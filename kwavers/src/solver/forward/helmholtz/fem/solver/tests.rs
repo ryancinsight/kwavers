@@ -1,5 +1,7 @@
-use super::config::FemHelmholtzConfig;
+use super::config::{FemHelmholtzConfig, PreconditionerType};
 use super::core::FemHelmholtzSolver;
+use crate::core::error::KwaversError;
+use crate::domain::grid::Grid;
 use crate::domain::mesh::{BoundaryType, TetrahedralMesh};
 use approx::assert_relative_eq;
 use ndarray::arr2;
@@ -117,4 +119,98 @@ fn test_solve_system_one_element_dirichlet() {
     let u3 = solver.solution()[_n3];
     assert_relative_eq!(u3.re, 0.0, epsilon = 1e-6);
     assert_relative_eq!(u3.im, 0.0, epsilon = 1e-6);
+}
+
+#[test]
+fn test_from_grid_structured_mesh_assembly() {
+    let grid = Grid::new(2, 2, 2, 1.0, 2.0, 3.0).unwrap();
+    let config = FemHelmholtzConfig {
+        wavenumber: 0.0,
+        radiation_boundary: false,
+        ..Default::default()
+    };
+    let mut solver = FemHelmholtzSolver::from_grid(config, &grid).unwrap();
+    let (medium, _) = homogeneous_medium();
+
+    solver.assemble_system(&medium).unwrap();
+
+    assert_eq!(solver.system_matrix.rows, 8);
+    assert_eq!(solver.system_matrix.cols, 8);
+    let diagonal_sum: f64 = (0..8)
+        .map(|row| solver.system_matrix.get_diagonal(row).re)
+        .sum();
+    assert!(diagonal_sum > 0.0);
+}
+
+#[test]
+fn test_ilu_and_amg_preconditioners_fail_explicitly() {
+    for preconditioner in [PreconditionerType::ILU, PreconditionerType::AMG] {
+        let (mesh, _) = unit_tet();
+        let config = FemHelmholtzConfig {
+            preconditioner,
+            ..Default::default()
+        };
+        let mut solver = FemHelmholtzSolver::new(config, mesh);
+
+        let error = solver.solve_system().unwrap_err();
+
+        assert!(matches!(error, KwaversError::FeatureNotAvailable(_)));
+    }
+}
+
+#[test]
+fn test_exact_nodal_load_updates_rhs_after_assembly() {
+    let (mesh, [_n0, n1, _n2, _n3]) = unit_tet();
+    let config = FemHelmholtzConfig {
+        wavenumber: 0.0,
+        radiation_boundary: false,
+        ..Default::default()
+    };
+    let mut solver = FemHelmholtzSolver::new(config, mesh);
+    let (medium, _) = homogeneous_medium();
+    solver.assemble_system(&medium).unwrap();
+
+    solver
+        .add_nodal_load(n1, Complex64::new(2.0, -0.5))
+        .unwrap();
+
+    assert_eq!(solver.rhs()[n1], Complex64::new(2.0, -0.5));
+    assert!(solver.add_nodal_load(99, Complex64::new(1.0, 0.0)).is_err());
+    assert!(solver
+        .add_nodal_load(n1, Complex64::new(f64::NAN, 0.0))
+        .is_err());
+}
+
+#[test]
+fn test_boundary_type_dirichlet_helper_applies_to_tagged_nodes() {
+    let mut mesh = TetrahedralMesh::new();
+    let n0 = mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Dirichlet);
+    let n1 = mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
+    let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Dirichlet);
+    let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+    mesh.add_element([n0, n1, n2, n3], 0).unwrap();
+
+    let config = FemHelmholtzConfig {
+        wavenumber: 0.0,
+        radiation_boundary: false,
+        ..Default::default()
+    };
+    let mut solver = FemHelmholtzSolver::new(config, mesh);
+    let count = solver
+        .add_dirichlet_on_boundary_type(BoundaryType::Dirichlet, Complex64::new(3.0, 0.0))
+        .unwrap();
+    let (medium, _) = homogeneous_medium();
+    solver.assemble_system(&medium).unwrap();
+
+    assert_eq!(count, 2);
+    assert_eq!(solver.rhs()[n0], Complex64::new(3.0, 0.0));
+    assert_eq!(solver.rhs()[n2], Complex64::new(3.0, 0.0));
+    assert_eq!(
+        solver.system_matrix.get_diagonal(n0),
+        Complex64::new(1.0, 0.0)
+    );
+    assert_eq!(
+        solver.system_matrix.get_diagonal(n2),
+        Complex64::new(1.0, 0.0)
+    );
 }

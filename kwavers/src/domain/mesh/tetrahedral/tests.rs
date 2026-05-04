@@ -1,5 +1,6 @@
 use super::mesh::TetrahedralMesh;
 use super::types::BoundaryType;
+use crate::domain::grid::Grid;
 
 #[test]
 fn tetrahedron_volume_unit_is_one_sixth() {
@@ -62,4 +63,32 @@ fn non_manifold_face_is_rejected() {
     let err = mesh.add_element([n0, n1, n2, n5], 0).unwrap_err();
     let msg = format!("{err}");
     assert!(msg.contains("Non-manifold face encountered"));
+}
+
+#[test]
+fn structured_grid_tetrahedralization_preserves_volume_and_counts() {
+    let grid = Grid::new(3, 2, 2, 0.5, 2.0, 3.0).unwrap();
+
+    let mesh = TetrahedralMesh::from_grid_vertices(&grid).unwrap();
+    let stats = mesh.statistics();
+
+    assert_eq!(stats.num_nodes, 12);
+    assert_eq!(stats.num_elements, 12);
+    assert_eq!(stats.num_boundary_faces, 20);
+    assert!((stats.total_volume - 6.0).abs() < 1e-12);
+    for element in &mesh.elements {
+        assert!((element.volume - 0.5).abs() < 1e-12);
+        assert!(element.quality > 0.0);
+    }
+    assert_eq!(mesh.nodes[0].coordinates, [0.0, 0.0, 0.0]);
+    assert_eq!(mesh.nodes[11].coordinates, [1.0, 2.0, 3.0]);
+}
+
+#[test]
+fn structured_grid_tetrahedralization_rejects_non_volume_grid() {
+    let grid = Grid::new(2, 2, 1, 1.0, 1.0, 1.0).unwrap();
+
+    let error = TetrahedralMesh::from_grid_vertices(&grid).unwrap_err();
+
+    assert!(format!("{error}").contains("at least 2 vertices per axis"));
 }

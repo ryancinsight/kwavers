@@ -127,7 +127,7 @@ fn test_nyquist_not_zeroed_propagation_amplitude() {
 }
 
 #[test]
-fn test_anti_aliasing_runs() {
+fn test_anti_aliasing_filter_attenuates_nyquist_checkerboard() {
     let config = PSTDConfig {
         anti_aliasing: AntiAliasingConfig {
             enabled: true,
@@ -135,21 +135,44 @@ fn test_anti_aliasing_runs() {
             order: 4,
         },
         dt: 1e-8,
-        nt: 10,
+        nt: 1,
         ..Default::default()
     };
 
-    let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
+    let n = 16usize;
+    let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001).unwrap();
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
     let source = GridSource::new_empty();
 
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                solver.fields.p[[i, j, k]] = if (i + j + k).is_multiple_of(2) {
+                    1.0
+                } else {
+                    -1.0
+                };
+            }
+        }
+    }
 
-    let result = solver.step_forward();
+    let initial_l2 = solver.fields.p.iter().map(|v| v * v).sum::<f64>().sqrt();
+    solver.apply_anti_aliasing_filter().unwrap();
+    let filtered_l2 = solver.fields.p.iter().map(|v| v * v).sum::<f64>().sqrt();
+    let max_abs = solver.fields.p.iter().fold(0.0_f64, |m, &v| m.max(v.abs()));
+
     assert!(
-        result.is_ok(),
-        "Step forward failed with anti-aliasing enabled: {:?}",
-        result.err()
+        filtered_l2 < 0.01 * initial_l2,
+        "Nyquist checkerboard should be strongly attenuated: initial_l2={initial_l2:.6e}, filtered_l2={filtered_l2:.6e}"
+    );
+    assert!(
+        max_abs.is_finite(),
+        "filtered pressure contains non-finite values"
+    );
+    assert_eq!(
+        solver.time_step_index, 0,
+        "direct filter application must not advance the time step"
     );
 }
 

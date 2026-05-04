@@ -27,6 +27,7 @@ from example_parity_utils import (
     expand_pml_outside_shape,
     normalize_sensor_matrix,
     pad_volume_for_pml_outside,
+    save_side_by_side_parity_figure,
 )
 
 
@@ -34,6 +35,8 @@ _ROOT = bootstrap_example_paths()
 
 KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_kwave_cache.npz"
 PYKWAVERS_CACHE = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_pykwavers_cache.npz"
+TR_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_time_reversal_compare.png"
+PRESSURE_FIGURE_PATH = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_pressure_compare.png"
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
 CACHE_VERSION = 1
 
@@ -419,6 +422,26 @@ def main() -> int:
 
     # --- Structured metrics file ---
     output_path = DEFAULT_OUTPUT_DIR / "pr_3D_TR_planar_sensor_metrics.txt"
+    tr_figure_path = save_side_by_side_parity_figure(
+        result["kwave"]["time_reversal"],
+        result["pykwavers"]["time_reversal"],
+        TR_FIGURE_PATH,
+        title="pr_3D_TR_planar_sensor time-reversal parity",
+        reference_label="k-wave-python TR",
+        candidate_label="pykwavers TR",
+        projection="peak_slice",
+        axis=0,
+        cmap="seismic",
+    )
+    pressure_figure_path = save_side_by_side_parity_figure(
+        result["kwave"]["pressure"],
+        result["pykwavers"]["pressure"],
+        PRESSURE_FIGURE_PATH,
+        title="pr_3D_TR_planar_sensor forward sensor parity",
+        reference_label="k-wave-python pressure",
+        candidate_label="pykwavers pressure",
+        cmap="seismic",
+    )
     with output_path.open("w") as fh:
         fh.write("pr_3D_TR_planar_sensor parity metrics\n")
         fh.write(f"parity_status: {overall_status}\n\n")
@@ -435,7 +458,10 @@ def main() -> int:
                 f"  row={row}: pearson_r={m['pearson_r']:.6f}  "
                 f"rms_ratio={m['rms_ratio']:.6f}  rmse={m['rmse']:.6e}\n"
             )
+        fh.write(f"\nfigure_time_reversal: {tr_figure_path.name}\n")
+        fh.write(f"figure_pressure: {pressure_figure_path.name}\n")
     print(f"Metrics written to: {output_path}")
+    print(f"Figures written to: {tr_figure_path}, {pressure_figure_path}")
 
     return 0 if overall_status == "PASS" else 1
 

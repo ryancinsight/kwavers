@@ -5,11 +5,16 @@
 use super::super::GpuPstdSolver;
 use wgpu::util::DeviceExt;
 
+const EMPTY_STORAGE_BUFFER_U32: [u32; 1] = [0];
+
 // ─── Packed buffer layout ────────────────────────────────────────────────────
 //
 // `source_data` GPU buffer: `[bitcast<f32>(indices[n_src]) | signals[n_src * nt]]`.
 // Indices occupy a stable prefix; signals occupy the tail and are overwritten each
 // scan line (cache hit) without reallocating the buffer or rebuilding bind groups.
+// Empty source/sensor sets still bind a one-element zero sentinel because WebGPU
+// storage buffers must have non-zero size; dispatch parameters carry the real
+// count, so shaders do not consume the sentinel when the count is zero.
 
 pub(super) fn packed_signal_len(n_points: usize, signal_len: usize) -> usize {
     n_points.max(1) + signal_len.max(1)
@@ -78,9 +83,8 @@ impl GpuPstdSolver {
         );
         rewrite_packed_source_buffer(&mut self.scratch_vel_x_data, vel_x_indices, vel_x_signals);
 
-        let placeholder_u32 = [0u32];
         let si_data: &[u32] = if sensor_indices.is_empty() {
-            &placeholder_u32
+            &EMPTY_STORAGE_BUFFER_U32
         } else {
             sensor_indices
         };
@@ -237,5 +241,49 @@ impl GpuPstdSolver {
             (n_vel_safe * std::mem::size_of::<f32>()) as u64,
             bytemuck::cast_slice(&self.scratch_vel_x_data[n_vel_safe..]),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn packed_signal_len_keeps_storage_buffers_non_empty() {
+        assert_eq!(packed_signal_len(0, 0), 2);
+        assert_eq!(packed_signal_len(3, 0), 4);
+        assert_eq!(packed_signal_len(0, 5), 6);
+        assert_eq!(EMPTY_STORAGE_BUFFER_U32, [0]);
+    }
+
+    #[test]
+    fn rewrite_packed_source_buffer_preserves_indices_and_signal_tail() {
+        let mut buffer = Vec::new();
+        rewrite_packed_source_buffer(&mut buffer, &[3, 7], &[0.25, -0.5, 1.0]);
+
+        assert_eq!(buffer.len(), 5);
+        assert_eq!(buffer[0].to_bits(), 3);
+        assert_eq!(buffer[1].to_bits(), 7);
+        assert_eq!(&buffer[2..], &[0.25, -0.5, 1.0]);
+    }
+
+    #[test]
+    fn rewrite_packed_source_buffer_uses_zero_signal_sentinel_for_empty_tail() {
+        let mut buffer = vec![99.0];
+        rewrite_packed_source_buffer(&mut buffer, &[], &[]);
+
+        assert_eq!(buffer, vec![0.0, 0.0]);
+    }
+
+    #[test]
+    fn overwrite_packed_signal_tail_keeps_index_prefix_stable() {
+        let mut buffer = Vec::new();
+        rewrite_packed_source_buffer(&mut buffer, &[11, 13], &[1.0, 2.0]);
+
+        overwrite_packed_signal_tail(&mut buffer, 2, &[3.0, 5.0, 8.0]);
+
+        assert_eq!(buffer[0].to_bits(), 11);
+        assert_eq!(buffer[1].to_bits(), 13);
+        assert_eq!(&buffer[2..], &[3.0, 5.0, 8.0]);
     }
 }

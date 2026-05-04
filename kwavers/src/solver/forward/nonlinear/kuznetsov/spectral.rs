@@ -4,7 +4,6 @@
 //! workspaces and pre-computes wavenumber vectors for efficient spectral
 //! derivative calculations.
 
-use crate::core::constants::numerical::FFT_K_SCALING;
 use crate::domain::grid::Grid;
 use crate::math::fft::{get_fft_for_grid, Fft3d};
 use ndarray::{Array1, Array3, Zip};
@@ -46,17 +45,23 @@ impl SpectralOperator {
     pub fn new(grid: &Grid) -> Self {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
 
-        // Pre-compute wavenumber vectors
-        let kx_max = PI / grid.dx;
-        let ky_max = PI / grid.dy;
-        let kz_max = PI / grid.dz;
+        // Discrete wavenumbers for an N-point DFT with physical spacing d:
+        //   k[i] = 2π·i / (N·d)   for i = 0, …, N/2
+        //   k[i] = 2π·(i−N) / (N·d)  for i = N/2+1, …, N−1
+        // Equivalently, k[i] = 2·k_Nyquist·i / N  where k_Nyquist = π/d.
+        // Note: the factor is 2, not 2π.  Using 2π here inflates each wavenumber
+        // by an extra factor of π, causing the spectral Laplacian — and therefore
+        // the effective wave speed — to be π² ≈ 9.87× too large.
+        let kx_nyquist = PI / grid.dx;
+        let ky_nyquist = PI / grid.dy;
+        let kz_nyquist = PI / grid.dz;
 
         let kx_vec: Array1<f64> = (0..nx)
             .map(|i| {
                 if i <= nx / 2 {
-                    i as f64 * FFT_K_SCALING * kx_max / nx as f64
+                    2.0 * kx_nyquist * i as f64 / nx as f64
                 } else {
-                    (i as f64 - nx as f64) * FFT_K_SCALING * kx_max / nx as f64
+                    2.0 * kx_nyquist * (i as f64 - nx as f64) / nx as f64
                 }
             })
             .collect();
@@ -64,9 +69,9 @@ impl SpectralOperator {
         let ky_vec: Array1<f64> = (0..ny)
             .map(|j| {
                 if j <= ny / 2 {
-                    j as f64 * FFT_K_SCALING * ky_max / ny as f64
+                    2.0 * ky_nyquist * j as f64 / ny as f64
                 } else {
-                    (j as f64 - ny as f64) * FFT_K_SCALING * ky_max / ny as f64
+                    2.0 * ky_nyquist * (j as f64 - ny as f64) / ny as f64
                 }
             })
             .collect();
@@ -74,9 +79,9 @@ impl SpectralOperator {
         let kz_vec: Array1<f64> = (0..nz)
             .map(|k| {
                 if k <= nz / 2 {
-                    k as f64 * FFT_K_SCALING * kz_max / nz as f64
+                    2.0 * kz_nyquist * k as f64 / nz as f64
                 } else {
-                    (k as f64 - nz as f64) * FFT_K_SCALING * kz_max / nz as f64
+                    2.0 * kz_nyquist * (k as f64 - nz as f64) / nz as f64
                 }
             })
             .collect();

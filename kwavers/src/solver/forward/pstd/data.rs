@@ -22,10 +22,12 @@ pub struct FieldArrays {
 /// Initialize field arrays for spectral solver
 pub fn initialize_field_arrays(grid: &Grid, _medium: &dyn Medium) -> KwaversResult<FieldArrays> {
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+    let nz_c = nz / 2 + 1;
 
     Ok(FieldArrays {
         p: Array3::zeros((nx, ny, nz)),
-        p_k: Array3::zeros((nx, ny, nz)),
+        // Half-spectrum buffer: r2c transform produces (nx, ny, nz/2+1) complex values.
+        p_k: Array3::zeros((nx, ny, nz_c)),
         ux: Array3::zeros((nx, ny, nz)),
         uy: Array3::zeros((nx, ny, nz)),
         uz: Array3::zeros((nx, ny, nz)),

@@ -30,6 +30,7 @@ import numpy as np
 from example_parity_utils import (
     DEFAULT_OUTPUT_DIR,
     bootstrap_example_paths,
+    save_side_by_side_parity_figure,
     save_text_report,
 )
 
@@ -64,6 +65,7 @@ NX = round_even(AXIAL_SIZE / DX) + SOURCE_X_OFFSET
 NY = round_even(LATERAL_SIZE / DX)
 NZ = NY
 
+FIGURE_PATH = DEFAULT_OUTPUT_DIR / "at_focused_annular_array_3D_mask_compare.png"
 REPORT_PATH = DEFAULT_OUTPUT_DIR / "at_focused_annular_array_3D_mask_metrics.txt"
 
 
@@ -166,6 +168,19 @@ def main() -> int:
         lines.append(f"  {k}: {v}")
     lines.append("")
     lines.append(f"parity_status: {status}")
+    figure_path = save_side_by_side_parity_figure(
+        kw_mask,
+        pkw_mask,
+        FIGURE_PATH,
+        title="at_focused_annular_array_3D binary mask parity",
+        reference_label="k-wave-python mask",
+        candidate_label="pykwavers mask",
+        projection="peak_slice",
+        axis=0,
+        cmap="gray",
+    )
+    lines.append(f"figure: {figure_path.name}")
+    print(f"  image: {figure_path}")
     save_text_report(REPORT_PATH, "at_focused_annular_array_3D_mask_compare", lines)
 
     return 0 if status == "PASS" else 1

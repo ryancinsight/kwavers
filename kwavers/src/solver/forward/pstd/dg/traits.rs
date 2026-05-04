@@ -1,4 +1,8 @@
-// src/physics/traits.rs stub/reconstruction
+//! DG adaptation traits for discontinuity detection, solution coupling, modal
+//! projection, reconstruction, and solver orchestration.
+//!
+//! These traits define the PSTD/DG boundary without binding acoustic kernels to
+//! concrete coupling or limiter implementations.
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;

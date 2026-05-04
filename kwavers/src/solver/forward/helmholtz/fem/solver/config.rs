@@ -3,18 +3,19 @@
 /// Preconditioner selection for the BiCGSTAB iterative solve.
 ///
 /// # Status
-/// - `None` — no preconditioning.
-/// - `Diagonal` — Jacobi (diagonal) preconditioning (implemented).
-/// - `ILU` / `AMG` — accepted but delegate to `Preconditioner::None` until implemented.
+/// - `None` - no preconditioning.
+/// - `Diagonal` - Jacobi diagonal preconditioning.
+/// - `ILU` and `AMG` return `FeatureNotAvailable` until real factorizations
+///   are provided.
 #[derive(Debug, Clone, Copy)]
 pub enum PreconditionerType {
     /// No preconditioning.
     None,
     /// Diagonal (Jacobi) preconditioning.
     Diagonal,
-    /// Incomplete LU factorization (not yet implemented).
+    /// Incomplete LU factorization.
     ILU,
-    /// Algebraic multigrid (not yet implemented).
+    /// Algebraic multigrid.
     AMG,
 }
 

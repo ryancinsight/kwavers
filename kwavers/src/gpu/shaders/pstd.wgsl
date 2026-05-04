@@ -1,37 +1,6 @@
-// PSTD (Pseudospectral Time Domain) GPU Compute Shaders
-//
-// Implements a GPU-resident acoustic PSTD solver with split-field PML.
-//
-// Bind group layout (≤8 storage buffers per group, ≤4 groups):
-//
-//   group(0): field buffers (7 storage: p, ux, uy, uz, rhox, rhoy, rhoz)
-//   group(1): k-space + medium scalars (8 storage: kspace_re, kspace_im,
-//             kappa, rho0_inv, c0_sq, rho0, bon_a, alpha_decay)
-//   group(2): PML + shift + sensor (8 storage: pml_sgx, pml_sgy, pml_sgz,
-//             pml_xyz (packed), shifts_all (packed), sensor_indices,
-//             sensor_data, source_data (packed))
-//
-// The shift operators for all 6 cases (x/y/z × pos/neg) are packed into a
-// single "shifts_all" buffer:
-//   Offset 0           .. nx      : x_pos_re[nx]
-//   Offset nx          .. 2*nx    : x_pos_im[nx]
-//   Offset 2*nx        .. 3*nx    : x_neg_re[nx]
-//   Offset 3*nx        .. 4*nx    : x_neg_im[nx]
-//   Offset 4*nx        .. 4*nx+ny : y_pos_re[ny]
-//   Offset 4*nx+ny     .. 4*nx+2*ny: y_pos_im[ny]
-//   Offset 4*nx+2*ny   .. 4*nx+3*ny: y_neg_re[ny]
-//   Offset 4*nx+3*ny   .. 4*nx+4*ny: y_neg_im[ny]
-//   Offset 4*nx+4*ny   .. 4*(nx+ny)+nz      : z_pos_re[nz]
-//   Offset 4*(nx+ny)+nz.. 4*(nx+ny)+2*nz    : z_pos_im[nz]
-//   Offset 4*(nx+ny)+2*nz..4*(nx+ny)+3*nz   : z_neg_re[nz]
-//   Offset 4*(nx+ny)+3*nz..4*(nx+ny)+4*nz   : z_neg_im[nz]
-//
-// The pml_xyz buffer packs three 3D arrays: [pml_x | pml_y | pml_z],
-// each of size nx*ny*nz. Total = 3*nx*ny*nz f32 values.
-//
-// References:
-//   Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
-//   Liu (1998). Microwave Opt. Technol. Lett. 15(3), 158-165.
+// PSTD GPU compute shader for split-field acoustic propagation.
+// Detailed buffer ABI: docs/gpu/pstd_shader_abi.md.
+// References: Treeby & Cox (2010) JBO 15(2), 021314; Liu (1998) MOTL 15(3).
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -118,7 +87,7 @@ var<storage, read> precomp_bon_a: array<f32>;
 @group(1) @binding(7)
 var<storage, read> precomp_alpha_decay: array<f32>;
 
-// ─── Bind Group 3: PML + shift operators + sensor/source (8 storage) ─────────
+// ─── Bind Group 2: PML + shift operators + sensor/source (8 storage) ─────────
 
 // pml_sgx/sgy/sgz: staggered PML for velocity (3 separate 3D arrays)
 @group(2) @binding(0)
@@ -134,20 +103,7 @@ var<storage, read> pml_sgz: array<f32>;
 @group(2) @binding(3)
 var<storage, read> pml_xyz: array<f32>;
 
-// shifts_all: packed shift operators for all 6 cases
-// Layout (offsets in f32 elements, all 1D arrays):
-//   [0 .. nx)        x_pos_re
-//   [nx .. 2nx)      x_pos_im
-//   [2nx .. 3nx)     x_neg_re
-//   [3nx .. 4nx)     x_neg_im
-//   [4nx .. 4nx+ny)  y_pos_re
-//   [4nx+ny .. +2ny) y_pos_im
-//   [4nx+2ny..+3ny)  y_neg_re
-//   [4nx+3ny..+4ny)  y_neg_im
-//   [4(nx+ny)..+nz)  z_pos_re
-//   [4(nx+ny)+nz..+2nz) z_pos_im
-//   [4(nx+ny)+2nz..+3nz) z_neg_re
-//   [4(nx+ny)+3nz..+4nz) z_neg_im
+// shifts_all packs x/y/z positive and negative staggered phase shifts.
 @group(2) @binding(4)
 var<storage, read> shifts_all: array<f32>;
 
@@ -159,14 +115,8 @@ var<storage, read> sensor_flat_indices: array<u32>;
 @group(2) @binding(6)
 var<storage, read_write> sensor_data: array<f32>;
 
-// source_data: packed [source_mask_indices(u32_as_f32, n_src) | source_signals(f32, n_src*Nt)]
-// We use a single f32 buffer; mask indices are cast u32->f32 (bit-cast on read).
-// Layout:
-//   [0 .. n_src)           : source_mask_indices as bitcast<f32>(u32)
-//   [n_src .. n_src + n_src*Nt) : source_signals[src * Nt + step]
-// n_src is encoded in params.n_sensors as upper 16 bits (n_sensors | (n_src << 16))
-// BUT for simplicity we pack n_src separately: use a source_count uniform is simpler.
-// Instead: store all source data in a plain source_data array; n_src is params.n_sensors >> 16.
+// source_data packs bitcast source indices followed by source_signals[src, t].
+// Source dispatches pass n_src through params.axis.
 @group(2) @binding(7)
 var<storage, read> source_data: array<f32>;
 
@@ -174,18 +124,8 @@ var<storage, read> source_data: array<f32>;
 
 var<workgroup> sm_re: array<f32, 256>;
 var<workgroup> sm_im: array<f32, 256>;
-// Precomputed twiddle factors for radix-2 butterfly — eliminates cos/sin per butterfly.
-// Loaded from precomp_alpha_decay (repurposed: apply_absorption never dispatched) at
-// workgroup startup.  Layout in the buffer:
-//   [0..128)    cos(-2πk/256)  k=0..127  (n=256 re)
-//   [128..256)  sin(-2πk/256)  k=0..127  (n=256 im)
-//   [256..320)  cos(-2πk/128)  k=0..63   (n=128 re)
-//   [320..384)  sin(-2πk/128)  k=0..63   (n=128 im)
-//   [384..416)  cos(-2πk/64)   k=0..31   (n=64  re)
-//   [416..448)  sin(-2πk/64)   k=0..31   (n=64  im)
-//   [448..464)  cos(-2πk/32)   k=0..15   (n=32  re)
-//   [464..480)  sin(-2πk/32)   k=0..15   (n=32  im)
-// For IFFT, conjugate: negate w_im before applying.
+// Precomputed radix-2 twiddles loaded from precomp_alpha_decay.
+// IFFT uses conjugates by negating the loaded imaginary component.
 var<workgroup> sm_tw_re: array<f32, 128>;
 var<workgroup> sm_tw_im: array<f32, 128>;
 
@@ -231,23 +171,8 @@ fn shift_im(ax_code: u32, idx: u32, nx: u32, ny: u32) -> f32 {
 
 // ─── Entry point: fft_1d_smem ─────────────────────────────────────────────────
 //
-// Shared-memory batched 1D Cooley-Tukey FFT with precomputed twiddle factors.
-// One workgroup per batch (params.n_batches total workgroups).
-// Workgroup size: 64 threads.
-//   - For n=128 (Y/Z axes, half_n=64): each thread handles exactly 1 butterfly
-//     per stage → 100% active thread utilization.
-//   - For n=256 (X axis, half_n=128): each thread handles 2 butterflies per
-//     stage via the stride-64 inner loop → 2× warps in flight per stage.
-//
-// Twiddle factors are loaded from precomp_alpha_decay into sm_tw_re/im at
-// workgroup startup (one load per workgroup, amortized over log2n stages).
-// This eliminates costly cos/sin from the butterfly hot path.
-// For IFFT, twiddles are conjugated (negate im) in-register — no separate table.
-//
-// axis selects the transform dimension:
-//   axis=0 (X): stride=ny*nz, batch_id indexes (iy, iz) pairs
-//   axis=1 (Y): stride=nz,    batch_id indexes (ix, iz) pairs
-//   axis=2 (Z): stride=1,     batch_id indexes (ix, iy) pairs
+// Shared-memory batched 1D Cooley-Tukey FFT with precomputed twiddles.
+// axis=0/1/2 selects x/y/z; one workgroup owns one transform lane.
 @compute @workgroup_size(64, 1, 1)
 fn fft_1d_smem(
     @builtin(local_invocation_id) lid: vec3<u32>,
@@ -266,11 +191,6 @@ fn fft_1d_smem(
     if batch_id >= params.n_batches { return; }
 
     // ── Load twiddle factors into shared memory ───────────────────────────────
-    // Buffer layout (precomp_alpha_decay): repurposed for FFT twiddle factors.
-    //   [0..128)   re for n=256,  [128..256)  im for n=256
-    //   [256..320) re for n=128,  [320..384)  im for n=128
-    //   [384..416) re for n=64,   [416..448)  im for n=64
-    //   [448..464) re for n=32,   [464..480)  im for n=32
     var tw_re_base: u32;
     var tw_im_base: u32;
     if n == 128u {

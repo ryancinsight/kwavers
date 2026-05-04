@@ -30,7 +30,9 @@
 
 mod deep_learning;
 mod feature_based;
+mod intensity_projection;
 mod maximum_likelihood;
+mod pca;
 mod probabilistic;
 pub(crate) mod utils;
 pub(crate) mod weighted_average;
@@ -39,6 +41,7 @@ use super::config::{FusionConfig, FusionMethod};
 use super::quality;
 use super::types::{FusedImageResult, RegisteredModality};
 use crate::core::error::{KwaversError, KwaversResult};
+use intensity_projection::ProjectionKind;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -182,20 +185,12 @@ impl MultiModalFusion {
             FusionMethod::DeepFusion => deep_learning::fuse_deep_learning(self),
             FusionMethod::MaximumLikelihood => maximum_likelihood::fuse_maximum_likelihood(self),
             FusionMethod::MaximumIntensity => {
-                return Err(KwaversError::NotImplemented(
-                    "Maximum Intensity Projection (MIP) fusion not yet implemented".into(),
-                ))
+                intensity_projection::fuse_intensity_projection(self, ProjectionKind::Maximum)
             }
             FusionMethod::MinimumIntensity => {
-                return Err(KwaversError::NotImplemented(
-                    "Minimum Intensity Projection (MinIP) fusion not yet implemented".into(),
-                ))
+                intensity_projection::fuse_intensity_projection(self, ProjectionKind::Minimum)
             }
-            FusionMethod::PCA => {
-                return Err(KwaversError::NotImplemented(
-                    "PCA-based image fusion not yet implemented".into(),
-                ))
-            }
+            FusionMethod::PCA => pca::fuse_pca(self),
         }?;
 
         Ok(fused_result)

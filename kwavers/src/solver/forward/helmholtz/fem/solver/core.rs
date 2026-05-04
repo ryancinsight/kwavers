@@ -20,8 +20,9 @@
 use super::config::{FemHelmholtzConfig, PreconditionerType};
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use crate::domain::boundary::FemBoundaryManager;
+use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::domain::mesh::TetrahedralMesh;
+use crate::domain::mesh::{BoundaryType, TetrahedralMesh};
 use crate::math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use crate::math::linear_algebra::sparse::solver::{IterativeSolver, Preconditioner, SolverConfig};
 use crate::solver::forward::helmholtz::fem::assembly::FemAssembly;
@@ -54,6 +55,16 @@ impl FemHelmholtzSolver {
             rhs: Array1::zeros(num_dofs),
             solution: Array1::zeros(num_dofs),
         }
+    }
+
+    /// Construct a FEM Helmholtz solver from a structured Cartesian grid.
+    ///
+    /// The grid is interpreted as a vertex lattice and tetrahedralized by
+    /// `TetrahedralMesh::from_grid_vertices`, preserving exact domain volume
+    /// through the six-tetrahedra-per-cell split.
+    pub fn from_grid(config: FemHelmholtzConfig, grid: &Grid) -> KwaversResult<Self> {
+        let mesh = TetrahedralMesh::from_grid_vertices(grid)?;
+        Ok(Self::new(config, mesh))
     }
 
     /// Compute per-element stiffness K_e, consistent mass M_e, and RHS f_e.
@@ -147,7 +158,7 @@ impl FemHelmholtzSolver {
     ///
     /// The `medium` parameter is reserved for future heterogeneous-k support;
     /// currently the uniform `config.wavenumber` is used.
-    pub fn assemble_system<M: Medium>(&mut self, _medium: &M) -> KwaversResult<()> {
+    pub fn assemble_system<M: Medium + ?Sized>(&mut self, _medium: &M) -> KwaversResult<()> {
         if self.mesh.elements.is_empty() {
             let num_nodes = self.mesh.nodes.len();
             let mut k_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
@@ -208,7 +219,16 @@ impl FemHelmholtzSolver {
         let preconditioner = match self.config.preconditioner {
             PreconditionerType::None => Preconditioner::None,
             PreconditionerType::Diagonal => Preconditioner::Jacobi,
-            _ => Preconditioner::None,
+            PreconditionerType::ILU => {
+                return Err(KwaversError::FeatureNotAvailable(
+                    "FEM Helmholtz ILU preconditioner requires a real sparse incomplete factorization backend".to_string(),
+                ))
+            }
+            PreconditionerType::AMG => {
+                return Err(KwaversError::FeatureNotAvailable(
+                    "FEM Helmholtz AMG preconditioner requires a real multigrid hierarchy backend".to_string(),
+                ))
+            }
         };
 
         let config = SolverConfig {
@@ -226,6 +246,81 @@ impl FemHelmholtzSolver {
         };
 
         self.solution = solver.bicgstab_complex(&self.system_matrix, self.rhs.view(), x0)?;
+        Ok(())
+    }
+
+    /// Add an exact nodal Helmholtz load to the assembled right-hand side.
+    ///
+    /// # Contract
+    ///
+    /// This method represents the discrete functional `F_i += value` for the
+    /// nodal basis function `phi_i`. It does not project an arbitrary physical
+    /// point to the nearest node; callers must provide the FEM degree of freedom
+    /// explicitly so no hidden spatial approximation is introduced.
+    pub fn add_nodal_load(&mut self, node_idx: usize, value: Complex64) -> KwaversResult<()> {
+        self.validate_node_index(node_idx)?;
+        if !value.re.is_finite() || !value.im.is_finite() {
+            return Err(KwaversError::InvalidInput(format!(
+                "FEM nodal load must be finite, got {value}"
+            )));
+        }
+
+        self.rhs[node_idx] += value;
+        Ok(())
+    }
+
+    /// Apply homogeneous or inhomogeneous Dirichlet conditions to nodes tagged
+    /// with the requested mesh boundary type.
+    ///
+    /// Boundary conditions are queued in the solver's boundary manager and take
+    /// effect on the next `assemble_system` call.
+    pub fn add_dirichlet_on_boundary_type(
+        &mut self,
+        boundary_type: BoundaryType,
+        value: Complex64,
+    ) -> KwaversResult<usize> {
+        if !value.re.is_finite() || !value.im.is_finite() {
+            return Err(KwaversError::InvalidInput(format!(
+                "FEM Dirichlet value must be finite, got {value}"
+            )));
+        }
+
+        let nodes: Vec<_> = self
+            .mesh
+            .nodes
+            .iter()
+            .filter(|node| node.boundary_type == boundary_type)
+            .map(|node| (node.index, value))
+            .collect();
+
+        if nodes.is_empty() {
+            return Ok(0);
+        }
+
+        let count = nodes.len();
+        self.boundary_manager.add_dirichlet(nodes);
+        Ok(count)
+    }
+
+    /// Borrow the assembled right-hand side vector.
+    #[must_use]
+    pub fn rhs(&self) -> &Array1<Complex64> {
+        &self.rhs
+    }
+
+    /// Borrow the tetrahedral mesh owned by the solver.
+    #[must_use]
+    pub fn mesh(&self) -> &TetrahedralMesh {
+        &self.mesh
+    }
+
+    fn validate_node_index(&self, node_idx: usize) -> KwaversResult<()> {
+        if node_idx >= self.rhs.len() {
+            return Err(KwaversError::InvalidInput(format!(
+                "FEM node index {node_idx} is outside system dimension {}",
+                self.rhs.len()
+            )));
+        }
         Ok(())
     }
 

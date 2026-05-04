@@ -8,14 +8,14 @@ Complements the mask + weighted-mask compares by driving the geometry
 through the solver and comparing on-axis steady-state pressure
 amplitude between pykwavers and k-wave-python.
 
-Scope limitation
-----------------
-The upstream `at_focused_annular_array_3D.py` drives the three rings
-with independent CW signals (0.5 / 1.0 / 0.75 MPa at 0° / 10° / 20°).
-pykwavers' `get_distributed_source_signal` currently only broadcasts a
-shared 1D signal across all elements, so this compare uses a single
-shared CW drive on all three rings. The geometry (annular rasterizer +
-BLI-weighted mask) is still exercised end-to-end.
+Scope
+-----
+This script uses a shared CW drive across all three rings and validates
+the annular geometry + BLI-weighted source mask path end-to-end.
+
+For the upstream independent per-ring amplitude/phase case, use
+`at_focused_annular_array_3D_full_compare.py`, which now exercises
+`Source.from_kwave_array_per_element` directly.
 
 Outputs
 -------

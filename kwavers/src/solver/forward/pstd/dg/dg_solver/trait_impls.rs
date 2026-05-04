@@ -265,6 +265,20 @@ mod tests {
         DGSolver::new(config, grid).expect("DGSolver::new failed in test")
     }
 
+    #[test]
+    fn fourier_basis_solver_construction_rejects_gll_duplicate_periodic_endpoints() {
+        let config = DGConfig {
+            polynomial_order: 2,
+            basis_type: BasisType::Fourier,
+            ..DGConfig::default()
+        };
+        let grid = Arc::new(Grid::new(3, 3, 3, 1.0, 1.0, 1.0).expect("Grid::new failed in test"));
+
+        let error = DGSolver::new(config, grid).unwrap_err();
+
+        assert!(format!("{error}").contains("requires periodic nodes on [-1,1)"));
+    }
+
     /// **Round-trip identity**: project_to_basis followed by reconstruct_from_basis
     /// must recover the input to machine precision (≤ 1e-12) for any field.
     ///

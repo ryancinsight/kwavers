@@ -13,6 +13,7 @@
 //! - Liu, Q. H. (1997). Microwave Opt. Technol. Lett., 15(3), 158-165.
 
 use super::trait_def::SpectralOperator;
+use super::{FilterType, SpectralFilter};
 use crate::core::error::{KwaversResult, NumericalError};
 use crate::math::fft::{Complex64, Shape1D, FFT_CACHE_1D};
 use ndarray::{Array1, Array3, ArrayView3, Axis};
@@ -237,10 +238,7 @@ impl SpectralOperator for PseudospectralDerivative {
         (PI / self.dx, PI / self.dy, PI / self.dz)
     }
 
-    fn apply_antialias_filter(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        Err(NumericalError::NotImplemented {
-            feature: "Anti-aliasing filter (requires FFT integration)".to_string(),
-        }
-        .into())
+    fn apply_antialias_filter(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        SpectralFilter::new(2.0 / 3.0, FilterType::SharpCutoff).apply(field)
     }
 }

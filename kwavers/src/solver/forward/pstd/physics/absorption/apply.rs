@@ -41,8 +41,13 @@ impl PSTDSolver {
             return Ok(());
         };
 
+        // All spectral arrays (grad_k, ux_k, uy_k, uz_k, nabla1, nabla2) have shape
+        // (nx, ny, nz_c); dpx/dpy/dpz/div_u/rho* are real-space (nx, ny, nz).
+        // R2C: dpα (nx,ny,nz) → grad_k (nx,ny,nz_c); nabla multiply in k-space;
+        // C2R: k-space result → real-space scratch (nx,ny,nz).
+
         // ── X-AXIS ────────────────────────────────────────────────────────────────
-        self.fft.forward_into(&self.dpx, &mut self.grad_k);
+        self.fft.forward_r2c_into(&self.dpx, &mut self.grad_k);
         {
             let n1 = abs.nabla1.view();
             Zip::from(&mut self.ux_k)
@@ -53,7 +58,7 @@ impl PSTDSolver {
                 });
         }
         self.fft
-            .inverse_into(&self.ux_k, &mut self.div_u, &mut self.uy_k);
+            .inverse_c2r_into(&self.ux_k, &mut self.div_u, &mut self.uy_k);
         {
             let n2 = abs.nabla2.view();
             Zip::from(&mut self.ux_k)
@@ -64,7 +69,7 @@ impl PSTDSolver {
                 });
         }
         self.fft
-            .inverse_into(&self.ux_k, &mut self.dpx, &mut self.uy_k);
+            .inverse_c2r_into(&self.ux_k, &mut self.dpx, &mut self.uy_k);
         {
             let tau = abs.tau.view();
             let eta = abs.eta.view();
@@ -79,7 +84,7 @@ impl PSTDSolver {
         }
 
         // ── Y-AXIS ────────────────────────────────────────────────────────────────
-        self.fft.forward_into(&self.dpy, &mut self.grad_k);
+        self.fft.forward_r2c_into(&self.dpy, &mut self.grad_k);
         {
             let n1 = abs.nabla1.view();
             Zip::from(&mut self.uy_k)
@@ -90,7 +95,7 @@ impl PSTDSolver {
                 });
         }
         self.fft
-            .inverse_into(&self.uy_k, &mut self.div_u, &mut self.ux_k);
+            .inverse_c2r_into(&self.uy_k, &mut self.div_u, &mut self.ux_k);
         {
             let n2 = abs.nabla2.view();
             Zip::from(&mut self.uy_k)
@@ -101,7 +106,7 @@ impl PSTDSolver {
                 });
         }
         self.fft
-            .inverse_into(&self.uy_k, &mut self.dpy, &mut self.ux_k);
+            .inverse_c2r_into(&self.uy_k, &mut self.dpy, &mut self.ux_k);
         {
             let tau = abs.tau.view();
             let eta = abs.eta.view();
@@ -116,7 +121,7 @@ impl PSTDSolver {
         }
 
         // ── Z-AXIS ────────────────────────────────────────────────────────────────
-        self.fft.forward_into(&self.dpz, &mut self.grad_k);
+        self.fft.forward_r2c_into(&self.dpz, &mut self.grad_k);
         {
             let n1 = abs.nabla1.view();
             Zip::from(&mut self.uz_k)
@@ -127,7 +132,7 @@ impl PSTDSolver {
                 });
         }
         self.fft
-            .inverse_into(&self.uz_k, &mut self.div_u, &mut self.ux_k);
+            .inverse_c2r_into(&self.uz_k, &mut self.div_u, &mut self.ux_k);
         {
             let n2 = abs.nabla2.view();
             Zip::from(&mut self.uz_k)
@@ -138,7 +143,7 @@ impl PSTDSolver {
                 });
         }
         self.fft
-            .inverse_into(&self.uz_k, &mut self.dpz, &mut self.ux_k);
+            .inverse_c2r_into(&self.uz_k, &mut self.dpz, &mut self.ux_k);
         {
             let tau = abs.tau.view();
             let eta = abs.eta.view();

@@ -17,3 +17,6 @@ mod params;
 mod processor;
 #[cfg(test)]
 mod tests;
+
+#[cfg(feature = "gpu")]
+pub use processor::DelaySumGPU;

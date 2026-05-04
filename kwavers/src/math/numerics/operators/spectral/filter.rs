@@ -11,8 +11,18 @@
 //! ```
 //!
 //! where H(k) is a window function (sharp cutoff or smooth taper).
+//!
+//! # Theorem: Separable modal filter
+//!
+//! Let `F₃ = Fₓ ⊗ Fᵧ ⊗ F_z` be the tensor-product DFT and let
+//! `H(i,j,k)=Hₓ(i)Hᵧ(j)H_z(k)` with each one-dimensional transfer factor
+//! bounded in `[0,1]`. The filtered field
+//! `u_f = F₃⁻¹(H ⊙ F₃u)` preserves every retained Fourier mode exactly and
+//! removes rejected modes without changing their phase. Constant fields are
+//! invariant because `H(0,0,0)=1`.
 
-use crate::core::error::{KwaversResult, NumericalError};
+use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::fft::{fft_3d_array, ifft_3d_array};
 use ndarray::{Array3, ArrayView3};
 use std::f64::consts::PI;
 
@@ -53,12 +63,46 @@ impl SpectralFilter {
         }
     }
 
-    /// Apply filter to field in k-space
-    pub fn apply(&self, _field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        Err(NumericalError::NotImplemented {
-            feature: "Spectral filtering (requires FFT integration)".to_string(),
+    /// Apply the filter to a real-space field using a tensor-product FFT.
+    ///
+    /// The cutoff is interpreted per axis as a fraction of that axis Nyquist
+    /// bin. The three one-dimensional transfer factors are multiplied, which
+    /// implements the standard tensor-product modal de-aliasing contract used
+    /// by Cartesian pseudospectral discretisations.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] for empty arrays or invalid cutoff
+    /// values.
+    pub fn apply(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+        if nx == 0 || ny == 0 || nz == 0 {
+            return Err(KwaversError::DimensionMismatch(
+                "SpectralFilter requires all dimensions to be non-zero".to_string(),
+            ));
         }
-        .into())
+        if !(0.0..=1.0).contains(&self.cutoff) || !self.cutoff.is_finite() {
+            return Err(KwaversError::InvalidInput(format!(
+                "SpectralFilter cutoff must be finite and within [0, 1], got {}",
+                self.cutoff
+            )));
+        }
+
+        let real_field = field.to_owned();
+        let mut spectrum = fft_3d_array(&real_field);
+
+        for i in 0..nx {
+            let hx = self.transfer_function(normalized_mode(i, nx), 1.0);
+            for j in 0..ny {
+                let hxy = hx * self.transfer_function(normalized_mode(j, ny), 1.0);
+                for k in 0..nz {
+                    spectrum[[i, j, k]] *=
+                        hxy * self.transfer_function(normalized_mode(k, nz), 1.0);
+                }
+            }
+        }
+
+        Ok(ifft_3d_array(&spectrum))
     }
 
     /// Get filter transfer function H(k) for given wavenumber
@@ -81,4 +125,17 @@ impl SpectralFilter {
             1.0
         }
     }
+}
+
+fn normalized_mode(index: usize, n: usize) -> f64 {
+    if n <= 1 {
+        return 0.0;
+    }
+
+    let signed = if index <= n / 2 {
+        index as isize
+    } else {
+        index as isize - n as isize
+    };
+    signed.unsigned_abs() as f64 / ((n / 2) as f64)
 }

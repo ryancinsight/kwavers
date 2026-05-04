@@ -620,6 +620,7 @@ fn main() -> KwaversResult<()> {
             tv_weight: 0.0,
             smoothness_weight: 0.0,
         },
+        source_mute_radius: 0,
     };
     println!("  dt              : {:.2} ns", dt * 1e9);
     println!("  f₀              : {:.0} kHz", f0 * 1e-3);

@@ -66,6 +66,13 @@ impl PSTDSolver {
         // application is needed here.
 
         self.sensor_recorder.record_step(&self.fields.p)?;
+        if self.sensor_recorder.needs_velocity() {
+            self.sensor_recorder.record_velocity_step(
+                &self.fields.ux,
+                &self.fields.uy,
+                &self.fields.uz,
+            )?;
+        }
 
         self.time_step_index += 1;
 
@@ -153,6 +160,13 @@ impl PSTDSolver {
 
         self.apply_boundary(time_index)?;
         self.sensor_recorder.record_step(&self.fields.p)?;
+        if self.sensor_recorder.needs_velocity() {
+            self.sensor_recorder.record_velocity_step(
+                &self.fields.ux,
+                &self.fields.uy,
+                &self.fields.uz,
+            )?;
+        }
         self.time_step_index += 1;
 
         Ok(())

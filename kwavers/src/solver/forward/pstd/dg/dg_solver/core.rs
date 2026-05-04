@@ -4,6 +4,7 @@
 //! separated from the implementation details for better modularity.
 
 use super::super::basis::build_vandermonde;
+use super::super::basis::BasisType;
 use super::super::config::DGConfig;
 use super::super::matrices::{
     compute_diff_matrix, compute_lift_matrix, compute_mass_matrix, compute_stiffness_matrix,
@@ -11,6 +12,7 @@ use super::super::matrices::{
 };
 use super::super::quadrature::gauss_lobatto_quadrature;
 use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, NumericalError};
 use crate::domain::grid::Grid;
 use ndarray::{Array1, Array2, Array3};
 use std::sync::Arc;
@@ -50,6 +52,13 @@ pub struct DGSolver {
 impl DGSolver {
     /// Create a new DG solver with proper matrix initialization
     pub fn new(config: DGConfig, grid: Arc<Grid>) -> KwaversResult<Self> {
+        if config.basis_type == BasisType::Fourier {
+            return Err(KwaversError::Numerical(NumericalError::UnsupportedOperation {
+                operation: "DGSolver::new".to_string(),
+                reason: "Fourier DG requires periodic nodes on [-1,1); the current nodal DG constructor uses GLL nodes with duplicate periodic endpoints".to_string(),
+            }));
+        }
+
         let n_nodes = config.polynomial_order + 1;
 
         // Generate quadrature nodes and weights

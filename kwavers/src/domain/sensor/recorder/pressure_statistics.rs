@@ -1,8 +1,13 @@
-//! Pressure field statistics for k-Wave parity recording modes
+//! Pressure field statistics for k-Wave parity recording modes.
 //!
-//! Implements spatial statistics: p_max, p_min, p_rms, p_final
+//! Accumulates per-voxel statistics over the simulation time loop, matching
+//! k-Wave's `sensor.record = {'p_max', 'p_min', 'p_rms', 'p_final'}` behaviour.
+//!
+//! All accumulations use `ndarray::Zip::par_for_each` via rayon for O(N³)
+//! parallelism with no intermediate allocations.
 
-use ndarray::{Array1, Array3};
+use crate::core::error::{KwaversError, KwaversResult};
+use ndarray::{Array1, Array3, Zip};
 
 /// Spatial statistics for pressure field over time
 #[derive(Debug, Clone)]
@@ -35,27 +40,33 @@ impl PressureFieldStatistics {
         }
     }
 
-    /// Update statistics with current pressure field
+    /// Accumulate one time step of pressure data.
+    ///
+    /// Updates max, min, squared sum, and final field element-wise.
+    /// Single-pass, fully parallelised — O(N³), no intermediate allocation.
     pub fn update(&mut self, pressure: &Array3<f64>) {
-        assert_eq!(
-            pressure.shape(),
-            &[self.shape.0, self.shape.1, self.shape.2]
+        debug_assert_eq!(
+            pressure.dim(),
+            self.shape,
+            "pressure field shape mismatch in PressureFieldStatistics::update"
         );
 
-        // Update max/min
-        for i in 0..self.shape.0 {
-            for j in 0..self.shape.1 {
-                for k in 0..self.shape.2 {
-                    let p = pressure[[i, j, k]];
-                    self.p_max[[i, j, k]] = self.p_max[[i, j, k]].max(p);
-                    self.p_min[[i, j, k]] = self.p_min[[i, j, k]].min(p);
-                    self.p_squared_sum[[i, j, k]] += p * p;
+        Zip::from(&mut self.p_max)
+            .and(&mut self.p_min)
+            .and(&mut self.p_squared_sum)
+            .and(&mut self.p_final)
+            .and(pressure)
+            .par_for_each(|pmax, pmin, sq, pfin, &p| {
+                if p > *pmax {
+                    *pmax = p;
                 }
-            }
-        }
+                if p < *pmin {
+                    *pmin = p;
+                }
+                *sq += p * p;
+                *pfin = p;
+            });
 
-        // Store final pressure
-        self.p_final = pressure.clone();
         self.time_step_count += 1;
     }
 
@@ -112,24 +123,94 @@ impl PressureFieldStatistics {
     }
 
     /// Sample statistics at sensor positions
-    pub fn sample_at_positions(&self, positions: &[(usize, usize, usize)]) -> SampledStatistics {
-        let mut p_max = Vec::with_capacity(positions.len());
-        let mut p_min = Vec::with_capacity(positions.len());
-        let mut p_rms = Vec::with_capacity(positions.len());
-        let mut p_final = Vec::with_capacity(positions.len());
+    #[must_use]
+    pub fn sample_p_max(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
+        let mut out = Array1::zeros(positions.len());
+        let _ = self.fill_p_max(positions, &mut out);
+        out
+    }
 
-        for &(i, j, k) in positions {
-            p_max.push(self.p_max[[i, j, k]]);
-            p_min.push(self.p_min[[i, j, k]]);
-            p_rms.push((self.p_squared_sum[[i, j, k]] / self.time_step_count as f64).sqrt());
-            p_final.push(self.p_final[[i, j, k]]);
+    /// Fill caller-owned storage with maximum pressure at sensor positions.
+    pub fn fill_p_max(
+        &self,
+        positions: &[(usize, usize, usize)],
+        out: &mut Array1<f64>,
+    ) -> KwaversResult<()> {
+        fill_field_at_positions(&self.p_max, positions, out)
+    }
+
+    /// Sample minimum pressure at sensor positions.
+    #[must_use]
+    pub fn sample_p_min(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
+        let mut out = Array1::zeros(positions.len());
+        let _ = self.fill_p_min(positions, &mut out);
+        out
+    }
+
+    /// Fill caller-owned storage with minimum pressure at sensor positions.
+    pub fn fill_p_min(
+        &self,
+        positions: &[(usize, usize, usize)],
+        out: &mut Array1<f64>,
+    ) -> KwaversResult<()> {
+        fill_field_at_positions(&self.p_min, positions, out)
+    }
+
+    /// Sample RMS pressure at sensor positions.
+    ///
+    /// With no accumulated time steps the RMS is the neutral zero field, matching
+    /// [`p_rms`](Self::p_rms) and avoiding undefined `0/0` sampling.
+    #[must_use]
+    pub fn sample_p_rms(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
+        let mut out = Array1::zeros(positions.len());
+        let _ = self.fill_p_rms(positions, &mut out);
+        out
+    }
+
+    /// Fill caller-owned storage with RMS pressure at sensor positions.
+    pub fn fill_p_rms(
+        &self,
+        positions: &[(usize, usize, usize)],
+        out: &mut Array1<f64>,
+    ) -> KwaversResult<()> {
+        validate_sample_output_len(positions, out)?;
+
+        if self.time_step_count == 0 {
+            out.fill(0.0);
+            return Ok(());
         }
 
+        let n = self.time_step_count as f64;
+        for (row, &(i, j, k)) in positions.iter().enumerate() {
+            out[row] = (self.p_squared_sum[[i, j, k]] / n).sqrt();
+        }
+        Ok(())
+    }
+
+    /// Sample final pressure at sensor positions.
+    #[must_use]
+    pub fn sample_p_final(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
+        let mut out = Array1::zeros(positions.len());
+        let _ = self.fill_p_final(positions, &mut out);
+        out
+    }
+
+    /// Fill caller-owned storage with final pressure at sensor positions.
+    pub fn fill_p_final(
+        &self,
+        positions: &[(usize, usize, usize)],
+        out: &mut Array1<f64>,
+    ) -> KwaversResult<()> {
+        fill_field_at_positions(&self.p_final, positions, out)
+    }
+
+    /// Sample all pressure statistics at sensor positions.
+    pub fn sample_at_positions(&self, positions: &[(usize, usize, usize)]) -> SampledStatistics {
         SampledStatistics {
-            p_max: Array1::from(p_max),
-            p_min: Array1::from(p_min),
-            p_rms: Array1::from(p_rms),
-            p_final: Array1::from(p_final),
+            p_max: self.sample_p_max(positions),
+            p_min: self.sample_p_min(positions),
+            p_rms: self.sample_p_rms(positions),
+            p_final: self.sample_p_final(positions),
         }
     }
 
@@ -197,4 +278,43 @@ mod tests {
         assert_eq!(sampled.num_sensors(), 3);
         assert!(sampled.p_max.iter().all(|&v| v == 5000.0));
     }
+
+    #[test]
+    fn test_single_field_sampling_and_zero_step_rms() {
+        let stats = PressureFieldStatistics::new(3, 1, 1);
+        let positions = vec![(0, 0, 0), (2, 0, 0)];
+
+        let rms = stats.sample_p_rms(&positions);
+        assert_eq!(rms.len(), 2);
+        assert!(rms.iter().all(|&v| v == 0.0));
+
+        let final_pressure = stats.sample_p_final(&positions);
+        assert!(final_pressure.iter().all(|&v| v == 0.0));
+    }
+}
+
+fn fill_field_at_positions(
+    field: &Array3<f64>,
+    positions: &[(usize, usize, usize)],
+    out: &mut Array1<f64>,
+) -> KwaversResult<()> {
+    validate_sample_output_len(positions, out)?;
+    for (row, &(i, j, k)) in positions.iter().enumerate() {
+        out[row] = field[[i, j, k]];
+    }
+    Ok(())
+}
+
+fn validate_sample_output_len(
+    positions: &[(usize, usize, usize)],
+    out: &Array1<f64>,
+) -> KwaversResult<()> {
+    if out.len() != positions.len() {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "pressure-stat output length {} != sensor count {}",
+            out.len(),
+            positions.len()
+        )));
+    }
+    Ok(())
 }

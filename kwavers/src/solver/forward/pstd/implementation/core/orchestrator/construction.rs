@@ -19,7 +19,7 @@ use crate::solver::forward::pstd::physics::absorption::initialize_absorption_ope
 use crate::solver::forward::pstd::propagator::axisymmetric::AsContext;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
 use crate::solver::geometry::Geometry;
-use ndarray::{Array3, Zip};
+use ndarray::{s, Array3, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
 
@@ -31,11 +31,13 @@ impl PSTDSolver {
         source: GridSource,
     ) -> KwaversResult<Self> {
         let grid = Arc::new(grid);
+        let nz_c = grid.nz / 2 + 1; // half-spectrum length for r2c z-axis
         if config.compatibility_mode == CompatibilityMode::Reference {
             config.spectral_correction.method = CorrectionMethod::Treeby2010;
         }
 
-        let (k_ops, kappa, k_max, c_ref) = initialize_spectral_operators(&config, &grid, medium)?;
+        let (mut k_ops, kappa, k_max, c_ref) =
+            initialize_spectral_operators(&config, &grid, medium)?;
         let mut k_mag = compute_k_magnitude(&k_ops.kx, &k_ops.ky, &k_ops.kz);
 
         let _x_max: f64 = 0.0;
@@ -52,10 +54,23 @@ impl PSTDSolver {
             BoundaryConfig::None => None,
         };
 
-        let absorption =
+        let mut absorption =
             initialize_absorption_operators(&config, &grid, medium, &k_mag, k_max, c_ref)?;
+        // Truncate spectral nabla operators to the r2c half-spectrum (z-axis: nz_c = nz/2+1).
+        // nabla1 = |k|^(y-2) and nabla2 = |k|^(y-1) are symmetric under kz sign flip,
+        // so the first nz_c z-values are the complete independent set for real-input fields.
+        if let Some(ref mut abs) = absorption {
+            abs.nabla1 = abs.nabla1.slice(s![.., .., ..nz_c]).to_owned();
+            abs.nabla2 = abs.nabla2.slice(s![.., .., ..nz_c]).to_owned();
+        }
         k_mag.mapv_inplace(|k| (0.5 * c_ref * config.dt * k).cos());
         let source_kappa = k_mag;
+        // Truncate the anti-aliasing filter to the r2c half-spectrum.
+        // The filter is real-valued and symmetric (depends on |k|), so values at
+        // kz ∈ [0, nz/2] (indices [0, nz_c)) are the complete independent set.
+        if let Some(ref mut f) = k_ops.filter {
+            *f = f.slice(s![.., .., ..nz_c]).to_owned();
+        }
         let field_arrays =
             crate::solver::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
 
@@ -64,7 +79,12 @@ impl PSTDSolver {
         let dk_z = 2.0 * PI / (grid.nz as f64 * grid.dz);
         let (ddx_k_shift_pos, ddx_k_shift_neg) = generate_shift_1d(grid.nx, dk_x, grid.dx);
         let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(grid.ny, dk_y, grid.dy);
-        let (ddz_k_shift_pos, ddz_k_shift_neg) = generate_shift_1d(grid.nz, dk_z, grid.dz);
+        // Z-axis: generate full-length shifts, then truncate to nz_c = nz/2+1.
+        // generate_shift_1d produces i·k·exp(±i·k·ds/2) for k in rfftfreq order
+        // (indices [0, nz_c) cover non-negative kz exactly), so prefix truncation is exact.
+        let (ddz_full_pos, ddz_full_neg) = generate_shift_1d(grid.nz, dk_z, grid.dz);
+        let ddz_k_shift_pos = ddz_full_pos.slice(s![..nz_c]).to_owned();
+        let ddz_k_shift_neg = ddz_full_neg.slice(s![..nz_c]).to_owned();
 
         let shape = (grid.nx, grid.ny, grid.nz);
         let (rho0, c0, bon) = if medium.is_homogeneous() {
@@ -140,10 +160,11 @@ impl PSTDSolver {
             rhoy: Array3::zeros(shape),
             rhoz: Array3::zeros(shape),
             p_k: field_arrays.p_k,
-            ux_k: Array3::zeros(shape),
-            uy_k: Array3::zeros(shape),
-            uz_k: Array3::zeros(shape),
-            grad_k: Array3::zeros(shape),
+            // Half-spectrum k-space buffers: r2c z-axis reduces nz → nz_c = nz/2+1.
+            ux_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
+            uy_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
+            uz_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
+            grad_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
             materials: MaterialFields { rho0, c0 },
             bon,
             absorption,
@@ -228,6 +249,8 @@ impl PSTDSolver {
         let rho0_ref = self.materials.rho0.mean().unwrap_or(1000.0);
         let has_y = self.grid.ny > 1;
         let has_z = self.grid.nz > 1;
+        // nz_c: half-spectrum z-length; p_k/grad_k have shape (nx, ny, nz_c).
+        let nz_c = self.p_k.dim().2;
 
         if !dt.is_finite() || dt <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
@@ -251,11 +274,14 @@ impl PSTDSolver {
                 };
             });
 
-        self.fft.forward_into(&self.fields.p, &mut self.p_k);
+        // R2C forward: real pressure (nx,ny,nz) → half-spectrum (nx,ny,nz_c).
+        self.fft.forward_r2c_into(&self.fields.p, &mut self.p_k);
 
+        // X-axis: grad_k[i,j,k] = ddx[i] · sin_s[i,j,k] · p_k[i,j,k]
+        // sin_s is sliced to (nx,ny,nz_c) to match the half-spectrum k-space shape.
         {
             let ddx = self.ddx_k_shift_pos.view();
-            let sin_s = self.div_u.view();
+            let sin_s = self.div_u.slice(s![.., .., ..nz_c]);
             let p_k = self.p_k.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)
@@ -265,11 +291,11 @@ impl PSTDSolver {
                 });
         }
         self.fft
-            .inverse_into(&self.grad_k, &mut self.fields.ux, &mut self.ux_k);
+            .inverse_c2r_into(&self.grad_k, &mut self.fields.ux, &mut self.ux_k);
 
         if has_y {
             let ddy = self.ddy_k_shift_pos.view();
-            let sin_s = self.div_u.view();
+            let sin_s = self.div_u.slice(s![.., .., ..nz_c]);
             let p_k = self.p_k.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)
@@ -278,14 +304,15 @@ impl PSTDSolver {
                     *gk = ddy[j] * ss * p;
                 });
             self.fft
-                .inverse_into(&self.grad_k, &mut self.fields.uy, &mut self.uy_k);
+                .inverse_c2r_into(&self.grad_k, &mut self.fields.uy, &mut self.uy_k);
         } else {
             self.fields.uy.fill(0.0);
         }
 
         if has_z {
+            // ddz has length nz_c (truncated in construction); k_idx ∈ [0, nz_c).
             let ddz = self.ddz_k_shift_pos.view();
-            let sin_s = self.div_u.view();
+            let sin_s = self.div_u.slice(s![.., .., ..nz_c]);
             let p_k = self.p_k.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(sin_s)
@@ -294,7 +321,7 @@ impl PSTDSolver {
                     *gk = ddz[k_idx] * ss * p;
                 });
             self.fft
-                .inverse_into(&self.grad_k, &mut self.fields.uz, &mut self.uz_k);
+                .inverse_c2r_into(&self.grad_k, &mut self.fields.uz, &mut self.uz_k);
         } else {
             self.fields.uz.fill(0.0);
         }

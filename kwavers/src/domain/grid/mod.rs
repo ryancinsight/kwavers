@@ -154,22 +154,22 @@ impl Grid {
         ))
     }
 
-    /// Compute kx array (compatibility)
+    /// Compute kx array — delegates to [`Self::kx`].
     #[inline]
     pub fn compute_kx(&self) -> ndarray::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.nx, self.dx)
+        self.kx()
     }
 
-    /// Compute ky array (compatibility)
+    /// Compute ky array — delegates to [`Self::ky`].
     #[inline]
     pub fn compute_ky(&self) -> ndarray::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.ny, self.dy)
+        self.ky()
     }
 
-    /// Compute kz array (compatibility)
+    /// Compute kz array — delegates to [`Self::kz`].
     #[inline]
     pub fn compute_kz(&self) -> ndarray::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.nz, self.dz)
+        self.kz()
     }
 
     /// Calculate CFL timestep for given sound speed

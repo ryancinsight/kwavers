@@ -6,7 +6,12 @@ Tests whether the ~8-step phase offset is in propagation or sensor summation.
 import numpy as np
 import sys
 sys.path.insert(0, '.')
-from example_parity_utils import bootstrap_example_paths
+from example_parity_utils import (
+    DEFAULT_OUTPUT_DIR,
+    bootstrap_example_paths,
+    save_side_by_side_parity_figure,
+    save_text_report,
+)
 bootstrap_example_paths()
 import pykwavers as pkw
 from kwave.data import Vector
@@ -117,6 +122,31 @@ print(f"  (positive lag = pykwavers is AHEAD of k-wave)")
 r = np.corrcoef(kw_trace, pkw_trace)[0,1]
 print(f"  Pearson r = {r:.6f}")
 print(f"  Peak: kwave={kw_max:.6f} Pa, pkwav={pkw_max:.6f} Pa, ratio={pkw_max/kw_max:.4f}")
+
+figure_path = save_side_by_side_parity_figure(
+    kw_trace.reshape(1, -1),
+    pkw_trace.reshape(1, -1),
+    DEFAULT_OUTPUT_DIR / "phase_compare_minimal_traces.png",
+    title="minimal phase pressure-trace parity",
+    reference_label="k-wave-python pressure",
+    candidate_label="pykwavers pressure",
+    cmap="seismic",
+)
+report_path = DEFAULT_OUTPUT_DIR / "phase_compare_minimal_metrics.txt"
+save_text_report(
+    report_path,
+    "phase_compare_minimal parity metrics",
+    [
+        "parity_status: DIAGNOSTIC",
+        f"arrival_step_difference: {pkw_first - kw_first}",
+        f"cross_correlation_peak_lag: {peak_lag}",
+        f"pearson_r: {r:.6f}",
+        f"peak_ratio_pykwavers_over_kwave: {pkw_max/kw_max:.6f}",
+        f"figure: {figure_path.name}",
+    ],
+)
+print(f"  Figure: {figure_path}")
+print(f"  Metrics: {report_path}")
 
 # Steady-state peaks
 ss_kw = kw_trace[Nt//2:]

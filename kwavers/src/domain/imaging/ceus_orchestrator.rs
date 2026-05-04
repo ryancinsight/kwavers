@@ -67,6 +67,13 @@ impl CEUSOrchestrators {
     }
 
     /// Create default CEUS orchestrator
+    ///
+    /// # Boundary contract
+    ///
+    /// The domain layer owns the orchestration trait and registry only. Concrete
+    /// CEUS simulation implementations are registered by an application or
+    /// physics assembly layer. An empty registry is therefore a configuration
+    /// state, not a placeholder implementation.
     pub fn create_default(
         &self,
         grid: &Grid,
@@ -75,8 +82,10 @@ impl CEUSOrchestrators {
         bubble_size: f64,
     ) -> KwaversResult<Box<dyn CEUSOrchestrator>> {
         self.default_creator.as_ref().ok_or_else(|| {
-            crate::core::error::KwaversError::NotImplemented(
-                "CEUS orchestrator not registered".to_string(),
+            crate::core::error::KwaversError::FeatureNotAvailable(
+                "CEUS orchestrator registry has no default factory; register a concrete CEUS \
+                 implementation before requesting default orchestration"
+                    .to_string(),
             )
         })?(grid, medium, bubble_concentration, bubble_size)
     }
@@ -91,9 +100,29 @@ impl Default for CEUSOrchestrators {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::medium::homogeneous::HomogeneousMedium;
 
     #[test]
     fn test_ceus_orchestrators_creation() {
-        let _registry = CEUSOrchestrators::new();
+        let registry = CEUSOrchestrators::new();
+
+        assert!(format!("{registry:?}").contains("default_creator: false"));
+    }
+
+    #[test]
+    fn create_default_rejects_unregistered_factory_without_placeholder_path() {
+        let registry = CEUSOrchestrators::new();
+        let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+
+        let error = registry
+            .create_default(&grid, &medium, 1.0e6, 2.0e-6)
+            .unwrap_err();
+
+        assert!(matches!(
+            error,
+            crate::core::error::KwaversError::FeatureNotAvailable(_)
+        ));
+        assert!(format!("{error}").contains("no default factory"));
     }
 }

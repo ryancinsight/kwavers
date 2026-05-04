@@ -59,8 +59,11 @@
 mod tests;
 
 use crate::core::error::KwaversResult;
+use crate::domain::mesh::BoundaryType;
 use crate::domain::source::Source;
 use ndarray::Array3;
+use ndarray::{Array1, ArrayView2};
+use num_complex::Complex64;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -131,4 +134,39 @@ pub trait AcousticSolverBackend: Debug {
 
     /// Get grid dimensions `(nx, ny, nz)`.
     fn get_grid_dimensions(&self) -> (usize, usize, usize);
+}
+
+/// Backend trait for frequency-domain acoustic Helmholtz solves.
+///
+/// This trait is intentionally separate from [`AcousticSolverBackend`]. A
+/// Helmholtz solve computes complex steady-state pressure for one angular
+/// frequency and has no timestep, velocity field, or CFL progression.
+pub trait FrequencyDomainAcousticBackend: Debug {
+    /// Queue an exact nodal load `F_i += value`.
+    fn add_nodal_load(&mut self, node_idx: usize, value: Complex64) -> KwaversResult<()>;
+
+    /// Queue Dirichlet values on nodes tagged with a mesh boundary type.
+    fn add_dirichlet_on_boundary_type(
+        &mut self,
+        boundary_type: BoundaryType,
+        value: Complex64,
+    ) -> KwaversResult<usize>;
+
+    /// Assemble and solve the frequency-domain system.
+    fn solve(&mut self) -> KwaversResult<()>;
+
+    /// Borrow the complex nodal pressure solution.
+    fn pressure_solution(&self) -> &Array1<Complex64>;
+
+    /// Interpolate complex pressure at physical query points.
+    fn interpolate_pressure(
+        &self,
+        query_points: ArrayView2<'_, f64>,
+    ) -> KwaversResult<Array1<Complex64>>;
+
+    /// Wavenumber used by the Helmholtz operator.
+    fn wavenumber(&self) -> f64;
+
+    /// Mesh size as `(nodes, tetrahedra)`.
+    fn mesh_size(&self) -> (usize, usize);
 }

@@ -18,59 +18,52 @@ pub struct HeterogeneousFactory;
 pub type PropertyFunction = Box<dyn Fn(f64, f64, f64) -> f64 + Send + Sync>;
 
 impl HeterogeneousFactory {
-    /// Create a heterogeneous medium from pre-existing 3D arrays
+    /// Create a heterogeneous medium from pre-existing 3D arrays.
     ///
     /// **k-Wave Equivalent**: `medium.sound_speed = c_array; medium.density = rho_array;`
     ///
     /// # Arguments
-    /// * `sound_speed` - 3D array of sound speeds [m/s]
-    /// * `density` - 3D array of densities [kg/m³]
-    /// * `absorption` - Optional 3D array of absorption coefficients [dB/(MHz·cm)]
-    /// * `nonlinearity` - Optional 3D array of B/A parameters
-    /// * `reference_frequency` - Reference frequency for absorption [Hz]
-    ///
-    /// # Returns
-    /// * `HeterogeneousMedium` configured with the provided arrays
+    /// * `sound_speed`          - 3D array of sound speeds [m/s]
+    /// * `density`              - 3D array of densities [kg/m³]
+    /// * `absorption`           - Optional 3D array of α₀ [dB/(MHz^y cm)]
+    /// * `alpha_power`          - Optional 3D array of power-law exponent y (default 1.0)
+    /// * `nonlinearity`         - Optional 3D array of B/A parameters
+    /// * `reference_frequency`  - Reference frequency for absorption [Hz]
     ///
     /// # Errors
-    /// Returns an error if array shapes don't match
+    /// Returns an error if any array shape does not match `sound_speed`.
     pub fn from_arrays(
         sound_speed: Array3<f64>,
         density: Array3<f64>,
         absorption: Option<Array3<f64>>,
+        alpha_power: Option<Array3<f64>>,
         nonlinearity: Option<Array3<f64>>,
         reference_frequency: f64,
     ) -> Result<HeterogeneousMedium, String> {
         let shape = sound_speed.shape();
-        if density.shape() != shape {
-            return Err(format!(
-                "Density shape {:?} doesn't match sound_speed shape {:?}",
-                density.shape(),
-                shape
-            ));
-        }
-
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
 
-        // Use provided arrays or create zeros
+        macro_rules! check_shape {
+            ($arr:expr, $name:expr) => {
+                if $arr.shape() != shape {
+                    return Err(format!(
+                        "{} shape {:?} doesn't match sound_speed shape {:?}",
+                        $name,
+                        $arr.shape(),
+                        shape
+                    ));
+                }
+            };
+        }
+        check_shape!(density, "density");
+
         let absorption = absorption.unwrap_or_else(|| Array3::zeros((nx, ny, nz)));
+        let alpha_power = alpha_power.unwrap_or_else(|| Array3::from_elem((nx, ny, nz), 1.0));
         let nonlinearity = nonlinearity.unwrap_or_else(|| Array3::zeros((nx, ny, nz)));
 
-        // Validate shapes
-        if absorption.shape() != shape {
-            return Err(format!(
-                "Absorption shape {:?} doesn't match sound_speed shape {:?}",
-                absorption.shape(),
-                shape
-            ));
-        }
-        if nonlinearity.shape() != shape {
-            return Err(format!(
-                "Nonlinearity shape {:?} doesn't match sound_speed shape {:?}",
-                nonlinearity.shape(),
-                shape
-            ));
-        }
+        check_shape!(absorption, "absorption");
+        check_shape!(alpha_power, "alpha_power");
+        check_shape!(nonlinearity, "nonlinearity");
 
         Ok(HeterogeneousMedium {
             use_trilinear_interpolation: true,
@@ -78,7 +71,7 @@ impl HeterogeneousFactory {
             sound_speed,
             viscosity: Array3::zeros((nx, ny, nz)),
             surface_tension: Array3::zeros((nx, ny, nz)),
-            ambient_pressure: 101325.0, // Standard atmospheric pressure
+            ambient_pressure: 101325.0,
             vapor_pressure: Array3::zeros((nx, ny, nz)),
             polytropic_index: Array3::zeros((nx, ny, nz)),
             specific_heat: Array3::zeros((nx, ny, nz)),
@@ -88,13 +81,14 @@ impl HeterogeneousFactory {
             thermal_diffusivity: Array3::zeros((nx, ny, nz)),
             mu_a: Array3::zeros((nx, ny, nz)),
             mu_s_prime: Array3::zeros((nx, ny, nz)),
-            temperature: Array3::from_elem((nx, ny, nz), 293.15), // 20°C default
+            temperature: Array3::from_elem((nx, ny, nz), 293.15),
             bubble_radius: Array3::zeros((nx, ny, nz)),
             bubble_velocity: Array3::zeros((nx, ny, nz)),
             alpha0: Array3::zeros((nx, ny, nz)),
             delta: Array3::zeros((nx, ny, nz)),
             b_a: nonlinearity.clone(),
             absorption,
+            alpha_power,
             nonlinearity,
             shear_sound_speed: Array3::zeros((nx, ny, nz)),
             shear_viscosity_coeff: Array3::zeros((nx, ny, nz)),
@@ -117,14 +111,17 @@ impl HeterogeneousFactory {
     /// * `nonlinearity_fn` - Optional function f(x, y, z) -> B/A parameter
     /// * `reference_frequency` - Reference frequency for absorption [Hz]
     ///
+    /// * `alpha_power_fn` - Optional function y(x,y,z) → power-law exponent (default 1.0)
+    ///
     /// # Returns
-    /// * `HeterogeneousMedium` with properties evaluated at grid points
+    /// * `HeterogeneousMedium` with properties evaluated at grid points.
     #[must_use]
     pub fn from_functions<F1, F2>(
         grid: &Grid,
         sound_speed_fn: F1,
         density_fn: F2,
         absorption_fn: Option<PropertyFunction>,
+        alpha_power_fn: Option<PropertyFunction>,
         nonlinearity_fn: Option<PropertyFunction>,
         reference_frequency: f64,
     ) -> HeterogeneousMedium
@@ -134,10 +131,10 @@ impl HeterogeneousFactory {
     {
         let (nx, ny, nz) = grid.dimensions();
 
-        // Evaluate functions at grid points
         let mut sound_speed = Array3::zeros((nx, ny, nz));
         let mut density = Array3::zeros((nx, ny, nz));
         let mut absorption = Array3::zeros((nx, ny, nz));
+        let mut alpha_power = Array3::from_elem((nx, ny, nz), 1.0_f64);
         let mut nonlinearity = Array3::zeros((nx, ny, nz));
 
         for i in 0..nx {
@@ -149,6 +146,9 @@ impl HeterogeneousFactory {
 
                     if let Some(ref abs_fn) = absorption_fn {
                         absorption[[i, j, k]] = abs_fn(x, y, z);
+                    }
+                    if let Some(ref yf) = alpha_power_fn {
+                        alpha_power[[i, j, k]] = yf(x, y, z);
                     }
                     if let Some(ref nl_fn) = nonlinearity_fn {
                         nonlinearity[[i, j, k]] = nl_fn(x, y, z);
@@ -180,6 +180,7 @@ impl HeterogeneousFactory {
             delta: Array3::zeros((nx, ny, nz)),
             b_a: nonlinearity.clone(),
             absorption,
+            alpha_power,
             nonlinearity,
             shear_sound_speed: Array3::zeros((nx, ny, nz)),
             shear_viscosity_coeff: Array3::zeros((nx, ny, nz)),
@@ -262,6 +263,7 @@ impl HeterogeneousFactory {
             delta: Array3::zeros((nx, ny, nz)),
             b_a: nonlinearity.clone(),
             absorption,
+            alpha_power: Array3::from_elem((nx, ny, nz), 1.0),
             nonlinearity,
             shear_sound_speed: Array3::zeros((nx, ny, nz)),
             shear_viscosity_coeff: Array3::zeros((nx, ny, nz)),
@@ -282,11 +284,13 @@ mod tests {
         let c = Array3::from_elem((10, 10, 10), 1500.0);
         let rho = Array3::from_elem((10, 10, 10), 1000.0);
 
-        let medium = HeterogeneousFactory::from_arrays(c, rho, None, None, 1e6).unwrap();
+        let medium = HeterogeneousFactory::from_arrays(c, rho, None, None, None, 1e6).unwrap();
 
         assert_eq!(medium.sound_speed[[0, 0, 0]], 1500.0);
         assert_eq!(medium.density[[0, 0, 0]], 1000.0);
         assert_eq!(medium.reference_frequency, 1e6);
+        // Default alpha_power is 1.0
+        assert_eq!(medium.alpha_power[[0, 0, 0]], 1.0);
     }
 
     #[test]
@@ -294,11 +298,15 @@ mod tests {
         let c = Array3::from_elem((10, 10, 10), 1500.0);
         let rho = Array3::from_elem((10, 10, 10), 1000.0);
         let alpha = Array3::from_elem((10, 10, 10), 0.5);
+        let yexp = Array3::from_elem((10, 10, 10), 1.5_f64);
         let ba = Array3::from_elem((10, 10, 10), 6.0);
 
-        let medium = HeterogeneousFactory::from_arrays(c, rho, Some(alpha), Some(ba), 1e6).unwrap();
+        let medium =
+            HeterogeneousFactory::from_arrays(c, rho, Some(alpha), Some(yexp), Some(ba), 1e6)
+                .unwrap();
 
         assert_eq!(medium.absorption[[0, 0, 0]], 0.5);
+        assert_eq!(medium.alpha_power[[0, 0, 0]], 1.5);
         assert_eq!(medium.nonlinearity[[0, 0, 0]], 6.0);
     }
 
@@ -311,12 +319,14 @@ mod tests {
             |_x, _y, _z| 1500.0,
             |_x, _y, _z| 1000.0,
             Some(Box::new(|_x, _y, z| if z > 0.005 { 0.5 } else { 0.0 })),
+            Some(Box::new(|_x, _y, _z| 1.5)), // alpha_power = 1.5
             None,
             1e6,
         );
 
         assert_eq!(medium.sound_speed[[0, 0, 0]], 1500.0);
         assert_eq!(medium.density[[0, 0, 0]], 1000.0);
+        assert_eq!(medium.alpha_power[[0, 0, 0]], 1.5);
     }
 
     #[test]

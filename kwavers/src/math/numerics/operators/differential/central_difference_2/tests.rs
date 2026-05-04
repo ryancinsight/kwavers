@@ -1,18 +1,64 @@
 use super::*;
+use crate::core::error::{KwaversError, NumericalError};
 use approx::assert_abs_diff_eq;
+
+fn assert_invalid_grid_spacing(
+    result: KwaversResult<CentralDifference2>,
+    dx: f64,
+    dy: f64,
+    dz: f64,
+) {
+    match result {
+        Err(KwaversError::Numerical(NumericalError::InvalidGridSpacing {
+            dx: actual_dx,
+            dy: actual_dy,
+            dz: actual_dz,
+        })) => {
+            assert_eq!(actual_dx.to_bits(), dx.to_bits());
+            assert_eq!(actual_dy.to_bits(), dy.to_bits());
+            assert_eq!(actual_dz.to_bits(), dz.to_bits());
+        }
+        Err(error) => panic!("expected invalid grid spacing, got {error:?}"),
+        Ok(_) => panic!("expected invalid grid spacing for ({dx}, {dy}, {dz})"),
+    }
+}
+
+fn assert_insufficient_grid_points<T>(
+    result: KwaversResult<T>,
+    required: usize,
+    actual: usize,
+    direction: &str,
+) {
+    match result {
+        Err(KwaversError::Numerical(NumericalError::InsufficientGridPoints {
+            required: actual_required,
+            actual: actual_points,
+            direction: actual_direction,
+        })) => {
+            assert_eq!(actual_required, required);
+            assert_eq!(actual_points, actual);
+            assert_eq!(actual_direction, direction);
+        }
+        Err(error) => panic!("expected insufficient grid points, got {error:?}"),
+        Ok(_) => panic!("expected insufficient grid points for {direction} direction"),
+    }
+}
 
 #[test]
 fn test_constructor_valid() {
-    let op = CentralDifference2::new(0.1, 0.1, 0.1);
-    assert!(op.is_ok());
+    let op = CentralDifference2::new(0.1, 0.2, 0.4).unwrap();
+    assert_eq!(op.order(), 2);
+    assert_eq!(op.stencil_width(), 3);
+    assert!(op.is_adjoint_consistent());
+    assert!(!op.is_conservative());
 }
 
 #[test]
 fn test_constructor_invalid_spacing() {
-    assert!(CentralDifference2::new(0.0, 0.1, 0.1).is_err());
-    assert!(CentralDifference2::new(-0.1, 0.1, 0.1).is_err());
-    assert!(CentralDifference2::new(0.1, 0.0, 0.1).is_err());
-    assert!(CentralDifference2::new(0.1, 0.1, -0.1).is_err());
+    assert_invalid_grid_spacing(CentralDifference2::new(0.0, 0.1, 0.1), 0.0, 0.1, 0.1);
+    assert_invalid_grid_spacing(CentralDifference2::new(-0.1, 0.1, 0.1), -0.1, 0.1, 0.1);
+    assert_invalid_grid_spacing(CentralDifference2::new(0.1, 0.0, 0.1), 0.1, 0.0, 0.1);
+    assert_invalid_grid_spacing(CentralDifference2::new(0.1, 0.1, -0.1), 0.1, 0.1, -0.1);
 }
 
 #[test]
@@ -32,6 +78,9 @@ fn test_apply_x_linear_function() {
     }
 
     let grad_x = op.apply_x(field.view()).unwrap();
+
+    assert_abs_diff_eq!(grad_x[[0, 0, 0]], 2.0, epsilon = 1e-10);
+    assert_abs_diff_eq!(grad_x[[9, 0, 0]], 2.0, epsilon = 1e-10);
 
     // Check interior points (exact for linear functions)
     for i in 1..9 {
@@ -59,6 +108,9 @@ fn test_apply_y_linear_function() {
 
     let grad_y = op.apply_y(field.view()).unwrap();
 
+    assert_abs_diff_eq!(grad_y[[0, 0, 0]], 3.0, epsilon = 1e-10);
+    assert_abs_diff_eq!(grad_y[[0, 9, 0]], 3.0, epsilon = 1e-10);
+
     for i in 0..5 {
         for j in 1..9 {
             for k in 0..5 {
@@ -83,6 +135,9 @@ fn test_apply_z_linear_function() {
     }
 
     let grad_z = op.apply_z(field.view()).unwrap();
+
+    assert_abs_diff_eq!(grad_z[[0, 0, 0]], 4.0, epsilon = 1e-10);
+    assert_abs_diff_eq!(grad_z[[0, 0, 9]], 4.0, epsilon = 1e-10);
 
     for i in 0..5 {
         for j in 0..5 {
@@ -121,9 +176,9 @@ fn test_insufficient_grid_points() {
     let field_y = Array3::zeros((10, 2, 10));
     let field_z = Array3::zeros((10, 10, 2));
 
-    assert!(op.apply_x(field_x.view()).is_err());
-    assert!(op.apply_y(field_y.view()).is_err());
-    assert!(op.apply_z(field_z.view()).is_err());
+    assert_insufficient_grid_points(op.apply_x(field_x.view()), 3, 2, "X");
+    assert_insufficient_grid_points(op.apply_y(field_y.view()), 3, 2, "Y");
+    assert_insufficient_grid_points(op.apply_z(field_z.view()), 3, 2, "Z");
 }
 
 #[test]

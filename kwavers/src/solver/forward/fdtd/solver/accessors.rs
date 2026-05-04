@@ -2,7 +2,7 @@
 //! metrics access/merge, sensor data extraction, orchestrated run loop.
 
 use log::info;
-use ndarray::Array3;
+use ndarray::{Array3, ArrayView2};
 use std::sync::Arc;
 
 use super::{FdtdGpuAccelerator, FdtdMetrics, GenericFdtdSolver};
@@ -58,6 +58,18 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// Returns None if no sensors are configured or no data has been recorded
     pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
+    }
+
+    /// Borrow the full allocated recorded sensor buffer without cloning.
+    #[must_use]
+    pub fn recorded_sensor_data_view(&self) -> Option<ArrayView2<'_, f64>> {
+        self.sensor_recorder.pressure_data_view()
+    }
+
+    /// Borrow only populated recorded sensor samples without cloning.
+    #[must_use]
+    pub fn recorded_sensor_prefix_view(&self) -> Option<ArrayView2<'_, f64>> {
+        self.sensor_recorder.recorded_pressure_view()
     }
 
     pub fn run_orchestrated(

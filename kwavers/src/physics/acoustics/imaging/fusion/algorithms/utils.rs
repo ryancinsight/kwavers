@@ -1,4 +1,74 @@
+use super::MultiModalFusion;
+use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::imaging::fusion::AffineTransform;
+use crate::physics::acoustics::imaging::fusion::types::RegisteredModality;
 use ndarray::ArrayView3;
+use std::collections::HashMap;
+
+pub(crate) fn sorted_modalities(
+    fusion: &MultiModalFusion,
+) -> KwaversResult<Vec<(&str, &RegisteredModality)>> {
+    let mut modality_names: Vec<&String> = fusion.registered_data.keys().collect();
+    modality_names.sort();
+
+    modality_names
+        .into_iter()
+        .map(|name| {
+            fusion
+                .registered_data
+                .get(name)
+                .map(|modality| (name.as_str(), modality))
+                .ok_or_else(|| KwaversError::InvalidInput(format!("Modality {name} missing")))
+        })
+        .collect()
+}
+
+pub(crate) fn common_registered_dims(
+    modalities: &[(&str, &RegisteredModality)],
+    algorithm_name: &str,
+) -> KwaversResult<(usize, usize, usize)> {
+    let (reference_name, reference) = modalities.first().ok_or_else(|| {
+        KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
+            message: format!("{algorithm_name} requires at least one registered modality"),
+        })
+    })?;
+    let dims = reference.data.dim();
+
+    if dims.0 == 0 || dims.1 == 0 || dims.2 == 0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "{algorithm_name} requires non-empty registered volumes; modality {reference_name} has {dims:?}"
+        )));
+    }
+
+    for (name, modality) in modalities {
+        if modality.data.dim() != dims {
+            return Err(KwaversError::DimensionMismatch(format!(
+                "{algorithm_name} requires identical registered dimensions; reference {dims:?}, modality {name} has {:?}",
+                modality.data.dim()
+            )));
+        }
+    }
+
+    Ok(dims)
+}
+
+pub(crate) fn modality_quality_map(
+    modalities: &[(&str, &RegisteredModality)],
+) -> HashMap<String, f64> {
+    modalities
+        .iter()
+        .map(|(name, modality)| ((*name).to_string(), modality.quality_score))
+        .collect()
+}
+
+pub(crate) fn identity_registration_transforms(
+    modalities: &[(&str, &RegisteredModality)],
+) -> HashMap<String, AffineTransform> {
+    modalities
+        .iter()
+        .map(|(name, _)| ((*name).to_string(), AffineTransform::identity()))
+        .collect()
+}
 
 /// Compute robust normalization bounds (1st and 99th percentiles)
 pub(crate) fn compute_robust_bounds(data: ArrayView3<'_, f64>) -> (f64, f64) {

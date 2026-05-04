@@ -1,4 +1,5 @@
 use crate::analysis::signal_processing::localization::model_order::ModelOrderCriterion;
+use crate::analysis::signal_processing::localization::{LocalizationConfig, LocalizationProcessor};
 use ndarray::Array2;
 use num_complex::Complex;
 
@@ -118,4 +119,53 @@ fn test_music_automatic_source_detection() {
 
     let result = processor.run(&snapshots);
     assert!(result.is_ok());
+}
+
+#[test]
+fn music_trait_localize_uses_time_delay_physics() {
+    let c = 1500.0;
+    let sensor_positions = vec![
+        [0.01, 0.0, 0.0],
+        [-0.01, 0.0, 0.0],
+        [0.0, 0.01, 0.0],
+        [0.0, 0.0, 0.01],
+    ];
+    let source = [0.002, 0.003, 0.004];
+    let arrival_times: Vec<f64> = sensor_positions
+        .iter()
+        .map(|sensor| {
+            let dx = source[0] - sensor[0];
+            let dy = source[1] - sensor[1];
+            let dz = source[2] - sensor[2];
+            let squared_distance: f64 = dx * dx + dy * dy + dz * dz;
+            squared_distance.sqrt() / c
+        })
+        .collect();
+
+    let localization_config = LocalizationConfig::new(sensor_positions.clone(), 40.0e6, c);
+    let music_config = MUSICConfig::new(localization_config, Some(1));
+    let processor = MUSICProcessor::new(&music_config).unwrap();
+
+    let result = processor
+        .localize(&arrival_times, &sensor_positions)
+        .unwrap();
+
+    for axis in 0..3 {
+        assert!((result.position[axis] - source[axis]).abs() < 1e-4);
+    }
+    assert!(result.confidence > 0.0);
+    assert!(result.uncertainty < 1e-4);
+}
+
+#[test]
+fn music_trait_localize_rejects_delay_sensor_count_mismatch() {
+    let processor = MUSICProcessor::new(&MUSICConfig::default()).unwrap();
+    let error = processor
+        .localize(
+            &[0.0],
+            &[[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]],
+        )
+        .unwrap_err();
+
+    assert!(format!("{error}").contains("one arrival time per sensor"));
 }

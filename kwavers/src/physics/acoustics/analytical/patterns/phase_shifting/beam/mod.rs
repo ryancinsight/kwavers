@@ -44,9 +44,12 @@ impl BeamSteering {
 
     /// Set steering angles (azimuth and elevation in degrees)
     pub fn set_steering_angles(&mut self, azimuth: f64, elevation: f64) -> KwaversResult<()> {
-        if azimuth.abs() > MAX_STEERING_ANGLE || elevation.abs() > MAX_STEERING_ANGLE {
+        if azimuth.to_radians().abs() > MAX_STEERING_ANGLE
+            || elevation.to_radians().abs() > MAX_STEERING_ANGLE
+        {
             return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Steering angles exceed maximum of {MAX_STEERING_ANGLE} degrees"
+                "Steering angles exceed maximum of {} degrees",
+                MAX_STEERING_ANGLE.to_degrees()
             )));
         }
 
@@ -135,5 +138,41 @@ impl BeamSteering {
         }
 
         (sum_real.powi(2) + sum_imag.powi(2)).sqrt() / self.element_positions.nrows() as f64
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use ndarray::arr2;
+
+    fn linear_array() -> Array2<f64> {
+        arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])
+    }
+
+    #[test]
+    fn steering_accepts_documented_sixty_degree_bound() {
+        let mut steering = BeamSteering::new(linear_array(), 1.0e6);
+
+        steering.set_steering_angles(60.0, 0.0).unwrap();
+
+        let wavelength = calculate_wavelength(1.0e6, SPEED_OF_SOUND);
+        let k = 2.0 * PI / wavelength;
+        let expected_left = wrap_phase(-k * -0.001 * 60.0_f64.to_radians().sin());
+        let phases = steering.get_phase_distribution();
+
+        assert_relative_eq!(phases[0], expected_left, epsilon = 1.0e-12);
+        assert_relative_eq!(phases[1], 0.0, epsilon = 1.0e-12);
+        assert_relative_eq!(phases[2], wrap_phase(-expected_left), epsilon = 1.0e-12);
+    }
+
+    #[test]
+    fn steering_rejects_angles_above_documented_bound() {
+        let mut steering = BeamSteering::new(linear_array(), 1.0e6);
+
+        let error = steering.set_steering_angles(61.0, 0.0).unwrap_err();
+
+        assert!(format!("{error}").contains("Steering angles exceed maximum"));
     }
 }

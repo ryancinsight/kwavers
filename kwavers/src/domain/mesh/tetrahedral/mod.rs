@@ -17,7 +17,9 @@
 //! - Shewchuk (1996): "Triangle: Engineering a 2D quality mesh generator"
 //! - Si (2015): "TetGen: A quality tetrahedral mesh generator"
 
+pub mod gaia;
 pub mod mesh;
+pub mod structured;
 #[cfg(test)]
 mod tests;
 pub mod types;

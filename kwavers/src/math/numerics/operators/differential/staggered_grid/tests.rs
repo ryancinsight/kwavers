@@ -1,16 +1,67 @@
 use super::operator::StaggeredGridOperator;
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 
+fn assert_invalid_grid_spacing(
+    result: KwaversResult<StaggeredGridOperator>,
+    dx: f64,
+    dy: f64,
+    dz: f64,
+) {
+    match result {
+        Err(KwaversError::Numerical(NumericalError::InvalidGridSpacing {
+            dx: actual_dx,
+            dy: actual_dy,
+            dz: actual_dz,
+        })) => {
+            assert_eq!(actual_dx.to_bits(), dx.to_bits());
+            assert_eq!(actual_dy.to_bits(), dy.to_bits());
+            assert_eq!(actual_dz.to_bits(), dz.to_bits());
+        }
+        Err(error) => panic!("expected invalid grid spacing, got {error:?}"),
+        Ok(_) => panic!("expected invalid grid spacing for ({dx}, {dy}, {dz})"),
+    }
+}
+
+fn assert_insufficient_grid_points<T>(
+    result: KwaversResult<T>,
+    required: usize,
+    actual: usize,
+    direction: &str,
+) {
+    match result {
+        Err(KwaversError::Numerical(NumericalError::InsufficientGridPoints {
+            required: actual_required,
+            actual: actual_points,
+            direction: actual_direction,
+        })) => {
+            assert_eq!(actual_required, required);
+            assert_eq!(actual_points, actual);
+            assert_eq!(actual_direction, direction);
+        }
+        Err(error) => panic!("expected insufficient grid points, got {error:?}"),
+        Ok(_) => panic!("expected insufficient grid points for {direction} direction"),
+    }
+}
+
 #[test]
 fn test_constructor_valid() {
-    assert!(StaggeredGridOperator::new(0.1, 0.1, 0.1).is_ok());
+    use crate::math::numerics::operators::differential::DifferentialOperator;
+
+    let op = StaggeredGridOperator::new(0.1, 0.2, 0.4).unwrap();
+    assert_eq!(op.order(), 2);
+    assert_eq!(op.stencil_width(), 2);
+    assert!(op.is_conservative());
+    assert!(op.is_adjoint_consistent());
 }
 
 #[test]
 fn test_constructor_invalid_spacing() {
-    assert!(StaggeredGridOperator::new(0.0, 0.1, 0.1).is_err());
-    assert!(StaggeredGridOperator::new(-0.1, 0.1, 0.1).is_err());
+    assert_invalid_grid_spacing(StaggeredGridOperator::new(0.0, 0.1, 0.1), 0.0, 0.1, 0.1);
+    assert_invalid_grid_spacing(StaggeredGridOperator::new(-0.1, 0.1, 0.1), -0.1, 0.1, 0.1);
+    assert_invalid_grid_spacing(StaggeredGridOperator::new(0.1, 0.0, 0.1), 0.1, 0.0, 0.1);
+    assert_invalid_grid_spacing(StaggeredGridOperator::new(0.1, 0.1, -0.1), 0.1, 0.1, -0.1);
 }
 
 #[test]
@@ -84,9 +135,15 @@ fn test_constant_field_has_zero_derivative() {
 #[test]
 fn test_insufficient_grid_points() {
     let op = StaggeredGridOperator::new(0.1, 0.1, 0.1).unwrap();
-    let field = Array3::zeros((1, 10, 10));
-    assert!(op.apply_forward_x(field.view()).is_err());
-    assert!(op.apply_backward_x(field.view()).is_err());
+    let field_x = Array3::zeros((1, 10, 10));
+    let field_y = Array3::zeros((10, 1, 10));
+    let field_z = Array3::zeros((10, 10, 1));
+    assert_insufficient_grid_points(op.apply_forward_x(field_x.view()), 2, 1, "X");
+    assert_insufficient_grid_points(op.apply_backward_x(field_x.view()), 2, 1, "X");
+    assert_insufficient_grid_points(op.apply_forward_y(field_y.view()), 2, 1, "Y");
+    assert_insufficient_grid_points(op.apply_backward_y(field_y.view()), 2, 1, "Y");
+    assert_insufficient_grid_points(op.apply_forward_z(field_z.view()), 2, 1, "Z");
+    assert_insufficient_grid_points(op.apply_backward_z(field_z.view()), 2, 1, "Z");
 }
 
 #[test]
@@ -232,5 +289,5 @@ fn test_forward_into_x_insufficient_points() {
     let op = StaggeredGridOperator::new(0.1, 0.1, 0.1).unwrap();
     let field = Array3::<f64>::zeros((1, 4, 4));
     let mut dst = Array3::<f64>::zeros((0, 4, 4));
-    assert!(op.apply_forward_x_into(field.view(), &mut dst).is_err());
+    assert_insufficient_grid_points(op.apply_forward_x_into(field.view(), &mut dst), 2, 1, "X");
 }

@@ -46,9 +46,10 @@ impl DynamicFocusing {
     pub fn set_focal_point(&mut self, x: f64, y: f64, z: f64) -> KwaversResult<()> {
         let focal_distance = (x * x + y * y + z * z).sqrt();
 
-        if focal_distance < MIN_FOCAL_DISTANCE / 1000.0 {
+        if focal_distance < MIN_FOCAL_DISTANCE {
             return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"
+                "Focal distance below minimum of {} mm",
+                MIN_FOCAL_DISTANCE * 1000.0
             )));
         }
 
@@ -67,9 +68,10 @@ impl DynamicFocusing {
 
         for point in &points {
             let focal_distance = (point[0].powi(2) + point[1].powi(2) + point[2].powi(2)).sqrt();
-            if focal_distance < MIN_FOCAL_DISTANCE / 1000.0 {
+            if focal_distance < MIN_FOCAL_DISTANCE {
                 return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                    "Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"
+                    "Focal distance below minimum of {} mm",
+                    MIN_FOCAL_DISTANCE * 1000.0
                 )));
             }
         }
@@ -183,6 +185,41 @@ impl DynamicFocusing {
         }
 
         (sum_real.powi(2) + sum_imag.powi(2)) / self.element_positions.nrows() as f64
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use ndarray::arr2;
+
+    fn linear_array() -> Array2<f64> {
+        arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])
+    }
+
+    #[test]
+    fn focusing_accepts_documented_one_millimeter_bound() {
+        let mut focusing = DynamicFocusing::new(linear_array(), 1.0e6);
+
+        focusing.set_focal_point(0.0, 0.0, 0.001).unwrap();
+
+        let phases = focusing.get_phase_distribution();
+        assert_relative_eq!(phases[1], 0.0, epsilon = 1.0e-12);
+        assert_relative_eq!(phases[0], phases[2], epsilon = 1.0e-12);
+    }
+
+    #[test]
+    fn focusing_rejects_sub_millimeter_single_and_multiple_points() {
+        let mut focusing = DynamicFocusing::new(linear_array(), 1.0e6);
+
+        let single_error = focusing.set_focal_point(0.0, 0.0, 0.0005).unwrap_err();
+        assert!(format!("{single_error}").contains("1"));
+
+        let multi_error = focusing
+            .set_multiple_focal_points(vec![[0.0, 0.0, 0.001], [0.0, 0.0, 0.0005]])
+            .unwrap_err();
+        assert!(format!("{multi_error}").contains("1"));
     }
 }
 

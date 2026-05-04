@@ -5,9 +5,9 @@
 
 mod kspace;
 
-use super::super::super::{GpuPstdSolver, PstdParams};
-use super::super::bgl::{build_bgl_absorb, build_bgl_fields, build_bgl_kspace, build_bgl_sensor};
-use super::super::bind_groups::{build_bg_absorb, build_bg_fields, build_bg_kspace};
+use super::super::{GpuPstdSolver, PstdParams};
+use super::bgl::{build_bgl_absorb, build_bgl_fields, build_bgl_kspace, build_bgl_sensor};
+use super::bind_groups::{build_bg_absorb, build_bg_fields, build_bg_kspace};
 use crate::domain::grid::Grid;
 use kspace::precompute_kspace_shifts;
 use std::f64::consts::PI;

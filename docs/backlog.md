@@ -2,11 +2,31 @@
 
 ## SSOT for Tasks, Priorities, Risks, Dependencies, and Retrospectives
 
-**Status**: SPRINT 218 - SESSION 1 COMPLETE - PSTD FIX VERIFIED
-**Last Updated**: 2026-02-05 (Sprint 218 Session 1 Complete)
-**Architecture Compliance**: ✅ Clean architecture maintained - unidirectional dependencies enforced
-**Quality Grade**: A+ (100%) - Mathematical verification complete with 2040/2040 tests passing
-**Current Sprint Phase**: PSTD Source Amplification Fix Complete - Ready for k-Wave Validation
+**Status**: CURRENT — k-Wave parity compare suite complete
+**Last Updated**: 2026-05-04
+**Architecture Compliance**: ✅ Clean architecture maintained
+**Quality Grade**: A+ — 2709/2709 tests passing (kwavers lib)
+**Current Phase**: Closure — all k-wave-python examples covered; GPU absorption gap open
+
+### Priority backlog (ordered: correctness → architecture → missing tests → docs)
+
+#### P0 — Correctness
+- [ ] GPU PSTD: port fractional-Laplacian absorption (Treeby & Cox 2010 Eq. 9-10) [minor]
+  Spec: `project_gpu_frac_laplacian_absorption.md`; CPU PSTD already correct.
+
+#### P1 — Validation
+- [ ] Axisymmetric compare: validate WSWA-FFT AS + FDTD cylindrical vs k-wave-python AS [patch]
+- [ ] SD directivity 3D compare: warm-up cache on first run (11 × 64³ PSTD) [patch]
+
+#### P2 — Architecture / API
+- [ ] cargo-semver-checks: audit new public surface since Sprint 218 [patch]
+  Added: from_velocity_mask, checkpointing API, set_pml_alpha_xyz, axisymmetric flag.
+
+#### P3 — Documentation
+- [ ] CHANGELOG.md: record post-Sprint-218 deliverables in chronological order [patch]
+- [ ] Update docs/checklist.md open-items section after each session [patch]
+
+---
 
 ---
 

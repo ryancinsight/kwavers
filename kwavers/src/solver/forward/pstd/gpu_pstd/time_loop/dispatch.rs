@@ -31,8 +31,8 @@ impl GpuPstdSolver {
 
     /// Encode a dispatch that also binds the absorption group(3) (4-group layout).
     ///
-    /// Used by fractional-Laplacian absorption shaders.  group(2) is set as a
-    /// placeholder; absorption shaders do not read it.
+    /// Used by fractional-Laplacian absorption shaders. The shared pipeline
+    /// layout still requires group(2); the absorption kernels do not read it.
     #[inline]
     pub(super) fn dispatch_absorb(
         &self,

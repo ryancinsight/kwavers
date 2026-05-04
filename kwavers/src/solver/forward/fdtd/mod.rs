@@ -130,14 +130,56 @@ mod tests {
 
     #[test]
     fn test_finite_difference_coefficients() {
-        let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0).unwrap();
-        let config = FdtdConfig::default();
-        let medium = crate::domain::medium::HomogeneousMedium::water(&grid);
-        let source = crate::domain::source::GridSource::default();
-        let solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
+        // Theorem (4th-order central difference accuracy):
+        // For f(x) = sin(k·x) with k = 2π/L and L = n·dx, the 4th-order
+        // interior stencil (-f[i+2]+8f[i+1]-8f[i-1]+f[i-2])/(12Δx) approximates
+        // ∂f/∂x = k·cos(k·x) with error O(k⁵Δx⁴/30).
+        // At 32 ppw (nx=32, dx=1.0, k=2π/32≈0.196): truncation error < 2e-6 per point.
+        //
+        // Analytical reference: Fornberg (1988) Tables of FD weights.
+        use crate::math::numerics::operators::{CentralDifference4, DifferentialOperator};
+        use ndarray::Array3;
+        use std::f64::consts::PI;
 
-        // Check that solver was created successfully with default config
-        assert_eq!(solver.config.spatial_order, 4);
+        let nx = 32usize;
+        let dx = 1.0_f64;
+        let k = 2.0 * PI / (nx as f64 * dx); // 1 full period across domain
+
+        let op = CentralDifference4::new(dx, dx, dx).unwrap();
+
+        // Build f(x) = sin(k·x) on a 1D-embedded 3D array (ny=nz=1)
+        let mut field = Array3::<f64>::zeros((nx, 1, 1));
+        for i in 0..nx {
+            field[[i, 0, 0]] = (k * i as f64 * dx).sin();
+        }
+
+        let deriv = op.apply_x(field.view()).unwrap();
+
+        // Compute RMS error at interior points [2, nx-3] against k·cos(k·x)
+        let mut rms_sq = 0.0_f64;
+        let n_interior = (nx - 4) as f64;
+        for i in 2..nx - 2 {
+            let analytical = k * (k * i as f64 * dx).cos();
+            let numerical = deriv[[i, 0, 0]];
+            let err = numerical - analytical;
+            rms_sq += err * err;
+        }
+        let rms = (rms_sq / n_interior).sqrt();
+
+        // 4th-order: error ~ k⁵·Δx⁴/30. With k≈0.196, k⁵≈2.9e-4, /30 → ~1e-5.
+        // Generous tolerance of 1e-4 to accommodate boundary treatment effects.
+        assert!(
+            rms < 1e-4,
+            "4th-order CD RMS derivative error {rms:.3e} > 1e-4; stencil coefficients incorrect"
+        );
+
+        // Also verify the analytical error bound: stencil width must be 5 per Fornberg
+        assert_eq!(
+            op.stencil_width(),
+            5,
+            "4th-order stencil must be 5 points wide"
+        );
+        assert_eq!(op.order(), 4, "operator order must be 4");
     }
 
     #[test]

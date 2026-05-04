@@ -131,7 +131,7 @@ impl FunctionalUltrasoundGPS {
             .registration
             .affine_registration_mutual_info(
                 image,
-                &self.atlas.reference_image(),
+                self.atlas.reference_image_ref(),
                 &initial_transform,
             )
             .map_err(|e| {

@@ -6,6 +6,7 @@ use crate::physics::optics::monte_carlo::config::SimulationConfig;
 use crate::physics::optics::monte_carlo::photon::Photon;
 use crate::physics::optics::monte_carlo::utils::*;
 use rand::Rng;
+use rand::SeedableRng;
 
 #[test]
 fn test_normalize() {
@@ -104,21 +105,61 @@ fn test_scatter_photon_isotropic() {
     assert!((len - 1.0).abs() < 1e-6);
 }
 
+/// Henyey-Greenstein mean-cosine property.
+///
+/// **Theorem (Henyey & Greenstein 1941, §2):**
+/// For the HG phase function with anisotropy parameter `g ∈ (−1, 1)`,
+/// the expected cosine of the scattering angle satisfies
+///
+/// ```text
+///   E[cos θ] = g
+/// ```
+///
+/// For a photon initially propagating along +z, the new z-component equals
+/// `cos θ` exactly (the perpendicular basis vectors are both in the xy plane).
+///
+/// **Statistical bound:**  With N = 10 000 samples,
+/// `Var[cos θ] ≤ 1 − g² = 0.19` (first and second moments of HG), so
+/// `σ[mean] ≤ √(0.19/10000) ≈ 0.0044`.  Asserting `|mean − g| < 0.05`
+/// provides a >11σ margin — guaranteed to pass for any seeded RNG.
+///
+/// The test uses a fixed ChaCha8 seed so it is deterministic across
+/// platforms and compiler versions.
 #[test]
-fn test_scatter_photon_forward() {
-    let mut rng = rand::thread_rng();
-    let mut photon = Photon {
-        position: [0.0, 0.0, 0.0],
-        direction: [0.0, 0.0, 1.0],
-        weight: 1.0,
-        alive: true,
-    };
+fn test_scatter_photon_forward_hg_mean_cosine() {
+    const G: f64 = 0.9;
+    const N: usize = 10_000;
+    // Analytical tolerance: >11σ margin from CLT bound.
+    const TOL: f64 = 0.05;
 
-    // High g -> forward scattering
-    scatter_photon(&mut photon, 0.9, &mut rng);
+    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
+    let mut mean_cos_theta = 0.0;
 
-    // Direction should still be mostly forward (z > 0)
-    assert!(photon.direction[2] > 0.0);
+    for _ in 0..N {
+        let mut photon = Photon {
+            position: [0.0, 0.0, 0.0],
+            direction: [0.0, 0.0, 1.0],
+            weight: 1.0,
+            alive: true,
+        };
+        scatter_photon(&mut photon, G, &mut rng);
+        // For initial direction [0,0,1], perp1 and perp2 lie in the xy plane,
+        // so new_dir[2] = cos_theta exactly.
+        mean_cos_theta += photon.direction[2];
+
+        // Deterministic property: direction remains a unit vector.
+        let len = photon.direction.iter().map(|v| v * v).sum::<f64>().sqrt();
+        assert!(
+            (len - 1.0).abs() < 1e-10,
+            "direction not unit-length: {len}"
+        );
+    }
+    mean_cos_theta /= N as f64;
+
+    assert!(
+        (mean_cos_theta - G).abs() < TOL,
+        "HG mean cos θ = {mean_cos_theta:.4}, expected g = {G} (tol = {TOL})"
+    );
 }
 
 /// `photon_step_to_boundary` — slab-method boundary distance at voxel centre.

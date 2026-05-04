@@ -1,0 +1,41 @@
+//! `FemHelmholtzBackend` construction and state.
+
+use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
+use crate::solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemHelmholtzSolver};
+use num_complex::Complex64;
+
+/// Frequency-domain acoustic backend backed by P1 tetrahedral FEM.
+#[derive(Debug)]
+pub struct FemHelmholtzBackend<'a> {
+    pub(super) solver: FemHelmholtzSolver,
+    pub(super) medium: &'a dyn Medium,
+    pub(super) pending_nodal_loads: Vec<(usize, Complex64)>,
+    pub(super) wavenumber: f64,
+}
+
+impl<'a> FemHelmholtzBackend<'a> {
+    /// Construct a FEM Helmholtz backend from a structured Cartesian vertex grid.
+    pub fn from_grid(
+        grid: &Grid,
+        medium: &'a dyn Medium,
+        config: FemHelmholtzConfig,
+    ) -> KwaversResult<Self> {
+        if !config.wavenumber.is_finite() || config.wavenumber < 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "FEM Helmholtz wavenumber must be finite and non-negative, got {}",
+                config.wavenumber
+            )));
+        }
+
+        let wavenumber = config.wavenumber;
+        let solver = FemHelmholtzSolver::from_grid(config, grid)?;
+        Ok(Self {
+            solver,
+            medium,
+            pending_nodal_loads: Vec::new(),
+            wavenumber,
+        })
+    }
+}

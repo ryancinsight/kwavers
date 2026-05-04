@@ -86,27 +86,30 @@ impl PSTDSolver {
         // Using only one application (pre or post) produces incorrect amplitude.
         self.apply_pml_to_velocity()?; // pre: pml * u_old
 
-        // Transform pressure to k-space
-        self.fft.forward_into(&self.fields.p, &mut self.p_k);
+        // nz_c: half-spectrum z-length (nz/2+1); p_k/grad_k have shape (nx, ny, nz_c).
+        let nz_c = self.p_k.dim().2;
+
+        // R2C forward: real pressure (nx,ny,nz) → half-spectrum (nx,ny,nz_c).
+        self.fft.forward_r2c_into(&self.fields.p, &mut self.p_k);
 
         // Compute pressure gradients in k-space with staggered grid shifts.
         // k-wave uses ddx_k_shift_pos for pressure→velocity (positive shift).
         // grad_k is reused sequentially for each axis; p_k is read-only throughout.
-        // Three passes over p_k/kappa trade marginal cache bandwidth for 2 × N³ × 16 B
-        // of memory saved by eliminating grad_y_k and grad_z_k.
+        // kappa is sliced to (nx, ny, nz_c) — only non-negative kz values appear in
+        // the r2c half-spectrum; kappa is symmetric under kz sign flip (|k|² invariant).
 
         // X-direction
         {
             let ddx = self.ddx_k_shift_pos.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.p_k.view())
-                .and(self.kappa.view())
+                .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(i, _j, _k), gk, &p_val, &kap| {
                     *gk = ddx[i] * Complex64::new(kap, 0.0) * p_val;
                 });
         }
         self.fft
-            .inverse_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+            .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
         Zip::from(&mut self.fields.ux)
             .and(&self.dpx)
             .and(&self.materials.rho0)
@@ -120,12 +123,12 @@ impl PSTDSolver {
             let ddy = self.ddy_k_shift_pos.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.p_k.view())
-                .and(self.kappa.view())
+                .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
                     *gk = ddy[j] * Complex64::new(kap, 0.0) * p_val;
                 });
             self.fft
-                .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
+                .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
             Zip::from(&mut self.fields.uy)
                 .and(&self.dpy)
                 .and(&self.materials.rho0)
@@ -136,16 +139,17 @@ impl PSTDSolver {
 
         // Z-direction. A singleton z-axis has only the zero wavenumber, hence
         // dp/dz is identically zero under the periodic spectral derivative.
+        // ddz has length nz_c (truncated in construction); k ∈ [0, nz_c) from grad_k.
         if has_z {
             let ddz = self.ddz_k_shift_pos.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.p_k.view())
-                .and(self.kappa.view())
+                .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
                     *gk = ddz[k] * Complex64::new(kap, 0.0) * p_val;
                 });
             self.fft
-                .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
+                .inverse_c2r_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
             Zip::from(&mut self.fields.uz)
                 .and(&self.dpz)
                 .and(&self.materials.rho0)

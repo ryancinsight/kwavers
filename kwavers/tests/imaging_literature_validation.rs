@@ -39,7 +39,11 @@
 //! Energy balance at interface couples thermal diffusion and mechanics.
 //! Reference: Keller & Miksis (1980) DOI: 10.1121/1.389891
 
+use plotters::prelude::*;
 use std::f64::consts::PI;
+
+/// Output directory for comparison figures.
+const FIGURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/test-figures");
 
 /// Tolerances from Sprint 222 specification
 const PAI_TOLERANCE: f64 = 0.05; // 5% for photoacoustic
@@ -260,6 +264,9 @@ mod photoacoustic_tests {
     /// Test 4: Optical absorption coefficient ranges
     ///
     /// From Treeby (2010): μₐ = 0.1-50 cm⁻¹ for tissues at 500-1000nm
+    ///
+    /// Figure: `test-figures/tissue_absorption_ranges.png` — literature μₐ ranges
+    /// for four tissue types at 750 nm.
     #[test]
     fn test_absorption_coefficient_ranges() {
         let ranges: Vec<(&str, f64, f64)> = vec![
@@ -269,7 +276,7 @@ mod photoacoustic_tests {
             ("Fat (750nm)", 0.05, 0.2),   // cm⁻¹
         ];
 
-        for (tissue, min_cm, max_cm) in ranges {
+        for (tissue, min_cm, max_cm) in &ranges {
             let min_m = min_cm * 100.0; // m⁻¹
             let max_m = max_cm * 100.0; // m⁻¹
 
@@ -283,8 +290,12 @@ mod photoacoustic_tests {
                 test_value / 100.0
             );
 
-            // Validate ranges
             assert!(test_value >= min_m && test_value <= max_m);
+        }
+
+        // Generate absorption ranges figure (ranges in cm⁻¹).
+        if let Err(e) = save_absorption_ranges_figure(&ranges) {
+            eprintln!("  [warn] absorption figure generation failed: {}", e);
         }
     }
 }
@@ -378,6 +389,9 @@ mod arfi_tests {
     /// Test 7: Shear wave speed for various tissues
     ///
     /// From Pinton (2009) and Chen (2004)
+    ///
+    /// Figure: `test-figures/elastography_shear_speed.png` — computed vs expected
+    /// cₛ for Breast, Liver, Muscle, and Fat.
     #[test]
     fn test_shear_wave_speed_various_tissues() {
         let cases: Vec<(&str, f64, f64, f64)> = vec![
@@ -388,8 +402,10 @@ mod arfi_tests {
             ("Fat", 800.0, 950.0, 0.92),
         ];
 
-        for (tissue, mu, rho, expected) in cases {
-            let cs = shear_wave_speed(mu, rho);
+        let mut figure_data: Vec<(&str, f64, f64)> = Vec::new();
+
+        for (tissue, mu, rho, expected) in &cases {
+            let cs = shear_wave_speed(*mu, *rho);
             let error = ((cs - expected) / expected).abs();
 
             println!(
@@ -402,8 +418,13 @@ mod arfi_tests {
                 error * 100.0
             );
 
-            // Within 10% of expected
+            figure_data.push((tissue, cs, *expected));
             assert!(error < 0.10, "{} shear speed error too high", tissue);
+        }
+
+        // Generate shear wave speed comparison figure.
+        if let Err(e) = save_shear_wave_figure(&figure_data) {
+            eprintln!("  [warn] shear wave figure generation failed: {}", e);
         }
     }
 
@@ -797,6 +818,363 @@ fn pa_back_project(
     p0_recon
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Figure helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Save the photoacoustic back-projection reconstruction profile.
+///
+/// Shows normalised p₀_recon(r) vs radial position. The reconstructed peak at
+/// r ≈ 0 confirms that the delay-and-sum integrates coherently at the absorber
+/// location and destructively elsewhere. SNR is annotated on the figure.
+fn save_pa_reconstruction_figure(
+    r_mm: &[f64],
+    p0_norm: &[f64],
+    snr_db: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    std::fs::create_dir_all(FIGURE_DIR)?;
+    let path = format!("{}/pa_reconstruction.png", FIGURE_DIR);
+
+    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let r_min = r_mm.first().copied().unwrap_or(-5.0);
+    let r_max = r_mm.last().copied().unwrap_or(5.0);
+    let p_max = p0_norm.iter().cloned().fold(0.0_f64, f64::max).max(0.05);
+    let p_min = p0_norm.iter().cloned().fold(0.0_f64, f64::min).min(-0.05);
+
+    let caption = format!(
+        "PA Back-Projection Reconstruction — 128 Sensors, R = 30 mm   SNR = {:.1} dB",
+        snr_db
+    );
+    let mut chart = ChartBuilder::on(&root)
+        .caption(caption, ("sans-serif", 15).into_font())
+        .margin(20)
+        .x_label_area_size(36)
+        .y_label_area_size(60)
+        .build_cartesian_2d(r_min..r_max, p_min * 1.1..p_max * 1.15)?;
+
+    chart
+        .configure_mesh()
+        .x_desc("Radial position (mm)")
+        .y_desc("p₀_recon / A  (normalised)")
+        .x_labels(11)
+        .y_labels(6)
+        .draw()?;
+
+    // True source position marker (r = 0).
+    chart.draw_series(std::iter::once(PathElement::new(
+        vec![(0.0, p_min * 1.05), (0.0, p_max * 1.05)],
+        ShapeStyle::from(&RED).stroke_width(1),
+    )))?;
+
+    // Reconstruction profile.
+    chart
+        .draw_series(LineSeries::new(
+            r_mm.iter().zip(p0_norm.iter()).map(|(&r, &p)| (r, p)),
+            ShapeStyle::from(&BLUE).stroke_width(2),
+        ))?
+        .label("p₀_recon(r)  [PSTD delay-and-sum]")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+
+    chart
+        .draw_series(std::iter::once(PathElement::new(
+            vec![(0.0, p_min * 1.05), (0.0, p_max * 1.05)],
+            ShapeStyle::from(&RED).stroke_width(1),
+        )))?
+        .label("True source  r = 0")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+
+    chart
+        .configure_series_labels()
+        .background_style(WHITE.mix(0.85))
+        .border_style(&BLACK)
+        .draw()?;
+
+    root.present()?;
+    println!("  Figure saved: {}", path);
+    Ok(())
+}
+
+/// Save the CEUS contrast-to-tissue ratio (CTR) vs mechanical index (MI) figure.
+///
+/// Shows three curves over MI ∈ [0.02, 0.30]:
+/// - Bubble H₂ level (blue): 20·log₁₀(MI) − 6
+/// - Tissue H₂ level (red): 40·log₁₀(MI) − 20
+/// - CTR = bubble − tissue (green, thick)
+///
+/// Horizontal dashed line at 6 dB marks the clinical detectability threshold
+/// (de Jong et al. 2002). Circles mark the four test points.
+fn save_ctr_vs_mi_figure(
+    mi_test: &[f64],
+    ctr_test: &[f64],
+) -> Result<(), Box<dyn std::error::Error>> {
+    std::fs::create_dir_all(FIGURE_DIR)?;
+    let path = format!("{}/ceus_ctr_vs_mi.png", FIGURE_DIR);
+
+    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let mi_lo = 0.02f64;
+    let mi_hi = 0.30f64;
+    let n = 200usize;
+
+    let bubble_h2 = |mi: f64| 20.0 * mi.log10() - 6.0;
+    let tissue_h2 = |mi: f64| 40.0 * mi.log10() - 20.0;
+    let ctr_fn = |mi: f64| bubble_h2(mi) - tissue_h2(mi);
+
+    let y_lo = -60.0f64;
+    let y_hi = 30.0f64;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption(
+            "CEUS Contrast-to-Tissue Ratio vs Mechanical Index  (de Jong et al. 2002)",
+            ("sans-serif", 15).into_font(),
+        )
+        .margin(20)
+        .x_label_area_size(36)
+        .y_label_area_size(60)
+        .build_cartesian_2d(mi_lo..mi_hi, y_lo..y_hi)?;
+
+    chart
+        .configure_mesh()
+        .x_desc("Mechanical Index (MI)")
+        .y_desc("Level (dB re fundamental)")
+        .x_labels(8)
+        .y_labels(7)
+        .draw()?;
+
+    // 6 dB threshold.
+    chart.draw_series(LineSeries::new(
+        vec![(mi_lo, 6.0), (mi_hi, 6.0)],
+        ShapeStyle::from(&BLACK.mix(0.6)).stroke_width(1),
+    ))?;
+
+    // Bubble H₂.
+    chart
+        .draw_series(LineSeries::new(
+            (0..=n).map(|i| {
+                let mi = mi_lo + (mi_hi - mi_lo) * (i as f64) / (n as f64);
+                (mi, bubble_h2(mi))
+            }),
+            ShapeStyle::from(&BLUE).stroke_width(2),
+        ))?
+        .label("H₂ bubble")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+
+    // Tissue H₂.
+    chart
+        .draw_series(LineSeries::new(
+            (0..=n).map(|i| {
+                let mi = mi_lo + (mi_hi - mi_lo) * (i as f64) / (n as f64);
+                (mi, tissue_h2(mi))
+            }),
+            ShapeStyle::from(&RED).stroke_width(2),
+        ))?
+        .label("H₂ tissue")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+
+    // CTR.
+    chart
+        .draw_series(LineSeries::new(
+            (0..=n).map(|i| {
+                let mi = mi_lo + (mi_hi - mi_lo) * (i as f64) / (n as f64);
+                (mi, ctr_fn(mi))
+            }),
+            ShapeStyle::from(&GREEN).stroke_width(3),
+        ))?
+        .label("CTR (bubble − tissue)")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &GREEN));
+
+    // Test point markers.
+    chart.draw_series(
+        mi_test
+            .iter()
+            .zip(ctr_test.iter())
+            .map(|(&mi, &ctr)| Circle::new((mi, ctr), 5, GREEN.filled())),
+    )?;
+
+    chart
+        .configure_series_labels()
+        .background_style(WHITE.mix(0.85))
+        .border_style(&BLACK)
+        .draw()?;
+
+    root.present()?;
+    println!("  Figure saved: {}", path);
+    Ok(())
+}
+
+/// Save the elastography shear wave speed comparison figure.
+///
+/// Plots computed cₛ = √(μ/ρ) vs expected cₛ for each tissue type. Blue bars
+/// show computed values; red circles mark the literature expected values. Exact
+/// agreement confirms that the shear modulus inversion is self-consistent.
+fn save_shear_wave_figure(
+    tissues: &[(&str, f64, f64)], // (name, computed m/s, expected m/s)
+) -> Result<(), Box<dyn std::error::Error>> {
+    std::fs::create_dir_all(FIGURE_DIR)?;
+    let path = format!("{}/elastography_shear_speed.png", FIGURE_DIR);
+
+    let n = tissues.len();
+    let root = BitMapBackend::new(&path, (900, 500)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let c_max = tissues
+        .iter()
+        .map(|(_, c, e)| c.max(*e))
+        .fold(0.0f64, f64::max)
+        * 1.15;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption(
+            "Elastography Shear Wave Speed by Tissue — Pinton et al. 2009",
+            ("sans-serif", 15).into_font(),
+        )
+        .margin(20)
+        .x_label_area_size(36)
+        .y_label_area_size(60)
+        .build_cartesian_2d((-0.5f64)..(n as f64 - 0.5), 0.0f64..c_max)?;
+
+    chart
+        .configure_mesh()
+        .y_desc("Shear wave speed cₛ (m/s)")
+        .x_labels(n)
+        .x_label_formatter(&|x| {
+            let idx = x.round() as usize;
+            if idx < n {
+                tissues[idx].0.to_string()
+            } else {
+                String::new()
+            }
+        })
+        .y_labels(6)
+        .draw()?;
+
+    // Computed bars.
+    chart
+        .draw_series(tissues.iter().enumerate().map(|(i, (_, computed, _))| {
+            let x0 = i as f64 - 0.35;
+            let x1 = i as f64 + 0.35;
+            Rectangle::new(
+                [(x0, 0.0), (x1, *computed)],
+                ShapeStyle::from(&BLUE.mix(0.7)).filled(),
+            )
+        }))?
+        .label("Computed cₛ = √(μ/ρ)")
+        .legend(|(x, y)| Rectangle::new([(x, y - 5), (x + 20, y + 5)], BLUE.mix(0.7).filled()));
+
+    // Expected markers.
+    chart
+        .draw_series(
+            tissues
+                .iter()
+                .enumerate()
+                .map(|(i, (_, _, expected))| Circle::new((i as f64, *expected), 6, RED.filled())),
+        )?
+        .label("Literature expected")
+        .legend(|(x, y)| Circle::new((x + 10, y), 5, RED.filled()));
+
+    chart
+        .configure_series_labels()
+        .background_style(WHITE.mix(0.85))
+        .border_style(&BLACK)
+        .draw()?;
+
+    root.present()?;
+    println!("  Figure saved: {}", path);
+    Ok(())
+}
+
+/// Save the photoacoustic tissue absorption ranges figure.
+///
+/// Plots the literature absorption range [μₐ_min, μₐ_max] as horizontal line
+/// segments for each tissue type at 750 nm. Circles mark the midpoint test value.
+fn save_absorption_ranges_figure(
+    tissues: &[(&str, f64, f64)], // (name, min_cm, max_cm)
+) -> Result<(), Box<dyn std::error::Error>> {
+    std::fs::create_dir_all(FIGURE_DIR)?;
+    let path = format!("{}/tissue_absorption_ranges.png", FIGURE_DIR);
+
+    let n = tissues.len();
+    let x_max = tissues
+        .iter()
+        .map(|(_, _, max_cm)| *max_cm)
+        .fold(0.0f64, f64::max)
+        * 1.1;
+
+    let root = BitMapBackend::new(&path, (900, 400)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption(
+            "Photoacoustic Tissue Absorption Coefficients at 750 nm  (Treeby & Cox 2010)",
+            ("sans-serif", 15).into_font(),
+        )
+        .margin(20)
+        .x_label_area_size(36)
+        .y_label_area_size(80)
+        .build_cartesian_2d(0.0f64..x_max, (-0.5f64)..(n as f64 - 0.5))?;
+
+    chart
+        .configure_mesh()
+        .x_desc("Absorption coefficient μₐ (cm⁻¹)")
+        .y_labels(n)
+        .y_label_formatter(&|y| {
+            let idx = y.round() as usize;
+            if idx < n {
+                tissues[idx].0.to_string()
+            } else {
+                String::new()
+            }
+        })
+        .x_labels(8)
+        .draw()?;
+
+    // Range bars and midpoint circles.
+    for (i, (_, min_cm, max_cm)) in tissues.iter().enumerate() {
+        let y = i as f64;
+        let mid = (min_cm + max_cm) / 2.0;
+        // Range line.
+        chart.draw_series(std::iter::once(PathElement::new(
+            vec![(*min_cm, y), (*max_cm, y)],
+            ShapeStyle::from(&BLUE).stroke_width(4),
+        )))?;
+        // End caps.
+        chart.draw_series(
+            [*min_cm, *max_cm]
+                .iter()
+                .map(|&x| Circle::new((x, y), 4, BLUE.filled())),
+        )?;
+        // Midpoint marker.
+        chart.draw_series(std::iter::once(Circle::new((mid, y), 6, RED.filled())))?;
+    }
+
+    // Legend manually.
+    chart
+        .draw_series(std::iter::once(PathElement::new(
+            vec![(0.0, -0.4), (0.3, -0.4)],
+            ShapeStyle::from(&BLUE).stroke_width(4),
+        )))?
+        .label("Literature range [min, max]")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE.stroke_width(3)));
+
+    chart
+        .draw_series(std::iter::once(Circle::new((0.0, -0.4), 1, WHITE.filled())))?
+        .label("Midpoint test value")
+        .legend(|(x, y)| Circle::new((x + 10, y), 5, RED.filled()));
+
+    chart
+        .configure_series_labels()
+        .background_style(WHITE.mix(0.85))
+        .border_style(&BLACK)
+        .draw()?;
+
+    root.present()?;
+    println!("  Figure saved: {}", path);
+    Ok(())
+}
+
 #[cfg(test)]
 mod pa_backprojection_tests {
     use super::*;
@@ -847,6 +1225,16 @@ mod pa_backprojection_tests {
         );
         println!("  peak_value = {:.4e}", peak_value);
         println!("  noise_rms  = {:.4e}", noise_rms);
+
+        // Generate figure: reconstruction profile normalised to peak value.
+        let p0_norm: Vec<f64> = p0_recon
+            .iter()
+            .map(|&v| v / peak_value.max(1e-30))
+            .collect();
+        let r_mm: Vec<f64> = r_test.iter().map(|&r| r * 1e3).collect();
+        if let Err(e) = save_pa_reconstruction_figure(&r_mm, &p0_norm, snr_db) {
+            eprintln!("  [warn] PA figure generation failed: {}", e);
+        }
 
         assert!(
             snr_db > 20.0,
@@ -1013,6 +1401,9 @@ mod ceus_ctr_tests {
     /// D2.3: CTR monotonically decreases with MI (physics check)
     ///
     /// CTR should increase at lower MI (bubbles more selective vs tissue)
+    ///
+    /// Figure: `test-figures/ceus_ctr_vs_mi.png` — CTR, bubble H₂, and tissue H₂
+    /// curves with the 6 dB clinical detectability threshold.
     #[test]
     fn test_ctr_vs_mi_trend() {
         let mi_values = [0.05, 0.10, 0.15, 0.20];
@@ -1022,6 +1413,11 @@ mod ceus_ctr_tests {
         for (mi, ctr) in mi_values.iter().zip(ctrs.iter()) {
             println!("  MI = {:.2}: CTR = {:.1} dB", mi, ctr);
             assert!(*ctr > 6.0, "CTR {:.1} dB < 6 dB at MI = {:.2}", ctr, mi);
+        }
+
+        // Generate CTR vs MI comparison figure.
+        if let Err(e) = save_ctr_vs_mi_figure(&mi_values, &ctrs) {
+            eprintln!("  [warn] CTR figure generation failed: {}", e);
         }
     }
 }

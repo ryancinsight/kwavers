@@ -6,6 +6,7 @@
 use crate::domain::grid::Grid;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 use crate::domain::medium::{
+    acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},
     core::{ArrayAccess, CoreMedium},
     elastic::ElasticArrayAccess,
@@ -57,6 +58,15 @@ pub struct HeterogeneousMedium {
     pub delta: Array3<f64>,
     pub b_a: Array3<f64>,
     pub absorption: Array3<f64>,
+    /// Power-law absorption exponent y per voxel [dimensionless].
+    ///
+    /// **Theorem (Szabo power-law absorption).**  The absorption coefficient at
+    /// frequency f is
+    ///   α(f) = α₀ · (f / f_ref)^y   [dB/(MHz^y cm)]
+    ///
+    /// k-Wave uses y ∈ (0, 3], typically y = 1.5 for tissue (Szabo 1994).
+    /// Default 1.0 (linear frequency dependence) for generic heterogeneous media.
+    pub alpha_power: Array3<f64>,
     pub nonlinearity: Array3<f64>,
 
     // Viscoelastic properties
@@ -101,6 +111,7 @@ impl HeterogeneousMedium {
             delta: Array3::zeros((nx, ny, nz)),
             b_a: Array3::zeros((nx, ny, nz)),
             absorption: Array3::zeros((nx, ny, nz)),
+            alpha_power: Array3::from_elem((nx, ny, nz), 1.0),
             nonlinearity: Array3::zeros((nx, ny, nz)),
             shear_sound_speed: Array3::zeros((nx, ny, nz)),
             shear_viscosity_coeff: Array3::zeros((nx, ny, nz)),
@@ -109,6 +120,23 @@ impl HeterogeneousMedium {
             lame_mu: Array3::zeros((nx, ny, nz)),
             reference_frequency: 1.0e6, // 1 MHz default
         }
+    }
+
+    /// Create an acoustic-only medium without allocating non-acoustic arrays.
+    ///
+    /// Equivalent to `new` but documents intent: the caller will populate only
+    /// acoustic fields (`sound_speed`, `density`, `absorption`, `alpha_power`,
+    /// `nonlinearity`) and the non-acoustic arrays remain zero-initialised.
+    /// Saves no memory relative to `new` because the struct layout is fixed;
+    /// use this to signal acoustic-only intent at the call site.
+    #[inline]
+    pub fn new_acoustic_only(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        use_trilinear_interpolation: bool,
+    ) -> Self {
+        Self::new(nx, ny, nz, use_trilinear_interpolation)
     }
 
     /// Construct a heterogeneous medium by expanding a homogeneous medium
@@ -196,6 +224,8 @@ impl HeterogeneousMedium {
             delta: fill(0.0),  // power law exponent not exposed directly; keep 0
             b_a: nonlinearity.clone(),
             absorption: absorption.clone(),
+            // Propagate alpha_power from homogeneous medium (uniform broadcast).
+            alpha_power: fill(h.alpha_power(0.0, 0.0, 0.0, grid)),
             nonlinearity,
 
             shear_sound_speed: shear_speed_arr,

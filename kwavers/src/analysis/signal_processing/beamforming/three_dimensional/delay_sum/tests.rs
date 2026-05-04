@@ -1,4 +1,6 @@
+#[cfg(not(feature = "gpu"))]
 use super::processor::DelaySumGPU;
+#[cfg(not(feature = "gpu"))]
 use crate::analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 
 #[test]

@@ -105,3 +105,71 @@ fn test_interface_quality_structure() {
     assert!((quality.avg_element_size - 0.005).abs() < 1e-12);
     assert!(!quality.spurious_resonance_detected);
 }
+
+#[test]
+fn test_burton_miller_validation_computes_interface_quality() {
+    let mut config = EnhancedBemFemConfig::for_sphere_validation(0.1, 1000.0);
+    config.adaptive_refinement = false;
+    config.target_interface_error = 1e-3;
+    let mut solver = EnhancedBemFemSolver::new(config);
+
+    let result = solver.validate(1000.0).unwrap();
+
+    assert!(!result.spurious_resonance_detected);
+    assert!(result.burton_miller_used);
+    assert!(result.interface_error > 0.0);
+    assert!(result.interface_error < 1e-6);
+    assert!(result.interface_quality.num_elements > 0);
+    assert!(result.interface_quality.avg_element_size > 0.0);
+    assert!(result.interface_quality.condition_number.unwrap() > 1.0);
+}
+
+#[test]
+fn test_standard_bem_detects_configured_characteristic_frequency() {
+    let config = EnhancedBemFemConfig::for_sphere_validation(0.1, 1000.0)
+        .without_burton_miller()
+        .with_adaptive_refinement(false)
+        .with_target_error(1e-3);
+    let mut solver = EnhancedBemFemSolver::new(config);
+
+    let result = solver.validate(1000.0).unwrap();
+
+    assert!(result.spurious_resonance_detected);
+    assert!(!result.burton_miller_used);
+    assert!(!result.passed(1e-3));
+}
+
+#[test]
+fn test_adaptive_refinement_reduces_interface_error() {
+    let mut config = EnhancedBemFemConfig::for_sphere_validation(0.1, 1000.0);
+    config.min_element_size = config.max_element_size / 16.0;
+    config.target_interface_error = 1e-9;
+    config.max_refinement_level = 3;
+    let mut solver = EnhancedBemFemSolver::new(config);
+
+    let result = solver.validate(1000.0).unwrap();
+    let history = solver.refinement_history();
+
+    assert_eq!(result.refinement_levels, 3);
+    assert_eq!(history.len(), 3);
+    assert!(history[0].estimated_error > history[1].estimated_error);
+    assert!(history[1].estimated_error > history[2].estimated_error);
+    assert_eq!(
+        result.interface_quality.estimated_error,
+        history.last().unwrap().estimated_error
+    );
+}
+
+#[test]
+fn test_validation_rejects_invalid_frequency_and_mesh_bounds() {
+    let mut solver = EnhancedBemFemSolver::new(EnhancedBemFemConfig::default());
+    let bad_frequency = solver.validate(0.0).unwrap_err();
+    assert!(format!("{bad_frequency}").contains("finite and positive"));
+
+    let mut bad_config = EnhancedBemFemConfig::default();
+    bad_config.min_element_size = 0.2;
+    bad_config.max_element_size = 0.1;
+    let mut solver = EnhancedBemFemSolver::new(bad_config);
+    let bad_mesh = solver.validate(1000.0).unwrap_err();
+    assert!(format!("{bad_mesh}").contains("element bounds"));
+}

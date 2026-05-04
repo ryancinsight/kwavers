@@ -1,4 +1,4 @@
-//! DG basis functions: Legendre and Chebyshev polynomial families.
+//! DG basis functions: Legendre, Chebyshev, and real Fourier families.
 //!
 //! ## Theorem: Completeness of Legendre polynomials (Hesthaven & Warburton 2008, §3.2)
 //!
@@ -20,8 +20,31 @@
 //! Derivative via Rodrigues' formula (avoiding the singular endpoint form for n ≥ 2):
 //! ```text
 //!   P'_n(x) = n (P_{n-1}(x) − x P_n(x)) / (1 − x²)   for x ≠ ±1
-//!   P'_n(±1) = ±n(n+1)/2                                 (limiting value)
+//!   P'_n(1) = n(n+1)/2,  P'_n(-1) = (-1)^(n+1)n(n+1)/2    (limiting values)
 //! ```
+//!
+//! ## Algorithm: Chebyshev first-kind recurrence
+//!
+//! ```text
+//!   T_0(x) = 1,  T_1(x) = x
+//!   T_{n+1}(x) = 2xT_n(x) - T_{n-1}(x)
+//! ```
+//!
+//! The derivative satisfies `T'_n(x) = n U_{n-1}(x)`, where `U_m` is the
+//! Chebyshev polynomial of the second kind. Endpoint limits are
+//! `T'_n(1)=n²` and `T'_n(-1)=(-1)^(n-1)n²`.
+//!
+//! ## Algorithm: real Fourier basis on `[-1, 1)`
+//!
+//! For periodic reference coordinate `x`, with `θ = π(x + 1)`, the real basis is
+//! ```text
+//!   φ₀(x) = 1
+//!   φ₂k₋₁(x) = sin(kθ),  φ₂k(x) = cos(kθ),  k ≥ 1.
+//! ```
+//! This spans the real trigonometric polynomial space through wavenumber
+//! `ceil(p/2)`. The basis is valid only on periodic node sets that do not
+//! contain both `x=-1` and `x=1`, because those coordinates represent the same
+//! point on the reference torus and make interpolation matrices singular.
 //!
 //! ## Algorithm: Vandermonde matrix
 //!
@@ -79,11 +102,22 @@ pub fn build_vandermonde(
                 }
             }
         }
-        _ => {
-            return Err(crate::core::error::KwaversError::NotImplemented(format!(
-                "Basis type {:?} not implemented",
-                basis_type
-            )))
+        BasisType::Chebyshev => {
+            for i in 0..n_nodes {
+                let xi = nodes[i];
+                for j in 0..n_modes {
+                    v[[i, j]] = chebyshev_t(j, xi);
+                }
+            }
+        }
+        BasisType::Fourier => {
+            validate_fourier_nodes(nodes)?;
+            for i in 0..n_nodes {
+                let theta = fourier_theta(nodes[i]);
+                for j in 0..n_modes {
+                    v[[i, j]] = real_fourier_basis(j, theta);
+                }
+            }
         }
     }
 
@@ -107,4 +141,100 @@ fn legendre_poly(n: usize, x: f64) -> f64 {
         l_curr = l_next;
     }
     l_curr
+}
+
+pub(super) fn chebyshev_t(n: usize, x: f64) -> f64 {
+    if n == 0 {
+        return 1.0;
+    }
+    if n == 1 {
+        return x;
+    }
+
+    let mut t_prev = 1.0;
+    let mut t_curr = x;
+
+    for _ in 1..n {
+        let t_next = 2.0 * x * t_curr - t_prev;
+        t_prev = t_curr;
+        t_curr = t_next;
+    }
+
+    t_curr
+}
+
+pub(super) fn validate_fourier_nodes(nodes: &Array1<f64>) -> KwaversResult<()> {
+    const PERIODIC_ENDPOINT_TOL: f64 = 1e-12;
+
+    if nodes.iter().any(|node| !node.is_finite()) {
+        return Err(crate::core::error::KwaversError::InvalidInput(
+            "Fourier basis nodes must be finite".to_string(),
+        ));
+    }
+
+    let has_left_endpoint = nodes
+        .iter()
+        .any(|node| (*node + 1.0).abs() <= PERIODIC_ENDPOINT_TOL);
+    let has_right_endpoint = nodes
+        .iter()
+        .any(|node| (*node - 1.0).abs() <= PERIODIC_ENDPOINT_TOL);
+
+    if has_left_endpoint && has_right_endpoint {
+        return Err(crate::core::error::KwaversError::InvalidInput(
+            "Fourier basis on [-1,1) cannot include both periodic endpoints -1 and 1".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+#[inline]
+pub(super) fn fourier_theta(x: f64) -> f64 {
+    std::f64::consts::PI * (x + 1.0)
+}
+
+pub(super) fn real_fourier_basis(mode: usize, theta: f64) -> f64 {
+    if mode == 0 {
+        return 1.0;
+    }
+
+    let wavenumber = mode.div_ceil(2) as f64;
+    if mode % 2 == 1 {
+        (wavenumber * theta).sin()
+    } else {
+        (wavenumber * theta).cos()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::arr1;
+
+    #[test]
+    fn fourier_vandermonde_evaluates_real_trigonometric_basis() {
+        let nodes = arr1(&[-0.5, 0.0, 0.5]);
+
+        let v = build_vandermonde(&nodes, 2, BasisType::Fourier).unwrap();
+
+        assert_eq!(v.shape(), &[3, 3]);
+        for row in 0..3 {
+            assert_eq!(v[[row, 0]], 1.0);
+        }
+        assert!((v[[0, 1]] - 1.0).abs() <= 1e-12);
+        assert!(v[[1, 1]].abs() <= 1e-12);
+        assert!((v[[2, 1]] + 1.0).abs() <= 1e-12);
+        assert!(v[[0, 2]].abs() <= 1e-12);
+        assert!((v[[1, 2]] + 1.0).abs() <= 1e-12);
+        assert!(v[[2, 2]].abs() <= 1e-12);
+    }
+
+    #[test]
+    fn fourier_vandermonde_rejects_duplicate_periodic_endpoints() {
+        let nodes = arr1(&[-1.0, 0.0, 1.0]);
+
+        let error = build_vandermonde(&nodes, 2, BasisType::Fourier).unwrap_err();
+
+        assert!(format!("{error}").contains("cannot include both periodic endpoints"));
+    }
 }

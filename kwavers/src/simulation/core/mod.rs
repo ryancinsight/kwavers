@@ -17,8 +17,7 @@ use crate::domain::source::Source;
 use crate::simulation::solver_factory::SimulationSolverFactory;
 use crate::solver::config::{SolverConfiguration, SolverType};
 use crate::solver::feature::{FeatureManager, SolverFeature};
-use crate::solver::interface::Solver;
-use crate::solver::progress::{FieldsSummary, ProgressReporter, ProgressUpdate};
+use crate::solver::interface::{FieldsSummary, ProgressReporter, ProgressUpdate, Solver};
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -312,7 +311,7 @@ impl<'a, M: Medium> SimulationBuilder<'a, M> {
 
         // Use console reporter by default
         let progress_reporter: Box<dyn ProgressReporter> =
-            Box::new(crate::solver::progress::ConsoleProgressReporter::default());
+            Box::new(crate::solver::interface::ConsoleProgressReporter::default());
 
         let mut simulation =
             CoreSimulation::new(grid, medium, self.sources, self.sensors, progress_reporter)?;

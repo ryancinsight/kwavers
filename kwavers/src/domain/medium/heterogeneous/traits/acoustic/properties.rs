@@ -95,9 +95,20 @@ impl ArrayAccess for HeterogeneousMedium {
 }
 
 impl AcousticProperties for HeterogeneousMedium {
-    /// Get absorption coefficient at continuous coordinates and frequency
+    /// Absorption coefficient at continuous coordinates and frequency.
     ///
-    /// **Method**: Trilinear interpolation with frequency scaling per Hamilton & Blackstock
+    /// **Theorem (Szabo power-law absorption, Szabo 1994 J.Acoust.Soc.Am.).**
+    /// The frequency-dependent absorption coefficient α(f) [Np/m] satisfies
+    ///
+    /// ```text
+    ///   α(f) = α₀_Np · (f / f_ref)^y
+    /// ```
+    ///
+    /// where α₀_Np is the reference absorption in Np/m (converted from
+    /// dB/(MHz^y cm) via `DB_TO_NP * 100 * f_ref_MHz^y`), and y is the
+    /// per-voxel power-law exponent stored in `self.alpha_power`.  Both α₀
+    /// and y are trilinearly interpolated when `use_trilinear_interpolation`
+    /// is set.
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
         let base_absorption = TrilinearInterpolator::get_field_value(
             &self.absorption,
@@ -107,10 +118,32 @@ impl AcousticProperties for HeterogeneousMedium {
             grid,
             self.use_trilinear_interpolation,
         );
+        let exponent = TrilinearInterpolator::get_field_value(
+            &self.alpha_power,
+            x,
+            y,
+            z,
+            grid,
+            self.use_trilinear_interpolation,
+        );
 
-        // Frequency-dependent scaling
         let freq_ratio = frequency / self.reference_frequency;
-        base_absorption * freq_ratio.powf(1.0) // Power law with exponent 1.0
+        base_absorption * freq_ratio.powf(exponent)
+    }
+
+    /// Per-voxel power-law exponent y at the given continuous coordinates.
+    ///
+    /// Used by solvers that need the exponent separately from the absorption
+    /// coefficient (e.g. fractional-Laplacian PSTD absorber).
+    fn alpha_power(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        TrilinearInterpolator::get_field_value(
+            &self.alpha_power,
+            x,
+            y,
+            z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
     }
 
     /// Get acoustic diffusivity at continuous coordinates

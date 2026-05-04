@@ -1,15 +1,54 @@
 use super::*;
 
+const AMBIENT_PRESSURE: f64 = 101_325.0;
+const BODY_TEMPERATURE: f64 = 310.0;
+const WATER_SURFACE_TENSION: f64 = 0.072;
+const R_GAS: f64 = 8.314;
+
+fn expected_gas_moles(radius: f64) -> f64 {
+    let volume = (4.0 / 3.0) * std::f64::consts::PI * radius.powi(3);
+    (AMBIENT_PRESSURE * volume) / (R_GAS * BODY_TEMPERATURE)
+}
+
+fn assert_invalid_value(result: KwaversResult<MicrobubbleState>, parameter: &str, reason: &str) {
+    match result {
+        Err(KwaversError::Validation(ValidationError::InvalidValue {
+            parameter: actual_parameter,
+            reason: actual_reason,
+            ..
+        })) => {
+            assert_eq!(actual_parameter, parameter);
+            assert_eq!(actual_reason, reason);
+        }
+        Err(error) => panic!("expected validation invalid-value error, got {error:?}"),
+        Ok(state) => panic!("expected validation error, got {state:?}"),
+    }
+}
+
 #[test]
 fn test_create_sono_vue() {
     let pos = Position3D::zero();
     let state = MicrobubbleState::sono_vue(pos).unwrap();
 
-    assert!(state.radius > 0.0);
+    assert_eq!(state.radius.to_bits(), 1.25e-6_f64.to_bits());
     assert_eq!(state.radius, state.radius_equilibrium);
-    assert_eq!(state.wall_velocity, 0.0);
-    assert!(state.temperature > 0.0);
-    assert!(state.validate().is_ok());
+    assert_eq!(state.wall_velocity.to_bits(), 0.0_f64.to_bits());
+    assert_eq!(state.wall_acceleration.to_bits(), 0.0_f64.to_bits());
+    assert_eq!(state.temperature.to_bits(), BODY_TEMPERATURE.to_bits());
+    assert_eq!(
+        state.pressure_internal.to_bits(),
+        AMBIENT_PRESSURE.to_bits()
+    );
+    assert_eq!(state.pressure_liquid.to_bits(), AMBIENT_PRESSURE.to_bits());
+    assert_eq!(
+        state.surface_tension.to_bits(),
+        WATER_SURFACE_TENSION.to_bits()
+    );
+    assert_eq!(
+        state.gas_moles.to_bits(),
+        expected_gas_moles(1.25e-6).to_bits()
+    );
+    state.validate().unwrap();
 }
 
 #[test]
@@ -17,9 +56,18 @@ fn test_create_definity() {
     let pos = Position3D::zero();
     let state = MicrobubbleState::definity(pos).unwrap();
 
-    assert!(state.radius > 0.0);
-    assert!(state.radius > 1.0e-6);
-    assert!(state.validate().is_ok());
+    assert_eq!(state.radius.to_bits(), 1.5e-6_f64.to_bits());
+    assert_eq!(state.shell_elasticity.to_bits(), 1.0_f64.to_bits());
+    assert_eq!(state.shell_viscosity.to_bits(), 1.2e-9_f64.to_bits());
+    assert_eq!(
+        state.shell_radius_buckling.to_bits(),
+        (1.5e-6_f64 * 0.9).to_bits()
+    );
+    assert_eq!(
+        state.shell_radius_rupture.to_bits(),
+        (1.5e-6_f64 * 1.5).to_bits()
+    );
+    state.validate().unwrap();
 }
 
 #[test]
@@ -29,23 +77,46 @@ fn test_drug_loaded() {
     let state = MicrobubbleState::drug_loaded(2.0, drug_conc, pos).unwrap();
 
     assert_eq!(state.drug_concentration, drug_conc);
-    assert!(state.drug_mass() > 0.0);
-    assert_eq!(state.drug_remaining_fraction(), 1.0);
-    assert!(state.validate().is_ok());
+    let expected_volume = (4.0 / 3.0) * std::f64::consts::PI * (2.0e-6_f64).powi(3);
+    let expected_mass = drug_conc * expected_volume;
+    assert_eq!(state.drug_mass().to_bits(), expected_mass.to_bits());
+    assert_eq!(state.drug_remaining_fraction().to_bits(), 1.0_f64.to_bits());
+    state.validate().unwrap();
 }
 
 #[test]
 fn test_validation_negative_radius() {
     let pos = Position3D::zero();
     let result = MicrobubbleState::new(-1.0e-6, 1.0, 1.0, 0.0, pos);
-    assert!(result.is_err());
+    assert_invalid_value(result, "radius_equilibrium", "must be positive");
 }
 
 #[test]
 fn test_validation_negative_drug() {
     let pos = Position3D::zero();
     let result = MicrobubbleState::new(1.0e-6, 1.0, 1.0, -10.0, pos);
-    assert!(result.is_err());
+    assert_invalid_value(result, "drug_concentration", "must be non-negative");
+}
+
+#[test]
+fn test_validate_rejects_mutated_invalid_runtime_state() {
+    let pos = Position3D::zero();
+
+    let mut negative_radius = MicrobubbleState::new(1.0e-6, 1.0, 1.0, 0.0, pos).unwrap();
+    negative_radius.radius = 0.0;
+    assert_invalid_value(
+        negative_radius.validate().map(|()| negative_radius),
+        "radius",
+        "must be positive",
+    );
+
+    let mut negative_pressure = MicrobubbleState::new(1.0e-6, 1.0, 1.0, 0.0, pos).unwrap();
+    negative_pressure.pressure_internal = -1.0;
+    assert_invalid_value(
+        negative_pressure.validate().map(|()| negative_pressure),
+        "pressure_internal",
+        "must be non-negative",
+    );
 }
 
 #[test]

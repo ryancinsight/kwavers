@@ -124,6 +124,8 @@ impl TissueFactory {
             delta,
             b_a,
             absorption,
+            // Tissue default: y = 1.5 per Szabo (1994) Table I.
+            alpha_power: Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.5_f64),
             nonlinearity,
             shear_sound_speed,
             shear_viscosity_coeff,

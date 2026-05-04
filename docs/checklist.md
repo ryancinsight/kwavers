@@ -1,21 +1,51 @@
- # Sprint Checklist - Kwavers Development
+# Sprint Checklist - Kwavers Development
 
-## Current Sprint: Sprint 218 - PSTD Source Amplification Fix & k-Wave Validation
+## Current State: 2026-05-04 — k-Wave Parity Compare Suite Complete
 
-**Status**: 🔄 IN PROGRESS (Session 2 Complete)
-**Goal**: Fix PSTD source amplification bug and validate against k-Wave
-**Duration**: 3-4 sessions (6-8 hours)
-**Priority**: P0 - Critical Bug Fix & Validation
+**Tests**: 2709 / 2709 passing (kwavers lib, `cargo test -p kwavers --lib`)
+**Architecture health**: ✅ Clean — unidirectional dependencies, SRP, DIP enforced
+**pykwavers parity**: All 29 k-wave-python examples now have compare scripts
 
-### Sprint 218 Overview
+### Closed since Sprint 218 (2026-02-05 → 2026-05-04)
 
-**Context**: Sprint 217 (Architectural Audit & Unsafe Documentation) completed with excellent architecture health (98/100). Sprint 218 focuses on validating PSTD fix and establishing k-Wave parity.
+- [x] PSTD absorption: moved to pressure update (Treeby & Cox 2010 Eq. 9-10); <0.11% error [patch]
+- [x] Density advection (u·∇ρ₀) removed — ~20 MB/sim saving; all PSTD tests pass [patch]
+- [x] GPU PSTD TDR poll fix — `device.poll` every 16 batches; eliminates >60 s hang [patch]
+- [x] Phased array GPU parity — pearson=0.9996, harm=0.9968; 14× speedup vs k-wave [minor]
+- [x] B-mode scan_lines rms=0.977 PASS; us_bmode sensor ordering fix [patch]
+- [x] GPU fractional-Laplacian absorption design spec written [arch]
+- [x] US beam patterns sensor reshape fix (NY,NX).T; pearson -0.11 → 0.98 [patch]
+- [x] sd_focussed_detector_3D CPU PSTD parity (pearson=1.0) via rebuild [patch]
+- [x] at_focused_bowl_3D PASS (pearson=0.9999, rms=0.994, PSNR=45.82 dB) [patch]
+- [x] pml_inside=False grid padding + pml_alpha=0 transparent BC [minor]
+- [x] Axisymmetric flag (Geometry) + WSWA-FFT AS propagator + FDTD cylindrical [minor]
+- [x] KWCP binary checkpoint: run_to_checkpoint / run_from_checkpoint; bit-exact [minor]
+- [x] Annular array coordinate fix: NY/2 centering; Pearson=1.0, PSNR=119 dB [patch]
+- [x] PSTD memory optimization: grad_k consolidation −2×N³×16B; AbsorptionKernel Option [patch]
+- [x] pykwavers compare suite: ivp_1D, ivp_binary_sensor, na_filtering_1/2/3 [minor]
+- [x] pykwavers compare suite: ivp_3D, tvsp_3D, tvsp_doppler, tvsp_dipole [minor]
+- [x] pykwavers compare suite: sd_directional_array, sd_directivity_3D [minor]
+- [x] All 29 k-wave-python examples covered by compare scripts [minor]
+
+### Open / Next Actions
+
+- [ ] GPU fractional-Laplacian absorption port (Treeby & Cox 2010 Eq. 9-10) [minor]
+- [ ] Axisymmetric validation: run compare scripts against k-wave-python AS examples [patch]
+- [ ] SD directivity 3D compare: 11 × 3D PSTD runs — cache warm-up on first execution [patch]
+- [ ] Update CHANGELOG.md to reflect post-Sprint-218 deliverables [patch]
+- [ ] cargo-semver-checks for new public API surface (velocity source, checkpointing) [patch]
+
+---
+
+## Sprint 218 (2026-02-05) — PSTD Source Amplification Fix ✅ COMPLETE
+
+**Context**: Sprint 217 (Architectural Audit & Unsafe Documentation) completed with excellent architecture health (98/100). Sprint 218 focused on validating PSTD fix and establishing k-Wave parity.
 
 **Sprint 218 Focus Areas**:
 1. ✅ PSTD source amplification fix verification (Session 1)
 2. ✅ Code quality & clippy cleanup (Session 2)
-3. ⏭️ k-Wave validation via pykwavers (Session 3)
-4. ⏭️ CI integration for amplitude regression testing (Session 4)
+3. ✅ k-Wave validation via pykwavers (Sessions 3+)
+4. ⏭️ CI integration for amplitude regression testing (deferred)
 
 ---
 

@@ -52,8 +52,10 @@
 //! Sprint: 217 Session 9 - Python Integration via PyO3
 
 use kwavers::domain::sensor::recorder::config::RecordingMode;
+use kwavers::domain::sensor::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use kwavers::domain::sensor::recorder::pressure_statistics::SampledStatistics;
 use kwavers::domain::sensor::recorder::simple::SensorRecorder;
+use kwavers::domain::sensor::recorder::velocity_statistics::SampledVelocityStats;
 use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -90,7 +92,7 @@ use kwavers::solver::interface::solver::Solver as SolverTrait;
 use kwavers::solver::inverse::reconstruction::photoacoustic::{
     kspace_line_recon as kwavers_kspace_line_recon, LineReconDataOrder, LineReconInterpolation,
 };
-use ndarray::{Array1, Array2, Array3, Axis};
+use ndarray::{Array1, Array2, Array3, ArrayView2, Axis};
 #[cfg(feature = "gpu")]
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -443,11 +445,15 @@ impl Medium {
     /// >>> rho = np.ones((32, 32, 32)) * 1000.0
     /// >>> medium = Medium(sound_speed=c, density=rho)
     #[new]
-    #[pyo3(signature = (sound_speed, density, absorption=None, nonlinearity=None))]
+    #[pyo3(signature = (sound_speed, density, absorption=None, alpha_power=None, nonlinearity=None))]
     fn new(
         sound_speed: PyReadonlyArray3<f64>,
         density: PyReadonlyArray3<f64>,
         absorption: Option<PyReadonlyArray3<f64>>,
+        // Power-law exponent y for absorption: α(f) = α₀·(f/f_ref)^y.
+        // Pass a scalar float (broadcast to all voxels) or a 3D array
+        // matching the shape of `sound_speed`.  Default: 1.0.
+        alpha_power: Option<&pyo3::Bound<'_, pyo3::PyAny>>,
         nonlinearity: Option<PyReadonlyArray3<f64>>,
     ) -> PyResult<Self> {
         let c_arr = sound_speed.as_array().to_owned();
@@ -463,7 +469,6 @@ impl Medium {
             ));
         }
 
-        // Validate physical ranges
         if c_arr.iter().any(|&v| v <= 0.0) {
             return Err(PyValueError::new_err(
                 "All sound_speed values must be positive",
@@ -474,8 +479,7 @@ impl Medium {
         }
 
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-        // Use acoustic-only constructor: skips 22 non-acoustic zero arrays (~740 MB saved)
-        let mut het = HeterogeneousMedium::new(nx, ny, nz, true);
+        let mut het = HeterogeneousMedium::new_acoustic_only(nx, ny, nz, true);
         het.sound_speed = c_arr;
         het.density = rho_arr;
 
@@ -487,6 +491,26 @@ impl Medium {
                 ));
             }
             het.absorption = abs_arr;
+        }
+
+        // alpha_power: accept scalar float OR 3D ndarray.
+        if let Some(py_ap) = alpha_power {
+            use ndarray::Array3 as A3;
+            if let Ok(scalar) = py_ap.extract::<f64>() {
+                het.alpha_power = A3::from_elem((nx, ny, nz), scalar);
+            } else if let Ok(arr) = py_ap.extract::<PyReadonlyArray3<f64>>() {
+                let ap_arr = arr.as_array().to_owned();
+                if ap_arr.shape() != [nx, ny, nz] {
+                    return Err(PyValueError::new_err(
+                        "alpha_power shape must match sound_speed shape",
+                    ));
+                }
+                het.alpha_power = ap_arr;
+            } else {
+                return Err(PyValueError::new_err(
+                    "alpha_power must be a float or a 3D ndarray matching sound_speed shape",
+                ));
+            }
         }
 
         if let Some(nl) = nonlinearity {
@@ -1948,6 +1972,12 @@ impl TransducerArray2D {
 /// - Interpolation: trilinear for arbitrary positions
 ///
 /// Equivalent to k-Wave sensor struct.
+///
+/// # `record_start_index` convention
+///
+/// Mirrors k-Wave's `sensor.record_start_index` (1-based).  The default `1`
+/// records from the first time step.  Setting it to `N` (1 ≤ N ≤ Nt) starts
+/// recording at step N and the output has `Nt - N + 1` columns.
 #[pyclass]
 #[derive(Clone)]
 pub struct Sensor {
@@ -1959,6 +1989,8 @@ pub struct Sensor {
     mask: Option<Array3<bool>>,
     /// k-Wave-style recording mode strings (e.g. ["p", "p_max", "p_rms"])
     record_modes: Vec<String>,
+    /// k-Wave 1-based start step for recording (default 1 = all steps).
+    record_start_index: usize,
 }
 
 #[pymethods]
@@ -1985,6 +2017,7 @@ impl Sensor {
             position: Some([position.0, position.1, position.2]),
             mask: None,
             record_modes: Vec::new(),
+            record_start_index: 1,
         }
     }
 
@@ -2025,6 +2058,7 @@ impl Sensor {
             position: None,
             mask: Some(mask_arr),
             record_modes: Vec::new(),
+            record_start_index: 1,
         })
     }
 
@@ -2045,6 +2079,7 @@ impl Sensor {
             position: None,
             mask: None,
             record_modes: Vec::new(),
+            record_start_index: 1,
         }
     }
 
@@ -2067,6 +2102,35 @@ impl Sensor {
     #[getter]
     fn record(&self) -> Vec<String> {
         self.record_modes.clone()
+    }
+
+    /// Set the first time step to record (k-Wave 1-based convention).
+    ///
+    /// Parameters
+    /// ----------
+    /// index : int
+    ///     First time step at which to start recording (≥ 1).
+    ///     Equivalent to k-Wave `sensor.record_start_index`.
+    ///     Setting this to `N` yields output with `Nt - N + 1` time samples.
+    ///
+    /// Examples
+    /// --------
+    /// >>> # Record only the last 300 time steps of a 1000-step simulation
+    /// >>> sensor.set_record_start_index(701)
+    fn set_record_start_index(&mut self, index: usize) -> PyResult<()> {
+        if index < 1 {
+            return Err(PyValueError::new_err(
+                "record_start_index must be ≥ 1 (k-Wave 1-based convention)",
+            ));
+        }
+        self.record_start_index = index;
+        Ok(())
+    }
+
+    /// First time step to record (k-Wave 1-based, default 1).
+    #[getter]
+    fn record_start_index(&self) -> usize {
+        self.record_start_index
     }
 
     /// Number of active sensor points.
@@ -2801,8 +2865,13 @@ impl Simulation {
             .as_ref()
             .map(|s| s.record_modes.clone())
             .unwrap_or_default();
+        // k-Wave 1-based start index (default 1 = record all steps).
+        let sensor_record_start_index: usize = sensor_opt
+            .as_ref()
+            .map(|s| s.record_start_index)
+            .unwrap_or(1);
 
-        let (sensor_data_2d, stats_opt) = py
+        let run_result = py
             .detach(move || match solver_type {
                 SolverType::FDTD => Self::run_fdtd_impl(
                     &grid_clone,
@@ -2821,6 +2890,7 @@ impl Simulation {
                     enable_nonlinear,
                     axisymmetric,
                     &sensor_record_modes,
+                    sensor_record_start_index,
                 ),
                 SolverType::PSTD | SolverType::Hybrid => Self::run_pstd_impl(
                     &grid_clone,
@@ -2841,6 +2911,7 @@ impl Simulation {
                     pml_alpha_xyz,
                     axisymmetric,
                     &sensor_record_modes,
+                    sensor_record_start_index,
                 ),
                 SolverType::PstdGpu => Self::run_gpu_pstd_or_cpu_fallback(
                     &grid_clone,
@@ -2861,66 +2932,12 @@ impl Simulation {
                     enable_nonlinear,
                     axisymmetric,
                     &sensor_record_modes,
+                    sensor_record_start_index,
                 ),
             })
             .map_err(kwavers_error_to_py)?;
 
-        // Convert optional stats to numpy arrays
-        let p_max = stats_opt
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_max.clone()).into());
-        let p_min = stats_opt
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_min.clone()).into());
-        let p_rms = stats_opt
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_rms.clone()).into());
-        let p_final = stats_opt
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_final.clone()).into());
-
-        // Return 1D array for single sensor, 2D for multi-sensor
-        let n_sensors = sensor_data_2d.nrows();
-        let time_arr = PyArray1::from_owned_array(
-            py,
-            Array1::from_iter((0..time_steps).map(|i| i as f64 * dt_actual)),
-        )
-        .into();
-
-        if n_sensors <= 1 {
-            // Single sensor: return 1D for backward compatibility
-            let sensor_1d = sensor_data_2d.row(0).to_owned();
-            Ok(SimulationResult {
-                sensor_data_1d: Some(PyArray1::from_owned_array(py, sensor_1d).into()),
-                sensor_data_2d: None,
-                time: time_arr,
-                shape,
-                sensor_data_shape: (1, time_steps),
-                time_steps,
-                dt: dt_actual,
-                final_time: dt_actual * time_steps as f64,
-                p_max,
-                p_min,
-                p_rms,
-                p_final,
-            })
-        } else {
-            // Multi-sensor: return 2D array (n_sensors, n_timesteps)
-            Ok(SimulationResult {
-                sensor_data_1d: None,
-                sensor_data_2d: Some(PyArray2::from_owned_array(py, sensor_data_2d).into()),
-                time: time_arr,
-                shape,
-                sensor_data_shape: (n_sensors, time_steps),
-                time_steps,
-                dt: dt_actual,
-                final_time: dt_actual * time_steps as f64,
-                p_max,
-                p_min,
-                p_rms,
-                p_final,
-            })
-        }
+        Self::simulation_run_result_to_py(py, run_result, shape, time_steps, dt_actual)
     }
 
     /// Run PSTD for `checkpoint_steps` steps and save state to `checkpoint_path`.
@@ -3054,6 +3071,11 @@ impl Simulation {
         let alpha_coeff = self.alpha_coeff;
         let alpha_power = self.alpha_power;
         let path = std::path::PathBuf::from(checkpoint_path);
+        // Collect recording modes from sensor — same as the regular PSTD path.
+        let sensor_record_modes: Vec<String> = sensor_opt
+            .as_ref()
+            .map(|s| s.record_modes.clone())
+            .unwrap_or_default();
         let checkpoint = kwavers::solver::forward::pstd::checkpoint::PSTDCheckpoint::load(&path)
             .map_err(kwavers_error_to_py)?;
         checkpoint
@@ -3075,7 +3097,7 @@ impl Simulation {
             })?;
         let shape = (self.grid.inner.nx, self.grid.inner.ny, self.grid.inner.nz);
 
-        let (sensor_data_2d, stats_opt) = py
+        let run_result = py
             .detach(move || {
                 Self::run_pstd_from_checkpoint_loaded(
                     &grid_clone,
@@ -3097,62 +3119,12 @@ impl Simulation {
                     checkpoint,
                     remaining_steps,
                     &path,
+                    &sensor_record_modes,
                 )
             })
             .map_err(kwavers_error_to_py)?;
 
-        let p_max = stats_opt
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_max.clone()).into());
-        let p_min = stats_opt
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_min.clone()).into());
-        let p_rms = stats_opt
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_rms.clone()).into());
-        let p_final = stats_opt
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_final.clone()).into());
-
-        let n_sensors = sensor_data_2d.nrows();
-        let time_arr = PyArray1::from_owned_array(
-            py,
-            ndarray::Array1::from_iter((0..time_steps).map(|i| i as f64 * dt_actual)),
-        )
-        .into();
-
-        if n_sensors <= 1 {
-            let sensor_1d = sensor_data_2d.row(0).to_owned();
-            Ok(SimulationResult {
-                sensor_data_1d: Some(PyArray1::from_owned_array(py, sensor_1d).into()),
-                sensor_data_2d: None,
-                time: time_arr,
-                shape,
-                sensor_data_shape: (1, time_steps),
-                time_steps,
-                dt: dt_actual,
-                final_time: dt_actual * time_steps as f64,
-                p_max,
-                p_min,
-                p_rms,
-                p_final,
-            })
-        } else {
-            Ok(SimulationResult {
-                sensor_data_1d: None,
-                sensor_data_2d: Some(PyArray2::from_owned_array(py, sensor_data_2d).into()),
-                time: time_arr,
-                shape,
-                sensor_data_shape: (n_sensors, time_steps),
-                time_steps,
-                dt: dt_actual,
-                final_time: dt_actual * time_steps as f64,
-                p_max,
-                p_min,
-                p_rms,
-                p_final,
-            })
-        }
+        Self::simulation_run_result_to_py(py, run_result, shape, time_steps, dt_actual)
     }
 
     /// String representation.
@@ -3545,7 +3517,89 @@ impl Simulation {
         indices
     }
 
-    /// Convert k-Wave-style record strings to RecordingMode variants.
+    /// Map k-Wave-style `sensor.record` strings to a [`SensorRecordSpec`].
+    ///
+    /// ## Theorem (completeness)
+    /// Every string accepted by k-Wave's `sensor.record` cell array is mapped
+    /// to the corresponding `SensorRecordField` variant. Unrecognised strings
+    /// are silently ignored (k-Wave behaviour). `"p"` is always implicitly
+    /// included — it maps to `SensorRecordField::Pressure` which is the default.
+    ///
+    /// ## Mapping (k-Wave string → SensorRecordField)
+    /// | k-Wave string       | Variant                       |
+    /// |---------------------|-------------------------------|
+    /// | `p`                 | `Pressure`                    |
+    /// | `p_max`             | `PressureMax`                 |
+    /// | `p_min`             | `PressureMin`                 |
+    /// | `p_rms`             | `PressureRms`                 |
+    /// | `p_final`           | `PressureFinal`               |
+    /// | `all`               | all four pressure stats above  |
+    /// | `ux`                | `VelocityX`                   |
+    /// | `uy`                | `VelocityY`                   |
+    /// | `uz`                | `VelocityZ`                   |
+    /// | `ux_max`            | `VelocityMaxX`                |
+    /// | `uy_max`            | `VelocityMaxY`                |
+    /// | `uz_max`            | `VelocityMaxZ`                |
+    /// | `ux_min`            | `VelocityMinX`                |
+    /// | `uy_min`            | `VelocityMinY`                |
+    /// | `uz_min`            | `VelocityMinZ`                |
+    /// | `ux_rms`            | `VelocityRmsX`                |
+    /// | `uy_rms`            | `VelocityRmsY`                |
+    /// | `uz_rms`            | `VelocityRmsZ`                |
+    /// | `ux_non_staggered`  | `VelocityNonStaggeredX`       |
+    /// | `uy_non_staggered`  | `VelocityNonStaggeredY`       |
+    /// | `uz_non_staggered`  | `VelocityNonStaggeredZ`       |
+    /// | `Ix`                | `IntensityX`                 |
+    /// | `Iy`                | `IntensityY`                 |
+    /// | `Iz`                | `IntensityZ`                 |
+    /// | `I_avg_x`           | `IntensityAvgX`              |
+    /// | `I_avg_y`           | `IntensityAvgY`              |
+    /// | `I_avg_z`           | `IntensityAvgZ`              |
+    fn record_modes_to_spec(modes: &[String]) -> SensorRecordSpec {
+        let mut fields = vec![SensorRecordField::Pressure];
+        for s in modes {
+            match s.as_str() {
+                "p" => {} // already included above
+                "p_max" => fields.push(SensorRecordField::PressureMax),
+                "p_min" => fields.push(SensorRecordField::PressureMin),
+                "p_rms" => fields.push(SensorRecordField::PressureRms),
+                "p_final" => fields.push(SensorRecordField::PressureFinal),
+                "all" => {
+                    fields.push(SensorRecordField::PressureMax);
+                    fields.push(SensorRecordField::PressureMin);
+                    fields.push(SensorRecordField::PressureRms);
+                    fields.push(SensorRecordField::PressureFinal);
+                }
+                "ux" => fields.push(SensorRecordField::VelocityX),
+                "uy" => fields.push(SensorRecordField::VelocityY),
+                "uz" => fields.push(SensorRecordField::VelocityZ),
+                "ux_max" => fields.push(SensorRecordField::VelocityMaxX),
+                "uy_max" => fields.push(SensorRecordField::VelocityMaxY),
+                "uz_max" => fields.push(SensorRecordField::VelocityMaxZ),
+                "ux_min" => fields.push(SensorRecordField::VelocityMinX),
+                "uy_min" => fields.push(SensorRecordField::VelocityMinY),
+                "uz_min" => fields.push(SensorRecordField::VelocityMinZ),
+                "ux_rms" => fields.push(SensorRecordField::VelocityRmsX),
+                "uy_rms" => fields.push(SensorRecordField::VelocityRmsY),
+                "uz_rms" => fields.push(SensorRecordField::VelocityRmsZ),
+                "ux_non_staggered" => fields.push(SensorRecordField::VelocityNonStaggeredX),
+                "uy_non_staggered" => fields.push(SensorRecordField::VelocityNonStaggeredY),
+                "uz_non_staggered" => fields.push(SensorRecordField::VelocityNonStaggeredZ),
+                "Ix" => fields.push(SensorRecordField::IntensityX),
+                "Iy" => fields.push(SensorRecordField::IntensityY),
+                "Iz" => fields.push(SensorRecordField::IntensityZ),
+                "I_avg_x" => fields.push(SensorRecordField::IntensityAvgX),
+                "I_avg_y" => fields.push(SensorRecordField::IntensityAvgY),
+                "I_avg_z" => fields.push(SensorRecordField::IntensityAvgZ),
+                _ => {} // unrecognised strings silently ignored (k-Wave convention)
+            }
+        }
+        SensorRecordSpec::from_fields(&fields)
+    }
+
+    /// Convert k-Wave-style record strings to RecordingMode variants (pressure only).
+    ///
+    /// Retained for FDTD path compatibility; PSTD uses `record_modes_to_spec`.
     fn recording_modes_from_strings(modes: &[String]) -> Vec<RecordingMode> {
         modes
             .iter()
@@ -3560,16 +3614,195 @@ impl Simulation {
             .collect()
     }
 
-    /// Trim the initial `t=0` recorder column when a backend stores `Nt+1`
-    /// samples but the Python-facing API contract is exactly `time_steps`.
+    /// Trim the initial `t=0` recorder column and apply `record_start_index`.
+    ///
+    /// # Convention
+    ///
+    /// The recorder buffer has `Nt + 1` columns: column 0 is the `t = 0`
+    /// initial sample (always stripped); column `i` (i ≥ 1) is k-Wave time
+    /// step `i`.  `record_start_index` is k-Wave 1-based, so the first output
+    /// column is buffer column `record_start_index`.
+    ///
+    /// Output shape: `(n_sensors, Nt - record_start_index + 1)`.
+    /// Default (`record_start_index = 1`): identical to the previous behaviour
+    /// of slicing `[.., 1..]` → `Nt` output columns.
     fn trim_initial_recorder_sample(
         recorded_data: ndarray::Array2<f64>,
         time_steps: usize,
+        record_start_index: usize,
     ) -> ndarray::Array2<f64> {
+        // Clamp: record_start_index must be in [1, time_steps].
+        let start = record_start_index.max(1).min(time_steps);
         if recorded_data.ncols() > time_steps {
-            recorded_data.slice(ndarray::s![.., 1..]).to_owned()
+            recorded_data.slice(ndarray::s![.., start..]).to_owned()
         } else {
-            recorded_data
+            // Buffer is already Nt columns (no t=0); subtract 1 to convert from 1-based.
+            let skip = start.saturating_sub(1);
+            recorded_data.slice(ndarray::s![.., skip..]).to_owned()
+        }
+    }
+
+    /// Borrowed-view variant of [`trim_initial_recorder_sample`].
+    ///
+    /// Avoids cloning the full `Nt + 1` recorder matrix before discarding
+    /// the initial `t=0` column and applying `record_start_index`.
+    fn trim_initial_recorder_view(
+        recorded_data: ArrayView2<'_, f64>,
+        time_steps: usize,
+        record_start_index: usize,
+    ) -> ndarray::Array2<f64> {
+        let start = record_start_index.max(1).min(time_steps);
+        if recorded_data.ncols() > time_steps {
+            recorded_data.slice(ndarray::s![.., start..]).to_owned()
+        } else {
+            let skip = start.saturating_sub(1);
+            recorded_data.slice(ndarray::s![.., skip..]).to_owned()
+        }
+    }
+
+    /// Convert a [`SimulationRunResult`] into a [`SimulationResult`] exposed to Python.
+    ///
+    /// Velocity arrays and statistics are included only when they were populated
+    /// by the run (i.e. when the corresponding record modes were requested).
+    fn simulation_run_result_to_py(
+        py: Python<'_>,
+        result: SimulationRunResult,
+        shape: (usize, usize, usize),
+        time_steps: usize,
+        dt_actual: f64,
+    ) -> PyResult<SimulationResult> {
+        let SimulationRunResult {
+            sensor_data,
+            stats,
+            ux_data,
+            uy_data,
+            uz_data,
+            ix_data,
+            iy_data,
+            iz_data,
+            i_avg_x,
+            i_avg_y,
+            i_avg_z,
+            velocity_stats,
+        } = result;
+
+        // Pressure statistics → numpy arrays.
+        let p_max = stats
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_max.clone()).into());
+        let p_min = stats
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_min.clone()).into());
+        let p_rms = stats
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_rms.clone()).into());
+        let p_final = stats
+            .as_ref()
+            .map(|s| PyArray1::from_owned_array(py, s.p_final.clone()).into());
+
+        // Velocity time series → numpy arrays (None when not recorded).
+        let ux = ux_data.map(|d| PyArray2::from_owned_array(py, d).into());
+        let uy = uy_data.map(|d| PyArray2::from_owned_array(py, d).into());
+        let uz = uz_data.map(|d| PyArray2::from_owned_array(py, d).into());
+        let ix = ix_data.map(|d| PyArray2::from_owned_array(py, d).into());
+        let iy = iy_data.map(|d| PyArray2::from_owned_array(py, d).into());
+        let iz = iz_data.map(|d| PyArray2::from_owned_array(py, d).into());
+        let i_avg_x = i_avg_x.map(|d| PyArray1::from_owned_array(py, d).into());
+        let i_avg_y = i_avg_y.map(|d| PyArray1::from_owned_array(py, d).into());
+        let i_avg_z = i_avg_z.map(|d| PyArray1::from_owned_array(py, d).into());
+
+        // Velocity statistics → numpy arrays (None when not recorded).
+        let (ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms) =
+            if let Some(vs) = velocity_stats {
+                (
+                    Some(PyArray1::from_owned_array(py, vs.ux_max).into()),
+                    Some(PyArray1::from_owned_array(py, vs.ux_min).into()),
+                    Some(PyArray1::from_owned_array(py, vs.ux_rms).into()),
+                    Some(PyArray1::from_owned_array(py, vs.uy_max).into()),
+                    Some(PyArray1::from_owned_array(py, vs.uy_min).into()),
+                    Some(PyArray1::from_owned_array(py, vs.uy_rms).into()),
+                    Some(PyArray1::from_owned_array(py, vs.uz_max).into()),
+                    Some(PyArray1::from_owned_array(py, vs.uz_min).into()),
+                    Some(PyArray1::from_owned_array(py, vs.uz_rms).into()),
+                )
+            } else {
+                (None, None, None, None, None, None, None, None, None)
+            };
+
+        let time_arr = PyArray1::from_owned_array(
+            py,
+            Array1::from_iter((0..time_steps).map(|i| i as f64 * dt_actual)),
+        )
+        .into();
+
+        let n_sensors = sensor_data.nrows();
+        if n_sensors <= 1 {
+            let sensor_1d = sensor_data.row(0).to_owned();
+            Ok(SimulationResult {
+                sensor_data_1d: Some(PyArray1::from_owned_array(py, sensor_1d).into()),
+                sensor_data_2d: None,
+                time: time_arr,
+                shape,
+                sensor_data_shape: (1, time_steps),
+                time_steps,
+                dt: dt_actual,
+                final_time: dt_actual * time_steps as f64,
+                p_max,
+                p_min,
+                p_rms,
+                p_final,
+                ux,
+                uy,
+                uz,
+                ix,
+                iy,
+                iz,
+                i_avg_x,
+                i_avg_y,
+                i_avg_z,
+                ux_max,
+                ux_min,
+                ux_rms,
+                uy_max,
+                uy_min,
+                uy_rms,
+                uz_max,
+                uz_min,
+                uz_rms,
+            })
+        } else {
+            Ok(SimulationResult {
+                sensor_data_1d: None,
+                sensor_data_2d: Some(PyArray2::from_owned_array(py, sensor_data).into()),
+                time: time_arr,
+                shape,
+                sensor_data_shape: (n_sensors, time_steps),
+                time_steps,
+                dt: dt_actual,
+                final_time: dt_actual * time_steps as f64,
+                p_max,
+                p_min,
+                p_rms,
+                p_final,
+                ux,
+                uy,
+                uz,
+                ix,
+                iy,
+                iz,
+                i_avg_x,
+                i_avg_y,
+                i_avg_z,
+                ux_max,
+                ux_min,
+                ux_rms,
+                uy_max,
+                uy_min,
+                uy_rms,
+                uz_max,
+                uz_min,
+                uz_rms,
+            })
         }
     }
 
@@ -3617,7 +3850,8 @@ impl Simulation {
         enable_nonlinear: bool,
         axisymmetric: bool,
         record_modes: &[String],
-    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        record_start_index: usize,
+    ) -> KwaversResult<SimulationRunResult> {
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
 
         // For transducer sensors, override the recorder with element-ordered indices
@@ -3694,9 +3928,24 @@ impl Simulation {
         let full_data = solver.extract_recorded_sensor_data().ok_or_else(|| {
             kwavers::core::error::KwaversError::Io(std::io::Error::other("No sensor data recorded"))
         })?;
-        let recorded_data = Self::trim_initial_recorder_sample(full_data, time_steps);
+        let sensor_data =
+            Self::trim_initial_recorder_sample(full_data, time_steps, record_start_index);
 
-        Ok((recorded_data, stats))
+        // FDTD stepper does not call record_velocity_step; velocity fields are None.
+        Ok(SimulationRunResult {
+            sensor_data,
+            stats,
+            ux_data: None,
+            uy_data: None,
+            uz_data: None,
+            ix_data: None,
+            iy_data: None,
+            iz_data: None,
+            i_avg_x: None,
+            i_avg_y: None,
+            i_avg_z: None,
+            velocity_stats: None,
+        })
     }
 
     /// Build and configure a PSTD solver without running it.
@@ -3871,13 +4120,18 @@ impl Simulation {
         let mut solver =
             PSTDSolver::new(config, sim_grid.clone(), medium.as_medium(), grid_source)?;
 
-        let modes = Self::recording_modes_from_strings(record_modes);
-        if !modes.is_empty() {
-            let shape = (sim_grid.nx, sim_grid.ny, sim_grid.nz);
-            solver.sensor_recorder =
-                SensorRecorder::with_modes(Some(&sensor_mask), shape, time_steps + 1, &modes)?;
-        } else if let Some(ordered) = transducer_ordered_indices {
+        // Always use with_spec so velocity recording is available when requested.
+        // with_spec allocates pressure stats and velocity buffers according to
+        // what the spec requests; an empty record_modes list produces a
+        // pressure-only spec (default, equivalent to the former with_modes path).
+        let spec = Self::record_modes_to_spec(record_modes);
+        let shape = (sim_grid.nx, sim_grid.ny, sim_grid.nz);
+        if let Some(ordered) = transducer_ordered_indices {
+            // Transducer override: element-ordered indices, no velocity stats.
             solver.sensor_recorder = SensorRecorder::from_ordered_indices(ordered, time_steps + 1)?;
+        } else {
+            solver.sensor_recorder =
+                SensorRecorder::with_spec(Some(&sensor_mask), shape, time_steps + 1, spec)?;
         }
 
         for source in sources {
@@ -3888,6 +4142,10 @@ impl Simulation {
     }
 
     /// Run PSTD simulation (internal).
+    ///
+    /// Returns a [`SimulationRunResult`] containing pressure time series,
+    /// pressure statistics, and — when velocity modes were requested — staggered
+    /// velocity time series and per-component velocity statistics.
     #[allow(clippy::too_many_arguments)]
     fn run_pstd_impl(
         grid: &KwaversGrid,
@@ -3908,7 +4166,8 @@ impl Simulation {
         pml_alpha_xyz: Option<(f64, f64, f64)>,
         axisymmetric: bool,
         record_modes: &[String],
-    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        record_start_index: usize,
+    ) -> KwaversResult<SimulationRunResult> {
         let (mut solver, _sim_grid, _sensor_mask) = Self::prepare_pstd_solver(
             grid,
             medium,
@@ -3931,14 +4190,66 @@ impl Simulation {
         )?;
 
         solver.run_orchestrated(time_steps)?;
+
+        // Extract pressure outputs.
         let stats = solver.sensor_recorder.extract_all_stats();
+        let full_data = solver
+            .sensor_recorder
+            .recorded_pressure_view()
+            .ok_or_else(|| {
+                kwavers::core::error::KwaversError::Io(std::io::Error::other(
+                    "No sensor data recorded",
+                ))
+            })?;
+        let sensor_data =
+            Self::trim_initial_recorder_view(full_data, time_steps, record_start_index);
 
-        let full_data = solver.extract_pressure_data().ok_or_else(|| {
-            kwavers::core::error::KwaversError::Io(std::io::Error::other("No sensor data recorded"))
-        })?;
-        let recorded_data = Self::trim_initial_recorder_sample(full_data, time_steps);
+        // Extract velocity time series (None when no velocity mode was requested).
+        let ux_data = solver
+            .sensor_recorder
+            .recorded_ux_view()
+            .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
+        let uy_data = solver
+            .sensor_recorder
+            .recorded_uy_view()
+            .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
+        let uz_data = solver
+            .sensor_recorder
+            .recorded_uz_view()
+            .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
+        let ix_data = solver
+            .sensor_recorder
+            .recorded_ix_view()
+            .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
+        let iy_data = solver
+            .sensor_recorder
+            .recorded_iy_view()
+            .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
+        let iz_data = solver
+            .sensor_recorder
+            .recorded_iz_view()
+            .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
+        let i_avg_x = solver.sensor_recorder.extract_i_avg_x();
+        let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
+        let i_avg_z = solver.sensor_recorder.extract_i_avg_z();
 
-        Ok((recorded_data, stats))
+        // Velocity statistics sampled at sensor positions.
+        let velocity_stats = solver.sensor_recorder.extract_sampled_velocity_stats();
+
+        Ok(SimulationRunResult {
+            sensor_data,
+            stats,
+            ux_data,
+            uy_data,
+            uz_data,
+            ix_data,
+            iy_data,
+            iz_data,
+            i_avg_x,
+            i_avg_y,
+            i_avg_z,
+            velocity_stats,
+        })
     }
 
     /// Run PSTD for `checkpoint_steps` steps and save state to `checkpoint_path`.
@@ -3991,6 +4302,10 @@ impl Simulation {
     }
 
     /// Resume a checkpointed PSTD simulation from a preloaded checkpoint and return sensor data.
+    ///
+    /// `record_modes` mirrors the sensor's recording spec: if it includes velocity
+    /// modes (`"ux"`, `"uy"`, `"uz"`) the recorder allocates the corresponding
+    /// buffers and `run_from_checkpoint_loaded` populates them step-by-step.
     #[allow(clippy::too_many_arguments)]
     fn run_pstd_from_checkpoint_loaded(
         grid: &KwaversGrid,
@@ -4012,7 +4327,8 @@ impl Simulation {
         checkpoint: kwavers::solver::forward::pstd::checkpoint::PSTDCheckpoint,
         remaining_steps: usize,
         checkpoint_path: &std::path::Path,
-    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        record_modes: &[String],
+    ) -> KwaversResult<SimulationRunResult> {
         let (mut solver, _sim_grid, _sensor_mask) = Self::prepare_pstd_solver(
             grid,
             medium,
@@ -4031,7 +4347,7 @@ impl Simulation {
             pml_inside,
             pml_alpha_xyz,
             false, // axisymmetric: checkpoint functions default to Cartesian3D
-            &[],
+            record_modes,
         )?;
 
         checkpoint.validate_restore_contract(grid.nx, grid.ny, grid.nz, total_steps, dt)?;
@@ -4045,8 +4361,53 @@ impl Simulation {
             })?;
 
         let stats = solver.sensor_recorder.extract_all_stats();
-        let recorded_data = Self::trim_initial_recorder_sample(full_data, total_steps);
-        Ok((recorded_data, stats))
+        // Checkpoint path does not propagate record_start_index — always strips only t=0.
+        let sensor_data = Self::trim_initial_recorder_sample(full_data, total_steps, 1);
+
+        // Extract velocity time series using the same pattern as run_pstd_impl.
+        let ux_data = solver
+            .sensor_recorder
+            .recorded_ux_view()
+            .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
+        let uy_data = solver
+            .sensor_recorder
+            .recorded_uy_view()
+            .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
+        let uz_data = solver
+            .sensor_recorder
+            .recorded_uz_view()
+            .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
+        let ix_data = solver
+            .sensor_recorder
+            .recorded_ix_view()
+            .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
+        let iy_data = solver
+            .sensor_recorder
+            .recorded_iy_view()
+            .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
+        let iz_data = solver
+            .sensor_recorder
+            .recorded_iz_view()
+            .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
+        let i_avg_x = solver.sensor_recorder.extract_i_avg_x();
+        let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
+        let i_avg_z = solver.sensor_recorder.extract_i_avg_z();
+        let velocity_stats = solver.sensor_recorder.extract_sampled_velocity_stats();
+
+        Ok(SimulationRunResult {
+            sensor_data,
+            stats,
+            ux_data,
+            uy_data,
+            uz_data,
+            ix_data,
+            iy_data,
+            iz_data,
+            i_avg_x,
+            i_avg_y,
+            i_avg_z,
+            velocity_stats,
+        })
     }
 
     /// Dispatch GPU-resident PSTD if the `gpu` feature is enabled and GPU is
@@ -4071,10 +4432,13 @@ impl Simulation {
         enable_nonlinear: bool,
         axisymmetric: bool,
         record_modes: &[String],
-    ) -> KwaversResult<(ndarray::Array2<f64>, Option<SampledStatistics>)> {
+        record_start_index: usize,
+    ) -> KwaversResult<SimulationRunResult> {
         #[cfg(feature = "gpu")]
         {
             // Attempt GPU path — fall back to CPU on any error.
+            // The GPU path returns `(Array2<f64>, Option<SampledStatistics>)`; wrap into
+            // `SimulationRunResult`. GPU path does not support velocity recording.
             match Self::run_gpu_pstd_impl(
                 grid,
                 medium,
@@ -4090,7 +4454,29 @@ impl Simulation {
                 pml_inside,
                 pml_alpha_xyz,
             ) {
-                Ok(result) => return Ok(result),
+                Ok((sensor_data, stats)) => {
+                    // GPU returns exactly `time_steps` columns with no t=0 column.
+                    // Apply record_start_index via the same trim helper (else branch).
+                    let sensor_data = Self::trim_initial_recorder_sample(
+                        sensor_data,
+                        time_steps,
+                        record_start_index,
+                    );
+                    return Ok(SimulationRunResult {
+                        sensor_data,
+                        stats,
+                        ux_data: None,
+                        uy_data: None,
+                        uz_data: None,
+                        ix_data: None,
+                        iy_data: None,
+                        iz_data: None,
+                        i_avg_x: None,
+                        i_avg_y: None,
+                        i_avg_z: None,
+                        velocity_stats: None,
+                    });
+                }
                 Err(e) => {
                     eprintln!("[PstdGpu] GPU path failed ({e}), falling back to CPU PSTD");
                 }
@@ -4116,6 +4502,7 @@ impl Simulation {
             pml_alpha_xyz,
             axisymmetric,
             record_modes,
+            record_start_index,
         )
     }
 
@@ -5158,6 +5545,42 @@ impl GpuPstdSession {
 }
 
 // ============================================================================
+// Internal run result bundle
+// ============================================================================
+
+/// Bundle returned by every `run_*_impl` function.
+///
+/// Velocity fields are `None` unless the caller supplied a `record_modes` list
+/// that includes at least one velocity component (e.g. `"ux"`, `"ux_max"`).
+/// The FDTD path never populates velocity fields; the PSTD path does.
+struct SimulationRunResult {
+    /// Pressure time series at sensor positions: `(n_sensors, time_steps)`.
+    sensor_data: ndarray::Array2<f64>,
+    /// Pressure spatial statistics (p_max/min/rms/final sampled at sensors).
+    stats: Option<SampledStatistics>,
+    /// Staggered ux time series at sensor positions: `(n_sensors, time_steps)`.
+    ux_data: Option<ndarray::Array2<f64>>,
+    /// Staggered uy time series at sensor positions.
+    uy_data: Option<ndarray::Array2<f64>>,
+    /// Staggered uz time series at sensor positions.
+    uz_data: Option<ndarray::Array2<f64>>,
+    /// Acoustic x-intensity time series at sensor positions.
+    ix_data: Option<ndarray::Array2<f64>>,
+    /// Acoustic y-intensity time series at sensor positions.
+    iy_data: Option<ndarray::Array2<f64>>,
+    /// Acoustic z-intensity time series at sensor positions.
+    iz_data: Option<ndarray::Array2<f64>>,
+    /// Time-averaged x-intensity at sensor positions.
+    i_avg_x: Option<ndarray::Array1<f64>>,
+    /// Time-averaged y-intensity at sensor positions.
+    i_avg_y: Option<ndarray::Array1<f64>>,
+    /// Time-averaged z-intensity at sensor positions.
+    i_avg_z: Option<ndarray::Array1<f64>>,
+    /// Per-component velocity statistics sampled at sensor positions.
+    velocity_stats: Option<SampledVelocityStats>,
+}
+
+// ============================================================================
 // Simulation Result
 // ============================================================================
 
@@ -5200,6 +5623,64 @@ pub struct SimulationResult {
     /// Final pressure at each sensor position [Pa] (None if not recorded)
     #[pyo3(get)]
     p_final: Option<Py<PyArray1<f64>>>,
+
+    // ── Particle velocity time series ────────────────────────────────────────
+    /// Staggered ux time series: `(n_sensors, time_steps)` [m/s] (None if not requested)
+    #[pyo3(get)]
+    ux: Option<Py<PyArray2<f64>>>,
+    /// Staggered uy time series: `(n_sensors, time_steps)` [m/s] (None if not requested)
+    #[pyo3(get)]
+    uy: Option<Py<PyArray2<f64>>>,
+    /// Staggered uz time series: `(n_sensors, time_steps)` [m/s] (None if not requested)
+    #[pyo3(get)]
+    uz: Option<Py<PyArray2<f64>>>,
+    /// Acoustic x-intensity time series: `p * ux` [W/m^2] (None if not requested)
+    #[pyo3(get)]
+    ix: Option<Py<PyArray2<f64>>>,
+    /// Acoustic y-intensity time series: `p * uy` [W/m^2] (None if not requested)
+    #[pyo3(get)]
+    iy: Option<Py<PyArray2<f64>>>,
+    /// Acoustic z-intensity time series: `p * uz` [W/m^2] (None if not requested)
+    #[pyo3(get)]
+    iz: Option<Py<PyArray2<f64>>>,
+    /// Time-averaged x-intensity at each sensor [W/m^2] (None if not requested)
+    #[pyo3(get)]
+    i_avg_x: Option<Py<PyArray1<f64>>>,
+    /// Time-averaged y-intensity at each sensor [W/m^2] (None if not requested)
+    #[pyo3(get)]
+    i_avg_y: Option<Py<PyArray1<f64>>>,
+    /// Time-averaged z-intensity at each sensor [W/m^2] (None if not requested)
+    #[pyo3(get)]
+    i_avg_z: Option<Py<PyArray1<f64>>>,
+
+    // ── Velocity statistics ──────────────────────────────────────────────────
+    /// Maximum ux at each sensor position over all time steps [m/s] (None if not requested)
+    #[pyo3(get)]
+    ux_max: Option<Py<PyArray1<f64>>>,
+    /// Minimum ux at each sensor position [m/s] (None if not requested)
+    #[pyo3(get)]
+    ux_min: Option<Py<PyArray1<f64>>>,
+    /// RMS ux at each sensor position [m/s] (None if not requested)
+    #[pyo3(get)]
+    ux_rms: Option<Py<PyArray1<f64>>>,
+    /// Maximum uy at each sensor position [m/s] (None if not requested)
+    #[pyo3(get)]
+    uy_max: Option<Py<PyArray1<f64>>>,
+    /// Minimum uy at each sensor position [m/s] (None if not requested)
+    #[pyo3(get)]
+    uy_min: Option<Py<PyArray1<f64>>>,
+    /// RMS uy at each sensor position [m/s] (None if not requested)
+    #[pyo3(get)]
+    uy_rms: Option<Py<PyArray1<f64>>>,
+    /// Maximum uz at each sensor position [m/s] (None if not requested)
+    #[pyo3(get)]
+    uz_max: Option<Py<PyArray1<f64>>>,
+    /// Minimum uz at each sensor position [m/s] (None if not requested)
+    #[pyo3(get)]
+    uz_min: Option<Py<PyArray1<f64>>>,
+    /// RMS uz at each sensor position [m/s] (None if not requested)
+    #[pyo3(get)]
+    uz_rms: Option<Py<PyArray1<f64>>>,
 }
 
 #[pymethods]
@@ -5379,20 +5860,55 @@ impl std::fmt::Debug for SampledSignal {
 
 #[cfg(test)]
 mod simulation_contract_tests {
-    use super::{time_reversal_reconstruction_impl, Grid, Simulation};
+    use super::{time_reversal_reconstruction_impl, Grid, SensorRecordField, Simulation};
     use ndarray::{array, Array2};
 
     #[test]
     fn trim_initial_recorder_sample_discards_t0_column_only_when_present() {
+        // Default record_start_index=1: strips col 0 (t=0 initial), yields Nt cols.
         let nt_plus_one = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
-        let trimmed = Simulation::trim_initial_recorder_sample(nt_plus_one, 3);
+        let trimmed = Simulation::trim_initial_recorder_sample(nt_plus_one, 3, 1);
         assert_eq!(trimmed.shape(), &[2, 3]);
         assert_eq!(trimmed[[0, 0]], 1.0);
         assert_eq!(trimmed[[1, 2]], 13.0);
 
         let exact_nt = array![[1.0, 2.0, 3.0], [11.0, 12.0, 13.0]];
-        let untouched = Simulation::trim_initial_recorder_sample(exact_nt.clone(), 3);
+        let untouched = Simulation::trim_initial_recorder_sample(exact_nt.clone(), 3, 1);
         assert_eq!(untouched, exact_nt);
+
+        // record_start_index=2: strips col 0 and col 1, yields Nt-1 cols.
+        let nt_plus_one2 = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
+        let trimmed2 = Simulation::trim_initial_recorder_sample(nt_plus_one2, 3, 2);
+        assert_eq!(trimmed2.shape(), &[2, 2]);
+        assert_eq!(trimmed2[[0, 0]], 2.0);
+        assert_eq!(trimmed2[[1, 1]], 13.0);
+    }
+
+    #[test]
+    fn trim_initial_recorder_view_discards_t0_without_full_buffer_clone() {
+        let nt_plus_one = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
+        let trimmed = Simulation::trim_initial_recorder_view(nt_plus_one.view(), 3, 1);
+        assert_eq!(trimmed.shape(), &[2, 3]);
+        assert_eq!(trimmed[[0, 0]], 1.0);
+        assert_eq!(trimmed[[1, 2]], 13.0);
+
+        let exact_nt = array![[1.0, 2.0, 3.0], [11.0, 12.0, 13.0]];
+        let untouched = Simulation::trim_initial_recorder_view(exact_nt.view(), 3, 1);
+        assert_eq!(untouched, exact_nt);
+    }
+
+    #[test]
+    fn record_modes_to_spec_maps_acoustic_intensity_fields() {
+        let modes = vec!["Ix".to_string(), "I_avg_x".to_string()];
+        let spec = Simulation::record_modes_to_spec(&modes);
+
+        assert!(spec.contains(SensorRecordField::IntensityX));
+        assert!(spec.contains(SensorRecordField::IntensityAvgX));
+        assert!(spec.records_pressure());
+        assert!(!spec.records_ux());
+        assert!(spec.needs_any_velocity());
+        assert!(spec.records_intensity_x());
+        assert!(!spec.records_intensity_y());
     }
 
     #[test]

@@ -56,3 +56,23 @@ fn solver_factory_policy_has_no_domain_or_simulation_imports() {
 
     assert_eq!(violations, Vec::<&str>::new());
 }
+
+#[test]
+fn simulation_progress_reporting_uses_solver_interface_boundary() {
+    let simulation_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/simulation");
+    let mut violations = Vec::new();
+
+    for file in rust_files_under(&simulation_root) {
+        let source = fs::read_to_string(&file).unwrap();
+        if source.contains("crate::solver::progress::") {
+            violations.push(format!(
+                "{} imports solver::progress instead of solver::interface",
+                file.strip_prefix(env!("CARGO_MANIFEST_DIR"))
+                    .unwrap()
+                    .display()
+            ));
+        }
+    }
+
+    assert_eq!(violations, Vec::<String>::new());
+}

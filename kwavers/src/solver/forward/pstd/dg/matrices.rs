@@ -16,7 +16,15 @@
 //!   D_{ij} = (Vr · V⁻¹)_{ij}
 //! ```
 //! For normalised Legendre: `φ'_j(x) = P̃'_j(x)` computed via the Legendre
-//! derivative recurrence.
+//! derivative recurrence. At GLL endpoints the quotient recurrence is replaced
+//! by the analytic limit
+//! `P'_n(1)=n(n+1)/2`, `P'_n(-1)=(-1)^(n+1)n(n+1)/2`, avoiding the removable
+//! singularity at `1 - x² = 0`.
+//! For real Fourier modes with `θ = π(x+1)`:
+//! ```text
+//!   d/dx sin(kθ) = kπ cos(kθ)
+//!   d/dx cos(kθ) = -kπ sin(kθ).
+//! ```
 //!
 //! ## Algorithm: Stiffness matrix `S = M · D`
 //!
@@ -38,7 +46,7 @@
 //! - Hesthaven & Warburton (2008). *Nodal Discontinuous Galerkin Methods*. Springer. §3.3.
 //! - Kopriva (2009). *Implementing Spectral Methods*. Springer. §4.5.
 
-use super::basis::BasisType;
+use super::basis::{fourier_theta, validate_fourier_nodes, BasisType};
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, NumericalError};
 use ndarray::{Array1, Array2};
@@ -110,10 +118,22 @@ pub fn compute_diff_matrix(
                 }
             }
         }
-        _ => {
-            return Err(KwaversError::Numerical(NumericalError::NotImplemented {
-                feature: "Differentiation matrix only implemented for Legendre".to_string(),
-            }))
+        BasisType::Chebyshev => {
+            for i in 0..n {
+                let xi = nodes[i];
+                for j in 0..n_modes {
+                    vr[[i, j]] = chebyshev_t_derivative(j, xi);
+                }
+            }
+        }
+        BasisType::Fourier => {
+            validate_fourier_nodes(nodes)?;
+            for i in 0..n {
+                let theta = fourier_theta(nodes[i]);
+                for j in 0..n_modes {
+                    vr[[i, j]] = real_fourier_basis_derivative(j, theta);
+                }
+            }
         }
     }
 
@@ -237,6 +257,180 @@ fn legendre_poly_and_deriv(n: usize, x: f64) -> (f64, f64) {
         l_curr = l_next;
     }
 
+    if x == 1.0 {
+        return (1.0, endpoint_legendre_derivative(n, 1.0));
+    }
+    if x == -1.0 {
+        return (
+            if n.is_multiple_of(2) { 1.0 } else { -1.0 },
+            endpoint_legendre_derivative(n, -1.0),
+        );
+    }
+
     let deriv = (n as f64) * (l_prev - x * l_curr) / (1.0 - x * x);
     (l_curr, deriv)
+}
+
+fn endpoint_legendre_derivative(n: usize, x: f64) -> f64 {
+    let magnitude = (n * (n + 1)) as f64 / 2.0;
+    if x == 1.0 || !n.is_multiple_of(2) {
+        magnitude
+    } else {
+        -magnitude
+    }
+}
+
+fn chebyshev_t_derivative(n: usize, x: f64) -> f64 {
+    if n == 0 {
+        return 0.0;
+    }
+    if x == 1.0 {
+        return (n * n) as f64;
+    }
+    if x == -1.0 {
+        let magnitude = (n * n) as f64;
+        return if n.is_multiple_of(2) {
+            -magnitude
+        } else {
+            magnitude
+        };
+    }
+
+    n as f64 * chebyshev_u(n - 1, x)
+}
+
+fn chebyshev_u(n: usize, x: f64) -> f64 {
+    if n == 0 {
+        return 1.0;
+    }
+    if n == 1 {
+        return 2.0 * x;
+    }
+
+    let mut u_prev = 1.0;
+    let mut u_curr = 2.0 * x;
+
+    for _ in 1..n {
+        let u_next = 2.0 * x * u_curr - u_prev;
+        u_prev = u_curr;
+        u_curr = u_next;
+    }
+
+    u_curr
+}
+
+fn real_fourier_basis_derivative(mode: usize, theta: f64) -> f64 {
+    if mode == 0 {
+        return 0.0;
+    }
+
+    let wavenumber = mode.div_ceil(2) as f64;
+    let angular_wavenumber = wavenumber * std::f64::consts::PI;
+    if mode % 2 == 1 {
+        angular_wavenumber * (wavenumber * theta).cos()
+    } else {
+        -angular_wavenumber * (wavenumber * theta).sin()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::solver::forward::pstd::dg::basis::build_vandermonde;
+    use ndarray::{arr1, Array1};
+
+    #[test]
+    fn legendre_derivative_endpoint_limits_are_finite() {
+        let endpoint_cases = [
+            (2, 1.0, 1.0, 3.0),
+            (2, -1.0, 1.0, -3.0),
+            (3, 1.0, 1.0, 6.0),
+            (3, -1.0, -1.0, 6.0),
+        ];
+
+        for (degree, node, expected_value, expected_derivative) in endpoint_cases {
+            let (value, derivative) = legendre_poly_and_deriv(degree, node);
+            assert_eq!(value, expected_value);
+            assert_eq!(derivative, expected_derivative);
+            assert!(value.is_finite());
+            assert!(derivative.is_finite());
+        }
+    }
+
+    #[test]
+    fn differentiation_matrix_is_finite_on_gll_endpoints() {
+        let nodes = arr1(&[-1.0, 0.0, 1.0]);
+        let vandermonde = build_vandermonde(&nodes, 2, BasisType::Legendre).unwrap();
+
+        let diff = compute_diff_matrix(&vandermonde, &nodes, BasisType::Legendre).unwrap();
+
+        assert!(diff.iter().all(|entry| entry.is_finite()));
+    }
+
+    #[test]
+    fn differentiation_matrix_exactly_differentiates_linear_polynomial() {
+        let nodes = arr1(&[-1.0, 0.0, 1.0]);
+        let vandermonde = build_vandermonde(&nodes, 2, BasisType::Legendre).unwrap();
+        let diff = compute_diff_matrix(&vandermonde, &nodes, BasisType::Legendre).unwrap();
+
+        let constant_values = Array1::ones(nodes.len());
+        let constant_derivative = diff.dot(&constant_values);
+        assert!(constant_derivative
+            .iter()
+            .all(|value: &f64| value.abs() <= 1e-12));
+
+        let linear_derivative = diff.dot(&nodes);
+        for value in linear_derivative {
+            assert!((value - 1.0).abs() <= 1e-12);
+        }
+    }
+
+    #[test]
+    fn chebyshev_differentiation_matrix_is_finite_on_endpoints() {
+        let nodes = arr1(&[-1.0, 0.0, 1.0]);
+        let vandermonde = build_vandermonde(&nodes, 2, BasisType::Chebyshev).unwrap();
+
+        let diff = compute_diff_matrix(&vandermonde, &nodes, BasisType::Chebyshev).unwrap();
+
+        assert!(diff.iter().all(|entry| entry.is_finite()));
+    }
+
+    #[test]
+    fn chebyshev_differentiation_matrix_exactly_differentiates_quadratic() {
+        let nodes = arr1(&[-1.0, 0.0, 1.0]);
+        let vandermonde = build_vandermonde(&nodes, 2, BasisType::Chebyshev).unwrap();
+        let diff = compute_diff_matrix(&vandermonde, &nodes, BasisType::Chebyshev).unwrap();
+
+        let quadratic_values = nodes.mapv(|x| x * x);
+        let derivative = diff.dot(&quadratic_values);
+
+        for (actual, expected) in derivative.iter().zip(nodes.iter().map(|x| 2.0 * x)) {
+            assert!((actual - expected).abs() <= 1e-12);
+        }
+    }
+
+    #[test]
+    fn fourier_differentiation_matrix_exactly_differentiates_first_sine_mode() {
+        let nodes = arr1(&[-0.5, 0.0, 0.5]);
+        let vandermonde = build_vandermonde(&nodes, 2, BasisType::Fourier).unwrap();
+        let diff = compute_diff_matrix(&vandermonde, &nodes, BasisType::Fourier).unwrap();
+
+        let sine_values = nodes.mapv(|x| (std::f64::consts::PI * (x + 1.0)).sin());
+        let derivative = diff.dot(&sine_values);
+
+        for (actual, node) in derivative.iter().zip(nodes.iter()) {
+            let expected = std::f64::consts::PI * (std::f64::consts::PI * (node + 1.0)).cos();
+            assert!((actual - expected).abs() <= 1e-12);
+        }
+    }
+
+    #[test]
+    fn fourier_differentiation_rejects_gll_duplicate_periodic_endpoints() {
+        let nodes = arr1(&[-1.0, 0.0, 1.0]);
+        let vandermonde = build_vandermonde(&nodes, 2, BasisType::Legendre).unwrap();
+
+        let error = compute_diff_matrix(&vandermonde, &nodes, BasisType::Fourier).unwrap_err();
+
+        assert!(format!("{error}").contains("cannot include both periodic endpoints"));
+    }
 }

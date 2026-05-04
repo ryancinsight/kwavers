@@ -5,7 +5,7 @@ use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::definition::ElasticWaveSolver;
 use crate::core::error::{KwaversResult, NumericalError};
 use crate::domain::sensor::recorder::simple::SensorRecorder;
-use ndarray::Array2;
+use ndarray::{Array2, ArrayView2};
 
 impl ElasticWaveSolver {
     pub fn propagate(
@@ -54,6 +54,18 @@ impl ElasticWaveSolver {
 
     pub fn extract_recorded_data(&self) -> Option<Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
+    }
+
+    /// Borrow the full allocated sensor displacement buffer without cloning.
+    #[must_use]
+    pub fn recorded_data_view(&self) -> Option<ArrayView2<'_, f64>> {
+        self.sensor_recorder.pressure_data_view()
+    }
+
+    /// Borrow only populated sensor displacement samples without cloning.
+    #[must_use]
+    pub fn recorded_data_prefix_view(&self) -> Option<ArrayView2<'_, f64>> {
+        self.sensor_recorder.recorded_pressure_view()
     }
 
     pub fn propagate_waves(

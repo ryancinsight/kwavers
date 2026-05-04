@@ -4,7 +4,7 @@
 
 use super::{LayerParameters, MediumParameters, MediumType};
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::medium::{homogeneous::HomogeneousMedium, Medium};
@@ -67,7 +67,15 @@ impl MediumBuilder {
         Ok(Box::new(medium))
     }
 
-    /// Build heterogeneous medium from configuration
+    /// Build heterogeneous medium from configuration.
+    ///
+    /// # Boundary contract
+    ///
+    /// Scalar heterogeneous configurations are materialized directly from the
+    /// validated scalar parameters. File-backed tissue maps and property maps
+    /// require a real parser/loader boundary before construction; they must not
+    /// degrade to scalar fields because that erases heterogeneity requested by
+    /// the caller.
     fn build_heterogeneous(
         config: &MediumParameters,
         grid: &Grid,
@@ -75,17 +83,19 @@ impl MediumBuilder {
         let (nx, ny, nz) = grid.dimensions();
 
         if let Some(file) = &config.tissue_file {
-            log::warn!(
-                "tissue_file '{}' loading not yet implemented; using scalar fallback for {}x{}x{} grid",
-                file, nx, ny, nz
-            );
+            return Err(KwaversError::FeatureNotAvailable(format!(
+                "heterogeneous tissue_file '{file}' requires an explicit medium-volume loader; \
+                 scalar fallback for {nx}x{ny}x{nz} grid is prohibited"
+            )));
         }
 
         if !config.property_maps.is_empty() {
-            log::warn!(
-                "property_maps file loading not yet implemented (keys: {:?}); using scalar fallback",
-                config.property_maps.keys().collect::<Vec<_>>()
-            );
+            let mut keys = config.property_maps.keys().cloned().collect::<Vec<_>>();
+            keys.sort();
+            return Err(KwaversError::FeatureNotAvailable(format!(
+                "heterogeneous property_maps {keys:?} require explicit property-volume loaders; \
+                 scalar fallback is prohibited"
+            )));
         }
 
         let c0 = config.sound_speed.unwrap_or(SOUND_SPEED_WATER_SIM);
@@ -99,6 +109,7 @@ impl MediumBuilder {
             move |_x, _y, _z| c0,
             move |_x, _y, _z| rho0,
             Some(Box::new(move |_x, _y, _z| absorption)),
+            None, // alpha_power: use default 1.0
             Some(Box::new(move |_x, _y, _z| nonlinearity)),
             reference_frequency,
         );
@@ -183,5 +194,72 @@ impl MediumBuilder {
         );
 
         Ok(Box::new(medium))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn test_grid() -> Grid {
+        Grid::new(3, 3, 3, 1.0e-3, 1.0e-3, 1.0e-3).unwrap()
+    }
+
+    #[test]
+    fn heterogeneous_scalar_config_builds_input_sensitive_uniform_medium() {
+        let grid = test_grid();
+        let config = MediumParameters {
+            medium_type: MediumType::Heterogeneous,
+            density: 1040.0,
+            sound_speed: Some(1540.0),
+            absorption: 0.45,
+            nonlinearity: 6.0,
+            ..MediumParameters::default()
+        };
+
+        let medium = MediumBuilder::build(&config, &grid).unwrap();
+
+        assert_eq!(medium.sound_speed(0, 0, 0), 1540.0);
+        assert_eq!(medium.sound_speed(2, 2, 2), 1540.0);
+        assert_eq!(medium.density(1, 1, 1), 1040.0);
+        assert_eq!(medium.absorption(2, 1, 0), 0.45);
+        assert_eq!(medium.nonlinearity(0, 2, 1), 6.0);
+    }
+
+    #[test]
+    fn heterogeneous_tissue_file_rejects_scalar_fallback() {
+        let grid = test_grid();
+        let config = MediumParameters {
+            medium_type: MediumType::Heterogeneous,
+            tissue_file: Some("phantom.nii.gz".to_string()),
+            ..MediumParameters::default()
+        };
+
+        let error = MediumBuilder::build(&config, &grid).unwrap_err();
+
+        assert!(matches!(error, KwaversError::FeatureNotAvailable(_)));
+        assert!(format!("{error}").contains("scalar fallback"));
+    }
+
+    #[test]
+    fn heterogeneous_property_maps_reject_scalar_fallback() {
+        let grid = test_grid();
+        let config = MediumParameters {
+            medium_type: MediumType::Heterogeneous,
+            property_maps: HashMap::from([
+                ("density".to_string(), "rho.h5".to_string()),
+                ("sound_speed".to_string(), "c.h5".to_string()),
+            ]),
+            ..MediumParameters::default()
+        };
+
+        let error = MediumBuilder::build(&config, &grid).unwrap_err();
+
+        assert!(matches!(error, KwaversError::FeatureNotAvailable(_)));
+        let message = format!("{error}");
+        assert!(message.contains("density"));
+        assert!(message.contains("sound_speed"));
+        assert!(message.contains("scalar fallback"));
     }
 }

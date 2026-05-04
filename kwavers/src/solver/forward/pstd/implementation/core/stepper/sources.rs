@@ -5,7 +5,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::source::{SourceField, SourceInjectionMode};
 use crate::math::fft::Complex64;
 use crate::solver::geometry::Geometry;
-use ndarray::Zip;
+use ndarray::{s, Zip};
 
 impl PSTDSolver {
     pub(super) fn apply_pressure_sources(
@@ -117,14 +117,16 @@ impl PSTDSolver {
                 }
             }
             crate::domain::source::SourceMode::Additive => {
-                self.fft.forward_into(&self.dpx, &mut self.p_k);
+                // R2C: dpx (nx,ny,nz) → p_k (nx,ny,nz_c); source_kappa sliced to nz_c.
+                let nz_c = self.p_k.dim().2;
+                self.fft.forward_r2c_into(&self.dpx, &mut self.p_k);
                 Zip::from(&mut self.p_k)
-                    .and(&self.source_kappa)
+                    .and(self.source_kappa.slice(s![.., .., ..nz_c]))
                     .for_each(|val, &k| {
                         *val *= Complex64::new(k, 0.0);
                     });
                 self.fft
-                    .inverse_into(&self.p_k, &mut self.dpx, &mut self.ux_k);
+                    .inverse_c2r_into(&self.p_k, &mut self.dpx, &mut self.ux_k);
 
                 if is_axisymmetric {
                     Zip::from(&mut self.rhox)

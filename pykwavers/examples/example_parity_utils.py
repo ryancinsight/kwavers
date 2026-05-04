@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable, Literal, Sequence
 
 import numpy as np
 
@@ -323,6 +323,132 @@ def compute_image_metrics(reference: np.ndarray, candidate: np.ndarray) -> dict[
         "peak_ratio": peak_ratio,
         "psnr_db": psnr_db,
     }
+
+
+VisualProjection = Literal["auto", "peak_slice", "max_abs_projection"]
+
+
+def _visual_plane(
+    array: np.ndarray,
+    *,
+    projection: VisualProjection,
+    axis: int,
+    slice_index: int | None,
+    reference_for_slice: np.ndarray | None = None,
+) -> tuple[np.ndarray, str]:
+    arr = np.asarray(array, dtype=float).squeeze()
+    if arr.ndim == 0:
+        return arr.reshape(1, 1), "scalar"
+    if arr.ndim == 1:
+        return arr.reshape(1, -1), "trace"
+    if arr.ndim == 2:
+        return arr, "matrix"
+    if arr.ndim != 3:
+        raise ValueError(f"Expected 1-D, 2-D, or 3-D visual data, got shape {arr.shape}")
+
+    axis = int(axis)
+    if axis < 0:
+        axis += arr.ndim
+    if axis not in (0, 1, 2):
+        raise ValueError(f"axis must be 0, 1, or 2 for 3-D data, got {axis}")
+
+    mode = "peak_slice" if projection == "auto" else projection
+    if mode == "max_abs_projection":
+        return np.max(np.abs(arr), axis=axis), f"max |.| projection over axis {axis}"
+    if mode != "peak_slice":
+        raise ValueError(f"Unknown visual projection: {projection}")
+
+    if slice_index is None:
+        selector_source = arr
+        if reference_for_slice is not None:
+            ref = np.asarray(reference_for_slice, dtype=float).squeeze()
+            if ref.shape == arr.shape:
+                selector_source = np.abs(ref) + np.abs(arr)
+        energy = np.sum(np.abs(selector_source), axis=tuple(i for i in range(3) if i != axis))
+        slice_index = int(np.argmax(energy))
+    if not (0 <= slice_index < arr.shape[axis]):
+        raise ValueError(
+            f"slice_index {slice_index} out of bounds for axis {axis} with length {arr.shape[axis]}"
+        )
+    return np.take(arr, slice_index, axis=axis), f"axis {axis} slice {slice_index}"
+
+
+def save_side_by_side_parity_figure(
+    reference: np.ndarray,
+    candidate: np.ndarray,
+    path: Path,
+    *,
+    title: str,
+    reference_label: str = "k-wave-python",
+    candidate_label: str = "pykwavers",
+    projection: VisualProjection = "auto",
+    axis: int = 0,
+    slice_index: int | None = None,
+    cmap: str = "viridis",
+    diff_cmap: str = "magma",
+    dpi: int = 160,
+) -> Path:
+    """Save a side-by-side parity figure: reference, candidate, and difference.
+
+    For 3-D data, the default projection chooses the slice with the largest
+    combined absolute signal over the selected axis. This keeps geometry
+    comparisons input-sensitive and avoids hidden central-slice assumptions.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    ref_arr = np.asarray(reference, dtype=float)
+    cand_arr = np.asarray(candidate, dtype=float)
+    if ref_arr.shape != cand_arr.shape:
+        raise ValueError(f"visual parity shape mismatch: {ref_arr.shape} != {cand_arr.shape}")
+
+    ref_plane, plane_label = _visual_plane(
+        ref_arr,
+        projection=projection,
+        axis=axis,
+        slice_index=slice_index,
+        reference_for_slice=cand_arr,
+    )
+    cand_plane, _ = _visual_plane(
+        cand_arr,
+        projection=projection,
+        axis=axis,
+        slice_index=slice_index,
+        reference_for_slice=ref_arr,
+    )
+    if ref_plane.shape != cand_plane.shape:
+        raise ValueError(f"visual parity plane mismatch: {ref_plane.shape} != {cand_plane.shape}")
+
+    diff = cand_plane - ref_plane
+    data_min = float(min(np.min(ref_plane), np.min(cand_plane)))
+    data_max = float(max(np.max(ref_plane), np.max(cand_plane)))
+    if data_min < 0.0 < data_max:
+        vmax = float(max(abs(data_min), abs(data_max), 1.0e-30))
+        vmin = -vmax
+    else:
+        vmin = data_min
+        vmax = data_max if data_max > data_min else data_min + 1.0
+    dmax = float(max(np.max(np.abs(diff)), 1.0e-30))
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.2), constrained_layout=True)
+    im0 = axes[0].imshow(ref_plane.T, origin="lower", aspect="auto", cmap=cmap, vmin=vmin, vmax=vmax)
+    axes[0].set_title(reference_label)
+    im1 = axes[1].imshow(cand_plane.T, origin="lower", aspect="auto", cmap=cmap, vmin=vmin, vmax=vmax)
+    axes[1].set_title(candidate_label)
+    im2 = axes[2].imshow(diff.T, origin="lower", aspect="auto", cmap=diff_cmap, vmin=-dmax, vmax=dmax)
+    axes[2].set_title(f"{candidate_label} - {reference_label}")
+    for ax in axes:
+        ax.set_xlabel("index 0")
+        ax.set_ylabel("index 1")
+    fig.colorbar(im0, ax=axes[:2], fraction=0.04, pad=0.02)
+    fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
+    fig.suptitle(f"{title}\n{plane_label}", fontsize=10)
+    fig.savefig(path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    return path
 
 
 def save_text_report(path: Path, header: str, lines: Iterable[str]) -> None:

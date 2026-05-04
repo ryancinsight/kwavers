@@ -261,6 +261,12 @@ impl PerformanceMonitor {
         }
     }
 
+    /// Number of recorded steps that exceeded the configured budget.
+    #[must_use]
+    pub fn budget_violations(&self) -> u64 {
+        self.budget_violations
+    }
+
     /// Get estimated remaining budget for next step
     pub fn estimated_remaining_budget(&self) -> f64 {
         let avg_time = self.calculate_average(&self.step_times);

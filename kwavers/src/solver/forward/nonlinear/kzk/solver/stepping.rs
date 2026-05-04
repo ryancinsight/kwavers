@@ -14,6 +14,14 @@ impl KZKSolver {
     pub fn step(&mut self) {
         let dz = self.config.dz;
 
+        if self.pressure_is_exact_zero() {
+            self.pressure_prev.assign(&self.pressure);
+            self.current_z_step += 1;
+            self.current_time += dz / self.config.c0;
+            self.check_conservation_laws();
+            return;
+        }
+
         if self.config.include_diffraction {
             self.apply_diffraction(dz / 2.0);
         }
@@ -36,6 +44,22 @@ impl KZKSolver {
         self.current_time += dz / self.config.c0;
 
         self.check_conservation_laws();
+    }
+
+    /// Return true when the complex pressure field is exactly zero.
+    ///
+    /// ## Theorem
+    ///
+    /// The split KZK sub-operators are homogeneous:
+    /// `D(0)=0`, `A(0)=0`, and `N(0)=β·0·∂τ0/(ρ₀c₀³)=0`.
+    /// Therefore the Strang composition maps the zero field to itself.
+    /// Detecting this state avoids FFT and nonlinear derivative work without
+    /// changing the mathematical result.
+    #[inline]
+    fn pressure_is_exact_zero(&self) -> bool {
+        self.pressure
+            .iter()
+            .all(|value| value.re == 0.0 && value.im == 0.0)
     }
 
     /// Propagate the acoustic field forward by `n_steps` axial z-steps.

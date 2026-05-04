@@ -20,7 +20,7 @@ fn test_simulation_creation() {
         &medium,
         sources,
         vec![],
-        Box::new(crate::solver::progress::ConsoleProgressReporter::default()),
+        Box::new(crate::solver::interface::ConsoleProgressReporter::default()),
     )
     .unwrap();
 
@@ -38,7 +38,7 @@ fn test_feature_management() {
         &medium,
         vec![],
         vec![],
-        Box::new(crate::solver::progress::ConsoleProgressReporter::default()),
+        Box::new(crate::solver::interface::ConsoleProgressReporter::default()),
     )
     .unwrap();
 

@@ -8,10 +8,12 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::{density_at, sound_speed_at, AcousticProperties, CoreMedium, Medium};
 use crate::domain::source::GridSource;
+use crate::simulation::solver_adapters::DgSimulationSolver;
 use crate::solver::config::{SolverConfiguration, SolverType};
 use crate::solver::factory::SolverFactory;
 use crate::solver::forward::fdtd::FdtdConfig;
 use crate::solver::forward::hybrid::config::HybridConfig;
+use crate::solver::forward::pstd::config::KSpaceMethod;
 use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use crate::solver::forward::{FdtdSolver, HybridSolver};
 use crate::solver::interface::factory::{FactoryConfiguration, GridParameters, MediumParameters};
@@ -82,7 +84,7 @@ impl SimulationSolverFactory {
     /// Create a concrete solver for a simulation.
     pub fn create_solver<M: Medium>(
         solver_type: SolverType,
-        _config: SolverConfiguration,
+        config: SolverConfiguration,
         grid: &Grid,
         medium: &M,
     ) -> KwaversResult<Box<dyn Solver>> {
@@ -95,13 +97,26 @@ impl SimulationSolverFactory {
 
         match selected_type {
             SolverType::FDTD => {
-                let solver =
-                    FdtdSolver::new(FdtdConfig::default(), grid, medium, GridSource::default())?;
+                let solver = FdtdSolver::new(
+                    fdtd_config_from(&config),
+                    grid,
+                    medium,
+                    GridSource::default(),
+                )?;
                 Ok(Box::new(solver))
             }
             SolverType::PSTD => {
                 let solver = PSTDSolver::new(
-                    PSTDConfig::default(),
+                    pstd_config_from(&config, KSpaceMethod::StandardPSTD),
+                    grid.clone(),
+                    medium,
+                    GridSource::default(),
+                )?;
+                Ok(Box::new(solver))
+            }
+            SolverType::KSpace => {
+                let solver = PSTDSolver::new(
+                    pstd_config_from(&config, KSpaceMethod::FullKSpace),
                     grid.clone(),
                     medium,
                     GridSource::default(),
@@ -109,14 +124,49 @@ impl SimulationSolverFactory {
                 Ok(Box::new(solver))
             }
             SolverType::Hybrid => {
-                let solver = HybridSolver::new(HybridConfig::default(), grid, medium)?;
+                let solver = HybridSolver::new(hybrid_config_from(&config), grid, medium)?;
                 Ok(Box::new(solver))
             }
             SolverType::Auto => unreachable!("Auto solver type must be resolved before assembly"),
-            unsupported => Err(KwaversError::NotImplemented(format!(
-                "Solver type not supported by simulation factory: {unsupported:?}"
-            ))),
+            SolverType::DiscontinuousGalerkin => {
+                Ok(Box::new(DgSimulationSolver::new(&config, grid, medium)?))
+            }
+            SolverType::FEM => Err(KwaversError::FeatureNotAvailable(
+                "Simulation factory cannot assemble FEM from Grid until a real Grid-to-TetrahedralMesh generator and frequency-domain source/boundary contract are available".to_string(),
+            )),
         }
+    }
+}
+
+fn fdtd_config_from(config: &SolverConfiguration) -> FdtdConfig {
+    FdtdConfig {
+        spatial_order: config.spatial_order,
+        cfl_factor: config.cfl,
+        enable_gpu_acceleration: config.enable_gpu,
+        nt: config.max_steps,
+        dt: config.dt,
+        ..FdtdConfig::default()
+    }
+}
+
+fn pstd_config_from(config: &SolverConfiguration, kspace_method: KSpaceMethod) -> PSTDConfig {
+    PSTDConfig {
+        nt: config.max_steps,
+        dt: config.dt,
+        kspace_method,
+        ..PSTDConfig::default()
+    }
+}
+
+fn hybrid_config_from(config: &SolverConfiguration) -> HybridConfig {
+    HybridConfig {
+        pstd_config: pstd_config_from(config, KSpaceMethod::StandardPSTD),
+        fdtd_config: fdtd_config_from(config),
+        validation: crate::solver::forward::hybrid::config::ValidationConfig {
+            enable_validation: config.validation_mode,
+            ..Default::default()
+        },
+        ..HybridConfig::default()
     }
 }
 
@@ -155,5 +205,62 @@ mod tests {
         assert_eq!(descriptor.density(0.0, 0.0, 0.0), 998.2);
         assert_eq!(descriptor.sound_speed(0.0, 0.0, 0.0), 1482.0);
         assert_eq!(descriptor.heterogeneity(), 0.0);
+    }
+
+    #[test]
+    fn assembles_kspace_solver_through_full_kspace_pstd() {
+        let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium = HomogeneousMedium::from_minimal(998.2, 1482.0, &grid);
+        let config = SolverConfiguration {
+            solver_type: SolverType::KSpace,
+            max_steps: 2,
+            dt: 1.0e-8,
+            ..SolverConfiguration::default()
+        };
+
+        let mut solver =
+            SimulationSolverFactory::create_solver(SolverType::KSpace, config, &grid, &medium)
+                .unwrap();
+
+        assert_eq!(solver.name(), "PSTD");
+        solver.run(0).unwrap();
+        assert_eq!(solver.pressure_field().dim(), (4, 4, 4));
+    }
+
+    #[test]
+    fn assembles_discontinuous_galerkin_solver_for_valid_layout() {
+        let grid = Grid::new(3, 3, 1, 1.0e-3, 1.0, 1.0).unwrap();
+        let medium = HomogeneousMedium::from_minimal(998.2, 10.0, &grid);
+        let config = SolverConfiguration {
+            solver_type: SolverType::DiscontinuousGalerkin,
+            spatial_order: 2,
+            dt: 1.0e-6,
+            ..SolverConfiguration::default()
+        };
+
+        let mut solver = SimulationSolverFactory::create_solver(
+            SolverType::DiscontinuousGalerkin,
+            config,
+            &grid,
+            &medium,
+        )
+        .unwrap();
+
+        assert_eq!(solver.name(), "DiscontinuousGalerkin");
+        solver.run(1).unwrap();
+        assert_eq!(solver.statistics().current_step, 1);
+        assert_eq!(solver.pressure_field().dim(), (3, 3, 1));
+    }
+
+    #[test]
+    fn reports_unavailable_fem_grid_assembly_without_not_implemented() {
+        let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium = HomogeneousMedium::from_minimal(998.2, 1482.0, &grid);
+        let config = SolverConfiguration::default();
+
+        let error = SimulationSolverFactory::create_solver(SolverType::FEM, config, &grid, &medium)
+            .unwrap_err();
+
+        assert!(matches!(error, KwaversError::FeatureNotAvailable(_)));
     }
 }

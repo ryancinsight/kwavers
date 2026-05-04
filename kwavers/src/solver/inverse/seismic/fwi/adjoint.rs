@@ -166,6 +166,7 @@ impl FwiProcessor {
             model.clone(),
             density_adj,
             None,
+            None, // alpha_power: default 1.0
             None,
             self.parameters.frequency,
         )

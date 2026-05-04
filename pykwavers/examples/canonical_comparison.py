@@ -22,6 +22,7 @@ import argparse
 import sys
 
 import numpy as np
+from example_parity_utils import DEFAULT_OUTPUT_DIR, save_side_by_side_parity_figure, save_text_report
 
 try:
     import pykwavers as kw
@@ -131,6 +132,34 @@ def print_metrics(metrics: dict, label: str) -> None:
     print(f"      max_diff    : {metrics['max_diff']:.3e} Pa")
     print(f"      k-Wave peak : {metrics['ref_peak']:.4e} Pa")
     print(f"      kwavers peak: {metrics['test_peak']:.4e} Pa")
+
+
+def save_case_visual(case_name: str, kw_data: np.ndarray | None, kwa_data: np.ndarray | None) -> None:
+    """Export a side-by-side sensor-trace visualization for a completed case."""
+    if kw_data is None or kwa_data is None:
+        return
+    ref = ensure_2d_sensors(np.asarray(kw_data, dtype=float))
+    test = ensure_2d_sensors(np.asarray(kwa_data, dtype=float))
+    n_rows = min(ref.shape[0], test.shape[0])
+    n_cols = min(ref.shape[1], test.shape[1])
+    ref = ref[:n_rows, :n_cols]
+    test = test[:n_rows, :n_cols]
+    figure_path = DEFAULT_OUTPUT_DIR / f"canonical_{case_name}_compare.png"
+    save_side_by_side_parity_figure(
+        ref,
+        test,
+        figure_path,
+        title=f"canonical {case_name} sensor parity",
+        reference_label="k-wave-python pressure",
+        candidate_label="pykwavers pressure",
+        cmap="seismic",
+    )
+    save_text_report(
+        DEFAULT_OUTPUT_DIR / f"canonical_{case_name}_metrics.txt",
+        f"canonical {case_name} parity metrics",
+        ["parity_status: DIAGNOSTIC", f"figure: {figure_path.name}"],
+    )
+    print(f"  Visual parity figure: {figure_path}")
 
 
 # ============================================================================
@@ -534,14 +563,17 @@ def main() -> None:
     if args.case in ("ivp", "all"):
         kw_data, kwa_data = run_ivp_case(gpu=args.gpu)
         results["ivp"] = (kw_data, kwa_data)
+        save_case_visual("ivp", kw_data, kwa_data)
 
     if args.case in ("point_source", "all"):
         kw_data, kwa_data = run_point_source_case(gpu=args.gpu)
         results["point_source"] = (kw_data, kwa_data)
+        save_case_visual("point_source", kw_data, kwa_data)
 
     if args.case in ("heterogeneous", "all"):
         kw_data, kwa_data = run_heterogeneous_case(gpu=args.gpu)
         results["heterogeneous"] = (kw_data, kwa_data)
+        save_case_visual("heterogeneous", kw_data, kwa_data)
 
     print("\n" + "=" * 60)
     print("Done.")

@@ -139,53 +139,57 @@ impl PSTDSolver {
         // Post: attenuate the complete result again.
         self.apply_pml_to_density()?; // pre: pml * rho_old
 
+        // nz_c: half-spectrum z-length (nz/2+1); ux_k/grad_k have shape (nx, ny, nz_c).
+        let nz_c = self.ux_k.dim().2;
+
         // dux/dx with negative shift + kappa correction (Treeby & Cox 2010, Eq. 17).
         // Full operator: iκₓ · exp(−iκₓ Δx/2) · κ(k) where κ(k)=sinc(c_ref·dt·|k|/2).
-        // Both the staggered shift (ddx_k_shift_neg) AND the kappa correction must be
-        // applied — this matches k-Wave's C++ implementation of the density update.
+        // R2C forward: real velocity (nx,ny,nz) → half-spectrum (nx,ny,nz_c).
+        // kappa sliced to (nx,ny,nz_c) — symmetric under kz sign flip.
         // grad_k is reused for each axis sequentially (one axis at a time).
-        self.fft.forward_into(&self.fields.ux, &mut self.ux_k);
+        self.fft.forward_r2c_into(&self.fields.ux, &mut self.ux_k);
         {
             let ddx = self.ddx_k_shift_neg.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.ux_k.view())
-                .and(self.kappa.view())
+                .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(i, _j, _k), gk, &u, &kap| {
                     *gk = ddx[i] * Complex64::new(kap, 0.0) * u;
                 });
         }
         self.fft
-            .inverse_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+            .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
 
         // duy/dy with negative shift + kappa (matches k-Wave Eq. 17).
         // Singleton embedding axes have k_y = 0 for all modes, so the spectral
         // divergence contribution is exactly zero and no FFT is required.
         if has_y {
-            self.fft.forward_into(&self.fields.uy, &mut self.uy_k);
+            self.fft.forward_r2c_into(&self.fields.uy, &mut self.uy_k);
             let ddy = self.ddy_k_shift_neg.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.uy_k.view())
-                .and(self.kappa.view())
+                .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(_i, j, _k), gk, &u, &kap| {
                     *gk = ddy[j] * Complex64::new(kap, 0.0) * u;
                 });
             self.fft
-                .inverse_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
+                .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
         }
 
         // duz/dz with negative shift + kappa (matches k-Wave Eq. 17).
         // For nz = 1, k_z = 0 and the z-divergence term is identically zero.
+        // ddz has length nz_c (truncated in construction); k ∈ [0, nz_c) from grad_k.
         if has_z {
-            self.fft.forward_into(&self.fields.uz, &mut self.uz_k);
+            self.fft.forward_r2c_into(&self.fields.uz, &mut self.uz_k);
             let ddz = self.ddz_k_shift_neg.view();
             Zip::indexed(self.grad_k.view_mut())
                 .and(self.uz_k.view())
-                .and(self.kappa.view())
+                .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(_i, _j, k), gk, &u, &kap| {
                     *gk = ddz[k] * Complex64::new(kap, 0.0) * u;
                 });
             self.fft
-                .inverse_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
+                .inverse_c2r_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
         }
 
         // ── Mass-conservation coefficient snapshot ──────────────────────────

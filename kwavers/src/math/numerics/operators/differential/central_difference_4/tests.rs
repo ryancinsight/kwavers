@@ -1,17 +1,65 @@
 use super::{CentralDifference4, DifferentialOperator};
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 
+fn assert_invalid_grid_spacing(
+    result: KwaversResult<CentralDifference4>,
+    dx: f64,
+    dy: f64,
+    dz: f64,
+) {
+    match result {
+        Err(KwaversError::Numerical(NumericalError::InvalidGridSpacing {
+            dx: actual_dx,
+            dy: actual_dy,
+            dz: actual_dz,
+        })) => {
+            assert_eq!(actual_dx.to_bits(), dx.to_bits());
+            assert_eq!(actual_dy.to_bits(), dy.to_bits());
+            assert_eq!(actual_dz.to_bits(), dz.to_bits());
+        }
+        Err(error) => panic!("expected invalid grid spacing, got {error:?}"),
+        Ok(_) => panic!("expected invalid grid spacing for ({dx}, {dy}, {dz})"),
+    }
+}
+
+fn assert_insufficient_grid_points<T>(
+    result: KwaversResult<T>,
+    required: usize,
+    actual: usize,
+    direction: &str,
+) {
+    match result {
+        Err(KwaversError::Numerical(NumericalError::InsufficientGridPoints {
+            required: actual_required,
+            actual: actual_points,
+            direction: actual_direction,
+        })) => {
+            assert_eq!(actual_required, required);
+            assert_eq!(actual_points, actual);
+            assert_eq!(actual_direction, direction);
+        }
+        Err(error) => panic!("expected insufficient grid points, got {error:?}"),
+        Ok(_) => panic!("expected insufficient grid points for {direction} direction"),
+    }
+}
+
 #[test]
 fn test_constructor_valid() {
-    let op = CentralDifference4::new(0.1, 0.1, 0.1);
-    assert!(op.is_ok());
+    let op = CentralDifference4::new(0.1, 0.2, 0.4).unwrap();
+    assert_eq!(op.order(), 4);
+    assert_eq!(op.stencil_width(), 5);
+    assert!(op.is_adjoint_consistent());
+    assert!(!op.is_conservative());
 }
 
 #[test]
 fn test_constructor_invalid_spacing() {
-    assert!(CentralDifference4::new(0.0, 0.1, 0.1).is_err());
-    assert!(CentralDifference4::new(-0.1, 0.1, 0.1).is_err());
+    assert_invalid_grid_spacing(CentralDifference4::new(0.0, 0.1, 0.1), 0.0, 0.1, 0.1);
+    assert_invalid_grid_spacing(CentralDifference4::new(-0.1, 0.1, 0.1), -0.1, 0.1, 0.1);
+    assert_invalid_grid_spacing(CentralDifference4::new(0.1, 0.0, 0.1), 0.1, 0.0, 0.1);
+    assert_invalid_grid_spacing(CentralDifference4::new(0.1, 0.1, -0.1), 0.1, 0.1, -0.1);
 }
 
 #[test]
@@ -30,6 +78,11 @@ fn test_apply_x_linear_function() {
     }
 
     let grad_x = op.apply_x(field.view()).unwrap();
+
+    assert_abs_diff_eq!(grad_x[[0, 0, 0]], 2.0, epsilon = 1e-10);
+    assert_abs_diff_eq!(grad_x[[1, 0, 0]], 2.0, epsilon = 1e-10);
+    assert_abs_diff_eq!(grad_x[[18, 0, 0]], 2.0, epsilon = 1e-10);
+    assert_abs_diff_eq!(grad_x[[19, 0, 0]], 2.0, epsilon = 1e-10);
 
     // Check interior points (fourth-order stencil)
     for i in 2..18 {
@@ -96,9 +149,9 @@ fn test_insufficient_grid_points() {
     let field_y = Array3::zeros((10, 4, 10));
     let field_z = Array3::zeros((10, 10, 4));
 
-    assert!(op.apply_x(field_x.view()).is_err());
-    assert!(op.apply_y(field_y.view()).is_err());
-    assert!(op.apply_z(field_z.view()).is_err());
+    assert_insufficient_grid_points(op.apply_x(field_x.view()), 5, 4, "X");
+    assert_insufficient_grid_points(op.apply_y(field_y.view()), 5, 4, "Y");
+    assert_insufficient_grid_points(op.apply_z(field_z.view()), 5, 4, "Z");
 }
 
 #[test]

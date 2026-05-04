@@ -3,3 +3,6 @@
 //! **Design Principle**: Cohesive acoustic behavior grouping per GRASP
 
 pub mod properties;
+
+#[cfg(test)]
+mod tests;

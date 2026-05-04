@@ -25,6 +25,8 @@
 
 pub mod backend;
 pub mod fdtd;
+pub mod helmholtz_fem;
 
-pub use backend::AcousticSolverBackend;
+pub use backend::{AcousticSolverBackend, FrequencyDomainAcousticBackend};
 pub use fdtd::FdtdBackend;
+pub use helmholtz_fem::FemHelmholtzBackend;

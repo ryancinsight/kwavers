@@ -71,6 +71,67 @@ fn test_spectral_filter_smooth() {
 }
 
 #[test]
+fn spectral_filter_preserves_constant_field() {
+    let filter = SpectralFilter::new(0.5, FilterType::SharpCutoff);
+    let field = Array3::from_elem((8, 4, 2), 3.25);
+
+    let filtered = filter.apply(field.view()).unwrap();
+
+    for value in filtered {
+        assert_abs_diff_eq!(value, 3.25, epsilon = 1e-12);
+    }
+}
+
+#[test]
+fn spectral_filter_removes_rejected_nyquist_mode_and_preserves_low_mode() {
+    let nx = 16;
+    let dx = 0.1;
+    let low_k = 2.0 * PI / (nx as f64 * dx);
+    let filter = SpectralFilter::new(0.5, FilterType::SharpCutoff);
+    let mut field = Array3::zeros((nx, 1, 1));
+
+    for i in 0..nx {
+        let x = i as f64 * dx;
+        let low_mode = (low_k * x).sin();
+        let nyquist_mode = if i.is_multiple_of(2) { 0.4 } else { -0.4 };
+        field[[i, 0, 0]] = low_mode + nyquist_mode;
+    }
+
+    let filtered = filter.apply(field.view()).unwrap();
+
+    for i in 0..nx {
+        let expected = (low_k * i as f64 * dx).sin();
+        assert_abs_diff_eq!(filtered[[i, 0, 0]], expected, epsilon = 1e-12);
+    }
+}
+
+#[test]
+fn spectral_operator_antialias_filter_uses_real_filter() {
+    let nx = 16;
+    let op = PseudospectralDerivative::new(nx, 1, 1, 0.1, 0.1, 0.1).unwrap();
+    let mut field = Array3::zeros((nx, 1, 1));
+    for i in 0..nx {
+        field[[i, 0, 0]] = if i.is_multiple_of(2) { 1.0 } else { -1.0 };
+    }
+
+    let filtered = op.apply_antialias_filter(field.view()).unwrap();
+
+    for value in filtered {
+        assert_abs_diff_eq!(value, 0.0, epsilon = 1e-12);
+    }
+}
+
+#[test]
+fn spectral_filter_rejects_invalid_cutoff_on_apply() {
+    let filter = SpectralFilter::new(f64::NAN, FilterType::SharpCutoff);
+    let field = Array3::zeros((2, 2, 2));
+
+    let error = filter.apply(field.view()).unwrap_err();
+
+    assert!(format!("{error}").contains("cutoff must be finite"));
+}
+
+#[test]
 fn test_invalid_grid_spacing() {
     assert!(PseudospectralDerivative::new(10, 10, 10, -0.1, 0.1, 0.1).is_err());
 }

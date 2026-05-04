@@ -65,7 +65,7 @@ impl LinearAlgebra {
     }
 }
 
-use crate::core::error::{KwaversError, KwaversResult, NumericalError};
+use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 use num_complex::Complex;
 use num_traits::{Float, NumCast, Zero};
@@ -232,16 +232,12 @@ impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
     }
 
     fn eig(&self) -> KwaversResult<(Array1<Complex<f64>>, Array2<Complex<f64>>)> {
-        // For complex matrices, we need to return complex eigenvalues.
-        // This is a simplified implementation - in practice you'd use proper complex eigendecomposition.
-        //
-        // Not yet implemented: full complex eigendecomposition and large-scale solvers. Absent:
-        // GMRES/BiCGSTAB Krylov subspace methods (Saad 2003); algebraic multigrid preconditioners;
-        // CSR/CSC/COO sparse matrix formats; large-scale eigenvalue algorithms (ARPACK interface);
-        // and SVD/QR decompositions for least-squares problems (Golub & Van Loan 2013).
-        Err(KwaversError::Numerical(NumericalError::NotImplemented {
-            feature: "Complex eigendecomposition".to_string(),
-        }))
+        let (eigenvalues, eigenvectors) =
+            LinearAlgebra::hermitian_eigendecomposition_complex(self)?;
+        Ok((
+            eigenvalues.mapv(|lambda| Complex::new(lambda, 0.0)),
+            eigenvectors,
+        ))
     }
 }
 
@@ -284,5 +280,49 @@ mod tests {
         let x = a.solve_into(b).unwrap();
         assert!((x[0] - 1.0).abs() < 1e-6);
         assert!((x[1] - 2.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn complex_ext_eig_delegates_to_hermitian_solver() {
+        let matrix = Array2::from_shape_vec(
+            (2, 2),
+            vec![
+                Complex::new(2.0, 0.0),
+                Complex::new(1.0, -1.0),
+                Complex::new(1.0, 1.0),
+                Complex::new(3.0, 0.0),
+            ],
+        )
+        .unwrap();
+
+        let (eigenvalues, eigenvectors) = matrix.eig().unwrap();
+
+        assert!((eigenvalues[0] - Complex::new(4.0, 0.0)).norm() < 1e-10);
+        assert!((eigenvalues[1] - Complex::new(1.0, 0.0)).norm() < 1e-10);
+
+        for column in 0..2 {
+            let lambda = eigenvalues[column];
+            let vector = eigenvectors.column(column).to_owned();
+            let residual = matrix.dot(&vector) - vector.mapv(|entry| lambda * entry);
+            assert!(residual.iter().all(|entry| entry.norm() < 1e-10));
+        }
+    }
+
+    #[test]
+    fn complex_ext_eig_rejects_non_hermitian_matrix() {
+        let matrix = Array2::from_shape_vec(
+            (2, 2),
+            vec![
+                Complex::new(1.0, 0.0),
+                Complex::new(1.0, 1.0),
+                Complex::new(2.0, 1.0),
+                Complex::new(3.0, 0.0),
+            ],
+        )
+        .unwrap();
+
+        let error = matrix.eig().unwrap_err();
+
+        assert!(format!("{error}").contains("not Hermitian"));
     }
 }

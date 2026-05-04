@@ -20,8 +20,8 @@ impl PSTDSolver {
 
         let (sensor_data, sensor_next_step, sensor_expected_steps) = self
             .sensor_recorder
-            .checkpoint_state()
-            .map(|(d, ns, es)| (Some(d), ns, es))
+            .checkpoint_state_view()
+            .map(|(view, ns, es)| (Some(view.to_owned()), ns, es))
             .unwrap_or((None, 0, 0));
 
         let ckpt = PSTDCheckpoint {

@@ -21,9 +21,6 @@ use crate::physics::acoustics::imaging::fusion::MultiModalFusion;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-#[cfg(feature = "gpu")]
-use super::super::simulation::generate_realistic_rf_data;
-
 /// Real-time clinical workflow orchestrator.
 #[derive(Debug)]
 pub struct ClinicalWorkflowOrchestrator {

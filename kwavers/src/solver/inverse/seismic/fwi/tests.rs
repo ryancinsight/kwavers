@@ -227,7 +227,7 @@ fn test_fwi_medium_density_not_water() {
     let sound_speed = Array3::from_elem((nx, ny, nz), 2000.0_f64);
     let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
 
-    let medium = HeterogeneousFactory::from_arrays(sound_speed, density, None, None, 20.0)
+    let medium = HeterogeneousFactory::from_arrays(sound_speed, density, None, None, None, 20.0)
         .expect("medium construction must succeed");
 
     let rho_sample = medium.density(4, 4, 4);
@@ -252,7 +252,7 @@ fn test_fwi_forward_medium_sound_speed_matches_model() {
     model[[3, 3, 3]] = 3200.0;
 
     let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
-    let medium = HeterogeneousFactory::from_arrays(model.clone(), density, None, None, 20.0)
+    let medium = HeterogeneousFactory::from_arrays(model.clone(), density, None, None, None, 20.0)
         .expect("medium construction must succeed");
 
     let c_bg = medium.sound_speed(1, 1, 1);

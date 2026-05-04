@@ -36,6 +36,7 @@ uom = { version = "0.36", default-features = false, features = ["f64", "si", "st
 
 # Linear algebra
 nalgebra = { version = "0.32" }
+gaia = { path = "../gaia" }
 
 # Essential utilities
 log = "0.4"
@@ -129,6 +130,15 @@ criterion = "0.4"
 proptest = "1.2"
 # PNG encoding for example image output (seismic_imaging_demo, etc.)
 png = "0.17"
+# Charting for comparison test figures (bitmap PNG backend)
+plotters = { version = "0.3", default-features = false, features = [
+    "bitmap_backend",
+    "bitmap_encoder",
+    "line_series",
+    "area_series",
+    "full_palette",
+    "ttf",
+] }
 
 # Async testing support
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros"] }
@@ -254,7 +264,7 @@ required-features = ["full"]
 [[test]]
 name = "absorption_validation_test"
 harness = true
-required-features = ["full"]
+required-features = []
 
 [[test]]
 name = "dispersion_validation_test"
@@ -269,7 +279,7 @@ required-features = ["full"]
 [[test]]
 name = "fdtd_pstd_comparison"
 harness = true
-required-features = ["full"]
+required-features = []
 
 [[test]]
 name = "physics_validation"
