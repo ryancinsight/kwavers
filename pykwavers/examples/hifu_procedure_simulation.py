@@ -96,10 +96,11 @@ class BubbleConfig:
     target_subharmonic_ratio: float = 0.18
     target_receiver_rms_pa: float = 15.0
     controller_gain: float = 0.15
-    initial_pressure_fraction: float = 0.07
+    initial_pressure_fraction: float = 0.05
     min_pressure_fraction: float = 0.04
     max_pressure_fraction: float = 0.10
     nominal_pressure_fraction: float = 0.10
+    feedback_period_s: float = 2.5
 
 
 @dataclass(frozen=True)
@@ -387,6 +388,7 @@ def feedback_power_envelope(
     thermal: ThermalConfig,
     feedback: dict[str, np.ndarray | float],
     reference_pressure_fraction: float,
+    feedback_period_s: float,
 ) -> np.ndarray:
     """Return the Pennes heat-source scale imposed by pressure feedback.
 
@@ -398,14 +400,16 @@ def feedback_power_envelope(
     pressure. The thermal source term therefore represents nominal treatment
     power, and receiver feedback only trims around that operating point.
 
-    The Keller-Miksis controller operates on acoustic-cycle windows while the
-    thermal solver advances on tissue time scales. The envelope is therefore
-    the piecewise controller pressure fraction squared at each thermal sample,
-    with the terminal controller value held after the simulated receiver window
-    and zero source power after sonication ends.
+    The Keller-Miksis controller operates on acoustic-cycle receiver windows
+    while the thermal solver advances on tissue time scales. The envelope
+    repeats the measured receiver-control burst over the requested feedback
+    period, modelling sample-and-hold cavitation monitoring throughout the
+    sonication instead of holding the first terminal controller value.
     """
     if reference_pressure_fraction <= 0.0 or not np.isfinite(reference_pressure_fraction):
         raise ValueError("reference_pressure_fraction must be positive and finite")
+    if feedback_period_s <= 0.0 or not np.isfinite(feedback_period_s):
+        raise ValueError("feedback_period_s must be positive and finite")
 
     window_times = np.asarray(feedback["window_time_s"], dtype=np.float64)
     controller = np.asarray(feedback["controller_output"], dtype=np.float64)
@@ -416,16 +420,23 @@ def feedback_power_envelope(
     if np.any(np.diff(window_times) < 0.0):
         raise ValueError("feedback controller times must be monotone")
 
+    burst_duration_s = float(window_times[-1])
+    if burst_duration_s <= 0.0:
+        raise ValueError("feedback controller times must span a positive burst duration")
+
     controller_with_initial = np.concatenate(([controller[0]], controller))
-    time_with_initial = np.concatenate(([0.0], window_times))
+    phase_with_initial = np.concatenate(([0.0], window_times / burst_duration_s))
+    active = thermal_times_s <= thermal.sonication_s
+    cycle_phase = np.zeros_like(thermal_times_s, dtype=np.float64)
+    cycle_phase[active] = np.mod(thermal_times_s[active], feedback_period_s) / feedback_period_s
     pressure_fraction = np.interp(
-        thermal_times_s,
-        time_with_initial,
+        cycle_phase,
+        phase_with_initial,
         controller_with_initial,
         left=controller_with_initial[0],
         right=controller_with_initial[-1],
     )
-    pressure_fraction = np.where(thermal_times_s <= thermal.sonication_s, pressure_fraction, 0.0)
+    pressure_fraction = np.where(active, pressure_fraction, 0.0)
     return (pressure_fraction / reference_pressure_fraction) ** 2
 
 
@@ -507,6 +518,7 @@ def save_figures(
     max_temperature: np.ndarray,
     metrics: dict[str, float],
     unmodulated_focus_temperature: np.ndarray | None = None,
+    power_envelope: np.ndarray | None = None,
     sonication_s: float = 20.0,
 ) -> tuple[Path, Path]:
     import matplotlib
@@ -543,17 +555,33 @@ def save_figures(
     fig.savefig(FIELD_FIGURE_PATH, dpi=160, bbox_inches="tight")
     plt.close(fig)
 
-    fig, ax = plt.subplots(figsize=(7.2, 4.6), constrained_layout=True)
+    fig, (ax, ax_rate) = plt.subplots(2, 1, figsize=(8.0, 6.6), sharex=True, constrained_layout=True)
     ax.plot(times, focus_temperature, label="feedback-controlled focal voxel")
     ax.plot(times, max_temperature, label="feedback-controlled spatial maximum", linestyle="--")
     if unmodulated_focus_temperature is not None:
         ax.plot(times, unmodulated_focus_temperature, label="constant-power focal voxel", color="0.35", linestyle=":")
     ax.axvline(sonication_s, color="0.4", linewidth=1.0, label="sonication off")
-    ax.set_xlabel("time [s]")
     ax.set_ylabel("temperature [deg C]")
     ax.set_title("HIFU temperature rise over time")
     ax.grid(True, alpha=0.3)
-    ax.legend()
+    lines, labels = ax.get_legend_handles_labels()
+    if power_envelope is not None:
+        ax_power = ax.twinx()
+        power_line = ax_power.step(times, power_envelope, where="post", color="tab:green", alpha=0.45, label="relative acoustic power")[0]
+        ax_power.set_ylabel("relative acoustic power")
+        ax_power.set_ylim(0.0, max(1.1, 1.05 * float(np.max(power_envelope))))
+        lines.append(power_line)
+        labels.append("relative acoustic power")
+    ax.legend(lines, labels)
+    heating_rate = np.gradient(focus_temperature, times)
+    ax_rate.plot(times, heating_rate, color="tab:red", label="focal dT/dt")
+    ax_rate.axhline(0.0, color="0.4", linewidth=0.8)
+    ax_rate.axvline(sonication_s, color="0.4", linewidth=1.0)
+    ax_rate.set_xlabel("time [s]")
+    ax_rate.set_ylabel("dT/dt [deg C/s]")
+    ax_rate.set_title("Temperature-rate response to power modulation")
+    ax_rate.grid(True, alpha=0.3)
+    ax_rate.legend()
     fig.savefig(TEMPERATURE_FIGURE_PATH, dpi=160, bbox_inches="tight")
     plt.close(fig)
     return FIELD_FIGURE_PATH, TEMPERATURE_FIGURE_PATH
@@ -669,7 +697,13 @@ def main() -> int:
     total_s = thermal.sonication_s + thermal.cooling_s
     n_thermal_steps = int(round(total_s / thermal.dt_s))
     thermal_times = np.linspace(0.0, n_thermal_steps * thermal.dt_s, n_thermal_steps + 1)
-    power_envelope = feedback_power_envelope(thermal_times, thermal, feedback, bubble.nominal_pressure_fraction)
+    power_envelope = feedback_power_envelope(
+        thermal_times,
+        thermal,
+        feedback,
+        bubble.nominal_pressure_fraction,
+        bubble.feedback_period_s,
+    )
     times, focus_temperature, max_temperature, final_temperature = pennes_temperature(
         heat_source,
         grid_config,
@@ -692,6 +726,7 @@ def main() -> int:
         max_temperature,
         metrics,
         unmodulated_focus_temperature,
+        power_envelope,
         thermal.sonication_s,
     )
     cavitation_figure = save_cavitation_figure(
@@ -743,6 +778,7 @@ def main() -> int:
             f"feedback_target_receiver_rms_pa: {bubble.target_receiver_rms_pa:.6e}",
             f"feedback_initial_pressure_fraction: {bubble.initial_pressure_fraction:.6f}",
             f"feedback_nominal_pressure_fraction: {bubble.nominal_pressure_fraction:.6f}",
+            f"feedback_period_s: {bubble.feedback_period_s:.6e}",
             f"feedback_mean_terminal_subharmonic_ratio: {feedback['mean_subharmonic_ratio']:.6f}",
             f"feedback_mean_terminal_receiver_activity: {feedback['mean_terminal_receiver_activity']:.6f}",
             f"feedback_final_pressure_fraction: {feedback['final_pressure_fraction']:.6f}",
@@ -750,6 +786,9 @@ def main() -> int:
             f"feedback_max_receiver_pressure_pa: {feedback['max_receiver_pressure_pa']:.6e}",
             f"feedback_terminal_power_scale: {power_envelope[int(round(thermal.sonication_s / thermal.dt_s))]:.6e}",
             f"feedback_mean_sonication_power_scale: {float(np.mean(power_envelope[times <= thermal.sonication_s])):.6e}",
+            f"feedback_min_sonication_power_scale: {float(np.min(power_envelope[times <= thermal.sonication_s])):.6e}",
+            f"feedback_max_sonication_power_scale: {float(np.max(power_envelope[times <= thermal.sonication_s])):.6e}",
+            f"feedback_std_sonication_power_scale: {float(np.std(power_envelope[times <= thermal.sonication_s])):.6e}",
             f"unmodulated_focus_peak_temperature_c: {unmodulated_focus_peak:.6f}",
             f"feedback_temperature_reduction_c: {unmodulated_focus_peak - focus_peak:.6f}",
             f"sonication_s: {thermal.sonication_s:.6e}",

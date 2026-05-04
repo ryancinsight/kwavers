@@ -248,7 +248,7 @@ def test_hifu_cavitation_feedback_uses_bubble_receiver_signal():
     radius_activity = np.asarray(feedback["radius_activity"], dtype=float)
     controller = np.asarray(feedback["controller_output"], dtype=float)
     times = np.linspace(0.0, thermal.sonication_s + thermal.cooling_s, int(round((thermal.sonication_s + thermal.cooling_s) / thermal.dt_s)) + 1)
-    power_envelope = module.feedback_power_envelope(times, thermal, feedback, bubble.nominal_pressure_fraction)
+    power_envelope = module.feedback_power_envelope(times, thermal, feedback, bubble.nominal_pressure_fraction, bubble.feedback_period_s)
     x, z, xx, zz = module.build_grid(grid_config)
     intensity = module.focused_aperture_intensity(xx, zz, acoustic)
     heat_source = 2.0 * acoustic.absorption_np_m * intensity
@@ -268,7 +268,8 @@ def test_hifu_cavitation_feedback_uses_bubble_receiver_signal():
     assert np.max(radius) / bubble.equilibrium_radius_m <= bubble.target_inertial_radius_ratio * 1.1
     assert np.all(power_envelope[times > thermal.sonication_s] == 0.0)
     assert np.max(power_envelope[times <= thermal.sonication_s]) <= (bubble.max_pressure_fraction / bubble.nominal_pressure_fraction) ** 2
-    assert power_envelope[int(round(thermal.sonication_s / thermal.dt_s))] == (feedback["final_pressure_fraction"] / bubble.nominal_pressure_fraction) ** 2
+    assert np.ptp(power_envelope[times <= thermal.sonication_s]) > 0.0
+    assert np.std(power_envelope[times <= thermal.sonication_s]) > 0.0
     assert np.max(controlled_focus_temperature) < np.max(uncontrolled_focus_temperature)
     assert controlled_focus_temperature[-1] < uncontrolled_focus_temperature[-1]
     assert np.max(controlled_focus_temperature) - thermal.baseline_temperature_c > 0.25 * (

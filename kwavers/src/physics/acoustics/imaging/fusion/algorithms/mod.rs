@@ -11,9 +11,10 @@
 //! - Probabilistic fusion with uncertainty modeling (basic Bayesian fusion)
 //! - Feature-based fusion using complementary tissue properties
 //! - Maximum likelihood estimation fusion with EM algorithm
+//! - DeepFusion parameter-free voxel attention with quality priors
 //!
 //! Planned but not yet implemented:
-//! - Deep learning fusion with U-Net architectures and attention mechanisms
+//! - Trained U-Net/Transformer fusion with validated model weights
 //! - Advanced feature extraction with tissue classification and correlation analysis
 //! - Real-time fusion for streaming multi-modal data
 //! - Comprehensive quality assessment and fusion confidence metrics
