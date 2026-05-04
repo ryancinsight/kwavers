@@ -191,4 +191,16 @@
 - Acoustic-intensity dependency semantics are now test-pinned and documented: requesting x-intensity requires pressure and ux only, not unrelated velocity components or statistic accumulators, and the pykwavers record-mode table lists the complete intensity mapping.
 - Acoustic-intensity memory policy no longer conflates instantaneous velocity-field dependency with raw velocity time-series storage. Intensity modes keep driving velocity sampling for `p·u` while avoiding `ux/uy/uz` output-buffer classification unless those velocity records are requested directly.
 - Recorder intensity verification no longer contains presence-only assertions or stale average-intensity record names. The active tests inspect matrix dimensions, zero initial average state, computed intensity values, and explicit absence contracts, and in-tree docs consistently use `I_avg_x/I_avg_y/I_avg_z`.
+
+## Session 2026-05-04 Gap Closures
+
+- **CLOSED** [patch] `ScratchArena` trait absent — no shared contract existed for pre-allocated solver scratch buffers. Fix: defined `ScratchArena` in `solver::workspace`; implemented for `SolverWorkspace` (with formula correction: was `2×complex_size + 3×real_size`, correct is `1×complex_size + 3×real_size`), `KuznetsovWorkspace` (14 buffers, `SpectralOperator` excluded), and `BornWorkspace`; deleted 2 orphaned files; wired `validation/contract.rs`; value-semantic tests added for all implementors. `cargo check` clean, targeted tests pass.
+- **CLOSED** [patch] Checkpoint test `match + panic!` control flow — 2 arms used `panic!` instead of `let…else`, hiding pattern-match failures as undifferentiated panics. Fix: replaced with `let KwaversError::InvalidInput(ref msg) = err else { panic!(...) }` and explicit message-content assertions.
+- **CLOSED** [patch] R2C/C2R FFT wiring in PSTD — audit confirmed `forward_r2c_into`/`inverse_c2r_into` from apollo-fft are correctly called with `nz_c = nz/2 + 1` for all pressure/velocity/absorption stages. No gap, no changes required.
+- **CLOSED** [patch] Spectral-CPML incompatibility silent no-op — enabling CPML with `kspace_correction = Spectral` silently bypassed boundary corrections. Fix: guard in `enable_cpml` returns `KwaversError::InvalidInput`; `# Errors` doc + Roden & Gedney (2000) reference added; 2 value-semantic tests verify rejection (Spectral) and acceptance (None) with `cpml_boundary.is_some()` assertion.
+
+## Remaining Open Gaps
+
+- Validate pykwavers comparison metrics: re-run `canonical_comparison.py` and update `metrics.csv` with current Pearson/PSNR values.
+- Axisymmetric solver validation: `Geometry::Axisymmetric` flag is wired into `PSTDConfig`/`FdtdConfig` and the WSWA-FFT AS propagator is implemented; end-to-end parity vs. k-Wave axisymmetric examples pending.
 - Pykwavers no longer carries a stale acoustic-intensity mapping assertion that treats intensity as raw `ux` storage. The Python-facing record-mode regression now pins the same split as kwavers: pressure storage plus instantaneous velocity sampling, without `ux` time-series allocation.

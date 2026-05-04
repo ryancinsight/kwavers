@@ -340,26 +340,24 @@ fn test_checkpoint_validate_restore_contract_rejects_mismatch() {
     let total_steps_err = ckpt
         .validate_restore_contract(2, 2, 2, 5, 1.0e-8)
         .unwrap_err();
-    match total_steps_err {
-        KwaversError::InvalidInput(msg) => {
-            assert!(
-                msg.contains("total_steps"),
-                "expected total_steps validation message, got {msg}"
-            );
-        }
-        other => panic!("expected InvalidInput for total_steps mismatch, got {other:?}"),
-    }
+    // Must be InvalidInput whose message references "total_steps".
+    let KwaversError::InvalidInput(ref ts_msg) = total_steps_err else {
+        panic!("expected InvalidInput for total_steps mismatch, got {total_steps_err:?}");
+    };
+    assert!(
+        ts_msg.contains("total_steps"),
+        "expected total_steps in validation message, got {ts_msg}"
+    );
 
     let dt_err = ckpt
         .validate_restore_contract(2, 2, 2, 4, 2.0e-8)
         .unwrap_err();
-    match dt_err {
-        KwaversError::InvalidInput(msg) => {
-            assert!(
-                msg.contains("dt"),
-                "expected dt validation message, got {msg}"
-            );
-        }
-        other => panic!("expected InvalidInput for dt mismatch, got {other:?}"),
-    }
+    // Must be InvalidInput whose message references "dt".
+    let KwaversError::InvalidInput(ref dt_msg) = dt_err else {
+        panic!("expected InvalidInput for dt mismatch, got {dt_err:?}");
+    };
+    assert!(
+        dt_msg.contains("dt"),
+        "expected dt in validation message, got {dt_msg}"
+    );
 }

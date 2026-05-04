@@ -17,6 +17,9 @@ pub mod plugin;
 pub mod utilities;
 pub mod workspace;
 
+// Re-export ScratchArena trait for ergonomic use across solver crates
+pub use workspace::ScratchArena;
+
 // Re-export field indices from the single source of truth
 pub use crate::domain::field::indices::{
     PRESSURE_IDX as P_IDX, STRESS_XX_IDX as SXX_IDX, STRESS_XY_IDX as SXY_IDX,

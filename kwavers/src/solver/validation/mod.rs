@@ -1,4 +1,5 @@
 pub mod config;
+pub mod contract;
 pub mod kwave_comparison;
 pub mod numerical_accuracy;
 pub mod physics_benchmarks;
@@ -6,6 +7,12 @@ pub mod physics_benchmarks;
 // ============================================================================
 // EXPLICIT RE-EXPORTS (Validation API)
 // ============================================================================
+
+/// Scientific contract primitives (MemoryBudget, ValidationCase, etc.)
+pub use contract::{
+    BenchmarkCase, CompletionGate, MemoryBudget, ScientificMetadata, ScientificMethod,
+    ScientificReference, ValidationCase, ValidationTarget,
+};
 
 /// Validation configuration
 pub use config::ValidationParameters;

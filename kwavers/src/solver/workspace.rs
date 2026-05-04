@@ -1,16 +1,66 @@
 //! Memory-efficient workspace for solver operations
 //!
 //! This module provides pre-allocated workspace arrays to minimize allocations
-//! during simulation. It follows the design principles:
-//! - **DRY**: Reusable workspace arrays
-//! - **KISS**: Simple interface for workspace management
-//! - **Performance**: Zero-allocation hot paths
-//! - **Memory Efficiency**: 30-50% reduction in allocations
+//! during simulation, and the [`ScratchArena`] trait that unifies the shared
+//! contract across all solver workspace types.
+//!
+//! # Design principles
+//! - **SSOT**: One canonical trait for scratch-buffer memory management.
+//! - **DRY**: `ScratchArena` eliminates per-solver boilerplate.
+//! - **Performance**: Zero-allocation hot paths via pre-allocated buffers.
+//!
+//! # Invariant (Memory Monotonicity)
+//! For any `T: ScratchArena`, `T::memory_bytes()` is constant after construction.
+//! `T::clear()` sets all elements to zero without reallocation, so
+//! `memory_bytes()` before and after `clear()` are equal.
 
 use crate::core::error::KwaversResult;
 #[cfg(not(feature = "parallel"))]
 use crate::core::error::{KwaversError, SystemError};
 use crate::domain::grid::Grid;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ScratchArena — shared contract for pre-allocated solver scratch buffers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Shared contract for pre-allocated solver scratch buffers.
+///
+/// Every solver workspace that allocates arrays at construction time and reuses
+/// them across time-loop iterations must implement `ScratchArena` to expose a
+/// uniform interface for memory reporting and buffer invalidation.
+///
+/// # Invariants
+///
+/// 1. **Memory stability** — `memory_bytes()` returns the same value throughout
+///    the lifetime of the arena (construction does not change the footprint).
+/// 2. **Zero after clear** — after `clear()` returns, every element of every
+///    scratch buffer is exactly zero (or `Complex::zero()` for complex buffers).
+/// 3. **No reallocation** — `clear()` must not allocate; it only fills existing
+///    backing storage.
+///
+/// # Mathematical basis
+///
+/// Let W be a workspace allocated for an N-element grid. Define:
+/// ```text
+/// StaticFootprint(W) := Σ_i (|buf_i| × sizeof(elem_i))
+/// ```
+/// `memory_bytes()` returns `StaticFootprint(W)` in O(1).
+/// `clear()` executes O(StaticFootprint(W)/cache_line) cache-line writes.
+pub trait ScratchArena {
+    /// Total statically pre-allocated memory in bytes.
+    ///
+    /// Counts only the persistent buffers allocated at construction time.
+    /// Transient allocations inside solver methods are excluded.
+    /// This operation is O(1).
+    fn memory_bytes(&self) -> usize;
+
+    /// Zero all scratch buffers in-place without reallocating.
+    ///
+    /// After this call every element of every pre-allocated buffer is `0.0`
+    /// (or `Complex { re: 0.0, im: 0.0 }` for complex buffers).  The arena
+    /// may be immediately reused for a subsequent simulation step.
+    fn clear(&mut self);
+}
 use ndarray::Array3;
 use num_complex::Complex;
 #[cfg(feature = "parallel")]
@@ -65,14 +115,31 @@ impl SolverWorkspace {
         self.temp_buffer.fill(0.0);
     }
 
-    /// Get the memory usage of this workspace in bytes
+    /// Get the statically pre-allocated memory in bytes.
+    ///
+    /// Counts one `Array3<Complex<f64>>` (`fft_buffer`) and three `Array3<f64>`
+    /// buffers (`real_buffer`, `k_space_buffer`, `temp_buffer`).
     #[must_use]
     pub fn memory_usage(&self) -> usize {
-        let complex_size = std::mem::size_of::<Complex<f64>>();
-        let real_size = std::mem::size_of::<f64>();
-        let num_elements = self.grid_shape.0 * self.grid_shape.1 * self.grid_shape.2;
+        let complex_size = std::mem::size_of::<Complex<f64>>(); // 16 bytes
+        let real_size = std::mem::size_of::<f64>();              //  8 bytes
+        let n = self.grid_shape.0 * self.grid_shape.1 * self.grid_shape.2;
+        // 1 × fft_buffer (Complex<f64>) + 3 × real buffers (f64)
+        complex_size * n + 3 * real_size * n
+    }
+}
 
-        2 * complex_size * num_elements + 3 * real_size * num_elements
+impl ScratchArena for SolverWorkspace {
+    #[inline]
+    fn memory_bytes(&self) -> usize {
+        self.memory_usage()
+    }
+
+    fn clear(&mut self) {
+        self.fft_buffer.fill(Complex::new(0.0, 0.0));
+        self.real_buffer.fill(0.0);
+        self.k_space_buffer.fill(0.0);
+        self.temp_buffer.fill(0.0);
     }
 }
 
@@ -272,5 +339,47 @@ mod tests {
         // Test fma_inplace: a = a * b + c = 6 * 2 + 3 = 15
         fma_inplace(&mut a, &b, &c);
         assert_eq!(a[[0, 0, 0]], 15.0);
+    }
+
+    // ─── ScratchArena contract tests for SolverWorkspace ───────────────────
+
+    #[test]
+    fn scratch_arena_memory_bytes_matches_memory_usage() {
+        let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+        let ws = SolverWorkspace::new(&grid);
+        // ScratchArena::memory_bytes() delegates to memory_usage(); both must agree.
+        assert_eq!(ws.memory_bytes(), ws.memory_usage());
+        // Quantitative: 1 complex (16 B) + 3 real (8 B) buffers × 512 elements.
+        let n = 8 * 8 * 8;
+        let expected = n * 16 + 3 * n * 8; // fft_buffer + real/k_space/temp
+        assert_eq!(ws.memory_bytes(), expected);
+    }
+
+    #[test]
+    fn scratch_arena_clear_zeros_solver_workspace() {
+        let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap();
+        let mut ws = SolverWorkspace::new(&grid);
+        ws.fft_buffer.fill(Complex::new(1.0, 2.0));
+        ws.real_buffer.fill(3.0);
+        ws.k_space_buffer.fill(4.0);
+        ws.temp_buffer.fill(5.0);
+
+        ScratchArena::clear(&mut ws);
+
+        assert!(ws.fft_buffer.iter().all(|c| c.re == 0.0 && c.im == 0.0),
+            "fft_buffer not zeroed");
+        assert!(ws.real_buffer.iter().all(|&v| v == 0.0),     "real_buffer not zeroed");
+        assert!(ws.k_space_buffer.iter().all(|&v| v == 0.0),  "k_space_buffer not zeroed");
+        assert!(ws.temp_buffer.iter().all(|&v| v == 0.0),     "temp_buffer not zeroed");
+    }
+
+    #[test]
+    fn scratch_arena_memory_bytes_stable_after_clear() {
+        let grid = Grid::new(6, 6, 6, 1e-3, 1e-3, 1e-3).unwrap();
+        let mut ws = SolverWorkspace::new(&grid);
+        let before = ws.memory_bytes();
+        ws.real_buffer.fill(99.0);
+        ScratchArena::clear(&mut ws);
+        assert_eq!(ws.memory_bytes(), before);
     }
 }

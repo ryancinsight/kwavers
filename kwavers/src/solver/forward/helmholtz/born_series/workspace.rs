@@ -4,6 +4,7 @@
 //! computations, enabling reuse of intermediate arrays and reducing memory
 //! allocation overhead for iterative methods.
 
+use crate::solver::workspace::ScratchArena;
 use ndarray::Array3;
 use num_complex::Complex64;
 
@@ -53,7 +54,7 @@ impl BornWorkspace {
         self.residual_workspace.fill(0.0);
     }
 
-    /// Get memory usage in bytes
+    /// Get statically pre-allocated memory in bytes.
     pub fn memory_usage_bytes(&self) -> usize {
         let complex_size = std::mem::size_of::<Complex64>();
         let real_size = std::mem::size_of::<f64>();
@@ -67,5 +68,22 @@ impl BornWorkspace {
                 .iter()
                 .map(|arr| arr.len() * complex_size)
                 .sum::<usize>()
+    }
+}
+
+impl ScratchArena for BornWorkspace {
+    #[inline]
+    fn memory_bytes(&self) -> usize {
+        self.memory_usage_bytes()
+    }
+
+    fn clear(&mut self) {
+        self.field_workspace.fill(Complex64::new(0.0, 0.0));
+        self.green_workspace.fill(Complex64::new(0.0, 0.0));
+        self.heterogeneity_workspace.fill(Complex64::new(0.0, 0.0));
+        self.residual_workspace.fill(0.0);
+        for arr in &mut self.fft_temp {
+            arr.fill(Complex64::new(0.0, 0.0));
+        }
     }
 }
