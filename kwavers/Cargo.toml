@@ -151,6 +151,10 @@ default = ["minimal"]  # PRODUCTION DEFAULT
 minimal = []           # Core functionality only
 parallel = ["ndarray/rayon"] # Add back parallel feature
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:apollofft-wgpu"]
+# Explicit-opt-in flag for the bit-rotted `solver::backend::gpu` subtree.
+# See solver/backend/mod.rs for repair list. Implies `gpu`. Do not enable in
+# production builds — currently produces 32 compile errors against wgpu v26.
+solver_backend_gpu_unstable = ["gpu"]
 plotting = ["dep:plotly"]
 # Additional features referenced in code
 dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.

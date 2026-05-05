@@ -112,8 +112,10 @@ impl GilmoreSolver {
         // Sound speed at bubble wall
         let c_wall = self.calculate_sound_speed(p_wall);
 
-        // Time derivative of enthalpy (quasi-static approximation per Gilmore 1952)
-        // Assumes slow pressure variation relative to acoustic period
+        // Full time derivative of the enthalpy difference H = H_wall − H_inf.
+        // dH/dt = (1/ρ_wall)·dp_wall/dt − (1/ρ_inf)·dp_inf/dt per Gilmore (1952) §4 Eq. 16.
+        // Implementation in `estimate_enthalpy_derivative` consumes state.{wall_velocity,
+        // wall_acceleration, gas_species.gamma()} for dp_wall/dt — no quasi-static reduction.
         let dh_dt = self.estimate_enthalpy_derivative(state, p_wall, p_acoustic, omega, t);
 
         // Gilmore equation solved for R_ddot
@@ -202,9 +204,8 @@ impl GilmoreSolver {
         // ── d(−2σ/R)/dt and d(−4μU/R)/dt (surface tension + viscous) ────────
         let dp_surface_dt = 2.0 * self.params.sigma * u / (r * r);
         // d(−4μU/R)/dt = −4μ·(R̈·R − U·U)/R² = −4μR̈/R + 4μU²/R²
-        let dp_viscous_dt =
-            -4.0 * self.params.mu_liquid * r_ddot / r
-                + 4.0 * self.params.mu_liquid * u * u / (r * r);
+        let dp_viscous_dt = -4.0 * self.params.mu_liquid * r_ddot / r
+            + 4.0 * self.params.mu_liquid * u * u / (r * r);
 
         let dp_wall_dt = dp_gas_dt + dp_surface_dt + dp_viscous_dt;
 
@@ -512,13 +513,14 @@ mod tests {
         let c_a = solver.calculate_sound_speed(p_wall_a);
         let expected_r_ddot_a = (h_a + r / c_a * expected_dh_dt_a) / r;
 
-        let rel_err = (r_ddot_a - expected_r_ddot_a).abs()
-            / expected_r_ddot_a.abs().max(1.0);
+        let rel_err = (r_ddot_a - expected_r_ddot_a).abs() / expected_r_ddot_a.abs().max(1.0);
         assert!(
             rel_err < 1e-10,
             "Analytical Gilmore acceleration mismatch: expected {:.6e}, got {:.6e} \
              (relative error {:.2e})",
-            expected_r_ddot_a, r_ddot_a, rel_err
+            expected_r_ddot_a,
+            r_ddot_a,
+            rel_err
         );
     }
 

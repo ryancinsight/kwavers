@@ -2,6 +2,7 @@
 // Clean module structure focusing only on the plugin-based architecture
 
 // Hierarchical solver module structure
+pub mod backend;
 pub mod config;
 pub mod factory;
 pub mod feature;
