@@ -180,6 +180,16 @@ pub enum SolverType {
     /// GPU-resident Pseudospectral Time Domain solver (requires `gpu` feature).
     /// Falls back to CPU PSTD if no GPU adapter is available.
     PstdGpu,
+    /// Elastic-wave solver (4th-order FD with velocity-Verlet integration,
+    /// PML boundary, supports compressional + shear waves). The Python-level
+    /// equivalent of k-Wave's `pstdElastic2D` / `pstdElastic3D`.
+    ///
+    /// Phase A.2 of ADR 007 — current capability: initial-displacement IVP
+    /// only (single component, configurable axis); records the chosen
+    /// displacement component at sensor mask positions. Stress / velocity
+    /// source masks and multi-component recording land in Phases A.3 and
+    /// A.2.5 respectively.
+    Elastic,
 }
 
 #[pymethods]
@@ -191,6 +201,7 @@ impl SolverType {
             SolverType::PSTD => "SolverType.PSTD".to_string(),
             SolverType::Hybrid => "SolverType.Hybrid".to_string(),
             SolverType::PstdGpu => "SolverType.PstdGpu".to_string(),
+            SolverType::Elastic => "SolverType.Elastic".to_string(),
         }
     }
 
@@ -201,6 +212,7 @@ impl SolverType {
             SolverType::PSTD => "PSTD".to_string(),
             SolverType::Hybrid => "Hybrid".to_string(),
             SolverType::PstdGpu => "PstdGpu".to_string(),
+            SolverType::Elastic => "Elastic".to_string(),
         }
     }
 
@@ -1092,6 +1104,84 @@ impl Source {
             signal: None,
             source_mode: "additive".to_string(),
             initial_pressure: Some(p0_arr),
+            velocity_signal: None,
+            direction: None,
+            kwave_array: None,
+        })
+    }
+
+    /// Create an initial-displacement source for the **elastic** solver.
+    ///
+    /// Sets the initial value of one displacement component (`ux`, `uy`, or
+    /// `uz`) on the elastic wavefield while the other two components and
+    /// all three velocity components are initialised to zero. The elastic
+    /// solver then propagates this initial-value-problem under
+    /// `ρ·∂²u/∂t² = (λ+μ)·∇(∇·u) + μ·∇²u`.
+    ///
+    /// This is the elastic analogue of `Source.from_initial_pressure`. It
+    /// is required because the elastic field state vector is
+    /// `(ux, uy, uz, vx, vy, vz)` rather than `p`, so a single
+    /// initial-pressure scalar is not the natural input.
+    ///
+    /// Parameters
+    /// ----------
+    /// field : ndarray
+    ///     2D or 3D initial displacement [m] for the chosen axis.
+    ///     A 2D field is lifted to a single-slice 3D volume with ``nz=1``.
+    /// axis : {"x", "y", "z"}, default "z"
+    ///     Which displacement component to initialise. Other components
+    ///     start at zero. Must be lower-case "x", "y", or "z".
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If ``field`` is not a 2-D or 3-D float64 ndarray, is all zeros,
+    ///     or ``axis`` is not one of ``"x"``, ``"y"``, ``"z"``.
+    ///
+    /// Notes
+    /// -----
+    /// Currently only consumed by ``SolverType.Elastic``. Phase A.2 of
+    /// ADR 007.
+    #[staticmethod]
+    #[pyo3(signature = (field, axis="z"))]
+    fn from_initial_displacement(field: &Bound<'_, PyAny>, axis: &str) -> PyResult<Self> {
+        let field_arr: Array3<f64> = if let Ok(f3) = field.extract::<PyReadonlyArray3<f64>>() {
+            f3.as_array().to_owned()
+        } else if let Ok(f2) = field.extract::<PyReadonlyArray2<f64>>() {
+            f2.as_array().insert_axis(Axis(2)).to_owned()
+        } else {
+            return Err(PyValueError::new_err(
+                "Initial displacement must be a 2D or 3D ndarray of float64 values",
+            ));
+        };
+        if field_arr.iter().all(|&v| v == 0.0) {
+            return Err(PyValueError::new_err("Initial displacement is all zeros"));
+        }
+        let axis_norm = match axis {
+            "x" | "X" => "x",
+            "y" | "Y" => "y",
+            "z" | "Z" => "z",
+            other => {
+                return Err(PyValueError::new_err(format!(
+                    "axis must be 'x', 'y', or 'z'; got '{}'",
+                    other
+                )))
+            }
+        };
+        let amplitude = field_arr.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
+        // source_type encodes both the elastic-IVP role and the axis target.
+        // The dispatch path inspects the prefix `elastic_u0_` to route into
+        // run_elastic_impl, then reads the suffix to choose the component.
+        let source_type = format!("elastic_u0_{}", axis_norm);
+        Ok(Source {
+            source_type,
+            frequency: 0.0,
+            amplitude,
+            position: None,
+            mask: None,
+            signal: None,
+            source_mode: "additive".to_string(),
+            initial_pressure: Some(field_arr),
             velocity_signal: None,
             direction: None,
             kwave_array: None,
@@ -2911,6 +3001,31 @@ impl Simulation {
                 continue;
             }
 
+            // Handle elastic initial-displacement source.
+            //
+            // The Source.from_initial_displacement(...) static method tags
+            // its source_type as "elastic_u0_{x|y|z}". The displacement field
+            // is carried in `initial_pressure` (re-using the carrier slot
+            // rather than expanding the Source struct surface). Routing into
+            // run_elastic_impl is gated on `solver_type == SolverType::Elastic`
+            // — see the dispatch match below. Here we just shuttle the field
+            // through `grid_source.p0` so the elastic dispatch can read it.
+            if src.source_type.starts_with("elastic_u0_") {
+                if !matches!(self.solver_type, SolverType::Elastic) {
+                    return Err(PyValueError::new_err(format!(
+                        "Source.from_initial_displacement(..., axis='{}') requires \
+                         SolverType.Elastic; got {:?}. Use Source.from_initial_pressure \
+                         for fluid-acoustic IVP.",
+                        &src.source_type[11..],
+                        self.solver_type
+                    )));
+                }
+                if let Some(ref u0) = src.initial_pressure {
+                    grid_source.p0 = Some(u0.clone());
+                }
+                continue;
+            }
+
             // Handle velocity source
             if src.source_type == "velocity" {
                 let mask = src
@@ -3083,6 +3198,16 @@ impl Simulation {
                     axisymmetric,
                     &sensor_record_modes,
                     sensor_record_start_index,
+                ),
+                SolverType::Elastic => Self::run_elastic_impl(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    grid_source,
+                    sensor_opt.as_ref(),
+                    pml_size,
+                    pml_inside,
                 ),
             })
             .map_err(kwavers_error_to_py)?;
@@ -4557,6 +4682,110 @@ impl Simulation {
             i_avg_y,
             i_avg_z,
             velocity_stats,
+        })
+    }
+
+    /// Run the elastic-wave solver (Phase A.2 of ADR 007).
+    ///
+    /// Drives `kwavers::solver::forward::elastic::swe::ElasticWaveSolver`:
+    ///   - reads the initial-displacement field from `grid_source.p0`
+    ///     (carrier slot used by `Source.from_initial_displacement`); the axis
+    ///     is decoded from the leading source's `source_type` suffix.
+    ///   - assigns the field to the chosen displacement component on a fresh
+    ///     `ElasticWaveField` (other components zero-initialised).
+    ///   - records the same component to `sensor_data` at sensor-mask points.
+    ///
+    /// **Phase A.2 limitations** (see ADR 007 §A.2):
+    ///   - Only one displacement component is initialised. The Rust solver
+    ///     records `uz` only; for axis="x" / "y" the recorded trace is `uz`
+    ///     even when the IVP is on `ux`/`uy` (sensor recorder still hooks
+    ///     `current_field.uz`). A.2.5 extends the recorder to per-component.
+    ///   - No stress / velocity source masks (Phase A.3).
+    ///   - No multi-component recording (Phase A.2.5).
+    ///   - No PML alpha or anisotropic PML thickness — uses uniform thickness
+    ///     from `pml_size`, default 10 if unset.
+    #[allow(clippy::too_many_arguments)]
+    fn run_elastic_impl(
+        grid: &KwaversGrid,
+        medium: &MediumInner,
+        time_steps: usize,
+        dt: f64,
+        grid_source: GridSource,
+        sensor: Option<&Sensor>,
+        pml_size: Option<usize>,
+        _pml_inside: bool,
+    ) -> KwaversResult<SimulationRunResult> {
+        use kwavers::solver::forward::elastic::swe::{
+            ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
+        };
+
+        let (nx, ny, nz) = grid.dimensions();
+
+        // Decode the initial-displacement field from grid_source.p0; if
+        // absent, the simulation is a quiescent zero-IVP — surface a clear
+        // error so callers know the IVP source is required for SolverType.Elastic.
+        let u0 = grid_source.p0.ok_or_else(|| {
+            kwavers::core::error::KwaversError::InvalidInput(
+                "SolverType.Elastic requires Source.from_initial_displacement(...) — \
+                 no initial displacement field was supplied"
+                    .to_string(),
+            )
+        })?;
+        if u0.dim() != (nx, ny, nz) {
+            return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
+                "Elastic initial displacement shape {:?} must equal grid ({}, {}, {})",
+                u0.dim(),
+                nx,
+                ny,
+                nz
+            )));
+        }
+
+        // Sensor mask (optional) — records the chosen displacement component.
+        let sensor_mask: Option<Array3<bool>> = sensor.and_then(|s| s.mask.clone());
+
+        // Build the elastic config — single uniform PML thickness (Phase A.2).
+        let pml_thickness = pml_size.unwrap_or(10);
+        let mut config = ElasticWaveConfig::default();
+        config.time_step = dt; // honor the dt computed by Simulation::run
+        config.simulation_time = dt * (time_steps as f64);
+        config.pml_thickness = pml_thickness;
+        config.save_every = 1; // record every step to match k-Wave behavior
+        config.sensor_mask = sensor_mask;
+
+        // Construct the solver; the Medium trait object covers ElasticProperties.
+        let medium_ref: &dyn kwavers::domain::medium::traits::Medium = medium.as_medium();
+        let mut solver = ElasticWaveSolver::new(grid, medium_ref, config)?;
+
+        // Initialise the field. Phase A.2 always assigns to uz (the only
+        // component currently recorded); axis="x"/"y" requests are honored
+        // for the IVP shape but the recorded sensor trace remains uz.
+        // Phase A.2.5 will route per-axis to per-component recording.
+        let mut initial_field = ElasticWaveField::new(nx, ny, nz);
+        initial_field.uz.assign(&u0);
+
+        let duration = dt * (time_steps as f64);
+        let _final_field = solver.propagate(&initial_field, duration, None)?;
+
+        // Extract recorded sensor data. If no mask was given, return an
+        // empty (1×0) array shaped (n_sensors, time_steps) so downstream
+        // numpy materialisation works.
+        let recorded = solver.extract_recorded_data();
+        let sensor_data = recorded.unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
+
+        Ok(SimulationRunResult {
+            sensor_data,
+            stats: None,
+            ux_data: None,
+            uy_data: None,
+            uz_data: None,
+            ix_data: None,
+            iy_data: None,
+            iz_data: None,
+            i_avg_x: None,
+            i_avg_y: None,
+            i_avg_z: None,
+            velocity_stats: None,
         })
     }
 
