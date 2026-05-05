@@ -4,6 +4,7 @@ use super::super::super::integration::TimeIntegrator;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::definition::ElasticWaveSolver;
 use crate::core::error::{KwaversResult, NumericalError};
+use crate::domain::sensor::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use crate::domain::sensor::recorder::simple::SensorRecorder;
 use ndarray::{Array2, ArrayView2};
 
@@ -37,16 +38,42 @@ impl ElasticWaveSolver {
         let save_every = self.config.save_every.max(1);
         let recorded_steps = steps.div_ceil(save_every);
         let (nx, ny, nz) = self.grid.dimensions();
-        self.sensor_recorder = SensorRecorder::new(
+
+        // Multi-component recording (Phase A.2.5 of ADR 007):
+        // allocate ux_data, uy_data, uz_data buffers in addition to the
+        // pressure buffer (which carries the legacy uz-as-pressure trace
+        // for back-compat with `extract_recorded_data` callers).
+        let spec = SensorRecordSpec::from_fields(&[
+            SensorRecordField::Pressure,
+            SensorRecordField::VelocityX,
+            SensorRecordField::VelocityY,
+            SensorRecordField::VelocityZ,
+        ]);
+        self.sensor_recorder = SensorRecorder::with_spec(
             self.config.sensor_mask.as_ref(),
             (nx, ny, nz),
             recorded_steps,
+            spec,
         )?;
         for step in 0..steps {
             integrator.step(&mut current_field, dt, body_force)?;
             current_field.time += dt;
             if step % save_every == 0 {
+                // Pressure-buffer entry: uz (legacy back-compat — many
+                // existing callers consume `extract_recorded_data` which
+                // returns the pressure buffer; this preserves their
+                // contract since the elastic solver historically wrote uz
+                // there).
                 self.sensor_recorder.record_step(&current_field.uz)?;
+                // Per-component displacement entries: ux_data / uy_data /
+                // uz_data. `record_velocity_step` requires `record_step` to
+                // have run first because it consumes `next_step - 1` as
+                // the column index.
+                self.sensor_recorder.record_velocity_step(
+                    &current_field.ux,
+                    &current_field.uy,
+                    &current_field.uz,
+                )?;
             }
         }
         Ok(current_field)
@@ -54,6 +81,28 @@ impl ElasticWaveSolver {
 
     pub fn extract_recorded_data(&self) -> Option<Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
+    }
+
+    /// Per-component displacement traces recorded at sensor mask points.
+    ///
+    /// Returns `(ux_data, uy_data, uz_data)` where each is
+    /// `Some(Array2<f64>)` of shape `(n_sensors, recorded_steps)` when the
+    /// corresponding component buffer was allocated by the spec passed to
+    /// the underlying `SensorRecorder`. The current `propagate` path
+    /// allocates all three; this accessor exposes them through the public
+    /// API for callers (e.g. PyO3 bridge) that cannot reach the
+    /// `pub(crate)` `sensor_recorder` field directly.
+    ///
+    /// Phase A.2.5 of ADR 007.
+    #[must_use]
+    pub fn extract_recorded_displacement_components(
+        &self,
+    ) -> (Option<Array2<f64>>, Option<Array2<f64>>, Option<Array2<f64>>) {
+        (
+            self.sensor_recorder.extract_ux_data(),
+            self.sensor_recorder.extract_uy_data(),
+            self.sensor_recorder.extract_uz_data(),
+        )
     }
 
     /// Borrow the full allocated sensor displacement buffer without cloning.

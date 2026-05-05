@@ -2825,6 +2825,11 @@ impl Simulation {
         let mut grid_source = GridSource::new_empty();
         let mut dynamic_sources: Vec<Box<dyn KwaversSource>> = Vec::new();
         let mut has_mask_source = false;
+        // Elastic IVP axis tag carried out-of-band from the source-routing
+        // layer to the elastic dispatch (Phase A.2.5 of ADR 007: per-axis
+        // IVP routing). None for non-elastic runs; "x" / "y" / "z" when an
+        // `elastic_u0_*` source has been supplied.
+        let mut elastic_ivp_axis: Option<String> = None;
 
         for src in &self.sources {
             // Handle KWaveArray source: rasterize geometry onto grid
@@ -3023,6 +3028,9 @@ impl Simulation {
                 if let Some(ref u0) = src.initial_pressure {
                     grid_source.p0 = Some(u0.clone());
                 }
+                // Stash the axis suffix so the elastic dispatch can route
+                // the IVP to the correct displacement component.
+                elastic_ivp_axis = Some(src.source_type[11..].to_string());
                 continue;
             }
 
@@ -3208,6 +3216,7 @@ impl Simulation {
                     sensor_opt.as_ref(),
                     pml_size,
                     pml_inside,
+                    elastic_ivp_axis.as_deref(),
                 ),
             })
             .map_err(kwavers_error_to_py)?;
@@ -4714,7 +4723,11 @@ impl Simulation {
         sensor: Option<&Sensor>,
         pml_size: Option<usize>,
         _pml_inside: bool,
+        elastic_ivp_axis: Option<&str>,
     ) -> KwaversResult<SimulationRunResult> {
+        // Local alias to keep the existing axis-decode block readable.
+        let grid_source_axis_suffix: Option<String> =
+            elastic_ivp_axis.map(|s| s.to_string());
         use kwavers::solver::forward::elastic::swe::{
             ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
         };
@@ -4757,28 +4770,36 @@ impl Simulation {
         let medium_ref: &dyn kwavers::domain::medium::traits::Medium = medium.as_medium();
         let mut solver = ElasticWaveSolver::new(grid, medium_ref, config)?;
 
-        // Initialise the field. Phase A.2 always assigns to uz (the only
-        // component currently recorded); axis="x"/"y" requests are honored
-        // for the IVP shape but the recorded sensor trace remains uz.
-        // Phase A.2.5 will route per-axis to per-component recording.
+        // Initialise the field on the requested axis component (Phase A.2.5
+        // of ADR 007: per-axis IVP routing). All other components and all
+        // velocities start at zero.
         let mut initial_field = ElasticWaveField::new(nx, ny, nz);
-        initial_field.uz.assign(&u0);
+        let axis_suffix = grid_source_axis_suffix.as_deref().unwrap_or("z");
+        match axis_suffix {
+            "x" => initial_field.ux.assign(&u0),
+            "y" => initial_field.uy.assign(&u0),
+            "z" | _ => initial_field.uz.assign(&u0),
+        }
 
         let duration = dt * (time_steps as f64);
         let _final_field = solver.propagate(&initial_field, duration, None)?;
 
-        // Extract recorded sensor data. If no mask was given, return an
-        // empty (1×0) array shaped (n_sensors, time_steps) so downstream
-        // numpy materialisation works.
-        let recorded = solver.extract_recorded_data();
-        let sensor_data = recorded.unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
+        // Extract pressure-buffer back-compat trace (uz, named "sensor_data"
+        // for parity with the acoustic API).
+        let recorded_p = solver.extract_recorded_data();
+        let sensor_data = recorded_p.unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
+
+        // Extract per-component displacement traces (Phase A.2.5) via the
+        // public accessor — `sensor_recorder` itself is pub(crate).
+        let (ux_data, uy_data, uz_data) =
+            solver.extract_recorded_displacement_components();
 
         Ok(SimulationRunResult {
             sensor_data,
             stats: None,
-            ux_data: None,
-            uy_data: None,
-            uz_data: None,
+            ux_data,
+            uy_data,
+            uz_data,
             ix_data: None,
             iy_data: None,
             iz_data: None,

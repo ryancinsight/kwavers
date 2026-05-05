@@ -210,8 +210,42 @@ def main() -> int:
     else:
         raise AssertionError("Should have raised when no IVP source supplied")
 
-    # ── Test 5: reject mismatched solver type for elastic IVP source ───────
-    print("\n[5/5] Validation: from_initial_displacement on PSTD → ValueError")
+    # ── Test 5a: per-component displacement traces are populated (A.2.5) ──
+    print("\n[5/6] Phase A.2.5: ux / uy / uz traces all populated, finite, "
+          "uz-dominant")
+    ux_trace = np.asarray(result.ux, dtype=np.float64) if result.ux is not None else None
+    uy_trace = np.asarray(result.uy, dtype=np.float64) if result.uy is not None else None
+    uz_trace = np.asarray(result.uz, dtype=np.float64) if result.uz is not None else None
+    assert ux_trace is not None, "result.ux must be populated by Phase A.2.5"
+    assert uy_trace is not None, "result.uy must be populated by Phase A.2.5"
+    assert uz_trace is not None, "result.uz must be populated by Phase A.2.5"
+    for name, arr in [("ux", ux_trace), ("uy", uy_trace), ("uz", uz_trace)]:
+        assert arr.shape == (n_sensors, NT), (
+            f"result.{name} shape must be ({n_sensors}, {NT}), got {arr.shape}"
+        )
+        assert np.all(np.isfinite(arr)), f"result.{name} must be all finite"
+    # The IVP was placed on uz, so uz should dominate ux and uy in magnitude
+    # at the closest sensor (where wavefront has propagated).
+    ux_peak = float(np.max(np.abs(ux_trace[0])))
+    uy_peak = float(np.max(np.abs(uy_trace[0])))
+    uz_peak = float(np.max(np.abs(uz_trace[0])))
+    print(f"  sensor[0]:  ux peak={ux_peak:.3e}  uy peak={uy_peak:.3e}  "
+          f"uz peak={uz_peak:.3e}")
+    assert uz_peak >= 10.0 * max(ux_peak, uy_peak, 1e-30), (
+        f"uz IVP should yield uz-dominant displacement at sensor 0; "
+        f"got uz_peak={uz_peak:.3e}, ux_peak={ux_peak:.3e}, uy_peak={uy_peak:.3e}"
+    )
+    # And uz should match the legacy sensor_data trace (within numerical noise)
+    sd_peak = float(np.max(np.abs(sensor_data[0])))
+    assert abs(uz_peak - sd_peak) < 1e-15 or abs(uz_peak - sd_peak) / sd_peak < 1e-6, (
+        f"uz_data and legacy sensor_data must agree on the uz trace; "
+        f"got uz_peak={uz_peak:.3e}, sd_peak={sd_peak:.3e}"
+    )
+    print(f"  [PASS] per-component recording works; uz/ux ratio = "
+          f"{uz_peak / max(ux_peak, 1e-30):.2e}")
+
+    # ── Test 6: reject mismatched solver type for elastic IVP source ───────
+    print("\n[6/6] Validation: from_initial_displacement on PSTD → ValueError")
     fluid_medium = pkw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
     mismatched_sim = pkw.Simulation(
         grid, fluid_medium, source, sensor, solver=pkw.SolverType.PSTD

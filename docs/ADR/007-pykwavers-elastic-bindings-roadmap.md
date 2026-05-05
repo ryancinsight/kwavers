@@ -68,23 +68,44 @@ Delivered in commit `<this commit>`:
 This phase is **independently usable** — Python code can construct elastic
 media and inspect Lamé parameters even before the solver dispatch lands.
 
-### Phase A.2 — SolverType.Elastic + Source/Sensor surface (`[minor]`, queued)
+### Phase A.2 — SolverType.Elastic + Source/Sensor surface (`[minor]`, **landed**)
 
 **Scope**: wire `SolverType::Elastic` into `Simulation::run` dispatch; add
-`Source.from_initial_displacement(field)` (uses
-`ElasticWaveSolver::propagate_waves` which already accepts an initial uz);
-extend `SimulationResult` to expose displacement traces from
-`SensorRecorder.extract_pressure_data()` (currently records `uz` only at
-sensor mask points). One end-to-end Python smoke test that propagates a
-disc IVP through an elastic medium and inspects the recorded uz time series.
+`Source.from_initial_displacement(field, axis)` (uses
+`ElasticWaveSolver::propagate` driving the velocity-Verlet integrator on
+an initial-uz / -ux / -uy displacement IVP); extend `SimulationResult`
+to expose displacement traces. End-to-end Python smoke test propagating
+a Gaussian IVP through a 32×32×16 elastic medium with three sensors
+along the +x ray, asserting causality and geometric spreading.
 
-**Blockers identified for this phase**:
-- The Rust `ElasticWaveSolver::propagate` records only `uz` to the sensor
-  recorder. To match k-Wave's `sensor.record = {"u"}` (all 3 components) or
-  the per-component options needed by `ewp_plane_wave_absorption`
-  (`sensor_data.ux`, `sensor_data.uy`), the recorder must be extended to
-  store all three velocity components. This is a Rust feature addition, not
-  bindings work.
+**Status**: landed in commit `590a52b7`.
+
+### Phase A.2.5 — Multi-component sensor recording (`[patch]`, **landed**)
+
+**Scope**: Rust feature addition — extend `ElasticWaveSolver::propagate`
+to record `ux`, `uy`, `uz` displacement components separately into the
+`SensorRecorder`'s ux/uy/uz buffers via `record_velocity_step` (in
+addition to the legacy `record_step(&uz)` that preserves
+`extract_recorded_data` back-compat). Use `SensorRecorder::with_spec`
+with a `SensorRecordSpec` covering Pressure + VelocityX + VelocityY +
+VelocityZ so all four buffers are allocated. Add public method
+`ElasticWaveSolver::extract_recorded_displacement_components()` returning
+`(Option<Array2<f64>>, Option<Array2<f64>>, Option<Array2<f64>>)`. PyO3
+side: `run_elastic_impl` now populates `SimulationRunResult.{ux_data,
+uy_data, uz_data}`, and routes the IVP per-axis ("x" / "y" / "z") via
+an `elastic_ivp_axis: Option<String>` carried out-of-band from the
+source-routing layer to the dispatch.
+
+**Status**: landed alongside Phase A.2.
+
+**Verification**:
+- `result.ux`, `result.uy`, `result.uz` populated as `(n_sensors, NT)`
+  ndarrays.
+- For uz IVP: uz_peak >> ux_peak / uy_peak at the +x-ray sensor (uz
+  peak = 1.35e-10 m vs. ux/uy peaks = 0 exactly at sensor 0 — symmetry
+  is exact within numerical precision before P-to-S conversion).
+- Legacy `sensor_data` trace agrees with `result.uz` (back-compat
+  invariant).
 
 ### Phase A.3 — `Source.from_stress` + `Source.from_velocity` (`[minor]`, queued)
 
