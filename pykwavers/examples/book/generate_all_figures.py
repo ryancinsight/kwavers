@@ -12,7 +12,7 @@ Usage::
 With no arguments, generates all chapters. With --chapter N, generates
 only Chapter N (1-indexed, N=1..20).
 
-Output: docs/book/figures/chNN/ for each chapter NN = 01..20.
+Output: docs/book/figures/chNN/ for each chapter NN = 01..21.
 
 Requires: numpy, matplotlib, scipy
 Optional: pykwavers (Chapter 1 fig06 and Chapter 3 fig06 only)
@@ -54,6 +54,7 @@ CHAPTER_SCRIPTS = [
     (18, "ch18_sonogenetics.py",                  "Sonogenetics"),
     (19, "ch19_performance_and_memory.py",        "Performance and Memory"),
     (20, "ch20_validation_and_benchmarking.py",   "Validation and Benchmarking"),
+    (21, "ch21_histotripsy_comparison.py",         "Histotripsy: Classical vs ms-Pulse"),
 ]
 
 
@@ -89,7 +90,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--chapter", type=int, default=None,
-        help="Generate only this chapter number (1-7). Default: all chapters."
+        help="Generate only this chapter number (1-21). Default: all chapters."
     )
     args = parser.parse_args()
 
@@ -99,7 +100,7 @@ def main() -> None:
     if args.chapter is not None:
         chapters_to_run = [(n, s, t) for n, s, t in CHAPTER_SCRIPTS if n == args.chapter]
         if not chapters_to_run:
-            print(f"ERROR: Chapter {args.chapter} not found. Valid range: 1–20.")
+            print(f"ERROR: Chapter {args.chapter} not found. Valid range: 1–21.")
             sys.exit(1)
 
     t_total_start = time.perf_counter()

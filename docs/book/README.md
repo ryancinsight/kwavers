@@ -24,6 +24,7 @@ This directory is the source tree for the in-repository book on ultrasound physi
 - [Safety and Dosimetry](safety_and_dosimetry.md)
 - [Validation and Benchmarking](validation_and_benchmarking.md)
 - [Performance and Memory](performance_and_memory.md)
+- [Histotripsy: Classical vs Millisecond-Pulse](histotripsy.md)
 
 ## Figure Sources
 
