@@ -2,20 +2,24 @@
 Master Figure Generation Script — kwavers Ultrasound Physics Book
 =================================================================
 
-Runs all chapter figure generation scripts in order. Each chapter
-script is independent and can also be run standalone.
+Runs all chapter figure generation scripts in order. The chapter roster
+is read from ``chapters.toml`` in the same directory (single source of truth).
+Each chapter script is independent and can also be run standalone.
 
 Usage::
 
     python generate_all_figures.py [--chapter N]
 
-With no arguments, generates all chapters. With --chapter N, generates
-only Chapter N (1-indexed, N=1..20).
+With no arguments, generates all chapters. With ``--chapter N``, generates
+only chapter N (number as listed in chapters.toml).
 
-Output: docs/book/figures/chNN/ for each chapter NN = 01..21.
+Output: docs/book/figures/chNN/ for each chapter NN.
 
 Requires: numpy, matplotlib, scipy
 Optional: pykwavers (Chapter 1 fig06 and Chapter 3 fig06 only)
+
+Chapter manifest: chapters.toml (co-located with this script).
+Do NOT hardcode chapter metadata here; edit chapters.toml instead.
 """
 
 import argparse
@@ -25,6 +29,18 @@ import sys
 import time
 import traceback
 
+# ── TOML parsing: stdlib in Python 3.11+; fall back to tomli for 3.10 ────────
+try:
+    import tomllib  # Python 3.11+
+except ImportError:
+    try:
+        import tomli as tomllib  # pip install tomli
+    except ImportError as exc:
+        raise SystemExit(
+            "TOML parser not found. Use Python ≥ 3.11 or install tomli:\n"
+            "    pip install tomli"
+        ) from exc
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
@@ -32,30 +48,62 @@ if hasattr(sys.stderr, "reconfigure"):
 
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 BOOK_SCRIPTS_DIR = os.path.dirname(__file__)
+CHAPTERS_TOML = os.path.join(BOOK_SCRIPTS_DIR, "chapters.toml")
 
-CHAPTER_SCRIPTS = [
-    (1,  "ch01_wave_physics_fundamentals.py",    "Wave Physics Fundamentals"),
-    (2,  "ch02_numerical_methods.py",            "Numerical Methods: FDTD and PSTD"),
-    (3,  "ch03_nonlinear_acoustics.py",           "Nonlinear Acoustics"),
-    (4,  "ch04_transducer_arrays_beamforming.py", "Transducer Arrays and Beamforming"),
-    (5,  "ch05_ultrasound_imaging.py",            "Ultrasound Imaging"),
-    (6,  "ch06_therapeutic_ultrasound.py",        "Therapeutic Ultrasound"),
-    (7,  "ch07_theranostics.py",                  "Theranostics"),
-    (8,  "ch08_acoustic_propagation.py",          "Acoustic Propagation"),
-    (9,  "ch09_cavitation_and_bubbles.py",        "Cavitation and Bubble Dynamics"),
-    (10, "ch10_elastography.py",                  "Elastography"),
-    (11, "ch11_sources_and_transducers.py",       "Sources and Transducers"),
-    (12, "ch12_media_and_tissue_models.py",       "Media and Tissue Models"),
-    (13, "ch13_photoacoustics.py",                "Photoacoustics"),
-    (14, "ch14_sensors_and_measurements.py",      "Sensors and Measurements"),
-    (15, "ch15_safety_and_dosimetry.py",          "Safety and Dosimetry"),
-    (16, "ch16_transcranial_ultrasound.py",       "Transcranial Ultrasound"),
-    (17, "ch17_inverse_problems_and_pinns.py",    "Inverse Problems and PINNs"),
-    (18, "ch18_sonogenetics.py",                  "Sonogenetics"),
-    (19, "ch19_performance_and_memory.py",        "Performance and Memory"),
-    (20, "ch20_validation_and_benchmarking.py",   "Validation and Benchmarking"),
-    (21, "ch21_histotripsy_comparison.py",         "Histotripsy: Classical vs ms-Pulse"),
-]
+
+def load_chapters() -> list[tuple[int, str, str]]:
+    """Parse chapters.toml and return a list of (number, script, title) tuples.
+
+    Validates that chapter numbers are unique and monotonically increasing.
+
+    Raises
+    ------
+    SystemExit
+        If chapters.toml is missing, malformed, or fails schema validation.
+    """
+    if not os.path.exists(CHAPTERS_TOML):
+        raise SystemExit(
+            f"Chapter manifest not found: {CHAPTERS_TOML}\n"
+            "Ensure chapters.toml is present in the same directory as this script."
+        )
+
+    with open(CHAPTERS_TOML, "rb") as fh:
+        data = tomllib.load(fh)
+
+    raw = data.get("chapter", [])
+    if not raw:
+        raise SystemExit("chapters.toml contains no [[chapter]] entries.")
+
+    chapters: list[tuple[int, str, str]] = []
+    seen_numbers: set[int] = set()
+    prev_number = 0
+
+    for entry in raw:
+        try:
+            number = int(entry["number"])
+            script = str(entry["script"])
+            title = str(entry["title"])
+        except KeyError as exc:
+            raise SystemExit(
+                f"chapters.toml entry missing required field: {exc}\n"
+                "Each [[chapter]] must have: number, script, title."
+            ) from exc
+
+        if number in seen_numbers:
+            raise SystemExit(
+                f"chapters.toml: duplicate chapter number {number}."
+            )
+        if number <= prev_number:
+            raise SystemExit(
+                f"chapters.toml: chapter numbers must be strictly increasing; "
+                f"got {number} after {prev_number}."
+            )
+
+        seen_numbers.add(number)
+        prev_number = number
+        chapters.append((number, script, title))
+
+    return chapters
 
 
 def run_chapter(ch_num: int, script_name: str, ch_title: str) -> bool:
@@ -85,22 +133,39 @@ def run_chapter(ch_num: int, script_name: str, ch_title: str) -> bool:
 
 
 def main() -> None:
+    chapter_scripts = load_chapters()
+    chapter_numbers = [n for n, _, _ in chapter_scripts]
+    ch_min = chapter_numbers[0]
+    ch_max = chapter_numbers[-1]
+
     parser = argparse.ArgumentParser(
-        description="Generate all book figures for the kwavers ultrasound physics book."
+        description=(
+            "Generate all book figures for the kwavers ultrasound physics book. "
+            f"Chapter manifest: {os.path.relpath(CHAPTERS_TOML)}."
+        )
     )
     parser.add_argument(
         "--chapter", type=int, default=None,
-        help="Generate only this chapter number (1-21). Default: all chapters."
+        help=(
+            f"Generate only this chapter number ({ch_min}–{ch_max}). "
+            "Default: all chapters."
+        ),
     )
     args = parser.parse_args()
 
     sys.path.insert(0, BOOK_SCRIPTS_DIR)
 
-    chapters_to_run = CHAPTER_SCRIPTS
+    chapters_to_run = chapter_scripts
     if args.chapter is not None:
-        chapters_to_run = [(n, s, t) for n, s, t in CHAPTER_SCRIPTS if n == args.chapter]
+        chapters_to_run = [
+            (n, s, t) for n, s, t in chapter_scripts if n == args.chapter
+        ]
         if not chapters_to_run:
-            print(f"ERROR: Chapter {args.chapter} not found. Valid range: 1–21.")
+            valid = ", ".join(str(n) for n in chapter_numbers)
+            print(
+                f"ERROR: Chapter {args.chapter} not found in chapters.toml. "
+                f"Valid numbers: {valid}."
+            )
             sys.exit(1)
 
     t_total_start = time.perf_counter()
@@ -129,10 +194,14 @@ def main() -> None:
     print("\nOutput directories:")
     for ch_num, _, ok in results:
         if ok:
-            out_dir = os.path.join(REPO_ROOT, "docs", "book", "figures", f"ch{ch_num:02d}")
+            out_dir = os.path.join(
+                REPO_ROOT, "docs", "book", "figures", f"ch{ch_num:02d}"
+            )
             if os.path.isdir(out_dir):
                 n_files = len([f for f in os.listdir(out_dir) if f.endswith(".pdf")])
-                print(f"  docs/book/figures/ch{ch_num:02d}/  ({n_files} PDF files)")
+                print(
+                    f"  docs/book/figures/ch{ch_num:02d}/  ({n_files} PDF files)"
+                )
 
 
 if __name__ == "__main__":

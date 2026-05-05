@@ -1,113 +1,43 @@
-//! GPU buffer management
+//! GPU buffer registry: name-keyed `BufferManager`.
+//!
+//! This module provides [`BufferManager`], a **named registry** of [`GpuBuffer`]
+//! instances allocated and looked up by string key. The buffer primitive itself
+//! lives in [`crate::gpu::buffer`]; this module only manages the registry layer.
+//!
+//! ## Relationship to `solver::backend::gpu::buffers::BufferManager`
+//!
+//! The codebase intentionally contains **two `BufferManager` types** with
+//! distinct responsibilities — this is **not** a DRY violation:
+//!
+//! | Type                                            | Layer       | Key                            | Purpose                                                                  |
+//! |-------------------------------------------------|-------------|--------------------------------|--------------------------------------------------------------------------|
+//! | `crate::gpu::buffers::BufferManager` (here)     | gpu module  | `String` (stable name)         | Named registry: persistent, per-context buffers (`GpuContext`, `MultiGpuContext`) |
+//! | `solver::backend::gpu::buffers::BufferManager`  | solver layer| `(size, usage)` (allocation key) | Allocation pool: ephemeral compute scratch buffers reused across kernel dispatches |
+//!
+//! The registry tracks named state (one `pressure_field` buffer per context).
+//! The pool recycles size-matched buffers between dispatches. Merging would
+//! conflate persistence semantics with reuse semantics. The split follows SRP:
+//! each `BufferManager` changes for one reason only.
+//!
+//! SRP: changes here when the registry naming or memory-budget strategy
+//! changes. Changes to individual buffer lifecycle or readback belong in
+//! `crate::gpu::buffer`. Changes to dispatch-pool reuse semantics belong in
+//! `solver::backend::gpu::buffers`.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::gpu::buffer::GpuBuffer;
 use std::collections::HashMap;
-use wgpu::util::DeviceExt;
 
-/// GPU buffer wrapper
-#[derive(Debug)]
-pub struct GpuBuffer {
-    buffer: wgpu::Buffer,
-    size: u64,
-    usage: wgpu::BufferUsages,
-    _label: String,
-}
-
-impl GpuBuffer {
-    /// Create a new GPU buffer
-    pub fn new(device: &wgpu::Device, label: &str, size: u64, usage: wgpu::BufferUsages) -> Self {
-        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some(label),
-            size,
-            usage,
-            mapped_at_creation: false,
-        });
-
-        Self {
-            buffer,
-            size,
-            usage,
-            _label: label.to_string(),
-        }
-    }
-
-    /// Create buffer with initial data
-    pub fn with_data<T: bytemuck::Pod>(
-        device: &wgpu::Device,
-        label: &str,
-        data: &[T],
-        usage: wgpu::BufferUsages,
-    ) -> Self {
-        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some(label),
-            contents: bytemuck::cast_slice(data),
-            usage,
-        });
-
-        let size = std::mem::size_of_val(data) as u64;
-
-        Self {
-            buffer,
-            size,
-            usage,
-            _label: label.to_string(),
-        }
-    }
-
-    /// Get buffer reference
-    pub fn buffer(&self) -> &wgpu::Buffer {
-        &self.buffer
-    }
-
-    /// Get buffer size
-    pub fn size(&self) -> u64 {
-        self.size
-    }
-
-    /// Map buffer for reading
-    pub async fn read<T: bytemuck::Pod>(&self) -> KwaversResult<Vec<T>> {
-        if !self.usage.contains(wgpu::BufferUsages::MAP_READ) {
-            return Err(KwaversError::System(
-                crate::core::error::SystemError::InvalidOperation {
-                    operation: "Buffer reading".to_string(),
-                    reason: "Buffer not created with MAP_READ usage".to_string(),
-                },
-            ));
-        }
-
-        let buffer_slice = self.buffer.slice(..);
-        let (tx, rx) = flume::bounded(1);
-
-        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = tx.send(result);
-        });
-
-        // Wait for mapping to complete
-        let result = rx.recv_async().await.map_err(|e| {
-            KwaversError::System(crate::core::error::SystemError::InvalidOperation {
-                operation: "Buffer mapping channel".to_string(),
-                reason: format!("Failed: {}", e),
-            })
-        })?;
-
-        result?;
-
-        let data = buffer_slice.get_mapped_range();
-        let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
-
-        drop(data);
-        self.buffer.unmap();
-
-        Ok(result)
-    }
-
-    /// Write data to buffer
-    pub fn write<T: bytemuck::Pod>(&self, queue: &wgpu::Queue, data: &[T]) {
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(data));
-    }
-}
-
-/// Buffer manager for efficient GPU memory management
+/// Named GPU buffer pool with aggregate memory tracking.
+///
+/// Allocates [`GpuBuffer`] instances keyed by string name and tracks total
+/// device-side memory. All allocations use the canonical [`GpuBuffer`] type
+/// from [`crate::gpu::buffer`].
+///
+/// # Invariants
+///
+/// - `total_memory` equals the sum of `buf.size()` for every live buffer.
+/// - No two entries share the same name; `allocate` returns `Err` on collision.
 #[derive(Debug)]
 pub struct BufferManager {
     buffers: HashMap<String, GpuBuffer>,
@@ -116,7 +46,10 @@ pub struct BufferManager {
 }
 
 impl BufferManager {
-    /// Create a new buffer manager
+    /// Create a new buffer manager.
+    ///
+    /// `max_memory` is initialised from the device's `max_buffer_size` limit
+    /// and recorded for future eviction / budget enforcement.
     pub fn new(device: &wgpu::Device) -> Self {
         let limits = device.limits();
         Self {
@@ -126,7 +59,10 @@ impl BufferManager {
         }
     }
 
-    /// Allocate a new buffer
+    /// Allocate a new buffer with the given `name`, `size`, and `usage`.
+    ///
+    /// Returns `Err` if a buffer named `name` already exists.
+    /// The new buffer is accessible via [`BufferManager::get`].
     pub fn allocate(
         &mut self,
         device: &wgpu::Device,
@@ -143,38 +79,37 @@ impl BufferManager {
             ));
         }
 
-        let buffer = GpuBuffer::new(device, name, size, usage);
+        // `GpuBuffer::new` is infallible; wgpu panics on OOM rather than returning Err.
+        let buffer = GpuBuffer::new(device, name, size as usize, usage);
         self.total_memory += size;
         self.buffers.insert(name.to_string(), buffer);
 
         self.buffers.get(name).ok_or_else(|| {
-            crate::core::error::KwaversError::System(
-                crate::core::error::SystemError::ResourceExhausted {
-                    resource: format!("GPU buffer '{}'", name),
-                    reason: "Buffer not found after creation".to_string(),
-                },
-            )
+            KwaversError::System(crate::core::error::SystemError::ResourceExhausted {
+                resource: format!("GPU buffer '{}'", name),
+                reason: "Buffer not found after creation".to_string(),
+            })
         })
     }
 
-    /// Get buffer by name
+    /// Get a buffer by name.
     pub fn get(&self, name: &str) -> Option<&GpuBuffer> {
         self.buffers.get(name)
     }
 
-    /// Get mutable buffer by name
+    /// Get a mutable buffer by name.
     pub fn get_mut(&mut self, name: &str) -> Option<&mut GpuBuffer> {
         self.buffers.get_mut(name)
     }
 
-    /// Release a buffer
+    /// Release (deallocate) a buffer by name, updating the memory counter.
     pub fn release(&mut self, name: &str) {
         if let Some(buffer) = self.buffers.remove(name) {
-            self.total_memory -= buffer.size();
+            self.total_memory = self.total_memory.saturating_sub(buffer.size() as u64);
         }
     }
 
-    /// Get total allocated memory
+    /// Total bytes currently allocated across all live buffers.
     pub fn total_memory(&self) -> u64 {
         self.total_memory
     }

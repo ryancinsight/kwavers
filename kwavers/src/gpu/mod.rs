@@ -31,8 +31,10 @@ pub mod shaders;
 pub mod thermal_acoustic;
 
 pub use backend::GpuBackend;
-pub use buffer::{BufferUsage, GpuBuffer as GpuBufferV2};
-pub use buffers::{BufferManager, GpuBuffer};
+// Single canonical GpuBuffer — `gpu/buffer.rs` is the SSOT.
+// `gpu/buffers.rs` exposes only BufferManager (the named-pool layer).
+pub use buffer::{BufferUsage, GpuBuffer};
+pub use buffers::BufferManager;
 #[cfg(feature = "pinn")]
 pub use burn_accelerator::BurnGpuAccelerator;
 pub use compute::{FdtdGpuDispatcher, GpuCompute};

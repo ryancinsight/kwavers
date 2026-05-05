@@ -65,6 +65,9 @@ impl BufferUsage {
 /// for transferring data between CPU and GPU. It handles the complexity of
 /// staging buffers and async operations required for GPU-to-CPU data transfer.
 ///
+/// This is the canonical GPU buffer type for the kwavers codebase.
+/// [`BufferManager`](crate::gpu::BufferManager) uses this type for named-buffer pools.
+///
 /// # Buffer Usage Patterns
 ///
 /// - **Storage Buffer**: Use `BufferUsage::STORAGE` for compute shader read/write
@@ -97,16 +100,89 @@ pub struct GpuBuffer {
     size: usize,
     #[allow(dead_code)]
     usage: wgpu::BufferUsages,
+    /// Debug label stored for diagnostics and `BufferManager` naming.
+    #[allow(dead_code)]
+    label: String,
     /// Lazily initialized readback staging buffer reused across `read_to_vec`
     /// calls. This avoids reallocating a fresh staging buffer for every read.
     readback_staging: OnceCell<wgpu::Buffer>,
 }
 
 impl GpuBuffer {
-    /// Create an empty GPU buffer
+    /// Create an empty, labeled GPU buffer (infallible).
+    ///
+    /// Primary constructor used by [`BufferManager`](crate::gpu::BufferManager) and
+    /// any call site that requires a diagnostic label. `wgpu::Device::create_buffer`
+    /// panics on OOM rather than returning an error, so this constructor is infallible.
+    ///
+    /// # Arguments
+    ///
+    /// * `device` - GPU device for buffer allocation
+    /// * `label`  - Debug label attached to the wgpu buffer
+    /// * `size`   - Size of buffer in bytes
+    /// * `usage`  - Buffer usage flags (combine with `|`)
+    pub fn new(
+        device: &wgpu::Device,
+        label: &str,
+        size: usize,
+        usage: wgpu::BufferUsages,
+    ) -> Self {
+        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some(label),
+            size: size as u64,
+            usage,
+            mapped_at_creation: false,
+        });
+        Self {
+            buffer,
+            size,
+            usage,
+            label: label.to_string(),
+            readback_staging: OnceCell::new(),
+        }
+    }
+
+    /// Create a labeled GPU buffer initialized with `data` (infallible).
+    ///
+    /// Copies `data` to device memory at construction time.
+    /// The data type must implement `bytemuck::Pod` for safe byte-level copying.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - Element type implementing `bytemuck::Pod`
+    ///
+    /// # Arguments
+    ///
+    /// * `device` - GPU device for buffer allocation
+    /// * `label`  - Debug label attached to the wgpu buffer
+    /// * `data`   - Slice of data to copy to GPU
+    /// * `usage`  - Buffer usage flags
+    pub fn new_with_data<T: bytemuck::Pod>(
+        device: &wgpu::Device,
+        label: &str,
+        data: &[T],
+        usage: wgpu::BufferUsages,
+    ) -> Self {
+        let bytes = bytemuck::cast_slice(data);
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some(label),
+            contents: bytes,
+            usage,
+        });
+        Self {
+            buffer,
+            size: bytes.len(),
+            usage,
+            label: label.to_string(),
+            readback_staging: OnceCell::new(),
+        }
+    }
+
+    /// Create an empty GPU buffer (unlabeled convenience form).
     ///
     /// Allocates GPU memory of the specified size with given usage flags.
-    /// The buffer contents are uninitialized.
+    /// The buffer contents are uninitialized. Prefer [`GpuBuffer::new`] when
+    /// a diagnostic label is available.
     ///
     /// # Arguments
     ///
@@ -136,25 +212,14 @@ impl GpuBuffer {
         size: usize,
         usage: wgpu::BufferUsages,
     ) -> KwaversResult<Self> {
-        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("kwavers_buffer"),
-            size: size as u64,
-            usage,
-            mapped_at_creation: false,
-        });
-
-        Ok(Self {
-            buffer,
-            size,
-            usage,
-            readback_staging: OnceCell::new(),
-        })
+        Ok(Self::new(device, "kwavers_buffer", size, usage))
     }
 
-    /// Create a GPU buffer initialized with data
+    /// Create a GPU buffer initialized with data (unlabeled convenience form).
     ///
     /// Allocates GPU memory and immediately copies the provided data.
     /// The data type must implement `bytemuck::Pod` for safe byte-level copying.
+    /// Prefer [`GpuBuffer::new_with_data`] when a diagnostic label is available.
     ///
     /// # Type Parameters
     ///
@@ -189,20 +254,7 @@ impl GpuBuffer {
         data: &[T],
         usage: wgpu::BufferUsages,
     ) -> KwaversResult<Self> {
-        let bytes = bytemuck::cast_slice(data);
-
-        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("kwavers_buffer"),
-            contents: bytes,
-            usage,
-        });
-
-        Ok(Self {
-            buffer,
-            size: bytes.len(),
-            usage,
-            readback_staging: OnceCell::new(),
-        })
+        Ok(Self::new_with_data(device, "kwavers_buffer", data, usage))
     }
 
     /// Write data to GPU buffer
