@@ -42,6 +42,7 @@
 
 mod apodization;
 pub mod config;
+pub(super) mod cpu;
 mod delay_sum;
 mod metrics;
 mod processing;

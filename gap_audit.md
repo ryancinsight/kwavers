@@ -199,8 +199,17 @@
 - **CLOSED** [patch] R2C/C2R FFT wiring in PSTD — audit confirmed `forward_r2c_into`/`inverse_c2r_into` from apollo-fft are correctly called with `nz_c = nz/2 + 1` for all pressure/velocity/absorption stages. No gap, no changes required.
 - **CLOSED** [patch] Spectral-CPML incompatibility silent no-op — enabling CPML with `kspace_correction = Spectral` silently bypassed boundary corrections. Fix: guard in `enable_cpml` returns `KwaversError::InvalidInput`; `# Errors` doc + Roden & Gedney (2000) reference added; 2 value-semantic tests verify rejection (Spectral) and acceptance (None) with `cpml_boundary.is_some()` assertion.
 
+## Session 2026-05-04 (continued) Gap Closures
+
+- **CLOSED** [minor] 3D CPU DAS beamformer absent — all `#[cfg(not(feature = "gpu"))]` paths in `analysis::signal_processing::beamforming::three_dimensional::processing` returned `FeatureNotAvailable`.  Fix: implemented `delay_and_sum_cpu` in `cpu/das.rs` (plane-wave receive delay, linear interpolation, Rayon parallelism over voxels, full apodization support); created `cpu/mod.rs`; added `pub(super) mod cpu;` to `three_dimensional/mod.rs`; replaced stubs in `processing.rs` for `process_volume`, `process_streaming`, `validate_input`, and `process_delay_and_sum`.  Theorem (Thomenius 1996, Jeong & Kwon 2013) and proof in file header.  4 value-semantic tests: zero-delay passthrough, channel-mismatch error, coherent gain M (co-located), exact receive-delay geometry (τ = 1 sample at sz=3 mm).
+- **CLOSED** [minor] 3D CPU MVDR beamformer absent — no CPU adaptive beamforming existed.  Fix: implemented `mvdr_cpu` in `cpu/mvdr.rs` with spatially-smoothed covariance (Shan & Kailath 1985), relative diagonal loading R_δ = R + δ·(tr(R)/L)·I, Cholesky/LU solve via nalgebra, Rayon parallelism over voxels; replaced `process_mvdr_3d` stub in `processing.rs`.  Theorems (Capon 1969, Synnevåg et al. 2007) and proofs in file header.  5 value-semantic tests: L=1 identity proof, L=1 δ-invariance, channel-mismatch error, subarray-exceeds-array error, diagonal-loading positive-definiteness over 4 decades of δ.
+- **CLOSED** [patch] `BeamformingProcessor3D::new` CPU path — constructor returned `FeatureNotAvailable` unconditionally; now returns a valid processor struct without GPU for use with CPU dispatch path.
+
+Total: 3258/3258 tests PASS (9 net-new beamforming tests added).
+
 ## Remaining Open Gaps
 
 - Validate pykwavers comparison metrics: re-run `canonical_comparison.py` and update `metrics.csv` with current Pearson/PSNR values.
 - Axisymmetric solver validation: `Geometry::Axisymmetric` flag is wired into `PSTDConfig`/`FdtdConfig` and the WSWA-FFT AS propagator is implemented; end-to-end parity vs. k-Wave axisymmetric examples pending.
 - Pykwavers no longer carries a stale acoustic-intensity mapping assertion that treats intensity as raw `ux` storage. The Python-facing record-mode regression now pins the same split as kwavers: pressure storage plus instantaneous velocity sampling, without `ux` time-series allocation.
+- Book chapters `acoustic_propagation.md`, `cavitation_and_bubbles.md`, `elastography.md`, `sources_and_transducers.md`, `media_and_tissue_models.md` remain at skeleton depth (1-2 KB) and require full theorem/proof/figure expansion.

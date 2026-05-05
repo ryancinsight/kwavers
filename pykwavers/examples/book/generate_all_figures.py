@@ -10,9 +10,9 @@ Usage::
     python generate_all_figures.py [--chapter N]
 
 With no arguments, generates all chapters. With --chapter N, generates
-only Chapter N (1-indexed, N=1..7).
+only Chapter N (1-indexed, N=1..20).
 
-Output: docs/book/figures/chNN/ for each chapter NN = 01..07.
+Output: docs/book/figures/chNN/ for each chapter NN = 01..20.
 
 Requires: numpy, matplotlib, scipy
 Optional: pykwavers (Chapter 1 fig06 and Chapter 3 fig06 only)
@@ -34,13 +34,26 @@ REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..",
 BOOK_SCRIPTS_DIR = os.path.dirname(__file__)
 
 CHAPTER_SCRIPTS = [
-    (1, "ch01_wave_physics_fundamentals.py", "Wave Physics Fundamentals"),
-    (2, "ch02_numerical_methods.py", "Numerical Methods: FDTD and PSTD"),
-    (3, "ch03_nonlinear_acoustics.py", "Nonlinear Acoustics"),
-    (4, "ch04_transducer_arrays_beamforming.py", "Transducer Arrays and Beamforming"),
-    (5, "ch05_ultrasound_imaging.py", "Ultrasound Imaging"),
-    (6, "ch06_therapeutic_ultrasound.py", "Therapeutic Ultrasound"),
-    (7, "ch07_theranostics.py", "Theranostics"),
+    (1,  "ch01_wave_physics_fundamentals.py",    "Wave Physics Fundamentals"),
+    (2,  "ch02_numerical_methods.py",            "Numerical Methods: FDTD and PSTD"),
+    (3,  "ch03_nonlinear_acoustics.py",           "Nonlinear Acoustics"),
+    (4,  "ch04_transducer_arrays_beamforming.py", "Transducer Arrays and Beamforming"),
+    (5,  "ch05_ultrasound_imaging.py",            "Ultrasound Imaging"),
+    (6,  "ch06_therapeutic_ultrasound.py",        "Therapeutic Ultrasound"),
+    (7,  "ch07_theranostics.py",                  "Theranostics"),
+    (8,  "ch08_acoustic_propagation.py",          "Acoustic Propagation"),
+    (9,  "ch09_cavitation_and_bubbles.py",        "Cavitation and Bubble Dynamics"),
+    (10, "ch10_elastography.py",                  "Elastography"),
+    (11, "ch11_sources_and_transducers.py",       "Sources and Transducers"),
+    (12, "ch12_media_and_tissue_models.py",       "Media and Tissue Models"),
+    (13, "ch13_photoacoustics.py",                "Photoacoustics"),
+    (14, "ch14_sensors_and_measurements.py",      "Sensors and Measurements"),
+    (15, "ch15_safety_and_dosimetry.py",          "Safety and Dosimetry"),
+    (16, "ch16_transcranial_ultrasound.py",       "Transcranial Ultrasound"),
+    (17, "ch17_inverse_problems_and_pinns.py",    "Inverse Problems and PINNs"),
+    (18, "ch18_sonogenetics.py",                  "Sonogenetics"),
+    (19, "ch19_performance_and_memory.py",        "Performance and Memory"),
+    (20, "ch20_validation_and_benchmarking.py",   "Validation and Benchmarking"),
 ]
 
 
@@ -86,7 +99,7 @@ def main() -> None:
     if args.chapter is not None:
         chapters_to_run = [(n, s, t) for n, s, t in CHAPTER_SCRIPTS if n == args.chapter]
         if not chapters_to_run:
-            print(f"ERROR: Chapter {args.chapter} not found. Valid range: 1–7.")
+            print(f"ERROR: Chapter {args.chapter} not found. Valid range: 1–20.")
             sys.exit(1)
 
     t_total_start = time.perf_counter()
