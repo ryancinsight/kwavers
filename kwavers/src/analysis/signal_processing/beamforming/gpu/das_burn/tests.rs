@@ -40,9 +40,11 @@ fn test_single_focal_point_beamforming() {
 
     let result = beamformer.beamform(&rf_data, &sensor_pos, &focal_points, None, 1e6, 1500.0);
 
-    assert!(result.is_ok());
     let output = result.unwrap();
     assert_eq!(output.shape(), &[1, 3, 1]);
+    assert!((output[[0, 0, 0]] - 1.5).abs() < 1.0e-5);
+    assert!((output[[0, 1, 0]] - 1.7).abs() < 1.0e-5);
+    assert!((output[[0, 2, 0]] - 1.9).abs() < 1.0e-5);
 }
 
 #[test]
@@ -62,7 +64,7 @@ fn test_apodization() {
         Array2::from_shape_vec((3, 3), vec![0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.02, 0.0, 0.0])
             .unwrap();
 
-    let focal_points = Array2::from_shape_vec((1, 3), vec![0.01, 0.0, 0.01]).unwrap();
+    let focal_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
     let apod_weights = vec![0.5, 1.0, 0.5];
 
     let result = beamformer.beamform(
@@ -74,9 +76,9 @@ fn test_apodization() {
         1500.0,
     );
 
-    assert!(result.is_ok());
     let output = result.unwrap();
     assert_eq!(output.shape(), &[1, 1, 1]);
+    assert!((output[[0, 0, 0]] - 0.5).abs() < 1.0e-5);
 }
 
 #[test]
@@ -100,7 +102,10 @@ fn test_cpu_wrapper() {
     let focal_points = Array2::zeros((1, 3));
 
     let result = beamform_cpu(&rf_data, &sensor_pos, &focal_points, None, 1e6, 1500.0);
-    assert!(result.is_ok());
+    let output = result.unwrap();
+    assert_eq!(output.shape(), &[1, 2, 1]);
+    assert_eq!(output[[0, 0, 0]], 2.0);
+    assert_eq!(output[[0, 1, 0]], 2.0);
 }
 
 #[test]
@@ -134,7 +139,7 @@ fn test_multiple_focal_points() {
 
     let result = beamformer.beamform(&rf_data, &sensor_pos, &focal_points, None, 1e6, 1500.0);
 
-    assert!(result.is_ok());
     let output = result.unwrap();
     assert_eq!(output.shape(), &[3, 5, 1]);
+    assert!(output.iter().all(|value| (*value - 4.0).abs() < 1.0e-5));
 }

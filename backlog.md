@@ -226,6 +226,7 @@
 - Closed the IVP particle-velocity plot discrepancy: k-wave-python's implicit multidimensional `p0` smoothing is now represented as an explicit shared source-preprocessing boundary, pykwavers receives the same smoothed field, and k-wave-python runs with `smooth_p0=False` to prevent double smoothing.
 - Added a HIFU procedure visualization slice using a documented Rayleigh-Sommerfeld focused-aperture field and Pennes bioheat update. The example exports focal intensity, absorbed heat, final temperature, and focal temperature-over-time plots with computed focus and FWHM metrics.
 - Extended the HIFU procedure slice from cavitation-risk screening to explicit bubble feedback: Keller-Miksis radius dynamics drive passive receiver pressure, subharmonic/RMS and Rmax/R0 onset metrics modulate source pressure around a nominal cavitation-onset operating point, repeated receiver-control bursts provide a nonconstant pressure-squared envelope for Pennes heat deposition, and the example exports closed-loop cavitation-feedback and modulated-versus-constant-power temperature/power plots plus report metrics.
+- Hardened Burn DAS beamforming verification by replacing success-only assertions with deterministic computed-value checks for focal delay sums, apodization weighting, CPU wrapper output, and multi-focus all-one RF data.
 
 ## Session 2026-05-04 Engineering Increments
 

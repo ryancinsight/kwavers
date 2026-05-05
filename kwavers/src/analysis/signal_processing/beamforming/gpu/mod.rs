@@ -212,8 +212,8 @@ mod tests {
             1540.0,
         );
 
-        assert!(result.is_ok());
         let image = result.unwrap();
         assert_eq!(image.shape(), &[1, 1, 1]);
+        assert_eq!(image[[0, 0, 0]], 0.0);
     }
 }
