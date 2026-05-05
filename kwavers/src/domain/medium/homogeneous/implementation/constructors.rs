@@ -158,4 +158,115 @@ impl HomogeneousMedium {
         };
         Self::soft_tissue(youngs_modulus_kpa * 1000.0, 0.49, grid)
     }
+
+    /// Create a homogeneous elastic medium parameterised by **physical wave
+    /// speeds** rather than Lamé parameters.
+    ///
+    /// This is the natural API for replicating k-Wave's
+    /// `medium.sound_speed_compression` / `medium.sound_speed_shear` inputs to
+    /// `pstdElastic2D` / `pstdElastic3D`. The Lamé parameters are derived from
+    /// the wave-speed identities for an isotropic linear elastic medium:
+    ///
+    /// ```text
+    /// μ  = ρ · c_s²                  (shear modulus)
+    /// λ  = ρ · (c_p² − 2·c_s²)        (first Lamé parameter)
+    /// ```
+    ///
+    /// where `c_p` (compressional) and `c_s` (shear) are the longitudinal and
+    /// transverse wave speeds. These follow directly from the dispersion
+    /// relations of the elastic wave equation
+    /// `ρ·∂²u/∂t² = (λ+μ)·∇(∇·u) + μ·∇²u`:
+    /// the longitudinal mode propagates at `√((λ+2μ)/ρ)` and the transverse
+    /// mode at `√(μ/ρ)`.
+    ///
+    /// # Physical constraints
+    ///
+    /// - `c_p > 0`, `c_s ≥ 0`, `density > 0` are required.
+    /// - `c_s ≤ c_p / √2` is required so that `λ ≥ 0`. This is the standard
+    ///   thermodynamic-stability bound (Poisson ratio ν ≥ 0); for soft tissue
+    ///   `c_s ≪ c_p` so the bound is satisfied with large margin.
+    /// - `c_s = 0` recovers a fluid (μ = 0, no shear support); `λ = ρ·c_p²`
+    ///   then matches the acoustic-wave bulk modulus `K = ρ·c_p²` of a fluid.
+    ///
+    /// # Returns
+    ///
+    /// `Some(medium)` on success, `None` if any constraint is violated.
+    pub fn elastic_homogeneous(
+        density: f64,
+        c_compression: f64,
+        c_shear: f64,
+        grid: &Grid,
+    ) -> Option<Self> {
+        if !density.is_finite() || density <= 0.0 {
+            return None;
+        }
+        if !c_compression.is_finite() || c_compression <= 0.0 {
+            return None;
+        }
+        if !c_shear.is_finite() || c_shear < 0.0 {
+            return None;
+        }
+        // Thermodynamic stability: λ ≥ 0 ⇔ c_p² ≥ 2·c_s²
+        if c_shear * c_shear * 2.0 > c_compression * c_compression {
+            return None;
+        }
+
+        let mu = density * c_shear * c_shear;
+        let lambda = density * (c_compression * c_compression - 2.0 * c_shear * c_shear);
+
+        // Build a baseline acoustic-only homogeneous medium at c_p, then
+        // overwrite Lamé parameters with the elastic-derived values.
+        let mut medium = Self::new(density, c_compression, 0.0, 0.0, grid);
+        let shape = (grid.nx, grid.ny, grid.nz);
+        medium.grid_shape = shape;
+        medium.temperature = Array3::from_elem(shape, 310.15);
+        medium.bubble_radius = Array3::zeros(shape);
+        medium.bubble_velocity = Array3::zeros(shape);
+        medium.density_cache = Array3::from_elem(shape, density);
+        medium.sound_speed_cache = Array3::from_elem(shape, c_compression);
+
+        let alpha = medium.absorption_alpha
+            * (medium.reference_frequency / 1e6).powf(medium.absorption_power);
+        medium.absorption_cache = Array3::from_elem(shape, alpha);
+        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
+
+        medium.lame_lambda = lambda;
+        medium.lame_mu = mu;
+
+        Some(medium)
+    }
+
+    /// Override the Lamé parameters on an existing homogeneous medium.
+    ///
+    /// Returns `Err` if either value is non-finite or negative; positivity is
+    /// enforced for `μ` (shear modulus) and non-negativity for `λ`. Both are
+    /// physically required for a passive isotropic elastic solid.
+    pub fn set_lame_parameters(&mut self, lame_lambda: f64, lame_mu: f64) -> Result<(), &'static str> {
+        if !lame_lambda.is_finite() {
+            return Err("lame_lambda must be finite");
+        }
+        if !lame_mu.is_finite() || lame_mu < 0.0 {
+            return Err("lame_mu must be finite and non-negative");
+        }
+        // λ may be slightly negative for some auxetic materials, but in
+        // standard tissue/water/typical elastography we enforce λ ≥ 0.
+        if lame_lambda < 0.0 {
+            return Err("lame_lambda must be non-negative for non-auxetic media");
+        }
+        self.lame_lambda = lame_lambda;
+        self.lame_mu = lame_mu;
+        Ok(())
+    }
+
+    /// Read the first Lamé parameter λ (Pa) currently stored on this medium.
+    #[must_use]
+    pub fn lame_lambda_value(&self) -> f64 {
+        self.lame_lambda
+    }
+
+    /// Read the second Lamé parameter μ (shear modulus, Pa) currently stored.
+    #[must_use]
+    pub fn lame_mu_value(&self) -> f64 {
+        self.lame_mu
+    }
 }

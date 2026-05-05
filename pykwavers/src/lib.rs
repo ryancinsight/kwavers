@@ -61,6 +61,8 @@ use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyTuple};
 
+mod pam_bindings;
+
 // Re-exports from kwavers core
 use kwavers::core::error::{KwaversError, KwaversResult};
 use kwavers::domain::boundary::cpml::CPMLConfig;
@@ -595,6 +597,154 @@ impl Medium {
         Ok(Medium {
             inner: MediumInner::Homogeneous(Box::new(medium)),
         })
+    }
+
+    /// Create a homogeneous **elastic** medium parameterised by physical wave
+    /// speeds.
+    ///
+    /// This is the natural pykwavers equivalent of k-Wave's
+    /// ``medium.sound_speed_compression`` / ``medium.sound_speed_shear``
+    /// inputs to ``pstdElastic2D`` / ``pstdElastic3D``. The Lamé parameters
+    /// are derived in closed form from the elastic-wave dispersion relations:
+    ///
+    /// ::
+    ///
+    ///     μ = ρ · c_s²                     (shear modulus)
+    ///     λ = ρ · (c_p² − 2 · c_s²)         (first Lamé parameter)
+    ///
+    /// Parameters
+    /// ----------
+    /// c_compression : float
+    ///     Compressional (P-wave) speed [m/s]. Must be positive.
+    /// c_shear : float
+    ///     Shear (S-wave) speed [m/s]. Must be ≥ 0 and satisfy
+    ///     ``2·c_shear² ≤ c_compression²`` (thermodynamic stability,
+    ///     equivalent to ``ν ≥ 0``).
+    /// density : float
+    ///     Mass density [kg/m³]. Must be positive.
+    /// grid : Grid, optional
+    ///     Computational grid; when omitted a default grid is used (the
+    ///     elastic medium itself is uniform, so grid only sizes the cached
+    ///     property arrays).
+    ///
+    /// Returns
+    /// -------
+    /// Medium
+    ///     Homogeneous elastic medium with Lamé parameters set from the
+    ///     supplied wave speeds.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If any input is non-finite, non-positive (where required), or the
+    ///     stability bound ``2·c_s² ≤ c_p²`` is violated.
+    ///
+    /// Examples
+    /// --------
+    /// >>> # k-Wave example_ewp_layered_medium upper layer (water)
+    /// >>> water = pkw.Medium.elastic(1500.0, 0.0, 1000.0)
+    /// >>> # k-Wave example_ewp_layered_medium lower layer (bone-like)
+    /// >>> bone  = pkw.Medium.elastic(2000.0, 800.0, 1200.0)
+    #[staticmethod]
+    #[pyo3(signature = (c_compression, c_shear, density, grid=None))]
+    fn elastic(
+        c_compression: f64,
+        c_shear: f64,
+        density: f64,
+        grid: Option<&Grid>,
+    ) -> PyResult<Self> {
+        let default_grid = KwaversGrid::default();
+        let grid_ref = grid.map(|g| &g.inner).unwrap_or(&default_grid);
+
+        let medium = HomogeneousMedium::elastic_homogeneous(
+            density,
+            c_compression,
+            c_shear,
+            grid_ref,
+        )
+        .ok_or_else(|| {
+            PyValueError::new_err(
+                "Invalid elastic parameters. Requirements: density > 0, \
+                 c_compression > 0, c_shear ≥ 0, 2·c_shear² ≤ c_compression². \
+                 (Stability bound: ν ≥ 0; recovers fluid medium when c_shear = 0.)",
+            )
+        })?;
+
+        Ok(Medium {
+            inner: MediumInner::Homogeneous(Box::new(medium)),
+        })
+    }
+
+    /// Compressional (P-wave) speed [m/s].
+    ///
+    /// Computed from the stored Lamé parameters and density via
+    /// ``c_p = sqrt((λ + 2μ) / ρ)``. For a fluid medium this collapses to
+    /// the acoustic sound speed.
+    #[getter]
+    fn c_compression(&self) -> f64 {
+        let m = self.inner.as_medium();
+        // Use the centre voxel; HomogeneousMedium is uniform so any (i,j,k) works.
+        // For heterogeneous media this returns the centre value which is a
+        // documented limitation of this scalar getter (see also `density`).
+        let lambda = match &self.inner {
+            MediumInner::Homogeneous(h) => h.lame_lambda_value(),
+            MediumInner::Heterogeneous(_) => {
+                // Heterogeneous λ access via grid+coords, not exposed here.
+                0.0
+            }
+        };
+        let mu = match &self.inner {
+            MediumInner::Homogeneous(h) => h.lame_mu_value(),
+            MediumInner::Heterogeneous(_) => 0.0,
+        };
+        let rho = m.density(0, 0, 0);
+        if rho > 0.0 {
+            ((lambda + 2.0 * mu) / rho).sqrt()
+        } else {
+            0.0
+        }
+    }
+
+    /// Shear (S-wave) speed [m/s].
+    ///
+    /// Computed from the shear modulus and density: ``c_s = sqrt(μ / ρ)``.
+    /// Returns 0 for fluid media (μ = 0).
+    #[getter]
+    fn c_shear(&self) -> f64 {
+        let m = self.inner.as_medium();
+        let mu = match &self.inner {
+            MediumInner::Homogeneous(h) => h.lame_mu_value(),
+            MediumInner::Heterogeneous(_) => 0.0,
+        };
+        let rho = m.density(0, 0, 0);
+        if rho > 0.0 {
+            (mu / rho).sqrt()
+        } else {
+            0.0
+        }
+    }
+
+    /// First Lamé parameter λ (Pa).
+    ///
+    /// Stored on the homogeneous medium directly. For fluid media this
+    /// equals the bulk modulus ``K = ρ · c_p²``.
+    #[getter]
+    fn lame_lambda(&self) -> f64 {
+        match &self.inner {
+            MediumInner::Homogeneous(h) => h.lame_lambda_value(),
+            MediumInner::Heterogeneous(_) => 0.0,
+        }
+    }
+
+    /// Second Lamé parameter μ (shear modulus, Pa).
+    ///
+    /// Zero for fluid media; positive for elastic solids supporting shear waves.
+    #[getter]
+    fn lame_mu(&self) -> f64 {
+        match &self.inner {
+            MediumInner::Homogeneous(h) => h.lame_mu_value(),
+            MediumInner::Heterogeneous(_) => 0.0,
+        }
     }
 
     /// Sound speed [m/s].
@@ -5746,6 +5896,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(time_reversal_reconstruction, m)?)?;
 
     // Register utility functions
+    pam_bindings::register_pam(m)?;
     utils_bindings::register_utils(m)?;
 
     // Module metadata
