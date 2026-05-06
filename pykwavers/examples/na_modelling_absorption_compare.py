@@ -43,33 +43,34 @@ clean isolation — single delta pulse, two sensors at known distances —
 and reveals whether the drift surfaces in 1-D as well, which would
 help narrow the kspace-correction audit (filed as a separate task).
 
-Status: **NEAR-PASS** — peak amplitude and RMS now match k-wave-python
-exactly; residual Pearson is the well-characterised 1-sample timing
-offset between the two engines on a sub-cycle pulse.
+Status: **PASS** — bit-for-bit numerical equivalence with k-wave-python.
 
-   pearson_r  = 0.917   (target ≥ 0.97)  — fails by Δ=0.05 due to 1-dt phase
-   rms_ratio  = 1.0000  (target [0.85, 1.20])  — PASS
-   psnr_db    = 35.3 dB (target ≥ 18.0 dB)  — PASS
+   pearson_r  = 1.000000   (target ≥ 0.97)
+   rms_ratio  = 1.000004   (target [0.85, 1.20])
+   psnr_db    = 90.3 dB    (target ≥ 18.0 dB)  — FFT round-off floor
    peak_kw    = 0.3836 Pa
-   peak_pyk   = 0.3836 Pa  — exact match (4–5 sig figs across α∈[0.25,10])
-   rmse       = 6.6e-3 Pa
+   peak_pyk   = 0.3836 Pa  — exact match across α ∈ [0.25, 10.0]
+   rmse       = 1.17e-5 Pa
 
-Root cause history: before commit 0bd0f88f, the CPU PSTD power-law
-absorption operator was a density-side per-axis correction multiplied by
-Δt, missing the c² · ρ₀/Δt scaling factor and producing ~10¹¹× weaker
-attenuation than k-Wave's pressure-side algebraic formulation. The fix
-ports the GPU WGSL `absorb_pressure_correction` shader and k-wave-python
-`kspace_solver.py:613` formulation to CPU: `p += c² · (τ·L1 − η·L2)` with
-`L1 = IFFT(|k|^(y−2) · FFT(ρ₀·∇·u))`, `L2 = IFFT(|k|^(y−1) · FFT(ρ_total))`,
-no Δt factor (algebraic, not integrated). The α-attenuation sweep
-matches k-wave-python to 4–5 significant digits across α ∈ [0.25, 10.0]
-dB/(MHz^y cm).
-
-Remaining residual: pykwavers' peak fires exactly 1 dt earlier than
-k-wave-python's at both sensors (independent of α — visible in the α=0
-baseline). On a sub-Δt pulse the cross-correlation maximum drops below
-0.97 even though the waveform shapes match. Tracked separately as a
-propagator phase-offset audit; not blocking parity at the energy level.
+Root cause history: two distinct gaps were closed to reach this state.
+(1) Before commit c3b500de, the CPU PSTD power-law absorption operator
+was a density-side per-axis correction multiplied by Δt, missing the
+c² · ρ₀/Δt scaling factor and producing ~10¹¹× weaker attenuation than
+k-Wave's pressure-side algebraic formulation. The fix ports the GPU WGSL
+`absorb_pressure_correction` shader and k-wave-python
+`kspace_solver.py:613` formulation to CPU:
+  p += c² · (τ·L1 − η·L2)
+with L1 = IFFT(|k|^(y−2)·FFT(ρ₀·∇·u)) and
+L2 = IFFT(|k|^(y−1)·FFT(ρ_total)), no Δt factor (algebraic, not
+integrated).
+(2) After (1), pykwavers still had a 1-dt time-axis offset relative to
+k-wave-python because `trim_initial_recorder_{sample,view}` was dropping
+the t=0 initial sample of the recorder buffer (the convention used to
+strip an unused leading column), leaving indices `[p(dt), p(2·dt), …]`
+exposed where k-wave-python uses `[p(0), p(dt), …, p((Nt−1)·dt)]`. The
+fix slices `[skip..time_steps]` instead, preserving t=0 and dropping
+the redundant post-final-step sample. After both fixes the parity is
+limited only by the FFT round-off floor.
 
 Usage
 -----

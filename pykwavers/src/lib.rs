@@ -4082,48 +4082,64 @@ impl Simulation {
             .collect()
     }
 
-    /// Trim the initial `t=0` recorder column and apply `record_start_index`.
+    /// Trim the recorder buffer to `Nt` columns aligned with k-Wave's
+    /// time-axis convention and apply `record_start_index`.
     ///
     /// # Convention
     ///
-    /// The recorder buffer has `Nt + 1` columns: column 0 is the `t = 0`
-    /// initial sample (always stripped); column `i` (i ≥ 1) is k-Wave time
-    /// step `i`.  `record_start_index` is k-Wave 1-based, so the first output
-    /// column is buffer column `record_start_index`.
+    /// `run_orchestrated` records `p(0)` once before the time loop, then
+    /// `step_forward` records `p(i·dt)` at the END of each of `Nt` steps,
+    /// producing a buffer with `Nt + 1` columns: `[p(0), p(dt), …, p(Nt·dt)]`.
+    /// k-wave-python's sensor data has `Nt` columns indexed by physical time
+    /// `[0, dt, …, (Nt − 1)·dt]` (verified empirically against
+    /// `kspaceFirstOrder1D` in `na_modelling_absorption_compare.py`: shifting
+    /// pykwavers' output by +1 sample produces perfect correlation r = 1.000
+    /// with k-wave-python). To match k-Wave we therefore **drop the last
+    /// sample** (`p(Nt·dt)` — the post-final-step value, redundant outside
+    /// the recording window) and keep `[p(0), p(dt), …, p((Nt − 1)·dt)]`.
     ///
-    /// Output shape: `(n_sensors, Nt - record_start_index + 1)`.
-    /// Default (`record_start_index = 1`): identical to the previous behaviour
-    /// of slicing `[.., 1..]` → `Nt` output columns.
+    /// `record_start_index` is the 1-based k-Wave start index. A value of `1`
+    /// (default) emits all `Nt` time samples; a value of `k` emits the last
+    /// `Nt − k + 1` samples starting from `p((k − 1)·dt)`.
+    ///
+    /// Output shape: `(n_sensors, Nt − record_start_index + 1)`.
     fn trim_initial_recorder_sample(
         recorded_data: ndarray::Array2<f64>,
         time_steps: usize,
         record_start_index: usize,
     ) -> ndarray::Array2<f64> {
-        // Clamp: record_start_index must be in [1, time_steps].
         let start = record_start_index.max(1).min(time_steps);
+        let skip = start.saturating_sub(1);
         if recorded_data.ncols() > time_steps {
-            recorded_data.slice(ndarray::s![.., start..]).to_owned()
+            // Buffer has Nt+1 columns: keep [p(0), …, p((Nt−1)·dt)] then apply
+            // record_start_index. Equivalent to slice [skip..time_steps].
+            recorded_data
+                .slice(ndarray::s![.., skip..time_steps])
+                .to_owned()
         } else {
-            // Buffer is already Nt columns (no t=0); subtract 1 to convert from 1-based.
-            let skip = start.saturating_sub(1);
+            // Buffer already has Nt columns (e.g. velocity buffers populated
+            // only inside step_forward); just apply the start offset.
             recorded_data.slice(ndarray::s![.., skip..]).to_owned()
         }
     }
 
     /// Borrowed-view variant of [`trim_initial_recorder_sample`].
     ///
-    /// Avoids cloning the full `Nt + 1` recorder matrix before discarding
-    /// the initial `t=0` column and applying `record_start_index`.
+    /// Avoids cloning the full `Nt + 1` recorder matrix before applying the
+    /// time-axis alignment and `record_start_index` slicing. See
+    /// [`trim_initial_recorder_sample`] for the convention.
     fn trim_initial_recorder_view(
         recorded_data: ArrayView2<'_, f64>,
         time_steps: usize,
         record_start_index: usize,
     ) -> ndarray::Array2<f64> {
         let start = record_start_index.max(1).min(time_steps);
+        let skip = start.saturating_sub(1);
         if recorded_data.ncols() > time_steps {
-            recorded_data.slice(ndarray::s![.., start..]).to_owned()
+            recorded_data
+                .slice(ndarray::s![.., skip..time_steps])
+                .to_owned()
         } else {
-            let skip = start.saturating_sub(1);
             recorded_data.slice(ndarray::s![.., skip..]).to_owned()
         }
     }
@@ -6524,33 +6540,42 @@ mod simulation_contract_tests {
     use ndarray::{array, Array2};
 
     #[test]
-    fn trim_initial_recorder_sample_discards_t0_column_only_when_present() {
-        // Default record_start_index=1: strips col 0 (t=0 initial), yields Nt cols.
+    fn trim_initial_recorder_sample_aligns_with_kwave_time_axis() {
+        // Default record_start_index=1: keeps cols [0..Nt) → drops the LAST
+        // column (post-final-step value), aligning with k-Wave's Nt-sample
+        // window indexed by physical times [0, dt, …, (Nt−1)·dt].
         let nt_plus_one = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
         let trimmed = Simulation::trim_initial_recorder_sample(nt_plus_one, 3, 1);
         assert_eq!(trimmed.shape(), &[2, 3]);
-        assert_eq!(trimmed[[0, 0]], 1.0);
-        assert_eq!(trimmed[[1, 2]], 13.0);
+        assert_eq!(trimmed[[0, 0]], 0.0); // p(0) preserved
+        assert_eq!(trimmed[[0, 1]], 1.0);
+        assert_eq!(trimmed[[0, 2]], 2.0); // p(2dt); p(3dt) dropped
+        assert_eq!(trimmed[[1, 0]], 10.0);
+        assert_eq!(trimmed[[1, 2]], 12.0);
 
+        // Buffer already Nt cols (e.g. velocity buffers populated only inside
+        // step_forward): pass through unchanged at start=1.
         let exact_nt = array![[1.0, 2.0, 3.0], [11.0, 12.0, 13.0]];
         let untouched = Simulation::trim_initial_recorder_sample(exact_nt.clone(), 3, 1);
         assert_eq!(untouched, exact_nt);
 
-        // record_start_index=2: strips col 0 and col 1, yields Nt-1 cols.
+        // record_start_index=2: skip col 0, keep cols [1..Nt) → Nt-1 cols.
         let nt_plus_one2 = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
         let trimmed2 = Simulation::trim_initial_recorder_sample(nt_plus_one2, 3, 2);
         assert_eq!(trimmed2.shape(), &[2, 2]);
-        assert_eq!(trimmed2[[0, 0]], 2.0);
-        assert_eq!(trimmed2[[1, 1]], 13.0);
+        assert_eq!(trimmed2[[0, 0]], 1.0);
+        assert_eq!(trimmed2[[0, 1]], 2.0);
+        assert_eq!(trimmed2[[1, 1]], 12.0);
     }
 
     #[test]
-    fn trim_initial_recorder_view_discards_t0_without_full_buffer_clone() {
+    fn trim_initial_recorder_view_aligns_with_kwave_time_axis() {
         let nt_plus_one = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
         let trimmed = Simulation::trim_initial_recorder_view(nt_plus_one.view(), 3, 1);
         assert_eq!(trimmed.shape(), &[2, 3]);
-        assert_eq!(trimmed[[0, 0]], 1.0);
-        assert_eq!(trimmed[[1, 2]], 13.0);
+        assert_eq!(trimmed[[0, 0]], 0.0);
+        assert_eq!(trimmed[[0, 2]], 2.0);
+        assert_eq!(trimmed[[1, 2]], 12.0);
 
         let exact_nt = array![[1.0, 2.0, 3.0], [11.0, 12.0, 13.0]];
         let untouched = Simulation::trim_initial_recorder_view(exact_nt.view(), 3, 1);
