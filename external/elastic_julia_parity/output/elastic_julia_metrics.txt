@@ -1,0 +1,16 @@
+compare_elastic: pykwavers vs KWave.jl pstd_elastic_2d
+parity_status: FAIL
+grid: 32x32  dx=5.000000e-04 m
+medium: cp=2000.0 cs=800.0 rho=1200.0
+source: uz plane at x_1b=9  f=1.0 MHz  peak=1.0 µm/s
+time: Nt=200  dt=4.330127e-08 s
+runtime: kwave_julia=1.908s  pykwavers=0.230s
+
+pearson_r  = 0.489303  (target ≥ 0.5)
+rms_ratio  = 0.158238  (target [0.2, 5.0])
+psnr_db    = 10.58 dB (target ≥ 5.0 dB)
+rmse       = 8.635556e-07 m
+max_abs_diff = 2.736691e-06 m
+peak_kwave   = 2.917788e-06 m
+peak_pykwavers = 9.309533e-07 m
+peak_ratio   = 0.319061
