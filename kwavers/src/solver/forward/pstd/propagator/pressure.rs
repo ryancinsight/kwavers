@@ -67,13 +67,17 @@ use ndarray::{s, Array2, Zip};
 
 impl PSTDSolver {
     /// Update pressure field from density perturbation (Equation of State)
+    /// and apply pressure-side power-law absorption.
     ///
-    /// In C++ k-wave, this is the final step: p = c² * (rhox + rhoy + rhoz)
-    /// Absorption is applied in `update_density()`, not here, matching the ordering
-    /// in k-Wave's `computeDensity()` function (Treeby & Cox 2010, Eq. 21).
+    /// Matches the C++ k-Wave binary's `computePressureLinearPowerLaw` /
+    /// `sumPressureTermsLinear`: pressure is first set from the EOS
+    /// `p = c² · ρ_total` (linear) or with the Westervelt nonlinearity
+    /// expansion, then the fractional-Laplacian absorption correction
+    /// `p += c² · (τ · L1 − η · L2)` is added algebraically (no Δt) via
+    /// [`Self::apply_absorption_to_pressure`].
     #[inline]
     pub(crate) fn update_pressure(&mut self, _dt: f64) -> KwaversResult<()> {
-        // Combine split density components
+        // Combine split density components into div_u (used as ρ_total scratch).
         Zip::from(&mut self.div_u)
             .and(&self.rhox)
             .and(&self.rhoy)
@@ -103,6 +107,11 @@ impl PSTDSolver {
                     *p = c * c * rho_sum;
                 });
         }
+
+        // Pressure-side power-law absorption (Treeby & Cox 2010 Eqs. 19–21).
+        // Reuses div_u (= ρ_total above) and dpx/dpy/dpz (per-axis velocity
+        // divergences populated by update_density) as inputs. Clobbers them.
+        self.apply_absorption_to_pressure()?;
 
         Ok(())
     }
@@ -269,12 +278,13 @@ impl PSTDSolver {
             }
         }
 
-        // Apply power-law absorption correction per axis (Treeby & Cox 2010, Eq. 21).
-        // Must be called AFTER the continuity-equation update (so dpx/dpy/dpz hold
-        // ∂u_α/∂α) and BEFORE the post-PML multiply, matching k-Wave's computeDensity().
-        self.apply_absorption(dt)?;
+        // Power-law absorption is applied **pressure-side** (algebraic, not
+        // integrated) inside `update_pressure`, matching the C++ k-Wave binary
+        // and the GPU WGSL `absorb_pressure_correction` shader. The dpx/dpy/dpz
+        // velocity-divergence buffers populated above are reused there. See
+        // [`Self::apply_absorption_to_pressure`] for the full formulation.
 
-        self.apply_pml_to_density()?; // post: pml * (pml*rho_old - dt*rho0*div_u + absorption)
+        self.apply_pml_to_density()?; // post: pml * (pml*rho_old - dt*rho0*div_u)
 
         // NOTE: Pressure computation and absorption are handled separately in
         // update_pressure(). Source injection happens between density and pressure
@@ -340,12 +350,12 @@ impl PSTDSolver {
                 *rho -= dt * c * du;
             });
 
-        // Copy divergences into 3-D scratch buffers for absorption, then restore ctx.
+        // Copy divergences into 3-D scratch buffers so update_pressure's
+        // pressure-side absorption correction has access to ∂u_α/∂α.
         self.dpx.slice_mut(s![.., 0, ..]).assign(&ctx.duxdx);
         self.dpy.fill(0.0);
         self.dpz.slice_mut(s![.., 0, ..]).assign(&ctx.duzdr);
         self.as_ctx = Some(ctx);
-        self.apply_absorption(dt)?;
 
         self.apply_pml_to_density()?; // post-step PML
         Ok(())

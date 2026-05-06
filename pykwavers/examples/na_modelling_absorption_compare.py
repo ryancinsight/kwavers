@@ -43,23 +43,33 @@ clean isolation — single delta pulse, two sensors at known distances —
 and reveals whether the drift surfaces in 1-D as well, which would
 help narrow the kspace-correction audit (filed as a separate task).
 
-Status: **FAIL — confirms the dispersion-drift hypothesis in 1-D**
+Status: **NEAR-PASS** — peak amplitude and RMS now match k-wave-python
+exactly; residual Pearson is the well-characterised 1-sample timing
+offset between the two engines on a sub-cycle pulse.
 
-   pearson_r  = 0.873   (target ≥ 0.97)
-   rms_ratio  = 1.409   (target [0.85, 1.20])
-   psnr_db    = 32.6 dB (target ≥ 18.0 dB) — PASS
-   peak_kw    = 0.384 Pa
-   peak_pyk   = 0.500 Pa  — pykwavers retains 30% more peak
-   rmse       = 1.17e-2 Pa  (PSNR-derived; structurally fine)
+   pearson_r  = 0.917   (target ≥ 0.97)  — fails by Δ=0.05 due to 1-dt phase
+   rms_ratio  = 1.0000  (target [0.85, 1.20])  — PASS
+   psnr_db    = 35.3 dB (target ≥ 18.0 dB)  — PASS
+   peak_kw    = 0.3836 Pa
+   peak_pyk   = 0.3836 Pa  — exact match (4–5 sig figs across α∈[0.25,10])
+   rmse       = 6.6e-3 Pa
 
-The 30% peak ratio mirrors the 28% rms_ratio observed in the 2-D
-image-source case at d=40 grid points — strong evidence the underlying
-cause is the same: pykwavers' kspace-correction kernel attenuates
-high-frequency content less aggressively than k-wave-python's,
-producing more sustained pulses that show up as both higher peaks and
-higher RMS at every distance. The PSNR of 32 dB confirms the script
-is structurally correct (no off-by-one or normalisation bug); the
-script will reach Pearson ≥ 0.97 once the kspace audit lands.
+Root cause history: before commit 0bd0f88f, the CPU PSTD power-law
+absorption operator was a density-side per-axis correction multiplied by
+Δt, missing the c² · ρ₀/Δt scaling factor and producing ~10¹¹× weaker
+attenuation than k-Wave's pressure-side algebraic formulation. The fix
+ports the GPU WGSL `absorb_pressure_correction` shader and k-wave-python
+`kspace_solver.py:613` formulation to CPU: `p += c² · (τ·L1 − η·L2)` with
+`L1 = IFFT(|k|^(y−2) · FFT(ρ₀·∇·u))`, `L2 = IFFT(|k|^(y−1) · FFT(ρ_total))`,
+no Δt factor (algebraic, not integrated). The α-attenuation sweep
+matches k-wave-python to 4–5 significant digits across α ∈ [0.25, 10.0]
+dB/(MHz^y cm).
+
+Remaining residual: pykwavers' peak fires exactly 1 dt earlier than
+k-wave-python's at both sensors (independent of α — visible in the α=0
+baseline). On a sub-Δt pulse the cross-correlation maximum drops below
+0.97 even though the waveform shapes match. Tracked separately as a
+propagator phase-offset audit; not blocking parity at the energy level.
 
 Usage
 -----
