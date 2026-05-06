@@ -9,6 +9,33 @@ loaded from an external image file (here the canonical
 ``EXAMPLE_source_one.png`` shipped with the k-Wave toolbox), resized to the
 computational grid, and scaled to a target peak amplitude.
 
+Status: **PASS Pearson r ≥ 0.97; rms_ratio FAILS at 1.28 (documented)**
+
+Bisection diagnosis (Pearson r 0.99 holds; rms_ratio 1.276 is the failure):
+    1. **Absorption** — disabled → rms_ratio still 1.275 (NOT the cause)
+    2. **High-spatial-frequency p0 content** — heavy Gaussian smoothing (σ
+       up to 4 grid points) → rms_ratio still 1.276 (NOT the cause)
+    3. **Distance-dependence** — single-sensor probes at d = 5, 10, 20, 30,
+       40 grid points from p0 centroid yield rms_ratio = 1.14, 1.16, 1.20,
+       1.25, 1.28 (monotonic with distance). Peak ratio = 1.000 at every
+       distance.
+
+Conclusion: the discrepancy is **PSTD dispersion accumulating with
+propagation distance**. Both engines reproduce the wavefront peak
+exactly (peak ratio = 1.000), but pykwavers' trailing pulse retains
+~14-28% more energy than k-wave-python's, with the gap growing
+monotonically with travel distance. The disc-source ``ivp_homogeneous_medium``
+test passes (rms_ratio ≈ 1.00) because compact sources produce short
+pulses that don't accumulate enough dispersion drift. The image source
+distributes energy across the full grid, producing extended wavefront
+trails that surface the dispersion fidelity difference.
+
+This is a real propagation-fidelity gap between pykwavers' PSTD k-space
+correction and k-wave-python's. Closing it requires audit of both
+engines' kspace-correction kernels (``cos(c·k·dt/2)`` factor and
+companion ``sinc`` normalisations). Filed for separate investigation;
+the failing rms_ratio reflects the truthful measured state.
+
 Physical setup (matches the MATLAB script verbatim)
 ---------------------------------------------------
 Grid    : 128×128 with ``dx = dy = 0.1 mm``
