@@ -293,10 +293,10 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
 
     grid = pkw.Grid(NX, NY, 1, DX, DY, DX)
 
-    medium = pkw.Medium(
+    medium = pkw.Medium.homogeneous(
         sound_speed=C0,
         density=1000.0,
-        alpha_coeff=ALPHA_COEFF,
+        absorption=ALPHA_COEFF,
         alpha_power=ALPHA_POWER,
     )
 

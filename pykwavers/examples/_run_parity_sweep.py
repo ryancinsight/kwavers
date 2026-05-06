@@ -17,13 +17,23 @@ EXAMPLES = os.path.dirname(os.path.abspath(__file__))
 # scan-line / frequency-domain comparisons are excluded — those are unaffected
 # by a 1-sample time shift.
 SCRIPTS = [
-    "na_modelling_nonlinearity_compare.py",
+    "ivp_1D_simulation_compare.py",
+    "ivp_3D_simulation_compare.py",
+    "ivp_homogeneous_medium_compare.py",
+    "ivp_loading_external_image_compare.py",
+    "ivp_heterogeneous_medium_compare.py",
+    "ivp_photoacoustic_waveforms_compare.py",
+    "ivp_recording_particle_velocity_compare.py",
+    "ivp_binary_sensor_mask_compare.py",
+    "ivp_opposing_corners_sensor_mask_compare.py",
+    "na_modelling_absorption_compare.py",
     "na_source_smoothing_compare.py",
     "na_controlling_the_pml_compare.py",
     "sd_focussed_detector_2D_compare.py",
     "sd_focussed_detector_3D_compare.py",
     "tvsp_homogeneous_medium_monopole_compare.py",
     "tvsp_homogeneous_medium_dipole_compare.py",
+    "tvsp_transducer_field_patterns_compare.py",
 ]
 
 re_status = re.compile(r"^\s*Status\s*:\s*(\S+)", re.M)

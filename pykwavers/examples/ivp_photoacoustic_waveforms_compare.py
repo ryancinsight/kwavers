@@ -193,10 +193,17 @@ def run_pykwavers(p0: np.ndarray) -> dict:
     grid   = pkw.Grid(NX, NY, NZ, DX, DX, DX)
     medium = pkw.Medium.homogeneous(sound_speed=C0, density=RHO0)
 
-    source = pkw.Source.from_initial_pressure(p0)
+    # k-wave-python's `kspaceFirstOrder3D` defaults to smooth_p0=True, which
+    # applies a Blackman window to p0 before injection. pykwavers' source
+    # injection is unsmoothed, so we replicate k-wave's smoothing here so the
+    # two engines see the same effective initial pressure.
+    from kwave.utils.filters import smooth as kwave_smooth
+    p0_smoothed = np.asarray(kwave_smooth(p0, restore_max=True), dtype=np.float64)
+    source = pkw.Source.from_initial_pressure(p0_smoothed)
 
-    sensor_mask = np.zeros((NX, NY, NZ), dtype=np.float64)
-    sensor_mask[SENSOR_IX, SENSOR_IY, SENSOR_IZ] = 1.0
+    # `Sensor.from_mask` expects a 3-D boolean ndarray.
+    sensor_mask = np.zeros((NX, NY, NZ), dtype=bool)
+    sensor_mask[SENSOR_IX, SENSOR_IY, SENSOR_IZ] = True
     sensor = pkw.Sensor.from_mask(sensor_mask)
 
     sim = pkw.Simulation(grid, medium, source, sensor, solver=pkw.SolverType.PSTD)
