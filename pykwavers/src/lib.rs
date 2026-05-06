@@ -856,6 +856,13 @@ pub struct Source {
     direction: Option<(f64, f64, f64)>,
     /// KWaveArray for custom transducer geometry sources
     kwave_array: Option<kwavers::domain::source::kwave_array::KWaveArray>,
+    /// Per-axis 1-D velocity-signal time series for the elastic
+    /// velocity-source path (Phase A.3 of ADR 007). Each entry is `Some`
+    /// when the corresponding component is to be driven; `None` otherwise.
+    /// The `mask` field above carries the `u_mask` for this source path.
+    elastic_ux_signal_1d: Option<ndarray::Array1<f64>>,
+    elastic_uy_signal_1d: Option<ndarray::Array1<f64>>,
+    elastic_uz_signal_1d: Option<ndarray::Array1<f64>>,
 }
 
 fn pressure_signal_to_matrix(signal: &Bound<'_, PyAny>) -> PyResult<Array2<f64>> {
@@ -939,6 +946,9 @@ impl Source {
             velocity_signal: None,
             direction: Some(norm_dir),
             kwave_array: None,
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
         })
     }
 
@@ -983,6 +993,9 @@ impl Source {
             velocity_signal: None,
             direction: None,
             kwave_array: None,
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
         })
     }
 
@@ -1068,6 +1081,9 @@ impl Source {
             velocity_signal: None,
             direction: None,
             kwave_array: None,
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
         })
     }
 
@@ -1107,6 +1123,99 @@ impl Source {
             velocity_signal: None,
             direction: None,
             kwave_array: None,
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
+        })
+    }
+
+    /// Create a particle-velocity source mask for the **elastic** solver.
+    ///
+    /// Equivalent to k-Wave's ``source.u_mask`` / ``source.ux`` /
+    /// ``source.uy`` / ``source.uz`` inputs to ``pstdElastic2D`` /
+    /// ``pstdElastic3D``. At each time step, the integrator's post-step
+    /// velocity field is **assigned** at every grid point inside ``mask``
+    /// with the supplied component signal sample for that step (Dirichlet
+    /// override semantics — matches k-Wave's default for velocity sources
+    /// in pstdElastic).
+    ///
+    /// Phase A.3 of ADR 007. Signals are 1-D ndarrays (broadcast across
+    /// all mask points); per-point signal matrices ship in Phase A.4.
+    ///
+    /// Parameters
+    /// ----------
+    /// mask : ndarray (3D bool)
+    ///     Boolean grid mask marking source-active points.
+    /// ux : ndarray (1D float64), optional
+    ///     Time signal for vx at each step. ``None`` disables vx injection.
+    /// uy : ndarray (1D float64), optional
+    ///     Time signal for vy at each step.
+    /// uz : ndarray (1D float64), optional
+    ///     Time signal for vz at each step.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If ``mask`` has no active points, has wrong dim, or all three
+    ///     signals are ``None``.
+    ///
+    /// Examples
+    /// --------
+    /// >>> # Plane-wave-like ux source on a single x-plane (analogue of
+    /// >>> # k-Wave example_ewp_plane_wave_absorption)
+    /// >>> u_mask = np.zeros((Nx, Ny, Nz), dtype=bool)
+    /// >>> u_mask[35, :, :] = True
+    /// >>> ux_sig = 1e-6 * np.sin(2*np.pi*1e6*np.arange(Nt)*dt)
+    /// >>> src = pkw.Source.from_elastic_velocity_source(u_mask, ux=ux_sig)
+    #[staticmethod]
+    #[pyo3(signature = (mask, ux=None, uy=None, uz=None))]
+    fn from_elastic_velocity_source(
+        mask: PyReadonlyArray3<bool>,
+        ux: Option<PyReadonlyArray1<f64>>,
+        uy: Option<PyReadonlyArray1<f64>>,
+        uz: Option<PyReadonlyArray1<f64>>,
+    ) -> PyResult<Self> {
+        let mask_arr = mask.as_array();
+        if mask_arr.ndim() != 3 {
+            return Err(PyValueError::new_err("mask must be a 3D bool ndarray"));
+        }
+        let n_active = mask_arr.iter().filter(|&&v| v).count();
+        if n_active == 0 {
+            return Err(PyValueError::new_err(
+                "mask must have at least one active point",
+            ));
+        }
+        if ux.is_none() && uy.is_none() && uz.is_none() {
+            return Err(PyValueError::new_err(
+                "At least one of ux, uy, uz must be provided",
+            ));
+        }
+        let convert = |opt: Option<PyReadonlyArray1<f64>>| -> Option<ndarray::Array1<f64>> {
+            opt.map(|sig| sig.as_array().to_owned())
+        };
+        // Carry the bool mask through `mask: Option<Array3<f64>>` (the
+        // existing carrier slot) by converting True/False to 1.0/0.0; the
+        // dispatch reads non-zero as active.
+        let mask_f64 = mask_arr.mapv(|b| if b { 1.0 } else { 0.0 });
+        let amplitude = [&ux, &uy, &uz]
+            .iter()
+            .filter_map(|sig| sig.as_ref().map(|s| s.as_array().iter().fold(0.0_f64, |a, &v| a.max(v.abs()))))
+            .fold(0.0_f64, f64::max);
+        Ok(Source {
+            source_type: "elastic_velocity_source".to_string(),
+            frequency: 0.0,
+            amplitude,
+            position: None,
+            mask: Some(mask_f64),
+            signal: None,
+            source_mode: "dirichlet".to_string(),
+            initial_pressure: None,
+            velocity_signal: None,
+            direction: None,
+            kwave_array: None,
+            elastic_ux_signal_1d: convert(ux),
+            elastic_uy_signal_1d: convert(uy),
+            elastic_uz_signal_1d: convert(uz),
         })
     }
 
@@ -1185,6 +1294,9 @@ impl Source {
             velocity_signal: None,
             direction: None,
             kwave_array: None,
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
         })
     }
 
@@ -1295,6 +1407,9 @@ impl Source {
             velocity_signal: Some(u_signal),
             direction: None,
             kwave_array: None,
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
         })
     }
 
@@ -1425,6 +1540,9 @@ impl Source {
             velocity_signal: Some(u_signal),
             direction: None,
             kwave_array: None,
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
         })
     }
 
@@ -1514,6 +1632,9 @@ impl Source {
             velocity_signal: None,
             direction: None,
             kwave_array: Some(array.inner.clone()),
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
         })
     }
 
@@ -1577,6 +1698,9 @@ impl Source {
             velocity_signal: None,
             direction: None,
             kwave_array: Some(array.inner.clone()),
+            elastic_ux_signal_1d: None,
+            elastic_uy_signal_1d: None,
+            elastic_uz_signal_1d: None,
         })
     }
 
@@ -2830,6 +2954,16 @@ impl Simulation {
         // IVP routing). None for non-elastic runs; "x" / "y" / "z" when an
         // `elastic_u0_*` source has been supplied.
         let mut elastic_ivp_axis: Option<String> = None;
+        // Optional elastic velocity-source bundle (Phase A.3 of ADR 007).
+        // None unless `Source.from_elastic_velocity_source` was supplied;
+        // when present, fed to `run_elastic_impl` and assigned to
+        // `ElasticWaveConfig.velocity_source`.
+        let mut elastic_velocity_source: Option<(
+            ndarray::Array3<bool>,
+            Option<ndarray::Array1<f64>>,
+            Option<ndarray::Array1<f64>>,
+            Option<ndarray::Array1<f64>>,
+        )> = None;
 
         for src in &self.sources {
             // Handle KWaveArray source: rasterize geometry onto grid
@@ -3034,6 +3168,32 @@ impl Simulation {
                 continue;
             }
 
+            // Handle elastic velocity-source mask (Phase A.3 of ADR 007).
+            // Tagged source_type = "elastic_velocity_source"; carries the
+            // mask in `Source.mask` (as f64 with 0/1 values) and the
+            // per-axis 1-D time signals in dedicated fields.
+            if src.source_type == "elastic_velocity_source" {
+                if !matches!(self.solver_type, SolverType::Elastic) {
+                    return Err(PyValueError::new_err(format!(
+                        "Source.from_elastic_velocity_source requires \
+                         SolverType.Elastic; got {:?}.",
+                        self.solver_type
+                    )));
+                }
+                let mask_f64 = src.mask.as_ref().ok_or_else(|| {
+                    PyValueError::new_err("elastic velocity-source mask missing")
+                })?;
+                // Convert f64 mask → bool mask for the kwavers config layer.
+                let mask_bool = mask_f64.mapv(|v| v != 0.0);
+                elastic_velocity_source = Some((
+                    mask_bool,
+                    src.elastic_ux_signal_1d.clone(),
+                    src.elastic_uy_signal_1d.clone(),
+                    src.elastic_uz_signal_1d.clone(),
+                ));
+                continue;
+            }
+
             // Handle velocity source
             if src.source_type == "velocity" {
                 let mask = src
@@ -3217,6 +3377,7 @@ impl Simulation {
                     pml_size,
                     pml_inside,
                     elastic_ivp_axis.as_deref(),
+                    elastic_velocity_source,
                 ),
             })
             .map_err(kwavers_error_to_py)?;
@@ -4704,15 +4865,17 @@ impl Simulation {
     ///     `ElasticWaveField` (other components zero-initialised).
     ///   - records the same component to `sensor_data` at sensor-mask points.
     ///
-    /// **Phase A.2 limitations** (see ADR 007 §A.2):
-    ///   - Only one displacement component is initialised. The Rust solver
-    ///     records `uz` only; for axis="x" / "y" the recorded trace is `uz`
-    ///     even when the IVP is on `ux`/`uy` (sensor recorder still hooks
-    ///     `current_field.uz`). A.2.5 extends the recorder to per-component.
-    ///   - No stress / velocity source masks (Phase A.3).
-    ///   - No multi-component recording (Phase A.2.5).
-    ///   - No PML alpha or anisotropic PML thickness — uses uniform thickness
-    ///     from `pml_size`, default 10 if unset.
+    /// **Phase A.2 / A.2.5 / A.3 status** (see ADR 007):
+    ///   - **A.2** ✅ initial-displacement IVP routed per-axis to the
+    ///     chosen `ElasticWaveField` component.
+    ///   - **A.2.5** ✅ ux / uy / uz traces all populated separately via
+    ///     the SensorRecorder's per-component buffers.
+    ///   - **A.3** ✅ optional velocity-source mask: post-step Dirichlet
+    ///     override on vx / vy / vz at `mask` points using the supplied
+    ///     1-D signals.
+    ///   - **Remaining**: stress-tensor sources (A.3.5),
+    ///     heterogeneous elastic media (A.4), PML alpha / anisotropic
+    ///     thickness.
     #[allow(clippy::too_many_arguments)]
     fn run_elastic_impl(
         grid: &KwaversGrid,
@@ -4724,6 +4887,12 @@ impl Simulation {
         pml_size: Option<usize>,
         _pml_inside: bool,
         elastic_ivp_axis: Option<&str>,
+        elastic_velocity_source: Option<(
+            ndarray::Array3<bool>,
+            Option<ndarray::Array1<f64>>,
+            Option<ndarray::Array1<f64>>,
+            Option<ndarray::Array1<f64>>,
+        )>,
     ) -> KwaversResult<SimulationRunResult> {
         // Local alias to keep the existing axis-decode block readable.
         let grid_source_axis_suffix: Option<String> =
@@ -4734,28 +4903,81 @@ impl Simulation {
 
         let (nx, ny, nz) = grid.dimensions();
 
-        // Decode the initial-displacement field from grid_source.p0; if
-        // absent, the simulation is a quiescent zero-IVP — surface a clear
-        // error so callers know the IVP source is required for SolverType.Elastic.
-        let u0 = grid_source.p0.ok_or_else(|| {
-            kwavers::core::error::KwaversError::InvalidInput(
-                "SolverType.Elastic requires Source.from_initial_displacement(...) — \
-                 no initial displacement field was supplied"
-                    .to_string(),
-            )
-        })?;
-        if u0.dim() != (nx, ny, nz) {
-            return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
-                "Elastic initial displacement shape {:?} must equal grid ({}, {}, {})",
-                u0.dim(),
-                nx,
-                ny,
-                nz
-            )));
+        // The elastic solver requires at least one source: either an IVP
+        // (initial-displacement field via grid_source.p0) or a velocity-
+        // source mask (supplied via elastic_velocity_source). A zero-input
+        // simulation is meaningless; surface a clear error.
+        let has_ivp = grid_source.p0.is_some();
+        let has_vel_source = elastic_velocity_source.is_some();
+        if !has_ivp && !has_vel_source {
+            return Err(kwavers::core::error::KwaversError::InvalidInput(
+                "SolverType.Elastic requires either Source.from_initial_displacement(...) \
+                 (initial-value problem) or Source.from_elastic_velocity_source(...) \
+                 (driven velocity source). No source was supplied.".to_string(),
+            ));
         }
+
+        // If an IVP was supplied, validate its shape.
+        let u0_opt = match grid_source.p0 {
+            Some(u0) => {
+                if u0.dim() != (nx, ny, nz) {
+                    return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
+                        "Elastic initial displacement shape {:?} must equal grid ({}, {}, {})",
+                        u0.dim(),
+                        nx,
+                        ny,
+                        nz
+                    )));
+                }
+                Some(u0)
+            }
+            None => None,
+        };
 
         // Sensor mask (optional) — records the chosen displacement component.
         let sensor_mask: Option<Array3<bool>> = sensor.and_then(|s| s.mask.clone());
+
+        // Validate and convert the velocity-source bundle into the
+        // kwavers `ElasticVelocitySource` type.
+        let elastic_vsrc_kw: Option<
+            kwavers::solver::forward::elastic::swe::ElasticVelocitySource,
+        > = if let Some((mask, ux_sig, uy_sig, uz_sig)) = elastic_velocity_source {
+            if mask.dim() != (nx, ny, nz) {
+                return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
+                    "Elastic velocity-source mask shape {:?} must equal grid ({}, {}, {})",
+                    mask.dim(),
+                    nx,
+                    ny,
+                    nz
+                )));
+            }
+            let validate_signal = |sig: &Option<ndarray::Array1<f64>>, name: &str| -> KwaversResult<()> {
+                if let Some(s) = sig {
+                    if s.len() != time_steps {
+                        return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
+                            "Elastic velocity-source {} signal length {} must equal time_steps {}",
+                            name,
+                            s.len(),
+                            time_steps,
+                        )));
+                    }
+                }
+                Ok(())
+            };
+            validate_signal(&ux_sig, "ux")?;
+            validate_signal(&uy_sig, "uy")?;
+            validate_signal(&uz_sig, "uz")?;
+            Some(
+                kwavers::solver::forward::elastic::swe::ElasticVelocitySource {
+                    mask,
+                    ux_signal: ux_sig,
+                    uy_signal: uy_sig,
+                    uz_signal: uz_sig,
+                },
+            )
+        } else {
+            None
+        };
 
         // Build the elastic config — single uniform PML thickness (Phase A.2).
         let pml_thickness = pml_size.unwrap_or(10);
@@ -4765,6 +4987,7 @@ impl Simulation {
         config.pml_thickness = pml_thickness;
         config.save_every = 1; // record every step to match k-Wave behavior
         config.sensor_mask = sensor_mask;
+        config.velocity_source = elastic_vsrc_kw;
 
         // Construct the solver; the Medium trait object covers ElasticProperties.
         let medium_ref: &dyn kwavers::domain::medium::traits::Medium = medium.as_medium();
@@ -4772,13 +4995,16 @@ impl Simulation {
 
         // Initialise the field on the requested axis component (Phase A.2.5
         // of ADR 007: per-axis IVP routing). All other components and all
-        // velocities start at zero.
+        // velocities start at zero. When no IVP is supplied (driven-velocity
+        // source case), the field starts identically zero.
         let mut initial_field = ElasticWaveField::new(nx, ny, nz);
-        let axis_suffix = grid_source_axis_suffix.as_deref().unwrap_or("z");
-        match axis_suffix {
-            "x" => initial_field.ux.assign(&u0),
-            "y" => initial_field.uy.assign(&u0),
-            "z" | _ => initial_field.uz.assign(&u0),
+        if let Some(u0) = u0_opt {
+            let axis_suffix = grid_source_axis_suffix.as_deref().unwrap_or("z");
+            match axis_suffix {
+                "x" => initial_field.ux.assign(&u0),
+                "y" => initial_field.uy.assign(&u0),
+                "z" | _ => initial_field.uz.assign(&u0),
+            }
         }
 
         let duration = dt * (time_steps as f64);

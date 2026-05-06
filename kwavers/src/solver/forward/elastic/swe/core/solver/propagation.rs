@@ -55,9 +55,58 @@ impl ElasticWaveSolver {
             recorded_steps,
             spec,
         )?;
+        // Pre-collect velocity-source mask indices once, outside the time
+        // loop, so per-step injection costs O(n_active) rather than O(N³).
+        // Phase A.3 of ADR 007.
+        let velocity_source_indices: Option<Vec<(usize, usize, usize)>> = self
+            .config
+            .velocity_source
+            .as_ref()
+            .filter(|vs| vs.has_any_component())
+            .map(|vs| {
+                vs.mask
+                    .indexed_iter()
+                    .filter_map(|(idx, &active)| active.then_some(idx))
+                    .collect()
+            });
+
         for step in 0..steps {
             integrator.step(&mut current_field, dt, body_force)?;
             current_field.time += dt;
+
+            // ── Velocity-source injection (post-integrator Dirichlet hook) ──
+            // After the velocity-Verlet step has updated vx/vy/vz from
+            // acceleration, override at masked points with the supplied
+            // signal sample for this step. The override is **assignment**
+            // not addition, matching k-Wave's `Dirichlet` source mode for
+            // velocity sources in pstdElastic2D / pstdElastic3D.
+            if let (Some(ref vs), Some(ref active)) = (
+                self.config.velocity_source.as_ref(),
+                velocity_source_indices.as_ref(),
+            ) {
+                if let Some(ref ux_sig) = vs.ux_signal {
+                    if let Some(&val) = ux_sig.as_slice().and_then(|s| s.get(step)) {
+                        for &(i, j, k) in active.iter() {
+                            current_field.vx[[i, j, k]] = val;
+                        }
+                    }
+                }
+                if let Some(ref uy_sig) = vs.uy_signal {
+                    if let Some(&val) = uy_sig.as_slice().and_then(|s| s.get(step)) {
+                        for &(i, j, k) in active.iter() {
+                            current_field.vy[[i, j, k]] = val;
+                        }
+                    }
+                }
+                if let Some(ref uz_sig) = vs.uz_signal {
+                    if let Some(&val) = uz_sig.as_slice().and_then(|s| s.get(step)) {
+                        for &(i, j, k) in active.iter() {
+                            current_field.vz[[i, j, k]] = val;
+                        }
+                    }
+                }
+            }
+
             if step % save_every == 0 {
                 // Pressure-buffer entry: uz (legacy back-compat — many
                 // existing callers consume `extract_recorded_data` which

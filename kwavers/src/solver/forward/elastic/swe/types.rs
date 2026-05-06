@@ -1,6 +1,39 @@
-use ndarray::Array3;
+use ndarray::{Array1, Array3};
 
 pub use crate::physics::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;
+
+/// Particle-velocity source configuration for the elastic wave solver.
+///
+/// Implements k-Wave's `source.u_mask` / `source.ux` / `source.uy` /
+/// `source.uz` semantics for `pstdElastic2D` / `pstdElastic3D`. At each
+/// time step, if the corresponding component signal is supplied, the
+/// integrator's post-step velocity field is **additively assigned** at
+/// every grid point inside `mask` with the signal sample for that step
+/// (broadcast 1-D signal across all mask points; phase A.3 does not yet
+/// support per-point signal matrices).
+///
+/// Phase A.3 of ADR 007. Stress-tensor sources (`source.s_mask`,
+/// `source.sxx`, `source.syy`, etc.) ship in Phase A.3.5.
+#[derive(Debug, Clone)]
+pub struct ElasticVelocitySource {
+    /// Boolean grid mask marking source-active points.
+    pub mask: Array3<bool>,
+    /// Time series for ux at each step (length must equal `Nt`). `None`
+    /// disables vx injection.
+    pub ux_signal: Option<Array1<f64>>,
+    /// Time series for uy at each step.
+    pub uy_signal: Option<Array1<f64>>,
+    /// Time series for uz at each step.
+    pub uz_signal: Option<Array1<f64>>,
+}
+
+impl ElasticVelocitySource {
+    /// Returns `true` if at least one component signal is present.
+    #[must_use]
+    pub fn has_any_component(&self) -> bool {
+        self.ux_signal.is_some() || self.uy_signal.is_some() || self.uz_signal.is_some()
+    }
+}
 
 /// Configuration for elastic wave simulation
 #[derive(Debug, Clone)]
@@ -15,6 +48,11 @@ pub struct ElasticWaveConfig {
     pub pml_thickness: usize,
     /// Sensor mask for recording time series data at specific locations
     pub sensor_mask: Option<Array3<bool>>,
+    /// Optional particle-velocity source. When present, at each step
+    /// `n`, the integrator's post-step velocity field is assigned at
+    /// every masked grid point with `signal[n]` for any provided
+    /// component. Phase A.3 of ADR 007.
+    pub velocity_source: Option<ElasticVelocitySource>,
 }
 
 impl Default for ElasticWaveConfig {
@@ -27,6 +65,7 @@ impl Default for ElasticWaveConfig {
             save_every: 10,
             pml_thickness: 10,
             sensor_mask: None,
+            velocity_source: None,
         }
     }
 }

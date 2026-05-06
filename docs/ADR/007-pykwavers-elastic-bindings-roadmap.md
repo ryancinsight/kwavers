@@ -107,17 +107,49 @@ source-routing layer to the dispatch.
 - Legacy `sensor_data` trace agrees with `result.uz` (back-compat
   invariant).
 
-### Phase A.3 — `Source.from_stress` + `Source.from_velocity` (`[minor]`, queued)
+### Phase A.3 — Velocity-source mask (`[minor]`, **landed**)
 
-**Scope**: add stress-tensor source (`s_mask`, `sxx`, `syy [, sxy, szz, sxz, syz]`)
-and particle-velocity source (`u_mask`, `ux`, `uy [, uz]`) bindings.
-Required for `ewp_shear_wave_snells_law` (stress source) and
-`ewp_3D_simulation` (velocity source with focusing).
+**Scope**: particle-velocity source (`u_mask`, `ux`, `uy`, `uz` 1-D
+signals) bindings via `Source.from_elastic_velocity_source`. Required by
+`ewp_3D_simulation` (single-component velocity source on a piston) and
+`ewp_plane_wave_absorption` (uniform-x-plane velocity drive for the
+attenuation-vs-frequency analysis).
 
-**Blockers identified**:
-- Current Rust `ElasticWaveSolver::propagate` accepts `Option<&ElasticBodyForceConfig>`
-  for body forces but has no stress-mask or velocity-mask source-injection
-  path. New Rust API surface required.
+**Status**: landed.
+
+**Implementation summary**:
+- New `ElasticVelocitySource { mask, ux_signal, uy_signal, uz_signal }`
+  type in `kwavers::solver::forward::elastic::swe::types`.
+- `ElasticWaveConfig.velocity_source: Option<ElasticVelocitySource>`
+  optional field.
+- `ElasticWaveSolver::propagate` pre-collects mask indices once outside
+  the time loop, then post-step-Dirichlet-overrides `vx/vy/vz` at masked
+  points using the per-step signal sample (gated on
+  `Some(signal[step])`). Per-step cost is `O(n_active)` not `O(N³)`.
+- PyO3 `Source.from_elastic_velocity_source(mask, ux=None, uy=None,
+  uz=None)` static method; routing layer recognises
+  `source_type == "elastic_velocity_source"` and stashes the mask + 1-D
+  signals in a tuple carried out-of-band to `run_elastic_impl`.
+- `run_elastic_impl` validates mask shape against grid + each signal
+  length against `time_steps`, then assigns to `config.velocity_source`.
+- IVP requirement relaxed: a velocity source alone is now sufficient;
+  earlier "no source" behaviour still rejects with a clear message.
+
+**Verification (Phase A.3)**:
+- `pykwavers/examples/elastic_velocity_source_smoke.py` — 5 tests
+  (driven response, source-plane integration correlation 0.96,
+  causality, three misuse rejections, mixed IVP+velocity-source).
+- `cargo nextest --package kwavers`: no regression.
+
+### Phase A.3.5 — Stress-tensor sources (`[minor]`, queued)
+
+**Scope**: add `Source.from_elastic_stress_source(s_mask, sxx, syy [,
+szz, sxy, sxz, syz])` for `ewp_shear_wave_snells_law` (focused-arc
+stress source). Tensor injection is fundamentally more complex than
+velocity injection: stress fields live on a different (staggered) grid
+in some implementations and the stress derivative drives acceleration
+directly. Implementation requires touching the integrator's stress
+computation, not just a post-step velocity override.
 
 ### Phase A.4 — Heterogeneous elastic medium + EWP example replications (`[minor]`, queued)
 
