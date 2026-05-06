@@ -25,13 +25,17 @@
 //! - Treeby, Jaros, Rendell & Cox (2012), J. Acoust. Soc. Am. 131(6).
 
 use kwavers::core::error::KwaversResult;
+use kwavers::domain::boundary::CPMLConfig;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::SineWave;
-use kwavers::domain::source::{InjectionMode, PlaneWaveConfig, PlaneWaveSource, SourceField};
-use kwavers::solver::forward::pstd::config::{KSpaceMethod, PSTDConfig};
+use kwavers::domain::source::{
+    GridSource, InjectionMode, PlaneWaveConfig, PlaneWaveSource, SourceField,
+};
+use kwavers::solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers::solver::interface::Solver;
+use ndarray::Array3;
 use std::sync::Arc;
 
 /// Helper: run PSTD for `nt` steps and return max |p| over the pressure field.
@@ -168,6 +172,108 @@ fn test_pstd_2d_vs_3d_source_amplitude_parity() -> KwaversResult<()> {
         "2D/3D peak pressure ratio should be near 1 after n_dim/3 fix; \
          got ratio={ratio:.3} (2D={peak_2d:.3e} Pa, 3D={peak_3d:.3e} Pa). \
          Ratio ≈1.5 would indicate the fix is not applied."
+    );
+
+    Ok(())
+}
+
+/// Theorem (2D IVP density split: no spurious DC pressure background).
+///
+/// ## Formal Statement
+/// Let `p₀(x,y)` be the initial pressure field on a 2-D grid (NZ=1).
+/// The acoustic EOS is `p = c²·(ρₓ+ρᵧ+ρ_z)`.
+///
+/// In the PSTD split-density formulation with NZ=1:
+///   - `∂ρ_z/∂t = −ρ₀·∂u_z/∂z = 0`  (k_z=0 for NZ=1 under periodic DFT)
+///   - z-directional PML: σ_z = 0    (kernels.rs:52 early-returns set_neutral when n≤1)
+///
+/// If `ρ_z` is initialised to `p₀/(3c²)` it never evolves, contributing a permanent
+/// static pressure `c²·ρ_z = p₀/3` to the EOS after the acoustic wave has passed.
+/// This is a DC bias forbidden by linear acoustics.
+///
+/// ## Correct Initialisation (proved)
+/// For NZ=1 (2-D embedding): `ρₓ = ρᵧ = p₀/(2c²)`, `ρ_z = 0`.
+/// After the wave is absorbed by the PML:
+///   `p_residual ≤ ε·p₀_max`  for ε ≪ 1   (tested: ε < 0.20)
+///
+/// ## Failure mode (before fix)
+/// `ρ_z(t=0) = p₀/(3c²)` → `p_residual ≈ p₀/3`  (ε ≈ 0.33).
+/// This produced the monotonic rms_ratio growth with sensor distance observed in
+/// `ivp_loading_external_image_compare.py`.
+#[test]
+fn test_pstd_2d_ivp_no_rhoz_dc_bias() -> KwaversResult<()> {
+    let nx = 64usize;
+    let ny = 64usize;
+    let nz = 1usize;
+    let dx = 0.1e-3; // 0.1 mm
+    let c0 = 1500.0;
+    let rho0 = 1000.0;
+
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx)?;
+    let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+
+    // Gaussian initial pressure centred at domain centre.
+    // sigma_cells = 5 → spatial extent well inside the inner domain.
+    let cx = nx as f64 / 2.0;
+    let cy = ny as f64 / 2.0;
+    let sigma_sq = 5.0f64.powi(2);
+    let mut p0 = Array3::<f64>::zeros((nx, ny, nz));
+    let mut p0_centroid = 0.0f64;
+    for i in 0..nx {
+        for j in 0..ny {
+            let r2 = (i as f64 - cx).powi(2) + (j as f64 - cy).powi(2);
+            let val = (-r2 / (2.0 * sigma_sq)).exp();
+            p0[[i, j, 0]] = val;
+            if i == nx / 2 && j == ny / 2 {
+                p0_centroid = val;
+            }
+        }
+    }
+    let p0_max = p0.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+
+    // GridSource with initial pressure only (no continuous source).
+    let source = GridSource {
+        p0: Some(p0),
+        ..GridSource::new_empty()
+    };
+
+    // Run with CPML thick enough to absorb all reflected energy.
+    // PML thickness = 16 on a 64-cell grid gives 2× the minimum from the
+    // k-Wave stability analysis; pml_alpha = 2 (k-Wave default).
+    let pml_thickness = 16usize;
+    let dt = 0.3 * dx / c0; // CFL=0.3
+    // Run long enough for the wave to reach the PML and be absorbed:
+    //   t_cross = (nx/2 - pml_thickness) * dx / c0   (inner domain half-width)
+    //   nt_absorb ≈ 3 × t_cross / dt  (generous factor for PML absorption)
+    let t_cross = ((nx / 2 - pml_thickness) as f64) * dx / c0;
+    let nt = (3.0 * t_cross / dt).ceil() as usize;
+
+    let pstd_config = PSTDConfig {
+        dt,
+        nt,
+        kspace_method: KSpaceMethod::StandardPSTD,
+        boundary: BoundaryConfig::CPML(CPMLConfig::with_thickness(pml_thickness).with_alpha(2.0)),
+        pml_inside: true,
+        ..Default::default()
+    };
+    let mut solver = PSTDSolver::new(pstd_config, grid.clone(), &medium, source)?;
+
+    for _ in 0..nt {
+        solver.step_forward()?;
+    }
+
+    // Centroid pressure after wave absorption must be negligible.
+    // With the bug (ρ_z = p₀/(3c²) frozen), the residual would be p₀_centroid/3 ≈ 0.33.
+    // After the fix (ρ_z = 0), the residual should be < 20% of p₀_max.
+    let p_centroid_late = solver.fields.p[[nx / 2, ny / 2, 0]].abs();
+    let residual_fraction = p_centroid_late / p0_max;
+    assert!(
+        residual_fraction < 0.20,
+        "2D IVP: residual pressure at centroid after wave absorption is {residual_fraction:.4} \
+         (= {p_centroid_late:.4e} Pa / p0_max {p0_max:.4e} Pa). \
+         Expected < 0.20; value ≈ 0.33 indicates the rhoz DC-bias bug is active \
+         (ρ_z was initialised to p₀/(3c²) instead of 0 for NZ=1). \
+         p0_centroid = {p0_centroid:.4e}"
     );
 
     Ok(())

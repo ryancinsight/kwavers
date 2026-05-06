@@ -220,15 +220,33 @@ impl PSTDSolver {
             &mut solver.fields.uz,
         );
 
+        // Split the total density perturbation (rho = p0/c²) equally among the active
+        // spatial dimensions.  For NZ=1 the z-divergence of uz is identically zero
+        // (k_z = 0 under periodic DFT) and the z-directional PML profile is neutral
+        // (sigma_z = 0; kernels.rs:52 early-returns set_neutral when n ≤ 1).  If rhoz
+        // were initialised to p0/(3c²) it would never evolve, permanently contributing
+        // a static pressure of p0/3 to the EOS (p = c²·(ρx+ρy+ρz)) and inflating the
+        // RMS at every sensor after the acoustic wave has passed.  k-Wave's 2-D solver
+        // uses only ρx and ρy (two-component split), so its pressure returns to zero;
+        // the three-component kwavers split produces a spurious DC background instead.
+        //
+        // General rule: split among active dimensions only.
+        //   3-D (nz > 1): ρx = ρy = ρz = ρ/3
+        //   2-D (ny > 1, nz = 1): ρx = ρy = ρ/2, ρz = 0
+        //   1-D (ny = 1, nz = 1): ρx = ρ,    ρy = ρz = 0
+        let has_y_dim = solver.grid.ny > 1;
+        let has_z_dim = solver.grid.nz > 1;
+        let n_active = 1 + has_y_dim as usize + has_z_dim as usize;
+        let divisor = n_active as f64;
         Zip::from(&mut solver.rhox)
             .and(&mut solver.rhoy)
             .and(&mut solver.rhoz)
             .and(&solver.div_u)
             .for_each(|rx, ry, rz, &rho| {
-                let split = rho / 3.0;
-                *rx = split;
-                *ry = split;
-                *rz = split;
+                let share = rho / divisor;
+                *rx = share;
+                *ry = if has_y_dim { share } else { 0.0 };
+                *rz = if has_z_dim { share } else { 0.0 };
             });
 
         if solver.source_handler.has_initial_pressure()
