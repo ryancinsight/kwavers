@@ -66,7 +66,16 @@ impl Default for SpectralCorrectionConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            method: CorrectionMethod::ExactDispersion,
+            // Treeby & Cox 2010 canonical kappa = sinc(c_ref·dt·|k|/2),
+            // matching k-wave-python's `kspace_solver.py` default. Was
+            // previously ExactDispersion which uses an `omega_phys/omega_num`
+            // ratio that produces high-frequency amplification (correction
+            // > 1 near Nyquist) rather than the Treeby/sinc attenuation
+            // (correction < 1). The mismatch surfaced as ~30% peak inflation
+            // in pykwavers parity scripts vs k-wave-python; switching the
+            // default to Treeby2010 (combined with the kappa-inversion fix
+            // landed in the same commit) closes the gap.
+            method: CorrectionMethod::Treeby2010,
             cfl_number: 0.3,
             max_correction: 2.0,
         }
@@ -160,6 +169,32 @@ fn compute_exact_dispersion_correction(
     kappa
 }
 
+/// Treeby & Cox 2010 k-space correction κ = sinc(c_ref·dt·|k|/2).
+///
+/// This is the canonical kappa derived in Treeby B. E. & Cox B. T. (2010),
+/// "Modeling power law absorption and dispersion for acoustic propagation
+/// using the fractional Laplacian," J. Acoust. Soc. Am. 127(5) 2741-2748,
+/// Eq. 18. With this kappa applied to the spatial derivative `i·k`, the
+/// leapfrog k-space scheme reproduces the EXACT analytical wave-equation
+/// update step for plane waves at `c = c_ref`:
+///
+///     p^{n+1} − 2·p^n + p^{n−1} = −4·sin²(c·dt·|k|/2) · p^n   (in k-space)
+///
+/// which matches the exact solution `p(t±dt) = exp(±i·c·|k|·dt) · p(t)`.
+///
+/// **Reference implementation**: k-wave-python's `kspace_solver.py` line 389:
+///     `self.kappa = xp.sinc((self.c_ref * k_mag * self.dt / 2) / np.pi)`
+///
+/// where numpy's `sinc(x) = sin(πx)/(πx)`, so passing `(arg)/π` recovers the
+/// unnormalised `sin(arg)/arg`. Equivalent to `sin(c·k·dt/2)/(c·k·dt/2)`.
+///
+/// **Prior pykwavers bug**: this function previously computed
+/// `1/sinc(c·dt·|k_mod|/2)` (the reciprocal) combined with a `(|k_mod|/|k_phys|)`
+/// spatial correction. Both were wrong for the canonical Treeby & Cox
+/// formulation — the bug surfaced as ~30% peak amplitude inflation in
+/// 1-D `na_modelling_absorption_compare.py` and ~28% RMS drift at d=40
+/// grid points in 2-D `ivp_loading_external_image_compare.py`. Fixed in
+/// the commit that introduced this comment.
 fn compute_treeby2010_correction(
     grid: &Grid,
     dt: f64,
@@ -176,26 +211,22 @@ fn compute_treeby2010_correction(
                 let ky = compute_wavenumber_component(j, grid.ny, grid.dy);
                 let kz = compute_wavenumber_component(k, grid.nz, grid.dz);
 
-                let kx_mod = 2.0 * (kx * grid.dx / 2.0).sin() / grid.dx;
-                let ky_mod = 2.0 * (ky * grid.dy / 2.0).sin() / grid.dy;
-                let kz_mod = 2.0 * (kz * grid.dz / 2.0).sin() / grid.dz;
-
-                let k_mod_sq = kx_mod * kx_mod + ky_mod * ky_mod + kz_mod * kz_mod;
-                let k_phys_sq = kx * kx + ky * ky + kz * kz;
-
-                if k_mod_sq > 0.0 && k_phys_sq > 0.0 {
-                    let spatial_correction = (k_mod_sq / k_phys_sq).sqrt();
-
-                    let omega_dt = c_ref * dt * k_mod_sq.sqrt();
-                    let temporal_correction = if omega_dt > 0.0 {
-                        omega_dt / (2.0 * (omega_dt / 2.0).sin())
-                    } else {
-                        1.0
-                    };
-
-                    let correction = spatial_correction * temporal_correction;
-                    kappa[[i, j, k]] = correction.min(max_correction).max(1.0 / max_correction);
+                let k_phys = (kx * kx + ky * ky + kz * kz).sqrt();
+                if k_phys <= 0.0 {
+                    continue; // DC: kappa = 1 (already initialised)
                 }
+
+                // arg = c_ref · dt · |k_phys| / 2
+                // kappa = sinc(arg) = sin(arg) / arg  (unnormalised)
+                let arg = 0.5 * c_ref * dt * k_phys;
+                let correction = if arg.abs() < 1e-12 {
+                    1.0 // L'Hôpital: lim sin(x)/x = 1
+                } else {
+                    arg.sin() / arg
+                };
+                kappa[[i, j, k]] = correction
+                    .min(max_correction)
+                    .max(1.0 / max_correction);
             }
         }
     }
