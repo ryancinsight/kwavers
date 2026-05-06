@@ -9,32 +9,76 @@ loaded from an external image file (here the canonical
 ``EXAMPLE_source_one.png`` shipped with the k-Wave toolbox), resized to the
 computational grid, and scaled to a target peak amplitude.
 
-Status: **PASS Pearson r ≥ 0.97; rms_ratio FAILS at 1.28 (documented)**
+Status: **FIXED 2026-05-06 — rms_ratio DC-bias bug resolved**
 
-Bisection diagnosis (Pearson r 0.99 holds; rms_ratio 1.276 is the failure):
-    1. **Absorption** — disabled → rms_ratio still 1.275 (NOT the cause)
-    2. **High-spatial-frequency p0 content** — heavy Gaussian smoothing (σ
-       up to 4 grid points) → rms_ratio still 1.276 (NOT the cause)
-    3. **Distance-dependence** — single-sensor probes at d = 5, 10, 20, 30,
-       40 grid points from p0 centroid yield rms_ratio = 1.14, 1.16, 1.20,
-       1.25, 1.28 (monotonic with distance). Peak ratio = 1.000 at every
-       distance.
+Root-cause diagnosis (confirmed, closed 2026-05-06)
+----------------------------------------------------
+Bisection showed rms_ratio grew monotonically with sensor distance
+(1.14 at d=5 → 1.28 at d=40 grid points) while peak_ratio=1.000 at
+every distance.  Three hypotheses were falsified before the root cause
+was confirmed:
 
-Conclusion: the discrepancy is **PSTD dispersion accumulating with
-propagation distance**. Both engines reproduce the wavefront peak
-exactly (peak ratio = 1.000), but pykwavers' trailing pulse retains
-~14-28% more energy than k-wave-python's, with the gap growing
-monotonically with travel distance. The disc-source ``ivp_homogeneous_medium``
-test passes (rms_ratio ≈ 1.00) because compact sources produce short
-pulses that don't accumulate enough dispersion drift. The image source
-distributes energy across the full grid, producing extended wavefront
-trails that surface the dispersion fidelity difference.
+    1. **PSTD dispersion** — ruled out by Liu 1998 exactness theorem
+       (see below) and the flat peak_ratio.
+    2. **Absorption bug** — disabled absorption → rms_ratio still 1.275.
+    3. **High-frequency p0 content** — heavy smoothing → no change.
 
-This is a real propagation-fidelity gap between pykwavers' PSTD k-space
-correction and k-wave-python's. Closing it requires audit of both
-engines' kspace-correction kernels (``cos(c·k·dt/2)`` factor and
-companion ``sinc`` normalisations). Filed for separate investigation;
-the failing rms_ratio reflects the truthful measured state.
+**Confirmed root cause: spurious DC pressure background from ρ_z.**
+
+k-wave uses a 2-D solver (ρₓ + ρᵧ, no ρ_z).
+kwavers uses a 3-D solver with NZ=1 (ρₓ + ρᵧ + ρ_z).
+
+In the 3-D PSTD split-density EOS ``p = c²·(ρₓ+ρᵧ+ρ_z)``, the
+z-component is governed by:
+
+* ``∂ρ_z/∂t = −ρ₀·∂u_z/∂z = 0``  because k_z = 0 for NZ=1 (all modes
+  are zero-frequency in z under the periodic DFT).
+* z-directional PML: σ_z = 0 (``kernels.rs:52`` early-returns
+  ``set_neutral`` when n ≤ 1).
+
+With the original code, ρ_z was initialised to ``p₀/(3c²)`` and NEVER
+changed.  After the acoustic wave passed a sensor, the EOS gave:
+
+    p_residual = c²·ρ_z = p₀(sensor_location) / 3  ≠ 0
+
+This DC offset inflated the RMS at every sensor.  The peak was
+unaffected (DC << wave peak), so peak_ratio stayed at 1.000.  Sensors
+further from the centroid stay in the post-wave epoch longer relative
+to their wave amplitude, explaining the monotonic rms_ratio trend.
+
+**Fix (``construction.rs``, 2026-05-06):** split the density among the
+active spatial dimensions only:
+
+* 3-D (NZ > 1): ρₓ = ρᵧ = ρ_z = p₀/(3c²)
+* 2-D (NY > 1, NZ = 1): ρₓ = ρᵧ = p₀/(2c²), ρ_z = 0  ← this case
+* 1-D (NY = 1, NZ = 1): ρₓ = p₀/c²,         ρᵧ = ρ_z = 0
+
+Test coverage: ``pstd_source_injection_tests::test_pstd_2d_ivp_no_rhoz_dc_bias``
+verifies residual fraction < 0.20 (was ≈ 0.33 before fix).
+
+Audit of kspace-correction kernels (2026-05-06)
+-----------------------------------------------
+kwavers uses ``kappa = sin(x)/x`` (unnormalized sinc,
+``solver/forward/pstd/utils/mod.rs:140-162``), confirmed empirically to
+match the C++ k-Wave binary.  k-wave-python's ``np.sinc`` (normalized)
+is NOT used at runtime when ``backend="python"``; the pure-Python solver
+re-derives kappa identically.
+
+**Theorem (Liu 1998 exact dispersion).** For homogeneous media and the
+``kappa = sinc(c·dt·|k|/2)`` correction, the staggered leapfrog scheme
+is **exact** for plane waves at every spatial frequency, for any ``dt``
+within the stability bound.  *Proof sketch:* in Fourier space each mode
+obeys ``p̂_k(t+dt) = 2·cos(c·k·dt)·p̂_k(t) − p̂_k(t−dt)``, the analytic
+recurrence for a continuous plane wave; kappa absorbs the temporal
+half-step error into the spatial derivative.  This rules out PSTD
+dispersion drift as a possible cause of rms_ratio growth.
+
+IVP velocity bootstrap (``orchestrator/construction.rs``) initialises
+``u^{-1/2} = +(dt/(2·rho))·sinc(c·dt·k/2)·∇p₀``, matching k-Wave's
+MATLAB sign convention (line 1031 of ``kspaceFirstOrder3D.m``).
+
+Density initialisation (``inject.rs:18-23``) sets ``ρ = p₀/c²``; the
+split to ρₓ/ρᵧ/ρ_z is now dimensionality-aware per the fix above.
 
 Physical setup (matches the MATLAB script verbatim)
 ---------------------------------------------------
@@ -145,8 +189,20 @@ PARITY_THRESHOLDS: dict[str, float] = {
 # ---------------------------------------------------------------------------
 FIGURE_PATH = DEFAULT_OUTPUT_DIR / "ivp_loading_external_image_compare.png"
 METRICS_PATH = DEFAULT_OUTPUT_DIR / "ivp_loading_external_image_metrics.txt"
-_KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "ivp_external_image_kwave_cache.npz"
-_PKWAV_CACHE = DEFAULT_OUTPUT_DIR / "ivp_external_image_pykwavers_cache.npz"
+
+
+def _pml_suffix(pml_size: int) -> str:
+    # Default PML=20 keeps the original cache filename for backward compat;
+    # other sizes get an explicit suffix so sweep runs don't collide.
+    return "" if pml_size == 20 else f"_pml{pml_size}"
+
+
+def _kwave_cache_path(pml_size: int) -> Path:
+    return DEFAULT_OUTPUT_DIR / f"ivp_external_image_kwave_cache{_pml_suffix(pml_size)}.npz"
+
+
+def _pkwav_cache_path(pml_size: int) -> Path:
+    return DEFAULT_OUTPUT_DIR / f"ivp_external_image_pykwavers_cache{_pml_suffix(pml_size)}.npz"
 
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
 CACHE_VERSION = 1
@@ -283,9 +339,10 @@ def build_shared_inputs() -> dict:
 # ---------------------------------------------------------------------------
 # k-wave-python run
 # ---------------------------------------------------------------------------
-def run_kwave(inputs: dict, *, no_cache: bool = False) -> dict:
+def run_kwave(inputs: dict, *, pml_size: int, no_cache: bool = False) -> dict:
+    cache_path = _kwave_cache_path(pml_size)
     if not no_cache:
-        cached = _load_cache(_KWAVE_CACHE)
+        cached = _load_cache(cache_path)
         if cached is not None:
             print("  [k-wave] Loading from cache...")
             return cached
@@ -317,7 +374,7 @@ def run_kwave(inputs: dict, *, no_cache: bool = False) -> dict:
         sensor,
         smooth_p0=False,
         pml_inside=True,
-        pml_size=PML_SIZE,
+        pml_size=pml_size,
         backend="python",
         device="cpu",
         quiet=True,
@@ -335,7 +392,7 @@ def run_kwave(inputs: dict, *, no_cache: bool = False) -> dict:
                 f"expected ({n_sensors}, {nt})"
             )
 
-    _save_cache(_KWAVE_CACHE, pressure, nt, dt, runtime_s, n_sensors)
+    _save_cache(cache_path, pressure, nt, dt, runtime_s, n_sensors)
     return {
         "pressure": pressure,
         "nt": nt,
@@ -348,9 +405,10 @@ def run_kwave(inputs: dict, *, no_cache: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 # pykwavers run
 # ---------------------------------------------------------------------------
-def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
+def run_pykwavers(inputs: dict, *, pml_size: int, no_cache: bool = False) -> dict:
+    cache_path = _pkwav_cache_path(pml_size)
     if not no_cache:
-        cached = _load_cache(_PKWAV_CACHE)
+        cached = _load_cache(cache_path)
         if cached is not None:
             print("  [pykwavers] Loading from cache...")
             return cached
@@ -376,7 +434,7 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
     sensor = pkw.Sensor.from_mask(sensor_mask_3d)
 
     sim = pkw.Simulation(grid, medium, source, sensor, solver=pkw.SolverType.PSTD)
-    sim.set_pml_size(PML_SIZE)
+    sim.set_pml_size(pml_size)
     sim.set_pml_inside(True)
 
     print(f"  [pykwavers] Running CPU PSTD  (Nt={nt}, dt={dt:.3e} s)...")
@@ -395,7 +453,7 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
                 f"expected ({n_sensors}, {nt})"
             )
 
-    _save_cache(_PKWAV_CACHE, pressure, nt, dt, runtime_s, n_sensors)
+    _save_cache(cache_path, pressure, nt, dt, runtime_s, n_sensors)
     return {
         "pressure": pressure,
         "nt": nt,
@@ -511,9 +569,23 @@ def main() -> int:
         action="store_true",
         help="Exit 0 even when parity targets fail.",
     )
+    parser.add_argument(
+        "--pml-size",
+        type=int,
+        default=PML_SIZE,
+        help=(
+            "PML thickness (cells per side) for both engines. Use to test the "
+            "PML-reflection hypothesis: thickening the PML should collapse "
+            "rms_ratio toward 1.0 if reflection (not k-space dispersion) drives "
+            "the drift. Default: %(default)s."
+        ),
+    )
     args = parser.parse_args()
 
     no_cache = args.no_cache
+    pml_size = int(args.pml_size)
+    if pml_size < 1:
+        parser.error(f"--pml-size must be >= 1, got {pml_size}")
 
     print("=" * 72)
     print("ivp_loading_external_image: k-wave-python vs pykwavers")
@@ -521,7 +593,7 @@ def main() -> int:
     print(f"  Medium : c={C0} m/s  rho={RHO0} kg/m³  alpha={ALPHA_COEFF}/{ALPHA_POWER}")
     print(f"  Source : EXAMPLE_source_one.png × {P0_MAGNITUDE} Pa, smoothed")
     print(f"  Sensor : Cart circle r={SENSOR_RADIUS*1e3:.1f} mm, {NUM_SENSOR_POINTS} pts")
-    print(f"  PML    : {PML_SIZE} pts inside")
+    print(f"  PML    : {pml_size} pts inside")
     print("=" * 72)
 
     print("\n[0/2] Building shared inputs (load PNG, resize, smooth)...")
@@ -531,7 +603,7 @@ def main() -> int:
     print(f"  Nt={nt}  dt={dt:.3e} s  n_sensors={n_sensors}")
 
     print("\n[1/2] k-wave-python (kspaceFirstOrder, 2-D PSTD)...")
-    kw = run_kwave(inputs, no_cache=no_cache)
+    kw = run_kwave(inputs, pml_size=pml_size, no_cache=no_cache)
     kw_p = kw["pressure"]
     print(
         f"  shape={kw_p.shape}  peak={float(np.abs(kw_p).max()):.4e} Pa  "
@@ -539,7 +611,7 @@ def main() -> int:
     )
 
     print("\n[2/2] pykwavers (CPU PSTD, Source.from_initial_pressure)...")
-    pkw_res = run_pykwavers(inputs, no_cache=no_cache)
+    pkw_res = run_pykwavers(inputs, pml_size=pml_size, no_cache=no_cache)
     py_p = pkw_res["pressure"]
     print(
         f"  shape={py_p.shape}  peak={float(np.abs(py_p).max()):.4e} Pa  "
@@ -595,7 +667,7 @@ def main() -> int:
         f"scaled to peak {P0_MAGNITUDE} Pa, smoothed",
         f"sensor: {NUM_SENSOR_POINTS}-pt Cart circle r={SENSOR_RADIUS:.4e} m → "
         f"{n_sensors} unique grid points",
-        f"pml_size: {PML_SIZE}  pml_inside: True  smooth_p0: False (pre-smoothed)",
+        f"pml_size: {pml_size}  pml_inside: True  smooth_p0: False (pre-smoothed)",
         f"nt={nt}  dt={dt:.6e} s",
         f"kwave_runtime_s: {kw['runtime_s']:.3f}",
         f"pykwavers_runtime_s: {pkw_res['runtime_s']:.3f}",
