@@ -91,12 +91,19 @@ function main()
     # sources only — `source.uz` is silently ignored in 2-D (no third
     # spatial axis). Drive the compressional wave by injecting ux into
     # the source plane (the plane is normal to x, so a ux drive launches
-    # a +x compressional wave). Use Additive mode (matches MATLAB k-Wave
-    # default for elastic velocity sources).
+    # a +x compressional wave).
+    u_mode_str = lowercase(get(args, "u-mode", "additive"))
+    u_mode = if u_mode_str == "dirichlet"
+        Dirichlet
+    elseif u_mode_str == "additive"
+        Additive
+    else
+        error("u-mode must be 'additive' or 'dirichlet'; got '$(u_mode_str)'")
+    end
     source = ElasticSource(
         u_mask = u_mask,
         ux = uz_2d,
-        u_mode = Additive,
+        u_mode = u_mode,
     )
 
     # Binary sensor mask from the supplied positions.
@@ -143,6 +150,7 @@ function main()
         @printf(io, "  \"cs\": %.17g,\n", cs)
         @printf(io, "  \"rho\": %.17g,\n", rho)
         @printf(io, "  \"pml_size\": %d,\n", pml_size)
+        @printf(io, "  \"u_mode\": \"%s\",\n", u_mode_str)
         @printf(io, "  \"n_sensors\": %d,\n", n_sensors)
         @printf(io, "  \"solver_seconds\": %.9f,\n", elapsed_s)
         @printf(io, "  \"peak_abs_ux\": %.17g\n", maximum(abs.(ux_data)))

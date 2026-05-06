@@ -71,41 +71,82 @@ impl ElasticWaveSolver {
             });
 
         for step in 0..steps {
-            integrator.step(&mut current_field, dt, body_force)?;
-            current_field.time += dt;
-
-            // ── Velocity-source injection (post-integrator Dirichlet hook) ──
-            // After the velocity-Verlet step has updated vx/vy/vz from
-            // acceleration, override at masked points with the supplied
-            // signal sample for this step. The override is **assignment**
-            // not addition, matching k-Wave's `Dirichlet` source mode for
-            // velocity sources in pstdElastic2D / pstdElastic3D.
+            // ── Velocity-source injection (pre-integrator hook) ─────────────
+            // Per the 2×2 mode-isolation study in
+            // external/elastic_julia_parity/, Additive injection MUST happen
+            // BEFORE the integrator step so the added v participates in the
+            // velocity-Verlet u-update within the same step. Post-integrator
+            // injection delays the Additive forcing by dt and produces
+            // Pearson r ≈ 0.09 vs KWave.jl's pre-step Additive injection.
+            //
+            //   Dirichlet: vx[idx] = signal[step]   (assignment — pre-step is
+            //                                         equivalent to post-step
+            //                                         because the integrator
+            //                                         re-derives v from a)
+            //   Additive : vx[idx] += signal[step]  (forcing — must precede
+            //                                         the integrator's u-update)
+            //
+            // Matches k-Wave's MATLAB `source.u_mode` semantics for elastic
+            // PSTD solvers (where source injection is between the velocity
+            // and stress half-steps in the stress-velocity formulation).
             if let (Some(ref vs), Some(ref active)) = (
                 self.config.velocity_source.as_ref(),
                 velocity_source_indices.as_ref(),
             ) {
+                use crate::solver::forward::elastic::swe::types::ElasticVelocitySourceMode;
+                let mode = vs.mode;
                 if let Some(ref ux_sig) = vs.ux_signal {
                     if let Some(&val) = ux_sig.as_slice().and_then(|s| s.get(step)) {
-                        for &(i, j, k) in active.iter() {
-                            current_field.vx[[i, j, k]] = val;
+                        match mode {
+                            ElasticVelocitySourceMode::Dirichlet => {
+                                for &(i, j, k) in active.iter() {
+                                    current_field.vx[[i, j, k]] = val;
+                                }
+                            }
+                            ElasticVelocitySourceMode::Additive => {
+                                for &(i, j, k) in active.iter() {
+                                    current_field.vx[[i, j, k]] += val;
+                                }
+                            }
                         }
                     }
                 }
                 if let Some(ref uy_sig) = vs.uy_signal {
                     if let Some(&val) = uy_sig.as_slice().and_then(|s| s.get(step)) {
-                        for &(i, j, k) in active.iter() {
-                            current_field.vy[[i, j, k]] = val;
+                        match mode {
+                            ElasticVelocitySourceMode::Dirichlet => {
+                                for &(i, j, k) in active.iter() {
+                                    current_field.vy[[i, j, k]] = val;
+                                }
+                            }
+                            ElasticVelocitySourceMode::Additive => {
+                                for &(i, j, k) in active.iter() {
+                                    current_field.vy[[i, j, k]] += val;
+                                }
+                            }
                         }
                     }
                 }
                 if let Some(ref uz_sig) = vs.uz_signal {
                     if let Some(&val) = uz_sig.as_slice().and_then(|s| s.get(step)) {
-                        for &(i, j, k) in active.iter() {
-                            current_field.vz[[i, j, k]] = val;
+                        match mode {
+                            ElasticVelocitySourceMode::Dirichlet => {
+                                for &(i, j, k) in active.iter() {
+                                    current_field.vz[[i, j, k]] = val;
+                                }
+                            }
+                            ElasticVelocitySourceMode::Additive => {
+                                for &(i, j, k) in active.iter() {
+                                    current_field.vz[[i, j, k]] += val;
+                                }
+                            }
                         }
                     }
                 }
             }
+
+            integrator.step(&mut current_field, dt, body_force)?;
+            current_field.time += dt;
 
             if step % save_every == 0 {
                 // Pressure-buffer entry: uz (legacy back-compat — many

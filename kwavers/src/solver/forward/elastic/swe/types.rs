@@ -2,18 +2,49 @@ use ndarray::{Array1, Array3};
 
 pub use crate::physics::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;
 
+/// Velocity-source injection mode for [`ElasticVelocitySource`].
+///
+/// Matches k-Wave's MATLAB `source.u_mode` semantics for `pstdElastic*`:
+///
+/// - **Dirichlet**: at each step, the integrator's post-step velocity
+///   field is **assigned** at masked grid points with the signal sample
+///   (`v[idx] = signal[step]`). Effectively replaces the integrator's
+///   contribution at those points.
+/// - **Additive**: the signal sample is **added** to the integrator's
+///   post-step velocity field (`v[idx] += signal[step]`). The integrator
+///   contribution at masked points is preserved and the signal acts as
+///   a forcing term. This is the default in MATLAB k-Wave's elastic
+///   solvers and KWave.jl's `pstd_elastic_2d`.
+///
+/// For a tone-burst drive on a dense plane mask, the two modes produce
+/// different amplitude scaling (Additive accumulates, Dirichlet replaces),
+/// so cross-engine parity requires matching the mode used by the
+/// reference. The k-wave-julia parity harness in
+/// `external/elastic_julia_parity/` uses this enum to drive both runs
+/// in the same mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ElasticVelocitySourceMode {
+    /// Replace velocity at masked points with the signal sample.
+    Dirichlet,
+    /// Add the signal sample to the integrator's velocity update.
+    /// Default — matches MATLAB k-Wave / KWave.jl elastic solvers.
+    #[default]
+    Additive,
+}
+
 /// Particle-velocity source configuration for the elastic wave solver.
 ///
 /// Implements k-Wave's `source.u_mask` / `source.ux` / `source.uy` /
 /// `source.uz` semantics for `pstdElastic2D` / `pstdElastic3D`. At each
 /// time step, if the corresponding component signal is supplied, the
-/// integrator's post-step velocity field is **additively assigned** at
-/// every grid point inside `mask` with the signal sample for that step
+/// integrator's post-step velocity field is updated at every grid point
+/// inside `mask` per the configured [`ElasticVelocitySourceMode`]
 /// (broadcast 1-D signal across all mask points; phase A.3 does not yet
 /// support per-point signal matrices).
 ///
-/// Phase A.3 of ADR 007. Stress-tensor sources (`source.s_mask`,
-/// `source.sxx`, `source.syy`, etc.) ship in Phase A.3.5.
+/// Phase A.3 of ADR 007. Phase A.3.1 added `mode` selection. Stress-
+/// tensor sources (`source.s_mask`, `source.sxx`, `source.syy`, etc.)
+/// ship in Phase A.3.5.
 #[derive(Debug, Clone)]
 pub struct ElasticVelocitySource {
     /// Boolean grid mask marking source-active points.
@@ -25,6 +56,9 @@ pub struct ElasticVelocitySource {
     pub uy_signal: Option<Array1<f64>>,
     /// Time series for uz at each step.
     pub uz_signal: Option<Array1<f64>>,
+    /// Injection mode (Dirichlet vs Additive). Default: Additive,
+    /// matching MATLAB k-Wave and KWave.jl elastic solvers.
+    pub mode: ElasticVelocitySourceMode,
 }
 
 impl ElasticVelocitySource {

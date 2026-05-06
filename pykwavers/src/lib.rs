@@ -1152,29 +1152,48 @@ impl Source {
     ///     Time signal for vy at each step.
     /// uz : ndarray (1D float64), optional
     ///     Time signal for vz at each step.
+    /// mode : {"additive", "dirichlet"}, default "additive"
+    ///     Injection mode. ``"additive"`` adds the signal to the
+    ///     integrator's post-step velocity (matches MATLAB k-Wave and
+    ///     KWave.jl's elastic-solver defaults). ``"dirichlet"``
+    ///     overwrites velocity at masked points with the signal sample.
     ///
     /// Raises
     /// ------
     /// ValueError
-    ///     If ``mask`` has no active points, has wrong dim, or all three
-    ///     signals are ``None``.
+    ///     If ``mask`` has no active points, has wrong dim, all three
+    ///     signals are ``None``, or ``mode`` is not one of
+    ///     ``"additive"``/``"dirichlet"``.
     ///
     /// Examples
     /// --------
-    /// >>> # Plane-wave-like ux source on a single x-plane (analogue of
-    /// >>> # k-Wave example_ewp_plane_wave_absorption)
+    /// >>> # Additive plane-wave ux source (k-Wave default)
     /// >>> u_mask = np.zeros((Nx, Ny, Nz), dtype=bool)
     /// >>> u_mask[35, :, :] = True
     /// >>> ux_sig = 1e-6 * np.sin(2*np.pi*1e6*np.arange(Nt)*dt)
-    /// >>> src = pkw.Source.from_elastic_velocity_source(u_mask, ux=ux_sig)
+    /// >>> src = pkw.Source.from_elastic_velocity_source(
+    /// ...     u_mask, ux=ux_sig, mode="additive")
     #[staticmethod]
-    #[pyo3(signature = (mask, ux=None, uy=None, uz=None))]
+    #[pyo3(signature = (mask, ux=None, uy=None, uz=None, mode=None))]
     fn from_elastic_velocity_source(
         mask: PyReadonlyArray3<bool>,
         ux: Option<PyReadonlyArray1<f64>>,
         uy: Option<PyReadonlyArray1<f64>>,
         uz: Option<PyReadonlyArray1<f64>>,
+        mode: Option<&str>,
     ) -> PyResult<Self> {
+        // Normalise the mode string up-front so we can fail fast with a
+        // helpful error message before touching the signal arrays.
+        let normalised_mode = match mode.unwrap_or("additive").to_ascii_lowercase().as_str() {
+            "additive" => "additive",
+            "dirichlet" => "dirichlet",
+            other => {
+                return Err(PyValueError::new_err(format!(
+                    "mode must be 'additive' or 'dirichlet'; got '{}'",
+                    other
+                )));
+            }
+        };
         let mask_arr = mask.as_array();
         if mask_arr.ndim() != 3 {
             return Err(PyValueError::new_err("mask must be a 3D bool ndarray"));
@@ -1208,7 +1227,9 @@ impl Source {
             position: None,
             mask: Some(mask_f64),
             signal: None,
-            source_mode: "dirichlet".to_string(),
+            // Carry mode through the existing string-typed source_mode slot;
+            // the elastic-routing branch in Simulation::run reads it.
+            source_mode: normalised_mode.to_string(),
             initial_pressure: None,
             velocity_signal: None,
             direction: None,
@@ -2963,6 +2984,7 @@ impl Simulation {
             Option<ndarray::Array1<f64>>,
             Option<ndarray::Array1<f64>>,
             Option<ndarray::Array1<f64>>,
+            String, // mode: "additive" or "dirichlet"
         )> = None;
 
         for src in &self.sources {
@@ -3190,6 +3212,7 @@ impl Simulation {
                     src.elastic_ux_signal_1d.clone(),
                     src.elastic_uy_signal_1d.clone(),
                     src.elastic_uz_signal_1d.clone(),
+                    src.source_mode.clone(),
                 ));
                 continue;
             }
@@ -4892,6 +4915,7 @@ impl Simulation {
             Option<ndarray::Array1<f64>>,
             Option<ndarray::Array1<f64>>,
             Option<ndarray::Array1<f64>>,
+            String,
         )>,
     ) -> KwaversResult<SimulationRunResult> {
         // Local alias to keep the existing axis-decode block readable.
@@ -4941,7 +4965,7 @@ impl Simulation {
         // kwavers `ElasticVelocitySource` type.
         let elastic_vsrc_kw: Option<
             kwavers::solver::forward::elastic::swe::ElasticVelocitySource,
-        > = if let Some((mask, ux_sig, uy_sig, uz_sig)) = elastic_velocity_source {
+        > = if let Some((mask, ux_sig, uy_sig, uz_sig, mode_str)) = elastic_velocity_source {
             if mask.dim() != (nx, ny, nz) {
                 return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
                     "Elastic velocity-source mask shape {:?} must equal grid ({}, {}, {})",
@@ -4967,12 +4991,21 @@ impl Simulation {
             validate_signal(&ux_sig, "ux")?;
             validate_signal(&uy_sig, "uy")?;
             validate_signal(&uz_sig, "uz")?;
+            let kw_mode = match mode_str.as_str() {
+                "dirichlet" => {
+                    kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Dirichlet
+                }
+                _ => {
+                    kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Additive
+                }
+            };
             Some(
                 kwavers::solver::forward::elastic::swe::ElasticVelocitySource {
                     mask,
                     ux_signal: ux_sig,
                     uy_signal: uy_sig,
                     uz_signal: uz_sig,
+                    mode: kw_mode,
                 },
             )
         } else {
