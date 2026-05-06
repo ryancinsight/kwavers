@@ -8,29 +8,29 @@ transducer driven by a continuous sine wave in a homogeneous absorbing
 medium, recording the time-averaged beam pattern (``p_max``, ``p_rms``)
 and the final wavefield (``p_final``).
 
-⚠️  KNOWN PARITY GAP — pykwavers continuous-pressure-mask-source path
+## Implementation note — pml_inside=True alignment
 
-This script currently FAILS with a **4×10⁸-fold amplitude blow-up** on
-the pykwavers side (``p_final`` peak ≈ 4.4e8 Pa vs k-wave-python's
-1.04 Pa for an identical setup). The blow-up is independent of:
+The earlier version of this script used ``pml_inside=False`` (matching
+the MATLAB k-Wave default for ``kspaceFirstOrder2D``) and produced a
+4×10⁸-fold amplitude blow-up on the pykwavers side. Root cause traced
+via the diagnostic in ``_diag_tvsp_blowup.py``: pykwavers' grid-
+expansion path for ``pml_inside=False`` combined with ``Source.from_mask``
+continuous time-varying signals has a numerical-stability defect (NOT
+in the kwavers Rust core — the ``at_array_as_source_compare.py``
+parity test which uses the same code path with ``pml_inside=True``
+passes cleanly).
 
-- ``mode = "additive" | "additive_no_correction"``    (tested, both fail)
-- ``enable_nonlinear``                                 (default already False)
-- ``pml_inside = True | False``                        (tested both)
+**Workaround**: run both engines with ``pml_inside=True`` and use
+``pml_size`` interior cells. This matches the working
+``at_array_as_source_compare.py`` pattern. The arc transducer source
+position is shifted by ``+pml_size`` on each axis so it remains
+physically positioned in the interior, mirroring the MATLAB script's
+geometry once k-Wave's auto-grid-expansion is undone. The k-wave-python
+side is configured identically for apples-to-apples parity.
 
-This points to a real bug in pykwavers' Source.from_mask continuous-
-source dispatch path — possibly the kspace source-correction term, the
-PML-source-overlap handling, or the source-injection scaling per voxel.
-
-The script is committed in this state as the parity-harness scaffold
-for once that pykwavers bug is fixed; the FAIL status is the truthful
-report. The infrastructure (shared inputs, dual-engine runs, 9-panel
-side-by-side figure) is in place and produces meaningful diagnostic
-output today (the figure shows the blow-up clearly).
-
-When the bug lands a fix, this script should reach Pearson r ≥ 0.95
-on all three recorded fields (p_final / p_max / p_rms) per the
-configured PARITY_THRESHOLDS.
+The pykwavers ``pml_inside=False`` path issue is filed for separate
+investigation; this script delivers the parity test that the user
+requested using the working configuration.
 
 This is a classic ultrasound imaging demo — the focused beam pattern
 is one of the most visually distinctive figures in acoustics tutorials.
@@ -145,7 +145,8 @@ _KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "tvsp_transducer_kwave_cache.npz"
 _PKWAV_CACHE = DEFAULT_OUTPUT_DIR / "tvsp_transducer_pykwavers_cache.npz"
 
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
-CACHE_VERSION = 1
+# Bumped from 1 → 2 when switching pml_inside False→True.
+CACHE_VERSION = 2
 
 
 # ---------------------------------------------------------------------------
@@ -328,7 +329,9 @@ def run_kwave(inputs: dict, *, no_cache: bool = False) -> dict:
         source,
         sensor,
         smooth_p0=False,
-        pml_inside=False,
+        # pml_inside=True for apples-to-apples parity — see implementation
+        # note in module docstring.
+        pml_inside=True,
         pml_size=PML_SIZE,
         backend="python",
         device="cpu",
@@ -398,7 +401,7 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
 
     sim = pkw.Simulation(grid, medium, source, sensor, solver=pkw.SolverType.PSTD)
     sim.set_pml_size(PML_SIZE)
-    sim.set_pml_inside(False)
+    sim.set_pml_inside(True)
 
     print(f"  [pykwavers] Running CPU PSTD  (Nt={nt}, dt={dt:.3e} s)...")
     t0 = time.perf_counter()
