@@ -4488,21 +4488,40 @@ impl Simulation {
                 }
                 let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
                 let p = thickness;
-                let pnx = nx + 2 * p;
-                // CylindricalAS: ny is a trivial dimension fixed at 1; never pad it.
-                // Padding ny=1 → 1+2*p would violate the CylindricalAS ny=1 invariant.
-                let pny = if axisymmetric { ny } else { ny + 2 * p };
+                // Degenerate axes (extent 1) carry no wave propagation along that
+                // direction, so a PML there serves no physical purpose and would
+                // inflate field arrays by 1 + 2·p in a dimension that should
+                // remain trivial. For example a quasi-1D problem (ny = nz = 1)
+                // with p = 80 would otherwise allocate fields shaped
+                // (nx + 160, 161, 161) — a ~360 MB scalar buffer for a 1-D grid
+                // — which routinely OOM'd `examples/na_modelling_nonlinearity_compare.py`.
+                let pad_x = nx > 1;
+                let pad_y = !axisymmetric && ny > 1; // CylindricalAS already protects ny=1
+                let pad_z_two_sided = !axisymmetric && nz > 1;
+                let pad_z_one_sided = axisymmetric && nz > 1;
+
+                let pnx = if pad_x { nx + 2 * p } else { nx };
+                let pny = if pad_y { ny + 2 * p } else { ny };
                 // CylindricalAS uses one-sided outer radial PML only (k-Wave pml.py semantics):
                 //   pnz = nz + p  (physical axis at k=0, PML at k=nz..nz+p-1)
                 // This places the WS-expansion axis at the left boundary of k=0, matching
                 // k-Wave's axisymmetric convention. Two-sided would push the axis to k=p,
                 // corrupting the whole-sample symmetric expansion's axis boundary condition.
-                let pnz = if axisymmetric { nz + p } else { nz + 2 * p };
+                let pnz = if pad_z_two_sided {
+                    nz + 2 * p
+                } else if pad_z_one_sided {
+                    nz + p
+                } else {
+                    nz
+                };
                 let padded_grid = KwaversGrid::new(pnx, pny, pnz, grid.dx, grid.dy, grid.dz)?;
 
-                let py = if axisymmetric { 0 } else { p };
-                // Physical cells embed at z=0 for AS (axis at k=0); z=p for Cartesian.
-                let pz_embed = if axisymmetric { 0 } else { p };
+                let px_embed = if pad_x { p } else { 0 };
+                let py = if pad_y { p } else { 0 };
+                // Physical cells embed at z=0 for AS (axis at k=0); z=p for Cartesian
+                // when nz>1; z=0 for nz=1 (no padding).
+                let pz_embed = if pad_z_two_sided { p } else { 0 };
+                let p = px_embed; // alias retained for the embed slices below
 
                 let embed = |arr: ndarray::Array3<f64>| -> ndarray::Array3<f64> {
                     let mut out = ndarray::Array3::<f64>::zeros((pnx, pny, pnz));

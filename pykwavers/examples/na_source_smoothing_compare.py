@@ -332,7 +332,7 @@ def run_pykwavers(
     # Sensor at (SENSOR_IDX, 0, 0) in grid space.
     sensor_mask = np.zeros((NX, 1, 1), dtype=bool)
     sensor_mask[SENSOR_IDX, 0, 0] = True
-    sensor_obj = pkw.Sensor(mask=sensor_mask)
+    sensor_obj = pkw.Sensor.from_mask(sensor_mask)
 
     for case_name, _ in WINDOW_CASES:
         # Reuse k-wave's windowed p0 so both solvers share identical IVP.
@@ -341,7 +341,13 @@ def run_pykwavers(
 
         source_obj = pkw.Source.from_initial_pressure(p0_3d)
 
-        sim = pkw.Simulation(grid, medium_obj, source_obj, sensor_obj)
+        # k-wave's `kspaceFirstOrder` is the PSTD solver; use PSTD here so the
+        # quasi-1D (ny = nz = 1) configuration is supported. Default FDTD
+        # requires ny >= 2 because it uses staggered finite differences.
+        sim = pkw.Simulation(
+            grid, medium_obj, source_obj, sensor_obj,
+            solver=pkw.SolverType.PSTD,
+        )
 
         print(f"  [pykwavers] Running case '{case_name}' (Nt={NT}, dt={DT:.2e} s)...")
         t0 = time.perf_counter()
@@ -511,7 +517,8 @@ def write_report(
         f"OVERALL: {'PASS' if all_pass else 'FAIL'}",
     ]
 
-    save_text_report(lines, METRICS_PATH)
+    # save_text_report signature: (path, header, lines).
+    save_text_report(METRICS_PATH, lines[0] if lines else "", lines[1:])
     print(f"  Report saved: {METRICS_PATH}")
 
 

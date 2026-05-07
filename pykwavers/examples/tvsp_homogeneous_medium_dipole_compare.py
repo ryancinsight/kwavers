@@ -248,10 +248,10 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
     dt = inputs["dt"]
 
     grid   = pkw.Grid(NX, NY, 1, DX, DY, DX)
-    medium = pkw.Medium(
+    medium = pkw.Medium.homogeneous(
         sound_speed=C0,
         density=RHO0,
-        alpha_coeff=ALPHA_COEFF,
+        absorption=ALPHA_COEFF,
         alpha_power=ALPHA_POWER,
     )
 
@@ -285,8 +285,10 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 def plot_comparison(kw: dict, pkw_res: dict, metrics: dict, *,
                     status: str) -> None:
-    kw_p  = kw["pressure"]
-    py_p  = pkw_res["pressure"]
+    # Trace shape can be (Nt,) or (1, Nt) depending on which engine recorded —
+    # squeeze to a 1-D vector before matplotlib's strict shape check.
+    kw_p  = np.asarray(kw["pressure"]).squeeze()
+    py_p  = np.asarray(pkw_res["pressure"]).squeeze()
     nt    = kw["nt"]
     dt    = kw["dt"]
     t_us  = np.arange(nt) * dt * 1e6
