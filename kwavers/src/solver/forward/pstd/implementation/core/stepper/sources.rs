@@ -178,7 +178,20 @@ impl PSTDSolver {
         Ok(())
     }
 
-    /// Apply dynamic velocity sources
+    /// Apply dynamic velocity sources registered via the `Arc<dyn Source>`
+    /// API (e.g. elastic mode-isolation tests).
+    ///
+    /// **Note on scaling.** The k-Wave additive scaling
+    /// `2·c₀·Δt/Δα` for velocity sources is applied in the parallel
+    /// [`SourceHandler::inject_force_source`] path (used by
+    /// `Source.from_velocity_mask` / k-Wave-style `u_mask + u_signal`).
+    /// The dynamic-source path here is reserved for the elastic
+    /// mode-isolation API where the user-supplied amplitude IS the velocity
+    /// to be injected (matching the `DIR-DIR` peak-ratio = 0.99 fixture in
+    /// the elastic 2×2 parity study); applying the scaling here would
+    /// regress that contract. If a future caller needs k-Wave-style scaling
+    /// on the dynamic-source path, bridge it via the `SourceHandler` API
+    /// instead.
     pub(crate) fn apply_dynamic_velocity_sources(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
         for (source, mask) in &self.dynamic_sources {

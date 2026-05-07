@@ -198,6 +198,13 @@ impl SourceHandler {
                 let mode = self.source.u_mode;
                 let is_scalar_signal = signal.shape()[1] == 1 && self.u_indices.len() > 1;
                 let has_kappa = !self.u_kappa.is_empty();
+                // Per-source-point per-axis k-Wave additive scale `2·c₀·Δt/Δα`.
+                // Vectors are populated by `prepare_velocity_source_scaling`;
+                // when empty (e.g. unit tests that bypass solver setup) we
+                // fall back to scale = 1 so existing test fixtures continue
+                // to behave as before. Dirichlet always uses scale = 1
+                // because the signal IS the velocity value.
+                let has_scale = !self.u_scale_x.is_empty();
 
                 for (idx, &(i, j, k, weight)) in self.u_indices.iter().enumerate() {
                     let sig_idx = if is_scalar_signal { 0 } else { idx };
@@ -206,9 +213,18 @@ impl SourceHandler {
                     } else {
                         1.0
                     };
-                    let val_x = kappa * weight * signal[[0, sig_idx, time_index]];
-                    let val_y = kappa * weight * signal[[1, sig_idx, time_index]];
-                    let val_z = kappa * weight * signal[[2, sig_idx, time_index]];
+                    let (sx, sy, sz) = if has_scale {
+                        (
+                            self.u_scale_x[idx],
+                            self.u_scale_y[idx],
+                            self.u_scale_z[idx],
+                        )
+                    } else {
+                        (1.0, 1.0, 1.0)
+                    };
+                    let val_x = sx * kappa * weight * signal[[0, sig_idx, time_index]];
+                    let val_y = sy * kappa * weight * signal[[1, sig_idx, time_index]];
+                    let val_z = sz * kappa * weight * signal[[2, sig_idx, time_index]];
 
                     match mode {
                         SourceMode::Additive | SourceMode::AdditiveNoCorrection => {

@@ -50,6 +50,16 @@ pub struct SourceHandler {
     ///
     /// Empty when no correction has been set (no k-space filtering applied).
     pub(super) u_kappa: Vec<f64>,
+    /// Per-source-point additive velocity source scale factor `2·c₀·Δt/Δα`
+    /// for axis α ∈ {x, y, z} (Cox et al. IEEE IUS 2018; k-wave-python
+    /// `kspace_solver.py:533`). Applied multiplicatively in
+    /// [`Self::inject_force_source`] for `Additive` and
+    /// `AdditiveNoCorrection` modes; ignored for `Dirichlet`. Empty when
+    /// no velocity source is registered or [`Self::prepare_velocity_source_scaling`]
+    /// has not yet been called.
+    pub(super) u_scale_x: Vec<f64>,
+    pub(super) u_scale_y: Vec<f64>,
+    pub(super) u_scale_z: Vec<f64>,
 }
 
 impl SourceHandler {
@@ -229,6 +239,9 @@ impl SourceHandler {
             p_scale_p: Vec::new(),
             source_propagation_dim,
             u_kappa: Vec::new(),
+            u_scale_x: Vec::new(),
+            u_scale_y: Vec::new(),
+            u_scale_z: Vec::new(),
         })
     }
 

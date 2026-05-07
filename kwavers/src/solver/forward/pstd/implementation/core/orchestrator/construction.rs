@@ -210,6 +210,11 @@ impl PSTDSolver {
             &solver.materials.c0,
             solver.config.dt,
         );
+        solver.source_handler.prepare_velocity_source_scaling(
+            &grid,
+            &solver.materials.c0,
+            solver.config.dt,
+        );
 
         solver.source_handler.apply_initial_conditions(
             &mut solver.fields.p,

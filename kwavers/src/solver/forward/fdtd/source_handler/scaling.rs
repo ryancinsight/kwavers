@@ -33,6 +33,70 @@ impl SourceHandler {
             .collect();
     }
 
+    /// Precompute k-Wave-compatible per-source-point velocity-source scale
+    /// factors `2·c₀·Δt/Δα` for each spatial axis α.
+    ///
+    /// **Theorem (Cox, Beard, Treeby — IEEE IUS 2018, k-Wave additive source
+    /// scaling).** For an additive velocity source on a leapfrog grid the
+    /// per-step injection that reproduces the canonical analytical mass-flow
+    /// boundary condition is
+    ///
+    /// ```text
+    ///   u_α(x_s, t_n) ← u_α(x_s, t_n) + (2·c₀(x_s)·Δt/Δα) · κ(x_s) · u_α^src(t_n)
+    /// ```
+    ///
+    /// where `c₀(x_s)` is the per-source-point sound speed, `Δα` is the grid
+    /// spacing along the injection axis, and `κ(x_s)` is the optional source
+    /// kappa correction stored in [`Self::u_kappa`]. This matches
+    /// `kwave/solvers/kspace_solver.py:533`
+    /// (`scale = 2 * c0_src * self.dt / di`) and the C++ k-Wave binary's
+    /// `velocity_source_input` term.
+    ///
+    /// `Dirichlet` mode is normalised differently (replacement, not addition),
+    /// so its scale is fixed at 1.0 and the user-supplied signal is treated
+    /// as the velocity value itself.
+    ///
+    /// On a degenerate axis (`grid.dα == 0` is impossible here, but
+    /// `grid.nα == 1` means there is no propagation along α), the per-axis
+    /// scale is still computed and applied; the velocity field along that
+    /// axis is simply zero everywhere so the multiplication is a no-op.
+    pub fn prepare_velocity_source_scaling(
+        &mut self,
+        grid: &Grid,
+        c0: &Array3<f64>,
+        dt: f64,
+    ) {
+        if self.u_indices.is_empty() {
+            self.u_scale_x.clear();
+            self.u_scale_y.clear();
+            self.u_scale_z.clear();
+            return;
+        }
+
+        let dx = grid.dx;
+        let dy = grid.dy;
+        let dz = grid.dz;
+        let n = self.u_indices.len();
+        self.u_scale_x = Vec::with_capacity(n);
+        self.u_scale_y = Vec::with_capacity(n);
+        self.u_scale_z = Vec::with_capacity(n);
+
+        for &(i, j, k, _weight) in &self.u_indices {
+            let c0_val = c0[[i, j, k]];
+            let (sx, sy, sz) = match self.source.u_mode {
+                SourceMode::Dirichlet => (1.0_f64, 1.0_f64, 1.0_f64),
+                SourceMode::Additive | SourceMode::AdditiveNoCorrection => (
+                    2.0 * c0_val * dt / dx,
+                    2.0 * c0_val * dt / dy,
+                    2.0 * c0_val * dt / dz,
+                ),
+            };
+            self.u_scale_x.push(sx);
+            self.u_scale_y.push(sy);
+            self.u_scale_z.push(sz);
+        }
+    }
+
     /// Precompute k-Wave compatible pressure source scaling for mass (rho) and pressure updates.
     ///
     /// This mirrors `scale_source_terms` in k-Wave for additive/dirichlet modes on a uniform grid.

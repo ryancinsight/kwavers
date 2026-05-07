@@ -75,9 +75,10 @@ impl GenericFdtdSolver<Array3<f64>> {
                 *rho_c_sq = rho * c * c;
             });
 
-        // Precompute k-Wave compatible pressure source scaling
+        // Precompute k-Wave compatible pressure and velocity source scaling
         let mut source_handler = source_handler;
         source_handler.prepare_pressure_source_scaling(grid, &materials.c0, config.dt);
+        source_handler.prepare_velocity_source_scaling(grid, &materials.c0, config.dt);
 
         // Initialize k-space correction operators when requested.
         // c_ref = mean sound speed over all grid cells (same convention as PSTD).
