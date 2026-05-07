@@ -311,12 +311,28 @@ def run_kwave(*, no_cache: bool = False) -> dict:
 
     # result["p_final"]: shape (NX*NY,), y-fastest (NumPy C-order) layout.
     # flat[i*NY + j] = pressure at (x=i, y=j).  Reshape C-order → p[i, j].
+    #
+    # Recent k-wave-python versions return the INNER non-PML region when
+    # `pml_inside=True` and `sensor.mask` covers the full grid. For NX=NY=128
+    # with PML_SIZE=20 inside, the inner region is (128 − 2·20)² = 88² = 7744
+    # cells. Detect the inner-only shape and zero-pad back to the full
+    # (NX, NY) grid so the comparison is well-defined and pykwavers' full-grid
+    # output can be compared at the original cell coordinates. Cells inside
+    # the PML are set to 0 in both engines (PML output is unreliable; the
+    # masked-off region carries no physical signal).
     pf_flat = np.asarray(result["p_final"], dtype=np.float64).ravel()
-    if pf_flat.size != NX * NY:
+    inner = NX - 2 * PML_SIZE
+    if pf_flat.size == NX * NY:
+        p_final_2d = pf_flat.reshape(NX, NY)
+    elif pf_flat.size == inner * inner:
+        p_inner = pf_flat.reshape(inner, inner)
+        p_final_2d = np.zeros((NX, NY), dtype=np.float64)
+        p_final_2d[PML_SIZE:NX - PML_SIZE, PML_SIZE:NY - PML_SIZE] = p_inner
+    else:
         raise ValueError(
-            f"k-wave p_final has unexpected size {pf_flat.size}, expected {NX * NY}"
+            f"k-wave p_final has unexpected size {pf_flat.size}, "
+            f"expected {NX * NY} (full grid) or {inner * inner} (inner-only)"
         )
-    p_final_2d = pf_flat.reshape(NX, NY)   # p[i, j] = pressure at (x=i, y=j)
 
     print(
         f"  [k-wave] p_final shape: {p_final_2d.shape}  "
@@ -466,6 +482,13 @@ def run_pykwavers(
 
     p_final_flat = sd[:, -1]
     p_final_2d = p_final_flat.reshape(NX, NY, order="F")  # p[i, j] = pressure at (x=i, y=j)
+    # Zero out the PML strip so the comparison against k-wave's
+    # inner-only-then-zero-padded output is meaningful only on the inner
+    # region carrying the physical signal.
+    p_final_2d[:PML_SIZE, :] = 0.0
+    p_final_2d[-PML_SIZE:, :] = 0.0
+    p_final_2d[:, :PML_SIZE] = 0.0
+    p_final_2d[:, -PML_SIZE:] = 0.0
 
     print(
         f"  [pykwavers] p_final shape: {p_final_2d.shape}  "

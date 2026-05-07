@@ -8,11 +8,12 @@ import os, subprocess, sys, time
 
 EXAMPLES = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS = [
-    "na_filtering_part_1_compare.py",
-    "na_filtering_part_2_compare.py",
-    "na_filtering_part_3_compare.py",
-    "sd_directional_array_elements_compare.py",
-    "tvsp_doppler_effect_compare.py",
+    "at_focused_annular_array_3D_full_compare.py",
+    "at_focused_annular_array_3D_weights_compare.py",
+    "histotripsy_cavitation_compare.py",
+    "tvsp_3D_simulation_compare.py",
+    "tvsp_snells_law_compare.py",
+    "tvsp_steering_linear_array_compare.py",
 ]
 
 for s in SCRIPTS:

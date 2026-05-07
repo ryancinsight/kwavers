@@ -278,7 +278,7 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
     dt = inputs["dt"]
 
     grid   = pkw.Grid(NX, NY, NZ, DX, DY, DZ)
-    medium = pkw.Medium(sound_speed=C0)
+    medium = pkw.Medium.homogeneous(sound_speed=C0, density=1000.0)
 
     sensor_mask_3d = inputs["sensor_mask_3d"].astype(bool)
     sensor = pkw.Sensor.from_mask(sensor_mask_3d)

@@ -280,12 +280,24 @@ def run_kwave(*, no_cache: bool = False) -> dict:
 
     # result["p_final"]: shape (NX*NY,), layout y-fastest (NumPy C-order boolean index):
     # flat[i*NY + j] = pressure at (x=i, y=j)  →  reshape with C-order gives p[i, j].
+    #
+    # Recent k-wave-python returns the INNER non-PML region when pml_inside=True.
+    # For NX=NY=128 with PML_SIZE=20 the inner region is 88² = 7744 cells.
+    # Zero-pad back to (NX, NY) so the comparison is well-defined; cells inside
+    # the PML are set to 0 in both engines (no physical signal).
     pf_flat = np.asarray(result["p_final"], dtype=np.float64).ravel()
-    if pf_flat.size != NX * NY:
+    inner = NX - 2 * PML_SIZE
+    if pf_flat.size == NX * NY:
+        p_final_2d = pf_flat.reshape(NX, NY)
+    elif pf_flat.size == inner * inner:
+        p_inner = pf_flat.reshape(inner, inner)
+        p_final_2d = np.zeros((NX, NY), dtype=np.float64)
+        p_final_2d[PML_SIZE:NX - PML_SIZE, PML_SIZE:NY - PML_SIZE] = p_inner
+    else:
         raise ValueError(
-            f"k-wave p_final has unexpected size {pf_flat.size}, expected {NX*NY}"
+            f"k-wave p_final has unexpected size {pf_flat.size}, "
+            f"expected {NX * NY} (full grid) or {inner * inner} (inner-only)"
         )
-    p_final_2d = pf_flat.reshape(NX, NY)   # p[i, j] = pressure at (x=i, y=j)
 
     print(f"  [k-wave] p_final shape: {p_final_2d.shape}  "
           f"peak: {float(np.abs(p_final_2d).max()):.4e} Pa")
@@ -394,6 +406,12 @@ def run_pykwavers(
     # Extract final time step as p_final.
     p_final_flat = sd[:, -1]
     p_final_2d = p_final_flat.reshape(NX, NY, order="F")  # p[i, j] = pressure at (x=i, y=j)
+    # Match k-wave's PML-zeroed convention so the comparison is over the
+    # physical inner region only.
+    p_final_2d[:PML_SIZE, :] = 0.0
+    p_final_2d[-PML_SIZE:, :] = 0.0
+    p_final_2d[:, :PML_SIZE] = 0.0
+    p_final_2d[:, -PML_SIZE:] = 0.0
 
     print(f"  [pykwavers] p_final shape: {p_final_2d.shape}  "
           f"peak: {float(np.abs(p_final_2d).max()):.4e} Pa")
