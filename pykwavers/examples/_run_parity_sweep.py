@@ -37,10 +37,10 @@ SCRIPTS = [
     "tvsp_snells_law_compare.py",
 ]
 
-re_status = re.compile(r"^\s*Status\s*:\s*(\S+)", re.M)
-re_pearson = re.compile(r"^\s*pearson_r\s*:\s*([-\d.eE+nan]+)", re.M)
-re_psnr = re.compile(r"^\s*psnr_db\s*:\s*([-\d.eE+nan]+)", re.M)
-re_overall = re.compile(r"^\s*Overall.*:\s*(\S+)", re.M)
+re_status = re.compile(r"^\s*[Ss]tatus\s*:\s*(\S+)", re.M)
+re_pearson = re.compile(r"^\s*pearson_r(?:_min)?\s*:\s*([-\d.eE+nan]+)", re.M)
+re_psnr = re.compile(r"^\s*psnr_db(?:_min)?\s*:\s*([-\d.eE+nan]+)", re.M)
+re_overall = re.compile(r"^\s*(?:Overall.*|RESULT)\s*:\s*(\S+)", re.M)
 
 
 def run_one(script: str) -> dict:
