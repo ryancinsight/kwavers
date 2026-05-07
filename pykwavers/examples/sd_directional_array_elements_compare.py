@@ -313,7 +313,7 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
     n_active = inputs["n_active"]
 
     grid   = pkw.Grid(NX, NY, 1, DX, DY, DX)
-    medium = pkw.Medium(sound_speed=C0)
+    medium = pkw.Medium.homogeneous(sound_speed=C0, density=1000.0)
 
     src_mask_3d = inputs["src_mask_2d"][:, :, None]
     filtered    = inputs["filtered_sig"]    # 1D — broadcast to all NY source pts

@@ -213,7 +213,7 @@ def run_pykwavers(filtered_signal: np.ndarray, *, no_cache: bool = False) -> dic
             return cached
 
     grid   = pkw.Grid(NX, 1, 1, DX, DX, DX)
-    medium = pkw.Medium(sound_speed=C0, density=1000.0)
+    medium = pkw.Medium.homogeneous(sound_speed=C0, density=1000.0)
 
     src_mask = np.zeros((NX, 1, 1), dtype=np.float64)
     src_mask[SOURCE_IDX, 0, 0] = 1.0

@@ -282,9 +282,10 @@ def run_pykwavers(source_p: np.ndarray, p_mask_2d: np.ndarray,
             return cached
 
     grid   = pkw.Grid(NX, NY, 1, DX, DY, DX)
-    medium = pkw.Medium(
+    medium = pkw.Medium.homogeneous(
         sound_speed=C0,
-        alpha_coeff=ALPHA_COEFF,
+        density=1000.0,
+        absorption=ALPHA_COEFF,
         alpha_power=ALPHA_POWER,
     )
 

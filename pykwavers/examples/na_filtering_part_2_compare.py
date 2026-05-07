@@ -227,7 +227,7 @@ def run_pykwavers(*, no_cache: bool = False) -> dict:
     binary_mask, signal_2d = _build_smoothed_source()
 
     grid   = pkw.Grid(NX, 1, 1, DX, DX, DX)
-    medium = pkw.Medium(sound_speed=C0, density=1000.0)
+    medium = pkw.Medium.homogeneous(sound_speed=C0, density=1000.0)
 
     # Expand binary mask to (NX, 1, 1); signal_2d is (num_active, NT).
     src_mask_3d = binary_mask.reshape(NX, 1, 1).astype(np.float64)
