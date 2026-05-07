@@ -107,6 +107,7 @@ HEIGHT = 1.0              # peak pressure [Pa]
 SENSOR_X_MM      = [-10.0, 10.0]          # sensor x coordinates [mm]
 SENSOR_INDICES   = [56, 456]              # 0-based grid indices
 N_SENSORS        = 2
+PML_SIZE         = 20                     # k-Wave default PML thickness [grid points]
 
 # Simulation duration
 T_END = 2.5 * (NX * DX) / C_FAST         # = 32e-6 s = 32 μs
@@ -332,6 +333,7 @@ def run_pykwavers(inputs: dict, *, no_cache: bool = False) -> dict:
     sensor = pkw.Sensor.from_mask(sensor_mask)
 
     sim = pkw.Simulation(grid, medium, source, sensor, solver=pkw.SolverType.PSTD)
+    sim.set_pml_size(PML_SIZE)   # k-Wave default 20; explicit to avoid grid-dependent defaults
     sim.set_pml_inside(True)
 
     print(f"  [pykwavers] Running quasi-1D PSTD  (Nt={nt}, dt={dt:.3e} s)...")

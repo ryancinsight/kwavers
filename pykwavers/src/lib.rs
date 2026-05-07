@@ -4087,16 +4087,25 @@ impl Simulation {
     ///
     /// # Convention
     ///
-    /// `run_orchestrated` records `p(0)` once before the time loop, then
-    /// `step_forward` records `p(i·dt)` at the END of each of `Nt` steps,
-    /// producing a buffer with `Nt + 1` columns: `[p(0), p(dt), …, p(Nt·dt)]`.
-    /// k-wave-python's sensor data has `Nt` columns indexed by physical time
-    /// `[0, dt, …, (Nt − 1)·dt]` (verified empirically against
-    /// `kspaceFirstOrder1D` in `na_modelling_absorption_compare.py`: shifting
-    /// pykwavers' output by +1 sample produces perfect correlation r = 1.000
-    /// with k-wave-python). To match k-Wave we therefore **drop the last
-    /// sample** (`p(Nt·dt)` — the post-final-step value, redundant outside
-    /// the recording window) and keep `[p(0), p(dt), …, p((Nt − 1)·dt)]`.
+    /// Two cases depending on source type:
+    ///
+    /// **IVP (p0) sources** — `run_orchestrated` records `p(0) = p0` once
+    /// before the time loop, then `step_forward` records `p(i·dt)` after each
+    /// of `Nt` steps, producing `Nt + 1` columns: `[p0, p(dt), …, p(Nt·dt)]`.
+    /// k-Wave records `p0` at column 0 (it overrides the first step with p0),
+    /// so the correct output is `[p0, p(dt), …, p((Nt−1)·dt)]` — the last
+    /// column is dropped.  The buffer has `Nt + 1` columns; the slice
+    /// `[skip..Nt]` removes the redundant final sample.
+    ///
+    /// **Time-varying sources** — `run_orchestrated` does NOT record before
+    /// the loop (no IVP), so only the `Nt` post-step recordings fill the
+    /// buffer: `[p(dt), p(2dt), …, p(Nt·dt)]`.  k-Wave records the same
+    /// range, so `[skip..]` with `Nt` columns already gives correct alignment.
+    /// The `Nt + 1` capacity buffer has one trailing zero column that never
+    /// gets filled; `ncols() > time_steps` is still true, so the same
+    /// `[skip..time_steps]` slice (which stops before that column) is applied.
+    ///
+    /// Both cases use the same code path: `ncols() > time_steps → [skip..Nt]`.
     ///
     /// `record_start_index` is the 1-based k-Wave start index. A value of `1`
     /// (default) emits all `Nt` time samples; a value of `k` emits the last
@@ -4311,7 +4320,9 @@ impl Simulation {
         }
         let min_dim = if min_dim == usize::MAX { 1 } else { min_dim };
         let max_allowed = (min_dim.saturating_sub(2)) / 2;
-        let default_thickness = (min_dim / 6).max(2);
+        // Default matches k-Wave's fixed 20-cell PML (kspaceFirstOrder default).
+        // min_dim/6 over-sized for large 1D grids (512/6=85), placing sensors inside the PML.
+        let default_thickness = 20_usize.min(max_allowed).max(2);
         (default_thickness, max_allowed)
     }
 

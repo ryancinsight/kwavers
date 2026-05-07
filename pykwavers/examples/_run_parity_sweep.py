@@ -34,6 +34,7 @@ SCRIPTS = [
     "tvsp_homogeneous_medium_monopole_compare.py",
     "tvsp_homogeneous_medium_dipole_compare.py",
     "tvsp_transducer_field_patterns_compare.py",
+    "tvsp_snells_law_compare.py",
 ]
 
 re_status = re.compile(r"^\s*Status\s*:\s*(\S+)", re.M)
