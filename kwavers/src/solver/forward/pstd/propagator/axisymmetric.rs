@@ -172,15 +172,15 @@ impl AsContext {
     /// Algorithm:
     ///  1. WS-expand p into p_exp.
     ///  2. ak = kappa_2d * FFT2(p_exp).
-    ///  3. g = ddx_k_shift_pos[row]*ak; IFFT g in-place;
-    ///     dpdx = Re(g)[..,0..nr] / (nx*nr_exp).
-    ///  4. g = ddy_k_shift_pos[col]*ak; IFFT g in-place;
-    ///     dpdr = Re(g)[..,0..nr] / (nx*nr_exp).
+    ///  3. g = ddx_k_shift_pos[row]*ak; IFFT g in-place; dpdx = Re(g)[..,0..nr].
+    ///  4. g = ddy_k_shift_pos[col]*ak; IFFT g in-place; dpdr = Re(g)[..,0..nr].
+    ///
+    /// No extra 1/N factor: apollo-fft inverse_complex_inplace uses FFTW-compatible
+    /// 1/N normalisation, so IFFT(FFT(x)) = x without additional scaling.
     pub fn compute_vel_grads(&mut self, p: ArrayView2<'_, f64>) {
         let nr = self.nr;
         let nx = self.nx;
         let nr_exp = self.nr_exp;
-        let norm = 1.0 / (nx * nr_exp) as f64;
         let plan = Arc::clone(&self.fft_plan);
 
         self.p_2d.assign(&p);
@@ -200,7 +200,7 @@ impl AsContext {
         plan.inverse_complex_inplace(&mut self.g);
         Zip::from(&mut self.dpdx)
             .and(self.g.slice(s![.., 0..nr]))
-            .for_each(|o, v| *o = v.re * norm);
+            .for_each(|o, v| *o = v.re);
 
         // grad_r
         for k in 0..nr_exp {
@@ -212,7 +212,7 @@ impl AsContext {
         plan.inverse_complex_inplace(&mut self.g);
         Zip::from(&mut self.dpdr)
             .and(self.g.slice(s![.., 0..nr]))
-            .for_each(|o, v| *o = v.re * norm);
+            .for_each(|o, v| *o = v.re);
     }
 
     /// Compute divergences duxdx and duzdr from ux and uz (shape (nx, nr)).
@@ -220,17 +220,17 @@ impl AsContext {
     /// No heap allocation.
     ///
     /// Algorithm:
-    ///  1. WS-expand ux;
-    ///     duxdx = Re(IFFT2(kappa*ddx_shift_neg*FFT2(ux_exp)))[..,0..nr]/N.
+    ///  1. WS-expand ux; duxdx = Re(IFFT2(kappa*ddx_shift_neg*FFT2(ux_exp)))[..,0..nr].
     ///  2. HAHS-expand uz; HSHA-expand uz/r.
     ///  3. ak = FFT2(uz_exp); g = FFT2(uz_on_r_exp).
-    ///  4. ak = (ddy_k*ak + g)*y_shift_neg*kappa; IFFT ak;
-    ///     duzdr = Re(ak)[..,0..nr]/N.
+    ///  4. ak = (ddy_k*ak + g)*y_shift_neg*kappa; IFFT ak; duzdr = Re(ak)[..,0..nr].
+    ///
+    /// No extra 1/N factor: apollo-fft inverse_complex_inplace uses FFTW-compatible
+    /// 1/N normalisation, so IFFT(FFT(x)) = x without additional scaling.
     pub fn compute_density_divs(&mut self, ux: ArrayView2<'_, f64>, uz: ArrayView2<'_, f64>) {
         let nr = self.nr;
         let nx = self.nx;
         let nr_exp = self.nr_exp;
-        let norm = 1.0 / (nx * nr_exp) as f64;
         let plan = Arc::clone(&self.fft_plan);
 
         self.ux_2d.assign(&ux);
@@ -256,7 +256,7 @@ impl AsContext {
         plan.inverse_complex_inplace(&mut self.g);
         Zip::from(&mut self.duxdx)
             .and(self.g.slice(s![.., 0..nr]))
-            .for_each(|o, v| *o = v.re * norm);
+            .for_each(|o, v| *o = v.re);
 
         // div_r_cylindrical
         Self::hahs_expand(&self.uz_2d, &mut self.uz_exp, nr);
@@ -276,7 +276,7 @@ impl AsContext {
         plan.inverse_complex_inplace(&mut self.ak);
         Zip::from(&mut self.duzdr)
             .and(self.ak.slice(s![.., 0..nr]))
-            .for_each(|o, v| *o = v.re * norm);
+            .for_each(|o, v| *o = v.re);
     }
 
     // ---- Domain expansion -- associated functions ------------------------
