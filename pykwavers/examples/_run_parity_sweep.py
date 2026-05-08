@@ -35,6 +35,9 @@ SCRIPTS = [
     "tvsp_homogeneous_medium_dipole_compare.py",
     "tvsp_transducer_field_patterns_compare.py",
     "tvsp_snells_law_compare.py",
+    "ewp_plane_wave_absorption_compare.py",
+    "ewp_3D_simulation_compare.py",
+    "ewp_layered_medium_compare.py",
 ]
 
 re_status = re.compile(r"^\s*[Ss]tatus\s*:\s*(\S+)", re.M)
