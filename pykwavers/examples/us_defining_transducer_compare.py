@@ -225,10 +225,8 @@ def build_pykwavers_inputs(dt: float, input_signal: np.ndarray, n_steps: int):
 
     ux = np.zeros((len(active_indices) * element_length, n_steps), dtype=np.float64)
 
-    # k-Wave scales additive velocity sources (including transducer) by 2*c0*dt/dx
-    # (scale_source_terms_func.py: scale_transducer_source).  Apply the same factor so
-    # pykwavers injects the same velocity amplitude as k-Wave.
-    transducer_scale = 2.0 * SOUND_SPEED * dt / DX
+    # kwavers applies 2*c0*dt/dx internally for additive velocity sources
+    # (commit caabc640). Do NOT apply the factor here.
 
     point_index = 0
     for global_el in active_indices:
@@ -241,7 +239,7 @@ def build_pykwavers_inputs(dt: float, input_signal: np.ndarray, n_steps: int):
             # Larger delay = reads further ahead = fires original signal EARLIER.
             n_inj = min(padded_signal.size - delay, n_steps)
             if n_inj > 0:
-                ux[point_index, :n_inj] = padded_signal[delay : delay + n_inj] * transducer_scale
+                ux[point_index, :n_inj] = padded_signal[delay : delay + n_inj]
             point_index += 1
 
     # Use additive mode to match k-Wave's NotATransducer source injection semantics.
@@ -369,17 +367,24 @@ def run_comparison(use_gpu: bool = False) -> dict[str, dict[str, np.ndarray | fl
     kwave = run_kwave_reference(use_gpu=use_gpu)
     pykwavers = run_pykwavers(kwave["dt"], kwave["input_signal"], int(kwave["time_steps"]))
     return {"kwave": kwave, "pykwavers": pykwavers}
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description="Compare pykwavers with k-wave-python for us_defining_transducer.")
     parser.add_argument("--gpu", action="store_true", help="Run k-wave-python with GPU execution if available.")
+    parser.add_argument("--allow-failure", action="store_true")
     args = parser.parse_args()
 
     comparison = run_comparison(use_gpu=args.gpu)
     kwave = comparison["kwave"]
     pykwavers = comparison["pykwavers"]
     plot_comparison(kwave, pykwavers, kwave["dt"])
-    save_text_report(METRICS_PATH, "us_defining_transducer parity metrics", build_report_lines(kwave, pykwavers))
+    lines = build_report_lines(kwave, pykwavers)
+    save_text_report(METRICS_PATH, "us_defining_transducer parity metrics", lines)
+    for line in lines:
+        print(line)
     print(f"Saved: {FIGURE_PATH}")
     print(f"Saved: {METRICS_PATH}")
+    passed = any("parity_status: PASS" in str(l) for l in lines)
+    return 0 if passed or args.allow_failure else 1
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

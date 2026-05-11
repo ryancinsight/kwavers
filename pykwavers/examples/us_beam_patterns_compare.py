@@ -284,9 +284,9 @@ def build_pkw_source(
 
     k-Wave additive velocity source scaling
     ----------------------------------------
-    k-Wave internally scales additive velocity sources by 2·c₀·dt/dx before
-    injection (see scale_source_terms_func.py: scale_transducer_source).
-    We apply the same factor so both legs inject identical acoustic energy.
+    kwavers applies 2·c₀·dt/d_axis internally for additive velocity sources
+    (commit caabc640). Do NOT apply the factor here; doing so would double-count
+    it and produce a ~0.6× amplitude deficit relative to k-Wave.
 
     Source mask layout (full grid, 128×64×64)
     -----------------------------------------
@@ -326,10 +326,9 @@ def build_pkw_source(
     az_offset     = int(-az_delays.min())               # shift so min = 0
     az_delays_abs = az_delays + az_offset               # non-negative
 
-    # k-wave velocity source scale factor
-    transducer_scale = 2.0 * C0 * dt / DX
-
     # Build per-source-point signals
+    # Rectangular apodization: weight = 1.0 for all elements.
+    # kwavers applies 2*c0*dt/dx internally; no manual scaling here.
     input_1d  = np.asarray(input_signal).ravel()
     L         = len(input_1d)
     max_delay = int(az_delays_abs.max())
@@ -340,8 +339,7 @@ def build_pkw_source(
     p = 0
     for i in range(N_ELEMENTS):
         az_d = int(az_delays_abs[i])
-        # Rectangular apodization → weight 1.0 for all elements
-        w = transducer_scale
+        w = 1.0
         for _yw in range(ELEM_WIDTH):
             for _j in range(ELEM_LENGTH):
                 end     = min(az_d + L, Nt)

@@ -1,0 +1,22 @@
+{
+  "bubble_internal_peak_temperature_k": 3497291.026721061,
+  "classical_p05_volume_mm3": 0.06000000000000013,
+  "classical_peak_negative_pressure_mpa": 29.0,
+  "classical_peak_probability": 0.797671619036357,
+  "figures": [
+    "D:\\kwavers\\pykwavers\\examples\\output\\histotripsy_intrinsic_threshold_volume.png",
+    "D:\\kwavers\\pykwavers\\examples\\output\\histotripsy_ms_pulse_cavitation_volume.png",
+    "D:\\kwavers\\pykwavers\\examples\\output\\histotripsy_bubble_internal_temperature_volume.png",
+    "D:\\kwavers\\pykwavers\\examples\\output\\histotripsy_mechanism_compare.png",
+    "D:\\kwavers\\pykwavers\\examples\\output\\histotripsy_ms_pressure_response.png"
+  ],
+  "focal_halfmax_axial_length_mm": 5.399999999999995,
+  "focal_halfmax_axial_to_lateral_ratio": 6.749999999999983,
+  "focal_halfmax_lateral_diameter_mm": 0.8000000000000013,
+  "focus_z_mm": 34.7,
+  "ms_activity_ge_0_5_volume_mm3": 217.36800000000045,
+  "ms_activity_peak": 1.0,
+  "ms_max_radius_ratio": 268.76101228323074,
+  "ms_onset_radius_ratio_volume_mm3": 243.46800000000053,
+  "ms_peak_negative_pressure_mpa": 5.0
+}

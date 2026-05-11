@@ -317,6 +317,7 @@ def main() -> int:
     for name, ok in checks.items():
         print(f"    {'[OK]' if ok else '[X]'} {name}")
     print(f"  => {status}")
+    print(f"parity_status: {status}")
 
     plot_comparison(kw, pkw_res)
 

@@ -256,6 +256,7 @@ def main() -> int:
     result = run_comparison()
     metrics = result["metrics"]
     print(f"checkpoint_status: {result['status']}")
+    print(f"parity_status: {result['status']}")
     print(f"reference_shape: {metrics['reference_shape']}")
     print(f"resumed_shape:   {metrics['resumed_shape']}")
     print(f"max_absolute_error: {metrics['max_absolute_error']:.6e}")

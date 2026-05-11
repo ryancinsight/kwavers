@@ -182,9 +182,8 @@ def build_phased_velocity_signals(kgrid, not_transducer, input_signal, active_co
     delay_mask = np.asarray(not_transducer.delay_mask(), dtype=int)
     transmit_apod_mask = np.asarray(not_transducer.transmit_apodization_mask, dtype=np.float64)
     transducer_signal = np.asarray(not_transducer.input_signal, dtype=np.float64).reshape(-1)
-    # Factor of 2 matches k-Wave MATLAB NotATransducer drive convention for staggered-grid PSTD:
-    # transducer_scale = 2 * c0 * dt / dx (confirmed by face-trace debug probe, 2026-04-20).
-    transducer_scale = 2.0 * float(not_transducer.sound_speed) * float(kgrid.dt) / float(kgrid.dx)
+    # kwavers applies 2*c0*dt/dx internally for additive velocity sources
+    # (commit caabc640). Do NOT apply the factor here.
 
     nt = int(kgrid.Nt)
     ux_signals = np.zeros((active_coords.shape[0], nt), dtype=np.float64)
@@ -195,7 +194,7 @@ def build_phased_velocity_signals(kgrid, not_transducer, input_signal, active_co
         start = delay
         end = min(delay + nt, transducer_signal.size)
         if end > start:
-            ux_signals[point, : end - start] = transducer_signal[start:end] * weight * transducer_scale
+            ux_signals[point, : end - start] = transducer_signal[start:end] * weight
     return ux_signals
 
 
@@ -550,12 +549,9 @@ def run_debug_probe(kgrid, medium, transducer, not_transducer, input_signal, arg
     mask = build_phased_source_mask(active_coords)
     ux_signals = build_phased_velocity_signals(kgrid, not_transducer, input_signal, active_coords)
     expected_sensor_points = int(not_transducer.number_active_elements * transducer.element_width * transducer.element_length)
-    transducer_scale = 2.0 * float(not_transducer.sound_speed) * float(kgrid.dt) / float(kgrid.dx)
-
     print(
         f"[debug_probe] drive stats: n_voxels={ux_signals.shape[0]}, nt={ux_signals.shape[1]}, "
-        f"max_abs={np.max(np.abs(ux_signals)):.4g}, rms={np.sqrt(np.mean(ux_signals**2)):.4g}, "
-        f"transducer_scale=2·c·dt/dx={transducer_scale:.4g}"
+        f"max_abs={np.max(np.abs(ux_signals)):.4g}, rms={np.sqrt(np.mean(ux_signals**2)):.4g}"
     )
 
     if args.pykwavers_gpu:
@@ -658,7 +654,7 @@ def run_debug_probe(kgrid, medium, transducer, not_transducer, input_signal, arg
     print(f"[debug_probe] saved: {png_path}")
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description="Compare pykwavers with k-wave-python for us_bmode_phased_array.")
     parser.add_argument("--quick", action="store_true", help="Use a reduced steering-angle set for faster diagnostics.")
     parser.add_argument("--seed", type=int, default=20260401, help="Deterministic phantom RNG seed.")
@@ -671,6 +667,7 @@ def main() -> None:
     parser.add_argument("--source-mode", type=str, default="additive",
         choices=("additive", "additive_no_correction", "dirichlet"),
         help="pykwavers velocity source mode (CPU path only). Use to test Dirichlet vs additive hypothesis.")
+    parser.add_argument("--allow-failure", action="store_true")
     args = parser.parse_args()
 
     steering_angles = STEERING_ANGLES_QUICK if args.quick else STEERING_ANGLES_FULL
@@ -681,7 +678,7 @@ def main() -> None:
 
     if args.debug_probe:
         run_debug_probe(kgrid, medium, transducer, not_transducer, input_signal, args)
-        return
+        return 0
 
     kwave_scan_lines, kwave_runtime = run_kwave_phased_array(
         medium, kgrid, not_transducer, steering_angles, args.kwave_gpu, cache_tag
@@ -720,10 +717,15 @@ def main() -> None:
     }
 
     plot_comparison(kwave_bundle, pykwavers_bundle, steering_angles)
-    save_text_report(METRICS_PATH, "us_bmode_phased_array parity metrics", build_report_lines(kwave_bundle, pykwavers_bundle, steering_angles))
+    lines = build_report_lines(kwave_bundle, pykwavers_bundle, steering_angles)
+    save_text_report(METRICS_PATH, "us_bmode_phased_array parity metrics", lines)
+    for line in lines:
+        print(line)
     print(f"Saved: {FIGURE_PATH}")
     print(f"Saved: {METRICS_PATH}")
+    passed = any("parity_status: PASS" in str(l) for l in lines)
+    return 0 if passed or args.allow_failure else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

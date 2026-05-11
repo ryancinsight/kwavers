@@ -1,0 +1,1 @@
+{"cp":2000.0,"cs":800.0,"dt":4.330127018922193e-8,"dx":0.0005,"dy":0.0005,"engine":"KWave.jl/pstd_elastic_2d","n_sens":4,"n_src":32,"nt":200,"nx":32,"ny":32,"peak_ux_recorded":2.7545710428719853e-6,"pml_size":10,"rho":1200.0,"source_mode":"Additive ux plane","src_x_1based":9}

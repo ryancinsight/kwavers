@@ -168,6 +168,7 @@ def main() -> int:
         lines.append(f"  {k}: {v}")
     lines.append("")
     lines.append(f"parity_status: {status}")
+    print(f"parity_status: {status}")
     figure_path = save_side_by_side_parity_figure(
         kw_mask,
         pkw_mask,

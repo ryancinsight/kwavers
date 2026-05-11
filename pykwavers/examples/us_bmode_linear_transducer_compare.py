@@ -89,7 +89,8 @@ _USE_GPU = True
 # Phantom data download utility (reuse from k-wave-python example)
 # ---------------------------------------------------------------------------
 _EXAMPLE_DIR = _KWAVE_PY / "examples" / "us_bmode_linear_transducer"
-sys.path.insert(0, str(_EXAMPLE_DIR))
+_EXAMPLE_UTILS_DIR = _KWAVE_PY / "examples" / "legacy" / "us_bmode_linear_transducer"
+sys.path.insert(0, str(_EXAMPLE_UTILS_DIR))
 from example_utils import download_if_does_not_exist  # noqa: E402
 
 PHANTOM_DATA_GDRIVE_ID = "1ZfSdJPe8nufZHz0U9IuwHR4chaOGAWO4"
@@ -253,10 +254,8 @@ def build_source_mask_and_signals(kgrid, not_transducer, input_signal):
 
     n_source_pts = int(active_mask.sum())  # = N_ELEMENTS * ELEM_WIDTH * ELEM_LENGTH = 1536
 
-    # k-Wave scales additive velocity sources by 2*c0*dt/dx internally
-    # (see scale_source_terms_func.py: scale_velocity_source). Apply the same
-    # factor here so pykwavers injects the same velocity amplitude.
-    transducer_scale = 2.0 * C0 * kgrid.dt / DX
+    # kwavers applies 2*c0*dt/dx internally for additive velocity sources
+    # (commit caabc640). Do NOT apply the factor here.
 
     delay_full = np.zeros((FNx, FNy, FNz), dtype=np.int32)
     apod_full = np.zeros((FNx, FNy, FNz), dtype=np.float64)
@@ -284,7 +283,7 @@ def build_source_mask_and_signals(kgrid, not_transducer, input_signal):
 
     for p, (x, y, z) in enumerate(np.argwhere(mask != 0)):
         delay = int(delay_full[x, y, z])
-        weight = float(apod_full[x, y, z]) * transducer_scale
+        weight = float(apod_full[x, y, z])
         n_inj = min(padded_signal.size - delay, Nt)
         if n_inj > 0:
             ux_signals[p, :n_inj] = padded_signal[delay : delay + n_inj] * weight
@@ -944,17 +943,29 @@ def main():
         kwave_sl = load_kwave_reference(scan_line_indices)
     print(f"  Reference scan lines shape: {kwave_sl.shape}")
 
-    # --- Run pykwavers B-mode ---
-    print(f"\n[2/3] Running pykwavers B-mode ({n_lines} scan lines)...")
-    t0_pkw = time.perf_counter()
-    pkw_sl, pkw_profiles = run_pykwavers_bmode(
-        sound_speed_map, density_map, kgrid, not_transducer,
-        input_signal, scan_line_indices, workers=workers,
-    )
-    pkw_elapsed_s = time.perf_counter() - t0_pkw
-    print(f"  pykwavers: {pkw_elapsed_s:.1f}s total  "
-          f"({pkw_elapsed_s/n_lines:.1f}s/line, "
-          f"extrapolated 96 lines = {pkw_elapsed_s/n_lines*96/60:.1f} min)")
+    # --- Run pykwavers B-mode (with NPZ caching for sweep re-use) ---
+    mode_tag = "quick" if args.quick else "full"
+    solver_tag = "gpu" if _USE_GPU else "cpu"
+    pkw_cache_path = OUTPUT_DIR / f"us_bmode_linear_transducer_pykwavers_cache_{mode_tag}_{solver_tag}.npz"
+    if pkw_cache_path.exists():
+        print(f"\n[2/3] Loading cached pykwavers scan lines ({pkw_cache_path.name})...")
+        cached = np.load(pkw_cache_path)
+        pkw_sl = cached["scan_lines"]
+        pkw_elapsed_s = float(cached["runtime_s"])
+        pkw_profiles = None
+        print(f"  Loaded {pkw_sl.shape[0]} cached scan lines in {pkw_elapsed_s:.1f}s (original)")
+    else:
+        print(f"\n[2/3] Running pykwavers B-mode ({n_lines} scan lines)...")
+        t0_pkw = time.perf_counter()
+        pkw_sl, pkw_profiles = run_pykwavers_bmode(
+            sound_speed_map, density_map, kgrid, not_transducer,
+            input_signal, scan_line_indices, workers=workers,
+        )
+        pkw_elapsed_s = time.perf_counter() - t0_pkw
+        np.savez(pkw_cache_path, scan_lines=pkw_sl, runtime_s=pkw_elapsed_s)
+        print(f"  pykwavers: {pkw_elapsed_s:.1f}s total  "
+              f"({pkw_elapsed_s/n_lines:.1f}s/line, "
+              f"extrapolated 96 lines = {pkw_elapsed_s/n_lines*96/60:.1f} min)")
     print(f"  pykwavers scan lines shape: {pkw_sl.shape}")
 
     # --- Raw scan-line metrics (physics parity, pre-post-processing) ---
@@ -1036,6 +1047,7 @@ def main():
                 f"PSNR>={eval_harm['target']['psnr_db']:.1f} dB\n")
     print(f"  Saved: {metrics_path}")
     print(f"  Scientific parity status: {overall_status}")
+    print(f"parity_status: {overall_status}")
     if overall_status != "PASS" and not args.allow_failure:
         raise SystemExit(
             "Scientific parity targets were not met for the B-mode transducer workflow. "

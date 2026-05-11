@@ -115,12 +115,21 @@ from ._pykwavers import (
     Source,
     KWaveArray,
     TransducerArray2D,
+    # Thermal diffusion / Pennes bioheat (KWaveDiffusion equivalent)
+    ThermalSimulation,
+    ThermalResult,
     # Phase 22: PID, Registration, Bubble Field
     PIDController,
     BubbleField,
+    # Field-surrogate cache (cached PSTD focal kernels for planners)
+    FocalKernel,
+    KernelCube,
+    place_kernel_at_focus,
     resample_to_target_grid,
     kspace_line_recon,
     time_reversal_reconstruction,
+    passive_acoustic_map_das,
+    beamform_image_delay_and_sum,
     # Signal generation
     tone_burst,
     create_cw_signals,
@@ -372,6 +381,266 @@ def grid2cart(
     return values
 
 
+def angular_spectrum_cw(
+    input_plane: "_np.ndarray",
+    dx: float,
+    z_pos,
+    f0: float,
+    medium,
+    *,
+    angular_restriction: bool = True,
+    grid_expansion: int = 0,
+) -> "_np.ndarray":
+    """Project a 2-D CW pressure plane using the angular spectrum method.
+
+    Matches k-Wave ``angularSpectrumCW`` / k-wave-python ``angular_spectrum_cw``
+    semantics. Input is the complex pressure amplitude on the source plane;
+    output is the complex pressure at each requested propagation plane.
+
+    Parameters
+    ----------
+    input_plane : ndarray, shape (Nx, Ny), complex
+        Complex pressure amplitude on the source plane at frequency *f0* [Pa].
+    dx : float
+        Isotropic grid spacing of the input plane [m].
+    z_pos : float or array-like of float
+        Propagation distance(s) from the source plane [m].
+    f0 : float
+        Source frequency [Hz].
+    medium : float or dict
+        Sound speed [m/s] (scalar), or dict with key ``sound_speed`` (m/s) and
+        optional keys ``alpha_coeff`` (dB/MHz^y/cm), ``alpha_power`` (y).
+    angular_restriction : bool, optional
+        Apply the angular restriction filter described in Zeng & McGough (2008).
+        Default True.
+    grid_expansion : int, optional
+        Number of grid points to pad around the input plane (zero-padding).
+        Default 0.
+
+    Returns
+    -------
+    pressure : ndarray, shape (Nx, Ny, Nz), complex
+        Complex pressure at each (x, y) position for each z plane in *z_pos*.
+        Slice ``[:, :, 0]`` is the source plane (z=0 or z=z_pos[0]).
+
+    References
+    ----------
+    Zeng & McGough (2008). "Evaluation of the angular spectrum approach for
+    simulations of near-field pressures." JASA, 123(1), 68-76.
+    """
+    # Parse medium
+    if isinstance(medium, dict):
+        c0 = float(medium["sound_speed"])
+        absorbing = "alpha_coeff" in medium and "alpha_power" in medium
+        if absorbing:
+            # Convert dB·MHz^{-y}·cm^{-1} to Np/m at f0
+            alpha_coeff = medium["alpha_coeff"]
+            alpha_power = medium["alpha_power"]
+            # db2neper converts dB/m at 1 Hz^y; multiply by f^y to get Np/m
+            alpha_neper_per_m = (
+                alpha_coeff
+                * (100.0)  # cm^{-1} → m^{-1}: ×100
+                / (8.686)  # dB→Np
+                * (1e-6 * f0) ** alpha_power  # scale by (MHz)^y
+            )
+        else:
+            alpha_neper_per_m = 0.0
+    else:
+        c0 = float(medium)
+        absorbing = False
+        alpha_neper_per_m = 0.0
+
+    if dx > c0 / (2.0 * f0):
+        raise ValueError(
+            f"dx={dx} m exceeds Nyquist limit {c0 / (2 * f0):.4g} m at f0={f0} Hz."
+        )
+
+    input_plane = _np.asarray(input_plane, dtype=complex)
+    Nx, Ny = input_plane.shape
+    z_pos_arr = _np.atleast_1d(_np.asarray(z_pos, dtype=float))
+    Nz = len(z_pos_arr)
+
+    # Optional zero-pad
+    if grid_expansion > 0:
+        pad = grid_expansion
+        input_plane = _np.pad(input_plane, ((pad, pad), (pad, pad)), mode="constant")
+        Nx, Ny = input_plane.shape
+
+    # FFT length: next power of 2 above max(Nx, Ny), then doubled
+    N = int(2 ** (_np.ceil(_np.log2(max(Nx, Ny))) + 1))
+
+    # Wavenumber vector (centred, then shifted to FFT order)
+    if N % 2 == 0:
+        k_vec = _np.arange(-N // 2, N // 2) * (2.0 * _np.pi / (N * dx))
+    else:
+        k_vec = _np.arange(-(N - 1) // 2, (N - 1) // 2 + 1) * (2.0 * _np.pi / (N * dx))
+    k_vec[N // 2] = 0.0  # remove floating-point round-off at DC
+    k_vec = _np.fft.ifftshift(k_vec)
+
+    k = 2.0 * _np.pi * f0 / c0
+
+    # 2-D wavenumber grids (indexing='ij' matches Nx×Ny layout)
+    ky, kx = _np.meshgrid(k_vec, k_vec, indexing="ij")
+    kz = _np.sqrt((k**2 - kx**2 - ky**2).astype(complex))
+    sqrt_kx2_ky2 = _np.sqrt(kx**2 + ky**2)
+
+    pressure = _np.zeros((Nx, Ny, Nz), dtype=complex)
+
+    input_plane_fft = _np.fft.fft2(input_plane, (N, N))
+
+    for z_idx in range(Nz):
+        z = z_pos_arr[z_idx]
+        if z == 0.0:
+            pressure[:, :, z_idx] = input_plane
+        else:
+            # Spectral propagator — conjugate matches k-wave-python (Eq. 6)
+            H = _np.conj(_np.exp(1j * z * kz))
+
+            if absorbing:
+                # Eq. 11 of Zeng & McGough: H *= exp(-alpha * z * k / kz)
+                H = H * _np.exp(-alpha_neper_per_m * z * k / kz)
+
+            if angular_restriction:
+                D = (N - 1) * dx
+                kc = k * _np.sqrt(0.5 * D**2 / (0.5 * D**2 + z**2))
+                H[sqrt_kx2_ky2 > kc] = 0.0
+
+            projected = _np.fft.ifft2(input_plane_fft * H, (N, N))
+            pressure[:, :, z_idx] = projected[:Nx, :Ny]
+
+    if grid_expansion > 0:
+        pad = grid_expansion
+        pressure = pressure[pad:-pad, pad:-pad, :]
+
+    return pressure
+
+
+def backward_angular_spectrum_cw(
+    measurement_plane: "_np.ndarray",
+    dx: float,
+    z_m: float,
+    f0: float,
+    medium,
+    *,
+    angular_restriction: bool = True,
+) -> "_np.ndarray":
+    """Reconstruct a source plane from a CW measurement via backward angular spectrum.
+
+    Applies the conjugate (time-reversed) propagator to the spectral
+    decomposition of the measured pressure field:
+
+        H_fwd(kx, ky) = conj(exp(j·kz·z_m)) = exp(-j·kz·z_m)
+        H_back(kx, ky) = exp(+j·kz·z_m)
+
+    so H_back · H_fwd = 1 for all propagating (real kz) spatial frequencies.
+    Evanescent components (kx²+ky² > k²) are suppressed rather than
+    amplified by the angular restriction filter (Zeng & McGough 2008, Eq. 7).
+
+    Parameters
+    ----------
+    measurement_plane : ndarray, shape (Nx, Ny), complex
+        Complex pressure amplitude at the measurement plane [Pa].
+    dx : float
+        Isotropic grid spacing [m].
+    z_m : float
+        Propagation distance from source to measurement plane [m].
+    f0 : float
+        Source frequency [Hz].
+    medium : float or dict
+        Sound speed [m/s] (scalar), or dict with key ``sound_speed`` (m/s).
+    angular_restriction : bool, optional
+        Apply the angular restriction filter to suppress evanescent components.
+        Default True.
+
+    Returns
+    -------
+    source_plane : ndarray, shape (Nx, Ny), complex
+        Reconstructed complex pressure amplitude at the source plane.
+
+    References
+    ----------
+    Zeng & McGough (2008). "Evaluation of the angular spectrum approach for
+    simulations of near-field pressures." JASA, 123(1), 68-76.
+    """
+    c0 = float(medium["sound_speed"]) if isinstance(medium, dict) else float(medium)
+
+    measurement_plane = _np.asarray(measurement_plane, dtype=complex)
+    Nx, Ny = measurement_plane.shape
+
+    N = int(2 ** (_np.ceil(_np.log2(max(Nx, Ny))) + 1))
+
+    if N % 2 == 0:
+        k_vec = _np.arange(-N // 2, N // 2) * (2.0 * _np.pi / (N * dx))
+    else:
+        k_vec = _np.arange(-(N - 1) // 2, (N - 1) // 2 + 1) * (2.0 * _np.pi / (N * dx))
+    k_vec[N // 2] = 0.0
+    k_vec = _np.fft.ifftshift(k_vec)
+
+    k = 2.0 * _np.pi * f0 / c0
+
+    ky, kx = _np.meshgrid(k_vec, k_vec, indexing="ij")
+    kz = _np.sqrt((k**2 - kx**2 - ky**2).astype(complex))
+    sqrt_kx2_ky2 = _np.sqrt(kx**2 + ky**2)
+
+    P_meas_fft = _np.fft.fft2(measurement_plane, (N, N))
+
+    # Backward propagator: conjugate of H_fwd = exp(-j·kz·z_m)
+    H_back = _np.exp(1j * z_m * kz)
+
+    if angular_restriction:
+        D = (N - 1) * dx
+        kc = k * _np.sqrt(0.5 * D**2 / (0.5 * D**2 + z_m**2))
+        H_back[sqrt_kx2_ky2 > kc] = 0.0
+    else:
+        H_back[sqrt_kx2_ky2 > k] = 0.0
+
+    p_recon_full = _np.fft.ifft2(P_meas_fft * H_back, (N, N))
+    return p_recon_full[:Nx, :Ny]
+
+
+def gaussian_source_2d(
+    nx: int,
+    ny: int,
+    dx: float,
+    sigma: float,
+    *,
+    amplitude: float = 1.0,
+    center_x=None,
+    center_y=None,
+) -> "_np.ndarray":
+    """Generate a 2-D Gaussian complex pressure amplitude on a source plane.
+
+    The Gaussian spatial bandwidth σ_k ≈ 1/σ. For the backward angular
+    spectrum reconstruction identity to hold (round-trip error ≈ 0), σ must
+    satisfy σ_k ≪ k so that all significant energy lies in the propagating
+    band (kx²+ky² < k²).
+
+    Parameters
+    ----------
+    nx, ny : int
+        Grid dimensions.
+    dx : float
+        Isotropic grid spacing [m].
+    sigma : float
+        Gaussian half-width (standard deviation) [m].
+    amplitude : float, optional
+        Peak pressure amplitude [Pa]. Default 1.0.
+    center_x : float, optional
+        x-coordinate of the Gaussian centre [m]. Default nx/2 * dx.
+    center_y : float, optional
+        y-coordinate of the Gaussian centre [m]. Default ny/2 * dx.
+
+    Returns
+    -------
+    source : ndarray, shape (nx, ny), complex
+        Complex Gaussian pressure amplitude.
+    """
+    x = (_np.arange(nx) - nx / 2.0) * dx if center_x is None else _np.arange(nx) * dx - center_x
+    y = (_np.arange(ny) - ny / 2.0) * dx if center_y is None else _np.arange(ny) * dx - center_y
+    xx, yy = _np.meshgrid(x, y, indexing="ij")
+    return (amplitude * _np.exp(-(xx**2 + yy**2) / (2.0 * sigma**2))).astype(complex)
+
+
 # Public API
 __all__ = [
     # Core classes
@@ -384,12 +653,17 @@ __all__ = [
     "Simulation",
     "SimulationResult",
     "SolverType",
+    # Thermal diffusion / Pennes bioheat
+    "ThermalSimulation",
+    "ThermalResult",
     # Phase 22: PID, Registration, Bubble Field
     "PIDController",
     "BubbleField",
     "resample_to_target_grid",
     "kspace_line_recon",
     "time_reversal_reconstruction",
+    "passive_acoustic_map_das",
+    "beamform_image_delay_and_sum",
     # Submodules
     "comparison",
     "kwave_python_bridge",
@@ -423,6 +697,9 @@ __all__ = [
     "extract_amp_phase",
     "cart2grid",
     "grid2cart",
+    "angular_spectrum_cw",
+    "backward_angular_spectrum_cw",
+    "gaussian_source_2d",
     # Metadata
     "__version__",
     "__author__",

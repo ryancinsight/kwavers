@@ -167,7 +167,8 @@ def build_phased_velocity_signals(kgrid, not_transducer, input_signal, active_co
     delay_mask = np.asarray(not_transducer.delay_mask(), dtype=int)
     transmit_apod_mask = np.asarray(not_transducer.transmit_apodization_mask, dtype=np.float64)
     transducer_signal = np.asarray(not_transducer.input_signal, dtype=np.float64).reshape(-1)
-    transducer_scale = 2.0 * float(not_transducer.sound_speed) * float(kgrid.dt) / float(kgrid.dx)
+    # kwavers applies 2*c0*dt/dx internally for additive velocity sources
+    # (commit caabc640). Do NOT apply the factor here.
 
     nt = int(kgrid.Nt)
     ux_signals = np.zeros((active_coords.shape[0], nt), dtype=np.float64)
@@ -177,8 +178,8 @@ def build_phased_velocity_signals(kgrid, not_transducer, input_signal, active_co
         start = delay
         end = min(delay + nt, transducer_signal.size)
         if end > start:
-            ux_signals[point, : end - start] = transducer_signal[start:end] * weight * transducer_scale
-    return ux_signals, transducer_scale
+            ux_signals[point, : end - start] = transducer_signal[start:end] * weight
+    return ux_signals, 1.0
 
 
 def normalize_sensor_matrix(raw, expected_sensors: int):

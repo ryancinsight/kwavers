@@ -329,6 +329,7 @@ def main() -> int:
     lines.append("")
     lines.append(f"parity_status: {status}")
     lines.append(f"image:  {FIGURE_PATH.name}")
+    print(f"parity_status: {status}")
     save_text_report(METRICS_PATH, "at_focused_annular_array_3D_full_compare", lines)
 
     if all_pass or args.allow_failure:

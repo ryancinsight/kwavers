@@ -1,0 +1,1 @@
+{"c0":1500.0,"dt":2.0e-8,"dx":0.0001,"dy":0.0001,"engine":"KWave.jl/kspace_first_order + TR","n_sensors":64,"nt":605,"nx":64,"ny":64,"p0_max":1.0,"pml_size":20,"recon_max":0.44357923655248077,"rho0":1000.0,"sensor_x_1based":1}

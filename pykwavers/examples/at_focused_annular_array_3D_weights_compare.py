@@ -204,6 +204,7 @@ def main() -> int:
     lines.append("")
     lines.append(f"parity_status: {status}")
     lines.append(f"image:  {PNG_PATH.name}")
+    print(f"parity_status: {status}")
     save_text_report(REPORT_PATH, "at_focused_annular_array_3D_weights_compare", lines)
 
     return 0 if status == "PASS" else 1

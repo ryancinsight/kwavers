@@ -101,7 +101,7 @@ _KWAVE_CACHE = DEFAULT_OUTPUT_DIR / "na_filtering_part3_kwave_cache.npz"
 _PKWAV_CACHE = DEFAULT_OUTPUT_DIR / "na_filtering_part3_pykwavers_cache.npz"
 
 REFRESH_CACHE = os.getenv("KWAVERS_REFRESH_CACHE", "0") == "1"
-CACHE_VERSION = 1
+CACHE_VERSION = 2  # bumped: explicit pml_size=20 to match k-wave default
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +224,7 @@ def run_pykwavers(filtered_signal: np.ndarray, *, no_cache: bool = False) -> dic
 
     sim = pkw.Simulation(grid, medium, source, sensor, solver=pkw.SolverType.PSTD)
     sim.set_pml_inside(True)
+    sim.set_pml_size(20)  # match k-wave default (20 grid points)
 
     print(f"  [pykwavers] Running quasi-1D PSTD  (Nt={NT}, dt={DT:.1e} s)...")
     t0 = time.perf_counter()

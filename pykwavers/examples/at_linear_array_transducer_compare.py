@@ -341,6 +341,7 @@ def main() -> int:
 
     report_lines = build_report_lines(result)
     report_lines.append(f"parity_status: {status}")
+    print(f"parity_status: {status}")
     save_comparison_figure(result, FIGURE_PATH)
     save_text_report(METRICS_PATH, "at_linear_array_transducer parity report", report_lines)
 
