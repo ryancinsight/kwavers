@@ -45,6 +45,7 @@ SCRIPTS = [
     "diff_focused_ultrasound_heating_compare.py",
     # Elastic wave parity scripts
     "ewp_shear_wave_snells_law_compare.py",
+    "ewp_fluid_and_elastic_comparison_compare.py",
     # Axisymmetric validation
     "ivp_axisymmetric_simulation_compare.py",
     # TVSP — propagator / diffraction
