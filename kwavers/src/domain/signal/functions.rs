@@ -111,6 +111,48 @@ pub(super) fn k_wave_gaussian_burst_window(n: usize) -> Vec<f64> {
         .collect()
 }
 
+/// Complete specification for a tone-burst signal aligned to k-Wave conventions.
+///
+/// Groups all parameters required by [`tone_burst_series`] into a single struct,
+/// eliminating positional argument confusion and satisfying the `too_many_arguments`
+/// constraint at the call site.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ToneBurstSpec {
+    /// Sampling frequency in Hz. Must be finite and > 0.
+    pub sample_rate_hz: f64,
+    /// Carrier frequency in Hz. Must be finite and > 0.
+    pub signal_freq_hz: f64,
+    /// Number of complete oscillation cycles. Must be finite and > 0.
+    pub num_cycles: f64,
+    /// Number of leading zero-valued samples before the burst onset.
+    pub signal_offset: usize,
+    /// Total output length; defaults to `signal_offset + burst_samples` when `None`.
+    pub signal_length: Option<usize>,
+    /// Envelope window applied to the burst region.
+    pub window: WindowType,
+    /// Peak amplitude. Must be finite and ≥ 0.
+    pub amplitude: f64,
+    /// Initial carrier phase in radians. Must be finite.
+    pub phase: f64,
+}
+
+impl ToneBurstSpec {
+    /// Construct a minimal burst spec with unit amplitude, zero offset, and a Hann window.
+    #[must_use]
+    pub fn new(sample_rate_hz: f64, signal_freq_hz: f64, num_cycles: f64) -> Self {
+        Self {
+            sample_rate_hz,
+            signal_freq_hz,
+            num_cycles,
+            signal_offset: 0,
+            signal_length: None,
+            window: WindowType::Hann,
+            amplitude: 1.0,
+            phase: 0.0,
+        }
+    }
+}
+
 /// Generate a tone-burst signal with an envelope aligned to k-wave-python.
 ///
 /// ## Theorem: Sample Count
@@ -122,16 +164,21 @@ pub(super) fn k_wave_gaussian_burst_window(n: usize) -> Vec<f64> {
 /// # Errors
 /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
 ///
-pub fn tone_burst_series(
-    sample_rate_hz: f64,
-    signal_freq_hz: f64,
-    num_cycles: f64,
-    signal_offset: usize,
-    signal_length: Option<usize>,
-    window: WindowType,
-    amplitude: f64,
-    phase: f64,
-) -> KwaversResult<Vec<f64>> {
+pub fn tone_burst_series(spec: &ToneBurstSpec) -> KwaversResult<Vec<f64>> {
+    let ToneBurstSpec {
+        sample_rate_hz,
+        signal_freq_hz,
+        num_cycles,
+        signal_offset,
+        signal_length,
+        window,
+        amplitude,
+        phase,
+    } = spec;
+    let (sample_rate_hz, signal_freq_hz, num_cycles, amplitude, phase) =
+        (*sample_rate_hz, *signal_freq_hz, *num_cycles, *amplitude, *phase);
+    let (signal_offset, signal_length) = (*signal_offset, *signal_length);
+
     if !sample_rate_hz.is_finite() || sample_rate_hz <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "sample_rate_hz must be finite and > 0, got {sample_rate_hz}"
@@ -176,7 +223,7 @@ pub fn tone_burst_series(
     let dt = 1.0 / sample_rate_hz;
     let win = match window {
         WindowType::Gaussian => k_wave_gaussian_burst_window(burst_samples),
-        _ => get_win(window, burst_samples, true),
+        _ => get_win(*window, burst_samples, true),
     };
 
     let mut out = vec![0.0; out_len];

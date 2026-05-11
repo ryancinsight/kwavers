@@ -154,6 +154,7 @@ impl TimeReversal {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    #[allow(clippy::too_many_arguments)]
     fn k_space_step(
         &self,
         pressure: &Array3<f64>,

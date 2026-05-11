@@ -37,7 +37,6 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[allow(clippy::too_many_arguments)]
     pub fn train(
         &mut self,
         x_data: &Array1<f64>,
@@ -65,7 +64,6 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
-    #[allow(clippy::too_many_arguments)]
     pub fn train_with_callback<F>(
         &mut self,
         x_data: &Array1<f64>,

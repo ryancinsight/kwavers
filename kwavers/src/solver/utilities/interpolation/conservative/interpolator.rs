@@ -299,6 +299,7 @@ impl ConservativeInterpolator {
     }
 
     /// Intersection volume of two axis-aligned 3D boxes.
+    #[allow(clippy::too_many_arguments)]
     fn box_intersection_volume(
         x1_min: f64,
         x1_max: f64,

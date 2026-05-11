@@ -12,17 +12,24 @@ use burn::tensor::{backend::Backend, Tensor};
 use crate::core::error::KwaversResult;
 
 use super::config::{ParamFieldPINNConfig, INPUT_DIM, OUTPUT_DIM};
+use super::dynamic_tanh::DynamicTanh;
 
 /// Parameterised field-surrogate PINN network.
 ///
 /// Mirrors the structure of `PINN3DNetwork` from
 /// `burn_wave_equation_3d` but with five input dimensions and three
-/// output dimensions. The hidden stack uses `tanh` activations; the
-/// output layer is linear (regression head).
+/// output dimensions. The hidden stack uses **Dynamic Tanh (DyT)**
+/// activations (`γ · tanh(α · x) + β`, Zhu 2025) — `α`, `γ`, `β` are
+/// per-layer learnable scalars that let the network adjust tanh
+/// saturation per-layer, closing the focal-peak underprediction that
+/// the fixed-`tanh` baseline plateaus on. The output layer is linear
+/// (regression head).
 #[derive(Module, Debug)]
 pub struct ParamFieldPINNNetwork<B: Backend> {
     input_layer: Linear<B>,
+    input_act: DynamicTanh<B>,
     hidden_layers: Vec<Linear<B>>,
+    hidden_acts: Vec<DynamicTanh<B>>,
     output_layer: Linear<B>,
 }
 
@@ -39,13 +46,16 @@ impl<B: Backend> ParamFieldPINNNetwork<B> {
 
         let first_hidden = config.hidden_layers[0];
         let input_layer = LinearConfig::new(INPUT_DIM, first_hidden).init(device);
+        let input_act = DynamicTanh::new(device);
 
         let mut hidden_layers = Vec::with_capacity(config.hidden_layers.len().saturating_sub(1));
+        let mut hidden_acts = Vec::with_capacity(config.hidden_layers.len().saturating_sub(1));
         for window in config.hidden_layers.windows(2) {
             let &[in_features, out_features] = window else {
                 continue;
             };
             hidden_layers.push(LinearConfig::new(in_features, out_features).init(device));
+            hidden_acts.push(DynamicTanh::new(device));
         }
 
         let last_hidden = *config
@@ -56,9 +66,27 @@ impl<B: Backend> ParamFieldPINNNetwork<B> {
 
         Ok(Self {
             input_layer,
+            input_act,
             hidden_layers,
+            hidden_acts,
             output_layer,
         })
+    }
+
+    /// Read the learned DyT scalars per layer — `Vec<(α, γ, β)>` in
+    /// activation order (input act first, then hidden acts).
+    /// Useful for inspecting what the network has converged on
+    /// (e.g. layers near the output typically learn `α > 1` to
+    /// saturate harder; layers near the input often learn `α < 1`
+    /// to preserve amplitude).
+    #[must_use]
+    pub fn dyt_scalars(&self) -> Vec<(f32, f32, f32)> {
+        let mut out = Vec::with_capacity(1 + self.hidden_acts.len());
+        out.push(self.input_act.scalars());
+        for act in &self.hidden_acts {
+            out.push(act.scalars());
+        }
+        out
     }
 
     /// Number of intermediate hidden layers (excluding input + output).
@@ -71,9 +99,9 @@ impl<B: Backend> ParamFieldPINNNetwork<B> {
     ///
     /// `input` shape `[batch, 5]`, output shape `[batch, 3]`.
     pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
-        let mut h = self.input_layer.forward(input).tanh();
-        for layer in &self.hidden_layers {
-            h = layer.forward(h).tanh();
+        let mut h = self.input_act.forward(self.input_layer.forward(input));
+        for (layer, act) in self.hidden_layers.iter().zip(self.hidden_acts.iter()) {
+            h = act.forward(layer.forward(h));
         }
         // Linear output (no activation): regression head; caller maps
         // the [-1, 1]-normalised output back to physical units using

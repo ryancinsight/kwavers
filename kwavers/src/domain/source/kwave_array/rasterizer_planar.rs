@@ -26,6 +26,7 @@ use super::{ElementShape, KWaveArray};
 impl KWaveArray {
     // ─── Rect ──────────────────────────────────────────────────────────────
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect(
         &self,
         mask: &mut ndarray::Array3<bool>,
@@ -63,6 +64,7 @@ impl KWaveArray {
         let _ = length;
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect_weighted(
         &self,
         mask: &mut ndarray::Array3<f64>,

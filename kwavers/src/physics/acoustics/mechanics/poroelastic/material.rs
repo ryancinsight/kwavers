@@ -47,6 +47,7 @@ impl PoroelasticMaterial {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         porosity: f64,
         solid_density: f64,

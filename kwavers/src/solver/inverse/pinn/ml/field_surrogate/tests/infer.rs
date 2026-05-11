@@ -20,7 +20,9 @@ fn test_infer_grid_shape_and_finiteness() {
         coord_half_m: (4.0e-3, 3.0e-3, 3.0e-3),
         f0_range: (0.5e6, 1.0e6),
         pnp_range: (15.0e6, 30.0e6),
-        output_scale_pa: (30.0e6, 30.0e6, 21.0e6),
+        output_transforms: super::super::target_transform::OutputTransforms::linear(
+            30.0e6, 30.0e6, 21.0e6,
+        ).unwrap(),
         batch_size: 64,
     };
     let (p_min, p_max, p_rms) = infer_grid(&net, &params, &device).unwrap();
@@ -62,7 +64,9 @@ fn test_infer_grid_batch_size_invariance() {
         coord_half_m: (3.0e-3, 2.0e-3, 2.0e-3),
         f0_range: (0.5e6, 1.0e6),
         pnp_range: (15.0e6, 30.0e6),
-        output_scale_pa: (30.0e6, 30.0e6, 21.0e6),
+        output_transforms: super::super::target_transform::OutputTransforms::linear(
+            30.0e6, 30.0e6, 21.0e6,
+        ).unwrap(),
         batch_size: bs,
     };
     let (a_min, a_max, a_rms) = infer_grid(&net, &make_params(7), &device).unwrap();

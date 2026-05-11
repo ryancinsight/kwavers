@@ -42,6 +42,7 @@ impl DispersionAnalysis {
     ///
     /// Full 3D Von Neumann stability analysis accounting for anisotropic grids
     /// and oblique wave propagation directions.
+    #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn fdtd_dispersion_3d(
         kx: f64,

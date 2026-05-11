@@ -144,13 +144,18 @@ impl IntensityTracker {
             return;
         }
 
-        // Compute SPTA (Spatial Peak Temporal Average)
+        // Compute SPTA (Spatial Peak Temporal Average) in W/m².
+        //
+        // SPTA = (1/T) × ∫ I_sp dt ≈ (Σ I_sp_n × Δt) / T = avg(I_sp_n)
+        // (assumes uniform Δt so the per-sample dt cancels with the sum length).
+        // Ref: IEC 62359:2010 §5.2, FDA 510(k) Guidance §IV.
+        let n = window_measurements.len() as f64;
         let total_spta: f64 = window_measurements.iter().map(|m| m.isppa).sum();
-        let spta = total_spta / self.max_window_duration;
+        let spta = total_spta / n;
 
-        // Compute TAS (Temporal Average Spatial)
+        // Compute TAS (Temporal Average Spatial) in W/m².
         let total_tas: f64 = window_measurements.iter().map(|m| m.spatial_average).sum();
-        let tas = total_tas / self.max_window_duration;
+        let tas = total_tas / n;
 
         // Track peak SPTA
         let peak_spta = window_measurements

@@ -30,6 +30,7 @@ use super::KWaveArray;
 impl KWaveArray {
     // ─── Arc ───────────────────────────────────────────────────────────────
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_arc(
         &self,
         mask: &mut ndarray::Array3<bool>,
@@ -66,6 +67,7 @@ impl KWaveArray {
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_arc_weighted(
         &self,
         mask: &mut ndarray::Array3<f64>,

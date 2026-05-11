@@ -157,6 +157,6 @@ pub use config::{
 };
 pub use intensity_tracker::IntensityTracker;
 pub use orchestrator::TherapyIntegrationOrchestrator;
-pub use safety_controller::{SafetyAction, SafetyController};
+pub use safety_controller::{SafetyController, TherapyAction};
 pub use state::{AcousticField, SafetyMetrics, SafetyStatus, TherapySessionState};
 pub use tissue::TissuePropertyMap;

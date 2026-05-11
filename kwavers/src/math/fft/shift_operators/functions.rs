@@ -143,7 +143,8 @@ pub fn generate_shift_1d(n: usize, dk: f64, ds: f64) -> (Array1<Complex64>, Arra
 /// # References
 /// - Treeby & Cox (2010), §II.A, Eq. 13.
 /// - k-Wave MATLAB kspaceFirstOrder3D.m: `ifftshift(sinc(c_ref*k*dt/(2*pi)))`
-#[must_use] 
+#[allow(clippy::too_many_arguments)]
+#[must_use]
 pub fn generate_kappa(
     nx: usize,
     ny: usize,
@@ -211,7 +212,8 @@ pub fn generate_kappa(
 ///
 /// # References
 /// - Treeby & Cox (2010), §II.B (source term k-space correction).
-#[must_use] 
+#[allow(clippy::too_many_arguments)]
+#[must_use]
 pub fn generate_source_kappa(
     nx: usize,
     ny: usize,

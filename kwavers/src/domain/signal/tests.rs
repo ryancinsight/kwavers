@@ -1,20 +1,22 @@
-use super::functions::{add_noise, create_cw_signals, next_pow2, pad_zeros, tone_burst_series};
+use super::functions::{
+    add_noise, create_cw_signals, next_pow2, pad_zeros, tone_burst_series, ToneBurstSpec,
+};
 use super::window::WindowType;
 use proptest::prelude::*;
 use std::f64::consts::PI;
 
 #[test]
 fn tone_burst_series_respects_offset_and_length() {
-    let y = tone_burst_series(
-        1_000.0,
-        100.0,
-        2.0,
-        10,
-        Some(40),
-        WindowType::Hann,
-        1.0,
-        0.0,
-    )
+    let y = tone_burst_series(&ToneBurstSpec {
+        sample_rate_hz: 1_000.0,
+        signal_freq_hz: 100.0,
+        num_cycles: 2.0,
+        signal_offset: 10,
+        signal_length: Some(40),
+        window: WindowType::Hann,
+        amplitude: 1.0,
+        phase: 0.0,
+    })
     .unwrap();
     assert_eq!(y.len(), 40);
     assert!(y[..10].iter().all(|&v| v == 0.0));
@@ -23,16 +25,16 @@ fn tone_burst_series_respects_offset_and_length() {
 
 #[test]
 fn tone_burst_series_matches_kwave_gaussian_reference() {
-    let y = tone_burst_series(
-        10_000_000.0,
-        1_000_000.0,
-        3.0,
-        0,
-        None,
-        WindowType::Gaussian,
-        1.0,
-        0.0,
-    )
+    let y = tone_burst_series(&ToneBurstSpec {
+        sample_rate_hz: 10_000_000.0,
+        signal_freq_hz: 1_000_000.0,
+        num_cycles: 3.0,
+        signal_offset: 0,
+        signal_length: None,
+        window: WindowType::Gaussian,
+        amplitude: 1.0,
+        phase: 0.0,
+    })
     .unwrap();
 
     let expected = [
@@ -80,16 +82,16 @@ fn tone_burst_series_matches_kwave_gaussian_reference() {
 
 #[test]
 fn tone_burst_series_uses_floor_plus_one_sample_count() {
-    let y = tone_burst_series(
-        11_293_333.333_333_33,
-        500_000.0,
-        5.0,
-        0,
-        None,
-        WindowType::Rectangular,
-        1.0,
-        0.0,
-    )
+    let y = tone_burst_series(&ToneBurstSpec {
+        sample_rate_hz: 11_293_333.333_333_33,
+        signal_freq_hz: 500_000.0,
+        num_cycles: 5.0,
+        signal_offset: 0,
+        signal_length: None,
+        window: WindowType::Rectangular,
+        amplitude: 1.0,
+        phase: 0.0,
+    })
     .unwrap();
 
     assert_eq!(y.len(), 113);

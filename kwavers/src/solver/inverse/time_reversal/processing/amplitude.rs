@@ -32,6 +32,7 @@ impl AmplitudeCorrector {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn apply_correction(
         &self,
         signal: Vec<f64>,

@@ -53,7 +53,6 @@ fn test_therapy_orchestrator_creation() {
 }
 
 #[test]
-#[ignore] // Integration test - requires full therapy simulation stack
 /// Test therapy step execution
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.

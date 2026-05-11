@@ -68,7 +68,8 @@ impl KSpaceFdtdOperators {
     /// Calls [`crate::math::fft::shift_operators::generate_shift_1d`] and
     /// [`crate::math::fft::shift_operators::generate_kappa`] — the same shared
     /// utilities used by the PSTD orchestrator.
-    #[must_use] 
+    #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new(
         nx: usize,
         ny: usize,

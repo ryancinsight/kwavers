@@ -28,6 +28,7 @@ use ndarray::{Array3, Zip};
 /// * `sound_speed` - Sound speed c₀
 /// * `nonlinearity_coefficient` - B/A parameter
 /// * `nonlinear_term_out` - Pre-allocated output buffer for the result
+#[allow(clippy::too_many_arguments)]
 pub fn compute_nonlinear_term_workspace(
     pressure: &Array3<f64>,
     pressure_prev: &Array3<f64>,

@@ -109,6 +109,21 @@ pub struct SafetyMetrics {
     pub temperature_rise: Array3<f64>,
 }
 
+impl Default for SafetyMetrics {
+    /// Returns zeroed metrics with an empty (0×0×0) temperature field.
+    ///
+    /// The temperature field is a placeholder; it is replaced on the first
+    /// call to `update_safety_metrics` which provides the grid dimensions.
+    fn default() -> Self {
+        Self {
+            thermal_index: 0.0,
+            mechanical_index: 0.0,
+            cavitation_dose: 0.0,
+            temperature_rise: Array3::zeros((0, 0, 0)),
+        }
+    }
+}
+
 /// Acoustic field representation
 ///
 /// Captures pressure and velocity fields from acoustic simulation.

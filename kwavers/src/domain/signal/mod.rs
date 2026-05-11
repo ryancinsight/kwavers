@@ -27,7 +27,7 @@ pub mod window;
 pub use filter::{Filter, FrequencyFilter};
 pub use functions::{
     add_noise, create_cw_signal, create_cw_signals, next_pow2, pad_zeros, sample_signal,
-    tone_burst_series,
+    tone_burst_series, ToneBurstSpec,
 };
 pub use special::{NullSignal, TimeVaryingSignal};
 pub use traits::Signal;

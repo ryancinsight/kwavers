@@ -4,6 +4,7 @@ use crate::domain::grid::Grid;
 use ndarray::{Array3, Zip};
 
 /// Compute total acoustic energy and relative error against `initial_energy`.
+#[allow(clippy::too_many_arguments)]
 #[must_use]
 pub fn validate_energy_conservation(
     pressure: &Array3<f64>,

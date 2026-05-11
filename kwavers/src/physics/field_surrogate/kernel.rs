@@ -39,6 +39,7 @@ impl FocalKernel {
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
+    #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn new(
         field: Array3<f64>,

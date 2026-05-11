@@ -107,6 +107,7 @@ impl AttenuationCalculator {
 
     /// Calculate thermo-viscous absorption in fluids (classical absorption)
     /// α = 2πf²/ρc³ * (4μ/3 + `μ_B` + κ(γ-1)/C_p)
+    #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn classical_absorption(
         frequency: f64,

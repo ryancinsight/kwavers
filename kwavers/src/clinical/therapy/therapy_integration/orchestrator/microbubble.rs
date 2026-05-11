@@ -173,18 +173,25 @@ pub fn update_microbubble_dynamics(
     )?;
 
     // Update bubble dynamics for this timestep.
-    // pressure_time_derivative = 0.0: the caller does not track the waveform
-    // phase here; the slowly-varying approximation is acceptable for the
-    // treatment-orchestration timestep (dt >> 1/f_acoustic).
+    //
+    // The orchestrator `dt` is a slowly-varying treatment step (10–100 ms),
+    // far larger than the K-M adaptive integrator's convergence domain (~1 µs).
+    // Under the slowly-varying approximation the acoustic pressure is held
+    // constant over the treatment step, so a single bubble-physics step with
+    // dt_bub = 1 µs correctly captures the bubble's quasi-steady response
+    // without driving the integrator out of its convergence domain.
+    // Ref: Prosperetti (1977): "Thermal effects and damping mechanisms in the
+    // forced radial oscillations of gas bubbles in liquids."
+    let dt_bub = dt.min(1e-6);
     service.update_bubble_dynamics(
         &mut bubble,
         &mut shell,
         &mut drug,
         acoustic_pressure,
         pressure_gradient,
-        0.0, // dP_ac/dt [Pa/s] — slowly-varying approximation
-        0.0, // time (could track cumulative time)
-        dt,
+        0.0,    // dP_ac/dt [Pa/s] — slowly-varying approximation
+        0.0,    // time (could track cumulative time)
+        dt_bub,
     )?;
 
     // Create concentration field (simplified: uniform concentration)

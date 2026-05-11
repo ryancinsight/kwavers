@@ -21,6 +21,7 @@ use ndarray::{Array3, Zip};
 ///
 /// # Returns
 /// The diffusive term: -(δ/c₀⁴)∂³p/∂t³ is written to `diffusive_term_out`
+#[allow(clippy::too_many_arguments)]
 pub fn compute_diffusive_term_workspace(
     pressure: &Array3<f64>,
     pressure_prev: &Array3<f64>,

@@ -13,9 +13,7 @@ pub mod modalities;
 pub mod parameters;
 pub mod swe_3d_workflows;
 
-// Note: therapy_integration module exists but not publicly exposed yet
-// due to ongoing integration work (Sprint 214 Session 5)
-// pub mod therapy_integration;
+pub mod therapy_integration;
 
 // Re-export main types for convenience
 pub use clinical_scenarios::{

@@ -65,6 +65,7 @@ impl SonoluminescenceEmission {
     }
 
     /// Calculate total light emission from bubble fields
+    #[allow(clippy::too_many_arguments)]
     pub fn calculate_emission(
         &mut self,
         temperature_field: &Array3<f64>,
@@ -186,6 +187,7 @@ impl SonoluminescenceEmission {
     }
 
     /// Calculate full spectral field
+    #[allow(clippy::too_many_arguments)]
     pub fn calculate_spectral_field(
         &mut self,
         temperature_field: &Array3<f64>,

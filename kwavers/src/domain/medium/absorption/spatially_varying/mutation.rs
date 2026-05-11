@@ -49,6 +49,7 @@ impl SpatiallyVaryingAbsorption {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn add_spherical_inclusion(
         &mut self,
         center: (f64, f64, f64),
@@ -81,6 +82,7 @@ impl SpatiallyVaryingAbsorption {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn add_gaussian_transition(
         &mut self,
         center: (f64, f64, f64),

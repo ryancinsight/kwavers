@@ -30,6 +30,7 @@ impl WavefieldModeler {
         ((nt as f64).sqrt().ceil() as usize).max(1)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn advance_forward_state(
         &self,
         current: &Array3<f64>,

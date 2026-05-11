@@ -12,6 +12,7 @@ use super::{ShapeModeState, N_MODES};
 ///
 /// The velocity-first order is symplectic for the undamped capillary
 /// oscillator and dissipative when viscosity contributes positive damping.
+#[allow(clippy::too_many_arguments)]
 pub fn advance_shape_modes(
     modes: &mut ShapeModeState,
     r: f64,

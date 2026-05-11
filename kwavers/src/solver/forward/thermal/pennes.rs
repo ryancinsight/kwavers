@@ -44,6 +44,7 @@ impl PennesSolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         nx: usize,
         ny: usize,

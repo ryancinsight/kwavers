@@ -7,9 +7,11 @@
 //! - `training` — trainer step, convergence, and Helmholtz-path tests (C-2).
 
 mod config;
+mod dynamic_tanh;
 mod infer;
 mod network;
 mod sampling;
+mod target_transform;
 mod training;
 
 /// Shared type aliases for all sub-modules.

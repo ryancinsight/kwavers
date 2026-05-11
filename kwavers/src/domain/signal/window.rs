@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WindowType {
     Rectangular,
     Hann,

@@ -12,6 +12,7 @@ pub trait FdtdGpuAccelerator: Send + Sync + std::fmt::Debug {
     ///
     /// # Errors
     /// - Returns [`Err`] if the GPU kernel launch fails or a device error occurs.
+    #[allow(clippy::too_many_arguments)]
     fn propagate_acoustic_wave(
         &self,
         pressure: &Array3<f64>,

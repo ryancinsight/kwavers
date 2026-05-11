@@ -92,6 +92,19 @@ pub struct TherapySessionConfig {
 /// Each modality has specific clinical applications and safety considerations.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TherapyModality {
+    /// High-intensity focused ultrasound (thermal ablation)
+    ///
+    /// Thermally ablates tissue via tightly focused acoustic energy.
+    /// References: Kennedy et al. (2003) "High-intensity focused ultrasound: surgery of the future?"
+    HIFU,
+
+    /// Low-intensity focused ultrasound (neuromodulation / drug delivery)
+    ///
+    /// Sub-ablative acoustic stimulation for brain neuromodulation and BBB opening.
+    /// References: Deffieux et al. (2013) "Low-intensity focused ultrasound modulates monkey
+    /// visuomotor behavior"
+    LIFU,
+
     /// Microbubble-enhanced therapy
     ///
     /// Uses ultrasound contrast agents to enhance drug delivery and imaging.

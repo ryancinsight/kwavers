@@ -34,6 +34,7 @@ pub struct OperatorSplittingSolver {
 
 impl OperatorSplittingSolver {
     /// Create new operator splitting solver
+    #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn new(
         nx: usize,

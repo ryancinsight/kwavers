@@ -21,12 +21,14 @@
 //! theorem in the spectral domain.
 
 mod orchestrator;
+mod pml;
 mod types;
 
 #[cfg(test)]
 mod tests;
 
 pub use orchestrator::ElasticPstdOrchestrator;
+pub use pml::ElasticPml;
 pub use types::{
     ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdSourceMode, ElasticPstdVelocitySource,
 };

@@ -39,14 +39,16 @@ fn tone_burst(
     };
 
     let signal = kwavers::domain::signal::tone_burst_series(
-        sample_rate_hz,
-        signal_freq_hz,
-        num_cycles,
-        signal_offset,
-        signal_length,
-        window_type,
-        amplitude,
-        phase,
+        &kwavers::domain::signal::ToneBurstSpec {
+            sample_rate_hz,
+            signal_freq_hz,
+            num_cycles,
+            signal_offset,
+            signal_length,
+            window: window_type,
+            amplitude,
+            phase,
+        },
     )
     .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
 

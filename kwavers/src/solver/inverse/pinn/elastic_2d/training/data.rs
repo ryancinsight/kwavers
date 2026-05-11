@@ -73,6 +73,7 @@ impl TrainingMetrics {
     }
 
     /// Record metrics for current epoch
+    #[allow(clippy::too_many_arguments)]
     pub fn record_epoch(
         &mut self,
         total: f64,

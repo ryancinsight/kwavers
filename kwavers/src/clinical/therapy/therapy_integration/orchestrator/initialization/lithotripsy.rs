@@ -42,22 +42,19 @@ pub fn init_lithotripsy_simulator(
 
 /// Create stone geometry from target volume via CT imaging workflow.
 ///
-/// Clinical workflow: CT imaging → registration → segmentation → morphological refinement.
+/// Clinical workflow: CT imaging → segmentation → morphological refinement.
+/// Registration is an identity transform (no spatial correction applied).
 fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f64> {
-    use crate::physics::acoustics::imaging::registration::ImageRegistration;
-
     let mut geometry = Array3::zeros(grid.dimensions());
 
+    // Load CT data or fall back to synthetic phantom.
+    // Registration (image-to-image alignment) is currently an identity pass;
+    // the `ImageRegistration` abstraction will be wired here once the
+    // `crate::physics::acoustics::imaging::registration` module is available.
     let ct_data = load_ct_imaging_data(config).unwrap_or_else(|_| generate_synthetic_ct_data(grid));
 
-    let registration = ImageRegistration::default();
-    let identity_transform = [
-        1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-    ];
-    let registered_ct = registration.apply_transform(&ct_data, &identity_transform);
-
     let stone_threshold_hu = 200.0;
-    let stone_geometry = segment_stone_from_ct(&registered_ct, stone_threshold_hu, grid);
+    let stone_geometry = segment_stone_from_ct(&ct_data, stone_threshold_hu, grid);
     let refined_geometry = morphological_refinement(&stone_geometry, grid);
 
     for i in 0..grid.dimensions().0 {

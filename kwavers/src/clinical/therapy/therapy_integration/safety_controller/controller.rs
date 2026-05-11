@@ -4,7 +4,8 @@ use super::types::TherapyAction;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
-use super::super::orchestrator::safety::{SafetyLimits, SafetyMetrics, SafetyStatus};
+use super::super::config::SafetyLimits;
+use super::super::state::{SafetyMetrics, SafetyStatus};
 
 /// Real-time safety controller for therapeutic ultrasound.
 ///
@@ -161,7 +162,8 @@ impl SafetyController {
 
     fn check_limits(&self, current_time: f64) -> TherapyAction {
         let elapsed = current_time - self.treatment_start_time;
-        if elapsed > self.limits.max_treatment_time {
+        // ≥ not > : at exactly max_treatment_time the session must stop.
+        if elapsed >= self.limits.max_treatment_time {
             return TherapyAction::Stop;
         }
 
@@ -218,7 +220,7 @@ impl SafetyController {
                 if current_dose > max_dose {
                     return TherapyAction::Stop;
                 }
-                if current_dose > max_dose * 0.8 {
+                if *current_dose > max_dose * 0.8 {
                     return TherapyAction::Warning;
                 }
             }

@@ -17,6 +17,7 @@
 //!    points into the recorder matrices.
 
 use super::super::PstdElasticPlugin;
+use super::pml::ElasticPml;
 use super::types::{ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdVelocitySource};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -25,6 +26,7 @@ use crate::physics::acoustics::mechanics::elastic_wave::{
     parameters::{StressUpdateParams, VelocityUpdateParams},
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
 };
+use crate::math::fft::{fft_3d_array_into, ifft_3d_array_into};
 use ndarray::{Array2, Array3};
 use num_complex::Complex;
 
@@ -91,9 +93,19 @@ pub struct ElasticPstdOrchestrator {
     /// Pre-built complex derivative operators with the half-cell k-shift
     /// baked in (matches KWave.jl `pstd_elastic_2d`'s `ddx_k_shift_pos/neg`).
     derivative_ops: StaggeredDerivativeOps,
+    /// Optional real-space exponential PML applied each step to the
+    /// post-IFFT velocity field. `None` ⇒ periodic boundary (pristine
+    /// FFT, suitable for short propagation where wraparound is benign);
+    /// `Some(_)` ⇒ exponentially-attenuating boundary cells per the
+    /// theorem in [`super::pml`].
+    pml: Option<ElasticPml>,
     pub(super) velocity: VelocityFields,
     pub(super) spectral_stress: SpectralStressFields,
     spectral_stress_next: SpectralStressFields,
+    /// Persistent scratch for `fft(velocity)` — reused every step via
+    /// `fft_3d_array_into` to avoid allocating 3 fresh `Array3<Complex<f64>>`
+    /// per step inside `SpectralVelocityFields::from_real`.
+    spectral_velocity_in: SpectralVelocityFields,
     spectral_velocity_next: SpectralVelocityFields,
     pub(super) dt: f64,
     grid_shape: (usize, usize, usize),
@@ -137,9 +149,11 @@ impl ElasticPstdOrchestrator {
             plugin: PstdElasticPlugin::default(),
             medium,
             derivative_ops,
+            pml: None,
             velocity: VelocityFields::new(nx, ny, nz),
             spectral_stress: SpectralStressFields::new(nx, ny, nz),
             spectral_stress_next: SpectralStressFields::new(nx, ny, nz),
+            spectral_velocity_in: SpectralVelocityFields::new(nx, ny, nz),
             spectral_velocity_next: SpectralVelocityFields::new(nx, ny, nz),
             dt,
             grid_shape: shape,
@@ -181,12 +195,18 @@ impl ElasticPstdOrchestrator {
                 inject_velocity_source(&mut self.velocity, src, step);
             }
 
-            let spectral_v_in = SpectralVelocityFields::from_real(&self.velocity);
+            // 2. In-place FFT of (vx, vy, vz) into the persistent
+            //    `spectral_velocity_in` buffer. Avoids 3 fresh
+            //    `Array3<Complex<f64>>` allocations per step that
+            //    `SpectralVelocityFields::from_real` would do.
+            fft_3d_array_into(&self.velocity.vx, &mut self.spectral_velocity_in.vx);
+            fft_3d_array_into(&self.velocity.vy, &mut self.spectral_velocity_in.vy);
+            fft_3d_array_into(&self.velocity.vz, &mut self.spectral_velocity_in.vz);
 
             let stress_params = StressUpdateParams {
-                vx_fft: &spectral_v_in.vx,
-                vy_fft: &spectral_v_in.vy,
-                vz_fft: &spectral_v_in.vz,
+                vx_fft: &self.spectral_velocity_in.vx,
+                vy_fft: &self.spectral_velocity_in.vy,
+                vz_fft: &self.spectral_velocity_in.vz,
                 txx_fft: &self.spectral_stress.txx,
                 tyy_fft: &self.spectral_stress.tyy,
                 tzz_fft: &self.spectral_stress.tzz,
@@ -208,9 +228,9 @@ impl ElasticPstdOrchestrator {
                 .apply_stress_update_in_place(&stress_params, &mut self.spectral_stress_next);
 
             let velocity_params = VelocityUpdateParams {
-                vx_fft: &spectral_v_in.vx,
-                vy_fft: &spectral_v_in.vy,
-                vz_fft: &spectral_v_in.vz,
+                vx_fft: &self.spectral_velocity_in.vx,
+                vy_fft: &self.spectral_velocity_in.vy,
+                vz_fft: &self.spectral_velocity_in.vz,
                 txx_fft: &self.spectral_stress_next.txx,
                 tyy_fft: &self.spectral_stress_next.tyy,
                 tzz_fft: &self.spectral_stress_next.tzz,
@@ -230,7 +250,26 @@ impl ElasticPstdOrchestrator {
                 .apply_velocity_update_in_place(&velocity_params, &mut self.spectral_velocity_next);
 
             std::mem::swap(&mut self.spectral_stress, &mut self.spectral_stress_next);
-            self.velocity = self.spectral_velocity_next.to_real();
+            // In-place IFFT of the new spectral velocity into the
+            // persistent `velocity` buffer. Avoids 3 fresh
+            // `Array3<f64>` allocations per step that
+            // `SpectralVelocityFields::to_real` would do.
+            ifft_3d_array_into(&mut self.spectral_velocity_next.vx, &mut self.velocity.vx);
+            ifft_3d_array_into(&mut self.spectral_velocity_next.vy, &mut self.velocity.vy);
+            ifft_3d_array_into(&mut self.spectral_velocity_next.vz, &mut self.velocity.vz);
+
+            // Apply the PML in real space immediately after the IFFT, per
+            // the theorem in `super::pml`. The damping is unconditionally
+            // stable (multiplier ∈ (0, 1]) and stress is implicitly
+            // damped through the velocity field on the subsequent step's
+            // FFT (the spectral stress only "sees" the PML-attenuated
+            // velocity), so no separate stress-PML pass is required at
+            // this fidelity level.
+            if let Some(pml) = self.pml.as_ref() {
+                pml.apply_to_field(&mut self.velocity.vx);
+                pml.apply_to_field(&mut self.velocity.vy);
+                pml.apply_to_field(&mut self.velocity.vz);
+            }
 
             if n_sensors > 0 {
                 record_sensors(
@@ -251,6 +290,43 @@ impl ElasticPstdOrchestrator {
             vy: sensor_vy,
             vz: sensor_vz,
         })
+    }
+
+    /// Attach a real-space exponential PML to the orchestrator.
+    ///
+    /// `thickness_cells` specifies the absorbing-layer thickness on each
+    /// side along each axis (e.g. `(10, 10, 0)` for 10-cell PML on x and
+    /// y, none on z). `c_max` is the maximum sound speed in the medium
+    /// (used to set σ_max). `r0` is the target theoretical reflection
+    /// coefficient (Roden & Gedney 2000); `1e-4` is a standard choice.
+    ///
+    /// See [`super::pml`] for the full PML theorem and σ_max derivation.
+    /// Calling this method REPLACES any previously-attached PML.
+    pub fn set_pml(&mut self, thickness_cells: (usize, usize, usize), c_max: f64, r0: f64) {
+        let (nx, ny, nz) = self.grid_shape;
+        // Recover dx/dy/dz from the precomputed wavenumber arrays — the
+        // orchestrator doesn't carry the Grid handle past construction.
+        // dk = 2π / (n · dx) ⇒ dx = 2π / (n · dk).
+        let dx = grid_spacing_from_wavenumber(&self.derivative_ops.dkx_pos, nx);
+        let dy = grid_spacing_from_wavenumber(&self.derivative_ops.dky_pos, ny);
+        let dz = grid_spacing_from_wavenumber(&self.derivative_ops.dkz_pos, nz);
+        self.pml = Some(ElasticPml::new(
+            nx,
+            ny,
+            nz,
+            thickness_cells,
+            dx,
+            dy,
+            dz,
+            c_max,
+            self.dt,
+            r0,
+        ));
+    }
+
+    /// Disable any attached PML and revert to periodic boundaries.
+    pub fn clear_pml(&mut self) {
+        self.pml = None;
     }
 
     /// Borrow the current real-space velocity field.
@@ -277,6 +353,26 @@ impl ElasticPstdOrchestrator {
 }
 
 // ─── Private helpers ─────────────────────────────────────────────────────────
+
+/// Recover the grid spacing `dx` from a precomputed complex spectral
+/// derivative axis.
+///
+/// The axis carries `D[i] = i · k[i] · exp(±i·k[i]·dx/2)` where
+/// `k[i] = i · dk` for `i < n/2` and `k[i] = (i − n) · dk` for
+/// `i ≥ n/2`, with `dk = 2π / (n·dx)`. The first non-zero positive
+/// wavenumber is at index 1: `|D[1]| = k[1] = dk`. Hence
+/// `dx = 2π / (n · |D[1]|)`.
+fn grid_spacing_from_wavenumber(d_op: &Array3<num_complex::Complex<f64>>, n: usize) -> f64 {
+    if n < 2 {
+        // Degenerate axis — caller will set thickness 0 anyway.
+        return 1.0;
+    }
+    let dk = d_op[[1, 0, 0]].norm();
+    if dk == 0.0 {
+        return 1.0;
+    }
+    2.0 * std::f64::consts::PI / (n as f64 * dk)
+}
 
 fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
     let mut k = Array3::<f64>::zeros((n, 1, 1));

@@ -164,6 +164,7 @@ impl MonolithicCoupler {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn line_search(
         &self,
         u: &Array3<f64>,

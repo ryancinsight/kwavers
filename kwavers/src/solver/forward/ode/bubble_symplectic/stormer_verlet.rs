@@ -33,6 +33,7 @@ use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel
 /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///
+#[allow(clippy::too_many_arguments)]
 pub fn stormer_verlet_step(
     state: &mut BubbleState,
     model: &KellerMiksisModel,

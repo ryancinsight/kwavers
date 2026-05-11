@@ -4,6 +4,7 @@ use super::FdtdSimdOps;
 
 impl FdtdSimdOps {
     /// Scalar velocity update.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn update_velocity_scalar(
         &self,
         velocity: &mut [f32],
@@ -36,6 +37,7 @@ impl FdtdSimdOps {
     /// - `_mm256_loadu_ps` / `_mm256_storeu_ps` handle unaligned addresses.
     ///
     /// **Preconditions**: all slices have length ≥ nx · ny · nz; interior loops only.
+    #[allow(clippy::too_many_arguments)]
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     #[allow(unsafe_code)]

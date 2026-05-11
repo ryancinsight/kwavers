@@ -63,6 +63,7 @@ impl InterpolationSimdOps {
     }
 
     /// Single trilinear interpolation
+    #[allow(clippy::too_many_arguments)]
     fn trilinear_single(
         &self,
         data: &[f32],

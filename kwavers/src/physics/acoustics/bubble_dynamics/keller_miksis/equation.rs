@@ -121,6 +121,7 @@ pub(crate) fn calculate_acceleration(
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
+#[allow(clippy::too_many_arguments)]
 fn estimate_wall_pressure_derivative(
     model: &KellerMiksisModel,
     _state: &BubbleState,

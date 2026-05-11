@@ -15,6 +15,7 @@
 /// $$ \text{local}_x = i \bmod T_x, \text{local}_y = j \bmod T_y, \text{local}_z = k \bmod T_z $$
 ///
 /// Linearized tile-major order for sequential access within tile.
+#[allow(clippy::too_many_arguments)]
 #[inline]
 #[must_use]
 pub fn tiled_index(

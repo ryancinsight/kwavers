@@ -26,6 +26,7 @@ impl DispersionAnalysis {
     }
 
     /// Calculate numerical dispersion for PSTD method in 3D
+    #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn pstd_dispersion_3d(
         kx: f64,

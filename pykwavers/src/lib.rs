@@ -68,7 +68,7 @@ use kwavers::core::error::{KwaversError, KwaversResult};
 use kwavers::domain::boundary::cpml::CPMLConfig;
 use kwavers::domain::grid::Grid as KwaversGrid;
 use kwavers::domain::medium::core::CoreMedium;
-use kwavers::domain::medium::heterogeneous::HeterogeneousMedium;
+use kwavers::domain::medium::heterogeneous::{HeterogeneousFactory, HeterogeneousMedium};
 use kwavers::domain::medium::traits::Medium as MediumTrait;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::Signal;
@@ -103,6 +103,8 @@ use std::sync::Arc;
 // ============================================================================
 
 mod utils_bindings;
+mod thermal_bindings;
+mod field_surrogate_bindings;
 
 // ============================================================================
 // Error Handling
@@ -190,6 +192,17 @@ pub enum SolverType {
     /// source masks and multi-component recording land in Phases A.3 and
     /// A.2.5 respectively.
     Elastic,
+    /// Pseudospectral elastic solver — drives the canonical PSTD step loop
+    /// with the [`pstd::extensions::PstdElasticPlugin`] for full elastic
+    /// (μ ≥ 0) propagation. With μ = 0 reduces exactly to baseline acoustic
+    /// PSTD per the plugin's acoustic-fluid-limit theorem.
+    ///
+    /// Currently velocity-source + sensor-mask only; no PML yet (short-
+    /// propagation diagnostics + cross-engine parity validation against
+    /// KWave.jl's `pstd_elastic_2d`). Adds boundary absorption in a follow-
+    /// up step. See `kwavers::solver::forward::pstd::extensions` and the
+    /// canonical solver matrix in `solver::forward` module docs.
+    ElasticPSTD,
 }
 
 #[pymethods]
@@ -202,6 +215,7 @@ impl SolverType {
             SolverType::Hybrid => "SolverType.Hybrid".to_string(),
             SolverType::PstdGpu => "SolverType.PstdGpu".to_string(),
             SolverType::Elastic => "SolverType.Elastic".to_string(),
+            SolverType::ElasticPSTD => "SolverType.ElasticPSTD".to_string(),
         }
     }
 
@@ -213,6 +227,7 @@ impl SolverType {
             SolverType::Hybrid => "Hybrid".to_string(),
             SolverType::PstdGpu => "PstdGpu".to_string(),
             SolverType::Elastic => "Elastic".to_string(),
+            SolverType::ElasticPSTD => "ElasticPSTD".to_string(),
         }
     }
 
@@ -684,6 +699,53 @@ impl Medium {
 
         Ok(Medium {
             inner: MediumInner::Homogeneous(Box::new(medium)),
+        })
+    }
+
+    /// Create a heterogeneous elastic medium from per-voxel wave-speed and density arrays.
+    ///
+    /// Lamé parameters are computed per voxel:
+    ///   μ   = ρ · c_s²
+    ///   λ   = ρ · (c_p² − 2·c_s²)
+    ///
+    /// Parameters
+    /// ----------
+    /// c_compression : ndarray (3D float64)
+    ///     P-wave speed [m/s] at every voxel.
+    /// c_shear : ndarray (3D float64)
+    ///     S-wave speed [m/s] at every voxel; set to 0 for fluid voxels.
+    /// density : ndarray (3D float64)
+    ///     Density [kg/m³] at every voxel.
+    /// reference_frequency : float, optional
+    ///     Reference frequency for absorption [Hz] (default 1 MHz).
+    ///
+    /// Returns
+    /// -------
+    /// Medium
+    ///     Heterogeneous elastic medium with Lamé parameters set from the wave speeds.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If array shapes mismatch, any density ≤ 0, any c_compression ≤ 0,
+    ///     any c_shear < 0, or stability is violated (2·c_s² > c_p² at any voxel).
+    #[staticmethod]
+    #[pyo3(signature = (c_compression, c_shear, density, reference_frequency=1.0e6))]
+    fn elastic_heterogeneous(
+        c_compression: PyReadonlyArray3<f64>,
+        c_shear: PyReadonlyArray3<f64>,
+        density: PyReadonlyArray3<f64>,
+        reference_frequency: f64,
+    ) -> PyResult<Self> {
+        let cp = c_compression.as_array();
+        let cs = c_shear.as_array();
+        let rho = density.as_array();
+
+        let medium = HeterogeneousFactory::from_elastic_arrays(cp, cs, rho, reference_frequency)
+            .map_err(PyValueError::new_err)?;
+
+        Ok(Medium {
+            inner: MediumInner::Heterogeneous(Box::new(medium)),
         })
     }
 
@@ -3195,10 +3257,13 @@ impl Simulation {
             // mask in `Source.mask` (as f64 with 0/1 values) and the
             // per-axis 1-D time signals in dedicated fields.
             if src.source_type == "elastic_velocity_source" {
-                if !matches!(self.solver_type, SolverType::Elastic) {
+                if !matches!(
+                    self.solver_type,
+                    SolverType::Elastic | SolverType::ElasticPSTD
+                ) {
                     return Err(PyValueError::new_err(format!(
                         "Source.from_elastic_velocity_source requires \
-                         SolverType.Elastic; got {:?}.",
+                         SolverType.Elastic or SolverType.ElasticPSTD; got {:?}.",
                         self.solver_type
                     )));
                 }
@@ -3400,6 +3465,14 @@ impl Simulation {
                     pml_size,
                     pml_inside,
                     elastic_ivp_axis.as_deref(),
+                    elastic_velocity_source,
+                ),
+                SolverType::ElasticPSTD => Self::run_elastic_pstd_impl(
+                    &grid_clone,
+                    &medium_clone,
+                    time_steps,
+                    dt_actual,
+                    sensor_opt.as_ref(),
                     elastic_velocity_source,
                 ),
             })
@@ -4177,7 +4250,20 @@ impl Simulation {
             i_avg_y,
             i_avg_z,
             velocity_stats,
+            full_grid_stats,
         } = result;
+
+        // Full-grid pressure-statistics arrays (cavitation-kernel use).
+        let (p_max_3d, p_min_3d, p_rms_3d, p_final_3d) = if let Some((mx, mn, rm, fn_)) = full_grid_stats {
+            (
+                Some(PyArray3::from_owned_array(py, mx).into()),
+                Some(PyArray3::from_owned_array(py, mn).into()),
+                Some(PyArray3::from_owned_array(py, rm).into()),
+                Some(PyArray3::from_owned_array(py, fn_).into()),
+            )
+        } else {
+            (None, None, None, None)
+        };
 
         // Pressure statistics → numpy arrays.
         let p_max = stats
@@ -4244,6 +4330,10 @@ impl Simulation {
                 p_min,
                 p_rms,
                 p_final,
+                p_max_field: p_max_3d.as_ref().map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
+                p_min_field: p_min_3d.as_ref().map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
+                p_rms_field: p_rms_3d.as_ref().map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
+                p_final_field: p_final_3d.as_ref().map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
                 ux,
                 uy,
                 uz,
@@ -4277,6 +4367,10 @@ impl Simulation {
                 p_min,
                 p_rms,
                 p_final,
+                p_max_field: p_max_3d,
+                p_min_field: p_min_3d,
+                p_rms_field: p_rms_3d,
+                p_final_field: p_final_3d,
                 ux,
                 uy,
                 uz,
@@ -4427,6 +4521,7 @@ impl Simulation {
             Self::trim_initial_recorder_sample(full_data, time_steps, record_start_index);
 
         // FDTD stepper does not call record_velocity_step; velocity fields are None.
+        let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
         Ok(SimulationRunResult {
             sensor_data,
             stats,
@@ -4440,6 +4535,7 @@ impl Simulation {
             i_avg_y: None,
             i_avg_z: None,
             velocity_stats: None,
+            full_grid_stats,
         })
     }
 
@@ -4749,6 +4845,7 @@ impl Simulation {
 
         // Velocity statistics sampled at sensor positions.
         let velocity_stats = solver.sensor_recorder.extract_sampled_velocity_stats();
+        let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 
         Ok(SimulationRunResult {
             sensor_data,
@@ -4763,6 +4860,7 @@ impl Simulation {
             i_avg_y,
             i_avg_z,
             velocity_stats,
+            full_grid_stats,
         })
     }
 
@@ -4907,6 +5005,7 @@ impl Simulation {
         let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
         let i_avg_z = solver.sensor_recorder.extract_i_avg_z();
         let velocity_stats = solver.sensor_recorder.extract_sampled_velocity_stats();
+        let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 
         Ok(SimulationRunResult {
             sensor_data,
@@ -4921,6 +5020,7 @@ impl Simulation {
             i_avg_y,
             i_avg_z,
             velocity_stats,
+            full_grid_stats,
         })
     }
 
@@ -5094,10 +5194,14 @@ impl Simulation {
         let recorded_p = solver.extract_recorded_data();
         let sensor_data = recorded_p.unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
 
-        // Extract per-component displacement traces (Phase A.2.5) via the
-        // public accessor — `sensor_recorder` itself is pub(crate).
+        // Extract per-component **particle-velocity** traces (Phase A.2.5)
+        // via the public accessor — `sensor_recorder` itself is pub(crate).
+        // Despite the legacy method name, the recorder is fed
+        // `field.{vx, vy, vz}`. See the theorem block on
+        // `extract_recorded_velocity_components` in
+        // kwavers/src/solver/forward/elastic/swe/core/solver/propagation.rs.
         let (ux_data, uy_data, uz_data) =
-            solver.extract_recorded_displacement_components();
+            solver.extract_recorded_velocity_components();
 
         Ok(SimulationRunResult {
             sensor_data,
@@ -5112,6 +5216,89 @@ impl Simulation {
             i_avg_y: None,
             i_avg_z: None,
             velocity_stats: None,
+            full_grid_stats: None,  // elastic-wave path doesn't use pressure stats
+        })
+    }
+
+    /// Dispatch the pseudospectral elastic path
+    /// (`SolverType::ElasticPSTD`) — drives the canonical PSTD kernel via
+    /// `pstd::extensions::ElasticPstdOrchestrator`. Currently velocity-source
+    /// + sensor-mask only; no PML yet (boundary absorption is the next
+    /// extension on the elastic-as-PSTD-plugin roadmap; see canonical solver
+    /// matrix in `kwavers::solver::forward` module docs and the `[arch]`
+    /// ElasticPSTD entry in `backlog.md`).
+    #[allow(clippy::too_many_arguments)]
+    fn run_elastic_pstd_impl(
+        grid: &KwaversGrid,
+        medium: &MediumInner,
+        time_steps: usize,
+        dt: f64,
+        sensor: Option<&Sensor>,
+        elastic_velocity_source: Option<(
+            ndarray::Array3<bool>,
+            Option<ndarray::Array1<f64>>,
+            Option<ndarray::Array1<f64>>,
+            Option<ndarray::Array1<f64>>,
+            String,
+        )>,
+    ) -> KwaversResult<SimulationRunResult> {
+        use kwavers::solver::forward::pstd::extensions::{
+            ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSourceMode,
+            ElasticPstdVelocitySource,
+        };
+
+        let medium_ref: &dyn kwavers::domain::medium::traits::Medium = medium.as_medium();
+        let lame_lambda = medium_ref.lame_lambda_array();
+        let lame_mu = medium_ref.lame_mu_array();
+        let density = medium_ref.density_array().to_owned();
+
+        let pstd_medium = ElasticPstdMedium {
+            lame_lambda,
+            lame_mu,
+            density,
+        };
+        let mut orch = ElasticPstdOrchestrator::new(grid, pstd_medium, dt)?;
+
+        let source = elastic_velocity_source.map(|(mask, ux, uy, uz, mode_str)| {
+            let mode = match mode_str.as_str() {
+                "dirichlet" => ElasticPstdSourceMode::Dirichlet,
+                _ => ElasticPstdSourceMode::Additive,
+            };
+            ElasticPstdVelocitySource {
+                mask,
+                ux,
+                uy,
+                uz,
+                mode,
+            }
+        });
+
+        let sensor_mask: Option<ndarray::Array3<bool>> = sensor.and_then(|s| s.mask.clone());
+        let recorded = orch.propagate(time_steps, source.as_ref(), sensor_mask.as_ref())?;
+
+        // The orchestrator records velocity components (vx, vy, vz). To match
+        // the SimulationRunResult contract used by SolverType::Elastic, the
+        // legacy "sensor_data" pressure buffer carries vz (preserves the
+        // back-compat ordering enforced for ElasticWaveSolver).
+        let sensor_data = recorded
+            .vz
+            .clone()
+            .unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
+
+        Ok(SimulationRunResult {
+            sensor_data,
+            stats: None,
+            ux_data: recorded.vx,
+            uy_data: recorded.vy,
+            uz_data: recorded.vz,
+            ix_data: None,
+            iy_data: None,
+            iz_data: None,
+            i_avg_x: None,
+            i_avg_y: None,
+            i_avg_z: None,
+            velocity_stats: None,
+            full_grid_stats: None,
         })
     }
 
@@ -6258,6 +6445,20 @@ impl GpuPstdSession {
 /// Velocity fields are `None` unless the caller supplied a `record_modes` list
 /// that includes at least one velocity component (e.g. `"ux"`, `"ux_max"`).
 /// The FDTD path never populates velocity fields; the PSTD path does.
+/// Extract full-grid `(p_max, p_min, p_rms, p_final)` from a recorder if
+/// any pressure-statistics mode was requested. Returns `None` otherwise.
+fn extract_full_grid_stats(
+    recorder: &SensorRecorder,
+) -> Option<(Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>)> {
+    let stats = recorder.full_pressure_statistics()?;
+    Some((
+        stats.get_p_max().clone(),
+        stats.get_p_min().clone(),
+        stats.p_rms(),
+        stats.get_p_final().clone(),
+    ))
+}
+
 struct SimulationRunResult {
     /// Pressure time series at sensor positions: `(n_sensors, time_steps)`.
     sensor_data: ndarray::Array2<f64>,
@@ -6283,6 +6484,10 @@ struct SimulationRunResult {
     i_avg_z: Option<ndarray::Array1<f64>>,
     /// Per-component velocity statistics sampled at sensor positions.
     velocity_stats: Option<SampledVelocityStats>,
+    /// Full-grid pressure-statistics field (kernel-generation use).
+    /// `(p_max, p_min, p_rms, p_final)` — each `Array3<f64>` shape
+    /// `(nx, ny, nz)`. `None` when no `p_*` mode was requested.
+    full_grid_stats: Option<(Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>)>,
 }
 
 // ============================================================================
@@ -6328,6 +6533,24 @@ pub struct SimulationResult {
     /// Final pressure at each sensor position [Pa] (None if not recorded)
     #[pyo3(get)]
     p_final: Option<Py<PyArray1<f64>>>,
+
+    /// Full-grid peak compressional pressure [Pa] over all time steps —
+    /// shape `(nx, ny, nz)`. None unless a `p_*` recording mode was set.
+    #[pyo3(get)]
+    p_max_field: Option<Py<PyArray3<f64>>>,
+    /// Full-grid peak rarefactional pressure [Pa] (most-negative
+    /// pressure per voxel) over all time steps. Shape `(nx, ny, nz)`.
+    /// This is the canonical cavitation-kernel field: feed it through
+    /// the Maxwell-2013 erf-CDF to obtain per-voxel intrinsic-threshold
+    /// cavitation probability.
+    #[pyo3(get)]
+    p_min_field: Option<Py<PyArray3<f64>>>,
+    /// Full-grid RMS pressure [Pa]. Shape `(nx, ny, nz)`.
+    #[pyo3(get)]
+    p_rms_field: Option<Py<PyArray3<f64>>>,
+    /// Full-grid final-time pressure snapshot [Pa]. Shape `(nx, ny, nz)`.
+    #[pyo3(get)]
+    p_final_field: Option<Py<PyArray3<f64>>>,
 
     // ── Particle velocity time series ────────────────────────────────────────
     /// Staggered ux time series: `(n_sensors, time_steps)` [m/s] (None if not requested)
@@ -6453,6 +6676,8 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Register utility functions
     pam_bindings::register_pam(m)?;
     utils_bindings::register_utils(m)?;
+    thermal_bindings::register_thermal(m)?;
+    field_surrogate_bindings::register(m)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -6955,14 +7180,14 @@ fn time_reversal_reconstruction_impl(
     let mut cropped = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
         pressure[[i + expand_x, j + expand_y, k + expand_z]]
     });
-    cropped.mapv_inplace(|value| {
-        let compensated = 2.0 * value;
-        if compensated < 0.0 {
-            0.0
-        } else {
-            compensated
-        }
-    });
+    // Apply the standard Dirichlet half-amplitude compensation (k-Wave
+    // convention): the reverse-time enforced-pressure source radiates into
+    // both half-spaces; only the inward-traveling wave focuses, so the recon
+    // recovers half the original initial pressure and is scaled by 2 here.
+    // Signed values are preserved — the non-negativity prior p₀ ≥ 0 is a
+    // photoacoustic post-processing choice and is left to the caller because
+    // clipping breaks signed-pattern parity against k-Wave's `p_final`.
+    cropped.mapv_inplace(|value| 2.0 * value);
 
     Ok(cropped)
 }

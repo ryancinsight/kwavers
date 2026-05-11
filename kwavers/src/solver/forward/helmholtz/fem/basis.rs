@@ -297,6 +297,7 @@ impl GaussQuadrature {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn add_element_contribution(
         &self,
         global_stiffness: &mut crate::math::linear_algebra::sparse::CompressedSparseRowMatrix<

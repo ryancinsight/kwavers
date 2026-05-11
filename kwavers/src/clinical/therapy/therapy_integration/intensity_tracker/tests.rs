@@ -27,9 +27,10 @@ fn test_intensity_recording() {
         .record_intensity(&pressure, &impedance, 0.0)
         .unwrap();
 
-    // I = p²/Z = (1e6)² / 1.5e6 ≈ 666.7 kW/m²
-    assert!(metrics.spta > 600.0);
-    assert!(metrics.spta < 700.0);
+    // I = p²/Z = (1e6)² / 1.5e6 = 666,666 W/m² ≈ 666.7 kW/m²
+    // spta is stored in W/m² (SI); 600_000 < 666,666 < 700_000
+    assert!(metrics.spta > 6e5);
+    assert!(metrics.spta < 7e5);
 }
 
 #[test]

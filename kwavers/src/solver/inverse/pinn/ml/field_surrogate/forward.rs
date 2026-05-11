@@ -13,6 +13,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 
 use super::config::OUTPUT_DIM;
 use super::network::ParamFieldPINNNetwork;
+use super::target_transform::{OutputTransforms, TargetTransform};
 
 /// Geometry + parameter inputs for [`infer_grid`].
 ///
@@ -39,10 +40,12 @@ pub struct GridQueryParams {
     pub f0_range: (f64, f64),
     /// `(pnp_min, pnp_max)` for input-side `pnp` normalisation.
     pub pnp_range: (f64, f64),
-    /// Per-channel `(p_min, p_max, p_rms)` output denormalisation
-    /// scales (in Pa). The network outputs in `[-1, 1]`; the planner
-    /// recovers physical Pa by multiplying by these scales.
-    pub output_scale_pa: (f64, f64, f64),
+    /// Per-channel `(p_min, p_max, p_rms)` inverse transforms. The
+    /// network outputs `[-1, 1]`; each channel's transform inverts
+    /// that back to physical Pa. For the legacy linear path this is
+    /// equivalent to multiplying by a per-channel scale; for the
+    /// C-8 signed-log1p path it inverts the dynamic-range compression.
+    pub output_transforms: OutputTransforms,
     /// Inference batch size; trades memory against throughput. Default
     /// 65536 voxels per call (`~5 MB` of f32 input tensor on CPU).
     pub batch_size: usize,
@@ -59,7 +62,11 @@ impl Default for GridQueryParams {
             coord_half_m: (50.0e-3, 50.0e-3, 50.0e-3),
             f0_range: (0.5e6, 1.0e6),
             pnp_range: (15.0e6, 30.0e6),
-            output_scale_pa: (30.0e6, 30.0e6, 21.0e6),
+            output_transforms: OutputTransforms {
+                p_min: TargetTransform::Linear { scale_pa: 30.0e6 },
+                p_max: TargetTransform::Linear { scale_pa: 30.0e6 },
+                p_rms: TargetTransform::Linear { scale_pa: 21.0e6 },
+            },
             batch_size: 65_536,
         }
     }
@@ -144,9 +151,9 @@ pub fn infer_grid<B: Backend>(
     let mut p_max = Array3::<f64>::zeros((nx, ny, nz));
     let mut p_rms = Array3::<f64>::zeros((nx, ny, nz));
 
-    let scale_min = params.output_scale_pa.0;
-    let scale_max = params.output_scale_pa.1;
-    let scale_rms = params.output_scale_pa.2;
+    let inv_min = params.output_transforms.p_min;
+    let inv_max = params.output_transforms.p_max;
+    let inv_rms = params.output_transforms.p_rms;
 
     // Pre-build the (i, j, k) index sequence and stream in batches.
     let total = nx * ny * nz;
@@ -197,9 +204,9 @@ pub fn infer_grid<B: Backend>(
             let j = (lin / nz) % ny;
             let i = lin / (ny * nz);
             let base = off * OUTPUT_DIM;
-            p_min[[i, j, k]] = (out_vec[base] as f64) * scale_min;
-            p_max[[i, j, k]] = (out_vec[base + 1] as f64) * scale_max;
-            p_rms[[i, j, k]] = (out_vec[base + 2] as f64) * scale_rms;
+            p_min[[i, j, k]] = inv_min.inverse(out_vec[base]) as f64;
+            p_max[[i, j, k]] = inv_max.inverse(out_vec[base + 1]) as f64;
+            p_rms[[i, j, k]] = inv_rms.inverse(out_vec[base + 2]) as f64;
         }
 
         linear_idx = end;

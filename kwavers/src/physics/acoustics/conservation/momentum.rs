@@ -4,6 +4,7 @@ use crate::domain::grid::Grid;
 use ndarray::Array3;
 
 /// Compute maximum linearised Euler residual per axis.
+#[allow(clippy::too_many_arguments)]
 #[must_use]
 pub fn validate_momentum_conservation(
     velocity_x: &Array3<f64>,

@@ -1,7 +1,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::domain::grid::operators::coefficients::SpatialOrder;
+use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
 use crate::simulation::backends::acoustic::{AcousticSolverBackend, FdtdBackend};
 use ndarray::Array3;
 use super::AcousticWaveSolver;

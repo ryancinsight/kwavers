@@ -23,6 +23,7 @@ impl FdtdSimdOps {
     /// SIMD-accelerated pressure update (3D FDTD)
     ///
     /// Updates pressure field using: p^{n+1} = 2p^n - p^{n-1} + c²Δt²∇²p
+    #[allow(clippy::too_many_arguments)]
     pub fn update_pressure_3d(
         &self,
         pressure: &mut [f32],
@@ -73,6 +74,7 @@ impl FdtdSimdOps {
     }
 
     /// SIMD-accelerated velocity update (3D FDTD)
+    #[allow(clippy::too_many_arguments)]
     pub fn update_velocity_3d(
         &self,
         velocity: &mut [f32],

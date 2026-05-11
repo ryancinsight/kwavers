@@ -18,8 +18,10 @@ use burn::tensor::{backend::AutodiffBackend, Tensor, TensorData};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
+use crate::core::error::KwaversResult;
 use crate::physics::field_surrogate::FocalKernel;
 
+use super::target_transform::OutputTransforms;
 use super::training::TrainingBatch;
 
 /// Per-channel scale factors used to map physical Pa to the
@@ -92,6 +94,13 @@ pub struct KernelCubeSampler {
     n: usize,
     pub coord_halves: CoordHalves,
     pub output_scales: OutputScales,
+    /// Per-channel transforms used to map physical Pa into the
+    /// network's `[-1, 1]` output space. Defaults to a linear
+    /// transform derived from `output_scales`; pass a
+    /// signed-log1p variant via [`KernelCubeSampler::with_transforms`]
+    /// to balance loss across the dynamic range and close the
+    /// focal-peak underprediction.
+    pub output_transforms: OutputTransforms,
     pub param_ranges: ParamRanges,
     /// Active sampling strategy. Mutable so callers can switch
     /// strategies between training phases (e.g., uniform warm-up,
@@ -119,6 +128,38 @@ impl KernelCubeSampler {
         kernels: &[FocalKernel],
         coord_halves_override: Option<CoordHalves>,
     ) -> Self {
+        // Default construction uses the legacy linear transform so
+        // existing tests and downstream callers keep their semantics.
+        // For the C-8 signed-log1p path, use
+        // [`Self::with_transforms`] and pass a precomputed
+        // [`OutputTransforms`].
+        Self::build(kernels, coord_halves_override, None)
+            .expect("default linear transform construction cannot fail")
+    }
+
+    /// Build a sampler with an explicit per-channel target transform.
+    ///
+    /// The supplied `transforms` is used both at construction time
+    /// (to forward-map every voxel's Pa into the network's `[-1, 1]`
+    /// output space) and stored on the sampler so the inference path
+    /// can apply the matching inverse.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::InvalidInput`] when the dataset is
+    /// empty (no kernels with shape ≥ 3 on every axis).
+    pub fn with_transforms(
+        kernels: &[FocalKernel],
+        coord_halves_override: Option<CoordHalves>,
+        transforms: OutputTransforms,
+    ) -> KwaversResult<Self> {
+        Self::build(kernels, coord_halves_override, Some(transforms))
+    }
+
+    fn build(
+        kernels: &[FocalKernel],
+        coord_halves_override: Option<CoordHalves>,
+        transforms_override: Option<OutputTransforms>,
+    ) -> KwaversResult<Self> {
         let (f0_min, f0_max) = kernels.iter().fold(
             (f32::INFINITY, f32::NEG_INFINITY),
             |(lo, hi), k| (lo.min(k.f0 as f32), hi.max(k.f0 as f32)),
@@ -154,6 +195,18 @@ impl KernelCubeSampler {
             p_min_pa: p_max_pa,
             p_max_pa,
             p_rms_pa: p_max_pa * 0.7, // typical p_rms ≈ p_max / sqrt(2)
+        };
+
+        // Per-channel transforms: default to the legacy linear divide
+        // when no override is supplied; the C-8 signed-log1p path is
+        // selected by `with_transforms`.
+        let output_transforms = match transforms_override {
+            Some(t) => t,
+            None => OutputTransforms::linear(
+                output_scales.p_min_pa,
+                output_scales.p_max_pa,
+                output_scales.p_rms_pa,
+            )?,
         };
 
         // Spatial halves: largest extent across all kernels (in m).
@@ -203,23 +256,38 @@ impl KernelCubeSampler {
                         inputs.push(pnp_norm);
 
                         // The cached PSTD kernel field stores peak
-                        // rarefactional pressure as positive Pa.
-                        // Map this onto all three target channels
-                        // until per-channel kernels are generated.
+                        // rarefactional pressure as positive Pa. Map
+                        // it onto all three target channels through
+                        // the per-channel forward transform — the
+                        // sign convention matches the inference path
+                        // (`p_min` is the negative envelope, `p_max`
+                        // the positive envelope, `p_rms ≈ |p|/√2`).
                         let p_pa = kernel.field[[i, j, kk]] as f32;
-                        let p_n = (p_pa / output_scales.p_max_pa).clamp(-1.0, 1.0);
-                        targets.push(-p_n); // p_min channel: negative envelope
-                        targets.push(p_n); // p_max channel: positive envelope
-                        targets.push(p_n * 0.7); // p_rms ≈ |p|/sqrt(2)
+                        let p_min_n = output_transforms.p_min.forward(-p_pa);
+                        let p_max_n = output_transforms.p_max.forward(p_pa);
+                        let p_rms_n = output_transforms.p_rms.forward(p_pa * 0.7);
+                        targets.push(p_min_n);
+                        targets.push(p_max_n);
+                        targets.push(p_rms_n);
                         f0_phys.push(f0);
-                        p_magnitude.push(p_n.abs());
+                        // Importance-sampling magnitude is the
+                        // *un-transformed* normalised pressure
+                        // `|p|/p_max`. Computing it from the
+                        // post-transform target would lift rim
+                        // voxels under signed-log1p and undo the
+                        // focal-peak concentration the importance
+                        // CDF is built for.
+                        let raw_mag = (p_pa / output_scales.p_max_pa)
+                            .abs()
+                            .clamp(0.0, 1.0);
+                        p_magnitude.push(raw_mag);
                     }
                 }
             }
         }
         let n = inputs.len() / 5;
 
-        Self {
+        Ok(Self {
             inputs,
             targets,
             f0_phys_hz: f0_phys,
@@ -227,13 +295,14 @@ impl KernelCubeSampler {
             n,
             coord_halves,
             output_scales,
+            output_transforms,
             param_ranges: ParamRanges {
                 f0_hz: f0_range,
                 pnp_pa: pnp_range,
             },
             sampling: SamplingMode::Uniform,
             cumulative_weights: Vec::new(),
-        }
+        })
     }
 
     /// Switch sampling strategy. Recomputes the cumulative-weight

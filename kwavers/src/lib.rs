@@ -36,7 +36,6 @@
 #![warn(trivial_casts, trivial_numeric_casts)]
 #![warn(unsafe_code)]
 #![allow(
-    clippy::too_many_arguments,
     clippy::type_complexity,
     clippy::assertions_on_constants,
     clippy::field_reassign_with_default

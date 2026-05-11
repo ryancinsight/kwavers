@@ -1,8 +1,7 @@
 use super::controller::SafetyController;
 use super::types::TherapyAction;
-use crate::clinical::therapy::therapy_integration::orchestrator::safety::{
-    SafetyLimits, SafetyMetrics,
-};
+use crate::clinical::therapy::therapy_integration::config::SafetyLimits;
+use crate::clinical::therapy::therapy_integration::state::SafetyMetrics;
 use std::collections::HashMap;
 
 fn create_test_controller() -> SafetyController {

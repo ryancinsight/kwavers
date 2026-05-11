@@ -102,7 +102,8 @@ impl TherapyIntegrationOrchestrator {
         let mut safety_controller = SafetyController::new(config.safety_limits.clone(), None);
         safety_controller.start_monitoring(0.0);
 
-        let intensity_tracker = IntensityTracker::new(0.1);
+        // 0.1 s averaging window; 10 µs acoustic time step.
+        let intensity_tracker = IntensityTracker::new(0.1, 1e-5)?;
 
         Ok(Self {
             config,
@@ -165,13 +166,14 @@ impl TherapyIntegrationOrchestrator {
         self.intensity_tracker
             .update_thermal_dose(&temperature_field, dt)?;
 
-        self.session_state.safety_metrics.thermal_index = intensity_metrics.spta_mw_cm2 * 0.001;
+        // SPTA is in W/m²; TI ≈ SPTA × 1e-4 (W/m² → W/cm² → dimensionless index).
+        self.session_state.safety_metrics.thermal_index = intensity_metrics.spta * 1e-4;
         self.session_state.safety_metrics.mechanical_index = self.config.acoustic_params.pnp
             / (1e6 * (self.config.acoustic_params.frequency).sqrt());
         self.session_state.safety_metrics.temperature_rise = temperature_field.clone();
 
         let safety_action = self.safety_controller.evaluate_safety(
-            crate::clinical::therapy::therapy_integration::safety_controller::SafetyMetrics {
+            SafetyMetrics {
                 thermal_index: self.session_state.safety_metrics.thermal_index,
                 mechanical_index: self.session_state.safety_metrics.mechanical_index,
                 cavitation_dose: self.session_state.safety_metrics.cavitation_dose,

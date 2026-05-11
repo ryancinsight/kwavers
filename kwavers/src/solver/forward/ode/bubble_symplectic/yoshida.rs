@@ -22,6 +22,7 @@ use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel
 /// # Errors
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///
+#[allow(clippy::too_many_arguments)]
 pub fn yoshida4_step(
     state: &mut BubbleState,
     model: &KellerMiksisModel,

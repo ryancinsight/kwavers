@@ -4,6 +4,7 @@ use super::FdtdSimdOps;
 
 impl FdtdSimdOps {
     /// Scalar fallback for pressure update.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn update_pressure_scalar(
         &self,
         pressure: &mut [f32],
@@ -41,6 +42,7 @@ impl FdtdSimdOps {
     /// **Preconditions**:
     /// - All slices have length ≥ nx · ny · nz.
     /// - Loops cover interior points only (1 ≤ i, j, k < nx-1, ny-1, nz-1).
+    #[allow(clippy::too_many_arguments)]
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     #[allow(unsafe_code)]
@@ -104,6 +106,7 @@ impl FdtdSimdOps {
     /// - `_mm512_loadu_ps` / `_mm512_storeu_ps` allow unaligned addresses.
     ///
     /// **Preconditions**: all slices have length ≥ nx · ny · nz.
+    #[allow(clippy::too_many_arguments)]
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx512f")]
     #[allow(unsafe_code)]

@@ -97,6 +97,7 @@ impl BjerknesCalculator {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn total_bjerknes_force(
         &self,
         bubble1_radius: f64,

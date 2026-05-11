@@ -113,7 +113,7 @@ impl Quantizer {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn quantize_tensor(
+    pub(crate) fn quantize_tensor(
         &self,
         data: &[f32],
         shape: &[usize],

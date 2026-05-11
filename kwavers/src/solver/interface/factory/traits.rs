@@ -132,6 +132,7 @@ pub trait MeshProvider: std::fmt::Debug + Send + Sync {
         count: usize,
     ) -> Vec<[f64; 3]>;
 
+    #[allow(clippy::too_many_arguments)]
     fn planar_sensor_positions(
         &self,
         origin_m: [f64; 3],

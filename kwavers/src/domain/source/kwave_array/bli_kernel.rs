@@ -34,6 +34,7 @@ impl KWaveArray {
     /// always `1.0` and out-of-window cells are still visited (binary mask
     /// semantics). When `false`, exact BLI weights are computed and zero-weight
     /// cells are skipped.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn map_surface_sample<F>(
         &self,
         grid: &crate::domain::grid::Grid,

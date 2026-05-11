@@ -84,7 +84,8 @@ impl Domain {
     }
 
     /// Create 3D domain
-    #[must_use] 
+    #[allow(clippy::too_many_arguments)]
+    #[must_use]
     pub fn new_3d(
         xmin: f64,
         xmax: f64,

@@ -38,6 +38,7 @@ impl PluginManager {
     /// - Returns [`KwaversError::Physics`] if a plugin index is out of bounds.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn execute(
         &mut self,
         fields: &mut Array4<f64>,
@@ -77,6 +78,7 @@ impl PluginManager {
     /// - Returns [`KwaversError::Physics`] if a plugin index is out of bounds.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn execute_with_metrics(
         &mut self,
         fields: &mut Array4<f64>,

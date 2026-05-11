@@ -14,6 +14,7 @@ pub trait ExecutionStrategy: Send + Sync {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    #[allow(clippy::too_many_arguments)]
     fn execute(
         &self,
         plugins: &mut [Box<dyn Plugin>],

@@ -7,6 +7,7 @@ use ndarray::Array3;
 /// # Panics
 /// - Panics if an internal precondition is violated.
 ///
+#[allow(clippy::too_many_arguments)]
 #[must_use]
 pub fn entropy_production_rate(
     pressure: &Array3<f64>,
