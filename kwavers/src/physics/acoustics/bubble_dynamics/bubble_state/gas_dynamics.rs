@@ -71,6 +71,7 @@ impl GasType {
 }
 
 /// Gas species in bubble
+#[allow(clippy::module_inception)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GasSpecies {
     Air,
@@ -131,5 +132,74 @@ impl GasSpecies {
             // For custom gas, derive from gamma (with documented assumption)
             Self::Custom { gamma, .. } => R_GAS / (gamma - 1.0),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::constants::GAS_CONSTANT;
+
+    // ── GasType ──────────────────────────────────────────────────────────────
+
+    /// Van der Waals constant `a` matches literature values (bar·L²/mol²).
+    ///
+    /// Reference: Atkins & de Paula, "Physical Chemistry" (10th ed.) Table 1C.3.
+    #[test]
+    fn gas_type_vdw_a_matches_literature() {
+        assert!((GasType::N2.vdw_a() - 1.370).abs() < 1e-6, "N₂ a");
+        assert!((GasType::He.vdw_a() - 0.0346).abs() < 1e-6, "He a");
+        assert!((GasType::Xe.vdw_a() - 4.250).abs() < 1e-6, "Xe a");
+    }
+
+    /// Van der Waals constant `b` matches literature values (L/mol).
+    #[test]
+    fn gas_type_vdw_b_matches_literature() {
+        assert!((GasType::N2.vdw_b() - 0.0387).abs() < 1e-6, "N₂ b");
+        assert!((GasType::He.vdw_b() - 0.0238).abs() < 1e-6, "He b");
+        assert!((GasType::O2.vdw_b() - 0.0319).abs() < 1e-6, "O₂ b");
+    }
+
+    /// Adiabatic index γ: monatomic = 5/3, diatomic = 1.4, triatomic = 1.289.
+    ///
+    /// Statistical mechanics: γ = 1 + 2/f where f is degrees of freedom.
+    #[test]
+    fn gas_type_gamma_by_molecular_structure() {
+        assert!((GasType::N2.gamma() - 1.4).abs() < 1e-10, "N₂ diatomic");
+        assert!((GasType::O2.gamma() - 1.4).abs() < 1e-10, "O₂ diatomic");
+        assert!((GasType::Ar.gamma() - 5.0 / 3.0).abs() < 1e-10, "Ar monatomic");
+        assert!((GasType::He.gamma() - 5.0 / 3.0).abs() < 1e-10, "He monatomic");
+        assert!((GasType::CO2.gamma() - 1.289).abs() < 1e-10, "CO₂ triatomic");
+    }
+
+    // ── GasSpecies ───────────────────────────────────────────────────────────
+
+    /// `GasSpecies::Air` is diatomic (γ=1.4); Argon/Xenon are monatomic (γ=5/3).
+    #[test]
+    fn gas_species_gamma_matches_species() {
+        assert!((GasSpecies::Air.gamma() - 1.4).abs() < 1e-10, "Air γ=1.4");
+        assert!((GasSpecies::Argon.gamma() - 5.0 / 3.0).abs() < 1e-10, "Ar γ=5/3");
+        assert!((GasSpecies::Xenon.gamma() - 5.0 / 3.0).abs() < 1e-10, "Xe γ=5/3");
+    }
+
+    /// `Custom` variant stores gamma and molecular weight verbatim.
+    #[test]
+    fn gas_species_custom_stores_values_verbatim() {
+        let g = 1.3_f64;
+        let mw = 0.044_f64;
+        let s = GasSpecies::Custom { gamma: g, molecular_weight: mw };
+        assert!((s.gamma() - g).abs() < 1e-15);
+        assert!((s.molecular_weight() - mw).abs() < 1e-15);
+    }
+
+    /// Diatomic molar Cv = (5/2)R; monatomic Cv = (3/2)R.
+    ///
+    /// Statistical mechanics: each translational+rotational DOF contributes R/2.
+    #[test]
+    fn gas_species_molar_cv_matches_statistical_mechanics() {
+        let cv_air = GasSpecies::Air.molar_heat_capacity_cv();
+        let cv_ar = GasSpecies::Argon.molar_heat_capacity_cv();
+        assert!((cv_air - 2.5 * GAS_CONSTANT).abs() < 1e-10, "Air Cv = 2.5R");
+        assert!((cv_ar - 1.5 * GAS_CONSTANT).abs() < 1e-10, "Ar Cv = 1.5R");
     }
 }

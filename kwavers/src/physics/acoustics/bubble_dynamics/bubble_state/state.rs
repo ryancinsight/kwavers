@@ -173,3 +173,90 @@ fn estimate_molecule_count(pressure: f64, radius: f64, temperature: f64) -> f64 
     let moles = pressure * volume / (GAS_CONSTANT * temperature);
     moles * AVOGADRO
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::constants::thermodynamic::T_AMBIENT;
+
+    fn default_state() -> BubbleState {
+        BubbleState::new(&BubbleParameters::default())
+    }
+
+    /// `BubbleState::new` initializes radius = R₀ and wall_velocity = 0.
+    #[test]
+    fn new_state_at_equilibrium_radius_and_zero_velocity() {
+        let p = BubbleParameters::default();
+        let s = BubbleState::new(&p);
+        assert_eq!(s.radius, p.r0, "initial radius must equal R₀");
+        assert_eq!(s.wall_velocity, 0.0, "initial wall velocity must be 0");
+        assert_eq!(s.wall_acceleration, 0.0, "initial acceleration must be 0");
+        assert_eq!(s.temperature, T_AMBIENT, "initial temperature = T_ambient");
+        assert_eq!(s.compression_ratio, 1.0, "compression ratio = 1 at equilibrium");
+    }
+
+    /// `volume` = (4/3)πR³.
+    ///
+    /// Analytical: R=5e-6 → V = (4/3)π·(5e-6)³ ≈ 5.236e-16 m³.
+    #[test]
+    fn volume_matches_analytical_formula() {
+        let s = default_state();
+        let expected = 4.0 / 3.0 * PI * s.radius.powi(3);
+        assert!((s.volume() - expected).abs() < 1e-30, "volume formula");
+    }
+
+    /// `surface_area` = 4πR².
+    #[test]
+    fn surface_area_matches_analytical_formula() {
+        let s = default_state();
+        let expected = 4.0 * PI * s.radius.powi(2);
+        assert!((s.surface_area() - expected).abs() < 1e-22, "surface area formula");
+    }
+
+    /// `is_violent_collapse` requires is_collapsing AND (Mach>0.3 OR compression>5).
+    #[test]
+    fn is_violent_collapse_requires_collapsing_flag_and_mach_or_compression() {
+        let mut s = default_state();
+        assert!(!s.is_violent_collapse(), "equilibrium: not violent collapse");
+
+        // collapsing with low Mach and low compression
+        s.is_collapsing = true;
+        s.mach_number = 0.1;
+        s.compression_ratio = 2.0;
+        assert!(!s.is_violent_collapse(), "collapsing but Mach<0.3 and comp<5");
+
+        // collapsing with high Mach
+        s.mach_number = 0.5;
+        assert!(s.is_violent_collapse(), "violent: collapsing AND Mach>0.3");
+
+        // collapsing with high compression only
+        s.mach_number = 0.1;
+        s.compression_ratio = 6.0;
+        assert!(s.is_violent_collapse(), "violent: collapsing AND compression>5");
+    }
+
+    /// `total_molecules` = n_gas + n_vapor.
+    #[test]
+    fn total_molecules_equals_sum_of_gas_and_vapor() {
+        let mut s = default_state();
+        s.n_gas = 1.23e10;
+        s.n_vapor = 4.56e9;
+        let expected = s.n_gas + s.n_vapor;
+        assert_eq!(s.total_molecules(), expected);
+    }
+
+    /// At mechanical equilibrium: p_internal = p₀ + 2σ/R₀ (force balance).
+    ///
+    /// Young-Laplace: Δp = 2σ/R → p_inside = p_outside + 2σ/R.
+    #[test]
+    fn equilibrium_pressure_satisfies_young_laplace_balance() {
+        let p = BubbleParameters::default();
+        let s = BubbleState::at_equilibrium(&p);
+        let expected = p.p0 + 2.0 * p.sigma / p.r0;
+        assert!(
+            (s.pressure_internal - expected).abs() < 1e-6,
+            "p_internal must equal p₀+2σ/R₀ (expected {expected:.2}, got {:.2})",
+            s.pressure_internal
+        );
+    }
+}

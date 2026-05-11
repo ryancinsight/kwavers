@@ -100,3 +100,55 @@ impl BubbleParameters {
         (a_mix, b_mix)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::gas_dynamics::GasType;
+
+    /// Default BubbleParameters matches documented water/air-bubble values.
+    ///
+    /// Physical reference: 5 µm air bubble in water at 20°C, 1 atm.
+    #[test]
+    fn default_parameters_match_documented_water_air_bubble() {
+        let p = BubbleParameters::default();
+        assert_eq!(p.r0, 5e-6, "equilibrium radius = 5 µm");
+        assert_eq!(p.p0, 101_325.0, "ambient pressure = 1 atm");
+        assert_eq!(p.rho_liquid, 998.0, "water density ≈ 998 kg/m³ at 20°C");
+        assert!((p.sigma - 0.0728).abs() < 1e-10, "surface tension ≈ 72.8 mN/m");
+        assert!((p.gamma - 1.4).abs() < 1e-10, "air γ = 1.4 (diatomic)");
+    }
+
+    /// Default air composition sums to 1.0 (0.79 N₂ + 0.21 O₂).
+    #[test]
+    fn default_gas_composition_sums_to_unity() {
+        let p = BubbleParameters::default();
+        let total: f64 = p.gas_composition.values().sum();
+        assert!(
+            (total - 1.0).abs() < 1e-14,
+            "gas fractions must sum to 1.0 (got {total:.6})"
+        );
+    }
+
+    /// `with_pure_gas` replaces the mixture with a single-component composition.
+    ///
+    /// After the call: only one entry in gas_composition with fraction = 1.0.
+    #[test]
+    fn with_pure_gas_replaces_composition_with_single_species() {
+        let p = BubbleParameters::default().with_pure_gas(GasType::Ar);
+        assert_eq!(p.gas_composition.len(), 1, "must have exactly one gas species");
+        let &fraction = p.gas_composition.get(&GasType::Ar).expect("Ar must be present");
+        assert!((fraction - 1.0).abs() < 1e-14, "Ar fraction must be 1.0");
+    }
+
+    /// `effective_vdw_constants` returns positive finite values for default air.
+    ///
+    /// Both a_mix and b_mix are positive for any physically valid composition.
+    #[test]
+    fn effective_vdw_constants_positive_for_air_mixture() {
+        let p = BubbleParameters::default();
+        let (a, b) = p.effective_vdw_constants();
+        assert!(a > 0.0 && a.is_finite(), "a_mix must be positive finite (got {a:.6e})");
+        assert!(b > 0.0 && b.is_finite(), "b_mix must be positive finite (got {b:.6e})");
+    }
+}
