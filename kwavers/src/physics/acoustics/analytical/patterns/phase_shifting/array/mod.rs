@@ -228,3 +228,76 @@ pub struct PerformanceMetrics {
     /// Number of elements
     pub num_elements: usize,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// configure_linear produces N elements at the correct positions.
+    ///
+    /// 8 elements with spacing λ/2 = 750 µm at 1 MHz in water:
+    /// positions span [−3.5·d, 3.5·d] symmetrically.
+    #[test]
+    fn configure_linear_produces_correct_element_count_and_positions() {
+        let n = 8_usize;
+        let spacing = 750e-6_f64; // λ/2 at 1 MHz in water
+        let freq = 1e6_f64;
+        let arr = PhaseArray::configure_linear(n, spacing, freq);
+
+        assert_eq!(arr.element_positions.nrows(), n,
+            "linear array must have {n} elements");
+
+        // Y and Z columns must be zero (linear in X only)
+        for i in 0..n {
+            assert!((arr.element_positions[[i, 1]]).abs() < 1e-15);
+            assert!((arr.element_positions[[i, 2]]).abs() < 1e-15);
+        }
+        // First element at −(n−1)/2 · spacing
+        let expected_first = -((n - 1) as f64 * spacing / 2.0);
+        assert!((arr.element_positions[[0, 0]] - expected_first).abs() < 1e-15,
+            "first element position: expected {expected_first}, got {}", arr.element_positions[[0, 0]]);
+    }
+
+    /// configure_rectangular produces nx×ny elements.
+    #[test]
+    fn configure_rectangular_produces_correct_element_count() {
+        let arr = PhaseArray::configure_rectangular(4, 3, 500e-6, 500e-6, 1e6);
+        assert_eq!(arr.element_positions.nrows(), 12, "4×3 array must have 12 elements");
+    }
+
+    /// configure_circular produces num_rings × elements_per_ring elements.
+    #[test]
+    fn configure_circular_produces_correct_element_count() {
+        let arr = PhaseArray::configure_circular(3, 8, 1e-3, 1e6);
+        assert_eq!(arr.element_positions.nrows(), 24, "3 rings × 8 elements = 24");
+    }
+
+    /// check_performance reports correct element count and grating-lobe-free status.
+    ///
+    /// At spacing = 0.4·λ (< λ/2): condition `min_spacing < λ/2` is satisfied → grating_lobe_free = true.
+    /// At spacing = 0.6·λ (> λ/2): condition fails → grating_lobe_free = false.
+    #[test]
+    fn check_performance_grating_lobe_free_at_sub_half_lambda_spacing() {
+        // c = 1500 m/s, f = 1 MHz → λ = 1.5 mm; 0.4·λ = 600 µm < 750 µm = λ/2
+        let arr = PhaseArray::configure_linear(8, 600e-6, 1e6);
+        let metrics = arr.check_performance();
+        assert_eq!(metrics.num_elements, 8);
+        assert!(metrics.grating_lobe_free,
+            "0.4λ spacing must be grating-lobe-free (ratio={:.3})", metrics.element_spacing_ratio);
+
+        // Spacing = 0.6·λ = 900 µm > λ/2 → not grating-lobe-free
+        let arr2 = PhaseArray::configure_linear(8, 900e-6, 1e6);
+        let metrics2 = arr2.check_performance();
+        assert!(!metrics2.grating_lobe_free,
+            "0.6λ spacing must NOT be grating-lobe-free (ratio={:.3})", metrics2.element_spacing_ratio);
+    }
+
+    /// calculate_intensity at the center of an on-axis focused array is finite and positive.
+    #[test]
+    fn calculate_intensity_at_origin_is_finite_and_positive() {
+        let arr = PhaseArray::configure_linear(8, 750e-6, 1e6);
+        let intensity = arr.calculate_intensity(0.0, 0.0, 0.01);
+        assert!(intensity.is_finite() && intensity > 0.0,
+            "intensity must be finite and positive (got {intensity})");
+    }
+}

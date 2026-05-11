@@ -56,3 +56,56 @@ impl HeterogeneityModelTrait for HeterogeneityModel {
         self.adjust_sound_speed(grid)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn small_grid() -> Grid {
+        Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).expect("grid creation must succeed")
+    }
+
+    /// new() constructs a field with the correct shape.
+    #[test]
+    fn new_produces_correct_shape() {
+        let grid = small_grid();
+        let model = HeterogeneityModel::new(&grid, 1500.0, 0.05);
+        assert_eq!(model.sound_speed_var.dim(), (4, 4, 4));
+    }
+
+    /// All values are within base_speed ± variance * base_speed.
+    #[test]
+    fn values_within_variance_bounds() {
+        let base = 1500.0_f64;
+        let var = 0.05_f64;
+        let grid = small_grid();
+        let model = HeterogeneityModel::new(&grid, base, var);
+        for &v in model.sound_speed_var.iter() {
+            assert!(v >= base * (1.0 - var) && v <= base * (1.0 + var),
+                "value {v} outside [{}, {}]", base * (1.0 - var), base * (1.0 + var));
+        }
+    }
+
+    /// adjust_sound_speed returns the stored field (same values).
+    #[test]
+    fn adjust_sound_speed_returns_stored_field() {
+        let grid = small_grid();
+        let model = HeterogeneityModel::new(&grid, 1500.0, 0.0); // zero variance → uniform
+        let returned = model.adjust_sound_speed(&grid);
+        for (&orig, &ret) in model.sound_speed_var.iter().zip(returned.iter()) {
+            assert!((orig - ret).abs() < 1e-14);
+        }
+    }
+
+    /// Zero variance produces a uniform field equal to base_speed.
+    #[test]
+    fn zero_variance_produces_uniform_field() {
+        let base = 1480.0_f64;
+        let grid = small_grid();
+        let model = HeterogeneityModel::new(&grid, base, 0.0);
+        for &v in model.sound_speed_var.iter() {
+            assert!((v - base).abs() < 1e-10,
+                "expected {base} with zero variance, got {v}");
+        }
+    }
+}

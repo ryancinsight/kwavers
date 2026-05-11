@@ -90,3 +90,51 @@ impl DispersionAnalysis {
         field.par_mapv_inplace(|v| v * correction_factor);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn unit_grid() -> Grid {
+        Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).expect("grid must be created")
+    }
+
+    /// DispersionMethod::None leaves the field unchanged.
+    #[test]
+    fn none_method_leaves_field_unchanged() {
+        let grid = unit_grid();
+        let mut field = Array3::from_elem((8, 8, 8), 2.0_f64);
+        DispersionAnalysis::apply_correction(&mut field, &grid, 1e6, 1500.0, DispersionMethod::None);
+        for &v in field.iter() {
+            assert!((v - 2.0).abs() < 1e-14, "None method must not change field (got {v})");
+        }
+    }
+
+    /// DispersionMethod::PSTD(2) applies a strictly positive correction factor.
+    ///
+    /// For valid k·dx ≪ 1, ε = 0.02·(k·dx)² ≥ 0 → correction factor 1/(1+ε) ≤ 1.
+    #[test]
+    fn pstd2_correction_reduces_field_amplitude() {
+        let grid = unit_grid();
+        let mut field = Array3::from_elem((8, 8, 8), 1.0_f64);
+        // 1 MHz in water at 8 PPW → correction reduces amplitude
+        DispersionAnalysis::apply_correction(&mut field, &grid, 1e6, 1500.0, DispersionMethod::PSTD(2));
+        for &v in field.iter() {
+            assert!(v > 0.0 && v <= 1.0 + 1e-10,
+                "PSTD(2) correction must give values in (0,1]: got {v}");
+        }
+    }
+
+    /// apply_correction_3d with None leaves field unchanged.
+    #[test]
+    fn none_method_3d_leaves_field_unchanged() {
+        let grid = unit_grid();
+        let mut field = Array3::from_elem((8, 8, 8), 3.0_f64);
+        DispersionAnalysis::apply_correction_3d(
+            &mut field, &grid, 0.0, 0.0, 0.0, 1500.0, DispersionMethod::None,
+        );
+        for &v in field.iter() {
+            assert!((v - 3.0).abs() < 1e-14, "None method must not change field (got {v})");
+        }
+    }
+}
