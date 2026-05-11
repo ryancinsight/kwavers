@@ -1,22 +1,23 @@
-//! Validation tests for elastic wave propagation
+//! Validation tests for elastic wave material parameters
 //!
-//! Tests P-wave and S-wave propagation against analytical solutions
+//! These tests check the analytical wave-speed accessors used by the
+//! canonical elastic propagator [`kwavers::solver::forward::elastic::swe::ElasticWaveSolver`]
+//! and by the consolidated PSTD elastic extension
+//! [`kwavers::solver::forward::pstd::extensions::PstdElasticPlugin`].
+//!
 //! References:
 //! - Aki & Richards, "Quantitative Seismology", 2002
 //! - Carcione, "Wave Fields in Real Media", 2007
 
 use approx::assert_relative_eq;
-use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
-use kwavers::domain::plugin::PluginFields;
-use kwavers::domain::source::Source;
-use kwavers::solver::forward::elastic::ElasticWavePlugin;
-use kwavers::{grid::Grid, Plugin, PluginContext};
-use ndarray::Array4;
+use kwavers::grid::Grid;
 
-/// Test P-wave velocity in isotropic elastic medium
+/// Test P-wave velocity in isotropic elastic medium.
+///
+/// Verifies the analytical relation `c_p = sqrt((λ + 2μ) / ρ)` (Aki &
+/// Richards Eq. 4.13) against the medium's own accessor.
 #[test]
 fn test_p_wave_velocity() {
-    // Create test medium with known elastic properties
     let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
 
     // Steel properties (typical values)
@@ -24,27 +25,21 @@ fn test_p_wave_velocity() {
     let youngs_modulus = 200e9_f64; // Pa
     let poisson_ratio = 0.3_f64;
 
-    // Calculate Lamé parameters from Young's modulus and Poisson's ratio
     let lame_mu = youngs_modulus / (2.0 * (1.0 + poisson_ratio));
     let lame_lambda =
         youngs_modulus * poisson_ratio / ((1.0 + poisson_ratio) * (1.0 - 2.0 * poisson_ratio));
 
-    // Theoretical P-wave velocity: c_p = sqrt((λ + 2μ)/ρ)
     let theoretical_cp = ((lame_lambda + 2.0 * lame_mu) / density).sqrt();
 
-    // Create medium with these properties
     let medium = TestElasticMedium::new(density, lame_lambda, lame_mu);
-
-    // Initialize elastic wave plugin
-    let dt = 1e-7; // Time step
-    let mut _plugin = ElasticWavePlugin::new(&grid, &medium, dt).unwrap();
-
-    // Verify P-wave velocity matches theory
     let computed_cp = medium.p_wave_speed(0.0, 0.0, 0.0, &grid);
     assert_relative_eq!(computed_cp, theoretical_cp, epsilon = 1e-6);
 }
 
-/// Test S-wave velocity in isotropic elastic medium
+/// Test S-wave velocity in isotropic elastic medium.
+///
+/// Verifies the analytical relation `c_s = sqrt(μ / ρ)` (Aki & Richards
+/// Eq. 4.14) against the medium's own accessor.
 #[test]
 fn test_s_wave_velocity() {
     let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
@@ -54,58 +49,19 @@ fn test_s_wave_velocity() {
     let lame_mu = 30e9_f64; // Pa (shear modulus)
     let lame_lambda = 25e9_f64; // Pa
 
-    // Theoretical S-wave velocity: c_s = sqrt(μ/ρ)
     let theoretical_cs = (lame_mu / density).sqrt();
 
     let medium = TestElasticMedium::new(density, lame_lambda, lame_mu);
-
-    // Verify S-wave velocity matches theory
     let computed_cs = medium.shear_wave_speed(0.0, 0.0, 0.0, &grid);
     assert_relative_eq!(computed_cs, theoretical_cs, epsilon = 1e-6);
 }
 
-/// Test wave propagation with proper mode separation
-#[test]
-fn test_elastic_wave_propagation() {
-    let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001).unwrap();
-    let dt = 1e-6; // 1 microsecond timestep
-
-    // Aluminum properties
-    let density = 2700.0; // kg/m³
-    let lame_mu = 26e9; // Pa
-    let lame_lambda = 54e9; // Pa
-
-    let medium = TestElasticMedium::new(density, lame_lambda, lame_mu);
-
-    // Initialize plugin
-    let mut plugin = ElasticWavePlugin::new(&grid, &medium, dt).unwrap();
-
-    // Create field array
-    let mut fields = Array4::zeros((4, 100, 100, 100));
-
-    // Apply initial displacement (point source)
-    fields[[1, 50, 50, 50]] = 1.0; // vx component
-
-    // Propagate for several timesteps
-    let pressure = ndarray::Array3::<f64>::zeros((100, 100, 100));
-    let extra_fields = PluginFields::new(pressure);
-    let sources: Vec<Box<dyn Source>> = Vec::new();
-    let mut boundary = PMLBoundary::new(PMLConfig::default()).unwrap();
-    let mut context = PluginContext {
-        extra_fields: &extra_fields,
-        sources: &sources,
-        boundary: &mut boundary,
-    };
-    for _ in 0..10 {
-        plugin
-            .update(&mut fields, &grid, &medium, dt, 0.0, &mut context)
-            .unwrap();
-    }
-
-    // Verify wave has propagated (energy conservation)
-    let total_energy: f64 = fields.iter().map(|v| v * v).sum();
-    assert!(total_energy > 0.0, "Wave should have propagated");
-}
+// `test_elastic_wave_propagation` was removed alongside the deleted
+// `ElasticWavePlugin` (the legacy μ = 0 acoustic-fluid duplicate that
+// previously exercised this path). End-to-end elastic propagation is now
+// covered by `external/elastic_julia_parity/compare_elastic.py` (against
+// KWave.jl) and `pykwavers/examples/ewp_elastic_2d_jl_compare.py`. See the
+// canonical solver matrix in `solver::forward` module docs.
 
 /// Test medium for elastic wave validation
 #[derive(Debug, Clone)]
