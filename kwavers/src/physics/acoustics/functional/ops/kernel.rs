@@ -135,3 +135,45 @@ where
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// compose_operations(op1, op2) applies op1 then op2 sequentially.
+    ///
+    /// op1: ×2, op2: +1 → compose(v) = 2v+1. At uniform v=3: result = 7.
+    #[test]
+    fn compose_operations_applies_in_sequence() {
+        let field: Array3<f64> = Array3::from_elem((3, 3, 3), 3.0);
+        let result = compose_operations(
+            &field,
+            |f| f.mapv(|x| x * 2.0),
+            |f| f.mapv(|x| x + 1.0),
+        );
+        for &v in result.iter() {
+            assert!((v - 7.0).abs() < 1e-14, "compose(×2,+1) at 3.0 must give 7.0 (got {v})");
+        }
+    }
+
+    /// apply_kernel_parallel produces identical results to apply_kernel.
+    ///
+    /// Identity-weight kernel (centre=1) → output equals input.
+    #[test]
+    fn apply_kernel_parallel_matches_sequential_result() {
+        let field: Array3<f64> = Array3::from_shape_fn((5, 5, 5), |(i, j, k)| {
+            (i + j + k) as f64
+        });
+        let mut kernel = Array3::<f64>::zeros((3, 3, 3));
+        kernel[[1, 1, 1]] = 1.0; // identity kernel
+
+        let seq = apply_kernel(&field, &kernel, |f: &f64, k: &f64| f * k);
+        let par = apply_kernel_parallel(&field, &kernel, |f: &f64, k: &f64| f * k);
+
+        for ((i, j, k), &sv) in seq.indexed_iter() {
+            let pv = par[[i, j, k]];
+            assert!((pv - sv).abs() < 1e-14,
+                "[{i},{j},{k}]: sequential={sv:.4}, parallel={pv:.4}");
+        }
+    }
+}
