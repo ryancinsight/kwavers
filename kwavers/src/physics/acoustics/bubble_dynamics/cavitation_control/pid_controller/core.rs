@@ -101,3 +101,58 @@ pub struct ControllerOutput {
     pub error: f64,
     pub saturated: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Default PIDConfig satisfies output ordering invariant.
+    #[test]
+    fn default_pid_config_output_ordering() {
+        let cfg = PIDConfig::default();
+        assert!(cfg.output_min < cfg.output_max,
+            "output_min ({}) must be < output_max ({})", cfg.output_min, cfg.output_max);
+        assert!(cfg.sample_time > 0.0, "sample_time must be positive");
+        assert!(cfg.integral_limit > 0.0, "integral_limit must be positive");
+    }
+
+    /// PIDGains::default matches canonical constants.
+    #[test]
+    fn default_pid_gains_match_constants() {
+        let g = PIDGains::default();
+        assert!((g.kp - DEFAULT_KP).abs() < 1e-15);
+        assert!((g.ki - DEFAULT_KI).abs() < 1e-15);
+        assert!((g.kd - DEFAULT_KD).abs() < 1e-15);
+    }
+
+    /// ErrorIntegral::update accumulates correctly and clamps at limit.
+    ///
+    /// With limit=1.0, dt=1.0, error=2.0: after one update, value = clamp(0+2·1, -1, 1) = 1.0.
+    #[test]
+    fn error_integral_update_clamps_at_limit() {
+        let mut ei = ErrorIntegral::new(1.0);
+        ei.update(2.0, 1.0); // error * dt = 2 > limit
+        assert!((ei.value - 1.0).abs() < 1e-15,
+            "integral must be clamped at limit=1.0, got {}", ei.value);
+    }
+
+    /// ErrorIntegral::reset sets value to zero.
+    #[test]
+    fn error_integral_reset_zeros_value() {
+        let mut ei = ErrorIntegral::new(10.0);
+        ei.update(1.0, 1.0); // value = 1.0
+        ei.reset();
+        assert!((ei.value).abs() < 1e-15, "reset must zero the integral");
+    }
+
+    /// ErrorIntegral accumulates correctly below the limit.
+    ///
+    /// With limit=10.0, error=0.5, dt=2.0 → accumulated = 0.5·2.0 = 1.0 < limit.
+    #[test]
+    fn error_integral_accumulates_below_limit() {
+        let mut ei = ErrorIntegral::new(10.0);
+        ei.update(0.5, 2.0);
+        assert!((ei.value - 1.0).abs() < 1e-15,
+            "integral must be 1.0 (got {})", ei.value);
+    }
+}
