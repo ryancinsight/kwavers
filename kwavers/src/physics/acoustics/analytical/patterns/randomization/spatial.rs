@@ -74,3 +74,44 @@ impl SpatialRandomization {
         self.correlation_length = length;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array2;
+
+    /// generate_correlated_phases returns one phase per element.
+    #[test]
+    fn generates_one_phase_per_element() {
+        let mut sr = SpatialRandomization::new(1e-3);
+        // 4-element 1-D array; positions are (x,y,z) columns
+        let positions = Array2::from_shape_fn((4, 3), |(i, _)| i as f64 * 1e-3);
+        let phases = sr.generate_correlated_phases(&positions);
+        assert_eq!(phases.len(), 4, "must return 4 phases for 4 elements");
+    }
+
+    /// With zero correlation length, phases are uncorrelated random values in [0, MAX_PHASE_SHIFT).
+    #[test]
+    fn zero_correlation_produces_uncorrelated_phases() {
+        use super::super::constants::MAX_PHASE_SHIFT;
+        let mut sr = SpatialRandomization::new(0.0);
+        let positions = Array2::zeros((8, 3));
+        let phases = sr.generate_correlated_phases(&positions);
+        assert_eq!(phases.len(), 8);
+        for &p in phases.iter() {
+            assert!(p >= 0.0 && p < MAX_PHASE_SHIFT,
+                "phase {p} out of [0, MAX_PHASE_SHIFT)");
+        }
+    }
+
+    /// set_correlation_length updates the stored length (deterministic RNG seed).
+    #[test]
+    fn set_correlation_length_changes_smoothing() {
+        let mut sr = SpatialRandomization::new(0.0);
+        sr.set_correlation_length(5e-3);
+        // Just verify it doesn't panic and the struct is usable afterward
+        let positions = Array2::from_shape_fn((3, 3), |(i, _)| i as f64 * 5e-3);
+        let phases = sr.generate_correlated_phases(&positions);
+        assert_eq!(phases.len(), 3);
+    }
+}

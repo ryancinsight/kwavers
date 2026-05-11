@@ -41,3 +41,53 @@ impl Default for RandomizationScheme {
         Self::Temporal { period: 1e-3 }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Default scheme is Temporal with period 1 ms.
+    #[test]
+    fn default_is_temporal_1ms() {
+        match RandomizationScheme::default() {
+            RandomizationScheme::Temporal { period } => {
+                assert!((period - 1e-3).abs() < 1e-15,
+                    "default period must be 1e-3, got {period}");
+            }
+            other => panic!("expected Temporal, got {other:?}"),
+        }
+    }
+
+    /// Spatial variant stores correlation length.
+    #[test]
+    fn spatial_stores_correlation() {
+        let s = RandomizationScheme::Spatial { correlation: 2.5e-3 };
+        match s {
+            RandomizationScheme::Spatial { correlation } => {
+                assert!((correlation - 2.5e-3).abs() < 1e-18);
+            }
+            _ => panic!("expected Spatial"),
+        }
+    }
+
+    /// SpatioTemporal stores both fields.
+    #[test]
+    fn spatiotemporal_stores_both_fields() {
+        let st = RandomizationScheme::SpatioTemporal { period: 1e-4, correlation: 1e-3 };
+        match st {
+            RandomizationScheme::SpatioTemporal { period, correlation } => {
+                assert!((period - 1e-4).abs() < 1e-18);
+                assert!((correlation - 1e-3).abs() < 1e-18);
+            }
+            _ => panic!("expected SpatioTemporal"),
+        }
+    }
+
+    /// Clone produces an equal copy.
+    #[test]
+    fn clone_produces_equal_copy() {
+        let original = RandomizationScheme::Frequency { bandwidth: 5e4 };
+        let cloned = original;
+        assert_eq!(original, cloned);
+    }
+}
