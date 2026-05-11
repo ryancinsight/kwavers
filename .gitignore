@@ -66,8 +66,8 @@ test_octree
 # k-Wave example replication output directories
 kwave_replication_outputs_*/
 
-# External vendor repos
-external/
+# External vendor repos and Julia parity worktrees
+/external/
 
 # Build artifacts
 *.o
