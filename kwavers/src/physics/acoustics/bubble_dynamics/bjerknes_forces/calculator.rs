@@ -21,3 +21,25 @@ impl BjerknesCalculator {
         self.config
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// BjerknesCalculator::new stores the provided config.
+    #[test]
+    fn new_stores_config_fields() {
+        let mut cfg = BjerknesConfig::default();
+        cfg.frequency = 500e3;
+        let calc = BjerknesCalculator::new(cfg);
+        assert!((calc.config().frequency - 500e3).abs() < 1e-6,
+            "frequency not stored: {}", calc.config().frequency);
+    }
+
+    /// Debug output is non-empty.
+    #[test]
+    fn debug_non_empty() {
+        let calc = BjerknesCalculator::new(BjerknesConfig::default());
+        assert!(!format!("{calc:?}").is_empty());
+    }
+}

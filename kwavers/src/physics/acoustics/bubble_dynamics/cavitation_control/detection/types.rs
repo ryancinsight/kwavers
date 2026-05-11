@@ -89,3 +89,54 @@ impl<T: Clone> HistoryBuffer<T> {
         self.buffer.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// CavitationMetrics::default has zero-valued numeric fields and CavitationState::None.
+    #[test]
+    fn default_metrics_are_zero() {
+        let m = CavitationMetrics::default();
+        assert_eq!(m.state, CavitationState::None);
+        assert!((m.subharmonic_level).abs() < 1e-30);
+        assert!((m.confidence).abs() < 1e-30);
+    }
+
+    /// DetectionMethod variants are pairwise distinct.
+    #[test]
+    fn detection_method_variants_distinct() {
+        assert_ne!(DetectionMethod::Subharmonic, DetectionMethod::Broadband);
+        assert_ne!(DetectionMethod::Harmonic, DetectionMethod::Combined);
+    }
+
+    /// CavitationState variants are pairwise distinct.
+    #[test]
+    fn cavitation_state_variants_distinct() {
+        assert_ne!(CavitationState::None, CavitationState::Stable);
+        assert_ne!(CavitationState::Inertial, CavitationState::Transient);
+    }
+
+    /// HistoryBuffer respects capacity: oldest elements are evicted when full.
+    #[test]
+    fn history_buffer_evicts_oldest_at_capacity() {
+        let mut buf: HistoryBuffer<i32> = HistoryBuffer::new(3);
+        buf.push(1);
+        buf.push(2);
+        buf.push(3);
+        assert_eq!(buf.len(), 3);
+        buf.push(4); // evicts 1
+        assert_eq!(buf.len(), 3);
+        let values: Vec<i32> = buf.iter().copied().collect();
+        assert_eq!(values, vec![2, 3, 4], "oldest element must be evicted: {values:?}");
+    }
+
+    /// HistoryBuffer::is_empty() is true for new buffer and false after push.
+    #[test]
+    fn history_buffer_empty_state_correct() {
+        let mut buf: HistoryBuffer<f64> = HistoryBuffer::new(5);
+        assert!(buf.is_empty(), "new buffer must be empty");
+        buf.push(1.0);
+        assert!(!buf.is_empty(), "buffer must not be empty after push");
+    }
+}
