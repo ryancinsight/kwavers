@@ -46,3 +46,60 @@ pub(crate) fn calculate_vdw_pressure(state: &BubbleState) -> KwaversResult<f64> 
 
     Ok(p_ideal - p_correction)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::physics::acoustics::bubble_dynamics::bubble_state::{
+        BubbleParameters, BubbleState,
+    };
+
+    fn equilibrium_state() -> BubbleState {
+        BubbleState::at_equilibrium(&BubbleParameters::default())
+    }
+
+    /// VdW pressure for a dilute gas approaches ideal gas law: p ≈ nRT/V.
+    ///
+    /// At large volume, excluded-volume and intermolecular attraction corrections
+    /// become negligible: p_VdW → p_ideal = nRT/V.
+    /// We verify that the VdW result is within 1% of the ideal gas value.
+    #[test]
+    fn vdw_pressure_approaches_ideal_gas_at_large_volume() {
+        let mut state = equilibrium_state();
+        // Large bubble (1 mm) so that VdW corrections are negligible
+        state.radius = 1e-3;
+        let p = calculate_vdw_pressure(&state).unwrap();
+
+        // Ideal gas reference
+        let volume = 4.0 / 3.0 * std::f64::consts::PI * state.radius.powi(3);
+        let n_moles =
+            (state.n_gas + state.n_vapor) / crate::core::constants::AVOGADRO;
+        let p_ideal = n_moles * crate::core::constants::GAS_CONSTANT * state.temperature / volume;
+
+        let rel_err = (p - p_ideal).abs() / p_ideal;
+        assert!(
+            rel_err < 0.01,
+            "VdW pressure must be within 1% of ideal gas at R=1mm (rel_err={rel_err:.4})"
+        );
+    }
+
+    /// VdW pressure is finite and positive for a physical state.
+    #[test]
+    fn vdw_pressure_positive_for_equilibrium_state() {
+        let state = equilibrium_state();
+        let p = calculate_vdw_pressure(&state).unwrap();
+        assert!(p > 0.0 && p.is_finite(), "VdW pressure must be positive finite (got {p:.3e})");
+    }
+
+    /// VdW returns Err when bubble volume ≤ excluded volume (unphysical collapse).
+    ///
+    /// Set radius near zero so volume < n·b (Van der Waals hard-sphere volume).
+    #[test]
+    fn vdw_pressure_errors_when_volume_below_excluded() {
+        let mut state = equilibrium_state();
+        // Radius so small the bubble volume is essentially zero
+        state.radius = 1e-15;
+        let result = calculate_vdw_pressure(&state);
+        assert!(result.is_err(), "must return Err when volume <= excluded volume");
+    }
+}
