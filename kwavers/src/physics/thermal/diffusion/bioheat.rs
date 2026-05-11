@@ -7,7 +7,7 @@ use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, ArrayView3, Zip};
 
 /// Pennes bioheat equation parameters
 #[derive(Debug, Clone)]
@@ -62,7 +62,7 @@ impl PennesBioheat {
 
         Zip::indexed(&mut source)
             .and(temperature)
-            .for_each(|(i, j, k), q, &t| {
+            .par_for_each(|(i, j, k), q, &t| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -81,7 +81,15 @@ impl PennesBioheat {
         Ok(source)
     }
 
-    /// Update.
+    /// Update temperature in place without allocating a perfusion field.
+    ///
+    /// # Contract
+    /// The Pennes source term
+    /// `ω_b ρ_b c_b (T_a - T) / (ρ c_p)` is point-local. Therefore the update
+    /// can compute perfusion inside the same traversal that applies diffusion
+    /// and external heating. This preserves the explicit Euler equation while
+    /// removing one `Array3<f64>` allocation per bioheat step.
+    ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
@@ -89,25 +97,29 @@ impl PennesBioheat {
         &self,
         temperature: &mut Array3<f64>,
         laplacian: &Array3<f64>,
-        external_source: Option<&Array3<f64>>,
+        external_source: Option<ArrayView3<'_, f64>>,
         medium: &dyn Medium,
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
-        let perfusion = self.perfusion_source(temperature, medium, grid)?;
-
         Zip::indexed(temperature)
             .and(laplacian)
-            .and(&perfusion)
-            .for_each(|(i, j, k), t, &lap, &perf| {
+            .par_for_each(|(i, j, k), t, &lap| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
+                let rho = crate::domain::medium::density_at(medium, x, y, z, grid);
+                let cp = medium.specific_heat(x, y, z, grid);
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                let ext_source = external_source.map_or(0.0, |s| s[[i, j, k]]);
+                let perfusion = self.params.perfusion_rate
+                    * self.params.blood_density
+                    * self.params.blood_specific_heat
+                    * (self.params.arterial_temperature - *t)
+                    / (rho * cp);
+                let ext_source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
 
-                *t += dt * (alpha.mul_add(lap, perf) + ext_source);
+                *t += dt * (alpha.mul_add(lap, perfusion) + ext_source);
             });
 
         Ok(())

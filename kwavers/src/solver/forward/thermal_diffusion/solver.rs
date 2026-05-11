@@ -1,7 +1,7 @@
 //! Unified thermal diffusion solver
 
 use crate::{core::error::KwaversResult, domain::grid::Grid, domain::medium::Medium};
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, ArrayView3, Zip};
 
 use crate::physics::thermal::diffusion::{
     BioheatParameters, CattaneoVernotte, HyperbolicParameters, PennesBioheat,
@@ -67,66 +67,144 @@ impl ThermalDiffusionSolver {
     }
 
     fn calculate_laplacian(&mut self, grid: &Grid) -> KwaversResult<()> {
-        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-
         match self.config.spatial_order {
-            2 => {
-                let dx2_inv = 1.0 / (grid.dx * grid.dx);
-                let dy2_inv = 1.0 / (grid.dy * grid.dy);
-                let dz2_inv = 1.0 / (grid.dz * grid.dz);
-
-                for i in 1..nx - 1 {
-                    for j in 1..ny - 1 {
-                        for k in 1..nz - 1 {
-                            let d2_dx2 = (2.0f64.mul_add(-self.temperature[[i, j, k]], self.temperature[[i + 1, j, k]])
-                                + self.temperature[[i - 1, j, k]])
-                                * dx2_inv;
-                            let d2_dy2 = (2.0f64.mul_add(-self.temperature[[i, j, k]], self.temperature[[i, j + 1, k]])
-                                + self.temperature[[i, j - 1, k]])
-                                * dy2_inv;
-                            let d2_dz2 = (2.0f64.mul_add(-self.temperature[[i, j, k]], self.temperature[[i, j, k + 1]])
-                                + self.temperature[[i, j, k - 1]])
-                                * dz2_inv;
-
-                            self.laplacian_workspace[[i, j, k]] = d2_dx2 + d2_dy2 + d2_dz2;
-                        }
-                    }
-                }
-            }
-            4 => {
-                const C0: f64 = -1.0 / 12.0;
-                const C1: f64 = 4.0 / 3.0;
-                const C2: f64 = -5.0 / 2.0;
-
-                let dx2_inv = 1.0 / (grid.dx * grid.dx);
-                let dy2_inv = 1.0 / (grid.dy * grid.dy);
-                let dz2_inv = 1.0 / (grid.dz * grid.dz);
-
-                for i in 2..nx - 2 {
-                    for j in 2..ny - 2 {
-                        for k in 2..nz - 2 {
-                            let d2_dx2 = C0.mul_add(self.temperature[[i + 2, j, k]], C1.mul_add(self.temperature[[i + 1, j, k]], C2.mul_add(self.temperature[[i, j, k]], C0.mul_add(self.temperature[[i - 2, j, k]], C1 * self.temperature[[i - 1, j, k]]))))
-                                * dx2_inv;
-
-                            let d2_dy2 = C0.mul_add(self.temperature[[i, j + 2, k]], C1.mul_add(self.temperature[[i, j + 1, k]], C2.mul_add(self.temperature[[i, j, k]], C0.mul_add(self.temperature[[i, j - 2, k]], C1 * self.temperature[[i, j - 1, k]]))))
-                                * dy2_inv;
-
-                            let d2_dz2 = C0.mul_add(self.temperature[[i, j, k + 2]], C1.mul_add(self.temperature[[i, j, k + 1]], C2.mul_add(self.temperature[[i, j, k]], C0.mul_add(self.temperature[[i, j, k - 2]], C1 * self.temperature[[i, j, k - 1]]))))
-                                * dz2_inv;
-
-                            self.laplacian_workspace[[i, j, k]] = d2_dx2 + d2_dy2 + d2_dz2;
-                        }
-                    }
-                }
-            }
+            2 => self.calculate_laplacian_order::<2>(grid),
+            4 => self.calculate_laplacian_order::<4>(grid),
             _ => {
                 self.config.spatial_order = 2;
-                self.calculate_laplacian(grid)?;
+                self.calculate_laplacian_order::<2>(grid);
             }
         }
 
         Ok(())
     }
+
+    /// Compute the finite-difference Laplacian through one monomorphized stencil body.
+    ///
+    /// # Contract
+    /// `ORDER` selects the maximum centered stencil width at compile time.
+    /// Each axis then independently selects the widest admissible centered
+    /// second derivative:
+    /// - `n >= 5` and `ORDER == 4`: fourth-order centered derivative.
+    /// - `n >= 3`: second-order centered derivative.
+    /// - `n == 1`: inactive embedded dimension, derivative contribution is zero.
+    /// - `n == 2`: no centered second derivative exists, so no interior cells are updated.
+    ///
+    /// This keeps one authoritative algorithm while allowing the optimizer to
+    /// eliminate the order branch per instantiation.
+    #[inline]
+    fn calculate_laplacian_order<const ORDER: usize>(&mut self, grid: &Grid) {
+        let i_range = Self::axis_range::<ORDER>(grid.nx);
+        let j_range = Self::axis_range::<ORDER>(grid.ny);
+        let k_range = Self::axis_range::<ORDER>(grid.nz);
+
+        let dx2_inv = 1.0 / (grid.dx * grid.dx);
+        let dy2_inv = 1.0 / (grid.dy * grid.dy);
+        let dz2_inv = 1.0 / (grid.dz * grid.dz);
+
+        for i in i_range {
+            for j in j_range.clone() {
+                for k in k_range.clone() {
+                    let d2_dx2 =
+                        Self::second_derivative_axis::<0, ORDER>(&self.temperature, i, j, k, dx2_inv, grid.nx);
+                    let d2_dy2 =
+                        Self::second_derivative_axis::<1, ORDER>(&self.temperature, i, j, k, dy2_inv, grid.ny);
+                    let d2_dz2 =
+                        Self::second_derivative_axis::<2, ORDER>(&self.temperature, i, j, k, dz2_inv, grid.nz);
+
+                    self.laplacian_workspace[[i, j, k]] = d2_dx2 + d2_dy2 + d2_dz2;
+                }
+            }
+        }
+    }
+
+    #[inline]
+    fn axis_range<const ORDER: usize>(n: usize) -> std::ops::Range<usize> {
+        if n == 1 {
+            0..1
+        } else if ORDER >= 4 && n >= 5 {
+            2..n - 2
+        } else if n >= 3 {
+            1..n - 1
+        } else {
+            0..0
+        }
+    }
+
+    #[inline]
+    fn second_derivative_axis<const AXIS: usize, const ORDER: usize>(
+        field: &Array3<f64>,
+        i: usize,
+        j: usize,
+        k: usize,
+        inv_h2: f64,
+        n: usize,
+    ) -> f64 {
+        if ORDER >= 4 && n >= 5 {
+            Self::second_derivative_fourth::<AXIS>(field, i, j, k, inv_h2)
+        } else if n >= 3 {
+            Self::second_derivative_second::<AXIS>(field, i, j, k, inv_h2)
+        } else {
+            0.0
+        }
+    }
+
+    #[inline]
+    fn second_derivative_second<const AXIS: usize>(
+        field: &Array3<f64>,
+        i: usize,
+        j: usize,
+        k: usize,
+        inv_h2: f64,
+    ) -> f64 {
+        let center = field[[i, j, k]];
+        let (hi, lo) = match AXIS {
+            0 => (field[[i + 1, j, k]], field[[i - 1, j, k]]),
+            1 => (field[[i, j + 1, k]], field[[i, j - 1, k]]),
+            2 => (field[[i, j, k + 1]], field[[i, j, k - 1]]),
+            _ => unreachable!("AXIS is a const-generic selector in 0..3"),
+        };
+        (2.0f64.mul_add(-center, hi) + lo) * inv_h2
+    }
+
+    #[inline]
+    fn second_derivative_fourth<const AXIS: usize>(
+        field: &Array3<f64>,
+        i: usize,
+        j: usize,
+        k: usize,
+        inv_h2: f64,
+    ) -> f64 {
+        const C0: f64 = -1.0 / 12.0;
+        const C1: f64 = 4.0 / 3.0;
+        const C2: f64 = -5.0 / 2.0;
+
+        let center = field[[i, j, k]];
+        let (p2, p1, m1, m2) = match AXIS {
+            0 => (
+                field[[i + 2, j, k]],
+                field[[i + 1, j, k]],
+                field[[i - 1, j, k]],
+                field[[i - 2, j, k]],
+            ),
+            1 => (
+                field[[i, j + 2, k]],
+                field[[i, j + 1, k]],
+                field[[i, j - 1, k]],
+                field[[i, j - 2, k]],
+            ),
+            2 => (
+                field[[i, j, k + 2]],
+                field[[i, j, k + 1]],
+                field[[i, j, k - 1]],
+                field[[i, j, k - 2]],
+            ),
+            _ => unreachable!("AXIS is a const-generic selector in 0..3"),
+        };
+
+        C0.mul_add(p2, C1.mul_add(p1, C2.mul_add(center, C1.mul_add(m1, C0 * m2)))) * inv_h2
+    }
+
     /// Update.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -136,7 +214,7 @@ impl ThermalDiffusionSolver {
         medium: &dyn Medium,
         grid: &Grid,
         dt: f64,
-        external_source: Option<&Array3<f64>>,
+        external_source: Option<ArrayView3<'_, f64>>,
     ) -> KwaversResult<()> {
         if self.temperature_prev.is_none() {
             self.temperature_prev = Some(Array3::zeros(self.temperature.raw_dim()));
@@ -178,20 +256,20 @@ impl ThermalDiffusionSolver {
 
     fn update_standard_diffusion(
         &mut self,
-        external_source: Option<&Array3<f64>>,
+        external_source: Option<ArrayView3<'_, f64>>,
         medium: &dyn Medium,
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
         Zip::indexed(&mut self.temperature)
             .and(&self.laplacian_workspace)
-            .for_each(|(i, j, k), temp, &lap| {
+            .par_for_each(|(i, j, k), temp, &lap| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                let source = external_source.map_or(0.0, |s| s[[i, j, k]]);
+                let source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
 
                 *temp += dt * alpha.mul_add(lap, source);
             });
@@ -239,5 +317,68 @@ impl ThermalDiffusionSolver {
         if let Some(ref mut calc) = self.dose_calculator {
             calc.reset();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::medium::HomogeneousMedium;
+
+    fn config(spatial_order: usize) -> ThermalDiffusionConfig {
+        ThermalDiffusionConfig {
+            enable_bioheat: false,
+            enable_hyperbolic: false,
+            track_thermal_dose: false,
+            spatial_order,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn second_order_laplacian_keeps_singleton_axis_active_for_other_axes() {
+        let grid = Grid::new(5, 5, 1, 1.0, 1.0, 1.0).unwrap();
+        let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
+        let field = Array3::from_shape_fn((5, 5, 1), |(i, j, _)| {
+            (i * i) as f64 + 2.0 * (j * j) as f64
+        });
+        solver.set_temperature(field);
+
+        solver.calculate_laplacian(&grid).unwrap();
+
+        assert_eq!(solver.laplacian_workspace[[2, 2, 0]], 6.0);
+        assert_eq!(solver.laplacian_workspace[[0, 2, 0]], 0.0);
+    }
+
+    #[test]
+    fn fourth_order_laplacian_falls_back_per_axis_on_narrow_dimensions() {
+        let grid = Grid::new(7, 3, 1, 1.0, 1.0, 1.0).unwrap();
+        let mut solver = ThermalDiffusionSolver::new(config(4), &grid);
+        let field = Array3::from_shape_fn((7, 3, 1), |(i, j, _)| {
+            (i * i) as f64 + 3.0 * (j * j) as f64
+        });
+        solver.set_temperature(field);
+
+        solver.calculate_laplacian(&grid).unwrap();
+
+        let error = (solver.laplacian_workspace[[3, 1, 0]] - 8.0).abs();
+        assert!(error <= 8.0 * f64::EPSILON);
+    }
+
+    #[test]
+    fn standard_update_consumes_borrowed_source_view_without_source_clone() {
+        let grid = Grid::new(3, 3, 1, 1.0, 1.0, 1.0).unwrap();
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
+        solver.set_temperature(Array3::from_elem((3, 3, 1), 310.0));
+        let mut source = Array3::zeros((3, 3, 1));
+        source[[1, 1, 0]] = 5.0;
+
+        solver
+            .update(&medium, &grid, 2.0, Some(source.view()))
+            .unwrap();
+
+        assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
+        assert_eq!(solver.temperature()[[0, 0, 0]], 310.0);
     }
 }

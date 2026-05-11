@@ -70,16 +70,15 @@ impl crate::domain::plugin::Plugin for ThermalDiffusionPlugin {
     ) -> KwaversResult<()> {
         if let Some(ref mut solver) = self.solver {
             let heat_source = if fields.shape()[0] > UnifiedFieldType::Temperature as usize + 1 {
-                Some(
-                    fields
-                        .index_axis(ndarray::Axis(0), UnifiedFieldType::Temperature as usize + 1)
-                        .to_owned(),
-                )
+                Some(fields.index_axis(
+                    ndarray::Axis(0),
+                    UnifiedFieldType::Temperature as usize + 1,
+                ))
             } else {
                 None
             };
 
-            solver.update(medium, grid, dt, heat_source.as_ref())?;
+            solver.update(medium, grid, dt, heat_source)?;
 
             let temp_idx = UnifiedFieldType::Temperature as usize;
             if fields.shape()[0] > temp_idx {

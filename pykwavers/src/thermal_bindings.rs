@@ -116,6 +116,7 @@ pub struct ThermalSimulation {
     initial_temperature_c: f64,
     // options
     track_thermal_dose: bool,
+    spatial_order: u8,
 }
 
 #[pymethods]
@@ -137,6 +138,7 @@ impl ThermalSimulation {
     /// metabolic_heat : Q_m [W/m³]. Default 0.
     /// initial_temperature : T_0 [°C]. Default 37.
     /// track_thermal_dose : compute CEM43 field. Default True.
+    /// spatial_order : Laplacian finite-difference order (2 or 4). Default 2.
     #[new]
     #[pyo3(signature = (
         nx, ny, nz, dx, dy, dz,
@@ -151,6 +153,7 @@ impl ThermalSimulation {
         metabolic_heat = 0.0,
         initial_temperature = DEFAULT_TA_C,
         track_thermal_dose = true,
+        spatial_order = 2,
     ))]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -171,6 +174,7 @@ impl ThermalSimulation {
         metabolic_heat: f64,
         initial_temperature: f64,
         track_thermal_dose: bool,
+        spatial_order: u8,
     ) -> PyResult<Self> {
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(PyValueError::new_err("Grid dimensions must be > 0"));
@@ -201,6 +205,7 @@ impl ThermalSimulation {
             metabolic_heat,
             initial_temperature_c: initial_temperature,
             track_thermal_dose,
+            spatial_order,
         })
     }
 
@@ -262,7 +267,7 @@ impl ThermalSimulation {
             relaxation_time: 20.0,
             track_thermal_dose: self.track_thermal_dose,
             dose_reference_temperature: 43.0,
-            spatial_order: 2,
+            spatial_order: self.spatial_order as usize,
         };
 
         // ── Construct solver and set initial temperature ──────────────────────
@@ -334,7 +339,7 @@ impl ThermalSimulation {
             }
 
             solver
-                .update(&medium, &kgrid, dt, q_ks.as_ref())
+                .update(&medium, &kgrid, dt, q_ks.as_ref().map(|a| a.view()))
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         }
 
