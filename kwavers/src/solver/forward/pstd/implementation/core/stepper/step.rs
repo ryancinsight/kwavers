@@ -47,6 +47,16 @@ impl PSTDSolver {
 
         self.update_pressure(dt)?;
 
+        // Dirichlet sources: override p[sensor] = data[t] directly post-EOS,
+        // mirroring KWave.jl's time_reversal_boundary_data which sets p after
+        // the normal density→pressure update rather than pre-setting density.
+        // Density evolves naturally at sensor locations; apply_pressure_sources
+        // is a no-op for Dirichlet mode.
+        if self.source_handler.pressure_mode() == crate::domain::source::SourceMode::Dirichlet {
+            self.source_handler
+                .enforce_pressure_dirichlet(self.time_step_index, &mut self.fields.p);
+        }
+
         if enabled!(Level::TRACE)
             && (self.time_step_index < 5 || self.time_step_index.is_multiple_of(10))
         {

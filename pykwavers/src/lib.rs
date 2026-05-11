@@ -7097,6 +7097,14 @@ fn time_reversal_reconstruction_impl(
         Simulation::cpml_thickness_limits(grid.nx, grid.ny, grid.nz);
     let pml = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
+    // Expand the grid by `pml` cells on each active side so the CPML absorbing
+    // region lies outside the physical domain.  Sensor positions are shifted into
+    // the expanded domain.  KWave.jl places the sensor at cell 0 of the original
+    // domain (inside its PML), but injecting at a cell inside the CPML causes the
+    // split-field correction to cancel the effective velocity drive (sigma_max at
+    // the outer wall → b≈0.55 → near-zero net outward propagation).  Placing the
+    // sensor at the first non-PML cell of the expanded domain (cell `pml`) avoids
+    // CPML isolation while still using the same time-reversed pressure data.
     let expand_x = if grid.nx > 1 { pml } else { 0 };
     let expand_y = if grid.ny > 1 { pml } else { 0 };
     let expand_z = if grid.nz > 1 { pml } else { 0 };

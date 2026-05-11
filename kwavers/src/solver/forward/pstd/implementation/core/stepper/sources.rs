@@ -99,67 +99,11 @@ impl PSTDSolver {
 
         match p_mode {
             crate::domain::source::SourceMode::Dirichlet => {
-                if is_axisymmetric {
-                    Zip::from(&mut self.rhox)
-                        .and(&mut self.rhoz)
-                        .and(&self.dpx)
-                        .par_for_each(|rx, rz, &s| {
-                            if s.abs() > 0.0 {
-                                *rx = s * density_scale;
-                                *rz = s * density_scale;
-                            }
-                        });
-                } else {
-                    match (has_y, has_z) {
-                        (true, true) => {
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoy)
-                                .and(&mut self.rhoz)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, ry, rz, &s| {
-                                    if s.abs() > 0.0 {
-                                        *rx = s;
-                                        *ry = s;
-                                        *rz = s;
-                                    }
-                                });
-                        }
-                        (true, false) => {
-                            // Quasi-2D (NZ=1): ρ_z has no divergence update — must not be set.
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoy)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, ry, &s| {
-                                    if s.abs() > 0.0 {
-                                        *rx = s;
-                                        *ry = s;
-                                    }
-                                });
-                        }
-                        (false, true) => {
-                            // XZ plane (NY=1): ρᵧ has no y-divergence update — must not be set.
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoz)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, rz, &s| {
-                                    if s.abs() > 0.0 {
-                                        *rx = s;
-                                        *rz = s;
-                                    }
-                                });
-                        }
-                        (false, false) => {
-                            // 1D (NY=1, NZ=1): only ρₓ participates.
-                            Zip::from(&mut self.rhox)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, &s| {
-                                    if s.abs() > 0.0 {
-                                        *rx = s;
-                                    }
-                                });
-                        }
-                    }
-                }
+                // Density evolves naturally at sensor locations. The direct pressure
+                // override p[sensor] = data[t] is applied post-EOS in step_forward
+                // via enforce_pressure_dirichlet, matching KWave.jl's
+                // time_reversal_boundary_data which sets p after the density→pressure
+                // update rather than pre-setting density components.
             }
             crate::domain::source::SourceMode::Additive => {
                 // R2C: dpx (nx,ny,nz) → p_k (nx,ny,nz_c); source_kappa sliced to nz_c.
