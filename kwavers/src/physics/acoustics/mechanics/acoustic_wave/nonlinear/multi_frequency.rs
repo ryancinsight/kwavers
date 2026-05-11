@@ -160,3 +160,116 @@ impl MultiFrequencyConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_produces_single_1mhz_component() {
+        let cfg = MultiFrequencyConfig::default();
+        assert_eq!(cfg.frequencies, vec![1e6]);
+        assert_eq!(cfg.weights, vec![1.0]);
+        assert!(!cfg.track_harmonics);
+        assert_eq!(cfg.max_harmonic_order, 5);
+    }
+
+    /// `new` with `None` weights produces equal-weight components.
+    #[test]
+    fn new_with_none_weights_distributes_equally() {
+        let freqs = vec![1e6, 2e6, 3e6];
+        let cfg = MultiFrequencyConfig::new(freqs.clone(), None);
+        assert_eq!(cfg.frequencies, freqs);
+        assert_eq!(cfg.weights.len(), 3);
+        let expected_weight = 1.0 / 3.0;
+        for &w in &cfg.weights {
+            assert!((w - expected_weight).abs() < 1e-15);
+        }
+    }
+
+    /// `new` with explicit weights stores them verbatim.
+    #[test]
+    fn new_with_explicit_weights_stores_them_verbatim() {
+        let freqs = vec![1e6, 2e6];
+        let weights = vec![0.7, 0.3];
+        let cfg = MultiFrequencyConfig::new(freqs, Some(weights.clone()));
+        assert_eq!(cfg.weights, weights);
+    }
+
+    /// `for_harmonics` produces frequencies [f, 2f, …, n·f] with equal weights
+    /// summing to 1 and sets `track_harmonics = true`.
+    #[test]
+    fn for_harmonics_produces_correct_frequency_series() {
+        let fundamental = 1e6_f64;
+        let n = 3usize;
+        let cfg = MultiFrequencyConfig::for_harmonics(fundamental, n);
+        assert_eq!(cfg.frequencies.len(), n);
+        for (idx, &f) in cfg.frequencies.iter().enumerate() {
+            let expected = fundamental * (idx + 1) as f64;
+            assert!((f - expected).abs() < 1.0, "harmonic {}: {f} vs {expected}", idx + 1);
+        }
+        assert!(cfg.track_harmonics);
+        assert_eq!(cfg.max_harmonic_order, n);
+        let weight_sum: f64 = cfg.weights.iter().sum();
+        assert!((weight_sum - 1.0).abs() < 1e-15, "weights must sum to 1");
+    }
+
+    /// `broadband` produces endpoints matching min/max frequency and num_points entries.
+    #[test]
+    fn broadband_endpoints_and_count_are_correct() {
+        let (min_f, max_f, n) = (1e6, 5e6, 5usize);
+        let cfg = MultiFrequencyConfig::broadband(min_f, max_f, n);
+        assert_eq!(cfg.frequencies.len(), n);
+        assert!((cfg.frequencies[0] - min_f).abs() < 1.0);
+        assert!((cfg.frequencies[n - 1] - max_f).abs() < 1.0);
+        let weight_sum: f64 = cfg.weights.iter().sum();
+        assert!((weight_sum - 1.0).abs() < 1e-15);
+    }
+
+    /// `validate` accepts a valid single-frequency unit-weight config.
+    #[test]
+    fn validate_accepts_valid_config() {
+        let cfg = MultiFrequencyConfig::default();
+        assert!(cfg.validate(), "default config must be valid");
+    }
+
+    /// `validate` rejects empty frequency list.
+    #[test]
+    fn validate_rejects_empty_frequencies() {
+        let cfg = MultiFrequencyConfig {
+            frequencies: vec![],
+            weights: vec![],
+            ..Default::default()
+        };
+        assert!(!cfg.validate());
+    }
+
+    /// `validate` rejects mismatched frequency / weight lengths.
+    #[test]
+    fn validate_rejects_mismatched_lengths() {
+        let cfg = MultiFrequencyConfig {
+            frequencies: vec![1e6, 2e6],
+            weights: vec![1.0],
+            ..Default::default()
+        };
+        assert!(!cfg.validate());
+    }
+
+    /// `fundamental_frequency` returns the minimum frequency.
+    #[test]
+    fn fundamental_frequency_returns_minimum() {
+        let cfg = MultiFrequencyConfig::new(vec![3e6, 1e6, 2e6], None);
+        let f0 = cfg.fundamental_frequency().unwrap();
+        assert!((f0 - 1e6).abs() < 1.0);
+    }
+
+    /// `bandwidth` is max − min; single component → 0.
+    #[test]
+    fn bandwidth_is_max_minus_min() {
+        let cfg = MultiFrequencyConfig::new(vec![1e6, 5e6], None);
+        assert!((cfg.bandwidth() - 4e6).abs() < 1.0);
+
+        let single = MultiFrequencyConfig::default();
+        assert_eq!(single.bandwidth(), 0.0);
+    }
+}
