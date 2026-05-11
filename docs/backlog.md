@@ -2,17 +2,22 @@
 
 ## SSOT for Tasks, Priorities, Risks, Dependencies, and Retrospectives
 
-**Status**: CURRENT — k-Wave parity compare suite complete
-**Last Updated**: 2026-05-04
+**Status**: CURRENT — structural split complete; zero kwavers warnings; dynamic-focus GPU wired
+**Last Updated**: 2026-05-10
 **Architecture Compliance**: ✅ Clean architecture maintained
-**Quality Grade**: A+ — 2709/2709 tests passing (kwavers lib)
-**Current Phase**: Closure — all k-wave-python examples covered; GPU absorption gap open
+**Quality Grade**: A+ — 0 files ≥400 lines; 0 kwavers compiler warnings
+**Current Phase**: Closure — file hierarchy + naming fixes + GPU dynamic focus gap closed
 
 ### Priority backlog (ordered: correctness → architecture → missing tests → docs)
 
 #### P0 — Correctness
-- [ ] GPU PSTD: port fractional-Laplacian absorption (Treeby & Cox 2010 Eq. 9-10) [minor]
-  Spec: `project_gpu_frac_laplacian_absorption.md`; CPU PSTD already correct.
+- [x] GPU PSTD: fractional-Laplacian absorption (Treeby & Cox 2010 Eq. 9-10) VERIFIED COMPLETE [minor]
+  WGSL: `absorb_*` entry points in pstd.wgsl; Rust: encode_density_update + encode_pressure_record;
+  pipelines: all pipeline_absorb_* compiled + bg_absorb bound. No remaining gap.
+- [x] GPU 3D dynamic-focus DAS: `FeatureNotAvailable` closed; CPU delay tables uploaded to GPU;
+  `DynamicFocusGPU` + 7-binding layout + `dynamic_focus_pipeline` wired in `BeamformingProcessor3D` [minor]
+- [x] checkpoint/data.rs: sealed `WirePrimitive` trait replaces type-suffixed `read_f64`/`read_f64_array3` [patch]
+- [x] `test_radiation_force_moves_bubble`: `dt=1e-5` → `dt=1e-6`; 10→100 steps; directional assertion; `#[ignore]` removed [patch]
 
 #### P1 — Validation
 - [ ] Axisymmetric compare: validate WSWA-FFT AS + FDTD cylindrical vs k-wave-python AS [patch]
@@ -25,6 +30,14 @@
 #### P3 — Documentation
 - [ ] CHANGELOG.md: record post-Sprint-218 deliverables in chronological order [patch]
 - [ ] Update docs/checklist.md open-items section after each session [patch]
+
+#### Completed 2026-05-09
+- [x] File hierarchy: all `.rs` files split to <400 lines; 0 files ≥400 lines remain [patch]
+  Splits: neuron, stress, diagnosis, validators, general (factory), general_tests migration.
+- [x] Warning elimination: 10 kwavers warnings removed (unused imports + EnsembleModel privacy) [patch]
+  Files: coupling_ops.rs, execution_impl.rs (×2), manager/mod.rs (×5), algorithms.rs, ensemble_methods/mod.rs.
+- [x] AS PSTD hot-path: pre-allocate `coef: Array2<f64>` in `AsContext` — eliminates per-step
+  `Array2::zeros((nx,nr))` heap allocation in `update_density_as`; zero-allocation hot path [patch]
 
 ---
 

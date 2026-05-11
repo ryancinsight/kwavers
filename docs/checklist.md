@@ -27,13 +27,28 @@
 - [x] pykwavers compare suite: sd_directional_array, sd_directivity_3D [minor]
 - [x] All 29 k-wave-python examples covered by compare scripts [minor]
 
+### Closed 2026-05-09 (continuation session)
+
+- [x] File hierarchy complete: 0 `.rs` files ≥400 lines in kwavers src [patch]
+- [x] 10 kwavers compiler warnings eliminated (unused imports + privacy fix) [patch]
+- [x] AS PSTD hot-path: `AsContext::coef` pre-allocated; `update_density_as` allocation-free [patch]
+
+### Closed 2026-05-10 (this session)
+
+- [x] module_inception: `plugin/plugin.rs` → `plugin/implementation.rs`; mod.rs updated [patch]
+- [x] checkpoint/data.rs: sealed `WirePrimitive` trait; `read_le<T>` + `read_array3<T>` replace type-suffixed helpers [patch]
+- [x] `test_radiation_force_moves_bubble`: `#[ignore]` removed; `dt=1e-6`, 100 steps, directional assertion [patch]
+- [x] GPU 3D dynamic-focus DAS: `FeatureNotAvailable` wiring gap closed; `DynamicFocusGPU` + 7-binding layout + pipeline wired [minor]
+- [ ] `test_therapy_step_execution`: `#[ignore]` — investigation pending (therapy stack test result unknown) [patch]
+
 ### Open / Next Actions
 
-- [ ] GPU fractional-Laplacian absorption port (Treeby & Cox 2010 Eq. 9-10) [minor]
+- [ ] `test_therapy_step_execution`: verify passes; remove `#[ignore]` [patch]
 - [ ] Axisymmetric validation: run compare scripts against k-wave-python AS examples [patch]
 - [ ] SD directivity 3D compare: 11 × 3D PSTD runs — cache warm-up on first execution [patch]
 - [ ] Update CHANGELOG.md to reflect post-Sprint-218 deliverables [patch]
-- [ ] cargo-semver-checks for new public API surface (velocity source, checkpointing) [patch]
+- [ ] cargo-semver-checks for new public API surface (velocity source, checkpointing, dynamic-focus GPU) [patch]
+- [ ] Remove global `#![allow(clippy::too_many_arguments)]` from lib.rs; replace with targeted param-struct refactors [minor]
 
 ---
 
