@@ -71,3 +71,98 @@ impl PlaneWaveSolution {
         speed_error < tolerance && correlation > 0.9
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use std::f64::consts::PI;
+
+    fn water_grid_one_wavelength() -> Grid {
+        // f=1MHz, c=1500 m/s → λ=1.5mm; grid spacing dx=λ/32 → N=32 points per wavelength
+        let f = 1e6_f64;
+        let c = 1500.0_f64;
+        let lam = c / f;
+        let dx = lam / 32.0;
+        Grid::new(32, 4, 4, dx, dx, dx).unwrap()
+    }
+
+    /// Field at origin (i=j=k=0) at t=0 with x-direction propagation is 0.
+    ///
+    /// Phase = k_dispersed·(dir_x·0 + dir_y·0 + dir_z·0) − ω·0 = 0, sin(0) = 0.
+    #[test]
+    fn plane_wave_zero_at_origin_t0_x_direction() {
+        let grid = water_grid_one_wavelength();
+        let field = PlaneWaveSolution::generate(
+            &grid, 1e6, 10.0, 1500.0, 0.0, (1.0, 0.0, 0.0),
+        );
+        assert!(
+            field[[0, 0, 0]].abs() < 1e-13,
+            "field at origin must be 0 (got {:.3e})", field[[0, 0, 0]]
+        );
+    }
+
+    /// Field is bounded by amplitude at every grid point.
+    ///
+    /// |sin(φ)| ≤ 1, so |field| ≤ amplitude·(1 + small dispersion correction).
+    #[test]
+    fn plane_wave_bounded_by_amplitude_everywhere() {
+        let grid = water_grid_one_wavelength();
+        let amplitude = 7.0_f64;
+        let field = PlaneWaveSolution::generate(
+            &grid, 1e6, amplitude, 1500.0, 0.0, (1.0, 0.0, 0.0),
+        );
+        for &v in field.iter() {
+            assert!(
+                v.abs() <= amplitude * 1.01,
+                "field ({v:.3e}) must not exceed amplitude ({amplitude})"
+            );
+        }
+    }
+
+    /// Output array shape matches the grid shape exactly.
+    #[test]
+    fn plane_wave_shape_matches_grid() {
+        let grid = water_grid_one_wavelength();
+        let field = PlaneWaveSolution::generate(
+            &grid, 1e6, 1.0, 1500.0, 0.0, (1.0, 0.0, 0.0),
+        );
+        assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
+    }
+
+    /// At i = N/4 (quarter wavelength) along x with t=0, the field is near peak.
+    ///
+    /// Analytical: k·(N/4·dx) ≈ (2π/λ)·(λ/4) = π/2 → sin(π/2) = 1.
+    /// The dispersion-corrected wavenumber introduces a small positive correction:
+    /// k_dispersed = k·(1 + 0.02·(k·dx)²) > k, so phase at i=N/4 > π/2
+    /// and sin(phase) still ≈ 1 for large N.
+    #[test]
+    fn plane_wave_near_peak_at_quarter_wavelength() {
+        let nx = 64usize;
+        let f = 1e6_f64;
+        let c = 1500.0_f64;
+        let lam = c / f;
+        let dx = lam / nx as f64;   // N grid points per wavelength
+        let grid = Grid::new(nx, 4, 4, dx, dx, dx).unwrap();
+
+        let amplitude = 5.0_f64;
+        let field = PlaneWaveSolution::generate(
+            &grid, f, amplitude, c, 0.0, (1.0, 0.0, 0.0),
+        );
+
+        // At i = nx/4: k·x = (2π/λ)·(λ/4) = π/2
+        let k = 2.0 * PI * f / c;
+        let x_quarter = (nx / 4) as f64 * dx;
+
+        // Dispersion correction: k_disp = k · (1 + 0.02 · (k·dx)²)
+        let k_corr = k * (1.0 + DISPERSION_CORRECTION_SECOND_ORDER * (k * dx).powi(2));
+        let actual_phase = k_corr * x_quarter;
+        let expected_value = amplitude * actual_phase.sin();
+
+        let got = field[[nx / 4, 0, 0]];
+        assert!(
+            (got - expected_value).abs() < 1e-12,
+            "field at N/4 must match analytical sin (expected {expected_value:.6}, got {got:.6})"
+        );
+    }
+}
