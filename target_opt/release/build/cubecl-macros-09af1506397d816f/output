@@ -1,2 +1,0 @@
-cargo::rustc-check-cfg=cfg(debug_symbols)
-cargo:rerun-if-env-changed=CUBECL_DEBUG

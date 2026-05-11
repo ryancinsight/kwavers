@@ -1,5 +1,0 @@
-cargo:rustc-check-cfg=cfg(std_io)
-cargo:rustc-cfg=std_io
-cargo:rustc-check-cfg=cfg(exclusive_memory_only)
-cargo:rustc-check-cfg=cfg(multi_threading)
-cargo:rustc-cfg=multi_threading
