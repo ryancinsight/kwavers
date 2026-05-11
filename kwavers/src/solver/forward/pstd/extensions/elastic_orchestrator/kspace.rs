@@ -1,4 +1,5 @@
-//! k-space correction for the elastic PSTD orchestrator.
+//! k-space correction and spectral derivative helpers for the elastic PSTD
+//! orchestrator.
 //!
 //! # Theorem (Tabei et al. 2002 / Treeby–Cox 2010 Eq. 18)
 //!
@@ -36,7 +37,7 @@
 //!   Opt. 15(2), 021314.
 
 use super::types::ElasticPstdMedium;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 use num_complex::Complex;
 
 /// Maximum P-wave speed `c_p = sqrt((λ + 2μ)/ρ)` across the medium.
@@ -127,4 +128,71 @@ pub(super) fn build_kappa(
         let arg = 0.5 * c_ref * dt * k_sq.sqrt();
         if arg < 1e-12 { 1.0 } else { arg.sin() / arg }
     })
+}
+
+// ─── Spectral derivative helpers ─────────────────────────────────────────────
+//
+// These three functions apply a staggered-grid spectral derivative operator
+// (shaped `(n_axis, 1, 1)`, passed as a contiguous slice) combined with the
+// k-space correction `kappa` to a complex spectral field. They are shared by
+// both the standard leapfrog path (`orchestrator.rs`) and the split-field PML
+// path (`split_field_step.rs`).
+
+/// Compute `output[i,j,k] = input[i,j,k] · op_x[i] · kappa[i,j,k]`.
+///
+/// `op_x` is a contiguous slice of length `nx` from a `(nx, 1, 1)` operator
+/// array. The x-axis index `i` selects the per-wavenumber multiplier.
+/// Applied to both the stress-update (neg-shift) and velocity-update
+/// (pos-shift) derivative operators; the caller chooses the correct slice.
+#[inline]
+pub(super) fn spectral_mul_x(
+    input: &Array3<Complex<f64>>,
+    op_x: &[Complex<f64>],
+    kappa: &Array3<f64>,
+    output: &mut Array3<Complex<f64>>,
+) {
+    Zip::indexed(output.view_mut())
+        .and(input.view())
+        .and(kappa.view())
+        .for_each(|(i, _, _), out, inp, kap| {
+            *out = *inp * op_x[i] * kap;
+        });
+}
+
+/// Compute `output[i,j,k] = input[i,j,k] · op_y[j] · kappa[i,j,k]`.
+///
+/// `op_y` is a contiguous slice of length `ny` from a `(ny, 1, 1)` operator
+/// array indexed by the y-axis position `j`.
+#[inline]
+pub(super) fn spectral_mul_y(
+    input: &Array3<Complex<f64>>,
+    op_y: &[Complex<f64>],
+    kappa: &Array3<f64>,
+    output: &mut Array3<Complex<f64>>,
+) {
+    Zip::indexed(output.view_mut())
+        .and(input.view())
+        .and(kappa.view())
+        .for_each(|(_, j, _), out, inp, kap| {
+            *out = *inp * op_y[j] * kap;
+        });
+}
+
+/// Compute `output[i,j,k] = input[i,j,k] · op_z[k] · kappa[i,j,k]`.
+///
+/// `op_z` is a contiguous slice of length `nz` from a `(nz, 1, 1)` operator
+/// array indexed by the z-axis position `k`.
+#[inline]
+pub(super) fn spectral_mul_z(
+    input: &Array3<Complex<f64>>,
+    op_z: &[Complex<f64>],
+    kappa: &Array3<f64>,
+    output: &mut Array3<Complex<f64>>,
+) {
+    Zip::indexed(output.view_mut())
+        .and(input.view())
+        .and(kappa.view())
+        .for_each(|(_, _, k), out, inp, kap| {
+            *out = *inp * op_z[k] * kap;
+        });
 }

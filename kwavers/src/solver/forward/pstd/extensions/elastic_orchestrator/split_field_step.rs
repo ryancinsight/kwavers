@@ -24,6 +24,7 @@
 //! `spectral_stress` and `spectral_stress_next` are used as scratch FFT
 //! buffers in this path; their contents after return are undefined.
 
+use super::kspace::{spectral_mul_x, spectral_mul_y, spectral_mul_z};
 use super::split_field_pml::{ElasticSplitFieldPml, SplitFieldState};
 use super::types::ElasticPstdMedium;
 use crate::math::fft::{fft_3d_array_into, ifft_3d_array_into};
@@ -499,61 +500,3 @@ pub(super) fn propagate_split_field_step(
         .for_each(|out, &a, &b, &c| *out = a + b + c);
 }
 
-// ─── Spectral derivative helpers ─────────────────────────────────────────────
-
-/// Compute `output[i,j,k] = input[i,j,k] · op_x[i] · kappa[i,j,k]`.
-///
-/// `op_x` is a contiguous slice of length `nx` from a `(nx, 1, 1)` operator
-/// array. The x-axis index `i` selects the per-wavenumber multiplier.
-#[inline]
-fn spectral_mul_x(
-    input: &Array3<Complex<f64>>,
-    op_x: &[Complex<f64>],
-    kappa: &Array3<f64>,
-    output: &mut Array3<Complex<f64>>,
-) {
-    Zip::indexed(output.view_mut())
-        .and(input.view())
-        .and(kappa.view())
-        .for_each(|(i, _, _), out, inp, kap| {
-            *out = *inp * op_x[i] * kap;
-        });
-}
-
-/// Compute `output[i,j,k] = input[i,j,k] · op_y[j] · kappa[i,j,k]`.
-///
-/// `op_y` is a contiguous slice of length `ny` from a `(ny, 1, 1)` operator
-/// array indexed by the y-axis position `j`.
-#[inline]
-fn spectral_mul_y(
-    input: &Array3<Complex<f64>>,
-    op_y: &[Complex<f64>],
-    kappa: &Array3<f64>,
-    output: &mut Array3<Complex<f64>>,
-) {
-    Zip::indexed(output.view_mut())
-        .and(input.view())
-        .and(kappa.view())
-        .for_each(|(_, j, _), out, inp, kap| {
-            *out = *inp * op_y[j] * kap;
-        });
-}
-
-/// Compute `output[i,j,k] = input[i,j,k] · op_z[k] · kappa[i,j,k]`.
-///
-/// `op_z` is a contiguous slice of length `nz` from a `(nz, 1, 1)` operator
-/// array indexed by the z-axis position `k`.
-#[inline]
-fn spectral_mul_z(
-    input: &Array3<Complex<f64>>,
-    op_z: &[Complex<f64>],
-    kappa: &Array3<f64>,
-    output: &mut Array3<Complex<f64>>,
-) {
-    Zip::indexed(output.view_mut())
-        .and(input.view())
-        .and(kappa.view())
-        .for_each(|(_, _, k), out, inp, kap| {
-            *out = *inp * op_z[k] * kap;
-        });
-}

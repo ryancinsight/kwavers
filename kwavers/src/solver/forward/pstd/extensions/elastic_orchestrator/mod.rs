@@ -23,6 +23,7 @@
 mod kspace;
 mod orchestrator;
 mod pml;
+mod source_sensor;
 mod split_field_pml;
 mod split_field_step;
 mod types;
