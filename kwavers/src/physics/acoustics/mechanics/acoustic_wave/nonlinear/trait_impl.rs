@@ -159,3 +159,110 @@ impl NonlinearWave {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::wave_model::NonlinearWave;
+    use crate::domain::grid::Grid;
+    use crate::domain::medium::HomogeneousMedium;
+    use crate::physics::traits::AcousticWaveModel;
+
+    /// `set_nonlinearity_scaling` stores the supplied value verbatim.
+    #[test]
+    fn set_nonlinearity_scaling_stores_supplied_value() {
+        let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
+        let mut w = NonlinearWave::new(&grid, 1e-7);
+        w.set_nonlinearity_scaling(3.7);
+        assert!(
+            (w.nonlinearity_scaling - 3.7).abs() < f64::EPSILON,
+            "nonlinearity_scaling must be 3.7 (got {})",
+            w.nonlinearity_scaling
+        );
+    }
+
+    /// `validate_parameters` accepts a configuration that satisfies the CFL
+    /// condition, grid-resolution criterion (≥6 pts/wavelength), and
+    /// nonlinearity_scaling ∈ [0, 10].
+    ///
+    /// Parameters derived analytically for water (c≈1500 m/s, f=1 MHz):
+    ///   λ = 1500/1e6 = 1.5 mm → min_dx < 1.5e-3/6 = 0.25 mm.
+    ///   Use dx = 0.0001 m (0.1 mm) — factor-of-2.5 margin.
+    ///   dt = get_stable_timestep → CFL = safety·threshold = 0.45 ≤ 0.45 ✓.
+    #[test]
+    fn validate_parameters_accepts_valid_config_for_water() {
+        let dx = 0.0001_f64; // 0.1 mm
+        let grid = Grid::new(10, 10, 10, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let mut w = NonlinearWave::new(&grid, 1e-7 /* placeholder */);
+        // Override dt to the analytically safe value
+        let dt_safe = w.get_stable_timestep(&medium, &grid);
+        w.dt = dt_safe;
+        w.source_frequency = 1e6;
+
+        assert!(
+            w.validate_parameters(&medium, &grid).is_ok(),
+            "analytically derived config must pass validate_parameters"
+        );
+    }
+
+    /// `validate_parameters` rejects a timestep that violates the CFL condition.
+    ///
+    /// With water (c≈1500) and dx=0.001 m, CFL limit ≈ 0.45·dx/c ≈ 3e-7 s.
+    /// dt=1e-3 s gives CFL≈1500 >> 0.45 → unstable.
+    #[test]
+    fn validate_parameters_rejects_unstable_dt() {
+        let dx = 0.001_f64;
+        let grid = Grid::new(4, 4, 4, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let w = NonlinearWave::new(&grid, 1e-3); // CFL >> 0.45
+
+        let result = w.validate_parameters(&medium, &grid);
+        assert!(result.is_err(), "CFL violation must return Err");
+    }
+
+    /// `validate_parameters` rejects a grid spacing too coarse for the source
+    /// frequency.
+    ///
+    /// At f=5 MHz and c≈1500 m/s: λ=0.3 mm → min_dx must be < 0.3mm/6=50 μm.
+    /// dx=0.001 m = 1 mm >> 50 μm → Err.
+    #[test]
+    fn validate_parameters_rejects_grid_too_coarse_for_frequency() {
+        let dx = 0.001_f64; // 1 mm
+        let grid = Grid::new(4, 4, 4, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let mut w = NonlinearWave::new(&grid, 1e-7);
+        // Stable dt but source_frequency set so that wavelength requires finer grid
+        let dt_safe = w.get_stable_timestep(&medium, &grid);
+        w.dt = dt_safe;
+        w.source_frequency = 5e6; // λ=0.3mm, need dx < 50µm; dx=1mm violates
+
+        let result = w.validate_parameters(&medium, &grid);
+        assert!(result.is_err(), "coarse grid must return Err");
+    }
+
+    /// `validate_parameters` rejects nonlinearity_scaling outside [0, 10].
+    #[test]
+    fn validate_parameters_rejects_out_of_range_nonlinearity_scaling() {
+        let dx = 0.0001_f64;
+        let grid = Grid::new(10, 10, 10, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let mut w = NonlinearWave::new(&grid, 1e-7);
+        let dt_safe = w.get_stable_timestep(&medium, &grid);
+        w.dt = dt_safe;
+        w.source_frequency = 1e6;
+
+        // Negative scaling
+        w.nonlinearity_scaling = -0.1;
+        assert!(
+            w.validate_parameters(&medium, &grid).is_err(),
+            "negative nonlinearity_scaling must be rejected"
+        );
+
+        // Scaling exceeding upper bound
+        w.nonlinearity_scaling = 10.1;
+        assert!(
+            w.validate_parameters(&medium, &grid).is_err(),
+            "nonlinearity_scaling > 10.0 must be rejected"
+        );
+    }
+}
