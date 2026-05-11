@@ -2,7 +2,7 @@
 
 use super::config::PMLConfig;
 use crate::domain::grid::Grid;
-use ndarray::Array3;
+use ndarray::{Array1, Array3};
 
 /// PML boundary condition calculator.
 ///
@@ -76,6 +76,48 @@ impl PMLBoundary {
                 }
             }
         }
+    }
+
+    /// Per-axis σ profiles matching the scalar `compute_attenuation_field` profile.
+    ///
+    /// Returns `(sigma_x, sigma_y, sigma_z)` each of length `n_α`.  Interior
+    /// points have `σ = 0`; absorbing-layer points follow
+    /// `σ(d) = σ_max · (d / L_pml)^order` with `d` the boundary distance.
+    ///
+    /// Callers that need per-step damping compute `exp(−σ · dt)` themselves,
+    /// because `dt` is not known at `PMLBoundary` construction time.
+    #[must_use]
+    pub fn axis_sigma_profiles(&self, grid: &Grid) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
+        let (nx, ny, nz) = grid.dimensions();
+        let thickness = self.config.thickness;
+        let sigma_max = self.config.sigma_max;
+        let order = self.config.profile_order as i32;
+
+        let compute_axis = |n: usize, active: bool| {
+            let mut sigma = Array1::<f64>::zeros(n);
+            if !active || thickness == 0 || n < 2 {
+                return sigma;
+            }
+            for i in 0..thickness {
+                if i < n {
+                    let dist = (thickness - i) as f64;
+                    sigma[i] = sigma_max * (dist / thickness as f64).powi(order);
+                }
+            }
+            if n > thickness {
+                for i in (n - thickness)..n {
+                    let dist = (i - (n - thickness) + 1) as f64;
+                    sigma[i] = sigma_max * (dist / thickness as f64).powi(order);
+                }
+            }
+            sigma
+        };
+
+        (
+            compute_axis(nx, nx > 1),
+            compute_axis(ny, ny > 1),
+            compute_axis(nz, nz > 1),
+        )
     }
 
     /// Theoretical reflection coefficient: `R ≈ exp(-2 * σ_max * L_pml / c_max)`.

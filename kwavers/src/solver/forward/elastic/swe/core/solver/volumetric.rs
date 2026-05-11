@@ -40,7 +40,7 @@ impl ElasticWaveSolver {
             &self.lambda,
             &self.mu,
             &self.density,
-            self.pml.attenuation_field(),
+            &self.pml,
         );
         let dt = if self.config.time_step > 0.0 {
             self.config.time_step
@@ -112,7 +112,7 @@ impl ElasticWaveSolver {
             &self.lambda,
             &self.mu,
             &self.density,
-            self.pml.attenuation_field(),
+            &self.pml,
         );
         let dt = if self.config.time_step > 0.0 {
             self.config.time_step

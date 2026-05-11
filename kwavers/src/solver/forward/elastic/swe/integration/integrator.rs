@@ -1,39 +1,64 @@
 //! `TimeIntegrator` — velocity-Verlet time integration for elastic waves.
 
+use super::super::boundary::PMLBoundary;
 use super::super::stress::stress_divergence;
 use super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use ndarray::Array3;
+use ndarray::{Array1, Array3};
 
-/// Time integration engine for elastic waves
+/// Time integration engine for elastic waves.
 ///
-/// Implements velocity-Verlet scheme with optional body forces and PML damping.
+/// Implements a velocity-Verlet scheme with optional body forces and a
+/// separable per-axis exponential PML (Collino & Tsogka 2001 §3).
+///
+/// # PML correctness
+///
+/// The previous scalar implementation applied the maximum σ over all axes
+/// uniformly to all velocity components (`v *= exp(−σ_max · dt)`), which
+/// fails for oblique-incidence waves and grows unboundedly past NT ≈ 200.
+///
+/// The corrected implementation pre-computes per-axis σ profiles and at each
+/// step applies the separable damping factor `exp(−σ_x[i]·dt) · exp(−σ_y[j]·dt) ·
+/// exp(−σ_z[k]·dt)` to **both** displacements `u` and velocities `v`.
+///
+/// Damping `u` is necessary because the displacement field drives the stress
+/// tensor, and undamped displacement in the PML generates stress that
+/// continuously feeds reflected velocity back into the domain.
 #[derive(Debug)]
 pub struct TimeIntegrator<'a> {
     grid: &'a Grid,
     lambda: &'a Array3<f64>,
     mu: &'a Array3<f64>,
     density: &'a Array3<f64>,
-    pml_sigma: &'a Array3<f64>,
+    /// Per-axis σ profiles (interior = 0; absorbing layer = power-law).
+    sigma_x: Array1<f64>,
+    sigma_y: Array1<f64>,
+    sigma_z: Array1<f64>,
 }
 
 impl<'a> TimeIntegrator<'a> {
-    /// Create new time integrator
+    /// Create a new time integrator.
+    ///
+    /// Computes per-axis σ profiles from `pml` at construction; the profiles
+    /// do not depend on `dt`, which is determined later from the CFL condition.
     #[must_use]
     pub fn new(
         grid: &'a Grid,
         lambda: &'a Array3<f64>,
         mu: &'a Array3<f64>,
         density: &'a Array3<f64>,
-        pml_sigma: &'a Array3<f64>,
+        pml: &PMLBoundary,
     ) -> Self {
+        let (sigma_x, sigma_y, sigma_z) = pml.axis_sigma_profiles(grid);
         Self {
             grid,
             lambda,
             mu,
             density,
-            pml_sigma,
+            sigma_x,
+            sigma_y,
+            sigma_z,
         }
     }
 
@@ -288,14 +313,19 @@ impl<'a> TimeIntegrator<'a> {
                 }
 
                 let spatial_factor = (-0.5
-                    * (dz / sz).mul_add(dz / sz, (dx / sx).mul_add(dx / sx, (dy / sy) * (dy / sy))))
-                    .exp();
+                    * (dz / sz)
+                        .mul_add(dz / sz, (dx / sx).mul_add(dx / sx, (dy / sy) * (dy / sy))))
+                .exp();
 
                 let dt = time - *t0_s;
                 let temporal_factor = (-(dt * dt) / (2.0 * sigma_t_s * sigma_t_s)).exp()
                     / (sigma_t_s * (2.0 * std::f64::consts::PI).sqrt());
 
-                let dir_norm = direction[2].mul_add(direction[2], direction[0].mul_add(direction[0], direction[1] * direction[1]))
+                let dir_norm = direction[2]
+                    .mul_add(
+                        direction[2],
+                        direction[0].mul_add(direction[0], direction[1] * direction[1]),
+                    )
                     .sqrt();
                 if !dir_norm.is_finite() || dir_norm < 1e-12 {
                     return Ok([0.0, 0.0, 0.0]);
@@ -311,21 +341,42 @@ impl<'a> TimeIntegrator<'a> {
         }
     }
 
-    /// Apply PML damping to velocity field.
+    /// Apply separable per-axis PML damping to both displacements and velocities.
     ///
-    /// Model: `v(t+Δt) = v(t) * exp(-σ * Δt)`
+    /// For cell `(i,j,k)`, the damping factor is the product of per-axis
+    /// exponentials:
+    ///
+    /// ```text
+    /// d(i,j,k) = exp(−σ_x[i]·dt) · exp(−σ_y[j]·dt) · exp(−σ_z[k]·dt)
+    /// ```
+    ///
+    /// Applied to both `{ux,uy,uz}` and `{vx,vy,vz}`.  Damping the
+    /// displacement fields is necessary: the stress tensor is derived from
+    /// displacements, and undamped displacement in the PML would continuously
+    /// feed reflected energy back into the interior even with damped velocity.
     pub(crate) fn apply_pml_damping(&self, field: &mut ElasticWaveField, dt: f64) {
         let (nx, ny, nz) = field.vx.dim();
+        let sx = self.sigma_x.as_slice().expect("sigma_x contiguous");
+        let sy = self.sigma_y.as_slice().expect("sigma_y contiguous");
+        let sz = self.sigma_z.as_slice().expect("sigma_z contiguous");
 
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let sigma = self.pml_sigma[[i, j, k]];
-                    if sigma > 0.0 {
-                        let damping = (-sigma * dt).exp();
-                        field.vx[[i, j, k]] *= damping;
-                        field.vy[[i, j, k]] *= damping;
-                        field.vz[[i, j, k]] *= damping;
+        debug_assert_eq!(sx.len(), nx);
+        debug_assert_eq!(sy.len(), ny);
+        debug_assert_eq!(sz.len(), nz);
+
+        for (k, sigma_z) in sz.iter().copied().enumerate().take(nz) {
+            let ez = (-sigma_z * dt).exp();
+            for (j, sigma_y) in sy.iter().copied().enumerate().take(ny) {
+                let eyz = ez * (-sigma_y * dt).exp();
+                for (i, sigma_x) in sx.iter().copied().enumerate().take(nx) {
+                    let d = eyz * (-sigma_x * dt).exp();
+                    if d < 1.0 {
+                        field.vx[[i, j, k]] *= d;
+                        field.vy[[i, j, k]] *= d;
+                        field.vz[[i, j, k]] *= d;
+                        field.ux[[i, j, k]] *= d;
+                        field.uy[[i, j, k]] *= d;
+                        field.uz[[i, j, k]] *= d;
                     }
                 }
             }
