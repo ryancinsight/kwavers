@@ -119,13 +119,13 @@ SENSOR_IZ_FULL   = PML_Z_SIZE + SENSOR_IZ_ACTIVE  # 32  (full grid)
 # ---------------------------------------------------------------------------
 PARITY_THRESHOLDS: dict[str, dict] = {
     "p_rms": {
-        "pearson_r": 0.97,
+        "pearson_r": 0.99,
         "rms_ratio_min": 0.90,
         "rms_ratio_max": 1.10,
-        "psnr_db": 26.0,  # k-wave (k-space) vs PSTD achievable PSNR with TX delays
+        "psnr_db": 26.0,
     },
     "p_max": {
-        "pearson_r": 0.95,
+        "pearson_r": 0.99,
         "rms_ratio_min": 0.85,
         "rms_ratio_max": 1.15,
         "psnr_db": 25.0,
@@ -291,12 +291,12 @@ def build_pkw_source(
     Source mask layout (full grid, 128×64×64)
     -----------------------------------------
     Transducer is at x = PML_X_SIZE = 20 (first active voxel).
-    Active-domain position (0-indexed, from k-wave 1-indexed [1, 6, 16]):
-        y0_active = round(NY/2 − transducer_width/2) = 6
-        z0_active = round(NZ/2 − ELEM_LENGTH/2)      = 16
+    k-wave 1-indexed position [1, 6, 16] → 0-indexed active-domain [0, 5, 15]:
+        y0_active = round(NY/2 − transducer_width/2) − 1 = 5
+        z0_active = round(NZ/2 − ELEM_LENGTH/2)      − 1 = 15
     Full-grid position:
-        y0 = y0_active + PML_Y_SIZE = 16
-        z0 = z0_active + PML_Z_SIZE = 26
+        y0 = y0_active + PML_Y_SIZE = 15
+        z0 = z0_active + PML_Z_SIZE = 25
 
     Returns
     -------
@@ -305,9 +305,13 @@ def build_pkw_source(
     """
     transducer_width = N_ELEMENTS * ELEM_WIDTH + (N_ELEMENTS - 1) * ELEM_SPACING
 
-    # Active-domain corner (0-indexed)
-    y0_act = int(np.round(NY / 2 - transducer_width / 2))
-    z0_act = int(np.round(NZ / 2 - ELEM_LENGTH / 2))
+    # Active-domain corner (0-indexed).
+    # kWaveTransducerSimple.position uses 1-indexed MATLAB convention:
+    #   tr.position = [1, round(NY/2 - tw/2), round(NZ/2 - EL/2)]
+    # The same arithmetic evaluated in Python yields 0-indexed values that are 1 too high.
+    # Subtracting 1 converts the k-wave 1-indexed position to the correct 0-indexed cell.
+    y0_act = int(np.round(NY / 2 - transducer_width / 2)) - 1
+    z0_act = int(np.round(NZ / 2 - ELEM_LENGTH / 2)) - 1
 
     # Full-grid coordinates
     x_src = PML_X_SIZE
