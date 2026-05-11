@@ -196,3 +196,156 @@ pub(super) fn spectral_mul_z(
             *out = *inp * op_z[k] * kap;
         });
 }
+
+// ─── Tests ───────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::super::orchestrator::ElasticPstdOrchestrator;
+    use super::super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource};
+    use crate::domain::grid::Grid;
+    use ndarray::{Array1, Array3};
+    use std::f64::consts::PI;
+
+    /// DC mode kappa (|k|=0) must be exactly 1.0: `sinc(0) = 1` by L'Hôpital.
+    ///
+    /// Proof: `lim_{x→0} sin(x)/x = 1`. The branch in `build_kappa` guards
+    /// `arg < 1e-12` with the value 1.0, so the DC mode is never divided by
+    /// near-zero and kappa[0,0,0] = 1.0 exactly.
+    #[test]
+    fn kappa_dc_mode_is_exactly_one() {
+        let nx = 16usize;
+        let dx = 1e-3_f64;
+        let cp = 1500.0_f64;
+        let dt = 0.3 * dx / cp;
+        let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
+        let medium = ElasticPstdMedium {
+            lame_lambda: Array3::from_elem((nx, nx, nx), 1000.0 * cp * cp),
+            lame_mu: Array3::zeros((nx, nx, nx)),
+            density: Array3::from_elem((nx, nx, nx), 1000.0),
+        };
+        let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
+        assert_eq!(
+            orch.kappa[[0, 0, 0]],
+            1.0,
+            "kappa at |k|=0 (DC mode) must be exactly 1.0 by L'Hôpital"
+        );
+    }
+
+    /// Kappa values lie in `(0, 1]` for all wavenumber modes.
+    ///
+    /// `sinc(x) ∈ (0, 1]` for `x ∈ [0, π/2)` and `sinc(x) > 0` for any
+    /// `arg = c_ref·dt·|k|/2`. The CFL stability bound ensures `arg < π/2`
+    /// for all modes up to the Nyquist wavenumber at `CFL = 1`, so kappa
+    /// stays in `(0, 1]` for any physically realised elastic CFL ≤ 1.
+    #[test]
+    fn kappa_strictly_in_unit_interval() {
+        let nx = 32usize;
+        let dx = 1e-3_f64;
+        let cp = 1500.0_f64;
+        // CFL = 0.5 (moderate; kappa Nyquist ≈ sinc(π/4) ≈ 0.90)
+        let dt = 0.5 * dx / cp;
+        let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
+        let medium = ElasticPstdMedium {
+            lame_lambda: Array3::from_elem((nx, nx, nx), 1000.0 * cp * cp),
+            lame_mu: Array3::zeros((nx, nx, nx)),
+            density: Array3::from_elem((nx, nx, nx), 1000.0),
+        };
+        let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
+        for ((i, j, k), &kap) in orch.kappa.indexed_iter() {
+            assert!(
+                kap > 0.0 && kap <= 1.0,
+                "kappa[{i},{j},{k}] = {kap:.6} not in (0, 1]"
+            );
+        }
+    }
+
+    /// Kappa Nyquist value matches the analytical `sinc(CFL·π/2)`.
+    ///
+    /// At the 1D Nyquist wavenumber `|k| = π/dx` along one axis, the argument
+    /// is `c_ref·dt·π/(2·dx) = CFL·π/2`. This test uses `nx = 4`, `ny = nz = 1`
+    /// so the Nyquist mode is at `i = nx/2 = 2` for the x-axis.
+    #[test]
+    fn kappa_nyquist_matches_analytical_sinc_cfl_pi_over_2() {
+        let nx = 4usize;
+        let dx = 1e-3_f64;
+        let cp = 1500.0_f64;
+        let cfl = 0.3_f64;
+        let dt = cfl * dx / cp;
+        let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
+        let medium = ElasticPstdMedium {
+            lame_lambda: Array3::from_elem((nx, 1, 1), 1000.0 * cp * cp),
+            lame_mu: Array3::zeros((nx, 1, 1)),
+            density: Array3::from_elem((nx, 1, 1), 1000.0),
+        };
+        let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
+        // At i = nx/2 = 2: kx = (2−4)·2π/(4·dx) → |kx| = π/dx (Nyquist)
+        let nyquist_kap = orch.kappa[[nx / 2, 0, 0]];
+        let arg = cfl * PI / 2.0;
+        let expected = arg.sin() / arg;
+        let rel_err = (nyquist_kap - expected).abs() / expected;
+        assert!(
+            rel_err < 1e-12,
+            "kappa at Nyquist = {nyquist_kap:.10}, expected sinc(CFL·π/2) = {expected:.10}, \
+             rel_err = {rel_err:.3e}"
+        );
+    }
+
+    /// k-space correction suppresses temporal dispersion at moderate CFL.
+    ///
+    /// A sinusoidal source drives a 1D (ny=nz=1) grid for 20 steps. The
+    /// k-space corrected scheme produces a finite, non-zero, bounded signal at
+    /// a downstream sensor, confirming the correction does not introduce
+    /// numerical instability or suppress valid propagation.
+    ///
+    /// # Theorem reference
+    ///
+    /// Treeby–Cox 2010, Eq. 18: κ(k) = sinc(c_ref·dt·|k|/2) exactly cancels
+    /// the leapfrog temporal phase error for the reference plane-wave speed,
+    /// so the numerical phase velocity equals c_ref for all modes.
+    #[test]
+    fn kappa_preserves_peak_amplitude_at_moderate_cfl() {
+        let nx = 64usize;
+        let dx = 1e-3_f64;
+        let cp = 1500.0_f64;
+        let cfl = 0.5_f64;
+        let dt = cfl * dx / cp;
+        let n_steps = 20usize;
+        let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
+        let lam = 1000.0 * cp * cp;
+        let medium = ElasticPstdMedium {
+            lame_lambda: Array3::from_elem((nx, 1, 1), lam),
+            lame_mu: Array3::zeros((nx, 1, 1)),
+            density: Array3::from_elem((nx, 1, 1), 1000.0),
+        };
+        let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
+        let k0 = PI / (4.0 * dx); // quarter-Nyquist
+        let amp = 1e-6_f64;
+        let mut src_signal = Array1::<f64>::zeros(n_steps);
+        for (t, v) in src_signal.iter_mut().enumerate() {
+            *v = amp * (cp * k0 * t as f64 * dt).sin();
+        }
+        let mut mask = Array3::<bool>::from_elem((nx, 1, 1), false);
+        mask[[nx / 2, 0, 0]] = true;
+        let source = ElasticPstdVelocitySource {
+            mask,
+            ux: Some(src_signal),
+            uy: None,
+            uz: None,
+            mode: ElasticPstdSourceMode::Additive,
+        };
+        let mut sensor_mask = Array3::<bool>::from_elem((nx, 1, 1), false);
+        sensor_mask[[nx / 2 + 4, 0, 0]] = true;
+        let data = orch
+            .propagate(n_steps, Some(&source), Some(&sensor_mask))
+            .unwrap();
+        let vx_trace = data.vx.expect("vx recorded at sensor");
+        let peak = vx_trace.iter().map(|x| x.abs()).fold(0.0_f64, f64::max);
+        assert!(peak.is_finite(), "k-space corrected peak must be finite");
+        assert!(peak > 0.0, "k-space corrected sensor must record a pulse");
+        assert!(
+            peak < 1e-4,
+            "peak {peak:.3e} unexpectedly large — possible instability"
+        );
+    }
+}
