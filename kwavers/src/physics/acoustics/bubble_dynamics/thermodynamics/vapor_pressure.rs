@@ -199,3 +199,97 @@ impl ThermodynamicsCalculator {
         P_TRIPLE_WATER * 10_f64.powf(log10_p)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `VaporPressureModel` derives `PartialEq`: variants compare by identity.
+    #[test]
+    fn vapor_pressure_model_equality_by_variant() {
+        assert_eq!(VaporPressureModel::Antoine, VaporPressureModel::Antoine);
+        assert_ne!(VaporPressureModel::Antoine, VaporPressureModel::Wagner);
+    }
+
+    /// Default calculator uses Wagner model at T_boiling → ≈ 1 atm.
+    ///
+    /// Wagner equation is the reference model; at 100 °C (373.15 K) the
+    /// saturation pressure must equal 1 atm within 0.1%.
+    #[test]
+    fn wagner_model_at_boiling_point_equals_one_atm() {
+        let calc = ThermodynamicsCalculator::default(); // Wagner model
+        let p = calc.vapor_pressure(T_BOILING_WATER);
+        assert!(
+            (p - P_ATM).abs() / P_ATM < 0.001,
+            "Wagner model at 373.15 K must give ≈101325 Pa (got {p:.1})"
+        );
+    }
+
+    /// At or above critical temperature, vapor_pressure clamps to P_CRITICAL.
+    #[test]
+    fn vapor_pressure_clamps_to_critical_above_critical_temperature() {
+        let calc = ThermodynamicsCalculator::default();
+        let p = calc.vapor_pressure(T_CRITICAL_WATER + 50.0);
+        assert_eq!(p, P_CRITICAL_WATER, "must return P_CRITICAL above T_critical");
+    }
+
+    /// Antoine model at 100 °C gives ≈1 atm within 0.5%.
+    #[test]
+    fn antoine_model_at_boiling_point_within_half_percent_of_one_atm() {
+        let calc = ThermodynamicsCalculator::new(VaporPressureModel::Antoine);
+        let p = calc.vapor_pressure(T_BOILING_WATER);
+        assert!(
+            (p - P_ATM).abs() / P_ATM < 0.005,
+            "Antoine model at 373.15 K must be ≈101325 Pa (got {p:.1})"
+        );
+    }
+
+    /// Clausius-Clapeyron model at T_ref (T_boiling) returns P_ref (1 atm).
+    ///
+    /// Clausius-Clapeyron: ln(P/P_ref) = 0 when T = T_ref → P = P_ref.
+    #[test]
+    fn clausius_clapeyron_at_reference_temperature_equals_reference_pressure() {
+        let calc = ThermodynamicsCalculator::new(VaporPressureModel::ClausiusClapeyron);
+        let p = calc.vapor_pressure(calc.t_ref);
+        assert!(
+            (p - calc.p_ref).abs() / calc.p_ref < 1e-10,
+            "Clausius-Clapeyron at T_ref must give P_ref (got {p:.3e})"
+        );
+    }
+
+    /// All models produce positive, finite vapor pressure at 373.15 K.
+    #[test]
+    fn all_models_positive_finite_at_boiling_point() {
+        let models = [
+            VaporPressureModel::Antoine,
+            VaporPressureModel::ClausiusClapeyron,
+            VaporPressureModel::Wagner,
+            VaporPressureModel::Buck,
+            VaporPressureModel::IAPWS,
+        ];
+        for model in models {
+            let calc = ThermodynamicsCalculator::new(model);
+            let p = calc.vapor_pressure(T_BOILING_WATER);
+            assert!(
+                p > 0.0 && p.is_finite(),
+                "model {model:?}: must give positive finite p at boiling point (got {p:.3e})"
+            );
+        }
+    }
+
+    /// Vapor pressure is monotonically increasing with temperature (280–640 K).
+    #[test]
+    fn vapor_pressure_monotonically_increasing_with_temperature() {
+        let calc = ThermodynamicsCalculator::default();
+        let temps = [280.0_f64, 320.0, 360.0, 400.0, 450.0, 550.0, 630.0];
+        for w in temps.windows(2) {
+            let p_lo = calc.vapor_pressure(w[0]);
+            let p_hi = calc.vapor_pressure(w[1]);
+            assert!(
+                p_hi > p_lo,
+                "p({}) = {p_lo:.1} must be less than p({}) = {p_hi:.1}",
+                w[0], w[1]
+            );
+        }
+    }
+}
