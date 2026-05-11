@@ -33,11 +33,18 @@ pub struct BeamformingProcessor3D {
     /// WGPU queue
     pub(crate) queue: wgpu::Queue,
     #[cfg(feature = "gpu")]
-    /// Compute pipeline for delay-and-sum
+    /// Compute pipeline for static delay-and-sum (`beamforming_3d.wgsl`).
     pub(crate) delay_sum_pipeline: wgpu::ComputePipeline,
     #[cfg(feature = "gpu")]
-    /// Bind group layouts
+    /// Compute pipeline for dynamic-focus delay-and-sum (`dynamic_focus_3d.wgsl`).
+    pub(crate) dynamic_focus_pipeline: wgpu::ComputePipeline,
+    #[cfg(feature = "gpu")]
+    /// Bind group layout for static DAS (5 bindings).
     pub(crate) bind_group_layouts: Vec<wgpu::BindGroupLayout>,
+    #[cfg(feature = "gpu")]
+    /// Bind group layout for dynamic-focus DAS (7 bindings: RF, output, params,
+    /// apodization, element positions, focus delays, aperture masks).
+    pub(crate) dynamic_focus_bind_group_layout: wgpu::BindGroupLayout,
     #[cfg(feature = "gpu")]
     /// Streaming data buffer
     pub(crate) streaming_buffer: Option<super::streaming::StreamingBuffer>,
@@ -116,66 +123,70 @@ impl BeamformingProcessor3D {
                 source: wgpu::ShaderSource::Wgsl(shaders::BEAMFORMING_3D_SHADER.into()),
             });
 
-            // Create bind group layout for GPU buffers
+            let dynamic_focus_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("3D Dynamic-Focus Shader"),
+                source: wgpu::ShaderSource::Wgsl(shaders::DYNAMIC_FOCUS_3D_SHADER.into()),
+            });
+
+            // Helper: create a standard read-only storage entry
+            let storage_ro = |binding: u32| wgpu::BindGroupLayoutEntry {
+                binding,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            };
+            // Helper: create a read-write storage entry
+            let storage_rw = |binding: u32| wgpu::BindGroupLayoutEntry {
+                binding,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            };
+            // Helper: create a uniform entry
+            let uniform = |binding: u32| wgpu::BindGroupLayoutEntry {
+                binding,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            };
+
+            // Static DAS bind group layout (5 bindings).
             let bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("3D Beamforming Bind Group Layout"),
                     entries: &[
-                        // RF data buffer (read-only storage)
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Output volume buffer (read-write storage)
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Parameters uniform buffer
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Apodization weights buffer (read-only storage)
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        // Element positions buffer (read-only storage)
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 4,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
+                        storage_ro(0), // RF data
+                        storage_rw(1), // output volume
+                        uniform(2),    // params
+                        storage_ro(3), // apodization weights
+                        storage_ro(4), // element positions
+                    ],
+                });
+
+            // Dynamic-focus bind group layout (7 bindings).
+            let dynamic_focus_bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Dynamic-Focus Bind Group Layout"),
+                    entries: &[
+                        storage_ro(0), // RF data
+                        storage_rw(1), // output volume
+                        uniform(2),    // DynamicFocusParams
+                        storage_ro(3), // apodization weights
+                        storage_ro(4), // element positions
+                        storage_ro(5), // focus delays [zones × elements]
+                        storage_ro(6), // aperture masks [zones × ⌈elements/32⌉]
                     ],
                 });
 
@@ -185,13 +196,31 @@ impl BeamformingProcessor3D {
                 push_constant_ranges: &[],
             });
 
-            // Create compute pipelines
+            let dynamic_focus_pipeline_layout =
+                device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("Dynamic-Focus Pipeline Layout"),
+                    bind_group_layouts: &[&dynamic_focus_bind_group_layout],
+                    push_constant_ranges: &[],
+                });
+
+            // Static DAS compute pipeline.
             let delay_sum_pipeline =
                 device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                     label: Some("3D Delay-and-Sum Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &delay_sum_shader,
                     entry_point: Some("delay_and_sum_main"),
+                    compilation_options: Default::default(),
+                    cache: None,
+                });
+
+            // Dynamic-focus compute pipeline.
+            let dynamic_focus_pipeline =
+                device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("3D Dynamic-Focus Pipeline"),
+                    layout: Some(&dynamic_focus_pipeline_layout),
+                    module: &dynamic_focus_shader,
+                    entry_point: Some("dynamic_focus_main"),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -212,7 +241,9 @@ impl BeamformingProcessor3D {
                 device,
                 queue,
                 delay_sum_pipeline,
+                dynamic_focus_pipeline,
                 bind_group_layouts: vec![bind_group_layout],
+                dynamic_focus_bind_group_layout,
                 streaming_buffer,
                 metrics: BeamformingMetrics::default(),
             })
@@ -262,6 +293,31 @@ impl BeamformingProcessor3D {
             apodization_window,
             apodization_weights,
         )
+    }
+
+    /// Execute dynamic-focus delay-and-sum on GPU.
+    ///
+    /// Uses `dynamic_focus_3d.wgsl` with CPU-pre-computed delay tables; the
+    /// GPU kernel applies depth-stratified focal zones and optional variable
+    /// aperture.
+    /// # Errors
+    /// - Propagates GPU device errors.
+    ///
+    #[cfg(feature = "gpu")]
+    pub(super) fn dynamic_focus_gpu(
+        &self,
+        rf_data: &ndarray::Array4<f32>,
+        apodization_window: &super::config::ApodizationWindow,
+        apodization_weights: &ndarray::Array3<f32>,
+    ) -> KwaversResult<ndarray::Array3<f32>> {
+        let df = super::delay_sum::DynamicFocusGPU {
+            config: &self.config,
+            device: &self.device,
+            queue: &self.queue,
+            pipeline: &self.dynamic_focus_pipeline,
+            bind_group_layout: &self.dynamic_focus_bind_group_layout,
+        };
+        df.process(rf_data, apodization_window, apodization_weights)
     }
 
     /// Execute delay-and-sum subvolume processing on GPU

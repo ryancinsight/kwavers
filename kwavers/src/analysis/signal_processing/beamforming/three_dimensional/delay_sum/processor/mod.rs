@@ -1,6 +1,7 @@
 //! GPU delay-and-sum beamforming processor.
 
 mod dispatch;
+mod dynamic_focus_dispatch;
 
 #[cfg(feature = "gpu")]
 use super::params::Params;

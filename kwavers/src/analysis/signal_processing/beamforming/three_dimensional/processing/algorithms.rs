@@ -6,8 +6,15 @@ use ndarray::{Array3, Array4};
 impl BeamformingProcessor3D {
     /// Process delay-and-sum beamforming (GPU path).
     ///
-    /// Coherent summation of delayed RF signals across all elements to form a focused image.
-    /// Optional sub-volume processing for memory-constrained systems.
+    /// When `dynamic_focusing` is `false`, the static DAS kernel
+    /// (`beamforming_3d.wgsl`) runs a single coherent-summation pass with fixed
+    /// time-of-flight delays.  When `dynamic_focusing` is `true`, the
+    /// dynamic-focus kernel (`dynamic_focus_3d.wgsl`) is used: CPU-pre-computed
+    /// delay tables are uploaded as a GPU storage buffer and the shader applies
+    /// depth-stratified focal zones with optional variable aperture.
+    ///
+    /// Optional sub-volume processing is supported for memory-constrained systems
+    /// in the static path; dynamic-focus processes the full volume in a single pass.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -20,6 +27,11 @@ impl BeamformingProcessor3D {
         sub_volume_size: Option<(usize, usize, usize)>,
     ) -> KwaversResult<Array3<f32>> {
         let apodization_weights = self.create_apodization_weights(apodization);
+
+        if dynamic_focusing {
+            // Dynamic-focus path: uses dedicated pipeline + delay tables.
+            return self.dynamic_focus_gpu(rf_data, apodization, &apodization_weights);
+        }
 
         if let Some(sub_size) = sub_volume_size {
             self.delay_and_sum_subvolume_gpu(

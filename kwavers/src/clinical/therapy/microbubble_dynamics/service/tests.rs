@@ -42,8 +42,13 @@ fn test_update_bubble_dynamics_basic() {
 }
 
 #[test]
-#[ignore] // Requires longer simulation time for measurable movement
 fn test_radiation_force_moves_bubble() {
+    // Primary Bjerknes force: F = -(4π/3)R³ · ∇P.
+    // With ∇P = (1e6, 0, 0) Pa/m and R > 0, F_x < 0 → bubble drifts toward −x.
+    //
+    // dt must be ≤ 1 µs to remain within the K-M adaptive integrator's
+    // convergence domain; 1e-5 s is 20× the acoustic half-period and causes
+    // ConvergenceFailure.  100 steps × 1e-6 s = 100 µs gives measurable drift.
     let position = Position3D::zero();
     let mut bubble = MicrobubbleState::sono_vue(position).unwrap();
     let mut shell = MarmottantShellProperties::sono_vue(bubble.radius_equilibrium).unwrap();
@@ -52,11 +57,14 @@ fn test_radiation_force_moves_bubble() {
 
     let service = MicrobubbleDynamicsService::from_microbubble_state(&bubble).unwrap();
 
-    let _initial_x = bubble.position.x;
+    let initial_x = bubble.position.x; // 0.0 from Position3D::zero()
     let pressure_gradient = (1e6, 0.0, 0.0);
 
-    for i in 0..10 {
-        let t = i as f64 * 1e-5;
+    const N_STEPS: usize = 100;
+    const DT: f64 = 1e-6;
+
+    for i in 0..N_STEPS {
+        let t = i as f64 * DT;
         service
             .update_bubble_dynamics(
                 &mut bubble,
@@ -66,10 +74,17 @@ fn test_radiation_force_moves_bubble() {
                 pressure_gradient,
                 0.0,
                 t,
-                1e-5,
+                DT,
             )
             .unwrap();
     }
+
+    // Bjerknes force is in −x: bubble must have drifted left.
+    assert!(
+        bubble.position.x < initial_x,
+        "radiation force should push bubble in −x direction; got position.x = {}",
+        bubble.position.x,
+    );
 }
 
 #[test]

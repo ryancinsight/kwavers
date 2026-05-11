@@ -21,14 +21,18 @@ use wgpu::util::DeviceExt;
 
 #[cfg(feature = "gpu")]
 impl<'a> DelaySumGPU<'a> {
-    /// Execute delay-and-sum beamforming on GPU.
+    /// Execute static delay-and-sum beamforming on GPU.
     ///
     /// Uploads RF data, apodization weights, and element positions to GPU
-    /// storage buffers, dispatches the compute shader, and reads back the
-    /// reconstructed volume.
+    /// storage buffers, dispatches the `delay_and_sum_main` compute shader, and
+    /// reads back the reconstructed volume.
+    ///
+    /// `dynamic_focusing` is accepted for API symmetry but must be `false`
+    /// here: the caller (`BeamformingProcessor3D::process_delay_and_sum`) routes
+    /// `dynamic_focusing = true` to [`DynamicFocusGPU`] before reaching this
+    /// method.
     /// # Errors
-    /// - Returns [`crate::core::error::KwaversError::System`] if dynamic focusing is requested
-    ///   (not yet implemented — requires delay tables and aperture mask buffers).
+    /// - Propagates GPU device errors via `KwaversError::System`.
     ///
     pub fn process(
         &self,
@@ -37,16 +41,11 @@ impl<'a> DelaySumGPU<'a> {
         apodization_window: &ApodizationWindow,
         apodization_weights: &Array3<f32>,
     ) -> KwaversResult<Array3<f32>> {
-        if dynamic_focusing {
-            return Err(crate::core::error::KwaversError::System(
-                crate::core::error::SystemError::FeatureNotAvailable {
-                    feature: "3D dynamic focusing".to_string(),
-                    reason: "Dynamic focusing compute pipeline is not yet wired \
-                             (missing delay tables and aperture mask buffers)"
-                        .to_string(),
-                },
-            ));
-        }
+        debug_assert!(
+            !dynamic_focusing,
+            "DelaySumGPU::process must not be called with dynamic_focusing=true; \
+             route through DynamicFocusGPU instead"
+        );
 
         let rf_dims = rf_data.dim();
         let frames = rf_dims.0;

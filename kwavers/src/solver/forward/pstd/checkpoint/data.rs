@@ -149,28 +149,28 @@ impl PSTDCheckpoint {
             )));
         }
 
-        let version = read_u32(&mut r)?;
+        let version: u32 = read_le(&mut r)?;
         if version != FORMAT_VERSION {
             return Err(KwaversError::InvalidInput(format!(
                 "Unsupported checkpoint version {version}; expected {FORMAT_VERSION}"
             )));
         }
 
-        let nx = read_u64(&mut r)? as usize;
-        let ny = read_u64(&mut r)? as usize;
-        let nz = read_u64(&mut r)? as usize;
-        let time_step_index = read_u64(&mut r)? as usize;
-        let total_steps = read_u64(&mut r)? as usize;
-        let dt = read_f64(&mut r)?;
+        let nx = read_le::<u64>(&mut r)? as usize;
+        let ny = read_le::<u64>(&mut r)? as usize;
+        let nz = read_le::<u64>(&mut r)? as usize;
+        let time_step_index = read_le::<u64>(&mut r)? as usize;
+        let total_steps = read_le::<u64>(&mut r)? as usize;
+        let dt: f64 = read_le(&mut r)?;
 
-        let has_sensor = read_u8(&mut r)?;
+        let has_sensor: u8 = read_le(&mut r)?;
         let (sensor_data, sensor_next_step, sensor_expected_steps) = if has_sensor == 1 {
-            let n_sensors = read_u64(&mut r)? as usize;
-            let n_recorded = read_u64(&mut r)? as usize;
-            let expected_steps = read_u64(&mut r)? as usize;
+            let n_sensors = read_le::<u64>(&mut r)? as usize;
+            let n_recorded = read_le::<u64>(&mut r)? as usize;
+            let expected_steps = read_le::<u64>(&mut r)? as usize;
             let mut flat = vec![0.0f64; n_sensors * n_recorded];
             for v in &mut flat {
-                *v = read_f64(&mut r)?;
+                *v = read_le(&mut r)?;
             }
             let data = Array2::from_shape_vec((n_sensors, n_recorded), flat)
                 .map_err(KwaversError::Shape)?;
@@ -180,13 +180,13 @@ impl PSTDCheckpoint {
         };
 
         let n = nx * ny * nz;
-        let p = read_f64_array3(&mut r, n, nx, ny, nz)?;
-        let ux = read_f64_array3(&mut r, n, nx, ny, nz)?;
-        let uy = read_f64_array3(&mut r, n, nx, ny, nz)?;
-        let uz = read_f64_array3(&mut r, n, nx, ny, nz)?;
-        let rhox = read_f64_array3(&mut r, n, nx, ny, nz)?;
-        let rhoy = read_f64_array3(&mut r, n, nx, ny, nz)?;
-        let rhoz = read_f64_array3(&mut r, n, nx, ny, nz)?;
+        let p = read_array3(&mut r, n, nx, ny, nz)?;
+        let ux = read_array3(&mut r, n, nx, ny, nz)?;
+        let uy = read_array3(&mut r, n, nx, ny, nz)?;
+        let uz = read_array3(&mut r, n, nx, ny, nz)?;
+        let rhox = read_array3(&mut r, n, nx, ny, nz)?;
+        let rhoy = read_array3(&mut r, n, nx, ny, nz)?;
+        let rhoz = read_array3(&mut r, n, nx, ny, nz)?;
 
         Ok(Self {
             nx,
@@ -271,40 +271,78 @@ impl PSTDCheckpoint {
 
 // --- Private IO helpers ---
 
-fn read_u8(r: &mut impl Read) -> KwaversResult<u8> {
-    let mut buf = [0u8; 1];
-    r.read_exact(&mut buf)?;
-    Ok(buf[0])
+/// Sealed trait for little-endian wire-format primitives used in the KWCP
+/// binary format.  All arithmetic types that appear in checkpoint files
+/// implement this trait; the sealed design prevents external callers from
+/// accidentally extending it to types whose memory representation does not
+/// match the on-disk layout.
+mod wire_primitive_seal {
+    pub trait Sealed {}
+    impl Sealed for u8 {}
+    impl Sealed for u32 {}
+    impl Sealed for u64 {}
+    impl Sealed for f64 {}
 }
 
-fn read_u32(r: &mut impl Read) -> KwaversResult<u32> {
-    let mut buf = [0u8; 4];
-    r.read_exact(&mut buf)?;
-    Ok(u32::from_le_bytes(buf))
+trait WirePrimitive: wire_primitive_seal::Sealed + Default + Copy {
+    /// Number of bytes occupied by this type in the wire format.
+    const WIRE_BYTES: usize;
+    /// Decode `bytes[..Self::WIRE_BYTES]` as a little-endian value.
+    fn from_le_wire(bytes: &[u8]) -> Self;
 }
 
-fn read_u64(r: &mut impl Read) -> KwaversResult<u64> {
-    let mut buf = [0u8; 8];
-    r.read_exact(&mut buf)?;
-    Ok(u64::from_le_bytes(buf))
+impl WirePrimitive for u8 {
+    const WIRE_BYTES: usize = 1;
+    #[inline]
+    fn from_le_wire(bytes: &[u8]) -> Self {
+        bytes[0]
+    }
 }
 
-fn read_f64(r: &mut impl Read) -> KwaversResult<f64> {
-    let mut buf = [0u8; 8];
-    r.read_exact(&mut buf)?;
-    Ok(f64::from_le_bytes(buf))
+impl WirePrimitive for u32 {
+    const WIRE_BYTES: usize = 4;
+    #[inline]
+    fn from_le_wire(bytes: &[u8]) -> Self {
+        u32::from_le_bytes(bytes[..4].try_into().expect("u32 wire slice"))
+    }
 }
 
-fn read_f64_array3(
+impl WirePrimitive for u64 {
+    const WIRE_BYTES: usize = 8;
+    #[inline]
+    fn from_le_wire(bytes: &[u8]) -> Self {
+        u64::from_le_bytes(bytes[..8].try_into().expect("u64 wire slice"))
+    }
+}
+
+impl WirePrimitive for f64 {
+    const WIRE_BYTES: usize = 8;
+    #[inline]
+    fn from_le_wire(bytes: &[u8]) -> Self {
+        f64::from_le_bytes(bytes[..8].try_into().expect("f64 wire slice"))
+    }
+}
+
+/// Read one little-endian wire primitive from `r`.
+fn read_le<T: WirePrimitive>(r: &mut impl Read) -> KwaversResult<T> {
+    let mut buf = [0u8; 8]; // 8 bytes covers all WirePrimitive impls (max size = f64/u64)
+    let bytes = &mut buf[..T::WIRE_BYTES];
+    r.read_exact(bytes)?;
+    Ok(T::from_le_wire(bytes))
+}
+
+/// Read `n` little-endian `T` values from `r` and reshape into an
+/// `(nx, ny, nz)` `Array3<T>`.
+fn read_array3<T: WirePrimitive>(
     r: &mut impl Read,
     n: usize,
     nx: usize,
     ny: usize,
     nz: usize,
-) -> KwaversResult<Array3<f64>> {
-    let mut flat = vec![0.0f64; n];
+) -> KwaversResult<Array3<T>> {
+    let mut flat = vec![T::default(); n];
     for v in &mut flat {
-        *v = read_f64(r)?;
+        *v = read_le(r)?;
     }
     Array3::from_shape_vec((nx, ny, nz), flat).map_err(KwaversError::Shape)
 }
