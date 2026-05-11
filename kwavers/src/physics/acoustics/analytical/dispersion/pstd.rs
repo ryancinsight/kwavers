@@ -67,3 +67,69 @@ impl DispersionAnalysis {
         base_error + anisotropy_correction
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::f64::consts::PI;
+
+    /// pstd_dispersion order=2 follows the 0.02·(k·dx)² analytical model.
+    ///
+    /// Reference: Liu (1997) — 2nd-order PSTD phase error ≈ 0.02·(k·Δx)².
+    #[test]
+    fn pstd_dispersion_order2_matches_analytical_formula() {
+        let c = 1500.0_f64;
+        let freq = 1e6_f64;
+        let lambda = c / freq;
+        let dx = lambda / 10.0;
+        let k = 2.0 * PI / lambda;
+        let kx_dx = k * dx;
+
+        let disp = DispersionAnalysis::pstd_dispersion(k, dx, 2);
+        let expected = 0.02 * kx_dx.powi(2);
+        assert!(
+            (disp - expected).abs() < 1e-15,
+            "order-2 dispersion={disp:.6e}, expected={expected:.6e}"
+        );
+    }
+
+    /// pstd_dispersion order=4 follows the 0.001·(k·dx)⁴ analytical model.
+    #[test]
+    fn pstd_dispersion_order4_matches_analytical_formula() {
+        let c = 1500.0_f64;
+        let freq = 1e6_f64;
+        let lambda = c / freq;
+        let dx = lambda / 8.0;
+        let k = 2.0 * PI / lambda;
+        let kx_dx = k * dx;
+
+        let disp = DispersionAnalysis::pstd_dispersion(k, dx, 4);
+        let expected = 0.001 * kx_dx.powi(4);
+        assert!(
+            (disp - expected).abs() < 1e-15,
+            "order-4 dispersion={disp:.6e}, expected={expected:.6e}"
+        );
+    }
+
+    /// Unknown order returns 0.0.
+    #[test]
+    fn pstd_dispersion_unknown_order_returns_zero() {
+        let disp = DispersionAnalysis::pstd_dispersion(1.0, 1e-4, 99);
+        assert_eq!(disp, 0.0, "unknown order must return 0.0");
+    }
+
+    /// 4th-order PSTD has strictly lower dispersion than 2nd-order at same grid resolution.
+    #[test]
+    fn pstd_order4_lower_than_order2_at_same_resolution() {
+        let c = 1500.0_f64;
+        let freq = 2e6_f64;
+        let lambda = c / freq;
+        let dx = lambda / 8.0;
+        let k = 2.0 * PI / lambda;
+
+        let d2 = DispersionAnalysis::pstd_dispersion(k, dx, 2);
+        let d4 = DispersionAnalysis::pstd_dispersion(k, dx, 4);
+        assert!(d4.abs() < d2.abs(),
+            "order-4 error={d4:.4e} must be smaller than order-2 error={d2:.4e}");
+    }
+}
