@@ -56,17 +56,10 @@ fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f
     let ct_data = load_ct_imaging_data(config).unwrap_or_else(|_| generate_synthetic_ct_data(grid));
 
     let stone_threshold_hu = 200.0;
-    let stone_geometry = segment_stone_from_ct(&ct_data, stone_threshold_hu, grid);
+    let stone_geometry = segment_stone_from_ct(&ct_data, stone_threshold_hu);
     let refined_geometry = morphological_refinement(&stone_geometry, grid);
 
-    for i in 0..grid.dimensions().0 {
-        for j in 0..grid.dimensions().1 {
-            for k in 0..grid.dimensions().2 {
-                geometry[[i, j, k]] = refined_geometry[[i, j, k]];
-            }
-        }
-    }
-
+    geometry.assign(&refined_geometry);
     geometry
 }
 
@@ -196,24 +189,13 @@ fn generate_synthetic_ct_data(grid: &Grid) -> Array3<f64> {
 
 /// Segment stone from CT data using HU-based thresholding.
 ///
+/// Binary mask: voxels with HU ≥ threshold → 1.0 (stone), else 0.0 (tissue/fluid).
+///
 /// # References
 ///
 /// - Williams et al. (2010): "Characterization of kidney stone composition"
-fn segment_stone_from_ct(ct_data: &Array3<f64>, threshold_hu: f64, grid: &Grid) -> Array3<f64> {
-    let (nx, ny, nz) = grid.dimensions();
-    let mut stone_mask = Array3::zeros((nx, ny, nz));
-
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                if ct_data[[i, j, k]] >= threshold_hu {
-                    stone_mask[[i, j, k]] = 1.0;
-                }
-            }
-        }
-    }
-
-    stone_mask
+fn segment_stone_from_ct(ct_data: &Array3<f64>, threshold_hu: f64) -> Array3<f64> {
+    ct_data.mapv(|hu| if hu >= threshold_hu { 1.0 } else { 0.0 })
 }
 
 /// Apply morphological closing to refine stone boundary.
