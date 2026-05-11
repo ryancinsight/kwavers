@@ -45,6 +45,7 @@
 pub mod cube;
 pub mod helmholtz;
 pub mod kernel;
+pub mod npz_loader;
 pub mod placement;
 pub mod resample;
 
@@ -57,5 +58,6 @@ pub use helmholtz::{
     HelmholtzResidualStats, HELMHOLTZ_C0_WATER,
 };
 pub use kernel::FocalKernel;
+pub use npz_loader::{discover_focal_kernels, load_focal_kernel};
 pub use placement::place_kernel_at_focus;
 pub use resample::resample_trilinear;

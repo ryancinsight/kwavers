@@ -44,6 +44,37 @@ fn make_cube_sampler() -> KernelCubeSampler {
 }
 
 #[test]
+fn test_sampler_emits_distinct_group_ids_per_kernel() {
+    let sampler = make_cube_sampler();
+    // 4 corners → 4 active groups, dense indices 0..3.
+    assert_eq!(sampler.num_groups(), 4);
+    let device = Default::default();
+    // Large batch + uniform sampling makes the empirical group set
+    // overwhelmingly likely to cover all 4 groups.
+    let batch = sampler.batch::<AB>(&device, 0, 2048);
+    let group_host: Vec<f32> = batch
+        .group_ids
+        .clone()
+        .into_data()
+        .convert::<f32>()
+        .into_vec()
+        .unwrap();
+    assert_eq!(batch.num_groups, 4);
+    let mut seen = [false; 4];
+    for &g in &group_host {
+        assert!(g.is_finite(), "non-finite group id: {g}");
+        let idx = g as usize;
+        assert!(idx < 4, "group id {idx} out of range");
+        assert!((g - idx as f32).abs() < 1e-6, "group id not an integer: {g}");
+        seen[idx] = true;
+    }
+    assert!(
+        seen.iter().all(|&b| b),
+        "uniform 2048-sample batch did not cover all 4 groups: {seen:?}"
+    );
+}
+
+#[test]
 fn test_default_sampling_is_uniform() {
     let sampler = make_cube_sampler();
     assert!(matches!(sampler.sampling, SamplingMode::Uniform));

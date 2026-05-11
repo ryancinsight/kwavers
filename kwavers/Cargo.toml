@@ -17,6 +17,7 @@ categories = ["science", "simulation", "medical"]
 
 # Essential numerical computing
 ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
 rayon = "1.10"
 num-complex = "0.4"
 num-traits = "0.2"

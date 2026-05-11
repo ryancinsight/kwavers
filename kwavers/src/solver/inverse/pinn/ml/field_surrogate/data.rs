@@ -89,6 +89,13 @@ pub struct KernelCubeSampler {
     /// Per-sample `|p_max_norm|` magnitude (used for importance
     /// sampling). Same length as `f0_phys_hz`.
     p_magnitude: Vec<f32>,
+    /// Per-sample source-kernel index. Voxel `i` originated from
+    /// `kernels[group_ids[i]]`. Consumed by the per-kernel-scoped
+    /// peak-prominence loss (Phase C-10).
+    group_ids: Vec<f32>,
+    /// Number of distinct source kernels — propagated to the
+    /// `TrainingBatch` so the trainer can size its per-group loop.
+    num_groups: usize,
     /// Number of samples = total interior voxel count across all
     /// kernels.
     n: usize,
@@ -227,11 +234,18 @@ impl KernelCubeSampler {
         let mut targets: Vec<f32> = Vec::new();
         let mut f0_phys: Vec<f32> = Vec::new();
         let mut p_magnitude: Vec<f32> = Vec::new();
-        for kernel in kernels {
+        let mut group_ids: Vec<f32> = Vec::new();
+        let mut active_kernel_count: usize = 0;
+        for kernel in kernels.iter() {
             let (nx, ny, nz) = kernel.shape();
             if nx < 3 || ny < 3 || nz < 3 {
                 continue;
             }
+            // Use the dense index of active kernels so downstream
+            // per-group loops iterate 0..num_groups consecutively
+            // without holes from skipped (too-small) kernels.
+            let group_id = active_kernel_count as f32;
+            active_kernel_count += 1;
             let dx = kernel.dx_m as f32;
             let (fx, fy, fz) = kernel.focus_idx;
             let f0 = kernel.f0 as f32;
@@ -270,6 +284,7 @@ impl KernelCubeSampler {
                         targets.push(p_max_n);
                         targets.push(p_rms_n);
                         f0_phys.push(f0);
+                        group_ids.push(group_id);
                         // Importance-sampling magnitude is the
                         // *un-transformed* normalised pressure
                         // `|p|/p_max`. Computing it from the
@@ -292,6 +307,8 @@ impl KernelCubeSampler {
             targets,
             f0_phys_hz: f0_phys,
             p_magnitude,
+            group_ids,
+            num_groups: active_kernel_count,
             n,
             coord_halves,
             output_scales,
@@ -383,12 +400,14 @@ impl KernelCubeSampler {
         let mut input_buf = Vec::with_capacity(batch_size * 5);
         let mut target_buf = Vec::with_capacity(batch_size * 3);
         let mut f0_buf = Vec::with_capacity(batch_size);
+        let mut group_buf = Vec::with_capacity(batch_size);
         for _ in 0..batch_size {
             let u: f32 = rng.r#gen();
             let idx = self.sample_one(u);
             input_buf.extend_from_slice(&self.inputs[idx * 5..idx * 5 + 5]);
             target_buf.extend_from_slice(&self.targets[idx * 3..idx * 3 + 3]);
             f0_buf.push(self.f0_phys_hz[idx]);
+            group_buf.push(self.group_ids[idx]);
         }
         let inputs = Tensor::<B, 2>::from_data(
             TensorData::new(input_buf, [batch_size, 5]),
@@ -402,10 +421,16 @@ impl KernelCubeSampler {
             TensorData::new(f0_buf, [batch_size]),
             device,
         );
+        let group_ids = Tensor::<B, 1>::from_data(
+            TensorData::new(group_buf, [batch_size]),
+            device,
+        );
         TrainingBatch {
             inputs,
             targets,
             f0_phys_hz,
+            group_ids,
+            num_groups: self.num_groups,
             coord_half_m: (
                 self.coord_halves.hx_m,
                 self.coord_halves.hy_m,
@@ -413,5 +438,11 @@ impl KernelCubeSampler {
             ),
             p_max_scale_pa: self.output_scales.p_max_pa,
         }
+    }
+
+    /// Number of distinct source-kernel groups in the flat dataset.
+    #[must_use]
+    pub fn num_groups(&self) -> usize {
+        self.num_groups
     }
 }
