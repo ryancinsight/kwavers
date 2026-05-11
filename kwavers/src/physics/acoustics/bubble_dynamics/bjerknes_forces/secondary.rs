@@ -128,3 +128,75 @@ impl BjerknesCalculator {
         Ok(result)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{
+        calculator::BjerknesCalculator,
+        types::{BjerknesConfig, InteractionType},
+    };
+    use std::f64::consts::PI;
+
+    fn calc() -> BjerknesCalculator {
+        BjerknesCalculator::new(BjerknesConfig::default())
+    }
+
+    /// Non-positive radii or distance → Err.
+    #[test]
+    fn secondary_bjerknes_force_errors_for_invalid_geometry() {
+        let c = calc();
+        assert!(c.secondary_bjerknes_force(0.0, 5e-6, 1e-15, 1e-15, 0.0, 10e-6).is_err());
+        assert!(c.secondary_bjerknes_force(5e-6, 0.0, 1e-15, 1e-15, 0.0, 10e-6).is_err());
+        assert!(c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 0.0).is_err());
+        assert!(c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, -1e-6).is_err());
+    }
+
+    /// Phase=0 (in-phase) → attractive interaction.
+    ///
+    /// cos(0) = 1 > 0.1 → InteractionType::Attractive.
+    #[test]
+    fn secondary_bjerknes_force_attractive_for_zero_phase_difference() {
+        let result = calc()
+            .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 10e-6)
+            .unwrap();
+        assert_eq!(result.interaction_type, InteractionType::Attractive);
+        assert!(result.secondary > 0.0, "attractive force must be positive");
+    }
+
+    /// Phase=π (anti-phase) → repulsive interaction.
+    ///
+    /// cos(π) = −1 < −0.1 → InteractionType::Repulsive.
+    #[test]
+    fn secondary_bjerknes_force_repulsive_for_pi_phase_difference() {
+        let result = calc()
+            .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, PI, 10e-6)
+            .unwrap();
+        assert_eq!(result.interaction_type, InteractionType::Repulsive);
+        assert!(result.secondary < 0.0, "repulsive force must be negative");
+    }
+
+    /// Distance beyond interaction_range → all forces zero, Neutral.
+    #[test]
+    fn secondary_bjerknes_force_zero_beyond_interaction_range() {
+        let cfg = BjerknesConfig { interaction_range: 50e-6, ..BjerknesConfig::default() };
+        let c = BjerknesCalculator::new(cfg);
+        let result = c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 100e-6).unwrap();
+        assert_eq!(result.secondary, 0.0, "force must be 0 beyond interaction range");
+        assert_eq!(result.interaction_type, InteractionType::Neutral);
+    }
+
+    /// Coalescence flag set when distance < coalescence_distance.
+    #[test]
+    fn secondary_bjerknes_force_sets_coalescence_flag_below_threshold() {
+        let cfg = BjerknesConfig {
+            coalescence_distance: 5e-6,
+            interaction_range: 100e-6,
+            ..BjerknesConfig::default()
+        };
+        let c = BjerknesCalculator::new(cfg);
+        let near = c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 2e-6).unwrap();
+        let far = c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 20e-6).unwrap();
+        assert!(near.coalescing, "must coalesce when d < coalescence_distance");
+        assert!(!far.coalescing, "must not coalesce when d > coalescence_distance");
+    }
+}

@@ -43,3 +43,51 @@ impl BjerknesCalculator {
         Ok(force)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{calculator::BjerknesCalculator, types::BjerknesConfig};
+
+    fn calc() -> BjerknesCalculator {
+        BjerknesCalculator::new(BjerknesConfig::default())
+    }
+
+    /// Zero bubble radius returns Err.
+    #[test]
+    fn primary_bjerknes_force_errors_for_nonpositive_radius() {
+        let c = calc();
+        assert!(c.primary_bjerknes_force(0.0, 1e5, 1e3).is_err());
+        assert!(c.primary_bjerknes_force(-1e-6, 1e5, 1e3).is_err());
+    }
+
+    /// Zero acoustic pressure amplitude → zero primary force.
+    ///
+    /// F_p ∝ p² → p=0 gives F_p = 0 regardless of gradient.
+    #[test]
+    fn primary_bjerknes_force_zero_for_zero_pressure_amplitude() {
+        let f = calc().primary_bjerknes_force(5e-6, 0.0, 1e3).unwrap();
+        assert_eq!(f, 0.0, "zero pressure amplitude must give zero force");
+    }
+
+    /// Force scales as R²: doubling radius quadruples force magnitude.
+    ///
+    /// F_p = -4πR² · radiation_pressure · (grad/c₀) ∝ R².
+    #[test]
+    fn primary_bjerknes_force_scales_as_radius_squared() {
+        let c = calc();
+        let f1 = c.primary_bjerknes_force(5e-6, 1e5, 1e3).unwrap();
+        let f2 = c.primary_bjerknes_force(10e-6, 1e5, 1e3).unwrap();
+        // f2/f1 = (10/5)² = 4
+        assert!(
+            (f2 / f1 - 4.0).abs() < 1e-12,
+            "force ratio must be 4 when radius doubles (got {:.6})", f2 / f1
+        );
+    }
+
+    /// Positive pressure gradient → negative force (radiation pushes toward minimum).
+    #[test]
+    fn primary_bjerknes_force_negative_for_positive_gradient() {
+        let f = calc().primary_bjerknes_force(5e-6, 1e5, 1e3).unwrap();
+        assert!(f < 0.0, "positive gradient must give negative force (got {f:.3e})");
+    }
+}
