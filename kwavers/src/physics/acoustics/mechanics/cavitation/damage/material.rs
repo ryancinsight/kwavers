@@ -66,3 +66,34 @@ impl Default for DamageParameters {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::constants::cavitation::{
+        DEFAULT_CONCENTRATION_FACTOR, DEFAULT_FATIGUE_RATE, DEFAULT_PIT_EFFICIENCY,
+        DEFAULT_THRESHOLD_PRESSURE,
+    };
+
+    /// `MaterialProperties::default` matches the SS316 physical constants.
+    #[test]
+    fn material_properties_default_matches_stainless_steel_316() {
+        let m = MaterialProperties::default();
+        assert_eq!(m.yield_strength, 290e6, "SS316 yield = 290 MPa");
+        assert_eq!(m.ultimate_strength, 580e6, "SS316 UTS = 580 MPa");
+        assert_eq!(m.hardness, 2.0e9, "SS316 hardness = 2 GPa");
+        assert_eq!(m.density, 7850.0, "SS316 density = 7850 kg/m³");
+        assert_eq!(m.fatigue_exponent, 3.0);
+        assert_eq!(m.erosion_resistance, 1.0);
+    }
+
+    /// `DamageParameters::default` matches the module constants.
+    #[test]
+    fn damage_parameters_default_matches_module_constants() {
+        let p = DamageParameters::default();
+        assert_eq!(p.threshold_pressure, DEFAULT_THRESHOLD_PRESSURE);
+        assert_eq!(p.pit_efficiency, DEFAULT_PIT_EFFICIENCY);
+        assert_eq!(p.fatigue_rate, DEFAULT_FATIGUE_RATE);
+        assert_eq!(p.concentration_factor, DEFAULT_CONCENTRATION_FACTOR);
+    }
+}

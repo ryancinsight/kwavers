@@ -66,3 +66,64 @@ impl ErosionPattern {
         damage_field.mapv(|d| d > threshold)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array3;
+
+    /// `risk_map` marks cells strictly above the threshold as high-risk.
+    ///
+    /// Cells exactly at the threshold are NOT high-risk (strict inequality `>`).
+    #[test]
+    fn risk_map_marks_cells_above_threshold_only() {
+        let mut field = Array3::<f64>::zeros((2, 2, 2));
+        field[[0, 0, 0]] = 1.5; // above
+        field[[1, 1, 1]] = 0.5; // at half (below)
+        let threshold = 1.0;
+
+        let risk = ErosionPattern::risk_map(&field, threshold);
+
+        assert!(risk[[0, 0, 0]], "cell above threshold must be high-risk");
+        assert!(!risk[[1, 1, 1]], "cell below threshold must not be high-risk");
+        // Cells equal to threshold (none here) would also be false (strict >)
+        let eq_field = Array3::<f64>::from_elem((2, 2, 2), 1.0);
+        let risk_eq = ErosionPattern::risk_map(&eq_field, 1.0);
+        assert!(!risk_eq[[0, 0, 0]], "cell equal to threshold must not be high-risk");
+    }
+
+    /// `erosion_potential` formula: damage × (1 + 0.1·v) × |n|.
+    ///
+    /// For damage=1, v=0, n=1: potential = 1·1·1 = 1.0.
+    /// For damage=2, v=10, n=0.5: potential = 2·(1+1)·0.5 = 2.0.
+    #[test]
+    fn erosion_potential_matches_formula_analytically() {
+        let damage = Array3::<f64>::from_elem((2, 2, 2), 1.0);
+        let velocity = Array3::<f64>::zeros((2, 2, 2)); // v=0
+        let normal = Array3::<f64>::from_elem((2, 2, 2), 1.0); // n=1
+
+        let potential = ErosionPattern::erosion_potential(&damage, &velocity, &normal);
+
+        // expected: 1.0 × (1 + 0.1×0) × |1.0| = 1.0
+        for &v in potential.iter() {
+            assert!(
+                (v - 1.0).abs() < 1e-14,
+                "erosion_potential must be 1.0 for damage=1,v=0,n=1 (got {v:.3e})"
+            );
+        }
+    }
+
+    /// Zero damage field produces zero erosion potential regardless of velocity.
+    #[test]
+    fn erosion_potential_zero_for_zero_damage() {
+        let damage = Array3::<f64>::zeros((2, 2, 2));
+        let velocity = Array3::<f64>::from_elem((2, 2, 2), 100.0);
+        let normal = Array3::<f64>::from_elem((2, 2, 2), 1.0);
+
+        let potential = ErosionPattern::erosion_potential(&damage, &velocity, &normal);
+
+        for &v in potential.iter() {
+            assert_eq!(v, 0.0, "zero damage must give zero erosion potential");
+        }
+    }
+}

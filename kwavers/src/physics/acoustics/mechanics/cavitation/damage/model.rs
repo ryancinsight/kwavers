@@ -173,3 +173,77 @@ impl CavitationDamage {
         depth
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_damage() -> CavitationDamage {
+        CavitationDamage::new((4, 4, 4), MaterialProperties::default(), DamageParameters::default())
+    }
+
+    /// A freshly constructed damage model has zero total damage and zero erosion.
+    #[test]
+    fn new_model_has_zero_total_damage_and_erosion() {
+        let d = make_damage();
+        assert_eq!(d.total_damage(), 0.0, "initial total_damage must be zero");
+        for &v in d.erosion_rate.iter() {
+            assert_eq!(v, 0.0, "initial erosion_rate must be zero");
+        }
+    }
+
+    /// `mean_time_to_failure` returns ∞ when all damage is zero.
+    #[test]
+    fn mean_time_to_failure_infinity_when_no_damage() {
+        let d = make_damage();
+        assert_eq!(d.mean_time_to_failure(1e-6), f64::INFINITY);
+    }
+
+    /// `max_damage_location` returns (0,0,0) when all values are equal (zero).
+    #[test]
+    fn max_damage_location_zero_for_zero_field() {
+        let d = make_damage();
+        assert_eq!(d.max_damage_location(), (0, 0, 0));
+    }
+
+    /// `calculate_damage_increment` with zero impact pressure produces zero damage.
+    ///
+    /// Both fatigue (stress_intensity=0 branch) and pit probability
+    /// (max(0, 0/yield−1)=0) are zero.
+    #[test]
+    fn calculate_damage_increment_zero_for_zero_impact_pressure() {
+        let d = make_damage();
+        let increment = d.calculate_damage_increment(0.0, 1e-6, 0);
+        assert_eq!(increment, 0.0, "zero pressure must give zero damage increment");
+    }
+
+    /// `calculate_erosion_rate` returns zero when impact pressure < material hardness.
+    ///
+    /// Hardness for SS316 = 2 GPa; using p=1e9 Pa (< 2e9) → erosion = 0.
+    #[test]
+    fn calculate_erosion_rate_zero_below_hardness() {
+        let d = make_damage();
+        let rate = d.calculate_erosion_rate(1e9, 1e-6, 100.0);
+        assert_eq!(rate, 0.0, "erosion must be zero when p < hardness");
+    }
+
+    /// `calculate_erosion_rate` is positive when impact pressure exceeds hardness.
+    ///
+    /// p = 3e9 > 2e9 (hardness) → positive erosion rate.
+    #[test]
+    fn calculate_erosion_rate_positive_above_hardness() {
+        let d = make_damage();
+        let rate = d.calculate_erosion_rate(3e9, 1e-6, 100.0);
+        assert!(rate > 0.0, "erosion must be positive when p > hardness (got {rate:.3e})");
+    }
+
+    /// `erosion_depth` at t=0 is identically zero (no time elapsed).
+    #[test]
+    fn erosion_depth_zero_at_time_zero() {
+        let d = make_damage();
+        let depth = d.erosion_depth(0.0);
+        for &v in depth.iter() {
+            assert_eq!(v, 0.0, "erosion_depth at t=0 must be zero");
+        }
+    }
+}
