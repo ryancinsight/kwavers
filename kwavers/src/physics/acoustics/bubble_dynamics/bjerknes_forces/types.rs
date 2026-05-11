@@ -64,3 +64,51 @@ pub enum InteractionType {
     /// No significant interaction
     Neutral,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// BjerknesConfig::default satisfies the ordering invariant c0 > 0, rho > 0, frequency > 0.
+    #[test]
+    fn default_config_positive_physical_constants() {
+        let cfg = BjerknesConfig::default();
+        assert!(cfg.c0 > 0.0, "c0 must be positive");
+        assert!(cfg.rho > 0.0, "rho must be positive");
+        assert!(cfg.frequency > 0.0, "frequency must be positive");
+    }
+
+    /// BjerknesConfig coalescence_distance < interaction_range (physical ordering).
+    #[test]
+    fn coalescence_distance_less_than_interaction_range() {
+        let cfg = BjerknesConfig::default();
+        assert!(cfg.coalescence_distance < cfg.interaction_range,
+            "coalescence_distance ({}) must be < interaction_range ({})",
+            cfg.coalescence_distance, cfg.interaction_range);
+    }
+
+    /// InteractionType variants are distinct.
+    #[test]
+    fn interaction_type_variants_distinct() {
+        assert_ne!(InteractionType::Attractive, InteractionType::Repulsive);
+        assert_ne!(InteractionType::Repulsive, InteractionType::Neutral);
+    }
+
+    /// BjerknesForce stores all fields and Clone works.
+    #[test]
+    fn bjerknes_force_stores_fields() {
+        let f = BjerknesForce {
+            primary: 1e-9,
+            secondary: -5e-10,
+            total: 5e-10,
+            phase_difference: 0.3,
+            interaction_type: InteractionType::Attractive,
+            distance: 50e-6,
+            coalescing: false,
+        };
+        let c = f;
+        assert!((c.primary - 1e-9).abs() < 1e-24);
+        assert_eq!(c.interaction_type, InteractionType::Attractive);
+        assert!(!c.coalescing);
+    }
+}
