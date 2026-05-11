@@ -274,6 +274,79 @@ mod tests {
         );
     }
 
+    /// `compute_max_stable_timestep` implements the CFL condition:
+    ///   dt_max = CFL_limit(order) · min(dx, dy, dz) / c_max
+    ///
+    /// Analytical verification for Second-order, isotropic grid:
+    ///   dt_max = (1/√3) · 0.001 / 1500 ≈ 3.849e-7 s
+    #[test]
+    fn compute_max_stable_timestep_matches_analytical_cfl_formula() {
+        let dx = 0.001_f64;
+        let grid = Grid::new(10, 10, 10, dx, dx, dx).unwrap();
+        let c_max = 1500.0_f64;
+
+        let dt_second = compute_max_stable_timestep(&grid, c_max, SpatialOrder::Second);
+        let expected_second = SpatialOrder::Second.cfl_limit() * dx / c_max;
+        assert!(
+            (dt_second - expected_second).abs() < 1e-15,
+            "Second-order: got {dt_second:.6e} expected {expected_second:.6e}"
+        );
+
+        let dt_fourth = compute_max_stable_timestep(&grid, c_max, SpatialOrder::Fourth);
+        let expected_fourth = SpatialOrder::Fourth.cfl_limit() * dx / c_max;
+        assert!(
+            (dt_fourth - expected_fourth).abs() < 1e-15,
+            "Fourth-order: got {dt_fourth:.6e} expected {expected_fourth:.6e}"
+        );
+
+        // Higher-order schemes impose stricter CFL limits.
+        assert!(
+            dt_fourth < dt_second,
+            "Fourth-order dt_max must be strictly less than Second-order dt_max"
+        );
+    }
+
+    /// `compute_max_stable_timestep` uses the minimum grid spacing when the
+    /// grid is anisotropic (dx ≠ dy ≠ dz).
+    #[test]
+    fn compute_max_stable_timestep_uses_minimum_spacing_for_anisotropic_grid() {
+        let grid = Grid::new(10, 10, 10, 0.001, 0.002, 0.003).unwrap();
+        let c_max = 1500.0_f64;
+        let dt = compute_max_stable_timestep(&grid, c_max, SpatialOrder::Second);
+        // Minimum spacing is dx = 0.001.
+        let expected = SpatialOrder::Second.cfl_limit() * 0.001 / c_max;
+        assert!((dt - expected).abs() < 1e-15);
+    }
+
+    /// `compute_nonlinearity_coefficient` computes β = 1 + B/(2A).
+    ///
+    /// For water: B/A ≈ 5.2 → β ≈ 3.6.
+    /// The test verifies the formula from a real `HomogeneousMedium::water`
+    /// instance, not a hardcoded constant.
+    #[test]
+    fn compute_nonlinearity_coefficient_matches_ba_formula() {
+        use crate::domain::medium::HomogeneousMedium;
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+
+        let beta = compute_nonlinearity_coefficient(&medium, 0.0, 0.0, 0.0, &grid);
+
+        // Formula: β = 1 + B/(2A). Retrieve B/A through the same trait call.
+        let b_over_a = crate::domain::medium::AcousticProperties::nonlinearity_coefficient(
+            &medium, 0.0, 0.0, 0.0, &grid,
+        );
+        let expected = 1.0 + b_over_a / 2.0;
+        assert!(
+            (beta - expected).abs() < 1e-15,
+            "β = {beta} must equal 1 + B/2A = {expected}"
+        );
+        // Sanity: water B/A ≈ 5.2 → β ≈ 3.6; must be > 1.
+        assert!(
+            beta > 1.0,
+            "nonlinearity coefficient must be > 1 for water (got {beta})"
+        );
+    }
+
     #[test]
     fn test_heterogeneous_medium_position_dependence() {
         use crate::domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
