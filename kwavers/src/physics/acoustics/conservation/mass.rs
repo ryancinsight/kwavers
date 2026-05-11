@@ -36,3 +36,56 @@ pub fn validate_mass_conservation(
 
     max_error
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use ndarray::Array3;
+
+    fn small_grid() -> Grid {
+        Grid::new(6, 6, 6, 1e-3, 1e-3, 1e-3).unwrap()
+    }
+
+    /// Constant density, zero velocity: ∂ρ/∂t = 0 and div(ρv) = 0 → max_error = 0.
+    ///
+    /// This verifies the exact null case of the continuity equation.
+    #[test]
+    fn mass_conservation_zero_error_for_uniform_static_field() {
+        let grid = small_grid();
+        let s = (grid.nx, grid.ny, grid.nz);
+        let density          = Array3::from_elem(s, 1000.0_f64);
+        let density_previous = Array3::from_elem(s, 1000.0_f64);
+        let velocity_x       = Array3::zeros(s);
+        let velocity_y       = Array3::zeros(s);
+        let velocity_z       = Array3::zeros(s);
+
+        let error = validate_mass_conservation(
+            &density, &density_previous, &velocity_x, &velocity_y, &velocity_z, 1e-6, &grid,
+        );
+        assert_eq!(error, 0.0, "uniform static field must give zero mass continuity error");
+    }
+
+    /// Linear density gradient with zero velocity: ∂ρ/∂t=0, divergence of zero velocity=0
+    /// → max_error = 0.
+    #[test]
+    fn mass_conservation_zero_error_for_static_gradient_field() {
+        let grid = small_grid();
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        let mut density = Array3::<f64>::zeros((nx, ny, nz));
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    density[[i, j, k]] = 900.0 + i as f64;
+                }
+            }
+        }
+        let density_prev = density.clone();
+        let zero = Array3::<f64>::zeros((nx, ny, nz));
+
+        let error = validate_mass_conservation(
+            &density, &density_prev, &zero, &zero, &zero, 1e-6, &grid,
+        );
+        assert_eq!(error, 0.0, "static gradient field with zero velocity must give zero error");
+    }
+}
