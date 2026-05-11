@@ -9,16 +9,17 @@ fluid-solid interface:
   1. Fluid model  — homogeneous water everywhere (cs=0, cp=1500, rho=1000).
                     The "fluid approximation": no impedance mismatch at the
                     notional solid boundary.
-  2. Elastic model (acoustic approximation) — heterogeneous medium:
+  2. Elastic model (acoustic approximation) — heterogeneous acoustic medium:
                     water above the interface, solid acoustic properties
-                    (cp=2000, rho=1200, cs=0) below.  This is the
-                    standard acoustic approximation to a fluid-solid
-                    interface; it captures reflection and transmission
-                    due to impedance contrast but omits shear-wave mode
-                    conversion.  The SolverType.Elastic solver is not used
-                    because its boundary absorption (PML) is not yet
-                    implemented, causing boundary reflections that corrupt
-                    the long-run field statistics.
+                    (cp=2000, rho=1200, cs=0) below.  Captures impedance-mismatch
+                    reflection/transmission but omits shear-wave mode conversion.
+                    Both models use the acoustic PSTD solver (SolverType.PSTD).
+
+Note: The SolverType.Elastic PML instability (scalar isotropic damping that
+explodes past NT≈200) was fixed in commit 5b2c5dd9. The fix replaces the scalar
+PML with a separable per-axis exponential PML applied to both displacements and
+velocities. A full elastic-with-shear comparison (cs>0 in solid, SolverType.Elastic)
+is deferred until a k-Wave.jl reference for the elastic case is available.
 
 A focused arc source (ring-IVP) in the fluid region concentrates energy on
 the interface centre.  The fluid model shows a freely propagating focused
