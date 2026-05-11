@@ -48,10 +48,10 @@
 
 mod config;
 mod engine;
-mod plugin;
+mod implementation;
 
 #[cfg(test)]
 mod tests;
 
 pub use config::BubbleDynamicsConfig;
-pub use plugin::BubbleDynamicsPlugin;
+pub use implementation::BubbleDynamicsPlugin;

@@ -259,6 +259,16 @@ impl ElasticPstdOrchestrator {
         &self.velocity
     }
 
+    /// Borrow the current persistent spectral stress tensor.
+    ///
+    /// Exposed for invariant tests (e.g. `μ ≡ 0 ⇒ shear stress = 0`).
+    /// Not part of the simulation API surface — the orchestrator manages
+    /// stress internally.
+    #[must_use]
+    pub fn spectral_stress(&self) -> &SpectralStressFields {
+        &self.spectral_stress
+    }
+
     /// Number of steps executed so far.
     #[must_use]
     pub fn step_index(&self) -> usize {
