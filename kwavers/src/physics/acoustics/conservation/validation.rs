@@ -84,3 +84,78 @@ pub fn validate_conservation(
         is_conserved,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use ndarray::Array3;
+
+    fn small_grid() -> Grid {
+        Grid::new(6, 6, 6, 1e-3, 1e-3, 1e-3).unwrap()
+    }
+
+    fn uniform(s: (usize, usize, usize), val: f64) -> Array3<f64> {
+        Array3::from_elem(s, val)
+    }
+
+    /// All `None` previous-step fields → mass_error = 0.0, momentum_error = (0,0,0).
+    ///
+    /// The aggregator short-circuits to 0 when optional history is absent,
+    /// supporting first-timestep invocation without prior state.
+    #[test]
+    fn validate_conservation_none_previous_gives_zero_mass_and_momentum() {
+        let grid = small_grid();
+        let s    = (grid.nx, grid.ny, grid.nz);
+        let p    = uniform(s, 1000.0);
+        let v    = uniform(s, 0.0);
+        let rho  = uniform(s, 1000.0);
+        let c    = uniform(s, 1500.0);
+        let alpha = uniform(s, 0.0);
+        let dv    = grid.dx * grid.dy * grid.dz;
+        let n     = (s.0 * s.1 * s.2) as f64;
+        let init  = 1000.0_f64.powi(2) / (2.0 * 1000.0 * 1500.0_f64.powi(2)) * dv * n;
+
+        let m = validate_conservation(
+            &p, &v, &v, &v, &rho, &c, &alpha, 310.0,
+            None, None, None, None, None,
+            init, 1e-6, &grid, 1e-4,
+        );
+
+        assert_eq!(m.mass_error, 0.0, "None density_previous → mass_error must be 0");
+        assert_eq!(
+            m.momentum_error, (0.0, 0.0, 0.0),
+            "None velocity_previous → momentum_error must be (0,0,0)"
+        );
+    }
+
+    /// Lossless field with matching initial energy → is_conserved = true.
+    ///
+    /// energy_error→0, mass_error=0, momentum_error=(0,0,0), ds_dt=0 ≥ 0 → is_conserved.
+    #[test]
+    fn validate_conservation_conserved_for_lossless_matched_energy() {
+        let grid = small_grid();
+        let s    = (grid.nx, grid.ny, grid.nz);
+        let p0   = 500.0_f64;
+        let rho0 = 1000.0_f64;
+        let c0   = 1500.0_f64;
+        let p     = uniform(s, p0);
+        let v     = uniform(s, 0.0);
+        let rho   = uniform(s, rho0);
+        let c     = uniform(s, c0);
+        let alpha = uniform(s, 0.0);
+        let dv    = grid.dx * grid.dy * grid.dz;
+        let n     = (s.0 * s.1 * s.2) as f64;
+        let init  = p0.powi(2) / (2.0 * rho0 * c0.powi(2)) * dv * n;
+
+        let m = validate_conservation(
+            &p, &v, &v, &v, &rho, &c, &alpha, 310.0,
+            None, None, None, None, None,
+            init, 1e-6, &grid, 1e-4,
+        );
+
+        assert!(m.energy_error < 1e-10, "energy_error={:.3e}", m.energy_error);
+        assert!(m.entropy_production_rate >= 0.0, "entropy_production_rate must be nonneg");
+        assert!(m.is_conserved, "lossless matched field must satisfy is_conserved");
+    }
+}

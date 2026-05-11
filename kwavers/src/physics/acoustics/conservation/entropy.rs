@@ -47,3 +47,59 @@ pub fn entropy_production_rate(
 
     total
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use ndarray::Array3;
+
+    fn small_grid() -> Grid {
+        Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap()
+    }
+
+    fn uniform(s: (usize, usize, usize), val: f64) -> Array3<f64> {
+        Array3::from_elem(s, val)
+    }
+
+    /// Zero acoustic fields (p=0, v=0) with non-zero absorption → zero entropy production.
+    ///
+    /// energy_density = 0 → 2·α·c·0/T = 0 regardless of α.
+    #[test]
+    fn entropy_production_zero_for_zero_energy_fields() {
+        let grid = small_grid();
+        let s    = (grid.nx, grid.ny, grid.nz);
+        let zero  = Array3::<f64>::zeros(s);
+        let rho   = uniform(s, 1000.0);
+        let c     = uniform(s, 1500.0);
+        let alpha = uniform(s, 5.0); // non-zero absorption, but zero energy
+        let ds = entropy_production_rate(&zero, &zero, &zero, &zero, &rho, &c, &alpha, 310.0, &grid);
+        assert_eq!(ds, 0.0, "zero acoustic energy must give zero entropy production");
+    }
+
+    /// Analytical formula: ds/dt = α·P²/(ρ·c·T)·V for pressure-only field.
+    ///
+    /// Derivation: energy_density = P²/(2ρc²), ds/dt = 2·α·c·P²/(2ρc²·T)·N·dV = α·P²·N·dV/(ρ·c·T).
+    #[test]
+    fn entropy_production_matches_analytical_formula_pressure_field() {
+        let grid = small_grid();
+        let s    = (grid.nx, grid.ny, grid.nz);
+        let p0   = 3000.0_f64;
+        let rho0 = 1000.0_f64;
+        let c0   = 1500.0_f64;
+        let a0   = 2.0_f64;
+        let t0   = 310.0_f64;
+        let p     = uniform(s, p0);
+        let v     = Array3::<f64>::zeros(s);
+        let rho   = uniform(s, rho0);
+        let c     = uniform(s, c0);
+        let alpha = uniform(s, a0);
+        let vol   = grid.dx * grid.dy * grid.dz * (s.0 * s.1 * s.2) as f64;
+
+        let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, t0, &grid);
+
+        let expected = a0 * p0 * p0 / (rho0 * c0 * t0) * vol;
+        let rel = (ds - expected).abs() / expected;
+        assert!(rel < 1e-10, "entropy rel-error={rel:.3e}, expected={expected:.6e}, got={ds:.6e}");
+    }
+}
