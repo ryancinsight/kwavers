@@ -91,3 +91,67 @@ impl NonlinearWave {
         Ok(updated_pressure)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::super::wave_model::NonlinearWave;
+    use crate::domain::grid::Grid;
+    use crate::domain::medium::HomogeneousMedium;
+    use ndarray::Array3;
+
+    /// `update_wave_inner` must return Err when the pressure array shape does not
+    /// match the grid dimensions.
+    ///
+    /// Precondition check: shape mismatch is detected before any FFT allocation.
+    #[test]
+    fn update_wave_inner_rejects_mismatched_pressure_shape() {
+        let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let mut w = NonlinearWave::new(&grid, 1e-7);
+
+        // 3×3×3 ≠ 4×4×4
+        let pressure = Array3::<f64>::zeros((3, 3, 3));
+        let source = Array3::<f64>::zeros((4, 4, 4));
+
+        let result = w.update_wave_inner(&pressure, &source, &medium, &grid, 0);
+        assert!(result.is_err(), "shape mismatch must return Err");
+    }
+
+    /// `update_wave_inner` increments `call_count` on each invocation.
+    #[test]
+    fn update_wave_inner_increments_call_count() {
+        let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let mut w = NonlinearWave::new(&grid, 1e-7);
+        w.precompute_k_squared(&grid);
+
+        let pressure = Array3::<f64>::zeros((4, 4, 4));
+        let source = Array3::<f64>::zeros((4, 4, 4));
+
+        assert_eq!(w.call_count, 0);
+        w.update_wave_inner(&pressure, &source, &medium, &grid, 0).unwrap();
+        assert_eq!(w.call_count, 1, "call_count must be 1 after one call");
+        w.update_wave_inner(&pressure, &source, &medium, &grid, 1).unwrap();
+        assert_eq!(w.call_count, 2, "call_count must be 2 after two calls");
+    }
+
+    /// Zero source + zero pressure → output shape matches the grid dimensions.
+    #[test]
+    fn update_wave_inner_output_shape_matches_grid() {
+        let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let mut w = NonlinearWave::new(&grid, 1e-7);
+        w.precompute_k_squared(&grid);
+
+        let pressure = Array3::<f64>::zeros((4, 4, 4));
+        let source = Array3::<f64>::zeros((4, 4, 4));
+
+        let result = w.update_wave_inner(&pressure, &source, &medium, &grid, 0).unwrap();
+        assert_eq!(
+            result.dim(),
+            (4, 4, 4),
+            "output shape must match grid (4,4,4), got {:?}",
+            result.dim()
+        );
+    }
+}

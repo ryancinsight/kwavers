@@ -79,3 +79,52 @@ impl NonlinearWave {
         Ok(nonlinear_term)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::super::wave_model::NonlinearWave;
+    use crate::domain::grid::Grid;
+    use crate::domain::medium::HomogeneousMedium;
+    use ndarray::Array3;
+
+    /// A spatially uniform (constant) pressure field has zero gradient and zero
+    /// Laplacian. Both terms of the Westervelt nonlinear operator vanish, so the
+    /// nonlinear contribution must be identically zero everywhere.
+    ///
+    /// Tolerance: N·ε_mach·10 where N = nx·ny·nz = 512 for an 8³ grid.
+    #[test]
+    fn compute_nonlinear_term_zero_for_constant_pressure_field() {
+        let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let mut w = NonlinearWave::new(&grid, 1e-7);
+        w.precompute_k_squared(&grid);
+
+        // Constant field: gradient = 0, Laplacian = 0 → nonlinear term = 0
+        let pressure = Array3::<f64>::from_elem((8, 8, 8), 1_000.0);
+
+        let term = w.compute_nonlinear_term(&pressure, &medium, &grid).unwrap();
+
+        let tol = 512.0 * f64::EPSILON * 10.0;
+        for &v in term.iter() {
+            assert!(
+                v.abs() < tol,
+                "nonlinear term must be zero for constant pressure (got {v:.3e}, tol {tol:.3e})"
+            );
+        }
+    }
+
+    /// Zero pressure field → zero nonlinear term (trivial null case).
+    #[test]
+    fn compute_nonlinear_term_zero_for_zero_pressure_field() {
+        let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let w = NonlinearWave::new(&grid, 1e-7);
+
+        let pressure = Array3::<f64>::zeros((8, 8, 8));
+        let term = w.compute_nonlinear_term(&pressure, &medium, &grid).unwrap();
+
+        for &v in term.iter() {
+            assert_eq!(v, 0.0, "zero pressure must give zero nonlinear term");
+        }
+    }
+}
