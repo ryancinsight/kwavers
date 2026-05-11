@@ -17,8 +17,10 @@
 //!    points into the recorder matrices.
 
 use super::super::PstdElasticPlugin;
-use super::kspace::{build_kappa, max_p_wave_speed};
+use super::kspace::{build_kappa, grid_spacing_from_wavenumber, max_p_wave_speed, wavenumber_axis};
 use super::pml::ElasticPml;
+use super::split_field_pml::{ElasticSplitFieldPml, SplitFieldState};
+use super::split_field_step::propagate_split_field_step;
 use super::types::{ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdVelocitySource};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -106,6 +108,17 @@ pub struct ElasticPstdOrchestrator {
     /// `Some(_)` ⇒ exponentially-attenuating boundary cells per the
     /// theorem in [`super::pml`].
     pml: Option<ElasticPml>,
+    /// Optional Bérenger split-field PML (zero theoretical reflection at
+    /// all incidence angles). When `Some`, `propagate` routes each step
+    /// through [`propagate_split_field_step`] instead of the standard
+    /// leapfrog. Takes precedence over the scalar `pml` field.
+    split_pml: Option<ElasticSplitFieldPml>,
+    /// Persistent sub-field state for the split-field PML (24 arrays).
+    /// `Box`-allocated to avoid stack overflow at large grid sizes.
+    split_pml_state: Option<Box<SplitFieldState>>,
+    /// Scratch real-space buffer reused across split-field-step derivative
+    /// IFFTs. One allocation at construction; zero allocations per step.
+    scratch_r: ndarray::Array3<f64>,
     pub(super) velocity: VelocityFields,
     pub(super) spectral_stress: SpectralStressFields,
     spectral_stress_next: SpectralStressFields,
@@ -161,6 +174,9 @@ impl ElasticPstdOrchestrator {
             derivative_ops,
             kappa,
             pml: None,
+            split_pml: None,
+            split_pml_state: None,
+            scratch_r: ndarray::Array3::<f64>::zeros(shape),
             velocity: VelocityFields::new(nx, ny, nz),
             spectral_stress: SpectralStressFields::new(nx, ny, nz),
             spectral_stress_next: SpectralStressFields::new(nx, ny, nz),
@@ -206,82 +222,110 @@ impl ElasticPstdOrchestrator {
                 inject_velocity_source(&mut self.velocity, src, step);
             }
 
-            // 2. In-place FFT of (vx, vy, vz) into the persistent
-            //    `spectral_velocity_in` buffer. Avoids 3 fresh
-            //    `Array3<Complex<f64>>` allocations per step that
-            //    `SpectralVelocityFields::from_real` would do.
-            fft_3d_array_into(&self.velocity.vx, &mut self.spectral_velocity_in.vx);
-            fft_3d_array_into(&self.velocity.vy, &mut self.spectral_velocity_in.vy);
-            fft_3d_array_into(&self.velocity.vz, &mut self.spectral_velocity_in.vz);
+            if self.split_pml.is_some() {
+                // ── Bérenger split-field PML path ─────────────────────────
+                // Phase 4 of the split-field step overwrites `velocity` with
+                // the sum of velocity sub-fields.  To ensure source-injected
+                // velocity carries through to Phase 4, the source is also
+                // injected into the x-directional velocity sub-fields before
+                // the step.  The invariant `vx = vxx + vxy + vxz` is then
+                // maintained: vxx absorbs the source, vxy/vxz are unchanged.
+                if let (Some(src), Some(state)) =
+                    (source, self.split_pml_state.as_mut())
+                {
+                    inject_velocity_source_subfields(state, src, step);
+                }
+                let pml = self.split_pml.as_ref().unwrap();
+                let state = self.split_pml_state.as_mut().unwrap().as_mut();
+                propagate_split_field_step(
+                    &mut self.velocity,
+                    &mut self.spectral_stress,
+                    &mut self.spectral_stress_next,
+                    &mut self.spectral_velocity_in,
+                    &mut self.spectral_velocity_next,
+                    pml,
+                    state,
+                    &self.medium,
+                    &self.derivative_ops.dkx_neg,
+                    &self.derivative_ops.dky_neg,
+                    &self.derivative_ops.dkz_neg,
+                    &self.derivative_ops.dkx_pos,
+                    &self.derivative_ops.dky_pos,
+                    &self.derivative_ops.dkz_pos,
+                    &self.kappa,
+                    &mut self.scratch_r,
+                );
+            } else {
+                // ── Standard leapfrog path (no split-field PML) ───────────
+                fft_3d_array_into(&self.velocity.vx, &mut self.spectral_velocity_in.vx);
+                fft_3d_array_into(&self.velocity.vy, &mut self.spectral_velocity_in.vy);
+                fft_3d_array_into(&self.velocity.vz, &mut self.spectral_velocity_in.vz);
 
-            let stress_params = StressUpdateParams {
-                vx_fft: &self.spectral_velocity_in.vx,
-                vy_fft: &self.spectral_velocity_in.vy,
-                vz_fft: &self.spectral_velocity_in.vz,
-                txx_fft: &self.spectral_stress.txx,
-                tyy_fft: &self.spectral_stress.tyy,
-                tzz_fft: &self.spectral_stress.tzz,
-                txy_fft: &self.spectral_stress.txy,
-                txz_fft: &self.spectral_stress.txz,
-                tyz_fft: &self.spectral_stress.tyz,
-                // Stress update consumes ∇v sampled at the staggered stress
-                // grid → use the negative-shift derivative operator
-                // (KWave.jl ddx_k_shift_neg).
-                dkx_op: &self.derivative_ops.dkx_neg,
-                dky_op: &self.derivative_ops.dky_neg,
-                dkz_op: &self.derivative_ops.dkz_neg,
-                lame_lambda: &self.medium.lame_lambda,
-                lame_mu: &self.medium.lame_mu,
-                density: self.medium.density.view(),
-                dt: self.dt,
-                kappa: &self.kappa,
-            };
-            self.plugin
-                .apply_stress_update_in_place(&stress_params, &mut self.spectral_stress_next);
+                let stress_params = StressUpdateParams {
+                    vx_fft: &self.spectral_velocity_in.vx,
+                    vy_fft: &self.spectral_velocity_in.vy,
+                    vz_fft: &self.spectral_velocity_in.vz,
+                    txx_fft: &self.spectral_stress.txx,
+                    tyy_fft: &self.spectral_stress.tyy,
+                    tzz_fft: &self.spectral_stress.tzz,
+                    txy_fft: &self.spectral_stress.txy,
+                    txz_fft: &self.spectral_stress.txz,
+                    tyz_fft: &self.spectral_stress.tyz,
+                    dkx_op: &self.derivative_ops.dkx_neg,
+                    dky_op: &self.derivative_ops.dky_neg,
+                    dkz_op: &self.derivative_ops.dkz_neg,
+                    lame_lambda: &self.medium.lame_lambda,
+                    lame_mu: &self.medium.lame_mu,
+                    density: self.medium.density.view(),
+                    dt: self.dt,
+                    kappa: &self.kappa,
+                };
+                self.plugin.apply_stress_update_in_place(
+                    &stress_params,
+                    &mut self.spectral_stress_next,
+                );
 
-            let velocity_params = VelocityUpdateParams {
-                vx_fft: &self.spectral_velocity_in.vx,
-                vy_fft: &self.spectral_velocity_in.vy,
-                vz_fft: &self.spectral_velocity_in.vz,
-                txx_fft: &self.spectral_stress_next.txx,
-                tyy_fft: &self.spectral_stress_next.tyy,
-                tzz_fft: &self.spectral_stress_next.tzz,
-                txy_fft: &self.spectral_stress_next.txy,
-                txz_fft: &self.spectral_stress_next.txz,
-                tyz_fft: &self.spectral_stress_next.tyz,
-                // Velocity update consumes ∇·σ sampled at the staggered
-                // velocity grid → use the positive-shift derivative
-                // operator (KWave.jl ddx_k_shift_pos).
-                dkx_op: &self.derivative_ops.dkx_pos,
-                dky_op: &self.derivative_ops.dky_pos,
-                dkz_op: &self.derivative_ops.dkz_pos,
-                density: self.medium.density.view(),
-                dt: self.dt,
-                kappa: &self.kappa,
-            };
-            self.plugin
-                .apply_velocity_update_in_place(&velocity_params, &mut self.spectral_velocity_next);
+                let velocity_params = VelocityUpdateParams {
+                    vx_fft: &self.spectral_velocity_in.vx,
+                    vy_fft: &self.spectral_velocity_in.vy,
+                    vz_fft: &self.spectral_velocity_in.vz,
+                    txx_fft: &self.spectral_stress_next.txx,
+                    tyy_fft: &self.spectral_stress_next.tyy,
+                    tzz_fft: &self.spectral_stress_next.tzz,
+                    txy_fft: &self.spectral_stress_next.txy,
+                    txz_fft: &self.spectral_stress_next.txz,
+                    tyz_fft: &self.spectral_stress_next.tyz,
+                    dkx_op: &self.derivative_ops.dkx_pos,
+                    dky_op: &self.derivative_ops.dky_pos,
+                    dkz_op: &self.derivative_ops.dkz_pos,
+                    density: self.medium.density.view(),
+                    dt: self.dt,
+                    kappa: &self.kappa,
+                };
+                self.plugin.apply_velocity_update_in_place(
+                    &velocity_params,
+                    &mut self.spectral_velocity_next,
+                );
 
-            std::mem::swap(&mut self.spectral_stress, &mut self.spectral_stress_next);
-            // In-place IFFT of the new spectral velocity into the
-            // persistent `velocity` buffer. Avoids 3 fresh
-            // `Array3<f64>` allocations per step that
-            // `SpectralVelocityFields::to_real` would do.
-            ifft_3d_array_into(&mut self.spectral_velocity_next.vx, &mut self.velocity.vx);
-            ifft_3d_array_into(&mut self.spectral_velocity_next.vy, &mut self.velocity.vy);
-            ifft_3d_array_into(&mut self.spectral_velocity_next.vz, &mut self.velocity.vz);
+                std::mem::swap(&mut self.spectral_stress, &mut self.spectral_stress_next);
+                ifft_3d_array_into(
+                    &mut self.spectral_velocity_next.vx,
+                    &mut self.velocity.vx,
+                );
+                ifft_3d_array_into(
+                    &mut self.spectral_velocity_next.vy,
+                    &mut self.velocity.vy,
+                );
+                ifft_3d_array_into(
+                    &mut self.spectral_velocity_next.vz,
+                    &mut self.velocity.vz,
+                );
 
-            // Apply the PML in real space immediately after the IFFT, per
-            // the theorem in `super::pml`. The damping is unconditionally
-            // stable (multiplier ∈ (0, 1]) and stress is implicitly
-            // damped through the velocity field on the subsequent step's
-            // FFT (the spectral stress only "sees" the PML-attenuated
-            // velocity), so no separate stress-PML pass is required at
-            // this fidelity level.
-            if let Some(pml) = self.pml.as_ref() {
-                pml.apply_to_field(&mut self.velocity.vx);
-                pml.apply_to_field(&mut self.velocity.vy);
-                pml.apply_to_field(&mut self.velocity.vz);
+                if let Some(pml) = self.pml.as_ref() {
+                    pml.apply_to_field(&mut self.velocity.vx);
+                    pml.apply_to_field(&mut self.velocity.vy);
+                    pml.apply_to_field(&mut self.velocity.vz);
+                }
             }
 
             if n_sensors > 0 {
@@ -342,6 +386,44 @@ impl ElasticPstdOrchestrator {
         self.pml = None;
     }
 
+    /// Attach a Bérenger split-field PML (zero theoretical reflection at all
+    /// incidence angles and frequencies). Replaces any previously-attached
+    /// `pml` or `split_pml`. The split-field path takes precedence over the
+    /// scalar PML in `propagate`.
+    ///
+    /// See [`super::split_field_pml`] for the exact discrete integrator and
+    /// memory layout of the 24 persistent sub-fields.
+    pub fn set_split_field_pml(
+        &mut self,
+        thickness_cells: (usize, usize, usize),
+        c_max: f64,
+        r0: f64,
+    ) {
+        let (nx, ny, nz) = self.grid_shape;
+        let dx = grid_spacing_from_wavenumber(&self.derivative_ops.dkx_pos, nx);
+        let dy = grid_spacing_from_wavenumber(&self.derivative_ops.dky_pos, ny);
+        let dz = grid_spacing_from_wavenumber(&self.derivative_ops.dkz_pos, nz);
+        self.split_pml = Some(ElasticSplitFieldPml::new(
+            nx,
+            ny,
+            nz,
+            thickness_cells,
+            dx,
+            dy,
+            dz,
+            c_max,
+            self.dt,
+            r0,
+        ));
+        self.split_pml_state = Some(Box::new(SplitFieldState::new(nx, ny, nz)));
+    }
+
+    /// Disable the split-field PML and revert to periodic boundaries.
+    pub fn clear_split_field_pml(&mut self) {
+        self.split_pml = None;
+        self.split_pml_state = None;
+    }
+
     /// Borrow the current real-space velocity field.
     #[must_use]
     pub fn velocity(&self) -> &VelocityFields {
@@ -366,44 +448,6 @@ impl ElasticPstdOrchestrator {
 }
 
 // ─── Private helpers ─────────────────────────────────────────────────────────
-
-/// Recover the grid spacing `dx` from a precomputed complex spectral
-/// derivative axis.
-///
-/// The axis carries `D[i] = i · k[i] · exp(±i·k[i]·dx/2)` where
-/// `k[i] = i · dk` for `i < n/2` and `k[i] = (i − n) · dk` for
-/// `i ≥ n/2`, with `dk = 2π / (n·dx)`. The first non-zero positive
-/// wavenumber is at index 1: `|D[1]| = k[1] = dk`. Hence
-/// `dx = 2π / (n · |D[1]|)`.
-fn grid_spacing_from_wavenumber(d_op: &Array3<num_complex::Complex<f64>>, n: usize) -> f64 {
-    if n < 2 {
-        // Degenerate axis — caller will set thickness 0 anyway.
-        return 1.0;
-    }
-    let dk = d_op[[1, 0, 0]].norm();
-    if dk == 0.0 {
-        return 1.0;
-    }
-    2.0 * std::f64::consts::PI / (n as f64 * dk)
-}
-
-fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
-    let mut k = Array3::<f64>::zeros((n, 1, 1));
-    // n = 1: only the DC mode (k = 0) exists; the loop below would
-    // incorrectly place (0 - 1)·dk at index 0 due to n/2 = 0 skipping
-    // the positive-frequency branch. Return the all-zero array directly.
-    if n <= 1 {
-        return k;
-    }
-    let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
-    for i in 0..n / 2 {
-        k[[i, 0, 0]] = i as f64 * dk;
-    }
-    for i in n / 2..n {
-        k[[i, 0, 0]] = (i as f64 - n as f64) * dk;
-    }
-    k
-}
 
 fn validate_source(
     src: &ElasticPstdVelocitySource,
@@ -456,6 +500,55 @@ fn inject_velocity_source(
     inject(&mut velocity.vx, &src.ux);
     inject(&mut velocity.vy, &src.uy);
     inject(&mut velocity.vz, &src.uz);
+}
+
+/// Inject the velocity source into the x-directional velocity sub-fields
+/// (`vxx`, `vyx`, `vzx`) so that the Phase-4 summation
+/// `vx = vxx + vxy + vxz` in [`propagate_split_field_step`] preserves the
+/// source contribution.
+///
+/// # Invariant
+///
+/// For the source-injected step the following chain holds:
+///
+/// ```text
+///   Phase 4: vx^{n+1} = vxx^{n+1} + vxy^{n+1} + vxz^{n+1}
+///          = (α_x·vxx^n + β_x·∂_x·σ_{xx}^{n+1} + s[n])
+///            + (α_x·vxy^n + β_x·∂_y·σ_{xy}^{n+1})
+///            + (α_x·vxz^n + β_x·∂_z·σ_{xz}^{n+1})
+///          = α_x·vx^n + β_x·(∇·σ)_x^{n+1} + s[n]    ✓
+/// ```
+///
+/// where `s[n]` is the signal value at the current step. Without this
+/// injection Phase 4 would clobber the source injected into `velocity.vx`
+/// before the step, yielding ~1.5× amplitude error in the differential
+/// equivalence test.
+fn inject_velocity_source_subfields(
+    state: &mut SplitFieldState,
+    src: &ElasticPstdVelocitySource,
+    step: usize,
+) {
+    use super::types::ElasticPstdSourceMode;
+    let active: Vec<(usize, usize, usize)> = src
+        .mask
+        .indexed_iter()
+        .filter_map(|(idx, &b)| b.then_some(idx))
+        .collect();
+    let inject = |field: &mut Array3<f64>, sig: &Option<ndarray::Array1<f64>>| {
+        if let Some(s) = sig {
+            if let Some(&val) = s.as_slice().and_then(|sl| sl.get(step)) {
+                for &(i, j, k) in &active {
+                    match src.mode {
+                        ElasticPstdSourceMode::Additive => field[[i, j, k]] += val,
+                        ElasticPstdSourceMode::Dirichlet => field[[i, j, k]] = val,
+                    }
+                }
+            }
+        }
+    };
+    inject(&mut state.vxx, &src.ux);
+    inject(&mut state.vyx, &src.uy);
+    inject(&mut state.vzx, &src.uz);
 }
 
 fn record_sensors(

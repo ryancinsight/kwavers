@@ -1,4 +1,5 @@
 use super::orchestrator::ElasticPstdOrchestrator;
+use super::split_field_pml::ElasticSplitFieldPml;
 use super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource};
 use crate::domain::grid::Grid;
 use ndarray::{Array1, Array3};
@@ -215,6 +216,159 @@ fn kappa_preserves_peak_amplitude_at_moderate_cfl() {
     assert!(
         peak < 1e-4,
         "peak {peak:.3e} unexpectedly large — possible numerical instability"
+    );
+}
+
+// ─── Split-field PML tests ────────────────────────────────────────────────────
+
+/// Construction: α ∈ (0,1], β > 0, interior cells have α = 1 and β = dt exactly.
+///
+/// For the interior (σ = 0), the exact integrator coefficients must satisfy:
+/// - `α = exp(−0 · dt) = 1.0` (no decay)
+/// - `β = dt` (standard leapfrog integration weight, L'Hôpital limit)
+///
+/// At the boundary (σ > 0), `α = exp(−σ·dt) ∈ (0, 1)` and
+/// `β = (1 − α) / σ ∈ (0, dt)`.
+#[test]
+fn split_field_pml_alpha_beta_are_valid_integrator_coefficients() {
+    let nx = 32usize;
+    let thickness = 8usize;
+    let dx = 1e-3_f64;
+    let c_max = 1500.0_f64;
+    let dt = 1e-7_f64;
+    let r0 = 1e-4_f64;
+    let pml = ElasticSplitFieldPml::new(
+        nx,
+        nx,
+        nx,
+        (thickness, thickness, thickness),
+        dx,
+        dx,
+        dx,
+        c_max,
+        dt,
+        r0,
+    );
+    let (alpha_x, beta_x) = pml.x_coeffs();
+    for i in 0..nx {
+        let a = alpha_x[i];
+        let b = beta_x[i];
+        assert!(
+            a > 0.0 && a <= 1.0,
+            "alpha_x[{i}] = {a:.6e} not in (0, 1]"
+        );
+        assert!(b > 0.0, "beta_x[{i}] = {b:.6e} not positive");
+        if i >= thickness && i < nx - thickness {
+            assert_eq!(a, 1.0, "interior alpha_x[{i}] must be exactly 1.0");
+            assert_eq!(b, dt, "interior beta_x[{i}] must equal dt = {dt:.3e}");
+        }
+    }
+    // Outermost cell absorbs more (smaller α) than innermost layer cell.
+    assert!(
+        alpha_x[0] < alpha_x[thickness],
+        "alpha_x[0]={:.6} must be < alpha_x[thickness]={:.6} (outermost absorbs most)",
+        alpha_x[0],
+        alpha_x[thickness]
+    );
+}
+
+/// Split-field PML quiescent invariant: zero source → velocity stays zero.
+///
+/// With all sub-fields initialised to zero and no source injection,
+/// the exact integrator's update `α · 0 + β · 0 = 0` at every cell means
+/// all sub-fields and the total velocity remain identically zero for any
+/// number of steps.
+#[test]
+fn split_field_pml_quiescent_state_stays_zero() {
+    let nx = 8usize;
+    let dx = 1e-3_f64;
+    let cp = 1500.0_f64;
+    let dt = 0.3 * dx / cp;
+    let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
+    let medium = ElasticPstdMedium {
+        lame_lambda: Array3::from_elem((nx, nx, nx), 1000.0 * cp * cp),
+        lame_mu: Array3::from_elem((nx, nx, nx), 1000.0 * cp * cp * 0.5),
+        density: Array3::from_elem((nx, nx, nx), 1000.0),
+    };
+    let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
+    orch.set_split_field_pml((2, 2, 2), cp, 1e-4);
+    let _ = orch.propagate(20, None, None).unwrap();
+    let max_v = orch
+        .velocity()
+        .vx
+        .iter()
+        .chain(orch.velocity().vy.iter())
+        .chain(orch.velocity().vz.iter())
+        .fold(0.0_f64, |m, v| m.max(v.abs()));
+    assert_eq!(max_v, 0.0, "quiescent state must remain zero under split-field PML");
+}
+
+/// Differential equivalence: zero-thickness split-field PML reproduces the
+/// standard leapfrog velocity field within 1e-9 relative error.
+///
+/// At `thickness = 0` every cell has `σ = 0`, so `α = 1` and `β = dt`.
+/// The split-field integrator then reduces algebraically to the standard
+/// leapfrog; the two paths must agree on the final velocity field.
+/// Small floating-point differences arise from extra FFT-IFFT round-trips
+/// in the split-field path; the expected accumulated relative error for a
+/// 5-step simulation on a 4³ grid is O(ε_mach · n_steps · n_fft) ≈ 4e-13,
+/// well within the 1e-9 tolerance.
+#[test]
+fn split_field_pml_zero_thickness_reproduces_standard_leapfrog() {
+    let nx = 4usize;
+    let dx = 1e-3_f64;
+    let cp = 1500.0_f64;
+    let dt = 0.3 * dx / (cp * 3.0_f64.sqrt());
+    let n_steps = 5usize;
+    let amp = 1e-6_f64;
+    let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
+    let lam = 1000.0 * cp * cp;
+    let mu = 500.0 * cp * cp;
+    let rho = 1000.0_f64;
+    let make_medium = || ElasticPstdMedium {
+        lame_lambda: Array3::from_elem((nx, nx, nx), lam),
+        lame_mu: Array3::from_elem((nx, nx, nx), mu),
+        density: Array3::from_elem((nx, nx, nx), rho),
+    };
+    let make_source = || {
+        let signal =
+            Array1::from_iter((0..n_steps).map(|n| amp * (PI * 1e6 * n as f64 * dt).sin()));
+        let mut mask = Array3::<bool>::from_elem((nx, nx, nx), false);
+        mask[[1, 1, 1]] = true;
+        ElasticPstdVelocitySource {
+            mask,
+            ux: Some(signal),
+            uy: None,
+            uz: None,
+            mode: ElasticPstdSourceMode::Additive,
+        }
+    };
+
+    // Standard leapfrog path (no PML).
+    let mut orch_std =
+        ElasticPstdOrchestrator::new(&grid, make_medium(), dt).unwrap();
+    let _ = orch_std.propagate(n_steps, Some(&make_source()), None).unwrap();
+
+    // Split-field path with zero-thickness PML (α=1, β=dt everywhere).
+    let mut orch_sf =
+        ElasticPstdOrchestrator::new(&grid, make_medium(), dt).unwrap();
+    orch_sf.set_split_field_pml((0, 0, 0), cp, 1e-4);
+    let _ = orch_sf.propagate(n_steps, Some(&make_source()), None).unwrap();
+
+    let v_std = orch_std.velocity();
+    let v_sf = orch_sf.velocity();
+    let norm: f64 = v_std.vx.iter().map(|x| x * x).sum::<f64>().sqrt().max(1e-300);
+    let diff: f64 = v_std
+        .vx
+        .iter()
+        .zip(v_sf.vx.iter())
+        .map(|(a, b)| (a - b).powi(2))
+        .sum::<f64>()
+        .sqrt();
+    let rel = diff / norm;
+    assert!(
+        rel < 1e-9,
+        "split-field (zero thickness) vs standard leapfrog: rel error = {rel:.3e} > 1e-9"
     );
 }
 

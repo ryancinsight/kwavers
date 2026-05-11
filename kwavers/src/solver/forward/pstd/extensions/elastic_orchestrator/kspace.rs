@@ -37,6 +37,7 @@
 
 use super::types::ElasticPstdMedium;
 use ndarray::Array3;
+use num_complex::Complex;
 
 /// Maximum P-wave speed `c_p = sqrt((λ + 2μ)/ρ)` across the medium.
 ///
@@ -65,6 +66,52 @@ pub(super) fn max_p_wave_speed(medium: &ElasticPstdMedium) -> f64 {
 ///
 /// At `|k| = 0` (DC mode) the sinc function returns 1.0 by L'Hôpital's
 /// rule, enforced by the `arg < 1e-12` guard.
+/// Build the standard FFTW-convention wavenumber axis for `n` points with
+/// grid spacing `dx`.
+///
+/// Returns an `(n, 1, 1)` array (broadcast-ready for spectral derivative
+/// operators) with:
+/// - `k[i] = i · dk` for `i < n/2` (positive frequencies)
+/// - `k[i] = (i − n) · dk` for `i ≥ n/2` (negative frequencies / Nyquist)
+///
+/// where `dk = 2π / (n · dx)`. The DC mode (`i = 0`) has `k = 0`.
+/// For `n ≤ 1` the array is all zeros (only the DC mode exists).
+pub(super) fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
+    let mut k = Array3::<f64>::zeros((n, 1, 1));
+    if n <= 1 {
+        return k;
+    }
+    let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
+    for i in 0..n / 2 {
+        k[[i, 0, 0]] = i as f64 * dk;
+    }
+    for i in n / 2..n {
+        k[[i, 0, 0]] = (i as f64 - n as f64) * dk;
+    }
+    k
+}
+
+/// Recover the grid spacing `dx` from a precomputed complex spectral
+/// derivative operator axis shaped `(n, 1, 1)`.
+///
+/// The axis carries `D[i] = i·k[i]·exp(±i·k[i]·dx/2)` where
+/// `k[1] = dk = 2π / (n·dx)`. Hence `|D[1]| = dk` and
+/// `dx = 2π / (n·|D[1]|)`. Returns `1.0` for degenerate axes (`n < 2` or
+/// `|D[1]| = 0`).
+pub(super) fn grid_spacing_from_wavenumber(
+    d_op: &Array3<Complex<f64>>,
+    n: usize,
+) -> f64 {
+    if n < 2 {
+        return 1.0;
+    }
+    let dk = d_op[[1, 0, 0]].norm();
+    if dk == 0.0 {
+        return 1.0;
+    }
+    2.0 * std::f64::consts::PI / (n as f64 * dk)
+}
+
 pub(super) fn build_kappa(
     kx: &Array3<f64>,
     ky: &Array3<f64>,

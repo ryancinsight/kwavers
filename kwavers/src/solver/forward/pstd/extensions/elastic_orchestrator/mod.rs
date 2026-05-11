@@ -23,6 +23,8 @@
 mod kspace;
 mod orchestrator;
 mod pml;
+mod split_field_pml;
+mod split_field_step;
 mod types;
 
 #[cfg(test)]
@@ -30,6 +32,7 @@ mod tests;
 
 pub use orchestrator::ElasticPstdOrchestrator;
 pub use pml::ElasticPml;
+pub use split_field_pml::{ElasticSplitFieldPml, SplitFieldState};
 pub use types::{
     ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdSourceMode, ElasticPstdVelocitySource,
 };

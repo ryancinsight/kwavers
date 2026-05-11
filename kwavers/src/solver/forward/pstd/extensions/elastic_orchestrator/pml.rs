@@ -174,6 +174,57 @@ fn build_axis_damping(
     damping
 }
 
+/// Build per-cell exponential-decay (`alpha`) and RHS-integration (`beta`)
+/// coefficient arrays for one axis of the split-field PML.
+///
+/// The profile matches [`build_axis_damping`]:
+/// `σ_i = σ_max · ((distance from interior edge) / L)^p`,
+/// `σ_max = −(p+1) c_max ln(r0) / (2L)` (Roden & Gedney 2000 eq. 25).
+///
+/// Returned arrays (length `n`):
+/// - `alpha[i] = exp(−σ_i · dt)` ∈ (0, 1].  Interior: `alpha = 1`.
+/// - `beta[i]  = (1 − alpha[i]) / σ_i` for σ_i > 0; otherwise `dt`.
+///   Absorbs `dt` so the caller's RHS need not carry the time-step factor
+///   (exact integrator: `f^{n+1} = alpha·f^n + beta·g`, where in the
+///   interior α=1, β=dt → standard leapfrog).
+pub(super) fn build_axis_alpha_beta(
+    n: usize,
+    thickness: usize,
+    dx: f64,
+    c_max: f64,
+    dt: f64,
+    r0: f64,
+    p: f64,
+) -> (Array1<f64>, Array1<f64>) {
+    let mut alpha = Array1::<f64>::ones(n);
+    let mut beta = Array1::<f64>::from_elem(n, dt);
+    if thickness == 0 || n < 2 * thickness + 1 {
+        return (alpha, beta);
+    }
+    let layer_len = thickness as f64 * dx;
+    let sigma_max = -(p + 1.0) * c_max * r0.ln() / (2.0 * layer_len);
+    debug_assert!(
+        sigma_max.is_finite() && sigma_max > 0.0,
+        "PML σ_max must be positive and finite (r0 = {r0}, c_max = {c_max}, \
+         layer_len = {layer_len})"
+    );
+    for i in 0..thickness {
+        let x = (thickness - i) as f64 / thickness as f64;
+        let sigma = sigma_max * x.powf(p);
+        let a = (-sigma * dt).exp();
+        alpha[i] = a;
+        beta[i] = (1.0 - a) / sigma;
+    }
+    for i in (n - thickness)..n {
+        let x = (i - (n - thickness - 1)) as f64 / thickness as f64;
+        let sigma = sigma_max * x.powf(p);
+        let a = (-sigma * dt).exp();
+        alpha[i] = a;
+        beta[i] = (1.0 - a) / sigma;
+    }
+    (alpha, beta)
+}
+
 // `PI` is referenced indirectly through future cosine-tapered profiles;
 // silence the unused-import warning until that variant lands.
 #[allow(dead_code)]
