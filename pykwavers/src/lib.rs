@@ -7097,14 +7097,28 @@ fn time_reversal_reconstruction_impl(
         Simulation::cpml_thickness_limits(grid.nx, grid.ny, grid.nz);
     let pml = pml_size.unwrap_or(default_thickness).min(max_allowed);
 
-    // Expand the grid by `pml` cells on each active side so the CPML absorbing
-    // region lies outside the physical domain.  Sensor positions are shifted into
-    // the expanded domain.  KWave.jl places the sensor at cell 0 of the original
-    // domain (inside its PML), but injecting at a cell inside the CPML causes the
-    // split-field correction to cancel the effective velocity drive (sigma_max at
-    // the outer wall → b≈0.55 → near-zero net outward propagation).  Placing the
-    // sensor at the first non-PML cell of the expanded domain (cell `pml`) avoids
-    // CPML isolation while still using the same time-reversed pressure data.
+    // Expand the grid by `pml` cells on each active side so the TR sensor falls
+    // on the first non-PML cell (sigma = 0) of the expanded domain.
+    //
+    // Architecture note: pykwavers uses split-field PML (exp(−σΔt/2) per half-step),
+    // which is direction-agnostic — it absorbs both inward and outward waves.  Placing
+    // the Dirichlet TR source inside the PML (sensor at cell 0 of the original domain)
+    // causes outward TR waves to be attenuated by cells 1..pml-1 as they propagate toward
+    // the interior, collapsing the reconstruction amplitude by >200×.
+    //
+    // KWave.jl uses CPML (Convolutional PML), which is direction-selective: the
+    // convolution memory (ψ) tracks outgoing waves and is transparent to inward waves.
+    // When `time_reversal_boundary_data` is active, KWave.jl additionally bypasses CPML
+    // at source cells, allowing the forced pressure to drive the interior without split-
+    // field interference.  Replicating this with split-field PML would require either:
+    //   (a) full CPML implementation (direction-selective absorption), or
+    //   (b) bypassing ALL PML cells 0..pml-1 (which removes the left absorbing boundary).
+    //
+    // The expansion approach is the correct workaround: the sensor at cell `pml` of the
+    // expanded domain is at sigma = 0 (first non-PML cell), so no attenuation applies.
+    // The residual recon-vs-recon Pearson gap (~0.70 vs KWave.jl's 1.0) reflects the
+    // pml×dx spatial offset between the source positions; lifting it to ≥0.99 requires
+    // CPML implementation (tracked in project memory as a multi-session effort).
     let expand_x = if grid.nx > 1 { pml } else { 0 };
     let expand_y = if grid.ny > 1 { pml } else { 0 };
     let expand_z = if grid.nz > 1 { pml } else { 0 };

@@ -190,6 +190,7 @@ impl PSTDSolver {
             div_uy: Array3::zeros(shape),
             div_uz: Array3::zeros(shape),
             as_ctx: None,
+            dirichlet_pml_bypass_x: Vec::new(),
         };
 
         if solver.config.kspace_method == KSpaceMethod::FullKSpace {

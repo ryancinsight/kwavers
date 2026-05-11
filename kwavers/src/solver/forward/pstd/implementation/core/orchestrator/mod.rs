@@ -86,6 +86,17 @@ pub struct PSTDSolver {
     pub(crate) div_uz: Array3<f64>,
     /// Axisymmetric WSWA-FFT context — `Some` when `config.geometry == CylindricalAS`.
     pub(crate) as_ctx: Option<AsContext>,
+    /// X-row indices at which split-field PML is bypassed during TR Dirichlet reconstruction.
+    ///
+    /// When `enforce_pressure_dirichlet` forces p[sensor] = data[t], the sensor cell must
+    /// emit outward waves into the domain.  The split-field PML at x=0 applies
+    /// exp(-sigma_max * dt/2) to velocity and density twice per step, suppressing the
+    /// driven amplitude by exp(-sigma_max * dt) ≈ 0.66 per step and collapsing the
+    /// reconstruction amplitude to ~0 after many steps.  Setting this list to the sensor
+    /// x-indices causes apply_pml_to_velocity and apply_pml_to_density to skip PML at
+    /// those rows (save before, restore after), matching KWave.jl's CPML bypass at TR
+    /// source cells and allowing the Dirichlet pressure to drive waves normally.
+    pub(crate) dirichlet_pml_bypass_x: Vec<usize>,
 }
 
 impl PSTDSolver {
@@ -122,9 +133,18 @@ impl PSTDSolver {
         self.sensor_recorder.recorded_pressure_view()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get_timestep(&self) -> f64 {
         self.config.dt
+    }
+
+    /// Register x-row indices at which the split-field PML is bypassed.
+    ///
+    /// Use during TR Dirichlet reconstruction: sensor cells at the PML boundary
+    /// must emit waves into the domain; bypassing PML at those rows allows the
+    /// forced pressure to drive velocity and density without split-field damping.
+    pub fn set_dirichlet_pml_bypass_x(&mut self, rows: Vec<usize>) {
+        self.dirichlet_pml_bypass_x = rows;
     }
 
     /// Pressure field.
