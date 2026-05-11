@@ -70,6 +70,16 @@ pub struct TrainingConfig {
     /// critical for the residual focal-peak fitting under importance
     /// sampling.
     pub cosine_schedule: Option<(usize, f64)>,
+    /// Weight on the **peak-prominence** loss term `(max(pred_pmax)
+    /// − max(target_pmax))²` aggregated over the batch. The
+    /// volumetric data MSE under-fits the focal peak because the
+    /// argmax voxel contributes only `1/batch_size` of the total
+    /// loss; this term gives the argmax voxel a direct, dedicated
+    /// gradient channel so peak prediction tracks target peak.
+    /// Default 0 (off) preserves pre-C-9 behaviour. Typical training
+    /// uses 0.1–1.0 — large enough to bias the argmax voxel without
+    /// overwhelming the volumetric fit.
+    pub peak_prominence_weight: f32,
 }
 
 impl Default for TrainingConfig {
@@ -81,6 +91,7 @@ impl Default for TrainingConfig {
             helmholtz_eps_m: 5.0e-4,
             c0_m_per_s: 1500.0,
             cosine_schedule: None,
+            peak_prominence_weight: 0.0,
         }
     }
 }
@@ -110,6 +121,11 @@ impl TrainingConfig {
                 "c0_m_per_s must be > 0".into(),
             ));
         }
+        if self.peak_prominence_weight < 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "peak_prominence_weight must be ≥ 0".into(),
+            ));
+        }
         Ok(())
     }
 }
@@ -128,6 +144,18 @@ pub struct TrainingBatch<B: AutodiffBackend> {
     /// Per-sample physical `f0` (Hz) `[batch]` — used to compute the
     /// per-sample wavenumber for the Helmholtz residual.
     pub f0_phys_hz: Tensor<B, 1>,
+    /// Per-sample source-kernel index `[batch]` as f32 (storage-only
+    /// — not used as a network input). Voxels from kernel `k` carry
+    /// `group_id == k`. Consumed by the per-kernel-scoped
+    /// peak-prominence loss (Phase C-10) so the `(max(pred) −
+    /// max(target))²` aggregation is per-kernel rather than batch-
+    /// wide, eliminating the cross-kernel `max(target)` ambiguity
+    /// that fragmented per-f0 fits in Phase C-9.
+    pub group_ids: Tensor<B, 1>,
+    /// Total number of distinct groups across the source dataset.
+    /// Used to bound the per-group prominence loop without scanning
+    /// every batch for unique IDs.
+    pub num_groups: usize,
     /// Spatial half-extent `(hx, hy, hz)` (m) used to denormalise the
     /// finite-difference perturbations from input-space units back
     /// into physical metres. Must match the normalisation applied at
@@ -140,11 +168,12 @@ pub struct TrainingBatch<B: AutodiffBackend> {
 }
 
 /// Per-step loss values returned from [`train_step`]. All values are
-/// post-weighting so `total = data + helmholtz`.
+/// post-weighting so `total = data + helmholtz + peak_prominence`.
 #[derive(Debug, Clone, Copy)]
 pub struct StepMetrics {
     pub data: f32,
     pub helmholtz: f32,
+    pub peak_prominence: f32,
     pub total: f32,
 }
 
@@ -154,6 +183,7 @@ pub struct TrainingMetrics {
     pub steps: usize,
     pub data_sum: f32,
     pub helmholtz_sum: f32,
+    pub peak_prominence_sum: f32,
     pub total_sum: f32,
 }
 
@@ -162,6 +192,7 @@ impl TrainingMetrics {
         self.steps += 1;
         self.data_sum += step.data;
         self.helmholtz_sum += step.helmholtz;
+        self.peak_prominence_sum += step.peak_prominence;
         self.total_sum += step.total;
     }
 
@@ -170,6 +201,7 @@ impl TrainingMetrics {
         StepMetrics {
             data: self.data_sum / n,
             helmholtz: self.helmholtz_sum / n,
+            peak_prominence: self.peak_prominence_sum / n,
             total: self.total_sum / n,
         }
     }
@@ -317,12 +349,64 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
     {
         // Forward + data MSE
         let pred = self.network.forward(batch.inputs.clone());
-        let diff = pred - batch.targets.clone();
+        let diff = pred.clone() - batch.targets.clone();
         let data_loss = diff.powf_scalar(2.0).mean();
         let data_loss_w = data_loss.clone().mul_scalar(self.config.data_weight);
 
         // Helmholtz residual (same autodiff graph)
         let mut total = data_loss_w;
+        // Per-kernel-scoped peak-prominence loss (Phase C-10).
+        //
+        // Phase C-9 demonstrated that a single batch-wide
+        // `(max(pred) − max(target))²` term fragments per-f0 fits
+        // because the batch mixes voxels from every kernel and a
+        // single `max(target)` aggregates over an ambiguous
+        // `(f0, pnp)`. The C-10 fix groups batch rows by
+        // `group_ids[i] = source-kernel index`, computes the
+        // max-pair *per group* via boolean masking, and accumulates
+        // the squared gaps. Empty groups contribute 0. Masking uses
+        // a large negative constant on out-of-group rows so the
+        // per-group max correctly picks the in-group maximum;
+        // gradient flows only through in-group rows because the
+        // mask is a constant in the autodiff graph.
+        let prom_value: f32 = if self.config.peak_prominence_weight > 0.0 {
+            let n = batch.inputs.dims()[0];
+            let pred_pmax = pred.clone().slice([0..n, 1..2]).reshape([n]);
+            let tgt_pmax = batch.targets.clone().slice([0..n, 1..2]).reshape([n]);
+            // OUT_FILL is well below any plausible network output in
+            // `[-1, 1]`. Out-of-group rows are forced to this value
+            // so the per-group `.max()` always selects an in-group
+            // row. For groups with zero representatives in this
+            // batch, *all* rows are OUT_FILL after masking; the
+            // resulting `(OUT_FILL − OUT_FILL)² = 0` and gradient
+            // through `pred * 0` is zero, so empty groups
+            // contribute neither loss nor gradient — exactly the
+            // desired behaviour.
+            const OUT_FILL: f32 = -1.0e6;
+            // Start the accumulator with an autodiff-connected zero
+            // (pred * 0 still carries the autodiff lineage).
+            let mut prom_acc = pred_pmax.clone().mul_scalar(0.0).sum();
+            for g in 0..batch.num_groups {
+                let mask_bool = batch.group_ids.clone().equal_elem(g as f32);
+                let mask = mask_bool.float();
+                let inv_mask = mask.clone().mul_scalar(-1.0).add_scalar(1.0);
+                let pred_masked = pred_pmax.clone() * mask.clone()
+                    + inv_mask.clone().mul_scalar(OUT_FILL);
+                let tgt_masked = tgt_pmax.clone() * mask
+                    + inv_mask.mul_scalar(OUT_FILL);
+                let gap_g = pred_masked.max() - tgt_masked.max();
+                prom_acc = prom_acc + gap_g.powf_scalar(2.0);
+            }
+            // Normalise by `num_groups` so the term's magnitude is
+            // invariant under cube size / kernel count.
+            let denom = batch.num_groups.max(1) as f32;
+            let prom = prom_acc.div_scalar(denom);
+            let prom_w = prom.clone().mul_scalar(self.config.peak_prominence_weight);
+            total = total + prom_w;
+            prom.into_scalar().elem::<f32>() * self.config.peak_prominence_weight
+        } else {
+            0.0
+        };
         let helm_value: f32 = if self.config.helmholtz_weight > 0.0 {
             let r = helmholtz_residual_tensor(
                 &self.network,
@@ -358,6 +442,7 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
         StepMetrics {
             data: data_value,
             helmholtz: helm_value,
+            peak_prominence: prom_value,
             total: total_value,
         }
     }

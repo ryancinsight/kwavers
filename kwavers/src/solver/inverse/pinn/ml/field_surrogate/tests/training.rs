@@ -56,10 +56,20 @@ fn make_synthetic_batch(
         Tensor::<AB, 2>::from_data(TensorData::new(targets, [n, 3]), device);
     let f0_phys =
         Tensor::<AB, 1>::from_data(TensorData::new(f0_vec, [n]), device);
+    // Synthetic batch is treated as drawn from a single virtual
+    // kernel; the per-group prominence loop then collapses to the
+    // same batch-wide aggregation Phase C-9 exercised, keeping the
+    // training-loss-decreases test sensitive to gradient flow.
+    let group_ids = Tensor::<AB, 1>::from_data(
+        TensorData::new(vec![0.0_f32; n], [n]),
+        device,
+    );
     TrainingBatch {
         inputs,
         targets,
         f0_phys_hz: f0_phys,
+        group_ids,
+        num_groups: 1,
         coord_half_m: (10.0e-3, 10.0e-3, 10.0e-3),
         p_max_scale_pa: 30.0e6,
     }
@@ -126,6 +136,49 @@ fn test_trainer_data_loss_decreases_over_50_steps() {
 // The long-running demo training has been moved to the standalone
 // example binary at `kwavers/examples/field_surrogate_demo.rs`. See
 // the doc-comment near the top of this file for the rationale.
+
+#[test]
+fn test_trainer_with_peak_prominence_weight_runs_finite_and_propagates_gradient() {
+    // Peak-prominence path: `(max(pred_pmax) − max(target_pmax))²`
+    // must stay finite over multiple steps and actually drive the
+    // network's batch-max prediction toward the batch-max target.
+    let cfg = ParamFieldPINNConfig {
+        hidden_layers: vec![16, 16],
+        ..ParamFieldPINNConfig::default()
+    };
+    let device = Default::default();
+    let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).unwrap();
+    let train_cfg = TrainingConfig {
+        learning_rate: 5.0e-2,
+        helmholtz_weight: 0.0,
+        peak_prominence_weight: 1.0,
+        ..TrainingConfig::default()
+    };
+    let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
+    let mut first_prom = 0.0_f32;
+    let mut last_prom = 0.0_f32;
+    for step in 0..30 {
+        let batch = make_synthetic_batch(&device, step as u64, 128);
+        let m = trainer.step(batch);
+        assert!(m.data.is_finite(), "data loss not finite at step {step}");
+        assert!(
+            m.peak_prominence.is_finite() && m.peak_prominence >= 0.0,
+            "prominence loss invalid at step {step}: {}",
+            m.peak_prominence
+        );
+        assert!(m.total.is_finite(), "total loss not finite at step {step}");
+        if step == 0 {
+            first_prom = m.peak_prominence;
+        }
+        last_prom = m.peak_prominence;
+    }
+    // Prominence loss must decrease — autodiff has to be reaching the
+    // argmax voxel's parameters. Allow noise but require a clear drop.
+    assert!(
+        last_prom < first_prom * 0.7,
+        "peak prominence did not decrease: first={first_prom}, last={last_prom}"
+    );
+}
 
 #[test]
 fn test_trainer_with_helmholtz_weight_runs_finite() {
