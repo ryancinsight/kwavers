@@ -141,3 +141,88 @@ impl PhaseRandomizer {
         self.time_since_switch = 0.0;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::distribution::PhaseDistribution;
+    use super::super::scheme::RandomizationScheme;
+
+    /// Initial phases are all zero before any update.
+    #[test]
+    fn initial_phases_are_zero() {
+        let r = PhaseRandomizer::new(
+            RandomizationScheme::Temporal { period: 1e-3 },
+            PhaseDistribution::Uniform,
+            8,
+        );
+        assert!(r.phases().iter().all(|&p| p == 0.0),
+            "all phases must be zero at construction");
+    }
+
+    /// After reset, phases return to zero.
+    #[test]
+    fn reset_clears_phases_to_zero() {
+        let mut r = PhaseRandomizer::new(
+            RandomizationScheme::Temporal { period: 1e-4 },
+            PhaseDistribution::Uniform,
+            4,
+        );
+        // Exceed the period to trigger randomization
+        r.update(2e-4);
+        r.reset();
+        assert!(r.phases().iter().all(|&p| p == 0.0),
+            "phases must be zero after reset");
+    }
+
+    /// Temporal update below period → phases remain zero.
+    #[test]
+    fn update_below_period_does_not_change_phases() {
+        let period = 1e-3;
+        let mut r = PhaseRandomizer::new(
+            RandomizationScheme::Temporal { period },
+            PhaseDistribution::Binary,
+            6,
+        );
+        r.update(period * 0.5); // below threshold
+        assert!(r.phases().iter().all(|&p| p == 0.0),
+            "phases must remain zero when update < period");
+    }
+
+    /// Temporal update at or above period triggers randomization.
+    ///
+    /// For Binary distribution, every phase must be in {0, π}.
+    #[test]
+    fn temporal_update_at_period_triggers_binary_randomization() {
+        let period = 1e-3;
+        let mut r = PhaseRandomizer::new(
+            RandomizationScheme::Temporal { period },
+            PhaseDistribution::Binary,
+            16,
+        );
+        r.update(period); // exactly at period → should trigger
+        let phases: Vec<f64> = r.phases().to_vec();
+        assert!(
+            phases.iter().all(|&p| (p - 0.0).abs() < 1e-14 || (p - PI).abs() < 1e-14),
+            "Binary distribution must produce phases in {{0, π}}: {phases:?}"
+        );
+    }
+
+    /// After apply_to_field with zero phases, field is unchanged.
+    #[test]
+    fn apply_to_field_with_zero_phases_leaves_field_unchanged() {
+        use ndarray::arr2;
+        let r = PhaseRandomizer::new(
+            RandomizationScheme::Temporal { period: 1e-3 },
+            PhaseDistribution::Uniform,
+            3,
+        );
+        // phases are all zero → cos(0)=1 → no change
+        let mut field = arr2(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]);
+        let original = field.clone();
+        r.apply_to_field(&mut field);
+        for (a, b) in field.iter().zip(original.iter()) {
+            assert!((a - b).abs() < 1e-14, "field must be unchanged with zero phases");
+        }
+    }
+}
