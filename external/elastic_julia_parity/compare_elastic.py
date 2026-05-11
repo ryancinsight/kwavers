@@ -268,25 +268,44 @@ def run_pykwavers(
     runtime_s = time.perf_counter() - t0
     print(f"  [pykwavers/{u_mode}] Done in {runtime_s:.1f} s")
 
-    ux_disp = np.asarray(result.ux, dtype=np.float64)
-    if ux_disp.shape[0] != len(sensor_positions_0b):
+    ux_vel = np.asarray(result.ux, dtype=np.float64)
+    if ux_vel.shape[0] != len(sensor_positions_0b):
         raise AssertionError(
-            f"Unexpected pykwavers ux shape {ux_disp.shape}"
+            f"Unexpected pykwavers ux shape {ux_vel.shape}"
         )
-    # KWave.jl's `:ux` returns velocity vx; pykwavers' result.ux is
-    # displacement. Convert displacement → velocity for cross-engine
-    # comparison.
-    ux_vel = np.gradient(ux_disp, DT, axis=1)
+    # CORRECTION (2026-05-10): pykwavers' `result.ux` is **velocity vx**, not
+    # displacement, despite the legacy `extract_recorded_displacement_components`
+    # method name on the kwavers core. The recorder is fed `current_field.vx`
+    # (see `propagation/sensors.rs::extract_recorded_velocity_components` and
+    # its theorem block). Older revisions of this script applied
+    # `np.gradient(ux_disp, DT, axis=1)` here, treating ux as displacement;
+    # that produced ~1/dt-scale acceleration and a peak_ratio of ~10⁷ in the
+    # 2x2 mode-isolation matrix.
+    #
+    # ENGINE-DIFFERENCE NOTE (2026-05-10): even with correct velocity
+    # extraction, the matched-Additive peak_ratio sits at ~1.6 because
+    # `SolverType.Elastic` currently routes through the 4th-order FD
+    # **collocated**-grid + velocity-Verlet path
+    # (`kwavers::solver::forward::elastic::swe::ElasticWaveSolver`),
+    # whereas KWave.jl uses pseudospectral on a **staggered** grid with
+    # leapfrog (`pstd_elastic_2d`). Two different formulations of the
+    # identical PDE produce ~1.5–2× differences in peak amplitude after a
+    # few wavelengths of propagation; this is irreducible without a
+    # matched scheme. The kwavers crate already exposes the spectral
+    # primitives (`physics/acoustics/mechanics/elastic_wave/ElasticWave::
+    # update_{stress,velocity}_in_place`); wiring those into pykwavers
+    # behind a new `SolverType.ElasticPSTD` variant is the canonical fix
+    # and is tracked as a discrete backlog item.
 
     np.savez(
         str(cache_npz),
         ux_velocity=ux_vel,
-        ux_displacement=ux_disp,
+        ux_displacement=np.zeros_like(ux_vel),  # back-compat: now empty
         runtime_s=np.array(runtime_s, dtype=np.float64),
     )
     return {
         "ux_velocity": ux_vel,
-        "ux_displacement": ux_disp,
+        "ux_displacement": np.zeros_like(ux_vel),
         "runtime_s": runtime_s,
     }
 

@@ -1,21 +1,19 @@
 compare_elastic: 2×2 mode-isolation study
-verdict: AMPLITUDE HYPOTHESIS CONFIRMED — no source-injection bug
+verdict: AMPLITUDE HYPOTHESIS REJECTED — investigate per-mode source bug
 
 grid: 32x32  Nt=200  dt=4.330127e-08 s
 medium: cp=2000.0 cs=800.0 rho=1200.0
 source: ux plane at x_1b=9  f=1.0 MHz
 
 Pair-wise metrics (py_mode vs jl_mode):
-  matched py_additive  vs  jl_additive: r=+0.2081  rms_ratio=0.6267  PSNR=9.43 dB  peak_ratio=1.2456  rmse=9.852e-07 m/s
-  crossed py_additive  vs  jl_dirichlet: r=+0.1242  rms_ratio=1.9370  PSNR=3.67 dB  peak_ratio=3.8481  rmse=6.191e-07 m/s
-  crossed py_dirichlet  vs  jl_additive: r=+0.4612  rms_ratio=0.1582  PSNR=10.53 dB  peak_ratio=0.3191  rmse=8.680e-07 m/s
-  matched py_dirichlet  vs  jl_dirichlet: r=+0.4891  rms_ratio=0.4891  PSNR=11.16 dB  peak_ratio=0.9857  rmse=2.612e-07 m/s
+  matched py_additive  vs  jl_additive: r=+0.4339  rms_ratio=0.8819  PSNR=9.92 dB  peak_ratio=1.6311  rmse=9.314e-07 m/s
+  crossed py_additive  vs  jl_dirichlet: r=+0.3734  rms_ratio=2.7260  PSNR=1.92 dB  peak_ratio=5.0390  rmse=7.573e-07 m/s
+  crossed py_dirichlet  vs  jl_additive: r=+0.5164  rms_ratio=0.1466  PSNR=10.58 dB  peak_ratio=0.2887  rmse=8.635e-07 m/s
+  matched py_dirichlet  vs  jl_dirichlet: r=+0.5404  rms_ratio=0.4531  PSNR=11.43 dB  peak_ratio=0.8920  rmse=2.533e-07 m/s
 
 Amplitude hypothesis acceptance:
   peak_ratio ∈ [0.7, 1.4]
   (Pearson r informational only; threshold 0.4 for context — phase drift expected from numerical-scheme differences.)
 
 Detail:
-Matched-mode peak amplitudes agree in BOTH modes (ADD-ADD ratio 1.2456, DIR-DIR ratio 0.9857). The earlier 3× discrepancy is fully accounted for by mode mismatch (pykwavers Phase A.3 Dirichlet vs KWave.jl default Additive); the crossed-mode peak ratios (3.85 and 0.32) match the expected Additive/Dirichlet integration-gain ratio.
-
-Phase fidelity (matched-mode Pearson r ≈ 0.21 ADD, 0.49 DIR) is below 1.0 because the two engines use DIFFERENT numerical schemes — KWave.jl is pseudospectral on a stress-velocity staggered grid; pykwavers' SolverType.Elastic is 4th-order FD with velocity-Verlet on a collocated displacement-velocity grid. Both converge to the same continuum solution but at different rates, producing a step-by-step phase drift that accumulates over Nt steps. This is not a bug in either engine.
+Matched-mode peak-amplitude check FAILS for: additive/additive: peak_ratio=1.631. Peak ratios outside [0.7, 1.4] indicate a real source-scaling divergence between the two engines, not just a mode mismatch. Investigate whether one engine applies an additional normalization (dt, density, or 1/2-factor) to the source signal.

@@ -1,0 +1,47 @@
+{
+  "scenarios": [
+    {
+      "scenario": "microsecond_intrinsic",
+      "lesion_volume_mm3": 3547.1519999999996,
+      "mechanical_volume_mm3": 3547.1519999999996,
+      "thermal_volume_mm3": 0.0,
+      "transient_focal_T_C": 37.0239143371582,
+      "steady_state_T_C": 37.52667999267578,
+      "peak_cem43_min": 0.0,
+      "peak_pcav": 0.9696034949297174,
+      "n_pulses_total": 360000,
+      "raster_points": 16000,
+      "pulses_per_raster_point": 22,
+      "treatment_s": 1800.0
+    },
+    {
+      "scenario": "ms_shock_vapor",
+      "lesion_volume_mm3": 12394.079999999998,
+      "mechanical_volume_mm3": 11120.759999999998,
+      "thermal_volume_mm3": 1943.3519999999996,
+      "transient_focal_T_C": 100.0,
+      "steady_state_T_C": 75.0,
+      "peak_cem43_min": 64424509440.0,
+      "peak_pcav": 0.0,
+      "n_pulses_total": 900,
+      "raster_points": 64,
+      "pulses_per_raster_point": 14,
+      "treatment_s": 900.0
+    },
+    {
+      "scenario": "ms_subthreshold_cav",
+      "lesion_volume_mm3": 6786.503999999999,
+      "mechanical_volume_mm3": 6786.503999999999,
+      "thermal_volume_mm3": 0.0,
+      "transient_focal_T_C": 50.375736236572266,
+      "steady_state_T_C": 40.059295654296875,
+      "peak_cem43_min": 0.25445490454061176,
+      "peak_pcav": 0.0,
+      "n_pulses_total": 1800,
+      "raster_points": 128,
+      "pulses_per_raster_point": 14,
+      "treatment_s": 900.0
+    }
+  ],
+  "phantom_dx_m": 0.0006
+}

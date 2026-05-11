@@ -13,6 +13,6 @@
   "pml_size": 10,
   "u_mode": "additive",
   "n_sensors": 3,
-  "solver_seconds": 1.916327200,
+  "solver_seconds": 1.499759700,
   "peak_abs_ux": 2.917787802432483e-06
 }

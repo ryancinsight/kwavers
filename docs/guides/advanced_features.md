@@ -300,7 +300,7 @@ Here's a complete example combining multiple advanced features:
 use kwavers::analysis::performance::profiling::PerformanceProfiler;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
-use kwavers::physics::plugin::PluginManager;
+use kwavers::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use ndarray::Array4;
 

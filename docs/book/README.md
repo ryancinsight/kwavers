@@ -25,6 +25,9 @@ This directory is the source tree for the in-repository book on ultrasound physi
 - [Validation and Benchmarking](validation_and_benchmarking.md)
 - [Performance and Memory](performance_and_memory.md)
 - [Histotripsy: Classical vs Millisecond-Pulse](histotripsy.md)
+- [Simulation Orchestration: The Capability Catalog](simulation_orchestration.md)
+- [Passive Acoustic Mapping](passive_acoustic_mapping.md)
+- [LIFU-Mediated Blood–Brain Barrier Opening](bbb_lifu_opening.md)
 
 ## Figure Sources
 

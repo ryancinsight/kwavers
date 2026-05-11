@@ -338,3 +338,7 @@
   * **Dead field removed** (`intensity_tracker/tracker.rs`): `dt` field stored but never read post-construction. Removed from struct (validation in `new()` retained).
   * **Unused log import fixed** (`initialization/lithotripsy.rs`): `use log::{info, warn}` split to `#[cfg(feature = "nifti")] use log::info; use log::warn;` — `info!` is only reachable inside the `nifti` feature gate.
   * 2953/2953 tests pass with PATH fix (`D:\msys64\ucrt64\bin` must precede PATH for UCRT64 runtime DLLs).
+- [x] [patch] Harden orchestrator tests + refactor lithotripsy initializer (2026-05-10):
+  * **Value-semantic test hardening** (`orchestrator/tests.rs`): `test_therapy_step_execution` (16³ grid, dx=0.002m, PNP=1 MPa, f=2 MHz, focal=0.03m) and `test_intensity_tracker_integration` (12³ grid, dx=0.0025m, PNP=2 MPa) pin analytical expected values — TI = (α·p²·dt)/(ρ²·c₀·c_p) − 37.0°C, MI = pnp_Pa/(1e3·√f_Hz), P_peak from Gaussian amplitude at focal voxel. All assertions replaced with analytically-derived tolerance checks over computed values.
+  * **Lithotripsy `create_stone_geometry` zero-alloc refactor** (`initialization/lithotripsy.rs`): replaced triple-nested `[[i,j,k]]` copy loop with `Array3::assign`; replaced triple-nested threshold loop in `segment_stone_from_ct` with `mapv(|hu| if hu >= threshold_hu { 1.0 } else { 0.0 })` and removed the now-redundant `grid: &Grid` parameter.
+  * 2958/2958 tests pass (11 skipped).

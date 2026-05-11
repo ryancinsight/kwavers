@@ -95,7 +95,8 @@ fn adaptive_step_zero_rhs() -> KwaversResult<()> {
 ```rust
 use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
-use kwavers::physics::plugin::AcousticWavePlugin;
+use kwavers::AcousticWavePlugin;
+use kwavers::plugin::Plugin;
 use kwavers::solver::time_integration::{MultiRateConfig, MultiRateTimeIntegrator};
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -112,7 +113,7 @@ fn multirate_advance_example() -> KwaversResult<()> {
     let mut fields = HashMap::new();
     fields.insert("acoustic".to_string(), Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz)));
 
-    let mut physics_components: HashMap<String, Box<dyn kwavers::physics::plugin::Plugin>> =
+    let mut physics_components: HashMap<String, Box<dyn kwavers::plugin::Plugin>> =
         HashMap::new();
     physics_components.insert("acoustic".to_string(), Box::new(AcousticWavePlugin::new(0.3)));
 

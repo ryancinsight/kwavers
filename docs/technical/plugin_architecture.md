@@ -33,7 +33,7 @@ use kwavers::domain::medium::Medium;
 use kwavers::domain::source::Source;
 use kwavers::domain::boundary::Boundary;
 use kwavers::physics::field_mapping::UnifiedFieldType;
-use kwavers::physics::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
+use kwavers::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use ndarray::Array4;
 use std::any::Any;
 use std::fmt::Debug;
@@ -140,7 +140,7 @@ use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::Medium;
 use kwavers::physics::field_mapping::UnifiedFieldType;
-use kwavers::physics::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
+use kwavers::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use ndarray::Array4;
 use std::any::Any;
 use std::fmt::Debug;
@@ -234,7 +234,10 @@ manager.execute(&mut fields, &grid, &medium, &sources, &mut boundary, dt, t)?;
 The plugin system provides adapters to wrap existing PhysicsComponent implementations:
 
 ```rust
-use kwavers::physics::plugin::adapters::ComponentPluginAdapter;
+// Note: ComponentPluginAdapter is not currently part of the public API.
+// To wrap an existing PhysicsComponent, implement the `Plugin` trait
+// directly on it. See `kwavers::plugin::Plugin` for the contract.
+use kwavers::plugin::{Plugin, PluginMetadata};
 
 // Wrap an existing component
 let acoustic_component = AcousticWaveComponent::new("acoustic".to_string());

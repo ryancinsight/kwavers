@@ -2,7 +2,11 @@
 
 **Scope.** This chapter derives the physical mechanisms of ultrasound therapy: HIFU-induced
 heating, the Pennes bioheat equation, thermal dose (CEM43), acoustic radiation force,
-sonoporation, lithotripsy, and neuromodulation. Every mechanism is derived from
+sonoporation, lithotripsy, and neuromodulation. Histotripsy (microsecond intrinsic-threshold
+and millisecond regimes) and the optimal pulse patterns for each — dual-PRF burst-and-pause,
+dithered-PRF, and hybrid microsecond/boiling — are treated separately in
+[Chapter 21 (Histotripsy)](histotripsy.md), with code in
+`kwavers::clinical::therapy::clinical_scenarios`. Every mechanism is derived from
 first principles with formal theorems. Code references map to `kwavers::clinical::therapy`
 and the acoustic propagation solvers (Chapters 2–3).
 
@@ -318,6 +322,7 @@ Output: thermal dose map CEM43(r), peak pressure field, MI/TI
 | Thermal dose | `clinical::therapy::metrics` | `CEM43Accumulator` |
 | Intensity tracking | `therapy_integration::intensity_tracker` | `IntensityTracker` |
 | Lithotripsy | `clinical::therapy::lithotripsy` | `ShockWaveGenerator` |
+| Histotripsy scenarios | `clinical::therapy::clinical_scenarios` | `HistotripsyScenario`, `PulsePattern` |
 | Stone fracture | `lithotripsy::stone_fracture` | `StoneFractureModel` |
 | Cavitation cloud | `lithotripsy::cavitation_cloud` | `CavitationCloud` |
 | Microbubble dynamics | `clinical::therapy::microbubble_dynamics` | `MicrobubbleService` |
