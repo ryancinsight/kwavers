@@ -159,3 +159,54 @@ fn calculate_beam_width_at_location(
     // Return average width
     (width_x + width_y) / 2.0
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use ndarray::Array3;
+
+    fn small_grid() -> Grid {
+        Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap()
+    }
+
+    /// `find_peak_pressure` returns position of the maximum |pressure| cell.
+    ///
+    /// Spike at [4,4,4]: location = 4·dx × (4·dy) × (4·dz) = (4e-3, 4e-3, 4e-3).
+    #[test]
+    fn find_peak_pressure_locates_spike_cell() {
+        let grid = small_grid();
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        field[[4, 4, 4]] = 500.0;
+
+        let (loc, peak) = find_peak_pressure(field.view(), &grid).unwrap();
+
+        assert!((peak - 500.0).abs() < 1e-12, "peak pressure must be 500 Pa");
+        assert!((loc[0] - 4.0 * grid.dx).abs() < 1e-14, "x location");
+        assert!((loc[1] - 4.0 * grid.dy).abs() < 1e-14, "y location");
+        assert!((loc[2] - 4.0 * grid.dz).abs() < 1e-14, "z location");
+    }
+
+    /// Uniform zero field: peak = 0 and location = origin (all-zero search result).
+    #[test]
+    fn find_peak_pressure_zero_for_zero_field() {
+        let grid = small_grid();
+        let field = Array3::<f64>::zeros((8, 8, 8));
+        let (_loc, peak) = find_peak_pressure(field.view(), &grid).unwrap();
+        assert_eq!(peak, 0.0, "peak must be 0 for zero field");
+    }
+
+    /// `calculate_field_metrics` returns finite, positive values for a physical field.
+    #[test]
+    fn calculate_field_metrics_positive_for_nonzero_field() {
+        let grid = small_grid();
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        field[[4, 4, 4]] = 1e5;
+
+        let metrics = calculate_field_metrics(field.view(), &grid, 1000.0, 1500.0).unwrap();
+
+        assert!(metrics.peak_pressure > 0.0, "peak_pressure must be positive");
+        assert!(metrics.total_power >= 0.0, "total_power must be non-negative");
+        assert!(metrics.spatial_peak_intensity > 0.0, "spatial_peak_intensity positive");
+    }
+}
