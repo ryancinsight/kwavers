@@ -6,6 +6,9 @@ use ndarray::Array3;
 
 impl InterpolationManager {
     /// Trilinear interpolation from source to target grid.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn linear_interpolation(
         &self,
         source_field: &Array3<f64>,
@@ -69,14 +72,7 @@ impl InterpolationManager {
             let c011 = source_field[[i0, j1, k1]];
             let c111 = source_field[[i1, j1, k1]];
 
-            let value = c000 * (1.0 - wx) * (1.0 - wy) * (1.0 - wz)
-                + c100 * wx * (1.0 - wy) * (1.0 - wz)
-                + c010 * (1.0 - wx) * wy * (1.0 - wz)
-                + c110 * wx * wy * (1.0 - wz)
-                + c001 * (1.0 - wx) * (1.0 - wy) * wz
-                + c101 * wx * (1.0 - wy) * wz
-                + c011 * (1.0 - wx) * wy * wz
-                + c111 * wx * wy * wz;
+            let value = (c111 * wx * wy).mul_add(wz, (c011 * (1.0 - wx) * wy).mul_add(wz, (c101 * wx * (1.0 - wy)).mul_add(wz, (c001 * (1.0 - wx) * (1.0 - wy)).mul_add(wz, (c110 * wx * wy).mul_add(1.0 - wz, (c010 * (1.0 - wx) * wy).mul_add(1.0 - wz, (c000 * (1.0 - wx) * (1.0 - wy)).mul_add(1.0 - wz, c100 * wx * (1.0 - wy) * (1.0 - wz))))))));
 
             // Map to result array (assuming same shape)
             let ri = idx / (shape[1] * shape[2]);

@@ -13,7 +13,7 @@
 //! T_display[n+1] - T_display[n] ≥ T_target
 //!
 //! Synchronization condition:
-//! T_display[n] = T_sim[m] + L_pipeline ≤ T_deadline[n]
+//! T_display[n] = T_sim(m) + L_pipeline ≤ T_deadline[n]
 //!
 //! where T_deadline[n] = T_start + n × T_target
 //! ```

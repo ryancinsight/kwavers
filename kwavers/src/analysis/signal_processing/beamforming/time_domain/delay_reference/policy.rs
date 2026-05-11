@@ -23,10 +23,17 @@ impl DelayReference {
     }
 
     /// Resolve the reference delay `τᵣₑ𝒻` from an absolute delay vector.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn resolve_reference_delay_s(self, delays_s: &[f64]) -> KwaversResult<f64> {
         if delays_s.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "DelayReference: delays_s must be non-empty".to_string(),
+                "DelayReference: delays_s must be non-empty".to_owned(),
             ));
         }
 
@@ -44,17 +51,17 @@ impl DelayReference {
         }
 
         let tau_ref = match self {
-            DelayReference::SensorIndex(idx) => delays_s.get(idx).copied().ok_or_else(|| {
+            Self::SensorIndex(idx) => delays_s.get(idx).copied().ok_or_else(|| {
                 KwaversError::InvalidInput(format!(
                     "DelayReference::SensorIndex({idx}) out of bounds for delays_s (len={})",
                     delays_s.len()
                 ))
             })?,
-            DelayReference::EarliestArrival => *delays_s
+            Self::EarliestArrival => *delays_s
                 .iter()
                 .min_by(|a, b| a.partial_cmp(b).unwrap())
                 .unwrap(),
-            DelayReference::LatestArrival => *delays_s
+            Self::LatestArrival => *delays_s
                 .iter()
                 .max_by(|a, b| a.partial_cmp(b).unwrap())
                 .unwrap(),
@@ -62,7 +69,7 @@ impl DelayReference {
 
         if !tau_ref.is_finite() {
             return Err(KwaversError::InvalidInput(
-                "DelayReference: resolved τᵣₑ𝒻 is non-finite".to_string(),
+                "DelayReference: resolved τᵣₑ𝒻 is non-finite".to_owned(),
             ));
         }
 
@@ -70,12 +77,18 @@ impl DelayReference {
     }
 
     /// Compute relative delays `Δτᵢ = τᵢ - τᵣₑ𝒻` from absolute delays.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_relative_delays(self, delays_s: &[f64]) -> KwaversResult<Vec<f64>> {
         let tau_ref = self.resolve_reference_delay_s(delays_s)?;
         Ok(delays_s.iter().map(|&tau| tau - tau_ref).collect())
     }
 
     /// Compute alignment shifts `Δτₐₗᵢ𝓰ₙ,ᵢ = τᵣₑ𝒻 - τᵢ` from absolute delays.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_alignment_shifts(self, delays_s: &[f64]) -> KwaversResult<Vec<f64>> {
         let tau_ref = self.resolve_reference_delay_s(delays_s)?;
         Ok(delays_s.iter().map(|&tau| tau_ref - tau).collect())

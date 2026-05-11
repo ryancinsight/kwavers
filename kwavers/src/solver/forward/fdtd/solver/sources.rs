@@ -13,7 +13,7 @@ use crate::domain::source::{Source, SourceField, SourceInjectionMode};
 impl GenericFdtdSolver<Array3<f64>> {
     pub(super) fn apply_dynamic_pressure_sources(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        let GenericFdtdSolver {
+        let Self {
             ref dynamic_sources,
             ref mut fields,
             ref grid,
@@ -40,7 +40,7 @@ impl GenericFdtdSolver<Array3<f64>> {
                     match mode {
                         SourceInjectionMode::Boundary => {
                             // Dirichlet: enforce p = amplitude at boundary
-                            Zip::from(&mut fields.p).and(mask).for_each(|p, &m| {
+                            Zip::from(&mut fields.p).and(mask).par_for_each(|p, &m| {
                                 if m > 0.0 {
                                     *p = amp;
                                 }
@@ -52,7 +52,7 @@ impl GenericFdtdSolver<Array3<f64>> {
                             // and we expect the physical scaling to be handled by the caller or precomputed.
                             Zip::from(&mut fields.p)
                                 .and(mask)
-                                .for_each(|p, &m| *p += m * amp);
+                                .par_for_each(|p, &m| *p += m * amp);
                         }
                     }
                 }
@@ -63,7 +63,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
     pub(super) fn apply_dynamic_pressure_dirichlet(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        let GenericFdtdSolver {
+        let Self {
             ref dynamic_sources,
             ref mut fields,
             ..
@@ -80,7 +80,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             if amp.abs() < 1e-12 {
                 continue;
             }
-            Zip::from(&mut fields.p).and(mask).for_each(|p, &m| {
+            Zip::from(&mut fields.p).and(mask).par_for_each(|p, &m| {
                 if m > 0.0 {
                     *p = amp;
                 }
@@ -90,7 +90,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
     pub(super) fn apply_dynamic_velocity_sources(&mut self, dt: f64) {
         let t = self.time_step_index as f64 * dt;
-        let GenericFdtdSolver {
+        let Self {
             ref dynamic_sources,
             ref mut fields,
             ..
@@ -122,7 +122,10 @@ impl GenericFdtdSolver<Array3<f64>> {
             }
         }
     }
-
+    /// Add source arc.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {
         let mask = source.create_mask(&self.grid);
 
@@ -191,7 +194,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             .count();
 
         // Compute total mask statistics
-        for &val in mask.iter() {
+        for &val in mask {
             if val > 0.0 {
                 nonzero_count += 1;
                 mask_sum += val;

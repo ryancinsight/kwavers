@@ -23,6 +23,7 @@ pub struct ClinicalMonitor {
 
 impl ClinicalMonitor {
     /// Create new clinical monitor
+    #[must_use] 
     pub fn new(config: MonitoringConfig) -> Self {
         let history_cap = config.history_window;
         Self {
@@ -35,6 +36,9 @@ impl ClinicalMonitor {
     }
 
     /// Record frame quality metrics
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn record_frame_quality(
         &mut self,
         frame_number: usize,
@@ -59,9 +63,7 @@ impl ClinicalMonitor {
 
         self.performance_metrics.total_frames += 1;
         self.performance_metrics.avg_processing_time_ms =
-            (self.performance_metrics.avg_processing_time_ms
-                * (self.performance_metrics.total_frames - 1) as f64
-                + processing_time_ms)
+            self.performance_metrics.avg_processing_time_ms.mul_add((self.performance_metrics.total_frames - 1) as f64, processing_time_ms)
                 / self.performance_metrics.total_frames as f64;
         self.performance_metrics.max_processing_time_ms = self
             .performance_metrics
@@ -96,8 +98,11 @@ impl ClinicalMonitor {
     }
 
     /// Record safety event
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn log_safety_event(&mut self, event: SafetyEvent) -> KwaversResult<()> {
-        self.safety_log.push_back(event.clone());
+        self.safety_log.push_back(event);
 
         if self.safety_log.len() > 10000 {
             self.safety_log.pop_front();
@@ -184,21 +189,25 @@ impl ClinicalMonitor {
     }
 
     /// Get frame quality history
+    #[must_use] 
     pub fn frame_history(&self) -> Vec<FrameQualityRecord> {
         self.frame_history.iter().cloned().collect()
     }
 
     /// Get safety event log
+    #[must_use] 
     pub fn safety_log(&self) -> Vec<SafetyEvent> {
         self.safety_log.iter().cloned().collect()
     }
 
     /// Get performance metrics
+    #[must_use] 
     pub fn performance_metrics(&self) -> &PerformanceMetrics {
         &self.performance_metrics
     }
 
     /// Get session summary report
+    #[must_use] 
     pub fn generate_report(&self) -> MonitoringReport {
         let uptime = self.start_time.elapsed().as_secs_f64();
 
@@ -245,11 +254,11 @@ impl ClinicalMonitor {
             urgent_events: urgent_count,
             critical_events: critical_count,
             system_status: if critical_count > 0 {
-                "UNSAFE - Critical events detected".to_string()
+                "UNSAFE - Critical events detected".to_owned()
             } else if urgent_count > 0 {
-                "CAUTION - Urgent events detected".to_string()
+                "CAUTION - Urgent events detected".to_owned()
             } else {
-                "SAFE - Normal operation".to_string()
+                "SAFE - Normal operation".to_owned()
             },
         }
     }

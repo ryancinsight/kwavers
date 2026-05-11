@@ -35,6 +35,9 @@ use super::super::types::elasticity_map_from_speed;
 /// # References
 ///
 /// - McLaughlin & Renzi (2006): "Shear wave speed recovery using phase information"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn phase_gradient_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
@@ -98,7 +101,7 @@ pub(super) fn compute_phase_gradient_speed(
     if valid_points > 0 {
         phase_gradient /= valid_points as f64;
 
-        let max_amplitude = profile.iter().cloned().fold(0.0, f64::max).max(1e-12);
+        let max_amplitude = profile.iter().copied().fold(0.0, f64::max).max(1e-12);
         let wavenumber = phase_gradient / max_amplitude;
 
         let cs = 2.0 * PI * frequency / wavenumber.abs().max(0.1);

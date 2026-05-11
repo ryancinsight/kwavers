@@ -43,11 +43,14 @@ pub struct BumpAllocator {
 
 impl BumpAllocator {
     /// Create a bump allocator with `size_bytes` capacity (64-byte aligned).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(size_bytes: usize) -> KwaversResult<Self> {
         let layout = Layout::from_size_align(size_bytes, 64).map_err(|_| {
             KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: size_bytes,
-                reason: "Failed to create layout for bump allocator".to_string(),
+                reason: "Failed to create layout for bump allocator".to_owned(),
             })
         })?;
 
@@ -56,7 +59,7 @@ impl BumpAllocator {
         let memory = NonNull::new(memory).ok_or_else(|| {
             KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: size_bytes,
-                reason: "Failed to allocate memory for bump allocator".to_string(),
+                reason: "Failed to allocate memory for bump allocator".to_owned(),
             })
         })?;
 
@@ -71,6 +74,12 @@ impl BumpAllocator {
     /// Allocate `size` bytes with `align`-byte alignment.
     ///
     /// Returns [`KwaversError::System`] when the pool is exhausted.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if `bump allocator pointer must be non-null`.
+    ///
     pub fn allocate(&self, size: usize, align: usize) -> KwaversResult<NonNull<u8>> {
         let mut offset = self.offset.borrow_mut();
         let aligned_offset = (*offset + align - 1) & !(align - 1);
@@ -135,6 +144,9 @@ pub struct ScopedArena {
 
 impl ScopedArena {
     /// Create a scoped arena with the given configuration.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: ArenaConfig) -> KwaversResult<Self> {
         Ok(Self {
             arena: FieldArena::new(config)?,
@@ -143,6 +155,9 @@ impl ScopedArena {
     }
 
     /// Allocate a field; it will be freed when the arena is dropped.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn alloc_field(&mut self) -> KwaversResult<&mut [f64]> {
         let field = self.arena.allocate_field()?;
         // Record slot index count for deallocation bookkeeping.

@@ -17,6 +17,11 @@ impl Avx512StencilProcessor {
     ///
     /// # Returns
     /// Updated pressure field at time step n+1
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_pressure_avx512(
         &self,
         p_curr: &Array3<f64>,
@@ -73,6 +78,9 @@ impl Avx512StencilProcessor {
     /// Caller must ensure:
     /// - Input arrays have matching dimensions equal to `(self.nx, self.ny, self.nz)`
     /// - Arrays are properly initialized (no uninitialized memory)
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    ///
     #[allow(unsafe_code)]
     #[cfg(target_arch = "x86_64")]
     unsafe fn update_pressure_avx512_unsafe(

@@ -44,6 +44,10 @@ pub struct CudaKernelManager {
 }
 
 impl CudaKernelManager {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> KwaversResult<Self> {
         Ok(Self {
             modules: HashMap::new(),
@@ -52,6 +56,9 @@ impl CudaKernelManager {
     }
 
     /// Load CUDA module from PTX or cubin
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compile_ptx(&mut self, name: &str, _ptx_source: &str) -> KwaversResult<()> {
         let module = CudaModule {
             handle: self.modules.len(),
@@ -62,12 +69,18 @@ impl CudaKernelManager {
     }
 
     /// Get kernel function handle
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_kernel(&self, module_name: &str, kernel_name: &str) -> Option<&CudaKernel> {
         let full_name = format!("{}::{}", module_name, kernel_name);
         self.kernels.get(&full_name)
     }
 
     /// Launch PDE residual computation kernel
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn launch_pde_residual_kernel(
         &self,
         _kernel_name: &str,

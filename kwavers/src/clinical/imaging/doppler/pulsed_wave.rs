@@ -56,19 +56,19 @@ use std::f64::consts::PI;
 /// Pulsed-wave Doppler configuration
 #[derive(Debug, Clone)]
 pub struct PWDConfig {
-    /// Transducer centre frequency [Hz]
+    /// Transducer centre frequency (Hz)
     pub center_frequency: f64,
-    /// Pulse repetition frequency [Hz]
+    /// Pulse repetition frequency (Hz)
     pub prf: f64,
-    /// Sample volume depth [m]
+    /// Sample volume depth (m)
     pub sample_volume_depth: f64,
-    /// Sample volume gate length [m]
+    /// Sample volume gate length (m)
     pub sample_volume_length: f64,
     /// FFT length for spectral estimation (power of 2 recommended)
     pub fft_size: usize,
-    /// Speed of sound [m/s]
+    /// Speed of sound (m/s)
     pub c_sound: f64,
-    /// Beam-to-flow angle [radians] (used for velocity axis scaling)
+    /// Beam-to-flow angle (radians) (used for velocity axis scaling)
     pub beam_angle: f64,
 }
 
@@ -99,6 +99,7 @@ pub struct PulsedWaveDoppler {
 }
 
 impl PulsedWaveDoppler {
+    #[must_use] 
     pub fn new(config: PWDConfig) -> Self {
         Self { config }
     }
@@ -131,14 +132,14 @@ impl PulsedWaveDoppler {
 
         if ensemble_len == 0 {
             return Err(KwaversError::InvalidInput(
-                "I/Q ensemble must be non-empty".to_string(),
+                "I/Q ensemble must be non-empty".to_owned(),
             ));
         }
 
         let fft_size = self.config.fft_size;
         if fft_size < 2 {
             return Err(KwaversError::InvalidInput(
-                "fft_size must be ≥ 2".to_string(),
+                "fft_size must be ≥ 2".to_owned(),
             ));
         }
 
@@ -168,10 +169,11 @@ impl PulsedWaveDoppler {
         Ok(waveform)
     }
 
-    /// Velocity axis corresponding to `extract_waveform` output [m/s].
+    /// Velocity axis corresponding to `extract_waveform` output (m/s).
     ///
     /// Uses the Doppler equation: `v[k] = k·f_prf/fft_size · c / (2·f₀·cos θ)`.
     /// Maximum alias-free velocity: `v_max = f_prf·c/(4·f₀·cos θ)`.
+    #[must_use] 
     pub fn velocity_axis(&self) -> Array1<f64> {
         let fft_size = self.config.fft_size;
         let out_len = fft_size / 2 + 1;
@@ -182,13 +184,14 @@ impl PulsedWaveDoppler {
         Array1::from_shape_fn(out_len, |k| k as f64 * df * df_to_v)
     }
 
-    /// Maximum alias-free velocity [m/s] (Nyquist limit for PW Doppler).
+    /// Maximum alias-free velocity (m/s) (Nyquist limit for PW Doppler).
     ///
     /// ```text
     /// v_max = f_prf · c / (4 · f₀ · cos θ)
     /// ```
     ///
     /// Above this velocity, Doppler aliasing occurs (Evans & McDicken 2000, §3.5).
+    #[must_use] 
     pub fn max_velocity(&self) -> f64 {
         let cos_theta = self.config.beam_angle.cos().max(1e-6);
         self.config.prf * self.config.c_sound / (4.0 * self.config.center_frequency * cos_theta)
@@ -201,6 +204,9 @@ mod tests {
     use std::f64::consts::PI;
 
     /// **Test: zero ensemble produces zero-magnitude waveform**
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_extract_waveform_zero_signal() {
         let config = PWDConfig::default();
@@ -218,6 +224,9 @@ mod tests {
     ///
     /// Signal: `s[n] = exp(j 2π f_d n / f_prf)` with `f_d = k₀ · f_prf / fft_size`.
     /// Expected peak: bin `k₀`.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_extract_waveform_single_tone_peak() {
         let config = PWDConfig {
@@ -256,6 +265,9 @@ mod tests {
     /// **Test: waveform output has correct length**
     ///
     /// Expected length = `fft_size/2 + 1` (one-sided spectrum).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_extract_waveform_output_length() {
         let config = PWDConfig {
@@ -270,6 +282,9 @@ mod tests {
     }
 
     /// **Test: waveform is non-negative (magnitude spectrum)**
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_extract_waveform_non_negative() {
         let config = PWDConfig::default();
@@ -288,6 +303,9 @@ mod tests {
     ///
     /// For a 5 MHz probe with f_prf = 4 kHz and c = 1540 m/s at 0° angle:
     /// `v_max = f_prf · c / (4 · f₀) = 4000 × 1540 / (4 × 5e6) = 0.308 m/s`
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_velocity_axis_nyquist_limit() {
         let config = PWDConfig {

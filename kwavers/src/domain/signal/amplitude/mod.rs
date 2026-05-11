@@ -19,6 +19,10 @@ pub struct ConstantAmplitude {
 }
 
 impl ConstantAmplitude {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(value: f64) -> Self {
         assert!(value >= 0.0, "Amplitude must be non-negative");
@@ -43,6 +47,10 @@ pub struct PowerModulation {
 }
 
 impl PowerModulation {
+    /// New.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn new(base_amplitude: f64, modulation_freq: f64, modulation_depth: f64) -> Self {
         assert!(
@@ -61,9 +69,7 @@ impl PowerModulation {
 impl Amplitude for PowerModulation {
     fn amplitude(&self, t: f64) -> f64 {
         self.base_amplitude
-            * (1.0
-                + self.modulation_depth
-                    * (2.0 * std::f64::consts::PI * self.modulation_freq * t).sin())
+            * self.modulation_depth.mul_add((2.0 * std::f64::consts::PI * self.modulation_freq * t).sin(), 1.0)
     }
     fn clone_box(&self) -> Box<dyn Amplitude> {
         Box::new(self.clone())

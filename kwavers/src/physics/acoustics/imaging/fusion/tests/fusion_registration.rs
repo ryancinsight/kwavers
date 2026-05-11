@@ -24,8 +24,7 @@ fn test_coordinate_array_generation() {
 #[test]
 fn test_registration_compatibility_validation() {
     // Compatible dimensions
-    let result = registration::validate_registration_compatibility((10, 10, 10), (20, 20, 20));
-    assert!(result.is_ok());
+    registration::validate_registration_compatibility((10, 10, 10), (20, 20, 20)).unwrap();
 
     // Incompatible dimensions (ratio > 10)
     let result = registration::validate_registration_compatibility((10, 10, 10), (200, 200, 200));

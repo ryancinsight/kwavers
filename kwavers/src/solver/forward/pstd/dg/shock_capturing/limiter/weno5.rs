@@ -6,6 +6,9 @@ use ndarray::Array3;
 
 impl WENOLimiter {
     /// WENO5 limiting implementation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn weno5_limit(
         &self,
         field: &mut Array3<f64>,
@@ -27,6 +30,9 @@ impl WENOLimiter {
     }
 
     /// WENO5 limiting in x-direction
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn weno5_limit_x(
         &self,
         field: &mut Array3<f64>,
@@ -61,6 +67,9 @@ impl WENOLimiter {
     }
 
     /// WENO5 limiting in y-direction
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn weno5_limit_y(
         &self,
         field: &mut Array3<f64>,
@@ -95,6 +104,9 @@ impl WENOLimiter {
     }
 
     /// WENO5 limiting in z-direction
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn weno5_limit_z(
         &self,
         field: &mut Array3<f64>,
@@ -131,16 +143,14 @@ impl WENOLimiter {
     /// Compute WENO5 reconstruction value from stencil
     pub(super) fn compute_weno5_value(&self, v: &[f64; 5]) -> f64 {
         // Three stencils for WENO5
-        let p0 = (2.0 * v[0] - 7.0 * v[1] + 11.0 * v[2]) / 6.0;
-        let p1 = (-v[1] + 5.0 * v[2] + 2.0 * v[3]) / 6.0;
-        let p2 = (2.0 * v[2] + 5.0 * v[3] - v[4]) / 6.0;
+        let p0 = 11.0f64.mul_add(v[2], 2.0f64.mul_add(v[0], -(7.0 * v[1]))) / 6.0;
+        let p1 = 2.0f64.mul_add(v[3], 5.0f64.mul_add(v[2], -v[1])) / 6.0;
+        let p2 = (2.0f64.mul_add(v[2], 5.0 * v[3]) - v[4]) / 6.0;
 
         // Smoothness indicators
-        let beta0 = 13.0 / 12.0 * (v[0] - 2.0 * v[1] + v[2]).powi(2)
-            + 0.25 * (v[0] - 4.0 * v[1] + 3.0 * v[2]).powi(2);
-        let beta1 = 13.0 / 12.0 * (v[1] - 2.0 * v[2] + v[3]).powi(2) + 0.25 * (v[1] - v[3]).powi(2);
-        let beta2 = 13.0 / 12.0 * (v[2] - 2.0 * v[3] + v[4]).powi(2)
-            + 0.25 * (3.0 * v[2] - 4.0 * v[3] + v[4]).powi(2);
+        let beta0 = (13.0_f64 / 12.0).mul_add((2.0f64.mul_add(-v[1], v[0]) + v[2]).powi(2), 0.25 * 3.0f64.mul_add(v[2], 4.0f64.mul_add(-v[1], v[0])).powi(2));
+        let beta1 = (13.0_f64 / 12.0).mul_add((2.0f64.mul_add(-v[2], v[1]) + v[3]).powi(2), 0.25 * (v[1] - v[3]).powi(2));
+        let beta2 = (13.0_f64 / 12.0).mul_add((2.0f64.mul_add(-v[3], v[2]) + v[4]).powi(2), 0.25 * (3.0f64.mul_add(v[2], -(4.0 * v[3])) + v[4]).powi(2));
 
         // Optimal weights
         let d0 = 0.1;

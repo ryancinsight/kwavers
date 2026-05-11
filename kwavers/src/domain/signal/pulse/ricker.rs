@@ -17,6 +17,11 @@ pub struct RickerWavelet {
 }
 
 impl RickerWavelet {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Peak frequency must be positive`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(peak_frequency: f64, peak_time: f64, amplitude: f64) -> Self {
         assert!(peak_frequency > 0.0, "Peak frequency must be positive");
@@ -38,7 +43,7 @@ impl RickerWavelet {
         let arg = PI * f * tau;
         let arg_squared = arg * arg;
 
-        (1.0 - 2.0 * arg_squared) * (-arg_squared).exp()
+        2.0f64.mul_add(-arg_squared, 1.0) * (-arg_squared).exp()
     }
 }
 

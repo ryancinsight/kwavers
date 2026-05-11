@@ -85,6 +85,9 @@ impl SlscConfig {
     }
 
     /// Create a new config with triangular weighting
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_triangular_weighting() -> Self {
         Self {
@@ -101,9 +104,9 @@ impl SlscConfig {
         if self.max_lag == 0 {
             return Err(KwaversError::Config(
                 crate::core::error::ConfigError::InvalidValue {
-                    parameter: "max_lag".to_string(),
-                    value: "0".to_string(),
-                    constraint: "max_lag must be greater than 0".to_string(),
+                    parameter: "max_lag".to_owned(),
+                    value: "0".to_owned(),
+                    constraint: "max_lag must be greater than 0".to_owned(),
                 },
             ));
         }

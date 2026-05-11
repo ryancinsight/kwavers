@@ -41,6 +41,9 @@ impl PennesSolver {
     /// * `properties` - Material thermal properties (conductivity, specific heat, density, perfusion)
     /// * `arterial_temperature` - Arterial blood temperature (°C) for perfusion term
     /// * `metabolic_heat` - Metabolic heat generation rate (W/m³)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         nx: usize,
         ny: usize,
@@ -55,7 +58,7 @@ impl PennesSolver {
     ) -> Result<Self, String> {
         if !properties.has_bioheat_parameters() {
             return Err(
-                "ThermalPropertyData must have blood_perfusion and blood_specific_heat for Pennes solver".to_string()
+                "ThermalPropertyData must have blood_perfusion and blood_specific_heat for Pennes solver".to_owned()
             );
         }
 
@@ -89,6 +92,10 @@ impl PennesSolver {
 
     /// Update temperature for one time step
     /// `heat_source`: volumetric heat deposition rate (W/m³)
+    /// # Panics
+    /// - Panics if `blood_perfusion validated in constructor`.
+    /// - Panics if `blood_specific_heat validated in constructor`.
+    ///
     pub fn step(&mut self, heat_source: &Array3<f64>) {
         let alpha = self.properties.thermal_diffusivity();
 
@@ -107,32 +114,28 @@ impl PennesSolver {
         for k in 1..self.nz - 1 {
             for j in 1..self.ny - 1 {
                 for i in 1..self.nx - 1 {
-                    let laplacian_x = (self.temperature_prev[[i + 1, j, k]]
-                        - 2.0 * self.temperature_prev[[i, j, k]]
+                    let laplacian_x = (2.0f64.mul_add(-self.temperature_prev[[i, j, k]], self.temperature_prev[[i + 1, j, k]])
                         + self.temperature_prev[[i - 1, j, k]])
                         / (self.dx * self.dx);
 
-                    let laplacian_y = (self.temperature_prev[[i, j + 1, k]]
-                        - 2.0 * self.temperature_prev[[i, j, k]]
+                    let laplacian_y = (2.0f64.mul_add(-self.temperature_prev[[i, j, k]], self.temperature_prev[[i, j + 1, k]])
                         + self.temperature_prev[[i, j - 1, k]])
                         / (self.dy * self.dy);
 
-                    let laplacian_z = (self.temperature_prev[[i, j, k + 1]]
-                        - 2.0 * self.temperature_prev[[i, j, k]]
+                    let laplacian_z = (2.0f64.mul_add(-self.temperature_prev[[i, j, k]], self.temperature_prev[[i, j, k + 1]])
                         + self.temperature_prev[[i, j, k - 1]])
                         / (self.dz * self.dz);
 
                     let laplacian = laplacian_x + laplacian_y + laplacian_z;
 
                     let t = self.temperature_prev[[i, j, k]];
-                    let dt_dt = alpha * laplacian
-                        - perfusion_term * (t - self.arterial_temperature)
+                    let dt_dt = alpha.mul_add(laplacian, -(perfusion_term * (t - self.arterial_temperature)))
                         + self.metabolic_heat
                             / (self.properties.density * self.properties.specific_heat)
                         + heat_source[[i, j, k]]
                             / (self.properties.density * self.properties.specific_heat);
 
-                    self.temperature[[i, j, k]] = t + self.dt * dt_dt;
+                    self.temperature[[i, j, k]] = self.dt.mul_add(dt_dt, t);
                 }
             }
         }
@@ -210,7 +213,7 @@ mod tests {
             arterial_temp,
             metabolic_heat,
         );
-        assert!(solver.is_ok());
+        let _solver = solver.unwrap();
     }
 
     #[test]

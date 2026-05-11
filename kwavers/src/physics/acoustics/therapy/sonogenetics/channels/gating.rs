@@ -29,9 +29,9 @@ pub fn boltzmann_p_open(
 ) -> KwaversResult<Array3<f64>> {
     if temperature_k <= 0.0 {
         return Err(KwaversError::Validation(ValidationError::InvalidValue {
-            parameter: "temperature_k".to_string(),
+            parameter: "temperature_k".to_owned(),
             value: temperature_k,
-            reason: "absolute temperature must be strictly positive".to_string(),
+            reason: "absolute temperature must be strictly positive".to_owned(),
         }));
     }
     let kbt = K_B * temperature_k;
@@ -62,9 +62,9 @@ pub fn pressure_threshold_p_open(
 ) -> KwaversResult<Array3<f64>> {
     if params.steepness_pa <= 0.0 {
         return Err(KwaversError::Validation(ValidationError::InvalidValue {
-            parameter: "steepness_pa".to_string(),
+            parameter: "steepness_pa".to_owned(),
             value: params.steepness_pa,
-            reason: "sigmoid steepness must be strictly positive".to_string(),
+            reason: "sigmoid steepness must be strictly positive".to_owned(),
         }));
     }
     let p_half = params.half_pressure_pa;

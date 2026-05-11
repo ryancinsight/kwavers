@@ -20,7 +20,7 @@ impl CPMLUpdater {
         Zip::indexed(memory.psi_p_x.slice_mut(s![..left_count, .., ..]))
             .and(gradient.slice(s![..left_count, .., ..]))
             .par_for_each(|(i, _j, _k), psi, &g| {
-                *psi = profiles.b_x[i] * *psi + profiles.a_x[i] * g;
+                *psi = profiles.b_x[i].mul_add(*psi, profiles.a_x[i] * g);
             });
 
         // Right boundary
@@ -30,7 +30,7 @@ impl CPMLUpdater {
                 .and(gradient.slice(s![right_start.., .., ..]))
                 .par_for_each(|(i, _j, _k), psi, &g| {
                     let grid_i = right_start + i;
-                    *psi = profiles.b_x[grid_i] * *psi + profiles.a_x[grid_i] * g;
+                    *psi = profiles.b_x[grid_i].mul_add(*psi, profiles.a_x[grid_i] * g);
                 });
         }
     }
@@ -77,7 +77,7 @@ impl CPMLUpdater {
         Zip::indexed(memory.psi_v_x.slice_mut(s![..left_count, .., ..]))
             .and(v_gradient.slice(s![..left_count, .., ..]))
             .par_for_each(|(i, _j, _k), psi, &g| {
-                *psi = profiles.b_x[i] * *psi + profiles.a_x[i] * g;
+                *psi = profiles.b_x[i].mul_add(*psi, profiles.a_x[i] * g);
             });
 
         // Right boundary
@@ -87,7 +87,7 @@ impl CPMLUpdater {
                 .and(v_gradient.slice(s![right_start.., .., ..]))
                 .par_for_each(|(i, _j, _k), psi, &g| {
                     let grid_i = right_start + i;
-                    *psi = profiles.b_x[grid_i] * *psi + profiles.a_x[grid_i] * g;
+                    *psi = profiles.b_x[grid_i].mul_add(*psi, profiles.a_x[grid_i] * g);
                 });
         }
     }

@@ -13,6 +13,9 @@ use crate::physics::acoustics::bubble_dynamics::{
 /// but depends on the complete implementation of acceleration computation.
 ///
 /// Will be re-enabled in Sprint 111 with microbubble dynamics implementation.
+/// # Panics
+/// - Panics if `Integration failed`.
+///
 #[test]
 #[ignore = "Requires Sprint 111+ Keller-Miksis full implementation (PRD FR-014)"]
 fn test_adaptive_integration() {
@@ -54,8 +57,8 @@ fn test_adaptive_integration() {
         }
     }
 
-    assert!(result.is_ok(), "Integration failed: {:?}", result.err());
-    assert!(state.radius > 0.0);
+    result.expect("Integration failed");
+    assert!(state.radius > 0.0, "radius must be positive after integration, got {}", state.radius);
 
     // Check that sub-cycling occurred
     let stats = integrator.statistics();

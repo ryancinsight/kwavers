@@ -43,20 +43,23 @@ pub struct PlaneWaveCompound {
 
 impl PlaneWaveCompound {
     /// Construct and validate a plane wave compounding processor.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(config: PlaneWaveConfig) -> KwaversResult<Self> {
         if config.num_angles == 0 {
             return Err(KwaversError::InvalidInput(
-                "num_angles must be > 0".to_string(),
+                "num_angles must be > 0".to_owned(),
             ));
         }
         if config.sound_speed <= 0.0 || config.frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "sound_speed and frequency must be positive".to_string(),
+                "sound_speed and frequency must be positive".to_owned(),
             ));
         }
         if config.depth <= 0.0 || config.axial_step <= 0.0 || config.lateral_step <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "depth and steps must be positive".to_string(),
+                "depth and steps must be positive".to_owned(),
             ));
         }
 
@@ -98,8 +101,10 @@ impl PlaneWaveCompound {
     ///
     /// Field: p(x,z) = A(x) exp(j·k·x·sin(θ)) · exp(j·k·z)
     /// where A(x) is the aperture apodization.
-    #[allow(dead_code)]
-    pub(super) fn generate_plane_wave(
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
+    pub fn generate_plane_wave(
         &self,
         angle_idx: usize,
     ) -> KwaversResult<Array2<Complex<f64>>> {
@@ -141,37 +146,34 @@ impl PlaneWaveCompound {
     /// Compute normalized aperture apodization weights.
     ///
     /// Supported window types: `"hann"`, `"hamming"`, `"blackman"`, `"rect"` (default).
-    #[allow(dead_code)]
-    pub(super) fn compute_apodization(&self) -> Vec<f64> {
+    pub fn compute_apodization(&self) -> Vec<f64> {
         let n = self.config.num_elements;
         let mut apod = vec![0.0_f64; n];
 
         match self.config.apodization.as_str() {
             "hann" => {
                 for (i, w) in apod.iter_mut().enumerate() {
-                    *w = 0.5 - 0.5 * (2.0 * PI * i as f64 / (n as f64 - 1.0)).cos();
+                    *w = 0.5f64.mul_add(-(2.0 * PI * i as f64 / (n as f64 - 1.0)).cos(), 0.5);
                 }
             }
             "hamming" => {
                 for (i, w) in apod.iter_mut().enumerate() {
-                    *w = 0.54 - 0.46 * (2.0 * PI * i as f64 / (n as f64 - 1.0)).cos();
+                    *w = 0.46f64.mul_add(-(2.0 * PI * i as f64 / (n as f64 - 1.0)).cos(), 0.54);
                 }
             }
             "blackman" => {
                 for (i, w) in apod.iter_mut().enumerate() {
                     let nn = i as f64 / (n as f64 - 1.0);
-                    *w = 0.42 - 0.5 * (2.0 * PI * nn).cos() + 0.08 * (4.0 * PI * nn).cos();
+                    *w = 0.08f64.mul_add((4.0 * PI * nn).cos(), 0.5f64.mul_add(-(2.0 * PI * nn).cos(), 0.42));
                 }
             }
             _ => {
                 // "rect" or any other — uniform window
-                for w in apod.iter_mut() {
-                    *w = 1.0;
-                }
+                apod.fill(1.0);
             }
         }
 
-        let max_w = apod.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let max_w = apod.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if max_w > 0.0 {
             for w in &mut apod {
                 *w = (*w / max_w).clamp(0.0, 1.0);
@@ -184,6 +186,9 @@ impl PlaneWaveCompound {
     /// Delay-and-sum beamform `received_field` for the specified plane wave angle.
     ///
     /// Phase correction: −k x sin(θ) reverses transmit steering; −k z removes depth phase.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn beamform_angle(
         &self,
         angle_idx: usize,
@@ -219,8 +224,11 @@ impl PlaneWaveCompound {
     /// Coherently compound all angle images and apply log-compression.
     ///
     /// Compound: Σᵢ image_i(r), then dB = 10·log₁₀(|·|²).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compound(&mut self) -> KwaversResult<()> {
-        for elem in self.compounded_image.iter_mut() {
+        for elem in &mut self.compounded_image {
             *elem = Complex::new(0.0, 0.0);
         }
 
@@ -250,6 +258,10 @@ impl PlaneWaveCompound {
     /// Beamform one received field per angle, then coherently compound.
     ///
     /// Returns the normalized log-compressed display image.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process_frame(
         &mut self,
         received_fields: &[Array2<Complex<f64>>],
@@ -277,6 +289,7 @@ impl PlaneWaveCompound {
     /// as a one-cell-thick volume with `(nx, ny, nz) = (lateral, 1, axial)`.
     /// The time step uses the same acoustic CFL factor as the coupled solver
     /// default: `dt = 0.3 min(dx, dy, dz) / c_ref`.
+    #[must_use] 
     pub fn config(&self) -> crate::solver::forward::coupled::ThermalAcousticConfig {
         let mut thermal = crate::solver::forward::coupled::ThermalAcousticConfig::default();
         thermal.nx = self.num_lateral;
@@ -291,26 +304,31 @@ impl PlaneWaveCompound {
     }
 
     /// Number of configured plane wave angles.
+    #[must_use] 
     pub fn num_angles(&self) -> usize {
         self.config.num_angles
     }
 
     /// Plane wave angles in degrees.
+    #[must_use] 
     pub fn get_angles(&self) -> Vec<f64> {
         self.angles.iter().map(|&a| a.to_degrees()).collect()
     }
 
-    /// Log-compressed display image (values in [0,1]).
+    /// Log-compressed display image (values in \[0,1\]).
+    #[must_use] 
     pub fn display_image(&self) -> &Array2<f64> {
         &self.display_image
     }
 
     /// Raw coherently compounded complex image.
+    #[must_use] 
     pub fn compounded_image(&self) -> &Array2<Complex<f64>> {
         &self.compounded_image
     }
 
     /// Image grid dimensions: `(num_axial, num_lateral)`.
+    #[must_use] 
     pub fn dimensions(&self) -> (usize, usize) {
         (self.num_axial, self.num_lateral)
     }
@@ -318,6 +336,7 @@ impl PlaneWaveCompound {
     /// Estimated frame rate: `(speedup_factor, practical_fps)`.
     ///
     /// Reference: 30 fps focused beam; speedup = N_angles.
+    #[must_use] 
     pub fn frame_rate_estimate(&self) -> (f64, f64) {
         let focused_fps = 30.0;
         let speedup = self.config.num_angles as f64;

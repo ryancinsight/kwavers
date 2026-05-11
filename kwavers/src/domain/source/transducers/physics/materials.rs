@@ -230,7 +230,7 @@ impl MatchingLayer {
         for i in 1..=num_layers {
             let fraction = i as f64 / (num_layers + 1) as f64;
             let layer_impedance = piezo_impedance * (fraction * impedance_ratio).exp();
-            let sound_speed = 2500.0 + 500.0 * fraction; // Varies with material
+            let sound_speed = 500.0f64.mul_add(fraction, 2500.0); // Varies with material
             let wavelength = sound_speed / frequency;
             let thickness = wavelength / 4.0;
 
@@ -314,6 +314,9 @@ impl AcousticLens {
     }
 
     /// Calculate focal length in the medium
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn focal_length(&self, medium_sound_speed: f64) -> f64 {
         let _speed_ratio = medium_sound_speed / self.sound_speed;
@@ -321,26 +324,32 @@ impl AcousticLens {
     }
 
     /// Calculate f-number (focal length / aperture)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn f_number(&self, aperture: f64, medium_sound_speed: f64) -> f64 {
         self.focal_length(medium_sound_speed) / aperture
     }
 
     /// Validate lens design
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.center_thickness <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "center_thickness".to_string(),
+                parameter: "center_thickness".to_owned(),
                 value: self.center_thickness.to_string(),
-                constraint: "Lens thickness must be positive".to_string(),
+                constraint: "Lens thickness must be positive".to_owned(),
             }));
         }
 
         if self.radius_of_curvature == 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "radius_of_curvature".to_string(),
-                value: "0".to_string(),
-                constraint: "Radius of curvature cannot be zero".to_string(),
+                parameter: "radius_of_curvature".to_owned(),
+                value: "0".to_owned(),
+                constraint: "Radius of curvature cannot be zero".to_owned(),
             }));
         }
 

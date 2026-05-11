@@ -25,6 +25,7 @@ pub struct StoneFractureModel {
 
 impl StoneFractureModel {
     /// Create new fracture model for given material and grid dimensions.
+    #[must_use] 
     pub fn new(material: StoneMaterial, dimensions: (usize, usize, usize)) -> Self {
         Self {
             material,
@@ -35,6 +36,7 @@ impl StoneFractureModel {
 
     /// Get material properties.
     #[inline]
+    #[must_use] 
     pub fn material(&self) -> &StoneMaterial {
         &self.material
     }
@@ -65,12 +67,14 @@ impl StoneFractureModel {
 
     /// Get current damage field (0 = intact, 1 = fully fractured).
     #[inline]
+    #[must_use] 
     pub fn damage_field(&self) -> &Array3<f64> {
         &self.damage_field
     }
 
     /// Get distribution of fragment sizes (meters).
     #[inline]
+    #[must_use] 
     pub fn fragment_sizes(&self) -> &[f64] {
         &self.fragment_sizes
     }

@@ -1,6 +1,10 @@
 use super::{DispersionResults, NumericalValidator};
 
 impl NumericalValidator {
+    /// Validate dispersion.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn validate_dispersion(
         &self,
     ) -> Result<DispersionResults, Box<dyn std::error::Error>> {
@@ -62,6 +66,9 @@ impl NumericalValidator {
     /// Returns worst-case (maximum over 100 log-spaced k samples) phase-velocity error.
     ///
     /// References: Liu (1998), §3; Treeby & Cox (2010), §II.A.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_phase_error<S>(
         &self,
         _solver: &S,
@@ -102,6 +109,9 @@ impl NumericalValidator {
     /// Returns worst-case error (max over 100 log-spaced k samples).
     ///
     /// Reference: Taflove & Hagness (2005), §4.5, Eq. 4.73.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_phase_error_fdtd<S>(
         &self,
         _solver: &S,
@@ -136,6 +146,9 @@ impl NumericalValidator {
     /// phase error equals that of the underlying FDTD scheme (conservative upper bound).
     ///
     /// References: Blackstock (1966); Hamilton & Blackstock (1998), Ch. 3.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_phase_error_kuznetsov<S>(
         &self,
         solver: &S,

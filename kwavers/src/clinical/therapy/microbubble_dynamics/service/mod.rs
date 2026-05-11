@@ -27,12 +27,19 @@ pub struct MicrobubbleDynamicsService {
 
 impl MicrobubbleDynamicsService {
     /// Create new microbubble dynamics service
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(bubble_params: BubbleParameters) -> Self {
         let keller_miksis = KellerMiksisModel::new(bubble_params);
         Self { keller_miksis }
     }
 
     /// Create service from microbubble state
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_microbubble_state(state: &MicrobubbleState) -> KwaversResult<Self> {
         let params = Self::extract_bubble_parameters(state)?;
         Ok(Self::new(params))

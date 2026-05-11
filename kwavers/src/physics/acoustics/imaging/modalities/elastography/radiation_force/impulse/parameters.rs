@@ -44,6 +44,9 @@ impl PushPulseParameters {
     /// * `intensity` - Peak intensity in W/m²
     /// * `focal_depth` - Focal depth in meters
     /// * `f_number` - F-number (dimensionless)
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn new(
         frequency: f64,
         duration: f64,
@@ -54,27 +57,27 @@ impl PushPulseParameters {
         if frequency <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidValue {
-                    parameter: "frequency".to_string(),
+                    parameter: "frequency".to_owned(),
                     value: frequency,
-                    reason: "must be positive".to_string(),
+                    reason: "must be positive".to_owned(),
                 },
             ));
         }
         if duration <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidValue {
-                    parameter: "duration".to_string(),
+                    parameter: "duration".to_owned(),
                     value: duration,
-                    reason: "must be positive".to_string(),
+                    reason: "must be positive".to_owned(),
                 },
             ));
         }
         if intensity <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidValue {
-                    parameter: "intensity".to_string(),
+                    parameter: "intensity".to_owned(),
                     value: intensity,
-                    reason: "must be positive".to_string(),
+                    reason: "must be positive".to_owned(),
                 },
             ));
         }

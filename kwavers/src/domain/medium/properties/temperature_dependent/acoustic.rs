@@ -26,6 +26,10 @@ pub struct TemperatureDependentAcoustic {
 }
 
 impl TemperatureDependentAcoustic {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         base_properties: AcousticPropertyData,
         reference_temperature: f64,
@@ -68,33 +72,38 @@ impl TemperatureDependentAcoustic {
 
     /// `c(T) = c₀[1 + β(T − T₀)]`
     #[inline]
+    #[must_use] 
     pub fn sound_speed(&self, temperature: f64) -> f64 {
         let delta_t = temperature - self.reference_temperature;
-        self.base_properties.sound_speed * (1.0 + self.sound_speed_coefficient * delta_t)
+        self.base_properties.sound_speed * self.sound_speed_coefficient.mul_add(delta_t, 1.0)
     }
 
     /// `ρ(T) = ρ₀[1 − α_T(T − T₀)]`
     #[inline]
+    #[must_use] 
     pub fn density(&self, temperature: f64) -> f64 {
         let delta_t = temperature - self.reference_temperature;
-        self.base_properties.density * (1.0 - self.density_coefficient * delta_t)
+        self.base_properties.density * self.density_coefficient.mul_add(-delta_t, 1.0)
     }
 
     /// `Z(T) = ρ(T) × c(T)`
     #[inline]
+    #[must_use] 
     pub fn impedance(&self, temperature: f64) -> f64 {
         self.density(temperature) * self.sound_speed(temperature)
     }
 
     /// `α(T,f) = α₀(T₀) f^y [1 + γ(T − T₀)]`
     #[inline]
+    #[must_use] 
     pub fn absorption(&self, temperature: f64, frequency: f64) -> f64 {
         let delta_t = temperature - self.reference_temperature;
         self.base_properties.absorption_at_frequency(frequency)
-            * (1.0 + self.absorption_coefficient * delta_t)
+            * self.absorption_coefficient.mul_add(delta_t, 1.0)
     }
 
     /// Water properties — Duck (1990) Table 2.1
+    #[must_use] 
     pub fn water() -> Self {
         Self {
             base_properties: AcousticPropertyData::water(),
@@ -106,6 +115,7 @@ impl TemperatureDependentAcoustic {
     }
 
     /// Soft tissue — Duck (1990) Tables 4.1-4.3
+    #[must_use] 
     pub fn soft_tissue() -> Self {
         Self {
             base_properties: AcousticPropertyData::soft_tissue(),
@@ -117,6 +127,7 @@ impl TemperatureDependentAcoustic {
     }
 
     /// Liver — Bamber & Hill (1979), Duck (1990)
+    #[must_use] 
     pub fn liver() -> Self {
         Self {
             base_properties: AcousticPropertyData::liver(),
@@ -128,6 +139,7 @@ impl TemperatureDependentAcoustic {
     }
 
     /// Muscle — Duck (1990) Table 4.2
+    #[must_use] 
     pub fn muscle() -> Self {
         Self {
             base_properties: AcousticPropertyData::muscle(),
@@ -139,6 +151,7 @@ impl TemperatureDependentAcoustic {
     }
 
     /// Fat — Duck (1990) Table 4.2
+    #[must_use] 
     pub fn fat() -> Self {
         Self {
             base_properties: AcousticPropertyData::fat(),

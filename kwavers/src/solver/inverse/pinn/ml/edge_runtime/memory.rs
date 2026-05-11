@@ -3,6 +3,9 @@ use crate::core::error::{KwaversError, KwaversResult};
 
 impl MemoryAllocator {
     /// Create a new memory allocator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(total_memory: usize) -> Self {
         Self {
             total_memory,
@@ -12,6 +15,9 @@ impl MemoryAllocator {
     }
 
     /// Allocate a memory block with alignment
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub fn allocate_block(&mut self, size: usize, alignment: usize) -> KwaversResult<usize> {
         let aligned_size = size.div_ceil(alignment) * alignment;
 

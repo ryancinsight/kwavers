@@ -17,6 +17,11 @@ use num_complex::Complex64;
 ///
 /// Snapshot formation is controlled by `cfg.snapshot_selection`. When `None`, a conservative scenario
 /// is auto-derived; on failure the legacy analytic-baseband model is used as a deterministic fallback.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn capon_spatial_spectrum_point_complex_baseband(
     sensor_data: &Array3<f64>,
     sensor_positions: &[[f64; 3]],
@@ -33,8 +38,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
     }
     if n_sensors == 0 || n_samples == 0 {
         return Err(KwaversError::InvalidInput(
-            "capon_spatial_spectrum_point_complex_baseband requires n_sensors > 0 and n_samples > 0"
-                .to_string(),
+            "capon_spatial_spectrum_point_complex_baseband requires n_sensors > 0 and n_samples > 0".to_owned(),
         ));
     }
     if sensor_positions.len() != n_sensors {
@@ -45,14 +49,13 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
     }
     if candidate.iter().any(|v| !v.is_finite()) {
         return Err(KwaversError::InvalidInput(
-            "capon_spatial_spectrum_point_complex_baseband: candidate must be finite".to_string(),
+            "capon_spatial_spectrum_point_complex_baseband: candidate must be finite".to_owned(),
         ));
     }
 
     let sampling_frequency_hz = cfg.sampling_frequency_hz.ok_or_else(|| {
         KwaversError::InvalidInput(
-            "capon_spatial_spectrum_point_complex_baseband: cfg.sampling_frequency_hz is required"
-                .to_string(),
+            "capon_spatial_spectrum_point_complex_baseband: cfg.sampling_frequency_hz is required".to_owned(),
         )
     })?;
 
@@ -118,8 +121,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
     if !denom_re.is_finite() || denom_re <= 1e-18 {
         return Err(KwaversError::Numerical(
             crate::core::error::NumericalError::InvalidOperation(
-                "capon_spatial_spectrum_point_complex_baseband: non-positive or non-finite MVDR denominator"
-                    .to_string(),
+                "capon_spatial_spectrum_point_complex_baseband: non-positive or non-finite MVDR denominator".to_owned(),
             ),
         ));
     }

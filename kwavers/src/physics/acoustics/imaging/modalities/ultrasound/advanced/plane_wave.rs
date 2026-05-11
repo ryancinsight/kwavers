@@ -99,7 +99,7 @@ impl PlaneWaveReconstruction {
 
     /// Calculate receive delay for plane wave
     fn calculate_receive_delay(&self, x: f64, z: f64, elem_x: f64) -> f64 {
-        let distance = ((x - elem_x).powi(2) + z.powi(2)).sqrt();
+        let distance = (x - elem_x).hypot(z);
         distance / self.config.sound_speed
     }
 }

@@ -15,6 +15,9 @@ pub struct NonlinearScattering {
 
 impl NonlinearScattering {
     /// Create new nonlinear scattering model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> KwaversResult<Self> {
         Ok(Self {
             harmonic_efficiency: 0.3,
@@ -33,6 +36,9 @@ impl NonlinearScattering {
     /// # Returns
     ///
     /// Nonlinear scattering coefficient
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_scattering(
         &self,
         population: &MicrobubblePopulation,
@@ -55,12 +61,12 @@ impl NonlinearScattering {
             .reference_bubble
             .resonance_frequency(101325.0, 1000.0);
         let freq_ratio = frequency / resonance_freq;
-        let resonance_factor = 1.0 / (1.0 + (freq_ratio - 1.0).powi(2));
+        let resonance_factor = 1.0 / (freq_ratio - 1.0).mul_add(freq_ratio - 1.0, 1.0);
 
         // Total nonlinear scattering
         let nonlinear_scattering = linear_scattering
             * concentration
-            * (1.0 + self.harmonic_efficiency * pressure_factor)
+            * self.harmonic_efficiency.mul_add(pressure_factor, 1.0)
             * resonance_factor;
 
         Ok(nonlinear_scattering)
@@ -90,6 +96,7 @@ pub struct HarmonicImagingParameters {
 
 impl HarmonicImaging {
     /// Create new harmonic imaging system
+    #[must_use] 
     pub fn new(fundamental_freq: f64) -> Self {
         let harmonic_frequencies = vec![
             fundamental_freq * 2.0, // Second harmonic
@@ -109,6 +116,7 @@ impl HarmonicImaging {
     }
 
     /// Extract harmonic components from scattered signal
+    #[must_use] 
     pub fn extract_harmonics(&self, signal: &[f64], sample_rate: f64) -> Vec<f64> {
         self.harmonic_frequencies
             .iter()
@@ -132,6 +140,6 @@ impl HarmonicImaging {
             imag += sample * phase.sin();
         }
 
-        (real * real + imag * imag).sqrt() / n as f64
+        real.hypot(imag) / n as f64
     }
 }

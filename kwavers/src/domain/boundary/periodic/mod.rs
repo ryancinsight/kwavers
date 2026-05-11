@@ -42,7 +42,7 @@ pub struct PeriodicConfig {
     pub periodic_x: bool,
     pub periodic_y: bool,
     pub periodic_z: bool,
-    /// Bloch wave vector phase shift k·L [rad] for each direction.
+    /// Bloch wave vector phase shift k·L (rad) for each direction.
     /// For standard periodic boundaries, use [0.0, 0.0, 0.0].
     pub bloch_phase: [f64; 3],
 }
@@ -59,10 +59,12 @@ impl Default for PeriodicConfig {
 }
 
 impl PeriodicConfig {
+    #[must_use] 
     pub fn all() -> Self {
         Self::default()
     }
 
+    #[must_use] 
     pub fn new(periodic_x: bool, periodic_y: bool, periodic_z: bool) -> Self {
         Self {
             periodic_x,
@@ -71,18 +73,25 @@ impl PeriodicConfig {
             bloch_phase: [0.0, 0.0, 0.0],
         }
     }
-
+    /// With bloch phase.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_bloch_phase(mut self, bloch_phase: [f64; 3]) -> Self {
         self.bloch_phase = bloch_phase;
         self
     }
-
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub(super) fn validate(&self) -> KwaversResult<()> {
         for &phase in &self.bloch_phase {
             if !phase.is_finite() {
                 return Err(KwaversError::Validation(
                     crate::core::error::validation::ValidationError::ConstraintViolation {
-                        message: "Bloch phase must be finite".to_string(),
+                        message: "Bloch phase must be finite".to_owned(),
                     },
                 ));
             }

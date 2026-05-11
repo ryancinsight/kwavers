@@ -5,7 +5,7 @@ use ndarray::Array3;
 fn test_stencil_creation() {
     let config = SimdStencilConfig::default();
     let result = SimdStencilProcessor::new(64, 64, 64, config);
-    assert!(result.is_ok());
+    let _processor = result.unwrap();
 }
 
 #[test]
@@ -25,7 +25,6 @@ fn test_pressure_update() {
     let velocity_div = Array3::zeros((16, 16, 16));
 
     let result = processor.update_pressure(&pressure, &pressure_prev, &velocity_div);
-    assert!(result.is_ok());
 
     let updated = result.unwrap();
     assert_eq!(updated.shape(), pressure.shape());
@@ -40,7 +39,7 @@ fn test_velocity_update() {
     let pressure = Array3::ones((16, 16, 16));
 
     let result = processor.update_velocity(&mut velocity, &pressure);
-    assert!(result.is_ok());
+    result.unwrap();
     assert_eq!(velocity.shape(), &[16, 16, 16]);
 }
 
@@ -56,7 +55,6 @@ fn test_fused_update() {
     let velocity_div = Array3::zeros((16, 16, 16));
 
     let result = processor.fused_update(&pressure, &pressure_prev, &mut velocity, &velocity_div);
-    assert!(result.is_ok());
 
     let p_new = result.unwrap();
     assert_eq!(p_new.shape(), pressure.shape());
@@ -65,6 +63,9 @@ fn test_fused_update() {
 
 /// Tiled and non-tiled (tile=256) results must be bitwise identical on a 17³ grid.
 /// Non-power-of-two grid size exercises tile boundary handling.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_tiling_matches_naive() {
     let n = 17usize;
@@ -99,6 +100,9 @@ fn test_tiling_matches_naive() {
 }
 
 /// In-place velocity update must match the clone-based path.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_velocity_inplace_no_regression() {
     let n = 16usize;

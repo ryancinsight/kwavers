@@ -68,6 +68,13 @@ impl AdaptiveSampler {
     }
 
     /// Resample collocation points based on PDE residuals.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn resample(&mut self, residuals: &[f64]) -> KwaversResult<Vec<usize>> {
         let n_candidates = residuals.len();
         if n_candidates == 0 {

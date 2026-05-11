@@ -30,6 +30,9 @@ pub struct BeamSteering {
 
 impl BeamSteering {
     /// Create a new beam steering controller
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
         let num_elements = element_positions.nrows();
@@ -43,6 +46,9 @@ impl BeamSteering {
     }
 
     /// Set steering angles (azimuth and elevation in degrees)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_steering_angles(&mut self, azimuth: f64, elevation: f64) -> KwaversResult<()> {
         if azimuth.to_radians().abs() > MAX_STEERING_ANGLE
             || elevation.to_radians().abs() > MAX_STEERING_ANGLE
@@ -59,6 +65,9 @@ impl BeamSteering {
     }
 
     /// Calculate phase distribution for current steering angles
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn calculate_phase_distribution(&mut self) -> KwaversResult<()> {
         let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;
@@ -89,7 +98,7 @@ impl BeamSteering {
         for i in 0..self.element_positions.nrows() - 1 {
             let pos1 = self.element_positions.row(i);
             let pos2 = self.element_positions.row(i + 1);
-            let spacing = ((pos2[0] - pos1[0]).powi(2) + (pos2[1] - pos1[1]).powi(2)).sqrt();
+            let spacing = (pos2[0] - pos1[0]).hypot(pos2[1] - pos1[1]);
             if spacing > 0.0 && spacing < min_spacing {
                 min_spacing = spacing;
             }
@@ -137,7 +146,7 @@ impl BeamSteering {
             sum_imag += phase.sin();
         }
 
-        (sum_real.powi(2) + sum_imag.powi(2)).sqrt() / self.element_positions.nrows() as f64
+        sum_real.hypot(sum_imag) / self.element_positions.nrows() as f64
     }
 }
 

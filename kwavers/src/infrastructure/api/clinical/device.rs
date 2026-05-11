@@ -11,6 +11,9 @@ use crate::infrastructure::api::{APIError, PaginationParams, UltrasoundDevice};
 use super::state::ClinicalAppState;
 
 /// Register ultrasound device endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub async fn register_device(
     State(state): State<ClinicalAppState>,
     auth: AuthenticatedUser,
@@ -36,6 +39,9 @@ pub async fn register_device(
 }
 
 /// Get device status endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub async fn get_device_status(
     State(state): State<ClinicalAppState>,
     Path(device_id): Path<String>,
@@ -59,6 +65,9 @@ pub async fn get_device_status(
 }
 
 /// List connected devices endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub async fn list_devices(
     State(state): State<ClinicalAppState>,
     _auth: AuthenticatedUser,

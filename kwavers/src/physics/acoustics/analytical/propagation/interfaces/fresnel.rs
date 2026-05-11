@@ -39,12 +39,18 @@ pub struct FresnelCalculator {
 
 impl FresnelCalculator {
     /// Create a new Fresnel calculator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(n1: f64, n2: f64) -> Self {
         Self { n1, n2 }
     }
 
     /// Calculate Fresnel coefficients for given angles and polarization
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calculate(
         &self,
         incident_angle: f64,
@@ -63,14 +69,14 @@ impl FresnelCalculator {
             Polarization::TransverseMagnetic => (rp, tp, 0.0, 0.0),
             Polarization::Unpolarized => {
                 // Average of S and P polarizations for unpolarized light
-                let r_avg = ((rs * rs + rp * rp) / 2.0).sqrt();
-                let t_avg = ((ts * ts + tp * tp) / 2.0).sqrt();
+                let r_avg = (rs.mul_add(rs, rp * rp) / 2.0).sqrt();
+                let t_avg = (ts.mul_add(ts, tp * tp) / 2.0).sqrt();
                 (r_avg, t_avg, 0.0, 0.0)
             }
             Polarization::Circular | Polarization::Elliptical => {
                 // For circular/elliptical, use equal weighting
-                let r_avg = ((rs * rs + rp * rp) / 2.0).sqrt();
-                let t_avg = ((ts * ts + tp * tp) / 2.0).sqrt();
+                let r_avg = (rs.mul_add(rs, rp * rp) / 2.0).sqrt();
+                let t_avg = (ts.mul_add(ts, tp * tp) / 2.0).sqrt();
                 (r_avg, t_avg, 0.0, 0.0)
             }
         };
@@ -92,6 +98,9 @@ impl FresnelCalculator {
     }
 
     /// Calculate S-polarization (TE) Fresnel coefficients
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn calculate_s_polarization(
         &self,
         incident_angle: f64,
@@ -102,15 +111,18 @@ impl FresnelCalculator {
 
         // Fresnel equations for S-polarization
         // rs = (n1*cos(θi) - n2*cos(θt)) / (n1*cos(θi) + n2*cos(θt))
-        let rs = (self.n1 * cos_i - self.n2 * cos_t) / (self.n1 * cos_i + self.n2 * cos_t);
+        let rs = self.n1.mul_add(cos_i, -(self.n2 * cos_t)) / self.n1.mul_add(cos_i, self.n2 * cos_t);
 
         // ts = 2*n1*cos(θi) / (n1*cos(θi) + n2*cos(θt))
-        let ts = (2.0 * self.n1 * cos_i) / (self.n1 * cos_i + self.n2 * cos_t);
+        let ts = (2.0 * self.n1 * cos_i) / self.n1.mul_add(cos_i, self.n2 * cos_t);
 
         Ok((rs, ts))
     }
 
     /// Calculate P-polarization (TM) Fresnel coefficients
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn calculate_p_polarization(
         &self,
         incident_angle: f64,
@@ -121,15 +133,18 @@ impl FresnelCalculator {
 
         // Fresnel equations for P-polarization
         // rp = (n2*cos(θi) - n1*cos(θt)) / (n2*cos(θi) + n1*cos(θt))
-        let rp = (self.n2 * cos_i - self.n1 * cos_t) / (self.n2 * cos_i + self.n1 * cos_t);
+        let rp = self.n2.mul_add(cos_i, -(self.n1 * cos_t)) / self.n2.mul_add(cos_i, self.n1 * cos_t);
 
         // tp = 2*n1*cos(θi) / (n2*cos(θi) + n1*cos(θt))
-        let tp = (2.0 * self.n1 * cos_i) / (self.n2 * cos_i + self.n1 * cos_t);
+        let tp = (2.0 * self.n1 * cos_i) / self.n2.mul_add(cos_i, self.n1 * cos_t);
 
         Ok((rp, tp))
     }
 
     /// Calculate reflectance (power reflection coefficient)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn reflectance(
         &self,
         incident_angle: f64,
@@ -149,12 +164,15 @@ impl FresnelCalculator {
         match polarization {
             Polarization::TransverseElectric => Ok(coeffs.rs * coeffs.rs),
             Polarization::TransverseMagnetic => Ok(coeffs.rp * coeffs.rp),
-            Polarization::Unpolarized => Ok((coeffs.rs * coeffs.rs + coeffs.rp * coeffs.rp) / 2.0),
+            Polarization::Unpolarized => Ok(coeffs.rs.mul_add(coeffs.rs, coeffs.rp * coeffs.rp) / 2.0),
             _ => Ok(coeffs.reflection_amplitude * coeffs.reflection_amplitude),
         }
     }
 
     /// Calculate transmittance (power transmission coefficient)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn transmittance(
         &self,
         incident_angle: f64,

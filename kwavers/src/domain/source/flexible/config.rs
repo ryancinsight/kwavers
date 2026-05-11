@@ -83,8 +83,8 @@ pub enum CalibrationMethod {
     },
     /// Hybrid approach combining multiple methods
     Hybrid {
-        primary_method: Box<CalibrationMethod>,
-        fallback_method: Box<CalibrationMethod>,
+        primary_method: Box<Self>,
+        fallback_method: Box<Self>,
     },
 }
 

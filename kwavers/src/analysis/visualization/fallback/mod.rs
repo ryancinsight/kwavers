@@ -17,11 +17,17 @@ pub struct FallbackRenderer {
 
 impl FallbackRenderer {
     /// Create a new fallback renderer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> Self {
         Self { active: true }
     }
 
     /// Render field using CPU fallback
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn render_field(
         &self,
         field: &Array3<f64>,
@@ -53,6 +59,9 @@ impl FallbackRenderer {
     }
 
     /// Render a 2D slice as ASCII art
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn render_ascii_slice(&self, field: &Array3<f64>, z_slice: usize) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
 
@@ -90,6 +99,9 @@ impl FallbackRenderer {
     }
 
     /// Export field data to file
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn export_field(
         &self,
         field: &Array3<f64>,
@@ -122,6 +134,9 @@ impl Default for FallbackRenderer {
 }
 
 /// Fallback function for simple field rendering
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn render_field(
     field: &Array3<f64>,
     field_type: UnifiedFieldType,
@@ -132,6 +147,9 @@ pub fn render_field(
 }
 
 /// Fallback function for field export
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn export_field(
     field: &Array3<f64>,
     field_type: UnifiedFieldType,

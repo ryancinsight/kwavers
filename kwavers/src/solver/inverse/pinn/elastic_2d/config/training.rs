@@ -80,6 +80,7 @@ impl Default for Config {
 }
 
 impl Config {
+    #[must_use] 
     pub fn forward_problem(lambda: f64, mu: f64, rho: f64) -> Self {
         Self {
             optimize_lambda: false,
@@ -99,6 +100,7 @@ impl Config {
         }
     }
 
+    #[must_use] 
     pub fn inverse_problem(lambda_guess: f64, mu_guess: f64, rho_guess: f64) -> Self {
         Self {
             optimize_lambda: true,
@@ -119,22 +121,25 @@ impl Config {
             ..Default::default()
         }
     }
-
+    /// Validate.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> Result<(), String> {
         if self.hidden_layers.is_empty() {
-            return Err("Must have at least one hidden layer".to_string());
+            return Err("Must have at least one hidden layer".to_owned());
         }
         if self.hidden_layers.contains(&0) {
-            return Err("Hidden layer sizes must be positive".to_string());
+            return Err("Hidden layer sizes must be positive".to_owned());
         }
         if self.learning_rate <= 0.0 || self.learning_rate >= 1.0 {
-            return Err("Learning rate must be in (0, 1)".to_string());
+            return Err("Learning rate must be in (0, 1)".to_owned());
         }
         if self.n_epochs == 0 {
-            return Err("Number of epochs must be positive".to_string());
+            return Err("Number of epochs must be positive".to_owned());
         }
         if self.n_collocation_interior == 0 {
-            return Err("Number of interior collocation points must be positive".to_string());
+            return Err("Number of interior collocation points must be positive".to_owned());
         }
         if self.loss_weights.pde < 0.0
             || self.loss_weights.boundary < 0.0
@@ -142,16 +147,16 @@ impl Config {
             || self.loss_weights.data < 0.0
             || self.loss_weights.interface < 0.0
         {
-            return Err("Loss weights must be non-negative".to_string());
+            return Err("Loss weights must be non-negative".to_owned());
         }
         if self.optimize_lambda && self.lambda_init.is_none() {
-            return Err("lambda_init required when optimize_lambda is true".to_string());
+            return Err("lambda_init required when optimize_lambda is true".to_owned());
         }
         if self.optimize_mu && self.mu_init.is_none() {
-            return Err("mu_init required when optimize_mu is true".to_string());
+            return Err("mu_init required when optimize_mu is true".to_owned());
         }
         if self.optimize_rho && self.rho_init.is_none() {
-            return Err("rho_init required when optimize_rho is true".to_string());
+            return Err("rho_init required when optimize_rho is true".to_owned());
         }
         Ok(())
     }

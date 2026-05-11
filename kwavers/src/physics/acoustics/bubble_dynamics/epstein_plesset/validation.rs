@@ -6,6 +6,9 @@ use crate::core::error::KwaversResult;
 
 impl EpsteinPlessetStabilitySolver {
     /// Validate implementation against literature values
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate_implementation(&self) -> KwaversResult<ValidationResults> {
         let analysis = self.analyze_stability();
 

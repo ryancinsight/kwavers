@@ -103,9 +103,15 @@ pub use types::BoundaryType as CanonicalBoundaryType;
 /// therefore includes `apply_light(...)` for fluence/fluence-rate boundary handling.
 pub trait Boundary: Debug + Send + Sync {
     /// Downcast support for boundary-specific logic in solver internals.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
     /// Applies boundary conditions to the acoustic field in spatial domain.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_acoustic(
         &mut self,
         field: ArrayViewMut3<f64>,
@@ -114,6 +120,9 @@ pub trait Boundary: Debug + Send + Sync {
     ) -> KwaversResult<()>;
 
     /// Applies boundary conditions to the acoustic field in frequency domain (k-space).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_acoustic_freq(
         &mut self,
         field: &mut Array3<crate::math::fft::Complex64>,
@@ -124,6 +133,9 @@ pub trait Boundary: Debug + Send + Sync {
     /// Applies boundary conditions to the acoustic field with a scaling factor.
     ///
     /// Default implementation applies regular boundary conditions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_acoustic_with_factor(
         &mut self,
         field: ArrayViewMut3<f64>,
@@ -145,6 +157,9 @@ pub trait Boundary: Debug + Send + Sync {
     /// per-direction PML: `rho_x *= pml_x`, `rho_y *= pml_y`, `rho_z *= pml_z`.
     ///
     /// Default implementation falls back to the full (all-direction) apply_acoustic.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_acoustic_directional(
         &mut self,
         field: ArrayViewMut3<f64>,
@@ -170,6 +185,9 @@ pub trait Boundary: Debug + Send + Sync {
     ///
     /// Default: falls back to `apply_acoustic_directional` (non-staggered), which is exact
     /// for boundaries that do not distinguish collocated from staggered fields.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_velocity_pml_directional(
         &mut self,
         field: ArrayViewMut3<f64>,

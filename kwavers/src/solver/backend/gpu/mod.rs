@@ -110,6 +110,9 @@ impl GPUBackend {
     /// 3. Software renderer (fallback)
     ///
     /// Returns error if no suitable backend is available.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new() -> KwaversResult<Self> {
         // Initialize WGPU context
         let context = WGPUContext::new()?;
@@ -296,6 +299,9 @@ impl GPUBackend {
     /// };
     /// let mut orchestrator = backend.create_realtime_orchestrator(config)?;
     /// ```
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn create_realtime_orchestrator(
         &self,
         config: RealtimeConfig,
@@ -329,6 +335,9 @@ impl GPUBackend {
     /// - Execute conservative interpolation for coupling
     /// - Download results to CPU
     /// - Handle potential budget violations with warnings
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn multiphysics_step(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,

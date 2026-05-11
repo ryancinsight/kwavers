@@ -38,7 +38,7 @@ impl DispersionModel {
         if (self.y - 2.0).abs() < 1e-10 {
             self.c0
         } else {
-            self.c0 / (1.0 - self.alpha_0 * tan_factor * omega.powf(self.y - 1.0))
+            self.c0 / (self.alpha_0 * tan_factor).mul_add(-omega.powf(self.y - 1.0), 1.0)
         }
     }
 
@@ -78,7 +78,7 @@ impl DispersionCorrection {
         k_values: &Array3<f64>,
         dt: f64,
     ) {
-        Zip::from(spectrum).and(k_values).for_each(|s, &k| {
+        Zip::from(spectrum).and(k_values).par_for_each(|s, &k| {
             if k != 0.0 {
                 // Frequency corresponding to this k value
                 let freq = k * self.model.c0 / (2.0 * std::f64::consts::PI);

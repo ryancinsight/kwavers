@@ -11,7 +11,7 @@ use std::f64::consts::PI;
 /// slightly faster than the local sound speed (c = c₀ + βu), and the negative phase
 /// travels slightly slower. This causes the wave to steepen until a shock forms.
 ///
-/// Returns distance [m]
+/// Returns distance (m)
 #[must_use]
 pub fn shock_formation_distance(
     initial_pressure: f64,
@@ -35,7 +35,7 @@ pub fn shock_formation_distance(
 /// Thermoviscous dissipation counteracts nonlinear steepening, resulting in a
 /// finite shock thickness.
 ///
-/// Returns thickness [m]
+/// Returns thickness (m)
 #[must_use]
 pub fn shock_thickness(shock_pressure: f64, params: &NonlinearParameters) -> f64 {
     // Basic theoretical shock thickness (weak shock theory)

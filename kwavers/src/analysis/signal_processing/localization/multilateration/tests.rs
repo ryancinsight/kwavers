@@ -11,8 +11,7 @@ fn test_multilateration_creation() {
         [0.0, 0.0, 0.01],
     ];
     let config = MultilaterationConfig::default();
-    let multi = Multilateration::new(sensors, config);
-    assert!(multi.is_ok());
+    let _multi = Multilateration::new(sensors, config).unwrap();
 }
 
 #[test]
@@ -34,7 +33,7 @@ fn test_set_uncertainties() {
     let mut multi = Multilateration::new(sensors, config).unwrap();
 
     let uncertainties = vec![1e-9, 1e-9, 1e-9, 1e-9];
-    assert!(multi.set_sensor_uncertainties(uncertainties).is_ok());
+    multi.set_sensor_uncertainties(uncertainties).unwrap();
 
     let bad_uncertainties = vec![1e-9, 1e-9];
     assert!(multi.set_sensor_uncertainties(bad_uncertainties).is_err());

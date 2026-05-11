@@ -12,6 +12,9 @@ use uuid::Uuid;
 
 impl AuthMiddleware {
     /// Authenticate user from JWT token
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn authenticate_jwt(&self, token: &str) -> Result<AuthenticatedUser, APIError> {
         let validation = Validation::new(self.jwt_config.algorithm);
         let token_data =
@@ -60,6 +63,9 @@ impl AuthMiddleware {
     }
 
     /// Authenticate user from API key
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn authenticate_api_key(
         &self,
         api_key: &str,
@@ -95,6 +101,9 @@ impl AuthMiddleware {
     }
 
     /// Authorize user action
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn authorize(
         &self,
         user: &AuthenticatedUser,
@@ -142,6 +151,9 @@ impl AuthMiddleware {
     }
 
     /// Generate JWT token for user
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn generate_token(
         &self,
         user_id: &str,

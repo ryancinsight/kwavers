@@ -12,9 +12,6 @@ pub struct IMEXRK {
     pub(super) a_implicit: Vec<Vec<f64>>,
     /// RK weights (`b_i`)
     pub(super) b: Vec<f64>,
-    /// RK nodes (`c_i`)
-    #[allow(dead_code)]
-    pub(super) c: Vec<f64>,
     /// Number of stages
     pub(super) s: usize,
     /// Order of the method
@@ -27,7 +24,7 @@ impl IMEXRK {
     /// Create a new IMEX-RK scheme
     #[must_use]
     pub fn new(config: IMEXRKConfig) -> Self {
-        let (a_explicit, a_implicit, b, c, s, p) = match config.scheme_type {
+        let (a_explicit, a_implicit, b, _c, s, p) = match config.scheme_type {
             IMEXRKType::SSP2_222 => Self::ssp2_222_coefficients(),
             IMEXRKType::SSP3_333 => Self::ssp3_333_coefficients(),
             IMEXRKType::ARK3 => Self::ark3_coefficients(),
@@ -39,7 +36,6 @@ impl IMEXRK {
             a_explicit,
             a_implicit,
             b,
-            c,
             s,
             p,
             stiffness_factor: 1.0,
@@ -60,7 +56,7 @@ impl IMEXRK {
 
         // Implicit tableau (L-stable)
         let gamma = 1.0 - 1.0 / 2.0_f64.sqrt();
-        let a_implicit = vec![vec![gamma, 0.0], vec![1.0 - 2.0 * gamma, gamma]];
+        let a_implicit = vec![vec![gamma, 0.0], vec![2.0f64.mul_add(-gamma, 1.0), gamma]];
 
         let b = vec![0.5, 0.5];
         let c = vec![gamma, 1.0 - gamma];

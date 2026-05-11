@@ -3,6 +3,9 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Construct a minimal grid suitable for HAS tests.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 fn make_grid(nx: usize, ny: usize, nz: usize) -> Grid {
     Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).unwrap()
 }
@@ -24,6 +27,9 @@ fn make_grid(nx: usize, ny: usize, nz: usize) -> Grid {
 ///
 /// ## References
 /// - Szabo TL (1994). J. Acoust. Soc. Am. 96(1), 491–500. DOI: 10.1121/1.410434
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_absorption_reduces_field_energy() {
     let grid = make_grid(8, 8, 4);
@@ -79,6 +85,9 @@ fn test_absorption_reduces_field_energy() {
 ///
 /// ## References
 /// - Goodman JW (2005). Introduction to Fourier Optics. Roberts & Co., §3.3.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_lossless_linear_energy_conservation() {
     // Use a low frequency so k·dz << 1 (small phase per step, no evanescent loss)
@@ -134,6 +143,9 @@ fn test_lossless_linear_energy_conservation() {
 ///
 /// ## References
 /// - Strang G (1968). SIAM J. Numer. Anal. 5(3), 506–517. DOI: 10.1137/0705041
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_strang_splitting_second_order_convergence() {
     let grid = make_grid(8, 8, 4);
@@ -224,6 +236,9 @@ fn test_strang_splitting_second_order_convergence() {
 ///
 /// ## References
 /// - Hamilton MF, Blackstock DT (2008). Nonlinear Acoustics. ASA Press, §4.2.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_harmonic_generation_by_nonlinearity() {
     let nz = 32;

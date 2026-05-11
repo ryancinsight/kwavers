@@ -84,6 +84,13 @@ pub mod burn_wave_equation_2d;
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_3d;
 
+// Field-surrogate PINN: parameterised (x, y, z, f0, pnp) → (p_min,
+// p_max, p_rms) for treatment-planner use. Static surrogate trained
+// against `physics::field_surrogate::KernelCube` data — see module
+// docs for the pipeline and Phase C-1/C-2 split.
+#[cfg(feature = "pinn")]
+pub mod field_surrogate;
+
 // Sprint 151: GPU Acceleration & Advanced Geometries
 // #[cfg(feature = "pinn")]
 // pub mod gpu_accelerator;
@@ -288,9 +295,13 @@ pub struct PINN1DWave;
 
 #[cfg(not(feature = "pinn"))]
 impl PINN1DWave {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(_wave_speed: f64, _config: ()) -> Result<Self, crate::core::error::KwaversError> {
         Err(crate::core::error::KwaversError::InvalidInput(
-            "PINN feature not enabled. Add 'pinn' feature to Cargo.toml".to_string(),
+            "PINN feature not enabled. Add 'pinn' feature to Cargo.toml".to_owned(),
         ))
     }
 }
@@ -304,7 +315,7 @@ mod tests {
             use burn::backend::{Autodiff, NdArray};
             type TestBackend = Autodiff<NdArray<f32>>;
             let solver = super::UniversalPINNSolver::<TestBackend>::new();
-            assert!(solver.is_ok());
+            let _solver = solver.unwrap();
         }
 
         #[cfg(not(feature = "pinn"))]

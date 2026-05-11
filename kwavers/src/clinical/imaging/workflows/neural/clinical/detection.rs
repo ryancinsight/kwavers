@@ -4,6 +4,10 @@ use crate::core::error::KwaversResult;
 use ndarray::{Array3, ArrayView3};
 
 impl ClinicalDecisionSupport {
+    /// Detect lesions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn detect_lesions(
         &self,
         volume: ArrayView3<f32>,
@@ -25,14 +29,12 @@ impl ClinicalDecisionSupport {
                     let gradient_mag = features
                         .morphological
                         .get("gradient_magnitude")
-                        .map(|arr| arr[[x, y, z]])
-                        .unwrap_or(0.0);
+                        .map_or(0.0, |arr| arr[[x, y, z]]);
 
                     let speckle_var = features
                         .texture
                         .get("speckle_variance")
-                        .map(|arr| arr[[x, y, z]])
-                        .unwrap_or(0.0);
+                        .map_or(0.0, |arr| arr[[x, y, z]]);
 
                     let is_high_contrast = vol_val > self.config.contrast_abnormality_threshold;
                     let is_high_confidence = conf_val > self.config.lesion_confidence_threshold;
@@ -80,7 +82,7 @@ impl ClinicalDecisionSupport {
         let (dim_x, dim_y, dim_z) = volume.dim();
 
         let local_mean = self.compute_local_statistics(&volume, seed_x, seed_y, seed_z);
-        let threshold = local_mean + 2.0 * self.config.segmentation_sensitivity;
+        let threshold = 2.0f32.mul_add(self.config.segmentation_sensitivity, local_mean);
 
         let mut visited = Array3::<bool>::from_elem((dim_x, dim_y, dim_z), false);
         let mut component_voxels = Vec::new();
@@ -120,7 +122,7 @@ impl ClinicalDecisionSupport {
         while let Some((x, y, z)) = queue.pop_front() {
             component_voxels.push((x, y, z));
 
-            for (dx, dy, dz) in offsets.iter() {
+            for (dx, dy, dz) in &offsets {
                 let nx = x as isize + dx;
                 let ny = y as isize + dy;
                 let nz = z as isize + dz;
@@ -147,7 +149,7 @@ impl ClinicalDecisionSupport {
         let voxel_volume_mm3 = self.config.voxel_size_mm.powi(3);
         let lesion_volume_mm3 = component_voxels.len() as f32 * voxel_volume_mm3;
         let equivalent_radius_mm =
-            (3.0 * lesion_volume_mm3 / (4.0 * std::f32::consts::PI)).powf(1.0 / 3.0);
+            (3.0 * lesion_volume_mm3 / (4.0 * std::f32::consts::PI)).cbrt();
         2.0 * equivalent_radius_mm
     }
 
@@ -209,11 +211,11 @@ impl ClinicalDecisionSupport {
         _z: usize,
     ) -> String {
         if intensity > 3.0 {
-            "Hyperechoic Lesion".to_string()
+            "Hyperechoic Lesion".to_owned()
         } else if intensity < 0.5 {
-            "Hypoechoic Lesion".to_string()
+            "Hypoechoic Lesion".to_owned()
         } else {
-            "Isoechoic Lesion".to_string()
+            "Isoechoic Lesion".to_owned()
         }
     }
 

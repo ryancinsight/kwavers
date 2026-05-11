@@ -22,6 +22,9 @@ pub trait AcousticWaveModel: Debug + Send + Sync {
     /// * `medium` - A trait object implementing `Medium`, providing material properties.
     /// * `dt` - The time step size for this update.
     /// * `t` - The current simulation time.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[allow(clippy::too_many_arguments)]
     fn update_wave(
         &mut self,

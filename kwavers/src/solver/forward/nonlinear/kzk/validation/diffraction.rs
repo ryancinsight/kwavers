@@ -12,6 +12,9 @@ mod tests {
     ///
     /// This test propagates to full Rayleigh distance with default grid.
     /// Execution time: >60s, classified as Tier 3 comprehensive validation.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     #[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
     fn test_gaussian_beam_diffraction() {
@@ -129,6 +132,9 @@ mod tests {
     /// Test linear propagation of Gaussian beam (FAST - Tier 1)
     /// Fast version with reduced grid and fewer steps for CI/CD.
     /// Execution time: <2s, classified as Tier 1 fast validation.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_gaussian_beam_diffraction_fast() {
         let config = KZKConfig {

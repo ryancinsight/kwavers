@@ -21,7 +21,7 @@ impl Boundary for CPMLBoundary {
         // (split-field PML, applied twice per step = net exp(-sigma*dt)).
         let dt = self.estimate_dt_from_grid(grid);
 
-        Zip::indexed(&mut field).for_each(|(i, j, k), val| {
+        Zip::indexed(&mut field).par_for_each(|(i, j, k), val| {
             let s_x = self.profiles.sigma_x[i];
             let s_y = self.profiles.sigma_y[j];
             let s_z = self.profiles.sigma_z[k];
@@ -43,7 +43,7 @@ impl Boundary for CPMLBoundary {
     ) -> KwaversResult<()> {
         let dt = self.estimate_dt_from_grid(grid);
 
-        Zip::indexed(field).for_each(|(i, j, k), val| {
+        Zip::indexed(field).par_for_each(|(i, j, k), val| {
             let s_x = self.profiles.sigma_x[i];
             let s_y = self.profiles.sigma_y[j];
             let s_z = self.profiles.sigma_z[k];
@@ -67,6 +67,9 @@ impl Boundary for CPMLBoundary {
     ///   ux    *= pml_x,  uy    *= pml_y,  uz    *= pml_z
     ///
     /// Ref: Treeby & Cox (2010), J. Biomed. Opt. 15(2), Eq. (3)-(5)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_acoustic_directional(
         &mut self,
         mut field: ArrayViewMut3<f64>,
@@ -75,7 +78,7 @@ impl Boundary for CPMLBoundary {
         axis: usize,
     ) -> KwaversResult<()> {
         let dt = self.estimate_dt_from_grid(grid);
-        Zip::indexed(&mut field).for_each(|(i, j, k), val| {
+        Zip::indexed(&mut field).par_for_each(|(i, j, k), val| {
             let sigma = match axis {
                 0 => self.profiles.sigma_x[i],
                 1 => self.profiles.sigma_y[j],
@@ -99,6 +102,9 @@ impl Boundary for CPMLBoundary {
     ///
     /// This matches k-Wave's behavior and corrects the ≈ 20% amplitude under-prediction
     /// that occurs when non-staggered sigma is applied to staggered velocity fields.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_velocity_pml_directional(
         &mut self,
         mut field: ArrayViewMut3<f64>,
@@ -107,7 +113,7 @@ impl Boundary for CPMLBoundary {
         axis: usize,
     ) -> KwaversResult<()> {
         let dt = self.estimate_dt_from_grid(grid);
-        Zip::indexed(&mut field).for_each(|(i, j, k), val| {
+        Zip::indexed(&mut field).par_for_each(|(i, j, k), val| {
             let sigma = match axis {
                 0 => self.profiles.sigma_x_sgx[i],
                 1 => self.profiles.sigma_y_sgy[j],

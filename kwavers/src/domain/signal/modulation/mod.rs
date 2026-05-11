@@ -21,9 +21,15 @@ use crate::core::error::KwaversResult;
 /// Common trait for all modulation schemes
 pub trait Modulation {
     /// Apply modulation to a carrier signal
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn modulate(&self, carrier: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>>;
 
     /// Demodulate a modulated signal
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn demodulate(&self, signal: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>>;
 }
 

@@ -61,15 +61,13 @@ impl DispersionAnalysis {
         let sin_ky_dy_half = (0.5 * ky * dy).sin();
         let sin_kz_dz_half = (0.5 * kz * dz).sin();
 
-        let sin_squared_omega_dt_half = cfl_x * cfl_x * sin_kx_dx_half * sin_kx_dx_half
-            + cfl_y * cfl_y * sin_ky_dy_half * sin_ky_dy_half
-            + cfl_z * cfl_z * sin_kz_dz_half * sin_kz_dz_half;
+        let sin_squared_omega_dt_half = (cfl_z * cfl_z * sin_kz_dz_half).mul_add(sin_kz_dz_half, (cfl_x * cfl_x * sin_kx_dx_half).mul_add(sin_kx_dx_half, cfl_y * cfl_y * sin_ky_dy_half * sin_ky_dy_half));
 
         let sin_squared_clamped = sin_squared_omega_dt_half.clamp(0.0, 1.0);
         let sin_half_omega_dt = sin_squared_clamped.sqrt();
         let omega_numerical = 2.0 * sin_half_omega_dt.asin() / dt;
 
-        let k_magnitude = (kx * kx + ky * ky + kz * kz).sqrt();
+        let k_magnitude = kz.mul_add(kz, kx.mul_add(kx, ky * ky)).sqrt();
         let omega_exact = k_magnitude * c;
 
         if omega_exact.abs() < 1e-14 {

@@ -179,6 +179,9 @@ impl KWaveArray {
     ///
     /// `n` is the disc normal: `(focus_position − center) / ‖…‖` when a focus
     /// is provided, or `e_z` otherwise. `(u, v)` span the tangent plane.
+    /// # Panics
+    /// - Panics if assertion fails: `focus position must differ from disc position`.
+    ///
     pub(super) fn disc_basis(
         &self,
         center: (f64, f64, f64),
@@ -188,7 +191,7 @@ impl KWaveArray {
             let nx = fx - center.0;
             let ny = fy - center.1;
             let nz = fz - center.2;
-            let norm = (nx * nx + ny * ny + nz * nz).sqrt();
+            let norm = nz.mul_add(nz, nx.mul_add(nx, ny * ny)).sqrt();
             assert!(
                 norm > DISC_AXIS_EPSILON,
                 "focus position must differ from disc position"
@@ -198,17 +201,17 @@ impl KWaveArray {
             [0.0, 0.0, 1.0]
         };
 
-        let reference = if normal[2].abs() < 0.9 {
+        let reference: [f64; 3] = if normal[2].abs() < 0.9 {
             [0.0, 0.0, 1.0]
         } else {
             [0.0, 1.0, 0.0]
         };
         let mut u = [
-            reference[1] * normal[2] - reference[2] * normal[1],
-            reference[2] * normal[0] - reference[0] * normal[2],
-            reference[0] * normal[1] - reference[1] * normal[0],
+            reference[1].mul_add(normal[2], -(reference[2] * normal[1])),
+            reference[2].mul_add(normal[0], -(reference[0] * normal[2])),
+            reference[0].mul_add(normal[1], -(reference[1] * normal[0])),
         ];
-        let u_norm = (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]).sqrt();
+        let u_norm = u[2].mul_add(u[2], u[0].mul_add(u[0], u[1] * u[1])).sqrt();
         if u_norm <= DISC_AXIS_EPSILON {
             u = [1.0, 0.0, 0.0];
         } else {
@@ -217,9 +220,9 @@ impl KWaveArray {
             u[2] /= u_norm;
         }
         let v = [
-            normal[1] * u[2] - normal[2] * u[1],
-            normal[2] * u[0] - normal[0] * u[2],
-            normal[0] * u[1] - normal[1] * u[0],
+            normal[1].mul_add(u[2], -(normal[2] * u[1])),
+            normal[2].mul_add(u[0], -(normal[0] * u[2])),
+            normal[0].mul_add(u[1], -(normal[1] * u[0])),
         ];
         (u, v, normal)
     }

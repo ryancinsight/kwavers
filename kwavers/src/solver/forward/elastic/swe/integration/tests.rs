@@ -32,9 +32,7 @@ fn test_velocity_verlet_step() {
     let mut field = ElasticWaveField::new(10, 10, 10);
 
     let dt = integrator.calculate_stable_timestep(0.5);
-    let result = integrator.step(&mut field, dt, None);
-
-    assert!(result.is_ok());
+    integrator.step(&mut field, dt, None).unwrap();
 }
 
 #[test]

@@ -8,6 +8,9 @@ use approx::assert_abs_diff_eq;
 ///
 /// ## Reference
 /// bytemuck crate documentation: Pod requires repr(C) + no padding + no uninit bytes.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_pressure_params_pod_layout() {
     use std::mem;
@@ -24,6 +27,9 @@ fn test_pressure_params_pod_layout() {
 
 /// The `fdtd_pressure.wgsl` shader source must declare the correct entry point
 /// and all required bindings.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_fdtd_wgsl_shader_content() {
     let src = include_str!("../shaders/fdtd_pressure.wgsl");
@@ -52,6 +58,9 @@ fn test_fdtd_wgsl_shader_content() {
 // ── FdtdGpuDispatcher tests (CPU fallback) ────────────────────────────────
 
 /// Uniform pressure field: Laplacian = 0, so p_new = 2*p_curr - p_prev.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fdtd_gpu_uniform_field() {
     let (nx, ny, nz) = (8, 8, 8);
@@ -70,6 +79,9 @@ fn test_fdtd_gpu_uniform_field() {
 }
 
 /// Linear ramp p(i,j,k) = i+j+k: Laplacian is zero (exact polynomial).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fdtd_gpu_linear_ramp_zero_laplacian() {
     let (nx, ny, nz) = (8, 8, 8);
@@ -95,6 +107,9 @@ fn test_fdtd_gpu_linear_ramp_zero_laplacian() {
 }
 
 /// Dimension mismatch returns an error.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fdtd_gpu_dimension_mismatch_error() {
     let mut disp = FdtdGpuDispatcher::new(8, 8, 8).unwrap();
@@ -107,15 +122,21 @@ fn test_fdtd_gpu_dimension_mismatch_error() {
 }
 
 /// Grid too small (< 3 in any axis) returns an error.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fdtd_gpu_minimum_dimension_check() {
     assert!(FdtdGpuDispatcher::new(2, 8, 8).is_err());
     assert!(FdtdGpuDispatcher::new(8, 2, 8).is_err());
     assert!(FdtdGpuDispatcher::new(8, 8, 2).is_err());
-    assert!(FdtdGpuDispatcher::new(3, 3, 3).is_ok());
+    let _disp = FdtdGpuDispatcher::new(3, 3, 3).unwrap();
 }
 
 /// update_pressure_into and update_pressure return identical results.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fdtd_gpu_into_matches_alloc() {
     let (nx, ny, nz) = (6, 6, 6);

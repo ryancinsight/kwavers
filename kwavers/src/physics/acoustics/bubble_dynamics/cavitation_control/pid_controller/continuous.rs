@@ -10,8 +10,6 @@ pub struct PIDController {
     previous_error: f64,
     derivative_filter: VecDeque<f64>,
     setpoint: f64,
-    #[allow(dead_code)]
-    last_output: f64,
     initialized: bool,
 }
 
@@ -24,7 +22,6 @@ impl PIDController {
             previous_error: 0.0,
             derivative_filter: VecDeque::with_capacity(DERIVATIVE_WINDOW_SIZE),
             setpoint: 0.0,
-            last_output: 0.0,
             initialized: false,
         }
     }
@@ -39,7 +36,6 @@ impl PIDController {
         self.integral.reset();
         self.previous_error = 0.0;
         self.derivative_filter.clear();
-        self.last_output = 0.0;
         self.initialized = false;
     }
 
@@ -60,7 +56,7 @@ impl PIDController {
 
         // Proportional term with setpoint weighting
         let p_term =
-            self.config.gains.kp * (self.config.setpoint_weighting * self.setpoint - measurement);
+            self.config.gains.kp * self.config.setpoint_weighting.mul_add(self.setpoint, -measurement);
 
         // Integral term with anti-windup
         self.integral.update(error, self.config.sample_time);
@@ -92,7 +88,6 @@ impl PIDController {
 
         // Update state for next iteration
         self.previous_error = error;
-        self.last_output = control_signal;
 
         ControllerOutput {
             control_signal,

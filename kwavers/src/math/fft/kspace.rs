@@ -11,11 +11,18 @@ pub struct KSpaceCalculator;
 
 impl KSpaceCalculator {
     /// Generate k-space wavenumbers for one dimension
+    #[must_use] 
     pub fn generate_k_vector(n: usize, dx: f64) -> Array1<f64> {
         Array1::from_vec(apollo::fftfreq(n, dx)).mapv(|cycles_per_unit| 2.0 * PI * cycles_per_unit)
     }
 
     /// Generate 3D k-squared array for Laplacian operations
+    /// # Panics
+    /// - Panics if `kx contiguous`.
+    /// - Panics if `ky contiguous`.
+    /// - Panics if `kz contiguous`.
+    ///
+    #[must_use] 
     pub fn generate_k_squared(
         nx: usize,
         ny: usize,
@@ -30,19 +37,23 @@ impl KSpaceCalculator {
 
         let mut k_squared = Array3::zeros((nx, ny, nz));
 
-        Zip::indexed(&mut k_squared).for_each(|(i, j, k), val| {
-            *val = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
+        let kx_s = kx.as_slice().expect("kx contiguous");
+        let ky_s = ky.as_slice().expect("ky contiguous");
+        let kz_s = kz.as_slice().expect("kz contiguous");
+        Zip::indexed(&mut k_squared).par_for_each(|(i, j, k), val| {
+            *val = kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
         });
 
         k_squared
     }
 
     /// Calculate maximum stable k-space value
+    #[must_use] 
     pub fn max_k_stable(dx: f64, dy: f64, dz: f64) -> f64 {
         let kx_max = PI / dx;
         let ky_max = PI / dy;
         let kz_max = PI / dz;
-        (kx_max.powi(2) + ky_max.powi(2) + kz_max.powi(2)).sqrt()
+        kz_max.mul_add(kz_max, ky_max.mul_add(ky_max, kx_max.powi(2))).sqrt()
     }
 
     /// Calculate k-space correction factor for heterogeneous media

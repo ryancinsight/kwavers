@@ -14,7 +14,7 @@ pub struct OctreeNode {
     /// Node data
     pub data: NodeData,
     /// Child nodes (8 for octree)
-    pub children: Option<Box<[OctreeNode; 8]>>,
+    pub children: Option<Box<[Self; 8]>>,
 }
 
 /// Node data stored at each octree node
@@ -39,12 +39,18 @@ impl OctreeNode {
     }
 
     /// Check if node is a leaf
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn is_leaf(&self) -> bool {
         self.children.is_none()
     }
 
     /// Refine this node by creating children
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn refine(&mut self) -> KwaversResult<()> {
         if self.children.is_some() {
             return Ok(()); // Already refined
@@ -58,43 +64,46 @@ impl OctreeNode {
     }
 
     /// Create child nodes
-    fn create_children(&self) -> KwaversResult<[OctreeNode; 8]> {
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    fn create_children(&self) -> KwaversResult<[Self; 8]> {
         let mid = self.bounds.center();
         let min = self.bounds.min;
         let max = self.bounds.max;
 
         Ok([
             // Bottom layer (z = min)
-            OctreeNode::new(
+            Self::new(
                 Bounds::new([min[0], min[1], min[2]], [mid[0], mid[1], mid[2]]),
                 self.level + 1,
             ),
-            OctreeNode::new(
+            Self::new(
                 Bounds::new([mid[0], min[1], min[2]], [max[0], mid[1], mid[2]]),
                 self.level + 1,
             ),
-            OctreeNode::new(
+            Self::new(
                 Bounds::new([min[0], mid[1], min[2]], [mid[0], max[1], mid[2]]),
                 self.level + 1,
             ),
-            OctreeNode::new(
+            Self::new(
                 Bounds::new([mid[0], mid[1], min[2]], [max[0], max[1], mid[2]]),
                 self.level + 1,
             ),
             // Top layer (z = mid)
-            OctreeNode::new(
+            Self::new(
                 Bounds::new([min[0], min[1], mid[2]], [mid[0], mid[1], max[2]]),
                 self.level + 1,
             ),
-            OctreeNode::new(
+            Self::new(
                 Bounds::new([mid[0], min[1], mid[2]], [max[0], mid[1], max[2]]),
                 self.level + 1,
             ),
-            OctreeNode::new(
+            Self::new(
                 Bounds::new([min[0], mid[1], mid[2]], [mid[0], max[1], max[2]]),
                 self.level + 1,
             ),
-            OctreeNode::new(
+            Self::new(
                 Bounds::new([mid[0], mid[1], mid[2]], [max[0], max[1], max[2]]),
                 self.level + 1,
             ),
@@ -119,6 +128,9 @@ pub struct Octree {
 
 impl Octree {
     /// Create a new octree
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(bounds: Bounds, max_level: usize) -> KwaversResult<Self> {
         Ok(Self {
             root: OctreeNode::new(bounds, 0),
@@ -127,18 +139,27 @@ impl Octree {
     }
 
     /// Get the bounds of the octree
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn bounds(&self) -> &Bounds {
         &self.root.bounds
     }
 
     /// Get a reference to the root node
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn root(&self) -> &OctreeNode {
         &self.root
     }
 
     /// Update refinement based on markers
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update_refinement(&mut self, markers: &Array3<i8>) -> KwaversResult<()> {
         // Traverse tree and refine/coarsen based on markers
         // 1 = refine, -1 = coarsen, 0 = no change

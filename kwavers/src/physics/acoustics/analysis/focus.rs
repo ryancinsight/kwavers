@@ -5,6 +5,9 @@ use crate::domain::grid::Grid;
 use ndarray::{Array1, ArrayView3};
 
 /// Find focus location using maximum pressure
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<[f64; 3]> {
     let mut max_pressure = 0.0;
     let mut focus_indices = [0, 0, 0];
@@ -29,6 +32,9 @@ pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult
 }
 
 /// Find focal plane (axial slice with maximum energy)
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn find_focal_plane(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
@@ -40,7 +46,7 @@ pub fn find_focal_plane(
         2 => grid.nz,
         _ => {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Invalid axis: must be 0, 1, or 2".to_string(),
+                "Invalid axis: must be 0, 1, or 2".to_owned(),
             ))
         }
     };
@@ -91,6 +97,9 @@ pub fn find_focal_plane(
 }
 
 /// Calculate beam width at different axial distances
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn calculate_beam_width(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
@@ -103,7 +112,7 @@ pub fn calculate_beam_width(
         2 => grid.nz,
         _ => {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Invalid axis: must be 0, 1, or 2".to_string(),
+                "Invalid axis: must be 0, 1, or 2".to_owned(),
             ))
         }
     };

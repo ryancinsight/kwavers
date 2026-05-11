@@ -44,9 +44,6 @@ impl RefinementLevel {
 /// Manages mesh refinement decisions
 #[derive(Debug)]
 pub struct RefinementManager {
-    /// Maximum refinement level
-    #[allow(dead_code)]
-    max_level: usize,
     /// Refinement levels
     levels: Vec<RefinementLevel>,
     /// Buffer zone size for refinement
@@ -75,18 +72,20 @@ impl RefinementManager {
         }
 
         Self {
-            max_level,
             levels,
             buffer_size: 2,
         }
     }
 
     /// Mark cells for refinement/coarsening
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn mark_cells(&self, error: &Array3<f64>, threshold: f64) -> KwaversResult<Array3<i8>> {
         let mut markers = Array3::zeros(error.dim());
 
         // Mark cells based on error threshold
-        Zip::from(&mut markers).and(error).for_each(|m, &e| {
+        Zip::from(&mut markers).and(error).par_for_each(|m, &e| {
             if e > threshold {
                 *m = 1; // Mark for refinement
             } else if e < threshold * 0.1 {
@@ -105,6 +104,9 @@ impl RefinementManager {
     }
 
     /// Add buffer zones around refinement regions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn add_buffer_zones(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
         let (nx, ny, nz) = markers.dim();
         let mut buffer = markers.clone();
@@ -158,6 +160,9 @@ impl RefinementManager {
     /// - Berger & Rigoutsos (1991): "An algorithm for point clustering and grid generation"
     /// - Khokhlov (1998): "Fully threaded tree algorithms for adaptive refinement"
     /// - Burstedde et al. (2011): "p4est: Scalable algorithms for parallel AMR"
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn enforce_nesting(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
         let (nx, ny, nz) = markers.dim();
 

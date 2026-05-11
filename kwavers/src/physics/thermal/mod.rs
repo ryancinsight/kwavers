@@ -40,6 +40,9 @@ pub mod tissues {
     ///
     /// - Arterial temperature: 37.0°C
     /// - Metabolic heat: 33,800 W/m³ (high metabolic activity)
+    /// # Panics
+    /// - Panics if `Liver tissue properties are valid`.
+    ///
     #[must_use]
     pub fn liver() -> ThermalPropertyData {
         ThermalPropertyData::new(
@@ -60,6 +63,9 @@ pub mod tissues {
     ///
     /// - Arterial temperature: 37.0°C
     /// - Metabolic heat: 684 W/m³
+    /// # Panics
+    /// - Panics if `Muscle tissue properties are valid`.
+    ///
     #[must_use]
     pub fn muscle() -> ThermalPropertyData {
         ThermalPropertyData::new(
@@ -80,6 +86,9 @@ pub mod tissues {
     ///
     /// - Arterial temperature: 37.0°C
     /// - Metabolic heat: 400 W/m³
+    /// # Panics
+    /// - Panics if `Fat tissue properties are valid`.
+    ///
     #[must_use]
     pub fn fat() -> ThermalPropertyData {
         ThermalPropertyData::new(
@@ -100,6 +109,9 @@ pub mod tissues {
     ///
     /// - Arterial temperature: 37.0°C
     /// - Metabolic heat: 5,000 W/m³ (higher metabolism, poor perfusion)
+    /// # Panics
+    /// - Panics if `Tumor tissue properties are valid`.
+    ///
     #[must_use]
     pub fn tumor() -> ThermalPropertyData {
         ThermalPropertyData::new(
@@ -176,9 +188,6 @@ mod tests {
         let tissue = tissues::liver();
 
         assert!(tissue.has_bioheat_parameters());
-        assert!(tissue.blood_perfusion.is_some());
-        assert!(tissue.blood_specific_heat.is_some());
-
         let w_b = tissue.blood_perfusion.unwrap();
         let c_b = tissue.blood_specific_heat.unwrap();
 

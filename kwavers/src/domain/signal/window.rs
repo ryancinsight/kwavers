@@ -21,10 +21,9 @@ pub fn window_value(window: WindowType, normalized_time: f64) -> f64 {
     match window {
         WindowType::Rectangular => 1.0,
         WindowType::Hann => 0.5 * (1.0 - (2.0 * PI * normalized_time).cos()),
-        WindowType::Hamming => 0.54 - 0.46 * (2.0 * PI * normalized_time).cos(),
+        WindowType::Hamming => 0.46f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.54),
         WindowType::Blackman => {
-            0.42 - 0.5 * (2.0 * PI * normalized_time).cos()
-                + 0.08 * (4.0 * PI * normalized_time).cos()
+            0.08f64.mul_add((4.0 * PI * normalized_time).cos(), 0.5f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.42))
         }
         WindowType::Gaussian => {
             let sigma = 0.4;
@@ -47,6 +46,10 @@ pub fn window_value(window: WindowType, normalized_time: f64) -> f64 {
     }
 }
 
+/// Get win.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[must_use]
 pub fn get_win(window: WindowType, n: usize, symmetric: bool) -> Vec<f64> {
     if n <= 1 {
@@ -58,7 +61,10 @@ pub fn get_win(window: WindowType, n: usize, symmetric: bool) -> Vec<f64> {
         .map(|i| window_value(window, i as f64 / denom))
         .collect()
 }
-
+/// Apply window.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn apply_window(signal: &[f64], window: &[f64]) -> KwaversResult<Vec<f64>> {
     if signal.len() != window.len() {
         return Err(KwaversError::InvalidInput(format!(

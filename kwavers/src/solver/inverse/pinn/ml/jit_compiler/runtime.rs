@@ -35,7 +35,10 @@ impl OptimizedRuntime {
             biases,
         }
     }
-
+    /// Load model.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn load_model(
         &mut self,
         model: &dyn std::any::Any,
@@ -50,7 +53,10 @@ impl OptimizedRuntime {
 
         Ok(kernel_id)
     }
-
+    /// Inference.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn inference(&self, kernel_id: &str, input: &[f32]) -> KwaversResult<Vec<f32>> {
         let kernel = self.active_kernels.get(kernel_id).ok_or_else(|| {
             KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {

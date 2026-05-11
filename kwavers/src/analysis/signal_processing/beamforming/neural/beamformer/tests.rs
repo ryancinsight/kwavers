@@ -10,9 +10,13 @@ fn create_test_rf_data() -> Array4<f32> {
 
 #[test]
 fn test_beamformer_creation() {
+    // default: mode=Hybrid, neural_network=Some (Hybrid allocates network)
     let config = NeuralBeamformingConfig::default();
-    let beamformer = NeuralBeamformer::new(config);
-    assert!(beamformer.is_ok());
+    let beamformer = NeuralBeamformer::new(config).unwrap();
+    assert!(
+        beamformer.neural_network.is_some(),
+        "Hybrid mode must allocate a neural network"
+    );
 }
 
 #[test]
@@ -21,8 +25,11 @@ fn test_beamformer_creation_invalid_config() {
         network_architecture: vec![],
         ..Default::default()
     };
-    let beamformer = NeuralBeamformer::new(config);
-    assert!(beamformer.is_err());
+    let err = NeuralBeamformer::new(config).unwrap_err();
+    assert!(
+        format!("{err:?}").len() > 0,
+        "empty network_architecture must produce a non-empty error"
+    );
 }
 
 #[test]
@@ -35,10 +42,7 @@ fn test_process_hybrid() {
 
     let rf_data = create_test_rf_data();
     let angles = vec![0.0];
-    let result = beamformer.process(&rf_data, &angles);
-
-    assert!(result.is_ok());
-    let result = result.unwrap();
+    let result = beamformer.process(&rf_data, &angles).unwrap();
     assert_eq!(result.processing_mode, "Hybrid");
     assert!((0.0..=1.0).contains(&result.confidence));
 }
@@ -53,10 +57,7 @@ fn test_process_neural_only() {
 
     let rf_data = create_test_rf_data();
     let angles = vec![0.0];
-    let result = beamformer.process(&rf_data, &angles);
-
-    assert!(result.is_ok());
-    let result = result.unwrap();
+    let result = beamformer.process(&rf_data, &angles).unwrap();
     assert_eq!(result.processing_mode, "NeuralOnly");
 }
 
@@ -70,10 +71,7 @@ fn test_process_adaptive() {
 
     let rf_data = create_test_rf_data();
     let angles = vec![0.0];
-    let result = beamformer.process(&rf_data, &angles);
-
-    assert!(result.is_ok());
-    let result = result.unwrap();
+    let result = beamformer.process(&rf_data, &angles).unwrap();
     assert!(result.processing_mode.starts_with("Adaptive"));
 }
 
@@ -83,10 +81,7 @@ fn test_signal_quality_assessment() {
     let beamformer = NeuralBeamformer::new(config).unwrap();
 
     let rf_data = create_test_rf_data();
-    let quality = beamformer.assess_signal_quality(&rf_data);
-
-    assert!(quality.is_ok());
-    let quality = quality.unwrap();
+    let quality = beamformer.assess_signal_quality(&rf_data).unwrap();
     assert!((0.0..=1.0).contains(&quality));
 }
 
@@ -101,8 +96,9 @@ fn test_adaptation() {
         signal_quality: 0.85,
     };
 
-    let result = beamformer.adapt(&feedback);
-    assert!(result.is_ok());
+    beamformer.adapt(&feedback).unwrap();
+    // Verify the adaptation updated metrics or state (metrics.total_frames_processed unchanged)
+    assert_eq!(beamformer.metrics().total_frames_processed, 0);
 }
 
 #[test]

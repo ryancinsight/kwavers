@@ -10,6 +10,10 @@ pub struct PhotoacousticRunner {
 }
 
 impl PhotoacousticRunner {
+    /// Run.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn run(
         &self,
         scenario: &PhotoacousticScenario,

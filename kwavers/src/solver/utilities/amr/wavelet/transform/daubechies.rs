@@ -15,6 +15,9 @@ use super::core::WaveletTransform;
 
 impl WaveletTransform {
     /// Daubechies wavelet forward transform (1D)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn daubechies_forward(
         &self,
         data: &mut Array3<f64>,
@@ -64,6 +67,9 @@ impl WaveletTransform {
     }
 
     /// Daubechies wavelet inverse transform
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn daubechies_inverse(
         &self,
         coeffs: &mut Array3<f64>,

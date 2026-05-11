@@ -16,8 +16,7 @@ fn make_corrector() -> TranscranialAberrationCorrection {
 #[test]
 fn test_aberration_corrector_creation() {
     let grid = Grid::new(32, 32, 32, 0.002, 0.002, 0.002).unwrap();
-    let corrector = TranscranialAberrationCorrection::new(&grid);
-    assert!(corrector.is_ok());
+    let _corrector = TranscranialAberrationCorrection::new(&grid).unwrap();
 }
 
 #[test]
@@ -38,6 +37,9 @@ fn test_phase_correction_lengths() {
 
 /// For a homogeneous medium (c_local = c_water everywhere), all aberration
 /// phases must be exactly zero.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_homogeneous_medium_gives_zero_aberration() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
@@ -63,6 +65,9 @@ fn test_homogeneous_medium_gives_zero_aberration() {
 }
 
 /// Phase correction must be the exact negation of the computed aberration phase.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_correction_negates_aberration() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
@@ -87,6 +92,9 @@ fn test_correction_negates_aberration() {
 }
 
 /// The focal gain improvement for perfectly coherent phases (all same) is 0 dB.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_focal_gain_zero_for_coherent_phases() {
     let phases_coherent = vec![1.23_f64; 8]; // all identical → R = 1
@@ -98,6 +106,9 @@ fn test_focal_gain_zero_for_coherent_phases() {
 }
 
 /// The focal gain improvement for anti-phase pair (φ, φ+π) is positive.
+/// # Panics
+/// - Panics if assertion fails: `aberrated phases should yield positive focal gain improvement; got {gain_db:.4e} dB`.
+///
 #[test]
 fn test_focal_gain_positive_for_aberrated_phases() {
     // Two elements with phases 0 and π → coherence R = 0 → ΔG = ∞.
@@ -112,6 +123,9 @@ fn test_focal_gain_positive_for_aberrated_phases() {
 }
 
 /// Circular coherence of identical phases equals 1.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_circular_coherence_identical_phases_is_one() {
     let phases = vec![0.7_f64; 20];
@@ -123,6 +137,9 @@ fn test_circular_coherence_identical_phases_is_one() {
 }
 
 /// Circular coherence of uniformly distributed phases over [0, 2π) → ≈ 0.
+/// # Panics
+/// - Panics if assertion fails: `uniformly distributed phases → coherence near 0; got {r:.6e}`.
+///
 #[test]
 fn test_circular_coherence_uniform_distribution_near_zero() {
     let n = 1000_usize;
@@ -137,6 +154,9 @@ fn test_circular_coherence_uniform_distribution_near_zero() {
 // ── Time-reversal (phase conjugation) tests ───────────────────────────────────
 
 /// Time-reversal: if field at element position is e^{iφ}, correction = −φ.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_time_reversal_phase_conjugation_exact() {
     let corrector = make_corrector();
@@ -161,6 +181,9 @@ fn test_time_reversal_phase_conjugation_exact() {
 }
 
 /// After phase conjugation of a pure single-phase field, quality_metric → 1.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_time_reversal_quality_metric_is_one_for_uniform_field() {
     let corrector = make_corrector();
@@ -190,6 +213,9 @@ fn test_time_reversal_quality_metric_is_one_for_uniform_field() {
 }
 
 /// Time-reversal output lengths match number of transducer elements.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_time_reversal_output_lengths() {
     let corrector = make_corrector();
@@ -203,6 +229,9 @@ fn test_time_reversal_output_lengths() {
 }
 
 /// Focal gain improvement from time-reversal of an aberrated field is positive.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_time_reversal_focal_gain_positive_for_aberrated_field() {
     let corrector = make_corrector();

@@ -41,7 +41,7 @@ impl FractionalLaplacian {
     ) {
         let omega = 2.0 * std::f64::consts::PI * frequency;
 
-        Zip::from(spectrum).and(k_squared).for_each(|s, &k2| {
+        Zip::from(spectrum).and(k_squared).par_for_each(|s, &k2| {
             if k2 > 0.0 {
                 // Fractional Laplacian operator: (-k²)^(y/2)
                 let fractional_term = k2.powf(self.y / 2.0);

@@ -14,6 +14,9 @@ use crate::solver::forward::nonlinear::conservation::{ConservationDiagnostics, V
 
 impl WesterveltFdtd {
     /// Update the pressure field for one time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update(
         &mut self,
         medium: &dyn Medium,
@@ -70,7 +73,7 @@ impl WesterveltFdtd {
                         let f_ref = 1.0e6_f64; // 1 MHz reference frequency (matches alpha query above)
                         let omega_ref = 2.0 * std::f64::consts::PI * f_ref; // ω = 2π·f_ref
                         let delta = 2.0 * alpha * c.powi(3) / omega_ref.powi(2);
-                        delta * dt / c.powi(2) * (p - 2.0 * p_prev + p_prev2[[i, j, k]]) / (dt * dt)
+                        delta * dt / c.powi(2) * (2.0f64.mul_add(-p_prev, p) + p_prev2[[i, j, k]]) / (dt * dt)
                     } else {
                         0.0
                     }
@@ -92,12 +95,12 @@ impl WesterveltFdtd {
                     let dz2 = grid.dz * grid.dz;
 
                     // Laplacian of pressure for viscosity
-                    let lap_p = (self.pressure[(i + 1, j, k)] - 2.0 * p
+                    let lap_p = (2.0f64.mul_add(-p, self.pressure[(i + 1, j, k)])
                         + self.pressure[(i - 1, j, k)])
                         / dx2
-                        + (self.pressure[(i, j + 1, k)] - 2.0 * p + self.pressure[(i, j - 1, k)])
+                        + (2.0f64.mul_add(-p, self.pressure[(i, j + 1, k)]) + self.pressure[(i, j - 1, k)])
                             / dy2
-                        + (self.pressure[(i, j, k + 1)] - 2.0 * p + self.pressure[(i, j, k - 1)])
+                        + (2.0f64.mul_add(-p, self.pressure[(i, j, k + 1)]) + self.pressure[(i, j, k - 1)])
                             / dz2;
 
                     self.config.artificial_viscosity * dt * lap_p
@@ -107,7 +110,7 @@ impl WesterveltFdtd {
 
                 // Update equation: p^{n+1} = 2p^n - p^{n-1} + linear + nonlinear + absorption + viscosity
                 *p_next =
-                    2.0 * p - p_prev + linear_term - nl_coeff * nl - absorption_term + visc_term;
+                    2.0f64.mul_add(p, -p_prev) + linear_term - nl_coeff * nl - absorption_term + visc_term;
 
                 // No explicit pressure clamping - allows natural shock formation through nonlinearity
                 // Stability maintained through CFL conditions and artificial viscosity

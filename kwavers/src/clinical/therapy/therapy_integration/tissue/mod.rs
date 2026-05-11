@@ -195,12 +195,18 @@ impl TissuePropertyMap {
     }
 
     /// Get the shape of the tissue property map
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[inline]
     pub fn shape(&self) -> (usize, usize, usize) {
         self.speed_of_sound.dim()
     }
 
     /// Get the number of dimensions (always 3 for tissue maps)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[inline]
     pub fn ndim(&self) -> usize {
         3
@@ -211,6 +217,9 @@ impl TissuePropertyMap {
     /// # Returns
     ///
     /// `Ok(())` if all arrays have the same shape, error otherwise.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_shape_consistency(&self) -> Result<(), String> {
         let shape = self.speed_of_sound.dim();
 

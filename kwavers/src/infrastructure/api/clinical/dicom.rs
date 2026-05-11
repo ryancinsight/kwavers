@@ -24,13 +24,20 @@ pub struct DICOMService {
 }
 
 impl DICOMService {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> Self {
         Self {
             dicom_nodes: HashMap::new(),
             study_cache: std::sync::Mutex::new(HashMap::new()),
         }
     }
-
+    /// Read study.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn read_study(
         &self,
         study_uid: &str,
@@ -66,7 +73,10 @@ impl DICOMService {
 
         Ok(None)
     }
-
+    /// Read series.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn read_series(
         &self,
         study_uid: &str,
@@ -83,7 +93,10 @@ impl DICOMService {
             Ok(None)
         }
     }
-
+    /// Read instance.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn read_instance(
         &self,
         study_uid: &str,
@@ -131,6 +144,9 @@ pub struct DICOMNode {
 }
 
 /// DICOM integration endpoint
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub async fn dicom_integrate(
     State(state): State<ClinicalAppState>,
     _auth: AuthenticatedUser,

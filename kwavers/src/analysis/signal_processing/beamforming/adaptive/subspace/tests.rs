@@ -145,10 +145,16 @@ fn test_esmv_diagonal_loading_stability() {
     let esmv_high = EigenspaceMV::with_diagonal_loading(1, 1e-4);
     let result_high = esmv_high.compute_weights(&cov, &steering);
 
-    assert!(result_low.is_ok() || result_high.is_ok());
+    // At least one loading level must converge; high loading is more stable.
+    assert!(
+        result_low.is_ok() || result_high.is_ok(),
+        "neither low nor high diagonal loading converged"
+    );
+    // If high loading succeeded, all weights must be finite.
     if let Ok(weights) = result_high {
+        assert!(!weights.is_empty(), "high-loading weights must be non-empty");
         for &w in &weights {
-            assert!(w.is_finite());
+            assert!(w.is_finite(), "high-loading weight {w} must be finite");
         }
     }
 }

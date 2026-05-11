@@ -126,7 +126,7 @@ fn test_network_creation_via_public_api() {
 
     // Should be able to create network directly
     let network = BurnPINN1DWave::<TestBackend>::new(config, &device);
-    assert!(network.is_ok());
+    let _network = network.unwrap();
 }
 
 #[test]

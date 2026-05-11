@@ -33,6 +33,9 @@ pub struct TimeReversalReconstructor {
 
 impl TimeReversalReconstructor {
     /// Create a new time-reversal reconstructor
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: TimeReversalConfig) -> KwaversResult<Self> {
         config.validate()?;
 
@@ -44,6 +47,9 @@ impl TimeReversalReconstructor {
     }
 
     /// Perform time-reversal reconstruction
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn reconstruct(
         &mut self,
         pressure_data: &Array2<f64>,
@@ -109,6 +115,9 @@ impl TimeReversalReconstructor {
     }
 
     /// Prepare time-reversed signals
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn prepare_reversed_signals(
         &mut self,
         pressure_data: &Array2<f64>,
@@ -176,6 +185,9 @@ impl TimeReversalReconstructor {
     }
 
     /// Apply phase conjugation to a signal
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_phase_conjugation(&self, signal: Vec<f64>) -> KwaversResult<Vec<f64>> {
         // For real signals, phase conjugation in time domain is just time reversal
         // which is already done. For complex processing, we would conjugate here.
@@ -183,6 +195,9 @@ impl TimeReversalReconstructor {
     }
 
     /// Apply reversed sources to the solver
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_reversed_sources(
         &self,
         reversed_signals: &HashMap<usize, Vec<f64>>,
@@ -222,6 +237,9 @@ impl TimeReversalReconstructor {
     }
 
     /// Propagate backwards in time
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn propagate_backwards(
         &self,
         _grid: &Grid,
@@ -257,9 +275,9 @@ impl TimeReversalReconstructor {
             .ok_or_else(|| {
                 crate::core::error::KwaversError::Validation(
                     crate::core::error::ValidationError::FieldValidation {
-                        field: "pressure_field".to_string(),
-                        value: "missing".to_string(),
-                        constraint: "pressure field not found in solver".to_string(),
+                        field: "pressure_field".to_owned(),
+                        value: "missing".to_owned(),
+                        constraint: "pressure field not found in solver".to_owned(),
                     },
                 )
             })?;
@@ -267,6 +285,9 @@ impl TimeReversalReconstructor {
     }
 
     /// Check convergence between iterations
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn check_convergence(
         &self,
         current: &Array3<f64>,
@@ -284,6 +305,9 @@ impl TimeReversalReconstructor {
     }
 
     /// Post-process the reconstruction
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn post_process(
         &self,
         mut reconstruction: Array3<f64>,
@@ -298,7 +322,7 @@ impl TimeReversalReconstructor {
         let max_val = reconstruction.iter().map(|&x| x.abs()).fold(0.0, f64::max);
 
         if max_val > 0.0 {
-            reconstruction.mapv_inplace(|x| x / max_val);
+            reconstruction.par_mapv_inplace(|x| x / max_val);
         }
 
         Ok(reconstruction)

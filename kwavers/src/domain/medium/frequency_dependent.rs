@@ -12,7 +12,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::math::fft::Complex64;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 
 /// Frequency-dependent tissue properties
 #[derive(Debug, Clone)]
@@ -33,6 +33,9 @@ pub struct FrequencyDependentProperties {
 
 impl FrequencyDependentProperties {
     /// Create new frequency-dependent properties
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(c0: f64, nonlinearity_parameter: f64) -> Self {
         Self {
@@ -46,12 +49,15 @@ impl FrequencyDependentProperties {
     }
 
     /// Add a relaxation process
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn add_relaxation(&mut self, frequency: f64, strength: f64) -> KwaversResult<()> {
         if frequency <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "relaxation_frequency".to_string(),
+                field: "relaxation_frequency".to_owned(),
                 value: frequency.to_string(),
-                constraint: "Must be positive".to_string(),
+                constraint: "Must be positive".to_owned(),
             }));
         }
 
@@ -66,7 +72,7 @@ impl FrequencyDependentProperties {
         let omega = 2.0 * std::f64::consts::PI * frequency;
 
         // Base dispersion
-        let mut c_phase = self.c0 * (1.0 + self.dispersion_coefficient * frequency.ln());
+        let mut c_phase = self.c0 * self.dispersion_coefficient.mul_add(frequency.ln(), 1.0);
 
         // Add relaxation contributions
         self.relaxation_frequencies
@@ -75,7 +81,7 @@ impl FrequencyDependentProperties {
             .for_each(|(&f_r, &strength)| {
                 let omega_r = 2.0 * std::f64::consts::PI * f_r;
                 let relaxation_factor =
-                    1.0 + strength * omega.powi(2) / (omega_r.powi(2) + omega.powi(2));
+                    1.0 + strength * omega.powi(2) / omega.mul_add(omega, omega_r.powi(2));
                 c_phase *= relaxation_factor.sqrt();
             });
 
@@ -102,7 +108,7 @@ impl FrequencyDependentProperties {
         if self.frequency_dependent_nonlinearity {
             // Empirical model for frequency-dependent B/A
             let f_mhz = frequency / 1e6;
-            self.nonlinearity_parameter * (1.0 + 0.1 * f_mhz.ln().max(0.0))
+            self.nonlinearity_parameter * 0.1f64.mul_add(f_mhz.ln().max(0.0), 1.0)
         } else {
             self.nonlinearity_parameter
         }
@@ -118,7 +124,7 @@ impl FrequencyDependentProperties {
             .zip(self.relaxation_strengths.iter())
             .map(|(&f_r, &strength)| {
                 let omega_r = 2.0 * std::f64::consts::PI * f_r;
-                let denominator = 1.0 + (omega / omega_r).powi(2);
+                let denominator = (omega / omega_r).mul_add(omega / omega_r, 1.0);
                 strength * omega.powi(2) / (2.0 * self.c0 * omega_r * denominator)
             })
             .sum()
@@ -189,6 +195,9 @@ pub struct DispersionCorrection {
 
 impl DispersionCorrection {
     /// Create new dispersion correction
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(properties: FrequencyDependentProperties, reference_frequency: f64) -> Self {
         Self {
@@ -198,35 +207,28 @@ impl DispersionCorrection {
     }
 
     /// Apply dispersion correction in frequency domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_dispersion_correction(
         &self,
         spectrum: &mut Array3<Complex64>,
         k_vec: &Array3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = spectrum.dim();
-
-        (0..nx).for_each(|i| {
-            (0..ny).for_each(|j| {
-                (0..nz).for_each(|k| {
-                    let k_mag = k_vec[[i, j, k]];
-                    if k_mag > 0.0 {
-                        // Frequency from wavenumber
-                        let freq = k_mag * self.properties.c0 / (2.0 * std::f64::consts::PI);
-
-                        // Phase velocity at this frequency
-                        let c_phase = self.properties.phase_velocity(freq);
-
-                        // Dispersion phase shift
-                        let k_dispersive = 2.0 * std::f64::consts::PI * freq / c_phase;
-                        let phase_shift = (k_dispersive - k_mag) * c_phase * dt;
-
-                        // Apply phase correction
-                        let correction = Complex64::new(phase_shift.cos(), phase_shift.sin());
-                        spectrum[[i, j, k]] *= correction;
-                    }
-                });
-            });
+        Zip::from(spectrum).and(k_vec).par_for_each(|s, &k_mag| {
+            if k_mag > 0.0 {
+                // Frequency from wavenumber
+                let freq = k_mag * self.properties.c0 / (2.0 * std::f64::consts::PI);
+                // Phase velocity at this frequency
+                let c_phase = self.properties.phase_velocity(freq);
+                // Dispersion phase shift
+                let k_dispersive = 2.0 * std::f64::consts::PI * freq / c_phase;
+                let phase_shift = (k_dispersive - k_mag) * c_phase * dt;
+                // Apply phase correction
+                let correction = Complex64::new(phase_shift.cos(), phase_shift.sin());
+                *s *= correction;
+            }
         });
 
         Ok(())

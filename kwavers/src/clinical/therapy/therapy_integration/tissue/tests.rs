@@ -55,10 +55,11 @@ fn test_tissue_property_map_extraction() {
 fn test_tissue_property_map_bounds_checking() {
     let tissue_map = TissuePropertyMap::water((10, 10, 10));
 
-    // Valid indices should succeed
-    assert!(tissue_map.at((0, 0, 0)).is_ok());
-    assert!(tissue_map.at((9, 9, 9)).is_ok());
-    assert!(tissue_map.at((5, 5, 5)).is_ok());
+    // Valid indices: check they return finite values
+    let p000 = tissue_map.at((0, 0, 0)).unwrap();
+    assert!(p000.density > 0.0);
+    tissue_map.at((9, 9, 9)).unwrap();
+    tissue_map.at((5, 5, 5)).unwrap();
 
     // Out-of-bounds indices should fail
     assert!(tissue_map.at((10, 5, 5)).is_err());
@@ -101,7 +102,7 @@ fn test_tissue_property_map_shape_consistency() {
     let tissue_map = TissuePropertyMap::liver(shape);
 
     // Validation should pass for consistent shapes
-    assert!(tissue_map.validate_shape_consistency().is_ok());
+    tissue_map.validate_shape_consistency().unwrap();
 }
 
 #[test]
@@ -163,7 +164,7 @@ fn test_tissue_property_map_heterogeneous_simulation() {
     assert_eq!(inclusion_props.sound_speed, liver.sound_speed);
 
     // Verify shape consistency
-    assert!(tissue_map.validate_shape_consistency().is_ok());
+    tissue_map.validate_shape_consistency().unwrap();
 }
 
 #[test]

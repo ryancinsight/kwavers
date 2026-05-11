@@ -26,18 +26,27 @@ impl BeamformingProcessor {
         }
     }
     /// Get number of sensors
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn num_sensors(&self) -> usize {
         self.num_sensors
     }
 
     /// Get sensor positions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sensor_positions(&self) -> &[[f64; 3]] {
         &self.sensor_positions
     }
 
     /// Compute eigendecomposition of a matrix
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn eigendecomposition(
         &self,
         matrix: &Array2<f64>,
@@ -46,6 +55,9 @@ impl BeamformingProcessor {
     }
 
     /// Compute matrix inverse
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         LinearAlgebra::matrix_inverse(matrix)
     }
@@ -70,7 +82,7 @@ impl BeamformingProcessor {
                 let dx = pos[0] - focal_point[0];
                 let dy = pos[1] - focal_point[1];
                 let dz = pos[2] - focal_point[2];
-                let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
                 distance / c
             })
             .collect()
@@ -93,6 +105,9 @@ impl BeamformingProcessor {
     /// and you score `∑_t y(t)^2`, then the **choice of delay reference matters**.
     /// For grid-search localization of transients, many pipelines use a fixed reference sensor
     /// (or earliest-arrival) rather than latest-arrival normalization.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn delay_and_sum_with(
         &self,
         sensor_data: &Array3<f64>,
@@ -153,6 +168,9 @@ impl BeamformingProcessor {
     /// - Computes a real-valued sample covariance from `(n_elements, 1, n_samples)`.
     /// - Applies diagonal loading `δI` for robustness.
     /// - Applies the resulting weights across time to produce `(1, 1, n_samples)`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn mvdr_unsteered_weights_time_series(
         &self,
         sensor_data: &Array3<f64>,

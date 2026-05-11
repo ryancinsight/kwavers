@@ -48,6 +48,9 @@ impl ArtificialViscosity {
     }
 
     /// Compute artificial viscosity coefficient
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_viscosity(
         &self,
         velocity: &Array4<f64>,
@@ -104,6 +107,9 @@ impl ArtificialViscosity {
     }
 
     /// Apply viscous flux to momentum equation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_viscous_flux(
         &self,
         momentum: &mut Array4<f64>,
@@ -123,25 +129,16 @@ impl ArtificialViscosity {
                 for j in 1..ny - 1 {
                     for k in 1..nz - 1 {
                         // Compute viscous stress gradients
-                        let visc_flux_x = (viscosity[[i + 1, j, k]]
-                            * (velocity_component[[i + 1, j, k]] - velocity_component[[i, j, k]])
-                            - viscosity[[i - 1, j, k]]
-                                * (velocity_component[[i, j, k]]
-                                    - velocity_component[[i - 1, j, k]]))
+                        let visc_flux_x = viscosity[[i + 1, j, k]].mul_add(velocity_component[[i + 1, j, k]] - velocity_component[[i, j, k]], -(viscosity[[i - 1, j, k]] * (velocity_component[[i, j, k]]
+                                    - velocity_component[[i - 1, j, k]])))
                             / (grid.dx * grid.dx);
 
-                        let visc_flux_y = (viscosity[[i, j + 1, k]]
-                            * (velocity_component[[i, j + 1, k]] - velocity_component[[i, j, k]])
-                            - viscosity[[i, j - 1, k]]
-                                * (velocity_component[[i, j, k]]
-                                    - velocity_component[[i, j - 1, k]]))
+                        let visc_flux_y = viscosity[[i, j + 1, k]].mul_add(velocity_component[[i, j + 1, k]] - velocity_component[[i, j, k]], -(viscosity[[i, j - 1, k]] * (velocity_component[[i, j, k]]
+                                    - velocity_component[[i, j - 1, k]])))
                             / (grid.dy * grid.dy);
 
-                        let visc_flux_z = (viscosity[[i, j, k + 1]]
-                            * (velocity_component[[i, j, k + 1]] - velocity_component[[i, j, k]])
-                            - viscosity[[i, j, k - 1]]
-                                * (velocity_component[[i, j, k]]
-                                    - velocity_component[[i, j, k - 1]]))
+                        let visc_flux_z = viscosity[[i, j, k + 1]].mul_add(velocity_component[[i, j, k + 1]] - velocity_component[[i, j, k]], -(viscosity[[i, j, k - 1]] * (velocity_component[[i, j, k]]
+                                    - velocity_component[[i, j, k - 1]])))
                             / (grid.dz * grid.dz);
 
                         // Update momentum with viscous flux

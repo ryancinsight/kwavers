@@ -135,12 +135,7 @@ impl ThermodynamicsCalculator {
             return P_CRITICAL_WATER;
         }
 
-        let ln_pr = (A1 * tau
-            + A2 * tau.powf(1.5)
-            + A3 * tau.powf(3.0)
-            + A4 * tau.powf(3.5)
-            + A5 * tau.powf(4.0)
-            + A6 * tau.powf(7.5))
+        let ln_pr = A6.mul_add(tau.powf(7.5), A5.mul_add(tau.powi(4), A4.mul_add(tau.powf(3.5), A3.mul_add(tau.powi(3), A1.mul_add(tau, A2 * tau.powf(1.5))))))
             / (temperature / T_CRITICAL_WATER);
 
         P_CRITICAL_WATER * ln_pr.exp()
@@ -182,11 +177,11 @@ impl ThermodynamicsCalculator {
         ];
 
         let theta = temperature + N[8] / (temperature - N[9]);
-        let a = theta * theta + N[0] * theta + N[1];
-        let b = N[2] * theta * theta + N[3] * theta + N[4];
-        let c = N[5] * theta * theta + N[6] * theta + N[7];
+        let a = theta.mul_add(theta, N[0] * theta) + N[1];
+        let b = (N[2] * theta).mul_add(theta, N[3] * theta) + N[4];
+        let c = (N[5] * theta).mul_add(theta, N[6] * theta) + N[7];
 
-        let p_mpa = (2.0 * c / (-b + (b * b - 4.0 * a * c).sqrt())).powi(4);
+        let p_mpa = (2.0 * c / (-b + b.mul_add(b, -(4.0 * a * c)).sqrt())).powi(4);
         p_mpa * 1e6 // Convert MPa to Pa
     }
 
@@ -199,7 +194,7 @@ impl ThermodynamicsCalculator {
         const D: f64 = -2.2195983e-3;
 
         let t_ratio = T_TRIPLE_WATER / temperature;
-        let log10_p = A * (t_ratio - 1.0) + B * t_ratio.log10() + C * (1.0 - 1.0 / t_ratio) + D;
+        let log10_p = C.mul_add(1.0 - 1.0 / t_ratio, A.mul_add(t_ratio - 1.0, B * t_ratio.log10())) + D;
 
         P_TRIPLE_WATER * 10_f64.powf(log10_p)
     }

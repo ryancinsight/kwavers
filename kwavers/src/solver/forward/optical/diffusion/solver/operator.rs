@@ -49,8 +49,7 @@ impl DiffusionSolver {
                                 0.5 * (d_center + self.diffusion_coefficient[[i - 1, j, k]]);
                             let phi_minus = fluence[[i - 1, j, k]];
                             let phi_plus = ghost_coeff * phi_center;
-                            laplacian += (d_center * (phi_plus - phi_center)
-                                - d_minus * (phi_center - phi_minus))
+                            laplacian += d_center.mul_add(phi_plus - phi_center, -(d_minus * (phi_center - phi_minus)))
                                 * dx2_inv;
                         } else {
                             let d_minus =
@@ -84,8 +83,7 @@ impl DiffusionSolver {
                                 0.5 * (d_center + self.diffusion_coefficient[[i, j - 1, k]]);
                             let phi_minus = fluence[[i, j - 1, k]];
                             let phi_plus = ghost_coeff * phi_center;
-                            laplacian += (d_center * (phi_plus - phi_center)
-                                - d_minus * (phi_center - phi_minus))
+                            laplacian += d_center.mul_add(phi_plus - phi_center, -(d_minus * (phi_center - phi_minus)))
                                 * dy2_inv;
                         } else {
                             let d_minus =
@@ -119,8 +117,7 @@ impl DiffusionSolver {
                                 0.5 * (d_center + self.diffusion_coefficient[[i, j, k - 1]]);
                             let phi_minus = fluence[[i, j, k - 1]];
                             let phi_plus = ghost_coeff * phi_center;
-                            laplacian += (d_center * (phi_plus - phi_center)
-                                - d_minus * (phi_center - phi_minus))
+                            laplacian += d_center.mul_add(phi_plus - phi_center, -(d_minus * (phi_center - phi_minus)))
                                 * dz2_inv;
                         } else {
                             let d_minus =
@@ -135,7 +132,7 @@ impl DiffusionSolver {
                         }
                     }
 
-                    result[[i, j, k]] = -laplacian + mu_a * phi_center;
+                    result[[i, j, k]] = mu_a.mul_add(phi_center, -laplacian);
                 }
             }
         }

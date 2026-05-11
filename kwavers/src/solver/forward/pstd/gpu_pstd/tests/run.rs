@@ -30,6 +30,9 @@ fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
 
 /// Run a minimal simulation: one source point, one sensor point, 20 steps.
 /// Verify that non-zero pressure is recorded at the sensor.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_gpu_pstd_run_produces_output() {
     let Some(mut solver) = make_solver_32(20) else {
@@ -61,6 +64,9 @@ fn test_gpu_pstd_run_produces_output() {
 
 /// Run a minimal velocity-source simulation to validate the phased-array
 /// ux source path used by `GpuPstdSession`.
+/// # Panics
+/// - Panics if assertion fails: `velocity-source path produced an all-zero sensor trace`.
+///
 #[test]
 fn test_gpu_pstd_velocity_source_produces_output() {
     let Some(mut solver) = make_solver_32(20) else {
@@ -96,6 +102,9 @@ fn test_gpu_pstd_velocity_source_produces_output() {
 
 /// Mirror the session-style usage pattern with multiple velocity sources
 /// and sensors on the same plane.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
     let nx = 64usize;
@@ -156,6 +165,9 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
 }
 
 /// Benchmark: measure GPU PSTD steps/second for a 256×128×128 grid.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn bench_gpu_pstd_bmode_grid() {
     let nx = 256usize;

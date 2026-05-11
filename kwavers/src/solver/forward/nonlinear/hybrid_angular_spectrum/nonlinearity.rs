@@ -16,6 +16,10 @@ pub struct NonlinearOperator {
 
 impl NonlinearOperator {
     /// Create new nonlinear operator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: &HASConfig) -> Self {
         Self {
             beta: config.nonlinearity,
@@ -27,6 +31,9 @@ impl NonlinearOperator {
     /// Apply nonlinear step
     ///
     /// Solves ∂p/∂z = -β/(2ρ₀c₀³) × p × ∂p/∂t in time domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply(&self, pressure: &Array3<f64>, dz: f64) -> KwaversResult<Array3<f64>> {
         let mut result = pressure.clone();
 

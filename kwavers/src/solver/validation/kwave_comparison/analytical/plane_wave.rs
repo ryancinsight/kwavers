@@ -29,6 +29,9 @@ pub struct PlaneWave {
 
 impl PlaneWave {
     /// Create new plane wave. Validates f > 0, c₀ > 0, normalizes direction.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn new(
         amplitude: f64,
         frequency: f64,
@@ -39,23 +42,23 @@ impl PlaneWave {
         if frequency <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "Frequency must be positive".to_string(),
+                    message: "Frequency must be positive".to_owned(),
                 },
             ));
         }
         if sound_speed <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "Sound speed must be positive".to_string(),
+                    message: "Sound speed must be positive".to_owned(),
                 },
             ));
         }
 
-        let norm = (direction[0].powi(2) + direction[1].powi(2) + direction[2].powi(2)).sqrt();
+        let norm = direction[2].mul_add(direction[2], direction[1].mul_add(direction[1], direction[0].powi(2))).sqrt();
         if norm < 1e-10 {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "Direction vector must be non-zero".to_string(),
+                    message: "Direction vector must be non-zero".to_owned(),
                 },
             ));
         }
@@ -76,10 +79,11 @@ impl PlaneWave {
     }
 
     /// p(x, t) = A sin(k·x − ωt + φ)
+    #[must_use] 
     pub fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
         let omega = 2.0 * PI * self.frequency;
         let k = omega / self.sound_speed;
-        let k_dot_x = k * (self.direction[0] * x + self.direction[1] * y + self.direction[2] * z);
+        let k_dot_x = k * self.direction[2].mul_add(z, self.direction[0].mul_add(x, self.direction[1] * y));
         self.amplitude * (k_dot_x - omega * t + self.phase).sin()
     }
 
@@ -100,16 +104,19 @@ impl PlaneWave {
     }
 
     /// Wave number k = 2πf/c₀ [rad/m]
+    #[must_use] 
     pub fn wave_number(&self) -> f64 {
         2.0 * PI * self.frequency / self.sound_speed
     }
 
-    /// Wavelength λ = c₀/f [m]
+    /// Wavelength λ = c₀/f (m)
+    #[must_use] 
     pub fn wavelength(&self) -> f64 {
         self.sound_speed / self.frequency
     }
 
     /// Angular frequency ω = 2πf [rad/s]
+    #[must_use] 
     pub fn angular_frequency(&self) -> f64 {
         2.0 * PI * self.frequency
     }

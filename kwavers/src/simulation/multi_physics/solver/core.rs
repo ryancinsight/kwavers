@@ -34,6 +34,10 @@ impl std::fmt::Debug for MultiPhysicsSolver {
 
 impl MultiPhysicsSolver {
     /// Create new multi-physics solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: MultiPhysicsConfig) -> Self {
         Self {
             config,
@@ -45,6 +49,10 @@ impl MultiPhysicsSolver {
     }
 
     /// Add a physics solver to the coupled system
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_solver(&mut self, solver: Box<dyn CoupledPhysicsSolver>) -> KwaversResult<()> {
         let domain = solver.domain_type();
         if self.solvers.contains_key(&domain) {
@@ -58,6 +66,9 @@ impl MultiPhysicsSolver {
     }
 
     /// Add coupling between two physics domains
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_coupling(
         &mut self,
         source_domain: PhysicsDomain,
@@ -84,6 +95,9 @@ impl MultiPhysicsSolver {
     }
 
     /// Solve coupled multi-physics system for one time step
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn step_coupled(&mut self, dt: f64) -> KwaversResult<f64> {
         self.convergence_history.clear();
         match self.config.coupling_strategy {
@@ -153,7 +167,7 @@ impl MultiPhysicsSolver {
     }
 
     fn solve_partitioned_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
-        let domains: Vec<PhysicsDomain> = self.solvers.keys().cloned().collect();
+        let domains: Vec<PhysicsDomain> = self.solvers.keys().copied().collect();
         let mut max_residual = 0.0_f64;
         for &domain in &domains {
             let Some(mut source_solver) = self.solvers.remove(&domain) else {
@@ -193,8 +207,11 @@ impl MultiPhysicsSolver {
     ///   2. Transfer all inter-domain fields simultaneously (Jacobi, u^k for all sources).
     ///   3. Step each solver with updated coupling forcing.
     ///   4. Compute L∞ residual. Converge or iterate.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn solve_monolithic_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
-        let domains: Vec<PhysicsDomain> = self.solvers.keys().cloned().collect();
+        let domains: Vec<PhysicsDomain> = self.solvers.keys().copied().collect();
         let mut residual = f64::MAX;
         for _iteration in 0..self.config.max_iterations {
             let mut snapshots: HashMap<PhysicsDomain, Array3<f64>> = HashMap::new();
@@ -249,11 +266,16 @@ impl MultiPhysicsSolver {
     }
 
     /// Get convergence history
+    #[must_use] 
     pub fn convergence_history(&self) -> &[f64] {
         &self.convergence_history
     }
 
     /// Check if coupling has converged
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    #[must_use] 
     pub fn has_converged(&self) -> bool {
         if self.convergence_history.is_empty() {
             return false;

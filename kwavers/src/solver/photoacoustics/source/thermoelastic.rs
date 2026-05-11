@@ -19,6 +19,13 @@ use ndarray::Array3;
 pub struct PhotoacousticSourceModel;
 
 impl PhotoacousticSourceModel {
+    /// Compute initial pressure.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if `optical map dimensions are internally consistent`.
+    ///
     pub fn compute_initial_pressure(
         &self,
         scenario: &PhotoacousticScenario,

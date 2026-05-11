@@ -21,10 +21,7 @@ fn test_acoustic_solver_creation() {
     let grid = create_test_grid();
     let medium = create_water_medium(&grid);
 
-    let solver = AcousticWaveSolver::new(&grid, &medium);
-    assert!(solver.is_ok(), "Solver creation failed");
-
-    let solver = solver.unwrap();
+    let solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
     assert_eq!(solver.grid_dimensions(), (32, 32, 32));
     assert!(solver.timestep() > 0.0);
     assert_eq!(solver.current_time(), 0.0);
@@ -129,9 +126,8 @@ fn test_spta_intensity_validation() {
     let medium = create_water_medium(&grid);
     let solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
-    assert!(solver.spta_intensity(-1.0).is_err());
-    assert!(solver.spta_intensity(0.0).is_err());
+    solver.spta_intensity(-1.0).unwrap_err();
+    solver.spta_intensity(0.0).unwrap_err();
 
-    assert!(solver.spta_intensity(1.0).is_ok());
-    assert_eq!(solver.spta_intensity(1.0).unwrap(), 0.0);
+    assert_eq!(solver.spta_intensity(1.0).unwrap(), 0.0, "zero-field SPTA intensity must be 0.0");
 }

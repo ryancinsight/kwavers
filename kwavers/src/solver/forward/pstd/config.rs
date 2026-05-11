@@ -51,7 +51,7 @@ impl Default for BoundaryConfig {
 pub struct PSTDConfig {
     /// Number of time steps
     pub nt: usize,
-    /// Time step size [s]
+    /// Time step size (s)
     pub dt: f64,
     /// Compatibility mode for solver logic
     pub compatibility_mode: CompatibilityMode,

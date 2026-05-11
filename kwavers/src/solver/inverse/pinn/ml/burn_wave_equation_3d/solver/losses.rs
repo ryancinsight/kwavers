@@ -57,6 +57,9 @@ impl<B: Backend> BurnPINN3DWave<B> {
     /// - **bc_loss**: Boundary condition violations
     /// - **ic_loss**: Initial condition violations
     /// - **total_loss**: Weighted sum of all components
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn compute_physics_loss(
         &self,
         x_data: Tensor<B, 2>,
@@ -138,10 +141,10 @@ impl<B: Backend> BurnPINN3DWave<B> {
         };
 
         // Extract scalar values for scale update
-        let data_loss_val = Self::scalar_f32(&data_loss_raw).unwrap_or(1.0);
-        let pde_loss_val = Self::scalar_f32(&pde_loss_raw).unwrap_or(1.0);
-        let bc_loss_val = Self::scalar_f32(&bc_loss_raw).unwrap_or(1.0);
-        let ic_loss_val = Self::scalar_f32(&ic_loss_raw).unwrap_or(1.0);
+        let data_loss_val = Self::extract_scalar(&data_loss_raw).unwrap_or(1.0);
+        let pde_loss_val = Self::extract_scalar(&pde_loss_raw).unwrap_or(1.0);
+        let bc_loss_val = Self::extract_scalar(&bc_loss_raw).unwrap_or(1.0);
+        let ic_loss_val = Self::extract_scalar(&ic_loss_raw).unwrap_or(1.0);
 
         // Update loss scales with exponential moving average
         loss_scales.update(data_loss_val, pde_loss_val, bc_loss_val, ic_loss_val);

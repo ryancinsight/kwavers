@@ -28,6 +28,7 @@ impl std::fmt::Debug for AdaptiveRefinement {
 }
 
 impl AdaptiveRefinement {
+    #[must_use] 
     pub fn new(sampler: CollocationSampler, initial_points: Array2<f64>, threshold: f64) -> Self {
         let n_points = initial_points.nrows();
         Self {
@@ -38,6 +39,10 @@ impl AdaptiveRefinement {
         }
     }
 
+    /// Update residuals.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn update_residuals(&mut self, residuals: Array1<f64>) {
         assert_eq!(
             residuals.len(),

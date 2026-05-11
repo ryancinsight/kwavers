@@ -14,7 +14,8 @@ impl NonlinearWave {
     /// * `field` - Field to constrain (modified in place)
     pub(crate) fn apply_stability_constraints(&self, field: &mut Array3<f64>) {
         // Clamp extreme values
-        field.iter_mut().for_each(|val| {
+        use rayon::prelude::*;
+        field.par_iter_mut().for_each(|val| {
             if val.abs() > self.max_pressure {
                 *val = val.signum() * self.max_pressure;
             }

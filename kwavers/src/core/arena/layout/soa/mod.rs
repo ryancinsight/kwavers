@@ -71,22 +71,26 @@ impl SoAFieldStorage {
     /// - $N_{fields} \times \text{aligned}(N_{elements} \times S, 64) \leq \text{usize::MAX}$
     ///
     /// **Postconditions**:
-    /// - $\forall i \in [0, N_{fields}): \text{field}_i \text{ is 64-byte aligned}$
-    /// - $\text{field}_i[j]$ accessible for all $j \in [0, N_{elements})$
+    /// - $\forall i \in \[0, N_{\text{fields}}): \text{field}_i \text{ is 64-byte aligned}$
+    /// - element `field_i[j]` accessible for all `j` in `0..N_elements`
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(num_fields: usize, num_elements: usize) -> KwaversResult<Self> {
         if num_fields == 0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "num_fields".to_string(),
+                parameter: "num_fields".to_owned(),
                 value: 0.0,
-                reason: "SoA storage requires at least one field".to_string(),
+                reason: "SoA storage requires at least one field".to_owned(),
             }));
         }
 
         if num_elements == 0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "num_elements".to_string(),
+                parameter: "num_elements".to_owned(),
                 value: 0.0,
-                reason: "SoA storage requires at least one element".to_string(),
+                reason: "SoA storage requires at least one element".to_owned(),
             }));
         }
 
@@ -98,14 +102,14 @@ impl SoAFieldStorage {
             .ok_or_else(|| {
                 KwaversError::System(SystemError::MemoryAllocation {
                     requested_bytes: num_fields * field_size_bytes,
-                    reason: "SoA storage size overflow".to_string(),
+                    reason: "SoA storage size overflow".to_owned(),
                 })
             })?;
 
         let layout = Layout::from_size_align(total_size, CACHE_LINE_SIZE).map_err(|_| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: total_size,
-                reason: "Failed to create layout for SoA storage".to_string(),
+                reason: "Failed to create layout for SoA storage".to_owned(),
             })
         })?;
 
@@ -114,7 +118,7 @@ impl SoAFieldStorage {
         let memory = NonNull::new(memory).ok_or_else(|| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: total_size,
-                reason: "Failed to allocate SoA storage".to_string(),
+                reason: "Failed to allocate SoA storage".to_owned(),
             })
         })?;
 
@@ -171,6 +175,7 @@ impl SoAFieldStorage {
 
     /// Create a 3D view of field `index` with given dimensions
     #[inline]
+    #[must_use] 
     pub fn field_view3(
         &self,
         index: usize,
@@ -213,6 +218,9 @@ impl SoAFieldStorage {
     ///
     /// This method allows parallel initialization without borrow checker issues
     /// by operating on individual fields.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn first_touch_field_parallel(&mut self, field_idx: usize) {
         if let Some(field) = self.field_mut(field_idx) {
             const CHUNK_SIZE: usize = 512;
@@ -229,10 +237,13 @@ impl SoAFieldStorage {
     /// # Preconditions
     /// - `sources.len() == self.num_fields`
     /// - Each `sources[i].len() >= self.num_elements`
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn copy_from_slices(&mut self, sources: &[&[f64]]) -> KwaversResult<()> {
         if sources.len() != self.num_fields {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "sources.len()".to_string(),
+                parameter: "sources.len()".to_owned(),
                 value: sources.len() as f64,
                 reason: format!(
                     "Expected {} source slices, got {}",
@@ -264,12 +275,15 @@ impl SoAFieldStorage {
 
     /// Transfer data from SoA to AoS format
     ///
-    /// Outputs to `dest` where dest[i] contains all fields at element i
+    /// Outputs to `dest` where `dest[i]` contains all fields at element i
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn to_aos(&self, dest: &mut [f64]) -> KwaversResult<()> {
         let elements_aos = self.num_fields * self.num_elements;
         if dest.len() < elements_aos {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "dest.len()".to_string(),
+                parameter: "dest.len()".to_owned(),
                 value: dest.len() as f64,
                 reason: format!("AoS destination too small, need {} elements", elements_aos),
             }));

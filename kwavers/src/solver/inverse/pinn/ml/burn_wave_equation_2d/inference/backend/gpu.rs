@@ -11,6 +11,10 @@ use burn::tensor::{backend::Backend, Tensor, TensorData};
 
 #[cfg(feature = "gpu")]
 impl<B: Backend> BurnNeuralNetwork<B> {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(network: &QuantizedNetwork, device: &B::Device) -> KwaversResult<Self> {
         let mut weights = Vec::new();
         let mut biases = Vec::new();
@@ -49,7 +53,10 @@ impl<B: Backend> BurnNeuralNetwork<B> {
             activation: activation_str,
         })
     }
-
+    /// Predict.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn predict(&self, x: &[f32], y: &[f32], t: &[f32]) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
         let batch_size = x.len();
         if y.len() != batch_size || t.len() != batch_size {

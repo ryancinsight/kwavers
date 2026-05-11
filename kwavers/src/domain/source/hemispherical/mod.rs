@@ -39,42 +39,44 @@ use std::sync::Arc;
 /// Hemispherical array transducer
 #[derive(Debug, Clone)]
 pub struct HemisphericalArray {
-    #[allow(dead_code)] // Geometry configuration for array layout
-    geometry: HemisphereGeometry,
     elements: Vec<ElementConfiguration>,
     steering: SteeringController,
     sparse_optimizer: Option<SparseArrayOptimizer>,
-    #[allow(dead_code)] // Safety validator for clinical applications
-    validator: ArrayValidator,
     signal: Arc<dyn Signal>,
 }
 
 impl HemisphericalArray {
     /// Create new hemispherical array
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(radius: f64, num_elements: usize, frequency: f64) -> KwaversResult<Self> {
         let geometry = HemisphereGeometry::new(radius)?;
         let elements = ElementPlacement::generate_elements(&geometry, num_elements)?;
         let steering = SteeringController::new(frequency);
-        let validator = ArrayValidator::new();
         let signal = Arc::new(SineWave::new(frequency, 1.0, 0.0));
 
         Ok(Self {
-            geometry,
             elements,
             steering,
             sparse_optimizer: None,
-            validator,
             signal,
         })
     }
 
     /// Enable sparse array optimization
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn with_sparse_optimization(mut self, density_factor: f64) -> KwaversResult<Self> {
         self.sparse_optimizer = Some(SparseArrayOptimizer::new(density_factor)?);
         Ok(self)
     }
 
     /// Set focal point
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_focus(&mut self, focal_point: FocalPoint) -> KwaversResult<()> {
         self.steering.set_focus(focal_point, &self.elements)
     }

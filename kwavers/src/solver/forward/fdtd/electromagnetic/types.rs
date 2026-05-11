@@ -2,7 +2,6 @@
 
 use crate::domain::field::EMFields;
 use crate::domain::grid::Grid;
-use crate::math::numerics::operators::DifferentialOperator;
 use crate::physics::electromagnetic::equations::EMMaterialDistribution;
 use ndarray::Array3;
 
@@ -34,13 +33,6 @@ pub struct ElectromagneticFdtdSolver {
     pub(super) hz: Array3<f64>,
     /// Cell-centered electromagnetic fields (derived from Yee grid)
     pub(super) fields_cache: EMFields,
-    /// Spatial derivative operators
-    #[allow(dead_code)]
-    pub(super) dx_operator: Box<dyn DifferentialOperator>,
-    #[allow(dead_code)]
-    pub(super) dy_operator: Box<dyn DifferentialOperator>,
-    #[allow(dead_code)]
-    pub(super) dz_operator: Box<dyn DifferentialOperator>,
 }
 
 impl std::fmt::Debug for ElectromagneticFdtdSolver {

@@ -66,7 +66,6 @@ fn test_uncertainty_quantification_enabled() {
 
     let result = fusion.fuse().unwrap();
 
-    assert!(result.uncertainty_map.is_some());
     let uncertainty = result.uncertainty_map.unwrap();
     assert_eq!(uncertainty.dim(), shape);
 

@@ -16,13 +16,13 @@
 //! $$ \frac{dR_0}{dt} \propto 4\pi R \cdot D \cdot C \cdot \frac{P_{ac}}{P_0} \cdot \sqrt{Pe} $$
 //!
 //! where:
-//! - $R$ = current bubble radius [m]
-//! - $D$ = gas diffusivity in liquid [m²/s]
-//! - $C$ = dissolved gas concentration [mol/m³]
+//! - $R$ = current bubble radius (m)
+//! - $D$ = gas diffusivity in liquid (m²/s)
+//! - $C$ = dissolved gas concentration (mol/m³)
 //! - $P_{ac}/P_0$ = acoustic-to-ambient pressure ratio (dimensionless)
 //! - $Pe = R^2 f / D$ = Péclet number (convective/diffusive transport ratio)
 //!
-//! **Dimensional analysis:** $[m] \cdot [m^2/s] \cdot [mol/m^3] \cdot [1] \cdot [1] = [mol/s]$
+//! **Dimensional analysis:** (m)·(m²/s)·(mol/m³)·(1)·(1) = (mol/s)
 //! confirming units of molar flux rate.
 //!
 //! # References

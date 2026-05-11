@@ -38,6 +38,9 @@ pub use BasicLinearAlgebra as LinearAlgebra;
 
 impl LinearAlgebra {
     /// Solve complex linear system Ax = b (backward compatibility)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn solve_linear_system_complex(
         a: &Array2<Complex<f64>>,
         b: &Array1<Complex<f64>>,
@@ -46,6 +49,9 @@ impl LinearAlgebra {
     }
 
     /// Compute inverse of a complex matrix (backward compatibility)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn matrix_inverse_complex(
         matrix: &Array2<Complex<f64>>,
     ) -> KwaversResult<Array2<Complex<f64>>> {
@@ -53,11 +59,17 @@ impl LinearAlgebra {
     }
 
     /// Compute eigendecomposition of symmetric matrix (backward compatibility)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn eigendecomposition(matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
         EigenDecomposition::eigendecomposition(matrix)
     }
 
     /// Compute eigendecomposition of Hermitian matrix (backward compatibility)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn hermitian_eigendecomposition_complex(
         matrix: &Array2<Complex<f64>>,
     ) -> KwaversResult<(Array1<f64>, Array2<Complex<f64>>)> {
@@ -89,6 +101,9 @@ where
     }
 
     /// Generic vector normalization
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn normalize(vector: &mut [T]) -> bool {
         let norm_sq = vector
             .iter()
@@ -105,6 +120,9 @@ where
     }
 
     /// Generic element-wise addition for arrays
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn add_arrays(a: &[T], b: &[T], out: &mut [T]) -> Result<(), &'static str> {
         if a.len() != b.len() || b.len() != out.len() {
             return Err("Array length mismatch");
@@ -116,6 +134,9 @@ where
     }
 
     /// Generic scalar multiplication
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn scale_array(input: &[T], scalar: T, out: &mut [T]) -> Result<(), &'static str> {
         if input.len() != out.len() {
             return Err("Array length mismatch");
@@ -188,10 +209,14 @@ pub mod tolerance {
 }
 
 // Implement NumericOps for standard float types
-impl NumericOps<f64> for f64 {}
-impl NumericOps<f32> for f32 {}
+impl NumericOps<Self> for f64 {}
+impl NumericOps<Self> for f32 {}
 
 /// Compute L2 norm of a 3D array (convenience function)
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+#[must_use] 
 pub fn norm_l2(array: &ndarray::Array3<f64>) -> f64 {
     VectorOperations::norm_l2(array)
 }
@@ -199,12 +224,21 @@ pub fn norm_l2(array: &ndarray::Array3<f64>) -> f64 {
 /// Extension trait for ndarray operations
 pub trait LinearAlgebraExt<T> {
     /// Solve linear system in-place where possible
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn solve_into(&self, b: Array1<T>) -> KwaversResult<Array1<T>>;
 
     /// Compute matrix inverse
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn inv(&self) -> KwaversResult<Array2<T>>;
 
     /// Eigendecomposition
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn eig(&self) -> KwaversResult<(Array1<T>, Array2<T>)>;
 }
 
@@ -213,11 +247,11 @@ impl LinearAlgebraExt<f64> for Array2<f64> {
         LinearAlgebra::solve_linear_system(self, &b)
     }
 
-    fn inv(&self) -> KwaversResult<Array2<f64>> {
+    fn inv(&self) -> KwaversResult<Self> {
         LinearAlgebra::matrix_inverse(self)
     }
 
-    fn eig(&self) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
+    fn eig(&self) -> KwaversResult<(Array1<f64>, Self)> {
         LinearAlgebra::eigendecomposition(self)
     }
 }
@@ -227,11 +261,11 @@ impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
         LinearAlgebra::solve_linear_system_complex(self, &b)
     }
 
-    fn inv(&self) -> KwaversResult<Array2<Complex<f64>>> {
+    fn inv(&self) -> KwaversResult<Self> {
         LinearAlgebra::matrix_inverse_complex(self)
     }
 
-    fn eig(&self) -> KwaversResult<(Array1<Complex<f64>>, Array2<Complex<f64>>)> {
+    fn eig(&self) -> KwaversResult<(Array1<Complex<f64>>, Self)> {
         let (eigenvalues, eigenvectors) =
             LinearAlgebra::hermitian_eigendecomposition_complex(self)?;
         Ok((

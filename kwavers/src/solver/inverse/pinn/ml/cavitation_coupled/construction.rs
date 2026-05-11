@@ -87,6 +87,9 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
     /// # Arguments
     /// * `pressure_field` – acoustic pressure tensor `[N, 1]` (Pa)
     /// * `x`, `y`, `z`   – spatial coordinate tensors `[N, 1]` (m)
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn detect_nucleation_sites(
         &mut self,
         pressure_field: &Tensor<B, 2>,

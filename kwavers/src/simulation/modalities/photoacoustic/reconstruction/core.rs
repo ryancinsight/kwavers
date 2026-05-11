@@ -4,7 +4,11 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use rayon::prelude::*;
-
+/// Time reversal reconstruction.
+/// # Errors
+/// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn time_reversal_reconstruction(
     grid: &Grid,
     pressure_fields: &[Array3<f64>],
@@ -40,11 +44,11 @@ pub fn time_reversal_reconstruction(
     let nxy = ny * nz;
     let expected_len = nx * nxy;
     let out = reconstructed.as_slice_mut().ok_or_else(|| {
-        KwaversError::InternalError("Reconstruction buffer not contiguous".to_string())
+        KwaversError::InternalError("Reconstruction buffer not contiguous".to_owned())
     })?;
     if out.len() != expected_len {
         return Err(KwaversError::InternalError(
-            "Reconstruction buffer length mismatch".to_string(),
+            "Reconstruction buffer length mismatch".to_owned(),
         ));
     }
     out.par_iter_mut().enumerate().for_each(|(idx, out_cell)| {
@@ -59,7 +63,7 @@ pub fn time_reversal_reconstruction(
             let rx = px - dx;
             let ry = py - dy;
             let rz = pz - dz;
-            let dist = (rx * rx + ry * ry + rz * rz).sqrt();
+            let dist = rz.mul_add(rz, rx.mul_add(rx, ry * ry)).sqrt();
             let delay = dist / speed_of_sound;
             let mut val = signals[d_idx * n_time];
             if n_time >= 2 && inv_dt_time > 0.0 {
@@ -76,7 +80,7 @@ pub fn time_reversal_reconstruction(
                         let base = d_idx * n_time + i0;
                         let v0 = signals[base];
                         let v1 = signals[base + 1];
-                        val = v0 * (1.0 - frac) + v1 * frac;
+                        val = v0.mul_add(1.0 - frac, v1 * frac);
                     }
                 }
             }
@@ -117,14 +121,7 @@ pub fn interpolate_detector_signal(
     let c101 = field[[x_ceil, y_floor, z_ceil]];
     let c110 = field[[x_ceil, y_ceil, z_floor]];
     let c111 = field[[x_ceil, y_ceil, z_ceil]];
-    c000 * (1.0 - x_weight) * (1.0 - y_weight) * (1.0 - z_weight)
-        + c001 * (1.0 - x_weight) * (1.0 - y_weight) * z_weight
-        + c010 * (1.0 - x_weight) * y_weight * (1.0 - z_weight)
-        + c011 * (1.0 - x_weight) * y_weight * z_weight
-        + c100 * x_weight * (1.0 - y_weight) * (1.0 - z_weight)
-        + c101 * x_weight * (1.0 - y_weight) * z_weight
-        + c110 * x_weight * y_weight * (1.0 - z_weight)
-        + c111 * x_weight * y_weight * z_weight
+    (c111 * x_weight * y_weight).mul_add(z_weight, (c110 * x_weight * y_weight).mul_add(1.0 - z_weight, (c101 * x_weight * (1.0 - y_weight)).mul_add(z_weight, (c100 * x_weight * (1.0 - y_weight)).mul_add(1.0 - z_weight, (c011 * (1.0 - x_weight) * y_weight).mul_add(z_weight, (c010 * (1.0 - x_weight) * y_weight).mul_add(1.0 - z_weight, (c000 * (1.0 - x_weight) * (1.0 - y_weight)).mul_add(1.0 - z_weight, c001 * (1.0 - x_weight) * (1.0 - y_weight) * z_weight)))))))
 }
 
 pub fn compute_detector_positions(grid: &Grid, n_detectors: usize) -> Vec<(f64, f64, f64)> {

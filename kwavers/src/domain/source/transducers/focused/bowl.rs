@@ -74,13 +74,17 @@ pub struct BowlTransducer {
 
 impl BowlTransducer {
     /// Create a new bowl transducer
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: BowlConfig) -> KwaversResult<Self> {
         // Validate configuration
         if config.diameter > 2.0 * config.radius_of_curvature {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "diameter".to_string(),
+                field: "diameter".to_owned(),
                 value: config.diameter.to_string(),
-                constraint: "Diameter cannot exceed 2 * radius_of_curvature".to_string(),
+                constraint: "Diameter cannot exceed 2 * radius_of_curvature".to_owned(),
             }));
         }
 
@@ -104,6 +108,9 @@ impl BowlTransducer {
     }
 
     /// Discretize the bowl surface into elements
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn discretize_bowl(
         config: &BowlConfig,
         element_size: f64,
@@ -115,7 +122,7 @@ impl BowlTransducer {
         // Calculate bowl parameters
         let r = config.radius_of_curvature;
         let a = config.diameter / 2.0;
-        let _h = r - (r * r - a * a).sqrt(); // Height of spherical cap
+        let _h = r - r.mul_add(r, -(a * a)).sqrt(); // Height of spherical cap
 
         // Angular extent of the bowl
         let theta_max = (a / r).asin();
@@ -155,7 +162,7 @@ impl BowlTransducer {
                     config.focus[2] - pos[2],
                 ];
                 let norm_mag =
-                    (norm_vec[0].powi(2) + norm_vec[1].powi(2) + norm_vec[2].powi(2)).sqrt();
+                    norm_vec[2].mul_add(norm_vec[2], norm_vec[1].mul_add(norm_vec[1], norm_vec[0].powi(2))).sqrt();
                 let normal = [
                     norm_vec[0] / norm_mag,
                     norm_vec[1] / norm_mag,
@@ -177,6 +184,9 @@ impl BowlTransducer {
     }
 
     /// Generate source distribution on grid
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
         let mut source = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let omega = 2.0 * PI * self.config.frequency;
@@ -207,9 +217,7 @@ impl BowlTransducer {
 
                                 for (i, &pos) in self.element_positions.iter().enumerate() {
                                     // Distance from element to grid point
-                                    let r = ((x - pos[0]).powi(2)
-                                        + (y - pos[1]).powi(2)
-                                        + (z - pos[2]).powi(2))
+                                    let r = (z - pos[2]).mul_add(z - pos[2], (y - pos[1]).mul_add(y - pos[1], (x - pos[0]).powi(2)))
                                     .sqrt();
 
                                     if r > 0.0 {
@@ -251,9 +259,7 @@ impl BowlTransducer {
 
                         let mut pressure = 0.0;
                         for (i, &pos) in self.element_positions.iter().enumerate() {
-                            let r = ((x - pos[0]).powi(2)
-                                + (y - pos[1]).powi(2)
-                                + (z - pos[2]).powi(2))
+                            let r = (z - pos[2]).mul_add(z - pos[2], (y - pos[1]).mul_add(y - pos[1], (x - pos[0]).powi(2)))
                             .sqrt();
                             if r > 0.0 {
                                 let directivity = if self.config.apply_directivity {
@@ -286,9 +292,7 @@ impl BowlTransducer {
         self.element_positions
             .iter()
             .map(|&pos| {
-                let distance = ((self.config.focus[0] - pos[0]).powi(2)
-                    + (self.config.focus[1] - pos[1]).powi(2)
-                    + (self.config.focus[2] - pos[2]).powi(2))
+                let distance = (self.config.focus[2] - pos[2]).mul_add(self.config.focus[2] - pos[2], (self.config.focus[1] - pos[1]).mul_add(self.config.focus[1] - pos[1], (self.config.focus[0] - pos[0]).powi(2)))
                 .sqrt();
                 distance / speed_of_sound
             })
@@ -302,12 +306,12 @@ impl BowlTransducer {
 
         // Vector from element to target
         let dir = [target[0] - pos[0], target[1] - pos[1], target[2] - pos[2]];
-        let dir_mag = (dir[0].powi(2) + dir[1].powi(2) + dir[2].powi(2)).sqrt();
+        let dir_mag = dir[2].mul_add(dir[2], dir[1].mul_add(dir[1], dir[0].powi(2))).sqrt();
 
         if dir_mag > 0.0 {
             // Cosine of angle between normal and direction
             let cos_theta =
-                (normal[0] * dir[0] + normal[1] * dir[1] + normal[2] * dir[2]) / dir_mag;
+                normal[2].mul_add(dir[2], normal[0].mul_add(dir[0], normal[1] * dir[1])) / dir_mag;
 
             // Cosine directivity pattern
             if cos_theta > 0.0 {
@@ -339,12 +343,12 @@ impl BowlTransducer {
 
         // Geometric parameters
         // h is the height of the spherical cap
-        let h = r - (r * r - a * a).sqrt();
+        let h = r - r.mul_add(r, -(a * a)).sqrt();
 
         // Distance from transducer center to field point
         let d1 = z.abs();
         // Distance from edge of spherical cap to field point
-        let d2 = ((z - (r - h)).powi(2) + a * a).sqrt();
+        let d2 = (z - (r - h)).mul_add(z - (r - h), a * a).sqrt();
 
         // O'Neil's formula for on-axis pressure
         // The pressure is the result of interference between waves from the center

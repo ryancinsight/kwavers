@@ -4,7 +4,7 @@ use super::memory::{GpuMemoryManager, MemoryPool, MemoryPoolType, MemoryStats};
 #[test]
 fn test_gpu_memory_manager_creation() {
     let manager = GpuMemoryManager::new();
-    assert!(manager.is_ok());
+    let _manager = manager.unwrap();
 }
 
 #[test]
@@ -12,7 +12,6 @@ fn test_memory_pool_allocation() {
     let mut pool = MemoryPool::new(MemoryPoolType::Temporary, 1024 * 1024, 256);
 
     let block = pool.allocate(1024);
-    assert!(block.is_ok());
 
     let block = block.unwrap();
     assert_eq!(block.size, 1024);
@@ -23,7 +22,6 @@ fn test_memory_pool_allocation() {
 #[test]
 fn test_cuda_kernel_manager() {
     let manager = CudaKernelManager::new();
-    assert!(manager.is_ok());
 
     let mut manager = manager.unwrap();
 

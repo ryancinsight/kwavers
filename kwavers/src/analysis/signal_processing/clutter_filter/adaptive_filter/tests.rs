@@ -5,8 +5,7 @@ use ndarray::Array2;
 #[test]
 fn test_adaptive_filter_creation() {
     let config = AdaptiveFilterConfig::default();
-    let filter = AdaptiveFilter::new(config);
-    assert!(filter.is_ok());
+    let _filter = AdaptiveFilter::new(config).unwrap();
 }
 
 #[test]
@@ -78,7 +77,8 @@ fn test_adaptive_threshold_method() {
 
     let filtered = filter.filter(&data).unwrap();
     assert!(filtered.iter().all(|&x| x.is_finite()));
-    assert!(filter.current_cbr_db().is_some());
+    let cbr = filter.current_cbr_db().unwrap();
+    assert!(cbr.is_finite());
 }
 
 #[test]

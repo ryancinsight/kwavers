@@ -27,6 +27,9 @@ impl AdaptiveSlsc {
     ///
     /// # Returns
     /// * Optimized coherence values
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn process_adaptive(
         &self,
         data: &ndarray::Array2<Complex64>,

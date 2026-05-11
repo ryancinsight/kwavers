@@ -11,11 +11,18 @@ pub struct FusionEngine {
 
 impl FusionEngine {
     /// Create new fusion engine
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(params: FusionParameters) -> Self {
         Self { params }
     }
 
     /// Perform image fusion
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn fuse(
         &self,
         reference: &ImageData,
@@ -38,6 +45,9 @@ impl FusionEngine {
     }
 
     /// Apply transformation to floating image (nearest neighbor interpolation)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_transform(
         &self,
         floating: &ImageData,

@@ -17,6 +17,9 @@ pub struct KSpaceGpu {
 
 impl KSpaceGpu {
     /// Create a new k-space GPU solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(device: &wgpu::Device, grid: &Grid) -> KwaversResult<Self> {
         let fft_shader = include_str!("../shaders/fft.wgsl");
         let propagate_shader = include_str!("../shaders/kspace_propagate.wgsl");

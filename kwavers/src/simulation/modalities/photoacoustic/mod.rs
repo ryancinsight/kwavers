@@ -17,9 +17,9 @@
 //! ```
 //!
 //! Where:
-//! - `p`: Acoustic pressure [Pa]
-//! - `c`: Speed of sound [m/s]
-//! - `Γ`: Grüneisen parameter (thermoelastic efficiency) [dimensionless]
+//! - `p`: Acoustic pressure (Pa)
+//! - `c`: Speed of sound (m/s)
+//! - `Γ`: Grüneisen parameter (thermoelastic efficiency) (dimensionless)
 //! - `μₐ`: Optical absorption coefficient [m⁻¹]
 //! - `Φ`: Optical fluence [W/m² or J/m²]
 //! - `H`: Heating function [J/m³]
@@ -130,7 +130,7 @@
 //! ```
 //!
 //! Where:
-//! - `D = 1/(3(μₐ + μₛ'))`: Diffusion coefficient [m]
+//! - `D = 1/(3(μₐ + μₛ'))`: Diffusion coefficient (m)
 //! - `μₛ'`: Reduced scattering coefficient [m⁻¹]
 //! - `S`: Source term [W/m³]
 //!

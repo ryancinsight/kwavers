@@ -132,14 +132,14 @@ impl TimingProfiler {
     /// Start a timing scope
     #[must_use]
     pub fn scope(&self, name: &str) -> TimingScope {
-        TimingScope::new(name.to_string(), self.timings.clone())
+        TimingScope::new(name.to_owned(), self.timings.clone())
     }
 
     /// Record a timing measurement directly
     pub fn record(&self, name: &str, duration: Duration) {
         if let Ok(mut timings) = self.timings.lock() {
             timings
-                .entry(name.to_string())
+                .entry(name.to_owned())
                 .or_insert_with(Vec::new)
                 .push(duration);
         }

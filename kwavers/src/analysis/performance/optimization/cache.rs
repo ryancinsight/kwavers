@@ -15,30 +15,33 @@ pub enum AccessPattern {
     Stencil,
 }
 
-/// Cache optimizer for improving memory access patterns
+/// Cache optimizer for improving memory access patterns.
+///
+/// Block-size tiling strategy uses L1 cache size (32 KiB) to derive optimal
+/// tile dimensions.  L2 size and cache-line size are not yet incorporated into
+/// the tiling model; they are tracked in `backlog.md` as a cache-hierarchy
+/// optimization task.
 #[derive(Debug)]
 pub struct CacheOptimizer {
     block_size: usize,
+    /// L1 cache size in bytes — used by `optimal_block_size_3d`.
     l1_cache_size: usize,
-    #[allow(dead_code)] // Cache configuration for advanced optimization
-    l2_cache_size: usize,
-    #[allow(dead_code)]
-    cache_line_size: usize,
 }
 
 impl CacheOptimizer {
-    /// Create a new cache optimizer
+    /// Create a new cache optimizer.
     #[must_use]
     pub fn new(block_size: usize) -> Self {
         Self {
             block_size,
-            l1_cache_size: 32 * 1024,  // 32 KB typical L1
-            l2_cache_size: 256 * 1024, // 256 KB typical L2
-            cache_line_size: 64,       // 64 bytes typical
+            l1_cache_size: 32 * 1024, // 32 KiB typical L1
         }
     }
 
     /// Optimize memory access through cache blocking
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn optimize_blocking(&self) -> KwaversResult<()> {
         log::info!(
             "Cache blocking enabled with block size: {}",
@@ -55,7 +58,7 @@ impl CacheOptimizer {
         let max_elements = self.l1_cache_size / element_size / 4; // Reserve 75% of L1
 
         // Start with cubic blocks
-        let block_dim = (max_elements as f64).powf(1.0 / 3.0) as usize;
+        let block_dim = (max_elements as f64).cbrt() as usize;
 
         let bx = block_dim.min(nx);
         let by = block_dim.min(ny);

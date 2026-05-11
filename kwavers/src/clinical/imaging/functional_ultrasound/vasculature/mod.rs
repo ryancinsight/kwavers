@@ -83,7 +83,7 @@ impl VesselSegmentation {
         let (nx, ny, nz) = image.dim();
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
-                "image must be at least 3×3×3".to_string(),
+                "image must be at least 3×3×3".to_owned(),
             ));
         }
 
@@ -107,6 +107,9 @@ impl VesselSegmentation {
     ///
     /// Returns voxels that are local maxima in the 6-neighbour topology —
     /// a deterministic one-pass medial-axis approximation for thin Frangi masks.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn extract_centerline(&self) -> KwaversResult<Vec<[f64; 3]>> {
         Ok(
             classify::centerline_from_points(&self.mask, &classify::masked_points(&self.mask))
@@ -143,15 +146,14 @@ impl VesselSegmentation {
             || !beam_angle_rad.is_finite()
         {
             return Err(KwaversError::InvalidInput(
-                "Doppler velocity inputs must be finite with positive frequency and sound speed"
-                    .to_string(),
+                "Doppler velocity inputs must be finite with positive frequency and sound speed".to_owned(),
             ));
         }
 
         let cos_theta = beam_angle_rad.cos();
         if cos_theta.abs() < 1e-6 {
             return Err(KwaversError::InvalidInput(
-                "Doppler beam angle is too close to 90 degrees".to_string(),
+                "Doppler beam angle is too close to 90 degrees".to_owned(),
             ));
         }
 
@@ -162,9 +164,12 @@ impl VesselSegmentation {
     ///
     /// Use [`estimate_flow_velocity_from_doppler`](Self::estimate_flow_velocity_from_doppler)
     /// with measured Doppler inputs instead.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn estimate_flow_velocity(&self) -> KwaversResult<f64> {
         Err(KwaversError::InvalidInput(
-            "static vessel segmentation does not contain Doppler or tracking data".to_string(),
+            "static vessel segmentation does not contain Doppler or tracking data".to_owned(),
         ))
     }
 }

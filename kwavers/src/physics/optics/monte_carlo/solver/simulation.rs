@@ -14,6 +14,9 @@ use crate::physics::optics::monte_carlo::source::PhotonSource;
 
 impl MonteCarloSolver {
     /// Run Monte Carlo simulation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn simulate(&self, source: &PhotonSource, config: &SimulationConfig) -> Result<MCResult> {
         let num_photons = config.num_photons;
         let chunk_size = (num_photons / rayon::current_num_threads()).max(1000);

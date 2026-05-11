@@ -3,7 +3,7 @@ use super::config::GpuThermalAcousticConfig;
 #[test]
 fn test_config_validation() {
     let config = GpuThermalAcousticConfig::default();
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn test_config_invalid_grid() {
 #[test]
 fn test_default_config_valid() {
     let config = GpuThermalAcousticConfig::default();
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
 
     let max_c = config.c_ref + config.dc_dT * 10.0;
     let cfl_ac = max_c * config.dt / config.dx.min(config.dy).min(config.dz);

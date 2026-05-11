@@ -9,11 +9,14 @@ pub struct WeightedAverageValidationCase {
 }
 
 /// Validate the retained weighted-average fusion inputs.
+/// # Errors
+/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+///
 pub fn validate_weighted_average_inputs(fusion: &MultiModalFusion) -> KwaversResult<()> {
     if fusion.registered_data.len() < 2 {
         return Err(KwaversError::Validation(
             crate::core::error::ValidationError::ConstraintViolation {
-                message: "At least two modalities required for weighted-average fusion".to_string(),
+                message: "At least two modalities required for weighted-average fusion".to_owned(),
             },
         ));
     }
@@ -33,8 +36,7 @@ pub fn validate_weighted_average_inputs(fusion: &MultiModalFusion) -> KwaversRes
     if !total_weight.is_finite() || total_weight <= 0.0 {
         return Err(KwaversError::Validation(
             crate::core::error::ValidationError::ConstraintViolation {
-                message: "FusionConfig.modality_weights must sum to a positive finite value"
-                    .to_string(),
+                message: "FusionConfig.modality_weights must sum to a positive finite value".to_owned(),
             },
         ));
     }

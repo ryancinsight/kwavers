@@ -4,6 +4,9 @@ use burn::tensor::backend::AutodiffBackend;
 
 impl<B: AutodiffBackend> TransferLearner<B> {
     /// Evaluate model accuracy on geometry
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn evaluate_accuracy(
         &self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
@@ -38,6 +41,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Generate test points within geometry for evaluation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn generate_test_points(
         &self,
         geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
@@ -59,6 +65,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Compute PDE residual at a point (simplified wave equation: ∂²u/∂t² = c²∇²u)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn compute_pde_residual(
         &self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
@@ -101,6 +110,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     /// For Dirichlet (u = 0): ε_BC = (1/N) Σ |u_model(x_bc, y_bc, 0)|²
     /// For Neumann (∂u/∂n = 0): ε_BC = (1/N) Σ |∂u_model/∂n|²
     /// For Periodic/Absorbing: Returns 0.0 (no simple pointwise residual)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn evaluate_boundary_condition(
         &self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,

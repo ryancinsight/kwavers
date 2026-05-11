@@ -27,7 +27,7 @@ pub fn acoustic_heat_source(
                     let vz = velocity_z[[i, j, k]];
                     let alpha = absorption[[i, j, k]];
                     let energy_density =
-                        0.5 * rho * (vx * vx + vy * vy + vz * vz) + p * p / (2.0 * rho * c * c);
+                        (0.5 * rho).mul_add(vz.mul_add(vz, vx.mul_add(vx, vy * vy)), p * p / (2.0 * rho * c * c));
                     q[[i, j, k]] = 2.0 * alpha * c * energy_density;
                 }
             }

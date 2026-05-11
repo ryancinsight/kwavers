@@ -49,6 +49,9 @@ impl Default for BeamPatternConfig {
 ///
 /// # Returns
 /// * 2D array of beam pattern (theta, phi)
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn calculate_beam_pattern(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
@@ -90,7 +93,7 @@ pub fn calculate_beam_pattern(
                         let z = iz as f64 * grid.dz;
 
                         // Phase from this point to far-field
-                        let phase = k * (x * dir_x + y * dir_y + z * dir_z);
+                        let phase = k * z.mul_add(dir_z, x.mul_add(dir_x, y * dir_y));
 
                         // Add contribution
                         let p = pressure_field[[ix, iy, iz]];
@@ -130,7 +133,7 @@ pub fn calculate_directivity(beam_pattern: &Array2<f64>) -> f64 {
 
 /// Calculate far-field distance
 fn calculate_far_field_distance(grid: &Grid, wavelength: f64, method: &FarFieldMethod) -> f64 {
-    let aperture = ((grid.nx as f64 * grid.dx).powi(2) + (grid.ny as f64 * grid.dy).powi(2)).sqrt();
+    let aperture = (grid.nx as f64 * grid.dx).hypot(grid.ny as f64 * grid.dy);
 
     match method {
         FarFieldMethod::Fresnel => aperture.powi(2) / wavelength,

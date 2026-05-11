@@ -46,6 +46,7 @@ pub struct PointEMSource {
 }
 
 impl PointEMSource {
+    #[must_use] 
     pub fn new(position: [f64; 3], frequency: f64, amplitude: f64) -> Self {
         Self {
             position,
@@ -75,9 +76,7 @@ impl EMSource for PointEMSource {
     }
 
     fn electric_field_at_time(&self, time: f64, position: &[f64]) -> [f64; 3] {
-        let distance = ((position[0] - self.position[0]).powi(2)
-            + (position[1] - self.position[1]).powi(2)
-            + (position[2] - self.position[2]).powi(2))
+        let distance = (position[2] - self.position[2]).mul_add(position[2] - self.position[2], (position[1] - self.position[1]).mul_add(position[1] - self.position[1], (position[0] - self.position[0]).powi(2)))
         .sqrt();
 
         if distance < 1e-10 {
@@ -108,9 +107,7 @@ impl EMSource for PointEMSource {
             return Complex::new(0.0, 0.0); // Off-resonance
         }
 
-        let distance = ((position[0] - self.position[0]).powi(2)
-            + (position[1] - self.position[1]).powi(2)
-            + (position[2] - self.position[2]).powi(2))
+        let distance = (position[2] - self.position[2]).mul_add(position[2] - self.position[2], (position[1] - self.position[1]).mul_add(position[1] - self.position[1], (position[0] - self.position[0]).powi(2)))
         .sqrt();
 
         if distance < 1e-10 {
@@ -145,9 +142,10 @@ pub struct PlaneWaveEMSource {
 }
 
 impl PlaneWaveEMSource {
+    #[must_use] 
     pub fn new(direction: [f64; 3], frequency: f64, amplitude: f64) -> Self {
         // Normalize direction
-        let norm = (direction[0].powi(2) + direction[1].powi(2) + direction[2].powi(2)).sqrt();
+        let norm = direction[2].mul_add(direction[2], direction[1].mul_add(direction[1], direction[0].powi(2))).sqrt();
         let normalized_dir = if norm > 0.0 {
             [
                 direction[0] / norm,
@@ -187,9 +185,7 @@ impl EMSource for PlaneWaveEMSource {
 
     fn electric_field_at_time(&self, time: f64, position: &[f64]) -> [f64; 3] {
         // Plane wave: E ∝ sin(k·r - ωt + φ)
-        let k_dot_r = self.direction[0] * position[0]
-            + self.direction[1] * position[1]
-            + self.direction[2] * position[2];
+        let k_dot_r = self.direction[2].mul_add(position[2], self.direction[0].mul_add(position[0], self.direction[1] * position[1]));
 
         let omega = 2.0 * std::f64::consts::PI * self.frequency;
         let c = 3e8; // Speed of light approximation
@@ -211,9 +207,7 @@ impl EMSource for PlaneWaveEMSource {
             return Complex::new(0.0, 0.0);
         }
 
-        let k_dot_r = self.direction[0] * position[0]
-            + self.direction[1] * position[1]
-            + self.direction[2] * position[2];
+        let k_dot_r = self.direction[2].mul_add(position[2], self.direction[0].mul_add(position[0], self.direction[1] * position[1]));
 
         let omega = 2.0 * std::f64::consts::PI * frequency;
         let c = 3e8;
@@ -229,9 +223,7 @@ impl EMSource for PlaneWaveEMSource {
 
     fn directivity(&self, direction: &[f64]) -> f64 {
         // For plane waves, directivity depends on angle between propagation and observation
-        let cos_theta = self.direction[0] * direction[0]
-            + self.direction[1] * direction[1]
-            + self.direction[2] * direction[2];
+        let cos_theta = self.direction[2].mul_add(direction[2], self.direction[0].mul_add(direction[0], self.direction[1] * direction[1]));
 
         // Simplified: higher directivity in propagation direction
         (cos_theta + 1.0) / 2.0

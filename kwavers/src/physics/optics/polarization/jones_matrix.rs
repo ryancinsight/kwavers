@@ -119,8 +119,8 @@ impl JonesMatrix {
 
     /// Matrix multiplication (composition of optical elements)
     #[must_use]
-    pub fn multiply(&self, other: &JonesMatrix) -> JonesMatrix {
-        JonesMatrix::new(
+    pub fn multiply(&self, other: &Self) -> Self {
+        Self::new(
             self.m11 * other.m11 + self.m12 * other.m21,
             self.m11 * other.m12 + self.m12 * other.m22,
             self.m21 * other.m11 + self.m22 * other.m21,

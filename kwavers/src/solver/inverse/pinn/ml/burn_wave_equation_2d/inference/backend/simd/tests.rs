@@ -37,6 +37,9 @@ fn matmul_scalar_quantized(
 }
 
 /// Test SIMD matmul with input_size=3, output_size=3
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_matmul_simd_3x3() {
     let executor = SimdExecutor::new(16);
@@ -87,6 +90,9 @@ fn test_matmul_simd_3x3() {
 }
 
 /// Test SIMD matmul with input_size=3, output_size=8 (hidden layer)
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_matmul_simd_3x8() {
     let executor = SimdExecutor::new(16);
@@ -137,6 +143,9 @@ fn test_matmul_simd_3x8() {
 }
 
 /// Test SIMD matmul with input_size=16, output_size=16 (larger hidden layer)
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_matmul_simd_16x16() {
     let executor = SimdExecutor::new(16);
@@ -191,6 +200,9 @@ fn test_matmul_simd_16x16() {
 }
 
 /// Test SIMD matmul with input_size=32, output_size=1 (output layer from large hidden)
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_matmul_simd_32x1() {
     let executor = SimdExecutor::new(16);
@@ -243,6 +255,9 @@ fn test_matmul_simd_32x1() {
 }
 
 /// Integration test: full forward pass with multi-layer network
+/// # Panics
+/// - Panics if `Forward pass should succeed`.
+///
 #[test]
 fn test_forward_simd_multilayer() {
     let mut executor = SimdExecutor::new(16);
@@ -298,8 +313,7 @@ fn test_forward_simd_multilayer() {
 
     let result = executor.predict(&network, &mut memory_pool, &x, &y, &t);
 
-    assert!(result.is_ok(), "Forward pass should succeed");
-    let (predictions, uncertainties) = result.unwrap();
+    let (predictions, uncertainties) = result.expect("Forward pass should succeed");
     assert_eq!(predictions.len(), 2);
     assert_eq!(uncertainties.len(), 2);
     assert!(predictions.iter().all(|&p| p.is_finite()));

@@ -81,6 +81,9 @@ impl TranscranialAberrationCorrection {
     ///
     /// ## Panics / Errors
     /// Returns `Err` if the `measured_field` dimensions do not match `self.grid`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_time_reversal_correction(
         &self,
         measured_field: &Array3<Complex<f64>>,
@@ -115,7 +118,7 @@ impl TranscranialAberrationCorrection {
 
         // Focal gain improvement from the pre-correction aberration.
         let focal_gain_db =
-            TranscranialAberrationCorrection::focal_gain_improvement_db(&forward_phases);
+            Self::focal_gain_improvement_db(&forward_phases);
 
         // Quality: coherence of (forward_phase + correction_phase) = coherence of zeros.
         // Deviates from 1 only when near-zero-magnitude field samples introduce arg() noise.
@@ -124,7 +127,7 @@ impl TranscranialAberrationCorrection {
             .zip(correction_phases.iter())
             .map(|(phi, corr)| phi + corr)
             .collect();
-        let quality_metric = TranscranialAberrationCorrection::circular_coherence(&residual_phases);
+        let quality_metric = Self::circular_coherence(&residual_phases);
 
         Ok(PhaseCorrection {
             phases: correction_phases,

@@ -62,6 +62,7 @@ impl Default for AutocorrelationConfig {
 
 impl AutocorrelationConfig {
     /// Create configuration for cardiac imaging
+    #[must_use] 
     pub fn cardiac() -> Self {
         Self {
             center_frequency: 2.5e6,
@@ -72,6 +73,7 @@ impl AutocorrelationConfig {
     }
 
     /// Create configuration for vascular imaging
+    #[must_use] 
     pub fn vascular() -> Self {
         Self {
             center_frequency: 7.5e6,
@@ -82,11 +84,13 @@ impl AutocorrelationConfig {
     }
 
     /// Calculate Nyquist velocity limit (maximum unambiguous velocity)
+    #[must_use] 
     pub fn nyquist_velocity(&self) -> f64 {
         (self.prf * self.speed_of_sound) / (4.0 * self.center_frequency * self.beam_angle.cos())
     }
 
     /// Calculate velocity resolution (minimum detectable velocity difference)
+    #[must_use] 
     pub fn velocity_resolution(&self) -> f64 {
         self.speed_of_sound / (2.0 * self.center_frequency * self.prf * (self.ensemble_size as f64))
     }
@@ -103,6 +107,7 @@ pub struct AutocorrelationEstimator {
 
 impl AutocorrelationEstimator {
     /// Create a new autocorrelation estimator
+    #[must_use] 
     pub fn new(config: AutocorrelationConfig) -> Self {
         Self { config }
     }
@@ -132,6 +137,9 @@ impl AutocorrelationEstimator {
     ///
     /// let (velocity, variance) = estimator.estimate(&iq_data.view())?;
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn estimate(
         &self,
         iq_data: &ArrayView3<Complex64>,
@@ -141,8 +149,8 @@ impl AutocorrelationEstimator {
         if ensemble_size < 2 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidParameter {
-                    parameter: "ensemble_size".to_string(),
-                    reason: "Ensemble size must be at least 2 for autocorrelation".to_string(),
+                    parameter: "ensemble_size".to_owned(),
+                    reason: "Ensemble size must be at least 2 for autocorrelation".to_owned(),
                 },
             ));
         }
@@ -150,7 +158,7 @@ impl AutocorrelationEstimator {
         if ensemble_size != self.config.ensemble_size {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidParameter {
-                    parameter: "ensemble_size".to_string(),
+                    parameter: "ensemble_size".to_owned(),
                     reason: format!(
                         "Expected ensemble size {}, got {}",
                         self.config.ensemble_size, ensemble_size
@@ -237,6 +245,7 @@ impl AutocorrelationEstimator {
     /// Apply variance-based quality filtering
     ///
     /// Rejects velocity estimates with variance above threshold
+    #[must_use] 
     pub fn filter_by_variance(
         &self,
         velocity: &Array2<f64>,
@@ -311,9 +320,7 @@ mod tests {
         let iq_data = Array3::<Complex64>::zeros((10, 16, 8));
 
         let result = estimator.estimate(&iq_data.view());
-        assert!(result.is_ok(), "Zero signal should not error");
-
-        let (velocity, variance) = result.unwrap();
+        let (velocity, variance) = result.expect("Zero signal should not error");
 
         // Zero signal should give zero velocity
         assert!(

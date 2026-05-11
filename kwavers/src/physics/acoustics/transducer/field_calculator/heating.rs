@@ -17,6 +17,9 @@ use ndarray::{Array3, Zip};
 
 impl TransducerFieldCalculatorPlugin {
     /// Calculate heating rate from acoustic field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_heating_rate(
         &self,
         pressure_field: &Array3<f64>,

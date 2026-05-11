@@ -19,33 +19,29 @@ pub struct CriticalAngles {
 #[derive(Debug)]
 pub struct SnellLawCalculator<'a> {
     interface: &'a Interface,
-    /// Ratio of wave speeds or refractive indices
-    #[allow(dead_code)]
-    speed_ratio: f64,
 }
 
 impl<'a> SnellLawCalculator<'a> {
     /// Create a new Snell's law calculator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(interface: &'a Interface) -> Self {
-        // For acoustic waves: use wave speeds
-        // For optical waves: use refractive indices
-        let speed_ratio = interface.medium1.wave_speed / interface.medium2.wave_speed;
-
-        Self {
-            interface,
-            speed_ratio,
-        }
+        Self { interface }
     }
 
     /// Calculate transmitted angle using Snell's law
+    /// # Errors
+    /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
+    ///
     pub fn calculate_transmitted_angle(&self, incident_angle: f64) -> KwaversResult<f64> {
         // Validate input
         if !(0.0..=PI / 2.0).contains(&incident_angle) {
             return Err(KwaversError::Physics(PhysicsError::InvalidState {
-                field: "incident_angle".to_string(),
+                field: "incident_angle".to_owned(),
                 value: format!("{incident_angle}"),
-                reason: "must be between 0 and π/2".to_string(),
+                reason: "must be between 0 and π/2".to_owned(),
             }));
         }
 
@@ -123,7 +119,7 @@ impl<'a> SnellLawCalculator<'a> {
         let n2 = self.interface.medium2.refractive_index;
         let sin_i = incident_angle.sin();
 
-        let discriminant = n1 * n1 * sin_i * sin_i - n2 * n2;
+        let discriminant = (n1 * n1 * sin_i).mul_add(sin_i, -(n2 * n2));
         if discriminant > 0.0 {
             Some((2.0 * PI / wavelength) * discriminant.sqrt())
         } else {

@@ -14,12 +14,19 @@ use ndarray::Array1;
 impl SensorRecorder {
     // ── ux statistics ─────────────────────────────────────────────────────────
 
+    /// Extract ux max.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_ux_max(&self) -> Option<Array1<f64>> {
         Some(self.ux_stats.as_ref()?.sample_max(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled ux maximum values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_ux_max(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,
@@ -29,12 +36,19 @@ impl SensorRecorder {
         )
     }
 
+    /// Extract ux min.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_ux_min(&self) -> Option<Array1<f64>> {
         Some(self.ux_stats.as_ref()?.sample_min(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled ux minimum values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_ux_min(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,
@@ -44,12 +58,19 @@ impl SensorRecorder {
         )
     }
 
+    /// Extract ux rms.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_ux_rms(&self) -> Option<Array1<f64>> {
         Some(self.ux_stats.as_ref()?.sample_rms(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled ux RMS values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_ux_rms(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,
@@ -61,12 +82,19 @@ impl SensorRecorder {
 
     // ── uy statistics ─────────────────────────────────────────────────────────
 
+    /// Extract uy max.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_uy_max(&self) -> Option<Array1<f64>> {
         Some(self.uy_stats.as_ref()?.sample_max(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled uy maximum values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_uy_max(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,
@@ -76,12 +104,19 @@ impl SensorRecorder {
         )
     }
 
+    /// Extract uy min.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_uy_min(&self) -> Option<Array1<f64>> {
         Some(self.uy_stats.as_ref()?.sample_min(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled uy minimum values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_uy_min(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,
@@ -91,12 +126,19 @@ impl SensorRecorder {
         )
     }
 
+    /// Extract uy rms.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_uy_rms(&self) -> Option<Array1<f64>> {
         Some(self.uy_stats.as_ref()?.sample_rms(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled uy RMS values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_uy_rms(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,
@@ -108,12 +150,19 @@ impl SensorRecorder {
 
     // ── uz statistics ─────────────────────────────────────────────────────────
 
+    /// Extract uz max.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_uz_max(&self) -> Option<Array1<f64>> {
         Some(self.uz_stats.as_ref()?.sample_max(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled uz maximum values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_uz_max(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,
@@ -123,12 +172,19 @@ impl SensorRecorder {
         )
     }
 
+    /// Extract uz min.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_uz_min(&self) -> Option<Array1<f64>> {
         Some(self.uz_stats.as_ref()?.sample_min(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled uz minimum values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_uz_min(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,
@@ -138,12 +194,19 @@ impl SensorRecorder {
         )
     }
 
+    /// Extract uz rms.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_uz_rms(&self) -> Option<Array1<f64>> {
         Some(self.uz_stats.as_ref()?.sample_rms(&self.sensor_indices))
     }
 
     /// Fill caller-owned storage with sampled uz RMS values.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_uz_rms(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_velocity_stat(
             out,

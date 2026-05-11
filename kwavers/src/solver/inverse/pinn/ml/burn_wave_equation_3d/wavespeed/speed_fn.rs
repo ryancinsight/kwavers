@@ -8,18 +8,28 @@ use super::super::geometry::Geometry3D;
 use super::{WaveSpeedFn3D, WaveSpeedGrid3D, WaveSpeedRepr3D};
 
 impl<B: Backend> WaveSpeedFn3D<B> {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(func: Arc<dyn Fn(f32, f32, f32) -> f32 + Send + Sync>) -> Self {
         Self {
             repr: WaveSpeedRepr3D::Cpu(func),
         }
     }
-
+    /// From grid with bbox.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_grid_with_bbox(grid: Tensor<B, 3>, bbox: [f32; 6]) -> KwaversResult<Self> {
         Ok(Self {
             repr: WaveSpeedRepr3D::Grid(WaveSpeedGrid3D::try_new(grid, bbox)?),
         })
     }
-
+    /// From grid with geometry.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_grid_with_geometry(
         grid: Tensor<B, 3>,
         geometry: &Geometry3D,
@@ -56,6 +66,10 @@ impl<B: Backend> WaveSpeedFn3D<B> {
         }
     }
 
+    /// Grid dims.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn grid_dims(&self) -> Option<[usize; 3]> {
         match &self.repr {
             WaveSpeedRepr3D::Cpu(_) => None,
@@ -63,6 +77,10 @@ impl<B: Backend> WaveSpeedFn3D<B> {
         }
     }
 
+    /// Grid bbox.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn grid_bbox(&self) -> Option<[f32; 6]> {
         match &self.repr {
             WaveSpeedRepr3D::Cpu(_) => None,

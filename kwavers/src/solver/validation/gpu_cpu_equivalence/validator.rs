@@ -71,6 +71,9 @@ impl EquivalenceValidator {
     /// Validate two arrays for equivalence
     ///
     /// Computes error metrics and returns a report with pass/fail status.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_arrays(
         &self,
         cpu_result: &Array3<f64>,
@@ -149,6 +152,9 @@ mod tests {
     use super::*;
 
     /// Test validator strict mode
+    /// # Panics
+    /// - Panics if assertion fails: `Strict mode requires bitwise`.
+    ///
     #[test]
     fn test_validator_strict() {
         let strict = EquivalenceValidator::strict();
@@ -158,6 +164,9 @@ mod tests {
     }
 
     /// Test validator relaxed mode
+    /// # Panics
+    /// - Panics if assertion fails: `Relaxed mode allows non-bitwise`.
+    ///
     #[test]
     fn test_validator_relaxed() {
         let relaxed = EquivalenceValidator::relaxed(1e-10);
@@ -166,6 +175,9 @@ mod tests {
     }
 
     /// Test validator default values
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_validator_default() {
         let default = EquivalenceValidator::default();
@@ -176,6 +188,9 @@ mod tests {
     }
 
     /// Test array validation with identical arrays
+    /// # Panics
+    /// - Panics if `Validation should succeed`.
+    ///
     #[test]
     fn test_validate_arrays_identical() {
         let shape = (10, 10, 10);
@@ -199,6 +214,9 @@ mod tests {
     }
 
     /// Test array validation with small error
+    /// # Panics
+    /// - Panics if `Validation should complete`.
+    ///
     #[test]
     fn test_validate_arrays_small_error() {
         let shape = (10, 10, 10);
@@ -225,6 +243,9 @@ mod tests {
     }
 
     /// Test array validation with dimension mismatch
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_validate_arrays_dimension_mismatch() {
         let cpu = Array3::zeros((10, 10, 10));
@@ -237,6 +258,9 @@ mod tests {
     }
 
     /// Test validation with zero pressure arrays
+    /// # Panics
+    /// - Panics if `Validation should handle zeros`.
+    ///
     #[test]
     fn test_validate_arrays_zero_pressure() {
         let shape = (10, 10, 10);
@@ -254,6 +278,9 @@ mod tests {
 
     /// Test error symmetry for deterministic operations
     /// |GPU - CPU| = |CPU - GPU|
+    /// # Panics
+    /// - Panics if `Validation should succeed`.
+    ///
     #[test]
     fn test_error_symmetry() {
         let cpu = Array3::from_elem((10, 10, 10), 1.5);
@@ -278,6 +305,9 @@ mod tests {
     }
 
     /// Test zero error for identical values property
+    /// # Panics
+    /// - Panics if `Validation should succeed`.
+    ///
     #[test]
     fn test_zero_error_for_identical() {
         let array = Array3::from_elem((5, 5, 5), std::f64::consts::E);

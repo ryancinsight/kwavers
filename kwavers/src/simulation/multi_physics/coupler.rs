@@ -19,6 +19,10 @@ pub struct FieldCoupler {
 
 impl FieldCoupler {
     /// Create a new field coupler
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             interpolators: HashMap::new(),
@@ -28,6 +32,9 @@ impl FieldCoupler {
     }
 
     /// Add coupling between two physics domains
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_coupling(
         &mut self,
         source_domain: PhysicsDomain,
@@ -52,6 +59,9 @@ impl FieldCoupler {
     }
 
     /// Transfer field conservatively between domains
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn transfer_field(
         &mut self,
         source_domain: PhysicsDomain,
@@ -94,6 +104,9 @@ impl FieldCoupler {
     /// source field rather than extracting it from a solver. Used by monolithic
     /// coupling to implement Jacobi-style simultaneous updates (all source fields
     /// are taken from the same snapshot u^k rather than the evolving state).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn transfer_field_array(
         &mut self,
         source_domain: PhysicsDomain,

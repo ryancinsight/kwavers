@@ -1,19 +1,15 @@
 //! Optimization algorithms for FWI
 //! Based on Nocedal & Wright (2006): "Numerical Optimization"
 
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
+use rayon::prelude::*;
 
 /// Line search methods for step size selection
 #[derive(Debug)]
 pub struct LineSearch {
     /// Armijo constant for sufficient decrease
-    #[allow(dead_code)]
     c1: f64,
-    /// Wolfe constant for curvature condition
-    #[allow(dead_code)]
-    c2: f64,
     /// Maximum iterations
-    #[allow(dead_code)]
     max_iterations: usize,
 }
 
@@ -28,7 +24,6 @@ impl LineSearch {
     pub fn new() -> Self {
         Self {
             c1: 1e-4,
-            c2: 0.9,
             max_iterations: 20,
         }
     }
@@ -59,6 +54,10 @@ impl LineSearch {
     /// Backtracking line search
     /// Implements Armijo condition for sufficient decrease
     /// Based on Nocedal & Wright (2006), Algorithm 3.1
+    /// # Panics
+    /// - Panics if `gradient contiguous`.
+    /// - Panics if `direction contiguous`.
+    ///
     #[must_use]
     pub fn backtracking(
         &self,
@@ -82,11 +81,14 @@ impl LineSearch {
         let c1 = self.c1; // Armijo constant
         let max_iterations = self.max_iterations;
 
-        // Compute directional derivative: ∇f·p
-        let mut directional_derivative = 0.0;
-        Zip::from(gradient).and(direction).for_each(|&g, &d| {
-            directional_derivative += g * d;
-        });
+        // Compute directional derivative: ∇f·p = Σᵢ gᵢ dᵢ (parallel dot product)
+        let directional_derivative: f64 = gradient
+            .as_slice()
+            .expect("gradient contiguous")
+            .par_iter()
+            .zip(direction.as_slice().expect("direction contiguous").par_iter())
+            .map(|(&g, &d)| g * d)
+            .sum();
 
         // If directional derivative is non-negative, we're not going downhill
         // Return small step size to prevent divergence
@@ -143,16 +145,31 @@ impl ConjugateGradient {
     }
 
     /// Compute search direction using Polak-Ribière formula
+    /// # Panics
+    /// - Panics if `gradient contiguous`.
+    /// - Panics if `grad_diff contiguous`.
+    /// - Panics if `prev_grad contiguous`.
+    ///
     pub fn compute_direction(&mut self, gradient: &Array3<f64>) -> Array3<f64> {
         let direction = if let (Some(prev_grad), Some(prev_dir)) =
             (&self.previous_gradient, &self.previous_direction)
         {
             // Polak-Ribière: β = (g_k·(g_k - g_{k-1})) / ||g_{k-1}||²
             let grad_diff = gradient - prev_grad;
-            let beta = Zip::from(gradient)
-                .and(&grad_diff)
-                .fold(0.0, |acc, &g, &d| acc + g * d)
-                / Zip::from(prev_grad).fold(0.0, |acc, &g| acc + g * g);
+            let numerator: f64 = gradient
+                .as_slice()
+                .expect("gradient contiguous")
+                .par_iter()
+                .zip(grad_diff.as_slice().expect("grad_diff contiguous").par_iter())
+                .map(|(&g, &d)| g * d)
+                .sum();
+            let denominator: f64 = prev_grad
+                .as_slice()
+                .expect("prev_grad contiguous")
+                .par_iter()
+                .map(|&g| g * g)
+                .sum();
+            let beta = numerator / denominator;
 
             // d_k = -g_k + β*d_{k-1}
             -gradient + beta * prev_dir

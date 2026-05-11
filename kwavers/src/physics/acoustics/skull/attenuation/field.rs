@@ -22,6 +22,9 @@ impl SkullAttenuation {
     /// # Returns
     ///
     /// Attenuation factor array (exp(-α·d)) where d is path length
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_attenuation_field(
         &self,
         grid: &Grid,
@@ -43,6 +46,9 @@ impl SkullAttenuation {
     /// # Returns
     ///
     /// Attenuation factor array incorporating all physics
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_attenuation_field_with_temperature(
         &self,
         grid: &Grid,

@@ -72,13 +72,16 @@ impl CentralDifference6 {
     /// dst[i] = (−f[i−3] + 9f[i−2] − 45f[i−1] + 45f[i+1] − 9f[i+2] + f[i+3]) / (60 Δx)
     /// ```
     /// Near-boundary: O(Δx⁴) at i=2/n−3, O(Δx²) at i=1/n−2, O(Δx) at i=0/n−1.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if nx < 7 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -89,10 +92,7 @@ impl CentralDifference6 {
         for i in 3..nx - 3 {
             for j in 0..ny {
                 for k in 0..nz {
-                    dst[[i, j, k]] = (-field[[i - 3, j, k]] + 9.0 * field[[i - 2, j, k]]
-                        - 45.0 * field[[i - 1, j, k]]
-                        + 45.0 * field[[i + 1, j, k]]
-                        - 9.0 * field[[i + 2, j, k]]
+                    dst[[i, j, k]] = (9.0f64.mul_add(-field[[i + 2, j, k]], 45.0f64.mul_add(field[[i + 1, j, k]], 45.0f64.mul_add(-field[[i - 1, j, k]], 9.0f64.mul_add(field[[i - 2, j, k]], -field[[i - 3, j, k]]))))
                         + field[[i + 3, j, k]])
                         * inv60dx;
                 }
@@ -100,12 +100,10 @@ impl CentralDifference6 {
         }
         for j in 0..ny {
             for k in 0..nz {
-                dst[[2, j, k]] = (-field[[4, j, k]] + 8.0 * field[[3, j, k]]
-                    - 8.0 * field[[1, j, k]]
+                dst[[2, j, k]] = (8.0f64.mul_add(-field[[1, j, k]], 8.0f64.mul_add(field[[3, j, k]], -field[[4, j, k]]))
                     + field[[0, j, k]])
                     * inv12dx;
-                dst[[nx - 3, j, k]] = (-field[[nx - 1, j, k]] + 8.0 * field[[nx - 2, j, k]]
-                    - 8.0 * field[[nx - 4, j, k]]
+                dst[[nx - 3, j, k]] = (8.0f64.mul_add(-field[[nx - 4, j, k]], 8.0f64.mul_add(field[[nx - 2, j, k]], -field[[nx - 1, j, k]]))
                     + field[[nx - 5, j, k]])
                     * inv12dx;
                 dst[[1, j, k]] = (field[[2, j, k]] - field[[0, j, k]]) * inv2dx;
@@ -118,13 +116,16 @@ impl CentralDifference6 {
     }
 
     /// Apply ∂/∂y into a pre-allocated destination — zero heap allocation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if ny < 7 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -135,10 +136,7 @@ impl CentralDifference6 {
         for i in 0..nx {
             for j in 3..ny - 3 {
                 for k in 0..nz {
-                    dst[[i, j, k]] = (-field[[i, j - 3, k]] + 9.0 * field[[i, j - 2, k]]
-                        - 45.0 * field[[i, j - 1, k]]
-                        + 45.0 * field[[i, j + 1, k]]
-                        - 9.0 * field[[i, j + 2, k]]
+                    dst[[i, j, k]] = (9.0f64.mul_add(-field[[i, j + 2, k]], 45.0f64.mul_add(field[[i, j + 1, k]], 45.0f64.mul_add(-field[[i, j - 1, k]], 9.0f64.mul_add(field[[i, j - 2, k]], -field[[i, j - 3, k]]))))
                         + field[[i, j + 3, k]])
                         * inv60dy;
                 }
@@ -146,12 +144,10 @@ impl CentralDifference6 {
         }
         for i in 0..nx {
             for k in 0..nz {
-                dst[[i, 2, k]] = (-field[[i, 4, k]] + 8.0 * field[[i, 3, k]]
-                    - 8.0 * field[[i, 1, k]]
+                dst[[i, 2, k]] = (8.0f64.mul_add(-field[[i, 1, k]], 8.0f64.mul_add(field[[i, 3, k]], -field[[i, 4, k]]))
                     + field[[i, 0, k]])
                     * inv12dy;
-                dst[[i, ny - 3, k]] = (-field[[i, ny - 1, k]] + 8.0 * field[[i, ny - 2, k]]
-                    - 8.0 * field[[i, ny - 4, k]]
+                dst[[i, ny - 3, k]] = (8.0f64.mul_add(-field[[i, ny - 4, k]], 8.0f64.mul_add(field[[i, ny - 2, k]], -field[[i, ny - 1, k]]))
                     + field[[i, ny - 5, k]])
                     * inv12dy;
                 dst[[i, 1, k]] = (field[[i, 2, k]] - field[[i, 0, k]]) * inv2dy;
@@ -164,13 +160,16 @@ impl CentralDifference6 {
     }
 
     /// Apply ∂/∂z into a pre-allocated destination — zero heap allocation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if nz < 7 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }
@@ -181,10 +180,7 @@ impl CentralDifference6 {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 3..nz - 3 {
-                    dst[[i, j, k]] = (-field[[i, j, k - 3]] + 9.0 * field[[i, j, k - 2]]
-                        - 45.0 * field[[i, j, k - 1]]
-                        + 45.0 * field[[i, j, k + 1]]
-                        - 9.0 * field[[i, j, k + 2]]
+                    dst[[i, j, k]] = (9.0f64.mul_add(-field[[i, j, k + 2]], 45.0f64.mul_add(field[[i, j, k + 1]], 45.0f64.mul_add(-field[[i, j, k - 1]], 9.0f64.mul_add(field[[i, j, k - 2]], -field[[i, j, k - 3]]))))
                         + field[[i, j, k + 3]])
                         * inv60dz;
                 }
@@ -192,12 +188,10 @@ impl CentralDifference6 {
         }
         for i in 0..nx {
             for j in 0..ny {
-                dst[[i, j, 2]] = (-field[[i, j, 4]] + 8.0 * field[[i, j, 3]]
-                    - 8.0 * field[[i, j, 1]]
+                dst[[i, j, 2]] = (8.0f64.mul_add(-field[[i, j, 1]], 8.0f64.mul_add(field[[i, j, 3]], -field[[i, j, 4]]))
                     + field[[i, j, 0]])
                     * inv12dz;
-                dst[[i, j, nz - 3]] = (-field[[i, j, nz - 1]] + 8.0 * field[[i, j, nz - 2]]
-                    - 8.0 * field[[i, j, nz - 4]]
+                dst[[i, j, nz - 3]] = (8.0f64.mul_add(-field[[i, j, nz - 4]], 8.0f64.mul_add(field[[i, j, nz - 2]], -field[[i, j, nz - 1]]))
                     + field[[i, j, nz - 5]])
                     * inv12dz;
                 dst[[i, j, 1]] = (field[[i, j, 2]] - field[[i, j, 0]]) * inv2dz;
@@ -217,7 +211,7 @@ impl DifferentialOperator for CentralDifference6 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -232,7 +226,7 @@ impl DifferentialOperator for CentralDifference6 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -247,7 +241,7 @@ impl DifferentialOperator for CentralDifference6 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 7,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }

@@ -29,6 +29,9 @@ pub struct PhotoacousticSimulator {
 
 impl PhotoacousticSimulator {
     /// Create new photoacoustic simulator
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         grid: Grid,
         parameters: PhotoacousticParameters,
@@ -68,6 +71,9 @@ impl PhotoacousticSimulator {
     /// Compute optical fluence distribution using diffusion approximation
     ///
     /// Solves the steady-state diffusion equation: ∇·(D∇Φ) - μₐΦ = -S
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_fluence(&self) -> KwaversResult<Array3<f64>> {
         self.compute_fluence_at_wavelength(
             self.parameters
@@ -79,6 +85,9 @@ impl PhotoacousticSimulator {
     }
 
     /// Compute optical fluence for a specific wavelength
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_fluence_at_wavelength(&self, wavelength_nm: f64) -> KwaversResult<Array3<f64>> {
         optics::compute_fluence_at_wavelength(
             &self.grid,
@@ -89,6 +98,9 @@ impl PhotoacousticSimulator {
     }
 
     /// Compute fluence for all wavelengths in parallel
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_multi_wavelength_fluence(&self) -> KwaversResult<Vec<Array3<f64>>> {
         optics::compute_multi_wavelength_fluence(
             &self.grid,
@@ -104,11 +116,17 @@ impl PhotoacousticSimulator {
     }
 
     /// Get optical properties reference
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn optical_properties(&self) -> &Array3<OpticalPropertyData> {
         &self.optical_properties
     }
 
     /// Get parameters reference
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn parameters(&self) -> &PhotoacousticParameters {
         &self.parameters
     }
@@ -117,6 +135,9 @@ impl PhotoacousticSimulator {
     ///
     /// Compares computed pressure with analytical photoacoustic generation formula
     /// at the center of the grid.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_analytical(&self) -> KwaversResult<f64> {
         let fluence = self.compute_fluence()?;
         let initial_pressure = self.compute_initial_pressure(&fluence)?;

@@ -13,6 +13,7 @@ pub struct BurtonMillerAssembler {
 }
 
 impl BurtonMillerAssembler {
+    #[must_use] 
     pub fn new(config: BurtonMillerConfig) -> Self {
         Self { config }
     }
@@ -33,7 +34,7 @@ impl BurtonMillerAssembler {
         }
 
         for n in &mut normals {
-            let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+            let len = n[2].mul_add(n[2], n[0].mul_add(n[0], n[1] * n[1])).sqrt();
             if len > 1e-14 {
                 n[0] /= len;
                 n[1] /= len;
@@ -47,6 +48,9 @@ impl BurtonMillerAssembler {
     }
 
     /// Assemble Burton-Miller H matrix (CBIE + α·HBIE).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn assemble_h_matrix(
         &self,
         boundary_nodes: &[[f64; 3]],
@@ -88,6 +92,9 @@ impl BurtonMillerAssembler {
     }
 
     /// Assemble Burton-Miller G matrix (Neumann data RHS).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn assemble_g_matrix(
         &self,
         boundary_nodes: &[[f64; 3]],
@@ -119,6 +126,9 @@ impl BurtonMillerAssembler {
     }
 
     /// Compute element contribution to H matrix (CBIE + HBIE).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn element_contribution(
         &self,
         collocation: &[f64; 3],
@@ -131,7 +141,7 @@ impl BurtonMillerAssembler {
         let mut h_cbie = Complex64::new(0.0, 0.0);
         let mut h_hbie = Complex64::new(0.0, 0.0);
 
-        let gauss_points = [(1.0 / 3.0, 1.0 / 3.0), (0.6, 0.2), (0.2, 0.6)];
+        let gauss_points: [(f64, f64); 3] = [(1.0 / 3.0, 1.0 / 3.0), (0.6, 0.2), (0.2, 0.6)];
         let gauss_weights = [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
 
         let normal_y = self.triangle_normal(node1, node2, node3);
@@ -139,9 +149,9 @@ impl BurtonMillerAssembler {
         for (gp_idx, &(xi, eta)) in gauss_points.iter().enumerate() {
             let zeta = 1.0 - xi - eta;
             let point_on_element = [
-                zeta * node1[0] + xi * node2[0] + eta * node3[0],
-                zeta * node1[1] + xi * node2[1] + eta * node3[1],
-                zeta * node1[2] + xi * node2[2] + eta * node3[2],
+                eta.mul_add(node3[0], zeta * node1[0] + xi * node2[0]),
+                eta.mul_add(node3[1], zeta * node1[1] + xi * node2[1]),
+                eta.mul_add(node3[2], zeta * node1[2] + xi * node2[2]),
             ];
 
             let r = self.distance(collocation, &point_on_element);
@@ -187,15 +197,15 @@ impl BurtonMillerAssembler {
         let mut g_cbie = Complex64::new(0.0, 0.0);
         let mut g_hbie = Complex64::new(0.0, 0.0);
 
-        let gauss_points = [(1.0 / 3.0, 1.0 / 3.0), (0.6, 0.2), (0.2, 0.6)];
+        let gauss_points: [(f64, f64); 3] = [(1.0 / 3.0, 1.0 / 3.0), (0.6, 0.2), (0.2, 0.6)];
         let gauss_weights = [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
 
         for (gp_idx, &(xi, eta)) in gauss_points.iter().enumerate() {
             let zeta = 1.0 - xi - eta;
             let point_on_element = [
-                zeta * node1[0] + xi * node2[0] + eta * node3[0],
-                zeta * node1[1] + xi * node2[1] + eta * node3[1],
-                zeta * node1[2] + xi * node2[2] + eta * node3[2],
+                eta.mul_add(node3[0], zeta * node1[0] + xi * node2[0]),
+                eta.mul_add(node3[1], zeta * node1[1] + xi * node2[1]),
+                eta.mul_add(node3[2], zeta * node1[2] + xi * node2[2]),
             ];
 
             let r = self.distance(collocation, &point_on_element);

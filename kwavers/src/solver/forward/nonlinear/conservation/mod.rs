@@ -69,9 +69,9 @@ pub enum ConservationLaw {
 impl fmt::Display for ConservationLaw {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ConservationLaw::Energy => write!(f, "Energy"),
-            ConservationLaw::Momentum => write!(f, "Momentum"),
-            ConservationLaw::Mass => write!(f, "Mass"),
+            Self::Energy => write!(f, "Energy"),
+            Self::Momentum => write!(f, "Momentum"),
+            Self::Mass => write!(f, "Mass"),
         }
     }
 }
@@ -92,10 +92,10 @@ pub enum ViolationSeverity {
 impl fmt::Display for ViolationSeverity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ViolationSeverity::Acceptable => write!(f, "ACCEPTABLE"),
-            ViolationSeverity::Warning => write!(f, "WARNING"),
-            ViolationSeverity::Error => write!(f, "ERROR"),
-            ViolationSeverity::Critical => write!(f, "CRITICAL"),
+            Self::Acceptable => write!(f, "ACCEPTABLE"),
+            Self::Warning => write!(f, "WARNING"),
+            Self::Error => write!(f, "ERROR"),
+            Self::Critical => write!(f, "CRITICAL"),
         }
     }
 }
@@ -200,10 +200,10 @@ pub trait ConservationDiagnostics {
 
         let current_momentum = self.calculate_total_momentum();
         let initial_momentum_mag =
-            (initial_momentum.0.powi(2) + initial_momentum.1.powi(2) + initial_momentum.2.powi(2))
+            initial_momentum.2.mul_add(initial_momentum.2, initial_momentum.1.mul_add(initial_momentum.1, initial_momentum.0.powi(2)))
                 .sqrt();
         let current_momentum_mag =
-            (current_momentum.0.powi(2) + current_momentum.1.powi(2) + current_momentum.2.powi(2))
+            current_momentum.2.mul_add(current_momentum.2, current_momentum.1.mul_add(current_momentum.1, current_momentum.0.powi(2)))
                 .sqrt();
         diagnostics.push(ConservationDiagnostic::new(
             ConservationLaw::Momentum,

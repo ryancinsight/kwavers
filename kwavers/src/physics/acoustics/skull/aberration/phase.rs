@@ -17,6 +17,9 @@ impl AberrationCorrection<'_> {
     ///
     /// Positive values indicate a slower-than-water path; cortical bone
     /// normally gives negative values because `c_bone > c_water`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_time_reversal_phases(&self, frequency: f64) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
         let dz = self.grid.dz;
@@ -41,6 +44,9 @@ impl AberrationCorrection<'_> {
     }
 
     /// Compute the correction phase field `Phi_corr = -Phi(x,y,z)`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_correction_phases(&self, frequency: f64) -> KwaversResult<Array3<f64>> {
         let phases = self.compute_time_reversal_phases(frequency)?;
         Ok(phases.mapv(|phi| -phi))

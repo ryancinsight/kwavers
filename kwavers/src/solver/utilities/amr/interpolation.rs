@@ -49,6 +49,9 @@ impl ConservativeInterpolator {
     /// References:
     /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
     /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn interpolate_to_refined(
         &self,
         octree: &Octree,
@@ -67,6 +70,9 @@ impl ConservativeInterpolator {
     }
 
     /// Recursively interpolate field values for octree nodes
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn interpolate_node(
         &self,
         node: &super::octree::OctreeNode,

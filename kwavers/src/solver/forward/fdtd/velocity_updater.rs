@@ -20,6 +20,12 @@ impl FdtdSolver {
     ///
     /// # Reference
     /// Treeby & Cox (2010), §II.A (k-space corrected FDTD velocity update).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn update_velocity_kspace(&mut self, dt: f64) -> KwaversResult<()> {
         // Compute spectral gradients of pressure (fills kops.grad_x/y/z)
         {
@@ -37,7 +43,7 @@ impl FdtdSolver {
             Zip::from(&mut self.fields.ux)
                 .and(&kops.grad_x)
                 .and(&self.materials.rho0)
-                .for_each(|u, &dp, &rho| {
+                .par_for_each(|u, &dp, &rho| {
                     if rho > 1e-9 {
                         *u -= dt / rho * dp;
                     }
@@ -53,7 +59,7 @@ impl FdtdSolver {
             Zip::from(&mut self.fields.uy)
                 .and(&kops.grad_y)
                 .and(&self.materials.rho0)
-                .for_each(|u, &dp, &rho| {
+                .par_for_each(|u, &dp, &rho| {
                     if rho > 1e-9 {
                         *u -= dt / rho * dp;
                     }
@@ -68,7 +74,7 @@ impl FdtdSolver {
             Zip::from(&mut self.fields.uz)
                 .and(&kops.grad_z)
                 .and(&self.materials.rho0)
-                .for_each(|u, &dp, &rho| {
+                .par_for_each(|u, &dp, &rho| {
                     if rho > 1e-9 {
                         *u -= dt / rho * dp;
                     }
@@ -93,6 +99,9 @@ impl FdtdSolver {
     ///    gradient, CPML applied if present.
     /// 3. **Collocated FD** (`staggered_grid = false`): central-difference gradient,
     ///    CPML applied if present.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[inline]
     pub fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
         if self.kspace_ops.is_some() {
@@ -124,7 +133,7 @@ impl FdtdSolver {
             Zip::from(vel_component)
                 .and(grad_component)
                 .and(&self.materials.rho0)
-                .for_each(|v, &grad, &rho| {
+                .par_for_each(|v, &grad, &rho| {
                     if rho > 1e-9 {
                         *v -= dt / rho * grad;
                     }
@@ -151,6 +160,9 @@ impl FdtdSolver {
     /// `dp_dz_scratch` using a vectorizable Zip slice-pair pattern — zero heap allocation
     /// per step. Phase 2 applies CPML corrections in-place. Phase 3 reads the scratch
     /// gradients and updates the velocity components.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
         let (nx, ny, nz) = self.fields.p.dim();
         // Extract grid spacings as Copy values — avoids re-borrowing self inside closures.

@@ -5,6 +5,9 @@ use std::sync::Arc;
 
 /// Verify GpuPstdSolver can be constructed and runs without error.
 /// Skipped if no GPU adapter is available (headless CI).
+/// # Panics
+/// - Panics if `device creation`.
+///
 #[test]
 fn test_gpu_pstd_solver_new() {
     let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {

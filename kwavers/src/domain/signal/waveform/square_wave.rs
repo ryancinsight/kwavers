@@ -59,7 +59,7 @@ impl Signal for SquareWave {
         let amp = self.amplitude.amplitude(t);
         let freq = self.frequency_hz_checked(t);
         let phase = self.phase.phase(t);
-        let theta = 2.0 * std::f64::consts::PI * freq * t + phase;
+        let theta = (2.0 * std::f64::consts::PI * freq).mul_add(t, phase);
 
         let s = if theta.sin() >= 0.0 { 1.0 } else { -1.0 };
         amp * s

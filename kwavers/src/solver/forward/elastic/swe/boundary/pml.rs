@@ -136,42 +136,54 @@ impl PMLBoundary {
         let sigma_max = config.sigma_max;
         let order = config.profile_order;
 
+        // Degenerate axes (size == 1): no propagation → no PML needed.
+        // Mirrors fd1_y / fd1_z guard (`if ny <= 1 { return 0.0 }`).
+        let pml_x = nx > 1;
+        let pml_y = ny > 1;
+        let pml_z = nz > 1;
+
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
                     let mut max_sigma = 0.0_f64;
 
                     // X-direction PML (left and right faces)
-                    if i < thickness {
-                        let dist = (thickness - i) as f64;
-                        let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                        max_sigma = max_sigma.max(val);
-                    } else if i >= nx - thickness {
-                        let dist = (i - (nx - thickness) + 1) as f64;
-                        let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                        max_sigma = max_sigma.max(val);
+                    if pml_x {
+                        if i < thickness {
+                            let dist = (thickness - i) as f64;
+                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
+                            max_sigma = max_sigma.max(val);
+                        } else if nx > thickness && i >= nx - thickness {
+                            let dist = (i - (nx - thickness) + 1) as f64;
+                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
+                            max_sigma = max_sigma.max(val);
+                        }
                     }
 
                     // Y-direction PML (front and back faces)
-                    if j < thickness {
-                        let dist = (thickness - j) as f64;
-                        let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                        max_sigma = max_sigma.max(val);
-                    } else if j >= ny - thickness {
-                        let dist = (j - (ny - thickness) + 1) as f64;
-                        let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                        max_sigma = max_sigma.max(val);
+                    if pml_y {
+                        if j < thickness {
+                            let dist = (thickness - j) as f64;
+                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
+                            max_sigma = max_sigma.max(val);
+                        } else if ny > thickness && j >= ny - thickness {
+                            let dist = (j - (ny - thickness) + 1) as f64;
+                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
+                            max_sigma = max_sigma.max(val);
+                        }
                     }
 
                     // Z-direction PML (top and bottom faces)
-                    if k < thickness {
-                        let dist = (thickness - k) as f64;
-                        let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                        max_sigma = max_sigma.max(val);
-                    } else if k >= nz - thickness {
-                        let dist = (k - (nz - thickness) + 1) as f64;
-                        let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                        max_sigma = max_sigma.max(val);
+                    if pml_z {
+                        if k < thickness {
+                            let dist = (thickness - k) as f64;
+                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
+                            max_sigma = max_sigma.max(val);
+                        } else if nz > thickness && k >= nz - thickness {
+                            let dist = (k - (nz - thickness) + 1) as f64;
+                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
+                            max_sigma = max_sigma.max(val);
+                        }
                     }
 
                     sigma[[i, j, k]] = max_sigma;

@@ -10,6 +10,9 @@ pub struct LieTrotterSplitting;
 
 impl LieTrotterSplitting {
     /// Create a new Lie-Trotter splitting
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self
@@ -56,6 +59,9 @@ pub struct StrangSplitting;
 
 impl StrangSplitting {
     /// Create a new Strang splitting
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self
@@ -111,8 +117,8 @@ impl YoshidaSplitting {
     /// Create a new Yoshida splitting
     #[must_use]
     pub fn new() -> Self {
-        let w1 = 1.0 / (2.0 - 2.0_f64.powf(1.0 / 3.0));
-        let w0 = 1.0 - 2.0 * w1;
+        let w1 = 1.0 / (2.0 - 2.0_f64.cbrt());
+        let w0 = 2.0f64.mul_add(-w1, 1.0);
 
         Self { w0, w1 }
     }
@@ -185,14 +191,14 @@ impl RecursiveSplitting {
             2 => vec![0.5, 0.5],
             4 => {
                 // Yoshida coefficients
-                let w1 = 1.0 / (2.0 - 2.0_f64.powf(1.0 / 3.0));
-                let w0 = 1.0 - 2.0 * w1;
+                let w1 = 1.0 / (2.0 - 2.0_f64.cbrt());
+                let w0 = 2.0f64.mul_add(-w1, 1.0);
                 vec![w1 / 2.0, w1 / 2.0, w0 / 2.0, w0 / 2.0, w1 / 2.0, w1 / 2.0]
             }
             6 => {
                 // 6th order coefficients (Yoshida 1990)
-                let w1 = 1.0 / (2.0 - 2.0_f64.powf(1.0 / 5.0));
-                let w0 = 1.0 - 2.0 * w1;
+                let w1: f64 = 1.0 / (2.0 - (1.0_f64 / 5.0).exp2());
+                let w0: f64 = 2.0f64.mul_add(-w1, 1.0);
                 vec![w1 / 2.0, w1 / 2.0, w0 / 2.0, w0 / 2.0, w1 / 2.0, w1 / 2.0]
             }
             _ => {

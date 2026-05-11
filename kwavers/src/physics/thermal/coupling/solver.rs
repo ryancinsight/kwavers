@@ -32,12 +32,18 @@ impl ThermalAcousticCoupling {
     }
 
     /// Establish execution domain matching wave geometry
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn initialize(&mut self, shape: (usize, usize, usize)) {
         self.acoustic_heat = Array3::zeros(shape);
     }
 
     /// Evaluate temporal step executing power transfer between modalities.
     /// Returns a validated energy matrix confirming spatial boundaries.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update(
         &mut self,
         temperature: &Array3<f64>,
@@ -81,7 +87,7 @@ impl ThermalAcousticCoupling {
         &self.acoustic_heat
     }
 
-    /// Analytical integration across spatial matrix ensuring energy balance [J]
+    /// Analytical integration across spatial matrix ensuring energy balance (J)
     #[must_use]
     pub fn total_energy(&self) -> f64 {
         self.acoustic_heat.iter().sum()

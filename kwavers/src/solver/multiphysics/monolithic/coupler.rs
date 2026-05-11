@@ -55,6 +55,7 @@ pub struct MonolithicCoupler {
 }
 impl MonolithicCoupler {
     /// Create new monolithic coupler
+    #[must_use] 
     pub fn new(newton_config: NewtonKrylovConfig, gmres_config: GMRESConfig) -> Self {
         Self {
             newton_config,
@@ -70,6 +71,7 @@ impl MonolithicCoupler {
     }
 
     /// Create new monolithic coupler with custom physics coefficients
+    #[must_use] 
     pub fn with_coefficients(
         newton_config: NewtonKrylovConfig,
         gmres_config: GMRESConfig,
@@ -89,11 +91,17 @@ impl MonolithicCoupler {
     }
 
     /// Set physics coefficients
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_physics_coefficients(&mut self, coefficients: PhysicsCoefficients) {
         self.physics_coefficients = coefficients;
     }
 
     /// Register physics component
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn register_physics(
         &mut self,
         name: String,
@@ -131,6 +139,12 @@ impl MonolithicCoupler {
     ///    - Inner linear solver tolerance: 10⁻³ × Newton residual (Eisenstat-Walker)
     ///    - Restarted GMRES(30) with configurable Krylov dimension
     ///    - Adaptive preconditioning (physics-based block preconditioner)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn solve_coupled_step(
         &mut self,
         fields: &mut HashMap<UnifiedFieldType, Array3<f64>>,
@@ -282,11 +296,13 @@ impl MonolithicCoupler {
         })
     }
     /// Get convergence history
+    #[must_use] 
     pub fn convergence_history(&self) -> &[f64] {
         &self.convergence_history
     }
 
     /// Get physics coefficients (read-only)
+    #[must_use] 
     pub fn physics_coefficients(&self) -> &PhysicsCoefficients {
         &self.physics_coefficients
     }

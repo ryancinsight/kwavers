@@ -11,6 +11,9 @@ pub struct AmplitudeModulation {
 
 impl AmplitudeModulation {
     /// Create new AM modulator
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(params: ModulationParams) -> KwaversResult<Self> {
         if params.modulation_index < 0.0 || params.modulation_index > super::constants::MAX_AM_INDEX
         {
@@ -23,6 +26,9 @@ impl AmplitudeModulation {
     }
 
     /// Get modulation depth
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn modulation_depth(&self) -> f64 {
         self.params.modulation_index
@@ -33,7 +39,7 @@ impl Modulation for AmplitudeModulation {
     fn modulate(&self, carrier: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>> {
         if carrier.len() != t.len() {
             return Err(KwaversError::InvalidInput(
-                "Carrier and time arrays must have same length".to_string(),
+                "Carrier and time arrays must have same length".to_owned(),
             ));
         }
 
@@ -42,14 +48,14 @@ impl Modulation for AmplitudeModulation {
 
         Ok(t.iter()
             .zip(carrier.iter())
-            .map(|(&ti, &msg)| (1.0 + m * msg) * (omega_c * ti).cos())
+            .map(|(&ti, &msg)| m.mul_add(msg, 1.0) * (omega_c * ti).cos())
             .collect())
     }
 
     fn demodulate(&self, signal: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>> {
         if signal.len() != t.len() {
             return Err(KwaversError::InvalidInput(
-                "Signal and time arrays must have same length".to_string(),
+                "Signal and time arrays must have same length".to_owned(),
             ));
         }
 

@@ -29,13 +29,16 @@ use std::collections::HashMap;
 /// where $\tau_k = (\sigma_k^2)^{-1}$ is the precision (confidence) of modality $k$.
 /// The resulting uncertainty corresponds to the Cramér-Rao lower bound for the variance of the estimator:
 /// $$ \text{Var}(F_{MAP}) = \left( \sum_{k=1}^N \tau_k \right)^{-1} $$
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
     let registration = ImageRegistration::default();
 
     // Use first modality as reference
     let reference_modality = fusion.registered_data.values().next().ok_or_else(|| {
         KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-            message: "No modalities available for fusion".to_string(),
+            message: "No modalities available for fusion".to_owned(),
         })
     })?;
 

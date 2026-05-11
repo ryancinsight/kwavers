@@ -24,6 +24,12 @@ pub struct LinearChirp {
 
 impl LinearChirp {
     /// Create new linear chirp - USING all parameters
+    /// # Panics
+    /// - Panics if assertion fails: `Start frequency must be positive`.
+    /// - Panics if assertion fails: `Stop frequency must be positive`.
+    /// - Panics if assertion fails: `Duration too short`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(start_freq: f64, stop_freq: f64, duration: f64, amplitude: f64) -> Self {
         assert!(start_freq > 0.0, "Start frequency must be positive");
@@ -87,14 +93,14 @@ impl FrequencySweep for LinearChirp {
         if t < 0.0 || t > self.duration {
             return 0.0;
         }
-        self.start_frequency + self.sweep_rate * t
+        self.sweep_rate.mul_add(t, self.start_frequency)
     }
 
     fn phase(&self, t: f64) -> f64 {
         if t < 0.0 || t > self.duration {
             return 0.0;
         }
-        TWO_PI * (self.start_frequency * t + 0.5 * self.sweep_rate * t * t)
+        TWO_PI * self.start_frequency.mul_add(t, 0.5 * self.sweep_rate * t * t)
     }
 
     fn sweep_rate(&self, t: f64) -> f64 {

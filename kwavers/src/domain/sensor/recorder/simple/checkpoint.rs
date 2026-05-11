@@ -43,6 +43,10 @@ impl SensorRecorder {
     ///
     /// Returns `(data, next_step, expected_steps)` where `data` has shape
     /// `(n_sensors, next_step)`. Returns `None` when no sensor mask is active.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn checkpoint_state(&self) -> Option<(Array2<f64>, usize, usize)> {
         self.checkpoint_state_view()
             .map(|(view, next_step, expected_steps)| (view.to_owned(), next_step, expected_steps))
@@ -51,6 +55,10 @@ impl SensorRecorder {
     /// Restore recorder state from a checkpoint.
     ///
     /// `data` must have shape `(n_sensors, next_step)`.
+    /// # Errors
+    /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn restore_from_checkpoint(
         &mut self,
         data: Array2<f64>,

@@ -24,7 +24,8 @@ const COLLAPSE_ENERGY_CONVERSION_EFFICIENCY: f64 = 0.01;
 ///
 /// Uses kinetic theory: E = (3/2) N k_B T × η
 ///
-/// where η = [`COLLAPSE_ENERGY_CONVERSION_EFFICIENCY`] ≈ 1%.
+/// where η = `COLLAPSE_ENERGY_CONVERSION_EFFICIENCY` ≈ 1%.
+#[must_use] 
 pub fn estimate_collapse_energy(state: &BubbleState) -> f64 {
     let n_total = state.n_gas + state.n_vapor;
 

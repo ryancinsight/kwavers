@@ -24,13 +24,13 @@ impl HounsfieldUnits {
     #[must_use]
     pub fn to_density(hu: f64) -> f64 {
         if hu < 930.0 {
-            1.025793065681423 * hu + (-5.680404011488714)
+            1.025793065681423f64.mul_add(hu, -5.680404011488714)
         } else if hu <= 1098.0 {
-            0.9082709691264 * hu + 103.6151457847139
+            0.9082709691264f64.mul_add(hu, 103.6151457847139)
         } else if hu < 1260.0 {
-            0.5108369316599 * hu + 539.9977189228704
+            0.5108369316599f64.mul_add(hu, 539.9977189228704)
         } else {
-            0.6625370912451 * hu + 348.8555178455294
+            0.6625370912451f64.mul_add(hu, 348.8555178455294)
         }
     }
 
@@ -49,7 +49,7 @@ impl HounsfieldUnits {
     /// Uses the Mast (2000) empirical relationship:
     ///   c = (ρ(HU) + 349) / 0.893
     ///
-    /// where ρ(HU) is computed from [`to_density`].
+    /// where ρ(HU) is computed from [`Self::to_density`].
     /// Matches k-wave-python's `hounsfield2soundspeed`.
     #[must_use]
     pub fn to_sound_speed(hu: f64) -> f64 {

@@ -62,7 +62,7 @@ impl Signal for SineWave {
         let amp = self.amplitude.amplitude(t);
         let freq = self.frequency_hz_checked(t);
         let phase = self.phase.phase(t);
-        amp * (2.0 * std::f64::consts::PI * freq * t + phase).sin()
+        amp * (2.0 * std::f64::consts::PI * freq).mul_add(t, phase).sin()
     }
 
     fn frequency(&self, t: f64) -> f64 {

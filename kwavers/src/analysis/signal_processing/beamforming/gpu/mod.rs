@@ -121,9 +121,9 @@
 //! ```
 //!
 //! where:
-//! - `rᵢ` = position of sensor i [m]
-//! - `r` = focal point position [m]
-//! - `c` = sound speed [m/s]
+//! - `rᵢ` = position of sensor i (m)
+//! - `r` = focal point position (m)
+//! - `c` = sound speed (m/s)
 //!
 //! # Feature Flags
 //!

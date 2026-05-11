@@ -79,7 +79,7 @@ fn test_temperature_dependence() -> KwaversResult<()> {
 #[test]
 fn test_validation() -> KwaversResult<()> {
     let good = SpatiallyVaryingAbsorption::uniform(3, 3, 3, 0.5, 1.2)?;
-    assert!(good.validate().is_ok());
+    good.validate().unwrap();
 
     let mut bad_alpha = Array3::from_elem((3, 3, 3), 0.5);
     bad_alpha[[1, 1, 1]] = -0.1;

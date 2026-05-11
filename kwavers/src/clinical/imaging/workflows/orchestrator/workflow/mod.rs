@@ -3,15 +3,15 @@
 mod acquisition;
 
 use super::super::analysis::{calculate_confidence_score, generate_diagnostic_recommendations};
-use super::super::config::*;
-use super::super::results::*;
+use super::super::config::{ClinicalWorkflowConfig, ClinicalApplication, PhotoacousticConfig, ElastographyConfig};
+use super::super::results::{ClinicalExaminationResult, AcquisitionResult, ProcessingResult, AnalysisResult, PerformanceMetrics};
 #[allow(unused_imports)]
 use super::super::simulation::generate_realistic_rf_volume;
 use super::super::simulation::{
     compute_pa_snr, generate_realistic_elastography_data, generate_realistic_pa_data,
     reconstruct_pa_image,
 };
-use super::super::state::*;
+use super::super::state::WorkflowState;
 use super::monitor::PerformanceMonitor;
 use crate::clinical::imaging::photoacoustic::PhotoacousticResult;
 use crate::core::error::{KwaversError, KwaversResult};
@@ -32,13 +32,16 @@ pub struct ClinicalWorkflowOrchestrator {
 
 impl ClinicalWorkflowOrchestrator {
     /// Create a new clinical workflow orchestrator.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: ClinicalWorkflowConfig) -> KwaversResult<Self> {
         let fusion_config = match config.application {
             ClinicalApplication::Oncology => FusionConfig {
                 modality_weights: [
-                    ("ultrasound".to_string(), 0.3),
-                    ("photoacoustic".to_string(), 0.4),
-                    ("elastography".to_string(), 0.3),
+                    ("ultrasound".to_owned(), 0.3),
+                    ("photoacoustic".to_owned(), 0.4),
+                    ("elastography".to_owned(), 0.3),
                 ]
                 .into(),
                 fusion_method: crate::domain::imaging::fusion::FusionMethod::Probabilistic,
@@ -47,8 +50,8 @@ impl ClinicalWorkflowOrchestrator {
             },
             ClinicalApplication::Cardiology => FusionConfig {
                 modality_weights: [
-                    ("ultrasound".to_string(), 0.5),
-                    ("elastography".to_string(), 0.5),
+                    ("ultrasound".to_owned(), 0.5),
+                    ("elastography".to_owned(), 0.5),
                 ]
                 .into(),
                 ..Default::default()
@@ -65,6 +68,9 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     /// Execute complete clinical examination workflow.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn execute_examination(
         &mut self,
         patient_id: &str,
@@ -208,7 +214,7 @@ impl ClinicalWorkflowOrchestrator {
         };
 
         Ok(ClinicalExaminationResult {
-            patient_id: patient_id.to_string(),
+            patient_id: patient_id.to_owned(),
             timestamp: chrono::Utc::now(),
             fused_image: fused_result,
             tissue_classification: analysis.tissue_properties,
@@ -269,22 +275,24 @@ impl ClinicalWorkflowOrchestrator {
         acquisition: &AcquisitionResult,
     ) -> KwaversResult<HashMap<String, f64>> {
         let mut metrics = HashMap::new();
-        metrics.insert("ultrasound_snr".to_string(), 25.0);
-        metrics.insert("ultrasound_cnr".to_string(), 12.0);
+        metrics.insert("ultrasound_snr".to_owned(), 25.0);
+        metrics.insert("ultrasound_cnr".to_owned(), 12.0);
         metrics.insert(
-            "photoacoustic_snr".to_string(),
+            "photoacoustic_snr".to_owned(),
             acquisition.photoacoustic_result.snr,
         );
-        metrics.insert("elastography_snr".to_string(), 18.0);
+        metrics.insert("elastography_snr".to_owned(), 18.0);
         Ok(metrics)
     }
 
     /// Get current workflow state.
+    #[must_use] 
     pub fn get_state(&self) -> WorkflowState {
         self.state.clone()
     }
 
     /// Check if workflow meets real-time constraints.
+    #[must_use] 
     pub fn check_realtime_performance(&self) -> bool {
         if !self.config.real_time_enabled {
             return true;

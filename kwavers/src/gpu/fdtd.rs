@@ -5,20 +5,23 @@ use crate::domain::grid::Grid;
 use ndarray::Array3;
 
 /// GPU-accelerated FDTD solver
-/// NOTE: Some fields currently unused - part of future GPU pipeline implementation
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct FdtdGpu {
     pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
     pressure_buffer: wgpu::Buffer,
-    velocity_buffer: wgpu::Buffer,
-    medium_buffer: wgpu::Buffer,
+    /// GPU resource lifetime anchor — bind group references this buffer on-device.
+    _velocity_buffer: wgpu::Buffer,
+    /// GPU resource lifetime anchor — bind group references this buffer on-device.
+    _medium_buffer: wgpu::Buffer,
     workgroup_size: [u32; 3],
 }
 
 impl FdtdGpu {
     /// Create a new GPU FDTD solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(device: &wgpu::Device, grid: &Grid) -> KwaversResult<Self> {
         let shader_source = include_str!("shaders/fdtd.wgsl");
 
@@ -139,19 +142,25 @@ impl FdtdGpu {
             pipeline,
             bind_group,
             pressure_buffer,
-            velocity_buffer,
-            medium_buffer,
+            _velocity_buffer: velocity_buffer,
+            _medium_buffer: medium_buffer,
             workgroup_size,
         })
     }
 
     /// Upload pressure field to GPU
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn upload_pressure(&self, queue: &wgpu::Queue, pressure: &Array3<f64>) {
         let data: Vec<f32> = pressure.iter().map(|&x| x as f32).collect();
         queue.write_buffer(&self.pressure_buffer, 0, bytemuck::cast_slice(&data));
     }
 
     /// Download pressure field from GPU
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn download_pressure(
         &self,
         device: &wgpu::Device,

@@ -49,6 +49,9 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     }
 
     /// Compute initial pressure distribution from optical fluence
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_initial_pressure(
         &mut self,
         fluence: &ArrayD<f64>,
@@ -86,6 +89,9 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     /// # Returns
     ///
     /// Fluence array of the same shape as `evaluation_points`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_fluence_diffusion(
         &self,
         source_position: &[f64],
@@ -135,11 +141,11 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         let mut data = vec![0.0_f64; total * extra];
 
         for i in 0..nx {
-            let rx = i as f64 * dx - sx;
+            let rx = (i as f64).mul_add(dx, -sx);
             for j in 0..ny {
-                let ry = j as f64 * dy - sy;
+                let ry = (j as f64).mul_add(dy, -sy);
                 for k in 0..nz {
-                    let rz = k as f64 * dz - sz;
+                    let rz = (k as f64).mul_add(dz, -sz);
                     let r = (rx * rx + ry * ry + rz * rz).sqrt();
 
                     // Regularise near singularity (r → 0): clamp to dx/2
@@ -198,7 +204,7 @@ impl<T: ElectromagneticWaveEquation> ElectromagneticWaveEquation for Photoacoust
     }
 
     fn apply_em_boundary_conditions(&mut self, fields: &mut EMFields) {
-        self.em_solver.apply_em_boundary_conditions(fields)
+        self.em_solver.apply_em_boundary_conditions(fields);
     }
 
     fn check_em_constraints(&self, fields: &EMFields) -> Result<(), String> {

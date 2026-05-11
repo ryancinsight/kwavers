@@ -39,11 +39,11 @@ pub enum JumpConditionType {
 /// Immersed interface method smoother
 #[derive(Debug, Clone)]
 pub struct ImmersedInterfaceMethod {
-    #[allow(dead_code)] // Used in apply() method implementation
     config: IIMConfig,
 }
 
 impl ImmersedInterfaceMethod {
+    #[must_use] 
     pub fn new(config: IIMConfig) -> Self {
         Self { config }
     }
@@ -65,6 +65,9 @@ impl ImmersedInterfaceMethod {
     ///
     /// - LeVeque & Li (1994). "The immersed interface method for elliptic equations".
     ///   *SIAM J. Numer. Anal.*, 31(4), 1019-1044.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply(
         &self,
         property: &Array3<f64>,
@@ -92,15 +95,15 @@ impl ImmersedInterfaceMethod {
                         smoothed[[i, j, k]] = match self.config.jump_type {
                             JumpConditionType::Continuous => {
                                 // Smooth transition across interface
-                                geom * property[[i, j, k]] + (1.0 - geom) * correction
+                                geom.mul_add(property[[i, j, k]], (1.0 - geom) * correction)
                             }
                             JumpConditionType::ValueJump => {
                                 // Allow discontinuity in value
-                                property[[i, j, k]] + correction * (1.0 - geom)
+                                correction.mul_add(1.0 - geom, property[[i, j, k]])
                             }
                             JumpConditionType::DerivativeJump => {
                                 // Discontinuity in derivative
-                                property[[i, j, k]] + correction * geom * (1.0 - geom)
+                                (correction * geom).mul_add(1.0 - geom, property[[i, j, k]])
                             }
                         };
                     }

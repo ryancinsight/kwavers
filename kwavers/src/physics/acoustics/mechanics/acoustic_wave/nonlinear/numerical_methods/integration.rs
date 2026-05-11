@@ -25,6 +25,9 @@ impl NonlinearWave {
     /// # Returns
     ///
     /// Updated pressure field (internal implementation)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_wave_inner(
         &mut self,
         pressure: &Array3<f64>,

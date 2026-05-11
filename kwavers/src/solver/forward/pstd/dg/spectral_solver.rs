@@ -55,7 +55,7 @@ impl RegionPSTDSolver {
             .and(&ky)
             .and(&kz)
             .for_each(|k2, &kx, &ky, &kz| {
-                *k2 = kx * kx + ky * ky + kz * kz;
+                *k2 = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
             });
 
         let filter = compute_anti_aliasing_filter(&grid, 2.0 / 3.0, order.max(1) as u32);
@@ -98,6 +98,13 @@ impl RegionPSTDSolver {
     ///
     /// ## Precondition
     /// `output` must have the same shape as `field`.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn spectral_wave_step_into(
         &mut self,
         field: &Array3<f64>,
@@ -108,9 +115,9 @@ impl RegionPSTDSolver {
     ) -> KwaversResult<()> {
         if c <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "wave_speed".to_string(),
+                parameter: "wave_speed".to_owned(),
                 value: c,
-                reason: "wave speed must be positive".to_string(),
+                reason: "wave speed must be positive".to_owned(),
             }));
         }
         if field.dim() != mask.dim() {
@@ -147,7 +154,7 @@ impl RegionPSTDSolver {
                 .zip(prev.iter())
             {
                 *out = if use_spectral {
-                    2.0 * u - u_prev + coeff * lap
+                    coeff.mul_add(lap, 2.0f64.mul_add(u, -u_prev))
                 } else {
                     u
                 };
@@ -160,7 +167,7 @@ impl RegionPSTDSolver {
                 .zip(self.laplacian.iter())
             {
                 *out = if use_spectral {
-                    u + 0.5 * coeff * lap
+                    (0.5 * coeff).mul_add(lap, u)
                 } else {
                     u
                 };
@@ -179,7 +186,10 @@ impl RegionPSTDSolver {
     }
 
     /// Convenience wrapper — allocates and returns the next field.
-    /// Prefer [`spectral_wave_step_into`] in time-step loops.
+    /// Prefer [`Self::spectral_wave_step_into`] in time-step loops.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn spectral_wave_step(
         &mut self,
         field: &Array3<f64>,

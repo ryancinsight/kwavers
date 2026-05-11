@@ -43,9 +43,10 @@ const SATURATION_SCALE: f64 = 0.4;
 /// # Returns
 ///
 /// Oxygenation index map (0-1, where 1.0 = 100% oxygenation)
+#[must_use] 
 pub fn compute_oxygenation_index(intensity_image: &Array3<f64>) -> Array3<f64> {
     intensity_image.mapv(|intensity| {
         let vascular_component = intensity * VASCULAR_WEIGHT;
-        (BASELINE_OXYGENATION + vascular_component * SATURATION_SCALE).min(1.0)
+        vascular_component.mul_add(SATURATION_SCALE, BASELINE_OXYGENATION).min(1.0)
     })
 }

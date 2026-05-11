@@ -8,9 +8,9 @@
 pub struct NonlinearHeating {
     /// Nonlinearity parameter (B/A)
     pub nonlinearity_parameter: f64,
-    /// Acoustic pressure [Pa]
+    /// Acoustic pressure (Pa)
     pub pressure: f64,
-    /// Sound speed [m/s]
+    /// Sound speed (m/s)
     pub sound_speed: f64,
     /// Density [kg/m³]
     pub density: f64,

@@ -71,7 +71,7 @@ const SOFT_TISSUE_ABSORPTION_COEFF_PER_C: f64 = 0.015;
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn conductivity_vs_temperature(k0: f64, temperature: f64) -> f64 {
-    k0 * (1.0 + THERMAL_CONDUCTIVITY_COEFF_PER_C * (temperature - REFERENCE_TEMPERATURE_C))
+    k0 * THERMAL_CONDUCTIVITY_COEFF_PER_C.mul_add(temperature - REFERENCE_TEMPERATURE_C, 1.0)
 }
 
 /// Temperature-dependent specific heat
@@ -90,7 +90,7 @@ pub fn conductivity_vs_temperature(k0: f64, temperature: f64) -> f64 {
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn specific_heat_vs_temperature(c0: f64, temperature: f64) -> f64 {
-    c0 * (1.0 + SPECIFIC_HEAT_COEFF_PER_C * (temperature - REFERENCE_TEMPERATURE_C))
+    c0 * SPECIFIC_HEAT_COEFF_PER_C.mul_add(temperature - REFERENCE_TEMPERATURE_C, 1.0)
 }
 
 /// Temperature-dependent blood perfusion
@@ -131,6 +131,9 @@ pub fn perfusion_vs_temperature(w_b0: f64, temperature: f64) -> f64 {
 ///
 /// * `base_properties` - Base thermal properties at reference temperature
 /// * `temperature` - Current temperature (°C)
+/// # Panics
+/// - Panics if `Temperature-updated properties should be valid if base properties are valid`.
+///
 #[must_use]
 pub fn update_properties(
     base_properties: &ThermalPropertyData,
@@ -197,7 +200,7 @@ pub fn absorption_vs_temperature(alpha0: f64, temperature: f64) -> f64 {
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn sound_speed_vs_temperature(c0: f64, temperature: f64) -> f64 {
-    c0 * (1.0 + SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C * (temperature - REFERENCE_TEMPERATURE_C))
+    c0 * SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C.mul_add(temperature - REFERENCE_TEMPERATURE_C, 1.0)
 }
 
 #[cfg(test)]

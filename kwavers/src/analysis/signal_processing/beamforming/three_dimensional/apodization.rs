@@ -51,9 +51,7 @@ use ndarray::Array3;
 ///
 /// Then apply the window function w(r) based on the selected window type.
 ///
-/// # Note
-/// Currently used only in tests. Will be integrated into GPU beamforming pipeline.
-#[allow(dead_code)]
+/// Called from `processor.rs` (GPU delay-and-sum path) and from unit tests.
 #[must_use]
 pub fn create_apodization_weights(
     num_elements: (usize, usize, usize),
@@ -73,7 +71,7 @@ pub fn create_apodization_weights(
                 for j in 0..ny {
                     for k in 0..nz {
                         let r = compute_normalized_radius(i, j, k, nx, ny, nz);
-                        weights[[i, j, k]] = 0.54 - 0.46 * (std::f32::consts::PI * r).cos();
+                        weights[[i, j, k]] = 0.46f32.mul_add(-(std::f32::consts::PI * r).cos(), 0.54);
                     }
                 }
             }
@@ -97,8 +95,7 @@ pub fn create_apodization_weights(
                 for j in 0..ny {
                     for k in 0..nz {
                         let r = compute_normalized_radius(i, j, k, nx, ny, nz);
-                        weights[[i, j, k]] = 0.42 - 0.5 * (std::f32::consts::PI * r).cos()
-                            + 0.08 * (2.0 * std::f32::consts::PI * r).cos();
+                        weights[[i, j, k]] = 0.08f32.mul_add((2.0 * std::f32::consts::PI * r).cos(), 0.5f32.mul_add(-(std::f32::consts::PI * r).cos(), 0.42));
                     }
                 }
             }
@@ -151,7 +148,6 @@ pub fn create_apodization_weights(
 /// We normalize coordinates to [-1, 1] in each dimension, then compute
 /// Euclidean distance from origin. The maximum theoretical distance is √3
 /// (corner elements), but we clamp to 1.0 for standard window functions.
-#[allow(dead_code)]
 #[inline]
 fn compute_normalized_radius(i: usize, j: usize, k: usize, nx: usize, ny: usize, nz: usize) -> f32 {
     let x = 2.0 * i as f32 / (nx - 1) as f32 - 1.0;

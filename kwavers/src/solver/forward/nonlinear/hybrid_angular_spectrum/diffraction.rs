@@ -32,6 +32,9 @@ impl std::fmt::Debug for DiffractionOperator {
 
 impl DiffractionOperator {
     /// Create new diffraction operator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: &Grid, config: &HASConfig) -> KwaversResult<Self> {
         let k = 2.0 * PI * config.reference_frequency / config.sound_speed;
 
@@ -47,6 +50,9 @@ impl DiffractionOperator {
     /// Apply diffraction step
     ///
     /// Propagates field by distance dz using angular spectrum
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply(&self, pressure: &Array3<f64>, dz: f64) -> KwaversResult<Array3<f64>> {
         let nz = pressure.shape()[2];
         let mut result = pressure.clone();
@@ -102,7 +108,7 @@ impl DiffractionOperator {
                 };
 
                 if kx.abs() <= kx_max && ky.abs() <= ky_max {
-                    let kz_sq = self.k * self.k - kx * kx - ky * ky;
+                    let kz_sq = self.k.mul_add(self.k, -(kx * kx)) - ky * ky;
                     if kz_sq >= 0.0 {
                         let kz = kz_sq.sqrt();
                         let phase = Complex64::from_polar(1.0, kz * dz);

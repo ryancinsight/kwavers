@@ -8,12 +8,12 @@ impl SourceHandler {
     ///
     /// ## Theorem (K-Wave ifftshift Convention)
     /// K-Wave's source_kappa is stored as `ifftshift(cos(c_ref·|k|·dt/2))` so that
-    /// element [i,j,k] in physical space equals `cos(c_ref·|k_standard[(i+Nx/2)%Nx,
-    /// (j+Ny/2)%Ny, (k+Nz/2)%Nz]|·dt/2)`. The ifftshift maps DC (k=0) to the
-    /// grid corner [0,0,0], matching the C++ k-Wave binary's direct-indexing convention.
+    /// element `[i,j,k]` in physical space equals `cos(c_ref·|k_standard[(i+Nx/2)%Nx,`
+    /// `(j+Ny/2)%Ny, (k+Nz/2)%Nz]|·dt/2)`. The ifftshift maps DC (`k=0`) to the
+    /// grid corner `[0,0,0]`, matching the C++ k-Wave binary's direct-indexing convention.
     ///
-    /// `source_kappa_fft`: the (Nx,Ny,Nz) k-space correction array in **standard FFT
-    /// order** (kappa_fft[0,0,0] = 1.0 at DC). The ifftshift mapping is applied here.
+    /// `source_kappa_fft`: the `(Nx,Ny,Nz)` k-space correction array in **standard FFT
+    /// order** (`kappa_fft[0,0,0]` = 1.0 at DC). The ifftshift mapping is applied here.
     pub fn set_velocity_source_kappa(
         &mut self,
         source_kappa_fft: &Array3<f64>,
@@ -47,7 +47,7 @@ impl SourceHandler {
     ///
     /// where `c₀(x_s)` is the per-source-point sound speed, `Δα` is the grid
     /// spacing along the injection axis, and `κ(x_s)` is the optional source
-    /// kappa correction stored in [`Self::u_kappa`]. This matches
+    /// kappa correction stored in `Self::u_kappa`. This matches
     /// `kwave/solvers/kspace_solver.py:533`
     /// (`scale = 2 * c0_src * self.dt / di`) and the C++ k-Wave binary's
     /// `velocity_source_input` term.

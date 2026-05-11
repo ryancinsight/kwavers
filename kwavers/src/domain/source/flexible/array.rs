@@ -31,6 +31,9 @@ pub struct FlexibleTransducerArray {
 
 impl FlexibleTransducerArray {
     /// Create a new flexible transducer array
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: FlexibleTransducerConfig, signal: Arc<dyn Signal>) -> KwaversResult<Self> {
         let geometry_state = GeometryState::flat_array(config.num_elements, config.nominal_spacing);
 
@@ -46,6 +49,9 @@ impl FlexibleTransducerArray {
     }
 
     /// Update geometry based on measurements
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_geometry(
         &mut self,
         measurement_data: ArrayView2<f64>,
@@ -127,13 +133,13 @@ impl FlexibleTransducerArray {
 
             // Cross product to get normal (assuming array lies roughly in x-y plane)
             let normal = [
-                v1[1] * v2[2] - v1[2] * v2[1],
-                v1[2] * v2[0] - v1[0] * v2[2],
-                v1[0] * v2[1] - v1[1] * v2[0],
+                v1[1].mul_add(v2[2], -(v1[2] * v2[1])),
+                v1[2].mul_add(v2[0], -(v1[0] * v2[2])),
+                v1[0].mul_add(v2[1], -(v1[1] * v2[0])),
             ];
 
             // Normalize
-            let mag = (normal[0].powi(2) + normal[1].powi(2) + normal[2].powi(2)).sqrt();
+            let mag = normal[2].mul_add(normal[2], normal[1].mul_add(normal[1], normal[0].powi(2))).sqrt();
             if mag > 0.0 {
                 normals[[i, 0]] = normal[0] / mag;
                 normals[[i, 1]] = normal[1] / mag;
@@ -148,6 +154,9 @@ impl FlexibleTransducerArray {
     }
 
     /// Update deformation state based on current geometry
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn update_deformation_state(&mut self) -> KwaversResult<()> {
         let curvature = self.geometry_state.calculate_curvature();
 
@@ -178,8 +187,8 @@ impl FlexibleTransducerArray {
                     } else {
                         None
                     },
-                    strain: strain.clone(),
-                    stress: stress.clone(),
+                    strain,
+                    stress,
                     deformation_energy: 0.0,
                     max_safe_deformation: 0.1, // 10% strain limit
                 };

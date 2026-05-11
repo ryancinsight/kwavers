@@ -28,6 +28,9 @@ pub struct ScatteredField {
 
 impl CloudDynamics {
     /// Calculate scattered acoustic field from bubble cloud
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_scattered_field(&self, frequency: f64) -> KwaversResult<ScatteredField> {
         if self.bubbles.is_empty() {
             return Ok(ScatteredField {
@@ -87,7 +90,7 @@ impl CloudDynamics {
         }
 
         let bubble_count = self.bubbles.len().max(1) as f64;
-        scattered_pressure.mapv_inplace(|x| x / bubble_count);
+        scattered_pressure.par_mapv_inplace(|x| x / bubble_count);
 
         Ok(ScatteredField {
             fundamental: scattered_pressure,

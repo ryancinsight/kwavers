@@ -23,8 +23,8 @@ impl RiskRecord {
         Self {
             risk_id: risk_id.into(),
             description: description.into(),
-            severity: "Medium".to_string(),
-            probability: "Medium".to_string(),
+            severity: "Medium".to_owned(),
+            probability: "Medium".to_owned(),
             rpn: 9,
             mitigations: Vec::new(),
             residual_assessment: String::new(),

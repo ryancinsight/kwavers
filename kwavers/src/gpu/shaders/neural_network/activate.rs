@@ -5,6 +5,9 @@ use wgpu::util::DeviceExt;
 
 impl NeuralNetworkShader {
     /// Apply activation function (GPU-accelerated; CPU fallback when GPU unavailable)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn activate(&self, input: &[f32], activation_type: u32) -> KwaversResult<Vec<f32>> {
         Self::validate_activation_type(activation_type)?;
 
@@ -122,7 +125,10 @@ impl NeuralNetworkShader {
 
         Ok(result)
     }
-
+    /// Activate cpu.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub(super) fn activate_cpu(
         &self,
         input: &[f32],

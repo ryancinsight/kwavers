@@ -61,7 +61,7 @@ impl FwiProcessor {
         Zip::from(&mut gradient)
             .and(forward_field)
             .and(adjoint_field)
-            .for_each(|g, &fwd, &adj| {
+            .par_for_each(|g, &fwd, &adj| {
                 *g = -fwd * adj;
             });
         self.smooth_gradient(&gradient)
@@ -126,13 +126,11 @@ impl FwiProcessor {
             for i in 1..nx - 1 {
                 for j in 1..ny - 1 {
                     for k in 1..nz - 1 {
-                        smoothed[[i, j, k]] = (gradient[[i - 1, j, k]]
+                        smoothed[[i, j, k]] = 3.0f64.mul_add(gradient[[i, j, k]], gradient[[i - 1, j, k]]
                             + gradient[[i + 1, j, k]]
                             + gradient[[i, j - 1, k]]
                             + gradient[[i, j + 1, k]]
-                            + gradient[[i, j, k - 1]]
-                            + gradient[[i, j, k + 1]]
-                            + 3.0 * gradient[[i, j, k]])
+                            + gradient[[i, j, k - 1]] + gradient[[i, j, k + 1]])
                             / 9.0;
                     }
                 }
@@ -143,6 +141,9 @@ impl FwiProcessor {
     }
 
     /// Apply regularization to gradient.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_regularization(
         &self,
         gradient: &Array3<f64>,
@@ -194,7 +195,7 @@ impl FwiProcessor {
                     let dx = model[[i + 1, j, k]] - model[[i - 1, j, k]];
                     let dy = model[[i, j + 1, k]] - model[[i, j - 1, k]];
                     let dz = model[[i, j, k + 1]] - model[[i, j, k - 1]];
-                    let grad_mag = (dx * dx + dy * dy + dz * dz).sqrt();
+                    let grad_mag = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
                     if grad_mag > f64::EPSILON {
                         tv_gradient[[i, j, k]] = grad_mag;
                     }
@@ -218,13 +219,11 @@ impl FwiProcessor {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    laplacian[[i, j, k]] = model[[i + 1, j, k]]
+                    laplacian[[i, j, k]] = 6.0f64.mul_add(-model[[i, j, k]], model[[i + 1, j, k]]
                         + model[[i - 1, j, k]]
                         + model[[i, j + 1, k]]
                         + model[[i, j - 1, k]]
-                        + model[[i, j, k + 1]]
-                        + model[[i, j, k - 1]]
-                        - 6.0 * model[[i, j, k]];
+                        + model[[i, j, k + 1]] + model[[i, j, k - 1]]);
                 }
             }
         }

@@ -13,6 +13,7 @@ pub struct PerformanceMonitor {
 }
 
 impl PerformanceMonitor {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             start_time: Instant::now(),
@@ -30,21 +31,24 @@ impl PerformanceMonitor {
     }
 
     pub fn record_stage(&mut self, stage: &str, duration: Duration) {
-        self.stage_times.insert(stage.to_string(), duration);
+        self.stage_times.insert(stage.to_owned(), duration);
         let sample_count = self.gpu_samples.len() as f64;
-        self.gpu_samples.push(75.0 + (sample_count.sin() * 10.0));
+        self.gpu_samples.push(sample_count.sin().mul_add(10.0, 75.0));
         self.memory_samples
-            .push(1024.0 + (sample_count.cos() * 128.0));
+            .push(sample_count.cos().mul_add(128.0, 1024.0));
     }
 
+    #[must_use] 
     pub fn get_stage_times(&self) -> HashMap<String, Duration> {
         self.stage_times.clone()
     }
 
+    #[must_use] 
     pub fn get_total_time(&self) -> Duration {
         self.start_time.elapsed()
     }
 
+    #[must_use] 
     pub fn get_gpu_utilization(&self) -> f64 {
         if self.gpu_samples.is_empty() {
             0.0
@@ -53,6 +57,7 @@ impl PerformanceMonitor {
         }
     }
 
+    #[must_use] 
     pub fn get_memory_usage(&self) -> f64 {
         if self.memory_samples.is_empty() {
             0.0

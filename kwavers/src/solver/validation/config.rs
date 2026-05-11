@@ -25,39 +25,42 @@ pub struct ValidationParameters {
 
 impl ValidationParameters {
     /// Validate validation parameters (meta!)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.energy_tolerance <= 0.0 || self.energy_tolerance >= 1.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "energy_tolerance".to_string(),
+                parameter: "energy_tolerance".to_owned(),
                 value: self.energy_tolerance.to_string(),
-                constraint: "Must be in (0, 1)".to_string(),
+                constraint: "Must be in (0, 1)".to_owned(),
             }
             .into());
         }
 
         if self.mass_tolerance <= 0.0 || self.mass_tolerance >= 1.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "mass_tolerance".to_string(),
+                parameter: "mass_tolerance".to_owned(),
                 value: self.mass_tolerance.to_string(),
-                constraint: "Must be in (0, 1)".to_string(),
+                constraint: "Must be in (0, 1)".to_owned(),
             }
             .into());
         }
 
         if self.dispersion_tolerance <= 0.0 || self.dispersion_tolerance >= 1.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "dispersion_tolerance".to_string(),
+                parameter: "dispersion_tolerance".to_owned(),
                 value: self.dispersion_tolerance.to_string(),
-                constraint: "Must be in (0, 1)".to_string(),
+                constraint: "Must be in (0, 1)".to_owned(),
             }
             .into());
         }
 
         if self.validation_interval == 0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "validation_interval".to_string(),
-                value: "0".to_string(),
-                constraint: "Must be positive".to_string(),
+                parameter: "validation_interval".to_owned(),
+                value: "0".to_owned(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }

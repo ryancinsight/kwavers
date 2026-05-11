@@ -4,6 +4,9 @@ use crate::domain::grid::Grid;
 use ndarray::Array3;
 
 /// Compute volumetric irreversible entropy production rate [W/K].
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[must_use]
 pub fn entropy_production_rate(
     pressure: &Array3<f64>,
@@ -34,7 +37,7 @@ pub fn entropy_production_rate(
                     let vy = velocity_y[[i, j, k]];
                     let vz = velocity_z[[i, j, k]];
                     let energy_density =
-                        0.5 * rho * (vx * vx + vy * vy + vz * vz) + p * p / (2.0 * rho * c * c);
+                        (0.5 * rho).mul_add(vz.mul_add(vz, vx.mul_add(vx, vy * vy)), p * p / (2.0 * rho * c * c));
                     total += 2.0 * alpha * c * energy_density * t0_inv * dv;
                 }
             }

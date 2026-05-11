@@ -39,6 +39,6 @@ mod tests {
         // Test that mesh adaptation can be triggered (though actual refinement
         // depends on the field gradients exceeding thresholds)
         let adaptation_result = amr.adapt_mesh(&field, 0.1);
-        assert!(adaptation_result.is_ok());
+        adaptation_result.unwrap();
     }
 }

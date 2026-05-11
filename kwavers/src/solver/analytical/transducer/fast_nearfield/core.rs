@@ -29,6 +29,9 @@ pub struct FastNearfieldSolver {
 
 impl FastNearfieldSolver {
     /// Create new FNM solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: FNMConfig) -> Result<Self, String> {
         let (n_kx, n_ky) = config.angular_spectrum_size;
         let dkx = 2.0 * PI / (config.dx * n_kx as f64);
@@ -68,12 +71,18 @@ impl FastNearfieldSolver {
     }
 
     /// Set transducer geometry
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_transducer(&mut self, transducer: RectangularTransducer) {
         self.transducer = Some(transducer);
         self.cached_factors.clear(); // Clear cache when transducer changes
     }
 
     /// Set medium properties
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_medium(&mut self, c0: f64, rho0: f64) {
         self.c0 = c0;
         self.rho0 = rho0;
@@ -81,6 +90,9 @@ impl FastNearfieldSolver {
     }
 
     /// Precompute angular spectrum factors for a given z-distance
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn precompute_factors(&mut self, z: f64) -> Result<(), String> {
         let transducer = self
             .transducer
@@ -100,6 +112,9 @@ impl FastNearfieldSolver {
     }
 
     /// Compute angular spectrum factors for Green's function
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_angular_spectrum_factors(
         &self,
         transducer: &RectangularTransducer,
@@ -114,11 +129,11 @@ impl FastNearfieldSolver {
 
         for (i, &kx_val) in self.kx.iter().enumerate() {
             for (j, &ky_val) in self.ky.iter().enumerate() {
-                let k_rho_squared = kx_val * kx_val + ky_val * ky_val;
+                let k_rho_squared = kx_val.mul_add(kx_val, ky_val * ky_val);
 
                 if k_rho_squared < k * k {
                     // Propagating wave
-                    let kz = (k * k - k_rho_squared).sqrt();
+                    let kz = k.mul_add(k, -k_rho_squared).sqrt();
 
                     if z > 0.0 {
                         // Forward propagation: angular spectrum factor for Rayleigh-Sommerfeld
@@ -153,6 +168,9 @@ impl FastNearfieldSolver {
     }
 
     /// Compute pressure field from transducer velocity distribution
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_field(
         &self,
         velocity: &Array2<Complex64>,
@@ -197,7 +215,7 @@ impl FastNearfieldSolver {
         let k = transducer.wavenumber(self.c0);
         let scaling = Complex64::new(0.0, self.rho0 * self.c0 * k / (2.0 * PI));
 
-        for val in pressure_spectrum.iter_mut() {
+        for val in &mut pressure_spectrum {
             *val *= scaling;
         }
 
@@ -218,6 +236,9 @@ impl FastNearfieldSolver {
     }
 
     /// Compute field at multiple z-distances (efficient batch computation)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_field_stack(
         &self,
         velocity: &Array2<Complex64>,
@@ -259,6 +280,7 @@ impl FastNearfieldSolver {
     }
 
     /// Get cached z-distances
+    #[must_use] 
     pub fn cached_z_distances(&self) -> Vec<f64> {
         self.cached_factors
             .keys()
@@ -272,6 +294,7 @@ impl FastNearfieldSolver {
     }
 
     /// Get memory usage estimate (bytes)
+    #[must_use] 
     pub fn memory_usage(&self) -> usize {
         let mut total = 0;
 

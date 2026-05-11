@@ -19,6 +19,9 @@ use super::super::super::config::{TherapyModality, TherapySessionConfig};
 ///
 /// - Stride & Coussios (2010): "Nucleation, mapping and control of cavitation for drug delivery"
 /// - FDA Guidance for Ultrasound Contrast Agents
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn init_ceus_system(
     grid: &Grid,
     medium: &dyn Medium,
@@ -36,6 +39,9 @@ pub fn init_ceus_system(
 ///
 /// - Aubry et al. (2003): "Experimental demonstration of noninvasive transskull adaptive focusing"
 /// - Marsac et al. (2012): "MR-guided adaptive focusing of therapeutic ultrasound beams"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn init_transcranial_system(
     _config: &TherapySessionConfig,
     grid: &Grid,
@@ -51,6 +57,9 @@ pub fn init_transcranial_system(
 ///
 /// - Umemura et al. (1996): "Sonodynamic therapy: a novel approach to cancer treatment"
 /// - Suslick (1990): "Sonochemistry"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn init_chemical_model(grid: &Grid) -> KwaversResult<ChemicalModel> {
     ChemicalModel::new(grid, true, true)
 }
@@ -63,6 +72,12 @@ pub fn init_chemical_model(grid: &Grid) -> KwaversResult<ChemicalModel> {
 ///
 /// - Hall et al. (2010): "Histotripsy: minimally invasive tissue ablation using cavitation"
 /// - Xu et al. (2016): "Oncotripsy: targeted cancer therapy using tumor-specific cavitation"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub fn init_cavitation_controller(
     config: &TherapySessionConfig,
 ) -> KwaversResult<FeedbackController> {

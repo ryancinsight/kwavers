@@ -39,7 +39,7 @@ impl EnergyBalanceCalculator {
     /// α = (−Φ + √(Φ² + 4 Φ n_total)) / (2 n_total)   ∈ [0, 1]
     /// ```
     ///
-    /// The energy absorption rate [W] = `α · n_total · E_ion / τ_eq`
+    /// The energy absorption rate (W) = `α · n_total · E_ion / τ_eq`
     /// where `τ_eq = 1e-12 s` is the collisional equilibration time
     /// (Moss et al. 1997, Table 1).
     ///
@@ -70,7 +70,7 @@ impl EnergyBalanceCalculator {
             GasSpecies::Nitrogen => 14.534_135 * E_V_TO_JOULES,
             GasSpecies::Oxygen => 13.618_055 * E_V_TO_JOULES,
             GasSpecies::Air => 14.53 * E_V_TO_JOULES, // N₂-weighted average
-            _ => 15.0 * E_V_TO_JOULES,
+            GasSpecies::Custom { .. } => 15.0 * E_V_TO_JOULES,
         };
 
         let t = state.temperature;
@@ -93,7 +93,7 @@ impl EnergyBalanceCalculator {
         // α² + (Φ/n) α − (Φ/n) = 0
         // α = [−(Φ/n) + √((Φ/n)² + 4 Φ/n)] / 2  (positive root)
         let r = phi / n_density.max(1e-30);
-        let alpha = (r.powi(2) + 4.0 * r).sqrt().mul_add(0.5, -r * 0.5);
+        let alpha = r.mul_add(r, 4.0 * r).sqrt().mul_add(0.5, -r * 0.5);
         let alpha = alpha.clamp(0.0, 1.0);
 
         // Collisional equilibration time scale (Moss et al. 1997)
@@ -156,6 +156,9 @@ mod tests {
     }
 
     /// At T < 10 000 K, plasma effects should return zero (below threshold).
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_plasma_below_threshold_returns_zero() {
         let state = make_state(9_999.0);
@@ -165,6 +168,9 @@ mod tests {
     }
 
     /// At T = 10 000 K with plasma effects disabled, result is zero.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_plasma_disabled_returns_zero() {
         let state = make_state(20_000.0);
@@ -176,6 +182,9 @@ mod tests {
     /// At high temperature the ionization rate is negative (endothermic) and finite.
     ///
     /// Reference: Moss et al. (1997) Fig. 3 — ionization fraction ≈ 0.01 at 20 000 K.
+    /// # Panics
+    /// - Panics if assertion fails: `plasma ionization must absorb energy; got {:.3e} W`.
+    ///
     #[test]
     fn test_plasma_at_20000k_endothermic_finite() {
         let state = make_state(20_000.0);
@@ -196,6 +205,9 @@ mod tests {
     }
 
     /// Saha ionization fraction α grows monotonically with temperature.
+    /// # Panics
+    /// - Panics if assertion fails: `ionization power must grow in magnitude with T: p1={:.3e}, p2={:.3e}`.
+    ///
     #[test]
     fn test_plasma_ionization_monotone_in_temperature() {
         use uom::si::power::watt;

@@ -58,8 +58,8 @@ fn matmul(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
 /// Apply a 3×3 rotation matrix to a 3-vector stored as a tuple.
 pub(super) fn apply_matrix(m: &[[f64; 3]; 3], v: (f64, f64, f64)) -> (f64, f64, f64) {
     (
-        m[0][0] * v.0 + m[0][1] * v.1 + m[0][2] * v.2,
-        m[1][0] * v.0 + m[1][1] * v.1 + m[1][2] * v.2,
-        m[2][0] * v.0 + m[2][1] * v.1 + m[2][2] * v.2,
+        m[0][2].mul_add(v.2, m[0][0].mul_add(v.0, m[0][1] * v.1)),
+        m[1][2].mul_add(v.2, m[1][0].mul_add(v.0, m[1][1] * v.1)),
+        m[2][2].mul_add(v.2, m[2][0].mul_add(v.0, m[2][1] * v.1)),
     )
 }

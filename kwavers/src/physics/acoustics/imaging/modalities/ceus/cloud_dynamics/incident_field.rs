@@ -19,6 +19,7 @@ pub struct IncidentField {
 
 impl IncidentField {
     /// Create plane wave field
+    #[must_use] 
     pub fn plane_wave(pressure: f64, frequency: f64, direction: [f64; 3]) -> Self {
         Self {
             pressure_amplitude: pressure,
@@ -32,11 +33,10 @@ impl IncidentField {
     /// Calculate pressure at position and time
     ///
     /// Plane wave: p(x,t) = p₀ cos(k·x − ωt + φ)
+    #[must_use] 
     pub fn pressure_at(&self, position: [f64; 3], time: f64) -> f64 {
         let kx = (2.0 * std::f64::consts::PI * self.frequency / self.sound_speed)
-            * (position[0] * self.direction[0]
-                + position[1] * self.direction[1]
-                + position[2] * self.direction[2]);
+            * position[2].mul_add(self.direction[2], position[0].mul_add(self.direction[0], position[1] * self.direction[1]));
 
         let omega_t = 2.0 * std::f64::consts::PI * self.frequency * time;
 

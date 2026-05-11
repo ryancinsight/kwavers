@@ -41,6 +41,9 @@ impl Iterator for BatchIterator {
 }
 
 /// Extract subset of collocation data by indices.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 #[cfg(feature = "pinn")]
 pub fn extract_batch<B: burn::tensor::backend::AutodiffBackend>(
     data: &CollocationData<B>,

@@ -49,10 +49,13 @@ pub struct ConformalPredictor {
 
 impl ConformalPredictor {
     /// Create new conformal predictor
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: ConformalConfig) -> KwaversResult<Self> {
         if config.confidence_level <= 0.0 || config.confidence_level >= 1.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Confidence level must be between 0 and 1".to_string(),
+                "Confidence level must be between 0 and 1".to_owned(),
             ));
         }
 
@@ -64,6 +67,12 @@ impl ConformalPredictor {
     }
 
     /// Calibrate the conformal predictor using a calibration dataset
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn calibrate(
         &mut self,
         predictions: &[Array2<f32>],
@@ -71,7 +80,7 @@ impl ConformalPredictor {
     ) -> KwaversResult<()> {
         if predictions.len() != targets.len() {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Predictions and targets must have same length".to_string(),
+                "Predictions and targets must have same length".to_owned(),
             ));
         }
 
@@ -95,6 +104,9 @@ impl ConformalPredictor {
     }
 
     /// Quantify uncertainty using conformal prediction
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[cfg(feature = "pinn")]
     pub fn quantify_uncertainty<B: Backend>(
         &self,
@@ -138,6 +150,9 @@ impl ConformalPredictor {
     }
 
     /// Compute conformity score between prediction and target
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn compute_conformity_score(&self, prediction: &Array2<f32>, target: &Array2<f32>) -> f64 {
         let error = prediction - target;
         let abs_error = error.mapv(|x| x.abs());
@@ -169,15 +184,21 @@ impl ConformalPredictor {
     }
 
     /// Estimate coverage probability from calibration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn estimate_coverage_probability(&self) -> f64 {
         self.config.confidence_level
     }
 
     /// Generate prediction intervals for new data
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn predict_intervals(&self, predictions: &[Array2<f32>]) -> KwaversResult<ConformalResult> {
         if !self.is_calibrated {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Predictor must be calibrated".to_string(),
+                "Predictor must be calibrated".to_owned(),
             ));
         }
 
@@ -213,6 +234,9 @@ impl ConformalPredictor {
     }
 
     /// Validate conformal prediction performance
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate_performance(
         &self,
         test_predictions: &[Array2<f32>],
@@ -220,7 +244,7 @@ impl ConformalPredictor {
     ) -> KwaversResult<ValidationMetrics> {
         if test_predictions.len() != test_targets.len() {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Test predictions and targets must have same length".to_string(),
+                "Test predictions and targets must have same length".to_owned(),
             ));
         }
 
@@ -259,11 +283,13 @@ impl ConformalPredictor {
     }
 
     /// Check if predictor is calibrated
+    #[must_use] 
     pub fn is_calibrated(&self) -> bool {
         self.is_calibrated
     }
 
     /// Get calibration summary
+    #[must_use] 
     pub fn calibration_summary(&self) -> CalibrationSummary {
         if !self.is_calibrated {
             return CalibrationSummary {

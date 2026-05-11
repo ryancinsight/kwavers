@@ -152,7 +152,7 @@ pub(crate) fn compute_nonsingular_integrals(
 
     let (area, normal) = triangle_area_normal(p1, p2, p3);
 
-    let q_points = [
+    let q_points: [([f64; 2], f64); 3] = [
         ([1.0 / 6.0, 1.0 / 6.0], 1.0 / 3.0),
         ([2.0 / 3.0, 1.0 / 6.0], 1.0 / 3.0),
         ([1.0 / 6.0, 2.0 / 3.0], 1.0 / 3.0),
@@ -166,9 +166,9 @@ pub(crate) fn compute_nonsingular_integrals(
         let v = uv[1];
         let shape_fn = [1.0 - u - v, u, v];
 
-        let rx = shape_fn[0] * p1[0] + shape_fn[1] * p2[0] + shape_fn[2] * p3[0];
-        let ry = shape_fn[0] * p1[1] + shape_fn[1] * p2[1] + shape_fn[2] * p3[1];
-        let rz = shape_fn[0] * p1[2] + shape_fn[1] * p2[2] + shape_fn[2] * p3[2];
+        let rx = shape_fn[2].mul_add(p3[0], shape_fn[0].mul_add(p1[0], shape_fn[1] * p2[0]));
+        let ry = shape_fn[2].mul_add(p3[1], shape_fn[0].mul_add(p1[1], shape_fn[1] * p2[1]));
+        let rz = shape_fn[2].mul_add(p3[2], shape_fn[0].mul_add(p1[2], shape_fn[1] * p2[2]));
         let r = [rx, ry, rz];
 
         let (g_val, grad_g) = green_helmholtz(k, r_i, r);
@@ -212,6 +212,9 @@ pub(crate) fn compute_nonsingular_integrals(
 /// # Returns
 ///
 /// `(h_contrib, g_contrib)` — H contribution is zero (flat element: ∂G/∂n = 0 for self-element).
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub(crate) fn compute_singular_integrals(
     k: f64,
     _r_i: [f64; 3],
@@ -252,14 +255,14 @@ pub(crate) fn compute_singular_integrals(
             let dir_y = v10[1] + v * v21[1];
             let dir_z = v10[2] + v * v21[2];
 
-            let r_dist = u * (dir_x * dir_x + dir_y * dir_y + dir_z * dir_z).sqrt();
+            let r_dist = u * dir_z.mul_add(dir_z, dir_x.mul_add(dir_x, dir_y * dir_y)).sqrt();
 
             // Jacobian: J = 2·Area·u
             let jac = 2.0 * area * u;
 
             let g_val = if r_dist < 1e-12 {
                 // Limit u→0: G·J → 2·Area / (4π·|dir|)
-                let dir_norm = (dir_x * dir_x + dir_y * dir_y + dir_z * dir_z).sqrt();
+                let dir_norm = dir_z.mul_add(dir_z, dir_x.mul_add(dir_x, dir_y * dir_y)).sqrt();
                 Complex64::new(2.0 * area / (4.0 * PI * dir_norm), 0.0)
             } else {
                 Complex64::new(0.0, k * r_dist).exp() / (4.0 * PI * r_dist) * jac

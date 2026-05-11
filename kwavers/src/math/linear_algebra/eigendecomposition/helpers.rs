@@ -4,6 +4,10 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
 impl EigenSolver {
+    /// Verify hermitian.
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
     pub(super) fn verify_hermitian(matrix: &Array2<Complex<f64>>) -> KwaversResult<()> {
         let n = matrix.nrows();
         let tolerance = 1e-10;
@@ -24,7 +28,10 @@ impl EigenSolver {
 
         Ok(())
     }
-
+    /// Qr decomposition.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn qr_decomposition(
         matrix: &Array2<Complex<f64>>,
         n: usize,
@@ -82,7 +89,7 @@ impl EigenSolver {
         let d = matrix[[n - 1, n - 1]].re;
 
         let trace = a + d;
-        let det = a * d - b * b;
+        let det = a.mul_add(d, -(b * b));
         let disc = (trace * trace / 4.0 - det).sqrt();
 
         let lambda1 = trace / 2.0 + disc;
@@ -106,7 +113,10 @@ impl EigenSolver {
         }
         norm.sqrt()
     }
-
+    /// Sort eigenvalues.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub(super) fn sort_eigenvalues(
         eigenvalues: Array1<f64>,
         eigenvectors: Array2<Complex<f64>>,

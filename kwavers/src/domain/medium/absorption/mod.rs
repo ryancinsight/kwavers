@@ -70,6 +70,9 @@ impl AbsorptionCalculator {
     }
 
     /// Calculate absorption coefficient at a given frequency
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn absorption_coefficient(&self, frequency: f64) -> f64 {
         match &self.model {
@@ -81,6 +84,9 @@ impl AbsorptionCalculator {
     }
 
     /// Apply absorption to a field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_absorption(
         &self,
         field: &mut Array3<f64>,
@@ -94,7 +100,7 @@ impl AbsorptionCalculator {
         const SOUND_SPEED: f64 = 1500.0;
         let decay = (-alpha * SOUND_SPEED * dt).exp();
 
-        field.mapv_inplace(|x| x * decay);
+        field.par_mapv_inplace(|x| x * decay);
 
         Ok(())
     }

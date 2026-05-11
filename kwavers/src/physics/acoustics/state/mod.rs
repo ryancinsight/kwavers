@@ -3,9 +3,11 @@
 //! This module provides a single source of truth for physics field states,
 //! eliminating the need for dummy fields scattered across implementations.
 
+pub mod access;
 pub mod container;
 pub mod traits;
 
+pub use access::{PluginFieldAccess, PluginFieldAccessMut};
 pub use container::{field_indices, PhysicsState};
 pub use traits::{FieldView, FieldViewMut, HasPhysicsState};
 

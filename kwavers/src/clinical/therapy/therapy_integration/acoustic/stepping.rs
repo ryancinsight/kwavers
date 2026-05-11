@@ -3,6 +3,9 @@ use super::AcousticWaveSolver;
 
 impl AcousticWaveSolver {
     /// Advance simulation by one time step.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(&mut self) -> KwaversResult<()> {
         self.backend.step()?;
 
@@ -14,6 +17,10 @@ impl AcousticWaveSolver {
     }
 
     /// Advance simulation by the specified physical time duration (seconds).
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn advance(&mut self, duration: f64) -> KwaversResult<()> {
         if duration < 0.0 {
             return Err(KwaversError::InvalidInput(

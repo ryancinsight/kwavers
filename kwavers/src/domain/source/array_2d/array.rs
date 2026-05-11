@@ -46,6 +46,9 @@ impl Clone for TransducerArray2D {
 
 impl TransducerArray2D {
     /// Create a new 2D transducer array
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         config: TransducerArray2DConfig,
         sound_speed: f64,
@@ -54,10 +57,10 @@ impl TransducerArray2D {
         config.validate()?;
 
         if sound_speed <= 0.0 {
-            return Err("Sound speed must be positive".to_string());
+            return Err("Sound speed must be positive".to_owned());
         }
         if frequency <= 0.0 {
-            return Err("Frequency must be positive".to_string());
+            return Err("Frequency must be positive".to_owned());
         }
 
         let num_elements = config.number_elements;
@@ -108,7 +111,7 @@ impl TransducerArray2D {
                 if config.radius.is_finite() && config.radius > 0.0 {
                     let arc_length = frac * total_width;
                     let angle = arc_length / config.radius;
-                    y = cy + config.radius * (1.0 - angle.cos());
+                    y = config.radius.mul_add(1.0 - angle.cos(), cy);
                 }
 
                 ArrayElement {
@@ -130,7 +133,7 @@ impl TransducerArray2D {
         self.invalidate_cache();
     }
 
-    /// Set focus distance [m]
+    /// Set focus distance (m)
     pub fn set_focus_distance(&mut self, distance: f64) {
         if distance > 0.0 {
             self.focus_distance = distance;
@@ -139,7 +142,7 @@ impl TransducerArray2D {
         }
     }
 
-    /// Set elevation focus distance [m]
+    /// Set elevation focus distance (m)
     pub fn set_elevation_focus_distance(&mut self, distance: f64) {
         if distance > 0.0 {
             self.elevation_focus_distance = distance;
@@ -147,7 +150,7 @@ impl TransducerArray2D {
         }
     }
 
-    /// Set steering angle [degrees]
+    /// Set steering angle (degrees)
     pub fn set_steering_angle(&mut self, angle_deg: f64) {
         self.steering_angle = angle_deg;
         self.update_time_delays();
@@ -162,6 +165,9 @@ impl TransducerArray2D {
     }
 
     /// Set receive apodization type
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_receive_apodization(&mut self, apodization: ApodizationType) {
         self.receive_apodization = apodization;
         self.update_apodization_weights();
@@ -169,6 +175,9 @@ impl TransducerArray2D {
     }
 
     /// Set active element mask
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_active_elements(&mut self, mask: &[bool]) -> Result<(), String> {
         if mask.len() != self.config.number_elements {
             return Err(format!(
@@ -209,7 +218,7 @@ impl TransducerArray2D {
         self.focus_distance
     }
 
-    /// Get current steering angle [degrees]
+    /// Get current steering angle (degrees)
     #[must_use]
     pub fn steering_angle(&self) -> f64 {
         self.steering_angle
@@ -221,37 +230,37 @@ impl TransducerArray2D {
         self.config.number_elements
     }
 
-    /// Get element width [m]
+    /// Get element width (m)
     #[must_use]
     pub fn element_width(&self) -> f64 {
         self.config.element_width
     }
 
-    /// Get element length [m]
+    /// Get element length (m)
     #[must_use]
     pub fn element_length(&self) -> f64 {
         self.config.element_length
     }
 
-    /// Get element spacing [m]
+    /// Get element spacing (m)
     #[must_use]
     pub fn element_spacing(&self) -> f64 {
         self.config.element_spacing
     }
 
-    /// Get radius of curvature [m]
+    /// Get radius of curvature (m)
     #[must_use]
     pub fn radius(&self) -> f64 {
         self.config.radius
     }
 
-    /// Get operating frequency [Hz]
+    /// Get operating frequency (Hz)
     #[must_use]
     pub fn frequency(&self) -> f64 {
         self.frequency
     }
 
-    /// Get sound speed [m/s]
+    /// Get sound speed (m/s)
     #[must_use]
     pub fn sound_speed(&self) -> f64 {
         self.sound_speed
@@ -301,15 +310,15 @@ impl TransducerArray2D {
         let focus_point = if self.focus_distance.is_finite() {
             let theta = self.steering_angle.to_radians();
             Some((
-                center_pos.0 + self.focus_distance * theta.sin(),
+                self.focus_distance.mul_add(theta.sin(), center_pos.0),
                 center_pos.1,
-                center_pos.2 + self.focus_distance * theta.cos(),
+                self.focus_distance.mul_add(theta.cos(), center_pos.2),
             ))
         } else {
             None
         };
 
-        for element in self.elements.iter_mut() {
+        for element in &mut self.elements {
             let mut delay = 0.0;
 
             if self.steering_angle != 0.0 {
@@ -319,14 +328,10 @@ impl TransducerArray2D {
             }
 
             if let Some(focus) = focus_point {
-                let dist_to_focus = ((element.position.0 - focus.0).powi(2)
-                    + (element.position.1 - focus.1).powi(2)
-                    + (element.position.2 - focus.2).powi(2))
+                let dist_to_focus = (element.position.2 - focus.2).mul_add(element.position.2 - focus.2, (element.position.1 - focus.1).mul_add(element.position.1 - focus.1, (element.position.0 - focus.0).powi(2)))
                 .sqrt();
 
-                let dist_center_to_focus = ((center_pos.0 - focus.0).powi(2)
-                    + (center_pos.1 - focus.1).powi(2)
-                    + (center_pos.2 - focus.2).powi(2))
+                let dist_center_to_focus = (center_pos.2 - focus.2).mul_add(center_pos.2 - focus.2, (center_pos.1 - focus.1).mul_add(center_pos.1 - focus.1, (center_pos.0 - focus.0).powi(2)))
                 .sqrt();
 
                 delay += (dist_to_focus - dist_center_to_focus) / c;
@@ -341,7 +346,7 @@ impl TransducerArray2D {
         self.cached_grid_id = None;
     }
 
-    /// Get total aperture width [m]
+    /// Get total aperture width (m)
     #[must_use]
     pub fn aperture_width(&self) -> f64 {
         self.config.aperture_width()

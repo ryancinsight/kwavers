@@ -11,14 +11,17 @@ pub struct GpuOptimizer {
 
 impl GpuOptimizer {
     /// Create a new GPU optimizer
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn new(num_streams: usize) -> KwaversResult<Self> {
         // Check for GPU availability
         if !Self::is_gpu_available() {
             return Err(KwaversError::Config(
                 crate::core::error::ConfigError::InvalidValue {
-                    parameter: "gpu".to_string(),
-                    value: "unavailable".to_string(),
-                    constraint: "GPU device required".to_string(),
+                    parameter: "gpu".to_owned(),
+                    value: "unavailable".to_owned(),
+                    constraint: "GPU device required".to_owned(),
                 },
             ));
         }
@@ -30,6 +33,9 @@ impl GpuOptimizer {
     }
 
     /// Check if GPU is available
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn is_gpu_available() -> bool {
         // GPU availability detection deferred to Sprint 125+ (wgpu device enumeration)
         // Current: Conservative approach returns false to ensure CPU fallback stability
@@ -38,6 +44,9 @@ impl GpuOptimizer {
     }
 
     /// Optimize GPU kernels
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn optimize_kernels(&self) -> KwaversResult<()> {
         if self.kernel_fusion_enabled {
             log::info!(
@@ -54,23 +63,29 @@ impl GpuOptimizer {
     }
 
     /// Transfer data to GPU
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn upload_to_gpu<T>(&self, _data: &[T]) -> KwaversResult<GpuBuffer> {
         Err(KwaversError::Config(
             crate::core::error::ConfigError::InvalidValue {
-                parameter: "gpu_upload".to_string(),
-                value: "unimplemented".to_string(),
-                constraint: "GPU support not yet implemented".to_string(),
+                parameter: "gpu_upload".to_owned(),
+                value: "unimplemented".to_owned(),
+                constraint: "GPU support not yet implemented".to_owned(),
             },
         ))
     }
 
     /// Transfer data from GPU
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn download_from_gpu<T>(&self, _buffer: &GpuBuffer) -> KwaversResult<Vec<T>> {
         Err(KwaversError::Config(
             crate::core::error::ConfigError::InvalidValue {
-                parameter: "gpu_download".to_string(),
-                value: "unimplemented".to_string(),
-                constraint: "GPU support not yet implemented".to_string(),
+                parameter: "gpu_download".to_owned(),
+                value: "unimplemented".to_owned(),
+                constraint: "GPU support not yet implemented".to_owned(),
             },
         ))
     }

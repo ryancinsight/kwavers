@@ -234,6 +234,9 @@ pub struct PhysicsDomainRegistry<B: AutodiffBackend> {
 
 impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
     /// Create a new empty registry
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> Self {
         Self {
             domains: HashMap::new(),
@@ -241,6 +244,9 @@ impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
     }
 
     /// Register a physics domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn register_domain<D>(&mut self, domain: D) -> KwaversResult<()>
     where
         D: PhysicsDomain<B> + Send + Sync + 'static,
@@ -257,16 +263,25 @@ impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
     }
 
     /// List all registered domains
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn list_domains(&self) -> Vec<String> {
         self.domains.keys().cloned().collect()
     }
 
     /// Check if a domain is registered
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn has_domain(&self, name: &str) -> bool {
         self.domains.contains_key(name)
     }
 
     /// Remove a domain
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub fn remove_domain(&mut self, name: &str) -> KwaversResult<()> {
         if self.domains.remove(name).is_some() {
             Ok(())

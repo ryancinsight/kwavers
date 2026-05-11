@@ -49,20 +49,12 @@ pub fn compute_nonlinear_term_workspace(
         .and(pressure)
         .and(pressure_prev)
         .and(pressure_prev2)
-        .for_each(|nl, &p, &p_prev, &p_prev2| {
-            // Compute p² at each time step
+        .par_for_each(|nl, &p, &p_prev, &p_prev2| {
             let p2 = p * p;
             let p2_prev = p_prev * p_prev;
             let p2_prev2 = p_prev2 * p_prev2;
-
-            // Second time derivative of p² using central difference
-            let d2p2_dt2 = (p2 - 2.0 * p2_prev + p2_prev2) / (dt * dt);
-
-            // Full Kuznetsov nonlinear term
-            let nonlinear = -coeff * d2p2_dt2;
-
-            // Apply limiting for stability (more conservative than convective form)
-            *nl = nonlinear.clamp(-1e4, 1e4);
+            let d2p2_dt2 = (2.0f64.mul_add(-p2_prev, p2) + p2_prev2) / (dt * dt);
+            *nl = (-coeff * d2p2_dt2).clamp(-1e4, 1e4);
         });
 }
 

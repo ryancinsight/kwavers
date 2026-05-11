@@ -10,11 +10,18 @@ use super::types::{treeby_2010, ValidationResult};
 pub struct LiteratureValidator;
 
 impl LiteratureValidator {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> Self {
         Self
     }
 
     /// Validate against Treeby (2010) plane wave propagation.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate_treeby_plane_wave(
         &self,
         pressure_field: &Array3<f64>,
@@ -100,6 +107,9 @@ impl LiteratureValidator {
     }
 
     /// Validate Pinton (2009) elastic wave shear component.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn validate_pinton_shear_wave(
         &self,
         displacement_field: &Array3<f64>,

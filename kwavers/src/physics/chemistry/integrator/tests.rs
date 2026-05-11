@@ -2,6 +2,9 @@ use super::*;
 use crate::physics::chemistry::ros_plasma::radical_kinetics::RadicalReaction;
 
 /// Constant first-order decay: y(t) = y0 * exp(-k*t).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_rk45_constant_first_order_decay() {
     let mut kinetics = RadicalKinetics::new(7.0, 298.15);
@@ -35,6 +38,9 @@ fn test_rk45_constant_first_order_decay() {
 }
 
 /// OH self-recombination half-life: [OH](t) = [OH0] / (1 + 2k[OH0]t).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_oh_recombination_half_life() {
     let mut kinetics = RadicalKinetics::new(7.0, 298.15);
@@ -84,6 +90,9 @@ fn test_concentrations_remain_non_negative() {
 }
 
 /// Oxygen atom conservation for 2 OH -> H2O2.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_oxygen_mass_conservation_oh_recombination() {
     let mut kinetics = RadicalKinetics::new(7.0, 298.15);

@@ -191,8 +191,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_cloud_service_creation() {
-        let service = CloudPINNService::new(CloudProvider::AWS).await;
-        assert!(service.is_ok());
+        let service = CloudPINNService::new(CloudProvider::AWS).await.unwrap();
+        assert_eq!(service.provider(), CloudProvider::AWS);
     }
 
     #[test]
@@ -207,7 +207,7 @@ mod tests {
             monitoring: MonitoringConfig::default(),
         };
 
-        assert!(valid_config.validate().is_ok());
+        valid_config.validate().unwrap();
 
         let invalid_config = DeploymentConfig {
             provider: CloudProvider::AWS,
@@ -228,18 +228,18 @@ mod tests {
         assert_eq!(auto_scaling.min_instances, 1);
         assert_eq!(auto_scaling.max_instances, 10);
         assert_eq!(auto_scaling.target_gpu_utilization, 0.7);
-        assert!(auto_scaling.validate().is_ok());
+        auto_scaling.validate().unwrap();
 
         let monitoring = MonitoringConfig::default();
         assert!(monitoring.enable_detailed_metrics);
         assert_eq!(monitoring.metrics_interval_seconds, 60);
-        assert!(monitoring.validate().is_ok());
+        monitoring.validate().unwrap();
 
         let alerts = AlertThresholds::default();
         assert_eq!(alerts.gpu_utilization_threshold, 0.9);
         assert_eq!(alerts.memory_usage_threshold, 0.9);
         assert_eq!(alerts.error_rate_threshold, 0.05);
-        assert!(alerts.validate().is_ok());
+        alerts.validate().unwrap();
     }
 
     #[test]

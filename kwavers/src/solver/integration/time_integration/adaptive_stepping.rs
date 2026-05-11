@@ -50,6 +50,9 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
     }
 
     /// Perform adaptive time step with error control
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn adaptive_step<F>(
         &mut self,
         field: &Array3<f64>,
@@ -68,7 +71,7 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
             if attempts > MAX_ATTEMPTS {
                 return Err(crate::core::error::KwaversError::Numerical(
                     crate::core::error::NumericalError::Instability {
-                        operation: "adaptive_step".to_string(),
+                        operation: "adaptive_step".to_owned(),
                         condition: attempts as f64,
                     },
                 ));

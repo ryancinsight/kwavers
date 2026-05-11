@@ -38,6 +38,7 @@ pub struct MultiPhysicsInterface {
 
 impl MultiPhysicsInterface {
     /// Create a new multi-physics interface
+    #[must_use] 
     pub fn new(
         position: [f64; 3],
         normal: [f64; 3],
@@ -76,6 +77,7 @@ impl MultiPhysicsInterface {
     /// ```text
     /// η = 2 α / (ρ c_p)   clamped to [0, 1]
     /// ```
+    #[must_use] 
     pub fn transmission_coefficient(&self, _frequency: f64) -> f64 {
         match &self.coupling_type {
             CouplingType::AcousticElastic { z1_rayl, z2_rayl } => {

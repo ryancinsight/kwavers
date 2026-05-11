@@ -35,6 +35,9 @@ pub enum TransmissionCondition {
 /// Schwarz iteration method for domain decomposition
 pub trait SchwarzMethod {
     /// Perform one Schwarz iteration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn schwarz_iteration(&mut self, dt: f64) -> Result<(), String>;
 
     /// Check convergence of Schwarz method

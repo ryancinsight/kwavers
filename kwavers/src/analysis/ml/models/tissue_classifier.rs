@@ -21,6 +21,9 @@ impl TissueClassifierModel {
     /// Production ML models would deserialize trained weights from checkpoint files.
     ///
     /// **Future**: Sprint 127+ ML infrastructure with proper model serialization
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
         Ok(Self::with_random_weights(128, 10))
     }
@@ -32,8 +35,8 @@ impl TissueClassifierModel {
         let engine = InferenceEngine::from_weights(weights, bias, 32, false);
 
         let metadata = ModelMetadata {
-            name: "TissueClassifier".to_string(),
-            version: "1.0.0".to_string(),
+            name: "TissueClassifier".to_owned(),
+            version: "1.0.0".to_owned(),
             input_shape: vec![features],
             output_shape: vec![classes],
             accuracy: 0.0_f64,
@@ -44,12 +47,18 @@ impl TissueClassifierModel {
     }
 
     /// Get metadata
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
 
     /// Run inference
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         self.predict(input)
     }
@@ -63,8 +72,8 @@ impl TissueClassifierModel {
         let engine = InferenceEngine::from_weights(weights, None, 32, false);
 
         let metadata = ModelMetadata {
-            name: "TissueClassifier".to_string(),
-            version: "1.0.0".to_string(),
+            name: "TissueClassifier".to_owned(),
+            version: "1.0.0".to_owned(),
             input_shape: vec![features],
             output_shape: vec![classes],
             accuracy: 0.0_f64,
@@ -75,6 +84,9 @@ impl TissueClassifierModel {
     }
 
     /// Classify tissue types
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn classify(&self, features: &Array1<f32>) -> KwaversResult<usize> {
         let input = features.clone().insert_axis(ndarray::Axis(0));
         let output = self.engine.forward(&input)?;

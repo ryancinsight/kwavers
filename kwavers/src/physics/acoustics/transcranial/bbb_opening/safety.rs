@@ -5,6 +5,7 @@ use super::types::{SafetyValidation, TreatmentProtocol};
 /// Safety and protocol generation for BBB Opening
 impl BBBOpening {
     /// Generate treatment protocol
+    #[must_use] 
     pub fn generate_protocol(&self) -> TreatmentProtocol {
         let target_mi = self.parameters.target_mi;
         let duration = self.parameters.duration;
@@ -41,11 +42,11 @@ impl BBBOpening {
     /// Generate safety checks for protocol
     fn generate_safety_checks(&self) -> Vec<String> {
         vec![
-            "Verify microbubble concentration in target range (1e7-1e8/mL)".to_string(),
-            "Monitor acoustic power to maintain MI < 0.5".to_string(),
-            "Check for cavitation signals during treatment".to_string(),
-            "Monitor subject for adverse reactions".to_string(),
-            "Verify BBB opening with contrast-enhanced imaging".to_string(),
+            "Verify microbubble concentration in target range (1e7-1e8/mL)".to_owned(),
+            "Monitor acoustic power to maintain MI < 0.5".to_owned(),
+            "Check for cavitation signals during treatment".to_owned(),
+            "Monitor subject for adverse reactions".to_owned(),
+            "Verify BBB opening with contrast-enhanced imaging".to_owned(),
         ]
     }
 
@@ -86,7 +87,7 @@ impl BBBOpening {
         }
 
         if max_mi < 0.1 {
-            warnings.push("Low MI may result in insufficient BBB opening".to_string());
+            warnings.push("Low MI may result in insufficient BBB opening".to_owned());
         }
 
         warnings

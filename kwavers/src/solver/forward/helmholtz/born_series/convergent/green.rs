@@ -10,6 +10,9 @@ impl ConvergentBornSolver {
     /// Compute Green's function in k-space.
     ///
     /// `Ĝ(k) = 1/(k² - k₀² + iε)` where k₀ = wavenumber.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_green_kspace(
         &self,
         green: &mut Array3<Complex64>,
@@ -18,7 +21,7 @@ impl ConvergentBornSolver {
         let k0_squared = wavenumber * wavenumber;
         let epsilon = 1e-10;
 
-        Zip::indexed(green).for_each(|(i, j, k), g| {
+        Zip::indexed(green).par_for_each(|(i, j, k), g| {
             let kx = if i <= self.grid.nx / 2 {
                 2.0 * PI * (i as f64) / (self.grid.nx as f64 * self.grid.dx)
             } else {
@@ -43,6 +46,9 @@ impl ConvergentBornSolver {
     }
 
     /// Apply Green's operator (FFT path when available; direct otherwise).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_green_operator(&mut self) -> KwaversResult<()> {
         if self.green_fft.is_some() {
             self.apply_green_fft()
@@ -52,6 +58,9 @@ impl ConvergentBornSolver {
     }
 
     /// Apply Green's function via FFT-based 3D convolution: O(N³ log N).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_green_fft(&mut self) -> KwaversResult<()> {
         if self.workspace.fft_temp.is_empty() {
             let temp1 = Array3::<Complex64>::zeros((self.grid.nx, self.grid.ny, self.grid.nz));
@@ -68,7 +77,7 @@ impl ConvergentBornSolver {
 
         {
             let mut result_fft = self.workspace.fft_temp[1].view_mut();
-            Zip::indexed(&mut result_fft).and(&source_fft).for_each(
+            Zip::indexed(&mut result_fft).and(&source_fft).par_for_each(
                 |(i, j, k), result_val, &source_val| {
                     if let Some(green_fft) = &self.green_fft {
                         *result_val = source_val * green_fft[[i, j, k]];
@@ -91,6 +100,9 @@ impl ConvergentBornSolver {
     }
 
     /// Perform inverse FFT (static helper to avoid split borrow).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn perform_inverse_fft(
         fft_processor: Option<&crate::math::fft::Fft3d>,
         input: &ArrayView3<Complex64>,
@@ -103,6 +115,9 @@ impl ConvergentBornSolver {
     }
 
     /// 3D forward FFT.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn forward_fft_3d(
         &self,
         input: &ArrayView3<Complex64>,
@@ -116,8 +131,11 @@ impl ConvergentBornSolver {
     }
 
     /// 3D inverse FFT.
-    #[allow(dead_code)]
-    pub(super) fn inverse_fft_3d(
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[cfg(test)]
+    pub(crate) fn inverse_fft_3d(
         &self,
         input: &ArrayView3<Complex64>,
         output: &mut Array3<Complex64>,
@@ -127,6 +145,9 @@ impl ConvergentBornSolver {
     }
 
     /// Apply Green's function via direct spatial-domain stencil.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_green_direct(&mut self) -> KwaversResult<()> {
         let nx = self.grid.nx;
         let ny = self.grid.ny;

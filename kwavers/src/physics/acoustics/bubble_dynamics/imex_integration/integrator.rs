@@ -81,12 +81,18 @@ impl BubbleIMEXIntegrator {
     }
 
     /// Get solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn solver(&self) -> &Arc<KellerMiksisModel> {
         &self.solver
     }
 
     /// Integrate bubble dynamics for one time step using IMEX
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(
         &mut self,
         state: &mut BubbleState,
@@ -106,8 +112,8 @@ impl BubbleIMEXIntegrator {
                 self.solver
                     .calculate_acceleration(&mut temp_state, p_acoustic, dp_dt, t)?;
 
-            y_explicit[0] = y0[0] + dt * temp_state.wall_velocity;
-            y_explicit[1] = y0[1] + dt * accel;
+            y_explicit[0] = dt.mul_add(temp_state.wall_velocity, y0[0]);
+            y_explicit[1] = dt.mul_add(accel, y0[1]);
             y_explicit[2] = y0[2];
             y_explicit[3] = y0[3];
         }
@@ -124,8 +130,8 @@ impl BubbleIMEXIntegrator {
                 let residual = Array1::from_vec(vec![
                     0.0,
                     0.0,
-                    y_final[2] - y_explicit[2] - dt * dt_dt,
-                    y_final[3] - y_explicit[3] - dt * dn_vapor_dt,
+                    dt.mul_add(-dt_dt, y_final[2] - y_explicit[2]),
+                    dt.mul_add(-dn_vapor_dt, y_final[3] - y_explicit[3]),
                 ]);
 
                 let residual_norm = residual.iter().map(|x| x.abs()).fold(0.0, f64::max);
@@ -156,6 +162,9 @@ impl BubbleIMEXIntegrator {
     }
 
     /// Compute diagonal Jacobian approximation for implicit solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn compute_jacobian_diagonal(
         &self,
         y: &Array1<f64>,
@@ -177,19 +186,22 @@ impl BubbleIMEXIntegrator {
         } else {
             0.0
         };
-        jac[2] = 1.0 + dt * (thermal_diffusion_rate + mass_transfer_coupling);
+        jac[2] = dt.mul_add(thermal_diffusion_rate + mass_transfer_coupling, 1.0);
 
         let vapor_diffusion_rate = if r > 1e-9 {
             3.0 * VAPOR_DIFFUSION_COEFFICIENT / (r * r)
         } else {
             0.0
         };
-        jac[3] = 1.0 + dt * vapor_diffusion_rate;
+        jac[3] = dt.mul_add(vapor_diffusion_rate, 1.0);
 
         Ok(jac)
     }
 
     /// Convert bubble state to vector form
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn state_to_vector(&self, state: &BubbleState) -> Array1<f64> {
         let mut y = Array1::zeros(4);
         y[0] = state.radius;
@@ -200,6 +212,9 @@ impl BubbleIMEXIntegrator {
     }
 
     /// Convert vector to bubble state
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn vector_to_state(
         &self,
         y: &Array1<f64>,
@@ -207,9 +222,9 @@ impl BubbleIMEXIntegrator {
     ) -> KwaversResult<BubbleState> {
         if y.len() != 4 {
             return Err(PhysicsError::InvalidState {
-                field: "state_vector".to_string(),
+                field: "state_vector".to_owned(),
                 value: format!("length {}", y.len()),
-                reason: "Expected 4 elements".to_string(),
+                reason: "Expected 4 elements".to_owned(),
             }
             .into());
         }

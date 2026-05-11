@@ -48,36 +48,46 @@ impl Default for PMLConfig {
 }
 
 impl PMLConfig {
+    /// With thickness.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_thickness(mut self, thickness: usize) -> Self {
         self.thickness = thickness;
         self
     }
-
+    /// With reflection coefficient.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_reflection_coefficient(mut self, reflection: f64) -> Self {
         self.target_reflection = Some(reflection);
         self
     }
-
+    /// Validate.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.thickness == 0 {
             return Err(ConfigError::InvalidValue {
-                parameter: "thickness".to_string(),
+                parameter: "thickness".to_owned(),
                 value: self.thickness.to_string(),
-                constraint: "PML thickness must be > 0".to_string(),
+                constraint: "PML thickness must be > 0".to_owned(),
             }
             .into());
         }
 
         if self.sigma_max_acoustic < 0.0 || self.sigma_max_light < 0.0 {
             return Err(ConfigError::InvalidValue {
-                parameter: "sigma_max".to_string(),
+                parameter: "sigma_max".to_owned(),
                 value: format!(
                     "acoustic: {}, light: {}",
                     self.sigma_max_acoustic, self.sigma_max_light
                 ),
-                constraint: "Sigma values must be >= 0".to_string(),
+                constraint: "Sigma values must be >= 0".to_owned(),
             }
             .into());
         }
@@ -87,6 +97,10 @@ impl PMLConfig {
 }
 
 impl PMLBoundary {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: PMLConfig) -> KwaversResult<Self> {
         config.validate()?;
 
@@ -98,14 +112,17 @@ impl PMLBoundary {
         Ok(Self {
             acoustic_damping_x: acoustic_profile.clone(),
             acoustic_damping_y: acoustic_profile.clone(),
-            acoustic_damping_z: acoustic_profile.clone(),
+            acoustic_damping_z: acoustic_profile,
             light_damping_x: light_profile.clone(),
             light_damping_y: light_profile.clone(),
             light_damping_z: light_profile,
             thickness: config.thickness,
         })
     }
-
+    /// With defaults.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_defaults() -> KwaversResult<Self> {
         Self::new(PMLConfig::default())
     }
@@ -133,7 +150,7 @@ impl PMLBoundary {
 
             *profile_val = sigma_eff
                 * polynomial_factor
-                * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
+                * PML_EXPONENTIAL_SCALING_FACTOR.mul_add(exponential_factor, 1.0);
         }
 
         profile

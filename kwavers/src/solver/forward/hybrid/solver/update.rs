@@ -12,6 +12,9 @@ use std::time::Instant;
 
 impl HybridSolver {
     /// Update fields for one time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update(
         &mut self,
         fields: &mut Array4<f64>,
@@ -158,6 +161,9 @@ impl HybridSolver {
     }
 
     /// Apply hybrid processing to transition region
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_hybrid_region_blended(
         &mut self,
         fields: &mut Array4<f64>,
@@ -218,12 +224,18 @@ impl HybridSolver {
     }
 
     /// Apply coupling between regions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_coupling(&mut self, fields: &mut Array4<f64>) -> KwaversResult<()> {
         self.coupling
             .apply_coupling(fields, &self.regions, &self.grid)
     }
 
     /// Update domain decomposition based on current fields
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn update_decomposition(
         &mut self,
         fields: &Array4<f64>,
@@ -253,6 +265,9 @@ impl HybridSolver {
     }
 
     /// Validate solution quality
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     fn validate_solution(&mut self, fields: &Array4<f64>, _time: f64) -> KwaversResult<()> {
         use crate::domain::field::mapping::UnifiedFieldType;
 
@@ -267,9 +282,9 @@ impl HybridSolver {
             if self.config.validation.check_nan_inf {
                 return Err(KwaversError::Validation(
                     crate::core::error::ValidationError::FieldValidation {
-                        field: "pressure".to_string(),
+                        field: "pressure".to_owned(),
                         value: format!("NaN: {has_nan}, Inf: {has_inf}"),
-                        constraint: "Must be finite".to_string(),
+                        constraint: "Must be finite".to_owned(),
                     },
                 ));
             }

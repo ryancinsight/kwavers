@@ -59,7 +59,7 @@ impl FieldsSummary {
 
     /// Insert a field value
     pub fn insert(&mut self, key: &str, value: f64) {
-        self.0.insert(key.to_string(), value);
+        self.0.insert(key.to_owned(), value);
     }
 
     /// Get a field value

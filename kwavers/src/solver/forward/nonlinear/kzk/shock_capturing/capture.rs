@@ -6,6 +6,9 @@ use ndarray::Array2;
 
 impl ShockCapture {
     /// Compute artificial viscosity source term: `Q_av = μ |∇p| ∇²p / ρ₀`
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn artificial_viscosity(
         &self,
         pressure: &Array2<f64>,
@@ -25,10 +28,10 @@ impl ShockCapture {
 
         for z in 1..nz - 1 {
             for x in 1..nx - 1 {
-                let laplacian_val = (pressure[[x + 1, z]] - 2.0 * pressure[[x, z]]
+                let laplacian_val = (2.0f64.mul_add(-pressure[[x, z]], pressure[[x + 1, z]])
                     + pressure[[x - 1, z]])
                     / (dx * dx)
-                    + (pressure[[x, z + 1]] - 2.0 * pressure[[x, z]] + pressure[[x, z - 1]])
+                    + (2.0f64.mul_add(-pressure[[x, z]], pressure[[x, z + 1]]) + pressure[[x, z - 1]])
                         / (dz * dz);
                 laplacian[[x - 1, z - 1]] = laplacian_val;
             }
@@ -40,7 +43,7 @@ impl ShockCapture {
             for x in 1..nx - 1 {
                 let gx = (pressure[[x + 1, z]] - pressure[[x - 1, z]]) / (2.0 * dx);
                 let gz = (pressure[[x, z + 1]] - pressure[[x, z - 1]]) / (2.0 * dz);
-                grad_mag[[x - 1, z - 1]] = (gx * gx + gz * gz).sqrt();
+                grad_mag[[x - 1, z - 1]] = gx.hypot(gz);
             }
         }
 
@@ -56,6 +59,9 @@ impl ShockCapture {
     }
 
     /// Apply shock capturing filter to smooth discontinuities near the shock location.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn shock_filter(
         &self,
         pressure: &mut Array2<f64>,
@@ -76,7 +82,7 @@ impl ShockCapture {
                 if z > 0 && z < nz - 1 {
                     for x in 1..nx - 1 {
                         let smoothed =
-                            (pressure[[x, z - 1]] + 2.0 * pressure[[x, z]] + pressure[[x, z + 1]])
+                            (2.0f64.mul_add(pressure[[x, z]], pressure[[x, z - 1]]) + pressure[[x, z + 1]])
                                 / 4.0;
                         pressure[[x, z]] = smoothed;
                     }

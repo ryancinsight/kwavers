@@ -24,6 +24,9 @@ mod tests {
     ///   numerator   = 2·3·2 = 12
     ///   denominator = 4·2   =  8
     ///   result      = 1.5
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn energy_normalized_condition_matches_cross_correlation_over_source_energy() {
         let mut rtm = rtm_with_condition(RtmImagingCondition::EnergyNormalized);
@@ -43,6 +46,9 @@ mod tests {
     ///
     /// S[t,…] = t; ∂S/∂t = 1 at all interior t.
     /// R = 3; 3 time steps → image = 1·3·3 = 9.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn source_normalized_condition_uses_temporal_source_derivative() {
         let mut rtm = rtm_with_condition(RtmImagingCondition::SourceNormalized);
@@ -70,6 +76,9 @@ mod tests {
     ///   x-contribution = 0.25·(4−2)·(8−4) = 2; same for y and z.
     /// Total per step = 6; 2 steps → image[[1,1,1]] = 12.
     /// Boundary point (0,1,1) must be zero (not in interior).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn poynting_condition_accumulates_spatial_gradient_dot_product() {
         let mut rtm = rtm_with_condition(RtmImagingCondition::Poynting);

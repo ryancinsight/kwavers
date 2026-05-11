@@ -4,6 +4,9 @@ use std::f64::consts::PI;
 
 /// Lyman-alpha: lambda = 121.567 nm, f12 = 0.4162, g1 = 2, g2 = 6.
 /// Reference A21 = 6.265e8 s^-1.
+/// # Panics
+/// - Panics if assertion fails: `Lyman-alpha A21: got {:.4e}, expected {:.4e} (err {:.1}%)`.
+///
 #[test]
 fn test_einstein_a21_hydrogen_lyman_alpha() {
     let lambda = 121.567e-9;
@@ -21,6 +24,9 @@ fn test_einstein_a21_hydrogen_lyman_alpha() {
 }
 
 /// Radiative lifetime for hydrogen Lyman-alpha must be near 1.6 ns.
+/// # Panics
+/// - Panics if assertion fails: `Lyman-alpha lifetime must be 1-3 ns, got {tau:.3e} s`.
+///
 #[test]
 fn test_radiative_lifetime_lyman_alpha() {
     let omega21 = 2.0 * PI * C / 121.567e-9;
@@ -33,6 +39,9 @@ fn test_radiative_lifetime_lyman_alpha() {
 }
 
 /// Einstein detailed balance requires B12 / B21 = g2 / g1.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_einstein_b_degeneracy_relation() {
     let omega = 2.0 * PI * C / 400e-9;
@@ -45,6 +54,9 @@ fn test_einstein_b_degeneracy_relation() {
 }
 
 /// Invalid oscillator-strength inputs are non-finite, not silently regularized.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_einstein_invalid_degeneracy_is_nonfinite() {
     let coeff = EinsteinCoefficients::from_oscillator_strength(1.0e15, 0.5, 1.0, 0.0);
@@ -53,6 +65,10 @@ fn test_einstein_invalid_degeneracy_is_nonfinite() {
 }
 
 /// Flash emission fraction follows the short-time Poisson expansion.
+/// # Panics
+/// - Panics if assertion fails: `Flash emission fraction must be < 30% for short flash`.
+/// - Panics if assertion fails: `Flash fraction must approach A21*dt for short flash`.
+///
 #[test]
 fn test_flash_emission_fraction_sbsl() {
     let omega = 2.0 * PI * C / 300e-9;
@@ -70,6 +86,9 @@ fn test_flash_emission_fraction_sbsl() {
 }
 
 /// Gaunt factor at SBSL visible conditions must lie in the published range.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_gaunt_factor_sbsl_conditions() {
     let nu = C / 400e-9;
@@ -81,6 +100,9 @@ fn test_gaunt_factor_sbsl_conditions() {
 }
 
 /// Gaunt factor decreases from red to UV wavelengths at fixed SBSL temperature.
+/// # Panics
+/// - Panics if assertion fails: `Gaunt factor at 800 nm ({g_red:.4}) must exceed 200 nm ({g_uv:.4})`.
+///
 #[test]
 fn test_gaunt_factor_frequency_dependence() {
     let g_red = gaunt_factor_ff(C / 800e-9, 10_000.0, 1.0);
@@ -92,6 +114,9 @@ fn test_gaunt_factor_frequency_dependence() {
 }
 
 /// Invalid Gaunt-factor inputs produce NaN instead of a constant placeholder.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_gaunt_factor_invalid_domain_is_nan() {
     assert!(gaunt_factor_ff(0.0, 10_000.0, 1.0).is_nan());
@@ -99,6 +124,9 @@ fn test_gaunt_factor_invalid_domain_is_nan() {
 }
 
 /// Relativistic parameter at SBSL temperature must be much smaller than 1e-3.
+/// # Panics
+/// - Panics if assertion fails: `At 15 000 K, relativistic parameter = {rel:.3e} must be << 1e-3`.
+///
 #[test]
 fn test_relativistic_parameter_sbsl() {
     let rel = relativistic_parameter(15_000.0);
@@ -109,6 +137,9 @@ fn test_relativistic_parameter_sbsl() {
 }
 
 /// Lamb shift ratio must be negligible at SBSL temperatures.
+/// # Panics
+/// - Panics if assertion fails: `Lamb shift / kT at 10 000 K = {ratio:.3e} must be < 1e-4`.
+///
 #[test]
 fn test_lamb_shift_negligible_at_sbsl_temperature() {
     let k_t_ev = KB * 10_000.0 / E_CHARGE;
@@ -120,6 +151,9 @@ fn test_lamb_shift_negligible_at_sbsl_temperature() {
 }
 
 /// Classical bremsstrahlung is adequate for SBSL thermal conditions.
+/// # Panics
+/// - Panics if assertion fails: `Classical accuracy at 10 000 K: {:.6}%`.
+///
 #[test]
 fn test_classical_bremsstrahlung_adequate_sbsl() {
     let omega_uv = 2.0 * PI * C / 300e-9;

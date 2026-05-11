@@ -55,7 +55,7 @@ impl MassTransferModel {
         // Non-equilibrium correction for rapid dynamics
         if self.non_equilibrium {
             let peclet = pressure_vapor.abs() / p_sat;
-            let correction = 1.0 / (1.0 + 0.5 * peclet);
+            let correction = 1.0 / 0.5f64.mul_add(peclet, 1.0);
             rate * correction
         } else {
             rate

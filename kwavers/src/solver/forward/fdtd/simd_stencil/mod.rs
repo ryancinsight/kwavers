@@ -67,15 +67,19 @@ pub struct SimdStencilProcessor {
 }
 
 impl SimdStencilProcessor {
+    /// New.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(nx: usize, ny: usize, nz: usize, config: SimdStencilConfig) -> KwaversResult<Self> {
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
-                "Grid dimensions must be at least 3".to_string(),
+                "Grid dimensions must be at least 3".to_owned(),
             ));
         }
         if config.tile_size == 0 || (config.tile_size & (config.tile_size - 1)) != 0 {
             return Err(KwaversError::InvalidInput(
-                "tile_size must be a power of 2".to_string(),
+                "tile_size must be a power of 2".to_owned(),
             ));
         }
 
@@ -103,6 +107,9 @@ impl SimdStencilProcessor {
     }
 
     /// Zero-gradient Neumann boundary conditions for pressure.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_boundary_conditions_pressure(
         &self,
         field: &mut Array3<f64>,
@@ -129,6 +136,9 @@ impl SimdStencilProcessor {
     }
 
     /// Rigid (zero-velocity) boundary conditions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_boundary_conditions_velocity(
         &self,
         field: &mut Array3<f64>,
@@ -154,14 +164,17 @@ impl SimdStencilProcessor {
         Ok(())
     }
 
+    #[must_use] 
     pub fn tile_stats(&self) -> (usize, usize, usize) {
         (self.num_tiles_x, self.num_tiles_y, self.num_tiles_z)
     }
 
+    #[must_use] 
     pub fn total_tiles(&self) -> usize {
         self.num_tiles_x * self.num_tiles_y * self.num_tiles_z
     }
 
+    #[must_use] 
     pub fn config(&self) -> SimdStencilConfig {
         self.config
     }

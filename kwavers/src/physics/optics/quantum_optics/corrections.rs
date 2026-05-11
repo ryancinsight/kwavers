@@ -12,7 +12,7 @@ pub fn relativistic_parameter(temperature_k: f64) -> f64 {
     KB * temperature_k / (M_E * C * C)
 }
 
-/// Compute the leading hydrogenic Lamb-shift scale [eV].
+/// Compute the leading hydrogenic Lamb-shift scale (eV).
 ///
 /// # Formula
 ///

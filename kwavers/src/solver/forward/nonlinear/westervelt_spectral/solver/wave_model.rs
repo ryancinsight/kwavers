@@ -183,8 +183,8 @@ impl AcousticWaveModel for WesterveltWave {
                 let src = src_term.as_slice().unwrap()[idx];
 
                 let c2 = c * c;
-                let update = dt2 * (c2 * lap + nl + damp + src);
-                *p_next = 2.0 * p_curr - p_prev + update;
+                let update = dt2 * (c2.mul_add(lap, nl) + damp + src);
+                *p_next = 2.0f64.mul_add(p_curr, -p_prev) + update;
             });
 
         fields

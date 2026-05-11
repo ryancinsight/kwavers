@@ -33,6 +33,7 @@ impl FemAssembly {
     }
 
     /// Pre-allocate sparse matrices with estimated sparsity
+    #[must_use] 
     pub fn preallocate_matrices(
         &self,
         num_nodes: usize,
@@ -51,6 +52,9 @@ impl FemAssembly {
     }
 
     /// Assemble global matrices from element contributions (parallel version)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn assemble_global_matrices_parallel(
         &self,
         elements: &[Tetrahedron],
@@ -96,6 +100,9 @@ impl FemAssembly {
     }
 
     /// Assemble single element contribution
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn assemble_single_element(
         &self,
         element: &Tetrahedron,
@@ -112,6 +119,9 @@ impl FemAssembly {
     }
 
     /// Add element contribution to global matrices
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn add_contribution_to_global(
         &self,
         global_stiffness: &mut CompressedSparseRowMatrix<Complex64>,
@@ -147,6 +157,9 @@ impl FemAssembly {
     }
 
     /// Apply Dirichlet boundary conditions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_dirichlet_bc(
         &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
@@ -171,6 +184,9 @@ impl FemAssembly {
     }
 
     /// Apply Neumann boundary conditions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_neumann_bc(
         &self,
         rhs: &mut Array1<Complex64>,
@@ -192,6 +208,9 @@ impl FemAssembly {
     }
 
     /// Apply radiation (Sommerfeld) boundary conditions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_radiation_bc(
         &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
@@ -210,6 +229,9 @@ impl FemAssembly {
     }
 
     /// Find maximum node index in mesh
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn find_max_node_index(&self, elements: &[Tetrahedron]) -> usize {
         elements
             .iter()
@@ -220,6 +242,9 @@ impl FemAssembly {
     }
 
     /// Optimize matrix storage by removing explicit zeros
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compress_matrices(
         &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,

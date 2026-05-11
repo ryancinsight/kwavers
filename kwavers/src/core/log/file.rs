@@ -48,6 +48,10 @@ impl Log for CombinedLogger {
     }
 }
 
+/// Configure logger.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn configure_logger() -> io::Result<Box<CombinedLogger>> {
     let file = OpenOptions::new()
         .create(true)

@@ -227,13 +227,13 @@ pub type KwaversResult<T> = Result<T, KwaversError>;
 // Backward compatibility conversions
 impl From<String> for KwaversError {
     fn from(s: String) -> Self {
-        KwaversError::InvalidInput(s)
+        Self::InvalidInput(s)
     }
 }
 
 impl From<&str> for KwaversError {
     fn from(s: &str) -> Self {
-        KwaversError::InvalidInput(s.to_string())
+        Self::InvalidInput(s.to_owned())
     }
 }
 

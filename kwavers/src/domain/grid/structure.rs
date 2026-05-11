@@ -4,8 +4,6 @@
 
 use super::error::GridError;
 use log::debug;
-use ndarray::Array3;
-use std::sync::OnceLock;
 
 /// Epsilon for floating point comparisons of grid spacing
 const GRID_SPACING_EQUALITY_EPSILON: f64 = 1e-10;
@@ -75,9 +73,6 @@ pub struct Grid {
     pub dimensionality: usize,
     /// Maximum wavenumber supported by the grid
     pub k_max: f64,
-    /// Cache for `k_squared` computation
-    #[allow(dead_code)]
-    pub(crate) k_squared_cache: OnceLock<Array3<f64>>,
 }
 
 impl Default for Grid {
@@ -99,7 +94,6 @@ impl Default for Grid {
             origin: [0.0, 0.0, 0.0],
             dimensionality: 3,
             k_max,
-            k_squared_cache: OnceLock::new(),
         }
     }
 }
@@ -107,6 +101,9 @@ impl Default for Grid {
 impl Grid {
     /// Creates a new grid with specified dimensions and spacing.
     /// Returns a `GridError` if parameters are invalid.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         nx: usize,
         ny: usize,
@@ -154,7 +151,6 @@ impl Grid {
             origin: [0.0, 0.0, 0.0],
             dimensionality,
             k_max,
-            k_squared_cache: OnceLock::new(),
         };
 
         debug!(
@@ -165,31 +161,19 @@ impl Grid {
         Ok(grid)
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn k_squared(&self) -> &Array3<f64> {
-        self.k_squared_cache.get_or_init(|| {
-            let mut k2 = Array3::<f64>::zeros((self.nx, self.ny, self.nz));
-            for i in 0..self.nx {
-                for j in 0..self.ny {
-                    for k in 0..self.nz {
-                        let kx = std::f64::consts::PI * (i as f64) / (self.nx as f64 * self.dx);
-                        let ky = std::f64::consts::PI * (j as f64) / (self.ny as f64 * self.dy);
-                        let kz = std::f64::consts::PI * (k as f64) / (self.nz as f64 * self.dz);
-                        k2[[i, j, k]] = kx * kx + ky * ky + kz * kz;
-                    }
-                }
-            }
-            k2
-        })
-    }
-
     /// Creates a new grid with the same spacing in all directions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn uniform(n: usize, spacing: f64) -> Result<Self, GridError> {
         Self::new(n, n, n, spacing, spacing, spacing)
     }
 
     /// Create a grid optimized for a given frequency
     /// Domain-specific factory method following Information Expert
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn create_for_frequency(
         frequency: f64,
         sound_speed: f64,

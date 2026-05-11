@@ -31,7 +31,11 @@ use ndarray::Array3;
 use std::collections::HashMap;
 
 const MIN_PRIOR: f64 = 1.0e-12;
-
+/// Fuse deep learning.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub(crate) fn fuse_deep_learning(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
     let modalities = super::utils::sorted_modalities(fusion)?;
     let dims = super::utils::common_registered_dims(&modalities, "DeepFusion attention")?;
@@ -68,8 +72,7 @@ pub(crate) fn fuse_deep_learning(fusion: &MultiModalFusion) -> KwaversResult<Fus
 
                 if denominator <= 0.0 || !denominator.is_finite() {
                     return Err(KwaversError::InvalidInput(
-                        "DeepFusion attention produced an invalid attention normalization"
-                            .to_string(),
+                        "DeepFusion attention produced an invalid attention normalization".to_owned(),
                     ));
                 }
 

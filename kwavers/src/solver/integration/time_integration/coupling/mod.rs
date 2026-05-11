@@ -20,6 +20,9 @@ pub use subcycling::SubcyclingStrategy;
 /// Trait for time coupling strategies
 pub trait TimeCoupling: Send + Sync + Debug {
     /// Advance the coupled system
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,

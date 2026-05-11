@@ -3,7 +3,7 @@
 //! This module implements a unified solver for coupled acoustic-optical-thermal simulations.
 
 use crate::core::error::KwaversResult;
-use crate::domain::field::indices::*;
+use crate::domain::field::indices::{TOTAL_FIELDS, PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::solver::multiphysics::field_coupling::{CouplingStrategy, FieldCoupler};
@@ -25,6 +25,9 @@ pub struct MultiPhysicsSolver {
 
 impl MultiPhysicsSolver {
     /// Create a new multi-physics solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         grid: Grid,
         medium: Arc<dyn Medium + Send + Sync>,
@@ -48,6 +51,9 @@ impl MultiPhysicsSolver {
     }
 
     /// Step the multi-physics simulation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(&mut self, dt: f64) -> KwaversResult<()> {
         // Apply field coupling
         self.field_coupler.couple_fields(&mut self.fields, dt)?;

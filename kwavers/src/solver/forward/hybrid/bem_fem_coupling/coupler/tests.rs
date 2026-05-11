@@ -16,7 +16,7 @@ fn test_bem_fem_coupler_creation() {
 
     let coupler = BemFemCoupler::new(config, &fem_mesh, &bem_boundary);
 
-    assert!(coupler.is_ok());
+    let _coupler = coupler.unwrap();
 }
 
 #[test]

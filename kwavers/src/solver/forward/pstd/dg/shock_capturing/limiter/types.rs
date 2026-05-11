@@ -11,27 +11,27 @@ pub struct WENOLimiter {
     pub(super) order: usize,
     /// Small parameter to avoid division by zero
     pub(super) epsilon: f64,
-    /// Power parameter for smoothness indicators
-    #[allow(dead_code)]
-    pub(super) p: f64,
     /// Threshold for shock detection
     pub(super) shock_threshold: f64,
 }
 
 impl WENOLimiter {
+    /// New.
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn new(order: usize) -> KwaversResult<Self> {
         if order != 3 && order != 5 && order != 7 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "weno_order".to_string(),
+                parameter: "weno_order".to_owned(),
                 value: order.to_string(),
-                constraint: "WENO order must be 3, 5, or 7".to_string(),
+                constraint: "WENO order must be 3, 5, or 7".to_owned(),
             }));
         }
 
         Ok(Self {
             order,
             epsilon: WENO_EPSILON,
-            p: 2.0,
             shock_threshold: NUMERICAL_SHOCK_DETECTION_THRESHOLD,
         })
     }
@@ -46,6 +46,13 @@ impl WENOLimiter {
     ///
     /// ## Precondition
     /// `output` must have the same shape as `field`.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn limit_field_into(
         &self,
         field: &Array3<f64>,
@@ -60,9 +67,9 @@ impl WENOLimiter {
             7 => self.weno7_limit_into(field, shock_indicator, output)?,
             _ => {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "weno_order".to_string(),
+                    field: "weno_order".to_owned(),
                     value: self.order.to_string(),
-                    constraint: "must be 3, 5, or 7".to_string(),
+                    constraint: "must be 3, 5, or 7".to_owned(),
                 }));
             }
         }
@@ -70,7 +77,10 @@ impl WENOLimiter {
     }
 
     /// Convenience wrapper — allocates and returns the limited field.
-    /// Prefer [`limit_field_into`] in time-step loops to avoid per-step allocation.
+    /// Prefer [`Self::limit_field_into`] in time-step loops to avoid per-step allocation.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn limit_field(
         &self,
         field: &Array3<f64>,

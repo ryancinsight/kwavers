@@ -41,6 +41,9 @@ impl BroadbandDetector {
     }
 
     /// Detect broadband emissions
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn detect_broadband_emissions(&mut self, signal: &ArrayView1<f64>) -> f64 {
         let current_energy = self.calculate_energy(signal);
 
@@ -80,7 +83,7 @@ impl BroadbandDetector {
         }
 
         let history_avg = self.history.iter().sum::<f64>() / self.history.len() as f64;
-        TEMPORAL_SMOOTHING * current_value + (1.0 - TEMPORAL_SMOOTHING) * history_avg
+        TEMPORAL_SMOOTHING.mul_add(current_value, (1.0 - TEMPORAL_SMOOTHING) * history_avg)
     }
 }
 

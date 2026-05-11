@@ -151,6 +151,10 @@ pub fn norm_neon(field: &Array3<f64>) -> f64 {
     }
 }
 
+/// Add fields neon.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[cfg(not(target_arch = "aarch64"))]
 pub fn add_fields_neon(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     let dims = a.dim();
@@ -166,6 +170,10 @@ pub fn add_fields_neon(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) 
     }
 }
 
+/// Scale field neon.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[cfg(not(target_arch = "aarch64"))]
 pub fn scale_field_neon(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>) {
     let dims = field.dim();
@@ -181,11 +189,12 @@ pub fn scale_field_neon(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>)
 }
 
 #[cfg(not(target_arch = "aarch64"))]
+#[must_use] 
 pub fn norm_neon(field: &Array3<f64>) -> f64 {
     let mut sum = 0.0;
     let mut compensation = 0.0;
 
-    for &value in field.iter() {
+    for &value in field {
         let squared = value * value;
         let y = squared - compensation;
         let t = sum + y;
@@ -279,13 +288,19 @@ pub fn subtract_fields_neon(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f
         }
     }
 }
-
+/// Multiply fields neon.
+/// # Panics
+/// - Panics with `"NEON operations should never be called on non-aarch64 platforms"`.
+///
 #[cfg(not(target_arch = "aarch64"))]
 pub fn multiply_fields_neon(_a: &Array3<f64>, _b: &Array3<f64>, _out: &mut Array3<f64>) {
     #[cfg(debug_assertions)]
     panic!("NEON operations should never be called on non-aarch64 platforms");
 }
-
+/// Subtract fields neon.
+/// # Panics
+/// - Panics with `"NEON operations should never be called on non-aarch64 platforms"`.
+///
 #[cfg(not(target_arch = "aarch64"))]
 pub fn subtract_fields_neon(_a: &Array3<f64>, _b: &Array3<f64>, _out: &mut Array3<f64>) {
     #[cfg(debug_assertions)]

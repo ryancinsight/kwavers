@@ -93,7 +93,6 @@ fn test_scatter_photon_isotropic() {
         position: [0.0, 0.0, 0.0],
         direction: [0.0, 0.0, 1.0],
         weight: 1.0,
-        alive: true,
     };
 
     scatter_photon(&mut photon, 0.0, &mut rng);
@@ -125,6 +124,9 @@ fn test_scatter_photon_isotropic() {
 ///
 /// The test uses a fixed ChaCha8 seed so it is deterministic across
 /// platforms and compiler versions.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_scatter_photon_forward_hg_mean_cosine() {
     const G: f64 = 0.9;
@@ -140,7 +142,6 @@ fn test_scatter_photon_forward_hg_mean_cosine() {
             position: [0.0, 0.0, 0.0],
             direction: [0.0, 0.0, 1.0],
             weight: 1.0,
-            alive: true,
         };
         scatter_photon(&mut photon, G, &mut rng);
         // For initial direction [0,0,1], perp1 and perp2 lie in the xy plane,
@@ -167,6 +168,9 @@ fn test_scatter_photon_forward_hg_mean_cosine() {
 /// **Property (Kay & Kajiya 1986, §3):** For a ray at the geometric centre of
 /// voxel (0,0,0) with unit spacing d, propagating in +z, the distance to the
 /// exit face is exactly d/2 and the next voxel index is (0,0,1).
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_photon_step_to_boundary_center_to_face() {
     let pos = [0.0005, 0.0005, 0.0005]; // centre of voxel (0,0,0), d=0.001 m
@@ -179,6 +183,9 @@ fn test_photon_step_to_boundary_center_to_face() {
 /// `photon_step_to_boundary` — exit through the +z grid face.
 ///
 /// At the last voxel in z (k = nz-1) propagating in +z, `next` must be `None`.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_photon_step_to_boundary_exit() {
     let pos = [0.0005, 0.0005, 0.0095]; // centre of voxel (0,0,9)
@@ -192,6 +199,9 @@ fn test_photon_step_to_boundary_exit() {
 ///
 /// Voxel (0,0,0) propagating in −z exits the grid immediately (k cannot
 /// underflow below 0).  `next` must be `None`.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_photon_step_to_boundary_negative_dir() {
     let pos = [0.0005, 0.0005, 0.0005]; // centre of voxel (0,0,0)
@@ -209,6 +219,9 @@ fn test_photon_step_to_boundary_negative_dir() {
 /// ```
 /// For N=100,000 independent trials the relative Monte-Carlo error is
 /// O(1/√N) ≈ 0.3%, so a ±5% tolerance is conservative.
+/// # Panics
+/// - Panics if assertion fails: `Russian roulette energy conservation: E[W_out]/W_in − 1 = {rel_err:.4} (must be < 5%)`.
+///
 #[test]
 fn test_russian_roulette_energy_conservation() {
     let mut rng = rand::thread_rng();
@@ -245,6 +258,9 @@ fn test_russian_roulette_energy_conservation() {
 /// W_absorbed / N  +  R_d  ≤  1.0  +  ε_machine
 /// ```
 /// We additionally require `W_absorbed / N > 0` for a medium with `μ_a > 0`.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fluence_energy_conservation() {
     let nx = 20_usize;
@@ -299,6 +315,9 @@ fn test_fluence_energy_conservation() {
 ///
 /// Diffusion theory gives Rd(n=1) ≈ 0.54 for a′=0.909; our finite-domain
 /// Monte Carlo (60×60×120 mm) with Fresnel gate produces Rd ∈ [0.14, 0.24].
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_mcml_semi_infinite_phantom() {
     let nx = 60_usize;

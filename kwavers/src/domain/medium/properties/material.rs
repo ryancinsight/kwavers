@@ -53,7 +53,7 @@ pub struct MaterialProperties {
     // ========================================================================
     // Acoustic Properties
     // ========================================================================
-    /// Speed of sound [m/s]
+    /// Speed of sound (m/s)
     pub sound_speed: f64,
 
     /// Density [kg/m³]
@@ -119,12 +119,13 @@ pub struct MaterialProperties {
     /// Temperature at which properties are defined [°C]
     pub reference_temperature: f64,
 
-    /// Pressure at which properties are defined [Pa]
+    /// Pressure at which properties are defined (Pa)
     pub reference_pressure: f64,
 }
 
 impl MaterialProperties {
     /// Create material properties with core parameters
+    #[must_use] 
     pub fn new(
         sound_speed: f64,
         density: f64,
@@ -159,78 +160,81 @@ impl MaterialProperties {
     }
 
     /// Validate material properties against physical constraints
+    /// # Errors
+    /// - Returns [`KwaversError::Medium`] if the precondition for a Medium-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         use crate::core::error::MediumError;
 
         // Speed of sound must be positive
         if self.sound_speed <= 0.0 {
             return Err(KwaversError::Medium(MediumError::InvalidProperties {
-                property: "sound_speed".to_string(),
+                property: "sound_speed".to_owned(),
                 value: self.sound_speed,
-                constraint: "must be positive".to_string(),
+                constraint: "must be positive".to_owned(),
             }));
         }
 
         // Density must be positive
         if self.density <= 0.0 {
             return Err(KwaversError::Medium(MediumError::InvalidProperties {
-                property: "density".to_string(),
+                property: "density".to_owned(),
                 value: self.density,
-                constraint: "must be positive".to_string(),
+                constraint: "must be positive".to_owned(),
             }));
         }
 
         // Impedance must be positive
         if self.impedance <= 0.0 {
             return Err(KwaversError::Medium(MediumError::InvalidProperties {
-                property: "impedance".to_string(),
+                property: "impedance".to_owned(),
                 value: self.impedance,
-                constraint: "must be positive".to_string(),
+                constraint: "must be positive".to_owned(),
             }));
         }
 
         // Absorption must be non-negative
         if self.absorption_coefficient < 0.0 {
             return Err(KwaversError::Medium(MediumError::InvalidProperties {
-                property: "absorption_coefficient".to_string(),
+                property: "absorption_coefficient".to_owned(),
                 value: self.absorption_coefficient,
-                constraint: "must be non-negative".to_string(),
+                constraint: "must be non-negative".to_owned(),
             }));
         }
 
         // Specific heat must be positive
         if self.specific_heat <= 0.0 {
             return Err(KwaversError::Medium(MediumError::InvalidProperties {
-                property: "specific_heat".to_string(),
+                property: "specific_heat".to_owned(),
                 value: self.specific_heat,
-                constraint: "must be positive".to_string(),
+                constraint: "must be positive".to_owned(),
             }));
         }
 
         // Thermal conductivity must be non-negative
         if self.thermal_conductivity < 0.0 {
             return Err(KwaversError::Medium(MediumError::InvalidProperties {
-                property: "thermal_conductivity".to_string(),
+                property: "thermal_conductivity".to_owned(),
                 value: self.thermal_conductivity,
-                constraint: "must be non-negative".to_string(),
+                constraint: "must be non-negative".to_owned(),
             }));
         }
 
         // Viscosity must be non-negative
         if self.shear_viscosity < 0.0 || self.bulk_viscosity < 0.0 {
             return Err(KwaversError::Medium(MediumError::InvalidProperties {
-                property: "viscosity".to_string(),
+                property: "viscosity".to_owned(),
                 value: self.shear_viscosity.min(self.bulk_viscosity),
-                constraint: "must be non-negative".to_string(),
+                constraint: "must be non-negative".to_owned(),
             }));
         }
 
         // Refractive index should be typically >= 1.0 for physical materials
         if self.refractive_index < 1.0 {
             return Err(KwaversError::Medium(MediumError::InvalidProperties {
-                property: "refractive_index".to_string(),
+                property: "refractive_index".to_owned(),
                 value: self.refractive_index,
-                constraint: "must be >= 1.0".to_string(),
+                constraint: "must be >= 1.0".to_owned(),
             }));
         }
 
@@ -238,30 +242,35 @@ impl MaterialProperties {
     }
 
     /// Calculate acoustic impedance mismatch ratio
-    pub fn impedance_ratio(&self, other: &MaterialProperties) -> f64 {
+    #[must_use] 
+    pub fn impedance_ratio(&self, other: &Self) -> f64 {
         let z1 = self.impedance;
         let z2 = other.impedance;
         ((z1 - z2) / (z1 + z2)).abs()
     }
 
     /// Calculate reflection coefficient at normal incidence
-    pub fn reflection_coefficient(&self, other: &MaterialProperties) -> f64 {
+    #[must_use] 
+    pub fn reflection_coefficient(&self, other: &Self) -> f64 {
         let z1 = self.impedance;
         let z2 = other.impedance;
         ((z2 - z1) / (z2 + z1)).abs()
     }
 
     /// Calculate transmission coefficient at normal incidence
-    pub fn transmission_coefficient(&self, other: &MaterialProperties) -> f64 {
+    #[must_use] 
+    pub fn transmission_coefficient(&self, other: &Self) -> f64 {
         1.0 - self.reflection_coefficient(other)
     }
 
     /// Absorption coefficient at given frequency
+    #[must_use] 
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         self.absorption_coefficient * frequency.powf(self.absorption_exponent)
     }
 
     /// Attenuation in dB/cm at given frequency
+    #[must_use] 
     pub fn attenuation_db_cm(&self, frequency: f64) -> f64 {
         let alpha = self.absorption_at_frequency(frequency);
         // Convert Np/m to dB/cm: dB = 20·log₁₀(e) · Np · 0.01
@@ -283,7 +292,7 @@ mod tests {
     #[test]
     fn test_validation_valid() {
         let mat = MaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
-        assert!(mat.validate().is_ok());
+        mat.validate().unwrap();
     }
 
     #[test]

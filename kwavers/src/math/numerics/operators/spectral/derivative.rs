@@ -90,6 +90,9 @@ impl PseudospectralDerivative {
     ///
     /// For smooth periodic functions, achieves O(exp(-cN)) convergence.
     /// Validated: ∂(sin(kx))/∂x = k·cos(kx) with L∞ error < 1e-12.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn derivative_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
 
@@ -135,6 +138,9 @@ impl PseudospectralDerivative {
     }
 
     /// Compute spectral derivative in Y direction: ∂u/∂y = F⁻¹{ik_y F{u}}
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn derivative_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
 
@@ -180,6 +186,9 @@ impl PseudospectralDerivative {
     }
 
     /// Compute spectral derivative in Z direction: ∂u/∂z = F⁻¹{ik_z F{u}}
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn derivative_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
 

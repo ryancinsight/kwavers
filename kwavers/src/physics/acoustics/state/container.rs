@@ -23,6 +23,9 @@ pub struct PhysicsState {
 
 impl PhysicsState {
     /// Create a new physics state with the given grid
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: Grid) -> Self {
         let (nx, ny, nz) = grid.dimensions();
         let fields = Array4::<f64>::zeros((field_indices::TOTAL_FIELDS, nx, ny, nz));
@@ -31,6 +34,9 @@ impl PhysicsState {
     }
 
     /// Get a read-only view of a specific field (zero-copy)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_field(&self, field_index: usize) -> KwaversResult<ArrayView3<'_, f64>> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
@@ -40,6 +46,9 @@ impl PhysicsState {
     }
 
     /// Get a mutable view of a specific field (zero-copy)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_field_mut(&mut self, field_index: usize) -> KwaversResult<ArrayViewMut3<'_, f64>> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
@@ -49,6 +58,9 @@ impl PhysicsState {
     }
 
     /// Apply a closure to a field for reading (zero-copy)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_field<F, R>(&self, field_index: usize, f: F) -> KwaversResult<R>
     where
         F: FnOnce(ArrayView3<f64>) -> R,
@@ -61,6 +73,9 @@ impl PhysicsState {
     }
 
     /// Apply a closure to a field for mutation (zero-copy)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_field_mut<F, R>(&mut self, field_index: usize, f: F) -> KwaversResult<R>
     where
         F: FnOnce(ArrayViewMut3<f64>) -> R,
@@ -74,11 +89,17 @@ impl PhysicsState {
 
     /// Get a cloned copy of a field (allocates memory)
     /// Prefer `get_field()` for zero-copy access when possible
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn clone_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
         self.with_field(field_index, |field| field.to_owned())
     }
 
     /// Update a specific field with new data
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
@@ -93,6 +114,9 @@ impl PhysicsState {
     }
 
     /// Get direct access to all fields (for plugin system)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_all_fields_mut<F, R>(&mut self, f: F) -> KwaversResult<R>
     where
         F: FnOnce(&mut Array4<f64>) -> R,
@@ -106,16 +130,25 @@ impl PhysicsState {
     }
 
     /// Get field metadata name
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_field_name(&self, field_index: usize) -> &'static str {
         field_indices::field_name(field_index)
     }
 
     /// Get field metadata unit
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_field_unit(&self, field_index: usize) -> &'static str {
         field_indices::field_unit(field_index)
     }
 
     /// Initialize field with a constant value
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn initialize_field(&mut self, field_index: usize, value: f64) -> KwaversResult<()> {
         self.with_field_mut(field_index, |mut field| {
             field.fill(value);
@@ -123,6 +156,9 @@ impl PhysicsState {
     }
 
     /// Initialize field with a function
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn initialize_field_with<F>(&mut self, field_index: usize, init_fn: F) -> KwaversResult<()>
     where
         F: Fn(usize, usize, usize) -> f64,

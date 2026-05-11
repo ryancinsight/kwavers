@@ -110,6 +110,9 @@ fn test_matrix_eigenvalues() {
 /// (Lagrange multiplier p enforcing J=1) adds −p I to produce zero total stress
 /// at the reference state.  The energy-derivative formula correctly captures
 /// the compressible behavior.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_first_pk_stress_reference_state_diagonal() {
     let model = HyperelasticModel::neo_hookean_soft_tissue();
@@ -140,6 +143,9 @@ fn test_first_pk_stress_reference_state_diagonal() {
 ///
 /// Under a diagonal F = diag(λ₁, λ₂, λ₃), both σ and cof(F) are diagonal.
 /// The matrix product P = σ · cof(F) of two diagonal matrices is diagonal. □
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_first_pk_stress_diagonal_for_principal_loading() {
     let model = HyperelasticModel::neo_hookean_soft_tissue();
@@ -169,6 +175,9 @@ fn test_first_pk_stress_diagonal_for_principal_loading() {
 ///
 /// For any hyperelastic material, `P_{iA} = ∂W/∂F_{iA}` (definition).
 /// We check this numerically with step h = 1e-6 (relative error ≈ h²/6 ·|∂³W/∂F³|).
+/// # Panics
+/// - Panics if assertion fails: `P[{i}][{cap_a}]: analytic={:.6e} finite-diff={:.6e} rel_err={rel_err:.2e}`.
+///
 #[test]
 fn test_first_pk_stress_is_energy_gradient() {
     let model = HyperelasticModel::neo_hookean_soft_tissue();

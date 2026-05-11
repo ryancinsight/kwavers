@@ -14,6 +14,9 @@ pub struct PredictorCorrectorStrategy {
 
 impl PredictorCorrectorStrategy {
     /// Create a new predictor-corrector strategy
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(corrector_iterations: usize) -> Self {
         Self {
@@ -56,9 +59,9 @@ impl TimeCoupling for PredictorCorrectorStrategy {
                 let _field = fields.get_mut(name).ok_or_else(|| {
                     crate::core::error::KwaversError::Validation(
                         crate::core::error::ValidationError::FieldValidation {
-                            field: "fields".to_string(),
+                            field: "fields".to_owned(),
                             value: name.clone(),
-                            constraint: "Field not found".to_string(),
+                            constraint: "Field not found".to_owned(),
                         },
                     )
                 })?;
@@ -99,7 +102,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
                                     };
 
                                     evolved_field[[i, j, k]] =
-                                        val + weight * local_dt * rate * val * 1e-6;
+                                        (weight * local_dt * rate * val).mul_add(1e-6, val);
                                 }
                             }
                         }

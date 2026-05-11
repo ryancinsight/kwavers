@@ -93,6 +93,9 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
     }
 
     /// Create meta-optimizer with Momentum mode.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn with_momentum(lr: f64, num_params: usize, momentum: f64) -> Self {
         assert!(
             (0.0..1.0).contains(&momentum),
@@ -107,6 +110,11 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
     }
 
     /// Create meta-optimizer with Adam hyperparameters.
+    /// # Panics
+    /// - Panics if assertion fails: `Beta1 must be in (0, 1), got {}`.
+    /// - Panics if assertion fails: `Beta2 must be in (0, 1), got {}`.
+    /// - Panics if assertion fails: `Epsilon must be positive, got {}`.
+    ///
     pub fn with_adam(lr: f64, num_params: usize, beta1: f64, beta2: f64, epsilon: f64) -> Self {
         assert!(
             beta1 > 0.0 && beta1 < 1.0,
@@ -129,6 +137,10 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
     }
 
     /// Create meta-optimizer with RMSProp hyperparameters.
+    /// # Panics
+    /// - Panics if assertion fails: `Decay must be in (0, 1), got {}`.
+    /// - Panics if assertion fails: `Epsilon must be positive, got {}`.
+    ///
     pub fn with_rmsprop(lr: f64, num_params: usize, decay: f64, epsilon: f64) -> Self {
         assert!(
             decay > 0.0 && decay < 1.0,

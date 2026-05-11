@@ -74,13 +74,14 @@ pub struct ErrorIntegral {
 }
 
 impl ErrorIntegral {
+    #[must_use] 
     pub fn new(limit: f64) -> Self {
         Self { value: 0.0, limit }
     }
 
     pub fn update(&mut self, error: f64, dt: f64) {
         // Update integral with proper clamping
-        let new_value = self.value + error * dt;
+        let new_value = error.mul_add(dt, self.value);
         // Anti-windup: clamp integral to prevent windup
         self.value = new_value.clamp(-self.limit, self.limit);
     }

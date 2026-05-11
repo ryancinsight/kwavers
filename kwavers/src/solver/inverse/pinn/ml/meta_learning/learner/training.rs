@@ -11,6 +11,9 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 impl<B: AutodiffBackend> MetaLearner<B> {
     /// Perform one meta-training step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn meta_train_step(&mut self) -> KwaversResult<MetaLoss> {
         let tasks = self
             .task_sampler
@@ -95,12 +98,18 @@ impl<B: AutodiffBackend> MetaLearner<B> {
     }
 
     /// Adapt to a specific physics task using learned meta-parameters
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn adapt_to_task(&self, task: &PhysicsTask) -> KwaversResult<(f64, f64)> {
         let (loss, physics_loss, _) = self.adapt_to_task_internal(task)?;
         Ok((loss, physics_loss))
     }
 
     /// Internal adaptation method returning the adapted model
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn adapt_to_task_internal(
         &self,
         task: &PhysicsTask,

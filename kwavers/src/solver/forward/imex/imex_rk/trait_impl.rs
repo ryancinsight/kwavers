@@ -117,7 +117,7 @@ impl IMEXScheme for IMEXRK {
         match self.config.scheme_type {
             IMEXRKType::SSP2_222 => {
                 let gamma = 1.0 - 1.0 / 2.0_f64.sqrt();
-                (1.0 + (1.0 - 2.0 * gamma) * z) / (1.0 - gamma * z).powi(2)
+                2.0f64.mul_add(-gamma, 1.0).mul_add(z, 1.0) / (1.0 - gamma * z).powi(2)
             }
             _ => {
                 // General approximation for higher order methods

@@ -23,6 +23,14 @@ impl NonlinearWave {
     /// # Returns
     ///
     /// The k-space corrected pressure field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if `kx contiguous`.
+    /// - Panics if `ky contiguous`.
+    /// - Panics if `kz contiguous`.
+    ///
     pub(crate) fn apply_k_space_correction(
         &self,
         pressure: &Array3<f64>,
@@ -41,38 +49,42 @@ impl NonlinearWave {
         let c_array = medium.sound_speed_array();
         let c = c_array.mean().unwrap_or(self.max_sound_speed);
         let mut result_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
+        let dt = self.dt;
 
         // Use pre-computed k_squared if available
         if let Some(ref k_squared) = self.k_squared {
             Zip::from(&mut result_k)
                 .and(&pressure_k)
                 .and(k_squared)
-                .for_each(|r, &p, &k2| {
+                .par_for_each(|r, &p, &k2| {
                     let k = k2.sqrt();
                     let sinc_factor = if k > numerical::EPSILON {
-                        (c * k * self.dt / 2.0).sin() / (c * k * self.dt / 2.0)
+                        (c * k * dt / 2.0).sin() / (c * k * dt / 2.0)
                     } else {
                         1.0
                     };
-                    *r = p * Complex::new(sinc_factor * (-c.powi(2) * k2 * self.dt.powi(2)), 0.0)
-                        .exp();
+                    *r = p * Complex::new(sinc_factor * (-c * c * k2 * dt * dt), 0.0).exp();
                 });
         } else {
             // Compute k-squared on the fly
-            result_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
-                let k_mag_sq = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
-                let k_mag = k_mag_sq.sqrt();
-
-                let sinc_factor = if k_mag > numerical::EPSILON {
-                    (c * k_mag * self.dt / 2.0).sin() / (c * k_mag * self.dt / 2.0)
-                } else {
-                    1.0
-                };
-
-                *val = pressure_k[(i, j, k)]
-                    * Complex::new(sinc_factor * (-c.powi(2) * k_mag_sq * self.dt.powi(2)), 0.0)
-                        .exp();
-            });
+            let kx_s = kx.as_slice().expect("kx contiguous");
+            let ky_s = ky.as_slice().expect("ky contiguous");
+            let kz_s = kz.as_slice().expect("kz contiguous");
+            Zip::indexed(&mut result_k)
+                .and(&pressure_k)
+                .par_for_each(|(i, j, k), val, &pk| {
+                    let k_mag_sq =
+                        kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
+                    let k_mag = k_mag_sq.sqrt();
+                    let sinc_factor = if k_mag > numerical::EPSILON {
+                        (c * k_mag * dt / 2.0).sin() / (c * k_mag * dt / 2.0)
+                    } else {
+                        1.0
+                    };
+                    *val =
+                        pk * Complex::new(sinc_factor * (-c * c * k_mag_sq * dt * dt), 0.0)
+                            .exp();
+                });
         }
 
         // Transform back to spatial domain
@@ -89,6 +101,14 @@ impl NonlinearWave {
     /// # Returns
     ///
     /// Tuple of (`grad_x`, `grad_y`, `grad_z`)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if `kx contiguous`.
+    /// - Panics if `ky contiguous`.
+    /// - Panics if `kz contiguous`.
+    ///
     pub(crate) fn compute_spectral_gradient(
         &self,
         field: &Array3<f64>,
@@ -107,16 +127,20 @@ impl NonlinearWave {
         let mut grad_y_k = Array3::<Complex>::zeros(field_k.raw_dim());
         let mut grad_z_k = Array3::<Complex>::zeros(field_k.raw_dim());
 
-        grad_x_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
-            *val = field_k[(i, j, k)] * Complex::new(0.0, kx[i]);
+        let kx_s = kx.as_slice().expect("kx contiguous");
+        let ky_s = ky.as_slice().expect("ky contiguous");
+        let kz_s = kz.as_slice().expect("kz contiguous");
+
+        Zip::indexed(&mut grad_x_k).and(&field_k).par_for_each(|(i, _j, _k), val, &fk| {
+            *val = fk * Complex::new(0.0, kx_s[i]);
         });
 
-        grad_y_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
-            *val = field_k[(i, j, k)] * Complex::new(0.0, ky[j]);
+        Zip::indexed(&mut grad_y_k).and(&field_k).par_for_each(|(_i, j, _k), val, &fk| {
+            *val = fk * Complex::new(0.0, ky_s[j]);
         });
 
-        grad_z_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
-            *val = field_k[(i, j, k)] * Complex::new(0.0, kz[k]);
+        Zip::indexed(&mut grad_z_k).and(&field_k).par_for_each(|(_i, _j, k), val, &fk| {
+            *val = fk * Complex::new(0.0, kz_s[k]);
         });
 
         // Transform back to spatial domain
@@ -137,6 +161,14 @@ impl NonlinearWave {
     /// # Returns
     ///
     /// The Laplacian of the field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if `kx contiguous`.
+    /// - Panics if `ky contiguous`.
+    /// - Panics if `kz contiguous`.
+    ///
     pub(crate) fn compute_spectral_laplacian(
         &self,
         field: &Array3<f64>,
@@ -153,19 +185,25 @@ impl NonlinearWave {
             Zip::from(&mut laplacian_k)
                 .and(&field_k)
                 .and(k_squared)
-                .for_each(|l, &f, &k2| {
-                    *l = f * Complex::new(-k2, 0.0);
+                .par_for_each(|l, &f, &k2| {
+                    *l = f * (-k2);
                 });
         } else {
             // Compute k-squared on the fly
             let kx = grid.compute_kx();
             let ky = grid.compute_ky();
             let kz = grid.compute_kz();
+            let kx_s = kx.as_slice().expect("kx contiguous");
+            let ky_s = ky.as_slice().expect("ky contiguous");
+            let kz_s = kz.as_slice().expect("kz contiguous");
 
-            laplacian_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
-                let k_mag_sq = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
-                *val = field_k[(i, j, k)] * Complex::new(-k_mag_sq, 0.0);
-            });
+            Zip::indexed(&mut laplacian_k)
+                .and(&field_k)
+                .par_for_each(|(i, j, k), val, &fk| {
+                    let k_mag_sq =
+                        kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
+                    *val = fk * (-k_mag_sq);
+                });
         }
 
         // Transform back to spatial domain

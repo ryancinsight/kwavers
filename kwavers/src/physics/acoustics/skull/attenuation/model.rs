@@ -84,10 +84,13 @@ impl SkullAttenuation {
     /// * `alpha_0` - Base attenuation (Np/m/MHz)
     /// * `exponent` - Frequency power law exponent
     /// * `bone_type` - Type of bone tissue
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(alpha_0: f64, exponent: f64, bone_type: BoneType) -> KwaversResult<Self> {
         if alpha_0 < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Attenuation coefficient must be non-negative".to_string(),
+                "Attenuation coefficient must be non-negative".to_owned(),
             ));
         }
 
@@ -102,7 +105,7 @@ impl SkullAttenuation {
             BoneType::Cortical => (0.01, true),
             BoneType::Cancellous => (0.1, true),
             BoneType::Mixed { cortical_fraction } => {
-                let scatter = 0.01 * cortical_fraction + 0.1 * (1.0 - cortical_fraction);
+                let scatter = 0.01f64.mul_add(cortical_fraction, 0.1 * (1.0 - cortical_fraction));
                 (scatter, true)
             }
         };

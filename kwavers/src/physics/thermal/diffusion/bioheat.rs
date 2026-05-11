@@ -18,7 +18,7 @@ pub struct BioheatParameters {
     pub blood_density: f64,
     /// Blood specific heat [J/(kg·K)]
     pub blood_specific_heat: f64,
-    /// Arterial blood temperature [K]
+    /// Arterial blood temperature (K)
     pub arterial_temperature: f64,
 }
 
@@ -40,11 +40,18 @@ pub struct PennesBioheat {
 }
 
 impl PennesBioheat {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(params: BioheatParameters) -> Self {
         Self { params }
     }
-
+    /// Perfusion source.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn perfusion_source(
         &self,
         temperature: &Array3<f64>,
@@ -74,6 +81,10 @@ impl PennesBioheat {
         Ok(source)
     }
 
+    /// Update.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update(
         &self,
         temperature: &mut Array3<f64>,
@@ -96,7 +107,7 @@ impl PennesBioheat {
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
                 let ext_source = external_source.map_or(0.0, |s| s[[i, j, k]]);
 
-                *t += dt * (alpha * lap + perf + ext_source);
+                *t += dt * (alpha.mul_add(lap, perf) + ext_source);
             });
 
         Ok(())

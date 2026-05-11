@@ -79,9 +79,9 @@ impl TissueProperties {
         // For soft tissue, assume Poisson's ratio of 0.499 (nearly incompressible)
         let bulk_modulus = density * sound_speed * sound_speed;
         let poisson_ratio = 0.499;
-        let youngs_modulus = 3.0 * bulk_modulus * (1.0 - 2.0 * poisson_ratio);
+        let youngs_modulus = 3.0 * bulk_modulus * 2.0f64.mul_add(-poisson_ratio, 1.0);
         let lame_lambda =
-            youngs_modulus * poisson_ratio / ((1.0 + poisson_ratio) * (1.0 - 2.0 * poisson_ratio));
+            youngs_modulus * poisson_ratio / ((1.0 + poisson_ratio) * 2.0f64.mul_add(-poisson_ratio, 1.0));
         let lame_mu = youngs_modulus / (2.0 * (1.0 + poisson_ratio));
 
         Self {

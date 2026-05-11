@@ -22,6 +22,13 @@ pub struct SteppedSweep {
 
 impl SteppedSweep {
     /// Create new stepped sweep - USING all parameters
+    /// # Panics
+    /// - Panics if assertion fails: `Start frequency too low`.
+    /// - Panics if assertion fails: `Stop frequency too low`.
+    /// - Panics if assertion fails: `Duration too short`.
+    /// - Panics if assertion fails: `Must have at least one step`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(
         start_freq: f64,
@@ -96,7 +103,7 @@ impl FrequencySweep for SteppedSweep {
         }
 
         let step = self.get_step_index(t);
-        self.start_frequency + self.frequency_step * step as f64
+        self.frequency_step.mul_add(step as f64, self.start_frequency)
     }
 
     fn phase(&self, t: f64) -> f64 {
@@ -109,13 +116,13 @@ impl FrequencySweep for SteppedSweep {
 
         // Sum phase from previous steps
         for i in 0..step {
-            let freq = self.start_frequency + self.frequency_step * i as f64;
+            let freq = self.frequency_step.mul_add(i as f64, self.start_frequency);
             phase += TWO_PI * freq * self.step_duration;
         }
 
         // Add phase from current step
-        let current_freq = self.start_frequency + self.frequency_step * step as f64;
-        let time_in_step = t - step as f64 * self.step_duration;
+        let current_freq = self.frequency_step.mul_add(step as f64, self.start_frequency);
+        let time_in_step = (step as f64).mul_add(-self.step_duration, t);
         phase += TWO_PI * current_freq * time_in_step;
 
         phase

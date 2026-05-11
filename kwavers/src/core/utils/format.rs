@@ -38,7 +38,7 @@ pub fn format_duration(duration: Duration) -> String {
         format!("{}ns", duration.as_nanos())
     } else {
         // Zero duration
-        "0ms".to_string()
+        "0ms".to_owned()
     }
 }
 
@@ -93,11 +93,11 @@ pub fn format_bytes(bytes: usize) -> String {
     const UNITS: &[&str] = &["B", "KiB", "MiB", "GiB", "TiB"];
 
     if bytes == 0 {
-        return "0 B".to_string();
+        return "0 B".to_owned();
     }
 
     let bytes = bytes as f64;
-    let i = (bytes.ln() / 1024_f64.ln()).floor() as usize;
+    let i = bytes.log(1024_f64).floor() as usize;
     let i = i.min(UNITS.len() - 1);
     let value = bytes / 1024_f64.powi(i as i32);
 

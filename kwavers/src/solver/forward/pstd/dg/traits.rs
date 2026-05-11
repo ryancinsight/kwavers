@@ -11,9 +11,15 @@ use ndarray::Array3;
 /// Trait for discontinuity detection
 pub trait DiscontinuityDetection: Send + Sync {
     /// Detect discontinuities in the field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn detect(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<bool>>;
 
     /// Update detection threshold
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn update_threshold(&mut self, threshold: f64);
 }
 
@@ -23,6 +29,9 @@ pub trait SolutionCoupling: Send + Sync {
     ///
     /// `output` does NOT need to be pre-initialized; every element is written.
     /// This is the zero-allocation hot-path variant.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn couple_into(
         &self,
         solution1: &Array3<f64>,
@@ -33,7 +42,10 @@ pub trait SolutionCoupling: Send + Sync {
     ) -> KwaversResult<()>;
 
     /// Convenience wrapper — allocates and returns the coupled field.
-    /// Prefer [`couple_into`] in time-step loops.
+    /// Prefer [`Self::couple_into`] in time-step loops.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn couple(
         &self,
         solution1: &Array3<f64>,
@@ -50,17 +62,30 @@ pub trait SolutionCoupling: Send + Sync {
 /// Trait for DG-specific operations
 pub trait DGOperations: Send + Sync {
     /// Compute numerical flux at element interfaces
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_flux(&self, left_state: f64, right_state: f64, normal: f64) -> f64;
 
     /// Project field onto DG basis functions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn project_to_basis(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>>;
 
     /// Reconstruct field from DG basis coefficients
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn reconstruct_from_basis(&self, coefficients: &Array3<f64>) -> KwaversResult<Array3<f64>>;
 }
 
 /// Trait for numerical solvers
 pub trait NumericalSolver: Send + Sync {
+    /// Advance the field one time step `dt` subject to the active-cell mask.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if the numerical scheme diverges or a dimension mismatch occurs.
     fn solve(
         &mut self,
         field: &Array3<f64>,

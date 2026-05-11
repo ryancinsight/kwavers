@@ -13,13 +13,13 @@
 //! ```
 //!
 //! where:
-//! - z: axial (propagation) coordinate [m]
-//! - τ = t − z/c₀: retarded time [s]
+//! - z: axial (propagation) coordinate (m)
+//! - τ = t − z/c₀: retarded time (s)
 //! - ∇⊥² = ∂²/∂x² + ∂²/∂y²: transverse Laplacian [m⁻²]
 //! - δ: diffusivity of sound [m²/s]
-//! - β = 1 + B/(2A): nonlinearity coefficient [dimensionless]
+//! - β = 1 + B/(2A): nonlinearity coefficient (dimensionless)
 //! - ρ₀: ambient density [kg/m³]
-//! - c₀: small-signal sound speed [m/s]
+//! - c₀: small-signal sound speed (m/s)
 //!
 //! # Operator Splitting
 //!
@@ -97,7 +97,7 @@
 /// let field_2d: Array2<f64> = solver.current_field();
 /// ```
 pub trait KZKSolver {
-    /// Advance the acoustic pressure field by one axial step of length `dz` [m].
+    /// Advance the acoustic pressure field by one axial step of length `dz` (m).
     ///
     /// Applies the full Strang-split sequence:
     ///   D(dz/2) · A(dz/2) · N(dz) · A(dz/2) · D(dz/2)
@@ -107,12 +107,12 @@ pub trait KZKSolver {
     /// * `dz` — axial step size in metres.  Must be positive.
     fn step_forward(&mut self, dz: f64);
 
-    /// Return the RMS pressure field [Pa] at the current axial z-plane.
+    /// Return the RMS pressure field (Pa) at the current axial z-plane.
     ///
     /// ## Definition
     ///
     /// ```text
-    /// p_rms(i, j) = √( (1/nt) Σ_{t=0}^{nt−1} p[i, j, t]² )     [Pa]
+    /// p_rms(i, j) = √( (1/nt) Σ_{t=0}^{nt−1} p[i, j, t]² )     (Pa)
     /// ```
     ///
     /// This is the L² norm of the retarded-time waveform at each (i,j), scaled
@@ -129,7 +129,7 @@ pub trait KZKSolver {
     /// `Array2<f64>` of shape `(nx, ny)` with units of Pa.
     fn current_field(&self) -> ndarray::Array2<f64>;
 
-    /// Return the peak positive pressure field [Pa] at the current z-plane.
+    /// Return the peak positive pressure field (Pa) at the current z-plane.
     ///
     /// ## Definition
     ///

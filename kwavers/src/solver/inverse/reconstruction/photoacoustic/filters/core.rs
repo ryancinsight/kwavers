@@ -21,6 +21,7 @@ pub struct Filters {
 
 impl Filters {
     /// Create new filter operations
+    #[must_use] 
     pub fn new(_config: &PhotoacousticConfig) -> Self {
         Self {
             filter_type: FilterType::RamLak, // Default filter type
@@ -31,12 +32,18 @@ impl Filters {
     ///
     /// # Note
     /// This method is exposed for testing. Prefer setting filter type through configuration.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[doc(hidden)]
     pub fn set_filter_type(&mut self, filter_type: FilterType) {
         self.filter_type = filter_type;
     }
 
     /// Apply bandpass filter to sensor data
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_bandpass_filter(
         &self,
         data: &Array2<f64>,
@@ -64,6 +71,9 @@ impl Filters {
     }
 
     /// Apply 1D bandpass filter using FFT
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn bandpass_filter_1d(
         &self,
         signal: Array1<f64>,
@@ -93,6 +103,9 @@ impl Filters {
     }
 
     /// Apply envelope detection using Hilbert transform
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_envelope_detection(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let (n_samples, n_sensors) = data.dim();
         let mut envelope = Array2::zeros((n_samples, n_sensors));
@@ -110,6 +123,9 @@ impl Filters {
     }
 
     /// Apply FBP filter to data
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_fbp_filter(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let mut filtered = data.clone();
 
@@ -126,6 +142,9 @@ impl Filters {
     }
 
     /// Apply Ram-Lak filter
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_ram_lak_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let (n_samples, _) = data.dim();
         let filter = self.create_ram_lak_filter(n_samples);
@@ -139,6 +158,9 @@ impl Filters {
     }
 
     /// Apply Shepp-Logan filter
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_shepp_logan_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let (n_samples, _) = data.dim();
         let filter = self.create_shepp_logan_filter(n_samples);
@@ -152,6 +174,9 @@ impl Filters {
     }
 
     /// Apply Cosine filter
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_cosine_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let (n_samples, _) = data.dim();
         let filter = self.create_cosine_filter(n_samples);
@@ -186,6 +211,9 @@ impl Filters {
     }
 
     /// Create Cosine filter
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn create_cosine_filter(&self, n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {
@@ -200,6 +228,9 @@ impl Filters {
     ///
     /// Hamming window: w(n) = 0.54 - 0.46*cos(2πn/(N-1))
     /// Applied to Ram-Lak filter for improved noise reduction
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_hamming_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let (n_samples, _) = data.dim();
         let filter = self.create_hamming_filter(n_samples);
@@ -216,6 +247,9 @@ impl Filters {
     ///
     /// Hann window: w(n) = 0.5 * (1 - cos(2πn/(N-1)))
     /// Applied to Ram-Lak filter for smooth frequency response
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_hann_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let (n_samples, _) = data.dim();
         let filter = self.create_hann_filter(n_samples);
@@ -236,6 +270,7 @@ impl Filters {
     /// # Note
     /// This method is exposed as `pub` for integration testing. Not part of stable public API.
     #[doc(hidden)]
+    #[must_use] 
     pub fn create_hamming_filter(&self, n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {
@@ -259,6 +294,7 @@ impl Filters {
     /// # Note
     /// This method is exposed as `pub` for integration testing. Not part of stable public API.
     #[doc(hidden)]
+    #[must_use] 
     pub fn create_hann_filter(&self, n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {
@@ -275,6 +311,9 @@ impl Filters {
     }
 
     /// Apply filter in frequency domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_filter_1d(
         &self,
         signal: Array1<f64>,
@@ -291,6 +330,9 @@ impl Filters {
     }
 
     /// Apply reconstruction filter for regularization and denoising
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_reconstruction_filter(&self, image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         // Apply 3D Gaussian filter for noise reduction
         const GAUSSIAN_SIGMA: f64 = 1.0; // Standard deviation in voxels

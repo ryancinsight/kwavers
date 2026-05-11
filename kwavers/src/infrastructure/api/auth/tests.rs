@@ -57,7 +57,7 @@ fn test_authorization_success() {
         auth_method: AuthMethod::JWT,
     };
 
-    assert!(auth.authorize(&user, "pinn", "infer").is_ok());
+    auth.authorize(&user, "pinn", "infer").unwrap();
 }
 
 #[test]
@@ -87,8 +87,8 @@ fn test_wildcard_permissions() {
         auth_method: AuthMethod::JWT,
     };
 
-    assert!(auth.authorize(&user, "pinn", "train").is_ok());
-    assert!(auth.authorize(&user, "pinn", "infer").is_ok());
+    auth.authorize(&user, "pinn", "train").unwrap();
+    auth.authorize(&user, "pinn", "infer").unwrap();
 }
 
 #[test]

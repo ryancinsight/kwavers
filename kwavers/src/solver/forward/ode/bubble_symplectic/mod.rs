@@ -69,9 +69,9 @@
 //!
 //! # Module layout
 //!
-//! - [`stormer_verlet`]: 2nd-order symplectic Störmer-Verlet step kernel.
-//! - [`yoshida`]: 4th-order Yoshida composition kernel.
-//! - [`integrate`]: convenience time-span integration wrapper.
+//! - `stormer_verlet`: 2nd-order symplectic Störmer-Verlet step kernel.
+//! - `yoshida`: 4th-order Yoshida composition kernel.
+//! - `integrate`: convenience time-span integration wrapper.
 //!
 //! # Validation
 //!
@@ -107,7 +107,7 @@ pub(super) const YOSHIDA_W2: f64 = -1.702_414_383_919_315_3;
 /// Configuration for symplectic bubble integrators.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SymplecticConfig {
-    /// Default time step [s].
+    /// Default time step (s).
     pub dt: f64,
     /// Maximum allowed wall Mach number before returning an error.
     /// The K-M equation is singular at M = 1; 0.95 is a conservative bound.
@@ -137,6 +137,7 @@ pub struct BubbleSymplecticIntegrator {
 
 impl BubbleSymplecticIntegrator {
     /// Create integrator with default config.
+    #[must_use] 
     pub fn with_defaults(model: Arc<KellerMiksisModel>) -> Self {
         Self {
             model,
@@ -145,11 +146,18 @@ impl BubbleSymplecticIntegrator {
     }
 
     /// Create integrator with explicit config.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(model: Arc<KellerMiksisModel>, config: SymplecticConfig) -> Self {
         Self { model, config }
     }
 
     /// Advance state by one Störmer-Verlet step (2nd-order symplectic).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn sv_step(
         &self,
         state: &mut BubbleState,
@@ -170,6 +178,9 @@ impl BubbleSymplecticIntegrator {
     }
 
     /// Advance state by one Yoshida 4th-order step.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn yoshida4_step(
         &self,
         state: &mut BubbleState,

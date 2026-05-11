@@ -180,7 +180,7 @@ pub trait DifferentialOperator: Send + Sync {
     ///
     /// # Mathematical Specification
     ///
-    /// If the exact derivative is D[u] and the numerical approximation is D_h[u],
+    /// If the exact derivative is `D[u]` and the numerical approximation is `D_h[u]`,
     /// then:
     /// ```text
     /// |D[u] - D_h[u]| = O(h^p)

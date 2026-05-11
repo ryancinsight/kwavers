@@ -19,6 +19,9 @@ pub struct PhaseShiftKeying {
 
 impl PhaseShiftKeying {
     /// Create new PSK modulator
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn new(modulation_order: usize, symbol_duration: f64) -> Self {
         assert!(

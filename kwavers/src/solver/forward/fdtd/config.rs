@@ -74,7 +74,7 @@ pub struct FdtdConfig {
     // Parity fields
     /// Number of time steps
     pub nt: usize,
-    /// Time step size [s]
+    /// Time step size (s)
     pub dt: f64,
     /// Data recording options
     pub sensor_mask: Option<Array3<bool>>,
@@ -102,6 +102,10 @@ impl Default for FdtdConfig {
 }
 
 impl FdtdConfig {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         let mut multi_error = MultiError::new();
 
@@ -109,9 +113,9 @@ impl FdtdConfig {
         if ![2, 4, 6].contains(&self.spatial_order) {
             multi_error.add(
                 ValidationError::FieldValidation {
-                    field: "spatial_order".to_string(),
+                    field: "spatial_order".to_owned(),
                     value: self.spatial_order.to_string(),
-                    constraint: "Must be 2, 4, or 6".to_string(),
+                    constraint: "Must be 2, 4, or 6".to_owned(),
                 }
                 .into(),
             );
@@ -128,7 +132,7 @@ impl FdtdConfig {
         if self.cfl_factor <= 0.0 || self.cfl_factor > CFL_MAX_3D {
             multi_error.add(
                 ValidationError::FieldValidation {
-                    field: "cfl_factor".to_string(),
+                    field: "cfl_factor".to_owned(),
                     value: self.cfl_factor.to_string(),
                     constraint: format!("Must be in (0, {CFL_MAX_3D}] for 3D stability (1/√3)"),
                 }
@@ -140,9 +144,9 @@ impl FdtdConfig {
         if self.subgridding && self.subgrid_factor < 2 {
             multi_error.add(
                 ValidationError::FieldValidation {
-                    field: "subgrid_factor".to_string(),
+                    field: "subgrid_factor".to_owned(),
                     value: self.subgrid_factor.to_string(),
-                    constraint: "Must be >= 2".to_string(),
+                    constraint: "Must be >= 2".to_owned(),
                 }
                 .into(),
             );

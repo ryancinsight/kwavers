@@ -70,7 +70,6 @@ fn test_simulation_builder() {
         .with_feature(SolverFeature::Reconstruction)
         .build();
 
-    assert!(simulation.is_ok());
     let simulation = simulation.unwrap();
     assert!(simulation.is_feature_enabled(SolverFeature::Reconstruction));
 }

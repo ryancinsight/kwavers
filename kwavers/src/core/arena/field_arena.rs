@@ -34,6 +34,7 @@ pub struct ArenaConfig {
 
 impl ArenaConfig {
     /// Configuration for 3-D field operations (`nx × ny × nz` elements each).
+    #[must_use] 
     pub fn for_3d_fields(nx: usize, ny: usize, nz: usize, max_concurrent: usize) -> Self {
         Self {
             max_fields: max_concurrent,
@@ -44,6 +45,7 @@ impl ArenaConfig {
     }
 
     /// Configuration for 2-D field operations (`nx × ny` elements each).
+    #[must_use] 
     pub fn for_2d_fields(nx: usize, ny: usize, max_concurrent: usize) -> Self {
         Self {
             max_fields: max_concurrent,
@@ -54,6 +56,7 @@ impl ArenaConfig {
     }
 
     /// Total memory requirement in bytes.
+    #[must_use] 
     pub fn total_memory_bytes(&self) -> usize {
         self.max_fields * self.field_size * self.element_size
     }
@@ -118,15 +121,19 @@ pub struct FieldArena {
 
 impl FieldArena {
     /// Create a new field arena.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: ArenaConfig) -> KwaversResult<Self> {
         let total_size = config.total_memory_bytes();
 
         if total_size == 0 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidValue {
-                    parameter: "arena_config".to_string(),
+                    parameter: "arena_config".to_owned(),
                     value: 0.0,
-                    reason: "Arena configuration results in zero memory allocation".to_string(),
+                    reason: "Arena configuration results in zero memory allocation".to_owned(),
                 },
             ));
         }
@@ -135,7 +142,7 @@ impl FieldArena {
         let layout = Layout::from_size_align(total_size, 64).map_err(|_| {
             KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: total_size,
-                reason: "Failed to create layout for arena allocation".to_string(),
+                reason: "Failed to create layout for arena allocation".to_owned(),
             })
         })?;
 
@@ -145,7 +152,7 @@ impl FieldArena {
         let memory = NonNull::new(memory).ok_or_else(|| {
             KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: total_size,
-                reason: "Failed to allocate memory for arena".to_string(),
+                reason: "Failed to allocate memory for arena".to_owned(),
             })
         })?;
 
@@ -165,6 +172,9 @@ impl FieldArena {
     /// Allocate one field slot and return a mutable slice into arena memory.
     ///
     /// Fails with [`KwaversError::System`] when all slots are occupied.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn allocate_field(&mut self) -> KwaversResult<&mut [f64]> {
         let mut state = self.allocation_state.borrow_mut();
 
@@ -174,7 +184,7 @@ impl FieldArena {
             .position(|&in_use| !in_use)
             .ok_or_else(|| {
                 KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                    resource: "arena field slot".to_string(),
+                    resource: "arena field slot".to_owned(),
                 })
             })?;
 
@@ -195,6 +205,9 @@ impl FieldArena {
     ///
     /// In this slab implementation, individual slots are freed at arena drop.
     /// This method exists for API symmetry only.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn deallocate_field(&self, _field: &mut [f64]) -> KwaversResult<()> {
         Ok(())
     }

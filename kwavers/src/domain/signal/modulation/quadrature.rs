@@ -10,6 +10,10 @@ pub struct QuadratureAmplitudeModulation {
 }
 
 impl QuadratureAmplitudeModulation {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(params: ModulationParams) -> Self {
         Self { params }
@@ -34,7 +38,7 @@ impl Modulation for QuadratureAmplitudeModulation {
 
         if carrier.len() != t.len() {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Carrier and time arrays must have same length".to_string(),
+                "Carrier and time arrays must have same length".to_owned(),
             ));
         }
 
@@ -58,7 +62,7 @@ impl Modulation for QuadratureAmplitudeModulation {
                 let q_comp = q_signal[idx];
 
                 // QAM signal = I*cos(ωt) - Q*sin(ωt)
-                i_comp * (omega_c * ti).cos() - q_comp * (omega_c * ti).sin()
+                i_comp.mul_add((omega_c * ti).cos(), -(q_comp * (omega_c * ti).sin()))
             })
             .collect();
 
@@ -90,7 +94,7 @@ impl Modulation for QuadratureAmplitudeModulation {
             // Combine I/Q components (envelope detection per Lyons 2010 §13.3)
             // Full QAM demodulation requires constellation mapping and symbol decision
             // Current: Envelope magnitude suitable for analog QAM signals
-            demodulated.push((i_component.powi(2) + q_component.powi(2)).sqrt());
+            demodulated.push(i_component.hypot(q_component));
         }
 
         Ok(demodulated)

@@ -12,6 +12,9 @@ pub trait SolverFactory {
     type Error;
 
     /// Create a solver of the specified type with given configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn create_solver(
         &self,
         solver_type: SolverType,
@@ -156,6 +159,9 @@ pub trait MeshProvider: std::fmt::Debug + Send + Sync {
 /// $M \circ \phi^{-1} \approx F$ under a chosen similarity metric $\mathcal{S}$.
 pub trait RegistrationEngine: std::fmt::Debug + Send + Sync {
     /// Rigid-body (6-DOF) registration via mutual information maximisation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn register_rigid(
         &self,
         fixed: &Array3<f64>,
@@ -163,6 +169,9 @@ pub trait RegistrationEngine: std::fmt::Debug + Send + Sync {
     ) -> Result<Array2<f64>, FactoryError>;
 
     /// Affine (12-DOF) registration.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn register_affine(
         &self,
         fixed: &Array3<f64>,
@@ -170,6 +179,9 @@ pub trait RegistrationEngine: std::fmt::Debug + Send + Sync {
     ) -> Result<Array2<f64>, FactoryError>;
 
     /// Deformable registration returning a dense displacement field.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn register_deformable(
         &self,
         fixed: &Array3<f64>,
@@ -177,6 +189,9 @@ pub trait RegistrationEngine: std::fmt::Debug + Send + Sync {
     ) -> Result<Array3<[f64; 3]>, FactoryError>;
 
     /// Resample `moving` volume using a 4×4 homogeneous `transform` to `target_shape`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn resample(
         &self,
         moving: &Array3<f64>,

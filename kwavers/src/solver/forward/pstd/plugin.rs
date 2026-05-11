@@ -22,16 +22,18 @@ pub struct PSTDPlugin {
 
 impl PSTDPlugin {
     /// Create a new PSTD plugin
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: PSTDConfig, _grid: &Grid) -> KwaversResult<Self> {
         Ok(Self {
             metadata: PluginMetadata {
-                id: "pstd_solver".to_string(),
-                name: "PSTD Solver".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Generalized spectral solver for acoustic wave propagation"
-                    .to_string(),
-                author: "Kwavers Team".to_string(),
-                license: "MIT".to_string(),
+                id: "pstd_solver".to_owned(),
+                name: "PSTD Solver".to_owned(),
+                version: "1.0.0".to_owned(),
+                description: "Generalized spectral solver for acoustic wave propagation".to_owned(),
+                author: "Kwavers Team".to_owned(),
+                license: "MIT".to_owned(),
             },
             state: PluginState::Created,
             solver: None,
@@ -92,7 +94,7 @@ impl crate::domain::plugin::Plugin for PSTDPlugin {
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
             crate::core::error::KwaversError::InternalError(
-                "PSTD solver not initialized".to_string(),
+                "PSTD solver not initialized".to_owned(),
             )
         })?;
 
@@ -132,7 +134,7 @@ impl crate::domain::plugin::Plugin for PSTDPlugin {
             .and(&mut solver.rhoz)
             .and(&solver.fields.p)
             .and(&solver.materials.c0)
-            .for_each(|rx, ry, rz, &p, &c| {
+            .par_for_each(|rx, ry, rz, &p, &c| {
                 if c > 1e-6 {
                     let rho = p / (c * c);
                     let split = rho / 3.0;

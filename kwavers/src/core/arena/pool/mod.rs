@@ -48,14 +48,16 @@ pub struct PoolConfig {
 }
 
 impl PoolConfig {
-    /// Configuration for f64 field buffers with NUMA awareness.
+    /// Configuration for scalar field buffers with NUMA awareness.
     ///
-    /// **Size Calculation**: `total_size = ceil(n × 8 / 64) × 64`
+    /// `T` determines the element size: `element_size = size_of::<T>()`.
+    ///
+    /// **Size Calculation**: `total_size = ceil(n × size_of::<T>() / 64) × 64`
     #[must_use]
-    pub fn for_f64_field(elements: usize, capacity: usize, numa_node: i32) -> Self {
+    pub fn for_scalar_field<T: Sized>(elements: usize, capacity: usize, numa_node: i32) -> Self {
         Self {
             elements,
-            element_size: std::mem::size_of::<f64>(),
+            element_size: std::mem::size_of::<T>(),
             capacity,
             numa_node,
         }
@@ -103,6 +105,9 @@ pub struct PoolStats {
 
 impl PoolStats {
     /// Current utilization ratio [0.0, 1.0].
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn utilization(&self) -> f64 {
         if self.capacity == 0 {
@@ -114,11 +119,14 @@ impl PoolStats {
 }
 
 /// Allocate memory with 64-byte alignment.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub(super) fn allocate_numa_aware(size: usize) -> KwaversResult<NonNull<u8>> {
     let layout = Layout::from_size_align(size, CACHE_LINE_SIZE).map_err(|_| {
         KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
             requested_bytes: size,
-            reason: "Invalid layout for NUMA-aware allocation".to_string(),
+            reason: "Invalid layout for NUMA-aware allocation".to_owned(),
         })
     })?;
 
@@ -127,7 +135,7 @@ pub(super) fn allocate_numa_aware(size: usize) -> KwaversResult<NonNull<u8>> {
     let memory = NonNull::new(ptr).ok_or_else(|| {
         KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
             requested_bytes: size,
-            reason: "Failed to allocate NUMA-aware memory".to_string(),
+            reason: "Failed to allocate NUMA-aware memory".to_owned(),
         })
     })?;
 

@@ -15,7 +15,7 @@
 //! a 2D `Array2<f64>` defined as the RMS pressure over τ:
 //!
 //! ```text
-//! p_rms(i, j) = √( (1/nt) Σ_t p[i,j,t]² )      [Pa]
+//! p_rms(i, j) = √( (1/nt) Σ_t p[i,j,t]² )      (Pa)
 //! ```
 //!
 //! This is the most physically relevant single-slice summary for HIFU
@@ -27,7 +27,7 @@ use super::KZKSolver;
 use crate::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolver as KZKSolverTrait;
 
 impl KZKSolverTrait for KZKSolver {
-    /// Advance the pressure field by axial increment `dz` [m].
+    /// Advance the pressure field by axial increment `dz` (m).
     ///
     /// Overrides `config.dz` for this step, then applies the full Strang-split
     /// `D(dz/2)·A(dz/2)·N(dz)·A(dz/2)·D(dz/2)` sequence.
@@ -36,7 +36,7 @@ impl KZKSolverTrait for KZKSolver {
         self.step();
     }
 
-    /// Return the RMS pressure field [Pa] at the current axial z-plane.
+    /// Return the RMS pressure field (Pa) at the current axial z-plane.
     ///
     /// Shape: `(nx, ny)` — transverse grid.
     ///
@@ -60,7 +60,7 @@ impl KZKSolverTrait for KZKSolver {
         rms
     }
 
-    /// Return the peak positive pressure field [Pa] at the current z-plane.
+    /// Return the peak positive pressure field (Pa) at the current z-plane.
     fn peak_pressure(&self) -> Array2<f64> {
         self.get_peak_pressure()
     }

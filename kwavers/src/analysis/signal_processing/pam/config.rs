@@ -13,34 +13,38 @@ pub struct PamBeamformingConfig {
 }
 
 impl PamBeamformingConfig {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         let (f_min, f_max) = self.frequency_range;
 
         if !(f_min.is_finite() && f_max.is_finite()) {
             return Err(KwaversError::InvalidInput(
-                "PAM beamforming config: frequency_range must be finite".to_string(),
+                "PAM beamforming config: frequency_range must be finite".to_owned(),
             ));
         }
         if f_min < 0.0 || f_max < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "PAM beamforming config: frequency_range must be non-negative".to_string(),
+                "PAM beamforming config: frequency_range must be non-negative".to_owned(),
             ));
         }
         if f_min > f_max {
             return Err(KwaversError::InvalidInput(
-                "PAM beamforming config: require f_min <= f_max".to_string(),
+                "PAM beamforming config: require f_min <= f_max".to_owned(),
             ));
         }
 
         if !self.spatial_resolution.is_finite() || self.spatial_resolution <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "PAM beamforming config: spatial_resolution must be finite and > 0".to_string(),
+                "PAM beamforming config: spatial_resolution must be finite and > 0".to_owned(),
             ));
         }
 
         if self.focal_point.iter().any(|v| !v.is_finite()) {
             return Err(KwaversError::InvalidInput(
-                "PAM beamforming config: focal_point must be finite".to_string(),
+                "PAM beamforming config: focal_point must be finite".to_owned(),
             ));
         }
 
@@ -48,15 +52,14 @@ impl PamBeamformingConfig {
             PamBeamformingMethod::CaponDiagonalLoading { diagonal_loading } => {
                 if !diagonal_loading.is_finite() || diagonal_loading < 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "PAM beamforming config: diagonal_loading must be finite and >= 0"
-                            .to_string(),
+                        "PAM beamforming config: diagonal_loading must be finite and >= 0".to_owned(),
                     ));
                 }
             }
             PamBeamformingMethod::Music { num_sources } => {
                 if num_sources == 0 {
                     return Err(KwaversError::InvalidInput(
-                        "PAM beamforming config: MUSIC requires num_sources >= 1".to_string(),
+                        "PAM beamforming config: MUSIC requires num_sources >= 1".to_owned(),
                     ));
                 }
             }
@@ -65,8 +68,7 @@ impl PamBeamformingConfig {
             } => {
                 if signal_subspace_dimension == 0 {
                     return Err(KwaversError::InvalidInput(
-                        "PAM beamforming config: ESMV requires signal_subspace_dimension >= 1"
-                            .to_string(),
+                        "PAM beamforming config: ESMV requires signal_subspace_dimension >= 1".to_owned(),
                     ));
                 }
             }

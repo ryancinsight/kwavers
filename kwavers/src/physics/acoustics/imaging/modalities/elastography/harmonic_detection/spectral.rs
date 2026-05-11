@@ -8,6 +8,9 @@ use std::f64::consts::PI;
 
 impl HarmonicDetector {
     /// Analyze harmonics at a single spatial point
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn analyze_single_point(
         &self,
         time_series: &[f64],
@@ -66,6 +69,9 @@ impl HarmonicDetector {
     }
 
     /// Apply window function to time series
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn apply_window(&self, time_series: &[f64]) -> Vec<f64> {
         let n = time_series.len();
         let mut windowed = Vec::with_capacity(n);
@@ -80,6 +86,9 @@ impl HarmonicDetector {
     }
 
     /// Compute FFT of time series
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn compute_fft(&self, time_series: &[f64]) -> KwaversResult<Vec<Complex64>> {
         let mut buffer = fft_1d_array(&ndarray::Array1::from_vec(time_series.to_vec()));
 
@@ -93,6 +102,9 @@ impl HarmonicDetector {
     }
 
     /// Find fundamental frequency peak in spectrum
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn find_fundamental_peak(
         &self,
         spectrum: &[Complex64],

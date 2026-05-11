@@ -28,6 +28,10 @@ impl UlmDetector {
     /// * `iq_block` — IQ matrix \[N_px × N_t\] (pixels × frames, linearized 2D→1D)
     /// * `n_z` — number of axial pixels (N_px = n_z × n_x)
     /// * `n_x` — number of lateral pixels
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process_block(
         &self,
         iq_block: &Array2<f64>,
@@ -42,7 +46,7 @@ impl UlmDetector {
             let frame_col = bubble_data.column(t);
             if frame_col.len() != n_z * n_x {
                 return Err(KwaversError::Numerical(NumericalError::SolverFailed {
-                    method: "ULM detect".to_string(),
+                    method: "ULM detect".to_owned(),
                     reason: format!(
                         "pixel count {} ≠ n_z×n_x = {}×{}={}",
                         frame_col.len(),
@@ -56,7 +60,7 @@ impl UlmDetector {
                 Array2::from_shape_vec((n_z, n_x), frame_col.iter().map(|v| v.abs()).collect())
                     .map_err(|e| {
                         KwaversError::Numerical(NumericalError::SolverFailed {
-                            method: "ULM reshape".to_string(),
+                            method: "ULM reshape".to_owned(),
                             reason: e.to_string(),
                         })
                     })?;

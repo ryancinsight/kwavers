@@ -25,6 +25,10 @@ impl ValidatedKinetics {
     /// Create kinetics database with literature values
     ///
     /// All values at 25°C unless otherwise noted
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             oh_recombination: LiteratureValue::from_range(4.5e9, 5.5e9),
@@ -36,6 +40,9 @@ impl ValidatedKinetics {
     }
 
     /// Validate a simulated rate constant against literature
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(
         &self,
         reaction: &str,
@@ -51,7 +58,7 @@ impl ValidatedKinetics {
             "hydroxyl_peroxide" | "oh + h2o2" => self.hydroxyl_peroxide,
             _ => {
                 return Err(ValidationError::InvalidParameter {
-                    parameter: "reaction".to_string(),
+                    parameter: "reaction".to_owned(),
                     reason: format!("Unknown reaction: {}", reaction),
                 }
                 .into())
@@ -59,7 +66,7 @@ impl ValidatedKinetics {
         };
 
         Ok(ValidationResult {
-            reaction: reaction.to_string(),
+            reaction: reaction.to_owned(),
             simulated_value,
             literature_value: literature.nominal,
             literature_min: literature.min,
@@ -97,6 +104,7 @@ pub struct ValidationResult {
 
 impl ValidationResult {
     /// Print validation report
+    #[must_use] 
     pub fn report(&self) -> String {
         format!(
             "Reaction: {}\n  Simulated: {:.3e} M⁻¹·s⁻¹\n  Literature: {:.3e} ± {:.3e} M⁻¹·s⁻¹\n  Range: [{:.3e}, {:.3e}]\n  Within range: {}\n  Difference: {:.1}%",

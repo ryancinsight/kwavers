@@ -13,6 +13,7 @@ pub struct ModelRegularizer2D {
 
 impl ModelRegularizer2D {
     /// Create new 2D regularizer
+    #[must_use] 
     pub fn new(config: RegularizationConfig) -> Self {
         Self { config }
     }
@@ -41,7 +42,7 @@ impl ModelRegularizer2D {
     }
 
     fn apply_tikhonov(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
-        Zip::from(gradient).and(model).for_each(|g, &m| {
+        Zip::from(gradient).and(model).par_for_each(|g, &m| {
             *g += self.config.tikhonov_weight * m;
         });
     }
@@ -55,9 +56,9 @@ impl ModelRegularizer2D {
                 let dx = model[[i + 1, j]] - model[[i, j]];
                 let dy = model[[i, j + 1]] - model[[i, j]];
 
-                let grad_norm = (dx * dx + dy * dy + eps).sqrt();
+                let grad_norm = (dx.mul_add(dx, dy * dy) + eps).sqrt();
                 let tv_term =
-                    (3.0 * model[[i, j]] - model[[i + 1, j]] - model[[i, j + 1]]) / grad_norm;
+                    (3.0f64.mul_add(model[[i, j]], -model[[i + 1, j]]) - model[[i, j + 1]]) / grad_norm;
 
                 gradient[[i, j]] += self.config.tv_weight * tv_term;
             }
@@ -70,21 +71,19 @@ impl ModelRegularizer2D {
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
-                laplacian[[i, j]] = gradient[[i + 1, j]]
+                laplacian[[i, j]] = 4.0f64.mul_add(-gradient[[i, j]], gradient[[i + 1, j]]
                     + gradient[[i - 1, j]]
-                    + gradient[[i, j + 1]]
-                    + gradient[[i, j - 1]]
-                    - 4.0 * gradient[[i, j]];
+                    + gradient[[i, j + 1]] + gradient[[i, j - 1]]);
             }
         }
 
-        Zip::from(gradient).and(&laplacian).for_each(|g, &lap| {
+        Zip::from(gradient).and(&laplacian).par_for_each(|g, &lap| {
             *g += self.config.smoothness_weight * lap;
         });
     }
 
     fn apply_l1(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
-        Zip::from(gradient).and(model).for_each(|g, &m| {
+        Zip::from(gradient).and(model).par_for_each(|g, &m| {
             *g += self.config.l1_weight * m.signum();
         });
     }

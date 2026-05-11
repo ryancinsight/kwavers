@@ -13,8 +13,8 @@
 //! where:
 //! - bᵢ are feedforward (numerator) coefficients
 //! - aⱼ are feedback (denominator) coefficients
-//! - x[n] is the input signal
-//! - y[n] is the output signal
+//! - `x[n]` is the input signal
+//! - `y[n]` is the output signal
 //!
 //! # High-Pass Filter Design
 //!
@@ -95,6 +95,9 @@ impl IirFilterConfig {
     }
 
     /// Enable zero-phase filtering
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_zero_phase(mut self) -> Self {
         self.zero_phase = true;
@@ -102,6 +105,9 @@ impl IirFilterConfig {
     }
 
     /// Set filter order
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_order(mut self, order: usize) -> Self {
         self.order = order;
@@ -109,6 +115,9 @@ impl IirFilterConfig {
     }
 
     /// Validate configuration parameters
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.cutoff_frequency <= 0.0 || self.cutoff_frequency >= 0.5 {
             return Err(KwaversError::InvalidInput(format!(
@@ -161,6 +170,9 @@ impl IirFilter {
     /// Design high-pass IIR filter coefficients
     ///
     /// Uses bilinear transform from analog prototype
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn design_highpass_filter(cutoff: f64, order: usize) -> KwaversResult<(Vec<f64>, Vec<f64>)> {
         // For first-order high-pass filter:
         // H(z) = (1 - z^-1) / (1 - α·z^-1)
@@ -218,9 +230,12 @@ impl IirFilter {
     /// # Algorithm
     ///
     /// For each pixel:
-    /// 1. Apply forward IIR filter: y[n] = Σbᵢx[n-i] - Σaⱼy[n-j]
+    /// 1. Apply forward IIR filter: `y[n] = Σbᵢx[n-i] - Σaⱼy[n-j]`
     /// 2. If zero_phase enabled, reverse and filter again
     /// 3. Return filtered signal
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let (n_pixels, n_frames) = slow_time_data.dim();
 

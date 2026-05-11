@@ -10,6 +10,10 @@ pub struct PulseWidthModulation {
 }
 
 impl PulseWidthModulation {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(params: ModulationParams) -> Self {
         Self { params }
@@ -24,7 +28,7 @@ impl Modulation for PulseWidthModulation {
             .zip(carrier.iter())
             .map(|(&ti, &msg)| {
                 let phase = (ti % period) / period;
-                let duty_cycle = 0.5 + 0.5 * msg; // Map [-1,1] to [0,1]
+                let duty_cycle = 0.5f64.mul_add(msg, 0.5); // Map [-1,1] to [0,1]
                 if phase < duty_cycle {
                     1.0
                 } else {

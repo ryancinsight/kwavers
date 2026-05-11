@@ -26,6 +26,9 @@ pub struct PluginMetadata {
 /// Configuration for a physics plugin
 pub trait PluginConfig: Debug + Send + Sync {
     /// Validate the configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn validate(&self) -> KwaversResult<()>;
 
     /// Clone the configuration as a boxed Any for type erasure

@@ -32,28 +32,32 @@ pub mod acoustic_properties {
     pub const FREQUENCY_RANGE: (f64, f64) = (1000.0, 10_000_000.0);
 
     /// Validate density value against physical constraints
+    #[must_use] 
     pub fn is_valid_density(density: f64) -> bool {
         density > 0.0 && density.is_finite()
     }
 
     /// Validate sound speed value against physical constraints
+    #[must_use] 
     pub fn is_valid_sound_speed(sound_speed: f64) -> bool {
         sound_speed > 0.0 && sound_speed.is_finite()
     }
 
     /// Validate acoustic impedance calculation
+    #[must_use] 
     pub fn is_valid_acoustic_impedance(density: f64, sound_speed: f64) -> bool {
         let impedance = density * sound_speed;
         impedance.is_finite() && impedance > 0.0
     }
 
     /// Validate frequency scaling doesn't cause overflow
+    #[must_use] 
     pub fn is_valid_frequency_scaling(base_absorption: f64, frequency: f64, ref_freq: f64) -> bool {
         if ref_freq <= 0.0 {
             return false;
         }
         let freq_ratio = frequency / ref_freq;
-        let scaled_absorption = base_absorption * freq_ratio.powf(1.0);
+        let scaled_absorption = base_absorption * freq_ratio.powi(1);
         scaled_absorption.is_finite()
     }
 }
@@ -70,6 +74,9 @@ pub mod medium_properties {
     ///
     /// **Property**: All medium property queries return finite positive values
     /// **Evidence**: Physical impossibility of negative density/sound speed
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn verify_medium_properties_physically_valid<M: CoreMedium>(
         medium: &M,
         grid: &Grid,
@@ -130,6 +137,9 @@ pub mod grid_properties {
     ///
     /// **Property**: Index conversion never panics for valid coordinates
     /// **Safety**: Critical for preventing array bounds violations
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn verify_grid_indexing_safe(grid: &Grid) -> Result<(), String> {
         // Test coordinate bounds
         let max_x = (grid.nx - 1) as f64 * grid.dx;

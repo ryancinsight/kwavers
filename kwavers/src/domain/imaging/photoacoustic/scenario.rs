@@ -15,6 +15,10 @@ pub struct PhotoacousticScenario {
 }
 
 impl PhotoacousticScenario {
+    /// New.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(
         grid: Grid,
         wavelength_nm: f64,
@@ -24,17 +28,17 @@ impl PhotoacousticScenario {
     ) -> KwaversResult<Self> {
         if sensor_positions_m.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "photoacoustic scenario requires at least one sensor".to_string(),
+                "photoacoustic scenario requires at least one sensor".to_owned(),
             ));
         }
         if config.incident_fluence_j_m2 <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "incident fluence must be positive".to_string(),
+                "incident fluence must be positive".to_owned(),
             ));
         }
         if config.pulse_duration_s <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "pulse duration must be positive".to_string(),
+                "pulse duration must be positive".to_owned(),
             ));
         }
         Ok(Self {

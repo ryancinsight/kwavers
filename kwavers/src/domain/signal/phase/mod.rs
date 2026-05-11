@@ -40,6 +40,10 @@ pub struct RandomPhase {
 }
 
 impl RandomPhase {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(amplitude: f64) -> Self {
         assert!(amplitude >= 0.0, "Amplitude must be non-negative");
@@ -75,7 +79,7 @@ impl LinearPhaseShift {
 
 impl Phase for LinearPhaseShift {
     fn phase(&self, t: f64) -> f64 {
-        self.initial_phase + self.rate * t
+        self.rate.mul_add(t, self.initial_phase)
     }
     fn clone_box(&self) -> Box<dyn Phase> {
         Box::new(self.clone())

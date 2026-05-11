@@ -57,7 +57,6 @@ fn test_data_type_quantization() {
     };
 
     let result = runtime.software_quantize(&input, &kernel);
-    assert!(result.is_ok());
 
     let quantized = result.unwrap();
     assert_eq!(quantized.len(), 4);

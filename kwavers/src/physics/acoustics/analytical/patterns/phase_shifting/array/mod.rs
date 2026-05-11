@@ -12,7 +12,6 @@ use crate::physics::phase_modulation::phase_shifting::core::{
     calculate_wavelength, wrap_phase, SPEED_OF_SOUND,
 };
 use crate::physics::phase_modulation::phase_shifting::focus::DynamicFocusing;
-use crate::physics::phase_modulation::phase_shifting::shifter::PhaseShifter;
 
 /// Phased array system
 #[derive(Debug)]
@@ -21,9 +20,6 @@ pub struct PhaseArray {
     element_positions: Array2<f64>,
     /// Operating frequency
     frequency: f64,
-    /// Phase shifter
-    #[allow(dead_code)] // Phase control hardware interface
-    phase_shifter: PhaseShifter,
     /// Beam steering controller
     beam_steering: BeamSteering,
     /// Dynamic focusing controller
@@ -34,14 +30,12 @@ impl PhaseArray {
     /// Create a new phased array
     #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
-        let phase_shifter = PhaseShifter::new(element_positions.clone(), frequency);
         let beam_steering = BeamSteering::new(element_positions.clone(), frequency);
         let dynamic_focusing = DynamicFocusing::new(element_positions.clone(), frequency);
 
         Self {
             element_positions,
             frequency,
-            phase_shifter,
             beam_steering,
             dynamic_focusing,
         }
@@ -52,7 +46,7 @@ impl PhaseArray {
     pub fn configure_linear(num_elements: usize, spacing: f64, frequency: f64) -> Self {
         let mut positions = Array2::zeros((num_elements, 3));
         for i in 0..num_elements {
-            positions[[i, 0]] = i as f64 * spacing - (num_elements - 1) as f64 * spacing / 2.0;
+            positions[[i, 0]] = (i as f64).mul_add(spacing, -((num_elements - 1) as f64 * spacing / 2.0));
         }
         Self::new(positions, frequency)
     }
@@ -66,8 +60,8 @@ impl PhaseArray {
         let mut idx = 0;
         for j in 0..ny {
             for i in 0..nx {
-                positions[[idx, 0]] = i as f64 * dx - (nx - 1) as f64 * dx / 2.0;
-                positions[[idx, 1]] = j as f64 * dy - (ny - 1) as f64 * dy / 2.0;
+                positions[[idx, 0]] = (i as f64).mul_add(dx, -((nx - 1) as f64 * dx / 2.0));
+                positions[[idx, 1]] = (j as f64).mul_add(dy, -((ny - 1) as f64 * dy / 2.0));
                 idx += 1;
             }
         }
@@ -101,16 +95,25 @@ impl PhaseArray {
     }
 
     /// Set beam steering angles
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn steer_beam(&mut self, azimuth: f64, elevation: f64) -> KwaversResult<()> {
         self.beam_steering.set_steering_angles(azimuth, elevation)
     }
 
     /// Set focal point
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_focus(&mut self, x: f64, y: f64, z: f64) -> KwaversResult<()> {
         self.dynamic_focusing.set_focal_point(x, y, z)
     }
 
     /// Set multiple focal points
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_multi_focus(&mut self, points: Vec<[f64; 3]>) -> KwaversResult<()> {
         self.dynamic_focusing.set_multiple_focal_points(points)
     }
@@ -147,7 +150,7 @@ impl PhaseArray {
             let dx = x - pos[0];
             let dy = y - pos[1];
             let dz = z - pos[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             if distance > 0.0 {
                 let phase = phases[i] + k * distance;
@@ -165,7 +168,7 @@ impl PhaseArray {
     #[must_use]
     pub fn calculate_intensity(&self, x: f64, y: f64, z: f64) -> f64 {
         let (real, imag) = self.calculate_field(x, y, z);
-        real * real + imag * imag
+        real.mul_add(real, imag * imag)
     }
 
     /// Check system performance
@@ -179,9 +182,7 @@ impl PhaseArray {
             for j in i + 1..self.element_positions.nrows() {
                 let pos1 = self.element_positions.row(i);
                 let pos2 = self.element_positions.row(j);
-                let spacing = ((pos2[0] - pos1[0]).powi(2)
-                    + (pos2[1] - pos1[1]).powi(2)
-                    + (pos2[2] - pos1[2]).powi(2))
+                let spacing = (pos2[2] - pos1[2]).mul_add(pos2[2] - pos1[2], (pos2[1] - pos1[1]).mul_add(pos2[1] - pos1[1], (pos2[0] - pos1[0]).powi(2)))
                 .sqrt();
                 if spacing < min_spacing {
                     min_spacing = spacing;
@@ -200,9 +201,7 @@ impl PhaseArray {
             }
         }
 
-        let aperture_size = ((max_extent[0] - min_extent[0]).powi(2)
-            + (max_extent[1] - min_extent[1]).powi(2)
-            + (max_extent[2] - min_extent[2]).powi(2))
+        let aperture_size = (max_extent[2] - min_extent[2]).mul_add(max_extent[2] - min_extent[2], (max_extent[1] - min_extent[1]).mul_add(max_extent[1] - min_extent[1], (max_extent[0] - min_extent[0]).powi(2)))
         .sqrt();
 
         PerformanceMetrics {

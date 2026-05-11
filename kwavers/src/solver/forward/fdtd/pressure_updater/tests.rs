@@ -9,6 +9,9 @@ use ndarray::{Array3, Zip};
 ///
 /// For c=1500 m/s, ρ=1000 kg/m³, B/A=6 (β=4), p=1 MPa initial:
 /// the nonlinear correction at step 2 is non-zero.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_westervelt_correction_nonzero_after_history() {
     let n = 4usize;
@@ -49,6 +52,9 @@ fn test_westervelt_correction_nonzero_after_history() {
 /// Scratch-buffer pressure update must be bitwise-identical to explicit-allocation path.
 ///
 /// Both paths use the same 2nd-order central difference stencil over 10 steps on a 16³ grid.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fdtd_pressure_numerical_identity() {
     let n = 16usize;
@@ -145,6 +151,9 @@ fn test_fdtd_pressure_numerical_identity() {
 }
 
 /// Staggered-grid divergence must match explicit linear sum in scratch buffer.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_staggered_divergence_uses_scratch_buffer() {
     let n = 12usize;

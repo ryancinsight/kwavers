@@ -57,6 +57,9 @@ impl SafetyController {
     }
 
     /// Start monitoring (reset treatment timer).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn start_monitoring(&mut self, current_time: f64) {
         self.treatment_start_time = current_time;
         self.violation_detected = false;
@@ -65,6 +68,9 @@ impl SafetyController {
     }
 
     /// Update metrics and evaluate safety.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn evaluate_safety(
         &mut self,
         metrics: SafetyMetrics,
@@ -88,6 +94,9 @@ impl SafetyController {
     }
 
     /// Update organ dose accumulation.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn accumulate_organ_dose(
         &mut self,
         organ_name: &str,

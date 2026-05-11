@@ -13,6 +13,9 @@ impl AberrationCorrection<'_> {
     /// For element `l` at aperture position `(x_m, y_m)`,
     /// `phi_corr,l = -sum_z [k_skull(i,j,z) - k_water] dz`, where `(i,j)` is
     /// the nearest grid cell to the element position.
+    /// # Errors
+    /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+    ///
     pub fn compute_element_corrections(
         &self,
         frequency: f64,
@@ -56,6 +59,9 @@ impl AberrationCorrection<'_> {
     ///
     /// The correction for element `l` is `-phases[gi, gj, Nz-1]`, where
     /// `(gi,gj)` is the nearest grid cell to the element position.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn element_corrections_from_map(
         &self,

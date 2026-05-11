@@ -5,6 +5,9 @@ use super::super::KWaveArray;
 /// Annulus has strictly fewer active cells than the full bowl of the same
 /// outer diameter, and the surface-area formula satisfies the closed form:
 /// `annulus(0, D) == bowl(D)`.
+/// # Panics
+/// - Panics if `grid`.
+///
 #[test]
 fn test_annulus_is_subset_of_bowl_same_outer_diameter() {
     use crate::domain::grid::Grid;

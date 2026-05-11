@@ -19,6 +19,10 @@ use ndarray::Array2;
 use super::super::super::simulation::generate_realistic_rf_data;
 
 impl ClinicalWorkflowOrchestrator {
+    /// Acquire ultrasound data.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn acquire_ultrasound_data(&self) -> KwaversResult<Array3<f64>> {
         #[cfg(feature = "gpu")]
         {

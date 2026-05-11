@@ -47,20 +47,28 @@ use serde::{Deserialize, Serialize};
 /// Point sensor configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointSensorConfig {
-    /// Sensor locations in physical coordinates [m]
+    /// Sensor locations in physical coordinates (m)
     pub locations: Vec<[f64; 3]>,
 }
 
 impl PointSensorConfig {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(locations: Vec<[f64; 3]>) -> Self {
         Self { locations }
     }
-
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub(super) fn validate(&self, grid: &Grid) -> KwaversResult<()> {
         if self.locations.is_empty() {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "At least one sensor location required".to_string(),
+                    message: "At least one sensor location required".to_owned(),
                 },
             ));
         }
@@ -146,14 +154,7 @@ impl InterpolationData {
         let j1 = (j + 1).min(shape[1] - 1);
         let k1 = (k + 1).min(shape[2] - 1);
 
-        weights[0] * field[[i, j, k]]
-            + weights[1] * field[[i1, j, k]]
-            + weights[2] * field[[i, j1, k]]
-            + weights[3] * field[[i1, j1, k]]
-            + weights[4] * field[[i, j, k1]]
-            + weights[5] * field[[i1, j, k1]]
-            + weights[6] * field[[i, j1, k1]]
-            + weights[7] * field[[i1, j1, k1]]
+        weights[7].mul_add(field[[i1, j1, k1]], weights[6].mul_add(field[[i, j1, k1]], weights[5].mul_add(field[[i1, j, k1]], weights[4].mul_add(field[[i, j, k1]], weights[3].mul_add(field[[i1, j1, k]], weights[2].mul_add(field[[i, j1, k]], weights[0].mul_add(field[[i, j, k]], weights[1] * field[[i1, j, k]])))))))
     }
 }
 
@@ -171,6 +172,9 @@ pub struct PointSensor {
 
 impl PointSensor {
     /// Create new point sensor with precomputed interpolation data.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: PointSensorConfig, grid: &Grid) -> KwaversResult<Self> {
         config.validate(grid)?;
 
@@ -211,6 +215,7 @@ impl PointSensor {
     }
 
     /// Get time history for specific sensor as 1D array.
+    #[must_use] 
     pub fn time_history(&self, sensor_idx: usize) -> Option<Array1<f64>> {
         self.time_history
             .get(sensor_idx)
@@ -218,6 +223,7 @@ impl PointSensor {
     }
 
     /// Get all time histories as 2D array [n_sensors × n_timesteps].
+    #[must_use] 
     pub fn all_time_histories(&self) -> Array2<f64> {
         let n_sensors = self.locations.len();
         let n_timesteps = self.n_timesteps;
@@ -231,14 +237,17 @@ impl PointSensor {
         histories
     }
 
+    #[must_use] 
     pub fn locations(&self) -> &[[f64; 3]] {
         &self.locations
     }
 
+    #[must_use] 
     pub fn n_sensors(&self) -> usize {
         self.locations.len()
     }
 
+    #[must_use] 
     pub fn n_timesteps(&self) -> usize {
         self.n_timesteps
     }

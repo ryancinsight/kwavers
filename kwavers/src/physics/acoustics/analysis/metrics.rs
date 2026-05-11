@@ -24,6 +24,9 @@ pub struct FieldMetrics {
 }
 
 /// Calculate comprehensive field metrics
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn calculate_field_metrics(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
@@ -35,7 +38,7 @@ pub fn calculate_field_metrics(
 
     // Calculate focal distance
     let focal_distance =
-        (peak_location[0].powi(2) + peak_location[1].powi(2) + peak_location[2].powi(2)).sqrt();
+        peak_location[2].mul_add(peak_location[2], peak_location[1].mul_add(peak_location[1], peak_location[0].powi(2))).sqrt();
 
     // Calculate beam width at focus
     let beam_width = calculate_beam_width_at_location(
@@ -80,6 +83,9 @@ pub fn calculate_field_metrics(
 }
 
 /// Find peak pressure location in field
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn find_peak_pressure(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,

@@ -71,6 +71,7 @@ impl RealTimeWorkflow {
     /// Create new real-time workflow manager
     ///
     /// Initializes empty performance history and quality metrics.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             performance_history: Vec::new(),
@@ -112,6 +113,9 @@ impl RealTimeWorkflow {
     /// # Performance
     ///
     /// Target: <100ms total processing time for real-time operation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[cfg(feature = "pinn")]
     pub fn execute_workflow(
         &mut self,
@@ -161,14 +165,14 @@ impl RealTimeWorkflow {
         if !self.performance_history.is_empty() {
             let times = &self.performance_history;
             stats.insert(
-                "min_time".to_string(),
-                times.iter().cloned().fold(f64::INFINITY, f64::min),
+                "min_time".to_owned(),
+                times.iter().copied().fold(f64::INFINITY, f64::min),
             );
             stats.insert(
-                "max_time".to_string(),
-                times.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+                "max_time".to_owned(),
+                times.iter().copied().fold(f64::NEG_INFINITY, f64::max),
             );
-            stats.insert("median_time".to_string(), self.compute_median(times));
+            stats.insert("median_time".to_owned(), self.compute_median(times));
         }
 
         stats
@@ -204,11 +208,11 @@ impl RealTimeWorkflow {
     /// # Returns
     ///
     /// true if average processing time is below 100ms threshold
+    #[must_use] 
     pub fn meets_performance_target(&self) -> bool {
         self.quality_metrics
             .get("avg_processing_time")
-            .map(|&t| t < 100.0)
-            .unwrap_or(false)
+            .is_some_and(|&t| t < 100.0)
     }
 
     /// Get workflow health status
@@ -225,6 +229,7 @@ impl RealTimeWorkflow {
     /// # Returns
     ///
     /// Health status string
+    #[must_use] 
     pub fn get_health_status(&self) -> String {
         let avg_time = self
             .quality_metrics
@@ -238,13 +243,13 @@ impl RealTimeWorkflow {
             .unwrap_or(0.0);
 
         if avg_time < 80.0 && diag_confidence > 0.9 {
-            "EXCELLENT".to_string()
+            "EXCELLENT".to_owned()
         } else if avg_time < 100.0 && diag_confidence > 0.8 {
-            "GOOD".to_string()
+            "GOOD".to_owned()
         } else if avg_time < 120.0 && diag_confidence > 0.7 {
-            "ACCEPTABLE".to_string()
+            "ACCEPTABLE".to_owned()
         } else {
-            "DEGRADED".to_string()
+            "DEGRADED".to_owned()
         }
     }
 
@@ -258,6 +263,7 @@ impl RealTimeWorkflow {
     }
 
     /// Get number of workflow executions tracked
+    #[must_use] 
     pub fn execution_count(&self) -> usize {
         self.performance_history.len()
     }

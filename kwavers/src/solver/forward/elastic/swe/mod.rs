@@ -136,7 +136,6 @@ pub use boundary::{PMLBoundary, PMLConfig};
 pub use core::ElasticWaveSolver;
 pub use gpu::{AdaptiveResolution, GPUDevice, GPUElasticWaveSolver3D};
 pub use integration::TimeIntegrator;
-pub use stress::StressDerivatives;
 
 // Note: The elastic wave solver was originally misplaced in:
 // physics/acoustics/imaging/modalities/elastography/elastic_wave_solver.rs

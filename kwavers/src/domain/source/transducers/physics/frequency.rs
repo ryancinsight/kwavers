@@ -44,6 +44,9 @@ impl FrequencyResponse {
     /// * `mechanical_q` - Mechanical quality factor
     /// * `electrical_q` - Electrical quality factor
     /// * `num_points` - Number of frequency points
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn from_klm_model(
         center_freq: f64,
         coupling: f64,
@@ -53,9 +56,9 @@ impl FrequencyResponse {
     ) -> KwaversResult<Self> {
         if center_freq <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "center_frequency".to_string(),
+                parameter: "center_frequency".to_owned(),
                 value: center_freq.to_string(),
-                constraint: "Center frequency must be positive".to_string(),
+                constraint: "Center frequency must be positive".to_owned(),
             }));
         }
 
@@ -210,7 +213,7 @@ impl FrequencyResponse {
             let m2 = self.magnitude[idx];
 
             let t = (frequency - f1) / (f2 - f1);
-            m1 * (1.0 - t) + m2 * t
+            m1.mul_add(1.0 - t, m2 * t)
         }
     }
 
@@ -231,7 +234,7 @@ impl FrequencyResponse {
         let z = self.impedance[center_idx];
 
         let reflection_coeff = (z - z0) / (z + z0);
-        let transmission: f64 = 1.0 - reflection_coeff.norm().powi(2);
+        let transmission: f64 = reflection_coeff.norm().mul_add(-reflection_coeff.norm(), 1.0);
 
         -10.0 * transmission.log10()
     }

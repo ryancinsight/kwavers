@@ -110,10 +110,9 @@ impl EnergyBalanceCalculator {
         // Nu = 2 + 0.6 * Pe^0.5 (standard correlation)
         const NUSSELT_BASE: f64 = 2.0;
         const NUSSELT_PECLET_COEFF: f64 = 0.6;
-        const NUSSELT_PECLET_EXPONENT: f64 = 0.5;
 
         let nusselt =
-            NUSSELT_BASE + NUSSELT_PECLET_COEFF * peclet_number.powf(NUSSELT_PECLET_EXPONENT);
+            NUSSELT_PECLET_COEFF.mul_add(peclet_number.sqrt(), NUSSELT_BASE);
 
         // Heat transfer coefficient: h = Nu * k / r
         let radius = Length::new::<uom::si::length::meter>(state.radius);

@@ -31,9 +31,9 @@ pub struct SvdClutterConfig {
 pub struct LocalizationConfig {
     /// Detection threshold: candidate_amplitude > threshold_sigma_multiplier × noise_std
     pub threshold_sigma_multiplier: f64,
-    /// Minimum PSF width accepted [pixels]
+    /// Minimum PSF width accepted (pixels)
     pub min_sigma_px: f64,
-    /// Maximum PSF width accepted [pixels]
+    /// Maximum PSF width accepted (pixels)
     pub max_sigma_px: f64,
     /// Minimum amplitude-to-background ratio for acceptance
     pub min_snr_ratio: f64,

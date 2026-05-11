@@ -156,13 +156,13 @@
 //!
 //! ## Module layout
 //!
-//! - [`laplacian`]: finite-difference Laplacian (O2/O4) into a pre-allocated
+//! - `laplacian`: finite-difference Laplacian (O2/O4) into a pre-allocated
 //!   workspace.
-//! - [`nonlinear`]: ∂²p²/∂t² product-rule kernel.
-//! - [`update`]: full Westervelt time-step (linear + nonlinear + absorption +
+//! - `nonlinear`: ∂²p²/∂t² product-rule kernel.
+//! - `update`: full Westervelt time-step (linear + nonlinear + absorption +
 //!   artificial viscosity), source injection, history rotation, and
 //!   conservation-check pipeline.
-//! - [`conservation`]: `ConservationDiagnostics` trait impl.
+//! - `conservation`: `ConservationDiagnostics` trait impl.
 //!
 //! ---
 //!
@@ -333,6 +333,9 @@ impl WesterveltFdtd {
     /// Check if solution satisfies conservation constraints
     ///
     /// Returns `true` if all conservation violations are within acceptable limits.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn is_solution_valid(&self) -> bool {
         self.conservation_tracker
             .as_ref()
@@ -340,12 +343,18 @@ impl WesterveltFdtd {
     }
 
     /// Get the current pressure field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn pressure(&self) -> &Array3<f64> {
         &self.pressure
     }
 
     /// Calculate the CFL-limited time step
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_dt(&self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<f64> {
         // Get maximum sound speed
         let c_max = medium

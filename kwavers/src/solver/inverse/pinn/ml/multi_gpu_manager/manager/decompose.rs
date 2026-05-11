@@ -6,6 +6,9 @@ use crate::core::error::KwaversResult;
 
 impl MultiGpuManager {
     /// Decompose a PINN training task across GPUs.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn decompose_training_task(
         &self,
         total_collocation_points: usize,
@@ -37,7 +40,10 @@ impl MultiGpuManager {
             ),
         }
     }
-
+    /// Decompose spatially.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn decompose_spatially(
         &self,
         total_points: usize,
@@ -73,7 +79,10 @@ impl MultiGpuManager {
 
         Ok(work_units)
     }
-
+    /// Decompose temporally.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn decompose_temporally(
         &self,
         total_points: usize,
@@ -98,7 +107,10 @@ impl MultiGpuManager {
 
         Ok(work_units)
     }
-
+    /// Decompose hybrid.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn decompose_hybrid(
         &self,
         total_points: usize,

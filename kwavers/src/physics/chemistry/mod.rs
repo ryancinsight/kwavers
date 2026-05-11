@@ -10,7 +10,7 @@
 //! ## Implemented (Sprint 226)
 //!
 //! - **Master equation kinetics**: Dormand-Prince RK45 adaptive integrator in `integrator/`
-//!   evolves d[N]/dt = Σ νᵢⱼ·rⱼ(N,T,pH) forward in time with error control.
+//!   evolves d(N)/dt = Σ νᵢⱼ·rⱼ(N,T,pH) forward in time with error control.
 //! - **Radical diffusion**: Smoluchowski radial solver in `diffusion/` — Crank-Nicolson
 //!   implicit diffusion on a logarithmic grid (64 points, 10–1000 R_bubble), operator-split
 //!   with RK45 reactions.

@@ -6,14 +6,14 @@
 //!
 //! # Module layout
 //!
-//! - [`math`]: module-level constants and rotation/linear-algebra helpers.
-//! - [`construction`]: constructors and element-addition methods.
-//! - [`transform`]: global array-position transform helpers.
-//! - [`geometry`]: surface-area and arc-length formulae.
-//! - [`bli_kernel`]: BLI stencil, disc basis, and nearest-index helpers.
-//! - [`rasterizer_curved`]: arc, bowl, and annulus element rasterizers.
-//! - [`rasterizer_planar`]: rect, disc, and per-element rasterizers.
-//! - [`accessors`]: public query methods (masks, delays, apodization, etc.).
+//! - `math`: module-level constants and rotation/linear-algebra helpers.
+//! - `construction`: constructors and element-addition methods.
+//! - `transform`: global array-position transform helpers.
+//! - `geometry`: surface-area and arc-length formulae.
+//! - `bli_kernel`: BLI stencil, disc basis, and nearest-index helpers.
+//! - `rasterizer_curved`: arc, bowl, and annulus element rasterizers.
+//! - `rasterizer_planar`: rect, disc, and per-element rasterizers.
+//! - `accessors`: public query methods (masks, delays, apodization, etc.).
 
 mod accessors;
 mod bli_kernel;

@@ -26,6 +26,9 @@ use super::time::compute_second_time_derivative;
 /// ε_yy = ∂u_y/∂y
 /// ε_xy = ½(∂u_x/∂y + ∂u_y/∂x)
 /// ```
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn compute_strain_tensor_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
@@ -73,6 +76,9 @@ where
 /// R = ρ ∂²u/∂t² − (λ + 2μ)∇(∇·u) − μ∇²u
 /// ```
 /// `R = 0` ⟺ u satisfies the governing equation.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn compute_elastic_wave_residual_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,

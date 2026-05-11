@@ -18,9 +18,9 @@ pub enum DrugLoadingMode {
 impl fmt::Display for DrugLoadingMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DrugLoadingMode::SurfaceAttached => write!(f, "Surface"),
-            DrugLoadingMode::ShellEmbedded => write!(f, "Shell"),
-            DrugLoadingMode::CoreEncapsulated => write!(f, "Core"),
+            Self::SurfaceAttached => write!(f, "Surface"),
+            Self::ShellEmbedded => write!(f, "Shell"),
+            Self::CoreEncapsulated => write!(f, "Core"),
         }
     }
 }

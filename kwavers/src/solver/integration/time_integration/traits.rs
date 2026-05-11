@@ -11,15 +11,27 @@ use std::fmt::Debug;
 /// Configuration trait for time steppers
 pub trait TimeStepperConfig: Clone + Send + Sync + Debug {
     /// Get the order of accuracy
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn order(&self) -> usize;
 
     /// Get the number of stages (for multi-stage methods)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn stages(&self) -> usize;
 
     /// Is this an explicit method?
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn is_explicit(&self) -> bool;
 
     /// Validate the configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn validate(&self) -> KwaversResult<()>;
 }
 
@@ -29,6 +41,9 @@ pub trait TimeStepper: Send + Sync + Debug {
     type Config: TimeStepperConfig;
 
     /// Create a new time stepper with given configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn new(config: Self::Config) -> Self;
 
     /// Advance the solution by one time step (in-place)
@@ -38,6 +53,9 @@ pub trait TimeStepper: Send + Sync + Debug {
     /// * `rhs_fn` - Function that computes the right-hand side (time derivative)
     /// * `dt` - Time step size
     /// * `grid` - Computational grid
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn step<F>(
         &mut self,
         field: &mut Array3<f64>,

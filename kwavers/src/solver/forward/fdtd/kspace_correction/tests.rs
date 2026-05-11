@@ -17,6 +17,9 @@ fn test_grid() -> Grid {
 ///
 /// Both call `generate_shift_1d` from the same shared module. Any divergence
 /// would indicate they are using different implementations.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_kspace_shift_operators_match_pstd() {
     let grid = test_grid();
@@ -42,6 +45,9 @@ fn test_kspace_shift_operators_match_pstd() {
 
 /// With `KSpaceCorrectionMode::None`, the FdtdSolver must produce the same
 /// results as before this feature was added (no regression).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_kspace_fd_fallback_unchanged() {
     let grid = test_grid();
@@ -73,6 +79,9 @@ fn test_kspace_fd_fallback_unchanged() {
 }
 
 /// K-space FDTD must run without NaN/Inf for a simple IVP.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_kspace_spectral_solver_runs_without_nan() {
     let grid = test_grid();
@@ -117,6 +126,9 @@ fn test_kspace_spectral_solver_runs_without_nan() {
 ///
 /// Proof: IFFT( ddx_k_shift · κ · FFT(C) ) = IFFT( C · ddx[0] · κ · δ₀ ) = 0
 /// because ddx_k_shift[0] = i·0·exp(0) = 0 (DC bin).
+/// # Panics
+/// - Panics if assertion fails: `Gradient of constant should be ~0, got max={max_grad}`.
+///
 #[test]
 fn test_spectral_gradient_of_constant_is_zero() {
     let nx = 8;
@@ -136,6 +148,9 @@ fn test_spectral_gradient_of_constant_is_zero() {
 }
 
 /// The spectral divergence of zero velocity must be zero everywhere.
+/// # Panics
+/// - Panics if assertion fails: `Divergence of zero should be ~0, got max={max_div}`.
+///
 #[test]
 fn test_spectral_divergence_of_zero_is_zero() {
     let nx = 8;
@@ -162,6 +177,9 @@ fn test_spectral_divergence_of_zero_is_zero() {
 ///
 /// The spectral derivative is exact: d/dx sin(kx·x) = kx cos(kx·x).
 /// We verify max relative error < 1e-6.
+/// # Panics
+/// - Panics if assertion fails: `Spectral d/dx sin(kx) relative error too large: {rel_err} (max_abs={max_abs_err:.3e}, k_fund={k_fund:.3e})`.
+///
 #[test]
 fn test_spectral_gradient_of_sine_is_cosine() {
     let nx = 32usize;

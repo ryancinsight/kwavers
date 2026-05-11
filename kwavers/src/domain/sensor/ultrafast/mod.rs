@@ -148,6 +148,6 @@ mod tests {
         let config = PlaneWaveConfig::default();
         assert_eq!(config.tilt_angles.len(), 11);
         assert!(config.sound_speed > 0.0);
-        assert!(config.f_number.is_some());
+        assert_eq!(config.f_number.unwrap(), 1.5);
     }
 }

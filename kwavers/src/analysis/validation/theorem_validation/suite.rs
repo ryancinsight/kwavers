@@ -7,6 +7,7 @@ use std::f64::consts::PI;
 
 impl TheoremValidator {
     /// Run comprehensive theorem validation suite
+    #[must_use] 
     pub fn run_comprehensive_validation(&self) -> Vec<TheoremValidation> {
         let mut results = Vec::new();
 
@@ -66,7 +67,7 @@ impl TheoremValidator {
             .iter()
             .map(|&omega: &f64| {
                 let tan_factor = (alpha_power * PI / 2.0).tan();
-                c0 + (2.0 * alpha_0 / PI) * omega.powf(alpha_power) * tan_factor
+                ((2.0 * alpha_0 / PI) * omega.powf(alpha_power)).mul_add(tan_factor, c0)
             })
             .collect();
 
@@ -96,6 +97,7 @@ impl TheoremValidator {
     }
 
     /// Generate validation report
+    #[must_use] 
     pub fn generate_validation_report(&self, validations: &[TheoremValidation]) -> String {
         let mut report = String::new();
         report.push_str("# Theorem Validation Report\n\n");

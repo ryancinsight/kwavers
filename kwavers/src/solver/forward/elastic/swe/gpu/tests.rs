@@ -56,7 +56,7 @@ fn test_gpu_solver_initialization() {
     };
 
     let mut solver = GPUElasticWaveSolver3D::new(device).unwrap();
-    assert!(solver.initialize_kernels().is_ok());
+    solver.initialize_kernels().unwrap();
     assert!(!solver.kernel_cache.is_empty());
 }
 
@@ -71,10 +71,7 @@ fn test_adaptive_resolution() {
     );
 
     let initial_disp = Array3::zeros((64, 64, 64));
-    let result = adaptive.adaptive_solve(&initial_disp, 0.85);
-    assert!(result.is_ok());
-
-    let solution = result.unwrap();
+    let solution = adaptive.adaptive_solve(&initial_disp, 0.85).unwrap();
     assert!(!solution.steps.is_empty());
     assert!(solution.final_quality > 0.0);
 }

@@ -2,6 +2,9 @@ use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Create a line mask connecting two points using a Bresenham-like 3D algorithm.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn make_line(
     dim: (usize, usize, usize),
     spacing: (f64, f64, f64),

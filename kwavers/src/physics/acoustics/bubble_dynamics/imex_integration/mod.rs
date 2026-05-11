@@ -22,6 +22,9 @@ use crate::core::error::KwaversResult;
 use std::sync::Arc;
 
 /// Main function to integrate bubble dynamics using IMEX method
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn integrate_bubble_dynamics_imex(
     solver: Arc<KellerMiksisModel>,
     state: &mut BubbleState,

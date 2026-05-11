@@ -3,6 +3,9 @@
 use super::super::{ApodizationWindow, KWaveArray};
 
 /// Rectangular apodization returns all-ones.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_apodization_rectangular_all_ones() {
     let mut array = KWaveArray::new();
@@ -17,6 +20,9 @@ fn test_apodization_rectangular_all_ones() {
 }
 
 /// Hann window: endpoints ≈ 0, center = 1.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_apodization_hann_endpoints_near_zero() {
     let mut array = KWaveArray::new();
@@ -43,6 +49,9 @@ fn test_apodization_hann_endpoints_near_zero() {
 }
 
 /// Hamming window: all weights in [0.08, 1.0] and symmetric.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_apodization_hamming_range_and_symmetry() {
     let mut array = KWaveArray::new();
@@ -69,6 +78,9 @@ fn test_apodization_hamming_range_and_symmetry() {
 }
 
 /// Single-element array: all windows return `[1.0]`.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_apodization_single_element() {
     let mut array = KWaveArray::new();
@@ -88,6 +100,9 @@ fn test_apodization_single_element() {
 }
 
 /// SSOT: `KWaveArray::new()` uses `SOUND_SPEED_TISSUE`.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_default_sound_speed_is_ssot_constant() {
     use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;

@@ -102,7 +102,7 @@ impl ROSConcentrations {
             let decay_rate = 1.0 / lifetime;
 
             // Exponential decay: C(t+dt) = C(t) * exp(-dt/τ)
-            conc.mapv_inplace(|c| c * (-dt * decay_rate).exp());
+            conc.par_mapv_inplace(|c| c * (-dt * decay_rate).exp());
         }
     }
 }

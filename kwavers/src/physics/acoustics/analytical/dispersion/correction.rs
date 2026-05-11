@@ -55,7 +55,7 @@ impl DispersionAnalysis {
             DispersionMethod::None => 1.0,
         };
 
-        field.mapv_inplace(|v| v * correction_factor);
+        field.par_mapv_inplace(|v| v * correction_factor);
     }
 
     /// Apply dispersion correction to a field using full 3D analysis
@@ -77,16 +77,16 @@ impl DispersionAnalysis {
                     + Self::pstd_dispersion_3d(kx, ky, kz, grid.dx, grid.dy, grid.dz, dt, c, order))
             }
             DispersionMethod::FDTD(dt) => {
-                let k_magnitude = (kx * kx + ky * ky + kz * kz).sqrt();
+                let k_magnitude = kz.mul_add(kz, kx.mul_add(kx, ky * ky)).sqrt();
                 1.0 / (1.0 + Self::fdtd_dispersion(k_magnitude, grid.dx, dt, c))
             }
             DispersionMethod::PSTD(order) => {
-                let k_magnitude = (kx * kx + ky * ky + kz * kz).sqrt();
+                let k_magnitude = kz.mul_add(kz, kx.mul_add(kx, ky * ky)).sqrt();
                 1.0 / (1.0 + Self::pstd_dispersion(k_magnitude, grid.dx, order))
             }
             DispersionMethod::None => 1.0,
         };
 
-        field.mapv_inplace(|v| v * correction_factor);
+        field.par_mapv_inplace(|v| v * correction_factor);
     }
 }

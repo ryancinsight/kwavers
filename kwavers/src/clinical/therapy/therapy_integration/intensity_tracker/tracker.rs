@@ -41,6 +41,9 @@ impl IntensityTracker {
     ///   - Typical: 0.1 seconds (100 ms window)
     /// - `dt`: Time between measurements (seconds)
     ///   - Typical: 10 microseconds (acoustic step)
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(max_window_duration: f64, dt: f64) -> KwaversResult<Self> {
         if max_window_duration <= 0.0 || dt <= 0.0 {
             return Err(KwaversError::InvalidInput(
@@ -76,6 +79,9 @@ impl IntensityTracker {
     /// # Returns
     ///
     /// Updated temporal metrics after adding this measurement
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn record_intensity(
         &mut self,
         pressure_field: &Array3<f64>,
@@ -167,6 +173,9 @@ impl IntensityTracker {
     }
 
     /// Trim history to window duration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn trim_history(&mut self) {
         let cutoff = self.current_time - self.max_window_duration * 2.0; // Keep 2x window for safety
         self.intensity_history.retain(|m| m.timestamp > cutoff);
@@ -178,6 +187,9 @@ impl IntensityTracker {
     ///
     /// - `temperature_field`: 3D temperature field (°C)
     /// - `dt`: Time step duration (seconds)
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn update_thermal_dose(
         &mut self,
         temperature_field: &Array3<f64>,

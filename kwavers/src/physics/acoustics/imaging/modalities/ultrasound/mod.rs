@@ -55,7 +55,7 @@ fn compute_envelope(signal: &ndarray::Array1<f64>) -> ndarray::Array1<f64> {
         } else {
             0.0
         };
-        envelope[i] = (real * real + imag * imag).sqrt();
+        envelope[i] = real.hypot(imag);
     }
     envelope
 }

@@ -32,7 +32,7 @@ impl RickerWavelet {
         let t_shifted = t - self.time_shift;
         let arg = PI * self.frequency * t_shifted;
         let arg_squared = arg * arg;
-        (1.0 - 2.0 * arg_squared) * (-arg_squared).exp()
+        2.0f64.mul_add(-arg_squared, 1.0) * (-arg_squared).exp()
     }
 
     /// Generate a time series of the wavelet
@@ -112,6 +112,9 @@ pub struct OrmsbyWavelet {
 
 impl OrmsbyWavelet {
     /// Create a new Ormsby wavelet with specified frequency band
+    /// # Panics
+    /// - Panics if assertion fails: `Frequencies must be in ascending order`.
+    ///
     #[must_use]
     pub fn new(f1: f64, f2: f64, f3: f64, f4: f64) -> Self {
         assert!(

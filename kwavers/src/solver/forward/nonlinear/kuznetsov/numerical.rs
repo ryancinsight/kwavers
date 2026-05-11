@@ -19,7 +19,7 @@ pub fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     let kz_max = PI / grid.dz;
 
     // Apply Laplacian in k-space: ∇²f = -(kx² + ky² + kz²) * f_hat
-    Zip::indexed(&mut field_hat).for_each(|(i, j, k), f| {
+    Zip::indexed(&mut field_hat).par_for_each(|(i, j, k), f| {
         let kx = if i <= nx / 2 {
             i as f64 * 2.0 * kx_max / nx as f64
         } else {
@@ -69,7 +69,7 @@ pub fn compute_gradient(
         .and(&mut grad_y_hat)
         .and(&mut grad_z_hat)
         .and(&field_hat)
-        .for_each(|(i, j, k), gx, gy, gz, &f| {
+        .par_for_each(|(i, j, k), gx, gy, gz, &f| {
             let kx = if i <= nx / 2 {
                 i as f64 * 2.0 * kx_max / nx as f64
             } else {
@@ -85,8 +85,6 @@ pub fn compute_gradient(
             } else {
                 (k as f64 - nz as f64) * 2.0 * kz_max / nz as f64
             };
-
-            // Gradient in k-space: ∂f/∂x = i*kx*f_hat
             *gx = Complex64::new(0.0, kx) * f;
             *gy = Complex64::new(0.0, ky) * f;
             *gz = Complex64::new(0.0, kz) * f;

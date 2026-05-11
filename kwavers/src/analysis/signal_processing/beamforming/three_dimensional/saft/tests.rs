@@ -135,5 +135,5 @@ fn test_input_validation() {
     let empty = Array4::<f32>::zeros((0, 0, 0, 0));
     assert!(processor.validate_input(&empty).is_err());
     let valid = Array4::<f32>::zeros((1, 64, 512, 1));
-    assert!(processor.validate_input(&valid).is_ok());
+    processor.validate_input(&valid).unwrap();
 }

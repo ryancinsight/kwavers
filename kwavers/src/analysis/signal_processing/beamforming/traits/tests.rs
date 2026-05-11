@@ -66,8 +66,9 @@ fn test_beamformer_trait() {
     let data = Array2::<f64>::zeros((4, 100));
     let focal_point = [0.0, 0.0, 0.01];
 
-    let result = beamformer.focus_at_point(&data, focal_point);
-    assert!(result.is_ok());
+    let focused = beamformer.focus_at_point(&data, focal_point).unwrap();
+    // data is all-zeros so sum = 0.0
+    assert_eq!(focused, 0.0);
 }
 
 #[test]

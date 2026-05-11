@@ -75,6 +75,15 @@ pub struct PSTDSolver {
     pub(crate) dpy: Array3<f64>,
     pub(crate) dpz: Array3<f64>,
     pub(crate) div_u: Array3<f64>,
+    /// Cached kappa-corrected velocity divergences written by `update_density_cartesian`
+    /// and read by `apply_absorption_to_pressure`.  `apply_pressure_sources` zeroes `dpx`
+    /// between those two calls; caching avoids 3 forward + 3 inverse FFT recomputations
+    /// per step on absorbing simulations.  `div_uy` and `div_uz` are zero when the
+    /// corresponding axis is singleton (ny=1 or nz=1).  Not checkpointed — recomputed
+    /// from velocity fields on the first step after restore.
+    pub(crate) div_ux: Array3<f64>,
+    pub(crate) div_uy: Array3<f64>,
+    pub(crate) div_uz: Array3<f64>,
     /// Axisymmetric WSWA-FFT context — `Some` when `config.geometry == CylindricalAS`.
     pub(crate) as_ctx: Option<AsContext>,
 }
@@ -86,15 +95,17 @@ impl PSTDSolver {
             .and(&self.rhox)
             .and(&self.rhoy)
             .and(&self.rhoz)
-            .for_each(|rho_sum, &rx, &ry, &rz| {
+            .par_for_each(|rho_sum, &rx, &ry, &rz| {
                 *rho_sum = rx + ry + rz;
             });
     }
 
+    #[must_use] 
     pub fn sensor_indices(&self) -> &[(usize, usize, usize)] {
         self.sensor_recorder.sensor_indices()
     }
 
+    #[must_use] 
     pub fn extract_pressure_data(&self) -> Option<Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
     }
@@ -111,20 +122,38 @@ impl PSTDSolver {
         self.sensor_recorder.recorded_pressure_view()
     }
 
+    #[must_use] 
     pub fn get_timestep(&self) -> f64 {
         self.config.dt
     }
 
+    /// Pressure field.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn pressure_field(&self) -> &Array3<f64> {
         &self.fields.p
     }
-
+    /// Velocity fields.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.fields.ux, &self.fields.uy, &self.fields.uz)
     }
-
+    /// Run orchestrated.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_orchestrated(&mut self, steps: usize) -> KwaversResult<Option<Array2<f64>>> {
-        if self.time_step_index == 0 {
+        // Record the initial state only for IVP (p0) sources, matching k-Wave's convention:
+        // k-Wave's step t=0 overrides the computed pressure with p0 before recording, so
+        // sensor column 0 = p0.  For time-varying sources k-Wave records p(dt) at column 0
+        // (state after the first update), so we must NOT emit the zero initial state here —
+        // doing so would shift every time-varying source output by +1 step vs k-Wave.
+        if self.time_step_index == 0 && self.source_handler.has_initial_pressure() {
             self.sensor_recorder.record_step(&self.fields.p)?;
         }
         for _ in 0..steps {
@@ -134,6 +163,10 @@ impl PSTDSolver {
     }
 }
 
+/// Pstd source time shift samples.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn pstd_source_time_shift_samples() -> isize {
     match env::var("KWAVERS_PSTD_SOURCE_TIME_SHIFT") {
         Ok(value) => value.trim().parse::<isize>().unwrap_or(0),
@@ -141,6 +174,10 @@ pub(super) fn pstd_source_time_shift_samples() -> isize {
     }
 }
 
+/// Pstd source gain.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn pstd_source_gain() -> f64 {
     match env::var("KWAVERS_PSTD_SOURCE_GAIN") {
         Ok(value) => value.trim().parse::<f64>().unwrap_or(1.0),

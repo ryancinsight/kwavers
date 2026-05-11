@@ -30,6 +30,9 @@ pub struct DynamicFocusing {
 
 impl DynamicFocusing {
     /// Create a new dynamic focusing controller
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
         let num_elements = element_positions.nrows();
@@ -43,8 +46,11 @@ impl DynamicFocusing {
     }
 
     /// Set single focal point
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_focal_point(&mut self, x: f64, y: f64, z: f64) -> KwaversResult<()> {
-        let focal_distance = (x * x + y * y + z * z).sqrt();
+        let focal_distance = z.mul_add(z, x.mul_add(x, y * y)).sqrt();
 
         if focal_distance < MIN_FOCAL_DISTANCE {
             return Err(crate::core::error::KwaversError::InvalidInput(format!(
@@ -59,6 +65,9 @@ impl DynamicFocusing {
     }
 
     /// Set multiple focal points
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_multiple_focal_points(&mut self, points: Vec<[f64; 3]>) -> KwaversResult<()> {
         if points.len() > MAX_FOCAL_POINTS {
             return Err(crate::core::error::KwaversError::InvalidInput(format!(
@@ -67,7 +76,7 @@ impl DynamicFocusing {
         }
 
         for point in &points {
-            let focal_distance = (point[0].powi(2) + point[1].powi(2) + point[2].powi(2)).sqrt();
+            let focal_distance = point[2].mul_add(point[2], point[1].mul_add(point[1], point[0].powi(2))).sqrt();
             if focal_distance < MIN_FOCAL_DISTANCE {
                 return Err(crate::core::error::KwaversError::InvalidInput(format!(
                     "Focal distance below minimum of {} mm",
@@ -82,6 +91,9 @@ impl DynamicFocusing {
     }
 
     /// Calculate phase distribution for current focal points
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn calculate_phase_distribution(&mut self) -> KwaversResult<()> {
         if self.focal_points.is_empty() {
             self.phase_distribution.fill(0.0);
@@ -95,14 +107,14 @@ impl DynamicFocusing {
 
         for focal_point in &self.focal_points {
             let reference_distance =
-                (focal_point[0].powi(2) + focal_point[1].powi(2) + focal_point[2].powi(2)).sqrt();
+                focal_point[2].mul_add(focal_point[2], focal_point[1].mul_add(focal_point[1], focal_point[0].powi(2))).sqrt();
 
             for i in 0..self.element_positions.nrows() {
                 let pos = self.element_positions.row(i);
                 let dx = focal_point[0] - pos[0];
                 let dy = focal_point[1] - pos[1];
                 let dz = focal_point[2] - pos[2];
-                let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                 // Superposition of phases
                 self.phase_distribution[i] +=
@@ -129,7 +141,7 @@ impl DynamicFocusing {
             ApodizationType::Hamming => {
                 for i in 0..n {
                     let x = i as f64 / (n - 1) as f64;
-                    self.amplitude_weights[i] = 0.54 - 0.46 * (2.0 * PI * x).cos();
+                    self.amplitude_weights[i] = 0.46f64.mul_add(-(2.0 * PI * x).cos(), 0.54);
                 }
             }
             ApodizationType::Hanning => {
@@ -175,7 +187,7 @@ impl DynamicFocusing {
             let dx = x - pos[0];
             let dy = y - pos[1];
             let dz = z - pos[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             let phase = self.phase_distribution[i] + k * distance;
             let amplitude = self.amplitude_weights[i];
@@ -184,7 +196,7 @@ impl DynamicFocusing {
             sum_imag += amplitude * phase.sin();
         }
 
-        (sum_real.powi(2) + sum_imag.powi(2)) / self.element_positions.nrows() as f64
+        sum_imag.mul_add(sum_imag, sum_real.powi(2)) / self.element_positions.nrows() as f64
     }
 }
 

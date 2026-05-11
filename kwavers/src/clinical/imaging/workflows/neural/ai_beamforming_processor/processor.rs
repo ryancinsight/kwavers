@@ -47,6 +47,9 @@ impl std::fmt::Debug for AIEnhancedBeamformingProcessor {
 
 impl AIEnhancedBeamformingProcessor {
     /// Create new neural beamforming processor.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         config: AIBeamformingConfig,
         sensor_positions: Vec<[f64; 3]>,
@@ -60,7 +63,7 @@ impl AIEnhancedBeamformingProcessor {
 
         if config.enable_realtime_pinn && pinn_engine.is_none() {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "PINN inference enabled but no PinnInferenceEngine provided".to_string(),
+                "PINN inference enabled but no PinnInferenceEngine provided".to_owned(),
             ));
         }
 
@@ -79,6 +82,9 @@ impl AIEnhancedBeamformingProcessor {
     }
 
     /// Process ultrasound data with neural enhancement.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process_ai_enhanced(
         &mut self,
         rf_data: ArrayView4<f32>,
@@ -136,6 +142,9 @@ impl AIEnhancedBeamformingProcessor {
     }
 
     /// Perform traditional delay-and-sum beamforming.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn perform_beamforming(
         &self,
         rf_data: ArrayView4<f32>,
@@ -148,7 +157,7 @@ impl AIEnhancedBeamformingProcessor {
             for x in 0..64 {
                 for y in 0..64 {
                     let angle = angles.get(frame).copied().unwrap_or(0.0);
-                    let steering_delay = (x as f32 * angle.sin() + y as f32 * angle.cos()) * 0.01;
+                    let steering_delay = (x as f32).mul_add(angle.sin(), y as f32 * angle.cos()) * 0.01;
                     let mut sum = 0.0;
                     let channel_limit = nchan.min(10);
                     for chan in 0..channel_limit {
@@ -166,6 +175,9 @@ impl AIEnhancedBeamformingProcessor {
     }
 
     /// Perform real-time PINN inference for uncertainty quantification.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn perform_pinn_inference(
         &mut self,
         volume: &Array3<f32>,
@@ -196,7 +208,7 @@ impl AIEnhancedBeamformingProcessor {
 
         let pinn_engine = self.pinn_engine.as_mut().ok_or_else(|| {
             crate::core::error::KwaversError::InvalidInput(
-                "PINN inference enabled but no PinnInferenceEngine available".to_string(),
+                "PINN inference enabled but no PinnInferenceEngine available".to_owned(),
             )
         })?;
         let (_predictions, uncertainties) =
@@ -241,11 +253,18 @@ impl AIEnhancedBeamformingProcessor {
     }
 
     /// Get current configuration.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn config(&self) -> &AIBeamformingConfig {
         &self.config
     }
 
     /// Update configuration.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_config(&mut self, config: AIBeamformingConfig) -> KwaversResult<()> {
         config.validate().map_err(|e| {
             crate::core::error::KwaversError::InvalidInput(format!(

@@ -9,6 +9,9 @@ use crate::core::error::KwaversResult;
 pub use super::multi_bowl::ApodizationType;
 
 /// Helper function to create a spherical section bowl
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn make_bowl(
     radius: f64,
     diameter: f64,
@@ -30,6 +33,9 @@ pub fn make_bowl(
 }
 
 /// Helper function to create an annular array
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn make_annular_array(
     inner_radius: f64,
     outer_radius: f64,
@@ -125,6 +131,9 @@ mod tests {
     ///
     /// This test generates sources on a 32³ grid with phase shifts.
     /// Execution time: >60s, classified as Tier 3 comprehensive validation.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     #[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
     fn test_multi_bowl_phases() {
@@ -169,6 +178,9 @@ mod tests {
     ///
     /// Fast version with reduced grid (8³) for CI/CD smoke test.
     /// Execution time: <1s, classified as Tier 1 fast validation.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_multi_bowl_phases_fast() {
         // Create two bowls with different phases

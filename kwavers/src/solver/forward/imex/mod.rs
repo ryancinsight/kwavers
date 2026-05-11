@@ -101,10 +101,10 @@ impl IMEXSchemeType {
         G: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
         match self {
-            IMEXSchemeType::RungeKutta(rk) => {
+            Self::RungeKutta(rk) => {
                 rk.step(field, dt, explicit_rhs, implicit_rhs, implicit_solver)
             }
-            IMEXSchemeType::BDF(bdf) => {
+            Self::BDF(bdf) => {
                 bdf.step(field, dt, explicit_rhs, implicit_rhs, implicit_solver)
             }
         }
@@ -112,44 +112,36 @@ impl IMEXSchemeType {
 
     fn order(&self) -> usize {
         match self {
-            IMEXSchemeType::RungeKutta(rk) => rk.order(),
-            IMEXSchemeType::BDF(bdf) => bdf.order(),
-        }
-    }
-
-    #[allow(dead_code)]
-    fn stages(&self) -> usize {
-        match self {
-            IMEXSchemeType::RungeKutta(rk) => rk.stages(),
-            IMEXSchemeType::BDF(bdf) => bdf.stages(),
+            Self::RungeKutta(rk) => rk.order(),
+            Self::BDF(bdf) => bdf.order(),
         }
     }
 
     fn is_a_stable(&self) -> bool {
         match self {
-            IMEXSchemeType::RungeKutta(rk) => rk.is_a_stable(),
-            IMEXSchemeType::BDF(bdf) => bdf.is_a_stable(),
+            Self::RungeKutta(rk) => rk.is_a_stable(),
+            Self::BDF(bdf) => bdf.is_a_stable(),
         }
     }
 
     fn is_l_stable(&self) -> bool {
         match self {
-            IMEXSchemeType::RungeKutta(rk) => rk.is_l_stable(),
-            IMEXSchemeType::BDF(bdf) => bdf.is_l_stable(),
+            Self::RungeKutta(rk) => rk.is_l_stable(),
+            Self::BDF(bdf) => bdf.is_l_stable(),
         }
     }
 
     fn adjust_for_stiffness(&mut self, stiffness_ratio: f64) {
         match self {
-            IMEXSchemeType::RungeKutta(rk) => rk.adjust_for_stiffness(stiffness_ratio),
-            IMEXSchemeType::BDF(bdf) => bdf.adjust_for_stiffness(stiffness_ratio),
+            Self::RungeKutta(rk) => rk.adjust_for_stiffness(stiffness_ratio),
+            Self::BDF(bdf) => bdf.adjust_for_stiffness(stiffness_ratio),
         }
     }
 
     fn stability_function(&self, z: f64) -> f64 {
         match self {
-            IMEXSchemeType::RungeKutta(rk) => rk.stability_function(z),
-            IMEXSchemeType::BDF(bdf) => bdf.stability_function(z),
+            Self::RungeKutta(rk) => rk.stability_function(z),
+            Self::BDF(bdf) => bdf.stability_function(z),
         }
     }
 }
@@ -167,8 +159,8 @@ impl ImplicitSolverType {
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
         match self {
-            ImplicitSolverType::Linear(solver) => solver.solve(initial_guess, residual_fn),
-            ImplicitSolverType::Nonlinear(solver) => solver.solve(initial_guess, residual_fn),
+            Self::Linear(solver) => solver.solve(initial_guess, residual_fn),
+            Self::Nonlinear(solver) => solver.solve(initial_guess, residual_fn),
         }
     }
 }
@@ -179,22 +171,22 @@ impl ImplicitSolver for ImplicitSolverType {
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
         match self {
-            ImplicitSolverType::Linear(solver) => solver.solve(initial_guess, residual_fn),
-            ImplicitSolverType::Nonlinear(solver) => solver.solve(initial_guess, residual_fn),
+            Self::Linear(solver) => solver.solve(initial_guess, residual_fn),
+            Self::Nonlinear(solver) => solver.solve(initial_guess, residual_fn),
         }
     }
 
     fn tolerance(&self) -> f64 {
         match self {
-            ImplicitSolverType::Linear(solver) => solver.tolerance(),
-            ImplicitSolverType::Nonlinear(solver) => solver.tolerance(),
+            Self::Linear(solver) => solver.tolerance(),
+            Self::Nonlinear(solver) => solver.tolerance(),
         }
     }
 
     fn max_iterations(&self) -> usize {
         match self {
-            ImplicitSolverType::Linear(solver) => solver.max_iterations(),
-            ImplicitSolverType::Nonlinear(solver) => solver.max_iterations(),
+            Self::Linear(solver) => solver.max_iterations(),
+            Self::Nonlinear(solver) => solver.max_iterations(),
         }
     }
 }
@@ -212,14 +204,11 @@ pub struct IMEXIntegrator {
     stiffness_detector: StiffnessDetector,
     /// Stability analyzer
     stability_analyzer: IMEXStabilityAnalyzer,
-    /// Grid reference
-    #[allow(dead_code)]
-    grid: Arc<Grid>,
 }
 
 impl IMEXIntegrator {
     /// Create a new IMEX integrator
-    pub fn new(config: IMEXConfig, scheme: IMEXSchemeType, grid: Arc<Grid>) -> Self {
+    pub fn new(config: IMEXConfig, scheme: IMEXSchemeType, _grid: Arc<Grid>) -> Self {
         let implicit_solver = ImplicitSolverType::Nonlinear(NonlinearSolver::new(
             config.tolerance,
             config.max_iterations,
@@ -233,11 +222,13 @@ impl IMEXIntegrator {
             implicit_solver,
             stiffness_detector,
             stability_analyzer,
-            grid,
         }
     }
 
     /// Advance solution by one time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn advance<F, G>(
         &mut self,
         field: &Array3<f64>,
@@ -272,7 +263,7 @@ impl IMEXIntegrator {
             if dt > stable_dt * self.config.safety_factor {
                 return Err(crate::core::error::KwaversError::Numerical(
                     crate::core::error::NumericalError::Instability {
-                        operation: "IMEX time step".to_string(),
+                        operation: "IMEX time step".to_owned(),
                         condition: dt,
                     },
                 ));

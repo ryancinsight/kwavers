@@ -9,7 +9,7 @@
 //! w(r) = 1 / r    (spherical spreading; 1/r² for intensity, 1/r for pressure)
 //! r    = ‖x_sensor_s − x_voxel_v‖₂
 //! α_np = attenuation coefficient [Np/(m·Hz)]
-//! f_c  = centre frequency [Hz]
+//! f_c  = centre frequency (Hz)
 //! ```
 //!
 //! The factor **2** accounts for the round-trip (transmit + receive) path.
@@ -39,18 +39,18 @@ use ndarray::{Array1, Array3};
 /// Acoustic forward-projection geometry for pulse-echo ultrasound SIRT.
 #[derive(Debug, Clone)]
 pub struct AcousticProjectionGeometry {
-    /// Lateral (x) positions of each sensor element [m].
+    /// Lateral (x) positions of each sensor element (m).
     pub element_x: Vec<f64>,
-    /// Axial (z) position of the sensor array plane [m].  Typically 0.
+    /// Axial (z) position of the sensor array plane (m).  Typically 0.
     pub element_z: f64,
-    /// Speed of sound in the medium [m/s].
+    /// Speed of sound in the medium (m/s).
     pub sound_speed: f64,
     /// Tissue attenuation coefficient [dB/(cm·MHz)].
     /// Soft tissue typical: 0.5.  Water: ≈ 0.002.
     pub attenuation_db_cm_mhz: f64,
-    /// Transducer centre frequency [Hz].
+    /// Transducer centre frequency (Hz).
     pub center_frequency_hz: f64,
-    /// Physical voxel spacing (dx, dy, dz) [m].
+    /// Physical voxel spacing (dx, dy, dz) (m).
     pub voxel_spacing: (f64, f64, f64),
 }
 
@@ -81,6 +81,7 @@ impl AcousticProjectionGeometry {
     ///                  = α_dB × 1.15129e-4
     /// ```
     #[inline]
+    #[must_use] 
     pub fn alpha_nepers_per_m_per_hz(&self) -> f64 {
         self.attenuation_db_cm_mhz * (10.0_f64.ln() / 20.0) * 100.0 * 1e-6
     }
@@ -118,10 +119,10 @@ pub(crate) fn project_acoustic(
             let dx2 = (xv - xs) * (xv - xs);
             for j in 0..ny {
                 let yv = j as f64 * dy;
-                let dxy2 = dx2 + yv * yv;
+                let dxy2 = yv.mul_add(yv, dx2);
                 for k in 0..nz {
                     let zv = k as f64 * dz;
-                    let r = (dxy2 + (zv - zs) * (zv - zs)).sqrt().max(1e-6);
+                    let r = (zv - zs).mul_add(zv - zs, dxy2).sqrt().max(1e-6);
                     let weight = (-2.0 * alpha * f_c * r).exp() / r;
                     sum += weight * image[[i, j, k]];
                 }
@@ -137,9 +138,9 @@ pub(crate) fn project_acoustic(
 /// # Algorithm
 ///
 /// The adjoint of `project_acoustic` distributes each sensor residual
-/// r[s] back to all voxels weighted by the same A[s,v]:
+/// r(s) back to all voxels weighted by the same A[s,v]:
 /// ```text
-/// [Aᵀ·r][i,j,k] = Σ_s A[s,(i,j,k)] · r[s]
+/// [Aᵀ·r][i,j,k] = Σ_s A[s,(i,j,k)] · r(s)
 /// ```
 pub(crate) fn backproject_acoustic(
     residual: &Array1<f64>,
@@ -160,10 +161,10 @@ pub(crate) fn backproject_acoustic(
             let dx2 = (xv - xs) * (xv - xs);
             for j in 0..ny {
                 let yv = j as f64 * dy;
-                let dxy2 = dx2 + yv * yv;
+                let dxy2 = yv.mul_add(yv, dx2);
                 for k in 0..nz {
                     let zv = k as f64 * dz;
-                    let r = (dxy2 + (zv - zs) * (zv - zs)).sqrt().max(1e-6);
+                    let r = (zv - zs).mul_add(zv - zs, dxy2).sqrt().max(1e-6);
                     let weight = (-2.0 * alpha * f_c * r).exp() / r;
                     image[[i, j, k]] += weight * r_s;
                 }

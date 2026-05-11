@@ -3,8 +3,8 @@ use super::orchestrator::CloudPINNService;
 
 #[tokio::test]
 async fn test_cloud_service_creation() {
-    let service = CloudPINNService::new(CloudProvider::AWS).await;
-    assert!(service.is_ok());
+    let service = CloudPINNService::new(CloudProvider::AWS).await.unwrap();
+    assert_eq!(service.provider, CloudProvider::AWS);
 }
 
 #[tokio::test]

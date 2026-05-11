@@ -31,7 +31,10 @@ use std::collections::HashMap;
 
 const POWER_ITERATIONS: usize = 128;
 const POWER_TOLERANCE: f64 = 1e-12;
-
+/// Fuse pca.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub(crate) fn fuse_pca(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
     let modalities = super::utils::sorted_modalities(fusion)?;
     let dims = super::utils::common_registered_dims(&modalities, "PCA fusion")?;

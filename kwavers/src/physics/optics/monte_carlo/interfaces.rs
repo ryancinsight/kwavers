@@ -141,11 +141,11 @@ pub fn fresnel_reflectance(n1: f64, n2: f64, cos_theta_i: f64) -> f64 {
 #[must_use]
 pub fn reflect_direction(dir: [f64; 3], n_hat: [f64; 3]) -> [f64; 3] {
     // r = d − 2(d·n)n
-    let dot = dir[0] * n_hat[0] + dir[1] * n_hat[1] + dir[2] * n_hat[2];
+    let dot = dir[2].mul_add(n_hat[2], dir[0].mul_add(n_hat[0], dir[1] * n_hat[1]));
     [
-        dir[0] - 2.0 * dot * n_hat[0],
-        dir[1] - 2.0 * dot * n_hat[1],
-        dir[2] - 2.0 * dot * n_hat[2],
+        (2.0 * dot).mul_add(-n_hat[0], dir[0]),
+        (2.0 * dot).mul_add(-n_hat[1], dir[1]),
+        (2.0 * dot).mul_add(-n_hat[2], dir[2]),
     ]
 }
 
@@ -173,7 +173,7 @@ pub fn reflect_direction(dir: [f64; 3], n_hat: [f64; 3]) -> [f64; 3] {
 pub fn refract_direction(dir: [f64; 3], n_hat: [f64; 3], n1: f64, n2: f64) -> Option<[f64; 3]> {
     let eta = n1 / n2;
     // cos θᵢ = −dir·n̂  (dir points toward surface, n̂ points away from surface)
-    let cos_i = -(dir[0] * n_hat[0] + dir[1] * n_hat[1] + dir[2] * n_hat[2]);
+    let cos_i = -dir[2].mul_add(n_hat[2], dir[0].mul_add(n_hat[0], dir[1] * n_hat[1]));
     let cos_i = cos_i.max(0.0);
 
     let sin2_t = eta * eta * (1.0 - cos_i * cos_i);
@@ -182,11 +182,11 @@ pub fn refract_direction(dir: [f64; 3], n_hat: [f64; 3], n1: f64, n2: f64) -> Op
     }
 
     let cos_t = (1.0 - sin2_t).sqrt();
-    let scale = eta * cos_i - cos_t;
+    let scale = eta.mul_add(cos_i, -cos_t);
     Some([
-        eta * dir[0] + scale * n_hat[0],
-        eta * dir[1] + scale * n_hat[1],
-        eta * dir[2] + scale * n_hat[2],
+        eta.mul_add(dir[0], scale * n_hat[0]),
+        eta.mul_add(dir[1], scale * n_hat[1]),
+        eta.mul_add(dir[2], scale * n_hat[2]),
     ])
 }
 
@@ -214,7 +214,7 @@ pub fn apply_fresnel<R: Rng>(
     // cos θᵢ from the *outward* convention used for the incident side
     let cos_theta_i = {
         let d = *direction;
-        let dot = d[0] * n_hat[0] + d[1] * n_hat[1] + d[2] * n_hat[2];
+        let dot = d[2].mul_add(n_hat[2], d[0].mul_add(n_hat[0], d[1] * n_hat[1]));
         // n_hat points INTO the incident medium; cos θᵢ = -d·n̂ when d
         // points toward the surface
         (-dot).clamp(0.0, 1.0)
@@ -252,6 +252,9 @@ mod tests {
 
     /// Test Fresnel reflectance at normal incidence against the analytic formula:
     /// R₀ = [(n₁ − n₂)/(n₁ + n₂)]²
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_fresnel_normal_incidence() {
         // Water–glass: n₁=1.33, n₂=1.5 → R₀ = ((1.33-1.5)/(1.33+1.5))² ≈ 0.00359
@@ -264,6 +267,9 @@ mod tests {
     }
 
     /// At grazing incidence (cos θᵢ → 0) reflectance → 1 for any interface.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_fresnel_grazing_incidence() {
         let r = fresnel_reflectance(1.0, 1.5, 0.0);
@@ -274,6 +280,9 @@ mod tests {
     }
 
     /// Total internal reflection: n₁ > n₂, sin θᵢ > n₂/n₁.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_total_internal_reflection() {
         let n1 = 1.5;
@@ -287,6 +296,9 @@ mod tests {
     }
 
     /// Identical refractive indices → zero reflectance.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_fresnel_identical_media() {
         let r = fresnel_reflectance(1.4, 1.4, 0.5);
@@ -295,6 +307,9 @@ mod tests {
 
     /// Snell's law verification: refracted direction satisfies
     /// n₁ sin θᵢ = n₂ sin θₜ.
+    /// # Panics
+    /// - Panics if `No TIR at 30°`.
+    ///
     #[test]
     fn test_snell_law_refraction() {
         let n1 = 1.0;
@@ -321,6 +336,9 @@ mod tests {
     }
 
     /// Reflection: direction component along normal reverses.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_reflect_direction() {
         let dir = [0.5_f64.sqrt(), 0.0, 0.5_f64.sqrt()]; // 45° to normal

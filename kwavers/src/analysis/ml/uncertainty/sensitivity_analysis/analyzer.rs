@@ -14,11 +14,17 @@ pub struct SensitivityAnalyzer {
 
 impl SensitivityAnalyzer {
     /// Create new sensitivity analyzer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: SensitivityConfig) -> KwaversResult<Self> {
         Ok(Self { config })
     }
 
     /// Perform global sensitivity analysis
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn analyze<F>(
         &self,
         model_fn: F,
@@ -38,6 +44,9 @@ impl SensitivityAnalyzer {
     }
 
     /// Generate parameter samples for sensitivity analysis
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn generate_parameter_samples(
         &self,
         parameter_ranges: &[(f64, f64)],
@@ -234,6 +243,9 @@ impl SensitivityAnalyzer {
     }
 
     /// Perform Morris screening for factor prioritization
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn morris_screening(
         &self,
         model_fn: impl Fn(&Array1<f64>) -> Array1<f64>,
@@ -277,8 +289,8 @@ impl SensitivityAnalyzer {
         for _ in 1..length {
             let param_to_change = rng.gen_range(0..parameter_ranges.len());
             let (min_val, max_val) = parameter_ranges[param_to_change];
-            let step = rng.gen_range(-0.5..0.5);
-            let new_value = current_point[param_to_change] + step * (max_val - min_val);
+            let step: f64 = rng.gen_range(-0.5..0.5);
+            let new_value = step.mul_add(max_val - min_val, current_point[param_to_change]);
             current_point[param_to_change] = new_value.max(min_val).min(max_val);
             trajectory.push(current_point.clone());
         }

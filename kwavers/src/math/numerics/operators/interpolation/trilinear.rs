@@ -28,11 +28,18 @@ pub struct TrilinearInterpolator {
 
 impl TrilinearInterpolator {
     /// Create a new trilinear interpolator with grid spacings `dx`, `dy`, `dz` (meters).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(dx: f64, dy: f64, dz: f64) -> Self {
         Self { dx, dy, dz }
     }
 
     /// Interpolate at a single 3D point (x, y, z) in physical coordinates.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn interpolate_point(
         &self,
         data: ArrayView3<f64>,
@@ -52,7 +59,7 @@ impl TrilinearInterpolator {
 
         if i >= nx - 1 || j >= ny - 1 || k >= nz - 1 {
             return Err(NumericalError::InterpolationOutOfBounds {
-                point: (x.powi(2) + y.powi(2) + z.powi(2)).sqrt(),
+                point: z.mul_add(z, y.mul_add(y, x.powi(2))).sqrt(),
                 min: 0.0,
                 max: ((nx - 1) as f64 * self.dx)
                     .max((ny - 1) as f64 * self.dy)
@@ -74,14 +81,12 @@ impl TrilinearInterpolator {
         let w011 = (1.0 - tx) * ty * tz;
         let w111 = tx * ty * tz;
 
-        let value = w000 * data[[i, j, k]]
+        let value = w111.mul_add(data[[i + 1, j + 1, k + 1]], w000 * data[[i, j, k]]
             + w100 * data[[i + 1, j, k]]
             + w010 * data[[i, j + 1, k]]
             + w110 * data[[i + 1, j + 1, k]]
             + w001 * data[[i, j, k + 1]]
-            + w101 * data[[i + 1, j, k + 1]]
-            + w011 * data[[i, j + 1, k + 1]]
-            + w111 * data[[i + 1, j + 1, k + 1]];
+            + w101 * data[[i + 1, j, k + 1]] + w011 * data[[i, j + 1, k + 1]]);
 
         Ok(value)
     }
@@ -110,7 +115,7 @@ impl Interpolator for TrilinearInterpolator {
             }
 
             let t = i_float - (i as f64);
-            result[idx] = data[i] * (1.0 - t) + data[i + 1] * t;
+            result[idx] = data[i].mul_add(1.0 - t, data[i + 1] * t);
         }
 
         Ok(result)

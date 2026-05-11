@@ -19,6 +19,10 @@ impl GpuPstdSolver {
     /// * `vel_x_indices` — flat grid indices of ux velocity source points (u32); pass `&[]` for none
     /// * `vel_x_signals` — ux velocity amplitude per (source_pt, step),
     ///   flat `[n_vel_x * nt]` row-major; pass `&[]` for none
+    /// # Panics
+    /// - Panics if `cache populated above`.
+    /// - Panics if `staging buffer allocated in cache miss path`.
+    ///
     pub fn run(
         &mut self,
         sensor_indices: &[u32],

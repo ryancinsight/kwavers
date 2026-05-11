@@ -33,6 +33,7 @@ impl SafetyAuditLogger {
     /// Create new audit logger with a maximum entry capacity.
     ///
     /// When the capacity is exceeded, the oldest entry is removed (FIFO).
+    #[must_use] 
     pub fn new(max_entries: usize) -> Self {
         Self {
             log_entries: Arc::new(Mutex::new(Vec::new())),
@@ -66,13 +67,13 @@ impl SafetyAuditLogger {
     /// Log a safety violation with structured metadata.
     pub fn log_violation(&self, violation: &SafetyViolation) {
         let mut metadata = HashMap::new();
-        metadata.insert("parameter".to_string(), violation.parameter.clone());
+        metadata.insert("parameter".to_owned(), violation.parameter.clone());
         metadata.insert(
-            "measured_value".to_string(),
+            "measured_value".to_owned(),
             violation.measured_value.to_string(),
         );
-        metadata.insert("limit_value".to_string(), violation.limit_value.to_string());
-        metadata.insert("severity".to_string(), format!("{:?}", violation.severity));
+        metadata.insert("limit_value".to_owned(), violation.limit_value.to_string());
+        metadata.insert("severity".to_owned(), format!("{:?}", violation.severity));
 
         self.log_event(
             SafetyEventType::Violation,
@@ -84,8 +85,8 @@ impl SafetyAuditLogger {
     /// Log a system safety state transition.
     pub fn log_system_state(&self, old_state: SafetyLevel, new_state: SafetyLevel) {
         let mut metadata = HashMap::new();
-        metadata.insert("old_state".to_string(), format!("{:?}", old_state));
-        metadata.insert("new_state".to_string(), format!("{:?}", new_state));
+        metadata.insert("old_state".to_owned(), format!("{:?}", old_state));
+        metadata.insert("new_state".to_owned(), format!("{:?}", new_state));
 
         let message = format!(
             "System safety state changed from {:?} to {:?}",
@@ -95,6 +96,10 @@ impl SafetyAuditLogger {
     }
 
     /// Get a clone of all audit log entries.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn get_entries(&self) -> Vec<AuditEntry> {
         self.log_entries
             .lock()
@@ -105,6 +110,9 @@ impl SafetyAuditLogger {
     /// Export audit log to a JSONL file (one JSON object per line).
     ///
     /// Fields per line: `timestamp_ms`, `event_type`, `message`, `metadata`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn export_log(&self, filename: &str) -> KwaversResult<()> {
         use std::io::Write;
 
@@ -115,8 +123,7 @@ impl SafetyAuditLogger {
 
         for entry in entries.iter() {
             let elapsed_ms = reference
-                .map(|r| entry.timestamp.duration_since(r).as_millis())
-                .unwrap_or(0);
+                .map_or(0, |r| entry.timestamp.duration_since(r).as_millis());
 
             let meta_pairs: Vec<String> = entry
                 .metadata

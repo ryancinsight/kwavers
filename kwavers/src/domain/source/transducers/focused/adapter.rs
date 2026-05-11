@@ -16,6 +16,10 @@ pub struct FocusedSource {
 }
 
 impl FocusedSource {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         config: BowlConfig,
         signal: Arc<dyn Signal>,

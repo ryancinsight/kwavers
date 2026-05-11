@@ -36,6 +36,9 @@ use std::f64::consts::PI;
 /// References:
 /// - Hairer, Lubich & Wanner (2006) *Geometric Numerical Integration* §II.1, §V.3.
 /// - Yoshida (1990) Phys. Lett. A 150:262.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_yoshida4_order() {
     // SHO parameters: ω = 1, x₀ = 1, v₀ = 0

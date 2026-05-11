@@ -1,6 +1,6 @@
 //! `TimeIntegrator` — velocity-Verlet time integration for elastic waves.
 
-use super::super::stress::StressDerivatives;
+use super::super::stress::stress_divergence;
 use super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -16,7 +16,6 @@ pub struct TimeIntegrator<'a> {
     mu: &'a Array3<f64>,
     density: &'a Array3<f64>,
     pml_sigma: &'a Array3<f64>,
-    stress_calc: StressDerivatives<'a>,
 }
 
 impl<'a> TimeIntegrator<'a> {
@@ -35,7 +34,6 @@ impl<'a> TimeIntegrator<'a> {
             mu,
             density,
             pml_sigma,
-            stress_calc: StressDerivatives::new(grid),
         }
     }
 
@@ -46,6 +44,9 @@ impl<'a> TimeIntegrator<'a> {
     /// 2. Full-step displacement: u(t+Δt) = u(t) + Δt * v(t+Δt/2)
     /// 3. Half-step velocity update: v(t+Δt) = v(t+Δt/2) + (Δt/2) * a(t+Δt)
     /// 4. Apply PML damping
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(
         &self,
         field: &mut ElasticWaveField,
@@ -100,6 +101,9 @@ impl<'a> TimeIntegrator<'a> {
     }
 
     /// Perform single time step with multiple simultaneous body forces.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step_with_body_forces(
         &self,
         field: &mut ElasticWaveField,
@@ -167,9 +171,14 @@ impl<'a> TimeIntegrator<'a> {
         Ok(())
     }
 
-    /// Compute acceleration from stress divergence and body forces.
+    /// Compute elastic acceleration a = (∇·σ + f) / ρ.
     ///
-    /// Formula: `a = (∇·σ + f) / ρ`
+    /// Uses a two-pass stress divergence: first construct the full 6-component
+    /// stress tensor from displacements and spatially-varying Lamé parameters,
+    /// then differentiate to obtain ∇·σ.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn compute_acceleration(
         &self,
         field: &ElasticWaveField,
@@ -180,12 +189,11 @@ impl<'a> TimeIntegrator<'a> {
         time: f64,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = field.ux.dim();
+        let (div_x, div_y, div_z) = stress_divergence(self.grid, self.lambda, self.mu, field);
 
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let div = self.stress_calc.stress_divergence(i, j, k, field);
-
                     let force = if let Some(bf) = body_force {
                         self.evaluate_body_force(bf, i, j, k, time)?
                     } else {
@@ -193,9 +201,9 @@ impl<'a> TimeIntegrator<'a> {
                     };
 
                     let rho = self.density[[i, j, k]];
-                    ax[[i, j, k]] = (div[0] + force[0]) / rho;
-                    ay[[i, j, k]] = (div[1] + force[1]) / rho;
-                    az[[i, j, k]] = (div[2] + force[2]) / rho;
+                    ax[[i, j, k]] = (div_x[[i, j, k]] + force[0]) / rho;
+                    ay[[i, j, k]] = (div_y[[i, j, k]] + force[1]) / rho;
+                    az[[i, j, k]] = (div_z[[i, j, k]] + force[2]) / rho;
                 }
             }
         }
@@ -213,12 +221,11 @@ impl<'a> TimeIntegrator<'a> {
         time: f64,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = field.ux.dim();
+        let (div_x, div_y, div_z) = stress_divergence(self.grid, self.lambda, self.mu, field);
 
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let div = self.stress_calc.stress_divergence(i, j, k, field);
-
                     let mut force = [0.0, 0.0, 0.0];
                     for bf in body_forces {
                         let f = self.evaluate_body_force(bf, i, j, k, time)?;
@@ -228,9 +235,9 @@ impl<'a> TimeIntegrator<'a> {
                     }
 
                     let rho = self.density[[i, j, k]];
-                    ax[[i, j, k]] = (div[0] + force[0]) / rho;
-                    ay[[i, j, k]] = (div[1] + force[1]) / rho;
-                    az[[i, j, k]] = (div[2] + force[2]) / rho;
+                    ax[[i, j, k]] = (div_x[[i, j, k]] + force[0]) / rho;
+                    ay[[i, j, k]] = (div_y[[i, j, k]] + force[1]) / rho;
+                    az[[i, j, k]] = (div_z[[i, j, k]] + force[2]) / rho;
                 }
             }
         }
@@ -281,16 +288,14 @@ impl<'a> TimeIntegrator<'a> {
                 }
 
                 let spatial_factor = (-0.5
-                    * ((dx / sx) * (dx / sx) + (dy / sy) * (dy / sy) + (dz / sz) * (dz / sz)))
+                    * (dz / sz).mul_add(dz / sz, (dx / sx).mul_add(dx / sx, (dy / sy) * (dy / sy))))
                     .exp();
 
                 let dt = time - *t0_s;
                 let temporal_factor = (-(dt * dt) / (2.0 * sigma_t_s * sigma_t_s)).exp()
                     / (sigma_t_s * (2.0 * std::f64::consts::PI).sqrt());
 
-                let dir_norm = (direction[0] * direction[0]
-                    + direction[1] * direction[1]
-                    + direction[2] * direction[2])
+                let dir_norm = direction[2].mul_add(direction[2], direction[0].mul_add(direction[0], direction[1] * direction[1]))
                     .sqrt();
                 if !dir_norm.is_finite() || dir_norm < 1e-12 {
                     return Ok([0.0, 0.0, 0.0]);
@@ -344,7 +349,7 @@ impl<'a> TimeIntegrator<'a> {
 
                     if rho_val > 0.0 {
                         let cs = (mu_val / rho_val).sqrt();
-                        let cp = ((lambda_val + 2.0 * mu_val) / rho_val).sqrt();
+                        let cp = (2.0f64.mul_add(mu_val, lambda_val) / rho_val).sqrt();
                         max_c = f64::max(max_c, f64::max(cs, cp));
                     }
                 }

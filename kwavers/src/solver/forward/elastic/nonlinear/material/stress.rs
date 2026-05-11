@@ -88,6 +88,9 @@ fn cauchy_stress_invariant_based(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -
 /// This implements the complete hyperelastic stress relations for Ogden materials,
 /// computing stress directly from principal stretches without approximation.
 /// Reference: Ogden (1984), Nonlinear Elastic Deformations, Eq. (4.3.8)
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 fn cauchy_stress_ogden(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
     if let HyperelasticModel::Ogden { mu, alpha } = model {
         let lambda = principal_stretches(model, f);
@@ -148,19 +151,19 @@ fn cauchy_stress_ogden(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3
 pub fn mat3_cofactor(f: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
     [
         [
-            f[1][1] * f[2][2] - f[1][2] * f[2][1], // C₀₀ = +(F₁₁F₂₂ − F₁₂F₂₁)
-            -(f[1][0] * f[2][2] - f[1][2] * f[2][0]), // C₀₁ = −(F₁₀F₂₂ − F₁₂F₂₀)
-            f[1][0] * f[2][1] - f[1][1] * f[2][0], // C₀₂ = +(F₁₀F₂₁ − F₁₁F₂₀)
+            f[1][1].mul_add(f[2][2], -(f[1][2] * f[2][1])), // C₀₀ = +(F₁₁F₂₂ − F₁₂F₂₁)
+            -f[1][0].mul_add(f[2][2], -(f[1][2] * f[2][0])), // C₀₁ = −(F₁₀F₂₂ − F₁₂F₂₀)
+            f[1][0].mul_add(f[2][1], -(f[1][1] * f[2][0])), // C₀₂ = +(F₁₀F₂₁ − F₁₁F₂₀)
         ],
         [
-            -(f[0][1] * f[2][2] - f[0][2] * f[2][1]), // C₁₀ = −(F₀₁F₂₂ − F₀₂F₂₁)
-            f[0][0] * f[2][2] - f[0][2] * f[2][0],    // C₁₁ = +(F₀₀F₂₂ − F₀₂F₂₀)
-            -(f[0][0] * f[2][1] - f[0][1] * f[2][0]), // C₁₂ = −(F₀₀F₂₁ − F₀₁F₂₀)
+            -f[0][1].mul_add(f[2][2], -(f[0][2] * f[2][1])), // C₁₀ = −(F₀₁F₂₂ − F₀₂F₂₁)
+            f[0][0].mul_add(f[2][2], -(f[0][2] * f[2][0])),    // C₁₁ = +(F₀₀F₂₂ − F₀₂F₂₀)
+            -f[0][0].mul_add(f[2][1], -(f[0][1] * f[2][0])), // C₁₂ = −(F₀₀F₂₁ − F₀₁F₂₀)
         ],
         [
-            f[0][1] * f[1][2] - f[0][2] * f[1][1], // C₂₀ = +(F₀₁F₁₂ − F₀₂F₁₁)
-            -(f[0][0] * f[1][2] - f[0][2] * f[1][0]), // C₂₁ = −(F₀₀F₁₂ − F₀₂F₁₀)
-            f[0][0] * f[1][1] - f[0][1] * f[1][0], // C₂₂ = +(F₀₀F₁₁ − F₀₁F₁₀)
+            f[0][1].mul_add(f[1][2], -(f[0][2] * f[1][1])), // C₂₀ = +(F₀₁F₁₂ − F₀₂F₁₁)
+            -f[0][0].mul_add(f[1][2], -(f[0][2] * f[1][0])), // C₂₁ = −(F₀₀F₁₂ − F₀₂F₁₀)
+            f[0][0].mul_add(f[1][1], -(f[0][1] * f[1][0])), // C₂₂ = +(F₀₀F₁₁ − F₀₁F₁₀)
         ],
     ]
 }
@@ -237,10 +240,8 @@ pub fn first_pk_stress(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3
             tr_c2 += c_ij * c[j][i];
         }
     }
-    let i2 = 0.5 * (i1 * i1 - tr_c2);
-    let j_det = f[0][0] * (f[1][1] * f[2][2] - f[1][2] * f[2][1])
-        - f[0][1] * (f[1][0] * f[2][2] - f[1][2] * f[2][0])
-        + f[0][2] * (f[1][0] * f[2][1] - f[1][1] * f[2][0]);
+    let i2 = 0.5 * i1.mul_add(i1, -tr_c2);
+    let j_det = f[0][2].mul_add(f[1][0].mul_add(f[2][1], -(f[1][1] * f[2][0])), f[0][0].mul_add(f[1][1].mul_add(f[2][2], -(f[1][2] * f[2][1])), -(f[0][1] * f[1][0].mul_add(f[2][2], -(f[1][2] * f[2][0])))));
 
     // Energy derivatives (∂W/∂I₁, ∂W/∂I₂, ∂W/∂J)
     let dw_di1 = compute_strain_energy_derivative_wrt_i1(model, i1, i2, j_det, Some(f));
@@ -264,8 +265,7 @@ pub fn first_pk_stress(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3
     let mut p = [[0.0_f64; 3]; 3];
     for i in 0..3 {
         for cap_a in 0..3 {
-            p[i][cap_a] = 2.0 * dw_di1 * f[i][cap_a]
-                + 2.0 * dw_di2 * (i1 * f[i][cap_a] - fc[i][cap_a])
+            p[i][cap_a] = (2.0 * dw_di1).mul_add(f[i][cap_a], 2.0 * dw_di2 * i1.mul_add(f[i][cap_a], -fc[i][cap_a]))
                 + dw_dj * cof_f[i][cap_a];
         }
     }

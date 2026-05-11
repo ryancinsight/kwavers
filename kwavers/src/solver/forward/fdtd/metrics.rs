@@ -31,7 +31,7 @@ impl FdtdMetrics {
     }
 
     /// Merge metrics from another instance
-    pub fn merge(&mut self, other: &FdtdMetrics) {
+    pub fn merge(&mut self, other: &Self) {
         self.update_pressure_time += other.update_pressure_time;
         self.update_velocity_time += other.update_velocity_time;
         self.divergence_time += other.divergence_time;

@@ -52,12 +52,6 @@ pub struct ShockDetector {
     use_modal_decay: bool,
     /// Use jump indicator
     use_jump_indicator: bool,
-    /// Use entropy residual
-    #[allow(dead_code)]
-    use_entropy_residual: bool,
-    /// Smoothness exponent for modal decay
-    #[allow(dead_code)]
-    smoothness_exponent: f64,
 }
 
 impl Default for ShockDetector {
@@ -66,8 +60,6 @@ impl Default for ShockDetector {
             threshold: 0.01,
             use_modal_decay: true,
             use_jump_indicator: true,
-            use_entropy_residual: false,
-            smoothness_exponent: 2.0,
         }
     }
 }
@@ -151,6 +143,9 @@ impl ShockDetector {
     }
 
     /// Compute entropy-based shock indicator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_entropy_indicator(
         &self,
         pressure: &Array3<f64>,
@@ -199,6 +194,9 @@ impl ShockDetector {
     }
 
     /// Compute pressure-based shock indicator (Ducros sensor)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_pressure_indicator(
         &self,
         pressure: &Array3<f64>,
@@ -215,13 +213,13 @@ impl ShockDetector {
                     let p_center = pressure[[i, j, k]];
 
                     // Second derivatives for detecting discontinuities
-                    let d2p_dx2 = (pressure[[i + 1, j, k]] - 2.0 * p_center
+                    let d2p_dx2 = (2.0f64.mul_add(-p_center, pressure[[i + 1, j, k]])
                         + pressure[[i - 1, j, k]])
                         / (grid.dx * grid.dx);
-                    let d2p_dy2 = (pressure[[i, j + 1, k]] - 2.0 * p_center
+                    let d2p_dy2 = (2.0f64.mul_add(-p_center, pressure[[i, j + 1, k]])
                         + pressure[[i, j - 1, k]])
                         / (grid.dy * grid.dy);
-                    let d2p_dz2 = (pressure[[i, j, k + 1]] - 2.0 * p_center
+                    let d2p_dz2 = (2.0f64.mul_add(-p_center, pressure[[i, j, k + 1]])
                         + pressure[[i, j, k - 1]])
                         / (grid.dz * grid.dz);
 
@@ -237,7 +235,7 @@ impl ShockDetector {
                     let laplacian = d2p_dx2 + d2p_dy2 + d2p_dz2;
                     let grad_mag = (dp_dx * dp_dx + dp_dy * dp_dy + dp_dz * dp_dz).sqrt();
 
-                    let sensor = laplacian.abs() / (grad_mag + EPSILON * p_center.abs());
+                    let sensor = laplacian.abs() / EPSILON.mul_add(p_center.abs(), grad_mag);
                     indicator[[i, j, k]] = (sensor / self.threshold).min(1.0);
                 }
             }
@@ -247,6 +245,9 @@ impl ShockDetector {
     }
 
     /// Compute velocity divergence indicator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_divergence_indicator(
         &self,
         velocity: &Array4<f64>,

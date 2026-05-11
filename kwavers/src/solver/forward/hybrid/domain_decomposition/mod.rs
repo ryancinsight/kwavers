@@ -49,6 +49,9 @@ pub struct DomainDecomposer {
 
 impl DomainDecomposer {
     /// Create a new domain decomposer with default parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -58,6 +61,9 @@ impl DomainDecomposer {
     }
 
     /// Decompose the domain based on medium properties, grid, and strategy
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn decompose(
         &self,
         grid: &Grid,

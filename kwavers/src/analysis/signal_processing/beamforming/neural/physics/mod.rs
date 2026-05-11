@@ -63,6 +63,10 @@ impl PhysicsConstraints {
     ///
     /// - All weights must be in [0.0, 1.0]
     /// - Higher weights = stronger constraint enforcement
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
+    #[must_use] 
     pub fn new(reciprocity_weight: f64, coherence_weight: f64, sparsity_weight: f64) -> Self {
         debug_assert!(
             (0.0..=1.0).contains(&reciprocity_weight),
@@ -88,16 +92,19 @@ impl PhysicsConstraints {
     }
 
     /// Get reciprocity constraint weight.
+    #[must_use] 
     pub fn reciprocity_weight(&self) -> f64 {
         self.reciprocity_weight
     }
 
     /// Get coherence constraint weight.
+    #[must_use] 
     pub fn coherence_weight(&self) -> f64 {
         self.coherence_weight
     }
 
     /// Get sparsity constraint weight.
+    #[must_use] 
     pub fn sparsity_weight(&self) -> f64 {
         self.sparsity_weight
     }
@@ -116,6 +123,9 @@ impl PhysicsConstraints {
     /// # Returns
     ///
     /// Constrained image satisfying physical consistency requirements.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply(&self, image: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         let mut constrained = image.clone();
 
@@ -164,7 +174,7 @@ impl PhysicsConstraints {
                         image[[i, j + 1, k]],
                     ];
                     let avg = neighborhood.iter().sum::<f32>() / 4.0;
-                    result[[i, j, k]] = image[[i, j, k]] * (1.0 - alpha) + avg * alpha;
+                    result[[i, j, k]] = image[[i, j, k]].mul_add(1.0 - alpha, avg * alpha);
                 }
             }
         }
@@ -210,7 +220,7 @@ impl PhysicsConstraints {
                     let center = image[[i, j, k]];
 
                     // Laplacian: ∇²I ≈ (sum_neighbors - 4·center)
-                    let laplacian = neighbors_sum - 4.0 * center;
+                    let laplacian = 4.0f32.mul_add(-center, neighbors_sum);
 
                     // Diffusion update
                     smoothed[[i, j, k]] = center + lambda * laplacian;
@@ -263,6 +273,9 @@ impl PhysicsConstraints {
     /// # Arguments
     ///
     /// * `feedback` - Performance metrics from beamforming iteration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update(&mut self, feedback: &BeamformingFeedback) -> KwaversResult<()> {
         if feedback.improvement <= 0.0 {
             // Poor performance: relax constraints

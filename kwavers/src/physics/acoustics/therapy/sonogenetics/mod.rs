@@ -21,7 +21,7 @@
 //!
 //!  Membrane mechanics
 //!  ─────────────────────────────────────────────────────────────────────────
-//!  radiation_pressure P_rad(x) = I/c         [Pa]
+//!  radiation_pressure P_rad(x) = I/c         (Pa)
 //!  membrane_tension   ΔT(x) = I·R/(2·c)      [N/m]   (Laplace thin-shell)
 //!
 //!  Channel gating

@@ -47,7 +47,6 @@
 //! - Berenger (1994). J. Comput. Phys. 114(2), 185–200. (split-field PML)
 
 use crate::core::error::KwaversResult;
-use crate::math::fft::Complex64;
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::solver::geometry::Geometry;
 use ndarray::{s, Zip};
@@ -57,6 +56,9 @@ impl PSTDSolver {
     ///
     /// Dispatches to [`update_velocity_as`] when `config.geometry == CylindricalAS`,
     /// otherwise uses the standard 3-D spectral path.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[inline]
     pub(crate) fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
         if self.config.geometry == Geometry::CylindricalAS {
@@ -69,6 +71,9 @@ impl PSTDSolver {
     ///
     /// Uses staggered grid shift operators matching the C++ k-wave binary:
     ///   grad_x(p) = IFFT( ddx_k_shift_pos[x] * kappa[i,j,k] * FFT(p)[i,j,k] )
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[inline]
     pub(crate) fn update_velocity_cartesian(&mut self, dt: f64) -> KwaversResult<()> {
         let has_y = self.grid.ny > 1;
@@ -105,7 +110,7 @@ impl PSTDSolver {
                 .and(self.p_k.view())
                 .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(i, _j, _k), gk, &p_val, &kap| {
-                    *gk = ddx[i] * Complex64::new(kap, 0.0) * p_val;
+                    *gk = (ddx[i] * p_val) * kap;
                 });
         }
         self.fft
@@ -125,7 +130,7 @@ impl PSTDSolver {
                 .and(self.p_k.view())
                 .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
-                    *gk = ddy[j] * Complex64::new(kap, 0.0) * p_val;
+                    *gk = (ddy[j] * p_val) * kap;
                 });
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
@@ -146,7 +151,7 @@ impl PSTDSolver {
                 .and(self.p_k.view())
                 .and(self.kappa.slice(s![.., .., ..nz_c]))
                 .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
-                    *gk = ddz[k] * Complex64::new(kap, 0.0) * p_val;
+                    *gk = (ddz[k] * p_val) * kap;
                 });
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
@@ -177,6 +182,12 @@ impl PSTDSolver {
     /// ux -= dt / rho0 * dp/dx          (axial momentum)
     /// uz -= dt / rho0 * dp/dr          (radial momentum, staggered at r_{m+1/2})
     /// ```
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if `AsContext must be Some for CylindricalAS`.
+    ///
     pub(crate) fn update_velocity_as(&mut self, dt: f64) -> KwaversResult<()> {
         self.apply_pml_to_velocity()?; // pre-step PML
 
@@ -222,6 +233,9 @@ impl PSTDSolver {
     ///
     /// The staggered sigma is smaller at PML boundary cells (~70% of σ_max at deepest cell),
     /// so using non-staggered sigma for velocity over-damps it by ≈ 20%.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn apply_pml_to_velocity(&mut self) -> KwaversResult<()> {
         if let Some(boundary) = self.boundary.as_deref_mut() {
             boundary.apply_velocity_pml_directional(

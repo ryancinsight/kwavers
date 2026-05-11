@@ -30,7 +30,7 @@
 //! ```text
 //!   λ₀ = 1 − u,   λ₁ = u(1−v),   λ₂ = uv
 //! ```
-//! so the shape functions `N₀=λ₀`, `N₁=λ₁`, `N₂=λ₂` are bounded for u ∈ [0,1].
+//! so the shape functions `N₀=λ₀`, `N₁=λ₁`, `N₂=λ₂` are bounded for u ∈ \[0,1\].
 //!
 //! # Nearly-Singular Integrals
 //!
@@ -95,6 +95,9 @@ const GL3_WEIGHTS: [f64; 3] = [
 /// `(h_contrib, g_contrib)` — contributions to the H and G BEM matrices
 /// for each of the 3 element nodes. `h_contrib` is zero for flat elements
 /// (since `(r−r_src)·n = 0` for same-plane source and field points).
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[must_use]
 pub fn compute_singular_integrals(
     k: f64,
@@ -117,10 +120,10 @@ pub fn compute_singular_integrals(
     // Triangle area for Jacobian
     let e1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
     let e2 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
-    let cx = e1[1] * e2[2] - e1[2] * e2[1];
-    let cy = e1[2] * e2[0] - e1[0] * e2[2];
-    let cz = e1[0] * e2[1] - e1[1] * e2[0];
-    let area = 0.5 * (cx * cx + cy * cy + cz * cz).sqrt();
+    let cx = e1[1].mul_add(e2[2], -(e1[2] * e2[1]));
+    let cy = e1[2].mul_add(e2[0], -(e1[0] * e2[2]));
+    let cz = e1[0].mul_add(e2[1], -(e1[1] * e2[0]));
+    let area = 0.5 * cz.mul_add(cz, cx.mul_add(cx, cy * cy)).sqrt();
 
     // 3×3 Gauss-Legendre quadrature on [0,1]² (9 points)
     let mut g_duffy = [Complex64::ZERO; 3]; // indices: [p0, p1, p2]
@@ -132,9 +135,9 @@ pub fn compute_singular_integrals(
             let dp1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
             let dp2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
 
-            let rx = p0[0] + u * dp1[0] + u * v * (dp2[0] - dp1[0]);
-            let ry = p0[1] + u * dp1[1] + u * v * (dp2[1] - dp1[1]);
-            let rz = p0[2] + u * dp1[2] + u * v * (dp2[2] - dp1[2]);
+            let rx = (u * v).mul_add(dp2[0] - dp1[0], u.mul_add(dp1[0], p0[0]));
+            let ry = (u * v).mul_add(dp2[1] - dp1[1], u.mul_add(dp1[1], p0[1]));
+            let rz = (u * v).mul_add(dp2[2] - dp1[2], u.mul_add(dp1[2], p0[2]));
             let r_field = [rx, ry, rz];
 
             // Barycentric: λ₀ = 1-u, λ₁ = u(1-v), λ₂ = uv
@@ -149,16 +152,16 @@ pub fn compute_singular_integrals(
             let dx = rx - p0[0];
             let dy = ry - p0[1];
             let dz = rz - p0[2];
-            let r_dist = (dx * dx + dy * dy + dz * dz).sqrt();
+            let r_dist = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             let g_times_jac = if r_dist < 1e-14 {
                 // Limit u→0: G·J → 1/(4πu|dir|) * 2A·u = A/(2π|dir|)
                 let dir = [
-                    dp1[0] + v * (dp2[0] - dp1[0]),
-                    dp1[1] + v * (dp2[1] - dp1[1]),
-                    dp1[2] + v * (dp2[2] - dp1[2]),
+                    v.mul_add(dp2[0] - dp1[0], dp1[0]),
+                    v.mul_add(dp2[1] - dp1[1], dp1[1]),
+                    v.mul_add(dp2[2] - dp1[2], dp1[2]),
                 ];
-                let dir_norm = (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]).sqrt();
+                let dir_norm = dir[2].mul_add(dir[2], dir[0].mul_add(dir[0], dir[1] * dir[1])).sqrt();
                 Complex64::new(area / (2.0 * PI * dir_norm.max(1e-20)), 0.0)
             } else {
                 let (g_val, _) = green_helmholtz(k, p0, r_field);
@@ -219,6 +222,10 @@ mod tests {
     /// for the unit right triangle (from Duffy 1982, Table 3.2).
     ///
     /// Tolerance: 1% relative error (the formula is approximate).
+    /// # Panics
+    /// - Panics if assertion fails: `Duffy integral of 1/(4πR) out of expected range: {:.4e}`.
+    /// - Panics if assertion fails: `1/(4πR) integral must be positive`.
+    ///
     #[test]
     fn test_duffy_static_green_function() {
         let p0 = [0.0, 0.0, 0.0]; // singular vertex
@@ -265,6 +272,9 @@ mod tests {
     /// The naive 3-point rule places no quadrature points near the singularity
     /// and underestimates I. The Duffy transformation regularizes the 1/R kernel
     /// and produces a closer estimate.
+    /// # Panics
+    /// - Panics if assertion fails: `Duffy error vs analytical too large: {:.3e}`.
+    ///
     #[test]
     fn test_duffy_closer_to_analytical_than_naive() {
         let p0 = [0.0, 0.0, 0.0];
@@ -314,6 +324,9 @@ mod tests {
     }
 
     /// H contribution is zero for a flat triangle (source on element).
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_h_contribution_zero_flat_element() {
         let p0 = [0.0, 0.0, 0.0];

@@ -63,7 +63,7 @@ pub struct MUSICConfig {
     /// Search region bounds [xmin, xmax, ymin, ymax, zmin, zmax] in meters
     pub search_bounds: [f64; 6],
 
-    /// Minimum separation between detected sources [m]
+    /// Minimum separation between detected sources (m)
     pub min_source_separation: f64,
 
     /// Number of temporal snapshots for covariance estimation
@@ -75,12 +75,13 @@ pub struct MUSICConfig {
     /// Prevents ill-conditioning. Typical value: 1e-6 to 1e-3.
     pub diagonal_loading: f64,
 
-    /// Center frequency for steering vector calculation [Hz]
+    /// Center frequency for steering vector calculation (Hz)
     pub center_frequency: f64,
 }
 
 impl MUSICConfig {
     /// Create new MUSIC configuration
+    #[must_use] 
     pub fn new(config: LocalizationConfig, num_sources: Option<usize>) -> Self {
         let center_frequency = config.sampling_frequency / 4.0;
         Self {
@@ -97,42 +98,49 @@ impl MUSICConfig {
     }
 
     /// Set model order selection criterion
+    #[must_use] 
     pub fn with_criterion(mut self, criterion: ModelOrderCriterion) -> Self {
         self.model_order_criterion = criterion;
         self
     }
 
     /// Set grid resolution
+    #[must_use] 
     pub fn with_grid_resolution(mut self, resolution: usize) -> Self {
         self.grid_resolution = resolution;
         self
     }
 
     /// Set search region bounds
+    #[must_use] 
     pub fn with_search_bounds(mut self, bounds: [f64; 6]) -> Self {
         self.search_bounds = bounds;
         self
     }
 
     /// Set minimum source separation
+    #[must_use] 
     pub fn with_min_separation(mut self, separation: f64) -> Self {
         self.min_source_separation = separation;
         self
     }
 
     /// Set number of snapshots
+    #[must_use] 
     pub fn with_num_snapshots(mut self, snapshots: usize) -> Self {
         self.num_snapshots = snapshots;
         self
     }
 
     /// Set diagonal loading factor
+    #[must_use] 
     pub fn with_diagonal_loading(mut self, loading: f64) -> Self {
         self.diagonal_loading = loading;
         self
     }
 
     /// Set center frequency
+    #[must_use] 
     pub fn with_center_frequency(mut self, frequency: f64) -> Self {
         self.center_frequency = frequency;
         self

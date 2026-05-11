@@ -19,6 +19,9 @@ use super::super::super::config::TherapySessionConfig;
 ///
 /// - Chaussy et al. (1980): "Extracorporeally induced destruction of kidney stones"
 /// - ISO 16869:2015: "Lithotripters - Characteristics"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn init_lithotripsy_simulator(
     config: &TherapySessionConfig,
     grid: &Grid,
@@ -71,6 +74,12 @@ fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f
 /// Load CT imaging data from medical imaging sources.
 ///
 /// Returns error to trigger fallback to synthetic data when CT unavailable.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f64>> {
     if let Some(ct_path) = &config.imaging_data_path {
         if ct_path.ends_with(".nii") || ct_path.ends_with(".nii.gz") {

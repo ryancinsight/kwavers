@@ -11,6 +11,9 @@ use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use ndarray::Array3;
 
 /// Construct a minimal 4×4×4 grid for point-query tests.
+/// # Panics
+/// - Panics if `grid construction must succeed`.
+///
 fn small_grid() -> Grid {
     Grid::new(4, 4, 4, 1.0, 1.0, 1.0).expect("grid construction must succeed")
 }
@@ -29,6 +32,9 @@ fn uniform_medium(alpha0: f64, alpha_power: f64, f_ref: f64) -> HeterogeneousMed
 /// At the reference frequency the frequency ratio is exactly 1, so the
 /// power-law factor is 1 regardless of the exponent.  The computed value
 /// must equal α₀ to machine precision.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_absorption_at_reference_frequency_equals_alpha0() {
     let f_ref = 1.0e6; // 1 MHz
@@ -47,6 +53,9 @@ fn test_absorption_at_reference_frequency_equals_alpha0() {
 ///
 /// With α₀=1, y=2, f=2·f_ref the result must be exactly 4.0.
 /// Proof: (2·f_ref / f_ref)^2 = 2² = 4.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_power_law_exponent_y2_doubles_frequency() {
     let f_ref = 500.0e3; // 500 kHz
@@ -64,6 +73,9 @@ fn test_power_law_exponent_y2_doubles_frequency() {
 /// **Theorem (Szabo 1994):** y=1.5 is the canonical tissue exponent
 /// (Szabo 1994, Table I).  At f=4·f_ref:
 ///   α = α₀ · 4^1.5 = α₀ · 8
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_power_law_tissue_exponent_y1_5() {
     let f_ref = 1.0e6;
@@ -81,6 +93,9 @@ fn test_power_law_tissue_exponent_y1_5() {
 
 /// **Theorem:** y=1 gives linear frequency dependence.
 /// At f=3·f_ref: α = α₀ · 3.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_power_law_linear_exponent_y1() {
     let f_ref = 200.0e3;
@@ -98,6 +113,9 @@ fn test_power_law_linear_exponent_y1() {
 
 /// **Theorem:** `alpha_power()` returns the stored exponent at continuous
 /// coordinates (nearest-neighbor, no interpolation).
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_alpha_power_query_returns_stored_exponent() {
     let mut m = HeterogeneousMedium::new(4, 4, 4, false);
@@ -118,6 +136,9 @@ fn test_alpha_power_query_returns_stored_exponent() {
 /// At f=2·f_ref:
 ///   α[0,0,0] = α₀ · 2^1 = 2·α₀
 ///   α[3,3,3] = α₀ · 2^2 = 4·α₀
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_spatially_varying_alpha_power() {
     let f_ref = 1.0e6;
@@ -144,6 +165,9 @@ fn test_spatially_varying_alpha_power() {
 
 /// **Theorem:** default `alpha_power` in `HeterogeneousMedium::new()` is 1.0
 /// (linear frequency dependence), per the struct contract.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_default_alpha_power_is_one() {
     let m = HeterogeneousMedium::new(4, 4, 4, false);
@@ -157,6 +181,9 @@ fn test_default_alpha_power_is_one() {
 }
 
 /// **Theorem:** `TissueFactory` sets alpha_power=1.5 per Szabo (1994) Table I.
+/// # Panics
+/// - Panics if `grid must be valid`.
+///
 #[test]
 fn test_tissue_factory_alpha_power_is_1_5() {
     use crate::domain::medium::heterogeneous::factory::tissue::TissueFactory;

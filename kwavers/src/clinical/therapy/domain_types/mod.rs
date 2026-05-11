@@ -62,6 +62,7 @@ pub struct TherapyParameters {
 
 impl TherapyParameters {
     /// Create new therapy parameters
+    #[must_use] 
     pub fn new(frequency: f64, pressure: f64, duration: f64) -> Self {
         Self {
             frequency,
@@ -76,6 +77,7 @@ impl TherapyParameters {
     }
 
     /// HIFU standard parameters
+    #[must_use] 
     pub fn hifu() -> Self {
         Self {
             frequency: 1.5e6,

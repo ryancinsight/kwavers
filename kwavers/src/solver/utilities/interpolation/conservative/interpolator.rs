@@ -157,16 +157,25 @@ impl ConservativeInterpolator {
     }
 
     /// Reference to the source grid.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn source_grid(&self) -> &Grid {
         &self.source_grid
     }
 
     /// Reference to the target grid.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn target_grid(&self) -> &Grid {
         &self.target_grid
     }
 
     /// Number of non-zero entries in the sparse transfer matrix.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn nnz(&self) -> usize {
         self.transfer_matrix.iter().map(|row| row.len()).sum()
     }
@@ -176,12 +185,12 @@ impl ConservativeInterpolator {
     fn validate_grids(source: &Grid, target: &Grid) -> KwaversResult<()> {
         if source.nx == 0 || source.ny == 0 || source.nz == 0 {
             return Err(KwaversError::InvalidInput(
-                "Source grid has zero dimension".to_string(),
+                "Source grid has zero dimension".to_owned(),
             ));
         }
         if target.nx == 0 || target.ny == 0 || target.nz == 0 {
             return Err(KwaversError::InvalidInput(
-                "Target grid has zero dimension".to_string(),
+                "Target grid has zero dimension".to_owned(),
             ));
         }
         Ok(())
@@ -193,6 +202,9 @@ impl ConservativeInterpolator {
     }
 
     /// Build sparse transfer matrix via axis-aligned box intersection volumes.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn build_transfer_matrix(
         source: &Grid,
         target: &Grid,

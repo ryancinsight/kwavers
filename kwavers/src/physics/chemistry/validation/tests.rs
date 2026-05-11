@@ -36,18 +36,14 @@ fn test_percent_difference() {
 #[test]
 fn test_validated_kinetics_oh_recombination() {
     let kinetics = ValidatedKinetics::new();
-    let result = kinetics.validate("oh_recombination", 5.5e9);
-    assert!(result.is_ok());
-    let res = result.unwrap();
+    let res = kinetics.validate("oh_recombination", 5.5e9).unwrap();
     assert!(res.within_range);
 }
 
 #[test]
 fn test_validated_kinetics_out_of_range() {
     let kinetics = ValidatedKinetics::new();
-    let result = kinetics.validate("oh_recombination", 1e10); // Too high
-    assert!(result.is_ok());
-    let res = result.unwrap();
+    let res = kinetics.validate("oh_recombination", 1e10).unwrap(); // Too high
     assert!(!res.within_range);
 }
 
@@ -101,10 +97,10 @@ fn test_high_activation_energy_q10() {
 fn test_kinetics_database_completeness() {
     let kinetics = ValidatedKinetics::new();
 
-    assert!(kinetics.validate("oh_recombination", 5e9).is_ok());
-    assert!(kinetics.validate("superoxide_dismutation", 1.5e8).is_ok());
-    assert!(kinetics.validate("peroxide_hydroxyl", 2.7e7).is_ok());
-    assert!(kinetics.validate("ozone_hydroxyl", 1e8).is_ok());
+    assert!(kinetics.validate("oh_recombination", 5e9).unwrap().within_range);
+    kinetics.validate("superoxide_dismutation", 1.5e8).unwrap();
+    kinetics.validate("peroxide_hydroxyl", 2.7e7).unwrap();
+    kinetics.validate("ozone_hydroxyl", 1e8).unwrap();
 }
 
 #[test]
@@ -120,7 +116,5 @@ fn test_case_insensitivity() {
     let result1 = kinetics.validate("OH_RECOMBINATION", 5.5e9);
     let result2 = kinetics.validate("oh_recombination", 5.5e9);
 
-    assert!(result1.is_ok());
-    assert!(result2.is_ok());
     assert_eq!(result1.unwrap().within_range, result2.unwrap().within_range);
 }

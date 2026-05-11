@@ -69,7 +69,7 @@ pub fn green_helmholtz(k: f64, r_src: [f64; 3], r_obs: [f64; 3]) -> (Complex64, 
     let dx = r_obs[0] - r_src[0];
     let dy = r_obs[1] - r_src[1];
     let dz = r_obs[2] - r_src[2];
-    let r_sq = dx * dx + dy * dy + dz * dz;
+    let r_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
     if r_sq < NEAR_FIELD_CUTOFF_SQ {
         return (Complex64::ZERO, [Complex64::ZERO; 3]);
@@ -104,7 +104,7 @@ pub fn green_normal_deriv(k: f64, r_src: [f64; 3], r_obs: [f64; 3], normal: [f64
     let dx = r_obs[0] - r_src[0];
     let dy = r_obs[1] - r_src[1];
     let dz = r_obs[2] - r_src[2];
-    let r_sq = dx * dx + dy * dy + dz * dz;
+    let r_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
     if r_sq < NEAR_FIELD_CUTOFF_SQ {
         return Complex64::ZERO;
@@ -128,6 +128,9 @@ mod tests {
     use std::f64::consts::PI;
 
     /// G(r, r') → 1/(4πR) as k→0 (static Laplace Green's function).
+    /// # Panics
+    /// - Panics if assertion fails: `k=0 Green's: rel={:.3e}`.
+    ///
     #[test]
     fn test_green_zero_wavenumber() {
         let r_src = [0.0, 0.0, 0.0];
@@ -140,6 +143,9 @@ mod tests {
     }
 
     /// G(r, r') = G(r', r) (reciprocity / symmetry of fundamental solution).
+    /// # Panics
+    /// - Panics if assertion fails: `G must be symmetric: diff={:.3e}`.
+    ///
     #[test]
     fn test_green_symmetry() {
         let r1 = [0.3, 0.5, 0.1];
@@ -154,6 +160,9 @@ mod tests {
     /// ∇G matches central finite differences to < 10⁻⁷ relative error.
     ///
     /// Numerical gradient via 6-point FD: `g_i = (G(r + ε·eᵢ) − G(r − ε·eᵢ)) / (2ε)`.
+    /// # Panics
+    /// - Panics if assertion fails: `Gradient dim={}: FD={:.4e}+{:.4e}i, exact={:.4e}+{:.4e}i, rel={:.3e}`.
+    ///
     #[test]
     fn test_green_gradient_fd() {
         let r_src = [0.0, 0.0, 0.0];
@@ -190,6 +199,9 @@ mod tests {
     }
 
     /// |G(r, r')| = 1/(4πR) (envelope of complex exponential).
+    /// # Panics
+    /// - Panics if assertion fails: `|G| error: rel={:.3e}`.
+    ///
     #[test]
     fn test_green_modulus() {
         let r_src = [0.0, 0.0, 0.0];

@@ -33,12 +33,21 @@ pub const APFEL_HOLLAND_CAVITATION_THRESHOLD_1MHZ_PA: f64 = 0.7e6;
 /// Core cavitation detection and modeling
 pub trait CavitationCore: Send + Sync {
     /// Detect cavitation based on pressure threshold
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn detect_cavitation(&self, pressure: f64, threshold: f64) -> bool;
 
     /// Calculate cavitation index
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn cavitation_index(&self, pressure: f64, vapor_pressure: f64, ambient_pressure: f64) -> f64;
 
     /// Update cavitation state
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn update(&mut self, pressure_field: &Array3<f64>, dt: f64) -> KwaversResult<()>;
 }
 

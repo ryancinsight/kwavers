@@ -41,14 +41,14 @@
 //!
 //! # Module layout
 //!
-//! - [`core`]: root [`Beamformer`] trait — minimal `focus_at_point` contract.
-//! - [`time_domain`]: [`TimeDomainBeamformer`] — RF time-series with delay
+//! - `core`: root [`Beamformer`] trait — minimal `focus_at_point` contract.
+//! - `time_domain`: [`TimeDomainBeamformer`] — RF time-series with delay
 //!   computation and apodization.
-//! - [`frequency_domain`]: [`FrequencyDomainBeamformer`] — FFT-bin steering
+//! - `frequency_domain`: [`FrequencyDomainBeamformer`] — FFT-bin steering
 //!   vectors and sample covariance.
-//! - [`adaptive`]: [`AdaptiveBeamformer`] — data-driven weight optimization
+//! - `adaptive`: [`AdaptiveBeamformer`] — data-driven weight optimization
 //!   with diagonal loading and pseudospectrum.
-//! - [`config`]: [`BeamformerConfig`] — sensor-array initialization seam.
+//! - `config`: [`BeamformerConfig`] — sensor-array initialization seam.
 //!
 //! # Mathematical Foundation
 //!

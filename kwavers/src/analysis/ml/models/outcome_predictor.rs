@@ -17,12 +17,19 @@ impl Default for OutcomePredictorModel {
 }
 
 impl OutcomePredictorModel {
+    /// Create an outcome predictor with default metadata.
+    ///
+    /// Predicts three-class treatment outcomes from a 20-element feature vector.
+    /// Uses a mean-based heuristic baseline; output shape is `[n, 3]`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
             metadata: ModelMetadata {
-                name: "OutcomePredictor".to_string(),
-                version: "1.0.0".to_string(),
+                name: "OutcomePredictor".to_owned(),
+                version: "1.0.0".to_owned(),
                 input_shape: vec![20],
                 output_shape: vec![3],
                 accuracy: 0.88_f64,
@@ -42,9 +49,9 @@ impl MLModel for OutcomePredictorModel {
         if input.is_empty() {
             return Err(crate::core::error::KwaversError::Validation(
                 crate::core::error::ValidationError::FieldValidation {
-                    field: "input".to_string(),
-                    value: "empty array".to_string(),
-                    constraint: "array must not be empty".to_string(),
+                    field: "input".to_owned(),
+                    value: "empty array".to_owned(),
+                    constraint: "array must not be empty".to_owned(),
                 },
             ));
         }
@@ -52,9 +59,9 @@ impl MLModel for OutcomePredictorModel {
         let mean = input.mean_axis(ndarray::Axis(1)).ok_or_else(|| {
             crate::core::error::KwaversError::Validation(
                 crate::core::error::ValidationError::FieldValidation {
-                    field: "input".to_string(),
+                    field: "input".to_owned(),
                     value: format!("shape {:?}", input.shape()),
-                    constraint: "cannot compute mean across empty axis".to_string(),
+                    constraint: "cannot compute mean across empty axis".to_owned(),
                 },
             )
         })?;

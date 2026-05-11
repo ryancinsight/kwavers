@@ -30,6 +30,7 @@ pub struct BemSolution {
 ///
 /// Max, N.L. (1999). "Weights for computing vertex normals from facet normals."
 /// *Journal of Graphics Tools*, 4(2), 1–6.
+#[must_use] 
 pub fn compute_vertex_normals(vertices: &[[f64; 3]], triangles: &[[usize; 3]]) -> Vec<[f64; 3]> {
     let nv = vertices.len();
     let mut normals = vec![[0.0f64; 3]; nv];
@@ -43,9 +44,9 @@ pub fn compute_vertex_normals(vertices: &[[f64; 3]], triangles: &[[usize; 3]]) -
         let e2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
 
         // Cross product e1 × e2 (magnitude = 2 × triangle area)
-        let cx = e1[1] * e2[2] - e1[2] * e2[1];
-        let cy = e1[2] * e2[0] - e1[0] * e2[2];
-        let cz = e1[0] * e2[1] - e1[1] * e2[0];
+        let cx = e1[1].mul_add(e2[2], -(e1[2] * e2[1]));
+        let cy = e1[2].mul_add(e2[0], -(e1[0] * e2[2]));
+        let cz = e1[0].mul_add(e2[1], -(e1[1] * e2[0]));
 
         for &vi in tri {
             normals[vi][0] += cx;
@@ -56,7 +57,7 @@ pub fn compute_vertex_normals(vertices: &[[f64; 3]], triangles: &[[usize; 3]]) -
 
     // Normalise
     for n in &mut normals {
-        let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
+        let len = n[2].mul_add(n[2], n[0].mul_add(n[0], n[1] * n[1])).sqrt();
         if len > 1e-15 {
             n[0] /= len;
             n[1] /= len;
@@ -91,6 +92,7 @@ pub fn compute_vertex_normals(vertices: &[[f64; 3]], triangles: &[[usize; 3]]) -
 ///
 /// Colton, D. & Kress, R. (1998). *Inverse Acoustic and Electromagnetic Scattering Theory*,
 /// 2nd ed., Springer. §3.1.
+#[must_use] 
 pub fn plane_wave_incident(
     vertices: &[[f64; 3]],
     normals: &[[f64; 3]],
@@ -99,7 +101,7 @@ pub fn plane_wave_incident(
     amplitude: Complex64,
 ) -> (Vec<Complex64>, Vec<Complex64>) {
     let dlen =
-        (direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2])
+        direction[2].mul_add(direction[2], direction[0].mul_add(direction[0], direction[1] * direction[1]))
             .sqrt()
             .max(1e-15);
     let d = [
@@ -115,9 +117,9 @@ pub fn plane_wave_incident(
     let mut dp_inc_dn = Vec::with_capacity(n);
 
     for (xi, ni) in vertices.iter().zip(normals.iter()) {
-        let phase = d[0] * xi[0] + d[1] * xi[1] + d[2] * xi[2];
+        let phase = d[2].mul_add(xi[2], d[0].mul_add(xi[0], d[1] * xi[1]));
         let pi = amplitude * Complex64::from_polar(1.0, wavenumber * phase);
-        let dn = d[0] * ni[0] + d[1] * ni[1] + d[2] * ni[2];
+        let dn = d[2].mul_add(ni[2], d[0].mul_add(ni[0], d[1] * ni[1]));
         p_inc.push(pi);
         dp_inc_dn.push(ik * dn * pi);
     }

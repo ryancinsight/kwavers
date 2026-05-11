@@ -32,6 +32,9 @@ pub struct UncertaintyQuantifier {
 
 impl UncertaintyQuantifier {
     /// Create new uncertainty quantifier.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: UncertaintyConfig) -> KwaversResult<Self> {
         let bayesian = if matches!(
             config.method,
@@ -91,6 +94,10 @@ impl UncertaintyQuantifier {
     }
 
     /// Quantify uncertainty for PINN predictions.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[cfg(feature = "pinn")]
     pub fn quantify_pinn_uncertainty<B: Backend>(
         &self,
@@ -154,6 +161,9 @@ impl UncertaintyQuantifier {
     }
 
     /// Quantify uncertainty for beamforming results.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn quantify_beamforming_uncertainty(
         &self,
         beamformed_image: &Array3<f32>,
@@ -195,6 +205,9 @@ impl UncertaintyQuantifier {
     }
 
     /// Perform sensitivity analysis on model parameters.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn sensitivity_analysis(
         &self,
         model_fn: impl Fn(&Array1<f64>) -> Array1<f64>,
@@ -205,7 +218,7 @@ impl UncertaintyQuantifier {
             sensitivity.analyze(model_fn, parameter_ranges, num_samples)
         } else {
             Err(KwaversError::InvalidInput(
-                "Sensitivity analysis not configured".to_string(),
+                "Sensitivity analysis not configured".to_owned(),
             ))
         }
     }
@@ -253,6 +266,7 @@ impl UncertaintyQuantifier {
     }
 
     /// Generate uncertainty report.
+    #[must_use] 
     pub fn generate_report<'a>(
         &self,
         results: &'a [Box<dyn UncertaintyResult>],
@@ -298,20 +312,20 @@ impl UncertaintyQuantifier {
         let mut recommendations = Vec::new();
 
         if summary.mean_confidence < 0.7 {
-            recommendations.push("High uncertainty detected. Consider additional imaging or reduced confidence in diagnosis.".to_string());
+            recommendations.push("High uncertainty detected. Consider additional imaging or reduced confidence in diagnosis.".to_owned());
         }
 
         if summary.confidence_range.1 - summary.confidence_range.0 > 0.3 {
-            recommendations.push("Wide confidence range indicates variable reliability. Focus on high-confidence regions.".to_string());
+            recommendations.push("Wide confidence range indicates variable reliability. Focus on high-confidence regions.".to_owned());
         }
 
         if summary.reliability_score < 0.6 {
-            recommendations.push("Low overall reliability. Consider alternative imaging modalities or expert consultation.".to_string());
+            recommendations.push("Low overall reliability. Consider alternative imaging modalities or expert consultation.".to_owned());
         }
 
         if recommendations.is_empty() {
             recommendations
-                .push("Uncertainty levels acceptable for clinical decision-making.".to_string());
+                .push("Uncertainty levels acceptable for clinical decision-making.".to_owned());
         }
 
         recommendations

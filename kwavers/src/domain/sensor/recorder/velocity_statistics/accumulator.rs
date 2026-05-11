@@ -70,6 +70,9 @@ impl VelocityComponentStats {
     ///
     /// Updates max, min, and squared sum element-wise.  O(N³) but fully
     /// parallelised via rayon — no allocation.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[inline]
     pub fn update(&mut self, field: &Array3<f64>) {
         debug_assert_eq!(
@@ -110,6 +113,9 @@ impl VelocityComponentStats {
     // ── Sensor-position sampling ─────────────────────────────────────────────
 
     /// Sample the per-component max at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sample_max(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros(positions.len());
@@ -118,6 +124,9 @@ impl VelocityComponentStats {
     }
 
     /// Fill caller-owned storage with per-component max at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_max(
         &self,
         positions: &[(usize, usize, usize)],
@@ -127,6 +136,9 @@ impl VelocityComponentStats {
     }
 
     /// Sample the per-component min at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sample_min(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros(positions.len());
@@ -135,6 +147,9 @@ impl VelocityComponentStats {
     }
 
     /// Fill caller-owned storage with per-component min at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_min(
         &self,
         positions: &[(usize, usize, usize)],
@@ -144,6 +159,9 @@ impl VelocityComponentStats {
     }
 
     /// Sample the per-component RMS at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sample_rms(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros(positions.len());
@@ -152,6 +170,9 @@ impl VelocityComponentStats {
     }
 
     /// Fill caller-owned storage with per-component RMS at sensor positions.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn fill_rms(
         &self,
         positions: &[(usize, usize, usize)],

@@ -73,12 +73,12 @@ impl OperatorSplittingSolver {
         if self.ny == 1 && self.nz == 1 {
             // 1D case
             for i in 1..self.nx - 1 {
-                let laplacian = (pressure[[i + 1, 0, 0]] - 2.0 * pressure[[i, 0, 0]]
+                let laplacian = (2.0f64.mul_add(-pressure[[i, 0, 0]], pressure[[i + 1, 0, 0]])
                     + pressure[[i - 1, 0, 0]])
                     / (self.dx * self.dx);
 
                 pressure_next[[i, 0, 0]] =
-                    2.0 * pressure[[i, 0, 0]] - pressure_prev[[i, 0, 0]] + dt2 * c2 * laplacian;
+                    (dt2 * c2).mul_add(laplacian, 2.0f64.mul_add(pressure[[i, 0, 0]], -pressure_prev[[i, 0, 0]]));
             }
         } else {
             // 2D/3D case
@@ -87,7 +87,7 @@ impl OperatorSplittingSolver {
                     for i in 1..self.nx.saturating_sub(1).max(1) {
                         // Compute Laplacian
                         let laplacian_x = if self.nx > 1 {
-                            (pressure[[i + 1, j, k]] - 2.0 * pressure[[i, j, k]]
+                            (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i + 1, j, k]])
                                 + pressure[[i - 1, j, k]])
                                 / (self.dx * self.dx)
                         } else {
@@ -95,7 +95,7 @@ impl OperatorSplittingSolver {
                         };
 
                         let laplacian_y = if self.ny > 1 {
-                            (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
+                            (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i, j + 1, k]])
                                 + pressure[[i, j - 1, k]])
                                 / (self.dy * self.dy)
                         } else {
@@ -103,7 +103,7 @@ impl OperatorSplittingSolver {
                         };
 
                         let laplacian_z = if self.nz > 1 {
-                            (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
+                            (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i, j, k + 1]])
                                 + pressure[[i, j, k - 1]])
                                 / (self.dz * self.dz)
                         } else {
@@ -113,9 +113,7 @@ impl OperatorSplittingSolver {
                         let laplacian = laplacian_x + laplacian_y + laplacian_z;
 
                         // Leapfrog time integration
-                        pressure_next[[i, j, k]] = 2.0 * pressure[[i, j, k]]
-                            - pressure_prev[[i, j, k]]
-                            + dt2 * c2 * laplacian;
+                        pressure_next[[i, j, k]] = (dt2 * c2).mul_add(laplacian, 2.0f64.mul_add(pressure[[i, j, k]], -pressure_prev[[i, j, k]]));
                     }
                 }
             }
@@ -181,11 +179,11 @@ impl OperatorSplittingSolver {
         }
 
         // Apply the nonlinear correction
+        let scale = self.dt * self.sound_speed * norm_factor / beta;
         Zip::from(pressure)
             .and(&flux_gradient)
-            .for_each(|p, &grad| {
-                // Convert back from normalized units
-                *p -= self.dt * self.sound_speed * norm_factor * grad / beta;
+            .par_for_each(|p, &grad| {
+                *p -= scale * grad;
             });
     }
 

@@ -47,6 +47,9 @@ pub struct TimeScaleSeparator {
 
 impl TimeScaleSeparator {
     /// Create a new time scale separator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: &Grid) -> Self {
         Self {
             grid: grid.clone(),
@@ -56,6 +59,12 @@ impl TimeScaleSeparator {
     }
 
     /// Analyze fields to identify time scales
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn analyze(&mut self, fields: &Array4<f64>, tolerance: f64) -> KwaversResult<Vec<f64>> {
         let mut time_scales = Vec::new();
 
@@ -90,6 +99,9 @@ impl TimeScaleSeparator {
     }
 
     /// Determine if the system is stiff based on time scale separation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn is_stiff(&self) -> bool {
         if let Some(last_scales) = self.time_scale_history.last() {
             if last_scales.len() >= 2 {
@@ -101,6 +113,9 @@ impl TimeScaleSeparator {
     }
 
     /// Compute spatial derivatives for time scale analysis
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_spatial_derivatives(
         &self,
         field: &Array3<f64>,
@@ -122,13 +137,13 @@ impl TimeScaleSeparator {
                     grad_max = grad_max.max(grad_mag);
 
                     // Laplacian
-                    let d2x = (field[[i + 1, j, k]] - 2.0 * field[[i, j, k]]
+                    let d2x = (2.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]])
                         + field[[i - 1, j, k]])
                         / (grid.dx * grid.dx);
-                    let d2y = (field[[i, j + 1, k]] - 2.0 * field[[i, j, k]]
+                    let d2y = (2.0f64.mul_add(-field[[i, j, k]], field[[i, j + 1, k]])
                         + field[[i, j - 1, k]])
                         / (grid.dy * grid.dy);
-                    let d2z = (field[[i, j, k + 1]] - 2.0 * field[[i, j, k]]
+                    let d2z = (2.0f64.mul_add(-field[[i, j, k]], field[[i, j, k + 1]])
                         + field[[i, j, k - 1]])
                         / (grid.dz * grid.dz);
                     let laplacian = (d2x + d2y + d2z).abs();

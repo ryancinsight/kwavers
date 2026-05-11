@@ -24,6 +24,9 @@ use std::sync::Arc;
 /// The key distinguishing property is bounded oscillation vs secular drift.
 ///
 /// Assertion: H_min > 0.5 × H₀  and  H_max < 2.0 × H₀  over 1000 periods.
+/// # Panics
+/// - Panics if `SV step must not fail`.
+///
 #[test]
 fn test_hamiltonian_no_drift() {
     let r0 = 10e-6;

@@ -44,8 +44,12 @@ consus-core = { git = "https://github.com/ryancinsight/consus", features = ["std
 consus-compression = { git = "https://github.com/ryancinsight/consus", features = ["std", "deflate"] }
 consus-io = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
 # Required so Cargo can parse apollo-fft/Cargo.toml (workspace-inherited deps).
+# rustfft pinned to apollo's workspace version (apollo/Cargo.toml). Kwavers
+# source code uses apollo, not rustfft; this declaration exists only because
+# apollo-fft's bench harness inherits rustfft via `workspace = true`.
 rand = "0.8"
 criterion = "0.5"
+rustfft = "6.4.1"
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }

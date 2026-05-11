@@ -32,6 +32,9 @@ fn homogeneous_medium() -> (crate::domain::medium::HomogeneousMedium, ()) {
 /// - K_00 = 0.5  (gradient of node 0 dotted with itself × volume 1/6)
 /// - K_11 = 1/6
 /// - Row sum = 0 (partition of unity)
+/// # Panics
+/// - Panics if `Assembly failed`.
+///
 #[test]
 fn test_assembly_one_element() {
     let (mesh, _) = unit_tet();
@@ -64,6 +67,9 @@ fn test_assembly_one_element() {
 /// At centroid (0.25, 0.25, 0.25): u = 0.25(1+2+3) = 1.5.
 /// At vertex (1,0,0): u = 1.0.
 /// Outside mesh: u = 0.0.
+/// # Panics
+/// - Panics if `Interpolation failed`.
+///
 #[test]
 fn test_interpolate_solution_basic() {
     let (mesh, [n0, n1, n2, n3]) = unit_tet();
@@ -90,6 +96,10 @@ fn test_interpolate_solution_basic() {
 /// Dirichlet BCs on nodes 0/1/2; solve Laplace; node 3 must satisfy free-node equation.
 ///
 /// Boundary: u(n0)=0, u(n1)=1, u(n2)=0. Free node n3 enforces row sum = 0 → u(n3)=0.
+/// # Panics
+/// - Panics if `Assembly failed`.
+/// - Panics if `Solve failed`.
+///
 #[test]
 fn test_solve_system_one_element_dirichlet() {
     let (mesh, [n0, n1, n2, _n3]) = unit_tet();

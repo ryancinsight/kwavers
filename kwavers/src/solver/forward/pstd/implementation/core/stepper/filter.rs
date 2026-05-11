@@ -10,6 +10,9 @@ impl PSTDSolver {
     ///
     /// Removes high-frequency spatial components that can cause instability
     /// or aliasing when using PSTD with nonlinearities.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn apply_anti_aliasing_filter(&mut self) -> KwaversResult<()> {
         if let Some(filter) = &self.filter {
             // filter has shape (nx, ny, nz_c) — truncated to the r2c half-spectrum
@@ -21,7 +24,7 @@ impl PSTDSolver {
             self.fft.forward_r2c_into(&self.fields.p, &mut self.p_k);
             Zip::from(&mut self.p_k)
                 .and(filter)
-                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+                .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
                 .inverse_c2r_into(&self.p_k, &mut self.fields.p, &mut self.ux_k);
 
@@ -29,21 +32,21 @@ impl PSTDSolver {
             self.fft.forward_r2c_into(&self.rhox, &mut self.p_k);
             Zip::from(&mut self.p_k)
                 .and(filter)
-                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+                .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
                 .inverse_c2r_into(&self.p_k, &mut self.rhox, &mut self.uy_k);
 
             self.fft.forward_r2c_into(&self.rhoy, &mut self.p_k);
             Zip::from(&mut self.p_k)
                 .and(filter)
-                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+                .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
                 .inverse_c2r_into(&self.p_k, &mut self.rhoy, &mut self.uy_k);
 
             self.fft.forward_r2c_into(&self.rhoz, &mut self.p_k);
             Zip::from(&mut self.p_k)
                 .and(filter)
-                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+                .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
                 .inverse_c2r_into(&self.p_k, &mut self.rhoz, &mut self.uy_k);
 
@@ -51,7 +54,7 @@ impl PSTDSolver {
             self.fft.forward_r2c_into(&self.fields.ux, &mut self.ux_k);
             Zip::from(&mut self.ux_k)
                 .and(filter)
-                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+                .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
                 .inverse_c2r_into(&self.ux_k, &mut self.fields.ux, &mut self.p_k);
 
@@ -59,7 +62,7 @@ impl PSTDSolver {
             self.fft.forward_r2c_into(&self.fields.uy, &mut self.uy_k);
             Zip::from(&mut self.uy_k)
                 .and(filter)
-                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+                .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
                 .inverse_c2r_into(&self.uy_k, &mut self.fields.uy, &mut self.p_k);
 
@@ -67,7 +70,7 @@ impl PSTDSolver {
             self.fft.forward_r2c_into(&self.fields.uz, &mut self.uz_k);
             Zip::from(&mut self.uz_k)
                 .and(filter)
-                .for_each(|val, &f| *val *= Complex64::new(f, 0.0));
+                .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
                 .inverse_c2r_into(&self.uz_k, &mut self.fields.uz, &mut self.p_k);
         }

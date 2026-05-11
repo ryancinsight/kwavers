@@ -68,13 +68,11 @@ impl TissueFactory {
                 let center_x = grid.nx as f64 / 2.0;
                 let center_y = grid.ny as f64 / 2.0;
                 let center_z = grid.nz as f64 / 2.0;
-                let dist_from_center = ((i as f64 - center_x).powi(2)
-                    + (j as f64 - center_y).powi(2)
-                    + (k as f64 - center_z).powi(2))
+                let dist_from_center = (k as f64 - center_z).mul_add(k as f64 - center_z, (j as f64 - center_y).mul_add(j as f64 - center_y, (i as f64 - center_x).powi(2)))
                 .sqrt();
-                let max_dist = (center_x.powi(2) + center_y.powi(2) + center_z.powi(2)).sqrt();
+                let max_dist = center_z.mul_add(center_z, center_y.mul_add(center_y, center_x.powi(2))).sqrt();
                 let normalized_dist = (dist_from_center / max_dist).min(1.0);
-                1.0 + 2.0 * normalized_dist // Range: 1.0-3.0 Pa·s
+                2.0f64.mul_add(normalized_dist, 1.0) // Range: 1.0-3.0 Pa·s
             });
 
         let bulk_viscosity_coeff = shear_viscosity_coeff.mapv(|shear_visc| shear_visc * 3.0);
@@ -89,11 +87,11 @@ impl TissueFactory {
         // Compute spatially varying shear modulus from shear wave speed field
         let lame_mu = shear_sound_speed.mapv(|cs| default_density * cs * cs);
         // Ensure λ remains positive by subtracting 2μ/3 from bulk modulus
-        let lame_lambda = lame_mu.mapv(|mu| (default_bulk_modulus - (2.0 / 3.0) * mu).max(1.0));
+        let lame_lambda = lame_mu.mapv(|mu| (2.0_f64 / 3.0).mul_add(-mu, default_bulk_modulus).max(1.0));
 
         // Compute frequency-dependent properties
         let freq_ratio: f64 = reference_frequency / 1e6;
-        let absorption = alpha0.mapv(|a0| a0 * freq_ratio.powf(1.0));
+        let absorption = alpha0.mapv(|a0| a0 * freq_ratio.powi(1));
         let nonlinearity = b_a.clone();
 
         debug!(

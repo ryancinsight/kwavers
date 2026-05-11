@@ -54,8 +54,7 @@ fn test_transcranial_simulation_creation() {
     let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001).unwrap();
     let props = SkullProperties::default();
 
-    let sim = TranscranialSimulation::new(&grid, props);
-    assert!(sim.is_ok());
+    let _sim = TranscranialSimulation::new(&grid, props).unwrap();
 }
 
 #[test]
@@ -66,8 +65,8 @@ fn test_analytical_sphere_geometry() {
     let mut sim = TranscranialSimulation::new(&grid, props).unwrap();
     let result = sim.set_analytical_geometry("sphere", &[20.0]);
 
-    assert!(result.is_ok());
-    assert!(sim.skull_mask.is_some());
+    result.unwrap();
+    assert!(!sim.skull_mask.as_ref().unwrap().is_empty());
 }
 
 #[test]

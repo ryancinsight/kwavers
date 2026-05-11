@@ -7,8 +7,7 @@ use ndarray::{Array1, Array2};
 fn test_pam_creation() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
     let config = DelayAndSumConfig::default();
-    let pam = DelayAndSumPAM::new(sensors, config);
-    assert!(pam.is_ok());
+    let _pam = DelayAndSumPAM::new(sensors, config).unwrap();
 }
 
 #[test]
@@ -71,6 +70,103 @@ fn test_beamform_basic() {
 
     assert_eq!(intensity_map.len(), 5);
     assert!(intensity_map.iter().all(|&x| x >= 0.0));
+}
+
+#[test]
+fn beamform_view_localizes_analytic_impulse_source() {
+    let sound_speed = 1500.0;
+    let sampling_frequency = 1.0e6;
+    let sensors = vec![
+        [-0.006, 0.0, 0.0],
+        [-0.002, 0.0, 0.0],
+        [0.002, 0.0, 0.0],
+        [0.006, 0.0, 0.0],
+    ];
+    let source = [0.001, 0.0, 0.018];
+    let distractor = [0.0, 0.0, 0.024];
+    let config = DelayAndSumConfig {
+        sound_speed,
+        sampling_frequency,
+        window_size: 64,
+        apodization: ApodizationType::None,
+        ..Default::default()
+    };
+    let pam = DelayAndSumPAM::new(sensors.clone(), config).unwrap();
+    let mut passive_data = Array2::<f64>::zeros((sensors.len(), 96));
+
+    for (sensor_idx, sensor) in sensors.iter().enumerate() {
+        let dx = source[0] - sensor[0];
+        let dy = source[1] - sensor[1];
+        let dz = source[2] - sensor[2];
+        let sample = ((dx * dx + dy * dy + dz * dz).sqrt() / sound_speed * sampling_frequency)
+            .round() as usize;
+        passive_data[[sensor_idx, sample]] = 1.0;
+    }
+
+    let grid_points = Array2::from_shape_vec(
+        (2, 3),
+        vec![
+            source[0],
+            source[1],
+            source[2],
+            distractor[0],
+            distractor[1],
+            distractor[2],
+        ],
+    )
+    .unwrap();
+    let intensity = pam
+        .beamform_view(passive_data.view(), grid_points.view())
+        .unwrap();
+
+    assert_eq!(intensity.len(), 2);
+    assert!(intensity[0].is_finite());
+    assert!(intensity[1].is_finite());
+    assert!(
+        intensity[0] > 4.0 * intensity[1],
+        "true-source intensity {} did not dominate distractor {}",
+        intensity[0],
+        intensity[1]
+    );
+}
+
+#[test]
+fn beamform_view_uses_fractional_delay_interpolation() {
+    let sensors = vec![[0.0, 0.0, 0.0]; 3];
+    let config = DelayAndSumConfig {
+        sound_speed: 1.0,
+        sampling_frequency: 1.0,
+        window_size: 1,
+        apodization: ApodizationType::None,
+        ..Default::default()
+    };
+    let pam = DelayAndSumPAM::new(sensors, config).unwrap();
+    let passive_data = Array2::from_shape_vec((3, 2), vec![0.0, 2.0, 0.0, 2.0, 0.0, 2.0]).unwrap();
+    let grid_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.5]).unwrap();
+
+    let intensity = pam
+        .beamform_view(passive_data.view(), grid_points.view())
+        .unwrap();
+
+    assert_relative_eq!(intensity[0], 9.0, epsilon = 1e-12);
+}
+
+#[test]
+fn beamform_view_rejects_invalid_boundary_shapes_and_values() {
+    let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
+    let pam = DelayAndSumPAM::new(sensors, DelayAndSumConfig::default()).unwrap();
+    let passive_data = Array2::<f64>::zeros((3, 16));
+    let bad_grid_shape = Array2::<f64>::zeros((2, 2));
+    assert!(pam
+        .beamform_view(passive_data.view(), bad_grid_shape.view())
+        .is_err());
+
+    let mut nonfinite_data = passive_data.clone();
+    nonfinite_data[[0, 0]] = f64::NAN;
+    let grid_points = Array2::<f64>::zeros((1, 3));
+    assert!(pam
+        .beamform_view(nonfinite_data.view(), grid_points.view())
+        .is_err());
 }
 
 #[test]

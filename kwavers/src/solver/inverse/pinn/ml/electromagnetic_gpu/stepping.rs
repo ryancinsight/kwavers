@@ -9,6 +9,9 @@ use crate::core::error::{KwaversError, KwaversResult};
 
 impl GPUEMSolver {
     /// Add a current source at `position` with a per-time-step `time_profile`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_current_source(
         &mut self,
         position: [usize; 3],
@@ -49,6 +52,9 @@ impl GPUEMSolver {
     }
 
     /// Run the full electromagnetic simulation and return field data.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn solve(&mut self) -> KwaversResult<&EMFieldData> {
         if self.field_data.is_none() {
             self.initialize_fields(None)?;
@@ -74,6 +80,9 @@ impl GPUEMSolver {
     }
 
     /// GPU FDTD time step — dispatches one compute pass per step.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn time_step_gpu(&mut self, _step: usize) -> KwaversResult<()> {
         let device = self.compute_manager.device()?;
         let queue = self.compute_manager.queue()?;
@@ -108,11 +117,18 @@ impl GPUEMSolver {
     }
 
     /// CPU FDTD time step (development fallback — no-op pending full FDTD implementation).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn time_step_cpu(&mut self, _step: usize) -> KwaversResult<()> {
         Ok(())
     }
 
     /// Download electric and magnetic field results from GPU to CPU memory.
+    /// # Errors
+    /// - Returns [`KwaversError::GpuError`] if the precondition for a GpuError-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn download_results(&mut self) -> KwaversResult<()> {
         if let Some(field_data) = self.field_data.as_mut() {
             if let (Some(electric_buffer), Some(magnetic_buffer)) = (

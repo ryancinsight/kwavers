@@ -52,8 +52,8 @@ fn test_input_validation_valid() {
         output_smoothing_sigma: None,
         ..Default::default()
     });
-    let result = pipeline.process_frame(&valid, (4, 4, 1));
-    assert!(result.is_ok());
+    let frame = pipeline.process_frame(&valid, (4, 4, 1)).unwrap();
+    assert_eq!(frame.image.dim(), (4, 4, 1));
 }
 
 #[test]
@@ -98,6 +98,9 @@ fn test_frame_quality_assessment() {
 /// For column-sum A with nz=8: ‖A‖²_F = nx·ny·nz.
 /// λ=0.3 satisfies the bound for the 8×8×8 grid used here.
 /// Reference: Censor & Zenios (1997) *Parallel Optimization* §6.4.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_sirt_convergence_tracking() {
     let config = RealTimeSirtConfig {
@@ -135,6 +138,9 @@ fn test_sirt_convergence_tracking() {
 }
 
 /// Zero RF input must yield zero convergence error (x=0 is the exact solution).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_sirt_zero_measurement_converges_immediately() {
     let config = RealTimeSirtConfig {
@@ -160,6 +166,9 @@ fn test_sirt_zero_measurement_converges_immediately() {
 /// Attenuation unit conversion: 0.5 dB/(cm·MHz) → Nepers/(m·Hz).
 ///
 /// α_np = 0.5 × ln(10)/20 × 100 × 1e-6 = 5.7565e-5 Np/(m·Hz)
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_acoustic_geometry_attenuation_conversion() {
     let geom = AcousticProjectionGeometry {
@@ -177,6 +186,9 @@ fn test_acoustic_geometry_attenuation_conversion() {
 }
 
 /// Single point scatterer: projection must follow the 1/r law with zero attenuation.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_acoustic_forward_projection_single_scatterer() {
     let geom = AcousticProjectionGeometry {
@@ -210,6 +222,9 @@ fn test_acoustic_forward_projection_single_scatterer() {
 /// Adjoint property: ⟨Ax, y⟩ = ⟨x, Aᵀy⟩ for all x, y.
 ///
 /// Proof: ⟨Ax,y⟩ = Σ_s(Σ_v A[s,v] x_v) y_s = Σ_v x_v(Σ_s A[s,v] y_s) = ⟨x,Aᵀy⟩.
+/// # Panics
+/// - Panics if assertion fails: `Adjoint ⟨Ax,y⟩=⟨x,Aᵀy⟩ violated: {:.10e} vs {:.10e}, rel_err={:.3e}`.
+///
 #[test]
 fn test_acoustic_backprojection_adjoint_property() {
     let geom = AcousticProjectionGeometry {
@@ -247,8 +262,11 @@ fn test_acoustic_backprojection_adjoint_property() {
 /// Acoustic SIRT must reduce residual below 1.0 on a noiseless point phantom.
 ///
 /// Sensors at z=−10mm ensure all r ≥ 10mm, avoiding the r→0 singularity.
-/// With D_R[s]=1/‖A_row_s‖² and λ=0.3 < 2/3, spectral radius < 1.
+/// With D_R(s)=1/‖A_row_s‖² and λ=0.3 < 2/3, spectral radius < 1.
 /// Reference: Censor & Zenios (1997) §6.4.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_acoustic_sirt_converges_on_point_phantom() {
     let geom = AcousticProjectionGeometry {

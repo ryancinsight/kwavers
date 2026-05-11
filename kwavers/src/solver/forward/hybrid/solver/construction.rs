@@ -2,7 +2,7 @@ use super::HybridSolver;
 use crate::core::error::KwaversResult;
 use crate::domain::field::wave::WaveFields;
 use crate::domain::grid::Grid;
-use crate::domain::medium::{MaterialFields, Medium};
+use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
 use crate::solver::forward::fdtd::FdtdSolver;
 use crate::solver::forward::hybrid::adaptive_selection::AdaptiveSelector;
@@ -15,6 +15,9 @@ use log::info;
 
 impl HybridSolver {
     /// Create a new hybrid solver
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: HybridConfig, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Self> {
         info!("Initializing hybrid Spectral/FDTD solver");
 
@@ -45,20 +48,6 @@ impl HybridSolver {
 
         info!("Hybrid solver initialized with {} regions", regions.len());
 
-        let mut materials = MaterialFields::new((grid.nx, grid.ny, grid.nz));
-
-        for k in 0..grid.nz {
-            for j in 0..grid.ny {
-                for i in 0..grid.nx {
-                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    materials.rho0[[i, j, k]] =
-                        crate::domain::medium::density_at(medium, x, y, z, grid);
-                    materials.c0[[i, j, k]] =
-                        crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
-                }
-            }
-        }
-
         let shape = (grid.nx, grid.ny, grid.nz);
 
         Ok(Self {
@@ -66,7 +55,6 @@ impl HybridSolver {
             grid: grid.clone(),
             pstd_solver,
             fdtd_solver,
-            materials,
             decomposer,
             selector,
             coupling,

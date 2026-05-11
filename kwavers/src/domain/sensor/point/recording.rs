@@ -13,6 +13,10 @@ impl PointSensor {
     }
 
     /// Get maximum absolute pressure at specific sensor.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    #[must_use] 
     pub fn max_pressure(&self, sensor_idx: usize) -> Option<f64> {
         self.time_history.get(sensor_idx).and_then(|history| {
             history
@@ -27,6 +31,7 @@ impl PointSensor {
     /// ```text
     /// p_rms = √(1/N Σᵢ p[i]²)
     /// ```
+    #[must_use] 
     pub fn rms_pressure(&self, sensor_idx: usize) -> Option<f64> {
         self.time_history.get(sensor_idx).map(|history| {
             if history.is_empty() {
@@ -40,6 +45,7 @@ impl PointSensor {
     /// Export time history to CSV format.
     ///
     /// Header: `time, sensor_0, sensor_1, ..., sensor_N`
+    #[must_use] 
     pub fn to_csv(&self, dt: f64) -> String {
         let mut csv = String::new();
 

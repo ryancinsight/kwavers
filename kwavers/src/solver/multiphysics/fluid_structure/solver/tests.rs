@@ -4,6 +4,9 @@ use super::struct_impl::FluidStructureSolver;
 use super::super::interface::FsiInterface;
 
 /// Test zero normal vector rejection
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_zero_normal_rejected() {
     let interface = FsiInterface::new(
@@ -21,6 +24,9 @@ fn test_zero_normal_rejected() {
 }
 
 /// Test ghost cell traction balance at planar water-steel interface.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_ghost_cell_traction_balance() {
     let nx = 8usize;
@@ -89,6 +95,9 @@ fn test_ghost_cell_traction_balance() {
 }
 
 /// Test ghost cell velocity continuity across interface.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_ghost_cell_velocity_continuity() {
     let nx = 8usize;

@@ -13,8 +13,8 @@
 //! - τ = t − z/c₀: retarded time
 //! - ∇⊥²: transverse Laplacian (∂²/∂x² + ∂²/∂y²)
 //! - δ: diffusivity of sound [m²/s]
-//! - β = 1 + B/(2A): nonlinearity coefficient [dimensionless]
-//! - ρ₀, c₀: ambient density [kg/m³] and speed [m/s]
+//! - β = 1 + B/(2A): nonlinearity coefficient (dimensionless)
+//! - ρ₀, c₀: ambient density [kg/m³] and speed (m/s)
 //!
 //! # Operator Splitting
 //!
@@ -137,18 +137,21 @@ impl Default for KZKConfig {
 }
 
 /// Validate KZK configuration
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn validate_config(config: &KZKConfig) -> Result<(), String> {
     // Check grid sizes
     if config.nx < 2 || config.ny < 2 || config.nz < 2 {
-        return Err("Grid dimensions must be at least 2".to_string());
+        return Err("Grid dimensions must be at least 2".to_owned());
     }
 
     // Check physical parameters
     if config.c0 <= 0.0 {
-        return Err("Sound speed must be positive".to_string());
+        return Err("Sound speed must be positive".to_owned());
     }
     if config.rho0 <= 0.0 {
-        return Err("Density must be positive".to_string());
+        return Err("Density must be positive".to_owned());
     }
 
     // Check CFL condition for parabolic approximation

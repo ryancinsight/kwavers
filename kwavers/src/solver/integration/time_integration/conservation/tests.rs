@@ -1,4 +1,5 @@
 use super::*;
+use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use ndarray::Array3;
 

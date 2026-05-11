@@ -137,6 +137,9 @@ impl ParameterValidator {
     }
 
     /// Validate and apply a parameter update
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate_and_apply(
         value: ParameterValue,
         param_type: &ParameterType,

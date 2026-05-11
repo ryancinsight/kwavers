@@ -59,6 +59,10 @@ impl GPUEMSolver {
     }
 
     /// Export field data at `time_index` to a VTK ASCII structured-points file.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn export_vtk(&self, filename: &str, time_index: usize) -> KwaversResult<()> {
         use std::fs::File;
         use std::io::{BufWriter, Write};

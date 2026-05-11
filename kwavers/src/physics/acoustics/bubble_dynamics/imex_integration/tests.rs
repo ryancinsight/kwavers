@@ -16,9 +16,7 @@ fn test_imex_integration() {
     let config = BubbleIMEXConfig::default();
     let mut integrator = BubbleIMEXIntegrator::new(solver, config);
 
-    let result = integrator.step(&mut state, 1e5, 0.0, 1e-9, 0.0);
-
-    assert!(result.is_ok());
+    integrator.step(&mut state, 1e5, 0.0, 1e-9, 0.0).unwrap();
     assert!(state.radius > 0.0);
     assert!(state.temperature > 0.0);
 }
@@ -73,9 +71,7 @@ fn test_adaptive_epsilon() {
 
     let mut integrator = BubbleIMEXIntegrator::with_defaults(solver);
 
-    let small_result = integrator.step(&mut small_state, 0.0, 0.0, 1e-12, 0.0);
-    assert!(small_result.is_ok());
+    integrator.step(&mut small_state, 0.0, 0.0, 1e-12, 0.0).unwrap();
 
-    let large_result = integrator.step(&mut large_state, 0.0, 0.0, 1e-6, 0.0);
-    assert!(large_result.is_ok());
+    integrator.step(&mut large_state, 0.0, 0.0, 1e-6, 0.0).unwrap();
 }

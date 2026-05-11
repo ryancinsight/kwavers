@@ -59,13 +59,13 @@ impl ProcessingStage {
         let (target_min, target_max) = self.config.normalize_range;
         let target_range = (target_max - target_min) as f64;
 
-        data.mapv_inplace(|v| target_min as f64 + (v - min) * target_range / range);
+        data.par_mapv_inplace(|v| target_min as f64 + (v - min) * target_range / range);
     }
 
     /// Apply logarithmic scaling
     fn log_scale(&self, data: &mut Array3<f64>) {
         let epsilon = self.config.log_epsilon as f64;
-        data.mapv_inplace(|v| if v > epsilon { v.ln() } else { epsilon.ln() });
+        data.par_mapv_inplace(|v| if v > epsilon { v.ln() } else { epsilon.ln() });
     }
 
     /// Compute gradient magnitude

@@ -41,9 +41,9 @@ impl PlasmaChemistry {
     fn add_standard_reactions(&mut self) {
         // Water dissociation
         self.reactions.push(PlasmaReaction {
-            name: "Water dissociation".to_string(),
-            reactants: vec![("H2O".to_string(), 1.0)],
-            products: vec![("H".to_string(), 1.0), ("OH".to_string(), 1.0)],
+            name: "Water dissociation".to_owned(),
+            reactants: vec![("H2O".to_owned(), 1.0)],
+            products: vec![("H".to_owned(), 1.0), ("OH".to_owned(), 1.0)],
             activation_energy: 498e3, // J/mol
             pre_exponential: 2.2e10,
             temperature_exponent: 1.0,
@@ -51,9 +51,9 @@ impl PlasmaChemistry {
 
         // Oxygen dissociation
         self.reactions.push(PlasmaReaction {
-            name: "Oxygen dissociation".to_string(),
-            reactants: vec![("O2".to_string(), 1.0)],
-            products: vec![("O".to_string(), 2.0)],
+            name: "Oxygen dissociation".to_owned(),
+            reactants: vec![("O2".to_owned(), 1.0)],
+            products: vec![("O".to_owned(), 2.0)],
             activation_energy: 495e3, // J/mol
             pre_exponential: 3.6e18,
             temperature_exponent: -1.0,
@@ -61,9 +61,9 @@ impl PlasmaChemistry {
 
         // Nitrogen dissociation
         self.reactions.push(PlasmaReaction {
-            name: "Nitrogen dissociation".to_string(),
-            reactants: vec![("N2".to_string(), 1.0)],
-            products: vec![("N".to_string(), 2.0)],
+            name: "Nitrogen dissociation".to_owned(),
+            reactants: vec![("N2".to_owned(), 1.0)],
+            products: vec![("N".to_owned(), 2.0)],
             activation_energy: 945e3, // J/mol
             pre_exponential: 7.0e21,
             temperature_exponent: -1.5,
@@ -71,9 +71,9 @@ impl PlasmaChemistry {
 
         // OH radical recombination
         self.reactions.push(PlasmaReaction {
-            name: "OH recombination".to_string(),
-            reactants: vec![("OH".to_string(), 2.0)],
-            products: vec![("H2O2".to_string(), 1.0)],
+            name: "OH recombination".to_owned(),
+            reactants: vec![("OH".to_owned(), 2.0)],
+            products: vec![("H2O2".to_owned(), 1.0)],
             activation_energy: 0.0, // No barrier
             pre_exponential: 1.5e9,
             temperature_exponent: 0.0,
@@ -81,9 +81,9 @@ impl PlasmaChemistry {
 
         // H atom recombination
         self.reactions.push(PlasmaReaction {
-            name: "H recombination".to_string(),
-            reactants: vec![("H".to_string(), 2.0)],
-            products: vec![("H2".to_string(), 1.0)],
+            name: "H recombination".to_owned(),
+            reactants: vec![("H".to_owned(), 2.0)],
+            products: vec![("H2".to_owned(), 1.0)],
             activation_energy: 0.0,
             pre_exponential: 1.0e10,
             temperature_exponent: 0.0,
@@ -91,9 +91,9 @@ impl PlasmaChemistry {
 
         // NO formation (Zeldovich mechanism)
         self.reactions.push(PlasmaReaction {
-            name: "NO formation".to_string(),
-            reactants: vec![("N".to_string(), 1.0), ("O2".to_string(), 1.0)],
-            products: vec![("NO".to_string(), 1.0), ("O".to_string(), 1.0)],
+            name: "NO formation".to_owned(),
+            reactants: vec![("N".to_owned(), 1.0), ("O2".to_owned(), 1.0)],
+            products: vec![("NO".to_owned(), 1.0), ("O".to_owned(), 1.0)],
             activation_energy: 315e3, // J/mol
             pre_exponential: 1.8e14,
             temperature_exponent: 0.0,
@@ -101,9 +101,9 @@ impl PlasmaChemistry {
 
         // Ozone formation
         self.reactions.push(PlasmaReaction {
-            name: "Ozone formation".to_string(),
-            reactants: vec![("O".to_string(), 1.0), ("O2".to_string(), 1.0)],
-            products: vec![("O3".to_string(), 1.0)],
+            name: "Ozone formation".to_owned(),
+            reactants: vec![("O".to_owned(), 1.0), ("O2".to_owned(), 1.0)],
+            products: vec![("O3".to_owned(), 1.0)],
             activation_energy: 0.0,
             pre_exponential: 6.0e9,
             temperature_exponent: 0.0,
@@ -113,9 +113,9 @@ impl PlasmaChemistry {
         if self.temperature > 10000.0 {
             // Electron impact ionization of hydrogen
             self.reactions.push(PlasmaReaction {
-                name: "H ionization".to_string(),
-                reactants: vec![("H".to_string(), 1.0)],
-                products: vec![("H+".to_string(), 1.0), ("e-".to_string(), 1.0)],
+                name: "H ionization".to_owned(),
+                reactants: vec![("H".to_owned(), 1.0)],
+                products: vec![("H+".to_owned(), 1.0), ("e-".to_owned(), 1.0)],
                 activation_energy: 1312e3, // J/mol (13.6 eV)
                 pre_exponential: 1e15,
                 temperature_exponent: 0.5,
@@ -124,43 +124,46 @@ impl PlasmaChemistry {
     }
 
     /// Initialize species concentrations based on initial conditions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn initialize_concentrations(&mut self) -> crate::core::error::KwaversResult<()> {
         let r_gas = 8.314;
         if self.temperature <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Temperature must be greater than 0 K to initialize concentrations".to_string(),
+                "Temperature must be greater than 0 K to initialize concentrations".to_owned(),
             ));
         }
         let total_conc = self.pressure / (r_gas * self.temperature);
 
         // Assume initial composition: 50% water vapor, 50% air
         self.concentrations
-            .insert("H2O".to_string(), 0.5 * total_conc);
+            .insert("H2O".to_owned(), 0.5 * total_conc);
         self.concentrations
-            .insert("N2".to_string(), 0.395 * total_conc); // 79% of air
+            .insert("N2".to_owned(), 0.395 * total_conc); // 79% of air
         self.concentrations
-            .insert("O2".to_string(), 0.105 * total_conc); // 21% of air
+            .insert("O2".to_owned(), 0.105 * total_conc); // 21% of air
 
         // Initialize other species at trace levels
         self.concentrations
-            .insert("H".to_string(), 1e-10 * total_conc);
+            .insert("H".to_owned(), 1e-10 * total_conc);
         self.concentrations
-            .insert("OH".to_string(), 1e-10 * total_conc);
+            .insert("OH".to_owned(), 1e-10 * total_conc);
         self.concentrations
-            .insert("O".to_string(), 1e-10 * total_conc);
+            .insert("O".to_owned(), 1e-10 * total_conc);
         self.concentrations
-            .insert("N".to_string(), 1e-10 * total_conc);
+            .insert("N".to_owned(), 1e-10 * total_conc);
         self.concentrations
-            .insert("H2".to_string(), 1e-10 * total_conc);
-        self.concentrations.insert("H2O2".to_string(), 0.0);
-        self.concentrations.insert("NO".to_string(), 0.0);
-        self.concentrations.insert("O3".to_string(), 0.0);
+            .insert("H2".to_owned(), 1e-10 * total_conc);
+        self.concentrations.insert("H2O2".to_owned(), 0.0);
+        self.concentrations.insert("NO".to_owned(), 0.0);
+        self.concentrations.insert("O3".to_owned(), 0.0);
 
         if self.temperature > 10000.0 {
             self.concentrations
-                .insert("H+".to_string(), 1e-15 * total_conc);
+                .insert("H+".to_owned(), 1e-15 * total_conc);
             self.concentrations
-                .insert("e-".to_string(), 1e-15 * total_conc);
+                .insert("e-".to_owned(), 1e-15 * total_conc);
         }
         Ok(())
     }
@@ -197,7 +200,7 @@ impl PlasmaChemistry {
         // Update concentrations
         for (species, rate_change) in rate_changes {
             if let Some(conc) = self.concentrations.get_mut(&species) {
-                *conc = (*conc + rate_change * dt).max(0.0);
+                *conc = rate_change.mul_add(dt, *conc).max(0.0);
             }
         }
     }

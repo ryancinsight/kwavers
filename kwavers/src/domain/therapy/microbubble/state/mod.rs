@@ -34,7 +34,7 @@ mod physics;
 #[cfg(test)]
 mod tests;
 
-/// Position in 3D space (Cartesian coordinates) — value object [m].
+/// Position in 3D space (Cartesian coordinates) — value object (m).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Position3D {
     pub x: f64,
@@ -58,15 +58,15 @@ impl Position3D {
     }
 
     #[must_use]
-    pub fn distance_to(&self, other: &Position3D) -> f64 {
+    pub fn distance_to(&self, other: &Self) -> f64 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
         let dz = self.z - other.z;
-        (dx * dx + dy * dy + dz * dz).sqrt()
+        dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
     }
 }
 
-/// Velocity in 3D space — value object [m/s].
+/// Velocity in 3D space — value object (m/s).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Velocity3D {
     pub vx: f64,
@@ -91,7 +91,7 @@ impl Velocity3D {
 
     #[must_use]
     pub fn magnitude(&self) -> f64 {
-        (self.vx * self.vx + self.vy * self.vy + self.vz * self.vz).sqrt()
+        self.vz.mul_add(self.vz, self.vx.mul_add(self.vx, self.vy * self.vy)).sqrt()
     }
 }
 
@@ -122,6 +122,10 @@ pub struct MicrobubbleState {
 }
 
 impl MicrobubbleState {
+    /// New.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn new(
         radius_equilibrium: f64,
         shell_elasticity: f64,
@@ -131,30 +135,30 @@ impl MicrobubbleState {
     ) -> KwaversResult<Self> {
         if radius_equilibrium <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "radius_equilibrium".to_string(),
+                parameter: "radius_equilibrium".to_owned(),
                 value: radius_equilibrium,
-                reason: "must be positive".to_string(),
+                reason: "must be positive".to_owned(),
             }));
         }
         if shell_elasticity < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "shell_elasticity".to_string(),
+                parameter: "shell_elasticity".to_owned(),
                 value: shell_elasticity,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         if shell_viscosity < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "shell_viscosity".to_string(),
+                parameter: "shell_viscosity".to_owned(),
                 value: shell_viscosity,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         if drug_concentration < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "drug_concentration".to_string(),
+                parameter: "drug_concentration".to_owned(),
                 value: drug_concentration,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
 
@@ -194,16 +198,25 @@ impl MicrobubbleState {
     }
 
     /// SonoVue-like microbubble: 1.25 μm radius, phospholipid shell, SF6 gas.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn sono_vue(position: Position3D) -> KwaversResult<Self> {
         Self::new(1.25e-6, 0.5, 0.8e-9, 0.0, position)
     }
 
     /// Definity-like microbubble: 1.5 μm radius, lipid bilayer, C3F8 gas.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn definity(position: Position3D) -> KwaversResult<Self> {
         Self::new(1.5e-6, 1.0, 1.2e-9, 0.0, position)
     }
 
     /// Drug-loaded therapeutic microbubble with weaker shell for easier rupture.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn drug_loaded(
         radius_um: f64,
         drug_concentration_kg_m3: f64,

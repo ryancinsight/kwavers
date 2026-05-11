@@ -1,9 +1,4 @@
-use super::super::{
-    config::{BurnLossWeights, BurnPINNConfig},
-    network::BurnPINN1DWave,
-    optimizer::SimpleOptimizer,
-    types::BurnTrainingMetrics,
-};
+use super::super::config::BurnPINNConfig;
 use super::trainer_impl::BurnPINNTrainer;
 use burn::backend::{Autodiff, NdArray};
 use ndarray::{Array1, Array2};
@@ -18,7 +13,7 @@ fn test_trainer_creation() {
         ..Default::default()
     };
     let trainer = BurnPINNTrainer::<TestBackend>::new(config, &device);
-    assert!(trainer.is_ok());
+    let _trainer = trainer.unwrap();
 }
 
 #[test]
@@ -47,7 +42,6 @@ fn test_train_basic() {
     let t_data = Array1::linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
     let result = trainer.train(&x_data, &t_data, &u_data, 343.0, &device, 10);
-    assert!(result.is_ok());
     let metrics = result.unwrap();
     assert_eq!(metrics.epochs_completed, 10);
     assert_eq!(metrics.total_loss.len(), 10);
@@ -186,13 +180,3 @@ fn test_multiple_training_runs() {
     assert_eq!(metrics2.epochs_completed, 5);
 }
 
-// Silence unused import warnings for types only used in type position
-#[allow(dead_code)]
-fn _assert_types_available() {
-    let _: fn() -> BurnLossWeights = BurnLossWeights::default;
-    let _: fn(f64, f64, f64, f64) -> () = |_, _, _, _| {};
-    let _bm: BurnTrainingMetrics;
-    let _so: fn(f32) -> SimpleOptimizer = SimpleOptimizer::new;
-    let _: fn() -> BurnPINNConfig = BurnPINNConfig::default;
-    let _ = std::marker::PhantomData::<BurnPINN1DWave<TestBackend>>;
-}

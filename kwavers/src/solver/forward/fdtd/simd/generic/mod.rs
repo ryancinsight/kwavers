@@ -143,6 +143,9 @@ pub struct SimdStencilProcessor {
 
 impl SimdStencilProcessor {
     /// Create new SIMD stencil processor
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(nx: usize, ny: usize, nz: usize, config: SimdStencilConfig) -> KwaversResult<Self> {
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
@@ -207,7 +210,7 @@ mod tests {
     fn test_stencil_creation() {
         let config = SimdStencilConfig::default();
         let result = SimdStencilProcessor::new(64, 64, 64, config);
-        assert!(result.is_ok());
+        let _processor = result.unwrap();
     }
 
     #[test]

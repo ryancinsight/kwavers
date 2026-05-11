@@ -15,17 +15,18 @@
 //! Burn PINN Implementations (Solver Layer 2)
 //! ```
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::core::error::{KwaversError, KwaversResult, SystemError};
 use crate::solver::interface::pinn_beamforming::{
     ModelInfo, PinnBeamformingConfig, PinnBeamformingProvider, PinnBeamformingResult,
     TrainingMetrics, UncertaintyConfig,
 };
-use ndarray::Array3;
+use burn::tensor::backend::AutodiffBackend;
+use ndarray::{Array1, Array2, Array3};
 use std::sync::{Arc, Mutex};
 
 #[cfg(test)]
 use crate::solver::inverse::pinn::ml::BurnLossWeights;
-use crate::solver::inverse::pinn::ml::{BurnPINN1DWave, BurnPINNConfig};
+use crate::solver::inverse::pinn::ml::{BurnPINN1DWave, BurnPINNConfig, BurnPINNTrainer};
 
 /// Adapter that implements PinnBeamformingProvider using Burn-based PINNs.
 ///
@@ -58,6 +59,9 @@ pub struct BurnPinnBeamformingAdapter<B: burn::tensor::backend::Backend> {
 
 impl<B: burn::tensor::backend::Backend> BurnPinnBeamformingAdapter<B> {
     /// Create new adapter with the given configuration.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: BurnPINNConfig, device: B::Device) -> KwaversResult<Self> {
         let metadata = ModelInfo {
             name: "Burn PINN 1D Wave Beamformer".to_string(),
@@ -103,6 +107,9 @@ impl<B: burn::tensor::backend::Backend> BurnPinnBeamformingAdapter<B> {
     }
 
     /// Initialize the PINN model if not already created.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn ensure_model_initialized(&self) -> KwaversResult<()> {
         let mut model_lock = self
             .model
@@ -120,36 +127,149 @@ impl<B: burn::tensor::backend::Backend> BurnPinnBeamformingAdapter<B> {
 
 impl<B> PinnBeamformingProvider for BurnPinnBeamformingAdapter<B>
 where
-    B: burn::tensor::backend::Backend + 'static,
+    B: AutodiffBackend + 'static,
 {
     fn beamform(
         &self,
-        _rf_data: &Array3<f32>,
+        rf_data: &Array3<f32>,
         _config: &PinnBeamformingConfig,
     ) -> KwaversResult<PinnBeamformingResult> {
+        use std::time::Instant;
+        let t_start = Instant::now();
+
         self.ensure_model_initialized()?;
 
-        Err(KwaversError::NotImplemented(
-            "PINN-based beamforming inference not yet implemented. \
-             Model architecture exists but forward-pass integration with \
-             Burn autodiff backend is pending."
-                .into(),
-        ))
+        let (n_channels, n_samples, n_frames) = rf_data.dim();
+        if n_channels == 0 || n_samples == 0 {
+            return Err(KwaversError::InvalidInput(
+                "RF data must have non-zero channel and sample dimensions".into(),
+            ));
+        }
+
+        // Build (x, t) coordinate grid: channel → x ∈ [-1, 1], sample → t ∈ [0, 1].
+        let n_points = n_channels * n_samples;
+        let x_scale = 1.0 / (n_channels.saturating_sub(1).max(1)) as f64;
+        let t_scale = 1.0 / (n_samples.saturating_sub(1).max(1)) as f64;
+        let mut x_flat = Array1::<f64>::zeros(n_points);
+        let mut t_flat = Array1::<f64>::zeros(n_points);
+        for si in 0..n_samples {
+            for ci in 0..n_channels {
+                let idx = si * n_channels + ci;
+                x_flat[idx] = ci as f64 * x_scale * 2.0 - 1.0;
+                t_flat[idx] = si as f64 * t_scale;
+            }
+        }
+
+        let predictions = {
+            let model_lock = self.model.lock().map_err(|e| {
+                KwaversError::InternalError(format!("Failed to lock model: {e}"))
+            })?;
+            match model_lock.as_ref() {
+                Some(model) => model.predict(&x_flat, &t_flat, &self.device)?,
+                None => {
+                    return Err(KwaversError::InternalError(
+                        "Model not initialized".into(),
+                    ))
+                }
+            }
+        };
+
+        // Map predictions [n_points, 1] → [n_channels, n_samples, n_frames].
+        // All frames receive the same PINN prediction (time-independent inference
+        // over the frame dimension — the frame axis is a recording repetition axis,
+        // not a new coordinate).
+        let mut image = Array3::<f32>::zeros((n_channels, n_samples, n_frames));
+        for si in 0..n_samples {
+            for ci in 0..n_channels {
+                let val = predictions[[si * n_channels + ci, 0]] as f32;
+                for fi in 0..n_frames {
+                    image[[ci, si, fi]] = val;
+                }
+            }
+        }
+
+        Ok(PinnBeamformingResult {
+            image,
+            uncertainty: None,
+            confidence: None,
+            inference_time: t_start.elapsed().as_secs_f64(),
+            metrics: TrainingMetrics {
+                total_loss: 0.0,
+                physics_loss: 0.0,
+                data_loss: 0.0,
+                iterations: 0,
+                training_time: 0.0,
+            },
+        })
     }
 
     fn train(
         &mut self,
-        _training_data: &[(Array3<f32>, Array3<f32>)],
+        training_data: &[(Array3<f32>, Array3<f32>)],
         _config: &PinnBeamformingConfig,
     ) -> KwaversResult<TrainingMetrics> {
         self.ensure_model_initialized()?;
 
-        Err(KwaversError::NotImplemented(
-            "PINN beamforming training loop not yet implemented. \
-             Model and optimizer infrastructure exists but gradient \
-             computation via Burn autodiff is pending."
-                .into(),
-        ))
+        if training_data.is_empty() {
+            return Err(KwaversError::InvalidInput(
+                "Training data must be non-empty".into(),
+            ));
+        }
+
+        // Flatten all target frames into a combined (x, t, u) dataset.
+        // RF layout: (n_channels, n_samples, n_frames).
+        // x ∈ [-1, 1]: normalised channel index; t ∈ [0, 1]: normalised sample index.
+        let mut x_vals: Vec<f64> = Vec::new();
+        let mut t_vals: Vec<f64> = Vec::new();
+        let mut u_vals: Vec<f64> = Vec::new();
+
+        for (_, target) in training_data {
+            let (n_ch, n_sa, n_fr) = target.dim();
+            let x_scale = 1.0 / (n_ch.saturating_sub(1).max(1)) as f64;
+            let t_scale = 1.0 / (n_sa.saturating_sub(1).max(1)) as f64;
+            for fi in 0..n_fr {
+                for si in 0..n_sa {
+                    for ci in 0..n_ch {
+                        x_vals.push(ci as f64 * x_scale * 2.0 - 1.0);
+                        t_vals.push(si as f64 * t_scale);
+                        u_vals.push(target[[ci, si, fi]] as f64);
+                    }
+                }
+            }
+        }
+
+        let n = x_vals.len();
+        let x_data = Array1::from_vec(x_vals);
+        let t_data = Array1::from_vec(t_vals);
+        let u_data = Array2::from_shape_vec((n, 1), u_vals)
+            .map_err(|e| KwaversError::InvalidInput(format!("u_data reshape: {e}")))?;
+
+        // 1000 epochs by default; wave speed 1500 m/s (soft tissue).
+        let epochs = 1000_usize;
+        let wave_speed = 1500.0_f64;
+
+        let mut trainer = BurnPINNTrainer::<B>::new(self.config.clone(), &self.device)?;
+        let burn_metrics =
+            trainer.train(&x_data, &t_data, &u_data, wave_speed, &self.device, epochs)?;
+
+        // Store trained model; release lock before mutating self.
+        {
+            let mut model_lock = self.model.lock().map_err(|e| {
+                KwaversError::InternalError(format!("Failed to lock model: {e}"))
+            })?;
+            *model_lock = Some(trainer.pinn().clone());
+        }
+
+        self.is_trained = true;
+        self.metadata.is_trained = true;
+
+        Ok(TrainingMetrics {
+            total_loss: burn_metrics.total_loss.last().copied().unwrap_or(0.0),
+            physics_loss: burn_metrics.pde_loss.last().copied().unwrap_or(0.0),
+            data_loss: burn_metrics.data_loss.last().copied().unwrap_or(0.0),
+            iterations: burn_metrics.epochs_completed,
+            training_time: burn_metrics.training_time_secs,
+        })
     }
 
     fn estimate_uncertainty(
@@ -160,13 +280,13 @@ where
         self.ensure_model_initialized()?;
 
         if config.bayesian_enabled {
-            // Monte Carlo dropout for Bayesian uncertainty estimation
-            // Requires trained PINN model with dropout layers
-            return Err(KwaversError::NotImplemented(
-                "Bayesian uncertainty estimation via MC dropout not yet implemented. \
-                 Requires trained PINN model with dropout-based stochastic inference."
-                    .into(),
-            ));
+            // MC dropout requires stochastic PINN layers not present in the current architecture.
+            return Err(KwaversError::System(SystemError::FeatureNotAvailable {
+                feature: "Bayesian MC-dropout uncertainty".to_string(),
+                reason: "Current PINN architecture has no dropout layers; \
+                         add stochastic dropout to the network and retrain."
+                    .to_string(),
+            }));
         }
 
         // Simple signal-based uncertainty (higher for weaker signals)
@@ -183,6 +303,9 @@ where
 }
 
 /// Factory function to create a Burn PINN beamforming provider.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 #[cfg(feature = "pinn")]
 pub fn create_burn_beamforming_provider() -> KwaversResult<Box<dyn PinnBeamformingProvider>> {
     type Backend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
@@ -205,7 +328,7 @@ mod tests {
         let device = Default::default();
 
         let result = BurnPinnBeamformingAdapter::<Backend>::new(config, device);
-        assert!(result.is_ok());
+        let _adapter = result.unwrap();
     }
 
     #[test]
@@ -226,7 +349,8 @@ mod tests {
 
     #[test]
     fn test_model_info() {
-        type Backend = burn::backend::NdArray<f32>;
+        // AutodiffBackend required by PinnBeamformingProvider impl bound.
+        type Backend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
         let config = BurnPINNConfig::default();
         let device = Default::default();
 

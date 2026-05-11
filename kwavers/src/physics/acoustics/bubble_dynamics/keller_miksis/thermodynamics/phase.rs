@@ -23,5 +23,5 @@ pub fn p_sat_water_pa(t_celsius: f64) -> f64 {
 /// ```
 #[must_use]
 pub fn latent_heat_water_j_per_kg(t_celsius: f64) -> f64 {
-    2.501e6 - 2369.0 * t_celsius
+    2369.0f64.mul_add(-t_celsius, 2.501e6)
 }

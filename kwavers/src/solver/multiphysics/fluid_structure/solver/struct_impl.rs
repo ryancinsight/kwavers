@@ -68,6 +68,10 @@ impl FluidStructureSolver {
     }
 
     /// Apply interface conditions with coupling.
+    /// # Errors
+    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_interface_conditions(
         &mut self,
         fluid_pressure: &mut Array3<f64>,
@@ -95,14 +99,14 @@ impl FluidStructureSolver {
                 let omega = self.relaxation;
                 ndarray::Zip::from(&mut self.p_fluid_ghost)
                     .and(&p_ghost_prev)
-                    .for_each(|new_val, &prev| *new_val = omega * *new_val + (1.0 - omega) * prev);
+                    .par_for_each(|new_val, &prev| *new_val = omega * *new_val + (1.0 - omega) * prev);
                 for (tsg, tgp) in self
                     .t_solid_ghost
                     .iter_mut()
                     .zip(t_ghost_prev.iter())
                     .take(3)
                 {
-                    ndarray::Zip::from(tsg).and(tgp).for_each(|new_val, &prev| {
+                    ndarray::Zip::from(tsg).and(tgp).par_for_each(|new_val, &prev| {
                         *new_val = omega * *new_val + (1.0 - omega) * prev
                     });
                 }
@@ -124,6 +128,9 @@ impl FluidStructureSolver {
     }
 
     /// Exchange ghost cell data across the fluid-structure interface.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn exchange_ghost_cells(
         &mut self,
         fluid_pressure: &Array3<f64>,
@@ -222,6 +229,9 @@ impl FluidStructureSolver {
     }
 
     /// Compute traction vector at interface.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_interface_traction(
         &self,
         fluid_pressure: &Array3<f64>,
@@ -255,6 +265,9 @@ impl FluidStructureSolver {
     }
 
     /// Check convergence of coupling iterations.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn check_convergence(
         &self,
         fluid_velocity: &[Array3<f64>; 3],

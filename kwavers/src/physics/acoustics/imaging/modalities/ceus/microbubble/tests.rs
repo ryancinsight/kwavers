@@ -12,7 +12,7 @@ fn test_microbubble_creation() {
 
     assert!((bubble.radius_eq - 1.5e-6).abs() < 1e-9);
     assert!(bubble.shell_elasticity > 0.0);
-    assert!(bubble.validate().is_ok());
+    bubble.validate().unwrap();
 }
 
 #[test]
@@ -66,6 +66,10 @@ fn test_bubble_dynamics() {
 ///
 /// Note: η_NL is not bounded by 1 — it is the ratio of the second-harmonic
 /// to the linear scattering amplitude, which can exceed 1 near resonance.
+/// # Panics
+/// - Panics if assertion fails: `η_NL must be non-negative, got {eff_nominal}`.
+/// - Panics if assertion fails: `η_NL at resonance ({eff_res:.3}) should exceed far off-resonance ({eff_off:.3})`.
+///
 #[test]
 fn test_nonlinear_scattering() {
     let dynamics = BubbleDynamics::new();

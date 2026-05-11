@@ -24,7 +24,7 @@ fn test_mock_transducer_creation() {
 fn test_mock_transducer_set_power() {
     let mut transducer = MockTransducer::new("TEST-1.5".to_string(), "TestCorp".to_string());
     let response = transducer.send_command(HardwareCommand::SetPower(50.0));
-    assert!(response.is_ok());
+    response.unwrap();
     assert!(transducer.current_power_percent - 50.0 < 0.01);
 }
 
@@ -33,14 +33,14 @@ fn test_mock_transducer_invalid_power() {
     let mut transducer = MockTransducer::new("TEST-1.5".to_string(), "TestCorp".to_string());
     let response = transducer.send_command(HardwareCommand::SetPower(150.0));
     assert!(response.is_err());
-    assert!(transducer.last_error().is_some());
+    assert!(!transducer.last_error().unwrap().is_empty());
 }
 
 #[test]
 fn test_mock_transducer_set_frequency() {
     let mut transducer = MockTransducer::new("TEST-1.5".to_string(), "TestCorp".to_string());
     let response = transducer.send_command(HardwareCommand::SetFrequency(5.0e6));
-    assert!(response.is_ok());
+    response.unwrap();
     assert!((transducer.current_frequency - 5.0e6).abs() < 1.0);
 }
 
@@ -52,7 +52,7 @@ fn test_device_manager_registration() {
         "TestCorp".to_string(),
     ));
     let result = manager.register_device("device_1".to_string(), transducer);
-    assert!(result.is_ok());
+    result.unwrap();
     assert_eq!(manager.device_count(), 1);
 }
 
@@ -92,7 +92,7 @@ fn test_device_manager_list_devices() {
 fn test_mock_transducer_calibration() {
     let mut transducer = MockTransducer::new("TEST-1.5".to_string(), "TestCorp".to_string());
     let result = transducer.calibrate();
-    assert!(result.is_ok());
+    result.unwrap();
     assert_eq!(transducer.state(), TransducerState::Idle);
 }
 
@@ -100,10 +100,7 @@ fn test_mock_transducer_calibration() {
 fn test_mock_transducer_telemetry() {
     let mut transducer = MockTransducer::new("TEST-1.5".to_string(), "TestCorp".to_string());
     let _ = transducer.send_command(HardwareCommand::SetPower(50.0));
-    let telemetry = transducer.get_telemetry();
-    assert!(telemetry.is_ok());
-
-    let telem = telemetry.unwrap();
+    let telem = transducer.get_telemetry().unwrap();
     assert!(telem.measured_power_w > 0.0);
     assert!(telem.temperature_c > 20.0);
 }
@@ -125,5 +122,5 @@ fn test_device_specification_creation() {
 
     assert_eq!(spec.model, "TEST-1.5");
     assert_eq!(spec.num_elements, 128);
-    assert!(spec.focal_length_mm.is_some());
+    assert_eq!(spec.focal_length_mm.unwrap(), 60.0);
 }

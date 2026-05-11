@@ -51,7 +51,7 @@ impl NumericsOperators {
     /// ∇²u = ∂²u/∂x² + ∂²u/∂y² + ∂²u/∂z²
     ///
     /// Using second-order central finite differences:
-    /// ∂²u/∂x² ≈ (u[i+1,j,k] - 2u[i,j,k] + u[i-1,j,k]) / Δx²
+    /// `∂²u/∂x² ≈ (u[i+1,j,k] - 2u[i,j,k] + u[i-1,j,k]) / Δx²`
     ///
     /// Truncation error: O(Δx²) for smooth solutions
     ///
@@ -73,19 +73,19 @@ impl NumericsOperators {
         let dz2 = self.grid.dz * self.grid.dz;
 
         let d2u_dx2 = if i > 0 && i < self.grid.nx - 1 {
-            (u[[i + 1, j, k]] - 2.0 * u[[i, j, k]] + u[[i - 1, j, k]]) / dx2
+            (2.0f64.mul_add(-u[[i, j, k]], u[[i + 1, j, k]]) + u[[i - 1, j, k]]) / dx2
         } else {
             0.0
         };
 
         let d2u_dy2 = if j > 0 && j < self.grid.ny - 1 {
-            (u[[i, j + 1, k]] - 2.0 * u[[i, j, k]] + u[[i, j - 1, k]]) / dy2
+            (2.0f64.mul_add(-u[[i, j, k]], u[[i, j + 1, k]]) + u[[i, j - 1, k]]) / dy2
         } else {
             0.0
         };
 
         let d2u_dz2 = if k > 0 && k < self.grid.nz - 1 {
-            (u[[i, j, k + 1]] - 2.0 * u[[i, j, k]] + u[[i, j, k - 1]]) / dz2
+            (2.0f64.mul_add(-u[[i, j, k]], u[[i, j, k + 1]]) + u[[i, j, k - 1]]) / dz2
         } else {
             0.0
         };

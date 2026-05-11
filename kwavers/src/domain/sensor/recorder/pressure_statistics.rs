@@ -44,6 +44,9 @@ impl PressureFieldStatistics {
     ///
     /// Updates max, min, squared sum, and final field element-wise.
     /// Single-pass, fully parallelised — O(N³), no intermediate allocation.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn update(&mut self, pressure: &Array3<f64>) {
         debug_assert_eq!(
             pressure.dim(),
@@ -123,6 +126,9 @@ impl PressureFieldStatistics {
     }
 
     /// Sample statistics at sensor positions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sample_p_max(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros(positions.len());
@@ -131,6 +137,9 @@ impl PressureFieldStatistics {
     }
 
     /// Fill caller-owned storage with maximum pressure at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_p_max(
         &self,
         positions: &[(usize, usize, usize)],
@@ -140,6 +149,9 @@ impl PressureFieldStatistics {
     }
 
     /// Sample minimum pressure at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sample_p_min(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros(positions.len());
@@ -148,6 +160,9 @@ impl PressureFieldStatistics {
     }
 
     /// Fill caller-owned storage with minimum pressure at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_p_min(
         &self,
         positions: &[(usize, usize, usize)],
@@ -160,6 +175,9 @@ impl PressureFieldStatistics {
     ///
     /// With no accumulated time steps the RMS is the neutral zero field, matching
     /// [`p_rms`](Self::p_rms) and avoiding undefined `0/0` sampling.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sample_p_rms(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros(positions.len());
@@ -168,6 +186,9 @@ impl PressureFieldStatistics {
     }
 
     /// Fill caller-owned storage with RMS pressure at sensor positions.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn fill_p_rms(
         &self,
         positions: &[(usize, usize, usize)],
@@ -188,6 +209,9 @@ impl PressureFieldStatistics {
     }
 
     /// Sample final pressure at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sample_p_final(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros(positions.len());
@@ -196,6 +220,9 @@ impl PressureFieldStatistics {
     }
 
     /// Fill caller-owned storage with final pressure at sensor positions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_p_final(
         &self,
         positions: &[(usize, usize, usize)],
@@ -205,6 +232,7 @@ impl PressureFieldStatistics {
     }
 
     /// Sample all pressure statistics at sensor positions.
+    #[must_use] 
     pub fn sample_at_positions(&self, positions: &[(usize, usize, usize)]) -> SampledStatistics {
         SampledStatistics {
             p_max: self.sample_p_max(positions),

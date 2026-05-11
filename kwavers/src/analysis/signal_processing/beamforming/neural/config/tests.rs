@@ -33,8 +33,17 @@ fn test_sensor_geometry_phased() {
 
 #[test]
 fn test_config_validation_valid() {
+    // default: Hybrid mode, non-empty architecture, valid weights
     let config = NeuralBeamformingConfig::default();
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
+    assert!(
+        !config.network_architecture.is_empty(),
+        "default must have non-empty network_architecture"
+    );
+    assert!(
+        config.physics_parameters.reciprocity_weight > 0.0,
+        "default reciprocity_weight must be positive"
+    );
 }
 
 #[test]

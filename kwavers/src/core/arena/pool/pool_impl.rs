@@ -8,7 +8,7 @@ use std::sync::Arc;
 /// Node in the Treiber stack free-list.
 #[repr(C)]
 struct BufferNode {
-    next: *mut BufferNode,
+    next: *mut Self,
 }
 
 /// Lock-free buffer pool with NUMA awareness.
@@ -35,13 +35,17 @@ impl BufferPool {
     /// 1. Allocate contiguous block: `total = config.buffer_size() × capacity`
     /// 2. Partition into aligned buffers
     /// 3. Initialize Treiber stack with all buffers
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: PoolConfig) -> KwaversResult<Arc<Self>> {
         if config.capacity == 0 || config.elements == 0 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidValue {
-                    parameter: "pool_config".to_string(),
+                    parameter: "pool_config".to_owned(),
                     value: 0.0,
-                    reason: "Pool capacity and elements must be non-zero".to_string(),
+                    reason: "Pool capacity and elements must be non-zero".to_owned(),
                 },
             ));
         }
@@ -54,7 +58,7 @@ impl BufferPool {
         let layout = Layout::from_size_align(total_size, CACHE_LINE_SIZE).map_err(|_| {
             KwaversError::System(crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: total_size,
-                reason: "Failed to create layout for pool".to_string(),
+                reason: "Failed to create layout for pool".to_owned(),
             })
         })?;
 
@@ -82,6 +86,9 @@ impl BufferPool {
     }
 
     /// Acquire a buffer from the pool (Treiber stack pop).
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub fn acquire(self: &Arc<Self>) -> KwaversResult<PooledBuffer> {
         loop {
             let head = self.free_list.load(Ordering::Acquire);
@@ -89,7 +96,7 @@ impl BufferPool {
             if head.is_null() {
                 return Err(KwaversError::System(
                     crate::core::error::SystemError::ResourceUnavailable {
-                        resource: "buffer pool".to_string(),
+                        resource: "buffer pool".to_owned(),
                     },
                 ));
             }
@@ -223,6 +230,9 @@ impl PooledBuffer {
     }
 
     /// View buffer as an immutable typed slice.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn as_typed<T>(&self) -> &[T] {
         let byte_size = self.pool.config.buffer_size();
@@ -236,6 +246,9 @@ impl PooledBuffer {
     }
 
     /// View buffer as a mutable typed slice.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn as_typed_mut<T>(&mut self) -> &mut [T] {
         let byte_size = self.pool.config.buffer_size();

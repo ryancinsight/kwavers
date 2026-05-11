@@ -4,6 +4,10 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 use rand::Rng;
 
 impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
+    /// Adaptive refinement.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn adaptive_refinement(&mut self) -> KwaversResult<()> {
         let priorities_data: Vec<f32> = self.priorities.to_data().to_vec().unwrap_or_default();
         let points_data: Vec<f32> = self.active_points.to_data().to_vec().unwrap_or_default();

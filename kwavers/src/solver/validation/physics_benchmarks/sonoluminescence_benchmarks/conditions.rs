@@ -6,15 +6,15 @@
 /// an air bubble in water at 20°C, driving at 26.5 kHz.
 #[derive(Debug, Clone)]
 pub struct BrennerSBSLConditions {
-    /// Driving frequency [Hz]
+    /// Driving frequency (Hz)
     pub freq_hz: f64,
-    /// Ambient pressure [Pa]
+    /// Ambient pressure (Pa)
     pub p0_pa: f64,
-    /// Acoustic pressure amplitude [Pa]
+    /// Acoustic pressure amplitude (Pa)
     pub p_a_pa: f64,
-    /// Equilibrium bubble radius [m]
+    /// Equilibrium bubble radius (m)
     pub r0_m: f64,
-    /// Water temperature [K]
+    /// Water temperature (K)
     pub temperature_k: f64,
     /// Surface tension water at 20°C [N/m]
     pub sigma: f64,
@@ -24,9 +24,9 @@ pub struct BrennerSBSLConditions {
     pub rho_l: f64,
     /// Polytropic index of air (adiabatic at collapse)
     pub gamma: f64,
-    /// Vapour pressure of water at 20°C [Pa]
+    /// Vapour pressure of water at 20°C (Pa)
     pub p_v: f64,
-    /// Liquid sound speed [m/s]
+    /// Liquid sound speed (m/s)
     pub c_l: f64,
 }
 

@@ -34,6 +34,10 @@ impl BurnPINNConfig {
         }
     }
 
+    /// For prototyping.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn for_prototyping() -> Self {
         Self {
             hidden_layers: vec![20, 20, 20],
@@ -42,7 +46,11 @@ impl BurnPINNConfig {
             num_collocation_points: 1_000,
         }
     }
-
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.hidden_layers.is_empty() {
             return Err(KwaversError::InvalidInput(

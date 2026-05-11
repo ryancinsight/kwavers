@@ -27,6 +27,7 @@ pub enum TransformationType {
 
 impl RegistrationTransform {
     /// Create identity transformation
+    #[must_use] 
     pub fn identity() -> Self {
         let mut matrix = Array2::zeros((4, 4));
         for i in 0..4 {
@@ -42,6 +43,7 @@ impl RegistrationTransform {
     }
 
     /// Apply transformation to 3D point
+    #[must_use] 
     pub fn apply_to_point(&self, point: (f64, f64, f64)) -> (f64, f64, f64) {
         // Convert to homogeneous coordinates
         let p = [point.0, point.1, point.2, 1.0];
@@ -90,6 +92,9 @@ impl RegistrationTransform {
     ///
     /// Craig, J.J. (2005). *Introduction to Robotics: Mechanics and Control*.
     /// 3rd ed. Pearson. §2.3, Eq. 2.45.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn invert(&self) -> KwaversResult<Self> {
         // Extract R (3×3 upper-left) and t (column 3, rows 0..3) from the 4×4 matrix.
         // Matrix is stored row-major: self.matrix[[row, col]].
@@ -107,7 +112,7 @@ impl RegistrationTransform {
         let t = [m[[0, 3]], m[[1, 3]], m[[2, 3]]];
         let mut neg_rt_t = [0.0_f64; 3];
         for i in 0..3 {
-            neg_rt_t[i] = -(rt[i][0] * t[0] + rt[i][1] * t[1] + rt[i][2] * t[2]);
+            neg_rt_t[i] = -rt[i][2].mul_add(t[2], rt[i][0].mul_add(t[0], rt[i][1] * t[1]));
         }
 
         // Assemble 4×4 inverse matrix
@@ -149,6 +154,9 @@ mod tests {
     /// Identity transform inverted must still be identity.
     ///
     /// T = I₄  ⟹  T⁻¹ = I₄  (Craig 2005, §2.3)
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_invert_identity() {
         let id = RegistrationTransform::identity();
@@ -169,6 +177,9 @@ mod tests {
     ///
     /// T = [ I  d ]  ⟹  T⁻¹ = [ I  -d ]
     ///     [ 0  1 ]             [ 0   1 ]
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_invert_pure_translation() {
         let dx = 5.0_f64;
@@ -190,6 +201,9 @@ mod tests {
     ///
     /// Uses a 90° rotation about the z-axis with a non-trivial translation.
     /// The round-trip error must be below f64 machine epsilon × grid_size (12).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_invert_round_trip() {
         use std::f64::consts::FRAC_PI_2;

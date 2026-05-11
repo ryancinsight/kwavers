@@ -23,6 +23,7 @@ pub struct SirtReconstructor {
 
 impl SirtReconstructor {
     /// Create a new reconstructor with the given configuration.
+    #[must_use] 
     pub fn new(config: SirtConfig) -> Self {
         Self { config }
     }
@@ -33,6 +34,12 @@ impl SirtReconstructor {
     /// - `system_matrix` — Forward problem matrix A (m × n).
     /// - `sensor_data` — Measured data b (m).
     /// - `grid_size` — 3D grid dimensions `(nx, ny, nz)` where n = nx·ny·nz.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn reconstruct(
         &self,
         system_matrix: &Array2<f64>,
@@ -133,6 +140,9 @@ impl SirtReconstructor {
     // ==================== Algorithm Implementations ====================
 
     /// SIRT iteration: `x^(k+1) = x^(k) + λ·(D_R · A^T · (b − A·x^(k)))`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn sirt_iteration(
         &self,
         a: &Array2<f64>,
@@ -155,6 +165,9 @@ impl SirtReconstructor {
     }
 
     /// ART iteration: `x^(k+1) = x^(k) + (λ/‖aᵢ‖²)·aᵢᵀ·(bᵢ − aᵢ·x^(k))`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn art_iteration(
         &self,
         a: &Array2<f64>,
@@ -182,6 +195,9 @@ impl SirtReconstructor {
     }
 
     /// OSEM iteration: ordered subsets EM.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn osem_iteration(
         &self,
         a: &Array2<f64>,

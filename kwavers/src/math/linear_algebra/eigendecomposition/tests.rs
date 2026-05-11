@@ -98,7 +98,6 @@ fn test_condition_number_estimation() {
 
     let result = EigenSolver::jacobi_hermitian(&matrix, config).unwrap();
 
-    assert!(result.condition_number.is_some());
     let kappa = result.condition_number.unwrap();
     assert!(kappa >= 1.0, "Condition number should be >= 1");
 }

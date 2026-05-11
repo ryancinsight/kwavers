@@ -17,7 +17,7 @@
 //! The bounding box of this region delineates the main lobe extent.
 //! The peak sidelobe level is:
 //! ```text
-//!   PSL = 10 · log10(I_sidelobe_peak / I_main_peak)   [dB]
+//!   PSL = 10 · log10(I_sidelobe_peak / I_main_peak)   (dB)
 //! ```
 //! Reference: Zhu & Steinberg (1993), IEEE Trans. UFFC 40(6):726–737.
 //!
@@ -51,6 +51,9 @@ pub use types::CorrectionValidation;
 
 impl TranscranialAberrationCorrection {
     /// Validate correction performance against three metrics.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_correction(
         &self,
         correction: &PhaseCorrection,

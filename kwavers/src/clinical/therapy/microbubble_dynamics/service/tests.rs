@@ -36,7 +36,7 @@ fn test_update_bubble_dynamics_basic() {
         1e-6,
     );
 
-    assert!(result.is_ok());
+    result.unwrap();
     assert!(bubble.radius > 0.0);
     assert!(bubble.time > 0.0);
 }

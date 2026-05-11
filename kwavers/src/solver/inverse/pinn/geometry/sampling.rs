@@ -36,6 +36,7 @@ impl std::fmt::Debug for CollocationSampler {
 }
 
 impl CollocationSampler {
+    #[must_use] 
     pub fn new(
         domain: Box<dyn GeometricDomain>,
         strategy: SamplingStrategy,
@@ -48,6 +49,7 @@ impl CollocationSampler {
         }
     }
 
+    #[must_use] 
     pub fn sample_interior(&self, n_points: usize) -> Array2<f64> {
         match self.strategy {
             SamplingStrategy::Uniform => self.domain.sample_interior(n_points, self.seed),
@@ -59,6 +61,7 @@ impl CollocationSampler {
         }
     }
 
+    #[must_use] 
     pub fn sample_boundary(&self, n_points: usize) -> Array2<f64> {
         match self.strategy {
             SamplingStrategy::Uniform => self.domain.sample_boundary(n_points, self.seed),
@@ -94,14 +97,14 @@ impl CollocationSampler {
 
             for (i, &p) in perm.iter().enumerate() {
                 let u = (p as f64 + rng.gen::<f64>()) / n_points as f64;
-                points[[i, d]] = bbox[2 * d] + u * (bbox[2 * d + 1] - bbox[2 * d]);
+                points[[i, d]] = u.mul_add(bbox[2 * d + 1] - bbox[2 * d], bbox[2 * d]);
             }
         }
 
         let mut valid_points = Vec::new();
         let tolerance = 1e-8;
         for i in 0..n_points {
-            let point: Vec<f64> = points.row(i).iter().cloned().collect();
+            let point: Vec<f64> = points.row(i).iter().copied().collect();
             let loc = self.domain.classify_point(&point, tolerance);
             let include = (boundary && loc == PointLocation::Boundary)
                 || (!boundary && loc == PointLocation::Interior);
@@ -133,7 +136,7 @@ impl CollocationSampler {
         let mut points = Array2::zeros((n_points, dim));
         for (i, u) in unit_points.iter().enumerate() {
             for d in 0..dim {
-                points[[i, d]] = bbox[2 * d] + u[d] * (bbox[2 * d + 1] - bbox[2 * d]);
+                points[[i, d]] = u[d].mul_add(bbox[2 * d + 1] - bbox[2 * d], bbox[2 * d]);
             }
         }
 
@@ -141,6 +144,10 @@ impl CollocationSampler {
     }
 }
 
+/// Sobol unit hypercube points.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub(super) fn sobol_unit_hypercube_points(
     n_points: usize,
     dim: usize,

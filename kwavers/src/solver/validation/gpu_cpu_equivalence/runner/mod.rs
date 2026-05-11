@@ -20,6 +20,9 @@ fn calculate_stable_dt(grid: &Grid, medium: &dyn Medium) -> f64 {
 ///
 /// Executes the FDTD solver on CPU for the specified number of timesteps.
 /// Returns the final pressure field or an error.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 fn run_simulation_cpu(
     grid: &Grid,
     medium: &dyn Medium,
@@ -73,6 +76,9 @@ fn run_simulation_cpu(
 ///
 /// Executes the FDTD solver with GPU acceleration if available.
 /// Falls back to CPU if GPU is unavailable.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 fn run_simulation_gpu(
     grid: &Grid,
     medium: &dyn Medium,
@@ -163,6 +169,9 @@ fn run_simulation_gpu(
 /// let report = validate_gpu_cpu_equivalence(&grid, &medium, 100).unwrap();
 /// assert!(report.passed(), "GPU/CPU equivalence failed");
 /// ```
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn validate_gpu_cpu_equivalence(
     grid: &Grid,
     medium: &dyn Medium,
@@ -175,6 +184,9 @@ pub fn validate_gpu_cpu_equivalence(
 /// Validate with custom validator configuration
 ///
 /// Allows specifying custom tolerances for specific validation scenarios.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn validate_gpu_cpu_equivalence_with_config(
     grid: &Grid,
     medium: &dyn Medium,
@@ -249,6 +261,9 @@ pub fn validate_gpu_cpu_equivalence_with_config(
 /// ## Returns
 ///
 /// Equivalence report or validation error
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn validate_equivalence_config(
     grid_size: (usize, usize, usize),
     dx: f64,

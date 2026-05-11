@@ -32,6 +32,9 @@ use crate::solver::pstd::utils::{
 };
 
 /// Initialize spectral operators and correction factors
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn initialize_spectral_operators(
     config: &PSTDConfig,
     grid: &Grid,

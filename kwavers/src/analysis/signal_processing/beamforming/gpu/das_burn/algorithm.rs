@@ -12,6 +12,12 @@ impl<B: Backend> BurnDasBeamformer<B> {
     /// 2. Clamp delay indices to valid sample range
     /// 3. Vectorized gather operations for delayed samples
     /// 4. Reduction (sum) over sensors with apodization
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn beamform_batch_tensor(
         &self,
         rf_tensor: &Tensor<B, 3>,
@@ -70,6 +76,9 @@ impl<B: Backend> BurnDasBeamformer<B> {
     ///
     /// For each sensor `i`, extracts `rf_frame[i, delay[i]]`.
     /// Returns 0 when `delay[i]` is out of range [0, n_samples).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn gather_delayed_samples(
         &self,
         rf_frame: &Tensor<B, 2>,
@@ -102,6 +111,9 @@ impl<B: Backend> BurnDasBeamformer<B> {
     /// ```text
     /// distances[i,j] = ||sensor_pos[j] - focal_points[i]||₂
     /// ```
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub(super) fn compute_distances_batch(
         &self,
         sensor_pos: &Tensor<B, 2>,

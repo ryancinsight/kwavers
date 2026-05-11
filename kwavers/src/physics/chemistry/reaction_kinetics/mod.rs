@@ -33,7 +33,7 @@ impl ReactionKinetics {
             .and(&mut self.hydrogen_peroxide)
             .and(radical_init)
             .and(temperature)
-            .for_each(|(i, j, k), oh, h2o2, &r_init, &t| {
+            .par_for_each(|(i, j, k), oh, h2o2, &r_init, &t| {
                 let _x = i as f64 * grid.dx;
                 let _y = j as f64 * grid.dy;
                 let _z = k as f64 * grid.dz;

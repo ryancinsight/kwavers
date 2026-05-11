@@ -75,6 +75,9 @@ pub struct PatientMedicalProfile {
 
 impl PatientMedicalProfile {
     /// Create a new patient profile
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(demographics: PatientDemographics) -> KwaversResult<Self> {
         demographics.validate()?;
 
@@ -89,6 +92,9 @@ impl PatientMedicalProfile {
     }
 
     /// Add a diagnosis to medical history
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_diagnosis(
         &mut self,
         diagnosis_code: impl Into<String>,
@@ -99,7 +105,7 @@ impl PatientMedicalProfile {
             diagnosis_code: diagnosis_code.into(),
             diagnosis: diagnosis.into(),
             date: iso8601_now(),
-            status: "active".to_string(),
+            status: "active".to_owned(),
             notes: notes.into(),
         };
 
@@ -109,6 +115,9 @@ impl PatientMedicalProfile {
     }
 
     /// Add a medication
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_medication(
         &mut self,
         medication: impl Into<String>,

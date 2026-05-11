@@ -66,6 +66,9 @@ impl Default for TimeReversalConfig {
 
 impl TimeReversalConfig {
     /// Validate configuration parameters
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.iterations == 0 {
             return Err(KwaversError::Validation(
@@ -90,9 +93,9 @@ impl TimeReversalConfig {
         if let Some((f_min, f_max)) = self.frequency_range {
             if f_min >= f_max || f_min < 0.0 {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "frequency_range".to_string(),
+                    field: "frequency_range".to_owned(),
                     value: format!("({f_min}, {f_max})"),
-                    constraint: "min must be less than max and non-negative".to_string(),
+                    constraint: "min must be less than max and non-negative".to_owned(),
                 }));
             }
         }
@@ -100,9 +103,9 @@ impl TimeReversalConfig {
         if let Some((t_min, t_max)) = self.time_window {
             if t_min >= t_max || t_min < 0.0 {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "time_window".to_string(),
+                    field: "time_window".to_owned(),
                     value: format!("({t_min}, {t_max})"),
-                    constraint: "min must be less than max and non-negative".to_string(),
+                    constraint: "min must be less than max and non-negative".to_owned(),
                 }));
             }
         }

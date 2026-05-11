@@ -12,6 +12,7 @@ impl ClinicalPhantoms {
     ///
     /// Contains arterial vessel (sO₂=98%), venous vessel (sO₂=65%),
     /// and hypoxic tumor (sO₂=55%).
+    #[must_use] 
     pub fn standard_blood_oxygenation(dims: GridDimensions) -> OpticalPropertyMap {
         let cx = dims.dx * (dims.nx as f64) / 2.0;
         let cy = dims.dy * (dims.ny as f64) / 2.0;
@@ -27,6 +28,7 @@ impl ClinicalPhantoms {
     }
 
     /// Skin tissue phantom (epidermis/dermis/fat/muscle)
+    #[must_use] 
     pub fn skin_tissue(dims: GridDimensions) -> OpticalPropertyMap {
         PhantomBuilder::layered_tissue()
             .dimensions(dims)
@@ -39,6 +41,7 @@ impl ClinicalPhantoms {
     }
 
     /// Breast tissue phantom with tumor
+    #[must_use] 
     pub fn breast_tumor(dims: GridDimensions, tumor_center: [f64; 3]) -> OpticalPropertyMap {
         PhantomBuilder::tumor_detection()
             .dimensions(dims)
@@ -49,6 +52,7 @@ impl ClinicalPhantoms {
     }
 
     /// Vascular network phantom
+    #[must_use] 
     pub fn vascular_network(dims: GridDimensions) -> OpticalPropertyMap {
         let cx = dims.dx * (dims.nx as f64) / 2.0;
         let cy = dims.dy * (dims.ny as f64) / 2.0;

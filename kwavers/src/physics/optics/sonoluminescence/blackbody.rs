@@ -58,7 +58,7 @@ impl BlackbodyModel {
             // Full Planck formula
             2.0 * PLANCK_CONSTANT * SPEED_OF_LIGHT.powi(2)
                 / wavelength.powi(5)
-                / (hc_over_lambda_kt.exp() - 1.0)
+                / hc_over_lambda_kt.exp_m1()
         };
 
         // Apply emissivity and optical depth correction
@@ -114,6 +114,9 @@ impl BlackbodyModel {
     ///
     /// # Returns
     /// Estimated color temperature in Kelvin
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[must_use]
     pub fn color_temperature(&self, spectrum: &Array1<f64>, wavelengths: &Array1<f64>) -> f64 {
         // Find peak wavelength
@@ -147,7 +150,7 @@ pub fn calculate_blackbody_emission(
     Zip::from(&mut emission_field)
         .and(temperature_field)
         .and(bubble_radius_field)
-        .for_each(|out, &temp, &radius| {
+        .par_for_each(|out, &temp, &radius| {
             if radius > 0.0 && temp > 0.0 {
                 // Surface area of bubble
                 let surface_area = 4.0 * PI * radius * radius;

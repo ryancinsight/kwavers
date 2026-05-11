@@ -44,6 +44,9 @@ pub struct Configuration {
 
 impl Configuration {
     /// Load configuration from TOML file
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_file<P: AsRef<Path>>(path: P) -> crate::core::error::KwaversResult<Self> {
         let contents = std::fs::read_to_string(path.as_ref()).map_err(|_e| {
             crate::core::error::ConfigError::FileNotFound {
@@ -61,6 +64,9 @@ impl Configuration {
     }
 
     /// Save configuration to TOML file
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> crate::core::error::KwaversResult<()> {
         let contents = toml::to_string_pretty(self).map_err(|e| {
             crate::core::error::ConfigError::ParseError {
@@ -71,13 +77,16 @@ impl Configuration {
 
         std::fs::write(path, contents).map_err(|_e| {
             crate::core::error::ConfigError::FileNotFound {
-                path: "config file".to_string(),
+                path: "config file".to_owned(),
             }
             .into()
         })
     }
 
     /// Validate configuration for consistency
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         let mut multi_error = crate::core::error::MultiError::new();
 
@@ -119,6 +128,9 @@ impl Configuration {
     }
 
     /// Validate cross-component dependencies
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn validate_cross_dependencies(&self) -> crate::core::error::KwaversResult<()> {
         let mut multi_error = crate::core::error::MultiError::new();
 
@@ -135,7 +147,7 @@ impl Configuration {
                 if cfl_actual > self.simulation.cfl {
                     multi_error.add(
                         crate::core::error::ConfigError::InvalidValue {
-                            parameter: "dt".to_string(),
+                            parameter: "dt".to_owned(),
                             value: format!("{dt}"),
                             constraint: format!(
                                 "CFL condition violated: {} > {} (max_velocity={}, min_spacing={})",
@@ -148,8 +160,8 @@ impl Configuration {
             } else {
                 multi_error.add(
                     crate::core::error::ConfigError::MissingParameter {
-                        parameter: "medium.sound_speed_max".to_string(),
-                        section: "Required for CFL validation when dt is specified".to_string(),
+                        parameter: "medium.sound_speed_max".to_owned(),
+                        section: "Required for CFL validation when dt is specified".to_owned(),
                     }
                     .into(),
                 );
@@ -168,7 +180,7 @@ impl Configuration {
 
             if min_ppw < 2.0 {
                 multi_error.add(crate::core::error::ConfigError::InvalidValue {
-                    parameter: "grid.spacing".to_string(),
+                    parameter: "grid.spacing".to_owned(),
                     value: format!("{:?}", self.grid.spacing),
                     constraint: format!(
                         "Nyquist criterion violated: {min_ppw} points per wavelength < 2 (min_wavelength={}, max_spacing={})",
@@ -179,8 +191,8 @@ impl Configuration {
         } else {
             multi_error.add(
                 crate::core::error::ConfigError::MissingParameter {
-                    parameter: "medium.sound_speed_min".to_string(),
-                    section: "Required for Nyquist validation".to_string(),
+                    parameter: "medium.sound_speed_min".to_owned(),
+                    section: "Required for Nyquist validation".to_owned(),
                 }
                 .into(),
             );

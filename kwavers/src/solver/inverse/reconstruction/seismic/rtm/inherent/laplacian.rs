@@ -30,6 +30,9 @@ impl ReverseTimeMigration {
     /// Compute the 2nd-order isotropic Laplacian of `field`.
     ///
     /// Returns an array of the same shape; boundary elements are zero.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_laplacian(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let mut laplacian = Array3::<f64>::zeros((nx, ny, nz));
@@ -52,7 +55,7 @@ impl ReverseTimeMigration {
             .and(&field.slice(s![1..nx - 1, 1..ny - 1, 2..nz]))
             .and(&field.slice(s![1..nx - 1, 1..ny - 1, ..nz - 2]))
             .and(&field.slice(s![1..nx - 1, 1..ny - 1, 1..nz - 1]))
-            .par_for_each(|lap, &zp, &zm, &c| *lap += zp + zm - 6.0 * c);
+            .par_for_each(|lap, &zp, &zm, &c| *lap += 6.0f64.mul_add(-c, zp + zm));
 
         Ok(laplacian)
     }

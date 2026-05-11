@@ -47,6 +47,9 @@ impl NarrowbandSteeringVector {
     }
 
     /// Consume and return the underlying phasor vector.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn into_array(self) -> Array1<Complex64> {
         self.0
@@ -70,12 +73,12 @@ impl NarrowbandSteering {
     pub fn new(sensor_positions_m: Vec<[f64; 3]>, sound_speed_m_per_s: f64) -> KwaversResult<Self> {
         if sensor_positions_m.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "NarrowbandSteering::new: sensor_positions_m must be non-empty".to_string(),
+                "NarrowbandSteering::new: sensor_positions_m must be non-empty".to_owned(),
             ));
         }
         if !sound_speed_m_per_s.is_finite() || sound_speed_m_per_s <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "NarrowbandSteering::new: sound_speed_m_per_s must be finite and > 0".to_string(),
+                "NarrowbandSteering::new: sound_speed_m_per_s must be finite and > 0".to_owned(),
             ));
         }
         if sensor_positions_m
@@ -83,7 +86,7 @@ impl NarrowbandSteering {
             .any(|p| p.iter().any(|v| !v.is_finite()))
         {
             return Err(KwaversError::InvalidInput(
-                "NarrowbandSteering::new: sensor_positions_m must be finite".to_string(),
+                "NarrowbandSteering::new: sensor_positions_m must be finite".to_owned(),
             ));
         }
 
@@ -94,12 +97,18 @@ impl NarrowbandSteering {
     }
 
     /// Number of sensors / elements.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn num_sensors(&self) -> usize {
         self.sensor_positions_m.len()
     }
 
     /// Speed of sound used for TOF calculations (m/s).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn sound_speed_m_per_s(&self) -> f64 {
         self.sound_speed_m_per_s
@@ -112,7 +121,7 @@ impl NarrowbandSteering {
     pub fn propagation_delays_s(&self, candidate_m: [f64; 3]) -> KwaversResult<Vec<f64>> {
         if candidate_m.iter().any(|v| !v.is_finite()) {
             return Err(KwaversError::InvalidInput(
-                "NarrowbandSteering::propagation_delays_s: candidate_m must be finite".to_string(),
+                "NarrowbandSteering::propagation_delays_s: candidate_m must be finite".to_owned(),
             ));
         }
 
@@ -154,6 +163,9 @@ impl NarrowbandSteering {
 /// - The output has unit magnitude phasors.
 /// - This applies a *negative* sign convention consistent with most array processing texts for
 ///   steering to compensate propagation delay.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[must_use]
 pub fn steering_from_delays_s(delays_s: &[f64], frequency_hz: f64) -> NarrowbandSteeringVector {
     // Caller is expected to validate `frequency_hz` and `delays_s` finiteness where needed.
@@ -170,7 +182,7 @@ pub fn steering_from_delays_s(delays_s: &[f64], frequency_hz: f64) -> Narrowband
 fn validate_frequency_hz(frequency_hz: f64) -> KwaversResult<()> {
     if !frequency_hz.is_finite() || frequency_hz <= 0.0 {
         return Err(KwaversError::InvalidInput(
-            "Narrowband steering: frequency_hz must be finite and > 0".to_string(),
+            "Narrowband steering: frequency_hz must be finite and > 0".to_owned(),
         ));
     }
     Ok(())

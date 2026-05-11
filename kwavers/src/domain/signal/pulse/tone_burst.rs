@@ -21,6 +21,11 @@ pub struct ToneBurst {
 }
 
 impl ToneBurst {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Center frequency must be positive`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(center_frequency: f64, num_cycles: f64, start_time: f64, amplitude: f64) -> Self {
         assert!(center_frequency > 0.0, "Center frequency must be positive");
@@ -36,7 +41,10 @@ impl ToneBurst {
             window_type: WindowType::Hann,
         }
     }
-
+    /// Try new.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn try_new(
         center_frequency: f64,
         num_cycles: f64,
@@ -82,6 +90,10 @@ impl ToneBurst {
         self
     }
 
+    /// With phase.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn with_phase(mut self, phase: f64) -> Self {
         assert!(phase.is_finite(), "Phase must be finite");
@@ -112,7 +124,7 @@ impl ToneBurst {
 impl Signal for ToneBurst {
     fn amplitude(&self, t: f64) -> f64 {
         let (window, relative_time) = self.window(t);
-        let carrier = (2.0 * PI * self.center_frequency * relative_time + self.phase).sin();
+        let carrier = (2.0 * PI * self.center_frequency).mul_add(relative_time, self.phase).sin();
         self.amplitude * window * carrier
     }
 

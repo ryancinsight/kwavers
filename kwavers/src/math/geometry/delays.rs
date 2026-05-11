@@ -1,7 +1,13 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 use std::f64::consts::PI;
-
+/// Focus phase delays.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub fn focus_phase_delays(
     element_positions: &[[f64; 3]],
     focal_point: [f64; 3],
@@ -48,7 +54,7 @@ pub fn focus_phase_delays(
         let dx = focal_point[0] - pos[0];
         let dy = focal_point[1] - pos[1];
         let dz = focal_point[2] - pos[2];
-        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+        let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
         if !distance.is_finite() {
             return Err(KwaversError::InvalidInput(format!(
@@ -76,7 +82,10 @@ pub fn focus_phase_delays(
 
     Ok(phase_delays)
 }
-
+/// Plane wave phase delays.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn plane_wave_phase_delays(
     element_positions: &[[f64; 3]],
     direction: [f64; 3],
@@ -103,7 +112,7 @@ pub fn plane_wave_phase_delays(
         )));
     }
 
-    let dir_norm_sq = direction[0].powi(2) + direction[1].powi(2) + direction[2].powi(2);
+    let dir_norm_sq = direction[2].mul_add(direction[2], direction[1].mul_add(direction[1], direction[0].powi(2)));
 
     if !dir_norm_sq.is_finite() {
         return Err(KwaversError::InvalidInput(
@@ -131,7 +140,7 @@ pub fn plane_wave_phase_delays(
             )));
         }
 
-        let dot_product = pos[0] * direction[0] + pos[1] * direction[1] + pos[2] * direction[2];
+        let dot_product = pos[2].mul_add(direction[2], pos[0].mul_add(direction[0], pos[1] * direction[1]));
 
         if !dot_product.is_finite() {
             return Err(KwaversError::InvalidInput(format!(
@@ -145,7 +154,10 @@ pub fn plane_wave_phase_delays(
 
     Ok(phase_delays)
 }
-
+/// Spherical steering phase delays.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn spherical_steering_phase_delays(
     element_positions: &[[f64; 3]],
     theta: f64,
@@ -167,7 +179,10 @@ pub fn spherical_steering_phase_delays(
 
     plane_wave_phase_delays(element_positions, direction, frequency, sound_speed)
 }
-
+/// Calculate beam width.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn calculate_beam_width(
     aperture_size: f64,
     frequency: f64,
@@ -197,7 +212,10 @@ pub fn calculate_beam_width(
     let wavelength = sound_speed / frequency;
     Ok(1.22 * wavelength / aperture_size)
 }
-
+/// Calculate focal zone.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn calculate_focal_zone(
     aperture_size: f64,
     focal_distance: f64,

@@ -19,6 +19,10 @@ pub struct GpuThermalAcousticSolver {
 }
 
 impl GpuThermalAcousticSolver {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -59,6 +63,9 @@ impl GpuThermalAcousticSolver {
     }
 
     /// Execute one time step of the coupled simulation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn step(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> KwaversResult<()> {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Thermal-Acoustic Step Encoder"),

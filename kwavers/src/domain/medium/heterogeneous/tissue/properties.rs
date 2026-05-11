@@ -9,10 +9,6 @@ use std::collections::HashMap;
 pub struct TissuePropertyCache {
     density_cache: HashMap<TissueType, f64>,
     sound_speed_cache: HashMap<TissueType, f64>,
-    #[allow(dead_code)]
-    absorption_cache: HashMap<TissueType, f64>,
-    #[allow(dead_code)]
-    nonlinearity_cache: HashMap<TissueType, f64>,
 }
 
 impl Default for TissuePropertyCache {
@@ -28,8 +24,6 @@ impl TissuePropertyCache {
         Self {
             density_cache: HashMap::new(),
             sound_speed_cache: HashMap::new(),
-            absorption_cache: HashMap::new(),
-            nonlinearity_cache: HashMap::new(),
         }
     }
 

@@ -39,6 +39,9 @@ impl ShearWaveElastography {
     /// * `medium` - Tissue medium properties
     /// * `method` - Inversion algorithm to use for reconstruction
     /// * `config` - Configuration for elastic wave simulation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new<M: Medium + Clone + 'static>(
         grid: &Grid,
         medium: &M,
@@ -65,6 +68,9 @@ impl ShearWaveElastography {
     /// # Returns
     ///
     /// Vector of displacement fields at different time points
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn generate_shear_wave(
         &self,
         push_location: [f64; 3],
@@ -94,6 +100,9 @@ impl ShearWaveElastography {
     /// # Returns
     ///
     /// Reconstructed elasticity map
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn reconstruct_elasticity(
         &self,
         displacement_history: &[ElasticWaveField],
@@ -103,9 +112,9 @@ impl ShearWaveElastography {
         let final_field = displacement_history.last().ok_or_else(|| {
             crate::core::error::KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidValue {
-                    parameter: "displacement_history".to_string(),
+                    parameter: "displacement_history".to_owned(),
                     value: 0.0,
-                    reason: "History cannot be empty".to_string(),
+                    reason: "History cannot be empty".to_owned(),
                 },
             )
         })?;

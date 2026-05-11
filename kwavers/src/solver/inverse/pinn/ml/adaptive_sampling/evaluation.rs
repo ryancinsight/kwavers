@@ -4,6 +4,10 @@ use burn::tensor::{backend::AutodiffBackend, ElementConversion, Tensor};
 use std::collections::HashMap;
 
 impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
+    /// Evaluate residuals.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn evaluate_residuals(
         &self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
@@ -43,7 +47,10 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
 
         Ok(residual_magnitude)
     }
-
+    /// Update priorities.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn update_priorities(&mut self, residuals: &Tensor<B, 1>) -> KwaversResult<()> {
         let max_residual = residuals.clone().max().into_scalar().elem::<f32>();
         let min_residual = residuals.clone().min().into_scalar().elem::<f32>();
@@ -78,7 +85,10 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
 
         Ok(())
     }
-
+    /// Update statistics.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn update_statistics(&mut self) -> KwaversResult<()> {
         let priorities_data: Vec<f32> = self.priorities.to_data().to_vec().unwrap_or_default();
 

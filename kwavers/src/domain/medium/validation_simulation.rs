@@ -11,6 +11,9 @@ pub struct MediumValidator;
 
 impl MediumValidator {
     /// Validate medium configuration with physics-based constraints
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate(config: &MediumParameters) -> KwaversResult<()> {
         match config.medium_type {
             MediumType::Homogeneous => {
@@ -40,8 +43,8 @@ impl MediumValidator {
                     Self::validate_anisotropic(file)?;
                 } else {
                     return Err(ConfigError::MissingParameter {
-                        parameter: "tensor_file".to_string(),
-                        section: "medium".to_string(),
+                        parameter: "tensor_file".to_owned(),
+                        section: "medium".to_owned(),
                     }
                     .into());
                 }
@@ -52,6 +55,9 @@ impl MediumValidator {
     }
 
     /// Validate homogeneous medium properties
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn validate_homogeneous(
         density: f64,
         sound_speed: f64,
@@ -61,18 +67,18 @@ impl MediumValidator {
         // Physical bounds based on literature (Hamilton & Blackstock 1998)
         if density <= 0.0 {
             return Err(ConfigError::InvalidValue {
-                parameter: "density".to_string(),
+                parameter: "density".to_owned(),
                 value: density.to_string(),
-                constraint: "Density must be positive".to_string(),
+                constraint: "Density must be positive".to_owned(),
             }
             .into());
         }
 
         if sound_speed <= 0.0 {
             return Err(ConfigError::InvalidValue {
-                parameter: "sound_speed".to_string(),
+                parameter: "sound_speed".to_owned(),
                 value: sound_speed.to_string(),
-                constraint: "Sound speed must be positive".to_string(),
+                constraint: "Sound speed must be positive".to_owned(),
             }
             .into());
         }
@@ -85,7 +91,7 @@ impl MediumValidator {
 
         if !(MIN_DENSITY..=MAX_DENSITY).contains(&density) {
             return Err(ConfigError::InvalidValue {
-                parameter: "density".to_string(),
+                parameter: "density".to_owned(),
                 value: density.to_string(),
                 constraint: format!("Density must be within [{MIN_DENSITY}, {MAX_DENSITY}] kg/m³"),
             }
@@ -94,7 +100,7 @@ impl MediumValidator {
 
         if !(MIN_SOUND_SPEED..=MAX_SOUND_SPEED).contains(&sound_speed) {
             return Err(ConfigError::InvalidValue {
-                parameter: "sound_speed".to_string(),
+                parameter: "sound_speed".to_owned(),
                 value: sound_speed.to_string(),
                 constraint: format!(
                     "Sound speed must be within [{MIN_SOUND_SPEED}, {MAX_SOUND_SPEED}] m/s"
@@ -106,18 +112,18 @@ impl MediumValidator {
         // Optical properties validation
         if mu_a < 0.0 {
             return Err(ConfigError::InvalidValue {
-                parameter: "mu_a".to_string(),
+                parameter: "mu_a".to_owned(),
                 value: mu_a.to_string(),
-                constraint: "Absorption coefficient must be non-negative".to_string(),
+                constraint: "Absorption coefficient must be non-negative".to_owned(),
             }
             .into());
         }
 
         if mu_s_prime < 0.0 {
             return Err(ConfigError::InvalidValue {
-                parameter: "mu_s_prime".to_string(),
+                parameter: "mu_s_prime".to_owned(),
                 value: mu_s_prime.to_string(),
-                constraint: "Reduced scattering coefficient must be non-negative".to_string(),
+                constraint: "Reduced scattering coefficient must be non-negative".to_owned(),
             }
             .into());
         }
@@ -126,13 +132,16 @@ impl MediumValidator {
     }
 
     /// Validate heterogeneous medium configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn validate_heterogeneous(tissue_file: &Option<String>) -> KwaversResult<()> {
         if let Some(file_path) = tissue_file {
             if file_path.is_empty() {
                 return Err(ConfigError::InvalidValue {
-                    parameter: "tissue_file".to_string(),
-                    value: "empty".to_string(),
-                    constraint: "Tissue file path cannot be empty".to_string(),
+                    parameter: "tissue_file".to_owned(),
+                    value: "empty".to_owned(),
+                    constraint: "Tissue file path cannot be empty".to_owned(),
                 }
                 .into());
             }
@@ -141,7 +150,7 @@ impl MediumValidator {
             let valid_extensions = [".nii", ".nii.gz", ".mat", ".h5"];
             if !valid_extensions.iter().any(|ext| file_path.ends_with(ext)) {
                 return Err(ConfigError::InvalidValue {
-                    parameter: "tissue_file".to_string(),
+                    parameter: "tissue_file".to_owned(),
                     value: file_path.clone(),
                     constraint: format!(
                         "File must have one of these extensions: {}",
@@ -155,12 +164,15 @@ impl MediumValidator {
     }
 
     /// Validate layered medium configuration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn validate_layered(layers: &[LayerParameters]) -> KwaversResult<()> {
         if layers.is_empty() {
             return Err(ConfigError::InvalidValue {
-                parameter: "layers".to_string(),
-                value: "empty".to_string(),
-                constraint: "At least one layer is required".to_string(),
+                parameter: "layers".to_owned(),
+                value: "empty".to_owned(),
+                constraint: "At least one layer is required".to_owned(),
             }
             .into());
         }
@@ -170,7 +182,7 @@ impl MediumValidator {
                 return Err(ConfigError::InvalidValue {
                     parameter: format!("layer[{}].thickness", i),
                     value: layer.thickness.to_string(),
-                    constraint: "Layer thickness must be positive".to_string(),
+                    constraint: "Layer thickness must be positive".to_owned(),
                 }
                 .into());
             }
@@ -188,12 +200,15 @@ impl MediumValidator {
     }
 
     /// Validate anisotropic medium configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn validate_anisotropic(tensor_file: &str) -> KwaversResult<()> {
         if tensor_file.is_empty() {
             return Err(ConfigError::InvalidValue {
-                parameter: "tensor_file".to_string(),
-                value: "empty".to_string(),
-                constraint: "Tensor file path cannot be empty".to_string(),
+                parameter: "tensor_file".to_owned(),
+                value: "empty".to_owned(),
+                constraint: "Tensor file path cannot be empty".to_owned(),
             }
             .into());
         }
@@ -201,9 +216,9 @@ impl MediumValidator {
         // Validate tensor file format
         if !tensor_file.ends_with(".ten") && !tensor_file.ends_with(".mat") {
             return Err(ConfigError::InvalidValue {
-                parameter: "tensor_file".to_string(),
-                value: tensor_file.to_string(),
-                constraint: "Tensor file must have .ten or .mat extension".to_string(),
+                parameter: "tensor_file".to_owned(),
+                value: tensor_file.to_owned(),
+                constraint: "Tensor file must have .ten or .mat extension".to_owned(),
             }
             .into());
         }

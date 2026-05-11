@@ -20,7 +20,7 @@ pub struct BubbleField {
     pub bubble_parameters: BubbleParameters,
     /// Grid dimensions (Nx, Ny, Nz).
     pub grid_shape: (usize, usize, usize),
-    /// Physical grid spacing (dx, dy, dz) [m].
+    /// Physical grid spacing (dx, dy, dz) (m).
     pub grid_spacing: (f64, f64, f64),
     /// Liquid density for secondary Bjerknes pressure [kg m⁻³].
     pub rho_liquid: f64,

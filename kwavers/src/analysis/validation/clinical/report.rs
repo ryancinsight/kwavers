@@ -7,6 +7,7 @@ use super::validator::ClinicalValidator;
 
 impl ClinicalValidator {
     /// Generate comprehensive clinical validation report (Markdown).
+    #[must_use] 
     pub fn generate_validation_report(
         &self,
         bmode_result: Option<&ClinicalValidationResult>,
@@ -22,7 +23,7 @@ impl ClinicalValidator {
 
         let all_passed = [bmode_result, doppler_result, safety_result]
             .iter()
-            .all(|r| r.map(|res| res.passed).unwrap_or(true));
+            .all(|r| r.is_none_or(|res| res.passed));
 
         report.push_str(&format!(
             "## Overall Status: {}\n\n",

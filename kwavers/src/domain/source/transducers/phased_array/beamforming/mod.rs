@@ -68,13 +68,13 @@ mod tests;
 /// to steer) into phase delays for transducer element excitation.
 #[derive(Debug, Clone)]
 pub enum BeamformingMode {
-    /// Focus at specific point (x, y, z) [m].
+    /// Focus at specific point (x, y, z) (m).
     ///
     /// Applies delays to focus acoustic energy at a target point in space.
     /// Used for B-mode imaging, therapy focusing, and synthetic aperture transmit.
     Focus { target: (f64, f64, f64) },
 
-    /// Steer beam to angle (theta, phi) [rad].
+    /// Steer beam to angle (theta, phi) (rad).
     ///
     /// Creates a plane wave propagating in the specified spherical direction.
     /// Used for plane wave imaging and sector scanning.
@@ -83,7 +83,7 @@ pub enum BeamformingMode {
     /// - `phi`: Azimuthal angle in xy-plane [0, 2π]
     Steer { theta: f64, phi: f64 },
 
-    /// Custom phase delays [rad].
+    /// Custom phase delays (rad).
     ///
     /// Directly specifies phase delays for each element. Used for advanced
     /// applications like coded excitation, arbitrary wavefront synthesis, or
@@ -128,9 +128,9 @@ pub enum BeamformingMode {
 /// ```
 #[derive(Debug)]
 pub struct BeamformingCalculator {
-    /// Speed of sound in medium [m/s]
+    /// Speed of sound in medium (m/s)
     sound_speed: f64,
-    /// Operating frequency [Hz]
+    /// Operating frequency (Hz)
     frequency: f64,
 }
 
@@ -158,12 +158,12 @@ impl BeamformingCalculator {
     ///
     /// # Arguments
     ///
-    /// * `element_positions` - Array element positions as (x, y, z) tuples [m]
-    /// * `target` - Target focal point as (x, y, z) [m]
+    /// * `element_positions` - Array element positions as (x, y, z) tuples (m)
+    /// * `target` - Target focal point as (x, y, z) (m)
     ///
     /// # Returns
     ///
-    /// Vector of phase delays [rad], one per element. Delays are normalized
+    /// Vector of phase delays (rad), one per element. Delays are normalized
     /// such that all values are non-negative (relative to maximum distance).
     ///
     /// # Errors
@@ -174,6 +174,10 @@ impl BeamformingCalculator {
     /// # Delegation
     ///
     /// Delegates to `math::geometry::delays::focus_phase_delays`.
+    /// # Panics
+    /// - Panics if `Focus delay calculation failed - invalid geometry or medium parameters`.
+    ///
+    #[must_use] 
     pub fn calculate_focus_delays(
         &self,
         element_positions: &[(f64, f64, f64)],
@@ -205,13 +209,13 @@ impl BeamformingCalculator {
     ///
     /// # Arguments
     ///
-    /// * `element_positions` - Array element positions as (x, y, z) tuples [m]
-    /// * `theta` - Polar angle from z-axis [rad], range [0, π]
-    /// * `phi` - Azimuthal angle in xy-plane [rad], range [0, 2π]
+    /// * `element_positions` - Array element positions as (x, y, z) tuples (m)
+    /// * `theta` - Polar angle from z-axis (rad), range [0, π]
+    /// * `phi` - Azimuthal angle in xy-plane (rad), range [0, 2π]
     ///
     /// # Returns
     ///
-    /// Vector of phase delays [rad], one per element. Values can be positive
+    /// Vector of phase delays (rad), one per element. Values can be positive
     /// or negative depending on geometry.
     ///
     /// # Spherical Coordinate Convention
@@ -225,6 +229,9 @@ impl BeamformingCalculator {
     /// # Delegation
     ///
     /// Delegates to `math::geometry::delays::spherical_steering_phase_delays`.
+    /// # Panics
+    /// - Panics if `Steering delay calculation failed`.
+    ///
     #[must_use]
     pub fn calculate_steering_delays(
         &self,
@@ -252,12 +259,12 @@ impl BeamformingCalculator {
     ///
     /// # Arguments
     ///
-    /// * `element_positions` - Array element positions as (x, y, z) tuples [m]
+    /// * `element_positions` - Array element positions as (x, y, z) tuples (m)
     /// * `direction` - Propagation direction as (x, y, z) tuple (must be unit vector)
     ///
     /// # Returns
     ///
-    /// Vector of phase delays [rad], one per element.
+    /// Vector of phase delays (rad), one per element.
     ///
     /// # Errors (via panic in current implementation)
     ///
@@ -267,6 +274,9 @@ impl BeamformingCalculator {
     /// # Delegation
     ///
     /// Delegates to `math::geometry::delays::plane_wave_phase_delays`.
+    /// # Panics
+    /// - Panics if `Plane wave delay calculation failed`.
+    ///
     #[must_use]
     pub fn calculate_plane_wave_delays(
         &self,
@@ -296,7 +306,7 @@ impl BeamformingCalculator {
     ///
     /// # Arguments
     ///
-    /// * `aperture_size` - Physical size of array aperture [m]
+    /// * `aperture_size` - Physical size of array aperture (m)
     ///
     /// # Returns
     ///
@@ -311,6 +321,9 @@ impl BeamformingCalculator {
     /// # Delegation
     ///
     /// Delegates to `math::geometry::delays::calculate_beam_width`.
+    /// # Panics
+    /// - Panics if `Beam width calculation failed`.
+    ///
     #[must_use]
     pub fn calculate_beam_width(&self, aperture_size: f64) -> f64 {
         delays::calculate_beam_width(aperture_size, self.frequency, self.sound_speed)
@@ -323,8 +336,8 @@ impl BeamformingCalculator {
     ///
     /// # Arguments
     ///
-    /// * `aperture_size` - Physical size of array aperture [m]
-    /// * `focal_distance` - Distance from array to focal point [m]
+    /// * `aperture_size` - Physical size of array aperture (m)
+    /// * `focal_distance` - Distance from array to focal point (m)
     ///
     /// # Returns
     ///
@@ -341,6 +354,9 @@ impl BeamformingCalculator {
     /// # Delegation
     ///
     /// Delegates to `math::geometry::delays::calculate_focal_zone`.
+    /// # Panics
+    /// - Panics if `Focal zone calculation failed`.
+    ///
     #[must_use]
     pub fn calculate_focal_zone(&self, aperture_size: f64, focal_distance: f64) -> f64 {
         delays::calculate_focal_zone(

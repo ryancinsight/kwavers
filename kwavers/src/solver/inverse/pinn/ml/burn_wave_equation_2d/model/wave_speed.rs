@@ -17,11 +17,18 @@ pub struct WaveSpeedFn<B: Backend> {
 
 impl<B: Backend> WaveSpeedFn<B> {
     /// Create a new wave speed function from a CPU closure.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(func: Arc<dyn Fn(f32, f32) -> f32 + Send + Sync>) -> Self {
         Self { func, grid: None }
     }
 
     /// Create a new wave speed function from a device-resident grid.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_grid(grid: Tensor<B, 2>) -> KwaversResult<Self> {
         let shape = grid.shape();
         let dims = match shape.dims.as_slice() {
@@ -113,6 +120,9 @@ impl<B: Backend> WaveSpeedFn<B> {
     }
 
     /// Get wave speed at coordinates (x, y).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get(&self, x: f32, y: f32) -> f32 {
         (self.func)(x, y)
     }

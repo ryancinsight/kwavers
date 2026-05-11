@@ -7,6 +7,9 @@ use std::collections::HashMap;
 impl ClinicalDecisionSupport {
     /// Perform comprehensive clinical analysis: lesion detection, tissue classification,
     /// recommendations, and overall diagnostic confidence.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn analyze_clinical(
         &self,
         volume: ArrayView3<f32>,
@@ -30,6 +33,9 @@ impl ClinicalDecisionSupport {
     /// Voxel-wise tissue classification: Fat, Muscle, Blood.
     ///
     /// Reference: Noble & Boukerroui (2006), "Ultrasound image segmentation: a survey".
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn classify_tissues(
         &self,
         volume: ArrayView3<f32>,
@@ -38,12 +44,12 @@ impl ClinicalDecisionSupport {
         let (nx, ny, nz) = volume.dim();
 
         let mut probabilities = HashMap::new();
-        let mut dominant_tissue = Array3::<String>::from_elem((nx, ny, nz), "Unknown".to_string());
+        let mut dominant_tissue = Array3::<String>::from_elem((nx, ny, nz), "Unknown".to_owned());
         let mut boundary_confidence = Array3::<f32>::zeros((nx, ny, nz));
 
-        probabilities.insert("Fat".to_string(), Array3::from_elem((nx, ny, nz), 0.33));
-        probabilities.insert("Muscle".to_string(), Array3::from_elem((nx, ny, nz), 0.33));
-        probabilities.insert("Blood".to_string(), Array3::from_elem((nx, ny, nz), 0.33));
+        probabilities.insert("Fat".to_owned(), Array3::from_elem((nx, ny, nz), 0.33));
+        probabilities.insert("Muscle".to_owned(), Array3::from_elem((nx, ny, nz), 0.33));
+        probabilities.insert("Blood".to_owned(), Array3::from_elem((nx, ny, nz), 0.33));
 
         for z in 0..nz {
             for y in 0..ny {
@@ -52,8 +58,7 @@ impl ClinicalDecisionSupport {
                     let speckle_var = features
                         .texture
                         .get("speckle_variance")
-                        .map(|arr| arr[[x, y, z]])
-                        .unwrap_or(0.5);
+                        .map_or(0.5, |arr| arr[[x, y, z]]);
 
                     let tissue_type = if intensity < 0.7 && speckle_var > 0.8 {
                         "Blood"
@@ -63,7 +68,7 @@ impl ClinicalDecisionSupport {
                         "Muscle"
                     };
 
-                    dominant_tissue[[x, y, z]] = tissue_type.to_string();
+                    dominant_tissue[[x, y, z]] = tissue_type.to_owned();
 
                     let grad_x = if x > 0 && x < nx - 1 {
                         (volume[[x + 1, y, z]] - volume[[x - 1, y, z]]) / 2.0
@@ -81,7 +86,7 @@ impl ClinicalDecisionSupport {
                         0.0
                     };
                     let grad_mag = (grad_x * grad_x + grad_y * grad_y + grad_z * grad_z).sqrt();
-                    boundary_confidence[[x, y, z]] = 1.0 / (1.0 + 5.0 * grad_mag);
+                    boundary_confidence[[x, y, z]] = 1.0 / 5.0f32.mul_add(grad_mag, 1.0);
                 }
             }
         }
@@ -103,8 +108,7 @@ impl ClinicalDecisionSupport {
 
         if lesions.is_empty() {
             recommendations.push(
-                "No significant lesions detected. Consider follow-up imaging if clinically indicated."
-                    .to_string(),
+                "No significant lesions detected. Consider follow-up imaging if clinically indicated.".to_owned(),
             );
         } else {
             recommendations.push(format!(
@@ -122,8 +126,7 @@ impl ClinicalDecisionSupport {
         }
 
         recommendations.push(
-            "Neural network analysis is supportive only. Clinical judgment required for final diagnosis."
-                .to_string(),
+            "Neural network analysis is supportive only. Clinical judgment required for final diagnosis.".to_owned(),
         );
 
         recommendations

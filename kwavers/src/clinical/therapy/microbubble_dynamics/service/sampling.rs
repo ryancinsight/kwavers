@@ -10,8 +10,11 @@ use crate::domain::therapy::microbubble::Position3D;
 ///
 /// # Returns
 ///
-/// - `pressure`: Local pressure [Pa]
+/// - `pressure`: Local pressure (Pa)
 /// - `pressure_gradient`: (∂P/∂x, ∂P/∂y, ∂P/∂z) [Pa/m]
+/// # Errors
+/// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
+///
 pub fn sample_acoustic_field_at_position(
     position: &Position3D,
     pressure_field: &Array3<f64>,
@@ -26,9 +29,9 @@ pub fn sample_acoustic_field_at_position(
 
     if ix >= nx || iy >= ny || iz >= nz {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
-            parameter: "position".to_string(),
+            parameter: "position".to_owned(),
             value: 0.0,
-            reason: "bubble position outside grid domain".to_string(),
+            reason: "bubble position outside grid domain".to_owned(),
         }));
     }
 

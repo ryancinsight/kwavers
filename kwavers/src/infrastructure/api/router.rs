@@ -26,6 +26,11 @@ use crate::infrastructure::api::clinical_handlers::{
 };
 
 /// Create the complete API router
+/// # Panics
+/// - Panics if `KWAVERS_JWT_SECRET must be set to a strong, non-empty secret to construct the API router`.
+/// - Panics if `Failed to construct AuthMiddleware from KWAVERS_JWT_SECRET`.
+/// - Panics if `Failed to create clinical app state`.
+///
 pub fn create_router(training_executor: std::sync::Arc<dyn TrainingExecutor>) -> Router<()> {
     // Create application states
     // Correctness + security invariant:

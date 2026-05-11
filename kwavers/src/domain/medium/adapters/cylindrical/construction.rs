@@ -59,7 +59,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
 
                 let (i, j, k) = grid.coordinates_to_indices(x, y, z).ok_or_else(|| {
                     KwaversError::Config(ConfigError::InvalidValue {
-                        parameter: "cylindrical topology".to_string(),
+                        parameter: "cylindrical topology".to_owned(),
                         value: format!(
                             "iz={}, ir={} -> x={}, y={}, z={} (out of bounds)",
                             iz, ir, x, y, z
@@ -86,25 +86,25 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
 
                 if c <= 0.0 || !c.is_finite() {
                     return Err(KwaversError::Config(ConfigError::InvalidValue {
-                        parameter: "sound_speed".to_string(),
+                        parameter: "sound_speed".to_owned(),
                         value: c.to_string(),
-                        constraint: "Must be positive and finite".to_string(),
+                        constraint: "Must be positive and finite".to_owned(),
                     }));
                 }
 
                 if rho <= 0.0 || !rho.is_finite() {
                     return Err(KwaversError::Config(ConfigError::InvalidValue {
-                        parameter: "density".to_string(),
+                        parameter: "density".to_owned(),
                         value: rho.to_string(),
-                        constraint: "Must be positive and finite".to_string(),
+                        constraint: "Must be positive and finite".to_owned(),
                     }));
                 }
 
                 if alpha < 0.0 || !alpha.is_finite() {
                     return Err(KwaversError::Config(ConfigError::InvalidValue {
-                        parameter: "absorption".to_string(),
+                        parameter: "absorption".to_owned(),
                         value: alpha.to_string(),
-                        constraint: "Must be non-negative and finite".to_string(),
+                        constraint: "Must be non-negative and finite".to_owned(),
                     }));
                 }
             }

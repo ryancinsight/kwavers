@@ -41,13 +41,13 @@
 //!
 //! # Module layout
 //!
-//! - [`geometry`]: `FwiGeometry` struct and index-mapping helpers.
-//! - [`forward`]: FDTD solver construction, forward-model runs, `generate_synthetic_data`.
-//! - [`adjoint`]: adjoint FDTD run, adjoint-source construction, L2 residual/objective.
-//! - [`gradient`]: gradient smoothing, regularization, near-source mute, TV/Laplacian helpers.
-//! - [`constraints`]: CFL validation, model clamping, pressure second-derivative.
-//! - [`inversion`]: `invert`, `invert_multi_source`, `invert_multi_source_masked`, shot-gradient dispatch.
-//! - [`search`]: line-search and joint-objective helpers.
+//! - `geometry`: `FwiGeometry` struct and index-mapping helpers.
+//! - `forward`: FDTD solver construction, forward-model runs, `generate_synthetic_data`.
+//! - `adjoint`: adjoint FDTD run, adjoint-source construction, L2 residual/objective.
+//! - `gradient`: gradient smoothing, regularization, near-source mute, TV/Laplacian helpers.
+//! - `constraints`: CFL validation, model clamping, pressure second-derivative.
+//! - `inversion`: `invert`, `invert_multi_source`, `invert_multi_source_masked`, shot-gradient dispatch.
+//! - `search`: line-search and joint-objective helpers.
 
 mod adjoint;
 mod constraints;

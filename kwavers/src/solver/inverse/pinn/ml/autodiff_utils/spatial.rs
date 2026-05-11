@@ -17,6 +17,9 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 ///
 /// # Burn 0.19+ autodiff pattern
 /// Columns 1 and 2 of `input.grad(&grads)` yield ∂/∂x and ∂/∂y respectively.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn compute_spatial_gradient_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
@@ -58,6 +61,9 @@ where
 /// ```
 /// Two separate backward passes are required because each component's gradient
 /// is computed from a distinct scalar reduction of its corresponding output slice.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn compute_divergence_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,

@@ -11,6 +11,9 @@ impl BjerknesCalculator {
     ///
     /// For a plane wave: F_p ≈ πR² I / c₀
     /// where I is acoustic intensity
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn primary_bjerknes_force(
         &self,
         bubble_radius: f64,
@@ -19,7 +22,7 @@ impl BjerknesCalculator {
     ) -> KwaversResult<f64> {
         if bubble_radius <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Bubble radius must be positive".to_string(),
+                "Bubble radius must be positive".to_owned(),
             ));
         }
 

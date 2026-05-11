@@ -65,6 +65,9 @@ impl ConvergentBornSolver {
     }
 
     /// Precompute FFT-accelerated Green's function.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn precompute_green_function(&mut self, wavenumber: f64) -> KwaversResult<()> {
         if !self.config.use_fft_green {
             return Ok(());

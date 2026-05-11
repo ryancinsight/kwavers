@@ -58,7 +58,7 @@ pub struct HeterogeneousMedium {
     pub delta: Array3<f64>,
     pub b_a: Array3<f64>,
     pub absorption: Array3<f64>,
-    /// Power-law absorption exponent y per voxel [dimensionless].
+    /// Power-law absorption exponent y per voxel (dimensionless).
     ///
     /// **Theorem (Szabo power-law absorption).**  The absorption coefficient at
     /// frequency f is
@@ -87,6 +87,7 @@ impl HeterogeneousMedium {
     ///
     /// **Evidence-Based Design**: Following Hamilton & Blackstock (1998)
     /// acoustic parameter initialization standards.
+    #[must_use] 
     pub fn new(nx: usize, ny: usize, nz: usize, use_trilinear_interpolation: bool) -> Self {
         Self {
             use_trilinear_interpolation,
@@ -130,6 +131,7 @@ impl HeterogeneousMedium {
     /// Saves no memory relative to `new` because the struct layout is fixed;
     /// use this to signal acoustic-only intent at the call site.
     #[inline]
+    #[must_use] 
     pub fn new_acoustic_only(
         nx: usize,
         ny: usize,
@@ -223,7 +225,7 @@ impl HeterogeneousMedium {
             alpha0: fill(0.0), // α0 (reference) not exposed directly; keep 0, use absorption array
             delta: fill(0.0),  // power law exponent not exposed directly; keep 0
             b_a: nonlinearity.clone(),
-            absorption: absorption.clone(),
+            absorption,
             // Propagate alpha_power from homogeneous medium (uniform broadcast).
             alpha_power: fill(h.alpha_power(0.0, 0.0, 0.0, grid)),
             nonlinearity,

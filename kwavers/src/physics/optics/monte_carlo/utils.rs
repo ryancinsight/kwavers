@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Normalize vector
 pub(crate) fn normalize(v: [f64; 3]) -> [f64; 3] {
-    let len = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    let len = v[2].mul_add(v[2], v[0].mul_add(v[0], v[1] * v[1])).sqrt();
     if len < 1e-12 {
         [0.0, 0.0, 1.0]
     } else {
@@ -15,9 +15,9 @@ pub(crate) fn normalize(v: [f64; 3]) -> [f64; 3] {
 /// Cross product
 pub(crate) fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
+        a[1].mul_add(b[2], -(a[2] * b[1])),
+        a[2].mul_add(b[0], -(a[0] * b[2])),
+        a[0].mul_add(b[1], -(a[1] * b[0])),
     ]
 }
 
@@ -39,7 +39,7 @@ pub(crate) fn get_perpendicular(v: [f64; 3]) -> [f64; 3] {
 /// Sample isotropic direction
 pub(crate) fn sample_isotropic_direction<R: Rng>(rng: &mut R) -> [f64; 3] {
     let theta = 2.0 * std::f64::consts::PI * rng.gen::<f64>();
-    let z = 2.0 * rng.gen::<f64>() - 1.0;
+    let z = 2.0f64.mul_add(rng.gen::<f64>(), -1.0);
     let r = (1.0 - z * z).sqrt();
     [r * theta.cos(), r * theta.sin(), z]
 }
@@ -49,11 +49,11 @@ pub(crate) fn scatter_photon<R: Rng>(photon: &mut Photon, g: f64, rng: &mut R) {
     // Sample scattering angle using Henyey-Greenstein
     let cos_theta = if g.abs() < 1e-6 {
         // Isotropic scattering
-        2.0 * rng.gen::<f64>() - 1.0
+        2.0f64.mul_add(rng.gen::<f64>(), -1.0)
     } else {
         let xi = rng.gen::<f64>();
-        let temp = (1.0 - g * g) / (1.0 - g + 2.0 * g * xi);
-        (1.0 + g * g - temp * temp) / (2.0 * g)
+        let temp = g.mul_add(-g, 1.0) / (2.0 * g).mul_add(xi, 1.0 - g);
+        (g.mul_add(g, 1.0) - temp * temp) / (2.0 * g)
     };
 
     let sin_theta = (1.0 - cos_theta * cos_theta).max(0.0).sqrt();
@@ -66,14 +66,11 @@ pub(crate) fn scatter_photon<R: Rng>(photon: &mut Photon, g: f64, rng: &mut R) {
 
     // New direction in local coordinates
     let new_dir = [
-        sin_theta * phi.cos() * perp1[0]
-            + sin_theta * phi.sin() * perp2[0]
+        (sin_theta * phi.cos()).mul_add(perp1[0], sin_theta * phi.sin() * perp2[0])
             + cos_theta * old_dir[0],
-        sin_theta * phi.cos() * perp1[1]
-            + sin_theta * phi.sin() * perp2[1]
+        (sin_theta * phi.cos()).mul_add(perp1[1], sin_theta * phi.sin() * perp2[1])
             + cos_theta * old_dir[1],
-        sin_theta * phi.cos() * perp1[2]
-            + sin_theta * phi.sin() * perp2[2]
+        (sin_theta * phi.cos()).mul_add(perp1[2], sin_theta * phi.sin() * perp2[2])
             + cos_theta * old_dir[2],
     ];
 

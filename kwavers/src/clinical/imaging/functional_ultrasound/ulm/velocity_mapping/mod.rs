@@ -10,7 +10,7 @@
 //!
 //! For each bubble track with detections at positions (x_k, z_k) at frame indices f_k:
 //! ```text
-//! v_x[k] = (x_{k+1} − x_k) / ((f_{k+1} − f_k) · Δt)   [m/s]
+//! v_x[k] = (x_{k+1} − x_k) / ((f_{k+1} − f_k) · Δt)   (m/s)
 //! v_z[k] = (z_{k+1} − z_k) / ((f_{k+1} − f_k) · Δt)
 //! ```
 //! The estimate is assigned to the segment midpoint (x̄_k, z̄_k) = ((x_k + x_{k+1})/2, ...).
@@ -28,8 +28,8 @@
 //! ### Velocity Magnitude and Direction
 //!
 //! ```text
-//! speed[m,n]     = √(⟨v_x⟩² + ⟨v_z⟩²)    [m/s]
-//! direction[m,n] = atan2(⟨v_z⟩, ⟨v_x⟩)   ∈ (−π, π]  [rad]
+//! speed[m,n]     = √(⟨v_x⟩² + ⟨v_z⟩²)    (m/s)
+//! direction[m,n] = atan2(⟨v_z⟩, ⟨v_x⟩)   ∈ (−π, π]  (rad)
 //! ```
 //!
 //! ### Wall Shear Stress Estimation (Womersley 1955; Reneman et al. 2006)
@@ -42,7 +42,7 @@
 //!             = μ · √(((speed[m+1,n] − speed[m−1,n])/(2d))²
 //!                   + ((speed[m,n+1] − speed[m,n−1])/(2d))²)
 //! ```
-//! where μ is dynamic blood viscosity [Pa·s] and d is the pixel size [m].
+//! where μ is dynamic blood viscosity [Pa·s] and d is the pixel size (m).
 //! Only interior cells with all four neighbors populated (non-NaN) are computed.
 //!
 //! ## References

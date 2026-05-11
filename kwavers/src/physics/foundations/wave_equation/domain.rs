@@ -54,6 +54,7 @@ pub struct Domain {
 
 impl Domain {
     /// Create 1D domain
+    #[must_use] 
     pub fn new_1d(xmin: f64, xmax: f64, nx: usize, bc: BoundaryCondition) -> Self {
         Self {
             dimension: SpatialDimension::One,
@@ -64,6 +65,7 @@ impl Domain {
     }
 
     /// Create 2D domain
+    #[must_use] 
     pub fn new_2d(
         xmin: f64,
         xmax: f64,
@@ -82,6 +84,7 @@ impl Domain {
     }
 
     /// Create 3D domain
+    #[must_use] 
     pub fn new_3d(
         xmin: f64,
         xmax: f64,
@@ -110,6 +113,7 @@ impl Domain {
     }
 
     /// Get spatial step sizes [dx, dy, dz]
+    #[must_use] 
     pub fn spacing(&self) -> Vec<f64> {
         self.resolution
             .iter()

@@ -24,6 +24,7 @@ pub struct DicomImageLoader {
 
 impl DicomImageLoader {
     /// Create a new, empty DICOM image loader.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             data: None,
@@ -32,16 +33,27 @@ impl DicomImageLoader {
     }
 
     /// Return loaded image data, if any.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn data(&self) -> Option<&Array3<f64>> {
         self.data.as_ref()
     }
 
     /// Return DICOM-specific metadata, if any.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn dicom_metadata(&self) -> Option<&DicomMetadata> {
         self.metadata.as_ref()
     }
 
     /// Internal series-load: delegates to `infrastructure::io::dicom_ritk`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn load_series_internal(&mut self, dir_path: &str) -> KwaversResult<Array3<f64>> {
         let volume =
             crate::infrastructure::io::dicom_ritk::load_series_from_dir(Path::new(dir_path))?;
@@ -103,12 +115,13 @@ impl DicomImageLoader {
     /// Convert a DICOM pixel value to Hounsfield Units (CT only).
     ///
     /// Formula: `HU = pixel_value × rescale_slope + rescale_intercept`
+    #[must_use] 
     pub fn to_hounsfield_units(
         pixel_value: f64,
         rescale_slope: f64,
         rescale_intercept: f64,
     ) -> f64 {
-        pixel_value * rescale_slope + rescale_intercept
+        pixel_value.mul_add(rescale_slope, rescale_intercept)
     }
 
     /// Compute a 4×4 affine matrix from DICOM IPP/IOP tags.
@@ -118,6 +131,7 @@ impl DicomImageLoader {
     /// - `image_orientation` — Image Orientation (Patient): `[xx, xy, xz, yx, yy, yz]`
     /// - `pixel_spacing` — Pixel Spacing: `[dx, dy]`
     /// - `slice_thickness` — Slice Thickness
+    #[must_use] 
     pub fn compute_affine(
         image_position: &[f64; 3],
         image_orientation: &[f64; 6],
@@ -131,9 +145,9 @@ impl DicomImageLoader {
         let yy = image_orientation[4];
         let yz = image_orientation[5];
 
-        let zx = xy * yz - xz * yy;
-        let zy = xz * yx - xx * yz;
-        let zz = xx * yy - xy * yx;
+        let zx = xy.mul_add(yz, -(xz * yy));
+        let zy = xz.mul_add(yx, -(xx * yz));
+        let zz = xx.mul_add(yy, -(xy * yx));
 
         [
             [
@@ -173,8 +187,7 @@ impl MedicalImageLoader for DicomImageLoader {
             self.load_series_internal(path)
         } else if file_path.is_file() {
             Err(KwaversError::InvalidInput(
-                "Single DICOM file loading: Please provide directory path containing complete series"
-                    .to_string(),
+                "Single DICOM file loading: Please provide directory path containing complete series".to_owned(),
             ))
         } else {
             Err(KwaversError::InvalidInput(format!(
@@ -201,9 +214,9 @@ impl MedicalImageLoader for DicomImageLoader {
                 voxel_spacing_m: (1e-3, 1e-3, 1e-3),
                 voxel_spacing_mm: (1.0, 1.0, 1.0),
                 affine: Self::identity_affine(),
-                data_type: "DICOM (Unknown)".to_string(),
+                data_type: "DICOM (Unknown)".to_owned(),
                 intensity_range: (0.0, 0.0),
-                modality: "Unknown".to_string(),
+                modality: "Unknown".to_owned(),
             }
         }
     }

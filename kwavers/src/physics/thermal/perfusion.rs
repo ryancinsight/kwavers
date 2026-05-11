@@ -45,7 +45,7 @@ impl PerfusionModel {
         } else if temperature > 37.0 {
             // Linear increase from baseline to max
             let fraction = (temperature - 37.0) / (self.t_max - 37.0);
-            self.w_b0 * (1.0 + (self.max_multiplier - 1.0) * fraction)
+            self.w_b0 * (self.max_multiplier - 1.0).mul_add(fraction, 1.0)
         } else {
             // Below body temperature
             self.w_b0
@@ -104,9 +104,7 @@ impl VesselCooling {
         let mut total_cooling = 0.0;
 
         for &(vi, vj, vk, radius) in &self.vessels {
-            let distance = (((i as f64 - vi as f64) * dx).powi(2)
-                + ((j as f64 - vj as f64) * dx).powi(2)
-                + ((k as f64 - vk as f64) * dx).powi(2))
+            let distance = ((k as f64 - vk as f64) * dx).mul_add((k as f64 - vk as f64) * dx, ((j as f64 - vj as f64) * dx).mul_add((j as f64 - vj as f64) * dx, ((i as f64 - vi as f64) * dx).powi(2)))
             .sqrt();
 
             if distance < radius {

@@ -7,17 +7,13 @@ use super::TimeCoupling;
 
 /// Subcycling strategy for multi-rate integration
 #[derive(Debug)]
-pub struct SubcyclingStrategy {
-    /// Maximum allowed subcycles
-    #[allow(dead_code)]
-    max_subcycles: usize,
-}
+pub struct SubcyclingStrategy {}
 
 impl SubcyclingStrategy {
     /// Create a new subcycling strategy
     #[must_use]
-    pub fn new(max_subcycles: usize) -> Self {
-        Self { max_subcycles }
+    pub fn new(_max_subcycles: usize) -> Self {
+        Self {}
     }
 }
 
@@ -47,9 +43,9 @@ impl TimeCoupling for SubcyclingStrategy {
                     let field = fields.get_mut(name).ok_or_else(|| {
                         crate::core::error::KwaversError::Validation(
                             crate::core::error::ValidationError::FieldValidation {
-                                field: "fields".to_string(),
+                                field: "fields".to_owned(),
                                 value: name.clone(),
-                                constraint: "Field not found".to_string(),
+                                constraint: "Field not found".to_owned(),
                             },
                         )
                     })?;
@@ -61,9 +57,9 @@ impl TimeCoupling for SubcyclingStrategy {
                     let field_initial = initial_fields.get(name).ok_or_else(|| {
                         crate::core::error::KwaversError::Validation(
                             crate::core::error::ValidationError::FieldValidation {
-                                field: "initial_fields".to_string(),
+                                field: "initial_fields".to_owned(),
                                 value: name.clone(),
-                                constraint: "Initial field not found".to_string(),
+                                constraint: "Initial field not found".to_owned(),
                             },
                         )
                     })?;
@@ -88,6 +84,9 @@ impl SubcyclingStrategy {
     /// k3 = f(t_n + dt/2, y_n + dt/2*k2)
     /// k4 = f(t_n + dt, y_n + dt*k3)
     /// y_{n+1} = y_n + dt/6*(k1 + 2*k2 + 2*k3 + k4)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn rk4_step(
         field: &mut Array3<f64>,
         field_initial: &Array3<f64>,
@@ -136,9 +135,7 @@ impl SubcyclingStrategy {
             for j in 0..ny {
                 for k in 0..nz {
                     field[[i, j, k]] += (dt / 6.0)
-                        * (k1[[i, j, k]]
-                            + 2.0 * k2[[i, j, k]]
-                            + 2.0 * k3[[i, j, k]]
+                        * (2.0f64.mul_add(k3[[i, j, k]], 2.0f64.mul_add(k2[[i, j, k]], k1[[i, j, k]]))
                             + k4[[i, j, k]]);
                 }
             }
@@ -152,6 +149,9 @@ impl SubcyclingStrategy {
     /// Demonstration implementation using diffusion physics
     /// Production version: Full RHS evaluation with problem-specific physics
     /// Current: Heat equation proxy (∂u/∂t = α∇²u) for coupling validation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_derivative(
         field: &Array3<f64>,
         _field_initial: &Array3<f64>,
@@ -167,13 +167,11 @@ impl SubcyclingStrategy {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // 7-point stencil Laplacian
-                    let laplacian = field[[i + 1, j, k]]
+                    let laplacian = 6.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]]
                         + field[[i - 1, j, k]]
                         + field[[i, j + 1, k]]
                         + field[[i, j - 1, k]]
-                        + field[[i, j, k + 1]]
-                        + field[[i, j, k - 1]]
-                        - 6.0 * field[[i, j, k]];
+                        + field[[i, j, k + 1]] + field[[i, j, k - 1]]);
 
                     derivative[[i, j, k]] = alpha * laplacian;
                 }

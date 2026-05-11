@@ -11,8 +11,7 @@ fn test_trilateration_creation() {
         [0.0, 0.0, 0.01],
     ];
     let config = TrilaterationConfig::default();
-    let trilat = Trilateration::new(sensors, config);
-    assert!(trilat.is_ok());
+    let _trilat = Trilateration::new(sensors, config).unwrap();
 }
 
 #[test]

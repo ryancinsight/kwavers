@@ -17,6 +17,9 @@ use ndarray::Array2;
 
 impl MisfitFunction {
     /// Envelope misfit: 0.5 * ||E_syn − E_obs||² (cycle-skipping mitigation).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn envelope_misfit(
         &self,
         observed: &Array2<f64>,
@@ -28,6 +31,9 @@ impl MisfitFunction {
     }
 
     /// Instantaneous phase misfit.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn phase_misfit(
         &self,
         observed: &Array2<f64>,
@@ -44,6 +50,9 @@ impl MisfitFunction {
     /// δE = (E_syn − E_obs) · Re[analytic / E_syn]
     ///    = (E_syn − E_obs) · s / E_syn
     /// ```
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn envelope_adjoint_source(
         &self,
         observed: &Array2<f64>,
@@ -79,6 +88,9 @@ impl MisfitFunction {
     /// ```text
     /// δφ = (φ_syn − φ_obs) · [−Im(dz/dt) / |z|²]
     /// ```
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn phase_adjoint_source(
         &self,
         observed: &Array2<f64>,
@@ -129,6 +141,9 @@ impl MisfitFunction {
     /// Compute envelope via Hilbert transform (Marple 1999).
     ///
     /// The analytic signal is z(t) = x(t) + i·H[x(t)]; envelope = |z(t)|.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_envelope(&self, signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let (ntraces, nsamples) = signal.dim();
         let mut envelope = Array2::zeros((ntraces, nsamples));
@@ -157,6 +172,9 @@ impl MisfitFunction {
     /// Compute instantaneous phase via Hilbert transform (Taner et al. 1979).
     ///
     /// φ(t) = atan2(H[x(t)], x(t))
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_instantaneous_phase(
         &self,
         signal: &Array2<f64>,
@@ -187,6 +205,9 @@ impl MisfitFunction {
     }
 
     /// L2 misfit between two pre-computed arrays.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn l2_misfit_arrays(&self, a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<f64> {
         let diff = b - a;
         Ok(0.5 * diff.mapv(|x| x * x).sum())

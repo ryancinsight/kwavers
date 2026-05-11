@@ -16,6 +16,9 @@ pub struct AveragingStrategy {
 
 impl AveragingStrategy {
     /// Create a new averaging strategy
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(interpolation_order: usize) -> Self {
         Self {
@@ -48,9 +51,9 @@ impl TimeCoupling for AveragingStrategy {
             let _field = fields.get_mut(name).ok_or_else(|| {
                 crate::core::error::KwaversError::Validation(
                     crate::core::error::ValidationError::FieldValidation {
-                        field: "fields".to_string(),
+                        field: "fields".to_owned(),
                         value: name.clone(),
-                        constraint: "Field not found".to_string(),
+                        constraint: "Field not found".to_owned(),
                     },
                 )
             })?;
@@ -58,7 +61,7 @@ impl TimeCoupling for AveragingStrategy {
             // Subcycle this component
             for _ in 0..n_subcycles {
                 // Update physics component using plugin interface
-                // crate::physics::plugin::Plugin uses update method with fields array
+                // crate::domain::plugin::Plugin uses update method with fields array
             }
         }
 
@@ -98,10 +101,10 @@ impl TimeCoupling for AveragingStrategy {
                                 };
 
                                 // Hermite basis functions
-                                let h00 = 2.0 * theta.powi(3) - 3.0 * theta.powi(2) + 1.0;
-                                let h10 = theta.powi(3) - 2.0 * theta.powi(2) + theta;
-                                let h01 = -2.0 * theta.powi(3) + 3.0 * theta.powi(2);
-                                let h11 = theta.powi(3) - theta.powi(2);
+                                let h00 = 2.0f64.mul_add(theta.powi(3), -(3.0 * theta.powi(2))) + 1.0;
+                                let h10 = 2.0f64.mul_add(-theta.powi(2), theta.powi(3)) + theta;
+                                let h01 = (-2.0f64).mul_add(theta.powi(3), 3.0 * theta.powi(2));
+                                let h11 = theta.mul_add(-theta, theta.powi(3));
 
                                 interpolated[[i, j, k]] = h00 * p0 + h10 * m0 + h01 * p1 + h11 * m1;
                             }

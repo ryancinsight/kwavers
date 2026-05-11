@@ -23,7 +23,7 @@ pub struct PhasedArrayTransducer {
     signal: Arc<dyn Signal>,
     /// Beamforming mode
     beamforming_mode: BeamformingMode,
-    /// Sound speed in medium [m/s]
+    /// Sound speed in medium (m/s)
     sound_speed: f64,
     /// Cross-talk model
     crosstalk_model: Option<CrosstalkModel>,
@@ -33,6 +33,9 @@ pub struct PhasedArrayTransducer {
 
 impl PhasedArrayTransducer {
     /// Create phased array transducer
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn create(
         config: PhasedArrayConfig,
         signal: Arc<dyn Signal>,
@@ -43,7 +46,7 @@ impl PhasedArrayTransducer {
         config.validate().map_err(|e| {
             crate::core::error::KwaversError::Validation(
                 crate::core::error::ValidationError::FieldValidation {
-                    field: "phased_array_config".to_string(),
+                    field: "phased_array_config".to_owned(),
                     value: format!("{config:?}"),
                     constraint: e,
                 },
@@ -158,7 +161,7 @@ impl PhasedArrayTransducer {
         }
 
         // Calculate field contribution from each element
-        Zip::indexed(&mut field).for_each(|(i, j, k), pressure| {
+        Zip::indexed(&mut field).par_for_each(|(i, j, k), pressure| {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;
@@ -171,9 +174,7 @@ impl PhasedArrayTransducer {
                     let _propagation_time = distance / self.sound_speed;
 
                     // Calculate directivity
-                    let theta = ((x - element.position.0).powi(2)
-                        + (y - element.position.1).powi(2))
-                    .sqrt()
+                    let theta = (x - element.position.0).hypot(y - element.position.1)
                     .atan2(z - element.position.2);
                     let directivity =
                         element.directivity(theta, self.config.frequency, self.sound_speed);
@@ -192,7 +193,7 @@ impl PhasedArrayTransducer {
         let dx = x - element.position.0;
         let dy = y - element.position.1;
         let dz = z - element.position.2;
-        (dx * dx + dy * dy + dz * dz).sqrt()
+        dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
     }
 
     /// Get beam width at focal distance
@@ -260,9 +261,7 @@ impl Source for PhasedArrayTransducer {
                     let modulated = element.apply_modulation(signal_value, retarded_time);
 
                     // Calculate directivity
-                    let theta = ((x - element.position.0).powi(2)
-                        + (y - element.position.1).powi(2))
-                    .sqrt()
+                    let theta = (x - element.position.0).hypot(y - element.position.1)
                     .atan2(z - element.position.2);
                     let directivity =
                         element.directivity(theta, self.config.frequency, self.sound_speed);
@@ -296,7 +295,7 @@ impl Source for PhasedArrayTransducer {
         let dy = focal_point.1 - cy;
         let dz = focal_point.2 - cz;
 
-        let depth = (dx * dx + dy * dy + dz * dz).sqrt();
+        let depth = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
         Some(depth)
     }
 

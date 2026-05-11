@@ -53,7 +53,7 @@ use ndarray::{Array1, Array3};
 /// heap allocation.
 #[derive(Debug)]
 pub struct NonlinearOperator {
-    /// Nonlinearity coefficient β = 1 + B/(2A)  [dimensionless]
+    /// Nonlinearity coefficient β = 1 + B/(2A)  (dimensionless)
     beta: f64,
     /// Solver configuration (grid sizes, timestep, medium properties)
     config: KZKConfig,
@@ -97,7 +97,7 @@ impl NonlinearOperator {
         }
     }
 
-    /// Apply the nonlinear sub-step over one axial increment `step_size` [m].
+    /// Apply the nonlinear sub-step over one axial increment `step_size` (m).
     ///
     /// ## Algorithm
     ///
@@ -124,12 +124,12 @@ impl NonlinearOperator {
     ///
     /// For each spatial point (i,j):
     /// 1. Fill `w_scratch[t] = Re[pressure[i,j,t]]` as complex input.
-    /// 2. Forward FFT: W[k] = Σ_t w[t] e^{−2πikt/N}.
-    /// 3. Multiply: W[k] ← W[k] · iω[k], where
-    ///    ω[k] = 2πk/(NΔτ) for k ≤ N/2, and 2π(k−N)/(NΔτ) for k > N/2.
-    ///    The Nyquist bin (k=N/2 for even N) is set to zero to preserve
+    /// 2. Forward FFT: `W[k] = Σ_t w[t] e^{−2πikt/N}`.
+    /// 3. Multiply: `W[k] ← W[k] · iω[k]`, where
+    ///    `ω[k] = 2πk/(NΔτ)` for `k ≤ N/2`, and `2π(k−N)/(NΔτ)` for `k > N/2`.
+    ///    The Nyquist bin (`k=N/2` for even N) is set to zero to preserve
     ///    real-valued output.
-    /// 4. Inverse FFT (with 1/N normalisation): ∂p/∂τ[t] = Re[IFFT(W)][t].
+    /// 4. Inverse FFT (with 1/N normalisation): `∂p/∂τ[t] = Re[IFFT(W)][t]`.
     ///
     /// All increments `δp` are accumulated into the pre-allocated buffer
     /// `self.delta` **before** being added back to `pressure`.  This ensures
@@ -141,11 +141,11 @@ impl NonlinearOperator {
     ///
     /// **Statement.** In Strang splitting, each sub-operator must evaluate its
     /// RHS at a consistent input state.  In-place central-difference updates
-    /// violate this: at step t=k, the stencil references p[k−1] which has
-    /// already been overwritten at t=k−1, introducing an O(Δz·Δτ) consistency
+    /// violate this: at step `t=k`, the stencil references `p[k−1]` which has
+    /// already been overwritten at `t=k−1`, introducing an O(Δz·Δτ) consistency
     /// error that accumulates over the propagation.
     ///
-    /// **Fix.** Let δp[i,j,t] = f(p[i,j,t], p[i,j,t±1]) for all (i,j,t)
+    /// **Fix.** Let `δp[i,j,t] = f(p[i,j,t], p[i,j,t±1])` for all (i,j,t)
     /// simultaneously, storing into a separate array `delta`.  Apply
     /// `pressure += delta` as a single vectorised pass after all RHS values
     /// are computed.  The RHS is then evaluated at the consistent input state
@@ -236,7 +236,7 @@ impl NonlinearOperator {
         }
     }
 
-    /// Shock formation distance for a plane wave [m].
+    /// Shock formation distance for a plane wave (m).
     ///
     /// ## Formula
     ///

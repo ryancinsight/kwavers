@@ -2,9 +2,9 @@ use super::NonlinearElasticWaveSolver;
 
 impl NonlinearElasticWaveSolver {
     /// Calculate stable time step using CFL condition (amplitude = max_strain * 1e-3).
+    #[cfg(test)]
     #[must_use]
-    #[allow(dead_code)]
-    pub(super) fn calculate_time_step(&self) -> f64 {
+    pub(crate) fn calculate_time_step(&self) -> f64 {
         self.calculate_time_step_for_amplitude(self.config.max_strain * 1e-3)
     }
 
@@ -19,7 +19,7 @@ impl NonlinearElasticWaveSolver {
         let cfl = 0.45;
 
         let max_u_over_ref = (max_abs_u / u_ref).max(0.0);
-        let max_speed = c * (1.0 + beta * max_u_over_ref);
+        let max_speed = c * beta.mul_add(max_u_over_ref, 1.0);
         let dt_cfl = cfl * self.grid.dx / max_speed.max(f64::EPSILON);
 
         dt_cfl.min(self.config.max_dt).max(f64::EPSILON)

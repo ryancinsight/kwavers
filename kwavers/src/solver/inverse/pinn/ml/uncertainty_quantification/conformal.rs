@@ -30,6 +30,13 @@ impl<B: Backend> ConformalPredictor<B> {
     }
 
     /// Calibrate using calibration data.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn calibrate(
         &mut self,
         calibration_inputs: &[Vec<f32>],
@@ -66,6 +73,10 @@ impl<B: Backend> ConformalPredictor<B> {
     }
 
     /// Predict with conformal uncertainty intervals.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn predict_conformal(&self, input: &[f32]) -> KwaversResult<(f32, f32)> {
         let q_hat = self.quantile.ok_or_else(|| {
             KwaversError::InvalidInput(
@@ -94,6 +105,10 @@ impl<B: Backend> ConformalPredictor<B> {
     }
 
     /// Compute nonconformity score.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn compute_nonconformity_score(&self, input: &[f32], target: f32) -> KwaversResult<f32> {
         if input.len() != 3 {
             return Err(KwaversError::InvalidInput(

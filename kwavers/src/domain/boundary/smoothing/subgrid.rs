@@ -46,6 +46,11 @@ pub struct SubgridAveraging {
 }
 
 impl SubgridAveraging {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: SubgridConfig) -> Self {
         Self { config }
     }
@@ -56,6 +61,9 @@ impl SubgridAveraging {
     ///
     /// * `property` - Material property field
     /// * `geometry` - Volume fraction (1.0 inside, 0.0 outside, 0-1 at boundary)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply(
         &self,
         property: &Array3<f64>,
@@ -139,10 +147,7 @@ mod tests {
         let property = Array3::from_elem((10, 10, 10), 1540.0);
         let geometry = Array3::from_elem((10, 10, 10), 1.0);
 
-        let result = smoother.apply(&property, &geometry);
-        assert!(result.is_ok());
-
-        let smoothed = result.unwrap();
+        let smoothed = smoother.apply(&property, &geometry).unwrap();
         // Should be unchanged (no boundary cells)
         assert_relative_eq!(smoothed[[5, 5, 5]], 1540.0, epsilon = 1e-9);
     }
@@ -164,10 +169,7 @@ mod tests {
         geometry.slice_mut(s![5.., .., ..]).fill(0.0); // Outside domain
         geometry[[5, 5, 5]] = 0.5; // Boundary cell (50% volume fraction)
 
-        let result = smoother.apply(&property, &geometry);
-        assert!(result.is_ok());
-
-        let smoothed = result.unwrap();
+        let smoothed = smoother.apply(&property, &geometry).unwrap();
         // Boundary cell should be smoothed (averaged value)
         let smoothed_val = smoothed[[5, 5, 5]];
         assert!(
@@ -192,11 +194,8 @@ mod tests {
         geometry.slice_mut(s![5.., .., ..]).fill(0.0);
         geometry[[5, 5, 5]] = 0.5;
 
-        let result = smoother.apply(&property, &geometry);
-        assert!(result.is_ok());
-
         // Harmonic average should be closer to lower value
-        let smoothed_val = result.unwrap()[[5, 5, 5]];
+        let smoothed_val = smoother.apply(&property, &geometry).unwrap()[[5, 5, 5]];
         let arithmetic_avg = (1000.0 + 2000.0) / 2.0; // 1500
         assert!(
             smoothed_val < arithmetic_avg,

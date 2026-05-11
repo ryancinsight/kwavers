@@ -16,6 +16,9 @@ impl BemSolver {
     /// Computes the boundary integrals to assemble the H and G matrices.
     /// Uses standard Gaussian quadrature for non-singular elements and
     /// Duffy transformation / singularity handling for singular elements.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn assemble_system(&mut self) -> KwaversResult<()> {
         let n = self.vertices.len();
         if n == 0 {
@@ -88,6 +91,9 @@ impl BemSolver {
     }
 
     /// Solve the assembled BEM linear system via BiCGSTAB
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn solve_bem_system(
         &self,
         a_matrix: &CompressedSparseRowMatrix<Complex64>,

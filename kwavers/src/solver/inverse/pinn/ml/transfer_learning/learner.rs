@@ -21,6 +21,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Transfer model to target geometry
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn transfer_to_geometry(
         &mut self,
         target_geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
@@ -78,6 +81,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Extract features from source model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn extract_source_features(&self) -> KwaversResult<SourceFeatures> {
         let params = self.source_model.parameters();
         let mut _weight_magnitudes = Vec::new();
@@ -98,6 +104,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Initialize target model with transferred weights
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn initialize_target_model(
         &self,
         _source_features: &SourceFeatures,
@@ -106,6 +115,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Setup domain adapter for cross-geometry transfer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn setup_domain_adapter(
         &mut self,
         _target_geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
@@ -118,6 +130,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Apply domain adaptation to model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_domain_adaptation(
         &self,
         model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
@@ -127,6 +142,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Fine-tune model on target geometry
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn fine_tune_model(
         &mut self,
         mut model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
@@ -163,6 +181,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Generate training data for target geometry
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub(super) fn generate_training_data(
         &self,
         geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
@@ -200,6 +221,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     }
 
     /// Perform one fine-tuning step with proper physics-informed training
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn fine_tune_step(
         &self,
         model: &mut crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,

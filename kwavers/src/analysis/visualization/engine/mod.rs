@@ -46,6 +46,9 @@ pub struct VisualizationEngine {
 
 impl VisualizationEngine {
     /// Create a new visualization engine
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn create(config: VisualizationConfig) -> KwaversResult<Self> {
         config.validate()?;
 
@@ -73,6 +76,9 @@ impl VisualizationEngine {
     }
 
     /// Initialize GPU resources
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn initialize_gpu(&mut self) -> KwaversResult<()> {
         info!("Initializing GPU resources for visualization");
 
@@ -93,6 +99,9 @@ impl VisualizationEngine {
     }
 
     /// Render a single field with 3D visualization
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn render_field(
         &mut self,
         field: &Array3<f64>,
@@ -141,6 +150,9 @@ impl VisualizationEngine {
     }
 
     /// Render multiple fields simultaneously
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn render_multi_field(
         &mut self,
         fields: &Array4<f64>,
@@ -195,6 +207,9 @@ impl VisualizationEngine {
     }
 
     /// Update a visualization parameter
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_parameter(&mut self, name: &str, value: f64) -> KwaversResult<()> {
         let mut params = self.parameters.lock().map_err(|_| {
             KwaversError::System(crate::core::error::SystemError::ResourceExhausted {
@@ -252,6 +267,9 @@ impl VisualizationEngine {
     }
 
     /// Export visualization to file
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn export(
         &self,
         field: &Array3<f64>,

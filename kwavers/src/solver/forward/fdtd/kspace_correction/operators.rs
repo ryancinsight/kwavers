@@ -21,7 +21,7 @@ pub struct KSpaceFdtdOperators {
     c_ref: f64,
     /// Shared FFT plan (cached; not duplicated if PSTD is also running).
     fft: Arc<ProcessorFft3d>,
-    /// Temporal correction factor κ[i,j,k] = sinc(0.5·c_ref·dt·|k|).
+    /// Temporal correction factor `κ[i,j,k] = sinc(0.5·c_ref·dt·|k|)`.
     /// Public so that tests can compare with PSTD's kappa.
     pub kappa: Array3<f64>,
     // 1-D staggered shift operators — pressure→velocity (positive half-shift)
@@ -68,6 +68,7 @@ impl KSpaceFdtdOperators {
     /// Calls [`crate::math::fft::shift_operators::generate_shift_1d`] and
     /// [`crate::math::fft::shift_operators::generate_kappa`] — the same shared
     /// utilities used by the PSTD orchestrator.
+    #[must_use] 
     pub fn new(
         nx: usize,
         ny: usize,
@@ -125,6 +126,9 @@ impl KSpaceFdtdOperators {
     /// When the medium is homogeneous and no explicit initial velocity is
     /// supplied, the compatible leapfrog start is obtained by applying the
     /// k-space pressure→velocity operator at `t = -Δt/2`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn initialize_ivp_velocity(
         &mut self,
         p0: &Array3<f64>,
@@ -208,8 +212,8 @@ impl KSpaceFdtdOperators {
                 .and(self.grad_z_k.view_mut())
                 .and(self.field_k.view())
                 .and(self.kappa.view())
-                .for_each(|(i, j, k), gx, gy, gz, &fk, &kap| {
-                    let e = Complex64::new(kap, 0.0) * fk;
+                .par_for_each(|(i, j, k), gx, gy, gz, &fk, &kap| {
+                    let e = fk * kap; // real-scalar multiply: 2 mults vs complex×complex (4+2)
                     *gx = ddx[i] * e;
                     *gy = ddy[j] * e;
                     *gz = ddz[k] * e;
@@ -242,8 +246,8 @@ impl KSpaceFdtdOperators {
             Zip::indexed(self.grad_x_k.view_mut())
                 .and(self.field_k.view())
                 .and(self.kappa.view())
-                .for_each(|(i, _j, _k), gx, &fk, &kap| {
-                    *gx = ddx[i] * Complex64::new(kap, 0.0) * fk;
+                .par_for_each(|(i, _j, _k), gx, &fk, &kap| {
+                    *gx = ddx[i] * (fk * kap);
                 });
         }
         self.fft
@@ -257,8 +261,8 @@ impl KSpaceFdtdOperators {
             Zip::indexed(self.grad_y_k.view_mut())
                 .and(self.field_k.view())
                 .and(self.kappa.view())
-                .for_each(|(_i, j, _k), gy, &fk, &kap| {
-                    *gy = ddy[j] * Complex64::new(kap, 0.0) * fk;
+                .par_for_each(|(_i, j, _k), gy, &fk, &kap| {
+                    *gy = ddy[j] * (fk * kap);
                 });
         }
         self.fft
@@ -272,8 +276,8 @@ impl KSpaceFdtdOperators {
             Zip::indexed(self.grad_z_k.view_mut())
                 .and(self.field_k.view())
                 .and(self.kappa.view())
-                .for_each(|(_i, _j, k), gz, &fk, &kap| {
-                    *gz = ddz[k] * Complex64::new(kap, 0.0) * fk;
+                .par_for_each(|(_i, _j, k), gz, &fk, &kap| {
+                    *gz = ddz[k] * (fk * kap);
                 });
         }
         self.fft

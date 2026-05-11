@@ -44,6 +44,9 @@ pub struct CPMLBoundary {
 
 impl CPMLBoundary {
     /// Create a new CPML boundary
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: CPMLConfig, grid: &Grid, sound_speed: f64) -> KwaversResult<Self> {
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let dt = 0.3 * dx_min / sound_speed;
@@ -51,6 +54,9 @@ impl CPMLBoundary {
     }
 
     /// Create a new CPML boundary with optional explicit solver time step.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new_with_time_step(
         config: CPMLConfig,
         grid: &Grid,

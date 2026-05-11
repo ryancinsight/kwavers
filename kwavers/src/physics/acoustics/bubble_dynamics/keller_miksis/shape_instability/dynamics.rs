@@ -46,8 +46,8 @@ pub fn advance_shape_modes(
 }
 
 fn damping_coefficient(n: f64, r_dot_over_r: f64, r2_inv: f64, nu: f64) -> f64 {
-    let viscous = 4.0 * nu * (n + 2.0) * (2.0 * n + 1.0) * r2_inv;
-    3.0 * r_dot_over_r + viscous
+    let viscous = 4.0 * nu * (n + 2.0) * 2.0f64.mul_add(n, 1.0) * r2_inv;
+    3.0f64.mul_add(r_dot_over_r, viscous)
 }
 
 fn driving_term(
@@ -58,7 +58,7 @@ fn driving_term(
     rho_l: f64,
     r3_inv: f64,
 ) -> f64 {
-    let inertial = (n - 1.0) * (r_ddot_over_r - (n + 2.0) * r_dot_sq_over_r_sq);
+    let inertial = (n - 1.0) * (n + 2.0).mul_add(-r_dot_sq_over_r_sq, r_ddot_over_r);
     let capillary = n * (n - 1.0) * (n + 2.0) * sigma * r3_inv / rho_l;
     inertial - capillary
 }

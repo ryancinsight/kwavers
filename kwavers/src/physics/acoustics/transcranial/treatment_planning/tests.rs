@@ -7,8 +7,7 @@ fn test_treatment_planner_creation() {
     let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
     let ct_data = Array3::from_elem((64, 64, 64), 0.0); // Air
 
-    let planner = TreatmentPlanner::new(&grid, &ct_data);
-    assert!(planner.is_ok());
+    let _planner = TreatmentPlanner::new(&grid, &ct_data).unwrap();
 }
 
 #[test]
@@ -27,9 +26,8 @@ fn test_treatment_plan_generation() {
     };
 
     let spec = TransducerSpecification::default();
-    let plan = planner.generate_plan("test_patient", &[target], &spec);
-
-    assert!(plan.is_ok());
+    let plan = planner.generate_plan("test_patient", &[target], &spec).unwrap();
+    assert_eq!(plan.patient_id, "test_patient");
 }
 
 #[test]
@@ -38,10 +36,7 @@ fn test_skull_properties_analysis() {
     let ct_data = Array3::from_elem((16, 16, 16), 800.0); // Dense bone
     let planner = TreatmentPlanner::new(&grid, &ct_data).unwrap();
 
-    let properties = planner.analyze_skull_properties();
-    assert!(properties.is_ok());
-
-    let props = properties.unwrap();
+    let props = planner.analyze_skull_properties().unwrap();
     assert_eq!(props.sound_speed.dim(), (16, 16, 16));
     assert_eq!(props.density.dim(), (16, 16, 16));
     assert_eq!(props.attenuation.dim(), (16, 16, 16));

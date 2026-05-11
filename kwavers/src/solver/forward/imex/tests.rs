@@ -16,6 +16,9 @@ use ndarray::Array3;
 use std::sync::Arc;
 
 /// Test problem: dy/dt = -y (stiff) + sin(t) (non-stiff)
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 fn create_test_problem() -> (
     impl Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     impl Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,

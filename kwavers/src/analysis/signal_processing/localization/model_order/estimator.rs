@@ -9,6 +9,9 @@ pub struct ModelOrderEstimator {
 
 impl ModelOrderEstimator {
     /// Create new model order estimator
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: ModelOrderConfig) -> KwaversResult<Self> {
         config.validate()?;
         Ok(Self { config })
@@ -54,6 +57,10 @@ impl ModelOrderEstimator {
     /// # References
     ///
     /// Wax & Kailath (1985), Equations (11)-(13)
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
     pub fn estimate(&self, eigenvalues: &[f64]) -> KwaversResult<ModelOrderResult> {
         let m = self.config.num_sensors;
         let n = self.config.num_samples;
@@ -78,7 +85,7 @@ impl ModelOrderEstimator {
         if valid_eigenvalues.is_empty() {
             return Err(KwaversError::Numerical(
                 crate::core::error::NumericalError::ConvergenceFailed {
-                    method: "model_order_estimation".to_string(),
+                    method: "model_order_estimation".to_owned(),
                     iterations: 0,
                     error: threshold,
                 },
@@ -134,11 +141,11 @@ impl ModelOrderEstimator {
             let criterion_value = match self.config.criterion {
                 ModelOrderCriterion::AIC => {
                     // AIC(k) = 2[-log L(k)] + 2p(k)
-                    2.0 * neg_log_likelihood + 2.0 * num_params as f64
+                    2.0f64.mul_add(neg_log_likelihood, 2.0 * num_params as f64)
                 }
                 ModelOrderCriterion::MDL => {
                     // MDL(k) = 2[-log L(k)] + p(k) ln(N)
-                    2.0 * neg_log_likelihood + (num_params as f64) * (n as f64).ln()
+                    2.0f64.mul_add(neg_log_likelihood, (num_params as f64) * (n as f64).ln())
                 }
             };
 
@@ -168,6 +175,9 @@ impl ModelOrderEstimator {
     ///
     /// Convenience method that accepts both eigenvalues and eigenvectors.
     /// Only eigenvalues are used for model order selection.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn estimate_from_decomposition(
         &self,
         eigenvalues: &[f64],

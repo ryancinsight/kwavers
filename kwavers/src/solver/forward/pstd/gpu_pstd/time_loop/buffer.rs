@@ -62,6 +62,9 @@ impl GpuPstdSolver {
     ///
     /// Called when `n_sensors`, `n_src`, or `n_vel_x` changes between `run` calls.
     /// Updates `self.cache_*` fields and sets the cache-key counters.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub(super) fn build_run_cache(
         &mut self,
         sensor_indices: &[u32],
@@ -222,6 +225,9 @@ impl GpuPstdSolver {
     ///
     /// `write_buffer` enqueues a PCIe upload; the GPU sees updated data before
     /// the first dispatch of the new run.  The stable index prefix is untouched.
+    /// # Panics
+    /// - Panics if `cache hit`.
+    ///
     pub(super) fn refresh_signal_tails(
         &mut self,
         source_signals: &[f32],

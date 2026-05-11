@@ -19,10 +19,7 @@ fn test_fdtd_backend_creation() {
     let grid = create_test_grid();
     let medium = create_test_medium(&grid);
 
-    let backend = FdtdBackend::new(&grid, &medium, SpatialOrder::Second);
-    assert!(backend.is_ok(), "Backend creation failed");
-
-    let backend = backend.unwrap();
+    let backend = FdtdBackend::new(&grid, &medium, SpatialOrder::Second).unwrap();
     assert_eq!(backend.get_grid_dimensions(), (32, 32, 32));
     assert!(backend.get_dt() > 0.0, "Time step must be positive");
     assert_eq!(backend.get_current_time(), 0.0);
@@ -142,11 +139,16 @@ fn test_spatial_order_variants() {
         SpatialOrder::Fourth,
         SpatialOrder::Sixth,
     ] {
-        let backend = FdtdBackend::new(&grid, &medium, *order);
+        let backend = FdtdBackend::new(&grid, &medium, *order)
+            .unwrap_or_else(|e| panic!("Failed to create backend with order {order:?}: {e:?}"));
+        assert_eq!(
+            backend.get_grid_dimensions(),
+            (32, 32, 32),
+            "order {order:?}: grid dimensions must match"
+        );
         assert!(
-            backend.is_ok(),
-            "Failed to create backend with order {:?}",
-            order
+            backend.get_dt() > 0.0,
+            "order {order:?}: dt must be positive"
         );
     }
 }

@@ -84,6 +84,9 @@ pub struct CPMLProfiles {
 
 impl CPMLProfiles {
     /// Create CPML profiles from grid spacing, medium reference speed, and time step.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: &CPMLConfig, grid: &Grid, sound_speed: f64, dt: f64) -> KwaversResult<Self> {
         let mut profiles = Self::neutral(grid.nx, grid.ny, grid.nz);
         profiles.compute_profiles(config, grid, sound_speed, dt)?;

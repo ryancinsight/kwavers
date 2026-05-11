@@ -110,7 +110,7 @@ impl CodedExcitationProcessor {
 
         for i in 0..length {
             let t = i as f64 * t_step;
-            let phase = 2.0 * PI * (start_freq * t + 0.5 * k * t * t);
+            let phase = 2.0 * PI * start_freq.mul_add(t, 0.5 * k * t * t);
             chirp[i] = Complex64::new(phase.cos(), phase.sin());
         }
 

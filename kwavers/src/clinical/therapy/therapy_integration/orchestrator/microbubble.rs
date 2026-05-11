@@ -131,6 +131,9 @@ use super::super::state::AcousticField;
 /// - Plesset & Prosperetti (1977): "Bubble dynamics and cavitation"
 /// - Blake (1986): "Bjerknes forces in stationary sound fields"
 /// - Ferrara et al. (2007): "Ultrasound microbubble contrast agents"
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn update_microbubble_dynamics(
     ceus_system: &mut ContrastEnhancedUltrasound,
     acoustic_field: &AcousticField,
@@ -229,11 +232,10 @@ mod tests {
         let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, 1e6, 2.5).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
-        let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6);
-        assert!(result.is_ok());
-
-        let concentration = result.unwrap();
-        assert!(concentration.is_some());
+        let concentration = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6)
+            .unwrap()
+            .unwrap();
+        assert!(!concentration.is_empty());
     }
 
     #[test]
@@ -277,11 +279,9 @@ mod tests {
         };
 
         // Verify microbubble dynamics handles pressure gradients correctly
-        let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6);
-        assert!(result.is_ok());
-        
+        let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6).unwrap();
         // Verify concentration field is returned and all values are positive
-        if let Ok(Some(concentration)) = result {
+        if let Some(concentration) = result {
             assert_eq!(concentration.dim(), (8, 8, 8));
             assert!(concentration.iter().all(|&c| c > 0.0));
         }
@@ -295,8 +295,7 @@ mod tests {
         let acoustic_field = create_test_acoustic_field();
 
         // Valid timestep
-        let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6);
-        assert!(result.is_ok());
+        update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6).unwrap();
 
         // Zero timestep should work (no evolution)
         let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 0.0);

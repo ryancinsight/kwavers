@@ -42,6 +42,10 @@ pub struct NeuralBeamformer {
 }
 
 impl NeuralBeamformer {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: NeuralBeamformingConfig) -> KwaversResult<Self> {
         config.validate()?;
 
@@ -73,7 +77,10 @@ impl NeuralBeamformer {
             metrics: HybridBeamformingMetrics::default(),
         })
     }
-
+    /// Adapt.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn adapt(&mut self, feedback: &BeamformingFeedback) -> KwaversResult<()> {
         if self.config.adaptation_parameters.enable_online_learning {
             if let Some(network) = &mut self.neural_network {
@@ -86,10 +93,12 @@ impl NeuralBeamformer {
         Ok(())
     }
 
+    #[must_use] 
     pub fn metrics(&self) -> &HybridBeamformingMetrics {
         &self.metrics
     }
 
+    #[must_use] 
     pub fn config(&self) -> &NeuralBeamformingConfig {
         &self.config
     }

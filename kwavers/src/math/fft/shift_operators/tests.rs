@@ -5,6 +5,9 @@ use std::f64::consts::PI;
 /// Shift operators at k=0 (DC bin) must be exactly zero.
 ///
 /// i·0·exp(0) = 0.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_shift_dc_bin_is_zero() {
     let n = 16;
@@ -31,6 +34,9 @@ fn test_shift_dc_bin_is_zero() {
 ///   shift_neg = i·k·(cos θ − i·sin θ) = k·sin θ + i·k·cos θ = −conj(shift_pos)
 ///
 /// Therefore: shift_neg[k] = −conj(shift_pos[k])
+/// # Panics
+/// - Panics if assertion fails: `shift_neg[{idx}] != -conj(shift_pos[{idx}]): diff = {diff}`.
+///
 #[test]
 fn test_shift_neg_is_neg_conjugate_of_pos() {
     let n = 32;
@@ -50,6 +56,9 @@ fn test_shift_neg_is_neg_conjugate_of_pos() {
 ///
 /// k_nyq = π/dx; the operator i·k_nyq·exp(±i·k_nyq·dx/2) = i·k_nyq·exp(±i·π/2)
 /// = i·k_nyq·(0 ± i) = ∓k_nyq ≠ 0.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_nyquist_bin_not_zeroed() {
     let n = 16;
@@ -72,6 +81,9 @@ fn test_nyquist_bin_not_zeroed() {
 /// κ at k=0 (DC, i=0,j=0,k=0) must be exactly 1.
 ///
 /// lim_{x→0} sin(x)/x = 1.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_kappa_dc_is_one() {
     let kappa = generate_kappa(8, 8, 8, 1e-3, 1e-3, 1e-3, 1500.0, 1e-7);
@@ -85,6 +97,9 @@ fn test_kappa_dc_is_one() {
 /// κ must be in [0, 1] for all bins when c_ref·dt·|k|/2 ≤ π/2,
 /// i.e., when the CFL condition c·dt/dx ≤ π / (sqrt(3)·π) = 1/sqrt(3) holds.
 /// For the test grid with CFL=0.3, all κ values are positive.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_kappa_range_cfl_stable() {
     let dx = 1e-3;
@@ -100,6 +115,9 @@ fn test_kappa_range_cfl_stable() {
 ///
 /// At k = (2π/dx)/4 (quarter-Nyquist), x = 0.5·c·dt·k:
 ///   κ = sin(x)/x  ≠  cos(x)
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_kappa_sinc_not_cos() {
     let dx = 1e-3_f64;
@@ -130,6 +148,9 @@ fn test_kappa_sinc_not_cos() {
 /// source_kappa uses cos, not sinc.
 ///
 /// Additive source injection requires cos(x), not sinc(x).
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_source_kappa_is_cos() {
     let dx = 1e-3_f64;
@@ -153,6 +174,9 @@ fn test_source_kappa_is_cos() {
 ///
 /// The PSTD orchestrator uses the same formula. This test verifies that the
 /// extracted function produces bit-identical results.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_shift_matches_orchestrator_formula() {
     let n = 8usize;

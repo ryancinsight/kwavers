@@ -3,6 +3,10 @@ use crate::domain::boundary::cpml::config::CPMLConfig;
 use crate::domain::grid::Grid;
 
 /// The k-Wave wall value is `sigma_max = pml_alpha * c0 / dx`.
+/// # Panics
+/// - Panics if `grid`.
+/// - Panics if `CPMLProfiles::new should succeed`.
+///
 #[test]
 fn test_cpml_sigma_max_formula() {
     let c0 = 1500.0_f64;
@@ -26,6 +30,10 @@ fn test_cpml_sigma_max_formula() {
 }
 
 /// Singleton axes must remain CPML-neutral for lower-dimensional embeddings.
+/// # Panics
+/// - Panics if `grid`.
+/// - Panics if `CPMLProfiles::new should succeed`.
+///
 #[test]
 fn test_singleton_axis_profiles_are_neutral() {
     let c0 = 1500.0_f64;
@@ -49,6 +57,10 @@ fn test_singleton_axis_profiles_are_neutral() {
 }
 
 /// Roden-Gedney coefficients reduce to `b = exp(-sigma dt)` and `a = b - 1`.
+/// # Panics
+/// - Panics if `grid`.
+/// - Panics if `CPMLProfiles::new should succeed`.
+///
 #[test]
 fn test_cpml_recursive_convolution_coefficients() {
     let c0 = 1500.0_f64;

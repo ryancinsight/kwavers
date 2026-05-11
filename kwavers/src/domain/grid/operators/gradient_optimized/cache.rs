@@ -26,6 +26,9 @@ where
     T: Float + Clone + Send + Sync,
 {
     /// Create a new gradient cache
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn new(grid: &Grid) -> Self {
         Self {
             coefficients_cache: RwLock::new(Vec::new()),

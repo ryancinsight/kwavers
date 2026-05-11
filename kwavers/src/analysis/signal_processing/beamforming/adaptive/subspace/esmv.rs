@@ -57,6 +57,11 @@ impl EigenspaceMV {
     /// ```text
     /// w = P_s R^{-1} a / (a^H R^{-1} P_s a)
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_weights(
         &self,
         covariance: &Array2<Complex64>,
@@ -66,8 +71,7 @@ impl EigenspaceMV {
 
         if n == 0 || covariance.ncols() != n {
             return Err(KwaversError::InvalidInput(
-                "EigenspaceMV::compute_weights: covariance must be non-empty square matrix"
-                    .to_string(),
+                "EigenspaceMV::compute_weights: covariance must be non-empty square matrix".to_owned(),
             ));
         }
         if steering.len() != n {
@@ -84,11 +88,11 @@ impl EigenspaceMV {
             )));
         }
 
-        for &val in steering.iter() {
+        for &val in steering {
             if !val.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::NaN {
-                    operation: "EigenspaceMV::compute_weights".to_string(),
-                    inputs: "steering vector contains non-finite values".to_string(),
+                    operation: "EigenspaceMV::compute_weights".to_owned(),
+                    inputs: "steering vector contains non-finite values".to_owned(),
                 }));
             }
         }
@@ -143,8 +147,7 @@ impl EigenspaceMV {
 
         if a_h_r_inv_ps_a.norm() < 1e-12 {
             return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
-                "EigenspaceMV::compute_weights: denominator near zero (signal subspace mismatch)"
-                    .to_string(),
+                "EigenspaceMV::compute_weights: denominator near zero (signal subspace mismatch)".to_owned(),
             )));
         }
 
@@ -153,7 +156,7 @@ impl EigenspaceMV {
         for &w in &weights {
             if !w.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
-                    "EigenspaceMV::compute_weights: non-finite weight computed".to_string(),
+                    "EigenspaceMV::compute_weights: non-finite weight computed".to_owned(),
                 )));
             }
         }

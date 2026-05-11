@@ -20,6 +20,12 @@ pub struct ExponentialSweep {
 
 impl ExponentialSweep {
     /// Create new exponential sweep - USING all parameters
+    /// # Panics
+    /// - Panics if assertion fails: `Start frequency too low`.
+    /// - Panics if assertion fails: `Stop frequency too low`.
+    /// - Panics if assertion fails: `Duration too short`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(start_freq: f64, stop_freq: f64, duration: f64, amplitude: f64) -> Self {
         assert!(start_freq > MIN_FREQUENCY, "Start frequency too low");
@@ -84,7 +90,7 @@ impl FrequencySweep for ExponentialSweep {
         if self.exp_rate.abs() < EPSILON {
             TWO_PI * self.start_frequency * t
         } else {
-            TWO_PI * self.start_frequency / self.exp_rate * ((self.exp_rate * t).exp() - 1.0)
+            TWO_PI * self.start_frequency / self.exp_rate * (self.exp_rate * t).exp_m1()
         }
     }
 

@@ -22,7 +22,7 @@ pub struct FwiParameters {
     pub n_depth: usize,
     /// Regularization weight
     pub regularization: RegularizationParameters,
-    /// Central source frequency [Hz]
+    /// Central source frequency (Hz)
     ///
     /// Used as the reference frequency for medium construction (absorption law
     /// frequency exponent) and for the Ricker wavelet.  Typical exploration

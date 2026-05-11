@@ -21,6 +21,9 @@ impl Quantizer {
     }
 
     /// Extract activation functions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn extract_activations<B: Backend>(_pinn: &BurnPINN2DWave<B>) -> Vec<ActivationType> {
         let mut activations = Vec::new();
         // Assume hidden layers use Tanh
@@ -32,6 +35,9 @@ impl Quantizer {
     }
 
     /// Quantize network weights and biases
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn quantize_network<B: Backend>(
         pinn: &BurnPINN2DWave<B>,
         layer_sizes: &[usize],

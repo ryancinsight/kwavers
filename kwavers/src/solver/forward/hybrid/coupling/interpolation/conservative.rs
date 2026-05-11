@@ -8,6 +8,9 @@ impl InterpolationManager {
     /// Volume-weighted conservative interpolation preserving integral quantities.
     ///
     /// Reference: Shashkov & Wendroff (2004), "The repair paradigm and application to conservation laws"
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn conservative_interpolation(
         &self,
         source_field: &Array3<f64>,
@@ -68,12 +71,12 @@ impl InterpolationManager {
 
                         // Distance-based weight approximates volume overlap
                         // Exact: would use cell face intersection volumes
-                        let xi = min_x + ii as f64 * dx;
-                        let yj = min_y + jj as f64 * dy;
-                        let zk = min_z + kk as f64 * dz;
+                        let xi = (ii as f64).mul_add(dx, min_x);
+                        let yj = (jj as f64).mul_add(dy, min_y);
+                        let zk = (kk as f64).mul_add(dz, min_z);
 
                         let dist =
-                            ((tx - xi).powi(2) + (ty - yj).powi(2) + (tz - zk).powi(2)).sqrt();
+                            (tz - zk).mul_add(tz - zk, (ty - yj).mul_add(ty - yj, (tx - xi).powi(2))).sqrt();
                         let weight = (source_volume / (1.0 + dist)).max(1e-10);
 
                         total_weighted_value += source_field[[ii, jj, kk]] * weight;

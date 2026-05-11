@@ -111,6 +111,10 @@ impl Default for BurnPINN3DConfig {
 }
 
 impl BurnPINN3DConfig {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.hidden_layers.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -236,6 +240,10 @@ impl Default for BurnLossWeights3D {
 }
 
 impl BurnLossWeights3D {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         for (name, v) in [
             ("data_weight", self.data_weight),

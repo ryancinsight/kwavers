@@ -6,24 +6,44 @@ use ndarray::Array2;
 
 #[test]
 fn test_training_config_default() {
+    // default: num_epochs=100, batch_size=32, learning_rate=0.001, lambda_data+lambda_physics=1.0
     let config = TrainingConfig::default();
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
+    assert_eq!(config.num_epochs, 100, "default num_epochs must be 100");
+    assert_eq!(config.batch_size, 32, "default batch_size must be 32");
+    let lambda_sum = config.lambda_data + config.lambda_physics;
+    assert!(
+        (lambda_sum - 1.0).abs() < 1e-6,
+        "lambda_data + lambda_physics = {lambda_sum} (must equal 1.0)"
+    );
 }
 
 #[test]
 fn test_training_config_validation() {
     let mut config = TrainingConfig::default();
     config.num_epochs = 0;
-    assert!(config.validate().is_err());
+    let err = config.validate().unwrap_err();
+    assert!(
+        format!("{err:?}").contains("num_epochs"),
+        "zero num_epochs error must mention 'num_epochs'; got: {err:?}"
+    );
 
     config.num_epochs = 100;
     config.learning_rate = 0.0;
-    assert!(config.validate().is_err());
+    let err = config.validate().unwrap_err();
+    assert!(
+        format!("{err:?}").contains("learning_rate"),
+        "zero learning_rate error must mention 'learning_rate'; got: {err:?}"
+    );
 
     config.learning_rate = 0.001;
     config.lambda_data = 0.6;
-    config.lambda_physics = 0.3; // Sum != 1.0
-    assert!(config.validate().is_err());
+    config.lambda_physics = 0.3; // sum = 0.9 ≠ 1.0
+    let err = config.validate().unwrap_err();
+    assert!(
+        format!("{err:?}").contains("lambda"),
+        "lambda-sum error must mention 'lambda'; got: {err:?}"
+    );
 }
 
 #[test]
@@ -35,23 +55,30 @@ fn test_training_config_builder() {
 
     assert_eq!(config.num_epochs, 200);
     assert_eq!(config.batch_size, 64);
-    assert!(config.learning_rate < 0.001);
+    assert!(
+        (config.learning_rate - 0.0001).abs() < 1e-12,
+        "learning_rate = {} (expected 0.0001)",
+        config.learning_rate
+    );
 }
 
 #[test]
 fn test_training_dataset_creation() {
     let inputs = Array2::<f64>::zeros((100, 10));
     let targets = Array2::<f64>::zeros((100, 1));
-    let dataset = TrainingDataset::new(inputs, targets);
-    assert!(dataset.is_ok());
+    let dataset = TrainingDataset::new(inputs, targets).unwrap();
+    assert_eq!(dataset.len(), 100, "dataset must hold 100 samples");
 }
 
 #[test]
 fn test_training_dataset_mismatched_sizes() {
     let inputs = Array2::<f64>::zeros((100, 10));
     let targets = Array2::<f64>::zeros((50, 1));
-    let dataset = TrainingDataset::new(inputs, targets);
-    assert!(dataset.is_err());
+    let err = TrainingDataset::new(inputs, targets).unwrap_err();
+    assert!(
+        format!("{err:?}").contains("same number"),
+        "mismatch error must mention 'same number'; got: {err:?}"
+    );
 }
 
 #[test]

@@ -1,6 +1,6 @@
 //! Erosion pattern analysis and cavitation intensity
 
-use crate::core::constants::cavitation::{COMPRESSION_FACTOR_EXPONENT, IMPACT_ENERGY_COEFFICIENT};
+use crate::core::constants::cavitation::IMPACT_ENERGY_COEFFICIENT;
 use crate::physics::bubble_dynamics::bubble_field::BubbleStateFields;
 use ndarray::{Array3, Zip};
 
@@ -26,11 +26,9 @@ pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f
         .and(&bubble_states.radius)
         .and(&bubble_states.velocity)
         .and(&bubble_states.compression_ratio)
-        .for_each(|out, &r, &v, &compression| {
-            let collapse_energy =
-                IMPACT_ENERGY_COEFFICIENT * liquid_density * v.powi(2) * r.powi(3);
-            let compression_factor = compression.powf(COMPRESSION_FACTOR_EXPONENT);
-            *out = collapse_energy * compression_factor;
+        .par_for_each(|out, &r, &v, &compression| {
+            *out = IMPACT_ENERGY_COEFFICIENT * liquid_density * v.powi(2) * r.powi(3)
+                * compression.powi(2);
         });
 
     intensity
@@ -55,10 +53,8 @@ impl ErosionPattern {
             .and(damage_field)
             .and(flow_velocity)
             .and(surface_normal)
-            .for_each(|out, &damage, &v, &n| {
-                let flow_factor = 1.0 + FLOW_INFLUENCE_COEFFICIENT * v;
-                let angle_factor = n.abs();
-                *out = damage * flow_factor * angle_factor;
+            .par_for_each(|out, &damage, &v, &n| {
+                *out = damage * FLOW_INFLUENCE_COEFFICIENT.mul_add(v, 1.0) * n.abs();
             });
 
         potential

@@ -26,6 +26,9 @@ pub struct SphericalWave {
 
 impl SphericalWave {
     /// Create new spherical wave. Validates f > 0 and c₀ > 0.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn new(
         source_strength: f64,
         frequency: f64,
@@ -36,14 +39,14 @@ impl SphericalWave {
         if frequency <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "Frequency must be positive".to_string(),
+                    message: "Frequency must be positive".to_owned(),
                 },
             ));
         }
         if sound_speed <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "Sound speed must be positive".to_string(),
+                    message: "Sound speed must be positive".to_owned(),
                 },
             ));
         }
@@ -58,11 +61,12 @@ impl SphericalWave {
     }
 
     /// p(r, t) = (A/r) sin(kr − ωt + φ); returns 0 for r < 1e-10.
+    #[must_use] 
     pub fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
         let dx = x - self.source_position[0];
         let dy = y - self.source_position[1];
         let dz = z - self.source_position[2];
-        let r = (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt();
+        let r = dz.mul_add(dz, dy.mul_add(dy, dx.powi(2))).sqrt();
 
         const EPSILON: f64 = 1e-10;
         if r < EPSILON {

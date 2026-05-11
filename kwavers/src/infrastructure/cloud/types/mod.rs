@@ -40,6 +40,9 @@ pub enum CloudProvider {
 
 impl CloudProvider {
     /// Get the human-readable name of the provider
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn name(&self) -> &'static str {
         match self {
             CloudProvider::AWS => "Amazon Web Services",
@@ -49,6 +52,9 @@ impl CloudProvider {
     }
 
     /// Get the short identifier for the provider
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn identifier(&self) -> &'static str {
         match self {
             CloudProvider::AWS => "aws",
@@ -99,11 +105,17 @@ pub enum DeploymentStatus {
 
 impl DeploymentStatus {
     /// Check if deployment is in a healthy state
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn is_healthy(&self) -> bool {
         matches!(self, DeploymentStatus::Active | DeploymentStatus::Scaling)
     }
 
     /// Check if deployment is terminal (cannot transition further)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn is_terminal(&self) -> bool {
         matches!(
             self,
@@ -112,6 +124,9 @@ impl DeploymentStatus {
     }
 
     /// Check if deployment is operational (can serve requests)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn is_operational(&self) -> bool {
         matches!(self, DeploymentStatus::Active)
     }

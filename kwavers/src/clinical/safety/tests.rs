@@ -65,7 +65,7 @@ fn test_interlock_system() {
     );
 
     assert!(interlocks.check_interlocks().unwrap());
-    assert!(interlocks.enable_system().is_ok());
+    interlocks.enable_system().unwrap();
     assert!(interlocks.is_system_enabled());
 }
 
@@ -79,7 +79,7 @@ fn test_dose_controller() {
         .is_ok());
 
     let params = TherapyParameters::hifu();
-    assert!(controller.update_dose(100.0, &params).is_ok());
+    controller.update_dose(100.0, &params).unwrap();
 
     assert_eq!(controller.accumulated_dose, 100.0);
     assert_eq!(controller.remaining_dose_capacity(), 9900.0);

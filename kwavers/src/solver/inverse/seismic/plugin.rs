@@ -46,12 +46,12 @@ impl SeismicImagingPlugin {
     pub fn new() -> Self {
         Self {
             metadata: PluginMetadata {
-                id: "seismic_imaging".to_string(),
-                name: "Seismic Imaging".to_string(),
-                version: "1.0.0".to_string(),
-                author: "Kwavers Team".to_string(),
-                description: "RTM and FWI for subsurface imaging".to_string(),
-                license: "MIT".to_string(),
+                id: "seismic_imaging".to_owned(),
+                name: "Seismic Imaging".to_owned(),
+                version: "1.0.0".to_owned(),
+                author: "Kwavers Team".to_owned(),
+                description: "RTM and FWI for subsurface imaging".to_owned(),
+                license: "MIT".to_owned(),
             },
             state: PluginState::Initialized,
             rtm_processor: None,
@@ -67,6 +67,9 @@ impl SeismicImagingPlugin {
     }
 
     /// Configure FWI parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn configure_fwi(&mut self, parameters: FwiParameters) {
         self.fwi_processor = Some(FwiProcessor::new(parameters));
         self.state = PluginState::Configured;
@@ -74,6 +77,9 @@ impl SeismicImagingPlugin {
 
     /// Perform Reverse Time Migration
     /// Based on Baysal et al. (1983): "Reverse time migration"
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn reverse_time_migration(
         &mut self,
         source_wavefield: &Array3<f64>,
@@ -83,8 +89,8 @@ impl SeismicImagingPlugin {
         let processor = self.rtm_processor.as_ref().ok_or_else(|| {
             crate::core::error::KwaversError::Physics(
                 crate::core::error::PhysicsError::InvalidConfiguration {
-                    parameter: "rtm_processor".to_string(),
-                    reason: "RTM processor not configured".to_string(),
+                    parameter: "rtm_processor".to_owned(),
+                    reason: "RTM processor not configured".to_owned(),
                 },
             )
         })?;
@@ -99,6 +105,9 @@ impl SeismicImagingPlugin {
     /// Full Waveform Inversion implementation
     /// Based on Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
     /// Reference: Geophysics, 49(8), 1259-1266
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn full_waveform_inversion(
         &mut self,
         observed_data: &Array2<f64>,
@@ -109,8 +118,8 @@ impl SeismicImagingPlugin {
         let processor = self.fwi_processor.as_ref().ok_or_else(|| {
             crate::core::error::KwaversError::Physics(
                 crate::core::error::PhysicsError::InvalidConfiguration {
-                    parameter: "fwi_processor".to_string(),
-                    reason: "FWI processor not configured".to_string(),
+                    parameter: "fwi_processor".to_owned(),
+                    reason: "FWI processor not configured".to_owned(),
                 },
             )
         })?;
@@ -156,7 +165,7 @@ mod tests {
         let settings = RtmSettings::default();
 
         plugin.configure_rtm(settings);
-        assert!(plugin.rtm_processor.is_some());
+        let _proc = plugin.rtm_processor.as_ref().unwrap(); // panics if configure_rtm failed to set processor
         assert!(matches!(plugin.state, PluginState::Configured));
     }
 
@@ -166,7 +175,7 @@ mod tests {
         let parameters = FwiParameters::default();
 
         plugin.configure_fwi(parameters);
-        assert!(plugin.fwi_processor.is_some());
+        let _proc = plugin.fwi_processor.as_ref().unwrap(); // panics if configure_fwi failed to set processor
         assert!(matches!(plugin.state, PluginState::Configured));
     }
 

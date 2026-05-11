@@ -11,7 +11,6 @@ use crate::infrastructure::api::JobStatus;
 
 /// Job manager for coordinating PINN training tasks
 #[derive(Clone, Debug)]
-#[allow(dead_code)] // Field is used at runtime via self.training_executor.execute()
 pub struct JobManager {
     /// Active and completed jobs
     pub(super) jobs: Arc<RwLock<HashMap<String, TrainingJob>>>,
@@ -45,6 +44,9 @@ impl JobManager {
     }
 
     /// Submit a new training job
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn submit_job(
         &self,
         user_id: &str,
@@ -104,12 +106,18 @@ impl JobManager {
     }
 
     /// Get job information
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_job(&self, job_id: &str) -> Option<TrainingJob> {
         let jobs = self.jobs.read();
         jobs.get(job_id).cloned()
     }
 
     /// Get all jobs for a user
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_user_jobs(&self, user_id: &str) -> Vec<TrainingJob> {
         let jobs = self.jobs.read();
         jobs.values()
@@ -119,6 +127,9 @@ impl JobManager {
     }
 
     /// Cancel a job (if not already running)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn cancel_job(&self, job_id: &str, user_id: &str) -> Result<(), APIError> {
         let mut jobs = self.jobs.write();
         if let Some(job) = jobs.get_mut(job_id) {
@@ -210,6 +221,9 @@ impl JobManager {
     }
 
     /// Execute the actual PINN training
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[cfg(feature = "pinn")]
     async fn execute_training(&self, job_id: &str) -> Result<TrainingResult, APIError> {
         let job = {
@@ -265,6 +279,9 @@ impl JobManager {
     }
 
     /// Stub implementation when PINN feature is not available
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[cfg(not(feature = "pinn"))]
     async fn execute_training(&self, _job_id: &str) -> Result<TrainingResult, APIError> {
         Err(APIError {

@@ -9,28 +9,63 @@ use num_complex::Complex;
 /// Type alias for complex 3D arrays used in spectral methods
 pub type Complex3D = Array3<Complex<f64>>;
 
-/// Parameters for stress update operations.
+/// Parameters for the spectral elastic stress update.
 ///
-/// # Invariant
-/// Initial stress is zero at every call (stress state is not persisted between
-/// steps in this implementation), so the former `sxx_fft`…`syz_fft` fields have
-/// been removed — the update formula reduces to `dt · Cᵢⱼₖₗ · ε̃ₖₗ`.
+/// # Update law
+///
+/// Each call writes
+///
+/// ```text
+/// σ̃(t+dt) = σ̃(t) + dt · Cᵢⱼₖₗ · ε̃ₖₗ(t+dt/2)
+/// ```
+///
+/// into the output buffer. The current spectral stress (`txx_fft` …
+/// `tyz_fft`) is required so the kernel can ADD the per-step increment to
+/// persistent stress, which is the correct behaviour for elastic
+/// propagation (μ ≠ 0). Passing zero-initialised stress fields recovers
+/// the legacy "single-step from rest" behaviour the old `update_wave`
+/// stepper relied on for its acoustic-fluid limit.
+///
+/// # Spectral derivative operators
+///
+/// `dkx_op[i] = i · k_x[i] · shift_x(i)` is the per-axis spectral
+/// derivative operator the kernel applies to the velocity field. For a
+/// **collocated** scheme pass `i · k_x[i]` (no shift). For a
+/// **staggered** scheme pass `i · k_x[i] · exp(− i · k_x[i] · Δx / 2)` —
+/// matches KWave.jl `pstd_elastic_2d`'s `ddx_k_shift_neg` used during the
+/// stress update. Caller owns the choice; the kernel merely consumes the
+/// pre-built operator.
 #[derive(Debug)]
 pub struct StressUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
     pub vy_fft: &'a Complex3D,
     pub vz_fft: &'a Complex3D,
-    pub kx: &'a Array3<f64>,
-    pub ky: &'a Array3<f64>,
-    pub kz: &'a Array3<f64>,
+    /// Current normal-stress spectrum, persisted from the previous step.
+    pub txx_fft: &'a Complex3D,
+    pub tyy_fft: &'a Complex3D,
+    pub tzz_fft: &'a Complex3D,
+    /// Current shear-stress spectrum, persisted from the previous step.
+    pub txy_fft: &'a Complex3D,
+    pub txz_fft: &'a Complex3D,
+    pub tyz_fft: &'a Complex3D,
+    /// Per-axis complex derivative operator: `i · kα · shift`.
+    /// See type-level docs.
+    pub dkx_op: &'a Complex3D,
+    pub dky_op: &'a Complex3D,
+    pub dkz_op: &'a Complex3D,
     pub lame_lambda: &'a Array3<f64>,
     pub lame_mu: &'a Array3<f64>,
     pub density: ArrayView3<'a, f64>,
     pub dt: f64,
 }
 
-/// Parameters for velocity update operations
-/// Follows SOLID principles by reducing parameter coupling
+/// Parameters for the spectral elastic velocity update.
+///
+/// `dkx_op` … `dkz_op` are the per-axis complex derivative operators
+/// applied to the stress field. For a **collocated** scheme pass
+/// `i · k_α[i]`. For a **staggered** scheme pass
+/// `i · k_α[i] · exp(+ i · k_α[i] · Δα / 2)` — matches KWave.jl
+/// `pstd_elastic_2d`'s `ddx_k_shift_pos` used during the velocity update.
 #[derive(Debug)]
 pub struct VelocityUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
@@ -42,9 +77,10 @@ pub struct VelocityUpdateParams<'a> {
     pub txy_fft: &'a Complex3D,
     pub txz_fft: &'a Complex3D,
     pub tyz_fft: &'a Complex3D,
-    pub kx: &'a Array3<f64>,
-    pub ky: &'a Array3<f64>,
-    pub kz: &'a Array3<f64>,
+    /// Per-axis complex derivative operator: `i · kα · shift`.
+    pub dkx_op: &'a Complex3D,
+    pub dky_op: &'a Complex3D,
+    pub dkz_op: &'a Complex3D,
     pub density: ArrayView3<'a, f64>,
     pub dt: f64,
 }

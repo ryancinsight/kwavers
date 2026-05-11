@@ -90,11 +90,11 @@ pub fn validate_cfl_condition(grid: &Grid, dt: f64, c_max: f64) -> PhysicsValida
     let theoretical_limit = constants::CFL_LIMIT_3D;
 
     PhysicsValidation {
-        test_name: "CFL Stability Condition".to_string(),
+        test_name: "CFL Stability Condition".to_owned(),
         passed: cfl_number <= theoretical_limit,
         error_l2: (cfl_number - theoretical_limit).abs(),
         error_linf: cfl_number / theoretical_limit,
-        reference: "Taflove & Hagness (2005) Eq. 4.92".to_string(),
+        reference: "Taflove & Hagness (2005) Eq. 4.92".to_owned(),
     }
 }
 
@@ -114,11 +114,11 @@ pub fn validate_fdtd_dispersion(grid: &Grid, dt: f64, frequency: f64, c: f64) ->
     let error = (k_num - k_exact).abs() / k_exact;
 
     PhysicsValidation {
-        test_name: "FDTD Dispersion Relation".to_string(),
+        test_name: "FDTD Dispersion Relation".to_owned(),
         passed: error < 0.01, // 1% error threshold
         error_l2: error,
         error_linf: error,
-        reference: "Taflove & Hagness (2005) Eq. 4.110".to_string(),
+        reference: "Taflove & Hagness (2005) Eq. 4.110".to_owned(),
     }
 }
 
@@ -151,11 +151,11 @@ pub fn validate_absorption_model(
     let total_error = theory_error.max(measurement_error);
 
     PhysicsValidation {
-        test_name: "Power Law Absorption (Szabo)".to_string(),
+        test_name: "Power Law Absorption (Szabo)".to_owned(),
         passed: total_error < 0.05, // 5% error threshold
         error_l2: theory_error,
         error_linf: total_error,
-        reference: "Szabo (1994) J. Acoust. Soc. Am. 96(1)".to_string(),
+        reference: "Szabo (1994) J. Acoust. Soc. Am. 96(1)".to_owned(),
     }
 }
 
@@ -166,11 +166,11 @@ pub fn validate_cpml_reflection(reflection_coefficient: f64) -> PhysicsValidatio
     let target_reflection = 1e-5;
 
     PhysicsValidation {
-        test_name: "CPML Reflection Coefficient".to_string(),
+        test_name: "CPML Reflection Coefficient".to_owned(),
         passed: reflection_coefficient < target_reflection,
         error_l2: reflection_coefficient,
         error_linf: reflection_coefficient / target_reflection,
-        reference: "Roden & Gedney (2000) Microwave Opt. Tech. Lett. 27(5)".to_string(),
+        reference: "Roden & Gedney (2000) Microwave Opt. Tech. Lett. 27(5)".to_owned(),
     }
 }
 

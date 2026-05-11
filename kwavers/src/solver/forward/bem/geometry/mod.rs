@@ -26,7 +26,7 @@ mod tests;
 #[inline]
 pub(crate) fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     // FMA-friendly: compiler will fuse on targets with FMA support.
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    a[2].mul_add(b[2], a[0].mul_add(b[0], a[1] * b[1]))
 }
 
 /// 3D vector subtraction: a − b.
@@ -51,9 +51,9 @@ pub(crate) fn scale(a: [f64; 3], s: f64) -> [f64; 3] {
 #[inline]
 pub(crate) fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
+        a[1].mul_add(b[2], -(a[2] * b[1])),
+        a[2].mul_add(b[0], -(a[0] * b[2])),
+        a[0].mul_add(b[1], -(a[1] * b[0])),
     ]
 }
 
@@ -137,13 +137,13 @@ pub(crate) fn barycentric_coords(
     let d02 = dot(e0, d);
     let d11 = dot(e1, e1);
     let d12 = dot(e1, d);
-    let denom = d00 * d11 - d01 * d01;
+    let denom = d00.mul_add(d11, -(d01 * d01));
     if denom.abs() < 1e-18 {
         [1.0, 0.0, 0.0]
     } else {
         let inv = 1.0 / denom;
-        let v = (d11 * d02 - d01 * d12) * inv;
-        let w = (d00 * d12 - d01 * d02) * inv;
+        let v = d11.mul_add(d02, -(d01 * d12)) * inv;
+        let w = d00.mul_add(d12, -(d01 * d02)) * inv;
         [1.0 - v - w, v, w]
     }
 }
@@ -203,7 +203,7 @@ pub(crate) fn point_to_triangle_distance(
     }
 
     // Region E(p1p2): closest to edge p1–p2
-    let vc = d1 * d4 - d3 * d2;
+    let vc = d1.mul_add(d4, -(d3 * d2));
     if vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0 {
         let v = d1 / (d1 - d3);
         let proj = add(p1, scale(ab, v));
@@ -220,7 +220,7 @@ pub(crate) fn point_to_triangle_distance(
     }
 
     // Region E(p1p3): closest to edge p1–p3
-    let vb = d5 * d2 - d1 * d6;
+    let vb = d5.mul_add(d2, -(d1 * d6));
     if vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0 {
         let w = d2 / (d2 - d6);
         let proj = add(p1, scale(ac, w));
@@ -228,7 +228,7 @@ pub(crate) fn point_to_triangle_distance(
     }
 
     // Region E(p2p3): closest to edge p2–p3
-    let va = d3 * d6 - d5 * d4;
+    let va = d3.mul_add(d6, -(d5 * d4));
     if va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0 {
         let w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
         let proj = add(p2, scale(sub(p3, p2), w));

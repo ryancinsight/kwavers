@@ -42,6 +42,9 @@ impl SensorRecorder {
     /// and updates per-component statistics accumulators. Must be called
     /// immediately after [`record_step`](SensorRecorder::record_step) so that
     /// the shared `next_step` counter is already incremented.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn record_velocity_step(
         &mut self,
         ux: &Array3<f64>,

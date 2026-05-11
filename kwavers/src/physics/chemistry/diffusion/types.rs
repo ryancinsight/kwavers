@@ -11,7 +11,7 @@
 pub struct RadicalDiffusionSolver {
     /// Number of radial grid points.
     pub n_points: usize,
-    /// Bubble radius [m], setting the inner boundary.
+    /// Bubble radius (m), setting the inner boundary.
     pub r_bubble_m: f64,
     /// `r_max = r_bubble * r_max_factor`.
     pub r_max_factor: f64,

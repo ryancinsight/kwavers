@@ -20,6 +20,7 @@ pub struct RectangularTransducer {
 
 impl RectangularTransducer {
     /// Get element size
+    #[must_use] 
     pub fn element_size(&self) -> (f64, f64) {
         (
             self.width / self.elements.0 as f64,
@@ -28,6 +29,7 @@ impl RectangularTransducer {
     }
 
     /// Get wavenumber
+    #[must_use] 
     pub fn wavenumber(&self, c0: f64) -> f64 {
         2.0 * PI * self.frequency / c0
     }

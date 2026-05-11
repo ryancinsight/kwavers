@@ -27,12 +27,12 @@ impl MixedDomainPropagationPlugin {
     pub fn new(domain_switch_threshold: f64) -> Self {
         Self {
             metadata: PluginMetadata {
-                id: "mixed_domain_propagation".to_string(),
-                name: "Mixed-Domain Propagation".to_string(),
-                version: "1.0.0".to_string(),
-                author: "Kwavers Team".to_string(),
-                description: "Hybrid time/frequency domain propagation".to_string(),
-                license: "MIT".to_string(),
+                id: "mixed_domain_propagation".to_owned(),
+                name: "Mixed-Domain Propagation".to_owned(),
+                version: "1.0.0".to_owned(),
+                author: "Kwavers Team".to_owned(),
+                description: "Hybrid time/frequency domain propagation".to_owned(),
+                license: "MIT".to_owned(),
             },
             state: PluginState::Initialized,
             domain_switch_threshold,
@@ -42,6 +42,9 @@ impl MixedDomainPropagationPlugin {
 
     /// Propagate field using optimal domain selection
     /// Based on Huijssen & Verweij (2010): "An iterative method for the computation"
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn propagate(
         &mut self,
         field: &Array3<f64>,
@@ -76,6 +79,9 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Select optimal domain for propagation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn select_optimal_domain(
         &self,
         field: &Array3<f64>,
@@ -105,6 +111,9 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Convert field to frequency domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn to_frequency_domain(&mut self, field: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
         let (nx, ny, nz) = field.dim();
         let fft = FFT_CACHE.get_or_create(Shape3D { nx, ny, nz });
@@ -115,6 +124,9 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Convert field to time domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn to_time_domain(&mut self, field: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let fft = FFT_CACHE.get_or_create(Shape3D { nx, ny, nz });
@@ -125,6 +137,9 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Time-domain propagation for nonlinear fields
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn propagate_time_domain(
         &mut self,
         field: &Array3<f64>,
@@ -140,6 +155,9 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Frequency-domain propagation for linear fields
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn propagate_frequency_domain(
         &mut self,
         field: &Array3<Complex64>,
@@ -152,7 +170,7 @@ impl MixedDomainPropagationPlugin {
         let k = 2.0 * std::f64::consts::PI
             / (crate::domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
 
-        Zip::from(&mut result).and(field).for_each(|r, &f| {
+        Zip::from(&mut result).and(field).par_for_each(|r, &f| {
             *r = f * Complex64::from_polar(1.0, k * grid.dx);
         });
 
@@ -160,6 +178,9 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Apply linear propagator in frequency domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_linear_propagator(
         &mut self,
         field: &Array3<Complex64>,
@@ -171,6 +192,9 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Apply nonlinear correction in time domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_nonlinear_correction(
         &mut self,
         field: &Array3<f64>,

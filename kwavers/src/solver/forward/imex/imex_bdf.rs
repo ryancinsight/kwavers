@@ -285,6 +285,9 @@ impl IMEXScheme for IMEXBDF {
 
 impl IMEXBDF {
     /// Reset the method (clear history)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn reset(&mut self) {
         self.history.clear();
         self.explicit_history.clear();
@@ -293,6 +296,9 @@ impl IMEXBDF {
     }
 
     /// Update with new solution (must be called after each successful step)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update(
         &mut self,
         solution: Array3<f64>,

@@ -13,7 +13,7 @@
 //! ```
 //!
 //! Where:
-//! - `D = 1/(3(μₐ + μₛ'))`: Diffusion coefficient [m]
+//! - `D = 1/(3(μₐ + μₛ'))`: Diffusion coefficient (m)
 //! - `μₐ`: Absorption coefficient [m⁻¹]
 //! - `μₛ'`: Reduced scattering coefficient [m⁻¹]
 //! - `S`: Source term [W/m³]
@@ -64,6 +64,9 @@ use rayon::prelude::*;
 /// This function creates a realistic test phantom for photoacoustic imaging validation.
 /// In production systems, optical properties would be loaded from medical imaging data
 /// or computed from tissue classification algorithms.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn initialize_optical_properties(
     grid: &Grid,
     _medium: &dyn Medium,
@@ -83,7 +86,7 @@ pub fn initialize_optical_properties(
                 let z = k as f64 * grid.dz;
 
                 // Add cylindrical blood vessel aligned with z-axis
-                let vessel_dist = ((x - 0.025).powi(2) + (y - 0.025).powi(2)).sqrt();
+                let vessel_dist = (x - 0.025).hypot(y - 0.025);
                 if vessel_dist < 0.002 {
                     // 2mm diameter vessel
                     properties[[i, j, k]] =
@@ -94,7 +97,7 @@ pub fn initialize_optical_properties(
 
                 // Add spherical tumor
                 let tumor_dist =
-                    ((x - 0.02).powi(2) + (y - 0.02).powi(2) + (z - 0.015).powi(2)).sqrt();
+                    (z - 0.015).mul_add(z - 0.015, (y - 0.02).mul_add(y - 0.02, (x - 0.02).powi(2))).sqrt();
                 if tumor_dist < 0.005 {
                     // 5mm diameter tumor
                     properties[[i, j, k]] =
@@ -138,6 +141,9 @@ pub fn initialize_optical_properties(
 /// - μₛ' >> μₐ (highly scattering medium)
 /// - Distance from source > 1/μₛ' (far from boundaries)
 /// - Valid for biological tissue in near-infrared (600-1000 nm)
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn compute_fluence_at_wavelength(
     grid: &Grid,
     optical_properties: &Array3<OpticalPropertyData>,
@@ -225,6 +231,9 @@ pub fn compute_fluence_at_wavelength(
 /// # Ok(())
 /// # }
 /// ```
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn compute_multi_wavelength_fluence(
     grid: &Grid,
     optical_properties: &Array3<OpticalPropertyData>,

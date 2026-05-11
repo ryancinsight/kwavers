@@ -2,6 +2,8 @@
 
 #[cfg(feature = "pinn")]
 use super::*;
+#[cfg(feature = "pinn")]
+use burn::tensor::Tensor;
 
 #[cfg(feature = "pinn")]
 #[test]

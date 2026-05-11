@@ -29,7 +29,7 @@
 //! ```
 //!
 //! **Proof sketch**: ∂(R_{n+1}, V_{n+1})/∂(R_n, V_n) is symplectic — its
-//! transpose-inverse equals itself w.r.t. J = [[0,1],[-1,0]].
+//! transpose-inverse equals itself w.r.t. J = `[[0,1],[-1,0]]`.
 //!
 //! **Consequence**: ∃ modified Hamiltonian H̃ = H + h²H₂ + O(h⁴) that is exactly
 //! conserved, so `|H(t) − H(0)|` remains bounded (no secular drift).
@@ -74,6 +74,9 @@ use crate::solver::forward::ode::bubble_symplectic::{
 /// ## References
 /// - Hairer et al. (2006) §VI.2. Theorem VI.2.2.
 /// - Minnaert M (1933). Phil. Mag. 16:235–248. (natural frequency)
+/// # Errors
+/// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
+///
 pub fn integrate_bubble_dynamics_stable(
     initial_state: BubbleState,
     params: &BubbleParameters,
@@ -82,16 +85,16 @@ pub fn integrate_bubble_dynamics_stable(
 ) -> KwaversResult<BubbleState> {
     if dt <= 0.0 {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
-            parameter: "dt".to_string(),
+            parameter: "dt".to_owned(),
             value: dt,
-            reason: "Time step must be positive".to_string(),
+            reason: "Time step must be positive".to_owned(),
         }));
     }
     if time_span.1 <= time_span.0 {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
-            parameter: "time_span".to_string(),
+            parameter: "time_span".to_owned(),
             value: time_span.1,
-            reason: "End time must be greater than start time".to_string(),
+            reason: "End time must be greater than start time".to_owned(),
         }));
     }
 
@@ -145,13 +148,15 @@ mod tests {
         let state = BubbleState::new(&params);
 
         let result = integrate_bubble_dynamics_stable(state, &params, (0.0, 1e-6), 1e-9);
-        assert!(result.is_ok());
         let final_state = result.unwrap();
         assert!(final_state.radius > 0.0, "radius must remain positive");
     }
 
     /// At exact equilibrium (R=R₀, Ṙ=0) the Störmer-Verlet integration
     /// must keep R within 1% of R₀ over 100 steps (no spurious drift).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_equilibrium_stable_for_100_steps() {
         let params = BubbleParameters::default();

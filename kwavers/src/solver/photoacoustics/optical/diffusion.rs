@@ -46,7 +46,7 @@ impl DiffusionOpticalSolver {
             .coordinates_to_indices(origin[0], origin[1], origin[2])
             .ok_or_else(|| {
                 KwaversError::InvalidInput(
-                    "illumination origin lies outside the computational grid".to_string(),
+                    "illumination origin lies outside the computational grid".to_owned(),
                 )
             })?;
         workspace.source[[

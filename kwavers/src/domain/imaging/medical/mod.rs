@@ -68,7 +68,7 @@ pub struct MedicalImageMetadata {
 /// Implementations must provide:
 /// - File loading with validation
 /// - Metadata extraction
-/// - 3D volumetric data as Array3<f64>
+/// - 3D volumetric data as `Array3<f64>`
 ///
 /// # Example
 ///
@@ -82,6 +82,9 @@ pub struct MedicalImageMetadata {
 /// ```
 pub trait MedicalImageLoader: Send + Sync {
     /// Load image from file
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn load(&mut self, path: &str) -> KwaversResult<Array3<f64>>;
 
     /// Get metadata from loaded image
@@ -111,6 +114,9 @@ pub trait MedicalImageLoader: Send + Sync {
 /// let loader = create_loader("patient_ct.nii.gz")?;
 /// # Ok::<(), kwavers::core::error::KwaversError>(())
 /// ```
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn create_loader(path: &str) -> KwaversResult<Box<dyn MedicalImageLoader>> {
     if path.ends_with(".nii") || path.ends_with(".nii.gz") {
         Ok(Box::new(CTImageLoader::new()))
@@ -151,14 +157,12 @@ mod tests {
 
     #[test]
     fn test_loader_factory_nifti() {
-        let result = create_loader("test.nii.gz");
-        assert!(result.is_ok());
+        let _loader = create_loader("test.nii.gz").unwrap();
     }
 
     #[test]
     fn test_loader_factory_dicom() {
-        let result = create_loader("test.dcm");
-        assert!(result.is_ok());
+        let _loader = create_loader("test.dcm").unwrap();
     }
 
     #[test]

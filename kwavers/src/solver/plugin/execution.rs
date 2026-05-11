@@ -11,6 +11,9 @@ use ndarray::Array4;
 /// Strategy for executing plugins
 pub trait ExecutionStrategy: Send + Sync {
     /// Execute a collection of plugins
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn execute(
         &self,
         plugins: &mut [Box<dyn Plugin>],
@@ -42,56 +45,6 @@ impl ExecutionStrategy for SequentialStrategy {
             plugin.update(fields, grid, medium, dt, t, context)?;
         }
         Ok(())
-    }
-}
-
-/// Plugin executor that manages plugin execution
-pub struct PluginExecutor {
-    strategy: Box<dyn ExecutionStrategy>,
-}
-
-impl std::fmt::Debug for PluginExecutor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PluginExecutor")
-            .field("strategy", &"<dyn ExecutionStrategy>")
-            .finish()
-    }
-}
-
-impl Default for PluginExecutor {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl PluginExecutor {
-    /// Create a new plugin executor with sequential strategy
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            strategy: Box::new(SequentialStrategy),
-        }
-    }
-
-    /// Create with a specific strategy
-    #[must_use]
-    pub fn with_strategy(strategy: Box<dyn ExecutionStrategy>) -> Self {
-        Self { strategy }
-    }
-
-    /// Execute plugins
-    pub fn execute(
-        &self,
-        plugins: &mut [Box<dyn Plugin>],
-        fields: &mut Array4<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
-        context: &mut PluginContext<'_>,
-    ) -> KwaversResult<()> {
-        self.strategy
-            .execute(plugins, fields, grid, medium, dt, t, context)
     }
 }
 

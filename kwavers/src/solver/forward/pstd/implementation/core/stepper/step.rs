@@ -10,6 +10,9 @@ use tracing::{enabled, trace, warn, Level};
 
 impl PSTDSolver {
     /// Perform a single time step using k-space pseudospectral method
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[inline]
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         let dt = self.config.dt;
@@ -80,6 +83,9 @@ impl PSTDSolver {
     }
 
     /// Time step using full k-space pseudospectral method (dispersion-free)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn step_forward_kspace(&mut self, dt: f64, time_index: usize) -> KwaversResult<()> {
         self.dpx.fill(0.0);
 
@@ -101,14 +107,14 @@ impl PSTDSolver {
 
                     match mode {
                         SourceInjectionMode::Boundary => {
-                            Zip::from(&mut self.dpx).and(mask).for_each(|s, &m| {
+                            Zip::from(&mut self.dpx).and(mask).par_for_each(|s, &m| {
                                 if m.abs() > 1e-12 {
                                     *s += m * amp;
                                 }
                             });
                         }
                         SourceInjectionMode::Additive { scale } => {
-                            Zip::from(&mut self.dpx).and(mask).for_each(|s, &m| {
+                            Zip::from(&mut self.dpx).and(mask).par_for_each(|s, &m| {
                                 if m.abs() > 1e-12 {
                                     *s += m * amp * scale;
                                 }
@@ -127,7 +133,7 @@ impl PSTDSolver {
                     let c_sq = self.c_ref * self.c_ref;
                     match self.velocity_source_grad_masks.get(idx) {
                         Some(Some(grad_mask)) => {
-                            Zip::from(&mut self.dpx).and(grad_mask).for_each(|s, &gm| {
+                            Zip::from(&mut self.dpx).and(grad_mask).par_for_each(|s, &gm| {
                                 *s -= c_sq * amp * gm;
                             });
                         }
@@ -146,10 +152,9 @@ impl PSTDSolver {
 
         let ops = self.kspace_operators.take().ok_or_else(|| {
             KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
-                parameter: "kspace_operators".to_string(),
-                value: "None".to_string(),
-                constraint: "k-space operators must be initialized for FullKSpace method"
-                    .to_string(),
+                parameter: "kspace_operators".to_owned(),
+                value: "None".to_owned(),
+                constraint: "k-space operators must be initialized for FullKSpace method".to_owned(),
             })
         })?;
 
@@ -182,6 +187,9 @@ impl PSTDSolver {
     /// ```
     ///
     /// `apply_helmholtz(p, 0.0)` evaluates `IFFT[(-|k|² + 0²) · FFT(p)] = ∇²p`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn propagate_kspace(
         &mut self,
         dt: f64,
@@ -193,7 +201,7 @@ impl PSTDSolver {
         Zip::from(&mut self.fields.p)
             .and(&laplacian)
             .and(source_term)
-            .for_each(|p, &lap, &s| *p += dt * (c_sq * lap + s));
+            .par_for_each(|p, &lap, &s| *p += dt * c_sq.mul_add(lap, s));
         Ok(())
     }
 }

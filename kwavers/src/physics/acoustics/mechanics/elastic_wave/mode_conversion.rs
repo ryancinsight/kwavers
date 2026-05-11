@@ -105,12 +105,15 @@ pub enum MaterialSymmetry {
 
 impl StiffnessTensor {
     /// Create isotropic stiffness tensor from Lamé parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn isotropic(lambda: f64, mu: f64, density: f64) -> KwaversResult<Self> {
         if density <= 0.0 || mu <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "density_or_mu".to_string(),
+                parameter: "density_or_mu".to_owned(),
                 value: if density <= 0.0 { density } else { mu },
-                reason: "Material parameters must be positive".to_string(),
+                reason: "Material parameters must be positive".to_owned(),
             }
             .into());
         }
@@ -118,9 +121,9 @@ impl StiffnessTensor {
         let mut c = Array2::zeros((6, 6));
 
         // Diagonal terms
-        c[[0, 0]] = lambda + 2.0 * mu; // C11
-        c[[1, 1]] = lambda + 2.0 * mu; // C22
-        c[[2, 2]] = lambda + 2.0 * mu; // C33
+        c[[0, 0]] = 2.0f64.mul_add(mu, lambda); // C11
+        c[[1, 1]] = 2.0f64.mul_add(mu, lambda); // C22
+        c[[2, 2]] = 2.0f64.mul_add(mu, lambda); // C33
         c[[3, 3]] = mu; // C44
         c[[4, 4]] = mu; // C55
         c[[5, 5]] = mu; // C66
@@ -141,6 +144,9 @@ impl StiffnessTensor {
     }
 
     /// Create hexagonal (transversely isotropic) stiffness tensor
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn hexagonal(
         c11: f64,
         c33: f64,
@@ -174,13 +180,16 @@ impl StiffnessTensor {
     }
 
     /// Validate stiffness tensor for positive definiteness
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         // Check density
         if self.density <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "density".to_string(),
+                parameter: "density".to_owned(),
                 value: self.density,
-                reason: "Density must be positive".to_string(),
+                reason: "Density must be positive".to_owned(),
             }
             .into());
         }
@@ -212,10 +221,9 @@ impl StiffnessTensor {
         // This ensures the material is physically stable
         if !self.is_positive_definite(&self.c) {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "stiffness_matrix".to_string(),
+                parameter: "stiffness_matrix".to_owned(),
                 value: 0.0, // Indicates eigenvalue issue
-                reason: "Stiffness matrix must be positive definite for physical stability"
-                    .to_string(),
+                reason: "Stiffness matrix must be positive definite for physical stability".to_owned(),
             }
             .into());
         }
@@ -239,16 +247,13 @@ impl StiffnessTensor {
         }
 
         // Check 2x2 minor
-        let det2 = matrix[[0, 0]] * matrix[[1, 1]] - matrix[[0, 1]] * matrix[[0, 1]];
+        let det2 = matrix[[0, 0]].mul_add(matrix[[1, 1]], -(matrix[[0, 1]] * matrix[[0, 1]]));
         if det2 <= 0.0 {
             return false;
         }
 
         // Check 3x3 minor
-        let det3 = matrix[[0, 0]]
-            * (matrix[[1, 1]] * matrix[[2, 2]] - matrix[[1, 2]] * matrix[[1, 2]])
-            - matrix[[0, 1]] * (matrix[[0, 1]] * matrix[[2, 2]] - matrix[[0, 2]] * matrix[[1, 2]])
-            + matrix[[0, 2]] * (matrix[[0, 1]] * matrix[[1, 2]] - matrix[[0, 2]] * matrix[[1, 1]]);
+        let det3 = matrix[[0, 2]].mul_add(matrix[[0, 1]].mul_add(matrix[[1, 2]], -(matrix[[0, 2]] * matrix[[1, 1]])), matrix[[0, 0]].mul_add(matrix[[1, 1]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[1, 2]])), -(matrix[[0, 1]] * matrix[[0, 1]].mul_add(matrix[[2, 2]], -(matrix[[0, 2]] * matrix[[1, 2]])))));
         if det3 <= 0.0 {
             return false;
         }
@@ -265,7 +270,7 @@ impl StiffnessTensor {
         // Additional check: ensure the matrix satisfies thermodynamic stability
         // C11, C22, C33 > 0 (already checked above)
         // C11 + C22 + 2*C12 > 0 (bulk modulus constraint)
-        if matrix[[0, 0]] + matrix[[1, 1]] + 2.0 * matrix[[0, 1]] <= 0.0 {
+        if 2.0f64.mul_add(matrix[[0, 1]], matrix[[0, 0]] + matrix[[1, 1]]) <= 0.0 {
             return false;
         }
 

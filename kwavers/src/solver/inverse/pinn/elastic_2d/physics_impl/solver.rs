@@ -9,10 +9,7 @@ use super::super::model::ElasticPINN2D;
 use crate::physics::foundations::Domain;
 
 #[cfg(feature = "pinn")]
-use ndarray::{ArrayD, IxDyn};
-
-#[cfg(feature = "pinn")]
-use burn::tensor::{backend::Backend, Tensor};
+use burn::tensor::backend::Backend;
 
 /// PINN solver wrapper implementing ElasticWaveEquation trait
 ///
@@ -28,8 +25,8 @@ use burn::tensor::{backend::Backend, Tensor};
 ///
 /// * `model` - Trained PINN neural network
 /// * `domain` - Spatial domain specification
-/// * `lambda` - Lamé first parameter [Pa] (may be learned or fixed)
-/// * `mu` - Shear modulus [Pa] (may be learned or fixed)
+/// * `lambda` - Lamé first parameter (Pa) (may be learned or fixed)
+/// * `mu` - Shear modulus (Pa) (may be learned or fixed)
 /// * `rho` - Density [kg/m³] (may be learned or fixed)
 #[cfg(feature = "pinn")]
 #[derive(Debug)]
@@ -54,8 +51,8 @@ impl<B: Backend> ElasticPINN2DSolver<B> {
     ///
     /// * `model` - Trained PINN model
     /// * `domain` - Spatial domain specification
-    /// * `lambda` - Lamé first parameter [Pa]
-    /// * `mu` - Shear modulus [Pa]
+    /// * `lambda` - Lamé first parameter (Pa)
+    /// * `mu` - Shear modulus (Pa)
     /// * `rho` - Density [kg/m³]
     ///
     /// # Returns
@@ -75,8 +72,8 @@ impl<B: Backend> ElasticPINN2DSolver<B> {
     ///
     /// # Arguments
     ///
-    /// * `lambda` - New Lamé first parameter [Pa]
-    /// * `mu` - New shear modulus [Pa]
+    /// * `lambda` - New Lamé first parameter (Pa)
+    /// * `mu` - New shear modulus (Pa)
     /// * `rho` - New density [kg/m³]
     pub fn update_parameters(&mut self, lambda: f64, mu: f64, rho: f64) {
         self.lambda = lambda;
@@ -99,50 +96,6 @@ impl<B: Backend> ElasticPINN2DSolver<B> {
     /// Get reference to underlying PINN model
     pub fn model(&self) -> &ElasticPINN2D<B> {
         &self.model
-    }
-
-    /// Evaluate PINN at spatial-temporal points
-    ///
-    /// # Arguments
-    ///
-    /// * `x` - X coordinates (flattened)
-    /// * `y` - Y coordinates (flattened)
-    /// * `t` - Time coordinates (flattened)
-    ///
-    /// # Returns
-    ///
-    /// Displacement field [N, 2] where columns are (uₓ, uᵧ)
-    #[allow(dead_code)]
-    fn evaluate_field(&self, x: &[f64], y: &[f64], t: &[f64]) -> ArrayD<f64> {
-        assert_eq!(x.len(), y.len());
-        assert_eq!(y.len(), t.len());
-
-        let device = self.model.device();
-        let n = x.len();
-
-        // Convert to Burn tensors [N, 1]
-        let x_data: Vec<f32> = x.iter().map(|&v| v as f32).collect();
-        let y_data: Vec<f32> = y.iter().map(|&v| v as f32).collect();
-        let t_data: Vec<f32> = t.iter().map(|&v| v as f32).collect();
-
-        let x_tensor = Tensor::<B, 2>::from_floats(x_data.as_slice(), &device).reshape([n, 1]);
-        let y_tensor = Tensor::<B, 2>::from_floats(y_data.as_slice(), &device).reshape([n, 1]);
-        let t_tensor = Tensor::<B, 2>::from_floats(t_data.as_slice(), &device).reshape([n, 1]);
-
-        // Forward pass through PINN
-        let u = self.model.forward(x_tensor, y_tensor, t_tensor);
-
-        // Convert back to ndarray [N, 2]
-        let u_data = u.to_data();
-        let u_vec: Vec<f64> = u_data
-            .as_slice::<f32>()
-            .unwrap()
-            .iter()
-            .map(|&v| v as f64)
-            .collect();
-
-        ArrayD::from_shape_vec(IxDyn(&[n, 2]), u_vec)
-            .expect("Shape mismatch in PINN output conversion")
     }
 
     /// Compute spatial grid coordinates for field evaluation

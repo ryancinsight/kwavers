@@ -13,6 +13,9 @@ impl FdtdSolver {
     ///
     /// For `CylindricalAS` geometry the cylindrical `ur/r` correction is added.
     /// CPML gradient corrections are applied per-direction when enabled.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<()> {
         self.staggered_operator
             .apply_backward_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
@@ -29,19 +32,14 @@ impl FdtdSolver {
             }
             for k in 1..nz {
                 let r_center = k as f64 * dz;
-                let uz_k_vals: Vec<f64> =
-                    self.fields.uz.slice(s![.., 0, k]).iter().copied().collect();
-                let uz_km1_vals: Vec<f64> = self
-                    .fields
-                    .uz
-                    .slice(s![.., 0, k - 1])
-                    .iter()
-                    .copied()
-                    .collect();
+                // Borrow disjoint slices from `fields.uz` and `divergence_scratch` without
+                // intermediate Vec allocation; split_at avoids overlapping borrows.
+                let uz_k = self.fields.uz.slice(s![.., 0, k]);
+                let uz_km1 = self.fields.uz.slice(s![.., 0, k - 1]);
                 let mut dvz_k = self.divergence_scratch.slice_mut(s![.., 0, k]);
                 Zip::from(&mut dvz_k)
-                    .and(ndarray::ArrayView1::from(&uz_k_vals))
-                    .and(ndarray::ArrayView1::from(&uz_km1_vals))
+                    .and(&uz_k)
+                    .and(&uz_km1)
                     .for_each(|d, &uk, &ukm1| {
                         *d += (uk + ukm1) / (2.0 * r_center);
                     });

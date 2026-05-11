@@ -26,11 +26,11 @@ impl Position {
 
     /// Distance to another position
     #[must_use]
-    pub fn distance_to(&self, other: &Position) -> f64 {
+    pub fn distance_to(&self, other: &Self) -> f64 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
         let dz = self.z - other.z;
-        (dx * dx + dy * dy + dz * dz).sqrt()
+        dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
     }
 
     /// Convert to array
@@ -180,6 +180,9 @@ impl SensorArray {
     }
 
     /// Set sound speed
+    /// # Panics
+    /// - Panics if assertion fails: `Sound speed must be positive`.
+    ///
     pub fn set_sound_speed(&mut self, sound_speed: f64) {
         assert!(sound_speed > 0.0, "Sound speed must be positive");
         self.sound_speed = sound_speed;

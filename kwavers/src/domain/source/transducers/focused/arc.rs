@@ -60,6 +60,9 @@ pub struct ArcSource {
 
 impl ArcSource {
     /// Create a new arc source
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: ArcConfig) -> KwaversResult<Self> {
         // Calculate element spacing if not provided
         let element_spacing = config.element_spacing.unwrap_or_else(|| {
@@ -83,8 +86,8 @@ impl ArcSource {
             let rotated_theta = theta + config.orientation;
 
             // Position
-            let x = config.center[0] + config.radius * rotated_theta.cos();
-            let y = config.center[1] + config.radius * rotated_theta.sin();
+            let x = config.radius.mul_add(rotated_theta.cos(), config.center[0]);
+            let y = config.radius.mul_add(rotated_theta.sin(), config.center[1]);
 
             positions.push([x, y]);
             weights.push(1.0 / n_elements as f64);
@@ -112,19 +115,19 @@ impl ArcSource {
             .element_positions
             .iter()
             .map(|&pos| {
-                let distance = ((focus[0] - pos[0]).powi(2) + (focus[1] - pos[1]).powi(2)).sqrt();
+                let distance = (focus[0] - pos[0]).hypot(focus[1] - pos[1]);
                 distance / speed_of_sound
             })
             .collect();
 
         // Generate source field
-        Zip::indexed(&mut source).for_each(|(ix, iy), val| {
+        Zip::indexed(&mut source).par_for_each(|(ix, iy), val| {
             let x = ix as f64 * dx;
             let y = iy as f64 * dx;
 
             let mut pressure = 0.0;
             for (i, &pos) in self.element_positions.iter().enumerate() {
-                let r = ((x - pos[0]).powi(2) + (y - pos[1]).powi(2)).sqrt();
+                let r = (x - pos[0]).hypot(y - pos[1]);
 
                 if r > 0.0 {
                     // Phase with focusing delay

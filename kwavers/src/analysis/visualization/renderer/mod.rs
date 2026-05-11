@@ -30,6 +30,9 @@ pub struct Renderer3D {
 
 impl Renderer3D {
     /// Create a new 3D renderer
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: VisualizationConfig) -> KwaversResult<Self> {
         let volume = VolumeRenderer::new(&config)?;
         let isosurface = IsosurfaceExtractor::new(&config)?;
@@ -49,6 +52,9 @@ impl Renderer3D {
     }
 
     /// Render a field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn render_field(
         &mut self,
         field: &Array3<f64>,
@@ -66,6 +72,9 @@ impl Renderer3D {
     }
 
     /// Extract isosurface
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn extract_isosurface(
         &mut self,
         field: &Array3<f64>,
@@ -75,6 +84,9 @@ impl Renderer3D {
     }
 
     /// Get memory usage
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn memory_usage(&self) -> usize {
         self.volume.memory_usage()
             + self.isosurface.memory_usage()
@@ -82,10 +94,16 @@ impl Renderer3D {
     }
 
     /// Create a new renderer (alias for new)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn create(config: VisualizationConfig) -> KwaversResult<Self> {
         Self::new(config)
     }
-
+    /// Render volume.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub async fn render_volume(
         &mut self,
         field: &Array3<f64>,
@@ -94,7 +112,10 @@ impl Renderer3D {
     ) -> KwaversResult<Vec<u8>> {
         self.render_field(field, field_type, grid)
     }
-
+    /// Render multi volume.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn render_multi_volume(
         &mut self,
         fields: Vec<(FieldType, &Array3<f64>)>,

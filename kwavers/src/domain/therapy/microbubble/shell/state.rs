@@ -14,9 +14,9 @@ pub enum ShellState {
 impl fmt::Display for ShellState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ShellState::Buckled => write!(f, "Buckled"),
-            ShellState::Elastic => write!(f, "Elastic"),
-            ShellState::Ruptured => write!(f, "Ruptured"),
+            Self::Buckled => write!(f, "Buckled"),
+            Self::Elastic => write!(f, "Elastic"),
+            Self::Ruptured => write!(f, "Ruptured"),
         }
     }
 }

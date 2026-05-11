@@ -17,6 +17,9 @@ pub struct AcousticOpticalSolver {
 
 impl AcousticOpticalSolver {
     /// Create a new acoustic-optical solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: Grid, photoelastic_coefficient: f64) -> Self {
         Self {
             photoelastic_coefficient,
@@ -25,6 +28,9 @@ impl AcousticOpticalSolver {
     }
 
     /// Couple acoustic pressure to optical intensity
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn couple_fields(
         &self,
         pressure: &Array3<f64>,
@@ -35,7 +41,7 @@ impl AcousticOpticalSolver {
         // which affects optical intensity
         for ((i, j, k), &p) in pressure.indexed_iter() {
             let delta_n = self.photoelastic_coefficient * p;
-            let modulation = 1.0 + delta_n * dt;
+            let modulation = delta_n.mul_add(dt, 1.0);
             intensity[[i, j, k]] *= modulation;
         }
 

@@ -16,12 +16,18 @@ pub struct StabilityAnalyzer {
 
 impl StabilityAnalyzer {
     /// Create a new stability analyzer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(safety_factor: f64) -> Self {
         Self { safety_factor }
     }
 
     /// Compute stable time step based on CFL condition
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_stable_dt(
         &self,
         _physics: &dyn crate::domain::plugin::Plugin,
@@ -42,6 +48,9 @@ impl StabilityAnalyzer {
     }
 
     /// Compute stable time step based on stability constraints
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_stable_dt_from_constraints(
         &self,
         field: &Array3<f64>,

@@ -22,6 +22,10 @@ impl Default for BurnLossWeights {
 }
 
 impl BurnLossWeights {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.data < 0.0 || !self.data.is_finite() {
             return Err(KwaversError::InvalidInput(format!(

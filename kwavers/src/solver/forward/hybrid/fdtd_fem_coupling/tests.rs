@@ -19,9 +19,13 @@ fn test_fdtd_fem_coupling_creation() {
     }
 
     let config = FdtdFemCouplingConfig::default();
-    let solver = FdtdFemSolver::new(config, fdtd_grid, fem_mesh);
-
-    assert!(solver.is_ok(), "FDTD-FEM solver creation should succeed");
+    let solver = FdtdFemSolver::new(config, fdtd_grid, fem_mesh).unwrap();
+    // Fresh solver: FDTD field is all-zero (ndarray zeros), FEM field is empty history.
+    assert_eq!(solver.fdtd_field().dim(), (10, 10, 10), "fdtd_field must match 10×10×10 grid");
+    assert!(
+        solver.fdtd_field().iter().all(|&v| v == 0.0),
+        "initial fdtd_field must be all-zero"
+    );
 }
 
 #[test]

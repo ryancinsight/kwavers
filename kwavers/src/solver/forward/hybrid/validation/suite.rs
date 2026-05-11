@@ -31,12 +31,18 @@ pub struct HybridValidationSuite {
 
 impl HybridValidationSuite {
     /// Create new validation suite
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(config: super::ValidationConfig) -> Self {
         Self { config }
     }
 
     /// Run all validation tests
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_all_tests(&self) -> KwaversResult<super::ValidationSummary> {
         let mut summary = super::ValidationSummary {
             total_tests: 0,
@@ -84,6 +90,9 @@ impl HybridValidationSuite {
     }
 
     /// Run convergence test
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn run_convergence_test(&self) -> KwaversResult<bool> {
         // Test that error decreases with grid refinement
         let mut errors = Vec::new();
@@ -105,6 +114,9 @@ impl HybridValidationSuite {
     }
 
     /// Run accuracy test
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn run_accuracy_test(&self) -> KwaversResult<bool> {
         // Test against analytical solution or reference
         let computed = self.compute_solution()?;
@@ -115,6 +127,9 @@ impl HybridValidationSuite {
     }
 
     /// Run stability test
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn run_stability_test(&self) -> KwaversResult<bool> {
         // Test CFL condition and numerical stability
         let max_eigenvalue = self.compute_max_eigenvalue()?;
@@ -125,6 +140,9 @@ impl HybridValidationSuite {
     }
 
     /// Compute error for a given grid size
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_error_for_grid_size(&self, size: usize) -> KwaversResult<f64> {
         let points = size.max(MIN_MANUFACTURED_POINTS);
         let h = grid_spacing(points);
@@ -143,6 +161,9 @@ impl HybridValidationSuite {
     }
 
     /// Compute numerical solution
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_solution(&self) -> KwaversResult<f64> {
         let points = self.validation_points();
         let h = grid_spacing(points);
@@ -150,11 +171,17 @@ impl HybridValidationSuite {
     }
 
     /// Get reference solution
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_reference_solution(&self) -> KwaversResult<f64> {
         Ok(exact_second_derivative(0.25))
     }
 
     /// Compute relative error
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_relative_error(&self, computed: &f64, reference: &f64) -> KwaversResult<f64> {
         if reference.abs() > crate::physics::constants::numerical::EPSILON {
             Ok((computed - reference).abs() / reference.abs())
@@ -164,11 +191,17 @@ impl HybridValidationSuite {
     }
 
     /// Compute maximum eigenvalue for stability
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_max_eigenvalue(&self) -> KwaversResult<f64> {
         Ok(ACOUSTIC_MODE_SPEED / grid_spacing(self.validation_points()))
     }
 
     /// Compute time step
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_time_step(&self) -> KwaversResult<f64> {
         Ok(0.25 * grid_spacing(self.validation_points()) / ACOUSTIC_MODE_SPEED)
     }
@@ -191,12 +224,9 @@ fn exact_second_derivative(x: f64) -> f64 {
 }
 
 fn sixth_order_second_derivative(x: f64, h: f64) -> f64 {
-    (manufactured_mode(x - 3.0 * h) / 90.0 - 3.0 * manufactured_mode(x - 2.0 * h) / 20.0
-        + 1.5 * manufactured_mode(x - h)
-        - 49.0 * manufactured_mode(x) / 18.0
-        + 1.5 * manufactured_mode(x + h)
-        - 3.0 * manufactured_mode(x + 2.0 * h) / 20.0
-        + manufactured_mode(x + 3.0 * h) / 90.0)
+    (1.5f64.mul_add(manufactured_mode(x + h), 1.5f64.mul_add(manufactured_mode(x - h), manufactured_mode(3.0f64.mul_add(-h, x)) / 90.0 - 3.0 * manufactured_mode(2.0f64.mul_add(-h, x)) / 20.0) - 49.0 * manufactured_mode(x) / 18.0)
+        - 3.0 * manufactured_mode(2.0f64.mul_add(h, x)) / 20.0
+        + manufactured_mode(3.0f64.mul_add(h, x)) / 90.0)
         / h.powi(2)
 }
 

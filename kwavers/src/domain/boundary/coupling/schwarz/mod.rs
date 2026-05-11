@@ -20,9 +20,9 @@
 //!
 //! # Module layout
 //!
-//! - [`gradient`]: shared `compute_normal_gradient` finite-difference helper.
-//! - [`transmission`]: branching `apply_transmission` dispatcher.
-//! - [`boundary_impl`]: `BoundaryCondition` trait bridge for the framework.
+//! - `gradient`: shared `compute_normal_gradient` finite-difference helper.
+//! - `transmission`: branching `apply_transmission` dispatcher.
+//! - `boundary_impl`: `BoundaryCondition` trait bridge for the framework.
 //!
 //! # References
 //!
@@ -68,6 +68,7 @@ impl SchwarzBoundary {
     /// # Returns
     ///
     /// New `SchwarzBoundary` with Dirichlet transmission (default)
+    #[must_use] 
     pub fn new(overlap_thickness: f64, directions: BoundaryDirections) -> Self {
         Self {
             overlap_thickness,
@@ -82,6 +83,7 @@ impl SchwarzBoundary {
     /// # Arguments
     ///
     /// * `condition` - Transmission condition type (Dirichlet, Neumann, Robin, Optimized)
+    #[must_use] 
     pub fn with_transmission_condition(mut self, condition: TransmissionCondition) -> Self {
         self.transmission_condition = condition;
         self
@@ -94,6 +96,7 @@ impl SchwarzBoundary {
     /// * `relaxation` - Relaxation parameter θ ∈ (0, 1]
     ///   - θ = 1: Full update (no relaxation)
     ///   - θ < 1: Under-relaxation (slower but more stable)
+    #[must_use] 
     pub fn with_relaxation(mut self, relaxation: f64) -> Self {
         self.relaxation_parameter = relaxation;
         self

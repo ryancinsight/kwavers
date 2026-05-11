@@ -5,6 +5,10 @@ use crate::domain::source::{Source, SourceField};
 use std::sync::Arc;
 
 impl PSTDSolver {
+    /// Add source arc.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {
         let mask = source.create_mask(&self.grid);
         let mode = source_injection::determine_injection_mode(&mask);
@@ -31,7 +35,7 @@ impl PSTDSolver {
                     None
                 }
             }
-            _ => None,
+            SourceField::Pressure => None,
         };
 
         self.dynamic_sources.push((source, mask));

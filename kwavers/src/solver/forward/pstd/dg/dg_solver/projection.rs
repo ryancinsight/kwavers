@@ -10,6 +10,9 @@ use ndarray::Array3;
 
 impl DGSolver {
     /// Project a field onto the DG basis
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn project_to_dg(&mut self, field: &Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
 
@@ -50,9 +53,12 @@ impl DGSolver {
     }
 
     /// Project modal coefficients back to grid
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn project_to_grid(&self, field: &mut Array3<f64>) -> KwaversResult<()> {
         let coeffs = self.modal_coefficients.as_ref().ok_or_else(|| {
-            KwaversError::InvalidInput("Modal coefficients not initialized".to_string())
+            KwaversError::InvalidInput("Modal coefficients not initialized".to_owned())
         })?;
 
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
@@ -81,6 +87,7 @@ impl DGSolver {
     }
 
     /// Get modal coefficients reference
+    #[must_use] 
     pub fn modal_coefficients(&self) -> Option<&Array3<f64>> {
         self.modal_coefficients.as_ref()
     }

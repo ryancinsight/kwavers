@@ -9,6 +9,10 @@ use crate::domain::sensor::beamforming::processor::BeamformingProcessor;
 use ndarray::Array3;
 
 /// Beamforming-based localization using raw time-series data (SSOT compliant).
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn localize_beamforming(
     sensor_array: &SensorArray,
     input: &BeamformingLocalizationInput,
@@ -24,8 +28,7 @@ pub fn localize_beamforming(
 
     if (search_cfg.core.sampling_frequency - input.sampling_frequency).abs() > 0.0 {
         return Err(KwaversError::InvalidInput(
-            "localize_beamforming: search_cfg.core.sampling_frequency must equal input.sampling_frequency to keep frequency-to-sample mapping consistent"
-                .to_string(),
+            "localize_beamforming: search_cfg.core.sampling_frequency must equal input.sampling_frequency to keep frequency-to-sample mapping consistent".to_owned(),
         ));
     }
 
@@ -62,6 +65,9 @@ pub struct BeamformSearch {
 
 impl BeamformSearch {
     /// Create a new beamforming grid search evaluator.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         processor: BeamformingProcessor,
         cfg: LocalizationBeamformSearchConfig,
@@ -71,18 +77,28 @@ impl BeamformSearch {
     }
 
     /// Access the underlying shared beamforming processor (SSOT).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn processor(&self) -> &BeamformingProcessor {
         &self.processor
     }
 
     /// Access the search configuration (policy layer).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn config(&self) -> &LocalizationBeamformSearchConfig {
         &self.cfg
     }
 
     /// Perform the grid search and return the best position.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn search(
         &self,
         array_centroid_m: [f64; 3],
@@ -102,7 +118,7 @@ impl BeamformSearch {
         }
         if n_samples == 0 {
             return Err(KwaversError::InvalidInput(
-                "BeamformSearch requires n_samples > 0".to_string(),
+                "BeamformSearch requires n_samples > 0".to_owned(),
             ));
         }
 
@@ -120,12 +136,15 @@ impl BeamformSearch {
         }
 
         let best_point = best_point.ok_or_else(|| {
-            KwaversError::InvalidInput("BeamformSearch: empty candidate set".to_string())
+            KwaversError::InvalidInput("BeamformSearch: empty candidate set".to_owned())
         })?;
 
         Ok(Position::from_array(best_point))
     }
-
+    /// Generate points.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn generate_points(&self, centroid: [f64; 3]) -> KwaversResult<Vec<[f64; 3]>> {
         match &self.cfg.grid {
             SearchGrid::ExplicitPoints { points_m } => Ok(points_m.clone()),
@@ -193,8 +212,7 @@ impl BeamformSearch {
 
             LocalizationBeamformingMethod::CaponMvdrSpectrum { .. } => {
                 Err(KwaversError::InvalidInput(
-                    "MVDR/Capon scoring is an analysis-layer algorithm and is not available from beamforming_search::BeamformSearch. Use analysis::signal_processing::beamforming::narrowband APIs for MVDR/Capon spatial spectrum evaluation."
-                        .to_string(),
+                    "MVDR/Capon scoring is an analysis-layer algorithm and is not available from beamforming_search::BeamformSearch. Use analysis::signal_processing::beamforming::narrowband APIs for MVDR/Capon spatial spectrum evaluation.".to_owned(),
                 ))
             }
         }

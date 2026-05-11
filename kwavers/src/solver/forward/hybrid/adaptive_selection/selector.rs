@@ -23,6 +23,9 @@ pub struct AdaptiveMethodSelector {
 
 impl AdaptiveMethodSelector {
     /// Create new selector
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(criteria: SelectionCriteria) -> Self {
         Self {
@@ -32,6 +35,9 @@ impl AdaptiveMethodSelector {
     }
 
     /// Select optimal method for each region
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn select_methods(
         &mut self,
         fields: &Array4<f64>,
@@ -163,7 +169,7 @@ impl AdaptiveMethodSelector {
         score += self.criteria.smoothness_weight * 0.5;
 
         // Works with heterogeneous media
-        score += self.criteria.material_weight * (1.0 - material.homogeneity * 0.5);
+        score += self.criteria.material_weight * material.homogeneity.mul_add(-0.5, 1.0);
 
         // Good stability
         score += self.criteria.efficiency_weight * computational.stability_margin;

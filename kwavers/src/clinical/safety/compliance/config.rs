@@ -21,44 +21,51 @@ impl Default for ComplianceConfig {
 }
 
 impl ComplianceConfig {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.max_power <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "max_power must be positive".to_string(),
+                "max_power must be positive".to_owned(),
             ));
         }
 
         if self.max_intensity <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "max_intensity must be positive".to_string(),
+                "max_intensity must be positive".to_owned(),
             ));
         }
 
         if self.max_temp_rise <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "max_temp_rise must be positive".to_string(),
+                "max_temp_rise must be positive".to_owned(),
             ));
         }
 
         if self.frequency_range.0 >= self.frequency_range.1 {
             return Err(KwaversError::InvalidInput(
-                "frequency_range min must be less than max".to_string(),
+                "frequency_range min must be less than max".to_owned(),
             ));
         }
 
         Ok(())
     }
 
+    #[must_use] 
     pub fn with_power_limit(mut self, watts: f64) -> Self {
         self.max_power = watts;
         self
     }
 
+    #[must_use] 
     pub fn with_intensity_limit(mut self, w_cm2: f64) -> Self {
         self.max_intensity = w_cm2;
         self
     }
 
+    #[must_use] 
     pub fn with_tissue_type(mut self, tissue: TissueType) -> Self {
         self.tissue_type = tissue;
         self

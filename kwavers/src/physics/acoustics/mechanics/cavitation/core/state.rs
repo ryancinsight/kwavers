@@ -7,9 +7,9 @@ pub struct CavitationState {
     pub is_cavitating: bool,
     /// Cavitation intensity (0-1)
     pub intensity: f64,
-    /// Time since cavitation onset [s]
+    /// Time since cavitation onset (s)
     pub duration: f64,
-    /// Peak negative pressure reached [Pa]
+    /// Peak negative pressure reached (Pa)
     pub peak_negative_pressure: f64,
     /// Mechanical index value
     pub mechanical_index: f64,
@@ -44,7 +44,7 @@ pub struct CavitationDose {
     intensity_sum: f64,
     /// Peak intensity observed across entire simulation
     pub peak_intensity: f64,
-    /// Latest timestamp of a cavitation event [s]
+    /// Latest timestamp of a cavitation event (s)
     pub last_event_time: f64,
 }
 

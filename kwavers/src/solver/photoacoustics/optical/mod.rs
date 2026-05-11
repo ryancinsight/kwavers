@@ -23,6 +23,12 @@ pub struct OpticalSolveResult {
 
 /// Canonical optical forward-model contract.
 pub trait OpticalForwardModel: std::fmt::Debug {
+    /// Return the optical model variant this implementation provides.
     fn model_kind(&self) -> OpticalModel;
+
+    /// Run the optical forward model for `scenario`.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if the optical solver fails to converge or encounters invalid input.
     fn solve(&self, scenario: &PhotoacousticScenario) -> KwaversResult<OpticalSolveResult>;
 }

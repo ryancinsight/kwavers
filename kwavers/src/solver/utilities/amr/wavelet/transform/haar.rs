@@ -7,6 +7,9 @@ use super::core::WaveletTransform;
 
 impl WaveletTransform {
     /// Haar wavelet forward transform
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn haar_forward(&self, data: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = data.dim();
 
@@ -57,6 +60,9 @@ impl WaveletTransform {
     }
 
     /// Haar wavelet inverse transform
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn haar_inverse(&self, _coeffs: &mut Array3<f64>) -> KwaversResult<()> {
         // Reverse of forward transform
         // Implementation would be similar but in reverse order

@@ -11,6 +11,10 @@ use ndarray::Array3;
 pub struct TimeReversalReconstruction;
 
 impl TimeReversalReconstruction {
+    /// Reconstruct.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn reconstruct(
         &self,
         scenario: &PhotoacousticScenario,

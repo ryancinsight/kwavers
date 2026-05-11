@@ -7,6 +7,12 @@ use burn::tensor::Tensor;
 /// Analytical: ∂u₀/∂t = 2t.
 /// At t = 0.2: expected = 0.4; at t = 0.7: expected = 1.4.
 /// Tolerance: 1e-4 (float32 autodiff accumulation).
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 #[test]
 fn test_time_derivative_matches_analytic() -> crate::core::error::KwaversResult<()> {
     type B = Autodiff<NdArray<f32>>;

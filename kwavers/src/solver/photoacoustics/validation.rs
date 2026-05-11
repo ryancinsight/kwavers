@@ -3,7 +3,10 @@ use crate::domain::imaging::photoacoustic::{
 };
 use crate::physics::photoacoustics::thermoelasticity::GrueneisenModel;
 use crate::physics::photoacoustics::ConfinementAssessment;
-
+/// Validate photoacoustic simulation.
+/// # Panics
+/// - Panics if `optical map dimensions are internally consistent`.
+///
 #[must_use]
 pub fn validate_photoacoustic_simulation(
     scenario: &PhotoacousticScenario,

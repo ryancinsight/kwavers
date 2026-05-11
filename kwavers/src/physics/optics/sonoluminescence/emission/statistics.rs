@@ -29,6 +29,9 @@ pub struct SonoluminescencePulse {
 
 impl SonoluminescencePulse {
     /// Analyze emission time series to extract pulse characteristics
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[must_use]
     pub fn from_time_series(
         times: &Array1<f64>,

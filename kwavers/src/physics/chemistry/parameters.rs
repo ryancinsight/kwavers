@@ -25,6 +25,9 @@ pub struct ChemicalUpdateParams<'a> {
 
 impl<'a> ChemicalUpdateParams<'a> {
     /// Create new chemical update parameters with validation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         pressure: &'a Array3<f64>,
@@ -40,16 +43,16 @@ impl<'a> ChemicalUpdateParams<'a> {
         // Validate parameters
         if dt <= 0.0 {
             return Err(crate::core::error::NumericalError::InvalidOperation(
-                "Time step must be positive".to_string(),
+                "Time step must be positive".to_owned(),
             )
             .into());
         }
 
         if frequency <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "frequency".to_string(),
+                parameter: "frequency".to_owned(),
                 value: frequency,
-                reason: "Frequency must be positive".to_string(),
+                reason: "Frequency must be positive".to_owned(),
             }
             .into());
         }

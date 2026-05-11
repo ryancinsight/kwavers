@@ -35,6 +35,7 @@ pub struct InterlockSystem {
 
 impl InterlockSystem {
     /// Create new interlock system (disabled by default).
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             interlocks: HashMap::new(),
@@ -44,6 +45,9 @@ impl InterlockSystem {
     }
 
     /// Register an interlock condition.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_interlock(&mut self, name: String, interlock: Interlock) {
         self.interlocks.insert(name, interlock);
     }
@@ -51,6 +55,9 @@ impl InterlockSystem {
     /// Evaluate all interlock conditions.
     ///
     /// Returns `Ok(true)` only if all interlocks pass and no emergency stop is active.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn check_interlocks(&mut self) -> KwaversResult<bool> {
         if self.emergency_stop_active {
             return Ok(false);
@@ -67,10 +74,14 @@ impl InterlockSystem {
     }
 
     /// Enable system operation (requires all interlocks to pass).
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn enable_system(&mut self) -> KwaversResult<()> {
         if !self.check_interlocks()? {
             return Err(KwaversError::InvalidInput(
-                "Cannot enable system: interlock conditions not satisfied".to_string(),
+                "Cannot enable system: interlock conditions not satisfied".to_owned(),
             ));
         }
 
@@ -95,6 +106,10 @@ impl InterlockSystem {
     }
 
     /// Check if system is enabled for operation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn is_system_enabled(&self) -> bool {
         self.system_enabled && !self.emergency_stop_active
     }
@@ -126,6 +141,9 @@ impl std::fmt::Debug for Interlock {
 
 impl Interlock {
     /// Create new interlock with a condition check function.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new<F>(description: String, check_function: F) -> Self
     where
         F: Fn() -> KwaversResult<bool> + Send + Sync + 'static,
@@ -137,6 +155,9 @@ impl Interlock {
     }
 
     /// Evaluate the interlock condition.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn check_condition(&self) -> KwaversResult<bool> {
         (self.check_function)()
     }

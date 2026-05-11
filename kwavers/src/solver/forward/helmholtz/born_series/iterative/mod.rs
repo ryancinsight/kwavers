@@ -51,7 +51,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
@@ -94,6 +94,9 @@ impl IterativeBornSolver {
     }
 
     /// Solve Helmholtz equation using iterative Born method
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn solve<M: Medium>(
         &mut self,
         wavenumber: f64,
@@ -130,6 +133,9 @@ impl IterativeBornSolver {
     }
 
     /// Perform one step of iterative Born method
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn iterative_born_step<M: Medium>(
         &mut self,
         wavenumber: f64,
@@ -151,38 +157,54 @@ impl IterativeBornSolver {
     }
 
     /// Compute scattering potential V * ψ
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if `contrast shape`.
+    ///
     fn compute_scattering_potential<M: Medium>(
         &mut self,
         wavenumber: f64,
         medium: &M,
     ) -> KwaversResult<()> {
-        use ndarray::Zip;
-
         let k0_squared = wavenumber * wavenumber;
+        let (nx, ny, nz) = self.workspace.heterogeneity_workspace.dim();
+        let c0 = 1500.0_f64;
+        let rho0 = 1000.0_f64;
 
-        Zip::indexed(&mut self.workspace.heterogeneity_workspace).for_each(
-            |(i, j, k), potential| {
-                // Compute local medium properties
-                let c_local = medium.sound_speed(i, j, k);
-                let rho_local = medium.density(i, j, k);
+        // Phase 1: sequential — medium not guaranteed Sync; collect per-cell contrast.
+        let contrasts: Vec<f64> = (0..nx)
+            .flat_map(|i| {
+                (0..ny).flat_map(move |j| {
+                    (0..nz).map(move |k| {
+                        let c = medium.sound_speed(i, j, k);
+                        let rho = medium.density(i, j, k);
+                        (rho * c * c) / (rho0 * c0 * c0)
+                    })
+                })
+            })
+            .collect();
+        let contrasts_arr =
+            ndarray::Array3::from_shape_vec((nx, ny, nz), contrasts).expect("contrast shape");
 
-                // Reference values (could be made configurable)
-                let c0 = 1500.0; // m/s
-                let rho0 = 1000.0; // kg/m³
-                let k0_squared_ref = k0_squared;
-
-                // Scattering potential: V = k²(1 - (ρ c²)/(ρ₀ c₀²))
-                let contrast = (rho_local * c_local * c_local) / (rho0 * c0 * c0);
-                let v = k0_squared_ref * (1.0 - contrast);
-
-                *potential = Complex64::new(v, 0.0) * self.current_field[[i, j, k]];
-            },
-        );
+        // Phase 2: parallel — pure arithmetic on pre-collected contrast values.
+        let current_field = &self.current_field;
+        Zip::from(&mut self.workspace.heterogeneity_workspace)
+            .and(&contrasts_arr)
+            .and(current_field)
+            .par_for_each(|potential, &contrast, &current_val| {
+                let v = k0_squared * (1.0 - contrast);
+                *potential = Complex64::new(v, 0.0) * current_val;
+            });
 
         Ok(())
     }
 
     /// Apply Green's operator to scattering potential
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_green_operator(&mut self, wavenumber: f64) -> KwaversResult<()> {
         // Use efficient local approximation for Green's function
         // Full 3D convolution would be better but this provides reasonable accuracy
@@ -229,7 +251,7 @@ impl IterativeBornSolver {
                                     let dx = di as f64 * self.grid.dx;
                                     let dy = dj as f64 * self.grid.dy;
                                     let dz = dk as f64 * self.grid.dz;
-                                    let r = (dx * dx + dy * dy + dz * dz).sqrt();
+                                    let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                                     // Free space Green's function approximation
                                     let kr = wavenumber * r;
@@ -255,19 +277,16 @@ impl IterativeBornSolver {
 
     /// Update field using Born iteration
     fn update_field(&mut self) {
-        use ndarray::Zip;
-
         Zip::from(&mut self.current_field)
             .and(&self.incident_field)
             .and(&self.workspace.green_workspace)
-            .for_each(|current, &incident, &green_contrib| {
+            .par_for_each(|current, &incident, &green_contrib| {
                 *current = incident + green_contrib;
             });
     }
 
     /// Compute residual for convergence check
     fn compute_residual<M: Medium>(&self, wavenumber: f64, medium: &M) -> f64 {
-        use ndarray::Zip;
 
         let mut residual_sum = 0.0;
         let k_squared = wavenumber * wavenumber;

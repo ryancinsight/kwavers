@@ -39,6 +39,11 @@ pub struct ColorFlowImaging {
 }
 
 impl ColorFlowImaging {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: ColorFlowConfig) -> Self {
         let estimator = AutocorrelationEstimator::new(config.autocorrelation.clone());
         let wall_filter = WallFilter::new(config.wall_filter.clone());
@@ -51,6 +56,9 @@ impl ColorFlowImaging {
     }
 
     /// Process I/Q data to generate color flow image
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process(&self, iq_data: &ArrayView3<Complex64>) -> KwaversResult<DopplerResult> {
         // Apply wall filter to remove clutter
         let filtered = self.wall_filter.apply(iq_data)?;

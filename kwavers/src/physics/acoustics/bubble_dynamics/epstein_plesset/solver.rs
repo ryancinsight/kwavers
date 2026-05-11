@@ -96,7 +96,7 @@ impl EpsteinPlessetStabilitySolver {
         2.0 * mu / (rho * r0 * r0)
     }
 
-    /// Compute resonance frequency using Minnaert formula [Hz]
+    /// Compute resonance frequency using Minnaert formula (Hz)
     ///
     /// f₀ = (1/2πR₀)√(3γP₀/ρ)
     #[must_use]

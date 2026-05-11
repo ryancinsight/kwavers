@@ -72,6 +72,9 @@ impl SpectralField {
 
     /// Update derived quantities (peak wavelength, total intensity, etc.)
     /// Update derived quantities (peak wavelength, total intensity, etc.)
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn update_derived_quantities(&mut self) {
         let wavelengths = &self.wavelengths;
 

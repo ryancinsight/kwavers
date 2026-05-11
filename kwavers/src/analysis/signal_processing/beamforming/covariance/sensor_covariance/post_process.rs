@@ -27,14 +27,17 @@ impl Default for CovariancePostProcess {
 }
 
 impl CovariancePostProcess {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         match self {
             Self::None => Ok(()),
             Self::ShrinkageToIdentity { alpha } => {
                 if !alpha.is_finite() || *alpha < 0.0 || *alpha > 1.0 {
                     return Err(KwaversError::InvalidInput(
-                        "CovariancePostProcess::ShrinkageToIdentity: alpha must be finite and in [0,1]"
-                            .to_string(),
+                        "CovariancePostProcess::ShrinkageToIdentity: alpha must be finite and in [0,1]".to_owned(),
                     ));
                 }
                 Ok(())
@@ -42,8 +45,7 @@ impl CovariancePostProcess {
             Self::SpatialSmoothing { subarray_size } => {
                 if *subarray_size == 0 {
                     return Err(KwaversError::InvalidInput(
-                        "CovariancePostProcess::SpatialSmoothing: subarray_size must be >= 1"
-                            .to_string(),
+                        "CovariancePostProcess::SpatialSmoothing: subarray_size must be >= 1".to_owned(),
                     ));
                 }
                 Ok(())
@@ -54,14 +56,12 @@ impl CovariancePostProcess {
             } => {
                 if !alpha.is_finite() || *alpha < 0.0 || *alpha > 1.0 {
                     return Err(KwaversError::InvalidInput(
-                        "CovariancePostProcess::ShrinkageThenSpatialSmoothing: alpha must be finite and in [0,1]"
-                            .to_string(),
+                        "CovariancePostProcess::ShrinkageThenSpatialSmoothing: alpha must be finite and in [0,1]".to_owned(),
                     ));
                 }
                 if *subarray_size == 0 {
                     return Err(KwaversError::InvalidInput(
-                        "CovariancePostProcess::ShrinkageThenSpatialSmoothing: subarray_size must be >= 1"
-                            .to_string(),
+                        "CovariancePostProcess::ShrinkageThenSpatialSmoothing: subarray_size must be >= 1".to_owned(),
                     ));
                 }
                 Ok(())

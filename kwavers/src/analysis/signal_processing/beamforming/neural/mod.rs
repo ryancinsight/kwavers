@@ -47,8 +47,8 @@
 //! - [`network`]: Feedforward network architecture for beamforming optimization
 //! - [`physics`]: Physics-informed constraints (reciprocity, coherence, sparsity)
 //! - [`uncertainty`]: Uncertainty estimation via dropout and local variance
-//! - [`pinn`]: Physics-informed neural network integration (feature-gated)
-//! - [`distributed`]: Multi-GPU distributed processing (feature-gated)
+//! - `pinn` (feature `"pinn"`): Physics-informed neural network integration
+//! - `distributed`: Multi-GPU distributed processing
 //!
 //! ## Performance Improvements
 //!
@@ -247,6 +247,7 @@ mod tests {
     fn test_high_level_api_available() {
         // Verify high-level API is accessible
         let config = NeuralBeamformingConfig::default();
-        assert!(config.validate().is_ok());
+        config.validate().unwrap();
+        assert!(!config.network_architecture.is_empty());
     }
 }

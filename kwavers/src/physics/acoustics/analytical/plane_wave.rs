@@ -25,12 +25,12 @@ impl PlaneWaveSolution {
         let omega = 2.0 * PI * frequency;
 
         // Normalize direction vector
-        let norm = (direction.0.powi(2) + direction.1.powi(2) + direction.2.powi(2)).sqrt();
+        let norm = direction.2.mul_add(direction.2, direction.1.mul_add(direction.1, direction.0.powi(2))).sqrt();
         let dir = (direction.0 / norm, direction.1 / norm, direction.2 / norm);
 
         // Apply dispersion correction for k-space methods
         let k_dispersed =
-            k * (1.0 + DISPERSION_CORRECTION_SECOND_ORDER * k * k * grid.dx * grid.dx);
+            k * (DISPERSION_CORRECTION_SECOND_ORDER * k * k * grid.dx).mul_add(grid.dx, 1.0);
 
         for i in 0..grid.nx {
             for j in 0..grid.ny {
@@ -39,7 +39,7 @@ impl PlaneWaveSolution {
                     let y = j as f64 * grid.dy;
                     let z = k_idx as f64 * grid.dz;
 
-                    let phase = k_dispersed * (dir.0 * x + dir.1 * y + dir.2 * z) - omega * time;
+                    let phase = k_dispersed * dir.2.mul_add(z, dir.0.mul_add(x, dir.1 * y)) - omega * time;
                     field[[i, j, k_idx]] = amplitude * phase.sin();
                 }
             }

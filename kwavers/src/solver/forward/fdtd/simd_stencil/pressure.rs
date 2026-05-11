@@ -14,6 +14,9 @@ impl SimdStencilProcessor {
     /// Loop nest blocked with `tile_size` so that each `tile_size³` sub-volume
     /// fits in L1/L2 cache before eviction. Writes into pre-allocated `pres_scratch`
     /// then copies out; boundary values use zero-gradient Neumann conditions.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_pressure(
         &mut self,
         pressure: &Array3<f64>,
@@ -23,7 +26,7 @@ impl SimdStencilProcessor {
         if pressure.shape() != pressure_prev.shape() || pressure.shape() != velocity_div.shape() {
             return crate::core::error::KwaversResult::Err(
                 crate::core::error::KwaversError::InvalidInput(
-                    "Field dimensions must match".to_string(),
+                    "Field dimensions must match".to_owned(),
                 ),
             );
         }
@@ -43,21 +46,17 @@ impl SimdStencilProcessor {
                     for k in kb..k_end {
                         for j in jb..j_end {
                             for i in ib..i_end {
-                                let laplacian = (pressure[[i + 1, j, k]]
-                                    - 2.0 * pressure[[i, j, k]]
+                                let laplacian = (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i + 1, j, k]])
                                     + pressure[[i - 1, j, k]])
                                     / dx2
-                                    + (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
+                                    + (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i, j + 1, k]])
                                         + pressure[[i, j - 1, k]])
                                         / dx2
-                                    + (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
+                                    + (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i, j, k + 1]])
                                         + pressure[[i, j, k - 1]])
                                         / dx2;
 
-                                self.pres_scratch[[i, j, k]] = 2.0 * pressure[[i, j, k]]
-                                    - pressure_prev[[i, j, k]]
-                                    + self.pressure_coeff * laplacian
-                                    + self.pressure_coeff * velocity_div[[i, j, k]];
+                                self.pres_scratch[[i, j, k]] = self.pressure_coeff.mul_add(velocity_div[[i, j, k]], self.pressure_coeff.mul_add(laplacian, 2.0f64.mul_add(pressure[[i, j, k]], -pressure_prev[[i, j, k]])));
                             }
                         }
                     }

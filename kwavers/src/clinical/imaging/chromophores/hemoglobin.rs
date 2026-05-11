@@ -15,6 +15,7 @@ pub struct HemoglobinDatabase {
 
 impl HemoglobinDatabase {
     /// Create hemoglobin database with standard literature values
+    #[must_use] 
     pub fn standard() -> Self {
         let hbo2_data = vec![
             (450, 106_112.0),
@@ -75,25 +76,37 @@ impl HemoglobinDatabase {
             hb: ExtinctionSpectrum::new("Hb (Deoxyhemoglobin)", hb_data),
         }
     }
-
+    /// Hbo2 extinction.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn hbo2_extinction(&self, wavelength_nm: f64) -> Result<f64> {
         self.hbo2
             .at_wavelength(wavelength_nm)
             .context("Failed to get HbO₂ extinction coefficient")
     }
-
+    /// Hb extinction.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn hb_extinction(&self, wavelength_nm: f64) -> Result<f64> {
         self.hb
             .at_wavelength(wavelength_nm)
             .context("Failed to get Hb extinction coefficient")
     }
-
+    /// Extinction pair.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn extinction_pair(&self, wavelength_nm: f64) -> Result<(f64, f64)> {
         let hbo2 = self.hbo2_extinction(wavelength_nm)?;
         let hb = self.hb_extinction(wavelength_nm)?;
         Ok((hbo2, hb))
     }
-
+    /// Absorption coefficient.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn absorption_coefficient(
         &self,
         wavelength_nm: f64,
@@ -102,10 +115,13 @@ impl HemoglobinDatabase {
     ) -> Result<f64> {
         let (eps_hbo2, eps_hb) = self.extinction_pair(wavelength_nm)?;
         let mu_a =
-            2.303 * (eps_hbo2 * hbo2_concentration_molar + eps_hb * hb_concentration_molar) * 100.0;
+            2.303 * eps_hbo2.mul_add(hbo2_concentration_molar, eps_hb * hb_concentration_molar) * 100.0;
         Ok(mu_a)
     }
-
+    /// Oxygen saturation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn oxygen_saturation(&self, hbo2_concentration: f64, hb_concentration: f64) -> Result<f64> {
         let total = hbo2_concentration + hb_concentration;
         if total <= 0.0 {
@@ -113,27 +129,40 @@ impl HemoglobinDatabase {
         }
         Ok(hbo2_concentration / total)
     }
-
+    /// Typical blood parameters.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn typical_blood_parameters() -> (f64, f64, f64) {
         (2.3e-3, 0.98, 0.75)
     }
-
+    /// Arterial blood absorption.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn arterial_blood_absorption(&self, wavelength_nm: f64) -> Result<f64> {
         let (total, so2, _) = Self::typical_blood_parameters();
         self.absorption_coefficient(wavelength_nm, total * so2, total * (1.0 - so2))
     }
-
+    /// Venous blood absorption.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn venous_blood_absorption(&self, wavelength_nm: f64) -> Result<f64> {
         let (total, _, so2) = Self::typical_blood_parameters();
         self.absorption_coefficient(wavelength_nm, total * so2, total * (1.0 - so2))
     }
 
+    #[must_use] 
     pub fn isosbestic_points() -> Vec<u32> {
         vec![500, 545, 570, 584, 797]
     }
+    #[must_use] 
     pub fn hbo2_spectrum(&self) -> &ExtinctionSpectrum {
         &self.hbo2
     }
+    #[must_use] 
     pub fn hb_spectrum(&self) -> &ExtinctionSpectrum {
         &self.hb
     }

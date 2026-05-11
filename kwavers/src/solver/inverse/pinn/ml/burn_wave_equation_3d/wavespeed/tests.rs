@@ -1,5 +1,6 @@
 use super::*;
 use burn::backend::NdArray;
+use burn::module::Module;
 
 type TestBackend = NdArray<f32>;
 

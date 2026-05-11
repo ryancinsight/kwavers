@@ -34,6 +34,12 @@ use super::time_of_flight_inversion;
 /// # References
 ///
 /// - Urban et al. (2013): "3D SWE reconstruction with multi-directional waves"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(super) fn volumetric_time_of_flight_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
@@ -59,9 +65,7 @@ pub(super) fn volumetric_time_of_flight_inversion(
                     let mut speed_estimates = Vec::new();
 
                     for push_pos in &push_locations {
-                        let distance = ((voxel_pos[0] - push_pos[0]).powi(2)
-                            + (voxel_pos[1] - push_pos[1]).powi(2)
-                            + (voxel_pos[2] - push_pos[2]).powi(2))
+                        let distance = (voxel_pos[2] - push_pos[2]).mul_add(voxel_pos[2] - push_pos[2], (voxel_pos[1] - push_pos[1]).mul_add(voxel_pos[1] - push_pos[1], (voxel_pos[0] - push_pos[0]).powi(2)))
                         .sqrt();
 
                         if distance > 1e-6 {

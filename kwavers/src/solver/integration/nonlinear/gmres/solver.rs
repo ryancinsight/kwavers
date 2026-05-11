@@ -33,6 +33,10 @@ pub struct GMRESSolver {
 
 impl GMRESSolver {
     /// Create new GMRES solver with configuration.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: GMRESConfig) -> Self {
         Self {
             config,
@@ -42,6 +46,10 @@ impl GMRESSolver {
     }
 
     /// Solve A·x = b using GMRES with implicit matrix-vector product.
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[allow(non_snake_case)]
     pub fn solve<F>(
         &mut self,
@@ -75,10 +83,10 @@ impl GMRESSolver {
 
         for _restart_iter in 0..self.config.max_iterations {
             let mut V = vec![Array3::zeros(x0.dim()); m + 1];
-            let mut H = vec![vec![0.0; m]; m + 1];
-            let mut gamma = vec![0.0; m + 1];
-            let mut cs = vec![0.0; m];
-            let mut sn = vec![0.0; m];
+            let mut H: Vec<Vec<f64>> = vec![vec![0.0; m]; m + 1];
+            let mut gamma: Vec<f64> = vec![0.0; m + 1];
+            let mut cs: Vec<f64> = vec![0.0; m];
+            let mut sn: Vec<f64> = vec![0.0; m];
 
             V[0] = &r / rho;
             gamma[0] = rho;
@@ -107,8 +115,8 @@ impl GMRESSolver {
                 }
 
                 for i in 0..j {
-                    let temp = cs[i] * H[i][j] + sn[i] * H[i + 1][j];
-                    H[i + 1][j] = -sn[i] * H[i][j] + cs[i] * H[i + 1][j];
+                    let temp = cs[i].mul_add(H[i][j], sn[i] * H[i + 1][j]);
+                    H[i + 1][j] = (-sn[i]).mul_add(H[i][j], cs[i] * H[i + 1][j]);
                     H[i][j] = temp;
                 }
 
@@ -116,7 +124,7 @@ impl GMRESSolver {
                 cs[j] = c;
                 sn[j] = s;
 
-                H[j][j] = c * H[j][j] + s * H[j + 1][j];
+                H[j][j] = c.mul_add(H[j][j], s * H[j + 1][j]);
                 H[j + 1][j] = 0.0;
                 gamma[j + 1] = -s * gamma[j];
                 gamma[j] *= c;
@@ -174,11 +182,13 @@ impl GMRESSolver {
     }
 
     /// Get residual history.
+    #[must_use] 
     pub fn residual_history(&self) -> &[f64] {
         &self.residual_history
     }
 
     /// Get total iteration count.
+    #[must_use] 
     pub fn iteration_count(&self) -> usize {
         self.iteration_count
     }
@@ -197,17 +207,20 @@ impl GMRESSolver {
     }
 
     /// Compute Givens rotation (c, s) such that [-s c][a b]ᵀ = [r 0]ᵀ.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn givens_rotation(a: f64, b: f64) -> (f64, f64) {
         if b.abs() < 1e-15 {
             (1.0, 0.0)
         } else if a.abs() < b.abs() {
             let temp = a / b;
-            let s = 1.0 / (1.0 + temp * temp).sqrt();
+            let s = 1.0 / temp.mul_add(temp, 1.0).sqrt();
             let c = temp * s;
             (c, s)
         } else {
             let temp = b / a;
-            let c = 1.0 / (1.0 + temp * temp).sqrt();
+            let c = 1.0 / temp.mul_add(temp, 1.0).sqrt();
             let s = temp * c;
             (c, s)
         }
@@ -224,7 +237,7 @@ impl GMRESSolver {
 
             if h[i][i].abs() < 1e-15 {
                 return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
-                    "Singular Hessenberg matrix in GMRES".to_string(),
+                    "Singular Hessenberg matrix in GMRES".to_owned(),
                 )));
             }
 

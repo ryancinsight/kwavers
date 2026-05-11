@@ -52,6 +52,9 @@ impl WavePropagationCalculator {
     }
 
     /// Check if frequency is appropriate for the wavelength assumption
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn validate_frequency_wavelength_consistency(&self) -> bool {
         let expected_wavelength = self.interface.medium1.wave_speed / self.frequency;
@@ -59,6 +62,13 @@ impl WavePropagationCalculator {
     }
 
     /// Calculate reflection and transmission for given incident angle
+    /// # Errors
+    /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn calculate_coefficients(
         &self,
         incident_angle: f64,
@@ -67,9 +77,9 @@ impl WavePropagationCalculator {
         // Validate incident angle
         if !(0.0..=PI / 2.0).contains(&incident_angle) {
             return Err(KwaversError::Physics(PhysicsError::InvalidState {
-                field: "incident_angle".to_string(),
+                field: "incident_angle".to_owned(),
                 value: format!("{incident_angle}"),
-                reason: "must be between 0 and π/2".to_string(),
+                reason: "must be between 0 and π/2".to_owned(),
             }));
         }
 
@@ -132,6 +142,9 @@ impl WavePropagationCalculator {
     }
 
     /// Calculate acoustic reflection and transmission coefficients
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn calculate_acoustic_coefficients(
         &self,
         incident_angle: f64,
@@ -144,10 +157,10 @@ impl WavePropagationCalculator {
         let cos_t = transmitted_angle.cos();
 
         // Acoustic reflection coefficient (pressure)
-        let r = (z2 * cos_i - z1 * cos_t) / (z2 * cos_i + z1 * cos_t);
+        let r = z2.mul_add(cos_i, -(z1 * cos_t)) / z2.mul_add(cos_i, z1 * cos_t);
 
         // Acoustic transmission coefficient (pressure)
-        let t = (2.0 * z2 * cos_i) / (z2 * cos_i + z1 * cos_t);
+        let t = (2.0 * z2 * cos_i) / z2.mul_add(cos_i, z1 * cos_t);
 
         // Phase shifts
         let r_phase = if r < 0.0 { PI } else { 0.0 };
@@ -157,6 +170,9 @@ impl WavePropagationCalculator {
     }
 
     /// Calculate optical Fresnel coefficients
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn calculate_optical_coefficients(
         &self,
         incident_angle: f64,
@@ -188,6 +204,9 @@ impl WavePropagationCalculator {
     /// **Future**: Sprint 129+ could add full elastic tensor analysis
     ///
     /// **Reference**: Aki & Richards (2002) "Quantitative Seismology" Chapter 5
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn calculate_elastic_coefficients(
         &self,
         incident_angle: f64,
@@ -243,6 +262,6 @@ mod tests {
 
         // No total internal reflection at normal incidence
         assert!(!coeffs.total_internal_reflection);
-        assert!(coeffs.transmitted_angle.is_some());
+        assert!(coeffs.transmitted_angle.unwrap().is_finite());
     }
 }

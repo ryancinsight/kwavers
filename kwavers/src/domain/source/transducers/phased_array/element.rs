@@ -54,7 +54,7 @@ impl TransducerElement {
     /// Apply phase and amplitude to signal
     #[must_use]
     pub fn apply_modulation(&self, signal: f64, time: f64) -> f64 {
-        signal * self.amplitude_weight * (2.0 * PI * time + self.phase_delay).cos()
+        signal * self.amplitude_weight * (2.0 * PI).mul_add(time, self.phase_delay).cos()
     }
 }
 

@@ -8,6 +8,9 @@ use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 /// evolution is coupled externally via
 /// [`KellerMiksisModel::update_shape_stability`], which must be called
 /// once per integration timestep after this function.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub(crate) fn calculate_acceleration(
     model: &KellerMiksisModel,
     state: &mut BubbleState,
@@ -115,6 +118,9 @@ pub(crate) fn calculate_acceleration(
 ///
 /// Keller JB, Miksis M (1980). "Bubble oscillations of large amplitude."
 /// *J Acoust Soc Am* 68(2):628–633. Eq. (2.3).
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 fn estimate_wall_pressure_derivative(
     model: &KellerMiksisModel,
     _state: &BubbleState,

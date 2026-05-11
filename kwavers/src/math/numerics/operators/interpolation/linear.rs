@@ -24,6 +24,10 @@ pub struct LinearInterpolator {
 
 impl LinearInterpolator {
     /// Create a new linear interpolator with grid spacing `dx` (meters).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(dx: f64) -> Self {
         Self { dx }
     }
@@ -52,7 +56,7 @@ impl Interpolator for LinearInterpolator {
             }
 
             let t = i_float - (i as f64);
-            result[idx] = data[i] * (1.0 - t) + data[i + 1] * t;
+            result[idx] = data[i].mul_add(1.0 - t, data[i + 1] * t);
         }
 
         Ok(result)

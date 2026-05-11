@@ -19,6 +19,10 @@ pub struct SimulationData {
 }
 
 impl SimulationData {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(time: f64, pressure: Vec<f64>, grid: &Grid) -> Self {
         Self {
@@ -27,7 +31,10 @@ impl SimulationData {
             grid: SerializableGrid::from(grid),
         }
     }
-
+    /// To bytes.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn to_bytes(&self) -> KwaversResult<Vec<u8>> {
         let mut serializer = AllocSerializer::<4096>::default();
         serializer.serialize_value(self).map_err(|error| {
@@ -35,12 +42,18 @@ impl SimulationData {
         })?;
         Ok(serializer.into_serializer().into_inner().to_vec())
     }
-
+    /// Access.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn access(bytes: &[u8]) -> KwaversResult<&ArchivedSimulationData> {
         check_archived_root::<SimulationData>(bytes)
             .map_err(|error| KwaversError::InvalidInput(format!("Invalid archived data: {error}")))
     }
-
+    /// From bytes.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_bytes(bytes: &[u8]) -> KwaversResult<Self> {
         let archived = Self::access(bytes)?;
         archived

@@ -20,8 +20,6 @@ pub struct TimeReversal {
     grid_size: [usize; 3],
     sound_speed: f64,
     sampling_frequency: f64,
-    #[allow(dead_code)]
-    time_steps: usize,
 }
 
 impl TimeReversal {
@@ -30,13 +28,12 @@ impl TimeReversal {
         grid_size: [usize; 3],
         sound_speed: f64,
         sampling_frequency: f64,
-        time_steps: usize,
+        _time_steps: usize,
     ) -> Self {
         Self {
             grid_size,
             sound_speed,
             sampling_frequency,
-            time_steps,
         }
     }
 
@@ -44,6 +41,9 @@ impl TimeReversal {
     ///
     /// This implements the k-space pseudospectral time reversal method
     /// which provides accurate reconstruction without numerical dispersion.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn reconstruct(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -68,7 +68,7 @@ impl TimeReversal {
         if cfl > 1.0 / f64::sqrt(3.0) {
             return Err(crate::core::error::KwaversError::Numerical(
                 crate::core::error::NumericalError::Instability {
-                    operation: "Time reversal CFL".to_string(),
+                    operation: "Time reversal CFL".to_owned(),
                     condition: cfl,
                 },
             ));
@@ -84,7 +84,7 @@ impl TimeReversal {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    k_squared[[i, j, k]] = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
+                    k_squared[[i, j, k]] = kz[k].mul_add(kz[k], ky[j].mul_add(ky[j], kx[i].powi(2)));
                 }
             }
         }
@@ -139,6 +139,9 @@ impl TimeReversal {
     }
 
     /// Compute k-space propagator for wave equation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_propagator(&self, k_squared: &Array3<f64>, c0: f64, dt: f64) -> Array3<Complex64> {
         let omega_dt = c0 * dt;
         k_squared.mapv(|k2| {
@@ -148,6 +151,9 @@ impl TimeReversal {
     }
 
     /// Perform one k-space time step
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn k_space_step(
         &self,
         pressure: &Array3<f64>,
@@ -172,7 +178,7 @@ impl TimeReversal {
             .and(propagator)
             .and(&pressure_hat)
             .and(&pressure_prev_hat)
-            .for_each(|pn, &prop, &p, &pp| {
+            .par_for_each(|pn, &prop, &p, &pp| {
                 *pn = 2.0 * prop * p - pp;
             });
 
@@ -183,6 +189,9 @@ impl TimeReversal {
     }
 
     /// Inject sensor data at sensor positions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn inject_sensor_data(
         &self,
         pressure: &mut Array3<f64>,

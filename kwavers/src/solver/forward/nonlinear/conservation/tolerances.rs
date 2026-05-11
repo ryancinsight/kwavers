@@ -11,6 +11,7 @@ impl Default for ConservationTolerances {
 }
 
 impl ConservationTolerances {
+    #[must_use] 
     pub fn strict() -> Self {
         Self {
             absolute_tolerance: 1e-10,
@@ -19,6 +20,7 @@ impl ConservationTolerances {
         }
     }
 
+    #[must_use] 
     pub fn relaxed() -> Self {
         Self {
             absolute_tolerance: 1e-6,

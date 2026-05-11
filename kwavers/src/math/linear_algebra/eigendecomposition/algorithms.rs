@@ -18,6 +18,10 @@ impl EigenSolver {
     ///
     /// - Time: O(n³)
     /// - Space: O(n²)
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn qr_algorithm(
         matrix: &Array2<Complex<f64>>,
         config: EigenSolverConfig,
@@ -26,7 +30,7 @@ impl EigenSolver {
 
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
-                operation: "qr_algorithm".to_string(),
+                operation: "qr_algorithm".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
                 actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
             }));
@@ -99,7 +103,7 @@ impl EigenSolver {
             iterations,
             off_diagonal_norm,
             condition_number,
-            algorithm: "QR with Wilkinson shift".to_string(),
+            algorithm: "QR with Wilkinson shift".to_owned(),
         })
     }
 
@@ -121,6 +125,10 @@ impl EigenSolver {
     ///
     /// - Time: O(n³) to O(n⁴) depending on matrix
     /// - Space: O(n²)
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn jacobi_hermitian(
         matrix: &Array2<Complex<f64>>,
         config: EigenSolverConfig,
@@ -129,7 +137,7 @@ impl EigenSolver {
 
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
-                operation: "jacobi_hermitian".to_string(),
+                operation: "jacobi_hermitian".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
                 actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
             }));
@@ -177,8 +185,8 @@ impl EigenSolver {
                             }
                         }
 
-                        let h_pp_new = c * c * h_pp + s * s * h_qq - 2.0 * s * c * h_pq.re;
-                        let h_qq_new = s * s * h_pp + c * c * h_qq + 2.0 * s * c * h_pq.re;
+                        let h_pp_new = (2.0 * s * c).mul_add(-h_pq.re, (c * c).mul_add(h_pp, s * s * h_qq));
+                        let h_qq_new = (2.0 * s * c).mul_add(h_pq.re, (s * s).mul_add(h_pp, c * c * h_qq));
 
                         h[[p, p]] = Complex::new(h_pp_new, 0.0);
                         h[[q, q]] = Complex::new(h_qq_new, 0.0);
@@ -226,7 +234,7 @@ impl EigenSolver {
             iterations,
             off_diagonal_norm,
             condition_number,
-            algorithm: "Jacobi for Hermitian matrices".to_string(),
+            algorithm: "Jacobi for Hermitian matrices".to_owned(),
         })
     }
 }

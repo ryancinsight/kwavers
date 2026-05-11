@@ -1,11 +1,10 @@
 use burn::module::{Ignored, Module};
-use burn::tensor::{backend::AutodiffBackend, backend::Backend, Tensor, TensorData};
+use burn::tensor::{backend::Backend, Tensor, TensorData};
 use std::marker::PhantomData;
-use std::time::Instant;
 
 use crate::core::error::{KwaversError, KwaversResult, SystemError, ValidationError};
 
-use super::super::config::{BurnLossWeights3D, BurnPINN3DConfig, BurnTrainingMetrics3D};
+use super::super::config::BurnPINN3DConfig;
 use super::super::geometry::Geometry3D;
 use super::super::network::PINN3DNetwork;
 use super::super::optimizer::SimpleOptimizer3D;
@@ -72,6 +71,9 @@ impl<B: Backend> BurnPINN3DWave<B> {
     ///
     /// let solver = BurnPINN3DWave::<Backend>::new(config, geometry, wave_speed, &device)?;
     /// ```
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new<F>(
         config: BurnPINN3DConfig,
         geometry: Geometry3D,
@@ -106,6 +108,10 @@ impl<B: Backend> BurnPINN3DWave<B> {
     /// # Returns
     ///
     /// Wave speed c(x, y, z) in m/s
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn get_wave_speed(&self, x: f32, y: f32, z: f32) -> KwaversResult<f32> {
         let wave_speed = self
             .wave_speed_fn
@@ -146,6 +152,10 @@ impl<B: Backend> BurnPINN3DWave<B> {
     ///
     /// let predictions = solver.predict(&x_test, &y_test, &z_test, &t_test, &device)?;
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn predict(
         &self,
         x: &[f32],
@@ -172,12 +182,16 @@ impl<B: Backend> BurnPINN3DWave<B> {
         let t_tensor = Tensor::<B, 2>::from_data(TensorData::new(t.to_vec(), [n, 1]), device);
 
         let u_pred = self.pinn.forward(x_tensor, y_tensor, z_tensor, t_tensor);
-        let u_vec = Self::tensor_column_vec_f32(&u_pred)?;
+        let u_vec = Self::extract_column_vec(&u_pred)?;
 
         Ok(u_vec)
     }
-
-    pub(crate) fn scalar_f32(t: &Tensor<B, 1>) -> KwaversResult<f32> {
+    /// Scalar f32.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    pub(crate) fn extract_scalar(t: &Tensor<B, 1>) -> KwaversResult<f32> {
         let data = t.clone().into_data();
         let slice = data.as_slice::<f32>().map_err(|e| {
             KwaversError::System(SystemError::InvalidOperation {
@@ -200,8 +214,12 @@ impl<B: Backend> BurnPINN3DWave<B> {
             })
         })
     }
-
-    pub(crate) fn tensor_column_vec_f32(t: &Tensor<B, 2>) -> KwaversResult<Vec<f32>> {
+    /// Tensor column vec f32.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    pub(crate) fn extract_column_vec(t: &Tensor<B, 2>) -> KwaversResult<Vec<f32>> {
         let shape = t.shape();
         let dims = shape.dims.as_slice();
         let [n, m] = dims else {
@@ -255,7 +273,8 @@ mod tests {
         let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
         assert!(solver.pinn.hidden_layer_count() > 0);
-        assert!(solver.wave_speed_fn.is_some());
+        // Verify the stored function returns the expected constant speed
+        assert_eq!(solver.wave_speed_fn.as_ref().unwrap().get(0.5, 0.5, 0.5), 1500.0);
         Ok(())
     }
 

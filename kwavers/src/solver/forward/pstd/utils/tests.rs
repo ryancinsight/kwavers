@@ -56,6 +56,9 @@ fn test_sinc_normalized_function() {
 /// ## Reference
 /// Treeby, B.E. & Cox, B.T. (2010). k-Wave: MATLAB toolbox for the simulation and
 /// reconstruction of photoacoustic wave fields. J. Biomed. Opt. 15(2):021314.
+/// # Panics
+/// - Panics if `grid creation`.
+///
 #[test]
 fn test_kspace_kappa_correction_at_nyquist() {
     let c0 = 1500.0_f64;

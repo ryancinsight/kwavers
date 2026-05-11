@@ -9,6 +9,12 @@ use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
 
 /// Optimized gradient computation with caching and parallelization
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub fn gradient_optimized<T>(
     field: &ArrayView3<T>,
     grid: &Grid,
@@ -101,6 +107,9 @@ where
 }
 
 /// Optimized gradient computation with boundary handling
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn gradient_with_boundaries<T>(
     field: &ArrayView3<T>,
     grid: &Grid,
@@ -111,7 +120,13 @@ where
 {
     gradient_with_strategy(field, grid, order, BoundaryStrategy::ZeroPadding)
 }
-
+/// Gradient with strategy.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(super) fn gradient_with_strategy<T>(
     field: &ArrayView3<T>,
     grid: &Grid,

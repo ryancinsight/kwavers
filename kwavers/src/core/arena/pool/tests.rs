@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_pool_config_buffer_size_alignment() {
     // 100 × 8 = 800 bytes → rounds up to 832 (= 13 × 64)
-    let config = PoolConfig::for_f64_field(100, 16, -1);
+    let config = PoolConfig::for_scalar_field::<f64>(100, 16, -1);
     let raw_size = 100 * 8;
     let padded = (raw_size + 63) & !63;
     assert_eq!(config.buffer_size(), padded);
@@ -12,7 +12,7 @@ fn test_pool_config_buffer_size_alignment() {
 
 #[test]
 fn test_pool_acquire_release_cycle() {
-    let config = PoolConfig::for_f64_field(128, 4, -1);
+    let config = PoolConfig::for_scalar_field::<f64>(128, 4, -1);
     let pool = BufferPool::new(config).expect("pool must create");
 
     assert_eq!(pool.stats().allocated, 0);
@@ -26,7 +26,7 @@ fn test_pool_acquire_release_cycle() {
 
 #[test]
 fn test_pool_exhaustion_then_recycle() {
-    let config = PoolConfig::for_f64_field(64, 2, -1);
+    let config = PoolConfig::for_scalar_field::<f64>(64, 2, -1);
     let pool = BufferPool::new(config).expect("pool must create");
 
     let b0 = pool.acquire().expect("first acquire");
@@ -45,7 +45,7 @@ fn test_pool_exhaustion_then_recycle() {
 
 #[test]
 fn test_buffer_batch_all_or_nothing() {
-    let config = PoolConfig::for_f64_field(64, 3, -1);
+    let config = PoolConfig::for_scalar_field::<f64>(64, 3, -1);
     let pool = BufferPool::new(config).expect("pool must create");
 
     assert!(BufferBatch::acquire(&pool, 4).is_err());
@@ -54,7 +54,7 @@ fn test_buffer_batch_all_or_nothing() {
 
 #[test]
 fn test_pool_stats_peak_tracking() {
-    let config = PoolConfig::for_f64_field(64, 4, -1);
+    let config = PoolConfig::for_scalar_field::<f64>(64, 4, -1);
     let pool = BufferPool::new(config).expect("pool must create");
 
     let b0 = pool.acquire().unwrap();
@@ -73,7 +73,7 @@ fn test_pool_stats_peak_tracking() {
 
 #[test]
 fn test_pooled_buffer_typed_access() {
-    let config = PoolConfig::for_f64_field(8, 2, -1);
+    let config = PoolConfig::for_scalar_field::<f64>(8, 2, -1);
     let pool = BufferPool::new(config).expect("pool must create");
     let mut buf = pool.acquire().expect("acquire");
 

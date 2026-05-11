@@ -30,6 +30,10 @@ impl TetrahedralMesh {
     /// Geometric labels such as `inlet`, `outlet`, and `wall` remain
     /// [`BoundaryType::Interior`] because they do not define a mathematical
     /// boundary condition by themselves.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_gaia_indexed_mesh(mesh: &IndexedMesh<f64>) -> KwaversResult<Self> {
         validate_gaia_mesh(mesh)?;
 
@@ -62,12 +66,12 @@ impl TetrahedralMesh {
 fn validate_gaia_mesh(mesh: &IndexedMesh<f64>) -> KwaversResult<()> {
     if mesh.vertex_count() == 0 {
         return Err(KwaversError::InvalidInput(
-            "Gaia mesh conversion requires at least one vertex".to_string(),
+            "Gaia mesh conversion requires at least one vertex".to_owned(),
         ));
     }
     if mesh.cell_count() == 0 {
         return Err(KwaversError::InvalidInput(
-            "Gaia mesh conversion requires tetrahedral volume cells".to_string(),
+            "Gaia mesh conversion requires tetrahedral volume cells".to_owned(),
         ));
     }
     Ok(())

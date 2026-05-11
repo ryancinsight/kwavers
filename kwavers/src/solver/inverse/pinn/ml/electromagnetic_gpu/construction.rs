@@ -12,6 +12,9 @@ use std::collections::HashMap;
 
 impl GPUEMSolver {
     /// Create a new GPU-accelerated electromagnetic solver.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: EMConfig) -> KwaversResult<Self> {
         Self::validate_config(&config)?;
         let compute_manager = ComputeManager::new_blocking()?;
@@ -27,6 +30,9 @@ impl GPUEMSolver {
     }
 
     /// Validate solver configuration against CFL stability and positivity constraints.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     fn validate_config(config: &EMConfig) -> KwaversResult<()> {
         if config.grid_size.contains(&0) {
             return Err(KwaversError::Validation(
@@ -64,6 +70,9 @@ impl GPUEMSolver {
     }
 
     /// Initialize electromagnetic fields from optional initial conditions.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn initialize_fields(
         &mut self,
         initial_conditions: Option<&EMFieldData>,
@@ -101,6 +110,9 @@ impl GPUEMSolver {
     }
 
     /// Allocate GPU storage buffers and upload initial field data.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn create_gpu_buffers(&mut self, field_data: &EMFieldData) -> KwaversResult<()> {
         if !self.compute_manager.has_gpu() {
             return Ok(());
@@ -154,6 +166,9 @@ impl GPUEMSolver {
     }
 
     /// Build bind group layout and compute pipeline (idempotent).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn ensure_pipeline_resources(&mut self) -> KwaversResult<()> {
         if self.compute_pipeline.is_some() && self.bind_group_layout.is_some() {
             return Ok(());
@@ -232,6 +247,9 @@ impl GPUEMSolver {
     }
 
     /// Create the wgpu bind group from current GPU buffers and layout.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn create_bind_group(&mut self) -> KwaversResult<()> {
         let electric_buffer = self
             .gpu_buffers

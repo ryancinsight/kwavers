@@ -93,39 +93,42 @@ impl Default for SolverConfiguration {
 
 impl SolverConfiguration {
     /// Validate solver parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.spatial_order == 0 || self.spatial_order > 16 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "spatial_order".to_string(),
+                parameter: "spatial_order".to_owned(),
                 value: self.spatial_order.to_string(),
-                constraint: "Must be between 1 and 16".to_string(),
+                constraint: "Must be between 1 and 16".to_owned(),
             }
             .into());
         }
 
         if self.max_steps == 0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "max_steps".to_string(),
-                value: "0".to_string(),
-                constraint: "Must be positive".to_string(),
+                parameter: "max_steps".to_owned(),
+                value: "0".to_owned(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }
 
         if self.dt <= 0.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "dt".to_string(),
+                parameter: "dt".to_owned(),
                 value: self.dt.to_string(),
-                constraint: "Must be positive".to_string(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }
 
         if self.cfl <= 0.0 || self.cfl > 1.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "cfl".to_string(),
+                parameter: "cfl".to_owned(),
                 value: self.cfl.to_string(),
-                constraint: "Must be between 0 and 1".to_string(),
+                constraint: "Must be between 0 and 1".to_owned(),
             }
             .into());
         }
@@ -134,6 +137,7 @@ impl SolverConfiguration {
     }
 
     /// Create a configuration optimized for accuracy
+    #[must_use] 
     pub fn accuracy_optimized() -> Self {
         Self {
             cfl: 0.1,
@@ -143,6 +147,7 @@ impl SolverConfiguration {
     }
 
     /// Create a configuration optimized for performance
+    #[must_use] 
     pub fn performance_optimized() -> Self {
         Self {
             cfl: 0.5,

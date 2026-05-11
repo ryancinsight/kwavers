@@ -17,9 +17,9 @@ use std::f64::consts::PI;
 /// ```
 ///
 /// ## Arguments
-/// * `freq_hz` — driving frequency [Hz]
+/// * `freq_hz` — driving frequency (Hz)
 /// * `gamma`   — polytropic index
-/// * `p0`      — ambient pressure [Pa]
+/// * `p0`      — ambient pressure (Pa)
 /// * `rho_l`   — liquid density [kg/m³]
 #[must_use]
 pub fn minnaert_resonance_radius(freq_hz: f64, gamma: f64, p0: f64, rho_l: f64) -> f64 {
@@ -43,9 +43,9 @@ pub fn minnaert_resonance_radius(freq_hz: f64, gamma: f64, p0: f64, rho_l: f64) 
 /// underpressure at which a stable bubble begins inertial growth.
 ///
 /// ## Arguments
-/// * `p0`    — ambient pressure [Pa]
-/// * `p_v`   — vapour pressure [Pa]
-/// * `r0`    — equilibrium bubble radius [m]
+/// * `p0`    — ambient pressure (Pa)
+/// * `p_v`   — vapour pressure (Pa)
+/// * `r0`    — equilibrium bubble radius (m)
 /// * `sigma` — surface tension [N/m]
 #[must_use]
 pub fn blake_threshold(p0: f64, p_v: f64, r0: f64, sigma: f64) -> f64 {
@@ -53,7 +53,7 @@ pub fn blake_threshold(p0: f64, p_v: f64, r0: f64, sigma: f64) -> f64 {
         return p_v - p0;
     }
     let factor = (3.0 * p0 * r0 / (2.0 * sigma)).sqrt();
-    p_v - (4.0 * sigma / (3.0 * r0)) * factor
+    (4.0 * sigma / (3.0 * r0)).mul_add(-factor, p_v)
 }
 
 /// Estimate the Rayleigh collapse time fraction of the acoustic period.
@@ -72,9 +72,9 @@ pub fn blake_threshold(p0: f64, p_v: f64, r0: f64, sigma: f64) -> f64 {
 /// For SBSL with R_max ≈ 8 R₀:  `t_c/T ≈ 0.5–1 %` (Brenner 2002 §III).
 ///
 /// ## Arguments
-/// * `r_max`   — maximum bubble radius [m]
-/// * `freq_hz` — driving frequency [Hz]
-/// * `p0`      — ambient pressure [Pa]
+/// * `r_max`   — maximum bubble radius (m)
+/// * `freq_hz` — driving frequency (Hz)
+/// * `p0`      — ambient pressure (Pa)
 /// * `rho_l`   — liquid density [kg/m³]
 #[must_use]
 pub fn collapse_time_fraction(r_max: f64, freq_hz: f64, p0: f64, rho_l: f64) -> f64 {
@@ -99,7 +99,7 @@ pub fn collapse_time_fraction(r_max: f64, freq_hz: f64, p0: f64, rho_l: f64) -> 
 /// with T ≈ 9,000–10,000 K (accounting for liquid absorption).
 ///
 /// ## Arguments
-/// * `temperature_k` — blackbody temperature [K]
+/// * `temperature_k` — blackbody temperature (K)
 #[must_use]
 pub fn wien_peak_wavelength_m(temperature_k: f64) -> f64 {
     if temperature_k < 1.0 {
@@ -119,8 +119,8 @@ pub fn wien_peak_wavelength_m(temperature_k: f64) -> f64 {
 /// Returns the radiance normalised by the peak value at this temperature.
 ///
 /// ## Arguments
-/// * `wavelength_m` — wavelength [m]
-/// * `temperature_k` — blackbody temperature [K]
+/// * `wavelength_m` — wavelength (m)
+/// * `temperature_k` — blackbody temperature (K)
 #[must_use]
 pub fn planck_radiance_relative(wavelength_m: f64, temperature_k: f64) -> f64 {
     if wavelength_m < 1e-12 || temperature_k < 1.0 {
@@ -131,11 +131,11 @@ pub fn planck_radiance_relative(wavelength_m: f64, temperature_k: f64) -> f64 {
         return 0.0; // underflow guard: exp(x) >> 1
     }
     let prefactor = 2.0 * H_PLANCK * C_LIGHT * C_LIGHT / wavelength_m.powi(5);
-    let bose = (x.exp() - 1.0).recip();
+    let bose = x.exp_m1().recip();
     // normalise by peak value using Wien's law
     let lambda_peak = wien_peak_wavelength_m(temperature_k);
     let x_peak = H_PLANCK * C_LIGHT / (lambda_peak * KB * temperature_k);
-    let bose_peak = (x_peak.exp() - 1.0).recip();
+    let bose_peak = x_peak.exp_m1().recip();
     let prefactor_peak = 2.0 * H_PLANCK * C_LIGHT * C_LIGHT / lambda_peak.powi(5);
     let b = prefactor * bose;
     let b_peak = prefactor_peak * bose_peak;
@@ -156,7 +156,7 @@ pub fn planck_radiance_relative(wavelength_m: f64, temperature_k: f64) -> f64 {
 /// Returns the ratio `I(T1) / I(T2)` for two maximum temperatures.
 ///
 /// ## Arguments
-/// * `t1_k`, `t2_k` — maximum collapse temperatures [K]
+/// * `t1_k`, `t2_k` — maximum collapse temperatures (K)
 #[must_use]
 pub fn yasui_intensity_ratio(t1_k: f64, t2_k: f64) -> f64 {
     // Integrate Planck spectrum from 200 nm to 700 nm at each temperature.
@@ -167,10 +167,10 @@ pub fn yasui_intensity_ratio(t1_k: f64, t2_k: f64) -> f64 {
         let dlam = (lam_max - lam_min) / n_pts as f64;
         let mut integral = 0.0;
         for k in 0..n_pts {
-            let lam = lam_min + (k as f64 + 0.5) * dlam;
+            let lam = (k as f64 + 0.5).mul_add(dlam, lam_min);
             let x = H_PLANCK * C_LIGHT / (lam * KB * temp);
             if x < 700.0 {
-                let b = 2.0 * H_PLANCK * C_LIGHT * C_LIGHT / lam.powi(5) / (x.exp() - 1.0);
+                let b = 2.0 * H_PLANCK * C_LIGHT * C_LIGHT / lam.powi(5) / x.exp_m1();
                 integral += b * dlam;
             }
         }

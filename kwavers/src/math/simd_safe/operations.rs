@@ -2,21 +2,23 @@
 
 use ndarray::Array3;
 
-/// SIMD lane width for f64 (architectural documentation constant).
+/// SIMD lane width for f64, selected at compile time per target ISA.
 ///
-/// Documents expected vector widths per ISA. Not used in control flow — runtime
-/// dispatch is handled by `is_x86_feature_detected!` / `is_aarch64_feature_detected!`.
+/// - x86_64 AVX2: 256 bits / 64 bits = 4 lanes
+/// - AArch64 NEON: 128 bits / 64 bits = 2 lanes
+/// - Scalar fallback: 1 lane
+///
+/// Runtime feature detection (`is_x86_feature_detected!` / `is_aarch64_feature_detected!`)
+/// selects the actual code path; this constant records the expected maximum width for
+/// each architecture so it can be referenced in loop-unroll and tiling decisions.
 #[cfg(target_arch = "x86_64")]
-#[allow(dead_code)] // Architectural doc; runtime dispatch via feature-detection macros
-const SIMD_WIDTH: usize = 4; // AVX2: 256 bits / 64 bits = 4
+pub const SIMD_WIDTH: usize =4;
 
 #[cfg(target_arch = "aarch64")]
-#[allow(dead_code)] // Architectural doc; runtime dispatch via feature-detection macros
-const SIMD_WIDTH: usize = 2; // NEON: 128 bits / 64 bits = 2
+pub const SIMD_WIDTH: usize =2;
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
-#[allow(dead_code)] // Architectural doc for scalar fallback builds
-const SIMD_WIDTH: usize = 1; // Scalar fallback
+pub const SIMD_WIDTH: usize =1;
 
 /// Portable SIMD operations
 #[derive(Debug)]

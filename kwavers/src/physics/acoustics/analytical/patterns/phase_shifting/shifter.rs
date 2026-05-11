@@ -18,8 +18,6 @@ use std::f64::consts::PI;
 pub struct PhaseShifter {
     strategy: ShiftingStrategy,
     element_positions: Array2<f64>,
-    #[allow(dead_code)] // Operating frequency for phase calculations
-    operating_frequency: f64,
     wavelength: f64,
     phase_offsets: Array1<f64>,
     quantization_enabled: bool,
@@ -36,7 +34,6 @@ impl PhaseShifter {
         Self {
             strategy: ShiftingStrategy::Linear,
             element_positions,
-            operating_frequency,
             wavelength,
             phase_offsets,
             quantization_enabled: false,
@@ -49,6 +46,9 @@ impl PhaseShifter {
     }
 
     /// Enable phase quantization
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn enable_quantization(&mut self, enable: bool) {
         self.quantization_enabled = enable;
     }
@@ -63,6 +63,9 @@ impl PhaseShifter {
     /// ```text
     /// phi_i = -k x_i sin(theta),    k = 2 pi / lambda.
     /// ```
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_linear_phases(&mut self, steering_angle: f64) -> KwaversResult<Array1<f64>> {
         let angle_rad = steering_angle.to_radians();
 
@@ -90,12 +93,15 @@ impl PhaseShifter {
     }
 
     /// Calculate phase shifts for spherical focusing
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_spherical_phases(
         &mut self,
         focal_point: &[f64; 3],
     ) -> KwaversResult<Array1<f64>> {
         let focal_distance =
-            (focal_point[0].powi(2) + focal_point[1].powi(2) + focal_point[2].powi(2)).sqrt();
+            focal_point[2].mul_add(focal_point[2], focal_point[1].mul_add(focal_point[1], focal_point[0].powi(2))).sqrt();
 
         if focal_distance < MIN_FOCAL_DISTANCE {
             return Err(crate::core::error::KwaversError::InvalidInput(format!(
@@ -112,7 +118,7 @@ impl PhaseShifter {
             let dx = focal_point[0] - position[0];
             let dy = focal_point[1] - position[1];
             let dz = focal_point[2] - position[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             *phase = -k * (distance - focal_distance);
 
@@ -126,6 +132,9 @@ impl PhaseShifter {
     }
 
     /// Calculate phase shifts for multiple focal points
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_multipoint_phases(
         &mut self,
         focal_points: &[Vec<f64>],
@@ -143,12 +152,12 @@ impl PhaseShifter {
         for focal_point in focal_points {
             if focal_point.len() != 3 {
                 return Err(crate::core::error::KwaversError::InvalidInput(
-                    "Focal points must be 3D coordinates".to_string(),
+                    "Focal points must be 3D coordinates".to_owned(),
                 ));
             }
 
             let focal_distance =
-                (focal_point[0].powi(2) + focal_point[1].powi(2) + focal_point[2].powi(2)).sqrt();
+                focal_point[2].mul_add(focal_point[2], focal_point[1].mul_add(focal_point[1], focal_point[0].powi(2))).sqrt();
 
             if focal_distance < MIN_FOCAL_DISTANCE {
                 return Err(crate::core::error::KwaversError::InvalidInput(format!(
@@ -162,7 +171,7 @@ impl PhaseShifter {
                 let dx = focal_point[0] - position[0];
                 let dy = focal_point[1] - position[1];
                 let dz = focal_point[2] - position[2];
-                let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                 // Superposition with equal weighting
                 *phase += (-k * (distance - focal_distance)) / num_points;
@@ -180,6 +189,9 @@ impl PhaseShifter {
     }
 
     /// Get current phase offsets
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn get_phase_offsets(&self) -> &Array1<f64> {
         &self.phase_offsets
@@ -193,12 +205,15 @@ impl PhaseShifter {
     /// - [`ShiftingStrategy::Focused`]: `target = [x, y, z]` in metres.
     /// - [`ShiftingStrategy::MultiFocus`]: packed `[x, y, z]` triples in metres.
     /// - [`ShiftingStrategy::Custom`]: one phase per array element.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_phases(&mut self, target: &[f64]) -> KwaversResult<Array1<f64>> {
         match self.strategy {
             ShiftingStrategy::Linear => {
                 if target.len() != 1 {
                     return Err(crate::core::error::KwaversError::InvalidInput(
-                        "Linear steering requires single angle".to_string(),
+                        "Linear steering requires single angle".to_owned(),
                     ));
                 }
                 self.calculate_linear_phases(target[0])
@@ -206,7 +221,7 @@ impl PhaseShifter {
             ShiftingStrategy::Focused => {
                 if target.len() != 3 {
                     return Err(crate::core::error::KwaversError::InvalidInput(
-                        "Spherical focusing requires 3D point".to_string(),
+                        "Spherical focusing requires 3D point".to_owned(),
                     ));
                 }
                 self.calculate_spherical_phases(&[target[0], target[1], target[2]])
@@ -214,7 +229,7 @@ impl PhaseShifter {
             ShiftingStrategy::MultiFocus => {
                 if target.is_empty() || !target.len().is_multiple_of(3) {
                     return Err(crate::core::error::KwaversError::InvalidInput(
-                        "Multi-focus steering requires one or more 3D focal points".to_string(),
+                        "Multi-focus steering requires one or more 3D focal points".to_owned(),
                     ));
                 }
 

@@ -38,6 +38,10 @@ impl Clone for MatrixArray {
 }
 
 impl MatrixArray {
+    /// New.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new<A: Apodization>(
         width: f64,
@@ -71,7 +75,7 @@ impl MatrixArray {
                 let iy = idx / num_x;
                 let x_norm = (ix as f64 - (num_x - 1) as f64 / 2.0) / ((num_x - 1) as f64 / 2.0);
                 let y_norm = (iy as f64 - (num_y - 1) as f64 / 2.0) / ((num_y - 1) as f64 / 2.0);
-                let r = (x_norm * x_norm + y_norm * y_norm).sqrt();
+                let r = x_norm.hypot(y_norm);
                 apodization.weight(
                     (r.min(1.0) * num_x.max(num_y) as f64 / 2.0) as usize,
                     num_x.max(num_y),
@@ -139,11 +143,9 @@ impl MatrixArray {
             .for_each(|(idx, delay)| {
                 let ix = idx % self.num_x;
                 let iy = idx / self.num_x;
-                let x_elem = start_x + ix as f64 * dx;
-                let y_elem = start_y + iy as f64 * dy;
-                let distance = ((x_elem - focus_x).powi(2)
-                    + (y_elem - focus_y).powi(2)
-                    + (self.z_pos - focus_z).powi(2))
+                let x_elem = (ix as f64).mul_add(dx, start_x);
+                let y_elem = (iy as f64).mul_add(dy, start_y);
+                let distance = (self.z_pos - focus_z).mul_add(self.z_pos - focus_z, (y_elem - focus_y).mul_add(y_elem - focus_y, (x_elem - focus_x).powi(2)))
                 .sqrt();
                 *delay = distance / c;
             });
@@ -168,8 +170,8 @@ impl Source for MatrixArray {
 
         for iy in 0..self.num_y {
             for ix in 0..self.num_x {
-                let x_elem = start_x + ix as f64 * dx;
-                let y_elem = start_y + iy as f64 * dy;
+                let x_elem = (ix as f64).mul_add(dx, start_x);
+                let y_elem = (iy as f64).mul_add(dy, start_y);
                 let idx = iy * self.num_x + ix;
 
                 if let Some((gx, gy, gz)) = grid.position_to_indices(x_elem, y_elem, self.z_pos) {
@@ -212,8 +214,8 @@ impl Source for MatrixArray {
             for ix in (ix_center - 1)..=(ix_center + 1) {
                 if ix >= 0 && ix < self.num_x as isize && iy >= 0 && iy < self.num_y as isize {
                     let idx = (iy as usize) * self.num_x + (ix as usize);
-                    let x_elem = start_x + (ix as f64) * dx;
-                    let y_elem = start_y + (iy as f64) * dy;
+                    let x_elem = (ix as f64).mul_add(dx, start_x);
+                    let y_elem = (iy as f64).mul_add(dy, start_y);
 
                     if (x - x_elem).abs() < tolerance && (y - y_elem).abs() < tolerance {
                         let delay = self.time_delays[idx];
@@ -234,8 +236,8 @@ impl Source for MatrixArray {
         let mut positions = Vec::with_capacity(self.num_x * self.num_y);
         for iy in 0..self.num_y {
             for ix in 0..self.num_x {
-                let x = start_x + ix as f64 * dx;
-                let y = start_y + iy as f64 * dy;
+                let x = (ix as f64).mul_add(dx, start_x);
+                let y = (iy as f64).mul_add(dy, start_y);
                 positions.push((x, y, self.z_pos));
             }
         }

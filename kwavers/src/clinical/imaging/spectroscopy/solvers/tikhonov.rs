@@ -17,6 +17,9 @@ use ndarray::{Array1, Array2};
 /// # Returns
 ///
 /// Concentration vector C (n × 1)
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[allow(non_snake_case)] // E is standard notation for extinction coefficient matrix
 pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<Array1<f64>> {
     let n_chromophores = e.ncols();
@@ -27,7 +30,7 @@ pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<
 
     // Add regularization: EᵀE + λI
     // This ensures the matrix is positive-definite even if E is rank-deficient
-    let mut ete_reg = ete.clone();
+    let mut ete_reg = ete;
     for i in 0..n_chromophores {
         ete_reg[[i, i]] += lambda.max(1e-12);
     }
@@ -46,6 +49,9 @@ pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<
 /// # Invariants
 /// - A must be symmetric and positive-definite
 /// - Smallest eigenvalue of A must be significantly larger than machine epsilon
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[allow(non_snake_case)]
 fn cholesky_solve(A: &Array2<f64>, b: &Array1<f64>) -> Result<Array1<f64>> {
     let n = A.nrows();
@@ -104,6 +110,9 @@ fn cholesky_solve(A: &Array2<f64>, b: &Array1<f64>) -> Result<Array1<f64>> {
 }
 
 /// Estimate condition number (max/min singular value ratio)
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[allow(non_snake_case)]
 pub fn estimate_condition_number(A: &Array2<f64>) -> Result<f64> {
     let (_, n) = A.dim();

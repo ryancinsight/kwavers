@@ -7,6 +7,9 @@ use crate::physics::acoustics::imaging::modalities::ceus::microbubble::response:
 
 impl BubbleDynamics {
     /// Simulate radial oscillation response to acoustic pressure.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn simulate_oscillation(
         &self,
         bubble: &Microbubble,
@@ -38,7 +41,7 @@ impl BubbleDynamics {
             );
 
             let radius_new =
-                radius[i] + radius_dot * self.dt + 0.5 * acceleration * self.dt * self.dt;
+                (0.5 * acceleration * self.dt).mul_add(self.dt, radius[i] + radius_dot * self.dt);
             let r_new = radius_new.max(1e-12);
             let radius_dot_pred = radius_dot + acceleration * self.dt;
             let time_new = (i + 1) as f64 * self.dt;

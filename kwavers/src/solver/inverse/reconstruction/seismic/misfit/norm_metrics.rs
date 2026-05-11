@@ -6,6 +6,9 @@ use ndarray::Array2;
 
 impl MisfitFunction {
     /// L2 norm misfit: 0.5 * ||d_obs − d_syn||²
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn l2_misfit(
         &self,
         observed: &Array2<f64>,
@@ -16,6 +19,9 @@ impl MisfitFunction {
     }
 
     /// L1 norm misfit: ||d_obs − d_syn||₁
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn l1_misfit(
         &self,
         observed: &Array2<f64>,
@@ -26,6 +32,9 @@ impl MisfitFunction {
     }
 
     /// L1 adjoint source: sign(d_syn − d_obs)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn l1_adjoint_source(
         &self,
         observed: &Array2<f64>,
@@ -36,6 +45,9 @@ impl MisfitFunction {
     }
 
     /// Normalized cross-correlation misfit.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn correlation_misfit(
         &self,
         observed: &Array2<f64>,
@@ -60,6 +72,9 @@ impl MisfitFunction {
     }
 
     /// Correlation adjoint source (Fréchet derivative of normalized cross-correlation).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn correlation_adjoint_source(
         &self,
         observed: &Array2<f64>,

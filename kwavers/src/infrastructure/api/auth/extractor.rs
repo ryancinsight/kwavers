@@ -6,6 +6,10 @@ use axum::extract::FromRequestParts;
 use axum::http::{header::AUTHORIZATION, request::Parts, StatusCode};
 
 impl AuthenticatedUser {
+    /// Extract from middleware.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) async fn extract_from_middleware(
         parts: &mut Parts,
         auth_middleware: &std::sync::Arc<AuthMiddleware>,

@@ -2,7 +2,10 @@
 use log::{LevelFilter, Record};
 
 pub mod file;
-
+/// Init logging.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn init_logging() -> Result<(), Box<dyn std::error::Error>> {
     let logger = file::configure_logger()?;
     log::set_logger(Box::leak(logger))?;

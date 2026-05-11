@@ -36,6 +36,7 @@ pub struct RealTimeScheduler {
 
 impl RealTimeScheduler {
     /// Create a new real-time scheduler
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             queue: Arc::new(Mutex::new(Vec::new())),
@@ -50,6 +51,9 @@ impl RealTimeScheduler {
     }
 
     /// Submit a task to the scheduler
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn submit(
         &self,
         priority: TaskPriority,
@@ -57,7 +61,7 @@ impl RealTimeScheduler {
     ) -> KwaversResult<u64> {
         if self.shutdown.load(Ordering::Relaxed) {
             return Err(KwaversError::InvalidInput(
-                "Scheduler is shutting down".to_string(),
+                "Scheduler is shutting down".to_owned(),
             ));
         }
 
@@ -97,6 +101,10 @@ impl RealTimeScheduler {
     }
 
     /// Get next pending task
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn next_task(&self) -> Option<WorkItem> {
         let mut queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         if queue.is_empty() {
@@ -108,6 +116,9 @@ impl RealTimeScheduler {
     }
 
     /// Execute a task and record metrics
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn execute_task(&self, item: WorkItem) -> KwaversResult<()> {
         let start = Instant::now();
         let wait_time = item.age_ms(current_timestamp());
@@ -135,6 +146,7 @@ impl RealTimeScheduler {
     }
 
     /// Get current metrics
+    #[must_use] 
     pub fn metrics(&self) -> TaskMetrics {
         let submitted = self.submitted.load(Ordering::Relaxed);
         let completed = self.completed.load(Ordering::Relaxed);
@@ -176,6 +188,7 @@ impl RealTimeScheduler {
     }
 
     /// Check if scheduler is shutdown
+    #[must_use] 
     pub fn is_shutdown(&self) -> bool {
         self.shutdown.load(Ordering::Relaxed)
     }
@@ -187,6 +200,7 @@ impl RealTimeScheduler {
     }
 
     /// Get queue depth
+    #[must_use] 
     pub fn queue_depth(&self) -> usize {
         let queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         queue.len()

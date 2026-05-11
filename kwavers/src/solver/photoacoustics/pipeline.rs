@@ -95,7 +95,10 @@ impl PhotoacousticPipeline {
             OpticalModel::MonteCarlo => &self.monte_carlo_solver,
         }
     }
-
+    /// Compute fluence.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_fluence(
         &self,
         scenario: &PhotoacousticScenario,
@@ -103,7 +106,10 @@ impl PhotoacousticPipeline {
         self.optical_solver(scenario.config.optical_model)
             .solve(scenario)
     }
-
+    /// Simulate.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn simulate(
         &self,
         scenario: &PhotoacousticScenario,

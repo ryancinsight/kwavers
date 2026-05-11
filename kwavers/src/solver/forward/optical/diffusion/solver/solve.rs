@@ -23,7 +23,10 @@ impl DiffusionSolver {
     /// 1. Discretize PDE into linear system `Ax = b`.
     /// 2. Iterate `x_{k+1} = x_k + α_k p_k` until `‖r_k‖ < tol`.
     /// 3. Apply extrapolated boundary conditions at domain boundaries via
-    ///    [`super::DiffusionSolver::apply_operator`].
+    ///    `DiffusionSolver::apply_operator`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn solve(&self, source: &Array3<f64>) -> Result<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
 

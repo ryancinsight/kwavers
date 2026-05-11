@@ -62,9 +62,9 @@ pub trait AdaptiveBeamformer: FrequencyDomainBeamformer {
     ///
     /// Optimal weight vector **w** (N×1 complex) according to algorithm's criterion.
     ///
-    /// # Errors (Strict - No Silent Fallbacks)
+    /// # Errors
     ///
-    /// Returns `Err(...)` if:
+    /// Returns `Err(...)` if (no silent fallbacks):
     /// - Dimensions inconsistent (covariance not square, steering length mismatch)
     /// - Covariance matrix singular or ill-conditioned
     /// - Numerical operation fails (solve, eigendecomposition, etc.)

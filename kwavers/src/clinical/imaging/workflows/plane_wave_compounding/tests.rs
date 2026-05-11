@@ -66,9 +66,7 @@ fn test_apodization_windows() {
 fn test_plane_wave_field_generation() {
     let config = PlaneWaveConfig::default();
     let compounding = PlaneWaveCompound::new(config).unwrap();
-    let result = compounding.generate_plane_wave(0);
-    assert!(result.is_ok());
-    let field = result.unwrap();
+    let field = compounding.generate_plane_wave(0).unwrap();
     assert_eq!(field.nrows(), compounding.num_axial);
     assert_eq!(field.ncols(), compounding.num_lateral);
 }
@@ -83,8 +81,8 @@ fn test_beamforming() {
         Complex::new(1.0, 0.0),
     );
 
-    let result = compounding.beamform_angle(0, &received);
-    assert!(result.is_ok());
+    let beamformed = compounding.beamform_angle(0, &received).unwrap();
+    assert_eq!(beamformed.dim(), received.dim());
 }
 
 #[test]
@@ -113,10 +111,7 @@ fn test_process_frame() {
         })
         .collect();
 
-    let result = compounding.process_frame(&received_fields);
-    assert!(result.is_ok());
-
-    let image = result.unwrap();
+    let image = compounding.process_frame(&received_fields).unwrap();
     assert_eq!(image.nrows(), compounding.num_axial);
     assert_eq!(image.ncols(), compounding.num_lateral);
 

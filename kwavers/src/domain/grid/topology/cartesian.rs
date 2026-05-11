@@ -17,28 +17,32 @@ pub struct CartesianTopology {
 
 impl CartesianTopology {
     /// Create a new Cartesian topology
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(dimensions: [usize; 3], spacing: [f64; 3], origin: [f64; 3]) -> KwaversResult<Self> {
         if dimensions[0] == 0 || dimensions[1] == 0 || dimensions[2] == 0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "grid dimensions".to_string(),
+                parameter: "grid dimensions".to_owned(),
                 value: format!("{:?}", dimensions),
-                constraint: "All dimensions must be positive".to_string(),
+                constraint: "All dimensions must be positive".to_owned(),
             }));
         }
 
         if spacing[0] <= 0.0 || spacing[1] <= 0.0 || spacing[2] <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "grid spacing".to_string(),
+                parameter: "grid spacing".to_owned(),
                 value: format!("{:?}", spacing),
-                constraint: "All spacing values must be positive".to_string(),
+                constraint: "All spacing values must be positive".to_owned(),
             }));
         }
 
         if !spacing[0].is_finite() || !spacing[1].is_finite() || !spacing[2].is_finite() {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "grid spacing".to_string(),
+                parameter: "grid spacing".to_owned(),
                 value: format!("{:?}", spacing),
-                constraint: "All spacing values must be finite".to_string(),
+                constraint: "All spacing values must be finite".to_owned(),
             }));
         }
 
@@ -50,6 +54,9 @@ impl CartesianTopology {
     }
 
     /// Create a uniform Cartesian grid (same spacing in all directions)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn uniform(n: usize, spacing: f64, origin: [f64; 3]) -> KwaversResult<Self> {
         Self::new([n, n, n], [spacing, spacing, spacing], origin)
     }
@@ -90,9 +97,9 @@ impl GridTopology for CartesianTopology {
 
     fn indices_to_coordinates(&self, indices: [usize; 3]) -> [f64; 3] {
         [
-            self.origin[0] + indices[0] as f64 * self.spacing[0],
-            self.origin[1] + indices[1] as f64 * self.spacing[1],
-            self.origin[2] + indices[2] as f64 * self.spacing[2],
+            (indices[0] as f64).mul_add(self.spacing[0], self.origin[0]),
+            (indices[1] as f64).mul_add(self.spacing[1], self.origin[1]),
+            (indices[2] as f64).mul_add(self.spacing[2], self.origin[2]),
         ]
     }
 

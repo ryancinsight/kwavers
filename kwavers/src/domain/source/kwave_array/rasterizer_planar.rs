@@ -223,9 +223,9 @@ impl KWaveArray {
 
         let mut emit = |x_local: f64, y_local: f64| {
             let point = [
-                center.0 + x_local * u[0] + y_local * v[0],
-                center.1 + x_local * u[1] + y_local * v[1],
-                center.2 + x_local * u[2] + y_local * v[2],
+                y_local.mul_add(v[0], x_local.mul_add(u[0], center.0)),
+                y_local.mul_add(v[1], x_local.mul_add(u[1], center.1)),
+                y_local.mul_add(v[2], x_local.mul_add(u[2], center.2)),
             ];
             visit(point, scale);
         };

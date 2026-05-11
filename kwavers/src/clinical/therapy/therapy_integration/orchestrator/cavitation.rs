@@ -68,6 +68,12 @@ use super::super::state::AcousticField;
 ///
 /// - Apfel & Holland (1991): "Gauging the likelihood of cavitation"
 /// - Maxwell et al. (2013): "Cavitation clouds in tissue: replication and translation"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub fn update_cavitation_control(
     cavitation_controller: &mut FeedbackController,
     acoustic_field: &AcousticField,

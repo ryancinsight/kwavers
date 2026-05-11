@@ -55,7 +55,7 @@ impl SpatialRandomization {
                 let dx = positions[[i, 0]] - positions[[j, 0]];
                 let dy = positions[[i, 1]] - positions[[j, 1]];
                 let dz = positions[[i, 2]] - positions[[j, 2]];
-                let dist2 = dx * dx + dy * dy + dz * dz;
+                let dist2 = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
                 // Gaussian weight
                 let weight = (-dist2 / (2.0 * sigma2)).exp();

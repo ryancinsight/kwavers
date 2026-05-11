@@ -19,7 +19,7 @@ pub(crate) const COMPRESSION_REFRACTIVE_COEFFICIENT: f64 = 0.02;
 /// Reference: Kim, J. Opt. Soc. Korea, 2012.
 pub(crate) const THERMAL_REFRACTIVE_COEFFICIENT: f64 = 1e-5;
 
-/// Reference temperature for thermo-optic shift [K]
+/// Reference temperature for thermo-optic shift (K)
 pub(crate) const REFERENCE_TEMPERATURE: f64 = 300.0;
 
 /// Compute Cherenkov emission field over a grid from physical fields
@@ -35,6 +35,9 @@ pub(crate) const REFERENCE_TEMPERATURE: f64 = 300.0;
 /// ## References
 ///
 /// - Frank, I. & Tamm, I. (1937). Dokl. Akad. Nauk SSSR, 14, 109–114.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[must_use]
 pub fn calculate_cherenkov_emission(
     velocity_field: &Array3<f64>,
@@ -57,15 +60,14 @@ pub fn calculate_cherenkov_emission(
         .and(charge_density_field)
         .and(temperature_field)
         .and(compression_field)
-        .for_each(|e, &v, &charge_density, &temp, &comp| {
+        .par_for_each(|e, &v, &charge_density, &temp, &comp| {
             let charge_density = charge_density.max(0.0);
             let temp = temp.max(0.0);
             let comp = comp.max(0.0);
 
             // Local refractive index: piezo-optic + thermo-optic correction
-            let increased_n = n_base * (1.0 + COMPRESSION_REFRACTIVE_COEFFICIENT * (comp - 1.0));
-            let n_local = (increased_n
-                - THERMAL_REFRACTIVE_COEFFICIENT * (temp - REFERENCE_TEMPERATURE))
+            let increased_n = n_base * COMPRESSION_REFRACTIVE_COEFFICIENT.mul_add(comp - 1.0, 1.0);
+            let n_local = THERMAL_REFRACTIVE_COEFFICIENT.mul_add(-(temp - REFERENCE_TEMPERATURE), increased_n)
                 .max(1.0);
 
             let critical = SPEED_OF_LIGHT / n_local;

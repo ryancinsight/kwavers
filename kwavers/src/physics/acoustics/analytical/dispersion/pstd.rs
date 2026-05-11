@@ -38,7 +38,7 @@ impl DispersionAnalysis {
         c: f64,
         order: usize,
     ) -> f64 {
-        let k_magnitude = (kx * kx + ky * ky + kz * kz).sqrt();
+        let k_magnitude = kz.mul_add(kz, kx.mul_add(kx, ky * ky)).sqrt();
 
         let c_dt_k_half = 0.5 * c * dt * k_magnitude;
         let sin_arg = c_dt_k_half.clamp(-1.0, 1.0);
@@ -55,7 +55,7 @@ impl DispersionAnalysis {
         let kx_dx = kx * dx;
         let ky_dy = ky * dy;
         let kz_dz = kz * dz;
-        let k_h_magnitude = (kx_dx * kx_dx + ky_dy * ky_dy + kz_dz * kz_dz).sqrt();
+        let k_h_magnitude = kz_dz.mul_add(kz_dz, kx_dx.mul_add(kx_dx, ky_dy * ky_dy)).sqrt();
 
         let anisotropy_correction = match order {
             2 => 0.02 * k_h_magnitude.powi(2),

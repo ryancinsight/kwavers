@@ -17,6 +17,9 @@ pub struct EmissionSpectrum {
 
 impl EmissionSpectrum {
     /// Create new emission spectrum
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn new(wavelengths: Array1<f64>, intensities: Array1<f64>, time: f64) -> Self {
         assert_eq!(
@@ -43,6 +46,9 @@ impl EmissionSpectrum {
     }
 
     /// Find peak wavelength
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[must_use]
     pub fn peak_wavelength(&self) -> f64 {
         let max_idx = self
@@ -73,6 +79,9 @@ impl EmissionSpectrum {
     }
 
     /// Calculate full width at half maximum (FWHM)
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[must_use]
     pub fn fwhm(&self) -> f64 {
         let (max_idx, &max_val) = self

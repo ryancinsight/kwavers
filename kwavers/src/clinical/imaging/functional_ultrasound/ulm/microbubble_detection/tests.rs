@@ -83,8 +83,8 @@ fn test_gaussian_fit_synthetic_peak() {
     }
 
     let result = gauss_newton_fit_2d(&envelope, true_z.round(), true_x.round(), 50);
-    assert!(result.is_some(), "Gauss-Newton fit should converge");
-    let (z_fit, x_fit, amp_fit, sigma_fit, _bg_fit) = result.unwrap();
+    let (z_fit, x_fit, amp_fit, sigma_fit, _bg_fit) =
+        result.expect("Gauss-Newton fit should converge");
 
     assert!(
         (z_fit - true_z).abs() < 0.1,

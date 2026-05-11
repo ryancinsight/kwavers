@@ -264,7 +264,7 @@ mod tests {
     fn test_blood_properties() {
         assert!(WHOLE_BLOOD.sound_speed > 1500.0);
         assert!(WHOLE_BLOOD.sound_speed < 1600.0);
-        assert!(WHOLE_BLOOD.validate().is_ok());
+        WHOLE_BLOOD.validate().unwrap();
     }
 
     #[test]
@@ -278,8 +278,8 @@ mod tests {
 
     #[test]
     fn test_coupling_fluid_acoustic_properties() {
-        assert!(ULTRASOUND_GEL.validate().is_ok());
-        assert!(MINERAL_OIL.validate().is_ok());
+        ULTRASOUND_GEL.validate().unwrap();
+        MINERAL_OIL.validate().unwrap();
 
         // Gel and oil should have similar sound speeds for coupling
         let speed_diff = (ULTRASOUND_GEL.sound_speed - MINERAL_OIL.sound_speed).abs();
@@ -361,7 +361,7 @@ mod tests {
         ];
 
         for fluid in fluids {
-            assert!(fluid.validate().is_ok(), "Fluid validation failed");
+            fluid.validate().unwrap_or_else(|e| panic!("Fluid validation failed: {e:?}"));
         }
     }
 }

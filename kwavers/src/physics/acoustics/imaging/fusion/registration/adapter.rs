@@ -27,7 +27,7 @@ pub struct FusionRegistrationResult {
     pub affine_transform: AffineTransform,
     pub confidence: f64,
     /// Pre-warped moving image from non-rigid (Demons) registration.
-    /// `None` for rigid / affine results.  Tuple of (warped_flat_f32, shape [nz,ny,nx]).
+    /// `None` for rigid / affine results.  Tuple of (warped_flat_f32, shape `[nz,ny,nx]`).
     pub prewarped: Option<(Vec<f32>, [usize; 3])>,
 }
 
@@ -40,6 +40,10 @@ pub struct RitkRegistrationEngine {
 }
 
 impl RitkRegistrationEngine {
+    /// Register for method.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn register_for_method(
         &self,
         fixed: &Array3<f64>,
@@ -83,7 +87,10 @@ impl RitkRegistrationEngine {
             prewarped: None,
         })
     }
-
+    /// Resample registered.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn resample_registered(
         &self,
         moving: &Array3<f64>,
@@ -136,7 +143,7 @@ impl RegistrationEngine for RitkRegistrationEngine {
         _moving: &Array3<f64>,
     ) -> Result<Array3<[f64; 3]>, FactoryError> {
         Err(FactoryError::InvalidConfiguration(
-            "deformable registration is not implemented in the retained fusion path".to_string(),
+            "deformable registration is not implemented in the retained fusion path".to_owned(),
         ))
     }
 
@@ -172,7 +179,7 @@ fn homogeneous_to_array2(matrix: &[f64; 16]) -> Result<Array2<f64>, FactoryError
 fn array2_to_homogeneous(matrix: &Array2<f64>) -> Result<[f64; 16], FactoryError> {
     if matrix.shape() != [4, 4] {
         return Err(FactoryError::InvalidConfiguration(
-            "registration transform must be a 4x4 homogeneous matrix".to_string(),
+            "registration transform must be a 4x4 homogeneous matrix".to_owned(),
         ));
     }
 

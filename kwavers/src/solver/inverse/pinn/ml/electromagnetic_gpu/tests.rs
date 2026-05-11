@@ -28,6 +28,6 @@ mod tests {
     fn test_em_solver_creation() {
         let config = EMConfig::default();
         let solver = GPUEMSolver::new(config);
-        assert!(solver.is_ok());
+        let _solver = solver.unwrap();
     }
 }

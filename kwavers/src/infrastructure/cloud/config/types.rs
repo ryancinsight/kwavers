@@ -27,6 +27,10 @@ pub struct DeploymentConfig {
 
 impl DeploymentConfig {
     /// Validate deployment configuration
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.gpu_count == 0 {
             return Err(KwaversError::System(
@@ -99,6 +103,9 @@ pub struct AutoScalingConfig {
 
 impl AutoScalingConfig {
     /// Validate auto-scaling configuration
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.min_instances == 0 {
             return Err(KwaversError::System(
@@ -178,6 +185,10 @@ pub struct MonitoringConfig {
 
 impl MonitoringConfig {
     /// Validate monitoring configuration
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.metrics_interval_seconds == 0 {
             return Err(KwaversError::System(
@@ -221,6 +232,9 @@ pub struct AlertThresholds {
 
 impl AlertThresholds {
     /// Validate alert thresholds
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         let thresholds = [
             ("gpu_utilization_threshold", self.gpu_utilization_threshold),

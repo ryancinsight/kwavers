@@ -34,7 +34,7 @@ impl GaussianBeamParameters {
     /// Beam radius at distance z: w(z) = w0 * sqrt(1 + (`z/z_R)²`)
     #[must_use]
     pub fn beam_radius(&self, z: f64) -> f64 {
-        self.w0 * (1.0 + (z / self.z_r).powi(2)).sqrt()
+        self.w0 * (z / self.z_r).mul_add(z / self.z_r, 1.0).sqrt()
     }
 
     /// Radius of curvature: R(z) = z * (1 + (`z_R/z)²`)
@@ -43,7 +43,7 @@ impl GaussianBeamParameters {
         if z.abs() < 1e-10 {
             f64::INFINITY
         } else {
-            z * (1.0 + (self.z_r / z).powi(2))
+            z * (self.z_r / z).mul_add(self.z_r / z, 1.0)
         }
     }
 
@@ -89,7 +89,7 @@ impl GaussianBeamParameters {
             for j in 0..ny {
                 let x = (i as f64 - cx) * dx;
                 let y = (j as f64 - cy) * dx;
-                let r = (x * x + y * y).sqrt();
+                let r = x.hypot(y);
 
                 profile[[i, j]] = self.field_amplitude(r, z);
             }

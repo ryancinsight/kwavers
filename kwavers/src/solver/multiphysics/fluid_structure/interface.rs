@@ -32,6 +32,9 @@ impl FsiInterface {
     /// c_f < c_l (acoustic slower than solid compression)
     ///
     /// This ensures physically valid wave propagation modes.
+    /// # Errors
+    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    ///
     pub fn new(
         fluid_density: f64,
         fluid_sound_speed: f64,
@@ -91,9 +94,9 @@ impl FsiInterface {
     /// Uses a level set function to determine interface location.
     pub fn set_interface_from_level_set<F>(&mut self, level_set: F)
     where
-        F: Fn(usize, usize, usize) -> f64,
+        F: Fn(usize, usize, usize) -> f64 + Sync,
     {
-        ndarray::Zip::indexed(&mut self.interface_mask).for_each(|(i, j, k), mask| {
+        ndarray::Zip::indexed(&mut self.interface_mask).par_for_each(|(i, j, k), mask| {
             // Interface where level set changes sign
             let phi_ijk = level_set(i, j, k);
             let is_interface = if i > 0 && j > 0 && k > 0 {
@@ -128,6 +131,9 @@ impl FsiInterface {
 mod tests {
     use super::*;
     /// Test material property validation
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_fsi_interface_creation() {
         let interface = FsiInterface::new(
@@ -141,13 +147,14 @@ mod tests {
             64,
             64,
         );
-        assert!(interface.is_ok());
-
         let i = interface.unwrap();
         assert!((i.normal[0] - 1.0).abs() < 1e-10); // Normalized
     }
 
     /// Test wave speed ordering validation
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_invalid_wave_speeds() {
         let interface = FsiInterface::new(

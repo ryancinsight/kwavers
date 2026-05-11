@@ -43,25 +43,28 @@ impl Default for PhasedArrayConfig {
 
 impl PhasedArrayConfig {
     /// Validate configuration parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> Result<(), String> {
         if self.num_elements == 0 {
-            return Err("Number of elements must be positive".to_string());
+            return Err("Number of elements must be positive".to_owned());
         }
 
         if self.element_spacing <= 0.0 {
-            return Err("Element spacing must be positive".to_string());
+            return Err("Element spacing must be positive".to_owned());
         }
 
         if self.element_width <= 0.0 || self.element_width > self.element_spacing {
-            return Err("Element width must be positive and less than spacing".to_string());
+            return Err("Element width must be positive and less than spacing".to_owned());
         }
 
         if self.frequency <= 0.0 {
-            return Err("Frequency must be positive".to_string());
+            return Err("Frequency must be positive".to_owned());
         }
 
         if self.crosstalk_coefficient < 0.0 || self.crosstalk_coefficient > 1.0 {
-            return Err("Crosstalk coefficient must be between 0 and 1".to_string());
+            return Err("Crosstalk coefficient must be between 0 and 1".to_owned());
         }
 
         Ok(())
@@ -70,7 +73,7 @@ impl PhasedArrayConfig {
     /// Calculate array aperture size
     #[must_use]
     pub fn aperture_size(&self) -> f64 {
-        (self.num_elements as f64 - 1.0) * self.element_spacing + self.element_width
+        (self.num_elements as f64 - 1.0).mul_add(self.element_spacing, self.element_width)
     }
 
     /// Calculate Nyquist sampling criterion

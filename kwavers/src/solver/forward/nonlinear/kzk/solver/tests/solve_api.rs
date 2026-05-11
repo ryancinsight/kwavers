@@ -7,6 +7,9 @@ use ndarray::Array2;
 ///
 /// ## Theorem
 /// Zero propagation steps applies no operators; the identity is preserved.
+/// # Panics
+/// - Panics if `solve(0) must succeed`.
+///
 #[test]
 fn test_kzk_solve_zero_steps() {
     let config = KZKConfig {
@@ -38,6 +41,9 @@ fn test_kzk_solve_zero_steps() {
 ///
 /// ## Theorem
 /// `solve(n)` calls `step()` exactly n times; counter increments by n.
+/// # Panics
+/// - Panics if `solve(10) must succeed`.
+///
 #[test]
 fn test_kzk_solve_basic_propagation() {
     let config = KZKConfig {
@@ -62,6 +68,9 @@ fn test_kzk_solve_basic_propagation() {
 ///
 /// ## Rationale
 /// The axial grid has exactly `nz` planes; propagating beyond is undefined.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_kzk_solve_exceeds_nz_returns_error() {
     let config = KZKConfig {
@@ -85,6 +94,9 @@ fn test_kzk_solve_exceeds_nz_returns_error() {
 }
 
 /// `solve(nz)` (full grid) succeeds; boundary case n == nz is valid.
+/// # Panics
+/// - Panics with `"solve(nz={nz}) must succeed; got: {e:?}"`.
+///
 #[test]
 fn test_kzk_solve_full_propagation() {
     let config = KZKConfig {
@@ -102,8 +114,7 @@ fn test_kzk_solve_full_propagation() {
     let mut solver = KZKSolver::new(config).unwrap();
     solver.set_source(Array2::from_elem((4, 4), 100.0_f64), 1e6);
 
-    let result = solver.solve(nz);
-    assert!(result.is_ok(), "solve(nz) must succeed; got: {result:?}");
+    solver.solve(nz).unwrap_or_else(|e| panic!("solve(nz={nz}) must succeed; got: {e:?}"));
     assert_eq!(
         solver.current_z_step, nz,
         "step counter must equal nz after full propagation"
@@ -115,6 +126,9 @@ fn test_kzk_solve_full_propagation() {
 /// ## Theorem
 /// `solve(n)` is exactly equivalent to `step()` called n times from the same
 /// initial state; both paths must yield the same pressure field.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_kzk_solve_matches_manual_step_loop() {
     let config = KZKConfig {
@@ -155,6 +169,9 @@ fn test_kzk_solve_matches_manual_step_loop() {
 /// ## Theorem
 /// All KZK operators (diffraction, absorption, nonlinearity) map the zero
 /// field to itself; the homogeneous solution is p=0.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_zero_pressure_step_is_identity() {
     let config = KZKConfig {

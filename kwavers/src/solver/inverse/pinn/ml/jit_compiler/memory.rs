@@ -9,6 +9,10 @@ impl Default for MemoryPool {
 }
 
 impl MemoryPool {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> Self {
         Self {
             buffers: Vec::new(),
@@ -16,14 +20,20 @@ impl MemoryPool {
             _current_index: 0,
         }
     }
-
+    /// Allocate for kernel.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn allocate_for_kernel(&mut self, _kernel_id: &str) -> KwaversResult<()> {
         for &size in &self.buffer_sizes {
             self.buffers.push(vec![0.0; size]);
         }
         Ok(())
     }
-
+    /// Allocate output buffer.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn allocate_output_buffer(&self, size: usize) -> KwaversResult<Vec<f32>> {
         let buffer_size = self
             .buffer_sizes

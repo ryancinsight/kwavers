@@ -11,8 +11,7 @@ fn test_lithotripsy_simulator_creation() {
         ..Default::default()
     };
 
-    let simulator = LithotripsySimulator::new(params, grid);
-    assert!(simulator.is_ok());
+    let _simulator = LithotripsySimulator::new(params, grid).unwrap();
 }
 
 #[test]

@@ -209,7 +209,7 @@ impl SonoluminescenceDetector {
                 let dx = events[i].physical_position.0 - events[j].physical_position.0;
                 let dy = events[i].physical_position.1 - events[j].physical_position.1;
                 let dz = events[i].physical_position.2 - events[j].physical_position.2;
-                let spatial_distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                let spatial_distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
                 let time_difference = (events[i].time - events[j].time).abs();
 
                 if spatial_distance <= self.config.spatial_resolution

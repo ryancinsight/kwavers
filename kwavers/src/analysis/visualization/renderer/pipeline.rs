@@ -13,6 +13,9 @@ pub struct RenderPipeline {
 
 impl RenderPipeline {
     /// Create a new render pipeline
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> KwaversResult<Self> {
         Ok(Self {
             #[cfg(feature = "gpu-visualization")]
@@ -23,6 +26,9 @@ impl RenderPipeline {
     }
 
     /// Initialize the pipeline with a device
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[cfg(feature = "gpu-visualization")]
     pub fn initialize(
         &mut self,
@@ -88,6 +94,9 @@ impl RenderPipeline {
     }
 
     /// Get the pipeline
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[cfg(feature = "gpu-visualization")]
     pub fn pipeline(&self) -> Option<&wgpu::RenderPipeline> {
         self.pipeline.as_ref()
@@ -105,6 +114,9 @@ pub struct ComputePipeline {
 
 impl ComputePipeline {
     /// Create a new compute pipeline
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> KwaversResult<Self> {
         Ok(Self {
             #[cfg(feature = "gpu-visualization")]
@@ -115,6 +127,9 @@ impl ComputePipeline {
     }
 
     /// Initialize the pipeline with a device
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[cfg(feature = "gpu-visualization")]
     pub fn initialize(
         &mut self,

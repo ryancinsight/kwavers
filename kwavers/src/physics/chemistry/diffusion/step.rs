@@ -2,14 +2,14 @@ use super::linear::thomas_solve;
 use super::{DiffusionError, DiffusionStepResult, RadicalDiffusionSolver};
 
 impl RadicalDiffusionSolver {
-    /// Advance all radical species by one diffusion step `dt` [s].
+    /// Advance all radical species by one diffusion step `dt` (s).
     ///
     /// # Arguments
     ///
     /// * `concentrations` - `[n_species][n_points]` concentrations in mol/m^3.
     ///   Mutated in place.
     /// * `bubble_concs` - Dirichlet boundary condition at `r = R_bubble` for each species.
-    /// * `dt` - Time step [s].
+    /// * `dt` - Time step (s).
     /// * `diffusion_coefficients` - One `D_i` [m^2/s] per species.
     ///
     /// # Errors
@@ -81,9 +81,9 @@ fn build_rhs(
     let inv_dxi2 = 1.0 / (dxi * dxi);
     for j in 1..n - 1 {
         let laplacian =
-            (concentration[j + 1] - 2.0 * concentration[j] + concentration[j - 1]) * inv_dxi2;
+            (2.0f64.mul_add(-concentration[j], concentration[j + 1]) + concentration[j - 1]) * inv_dxi2;
         let first_derivative = (concentration[j + 1] - concentration[j - 1]) / (2.0 * dxi * dxi);
-        rhs[j] = concentration[j] + alpha * (laplacian + first_derivative);
+        rhs[j] = alpha.mul_add(laplacian + first_derivative, concentration[j]);
     }
 
     rhs[n - 1] = 0.0;

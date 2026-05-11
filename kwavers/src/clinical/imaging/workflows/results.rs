@@ -75,16 +75,13 @@ pub struct AcquisitionResult {
     pub ultrasound_data: Array3<f64>,
     pub photoacoustic_result: PhotoacousticResult,
     pub elastography_result: ElasticityMap,
-    #[allow(dead_code)]
     pub acquisition_time: Duration,
 }
 
 /// Processing result after real-time processing
 #[derive(Debug)]
 pub struct ProcessingResult {
-    #[allow(dead_code)]
     pub quality_metrics: HashMap<String, f64>,
-    #[allow(dead_code)]
     pub processing_time: Duration,
 }
 

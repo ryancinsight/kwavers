@@ -17,19 +17,31 @@ pub trait CEUSOrchestrator: Send + Sync + std::fmt::Debug {
     ///
     /// # Arguments
     /// * `pressure_field` - Acoustic pressure field
-    /// * `time` - Current simulation time [s]
+    /// * `time` - Current simulation time (s)
     ///
     /// # Returns
     /// Updated image
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn update(&mut self, pressure_field: &Array3<f64>, time: f64) -> KwaversResult<Array3<f64>>;
 
     /// Get perfusion model output
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_perfusion_data(&self) -> KwaversResult<Array3<f64>>;
 
     /// Get microbubble concentration map
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_concentration_map(&self) -> KwaversResult<Array3<f64>>;
 
     /// Get name for diagnostics
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn name(&self) -> &str;
 }
 
@@ -52,6 +64,10 @@ impl std::fmt::Debug for CEUSOrchestrators {
 
 impl CEUSOrchestrators {
     /// Create new factory
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             default_creator: None,
@@ -59,6 +75,9 @@ impl CEUSOrchestrators {
     }
 
     /// Register default CEUS orchestrator factory
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_default<F>(&mut self, factory: F)
     where
         F: Fn(&Grid, &dyn Medium, f64, f64) -> KwaversResult<Box<dyn CEUSOrchestrator>> + 'static,
@@ -74,6 +93,9 @@ impl CEUSOrchestrators {
     /// CEUS simulation implementations are registered by an application or
     /// physics assembly layer. An empty registry is therefore a configuration
     /// state, not a placeholder implementation.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn create_default(
         &self,
         grid: &Grid,
@@ -84,8 +106,7 @@ impl CEUSOrchestrators {
         self.default_creator.as_ref().ok_or_else(|| {
             crate::core::error::KwaversError::FeatureNotAvailable(
                 "CEUS orchestrator registry has no default factory; register a concrete CEUS \
-                 implementation before requesting default orchestration"
-                    .to_string(),
+                 implementation before requesting default orchestration".to_owned(),
             )
         })?(grid, medium, bubble_concentration, bubble_size)
     }

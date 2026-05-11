@@ -31,9 +31,9 @@ const THRESHOLD_MODERATE_HIGH: f64 = 0.85;
 ///
 /// # Classification Categories
 ///
-/// - 0.0: Normal tissue (intensity < [`THRESHOLD_NORMAL_BORDERLINE`])
-/// - 0.5: Borderline tissue (intensity < [`THRESHOLD_BORDERLINE_MODERATE`])
-/// - 1.0: Moderate abnormality (intensity < [`THRESHOLD_MODERATE_HIGH`])
+/// - 0.0: Normal tissue (intensity < `THRESHOLD_NORMAL_BORDERLINE`)
+/// - 0.5: Borderline tissue (intensity < `THRESHOLD_BORDERLINE_MODERATE`)
+/// - 1.0: Moderate abnormality (intensity < `THRESHOLD_MODERATE_HIGH`)
 /// - 2.0: High abnormality (calcified or highly vascular)
 ///
 /// # Arguments
@@ -43,6 +43,7 @@ const THRESHOLD_MODERATE_HIGH: f64 = 0.85;
 /// # Returns
 ///
 /// Tissue classification map with values representing tissue categories
+#[must_use] 
 pub fn classify_tissue_types(intensity_image: &Array3<f64>) -> Array3<f64> {
     intensity_image.mapv(|intensity| {
         if intensity > THRESHOLD_MODERATE_HIGH {
@@ -70,6 +71,7 @@ pub fn classify_tissue_types(intensity_image: &Array3<f64>) -> Array3<f64> {
 /// # Returns
 ///
 /// Binary mask where 1.0 indicates ROI, 0.0 indicates normal tissue
+#[must_use] 
 pub fn detect_regions_of_interest(classification: &Array3<f64>, threshold: f64) -> Array3<f64> {
     classification.mapv(|class| if class >= threshold { 1.0 } else { 0.0 })
 }

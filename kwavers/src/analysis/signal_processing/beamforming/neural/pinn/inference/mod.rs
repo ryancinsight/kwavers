@@ -78,6 +78,12 @@ mod tests;
 /// - focal_depth > 0
 /// - sound_speed > 0
 /// - sampling_frequency > 0
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn compute_delay(
     channel_idx: usize,
     n_channels: usize,
@@ -174,6 +180,12 @@ pub fn compute_delay(
 /// - n_elements > 0
 /// - ∑ᵢ wᵢ ≈ 1.0 (normalized)
 /// - All weights finite
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub fn compute_weights(
     n_elements: usize,
     sample_idx: usize,
@@ -289,6 +301,9 @@ fn normalize_weights(weights: &mut [f32]) {
 /// # References
 ///
 /// - Harris (1978): "On the use of windows for harmonic analysis"
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[inline]
 pub fn hanning_apodization(element_idx: usize, n_elements: usize) -> f64 {
     debug_assert!(element_idx < n_elements, "Element index out of bounds");

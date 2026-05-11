@@ -72,6 +72,7 @@ pub struct SpectralAnalysis {
 }
 
 impl SpectralAnalysis {
+    #[must_use] 
     pub fn new(config: SpectralConfig) -> Self {
         Self { config }
     }
@@ -87,7 +88,7 @@ impl SpectralAnalysis {
     ///
     /// # Arguments
     /// * `signal`      – Real-valued time-domain samples (any length ≥ 1)
-    /// * `sample_rate` – Sampling frequency [Hz]; used for PSD normalisation to [unit²/Hz]
+    /// * `sample_rate` – Sampling frequency (Hz); used for PSD normalisation to [unit²/Hz]
     ///
     /// # Returns
     /// One-sided PSD of length `fft_size/2 + 1`, frequencies 0 … `sample_rate/2`.
@@ -104,12 +105,12 @@ impl SpectralAnalysis {
 
         if m < 2 {
             return Err(KwaversError::InvalidInput(
-                "fft_size must be ≥ 2".to_string(),
+                "fft_size must be ≥ 2".to_owned(),
             ));
         }
         if sample_rate <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "sample_rate must be positive".to_string(),
+                "sample_rate must be positive".to_owned(),
             ));
         }
 
@@ -176,9 +177,10 @@ impl SpectralAnalysis {
         Ok(psd_sum / n_segments as f64)
     }
 
-    /// Frequency axis for the PSD output [Hz].
+    /// Frequency axis for the PSD output (Hz).
     ///
     /// Returns `fft_size/2 + 1` frequencies from 0 to `sample_rate/2`.
+    #[must_use] 
     pub fn frequency_axis(&self, sample_rate: f64) -> Array1<f64> {
         let out_len = self.config.fft_size / 2 + 1;
         Array1::from_shape_fn(out_len, |k| {
@@ -196,6 +198,9 @@ mod tests {
     ///
     /// Signal: `x[n] = sin(2π f₀ n / f_s)`, expected peak at bin `k = f₀ / Δf`.
     /// Verification: peak bin index equals `round(f₀ × fft_size / f_s)`.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_psd_pure_tone_peak_at_correct_frequency() {
         let config = SpectralConfig {
@@ -230,6 +235,9 @@ mod tests {
     }
 
     /// **Test: PSD of zero signal is all-zero**
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_psd_zero_signal() {
         let spectral = SpectralAnalysis::new(SpectralConfig::default());
@@ -244,6 +252,9 @@ mod tests {
     /// **Test: PSD is non-negative for all frequencies**
     ///
     /// Physical constraint: power spectral density must be ≥ 0 everywhere.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_psd_non_negative() {
         let spectral = SpectralAnalysis::new(SpectralConfig::default());
@@ -260,6 +271,9 @@ mod tests {
     }
 
     /// **Test: frequency axis has correct length and endpoint**
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_frequency_axis_length_and_nyquist() {
         let config = SpectralConfig {
@@ -283,6 +297,9 @@ mod tests {
     ///
     /// For a single full segment (N = fft_size) with no overlap:
     /// `∫ PSD df ≈ mean(x²)` within 20% (Hann window reduces power by 3/8).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_psd_parseval_consistency() {
         let m = 512usize;

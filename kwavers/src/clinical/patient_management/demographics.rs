@@ -19,6 +19,7 @@ impl PatientId {
     }
 
     /// Get the underlying ID string
+    #[must_use] 
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -53,34 +54,41 @@ pub struct PatientDemographics {
 
 impl PatientDemographics {
     /// Calculate BMI from weight and height
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn calculate_bmi(&self) -> f64 {
         let height_m = self.height_cm / 100.0;
         self.weight_kg / (height_m * height_m)
     }
 
     /// Validate demographics data
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.name.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Patient name cannot be empty".to_string(),
+                "Patient name cannot be empty".to_owned(),
             ));
         }
 
         if self.weight_kg <= 0.0 || self.weight_kg > 500.0 {
             return Err(KwaversError::InvalidInput(
-                "Invalid patient weight".to_string(),
+                "Invalid patient weight".to_owned(),
             ));
         }
 
         if self.height_cm <= 50.0 || self.height_cm > 300.0 {
             return Err(KwaversError::InvalidInput(
-                "Invalid patient height".to_string(),
+                "Invalid patient height".to_owned(),
             ));
         }
 
         if !matches!(self.sex, 'M' | 'F' | 'O') {
             return Err(KwaversError::InvalidInput(
-                "Invalid biological sex value".to_string(),
+                "Invalid biological sex value".to_owned(),
             ));
         }
 

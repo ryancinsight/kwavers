@@ -34,7 +34,7 @@ pub trait ElasticProperties: CoreMedium {
         let (i, j, k) = crate::domain::medium::continuous_to_discrete(x, y, z, grid);
         let rho = self.density(i, j, k);
         if rho > 0.0 {
-            ((lambda + 2.0 * mu) / rho).sqrt()
+            (2.0f64.mul_add(mu, lambda) / rho).sqrt()
         } else {
             0.0
         }

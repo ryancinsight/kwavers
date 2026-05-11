@@ -60,11 +60,11 @@
 //!   DOI: 10.1016/j.jcp.2003.08.010
 //!
 //! - fullwave25: Nonlinear multiphysics HIFU simulator
-//!   https://github.com/pinton-lab/fullwave25
+//!   <https://github.com/pinton-lab/fullwave25>
 //!   Implements monolithic acoustic-thermal-bubble coupling
 //!
 //! - BabelBrain: Brain HIFU therapy planning
-//!   https://github.com/ProteusMRIgHIFU/BabelBrain
+//!   <https://github.com/ProteusMRIgHIFU/BabelBrain>
 //!   Uses monolithic thermal-acoustic coupling for safety verification
 
 pub mod config;

@@ -27,13 +27,13 @@
 //!
 //! # Module Structure
 //! - [`config`]: Configuration types, algorithm selection, and apodization windows
-//! - [`processor`]: Main GPU processor initialization and setup
-//! - [`processing`]: High-level processing interface (volume and streaming)
-//! - [`delay_sum`]: GPU delay-and-sum beamforming kernel implementation
-//! - [`apodization`]: Apodization weight generation for sidelobe reduction
-//! - [`steering`]: Steering vector computation for adaptive beamforming
-//! - [`streaming`]: Real-time streaming buffer management
-//! - [`metrics`]: Performance metrics and memory usage tracking
+//! - `processor`: Main GPU processor initialization and setup
+//! - `processing`: High-level processing interface (volume and streaming)
+//! - `delay_sum`: GPU delay-and-sum beamforming kernel implementation
+//! - `apodization`: Apodization weight generation for sidelobe reduction
+//! - `steering`: Steering vector computation for adaptive beamforming
+//! - `streaming`: Real-time streaming buffer management
+//! - `metrics`: Performance metrics and memory usage tracking
 //!
 //! # References
 //! - Van Veen & Buckley (1988) "Beamforming: A versatile approach to spatial filtering"
@@ -48,7 +48,6 @@ mod metrics;
 mod processing;
 mod processor;
 mod saft;
-mod steering;
 mod streaming;
 
 // Public API re-exports

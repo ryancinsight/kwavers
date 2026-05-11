@@ -41,6 +41,11 @@ pub struct WallFilter {
 }
 
 impl WallFilter {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: WallFilterConfig) -> Self {
         Self { config }
     }
@@ -49,6 +54,9 @@ impl WallFilter {
     ///
     /// Removes slow-moving clutter (tissue, vessel walls) while preserving
     /// blood flow signals.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply(&self, iq_data: &ArrayView3<Complex64>) -> KwaversResult<Array3<Complex64>> {
         let (ensemble_size, n_depths, n_beams) = iq_data.dim();
         let mut filtered = Array3::<Complex64>::zeros((ensemble_size, n_depths, n_beams));

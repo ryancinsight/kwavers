@@ -160,9 +160,7 @@ impl MemoryProfiler {
     #[must_use]
     pub fn profile(&self) -> MemoryProfile {
         self.profile
-            .lock()
-            .map(|p| p.clone())
-            .unwrap_or_else(|_| MemoryProfile::new())
+            .lock().map_or_else(|_| MemoryProfile::new(), |p| p.clone())
     }
 
     /// Clear all memory tracking data

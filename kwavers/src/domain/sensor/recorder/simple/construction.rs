@@ -14,6 +14,9 @@ use super::SensorRecorder;
 
 impl SensorRecorder {
     /// Create a basic pressure-only recorder.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         sensor_mask: Option<&Array3<bool>>,
         shape: (usize, usize, usize),
@@ -28,6 +31,9 @@ impl SensorRecorder {
     /// [`RecordingMode::MinPressure`], [`RecordingMode::RmsPressure`],
     /// [`RecordingMode::FinalPressure`], or [`RecordingMode::AllStatistics`].
     /// An empty slice disables statistics (equivalent to `new`).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn with_modes(
         sensor_mask: Option<&Array3<bool>>,
         shape: (usize, usize, usize),
@@ -89,6 +95,9 @@ impl SensorRecorder {
     /// Allocates velocity time-series buffers and statistics accumulators
     /// according to `spec`.  This is the preferred entry point for any
     /// simulation that records velocity or intensity.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn with_spec(
         sensor_mask: Option<&Array3<bool>>,
         shape: (usize, usize, usize),
@@ -160,6 +169,9 @@ impl SensorRecorder {
     }
 
     /// Create a `SensorRecorder` from a pre-ordered list of grid indices.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_ordered_indices(
         indices: Vec<(usize, usize, usize)>,
         expected_steps: usize,
@@ -196,6 +208,10 @@ impl SensorRecorder {
     /// Build a Fortran-order (x-fastest) index list from a boolean sensor mask.
     ///
     /// Returns an empty `Vec` when `sensor_mask` is `None`.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn build_sensor_indices(
         sensor_mask: Option<&Array3<bool>>,
         shape: (usize, usize, usize),

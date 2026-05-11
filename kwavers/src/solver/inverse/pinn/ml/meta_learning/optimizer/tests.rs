@@ -4,7 +4,7 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
 
-fn scalar_f32<B: AutodiffBackend>(tensor: &Tensor<B, 2>) -> f32 {
+fn extract_scalar<B: AutodiffBackend>(tensor: &Tensor<B, 2>) -> f32 {
     let data = tensor.clone().into_data();
     let slice = data.as_slice::<f32>().expect("tensor data must be f32");
     slice[0]
@@ -112,7 +112,7 @@ fn test_adam_step_updates_parameters() {
     let grads = vec![Some(Tensor::<TestBackend, 2>::ones([1, 1], &device))];
 
     optimizer.step(&mut params, &grads);
-    assert!(scalar_f32(&params[0]) < 0.0);
+    assert!(extract_scalar(&params[0]) < 0.0);
 }
 
 #[test]
@@ -124,5 +124,5 @@ fn test_rmsprop_step_updates_parameters() {
     let grads = vec![Some(Tensor::<TestBackend, 2>::ones([1, 1], &device))];
 
     optimizer.step(&mut params, &grads);
-    assert!(scalar_f32(&params[0]) < 0.0);
+    assert!(extract_scalar(&params[0]) < 0.0);
 }

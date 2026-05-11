@@ -26,11 +26,13 @@ pub enum PhotonSource {
 
 impl PhotonSource {
     /// Create pencil beam source
+    #[must_use] 
     pub fn pencil_beam(origin: [f64; 3], direction: [f64; 3]) -> Self {
         Self::PencilBeam { origin, direction }
     }
 
     /// Create Gaussian beam source
+    #[must_use] 
     pub fn gaussian(origin: [f64; 3], direction: [f64; 3], beam_waist: f64) -> Self {
         Self::Gaussian {
             origin,
@@ -40,6 +42,7 @@ impl PhotonSource {
     }
 
     /// Create isotropic point source
+    #[must_use] 
     pub fn isotropic(origin: [f64; 3]) -> Self {
         Self::Isotropic { origin }
     }
@@ -51,7 +54,6 @@ impl PhotonSource {
                 position: *origin,
                 direction: normalize(*direction),
                 weight: 1.0,
-                alive: true,
             },
 
             Self::Gaussian {
@@ -69,9 +71,9 @@ impl PhotonSource {
                 let perp2 = crate::physics::optics::monte_carlo::utils::cross(dir_norm, perp1);
 
                 let offset = [
-                    r * theta.cos() * perp1[0] + r * theta.sin() * perp2[0],
-                    r * theta.cos() * perp1[1] + r * theta.sin() * perp2[1],
-                    r * theta.cos() * perp1[2] + r * theta.sin() * perp2[2],
+                    (r * theta.cos()).mul_add(perp1[0], r * theta.sin() * perp2[0]),
+                    (r * theta.cos()).mul_add(perp1[1], r * theta.sin() * perp2[1]),
+                    (r * theta.cos()).mul_add(perp1[2], r * theta.sin() * perp2[2]),
                 ];
 
                 Photon {
@@ -82,7 +84,6 @@ impl PhotonSource {
                     ],
                     direction: dir_norm,
                     weight: 1.0,
-                    alive: true,
                 }
             }
 
@@ -93,7 +94,6 @@ impl PhotonSource {
                     position: *origin,
                     direction: dir,
                     weight: 1.0,
-                    alive: true,
                 }
             }
         }

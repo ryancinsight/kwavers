@@ -22,6 +22,9 @@ pub struct InterfaceGeometry {
 
 impl InterfaceGeometry {
     /// Create interface geometry from two grids
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_grids(source: &Grid, target: &Grid) -> KwaversResult<Self> {
         // Detect interface direction and position
         let (normal_direction, plane_position) = Self::detect_interface(source, target)?;
@@ -102,9 +105,9 @@ impl InterfaceGeometry {
             1 => Ok((source.dx * source.nx as f64, source.dz * source.nz as f64)),
             2 => Ok((source.dx * source.nx as f64, source.dy * source.ny as f64)),
             _ => Err(ValidationError::FieldValidation {
-                field: "normal_direction".to_string(),
+                field: "normal_direction".to_owned(),
                 value: format!("{normal_direction}"),
-                constraint: "Must be 0, 1, or 2".to_string(),
+                constraint: "Must be 0, 1, or 2".to_owned(),
             }
             .into()),
         }

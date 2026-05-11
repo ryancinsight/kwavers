@@ -2,6 +2,10 @@ use super::{ConservationResults, NumericalValidator};
 use crate::domain::grid::Grid;
 
 impl NumericalValidator {
+    /// Validate conservation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn validate_conservation(
         &self,
     ) -> Result<ConservationResults, Box<dyn std::error::Error>> {

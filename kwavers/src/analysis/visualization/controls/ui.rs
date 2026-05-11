@@ -50,11 +50,17 @@ impl ControlPanel {
     }
 
     /// Get the underlying controls system
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn controls(&self) -> &InteractiveControls {
         &self.controls
     }
 
     /// Organize parameters into groups
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn organize_groups(&mut self) -> KwaversResult<()> {
         let states = self.controls.get_all_states()?;
 

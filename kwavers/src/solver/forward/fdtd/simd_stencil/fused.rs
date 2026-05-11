@@ -11,6 +11,9 @@ impl SimdStencilProcessor {
     /// ## Returns
     ///
     /// Updated pressure field; `velocity` is updated in-place.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn fused_update(
         &mut self,
         pressure: &Array3<f64>,
@@ -35,26 +38,22 @@ impl SimdStencilProcessor {
                     for k in kb..k_end {
                         for j in jb..j_end {
                             for i in ib..i_end {
-                                let laplacian = (pressure[[i + 1, j, k]]
-                                    - 2.0 * pressure[[i, j, k]]
+                                let laplacian = (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i + 1, j, k]])
                                     + pressure[[i - 1, j, k]])
                                     / dx2
-                                    + (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
+                                    + (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i, j + 1, k]])
                                         + pressure[[i, j - 1, k]])
                                         / dx2
-                                    + (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
+                                    + (2.0f64.mul_add(-pressure[[i, j, k]], pressure[[i, j, k + 1]])
                                         + pressure[[i, j, k - 1]])
                                         / dx2;
 
-                                self.pres_scratch[[i, j, k]] = 2.0 * pressure[[i, j, k]]
-                                    - pressure_prev[[i, j, k]]
-                                    + self.pressure_coeff * laplacian
-                                    + self.pressure_coeff * velocity_div[[i, j, k]];
+                                self.pres_scratch[[i, j, k]] = self.pressure_coeff.mul_add(velocity_div[[i, j, k]], self.pressure_coeff.mul_add(laplacian, 2.0f64.mul_add(pressure[[i, j, k]], -pressure_prev[[i, j, k]])));
 
                                 let dp_dx = (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]])
                                     * half_dx_inv;
                                 self.vel_scratch[[i, j, k]] =
-                                    velocity[[i, j, k]] + self.velocity_coeff * dp_dx;
+                                    self.velocity_coeff.mul_add(dp_dx, velocity[[i, j, k]]);
                             }
                         }
                     }

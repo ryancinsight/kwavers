@@ -52,6 +52,9 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
     /// an infinite loop when every attempt is rejected: without this guard,
     /// `t` never advances, `substeps` never increments, and the while condition
     /// `substeps < max_substeps` is never false.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn integrate_adaptive(
         &mut self,
         state: &mut BubbleState,
@@ -73,7 +76,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
             total_attempts += 1;
             if total_attempts > max_total_attempts {
                 return Err(PhysicsError::ConvergenceFailure {
-                    solver: "AdaptiveBubbleIntegrator".to_string(),
+                    solver: "AdaptiveBubbleIntegrator".to_owned(),
                     iterations: total_attempts,
                     residual: (t_end - t).abs(),
                 }
@@ -106,7 +109,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
 
         if substeps >= self.config.max_substeps {
             return Err(PhysicsError::ConvergenceFailure {
-                solver: "AdaptiveBubbleIntegrator".to_string(),
+                solver: "AdaptiveBubbleIntegrator".to_owned(),
                 iterations: substeps,
                 residual: (t_end - t).abs(),
             }
@@ -131,6 +134,9 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
     /// Errors from the acceleration calculation itself (singular pressure, etc.) are
     /// propagated as hard failures via `?` because they indicate a structurally
     /// invalid state that no time-step reduction can fix.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn try_step(
         &self,
         state: &mut BubbleState,
@@ -151,7 +157,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
 
         // ── Two half steps (accepted state if step passes) ──
         // Errors here are also soft: reject the step.
-        let mut state_half = state_orig.clone();
+        let mut state_half = state_orig;
         let dt_half = dt * HALF_STEP_FACTOR;
         let half_ok = self
             .step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t)
@@ -170,11 +176,11 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         let error_v = (state_full.wall_velocity - state_half.wall_velocity).abs();
 
         // Compute error norm
-        let scale_r = self.config.atol + self.config.rtol * state_half.radius.abs();
-        let scale_v = self.config.atol + self.config.rtol * state_half.wall_velocity.abs();
+        let scale_r = self.config.rtol.mul_add(state_half.radius.abs(), self.config.atol);
+        let scale_v = self.config.rtol.mul_add(state_half.wall_velocity.abs(), self.config.atol);
 
         let error_norm =
-            ((error_r / scale_r).powi(2) + (error_v / scale_v).powi(2)).sqrt() / 2.0_f64.sqrt();
+            (error_r / scale_r).hypot(error_v / scale_v) / 2.0_f64.sqrt();
 
         // Compute new time step based on error
         let dt_next = if error_norm > 0.0 {
@@ -200,6 +206,9 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
     }
 
     /// Perform a single RK4 step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn step_rk4(
         &self,
         state: &mut BubbleState,
@@ -221,33 +230,33 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         let k1_v = state.wall_velocity;
 
         // k2
-        state.radius = state0.radius + 0.5 * dt * k1_v;
-        state.wall_velocity = state0.wall_velocity + 0.5 * dt * k1_a;
+        state.radius = (0.5 * dt).mul_add(k1_v, state0.radius);
+        state.wall_velocity = (0.5 * dt).mul_add(k1_a, state0.wall_velocity);
         let k2_a = self
             .solver
-            .calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt)?;
+            .calculate_acceleration(state, p_acoustic, dp_dt, 0.5f64.mul_add(dt, t))?;
         let k2_v = state.wall_velocity;
 
         // k3
-        state.radius = state0.radius + 0.5 * dt * k2_v;
-        state.wall_velocity = state0.wall_velocity + 0.5 * dt * k2_a;
+        state.radius = (0.5 * dt).mul_add(k2_v, state0.radius);
+        state.wall_velocity = (0.5 * dt).mul_add(k2_a, state0.wall_velocity);
         let k3_a = self
             .solver
-            .calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt)?;
+            .calculate_acceleration(state, p_acoustic, dp_dt, 0.5f64.mul_add(dt, t))?;
         let k3_v = state.wall_velocity;
 
         // k4
-        state.radius = state0.radius + dt * k3_v;
-        state.wall_velocity = state0.wall_velocity + dt * k3_a;
+        state.radius = dt.mul_add(k3_v, state0.radius);
+        state.wall_velocity = dt.mul_add(k3_a, state0.wall_velocity);
         let k4_a = self
             .solver
             .calculate_acceleration(state, p_acoustic, dp_dt, t + dt)?;
         let k4_v = state.wall_velocity;
 
         // Combine
-        state.radius = state0.radius + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v);
+        state.radius = (dt / 6.0).mul_add(2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v, state0.radius);
         state.wall_velocity =
-            state0.wall_velocity + (dt / 6.0) * (k1_a + 2.0 * k2_a + 2.0 * k3_a + k4_a);
+            (dt / 6.0).mul_add(2.0f64.mul_add(k3_a, 2.0f64.mul_add(k2_a, k1_a)) + k4_a, state0.wall_velocity);
 
         // Update derived quantities
         state.update_compression(r0);

@@ -28,7 +28,7 @@ impl MinimumVariance {
         }
         if steering.len() != n {
             return Err(KwaversError::InvalidInput(
-                "MVDR pseudospectrum: steering length mismatch".to_string(),
+                "MVDR pseudospectrum: steering length mismatch".to_owned(),
             ));
         }
 
@@ -46,7 +46,7 @@ impl MinimumVariance {
         if !denom_re.is_finite() || denom_re <= 0.0 {
             return Err(KwaversError::Numerical(
                 crate::core::error::NumericalError::InvalidOperation(
-                    "MVDR pseudospectrum: invalid denominator".to_string(),
+                    "MVDR pseudospectrum: invalid denominator".to_owned(),
                 ),
             ));
         }

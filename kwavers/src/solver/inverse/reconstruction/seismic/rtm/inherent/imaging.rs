@@ -42,6 +42,9 @@ impl ReverseTimeMigration {
     /// Cross-correlate `source_wavefield` and `receiver_wavefield` according
     /// to `self.config.rtm_imaging_condition` and accumulate into
     /// `self.image`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn apply_imaging_condition(
         &mut self,
         source_wavefield: &Array4<f64>,
@@ -59,7 +62,7 @@ impl ReverseTimeMigration {
                     Zip::from(&mut self.image)
                         .and(&src)
                         .and(&rcv)
-                        .for_each(|img, &s, &r| {
+                        .par_for_each(|img, &s, &r| {
                             if s.abs() > RTM_AMPLITUDE_THRESHOLD {
                                 *img += s * r;
                             }
@@ -79,21 +82,21 @@ impl ReverseTimeMigration {
                     Zip::from(&mut self.image)
                         .and(&src)
                         .and(&rcv)
-                        .for_each(|img, &s, &r| *img += s * r);
+                        .par_for_each(|img, &s, &r| *img += s * r);
 
                     Zip::from(&mut src_energy)
                         .and(&src)
-                        .for_each(|e, &s| *e += s * s);
+                        .par_for_each(|e, &s| *e += s * s);
 
                     Zip::from(&mut rcv_energy)
                         .and(&rcv)
-                        .for_each(|e, &r| *e += r * r);
+                        .par_for_each(|e, &r| *e += r * r);
                 }
 
                 Zip::from(&mut self.image)
                     .and(&src_energy)
                     .and(&rcv_energy)
-                    .for_each(|img, &se, &re| {
+                    .par_for_each(|img, &se, &re| {
                         let norm = (se * re).sqrt();
                         if norm > RTM_AMPLITUDE_THRESHOLD {
                             *img /= norm;
@@ -112,7 +115,7 @@ impl ReverseTimeMigration {
                     Zip::from(&mut self.image)
                         .and(&src_lap)
                         .and(&rcv)
-                        .for_each(|img, &lap, &r| {
+                        .par_for_each(|img, &lap, &r| {
                             *img += RTM_LAPLACIAN_SCALING * lap * r;
                         });
                 }
@@ -129,16 +132,16 @@ impl ReverseTimeMigration {
                     Zip::from(&mut self.image)
                         .and(&src)
                         .and(&rcv)
-                        .for_each(|img, &s, &r| *img += s * r);
+                        .par_for_each(|img, &s, &r| *img += s * r);
 
                     Zip::from(&mut src_energy)
                         .and(&src)
-                        .for_each(|e, &s| *e += s * s);
+                        .par_for_each(|e, &s| *e += s * s);
                 }
 
                 Zip::from(&mut self.image)
                     .and(&src_energy)
-                    .for_each(|img, &energy| {
+                    .par_for_each(|img, &energy| {
                         if energy > RTM_AMPLITUDE_THRESHOLD {
                             *img /= energy;
                         }
@@ -166,7 +169,7 @@ impl ReverseTimeMigration {
                     Zip::from(&mut self.image)
                         .and(&src_dt)
                         .and(&rcv)
-                        .for_each(|img, &ds, &r| *img += ds * r);
+                        .par_for_each(|img, &ds, &r| *img += ds * r);
                 }
             }
 
@@ -189,7 +192,7 @@ impl ReverseTimeMigration {
                         .and(&src.slice(s![..nx - 2, 1..ny - 1, 1..nz - 1]))
                         .and(&rcv.slice(s![2..nx, 1..ny - 1, 1..nz - 1]))
                         .and(&rcv.slice(s![..nx - 2, 1..ny - 1, 1..nz - 1]))
-                        .for_each(|img, &sxp, &sxm, &rxp, &rxm| {
+                        .par_for_each(|img, &sxp, &sxm, &rxp, &rxm| {
                             *img += 0.25 * (sxp - sxm) * (rxp - rxm);
                         });
 
@@ -199,7 +202,7 @@ impl ReverseTimeMigration {
                         .and(&src.slice(s![1..nx - 1, ..ny - 2, 1..nz - 1]))
                         .and(&rcv.slice(s![1..nx - 1, 2..ny, 1..nz - 1]))
                         .and(&rcv.slice(s![1..nx - 1, ..ny - 2, 1..nz - 1]))
-                        .for_each(|img, &syp, &sym, &ryp, &rym| {
+                        .par_for_each(|img, &syp, &sym, &ryp, &rym| {
                             *img += 0.25 * (syp - sym) * (ryp - rym);
                         });
 
@@ -209,7 +212,7 @@ impl ReverseTimeMigration {
                         .and(&src.slice(s![1..nx - 1, 1..ny - 1, ..nz - 2]))
                         .and(&rcv.slice(s![1..nx - 1, 1..ny - 1, 2..nz]))
                         .and(&rcv.slice(s![1..nx - 1, 1..ny - 1, ..nz - 2]))
-                        .for_each(|img, &szp, &szm, &rzp, &rzm| {
+                        .par_for_each(|img, &szp, &szm, &rzp, &rzm| {
                             *img += 0.25 * (szp - szm) * (rzp - rzm);
                         });
                 }

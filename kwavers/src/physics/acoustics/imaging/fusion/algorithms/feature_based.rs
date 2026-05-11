@@ -29,6 +29,12 @@ use std::collections::HashMap;
 /// modalities is low, they provide complementary features. Feature-based fusion adaptively selects
 /// the modality with the highest mutual information with the underlying true tissue class $T$,
 /// maximizing $I(F; T) \geq \max_k I(I_k; T)$.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
     let registration = ImageRegistration::default();
 
@@ -39,14 +45,14 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
 
     let reference_name = modality_names.first().ok_or_else(|| {
         KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-            message: "No modalities available for fusion".to_string(),
+            message: "No modalities available for fusion".to_owned(),
         })
     })?;
 
     let reference_modality = fusion
         .registered_data
         .get(*reference_name)
-        .ok_or_else(|| KwaversError::InvalidInput("Reference modality missing".to_string()))?;
+        .ok_or_else(|| KwaversError::InvalidInput("Reference modality missing".to_owned()))?;
 
     let ref_shape = reference_modality.data.dim();
     let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
@@ -220,9 +226,9 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
     }
 
     let mut tissue_properties = HashMap::new();
-    tissue_properties.insert("tissue_classification".to_string(), tissue_class_map);
+    tissue_properties.insert("tissue_classification".to_owned(), tissue_class_map);
     tissue_properties.insert(
-        "classification_confidence".to_string(),
+        "classification_confidence".to_owned(),
         classification_confidence_map,
     );
 

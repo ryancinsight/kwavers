@@ -22,8 +22,7 @@ fn test_mechanical_index_calculation() {
     let mut pressure = Array3::zeros((8, 8, 8));
     pressure[[4, 4, 4]] = 1e6; // 1 MPa
 
-    let result = monitor.update_fields(&temperature, &pressure, 0.1);
-    assert!(result.is_ok());
+    monitor.update_fields(&temperature, &pressure, 0.1).unwrap();
 
     // MI should be approximately 1.0 for 1 MPa at 1 MHz
     assert!(monitor.mechanical_index.current_mi > 0.0);

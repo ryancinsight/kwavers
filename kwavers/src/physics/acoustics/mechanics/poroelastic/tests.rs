@@ -63,6 +63,6 @@ fn test_poroelastic_simulation_creation() {
     let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001).unwrap();
     let material = PoroelasticMaterial::default();
 
-    let sim = PoroelasticSimulation::new(&grid, material);
-    assert!(sim.is_ok());
+    let sim = PoroelasticSimulation::new(&grid, material).unwrap();
+    assert!(sim.material.solid_density > 0.0);
 }

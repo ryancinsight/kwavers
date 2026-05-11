@@ -11,6 +11,9 @@ impl HeterogeneousSkull {
     ///
     /// All voxels with `mask > 0.5` receive the provided skull properties;
     /// remaining voxels are assigned water properties.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_mask(
         _grid: &Grid,
         mask: &Array3<f64>,
@@ -30,7 +33,7 @@ impl HeterogeneousSkull {
             .and(&mut density)
             .and(&mut attenuation)
             .and(mask)
-            .for_each(|c, rho, atten, &m| {
+            .par_for_each(|c, rho, atten, &m| {
                 if m > 0.5 {
                     *c = props.sound_speed;
                     *rho = props.density;
@@ -46,6 +49,7 @@ impl HeterogeneousSkull {
     }
 
     /// Generate a binary mask from CT data (1.0 = bone, 0.0 = tissue).
+    #[must_use] 
     pub fn generate_mask_from_ct(ct_data: &Array3<f64>) -> Array3<f64> {
         ct_data.mapv(|hu| if hu > 700.0 { 1.0 } else { 0.0 })
     }

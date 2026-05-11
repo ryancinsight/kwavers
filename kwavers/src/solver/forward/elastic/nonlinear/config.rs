@@ -113,7 +113,7 @@ impl NonlinearSWEConfig {
         // Higher nonlinearity requires longer simulation for harmonic stabilization
         // Deeper imaging requires more time for shear wave propagation
         let base_time = 10e-3; // 10 ms base time
-        let nonlinearity_factor = 1.0 + self.nonlinearity_parameter * 2.0;
+        let nonlinearity_factor = self.nonlinearity_parameter.mul_add(2.0, 1.0);
         let depth_factor = 1.0 + (self.max_strain * 10.0).min(2.0); // Strain affects effective depth
 
         base_time * nonlinearity_factor * depth_factor

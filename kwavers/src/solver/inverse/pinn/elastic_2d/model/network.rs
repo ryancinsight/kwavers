@@ -51,6 +51,14 @@ pub struct ElasticPINN2D<B: Backend> {
 #[cfg(feature = "pinn")]
 impl<B: Backend> ElasticPINN2D<B> {
     /// Construct a PINN from `config` and initialize on `device`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if `lambda_init required`.
+    /// - Panics if `mu_init required`.
+    /// - Panics if `rho_init required`.
+    ///
     pub fn new(config: &Config, device: &B::Device) -> KwaversResult<Self> {
         config.validate().map_err(KwaversError::InvalidInput)?;
 
@@ -146,6 +154,9 @@ impl<B: Backend> ElasticPINN2D<B> {
     /// Estimated material parameters for inverse problems.
     ///
     /// Returns `None` for each parameter that is not being optimized.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn estimated_parameters(&self) -> (Option<f64>, Option<f64>, Option<f64>) {
         let extract = |p: &Option<Param<Tensor<B, 1>>>| {
             p.as_ref().map(|param| {
@@ -191,6 +202,9 @@ impl<B: Backend> ElasticPINN2D<B> {
     }
 
     /// Serialize model weights to `path` using `BinFileRecorder` (full precision).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn save_checkpoint<P: AsRef<std::path::Path>>(&self, path: P) -> KwaversResult<()> {
         let recorder = BinFileRecorder::<FullPrecisionSettings>::new();
         self.clone()
@@ -199,6 +213,9 @@ impl<B: Backend> ElasticPINN2D<B> {
     }
 
     /// Placeholder: use `Trainer::load_checkpoint` for loading (requires `Config`).
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn load_checkpoint<P: AsRef<std::path::Path>>(
         _path: P,
         _device: &B::Device,
@@ -219,9 +236,13 @@ pub struct ElasticPINN2D {
 
 #[cfg(not(feature = "pinn"))]
 impl ElasticPINN2D {
+    /// New.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(_config: &Config, _device: &()) -> KwaversResult<Self> {
         Err(KwaversError::InvalidInput(
-            "ElasticPINN2D requires the 'pinn' feature to be enabled".to_string(),
+            "ElasticPINN2D requires the 'pinn' feature to be enabled".to_owned(),
         ))
     }
 }

@@ -1,7 +1,7 @@
 use super::super::{ApodizationWindow, KWaveArray};
 
 impl KWaveArray {
-    /// Calculate focus delays `[s]` for each element to a target point
+    /// Calculate focus delays `(s)` for each element to a target point
     /// (`delay = distance / c`).
     ///
     /// # Arguments
@@ -12,16 +12,14 @@ impl KWaveArray {
         self.get_element_positions()
             .iter()
             .map(|(ex, ey, ez)| {
-                let dist = ((ex - focus_point.0).powi(2)
-                    + (ey - focus_point.1).powi(2)
-                    + (ez - focus_point.2).powi(2))
+                let dist = (ez - focus_point.2).mul_add(ez - focus_point.2, (ey - focus_point.1).mul_add(ey - focus_point.1, (ex - focus_point.0).powi(2)))
                 .sqrt();
                 dist / c
             })
             .collect()
     }
 
-    /// Calculate per-element time delays `[s]` for electronic focusing.
+    /// Calculate per-element time delays `(s)` for electronic focusing.
     ///
     /// # Algorithm — Time-Delay Focusing (Selfridge et al. 1980)
     ///
@@ -41,13 +39,11 @@ impl KWaveArray {
         let distances: Vec<f64> = positions
             .iter()
             .map(|(ex, ey, ez)| {
-                ((ex - focus_point.0).powi(2)
-                    + (ey - focus_point.1).powi(2)
-                    + (ez - focus_point.2).powi(2))
+                (ez - focus_point.2).mul_add(ez - focus_point.2, (ey - focus_point.1).mul_add(ey - focus_point.1, (ex - focus_point.0).powi(2)))
                 .sqrt()
             })
             .collect();
-        let d_max = distances.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let d_max = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         distances.iter().map(|&d| (d_max - d) / c).collect()
     }
 
@@ -85,7 +81,7 @@ impl KWaveArray {
                 }
                 (0..n)
                     .map(|i| {
-                        0.54 - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos()
+                        0.46f64.mul_add(-(2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos(), 0.54)
                     })
                     .collect()
             }

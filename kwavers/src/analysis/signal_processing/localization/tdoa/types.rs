@@ -33,6 +33,7 @@ pub enum TimeDelayMethod {
 
 impl TDOAConfig {
     /// Create new TDOA configuration
+    #[must_use] 
     pub fn new(config: LocalizationConfig, method: TimeDelayMethod) -> Self {
         Self {
             config,
@@ -43,12 +44,14 @@ impl TDOAConfig {
     }
 
     /// Set refinement iterations
+    #[must_use] 
     pub fn with_refinement_iterations(mut self, iterations: usize) -> Self {
         self.refinement_iterations = iterations;
         self
     }
 
     /// Set convergence tolerance
+    #[must_use] 
     pub fn with_convergence_tolerance(mut self, tolerance: f64) -> Self {
         self.convergence_tolerance = tolerance;
         self

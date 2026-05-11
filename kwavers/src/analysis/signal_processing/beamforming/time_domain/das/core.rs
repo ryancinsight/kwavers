@@ -26,6 +26,10 @@ use ndarray::Array3;
 /// # Returns
 ///
 /// Beamformed output, shape `(1, 1, n_samples)`
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn delay_and_sum(
     sensor_data: &Array3<f64>,
     sampling_frequency_hz: f64,
@@ -43,7 +47,7 @@ pub fn delay_and_sum(
     }
     if n_elements == 0 || n_samples == 0 {
         return Err(KwaversError::InvalidInput(
-            "time_domain::das requires n_elements > 0 and n_samples > 0".to_string(),
+            "time_domain::das requires n_elements > 0 and n_samples > 0".to_owned(),
         ));
     }
     if !sampling_frequency_hz.is_finite() || sampling_frequency_hz <= 0.0 {

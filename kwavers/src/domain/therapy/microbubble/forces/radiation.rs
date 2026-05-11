@@ -7,7 +7,7 @@
 
 use crate::core::error::KwaversResult;
 
-/// Time-averaged radiation force on an oscillating bubble [N].
+/// Time-averaged radiation force on an oscillating bubble (N).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RadiationForce {
     pub fx: f64,
@@ -32,7 +32,7 @@ impl RadiationForce {
 
     #[must_use]
     pub fn magnitude(&self) -> f64 {
-        (self.fx * self.fx + self.fy * self.fy + self.fz * self.fz).sqrt()
+        self.fz.mul_add(self.fz, self.fx.mul_add(self.fx, self.fy * self.fy)).sqrt()
     }
 
     #[must_use]
@@ -50,7 +50,7 @@ impl RadiationForce {
     }
 
     #[must_use]
-    pub fn add(&self, other: &RadiationForce) -> Self {
+    pub fn add(&self, other: &Self) -> Self {
         Self {
             fx: self.fx + other.fx,
             fy: self.fy + other.fy,
@@ -58,6 +58,10 @@ impl RadiationForce {
         }
     }
 
+    /// Scale.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn scale(&self, factor: f64) -> Self {
         Self {
@@ -71,6 +75,9 @@ impl RadiationForce {
 /// Primary Bjerknes force using instantaneous radius: F = -(4π/3)R³ · ∇P.
 ///
 /// For time-averaged force, average the result over multiple acoustic periods.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn calculate_primary_bjerknes_force(
     radius: f64,
     _radius_equilibrium: f64,
@@ -87,6 +94,9 @@ pub fn calculate_primary_bjerknes_force(
 /// Primary Bjerknes force using time-averaged radius: F = -(4π/3)⟨R³⟩ · ∇P.
 ///
 /// Pass the cube-root of ⟨R³⟩ as `radius_avg` for correct time-averaging.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn calculate_primary_bjerknes_force_averaged(
     radius_avg: f64,
     _radius_equilibrium: f64,
@@ -101,6 +111,9 @@ pub fn calculate_primary_bjerknes_force_averaged(
 }
 
 /// Stokes drag force: F_drag = −6πμRv.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn calculate_drag_force(
     radius: f64,
     relative_velocity: (f64, f64, f64),

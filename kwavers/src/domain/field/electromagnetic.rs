@@ -20,6 +20,7 @@ pub struct EMFields {
 
 impl EMFields {
     /// Create new EM fields from electric and magnetic components
+    #[must_use] 
     pub fn new(electric: ArrayD<f64>, magnetic: ArrayD<f64>) -> Self {
         Self {
             electric,
@@ -30,6 +31,10 @@ impl EMFields {
     }
 
     /// Create fields with auxiliary components
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_auxiliary(
         electric: ArrayD<f64>,
         magnetic: ArrayD<f64>,
@@ -45,6 +50,9 @@ impl EMFields {
     }
 
     /// Validate field shapes are consistent
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_shapes(&self) -> Result<(), String> {
         let e_shape = self.electric.shape();
         let h_shape = self.magnetic.shape();
@@ -102,6 +110,12 @@ impl PoyntingVector {
     /// * `magnetic` - Magnetic field H [Nx, Ny, 2] or [Nx, Ny, Nz, 3]
     /// * `permittivity` - Relative permittivity ε_r
     /// * `permeability` - Relative permeability μ_r
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn from_fields(
         electric: &ArrayD<f64>,
         magnetic: &ArrayD<f64>,
@@ -110,12 +124,12 @@ impl PoyntingVector {
     ) -> Result<Self, String> {
         let shape = electric.shape();
         if shape != magnetic.shape() {
-            return Err("Electric and magnetic field shapes must match".to_string());
+            return Err("Electric and magnetic field shapes must match".to_owned());
         }
 
         let ndim = shape.len();
         if ndim < 2 {
-            return Err("Fields must be at least 2D".to_string());
+            return Err("Fields must be at least 2D".to_owned());
         }
 
         let field_components = *shape.last().unwrap();
@@ -161,7 +175,7 @@ impl PoyntingVector {
                 let hx = magnetic[&h_idx0[..]];
                 let hy = magnetic[&h_idx1[..]];
 
-                let sz = ex * hy - ey * hx;
+                let sz = ex.mul_add(hy, -(ey * hx));
                 let mut s_idx0 = spatial.to_vec();
                 s_idx0.push(0);
                 let mut s_idx1 = spatial.to_vec();
@@ -194,9 +208,9 @@ impl PoyntingVector {
                 let hy = magnetic[&h_idx1[..]];
                 let hz = magnetic[&h_idx2[..]];
 
-                let sx = ey * hz - ez * hy;
-                let sy = ez * hx - ex * hz;
-                let sz = ex * hy - ey * hx;
+                let sx = ey.mul_add(hz, -(ez * hy));
+                let sy = ez.mul_add(hx, -(ex * hz));
+                let sz = ex.mul_add(hy, -(ey * hx));
 
                 let mut s_idx0 = spatial.to_vec();
                 s_idx0.push(0);
@@ -208,7 +222,7 @@ impl PoyntingVector {
                 s_vector[&s_idx1[..]] = sy;
                 s_vector[&s_idx2[..]] = sz;
 
-                s_magnitude[spatial] = (sx * sx + sy * sy + sz * sz).sqrt();
+                s_magnitude[spatial] = sz.mul_add(sz, sx.mul_add(sx, sy * sy)).sqrt();
             }
 
             // Energy density: u = (1/2)(ε₀ε_r|E|² + μ₀μ_r|H|²)
@@ -219,7 +233,7 @@ impl PoyntingVector {
                 e_idx1.push(1);
                 let ex = electric[&e_idx0[..]];
                 let ey = electric[&e_idx1[..]];
-                ex * ex + ey * ey
+                ex.mul_add(ex, ey * ey)
             } else {
                 let mut e_idx0 = spatial.to_vec();
                 e_idx0.push(0);
@@ -230,7 +244,7 @@ impl PoyntingVector {
                 let ex = electric[&e_idx0[..]];
                 let ey = electric[&e_idx1[..]];
                 let ez = electric[&e_idx2[..]];
-                ex * ex + ey * ey + ez * ez
+                ez.mul_add(ez, ex.mul_add(ex, ey * ey))
             };
 
             let h_squared: f64 = if field_components == 2 {
@@ -240,7 +254,7 @@ impl PoyntingVector {
                 h_idx1.push(1);
                 let hx = magnetic[&h_idx0[..]];
                 let hy = magnetic[&h_idx1[..]];
-                hx * hx + hy * hy
+                hx.mul_add(hx, hy * hy)
             } else {
                 let mut h_idx0 = spatial.to_vec();
                 h_idx0.push(0);
@@ -251,14 +265,14 @@ impl PoyntingVector {
                 let hx = magnetic[&h_idx0[..]];
                 let hy = magnetic[&h_idx1[..]];
                 let hz = magnetic[&h_idx2[..]];
-                hx * hx + hy * hy + hz * hz
+                hz.mul_add(hz, hx.mul_add(hx, hy * hy))
             };
 
             let epsilon0 = 8.854e-12;
             let mu0 = 4.0 * std::f64::consts::PI * 1e-7;
 
             energy_density[spatial] =
-                0.5 * (epsilon0 * permittivity * e_squared + mu0 * permeability * h_squared);
+                0.5 * (epsilon0 * permittivity).mul_add(e_squared, mu0 * permeability * h_squared);
         }
 
         Ok(Self {
@@ -271,6 +285,7 @@ impl PoyntingVector {
     /// Get total power flow through a surface
     ///
     /// Computes ∫ S · dA over the specified surface
+    #[must_use] 
     pub fn total_power(&self, surface_normal: &[f64], surface_area: f64) -> f64 {
         let ndim = self.vector.ndim();
         let components = if ndim >= 1 {
@@ -317,7 +332,7 @@ mod tests {
         let magnetic = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
 
         let fields = EMFields::new(electric, magnetic);
-        assert!(fields.validate_shapes().is_ok());
+        fields.validate_shapes().unwrap();
     }
 
     #[test]

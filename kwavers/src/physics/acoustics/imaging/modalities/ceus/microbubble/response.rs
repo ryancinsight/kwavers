@@ -34,7 +34,7 @@ impl BubbleResponse {
             imag_sum += pressure * phase.sin();
         }
 
-        (real_sum * real_sum + imag_sum * imag_sum).sqrt() / n as f64
+        real_sum.hypot(imag_sum) / n as f64
     }
 
     /// Get maximum radius excursion

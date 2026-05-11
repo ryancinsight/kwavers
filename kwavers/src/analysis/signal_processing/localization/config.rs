@@ -9,16 +9,16 @@ pub struct LocalizationConfig {
     /// Sensor positions [x, y, z] in meters
     pub sensor_positions: Vec<[f64; 3]>,
 
-    /// Sampling frequency [Hz]
+    /// Sampling frequency (Hz)
     pub sampling_frequency: f64,
 
-    /// Speed of sound [m/s]
+    /// Speed of sound (m/s)
     pub sound_speed: f64,
 
-    /// Time window for analysis [s]
+    /// Time window for analysis (s)
     pub time_window: f64,
 
-    /// Localization search space bounds: (min_x, max_x, min_y, max_y, min_z, max_z) [m]
+    /// Localization search space bounds: (min_x, max_x, min_y, max_y, min_z, max_z) (m)
     pub search_bounds: Option<(f64, f64, f64, f64, f64, f64)>,
 
     /// Number of spatial grid points in search
@@ -30,6 +30,7 @@ pub struct LocalizationConfig {
 
 impl LocalizationConfig {
     /// Create new localization configuration
+    #[must_use] 
     pub fn new(sensor_positions: Vec<[f64; 3]>, sampling_frequency: f64, sound_speed: f64) -> Self {
         Self {
             sensor_positions,
@@ -43,12 +44,14 @@ impl LocalizationConfig {
     }
 
     /// Set time window
+    #[must_use] 
     pub fn with_time_window(mut self, window: f64) -> Self {
         self.time_window = window;
         self
     }
 
     /// Set search bounds
+    #[must_use] 
     pub fn with_search_bounds(
         mut self,
         min_x: f64,
@@ -63,63 +66,77 @@ impl LocalizationConfig {
     }
 
     /// Set grid resolution
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_grid_resolution(mut self, resolution: usize) -> Self {
         self.grid_resolution = resolution;
         self
     }
 
     /// Set confidence threshold
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_confidence_threshold(mut self, threshold: f64) -> Self {
         self.confidence_threshold = threshold.clamp(0.0, 1.0);
         self
     }
 
     /// Validate configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.sensor_positions.is_empty() {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "No sensor positions specified".to_string(),
+                "No sensor positions specified".to_owned(),
             ));
         }
 
         if !self.sampling_frequency.is_finite() || self.sampling_frequency <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Invalid sampling frequency".to_string(),
+                "Invalid sampling frequency".to_owned(),
             ));
         }
 
         if !self.sound_speed.is_finite() || self.sound_speed <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Invalid sound speed".to_string(),
+                "Invalid sound speed".to_owned(),
             ));
         }
 
         if self.time_window <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Invalid time window".to_string(),
+                "Invalid time window".to_owned(),
             ));
         }
 
         if self.grid_resolution == 0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Grid resolution must be > 0".to_string(),
+                "Grid resolution must be > 0".to_owned(),
             ));
         }
 
         Ok(())
     }
 
-    /// Get wavelength at frequency [m]
+    /// Get wavelength at frequency (m)
+    #[must_use] 
     pub fn wavelength(&self, frequency: f64) -> f64 {
         self.sound_speed / frequency
     }
 
-    /// Get time step [s]
+    /// Get time step (s)
+    #[must_use] 
     pub fn time_step(&self) -> f64 {
         1.0 / self.sampling_frequency
     }
 
     /// Get number of samples in time window
+    #[must_use] 
     pub fn num_samples(&self) -> usize {
         (self.sampling_frequency * self.time_window) as usize
     }
@@ -142,7 +159,8 @@ mod tests {
     #[test]
     fn test_config_creation() {
         let config = LocalizationConfig::default();
-        assert!(config.validate().is_ok());
+        config.validate().unwrap();
+        assert!(!config.sensor_positions.is_empty());
     }
 
     #[test]

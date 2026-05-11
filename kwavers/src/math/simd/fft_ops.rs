@@ -10,6 +10,7 @@ pub struct FftSimdOps {
 
 impl FftSimdOps {
     /// Create new FFT SIMD operations
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             config: SimdConfig::detect(),
@@ -33,7 +34,7 @@ impl FftSimdOps {
                 // 3. Memory is properly aligned for SIMD operations
                 #[allow(unsafe_code)]
                 unsafe {
-                    self.complex_multiply_avx2(real1, imag1, real2, imag2)
+                    self.complex_multiply_avx2(real1, imag1, real2, imag2);
                 }
             }
             _ => self.complex_multiply_scalar(real1, imag1, real2, imag2),
@@ -54,8 +55,8 @@ impl FftSimdOps {
             let r2 = real2[i];
             let i2 = imag2[i];
 
-            real1[i] = r1 * r2 - i1 * i2;
-            imag1[i] = r1 * i2 + i1 * r2;
+            real1[i] = r1.mul_add(r2, -(i1 * i2));
+            imag1[i] = r1.mul_add(i2, i1 * r2);
         }
     }
 
@@ -74,7 +75,7 @@ impl FftSimdOps {
         real2: &[f32],
         imag2: &[f32],
     ) {
-        use std::arch::x86_64::*;
+        use std::arch::x86_64::{_mm256_loadu_ps, _mm256_sub_ps, _mm256_mul_ps, _mm256_add_ps, _mm256_storeu_ps};
 
         let len = real1
             .len()
@@ -110,8 +111,8 @@ impl FftSimdOps {
             let r2 = real2[i];
             let i2 = imag2[i];
 
-            real1[i] = r1 * r2 - i1 * i2;
-            imag1[i] = r1 * i2 + i1 * r2;
+            real1[i] = r1.mul_add(r2, -(i1 * i2));
+            imag1[i] = r1.mul_add(i2, i1 * r2);
             i += 1;
         }
     }

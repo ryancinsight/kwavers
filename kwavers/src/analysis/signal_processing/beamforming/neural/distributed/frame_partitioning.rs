@@ -50,6 +50,10 @@ pub(crate) fn equal_partition_sizes(frame_count: usize, worker_count: usize) -> 
         .collect()
 }
 
+/// Weighted partition sizes.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub(crate) fn weighted_partition_sizes(
     frame_count: usize,
     active_indices: &[usize],

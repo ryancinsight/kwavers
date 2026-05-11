@@ -11,6 +11,7 @@ pub struct ModelRegularizer1D {
 
 impl ModelRegularizer1D {
     /// Create new 1D regularizer
+    #[must_use] 
     pub fn new(config: RegularizationConfig) -> Self {
         Self { config }
     }
@@ -35,7 +36,7 @@ impl ModelRegularizer1D {
     }
 
     fn apply_tikhonov(&self, gradient: &mut Array1<f64>, model: &Array1<f64>) {
-        Zip::from(gradient).and(model).for_each(|g, &m| {
+        Zip::from(gradient).and(model).par_for_each(|g, &m| {
             *g += self.config.tikhonov_weight * m;
         });
     }
@@ -48,16 +49,16 @@ impl ModelRegularizer1D {
 
         let mut laplacian = Array1::zeros(n);
         for i in 1..n - 1 {
-            laplacian[i] = gradient[i + 1] + gradient[i - 1] - 2.0 * gradient[i];
+            laplacian[i] = 2.0f64.mul_add(-gradient[i], gradient[i + 1] + gradient[i - 1]);
         }
 
-        Zip::from(gradient).and(&laplacian).for_each(|g, &lap| {
+        Zip::from(gradient).and(&laplacian).par_for_each(|g, &lap| {
             *g += self.config.smoothness_weight * lap;
         });
     }
 
     fn apply_l1(&self, gradient: &mut Array1<f64>, model: &Array1<f64>) {
-        Zip::from(gradient).and(model).for_each(|g, &m| {
+        Zip::from(gradient).and(model).par_for_each(|g, &m| {
             *g += self.config.l1_weight * m.signum();
         });
     }

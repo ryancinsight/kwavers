@@ -11,10 +11,7 @@ fn test_fluence_computation() {
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
-    let fluence = simulator.compute_fluence();
-    assert!(fluence.is_ok());
-
-    let fluence_data = fluence.unwrap();
+    let fluence_data = simulator.compute_fluence().unwrap();
     assert_eq!(fluence_data.dim(), (16, 16, 8));
 
     let surface_fluence = fluence_data[[8, 8, 0]];
@@ -41,10 +38,7 @@ fn test_multi_wavelength_fluence() {
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
-    let fluence_fields = simulator.compute_multi_wavelength_fluence();
-    assert!(fluence_fields.is_ok());
-
-    let fields = fluence_fields.unwrap();
+    let fields = simulator.compute_multi_wavelength_fluence().unwrap();
     assert_eq!(
         fields.len(),
         3,

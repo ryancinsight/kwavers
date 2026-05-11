@@ -22,7 +22,6 @@ fn test_single_point_prediction() {
     let predictor = Predictor::new(model);
 
     let result = predictor.predict_point(0.5, 0.5, 0.1);
-    assert!(result.is_ok());
 
     let displacement = result.unwrap();
     assert_eq!(displacement.len(), 2);
@@ -37,7 +36,6 @@ fn test_batch_prediction() {
 
     let points = vec![(0.5, 0.5, 0.1), (0.6, 0.6, 0.2), (0.7, 0.7, 0.3)];
     let result = predictor.predict_batch(&points);
-    assert!(result.is_ok());
 
     let displacements = result.unwrap();
     assert_eq!(displacements.dim(), (3, 2));
@@ -67,7 +65,6 @@ fn test_field_evaluation() {
     let t = 0.1;
 
     let result = predictor.evaluate_field(&x_grid, &y_grid, t);
-    assert!(result.is_ok());
 
     let field = result.unwrap();
     assert_eq!(field.dim(), (5, 5, 2));
@@ -82,7 +79,6 @@ fn test_time_series() {
 
     let times = Array1::linspace(0.0, 1.0, 10);
     let result = predictor.time_series(0.5, 0.5, &times);
-    assert!(result.is_ok());
 
     let time_series = result.unwrap();
     assert_eq!(time_series.dim(), (10, 2));
@@ -100,7 +96,6 @@ fn test_magnitude_field() {
     let t = 0.1;
 
     let result = predictor.magnitude_field(&x_grid, &y_grid, t);
-    assert!(result.is_ok());
 
     let magnitude = result.unwrap();
     assert_eq!(magnitude.dim(), (5, 5));
@@ -119,9 +114,9 @@ fn test_material_parameters_inverse() {
     let predictor = Predictor::new(model);
 
     let (lambda, mu, rho) = predictor.material_parameters();
-    assert!(lambda.is_some());
-    assert!(mu.is_some());
-    assert!(rho.is_some());
+    assert!((lambda.unwrap() - 1e9).abs() < 1e-3);
+    assert!((mu.unwrap() - 5e8).abs() < 1e-3);
+    assert!((rho.unwrap() - 1000.0).abs() < 1e-3);
 }
 
 #[test]

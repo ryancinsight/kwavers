@@ -40,7 +40,6 @@ fn test_quantized_tensor_creation() {
     let quantizer = Quantizer::new(QuantizationScheme::Dynamic8Bit);
     let result = quantizer.quantize_tensor(&data, &shape);
 
-    assert!(result.is_ok());
     let quantized = result.unwrap();
     assert_eq!(quantized.len(), 4);
     assert!(quantized.scale > 0.0);

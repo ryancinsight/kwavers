@@ -47,10 +47,10 @@ pub(crate) fn trilinear_interpolate(image: &Array3<f64>, coords: [f64; 3], dims:
     let c111 = image[[x1, y1, z1]];
 
     // Interpolate along x
-    let c00 = c000 * (1.0 - xd) + c100 * xd;
-    let c01 = c001 * (1.0 - xd) + c101 * xd;
-    let c10 = c010 * (1.0 - xd) + c110 * xd;
-    let c11 = c011 * (1.0 - xd) + c111 * xd;
+    let c00 = c000.mul_add(1.0 - xd, c100 * xd);
+    let c01 = c001.mul_add(1.0 - xd, c101 * xd);
+    let c10 = c010.mul_add(1.0 - xd, c110 * xd);
+    let c11 = c011.mul_add(1.0 - xd, c111 * xd);
 
     // Interpolate along y
     let c0 = c00 * (1.0 - yd) + c10 * yd;
@@ -74,6 +74,7 @@ pub(crate) fn trilinear_interpolate(image: &Array3<f64>, coords: [f64; 3], dims:
 /// # Returns
 ///
 /// Resampled image on the target grid
+#[must_use] 
 pub fn resample_to_target_grid(
     source_image: &Array3<f64>,
     transform: &[f64; 16],

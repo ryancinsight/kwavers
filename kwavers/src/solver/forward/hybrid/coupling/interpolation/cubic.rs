@@ -8,6 +8,9 @@ impl InterpolationManager {
     /// Tricubic interpolation using Catmull-Rom splines.
     ///
     /// Reference: Keys (1981), "Cubic convolution interpolation for digital image processing"
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn cubic_spline_interpolation(
         &self,
         source_field: &Array3<f64>,
@@ -46,10 +49,7 @@ impl InterpolationManager {
         let cubic_basis = |t: f64, v0: f64, v1: f64, v2: f64, v3: f64| -> f64 {
             let t2 = t * t;
             let t3 = t2 * t;
-            0.5 * ((2.0 * v1)
-                + (-v0 + v2) * t
-                + (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2
-                + (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
+            0.5 * (3.0f64.mul_add(-v2, 3.0f64.mul_add(v1, -v0)) + v3).mul_add(t3, (4.0f64.mul_add(v2, 2.0f64.mul_add(v0, -(5.0 * v1))) - v3).mul_add(t2, 2.0f64.mul_add(v1, (-v0 + v2) * t)))
         };
 
         for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take(result.len()) {
@@ -112,6 +112,9 @@ impl InterpolationManager {
     ///
     /// Achieves machine precision for bandlimited signals.
     /// Reference: Press et al. (2007), "Numerical Recipes", Section 20.4
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn spectral_interpolation(
         &self,
         source_field: &Array3<f64>,
@@ -140,17 +143,15 @@ impl InterpolationManager {
     /// **Current**: Cubic spline provides C² continuity suitable for most cases.
     /// **Future**: Could analyze field smoothness and switch to linear/quintic as needed.
     /// Cubic spline balances accuracy (4th order) with computational cost (Akima 1970).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn adaptive_interpolation(
         &self,
         source_field: &Array3<f64>,
         source_coords: &[(f64, f64, f64)],
         target_coords: &[(f64, f64, f64)],
     ) -> KwaversResult<Array3<f64>> {
-        if let Some(_criteria) = &self.adaptive_criteria {
-            // Analysis infrastructure present, algorithm selection deferred to Sprint 127+
-            self.cubic_spline_interpolation(source_field, source_coords, target_coords)
-        } else {
-            self.cubic_spline_interpolation(source_field, source_coords, target_coords)
-        }
+        self.cubic_spline_interpolation(source_field, source_coords, target_coords)
     }
 }

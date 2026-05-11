@@ -13,6 +13,9 @@ use super::core::WaveletTransform;
 
 impl WaveletTransform {
     /// CDF biorthogonal wavelet forward transform.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn cdf_forward(
         &self,
         data: &mut Array3<f64>,
@@ -59,6 +62,9 @@ impl WaveletTransform {
     }
 
     /// CDF wavelet inverse transform.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn cdf_inverse(
         &self,
         coeffs: &mut Array3<f64>,

@@ -12,8 +12,7 @@ fn test_nonlinear_solver_creation() {
     let material = HyperelasticModel::neo_hookean_soft_tissue();
     let config = NonlinearSWEConfig::default();
 
-    let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material, config);
-    assert!(solver.is_ok());
+    let _solver = NonlinearElasticWaveSolver::new(&grid, &medium, material, config).unwrap();
 }
 
 #[test]
@@ -47,9 +46,7 @@ fn test_wave_propagation() {
     let mut initial = Array3::zeros((32, 16, 16));
     initial[[16, 8, 8]] = 1e-6;
 
-    let history = solver.propagate_waves(&initial);
-    assert!(history.is_ok());
-    let history = history.unwrap();
+    let history = solver.propagate_waves(&initial).unwrap();
     assert!(!history.is_empty());
     assert!(history.len() >= 2);
 }

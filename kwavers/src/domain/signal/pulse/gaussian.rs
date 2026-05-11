@@ -22,6 +22,12 @@ pub struct GaussianPulse {
 }
 
 impl GaussianPulse {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Center frequency must be positive`.
+    /// - Panics if assertion fails: `Pulse width too small`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(center_frequency: f64, center_time: f64, pulse_width: f64, amplitude: f64) -> Self {
         assert!(center_frequency > 0.0, "Center frequency must be positive");
@@ -38,6 +44,10 @@ impl GaussianPulse {
         }
     }
 
+    /// With q factor.
+    /// # Panics
+    /// - Panics if assertion fails: `Q factor must be positive`.
+    ///
     #[must_use]
     pub fn with_q_factor(mut self, q: f64) -> Self {
         assert!(q > 0.0, "Q factor must be positive");
@@ -61,7 +71,7 @@ impl GaussianPulse {
 impl Signal for GaussianPulse {
     fn amplitude(&self, t: f64) -> f64 {
         let envelope = self.envelope(t);
-        let carrier = (2.0 * PI * self.center_frequency * t + self.phase).sin();
+        let carrier = (2.0 * PI * self.center_frequency).mul_add(t, self.phase).sin();
         self.amplitude * envelope * carrier
     }
 

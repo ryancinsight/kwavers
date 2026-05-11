@@ -19,6 +19,9 @@ impl CouplingInterface {
     ///
     /// Computes the interface area from the overlap of the two domain extents
     /// and sets the normal perpendicular to the largest face.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(source_grid: &Grid, target_grid: &Grid) -> KwaversResult<Self> {
         // Domain extents
         let sx = source_grid.nx as f64 * source_grid.dx;

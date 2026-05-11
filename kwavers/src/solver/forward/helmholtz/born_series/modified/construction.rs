@@ -22,7 +22,10 @@ impl ModifiedBornSolver {
             diffusivity_field: Array3::zeros(shape),
         }
     }
-
+    /// Precompute viscoacoustic properties.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn precompute_viscoacoustic_properties<M: Medium>(
         &mut self,
         frequency: f64,

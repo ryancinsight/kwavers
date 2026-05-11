@@ -32,6 +32,10 @@ pub struct MultimodalityFusionManager {
 
 impl MultimodalityFusionManager {
     /// Create new fusion manager
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             sessions: HashMap::new(),
@@ -41,6 +45,9 @@ impl MultimodalityFusionManager {
     }
 
     /// Create new fusion session
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn create_session(&mut self, session_id: String) -> KwaversResult<()> {
         let session = MultimodalitySession {
             session_id: session_id.clone(),
@@ -55,6 +62,9 @@ impl MultimodalityFusionManager {
     }
 
     /// Load reference image into session
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn load_reference(&mut self, session_id: &str, image_data: ImageData) -> KwaversResult<()> {
         let session = self.sessions.get_mut(session_id).ok_or_else(|| {
             KwaversError::InvalidInput(format!("Session {} not found", session_id))
@@ -65,6 +75,9 @@ impl MultimodalityFusionManager {
     }
 
     /// Load floating image into session
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn load_floating(&mut self, session_id: &str, image_data: ImageData) -> KwaversResult<()> {
         let session = self.sessions.get_mut(session_id).ok_or_else(|| {
             KwaversError::InvalidInput(format!("Session {} not found", session_id))
@@ -75,6 +88,9 @@ impl MultimodalityFusionManager {
     }
 
     /// Register images in session
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn register(&mut self, session_id: &str) -> KwaversResult<()> {
         let session = self.sessions.get_mut(session_id).ok_or_else(|| {
             KwaversError::InvalidInput(format!("Session {} not found", session_id))
@@ -83,12 +99,12 @@ impl MultimodalityFusionManager {
         let reference = session
             .reference_image
             .as_ref()
-            .ok_or_else(|| KwaversError::InvalidInput("Reference image not loaded".to_string()))?;
+            .ok_or_else(|| KwaversError::InvalidInput("Reference image not loaded".to_owned()))?;
 
         let floating = session
             .floating_image
             .as_ref()
-            .ok_or_else(|| KwaversError::InvalidInput("Floating image not loaded".to_string()))?;
+            .ok_or_else(|| KwaversError::InvalidInput("Floating image not loaded".to_owned()))?;
 
         // Identity matrix [4x4] flat row major for initialization
         let initial_transform = [
@@ -118,6 +134,9 @@ impl MultimodalityFusionManager {
     }
 
     /// Perform fusion in session
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn fuse(&self, session_id: &str) -> KwaversResult<Array3<f64>> {
         let session = self.sessions.get(session_id).ok_or_else(|| {
             KwaversError::InvalidInput(format!("Session {} not found", session_id))
@@ -126,22 +145,23 @@ impl MultimodalityFusionManager {
         let reference = session
             .reference_image
             .as_ref()
-            .ok_or_else(|| KwaversError::InvalidInput("Reference image not loaded".to_string()))?;
+            .ok_or_else(|| KwaversError::InvalidInput("Reference image not loaded".to_owned()))?;
 
         let floating = session
             .floating_image
             .as_ref()
-            .ok_or_else(|| KwaversError::InvalidInput("Floating image not loaded".to_string()))?;
+            .ok_or_else(|| KwaversError::InvalidInput("Floating image not loaded".to_owned()))?;
 
         let transform = session
             .transformation
             .as_ref()
-            .ok_or_else(|| KwaversError::InvalidInput("Images not yet registered".to_string()))?;
+            .ok_or_else(|| KwaversError::InvalidInput("Images not yet registered".to_owned()))?;
 
         self.fusion_engine.fuse(reference, floating, transform)
     }
 
     /// Get session
+    #[must_use] 
     pub fn get_session(&self, session_id: &str) -> Option<&MultimodalitySession> {
         self.sessions.get(session_id)
     }
@@ -160,7 +180,8 @@ mod tests {
     #[test]
     fn test_multimodality_fusion_manager() {
         let mut manager = MultimodalityFusionManager::new();
-        assert!(manager.create_session("test_session".to_string()).is_ok());
-        assert!(manager.get_session("test_session").is_some());
+        manager.create_session("test_session".to_string()).unwrap();
+        let session = manager.get_session("test_session").unwrap();
+        assert_eq!(session.session_id, "test_session");
     }
 }

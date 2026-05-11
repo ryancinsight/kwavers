@@ -37,6 +37,7 @@ pub struct FiberSource {
 
 impl FiberSource {
     /// Create a new fiber optic source
+    #[must_use] 
     pub fn new(config: FiberConfig, position: (f64, f64, f64)) -> Self {
         Self { config, position }
     }
@@ -56,7 +57,7 @@ impl OpticalSource for FiberSource {
         let dx = x - self.position.0;
         let dy = y - self.position.1;
         let dz = z - self.position.2;
-        let r = (dx * dx + dy * dy + dz * dz).sqrt();
+        let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
         let radius = self.config.core_diameter / 2.0;
         (-r * r / (radius * radius)).exp()

@@ -38,6 +38,9 @@ impl FourierReconstructor {
     /// sensor data using the Fourier slice theorem, which states that
     /// the Fourier transform of a projection equals a slice through
     /// the Fourier transform of the object.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn reconstruct(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -72,6 +75,9 @@ impl FourierReconstructor {
     }
 
     /// Apply ramp filter (derivative in time domain)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_ramp_filter(&self, signal: Array1<f64>) -> KwaversResult<Array1<f64>> {
         let n = signal.len();
         let mut complex_signal = fft_1d_array(&signal);
@@ -94,6 +100,9 @@ impl FourierReconstructor {
     }
 
     /// Compute angular spectrum from filtered sensor data
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_angular_spectrum(
         &self,
         filtered_signal: &Array1<f64>,
@@ -130,6 +139,9 @@ impl FourierReconstructor {
     }
 
     /// Add angular spectrum to k-space representation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn add_to_k_space(
         &self,
         k_space: &mut Array3<Complex64>,
@@ -193,6 +205,9 @@ impl FourierReconstructor {
     }
 
     /// Inverse Fourier transform to get spatial image
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn inverse_fourier_transform(&self, k_space: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
         let fft = FFT_CACHE.get_or_create(Shape3D { nx, ny, nz });
@@ -201,7 +216,7 @@ impl FourierReconstructor {
         fft.inverse_into(k_space, &mut result, &mut scratch);
 
         // Apply positivity constraint (pressure should be non-negative)
-        result.mapv_inplace(|x| x.max(0.0));
+        result.par_mapv_inplace(|x| x.max(0.0));
 
         Ok(result)
     }

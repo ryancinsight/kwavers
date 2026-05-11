@@ -48,20 +48,24 @@ impl FieldPool {
     ///
     /// **Precondition**: $\text{capacity} > 0 \land \text{elements} > 0$
     /// **Postcondition**: $\forall i \in [0, \text{capacity}): \text{slot}_i \text{ is available}$
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(capacity: usize, elements_per_field: usize) -> KwaversResult<Self> {
         if capacity == 0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "capacity".to_string(),
+                parameter: "capacity".to_owned(),
                 value: 0.0,
-                reason: "Field pool requires positive capacity".to_string(),
+                reason: "Field pool requires positive capacity".to_owned(),
             }));
         }
 
         if elements_per_field == 0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "elements_per_field".to_string(),
+                parameter: "elements_per_field".to_owned(),
                 value: 0.0,
-                reason: "Field pool requires positive field size".to_string(),
+                reason: "Field pool requires positive field size".to_owned(),
             }));
         }
 
@@ -69,14 +73,14 @@ impl FieldPool {
         let total_bytes = capacity.checked_mul(field_stride).ok_or_else(|| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: capacity * field_stride,
-                reason: "Field pool size overflow".to_string(),
+                reason: "Field pool size overflow".to_owned(),
             })
         })?;
 
         let layout = Layout::from_size_align(total_bytes, CACHE_LINE_SIZE).map_err(|_| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: total_bytes,
-                reason: "Invalid layout for field pool".to_string(),
+                reason: "Invalid layout for field pool".to_owned(),
             })
         })?;
 
@@ -84,7 +88,7 @@ impl FieldPool {
         let memory = NonNull::new(memory).ok_or_else(|| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: total_bytes,
-                reason: "Failed to allocate field pool".to_string(),
+                reason: "Failed to allocate field pool".to_owned(),
             })
         })?;
 
@@ -229,6 +233,7 @@ impl<'a> FieldBufferGuard<'a> {
 
     /// Convert to 3D view
     #[inline]
+    #[must_use] 
     pub fn as_view3(&self, nx: usize, ny: usize, nz: usize) -> Option<ArrayView3<'_, f64>> {
         ArrayView3::from_shape((nx, ny, nz), self.data).ok()
     }

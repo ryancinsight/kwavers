@@ -20,6 +20,10 @@ pub struct TemperatureDependentThermal {
 }
 
 impl TemperatureDependentThermal {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         base_properties: ThermalPropertyData,
         reference_temperature: f64,
@@ -44,27 +48,29 @@ impl TemperatureDependentThermal {
 
     /// `k(T) = k₀[1 + κ₁(T − T₀) + κ₂(T − T₀)²]`
     #[inline]
+    #[must_use] 
     pub fn conductivity(&self, temperature: f64) -> f64 {
         let delta_t = temperature - self.reference_temperature;
-        let factor = 1.0
-            + self.conductivity_coeff_linear * delta_t
-            + self.conductivity_coeff_quadratic * delta_t * delta_t;
+        let factor = (self.conductivity_coeff_quadratic * delta_t).mul_add(delta_t, self.conductivity_coeff_linear.mul_add(delta_t, 1.0));
         self.base_properties.conductivity * factor
     }
 
     /// `c_p(T) = c₀[1 + c₁(T − T₀)]`
     #[inline]
+    #[must_use] 
     pub fn specific_heat(&self, temperature: f64) -> f64 {
         let delta_t = temperature - self.reference_temperature;
-        self.base_properties.specific_heat * (1.0 + self.specific_heat_coefficient * delta_t)
+        self.base_properties.specific_heat * self.specific_heat_coefficient.mul_add(delta_t, 1.0)
     }
 
     /// `α(T) = k(T) / (ρ × c_p(T))`
+    #[must_use] 
     pub fn thermal_diffusivity(&self, temperature: f64, density: f64) -> f64 {
         self.conductivity(temperature) / (density * self.specific_heat(temperature))
     }
 
     /// Water properties
+    #[must_use] 
     pub fn water() -> Self {
         Self {
             base_properties: ThermalPropertyData::water(),
@@ -76,6 +82,7 @@ impl TemperatureDependentThermal {
     }
 
     /// Soft tissue properties
+    #[must_use] 
     pub fn soft_tissue() -> Self {
         Self {
             base_properties: ThermalPropertyData::soft_tissue(),

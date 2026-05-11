@@ -41,6 +41,7 @@ pub struct SchwarzCoupling {
 
 impl SchwarzCoupling {
     /// Create a new Schwarz coupling with the given parameters.
+    #[must_use] 
     pub fn new(theta: f64, max_iter: usize, tolerance: f64) -> Self {
         Self {
             theta,
@@ -72,6 +73,9 @@ impl SchwarzCoupling {
     /// 3. Record L∞ interface residual.
     ///
     /// Returns the maximum residual across all pairs.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn schwarz_step(
         &mut self,
         coupler: &mut FieldCoupler,
@@ -79,7 +83,7 @@ impl SchwarzCoupling {
         dt: f64,
     ) -> KwaversResult<f64> {
         let domains: Vec<PhysicsDomain> = {
-            let mut v: Vec<PhysicsDomain> = solvers.keys().cloned().collect();
+            let mut v: Vec<PhysicsDomain> = solvers.keys().copied().collect();
             v.sort_by_key(|d| Self::domain_key(*d));
             v
         };
@@ -220,6 +224,9 @@ mod tests {
     /// For overlapping domains with δ/L ≥ 0.1, Schwarz converges with rate ρ ≤ 0.53.
     ///
     /// We verify the Schwarz step reduces the max residual toward zero.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_schwarz_convergence() {
         let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();

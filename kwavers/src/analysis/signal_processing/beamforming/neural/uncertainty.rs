@@ -34,6 +34,10 @@ impl UncertaintyEstimator {
     /// # Invariants
     ///
     /// - 0.0 ≤ dropout_rate ≤ 1.0
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
+    #[must_use] 
     pub fn new(dropout_rate: f64) -> Self {
         debug_assert!(
             (0.0..=1.0).contains(&dropout_rate),
@@ -44,6 +48,7 @@ impl UncertaintyEstimator {
     }
 
     /// Get the configured dropout rate.
+    #[must_use] 
     pub fn dropout_rate(&self) -> f64 {
         self.dropout_rate
     }
@@ -69,6 +74,9 @@ impl UncertaintyEstimator {
     /// σ(i,j,k) = √(1/N ∑(I_n - μ)²)
     /// ```
     /// where N is neighborhood size and μ is local mean.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn estimate(&self, image: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         let mut uncertainty = Array3::zeros(image.dim());
 

@@ -11,6 +11,9 @@ use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use std::f64::consts::PI;
 
 /// Update bubble temperature through adiabatic, conductive, latent, and radiative terms.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(crate) fn update_temperature(
     model: &KellerMiksisModel,
     state: &mut BubbleState,
@@ -46,7 +49,7 @@ pub(crate) fn update_temperature(
 
     if !(0.0..=50000.0).contains(&t_new) || t_new.is_nan() || t_new.is_infinite() {
         return Err(PhysicsError::InvalidParameter {
-            parameter: "bubble_temperature".to_string(),
+            parameter: "bubble_temperature".to_owned(),
             value: t_new,
             reason: format!(
                 "Temperature {} K is outside valid range (0 K < T < 50000 K)",

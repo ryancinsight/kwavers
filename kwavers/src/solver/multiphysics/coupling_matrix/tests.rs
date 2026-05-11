@@ -9,6 +9,9 @@ fn make_coupler(nx: usize) -> AcousticElasticCoupler {
 /// Coupling matrix antisymmetry: Cᵀ = −C
 ///
 /// Both coupling coefficients must equal −n₀² = −1 to machine precision.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_coupling_antisymmetry() {
     let coupler = make_coupler(4);
@@ -38,6 +41,10 @@ fn test_coupling_antisymmetry() {
 }
 
 /// Stability dt is below individual CFL limits for both sub-domains.
+/// # Panics
+/// - Panics if assertion fails: `dt = {:.3e} must be < fluid CFL limit {:.3e}`.
+/// - Panics if assertion fails: `dt = {:.3e} must be < solid CFL limit {:.3e}`.
+///
 #[test]
 fn test_stability_dt_below_cfl() {
     let dx = 0.1e-3_f64;
@@ -65,6 +72,9 @@ fn test_stability_dt_below_cfl() {
 }
 
 /// Traction balance: (σ + Δσ)·n̂ + p·n̂ = 0 at interface.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_traction_balance() {
     let nx = 4usize;
@@ -127,6 +137,9 @@ fn test_traction_balance() {
 }
 
 /// Energy conservation: zero solid acceleration must not change fluid kinetic energy.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_energy_conservation_cavity() {
     let nx = 4usize;

@@ -28,6 +28,9 @@ pub struct CloudDynamics {
 
 impl CloudDynamics {
     /// Create new cloud dynamics simulator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: CloudConfig) -> KwaversResult<Self> {
         let bubble_solver = BubbleDynamics::new();
 
@@ -41,6 +44,9 @@ impl CloudDynamics {
     }
 
     /// Initialize bubble cloud with random positions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn initialize_cloud(&mut self) -> KwaversResult<()> {
         self.bubbles.clear();
 
@@ -80,11 +86,17 @@ impl CloudDynamics {
     }
 
     /// Set incident acoustic field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_incident_field(&mut self, field: IncidentField) {
         self.incident_field = Some(field);
     }
 
     /// Simulate cloud dynamics
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn simulate(&mut self) -> KwaversResult<CloudResponse> {
         let n_steps = (self.config.duration / self.config.dt) as usize;
         let mut responses = Vec::new();
@@ -130,6 +142,9 @@ impl CloudDynamics {
     }
 
     /// Update individual bubble dynamics
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn update_bubbles(&mut self) -> KwaversResult<()> {
         if let Some(field) = &self.incident_field {
             let mut bubble_data = Vec::new();

@@ -7,12 +7,15 @@ use ndarray::Array1;
 /// Compute Gauss-Lobatto-Legendre (GLL) quadrature nodes and weights
 ///
 /// Returns (nodes, weights) for N points on [-1, 1]
+/// # Errors
+/// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+///
 pub fn gauss_lobatto_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1<f64>)> {
     if n < 2 {
         return Err(KwaversError::Config(ConfigError::InvalidValue {
-            parameter: "quadrature_points".to_string(),
+            parameter: "quadrature_points".to_owned(),
             value: n.to_string(),
-            constraint: ">= 2".to_string(),
+            constraint: ">= 2".to_owned(),
         }));
     }
 
@@ -30,13 +33,13 @@ pub fn gauss_lobatto_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1<
 
     for i in 1..=(n - 1) / 2 {
         // Initial guess (Chebyshev nodes)
-        let mut x = -((2.0 * std::f64::consts::PI * i as f64) / (2.0 * p as f64 + 1.0)).cos();
+        let mut x = -((2.0 * std::f64::consts::PI * i as f64) / 2.0f64.mul_add(p as f64, 1.0)).cos();
 
         // Newton iterations
         for _ in 0..100 {
             let (ln, dln) = legendre_poly_and_deriv(p, x);
             // P''_n
-            let ddln = (2.0 * x * dln - (p * (p + 1)) as f64 * ln) / (1.0 - x * x);
+            let ddln = (2.0 * x).mul_add(dln, -((p * (p + 1)) as f64 * ln)) / (1.0 - x * x);
 
             let delta = dln / ddln;
             x -= delta;
@@ -78,7 +81,7 @@ fn legendre_poly(n: usize, x: f64) -> f64 {
     let mut l_curr = x;
 
     for i in 1..n {
-        let l_next = ((2 * i + 1) as f64 * x * l_curr - i as f64 * l_prev) / ((i + 1) as f64);
+        let l_next = ((2 * i + 1) as f64 * x).mul_add(l_curr, -(i as f64 * l_prev)) / ((i + 1) as f64);
         l_prev = l_curr;
         l_curr = l_next;
     }
@@ -89,6 +92,6 @@ fn legendre_poly_and_deriv(n: usize, x: f64) -> (f64, f64) {
     let ln = legendre_poly(n, x);
     let l_prev = legendre_poly(n - 1, x);
 
-    let dln = (n as f64) * (l_prev - x * ln) / (1.0 - x * x);
+    let dln = (n as f64) * x.mul_add(-ln, l_prev) / x.mul_add(-x, 1.0);
     (ln, dln)
 }

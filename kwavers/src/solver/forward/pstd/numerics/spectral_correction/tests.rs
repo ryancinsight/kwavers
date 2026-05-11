@@ -60,6 +60,9 @@ fn test_phase_velocity_computation() {
 /// regression that surfaced as ~30% peak inflation in
 /// `pykwavers/examples/na_modelling_absorption_compare.py` before the
 /// kappa-inversion fix.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_treeby2010_kappa_equals_sinc() {
     // Use a 1-D grid (NY = NZ = 1) so kappa values are determined by k_x alone.

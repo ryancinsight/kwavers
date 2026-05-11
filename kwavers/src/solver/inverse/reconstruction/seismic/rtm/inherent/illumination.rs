@@ -18,6 +18,9 @@ use super::super::types::ReverseTimeMigration;
 
 impl ReverseTimeMigration {
     /// Accumulate `Σ_t S²(x,t)` into `self.source_illumination`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn update_source_illumination(
         &mut self,
         source_wavefield: &Array4<f64>,
@@ -28,7 +31,7 @@ impl ReverseTimeMigration {
             let src = source_wavefield.slice(s![t, .., .., ..]);
             Zip::from(&mut self.source_illumination)
                 .and(&src)
-                .for_each(|illum, &s| *illum += s * s);
+                .par_for_each(|illum, &s| *illum += s * s);
         }
 
         Ok(())

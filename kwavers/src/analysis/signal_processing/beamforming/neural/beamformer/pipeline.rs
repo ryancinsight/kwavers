@@ -8,6 +8,10 @@ use super::super::types::HybridBeamformingResult;
 use super::NeuralBeamformer;
 
 impl NeuralBeamformer {
+    /// Process.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process(
         &mut self,
         rf_data: &Array4<f32>,
@@ -32,7 +36,10 @@ impl NeuralBeamformer {
 
         Ok(result)
     }
-
+    /// Process neural only.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn process_neural_only(
         &self,
         rf_data: &Array4<f32>,
@@ -57,10 +64,13 @@ impl NeuralBeamformer {
             image: beamformed,
             uncertainty: Some(uncertainty),
             confidence: 1.0 - mean_uncertainty,
-            processing_mode: "NeuralOnly".to_string(),
+            processing_mode: "NeuralOnly".to_owned(),
         })
     }
-
+    /// Process hybrid.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn process_hybrid(
         &self,
         rf_data: &Array4<f32>,
@@ -86,10 +96,13 @@ impl NeuralBeamformer {
             image: constrained,
             uncertainty: Some(uncertainty),
             confidence: 0.9 - mean_uncertainty * 0.1,
-            processing_mode: "Hybrid".to_string(),
+            processing_mode: "Hybrid".to_owned(),
         })
     }
-
+    /// Process adaptive.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn process_adaptive(
         &self,
         rf_data: &Array4<f32>,
@@ -100,11 +113,11 @@ impl NeuralBeamformer {
 
         if signal_quality > quality_threshold {
             let mut result = self.process_neural_only(rf_data, steering_angles)?;
-            result.processing_mode = "Adaptive(Neural)".to_string();
+            result.processing_mode = "Adaptive(Neural)".to_owned();
             Ok(result)
         } else {
             let mut result = self.process_hybrid(rf_data, steering_angles)?;
-            result.processing_mode = "Adaptive(Hybrid)".to_string();
+            result.processing_mode = "Adaptive(Hybrid)".to_owned();
             Ok(result)
         }
     }

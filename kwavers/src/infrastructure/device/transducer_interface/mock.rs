@@ -33,14 +33,14 @@ impl MockTransducer {
             spec: TransducerSpecification {
                 model,
                 manufacturer,
-                serial_number: "MOCK-001".to_string(),
+                serial_number: "MOCK-001".to_owned(),
                 frequency_range: (0.5e6, 15.0e6),
                 max_power: 100.0,
                 num_elements: 64,
                 focal_length_mm: Some(50.0),
                 element_diameter_mm: 0.5,
-                calibration_date: "2026-01-30".to_string(),
-                calibration_expiry: "2027-01-30".to_string(),
+                calibration_date: "2026-01-30".to_owned(),
+                calibration_expiry: "2027-01-30".to_owned(),
             },
             state: TransducerState::Idle,
             current_frequency: 1.5e6,
@@ -64,9 +64,9 @@ impl TransducerHardware for MockTransducer {
         match command {
             HardwareCommand::SetPower(power) => {
                 if !(0.0..=100.0).contains(&power) {
-                    self.last_error = Some("Power must be 0-100%".to_string());
+                    self.last_error = Some("Power must be 0-100%".to_owned());
                     return Err(KwaversError::InvalidInput(
-                        "Invalid power range".to_string(),
+                        "Invalid power range".to_owned(),
                     ));
                 }
                 self.current_power_percent = power;
@@ -82,7 +82,7 @@ impl TransducerHardware for MockTransducer {
                         self.spec.frequency_range.0 / 1e6,
                         self.spec.frequency_range.1 / 1e6
                     ));
-                    return Err(KwaversError::InvalidInput("Invalid frequency".to_string()));
+                    return Err(KwaversError::InvalidInput("Invalid frequency".to_owned()));
                 }
                 self.current_frequency = freq;
                 Ok(HardwareResponse::Acknowledged)
@@ -114,7 +114,7 @@ impl TransducerHardware for MockTransducer {
                 Ok(HardwareResponse::Acknowledged)
             }
             _ => Err(KwaversError::InvalidInput(
-                "Unsupported command for mock device".to_string(),
+                "Unsupported command for mock device".to_owned(),
             )),
         }
     }
@@ -133,10 +133,10 @@ impl TransducerHardware for MockTransducer {
         Ok(DeviceTelemetry {
             timestamp: Instant::now(),
             measured_power_w: self.current_power_percent * self.spec.max_power / 100.0,
-            temperature_c: 25.0 + (self.current_power_percent / 100.0) * 10.0,
+            temperature_c: (self.current_power_percent / 100.0).mul_add(10.0, 25.0),
             acoustic_impedance: 1.5e6,
             reflection_coefficient: 0.05,
-            current_draw_a: 1.0 + (self.current_power_percent / 100.0) * 4.0,
+            current_draw_a: (self.current_power_percent / 100.0).mul_add(4.0, 1.0),
         })
     }
 

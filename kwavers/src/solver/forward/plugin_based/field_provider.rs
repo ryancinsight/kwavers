@@ -17,6 +17,9 @@ pub struct FieldProvider<'a> {
 
 impl<'a> FieldProvider<'a> {
     /// Create a new field provider with restricted access
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(registry: &'a mut FieldRegistry, allowed_fields: Vec<UnifiedFieldType>) -> Self {
         Self {
             registry,
@@ -25,6 +28,9 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Get a field view (zero-copy, read-only)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn get_field(
         &self,
         field_type: UnifiedFieldType,
@@ -34,6 +40,9 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Get a mutable field view (zero-copy)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn get_field_mut(
         &mut self,
         field_type: UnifiedFieldType,
@@ -43,12 +52,18 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Check if a field is available to this provider
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn has_field(&self, field_type: UnifiedFieldType) -> bool {
         self.allowed_fields.contains(&field_type) && self.registry.has_field(field_type)
     }
 
     /// Get list of fields available to this provider
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn available_fields(&self) -> Vec<UnifiedFieldType> {
         self.allowed_fields
@@ -59,6 +74,9 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Check if provider has permission to access a field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn check_permission(&self, field_type: UnifiedFieldType) -> Result<(), FieldError> {
         if !self.allowed_fields.contains(&field_type) {
             return Err(FieldError::NotRegistered(format!(

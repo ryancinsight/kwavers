@@ -9,7 +9,7 @@ fn test_model_creation() {
     let config = crate::solver::inverse::pinn::elastic_2d::Config::default();
     let device = Default::default();
     let model = ElasticPINN2D::<TestBackend>::new(&config, &device);
-    assert!(model.is_ok());
+    let _model = model.unwrap();
 }
 
 #[test]
@@ -52,14 +52,7 @@ fn test_inverse_problem_parameters() {
     let device = Default::default();
     let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
 
-    assert!(model.lambda.is_some());
-    assert!(model.mu.is_some());
-    assert!(model.rho.is_some());
-
     let (lambda_est, mu_est, rho_est) = model.estimated_parameters();
-    assert!(lambda_est.is_some());
-    assert!(mu_est.is_some());
-    assert!(rho_est.is_some());
 
     assert!((lambda_est.unwrap() - 1e9).abs() < 1e-3);
     assert!((mu_est.unwrap() - 5e8).abs() < 1e-3);

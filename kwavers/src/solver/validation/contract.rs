@@ -5,8 +5,8 @@
 //! They are intentionally lightweight so they can be reused by forward solvers,
 //! inverse solvers, and higher-level parity harnesses.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 /// Completion gate for a scientific module or workflow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,6 +108,7 @@ impl MemoryBudget {
     /// THEOREM: Initial Memory Budget
     /// At initialization, transient allocations are zero.
     /// Peak tracking begins from the first timestep.
+    #[must_use] 
     pub fn new(workspace_bytes: usize) -> Self {
         Self {
             workspace_bytes,

@@ -32,6 +32,9 @@ use crate::domain::imaging::ultrasound::hifu::HIFUTransducer;
 /// # References
 ///
 /// O'Neil (1949): Theory of focusing radiators
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn compute_pressure_field(
     transducer: &HIFUTransducer,
     grid: &Grid,
@@ -56,7 +59,7 @@ pub fn compute_pressure_field(
 
                 // Distance from geometric focus point (paraxial approximation)
                 let r =
-                    ((x - focus_x).powi(2) + (y - focus_y).powi(2) + (z - focus_z).powi(2)).sqrt();
+                    (z - focus_z).mul_add(z - focus_z, (y - focus_y).mul_add(y - focus_y, (x - focus_x).powi(2))).sqrt();
 
                 if r > 1e-6 {
                     // Focused ultrasound field: Gaussian beam profile approximation
@@ -86,6 +89,12 @@ pub fn compute_pressure_field(
 }
 
 /// Compute acoustic intensity field (W/m²)
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub fn compute_intensity_field(
     transducer: &HIFUTransducer,
     grid: &Grid,
@@ -139,6 +148,9 @@ impl ThermalDose {
     ///
     /// Uses Sapareto & Dewey (1984) formula: CEM43 = Σ R^(43-T) Δt
     /// where R = 2 for T < 43°C, R = 4 for T ≥ 43°C
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn update_cem43(&mut self) {
         if self.temperature_history.len() < 2 {
             return;
@@ -167,11 +179,13 @@ impl ThermalDose {
     }
 
     /// Get thermal dose at specific location
+    #[must_use] 
     pub fn dose_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self.cem43[[i, j, k]]
     }
 
     /// Check if ablation threshold reached (CEM43 > 240)
+    #[must_use] 
     pub fn ablation_threshold_reached(&self) -> Array3<bool> {
         self.cem43.mapv(|dose| dose > 240.0)
     }
@@ -268,7 +282,7 @@ mod tests {
 
         // Note: validate is now a method on plan, taking transducer reference.
         // Original validate used to take _grid and _medium but ignored them.
-        assert!(plan.validate(&transducer).is_ok());
+        plan.validate(&transducer).unwrap();
 
         Ok(())
     }

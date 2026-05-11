@@ -19,6 +19,10 @@ pub struct ConstantFrequency {
 }
 
 impl ConstantFrequency {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Frequency must be positive`.
+    ///
     #[must_use]
     pub fn new(value: f64) -> Self {
         assert!(value > 0.0, "Frequency must be positive");

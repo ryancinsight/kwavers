@@ -20,6 +20,9 @@ pub struct TreatmentPlanner {
 
 impl TreatmentPlanner {
     /// Create new treatment planner
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(brain_grid: &Grid, skull_ct_data: &Array3<f64>) -> KwaversResult<Self> {
         let aberration_corrector = crate::physics::transcranial::aberration_correction::TranscranialAberrationCorrection::new(brain_grid)?;
 
@@ -31,6 +34,9 @@ impl TreatmentPlanner {
     }
 
     /// Generate treatment plan for target volumes
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn generate_plan(
         &self,
         patient_id: &str,
@@ -63,7 +69,7 @@ impl TreatmentPlanner {
         let treatment_time = self.estimate_treatment_time(targets, &acoustic_field);
 
         Ok(TreatmentPlan {
-            patient_id: patient_id.to_string(),
+            patient_id: patient_id.to_owned(),
             targets: targets.to_vec(),
             skull_ct: self.skull_ct.clone(),
             transducer_setup,

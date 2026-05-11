@@ -26,7 +26,7 @@ pub fn tissue_harmonic_efficiency(
     std::f64::consts::E * kappa * f * (-kappa * f).exp()
 }
 
-/// Optimal fundamental frequency for maximum second-harmonic return at given depth [Hz].
+/// Optimal fundamental frequency for maximum second-harmonic return at given depth (Hz).
 ///
 /// ```text
 /// f_opt = [α₀(1 + 2^y) y F]^{−1/y}
@@ -37,7 +37,7 @@ pub fn tissue_harmonic_efficiency(
 pub fn optimal_harmonic_frequency(depth: f64, params: &NonlinearParameters) -> f64 {
     let y = params.attenuation_exponent;
     let alpha0_per_hz_y = params.attenuation_coeff / (1.0e6_f64).powf(y);
-    let c = alpha0_per_hz_y * (1.0 + 2.0_f64.powf(y)) * y * depth;
+    let c = alpha0_per_hz_y * (1.0 + y.exp2()) * y * depth;
 
     if c <= 0.0 {
         return 2.0e6;

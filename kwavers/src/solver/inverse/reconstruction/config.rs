@@ -86,6 +86,9 @@ pub enum InterpolationMethod {
 /// Base trait for all reconstruction methods
 pub trait Reconstructor {
     /// Perform reconstruction from sensor data
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn reconstruct(
         &self,
         sensor_data: &Array2<f64>, // [sensors x time_steps]

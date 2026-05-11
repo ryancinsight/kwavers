@@ -57,11 +57,17 @@ impl LaplacianOperator {
     }
 
     /// Create with default second-order accuracy
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn second_order(grid: &Grid) -> Self {
         Self::new(grid, LaplacianConfig::default())
     }
 
     /// Create with specified order
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_order(grid: &Grid, order: SpatialOrder) -> Self {
         Self::new(
             grid,
@@ -73,6 +79,9 @@ impl LaplacianOperator {
     }
 
     /// Compute Laplacian of a scalar field
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply(&self, field: ArrayView3<'_, f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let mut result = Array3::zeros((nx, ny, nz));
@@ -81,6 +90,9 @@ impl LaplacianOperator {
     }
 
     /// Compute Laplacian in-place (zero-copy when possible)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_mut(
         &self,
         input: ArrayView3<f64>,
@@ -122,16 +134,16 @@ impl LaplacianOperator {
     #[inline]
     fn apply_second_order_interior(&self, input: ArrayView3<f64>, mut output: ArrayViewMut3<f64>) {
         let (nx, ny, nz) = input.dim();
-        Zip::indexed(&mut output.slice_mut(s![1..nx - 1, 1..ny - 1, 1..nz - 1])).for_each(
+        Zip::indexed(&mut output.slice_mut(s![1..nx - 1, 1..ny - 1, 1..nz - 1])).par_for_each(
             |(i, j, k), out| {
                 let i = i + 1;
                 let j = j + 1;
                 let k = k + 1;
-                let d2_dx2 = (input[[i + 1, j, k]] - 2.0 * input[[i, j, k]] + input[[i - 1, j, k]])
+                let d2_dx2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i + 1, j, k]]) + input[[i - 1, j, k]])
                     * self.dx2_inv;
-                let d2_dy2 = (input[[i, j + 1, k]] - 2.0 * input[[i, j, k]] + input[[i, j - 1, k]])
+                let d2_dy2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j + 1, k]]) + input[[i, j - 1, k]])
                     * self.dy2_inv;
-                let d2_dz2 = (input[[i, j, k + 1]] - 2.0 * input[[i, j, k]] + input[[i, j, k - 1]])
+                let d2_dz2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, k + 1]]) + input[[i, j, k - 1]])
                     * self.dz2_inv;
                 *out = d2_dx2 + d2_dy2 + d2_dz2;
             },
@@ -161,7 +173,7 @@ impl LaplacianOperator {
                         d2_dz2 += coeff * (input[[i, j, k + offset]] + input[[i, j, k - offset]]);
                     }
                     output[[i, j, k]] =
-                        d2_dx2 * self.dx2_inv + d2_dy2 * self.dy2_inv + d2_dz2 * self.dz2_inv;
+                        d2_dz2.mul_add(self.dz2_inv, d2_dx2.mul_add(self.dx2_inv, d2_dy2 * self.dy2_inv));
                 }
             }
         }
@@ -176,10 +188,10 @@ impl LaplacianOperator {
         match self.config.boundary {
             BoundaryCondition::Dirichlet => {}
             BoundaryCondition::Neumann => {
-                self.apply_neumann_boundaries(input, output.view_mut(), radius)
+                self.apply_neumann_boundaries(input, output.view_mut(), radius);
             }
             BoundaryCondition::Periodic => {
-                self.apply_periodic_boundaries(input, output.view_mut(), radius)
+                self.apply_periodic_boundaries(input, output.view_mut(), radius);
             }
         }
     }
@@ -195,14 +207,14 @@ impl LaplacianOperator {
             for j in 0..ny {
                 for i in 0..radius.min(nx) {
                     if i < nx - 2 {
-                        output[[i, j, k]] = (input[[i, j, k]] - 2.0 * input[[i + 1, j, k]]
+                        output[[i, j, k]] = (2.0f64.mul_add(-input[[i + 1, j, k]], input[[i, j, k]])
                             + input[[i + 2, j, k]])
                             * self.dx2_inv;
                     }
                 }
                 for i in (nx - radius)..nx {
                     if i >= 2 {
-                        output[[i, j, k]] = (input[[i, j, k]] - 2.0 * input[[i - 1, j, k]]
+                        output[[i, j, k]] = (2.0f64.mul_add(-input[[i - 1, j, k]], input[[i, j, k]])
                             + input[[i - 2, j, k]])
                             * self.dx2_inv;
                     }
@@ -228,13 +240,7 @@ impl LaplacianOperator {
                     let jp = if j == ny - 1 { 0 } else { j + 1 };
                     let km = if k == 0 { nz - 1 } else { k - 1 };
                     let kp = if k == nz - 1 { 0 } else { k + 1 };
-                    output[[i, j, k]] = (input[[im, j, k]] - 2.0 * input[[i, j, k]]
-                        + input[[ip, j, k]])
-                        * self.dx2_inv
-                        + (input[[i, jm, k]] - 2.0 * input[[i, j, k]] + input[[i, jp, k]])
-                            * self.dy2_inv
-                        + (input[[i, j, km]] - 2.0 * input[[i, j, k]] + input[[i, j, kp]])
-                            * self.dz2_inv;
+                    output[[i, j, k]] = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, km]]) + input[[i, j, kp]]).mul_add(self.dz2_inv, (2.0f64.mul_add(-input[[i, j, k]], input[[im, j, k]]) + input[[ip, j, k]]).mul_add(self.dx2_inv, (2.0f64.mul_add(-input[[i, j, k]], input[[i, jm, k]]) + input[[i, jp, k]]) * self.dy2_inv));
                 }
             }
         }
@@ -242,6 +248,9 @@ impl LaplacianOperator {
 }
 
 /// Compute Laplacian with specified order
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn laplacian(
     field: ArrayView3<f64>,
     grid: &Grid,

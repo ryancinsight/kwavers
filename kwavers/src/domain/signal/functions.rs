@@ -10,6 +10,9 @@ use rand_distr::{Distribution, Normal};
 use std::f64::consts::PI;
 
 /// Sample a signal at evenly spaced time points starting at `t0`.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn sample_signal(signal: &dyn Signal, dt: f64, n: usize, t0: f64) -> KwaversResult<Vec<f64>> {
     if !dt.is_finite() || dt <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
@@ -23,7 +26,7 @@ pub fn sample_signal(signal: &dyn Signal, dt: f64, n: usize, t0: f64) -> Kwavers
     }
 
     Ok((0..n)
-        .map(|i| signal.amplitude(t0 + i as f64 * dt))
+        .map(|i| signal.amplitude((i as f64).mul_add(dt, t0)))
         .collect())
 }
 
@@ -102,7 +105,7 @@ pub(super) fn k_wave_gaussian_burst_window(n: usize) -> Vec<f64> {
 
     (0..n)
         .map(|i| {
-            let x = -3.0 + i as f64 * step;
+            let x = (i as f64).mul_add(step, -3.0);
             (-0.5 * x * x).exp() * taper[i]
         })
         .collect()
@@ -116,6 +119,9 @@ pub(super) fn k_wave_gaussian_burst_window(n: usize) -> Vec<f64> {
 ///
 /// ## Reference
 /// `external/k-wave-python/kwave/utils/signals.py::tone_burst`
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn tone_burst_series(
     sample_rate_hz: f64,
     signal_freq_hz: f64,
@@ -155,7 +161,7 @@ pub fn tone_burst_series(
     let burst_samples = tone_burst_sample_count(sample_rate_hz, signal_freq_hz, num_cycles);
     if burst_samples == 0 {
         return Err(KwaversError::InvalidInput(
-            "tone burst has zero sample count".to_string(),
+            "tone burst has zero sample count".to_owned(),
         ));
     }
 
@@ -176,13 +182,16 @@ pub fn tone_burst_series(
     let mut out = vec![0.0; out_len];
     for i in 0..burst_samples {
         let t = i as f64 * dt;
-        let carrier = (2.0 * PI * signal_freq_hz * t + phase).sin();
+        let carrier = (2.0 * PI * signal_freq_hz).mul_add(t, phase).sin();
         out[signal_offset + i] = amplitude * win[i] * carrier;
     }
     Ok(out)
 }
 
 /// Generate a continuous-wave sinusoidal signal.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn create_cw_signal(
     t: &[f64],
     frequency_hz: f64,
@@ -206,16 +215,20 @@ pub fn create_cw_signal(
     }
     if t.iter().any(|&x| !x.is_finite()) {
         return Err(KwaversError::InvalidInput(
-            "time vector contains non-finite values".to_string(),
+            "time vector contains non-finite values".to_owned(),
         ));
     }
 
     Ok(t.iter()
-        .map(|&ti| amplitude * (2.0 * PI * frequency_hz * ti + phase).sin())
+        .map(|&ti| amplitude * (2.0 * PI * frequency_hz).mul_add(ti, phase).sin())
         .collect())
 }
 
 /// Generate multiple continuous-wave signals with broadcasting of amplitude and phase.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn create_cw_signals(
     t: &[f64],
     frequency_hz: f64,
@@ -224,7 +237,7 @@ pub fn create_cw_signals(
 ) -> KwaversResult<Array2<f64>> {
     if amplitudes.is_empty() || phases.is_empty() {
         return Err(KwaversError::InvalidInput(
-            "amplitudes and phases must be non-empty".to_string(),
+            "amplitudes and phases must be non-empty".to_owned(),
         ));
     }
 
@@ -261,6 +274,10 @@ pub fn create_cw_signals(
 }
 
 /// Add Gaussian noise to a signal at a target SNR (dB).
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn add_noise(signal: &[f64], snr_db: f64, seed: Option<u64>) -> KwaversResult<Vec<f64>> {
     if signal.is_empty() {
         return Ok(Vec::new());
@@ -275,14 +292,14 @@ pub fn add_noise(signal: &[f64], snr_db: f64, seed: Option<u64>) -> KwaversResul
     }
     if signal.iter().any(|&x| !x.is_finite()) {
         return Err(KwaversError::InvalidInput(
-            "signal contains non-finite values".to_string(),
+            "signal contains non-finite values".to_owned(),
         ));
     }
 
     let signal_power = signal.iter().map(|&x| x * x).sum::<f64>() / signal.len() as f64;
     if signal_power == 0.0 {
         return Err(KwaversError::InvalidInput(
-            "cannot add noise to zero-power signal".to_string(),
+            "cannot add noise to zero-power signal".to_owned(),
         ));
     }
 

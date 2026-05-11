@@ -32,6 +32,9 @@ use super::super::types::elasticity_map_from_speed;
 /// # References
 ///
 /// - Bercoff et al. (2004): "Supersonic shear imaging"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn time_of_flight_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
@@ -77,7 +80,7 @@ pub(super) fn time_of_flight_inversion(
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
                     let distance =
-                        ((x - push_x).powi(2) + (y - push_y).powi(2) + (z - push_z).powi(2)).sqrt();
+                        (z - push_z).mul_add(z - push_z, (y - push_y).mul_add(y - push_y, (x - push_x).powi(2))).sqrt();
 
                     if distance > 1e-6 {
                         // Estimate arrival time based on displacement amplitude

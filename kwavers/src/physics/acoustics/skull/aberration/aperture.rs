@@ -12,6 +12,9 @@ impl AberrationCorrection<'_> {
     ///
     /// Returns `Phi(x,y) = Phi(x,y,z_max)`, the quantity compared against
     /// CT-predicted corrections in adaptive focusing experiments.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn aperture_phase_map(&self, frequency: f64) -> KwaversResult<Array2<f64>> {
         let nx = self.grid.nx;
         let ny = self.grid.ny;

@@ -18,7 +18,7 @@ pub fn calculate_bremsstrahlung_emission(
         .and(temperature_field)
         .and(electron_density_field)
         .and(ion_density_field)
-        .for_each(|out, &temp, &n_electron, &n_ion| {
+        .par_for_each(|out, &temp, &n_electron, &n_ion| {
             if n_electron > 0.0 && n_ion > 0.0 && temp > 0.0 {
                 *out = model.total_power(temp, n_electron, n_ion, 1.0);
             }

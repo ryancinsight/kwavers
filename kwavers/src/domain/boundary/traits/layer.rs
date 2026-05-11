@@ -24,6 +24,7 @@ impl BoundaryLayer {
     ///
     /// # Panics
     /// Panics if `end <= start`.
+    #[must_use] 
     pub fn new(start: usize, end: usize, direction: usize, is_max_side: bool) -> Self {
         assert!(end > start, "Invalid boundary layer: end <= start");
         Self {
@@ -37,6 +38,7 @@ impl BoundaryLayer {
 
     /// Return `true` if `index` falls inside this layer.
     #[inline]
+    #[must_use] 
     pub fn contains(&self, index: usize) -> bool {
         index >= self.start && index < self.end
     }
@@ -46,6 +48,7 @@ impl BoundaryLayer {
     /// 0 = at the outer (domain) edge (maximum absorption).
     /// 1 = at the inner (domain interior) edge (no absorption).
     #[inline]
+    #[must_use] 
     pub fn normalized_distance(&self, index: usize) -> f64 {
         if !self.contains(index) {
             return 0.0;
@@ -64,6 +67,7 @@ impl BoundaryLayer {
     ///
     /// `σ(d) = σ_max · (1 − d)^order` where `d ∈ [0, 1]` is the normalized
     /// distance (1 = interior, 0 = edge).
+    #[must_use] 
     pub fn polynomial_profile(&self, index: usize, order: u32, sigma_max: f64) -> f64 {
         let d = self.normalized_distance(index);
         sigma_max * (1.0 - d).powi(order as i32)
@@ -112,6 +116,7 @@ impl BoundaryLayerManager {
     }
 
     /// Return `true` if any layer covers any of the given `indices`.
+    #[must_use] 
     pub fn contains(&self, indices: [usize; 3]) -> bool {
         self.layers.iter().any(|layer| {
             layer.direction == 0 && layer.contains(indices[0])

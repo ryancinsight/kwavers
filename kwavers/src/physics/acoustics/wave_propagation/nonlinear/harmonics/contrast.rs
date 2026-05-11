@@ -1,4 +1,4 @@
-/// Contrast agent second-harmonic response [Pa].
+/// Contrast agent second-harmonic response (Pa).
 ///
 /// ## Model
 /// Near resonance a microbubble acts as a weakly nonlinear oscillator whose
@@ -20,6 +20,6 @@ pub fn contrast_harmonic_response(pressure: f64, frequency: f64, bubble_resonanc
     const BUBBLE_NONLINEARITY_SCALE: f64 = 1e-6;
 
     let resonance_enhancement =
-        1.0 / ((1.0 - omega_ratio.powi(2)).powi(2) + DAMPING.powi(2) * omega_ratio.powi(2)).sqrt();
+        1.0 / omega_ratio.mul_add(-omega_ratio, 1.0).mul_add(omega_ratio.mul_add(-omega_ratio, 1.0), DAMPING.powi(2) * omega_ratio.powi(2)).sqrt();
     BUBBLE_NONLINEARITY_SCALE * pressure.powi(2) * resonance_enhancement
 }

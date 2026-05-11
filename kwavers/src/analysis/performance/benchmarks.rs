@@ -14,6 +14,7 @@ pub struct ProductionBenchmarks {
 }
 
 impl ProductionBenchmarks {
+    #[must_use] 
     pub fn new(grid_size: usize, iterations: usize) -> Self {
         Self {
             grid_size,
@@ -23,6 +24,7 @@ impl ProductionBenchmarks {
 
     /// Benchmark FDTD solver performance against SRS requirement
     /// Target: >1M grid updates per second per core
+    #[must_use] 
     pub fn benchmark_fdtd_throughput(&self) -> BenchmarkResult {
         let start = Instant::now();
 
@@ -38,10 +40,10 @@ impl ProductionBenchmarks {
         let updates_per_second = total_updates as f64 / duration.as_secs_f64();
 
         BenchmarkResult {
-            name: "FDTD Throughput".to_string(),
+            name: "FDTD Throughput".to_owned(),
             value: updates_per_second,
             target: 1_000_000.0,
-            unit: "updates/second".to_string(),
+            unit: "updates/second".to_owned(),
             passed: updates_per_second >= 1_000_000.0,
             duration,
         }
@@ -49,6 +51,7 @@ impl ProductionBenchmarks {
 
     /// Benchmark memory usage against SRS NFR-003
     /// Target: <2GB RAM for typical simulations (500³ grid)
+    #[must_use] 
     pub fn benchmark_memory_usage(&self) -> BenchmarkResult {
         let start = Instant::now();
 
@@ -59,16 +62,17 @@ impl ProductionBenchmarks {
         let duration = start.elapsed();
 
         BenchmarkResult {
-            name: "Memory Usage".to_string(),
+            name: "Memory Usage".to_owned(),
             value: memory_gb,
             target: 2.0,
-            unit: "GB".to_string(),
+            unit: "GB".to_owned(),
             passed: memory_gb <= 2.0,
             duration,
         }
     }
 
     /// Benchmark safe vectorization performance
+    #[must_use] 
     pub fn benchmark_vectorization(&self) -> BenchmarkResult {
         use ndarray::Array3;
 
@@ -86,16 +90,17 @@ impl ProductionBenchmarks {
         let operations_per_second = (10 * a.len()) as f64 / duration.as_secs_f64();
 
         BenchmarkResult {
-            name: "Safe Vectorization".to_string(),
+            name: "Safe Vectorization".to_owned(),
             value: operations_per_second,
             target: 10_000_000.0, // 10M operations/second target
-            unit: "ops/second".to_string(),
+            unit: "ops/second".to_owned(),
             passed: operations_per_second >= 10_000_000.0,
             duration,
         }
     }
 
     /// Run all production benchmarks
+    #[must_use] 
     pub fn run_all(&self) -> Vec<BenchmarkResult> {
         vec![
             self.benchmark_fdtd_throughput(),
@@ -116,6 +121,7 @@ pub struct BenchmarkResult {
 }
 
 impl BenchmarkResult {
+    #[must_use] 
     pub fn report(&self) -> String {
         let status = if self.passed { "PASS" } else { "FAIL" };
         format!(
@@ -132,6 +138,7 @@ impl BenchmarkResult {
 }
 
 /// Generate production benchmark report
+#[must_use] 
 pub fn run_production_benchmarks() -> String {
     let benchmarks = ProductionBenchmarks::new(100, 1000); // 100³ grid, 1000 iterations
     let results = benchmarks.run_all();

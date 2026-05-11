@@ -31,8 +31,11 @@
 //! - `TrainingHistory` - Training logs and convergence analysis
 
 pub mod beamforming_trainer;
+pub mod inference;
+pub mod models;
 pub mod physics_informed_loss;
 pub mod training;
+pub mod types;
 pub mod uncertainty;
 
 pub use beamforming_trainer::BeamformingTrainer;

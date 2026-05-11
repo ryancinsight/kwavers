@@ -2,17 +2,12 @@
 //!
 //! This module contains the core `NonlinearWave` struct and its basic implementation.
 
-use crate::core::constants::numerical::{
-    CHUNKED_PROCESSING_THRESHOLD, CHUNK_SIZE_LARGE, CHUNK_SIZE_MEDIUM, CHUNK_SIZE_SMALL,
-    LARGE_GRID_THRESHOLD, MEDIUM_GRID_THRESHOLD, PRESSURE_LIMIT,
-};
+use crate::core::constants::numerical::PRESSURE_LIMIT;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 use std::f64;
-
-use super::multi_frequency::MultiFrequencyConfig;
 
 /// Represents a nonlinear wave model solver.
 ///
@@ -65,10 +60,6 @@ pub struct NonlinearWave {
     // Physical model settings
     /// Scaling factor for the nonlinearity term, allowing adjustment for strong nonlinear effects.
     pub(crate) nonlinearity_scaling: f64,
-    /// Flag to enable or disable adaptive time-stepping for potentially more stable simulations.
-    #[allow(dead_code)]
-    pub(crate) use_adaptive_timestep: bool,
-
     // Precomputed arrays
     /// Precomputed k-squared values (square of wavenumber magnitudes) for the grid, used to speed up calculations.
     pub(crate) k_squared: Option<Array3<f64>>,
@@ -83,19 +74,6 @@ pub struct NonlinearWave {
     /// Flag to enable or disable clamping of pressure gradients to `max_gradient`.
     pub(crate) clamp_gradients: bool,
 
-    // Iterator optimization settings
-    /// Chunk size for cache-friendly processing
-    #[allow(dead_code)]
-    pub(crate) chunk_size: usize,
-    /// Whether to use chunked processing for large grids
-    #[allow(dead_code)]
-    pub(crate) use_chunked_processing: bool,
-
-    // Multi-frequency simulation support
-    /// Configuration for multi-frequency analysis
-    #[allow(dead_code)]
-    pub(crate) multi_freq_config: Option<MultiFrequencyConfig>,
-
     // Frequency-dependent physics
     /// Source frequency for frequency-dependent absorption and dispersion \[Hz\]
     pub(crate) source_frequency: f64,
@@ -107,13 +85,6 @@ pub struct NonlinearWave {
     // Numerical scheme parameters
     /// Time step size for the simulation \[s\]
     pub(crate) dt: f64,
-    /// Spatial step sizes \[m\]
-    #[allow(dead_code)]
-    pub(crate) dx: f64,
-    #[allow(dead_code)]
-    pub(crate) dy: f64,
-    #[allow(dead_code)]
-    pub(crate) dz: f64,
 }
 
 impl NonlinearWave {
@@ -127,17 +98,7 @@ impl NonlinearWave {
     /// # Returns
     ///
     /// A new `NonlinearWave` instance with sensible defaults
-    pub fn new(grid: &Grid, dt: f64) -> Self {
-        let chunk_size = if grid.nx * grid.ny * grid.nz > LARGE_GRID_THRESHOLD {
-            CHUNK_SIZE_LARGE
-        } else if grid.nx * grid.ny * grid.nz > MEDIUM_GRID_THRESHOLD {
-            CHUNK_SIZE_MEDIUM
-        } else {
-            CHUNK_SIZE_SMALL
-        };
-
-        let use_chunked_processing = grid.nx * grid.ny * grid.nz > CHUNKED_PROCESSING_THRESHOLD;
-
+    pub fn new(_grid: &Grid, dt: f64) -> Self {
         Self {
             // Performance metrics
             nonlinear_time: 0.0,
@@ -148,35 +109,24 @@ impl NonlinearWave {
 
             // Physical model settings
             nonlinearity_scaling: 1.0,
-            use_adaptive_timestep: false,
 
             // Precomputed arrays
             k_squared: None,
 
             // Stability parameters
             max_pressure: PRESSURE_LIMIT,
-            stability_threshold: 0.5, // Default CFL stability threshold
-            cfl_safety_factor: 0.9,   // Default CFL safety factor
+            stability_threshold: 0.5,
+            cfl_safety_factor: 0.9,
             clamp_gradients: false,
 
-            // Iterator optimization
-            chunk_size,
-            use_chunked_processing,
-
-            // Multi-frequency support
-            multi_freq_config: None,
-
             // Frequency-dependent physics
-            source_frequency: 1e6, // Default 1 MHz
+            source_frequency: 1e6,
 
             // Performance caches
-            max_sound_speed: 1500.0, // Default water sound speed
+            max_sound_speed: 1500.0,
 
             // Numerical scheme
             dt,
-            dx: grid.dx,
-            dy: grid.dy,
-            dz: grid.dz,
         }
     }
 
@@ -184,6 +134,11 @@ impl NonlinearWave {
     ///
     /// This method calculates and stores the square of the wavenumber magnitudes
     /// for each point in the k-space grid, which speeds up subsequent calculations.
+    /// # Panics
+    /// - Panics if `kx contiguous`.
+    /// - Panics if `ky contiguous`.
+    /// - Panics if `kz contiguous`.
+    ///
     pub fn precompute_k_squared(&mut self, grid: &Grid) {
         let kx = grid.compute_kx();
         let ky = grid.compute_ky();
@@ -191,9 +146,11 @@ impl NonlinearWave {
 
         let mut k_squared = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
-        // Use iterators for better performance
-        k_squared.indexed_iter_mut().for_each(|((i, j, k), val)| {
-            *val = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
+        let kx_s = kx.as_slice().expect("kx contiguous");
+        let ky_s = ky.as_slice().expect("ky contiguous");
+        let kz_s = kz.as_slice().expect("kz contiguous");
+        Zip::indexed(&mut k_squared).par_for_each(|(i, j, k), val| {
+            *val = kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
         });
 
         self.k_squared = Some(k_squared);

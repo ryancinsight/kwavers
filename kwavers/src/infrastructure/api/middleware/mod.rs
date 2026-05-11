@@ -21,6 +21,9 @@ pub use metrics::MetricsCollector;
 mod tests;
 
 /// Authentication middleware
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub async fn auth_middleware(
     State(auth_middleware): State<AuthMiddleware>,
     mut request: Request,

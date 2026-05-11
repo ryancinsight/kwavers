@@ -9,18 +9,21 @@ pub struct SourceValidationCase {
 }
 
 /// Validate a thermoelastic source realization against the canonical relation.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn validate_source_generation(
     scenario: &PhotoacousticScenario,
     initial_pressure: &InitialPressure,
 ) -> KwaversResult<()> {
     if initial_pressure.max_pressure <= 0.0 {
         return Err(KwaversError::InvalidInput(
-            "initial pressure must contain positive deposited energy".to_string(),
+            "initial pressure must contain positive deposited energy".to_owned(),
         ));
     }
     if scenario.config.pulse_duration_s <= 0.0 {
         return Err(KwaversError::InvalidInput(
-            "pulse duration must be positive".to_string(),
+            "pulse duration must be positive".to_owned(),
         ));
     }
     Ok(())

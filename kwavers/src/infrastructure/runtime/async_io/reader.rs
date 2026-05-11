@@ -13,6 +13,10 @@ pub struct AsyncFileReader {
 }
 
 impl AsyncFileReader {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new<P: AsRef<Path>>(path: P) -> KwaversResult<Self> {
         Ok(Self {
             path: path.as_ref().to_path_buf(),
@@ -20,7 +24,16 @@ impl AsyncFileReader {
     }
 
     /// Read a 3D array of `f64` values.
-    pub async fn read_array3_f64(&self) -> KwaversResult<Array3<f64>> {
+    ///
+    /// Reads the wire format written by [`AsyncFileWriter::write_array3`]:
+    /// 24-byte little-endian dimension header followed by `f64` payload.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    pub async fn read_array3(&self) -> KwaversResult<Array3<f64>> {
         let mut file = File::open(&self.path).await.map_err(KwaversError::Io)?;
 
         let mut dim_buf = [0u8; 24];

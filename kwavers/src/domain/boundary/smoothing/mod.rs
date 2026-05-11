@@ -95,6 +95,7 @@ pub struct BoundarySmoothing {
 
 impl BoundarySmoothing {
     /// Create a new boundary smoothing processor
+    #[must_use] 
     pub fn new(config: BoundarySmoothingConfig) -> Self {
         Self { config }
     }
@@ -109,6 +110,9 @@ impl BoundarySmoothing {
     /// # Returns
     ///
     /// Smoothed property field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn smooth(
         &self,
         property: &Array3<f64>,
@@ -155,10 +159,7 @@ mod tests {
         let property = Array3::from_elem((10, 10, 10), 1540.0);
         let geometry = Array3::from_elem((10, 10, 10), 1.0);
 
-        let result = smoother.smooth(&property, &geometry);
-        assert!(result.is_ok());
-
-        let smoothed = result.unwrap();
+        let smoothed = smoother.smooth(&property, &geometry).unwrap();
         assert_eq!(smoothed, property);
     }
 }

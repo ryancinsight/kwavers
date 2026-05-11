@@ -7,6 +7,9 @@ use super::BurnDasBeamformer;
 /// CPU convenience function for Burn-based beamforming
 ///
 /// Uses NdArray backend for CPU-only operation without GPU dependencies.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn beamform_cpu(
     rf_data: &Array3<f64>,
     sensor_positions: &ndarray::Array2<f64>,

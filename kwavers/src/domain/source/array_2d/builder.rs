@@ -129,7 +129,7 @@ impl TransducerArray2DBuilder {
         self
     }
 
-    /// Set steering angle [degrees]
+    /// Set steering angle (degrees)
     #[must_use]
     pub fn with_steering(mut self, angle: f64) -> Self {
         self.steering_angle = angle;
@@ -160,7 +160,7 @@ impl TransducerArray2DBuilder {
     ///
     /// # Arguments
     ///
-    /// * `sound_speed` - Speed of sound in medium [m/s]
+    /// * `sound_speed` - Speed of sound in medium (m/s)
     ///
     /// # Returns
     ///
@@ -204,6 +204,9 @@ impl TransducerArray2DBuilder {
     /// Build with explicit frequency
     ///
     /// Use this when you need precise frequency control
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn build_with_frequency(
         self,
         sound_speed: f64,

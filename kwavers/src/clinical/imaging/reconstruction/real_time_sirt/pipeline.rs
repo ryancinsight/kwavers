@@ -12,7 +12,7 @@
 //! Two forward-projection models are selected by `RealTimeSirtConfig::transducer_geometry`:
 //! - `None`  — legacy column-sum: `A[s,(i,j,k)] = 1` iff `s = i·ny + j`
 //! - `Some`  — acoustic ray-tracing: `A[s,v] = exp(−2αf_c r) / r`
-//!   Row normalisation `D_R[s] = 1/‖A_row_s‖²` (Dines & Kak 1979, §III).
+//!   Row normalisation `D_R(s) = 1/‖A_row_s‖²` (Dines & Kak 1979, §III).
 
 use super::config::RealTimeSirtConfig;
 use super::types::{FrameQuality, ReconstructionFrame};
@@ -35,6 +35,7 @@ pub struct RealTimeSirtPipeline {
 
 impl RealTimeSirtPipeline {
     /// Create a new streaming SIRT pipeline.
+    #[must_use] 
     pub fn new(config: RealTimeSirtConfig) -> Self {
         Self {
             config,
@@ -46,6 +47,12 @@ impl RealTimeSirtPipeline {
     }
 
     /// Process one RF measurement frame and return a reconstructed image.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn process_frame(
         &mut self,
         rf_data: &Array1<f64>,
@@ -93,10 +100,10 @@ impl RealTimeSirtPipeline {
                         let dx2 = (xv - xs) * (xv - xs);
                         for j in 0..ny {
                             let yv = j as f64 * dy;
-                            let dxy2 = dx2 + yv * yv;
+                            let dxy2 = yv.mul_add(yv, dx2);
                             for k in 0..nz {
                                 let zv = k as f64 * dz;
-                                let r = (dxy2 + (zv - zs_elem) * (zv - zs_elem)).sqrt().max(1e-6);
+                                let r = (zv - zs_elem).mul_add(zv - zs_elem, dxy2).sqrt().max(1e-6);
                                 let w = (-2.0 * alpha * f_c * r).exp() / r;
                                 sq += w * w;
                             }
@@ -191,12 +198,12 @@ impl RealTimeSirtPipeline {
 
     fn validate_input(rf_data: &Array1<f64>) -> KwaversResult<()> {
         if rf_data.is_empty() {
-            return Err(KwaversError::InvalidInput("Empty RF data".to_string()));
+            return Err(KwaversError::InvalidInput("Empty RF data".to_owned()));
         }
-        for &val in rf_data.iter() {
+        for &val in rf_data {
             if !val.is_finite() {
                 return Err(KwaversError::InvalidInput(
-                    "RF data contains NaN or Inf".to_string(),
+                    "RF data contains NaN or Inf".to_owned(),
                 ));
             }
         }
@@ -213,6 +220,9 @@ impl RealTimeSirtPipeline {
     }
 
     /// Separable 3-point Gaussian-weighted smoothing (σ in grid points).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_smoothing(image: &Array3<f64>, sigma: f64) -> KwaversResult<Array3<f64>> {
         if sigma <= 0.0 {
             return Ok(image.clone());
@@ -222,7 +232,7 @@ impl RealTimeSirtPipeline {
             return Ok(image.clone());
         }
         let wn = (-0.5 / (sigma * sigma)).exp();
-        let norm = 1.0 + 2.0 * wn;
+        let norm = 2.0f64.mul_add(wn, 1.0);
         let w0 = 1.0 / norm;
         let wn = wn / norm;
 
@@ -280,11 +290,13 @@ impl RealTimeSirtPipeline {
     }
 
     /// Chronological slice of all processed frames.
+    #[must_use] 
     pub fn frame_history(&self) -> &[ReconstructionFrame] {
         &self.frame_history
     }
 
     /// Average throughput since pipeline creation (fps).
+    #[must_use] 
     pub fn avg_frame_rate(&self) -> f64 {
         if self.frame_count == 0 {
             return 0.0;
@@ -298,6 +310,7 @@ impl RealTimeSirtPipeline {
     }
 
     /// Total number of frames processed.
+    #[must_use] 
     pub fn frame_count(&self) -> usize {
         self.frame_count
     }

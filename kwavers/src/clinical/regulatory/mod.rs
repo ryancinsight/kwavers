@@ -59,7 +59,7 @@ mod tests {
         assert!(desc.validate().is_err()); // No indications
 
         desc.add_indication("Benign tumors");
-        assert!(desc.validate().is_ok());
+        desc.validate().unwrap();
     }
 
     #[test]
@@ -92,7 +92,7 @@ mod tests {
         evidence.subject_count = 50;
         evidence.primary_outcome = "Pain reduction".to_string();
 
-        assert!(evidence.validate().is_ok());
+        evidence.validate().unwrap();
     }
 
     #[test]
@@ -101,10 +101,7 @@ mod tests {
         desc.intended_use = "Ablation therapy".to_string();
         desc.add_indication("Benign tumors");
 
-        let doc = SubmissionDocument::new("Manufacturer Inc", desc);
-        assert!(doc.is_ok());
-
-        let doc = doc.unwrap();
+        let doc = SubmissionDocument::new("Manufacturer Inc", desc).unwrap();
         assert_eq!(doc.status, "Draft");
     }
 
@@ -154,6 +151,6 @@ mod tests {
         doc.summary = "This device is equivalent to predicate".to_string();
 
         // Should pass now
-        assert!(doc.validate().is_ok());
+        doc.validate().unwrap();
     }
 }

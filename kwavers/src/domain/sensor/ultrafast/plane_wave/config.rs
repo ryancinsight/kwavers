@@ -1,6 +1,5 @@
 //! `PlaneWaveConfig` — plane wave imaging configuration.
 
-use std::f64::consts::PI;
 
 /// Plane wave imaging configuration.
 #[derive(Debug, Clone)]
@@ -23,7 +22,7 @@ impl Default for PlaneWaveConfig {
     fn default() -> Self {
         let tilt_angles: Vec<f64> = (-10..=10)
             .step_by(2)
-            .map(|a| a as f64 * PI / 180.0)
+            .map(|a| (a as f64).to_radians())
             .collect();
         Self {
             tilt_angles,

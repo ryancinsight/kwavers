@@ -27,7 +27,7 @@ impl BasicLinearAlgebra {
         let n = a.nrows();
         if a.ncols() != n || b.len() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
-                operation: "solve_linear_system".to_string(),
+                operation: "solve_linear_system".to_owned(),
                 expected: format!("{}×{} matrix and {} vector", n, n, n),
                 actual: format!("{}×{} matrix and {} vector", a.nrows(), a.ncols(), b.len()),
             }));
@@ -64,7 +64,7 @@ impl BasicLinearAlgebra {
             // Check for singularity
             if a_copy[[i, i]].abs() < 1e-12 {
                 return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
-                    operation: "LU decomposition".to_string(),
+                    operation: "LU decomposition".to_owned(),
                     condition_number: f64::INFINITY,
                 }));
             }
@@ -106,7 +106,7 @@ impl BasicLinearAlgebra {
         let n = matrix.nrows();
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
-                operation: "matrix_inverse".to_string(),
+                operation: "matrix_inverse".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
                 actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
             }));
@@ -133,6 +133,9 @@ impl BasicLinearAlgebra {
     ///
     /// # Returns
     /// Tuple (Q, R) where Q is orthogonal (m×m) and R is upper triangular (m×n)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn qr_decomposition(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
         let (m, n) = (matrix.nrows(), matrix.ncols());
         let mut q = Array2::eye(m);
@@ -192,6 +195,9 @@ impl BasicLinearAlgebra {
     ///
     /// # Returns
     /// Tuple (U, S, V) where U is (m×m) or (m×min(m,n)), S is diagonal (min(m,n)), V is (n×n) or (n×min(m,n))
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn svd(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array1<f64>, Array2<f64>)> {
         let (m, n) = (matrix.nrows(), matrix.ncols());
 
@@ -210,8 +216,8 @@ impl BasicLinearAlgebra {
         // Extract U
         let u_na = svd.u.ok_or_else(|| {
             KwaversError::Numerical(NumericalError::SolverFailed {
-                method: "SVD".to_string(),
-                reason: "Failed to compute left singular vectors (U)".to_string(),
+                method: "SVD".to_owned(),
+                reason: "Failed to compute left singular vectors (U)".to_owned(),
             })
         })?;
 
@@ -221,8 +227,8 @@ impl BasicLinearAlgebra {
         // Extract V^T (nalgebra returns V^T in v_t)
         let vt_na = svd.v_t.ok_or_else(|| {
             KwaversError::Numerical(NumericalError::SolverFailed {
-                method: "SVD".to_string(),
-                reason: "Failed to compute right singular vectors (V^T)".to_string(),
+                method: "SVD".to_owned(),
+                reason: "Failed to compute right singular vectors (V^T)".to_owned(),
             })
         })?;
 

@@ -31,6 +31,12 @@ use std::collections::HashMap;
 ///
 /// **Theorem (EM Monotonicity):** Each EM iteration monotonically increases the likelihood $\mathcal{L}$,
 /// converging to a local maximum or saddle point of the likelihood function.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(crate) fn fuse_maximum_likelihood(
     fusion: &MultiModalFusion,
 ) -> KwaversResult<FusedImageResult> {
@@ -41,13 +47,13 @@ pub(crate) fn fuse_maximum_likelihood(
 
     let reference_name = modality_names.first().ok_or_else(|| {
         KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-            message: "No modalities available for fusion".to_string(),
+            message: "No modalities available for fusion".to_owned(),
         })
     })?;
 
     let reference_modality = fusion.registered_data.get(*reference_name).ok_or_else(|| {
         KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-            message: "Reference modality missing".to_string(),
+            message: "Reference modality missing".to_owned(),
         })
     })?;
 
@@ -139,7 +145,7 @@ pub(crate) fn fuse_maximum_likelihood(
         // We can use a simplified check: L2 norm difference or max difference
         // Here using max difference
         let diff = &new_fused_intensity - &fused_intensity;
-        for v in diff.iter() {
+        for v in &diff {
             if v.abs() > max_change {
                 max_change = v.abs();
             }
@@ -159,7 +165,7 @@ pub(crate) fn fuse_maximum_likelihood(
                     .and(&fused_intensity)
                     .fold(0.0, |acc, &val, &mean| {
                         let diff = val - mean;
-                        acc + diff * diff
+                        diff.mul_add(diff, acc)
                     });
             ctx.variance = (sum_sq_error / num_voxels).max(MIN_VARIANCE);
         }

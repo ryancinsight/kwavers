@@ -4,6 +4,9 @@ use ndarray::Array2;
 
 impl PSTDSolver {
     /// Run `checkpoint_steps` steps then persist full solver state to `path`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_to_checkpoint(
         &mut self,
         checkpoint_steps: usize,
@@ -11,7 +14,8 @@ impl PSTDSolver {
     ) -> KwaversResult<()> {
         use crate::solver::forward::pstd::checkpoint::PSTDCheckpoint;
 
-        if self.time_step_index == 0 {
+        // Mirror run_orchestrated convention: only record initial state for IVP (p0) sources.
+        if self.time_step_index == 0 && self.source_handler.has_initial_pressure() {
             self.sensor_recorder.record_step(&self.fields.p)?;
         }
         for _ in 0..checkpoint_steps {
@@ -21,8 +25,7 @@ impl PSTDSolver {
         let (sensor_data, sensor_next_step, sensor_expected_steps) = self
             .sensor_recorder
             .checkpoint_state_view()
-            .map(|(view, ns, es)| (Some(view.to_owned()), ns, es))
-            .unwrap_or((None, 0, 0));
+            .map_or((None, 0, 0), |(view, ns, es)| (Some(view.to_owned()), ns, es));
 
         let ckpt = PSTDCheckpoint {
             nx: self.grid.nx,
@@ -46,6 +49,9 @@ impl PSTDSolver {
     }
 
     /// Restore state from `path` and run `remaining_steps` steps to completion.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_from_checkpoint(
         &mut self,
         path: &std::path::Path,
@@ -58,6 +64,10 @@ impl PSTDSolver {
     }
 
     /// Restore state from an already loaded checkpoint and continue the run.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_from_checkpoint_loaded(
         &mut self,
         ckpt: crate::solver::forward::pstd::checkpoint::PSTDCheckpoint,

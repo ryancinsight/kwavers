@@ -19,6 +19,9 @@ pub struct EigenvalueSolver {
 
 impl EigenvalueSolver {
     /// Create eigenvalue solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn create(max_iterations: usize, tolerance: f64) -> Self {
         Self {
@@ -28,13 +31,17 @@ impl EigenvalueSolver {
     }
 
     /// Power iteration for largest eigenvalue
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn power_iteration(
         &self,
         matrix: &CompressedSparseRowMatrix,
     ) -> KwaversResult<(f64, Array1<f64>)> {
         if matrix.rows != matrix.cols {
             return Err(KwaversError::Numerical(NumericalError::Instability {
-                operation: "eigenvalue_solver".to_string(),
+                operation: "eigenvalue_solver".to_owned(),
                 condition: matrix.rows as f64,
             }));
         }
@@ -53,7 +60,7 @@ impl EigenvalueSolver {
             let norm = v.dot(&v).sqrt();
             if norm < 1e-14 {
                 return Err(KwaversError::Numerical(NumericalError::Instability {
-                    operation: "power_iteration".to_string(),
+                    operation: "power_iteration".to_owned(),
                     condition: norm,
                 }));
             }
@@ -80,7 +87,7 @@ impl EigenvalueSolver {
         }
 
         Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
-            method: "power_iteration".to_string(),
+            method: "power_iteration".to_owned(),
             iterations: self.max_iterations,
             error: eigenvalue,
         }))
@@ -88,6 +95,10 @@ impl EigenvalueSolver {
 
     /// Inverse power iteration for smallest eigenvalue
     /// Reference: Golub & Van Loan (2013) "Matrix Computations", Algorithm 7.3.3
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn inverse_power_iteration(
         &self,
         matrix: &CompressedSparseRowMatrix,
@@ -159,7 +170,7 @@ impl EigenvalueSolver {
 
             if denominator.abs() < 1e-14 {
                 return Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
-                    method: "inverse_power_iteration".to_string(),
+                    method: "inverse_power_iteration".to_owned(),
                     iterations: self.max_iterations,
                     error: denominator.abs(),
                 }));
@@ -185,7 +196,7 @@ impl EigenvalueSolver {
                 v = w / norm;
             } else {
                 return Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
-                    method: "inverse_power_iteration".to_string(),
+                    method: "inverse_power_iteration".to_owned(),
                     iterations: _iter + 1,
                     error: norm,
                 }));
@@ -193,13 +204,16 @@ impl EigenvalueSolver {
         }
 
         Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
-            method: "inverse_power_iteration".to_string(),
+            method: "inverse_power_iteration".to_owned(),
             iterations: self.max_iterations,
             error: self.tolerance,
         }))
     }
 
     /// Helper method for matrix-vector multiplication
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn matrix_vector_multiply(
         &self,
         matrix: &CompressedSparseRowMatrix,

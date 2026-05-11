@@ -35,6 +35,7 @@ pub struct CTImageLoader {
 
 impl CTImageLoader {
     /// Create new CT image loader.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             data: None,
@@ -43,11 +44,19 @@ impl CTImageLoader {
     }
 
     /// Get loaded CT data.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn data(&self) -> Option<&Array3<f64>> {
         self.data.as_ref()
     }
 
     /// Get CT metadata.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn ct_metadata(&self) -> Option<&CTMetadata> {
         self.metadata.as_ref()
     }
@@ -134,7 +143,7 @@ impl MedicalImageLoader for CTImageLoader {
                 affine: ct_meta.affine,
                 data_type: ct_meta.data_type.clone(),
                 intensity_range: ct_meta.hu_range,
-                modality: "CT".to_string(),
+                modality: "CT".to_owned(),
             }
         } else {
             MedicalImageMetadata {
@@ -142,9 +151,9 @@ impl MedicalImageLoader for CTImageLoader {
                 voxel_spacing_m: (1e-3, 1e-3, 1e-3),
                 voxel_spacing_mm: (1.0, 1.0, 1.0),
                 affine: Self::identity_affine(),
-                data_type: "Hounsfield Units (f64)".to_string(),
+                data_type: "Hounsfield Units (f64)".to_owned(),
                 intensity_range: (0.0, 0.0),
-                modality: "CT".to_string(),
+                modality: "CT".to_owned(),
             }
         }
     }
@@ -234,11 +243,12 @@ impl CTImageLoader {
     }
 
     /// Compute min/max Hounsfield Unit values in the CT volume.
+    #[must_use] 
     pub fn compute_hu_range(hounsfield: &Array3<f64>) -> (f64, f64) {
         let mut min_hu = f64::INFINITY;
         let mut max_hu = f64::NEG_INFINITY;
 
-        for &val in hounsfield.iter() {
+        for &val in hounsfield {
             if val < min_hu {
                 min_hu = val;
             }
@@ -251,13 +261,16 @@ impl CTImageLoader {
     }
 
     /// Validate that HU values are within physically reasonable range (-2000 to +4000).
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate_hu_range(min_hu: f64, max_hu: f64) -> KwaversResult<()> {
         const MIN_VALID_HU: f64 = -2000.0;
         const MAX_VALID_HU: f64 = 4000.0;
 
         if min_hu < MIN_VALID_HU || max_hu > MAX_VALID_HU {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "hounsfield_units".to_string(),
+                field: "hounsfield_units".to_owned(),
                 value: format!("({:.0}, {:.0})", min_hu, max_hu),
                 constraint: format!(
                     "must be within valid CT range ({:.0}, {:.0})",
@@ -289,9 +302,10 @@ impl CTImageLoader {
     ///
     /// Bone (HU > 700): c(HU) = 2800 + (HU - 700) × 2.0 m/s
     /// Soft tissue: c = 1500 m/s
+    #[must_use] 
     pub fn hu_to_sound_speed(hu: f64) -> f64 {
         if hu > 700.0 {
-            2800.0 + (hu - 700.0) * 2.0
+            (hu - 700.0).mul_add(2.0, 2800.0)
         } else {
             1500.0
         }
@@ -301,9 +315,10 @@ impl CTImageLoader {
     ///
     /// Bone (HU > 700): ρ(HU) = 1700 + (HU - 700) × 0.2 kg/m³
     /// Soft tissue: ρ = 1000 kg/m³
+    #[must_use] 
     pub fn hu_to_density(hu: f64) -> f64 {
         if hu > 700.0 {
-            1700.0 + (hu - 700.0) * 0.2
+            (hu - 700.0).mul_add(0.2, 1700.0)
         } else {
             1000.0
         }

@@ -15,6 +15,9 @@ pub struct BemFemSolver {
 
 impl BemFemSolver {
     /// Create new BEM-FEM coupled solver
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         config: BemFemCouplingConfig,
         fem_mesh: TetrahedralMesh,
@@ -33,14 +36,17 @@ impl BemFemSolver {
     }
 
     /// Solve the coupled BEM-FEM system
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn solve(
         &mut self,
-        fem_initial_guess: Vec<Complex64>,
-        bem_boundary_guess: Vec<Complex64>,
+        mut fem_initial_guess: Vec<Complex64>,
+        mut bem_boundary_guess: Vec<Complex64>,
     ) -> KwaversResult<()> {
         self.coupler.solve_coupled(
-            &mut fem_initial_guess.clone(),
-            &mut bem_boundary_guess.clone(),
+            &mut fem_initial_guess,
+            &mut bem_boundary_guess,
             &self.fem_mesh,
             self.wavenumber,
         )?;
@@ -49,11 +55,13 @@ impl BemFemSolver {
     }
 
     /// Get the coupling interface
+    #[must_use] 
     pub fn interface(&self) -> &BemFemInterface {
         &self.coupler.interface
     }
 
     /// Get convergence information
+    #[must_use] 
     pub fn convergence_info(&self) -> (bool, usize, &[f64]) {
         (
             self.coupler.has_converged(),
@@ -63,6 +71,7 @@ impl BemFemSolver {
     }
 
     /// Get configuration
+    #[must_use] 
     pub fn config(&self) -> &BemFemCouplingConfig {
         &self.config
     }
@@ -84,6 +93,6 @@ mod tests {
 
         let solver = BemFemSolver::new(config, fem_mesh, bem_boundary, wavenumber);
 
-        assert!(solver.is_ok());
+        let _solver = solver.unwrap();
     }
 }

@@ -91,23 +91,26 @@ impl DispersiveParameters {
     }
 
     /// Validate dispersive parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> Result<(), String> {
         if self.tau.len() != self.num_mechanisms {
-            return Err("Mismatch between number of mechanisms and tau values".to_string());
+            return Err("Mismatch between number of mechanisms and tau values".to_owned());
         }
 
         if self.delta.len() != self.num_mechanisms {
-            return Err("Mismatch between number of mechanisms and delta values".to_string());
+            return Err("Mismatch between number of mechanisms and delta values".to_owned());
         }
 
         for &tau in &self.tau {
             if tau <= 0.0 {
-                return Err("Relaxation time must be positive".to_string());
+                return Err("Relaxation time must be positive".to_owned());
             }
         }
 
         if self.epsilon_s <= 0.0 || self.epsilon_inf <= 0.0 {
-            return Err("Permittivity values must be positive".to_string());
+            return Err("Permittivity values must be positive".to_owned());
         }
 
         Ok(())

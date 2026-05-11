@@ -19,6 +19,9 @@ const BA_WATER: f64 = 5.0;
 const BA_TISSUE: f64 = 6.0;
 
 /// Update pressure with nonlinear effects
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn update_pressure_with_nonlinearity(
     p: &mut Array3<f64>,
     div_u: &Array3<f64>,

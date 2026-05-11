@@ -4,7 +4,7 @@ use ndarray::Array2;
 #[test]
 fn test_config_validation() {
     let config = SvdClutterFilterConfig::with_fixed_rank(3);
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
 
     let bad_config = SvdClutterFilterConfig {
         clutter_rank: 0,
@@ -16,8 +16,7 @@ fn test_config_validation() {
 #[test]
 fn test_svd_filter_creation() {
     let config = SvdClutterFilterConfig::with_fixed_rank(2);
-    let filter = SvdClutterFilter::new(config);
-    assert!(filter.is_ok());
+    let _filter = SvdClutterFilter::new(config).unwrap();
 }
 
 #[test]
@@ -119,5 +118,6 @@ fn test_ensemble_length_validation() {
 
     // Sufficient ensemble
     let good_data = Array2::<f64>::zeros((10, 150));
-    assert!(filter.filter(&good_data).is_ok());
+    let filtered_good = filter.filter(&good_data).unwrap();
+    assert_eq!(filtered_good.dim(), good_data.dim());
 }

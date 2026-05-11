@@ -21,12 +21,15 @@ pub struct AnisotropicElasticProperties {
 impl AnisotropicElasticProperties {
     /// Create from full stiffness tensor
     /// Validates symmetry and positive definiteness
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(density: f64, stiffness: [[f64; 6]; 6]) -> KwaversResult<Self> {
         if density <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "density".to_string(),
+                parameter: "density".to_owned(),
                 value: density,
-                reason: "Density must be positive".to_string(),
+                reason: "Density must be positive".to_owned(),
             }
             .into());
         }
@@ -37,7 +40,7 @@ impl AnisotropicElasticProperties {
             for j in i + 1..6 {
                 if (row_i[j] - stiffness[j][i]).abs() > TOLERANCE {
                     return Err(PhysicsError::InvalidParameter {
-                        parameter: "stiffness tensor".to_string(),
+                        parameter: "stiffness tensor".to_owned(),
                         value: row_i[j],
                         reason: format!(
                             "Stiffness tensor must be symmetric. C[{}][{}]={} != C[{}][{}]={}",
@@ -62,36 +65,31 @@ impl AnisotropicElasticProperties {
         // Check first principal minor (1x1)
         if stiffness[0][0] <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "C11".to_string(),
+                parameter: "C11".to_owned(),
                 value: stiffness[0][0],
-                reason: "First principal minor must be positive".to_string(),
+                reason: "First principal minor must be positive".to_owned(),
             }
             .into());
         }
 
         // Check second principal minor (2x2 upper-left)
-        let det_2x2 = stiffness[0][0] * stiffness[1][1] - stiffness[0][1] * stiffness[1][0];
+        let det_2x2 = stiffness[0][0].mul_add(stiffness[1][1], -(stiffness[0][1] * stiffness[1][0]));
         if det_2x2 <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "C11*C22 - C12^2".to_string(),
+                parameter: "C11*C22 - C12^2".to_owned(),
                 value: det_2x2,
-                reason: "Second principal minor must be positive".to_string(),
+                reason: "Second principal minor must be positive".to_owned(),
             }
             .into());
         }
 
         // Check third principal minor (3x3 upper-left)
-        let det_3x3 = stiffness[0][0]
-            * (stiffness[1][1] * stiffness[2][2] - stiffness[1][2] * stiffness[2][1])
-            - stiffness[0][1]
-                * (stiffness[1][0] * stiffness[2][2] - stiffness[1][2] * stiffness[2][0])
-            + stiffness[0][2]
-                * (stiffness[1][0] * stiffness[2][1] - stiffness[1][1] * stiffness[2][0]);
+        let det_3x3 = stiffness[0][2].mul_add(stiffness[1][0].mul_add(stiffness[2][1], -(stiffness[1][1] * stiffness[2][0])), stiffness[0][0].mul_add(stiffness[1][1].mul_add(stiffness[2][2], -(stiffness[1][2] * stiffness[2][1])), -(stiffness[0][1] * stiffness[1][0].mul_add(stiffness[2][2], -(stiffness[1][2] * stiffness[2][0])))));
         if det_3x3 <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "det(C_3x3)".to_string(),
+                parameter: "det(C_3x3)".to_owned(),
                 value: det_3x3,
-                reason: "Third principal minor must be positive".to_string(),
+                reason: "Third principal minor must be positive".to_owned(),
             }
             .into());
         }
@@ -106,9 +104,9 @@ impl AnisotropicElasticProperties {
         // Check shear moduli (C44, C55, C66) are positive
         if stiffness[3][3] <= 0.0 || stiffness[4][4] <= 0.0 || stiffness[5][5] <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                parameter: "shear moduli".to_string(),
+                parameter: "shear moduli".to_owned(),
                 value: stiffness[3][3].min(stiffness[4][4]).min(stiffness[5][5]),
-                reason: "Shear moduli (C44, C55, C66) must be positive".to_string(),
+                reason: "Shear moduli (C44, C55, C66) must be positive".to_owned(),
             }
             .into());
         }
@@ -131,14 +129,14 @@ impl AnisotropicElasticProperties {
         // Use canonical ElasticPropertyData for validation
         let props = ElasticPropertyData::new(density, lambda, mu).map_err(|msg| {
             PhysicsError::InvalidParameter {
-                parameter: "elastic properties".to_string(),
+                parameter: "elastic properties".to_owned(),
                 value: density,
                 reason: msg,
             }
         })?;
 
         // Build isotropic stiffness tensor
-        let c11 = lambda + 2.0 * mu;
+        let c11 = 2.0f64.mul_add(mu, lambda);
         let c12 = lambda;
         let c44 = mu;
 

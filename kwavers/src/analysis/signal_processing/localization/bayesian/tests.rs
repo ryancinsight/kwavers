@@ -7,12 +7,17 @@ fn default_filter() -> BayesianFilter {
 
 #[test]
 fn test_bayesian_filter_creation() {
-    assert!(BayesianFilter::new(&KalmanFilterConfig::default()).is_ok());
+    let filter = BayesianFilter::new(&KalmanFilterConfig::default()).unwrap();
+    // Initial state must be at origin
+    assert!(filter.get_state().iter().all(|&x| x == 0.0));
 }
 
 /// **Test: predict propagates position by velocity × dt.**
 ///
 /// With initial state x=1 m, vx=1 m/s and dt=1 s: x_new = 2 m exactly.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_bayesian_filter_predict() {
     let mut filter = default_filter();
@@ -30,6 +35,9 @@ fn test_bayesian_filter_predict() {
 ///
 /// Starting at origin with measurement z = [1, 0, 0],
 /// the state x estimate must become positive.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_bayesian_filter_update() {
     let mut filter = default_filter();
@@ -44,6 +52,9 @@ fn test_bayesian_filter_update() {
 ///
 /// 20 EKF updates must strictly reduce P[0,0] from the initial value.
 /// Reference: Bar-Shalom (2001) §6.2.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_ekf_covariance_decreases() {
     let cfg = KalmanFilterConfig::default()
@@ -67,6 +78,9 @@ fn test_ekf_covariance_decreases() {
 ///
 /// After 50 updates toward z = [2, 3, 1], estimated position must be
 /// within 0.01 m of the true target in all axes.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_ekf_converges_to_stationary_target() {
     let cfg = KalmanFilterConfig::default()
@@ -92,6 +106,9 @@ fn test_ekf_converges_to_stationary_target() {
 /// **Test: position uncertainty is independent per axis (J-form preserves PSD).**
 ///
 /// All diagonal elements P[i,i] must remain non-negative after updates.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_ekf_covariance_psd_preserved() {
     let cfg = KalmanFilterConfig::default().with_measurement_noise(0.001);
@@ -113,6 +130,9 @@ fn test_ekf_covariance_psd_preserved() {
 /// **Test: predict grows covariance (process noise)**
 ///
 /// After a predict step with dt>0, P[0,0] must be strictly larger than before.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_predict_increases_covariance() {
     let mut filter = default_filter();

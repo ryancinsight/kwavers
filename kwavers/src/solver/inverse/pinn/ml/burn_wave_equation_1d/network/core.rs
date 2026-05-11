@@ -49,6 +49,12 @@ pub struct BurnPINN1DWave<B: Backend> {
 
 impl<B: Backend> BurnPINN1DWave<B> {
     /// Create a new Burn-based PINN for 1D wave equation.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn new(config: BurnPINNConfig, device: &B::Device) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -118,6 +124,12 @@ impl<B: Backend> BurnPINN1DWave<B> {
     ///
     /// - `Ok(u)` with predicted field values [n_points, 1]
     /// - `Err(KwaversError::InvalidInput)` if x and t have different lengths
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn predict(
         &self,
         x: &Array1<f64>,

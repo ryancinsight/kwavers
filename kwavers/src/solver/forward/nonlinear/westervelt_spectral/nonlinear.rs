@@ -46,11 +46,11 @@ pub fn compute_nonlinear_term(
                 let term = if let Some(p_history) = pressure_history {
                     // Full second-order accuracy with pressure history
                     let p_prev_prev = p_history[[i, j, k]];
-                    let d2p_dt2 = (p_curr - 2.0 * p_prev + p_prev_prev) / (dt * dt);
+                    let d2p_dt2 = (2.0f64.mul_add(-p_prev, p_curr) + p_prev_prev) / (dt * dt);
                     let dp_dt = (p_curr - p_prev) / dt;
 
                     // Westervelt nonlinear term
-                    let p_squared_second_deriv = 2.0 * p_curr * d2p_dt2 + 2.0 * dp_dt.powi(2);
+                    let p_squared_second_deriv = (2.0 * p_curr).mul_add(d2p_dt2, 2.0 * dp_dt.powi(2));
                     nonlinear_coeff * p_squared_second_deriv
                 } else {
                     // Bootstrap for first iteration
@@ -58,7 +58,7 @@ pub fn compute_nonlinear_term(
                     let d2p_dt2_bootstrap = dp_dt / dt.max(1e-12);
 
                     let p_squared_second_deriv =
-                        2.0 * p_curr * d2p_dt2_bootstrap + 2.0 * dp_dt.powi(2);
+                        (2.0 * p_curr).mul_add(d2p_dt2_bootstrap, 2.0 * dp_dt.powi(2));
                     nonlinear_coeff * p_squared_second_deriv
                 };
 
@@ -97,13 +97,7 @@ pub fn compute_viscoelastic_term(
     for k in 1..nz - 1 {
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
-                let laplacian_dp_dt = (dp_dt[[i + 1, j, k]] - 2.0 * dp_dt[[i, j, k]]
-                    + dp_dt[[i - 1, j, k]])
-                    * dx2_inv
-                    + (dp_dt[[i, j + 1, k]] - 2.0 * dp_dt[[i, j, k]] + dp_dt[[i, j - 1, k]])
-                        * dy2_inv
-                    + (dp_dt[[i, j, k + 1]] - 2.0 * dp_dt[[i, j, k]] + dp_dt[[i, j, k - 1]])
-                        * dz2_inv;
+                let laplacian_dp_dt = (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i, j, k + 1]]) + dp_dt[[i, j, k - 1]]).mul_add(dz2_inv, (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i + 1, j, k]]) + dp_dt[[i - 1, j, k]]).mul_add(dx2_inv, (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i, j + 1, k]]) + dp_dt[[i, j - 1, k]]) * dy2_inv));
 
                 let eta_s = eta_s_arr[[i, j, k]];
                 let eta_b = eta_b_arr[[i, j, k]];

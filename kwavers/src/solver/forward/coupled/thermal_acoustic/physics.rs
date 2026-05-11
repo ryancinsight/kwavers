@@ -14,8 +14,8 @@ impl ThermalAcousticCoupler {
             let t = self.temperature[[i, j, k]];
             let d_t = t - self.config.t_ref;
 
-            self.sound_speed[[i, j, k]] = self.config.c_ref + self.config.dc_d_t * d_t;
-            self.density[[i, j, k]] = self.config.rho_ref + self.config.drho_d_t * d_t;
+            self.sound_speed[[i, j, k]] = self.config.dc_d_t.mul_add(d_t, self.config.c_ref);
+            self.density[[i, j, k]] = self.config.drho_d_t.mul_add(d_t, self.config.rho_ref);
         }
     }
 
@@ -61,13 +61,13 @@ impl ThermalAcousticCoupler {
                 for i in 1..self.config.nx - 1 {
                     let t = self.temperature_prev[[i, j, k]];
 
-                    let d2_t_dx2 = (self.temperature_prev[[i + 1, j, k]] - 2.0 * t
+                    let d2_t_dx2 = (2.0f64.mul_add(-t, self.temperature_prev[[i + 1, j, k]])
                         + self.temperature_prev[[i - 1, j, k]])
                         / (dx * dx);
-                    let d2_t_dy2 = (self.temperature_prev[[i, j + 1, k]] - 2.0 * t
+                    let d2_t_dy2 = (2.0f64.mul_add(-t, self.temperature_prev[[i, j + 1, k]])
                         + self.temperature_prev[[i, j - 1, k]])
                         / (dy * dy);
-                    let d2_t_dz2 = (self.temperature_prev[[i, j, k + 1]] - 2.0 * t
+                    let d2_t_dz2 = (2.0f64.mul_add(-t, self.temperature_prev[[i, j, k + 1]])
                         + self.temperature_prev[[i, j, k - 1]])
                         / (dz * dz);
 
@@ -78,9 +78,9 @@ impl ThermalAcousticCoupler {
                     let acoustic_term = self.acoustic_heating[[i, j, k]] / rho_c;
 
                     let d_t_dt =
-                        k_thermal * laplacian_t + perfusion_term + metabolic_term + acoustic_term;
+                        k_thermal.mul_add(laplacian_t, perfusion_term) + metabolic_term + acoustic_term;
 
-                    self.temperature[[i, j, k]] = t + dt * d_t_dt;
+                    self.temperature[[i, j, k]] = dt.mul_add(d_t_dt, t);
                 }
             }
         }
@@ -148,6 +148,9 @@ impl ThermalAcousticCoupler {
     /// Check for numerical divergence
     ///
     /// Returns error if pressure or temperature exceed physical bounds
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
     pub(super) fn check_stability(&self) -> KwaversResult<()> {
         let max_pressure = self
             .pressure
@@ -157,18 +160,18 @@ impl ThermalAcousticCoupler {
         let max_temp = self
             .temperature
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::NEG_INFINITY, f64::max);
         let min_temp = self
             .temperature
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::INFINITY, f64::min);
 
         if !max_pressure.is_finite() {
             return Err(KwaversError::Numerical(
                 crate::core::error::NumericalError::Instability {
-                    operation: "thermal_acoustic_coupling".to_string(),
+                    operation: "thermal_acoustic_coupling".to_owned(),
                     condition: max_pressure,
                 },
             ));

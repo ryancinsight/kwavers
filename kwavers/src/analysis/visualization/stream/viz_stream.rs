@@ -36,6 +36,9 @@ pub struct VizStream {
 
 impl VizStream {
     /// Create a new visualization stream with specified buffer policy.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(policy: BufferPolicy) -> KwaversResult<Self> {
         let capacity = match policy {
             BufferPolicy::DropOldest(cap) => cap,
@@ -57,6 +60,9 @@ impl VizStream {
     }
 
     /// Create a stream with frame pooling enabled.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_pool(
         policy: BufferPolicy,
         grid_dimensions: (usize, usize, usize),
@@ -93,6 +99,10 @@ impl VizStream {
     /// - `DropLatest`: If channel full, drop the frame being sent immediately.
     /// - `Block`: Block until channel has capacity.
     /// - `AdaptiveLatency`: Evaluate latency, drop frames if budget exceeded.
+    /// # Errors
+    /// - Returns [`KwaversError::Visualization`] if the precondition for a Visualization-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn send_frame(&self, frame: VizFrame) -> KwaversResult<()> {
         match self.buffer_policy {
             BufferPolicy::DropOldest(capacity) => {
@@ -197,6 +207,9 @@ impl VizStream {
     }
 
     /// Receive a frame from the stream (async).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn recv_frame(&self) -> KwaversResult<VizFrame> {
         let frame = self
             .rx
@@ -226,6 +239,10 @@ impl VizStream {
     }
 
     /// Try to receive a frame without blocking.
+    /// # Errors
+    /// - Returns [`KwaversError::Visualization`] if the precondition for a Visualization-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn try_recv_frame(&self) -> KwaversResult<Option<VizFrame>> {
         match self.rx.try_recv() {
             Ok(frame) => {

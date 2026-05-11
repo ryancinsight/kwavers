@@ -8,6 +8,9 @@ use num_complex::Complex64;
 /// 1. Square (N×N)
 /// 2. All entries finite
 /// 3. Hermitian within tolerance 1e-10
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn validate_covariance_matrix(covariance: &Array2<Complex64>) -> KwaversResult<()> {
     let (nrows, ncols) = (covariance.nrows(), covariance.ncols());
 
@@ -36,7 +39,8 @@ pub fn validate_covariance_matrix(covariance: &Array2<Complex64>) -> KwaversResu
 /// Check if a matrix is Hermitian within numerical tolerance.
 ///
 /// Returns `true` if ||A − A^H||_∞ ≤ tolerance.
-/// A is Hermitian iff A[i,j] = A[j,i]^* for all i,j.
+/// A is Hermitian iff `A[i,j] = A[j,i]^*` for all i,j.
+#[must_use] 
 pub fn is_hermitian(matrix: &Array2<Complex64>, tolerance: f64) -> bool {
     let n = matrix.nrows();
     if n != matrix.ncols() {
@@ -59,7 +63,7 @@ pub fn is_hermitian(matrix: &Array2<Complex64>, tolerance: f64) -> bool {
     true
 }
 
-/// Compute the trace of a square matrix: tr(A) = ∑ᵢ A[i,i].
+/// Compute the trace of a square matrix: `tr(A) = ∑ᵢ A[i,i]`.
 ///
 /// For covariance matrices, the trace equals total signal power across sensors.
 ///

@@ -10,6 +10,7 @@ pub struct InterpolationSimdOps {
 
 impl InterpolationSimdOps {
     /// Create new interpolation SIMD operations
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             config: SimdConfig::detect(),
@@ -35,7 +36,7 @@ impl InterpolationSimdOps {
                 // 3. Memory alignment requirements are satisfied
                 #[allow(unsafe_code)]
                 unsafe {
-                    self.trilinear_interpolate_avx2(data, nx, ny, nz, query_points, results)
+                    self.trilinear_interpolate_avx2(data, nx, ny, nz, query_points, results);
                 }
             }
             _ => self.trilinear_interpolate_scalar(data, nx, ny, nz, query_points, results),

@@ -67,9 +67,4 @@ pub struct SpectralCouplingInterface {
     pub(super) modal_transform: Array2<f64>,
     /// Conservative projection matrix (SEM → PSTD)
     pub(super) projection_matrix: Array2<f64>,
-    /// Interface quadrature points and weights
-    #[allow(dead_code)]
-    pub(super) quadrature_points: Vec<(f64, f64, f64)>,
-    #[allow(dead_code)]
-    pub(super) quadrature_weights: Vec<f64>,
 }

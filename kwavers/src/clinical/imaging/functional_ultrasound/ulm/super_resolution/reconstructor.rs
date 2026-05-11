@@ -30,19 +30,19 @@ impl SuperResReconstructor {
     pub fn new(config: SuperResConfig) -> KwaversResult<Self> {
         if config.pixel_size <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "pixel_size must be > 0".to_string(),
+                "pixel_size must be > 0".to_owned(),
             ));
         }
         if config.x_extent <= 0.0 || config.z_extent <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "image extents must be > 0".to_string(),
+                "image extents must be > 0".to_owned(),
             ));
         }
         let nx = (config.x_extent / config.pixel_size).ceil() as usize;
         let nz = (config.z_extent / config.pixel_size).ceil() as usize;
         if nx == 0 || nz == 0 {
             return Err(KwaversError::InvalidInput(
-                "resulting grid has zero size".to_string(),
+                "resulting grid has zero size".to_owned(),
             ));
         }
         Ok(Self {
@@ -71,6 +71,9 @@ impl SuperResReconstructor {
     }
 
     /// Return the accumulated SR image (raw counts or kernel-density values).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn image(&self) -> &Array2<f64> {
         &self.image
@@ -84,12 +87,12 @@ impl SuperResReconstructor {
     pub fn density_image(&self) -> KwaversResult<Array2<f64>> {
         let t = self.config.total_time_s.ok_or_else(|| {
             KwaversError::InvalidInput(
-                "total_time_s must be set in SuperResConfig for density normalization".to_string(),
+                "total_time_s must be set in SuperResConfig for density normalization".to_owned(),
             )
         })?;
         if t <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "total_time_s must be > 0".to_string(),
+                "total_time_s must be > 0".to_owned(),
             ));
         }
         Ok(self.image.mapv(|v| v / t))
@@ -170,9 +173,9 @@ impl SuperResReconstructor {
         let two_sigma_sq = 2.0 * sigma * sigma;
 
         for ix in ix_lo..ix_hi {
-            let dx = (ix as f64 + 0.5) * d - x;
+            let dx = (ix as f64 + 0.5).mul_add(d, -x);
             for iz in iz_lo..iz_hi {
-                let dz = (iz as f64 + 0.5) * d - z;
+                let dz = (iz as f64 + 0.5).mul_add(d, -z);
                 let w = (-(dx * dx + dz * dz) / two_sigma_sq).exp();
                 self.image[[ix, iz]] += w;
             }

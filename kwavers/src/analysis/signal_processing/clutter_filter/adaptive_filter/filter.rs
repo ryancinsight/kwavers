@@ -24,36 +24,39 @@ pub struct AdaptiveFilter {
 
 impl AdaptiveFilter {
     /// Create a new adaptive filter with the given configuration.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(config: AdaptiveFilterConfig) -> KwaversResult<Self> {
         if config.noise_floor_threshold <= 0.0 || config.noise_floor_threshold >= 1.0 {
             return Err(KwaversError::InvalidInput(
-                "noise_floor_threshold must be in range (0, 1)".to_string(),
+                "noise_floor_threshold must be in range (0, 1)".to_owned(),
             ));
         }
         if config.temporal_smoothing && config.smoothing_window < 1 {
             return Err(KwaversError::InvalidInput(
-                "smoothing_window must be >= 1 when temporal_smoothing is enabled".to_string(),
+                "smoothing_window must be >= 1 when temporal_smoothing is enabled".to_owned(),
             ));
         }
         match config.separation_method {
             SubspaceSeparationMethod::FixedRank { clutter_rank } => {
                 if clutter_rank == 0 {
                     return Err(KwaversError::InvalidInput(
-                        "clutter_rank must be > 0".to_string(),
+                        "clutter_rank must be > 0".to_owned(),
                     ));
                 }
             }
             SubspaceSeparationMethod::AdaptiveThreshold { decay_factor } => {
                 if decay_factor <= 0.0 || decay_factor >= 1.0 {
                     return Err(KwaversError::InvalidInput(
-                        "decay_factor must be in range (0, 1)".to_string(),
+                        "decay_factor must be in range (0, 1)".to_owned(),
                     ));
                 }
             }
             SubspaceSeparationMethod::CbrBased { target_cbr_db } => {
                 if target_cbr_db <= 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "target_cbr_db must be > 0".to_string(),
+                        "target_cbr_db must be > 0".to_owned(),
                     ));
                 }
             }
@@ -67,12 +70,16 @@ impl AdaptiveFilter {
     /// Apply adaptive clutter filter to slow-time data.
     ///
     /// `slow_time_data` shape: `(n_pixels, n_frames)`.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn filter(&mut self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let (n_pixels, n_frames) = slow_time_data.dim();
 
         if n_frames < 3 {
             return Err(KwaversError::InvalidInput(
-                "Need at least 3 frames for adaptive filtering".to_string(),
+                "Need at least 3 frames for adaptive filtering".to_owned(),
             ));
         }
 
@@ -245,11 +252,13 @@ impl AdaptiveFilter {
     }
 
     /// Get the history of CBR estimates.
+    #[must_use] 
     pub fn cbr_history(&self) -> &[f64] {
         &self.cbr_history
     }
 
     /// Get the current estimated CBR in dB.
+    #[must_use] 
     pub fn current_cbr_db(&self) -> Option<f64> {
         self.cbr_history.last().map(|&cbr| 10.0 * cbr.log10())
     }

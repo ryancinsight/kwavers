@@ -28,10 +28,10 @@
 //! ```
 //!
 //! Where:
-//! - `p(x,t)` = acoustic pressure [Pa]
-//! - `u(x,t)` = particle velocity [m/s]
+//! - `p(x,t)` = acoustic pressure (Pa)
+//! - `u(x,t)` = particle velocity (m/s)
 //! - `ρ₀` = ambient density [kg/m³]
-//! - `c₀` = sound speed [m/s]
+//! - `c₀` = sound speed (m/s)
 //!
 //! ## k-Space Operator (k-Wave's Innovation)
 //!

@@ -5,6 +5,9 @@ use ndarray::s;
 
 impl HybridSolver {
     /// Perform a single time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         self.pstd_solver.fields.p.assign(&self.fields.p);
         self.pstd_solver.fields.ux.assign(&self.fields.ux);
@@ -77,7 +80,10 @@ impl HybridSolver {
         self.time_step += 1;
         Ok(())
     }
-
+    /// Apply hybrid region blended internal.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_hybrid_region_blended_internal(
         &mut self,
         region: &DomainRegion,

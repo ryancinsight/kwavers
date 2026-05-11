@@ -31,6 +31,9 @@ pub(super) struct GPUKernel {
 
 impl GPUElasticWaveSolver3D {
     /// Create new GPU-accelerated solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(device: GPUDevice) -> KwaversResult<Self> {
         let memory_pool = GPUMemoryPool::new(device.global_memory, 256);
 
@@ -43,11 +46,14 @@ impl GPUElasticWaveSolver3D {
     }
 
     /// Initialize GPU kernels for 3D SWE
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn initialize_kernels(&mut self) -> KwaversResult<()> {
         self.kernel_cache.insert(
-            "elastic_wave_3d".to_string(),
+            "elastic_wave_3d".to_owned(),
             GPUKernel {
-                _name: "elastic_wave_3d".to_string(),
+                _name: "elastic_wave_3d".to_owned(),
                 _shared_memory: 8192,
                 _registers: 32,
                 _occupancy: 0.75,
@@ -55,9 +61,9 @@ impl GPUElasticWaveSolver3D {
         );
 
         self.kernel_cache.insert(
-            "multidirectional_inversion".to_string(),
+            "multidirectional_inversion".to_owned(),
             GPUKernel {
-                _name: "multidirectional_inversion".to_string(),
+                _name: "multidirectional_inversion".to_owned(),
                 _shared_memory: 4096,
                 _registers: 24,
                 _occupancy: 0.8,
@@ -65,9 +71,9 @@ impl GPUElasticWaveSolver3D {
         );
 
         self.kernel_cache.insert(
-            "volumetric_attenuation".to_string(),
+            "volumetric_attenuation".to_owned(),
             GPUKernel {
-                _name: "volumetric_attenuation".to_string(),
+                _name: "volumetric_attenuation".to_owned(),
                 _shared_memory: 2048,
                 _registers: 16,
                 _occupancy: 0.9,
@@ -78,6 +84,10 @@ impl GPUElasticWaveSolver3D {
     }
 
     /// Execute GPU-accelerated 3D wave propagation
+    /// # Errors
+    /// - Returns [`KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn propagate_waves_gpu(
         &mut self,
         _initial_displacements: &[Array3<f64>],
@@ -171,6 +181,9 @@ impl GPUElasticWaveSolver3D {
     /// Estimate kernel execution time from thread count and assumed FLOP rate.
     ///
     /// **Performance model only** — no real GPU kernel is launched.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn simulate_kernel_execution(
         &self,
         kernel_name: &str,
@@ -194,12 +207,19 @@ impl GPUElasticWaveSolver3D {
     /// Estimate PCIe data transfer time.
     ///
     /// **Performance model only** — assumes PCIe 4.0 x16 (~32 GB/s).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn simulate_data_transfer(&self, bytes: usize) -> f64 {
         let pcie_bandwidth = 32.0 * 1024.0 * 1024.0 * 1024.0;
         bytes as f64 / pcie_bandwidth
     }
 
     /// Execute GPU-accelerated multi-directional inversion
+    /// # Errors
+    /// - Returns [`KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn multidirectional_inversion_gpu(
         &mut self,
         arrival_times: &[Array3<f64>],
@@ -213,7 +233,7 @@ impl GPUElasticWaveSolver3D {
 
         if !self.device.can_handle_volume(grid) {
             return Err(KwaversError::ResourceLimitExceeded {
-                message: "Insufficient GPU memory for inversion".to_string(),
+                message: "Insufficient GPU memory for inversion".to_owned(),
             });
         }
 
@@ -260,16 +280,21 @@ impl GPUElasticWaveSolver3D {
     }
 
     /// Get performance metrics
+    #[must_use] 
     pub fn performance_metrics(&self) -> &PerformanceMetrics {
         &self.performance_metrics
     }
 
     /// Get memory statistics
+    #[must_use] 
     pub fn memory_stats(&self) -> MemoryStats {
         self.memory_pool.memory_stats()
     }
 
     /// Optimize memory layout for GPU access
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn optimize_memory_layout(&self, data: &mut Array3<f64>) {
         data.as_slice_memory_order().unwrap();
     }

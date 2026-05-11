@@ -11,18 +11,18 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub struct FileStorage {
     base_path: PathBuf,
-    #[allow(dead_code)]
-    files: Vec<File>,
     shape: Option<(usize, usize, usize)>,
 }
 
 impl FileStorage {
     /// Create file storage
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn create(base_path: PathBuf) -> Self {
         Self {
             base_path,
-            files: Vec::new(),
             shape: None,
         }
     }

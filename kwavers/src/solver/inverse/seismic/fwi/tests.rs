@@ -218,6 +218,9 @@ fn test_model_constraints() {
 }
 
 /// Verify that the FWI forward-model medium is built with seismic (non-water) density.
+/// # Panics
+/// - Panics if `medium construction must succeed`.
+///
 #[test]
 fn test_fwi_medium_density_not_water() {
     use crate::domain::medium::heterogeneous::HeterogeneousFactory;
@@ -242,6 +245,9 @@ fn test_fwi_medium_density_not_water() {
 }
 
 /// Verify that the FWI forward-model medium stores the velocity model correctly.
+/// # Panics
+/// - Panics if `medium construction must succeed`.
+///
 #[test]
 fn test_fwi_forward_medium_sound_speed_matches_model() {
     use crate::domain::medium::heterogeneous::HeterogeneousFactory;

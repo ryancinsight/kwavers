@@ -52,10 +52,10 @@ fn trilinear_interpolation(field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &G
     let v110 = field[[i1, j1, k0]];
     let v111 = field[[i1, j1, k1]];
 
-    let v00 = v000 * (1.0 - fx) + v100 * fx;
-    let v01 = v001 * (1.0 - fx) + v101 * fx;
-    let v10 = v010 * (1.0 - fx) + v110 * fx;
-    let v11 = v011 * (1.0 - fx) + v111 * fx;
+    let v00 = v000.mul_add(1.0 - fx, v100 * fx);
+    let v01 = v001.mul_add(1.0 - fx, v101 * fx);
+    let v10 = v010.mul_add(1.0 - fx, v110 * fx);
+    let v11 = v011.mul_add(1.0 - fx, v111 * fx);
 
     let v0 = v00 * (1.0 - fy) + v10 * fy;
     let v1 = v01 * (1.0 - fy) + v11 * fy;

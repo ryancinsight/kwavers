@@ -77,7 +77,7 @@ impl SemElement {
 
         if !nodes.iter().all(|v| v.is_finite()) {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "hexahedral element nodes contain NaN/Inf".to_string(),
+                "hexahedral element nodes contain NaN/Inf".to_owned(),
             ));
         }
 
@@ -98,7 +98,7 @@ impl SemElement {
 
                     if !det.is_finite() {
                         return Err(crate::core::error::KwaversError::InvalidInput(
-                            "non-finite Jacobian determinant".to_string(),
+                            "non-finite Jacobian determinant".to_owned(),
                         ));
                     }
                     if det <= 0.0 {

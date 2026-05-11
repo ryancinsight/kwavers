@@ -42,11 +42,14 @@ impl NumaAwareAllocator {
     /// This is achieved by:
     /// 1. Allocating with standard allocator (pages unbound)
     /// 2. Optionally touching pages in parallel across desired nodes
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn allocate(&self, size: usize, align: usize) -> KwaversResult<NonNull<u8>> {
         let layout = Layout::from_size_align(size, align.max(NUMA_ALIGNMENT)).map_err(|_| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: size,
-                reason: "Invalid layout for NUMA allocation".to_string(),
+                reason: "Invalid layout for NUMA allocation".to_owned(),
             })
         })?;
 
@@ -56,7 +59,7 @@ impl NumaAwareAllocator {
         NonNull::new(ptr).ok_or_else(|| {
             KwaversError::System(SystemError::MemoryAllocation {
                 requested_bytes: size,
-                reason: "NUMA memory allocation failed".to_string(),
+                reason: "NUMA memory allocation failed".to_owned(),
             })
         })
     }

@@ -12,6 +12,7 @@ pub struct ClinicalValidator {
 }
 
 impl ClinicalValidator {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
@@ -23,21 +24,21 @@ impl Default for ClinicalValidator {
 
         let bmode_reqs = ClinicalRequirements {
             minimum_metrics: [
-                ("contrast_resolution".to_string(), 30.0),
-                ("dynamic_range".to_string(), 60.0),
-                ("snr".to_string(), 20.0),
+                ("contrast_resolution".to_owned(), 30.0),
+                ("dynamic_range".to_owned(), 60.0),
+                ("snr".to_owned(), 20.0),
             ]
             .into(),
             maximum_errors: [
-                ("distance_error".to_string(), 5.0),
-                ("area_error".to_string(), 10.0),
-                ("axial_resolution".to_string(), 0.5),
-                ("lateral_resolution".to_string(), 1.0),
+                ("distance_error".to_owned(), 5.0),
+                ("area_error".to_owned(), 10.0),
+                ("axial_resolution".to_owned(), 0.5),
+                ("lateral_resolution".to_owned(), 1.0),
             ]
             .into(),
             safety_thresholds: [
-                ("mechanical_index".to_string(), 1.9),
-                ("thermal_index".to_string(), 6.0),
+                ("mechanical_index".to_owned(), 1.9),
+                ("thermal_index".to_owned(), 6.0),
             ]
             .into(),
             standard: ClinicalStandard::FDA510k,
@@ -52,12 +53,12 @@ impl Default for ClinicalValidator {
             minimum_metrics: HashMap::new(),
             maximum_errors: HashMap::new(),
             safety_thresholds: [
-                ("mechanical_index_max".to_string(), 1.9),
-                ("thermal_index_soft_max".to_string(), 6.0),
-                ("thermal_index_bone_max".to_string(), 1.0),
-                ("thermal_index_cranial_max".to_string(), 1.0),
-                ("spta_max".to_string(), 720.0),
-                ("sppa_max".to_string(), 190.0),
+                ("mechanical_index_max".to_owned(), 1.9),
+                ("thermal_index_soft_max".to_owned(), 6.0),
+                ("thermal_index_bone_max".to_owned(), 1.0),
+                ("thermal_index_cranial_max".to_owned(), 1.0),
+                ("spta_max".to_owned(), 720.0),
+                ("sppa_max".to_owned(), 190.0),
             ]
             .into(),
             standard: ClinicalStandard::IEC60601_2_37,

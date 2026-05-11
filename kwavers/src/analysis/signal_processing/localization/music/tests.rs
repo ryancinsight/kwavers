@@ -8,8 +8,7 @@ use super::{MUSICConfig, MUSICProcessor};
 #[test]
 fn test_music_processor_creation() {
     let config = MUSICConfig::default();
-    let result = MUSICProcessor::new(&config);
-    assert!(result.is_ok());
+    let _processor = MUSICProcessor::new(&config).unwrap();
 }
 
 #[test]
@@ -91,10 +90,7 @@ fn test_music_run_single_source() {
         Complex::new((i + j) as f64 / 10.0, (i * j) as f64 / 20.0)
     });
 
-    let result = processor.run(&snapshots);
-    assert!(result.is_ok());
-
-    let music_result = result.unwrap();
+    let music_result = processor.run(&snapshots).unwrap();
     assert_eq!(music_result.num_sources, 1);
     assert!(music_result.sources.len() <= 1);
 }
@@ -117,8 +113,7 @@ fn test_music_automatic_source_detection() {
         }
     });
 
-    let result = processor.run(&snapshots);
-    assert!(result.is_ok());
+    processor.run(&snapshots).unwrap();
 }
 
 #[test]

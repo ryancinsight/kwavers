@@ -19,6 +19,9 @@ mod tests {
     /// Should match standard linear acoustic wave equation
     ///
     /// Fast version with reduced grid (16³) and 20 steps for CI/CD (<1s execution).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_linear_propagation() {
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
@@ -66,6 +69,9 @@ mod tests {
     }
 
     /// Test that homogeneous media warning is not triggered
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_homogeneous_no_warning() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
@@ -93,6 +99,9 @@ mod tests {
     /// This test runs 200 iterations on a 64³ grid for thorough validation.
     /// Execution time: >30s, classified as Tier 3 comprehensive validation.
     /// Use `cargo test -- --ignored` for full validation suite.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     #[ignore = "Tier 3: Comprehensive validation (>30s execution time)"]
     fn test_energy_conservation_linear() {
@@ -159,6 +168,9 @@ mod tests {
     ///
     /// Note: This is a smoke test to verify basic solver functionality.
     /// Comprehensive energy conservation validation is in the ignored test.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_energy_conservation_linear_fast() {
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
@@ -227,6 +239,9 @@ mod tests {
     /// This test runs 1000 iterations on a 128×64×64 grid for thorough validation.
     /// Execution time: >60s, classified as Tier 3 comprehensive validation.
     /// Use `cargo test -- --ignored` for full validation suite.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     #[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
     fn test_nonlinear_harmonic_generation() {
@@ -280,6 +295,9 @@ mod tests {
     ///
     /// Fast version with reduced grid (32×16×16) and fewer steps (50) for CI/CD.
     /// Execution time: <2s, classified as Tier 1 fast validation.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_nonlinear_harmonic_generation_fast() {
         let grid = Grid::new(32, 16, 16, 1e-4, 1e-3, 1e-3).unwrap();

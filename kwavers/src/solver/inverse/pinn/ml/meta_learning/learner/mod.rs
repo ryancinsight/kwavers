@@ -31,6 +31,9 @@ pub struct MetaLearner<B: AutodiffBackend> {
 
 impl<B: AutodiffBackend> MetaLearner<B> {
     /// Create a new meta-learner
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: MetaLearningConfig, device: &B::Device) -> KwaversResult<Self> {
         let pinn_config = BurnPINN2DConfig {
             hidden_layers: vec![config.hidden_dim; config.num_layers],

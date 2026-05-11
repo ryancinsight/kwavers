@@ -5,7 +5,6 @@ use std::time::Duration;
 #[test]
 fn test_universal_solver_creation() {
     let solver = UniversalPINNSolver::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new();
-    assert!(solver.is_ok());
     let solver = solver.unwrap();
     assert!(solver.available_domains().is_empty());
 }
@@ -49,7 +48,7 @@ fn test_training_config_defaults() {
     assert_eq!(config.collocation_points, 1000);
     assert_eq!(config.boundary_points, 200);
     assert!(config.adaptive_sampling);
-    assert!(config.early_stopping.is_some());
+    assert!(config.early_stopping.as_ref().unwrap().patience > 0);
 }
 
 #[test]

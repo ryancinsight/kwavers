@@ -115,13 +115,11 @@ pub(super) fn compute_jacobian(
     }
 
     // ── Determinant (Sarrus / cofactor expansion along row 0) ─────────────
-    let det = j[[0, 0]] * (j[[1, 1]] * j[[2, 2]] - j[[1, 2]] * j[[2, 1]])
-        - j[[0, 1]] * (j[[1, 0]] * j[[2, 2]] - j[[1, 2]] * j[[2, 0]])
-        + j[[0, 2]] * (j[[1, 0]] * j[[2, 1]] - j[[1, 1]] * j[[2, 0]]);
+    let det = j[[0, 2]].mul_add(j[[1, 0]].mul_add(j[[2, 1]], -(j[[1, 1]] * j[[2, 0]])), j[[0, 0]].mul_add(j[[1, 1]].mul_add(j[[2, 2]], -(j[[1, 2]] * j[[2, 1]])), -(j[[0, 1]] * j[[1, 0]].mul_add(j[[2, 2]], -(j[[1, 2]] * j[[2, 0]])))));
 
     if det.abs() < 1e-12 {
         return Err(NumericalError::SingularMatrix {
-            operation: "SEM Jacobian computation".to_string(),
+            operation: "SEM Jacobian computation".to_owned(),
             condition_number: det.abs(),
         }
         .into());
@@ -130,17 +128,17 @@ pub(super) fn compute_jacobian(
     // ── Inverse via Cramer's rule: J⁻¹ = adj(J)ᵀ / det(J) ───────────────
     let mut j_inv = Array2::<f64>::zeros((3, 3));
 
-    j_inv[[0, 0]] = (j[[1, 1]] * j[[2, 2]] - j[[1, 2]] * j[[2, 1]]) / det;
-    j_inv[[0, 1]] = (j[[0, 2]] * j[[2, 1]] - j[[0, 1]] * j[[2, 2]]) / det;
-    j_inv[[0, 2]] = (j[[0, 1]] * j[[1, 2]] - j[[0, 2]] * j[[1, 1]]) / det;
+    j_inv[[0, 0]] = j[[1, 1]].mul_add(j[[2, 2]], -(j[[1, 2]] * j[[2, 1]])) / det;
+    j_inv[[0, 1]] = j[[0, 2]].mul_add(j[[2, 1]], -(j[[0, 1]] * j[[2, 2]])) / det;
+    j_inv[[0, 2]] = j[[0, 1]].mul_add(j[[1, 2]], -(j[[0, 2]] * j[[1, 1]])) / det;
 
-    j_inv[[1, 0]] = (j[[1, 2]] * j[[2, 0]] - j[[1, 0]] * j[[2, 2]]) / det;
-    j_inv[[1, 1]] = (j[[0, 0]] * j[[2, 2]] - j[[0, 2]] * j[[2, 0]]) / det;
-    j_inv[[1, 2]] = (j[[0, 2]] * j[[1, 0]] - j[[0, 0]] * j[[1, 2]]) / det;
+    j_inv[[1, 0]] = j[[1, 2]].mul_add(j[[2, 0]], -(j[[1, 0]] * j[[2, 2]])) / det;
+    j_inv[[1, 1]] = j[[0, 0]].mul_add(j[[2, 2]], -(j[[0, 2]] * j[[2, 0]])) / det;
+    j_inv[[1, 2]] = j[[0, 2]].mul_add(j[[1, 0]], -(j[[0, 0]] * j[[1, 2]])) / det;
 
-    j_inv[[2, 0]] = (j[[1, 0]] * j[[2, 1]] - j[[1, 1]] * j[[2, 0]]) / det;
-    j_inv[[2, 1]] = (j[[0, 1]] * j[[2, 0]] - j[[0, 0]] * j[[2, 1]]) / det;
-    j_inv[[2, 2]] = (j[[0, 0]] * j[[1, 1]] - j[[0, 1]] * j[[1, 0]]) / det;
+    j_inv[[2, 0]] = j[[1, 0]].mul_add(j[[2, 1]], -(j[[1, 1]] * j[[2, 0]])) / det;
+    j_inv[[2, 1]] = j[[0, 1]].mul_add(j[[2, 0]], -(j[[0, 0]] * j[[2, 1]])) / det;
+    j_inv[[2, 2]] = j[[0, 0]].mul_add(j[[1, 1]], -(j[[0, 1]] * j[[1, 0]])) / det;
 
     Ok((j, det, j_inv))
 }

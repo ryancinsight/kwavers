@@ -77,7 +77,11 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
     )
     .ok()
 }
-
+/// Read buffer f32.
+/// # Panics
+/// - Panics if `buffer readback callback`.
+/// - Panics if `buffer map`.
+///
 pub(super) fn read_buffer_f32(
     device: &wgpu::Device,
     queue: &wgpu::Queue,

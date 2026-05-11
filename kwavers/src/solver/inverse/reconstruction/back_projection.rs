@@ -48,7 +48,7 @@ impl UniversalBackProjection {
             let dx = voxel_pos[0] - sensor_pos[0];
             let dy = voxel_pos[1] - sensor_pos[1];
             let dz = voxel_pos[2] - sensor_pos[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             // Calculate time delay
             let time_delay = distance / config.sound_speed;

@@ -86,52 +86,59 @@ impl Default for PhysicsLossConfig {
 
 impl PhysicsLossConfig {
     /// Validate configuration
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.lambda_data_init < 0.0 || self.lambda_physics_init < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Lambda weights must be non-negative".to_string(),
+                "Lambda weights must be non-negative".to_owned(),
             ));
         }
         if (self.lambda_data_init + self.lambda_physics_init) < 1e-6 {
             return Err(KwaversError::InvalidInput(
-                "At least one lambda weight must be positive".to_string(),
+                "At least one lambda weight must be positive".to_owned(),
             ));
         }
         if self.sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "sound_speed must be positive".to_string(),
+                "sound_speed must be positive".to_owned(),
             ));
         }
         if self.frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "frequency must be positive".to_string(),
+                "frequency must be positive".to_owned(),
             ));
         }
         if self.history_window == 0 {
             return Err(KwaversError::InvalidInput(
-                "history_window must be positive".to_string(),
+                "history_window must be positive".to_owned(),
             ));
         }
         Ok(())
     }
 
+    #[must_use] 
     pub fn with_loss_weights(mut self, lambda_data: f64, lambda_physics: f64) -> Self {
         self.lambda_data_init = lambda_data;
         self.lambda_physics_init = lambda_physics;
         self
     }
 
+    #[must_use] 
     pub fn with_wave_params(mut self, sound_speed: f64, frequency: f64) -> Self {
         self.sound_speed = sound_speed;
         self.frequency = frequency;
         self
     }
 
+    #[must_use] 
     pub fn with_schedule(mut self, schedule: WeightSchedule) -> Self {
         self.weight_schedule = schedule;
         self
     }
 
+    #[must_use] 
     pub fn without_history(mut self) -> Self {
         self.track_history = false;
         self

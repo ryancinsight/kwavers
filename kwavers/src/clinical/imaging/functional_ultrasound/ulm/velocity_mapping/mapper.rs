@@ -30,17 +30,17 @@ impl VelocityMapper {
     pub fn new(config: VelocityMapConfig) -> KwaversResult<Self> {
         if config.pixel_size <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "pixel_size must be > 0".to_string(),
+                "pixel_size must be > 0".to_owned(),
             ));
         }
         if config.x_extent <= 0.0 || config.z_extent <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "image extents must be > 0".to_string(),
+                "image extents must be > 0".to_owned(),
             ));
         }
         if config.frame_dt <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "frame_dt must be > 0".to_string(),
+                "frame_dt must be > 0".to_owned(),
             ));
         }
         let nx = (config.x_extent / config.pixel_size).ceil() as usize;
@@ -106,7 +106,7 @@ impl VelocityMapper {
                     let mvz = self.sum_vz[[ix, iz]] / cf;
                     vx[[ix, iz]] = mvx;
                     vz[[ix, iz]] = mvz;
-                    speed[[ix, iz]] = (mvx * mvx + mvz * mvz).sqrt();
+                    speed[[ix, iz]] = mvx.hypot(mvz);
                     direction[[ix, iz]] = mvz.atan2(mvx);
                 }
             }
@@ -150,7 +150,7 @@ impl VelocityMapper {
                 }
                 let gx = (sx_plus - sx_minus) / (2.0 * d);
                 let gz = (sz_plus - sz_minus) / (2.0 * d);
-                wss[[ix, iz]] = mu * (gx * gx + gz * gz).sqrt();
+                wss[[ix, iz]] = mu * gx.hypot(gz);
             }
         }
         wss

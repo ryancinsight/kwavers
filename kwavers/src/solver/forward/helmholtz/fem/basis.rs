@@ -44,12 +44,18 @@ impl BasisFunction {
     }
 
     /// Get number of basis functions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn num_functions(&self) -> usize {
         self.num_functions
     }
 
-    /// Evaluate all basis functions at local coordinates ξ ∈ [0,1]³
+    /// Evaluate all basis functions at local coordinates ξ ∈ \[0,1\]³
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn evaluate(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         match self.degree {
             1 => self.evaluate_linear(xi),
@@ -62,6 +68,9 @@ impl BasisFunction {
     }
 
     /// Evaluate derivatives of all basis functions
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn evaluate_derivatives(&self, xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
         match self.degree {
             1 => self.evaluate_linear_derivatives(xi),
@@ -78,6 +87,9 @@ impl BasisFunction {
     /// φ₂ = ξ
     /// φ₃ = η
     /// φ₄ = ζ
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     fn evaluate_linear(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         let [xi_xi, eta, zeta] = xi;
 
@@ -101,6 +113,9 @@ impl BasisFunction {
     /// dφ/dξ = [-1, 1, 0, 0]
     /// dφ/dη = [-1, 0, 1, 0]
     /// dφ/dζ = [-1, 0, 0, 1]
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn evaluate_linear_derivatives(&self, _xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
         // Derivatives are constant for linear elements
         let mut derivatives = Array2::<f64>::zeros((4, 3));
@@ -128,6 +143,9 @@ impl BasisFunction {
 
     /// Quadratic (P2) tetrahedral basis functions
     /// 10-node tetrahedron with edge and face nodes
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     fn evaluate_quadratic(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         let [xi_xi, eta, zeta] = xi;
 
@@ -145,10 +163,10 @@ impl BasisFunction {
         let lambda4 = zeta;
 
         // Vertex functions (same as linear)
-        let phi1 = lambda1 * (2.0 * lambda1 - 1.0);
-        let phi2 = lambda2 * (2.0 * lambda2 - 1.0);
-        let phi3 = lambda3 * (2.0 * lambda3 - 1.0);
-        let phi4 = lambda4 * (2.0 * lambda4 - 1.0);
+        let phi1 = lambda1 * 2.0f64.mul_add(lambda1, -1.0);
+        let phi2 = lambda2 * 2.0f64.mul_add(lambda2, -1.0);
+        let phi3 = lambda3 * 2.0f64.mul_add(lambda3, -1.0);
+        let phi4 = lambda4 * 2.0f64.mul_add(lambda4, -1.0);
 
         // Edge functions
         let phi5 = 4.0 * lambda1 * lambda2; // Edge 1-2
@@ -164,6 +182,9 @@ impl BasisFunction {
     }
 
     /// Derivatives of quadratic basis functions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn evaluate_quadratic_derivatives(&self, xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
         let [xi_xi, eta, zeta] = xi;
         let lambda1 = 1.0 - xi_xi - eta - zeta;
@@ -174,8 +195,8 @@ impl BasisFunction {
         let mut derivatives = Array2::<f64>::zeros((10, 3));
 
         // Derivatives with respect to ξ (lambda2 direction)
-        derivatives[[0, 0]] = 4.0 * lambda1 - 1.0; // φ₁
-        derivatives[[1, 0]] = 4.0 * lambda2 - 1.0; // φ₂
+        derivatives[[0, 0]] = 4.0f64.mul_add(lambda1, -1.0); // φ₁
+        derivatives[[1, 0]] = 4.0f64.mul_add(lambda2, -1.0); // φ₂
         derivatives[[2, 0]] = 0.0; // φ₃
         derivatives[[3, 0]] = 0.0; // φ₄
         derivatives[[4, 0]] = 4.0 * (lambda1 - lambda2); // φ₅
@@ -186,9 +207,9 @@ impl BasisFunction {
         derivatives[[9, 0]] = 0.0; // φ₁₀
 
         // Derivatives with respect to η (lambda3 direction)
-        derivatives[[0, 1]] = 4.0 * lambda1 - 1.0; // φ₁
+        derivatives[[0, 1]] = 4.0f64.mul_add(lambda1, -1.0); // φ₁
         derivatives[[1, 1]] = 0.0; // φ₂
-        derivatives[[2, 1]] = 4.0 * lambda3 - 1.0; // φ₃
+        derivatives[[2, 1]] = 4.0f64.mul_add(lambda3, -1.0); // φ₃
         derivatives[[3, 1]] = 0.0; // φ₄
         derivatives[[4, 1]] = -4.0 * lambda2; // φ₅
         derivatives[[5, 1]] = 4.0 * (lambda2 - lambda3); // φ₆
@@ -198,10 +219,10 @@ impl BasisFunction {
         derivatives[[9, 1]] = 4.0 * lambda4; // φ₁₀
 
         // Derivatives with respect to ζ (lambda4 direction)
-        derivatives[[0, 2]] = 4.0 * lambda1 - 1.0; // φ₁
+        derivatives[[0, 2]] = 4.0f64.mul_add(lambda1, -1.0); // φ₁
         derivatives[[1, 2]] = 0.0; // φ₂
         derivatives[[2, 2]] = 0.0; // φ₃
-        derivatives[[3, 2]] = 4.0 * lambda4 - 1.0; // φ₄
+        derivatives[[3, 2]] = 4.0f64.mul_add(lambda4, -1.0); // φ₄
         derivatives[[4, 2]] = 0.0; // φ₅
         derivatives[[5, 2]] = 0.0; // φ₆
         derivatives[[6, 2]] = -4.0 * lambda3; // φ₇
@@ -273,6 +294,9 @@ impl GaussQuadrature {
     }
 
     /// Add element contribution to global matrices
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_element_contribution(
         &self,
         global_stiffness: &mut crate::math::linear_algebra::sparse::CompressedSparseRowMatrix<

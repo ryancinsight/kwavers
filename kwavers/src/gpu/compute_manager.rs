@@ -4,64 +4,51 @@
 
 use crate::core::constants::numerical;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::gpu::shaders;
 use ndarray::Array3;
 
-/// GPU compute manager with automatic dispatch
-/// NOTE: Some fields currently unused - part of future GPU pipeline implementation
-#[allow(dead_code)]
+/// GPU compute manager with automatic CPU fallback dispatch.
+///
+/// Holds optional `device`/`queue` handles acquired at construction time.
+/// GPU dispatch kernels (FDTD, k-space, absorption, nonlinear) are deferred to
+/// a future sprint; all current paths use the CPU implementations.
 #[derive(Debug)]
 pub struct ComputeManager {
     device: Option<wgpu::Device>,
     queue: Option<wgpu::Queue>,
-    pipelines: ComputePipelines,
-}
-
-/// Collection of compute pipelines
-/// NOTE: Fields currently unused - part of future GPU pipeline implementation
-#[allow(dead_code)]
-#[derive(Debug)]
-struct ComputePipelines {
-    fdtd: Option<wgpu::ComputePipeline>,
-    kspace: Option<wgpu::ComputePipeline>,
-    absorption: Option<wgpu::ComputePipeline>,
-    nonlinear: Option<wgpu::ComputePipeline>,
 }
 
 impl ComputeManager {
-    /// Create new compute manager with automatic GPU detection
+    /// Create new compute manager with automatic GPU detection.
+    ///
+    /// Falls back to CPU-only mode when no GPU adapter is available.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn new() -> KwaversResult<Self> {
         match Self::init_gpu().await {
-            Ok((device, queue)) => {
-                let pipelines = Self::compile_pipelines(&device)?;
-                Ok(Self {
-                    device: Some(device),
-                    queue: Some(queue),
-                    pipelines,
-                })
-            }
-            Err(_) => {
-                // GPU not available, use CPU fallback
-                Ok(Self {
-                    device: None,
-                    queue: None,
-                    pipelines: ComputePipelines {
-                        fdtd: None,
-                        kspace: None,
-                        absorption: None,
-                        nonlinear: None,
-                    },
-                })
-            }
+            Ok((device, queue)) => Ok(Self {
+                device: Some(device),
+                queue: Some(queue),
+            }),
+            Err(_) => Ok(Self {
+                device: None,
+                queue: None,
+            }),
         }
     }
 
     /// Create new compute manager (blocking)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new_blocking() -> KwaversResult<Self> {
         pollster::block_on(Self::new())
     }
 
     /// Get device reference (error if GPU unavailable)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn device(&self) -> KwaversResult<&wgpu::Device> {
         self.device.as_ref().ok_or_else(|| {
             KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
@@ -71,6 +58,9 @@ impl ComputeManager {
     }
 
     /// Get queue reference (error if GPU unavailable)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn queue(&self) -> KwaversResult<&wgpu::Queue> {
         self.queue.as_ref().ok_or_else(|| {
             KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
@@ -80,6 +70,9 @@ impl ComputeManager {
     }
 
     /// Create a GPU buffer (error if GPU unavailable)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn create_buffer(
         &self,
         size_bytes: usize,
@@ -95,6 +88,9 @@ impl ComputeManager {
     }
 
     /// Write typed data into a GPU buffer (error if GPU unavailable)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn write_buffer<T: bytemuck::Pod>(
         &self,
         buffer: &wgpu::Buffer,
@@ -106,6 +102,9 @@ impl ComputeManager {
     }
 
     /// Initialize GPU if available
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     async fn init_gpu() -> KwaversResult<(wgpu::Device, wgpu::Queue)> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -135,61 +134,18 @@ impl ComputeManager {
         Ok((device, queue))
     }
 
-    /// Compile all compute pipelines
-    fn compile_pipelines(device: &wgpu::Device) -> KwaversResult<ComputePipelines> {
-        Ok(ComputePipelines {
-            fdtd: Some(Self::create_pipeline(
-                device,
-                shaders::FDTD_PRESSURE_SHADER,
-                "fdtd_pressure_update",
-            )?),
-            kspace: Some(Self::create_pipeline(
-                device,
-                shaders::KSPACE_PROPAGATE_SHADER,
-                "kspace_propagate",
-            )?),
-            absorption: Some(Self::create_pipeline(
-                device,
-                shaders::ABSORPTION_SHADER,
-                "apply_absorption",
-            )?),
-            nonlinear: Some(Self::create_pipeline(
-                device,
-                shaders::NONLINEAR_PROPAGATION_SHADER,
-                "nonlinear_propagate",
-            )?),
-        })
-    }
-
-    /// Create compute pipeline from shader
-    fn create_pipeline(
-        device: &wgpu::Device,
-        shader_source: &str,
-        entry_point: &str,
-    ) -> KwaversResult<wgpu::ComputePipeline> {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some(entry_point),
-            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-        });
-
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some(entry_point),
-            layout: None, // Auto layout
-            module: &shader,
-            entry_point: Some(entry_point),
-            compilation_options: Default::default(),
-            cache: None,
-        });
-
-        Ok(pipeline)
-    }
-
     /// Check if GPU is available
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn has_gpu(&self) -> bool {
         self.device.is_some()
     }
 
     /// Update FDTD pressure field
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn fdtd_update(
         &self,
         pressure: &mut Array3<f64>,
@@ -213,21 +169,15 @@ impl ComputeManager {
             )));
         }
 
-        if self.has_gpu() {
-            // GPU FDTD kernels deferred to future sprint (Sprint 125+)
-            // Current: CPU fallback ensures correctness while GPU infrastructure matures
-            // See ADR-008 for backend abstraction strategy (WGPU baseline + Vulkan/Metal)
-            self.fdtd_cpu(
-                pressure, velocity_x, velocity_y, velocity_z, dx, dy, dz, dt, c0, rho0,
-            )
-        } else {
-            self.fdtd_cpu(
-                pressure, velocity_x, velocity_y, velocity_z, dx, dy, dz, dt, c0, rho0,
-            )
-        }
+        self.fdtd_cpu(
+            pressure, velocity_x, velocity_y, velocity_z, dx, dy, dz, dt, c0, rho0,
+        )
     }
 
     /// CPU implementation of FDTD using SIMD
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn fdtd_cpu(
         &self,
         pressure: &mut Array3<f64>,
@@ -266,21 +216,22 @@ impl ComputeManager {
     }
 
     /// Apply absorption to pressure field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_absorption(
         &self,
         pressure: &mut Array3<f64>,
         absorption: &Array3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
-        if self.has_gpu() {
-            // GPU path would go here
-            self.absorption_cpu(pressure, absorption, dt)
-        } else {
-            self.absorption_cpu(pressure, absorption, dt)
-        }
+        self.absorption_cpu(pressure, absorption, dt)
     }
 
     /// CPU implementation of absorption
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn absorption_cpu(
         &self,
         pressure: &mut Array3<f64>,

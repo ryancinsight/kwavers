@@ -88,6 +88,9 @@ impl IntegratedSonoluminescence {
     /// layer separation: optics layer uses physics layer models without owning them.
     ///
     /// Reference: Brenner et al. (2002), "Single-bubble sonoluminescence"
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn simulate_step(
         &mut self,
         dt: f64,
@@ -117,7 +120,7 @@ impl IntegratedSonoluminescence {
                     let k1_r = state.wall_velocity;
 
                     // k2
-                    let t_k2 = time + 0.5 * dt;
+                    let t_k2 = 0.5f64.mul_add(dt, time);
                     let dp_dt_k2 = p_amp * omega * (omega * t_k2).cos();
                     let mut state_k2 = state.clone();
                     state_k2.radius += 0.5 * dt * k1_r;
@@ -162,9 +165,9 @@ impl IntegratedSonoluminescence {
 
                     // Final RK4 update
                     let new_radius =
-                        state.radius + (dt / 6.0) * (k1_r + 2.0 * k2_r + 2.0 * k3_r + k4_r);
+                        (dt / 6.0).mul_add(2.0f64.mul_add(k3_r, 2.0f64.mul_add(k2_r, k1_r)) + k4_r, state.radius);
                     let new_velocity =
-                        state.wall_velocity + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v);
+                        (dt / 6.0).mul_add(2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v, state.wall_velocity);
 
                     state.radius = new_radius;
                     state.wall_velocity = new_velocity;

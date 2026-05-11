@@ -126,6 +126,7 @@ pub struct TiledIterator3D {
 
 impl TiledIterator3D {
     /// Create tiled iterator for dimensions nx×ny×nz with specified tile size
+    #[must_use] 
     pub fn new(nx: usize, ny: usize, nz: usize, tile: &CacheBlockSize) -> Self {
         Self {
             nx,

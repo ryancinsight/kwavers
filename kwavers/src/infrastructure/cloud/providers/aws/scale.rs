@@ -5,6 +5,9 @@ use crate::infrastructure::cloud::DeploymentHandle;
 use std::collections::HashMap;
 
 /// Scale AWS SageMaker deployment to the target instance count.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 #[cfg(all(feature = "pinn", feature = "cloud-aws"))]
 pub async fn scale_aws_deployment(
     config: &HashMap<String, String>,

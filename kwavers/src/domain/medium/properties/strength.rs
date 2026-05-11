@@ -61,6 +61,9 @@ pub struct StrengthPropertyData {
 
 impl StrengthPropertyData {
     /// Construct with validation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         yield_strength: f64,
         ultimate_strength: f64,
@@ -98,11 +101,13 @@ impl StrengthPropertyData {
     }
 
     /// Estimate hardness from yield strength (H ≈ 3σ_y for metals)
+    #[must_use] 
     pub fn estimate_hardness(yield_strength: f64) -> f64 {
         3.0 * yield_strength
     }
 
     /// Steel properties (mild steel)
+    #[must_use] 
     pub fn steel() -> Self {
         Self {
             yield_strength: 250e6,
@@ -113,6 +118,10 @@ impl StrengthPropertyData {
     }
 
     /// Bone properties (cortical bone)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn bone() -> Self {
         Self {
             yield_strength: 130e6,
@@ -152,6 +161,7 @@ mod tests {
         assert!(StrengthPropertyData::new(400e6, 250e6, 750e6, 10.0).is_err());
 
         // Valid parameters should succeed
-        assert!(StrengthPropertyData::new(250e6, 400e6, 750e6, 10.0).is_ok());
+        let sp = StrengthPropertyData::new(250e6, 400e6, 750e6, 10.0).unwrap();
+        assert!(sp.yield_strength > 0.0);
     }
 }

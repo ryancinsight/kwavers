@@ -66,6 +66,7 @@ use std::f64::consts::PI;
 ///
 /// # Panics
 /// Never panics; all arithmetic is well-defined for all `n ≥ 1`.
+#[must_use] 
 pub fn generate_shift_1d(n: usize, dk: f64, ds: f64) -> (Array1<Complex64>, Array1<Complex64>) {
     let i_unit = Complex64::new(0.0, 1.0);
     let mut shift_pos = Array1::zeros(n);
@@ -135,13 +136,14 @@ pub fn generate_shift_1d(n: usize, dk: f64, ds: f64) -> (Array1<Complex64>, Arra
 ///
 /// # Arguments
 /// * `nx,ny,nz` — grid dimensions
-/// * `dx,dy,dz` — grid spacings [m]
-/// * `c_ref`    — reference sound speed used for the κ correction [m/s]
-/// * `dt`       — time step [s]
+/// * `dx,dy,dz` — grid spacings (m)
+/// * `c_ref`    — reference sound speed used for the κ correction (m/s)
+/// * `dt`       — time step (s)
 ///
 /// # References
 /// - Treeby & Cox (2010), §II.A, Eq. 13.
 /// - k-Wave MATLAB kspaceFirstOrder3D.m: `ifftshift(sinc(c_ref*k*dt/(2*pi)))`
+#[must_use] 
 pub fn generate_kappa(
     nx: usize,
     ny: usize,
@@ -209,6 +211,7 @@ pub fn generate_kappa(
 ///
 /// # References
 /// - Treeby & Cox (2010), §II.B (source term k-space correction).
+#[must_use] 
 pub fn generate_source_kappa(
     nx: usize,
     ny: usize,

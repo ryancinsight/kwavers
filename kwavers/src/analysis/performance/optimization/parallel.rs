@@ -19,6 +19,9 @@ impl Default for ParallelOptimizer {
 
 impl ParallelOptimizer {
     /// Create a new parallel optimizer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -28,6 +31,9 @@ impl ParallelOptimizer {
     }
 
     /// Set the number of threads for parallel execution
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_num_threads(&mut self, threads: usize) -> KwaversResult<()> {
         self.num_threads = threads;
         rayon::ThreadPoolBuilder::new()

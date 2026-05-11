@@ -14,6 +14,9 @@ use ndarray::Array3;
 /// 3. Bounds validation (ndarray handled)
 ///
 /// Performance: SSE4.2 provides 2x parallelism for f64
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     assert_eq!(a.shape(), b.shape());
     assert_eq!(a.shape(), out.shape());
@@ -28,15 +31,18 @@ pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
 
 /// Scale array using SSE4.2 instructions
 pub fn scale_array(array: &mut Array3<f64>, scalar: f64) {
-    array.mapv_inplace(|x| x * scalar);
+    array.par_mapv_inplace(|x| x * scalar);
 }
 
 /// Fused multiply-add using SSE4.2 instructions
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multiplier: f64) {
     assert_eq!(a.shape(), b.shape());
     assert_eq!(a.shape(), c.shape());
 
-    ndarray::Zip::from(c).and(a).and(b).for_each(|c, &a, &b| {
+    ndarray::Zip::from(c).and(a).and(b).par_for_each(|c, &a, &b| {
         *c += multiplier * a * b;
     });
 }

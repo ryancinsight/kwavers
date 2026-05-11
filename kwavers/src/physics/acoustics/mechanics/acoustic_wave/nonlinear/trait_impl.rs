@@ -87,12 +87,15 @@ impl AcousticWaveModel for NonlinearWave {
 
 impl NonlinearWave {
     /// Validates the parameters for the simulation using the minimum sound speed.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate_parameters(&self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         // Check CFL condition
         if !self.is_stable(medium, grid) {
             return Err(crate::core::error::KwaversError::Physics(
                 crate::core::error::PhysicsError::InvalidParameter {
-                    parameter: "timestep".to_string(),
+                    parameter: "timestep".to_owned(),
                     value: self.dt,
                     reason: format!(
                         "Must be <= {} for stability",
@@ -113,9 +116,9 @@ impl NonlinearWave {
         if min_c <= 0.0 || min_c.is_infinite() {
             return Err(crate::core::error::KwaversError::Physics(
                 crate::core::error::PhysicsError::InvalidParameter {
-                    parameter: "sound_speed".to_string(),
+                    parameter: "sound_speed".to_owned(),
                     value: min_c,
-                    reason: "Sound speed must be positive and finite".to_string(),
+                    reason: "Sound speed must be positive and finite".to_owned(),
                 },
             ));
         }
@@ -129,7 +132,7 @@ impl NonlinearWave {
         if min_dx > min_wavelength / MIN_POINTS_PER_WAVELENGTH {
             return Err(crate::core::error::KwaversError::Physics(
                 crate::core::error::PhysicsError::InvalidParameter {
-                    parameter: "grid_spacing".to_string(),
+                    parameter: "grid_spacing".to_owned(),
                     value: min_dx,
                     reason: format!(
                         "Grid spacing too large. Maximum allowed: {} m for minimum wavelength {} m at frequency {} Hz with minimum sound speed {} m/s",
@@ -146,9 +149,9 @@ impl NonlinearWave {
         if self.nonlinearity_scaling < 0.0 || self.nonlinearity_scaling > 10.0 {
             return Err(crate::core::error::KwaversError::Physics(
                 crate::core::error::PhysicsError::InvalidParameter {
-                    parameter: "nonlinearity_scaling".to_string(),
+                    parameter: "nonlinearity_scaling".to_owned(),
                     value: self.nonlinearity_scaling,
-                    reason: "Must be between 0.0 and 10.0".to_string(),
+                    reason: "Must be between 0.0 and 10.0".to_owned(),
                 },
             ));
         }

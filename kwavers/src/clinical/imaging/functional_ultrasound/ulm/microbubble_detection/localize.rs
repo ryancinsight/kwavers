@@ -28,6 +28,10 @@ pub struct GaussianLocalizer {
 }
 
 impl GaussianLocalizer {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(config: LocalizationConfig) -> Self {
         Self { config }
@@ -41,6 +45,9 @@ impl GaussianLocalizer {
     ///
     /// # Returns
     /// Vector of sub-pixel localizations passing quality filters.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn localize_frame(
         &self,
         envelope: &Array2<f64>,
@@ -103,6 +110,9 @@ impl GaussianLocalizer {
 /// Noise standard deviation estimate via median absolute deviation.
 ///
 /// σ̂ = MAD(envelope) / 0.6745   (consistent for Gaussian noise)
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 fn noise_std_estimate(a: &Array2<f64>) -> f64 {
     let mut vals: Vec<f64> = a.iter().copied().collect();
     vals.sort_by(|x, y| x.partial_cmp(y).unwrap());
@@ -191,7 +201,7 @@ pub(super) fn gauss_newton_fit_2d(
                 let x = ix as f64;
                 let dz = z - z0;
                 let dx = x - x0;
-                let r2 = (dz * dz + dx * dx) / (2.0 * sigma * sigma);
+                let r2 = dz.mul_add(dz, dx * dx) / (2.0 * sigma * sigma);
                 let g = (-r2).exp();
                 let model = amp * g + bg;
                 let resid = patch[[iz, ix]] - model;
@@ -200,7 +210,7 @@ pub(super) fn gauss_newton_fit_2d(
                 let df_amp = g;
                 let df_z0 = amp * g * dz / (sigma * sigma);
                 let df_x0 = amp * g * dx / (sigma * sigma);
-                let df_sigma = amp * g * (dz * dz + dx * dx) / (sigma * sigma * sigma);
+                let df_sigma = amp * g * dz.mul_add(dz, dx * dx) / (sigma * sigma * sigma);
                 let df_bg = 1.0;
 
                 let j = [df_amp, df_z0, df_x0, df_sigma, df_bg];

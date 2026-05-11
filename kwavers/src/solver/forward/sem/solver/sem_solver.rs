@@ -10,7 +10,6 @@
 use super::config::SemConfig;
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::FemBoundaryManager;
-use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use ndarray::{Array1, Array2};
 use std::sync::Arc;
 
@@ -26,9 +25,6 @@ pub struct SemSolver {
     pub(super) mesh: Arc<SemMesh>,
     /// Global mass matrix (diagonal by construction in SEM)
     pub(super) mass_matrix: Array1<f64>,
-    /// Global stiffness matrix
-    #[allow(dead_code)]
-    pub(super) stiffness_matrix: CompressedSparseRowMatrix<f64>,
     /// Boundary condition manager
     pub(super) boundary_manager: FemBoundaryManager,
     /// Time integrator
@@ -41,30 +37,33 @@ pub struct SemSolver {
 
 impl SemSolver {
     /// Create new SEM solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: SemConfig, mesh: Arc<SemMesh>) -> KwaversResult<Self> {
         if config.polynomial_degree == 0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "SEM polynomial_degree must be positive".to_string(),
+                "SEM polynomial_degree must be positive".to_owned(),
             ));
         }
         if !config.dt.is_finite() || config.dt <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "SEM dt must be finite and positive".to_string(),
+                "SEM dt must be finite and positive".to_owned(),
             ));
         }
         if config.n_steps == 0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "SEM n_steps must be positive".to_string(),
+                "SEM n_steps must be positive".to_owned(),
             ));
         }
         if !config.sound_speed.is_finite() || config.sound_speed <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "SEM sound_speed must be finite and positive".to_string(),
+                "SEM sound_speed must be finite and positive".to_owned(),
             ));
         }
         if !config.density.is_finite() || config.density <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "SEM density must be finite and positive".to_string(),
+                "SEM density must be finite and positive".to_owned(),
             ));
         }
         if config.polynomial_degree != mesh.basis.degree {
@@ -76,7 +75,6 @@ impl SemSolver {
 
         let n_dofs = mesh.n_dofs;
         let mass_matrix = Array1::<f64>::zeros(n_dofs);
-        let stiffness_matrix = CompressedSparseRowMatrix::create(n_dofs, n_dofs);
         let integrator = NewmarkIntegrator::average_acceleration(config.dt, n_dofs);
         let solution = Array1::<f64>::zeros(n_dofs);
 
@@ -84,7 +82,6 @@ impl SemSolver {
             config,
             mesh,
             mass_matrix,
-            stiffness_matrix,
             boundary_manager: FemBoundaryManager::new(),
             integrator,
             solution,
@@ -95,6 +92,9 @@ impl SemSolver {
     /// Assemble the global diagonal mass matrix.
     ///
     /// M_ii = ρ |J_i| w_i w_j w_k  (GLL quadrature; exact for p ≤ 2N-1)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn assemble_system(&mut self) -> KwaversResult<()> {
         self.mass_matrix.fill(0.0);
 
@@ -135,18 +135,27 @@ impl SemSolver {
     }
 
     /// Get mutable reference to boundary condition manager
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn boundary_manager(&mut self) -> &mut FemBoundaryManager {
         &mut self.boundary_manager
     }
 
     /// Get reference to boundary condition manager
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn boundary_manager_ref(&self) -> &FemBoundaryManager {
         &self.boundary_manager
     }
 
     /// Set initial displacement and synchronise the time integrator.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_initial_conditions(
         &mut self,
         initial_displacement: Array1<f64>,
@@ -165,6 +174,9 @@ impl SemSolver {
     }
 
     /// Advance one time step: M·ü + K·u = 0 via Newmark average-acceleration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(&mut self) -> KwaversResult<()> {
         if self.time_step >= self.config.n_steps {
             return Ok(());
@@ -179,6 +191,9 @@ impl SemSolver {
     }
 
     /// Run complete simulation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_simulation(&mut self) -> KwaversResult<()> {
         self.assemble_system()?;
         while self.time_step < self.config.n_steps {
@@ -194,18 +209,27 @@ impl SemSolver {
     }
 
     /// Get current time
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn current_time(&self) -> f64 {
         self.integrator.time
     }
 
     /// Get current time step index
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn current_step(&self) -> usize {
         self.time_step
     }
 
     /// Interpolate solution at arbitrary points
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn interpolate_solution(&self, query_points: &Array2<f64>) -> KwaversResult<Array1<f64>> {
         let mut interpolated = Array1::<f64>::zeros(query_points.nrows());
         for (i, point) in query_points.outer_iter().enumerate() {
@@ -239,7 +263,7 @@ impl SemSolver {
             Ok(result)
         } else {
             Err(crate::core::error::KwaversError::InvalidInput(
-                "No elements in mesh".to_string(),
+                "No elements in mesh".to_owned(),
             ))
         }
     }

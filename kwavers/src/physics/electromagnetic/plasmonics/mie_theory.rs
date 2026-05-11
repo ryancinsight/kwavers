@@ -193,7 +193,7 @@ impl MieTheory {
 pub(crate) fn gold_dielectric_johnson_christy(wavelength_m: f64) -> Complex<f64> {
     let wavelength_um = wavelength_m * 1.0e6;
     let (n, k) = interpolate_gold_nk(wavelength_um);
-    Complex::new(n * n - k * k, 2.0 * n * k)
+    Complex::new(n.mul_add(n, -(k * k)), 2.0 * n * k)
 }
 
 #[must_use]
@@ -208,7 +208,7 @@ fn interpolate_gold_nk(wavelength_um: f64) -> (f64, f64) {
         let (lambda1, n1, k1) = pair[1];
         if wavelength_um <= lambda1 {
             let t = (wavelength_um - lambda0) / (lambda1 - lambda0);
-            return (n0 + t * (n1 - n0), k0 + t * (k1 - k0));
+            return (t.mul_add(n1 - n0, n0), t.mul_add(k1 - k0, k0));
         }
     }
 

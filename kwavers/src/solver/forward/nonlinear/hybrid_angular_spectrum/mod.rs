@@ -83,6 +83,9 @@ impl Default for HASConfig {
 
 impl HASConfig {
     /// Create configuration with validation
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(
         sound_speed: f64,
         density: f64,
@@ -94,22 +97,22 @@ impl HASConfig {
     ) -> KwaversResult<Self> {
         if sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Sound speed must be positive".to_string(),
+                "Sound speed must be positive".to_owned(),
             ));
         }
         if density <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Density must be positive".to_string(),
+                "Density must be positive".to_owned(),
             ));
         }
         if dz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Step size must be positive".to_string(),
+                "Step size must be positive".to_owned(),
             ));
         }
         if !(0.0..=3.0).contains(&power_law_exponent) {
             return Err(KwaversError::InvalidInput(
-                "Power law exponent should be between 0 and 3".to_string(),
+                "Power law exponent should be between 0 and 3".to_owned(),
             ));
         }
 
@@ -125,11 +128,16 @@ impl HASConfig {
     }
 
     /// Calculate acoustic impedance Z = ρc
+    #[must_use] 
     pub fn impedance(&self) -> f64 {
         self.density * self.sound_speed
     }
 
     /// Calculate attenuation at given frequency (Np/m)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn attenuation_at_frequency(&self, frequency: f64) -> f64 {
         let freq_mhz = frequency / 1e6;
         // Convert dB/cm/MHz to Np/m
@@ -167,19 +175,19 @@ impl HASConfig {
 /// ```
 #[derive(Debug)]
 pub struct HybridAngularSpectrum {
-    #[allow(dead_code)]
-    grid: Grid,
     config: HASConfig,
     solver: HybridAngularSpectrumSolver,
 }
 
 impl HybridAngularSpectrum {
     /// Create new HAS propagator
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(grid: &Grid, config: HASConfig) -> KwaversResult<Self> {
         let solver = HybridAngularSpectrumSolver::new(grid, &config)?;
 
         Ok(Self {
-            grid: grid.clone(),
             config,
             solver,
         })
@@ -195,10 +203,13 @@ impl HybridAngularSpectrum {
     /// # Returns
     ///
     /// Final pressure field after propagation
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn propagate(&self, pressure: &Array3<f64>, distance: f64) -> KwaversResult<Array3<f64>> {
         if distance < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Propagation distance must be non-negative".to_string(),
+                "Propagation distance must be non-negative".to_owned(),
             ));
         }
 
@@ -276,7 +287,7 @@ mod tests {
         let config = HASConfig::default();
 
         let has = HybridAngularSpectrum::new(&grid, config);
-        assert!(has.is_ok());
+        let _has = has.unwrap();
     }
 
     #[test]

@@ -24,14 +24,14 @@ impl<'a> PermeabilityModels<'a> {
             10.0 * (mi / 0.3).powf(1.5) // Empirical relation
         } else if mi >= 0.5 {
             // Risk of damage
-            50.0 * (mi / 0.5).powf(2.0)
+            50.0 * (mi / 0.5).powi(2)
         } else {
             1.0 // No effect
         };
 
         // Microbubble concentration effect
         let bubble_factor = if bubble_conc > 0.0 {
-            1.0 + 0.5 * (bubble_conc / 1e6).ln().max(0.0) // Logarithmic enhancement
+            0.5f64.mul_add((bubble_conc / 1e6).ln().max(0.0), 1.0) // Logarithmic enhancement
         } else {
             1.0
         };
@@ -48,8 +48,8 @@ impl<'a> PermeabilityModels<'a> {
         let base_duration = self.parameters.duration; // Treatment duration
 
         // Opening duration scales with MI and bubble concentration
-        let mi_factor = (mi / 0.3).powf(0.5);
-        let bubble_factor = 1.0 + 0.2 * (bubble_conc / 1e8).min(5.0);
+        let mi_factor = (mi / 0.3).sqrt();
+        let bubble_factor = 0.2f64.mul_add((bubble_conc / 1e8).min(5.0), 1.0);
 
         base_duration * mi_factor * bubble_factor
     }

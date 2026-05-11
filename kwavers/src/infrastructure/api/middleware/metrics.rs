@@ -27,6 +27,9 @@ pub struct MetricsCollector {
 
 impl MetricsCollector {
     /// Create a new production metrics collector
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn new() -> Self {
         let registry = prometheus::Registry::new();
 
@@ -201,6 +204,9 @@ impl MetricsCollector {
     }
 
     /// Get metrics in Prometheus format
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn gather_metrics(&self) -> String {
         use prometheus::Encoder;
         let encoder = prometheus::TextEncoder::new();

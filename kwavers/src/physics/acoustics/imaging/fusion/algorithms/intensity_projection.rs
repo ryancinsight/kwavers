@@ -20,7 +20,10 @@ pub(crate) enum ProjectionKind {
     Maximum,
     Minimum,
 }
-
+/// Fuse intensity projection.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub(crate) fn fuse_intensity_projection(
     fusion: &MultiModalFusion,
     kind: ProjectionKind,

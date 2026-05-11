@@ -35,6 +35,10 @@ impl Clone for LinearArray {
 }
 
 impl LinearArray {
+    /// New.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn new<A: Apodization>(
         length: f64,
@@ -87,10 +91,8 @@ impl LinearArray {
             .par_iter_mut()
             .enumerate()
             .for_each(|(i, delay)| {
-                let x_elem = start_x + i as f64 * spacing;
-                let distance = ((x_elem - focus_x).powi(2)
-                    + (self.y_pos - focus_y).powi(2)
-                    + (self.z_pos - focus_z).powi(2))
+                let x_elem = (i as f64).mul_add(spacing, start_x);
+                let distance = (self.z_pos - focus_z).mul_add(self.z_pos - focus_z, (self.y_pos - focus_y).mul_add(self.y_pos - focus_y, (x_elem - focus_x).powi(2)))
                 .sqrt();
                 *delay = distance / c; // Time delay, not phase delay
             });
@@ -112,7 +114,7 @@ impl Source for LinearArray {
         let start_x = self.x_pos - self.length / 2.0;
 
         for i in 0..self.num_elements {
-            let x_elem = start_x + i as f64 * spacing;
+            let x_elem = (i as f64).mul_add(spacing, start_x);
             if let Some((ix, iy, iz)) = grid.position_to_indices(x_elem, self.y_pos, self.z_pos) {
                 mask[(ix, iy, iz)] = self.apodization_weights[i];
             }
@@ -146,7 +148,7 @@ impl Source for LinearArray {
             for i in (idx - 1)..=(idx + 1) {
                 if i >= 0 && i < self.num_elements as isize {
                     let i_usize = i as usize;
-                    let x_elem = start_x + i as f64 * spacing;
+                    let x_elem = (i as f64).mul_add(spacing, start_x);
                     if (x - x_elem).abs() < tolerance {
                         let delay = self.time_delays[i_usize];
                         let weight = self.apodization_weights[i_usize];
@@ -162,7 +164,7 @@ impl Source for LinearArray {
         let spacing = self.element_spacing();
         let start_x = self.x_pos - self.length / 2.0;
         (0..self.num_elements)
-            .map(|i| (start_x + i as f64 * spacing, self.y_pos, self.z_pos))
+            .map(|i| ((i as f64).mul_add(spacing, start_x), self.y_pos, self.z_pos))
             .collect()
     }
 

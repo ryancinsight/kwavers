@@ -57,6 +57,10 @@ pub struct GridDimensions {
 }
 
 impl GridDimensions {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Grid dimensions must be non-zero`.
+    ///
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
         assert!(

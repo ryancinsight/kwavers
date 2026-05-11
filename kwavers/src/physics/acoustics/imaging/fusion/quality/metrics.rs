@@ -12,6 +12,9 @@ pub struct ImageMetrics {
 }
 
 /// Calculate basic SNR and CNR metrics from 3D image data
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[must_use]
 pub fn calculate_image_metrics(data: &Array3<f64>) -> ImageMetrics {
     if data.is_empty() {

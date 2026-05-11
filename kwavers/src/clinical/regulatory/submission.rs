@@ -37,6 +37,9 @@ pub struct SubmissionDocument {
 
 impl SubmissionDocument {
     /// Create new 510(k) submission document
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         manufacturer: impl Into<String>,
         device_description: DeviceDescription,
@@ -63,16 +66,22 @@ impl SubmissionDocument {
             clinical_evidence: Vec::new(),
             summary: String::new(),
             submission_date: iso8601_now(),
-            status: "Draft".to_string(),
+            status: "Draft".to_owned(),
         })
     }
 
     /// Set contact information
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_contact(&mut self, contact: impl Into<String>) {
         self.contact_info = contact.into();
     }
 
     /// Add predicate device
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_predicate(&mut self, predicate: PredicateDevice) -> KwaversResult<()> {
         predicate.validate()?;
         self.predicate_devices.push(predicate);
@@ -80,11 +89,17 @@ impl SubmissionDocument {
     }
 
     /// Add risk record
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_risk(&mut self, risk: RiskRecord) {
         self.risk_management.push(risk);
     }
 
     /// Add performance test
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_performance_test(&mut self, test: PerformanceTest) -> KwaversResult<()> {
         test.validate()?;
         self.performance_tests.push(test);
@@ -92,6 +107,9 @@ impl SubmissionDocument {
     }
 
     /// Add clinical evidence
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_clinical_evidence(&mut self, evidence: ClinicalEvidence) -> KwaversResult<()> {
         evidence.validate()?;
         self.clinical_evidence.push(evidence);
@@ -104,34 +122,35 @@ impl SubmissionDocument {
     }
 
     /// Generate submission checklist
+    #[must_use] 
     pub fn generate_checklist(&self) -> HashMap<String, bool> {
         let mut checklist = HashMap::new();
 
-        checklist.insert("Device Description Complete".to_string(), {
+        checklist.insert("Device Description Complete".to_owned(), {
             self.device_description.validate().is_ok()
         });
 
-        checklist.insert("Predicate Device(s) Identified".to_string(), {
+        checklist.insert("Predicate Device(s) Identified".to_owned(), {
             !self.predicate_devices.is_empty()
         });
 
-        checklist.insert("Risk Analysis Complete".to_string(), {
+        checklist.insert("Risk Analysis Complete".to_owned(), {
             !self.risk_management.is_empty()
         });
 
-        checklist.insert("Performance Testing Done".to_string(), {
+        checklist.insert("Performance Testing Done".to_owned(), {
             self.performance_tests.iter().all(|t| t.result.is_some())
         });
 
-        checklist.insert("Clinical Evidence Provided".to_string(), {
+        checklist.insert("Clinical Evidence Provided".to_owned(), {
             !self.clinical_evidence.is_empty()
         });
 
-        checklist.insert("Summary Statement Complete".to_string(), {
+        checklist.insert("Summary Statement Complete".to_owned(), {
             !self.summary.is_empty()
         });
 
-        checklist.insert("Contact Information Provided".to_string(), {
+        checklist.insert("Contact Information Provided".to_owned(), {
             !self.contact_info.is_empty()
         });
 
@@ -139,12 +158,16 @@ impl SubmissionDocument {
     }
 
     /// Validate submission completeness
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         self.device_description.validate()?;
 
         if self.predicate_devices.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "At least one predicate device required".to_string(),
+                "At least one predicate device required".to_owned(),
             ));
         }
 
@@ -154,7 +177,7 @@ impl SubmissionDocument {
 
         if self.performance_tests.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Performance testing data required".to_string(),
+                "Performance testing data required".to_owned(),
             ));
         }
 
@@ -176,7 +199,7 @@ impl SubmissionDocument {
 
         if self.summary.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Summary statement required".to_string(),
+                "Summary statement required".to_owned(),
             ));
         }
 
@@ -184,40 +207,44 @@ impl SubmissionDocument {
     }
 
     /// Mark submission as submitted
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn submit(&mut self) -> KwaversResult<()> {
         self.validate()?;
-        self.status = "Submitted".to_string();
+        self.status = "Submitted".to_owned();
         Ok(())
     }
 
     /// Get submission statistics
+    #[must_use] 
     pub fn statistics(&self) -> HashMap<String, String> {
         let mut stats = HashMap::new();
 
-        stats.insert("Submission ID".to_string(), self.submission_id.clone());
+        stats.insert("Submission ID".to_owned(), self.submission_id.clone());
 
         stats.insert(
-            "Device Name".to_string(),
+            "Device Name".to_owned(),
             self.device_description.name.clone(),
         );
 
         stats.insert(
-            "Classification".to_string(),
-            self.device_description.classification.as_str().to_string(),
+            "Classification".to_owned(),
+            self.device_description.classification.as_str().to_owned(),
         );
 
         stats.insert(
-            "Predicate Devices".to_string(),
+            "Predicate Devices".to_owned(),
             self.predicate_devices.len().to_string(),
         );
 
         stats.insert(
-            "Risk Items".to_string(),
+            "Risk Items".to_owned(),
             self.risk_management.len().to_string(),
         );
 
         stats.insert(
-            "Performance Tests".to_string(),
+            "Performance Tests".to_owned(),
             self.performance_tests.len().to_string(),
         );
 
@@ -228,16 +255,16 @@ impl SubmissionDocument {
             .count();
 
         stats.insert(
-            "Passed Tests".to_string(),
+            "Passed Tests".to_owned(),
             format!("{}/{}", passed_tests, self.performance_tests.len()),
         );
 
         stats.insert(
-            "Clinical Evidence Items".to_string(),
+            "Clinical Evidence Items".to_owned(),
             self.clinical_evidence.len().to_string(),
         );
 
-        stats.insert("Status".to_string(), self.status.clone());
+        stats.insert("Status".to_owned(), self.status.clone());
 
         stats
     }

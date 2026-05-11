@@ -26,6 +26,10 @@ impl SimdStencilProcessor {
     ///   *SC '10 Companion*. §2.2.
     /// - Williams, S. et al. (2009). "Roofline: An insightful visual performance model".
     ///   *Commun. ACM* 52(4), 65–76.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_pressure(
         &mut self,
         pressure: &Array3<f64>,
@@ -90,6 +94,9 @@ impl SimdStencilProcessor {
     /// # Returns
     ///
     /// Updated pressure field (velocity is updated in-place).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn fused_update(
         &mut self,
         pressure: &Array3<f64>,
@@ -166,7 +173,6 @@ mod tests {
         let velocity_div = Array3::zeros((16, 16, 16));
 
         let result = processor.update_pressure(&pressure, &pressure_prev, &velocity_div);
-        assert!(result.is_ok());
 
         let updated = result.unwrap();
         assert_eq!(updated.shape(), pressure.shape());
@@ -184,7 +190,6 @@ mod tests {
 
         let result =
             processor.fused_update(&pressure, &pressure_prev, &mut velocity, &velocity_div);
-        assert!(result.is_ok());
 
         let p_new = result.unwrap();
         assert_eq!(p_new.shape(), pressure.shape());
@@ -194,6 +199,9 @@ mod tests {
     /// Verify tiled and non-tiled (tile=256) results are bitwise identical on a 17³ grid.
     ///
     /// Non-power-of-two grid size exercises tile boundary handling.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_tiling_matches_naive() {
         let n = 17usize;

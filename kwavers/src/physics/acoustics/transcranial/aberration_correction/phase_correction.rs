@@ -29,7 +29,7 @@
 //! `R = (1/N)|Σ_i e^{iφ_i}|`.  After correction R → 1, so the focal gain
 //! improvement is:
 //! ```text
-//!   ΔG = 20 · log10(1 / R)   [dB]
+//!   ΔG = 20 · log10(1 / R)   (dB)
 //! ```
 //! (positive when R < 1, i.e. when the array was aberrated.)
 //!
@@ -86,6 +86,9 @@ pub struct TranscranialAberrationCorrection {
 
 impl TranscranialAberrationCorrection {
     /// Create new aberration correction system
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: &Grid) -> KwaversResult<Self> {
         Ok(Self {
             grid: grid.clone(),
@@ -107,6 +110,9 @@ impl TranscranialAberrationCorrection {
     ///
     /// ## References
     /// - Clement & Hynynen (2002) §II.A. Phase-screen model.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calculate_correction(
         &self,
         skull_ct_data: &ndarray::Array3<f64>,
@@ -151,6 +157,9 @@ impl TranscranialAberrationCorrection {
     /// grid spacing and clamping to valid index range before lookup in the CT array.
     ///
     /// **References**: Aubry et al. (2003) §II.B; Marquet et al. (2009) §2.1.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn calculate_aberration_phases(
         &self,
         skull_ct_data: &ndarray::Array3<f64>,
@@ -166,7 +175,7 @@ impl TranscranialAberrationCorrection {
                 target_point[2] - transducer_pos[2],
             ];
             let path_length =
-                (path_vector[0].powi(2) + path_vector[1].powi(2) + path_vector[2].powi(2)).sqrt();
+                path_vector[2].mul_add(path_vector[2], path_vector[1].mul_add(path_vector[1], path_vector[0].powi(2))).sqrt();
 
             let num_samples: usize = 100;
             let ds = path_length / num_samples as f64;
@@ -212,7 +221,7 @@ impl TranscranialAberrationCorrection {
     ///
     /// The improvement in focal gain after phase conjugation is:
     /// ```text
-    ///   ΔG = −20 · log10(R)   [dB]
+    ///   ΔG = −20 · log10(R)   (dB)
     /// ```
     ///
     /// **References**:
@@ -246,6 +255,6 @@ impl TranscranialAberrationCorrection {
         let (sum_cos, sum_sin) = phases.iter().fold((0.0_f64, 0.0_f64), |(sc, ss), &p| {
             (sc + p.cos(), ss + p.sin())
         });
-        (sum_cos * sum_cos + sum_sin * sum_sin).sqrt() / n as f64
+        sum_cos.hypot(sum_sin) / n as f64
     }
 }

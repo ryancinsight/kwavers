@@ -111,6 +111,9 @@ pub fn create_identity_covariance(n: usize) -> Array2<Complex64> {
 /// Create a rank-deficient covariance matrix for testing singular cases.
 ///
 /// R = U Λ U^H where Λ has only `rank` non-zero eigenvalues.
+/// # Panics
+/// - Panics if assertion fails: `Rank must be <= dimension`.
+///
 pub fn create_rank_deficient_covariance(n: usize, rank: usize) -> Array2<Complex64> {
     assert!(rank <= n, "Rank must be <= dimension");
 

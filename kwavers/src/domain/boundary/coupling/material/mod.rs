@@ -35,6 +35,7 @@ pub struct MaterialInterface {
 }
 
 impl MaterialInterface {
+    #[must_use] 
     pub fn new(
         position: [f64; 3],
         normal: [f64; 3],
@@ -52,6 +53,7 @@ impl MaterialInterface {
     }
 
     /// Compute reflection coefficient R = (Z2 - Z1)/(Z2 + Z1)
+    #[must_use] 
     pub fn reflection_coefficient(&self) -> f64 {
         let z1 = self.material_1.impedance();
         let z2 = self.material_2.impedance();
@@ -59,16 +61,19 @@ impl MaterialInterface {
     }
 
     /// Compute transmission coefficient T = 2Z2/(Z1 + Z2)
+    #[must_use] 
     pub fn transmission_coefficient(&self) -> f64 {
         let z1 = self.material_1.impedance();
         let z2 = self.material_2.impedance();
         2.0 * z2 / (z1 + z2)
     }
 
+    #[must_use] 
     pub fn transmitted_pressure(&self, incident_pressure: f64) -> f64 {
         incident_pressure * self.transmission_coefficient()
     }
 
+    #[must_use] 
     pub fn reflected_pressure(&self, incident_pressure: f64) -> f64 {
         incident_pressure * self.reflection_coefficient()
     }

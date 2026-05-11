@@ -13,7 +13,7 @@ fn test_pressure_update_dimensions() {
         let u_div = Array3::zeros((16, 16, 16));
 
         let result = processor.update_pressure_avx512(&p_curr, &p_prev, &u_div);
-        assert!(result.is_ok());
+        result.unwrap();
     }
 }
 

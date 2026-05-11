@@ -50,11 +50,17 @@ impl GridAdapter {
     }
 
     /// Get a reference to the underlying `Grid`
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn inner(&self) -> &Grid {
         &self.grid
     }
 
     /// Consume the adapter and return the underlying `Grid`
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn into_inner(self) -> Grid {
         self.grid
     }
@@ -63,6 +69,9 @@ impl GridAdapter {
     ///
     /// This creates a proper topology instance that owns its data,
     /// suitable for long-term storage in topology-aware APIs.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn into_topology(self) -> KwaversResult<CartesianTopology> {
         CartesianTopology::new(
             [self.grid.nx, self.grid.ny, self.grid.nz],
@@ -75,6 +84,9 @@ impl GridAdapter {
     ///
     /// This provides a bridge in the opposite direction for code that still
     /// requires the legacy `Grid` struct.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_topology(topology: &dyn GridTopology) -> KwaversResult<Self> {
         let dims = topology.dimensions();
         let spacing = topology.spacing();
@@ -152,9 +164,15 @@ impl GridTopology for GridAdapter {
 /// Extension trait to easily convert `Grid` to topology adapters
 pub trait GridTopologyExt {
     /// Convert this grid into a topology adapter
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn as_topology(&self) -> GridAdapter;
 
     /// Convert this grid into a proper `CartesianTopology`
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn to_cartesian_topology(&self) -> KwaversResult<CartesianTopology>;
 }
 

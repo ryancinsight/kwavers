@@ -19,6 +19,7 @@ pub struct HIFUTransducer {
 
 impl HIFUTransducer {
     /// Create a new single-element focused transducer
+    #[must_use] 
     pub fn new_single_element(
         frequency: f64,
         acoustic_power: f64,
@@ -72,6 +73,10 @@ pub struct HIFUTreatmentPlan {
 
 impl HIFUTreatmentPlan {
     /// Create a new treatment plan
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(target: TreatmentTarget, protocol: TreatmentProtocol) -> Self {
         Self {
             target,
@@ -82,6 +87,9 @@ impl HIFUTreatmentPlan {
     }
 
     /// Validate treatment plan against safety constraints
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate(
         &self,
         transducer: &HIFUTransducer,
@@ -91,18 +99,18 @@ impl HIFUTreatmentPlan {
         // Check target is within accessible region
         if self.target.center[2] < transducer.focal_length * 0.5 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "target.center.z".to_string(),
+                parameter: "target.center.z".to_owned(),
                 value: self.target.center[2],
-                reason: "Target too close to transducer".to_string(),
+                reason: "Target too close to transducer".to_owned(),
             }));
         }
 
         // Check thermal constraints
         if self.safety.max_temperature > 100.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "safety.max_temperature".to_string(),
+                parameter: "safety.max_temperature".to_owned(),
                 value: self.safety.max_temperature,
-                reason: "Maximum temperature exceeds safe limit".to_string(),
+                reason: "Maximum temperature exceeds safe limit".to_owned(),
             }));
         }
 
@@ -110,9 +118,9 @@ impl HIFUTreatmentPlan {
         if self.safety.max_intensity > 1000.0 {
             // 1000 W/cm² = 10^7 W/m²
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "safety.max_intensity".to_string(),
+                parameter: "safety.max_intensity".to_owned(),
                 value: self.safety.max_intensity,
-                reason: "Maximum intensity exceeds safe limit".to_string(),
+                reason: "Maximum intensity exceeds safe limit".to_owned(),
             }));
         }
 

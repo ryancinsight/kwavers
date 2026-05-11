@@ -13,10 +13,7 @@ fn test_simulation() {
 
     let fluence = simulator.compute_fluence().unwrap();
     let initial_pressure = simulator.compute_initial_pressure(&fluence).unwrap();
-    let result = simulator.simulate(&initial_pressure);
-
-    assert!(result.is_ok());
-    let sim_result = result.unwrap();
+    let sim_result = simulator.simulate(&initial_pressure).unwrap();
 
     assert_eq!(sim_result.pressure_fields.len(), sim_result.time.len());
     assert!(
@@ -49,10 +46,7 @@ fn test_multi_wavelength_simulation() {
 
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
-    let results = simulator.simulate_multi_wavelength();
-    assert!(results.is_ok());
-
-    let multi_results = results.unwrap();
+    let multi_results = simulator.simulate_multi_wavelength().unwrap();
     assert_eq!(multi_results.len(), 2, "Should simulate all wavelengths");
 
     for (fluence, pressure) in &multi_results {

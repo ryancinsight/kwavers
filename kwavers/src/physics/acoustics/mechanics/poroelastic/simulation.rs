@@ -30,31 +30,33 @@ use super::waves::WaveSpeeds;
 /// ```
 #[derive(Debug)]
 pub struct PoroelasticSimulation {
-    #[allow(dead_code)]
-    grid: Grid,
-    #[allow(dead_code)]
     pub material: PoroelasticMaterial,
     pub biot: BiotTheory,
 }
 
 impl PoroelasticSimulation {
     /// Create new poroelastic simulation
-    pub fn new(grid: &Grid, material: PoroelasticMaterial) -> KwaversResult<Self> {
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn new(_grid: &Grid, material: PoroelasticMaterial) -> KwaversResult<Self> {
         let biot = BiotTheory::new(&material);
 
-        Ok(Self {
-            grid: grid.clone(),
-            material,
-            biot,
-        })
+        Ok(Self { material, biot })
     }
 
     /// Compute wave speeds at given frequency
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_wave_speeds(&self, frequency: f64) -> KwaversResult<WaveSpeeds> {
         self.biot.compute_wave_speeds(frequency)
     }
 
     /// Compute attenuation coefficients
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_attenuation(&self, frequency: f64) -> KwaversResult<(f64, f64)> {
         self.biot.compute_attenuation(frequency)
     }

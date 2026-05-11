@@ -58,6 +58,9 @@ pub struct HeterogeneousTissueMedium {
 
 impl HeterogeneousTissueMedium {
     /// Create a new heterogeneous tissue medium
+    /// # Panics
+    /// - Panics if `Default tissue properties not found`.
+    ///
     pub fn new(grid: Grid, default_tissue: TissueType) -> Self {
         let shape = (grid.nx, grid.ny, grid.nz);
         let tissue_map = Array3::from_elem(shape, default_tissue);
@@ -90,6 +93,9 @@ impl HeterogeneousTissueMedium {
     }
 
     /// Set tissue type for a region
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_tissue_region(&mut self, region: &TissueRegion) -> KwaversResult<()> {
         region.validate()?;
 
@@ -125,6 +131,9 @@ impl HeterogeneousTissueMedium {
     }
 
     /// Get tissue properties at an index
+    /// # Panics
+    /// - Panics if `Tissue type should have properties`.
+    ///
     pub(super) fn get_tissue_properties(
         &self,
         i: usize,
@@ -158,7 +167,7 @@ impl CoreMedium for HeterogeneousTissueMedium {
     fn max_sound_speed(&self) -> f64 {
         self.sound_speed
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::NAN, f64::max)
             .max(MIN_PHYSICAL_SOUND_SPEED)
     }

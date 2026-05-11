@@ -84,7 +84,7 @@ impl PlasmonicEnhancement {
         // where r is distance from particle center
 
         let distance_from_center =
-            (position[0].powi(2) + position[1].powi(2) + position[2].powi(2)).sqrt();
+            position[2].mul_add(position[2], position[1].mul_add(position[1], position[0].powi(2))).sqrt();
         let min_distance = self.mie_theory.radius * 1.1; // Just outside particle boundary
         let effective_distance = distance_from_center.max(min_distance);
 
@@ -145,7 +145,7 @@ impl PlasmonicEnhancement {
             let detuning = wavelength - resonance_wavelength;
 
             // Modeled peak near-field enhancement of 11x
-            1.0 + 10.0 / (1.0 + (detuning / delta_lambda).powi(2))
+            1.0 + 10.0 / (detuning / delta_lambda).mul_add(detuning / delta_lambda, 1.0)
         } else {
             1.0 // Base transmission (no enhancement)
         }

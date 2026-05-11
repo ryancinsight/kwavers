@@ -89,32 +89,32 @@ impl TimeStepper for RungeKutta4 {
         // Safe access to pre-allocated storage
         let k1 = self.k1.as_mut().ok_or_else(|| {
             KwaversError::System(SystemError::ResourceExhausted {
-                resource: "RK4 k1 storage".to_string(),
-                reason: "Storage not initialized".to_string(),
+                resource: "RK4 k1 storage".to_owned(),
+                reason: "Storage not initialized".to_owned(),
             })
         })?;
         let k2 = self.k2.as_mut().ok_or_else(|| {
             KwaversError::System(SystemError::ResourceExhausted {
-                resource: "RK4 k2 storage".to_string(),
-                reason: "Storage not initialized".to_string(),
+                resource: "RK4 k2 storage".to_owned(),
+                reason: "Storage not initialized".to_owned(),
             })
         })?;
         let k3 = self.k3.as_mut().ok_or_else(|| {
             KwaversError::System(SystemError::ResourceExhausted {
-                resource: "RK4 k3 storage".to_string(),
-                reason: "Storage not initialized".to_string(),
+                resource: "RK4 k3 storage".to_owned(),
+                reason: "Storage not initialized".to_owned(),
             })
         })?;
         let k4 = self.k4.as_mut().ok_or_else(|| {
             KwaversError::System(SystemError::ResourceExhausted {
-                resource: "RK4 k4 storage".to_string(),
-                reason: "Storage not initialized".to_string(),
+                resource: "RK4 k4 storage".to_owned(),
+                reason: "Storage not initialized".to_owned(),
             })
         })?;
         let intermediate_field = self.intermediate_field.as_mut().ok_or_else(|| {
             KwaversError::System(SystemError::ResourceExhausted {
-                resource: "RK4 intermediate field storage".to_string(),
-                reason: "Storage not initialized".to_string(),
+                resource: "RK4 intermediate field storage".to_owned(),
+                reason: "Storage not initialized".to_owned(),
             })
         })?;
 
@@ -126,7 +126,7 @@ impl TimeStepper for RungeKutta4 {
         intermediate_field.assign(field);
         Zip::from(&mut *intermediate_field)
             .and(&*k1)
-            .for_each(|t, k| *t += 0.5 * dt * *k);
+            .par_for_each(|t, k| *t += 0.5 * dt * *k);
         *k2 = rhs_fn(intermediate_field)?;
 
         // Stage 3: k3 = f(t + dt/2, y + dt/2 * k2)
@@ -134,14 +134,14 @@ impl TimeStepper for RungeKutta4 {
         intermediate_field.assign(field);
         Zip::from(&mut *intermediate_field)
             .and(&*k2)
-            .for_each(|t, k| *t += 0.5 * dt * *k);
+            .par_for_each(|t, k| *t += 0.5 * dt * *k);
         *k3 = rhs_fn(intermediate_field)?;
 
         // Stage 4: k4 = f(t + dt, y + dt * k3)
         intermediate_field.assign(field);
         Zip::from(&mut *intermediate_field)
             .and(&*k3)
-            .for_each(|t, k| *t += dt * *k);
+            .par_for_each(|t, k| *t += dt * *k);
         *k4 = rhs_fn(intermediate_field)?;
 
         // Combine stages: y_new = y + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
@@ -151,8 +151,8 @@ impl TimeStepper for RungeKutta4 {
             .and(&*k2)
             .and(&*k3)
             .and(&*k4)
-            .for_each(|r, k1, k2, k3, k4| {
-                *r += dt / 6.0 * (*k1 + 2.0 * *k2 + 2.0 * *k3 + *k4);
+            .par_for_each(|r, k1, k2, k3, k4| {
+                *r += dt / 6.0 * (2.0f64.mul_add(*k3, 2.0f64.mul_add(*k2, *k1)) + *k4);
             });
 
         Ok(())
@@ -198,9 +198,9 @@ impl TimeStepperConfig for AdamsBashforthConfig {
         if self.order != 2 && self.order != 3 {
             return Err(crate::core::error::KwaversError::Validation(
                 crate::core::error::ValidationError::FieldValidation {
-                    field: "order".to_string(),
+                    field: "order".to_owned(),
                     value: self.order.to_string(),
-                    constraint: "Must be 2 or 3".to_string(),
+                    constraint: "Must be 2 or 3".to_owned(),
                 },
             ));
         }
@@ -295,8 +295,8 @@ impl TimeStepper for AdamsBashforth {
                     Zip::from(field)
                         .and(f_n)
                         .and(f_nm1)
-                        .for_each(|r, fn_val, fnm1_val| {
-                            *r += dt * (1.5 * *fn_val - 0.5 * *fnm1_val);
+                        .par_for_each(|r, fn_val, fnm1_val| {
+                            *r += dt * 1.5f64.mul_add(*fn_val, -(0.5 * *fnm1_val));
                         });
                 }
             }
@@ -307,11 +307,10 @@ impl TimeStepper for AdamsBashforth {
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
                     let f_nm2 = &self.rhs_history[self.rhs_history.len() - 2];
 
-                    Zip::from(field).and(f_n).and(f_nm1).and(f_nm2).for_each(
+                    Zip::from(field).and(f_n).and(f_nm1).and(f_nm2).par_for_each(
                         |r, fn_val, fnm1_val, fnm2_val| {
                             *r += dt
-                                * (23.0 / 12.0 * *fn_val - 16.0 / 12.0 * *fnm1_val
-                                    + 5.0 / 12.0 * *fnm2_val);
+                                * (5.0_f64 / 12.0).mul_add(*fnm2_val, (23.0_f64 / 12.0).mul_add(*fn_val, -(16.0_f64 / 12.0 * *fnm1_val)));
                         },
                     );
                 }
@@ -319,9 +318,9 @@ impl TimeStepper for AdamsBashforth {
             _ => {
                 return Err(crate::core::error::KwaversError::Config(
                     crate::core::error::ConfigError::InvalidValue {
-                        parameter: "order".to_string(),
+                        parameter: "order".to_owned(),
                         value: self.config.order.to_string(),
-                        constraint: "1, 2, 3, or 4".to_string(),
+                        constraint: "1, 2, 3, or 4".to_owned(),
                     },
                 ));
             }

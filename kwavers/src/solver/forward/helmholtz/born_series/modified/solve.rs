@@ -6,6 +6,10 @@ use num_complex::Complex64;
 use super::{ModifiedBornSolver, ModifiedBornStats};
 
 impl ModifiedBornSolver {
+    /// Solve.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn solve<M: Medium>(
         &mut self,
         wavenumber: f64,
@@ -51,7 +55,10 @@ impl ModifiedBornSolver {
         result.assign(&total_field);
         Ok(stats)
     }
-
+    /// Compute modified born term.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn compute_modified_born_term<M: Medium>(
         &mut self,
         wavenumber: f64,

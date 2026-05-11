@@ -24,11 +24,11 @@ impl ApodizationType {
     /// Create an apodization implementation from the type
     pub(super) fn create_apodization(&self) -> Box<dyn Apodization> {
         match self {
-            ApodizationType::Rectangular => Box::new(RectangularApodization),
-            ApodizationType::Hanning => Box::new(HanningApodization),
-            ApodizationType::Hamming => Box::new(HammingApodization),
-            ApodizationType::Blackman => Box::new(BlackmanApodization),
-            ApodizationType::Gaussian { sigma } => Box::new(GaussianApodization::new(*sigma)),
+            Self::Rectangular => Box::new(RectangularApodization),
+            Self::Hanning => Box::new(HanningApodization),
+            Self::Hamming => Box::new(HammingApodization),
+            Self::Blackman => Box::new(BlackmanApodization),
+            Self::Gaussian { sigma } => Box::new(GaussianApodization::new(*sigma)),
         }
     }
 }
@@ -38,15 +38,15 @@ impl ApodizationType {
 pub struct TransducerArray2DConfig {
     /// Number of elements in the array
     pub number_elements: usize,
-    /// Width of each element [m]
+    /// Width of each element (m)
     pub element_width: f64,
-    /// Length of each element (elevation direction) [m]
+    /// Length of each element (elevation direction) (m)
     pub element_length: f64,
-    /// Spacing between element centers [m]
+    /// Spacing between element centers (m)
     pub element_spacing: f64,
-    /// Radius of curvature [m] (INF for flat array)
+    /// Radius of curvature (m) (INF for flat array)
     pub radius: f64,
-    /// Center position of the array (x, y, z) [m]
+    /// Center position of the array (x, y, z) (m)
     pub center_position: (f64, f64, f64),
 }
 
@@ -65,21 +65,24 @@ impl Default for TransducerArray2DConfig {
 
 impl TransducerArray2DConfig {
     /// Validate configuration parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> Result<(), String> {
         if self.number_elements == 0 {
-            return Err("Number of elements must be positive".to_string());
+            return Err("Number of elements must be positive".to_owned());
         }
         if self.element_width <= 0.0 {
-            return Err("Element width must be positive".to_string());
+            return Err("Element width must be positive".to_owned());
         }
         if self.element_length <= 0.0 {
-            return Err("Element length must be positive".to_string());
+            return Err("Element length must be positive".to_owned());
         }
         if self.element_spacing < self.element_width {
-            return Err("Element spacing must be >= element width".to_string());
+            return Err("Element spacing must be >= element width".to_owned());
         }
         if self.radius <= 0.0 && !self.radius.is_infinite() {
-            return Err("Radius must be positive or infinite".to_string());
+            return Err("Radius must be positive or infinite".to_owned());
         }
         Ok(())
     }
@@ -87,7 +90,7 @@ impl TransducerArray2DConfig {
     /// Calculate total array aperture width
     #[must_use]
     pub fn aperture_width(&self) -> f64 {
-        (self.number_elements - 1) as f64 * self.element_spacing + self.element_width
+        ((self.number_elements - 1) as f64).mul_add(self.element_spacing, self.element_width)
     }
 
     /// Check if element spacing satisfies Nyquist criterion
@@ -101,13 +104,13 @@ impl TransducerArray2DConfig {
 /// Individual transducer element in 2D array
 #[derive(Debug, Clone)]
 pub struct ArrayElement {
-    /// Element position (x, y, z) [m]
+    /// Element position (x, y, z) (m)
     pub position: (f64, f64, f64),
-    /// Element width [m]
+    /// Element width (m)
     pub width: f64,
-    /// Element length [m]
+    /// Element length (m)
     pub length: f64,
-    /// Time delay for beamforming [s]
+    /// Time delay for beamforming (s)
     pub time_delay: f64,
     /// Transmit apodization weight [0.0-1.0]
     pub transmit_weight: f64,

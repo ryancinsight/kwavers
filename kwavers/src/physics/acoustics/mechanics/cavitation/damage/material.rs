@@ -16,11 +16,11 @@ use crate::core::constants::cavitation::{
 /// Material properties for damage calculation
 #[derive(Debug, Clone)]
 pub struct MaterialProperties {
-    /// Yield strength [Pa]
+    /// Yield strength (Pa)
     pub yield_strength: f64,
-    /// Ultimate tensile strength [Pa]
+    /// Ultimate tensile strength (Pa)
     pub ultimate_strength: f64,
-    /// Hardness [Pa]
+    /// Hardness (Pa)
     pub hardness: f64,
     /// Density [kg/m³]
     pub density: f64,
@@ -46,7 +46,7 @@ impl Default for MaterialProperties {
 /// Damage calculation parameters
 #[derive(Debug, Clone)]
 pub struct DamageParameters {
-    /// Minimum impact pressure for damage [Pa]
+    /// Minimum impact pressure for damage (Pa)
     pub threshold_pressure: f64,
     /// Pit formation efficiency
     pub pit_efficiency: f64,

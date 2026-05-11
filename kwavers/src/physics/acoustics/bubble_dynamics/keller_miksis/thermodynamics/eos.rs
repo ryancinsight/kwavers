@@ -9,6 +9,9 @@ use crate::core::error::{KwaversResult, PhysicsError};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
 
 /// Calculate Van der Waals pressure for thermal effects.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(crate) fn calculate_vdw_pressure(state: &BubbleState) -> KwaversResult<f64> {
     let volume = (4.0 / 3.0) * std::f64::consts::PI * state.radius.powi(3);
     let n_total = state.n_gas + state.n_vapor;
@@ -18,7 +21,7 @@ pub(crate) fn calculate_vdw_pressure(state: &BubbleState) -> KwaversResult<f64> 
         GasSpecies::Xenon => VAN_DER_WAALS_XENON,
         GasSpecies::Nitrogen => VAN_DER_WAALS_NITROGEN,
         GasSpecies::Oxygen => VAN_DER_WAALS_OXYGEN,
-        _ => VAN_DER_WAALS_AIR,
+        GasSpecies::Custom { .. } => VAN_DER_WAALS_AIR,
     };
 
     let a_si = a * 1e5 * 1e-6;
@@ -28,7 +31,7 @@ pub(crate) fn calculate_vdw_pressure(state: &BubbleState) -> KwaversResult<f64> 
 
     if volume <= excluded_volume {
         return Err(PhysicsError::InvalidParameter {
-            parameter: "bubble_volume".to_string(),
+            parameter: "bubble_volume".to_owned(),
             value: volume,
             reason: format!(
                 "Volume {} m3 must be greater than excluded volume {} m3",

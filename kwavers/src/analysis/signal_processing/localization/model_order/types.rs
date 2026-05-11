@@ -57,10 +57,13 @@ impl ModelOrderConfig {
     /// - N ≥ M (samples ≥ sensors) for non-singular covariance
     /// - M ≥ 2 (need at least 2 sensors)
     /// - Default max_sources = M - 1
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(num_sensors: usize, num_samples: usize) -> KwaversResult<Self> {
         if num_sensors < 2 {
             return Err(KwaversError::InvalidInput(
-                "Number of sensors must be ≥ 2".to_string(),
+                "Number of sensors must be ≥ 2".to_owned(),
             ));
         }
 
@@ -81,28 +84,40 @@ impl ModelOrderConfig {
     }
 
     /// Set information criterion
+    #[must_use] 
     pub fn with_criterion(mut self, criterion: ModelOrderCriterion) -> Self {
         self.criterion = criterion;
         self
     }
 
     /// Set eigenvalue threshold
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_eigenvalue_threshold(mut self, threshold: f64) -> Self {
         self.eigenvalue_threshold = threshold;
         self
     }
 
     /// Set maximum allowed sources
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_max_sources(mut self, max_sources: usize) -> Self {
         self.max_sources = Some(max_sources);
         self
     }
 
     /// Validate configuration
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.eigenvalue_threshold < 0.0 || self.eigenvalue_threshold > 1.0 {
             return Err(KwaversError::InvalidInput(
-                "Eigenvalue threshold must be in [0, 1]".to_string(),
+                "Eigenvalue threshold must be in [0, 1]".to_owned(),
             ));
         }
 
@@ -152,6 +167,7 @@ pub struct ModelOrderResult {
 
 impl ModelOrderResult {
     /// Get signal subspace eigenvalues
+    #[must_use] 
     pub fn signal_eigenvalues(&self) -> Vec<f64> {
         self.signal_indices
             .iter()
@@ -160,6 +176,7 @@ impl ModelOrderResult {
     }
 
     /// Get noise subspace eigenvalues
+    #[must_use] 
     pub fn noise_eigenvalues(&self) -> Vec<f64> {
         self.noise_indices
             .iter()
@@ -168,6 +185,7 @@ impl ModelOrderResult {
     }
 
     /// Estimate noise variance (average of noise eigenvalues)
+    #[must_use] 
     pub fn noise_variance(&self) -> f64 {
         let noise_eigs = self.noise_eigenvalues();
         if noise_eigs.is_empty() {

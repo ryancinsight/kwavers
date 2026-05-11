@@ -23,7 +23,7 @@ impl Default for HIFUTransducer {
             aperture_diameter_mm: 40.0,
             power: 50.0,
             efficiency: 0.8,
-            transducer_type: "focused".to_string(),
+            transducer_type: "focused".to_owned(),
             transducer_diameter_mm: 40.0,
         }
     }
@@ -33,9 +33,9 @@ impl Default for HIFUTransducer {
 #[derive(Debug, Clone)]
 pub struct FocalSpot {
     pub location_mm: (f64, f64, f64),
-    /// Lateral FWHM [mm]: 1.02·λ·F# (O'Neil 1949)
+    /// Lateral FWHM (mm): 1.02·λ·F# (O'Neil 1949)
     pub lateral_width_mm: f64,
-    /// Axial FWHM [mm]: (8/π)·λ·F#² (Gaussian beam approximation)
+    /// Axial FWHM (mm): (8/π)·λ·F#² (Gaussian beam approximation)
     pub axial_width_mm: f64,
     pub peak_pressure_pa: f64,
     pub mechanical_index: f64,
@@ -44,6 +44,7 @@ pub struct FocalSpot {
 }
 
 impl FocalSpot {
+    #[must_use] 
     pub fn estimate_from_transducer(transducer: &HIFUTransducer) -> Self {
         let wavelength = SOUND_SPEED_WATER_SIM / transducer.frequency;
         let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm;
@@ -73,13 +74,16 @@ impl FocalSpot {
         }
     }
 
+    #[must_use] 
     pub fn is_safe(&self, tissue_type: TissueType) -> bool {
         self.mechanical_index < tissue_type.safety_limit()
     }
 
+    #[must_use] 
     pub fn focal_volume_cm3(&self) -> f64 {
         self.focal_volume_mm3 / 1000.0
     }
+    #[must_use] 
     pub fn volume_minus6db_cm3(&self) -> f64 {
         self.volume_minus6db_mm3 / 1000.0
     }
@@ -96,6 +100,7 @@ pub struct AblationTarget {
 }
 
 impl AblationTarget {
+    #[must_use] 
     pub fn new(
         name: String,
         location_mm: (f64, f64, f64),
@@ -111,20 +116,24 @@ impl AblationTarget {
         }
     }
 
+    #[must_use] 
     pub fn with_safety_margin(mut self, margin_mm: f64) -> Self {
         self.safety_margin_mm = margin_mm;
         self
     }
 
+    #[must_use] 
     pub fn volume_mm3(&self) -> f64 {
         self.dimensions_mm.0 * self.dimensions_mm.1 * self.dimensions_mm.2
     }
 
+    #[must_use] 
     pub fn volume_with_margin_mm3(&self) -> f64 {
         let (m, d) = (self.safety_margin_mm, self.dimensions_mm);
-        (d.0 + 2.0 * m) * (d.1 + 2.0 * m) * (d.2 + 2.0 * m)
+        2.0f64.mul_add(m, d.0) * 2.0f64.mul_add(m, d.1) * 2.0f64.mul_add(m, d.2)
     }
 
+    #[must_use] 
     pub fn is_focal_spot_adequate(&self, focal_spot: &FocalSpot) -> bool {
         let min_target_dim = self.dimensions_mm.0.min(self.dimensions_mm.1);
         focal_spot.lateral_width_mm >= min_target_dim * 0.5
@@ -140,6 +149,7 @@ pub struct ThermalDose {
 }
 
 impl ThermalDose {
+    #[must_use] 
     pub fn estimate_from_focal_spot(
         focal_spot: &FocalSpot,
         frequency_hz: f64,
@@ -183,9 +193,11 @@ impl ThermalDose {
         }
     }
 
+    #[must_use] 
     pub fn is_sufficient_for_ablation(&self) -> bool {
         self.cem43 >= 240.0
     }
+    #[must_use] 
     pub fn margin_to_ablation(&self) -> f64 {
         240.0 - self.cem43
     }
@@ -215,6 +227,7 @@ pub struct TreatmentFeasibility {
 }
 
 impl TreatmentFeasibility {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             is_feasible: true,
@@ -233,7 +246,7 @@ impl TreatmentFeasibility {
             && self.thermal_dose_achievable
             && self.access_path_clear;
         let num_issues = self.issues.len() as f64;
-        self.confidence_percent = 100.0 * (1.0 - 0.1 * num_issues).max(0.0);
+        self.confidence_percent = 100.0 * 0.1f64.mul_add(-num_issues, 1.0).max(0.0);
     }
 }
 

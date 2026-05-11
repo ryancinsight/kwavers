@@ -61,6 +61,9 @@ pub async fn health_check(State(state): State<AppState>) -> JsonResponse<HealthC
 }
 
 /// Train PINN model endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[axum::debug_handler]
 pub async fn train_pinn_model(
     State(state): State<AppState>,
@@ -95,6 +98,9 @@ pub async fn train_pinn_model(
 }
 
 /// Get job information endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[axum::debug_handler]
 pub async fn get_job_info(
     State(state): State<AppState>,
@@ -154,6 +160,9 @@ pub async fn get_job_info(
 }
 
 /// Run PINN inference endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[axum::debug_handler]
 pub async fn run_inference(
     State(state): State<AppState>,
@@ -219,6 +228,9 @@ pub async fn run_inference(
 }
 
 /// List available models endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[axum::debug_handler]
 pub async fn list_models(
     State(state): State<AppState>,
@@ -251,6 +263,9 @@ pub async fn list_models(
 }
 
 /// Get model metadata endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[axum::debug_handler]
 pub async fn get_model_info(
     State(state): State<AppState>,
@@ -274,6 +289,9 @@ pub async fn get_model_info(
 }
 
 /// Delete model endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[axum::debug_handler]
 pub async fn delete_model(
     State(state): State<AppState>,

@@ -71,6 +71,9 @@ pub struct ThreadLocalArena {
 
 impl ThreadLocalArena {
     /// Create a thread-local arena from the given configuration.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: ArenaConfig) -> KwaversResult<Self> {
         let arena = Rc::new(RefCell::new(FieldArena::new(config)?));
         Ok(Self { arena })
@@ -79,6 +82,9 @@ impl ThreadLocalArena {
     /// Allocate a field slot and return an RAII guard.
     ///
     /// The slot is released automatically when the guard is dropped.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn allocate_field(&self) -> KwaversResult<ThreadLocalFieldGuard> {
         let field_index = {
             let arena = self.arena.borrow_mut();
@@ -90,7 +96,7 @@ impl ThreadLocalArena {
                 .position(|&in_use| !in_use)
                 .ok_or_else(|| {
                     KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
-                        resource: "arena field slot".to_string(),
+                        resource: "arena field slot".to_owned(),
                     })
                 })?;
 
@@ -106,6 +112,7 @@ impl ThreadLocalArena {
     }
 
     /// Snapshot of current allocation statistics.
+    #[must_use] 
     pub fn stats(&self) -> ArenaStats {
         self.arena.borrow().stats()
     }

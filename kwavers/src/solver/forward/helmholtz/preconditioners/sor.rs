@@ -20,9 +20,6 @@ use num_complex::Complex64;
 pub struct SorPreconditioner {
     /// Relaxation parameter (ω = 1.0 for Gauss-Seidel, ω > 1.0 for SOR)
     omega: f64,
-    /// Number of SOR iterations
-    #[allow(dead_code)] // Will be used when multi-iteration SOR is implemented
-    iterations: usize,
     /// Inverse of the diagonal of the Helmholtz operator (precomputed in setup)
     diagonal_inv: Array3<Complex64>,
     /// Whether setup() has been called with valid operator data
@@ -32,11 +29,10 @@ pub struct SorPreconditioner {
 impl SorPreconditioner {
     /// Create a new SOR preconditioner
     #[must_use]
-    pub fn new(omega: f64, iterations: usize, grid: &Grid) -> Self {
+    pub fn new(omega: f64, _iterations: usize, grid: &Grid) -> Self {
         let shape = (grid.nx, grid.ny, grid.nz);
         Self {
             omega,
-            iterations,
             diagonal_inv: Array3::zeros(shape),
             is_setup: false,
         }
@@ -48,6 +44,9 @@ impl Preconditioner for SorPreconditioner {
     ///
     /// Uses the precomputed diagonal inverse from `setup()`.
     /// output = ω * D⁻¹ * input (Jacobi step with relaxation)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply(
         &self,
         input: &ArrayView3<Complex64>,
@@ -75,6 +74,9 @@ impl Preconditioner for SorPreconditioner {
     /// The diagonal of the 7-point Helmholtz stencil A = ∇² + k² is:
     ///   D(i,j,k) = -2(1/dx² + 1/dy² + 1/dz²) + k(x,y,z)²
     /// where k(x,y,z) = 2πf / c(x,y,z) is the spatially varying wavenumber.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn setup(&mut self, wavenumber: f64, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         let dx2_inv = 1.0 / (grid.dx * grid.dx);
         let dy2_inv = 1.0 / (grid.dy * grid.dy);

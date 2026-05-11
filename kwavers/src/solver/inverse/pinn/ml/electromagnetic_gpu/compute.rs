@@ -7,6 +7,10 @@ struct ComputeManager {
 }
 
 impl ComputeManager {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub async fn new() -> KwaversResult<Self> {
         match Self::init_gpu().await {
             Ok((device, queue)) => Ok(Self {
@@ -19,15 +23,24 @@ impl ComputeManager {
             }),
         }
     }
-
+    /// New blocking.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new_blocking() -> KwaversResult<Self> {
         pollster::block_on(Self::new())
     }
-
+    /// Has gpu.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn has_gpu(&self) -> bool {
         self.device.is_some() && self.queue.is_some()
     }
-
+    /// Device.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn device(&self) -> KwaversResult<&wgpu::Device> {
         self.device.as_ref().ok_or_else(|| {
             KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
@@ -35,7 +48,10 @@ impl ComputeManager {
             })
         })
     }
-
+    /// Queue.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn queue(&self) -> KwaversResult<&wgpu::Queue> {
         self.queue.as_ref().ok_or_else(|| {
             KwaversError::System(crate::core::error::SystemError::ResourceUnavailable {
@@ -43,7 +59,10 @@ impl ComputeManager {
             })
         })
     }
-
+    /// Create buffer.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn create_buffer(
         &self,
         size_bytes: usize,
@@ -57,7 +76,10 @@ impl ComputeManager {
             mapped_at_creation: false,
         }))
     }
-
+    /// Write buffer.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn write_buffer<T: bytemuck::Pod>(
         &self,
         buffer: &wgpu::Buffer,

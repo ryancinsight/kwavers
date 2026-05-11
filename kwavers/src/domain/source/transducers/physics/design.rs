@@ -35,6 +35,9 @@ impl TransducerDesign {
     /// * `num_elements` - Number of array elements
     /// * `aperture` - Total aperture size (m)
     /// * `focal_length` - Optional focal length for focused transducer (m)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn design_for_application(
         frequency: f64,
         num_elements: usize,
@@ -101,6 +104,9 @@ impl TransducerDesign {
     }
 
     /// Validate complete design
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         // Check mode separation
         if !self
@@ -108,27 +114,27 @@ impl TransducerDesign {
             .validate_mode_separation(self.piezo.sound_speed)
         {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "mode_separation".to_string(),
-                value: "insufficient".to_string(),
-                constraint: "Lateral modes too close to main resonance".to_string(),
+                parameter: "mode_separation".to_owned(),
+                value: "insufficient".to_owned(),
+                constraint: "Lateral modes too close to main resonance".to_owned(),
             }));
         }
 
         // Check bandwidth
         if !self.frequency_response.validate_bandwidth(20.0) {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "bandwidth".to_string(),
+                parameter: "bandwidth".to_owned(),
                 value: self.frequency_response.fractional_bandwidth.to_string(),
-                constraint: "Fractional bandwidth less than 20%".to_string(),
+                constraint: "Fractional bandwidth less than 20%".to_owned(),
             }));
         }
 
         // Check sensitivity
         if !self.sensitivity.validate_sensitivity(40.0) {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "sensitivity".to_string(),
-                value: "insufficient".to_string(),
-                constraint: "SNR less than 40 dB at typical imaging depth".to_string(),
+                parameter: "sensitivity".to_owned(),
+                value: "insufficient".to_owned(),
+                constraint: "SNR less than 40 dB at typical imaging depth".to_owned(),
             }));
         }
 

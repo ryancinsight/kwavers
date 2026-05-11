@@ -65,6 +65,9 @@ impl StiffnessDetector {
     }
 
     /// Set detection method
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_method(mut self, method: StiffnessMethod) -> Self {
         self.method = method;
@@ -72,6 +75,9 @@ impl StiffnessDetector {
     }
 
     /// Detect stiffness in the problem
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn detect<F, G>(
         &mut self,
         field: &Array3<f64>,
@@ -99,12 +105,18 @@ impl StiffnessDetector {
     }
 
     /// Get last computed metric
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn last_metric(&self) -> Option<StiffnessMetric> {
         self.last_metric.clone()
     }
 
     /// Eigenvalue-based detection (precise but computationally intensive)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn eigenvalue_detection<F, G>(
         &self,
         field: &Array3<f64>,
@@ -125,12 +137,12 @@ impl StiffnessDetector {
             // Create random perturbation
             let mut perturbation = Array3::zeros(field.dim());
             for p in &mut perturbation {
-                *p = 2.0 * rand::random::<f64>() - 1.0;
+                *p = 2.0f64.mul_add(rand::random::<f64>(), -1.0);
             }
 
             // Normalize perturbation
             let norm: f64 = perturbation.iter().map(|&x| x * x).sum::<f64>().sqrt();
-            perturbation.mapv_inplace(|x| x / norm);
+            perturbation.par_mapv_inplace(|x| x / norm);
 
             // Compute Jacobian-vector product
             let mut field_perturbed = field.clone();
@@ -179,6 +191,9 @@ impl StiffnessDetector {
     }
 
     /// Power iteration method (efficient approximation)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn power_iteration_detection<F, G>(
         &self,
         field: &Array3<f64>,
@@ -194,7 +209,7 @@ impl StiffnessDetector {
 
         // Normalize
         let norm: f64 = v.iter().map(|&x| x * x).sum::<f64>().sqrt();
-        v.mapv_inplace(|x| x / norm);
+        v.par_mapv_inplace(|x| x / norm);
 
         let mut eigenvalue = 0.0;
 
@@ -228,7 +243,7 @@ impl StiffnessDetector {
             v = jv;
             let norm: f64 = v.iter().map(|&x| x * x).sum::<f64>().sqrt();
             if norm > 0.0 {
-                v.mapv_inplace(|x| x / norm);
+                v.par_mapv_inplace(|x| x / norm);
             } else {
                 break;
             }
@@ -243,6 +258,9 @@ impl StiffnessDetector {
     }
 
     /// Norm-based detection (computationally efficient but approximate)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn norm_based_detection<F, G>(
         &self,
         field: &Array3<f64>,

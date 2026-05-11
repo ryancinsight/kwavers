@@ -83,7 +83,7 @@ impl EinsteinCoefficients {
         }
     }
 
-    /// Radiative lifetime `tau = 1 / A21` [s].
+    /// Radiative lifetime `tau = 1 / A21` (s).
     #[must_use]
     pub fn radiative_lifetime(&self) -> f64 {
         if self.a21 <= 0.0 || !self.a21.is_finite() {
@@ -93,7 +93,7 @@ impl EinsteinCoefficients {
         }
     }
 
-    /// Fraction of excited atoms that emit spontaneously during `dt` [s].
+    /// Fraction of excited atoms that emit spontaneously during `dt` (s).
     ///
     /// The Poisson survival law gives `f_emit = 1 - exp(-A21 dt)`.
     #[must_use]

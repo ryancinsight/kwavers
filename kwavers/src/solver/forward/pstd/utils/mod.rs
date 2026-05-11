@@ -74,12 +74,6 @@ pub fn compute_anti_aliasing_filter(grid: &Grid, cutoff: f64, order: u32) -> Arr
     filter
 }
 
-/// Compute 1D wavenumber array with proper Nyquist handling
-#[allow(dead_code)]
-fn compute_1d_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
-    KSpaceCalculator::generate_k_vector(n, dx).to_vec()
-}
-
 /// Compute k² magnitude array for Laplacian operations
 #[must_use]
 pub fn compute_k_squared(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>) -> Array3<f64> {
@@ -89,8 +83,8 @@ pub fn compute_k_squared(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>) -
         .and(kx)
         .and(ky)
         .and(kz)
-        .for_each(|k2, &kx_val, &ky_val, &kz_val| {
-            *k2 = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+        .par_for_each(|k2, &kx_val, &ky_val, &kz_val| {
+            *k2 = kz_val.mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val));
         });
 
     k_squared
@@ -105,8 +99,8 @@ pub fn compute_k_magnitude(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>)
         .and(kx)
         .and(ky)
         .and(kz)
-        .for_each(|km, &kx_val, &ky_val, &kz_val| {
-            *km = (kx_val * kx_val + ky_val * ky_val + kz_val * kz_val).sqrt();
+        .par_for_each(|km, &kx_val, &ky_val, &kz_val| {
+            *km = kz_val.mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val)).sqrt();
         });
 
     k_mag
@@ -128,7 +122,7 @@ pub fn compute_kspace_correction_factors(
     match correction_type {
         CorrectionType::Liu1997 => {
             // Liu (1997) correction: sinc function
-            Zip::from(&mut correction).and(kx).and(ky).and(kz).for_each(
+            Zip::from(&mut correction).and(kx).and(ky).and(kz).par_for_each(
                 |c, &kx_val, &ky_val, &kz_val| {
                     let sinc_x = sinc(kx_val * grid.dx / 2.0);
                     let sinc_y = sinc(ky_val * grid.dy / 2.0);
@@ -151,9 +145,9 @@ pub fn compute_kspace_correction_factors(
             // Although np.sinc (Python kspaceFirstOrder3D.py line 298) uses normalised
             // sinc, the Python-precomputed kappa is NOT saved to disk — the C++ binary
             // recomputes kappa internally using sin(x)/x.
-            Zip::from(&mut correction).and(kx).and(ky).and(kz).for_each(
+            Zip::from(&mut correction).and(kx).and(ky).and(kz).par_for_each(
                 |c, &kx_val, &ky_val, &kz_val| {
-                    let k_sq = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+                    let k_sq = kz_val.mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val));
                     let k_mag = k_sq.sqrt();
                     let arg = c_ref * dt * k_mag / 2.0;
                     *c = sinc(arg);
@@ -193,9 +187,8 @@ fn sinc(x: f64) -> f64 {
 
 /// Normalized sinc function: sinc(x) = sin(π·x)/(π·x)
 /// Matches numpy's np.sinc(x) convention. NOT used for kappa (C++ binary uses unnormalized).
-/// Kept for reference and testing.
+#[cfg(test)]
 #[inline]
-#[allow(dead_code)]
 fn sinc_normalized(x: f64) -> f64 {
     if x.abs() < 1e-10 {
         1.0
@@ -220,7 +213,7 @@ pub fn apply_antialiasing_filter(
             let transition_width = 0.1 * k_max_squared;
             let cutoff = 0.8 * k_max_squared;
 
-            Zip::from(&mut filter).and(k_squared).for_each(|f, &k2| {
+            Zip::from(&mut filter).and(k_squared).par_for_each(|f, &k2| {
                 if k2 > cutoff {
                     let x = (k2 - cutoff) / transition_width;
                     *f = 0.5 * (1.0 - x.tanh());
@@ -229,7 +222,7 @@ pub fn apply_antialiasing_filter(
         }
         FilterType::Sharp => {
             // Sharp cutoff at Nyquist
-            Zip::from(&mut filter).and(k_squared).for_each(|f, &k2| {
+            Zip::from(&mut filter).and(k_squared).par_for_each(|f, &k2| {
                 if k2 > k_max_squared {
                     *f = 0.0;
                 }
@@ -277,21 +270,30 @@ fn spectral_deriv_axis(field: &Array3<f64>, grid: &Grid, axis: usize) -> Array3<
     for (idx, &ki) in k_vec.iter().enumerate() {
         let scale = Complex64::new(0.0, ki);
         fhat.index_axis_mut(Axis(axis), idx)
-            .mapv_inplace(|c| c * scale);
+            .par_mapv_inplace(|c| c * scale);
     }
 
     ifft_3d_complex_inplace(&mut fhat);
     fhat.mapv(|c| c.re)
 }
-
+/// Gradient x.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn gradient_x(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
     Ok(spectral_deriv_axis(field, grid, 0))
 }
-
+/// Gradient y.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn gradient_y(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
     Ok(spectral_deriv_axis(field, grid, 1))
 }
-
+/// Gradient z.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn gradient_z(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
     Ok(spectral_deriv_axis(field, grid, 2))
 }

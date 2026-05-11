@@ -98,41 +98,68 @@ pub trait AcousticSolverBackend: Debug {
     ///
     /// Updates the pressure and velocity fields by integrating the acoustic
     /// wave equations forward by the backend's internal time step `dt`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn step(&mut self) -> KwaversResult<()>;
 
     /// Get current pressure field (Pa).
     ///
     /// Array dimensions are `[nx, ny, nz]`. Physical position of `field[[i,j,k]]`
     /// is `(i·dx, j·dy, k·dz)`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_pressure_field(&self) -> &Array3<f64>;
 
     /// Get current particle velocity fields (m/s).
     ///
     /// Returns references to `(vx, vy, vz)`. Lifetimes tied to backend.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>);
 
     /// Get acoustic intensity field (W/m²).
     ///
     /// Plane wave approximation: `I = p² / (ρ₀c₀)`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_intensity_field(&self) -> KwaversResult<Array3<f64>>;
 
     /// Get acoustic impedance field `Z = ρ₀c₀` (kg/(m²·s)).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_impedance_field(&self) -> KwaversResult<Array3<f64>>;
 
     /// Get simulation time step (s).
     ///
     /// Determined during initialization to satisfy the CFL stability condition.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_dt(&self) -> f64;
 
     /// Add dynamic source to simulation.
     ///
     /// Source is evaluated and applied at each subsequent time step.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn add_source(&mut self, source: Arc<dyn Source>) -> KwaversResult<()>;
 
     /// Get current simulation time (s): `t = (steps_completed) · dt`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_current_time(&self) -> f64;
 
     /// Get grid dimensions `(nx, ny, nz)`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_grid_dimensions(&self) -> (usize, usize, usize);
 }
 
@@ -143,9 +170,15 @@ pub trait AcousticSolverBackend: Debug {
 /// frequency and has no timestep, velocity field, or CFL progression.
 pub trait FrequencyDomainAcousticBackend: Debug {
     /// Queue an exact nodal load `F_i += value`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn add_nodal_load(&mut self, node_idx: usize, value: Complex64) -> KwaversResult<()>;
 
     /// Queue Dirichlet values on nodes tagged with a mesh boundary type.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn add_dirichlet_on_boundary_type(
         &mut self,
         boundary_type: BoundaryType,
@@ -153,12 +186,21 @@ pub trait FrequencyDomainAcousticBackend: Debug {
     ) -> KwaversResult<usize>;
 
     /// Assemble and solve the frequency-domain system.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn solve(&mut self) -> KwaversResult<()>;
 
     /// Borrow the complex nodal pressure solution.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn pressure_solution(&self) -> &Array1<Complex64>;
 
     /// Interpolate complex pressure at physical query points.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn interpolate_pressure(
         &self,
         query_points: ArrayView2<'_, f64>,

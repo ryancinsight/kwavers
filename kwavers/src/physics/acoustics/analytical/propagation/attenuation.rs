@@ -120,7 +120,7 @@ impl AttenuationCalculator {
     ) -> f64 {
         let omega = 2.0 * PI * frequency;
         let factor1 = omega * omega / (2.0 * density * sound_speed.powi(3));
-        let viscous_term = (4.0 / 3.0) * shear_viscosity + bulk_viscosity;
+        let viscous_term = (4.0_f64 / 3.0).mul_add(shear_viscosity, bulk_viscosity);
         let thermal_term = thermal_conductivity * (specific_heat_ratio - 1.0) / specific_heat_cp;
         factor1 * (viscous_term + thermal_term)
     }
@@ -141,9 +141,7 @@ impl AttenuationCalculator {
                     let y = j as f64 * grid_spacing[1];
                     let z = k as f64 * grid_spacing[2];
 
-                    let distance = ((x - source_position[0]).powi(2)
-                        + (y - source_position[1]).powi(2)
-                        + (z - source_position[2]).powi(2))
+                    let distance = (z - source_position[2]).mul_add(z - source_position[2], (y - source_position[1]).mul_add(y - source_position[1], (x - source_position[0]).powi(2)))
                     .sqrt();
 
                     field[(i, j, k)] *= (-self.absorption_coefficient * distance).exp();

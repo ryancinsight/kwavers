@@ -22,6 +22,7 @@ use ndarray::Array3;
 /// # Edge Handling
 ///
 /// Borders (1-pixel margin) are set to zero to avoid edge artifacts.
+#[must_use] 
 pub fn compute_local_std(image: &Array3<f32>) -> Array3<f32> {
     let mut std_map = Array3::zeros(image.dim());
     let (d0, d1, d2) = image.dim();
@@ -82,6 +83,7 @@ pub fn compute_local_std(image: &Array3<f32>) -> Array3<f32> {
 /// # Returns
 ///
 /// Gradient magnitude map: |∇I| = √(Gₓ² + Gᵧ²)
+#[must_use] 
 pub fn compute_spatial_gradient(image: &Array3<f32>) -> Array3<f32> {
     let mut grad_map = Array3::zeros(image.dim());
     let (d0, d1, d2) = image.dim();
@@ -90,22 +92,17 @@ pub fn compute_spatial_gradient(image: &Array3<f32>) -> Array3<f32> {
         for i in 1..d1 - 1 {
             for j in 1..d2 - 1 {
                 // Sobel X kernel (vertical edges)
-                let gx = -image[[k, i - 1, j - 1]] + image[[k, i + 1, j - 1]]
-                    - 2.0 * image[[k, i - 1, j]]
-                    + 2.0 * image[[k, i + 1, j]]
+                let gx = 2.0f32.mul_add(image[[k, i + 1, j]], 2.0f32.mul_add(-image[[k, i - 1, j]], -image[[k, i - 1, j - 1]] + image[[k, i + 1, j - 1]]))
                     - image[[k, i - 1, j + 1]]
                     + image[[k, i + 1, j + 1]];
 
                 // Sobel Y kernel (horizontal edges)
-                let gy = -image[[k, i - 1, j - 1]]
-                    - 2.0 * image[[k, i, j - 1]]
-                    - image[[k, i + 1, j - 1]]
-                    + image[[k, i - 1, j + 1]]
-                    + 2.0 * image[[k, i, j + 1]]
+                let gy = 2.0f32.mul_add(image[[k, i, j + 1]], 2.0f32.mul_add(-image[[k, i, j - 1]], -image[[k, i - 1, j - 1]])
+                    - image[[k, i + 1, j - 1]] + image[[k, i - 1, j + 1]])
                     + image[[k, i + 1, j + 1]];
 
                 // Gradient magnitude
-                grad_map[[k, i, j]] = (gx * gx + gy * gy).sqrt();
+                grad_map[[k, i, j]] = gx.hypot(gy);
             }
         }
     }
@@ -139,6 +136,7 @@ pub fn compute_spatial_gradient(image: &Array3<f32>) -> Array3<f32> {
 /// # Returns
 ///
 /// Absolute value of Laplacian: |∇²I|
+#[must_use] 
 pub fn compute_laplacian(image: &Array3<f32>) -> Array3<f32> {
     let mut lap_map = Array3::zeros(image.dim());
     let (d0, d1, d2) = image.dim();
@@ -147,11 +145,9 @@ pub fn compute_laplacian(image: &Array3<f32>) -> Array3<f32> {
         for i in 1..d1 - 1 {
             for j in 1..d2 - 1 {
                 // 4-connected Laplacian kernel
-                let lap = image[[k, i - 1, j]]
+                let lap = 4.0f32.mul_add(-image[[k, i, j]], image[[k, i - 1, j]]
                     + image[[k, i + 1, j]]
-                    + image[[k, i, j - 1]]
-                    + image[[k, i, j + 1]]
-                    - 4.0 * image[[k, i, j]];
+                    + image[[k, i, j - 1]] + image[[k, i, j + 1]]);
 
                 lap_map[[k, i, j]] = lap.abs();
             }
@@ -185,6 +181,7 @@ pub fn compute_laplacian(image: &Array3<f32>) -> Array3<f32> {
 ///
 /// Uses a simplified histogram-free approximation based on normalized
 /// patch variance for computational efficiency.
+#[must_use] 
 pub fn compute_local_entropy(image: &Array3<f32>) -> Array3<f32> {
     let mut entropy_map = Array3::zeros(image.dim());
     let (d0, d1, d2) = image.dim();

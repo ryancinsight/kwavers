@@ -82,6 +82,9 @@ pub struct HybridSpectralDGSolver {
 
 impl HybridSpectralDGSolver {
     /// Create a new Hybrid Spectral-DG solver
+    /// # Panics
+    /// - Panics if `Failed to create DG solver`.
+    ///
     pub fn new(config: HybridSpectralDGConfig, grid: Arc<Grid>) -> Self {
         let detector = DiscontinuityDetector::new(config.discontinuity_threshold);
         let spectral_solver = RegionPSTDSolver::new(config.spectral_order, grid.clone());
@@ -94,7 +97,7 @@ impl HybridSpectralDGSolver {
             shock_threshold: config.discontinuity_threshold,
             ..DGConfig::default()
         };
-        let dg_solver = DGSolver::new(dg_config, grid.clone()).expect("Failed to create DG solver");
+        let dg_solver = DGSolver::new(dg_config, grid).expect("Failed to create DG solver");
         let coupler = HybridCoupler::new(config.conservation_tolerance);
 
         Self {

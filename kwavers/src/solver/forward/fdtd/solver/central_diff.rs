@@ -19,6 +19,11 @@ pub(crate) enum CentralDifferenceOperator {
 }
 
 impl CentralDifferenceOperator {
+    /// New.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn new(order: usize, dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
         match order {
             2 => Ok(Self::Order2(CentralDifference2::new(dx, dy, dz)?)),
@@ -29,7 +34,10 @@ impl CentralDifferenceOperator {
             ))),
         }
     }
-
+    /// Apply x.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         match self {
             Self::Order2(op) => op.apply_x(field),
@@ -37,7 +45,10 @@ impl CentralDifferenceOperator {
             Self::Order6(op) => op.apply_x(field),
         }
     }
-
+    /// Apply y.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         match self {
             Self::Order2(op) => op.apply_y(field),
@@ -45,7 +56,10 @@ impl CentralDifferenceOperator {
             Self::Order6(op) => op.apply_y(field),
         }
     }
-
+    /// Apply z.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         match self {
             Self::Order2(op) => op.apply_z(field),
@@ -58,6 +72,9 @@ impl CentralDifferenceOperator {
     ///
     /// Zero heap allocation for all orders: O2 via `CentralDifference2::apply_x_into`,
     /// O4 via `CentralDifference4::apply_x_into`, O6 via `CentralDifference6::apply_x_into`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn apply_x_into(
         &self,
         field: ArrayView3<f64>,
@@ -73,6 +90,9 @@ impl CentralDifferenceOperator {
     /// Apply Y-derivative in-place into a pre-allocated destination buffer.
     ///
     /// Zero heap allocation for all orders.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn apply_y_into(
         &self,
         field: ArrayView3<f64>,
@@ -88,6 +108,9 @@ impl CentralDifferenceOperator {
     /// Apply Z-derivative in-place into a pre-allocated destination buffer.
     ///
     /// Zero heap allocation for all orders.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn apply_z_into(
         &self,
         field: ArrayView3<f64>,
@@ -99,7 +122,10 @@ impl CentralDifferenceOperator {
             Self::Order6(op) => op.apply_z_into(field, dst),
         }
     }
-
+    /// Gradient.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn gradient(
         &self,
         field: ArrayView3<f64>,

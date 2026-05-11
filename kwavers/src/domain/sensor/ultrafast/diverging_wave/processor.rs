@@ -29,11 +29,13 @@ pub struct DivergingWave {
 
 impl DivergingWave {
     /// Create a new diverging wave processor with the given configuration.
+    #[must_use] 
     pub fn new(config: DivergingWaveConfig) -> Self {
         Self { config }
     }
 
     /// Create with default cardiac imaging configuration (128 elements, 0.3 mm pitch).
+    #[must_use] 
     pub fn cardiac(element_positions: Vec<f64>) -> Self {
         Self::new(DivergingWaveConfig {
             element_positions,
@@ -42,6 +44,7 @@ impl DivergingWave {
     }
 
     /// Number of transducer elements.
+    #[must_use] 
     pub fn n_elements(&self) -> usize {
         self.config.element_positions.len()
     }
@@ -63,6 +66,9 @@ impl DivergingWave {
     /// * `x`        - Lateral position of imaging point (m)
     /// * `z`        - Axial depth of imaging point (m, must be ≥ 0)
     /// * `elem_idx` - Transmitting element index
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn transmit_delay(&self, x: f64, z: f64, elem_idx: usize) -> KwaversResult<f64> {
         self.check_elem(elem_idx)?;
         let xi = self.config.element_positions[elem_idx];
@@ -70,7 +76,7 @@ impl DivergingWave {
         let c = self.config.sound_speed;
         let dx = x - xi;
         let dz = z + f;
-        let delay = ((dx * dx + dz * dz).sqrt() - f) / c;
+        let delay = (dx.hypot(dz) - f) / c;
         Ok(delay)
     }
 
@@ -87,12 +93,15 @@ impl DivergingWave {
     /// * `x`        - Lateral position of imaging point (m)
     /// * `z`        - Axial depth of imaging point (m)
     /// * `elem_idx` - Receiving element index
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn receive_delay(&self, x: f64, z: f64, elem_idx: usize) -> KwaversResult<f64> {
         self.check_elem(elem_idx)?;
         let xj = self.config.element_positions[elem_idx];
         let c = self.config.sound_speed;
         let dx = x - xj;
-        let delay = (dx * dx + z * z).sqrt() / c;
+        let delay = dx.hypot(z) / c;
         Ok(delay)
     }
 
@@ -101,6 +110,9 @@ impl DivergingWave {
     /// ```text
     ///   τ_STA(x, z, i, j) = τ_tx(x, z, i) + τ_rx(x, z, j)
     /// ```
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn sta_delay(&self, x: f64, z: f64, tx_idx: usize, rx_idx: usize) -> KwaversResult<f64> {
         Ok(self.transmit_delay(x, z, tx_idx)? + self.receive_delay(x, z, rx_idx)?)
     }
@@ -120,6 +132,7 @@ impl DivergingWave {
     /// ```
     ///
     /// Reference: Synnevåg et al. (2007), *IEEE TUFFC* 54(11):2213–2220, Eq. (1).
+    #[must_use] 
     pub fn hann_apodization(&self, x: f64, z: f64, elem_idx: usize) -> f64 {
         let xj = self.config.element_positions[elem_idx];
         let f = self.config.virtual_source_depth;
@@ -141,6 +154,7 @@ impl DivergingWave {
     /// ```text
     ///   PRF_max = c / (2 · z_max)     (Hz)
     /// ```
+    #[must_use] 
     pub fn max_prf(&self, z_max: f64) -> f64 {
         self.config.sound_speed / (2.0 * z_max)
     }
@@ -160,6 +174,9 @@ impl DivergingWave {
     ///
     /// For large arrays this is O(N² × N_pixels) in memory.  For real-time systems
     /// consider computing delays on the fly or using the per-point `sta_delay()`.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn sta_delay_table(
         &self,
         x_pixels: &Array1<f64>,
@@ -168,7 +185,7 @@ impl DivergingWave {
         let n = self.n_elements();
         if n == 0 {
             return Err(KwaversError::InvalidInput(
-                "Element positions not set".to_string(),
+                "Element positions not set".to_owned(),
             ));
         }
         let nx = x_pixels.len();
@@ -188,12 +205,12 @@ impl DivergingWave {
                     // Transmit delay (same for all rx at this pixel)
                     let dx_tx = x - xi;
                     let dz_tx = z + f;
-                    let tau_tx = ((dx_tx * dx_tx + dz_tx * dz_tx).sqrt() - f) / c;
+                    let tau_tx = (dx_tx.hypot(dz_tx) - f) / c;
 
                     for rx in 0..n {
                         let xj = self.config.element_positions[rx];
                         let dx_rx = x - xj;
-                        let tau_rx = (dx_rx * dx_rx + z * z).sqrt() / c;
+                        let tau_rx = dx_rx.hypot(z) / c;
                         table[[tx, rx, pixel]] = tau_tx + tau_rx;
                     }
                 }
@@ -209,6 +226,9 @@ impl DivergingWave {
     ///
     /// # Returns
     /// Array of shape `[n_elements × (nx · nz)]`.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn transmit_delay_surface(
         &self,
         x_pixels: &Array1<f64>,
@@ -217,7 +237,7 @@ impl DivergingWave {
         let n = self.n_elements();
         if n == 0 {
             return Err(KwaversError::InvalidInput(
-                "Element positions not set".to_string(),
+                "Element positions not set".to_owned(),
             ));
         }
         let nx = x_pixels.len();
@@ -232,7 +252,7 @@ impl DivergingWave {
                 for (ix, &x) in x_pixels.iter().enumerate() {
                     let dx = x - xi;
                     let dz = z + f;
-                    delays[[tx, iz * nx + ix]] = ((dx * dx + dz * dz).sqrt() - f) / c;
+                    delays[[tx, iz * nx + ix]] = (dx.hypot(dz) - f) / c;
                 }
             }
         }

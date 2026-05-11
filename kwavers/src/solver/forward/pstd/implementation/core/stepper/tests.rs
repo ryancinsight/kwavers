@@ -14,6 +14,9 @@ const CPML_REFERENCE_TOL: f64 = 1e-4;
 /// that for a point source at [N/2, N/2, N/2] with N=16:
 /// - p[N/2, N/2, N/2] (source point) > 0
 /// - p[0, N/2, N/2] (off-source) < 0
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_source_injection_sign_matches_kwave() {
     let n = 16usize;
@@ -77,6 +80,9 @@ fn test_source_injection_sign_matches_kwave() {
 /// Reference values from k-Wave binary (N=16, no PML, signal=[0,1,0]):
 ///   step 2 (injection): p[8,8,8] = 0.5344 Pa
 ///   step 3 (free prop): p[8,8,8] = 0.1128 Pa
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_nyquist_not_zeroed_propagation_amplitude() {
     let n = 16usize;
@@ -177,6 +183,9 @@ fn test_anti_aliasing_filter_attenuates_nyquist_checkerboard() {
 }
 
 /// Verify propagation amplitude is correct even when CPML boundary is configured.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_propagation_amplitude_with_cpml_boundary() {
     use crate::domain::boundary::cpml::CPMLConfig;
@@ -235,6 +244,9 @@ fn test_propagation_amplitude_with_cpml_boundary() {
 ///
 /// At DC (k=0): cos(0) = 1.0.
 /// At k_max (CFL=0.5): cos(π/4) ≈ 0.7071.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_source_kappa_equals_cosine() {
     use std::f64::consts::PI;

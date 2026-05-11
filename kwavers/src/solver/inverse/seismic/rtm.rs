@@ -17,6 +17,9 @@ pub struct RtmProcessor {
 
 impl RtmProcessor {
     /// Create new RTM processor with specified settings
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(settings: RtmSettings) -> Self {
         Self { settings }
@@ -24,6 +27,9 @@ impl RtmProcessor {
 
     /// Perform Reverse Time Migration
     /// Based on Baysal et al. (1983): "Reverse time migration"
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn migrate(
         &self,
         source_wavefield: &Array3<f64>,
@@ -68,13 +74,16 @@ impl RtmProcessor {
         Zip::from(image)
             .and(source_wavefield)
             .and(receiver_wavefield)
-            .for_each(|img, &src, &rcv| {
+            .par_for_each(|img, &src, &rcv| {
                 *img = src * rcv;
             });
     }
 
     /// Apply normalized cross-correlation imaging condition
     /// I(x) = ∫ S(x,t) * R(x,t) dt / √(∫ S²(x,t) dt * ∫ R²(x,t) dt)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_normalized_correlation(
         &self,
         image: &mut Array3<f64>,
@@ -89,11 +98,11 @@ impl RtmProcessor {
         // Compute energy terms
         Zip::from(&mut source_energy)
             .and(source_wavefield)
-            .for_each(|energy, &src| *energy = src * src);
+            .par_for_each(|energy, &src| *energy = src * src);
 
         Zip::from(&mut receiver_energy)
             .and(receiver_wavefield)
-            .for_each(|energy, &rcv| *energy = rcv * rcv);
+            .par_for_each(|energy, &rcv| *energy = rcv * rcv);
 
         // Apply normalized correlation
         Zip::from(image)
@@ -101,7 +110,7 @@ impl RtmProcessor {
             .and(receiver_wavefield)
             .and(&source_energy)
             .and(&receiver_energy)
-            .for_each(|img, &src, &rcv, &src_energy, &rcv_energy| {
+            .par_for_each(|img, &src, &rcv, &src_energy, &rcv_energy| {
                 let normalization = (src_energy * rcv_energy).sqrt();
                 *img = if normalization > f64::EPSILON {
                     src * rcv / normalization
@@ -141,11 +150,11 @@ impl RtmProcessor {
         k: usize,
         grid: &Grid,
     ) -> f64 {
-        let d2_dx2 = (field[[i + 1, j, k]] + field[[i - 1, j, k]] - 2.0 * field[[i, j, k]])
+        let d2_dx2 = 2.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]] + field[[i - 1, j, k]])
             / (grid.dx * grid.dx);
-        let d2_dy2 = (field[[i, j + 1, k]] + field[[i, j - 1, k]] - 2.0 * field[[i, j, k]])
+        let d2_dy2 = 2.0f64.mul_add(-field[[i, j, k]], field[[i, j + 1, k]] + field[[i, j - 1, k]])
             / (grid.dy * grid.dy);
-        let d2_dz2 = (field[[i, j, k + 1]] + field[[i, j, k - 1]] - 2.0 * field[[i, j, k]])
+        let d2_dz2 = 2.0f64.mul_add(-field[[i, j, k]], field[[i, j, k + 1]] + field[[i, j, k - 1]])
             / (grid.dz * grid.dz);
 
         d2_dx2 + d2_dy2 + d2_dz2
@@ -173,7 +182,6 @@ mod tests {
         let receiver_field = Array3::ones((10, 10, 10));
 
         let result = processor.migrate(&source_field, &receiver_field, &grid);
-        assert!(result.is_ok());
 
         let image = result.unwrap();
         assert_eq!(image.dim(), (10, 10, 10));

@@ -12,13 +12,7 @@ use num_complex::Complex;
 /// Sensor-specific beamforming interface tied to hardware array geometry.
 #[derive(Debug, Clone)]
 pub struct SensorBeamformer {
-    /// Sensor array geometry.
-    #[allow(dead_code)]
-    sensor_array: SensorArray,
-    /// Grid sensor set for sampling (optional).
-    #[allow(dead_code)]
-    grid_sensors: Option<GridSensorSet>,
-    /// Cached 3-D sensor positions `[x, y, z]` (m).
+    /// Cached 3-D sensor positions `[x, y, z]` (m) derived from the sensor array at construction.
     sensor_positions: Vec<[f64; 3]>,
     /// Sampling frequency (Hz).
     sampling_frequency: f64,
@@ -35,18 +29,19 @@ impl SensorBeamformer {
             .collect();
 
         Self {
-            sensor_array,
-            grid_sensors: None,
             sensor_positions,
             sampling_frequency,
         }
     }
 
     /// Construct with an additional grid sensor set for volumetric sampling.
+    ///
+    /// `grid_sensors` is accepted for API symmetry; volumetric-sampling dispatch
+    /// is a tracked backlog item.
     #[must_use]
     pub fn with_grid_sensors(
         sensor_array: SensorArray,
-        grid_sensors: GridSensorSet,
+        _grid_sensors: GridSensorSet,
         sampling_frequency: f64,
     ) -> Self {
         let sensor_positions = sensor_array
@@ -56,14 +51,15 @@ impl SensorBeamformer {
             .collect();
 
         Self {
-            sensor_array,
-            grid_sensors: Some(grid_sensors),
             sensor_positions,
             sampling_frequency,
         }
     }
 
     /// Sensor positions as a slice of `[x, y, z]` triples (m).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn positions(&self) -> &[[f64; 3]] {
         &self.sensor_positions
@@ -77,6 +73,9 @@ impl SensorBeamformer {
     ///
     /// Grid points are enumerated in row-major (C) order:
     /// `idx = i*(ny*nz) + j*nz + k`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_delays(
         &self,
         image_grid: &Grid,
@@ -110,9 +109,7 @@ impl SensorBeamformer {
                     let y = origin[1] + y_rel;
                     for &z_rel in &z_coords {
                         let z = origin[2] + z_rel;
-                        let dist = ((x - sensor_pos[0]).powi(2)
-                            + (y - sensor_pos[1]).powi(2)
-                            + (z - sensor_pos[2]).powi(2))
+                        let dist = (z - sensor_pos[2]).mul_add(z - sensor_pos[2], (y - sensor_pos[1]).mul_add(y - sensor_pos[1], (x - sensor_pos[0]).powi(2)))
                         .sqrt();
                         delays[[sensor_idx, grid_idx]] = dist / sound_speed;
                         grid_idx += 1;
@@ -127,14 +124,17 @@ impl SensorBeamformer {
     /// Apply element-wise apodization window to a delay matrix.
     ///
     /// For each image point column `p`, each sensor row `s` is scaled by the
-    /// symmetric window coefficient `w[s]`:
+    /// symmetric window coefficient `w(s)`:
     /// ```text
-    /// d'[s, p] = w[s] · d[s, p]
+    /// d'[s, p] = w(s) · d[s, p]
     /// ```
     ///
     /// # Arguments
     /// - `delays` — `(n_sensors × n_image_points)` delay matrix.
     /// - `window_type` — Apodization window to apply.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_windowing(
         &self,
         delays: &Array2<f64>,
@@ -173,6 +173,9 @@ impl SensorBeamformer {
     ///
     /// # References
     /// - Van Trees, H. L. (2002): *Optimum Array Processing*, §2.4. Wiley.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calculate_steering(
         &self,
         angles: &[(f64, f64)],
@@ -242,9 +245,7 @@ impl SensorBeamformer {
         for i in 0..self.sensor_positions.len() - 1 {
             let pos1 = self.sensor_positions[i];
             let pos2 = self.sensor_positions[i + 1];
-            total += ((pos1[0] - pos2[0]).powi(2)
-                + (pos1[1] - pos2[1]).powi(2)
-                + (pos1[2] - pos2[2]).powi(2))
+            total += (pos1[2] - pos2[2]).mul_add(pos1[2] - pos2[2], (pos1[1] - pos2[1]).mul_add(pos1[1] - pos2[1], (pos1[0] - pos2[0]).powi(2)))
             .sqrt();
             count += 1;
         }

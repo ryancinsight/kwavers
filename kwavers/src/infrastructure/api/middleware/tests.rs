@@ -3,7 +3,7 @@ use super::*;
 #[tokio::test]
 async fn test_rate_limiter_creation() {
     let limiter = RateLimiter::new();
-    assert!(limiter.check_limit("user_123", "/api/train").await.is_ok());
+    limiter.check_limit("user_123", "/api/train").await.unwrap();
 }
 
 #[tokio::test]

@@ -15,9 +15,13 @@ use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel
 /// * `initial_state` — initial bubble state
 /// * `model` — Keller-Miksis model
 /// * `time_span` — (t_start, t_end)
-/// * `dt` — time step [s]
-/// * `p_acoustic` — constant acoustic pressure amplitude [Pa]
+/// * `dt` — time step (s)
+/// * `p_acoustic` — constant acoustic pressure amplitude (Pa)
 /// * `dp_dt` — constant pressure time-derivative [Pa/s]
+/// # Errors
+/// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn integrate_bubble_dynamics_symplectic(
     initial_state: BubbleState,
     model: &KellerMiksisModel,
@@ -28,16 +32,16 @@ pub fn integrate_bubble_dynamics_symplectic(
 ) -> KwaversResult<BubbleState> {
     if dt <= 0.0 {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
-            parameter: "dt".to_string(),
+            parameter: "dt".to_owned(),
             value: dt,
-            reason: "Time step must be positive".to_string(),
+            reason: "Time step must be positive".to_owned(),
         }));
     }
     if time_span.1 <= time_span.0 {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
-            parameter: "time_span.1".to_string(),
+            parameter: "time_span.1".to_owned(),
             value: time_span.1,
-            reason: "End time must be greater than start time".to_string(),
+            reason: "End time must be greater than start time".to_owned(),
         }));
     }
 

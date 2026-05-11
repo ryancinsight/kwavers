@@ -70,23 +70,23 @@ impl Default for BubbleParameters {
         // Default: Air bubble
         gas_composition
             .mole_fractions
-            .insert("N2".to_string(), 0.78);
+            .insert("N2".to_owned(), 0.78);
         gas_composition
             .mole_fractions
-            .insert("O2".to_string(), 0.21);
+            .insert("O2".to_owned(), 0.21);
         gas_composition
             .mole_fractions
-            .insert("Ar".to_string(), 0.01);
+            .insert("Ar".to_owned(), 0.01);
 
         gas_composition
             .molecular_weights
-            .insert("N2".to_string(), 0.028);
+            .insert("N2".to_owned(), 0.028);
         gas_composition
             .molecular_weights
-            .insert("O2".to_string(), 0.032);
+            .insert("O2".to_owned(), 0.032);
         gas_composition
             .molecular_weights
-            .insert("Ar".to_string(), 0.040);
+            .insert("Ar".to_owned(), 0.040);
 
         Self {
             r0: Length::new::<meter>(DEFAULT_BUBBLE_RADIUS),
@@ -123,12 +123,12 @@ impl BubbleParameters {
         params
             .gas_composition
             .mole_fractions
-            .insert("H2O".to_string(), 1.0);
+            .insert("H2O".to_owned(), 1.0);
         params.gas_composition.molecular_weights.clear();
         params
             .gas_composition
             .molecular_weights
-            .insert("H2O".to_string(), WATER_MOLECULAR_WEIGHT);
+            .insert("H2O".to_owned(), WATER_MOLECULAR_WEIGHT);
 
         params
     }
@@ -143,12 +143,12 @@ impl BubbleParameters {
         params
             .gas_composition
             .mole_fractions
-            .insert("C4F10".to_string(), 1.0);
+            .insert("C4F10".to_owned(), 1.0);
         params.gas_composition.molecular_weights.clear();
         params
             .gas_composition
             .molecular_weights
-            .insert("C4F10".to_string(), 0.238);
+            .insert("C4F10".to_owned(), 0.238);
 
         // Smaller initial radius
         params.r0 = Length::new::<meter>(2e-6);

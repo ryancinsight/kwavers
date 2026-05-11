@@ -31,7 +31,7 @@ pub const WATER_CRITICAL_PRESSURE: f64 = 22.064e6;
 /// Handbook value of 4186.0 J/(kg·K) (which was measured at 15°C).
 ///
 /// Reference: NIST Chemistry WebBook, SRD 69.
-/// https://webbook.nist.gov/cgi/fluid.cgi?Action=Load&ID=C7732185&Type=SatT
+/// <https://webbook.nist.gov/cgi/fluid.cgi?Action=Load&ID=C7732185&Type=SatT>
 pub const SPECIFIC_HEAT_WATER: f64 = 4182.0;
 
 /// Grüneisen parameter of water at body temperature (37°C), dimensionless.
@@ -100,7 +100,7 @@ pub const DC_DT_SOFT_TISSUE: f64 = 2.0;
 ///
 /// References:
 /// - NIST WebBook, Thermophysical properties of water (CAS 7732-18-5).
-///   https://webbook.nist.gov
+///   <https://webbook.nist.gov>
 /// - Duck, F.A. (1990). Physical Properties of Tissue.
 ///   Academic Press, London, p. 119.
 pub const DRHO_DT_SOFT_TISSUE: f64 = -0.2;
@@ -227,12 +227,14 @@ pub const EMISSIVITY_VAPOR: f64 = 0.1;
 
 /// Convert temperature from Kelvin to Celsius
 #[inline]
+#[must_use] 
 pub fn kelvin_to_celsius(kelvin: f64) -> f64 {
     kelvin + ABSOLUTE_ZERO_C
 }
 
 /// Convert temperature from Celsius to Kelvin
 #[inline]
+#[must_use] 
 pub fn celsius_to_kelvin(celsius: f64) -> f64 {
     celsius - ABSOLUTE_ZERO_C
 }

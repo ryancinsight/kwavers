@@ -7,14 +7,17 @@ use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
 impl FdtdSolver {
     /// Dispatch pressure update to GPU or CPU; apply nonlinear correction if enabled.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[inline]
     pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
         if self.config.enable_gpu_acceleration {
             let accelerator = self.gpu_accelerator.as_ref().ok_or_else(|| {
                 KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
-                    parameter: "enable_gpu_acceleration".to_string(),
-                    value: "true".to_string(),
-                    constraint: "GPU accelerator must be configured".to_string(),
+                    parameter: "enable_gpu_acceleration".to_owned(),
+                    value: "true".to_owned(),
+                    constraint: "GPU accelerator must be configured".to_owned(),
                 })
             })?;
             let new_pressure = self.update_pressure_gpu(accelerator.as_ref(), dt)?;
@@ -39,6 +42,9 @@ impl FdtdSolver {
     /// 1. K-space spectral divergence when `kspace_ops` is Some.
     /// 2. Staggered backward-difference when `staggered_grid = true`.
     /// 3. Central-difference otherwise.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn update_pressure_cpu(&mut self, dt: f64) -> KwaversResult<()> {
         if let Some(kops) = self.kspace_ops.as_mut() {
             kops.compute_divergence_neg(&self.fields.ux, &self.fields.uy, &self.fields.uz);
@@ -101,6 +107,9 @@ impl FdtdSolver {
     }
 
     /// GPU-accelerated pressure update via external accelerator trait.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn update_pressure_gpu(
         &self,
         accelerator: &dyn FdtdGpuAccelerator,

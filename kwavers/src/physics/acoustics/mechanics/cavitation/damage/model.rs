@@ -13,7 +13,7 @@ pub struct CavitationDamage {
     pub damage_field: Array3<f64>,
     /// Erosion rate field [kg/(m²·s)]
     pub erosion_rate: Array3<f64>,
-    /// Impact pressure field [Pa]
+    /// Impact pressure field (Pa)
     pub impact_pressure: Array3<f64>,
     /// Number of impacts field
     pub impact_count: Array3<u32>,
@@ -156,7 +156,7 @@ impl CavitationDamage {
         }
     }
 
-    /// Get erosion depth field [m]
+    /// Get erosion depth field (m)
     #[must_use]
     pub fn erosion_depth(&self, time: f64) -> Array3<f64> {
         let density = self.material.density;
@@ -164,7 +164,7 @@ impl CavitationDamage {
 
         Zip::from(&mut depth)
             .and(&self.erosion_rate)
-            .for_each(|out, &rate| {
+            .par_for_each(|out, &rate| {
                 if rate > 0.0 {
                     *out = rate * time / density;
                 }

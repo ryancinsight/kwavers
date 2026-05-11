@@ -34,21 +34,12 @@ pub struct TrainingCheckpoint {
 pub struct CheckpointManager {
     checkpoint_dir: std::path::PathBuf,
     max_checkpoints: usize,
-    #[allow(dead_code)]
-    checkpoint_interval: usize,
-    #[allow(dead_code)]
-    auto_save: bool,
 }
 
 /// Training coordinator for multi-GPU PINN training
 #[derive(Debug)]
 pub struct TrainingCoordinator<B: AutodiffBackend> {
-    #[allow(dead_code)]
     model_replicas: Vec<crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>>,
-    #[allow(dead_code)]
-    device_assignments: Vec<usize>,
-    #[allow(dead_code)]
-    gradient_aggregation: GradientAggregation,
     checkpoint_manager: CheckpointManager,
     training_state: TrainingState,
     performance_stats: Vec<PerformanceStats>,

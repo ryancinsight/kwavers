@@ -22,33 +22,32 @@ pub struct AcousticWavePlugin {
     density: Option<Array3<f64>>,
     /// Previous pressure for time integration
     prev_pressure: Option<Array3<f64>>,
-    /// CFL number for stability
-    #[allow(dead_code)]
-    cfl_number: f64,
 }
 
 impl AcousticWavePlugin {
     /// Create a new acoustic wave plugin
     #[must_use]
-    pub fn new(cfl_number: f64) -> Self {
+    pub fn new(_cfl_number: f64) -> Self {
         Self {
             metadata: PluginMetadata {
-                id: "acoustic_wave".to_string(),
-                name: "Acoustic Wave Propagation".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Implements linear acoustic wave equation".to_string(),
-                author: "Kwavers".to_string(),
-                license: "MIT".to_string(),
+                id: "acoustic_wave".to_owned(),
+                name: "Acoustic Wave Propagation".to_owned(),
+                version: "1.0.0".to_owned(),
+                description: "Implements linear acoustic wave equation".to_owned(),
+                author: "Kwavers".to_owned(),
+                license: "MIT".to_owned(),
             },
             state: PluginState::Created,
             sound_speed: None,
             density: None,
             prev_pressure: None,
-            cfl_number,
         }
     }
 
     /// Update acoustic pressure using finite differences
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn update_pressure(
         &self,
         pressure: &mut Array3<f64>,
@@ -84,6 +83,9 @@ impl AcousticWavePlugin {
     }
 
     /// Update particle velocities using finite differences
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn update_velocities(
         &self,
         vx: &mut Array3<f64>,

@@ -124,8 +124,7 @@ mod tests {
         let config = FdtdConfig::default();
         let medium = crate::domain::medium::HomogeneousMedium::water(&grid);
         let source = crate::domain::source::GridSource::default();
-        let solver = FdtdSolver::new(config, &grid, &medium, source);
-        assert!(solver.is_ok());
+        let _solver = FdtdSolver::new(config, &grid, &medium, source).unwrap();
     }
 
     #[test]

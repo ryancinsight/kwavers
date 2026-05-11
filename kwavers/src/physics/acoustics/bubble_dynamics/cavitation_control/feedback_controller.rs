@@ -52,7 +52,7 @@ impl FeedbackController {
         pid_controller.set_setpoint(config.target_intensity);
 
         Self {
-            config: config.clone(),
+            config,
             detector: Box::new(SpectralDetector::new(fundamental_freq, sample_rate)),
             pid_controller,
             state_estimator: StateEstimator::new(),

@@ -56,6 +56,9 @@ impl CovarianceEstimator {
     }
 
     /// Create a new covariance estimator with an explicit post-processing policy.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_post_process(
         forward_backward_averaging: bool,
@@ -70,13 +73,16 @@ impl CovarianceEstimator {
     }
 
     /// Estimate sample covariance matrix (real-valued): `R = (1/N) Σ x_n x_nᵀ`.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn estimate(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let (num_sensors, num_snapshots) = data.dim();
 
         if num_sensors == 0 || num_snapshots == 0 {
             return Err(KwaversError::InvalidInput(
-                "CovarianceEstimator::estimate: data must have shape (num_sensors>0, num_snapshots>0)"
-                    .to_string(),
+                "CovarianceEstimator::estimate: data must have shape (num_sensors>0, num_snapshots>0)".to_owned(),
             ));
         }
 
@@ -91,7 +97,7 @@ impl CovarianceEstimator {
             }
         }
 
-        covariance.mapv_inplace(|x| x / num_snapshots as f64);
+        covariance.par_mapv_inplace(|x| x / num_snapshots as f64);
 
         if self.forward_backward_averaging {
             covariance = self.apply_forward_backward_averaging(&covariance);
@@ -105,13 +111,16 @@ impl CovarianceEstimator {
     ///
     /// Intended for narrowband adaptive processing (MVDR/Capon, MUSIC, ESMV) on complex
     /// baseband snapshots.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn estimate_complex(&self, data: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
         let (num_sensors, num_snapshots) = data.dim();
 
         if num_sensors == 0 || num_snapshots == 0 {
             return Err(KwaversError::InvalidInput(
-                "CovarianceEstimator::estimate_complex: data must have shape (num_sensors>0, num_snapshots>0)"
-                    .to_string(),
+                "CovarianceEstimator::estimate_complex: data must have shape (num_sensors>0, num_snapshots>0)".to_owned(),
             ));
         }
 
@@ -127,7 +136,7 @@ impl CovarianceEstimator {
         }
 
         let inv_n = 1.0 / (num_snapshots as f64);
-        covariance.mapv_inplace(|v| v * inv_n);
+        covariance.par_mapv_inplace(|v| v * inv_n);
 
         if self.forward_backward_averaging {
             covariance = self.apply_forward_backward_averaging_complex(&covariance);
@@ -154,6 +163,9 @@ impl CovarianceEstimator {
     }
 
     /// Apply forward-backward averaging (complex-valued): `R_fb = 0.5 * (R + J R* J)`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn apply_forward_backward_averaging_complex(
         &self,
@@ -177,8 +189,7 @@ impl CovarianceEstimator {
         let m = covariance.nrows();
         if m == 0 || covariance.ncols() != m {
             return Err(KwaversError::InvalidInput(
-                "CovarianceEstimator::apply_post_process_real: covariance must be square and non-empty"
-                    .to_string(),
+                "CovarianceEstimator::apply_post_process_real: covariance must be square and non-empty".to_owned(),
             ));
         }
 
@@ -208,8 +219,7 @@ impl CovarianceEstimator {
         let m = covariance.nrows();
         if m == 0 || covariance.ncols() != m {
             return Err(KwaversError::InvalidInput(
-                "CovarianceEstimator::apply_post_process_complex: covariance must be square and non-empty"
-                    .to_string(),
+                "CovarianceEstimator::apply_post_process_complex: covariance must be square and non-empty".to_owned(),
             ));
         }
 
@@ -232,6 +242,9 @@ impl CovarianceEstimator {
     }
 
     /// Estimate covariance matrix with spatial smoothing for coherent sources (real-valued only).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn estimate_with_spatial_smoothing(
         &self,
         data: &Array2<f64>,
@@ -242,6 +255,9 @@ impl CovarianceEstimator {
     }
 
     /// Estimate covariance matrix with spatial smoothing for coherent sources (complex-valued).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn estimate_complex_with_spatial_smoothing(
         &self,
         data: &Array2<Complex64>,

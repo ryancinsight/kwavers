@@ -26,6 +26,9 @@ fn validate_pair_shapes(
 ///
 /// The residual is defined as `d_syn - d_obs`, which is the gradient of
 /// `1/2 ||d_syn - d_obs||²` with respect to the synthetic data.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn l2_residual(observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<Array2<f64>> {
     validate_pair_shapes(observed, synthetic)?;
     Ok(synthetic - observed)
@@ -36,6 +39,10 @@ pub fn l2_residual(observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversRe
 /// ## Theorem
 /// For `J = (dt / 2) ||d_syn - d_obs||²`, the objective is non-negative and
 /// vanishes if and only if `d_syn = d_obs` pointwise.
+/// # Errors
+/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn l2_objective(
     dt: f64,
     observed: &Array2<f64>,
@@ -44,7 +51,7 @@ pub fn l2_objective(
     if dt <= 0.0 || !dt.is_finite() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
-                message: "Objective timestep must be positive and finite".to_string(),
+                message: "Objective timestep must be positive and finite".to_owned(),
             },
         ));
     }
@@ -58,6 +65,10 @@ pub fn l2_objective(
 ///
 /// The input is interpreted as `(receiver, time)`. The output is an exact
 /// reversal of the time axis.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+#[must_use] 
 pub fn reverse_time_axis(data: &Array2<f64>) -> Array2<f64> {
     data.slice(s![.., ..;-1]).to_owned()
 }
@@ -68,6 +79,10 @@ pub fn reverse_time_axis(data: &Array2<f64>) -> Array2<f64> {
 /// If the discrete gradient is a weighted sum of pointwise products over
 /// matching time slices, then `G += scale * forward ⊙ adjoint` is the exact
 /// discrete imaging-condition update.
+/// # Errors
+/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn accumulate_signed_correlation(
     gradient: &mut Array3<f64>,
     forward: ArrayView3<'_, f64>,

@@ -19,6 +19,9 @@ use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel
 /// correctly without any special handling.
 ///
 /// # Arguments — same as `stormer_verlet_step`
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn yoshida4_step(
     state: &mut BubbleState,
     model: &KellerMiksisModel,
@@ -42,7 +45,7 @@ pub fn yoshida4_step(
     )?;
 
     // Sub-step 2: Φ_{w₂h} starting at t + w₁·h  (w₂ < 0 → backward step)
-    let t1 = t + YOSHIDA_W1 * dt;
+    let t1 = YOSHIDA_W1.mul_add(dt, t);
     stormer_verlet_step(
         state,
         model,
@@ -55,7 +58,7 @@ pub fn yoshida4_step(
     )?;
 
     // Sub-step 3: Φ_{w₁h} starting at t + (w₁+w₂)·h
-    let t2 = t1 + YOSHIDA_W2 * dt;
+    let t2 = YOSHIDA_W2.mul_add(dt, t1);
     stormer_verlet_step(
         state,
         model,

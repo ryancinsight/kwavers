@@ -44,6 +44,9 @@ pub struct SteeringController {
 
 impl SteeringController {
     /// Create new steering controller
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(frequency: f64) -> Self {
         Self {
@@ -54,6 +57,9 @@ impl SteeringController {
     }
 
     /// Set focal point and calculate delays
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_focus(
         &mut self,
         focal_point: FocalPoint,
@@ -74,6 +80,9 @@ impl SteeringController {
     }
 
     /// Apply steering to field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_to_field(
         &self,
         field: &mut Array3<f64>,
@@ -88,7 +97,7 @@ impl SteeringController {
             }
 
             // Apply element contribution with phase delay
-            let phase = 2.0 * PI * self.frequency * time + element.phase_offset;
+            let phase = (2.0 * PI * self.frequency).mul_add(time, element.phase_offset);
             let amplitude = element.amplitude * phase.sin();
 
             // Point source approximation: Adds field at discrete grid point
@@ -111,5 +120,5 @@ impl SteeringController {
 
 /// Calculate distance between two points
 fn calculate_distance(p1: [f64; 3], p2: [f64; 3]) -> f64 {
-    ((p2[0] - p1[0]).powi(2) + (p2[1] - p1[1]).powi(2) + (p2[2] - p1[2]).powi(2)).sqrt()
+    (p2[2] - p1[2]).mul_add(p2[2] - p1[2], (p2[1] - p1[1]).mul_add(p2[1] - p1[1], (p2[0] - p1[0]).powi(2))).sqrt()
 }

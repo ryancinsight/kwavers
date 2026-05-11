@@ -44,6 +44,7 @@ pub struct MaterialProperties {
 
 impl MaterialProperties {
     /// Create acoustic-only material (e.g., water, air)
+    #[must_use] 
     pub fn acoustic_only(acoustic: AcousticPropertyData) -> Self {
         Self {
             acoustic,
@@ -56,6 +57,7 @@ impl MaterialProperties {
     }
 
     /// Create elastic material with acoustic coupling
+    #[must_use] 
     pub fn elastic(acoustic: AcousticPropertyData, elastic: ElasticPropertyData) -> Self {
         Self {
             acoustic,
@@ -68,11 +70,13 @@ impl MaterialProperties {
     }
 
     /// Create builder for multi-physics composition
+    #[must_use] 
     pub fn builder() -> MaterialPropertiesBuilder {
         MaterialPropertiesBuilder::default()
     }
 
     /// Water at 20°C (acoustic + thermal)
+    #[must_use] 
     pub fn water() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData::water())
@@ -81,6 +85,7 @@ impl MaterialProperties {
     }
 
     /// Soft tissue (acoustic + thermal + EM)
+    #[must_use] 
     pub fn soft_tissue() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData::soft_tissue())
@@ -90,6 +95,7 @@ impl MaterialProperties {
     }
 
     /// Cortical bone (acoustic + elastic + thermal + strength)
+    #[must_use] 
     pub fn bone() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData {
@@ -106,6 +112,10 @@ impl MaterialProperties {
     }
 
     /// Steel (acoustic + elastic + strength)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn steel() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData {
@@ -157,36 +167,42 @@ pub struct MaterialPropertiesBuilder {
 
 impl MaterialPropertiesBuilder {
     /// Set acoustic properties (required)
+    #[must_use] 
     pub fn acoustic(mut self, acoustic: AcousticPropertyData) -> Self {
         self.acoustic = Some(acoustic);
         self
     }
 
     /// Set elastic properties (optional)
+    #[must_use] 
     pub fn elastic(mut self, elastic: ElasticPropertyData) -> Self {
         self.elastic = Some(elastic);
         self
     }
 
     /// Set electromagnetic properties (optional)
+    #[must_use] 
     pub fn electromagnetic(mut self, em: ElectromagneticPropertyData) -> Self {
         self.electromagnetic = Some(em);
         self
     }
 
     /// Set optical properties (optional)
+    #[must_use] 
     pub fn optical(mut self, optical: OpticalPropertyData) -> Self {
         self.optical = Some(optical);
         self
     }
 
     /// Set strength properties (optional)
+    #[must_use] 
     pub fn strength(mut self, strength: StrengthPropertyData) -> Self {
         self.strength = Some(strength);
         self
     }
 
     /// Set thermal properties (optional)
+    #[must_use] 
     pub fn thermal(mut self, thermal: ThermalPropertyData) -> Self {
         self.thermal = Some(thermal);
         self
@@ -197,6 +213,7 @@ impl MaterialPropertiesBuilder {
     /// # Panics
     ///
     /// Panics if acoustic properties are not set
+    #[must_use] 
     pub fn build(self) -> MaterialProperties {
         MaterialProperties {
             acoustic: self.acoustic.expect("Acoustic properties are required"),
@@ -227,7 +244,7 @@ mod tests {
             .thermal(ThermalPropertyData::water())
             .build();
 
-        assert!(props.thermal.is_some());
+        assert!(props.thermal.as_ref().unwrap().conductivity > 0.0);
         assert!(props.elastic.is_none());
     }
 
@@ -237,16 +254,16 @@ mod tests {
         let tissue = MaterialProperties::soft_tissue();
         let bone = MaterialProperties::bone();
 
-        assert!(water.thermal.is_some());
-        assert!(tissue.electromagnetic.is_some());
-        assert!(bone.elastic.is_some());
-        assert!(bone.strength.is_some());
+        assert!(water.thermal.as_ref().unwrap().conductivity > 0.0);
+        assert!(tissue.electromagnetic.as_ref().unwrap().permittivity > 0.0);
+        assert!(bone.elastic.as_ref().unwrap().mu > 0.0);
+        assert!(bone.strength.as_ref().unwrap().yield_strength > 0.0);
     }
 
     #[test]
     #[should_panic(expected = "Acoustic properties are required")]
     fn test_material_builder_missing_acoustic() {
-        MaterialPropertiesBuilder::default().build();
+        let _ = MaterialPropertiesBuilder::default().build();
     }
 
     #[test]

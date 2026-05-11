@@ -94,6 +94,9 @@ mod tests {
     /// Proof: if Ez(x,y,t) = C (constant), then
     ///   ∂²C/∂x² = ∂²C/∂y² = ∂²C/∂t² = ∂C/∂t = 0
     ///   → R = ε·μ·0 + μ·σ·0 − 0 − 0 = 0  ✓
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_wave_propagation_residual_constant_field_is_zero() {
         // Use a trivially constant model: build a raw network that outputs a constant.
@@ -140,6 +143,9 @@ mod tests {
     ///   R = ε·μ·(−ω²cos(ωt)) + μ·σ·(−ω·sin(ωt))
     /// which is non-zero for ω > 0. This confirms the residual correctly
     /// detects a field that does NOT satisfy the free-space (σ=0) wave equation.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_wave_propagation_residual_temporal_cosine_nonzero() {
         let h = EPS_FD_F32;
@@ -168,6 +174,9 @@ mod tests {
     ///
     /// The cancellation floor for f32 central differences is ε_mach^(2/3) ≈ 2.4e-5.
     /// EPS_FD_F32 = 4.9e-3 must be at least 100× above this floor.
+    /// # Panics
+    /// - Panics if assertion fails: `EPS_FD_F32 ({:.2e}) must be >100× above f32 cancellation floor ({:.2e})`.
+    ///
     #[test]
     fn test_eps_fd_above_cancellation_floor() {
         // Cancellation floor for f32 FD = ε_mach^(2/3)
@@ -182,6 +191,9 @@ mod tests {
 
     /// The optimal step h_opt = ε^(1/3) must be larger than the old (broken) value
     /// `(f32::EPSILON).sqrt() * 1e-2`.
+    /// # Panics
+    /// - Panics if assertion fails: `EPS_FD_F32 ({:.2e}) should be >> old step ({:.2e})`.
+    ///
     #[test]
     fn test_eps_fd_larger_than_old_broken_step() {
         let old_broken_step = f32::EPSILON.sqrt() * 1e-2_f32;
@@ -194,6 +206,10 @@ mod tests {
     }
 
     /// Finite-difference step size must be in a physically reasonable range.
+    /// # Panics
+    /// - Panics if assertion fails: `EPS_FD_F32 too small: {}`.
+    /// - Panics if assertion fails: `EPS_FD_F32 too large: {}`.
+    ///
     #[test]
     fn test_fd_step_is_in_safe_range() {
         assert!(EPS_FD_F32 > 1e-4, "EPS_FD_F32 too small: {}", EPS_FD_F32);

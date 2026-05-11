@@ -23,7 +23,7 @@ impl AcousticWaveModel for KuznetsovWave {
     ) -> KwaversResult<()> {
         if grid.nx != self.grid.nx || grid.ny != self.grid.ny || grid.nz != self.grid.nz {
             return Err(KwaversError::InvalidInput(
-                "Grid dimensions mismatch with solver initialization".to_string(),
+                "Grid dimensions mismatch with solver initialization".to_owned(),
             ));
         }
 
@@ -46,7 +46,7 @@ impl AcousticWaveModel for KuznetsovWave {
                 .and(&self.pressure_current)
                 .and(rhs)
                 .par_for_each(|p_next, &p_curr, &accel| {
-                    *p_next = p_curr + 0.5 * dt * dt * accel;
+                    *p_next = (0.5 * dt * dt).mul_add(accel, p_curr);
                 });
 
             self.workspace.update_time_history(&self.pressure_current);
@@ -60,7 +60,7 @@ impl AcousticWaveModel for KuznetsovWave {
                 .and(&self.pressure_prev)
                 .and(rhs)
                 .par_for_each(|p_next, &p_curr, &p_prev, &accel| {
-                    *p_next = 2.0 * p_curr - p_prev + dt * dt * accel;
+                    *p_next = (dt * dt).mul_add(accel, 2.0f64.mul_add(p_curr, -p_prev));
                 });
 
             self.pressure_prev.assign(&self.pressure_current);

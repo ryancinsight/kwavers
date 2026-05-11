@@ -59,7 +59,7 @@ impl Signal for TriangleWave {
         let amp = self.amplitude.amplitude(t);
         let freq = self.frequency_hz_checked(t);
         let phase = self.phase.phase(t);
-        let theta = 2.0 * std::f64::consts::PI * freq * t + phase;
+        let theta = (2.0 * std::f64::consts::PI * freq).mul_add(t, phase);
 
         let tri = (2.0 / std::f64::consts::PI) * theta.sin().asin();
         amp * tri

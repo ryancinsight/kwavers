@@ -8,7 +8,7 @@
 //! Implemented concrete wave equations:
 //!
 //! * **Westervelt equation** (nonlinear FDTD):
-//!   [`crate::solver::forward::nonlinear::westervelt::WesterveltSolver`]
+//!   [`crate::solver::forward::nonlinear::westervelt::WesterveltFdtd`]
 //! * **PSTD pseudospectral solver** with power-law absorption (Treeby & Cox 2010):
 //!   [`crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver`]
 //! * **Keller-Miksis bubble dynamics** (compressible, Keller & Miksis 1980):

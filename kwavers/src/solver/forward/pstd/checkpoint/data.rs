@@ -67,7 +67,7 @@ pub struct PSTDCheckpoint {
     pub time_step_index: usize,
     /// Total simulation steps (`config.nt`).
     pub total_steps: usize,
-    /// Time step size [s].
+    /// Time step size (s).
     pub dt: f64,
     pub p: Array3<f64>,
     pub ux: Array3<f64>,
@@ -87,6 +87,9 @@ pub struct PSTDCheckpoint {
 
 impl PSTDCheckpoint {
     /// Serialize to a binary file at `path`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn save(&self, path: &Path) -> KwaversResult<()> {
         let file = std::fs::File::create(path)?;
         let mut w = BufWriter::new(file);
@@ -110,7 +113,7 @@ impl PSTDCheckpoint {
                 w.write_all(&(n_sensors as u64).to_le_bytes())?;
                 w.write_all(&(n_recorded as u64).to_le_bytes())?;
                 w.write_all(&(self.sensor_expected_steps as u64).to_le_bytes())?;
-                for &v in data.iter() {
+                for &v in data {
                     w.write_all(&v.to_le_bytes())?;
                 }
             }
@@ -119,7 +122,7 @@ impl PSTDCheckpoint {
         for arr in [
             &self.p, &self.ux, &self.uy, &self.uz, &self.rhox, &self.rhoy, &self.rhoz,
         ] {
-            for &v in arr.iter() {
+            for &v in arr {
                 w.write_all(&v.to_le_bytes())?;
             }
         }
@@ -129,6 +132,10 @@ impl PSTDCheckpoint {
     }
 
     /// Deserialize from a binary file at `path`.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn load(path: &Path) -> KwaversResult<Self> {
         let file = std::fs::File::open(path)?;
         let mut r = BufReader::new(file);
@@ -204,6 +211,11 @@ impl PSTDCheckpoint {
     /// Validate the checkpoint against a target PSTD solver configuration.
     ///
     /// Returns `Err` if any dimension, step count, or `dt` diverges from expectations.
+    /// # Errors
+    /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_restore_contract(
         &self,
         expected_nx: usize,
@@ -239,7 +251,7 @@ impl PSTDCheckpoint {
         if self.sensor_data.is_some() {
             let expected_sensor_steps = expected_total_steps.checked_add(1).ok_or_else(|| {
                 KwaversError::InvalidInput(
-                    "expected_total_steps overflow when computing recorder capacity".to_string(),
+                    "expected_total_steps overflow when computing recorder capacity".to_owned(),
                 )
             })?;
             if self.sensor_expected_steps != expected_sensor_steps {
@@ -250,7 +262,7 @@ impl PSTDCheckpoint {
             }
         } else if self.sensor_next_step != 0 || self.sensor_expected_steps != 0 {
             return Err(KwaversError::InvalidInput(
-                "checkpoint sensor metadata present without sensor data".to_string(),
+                "checkpoint sensor metadata present without sensor data".to_owned(),
             ));
         }
         Ok(())

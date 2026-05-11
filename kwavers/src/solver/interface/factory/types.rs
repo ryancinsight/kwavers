@@ -44,13 +44,13 @@ pub enum FactoryError {
 impl std::fmt::Display for FactoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FactoryError::SolverTypeNotSupported(t) => {
+            Self::SolverTypeNotSupported(t) => {
                 write!(f, "Solver type not supported: {:?}", t)
             }
-            FactoryError::InvalidConfiguration(msg) => {
+            Self::InvalidConfiguration(msg) => {
                 write!(f, "Invalid configuration: {}", msg)
             }
-            FactoryError::ResourceExceeded {
+            Self::ResourceExceeded {
                 requested,
                 available,
             } => {
@@ -60,8 +60,8 @@ impl std::fmt::Display for FactoryError {
                     requested, available
                 )
             }
-            FactoryError::NotInitialized => write!(f, "Factory not initialized"),
-            FactoryError::Internal(msg) => write!(f, "Internal error: {}", msg),
+            Self::NotInitialized => write!(f, "Factory not initialized"),
+            Self::Internal(msg) => write!(f, "Internal error: {}", msg),
         }
     }
 }
@@ -71,6 +71,6 @@ impl std::error::Error for FactoryError {}
 /// Conversion from FactoryError to KwaversError
 impl From<FactoryError> for crate::core::error::KwaversError {
     fn from(err: FactoryError) -> Self {
-        crate::core::error::KwaversError::InternalError(err.to_string())
+        Self::InternalError(err.to_string())
     }
 }

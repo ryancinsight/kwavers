@@ -69,9 +69,7 @@ fn test_treatment_plan_creation() {
         TissueType::SoftTissue,
     );
     let params = TherapyParameters::hifu();
-    let plan = planner.plan_treatment(target, &params);
-    assert!(plan.is_ok());
-    let plan = plan.unwrap();
+    let plan = planner.plan_treatment(target, &params).unwrap();
     assert!(!plan.feasibility.is_feasible || plan.feasibility.issues.is_empty());
 }
 

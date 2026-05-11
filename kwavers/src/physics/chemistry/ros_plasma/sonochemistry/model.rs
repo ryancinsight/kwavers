@@ -184,7 +184,7 @@ impl SonochemistryModel {
 
                     for (species, rate) in rate_changes {
                         if let Some(field) = self.ros_concentrations.get_mut(species) {
-                            field[[i, j, k]] = (field[[i, j, k]] + rate * dt).max(0.0);
+                            field[[i, j, k]] = rate.mul_add(dt, field[[i, j, k]]).max(0.0);
                         }
                     }
                 }
@@ -241,7 +241,7 @@ impl SonochemistryModel {
             for ((i, j, k), ph) in self.ph_field.indexed_iter_mut() {
                 let h2o2_effect = -0.1 * h2o2[[i, j, k]] / 1e-3;
                 let oh_effect = 0.5 * oh[[i, j, k]] / 1e-6;
-                *ph = (*ph + (h2o2_effect + oh_effect) * dt).clamp(2.0, 12.0);
+                *ph = (h2o2_effect + oh_effect).mul_add(dt, *ph).clamp(2.0, 12.0);
             }
         }
     }

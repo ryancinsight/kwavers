@@ -55,7 +55,7 @@ impl std::fmt::Debug for InterfaceCondition {
 pub struct MultiRegionDomain {
     pub regions: Vec<Box<dyn GeometricDomain>>,
     pub material_ids: Vec<usize>,
-    /// interfaces[i] specifies condition between regions i and i+1
+    /// `interfaces[i]` specifies condition between regions i and i+1
     pub interfaces: Vec<InterfaceCondition>,
 }
 
@@ -71,6 +71,10 @@ impl std::fmt::Debug for MultiRegionDomain {
 
 impl MultiRegionDomain {
     /// Create a new multi-region domain
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
+    #[must_use] 
     pub fn new(
         regions: Vec<Box<dyn GeometricDomain>>,
         material_ids: Vec<usize>,
@@ -94,6 +98,7 @@ impl MultiRegionDomain {
     }
 
     /// Find which region contains a given point
+    #[must_use] 
     pub fn locate_point(&self, point: &[f64], tolerance: f64) -> Option<(usize, PointLocation)> {
         for (i, region) in self.regions.iter().enumerate() {
             let loc = region.classify_point(point, tolerance);
@@ -105,6 +110,7 @@ impl MultiRegionDomain {
     }
 
     /// Sample interface points between regions
+    #[must_use] 
     pub fn sample_interface_points(
         &self,
         n_points_per_interface: usize,
@@ -118,7 +124,7 @@ impl MultiRegionDomain {
 
             for row_idx in 0..boundary_i.nrows() {
                 let point = boundary_i.row(row_idx);
-                let point_slice: Vec<f64> = point.iter().cloned().collect();
+                let point_slice: Vec<f64> = point.iter().copied().collect();
 
                 if self.regions[i + 1].classify_point(&point_slice, tolerance)
                     == PointLocation::Boundary

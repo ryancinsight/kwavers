@@ -51,11 +51,15 @@ pub struct DGSolver {
 
 impl DGSolver {
     /// Create a new DG solver with proper matrix initialization
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: DGConfig, grid: Arc<Grid>) -> KwaversResult<Self> {
         if config.basis_type == BasisType::Fourier {
             return Err(KwaversError::Numerical(NumericalError::UnsupportedOperation {
-                operation: "DGSolver::new".to_string(),
-                reason: "Fourier DG requires periodic nodes on [-1,1); the current nodal DG constructor uses GLL nodes with duplicate periodic endpoints".to_string(),
+                operation: "DGSolver::new".to_owned(),
+                reason: "Fourier DG requires periodic nodes on [-1,1); the current nodal DG constructor uses GLL nodes with duplicate periodic endpoints".to_owned(),
             }));
         }
 
@@ -102,6 +106,7 @@ impl DGSolver {
     }
 
     /// Check if modal coefficients are initialized
+    #[must_use] 
     pub fn has_modal_coefficients(&self) -> bool {
         self.modal_coefficients.is_some()
     }

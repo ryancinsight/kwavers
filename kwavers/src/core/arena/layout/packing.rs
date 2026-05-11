@@ -46,6 +46,10 @@ pub trait FieldLayoutInfo {
 /// Calculate struct size with optimal field ordering
 ///
 /// Returns minimum possible size by reordering fields.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
+#[must_use] 
 pub fn packed_struct_size(field_sizes: &[usize], field_alignments: &[usize]) -> usize {
     assert_eq!(field_sizes.len(), field_alignments.len());
 

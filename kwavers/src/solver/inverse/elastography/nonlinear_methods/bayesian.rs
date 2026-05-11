@@ -18,6 +18,9 @@ use ndarray::Array3;
 /// # References
 ///
 /// - Gelman et al. (2013). *Bayesian Data Analysis*, 3rd ed. §2.4.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn bayesian_inversion(
     harmonic_field: &HarmonicDisplacementField,
     _grid: &Grid,
@@ -59,7 +62,7 @@ pub(super) fn bayesian_inversion(
                     let likelihood_precision = 1.0 / (sigma_likelihood * sigma_likelihood);
 
                     let precision_post = prior_precision + likelihood_precision;
-                    let mean_post = (prior_mean * prior_precision + ba_obs * likelihood_precision)
+                    let mean_post = prior_mean.mul_add(prior_precision, ba_obs * likelihood_precision)
                         / precision_post;
                     let std_post = (1.0 / precision_post).sqrt();
                     let quality = (snr / 20.0).min(1.0);

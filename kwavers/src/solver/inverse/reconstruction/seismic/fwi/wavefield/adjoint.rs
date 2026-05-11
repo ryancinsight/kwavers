@@ -24,6 +24,10 @@ impl WavefieldModeler {
     /// state. By induction, replay from a checkpoint uses the same initial
     /// conditions and update operator, so every reconstructed slice equals the
     /// corresponding full-history slice.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn adjoint_model(
         &mut self,
         velocity_model: &Array3<f64>,
@@ -33,7 +37,7 @@ impl WavefieldModeler {
         if dt <= 0.0 || !dt.is_finite() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "WavefieldConfig.dt must be positive and finite".to_string(),
+                    message: "WavefieldConfig.dt must be positive and finite".to_owned(),
                 },
             ));
         }
@@ -41,7 +45,7 @@ impl WavefieldModeler {
         if nt == 0 {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "Adjoint source must contain at least one timestep".to_string(),
+                    message: "Adjoint source must contain at least one timestep".to_owned(),
                 },
             ));
         }
@@ -60,9 +64,9 @@ impl WavefieldModeler {
 
         let replay_cache = self.forward_replay.as_ref().ok_or_else(|| {
             KwaversError::Physics(PhysicsError::InvalidState {
-                field: "forward_replay".to_string(),
-                value: "None".to_string(),
-                reason: "Forward replay cache must be computed before adjoint modeling".to_string(),
+                field: "forward_replay".to_owned(),
+                value: "None".to_owned(),
+                reason: "Forward replay cache must be computed before adjoint modeling".to_owned(),
             })
         })?;
 
@@ -84,16 +88,16 @@ impl WavefieldModeler {
         if replay_cache.checkpoints.len() != expected_checkpoints {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "Forward replay cache is incomplete".to_string(),
+                    message: "Forward replay cache is incomplete".to_owned(),
                 },
             ));
         }
 
         let replay_cache = self.forward_replay.take().ok_or_else(|| {
             KwaversError::Physics(PhysicsError::InvalidState {
-                field: "forward_replay".to_string(),
-                value: "None".to_string(),
-                reason: "Forward replay cache must be computed before adjoint modeling".to_string(),
+                field: "forward_replay".to_owned(),
+                value: "None".to_owned(),
+                reason: "Forward replay cache must be computed before adjoint modeling".to_owned(),
             })
         })?;
 

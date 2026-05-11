@@ -34,6 +34,9 @@ impl DGSolver {
     ///
     /// Projects `field` to the DG basis on the first call.  Subsequent calls
     /// operate on the stored modal coefficients, then back-project to `field`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn solve_step(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
         if self.modal_coefficients.is_none() {
             self.project_to_dg(field)?;
@@ -58,6 +61,9 @@ impl DGSolver {
     ///   Stage 2: u⁽²⁾ = (3/4) u^n + (1/4) [u⁽¹⁾ + dt · L(u⁽¹⁾)]
     ///   Stage 3: u^{n+1} = (1/3) u^n + (2/3) [u⁽²⁾ + dt · L(u⁽²⁾)]
     /// ```
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn step_ssp_rk3(
         &mut self,
         dt: f64,
@@ -69,7 +75,7 @@ impl DGSolver {
             .as_ref()
             .ok_or_else(|| {
                 KwaversError::Validation(ValidationError::MissingField {
-                    field: "modal_coefficients".to_string(),
+                    field: "modal_coefficients".to_owned(),
                 })
             })?
             .clone();
@@ -96,6 +102,9 @@ impl DGSolver {
     ///
     /// **Warning**: conditionally stable for p=0, unconditionally unstable for p ≥ 1
     /// under the DG operator (Cockburn & Shu 2001 §4). Use only for baseline p=0 tests.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn step_forward_euler(
         &mut self,
         dt: f64,
@@ -107,7 +116,7 @@ impl DGSolver {
             .as_ref()
             .ok_or_else(|| {
                 KwaversError::Validation(ValidationError::MissingField {
-                    field: "modal_coefficients".to_string(),
+                    field: "modal_coefficients".to_owned(),
                 })
             })?
             .clone();
@@ -134,6 +143,9 @@ impl DGSolver {
     ///
     /// ## Reference
     /// Hesthaven & Warburton (2008). *Nodal Discontinuous Galerkin Methods*. §3, §6.3.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_rhs_from_coeffs(
         &self,
         coeffs: &Array3<f64>,
@@ -173,10 +185,8 @@ impl DGSolver {
                 let u_plus_right = coeffs[(right_elem, 0, var)];
 
                 // Lax–Friedrichs: f*(u⁻,u⁺) = 0.5 c(u⁻+u⁺) − 0.5 c(u⁺−u⁻)
-                let flux_left = 0.5 * wave_speed * (u_minus_left + u_plus_left)
-                    - 0.5 * wave_speed * (u_plus_left - u_minus_left);
-                let flux_right = 0.5 * wave_speed * (u_minus_right + u_plus_right)
-                    - 0.5 * wave_speed * (u_plus_right - u_minus_right);
+                let flux_left = (0.5 * wave_speed).mul_add(u_minus_left + u_plus_left, -(0.5 * wave_speed * (u_plus_left - u_minus_left)));
+                let flux_right = (0.5 * wave_speed).mul_add(u_minus_right + u_plus_right, -(0.5 * wave_speed * (u_plus_right - u_minus_right)));
 
                 let f_int_left = wave_speed * u_plus_left;
                 let f_int_right = wave_speed * u_minus_right;

@@ -11,6 +11,10 @@ impl SimdStencilProcessor {
     /// `velocity` via `std::mem::swap` — zero copies, zero allocation.
     ///
     /// The loop is cache-tiled identically to `update_pressure` (Kamil et al. 2010).
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_velocity(
         &mut self,
         velocity: &mut Array3<f64>,
@@ -57,6 +61,9 @@ impl SimdStencilProcessor {
     }
 
     /// Apply boundary conditions (zero-gradient Neumann)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_boundary_conditions_pressure(
         &self,
         field: &mut Array3<f64>,
@@ -87,6 +94,9 @@ impl SimdStencilProcessor {
     }
 
     /// Apply boundary conditions for velocity
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_boundary_conditions_velocity(
         &self,
         field: &mut Array3<f64>,
@@ -131,10 +141,13 @@ mod tests {
         let pressure = Array3::ones((16, 16, 16));
 
         let result = processor.update_velocity(&mut velocity, &pressure);
-        assert!(result.is_ok());
+        result.unwrap();
         assert_eq!(velocity.shape(), &[16, 16, 16]);
     }
     /// Verify in-place velocity update produces the same result as the old clone-based path.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_velocity_inplace_no_regression() {
         let n = 16usize;

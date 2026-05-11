@@ -10,10 +10,11 @@ pub struct TreatmentMetrics {
 }
 
 impl TreatmentMetrics {
+    #[must_use] 
     pub fn calculate_thermal_dose(temperature: &Array3<f64>, dt: f64) -> f64 {
         let max_dose_rate = temperature.iter().fold(0.0f64, |acc, &t| {
             let rate = if t > 43.0 {
-                2.0_f64.powf(t - 43.0)
+                (t - 43.0).exp2()
             } else if t > 37.0 {
                 4.0_f64.powf(t - 43.0)
             } else {
@@ -24,12 +25,13 @@ impl TreatmentMetrics {
         max_dose_rate * dt
     }
 
+    #[must_use] 
     pub fn calculate_cavitation_dose(cavitation_field: &Array3<f64>, dt: f64) -> f64 {
         cavitation_field.sum() * dt
     }
 
     pub fn update_peak_temperature(&mut self, temperature: &Array3<f64>) {
-        let max_t = temperature.iter().cloned().fold(0.0_f64, f64::max);
+        let max_t = temperature.iter().copied().fold(0.0_f64, f64::max);
         if max_t > self.peak_temperature {
             self.peak_temperature = max_t;
         }
@@ -49,10 +51,12 @@ impl TreatmentMetrics {
         }
     }
 
+    #[must_use] 
     pub fn is_successful(&self, target_dose: f64, threshold: f64) -> bool {
         self.thermal_dose >= target_dose * threshold
     }
 
+    #[must_use] 
     pub fn summary(&self) -> String {
         format!(
             "Dose: {:.1} CEM43, Peak T: {:.1} C, Safety: {:.2}",
@@ -79,10 +83,12 @@ pub enum TherapyModality {
 }
 
 impl TherapyModality {
+    #[must_use] 
     pub fn has_thermal_effects(&self) -> bool {
         matches!(self, Self::HIFU | Self::Sonodynamic)
     }
 
+    #[must_use] 
     pub fn has_cavitation(&self) -> bool {
         matches!(
             self,
@@ -90,6 +96,7 @@ impl TherapyModality {
         )
     }
 
+    #[must_use] 
     pub fn primary_mechanism(&self) -> TherapyMechanism {
         match self {
             Self::HIFU => TherapyMechanism::Thermal,
@@ -112,6 +119,7 @@ pub struct TherapyParameters {
 }
 
 impl TherapyParameters {
+    #[must_use] 
     pub fn new(frequency: f64, pressure: f64, duration: f64) -> Self {
         let mut params = Self {
             frequency,
@@ -125,6 +133,7 @@ impl TherapyParameters {
         params
     }
 
+    #[must_use] 
     pub fn hifu() -> Self {
         Self::new(1.5e6, 2.0e6, 5.0)
     }
@@ -136,6 +145,7 @@ impl TherapyParameters {
         }
     }
 
+    #[must_use] 
     pub fn validate_safety(&self) -> bool {
         if self.mechanical_index > 1.9 {
             return false;

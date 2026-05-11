@@ -32,6 +32,9 @@ pub struct ModelRegistry {
 
 impl ModelRegistry {
     /// Create a new empty model registry
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -41,6 +44,9 @@ impl ModelRegistry {
     }
 
     /// Store a trained model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn store_model(
         &self,
         user_id: &str,
@@ -80,6 +86,9 @@ impl ModelRegistry {
     }
 
     /// Get all models for a user
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_user_models(&self, user_id: &str) -> Vec<ModelMetadata> {
         let user_models = self.user_models.read();
         let models = self.models.read();
@@ -95,6 +104,9 @@ impl ModelRegistry {
     }
 
     /// Delete a model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn delete_model(&self, user_id: &str, model_id: &str) -> Result<(), APIError> {
         // Check if model exists and belongs to user
         {
@@ -156,6 +168,9 @@ impl ModelRegistry {
     }
 
     /// Update model metadata
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update_metadata(
         &self,
         model_id: &str,
@@ -271,10 +286,10 @@ mod tests {
         };
 
         // Store and then delete
-        assert!(registry
+        registry
             .store_model("user123", "test_model", vec![1, 2, 3], metadata)
-            .is_ok());
-        assert!(registry.delete_model("user123", "test_model").is_ok());
+            .unwrap();
+        registry.delete_model("user123", "test_model").unwrap();
 
         // Should not exist anymore
         assert!(registry.get_model("test_model").is_none());

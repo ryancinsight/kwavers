@@ -39,6 +39,9 @@ pub struct ChemicalModel {
 
 impl ChemicalModel {
     /// Create a new chemical model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         grid: &Grid,
         enable_kinetics: bool,
@@ -52,9 +55,9 @@ impl ChemicalModel {
         let (nx, ny, nz) = grid.dimensions();
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(ValidationError::FieldValidation {
-                field: "grid_dimensions".to_string(),
+                field: "grid_dimensions".to_owned(),
                 value: format!("({nx}, {ny}, {nz})"),
-                constraint: "All dimensions must be positive".to_string(),
+                constraint: "All dimensions must be positive".to_owned(),
             }
             .into());
         }
@@ -124,9 +127,9 @@ impl ChemicalModel {
     #[must_use]
     pub fn get_stats(&self) -> HashMap<String, f64> {
         let mut stats = HashMap::new();
-        stats.insert("update_count".to_string(), self.update_count as f64);
+        stats.insert("update_count".to_owned(), self.update_count as f64);
         stats.insert(
-            "avg_computation_time_ms".to_string(),
+            "avg_computation_time_ms".to_owned(),
             if self.update_count > 0 {
                 self.computation_time.as_secs_f64() * 1000.0 / self.update_count as f64
             } else {
@@ -134,7 +137,7 @@ impl ChemicalModel {
             },
         );
         stats.insert(
-            "total_computation_time_ms".to_string(),
+            "total_computation_time_ms".to_owned(),
             self.computation_time.as_secs_f64() * 1000.0,
         );
         stats

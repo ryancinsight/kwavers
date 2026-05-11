@@ -95,6 +95,9 @@ pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) 
 /// - `fft_scratch.dim() == field.dim()`
 /// - `out.dim() == field.dim()`
 /// - `k_squared.dim() == field.dim()`
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub fn compute_laplacian_spectral_into(
     field: &Array3<f64>,
     k_squared: &Array3<f64>,
@@ -145,7 +148,7 @@ pub fn apply_kspace_correction(
                 let ky_val = ky[[i, j, k]];
                 let kz_val = kz[[i, j, k]];
 
-                let k_squared = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+                let k_squared = kz_val.mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val));
 
                 if k_squared > 1e-10 {
                     // Compute k · ∇ρ
@@ -163,31 +166,3 @@ pub fn apply_kspace_correction(
     }
 }
 
-/// Compute density gradients for k-space correction
-/// Note: Reserved for future heterogeneous media implementation
-#[allow(dead_code)]
-pub fn compute_density_gradients(
-    rho_arr: &Array3<f64>,
-    grid: &Grid,
-) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let mut grad_x = Array3::zeros((nx, ny, nz));
-    let mut grad_y = Array3::zeros((nx, ny, nz));
-    let mut grad_z = Array3::zeros((nx, ny, nz));
-
-    let dx_inv = 0.5 / grid.dx;
-    let dy_inv = 0.5 / grid.dy;
-    let dz_inv = 0.5 / grid.dz;
-
-    for k in 1..nz - 1 {
-        for j in 1..ny - 1 {
-            for i in 1..nx - 1 {
-                grad_x[[i, j, k]] = (rho_arr[[i + 1, j, k]] - rho_arr[[i - 1, j, k]]) * dx_inv;
-                grad_y[[i, j, k]] = (rho_arr[[i, j + 1, k]] - rho_arr[[i, j - 1, k]]) * dy_inv;
-                grad_z[[i, j, k]] = (rho_arr[[i, j, k + 1]] - rho_arr[[i, j, k - 1]]) * dz_inv;
-            }
-        }
-    }
-
-    (grad_x, grad_y, grad_z)
-}

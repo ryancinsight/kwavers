@@ -43,6 +43,9 @@ mod tests {
     /// ## Reference
     ///
     /// Szabo TL (1994). J. Acoust. Soc. Am. 96(1), 491–500.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_absorption() {
         use crate::math::fft::fft_1d_array;

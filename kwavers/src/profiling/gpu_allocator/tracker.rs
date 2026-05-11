@@ -93,6 +93,7 @@ impl GpuAllocationTracker {
     /// # Arguments
     /// * `device_capacity` — Estimated device memory capacity in bytes.
     /// * `config` — Allocation configuration.
+    #[must_use] 
     pub fn new(device_capacity: usize, config: GpuAllocationConfig) -> Arc<Self> {
         let budget_bytes = (device_capacity as f64 * config.safety_factor) as usize;
         Arc::new(Self {
@@ -107,6 +108,7 @@ impl GpuAllocationTracker {
     }
 
     /// Create with default configuration (90% safety factor).
+    #[must_use] 
     pub fn with_capacity(device_capacity: usize) -> Arc<Self> {
         Self::new(device_capacity, GpuAllocationConfig::default())
     }
@@ -136,6 +138,9 @@ impl GpuAllocationTracker {
     ///
     /// # Complexity
     /// O(1) amortized via atomic operations.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn allocate(
         self: &Arc<Self>,
         size: usize,
@@ -165,7 +170,7 @@ impl GpuAllocationTracker {
         Ok(GpuAllocationGuard {
             tracker: self.clone(),
             size,
-            name: name.to_string(),
+            name: name.to_owned(),
         })
     }
 

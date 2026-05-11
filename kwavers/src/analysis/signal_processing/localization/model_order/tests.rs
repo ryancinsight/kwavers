@@ -24,8 +24,7 @@ fn test_config_validation_too_few_samples() {
 #[test]
 fn test_estimator_creation() {
     let config = ModelOrderConfig::new(4, 100).unwrap();
-    let estimator = ModelOrderEstimator::new(config);
-    assert!(estimator.is_ok());
+    let _estimator = ModelOrderEstimator::new(config).unwrap();
 }
 
 #[test]

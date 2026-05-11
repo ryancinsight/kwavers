@@ -50,17 +50,17 @@
 //!
 //! ## Module layout
 //!
-//! - [`central_diff`]: dispatch enum over 2nd / 4th / 6th-order central
+//! - `central_diff`: dispatch enum over 2nd / 4th / 6th-order central
 //!   difference operators.
-//! - [`construction`]: `new` constructor — material precomputation, source
+//! - `construction`: `new` constructor — material precomputation, source
 //!   scaling, k-space ops, scratch-buffer pre-allocation.
-//! - [`stepping`]: Yee leapfrog `step_forward`, debug-only NaN scans.
-//! - [`sources`]: dynamic pressure / velocity source dispatch and
+//! - `stepping`: Yee leapfrog `step_forward`, debug-only NaN scans.
+//! - `sources`: dynamic pressure / velocity source dispatch and
 //!   `add_source_arc` injection-mode classification.
-//! - [`accessors`]: GPU accelerator hookup, CPML enable, CFL helpers,
+//! - `accessors`: GPU accelerator hookup, CPML enable, CFL helpers,
 //!   metrics, sensor data extraction, orchestrated run loop.
-//! - [`gpu_accelerator`]: external GPU-backend trait surface.
-//! - [`interface`]: `solver::interface::Solver` trait bridge.
+//! - `gpu_accelerator`: external GPU-backend trait surface.
+//! - `interface`: `solver::interface::Solver` trait bridge.
 //!
 //! ## References
 //! - Yee, K.S. (1966). Numerical solution of initial boundary value problems

@@ -19,14 +19,17 @@ pub struct HybridPlugin {
 
 impl HybridPlugin {
     /// Create a new hybrid solver plugin
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: HybridConfig, _grid: &Grid) -> KwaversResult<Self> {
         let metadata = PluginMetadata {
-            id: "hybrid_solver".to_string(),
-            name: "Hybrid PSTD/FDTD Solver".to_string(),
-            version: "1.0.0".to_string(),
-            author: "Kwavers Team".to_string(),
-            description: "Adaptive hybrid solver combining PSTD and FDTD methods".to_string(),
-            license: "MIT".to_string(),
+            id: "hybrid_solver".to_owned(),
+            name: "Hybrid PSTD/FDTD Solver".to_owned(),
+            version: "1.0.0".to_owned(),
+            author: "Kwavers Team".to_owned(),
+            description: "Adaptive hybrid solver combining PSTD and FDTD methods".to_owned(),
+            license: "MIT".to_owned(),
         };
 
         Ok(Self {
@@ -65,7 +68,7 @@ impl crate::domain::plugin::Plugin for HybridPlugin {
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
             crate::core::error::KwaversError::InternalError(
-                "Hybrid solver not initialized".to_string(),
+                "Hybrid solver not initialized".to_owned(),
             )
         })?;
 
@@ -77,8 +80,7 @@ impl crate::domain::plugin::Plugin for HybridPlugin {
         let source: &dyn Source = context
             .sources
             .first()
-            .map(|s| s.as_ref())
-            .unwrap_or(&null_source);
+            .map_or(&null_source, |s| s.as_ref());
         let boundary = &mut *context.boundary;
 
         solver.update(fields, medium, source, boundary, dt, t)
@@ -117,7 +119,7 @@ impl crate::domain::plugin::Plugin for HybridPlugin {
                 metrics.total_time().as_millis()
             )
         } else {
-            "Hybrid Plugin - Not initialized".to_string()
+            "Hybrid Plugin - Not initialized".to_owned()
         }
     }
 

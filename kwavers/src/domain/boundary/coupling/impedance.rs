@@ -71,6 +71,7 @@ impl ImpedanceBoundary {
     /// # Returns
     ///
     /// New `ImpedanceBoundary` with flat frequency response
+    #[must_use] 
     pub fn new(target_impedance: f64, directions: BoundaryDirections) -> Self {
         Self {
             target_impedance,
@@ -89,6 +90,7 @@ impl ImpedanceBoundary {
     /// # Returns
     ///
     /// Self with Gaussian profile applied
+    #[must_use] 
     pub fn with_gaussian_profile(mut self, center_freq: f64, bandwidth: f64) -> Self {
         self.frequency_profile = FrequencyProfile::Gaussian {
             center_freq,
@@ -107,6 +109,10 @@ impl ImpedanceBoundary {
     /// # Returns
     ///
     /// Frequency-weighted impedance ratio Z_target / Z_medium
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    #[must_use] 
     pub fn impedance_ratio(&self, frequency: f64, medium_impedance: f64) -> f64 {
         let z_ratio = self.target_impedance / medium_impedance;
 
@@ -157,6 +163,7 @@ impl ImpedanceBoundary {
     /// # Returns
     ///
     /// Reflection coefficient R = (Z_target - Z_medium) / (Z_target + Z_medium)
+    #[must_use] 
     pub fn reflection_coefficient(&self, frequency: f64, medium_impedance: f64) -> f64 {
         let z_ratio = self.impedance_ratio(frequency, medium_impedance);
         (z_ratio - 1.0) / (z_ratio + 1.0)

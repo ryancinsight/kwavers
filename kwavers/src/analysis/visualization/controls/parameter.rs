@@ -70,6 +70,9 @@ impl ParameterValue {
     }
 
     /// Convert to vector3 if possible
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn as_vector3(&self) -> Option<[f64; 3]> {
         match self {
             Self::Vector3(v) => Some(*v),
@@ -78,6 +81,9 @@ impl ParameterValue {
     }
 
     /// Convert to color if possible
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn as_color(&self) -> Option<[f32; 3]> {
         match self {
             Self::Color(v) => Some(*v),

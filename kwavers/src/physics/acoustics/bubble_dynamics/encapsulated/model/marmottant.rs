@@ -43,7 +43,7 @@ impl MarmottantModel {
             0.0
         } else if radius <= r_r {
             // Elastic regime: variable surface tension
-            self.chi * (radius.powi(2) - r_b.powi(2)) / radius.powi(2)
+            self.chi * r_b.mul_add(-r_b, radius.powi(2)) / radius.powi(2)
         } else {
             // Ruptured state: water surface tension
             0.0728 // Water surface tension at 20°C [N/m]
@@ -65,6 +65,9 @@ impl MarmottantModel {
     }
 
     /// Calculate bubble wall acceleration with Marmottant shell model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,

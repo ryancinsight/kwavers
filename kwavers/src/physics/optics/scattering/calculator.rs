@@ -22,6 +22,9 @@ impl Default for MieCalculator {
 
 impl MieCalculator {
     /// Create new Mie calculator with custom maximum terms
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(max_terms: usize) -> Self {
         Self { max_terms }
@@ -150,8 +153,8 @@ impl MieCalculator {
 
         for n in 2..=n_max {
             let n_f64 = n as f64;
-            let psi_n = ((2.0 * n_f64 - 1.0) / n_f64) * psi[n - 1] - psi[n - 2];
-            let xi_n = ((2.0 * n_f64 - 1.0) / n_f64) * xi[n - 1] - xi[n - 2];
+            let psi_n = (2.0f64.mul_add(n_f64, -1.0) / n_f64) * psi[n - 1] - psi[n - 2];
+            let xi_n = (2.0f64.mul_add(n_f64, -1.0) / n_f64) * xi[n - 1] - xi[n - 2];
 
             psi.push(psi_n);
             xi.push(xi_n);
@@ -203,7 +206,7 @@ impl MieCalculator {
 
         for n in 0..an.len() {
             let n_f64 = (n + 1) as f64;
-            sum += (2.0 * n_f64 + 1.0) * (an[n].norm_sqr() + bn[n].norm_sqr());
+            sum += 2.0f64.mul_add(n_f64, 1.0) * (an[n].norm_sqr() + bn[n].norm_sqr());
         }
 
         (2.0 / (x * x)) * sum
@@ -220,7 +223,7 @@ impl MieCalculator {
 
         for n in 0..an.len() {
             let n_f64 = (n + 1) as f64;
-            sum += (2.0 * n_f64 + 1.0) * (an[n] + bn[n]).re;
+            sum += 2.0f64.mul_add(n_f64, 1.0) * (an[n] + bn[n]).re;
         }
 
         (2.0 / (x * x)) * sum
@@ -236,7 +239,7 @@ impl MieCalculator {
 
         for n in 0..an.len() {
             let n_f64 = (n + 1) as f64;
-            sum += (2.0 * n_f64 + 1.0) * (-1.0_f64).powi(n as i32) * (an[n] - bn[n]);
+            sum += 2.0f64.mul_add(n_f64, 1.0) * (-1.0_f64).powi(n as i32) * (an[n] - bn[n]);
         }
 
         sum.norm_sqr()
@@ -254,10 +257,10 @@ impl MieCalculator {
 
         for n in 0..an.len() {
             let n_f64 = (n + 1) as f64;
-            let weight = (2.0 * n_f64 + 1.0) / ((n_f64 * (n_f64 + 1.0)) * (2.0 * n_f64 + 1.0));
+            let weight = 2.0f64.mul_add(n_f64, 1.0) / ((n_f64 * (n_f64 + 1.0)) * 2.0f64.mul_add(n_f64, 1.0));
 
             sum1 += weight * (an[n] * bn[n].conj() + bn[n] * an[n].conj()).re;
-            sum2 += (2.0 * n_f64 + 1.0) * (an[n].norm_sqr() + bn[n].norm_sqr());
+            sum2 += 2.0f64.mul_add(n_f64, 1.0) * (an[n].norm_sqr() + bn[n].norm_sqr());
         }
 
         if sum2 > 0.0 {
@@ -277,7 +280,7 @@ impl MieCalculator {
 
         for n in 0..an.len() {
             let n_f64 = (n + 1) as f64;
-            sum += (2.0 * n_f64 + 1.0) * (-1.0_f64).powi(n as i32) * (an[n] - bn[n]);
+            sum += 2.0f64.mul_add(n_f64, 1.0) * (-1.0_f64).powi(n as i32) * (an[n] - bn[n]);
         }
 
         sum.norm_sqr()

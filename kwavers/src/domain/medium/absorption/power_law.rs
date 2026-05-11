@@ -75,7 +75,7 @@ impl PowerLawAbsorption {
         let omega = 2.0 * std::f64::consts::PI * frequency;
         let tan_term = (std::f64::consts::PI * self.y / 2.0).tan();
 
-        c0 / (1.0 + self.alpha_0 * tan_term * omega.powf(self.y - 1.0))
+        c0 / (self.alpha_0 * tan_term).mul_add(omega.powf(self.y - 1.0), 1.0)
     }
 }
 
@@ -107,7 +107,7 @@ impl PowerLawModel {
                 if freq > 0.0 {
                     let alpha = self.config.absorption_at_frequency(freq);
                     let attenuation = (-alpha * distance).exp();
-                    slice.mapv_inplace(|c| c * attenuation);
+                    slice.par_mapv_inplace(|c| c * attenuation);
                 }
             });
     }

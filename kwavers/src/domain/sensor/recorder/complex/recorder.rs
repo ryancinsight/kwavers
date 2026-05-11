@@ -55,11 +55,13 @@ pub struct Recorder {
 
 impl Recorder {
     /// Get reference to the sensor
+    #[must_use] 
     pub fn sensor(&self) -> &GridSensorSet {
         &self.sensor
     }
 
     /// Get pressure data as Array2 for compatibility
+    #[must_use] 
     pub fn pressure_data(&self) -> Option<Array2<f64>> {
         if self.pressure_sensor_data.is_empty() {
             return None;
@@ -79,6 +81,7 @@ impl Recorder {
     }
 
     /// Get light data as Array2 for compatibility
+    #[must_use] 
     pub fn light_data(&self) -> Option<Array2<f64>> {
         if self.light_sensor_data.is_empty() {
             return None;
@@ -141,6 +144,9 @@ impl Recorder {
     }
 
     /// Record field data at current time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn record_fields(
         &mut self,
         fields: &Array4<f64>,
@@ -189,7 +195,10 @@ impl Recorder {
 
         Ok(())
     }
-
+    /// Detect cavitation events.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn detect_cavitation_events(
         &mut self,
         fields: &Array4<f64>,
@@ -216,7 +225,10 @@ impl Recorder {
 
         Ok(())
     }
-
+    /// Detect sonoluminescence events.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn detect_sonoluminescence_events(
         &mut self,
         fields: &Array4<f64>,
@@ -249,7 +261,10 @@ impl Recorder {
         }
         Ok(())
     }
-
+    /// Detect thermal events.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn detect_thermal_events(
         &mut self,
         fields: &Array4<f64>,
@@ -277,6 +292,9 @@ impl Recorder {
     }
 
     /// Save recorded data to file
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn save_data(&self) -> KwaversResult<()> {
         info!("Saving recorded data to {}", self.filename);
 

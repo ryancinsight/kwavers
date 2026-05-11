@@ -3,6 +3,7 @@ use std::fmt;
 use super::{ConservationDiagnostic, ConservationLaw, ConservationTolerances, ViolationSeverity};
 
 impl ConservationDiagnostic {
+    #[must_use] 
     pub fn new(
         law: ConservationLaw,
         initial_value: f64,
@@ -53,10 +54,20 @@ impl ConservationDiagnostic {
         }
     }
 
+    /// Is acceptable.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn is_acceptable(&self) -> bool {
         self.severity == ViolationSeverity::Acceptable
     }
 
+    /// Requires action.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn requires_action(&self) -> bool {
         self.severity >= ViolationSeverity::Error
     }

@@ -15,6 +15,9 @@ pub struct MediumBuilder;
 
 impl MediumBuilder {
     /// Build medium instance from validated configuration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn build(config: &MediumParameters, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         match config.medium_type {
             MediumType::Homogeneous => Self::build_homogeneous(
@@ -45,6 +48,9 @@ impl MediumBuilder {
     }
 
     /// Build homogeneous medium
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn build_homogeneous(
         density: f64,
         sound_speed: f64,
@@ -76,6 +82,10 @@ impl MediumBuilder {
     /// require a real parser/loader boundary before construction; they must not
     /// degrade to scalar fields because that erases heterogeneity requested by
     /// the caller.
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn build_heterogeneous(
         config: &MediumParameters,
         grid: &Grid,
@@ -127,6 +137,9 @@ impl MediumBuilder {
     }
 
     /// Build layered medium with discrete horizontal layers
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn build_layered(layers: &[LayerParameters], grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         // Calculate thickness-weighted average properties
         let total_thickness: f64 = layers.iter().map(|l| l.thickness).sum();
@@ -169,6 +182,9 @@ impl MediumBuilder {
     }
 
     /// Build anisotropic medium with directional properties
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn build_anisotropic(config: &MediumParameters, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         // Extract anisotropic configuration
         // Log configuration for future enhancement

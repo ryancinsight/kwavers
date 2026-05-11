@@ -52,7 +52,7 @@ impl RadicalKinetics {
     fn add_standard_reactions(&mut self) {
         // Hydroxyl radical reactions
         self.reactions.push(RadicalReaction {
-            name: "OH self-recombination".to_string(),
+            name: "OH self-recombination".to_owned(),
             reactants: vec![(ROSSpecies::HydroxylRadical, 2.0)],
             products: vec![(ROSSpecies::HydrogenPeroxide, 1.0)],
             rate_constant: 5.5e9, // M⁻¹·s⁻¹
@@ -62,7 +62,7 @@ impl RadicalKinetics {
 
         // Superoxide reactions
         self.reactions.push(RadicalReaction {
-            name: "Superoxide dismutation".to_string(),
+            name: "Superoxide dismutation".to_owned(),
             reactants: vec![(ROSSpecies::Superoxide, 2.0)],
             products: vec![
                 (ROSSpecies::HydrogenPeroxide, 1.0),
@@ -75,7 +75,7 @@ impl RadicalKinetics {
 
         // Fenton-like reactions
         self.reactions.push(RadicalReaction {
-            name: "H2O2 + OH".to_string(),
+            name: "H2O2 + OH".to_owned(),
             reactants: vec![
                 (ROSSpecies::HydrogenPeroxide, 1.0),
                 (ROSSpecies::HydroxylRadical, 1.0),
@@ -88,7 +88,7 @@ impl RadicalKinetics {
 
         // Ozone reactions
         self.reactions.push(RadicalReaction {
-            name: "Ozone + OH".to_string(),
+            name: "Ozone + OH".to_owned(),
             reactants: vec![(ROSSpecies::Ozone, 1.0), (ROSSpecies::HydroxylRadical, 1.0)],
             products: vec![(ROSSpecies::HydroperoxylRadical, 1.0)],
             rate_constant: 1.1e8, // M⁻¹·s⁻¹
@@ -98,7 +98,7 @@ impl RadicalKinetics {
 
         // Singlet oxygen quenching
         self.reactions.push(RadicalReaction {
-            name: "Singlet oxygen decay".to_string(),
+            name: "Singlet oxygen decay".to_owned(),
             reactants: vec![(ROSSpecies::SingletOxygen, 1.0)],
             products: vec![],     // Decays to ground state O2
             rate_constant: 2.9e5, // s⁻¹ in water

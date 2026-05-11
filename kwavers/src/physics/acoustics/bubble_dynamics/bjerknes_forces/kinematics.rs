@@ -8,6 +8,9 @@ impl BjerknesCalculator {
     ///
     /// Simple model: acceleration = Force / mass
     /// where mass ≈ 3 * ρ * (4/3)πR³ for bubble in fluid
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn predict_bubble_motion(
         &self,
         bubble_radius: f64,
@@ -17,7 +20,7 @@ impl BjerknesCalculator {
     ) -> KwaversResult<(f64, f64)> {
         if bubble_radius <= 0.0 || time_step <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Bubble radius and time step must be positive".to_string(),
+                "Bubble radius and time step must be positive".to_owned(),
             ));
         }
 
@@ -30,7 +33,7 @@ impl BjerknesCalculator {
 
         // Update velocity and position (simple Euler integration)
         let new_velocity = initial_velocity + acceleration * time_step;
-        let displacement = initial_velocity * time_step + 0.5 * acceleration * time_step.powi(2);
+        let displacement = initial_velocity.mul_add(time_step, 0.5 * acceleration * time_step.powi(2));
 
         Ok((displacement, new_velocity))
     }

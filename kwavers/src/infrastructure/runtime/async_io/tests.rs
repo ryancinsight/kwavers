@@ -19,13 +19,13 @@ async fn async_file_roundtrip_uses_platform_temp_dir() {
 
     AsyncFileWriter::new(&path)
         .unwrap()
-        .write_array3_f64(&original)
+        .write_array3(&original)
         .await
         .unwrap();
 
     let loaded = AsyncFileReader::new(&path)
         .unwrap()
-        .read_array3_f64()
+        .read_array3()
         .await
         .unwrap();
     assert_eq!(original, loaded);

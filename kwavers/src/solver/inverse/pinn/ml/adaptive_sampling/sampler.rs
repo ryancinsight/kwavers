@@ -4,6 +4,9 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     /// Create a new adaptive sampler
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         total_points: usize,
         domain: Box<dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<B>>,
@@ -43,6 +46,9 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     }
 
     /// Resample collocation points based on current model
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn resample(
         &mut self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,

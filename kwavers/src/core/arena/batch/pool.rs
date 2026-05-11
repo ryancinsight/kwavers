@@ -28,25 +28,27 @@ pub enum BufferSize {
 
 impl BufferSize {
     /// Classify a required element count into a pool tier.
+    #[must_use] 
     pub fn classify(elements: usize) -> Self {
         if elements <= 256 {
-            BufferSize::Small
+            Self::Small
         } else if elements <= 4096 {
-            BufferSize::Medium
+            Self::Medium
         } else if elements <= 65536 {
-            BufferSize::Large
+            Self::Large
         } else {
-            BufferSize::Custom(elements)
+            Self::Custom(elements)
         }
     }
 
     /// Capacity in elements for this tier.
+    #[must_use] 
     pub fn capacity(&self) -> usize {
         match self {
-            BufferSize::Small => 256,
-            BufferSize::Medium => 4096,
-            BufferSize::Large => 65536,
-            BufferSize::Custom(n) => *n,
+            Self::Small => 256,
+            Self::Medium => 4096,
+            Self::Large => 65536,
+            Self::Custom(n) => *n,
         }
     }
 }
@@ -59,6 +61,7 @@ impl Default for TempBufferPool {
 
 impl TempBufferPool {
     /// Create an empty pool.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             small: Vec::new(),

@@ -61,9 +61,7 @@ impl DiffusionSolver {
                         d * (1.0 - ghost_coeff_z_max)
                     };
 
-                    let diagonal = (d_x_minus + d_x_plus) * dx2_inv
-                        + (d_y_minus + d_y_plus) * dy2_inv
-                        + (d_z_minus + d_z_plus) * dz2_inv
+                    let diagonal = (d_z_minus + d_z_plus).mul_add(dz2_inv, (d_x_minus + d_x_plus).mul_add(dx2_inv, (d_y_minus + d_y_plus) * dy2_inv))
                         + mu_a;
 
                     preconditioner[[i, j, k]] = if diagonal > 1e-30 {

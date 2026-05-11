@@ -8,14 +8,14 @@ use super::domain_specific::{
 impl From<AcousticBoundaryType> for BoundaryType {
     fn from(acoustic: AcousticBoundaryType) -> Self {
         match acoustic {
-            AcousticBoundaryType::SoundSoft => BoundaryType::Dirichlet,
-            AcousticBoundaryType::SoundHard => BoundaryType::Neumann,
-            AcousticBoundaryType::Impedance { impedance } => BoundaryType::Robin {
+            AcousticBoundaryType::SoundSoft => Self::Dirichlet,
+            AcousticBoundaryType::SoundHard => Self::Neumann,
+            AcousticBoundaryType::Impedance { impedance } => Self::Robin {
                 alpha: 1.0,
                 beta: impedance,
             },
-            AcousticBoundaryType::Absorbing => BoundaryType::Absorbing,
-            AcousticBoundaryType::Radiation => BoundaryType::Radiation,
+            AcousticBoundaryType::Absorbing => Self::Absorbing,
+            AcousticBoundaryType::Radiation => Self::Radiation,
         }
     }
 }
@@ -23,14 +23,14 @@ impl From<AcousticBoundaryType> for BoundaryType {
 impl From<ElectromagneticBoundaryType> for BoundaryType {
     fn from(em: ElectromagneticBoundaryType) -> Self {
         match em {
-            ElectromagneticBoundaryType::PerfectElectricConductor => BoundaryType::Dirichlet,
-            ElectromagneticBoundaryType::PerfectMagneticConductor => BoundaryType::Neumann,
-            ElectromagneticBoundaryType::Absorbing => BoundaryType::Absorbing,
+            ElectromagneticBoundaryType::PerfectElectricConductor => Self::Dirichlet,
+            ElectromagneticBoundaryType::PerfectMagneticConductor => Self::Neumann,
+            ElectromagneticBoundaryType::Absorbing => Self::Absorbing,
             ElectromagneticBoundaryType::Periodic { k_bloch: _ } => {
-                BoundaryType::Periodic { phase: 0.0 }
+                Self::Periodic { phase: 0.0 }
             }
             ElectromagneticBoundaryType::Impedance { impedance } => {
-                BoundaryType::Impedance { impedance }
+                Self::Impedance { impedance }
             }
         }
     }
@@ -39,14 +39,14 @@ impl From<ElectromagneticBoundaryType> for BoundaryType {
 impl From<ElasticBoundaryType> for BoundaryType {
     fn from(elastic: ElasticBoundaryType) -> Self {
         match elastic {
-            ElasticBoundaryType::Clamped => BoundaryType::Dirichlet,
-            ElasticBoundaryType::Free => BoundaryType::FreeSurface,
-            ElasticBoundaryType::Roller => BoundaryType::Robin {
+            ElasticBoundaryType::Clamped => Self::Dirichlet,
+            ElasticBoundaryType::Free => Self::FreeSurface,
+            ElasticBoundaryType::Roller => Self::Robin {
                 alpha: 1.0,
                 beta: 0.0,
             },
-            ElasticBoundaryType::Absorbing => BoundaryType::Absorbing,
-            ElasticBoundaryType::Periodic => BoundaryType::Periodic { phase: 0.0 },
+            ElasticBoundaryType::Absorbing => Self::Absorbing,
+            ElasticBoundaryType::Periodic => Self::Periodic { phase: 0.0 },
         }
     }
 }

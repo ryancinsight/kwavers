@@ -30,6 +30,9 @@ use ndarray::Array3;
 /// The result is `Δt / (2ρ₀) * sinc(arccos(κ_src))` with the `κ_src = 1`
 /// limit handled analytically. This is the scalar multiplier used by the exact
 /// initial-pressure velocity start in the PSTD and k-space FDTD solvers.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn spectral_velocity_scale_from_source_kappa(
     source_kappa: &Array3<f64>,
     dt: f64,

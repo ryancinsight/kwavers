@@ -15,10 +15,8 @@ fn main() {
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
-    let mut result = None;
     for _ in 0..10 {
-        result = Some(solver.run_orchestrated(1));
+        solver.run_orchestrated(1).expect("Solver iteration failed");
     }
-    assert!(result.is_some(), "Solver did not run");
     println!("k-Wave compatibility test passed!");
 }

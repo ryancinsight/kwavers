@@ -5,6 +5,10 @@ use super::{ForwardCheckpoint, ForwardReplayCache, WavefieldModeler};
 
 impl WavefieldModeler {
     /// Forward wavefield modeling — solves (1/v²)∂²u/∂t² − ∇²u = f.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn forward_model(&mut self, velocity_model: &Array3<f64>) -> KwaversResult<Array2<f64>> {
         let (nx, ny, nz) = velocity_model.dim();
         self.validate_geometry((nx, ny, nz))?;
@@ -13,7 +17,7 @@ impl WavefieldModeler {
         if nt == 0 {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "WavefieldConfig.max_time must span at least one timestep".to_string(),
+                    message: "WavefieldConfig.max_time must span at least one timestep".to_owned(),
                 },
             ));
         }
@@ -68,13 +72,16 @@ impl WavefieldModeler {
     }
 
     /// Get the final forward wavefield snapshot.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_forward_wavefield(&self) -> KwaversResult<Array3<f64>> {
         self.last_forward_wavefield
             .as_ref()
             .cloned()
             .ok_or_else(|| {
                 crate::core::error::KwaversError::InvalidInput(
-                    "Forward wavefield not computed".to_string(),
+                    "Forward wavefield not computed".to_owned(),
                 )
             })
     }

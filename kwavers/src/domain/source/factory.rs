@@ -28,6 +28,9 @@ pub struct SourceFactory;
 
 impl SourceFactory {
     /// Create a source from configuration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn create_source(config: &SourceParameters, grid: &Grid) -> KwaversResult<Box<dyn Source>> {
         config.validate()?;
 
@@ -83,7 +86,7 @@ impl SourceFactory {
                 // Axial calculation handled by factory or config?
                 // Legacy factory calculated it manually.
                 let axial_wavenumber =
-                    ((2.0 * PI / wavelength).powi(2) - radial_wavenumber.powi(2)).sqrt();
+                    radial_wavenumber.mul_add(-radial_wavenumber, (2.0 * PI / wavelength).powi(2)).sqrt();
 
                 let bessel_config = BesselConfig {
                     center: position,
@@ -180,9 +183,7 @@ impl SourceFactory {
                 };
 
                 // Approximate radius of curvature as distance to focus
-                let r_curv = ((focus[0] - position.0).powi(2)
-                    + (focus[1] - position.1).powi(2)
-                    + (focus[2] - position.2).powi(2))
+                let r_curv = (focus[2] - position.2).mul_add(focus[2] - position.2, (focus[1] - position.1).mul_add(focus[1] - position.1, (focus[0] - position.0).powi(2)))
                 .sqrt();
 
                 // Avoid zero radius
@@ -202,9 +203,9 @@ impl SourceFactory {
                 Ok(Box::new(FocusedSource::new(bowl_config, signal, grid)?))
             }
             SourceModel::Custom => Err(ConfigError::InvalidValue {
-                parameter: "model".to_string(),
-                value: "Custom".to_string(),
-                constraint: "Custom source requires programmatic creation via Builder, not supported via config file.".to_string(),
+                parameter: "model".to_owned(),
+                value: "Custom".to_owned(),
+                constraint: "Custom source requires programmatic creation via Builder, not supported via config file.".to_owned(),
             }
             .into()),
         }
@@ -239,9 +240,9 @@ impl SourceFactory {
                 ))
             }
             _ => Err(ConfigError::InvalidValue {
-                parameter: "pulse_type".to_string(),
+                parameter: "pulse_type".to_owned(),
                 value: format!("{:?}", pulse.pulse_type),
-                constraint: "Pulse type not currently supported by factory".to_string(),
+                constraint: "Pulse type not currently supported by factory".to_owned(),
             }
             .into()),
         }

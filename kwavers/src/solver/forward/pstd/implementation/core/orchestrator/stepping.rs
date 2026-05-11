@@ -2,6 +2,10 @@ use super::PSTDSolver;
 use crate::core::error::KwaversResult;
 
 impl PSTDSolver {
+    /// Apply boundary.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn apply_boundary(&mut self, time_index: usize) -> KwaversResult<()> {
         let Some(boundary) = &mut self.boundary else {
             return Ok(());

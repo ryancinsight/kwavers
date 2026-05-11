@@ -18,11 +18,11 @@ use super::local_ops::{
 ///
 /// # Arguments
 ///
-/// * `image` - Input image as Array3<f32> (frames, angles, samples)
+/// * `image` - Input image as `Array3<f32>` (frames, angles, samples)
 ///
 /// # Returns
 ///
-/// Array1<f32> of 6 summary features.
+/// `Array1<f32>` of 6 summary features.
 ///
 /// # Example
 ///
@@ -55,7 +55,7 @@ pub fn extract_all_features(image: &Array3<f32>) -> ndarray::Array1<f32> {
     let mean_entropy = entropy_map.mean().unwrap_or(0.0);
 
     // 6. Peak intensity (dynamic range)
-    let peak_intensity = image.iter().cloned().fold(0.0f32, f32::max);
+    let peak_intensity = image.iter().copied().fold(0.0f32, f32::max);
 
     Array1::from_vec(vec![
         mean_intensity,
@@ -90,12 +90,12 @@ pub fn extract_all_features(image: &Array3<f32>) -> ndarray::Array1<f32> {
 /// ```
 pub fn normalize_features(features: &mut [Array3<f32>]) {
     for feature in features.iter_mut() {
-        let min_val = feature.iter().cloned().fold(f32::INFINITY, f32::min);
-        let max_val = feature.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+        let min_val = feature.iter().copied().fold(f32::INFINITY, f32::min);
+        let max_val = feature.iter().copied().fold(f32::NEG_INFINITY, f32::max);
 
         let range = max_val - min_val;
         if range > 1e-10 {
-            feature.mapv_inplace(|v| (v - min_val) / range);
+            feature.par_mapv_inplace(|v| (v - min_val) / range);
         }
     }
 }
@@ -120,6 +120,7 @@ pub fn normalize_features(features: &mut [Array3<f32>]) {
 /// let stacked = concatenate_features(&features);
 /// assert_eq!(stacked.shape(), &[1, 5, 256, 256]);
 /// ```
+#[must_use] 
 pub fn concatenate_features(features: &[Array3<f32>]) -> ndarray::Array4<f32> {
     if features.is_empty() {
         return ndarray::Array4::zeros((0, 0, 0, 0));

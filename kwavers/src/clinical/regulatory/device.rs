@@ -14,6 +14,7 @@ pub enum DeviceClass {
 
 impl DeviceClass {
     /// Get string representation
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::ClassI => "Class I",
@@ -23,6 +24,7 @@ impl DeviceClass {
     }
 
     /// Get risk level description
+    #[must_use] 
     pub fn risk_level(&self) -> &'static str {
         match self {
             Self::ClassI => "Low Risk",
@@ -82,32 +84,41 @@ impl DeviceDescription {
     }
 
     /// Add feature
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_feature(&mut self, feature: impl Into<String>) {
         self.features.push(feature.into());
     }
 
     /// Add contraindication
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_contraindication(&mut self, contraindication: impl Into<String>) {
         self.contraindications.push(contraindication.into());
     }
 
     /// Validate device description completeness
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.name.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Device name cannot be empty".to_string(),
+                "Device name cannot be empty".to_owned(),
             ));
         }
 
         if self.intended_use.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Intended use statement required".to_string(),
+                "Intended use statement required".to_owned(),
             ));
         }
 
         if self.indications.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "At least one indication for use required".to_string(),
+                "At least one indication for use required".to_owned(),
             ));
         }
 
@@ -150,11 +161,17 @@ impl PredicateDevice {
     }
 
     /// Add similarity to predicate
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_similarity(&mut self, similarity: impl Into<String>) {
         self.similarities.push(similarity.into());
     }
 
     /// Add difference with justification
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_difference(
         &mut self,
         difference: impl Into<String>,
@@ -165,16 +182,19 @@ impl PredicateDevice {
     }
 
     /// Validate predicate device information
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.name.is_empty() || self.k_number.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Predicate device name and K number required".to_string(),
+                "Predicate device name and K number required".to_owned(),
             ));
         }
 
         if self.similarities.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "At least one similarity to predicate required".to_string(),
+                "At least one similarity to predicate required".to_owned(),
             ));
         }
 

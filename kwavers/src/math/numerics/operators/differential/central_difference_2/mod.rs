@@ -126,13 +126,19 @@ impl CentralDifference2 {
     ///
     /// Uses `Zip` slice-pair to expose element-wise independence to LLVM SIMD
     /// autovectorisation (same pattern as `CentralDifference4/6::apply_x_into`).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if nx < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -144,7 +150,7 @@ impl CentralDifference2 {
         Zip::from(dst.slice_mut(s![1..nx - 1, .., ..]))
             .and(field.slice(s![2..nx, .., ..]))
             .and(field.slice(s![0..nx - 2, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dx);
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dx);
 
         // Left boundary (i=0): forward difference
         Zip::from(dst.slice_mut(s![0, .., ..]))
@@ -165,13 +171,19 @@ impl CentralDifference2 {
     ///
     /// Interior: `dst[j] = (f[j+1] − f[j−1]) / (2Δy)` for j ∈ [1, ny−2].
     /// Boundaries: first/last-order forward/backward difference.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if ny < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -183,7 +195,7 @@ impl CentralDifference2 {
         Zip::from(dst.slice_mut(s![.., 1..ny - 1, ..]))
             .and(field.slice(s![.., 2..ny, ..]))
             .and(field.slice(s![.., 0..ny - 2, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dy);
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dy);
 
         // Bottom boundary (j=0)
         Zip::from(dst.slice_mut(s![.., 0, ..]))
@@ -205,13 +217,19 @@ impl CentralDifference2 {
     /// Interior: `dst[k] = (f[k+1] − f[k−1]) / (2Δz)` for k ∈ [1, nz−2].
     /// Boundaries: first/last-order forward/backward difference.
     /// The innermost (contiguous) dimension gives the best autovectorisation here.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if nz < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }
@@ -223,7 +241,7 @@ impl CentralDifference2 {
         Zip::from(dst.slice_mut(s![.., .., 1..nz - 1]))
             .and(field.slice(s![.., .., 2..nz]))
             .and(field.slice(s![.., .., 0..nz - 2]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dz);
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dz);
 
         // Near boundary (k=0)
         Zip::from(dst.slice_mut(s![.., .., 0]))

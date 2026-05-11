@@ -14,6 +14,9 @@ pub struct Trilateration {
 
 impl Trilateration {
     /// Create a new trilateration localizer
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(
         sensor_positions: Vec<[f64; 3]>,
         config: TrilaterationConfig,
@@ -22,13 +25,13 @@ impl Trilateration {
 
         if num_sensors < 4 {
             return Err(KwaversError::InvalidInput(
-                "Need at least 4 sensors for 3D trilateration".to_string(),
+                "Need at least 4 sensors for 3D trilateration".to_owned(),
             ));
         }
 
         if config.sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Sound speed must be positive".to_string(),
+                "Sound speed must be positive".to_owned(),
             ));
         }
 
@@ -40,6 +43,10 @@ impl Trilateration {
     }
 
     /// Localize source from time-of-arrival measurements
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn localize(&self, arrival_times: &[f64]) -> KwaversResult<LocalizationResult> {
         if arrival_times.len() != self.num_sensors {
             return Err(KwaversError::InvalidInput(format!(
@@ -89,7 +96,7 @@ impl Trilateration {
             position[2] += update[2];
 
             let update_norm =
-                (update[0] * update[0] + update[1] * update[1] + update[2] * update[2]).sqrt();
+                update[2].mul_add(update[2], update[0].mul_add(update[0], update[1] * update[1])).sqrt();
             if update_norm < self.config.convergence_tolerance {
                 converged = true;
                 break;
@@ -111,6 +118,9 @@ impl Trilateration {
     }
 
     /// Compute residuals and Jacobian for Gauss-Newton iteration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_residuals_and_jacobian(
         &self,
         position: &[f64; 3],
@@ -149,6 +159,9 @@ impl Trilateration {
     }
 
     /// Solve least squares with Levenberg-Marquardt damping: (J^T J + λI)x = J^T b
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn solve_least_squares(
         &self,
         jacobian: &[[f64; 3]],
@@ -181,6 +194,9 @@ impl Trilateration {
     }
 
     /// Solve 3x3 linear system Ax = b via Gaussian elimination with partial pivoting
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     fn solve_3x3(&self, a: &[[f64; 3]; 3], b: &[f64; 3]) -> KwaversResult<[f64; 3]> {
         let mut aug = [[0.0; 4]; 3];
         for i in 0..3 {
@@ -204,7 +220,7 @@ impl Trilateration {
 
             if aug[k][k].abs() < 1e-30 {
                 return Err(KwaversError::InvalidInput(
-                    "Singular matrix in trilateration - sensors may be coplanar".to_string(),
+                    "Singular matrix in trilateration - sensors may be coplanar".to_owned(),
                 ));
             }
 
@@ -234,6 +250,6 @@ impl Trilateration {
         let dx = p1[0] - p2[0];
         let dy = p1[1] - p2[1];
         let dz = p1[2] - p2[2];
-        (dx * dx + dy * dy + dz * dz).sqrt()
+        dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
     }
 }

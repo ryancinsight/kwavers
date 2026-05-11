@@ -4,6 +4,11 @@ use ndarray::Array3;
 use super::SpatiallyVaryingAbsorption;
 
 impl SpatiallyVaryingAbsorption {
+    /// New.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         alpha_0_field: Array3<f64>,
         gamma_field: Array3<f64>,
@@ -19,7 +24,7 @@ impl SpatiallyVaryingAbsorption {
 
         if alpha_0_field.iter().any(|&a| a < 0.0 || !a.is_finite()) {
             return Err(KwaversError::InvalidInput(
-                "alpha_0_field contains negative or non-finite values".to_string(),
+                "alpha_0_field contains negative or non-finite values".to_owned(),
             ));
         }
 
@@ -28,7 +33,7 @@ impl SpatiallyVaryingAbsorption {
             .any(|&g| !(0.0..=3.0).contains(&g) || !g.is_finite())
         {
             return Err(KwaversError::InvalidInput(
-                "gamma_field contains invalid values (must be in [0, 3])".to_string(),
+                "gamma_field contains invalid values (must be in [0, 3])".to_owned(),
             ));
         }
 
@@ -49,7 +54,10 @@ impl SpatiallyVaryingAbsorption {
             reference_temperature: 310.15,
         })
     }
-
+    /// Uniform.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn uniform(
         nx: usize,
         ny: usize,
@@ -61,7 +69,10 @@ impl SpatiallyVaryingAbsorption {
         let gamma_field = Array3::from_elem((nx, ny, nz), gamma);
         Self::new(alpha_0_field, gamma_field, 1e6)
     }
-
+    /// With temperature dependence.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn with_temperature_dependence(
         mut self,
         temperature_field: Array3<f64>,
@@ -69,7 +80,7 @@ impl SpatiallyVaryingAbsorption {
     ) -> KwaversResult<Self> {
         if temperature_field.dim() != self.alpha_0_field.dim() {
             return Err(KwaversError::InvalidInput(
-                "Temperature field dimension mismatch".to_string(),
+                "Temperature field dimension mismatch".to_owned(),
             ));
         }
         self.temperature_field = Some(temperature_field);
@@ -77,6 +88,7 @@ impl SpatiallyVaryingAbsorption {
         Ok(self)
     }
 
+    #[must_use] 
     pub fn with_dispersion_correction(mut self, enabled: bool) -> Self {
         self.dispersion_correction = enabled;
         self

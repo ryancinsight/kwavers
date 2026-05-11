@@ -139,9 +139,7 @@ pub trait PlasmonicEnhancement: ElectromagneticWaveEquation {
         wavelength: f64,
     ) -> f64 {
         // Dipole-dipole coupling approximation
-        let distance = ((particle1_pos[0] - particle2_pos[0]).powi(2)
-            + (particle1_pos[1] - particle2_pos[1]).powi(2)
-            + (particle1_pos[2] - particle2_pos[2]).powi(2))
+        let distance = (particle1_pos[2] - particle2_pos[2]).mul_add(particle1_pos[2] - particle2_pos[2], (particle1_pos[1] - particle2_pos[1]).mul_add(particle1_pos[1] - particle2_pos[1], (particle1_pos[0] - particle2_pos[0]).powi(2)))
         .sqrt();
 
         if distance > 0.0 {
@@ -178,9 +176,7 @@ pub(crate) fn frohlich_drude_resonance_frequency(dielectric_constant: f64) -> f6
         return 0.0;
     }
 
-    let omega_squared = GOLD_PLASMA_FREQUENCY_RAD_S.powi(2)
-        / (GOLD_EPS_INF + 2.0 * dielectric_constant)
-        - GOLD_DRUDE_DAMPING_RAD_S.powi(2);
+    let omega_squared = GOLD_DRUDE_DAMPING_RAD_S.mul_add(-GOLD_DRUDE_DAMPING_RAD_S, GOLD_PLASMA_FREQUENCY_RAD_S.powi(2) / 2.0f64.mul_add(dielectric_constant, GOLD_EPS_INF));
 
     if omega_squared > 0.0 {
         omega_squared.sqrt()
@@ -196,7 +192,7 @@ fn drude_imaginary_permittivity(omega: f64) -> f64 {
     }
 
     GOLD_PLASMA_FREQUENCY_RAD_S.powi(2) * GOLD_DRUDE_DAMPING_RAD_S
-        / (omega * (omega.powi(2) + GOLD_DRUDE_DAMPING_RAD_S.powi(2)))
+        / (omega * GOLD_DRUDE_DAMPING_RAD_S.mul_add(GOLD_DRUDE_DAMPING_RAD_S, omega.powi(2)))
 }
 
 #[cfg(test)]

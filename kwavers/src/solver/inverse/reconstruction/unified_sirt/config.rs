@@ -60,42 +60,49 @@ impl Default for SirtConfig {
 
 impl SirtConfig {
     /// Select SIRT algorithm.
+    #[must_use] 
     pub fn with_sirt(mut self) -> Self {
         self.algorithm = SirtAlgorithm::Sirt;
         self
     }
 
     /// Select ART algorithm.
+    #[must_use] 
     pub fn with_art(mut self) -> Self {
         self.algorithm = SirtAlgorithm::Art;
         self
     }
 
     /// Select OSEM algorithm with `num_subsets` subsets.
+    #[must_use] 
     pub fn with_osem(mut self, num_subsets: usize) -> Self {
         self.algorithm = SirtAlgorithm::Osem { num_subsets };
         self
     }
 
     /// Set maximum number of iterations.
+    #[must_use] 
     pub fn with_iterations(mut self, iterations: usize) -> Self {
         self.max_iterations = iterations;
         self
     }
 
     /// Set relaxation factor (clamped to `[0.001, 1.0]`).
+    #[must_use] 
     pub fn with_relaxation(mut self, factor: f64) -> Self {
         self.relaxation_factor = factor.clamp(0.001, 1.0);
         self
     }
 
     /// Set regularization configuration.
+    #[must_use] 
     pub fn with_regularization(mut self, reg: RegularizationConfig) -> Self {
         self.regularization = reg;
         self
     }
 
     /// Enable or disable verbose logging.
+    #[must_use] 
     pub fn with_verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
         self

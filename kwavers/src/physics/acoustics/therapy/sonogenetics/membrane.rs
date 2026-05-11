@@ -14,7 +14,7 @@
 //! For sonogenetics the quasi-static pressure acting on the membrane is the acoustic
 //! radiation pressure (Duck 1990 §4.2):
 //!
-//!   P_rad(x) = I(x) / c(x)     [Pa]   (progressive wave; Sarvazyan 2010 Eq. 3)
+//!   P_rad(x) = I(x) / c(x)     (Pa)   (progressive wave; Sarvazyan 2010 Eq. 3)
 //!
 //! Combining:
 //!
@@ -46,9 +46,9 @@ use ndarray::{Array3, Zip};
 /// Units are SI throughout.
 #[derive(Debug, Clone)]
 pub struct CellMembraneParams {
-    /// Cell soma radius R [m].
+    /// Cell soma radius R (m).
     pub radius_m: f64,
-    /// Lipid bilayer thickness h [m].
+    /// Lipid bilayer thickness h (m).
     pub thickness_m: f64,
 }
 
@@ -72,7 +72,7 @@ impl CellMembraneParams {
     }
 }
 
-/// Compute per-voxel acoustic radiation pressure P_rad(x) = I(x)/c(x) [Pa].
+/// Compute per-voxel acoustic radiation pressure P_rad(x) = I(x)/c(x) (Pa).
 ///
 /// # Formula
 ///
@@ -81,11 +81,11 @@ impl CellMembraneParams {
 /// # Arguments
 ///
 /// - `intensity`   — time-averaged intensity I(x) [W/m²]
-/// - `sound_speed` — per-voxel c(x) [m/s]; voxels with c ≤ 0 yield 0
+/// - `sound_speed` — per-voxel c(x) (m/s); voxels with c ≤ 0 yield 0
 ///
 /// # Returns
 ///
-/// Per-voxel radiation pressure [Pa].
+/// Per-voxel radiation pressure (Pa).
 #[must_use]
 pub fn compute_radiation_pressure(
     intensity: &Array3<f64>,
@@ -112,7 +112,7 @@ pub fn compute_radiation_pressure(
 /// # Arguments
 ///
 /// - `intensity`   — time-averaged intensity I(x) [W/m²]
-/// - `sound_speed` — per-voxel c(x) [m/s]; voxels with c ≤ 0 yield 0
+/// - `sound_speed` — per-voxel c(x) (m/s); voxels with c ≤ 0 yield 0
 /// - `params`      — cell geometry (radius R)
 ///
 /// # Panics
@@ -171,6 +171,9 @@ mod tests {
 
     /// HIFU-level intensity: I = 1e6 W/m², c = 1500 m/s, R = 10 μm → ΔT ≈ 3.333 mN/m
     /// This is within the half-activation range of MscL-G22S (T_half ≈ 4.7 mN/m).
+    /// # Panics
+    /// - Panics if assertion fails: `Expected tension {expected:.4e} N/m should be below T_half {mscl_t_half:.4e} N/m`.
+    ///
     #[test]
     fn test_hifu_level_tension_in_channel_range() {
         let (nx, ny, nz) = (2, 2, 2);
@@ -194,6 +197,9 @@ mod tests {
     }
 
     /// Zero sound speed voxels produce zero output.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_zero_sound_speed_produces_zero() {
         let (nx, ny, nz) = (2, 2, 2);

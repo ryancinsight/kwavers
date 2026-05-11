@@ -65,6 +65,9 @@ impl FaultInjector {
     ///
     /// Thread-safe: acquires the PRNG mutex for each call. Throughput is
     /// adequate for per-step fault injection at simulation step rates (< 10 MHz).
+    /// # Panics
+    /// - Panics if `FaultInjector RNG mutex poisoned`.
+    ///
     pub fn should_inject(&self) -> bool {
         use rand::Rng;
         let mut rng = self.rng.lock().expect("FaultInjector RNG mutex poisoned");

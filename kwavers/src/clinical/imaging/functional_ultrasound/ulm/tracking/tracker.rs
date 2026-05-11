@@ -37,6 +37,9 @@ impl HungarianTracker {
     /// 3. Update matched tracks; spawn new tracks for unmatched detections;
     ///    increment gap for unmatched tracks and terminate if gap > max_gap.
     /// ```
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn update(&mut self, detections: &[BubbleDetection]) {
         let m = self.active_tracks.len();
         let n = detections.len();
@@ -64,7 +67,7 @@ impl HungarianTracker {
                     .map(|j| {
                         let dx = last.x - detections[j].x;
                         let dz = last.z - detections[j].z;
-                        let d2 = dx * dx + dz * dz;
+                        let d2 = dx.mul_add(dx, dz * dz);
                         if d2 <= dmax2 {
                             d2
                         } else {
@@ -132,6 +135,7 @@ impl HungarianTracker {
 
     /// Finalise tracking: terminate all remaining active tracks and return all tracks
     /// with length ≥ `min_track_length`.
+    #[must_use] 
     pub fn finalize(mut self) -> Vec<BubbleTrack> {
         for mut t in self.active_tracks.drain(..) {
             t.active = false;

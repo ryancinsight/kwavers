@@ -12,6 +12,9 @@ impl BubbleField {
     ///
     /// Pairs with `d_ij = 0` and pairs where `R_i / d_ij < coupling_threshold`
     /// are skipped.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub(super) fn compute_secondary_pressures(&self) -> HashMap<(usize, usize, usize), f64> {
         let positions: Vec<(usize, usize, usize)> = self.bubbles.keys().copied().collect();
         let mut corrections: HashMap<(usize, usize, usize), f64> =
@@ -29,7 +32,7 @@ impl BubbleField {
                 let delta_x = (pos_i.0 as f64 - pos_j.0 as f64) * dx;
                 let delta_y = (pos_i.1 as f64 - pos_j.1 as f64) * dy;
                 let delta_z = (pos_i.2 as f64 - pos_j.2 as f64) * dz;
-                let d_ij = (delta_x * delta_x + delta_y * delta_y + delta_z * delta_z).sqrt();
+                let d_ij = delta_z.mul_add(delta_z, delta_x.mul_add(delta_x, delta_y * delta_y)).sqrt();
 
                 if d_ij == 0.0 || state_i.radius / d_ij < self.coupling_threshold {
                     continue;
@@ -38,7 +41,7 @@ impl BubbleField {
                 let r = state_i.radius;
                 let rdot = state_i.wall_velocity;
                 let rddot = state_i.wall_acceleration;
-                let p_ij = -self.rho_liquid * (r * r * rddot + 2.0 * r * rdot * rdot) / d_ij;
+                let p_ij = -self.rho_liquid * (r * r).mul_add(rddot, 2.0 * r * rdot * rdot) / d_ij;
 
                 *corrections.get_mut(&pos_j).unwrap() += p_ij;
             }

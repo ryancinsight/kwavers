@@ -82,7 +82,7 @@ async fn test_job_cancellation() {
     let job_id = manager.submit_job("user123", request).await.unwrap();
 
     // Should be able to cancel queued job
-    assert!(manager.cancel_job(&job_id, "user123").is_ok());
+    manager.cancel_job(&job_id, "user123").unwrap();
 
     let job = manager.get_job(&job_id).unwrap();
     assert_eq!(job.status, JobStatus::Cancelled);

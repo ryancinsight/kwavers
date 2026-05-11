@@ -43,32 +43,38 @@ impl SpatialOrder {
     #[must_use]
     pub fn cfl_limit(&self) -> f64 {
         match self {
-            SpatialOrder::Second => 1.0 / (3.0_f64).sqrt(), // 1/√3 ≈ 0.577
-            SpatialOrder::Fourth => 1.0 / (15.0_f64).sqrt(), // 1/√15 ≈ 0.258
-            SpatialOrder::Sixth => 1.0 / (27.0_f64).sqrt(), // 1/√27 ≈ 0.192
+            Self::Second => 1.0 / (3.0_f64).sqrt(), // 1/√3 ≈ 0.577
+            Self::Fourth => 1.0 / (15.0_f64).sqrt(), // 1/√15 ≈ 0.258
+            Self::Sixth => 1.0 / (27.0_f64).sqrt(), // 1/√27 ≈ 0.192
         }
     }
 
     /// Get the minimum number of grid points required for this spatial order
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn minimum_grid_points(&self) -> usize {
         match self {
-            SpatialOrder::Second => 3,
-            SpatialOrder::Fourth => 5,
-            SpatialOrder::Sixth => 7,
+            Self::Second => 3,
+            Self::Fourth => 5,
+            Self::Sixth => 7,
         }
     }
 
     /// Convert from usize, returning an error for invalid orders
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_usize(order: usize) -> Result<Self, crate::core::error::KwaversError> {
         match order {
-            2 => Ok(SpatialOrder::Second),
-            4 => Ok(SpatialOrder::Fourth),
-            6 => Ok(SpatialOrder::Sixth),
+            2 => Ok(Self::Second),
+            4 => Ok(Self::Fourth),
+            6 => Ok(Self::Sixth),
             _ => Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "spatial_order".to_string(),
+                parameter: "spatial_order".to_owned(),
                 value: order.to_string(),
-                constraint: "must be 2, 4, or 6".to_string(),
+                constraint: "must be 2, 4, or 6".to_owned(),
             }
             .into()),
         }

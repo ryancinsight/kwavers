@@ -29,6 +29,12 @@ pub struct BurnPINN2DWave<B: Backend> {
 
 impl<B: Backend> BurnPINN2DWave<B> {
     /// Create a new homogeneous PINN model.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn new(config: BurnPINN2DConfig, device: &B::Device) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -60,6 +66,9 @@ impl<B: Backend> BurnPINN2DWave<B> {
     }
 
     /// Create a heterogeneous PINN model with spatially varying wave speed.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new_heterogeneous<F>(
         config: BurnPINN2DConfig,
         wave_speed_fn: F,
@@ -102,6 +111,9 @@ impl<B: Backend> BurnPINN2DWave<B> {
     }
 
     /// Get the number of parameters in the model.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn num_parameters(&self) -> usize {
         let input_params = self.config.0.hidden_layers[0] * 3;
         let mut hidden_params = 0;
@@ -138,6 +150,12 @@ impl<B: Backend> BurnPINN2DWave<B> {
     }
 
     /// Predict field values at given spatial and temporal coordinates.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn predict(
         &self,
         x: &Array1<f64>,
@@ -177,6 +195,9 @@ impl<B: Backend> BurnPINN2DWave<B> {
 
 impl<B: AutodiffBackend> BurnPINN2DWave<B> {
     /// Compute PDE residual using finite differences within autodiff framework.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn compute_pde_residual(
         &self,
         x: Tensor<B, 2>,

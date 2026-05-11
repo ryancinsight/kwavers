@@ -77,7 +77,7 @@ impl<'de> Deserialize<'de> for SolverFeatureSet {
         D: serde::Deserializer<'de>,
     {
         let bits = u32::deserialize(deserializer)?;
-        SolverFeatureSet::from_bits(bits).ok_or_else(|| {
+        Self::from_bits(bits).ok_or_else(|| {
             serde::de::Error::custom(format!("invalid SolverFeatureSet bits: {}", bits))
         })
     }
@@ -85,6 +85,7 @@ impl<'de> Deserialize<'de> for SolverFeatureSet {
 
 impl SolverFeatureSet {
     /// Create a new feature set with all features disabled
+    #[must_use] 
     pub fn new() -> Self {
         Self::empty()
     }
@@ -122,6 +123,7 @@ impl SolverFeatureSet {
     }
 
     /// Check if a specific feature is enabled
+    #[must_use] 
     pub fn is_enabled(&self, feature: SolverFeature) -> bool {
         match feature {
             SolverFeature::Reconstruction => self.contains(Self::RECONSTRUCTION),
@@ -148,6 +150,7 @@ impl SolverFeatureSet {
     }
 
     /// Get preset configuration for accuracy-optimized simulation
+    #[must_use] 
     pub fn accuracy_optimized() -> Self {
         let mut features = Self::new();
         features.insert(Self::HIGH_PRECISION);
@@ -157,6 +160,7 @@ impl SolverFeatureSet {
     }
 
     /// Get preset configuration for performance-optimized simulation
+    #[must_use] 
     pub fn performance_optimized() -> Self {
         let mut features = Self::new();
         features.insert(Self::GPU_ACCELERATION);
@@ -166,6 +170,7 @@ impl SolverFeatureSet {
     }
 
     /// Get preset configuration for debugging
+    #[must_use] 
     pub fn debugging() -> Self {
         let mut features = Self::new();
         features.insert(Self::DETAILED_LOGGING);
@@ -174,6 +179,7 @@ impl SolverFeatureSet {
     }
 
     /// Convert to feature names for display
+    #[must_use] 
     pub fn enabled_features(&self) -> Vec<&'static str> {
         let mut features = Vec::new();
 
@@ -232,6 +238,7 @@ pub struct FeatureManager {
 
 impl FeatureManager {
     /// Create a new feature manager with all features available
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             features: SolverFeatureSet::new(),
@@ -240,6 +247,10 @@ impl FeatureManager {
     }
 
     /// Create a feature manager with only specified available features
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_available_features(available: SolverFeatureSet) -> Self {
         Self {
             features: SolverFeatureSet::new(),
@@ -248,6 +259,9 @@ impl FeatureManager {
     }
 
     /// Enable a feature if it's available
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn enable_feature(&mut self, feature: SolverFeature) -> Result<(), String> {
         if !self.available_features.is_enabled(feature) {
             return Err(format!("Feature {:?} is not available", feature));
@@ -263,26 +277,39 @@ impl FeatureManager {
     }
 
     /// Check if a feature is enabled
+    #[must_use] 
     pub fn is_enabled(&self, feature: SolverFeature) -> bool {
         self.features.is_enabled(feature)
     }
 
     /// Check if a feature is available
+    #[must_use] 
     pub fn is_available(&self, feature: SolverFeature) -> bool {
         self.available_features.is_enabled(feature)
     }
 
     /// Get the current feature set
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn feature_set(&self) -> SolverFeatureSet {
         self.features
     }
 
     /// Get available features
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn available_features(&self) -> SolverFeatureSet {
         self.available_features
     }
 
     /// Validate that required features are available
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_required_features(&self, required: &[SolverFeature]) -> Result<(), String> {
         for feature in required {
             if !self.is_available(*feature) {
@@ -293,6 +320,7 @@ impl FeatureManager {
     }
 
     /// Get feature summary for display
+    #[must_use] 
     pub fn summary(&self) -> String {
         format!(
             "Enabled: {} | Available: {}",

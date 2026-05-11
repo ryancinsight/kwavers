@@ -30,6 +30,9 @@ pub struct RealTimePINNInference<B: Backend> {
 
 impl<B: Backend> RealTimePINNInference<B> {
     /// Create a new real-time PINN inference engine
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(burn_pinn: BurnPINN2DWave<B>, _device: &B::Device) -> KwaversResult<Self> {
         let layer_sizes = Quantizer::extract_layer_sizes(&burn_pinn);
         let activations = Quantizer::extract_activations(&burn_pinn);
@@ -71,7 +74,10 @@ impl<B: Backend> RealTimePINNInference<B> {
             _buffer_sizes: buffer_sizes,
         }
     }
-
+    /// Predict realtime.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn predict_realtime(
         &mut self,
         x: &[f32],
@@ -92,7 +98,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         self.predict_quantized_cpu(x, y, t)
     }
 
-    #[allow(dead_code)]
+    #[cfg(not(feature = "simd"))]
     fn predict_quantized_cpu(
         &mut self,
         x: &[f32],
@@ -111,7 +117,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         Ok((predictions, uncertainties))
     }
 
-    #[allow(dead_code)]
+    #[cfg(not(feature = "simd"))]
     fn forward_quantized_single(&mut self, input: &[f32]) -> KwaversResult<f32> {
         let num_layers = self.quantized_network.weights.len();
 
@@ -154,7 +160,10 @@ impl<B: Backend> RealTimePINNInference<B> {
 
         Ok(self.memory_pool.buffers[num_layers - 1][0])
     }
-
+    /// Validate performance.
+    /// # Errors
+    /// - Returns [`KwaversError::PerformanceError`] if the precondition for a PerformanceError-class constraint is violated.
+    ///
     pub fn validate_performance(&mut self, test_samples: usize) -> KwaversResult<f64> {
         use std::time::Instant;
 

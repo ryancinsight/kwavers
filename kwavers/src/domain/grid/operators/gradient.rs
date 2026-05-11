@@ -7,6 +7,12 @@ use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
 
 /// Compute the gradient of a 3D field
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub fn gradient<T>(
     field: &ArrayView3<T>,
     grid: &Grid,

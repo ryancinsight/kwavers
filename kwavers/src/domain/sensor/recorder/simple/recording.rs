@@ -14,6 +14,9 @@ impl SensorRecorder {
     ///
     /// Silently returns `Ok(())` after `expected_steps` have been recorded
     /// (matching k-Wave's behaviour of stopping after the sensor buffer is full).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn record_step(&mut self, pressure_field: &Array3<f64>) -> KwaversResult<()> {
         if let Some(ref mut stats) = self.stats {
             stats.update(pressure_field);

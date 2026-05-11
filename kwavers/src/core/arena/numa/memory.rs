@@ -11,6 +11,9 @@ use crate::core::error::{KwaversError, KwaversResult};
 /// `ptr` must point to valid allocated memory of at least `size` bytes.
 /// The memory must be page-aligned. No concurrent thread may access the
 /// memory during binding.
+/// # Errors
+/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+///
 #[cfg(target_os = "linux")]
 pub unsafe fn bind_memory_to_node(ptr: *mut u8, size: usize, node: usize) -> KwaversResult<()> {
     const MPOL_BIND: i32 = 2;
@@ -44,11 +47,17 @@ pub unsafe fn bind_memory_to_node(ptr: *mut u8, size: usize, node: usize) -> Kwa
 ///
 /// The caller must ensure that `_ptr` is a valid pointer to a memory region of at
 /// least `_size` bytes that remains valid for the duration of this call.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[cfg(not(target_os = "linux"))]
 pub unsafe fn bind_memory_to_node(_ptr: *mut u8, _size: usize, _node: usize) -> KwaversResult<()> {
     Ok(())
 }
-
+/// Allocate interleaved memory.
+/// # Errors
+/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+///
 #[cfg(target_os = "linux")]
 pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<*mut u8> {
     use std::alloc::alloc;
@@ -85,7 +94,10 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
 
     Ok(ptr)
 }
-
+/// Allocate interleaved memory.
+/// # Errors
+/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+///
 #[cfg(target_os = "windows")]
 pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<*mut u8> {
     mod win_numa {
@@ -117,7 +129,7 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
             return Err(KwaversError::System(
                 crate::core::error::SystemError::MemoryAllocation {
                     requested_bytes: layout.size(),
-                    reason: "Standard allocation failed".to_string(),
+                    reason: "Standard allocation failed".to_owned(),
                 },
             ));
         }
@@ -143,7 +155,7 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
         return Err(KwaversError::System(
             crate::core::error::SystemError::MemoryAllocation {
                 requested_bytes: size,
-                reason: "Failed to reserve interleaved NUMA region".to_string(),
+                reason: "Failed to reserve interleaved NUMA region".to_owned(),
             },
         ));
     }
@@ -185,7 +197,10 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
 
     Ok(base_ptr as *mut u8)
 }
-
+/// Allocate interleaved memory.
+/// # Errors
+/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+///
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
 pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<*mut u8> {
     let ptr = unsafe { std::alloc::alloc(layout) };

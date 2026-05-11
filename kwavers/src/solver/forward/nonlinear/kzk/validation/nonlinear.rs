@@ -6,6 +6,9 @@ mod tests {
     use ndarray::Array2;
 
     /// Test harmonic generation in nonlinear propagation
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_harmonic_generation() {
         let config = KZKConfig {
@@ -88,6 +91,9 @@ mod tests {
     /// - Aanonsen SI et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768, Table 1.
     ///   DOI: 10.1121/1.390585
     /// - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics §4.3.2.
+    /// # Panics
+    /// - Panics if `KZK solve failed`.
+    ///
     #[test]
     #[ignore = "Tier 2: Literature validation (~10-30s depending on grid)"]
     fn test_aanonsen_1984_harmonic_amplitudes() {

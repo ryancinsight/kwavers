@@ -13,6 +13,9 @@ use std::f64::consts::PI;
 /// B_n(sigma) = (2/(n sigma)) J_n(n sigma)    0 < sigma < 1
 /// B_n(sigma) = 2/(n pi sigma)                sigma >= 1
 /// ```
+/// # Panics
+/// - Panics if assertion fails: `harmonic order must be >= 1`.
+///
 #[must_use]
 pub fn fubini_harmonic_amplitude(n: u32, sigma: f64) -> f64 {
     assert!(n >= 1, "harmonic order must be >= 1");

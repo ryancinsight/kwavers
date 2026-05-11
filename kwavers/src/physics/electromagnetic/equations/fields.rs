@@ -23,6 +23,9 @@ impl EMFieldUtils {
     /// * `magnetic` - Magnetic field H [Nx, Ny, 2] or [Nx, Ny, Nz, 3]
     /// * `permittivity` - Relative permittivity ε_r
     /// * `permeability` - Relative permeability μ_r
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_poynting_vector(
         electric: &ndarray::ArrayD<f64>,
         magnetic: &ndarray::ArrayD<f64>,
@@ -36,6 +39,12 @@ impl EMFieldUtils {
     ///
     /// Checks that electric and magnetic field arrays have compatible shapes
     /// for electromagnetic wave propagation.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn validate_em_compatibility(
         electric: &ndarray::ArrayD<f64>,
         magnetic: &ndarray::ArrayD<f64>,
@@ -81,7 +90,7 @@ mod tests {
         let electric = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
         let magnetic = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
 
-        assert!(EMFieldUtils::validate_em_compatibility(&electric, &magnetic).is_ok());
+        EMFieldUtils::validate_em_compatibility(&electric, &magnetic).unwrap();
 
         // Invalid: mismatched shapes
         let electric_wrong = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 3]));

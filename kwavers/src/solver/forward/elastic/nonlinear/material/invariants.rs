@@ -20,7 +20,7 @@ pub fn compute_invariants(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> (f64
     // Strain invariants
     let i1 = lambda_sq.iter().sum::<f64>();
     let i2 =
-        lambda_sq[0] * lambda_sq[1] + lambda_sq[1] * lambda_sq[2] + lambda_sq[2] * lambda_sq[0];
+        lambda_sq[2].mul_add(lambda_sq[0], lambda_sq[0].mul_add(lambda_sq[1], lambda_sq[1] * lambda_sq[2]));
     let j = lambda.iter().product::<f64>();
 
     (i1, i2, j)
@@ -81,6 +81,9 @@ pub fn principal_stretches(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [f6
 ///
 /// # Returns
 /// Array of eigenvalues [λ₁, λ₂, λ₃] sorted in ascending order
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub fn matrix_eigenvalues(m: &[[f64; 3]; 3]) -> [f64; 3] {
     // Jacobi eigenvalue algorithm for 3x3 symmetric matrices
     // Based on Golub & Van Loan, Matrix Computations (3rd ed.), Algorithm 8.4.2
@@ -144,17 +147,14 @@ pub fn matrix_eigenvalues(m: &[[f64; 3]; 3]) -> [f64; 3] {
 
         let akp = a[k][p];
         let akq = a[k][q];
-        a[k][p] = akp * cos_theta - akq * sin_theta;
-        a[k][q] = akp * sin_theta + akq * cos_theta;
+        a[k][p] = akp.mul_add(cos_theta, -(akq * sin_theta));
+        a[k][q] = akp.mul_add(sin_theta, akq * cos_theta);
         a[p][k] = a[k][p];
         a[q][k] = a[k][q];
 
         // Update diagonal and off-diagonal elements
-        a[p][p] = app * cos_theta * cos_theta + aqq * sin_theta * sin_theta
-            - 2.0 * apq * sin_theta * cos_theta;
-        a[q][q] = app * sin_theta * sin_theta
-            + aqq * cos_theta * cos_theta
-            + 2.0 * apq * sin_theta * cos_theta;
+        a[p][p] = (2.0 * apq * sin_theta).mul_add(-cos_theta, (app * cos_theta).mul_add(cos_theta, aqq * sin_theta * sin_theta));
+        a[q][q] = (2.0 * apq * sin_theta).mul_add(cos_theta, (app * sin_theta).mul_add(sin_theta, aqq * cos_theta * cos_theta));
         a[p][q] = 0.0;
         a[q][p] = 0.0;
     }

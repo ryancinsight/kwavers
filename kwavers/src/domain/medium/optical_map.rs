@@ -30,6 +30,7 @@ pub struct OpticalPropertyMap {
 
 impl OpticalPropertyMap {
     /// Create a new optical property map
+    #[must_use] 
     pub fn new(
         mu_a: Array3<f64>,
         mu_s_prime: Array3<f64>,
@@ -45,6 +46,7 @@ impl OpticalPropertyMap {
     }
 
     /// Create a homogeneous map with constant properties
+    #[must_use] 
     pub fn homogeneous(props: &OpticalPropertyData, dimensions: GridDimensions) -> Self {
         let shape = (dimensions.nx, dimensions.ny, dimensions.nz);
         Self {
@@ -56,6 +58,7 @@ impl OpticalPropertyMap {
     }
 
     /// Get properties at a specific grid point
+    #[must_use] 
     pub fn get_properties(&self, i: usize, j: usize, k: usize) -> Option<OpticalPropertyData> {
         if i >= self.dimensions.nx || j >= self.dimensions.ny || k >= self.dimensions.nz {
             return None;
@@ -71,11 +74,13 @@ impl OpticalPropertyMap {
 
     /// Get optical properties at grid coordinates (i, j, k) with bounds checking
     /// Alias for get_properties for backward compatibility
+    #[must_use] 
     pub fn get(&self, i: usize, j: usize, k: usize) -> Option<OpticalPropertyData> {
         self.get_properties(i, j, k)
     }
 
     /// Calculate the physical volume of the domain in cubic meters
+    #[must_use] 
     pub fn volume(&self) -> f64 {
         let GridDimensions {
             nx,
@@ -114,33 +119,38 @@ pub enum Region {
 
 impl Region {
     /// Construct sphere region
+    #[must_use] 
     pub fn sphere(center: [f64; 3], radius: f64) -> Self {
         Self::Sphere { center, radius }
     }
 
     /// Construct box region
+    #[must_use] 
     pub fn box_region(min: [f64; 3], max: [f64; 3]) -> Self {
         Self::Box { min, max }
     }
 
     /// Construct cylinder region
+    #[must_use] 
     pub fn cylinder(start: [f64; 3], end: [f64; 3], radius: f64) -> Self {
         Self::Cylinder { start, end, radius }
     }
 
     /// Construct ellipsoid region
+    #[must_use] 
     pub fn ellipsoid(center: [f64; 3], semi_axes: [f64; 3]) -> Self {
         Self::Ellipsoid { center, semi_axes }
     }
 
     /// Test if point is inside region
+    #[must_use] 
     pub fn contains(&self, point: [f64; 3]) -> bool {
         match self {
             Self::Sphere { center, radius } => {
                 let dx = point[0] - center[0];
                 let dy = point[1] - center[1];
                 let dz = point[2] - center[2];
-                dx * dx + dy * dy + dz * dz <= radius * radius
+                dz.mul_add(dz, dx.mul_add(dx, dy * dy)) <= radius * radius
             }
 
             Self::Box { min, max } => {
@@ -154,7 +164,7 @@ impl Region {
 
             Self::Cylinder { start, end, radius } => {
                 let axis = [end[0] - start[0], end[1] - start[1], end[2] - start[2]];
-                let axis_len_sq = axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2];
+                let axis_len_sq = axis[2].mul_add(axis[2], axis[0].mul_add(axis[0], axis[1] * axis[1]));
 
                 if axis_len_sq < 1e-12 {
                     return false;
@@ -166,7 +176,7 @@ impl Region {
                     point[2] - start[2],
                 ];
 
-                let dot = to_point[0] * axis[0] + to_point[1] * axis[1] + to_point[2] * axis[2];
+                let dot = to_point[2].mul_add(axis[2], to_point[0].mul_add(axis[0], to_point[1] * axis[1]));
                 let t = dot / axis_len_sq;
 
                 if !(0.0..=1.0).contains(&t) {
@@ -174,15 +184,15 @@ impl Region {
                 }
 
                 let closest = [
-                    start[0] + t * axis[0],
-                    start[1] + t * axis[1],
-                    start[2] + t * axis[2],
+                    t.mul_add(axis[0], start[0]),
+                    t.mul_add(axis[1], start[1]),
+                    t.mul_add(axis[2], start[2]),
                 ];
 
                 let dx = point[0] - closest[0];
                 let dy = point[1] - closest[1];
                 let dz = point[2] - closest[2];
-                let dist_sq = dx * dx + dy * dy + dz * dz;
+                let dist_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
                 dist_sq <= radius * radius
             }
@@ -191,7 +201,7 @@ impl Region {
                 let dx = (point[0] - center[0]) / semi_axes[0];
                 let dy = (point[1] - center[1]) / semi_axes[1];
                 let dz = (point[2] - center[2]) / semi_axes[2];
-                dx * dx + dy * dy + dz * dz <= 1.0
+                dz.mul_add(dz, dx.mul_add(dx, dy * dy)) <= 1.0
             }
         }
     }
@@ -210,6 +220,7 @@ pub struct Layer {
 
 impl Layer {
     /// Create a new layer
+    #[must_use] 
     pub fn new(z_min: f64, z_max: f64, properties: OpticalPropertyData) -> Self {
         Self {
             z_min,
@@ -230,6 +241,7 @@ pub struct OpticalPropertyMapBuilder {
 
 impl OpticalPropertyMapBuilder {
     /// Create a new builder with given dimensions
+    #[must_use] 
     pub fn new(dimensions: GridDimensions) -> Self {
         let shape = (dimensions.nx, dimensions.ny, dimensions.nz);
         Self {
@@ -296,6 +308,7 @@ impl OpticalPropertyMapBuilder {
     }
 
     /// Build the final optical property map
+    #[must_use] 
     pub fn build(self) -> OpticalPropertyMap {
         OpticalPropertyMap {
             mu_a: self.mu_a,

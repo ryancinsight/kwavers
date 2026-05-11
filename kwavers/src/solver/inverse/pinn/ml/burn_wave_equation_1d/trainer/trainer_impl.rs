@@ -18,6 +18,10 @@ pub struct BurnPINNTrainer<B: AutodiffBackend> {
 }
 
 impl<B: AutodiffBackend> BurnPINNTrainer<B> {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: BurnPINNConfig, device: &B::Device) -> KwaversResult<Self> {
         config.validate()?;
         let pinn = BurnPINN1DWave::<B>::new(config.clone(), device)?;
@@ -29,6 +33,10 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
         })
     }
 
+    /// Train.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn train(
         &mut self,
@@ -49,7 +57,14 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
             |_, _| true,
         )
     }
-
+    /// Train with callback.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn train_with_callback<F>(
         &mut self,

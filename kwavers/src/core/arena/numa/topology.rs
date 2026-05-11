@@ -15,10 +15,10 @@ impl Default for NumaTopology {
 }
 
 impl NumaTopology {
+    #[must_use] 
     pub fn single_node() -> Self {
         let cpus = std::thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(1);
+            .map_or(1, |n| n.get());
         Self {
             node_count: 1,
             total_cpus: cpus,
@@ -28,6 +28,7 @@ impl NumaTopology {
         }
     }
 
+    #[must_use] 
     pub fn detect() -> Self {
         #[cfg(target_os = "linux")]
         return Self::detect_linux();
@@ -99,6 +100,7 @@ impl NumaTopology {
         Self::single_node()
     }
 
+    #[must_use] 
     pub fn distance(&self, from: usize, to: usize) -> u32 {
         if from >= self.node_count || to >= self.node_count {
             return 20;
@@ -106,6 +108,7 @@ impl NumaTopology {
         self.distance_matrix[from][to]
     }
 
+    #[must_use] 
     pub fn nearest_node(&self, node: usize) -> Option<usize> {
         if !self.has_numa || node >= self.node_count {
             return Some(0);
@@ -125,6 +128,7 @@ impl NumaTopology {
         nearest
     }
 
+    #[must_use] 
     pub fn nodes_by_distance(&self, from: usize) -> Vec<(usize, u32)> {
         if !self.has_numa || from >= self.node_count {
             return vec![(0, 10)];

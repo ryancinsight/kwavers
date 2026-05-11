@@ -107,10 +107,14 @@ impl NeuralLayer {
     /// assert_eq!(layer.input_size(), 64);
     /// assert_eq!(layer.output_size(), 32);
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(input_size: usize, output_size: usize) -> KwaversResult<Self> {
         if input_size == 0 || output_size == 0 {
             return Err(KwaversError::InvalidInput(
-                "Layer sizes must be > 0".to_string(),
+                "Layer sizes must be > 0".to_owned(),
             ));
         }
 
@@ -143,21 +147,25 @@ impl NeuralLayer {
     }
 
     /// Get input feature dimension.
+    #[must_use] 
     pub fn input_size(&self) -> usize {
         self.input_size
     }
 
     /// Get output feature dimension.
+    #[must_use] 
     pub fn output_size(&self) -> usize {
         self.output_size
     }
 
     /// Access weight matrix (for inspection/testing).
+    #[must_use] 
     pub fn weights(&self) -> &Array2<f32> {
         &self.weights
     }
 
     /// Access bias vector (for inspection/testing).
+    #[must_use] 
     pub fn biases(&self) -> &Array1<f32> {
         &self.biases
     }
@@ -203,6 +211,10 @@ impl NeuralLayer {
     /// - input.dim().2 == self.input_size (feature dimension must match)
     /// - output.dim() == (input.dim().0, input.dim().1, self.output_size)
     /// - All output values in [-1, 1] (tanh bounds)
+    /// # Errors
+    /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn forward(&self, input: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         let (d0, d1, d2) = input.dim();
 
@@ -269,23 +281,26 @@ impl NeuralLayer {
     /// offset mutation. The scalar contract is the limiting input, so the
     /// update stays consistent with the current public API while remaining
     /// mathematically defined.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn adapt(&mut self, gradient: f32) -> KwaversResult<()> {
         if !gradient.is_finite() {
             return Err(KwaversError::InvalidInput(
-                "Layer feedback gradient must be finite".to_string(),
+                "Layer feedback gradient must be finite".to_owned(),
             ));
         }
 
-        let scale = 1.0 - 0.01 * gradient;
+        let scale = 0.01f32.mul_add(-gradient, 1.0);
 
         if !scale.is_finite() {
             return Err(KwaversError::InvalidInput(
-                "Layer feedback gradient produces a non-finite update scale".to_string(),
+                "Layer feedback gradient produces a non-finite update scale".to_owned(),
             ));
         }
 
-        self.weights.mapv_inplace(|w| w * scale);
-        self.biases.mapv_inplace(|b| b * scale);
+        self.weights.par_mapv_inplace(|w| w * scale);
+        self.biases.par_mapv_inplace(|b| b * scale);
         Ok(())
     }
 }

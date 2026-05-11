@@ -107,9 +107,7 @@ impl CacheProfile {
         let l2_weight = 0.3;
         let l3_weight = 0.2;
 
-        self.statistics.l1_hit_rate() * l1_weight
-            + self.statistics.l2_hit_rate() * l2_weight
-            + self.statistics.l3_hit_rate() * l3_weight
+        self.statistics.l3_hit_rate().mul_add(l3_weight, self.statistics.l1_hit_rate().mul_add(l1_weight, self.statistics.l2_hit_rate() * l2_weight))
     }
 
     /// Estimate memory bandwidth utilization
@@ -177,9 +175,7 @@ impl CacheProfiler {
     #[must_use]
     pub fn profile(&self) -> CacheProfile {
         self.profile
-            .lock()
-            .map(|p| p.clone())
-            .unwrap_or_else(|_| CacheProfile::new())
+            .lock().map_or_else(|_| CacheProfile::new(), |p| p.clone())
     }
 
     /// Clear cache statistics

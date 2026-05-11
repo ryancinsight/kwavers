@@ -10,6 +10,10 @@ use std::collections::HashMap;
 ///
 /// Creates a SageMaker endpoint, endpoint configuration, model resource, and
 /// Application Load Balancer.
+/// # Errors
+/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 #[cfg(all(feature = "pinn", feature = "cloud-aws"))]
 pub async fn deploy_to_aws<B: burn::tensor::backend::AutodiffBackend>(
     _model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,

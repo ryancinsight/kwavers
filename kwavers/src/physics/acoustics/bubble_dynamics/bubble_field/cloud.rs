@@ -118,7 +118,7 @@ impl BubbleCloud {
                 let u: f64 = rng.r#gen();
                 let alpha = exponent + 1.0;
 
-                (u * (max.powf(alpha) - min.powf(alpha)) + min.powf(alpha)).powf(1.0 / alpha)
+                u.mul_add(max.powf(alpha) - min.powf(alpha), min.powf(alpha)).powf(1.0 / alpha)
             }
         }
     }

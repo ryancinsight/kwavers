@@ -7,6 +7,9 @@ fn default_validator() -> NumericalValidator {
 /// FDTD phase error must be strictly positive and below 5% for CFL=0.3.
 ///
 /// Reference: Taflove & Hagness (2005), §4.5, Table 4.1.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fdtd_phase_error_positive_and_small() {
     let v = default_validator();
@@ -30,6 +33,9 @@ fn test_fdtd_phase_error_positive_and_small() {
 ///
 /// PSTD uses spectral spatial derivatives (exact), so only temporal error remains,
 /// which is smaller than FDTD's combined spatial+temporal error.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_pstd_phase_error_smaller_than_fdtd() {
     let v = default_validator();
@@ -50,6 +56,9 @@ fn test_pstd_phase_error_smaller_than_fdtd() {
 ///
 /// The finite-difference spatial error is O(Δx²) (2nd-order in space), so
 /// halving Δx should reduce the phase error by ~4×.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fdtd_phase_error_decreases_with_finer_grid() {
     use crate::domain::grid::Grid;
@@ -90,6 +99,9 @@ fn test_fdtd_phase_error_decreases_with_finer_grid() {
 /// CPML reflection must be < 0.001 (−60 dB), PML < 0.01 (−40 dB).
 ///
 /// Reference: Roden & Gedney (2000); Berenger (1994).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_boundary_reflection_within_bounds() {
     let v = default_validator();
@@ -108,6 +120,9 @@ fn test_boundary_reflection_within_bounds() {
 }
 
 /// Unknown boundary type must return an error.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_boundary_reflection_unknown_type_returns_error() {
     let v = default_validator();

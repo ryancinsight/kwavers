@@ -15,6 +15,11 @@ pub struct SphericalDomain {
 }
 
 impl SphericalDomain {
+    /// New 2d.
+    /// # Panics
+    /// - Panics if assertion fails: `Radius must be positive`.
+    ///
+    #[must_use] 
     pub fn new_2d(x0: f64, y0: f64, radius: f64) -> Self {
         assert!(radius > 0.0, "Radius must be positive");
         Self {
@@ -23,6 +28,11 @@ impl SphericalDomain {
         }
     }
 
+    /// New 3d.
+    /// # Panics
+    /// - Panics if assertion fails: `Radius must be positive`.
+    ///
+    #[must_use] 
     pub fn new_3d(x0: f64, y0: f64, z0: f64, radius: f64) -> Self {
         assert!(radius > 0.0, "Radius must be positive");
         Self {
@@ -156,18 +166,18 @@ impl GeometricDomain for SphericalDomain {
             match dim {
                 2 => {
                     let theta = rng.gen_range(0.0..(2.0 * PI));
-                    points[[i, 0]] = self.center[0] + self.radius * theta.cos();
-                    points[[i, 1]] = self.center[1] + self.radius * theta.sin();
+                    points[[i, 0]] = self.radius.mul_add(theta.cos(), self.center[0]);
+                    points[[i, 1]] = self.radius.mul_add(theta.sin(), self.center[1]);
                 }
                 3 => loop {
-                    let x1 = rng.gen_range(-1.0..1.0);
-                    let x2 = rng.gen_range(-1.0..1.0);
-                    let s = x1 * x1 + x2 * x2;
+                    let x1: f64 = rng.gen_range(-1.0..1.0);
+                    let x2: f64 = rng.gen_range(-1.0..1.0);
+                    let s = x1.mul_add(x1, x2 * x2);
                     if s < 1.0 {
                         let factor = 2.0 * (1.0_f64 - s).sqrt();
-                        points[[i, 0]] = self.center[0] + self.radius * x1 * factor;
-                        points[[i, 1]] = self.center[1] + self.radius * x2 * factor;
-                        points[[i, 2]] = self.center[2] + self.radius * (1.0 - 2.0 * s);
+                        points[[i, 0]] = (self.radius * x1).mul_add(factor, self.center[0]);
+                        points[[i, 1]] = (self.radius * x2).mul_add(factor, self.center[1]);
+                        points[[i, 2]] = self.radius.mul_add(2.0f64.mul_add(-s, 1.0), self.center[2]);
                         break;
                     }
                 },

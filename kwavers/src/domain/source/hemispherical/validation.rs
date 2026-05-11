@@ -8,9 +8,6 @@ use crate::core::error::KwaversResult;
 pub struct ArrayValidator {
     /// Maximum allowed pressure (Pa)
     max_pressure: f64,
-    /// Maximum temperature rise (K)
-    #[allow(dead_code)] // Safety validation parameter for future use
-    max_temp_rise: f64,
 }
 
 impl Default for ArrayValidator {
@@ -21,15 +18,20 @@ impl Default for ArrayValidator {
 
 impl ArrayValidator {
     /// Create new validator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
-            max_pressure: 10e6,  // 10 MPa safety limit
-            max_temp_rise: 10.0, // 10K safety limit
+            max_pressure: 10e6, // 10 MPa safety limit
         }
     }
 
     /// Validate array configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self, metrics: &PerformanceMetrics) -> KwaversResult<()> {
         // Check safety limits
         if metrics.peak_pressure > self.max_pressure {

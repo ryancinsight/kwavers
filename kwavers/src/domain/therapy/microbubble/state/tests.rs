@@ -179,6 +179,9 @@ fn test_energy_conservation_zero_at_equilibrium() {
 }
 
 /// Potential energy is positive for both compression and expansion (Brennen 1995, §4.1).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_potential_energy_positive_for_expansion_and_compression() {
     let pos = Position3D::zero();

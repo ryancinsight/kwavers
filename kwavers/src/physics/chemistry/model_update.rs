@@ -7,6 +7,9 @@ use std::time::Instant;
 
 impl ChemicalModel {
     /// Update chemical reactions based on acoustic field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update(&mut self, params: &ChemicalUpdateParams) -> KwaversResult<()> {
         let start = Instant::now();
         self.state = ChemicalModelState::Running;

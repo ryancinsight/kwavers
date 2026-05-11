@@ -6,14 +6,13 @@ use super::*;
 #[test]
 fn test_compliance_config_default() {
     let config = ComplianceConfig::default();
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
 }
 
 #[test]
 fn test_compliance_validator_creation() {
     let config = ComplianceConfig::default();
-    let validator = EnhancedComplianceValidator::new(config);
-    assert!(validator.is_ok());
+    let _validator = EnhancedComplianceValidator::new(config).unwrap();
 }
 
 #[test]
@@ -44,10 +43,7 @@ fn test_audit_parameters_hifu() {
     let mut validator = EnhancedComplianceValidator::new(config).unwrap();
     let params = TherapyParameters::hifu();
 
-    let audit = validator.audit_parameters(&params);
-    assert!(audit.is_ok());
-
-    let audit = audit.unwrap();
+    let audit = validator.audit_parameters(&params).unwrap();
     assert!(!audit.checks.is_empty());
 }
 
@@ -57,10 +53,7 @@ fn test_session_metrics() {
     let mut validator = EnhancedComplianceValidator::new(config).unwrap();
 
     validator.start_session();
-    let metrics = validator.end_session();
-    assert!(metrics.is_ok());
-
-    let metrics = metrics.unwrap();
+    let metrics = validator.end_session().unwrap();
     assert!(metrics.session_duration >= 0.0);
 }
 
@@ -81,7 +74,7 @@ fn test_config_builder() {
         .with_intensity_limit(5.0)
         .with_tissue_type(TissueType::Brain);
 
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
     assert!((config.max_power - 100.0).abs() < 0.1);
 }
 

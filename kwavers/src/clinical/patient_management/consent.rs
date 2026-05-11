@@ -20,6 +20,7 @@ pub enum ConsentType {
 
 impl ConsentType {
     /// Get string representation
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::GeneralTreatment => "General Treatment",
@@ -71,12 +72,13 @@ impl ConsentRecord {
             date: iso8601_now(),
             expiration_date: None,
             clinician: clinician.into(),
-            status: "active".to_string(),
+            status: "active".to_owned(),
             document_reference: format!("consent_{:08}", id),
         }
     }
 
     /// Check if consent is currently valid
+    #[must_use] 
     pub fn is_valid(&self) -> bool {
         if self.status != "active" {
             return false;
@@ -92,6 +94,6 @@ impl ConsentRecord {
 
     /// Revoke consent
     pub fn revoke(&mut self) {
-        self.status = "revoked".to_string();
+        self.status = "revoked".to_owned();
     }
 }

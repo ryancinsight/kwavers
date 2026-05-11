@@ -37,6 +37,9 @@ impl MisfitFunction {
     ///
     /// For envelope and phase misfits, use `compute_adjoint_source` instead
     /// for proper Hilbert transform-based adjoint computation per Fichtner et al. (2008).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn adjoint_source(&self, residual: &Array2<f64>) -> Array2<f64> {
         match self.misfit_type {
@@ -50,6 +53,9 @@ impl MisfitFunction {
     }
 
     /// Compute misfit between observed and synthetic data.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute(&self, observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<f64> {
         match self.misfit_type {
             MisfitType::L2Norm => self.l2_misfit(observed, synthetic),
@@ -62,6 +68,9 @@ impl MisfitFunction {
     }
 
     /// Compute adjoint source for gradient calculation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_adjoint_source(
         &self,
         observed: &Array2<f64>,

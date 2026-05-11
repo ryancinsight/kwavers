@@ -24,22 +24,17 @@ impl WesterveltFdtd {
                 .and(&self.pressure)
                 .and(&self.pressure_prev)
                 .and(p_prev2)
-                .for_each(|nl, &p, &p_prev, &p_prev2| {
-                    // Second derivative of pressure
-                    let d2p_dt2 = (p - 2.0 * p_prev + p_prev2) / (dt * dt);
-
-                    // First derivative of pressure
+                .par_for_each(|nl, &p, &p_prev, &p_prev2| {
+                    let d2p_dt2 = (2.0f64.mul_add(-p_prev, p) + p_prev2) / (dt * dt);
                     let dp_dt = (p - p_prev) / dt;
-
-                    // Nonlinear term
-                    *nl = 2.0 * p * d2p_dt2 + 2.0 * dp_dt * dp_dt;
+                    *nl = (2.0 * p).mul_add(d2p_dt2, 2.0 * dp_dt * dp_dt);
                 });
         } else {
-            // First time step: use forward difference for initialization (LeVeque 2007 §2.14)
+            // First time step: forward difference initialization (LeVeque 2007 §2.14)
             Zip::from(&mut nonlinear)
                 .and(&self.pressure)
                 .and(&self.pressure_prev)
-                .for_each(|nl, &p, &p_prev| {
+                .par_for_each(|nl, &p, &p_prev| {
                     let dp_dt = (p - p_prev) / dt;
                     *nl = 2.0 * dp_dt * dp_dt;
                 });

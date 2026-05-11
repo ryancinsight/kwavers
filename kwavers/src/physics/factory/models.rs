@@ -34,11 +34,6 @@ pub enum PhysicsModelType {
     ThermalDiffusion { bioheat: bool, perfusion: bool },
     /// Optical propagation and absorption
     OpticalPropagation { scattering: bool, anisotropy: f64 },
-    /// Mechanical stress and strain
-    MechanicalStress {
-        elastic_modulus: f64,
-        poisson_ratio: f64,
-    },
 }
 
 /// Acoustic solver types
@@ -76,6 +71,7 @@ pub enum BubbleModel {
 
 impl PhysicsModelConfig {
     /// Create linear acoustics configuration
+    #[must_use] 
     pub fn linear_acoustics(solver: AcousticSolver) -> Self {
         Self {
             model_type: PhysicsModelType::LinearAcoustics {
@@ -88,6 +84,7 @@ impl PhysicsModelConfig {
     }
 
     /// Create nonlinear acoustics configuration
+    #[must_use] 
     pub fn nonlinear_acoustics(equation: NonlinearEquation, harmonics: usize) -> Self {
         Self {
             model_type: PhysicsModelType::NonlinearAcoustics {

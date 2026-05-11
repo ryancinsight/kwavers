@@ -11,7 +11,7 @@ fn test_pinn_creation() {
     let device = Default::default();
     let config = BurnPINNConfig::default();
     let result = BurnPINN1DWave::<TestBackend>::new(config, &device);
-    assert!(result.is_ok());
+    let _pinn = result.unwrap();
 }
 
 #[test]
@@ -79,7 +79,6 @@ fn test_pinn_predict() {
     let t = Array1::from_vec(vec![0.0, 0.1, 0.2]);
 
     let result = pinn.predict(&x, &t, &device);
-    assert!(result.is_ok());
 
     let u = result.unwrap();
     assert_eq!(u.shape(), &[3, 1]);

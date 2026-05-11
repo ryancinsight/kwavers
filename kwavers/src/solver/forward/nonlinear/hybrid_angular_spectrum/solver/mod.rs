@@ -45,6 +45,9 @@ pub struct HybridAngularSpectrumSolver {
 
 impl HybridAngularSpectrumSolver {
     /// Construct from grid and configuration.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(grid: &Grid, config: &HASConfig) -> KwaversResult<Self> {
         let diffraction = DiffractionOperator::new(grid, config)?;
         let nonlinearity = NonlinearOperator::new(config);
@@ -71,15 +74,18 @@ impl HybridAngularSpectrumSolver {
     /// yielding 2nd-order accuracy in Δz (Strang 1968).
     ///
     /// ## Parameters
-    /// - `initial`   — initial pressure field `p[ix, iy, iz]` [Pa]
+    /// - `initial`   — initial pressure field `p[ix, iy, iz]` (Pa)
     /// - `num_steps` — number of Δz steps to advance
-    /// - `dz`        — axial step size [m]
+    /// - `dz`        — axial step size (m)
     ///
     /// ## References
     /// - Strang G (1968). SIAM J. Numer. Anal. 5(3), 506–517.
     ///   DOI: 10.1137/0705041
     /// - Zemp RJ et al. (2003). J. Acoust. Soc. Am. 113(1), 139–152.
     ///   DOI: 10.1121/1.1528928
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn propagate_steps(
         &self,
         initial: &Array3<f64>,

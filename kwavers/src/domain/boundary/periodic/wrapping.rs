@@ -9,6 +9,10 @@ use crate::domain::grid::topology::GridTopology;
 use super::{PeriodicBoundaryCondition, PeriodicConfig};
 
 impl PeriodicBoundaryCondition {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: PeriodicConfig) -> KwaversResult<Self> {
         config.validate()?;
 
@@ -96,10 +100,12 @@ impl PeriodicBoundaryCondition {
         }
     }
 
+    #[must_use] 
     pub fn is_bloch(&self) -> bool {
         self.config.bloch_phase.iter().any(|&p| p.abs() > 1e-12)
     }
 
+    #[must_use] 
     pub fn bloch_phase(&self) -> [f64; 3] {
         self.config.bloch_phase
     }

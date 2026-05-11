@@ -23,6 +23,9 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     fn name(&self) -> &str;
 
     /// Return the directions where this boundary is active.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn active_directions(&self) -> BoundaryDirections;
 
     /// Apply the boundary to a scalar field in the spatial domain.
@@ -31,6 +34,9 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     /// ```text
     /// u(x,t) → u(x,t) * exp(-σ(x) * Δt)
     /// ```
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_scalar_spatial(
         &mut self,
         field: ArrayViewMut3<f64>,
@@ -42,6 +48,9 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     /// Apply the boundary to a scalar field in the frequency domain.
     ///
     /// Used for spectral / k-space pseudospectral solvers.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_scalar_frequency(
         &mut self,
         field: &mut Array3<num_complex::Complex<f64>>,
@@ -53,6 +62,9 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     /// Apply the boundary to a 3-component vector field in the spatial domain.
     ///
     /// Default: applies `apply_scalar_spatial` independently to each component.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_vector_spatial(
         &mut self,
         field_x: ArrayViewMut3<f64>,
@@ -111,28 +123,40 @@ pub trait BoundaryCondition: Debug + Send + Sync {
 /// at the boundary.
 pub trait AbsorbingBoundary: BoundaryCondition {
     /// Return the thickness of the absorbing layer in grid points.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn thickness(&self) -> usize;
 
     /// Return the absorption coefficient σ at the given grid indices.
     ///
     /// The field decays as `exp(-σ * Δt)`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn absorption_profile(&self, indices: [usize; 3], grid: &dyn GridTopology) -> f64;
 
     /// Return the design target reflection coefficient R₀.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn target_reflection(&self) -> f64;
 
     /// Validate that the layer is thick enough for the given maximum frequency.
     ///
     /// Rule of thumb: at least λ_min / 4 or 10 grid points.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn validate_thickness(&self, grid: &dyn GridTopology, max_frequency: f64) -> KwaversResult<()> {
-        let min_spacing = grid.spacing().iter().cloned().fold(f64::INFINITY, f64::min);
+        let min_spacing = grid.spacing().iter().copied().fold(f64::INFINITY, f64::min);
         let wavelength = 1500.0 / max_frequency;
         let min_thickness = (wavelength / (4.0 * min_spacing)).ceil() as usize;
 
         if self.thickness() < min_thickness.max(10) {
             return Err(crate::core::error::KwaversError::Config(
                 crate::core::error::ConfigError::InvalidValue {
-                    parameter: "boundary thickness".to_string(),
+                    parameter: "boundary thickness".to_owned(),
                     value: self.thickness().to_string(),
                     constraint: format!("Must be at least {} points", min_thickness.max(10)),
                 },
@@ -158,6 +182,9 @@ pub trait ReflectiveBoundary: BoundaryCondition {
     }
 
     /// Return `true` if the boundary is perfectly soft (zero pressure).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn is_soft(&self) -> bool {
         false
     }
@@ -166,6 +193,9 @@ pub trait ReflectiveBoundary: BoundaryCondition {
 /// Trait for periodic boundary conditions.
 pub trait PeriodicBoundary: BoundaryCondition {
     /// Enforce periodicity: `field(x_max) = field(x_min)` for periodic dimensions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn wrap_periodic(
         &mut self,
         field: ArrayViewMut3<f64>,

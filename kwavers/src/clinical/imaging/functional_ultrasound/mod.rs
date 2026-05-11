@@ -22,7 +22,7 @@
 //!
 //! - Macé, E., et al. (2018). "Functional ultrasound imaging of the brain"
 //! - Tiran, E., et al. (2017). "Transcranial functional ultrasound imaging"
-//! - Allen Brain Atlas: http://mouse.brain-map.org
+//! - Allen Brain Atlas: <http://mouse.brain-map.org>
 
 pub mod atlas;
 pub mod targeting;
@@ -50,6 +50,7 @@ pub struct AffineTransform3D {
 
 impl AffineTransform3D {
     /// Create identity transformation
+    #[must_use] 
     pub fn identity() -> Self {
         Self {
             matrix: [
@@ -61,19 +62,14 @@ impl AffineTransform3D {
     }
 
     /// Transform a point
+    #[must_use] 
     pub fn transform_point(&self, p: &[f64; 3]) -> [f64; 3] {
         [
-            self.matrix[0][0] * p[0]
-                + self.matrix[0][1] * p[1]
-                + self.matrix[0][2] * p[2]
+            self.matrix[0][2].mul_add(p[2], self.matrix[0][0].mul_add(p[0], self.matrix[0][1] * p[1]))
                 + self.matrix[0][3],
-            self.matrix[1][0] * p[0]
-                + self.matrix[1][1] * p[1]
-                + self.matrix[1][2] * p[2]
+            self.matrix[1][2].mul_add(p[2], self.matrix[1][0].mul_add(p[0], self.matrix[1][1] * p[1]))
                 + self.matrix[1][3],
-            self.matrix[2][0] * p[0]
-                + self.matrix[2][1] * p[1]
-                + self.matrix[2][2] * p[2]
+            self.matrix[2][2].mul_add(p[2], self.matrix[2][0].mul_add(p[0], self.matrix[2][1] * p[1]))
                 + self.matrix[2][3],
         ]
     }
@@ -99,14 +95,14 @@ pub struct FunctionalUltrasoundGPS {
     /// Continuous tracking filter
     tracking: TrackingFilter,
 
-    /// Current imaging grid
-    #[allow(dead_code)]
-    grid: Grid,
 }
 
 impl FunctionalUltrasoundGPS {
     /// Create new brain GPS system
-    pub fn new(grid: &Grid) -> KwaversResult<Self> {
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    pub fn new(_grid: &Grid) -> KwaversResult<Self> {
         let registration = ImageRegistration::default();
         let atlas = BrainAtlas::load_default()?;
         let targeting = TargetingSystem::new(&atlas)?;
@@ -118,11 +114,13 @@ impl FunctionalUltrasoundGPS {
             atlas,
             targeting,
             tracking,
-            grid: grid.clone(),
         })
     }
 
     /// Register ultrasound image to brain atlas
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn register_to_atlas(&mut self, image: &Array3<f64>) -> KwaversResult<AffineTransform3D> {
         let initial_transform = [
             1f64, 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.,
@@ -149,6 +147,9 @@ impl FunctionalUltrasoundGPS {
     }
 
     /// Segment vasculature from registered image
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn segment_vasculature(&mut self, registered_image: &Array3<f64>) -> KwaversResult<()> {
         let segmentation = VesselSegmentation::segment(registered_image)?;
         self.vasculature = Some(segmentation);
@@ -156,6 +157,9 @@ impl FunctionalUltrasoundGPS {
     }
 
     /// Localize target in stereotactic coordinates
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn locate_target(
         &self,
         voxel_coords: &[usize; 3],
@@ -165,6 +169,9 @@ impl FunctionalUltrasoundGPS {
     }
 
     /// Update tracking with new measurement
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update_tracking(&mut self, measurement: &[f64; 3]) -> KwaversResult<[f64; 3]> {
         self.tracking.update(measurement)
     }
@@ -187,7 +194,6 @@ mod tests {
     #[test]
     fn test_functional_ultrasound_gps_creation() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
-        let result = FunctionalUltrasoundGPS::new(&grid);
-        assert!(result.is_ok());
+        let _gps = FunctionalUltrasoundGPS::new(&grid).unwrap();
     }
 }

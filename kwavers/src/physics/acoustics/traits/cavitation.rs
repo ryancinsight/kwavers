@@ -21,6 +21,9 @@ pub trait CavitationModelBehavior: Debug + Send + Sync {
     /// # Returns
     ///
     /// A `KwaversResult<()>` indicating success or failure of the update.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn update_cavitation(
         &mut self,
         pressure: &Array3<f64>,
@@ -31,9 +34,15 @@ pub trait CavitationModelBehavior: Debug + Send + Sync {
     ) -> crate::core::error::KwaversResult<()>;
 
     /// Returns the 3D array of bubble radii (meters).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn bubble_radius(&self) -> crate::core::error::KwaversResult<Array3<f64>>;
 
     /// Returns the 3D array of bubble wall velocities (m/s).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn bubble_velocity(&self) -> crate::core::error::KwaversResult<Array3<f64>>;
 
     /// Returns the 3D array of light emission from sonoluminescence (W/m³).

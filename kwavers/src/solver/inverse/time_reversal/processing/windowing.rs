@@ -8,6 +8,9 @@ use crate::domain::signal::window::{window_value, WindowType};
 use ndarray::Array3;
 
 /// Tukey window function (tapered cosine window)
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[must_use]
 pub fn tukey_window(i: usize, n: usize, alpha: f64) -> f64 {
     if n <= 1 {
@@ -19,6 +22,9 @@ pub fn tukey_window(i: usize, n: usize, alpha: f64) -> f64 {
 }
 
 /// Apply spatial windowing function to a 3D field
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn apply_spatial_window(
     mut field: Array3<f64>,
     grid: &Grid,

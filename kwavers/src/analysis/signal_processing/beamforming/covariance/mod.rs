@@ -39,11 +39,11 @@
 //! covariance matrix is:
 //!
 //! ```text
-//! R = (1/M) ∑ₘ₌₁ᴹ x[m] x[m]^H
+//! R = (1/M) ∑ₘ₌₁ᴹ x(m) x(m)^H
 //! ```
 //!
 //! where:
-//! - `x[m]` (N×1) = snapshot m (sensor data vector)
+//! - `x(m)` (N×1) = snapshot m (sensor data vector)
 //! - `H` = Hermitian transpose (conjugate transpose)
 //! - `R` (N×N) = Hermitian positive semi-definite matrix
 //!

@@ -47,6 +47,7 @@ impl ElasticityMap {
     /// For incompressible isotropic tissue:
     /// - Shear modulus: μ = ρcs²
     /// - Young's modulus: E = 3μ = 3ρcs² (Poisson's ratio ≈ 0.5)
+    #[must_use] 
     pub fn from_shear_wave_speed(shear_wave_speed: Array3<f64>, density: f64) -> Self {
         let (nx, ny, nz) = shear_wave_speed.dim();
         let mut shear_modulus = Array3::zeros((nx, ny, nz));
@@ -74,12 +75,12 @@ impl ElasticityMap {
         let min = self
             .youngs_modulus
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::INFINITY, f64::min);
         let max = self
             .youngs_modulus
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::NEG_INFINITY, f64::max);
         let mean = self.youngs_modulus.mean().unwrap_or(0.0);
         (min, max, mean)

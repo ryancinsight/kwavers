@@ -54,22 +54,25 @@ impl BandwidthOptimizer {
 pub struct MemoryOptimizer {
     prefetch_distance: usize,
     alignment: usize,
-    #[allow(dead_code)] // Memory optimization configuration for advanced systems
-    huge_pages_enabled: bool,
 }
 
 impl MemoryOptimizer {
     /// Create a new memory optimizer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(prefetch_distance: usize) -> Self {
         Self {
             prefetch_distance,
             alignment: 64, // Cache line alignment
-            huge_pages_enabled: false,
         }
     }
 
     /// Enable memory prefetching
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn enable_prefetching(&self) -> KwaversResult<()> {
         log::info!(
             "Memory prefetching enabled with distance: {}",
@@ -79,6 +82,9 @@ impl MemoryOptimizer {
     }
 
     /// Allocate aligned memory for better cache performance
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn allocate_aligned<T>(&self, count: usize) -> KwaversResult<*mut T> {
         let size = count * std::mem::size_of::<T>();
         let align = self.alignment.max(std::mem::align_of::<T>());
@@ -120,7 +126,7 @@ impl MemoryOptimizer {
                 return Err(crate::core::error::KwaversError::System(
                     crate::core::error::SystemError::MemoryAllocation {
                         requested_bytes: size,
-                        reason: "Failed to allocate aligned memory".to_string(),
+                        reason: "Failed to allocate aligned memory".to_owned(),
                     },
                 ));
             }
@@ -173,6 +179,9 @@ impl MemoryOptimizer {
     }
 
     /// Optimize memory layout for column-major access
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn transpose_for_column_major<T: Copy + Default>(
         &self,
         data: &[T],

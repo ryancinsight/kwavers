@@ -120,11 +120,11 @@ impl KWaveArray {
         let scale = m_grid / num_points as f64;
         let angle_span = end_angle - start_angle;
         for idx in 0..num_points {
-            let angle_deg = start_angle + angle_span * ((idx as f64 + 0.5) / num_points as f64);
+            let angle_deg = angle_span.mul_add((idx as f64 + 0.5) / num_points as f64, start_angle);
             let angle_rad = angle_deg.to_radians();
             let point = [
-                center.0 + radius * angle_rad.cos(),
-                center.1 + radius * angle_rad.sin(),
+                radius.mul_add(angle_rad.cos(), center.0),
+                radius.mul_add(angle_rad.sin(), center.1),
                 center.2,
             ];
             visit(point, scale);
@@ -223,7 +223,7 @@ impl KWaveArray {
             // [−cos(φ), sin(θ)sin(φ), cos(θ)sin(φ)] (rotation maps [0,0,−1]
             // → bowl-axis [1,0,0]; see make_cart_bowl/compute_linear_transform).
             let point = [
-                center.0 - radius * varphi.cos(),
+                radius.mul_add(-varphi.cos(), center.0),
                 center.1 + radial * theta.sin(),
                 center.2 + radial * theta.cos(),
             ];
@@ -331,7 +331,7 @@ impl KWaveArray {
             let radial = radius * varphi.sin();
             visit(
                 [
-                    center.0 - radius * varphi.cos(),
+                    radius.mul_add(-varphi.cos(), center.0),
                     center.1,
                     center.2 + radial,
                 ],
@@ -358,7 +358,7 @@ impl KWaveArray {
             let radial = radius * varphi.sin();
             // Same k-wave rotation convention as bowl (see rasterize_bowl_points).
             let point = [
-                center.0 - radius * varphi.cos(),
+                radius.mul_add(-varphi.cos(), center.0),
                 center.1 + radial * theta.sin(),
                 center.2 + radial * theta.cos(),
             ];

@@ -14,6 +14,10 @@ pub struct DoseController {
 
 impl DoseController {
     /// Create new dose controller.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(safety_limits: SafetyLimits) -> Self {
         Self {
             safety_limits,
@@ -24,10 +28,13 @@ impl DoseController {
     }
 
     /// Start new treatment session.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn start_session(&mut self, patient_id: String, protocol: String) -> KwaversResult<()> {
         if self.accumulated_dose >= self.safety_limits.max_total_dose {
             return Err(KwaversError::InvalidInput(
-                "Cannot start session: maximum total dose already reached".to_string(),
+                "Cannot start session: maximum total dose already reached".to_owned(),
             ));
         }
 
@@ -46,6 +53,9 @@ impl DoseController {
     }
 
     /// Update delivered dose during treatment.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn update_dose(
         &mut self,
         incremental_dose: f64,
@@ -55,14 +65,14 @@ impl DoseController {
             let session_duration = start_time.elapsed().as_secs_f64();
             if session_duration > self.safety_limits.max_session_time {
                 return Err(KwaversError::InvalidInput(
-                    "Session time limit exceeded".to_string(),
+                    "Session time limit exceeded".to_owned(),
                 ));
             }
         }
 
         if self.accumulated_dose + incremental_dose > self.safety_limits.max_total_dose {
             return Err(KwaversError::InvalidInput(
-                "Total dose limit would be exceeded".to_string(),
+                "Total dose limit would be exceeded".to_owned(),
             ));
         }
 
@@ -84,6 +94,9 @@ impl DoseController {
     }
 
     /// End current treatment session.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn end_session(&mut self) -> KwaversResult<()> {
         if let Some(record) = self.treatment_history.last_mut() {
             record.end_time = Some(Instant::now());
@@ -98,11 +111,13 @@ impl DoseController {
     }
 
     /// Get remaining dose capacity (J).
+    #[must_use] 
     pub fn remaining_dose_capacity(&self) -> f64 {
         self.safety_limits.max_total_dose - self.accumulated_dose
     }
 
     /// Get treatment history.
+    #[must_use] 
     pub fn treatment_history(&self) -> &[TreatmentRecord] {
         &self.treatment_history
     }

@@ -76,7 +76,7 @@ pub fn delay_and_sum_cpu(
     }
     if samples == 0 {
         return Err(KwaversError::InvalidInput(
-            "DAS CPU: RF data must have at least one sample".to_string(),
+            "DAS CPU: RF data must have at least one sample".to_owned(),
         ));
     }
 
@@ -97,15 +97,12 @@ pub fn delay_and_sum_cpu(
     // Element (ex, ey, ez) → physical (x, y, z).
     let elem_pos: Vec<[f32; 3]> = (0..nel_x)
         .flat_map(|ex| {
-            let sx = sx;
-            let sy = sy;
-            let sz = sz;
             (0..nel_y).flat_map(move |ey| {
                 (0..nel_z).map(move |ez| {
                     [
-                        (ex as f32 - (nel_x as f32 - 1.0) * 0.5) * sx,
-                        (ey as f32 - (nel_y as f32 - 1.0) * 0.5) * sy,
-                        (ez as f32 - (nel_z as f32 - 1.0) * 0.5) * sz,
+                        (nel_x as f32 - 1.0).mul_add(-0.5, ex as f32) * sx,
+                        (nel_y as f32 - 1.0).mul_add(-0.5, ey as f32) * sy,
+                        (nel_z as f32 - 1.0).mul_add(-0.5, ez as f32) * sz,
                     ]
                 })
             })
@@ -131,7 +128,7 @@ pub fn delay_and_sum_cpu(
         }
         let s0 = rf_data[[frame, ch, n0, 0]];
         let s1 = rf_data[[frame, ch, n0 + 1, 0]];
-        s0 + alpha * (s1 - s0)
+        alpha.mul_add(s1 - s0, s0)
     };
 
     // Parallelise across voxels with Rayon.
@@ -145,9 +142,9 @@ pub fn delay_and_sum_cpu(
 
         // Voxel centre in physical coordinates (origin at array centre).
         let pv = [
-            (vx as f32 - (vol_x as f32 - 1.0) * 0.5) * dx,
-            (vy as f32 - (vol_y as f32 - 1.0) * 0.5) * dy,
-            (vz as f32 - (vol_z as f32 - 1.0) * 0.5) * dz,
+            (vol_x as f32 - 1.0).mul_add(-0.5, vx as f32) * dx,
+            (vol_y as f32 - 1.0).mul_add(-0.5, vy as f32) * dy,
+            (vol_z as f32 - 1.0).mul_add(-0.5, vz as f32) * dz,
         ];
 
         let mut coherent_sum = 0.0_f32;
@@ -170,9 +167,8 @@ pub fn delay_and_sum_cpu(
         *out = coherent_sum / frames.max(1) as f32;
     });
 
-    Array3::from_shape_vec((vol_x, vol_y, vol_z), flat).map_err(|e| {
-        KwaversError::InvalidInput(format!("DAS CPU: output volume shape error: {e}"))
-    })
+    Array3::from_shape_vec((vol_x, vol_y, vol_z), flat)
+        .map_err(|e| KwaversError::InvalidInput(format!("DAS CPU: output volume shape error: {e}")))
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -214,6 +210,9 @@ mod tests {
     /// `rf_get(0, 0, 0.0)` returns rf[0,0,0,0] (alpha = 0 → no interpolation).
     /// coherent_sum = 1.0 × rf[0,0,0,0].  Division by frames = 1 gives
     /// output = rf[0,0,0,0].
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn das_single_element_zero_delay_passthrough() {
         let config = make_config(
@@ -242,6 +241,9 @@ mod tests {
     /// ## Proof
     /// The guard at the top of `delay_and_sum_cpu` checks `channels ==
     /// expected_channels` and short-circuits with an error otherwise.
+    /// # Panics
+    /// - Panics with `"expected InvalidInput, got {other:?}"`.
+    ///
     #[test]
     fn das_channel_mismatch_returns_error() {
         let config = make_config(
@@ -277,6 +279,9 @@ mod tests {
     /// τ_i = dist(origin, origin) / c = 0 for all i.
     /// coherent_sum = Σ_{i=0}^{M-1} 1.0 × rf[0,i,0,0] = M × 1.0 = M.
     /// output = M / frames = M.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn das_coherent_gain_co_located_elements() {
         const M: usize = 4;
@@ -315,6 +320,9 @@ mod tests {
     /// τ_s = 1.5e-3 / 1500 × 1e6 = 1.0 (exact integer).
     /// RF: ch0[1] = ch1[1] = 5.0; all other samples = 0.
     /// DAS output = (5.0 + 5.0) / 1 frame = 10.0.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn das_receive_delay_is_geometrically_correct() {
         let sz = 3e-3_f64; // 3 mm element z-spacing
@@ -327,13 +335,7 @@ mod tests {
             "test precondition: τ must equal 1.0 sample; got {tau_exact}"
         );
 
-        let config = make_config(
-            (1, 1, 2),
-            (1e-3, 1e-3, sz),
-            (1, 1, 1),
-            c,
-            fs,
-        );
+        let config = make_config((1, 1, 2), (1e-3, 1e-3, sz), (1, 1, 1), c, fs);
         let mut rf = Array4::<f32>::zeros((1, 2, 4, 1));
         // Pulse at sample index 1 in both channels.
         rf[[0, 0, 1, 0]] = 5.0;

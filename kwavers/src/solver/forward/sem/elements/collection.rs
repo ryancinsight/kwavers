@@ -153,8 +153,7 @@ impl SemMesh {
                 }
                 if !seen.insert(global_node) {
                     return Err(crate::core::error::KwaversError::InvalidInput(
-                        "hexahedral element connectivity contains duplicate node indices"
-                            .to_string(),
+                        "hexahedral element connectivity contains duplicate node indices".to_owned(),
                     ));
                 }
             }

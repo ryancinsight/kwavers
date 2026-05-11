@@ -86,7 +86,7 @@ impl PowerControl {
             }
             ModulationScheme::Sinusoidal => {
                 let omega = 2.0 * std::f64::consts::PI * self.prf;
-                self.amplitude * (0.5 + 0.5 * (omega * time).sin())
+                self.amplitude * 0.5f64.mul_add((omega * time).sin(), 0.5)
             }
             _ => self.amplitude, // Default for other schemes
         }

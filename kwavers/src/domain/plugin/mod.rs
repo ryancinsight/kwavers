@@ -3,9 +3,11 @@
 //! This module defines the core traits and types for the plugin system,
 //! allowing loose coupling between the solver orchestration and physics implementations.
 
+pub mod access;
 pub mod fields;
 pub mod metadata;
 
+pub use access::DirectPluginFieldAccess;
 pub use fields::PluginFields;
 pub use metadata::PluginMetadata;
 
@@ -72,15 +74,27 @@ pub trait Plugin: Debug + Send + Sync {
     fn state(&self) -> PluginState;
 
     /// Set plugin state
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn set_state(&mut self, state: PluginState);
 
     /// Get required fields for this plugin
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn required_fields(&self) -> Vec<UnifiedFieldType>;
 
     /// Get fields provided by this plugin
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn provided_fields(&self) -> Vec<UnifiedFieldType>;
 
     /// Update the plugin with current fields
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn update(
         &mut self,
         fields: &mut Array4<f64>,
@@ -92,16 +106,25 @@ pub trait Plugin: Debug + Send + Sync {
     ) -> KwaversResult<()>;
 
     /// Initialize the plugin
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
         Ok(())
     }
 
     /// Finalize the plugin
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn finalize(&mut self) -> KwaversResult<()> {
         Ok(())
     }
 
     /// Reset plugin state
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn reset(&mut self) -> KwaversResult<()> {
         Ok(())
     }
@@ -131,4 +154,107 @@ pub trait Plugin: Debug + Send + Sync {
 
     /// Convert to mutable Any for downcasting
     fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+// ── Shared test support ───────────────────────────────────────────────────────
+
+/// Test infrastructure for plugin unit tests.
+///
+/// Every plugin test that calls [`Plugin::update`] must supply a
+/// [`PluginContext`], which requires a concrete [`Boundary`] implementation.
+/// Re-implementing the full four-method `Boundary` trait in every test file
+/// would violate DRY.  This module provides:
+///
+/// - [`test_support::NullBoundary`] — a no-op boundary satisfying the trait
+///   contract without affecting any field value.
+/// - [`test_support::null_context`] — constructs a ready-to-use
+///   `(PluginFields, NullBoundary)` pair that callers borrow to form a
+///   [`PluginContext`].
+///
+/// ## Usage
+///
+/// ```rust,ignore
+/// use crate::domain::plugin::test_support::{NullBoundary, null_plugin_fields};
+/// use crate::domain::plugin::{PluginContext, PluginFields};
+///
+/// let extra = null_plugin_fields(&grid);
+/// let mut boundary = NullBoundary;
+/// let mut ctx = PluginContext { extra_fields: &extra, sources: &[], boundary: &mut boundary };
+/// plugin.update(&mut fields, &grid, &medium, dt, t, &mut ctx)?;
+/// ```
+#[cfg(test)]
+pub mod test_support {
+    use super::fields::PluginFields;
+    use super::PluginContext;
+    use crate::core::error::KwaversResult;
+    use crate::domain::boundary::Boundary;
+    use crate::domain::grid::Grid;
+    use ndarray::Array3;
+
+    /// No-op boundary condition for plugin unit tests.
+    ///
+    /// Every required method is a no-op: no energy is added or removed from
+    /// any field.  The implementation is intentionally minimal — test behaviour
+    /// must not depend on boundary effects unless the test is specifically
+    /// exercising boundary logic.
+    #[derive(Debug)]
+    pub struct NullBoundary;
+
+    impl Boundary for NullBoundary {
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+            self
+        }
+
+        fn apply_acoustic(
+            &mut self,
+            _field: ndarray::ArrayViewMut3<f64>,
+            _grid: &Grid,
+            _time_step: usize,
+        ) -> KwaversResult<()> {
+            Ok(())
+        }
+
+        fn apply_acoustic_freq(
+            &mut self,
+            _field: &mut Array3<crate::math::fft::Complex64>,
+            _grid: &Grid,
+            _time_step: usize,
+        ) -> KwaversResult<()> {
+            Ok(())
+        }
+
+        fn apply_light(
+            &mut self,
+            _field: ndarray::ArrayViewMut3<f64>,
+            _grid: &Grid,
+            _time_step: usize,
+        ) {
+        }
+    }
+
+    /// Construct zero-filled [`PluginFields`] sized to `grid`.
+    ///
+    /// The fields are spatially zero which is correct for test contexts where
+    /// the extra-fields channel is not exercised.
+    #[must_use]
+    pub fn null_plugin_fields(grid: &Grid) -> PluginFields {
+        PluginFields::new(Array3::zeros((grid.nx, grid.ny, grid.nz)))
+    }
+
+    /// Build a [`PluginContext`] from the provided extra-fields and boundary.
+    ///
+    /// The returned struct borrows both arguments; lifetime elision works
+    /// naturally when the caller holds `extra_fields` and `boundary` as local
+    /// `let` bindings before calling this helper.
+    #[must_use]
+    pub fn make_context<'a>(
+        extra_fields: &'a PluginFields,
+        boundary: &'a mut NullBoundary,
+    ) -> PluginContext<'a> {
+        PluginContext {
+            extra_fields,
+            sources: &[],
+            boundary,
+        }
+    }
 }

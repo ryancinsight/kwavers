@@ -106,11 +106,12 @@ pub enum Dimension {
 }
 
 impl Dimension {
+    #[must_use] 
     pub fn as_usize(&self) -> usize {
         match self {
-            Dimension::One => 1,
-            Dimension::Two => 2,
-            Dimension::Three => 3,
+            Self::One => 1,
+            Self::Two => 2,
+            Self::Three => 3,
         }
     }
 }

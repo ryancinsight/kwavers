@@ -52,11 +52,11 @@ impl ChemicalModelTrait for ChemicalModel {
 impl std::fmt::Display for ReactionType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = match self {
-            ReactionType::Dissociation => "Dissociation",
-            ReactionType::Recombination => "Recombination",
-            ReactionType::Oxidation => "Oxidation",
-            ReactionType::Reduction => "Reduction",
-            ReactionType::Polymerization => "Polymerization",
+            Self::Dissociation => "Dissociation",
+            Self::Recombination => "Recombination",
+            Self::Oxidation => "Oxidation",
+            Self::Reduction => "Reduction",
+            Self::Polymerization => "Polymerization",
         };
         write!(f, "{name}")
     }

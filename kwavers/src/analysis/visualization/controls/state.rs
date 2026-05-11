@@ -19,6 +19,9 @@ pub struct ControlState {
 
 impl ControlState {
     /// Create a control state from definition
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_definition(definition: ParameterDefinition) -> Self {
         Self {
             current_value: definition.default_value.clone(),
@@ -29,6 +32,9 @@ impl ControlState {
     }
 
     /// Update the value with validation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_value(&mut self, value: ParameterValue) -> KwaversResult<()> {
         let validated =
             ParameterValidator::validate_and_apply(value, &self.definition.parameter_type)?;
@@ -57,6 +63,9 @@ pub struct StateSnapshot {
 
 impl StateSnapshot {
     /// Create a snapshot from current states
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_states(states: &HashMap<String, ControlState>) -> Self {
         let parameters = states
             .iter()
@@ -70,6 +79,9 @@ impl StateSnapshot {
     }
 
     /// Apply snapshot to states
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_to_states(&self, states: &mut HashMap<String, ControlState>) -> KwaversResult<()> {
         for (name, value) in &self.parameters {
             if let Some(state) = states.get_mut(name) {
@@ -103,6 +115,9 @@ impl std::fmt::Debug for InteractiveControls {
 
 impl InteractiveControls {
     /// Create a control system
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> Self {
         Self {
             states: Arc::new(RwLock::new(HashMap::new())),
@@ -113,6 +128,9 @@ impl InteractiveControls {
     }
 
     /// Create a control system with configuration (alias for new)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn create(
         _config: &crate::analysis::visualization::VisualizationConfig,
     ) -> KwaversResult<Self> {
@@ -120,6 +138,9 @@ impl InteractiveControls {
     }
 
     /// Register a parameter
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn register_parameter(&self, definition: ParameterDefinition) -> KwaversResult<()> {
         let mut states = self
             .states
@@ -136,6 +157,9 @@ impl InteractiveControls {
     }
 
     /// Update a parameter value
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_parameter(&self, name: &str, value: ParameterValue) -> KwaversResult<()> {
         // Update state
         {
@@ -172,6 +196,9 @@ impl InteractiveControls {
     }
 
     /// Get current value of a parameter
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn get_value(&self, name: &str) -> KwaversResult<ParameterValue> {
         let states = self
             .states
@@ -187,6 +214,9 @@ impl InteractiveControls {
     }
 
     /// Register an update callback
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn register_callback<F>(&self, name: String, callback: F) -> KwaversResult<()>
     where
         F: Fn(&ParameterValue) + Send + Sync + 'static,
@@ -204,6 +234,9 @@ impl InteractiveControls {
     }
 
     /// Save current state to history
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn save_snapshot(&self) -> KwaversResult<()> {
         let states = self
             .states
@@ -232,6 +265,9 @@ impl InteractiveControls {
     }
 
     /// Restore a snapshot
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn restore_snapshot(&self, index: usize) -> KwaversResult<()> {
         let history = self
             .history
@@ -258,6 +294,9 @@ impl InteractiveControls {
     }
 
     /// Get all current parameter states
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn get_all_states(&self) -> KwaversResult<HashMap<String, ControlState>> {
         let states = self
             .states

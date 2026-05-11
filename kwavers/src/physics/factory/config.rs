@@ -15,6 +15,7 @@ pub struct PhysicsConfig {
 
 impl PhysicsConfig {
     /// Create new physics configuration
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             models: vec![PhysicsModelConfig::default()],
@@ -24,26 +25,37 @@ impl PhysicsConfig {
     }
 
     /// Add physics model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn add_model(mut self, model: PhysicsModelConfig) -> Self {
         self.models.push(model);
         self
     }
 
     /// Set global parameter
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn set_parameter(mut self, key: String, value: f64) -> Self {
         self.global_parameters.insert(key, value);
         self
     }
 
     /// Validate configuration - maintains backward compatibility
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         use crate::core::error::ConfigError;
 
         if self.models.is_empty() {
             return Err(ConfigError::InvalidValue {
-                parameter: "models".to_string(),
-                value: "empty".to_string(),
-                constraint: "At least one physics model is required".to_string(),
+                parameter: "models".to_owned(),
+                value: "empty".to_owned(),
+                constraint: "At least one physics model is required".to_owned(),
             }
             .into());
         }
@@ -63,8 +75,8 @@ impl PhysicsConfig {
             {
                 return Err(ConfigError::InvalidValue {
                     parameter: format!("models[{}].parameters", i),
-                    value: "empty".to_string(),
-                    constraint: "Nonlinear models require parameters".to_string(),
+                    value: "empty".to_owned(),
+                    constraint: "Nonlinear models require parameters".to_owned(),
                 }
                 .into());
             }

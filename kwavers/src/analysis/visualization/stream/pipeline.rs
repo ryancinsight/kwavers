@@ -148,6 +148,9 @@ impl StagePipeline {
     /// 2. Spawn background task that drains frames from channel.
     /// 3. Background task records latency per frame using Welford online mean.
     /// 4. `pipeline.metrics()` returns a snapshot without blocking the sender.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn new(config: PipelineConfig) -> Result<(Self, mpsc::Sender<VizFrame>), String> {
         let capacity = config.channel_capacity.max(1);
         let (tx, mut rx) = mpsc::channel::<VizFrame>(capacity);
@@ -297,9 +300,7 @@ mod tests {
     #[tokio::test]
     async fn test_pipeline_new_returns_valid_sender() {
         let config = PipelineConfig::default();
-        let result = StagePipeline::new(config).await;
-        assert!(result.is_ok());
-        let (_pipeline, tx) = result.unwrap();
+        let (_pipeline, tx) = StagePipeline::new(config).await.unwrap();
         // Sender should be valid (channel open)
         assert!(!tx.is_closed());
     }

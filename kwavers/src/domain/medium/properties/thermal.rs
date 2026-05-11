@@ -82,6 +82,9 @@ pub struct ThermalPropertyData {
 
 impl ThermalPropertyData {
     /// Construct with validation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         conductivity: f64,
         specific_heat: f64,
@@ -126,17 +129,20 @@ impl ThermalPropertyData {
 
     /// Thermal diffusivity α = k/(ρc) (m²/s)
     #[inline]
+    #[must_use] 
     pub fn thermal_diffusivity(&self) -> f64 {
         self.conductivity / (self.density * self.specific_heat)
     }
 
     /// Check if bio-heat parameters are present
     #[inline]
+    #[must_use] 
     pub fn has_bioheat_parameters(&self) -> bool {
         self.blood_perfusion.is_some() && self.blood_specific_heat.is_some()
     }
 
     /// Water properties (at 20°C)
+    #[must_use] 
     pub fn water() -> Self {
         Self {
             conductivity: 0.598,
@@ -148,6 +154,7 @@ impl ThermalPropertyData {
     }
 
     /// Soft tissue properties (generic)
+    #[must_use] 
     pub fn soft_tissue() -> Self {
         Self {
             conductivity: 0.5,
@@ -159,6 +166,10 @@ impl ThermalPropertyData {
     }
 
     /// Bone properties
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn bone() -> Self {
         Self {
             conductivity: 0.32,
@@ -214,6 +225,7 @@ mod tests {
         assert!(ThermalPropertyData::new(-0.5, 3600.0, 1050.0, None, None).is_err());
 
         // Valid parameters should succeed
-        assert!(ThermalPropertyData::new(0.5, 3600.0, 1050.0, Some(0.5), Some(3617.0)).is_ok());
+        let tp = ThermalPropertyData::new(0.5, 3600.0, 1050.0, Some(0.5), Some(3617.0)).unwrap();
+        assert!(tp.conductivity > 0.0);
     }
 }

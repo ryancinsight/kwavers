@@ -21,8 +21,7 @@ fn test_frame_quality_recording() {
     let config = MonitoringConfig::default();
     let mut monitor = ClinicalMonitor::new(config);
 
-    let result = monitor.record_frame_quality(1, 50.0, 25.0, 0.8, 1.5, 0.1);
-    assert!(result.is_ok());
+    monitor.record_frame_quality(1, 50.0, 25.0, 0.8, 1.5, 0.1).unwrap();
     assert_eq!(monitor.performance_metrics.total_frames, 1);
 }
 
@@ -40,8 +39,7 @@ fn test_safety_event_logging() {
         message: "Temperature exceeds limit".to_string(),
     };
 
-    let result = monitor.log_safety_event(event);
-    assert!(result.is_ok());
+    monitor.log_safety_event(event).unwrap();
     assert_eq!(monitor.safety_log().len(), 1);
 }
 

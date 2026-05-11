@@ -26,8 +26,7 @@ fn test_config_validation_cfl_acoustic() {
 #[test]
 fn test_single_step() {
     let mut coupler = ThermalAcousticCoupler::new_default();
-    let result = coupler.step();
-    assert!(result.is_ok());
+    coupler.step().unwrap();
     assert_eq!(coupler.step_count(), 1);
     assert!(coupler.total_time() > 0.0);
 }
@@ -36,7 +35,7 @@ fn test_single_step() {
 fn test_multiple_steps() {
     let mut coupler = ThermalAcousticCoupler::new_default();
     for _ in 0..10 {
-        assert!(coupler.step().is_ok());
+        coupler.step().unwrap();
     }
     assert_eq!(coupler.step_count(), 10);
 }

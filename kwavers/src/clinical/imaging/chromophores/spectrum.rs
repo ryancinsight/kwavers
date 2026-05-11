@@ -17,6 +17,9 @@ pub struct ExtinctionSpectrum {
 
 impl ExtinctionSpectrum {
     /// Create extinction spectrum from wavelength-coefficient pairs
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(name: impl Into<String>, data: Vec<(u32, f64)>) -> Self {
         Self {
             data: data.into_iter().collect(),
@@ -25,6 +28,9 @@ impl ExtinctionSpectrum {
     }
 
     /// Get extinction coefficient at specified wavelength (linear interpolation)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn at_wavelength(&self, wavelength_nm: f64) -> Result<f64> {
         let lambda = wavelength_nm.round() as u32;
 
@@ -49,7 +55,7 @@ impl ExtinctionSpectrum {
         match (lower, upper) {
             (Some((wl1, eps1)), Some((wl2, eps2))) => {
                 let t = (lambda - wl1) as f64 / (wl2 - wl1) as f64;
-                Ok(eps1 + t * (eps2 - eps1))
+                Ok(t.mul_add(eps2 - eps1, eps1))
             }
             (Some((_, eps)), None) => Ok(eps),
             (None, Some((_, eps))) => Ok(eps),
@@ -59,12 +65,14 @@ impl ExtinctionSpectrum {
         }
     }
 
+    #[must_use] 
     pub fn wavelength_range(&self) -> Option<(u32, u32)> {
         let min = self.data.keys().next().copied()?;
         let max = self.data.keys().next_back().copied()?;
         Some((min, max))
     }
 
+    #[must_use] 
     pub fn name(&self) -> &str {
         &self.name
     }

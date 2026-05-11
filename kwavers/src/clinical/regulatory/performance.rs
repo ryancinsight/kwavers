@@ -56,21 +56,30 @@ impl PerformanceTest {
     }
 
     /// Record test result
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn record_result(&mut self, passed: bool) {
         self.result = Some(passed);
         self.date_conducted = Some(iso8601_now());
     }
 
     /// Add test finding
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_finding(&mut self, finding: impl Into<String>) {
         self.findings.push(finding.into());
     }
 
     /// Validate performance test
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.objective.is_empty() || self.method.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Test objective and method required".to_string(),
+                "Test objective and method required".to_owned(),
             ));
         }
 

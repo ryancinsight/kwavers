@@ -6,6 +6,11 @@ impl Avx512StencilProcessor {
     /// Update velocity field with AVX-512 acceleration
     ///
     /// Implements 3D velocity update from pressure gradient.
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_velocity_avx512(
         &self,
         u: &mut Array3<f64>,
@@ -64,6 +69,12 @@ impl Avx512StencilProcessor {
     /// Caller must ensure:
     /// - u and p have matching dimensions (self.nx, self.ny, self.nz)
     /// - dim is in range [0, 2]
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[allow(unsafe_code)]
     #[cfg(target_arch = "x86_64")]
     unsafe fn update_velocity_avx512_unsafe(

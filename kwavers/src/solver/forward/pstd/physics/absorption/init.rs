@@ -61,6 +61,9 @@ use ndarray::Array3;
 ///
 /// ## References
 /// Treeby & Cox (2010) Eqs. 19–21 for τ and η; Eq. 10 for nabla operators.
+/// # Errors
+/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+///
 pub(crate) fn initialize_absorption_operators(
     config: &PSTDConfig,
     grid: &Grid,
@@ -147,8 +150,7 @@ pub(crate) fn initialize_absorption_operators(
             if (y_config - 1.0).abs() < 1e-12 {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
-                        message: "alpha_power must not be 1.0 for fractional Laplacian formulation"
-                            .to_string(),
+                        message: "alpha_power must not be 1.0 for fractional Laplacian formulation".to_owned(),
                     },
                 ));
             }
@@ -215,8 +217,7 @@ pub(crate) fn initialize_absorption_operators(
         }
         AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => Err(
             KwaversError::Validation(ValidationError::ConstraintViolation {
-                message: "Relaxation absorption modes are not supported by spectral solver"
-                    .to_string(),
+                message: "Relaxation absorption modes are not supported by spectral solver".to_owned(),
             }),
         ),
     }

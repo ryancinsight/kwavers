@@ -59,6 +59,9 @@ use super::super::state::AcousticField;
 ///
 /// - O'Neil (1949): "Theory of focusing radiators"
 /// - Hasegawa & Yosioka (1975): "Acoustic radiation pressure on compressible spheres"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn generate_acoustic_field(
     grid: &Grid,
     acoustic_params: &AcousticTherapyParams,

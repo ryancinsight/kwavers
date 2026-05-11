@@ -18,7 +18,7 @@ impl Utils {
 
     /// Calculate Euclidean distance between two 3D points
     pub fn euclidean_distance(&self, p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
-        ((p1[0] - p2[0]).powi(2) + (p1[1] - p2[1]).powi(2) + (p1[2] - p2[2]).powi(2)).sqrt()
+        (p1[2] - p2[2]).mul_add(p1[2] - p2[2], (p1[1] - p2[1]).mul_add(p1[1] - p2[1], (p1[0] - p2[0]).powi(2))).sqrt()
     }
 
     /// Calculate back-projection weight for spherical spreading compensation
@@ -41,6 +41,9 @@ impl Utils {
     }
 
     /// Build forward model matrix for model-based reconstruction
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn build_forward_model(
         &self,
         sensor_positions: &[[f64; 3]],

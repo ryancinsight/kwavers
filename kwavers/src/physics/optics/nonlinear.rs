@@ -27,6 +27,7 @@ pub struct KerrEffect {
 
 impl KerrEffect {
     /// Create Kerr effect for a material
+    #[must_use] 
     pub fn new(n0: f64, n2: f64) -> Self {
         // χ³ related to n₂: n₂ ~ (3/8) * χ³ / (c·n₀²)
         let chi3 = n2 * c::SPEED_OF_LIGHT * n0 * n0 * (8.0 / 3.0);
@@ -37,6 +38,7 @@ impl KerrEffect {
     ///
     /// B = k₀·n₂·I₀·r₀²
     /// where k₀ = 2π/λ, I₀ is peak intensity, r₀ is beam radius
+    #[must_use] 
     pub fn self_focusing_parameter(
         &self,
         wavelength: f64,
@@ -49,18 +51,21 @@ impl KerrEffect {
 
     /// Is self-focusing significant?
     /// (B > 0.1 typically indicates notable self-focusing)
+    #[must_use] 
     pub fn is_self_focusing(&self, wavelength: f64, intensity: f64, beam_radius: f64) -> bool {
         self.self_focusing_parameter(wavelength, intensity, beam_radius) > 0.1
     }
 
     /// Refractive index at given intensity
+    #[must_use] 
     pub fn refractive_index(&self, intensity: f64) -> f64 {
-        self.n0 + self.n2 * intensity
+        self.n2.mul_add(intensity, self.n0)
     }
 
     /// Nonlinear phase shift
     ///
     /// φ_nl = (2π/λ) * n₂ * I * L
+    #[must_use] 
     pub fn phase_shift(&self, wavelength: f64, intensity: f64, distance: f64) -> f64 {
         (2.0 * std::f64::consts::PI / wavelength) * self.n2 * intensity * distance
     }
@@ -68,6 +73,7 @@ impl KerrEffect {
     /// Critical power for self-focusing (approximate)
     ///
     /// P_crit ≈ λ² / (8π·n₂)
+    #[must_use] 
     pub fn critical_power(&self, wavelength: f64) -> f64 {
         wavelength.powi(2) / (8.0 * std::f64::consts::PI * self.n2)
     }
@@ -77,28 +83,33 @@ impl KerrEffect {
 impl KerrEffect {
     /// Silica glass at 1064 nm
     /// Reference: Boyd (2008)
+    #[must_use] 
     pub fn silica_glass() -> Self {
         Self::new(1.457, 2.7e-20) // n₂ = 2.7×10⁻²⁰ m²/W
     }
 
     /// Water at 800 nm
     /// Reference: Agrawal (2007)
+    #[must_use] 
     pub fn water() -> Self {
         Self::new(1.333, 2.5e-21) // n₂ = 2.5×10⁻²¹ m²/W
     }
 
     /// CS₂ (carbon disulfide) at 1064 nm
     /// Reference: Boyd (2008) - high nonlinearity
+    #[must_use] 
     pub fn cs2() -> Self {
         Self::new(1.629, 6.5e-19) // n₂ = 6.5×10⁻¹⁹ m²/W (high!)
     }
 
     /// Fused silica fiber
+    #[must_use] 
     pub fn fused_silica() -> Self {
         Self::new(1.46, 2.6e-20)
     }
 
     /// BK7 optical glass
+    #[must_use] 
     pub fn bk7_glass() -> Self {
         Self::new(1.517, 2.9e-20)
     }
@@ -111,7 +122,7 @@ impl KerrEffect {
 pub struct PhotoacousticConversion {
     /// Grüneisen parameter (thermal expansion coupling)
     pub gruneisen: f64,
-    /// Speed of sound [m/s]
+    /// Speed of sound (m/s)
     pub sound_speed: f64,
     /// Thermal conductivity [W/(m·K)]
     pub thermal_conductivity: f64,
@@ -121,6 +132,7 @@ pub struct PhotoacousticConversion {
 
 impl PhotoacousticConversion {
     /// Create photoacoustic conversion parameters
+    #[must_use] 
     pub fn new(
         gruneisen: f64,
         sound_speed: f64,
@@ -139,15 +151,17 @@ impl PhotoacousticConversion {
     ///
     /// η_PA = Γ·α·c / (ρ·C·ν)
     /// where α is optical absorption, ν is frequency
+    #[must_use] 
     pub fn efficiency(&self, optical_absorption: f64, frequency: f64) -> f64 {
         self.gruneisen * optical_absorption * self.sound_speed
             / (self.volumetric_heat_capacity * frequency)
     }
 
-    /// Thermal diffusion length [m]
+    /// Thermal diffusion length (m)
     ///
     /// l_th = √(D / (π·f))
     /// where D = k / (ρ·c) is thermal diffusivity
+    #[must_use] 
     pub fn thermal_diffusion_length(&self, frequency: f64) -> f64 {
         let thermal_diffusivity = self.thermal_conductivity / self.volumetric_heat_capacity;
         (thermal_diffusivity / (std::f64::consts::PI * frequency)).sqrt()
@@ -157,18 +171,21 @@ impl PhotoacousticConversion {
     ///
     /// P_ac = Γ·E_optical / V
     /// where E_optical is absorbed optical energy, V is interaction volume
+    #[must_use] 
     pub fn acoustic_pressure(&self, absorbed_energy: f64, volume: f64) -> f64 {
         self.gruneisen * absorbed_energy / volume
     }
 
     /// Stress confinement regime?
     /// (True if thermal diffusion length > optical penetration depth)
+    #[must_use] 
     pub fn is_stress_confined(&self, frequency: f64, optical_penetration_depth: f64) -> bool {
         self.thermal_diffusion_length(frequency) > optical_penetration_depth
     }
 
     /// Thermal confinement regime?
     /// (True if pulse duration << thermal relaxation time)
+    #[must_use] 
     pub fn is_thermal_confined(&self, pulse_duration: f64) -> bool {
         let thermal_relaxation = self.volumetric_heat_capacity
             / (self.thermal_conductivity.powi(2) / self.volumetric_heat_capacity);
@@ -179,6 +196,7 @@ impl PhotoacousticConversion {
 /// Common photoacoustic materials
 impl PhotoacousticConversion {
     /// Water
+    #[must_use] 
     pub fn water() -> Self {
         Self::new(
             0.13,    // Grüneisen parameter
@@ -189,6 +207,7 @@ impl PhotoacousticConversion {
     }
 
     /// Tissue (generic)
+    #[must_use] 
     pub fn tissue() -> Self {
         Self::new(
             0.25,               // Grüneisen parameter
@@ -199,6 +218,7 @@ impl PhotoacousticConversion {
     }
 
     /// Metal (gold)
+    #[must_use] 
     pub fn gold() -> Self {
         Self::new(
             0.74,   // Grüneisen parameter (high!)
@@ -209,6 +229,7 @@ impl PhotoacousticConversion {
     }
 
     /// Silica
+    #[must_use] 
     pub fn silica() -> Self {
         Self::new(
             0.27,   // Grüneisen parameter

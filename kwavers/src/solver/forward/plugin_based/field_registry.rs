@@ -34,6 +34,9 @@ pub struct FieldRegistry {
 
 impl FieldRegistry {
     /// Create a new field registry with deferred allocation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: &Grid) -> Self {
         Self {
             fields: vec![None; UnifiedFieldType::COUNT],
@@ -45,6 +48,9 @@ impl FieldRegistry {
     }
 
     /// Build the field registry by allocating data array
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn build(&mut self) -> KwaversResult<()> {
         let max_field_index = self.fields.len();
         if max_field_index == 0 {
@@ -65,6 +71,9 @@ impl FieldRegistry {
     }
 
     /// Register a new field dynamically
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn register_field(&mut self, field_type: UnifiedFieldType) -> KwaversResult<()> {
         let idx = field_type as usize;
 
@@ -94,6 +103,9 @@ impl FieldRegistry {
     }
 
     /// Register multiple fields at once
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn register_fields(&mut self, fields: &[UnifiedFieldType]) -> KwaversResult<()> {
         for field_type in fields {
             self.register_field(*field_type)?;
@@ -102,6 +114,9 @@ impl FieldRegistry {
     }
 
     /// Get a field view (zero-copy, read-only)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn get_field(
         &self,
         field_type: UnifiedFieldType,
@@ -109,7 +124,7 @@ impl FieldRegistry {
         let metadata = self.get_metadata(field_type)?;
 
         if !metadata.active {
-            return Err(FieldError::Inactive(field_type.name().to_string()));
+            return Err(FieldError::Inactive(field_type.name().to_owned()));
         }
 
         let data = self.data.as_ref().ok_or(FieldError::DataNotInitialized)?;
@@ -118,6 +133,9 @@ impl FieldRegistry {
     }
 
     /// Get a mutable field view (zero-copy)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn get_field_mut(
         &mut self,
         field_type: UnifiedFieldType,
@@ -129,10 +147,10 @@ impl FieldRegistry {
             .get(idx)
             .and_then(|opt| opt.as_ref())
             .map(|m| (m.index, m.active))
-            .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
+            .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_owned()))?;
 
         if !is_active {
-            return Err(FieldError::Inactive(field_type.name().to_string()));
+            return Err(FieldError::Inactive(field_type.name().to_owned()));
         }
 
         let data = self.data.as_mut().ok_or(FieldError::DataNotInitialized)?;
@@ -141,6 +159,9 @@ impl FieldRegistry {
     }
 
     /// Set a specific field with dimension validation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_field(
         &mut self,
         field_type: UnifiedFieldType,
@@ -150,7 +171,7 @@ impl FieldRegistry {
         let actual_dims = values.dim();
         if actual_dims != self.grid_dims {
             return Err(FieldError::DimensionMismatch {
-                field: field_type.name().to_string(),
+                field: field_type.name().to_owned(),
                 expected: self.grid_dims,
                 actual: actual_dims,
             }
@@ -203,12 +224,18 @@ impl FieldRegistry {
     }
 
     /// Get direct access to data array (for advanced operations)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn data(&self) -> Option<&Array4<f64>> {
         self.data.as_ref()
     }
 
     /// Get mutable direct access to data array
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn data_mut(&mut self) -> Option<&mut Array4<f64>> {
         self.data.as_mut()
     }
@@ -219,7 +246,7 @@ impl FieldRegistry {
         self.fields
             .get(field_type as usize)
             .and_then(|opt| opt.as_ref())
-            .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))
+            .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_owned()))
     }
 
     fn reallocate_data(&mut self) -> KwaversResult<()> {

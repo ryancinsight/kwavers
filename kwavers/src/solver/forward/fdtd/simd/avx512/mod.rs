@@ -147,6 +147,10 @@ impl Avx512StencilProcessor {
     /// # Returns
     /// * `Ok(processor)` on success
     /// * `Err` if dimensions invalid or tile_size not power of 2
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(nx: usize, ny: usize, nz: usize, config: Avx512Config) -> KwaversResult<Self> {
         // Validate dimensions
         if nx < 4 || ny < 4 || nz < 4 {

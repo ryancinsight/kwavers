@@ -57,6 +57,9 @@ use super::types::CloudProvider;
 /// let config = utilities::load_provider_config(&CloudProvider::AWS).await;
 /// # });
 /// ```
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub async fn load_provider_config(
     provider: &CloudProvider,
 ) -> KwaversResult<HashMap<String, String>> {

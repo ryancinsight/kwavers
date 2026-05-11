@@ -6,6 +6,9 @@ fn sequencer_40mm() -> TransmissionSequencer {
 }
 
 /// PRF_max = c / (2·z_max) = 1540 / 0.080 = 19 250 Hz.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_max_prf() {
     let seq = sequencer_40mm();
@@ -19,6 +22,9 @@ fn test_max_prf() {
 }
 
 /// Setting PRF above PRF_max must return an error.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_prf_exceeds_max_returns_error() {
     let seq = sequencer_40mm();
@@ -28,15 +34,27 @@ fn test_prf_exceeds_max_returns_error() {
 }
 
 /// Setting PRF ≤ PRF_max must succeed.
+/// # Panics
+/// - Panics if `PRF = PRF_max must succeed`.
+/// - Panics if `prf_override must be Some after with_prf`.
+///
 #[test]
 fn test_prf_at_max_is_valid() {
     let seq = sequencer_40mm();
     let prf_max = seq.max_prf();
-    let result = seq.with_prf(prf_max);
-    assert!(result.is_ok(), "PRF = PRF_max must succeed");
+    let seq2 = seq.with_prf(prf_max).expect("PRF = PRF_max must succeed");
+    // prf_override must be set to the exact requested value.
+    let stored = seq2.prf_override.expect("prf_override must be Some after with_prf");
+    assert!(
+        (stored - prf_max).abs() < 1e-6,
+        "prf_override = {stored} (expected {prf_max})"
+    );
 }
 
 /// Sequential schedule has correct event count, timing, and PRF.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_sequential_schedule_timing() {
     let seq = sequencer_40mm();
@@ -56,6 +74,9 @@ fn test_sequential_schedule_timing() {
 }
 
 /// Flash schedule has exactly one event at t=0 with θ=0.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_flash_schedule() {
     let seq = sequencer_40mm();
@@ -68,6 +89,9 @@ fn test_flash_schedule() {
 }
 
 /// Interleaved schedule preserves all angles (as a multiset).
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_interleaved_schedule_all_angles_present() {
     let seq = sequencer_40mm();
@@ -95,6 +119,9 @@ fn test_interleaved_schedule_all_angles_present() {
 ///
 /// For 11 angles [-5°,…,5°] the interleaved order is [0, 5, 1, 6, …],
 /// i.e., angles -5° and 0° at events 0 and 1.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_interleaved_max_separation_first_pair() {
     let seq = sequencer_40mm();
@@ -115,6 +142,9 @@ fn test_interleaved_max_separation_first_pair() {
 }
 
 /// STA schedule: each event fires a different element, tilt_angle = 0.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_sta_schedule_element_ordering() {
     let seq = sequencer_40mm();
@@ -127,6 +157,9 @@ fn test_sta_schedule_element_ordering() {
 }
 
 /// STA schedule with 0 elements returns error.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_sta_zero_elements_errors() {
     let seq = sequencer_40mm();
@@ -134,6 +167,9 @@ fn test_sta_zero_elements_errors() {
 }
 
 /// Frame rate for N compounding events = PRF / N.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_frame_rate_formula() {
     let seq = sequencer_40mm();

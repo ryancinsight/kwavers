@@ -2,6 +2,10 @@ use super::{NumericalValidator, StabilityResults};
 use crate::core::constants::SOUND_SPEED_TISSUE;
 
 impl NumericalValidator {
+    /// Validate stability.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn validate_stability(
         &self,
     ) -> Result<StabilityResults, Box<dyn std::error::Error>> {
@@ -52,7 +56,10 @@ impl NumericalValidator {
             growth_rate,
         })
     }
-
+    /// Test stability pstd.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn test_stability_pstd(&self, dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
         let f_max = 1.0 / (2.0 * self.grid.dx.min(self.grid.dy).min(self.grid.dz));
         let omega_max = 2.0 * std::f64::consts::PI * f_max;
@@ -66,7 +73,10 @@ impl NumericalValidator {
             Ok((cfl - 1.0) * omega_max * dt)
         }
     }
-
+    /// Test stability fdtd.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn test_stability_fdtd(&self, dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
         let c_max = SOUND_SPEED_TISSUE;
         let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
@@ -80,7 +90,10 @@ impl NumericalValidator {
             Ok((violation_ratio - 1.0).ln())
         }
     }
-
+    /// Test stability kuznetsov.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn test_stability_kuznetsov(
         &self,
         dt: f64,

@@ -55,8 +55,7 @@ impl NonlinearElasticWaveSolver {
 
                         let third_harmonic_source = beta * (term1 + term2 + term3);
                         let laplacian_u3 = self.numerics.laplacian(i, j, k, &field.u_harmonics[0]);
-                        let acceleration_u3 = self.config.sound_speed().powi(2) * laplacian_u3
-                            + third_harmonic_source;
+                        let acceleration_u3 = self.config.sound_speed().powi(2).mul_add(laplacian_u3, third_harmonic_source);
                         field.u_harmonics[0][[i, j, k]] += dt * dt * acceleration_u3;
                     }
                 }
@@ -88,13 +87,12 @@ impl NonlinearElasticWaveSolver {
 
                         let higher_harmonic_source = amplitude_factor
                             * beta
-                            * (u1 * laplacian_u_prev + u_prev * laplacian_u1);
+                            * u1.mul_add(laplacian_u_prev, u_prev * laplacian_u1);
 
                         let laplacian_u_n =
                             self.numerics
                                 .laplacian(i, j, k, &field.u_harmonics[harmonic_idx]);
-                        let acceleration_u_n = self.config.sound_speed().powi(2) * laplacian_u_n
-                            + higher_harmonic_source;
+                        let acceleration_u_n = self.config.sound_speed().powi(2).mul_add(laplacian_u_n, higher_harmonic_source);
 
                         field.u_harmonics[harmonic_idx][[i, j, k]] += dt * dt * acceleration_u_n;
                     }

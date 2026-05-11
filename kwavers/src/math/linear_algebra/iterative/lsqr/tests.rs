@@ -50,6 +50,9 @@ fn test_lsqr_diagonal_system() {
 ///
 /// Normal equations: AᵀA·x = Aᵀb  →  [2 1; 1 5]·x = [4; 11].
 /// Exact solution: x* = [1, 2] (b is in range(A), so residual is zero).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_lsqr_overdetermined_exact_solution() {
     let a = Array2::from_shape_vec((3, 2), vec![1.0, 0.0, 0.0, 2.0, 1.0, 1.0]).unwrap();

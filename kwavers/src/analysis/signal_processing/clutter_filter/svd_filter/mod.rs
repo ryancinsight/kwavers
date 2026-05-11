@@ -62,6 +62,7 @@ impl Default for SvdClutterFilterConfig {
 
 impl SvdClutterFilterConfig {
     /// Create configuration with manual rank selection
+    #[must_use] 
     pub fn with_fixed_rank(clutter_rank: usize) -> Self {
         Self {
             clutter_rank,
@@ -71,6 +72,10 @@ impl SvdClutterFilterConfig {
     }
 
     /// Create configuration with automatic rank selection
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_auto_rank(energy_threshold: f64) -> Self {
         Self {
             auto_rank_selection: true,
@@ -80,10 +85,13 @@ impl SvdClutterFilterConfig {
     }
 
     /// Validate configuration
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.clutter_rank == 0 {
             return Err(KwaversError::InvalidInput(
-                "Clutter rank must be at least 1".to_string(),
+                "Clutter rank must be at least 1".to_owned(),
             ));
         }
 
@@ -97,7 +105,7 @@ impl SvdClutterFilterConfig {
 
         if self.energy_threshold <= 0.0 || self.energy_threshold >= 1.0 {
             return Err(KwaversError::InvalidInput(
-                "Energy threshold must be in range (0.0, 1.0)".to_string(),
+                "Energy threshold must be in range (0.0, 1.0)".to_owned(),
             ));
         }
 
@@ -116,6 +124,9 @@ pub struct SvdClutterFilter {
 
 impl SvdClutterFilter {
     /// Create new SVD clutter filter with configuration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: SvdClutterFilterConfig) -> KwaversResult<Self> {
         config.validate()?;
         Ok(Self { config })
@@ -141,6 +152,13 @@ impl SvdClutterFilter {
     /// 4. Zero out first K singular values: Σ[0:K, 0:K] = 0
     /// 5. Reconstruct: S_filtered = UΣ_filtered V^T
     /// 6. Add back temporal means
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let (n_pixels, n_frames) = slow_time_data.dim();
 
@@ -212,6 +230,9 @@ impl SvdClutterFilter {
     /// capture at least energy_threshold fraction of total signal energy.
     ///
     /// This corresponds to removing the dominant tissue motion components.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn estimate_clutter_rank(&self, singular_values: &Array1<f64>) -> KwaversResult<usize> {
         // Compute total energy (sum of squared singular values)
         let total_energy: f64 = singular_values.iter().map(|&s| s * s).sum();
@@ -249,6 +270,7 @@ impl SvdClutterFilter {
     ///
     /// Power Doppler image (n_pixels,) where each value is the temporal
     /// variance of the filtered signal at that pixel
+    #[must_use] 
     pub fn compute_power_doppler(&self, filtered_data: &Array2<f64>) -> Array1<f64> {
         let (n_pixels, n_frames) = filtered_data.dim();
         let mut power_doppler = Array1::zeros(n_pixels);
@@ -277,6 +299,10 @@ impl SvdClutterFilter {
     }
 
     /// Get current configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn config(&self) -> &SvdClutterFilterConfig {
         &self.config
     }
@@ -288,6 +314,9 @@ impl SvdClutterFilter {
     /// # Returns
     ///
     /// SCR improvement in dB
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn estimate_scr_improvement(
         &self,
         original: &Array2<f64>,
@@ -295,7 +324,7 @@ impl SvdClutterFilter {
     ) -> KwaversResult<f64> {
         if original.dim() != filtered.dim() {
             return Err(KwaversError::InvalidInput(
-                "Original and filtered data must have same dimensions".to_string(),
+                "Original and filtered data must have same dimensions".to_owned(),
             ));
         }
 

@@ -84,13 +84,11 @@ impl NewmarkIntegrator {
         let dt2 = self.dt * self.dt;
 
         for i in 0..self.displacement.len() {
-            self.displacement[i] = self.displacement_prev[i]
-                + self.dt * self.velocity_prev[i]
-                + 0.5 * dt2 * acceleration[i];
+            self.displacement[i] = (0.5 * dt2).mul_add(acceleration[i], self.dt.mul_add(self.velocity_prev[i], self.displacement_prev[i]));
         }
 
         for i in 0..self.velocity.len() {
-            self.velocity[i] = self.velocity_prev[i] + self.dt * acceleration[i];
+            self.velocity[i] = self.dt.mul_add(acceleration[i], self.velocity_prev[i]);
         }
 
         self.acceleration.assign(acceleration);
@@ -125,8 +123,7 @@ impl NewmarkIntegrator {
 
         // Prediction formulas (assuming constant acceleration)
         for i in 0..self.displacement.len() {
-            displacement_pred[i] = self.displacement[i]
-                + self.dt * self.velocity[i]
+            displacement_pred[i] = self.dt.mul_add(self.velocity[i], self.displacement[i])
                 + dt2 * (0.5 - self.beta) * self.acceleration[i] / self.beta;
 
             velocity_pred[i] =
@@ -210,12 +207,12 @@ impl SemExplicitIntegrator {
                 let u0 = self.field[i];
                 let v0 = self.field_dot[i];
                 let a0 = rhs[i];
-                self.field_prev[i] = u0 - self.dt * v0 + 0.5 * dt2 * a0;
+                self.field_prev[i] = (0.5 * dt2).mul_add(a0, self.dt.mul_add(-v0, u0));
             }
         }
 
         for i in 0..self.field.len() {
-            let field_next = 2.0 * self.field[i] - self.field_prev[i] + dt2 * rhs[i];
+            let field_next = dt2.mul_add(rhs[i], 2.0f64.mul_add(self.field[i], -self.field_prev[i]));
             self.field_prev[i] = self.field[i];
             self.field[i] = field_next;
         }

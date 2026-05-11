@@ -20,6 +20,9 @@ impl ComplexLinearAlgebra {
     ///
     /// # Returns
     /// Complex solution vector x
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
     pub fn solve_linear_system_complex(
         a: &Array2<Complex<f64>>,
         b: &Array1<Complex<f64>>,
@@ -27,7 +30,7 @@ impl ComplexLinearAlgebra {
         let n = a.nrows();
         if a.ncols() != n || b.len() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
-                operation: "solve_linear_system_complex".to_string(),
+                operation: "solve_linear_system_complex".to_owned(),
                 expected: format!("{}×{} matrix and {} vector", n, n, n),
                 actual: format!("{}×{} matrix and {} vector", a.nrows(), a.ncols(), b.len()),
             }));
@@ -66,7 +69,7 @@ impl ComplexLinearAlgebra {
             // Check for singularity
             if a_copy[[i, i]].norm() < 1e-12 {
                 return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
-                    operation: "solve_linear_system_complex".to_string(),
+                    operation: "solve_linear_system_complex".to_owned(),
                     condition_number: f64::INFINITY,
                 }));
             }
@@ -105,13 +108,17 @@ impl ComplexLinearAlgebra {
     ///
     /// # Returns
     /// Complex inverse matrix
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn matrix_inverse_complex(
         matrix: &Array2<Complex<f64>>,
     ) -> KwaversResult<Array2<Complex<f64>>> {
         let n = matrix.nrows();
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
-                operation: "matrix_inverse_complex".to_string(),
+                operation: "matrix_inverse_complex".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
                 actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
             }));

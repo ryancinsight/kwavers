@@ -58,6 +58,6 @@ fn test_pulse_sequence() {
 
     assert_eq!(generator.total_duration(), 3.0 * 0.002);
 
-    let pulse = generator.get_current_pulse(0.0);
-    assert!(pulse.is_some());
+    let pulse = generator.get_current_pulse(0.0).unwrap();
+    assert!(pulse.amplitude > 0.0);
 }

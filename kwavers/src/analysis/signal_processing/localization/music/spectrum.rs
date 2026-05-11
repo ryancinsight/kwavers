@@ -12,6 +12,9 @@ impl MUSICProcessor {
     ///
     /// For each grid point θ, computes P(θ) = 1 / (a^H E_n E_n^H a).
     /// Sources correspond to peaks of P(θ) where a(θ) ⊥ E_n.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_pseudospectrum(
         &self,
         noise_eigenvectors: &Array2<Complex<f64>>,
@@ -63,9 +66,9 @@ impl MUSICProcessor {
         for ix in 0..nx {
             for iy in 0..ny {
                 for iz in 0..nz {
-                    let x = xmin + ix as f64 * dx;
-                    let y = ymin + iy as f64 * dy;
-                    let z = zmin + iz as f64 * dz;
+                    let x = (ix as f64).mul_add(dx, xmin);
+                    let y = (iy as f64).mul_add(dy, ymin);
+                    let z = (iz as f64).mul_add(dz, zmin);
 
                     let steering = Self::steering_vector(
                         [x, y, z],
@@ -151,7 +154,7 @@ impl MUSICProcessor {
                 let dx = position[0] - existing.position[0];
                 let dy = position[1] - existing.position[1];
                 let dz = position[2] - existing.position[2];
-                if (dx * dx + dy * dy + dz * dz).sqrt() < self.config.min_source_separation {
+                if dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt() < self.config.min_source_separation {
                     too_close = true;
                     break;
                 }
@@ -176,6 +179,9 @@ impl MUSICProcessor {
     ///
     /// Steps: covariance estimation → eigendecomposition → source number selection
     /// → noise subspace extraction → pseudospectrum → peak detection.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run(&self, snapshots: &Array2<Complex<f64>>) -> KwaversResult<MUSICResult> {
         let num_sensors = snapshots.nrows();
         let num_snapshots = snapshots.ncols();

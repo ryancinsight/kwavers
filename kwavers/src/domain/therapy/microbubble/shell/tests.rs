@@ -4,7 +4,7 @@ use super::state::ShellState;
 #[test]
 fn test_create_shell() {
     let shell = MarmottantShellProperties::new(1.0e-6, 1.0, 1.0e-9, 0.85, 1.6).unwrap();
-    assert!(shell.validate().is_ok());
+    shell.validate().unwrap();
     assert_eq!(shell.state, ShellState::Elastic);
     assert!(!shell.has_ruptured);
 }
@@ -12,7 +12,7 @@ fn test_create_shell() {
 #[test]
 fn test_sono_vue_shell() {
     let shell = MarmottantShellProperties::sono_vue(1.25e-6).unwrap();
-    assert!(shell.validate().is_ok());
+    shell.validate().unwrap();
     assert_eq!(shell.radius_equilibrium, 1.25e-6);
 }
 
@@ -105,6 +105,6 @@ fn test_surface_tension_derivative() {
 #[test]
 fn test_drug_delivery_shell() {
     let shell = MarmottantShellProperties::drug_delivery(2.0e-6).unwrap();
-    assert!(shell.validate().is_ok());
+    shell.validate().unwrap();
     assert!(shell.radius_rupture < 2.0e-6 * 1.5);
 }

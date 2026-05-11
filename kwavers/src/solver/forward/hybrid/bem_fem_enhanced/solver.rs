@@ -45,6 +45,7 @@ pub struct EnhancedBemFemSolver {
 
 impl EnhancedBemFemSolver {
     /// Create new enhanced solver.
+    #[must_use] 
     pub fn new(config: EnhancedBemFemConfig) -> Self {
         Self {
             config,
@@ -60,6 +61,12 @@ impl EnhancedBemFemSolver {
     /// 2. System is well-conditioned
     /// 3. Interface continuity satisfied
     /// 4. Solution converges with refinement
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn validate(&mut self, frequency: f64) -> KwaversResult<ValidationResult> {
         let start_time = std::time::Instant::now();
         self.validate_frequency(frequency)?;
@@ -106,6 +113,9 @@ impl EnhancedBemFemSolver {
     }
 
     /// Check for explicitly configured standard-BEM characteristic frequencies.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn check_spurious_resonance(&self, frequency: f64) -> KwaversResult<bool> {
         self.validate_frequency(frequency)?;
 
@@ -121,6 +131,9 @@ impl EnhancedBemFemSolver {
     }
 
     /// Estimate error on coupling interface at the current mesh level.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn estimate_interface_error_at_level(
         &self,
         frequency: f64,
@@ -140,6 +153,9 @@ impl EnhancedBemFemSolver {
     }
 
     /// Refine interface mesh at specified level.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn refine_interface(&mut self, frequency: f64, level: usize) -> KwaversResult<()> {
         let h = self.element_size_at_level(level);
         let estimated_error = self.estimate_interface_error_at_level(frequency, level)?;
@@ -160,11 +176,19 @@ impl EnhancedBemFemSolver {
     }
 
     /// Get interface quality metrics.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn interface_quality(&self) -> Option<&InterfaceQuality> {
         self.interface_quality.as_ref()
     }
 
     /// Get refinement history.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn refinement_history(&self) -> &[RefinementStep] {
         &self.refinement_history
     }
@@ -199,7 +223,7 @@ impl EnhancedBemFemSolver {
             || self.config.base_config.relaxation_factor > 1.0
         {
             return Err(KwaversError::InvalidInput(
-                "Invalid BEM-FEM coupling tolerances or relaxation factor".to_string(),
+                "Invalid BEM-FEM coupling tolerances or relaxation factor".to_owned(),
             ));
         }
         Ok(())

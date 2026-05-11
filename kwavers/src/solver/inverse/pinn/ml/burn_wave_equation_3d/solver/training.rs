@@ -43,6 +43,10 @@ impl<B: AutodiffBackend> BurnPINN3DWave<B> {
     ///     &device, 1000
     /// )?;
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn train(
         &mut self,
         x_data: &[f32],
@@ -143,11 +147,11 @@ impl<B: AutodiffBackend> BurnPINN3DWave<B> {
             )?;
 
             // Convert to f64 for metrics
-            let total_val = Self::scalar_f32(&total_loss)? as f64;
-            let data_val = Self::scalar_f32(&data_loss)? as f64;
-            let pde_val = Self::scalar_f32(&pde_loss)? as f64;
-            let bc_val = Self::scalar_f32(&bc_loss)? as f64;
-            let ic_val = Self::scalar_f32(&ic_loss)? as f64;
+            let total_val = Self::extract_scalar(&total_loss)? as f64;
+            let data_val = Self::extract_scalar(&data_loss)? as f64;
+            let pde_val = Self::extract_scalar(&pde_loss)? as f64;
+            let bc_val = Self::extract_scalar(&bc_loss)? as f64;
+            let ic_val = Self::extract_scalar(&ic_loss)? as f64;
 
             // Check for NaN/Inf - early stopping for numerical instability
             if !total_val.is_finite()

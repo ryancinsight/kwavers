@@ -1,4 +1,4 @@
-//! GPU Buffer Management
+﻿//! GPU Buffer Management
 //!
 //! Handles allocation, transfer, and lifecycle of GPU buffers.
 
@@ -75,6 +75,9 @@ impl BufferManager {
     }
 
     /// Return buffer to pool for reuse
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn return_buffer(&mut self, buffer: wgpu::Buffer, usage: wgpu::BufferUsages) {
         let size = buffer.size() as usize;
         let key = BufferKey {
@@ -86,6 +89,9 @@ impl BufferManager {
     }
 
     /// Create buffer from Array3<f64> data
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn create_buffer_from_array(
         &mut self,
         device: &wgpu::Device,
@@ -111,6 +117,9 @@ impl BufferManager {
     }
 
     /// Create buffer from Array3<f64> using queue write
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn write_array_to_buffer(
         &self,
         queue: &wgpu::Queue,
@@ -127,6 +136,12 @@ impl BufferManager {
     }
 
     /// Read buffer data into Array3<f64>
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub async fn read_buffer_to_array(
         &self,
         device: &wgpu::Device,
@@ -201,6 +216,9 @@ impl BufferManager {
     }
 
     /// Synchronous read (blocks on async)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn read_buffer_to_array_sync(
         &self,
         device: &wgpu::Device,

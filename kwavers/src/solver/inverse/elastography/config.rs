@@ -22,6 +22,7 @@ impl ShearWaveInversionConfig {
     /// # Arguments
     ///
     /// * `method` - Inversion algorithm to use
+    #[must_use] 
     pub fn new(method: InversionMethod) -> Self {
         Self {
             method,
@@ -35,6 +36,7 @@ impl ShearWaveInversionConfig {
     /// # Arguments
     ///
     /// * `density` - Tissue density in kg/m³
+    #[must_use] 
     pub fn with_density(mut self, density: f64) -> Self {
         self.density = density;
         self
@@ -45,6 +47,10 @@ impl ShearWaveInversionConfig {
     /// # Arguments
     ///
     /// * `frequency` - Frequency in Hz
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_frequency(mut self, frequency: f64) -> Self {
         self.frequency = frequency;
         self
@@ -55,6 +61,9 @@ impl ShearWaveInversionConfig {
     /// # Returns
     ///
     /// `Ok(())` if configuration is valid, `Err` with message otherwise
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> Result<(), String> {
         if self.density <= 0.0 {
             return Err(format!(
@@ -94,14 +103,14 @@ pub struct NonlinearInversionConfig {
     pub method: NonlinearInversionMethod,
     /// Tissue density (kg/m³)
     pub density: f64,
-    /// Compressional (acoustic) wave speed in tissue [m/s]
+    /// Compressional (acoustic) wave speed in tissue (m/s)
     pub acoustic_speed: f64,
-    /// Shear wave speed [m/s].  Used to compute shear modulus μ = ρ c_s².
+    /// Shear wave speed (m/s).  Used to compute shear modulus μ = ρ c_s².
     /// Typical values: liver 1–3 m/s, muscle 3–12 m/s (Nightingale 2011).
     pub shear_wave_speed: f64,
-    /// Shear wave excitation frequency [Hz] used for k_s = ω/c_s and second-harmonic accumulation.
+    /// Shear wave excitation frequency (Hz) used for k_s = ω/c_s and second-harmonic accumulation.
     pub excitation_frequency: f64,
-    /// Effective propagation distance over which second harmonics accumulate [m].
+    /// Effective propagation distance over which second harmonics accumulate (m).
     /// For focused ARFI/SWE this is typically the focal depth (0.02–0.10 m).
     pub propagation_distance: f64,
     /// Maximum iterations for iterative methods
@@ -116,6 +125,7 @@ impl NonlinearInversionConfig {
     /// # Arguments
     ///
     /// * `method` - Nonlinear inversion algorithm to use
+    #[must_use] 
     pub fn new(method: NonlinearInversionMethod) -> Self {
         Self {
             method,
@@ -134,7 +144,8 @@ impl NonlinearInversionConfig {
     /// # Arguments
     ///
     /// * `density`        - Tissue density [kg/m³]
-    /// * `acoustic_speed` - Compressional wave speed [m/s]
+    /// * `acoustic_speed` - Compressional wave speed (m/s)
+    #[must_use] 
     pub fn with_tissue_properties(mut self, density: f64, acoustic_speed: f64) -> Self {
         self.density = density;
         self.acoustic_speed = acoustic_speed;
@@ -145,9 +156,10 @@ impl NonlinearInversionConfig {
     ///
     /// # Arguments
     ///
-    /// * `shear_wave_speed`    - Shear wave speed [m/s]
-    /// * `excitation_frequency` - SWE push-pulse frequency [Hz]
-    /// * `propagation_distance` - Effective harmonic-accumulation depth [m]
+    /// * `shear_wave_speed`    - Shear wave speed (m/s)
+    /// * `excitation_frequency` - SWE push-pulse frequency (Hz)
+    /// * `propagation_distance` - Effective harmonic-accumulation depth (m)
+    #[must_use] 
     pub fn with_shear_properties(
         mut self,
         shear_wave_speed: f64,
@@ -166,6 +178,10 @@ impl NonlinearInversionConfig {
     ///
     /// * `max_iterations` - Maximum number of iterations
     /// * `tolerance` - Convergence tolerance
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_convergence(mut self, max_iterations: usize, tolerance: f64) -> Self {
         self.max_iterations = max_iterations;
         self.tolerance = tolerance;
@@ -177,6 +193,9 @@ impl NonlinearInversionConfig {
     /// # Returns
     ///
     /// `Ok(())` if configuration is valid, `Err` with message otherwise
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> Result<(), String> {
         if self.density <= 0.0 {
             return Err(format!(
@@ -207,7 +226,7 @@ impl NonlinearInversionConfig {
         }
 
         if self.max_iterations == 0 {
-            return Err("Max iterations must be at least 1".to_string());
+            return Err("Max iterations must be at least 1".to_owned());
         }
 
         if self.tolerance <= 0.0 {
@@ -253,7 +272,7 @@ mod tests {
     #[test]
     fn test_shear_wave_config_validation() {
         let config = ShearWaveInversionConfig::default();
-        assert!(config.validate().is_ok());
+        config.validate().unwrap();
 
         let invalid_config =
             ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_density(-100.0);
@@ -296,7 +315,7 @@ mod tests {
     #[test]
     fn test_nonlinear_config_validation() {
         let config = NonlinearInversionConfig::default();
-        assert!(config.validate().is_ok());
+        config.validate().unwrap();
 
         let invalid_density =
             NonlinearInversionConfig::default().with_tissue_properties(-100.0, 1540.0);
@@ -332,7 +351,7 @@ mod tests {
             InversionMethod::DirectionalPhaseGradient,
         ] {
             let config = ShearWaveInversionConfig::new(method);
-            assert!(config.validate().is_ok());
+            config.validate().unwrap();
         }
     }
 
@@ -344,7 +363,7 @@ mod tests {
             NonlinearInversionMethod::BayesianInversion,
         ] {
             let config = NonlinearInversionConfig::new(method);
-            assert!(config.validate().is_ok());
+            config.validate().unwrap();
         }
     }
 }

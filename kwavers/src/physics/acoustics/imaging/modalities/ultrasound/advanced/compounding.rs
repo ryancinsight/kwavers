@@ -10,29 +10,17 @@
 //!
 //! - Montaldo et al. (2009), "Coherent plane-wave compounding"
 
-use super::plane_wave::PlaneWaveConfig;
 use ndarray::{Array2, Array3};
 
 /// Multi-angle plane wave compounding
 #[derive(Debug)]
-pub struct PlaneWaveCompounding {
-    #[allow(dead_code)]
-    configs: Vec<PlaneWaveConfig>,
-}
+pub struct PlaneWaveCompounding {}
 
 impl PlaneWaveCompounding {
     /// Create new compounding processor
     #[must_use]
-    pub fn new(angles: &[f64], base_config: PlaneWaveConfig) -> Self {
-        let configs = angles
-            .iter()
-            .map(|&angle| PlaneWaveConfig {
-                tx_angle: angle,
-                ..base_config.clone()
-            })
-            .collect();
-
-        Self { configs }
+    pub fn new(_angles: &[f64], _base_config: super::plane_wave::PlaneWaveConfig) -> Self {
+        Self {}
     }
 
     /// Compound multiple plane wave images

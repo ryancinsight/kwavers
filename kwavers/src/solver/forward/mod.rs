@@ -3,6 +3,45 @@
 //! Solvers for forward problems (wave propagation, heat diffusion, etc.) that
 //! simulate physical phenomena from causes to effects.
 //!
+//! # Canonical solver matrix
+//!
+//! | Domain                      | Spatial scheme        | Time scheme         | Canonical orchestrator                                                                                            |
+//! |-----------------------------|-----------------------|---------------------|-------------------------------------------------------------------------------------------------------------------|
+//! | Acoustic fluid (μ = 0)      | Pseudospectral (FFT)  | k-space corrected   | [`pstd::PSTDSolver`]                                                                                              |
+//! | Acoustic fluid (μ = 0)      | 4th-order FD          | Leapfrog            | [`fdtd::GenericFdtdSolver`]                                                                                       |
+//! | Acoustic fluid (μ = 0)      | Pseudospectral (GPU)  | k-space corrected   | [`pstd::gpu_pstd::GpuPstdSolver`]                                                                                 |
+//! | Elastic isotropic (μ ≥ 0)   | Pseudospectral (FFT)  | k-space corrected   | [`pstd::PSTDSolver`] **+ [`pstd::extensions::PstdElasticPlugin`]** — μ = 0 reduces to baseline acoustic PSTD      |
+//! | Elastic isotropic (μ ≥ 0)   | 4th-order FD coll.    | Velocity-Verlet     | [`elastic::swe::ElasticWaveSolver`]                                                                               |
+//! | Elastic nonlinear           | 4th-order FD          | RK / IMEX           | [`elastic::nonlinear::NonlinearElasticWaveSolver`]                                                                |
+//! | Poroelastic                 | FD                    | Leapfrog            | [`poroelastic`]                                                                                                   |
+//! | Spectral-element            | High-order            | Various             | [`sem`]                                                                                                           |
+//! | Helmholtz / Born series     | Spectral              | Stationary          | [`helmholtz::born_series`]                                                                                        |
+//! | BEM                         | Boundary integral     | —                   | [`bem::BemSolver`]                                                                                                |
+//! | Pennes bioheat              | 2nd / 4th-order FD    | Forward Euler       | [`thermal_diffusion::ThermalDiffusionSolver`]                                                                     |
+//! | Optical (RTE / diffusion)   | FD / Monte Carlo      | Stationary          | [`optical`]                                                                                                       |
+//!
+//! # Architecture: elastic-as-PSTD-plugin
+//!
+//! Pseudospectral acoustic and pseudospectral elastic share the same FFT
+//! kernel; only the stress tensor differs (acoustic = isotropic pressure;
+//! elastic = full λ/μ stress). [`pstd::extensions::PstdElasticPlugin`]
+//! exposes the spectral elastic stress and velocity primitives so that
+//! [`pstd::PSTDSolver`] can be extended in place rather than duplicated.
+//!
+//! With `μ ≡ 0` the plugin's `apply_stress_update_in_place` reduces
+//! mathematically to the baseline acoustic stress update (the shear pass
+//! constant-folds to zero — see the theorem on
+//! [`pstd::extensions::elastic`]); the elastic plugin therefore strictly
+//! generalises rather than competes with the acoustic path.
+//!
+//! Prior to consolidation, two pseudospectral wave steppers existed in
+//! parallel: [`pstd::PSTDSolver`] (acoustic) and a duplicate
+//! `solver::forward::elastic_wave::ElasticWave::update_wave` (an
+//! `AcousticWaveModel` impl that hard-coded `μ = 0`). The duplicate plus its
+//! wrapping `ElasticWavePlugin` and the `PhysicsModelType::MechanicalStress`
+//! factory variant have been deleted; the genuinely useful spectral
+//! primitives now live under [`pstd::extensions`].
+//!
 //! ## Module organisation
 //!
 //! Two coexisting layouts (per ADR 005):
@@ -29,7 +68,6 @@ pub mod bem;
 pub mod bubble_dynamics;
 pub mod coupled;
 pub mod elastic;
-pub mod elastic_wave;
 pub mod fdtd;
 pub mod helmholtz;
 pub mod hybrid;
@@ -65,7 +103,6 @@ pub mod acoustic_solvers {
 /// the spectral-element method.
 pub mod elastic_solvers {
     pub use super::elastic;
-    pub use super::elastic_wave;
     pub use super::poroelastic;
     pub use super::sem;
 }
@@ -144,46 +181,52 @@ mod path_equivalence_tests {
     #[test]
     fn fdtd_solver_path_equivalence() {
         // If both paths name the same type, this assignment compiles.
-        let _: fn(crate::solver::forward::fdtd::FdtdSolver)
-            -> crate::solver::forward::acoustic_solvers::fdtd::FdtdSolver = std::convert::identity;
+        let _: fn(
+            crate::solver::forward::fdtd::FdtdSolver,
+        ) -> crate::solver::forward::acoustic_solvers::fdtd::FdtdSolver = std::convert::identity;
     }
 
     #[test]
     fn pstd_solver_path_equivalence() {
-        let _: fn(crate::solver::forward::pstd::PSTDSolver)
-            -> crate::solver::forward::acoustic_solvers::pstd::PSTDSolver = std::convert::identity;
+        let _: fn(
+            crate::solver::forward::pstd::PSTDSolver,
+        ) -> crate::solver::forward::acoustic_solvers::pstd::PSTDSolver = std::convert::identity;
     }
 
     #[test]
     fn bem_solver_path_equivalence() {
-        let _: fn(crate::solver::forward::bem::BemSolver)
-            -> crate::solver::forward::boundary_element::bem::BemSolver = std::convert::identity;
+        let _: fn(
+            crate::solver::forward::bem::BemSolver,
+        ) -> crate::solver::forward::boundary_element::bem::BemSolver = std::convert::identity;
     }
 
     #[test]
     fn pennes_solver_path_equivalence() {
-        let _: fn(crate::solver::forward::thermal::PennesSolver)
-            -> crate::solver::forward::thermal_solvers::thermal::PennesSolver =
+        let _: fn(
+            crate::solver::forward::thermal::PennesSolver,
+        ) -> crate::solver::forward::thermal_solvers::thermal::PennesSolver =
             std::convert::identity;
     }
 
     #[test]
     fn imex_integrator_path_equivalence() {
-        let _: fn(crate::solver::forward::imex::IMEXIntegrator)
-            -> crate::solver::forward::ode_methods::imex::IMEXIntegrator = std::convert::identity;
+        let _: fn(
+            crate::solver::forward::imex::IMEXIntegrator,
+        ) -> crate::solver::forward::ode_methods::imex::IMEXIntegrator = std::convert::identity;
     }
 
     #[test]
     fn plugin_based_solver_path_equivalence() {
-        let _: fn(crate::solver::forward::plugin_based::PluginBasedSolver)
-            -> crate::solver::forward::plugin::plugin_based::PluginBasedSolver =
+        let _: fn(
+            crate::solver::forward::plugin_based::PluginBasedSolver,
+        ) -> crate::solver::forward::plugin::plugin_based::PluginBasedSolver =
             std::convert::identity;
     }
 
     #[test]
     fn elastic_solvers_module_resolves() {
-        // Confirms `elastic_solvers::elastic_wave` and the flat path resolve
-        // to the same module by exercising a struct re-exported from each.
+        // Confirms `elastic_solvers::elastic` and the flat path resolve to the
+        // same module by exercising a struct re-exported from each.
         let _: fn(crate::solver::forward::elastic::nonlinear::HyperelasticModel)
             -> crate::solver::forward::elastic_solvers::elastic::nonlinear::HyperelasticModel =
             std::convert::identity;
@@ -191,17 +234,18 @@ mod path_equivalence_tests {
 
     #[test]
     fn optical_solvers_module_resolves() {
-        let _: fn(crate::solver::forward::optical::DiffusionSolver)
-            -> crate::solver::forward::optical_solvers::optical::DiffusionSolver =
+        let _: fn(
+            crate::solver::forward::optical::DiffusionSolver,
+        ) -> crate::solver::forward::optical_solvers::optical::DiffusionSolver =
             std::convert::identity;
     }
 
     #[test]
     fn hybrid_models_module_resolves() {
         // `hybrid::HybridSolver` must be reachable via the grouped path.
-        let _: fn(crate::solver::forward::hybrid::HybridSolver)
-            -> crate::solver::forward::hybrid_models::hybrid::HybridSolver =
-            std::convert::identity;
+        let _: fn(
+            crate::solver::forward::hybrid::HybridSolver,
+        ) -> crate::solver::forward::hybrid_models::hybrid::HybridSolver = std::convert::identity;
     }
 
     #[test]

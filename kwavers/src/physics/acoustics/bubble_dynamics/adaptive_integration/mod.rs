@@ -31,6 +31,9 @@ use super::BubbleState;
 use crate::core::error::KwaversResult;
 
 /// Replace the old fixed-timestep integration with adaptive version
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn integrate_bubble_dynamics_adaptive(
     solver: &KellerMiksisModel,
     state: &mut BubbleState,

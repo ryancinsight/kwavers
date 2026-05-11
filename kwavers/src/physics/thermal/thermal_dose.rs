@@ -39,7 +39,7 @@ impl ThermalDose {
 
         Zip::from(&mut self.dose)
             .and(temperature)
-            .for_each(|dose, &temp| {
+            .par_for_each(|dose, &temp| {
                 // CEM43 formula: t_eq = t * R^(43-T)
                 // where R = 0.5 for T > 43°C, R = 0.25 for T < 43°C
                 let r = if temp >= self.reference_temp {

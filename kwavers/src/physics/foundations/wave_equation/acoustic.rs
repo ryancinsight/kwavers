@@ -12,11 +12,11 @@ use ndarray::ArrayD;
 /// ```
 ///
 /// where:
-/// - p(x,t) is acoustic pressure [Pa]
-/// - c(x) is sound speed [m/s]
+/// - p(x,t) is acoustic pressure (Pa)
+/// - c(x) is sound speed (m/s)
 /// - f(x,t) is acoustic source [Pa/s²]
 pub trait AcousticWaveEquation: WaveEquation {
-    /// Get sound speed field c(x) [m/s]
+    /// Get sound speed field c(x) (m/s)
     fn sound_speed(&self) -> ArrayD<f64>;
 
     /// Get density field ρ(x) [kg/m³]

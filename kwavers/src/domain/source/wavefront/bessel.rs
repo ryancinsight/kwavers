@@ -37,7 +37,7 @@ impl Default for BesselConfig {
     fn default() -> Self {
         let wavelength = 1.5e-3_f64; // 1mm wavelength
         let radial_wavenumber = 1000.0_f64; // k_r = 1000 rad/m
-        let axial_wavenumber = ((2.0 * PI / wavelength).powi(2) - radial_wavenumber.powi(2)).sqrt();
+        let axial_wavenumber = radial_wavenumber.mul_add(-radial_wavenumber, (2.0 * PI / wavelength).powi(2)).sqrt();
 
         Self {
             center: (0.0, 0.0, 0.0),
@@ -57,20 +57,12 @@ impl Default for BesselConfig {
 pub struct BesselSource {
     config: BesselConfig,
     signal: Arc<dyn Signal>,
-    #[allow(dead_code)]
-    wave_number: f64,
 }
 
 impl BesselSource {
     /// Create a new Bessel beam source
     pub fn new(config: BesselConfig, signal: Arc<dyn Signal>) -> Self {
-        let wave_number = 2.0 * PI / config.wavelength;
-
-        Self {
-            config,
-            signal,
-            wave_number,
-        }
+        Self { config, signal }
     }
 
     /// Create a Bessel source with default configuration
@@ -79,16 +71,19 @@ impl BesselSource {
     }
 
     /// Get the radial wave number (k_r)
+    #[must_use] 
     pub fn radial_wavenumber(&self) -> f64 {
         self.config.radial_wavenumber
     }
 
     /// Get the axial wave number (k_z)
+    #[must_use] 
     pub fn axial_wavenumber(&self) -> f64 {
         self.config.axial_wavenumber
     }
 
     /// Get the Bessel function order
+    #[must_use] 
     pub fn order(&self) -> usize {
         self.config.order
     }
@@ -102,9 +97,8 @@ impl BesselSource {
         if r == 0.0 {
             if n == 0 {
                 return 1.0; // J0(0) = 1
-            } else {
-                return 0.0; // Jn(0) = 0 for n > 0
             }
+            return 0.0; // Jn(0) = 0 for n > 0
         }
 
         let x = self.config.radial_wavenumber * r;
@@ -135,15 +129,15 @@ impl BesselSource {
         let radial_distance = match self.config.direction {
             (_nx, _ny, nz) if nz.abs() > 0.5 => {
                 // Mainly z-propagation: use x-y plane
-                (dx.powi(2) + dy.powi(2)).sqrt()
+                dx.hypot(dy)
             }
             (_nx, ny, _nz) if ny.abs() > 0.5 => {
                 // Mainly y-propagation: use x-z plane
-                (dx.powi(2) + dz.powi(2)).sqrt()
+                dx.hypot(dz)
             }
             _ => {
                 // Mainly x-propagation: use y-z plane
-                (dy.powi(2) + dz.powi(2)).sqrt()
+                dy.hypot(dz)
             }
         };
 
@@ -158,7 +152,7 @@ impl BesselSource {
         let bessel_value = self.bessel_j(self.config.order, radial_distance);
 
         // Phase term
-        let phase_term = self.config.axial_wavenumber * z_dist + self.config.phase;
+        let phase_term = self.config.axial_wavenumber.mul_add(z_dist, self.config.phase);
 
         // Total amplitude
         bessel_value * phase_term.cos()
@@ -220,46 +214,54 @@ pub struct BesselBuilder {
 }
 
 impl BesselBuilder {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use] 
     pub fn center(mut self, center: (f64, f64, f64)) -> Self {
         self.config.center = center;
         self
     }
 
+    #[must_use] 
     pub fn direction(mut self, direction: (f64, f64, f64)) -> Self {
         self.config.direction = direction;
         self
     }
 
+    #[must_use] 
     pub fn wavelength(mut self, wavelength: f64) -> Self {
         self.config.wavelength = wavelength;
         // Recalculate axial wave number when wavelength changes
         self.config.axial_wavenumber =
-            ((2.0 * PI / wavelength).powi(2) - self.config.radial_wavenumber.powi(2)).sqrt();
+            self.config.radial_wavenumber.mul_add(-self.config.radial_wavenumber, (2.0 * PI / wavelength).powi(2)).sqrt();
         self
     }
 
+    #[must_use] 
     pub fn radial_wavenumber(mut self, radial_wavenumber: f64) -> Self {
         self.config.radial_wavenumber = radial_wavenumber;
         // Recalculate axial wave number when radial wave number changes
         self.config.axial_wavenumber =
-            ((2.0 * PI / self.config.wavelength).powi(2) - radial_wavenumber.powi(2)).sqrt();
+            radial_wavenumber.mul_add(-radial_wavenumber, (2.0 * PI / self.config.wavelength).powi(2)).sqrt();
         self
     }
 
+    #[must_use] 
     pub fn order(mut self, order: usize) -> Self {
         self.config.order = order;
         self
     }
 
+    #[must_use] 
     pub fn source_type(mut self, source_type: SourceField) -> Self {
         self.config.source_type = source_type;
         self
     }
 
+    #[must_use] 
     pub fn phase(mut self, phase: f64) -> Self {
         self.config.phase = phase;
         self

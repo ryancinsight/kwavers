@@ -9,11 +9,18 @@ pub struct SpatialSmoothing {
 }
 
 impl SpatialSmoothing {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(subarray_size: usize) -> Self {
         Self { subarray_size }
     }
-
+    /// Apply.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply(&self, covariance: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let n = covariance.nrows();
 
@@ -30,7 +37,7 @@ impl SpatialSmoothing {
             smoothed += &sub_cov;
         }
 
-        smoothed.mapv_inplace(|x| x / num_subarrays as f64);
+        smoothed.par_mapv_inplace(|x| x / num_subarrays as f64);
         Ok(smoothed)
     }
 }
@@ -42,17 +49,24 @@ pub struct SpatialSmoothingComplex {
 }
 
 impl SpatialSmoothingComplex {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(subarray_size: usize) -> Self {
         Self { subarray_size }
     }
 
     /// Apply spatial smoothing: `R_smooth = (1/L) ∑ R[start..start+p, start..start+p]`.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn apply(&self, covariance: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
         let n = covariance.nrows();
         if covariance.ncols() != n {
             return Err(KwaversError::InvalidInput(
-                "SpatialSmoothingComplex::apply: covariance must be square".to_string(),
+                "SpatialSmoothingComplex::apply: covariance must be square".to_owned(),
             ));
         }
 
@@ -61,7 +75,7 @@ impl SpatialSmoothingComplex {
         }
         if self.subarray_size == 0 {
             return Err(KwaversError::InvalidInput(
-                "SpatialSmoothingComplex::apply: subarray_size must be >= 1".to_string(),
+                "SpatialSmoothingComplex::apply: subarray_size must be >= 1".to_owned(),
             ));
         }
 
@@ -75,7 +89,7 @@ impl SpatialSmoothingComplex {
         }
 
         let inv = 1.0 / (num_subarrays as f64);
-        smoothed.mapv_inplace(|v| v * inv);
+        smoothed.par_mapv_inplace(|v| v * inv);
         Ok(smoothed)
     }
 }

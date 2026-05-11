@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_batch_config_validation() {
     let valid = BatchFieldConfig::for_3d_fields(10, 10, 10, 4);
-    assert!(valid.validate().is_ok());
+    valid.validate().unwrap();
 
     let invalid_zero_elems = BatchFieldConfig {
         field_elements: 0,

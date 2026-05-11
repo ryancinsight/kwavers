@@ -38,6 +38,9 @@ impl Default for IMEXConfig {
 /// Trait for IMEX time integration schemes
 pub trait IMEXScheme: Debug + Send + Sync {
     /// Perform one time step
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn step<F, G>(
         &self,
         field: &Array3<f64>,
@@ -63,15 +66,24 @@ pub trait IMEXScheme: Debug + Send + Sync {
     fn is_l_stable(&self) -> bool;
 
     /// Adjust parameters for stiff problems
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn adjust_for_stiffness(&mut self, stiffness_ratio: f64);
 
     /// Get stability function
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn stability_function(&self, z: f64) -> f64;
 }
 
 /// Trait for operator splitting strategies
 pub trait OperatorSplitting: Debug + Send + Sync {
     /// Split and advance the solution
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn split_step<F, G>(
         &self,
         field: &Array3<f64>,
@@ -84,15 +96,24 @@ pub trait OperatorSplitting: Debug + Send + Sync {
         G: Fn(&Array3<f64>, f64) -> KwaversResult<Array3<f64>>;
 
     /// Get the order of the splitting
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn order(&self) -> usize;
 
     /// Get the name of the splitting method
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn name(&self) -> &str;
 }
 
 /// Trait for stiffness indicators
 pub trait StiffnessIndicator: Debug + Send + Sync {
     /// Compute stiffness indicator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute<F, G>(
         &self,
         field: &Array3<f64>,

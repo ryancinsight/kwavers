@@ -12,6 +12,9 @@ pub struct SimdOptimizer {
 
 impl SimdOptimizer {
     /// Create a new SIMD optimizer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(level: SimdLevel) -> Self {
         Self {
@@ -21,6 +24,9 @@ impl SimdOptimizer {
     }
 
     /// Apply SIMD optimizations
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_optimizations(&self) -> KwaversResult<()> {
         // SIMD optimizations are applied at compile time through
         // architecture-specific code paths
@@ -33,6 +39,9 @@ impl SimdOptimizer {
     }
 
     /// Vectorized dot product using SIMD
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn dot_product(&self, a: &[f64], b: &[f64]) -> f64 {
         assert_eq!(a.len(), b.len());
@@ -77,6 +86,9 @@ impl SimdOptimizer {
     }
 
     /// Vectorized array addition
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn add_arrays(&self, a: &mut [f64], b: &[f64]) {
         assert_eq!(a.len(), b.len());
 

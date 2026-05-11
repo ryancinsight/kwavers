@@ -54,24 +54,28 @@ impl StencilKernel {
     }
 }
 
-/// Main optimization orchestrator
+/// Main optimization orchestrator.
+///
+/// `ParallelOptimizer` is re-exported from the `parallel` sub-module and can be
+/// used independently; it is not stored as a field here until the parallel
+/// dispatch strategy is wired into `apply_optimizations`.
 #[derive(Debug)]
 pub struct PerformanceOptimizer {
     config: OptimizationConfig,
     simd: SimdOptimizer,
     cache: CacheOptimizer,
-    #[allow(dead_code)] // Used for parallel optimization strategies
-    parallel: ParallelOptimizer,
     memory: MemoryOptimizer,
     gpu: Option<GpuOptimizer>,
 }
 
 impl PerformanceOptimizer {
     /// Create a new optimizer with the given configuration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: OptimizationConfig) -> KwaversResult<Self> {
         let simd = SimdOptimizer::new(config.simd_level);
         let cache = CacheOptimizer::new(config.cache_block_size);
-        let parallel = ParallelOptimizer::new();
         let memory = MemoryOptimizer::new(config.prefetch_distance);
 
         let gpu = if config.multi_gpu || config.kernel_fusion {
@@ -84,13 +88,15 @@ impl PerformanceOptimizer {
             config,
             simd,
             cache,
-            parallel,
             memory,
             gpu,
         })
     }
 
     /// Apply all optimizations based on configuration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn optimize(&self) -> KwaversResult<()> {
         if self.config.enable_simd {
             self.simd.apply_optimizations()?;

@@ -27,7 +27,7 @@ impl ClinicalEvidence {
         Self {
             ref_id: ref_id.into(),
             title: title.into(),
-            study_type: "Clinical Trial".to_string(),
+            study_type: "Clinical Trial".to_owned(),
             subject_count: 0,
             duration_days: 0,
             primary_outcome: String::new(),
@@ -43,26 +43,35 @@ impl ClinicalEvidence {
     }
 
     /// Add key finding
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_finding(&mut self, finding: impl Into<String>) {
         self.key_findings.push(finding.into());
     }
 
     /// Add adverse event
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_adverse_event(&mut self, event: impl Into<String>) {
         self.adverse_events.push(event.into());
     }
 
     /// Validate clinical evidence
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.subject_count == 0 {
             return Err(KwaversError::InvalidInput(
-                "Subject count must be greater than zero".to_string(),
+                "Subject count must be greater than zero".to_owned(),
             ));
         }
 
         if self.primary_outcome.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Primary outcome must be specified".to_string(),
+                "Primary outcome must be specified".to_owned(),
             ));
         }
 

@@ -17,6 +17,9 @@ pub struct ThermalOpticalSolver {
 
 impl ThermalOpticalSolver {
     /// Create a new thermal-optical solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: Grid, absorption_coefficient: f64) -> Self {
         Self {
             absorption_coefficient,
@@ -25,6 +28,9 @@ impl ThermalOpticalSolver {
     }
 
     /// Couple optical intensity to temperature
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn couple_fields(
         &self,
         intensity: &Array3<f64>,

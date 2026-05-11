@@ -28,31 +28,22 @@ pub enum InterpolationScheme {
 #[derive(Debug)]
 pub struct InterpolationManager {
     pub(super) scheme: InterpolationScheme,
-    pub(super) adaptive_criteria: Option<AdaptiveInterpolationCriteria>,
-}
-
-/// Criteria for adaptive interpolation
-#[derive(Debug)]
-pub(super) struct AdaptiveInterpolationCriteria {
-    #[allow(dead_code)]
-    pub(super) gradient_threshold: f64,
-    #[allow(dead_code)]
-    pub(super) smoothness_threshold: f64,
-    #[allow(dead_code)]
-    pub(super) frequency_cutoff: f64,
 }
 
 impl InterpolationManager {
     /// Create a new interpolation manager
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(scheme: InterpolationScheme) -> Self {
-        Self {
-            scheme,
-            adaptive_criteria: None,
-        }
+        Self { scheme }
     }
 
     /// Interpolate fields from source to target grid
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn interpolate(
         &self,
         source_field: &Array3<f64>,

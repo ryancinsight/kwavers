@@ -90,6 +90,9 @@ impl PluginBasedSolver {
     }
 
     /// Add a physics plugin
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> KwaversResult<()> {
         // Register required fields
         for field in plugin.required_fields() {
@@ -101,6 +104,9 @@ impl PluginBasedSolver {
     }
 
     /// Add an acoustic source
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_source(&mut self, source: Box<dyn Source>) -> KwaversResult<()> {
         let required_field = match source.source_type() {
             SourceField::Pressure => UnifiedFieldType::Pressure,
@@ -117,11 +123,17 @@ impl PluginBasedSolver {
     }
 
     /// Set the recorder
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_recorder(&mut self, recorder: Box<dyn RecorderTrait>) {
         self.recorder = Some(recorder);
     }
 
     /// Initialize the solver
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn initialize(&mut self) -> KwaversResult<()> {
         info!("Initializing plugin-based solver");
 
@@ -170,12 +182,18 @@ impl PluginBasedSolver {
     }
 
     /// Run the simulation for a specified duration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn run_for_duration(&mut self, duration: f64) -> KwaversResult<()> {
         let steps = (duration / self.time.dt) as usize;
         self.run_for_steps(steps)
     }
 
     /// Run the simulation for a specified number of steps
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_for_steps(&mut self, steps: usize) -> KwaversResult<()> {
         info!("Running simulation for {} steps", steps);
 
@@ -203,6 +221,9 @@ impl PluginBasedSolver {
     }
 
     /// Perform a single time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(&mut self) -> KwaversResult<()> {
         let t = self.current_step as f64 * self.time.dt;
 

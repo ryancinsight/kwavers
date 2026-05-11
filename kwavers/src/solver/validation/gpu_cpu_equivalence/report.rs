@@ -127,6 +127,9 @@ mod tests {
     use super::*;
 
     /// Test validation report passed() method
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_equivalence_report_passed() {
         let pass_report = EquivalenceReport {
@@ -151,6 +154,9 @@ mod tests {
     }
 
     /// Test report display formatting
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_equivalence_report_display() {
         let report = EquivalenceReport {
@@ -171,6 +177,9 @@ mod tests {
     }
 
     /// Test divergent fraction calculation
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_divergent_fraction() {
         let mut report = EquivalenceReport::new(1e-12, 1000);
@@ -181,6 +190,9 @@ mod tests {
     }
 
     /// Test empty report divergent fraction
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_divergent_fraction_empty() {
         let report = EquivalenceReport::new(1e-12, 0);

@@ -29,11 +29,19 @@ pub struct PlaneWave {
 
 impl PlaneWave {
     /// Create a new plane wave processor.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: PlaneWaveConfig) -> Self {
         Self { config }
     }
 
     /// Create with standard functional ultrasound settings (11 angles, −10° to +10°).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn functional_ultrasound(element_positions: Vec<f64>) -> Self {
         Self::new(PlaneWaveConfig {
             element_positions,
@@ -44,6 +52,9 @@ impl PlaneWave {
     /// Compute transmission delays: `τ_tx(x, θ) = -x·sin(θ) / c`.
     ///
     /// Returns one delay per element.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn transmission_delays(&self, tilt_angle: f64) -> KwaversResult<Array1<f64>> {
         self.require_elements()?;
         let c = self.config.sound_speed;
@@ -60,6 +71,9 @@ impl PlaneWave {
     /// Compute reception delays: `τ_rx(x_elem, y, θ) = ((x_elem−x)·sin(θ) + y·cos(θ)) / c`.
     ///
     /// Returns one delay per element.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn reception_delays(&self, x: f64, y: f64, tilt_angle: f64) -> KwaversResult<Array1<f64>> {
         self.require_elements()?;
         let c = self.config.sound_speed;
@@ -69,7 +83,7 @@ impl PlaneWave {
             .config
             .element_positions
             .iter()
-            .map(|&x_elem| ((x_elem - x) * sin_theta + y * cos_theta) / c)
+            .map(|&x_elem| (x_elem - x).mul_add(sin_theta, y * cos_theta) / c)
             .collect();
         Ok(Array1::from_vec(delays))
     }
@@ -77,6 +91,9 @@ impl PlaneWave {
     /// Compute total beamforming delays: `τ = (2·x_elem·sin(θ) + y·cos(θ)) / c`.
     ///
     /// Returns one delay per element.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn beamforming_delays(
         &self,
         _x: f64,
@@ -91,7 +108,7 @@ impl PlaneWave {
             .config
             .element_positions
             .iter()
-            .map(|&x_elem| (2.0 * x_elem * sin_theta + y * cos_theta) / c)
+            .map(|&x_elem| (2.0 * x_elem).mul_add(sin_theta, y * cos_theta) / c)
             .collect();
         Ok(Array1::from_vec(delays))
     }
@@ -99,6 +116,9 @@ impl PlaneWave {
     /// Compute delay surface for an image grid.
     ///
     /// Returns `[N_elements × N_pixels]` delay matrix (seconds).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn delay_surface(
         &self,
         x_pixels: &Array1<f64>,
@@ -114,10 +134,10 @@ impl PlaneWave {
         let cos_theta = tilt_angle.cos();
 
         let mut pixel_idx = 0;
-        for &y in y_pixels.iter() {
-            for _x in x_pixels.iter() {
+        for &y in y_pixels {
+            for _x in x_pixels {
                 for (elem_idx, &x_elem) in self.config.element_positions.iter().enumerate() {
-                    delays[[elem_idx, pixel_idx]] = (2.0 * x_elem * sin_theta + y * cos_theta) / c;
+                    delays[[elem_idx, pixel_idx]] = (2.0 * x_elem).mul_add(sin_theta, y * cos_theta) / c;
                 }
                 pixel_idx += 1;
             }
@@ -129,6 +149,9 @@ impl PlaneWave {
     /// Compute F-number dependent Hann apodization weights.
     ///
     /// Active aperture width: `D = |y| / F#`; weight is Hann-windowed within `D/2`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apodization_weights(&self, x: f64, y: f64) -> KwaversResult<Array1<f64>> {
         let f_number = self.config.f_number.unwrap_or(1.5);
         let half_aperture = y.abs() / (2.0 * f_number);
@@ -152,20 +175,29 @@ impl PlaneWave {
     }
 
     /// Number of compounding angles.
+    #[must_use] 
     pub fn num_angles(&self) -> usize {
         self.config.tilt_angles.len()
     }
 
     /// Tilt angles converted to degrees.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn angles_degrees(&self) -> Vec<f64> {
         self.config
             .tilt_angles
             .iter()
-            .map(|&theta| theta * 180.0 / PI)
+            .map(|&theta| theta.to_degrees())
             .collect()
     }
 
     /// Compounded frame rate: `PRF / N_angles`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn compounded_frame_rate(&self, prf: f64) -> f64 {
         prf / self.num_angles() as f64
     }
@@ -173,7 +205,7 @@ impl PlaneWave {
     fn require_elements(&self) -> KwaversResult<()> {
         if self.config.element_positions.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Element positions not set".to_string(),
+                "Element positions not set".to_owned(),
             ));
         }
         Ok(())

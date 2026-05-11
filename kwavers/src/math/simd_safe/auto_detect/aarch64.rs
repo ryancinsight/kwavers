@@ -26,6 +26,9 @@ pub mod neon {
     /// Add two arrays element-wise: `out[i] = a[i] + b[i]`.
     ///
     /// LLVM autovectorises this loop to `FADD Vn.2D` on `-C target-cpu=native`.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[inline]
     pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         debug_assert_eq!(a.shape(), b.shape());
@@ -41,7 +44,7 @@ pub mod neon {
     /// LLVM autovectorises to `FMUL Vn.2D` on `-C target-cpu=native`.
     #[inline]
     pub fn scale_array(array: &mut Array3<f64>, scalar: f64) {
-        array.mapv_inplace(|x| x * scalar);
+        array.par_mapv_inplace(|x| x * scalar);
     }
 
     /// Fused multiply-add in place: `c[i] += multiplier * a[i] * b[i]`.
@@ -51,6 +54,9 @@ pub mod neon {
     /// # Semantic note
     ///
     /// Matches the x86_64 `fma_arrays` contract: `c` is accumulated, not overwritten.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[inline]
     pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multiplier: f64) {
         debug_assert_eq!(a.shape(), b.shape());

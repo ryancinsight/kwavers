@@ -18,9 +18,15 @@ pub struct TestResult {
 /// Trait for validation test cases
 pub trait ValidationTestCase {
     /// Test name
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn name(&self) -> &str;
 
     /// Run the test
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn run(&self) -> KwaversResult<TestResult>;
 
     /// Check if results are within bounds

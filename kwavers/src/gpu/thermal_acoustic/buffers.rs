@@ -28,6 +28,10 @@ pub struct GpuThermalAcousticBuffers {
 }
 
 impl GpuThermalAcousticBuffers {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -89,6 +93,10 @@ impl GpuThermalAcousticBuffers {
     }
 
     /// Upload initial conditions to GPU
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn upload_fields(
         &self,
         queue: &wgpu::Queue,
@@ -136,6 +144,9 @@ impl GpuThermalAcousticBuffers {
     }
 
     /// Download the current pressure, velocity_x, and temperature fields from GPU.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn download_fields(
         &self,
         device: &wgpu::Device,

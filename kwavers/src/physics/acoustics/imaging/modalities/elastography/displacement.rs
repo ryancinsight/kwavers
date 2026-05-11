@@ -33,6 +33,7 @@ pub struct DisplacementField {
 
 impl DisplacementField {
     /// Create zero displacement field
+    #[must_use] 
     pub fn zeros(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             ux: Array3::zeros((nx, ny, nz)),
@@ -53,7 +54,7 @@ impl DisplacementField {
                     let ux = self.ux[[i, j, k]];
                     let uy = self.uy[[i, j, k]];
                     let uz = self.uz[[i, j, k]];
-                    mag[[i, j, k]] = (ux * ux + uy * uy + uz * uz).sqrt();
+                    mag[[i, j, k]] = uz.mul_add(uz, ux.mul_add(ux, uy * uy)).sqrt();
                 }
             }
         }
@@ -66,11 +67,7 @@ impl DisplacementField {
 #[derive(Debug)]
 pub struct DisplacementEstimator {
     /// Computational grid
-    #[allow(dead_code)] // Used in future implementation
     grid: Grid,
-    /// Estimation kernel size (points)
-    #[allow(dead_code)] // Used in future implementation
-    kernel_size: usize,
 }
 
 impl DisplacementEstimator {
@@ -80,10 +77,7 @@ impl DisplacementEstimator {
     ///
     /// * `grid` - Computational grid
     pub fn new(grid: &Grid) -> Self {
-        Self {
-            grid: grid.clone(),
-            kernel_size: 5, // 5-point kernel for spatial derivatives
-        }
+        Self { grid: grid.clone() }
     }
 
     /// Estimate displacement field from initial displacement
@@ -100,6 +94,9 @@ impl DisplacementEstimator {
     ///
     /// Simulates ultrafast plane wave imaging with temporal evolution.
     /// Uses plane wave propagation model for displacement tracking and temporal evolution.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn estimate(&self, initial_displacement: &Array3<f64>) -> KwaversResult<DisplacementField> {
         let (nx, ny, nz) = initial_displacement.dim();
 
@@ -152,10 +149,6 @@ impl DisplacementEstimator {
         Ok(DisplacementField { ux, uy, uz })
     }
 
-    /// Set kernel size for displacement estimation
-    pub fn set_kernel_size(&mut self, size: usize) {
-        self.kernel_size = size;
-    }
 }
 
 #[cfg(test)]
@@ -188,7 +181,6 @@ mod tests {
         let initial = Array3::from_elem((20, 20, 20), 1.0e-6);
         let result = estimator.estimate(&initial);
 
-        assert!(result.is_ok());
         let field = result.unwrap();
         assert_eq!(field.uz.dim(), (20, 20, 20));
     }

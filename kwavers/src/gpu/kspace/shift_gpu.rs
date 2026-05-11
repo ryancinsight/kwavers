@@ -2,7 +2,7 @@
 //!
 //! ## Algorithm (Treeby & Cox 2010, Eq. 12)
 //!
-//! For a 3D complex spectrum `F(kx,ky,kz)` and shift vector `(sx,sy,sz)` [m]:
+//! For a 3D complex spectrum `F(kx,ky,kz)` and shift vector `(sx,sy,sz)` (m):
 //!
 //! ```text
 //! F'(kx,ky,kz) = F(kx,ky,kz) · exp(−i·(kx·sx + ky·sy + kz·sz))
@@ -34,6 +34,9 @@ pub struct KspaceShiftGpu {
 
 impl KspaceShiftGpu {
     /// Create a new k-space shift dispatcher for a grid of size `nx × ny × nz`.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(nx: usize, ny: usize, nz: usize) -> KwaversResult<Self> {
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(KwaversError::InvalidInput(
@@ -49,8 +52,12 @@ impl KspaceShiftGpu {
     ///
     /// - `real_in` / `imag_in`  — input 3D complex spectrum (shape `[nx, ny, nz]`)
     /// - `kx_vec` / `ky_vec` / `kz_vec` — wavenumber vectors [rad/m]
-    /// - `shift` — `[sx, sy, sz]` half-cell shift vector [m]
+    /// - `shift` — `[sx, sy, sz]` half-cell shift vector (m)
     /// - `real_out` / `imag_out` — output buffers; fully overwritten
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_shift_into(
         &self,
         real_in: &Array3<f64>,
@@ -103,6 +110,9 @@ impl KspaceShiftGpu {
     /// Convenience wrapper that allocates output buffers.
     ///
     /// Returns `(real_out, imag_out)`. Prefer [`Self::apply_shift_into`] in time-step loops.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_shift(
         &self,
         real_in: &Array3<f64>,

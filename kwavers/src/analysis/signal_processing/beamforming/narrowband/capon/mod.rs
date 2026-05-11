@@ -69,35 +69,36 @@ pub struct CaponSpectrumConfig {
 
 impl CaponSpectrumConfig {
     /// Validate invariants.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.frequency_hz.is_finite() || self.frequency_hz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "CaponSpectrumConfig: frequency_hz must be finite and > 0".to_string(),
+                "CaponSpectrumConfig: frequency_hz must be finite and > 0".to_owned(),
             ));
         }
         if !self.sound_speed.is_finite() || self.sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "CaponSpectrumConfig: sound_speed must be finite and > 0".to_string(),
+                "CaponSpectrumConfig: sound_speed must be finite and > 0".to_owned(),
             ));
         }
         if !self.diagonal_loading.is_finite() || self.diagonal_loading < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "CaponSpectrumConfig: diagonal_loading must be finite and >= 0".to_string(),
+                "CaponSpectrumConfig: diagonal_loading must be finite and >= 0".to_owned(),
             ));
         }
         if let Some(fs) = self.sampling_frequency_hz {
             if !fs.is_finite() || fs <= 0.0 {
                 return Err(KwaversError::InvalidInput(
-                    "CaponSpectrumConfig: sampling_frequency_hz must be finite and > 0 (when provided)"
-                        .to_string(),
+                    "CaponSpectrumConfig: sampling_frequency_hz must be finite and > 0 (when provided)".to_owned(),
                 ));
             }
         }
         if let Some(step) = self.baseband_snapshot_step_samples {
             if step == 0 {
                 return Err(KwaversError::InvalidInput(
-                    "CaponSpectrumConfig: baseband_snapshot_step_samples must be >= 1 (when provided)"
-                        .to_string(),
+                    "CaponSpectrumConfig: baseband_snapshot_step_samples must be >= 1 (when provided)".to_owned(),
                 ));
             }
         }

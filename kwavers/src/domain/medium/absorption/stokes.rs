@@ -18,7 +18,7 @@ pub struct StokesParameters {
     pub specific_heat_v: f64,
     /// Density [kg/m³]
     pub density: f64,
-    /// Sound speed [m/s]
+    /// Sound speed (m/s)
     pub sound_speed: f64,
 }
 
@@ -62,9 +62,7 @@ impl StokesAbsorption {
         let viscosity = 1.002e-3 * (20.0 / (t + 1.0)).exp();
 
         // Sound speed (Bilaniuk & Wong 1993)
-        let sound_speed = 1402.385 + 5.038813 * t - 5.799136e-2 * t * t + 3.287156e-4 * t.powi(3)
-            - 1.398845e-6 * t.powi(4)
-            + 2.787860e-9 * t.powi(5);
+        let sound_speed = 2.787860e-9f64.mul_add(t.powi(5), 1.398845e-6f64.mul_add(-t.powi(4), 3.287156e-4f64.mul_add(t.powi(3), (5.799136e-2 * t).mul_add(-t, 5.038813f64.mul_add(t, 1402.385)))));
 
         // Density (IAPWS-95 formulation for water properties)
         // Polynomial approximation from Wagner & Pruß (2002) valid for 0-100°C at atmospheric pressure
@@ -75,14 +73,12 @@ impl StokesAbsorption {
         // References:
         // - Wagner & Pruß (2002): "IAPWS formulation 1995 for the thermodynamic properties of ordinary water"
         // - Lemmon et al. (2005): "Thermodynamic properties of water and steam"
-        let density = 999.842594 + 6.793952e-2 * t - 9.095290e-3 * t * t + 1.001685e-4 * t.powi(3)
-            - 1.120083e-6 * t.powi(4)
-            + 6.536332e-9 * t.powi(5);
+        let density = 6.536332e-9f64.mul_add(t.powi(5), 1.120083e-6f64.mul_add(-t.powi(4), 1.001685e-4f64.mul_add(t.powi(3), (9.095290e-3 * t).mul_add(-t, 6.793952e-2f64.mul_add(t, 999.842594)))));
 
         let params = StokesParameters {
             viscosity,
             bulk_viscosity: viscosity * 2.8, // Approximate ratio for water
-            thermal_conductivity: 0.598 * (1.0 + 0.003 * (t - 20.0)),
+            thermal_conductivity: 0.598 * 0.003f64.mul_add(t - 20.0, 1.0),
             specific_heat_p: SPECIFIC_HEAT_WATER,
             specific_heat_v: SPECIFIC_HEAT_WATER,
             density,
@@ -118,7 +114,7 @@ impl StokesAbsorption {
         let classical = self.absorption_at_frequency(frequency);
         let f_ratio = frequency / relaxation_freq;
 
-        classical * f_ratio.powi(2) / (1.0 + f_ratio.powi(2))
+        classical * f_ratio.powi(2) / f_ratio.mul_add(f_ratio, 1.0)
     }
 
     /// Get total absorption including multiple relaxation effects
@@ -165,7 +161,7 @@ impl StokesAbsorption {
         for mode in &modes {
             let f_ratio = frequency / mode.freq;
             let relaxation_contrib =
-                classical * mode.amplitude * f_ratio.powi(2) / (1.0 + f_ratio.powi(2));
+                classical * mode.amplitude * f_ratio.powi(2) / f_ratio.mul_add(f_ratio, 1.0);
             relaxation_total += relaxation_contrib;
         }
 

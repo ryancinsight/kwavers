@@ -10,7 +10,7 @@
 //! injected energy is independent of source geometry (point, line, plane).
 //!
 //! Formally: if the source occupies N active voxels, each voxel receives an
-//! amplitude scaled by 1/N so that Σᵢ mask[i] × amplitude = amplitude.
+//! amplitude scaled by 1/N so that `Σᵢ mask[i] × amplitude = amplitude`.
 //!
 //! Exception: a boundary-plane source (all active points share the same index
 //! on one axis and that axis is at the domain boundary) injects a plane wave
@@ -122,6 +122,9 @@ mod tests {
     use ndarray::Array3;
 
     /// Single active voxel in the interior → normalised (scale = 1.0 / 1 = 1.0).
+    /// # Panics
+    /// - Panics with `"Expected Additive"`.
+    ///
     #[test]
     fn test_single_interior_point_scale_one() {
         let mut mask = Array3::<f64>::zeros((8, 8, 8));
@@ -136,6 +139,9 @@ mod tests {
     }
 
     /// Four active voxels in the interior → scale = 0.25.
+    /// # Panics
+    /// - Panics with `"Expected Additive"`.
+    ///
     #[test]
     fn test_four_interior_points_normalised() {
         let mut mask = Array3::<f64>::zeros((8, 8, 8));
@@ -153,6 +159,9 @@ mod tests {
     }
 
     /// Full x=0 plane → boundary plane, scale = 1.0.
+    /// # Panics
+    /// - Panics with `"Expected Additive"`.
+    ///
     #[test]
     fn test_boundary_plane_x0_unit_scale() {
         let mut mask = Array3::<f64>::zeros((8, 4, 4));
@@ -174,6 +183,9 @@ mod tests {
     }
 
     /// Empty mask → scale = 1.0 (irrelevant, no injection occurs).
+    /// # Panics
+    /// - Panics with `"Expected Additive"`.
+    ///
     #[test]
     fn test_empty_mask_scale_one() {
         let mask = Array3::<f64>::zeros((4, 4, 4));

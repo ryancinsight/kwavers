@@ -48,8 +48,9 @@ impl Regularizer {
     /// Tikhonov (L2) regularization
     /// Penalizes large model values
     fn apply_tikhonov(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
-        Zip::from(gradient).and(model).for_each(|g, &m| {
-            *g += self.tikhonov_weight * m;
+        let w = self.tikhonov_weight;
+        Zip::from(gradient).and(model).par_for_each(|g, &m| {
+            *g += w * m;
         });
     }
 
@@ -67,11 +68,10 @@ impl Regularizer {
                     let dy = model[[i, j + 1, k]] - model[[i, j, k]];
                     let dz = model[[i, j, k + 1]] - model[[i, j, k]];
 
-                    let tv_norm = (dx * dx + dy * dy + dz * dz + epsilon).sqrt();
+                    let tv_norm = (dz.mul_add(dz, dx.mul_add(dx, dy * dy)) + epsilon).sqrt();
 
                     gradient[[i, j, k]] += self.tv_weight
-                        * (3.0 * model[[i, j, k]]
-                            - model[[i + 1, j, k]]
+                        * (3.0f64.mul_add(model[[i, j, k]], -model[[i + 1, j, k]])
                             - model[[i, j + 1, k]]
                             - model[[i, j, k + 1]])
                         / tv_norm;
@@ -89,20 +89,19 @@ impl Regularizer {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    laplacian[[i, j, k]] = gradient[[i + 1, j, k]]
+                    laplacian[[i, j, k]] = 6.0f64.mul_add(-gradient[[i, j, k]], gradient[[i + 1, j, k]]
                         + gradient[[i - 1, j, k]]
                         + gradient[[i, j + 1, k]]
                         + gradient[[i, j - 1, k]]
-                        + gradient[[i, j, k + 1]]
-                        + gradient[[i, j, k - 1]]
-                        - 6.0 * gradient[[i, j, k]];
+                        + gradient[[i, j, k + 1]] + gradient[[i, j, k - 1]]);
                 }
             }
         }
 
         // Apply smoothness penalty
-        Zip::from(gradient).and(&laplacian).for_each(|g, &l| {
-            *g -= self.smoothness_weight * l;
+        let w = self.smoothness_weight;
+        Zip::from(gradient).and(&laplacian).par_for_each(|g, &l| {
+            *g -= w * l;
         });
     }
 

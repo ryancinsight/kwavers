@@ -70,23 +70,26 @@ impl GaussianSource {
     }
 
     /// Get the beam waist radius (w0)
+    #[must_use] 
     pub fn waist_radius(&self) -> f64 {
         self.config.waist_radius
     }
 
     /// Get the Rayleigh range (depth of focus)
+    #[must_use] 
     pub fn rayleigh_range(&self) -> f64 {
         self.rayleigh_range
     }
 
     /// Get the focal point position
+    #[must_use] 
     pub fn focal_point(&self) -> (f64, f64, f64) {
         self.config.focal_point
     }
 
     /// Calculate beam radius at distance z from focus
     fn beam_radius_at(&self, z: f64) -> f64 {
-        self.config.waist_radius * (1.0 + (z / self.rayleigh_range).powi(2)).sqrt()
+        self.config.waist_radius * (z / self.rayleigh_range).mul_add(z / self.rayleigh_range, 1.0).sqrt()
     }
 
     /// Calculate Gaussian amplitude at position (x, y, z)
@@ -100,15 +103,15 @@ impl GaussianSource {
         let radial_distance = match self.config.direction {
             (_nx, _ny, nz) if nz.abs() > 0.5 => {
                 // Mainly z-propagation: use x-y plane
-                (dx.powi(2) + dy.powi(2)).sqrt()
+                dx.hypot(dy)
             }
             (_nx, ny, _nz) if ny.abs() > 0.5 => {
                 // Mainly y-propagation: use x-z plane
-                (dx.powi(2) + dz.powi(2)).sqrt()
+                dx.hypot(dz)
             }
             _ => {
                 // Mainly x-propagation: use y-z plane
-                (dy.powi(2) + dz.powi(2)).sqrt()
+                dy.hypot(dz)
             }
         };
 
@@ -129,7 +132,7 @@ impl GaussianSource {
         let gouy_phase = (z_dist / self.rayleigh_range).atan();
 
         // Total phase including propagation and Gouy phase
-        let total_phase = self.wave_number * z_dist + gouy_phase + self.config.phase;
+        let total_phase = self.wave_number.mul_add(z_dist, gouy_phase) + self.config.phase;
 
         amplitude * total_phase.cos()
     }
@@ -183,7 +186,7 @@ impl Source for GaussianSource {
         // For Gaussian beams, focal depth is typically measured from z=0 to focal point
         // along the propagation direction
         let (fx, fy, fz) = self.config.focal_point;
-        let focal_distance = (fx * fx + fy * fy + fz * fz).sqrt();
+        let focal_distance = fz.mul_add(fz, fx.mul_add(fx, fy * fy)).sqrt();
         Some(focal_distance)
     }
 
@@ -228,35 +231,42 @@ pub struct GaussianBuilder {
 }
 
 impl GaussianBuilder {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use] 
     pub fn focal_point(mut self, focal_point: (f64, f64, f64)) -> Self {
         self.config.focal_point = focal_point;
         self
     }
 
+    #[must_use] 
     pub fn waist_radius(mut self, waist_radius: f64) -> Self {
         self.config.waist_radius = waist_radius;
         self
     }
 
+    #[must_use] 
     pub fn wavelength(mut self, wavelength: f64) -> Self {
         self.config.wavelength = wavelength;
         self
     }
 
+    #[must_use] 
     pub fn direction(mut self, direction: (f64, f64, f64)) -> Self {
         self.config.direction = direction;
         self
     }
 
+    #[must_use] 
     pub fn source_type(mut self, source_type: SourceField) -> Self {
         self.config.source_type = source_type;
         self
     }
 
+    #[must_use] 
     pub fn phase(mut self, phase: f64) -> Self {
         self.config.phase = phase;
         self

@@ -16,10 +16,17 @@ pub struct SimdExecutor {
 
 #[cfg(all(feature = "simd", feature = "nightly"))]
 impl SimdExecutor {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(lanes: usize) -> Self {
         Self { lanes }
     }
-
+    /// Predict.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn predict(
         &mut self,
         network: &QuantizedNetwork,
@@ -106,6 +113,10 @@ impl SimdExecutor {
         Ok(output)
     }
 
+    /// Matmul simd quantized.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn matmul_simd_quantized(
         &self,
         input: &[f32],

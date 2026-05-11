@@ -22,9 +22,9 @@
 //!
 //! Where:
 //! - u(x,t): Acoustic pressure or displacement field [Pa or m]
-//! - c: Speed of sound in the medium [m/s], e.g., 343 m/s for air at 20°C
-//! - x: Spatial coordinate [m]
-//! - t: Time coordinate [s]
+//! - c: Speed of sound in the medium (m/s), e.g., 343 m/s for air at 20°C
+//! - x: Spatial coordinate (m)
+//! - t: Time coordinate (s)
 //!
 //! **Derivation**: From conservation of mass (∂ρ/∂t + ∇·(ρv) = 0) and momentum
 //! (ρ∂v/∂t + ∇p = 0) with linearization assumptions (small perturbations, p = c²ρ).

@@ -50,14 +50,14 @@ impl GradientComputer {
         Zip::from(&mut gradient)
             .and(forward_wavefield)
             .and(adjoint_wavefield)
-            .for_each(|grad, &u_f, &u_a| {
+            .par_for_each(|grad, &u_f, &u_a| {
                 // Cross-correlation at zero lag with proper scaling
                 *grad = -2.0 * dt * u_f * u_a;
             });
 
         // Apply preconditioning if available
         if let Some(ref precond) = self.preconditioner {
-            Zip::from(&mut gradient).and(precond).for_each(|grad, &p| {
+            Zip::from(&mut gradient).and(precond).par_for_each(|grad, &p| {
                 *grad *= p;
             });
         }
@@ -83,7 +83,7 @@ impl GradientComputer {
         Zip::from(&mut gradient)
             .and(forward_wavefield)
             .and(adjoint_wavefield)
-            .for_each(|grad, &u_f, &u_a| {
+            .par_for_each(|grad, &u_f, &u_a| {
                 *grad = -u_f * u_a;
             });
 
@@ -94,7 +94,7 @@ impl GradientComputer {
     /// Based on Shin et al. (2001): "Amplitude preservation for elastic migration"
     pub fn apply_preconditioning(&self, gradient: &mut Array3<f64>) {
         if let Some(ref precond) = self.preconditioner {
-            Zip::from(gradient).and(precond).for_each(|g, &p| {
+            Zip::from(gradient).and(precond).par_for_each(|g, &p| {
                 *g *= p;
             });
         }
@@ -115,6 +115,9 @@ impl GradientComputer {
     /// The adjoint-state gradient is linear in the right-hand-side source term.
     /// Therefore the gradient of a linear combination of encoded sources is the
     /// corresponding linear combination of the individual gradients.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn encoded_gradient(
         &self,
         source_gradients: &[Array3<f64>],
@@ -123,7 +126,7 @@ impl GradientComputer {
         if source_gradients.is_empty() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "encoded_gradient requires at least one source gradient".to_string(),
+                    message: "encoded_gradient requires at least one source gradient".to_owned(),
                 },
             ));
         }
@@ -144,14 +147,14 @@ impl GradientComputer {
         if source_gradients.iter().any(|g| g.dim() != shape) {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "All source gradients must share the same shape".to_string(),
+                    message: "All source gradients must share the same shape".to_owned(),
                 },
             ));
         }
 
         let mut encoded = Array3::zeros(shape);
         for (gradient, &weight) in source_gradients.iter().zip(encoding_weights.iter()) {
-            Zip::from(&mut encoded).and(gradient).for_each(|acc, &g| {
+            Zip::from(&mut encoded).and(gradient).par_for_each(|acc, &g| {
                 *acc += weight * g;
             });
         }

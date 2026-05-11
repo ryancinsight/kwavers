@@ -44,7 +44,6 @@ pub use fdtd::FdtdGpu;
 pub use kspace::{KSpaceGpu, KspaceShiftGpu};
 pub use memory::{MemoryPoolType, UnifiedMemoryManager};
 pub use multi_gpu::{GpuAffinity, MultiGpuContext};
-pub use pipeline::{ComputePipeline, PipelineLayout};
 pub use shaders::neural_network::NeuralNetworkShader;
 pub use thermal_acoustic::{
     GpuThermalAcousticBuffers, GpuThermalAcousticConfig, GpuThermalAcousticSolver,
@@ -68,19 +67,18 @@ pub struct GpuCapabilities {
 }
 
 /// Main GPU context for acoustic simulations
-/// NOTE: Some fields currently unused - part of future GPU pipeline implementation
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct GpuContext {
     device: wgpu::Device,
     queue: wgpu::Queue,
     capabilities: GpuCapabilities,
-    compute: GpuCompute,
-    buffer_manager: BufferManager,
 }
 
 impl GpuContext {
     /// Create a new GPU context
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn new() -> KwaversResult<Self> {
         // Create instance with all backends
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
@@ -152,15 +150,10 @@ impl GpuContext {
             supports_atomics: true, // Most modern GPUs support this
         };
 
-        let compute = GpuCompute::new(&device);
-        let buffer_manager = BufferManager::new(&device);
-
         Ok(Self {
             device,
             queue,
             capabilities,
-            compute,
-            buffer_manager,
         })
     }
 

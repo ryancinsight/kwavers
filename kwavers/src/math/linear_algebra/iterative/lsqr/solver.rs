@@ -24,6 +24,7 @@ pub struct LsqrSolver {
 
 impl LsqrSolver {
     /// Create new LSQR solver
+    #[must_use] 
     pub fn new(config: LsqrConfig) -> Self {
         Self { config }
     }
@@ -32,6 +33,7 @@ impl LsqrSolver {
     ///
     /// Implements LSQR (Paige & Saunders 1982) via Lanczos bidiagonalisation
     /// and Givens QR factorisation.
+    #[must_use] 
     pub fn solve(&self, a_matrix: &Array2<f64>, b_vector: &Array1<f64>) -> LsqrResult {
         let (_m, n) = a_matrix.dim();
         let mut x = Array1::zeros(n);
@@ -98,7 +100,7 @@ impl LsqrSolver {
             }
 
             // Givens rotation (Paige & Saunders 1982, Table 1, step 3)
-            let rho = (rho_bar.powi(2) + beta_new.powi(2) + damping.powi(2)).sqrt();
+            let rho = damping.mul_add(damping, beta_new.mul_add(beta_new, rho_bar.powi(2))).sqrt();
             if rho < 1e-12 {
                 break;
             }

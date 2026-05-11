@@ -57,6 +57,9 @@ impl Default for OxygenationConfig {
 /// # Returns
 ///
 /// Spatial maps of oxygen saturation and hemoglobin concentrations
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn estimate_oxygenation(
     absorption_maps: &[Array3<f64>],
     config: &OxygenationConfig,
@@ -97,7 +100,7 @@ pub fn estimate_oxygenation(
     }
 
     // Create spectral unmixer
-    let chromophore_names = vec!["HbO₂".to_string(), "Hb".to_string()];
+    let chromophore_names = vec!["HbO₂".to_owned(), "Hb".to_owned()];
     let unmixer = SpectralUnmixer::new(
         extinction_matrix,
         config.wavelengths.clone(),
@@ -149,6 +152,9 @@ pub fn estimate_oxygenation(
 /// Create arterial blood reference oxygenation (for validation)
 ///
 /// Returns typical arterial blood properties at specified wavelengths
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn arterial_blood_reference(wavelengths: &[f64]) -> Result<Vec<f64>> {
     let hb_db = HemoglobinDatabase::standard();
     wavelengths
@@ -160,6 +166,9 @@ pub fn arterial_blood_reference(wavelengths: &[f64]) -> Result<Vec<f64>> {
 /// Create venous blood reference oxygenation (for validation)
 ///
 /// Returns typical venous blood properties at specified wavelengths
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn venous_blood_reference(wavelengths: &[f64]) -> Result<Vec<f64>> {
     let hb_db = HemoglobinDatabase::standard();
     wavelengths

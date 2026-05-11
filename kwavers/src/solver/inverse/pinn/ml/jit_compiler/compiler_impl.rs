@@ -22,7 +22,10 @@ impl JitCompiler {
             },
         }
     }
-
+    /// Compile pinn model.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compile_pinn_model(
         &mut self,
         model: &dyn std::any::Any,

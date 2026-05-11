@@ -7,6 +7,12 @@ use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
 
 /// Compute divergence of a vector field
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub fn divergence<T>(
     vx: &ArrayView3<T>,
     vy: &ArrayView3<T>,
@@ -33,7 +39,7 @@ where
     if vy.shape() != shape || vz.shape() != shape {
         return Err(crate::core::error::KwaversError::Grid(
             crate::core::error::GridError::DimensionMismatch {
-                expected: "Vector field components must have same dimensions".to_string(),
+                expected: "Vector field components must have same dimensions".to_owned(),
                 actual: format!(
                     "vx: {:?}, vy: {:?}, vz: {:?}",
                     vx.shape(),

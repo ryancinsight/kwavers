@@ -49,6 +49,9 @@ pub struct KuznetsovWorkspace {
 
 impl KuznetsovWorkspace {
     /// Create a new workspace for the given grid
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: &Grid) -> KwaversResult<Self> {
         let shape = (grid.nx, grid.ny, grid.nz);
 
@@ -152,20 +155,41 @@ mod tests {
         ws.clear();
 
         // Every element of every scratch buffer must be exactly 0.0 after clear().
-        assert!(ws.pressure_prev.iter().all(|&v| v == 0.0),  "pressure_prev not zeroed");
-        assert!(ws.pressure_prev2.iter().all(|&v| v == 0.0), "pressure_prev2 not zeroed");
-        assert!(ws.pressure_prev3.iter().all(|&v| v == 0.0), "pressure_prev3 not zeroed");
-        assert!(ws.nonlinear_term.iter().all(|&v| v == 0.0), "nonlinear_term not zeroed");
-        assert!(ws.diffusive_term.iter().all(|&v| v == 0.0), "diffusive_term not zeroed");
-        assert!(ws.laplacian.iter().all(|&v| v == 0.0),      "laplacian not zeroed");
-        assert!(ws.grad_x.iter().all(|&v| v == 0.0),         "grad_x not zeroed");
-        assert!(ws.grad_y.iter().all(|&v| v == 0.0),         "grad_y not zeroed");
-        assert!(ws.grad_z.iter().all(|&v| v == 0.0),         "grad_z not zeroed");
-        assert!(ws.k1.iter().all(|&v| v == 0.0),             "k1 not zeroed");
-        assert!(ws.k2.iter().all(|&v| v == 0.0),             "k2 not zeroed");
-        assert!(ws.k3.iter().all(|&v| v == 0.0),             "k3 not zeroed");
-        assert!(ws.k4.iter().all(|&v| v == 0.0),             "k4 not zeroed");
-        assert!(ws.temp_field.iter().all(|&v| v == 0.0),     "temp_field not zeroed");
+        assert!(
+            ws.pressure_prev.iter().all(|&v| v == 0.0),
+            "pressure_prev not zeroed"
+        );
+        assert!(
+            ws.pressure_prev2.iter().all(|&v| v == 0.0),
+            "pressure_prev2 not zeroed"
+        );
+        assert!(
+            ws.pressure_prev3.iter().all(|&v| v == 0.0),
+            "pressure_prev3 not zeroed"
+        );
+        assert!(
+            ws.nonlinear_term.iter().all(|&v| v == 0.0),
+            "nonlinear_term not zeroed"
+        );
+        assert!(
+            ws.diffusive_term.iter().all(|&v| v == 0.0),
+            "diffusive_term not zeroed"
+        );
+        assert!(
+            ws.laplacian.iter().all(|&v| v == 0.0),
+            "laplacian not zeroed"
+        );
+        assert!(ws.grad_x.iter().all(|&v| v == 0.0), "grad_x not zeroed");
+        assert!(ws.grad_y.iter().all(|&v| v == 0.0), "grad_y not zeroed");
+        assert!(ws.grad_z.iter().all(|&v| v == 0.0), "grad_z not zeroed");
+        assert!(ws.k1.iter().all(|&v| v == 0.0), "k1 not zeroed");
+        assert!(ws.k2.iter().all(|&v| v == 0.0), "k2 not zeroed");
+        assert!(ws.k3.iter().all(|&v| v == 0.0), "k3 not zeroed");
+        assert!(ws.k4.iter().all(|&v| v == 0.0), "k4 not zeroed");
+        assert!(
+            ws.temp_field.iter().all(|&v| v == 0.0),
+            "temp_field not zeroed"
+        );
     }
 
     #[test]
@@ -175,8 +199,11 @@ mod tests {
         let bytes_before = ws.memory_bytes();
         ws.pressure_prev.fill(42.0);
         ws.clear();
-        assert_eq!(ws.memory_bytes(), bytes_before,
-            "memory_bytes() must be stable across clear()");
+        assert_eq!(
+            ws.memory_bytes(),
+            bytes_before,
+            "memory_bytes() must be stable across clear()"
+        );
     }
 }
 

@@ -16,10 +16,15 @@ pub struct NonlinearInversion {
 }
 
 impl NonlinearInversion {
+    #[must_use] 
     pub fn new(config: NonlinearInversionConfig) -> Self {
         Self { config }
     }
 
+    /// Method.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn method(
         &self,
@@ -27,11 +32,18 @@ impl NonlinearInversion {
         self.config.method
     }
 
+    /// Config.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn config(&self) -> &NonlinearInversionConfig {
         &self.config
     }
-
+    /// Reconstruct.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn reconstruct(
         &self,
         harmonic_field: &HarmonicDisplacementField,

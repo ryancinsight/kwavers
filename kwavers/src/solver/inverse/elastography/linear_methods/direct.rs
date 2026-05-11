@@ -28,6 +28,9 @@ use super::super::types::elasticity_map_from_speed;
 /// # References
 ///
 /// - McLaughlin & Renzi (2006): "Direct inversion methods"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn direct_inversion(
     displacement: &DisplacementField,
     grid: &Grid,
@@ -70,7 +73,7 @@ pub(super) fn direct_inversion(
                         + theta[[i, j, k - 1]];
 
                     let numerator = lambda * sum_theta - u_val * lap_val;
-                    let denominator = u_val * u_val + 6.0 * lambda;
+                    let denominator = u_val.mul_add(u_val, 6.0 * lambda);
 
                     theta[[i, j, k]] = numerator / denominator;
                 }
@@ -117,9 +120,9 @@ fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
             for k in 1..nz - 1 {
                 let center = field[[i, j, k]];
 
-                let d2x = (field[[i + 1, j, k]] - 2.0 * center + field[[i - 1, j, k]]) * idx2;
-                let d2y = (field[[i, j + 1, k]] - 2.0 * center + field[[i, j - 1, k]]) * idy2;
-                let d2z = (field[[i, j, k + 1]] - 2.0 * center + field[[i, j, k - 1]]) * idz2;
+                let d2x = (2.0f64.mul_add(-center, field[[i + 1, j, k]]) + field[[i - 1, j, k]]) * idx2;
+                let d2y = (2.0f64.mul_add(-center, field[[i, j + 1, k]]) + field[[i, j - 1, k]]) * idy2;
+                let d2z = (2.0f64.mul_add(-center, field[[i, j, k + 1]]) + field[[i, j, k - 1]]) * idz2;
 
                 laplacian[[i, j, k]] = d2x + d2y + d2z;
             }

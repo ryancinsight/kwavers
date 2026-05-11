@@ -34,7 +34,7 @@ impl FiberOrientation {
     /// Create from vector
     #[must_use]
     pub fn from_vector(v: &[f64; 3]) -> Self {
-        let r = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+        let r = v[2].mul_add(v[2], v[0].mul_add(v[0], v[1] * v[1])).sqrt();
         if r < 1e-10 {
             return Self {
                 azimuth: 0.0,
@@ -64,7 +64,7 @@ pub struct MuscleFiberModel {
 impl MuscleFiberModel {
     /// Create uniform fiber model
     pub fn uniform(grid: &Grid, orientation: FiberOrientation, pennation_angle: f64) -> Self {
-        let fiber_field = Array3::from_elem((grid.nx, grid.ny, grid.nz), orientation.clone());
+        let fiber_field = Array3::from_elem((grid.nx, grid.ny, grid.nz), orientation);
 
         Self {
             fiber_field,
@@ -85,7 +85,7 @@ impl MuscleFiberModel {
                     let z = k as f64 * grid.dz;
 
                     // Helical angle varies with radius
-                    let r = ((x * x + y * y).sqrt() / radius).min(1.0);
+                    let r = (x.hypot(y) / radius).min(1.0);
                     let helix_angle = -PI / 3.0 + r * 2.0 * PI / 3.0; // -60° to +60°
 
                     let azimuth = y.atan2(x) + helix_angle;
@@ -114,10 +114,10 @@ impl MuscleFiberModel {
     pub fn stiffness_enhancement(&self, along_fiber: bool) -> f64 {
         if along_fiber {
             // Fibers are stiffer along their length
-            1.0 + 2.0 * self.volume_fraction
+            2.0f64.mul_add(self.volume_fraction, 1.0)
         } else {
             // Softer perpendicular to fibers
-            1.0 - 0.5 * self.volume_fraction
+            0.5f64.mul_add(-self.volume_fraction, 1.0)
         }
     }
 

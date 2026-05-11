@@ -47,11 +47,17 @@ impl TaskSampler {
     }
 
     /// Add a task to the pool
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_task(&mut self, task: PhysicsTask) {
         self.task_pool.push(task);
     }
 
     /// Sample a batch of tasks
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub fn sample_batch(&mut self, batch_size: usize) -> KwaversResult<Vec<PhysicsTask>> {
         if self.task_pool.is_empty() {
             return Err(KwaversError::System(

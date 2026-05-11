@@ -37,8 +37,7 @@ impl MinimumVariance {
         if !denom_re.is_finite() {
             return Err(KwaversError::Numerical(
                 crate::core::error::NumericalError::InvalidOperation(
-                    "MVDR: non-finite denominator a^H R^{-1} a (covariance may be ill-conditioned)"
-                        .to_string(),
+                    "MVDR: non-finite denominator a^H R^{-1} a (covariance may be ill-conditioned)".to_owned(),
                 ),
             ));
         }

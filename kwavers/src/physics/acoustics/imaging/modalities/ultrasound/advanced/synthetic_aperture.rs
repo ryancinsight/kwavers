@@ -114,7 +114,7 @@ impl SyntheticApertureReconstruction {
 
     /// Calculate propagation delay between two points
     fn calculate_delay(&self, x1: f64, z1: f64, x2: f64, z2: f64) -> f64 {
-        let distance = ((x2 - x1).powi(2) + (z2 - z1).powi(2)).sqrt();
+        let distance = (x2 - x1).hypot(z2 - z1);
         distance / self.config.sound_speed
     }
 }

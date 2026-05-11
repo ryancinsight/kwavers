@@ -19,9 +19,9 @@ pub struct MechanicalIndexCalculator {
 impl MechanicalIndexCalculator {
     fn invalid_value(parameter: &str, value: f64, reason: &str) -> KwaversError {
         KwaversError::Validation(crate::core::error::ValidationError::InvalidValue {
-            parameter: parameter.to_string(),
+            parameter: parameter.to_owned(),
             value,
-            reason: reason.to_string(),
+            reason: reason.to_owned(),
         })
     }
 
@@ -99,6 +99,10 @@ impl MechanicalIndexCalculator {
     /// let result = mi_calc.calculate(&pressure, 5.0).unwrap();
     /// assert!(result.mi > 0.0);
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calculate(
         &self,
         pressure_field: &Array3<f64>,
@@ -116,9 +120,9 @@ impl MechanicalIndexCalculator {
         if peak_rarefactional_pa == 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidValue {
-                    parameter: "pressure_field".to_string(),
+                    parameter: "pressure_field".to_owned(),
                     value: 0.0,
-                    reason: "No negative pressure found in field".to_string(),
+                    reason: "No negative pressure found in field".to_owned(),
                 },
             ));
         }
@@ -171,6 +175,9 @@ impl MechanicalIndexCalculator {
     /// # Returns
     ///
     /// Vector of MI results at each focal distance
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_depth_profile(
         &self,
         pressure_field: &Array3<f64>,
@@ -185,6 +192,9 @@ impl MechanicalIndexCalculator {
     /// Calculate maximum MI along beam axis
     ///
     /// Returns the worst-case MI value for safety assessment
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calculate_max_mi(
         &self,
         pressure_field: &Array3<f64>,
@@ -219,8 +229,8 @@ impl MechanicalIndexCalculator {
             .max_by(|a, b| a.mi.partial_cmp(&b.mi).unwrap_or(std::cmp::Ordering::Equal))
             .ok_or_else(|| {
                 KwaversError::System(crate::core::error::SystemError::InvalidOperation {
-                    operation: "calculate_max_mi".to_string(),
-                    reason: "No valid MI values computed".to_string(),
+                    operation: "calculate_max_mi".to_owned(),
+                    reason: "No valid MI values computed".to_owned(),
                 })
             })
     }

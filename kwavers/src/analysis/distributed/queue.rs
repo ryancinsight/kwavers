@@ -40,14 +40,13 @@ pub struct ThreadPoolConfig {
 impl Default for ThreadPoolConfig {
     fn default() -> Self {
         let num_threads = std::thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(4);
+            .map_or(4, |n| n.get());
 
         Self {
             num_threads,
             stack_size: None,
             work_stealing_enabled: true,
-            thread_name_prefix: "kwavers-worker".to_string(),
+            thread_name_prefix: "kwavers-worker".to_owned(),
         }
     }
 }
@@ -81,6 +80,7 @@ impl std::fmt::Debug for WorkQueue {
 
 impl WorkQueue {
     /// Create a new work queue with the given configuration
+    #[must_use] 
     pub fn new(config: ThreadPoolConfig) -> Self {
         let scheduler = Arc::new(RealTimeScheduler::new());
         let work_time = Arc::new(AtomicU64::new(0));
@@ -137,6 +137,9 @@ impl WorkQueue {
     }
 
     /// Submit a task with given priority
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn submit(
         &self,
         priority: TaskPriority,
@@ -146,6 +149,9 @@ impl WorkQueue {
     }
 
     /// Submit a task with deadline
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn submit_with_deadline(
         &self,
         priority: TaskPriority,
@@ -154,7 +160,7 @@ impl WorkQueue {
     ) -> KwaversResult<u64> {
         if self.scheduler.is_shutdown() {
             return Err(KwaversError::InvalidInput(
-                "Queue is shutting down".to_string(),
+                "Queue is shutting down".to_owned(),
             ));
         }
 
@@ -168,6 +174,7 @@ impl WorkQueue {
     }
 
     /// Get current metrics
+    #[must_use] 
     pub fn metrics(&self) -> PoolMetrics {
         let task_metrics = self.scheduler.metrics();
         let work = self.work_time.load(Ordering::Relaxed);
@@ -203,6 +210,9 @@ impl WorkQueue {
     }
 
     /// Wait for all pending tasks to complete
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn wait_all(&self) -> KwaversResult<()> {
         loop {
             if self.scheduler.queue_depth() == 0 {
@@ -214,6 +224,9 @@ impl WorkQueue {
     }
 
     /// Shutdown the work queue and wait for threads to finish
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn shutdown(&mut self) -> KwaversResult<()> {
         self.scheduler.shutdown();
 
@@ -221,7 +234,7 @@ impl WorkQueue {
         for thread in self.threads.drain(..) {
             if thread.join().is_err() {
                 return Err(KwaversError::InvalidInput(
-                    "Failed to join worker thread".to_string(),
+                    "Failed to join worker thread".to_owned(),
                 ));
             }
         }

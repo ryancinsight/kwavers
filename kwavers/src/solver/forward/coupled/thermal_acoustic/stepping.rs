@@ -4,6 +4,13 @@ use ndarray::Array3;
 
 impl ThermalAcousticCoupler {
     /// Create new thermal-acoustic coupler with default configuration
+    /// # Panics
+    /// - Panics if `default config is valid`.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new_default() -> Self {
         Self::new(ThermalAcousticConfig::default()).expect("default config is valid")
     }
@@ -24,19 +31,19 @@ impl ThermalAcousticCoupler {
     pub fn new(config: ThermalAcousticConfig) -> KwaversResult<Self> {
         if config.nx < 3 || config.ny < 3 || config.nz < 3 {
             return Err(KwaversError::InvalidInput(
-                "Grid dimensions must be at least 3".to_string(),
+                "Grid dimensions must be at least 3".to_owned(),
             ));
         }
 
         if config.dx <= 0.0 || config.dy <= 0.0 || config.dz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Grid spacing must be positive".to_string(),
+                "Grid spacing must be positive".to_owned(),
             ));
         }
 
         if config.dt <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Time step must be positive".to_string(),
+                "Time step must be positive".to_owned(),
             ));
         }
 
@@ -104,6 +111,9 @@ impl ThermalAcousticCoupler {
     /// # Returns
     ///
     /// Ok on success, error if divergence detected
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(&mut self) -> KwaversResult<()> {
         self.pressure_prev.assign(&self.pressure);
         self.velocity_x_prev.assign(&self.velocity_x);
@@ -156,11 +166,11 @@ impl ThermalAcousticCoupler {
                             / (2.0 * dz);
 
                         self.velocity_x[[i, j, k]] =
-                            self.velocity_x_prev[[i, j, k]] - (dt / rho) * dp_dx;
+                            (dt / rho).mul_add(-dp_dx, self.velocity_x_prev[[i, j, k]]);
                         self.velocity_y[[i, j, k]] =
-                            self.velocity_y_prev[[i, j, k]] - (dt / rho) * dp_dy;
+                            (dt / rho).mul_add(-dp_dy, self.velocity_y_prev[[i, j, k]]);
                         self.velocity_z[[i, j, k]] =
-                            self.velocity_z_prev[[i, j, k]] - (dt / rho) * dp_dz;
+                            (dt / rho).mul_add(-dp_dz, self.velocity_z_prev[[i, j, k]]);
                     }
                 }
             }
@@ -183,33 +193,38 @@ impl ThermalAcousticCoupler {
                     let div_u = du_dx + dv_dy + dw_dz;
 
                     self.pressure[[i, j, k]] =
-                        self.pressure_prev[[i, j, k]] - rho_c_sq * dt * div_u;
+                        (rho_c_sq * dt).mul_add(-div_u, self.pressure_prev[[i, j, k]]);
                 }
             }
         }
     }
 
     /// Get current pressure field
+    #[must_use] 
     pub fn pressure(&self) -> &Array3<f64> {
         &self.pressure
     }
 
     /// Get current temperature field
+    #[must_use] 
     pub fn temperature(&self) -> &Array3<f64> {
         &self.temperature
     }
 
     /// Get current acoustic heating
+    #[must_use] 
     pub fn acoustic_heating(&self) -> &Array3<f64> {
         &self.acoustic_heating
     }
 
     /// Get total simulation time
+    #[must_use] 
     pub fn total_time(&self) -> f64 {
         self.total_time
     }
 
     /// Get step count
+    #[must_use] 
     pub fn step_count(&self) -> u64 {
         self.step_count
     }

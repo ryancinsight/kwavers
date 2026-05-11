@@ -184,6 +184,7 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
 /// # Returns
 ///
 /// 2D array of analytic signals
+#[must_use] 
 pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex64> {
     let (nrows, ncols) = data.dim();
     let mut result = Array2::from_elem((nrows, ncols), Complex64::new(0.0, 0.0));

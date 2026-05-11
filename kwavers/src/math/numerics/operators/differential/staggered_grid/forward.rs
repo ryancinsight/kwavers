@@ -11,6 +11,12 @@ impl StaggeredGridOperator {
     ///
     /// Zero heap allocation. `dst` must have shape `(nx-1, ny, nz)`.
     /// `dst[i,j,k] = (field[i+1,j,k] − field[i,j,k]) / Δx`
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_forward_x_into(
         &self,
         field: ArrayView3<f64>,
@@ -21,7 +27,7 @@ impl StaggeredGridOperator {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -35,7 +41,7 @@ impl StaggeredGridOperator {
         Zip::from(dst)
             .and(field.slice(s![1.., .., ..]))
             .and(field.slice(s![..nx - 1, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
         Ok(())
     }
 
@@ -43,6 +49,12 @@ impl StaggeredGridOperator {
     ///
     /// Zero heap allocation. `dst` must have shape `(nx, ny-1, nz)`.
     /// `dst[i,j,k] = (field[i,j+1,k] − field[i,j,k]) / Δy`
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_forward_y_into(
         &self,
         field: ArrayView3<f64>,
@@ -53,7 +65,7 @@ impl StaggeredGridOperator {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -67,7 +79,7 @@ impl StaggeredGridOperator {
         Zip::from(dst)
             .and(field.slice(s![.., 1.., ..]))
             .and(field.slice(s![.., ..ny - 1, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
         Ok(())
     }
 
@@ -75,6 +87,12 @@ impl StaggeredGridOperator {
     ///
     /// Zero heap allocation. `dst` must have shape `(nx, ny, nz-1)`.
     /// `dst[i,j,k] = (field[i,j,k+1] − field[i,j,k]) / Δz`
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_forward_z_into(
         &self,
         field: ArrayView3<f64>,
@@ -85,7 +103,7 @@ impl StaggeredGridOperator {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }
@@ -99,20 +117,23 @@ impl StaggeredGridOperator {
         Zip::from(dst)
             .and(field.slice(s![.., .., 1..]))
             .and(field.slice(s![.., .., ..nz - 1]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
+            .par_for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
         Ok(())
     }
 
     /// Apply forward difference in X, allocating the result.
     ///
     /// `∂u/∂x|_{i+1/2,j,k} ≈ (u[i+1,j,k] - u[i,j,k]) / Δx`
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_forward_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         if nx < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -120,14 +141,17 @@ impl StaggeredGridOperator {
         self.apply_forward_x_into(field, &mut result)?;
         Ok(result)
     }
-
+    /// Apply forward y.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_forward_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         if ny < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -135,14 +159,17 @@ impl StaggeredGridOperator {
         self.apply_forward_y_into(field, &mut result)?;
         Ok(result)
     }
-
+    /// Apply forward z.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_forward_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         if nz < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }

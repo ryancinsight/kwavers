@@ -31,8 +31,8 @@ impl PolarizationModel for LinearPolarization {
         _medium: &dyn Medium,
     ) {
         debug!("WARNING: Using deprecated LinearPolarization model. Consider using JonesPolarizationModel for mathematical accuracy.");
-        Zip::from(fluence).for_each(|f| {
-            *f *= 1.0 + self.polarization_factor * f.abs();
+        Zip::from(fluence).par_for_each(|f| {
+            *f *= self.polarization_factor.mul_add(f.abs(), 1.0);
         });
     }
 }

@@ -5,15 +5,12 @@ use ndarray::{Array3, ArrayView3};
 
 /// Field analyzer for adaptive selection
 #[derive(Debug)]
-pub struct FieldAnalyzer {
-    #[allow(dead_code)]
-    grid: Grid,
-}
+pub struct FieldAnalyzer {}
 
 impl FieldAnalyzer {
     /// Create new analyzer
-    pub fn new(grid: Grid) -> Self {
-        Self { grid }
+    pub fn new(_grid: Grid) -> Self {
+        Self {}
     }
 
     /// Analyze field smoothness

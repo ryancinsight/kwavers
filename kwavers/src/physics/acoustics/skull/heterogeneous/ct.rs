@@ -9,6 +9,9 @@ impl HeterogeneousSkull {
     /// Create heterogeneous skull from CT data using the legacy CTImageLoader
     /// pipeline. The binary threshold HU > 700 selects bone; attenuation uses
     /// the provided props value for bone voxels.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_ct(ct_data: &Array3<f64>, props: &SkullProperties) -> KwaversResult<Self> {
         use crate::domain::imaging::medical::CTImageLoader;
 
@@ -38,6 +41,9 @@ impl HeterogeneousSkull {
     /// 3. Compute Hill modulus: K_H = (K_V + K_R) / 2.
     /// 4. Effective speed: c_eff = sqrt(K_H / ρ_eff).
     /// 5. Attenuation: α_eff = φ·α_bone + (1−φ)·α_water.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_ct_hill(
         ct_data: &Array3<f64>,
         c_bone: f64,
@@ -55,8 +61,8 @@ impl HeterogeneousSkull {
             if phi >= 1.0 {
                 return c_bone;
             }
-            let rho_eff = phi * rho_bone + (1.0 - phi) * RHO_WATER;
-            let k_voigt = phi * k_bone + (1.0 - phi) * k_water;
+            let rho_eff = phi.mul_add(rho_bone, (1.0 - phi) * RHO_WATER);
+            let k_voigt = phi.mul_add(k_bone, (1.0 - phi) * k_water);
             let k_reuss = 1.0 / (phi / k_bone + (1.0 - phi) / k_water);
             let k_hill = 0.5 * (k_voigt + k_reuss);
             (k_hill / rho_eff).sqrt()
@@ -64,12 +70,12 @@ impl HeterogeneousSkull {
 
         let density = ct_data.mapv(|hu| {
             let phi = Self::bone_volume_fraction(hu);
-            phi * rho_bone + (1.0 - phi) * RHO_WATER
+            phi.mul_add(rho_bone, (1.0 - phi) * RHO_WATER)
         });
 
         let attenuation = ct_data.mapv(|hu| {
             let phi = Self::bone_volume_fraction(hu);
-            phi * alpha_bone + (1.0 - phi) * ALPHA_WATER
+            phi.mul_add(alpha_bone, (1.0 - phi) * ALPHA_WATER)
         });
 
         Ok(Self {

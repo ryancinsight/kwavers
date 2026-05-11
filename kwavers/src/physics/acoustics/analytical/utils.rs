@@ -44,7 +44,7 @@ impl PhysicsTestUtils {
 
         // Apply dispersion correction for k-space methods
         let k_dispersed =
-            k * (1.0 + DISPERSION_CORRECTION_SECOND_ORDER * k * k * grid.dx * grid.dx);
+            k * (DISPERSION_CORRECTION_SECOND_ORDER * k * k * grid.dx).mul_add(grid.dx, 1.0);
 
         for i in 0..grid.nx {
             let x = i as f64 * grid.dx;
@@ -103,7 +103,7 @@ impl PhysicsTestUtils {
         let search_range = (expected_shift_cells * 2.0) as i32;
         for shift_int in -search_range..=search_range {
             for sub_shift in 0..SUB_GRID_SEARCH_STEPS {
-                let total_shift = f64::from(shift_int) + f64::from(sub_shift) * 0.1;
+                let total_shift = f64::from(sub_shift).mul_add(0.1, f64::from(shift_int));
                 let correlation = Self::calculate_cross_correlation(
                     initial_field,
                     final_field,
@@ -142,8 +142,7 @@ impl PhysicsTestUtils {
                     for k in 0..grid.nz {
                         // Linear interpolation for sub-grid accuracy
                         let interpolated_value = if i_floor + 1 < grid.nx {
-                            field2[[i_floor, j, k]] * (1.0 - i_frac)
-                                + field2[[i_floor + 1, j, k]] * i_frac
+                            field2[[i_floor, j, k]].mul_add(1.0 - i_frac, field2[[i_floor + 1, j, k]] * i_frac)
                         } else {
                             field2[[i_floor, j, k]]
                         };

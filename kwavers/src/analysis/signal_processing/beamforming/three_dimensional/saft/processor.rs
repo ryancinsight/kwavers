@@ -13,7 +13,7 @@ pub(super) fn distance3(a: [f64; 3], b: [f64; 3]) -> f64 {
     let dx = a[0] - b[0];
     let dy = a[1] - b[1];
     let dz = a[2] - b[2];
-    (dx * dx + dy * dy + dz * dz).sqrt()
+    dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
 }
 
 /// SAFT processor for 3D volumetric reconstruction.
@@ -25,6 +25,10 @@ pub struct SaftProcessor {
 
 impl SaftProcessor {
     /// Create new SAFT processor.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(saft_config: SaftConfig, beamforming_config: BeamformingConfig3D) -> Self {
         Self {
             config: saft_config,
@@ -33,6 +37,9 @@ impl SaftProcessor {
     }
 
     /// Extract SAFT parameters from BeamformingAlgorithm3D::SAFT3D variant.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn from_algorithm(
         algorithm: &BeamformingAlgorithm3D,
         beamforming_config: BeamformingConfig3D,
@@ -46,7 +53,7 @@ impl SaftProcessor {
                 beamforming_config,
             )),
             _ => Err(KwaversError::InvalidInput(
-                "Expected SAFT3D algorithm variant".to_string(),
+                "Expected SAFT3D algorithm variant".to_owned(),
             )),
         }
     }
@@ -90,7 +97,7 @@ impl SaftProcessor {
         let center = total_elements as f64 / 2.0;
         let pos = (tx_idx + rx_idx) as f64 / 2.0;
         let normalized_pos = (pos - center) / center.max(1.0);
-        0.54 + 0.46 * (PI * normalized_pos).cos()
+        0.46f64.mul_add((PI * normalized_pos).cos(), 0.54)
     }
 
     /// Coherence factor (Mallart & Fink 1994).
@@ -112,6 +119,9 @@ impl SaftProcessor {
     }
 
     /// Reconstruct a 3D volume using SAFT with carrier-phase demodulation.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn reconstruct_volume(&self, rf_data: &Array4<f32>) -> KwaversResult<Array3<f32>> {
         let start_time = std::time::Instant::now();
 
@@ -194,11 +204,11 @@ impl SaftProcessor {
                         }
                     }
 
-                    let intensity = sum_i.powi(2) + sum_q.powi(2);
+                    let intensity = sum_q.mul_add(sum_q, sum_i.powi(2));
 
                     volume[[i, j, k]] =
                         if self.config.coherence_factor_enabled && num_contributions > 0 {
-                            let coherent_mag = (sum_i.powi(2) + sum_q.powi(2)).sqrt();
+                            let coherent_mag = sum_i.hypot(sum_q);
                             let cf = self.compute_coherence_factor(
                                 coherent_mag,
                                 incoherent_sum,
@@ -219,10 +229,13 @@ impl SaftProcessor {
     }
 
     /// Validate input RF data dimensions.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub(super) fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
         if rf_data.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "RF data array is empty".to_string(),
+                "RF data array is empty".to_owned(),
             ));
         }
 
@@ -240,7 +253,7 @@ impl SaftProcessor {
 
         if rf_data.dim().2 == 0 {
             return Err(KwaversError::InvalidInput(
-                "RF data must contain at least one sample per channel".to_string(),
+                "RF data must contain at least one sample per channel".to_owned(),
             ));
         }
 

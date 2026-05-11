@@ -34,7 +34,7 @@ impl EnergyBalanceCalculator {
     ///
     /// Molar dissociation rate: `ṅ = k(T) · n_vapor`  [mol/s]
     ///
-    /// Volumetric heat absorption rate [W]:
+    /// Volumetric heat absorption rate (W):
     /// ```text
     /// Q̇_chem = −ΔH_diss · ṅ
     /// ```

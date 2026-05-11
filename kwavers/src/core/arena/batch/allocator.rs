@@ -10,6 +10,7 @@ pub struct BatchFieldAllocator {
 
 impl BatchFieldAllocator {
     /// Create new batch field allocator.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             pools: std::collections::HashMap::new(),
@@ -18,12 +19,19 @@ impl BatchFieldAllocator {
     }
 
     /// Set NUMA node preference.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn with_numa_node(mut self, node: u32) -> Self {
         self.preferred_numa = Some(node);
         self
     }
 
     /// Allocate or retrieve from pool.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn allocate(&mut self, config: BatchFieldConfig) -> KwaversResult<SoAFieldBuffer<f64>> {
         let key = (config.field_elements, config.num_fields);
         if let Some(pool) = self.pools.get_mut(&key) {
@@ -37,12 +45,18 @@ impl BatchFieldAllocator {
     }
 
     /// Return buffer to pool for reuse.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn release(&mut self, buffer: SoAFieldBuffer<f64>) {
         let key = (buffer.field_elements, buffer.num_fields);
         self.pools.entry(key).or_default().push(buffer);
     }
 
     /// Pre-allocate buffers for common configurations.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn preallocate(
         &mut self,
         configs: &[(usize, usize)],
@@ -69,6 +83,7 @@ impl BatchFieldAllocator {
     }
 
     /// Total pooled buffers.
+    #[must_use] 
     pub fn pool_size(&self) -> usize {
         self.pools.values().map(|v| v.len()).sum()
     }

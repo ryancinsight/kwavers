@@ -21,6 +21,9 @@ use ndarray::{Array2, Array3};
 
 impl TransducerFieldCalculatorPlugin {
     /// Calculate pressure field using angular spectrum method
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_pressure_field(
         &mut self,
         frequency: f64,
@@ -110,6 +113,9 @@ impl TransducerFieldCalculatorPlugin {
     }
 
     /// Calculate harmonic pressure field for nonlinear propagation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calculate_harmonic_field(
         &mut self,
         harmonic: usize,

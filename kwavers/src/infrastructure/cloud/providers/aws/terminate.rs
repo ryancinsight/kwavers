@@ -5,6 +5,9 @@ use crate::infrastructure::cloud::DeploymentHandle;
 use std::collections::HashMap;
 
 /// Terminate AWS SageMaker deployment and delete all associated resources.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 #[cfg(all(feature = "pinn", feature = "cloud-aws"))]
 pub async fn terminate_aws_deployment(
     config: &HashMap<String, String>,

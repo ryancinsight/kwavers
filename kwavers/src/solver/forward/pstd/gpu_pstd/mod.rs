@@ -94,7 +94,6 @@ pub(super) struct PstdParams {
 ///
 /// Keeps all field data on the GPU throughout the time loop; sensor readings
 /// are downloaded in a single transfer after all time steps complete.
-#[allow(dead_code)]
 pub struct GpuPstdSolver {
     // Note: Manual Debug impl because wgpu types don't implement Debug.
     pub(super) device: Arc<wgpu::Device>,

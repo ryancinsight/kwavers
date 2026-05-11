@@ -11,6 +11,7 @@ pub struct ConservationEnforcer {
 
 impl ConservationEnforcer {
     /// Create new conservation enforcer
+    #[must_use] 
     pub fn new() -> Self {
         Self { tolerance: 1e-10 }
     }
@@ -47,12 +48,12 @@ impl ConservationEnforcer {
         let xt = target_i as f64 * target_grid.dx;
         let yt = target_j as f64 * target_grid.dy;
         let zt = target_k as f64 * target_grid.dz;
-        let xt_lo = xt - 0.5 * target_grid.dx;
-        let xt_hi = xt + 0.5 * target_grid.dx;
-        let yt_lo = yt - 0.5 * target_grid.dy;
-        let yt_hi = yt + 0.5 * target_grid.dy;
-        let zt_lo = zt - 0.5 * target_grid.dz;
-        let zt_hi = zt + 0.5 * target_grid.dz;
+        let xt_lo = 0.5f64.mul_add(-target_grid.dx, xt);
+        let xt_hi = 0.5f64.mul_add(target_grid.dx, xt);
+        let yt_lo = 0.5f64.mul_add(-target_grid.dy, yt);
+        let yt_hi = 0.5f64.mul_add(target_grid.dy, yt);
+        let zt_lo = 0.5f64.mul_add(-target_grid.dz, zt);
+        let zt_hi = 0.5f64.mul_add(target_grid.dz, zt);
         let v_target = target_grid.dx * target_grid.dy * target_grid.dz;
 
         // Source cell indices that can overlap with target cell
@@ -70,8 +71,8 @@ impl ConservationEnforcer {
 
         for si in si_min..=si_max {
             let xs = si as f64 * source_grid.dx;
-            let xs_lo = xs - 0.5 * source_grid.dx;
-            let xs_hi = xs + 0.5 * source_grid.dx;
+            let xs_lo = 0.5f64.mul_add(-source_grid.dx, xs);
+            let xs_hi = 0.5f64.mul_add(source_grid.dx, xs);
             let ov_x = (xt_hi.min(xs_hi) - xt_lo.max(xs_lo)).max(0.0);
             if ov_x == 0.0 {
                 continue;
@@ -79,8 +80,8 @@ impl ConservationEnforcer {
 
             for sj in sj_min..=sj_max {
                 let ys = sj as f64 * source_grid.dy;
-                let ys_lo = ys - 0.5 * source_grid.dy;
-                let ys_hi = ys + 0.5 * source_grid.dy;
+                let ys_lo = 0.5f64.mul_add(-source_grid.dy, ys);
+                let ys_hi = 0.5f64.mul_add(source_grid.dy, ys);
                 let ov_y = (yt_hi.min(ys_hi) - yt_lo.max(ys_lo)).max(0.0);
                 if ov_y == 0.0 {
                     continue;
@@ -88,8 +89,8 @@ impl ConservationEnforcer {
 
                 for sk in sk_min..=sk_max {
                     let zs = sk as f64 * source_grid.dz;
-                    let zs_lo = zs - 0.5 * source_grid.dz;
-                    let zs_hi = zs + 0.5 * source_grid.dz;
+                    let zs_lo = 0.5f64.mul_add(-source_grid.dz, zs);
+                    let zs_hi = 0.5f64.mul_add(source_grid.dz, zs);
                     let ov_z = (zt_hi.min(zs_hi) - zt_lo.max(zs_lo)).max(0.0);
                     if ov_z == 0.0 {
                         continue;
@@ -120,6 +121,10 @@ impl ConservationEnforcer {
     ///
     /// Σ_T φ_T · V_T = Σ_S φ_S · V_S to within floating-point rounding
     /// (~machine-epsilon × Σ|φ_S| · V_S). See `audit_energy_conservation`.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn conservative_interpolate(
         &self,
         source_field: &ArrayView3<f64>,
@@ -199,6 +204,9 @@ impl ConservationEnforcer {
     /// ```
     ///
     /// Returns `Ok(ε_E)`, or `Err` if source energy is zero (division by zero).
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn audit_energy_conservation(
         source_field: &ArrayView3<f64>,
         source_grid: &Grid,
@@ -212,7 +220,7 @@ impl ConservationEnforcer {
 
         if e_src.abs() < 1e-300 {
             return Err(KwaversError::InvalidInput(
-                "audit_energy_conservation: source energy is zero".to_string(),
+                "audit_energy_conservation: source energy is zero".to_owned(),
             ));
         }
 
@@ -240,6 +248,9 @@ mod tests {
     /// the source field unchanged. Hence E_src = E_tgt exactly.
     ///
     /// We verify: |E_src − E_tgt| / |E_src| < 1e-12.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_conservative_same_grid() {
         let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
@@ -281,6 +292,9 @@ mod tests {
     /// floating-point precision when the source domain is fully covered.
     ///
     /// We verify coarsening from 16³ → 8³ (dx doubles).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_conservative_2to1_coarsen() {
         // Fine source grid (16³, dx=0.001)

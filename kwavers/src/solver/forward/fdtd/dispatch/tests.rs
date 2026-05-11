@@ -18,8 +18,7 @@ fn test_strategy_selection() {
 
 #[test]
 fn test_dispatcher_creation() {
-    let result = FdtdStencilDispatcher::new(32, 32, 32, -1.0, -1.0);
-    assert!(result.is_ok());
+    let _dispatcher = FdtdStencilDispatcher::new(32, 32, 32, -1.0, -1.0).unwrap();
 }
 
 #[test]
@@ -30,10 +29,10 @@ fn test_dispatcher_invalid_dimensions() {
 
 #[test]
 fn test_dispatcher_strategy_override() {
-    let result =
-        FdtdStencilDispatcher::with_strategy(32, 32, 32, -1.0, -1.0, StencilStrategy::Scalar);
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap().strategy(), StencilStrategy::Scalar);
+    let dispatcher =
+        FdtdStencilDispatcher::with_strategy(32, 32, 32, -1.0, -1.0, StencilStrategy::Scalar)
+            .unwrap();
+    assert_eq!(dispatcher.strategy(), StencilStrategy::Scalar);
 }
 
 #[test]

@@ -76,6 +76,9 @@ impl PhaseRandomizer {
     }
 
     /// Randomize phases according to distribution
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn randomize_phases(&mut self) {
         let n = self.current_phases.len();
 
@@ -106,6 +109,9 @@ impl PhaseRandomizer {
     }
 
     /// Apply phase randomization to complex field
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_to_field(&self, field: &mut Array2<f64>) {
         let (n_elements, n_time) = field.dim();
         assert_eq!(n_elements, self.current_phases.len());

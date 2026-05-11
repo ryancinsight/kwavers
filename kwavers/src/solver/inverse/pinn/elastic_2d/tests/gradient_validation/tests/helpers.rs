@@ -10,6 +10,9 @@ use burn::tensor::Tensor;
 /// ```text
 /// ∂f/∂x ≈ (f(x+h) - f(x-h)) / (2h)
 /// ```
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(super) fn central_difference_x(
     model: &ElasticPINN2D<TestBackend>,
     x: f64,
@@ -35,6 +38,9 @@ pub(super) fn central_difference_x(
 }
 
 /// Compute central finite difference approximation of ∂f/∂y
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(super) fn central_difference_y(
     model: &ElasticPINN2D<TestBackend>,
     x: f64,
@@ -66,6 +72,9 @@ pub(super) fn central_difference_y(
 /// ```text
 /// ∂²f/∂x² ≈ (f(x+h) - 2f(x) + f(x-h)) / h²
 /// ```
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(super) fn second_difference_xx(
     model: &ElasticPINN2D<TestBackend>,
     x: f64,
@@ -96,6 +105,12 @@ pub(super) fn second_difference_xx(
 }
 
 /// Compute autodiff gradient ∂u/∂x at a point
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if `Gradient should exist`.
+///
 pub(super) fn autodiff_gradient_x(
     model: &ElasticPINN2D<TestAutodiffBackend>,
     x: f64,
@@ -123,6 +138,12 @@ pub(super) fn autodiff_gradient_x(
 }
 
 /// Compute autodiff gradient ∂u/∂y at a point
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if `Gradient should exist`.
+///
 pub(super) fn autodiff_gradient_y(
     model: &ElasticPINN2D<TestAutodiffBackend>,
     x: f64,
@@ -150,6 +171,13 @@ pub(super) fn autodiff_gradient_y(
 }
 
 /// Compute autodiff second derivative ∂²u/∂x²
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if `First gradient should exist`.
+/// - Panics if `Second gradient should exist`.
+///
 pub(super) fn autodiff_second_derivative_xx(
     model: &ElasticPINN2D<TestAutodiffBackend>,
     x: f64,

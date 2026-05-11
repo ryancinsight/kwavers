@@ -22,13 +22,12 @@ impl ThermalDiffusionPlugin {
     pub fn new(config: ThermalDiffusionConfig) -> Self {
         Self {
             metadata: PluginMetadata {
-                id: "thermal_diffusion".to_string(),
-                name: "ThermalDiffusion".to_string(),
-                version: "1.0.0".to_string(),
-                author: "Kwavers Team".to_string(),
-                description: "Thermal diffusion solver with bioheat and hyperbolic models"
-                    .to_string(),
-                license: "MIT".to_string(),
+                id: "thermal_diffusion".to_owned(),
+                name: "ThermalDiffusion".to_owned(),
+                version: "1.0.0".to_owned(),
+                author: "Kwavers Team".to_owned(),
+                description: "Thermal diffusion solver with bioheat and hyperbolic models".to_owned(),
+                license: "MIT".to_owned(),
             },
             solver: None,
             config,

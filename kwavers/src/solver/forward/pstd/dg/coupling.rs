@@ -7,6 +7,7 @@ pub struct HybridCoupler {
 }
 
 impl HybridCoupler {
+    #[must_use] 
     pub fn new(tolerance: f64) -> Self {
         Self { tolerance }
     }
@@ -23,6 +24,9 @@ impl super::traits::SolutionCoupling for HybridCoupler {
     /// - Otherwise (smooth spectral region): use s1 directly.
     ///
     /// `output` is fully overwritten; it does not need to be pre-initialized.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn couple_into(
         &self,
         solution1: &Array3<f64>,
@@ -40,7 +44,7 @@ impl super::traits::SolutionCoupling for HybridCoupler {
             if use_solution2 {
                 let diff = (s1 - s2).abs();
                 let w = (diff / tol).min(1.0);
-                *out = (1.0 - w) * s1 + w * s2;
+                *out = (1.0 - w).mul_add(s1, w * s2);
             } else {
                 *out = s1;
             }

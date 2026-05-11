@@ -5,6 +5,10 @@ use burn::tensor::backend::AutodiffBackend;
 use std::f64::consts::PI;
 
 impl<B: AutodiffBackend> MetaLearner<B> {
+    /// Generate task data.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn generate_task_data(&self, task: &PhysicsTask) -> KwaversResult<TaskData> {
         let collocation_points = self.generate_collocation_points(task.geometry.as_ref());
         let boundary_data =

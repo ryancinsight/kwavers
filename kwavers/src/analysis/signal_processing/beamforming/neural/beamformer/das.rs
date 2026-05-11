@@ -8,6 +8,9 @@ impl NeuralBeamformer {
     /// Traditional delay-and-sum beamforming.
     ///
     /// Computes baseline image using geometric focusing delays.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn traditional_beamforming(
         &self,
         rf_data: &Array4<f32>,
@@ -46,7 +49,7 @@ impl NeuralBeamformer {
                             (Ok(i0), Ok(i1)) if i1 < samples => {
                                 let s0 = rf_data[[f, ch, i0, 0]];
                                 let s1 = rf_data[[f, ch, i1, 0]];
-                                sum += s0 + frac * (s1 - s0);
+                                sum += frac.mul_add(s1 - s0, s0);
                                 count += 1;
                             }
                             (Ok(i0), _) if i0 < samples => {
@@ -70,6 +73,9 @@ impl NeuralBeamformer {
     /// Assess signal quality using coherence factor.
     ///
     /// CF = |Sum(s_i)|² / (N · Sum(|s_i|²)) ∈ [0, 1].
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn assess_signal_quality(&self, rf_data: &Array4<f32>) -> KwaversResult<f64> {
         let (frames, channels, samples, _) = rf_data.dim();
 

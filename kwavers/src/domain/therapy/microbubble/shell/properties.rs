@@ -16,11 +16,11 @@ use std::fmt;
 /// - Doinikov et al. (2011): nonlinear viscous stress in encapsulating shells
 #[derive(Debug, Clone)]
 pub struct MarmottantShellProperties {
-    /// Equilibrium radius [m]
+    /// Equilibrium radius (m)
     pub radius_equilibrium: f64,
-    /// Buckling radius [m]
+    /// Buckling radius (m)
     pub radius_buckling: f64,
-    /// Rupture radius [m]
+    /// Rupture radius (m)
     pub radius_rupture: f64,
     /// Shell elastic modulus κ_s [N/m]
     pub elasticity: f64,
@@ -36,6 +36,9 @@ pub struct MarmottantShellProperties {
 
 impl MarmottantShellProperties {
     /// Create new Marmottant shell properties.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn new(
         radius_equilibrium: f64,
         elasticity: f64,
@@ -45,37 +48,37 @@ impl MarmottantShellProperties {
     ) -> KwaversResult<Self> {
         if radius_equilibrium <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "radius_equilibrium".to_string(),
+                parameter: "radius_equilibrium".to_owned(),
                 value: radius_equilibrium,
-                reason: "must be positive".to_string(),
+                reason: "must be positive".to_owned(),
             }));
         }
         if elasticity < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "elasticity".to_string(),
+                parameter: "elasticity".to_owned(),
                 value: elasticity,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         if viscosity < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "viscosity".to_string(),
+                parameter: "viscosity".to_owned(),
                 value: viscosity,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         if buckling_ratio <= 0.0 || buckling_ratio >= 1.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "buckling_ratio".to_string(),
+                parameter: "buckling_ratio".to_owned(),
                 value: buckling_ratio,
-                reason: "must be in (0, 1)".to_string(),
+                reason: "must be in (0, 1)".to_owned(),
             }));
         }
         if rupture_ratio <= 1.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "rupture_ratio".to_string(),
+                parameter: "rupture_ratio".to_owned(),
                 value: rupture_ratio,
-                reason: "must be > 1".to_string(),
+                reason: "must be > 1".to_owned(),
             }));
         }
 
@@ -95,16 +98,25 @@ impl MarmottantShellProperties {
     }
 
     /// Create typical SonoVue-like shell.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn sono_vue(radius_equilibrium: f64) -> KwaversResult<Self> {
         Self::new(radius_equilibrium, 0.5, 0.8e-9, 0.85, 1.6)
     }
 
     /// Create typical Definity-like shell.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn definity(radius_equilibrium: f64) -> KwaversResult<Self> {
         Self::new(radius_equilibrium, 1.0, 1.2e-9, 0.90, 1.8)
     }
 
     /// Create drug-delivery shell (weaker for easier rupture).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn drug_delivery(radius_equilibrium: f64) -> KwaversResult<Self> {
         Self::new(radius_equilibrium, 0.3, 0.5e-9, 0.80, 1.4)
     }
@@ -195,45 +207,54 @@ impl MarmottantShellProperties {
     }
 
     /// Calculate shell strain (R/R₀ − 1).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn strain(&self, radius: f64) -> f64 {
         radius / self.radius_equilibrium - 1.0
     }
 
     /// Calculate shell stress (approximately χ(R)).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn stress(&self, radius: f64) -> f64 {
         self.surface_tension(radius)
     }
 
     /// Validate shell properties.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.radius_equilibrium <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "radius_equilibrium".to_string(),
+                parameter: "radius_equilibrium".to_owned(),
                 value: self.radius_equilibrium,
-                reason: "must be positive".to_string(),
+                reason: "must be positive".to_owned(),
             }));
         }
         if self.radius_buckling >= self.radius_equilibrium {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "radius_buckling".to_string(),
+                parameter: "radius_buckling".to_owned(),
                 value: self.radius_buckling,
-                reason: "must be < radius_equilibrium".to_string(),
+                reason: "must be < radius_equilibrium".to_owned(),
             }));
         }
         if self.radius_rupture <= self.radius_equilibrium {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "radius_rupture".to_string(),
+                parameter: "radius_rupture".to_owned(),
                 value: self.radius_rupture,
-                reason: "must be > radius_equilibrium".to_string(),
+                reason: "must be > radius_equilibrium".to_owned(),
             }));
         }
         if self.elasticity < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "elasticity".to_string(),
+                parameter: "elasticity".to_owned(),
                 value: self.elasticity,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         Ok(())

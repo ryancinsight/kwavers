@@ -42,10 +42,7 @@ mod tests {
     #[test]
     fn test_clinical_workflow_creation() {
         let config = ClinicalWorkflowConfig::default();
-        let workflow = ClinicalWorkflowOrchestrator::new(config);
-        assert!(workflow.is_ok());
-
-        let workflow = workflow.unwrap();
+        let workflow = ClinicalWorkflowOrchestrator::new(config).unwrap();
         match workflow.get_state() {
             WorkflowState::Initializing => {}
             _ => panic!("Expected Initializing state"),
@@ -60,10 +57,7 @@ mod tests {
         };
         let mut workflow = ClinicalWorkflowOrchestrator::new(config).unwrap();
 
-        let result = workflow.execute_examination("patient_001");
-        assert!(result.is_ok());
-
-        let result = result.unwrap();
+        let result = workflow.execute_examination("patient_001").unwrap();
         assert_eq!(result.patient_id, "patient_001");
         assert!(result.confidence_score >= 0.0 && result.confidence_score <= 100.0);
         assert!(!result.diagnostic_recommendations.is_empty());
@@ -84,9 +78,8 @@ mod tests {
 
     #[test]
     fn test_diagnostic_recommendations() {
-        let workflow = ClinicalWorkflowOrchestrator::new(ClinicalWorkflowConfig::default());
-        // Note: This would need proper setup for testing diagnostic recommendations
-        // For now, just test that workflow creation succeeds
-        assert!(workflow.is_ok());
+        let workflow = ClinicalWorkflowOrchestrator::new(ClinicalWorkflowConfig::default()).unwrap();
+        // State must be Initializing before any examination
+        matches!(workflow.get_state(), WorkflowState::Initializing);
     }
 }

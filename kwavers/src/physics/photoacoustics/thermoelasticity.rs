@@ -84,7 +84,7 @@ impl GrueneisenModel {
     pub fn evaluate(&self, t_celsius: f64) -> f64 {
         match self.d_gamma_d_t {
             None => self.gamma_0,
-            Some(c_t) => self.gamma_0 + c_t * (t_celsius - self.t_ref_celsius),
+            Some(c_t) => c_t.mul_add(t_celsius - self.t_ref_celsius, self.gamma_0),
         }
     }
 }
@@ -149,6 +149,9 @@ mod tests {
     use super::*;
 
     /// Γ = 0.12 + 0.004·(37−20) = 0.12 + 0.068 = 0.188 for water at 37 °C.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_grueneisen_water_at_37c() {
         let model = GrueneisenModel::water();
@@ -160,6 +163,9 @@ mod tests {
     }
 
     /// Temperature-independent model returns Γ₀ for any T.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_grueneisen_constant() {
         let model = GrueneisenModel::constant(0.2);
@@ -172,6 +178,9 @@ mod tests {
     ///
     /// Soft tissue: Γ(20°C) = 0.15 + 0.003·(20−37) = 0.15 − 0.051 = 0.099
     ///              Γ(37°C) = 0.15 + 0.003·(37−37) = 0.15
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_initial_pressure_temperature_dependence() {
         let model = GrueneisenModel::soft_tissue();
@@ -196,6 +205,9 @@ mod tests {
     ///
     /// This is the SSOT agreement test: the canonical type must return the
     /// published reference value exactly at its own reference temperature.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_grueneisen_types_agree_at_body_temperature() {
         // Soft-tissue model: Γ₀ = 0.15, T_ref = 37 °C → Γ(37) = 0.15
@@ -210,6 +222,9 @@ mod tests {
     ///
     /// For water model, ratio of reports at 37°C vs 20°C must equal
     /// `GrueneisenModel::water().evaluate(37.0) / GrueneisenModel::water().evaluate(20.0)`.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_thermoelastic_report_temperature_sensitivity() {
         use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
@@ -260,6 +275,9 @@ mod tests {
     /// Stress confinement: τ_laser ≪ τ_stress = 1/(μ_a · c_s).
     ///
     /// **Reference:** Oraevsky et al. (1994); τ_stress = δ_a / c_s = 1/(μ_a·c_s).
+    /// # Panics
+    /// - Panics if the stress confinement condition `τ_laser < τ_stress` is violated.
+    ///
     #[test]
     fn test_stress_confinement_condition() {
         let tau_laser = 5e-9_f64; // 5 ns laser pulse

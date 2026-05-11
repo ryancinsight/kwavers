@@ -34,6 +34,7 @@ pub enum TreatmentStatus {
 
 impl TreatmentStatus {
     /// Get string representation
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Planned => "Planned",
@@ -103,20 +104,29 @@ impl TreatmentPlan {
     }
 
     /// Add an objective
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_objective(&mut self, objective: impl Into<String>) {
         self.objectives.push(objective.into());
     }
 
     /// Add success criteria
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_success_criteria(&mut self, criteria: impl Into<String>) {
         self.success_criteria.push(criteria.into());
     }
 
     /// Mark a session as completed
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn complete_session(&mut self) -> KwaversResult<()> {
         if self.completed_sessions >= self.planned_sessions {
             return Err(KwaversError::InvalidInput(
-                "All planned sessions already completed".to_string(),
+                "All planned sessions already completed".to_owned(),
             ));
         }
 

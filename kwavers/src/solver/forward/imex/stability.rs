@@ -91,6 +91,9 @@ impl IMEXStabilityAnalyzer {
     }
 
     /// Estimate maximum stable time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn max_stable_timestep<F, G>(
         &self,
         scheme: &IMEXSchemeType,
@@ -127,6 +130,9 @@ impl IMEXStabilityAnalyzer {
     }
 
     /// Estimate maximum eigenvalue magnitude
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn estimate_max_eigenvalue<F>(&self, field: &Array3<f64>, rhs_fn: &F) -> KwaversResult<f64>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
@@ -137,7 +143,7 @@ impl IMEXStabilityAnalyzer {
 
         // Normalize
         let norm: f64 = v.iter().map(|&x| x * x).sum::<f64>().sqrt();
-        v.mapv_inplace(|x| x / norm);
+        v.par_mapv_inplace(|x| x / norm);
 
         let mut eigenvalue = 0.0;
 
@@ -164,7 +170,7 @@ impl IMEXStabilityAnalyzer {
             v = jv;
             let norm: f64 = v.iter().map(|&x| x * x).sum::<f64>().sqrt();
             if norm > 0.0 {
-                v.mapv_inplace(|x| x / norm);
+                v.par_mapv_inplace(|x| x / norm);
             } else {
                 break;
             }
@@ -174,6 +180,9 @@ impl IMEXStabilityAnalyzer {
     }
 
     /// Check if a time step is stable
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn is_stable<F, G>(
         &self,
         scheme: &IMEXSchemeType,

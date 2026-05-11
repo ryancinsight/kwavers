@@ -5,7 +5,7 @@ use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 pub struct NonlinearParameters {
     /// Density of the medium (rho_0) [kg/m^3]
     pub density: f64,
-    /// Small-signal sound speed (c_0) [m/s]
+    /// Small-signal sound speed (c_0) (m/s)
     pub sound_speed: f64,
     /// Nonlinear parameter B/A (dimensionless)
     pub b_over_a: f64,
@@ -60,14 +60,14 @@ impl NonlinearParameters {
 /// Properties for tissue harmonic imaging simulation
 #[derive(Debug, Clone)]
 pub struct TissueHarmonicProperties {
-    /// Fundamental frequency [Hz]
+    /// Fundamental frequency (Hz)
     pub fundamental_frequency: f64,
-    /// Peak negative pressure of fundamental [Pa]
+    /// Peak negative pressure of fundamental (Pa)
     pub fundamental_pressure: f64,
     /// Bandwidth of the transducer (fractional)
     pub fractional_bandwidth: f64,
     /// F-number of the imaging system
     pub f_number: f64,
-    /// Focal depth [m]
+    /// Focal depth (m)
     pub focal_depth: f64,
 }

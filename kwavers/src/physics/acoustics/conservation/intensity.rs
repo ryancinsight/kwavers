@@ -23,7 +23,7 @@ pub fn acoustic_intensity(
     (ix, iy, iz)
 }
 
-/// Compute total acoustic power through a z-plane [W].
+/// Compute total acoustic power through a z-plane (W).
 #[must_use]
 pub fn acoustic_power_through_z_plane(
     pressure: &Array3<f64>,

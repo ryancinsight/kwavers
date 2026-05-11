@@ -88,10 +88,10 @@ impl TrilinearInterpolator {
         let c111 = field[[i_next, j_next, k_next]];
 
         // Interpolate along x.
-        let c00 = c000 * (1.0 - dxf) + c100 * dxf;
-        let c10 = c010 * (1.0 - dxf) + c110 * dxf;
-        let c01 = c001 * (1.0 - dxf) + c101 * dxf;
-        let c11 = c011 * (1.0 - dxf) + c111 * dxf;
+        let c00 = c000.mul_add(1.0 - dxf, c100 * dxf);
+        let c10 = c010.mul_add(1.0 - dxf, c110 * dxf);
+        let c01 = c001.mul_add(1.0 - dxf, c101 * dxf);
+        let c11 = c011.mul_add(1.0 - dxf, c111 * dxf);
 
         // Interpolate along y.
         let c0 = c00 * (1.0 - dyf) + c10 * dyf;
@@ -135,6 +135,9 @@ mod tests {
     /// `field[[i, j + 1, k]]` panicked with `ndarray: index out of bounds`.
     /// Reproducer: any `pkw.Medium(sound_speed, density)` heterogeneous
     /// medium on a quasi-1D grid (e.g. `examples/ivp_1D_simulation_compare.py`).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn interpolate_quasi_1d_grid_does_not_panic_on_degenerate_y_z() {
         let grid = Grid::new(8, 1, 1, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
@@ -172,6 +175,9 @@ mod tests {
 
     /// Quasi-2D coverage: nz = 1 with non-degenerate nx and ny. Confirms the
     /// degenerate-axis logic is independent across axes.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn interpolate_quasi_2d_grid_does_not_panic_on_degenerate_z() {
         let grid = Grid::new(4, 4, 1, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();

@@ -30,9 +30,13 @@ impl StreamingVelocity {
         }
     }
 
+    /// Speed.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn speed(&self) -> f64 {
-        (self.vx * self.vx + self.vy * self.vy + self.vz * self.vz).sqrt()
+        self.vz.mul_add(self.vz, self.vx.mul_add(self.vx, self.vy * self.vy)).sqrt()
     }
 }
 
@@ -41,6 +45,9 @@ impl StreamingVelocity {
 /// Simplified model (Elder 1959): v_streaming ∝ (R₀²ω/ν)·(U/c)²·f(r/R₀)
 ///
 /// Returns zero for distances ≤ R₀ (inside bubble).
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn calculate_acoustic_streaming_velocity(
     radius_equilibrium: f64,
     wall_velocity_amplitude: f64,
@@ -63,7 +70,7 @@ pub fn calculate_acoustic_streaming_velocity(
     let v_magnitude = re * mach_sq * radius_equilibrium * omega * decay;
 
     let dir_mag =
-        (direction.0 * direction.0 + direction.1 * direction.1 + direction.2 * direction.2).sqrt();
+        direction.2.mul_add(direction.2, direction.0.mul_add(direction.0, direction.1 * direction.1)).sqrt();
     if dir_mag < 1e-10 {
         return Ok(StreamingVelocity::zero());
     }

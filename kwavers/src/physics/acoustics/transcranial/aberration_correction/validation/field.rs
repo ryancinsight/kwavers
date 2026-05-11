@@ -5,6 +5,9 @@ use num_complex::Complex;
 
 impl TranscranialAberrationCorrection {
     /// Simulate acoustic field with phase correction applied.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn simulate_corrected_field(
         &self,
         correction: &PhaseCorrection,
@@ -28,7 +31,7 @@ impl TranscranialAberrationCorrection {
                         let dx = x - elem_pos[0];
                         let dy = y - elem_pos[1];
                         let dz = z - elem_pos[2];
-                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                        let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                         if distance > 0.0 {
                             let phase = correction.phases.get(elem_idx).unwrap_or(&0.0);

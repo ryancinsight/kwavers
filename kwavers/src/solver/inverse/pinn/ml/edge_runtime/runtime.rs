@@ -1,6 +1,5 @@
 use super::{
-    DataType, EdgeRuntime, ExecutionKernel, HardwareCapabilities, IOSpecification, MemoryAllocator,
-    PerformanceMonitor,
+    DataType, EdgeRuntime, ExecutionKernel, IOSpecification, MemoryAllocator, PerformanceMonitor,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::QuantizedModel;
@@ -28,6 +27,9 @@ impl EdgeRuntime {
     }
 
     /// Load a quantized model for edge deployment
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn load_model(&mut self, model: QuantizedModel) -> KwaversResult<()> {
         self.validate_model_compatibility(&model)?;
 
@@ -41,6 +43,9 @@ impl EdgeRuntime {
     }
 
     /// Execute optimized inference
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn inference(&mut self, input: &[f32]) -> KwaversResult<Vec<f32>> {
         let start_time = std::time::Instant::now();
 
@@ -75,7 +80,10 @@ impl EdgeRuntime {
 
         Ok(output)
     }
-
+    /// Validate model compatibility.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub(super) fn validate_model_compatibility(&self, model: &QuantizedModel) -> KwaversResult<()> {
         let model_memory = model.memory_usage();
         if model_memory > self.allocator.total_memory {
@@ -131,7 +139,10 @@ impl EdgeRuntime {
 
         Ok(())
     }
-
+    /// Create execution kernels.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn create_execution_kernels(&mut self, model: &QuantizedModel) -> KwaversResult<()> {
         for (layer_idx, layer) in model.original_layers.iter().enumerate() {
             let kernel = ExecutionKernel {

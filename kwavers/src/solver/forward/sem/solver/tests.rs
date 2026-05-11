@@ -52,6 +52,9 @@ fn test_sem_time_stepping() {
 }
 
 /// Constant field u=1: ∇u=0 everywhere, so K·u must be identically zero.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_stiffness_constant_field_is_zero() {
     let mesh = MeshBuilder::create_rectangular_mesh(1.0, 1.0, 1.0, 3);
@@ -79,6 +82,9 @@ fn test_stiffness_constant_field_is_zero() {
 }
 
 /// uᵀKu = ρc² ∫|∇u|² dΩ = ρc² × Lx × Ly × Lz  for u = x on [0,Lx]×[0,Ly]×[0,Lz]
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_stiffness_energy_linear_field() {
     let lx = 2.0;
@@ -119,6 +125,9 @@ fn test_stiffness_energy_linear_field() {
 }
 
 /// K is symmetric: (K·u)·v = u·(K·v)
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_stiffness_symmetry() {
     let mesh = MeshBuilder::create_rectangular_mesh(1.0, 1.0, 1.0, 2);
@@ -151,6 +160,9 @@ fn test_stiffness_symmetry() {
 }
 
 /// E = ½(vᵀMv + uᵀKu) is conserved within 1% over 20 steps with Newmark.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_free_vibration_energy_conservation() {
     let mesh = MeshBuilder::create_rectangular_mesh(0.1, 0.1, 0.1, 2);

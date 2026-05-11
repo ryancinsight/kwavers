@@ -2,7 +2,6 @@
 
 use crate::domain::field::wave::WaveFields;
 use crate::domain::grid::Grid;
-use crate::domain::medium::MaterialFields;
 use crate::solver::forward::fdtd::FdtdSolver;
 use crate::solver::forward::hybrid::adaptive_selection::AdaptiveSelector;
 use crate::solver::forward::hybrid::config::HybridConfig;
@@ -16,13 +15,6 @@ mod interface_impl;
 mod stepping;
 mod update;
 
-/// Context for regional solver application
-#[allow(dead_code)]
-pub(super) struct RegionalContext<'a> {
-    pub(super) source: &'a dyn crate::domain::source::Source,
-    pub(super) boundary: &'a mut dyn crate::domain::boundary::Boundary,
-}
-
 /// Hybrid PSTD/FDTD solver combining spectral and finite-difference methods
 #[derive(Debug)]
 pub struct HybridSolver {
@@ -33,16 +25,10 @@ pub struct HybridSolver {
     pub(super) grid: Grid,
 
     /// PSTD solver for smooth regions
-    #[allow(dead_code)]
     pub(super) pstd_solver: PSTDSolver,
 
     /// FDTD solver for discontinuous regions
-    #[allow(dead_code)]
     pub(super) fdtd_solver: FdtdSolver,
-
-    /// Material properties cache
-    #[allow(dead_code)]
-    pub(super) materials: MaterialFields,
 
     // Unified Fields
     pub(super) fields: WaveFields,

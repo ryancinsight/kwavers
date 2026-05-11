@@ -11,6 +11,9 @@ impl NonlinearElasticWaveSolver {
     /// - Shock formation time: `t_shock ~ u_ref / (c β |∇u|)`
     ///
     /// scaled by a regime-dependent fraction, then clamped to at least one step.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn propagate_waves(
         &self,
         initial_displacement: &ndarray::Array3<f64>,
@@ -157,11 +160,11 @@ impl NonlinearElasticWaveSolver {
 
         if self.attenuation_np_per_m > 0.0 {
             let decay = (-self.attenuation_np_per_m * self.config.sound_speed() * dt).exp();
-            field.u_fundamental.mapv_inplace(|x| x * decay);
-            field.u_fundamental_prev.mapv_inplace(|x| x * decay);
-            field.u_second.mapv_inplace(|x| x * decay);
+            field.u_fundamental.par_mapv_inplace(|x| x * decay);
+            field.u_fundamental_prev.par_mapv_inplace(|x| x * decay);
+            field.u_second.par_mapv_inplace(|x| x * decay);
             for h in &mut field.u_harmonics {
-                h.mapv_inplace(|x| x * decay);
+                h.par_mapv_inplace(|x| x * decay);
             }
         }
     }

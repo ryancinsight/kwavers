@@ -19,6 +19,9 @@ pub struct DomainPartitioner {
 
 impl DomainPartitioner {
     /// Create a new domain partitioner
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -29,6 +32,9 @@ impl DomainPartitioner {
     }
 
     /// Partition the domain based on quality metrics and strategy
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn partition(
         &self,
         grid: &Grid,
@@ -83,9 +89,7 @@ impl DomainPartitioner {
                         && j < metrics.homogeneity.dim().1
                         && k < metrics.homogeneity.dim().2
                     {
-                        sum += metrics.homogeneity[[i, j, k]] * 0.4
-                            + metrics.smoothness[[i, j, k]] * 0.4
-                            + metrics.spectral_content[[i, j, k]] * 0.2;
+                        sum += metrics.spectral_content[[i, j, k]].mul_add(0.2, metrics.homogeneity[[i, j, k]].mul_add(0.4, metrics.smoothness[[i, j, k]] * 0.4));
                         count += 1;
                     }
                 }

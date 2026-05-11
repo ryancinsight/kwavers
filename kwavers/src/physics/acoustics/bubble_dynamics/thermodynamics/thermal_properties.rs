@@ -38,7 +38,7 @@ impl ThermodynamicsCalculator {
         const E: f64 = 0.082139;
 
         let t = temperature / 1000.0;
-        A + B * t + C * t * t + D * t * t * t + E / (t * t)
+        (D * t * t).mul_add(t, (C * t).mul_add(t, B.mul_add(t, A))) + E / (t * t)
     }
 
     /// Calculate thermal conductivity of water vapor

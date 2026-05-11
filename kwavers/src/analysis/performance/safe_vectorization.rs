@@ -20,6 +20,9 @@ impl SafeVectorOps {
     ///
     /// Uses ndarray's native `+` operator which LLVM autovectorizes to AVX2/NEON
     /// when available. No intermediate Vec allocation.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[inline]
     #[must_use]
     pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
@@ -28,6 +31,9 @@ impl SafeVectorOps {
     }
 
     /// Parallel add for large arrays using Rayon + ndarray Zip (no intermediate Vec)
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[inline]
     #[must_use]
     pub fn add_arrays_parallel(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
@@ -50,7 +56,7 @@ impl SafeVectorOps {
     /// In-place scalar multiplication for zero-copy operations
     #[inline]
     pub fn scalar_multiply_inplace(array: &mut Array3<f64>, scalar: f64) {
-        array.iter_mut().for_each(|val| *val *= scalar);
+        array.mapv_inplace(|v| v * scalar);
     }
 
     /// Element-wise exponential using ndarray mapv (no intermediate Vec allocation).
@@ -61,6 +67,9 @@ impl SafeVectorOps {
     }
 
     /// Dot product using fold for LLVM reduction optimization
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[inline]
     #[must_use]
     pub fn dot_product(a: &[f64], b: &[f64]) -> f64 {
@@ -88,6 +97,9 @@ impl SafeVectorOps {
     /// Falls back to element-wise ndarray Zip for non-contiguous arrays.
     /// The `chunk_size` parameter is advisory; the contiguous fast-path still uses
     /// it for L1-cache tiling; the fallback ignores it (ndarray handles tiling).
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[inline]
     #[must_use]
     pub fn add_arrays_chunked(a: &Array3<f64>, b: &Array3<f64>, chunk_size: usize) -> Array3<f64> {
@@ -113,7 +125,7 @@ impl SafeVectorOps {
             ndarray::Zip::from(&mut result)
                 .and(a)
                 .and(b)
-                .for_each(|r, &av, &bv| *r = av + bv);
+                .par_for_each(|r, &av, &bv| *r = av + bv);
         }
 
         result

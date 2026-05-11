@@ -8,6 +8,11 @@ pub struct DiscontinuityDetector {
 }
 
 impl DiscontinuityDetector {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(threshold: f64) -> Self {
         Self { threshold }
     }

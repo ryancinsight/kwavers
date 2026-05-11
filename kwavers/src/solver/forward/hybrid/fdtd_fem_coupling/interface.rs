@@ -19,6 +19,9 @@ pub struct CouplingInterface {
 
 impl CouplingInterface {
     /// Create coupling interface from FDTD grid and FEM mesh
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(fdtd_grid: &Grid, fem_mesh: &TetrahedralMesh) -> KwaversResult<Self> {
         let (fdtd_indices, fem_indices) = Self::find_interface_nodes(fdtd_grid, fem_mesh)?;
         let interpolation_weights =
@@ -35,6 +38,9 @@ impl CouplingInterface {
     }
 
     /// Find nodes at FDTD-FEM interface
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     fn find_interface_nodes(
         fdtd_grid: &Grid,
         fem_mesh: &TetrahedralMesh,
@@ -51,7 +57,7 @@ impl CouplingInterface {
                         let dx = x - node.coordinates[0];
                         let dy = y - node.coordinates[1];
                         let dz = z - node.coordinates[2];
-                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                        let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                         if distance <= fdtd_grid.dx {
                             fdtd_indices.push((i, j, k));
@@ -65,7 +71,7 @@ impl CouplingInterface {
 
         if fdtd_indices.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "No interface nodes found between FDTD and FEM domains".to_string(),
+                "No interface nodes found between FDTD and FEM domains".to_owned(),
             ));
         }
 
@@ -73,6 +79,9 @@ impl CouplingInterface {
     }
 
     /// Compute interpolation weights for conservative transfer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_interpolation_weights(
         fdtd_indices: &[(usize, usize, usize)],
         fem_indices: &[usize],
@@ -89,7 +98,7 @@ impl CouplingInterface {
             let dx = fdtd_x - fem_node.coordinates[0];
             let dy = fdtd_y - fem_node.coordinates[1];
             let dz = fdtd_z - fem_node.coordinates[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             let sigma = fdtd_grid.dx;
             let weight = (-distance * distance / (2.0 * sigma * sigma)).exp();
@@ -101,6 +110,9 @@ impl CouplingInterface {
     }
 
     /// Compute interface geometry (normals and areas)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_interface_geometry(
         fdtd_indices: &[(usize, usize, usize)],
         fdtd_grid: &Grid,

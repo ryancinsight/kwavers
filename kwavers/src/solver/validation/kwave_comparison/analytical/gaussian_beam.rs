@@ -26,6 +26,9 @@ pub struct GaussianBeam {
 
 impl GaussianBeam {
     /// Create new Gaussian beam. Validates f > 0, c₀ > 0, w₀ > 3λ.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn new(
         amplitude: f64,
         frequency: f64,
@@ -36,21 +39,21 @@ impl GaussianBeam {
         if frequency <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "Frequency must be positive".to_string(),
+                    message: "Frequency must be positive".to_owned(),
                 },
             ));
         }
         if sound_speed <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "Sound speed must be positive".to_string(),
+                    message: "Sound speed must be positive".to_owned(),
                 },
             ));
         }
         if waist_radius <= 0.0 {
             return Err(KwaversError::Validation(
                 crate::core::error::validation::ValidationError::ConstraintViolation {
-                    message: "Waist radius must be positive".to_string(),
+                    message: "Waist radius must be positive".to_owned(),
                 },
             ));
         }
@@ -76,20 +79,23 @@ impl GaussianBeam {
         })
     }
 
-    /// Rayleigh range z_R = πw₀²/λ [m]
+    /// Rayleigh range z_R = πw₀²/λ (m)
+    #[must_use] 
     pub fn rayleigh_range(&self) -> f64 {
         let wavelength = self.sound_speed / self.frequency;
         PI * self.waist_radius.powi(2) / wavelength
     }
 
-    /// Beam width w(z) = w₀√(1 + (z/z_R)²) [m]
+    /// Beam width w(z) = w₀√(1 + (z/z_R)²) (m)
+    #[must_use] 
     pub fn beam_width(&self, z: f64) -> f64 {
         let z_rel = z - self.focal_z;
         let z_r = self.rayleigh_range();
-        self.waist_radius * (1.0 + (z_rel / z_r).powi(2)).sqrt()
+        self.waist_radius * (z_rel / z_r).mul_add(z_rel / z_r, 1.0).sqrt()
     }
 
-    /// Gouy phase φ(z) = arctan(z/z_R) [rad]
+    /// Gouy phase φ(z) = arctan(z/z_R) (rad)
+    #[must_use] 
     pub fn gouy_phase(&self, z: f64) -> f64 {
         let z_rel = z - self.focal_z;
         let z_r = self.rayleigh_range();
@@ -97,8 +103,9 @@ impl GaussianBeam {
     }
 
     /// Evaluate Gaussian beam pressure (real part) at given position and time.
+    #[must_use] 
     pub fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
-        let r = (x.powi(2) + y.powi(2)).sqrt();
+        let r = x.hypot(y);
         let z_rel = z - self.focal_z;
         let w_z = self.beam_width(z);
         let amplitude_factor = self.waist_radius / w_z;

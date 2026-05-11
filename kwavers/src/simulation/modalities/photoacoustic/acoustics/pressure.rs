@@ -11,11 +11,11 @@
 //! ```
 //!
 //! Where:
-//! - `p₀`: Initial pressure [Pa]
-//! - `Γ`: Grüneisen parameter (thermoelastic efficiency) [dimensionless]
-//! - `μₐ`: Optical absorption coefficient [m⁻¹]
-//! - `Φ`: Optical fluence [J/m²]
-//! - `λ`: Wavelength [nm]
+//! - `p₀`: Initial pressure (Pa)
+//! - `Γ`: Grüneisen parameter (thermoelastic efficiency) (dimensionless)
+//! - `μₐ`: Optical absorption coefficient (m^-1)
+//! - `Φ`: Optical fluence (J/m^2)
+//! - `λ`: Wavelength (nm)
 //!
 //! ### Wavelength-Dependent Grüneisen Parameter
 //!
@@ -42,6 +42,9 @@ use ndarray::Array3;
 /// Compute initial pressure distribution from optical absorption.
 ///
 /// Implements the photoacoustic generation theorem: p₀(r) = Γ · μₐ(r) · Φ(r)
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn compute_initial_pressure(
     grid: &Grid,
     optical_properties: &Array3<OpticalPropertyData>,
@@ -58,9 +61,9 @@ pub fn compute_initial_pressure(
     let wavelength_scaling = if operating_wavelength < 600.0 {
         1.0
     } else if operating_wavelength < 800.0 {
-        0.9 - (operating_wavelength - 600.0) * 0.0005
+        (operating_wavelength - 600.0).mul_add(-0.0005, 0.9)
     } else {
-        0.8 - (operating_wavelength - 800.0) * 0.0002
+        (operating_wavelength - 800.0).mul_add(-0.0002, 0.8)
     };
 
     let base_gruneisen = gruneisen_parameters.first().copied().unwrap_or(0.12);
@@ -86,6 +89,9 @@ pub fn compute_initial_pressure(
 }
 
 /// Compute multi-wavelength initial pressure distributions.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn compute_multi_wavelength_pressure(
     grid: &Grid,
     optical_properties: &Array3<OpticalPropertyData>,

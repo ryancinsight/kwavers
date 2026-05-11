@@ -50,6 +50,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Dynamic viscosity [Pa·s]
+    #[must_use] 
     pub fn dynamic_viscosity_water(&self, temperature: f64) -> f64 {
         const A: f64 = 2.414e-5; // Pa·s  — pre-exponential factor
         const B: f64 = 247.8; // °C    — activation parameter
@@ -87,7 +88,7 @@ impl StateDependentConstants {
     /// # Arguments
     /// * `pre_exponential`    — A [Pa·s]
     /// * `activation_energy`  — E_a [J mol⁻¹]
-    /// * `temperature_kelvin` — T [K]
+    /// * `temperature_kelvin` — T (K)
     ///
     /// # Returns
     /// Dynamic viscosity [Pa·s]
@@ -108,6 +109,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Kinematic viscosity [m²/s]
+    #[must_use] 
     pub fn kinematic_viscosity_water(&self, temperature: f64) -> f64 {
         let eta = self.dynamic_viscosity_water(temperature);
         let rho = WaterProperties::density(temperature);
@@ -126,12 +128,13 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Thermal diffusivity [m²/s]
+    #[must_use] 
     pub fn thermal_diffusivity_water(&self, temperature: f64) -> f64 {
         const K_THERM: f64 = 0.598; // W/(m·K) at 20°C
         const CP: f64 = 4182.0; // J/(kg·K)
 
         let rho = WaterProperties::density(temperature);
-        let k_temp = K_THERM * (1.0 + 0.002 * (temperature - 20.0));
+        let k_temp = K_THERM * 0.002f64.mul_add(temperature - 20.0, 1.0);
 
         k_temp / (rho * CP)
     }
@@ -142,7 +145,8 @@ impl StateDependentConstants {
     /// * `temperature` - Temperature [°C]
     ///
     /// # Returns
-    /// Prandtl number [dimensionless]
+    /// Prandtl number (dimensionless)
+    #[must_use] 
     pub fn prandtl_number_water(&self, temperature: f64) -> f64 {
         let nu = self.kinematic_viscosity_water(temperature);
         let kappa = self.thermal_diffusivity_water(temperature);
@@ -152,12 +156,13 @@ impl StateDependentConstants {
     /// Calculate Reynolds number Re = (ρ·v·L)/η
     ///
     /// # Arguments
-    /// * `velocity` - Characteristic velocity [m/s]
-    /// * `length` - Characteristic length [m]
+    /// * `velocity` - Characteristic velocity (m/s)
+    /// * `length` - Characteristic length (m)
     /// * `temperature` - Temperature [°C]
     ///
     /// # Returns
-    /// Reynolds number [dimensionless]
+    /// Reynolds number (dimensionless)
+    #[must_use] 
     pub fn reynolds_number_water(&self, velocity: f64, length: f64, temperature: f64) -> f64 {
         let rho = WaterProperties::density(temperature);
         let eta = self.dynamic_viscosity_water(temperature);

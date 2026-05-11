@@ -26,6 +26,10 @@ pub enum SteeringVectorMethod {
 pub struct SteeringVector;
 
 impl SteeringVector {
+    /// Compute plane wave.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_plane_wave(
         direction: [f64; 3],
         frequency: f64,
@@ -51,6 +55,9 @@ impl SteeringVector {
 
     /// Compute steering vector for given direction and sensor positions
     /// Returns complex-valued steering vector as `Array1<Complex<f64>>`
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute(
         method: &SteeringVectorMethod,
         direction: [f64; 3],
@@ -62,17 +69,17 @@ impl SteeringVector {
 
         if !frequency.is_finite() || frequency <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "frequency must be finite and > 0".to_string(),
+                "frequency must be finite and > 0".to_owned(),
             ));
         }
         if !speed_of_sound.is_finite() || speed_of_sound <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "speed_of_sound must be finite and > 0".to_string(),
+                "speed_of_sound must be finite and > 0".to_owned(),
             ));
         }
         if sensor_positions.is_empty() {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "sensor_positions must be non-empty".to_string(),
+                "sensor_positions must be non-empty".to_owned(),
             ));
         }
         if sensor_positions
@@ -80,7 +87,7 @@ impl SteeringVector {
             .any(|p| !p.iter().all(|v| v.is_finite()))
         {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "sensor_positions must be finite 3D coordinates".to_string(),
+                "sensor_positions must be finite 3D coordinates".to_owned(),
             ));
         }
 
@@ -102,7 +109,7 @@ impl SteeringVector {
             SteeringVectorMethod::SphericalWave { source_position } => {
                 if source_position.iter().any(|v| !v.is_finite()) {
                     return Err(crate::core::error::KwaversError::InvalidInput(
-                        "source_position must be finite".to_string(),
+                        "source_position must be finite".to_owned(),
                     ));
                 }
                 // Spherical wave steering: a_i = exp(j k |r_i - r₀|) / |r_i - r₀|
@@ -139,6 +146,9 @@ impl SteeringVector {
     }
 
     /// Compute real-valued steering vector (phase-only for delay-and-sum)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_real(
         method: &SteeringVectorMethod,
         direction: [f64; 3],
@@ -157,6 +167,9 @@ impl SteeringVector {
     }
 
     /// Compute broadside steering vector (perpendicular to array axis)
+    /// # Panics
+    /// - Panics if `broadside steering computation must succeed`.
+    ///
     #[must_use]
     pub fn broadside(
         sensor_positions: &[[f64; 3]],
@@ -175,6 +188,9 @@ impl SteeringVector {
     }
 
     /// Compute endfire steering vector (along array axis)
+    /// # Panics
+    /// - Panics if `endfire steering computation must succeed`.
+    ///
     #[must_use]
     pub fn endfire(
         sensor_positions: &[[f64; 3]],

@@ -5,6 +5,10 @@ use super::helpers::{make_small_test_solver, read_buffer_f32};
 /// Regression guard: variable-only medium updates must preserve static
 /// absorption/nonlinearity buffers, and source-kappa disablement must write
 /// a resident unity buffer rather than a fresh allocation.
+/// # Panics
+/// - Panics if `non-empty c0`.
+/// - Panics if `non-empty rho`.
+///
 #[test]
 fn test_medium_variable_update_preserves_static_buffers_and_disables_source_correction() {
     let Some(mut solver) = make_small_test_solver() else {

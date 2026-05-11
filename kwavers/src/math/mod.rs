@@ -12,10 +12,10 @@
 //!
 //! # Modules
 //!
-//! - [`fft`]: Fast Fourier Transform operations and k-space utilities
-//! - [`geometry`]: Geometric primitives and spatial computations
-//! - [`linear_algebra`]: Linear algebra operations including sparse matrix support
-//! - [`numerics`]: Numerical methods and algorithms
+//! - `fft`: Fast Fourier Transform operations and k-space utilities
+//! - `geometry`: Geometric primitives and spatial computations
+//! - `linear_algebra`: Linear algebra operations including sparse matrix support
+//! - `numerics`: Numerical methods and algorithms
 //!
 //! # Design Principles
 //!

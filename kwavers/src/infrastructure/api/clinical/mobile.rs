@@ -48,6 +48,9 @@ pub struct OptimizationRule {
 }
 
 /// Mobile optimization endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub async fn optimize_mobile(
     State(state): State<ClinicalAppState>,
     _auth: AuthenticatedUser,

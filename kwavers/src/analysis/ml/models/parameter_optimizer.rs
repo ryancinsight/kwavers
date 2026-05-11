@@ -14,6 +14,9 @@ pub struct ParameterOptimizerModel {
 
 impl ParameterOptimizerModel {
     /// Load model from path
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
         // Basic model initialization (future: load from serialized weights)
         Ok(Self::new(128, 64))
@@ -26,8 +29,8 @@ impl ParameterOptimizerModel {
         Self {
             engine: InferenceEngine::from_weights(weights, bias, 32, false),
             metadata: ModelMetadata {
-                name: "ParameterOptimizer".to_string(),
-                version: "1.0.0".to_string(),
+                name: "ParameterOptimizer".to_owned(),
+                version: "1.0.0".to_owned(),
                 input_shape: vec![input_dim],
                 output_shape: vec![output_dim],
                 accuracy: 0.92_f64,
@@ -37,16 +40,27 @@ impl ParameterOptimizerModel {
     }
 
     /// Get metadata
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
 
     /// Run inference
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         self.predict(input)
     }
 
+    /// Create a parameter optimizer with randomly initialized weights.
+    ///
+    /// Weights are drawn from U(−0.1, 0.1). `input_dim` is the feature
+    /// count; `output_dim` is the number of optimized parameter outputs.
+    /// Accuracy and inference time are zero until the model is trained.
     #[must_use]
     pub fn new(input_dim: usize, output_dim: usize) -> Self {
         use rand::Rng;
@@ -56,8 +70,8 @@ impl ParameterOptimizerModel {
         Self {
             engine: InferenceEngine::from_weights(weights, None, 32, false),
             metadata: ModelMetadata {
-                name: "ParameterOptimizer".to_string(),
-                version: "1.0.0".to_string(),
+                name: "ParameterOptimizer".to_owned(),
+                version: "1.0.0".to_owned(),
                 input_shape: vec![input_dim],
                 output_shape: vec![output_dim],
                 accuracy: 0.0_f64,

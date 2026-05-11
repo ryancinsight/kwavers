@@ -8,6 +8,7 @@ use std::fmt::Write as FmtWrite;
 
 impl ConservationReport {
     /// Create a new conservation report
+    #[must_use] 
     pub fn new(
         _title: String,
         metadata: ReportMetadata,
@@ -46,39 +47,39 @@ impl ConservationReport {
         let mut recommendations = Vec::new();
 
         if analysis.statistics.total_violations == 0 {
-            recommendations.push("✓ Excellent conservation - no action needed".to_string());
+            recommendations.push("✓ Excellent conservation - no action needed".to_owned());
             return recommendations;
         }
 
         if analysis.statistics.trend_worsening {
-            recommendations.push("⚠ Violations are increasing over time - consider:".to_string());
-            recommendations.push("  1. Reducing timestep size (CFL number)".to_string());
-            recommendations.push("  2. Using higher-order discretization schemes".to_string());
-            recommendations.push("  3. Checking for numerical instabilities".to_string());
+            recommendations.push("⚠ Violations are increasing over time - consider:".to_owned());
+            recommendations.push("  1. Reducing timestep size (CFL number)".to_owned());
+            recommendations.push("  2. Using higher-order discretization schemes".to_owned());
+            recommendations.push("  3. Checking for numerical instabilities".to_owned());
         }
 
         if analysis.statistics.max_error > 1e-3 {
-            recommendations.push("⚠ Large conservation errors detected - consider:".to_string());
-            recommendations.push("  1. Refining spatial grid".to_string());
+            recommendations.push("⚠ Large conservation errors detected - consider:".to_owned());
+            recommendations.push("  1. Refining spatial grid".to_owned());
             recommendations.push(
-                "  2. Using conservative discretization (mass-conservative interpolation)"
-                    .to_string(),
+                "  2. Using conservative discretization (mass-conservative interpolation)".to_owned(),
             );
-            recommendations.push("  3. Checking boundary conditions".to_string());
+            recommendations.push("  3. Checking boundary conditions".to_owned());
         }
 
         if analysis.statistics.violation_frequency > 0.1 {
-            recommendations.push("⚠ Frequent violations - consider:".to_string());
-            recommendations.push("  1. Validating physical parameters".to_string());
-            recommendations.push("  2. Checking source/sink terms".to_string());
+            recommendations.push("⚠ Frequent violations - consider:".to_owned());
+            recommendations.push("  1. Validating physical parameters".to_owned());
+            recommendations.push("  2. Checking source/sink terms".to_owned());
             recommendations
-                .push("  3. Using implicit time integration for better stability".to_string());
+                .push("  3. Using implicit time integration for better stability".to_owned());
         }
 
         recommendations
     }
 
     /// Format report as human-readable text
+    #[must_use] 
     pub fn to_text(&self) -> String {
         let mut output = String::new();
 

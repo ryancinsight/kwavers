@@ -123,6 +123,9 @@ impl Default for TransferLearningStats {
 
 impl<B: AutodiffBackend> DomainAdapter<B> {
     /// Create a new domain adapter
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(strength: f64) -> Self {
         Self {
             _layers: Vec::new(),
@@ -131,6 +134,9 @@ impl<B: AutodiffBackend> DomainAdapter<B> {
     }
 
     /// Adapt input features for target domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn adapt(&self, features: &Tensor<B, 2>) -> KwaversResult<Tensor<B, 2>> {
         // Domain adaptation implementation for mathematical stability
         // Currently implements identity adaptation to prevent runtime panics

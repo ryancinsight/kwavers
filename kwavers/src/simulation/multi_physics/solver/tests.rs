@@ -78,7 +78,7 @@ fn test_add_solver() {
     let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let mock_solver = Box::new(MockSolver::new(PhysicsDomain::Acoustic, grid));
 
-    assert!(solver.add_solver(mock_solver).is_ok());
+    solver.add_solver(mock_solver).unwrap();
     assert_eq!(solver.solvers.len(), 1);
 }
 
@@ -100,6 +100,9 @@ fn test_explicit_coupling() {
 
 /// Monolithic coupling with a single physics domain is equivalent to uncoupled:
 /// no inter-domain transfers occur, and the solver simply steps once per iteration.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_monolithic_coupling_single_domain() {
     let mut solver = MultiPhysicsSolver::new(MultiPhysicsConfig {
@@ -120,6 +123,9 @@ fn test_monolithic_coupling_single_domain() {
 
 /// Monolithic coupling with two identical domains must produce a finite,
 /// non-negative residual and populate the convergence history.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_monolithic_coupling_two_domains_residual_nonnegative() {
     let mut solver = MultiPhysicsSolver::new(MultiPhysicsConfig {

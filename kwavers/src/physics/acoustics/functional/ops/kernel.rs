@@ -53,6 +53,9 @@ where
 }
 
 /// Parallel kernel application for large fields
+/// # Panics
+/// - Panics if `Shape mismatch in parallel kernel application`.
+///
 pub fn apply_kernel_parallel<T, K, U>(
     field: &Array3<T>,
     kernel: &Array3<K>,

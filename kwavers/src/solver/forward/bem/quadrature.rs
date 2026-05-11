@@ -123,9 +123,9 @@ pub const TRIANGLE_7PT: [QuadPoint; 7] = [
 #[must_use]
 pub fn map_to_triangle(bary: [f64; 3], p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> [f64; 3] {
     [
-        bary[0] * p1[0] + bary[1] * p2[0] + bary[2] * p3[0],
-        bary[0] * p1[1] + bary[1] * p2[1] + bary[2] * p3[1],
-        bary[0] * p1[2] + bary[1] * p2[2] + bary[2] * p3[2],
+        bary[2].mul_add(p3[0], bary[0].mul_add(p1[0], bary[1] * p2[0])),
+        bary[2].mul_add(p3[1], bary[0].mul_add(p1[1], bary[1] * p2[1])),
+        bary[2].mul_add(p3[2], bary[0].mul_add(p1[2], bary[1] * p2[2])),
     ]
 }
 
@@ -140,10 +140,10 @@ pub fn triangle_area_normal(p1: [f64; 3], p2: [f64; 3], p3: [f64; 3]) -> (f64, [
     let v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
     let v2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
 
-    let cx = v1[1] * v2[2] - v1[2] * v2[1];
-    let cy = v1[2] * v2[0] - v1[0] * v2[2];
-    let cz = v1[0] * v2[1] - v1[1] * v2[0];
-    let norm = (cx * cx + cy * cy + cz * cz).sqrt();
+    let cx = v1[1].mul_add(v2[2], -(v1[2] * v2[1]));
+    let cy = v1[2].mul_add(v2[0], -(v1[0] * v2[2]));
+    let cz = v1[0].mul_add(v2[1], -(v1[1] * v2[0]));
+    let norm = cz.mul_add(cz, cx.mul_add(cx, cy * cy)).sqrt();
 
     let area = 0.5 * norm;
     let normal = if norm > 1e-15 {
@@ -193,6 +193,9 @@ mod tests {
     use super::*;
 
     /// Weight sum must equal 1 for both rules (consistency condition).
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_weights_sum_to_one() {
         let sum3: f64 = TRIANGLE_3PT.iter().map(|q| q.weight).sum();
@@ -203,6 +206,9 @@ mod tests {
     }
 
     /// Barycentric coordinates sum to 1 for each quadrature point.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_barycentric_coordinates_sum_to_one() {
         for qp in TRIANGLE_3PT.iter().chain(TRIANGLE_7PT.iter()) {
@@ -212,6 +218,9 @@ mod tests {
     }
 
     /// Integrating the constant function f=1 gives the triangle area.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_integrate_constant_equals_area() {
         let p1 = [0.0, 0.0, 0.0];
@@ -229,6 +238,9 @@ mod tests {
     ///
     /// For a right triangle with vertices (0,0), (1,0), (0,1):
     /// ∫∫ x² dA = 1/12.
+    /// # Panics
+    /// - Panics if assertion fails: `3pt ∫x² error: rel={:.3e}`.
+    ///
     #[test]
     fn test_3pt_degree2_exact() {
         let p1 = [0.0, 0.0, 0.0];
@@ -244,6 +256,9 @@ mod tests {
     /// 7-point rule integrates degree-5 monomials exactly.
     ///
     /// For the unit right triangle: ∫∫ x⁵ dA = 1/252.
+    /// # Panics
+    /// - Panics if assertion fails: `7pt ∫x⁵ error: rel={:.3e}`.
+    ///
     #[test]
     fn test_7pt_degree5_exact() {
         let p1 = [0.0, 0.0, 0.0];
@@ -261,6 +276,9 @@ mod tests {
     ///
     /// This confirms that higher-order quadrature is needed for smooth but
     /// oscillatory integrands (e.g., BEM Green's function products).
+    /// # Panics
+    /// - Panics if assertion fails: `3pt rule should have >0.1% error for degree-5: err={:.3e}`.
+    ///
     #[test]
     fn test_3pt_insufficient_for_degree5() {
         let p1 = [0.0, 0.0, 0.0];
@@ -279,6 +297,9 @@ mod tests {
     }
 
     /// Verify triangle_area_normal for a known equilateral triangle.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_triangle_area_normal() {
         // Equilateral triangle of side 1 in z=0 plane, area = sqrt(3)/4

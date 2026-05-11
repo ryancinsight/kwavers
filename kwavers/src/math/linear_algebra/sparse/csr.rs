@@ -85,6 +85,9 @@ impl<T> CompressedSparseRowMatrix<T> {
     }
 
     /// Create CSR matrix with pre-allocated capacity
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_capacity(rows: usize, cols: usize, capacity: usize) -> Self {
         Self {
@@ -98,6 +101,9 @@ impl<T> CompressedSparseRowMatrix<T> {
     }
 
     /// Matrix-vector multiplication: y = A * x
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn multiply_vector(&self, x: ArrayView1<T>) -> KwaversResult<Array1<T>>
     where
         T: CsrScalar,
@@ -105,7 +111,7 @@ impl<T> CompressedSparseRowMatrix<T> {
         if x.len() != self.cols {
             return Err(crate::core::error::KwaversError::Numerical(
                 crate::core::error::NumericalError::Instability {
-                    operation: "csr_matvec".to_string(),
+                    operation: "csr_matvec".to_owned(),
                     condition: x.len() as f64,
                 },
             ));

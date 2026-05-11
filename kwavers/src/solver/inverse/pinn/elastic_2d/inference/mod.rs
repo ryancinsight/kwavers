@@ -79,6 +79,9 @@ impl<B: Backend> Predictor<B> {
     /// # Arguments
     ///
     /// * `model` - Trained PINN model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(model: ElasticPINN2D<B>) -> Self {
         let device = model.device();
         Self { model, device }
@@ -95,6 +98,9 @@ impl<B: Backend> Predictor<B> {
     /// # Returns
     ///
     /// Displacement vector [u_x, u_y]
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn predict_point(&self, x: f64, y: f64, t: f64) -> KwaversResult<[f64; 2]> {
         // Create tensors for single point
         let x_tensor = Tensor::<B, 2>::from_floats([[x as f32]], &self.device);
@@ -122,6 +128,10 @@ impl<B: Backend> Predictor<B> {
     /// # Returns
     ///
     /// Array of displacement vectors [N, 2]
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn predict_batch(&self, points: &[(f64, f64, f64)]) -> KwaversResult<Array2<f64>> {
         if points.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -166,6 +176,9 @@ impl<B: Backend> Predictor<B> {
     /// # Returns
     ///
     /// Displacement field [Nx, Ny, 2] where last dimension is (u_x, u_y)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn evaluate_field(
         &self,
         x_grid: &Array1<f64>,
@@ -210,6 +223,9 @@ impl<B: Backend> Predictor<B> {
     /// # Returns
     ///
     /// Displacement time series [N_times, 2]
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn time_series(&self, x: f64, y: f64, times: &Array1<f64>) -> KwaversResult<Array2<f64>> {
         let points: Vec<(f64, f64, f64)> = times.iter().map(|&t| (x, y, t)).collect();
         self.predict_batch(&points)
@@ -226,6 +242,9 @@ impl<B: Backend> Predictor<B> {
     /// # Returns
     ///
     /// Magnitude field [Nx, Ny] where magnitude = sqrt(u_x^2 + u_y^2)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn magnitude_field(
         &self,
         x_grid: &Array1<f64>,
@@ -273,24 +292,38 @@ pub struct Predictor {
 
 #[cfg(not(feature = "pinn"))]
 impl Predictor {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(_model: ()) -> Self {
         Self {
             _phantom: std::marker::PhantomData,
         }
     }
-
+    /// Predict point.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn predict_point(&self, _x: f64, _y: f64, _t: f64) -> KwaversResult<[f64; 2]> {
         Err(KwaversError::InvalidInput(
-            "Predictor requires 'burn' feature to be enabled".to_string(),
+            "Predictor requires 'burn' feature to be enabled".to_owned(),
         ))
     }
-
+    /// Predict batch.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn predict_batch(&self, _points: &[(f64, f64, f64)]) -> KwaversResult<Array2<f64>> {
         Err(KwaversError::InvalidInput(
-            "Predictor requires 'burn' feature to be enabled".to_string(),
+            "Predictor requires 'burn' feature to be enabled".to_owned(),
         ))
     }
-
+    /// Evaluate field.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn evaluate_field(
         &self,
         _x_grid: &Array1<f64>,
@@ -298,7 +331,7 @@ impl Predictor {
         _t: f64,
     ) -> KwaversResult<Array3<f64>> {
         Err(KwaversError::InvalidInput(
-            "Predictor requires 'burn' feature to be enabled".to_string(),
+            "Predictor requires 'burn' feature to be enabled".to_owned(),
         ))
     }
 }

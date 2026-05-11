@@ -113,7 +113,7 @@ pub trait FrequencyDomainBeamformer: Beamformer<Input = Complex64, Output = Comp
     /// # Mathematical Definition
     ///
     /// ```text
-    /// R = (1/M) ∑ₘ₌₁ᴹ x[m] x[m]^H
+    /// R = (1/M) ∑ₘ₌₁ᴹ x(m) x(m)^H
     /// ```
     ///
     /// where M is the number of snapshots (time samples or frequency bins).

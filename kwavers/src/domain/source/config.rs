@@ -109,30 +109,33 @@ pub enum EnvelopeType {
 
 impl SourceParameters {
     /// Validate source parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.amplitude < 0.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "amplitude".to_string(),
+                parameter: "amplitude".to_owned(),
                 value: self.amplitude.to_string(),
-                constraint: "Must be non-negative".to_string(),
+                constraint: "Must be non-negative".to_owned(),
             }
             .into());
         }
 
         if self.frequency <= 0.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "frequency".to_string(),
+                parameter: "frequency".to_owned(),
                 value: self.frequency.to_string(),
-                constraint: "Must be positive".to_string(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }
 
         if self.radius < 0.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "radius".to_string(),
+                parameter: "radius".to_owned(),
                 value: self.radius.to_string(),
-                constraint: "Must be non-negative".to_string(),
+                constraint: "Must be non-negative".to_owned(),
             }
             .into());
         }

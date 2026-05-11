@@ -10,7 +10,7 @@ pub struct TrackingFilter {
     /// Current position estimate [x, y, z]
     position: [f64; 3],
 
-    /// Position uncertainty [mm]
+    /// Position uncertainty (mm)
     uncertainty: f64,
 
     /// Filter state covariance
@@ -25,6 +25,9 @@ pub struct TrackingFilter {
 
 impl TrackingFilter {
     /// Create new tracking filter
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> KwaversResult<Self> {
         Ok(Self {
             position: [0.0, 0.0, 0.0],
@@ -36,6 +39,9 @@ impl TrackingFilter {
     }
 
     /// Update filter with measurement
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update(&mut self, measurement: &[f64; 3]) -> KwaversResult<[f64; 3]> {
         // Simple Kalman filter update
         let innovation = [
@@ -59,7 +65,7 @@ impl TrackingFilter {
         }
 
         // Covariance update
-        self.covariance = (1.0 - gain) * self.covariance + self.process_noise;
+        self.covariance = (1.0 - gain).mul_add(self.covariance, self.process_noise);
 
         // Update uncertainty
         self.uncertainty = self.covariance.sqrt();
@@ -68,11 +74,13 @@ impl TrackingFilter {
     }
 
     /// Get current position estimate
+    #[must_use] 
     pub fn get_position(&self) -> [f64; 3] {
         self.position
     }
 
     /// Get position uncertainty
+    #[must_use] 
     pub fn get_uncertainty(&self) -> f64 {
         self.uncertainty
     }
@@ -107,8 +115,7 @@ mod tests {
 
     #[test]
     fn test_tracking_filter_creation() {
-        let result = TrackingFilter::new();
-        assert!(result.is_ok());
+        let _filter = TrackingFilter::new().unwrap();
     }
 
     #[test]
@@ -116,8 +123,7 @@ mod tests {
         let mut filter = TrackingFilter::new().unwrap();
         let measurement = [1.0, 2.0, 3.0];
 
-        let result = filter.update(&measurement);
-        assert!(result.is_ok());
+        filter.update(&measurement).unwrap();
 
         let position = filter.get_position();
         assert!(position[0] > 0.0);

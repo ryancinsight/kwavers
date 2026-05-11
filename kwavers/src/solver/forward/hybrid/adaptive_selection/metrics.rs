@@ -78,7 +78,7 @@ impl SpectralMetrics {
         let kx_max = PI / grid.dx;
         let ky_max = PI / grid.dy;
         let kz_max = PI / grid.dz;
-        let k_max_norm = (kx_max.powi(2) + ky_max.powi(2) + kz_max.powi(2)).sqrt();
+        let k_max_norm = kz_max.mul_add(kz_max, ky_max.mul_add(ky_max, kx_max.powi(2))).sqrt();
         let k_high_cutoff = k_max_norm * 0.5;
 
         for k_idx in 0..nz {
@@ -102,7 +102,7 @@ impl SpectralMetrics {
                         2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
                     };
 
-                    let k_mag = (kx.powi(2) + ky.powi(2) + kz.powi(2)).sqrt();
+                    let k_mag = kz.mul_add(kz, ky.mul_add(ky, kx.powi(2))).sqrt();
 
                     // Use squared magnitude (energy)
                     let energy = spectrum[[i, j, k_idx]].norm_sqr();

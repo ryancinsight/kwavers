@@ -5,6 +5,9 @@ use ndarray::Array2;
 
 /// Tier 3 — comprehensive validation (>30 s).
 /// Uses a 64×64×128 grid.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 #[ignore = "Tier 3: Comprehensive validation (>30s execution time)"]
 fn test_gaussian_beam_propagation() {
@@ -48,6 +51,9 @@ fn test_gaussian_beam_propagation() {
 
 /// Tier 1 — fast CI/CD validation (<2 s).
 /// Uses a 16×16×32 grid.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_gaussian_beam_propagation_fast() {
     let mut config = KZKConfig {

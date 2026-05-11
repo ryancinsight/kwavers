@@ -11,10 +11,18 @@ pub struct HIFUPlanner {
 }
 
 impl HIFUPlanner {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(transducer: HIFUTransducer) -> Self {
         Self { transducer }
     }
-
+    /// Plan treatment.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn plan_treatment(
         &self,
         target: AblationTarget,
@@ -37,7 +45,7 @@ impl HIFUPlanner {
         if !feasibility.focal_coverage_adequate {
             feasibility
                 .issues
-                .push("Focal spot may not adequately cover target".to_string());
+                .push("Focal spot may not adequately cover target".to_owned());
         }
         feasibility.mi_within_limits = focal_spot.is_safe(target.tissue_type);
         if !feasibility.mi_within_limits {
@@ -66,6 +74,7 @@ impl HIFUPlanner {
         })
     }
 
+    #[must_use] 
     pub fn transducer(&self) -> &HIFUTransducer {
         &self.transducer
     }

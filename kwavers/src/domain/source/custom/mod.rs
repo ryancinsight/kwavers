@@ -29,6 +29,9 @@ pub struct SimpleCustomSource {
 
 impl SimpleCustomSource {
     /// Create a new simple custom source
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn new(
         positions: Vec<(f64, f64, f64)>,
         weights: Vec<f64>,
@@ -49,6 +52,7 @@ impl SimpleCustomSource {
     }
 
     /// Create a custom source builder
+    #[must_use] 
     pub fn builder() -> SimpleCustomSourceBuilder {
         SimpleCustomSourceBuilder::new()
     }
@@ -89,7 +93,7 @@ impl Source for SimpleCustomSource {
         let mut min_distance = f64::INFINITY;
 
         for (pos_idx, (px, py, pz)) in self.positions.iter().enumerate() {
-            let distance = ((x - px).powi(2) + (y - py).powi(2) + (z - pz).powi(2)).sqrt();
+            let distance = (z - pz).mul_add(z - pz, (y - py).mul_add(y - py, (x - px).powi(2))).sqrt();
             if distance < min_distance {
                 min_distance = distance;
                 closest_weight = self.weights[pos_idx];
@@ -109,16 +113,19 @@ pub struct SimpleCustomSourceBuilder {
 }
 
 impl SimpleCustomSourceBuilder {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use] 
     pub fn add_position(mut self, position: (f64, f64, f64), weight: f64) -> Self {
         self.positions.push(position);
         self.weights.push(weight);
         self
     }
 
+    #[must_use] 
     pub fn source_type(mut self, source_type: SourceField) -> Self {
         self.source_type = source_type;
         self

@@ -16,6 +16,9 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// In debug builds, full-field NaN scans are performed after each sub-step
     /// to catch numerical instabilities early. In release builds, these scans
     /// are elided for performance (O(N) per scan × 4 scans per step).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[inline]
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         let time_index = self.time_step_index;
@@ -73,6 +76,9 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// Returns `KwaversError::Numerical(NaN)` instead of panicking, enabling
     /// upstream callers to handle instabilities gracefully (e.g., reduce dt,
     /// log diagnostics, or return partial results).
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
     #[cfg(debug_assertions)]
     pub(super) fn check_nan_velocity(&self, step: usize, phase: &str) -> KwaversResult<()> {
         use crate::core::error::{KwaversError, NumericalError};
@@ -92,13 +98,16 @@ impl GenericFdtdSolver<Array3<f64>> {
     }
 
     /// Check pressure field for NaN values (debug-only).
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
     #[cfg(debug_assertions)]
     pub(super) fn check_nan_pressure(&self, step: usize, phase: &str) -> KwaversResult<()> {
         use crate::core::error::{KwaversError, NumericalError};
         if self.fields.p.iter().any(|&x| x.is_nan()) {
             return Err(KwaversError::Numerical(NumericalError::NaN {
                 operation: format!("FDTD {phase} at step {step}"),
-                inputs: "pressure field contains NaN".to_string(),
+                inputs: "pressure field contains NaN".to_owned(),
             }));
         }
         Ok(())

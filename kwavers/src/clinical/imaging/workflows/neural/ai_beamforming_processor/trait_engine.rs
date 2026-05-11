@@ -3,6 +3,10 @@
 use crate::core::error::KwaversResult;
 
 pub trait PinnInferenceEngine: Send + Sync {
+    /// Run real-time PINN inference at the given spatial-temporal coordinates.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if model inference fails or coordinate arrays have mismatched length.
     fn predict_realtime(
         &mut self,
         x_coords: &[f32],

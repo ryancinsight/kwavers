@@ -20,6 +20,9 @@ pub struct MultiBowlArray {
 
 impl MultiBowlArray {
     /// Create a new multi-bowl array
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(configs: Vec<BowlConfig>) -> KwaversResult<Self> {
         let n_bowls = configs.len();
         let mut bowls = Vec::with_capacity(n_bowls);
@@ -44,6 +47,9 @@ impl MultiBowlArray {
     /// This method combines the contributions from all bowl transducers,
     /// applying both amplitude scaling and phase shifts. The phase shifts
     /// are crucial for beam steering and complex field synthesis.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
         let mut combined_source = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
@@ -62,7 +68,7 @@ impl MultiBowlArray {
 
             Zip::from(&mut combined_source)
                 .and(&bowl_source)
-                .for_each(|c, &b| *c += scale * b);
+                .par_for_each(|c, &b| *c += scale * b);
         }
 
         Ok(combined_source)
@@ -87,7 +93,7 @@ impl MultiBowlArray {
             ApodizationType::Hamming => {
                 for i in 0..n {
                     let x = i as f64 / (n - 1) as f64;
-                    self.amplitudes[i] = 0.54 - 0.46 * (2.0 * PI * x).cos();
+                    self.amplitudes[i] = 0.46f64.mul_add(-(2.0 * PI * x).cos(), 0.54);
                 }
             }
             ApodizationType::Hanning => {

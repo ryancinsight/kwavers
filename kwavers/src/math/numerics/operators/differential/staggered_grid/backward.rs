@@ -11,6 +11,12 @@ impl StaggeredGridOperator {
     ///
     /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
     /// At i=0: forward difference (no i-1 point).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_backward_x_into(
         &self,
         field: ArrayView3<f64>,
@@ -21,7 +27,7 @@ impl StaggeredGridOperator {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -46,6 +52,12 @@ impl StaggeredGridOperator {
     /// Apply backward difference in Y into a pre-allocated buffer.
     ///
     /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_backward_y_into(
         &self,
         field: ArrayView3<f64>,
@@ -56,7 +68,7 @@ impl StaggeredGridOperator {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -81,6 +93,12 @@ impl StaggeredGridOperator {
     /// Apply backward difference in Z into a pre-allocated buffer.
     ///
     /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn apply_backward_z_into(
         &self,
         field: ArrayView3<f64>,
@@ -91,7 +109,7 @@ impl StaggeredGridOperator {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }
@@ -117,13 +135,16 @@ impl StaggeredGridOperator {
     ///
     /// `∂u/∂x|_{i,j,k} ≈ (u[i,j,k] - u[i-1,j,k]) / Δx`.
     /// At i=0, uses forward difference.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_backward_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         if nx < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -144,14 +165,17 @@ impl StaggeredGridOperator {
         }
         Ok(result)
     }
-
+    /// Apply backward y.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_backward_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         if ny < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -172,14 +196,17 @@ impl StaggeredGridOperator {
         }
         Ok(result)
     }
-
+    /// Apply backward z.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_backward_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         if nz < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }

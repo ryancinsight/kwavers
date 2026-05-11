@@ -7,6 +7,10 @@ use ndarray::{s, Array1, Array2};
 
 impl ShockCapture {
     /// Create new shock capture instance
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: super::ShockCapturingConfig) -> Self {
         Self {
             config,
@@ -15,6 +19,10 @@ impl ShockCapture {
     }
 
     /// Detect shock formation from pressure field
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn detect_shock(
         &self,
         pressure: &Array2<f64>,
@@ -26,7 +34,7 @@ impl ShockCapture {
         let (nx, nz) = pressure.dim();
         if nx < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
-                "Pressure field too small for shock detection".to_string(),
+                "Pressure field too small for shock detection".to_owned(),
             ));
         }
 
@@ -113,6 +121,9 @@ impl ShockCapture {
     /// IEEE Std 519-2014, §3.1: `P[k] = Σ p[n] exp(−i·2π·k·n/N)`.
     /// Fundamental bin: `k₀ = round(f₀ · N · dz)`.
     /// Harmonic ratio: `r_n = |P[n·k₀]| / |P[k₀]|`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_harmonic_ratios(
         &self,
         pressure: &Array2<f64>,
@@ -166,6 +177,7 @@ impl ShockCapture {
     }
 
     /// Get shock detection history
+    #[must_use] 
     pub fn history(&self) -> &[ShockDetectionResult] {
         &self.history
     }
@@ -176,6 +188,7 @@ impl ShockCapture {
     }
 
     /// Get configuration
+    #[must_use] 
     pub fn config(&self) -> super::ShockCapturingConfig {
         self.config
     }

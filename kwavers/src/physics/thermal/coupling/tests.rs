@@ -81,8 +81,7 @@ fn test_thermal_acoustic_coupling() {
     let temperature = Array3::from_elem((5, 5, 5), 37.0);
     let intensity = Array3::from_elem((5, 5, 5), 1e4);
 
-    let result = coupling.update(&temperature, &intensity, 37.0, 0.1);
-    assert!(result.is_ok());
+    coupling.update(&temperature, &intensity, 37.0, 0.1).unwrap();
 
     let energy = coupling.total_energy();
     assert!(energy > 0.0);

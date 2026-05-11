@@ -62,6 +62,9 @@ impl PhotoacousticReconstructor {
     /// Universal back-projection algorithm
     ///
     /// Reference: Xu & Wang (2005) Physical Review E 71, 016706
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn universal_back_projection(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -144,6 +147,9 @@ impl PhotoacousticReconstructor {
     }
 
     /// Filtered back-projection algorithm
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn filtered_back_projection(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -163,6 +169,9 @@ impl PhotoacousticReconstructor {
     }
 
     /// Time reversal reconstruction
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn time_reversal_reconstruction(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -181,6 +190,9 @@ impl PhotoacousticReconstructor {
     }
 
     /// Fourier domain reconstruction
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fourier_domain_reconstruction(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -196,6 +208,9 @@ impl PhotoacousticReconstructor {
     }
 
     /// Iterative reconstruction using SIRT/ART/OSEM
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn iterative_reconstruction(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -207,6 +222,12 @@ impl PhotoacousticReconstructor {
     }
 
     /// Model-based reconstruction
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn model_based_reconstruction(
         &self,
         sensor_data: ArrayView2<f64>,

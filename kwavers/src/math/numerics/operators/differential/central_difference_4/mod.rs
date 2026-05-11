@@ -136,13 +136,16 @@ impl CentralDifference4 {
     /// ```
     /// Near-boundary (i = 1, nx−2): O(Δx²) central.
     /// Boundary (i = 0, nx−1): O(Δx) one-sided.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if nx < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -152,8 +155,7 @@ impl CentralDifference4 {
         for i in 2..nx - 2 {
             for j in 0..ny {
                 for k in 0..nz {
-                    dst[[i, j, k]] = (-field[[i + 2, j, k]] + 8.0 * field[[i + 1, j, k]]
-                        - 8.0 * field[[i - 1, j, k]]
+                    dst[[i, j, k]] = (8.0f64.mul_add(-field[[i - 1, j, k]], 8.0f64.mul_add(field[[i + 1, j, k]], -field[[i + 2, j, k]]))
                         + field[[i - 2, j, k]])
                         * inv12dx;
                 }
@@ -173,13 +175,16 @@ impl CentralDifference4 {
     }
 
     /// Apply ∂/∂y into a pre-allocated destination — zero heap allocation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if ny < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -189,8 +194,7 @@ impl CentralDifference4 {
         for i in 0..nx {
             for j in 2..ny - 2 {
                 for k in 0..nz {
-                    dst[[i, j, k]] = (-field[[i, j + 2, k]] + 8.0 * field[[i, j + 1, k]]
-                        - 8.0 * field[[i, j - 1, k]]
+                    dst[[i, j, k]] = (8.0f64.mul_add(-field[[i, j - 1, k]], 8.0f64.mul_add(field[[i, j + 1, k]], -field[[i, j + 2, k]]))
                         + field[[i, j - 2, k]])
                         * inv12dy;
                 }
@@ -210,13 +214,16 @@ impl CentralDifference4 {
     }
 
     /// Apply ∂/∂z into a pre-allocated destination — zero heap allocation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         if nz < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }
@@ -226,8 +233,7 @@ impl CentralDifference4 {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 2..nz - 2 {
-                    dst[[i, j, k]] = (-field[[i, j, k + 2]] + 8.0 * field[[i, j, k + 1]]
-                        - 8.0 * field[[i, j, k - 1]]
+                    dst[[i, j, k]] = (8.0f64.mul_add(-field[[i, j, k - 1]], 8.0f64.mul_add(field[[i, j, k + 1]], -field[[i, j, k + 2]]))
                         + field[[i, j, k - 2]])
                         * inv12dz;
                 }
@@ -254,7 +260,7 @@ impl DifferentialOperator for CentralDifference4 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
                 actual: nx,
-                direction: "X".to_string(),
+                direction: "X".to_owned(),
             }
             .into());
         }
@@ -269,7 +275,7 @@ impl DifferentialOperator for CentralDifference4 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
                 actual: ny,
-                direction: "Y".to_string(),
+                direction: "Y".to_owned(),
             }
             .into());
         }
@@ -284,7 +290,7 @@ impl DifferentialOperator for CentralDifference4 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
                 actual: nz,
-                direction: "Z".to_string(),
+                direction: "Z".to_owned(),
             }
             .into());
         }

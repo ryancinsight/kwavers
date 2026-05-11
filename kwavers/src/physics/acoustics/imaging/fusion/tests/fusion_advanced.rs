@@ -62,8 +62,6 @@ fn test_probabilistic_fusion_uncertainty() {
     let result = fusion.fuse().unwrap();
 
     // Probabilistic fusion should always provide uncertainty
-    assert!(result.uncertainty_map.is_some());
-
     let uncertainty = result.uncertainty_map.unwrap();
     assert_eq!(uncertainty.dim(), shape);
 
@@ -95,6 +93,8 @@ fn test_nonrigid_fusion_succeeds() {
         },
     );
 
-    let result = fusion.fuse();
-    assert!(result.is_ok(), "NonRigid fusion should succeed: {result:?}");
+    let fused = fusion.fuse().expect("NonRigid fusion should succeed");
+    // Confidence map must span the fused image shape.
+    assert_eq!(fused.confidence_map.dim(), fused.intensity_image.dim(),
+        "confidence_map and intensity_image must have identical dimensions");
 }

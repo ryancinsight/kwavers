@@ -11,6 +11,9 @@ use std::sync::Arc;
 /// At R = R₀, Ṙ = 0, no acoustic driving: K-M gives R̈ = 0.
 /// Both half-kicks add zero → R and Ṙ remain exactly at equilibrium.
 /// Assert |R − R₀|/R₀ < 1e-12 and |Ṙ| < 1e-12 after 1000 steps.
+/// # Panics
+/// - Panics if `SV step must not fail`.
+///
 #[test]
 fn test_equilibrium_preserved() {
     let r0 = 10e-6;

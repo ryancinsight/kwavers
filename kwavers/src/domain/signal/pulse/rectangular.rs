@@ -22,6 +22,12 @@ pub struct RectangularPulse {
 }
 
 impl RectangularPulse {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Center frequency must be positive`.
+    /// - Panics if assertion fails: `Pulse width too small`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(center_frequency: f64, start_time: f64, pulse_width: f64, amplitude: f64) -> Self {
         assert!(center_frequency > 0.0, "Center frequency must be positive");
@@ -41,6 +47,10 @@ impl RectangularPulse {
         }
     }
 
+    /// With rise fall times.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn with_rise_fall_times(mut self, rise_time: f64, fall_time: f64) -> Self {
         assert!(rise_time >= 0.0 && rise_time < self.pulse_width / 2.0);
@@ -73,7 +83,7 @@ impl RectangularPulse {
 impl Signal for RectangularPulse {
     fn amplitude(&self, t: f64) -> f64 {
         let envelope = self.envelope(t);
-        let carrier = (2.0 * PI * self.center_frequency * t + self.phase).sin();
+        let carrier = (2.0 * PI * self.center_frequency).mul_add(t, self.phase).sin();
         self.amplitude * envelope * carrier
     }
 

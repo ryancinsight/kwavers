@@ -25,6 +25,9 @@ impl FwiGeometry {
     ///
     /// Constructs the Fortran-to-row-major permutation once so that every
     /// adjoint pass can reorder residual rows in O(n_receivers) time.
+    /// # Panics
+    /// - Panics if `receiver mask ordering mismatch`.
+    ///
     #[must_use]
     pub fn new(source: GridSource, sensor_mask: Array3<bool>) -> Self {
         let sensor_indices = Self::collect_fortran_indices(&sensor_mask);
@@ -82,7 +85,14 @@ impl FwiGeometry {
         }
         indices
     }
-
+    /// Validate.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if `validated above`.
+    ///
     pub(super) fn validate(&self, grid: &Grid, nt: usize) -> KwaversResult<()> {
         let expected_shape = grid.dimensions();
         if self.sensor_mask.dim() != expected_shape {
@@ -100,7 +110,7 @@ impl FwiGeometry {
         let Some(source_mask) = self.source.p_mask.as_ref() else {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "FWI requires a time-varying pressure source mask".to_string(),
+                    message: "FWI requires a time-varying pressure source mask".to_owned(),
                 },
             ));
         };
@@ -119,7 +129,7 @@ impl FwiGeometry {
         if self.source.p_signal.as_ref().is_none() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "FWI requires a time-varying pressure source signal".to_string(),
+                    message: "FWI requires a time-varying pressure source signal".to_owned(),
                 },
             ));
         }
@@ -138,7 +148,7 @@ impl FwiGeometry {
         if self.receiver_count() == 0 {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "Receiver mask contains no active points".to_string(),
+                    message: "Receiver mask contains no active points".to_owned(),
                 },
             ));
         }

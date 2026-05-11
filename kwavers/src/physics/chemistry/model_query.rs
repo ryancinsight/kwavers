@@ -12,12 +12,12 @@ impl ChemicalModel {
         let mut map = HashMap::new();
 
         if let Some(ref kinetics) = self.kinetics {
-            map.insert("OH".to_string(), kinetics.hydroxyl_concentration().clone());
-            map.insert("H2O2".to_string(), kinetics.hydrogen_peroxide().clone());
+            map.insert("OH".to_owned(), kinetics.hydroxyl_concentration().clone());
+            map.insert("H2O2".to_owned(), kinetics.hydrogen_peroxide().clone());
         }
 
         map.insert(
-            "radical_precursors".to_string(),
+            "radical_precursors".to_owned(),
             self.radical_initiation.radical_concentration.clone(),
         );
 
@@ -39,20 +39,20 @@ impl ChemicalModel {
             let avg_h2o2 = h2o2_conc.mean().unwrap_or(0.0);
 
             rates.insert(
-                "OH_production_rate".to_string(),
+                "OH_production_rate".to_owned(),
                 avg_radical * crate::physics::constants::thermodynamic::SONOCHEMISTRY_BASE_RATE,
             );
             rates.insert(
-                "H2O2_production_rate".to_string(),
+                "H2O2_production_rate".to_owned(),
                 avg_oh * avg_oh * crate::physics::constants::thermodynamic::SECONDARY_REACTION_RATE,
             );
-            rates.insert("OH_concentration_avg".to_string(), avg_oh);
-            rates.insert("H2O2_concentration_avg".to_string(), avg_h2o2);
+            rates.insert("OH_concentration_avg".to_owned(), avg_oh);
+            rates.insert("H2O2_concentration_avg".to_owned(), avg_h2o2);
         }
 
-        rates.insert("update_count".to_string(), self.update_count as f64);
+        rates.insert("update_count".to_owned(), self.update_count as f64);
         rates.insert(
-            "reactions_total".to_string(),
+            "reactions_total".to_owned(),
             self.metrics.total_reactions as f64,
         );
 

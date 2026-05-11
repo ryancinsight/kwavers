@@ -12,8 +12,6 @@ pub struct PowerModulator {
     scheme: ModulationScheme,
     control: PowerControl,
     current_phase: f64,
-    #[allow(dead_code)] // Signal processing parameter for modulation
-    sample_rate: f64,
     time: f64,
     amplitude_filter: ExponentialFilter,
     safety_limiter: SafetyLimiter,
@@ -22,12 +20,11 @@ pub struct PowerModulator {
 impl PowerModulator {
     /// Create new power modulator
     #[must_use]
-    pub fn new(scheme: ModulationScheme, sample_rate: f64) -> Self {
+    pub fn new(scheme: ModulationScheme, _sample_rate: f64) -> Self {
         Self {
             scheme,
             control: PowerControl::default(),
             current_phase: 0.0,
-            sample_rate,
             time: 0.0,
             amplitude_filter: ExponentialFilter::new(0.01),
             safety_limiter: SafetyLimiter::new(),

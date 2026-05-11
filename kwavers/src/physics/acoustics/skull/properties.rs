@@ -37,6 +37,9 @@ impl SkullProperties {
     /// # Arguments
     ///
     /// * `bone_type` - "cortical", "trabecular", or "suture"
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn from_bone_type(bone_type: &str) -> KwaversResult<Self> {
         match bone_type {
             "cortical" => Ok(Self {
@@ -68,6 +71,7 @@ impl SkullProperties {
     }
 
     /// Calculate acoustic impedance (Z = ρc)
+    #[must_use] 
     pub fn acoustic_impedance(&self) -> f64 {
         self.density * self.sound_speed
     }
@@ -75,6 +79,7 @@ impl SkullProperties {
     /// Calculate transmission coefficient for normal incidence
     ///
     /// Reference: Kinsler et al. (2000) "Fundamentals of Acoustics"
+    #[must_use] 
     pub fn transmission_coefficient(&self, water_impedance: f64) -> f64 {
         let z_skull = self.acoustic_impedance();
         let t = 2.0 * water_impedance / (water_impedance + z_skull);
@@ -84,6 +89,7 @@ impl SkullProperties {
     /// Calculate attenuation for given frequency (Hz)
     ///
     /// Attenuation = α(f) = α₀ × f^n where n ≈ 1 for bone
+    #[must_use] 
     pub fn attenuation_at_frequency(&self, frequency: f64) -> f64 {
         let freq_mhz = frequency / 1e6;
         self.attenuation_coeff * freq_mhz

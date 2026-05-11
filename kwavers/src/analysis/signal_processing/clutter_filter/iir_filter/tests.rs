@@ -4,7 +4,7 @@ use ndarray::Array2;
 #[test]
 fn test_config_validation() {
     let config = IirFilterConfig::with_cutoff(0.1);
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
 
     let bad_cutoff_low = IirFilterConfig {
         cutoff_frequency: 0.0,
@@ -29,8 +29,7 @@ fn test_config_validation() {
 #[test]
 fn test_iir_filter_creation() {
     let config = IirFilterConfig::with_cutoff(0.05);
-    let filter = IirFilter::new(config);
-    assert!(filter.is_ok());
+    let _filter = IirFilter::new(config).unwrap();
 }
 
 #[test]
@@ -97,12 +96,9 @@ fn test_zero_phase_filtering() {
     let signal =
         Array2::from_shape_fn((1, n_frames), |(_, t)| 5.0 + 2.0 * ((t as f64) * 0.4).sin());
 
-    let filtered = filter.filter(&signal);
-    assert!(filtered.is_ok());
-
     // Zero-phase filtering should preserve signal shape better
     // (this is a weak test - full test would compare phase spectrum)
-    let result = filtered.unwrap();
+    let result = filter.filter(&signal).unwrap();
     assert_eq!(result.dim(), signal.dim());
 }
 
@@ -113,6 +109,6 @@ fn test_higher_order_filter() {
 
     let data = Array2::from_shape_fn((5, 100), |(_, t)| 10.0 + (t as f64) * 0.1);
 
-    let filtered = filter.filter(&data);
-    assert!(filtered.is_ok());
+    let filtered = filter.filter(&data).unwrap();
+    assert_eq!(filtered.dim(), data.dim());
 }

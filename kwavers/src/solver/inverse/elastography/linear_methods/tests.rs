@@ -15,20 +15,32 @@ use crate::solver::inverse::elastography::config::ShearWaveInversionConfig;
 
 #[test]
 fn test_time_of_flight_inversion() {
+    // Zero displacement → default speed 3.0 everywhere (boundary fill). Map dim must be (20,20,20).
     let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
     let displacement = DisplacementField::zeros(20, 20, 20);
 
-    let result = time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0);
-    assert!(result.is_ok(), "TOF inversion should succeed");
+    let map = time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0).unwrap();
+    assert_eq!(map.shear_wave_speed.dim(), (20, 20, 20));
+    let center = map.shear_wave_speed[[10, 10, 10]];
+    assert!(
+        (0.5..=10.0).contains(&center),
+        "center shear_wave_speed = {center} must be in [0.5, 10.0]"
+    );
 }
 
 #[test]
 fn test_phase_gradient_inversion() {
+    // Zero displacement → default speed 3.0 everywhere. Map dim must be (20,20,20).
     let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
     let displacement = DisplacementField::zeros(20, 20, 20);
 
-    let result = phase_gradient_inversion(&displacement, &grid, 1000.0, 100.0);
-    assert!(result.is_ok(), "Phase gradient inversion should succeed");
+    let map = phase_gradient_inversion(&displacement, &grid, 1000.0, 100.0).unwrap();
+    assert_eq!(map.shear_wave_speed.dim(), (20, 20, 20));
+    let center = map.shear_wave_speed[[10, 10, 10]];
+    assert!(
+        (0.5..=10.0).contains(&center),
+        "center shear_wave_speed = {center} must be in [0.5, 10.0]"
+    );
 }
 
 #[test]
@@ -56,10 +68,7 @@ fn test_direct_inversion_synthetic() {
         }
     }
 
-    let result = direct_inversion(&displacement, &grid, 1000.0, frequency);
-    assert!(result.is_ok());
-
-    let elasticity_map = result.unwrap();
+    let elasticity_map = direct_inversion(&displacement, &grid, 1000.0, frequency).unwrap();
     let center_val = elasticity_map.shear_wave_speed[[nx / 2, ny / 2, nz / 2]];
 
     assert!(
@@ -83,11 +92,13 @@ fn test_all_inversion_methods() {
     ] {
         let config = ShearWaveInversionConfig::new(method);
         let inversion = ShearWaveInversion::new(config);
-        let result = inversion.reconstruct(&displacement, &grid);
-        assert!(
-            result.is_ok(),
-            "Inversion method {:?} should succeed",
-            method
+        let map = inversion
+            .reconstruct(&displacement, &grid)
+            .unwrap_or_else(|e| panic!("Inversion method {method:?} should succeed; got: {e:?}"));
+        assert_eq!(
+            map.shear_wave_speed.dim(),
+            (20, 20, 20),
+            "method {method:?}: shear_wave_speed must be 20×20×20"
         );
     }
 }
@@ -98,8 +109,8 @@ fn test_volumetric_tof_with_single_peak() {
     let mut displacement = DisplacementField::zeros(20, 20, 20);
     displacement.uz[[10, 10, 10]] = 5.0; // Single push location
 
-    let result = volumetric_time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0);
-    assert!(result.is_ok(), "Volumetric TOF should handle single peak");
+    let map = volumetric_time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0).unwrap();
+    assert_eq!(map.shear_wave_speed.dim(), (20, 20, 20), "output must span full 20×20×20 grid");
 }
 
 #[test]
@@ -116,8 +127,12 @@ fn test_directional_phase_gradient() {
         }
     }
 
-    let result = directional_phase_gradient_inversion(&displacement, &grid, 1000.0, 100.0);
-    assert!(result.is_ok(), "Directional phase gradient should succeed");
+    let map = directional_phase_gradient_inversion(&displacement, &grid, 1000.0, 100.0).unwrap();
+    let center = map.shear_wave_speed[[10, 10, 10]];
+    assert!(
+        (0.5..=10.0).contains(&center),
+        "directional phase gradient center speed = {center} must be in [0.5, 10.0]"
+    );
 }
 
 #[test]
@@ -125,10 +140,8 @@ fn test_compute_phase_gradient_speed() {
     let profile = vec![0.0, 0.1, 0.2, 0.3, 0.2, 0.1, 0.0];
     let dx = 0.001;
 
-    let speed = compute_phase_gradient_speed(&profile, dx, 100.0);
-    assert!(speed.is_some(), "Should compute speed from valid profile");
-
-    let cs = speed.unwrap();
+    let cs = compute_phase_gradient_speed(&profile, dx, 100.0)
+        .expect("Should compute speed from valid profile");
     assert!((0.5..=10.0).contains(&cs), "Speed should be in valid range");
 }
 

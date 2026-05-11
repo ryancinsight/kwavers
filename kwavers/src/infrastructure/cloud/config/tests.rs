@@ -13,7 +13,7 @@ fn test_deployment_config_validation_success() {
         monitoring: MonitoringConfig::default(),
     };
 
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn test_auto_scaling_config_default() {
     assert_eq!(config.scale_up_threshold, 0.8);
     assert_eq!(config.scale_down_threshold, 0.3);
     assert_eq!(config.cooldown_seconds, 300);
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
 }
 
 #[test]
@@ -106,7 +106,7 @@ fn test_monitoring_config_default() {
     let config = MonitoringConfig::default();
     assert!(config.enable_detailed_metrics);
     assert_eq!(config.metrics_interval_seconds, 60);
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
 }
 
 #[test]
@@ -115,7 +115,7 @@ fn test_alert_thresholds_default() {
     assert_eq!(thresholds.gpu_utilization_threshold, 0.9);
     assert_eq!(thresholds.memory_usage_threshold, 0.9);
     assert_eq!(thresholds.error_rate_threshold, 0.05);
-    assert!(thresholds.validate().is_ok());
+    thresholds.validate().unwrap();
 }
 
 #[test]

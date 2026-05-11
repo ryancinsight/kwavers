@@ -19,6 +19,9 @@ use ndarray::Array3;
 
 impl TransducerFieldCalculatorPlugin {
     /// Calculate spatial impulse response for a given transducer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_sir(
         &mut self,
         transducer_index: usize,

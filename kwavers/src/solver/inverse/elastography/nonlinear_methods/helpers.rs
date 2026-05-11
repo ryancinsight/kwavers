@@ -44,7 +44,7 @@ pub(super) fn ba_from_beta_s(beta_s: f64) -> f64 {
 /// A_L = μ(4 β_s − 3)  (Destrade & Ogden 2010, Eq. 3.8)
 #[inline]
 pub(super) fn a_landau(mu: f64, beta_s: f64) -> f64 {
-    mu * (4.0 * beta_s - 3.0)
+    mu * 4.0f64.mul_add(beta_s, -3.0)
 }
 
 /// Forward model: predict (A₁_pred, A₂_pred) given B/A and observed A₁.

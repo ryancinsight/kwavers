@@ -13,12 +13,6 @@ use ndarray::{Array2, Array3};
 /// Planar array reconstruction
 #[derive(Debug)]
 pub struct PlaneRecon {
-    /// Plane normal vector
-    #[allow(dead_code)]
-    normal: [f64; 3],
-    /// Plane center position
-    #[allow(dead_code)]
-    center: [f64; 3],
     /// Back-projection algorithm
     back_projector: UniversalBackProjection,
 }
@@ -26,15 +20,16 @@ pub struct PlaneRecon {
 impl PlaneRecon {
     /// Create a new planar array reconstruction
     #[must_use]
-    pub fn new(normal: [f64; 3], center: [f64; 3]) -> Self {
+    pub fn new(_normal: [f64; 3], _center: [f64; 3]) -> Self {
         Self {
-            normal,
-            center,
             back_projector: UniversalBackProjection::new(WeightFunction::SolidAngle),
         }
     }
 
     /// Set weight function for back-projection
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_weight_function(mut self, weight_function: WeightFunction) -> Self {
         self.back_projector = UniversalBackProjection::new(weight_function);

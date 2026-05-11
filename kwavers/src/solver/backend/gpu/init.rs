@@ -32,6 +32,9 @@ impl WGPUContext {
     /// 1. High-performance discrete GPU
     /// 2. Integrated GPU
     /// 3. Software renderer (fallback)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new() -> KwaversResult<Self> {
         // Create instance with all available backends
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -58,6 +61,9 @@ impl WGPUContext {
     }
 
     /// Request adapter from instance
+    /// # Errors
+    /// - Returns [`KwaversError::ConfigError`] if the precondition for invalid configuration values is violated.
+    ///
     async fn request_adapter(instance: &wgpu::Instance) -> KwaversResult<wgpu::Adapter> {
         // Try high-performance GPU first
         if let Some(adapter) = instance
@@ -93,6 +99,9 @@ impl WGPUContext {
     }
 
     /// Request device and queue from adapter
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     async fn request_device(adapter: &wgpu::Adapter) -> KwaversResult<(wgpu::Device, wgpu::Queue)> {
         // Request features and limits
         let mut features = wgpu::Features::empty();

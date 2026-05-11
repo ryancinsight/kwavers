@@ -20,6 +20,9 @@ fn test_config() -> NonlinearInversionConfig {
 ///
 /// Forward: A₂ = β_s k_s A₁² z / 2
 /// Inverse: β_s_rec = 2 A₂ c_s / (ω A₁² z)   [Rénier 2008, Eq. 8]
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_beta_s_round_trip() {
     let config = test_config();
@@ -44,6 +47,9 @@ fn test_beta_s_round_trip() {
 }
 
 /// ba_from_beta_s at β_s=1.0 (linear medium) must give B/A=0.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_ba_zero_for_linear_medium() {
     let ba = ba_from_beta_s(1.0);
@@ -54,6 +60,9 @@ fn test_ba_zero_for_linear_medium() {
 }
 
 /// A_L sign check (Destrade & Ogden 2010, Eq. 3.8).
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_a_landau_sign() {
     let mu = 9000.0;
@@ -65,6 +74,9 @@ fn test_a_landau_sign() {
 }
 
 /// For gelatin phantom: β_s ≈ 1.8, recover B/A ≈ 1.6 within 0.1%.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_gelatin_phantom_reference_value() {
     let config = test_config();
@@ -89,6 +101,9 @@ fn test_gelatin_phantom_reference_value() {
 }
 
 /// forward_model + beta_s_from_amplitudes must be inverses.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_forward_model_invertible() {
     let config = test_config();
@@ -108,6 +123,9 @@ fn test_forward_model_invertible() {
 }
 
 /// Jacobian: numerical ≈ analytical to 0.1%.
+/// # Panics
+/// - Panics if the relative error between numerical and analytical Jacobians exceeds tolerance.
+///
 #[test]
 fn test_forward_model_jacobian_numerical() {
     let config = test_config();
@@ -135,9 +153,9 @@ fn test_harmonic_ratio_inversion() {
     let harmonic_field = HarmonicDisplacementField::new(10, 10, 10, 2, 10);
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
-    let result = harmonic_ratio_inversion(&harmonic_field, &grid, &config);
-
-    assert!(result.is_ok(), "Harmonic ratio inversion should succeed");
+    let map = harmonic_ratio_inversion(&harmonic_field, &grid, &config).unwrap();
+    assert_eq!(map.nonlinearity_parameter.dim(), (10, 10, 10),
+        "harmonic ratio output must span the full 10×10×10 grid");
 }
 
 #[test]
@@ -146,12 +164,9 @@ fn test_nonlinear_least_squares_inversion() {
     let harmonic_field = HarmonicDisplacementField::new(10, 10, 10, 2, 10);
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares);
-    let result = nonlinear_least_squares_inversion(&harmonic_field, &grid, &config);
-
-    assert!(
-        result.is_ok(),
-        "Nonlinear least squares inversion should succeed"
-    );
+    let map = nonlinear_least_squares_inversion(&harmonic_field, &grid, &config).unwrap();
+    assert_eq!(map.nonlinearity_parameter.dim(), (10, 10, 10),
+        "nonlinear least squares output must span the full 10×10×10 grid");
 }
 
 #[test]
@@ -160,9 +175,9 @@ fn test_bayesian_inversion() {
     let harmonic_field = HarmonicDisplacementField::new(10, 10, 10, 2, 10);
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::BayesianInversion);
-    let result = bayesian_inversion(&harmonic_field, &grid, &config);
-
-    assert!(result.is_ok(), "Bayesian inversion should succeed");
+    let map = bayesian_inversion(&harmonic_field, &grid, &config).unwrap();
+    assert_eq!(map.nonlinearity_parameter.dim(), (10, 10, 10),
+        "bayesian inversion output must span the full 10×10×10 grid");
 }
 
 #[test]
@@ -177,12 +192,13 @@ fn test_all_nonlinear_methods() {
     ] {
         let config = NonlinearInversionConfig::new(method);
         let processor = NonlinearInversion::new(config);
-        let result = processor.reconstruct(&harmonic_field, &grid);
-
-        assert!(
-            result.is_ok(),
-            "Nonlinear method {:?} should succeed",
-            method
+        let map = processor
+            .reconstruct(&harmonic_field, &grid)
+            .unwrap_or_else(|e| panic!("Nonlinear method {method:?} should succeed; got: {e:?}"));
+        assert_eq!(
+            map.nonlinearity_parameter.dim(),
+            (10, 10, 10),
+            "method {method:?}: nonlinearity_parameter must span 10×10×10 grid"
         );
     }
 }
@@ -201,6 +217,9 @@ fn test_nonlinear_inversion_processor() {
 }
 
 /// shear_modulus: μ = ρ c_s² for default config (ρ=1000, c_s=3) → 9000 Pa.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_shear_modulus_default() {
     let config = NonlinearInversionConfig::default();

@@ -20,12 +20,15 @@ pub struct HemisphereGeometry {
 
 impl HemisphereGeometry {
     /// Create new hemisphere geometry
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn new(radius: f64) -> KwaversResult<Self> {
         if radius <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "radius".to_string(),
+                parameter: "radius".to_owned(),
                 value: radius.to_string(),
-                constraint: "must be positive".to_string(),
+                constraint: "must be positive".to_owned(),
             }));
         }
 
@@ -42,6 +45,9 @@ impl HemisphereGeometry {
     }
 
     /// Get geometric focus point
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn focal_point(&self) -> [f64; 3] {
         [0.0, 0.0, self.focal_length]
@@ -54,6 +60,9 @@ pub struct ElementPlacement;
 
 impl ElementPlacement {
     /// Generate element positions on hemisphere
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn generate_elements(
         geometry: &HemisphereGeometry,
         num_elements: usize,
@@ -91,6 +100,9 @@ impl ElementPlacement {
     }
 
     /// Generate sparse element distribution
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn generate_sparse(
         geometry: &HemisphereGeometry,
         density_factor: f64,

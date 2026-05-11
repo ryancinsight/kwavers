@@ -5,6 +5,11 @@ use crate::domain::source::{Source, SourceField};
 use ndarray::Array2;
 
 impl SourceHandler {
+    /// Add source.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_source(
         &mut self,
         source: std::sync::Arc<dyn Source>,
@@ -31,8 +36,7 @@ impl SourceHandler {
                 if self.source.p_mask.is_some() || self.source.p_signal.is_some() {
                     return Err(KwaversError::Validation(
                         ValidationError::ConstraintViolation {
-                            message: "Multiple pressure sources are not supported in SourceHandler"
-                                .to_string(),
+                            message: "Multiple pressure sources are not supported in SourceHandler".to_owned(),
                         },
                     ));
                 }
@@ -41,7 +45,7 @@ impl SourceHandler {
                 if indices.is_empty() {
                     return Err(KwaversError::Validation(
                         ValidationError::ConstraintViolation {
-                            message: "Source mask contains no active source points".to_string(),
+                            message: "Source mask contains no active source points".to_owned(),
                         },
                     ));
                 }
@@ -62,8 +66,7 @@ impl SourceHandler {
                 if self.source.u_mask.is_some() || self.source.u_signal.is_some() {
                     return Err(KwaversError::Validation(
                         ValidationError::ConstraintViolation {
-                            message: "Multiple velocity sources are not supported in SourceHandler"
-                                .to_string(),
+                            message: "Multiple velocity sources are not supported in SourceHandler".to_owned(),
                         },
                     ));
                 }
@@ -77,7 +80,7 @@ impl SourceHandler {
                 if indices.is_empty() {
                     return Err(KwaversError::Validation(
                         ValidationError::ConstraintViolation {
-                            message: "Source mask contains no active source points".to_string(),
+                            message: "Source mask contains no active source points".to_owned(),
                         },
                     ));
                 }
@@ -90,7 +93,7 @@ impl SourceHandler {
                     SourceField::Pressure => {
                         return Err(KwaversError::Validation(
                             ValidationError::ConstraintViolation {
-                                message: "Pressure source cannot be used as velocity source in this context.".to_string(),
+                                message: "Pressure source cannot be used as velocity source in this context.".to_owned(),
                             },
                         ));
                     }

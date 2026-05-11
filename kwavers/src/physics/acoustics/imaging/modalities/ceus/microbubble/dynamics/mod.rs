@@ -17,9 +17,9 @@ pub(crate) const PROSPERETTI_TOTAL_DAMPING_COEFFICIENT: f64 = 0.1;
 /// Microbubble dynamics simulator.
 #[derive(Debug, Clone, Copy)]
 pub struct BubbleDynamics {
-    /// Time step for integration [s].
+    /// Time step for integration (s).
     pub(crate) dt: f64,
-    /// Ambient pressure [Pa].
+    /// Ambient pressure (Pa).
     pub(crate) ambient_pressure: f64,
     /// Liquid density [kg/m^3].
     pub(crate) liquid_density: f64,

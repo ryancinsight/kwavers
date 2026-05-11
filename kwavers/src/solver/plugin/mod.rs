@@ -6,5 +6,5 @@
 pub mod execution;
 pub mod manager;
 
-pub use execution::{ExecutionStrategy, PluginExecutor, SequentialStrategy};
+pub use execution::{ExecutionStrategy, ParallelStrategy, SequentialStrategy};
 pub use manager::PluginManager;

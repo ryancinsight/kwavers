@@ -32,6 +32,9 @@ impl PinnEMSource {
     /// # Parameters
     /// - `source`: Domain electromagnetic source (SSOT)
     /// - `time_sample`: Time at which to sample source properties
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_domain_source(
         source: &PointEMSource,
         _time_sample: f64,
@@ -130,6 +133,9 @@ pub enum EMAdapterError {
 }
 
 /// Convert multiple domain EM sources to PINN EM source specifications
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn adapt_em_sources(
     sources: &[PointEMSource],
     time_sample: f64,

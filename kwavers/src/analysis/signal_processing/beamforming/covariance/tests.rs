@@ -44,8 +44,8 @@ fn test_sample_covariance_insufficient_snapshots() {
     let result = estimate_sample_covariance(&data, 0.0);
     assert!(result.is_err());
 
-    let result = estimate_sample_covariance(&data, 1e-4);
-    assert!(result.is_ok());
+    let cov = estimate_sample_covariance(&data, 1e-4).unwrap();
+    assert_eq!(cov.dim(), (8, 8), "covariance matrix must be 8×8 (n_sensors)");
 }
 
 #[test]

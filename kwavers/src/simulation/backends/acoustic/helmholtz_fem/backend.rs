@@ -17,6 +17,10 @@ pub struct FemHelmholtzBackend<'a> {
 
 impl<'a> FemHelmholtzBackend<'a> {
     /// Construct a FEM Helmholtz backend from a structured Cartesian vertex grid.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_grid(
         grid: &Grid,
         medium: &'a dyn Medium,

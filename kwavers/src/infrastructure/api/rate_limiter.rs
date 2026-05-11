@@ -78,11 +78,17 @@ impl RateLimiter {
     }
 
     /// Add endpoint-specific rate limit configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_endpoint_config(&mut self, endpoint: &str, config: RateLimitConfig) {
         self.configs.insert(endpoint.to_string(), config);
     }
 
     /// Check if request is within rate limits
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub async fn check_limit(&self, user_id: &str, endpoint: &str) -> Result<(), APIError> {
         let config = self.configs.get(endpoint).unwrap_or(&self.default_config);
         let user_key = format!("{}:{}", user_id, endpoint);
@@ -212,8 +218,8 @@ mod tests {
         let limiter = RateLimiter::new();
 
         // Should allow initial requests
-        assert!(limiter.check_limit("user1", "/api/test").await.is_ok());
-        assert!(limiter.check_limit("user1", "/api/test").await.is_ok());
+        limiter.check_limit("user1", "/api/test").await.unwrap();
+        limiter.check_limit("user1", "/api/test").await.unwrap();
     }
 
     #[tokio::test]
@@ -226,8 +232,8 @@ mod tests {
         let limiter = RateLimiter::with_config(config);
 
         // Use up the limit
-        assert!(limiter.check_limit("user1", "/api/test").await.is_ok());
-        assert!(limiter.check_limit("user1", "/api/test").await.is_ok());
+        limiter.check_limit("user1", "/api/test").await.unwrap();
+        limiter.check_limit("user1", "/api/test").await.unwrap();
 
         // Should be rate limited
         assert!(limiter.check_limit("user1", "/api/test").await.is_err());
@@ -243,14 +249,14 @@ mod tests {
         let limiter = RateLimiter::with_config(config);
 
         // Use up the limit
-        assert!(limiter.check_limit("user1", "/api/test").await.is_ok());
+        limiter.check_limit("user1", "/api/test").await.unwrap();
         assert!(limiter.check_limit("user1", "/api/test").await.is_err());
 
         // Wait for recovery
         sleep(Duration::from_secs(2)).await;
 
         // Should allow again
-        assert!(limiter.check_limit("user1", "/api/test").await.is_ok());
+        limiter.check_limit("user1", "/api/test").await.unwrap();
     }
 
     #[test]

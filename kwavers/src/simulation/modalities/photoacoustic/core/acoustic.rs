@@ -16,6 +16,9 @@ impl PhotoacousticSimulator {
     /// Compute initial pressure distribution from optical absorption
     ///
     /// Uses photoacoustic equation: p₀(r) = Γ · μₐ(r) · Φ(r)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_initial_pressure(
         &self,
         fluence: &Array3<f64>,
@@ -30,6 +33,9 @@ impl PhotoacousticSimulator {
     }
 
     /// Compute multi-wavelength initial pressure distributions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_multi_wavelength_pressure(
         &self,
         fluence_fields: &[Array3<f64>],
@@ -44,6 +50,9 @@ impl PhotoacousticSimulator {
     }
 
     /// Run multi-wavelength photoacoustic simulation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn simulate_multi_wavelength(&self) -> KwaversResult<Vec<(Array3<f64>, InitialPressure)>> {
         let fluence_fields = self.compute_multi_wavelength_fluence()?;
 
@@ -66,6 +75,9 @@ impl PhotoacousticSimulator {
     /// 2. Record pressure snapshots at detector positions
     /// 3. Reconstruct initial pressure using universal back-projection
     /// 4. Compute SNR from reconstructed image
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn simulate(
         &mut self,
         initial_pressure: &InitialPressure,
@@ -98,6 +110,9 @@ impl PhotoacousticSimulator {
     }
 
     /// Reconstruct using the dedicated PhotoacousticReconstructor from the solver module
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn reconstruct_with_solver(
         &self,
         pressure_fields: &[Array3<f64>],
@@ -137,6 +152,9 @@ impl PhotoacousticSimulator {
     }
 
     /// Time Reversal Reconstruction (Universal Back-Projection)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn time_reversal_reconstruction(
         &self,
         pressure_fields: &[Array3<f64>],

@@ -22,6 +22,9 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 /// grads = output.sum().backward()
 /// du_dt = input_grad.grad(&grads)[:, 0]   // column 0 = time
 /// ```
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn compute_time_derivative<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
@@ -65,6 +68,9 @@ where
 /// ```
 /// Truncation error O(ε²). Nested autodiff in Burn requires InnerBackend tensor handling;
 /// finite differences provide a pragmatic alternative on non-throughput-critical PDE paths.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn compute_second_time_derivative<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,

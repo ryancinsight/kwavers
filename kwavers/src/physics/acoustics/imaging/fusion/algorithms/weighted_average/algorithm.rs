@@ -22,6 +22,9 @@ use super::validation::{validate_weighted_average_inputs, WeightedAverageValidat
 ///
 /// Registration is performed prior to accumulation; unsupported registration
 /// requests fail explicitly instead of silently changing algorithms.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub(crate) fn fuse_weighted_average(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
     let _references = WEIGHTED_AVERAGE_FUSION_REFERENCES;
     let _validation_case = FusionValidationCase {
@@ -44,13 +47,13 @@ pub(crate) fn fuse_weighted_average(fusion: &MultiModalFusion) -> KwaversResult<
 
     let reference_name = modality_names.first().ok_or_else(|| {
         KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-            message: "No modalities available for fusion".to_string(),
+            message: "No modalities available for fusion".to_owned(),
         })
     })?;
 
     let reference_modality = fusion.registered_data.get(*reference_name).ok_or_else(|| {
         KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-            message: "Reference modality missing".to_string(),
+            message: "Reference modality missing".to_owned(),
         })
     })?;
 
@@ -86,7 +89,7 @@ pub(crate) fn fuse_weighted_average(fusion: &MultiModalFusion) -> KwaversResult<
         let modality = fusion
             .registered_data
             .get(modality_name.as_str())
-            .ok_or_else(|| KwaversError::InvalidInput("Modality missing".to_string()))?;
+            .ok_or_else(|| KwaversError::InvalidInput("Modality missing".to_owned()))?;
 
         let weight = fusion
             .config

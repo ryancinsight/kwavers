@@ -11,7 +11,7 @@ use num_complex::Complex64;
 /// # Mathematical Definition
 ///
 /// ```text
-/// R = (1/M) ∑ₘ₌₁ᴹ x[m] x[m]^H + ε·I
+/// R = (1/M) ∑ₘ₌₁ᴹ x(m) x(m)^H + ε·I
 /// ```
 ///
 /// # Errors
@@ -66,7 +66,7 @@ pub fn estimate_sample_covariance(
     }
 
     let scale = 1.0 / (n_snapshots as f64);
-    covariance.mapv_inplace(|x| x * scale);
+    covariance.par_mapv_inplace(|x| x * scale);
 
     if diagonal_loading > 0.0 {
         for i in 0..n_sensors {

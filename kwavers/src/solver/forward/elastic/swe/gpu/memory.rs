@@ -19,6 +19,10 @@ struct GPUMemoryBlock {
 
 impl GPUMemoryPool {
     /// Create new memory pool
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(_total_memory: usize, alignment: usize) -> Self {
         Self {
             available_blocks: Vec::new(),
@@ -28,12 +32,15 @@ impl GPUMemoryPool {
     }
 
     /// Allocate memory block
+    /// # Errors
+    /// - Returns [`KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
+    ///
     pub fn allocate(&mut self, size: usize) -> KwaversResult<usize> {
         let aligned_size = size.div_ceil(self.alignment) * self.alignment;
 
         if self.total_allocated + aligned_size > 1024 * 1024 * 1024 {
             return Err(KwaversError::ResourceLimitExceeded {
-                message: "GPU memory pool exhausted".to_string(),
+                message: "GPU memory pool exhausted".to_owned(),
             });
         }
 
@@ -58,6 +65,7 @@ impl GPUMemoryPool {
     }
 
     /// Get memory usage statistics
+    #[must_use] 
     pub fn memory_stats(&self) -> MemoryStats {
         let total_blocks = self.available_blocks.len();
         let average_block_size = self.total_allocated.checked_div(total_blocks).unwrap_or(0);

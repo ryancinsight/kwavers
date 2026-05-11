@@ -17,10 +17,8 @@ pub struct AcousticRadiationForce {
     /// Medium absorption coefficient (Np/m)
     absorption: f64,
     /// Medium density (kg/m³)
-    #[allow(dead_code)]
     density: f64,
     /// Computational grid
-    #[allow(dead_code)]
     grid: Grid,
 }
 
@@ -31,6 +29,9 @@ impl AcousticRadiationForce {
     ///
     /// * `grid` - Computational grid
     /// * `medium` - Tissue medium properties
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: &Grid, medium: &dyn Medium) -> KwaversResult<Self> {
         // Get medium properties at center
         let (nx, ny, nz) = grid.dimensions();
@@ -87,6 +88,9 @@ impl AcousticRadiationForce {
     /// # References
     ///
     /// Nightingale et al. (2002): Radiation force density f ≈ (2αI)/c.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn push_pulse_body_force(
         &self,
         push_location: [f64; 3],
@@ -136,8 +140,10 @@ impl AcousticRadiationForce {
             impulse_n_per_m3_s,
         })
     }
-
-    #[allow(dead_code)]
+    /// Push pulse pseudo displacement.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn push_pulse_pseudo_displacement(
         &self,
         push_location: [f64; 3],
@@ -169,7 +175,7 @@ impl AcousticRadiationForce {
                     let dy = y - push_location[1];
                     let dz = z - push_location[2];
 
-                    let r_lateral = (dx * dx + dy * dy).sqrt();
+                    let r_lateral = dx.hypot(dy);
                     let r_axial = dz.abs();
 
                     let lateral_profile = (-4.0 * (r_lateral / lateral_width).powi(2)).exp();
@@ -187,6 +193,9 @@ impl AcousticRadiationForce {
     /// Create per-push body-force configs for a multi-directional push sequence.
     ///
     /// This is the correctness-first replacement for summing scalar “initial displacements”.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn multi_directional_body_forces(
         &self,
         push_sequence: &MultiDirectionalPush,

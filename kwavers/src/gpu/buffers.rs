@@ -63,6 +63,9 @@ impl BufferManager {
     ///
     /// Returns `Err` if a buffer named `name` already exists.
     /// The new buffer is accessible via [`BufferManager::get`].
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub fn allocate(
         &mut self,
         device: &wgpu::Device,

@@ -92,7 +92,7 @@ mod tests {
         let device = Default::default();
         let config = BurnPINN2DConfig::default();
         let result = BurnPINN2DWave::<TestBackend>::new(config, &device);
-        assert!(result.is_ok());
+        let _wave = result.unwrap();
     }
 
     #[test]

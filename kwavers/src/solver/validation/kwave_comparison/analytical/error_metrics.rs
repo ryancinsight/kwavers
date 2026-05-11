@@ -25,6 +25,10 @@ pub struct ErrorMetrics {
 
 impl ErrorMetrics {
     /// Compute error metrics between numerical and analytical solutions.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
+    #[must_use] 
     pub fn compute(numerical: ArrayView3<f64>, analytical: ArrayView3<f64>) -> Self {
         assert_eq!(
             numerical.dim(),
@@ -79,11 +83,13 @@ impl ErrorMetrics {
     }
 
     /// Returns true if L² < 0.01, L∞ < 0.05, phase < 0.1 rad.
+    #[must_use] 
     pub fn meets_acceptance_criteria(&self) -> bool {
         self.l2_error < 0.01 && self.linf_error < 0.05 && self.phase_error < 0.1
     }
 
     /// Generate validation report string.
+    #[must_use] 
     pub fn report(&self) -> String {
         format!(
             "Error Metrics:\n\

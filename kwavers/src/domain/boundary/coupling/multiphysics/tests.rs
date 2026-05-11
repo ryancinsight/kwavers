@@ -25,6 +25,9 @@ fn test_multiphysics_interface_photoacoustic() {
 }
 
 /// Water–soft-tissue: nearly impedance-matched → τ ≈ 0.9978 (high transmission).
+/// # Panics
+/// - Panics if assertion fails: `water/tissue should be nearly impedance-matched; got τ = {:.6}`.
+///
 #[test]
 fn test_acoustic_elastic_water_soft_tissue_transmission() {
     let interface = MultiPhysicsInterface::new(
@@ -55,6 +58,10 @@ fn test_acoustic_elastic_water_soft_tissue_transmission() {
 }
 
 /// Water–cortical bone: significant impedance mismatch → τ ≈ 0.618, R ≈ 0.382.
+/// # Panics
+/// - Panics if assertion fails: `water/bone τ should be in (0.3, 0.75); got τ = {:.4}`.
+/// - Panics if assertion fails: `bone interface should have >20% reflection; R = {:.4}`.
+///
 #[test]
 fn test_acoustic_elastic_water_bone_transmission() {
     let interface = MultiPhysicsInterface::new(
@@ -90,6 +97,9 @@ fn test_acoustic_elastic_water_bone_transmission() {
 }
 
 /// Photoacoustic: higher absorption → higher coupling (monotone property).
+/// # Panics
+/// - Panics if assertion fails: `coupling must be monotone in μ_a`.
+///
 #[test]
 fn test_multiphysics_photoacoustic_monotone() {
     let gruneisen = 0.12;
@@ -121,6 +131,9 @@ fn test_multiphysics_photoacoustic_monotone() {
 }
 
 /// Acoustic-thermal: coupling is physically positive and ≤ 1.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_acoustic_thermal_coupling_bounds() {
     let interface = MultiPhysicsInterface::new(
@@ -167,6 +180,9 @@ fn test_multiphysics_custom_coupling() {
 }
 
 /// Impedance self-matching (Z₁ = Z₂) gives τ = 1.0 exactly.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_acoustic_elastic_self_matched() {
     let interface = MultiPhysicsInterface::new(

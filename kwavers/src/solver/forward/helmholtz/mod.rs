@@ -84,6 +84,9 @@ pub enum PreconditionerType {
 /// Preconditioner trait for Helmholtz solvers
 pub trait Preconditioner {
     /// Apply preconditioner to a field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply(
         &self,
         input: &ndarray::ArrayView3<num_complex::Complex64>,
@@ -91,6 +94,9 @@ pub trait Preconditioner {
     ) -> crate::core::error::KwaversResult<()>;
 
     /// Setup preconditioner for given wavenumber and medium
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn setup(
         &mut self,
         wavenumber: f64,

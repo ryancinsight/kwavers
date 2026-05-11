@@ -37,22 +37,23 @@ use std::collections::HashMap;
 /// # Returns
 ///
 /// HashMap mapping property names to 3D spatial maps
+#[must_use] 
 pub fn extract_tissue_properties(fused_result: &FusedImageResult) -> HashMap<String, Array3<f64>> {
     let mut properties = HashMap::new();
 
     // Extract derived tissue properties from multi-modal fusion
     properties.insert(
-        "tissue_classification".to_string(),
+        "tissue_classification".to_owned(),
         classify_tissue_types(&fused_result.intensity_image),
     );
 
     properties.insert(
-        "oxygenation_index".to_string(),
+        "oxygenation_index".to_owned(),
         compute_oxygenation_index(&fused_result.intensity_image),
     );
 
     properties.insert(
-        "composite_stiffness".to_string(),
+        "composite_stiffness".to_owned(),
         compute_composite_stiffness(&fused_result.intensity_image),
     );
 

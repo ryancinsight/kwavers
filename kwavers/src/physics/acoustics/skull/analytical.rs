@@ -1,7 +1,10 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
-
+/// Generate spherical skull.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn generate_spherical_skull(
     grid: &Grid,
     thickness: f64,
@@ -20,7 +23,7 @@ pub fn generate_spherical_skull(
         for j in 0..grid.ny {
             for k in 0..grid.nz {
                 let r =
-                    ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2) + (k as f64 - cz).powi(2))
+                    (k as f64 - cz).mul_add(k as f64 - cz, (j as f64 - cy).mul_add(j as f64 - cy, (i as f64 - cx).powi(2)))
                         .sqrt();
 
                 if r >= inner_radius && r <= outer_radius {
@@ -32,7 +35,10 @@ pub fn generate_spherical_skull(
 
     Ok(mask)
 }
-
+/// Generate ellipsoidal skull.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+///
 pub fn generate_ellipsoidal_skull(
     grid: &Grid,
     thickness: f64,
@@ -40,7 +46,7 @@ pub fn generate_ellipsoidal_skull(
 ) -> KwaversResult<Array3<f64>> {
     if params.len() < 3 {
         return Err(KwaversError::InvalidInput(
-            "Ellipsoid requires 3 radii".to_string(),
+            "Ellipsoid requires 3 radii".to_owned(),
         ));
     }
 

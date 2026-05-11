@@ -125,6 +125,9 @@ impl ReflectionTransmissionCoefficients {
     /// For computational implementations, tolerance accounts for:
     /// - Floating point errors (~1e-15)
     /// - Numerical dispersion in discretization
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn verify_energy_conservation(&self) -> Result<(), String> {
         let total = self.r_energy + self.t_energy_l;
         let tolerance = 1e-10;
@@ -148,6 +151,9 @@ mod tests {
     ///
     /// **Validation**: Water-Steel interface should have R ≈ 0.935
     /// reflecting almost all acoustic energy.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_normal_reflection_water_steel() {
         let interface = FsiInterface::new(
@@ -176,6 +182,9 @@ mod tests {
     }
 
     /// Test energy conservation
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_energy_conservation() {
         let interface = FsiInterface::new(
@@ -196,6 +205,9 @@ mod tests {
     }
 
     /// Test oblique incidence at various angles
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_oblique_reflection_angles() {
         let interface = FsiInterface::new(

@@ -18,6 +18,7 @@ pub struct GridConfig {
 
 impl GridConfig {
     /// Create new grid configuration with validation
+    #[must_use] 
     pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
         Self {
             nx,
@@ -30,17 +31,28 @@ impl GridConfig {
     }
 
     /// Calculate total grid points
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn total_points(&self) -> usize {
         self.nx * self.ny * self.nz
     }
 
     /// Calculate memory footprint estimate in bytes
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn memory_estimate(&self) -> usize {
         // Estimate: 8 fields * 8 bytes (f64) per point
         self.total_points() * 64
     }
 
     /// Validate grid configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         super::validation::GridValidator::validate(self)
     }

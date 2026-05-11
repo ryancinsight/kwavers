@@ -14,6 +14,10 @@ pub struct HarmonicTracker {
 
 impl HarmonicTracker {
     /// Create new harmonic tracker.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: HarmonicConfig) -> Self {
         Self {
             config,
@@ -22,10 +26,14 @@ impl HarmonicTracker {
     }
 
     /// Analyze harmonics from pressure time series.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn analyze_harmonics(&self, pressure: &Array1<f64>) -> KwaversResult<HarmonicAnalysis> {
         if pressure.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "Pressure array is empty".to_string(),
+                "Pressure array is empty".to_owned(),
             ));
         }
 
@@ -53,21 +61,32 @@ impl HarmonicTracker {
     }
 
     /// Get analysis history.
+    #[must_use] 
     pub fn history(&self) -> &[HarmonicAnalysis] {
         &self.history
     }
 
     /// Clear history.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn clear_history(&mut self) {
         self.history.clear();
     }
 
     /// Get configuration.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn config(&self) -> HarmonicConfig {
         self.config
     }
 
     /// Analyze spatial development of harmonics (2D field).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn analyze_harmonic_field(
         &self,
         pressure: &Array2<f64>,
@@ -177,7 +196,7 @@ impl HarmonicTracker {
             sin_acc += p * phase.sin();
         }
 
-        let amplitude = (cos_acc * cos_acc + sin_acc * sin_acc).sqrt() / pressure.len() as f64;
+        let amplitude = cos_acc.hypot(sin_acc) / pressure.len() as f64;
         Ok(amplitude)
     }
 

@@ -84,7 +84,7 @@ pub(super) fn norm(a: &Array3<f64>) -> f64 {
 /// Boundary nodes use zero-gradient (homogeneous Neumann) ghost-cell conditions.
 ///
 /// ## Parameters
-/// - `dx`, `dy`, `dz`: physical cell spacings [m]. Must be > 0.
+/// - `dx`, `dy`, `dz`: physical cell spacings (m). Must be > 0.
 ///
 /// ## Reference
 /// - LeVeque, R.J. (2007). *Finite Difference Methods for Ordinary and Partial
@@ -112,7 +112,7 @@ pub(super) fn laplacian_3d(
                 let d2x = if nx > 2 {
                     let im = if i == 0 { 0 } else { i - 1 };
                     let ip = if i == nx - 1 { nx - 1 } else { i + 1 };
-                    (field[[ip, j, k]] - 2.0 * field[[i, j, k]] + field[[im, j, k]]) * inv_dx2
+                    (2.0f64.mul_add(-field[[i, j, k]], field[[ip, j, k]]) + field[[im, j, k]]) * inv_dx2
                 } else {
                     0.0
                 };
@@ -120,7 +120,7 @@ pub(super) fn laplacian_3d(
                 let d2y = if ny > 2 {
                     let jm = if j == 0 { 0 } else { j - 1 };
                     let jp = if j == ny - 1 { ny - 1 } else { j + 1 };
-                    (field[[i, jp, k]] - 2.0 * field[[i, j, k]] + field[[i, jm, k]]) * inv_dy2
+                    (2.0f64.mul_add(-field[[i, j, k]], field[[i, jp, k]]) + field[[i, jm, k]]) * inv_dy2
                 } else {
                     0.0
                 };
@@ -128,7 +128,7 @@ pub(super) fn laplacian_3d(
                 let d2z = if nz > 2 {
                     let km = if k == 0 { 0 } else { k - 1 };
                     let kp = if k == nz - 1 { nz - 1 } else { k + 1 };
-                    (field[[i, j, kp]] - 2.0 * field[[i, j, k]] + field[[i, j, km]]) * inv_dz2
+                    (2.0f64.mul_add(-field[[i, j, k]], field[[i, j, kp]]) + field[[i, j, km]]) * inv_dz2
                 } else {
                     0.0
                 };
@@ -197,6 +197,9 @@ mod tests {
     ///
     /// ∇²f at interior node is proportional to 1/dx², so changing dx from 1.0
     /// to 1e-3 scales the output by (1/1e-3)² / (1/1.0)² = 1e6.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_laplacian_unit_vs_nonunit_spacing() {
         // f = 1 everywhere except a single interior spike to produce non-zero Laplacian
@@ -215,6 +218,9 @@ mod tests {
 
     /// ∇²(x²) = 2 exactly for any uniform dx (second-order central difference is exact
     /// for polynomials of degree ≤ 2).
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_laplacian_quadratic_field_exact() {
         let n = 10;
@@ -239,6 +245,9 @@ mod tests {
     }
 
     /// All-zero field → Laplacian is zero everywhere for any spacing.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_laplacian_zero_field() {
         let field = Array3::zeros((6, 6, 6));

@@ -103,12 +103,18 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     }
 
     /// Set problem type
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_problem_type(mut self, problem_type: EMProblemType) -> Self {
         self.problem_type = problem_type;
         self
     }
 
     /// Enable GPU acceleration for electromagnetic simulations
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[cfg(feature = "gpu")]
     pub fn with_gpu_acceleration(mut self, gpu_config: EMConfig) -> Self {
         self.gpu_config = Some(gpu_config);
@@ -116,6 +122,9 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
     }
 
     /// Validate domain configuration
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.permittivity <= 0.0 {
             return Err(KwaversError::Validation(

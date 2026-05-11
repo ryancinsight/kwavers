@@ -11,6 +11,9 @@ impl FwiProcessor {
     ///
     /// Calls `forward_model_sensor_only` — no pressure-history `Array4` is
     /// allocated.  Peak memory ~55 MB per call; safe to call from `par_iter`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn compute_objective(
         &self,
         model: &Array3<f64>,
@@ -26,6 +29,9 @@ impl FwiProcessor {
     ///
     /// Shots are independent: each forward model reads `model` and `grid`
     /// immutably, so the loop runs fully in parallel via Rayon.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn compute_joint_objective(
         &self,
         model: &Array3<f64>,
@@ -51,6 +57,9 @@ impl FwiProcessor {
     /// step that strictly reduces the objective is accepted.
     ///
     /// Reference: Nocedal & Wright (2006) §3.1, Condition (3.6a) with c₁ → 0.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn line_search(
         &self,
         model: &Array3<f64>,
@@ -71,7 +80,7 @@ impl FwiProcessor {
             Zip::from(&mut test_model)
                 .and(model)
                 .and(gradient)
-                .par_for_each(|t, &m, &g| *t = m - s * g);
+                .par_for_each(|t, &m, &g| *t = s.mul_add(-g, m));
             let test_objective =
                 self.compute_objective(&test_model, observed_data, geometry, grid)?;
 
@@ -94,6 +103,9 @@ impl FwiProcessor {
     /// positive `α` → caller applies `c − α·g`; negative `α` → caller applies
     /// `c + |α|·g`.  Returns `0.0` when neither direction satisfies sufficient
     /// decrease.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn line_search_multi(
         &self,
         model: &Array3<f64>,
@@ -111,7 +123,7 @@ impl FwiProcessor {
             Zip::from(&mut test_model)
                 .and(model)
                 .and(gradient)
-                .par_for_each(|t, &m, &g| *t = m - g * step);
+                .par_for_each(|t, &m, &g| *t = g.mul_add(-step, m));
             let test_obj = self.compute_joint_objective(&test_model, shots, grid)?;
             if test_obj < current_obj {
                 return Ok(step);
@@ -124,7 +136,7 @@ impl FwiProcessor {
             Zip::from(&mut test_model)
                 .and(model)
                 .and(gradient)
-                .par_for_each(|t, &m, &g| *t = m + g * step);
+                .par_for_each(|t, &m, &g| *t = g.mul_add(step, m));
             let test_obj = self.compute_joint_objective(&test_model, shots, grid)?;
             if test_obj < current_obj {
                 log::info!(

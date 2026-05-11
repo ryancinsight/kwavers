@@ -38,6 +38,9 @@ pub struct SimulationSetup;
 
 impl SimulationSetup {
     /// Create simulation components from configuration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn setup(config: &Configuration) -> KwaversResult<SimulationComponents> {
         // 1. Create Grid
         // GridParameters has spacing, dimensions.

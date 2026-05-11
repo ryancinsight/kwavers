@@ -35,6 +35,9 @@ use super::super::types::elasticity_map_from_speed;
 /// # References
 ///
 /// - Wang et al. (2014): "Multi-directional phase gradient methods for 3D SWE"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn directional_phase_gradient_inversion(
     displacement: &DisplacementField,
     grid: &Grid,

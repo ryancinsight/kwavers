@@ -10,6 +10,10 @@ use crate::core::error::{KwaversResult, NumericalError};
 use ndarray::Array3;
 
 impl ElasticWaveSolver {
+    /// Propagate volumetric waves with body forces.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn propagate_volumetric_waves_with_body_forces(
         &self,
         body_forces: &[ElasticBodyForceConfig],
@@ -18,7 +22,7 @@ impl ElasticWaveSolver {
     ) -> KwaversResult<(Vec<ElasticWaveField>, WaveFrontTracker)> {
         if body_forces.len() != push_times.len() {
             return Err(NumericalError::InvalidOperation(
-                "body_forces and push_times must have the same length".to_string(),
+                "body_forces and push_times must have the same length".to_owned(),
             )
             .into());
         }
@@ -45,14 +49,14 @@ impl ElasticWaveSolver {
         };
         if dt <= 0.0 {
             return Err(NumericalError::InvalidOperation(
-                "Calculated time step is non-positive".to_string(),
+                "Calculated time step is non-positive".to_owned(),
             )
             .into());
         }
         let duration_s = self.volumetric_config.duration_s;
         if !duration_s.is_finite() || duration_s <= 0.0 {
             return Err(NumericalError::InvalidOperation(
-                "Volumetric duration must be positive".to_string(),
+                "Volumetric duration must be positive".to_owned(),
             )
             .into());
         }
@@ -82,7 +86,10 @@ impl ElasticWaveSolver {
         let tracker = self.compute_wavefront_tracker(&history);
         Ok((history, tracker))
     }
-
+    /// Propagate volumetric waves with sources.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn propagate_volumetric_waves_with_sources(
         &self,
         initial_displacements: &[Array3<f64>],
@@ -94,7 +101,7 @@ impl ElasticWaveSolver {
         for disp in initial_displacements {
             if disp.dim() != (nx, ny, nz) {
                 return Err(NumericalError::InvalidOperation(
-                    "Initial displacement shape does not match grid".to_string(),
+                    "Initial displacement shape does not match grid".to_owned(),
                 )
                 .into());
             }
@@ -114,14 +121,14 @@ impl ElasticWaveSolver {
         };
         if dt <= 0.0 {
             return Err(NumericalError::InvalidOperation(
-                "Calculated time step is non-positive".to_string(),
+                "Calculated time step is non-positive".to_owned(),
             )
             .into());
         }
         let duration_s = self.volumetric_config.duration_s;
         if !duration_s.is_finite() || duration_s <= 0.0 {
             return Err(NumericalError::InvalidOperation(
-                "Volumetric duration must be positive".to_string(),
+                "Volumetric duration must be positive".to_owned(),
             )
             .into());
         }
@@ -151,14 +158,14 @@ impl ElasticWaveSolver {
         }
         if !push_times.is_empty() && push_times.len() != sources.len() {
             return Err(NumericalError::InvalidOperation(
-                "push_times and sources must have the same length when provided".to_string(),
+                "push_times and sources must have the same length when provided".to_owned(),
             )
             .into());
         }
         for w in push_times.windows(2) {
             if w[1] < w[0] {
                 return Err(NumericalError::InvalidOperation(
-                    "push_times must be non-decreasing".to_string(),
+                    "push_times must be non-decreasing".to_owned(),
                 )
                 .into());
             }
@@ -305,7 +312,7 @@ impl ElasticWaveSolver {
                                 if corr < *min_corr {
                                     continue;
                                 }
-                                let denom = template_norm * sig_energy.sqrt() + 1e-30;
+                                let denom = template_norm.mul_add(sig_energy.sqrt(), 1e-30);
                                 let quality = (corr / denom).min(1.0);
                                 if best_idx.is_none() || corr > best_corr {
                                     best_idx = Some(start);

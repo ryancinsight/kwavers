@@ -6,9 +6,9 @@ use super::{BREAKUP_FRACTION, N_MODES};
 /// `N_MODES + 1`. Index 0 maps to mode n = 2.
 #[derive(Debug, Clone)]
 pub struct ShapeModeState {
-    /// Mode amplitudes a_n [m].
+    /// Mode amplitudes a_n (m).
     pub amplitude: [f64; N_MODES],
-    /// Mode amplitude rates a_dot_n [m/s].
+    /// Mode amplitude rates a_dot_n (m/s).
     pub rate: [f64; N_MODES],
 }
 
@@ -22,7 +22,7 @@ impl Default for ShapeModeState {
 }
 
 impl ShapeModeState {
-    /// Seed mode `n` with an initial perturbation amplitude [m].
+    /// Seed mode `n` with an initial perturbation amplitude (m).
     pub fn seed(&mut self, n: usize, amplitude_0: f64) {
         if (2..N_MODES + 2).contains(&n) {
             self.amplitude[n - 2] = amplitude_0;

@@ -3,11 +3,14 @@
 use super::super::orchestrator::PSTDSolver;
 use crate::core::error::KwaversResult;
 use crate::domain::source::{SourceField, SourceInjectionMode};
-use crate::math::fft::Complex64;
 use crate::solver::geometry::Geometry;
 use ndarray::{s, Zip};
 
 impl PSTDSolver {
+    /// Apply pressure sources.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_pressure_sources(
         &mut self,
         time_index: usize,
@@ -31,7 +34,7 @@ impl PSTDSolver {
             self.source_handler
                 .add_pressure_source_into_density(shifted_time_index, &mut self.dpx);
             if source_gain != 1.0 {
-                self.dpx.iter_mut().for_each(|v| *v *= source_gain);
+                self.dpx.mapv_inplace(|v| v * source_gain);
             }
             has_sources = true;
         }
@@ -53,7 +56,7 @@ impl PSTDSolver {
                     SourceInjectionMode::Boundary => 1.0,
                 };
 
-                Zip::from(&mut self.dpx).and(mask).for_each(|p, &m| {
+                Zip::from(&mut self.dpx).and(mask).par_for_each(|p, &m| {
                     if m.abs() > 1e-12 {
                         *p += m * amp * scale * mass_source_scale * source_gain;
                     }
@@ -67,27 +70,32 @@ impl PSTDSolver {
         }
 
         // Theorem (PSTD Split-Density Source Injection, Treeby & Cox 2010 Eq. 16–18):
-        // k-Wave scales rho_scale = 2·Δt/(n_dim·c₀·Δx) and injects into n_dim density
-        // components so total density change = n_dim × s.
-        // kwavers always has 3 density components (ρₓ,ρᵧ,ρ_z) in the EOS p=c²·(ρₓ+ρᵧ+ρ_z).
         //
-        // CylindricalAS: only ρₓ (axial) and ρ_z (radial) are updated; ρᵧ must NOT
-        // receive source injection (no divergence update → accumulates without decay).
+        // k-Wave injects into exactly n_active density components with per-component scale
+        //   rho_scale = 2·Δt / (n_active · c₀ · Δx)
+        // so that the total density change per step = n_active × rho_scale × s = 2Δt·s/(c₀·Δx).
+        //
+        // kwavers has 3 split-density arrays (ρₓ,ρᵧ,ρ_z) in the EOS p = c²·(ρₓ+ρᵧ+ρ_z).
+        // Each inactive dimension (dim=1) receives no divergence update from the propagator,
+        // so injecting into its density array causes monotonic accumulation that grows without
+        // bound over all Nt steps — a static pressure bias scaling with Nt × source amplitude.
+        //
+        // Correctness invariant: inject ONLY into active-dimension density arrays (n_active of them),
+        // with density_scale = 1.0 so that:
+        //   total EOS contribution per step = n_active × dpx × 1.0
+        //   dpx = signal × 2Δt / (n_active · c₀ · Δx)   (from source_handler scaling)
+        //   → total = 2Δt·signal / (c₀·Δx)   ← matches k-Wave identically
+        //
+        // Special case — CylindricalAS: only ρₓ (axial) and ρ_z (radial) are updated by the
+        // propagator; ρᵧ must NOT receive injection.
         let is_axisymmetric = self.config.geometry == Geometry::CylindricalAS;
-        let (n_dim_active, density_scale) = if is_axisymmetric {
-            (2.0_f64, 1.0_f64)
-        } else {
-            let n = {
-                let g = &*self.grid;
-                [g.nx > 1, g.ny > 1, g.nz > 1]
-                    .iter()
-                    .filter(|&&d| d)
-                    .count()
-                    .max(1) as f64
-            };
-            (n, n / 3.0)
-        };
-        let _ = n_dim_active;
+        // density_scale = 1.0 for all geometries; dimension-awareness is expressed by which
+        // arrays receive injection, not by a fractional multiplier across all three arrays.
+        let density_scale = 1.0_f64;
+
+        // Active-dimension flags for the Cartesian non-axisymmetric path.
+        let has_y = self.grid.ny > 1;
+        let has_z = self.grid.nz > 1;
 
         match p_mode {
             crate::domain::source::SourceMode::Dirichlet => {
@@ -95,25 +103,62 @@ impl PSTDSolver {
                     Zip::from(&mut self.rhox)
                         .and(&mut self.rhoz)
                         .and(&self.dpx)
-                        .for_each(|rx, rz, &s| {
+                        .par_for_each(|rx, rz, &s| {
                             if s.abs() > 0.0 {
                                 *rx = s * density_scale;
                                 *rz = s * density_scale;
                             }
                         });
                 } else {
-                    Zip::from(&mut self.rhox)
-                        .and(&mut self.rhoy)
-                        .and(&mut self.rhoz)
-                        .and(&self.dpx)
-                        .for_each(|rx, ry, rz, &s| {
-                            if s.abs() > 0.0 {
-                                let v = s * density_scale;
-                                *rx = v;
-                                *ry = v;
-                                *rz = v;
-                            }
-                        });
+                    match (has_y, has_z) {
+                        (true, true) => {
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoy)
+                                .and(&mut self.rhoz)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, ry, rz, &s| {
+                                    if s.abs() > 0.0 {
+                                        *rx = s;
+                                        *ry = s;
+                                        *rz = s;
+                                    }
+                                });
+                        }
+                        (true, false) => {
+                            // Quasi-2D (NZ=1): ρ_z has no divergence update — must not be set.
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoy)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, ry, &s| {
+                                    if s.abs() > 0.0 {
+                                        *rx = s;
+                                        *ry = s;
+                                    }
+                                });
+                        }
+                        (false, true) => {
+                            // XZ plane (NY=1): ρᵧ has no y-divergence update — must not be set.
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoz)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, rz, &s| {
+                                    if s.abs() > 0.0 {
+                                        *rx = s;
+                                        *rz = s;
+                                    }
+                                });
+                        }
+                        (false, false) => {
+                            // 1D (NY=1, NZ=1): only ρₓ participates.
+                            Zip::from(&mut self.rhox)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, &s| {
+                                    if s.abs() > 0.0 {
+                                        *rx = s;
+                                    }
+                                });
+                        }
+                    }
                 }
             }
             crate::domain::source::SourceMode::Additive => {
@@ -122,8 +167,8 @@ impl PSTDSolver {
                 self.fft.forward_r2c_into(&self.dpx, &mut self.p_k);
                 Zip::from(&mut self.p_k)
                     .and(self.source_kappa.slice(s![.., .., ..nz_c]))
-                    .for_each(|val, &k| {
-                        *val *= Complex64::new(k, 0.0);
+                    .par_for_each(|val, &k| {
+                        *val *= k; // source_kappa is real-valued; scalar multiply
                     });
                 self.fft
                     .inverse_c2r_into(&self.p_k, &mut self.dpx, &mut self.ux_k);
@@ -132,22 +177,53 @@ impl PSTDSolver {
                     Zip::from(&mut self.rhox)
                         .and(&mut self.rhoz)
                         .and(&self.dpx)
-                        .for_each(|rx, rz, &s| {
-                            let v = s * density_scale;
-                            *rx += v;
-                            *rz += v;
+                        .par_for_each(|rx, rz, &s| {
+                            *rx += s * density_scale;
+                            *rz += s * density_scale;
                         });
                 } else {
-                    Zip::from(&mut self.rhox)
-                        .and(&mut self.rhoy)
-                        .and(&mut self.rhoz)
-                        .and(&self.dpx)
-                        .for_each(|rx, ry, rz, &s| {
-                            let v = s * density_scale;
-                            *rx += v;
-                            *ry += v;
-                            *rz += v;
-                        });
+                    match (has_y, has_z) {
+                        (true, true) => {
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoy)
+                                .and(&mut self.rhoz)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, ry, rz, &s| {
+                                    *rx += s;
+                                    *ry += s;
+                                    *rz += s;
+                                });
+                        }
+                        (true, false) => {
+                            // Quasi-2D (NZ=1): ρ_z never receives z-divergence update;
+                            // injecting here causes unbounded accumulation → must be skipped.
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoy)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, ry, &s| {
+                                    *rx += s;
+                                    *ry += s;
+                                });
+                        }
+                        (false, true) => {
+                            // XZ plane (NY=1): ρᵧ has no y-divergence update.
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoz)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, rz, &s| {
+                                    *rx += s;
+                                    *rz += s;
+                                });
+                        }
+                        (false, false) => {
+                            // 1D (NY=1, NZ=1): only ρₓ participates.
+                            Zip::from(&mut self.rhox)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, &s| {
+                                    *rx += s;
+                                });
+                        }
+                    }
                 }
             }
             crate::domain::source::SourceMode::AdditiveNoCorrection => {
@@ -155,22 +231,52 @@ impl PSTDSolver {
                     Zip::from(&mut self.rhox)
                         .and(&mut self.rhoz)
                         .and(&self.dpx)
-                        .for_each(|rx, rz, &s| {
-                            let v = s * density_scale;
-                            *rx += v;
-                            *rz += v;
+                        .par_for_each(|rx, rz, &s| {
+                            *rx += s * density_scale;
+                            *rz += s * density_scale;
                         });
                 } else {
-                    Zip::from(&mut self.rhox)
-                        .and(&mut self.rhoy)
-                        .and(&mut self.rhoz)
-                        .and(&self.dpx)
-                        .for_each(|rx, ry, rz, &s| {
-                            let v = s * density_scale;
-                            *rx += v;
-                            *ry += v;
-                            *rz += v;
-                        });
+                    match (has_y, has_z) {
+                        (true, true) => {
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoy)
+                                .and(&mut self.rhoz)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, ry, rz, &s| {
+                                    *rx += s;
+                                    *ry += s;
+                                    *rz += s;
+                                });
+                        }
+                        (true, false) => {
+                            // Quasi-2D (NZ=1): ρ_z must not receive injection.
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoy)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, ry, &s| {
+                                    *rx += s;
+                                    *ry += s;
+                                });
+                        }
+                        (false, true) => {
+                            // XZ plane (NY=1): ρᵧ must not receive injection.
+                            Zip::from(&mut self.rhox)
+                                .and(&mut self.rhoz)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, rz, &s| {
+                                    *rx += s;
+                                    *rz += s;
+                                });
+                        }
+                        (false, false) => {
+                            // 1D (NY=1, NZ=1): only ρₓ participates.
+                            Zip::from(&mut self.rhox)
+                                .and(&self.dpx)
+                                .par_for_each(|rx, &s| {
+                                    *rx += s;
+                                });
+                        }
+                    }
                 }
             }
         }
@@ -202,27 +308,27 @@ impl PSTDSolver {
 
             match source.source_type() {
                 SourceField::VelocityX => {
-                    Zip::from(&mut self.fields.ux).and(mask).for_each(|u, &m| {
+                    Zip::from(&mut self.fields.ux).and(mask).par_for_each(|u, &m| {
                         if m.abs() > 1e-12 {
                             *u += m * amp;
                         }
                     });
                 }
                 SourceField::VelocityY => {
-                    Zip::from(&mut self.fields.uy).and(mask).for_each(|u, &m| {
+                    Zip::from(&mut self.fields.uy).and(mask).par_for_each(|u, &m| {
                         if m.abs() > 1e-12 {
                             *u += m * amp;
                         }
                     });
                 }
                 SourceField::VelocityZ => {
-                    Zip::from(&mut self.fields.uz).and(mask).for_each(|u, &m| {
+                    Zip::from(&mut self.fields.uz).and(mask).par_for_each(|u, &m| {
                         if m.abs() > 1e-12 {
                             *u += m * amp;
                         }
                     });
                 }
-                _ => {}
+                SourceField::Pressure => {}
             }
         }
     }

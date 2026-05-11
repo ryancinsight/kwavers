@@ -64,6 +64,9 @@ mod backend_surface_tests {
 
     /// `ComputeDevice` and `BackendCapabilities` constructible (positive value
     /// inspection beyond mere `is_some()` / `is_ok()` per anti-mock rule).
+    /// # Panics
+    /// - Panics if assertion fails: `test-cpu-0`.
+    ///
     #[test]
     fn compute_device_and_capabilities_value_inspect() {
         use crate::solver::backend::{BackendCapabilities, BackendType, ComputeDevice};

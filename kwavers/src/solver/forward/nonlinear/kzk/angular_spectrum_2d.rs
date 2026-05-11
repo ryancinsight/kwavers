@@ -82,7 +82,7 @@ impl AngularSpectrum2D {
             for j in 0..ny {
                 let kx = self.kx[[i, j]];
                 let ky = self.ky[[i, j]];
-                let kt2 = kx * kx + ky * ky;
+                let kt2 = kx.mul_add(kx, ky * ky);
 
                 if kt2 < k0 * k0 {
                     // Propagating waves

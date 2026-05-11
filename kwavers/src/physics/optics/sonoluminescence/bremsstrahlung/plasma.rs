@@ -11,7 +11,7 @@ use crate::core::constants::fundamental::{
 /// All densities use SI units `m^-3`.
 #[derive(Debug, Clone)]
 pub struct PlasmaState {
-    /// Electron temperature [K].
+    /// Electron temperature (K).
     pub temperature: f64,
     /// Electron number density.
     pub electron_density: f64,
@@ -118,13 +118,13 @@ impl PlasmaState {
         }
 
         let (n0, n1, n2) = stage_densities(n_e.max(0.0), n_atom, k1, k1k2);
-        let n_e_total = n1 + 2.0 * n2;
+        let n_e_total = 2.0f64.mul_add(n2, n1);
         let mean_z = if n1 + n2 > 0.0 {
-            (n1 + 2.0 * n2) / (n1 + n2)
+            2.0f64.mul_add(n2, n1) / (n1 + n2)
         } else {
             1.0
         };
-        let ion_density_z2 = n1 + 4.0 * n2;
+        let ion_density_z2 = 4.0f64.mul_add(n2, n1);
         let ionization_fraction = n_e_total / (n0 + n1 + n2).max(1.0);
 
         Self {
@@ -157,7 +157,7 @@ impl PlasmaState {
 fn stage_densities(n_e: f64, n_atom: f64, k1: f64, k1k2: f64) -> (f64, f64, f64) {
     let ne = n_e.max(1.0);
     let ne2 = ne * ne;
-    let denom = ne2 + k1 * ne + k1k2;
+    let denom = k1.mul_add(ne, ne2) + k1k2;
     if denom > 0.0 {
         let n0 = n_atom * ne2 / denom;
         let n1 = n0 * k1 / ne;
@@ -170,9 +170,9 @@ fn stage_densities(n_e: f64, n_atom: f64, k1: f64, k1k2: f64) -> (f64, f64, f64)
 
 fn charge_residual_and_derivative(n_e: f64, n_atom: f64, k1: f64, k1k2: f64) -> (f64, f64) {
     let (_, n1, n2) = stage_densities(n_e, n_atom, k1, k1k2);
-    let f = n1 + 2.0 * n2 - n_e;
+    let f = 2.0f64.mul_add(n2, n1) - n_e;
     let ne_step = (n_e * 1e-6).max(1.0);
     let (_, n1_p, n2_p) = stage_densities(n_e + ne_step, n_atom, k1, k1k2);
-    let f_p = n1_p + 2.0 * n2_p - (n_e + ne_step);
+    let f_p = 2.0f64.mul_add(n2_p, n1_p) - (n_e + ne_step);
     (f, (f_p - f) / ne_step)
 }

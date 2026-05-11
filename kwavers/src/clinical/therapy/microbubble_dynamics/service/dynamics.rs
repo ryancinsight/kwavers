@@ -28,6 +28,10 @@ impl MicrobubbleDynamicsService {
     /// # Reference
     ///
     /// Keller JB, Miksis M (1980). *J Acoust Soc Am* 68(2):628–633.
+    /// # Errors
+    /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_bubble_dynamics(
         &self,
         bubble: &mut MicrobubbleState,
@@ -42,9 +46,9 @@ impl MicrobubbleDynamicsService {
     ) -> KwaversResult<()> {
         if dt <= 0.0 {
             return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
-                parameter: "dt".to_string(),
+                parameter: "dt".to_owned(),
                 value: dt,
-                reason: "timestep must be positive".to_string(),
+                reason: "timestep must be positive".to_owned(),
             }));
         }
 

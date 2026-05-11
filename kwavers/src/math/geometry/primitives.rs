@@ -9,6 +9,9 @@ use ndarray::Array3;
 ///
 /// For each grid point $(x_i, y_j, z_k)$:
 /// $\text{mask}(i,j,k) = \text{true}$ if $\sqrt{(x_i - x_c)^2 + (y_j - y_c)^2} \leq r$.
+/// # Errors
+/// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+///
 pub fn make_disc(
     dim: (usize, usize, usize),
     spacing: (f64, f64, f64),
@@ -17,9 +20,9 @@ pub fn make_disc(
 ) -> KwaversResult<Array3<bool>> {
     if radius <= 0.0 {
         return Err(KwaversError::Config(ConfigError::InvalidValue {
-            parameter: "radius".to_string(),
+            parameter: "radius".to_owned(),
             value: radius.to_string(),
-            constraint: "Radius must be positive".to_string(),
+            constraint: "Radius must be positive".to_owned(),
         }));
     }
 
@@ -53,6 +56,9 @@ pub fn make_disc(
 /// Create a 3D spherical ball mask
 ///
 /// Generates a binary mask with `true` inside a spherical region.
+/// # Errors
+/// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+///
 pub fn make_ball(
     dim: (usize, usize, usize),
     spacing: (f64, f64, f64),
@@ -61,9 +67,9 @@ pub fn make_ball(
 ) -> KwaversResult<Array3<bool>> {
     if radius <= 0.0 {
         return Err(KwaversError::Config(ConfigError::InvalidValue {
-            parameter: "radius".to_string(),
+            parameter: "radius".to_owned(),
             value: radius.to_string(),
-            constraint: "Radius must be positive".to_string(),
+            constraint: "Radius must be positive".to_owned(),
         }));
     }
 
@@ -98,6 +104,9 @@ pub fn make_ball(
 }
 
 /// Create a 3D spherical mask (alias for [`make_ball`])
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[inline]
 pub fn make_sphere(
     dim: (usize, usize, usize),

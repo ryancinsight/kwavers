@@ -4,14 +4,18 @@ use super::types::ElectromagneticFdtdSolver;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::field::EMFields;
 use crate::domain::grid::Grid;
-use crate::math::numerics::operators::{
-    CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
-};
 use crate::physics::electromagnetic::equations::EMMaterialDistribution;
 use ndarray::{Array3, Array4};
 
 impl ElectromagneticFdtdSolver {
     /// Create a new electromagnetic FDTD solver
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn new(
         grid: Grid,
         materials: EMMaterialDistribution,
@@ -35,34 +39,6 @@ impl ElectromagneticFdtdSolver {
         let hy = Array3::zeros((grid.nx, grid.ny + 1, grid.nz));
         let hz = Array3::zeros((grid.nx, grid.ny, grid.nz + 1));
 
-        // Validate spatial order before creating operators
-        if spatial_order != 2 && spatial_order != 4 && spatial_order != 6 {
-            return Err(KwaversError::InvalidInput(format!(
-                "ElectromagneticFDTD: spatial_order must be 2, 4, or 6, got {}",
-                spatial_order
-            )));
-        }
-
-        // Create spatial derivative operators
-        let dx_operator: Box<dyn DifferentialOperator> = match spatial_order {
-            2 => Box::new(CentralDifference2::new(grid.dx, grid.dy, grid.dz)?),
-            4 => Box::new(CentralDifference4::new(grid.dx, grid.dy, grid.dz)?),
-            6 => Box::new(CentralDifference6::new(grid.dx, grid.dy, grid.dz)?),
-            _ => unreachable!("validated above"),
-        };
-        let dy_operator: Box<dyn DifferentialOperator> = match spatial_order {
-            2 => Box::new(CentralDifference2::new(grid.dx, grid.dy, grid.dz)?),
-            4 => Box::new(CentralDifference4::new(grid.dx, grid.dy, grid.dz)?),
-            6 => Box::new(CentralDifference6::new(grid.dx, grid.dy, grid.dz)?),
-            _ => unreachable!("validated above"),
-        };
-        let dz_operator: Box<dyn DifferentialOperator> = match spatial_order {
-            2 => Box::new(CentralDifference2::new(grid.dx, grid.dy, grid.dz)?),
-            4 => Box::new(CentralDifference4::new(grid.dx, grid.dy, grid.dz)?),
-            6 => Box::new(CentralDifference6::new(grid.dx, grid.dy, grid.dz)?),
-            _ => unreachable!("validated above"),
-        };
-
         // Cache grid dimensions before moving grid
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
 
@@ -83,9 +59,6 @@ impl ElectromagneticFdtdSolver {
                 displacement: None,
                 flux_density: None,
             },
-            dx_operator,
-            dy_operator,
-            dz_operator,
         })
     }
 
@@ -274,7 +247,7 @@ impl ElectromagneticFdtdSolver {
         let dz = self.grid.dz;
 
         let denominator =
-            c_max * ((1.0 / dx).powi(2) + (1.0 / dy).powi(2) + (1.0 / dz).powi(2)).sqrt();
+            c_max * (1.0 / dz).mul_add(1.0 / dz, (1.0 / dy).mul_add(1.0 / dy, (1.0 / dx).powi(2))).sqrt();
         0.99 / denominator // 0.99 for stability margin
     }
 }

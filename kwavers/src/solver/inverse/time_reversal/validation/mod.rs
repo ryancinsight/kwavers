@@ -14,6 +14,9 @@ pub struct InputValidator;
 
 impl InputValidator {
     /// Validate sensor data for time-reversal
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate_sensor_data(
         pressure_data: &Array2<f64>,
         sensor_indices: &[(usize, usize, usize)],
@@ -22,24 +25,24 @@ impl InputValidator {
         let num_sensors = sensor_indices.len();
         if num_sensors == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "sensor_indices".to_string(),
-                value: "empty".to_string(),
-                constraint: "must contain at least one sensor".to_string(),
+                field: "sensor_indices".to_owned(),
+                value: "empty".to_owned(),
+                constraint: "must contain at least one sensor".to_owned(),
             }));
         }
 
         if pressure_data.nrows() != num_sensors {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "pressure_data".to_string(),
+                field: "pressure_data".to_owned(),
                 value: format!("rows={}", pressure_data.nrows()),
                 constraint: format!("must match number of sensors ({num_sensors})"),
             }));
         }
         if pressure_data.ncols() == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "pressure_data".to_string(),
-                value: "0 time steps".to_string(),
-                constraint: "must contain time series data".to_string(),
+                field: "pressure_data".to_owned(),
+                value: "0 time steps".to_owned(),
+                constraint: "must contain time series data".to_owned(),
             }));
         }
 
@@ -60,15 +63,18 @@ impl InputValidator {
     }
 
     /// Validate signal length consistency
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate_signal_lengths(
         signals: &[Vec<f64>],
         expected_length: Option<usize>,
     ) -> KwaversResult<()> {
         if signals.is_empty() {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "signals".to_string(),
-                value: "empty".to_string(),
-                constraint: "must contain at least one signal".to_string(),
+                field: "signals".to_owned(),
+                value: "empty".to_owned(),
+                constraint: "must contain at least one signal".to_owned(),
             }));
         }
 
@@ -89,7 +95,7 @@ impl InputValidator {
         if let Some(expected) = expected_length {
             if first_length != expected {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "signal_length".to_string(),
+                    field: "signal_length".to_owned(),
                     value: first_length.to_string(),
                     constraint: format!("must be {expected}"),
                 }));
@@ -100,20 +106,23 @@ impl InputValidator {
     }
 
     /// Validate grid dimensions
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate_grid_dimensions(grid: &Grid) -> KwaversResult<()> {
         if grid.nx == 0 || grid.ny == 0 || grid.nz == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "grid_dimensions".to_string(),
+                field: "grid_dimensions".to_owned(),
                 value: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
-                constraint: "all dimensions must be non-zero".to_string(),
+                constraint: "all dimensions must be non-zero".to_owned(),
             }));
         }
 
         if grid.dx <= 0.0 || grid.dy <= 0.0 || grid.dz <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "grid_spacing".to_string(),
+                field: "grid_spacing".to_owned(),
                 value: format!("({}, {}, {})", grid.dx, grid.dy, grid.dz),
-                constraint: "all spacings must be positive".to_string(),
+                constraint: "all spacings must be positive".to_owned(),
             }));
         }
 

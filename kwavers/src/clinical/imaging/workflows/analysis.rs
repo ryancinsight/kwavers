@@ -3,7 +3,10 @@ use crate::core::error::KwaversResult;
 use crate::domain::imaging::fusion::FusedImageResult;
 use ndarray::Array3;
 use std::collections::HashMap;
-
+/// Generate diagnostic recommendations.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn generate_diagnostic_recommendations(
     tissue_properties: &HashMap<String, Array3<f64>>,
 ) -> KwaversResult<Vec<DiagnosticRecommendation>> {
@@ -101,15 +104,14 @@ pub fn generate_diagnostic_recommendations(
     if diagnostic_score >= 40.0 {
         // High suspicion case
         recommendations.push(DiagnosticRecommendation {
-            finding: "High suspicion of tissue abnormality requiring immediate attention"
-                .to_string(),
+            finding: "High suspicion of tissue abnormality requiring immediate attention".to_owned(),
             confidence: f64::min(75.0 + diagnostic_score * 0.5, 98.0),
             recommendations: vec![
-                "Urgent biopsy recommended within 1-2 weeks".to_string(),
-                "Consider MRI or PET-CT for staging".to_string(),
-                "Schedule follow-up imaging within 1 month".to_string(),
-                "Consultation with oncology specialist advised".to_string(),
-                "Consider molecular/genetic testing".to_string(),
+                "Urgent biopsy recommended within 1-2 weeks".to_owned(),
+                "Consider MRI or PET-CT for staging".to_owned(),
+                "Schedule follow-up imaging within 1 month".to_owned(),
+                "Consultation with oncology specialist advised".to_owned(),
+                "Consider molecular/genetic testing".to_owned(),
             ],
             urgency: DiagnosticUrgency::Urgent,
             evidence,
@@ -117,13 +119,13 @@ pub fn generate_diagnostic_recommendations(
     } else if diagnostic_score >= 20.0 {
         // Moderate suspicion case
         recommendations.push(DiagnosticRecommendation {
-            finding: "Moderate tissue abnormalities detected - requires monitoring".to_string(),
+            finding: "Moderate tissue abnormalities detected - requires monitoring".to_owned(),
             confidence: f64::min(65.0 + diagnostic_score * 0.75, 85.0),
             recommendations: vec![
-                "Biopsy recommended within 4-6 weeks".to_string(),
-                "Schedule follow-up imaging in 3 months".to_string(),
-                "Consider additional molecular imaging".to_string(),
-                "Regular clinical monitoring advised".to_string(),
+                "Biopsy recommended within 4-6 weeks".to_owned(),
+                "Schedule follow-up imaging in 3 months".to_owned(),
+                "Consider additional molecular imaging".to_owned(),
+                "Regular clinical monitoring advised".to_owned(),
             ],
             urgency: DiagnosticUrgency::Urgent,
             evidence,
@@ -131,12 +133,12 @@ pub fn generate_diagnostic_recommendations(
     } else if diagnostic_score >= 5.0 {
         // Low suspicion case
         recommendations.push(DiagnosticRecommendation {
-            finding: "Minor tissue variations detected - low suspicion".to_string(),
+            finding: "Minor tissue variations detected - low suspicion".to_owned(),
             confidence: f64::min(80.0 + diagnostic_score, 92.0),
             recommendations: vec![
-                "Continue routine screening schedule".to_string(),
-                "Annual follow-up imaging recommended".to_string(),
-                "Monitor for any symptom changes".to_string(),
+                "Continue routine screening schedule".to_owned(),
+                "Annual follow-up imaging recommended".to_owned(),
+                "Monitor for any symptom changes".to_owned(),
             ],
             urgency: DiagnosticUrgency::Normal,
             evidence,
@@ -144,17 +146,17 @@ pub fn generate_diagnostic_recommendations(
     } else {
         // Normal case
         recommendations.push(DiagnosticRecommendation {
-            finding: "No significant abnormalities detected - normal findings".to_string(),
+            finding: "No significant abnormalities detected - normal findings".to_owned(),
             confidence: 95.0,
             recommendations: vec![
-                "Continue routine screening schedule".to_string(),
-                "Annual follow-up as per standard protocol".to_string(),
+                "Continue routine screening schedule".to_owned(),
+                "Annual follow-up as per standard protocol".to_owned(),
             ],
             urgency: DiagnosticUrgency::Normal,
             evidence: vec![
-                "Homogeneous tissue appearance across all modalities".to_string(),
-                "All quantitative parameters within normal ranges".to_string(),
-                "No concerning patterns detected".to_string(),
+                "Homogeneous tissue appearance across all modalities".to_owned(),
+                "All quantitative parameters within normal ranges".to_owned(),
+                "No concerning patterns detected".to_owned(),
             ],
         });
     }
@@ -162,6 +164,7 @@ pub fn generate_diagnostic_recommendations(
     Ok(recommendations)
 }
 
+#[must_use] 
 pub fn calculate_confidence_score(
     fused_result: &FusedImageResult,
     tissue_properties: &HashMap<String, Array3<f64>>,

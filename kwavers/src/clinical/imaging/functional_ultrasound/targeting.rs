@@ -9,13 +9,13 @@ use crate::core::error::{KwaversError, KwaversResult};
 /// Stereotactic coordinates (based on Bregma reference)
 #[derive(Debug, Clone, Copy)]
 pub struct StereotacticCoordinates {
-    /// Anterior-Posterior (relative to Bregma) [mm]
+    /// Anterior-Posterior (relative to Bregma) (mm)
     pub ap: f64,
 
-    /// Medial-Lateral (relative to midline) [mm]
+    /// Medial-Lateral (relative to midline) (mm)
     pub ml: f64,
 
-    /// Dorsal-Ventral (from brain surface) [mm]
+    /// Dorsal-Ventral (from brain surface) (mm)
     pub dv: f64,
 
     /// Confidence in coordinates (0.0-1.0)
@@ -24,6 +24,7 @@ pub struct StereotacticCoordinates {
 
 impl StereotacticCoordinates {
     /// Create new stereotactic coordinates
+    #[must_use] 
     pub fn new(ap: f64, ml: f64, dv: f64) -> Self {
         Self {
             ap,
@@ -34,11 +35,13 @@ impl StereotacticCoordinates {
     }
 
     /// Convert to [x, y, z] array
+    #[must_use] 
     pub fn to_array(&self) -> [f64; 3] {
         [self.ap, self.ml, self.dv]
     }
 
     /// Validate coordinates are within brain bounds
+    #[must_use] 
     pub fn is_valid(&self) -> bool {
         // Standard mouse brain bounds (relative to Bregma)
         self.ap >= -4.0
@@ -50,6 +53,7 @@ impl StereotacticCoordinates {
     }
 
     /// Check if coordinates are in safe region (away from ventricles/major vessels)
+    #[must_use] 
     pub fn is_safe(&self) -> bool {
         // Simplified safety check
         self.is_valid() && self.dv > 0.5 && self.dv < 7.5
@@ -59,26 +63,26 @@ impl StereotacticCoordinates {
 /// Stereotactic targeting system
 #[derive(Debug)]
 pub struct TargetingSystem {
-    /// Bregma reference point in atlas coordinates [mm]
+    /// Bregma reference point in atlas coordinates (mm)
     bregma: [f64; 3],
 
-    /// Brain dimensions [mm]
-    #[allow(dead_code)]
-    brain_dims: [f64; 3],
 }
 
 impl TargetingSystem {
     /// Create new targeting system
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(atlas: &BrainAtlas) -> KwaversResult<Self> {
         let bregma = atlas.brain_center();
 
-        // Mouse brain typical dimensions
-        let brain_dims = [8.0, 9.0, 8.0];
-
-        Ok(Self { bregma, brain_dims })
+        Ok(Self { bregma })
     }
 
     /// Convert voxel coordinates to stereotactic
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn voxel_to_stereotactic(
         &self,
         voxel: &[usize; 3],
@@ -98,6 +102,9 @@ impl TargetingSystem {
     }
 
     /// Convert stereotactic to voxel coordinates
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn stereotactic_to_voxel(
         &self,
         coords: &StereotacticCoordinates,
@@ -105,7 +112,7 @@ impl TargetingSystem {
     ) -> KwaversResult<[usize; 3]> {
         if !coords.is_valid() {
             return Err(KwaversError::InvalidInput(
-                "Stereotactic coordinates outside brain bounds".to_string(),
+                "Stereotactic coordinates outside brain bounds".to_owned(),
             ));
         }
 
@@ -120,6 +127,9 @@ impl TargetingSystem {
     }
 
     /// Plan trajectory to target
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn plan_trajectory(
         &self,
         start: &StereotacticCoordinates,
@@ -128,7 +138,7 @@ impl TargetingSystem {
     ) -> KwaversResult<Vec<StereotacticCoordinates>> {
         if !start.is_safe() || !target.is_safe() {
             return Err(KwaversError::InvalidInput(
-                "Trajectory endpoints not in safe region".to_string(),
+                "Trajectory endpoints not in safe region".to_owned(),
             ));
         }
 
@@ -147,16 +157,18 @@ impl TargetingSystem {
         Ok(trajectory)
     }
 
-    /// Get distance between two coordinates [mm]
+    /// Get distance between two coordinates (mm)
+    #[must_use] 
     pub fn distance(&self, from: &StereotacticCoordinates, to: &StereotacticCoordinates) -> f64 {
         let dx = to.ap - from.ap;
         let dy = to.ml - from.ml;
         let dz = to.dv - from.dv;
 
-        (dx * dx + dy * dy + dz * dz).sqrt()
+        dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
     }
 
     /// Get Bregma coordinates
+    #[must_use] 
     pub fn bregma(&self) -> [f64; 3] {
         self.bregma
     }
@@ -187,8 +199,7 @@ mod tests {
     #[test]
     fn test_targeting_system_creation() {
         let atlas = BrainAtlas::load_default().unwrap();
-        let result = TargetingSystem::new(&atlas);
-        assert!(result.is_ok());
+        let _targeting = TargetingSystem::new(&atlas).unwrap();
     }
 
     #[test]
@@ -199,10 +210,7 @@ mod tests {
         let start = StereotacticCoordinates::new(0.0, 0.0, 1.0);
         let target = StereotacticCoordinates::new(1.0, 1.0, 3.0);
 
-        let result = targeting.plan_trajectory(&start, &target, 5);
-        assert!(result.is_ok());
-
-        let trajectory = result.unwrap();
+        let trajectory = targeting.plan_trajectory(&start, &target, 5).unwrap();
         assert_eq!(trajectory.len(), 5);
     }
 

@@ -40,6 +40,9 @@ use ndarray::{Array1, Array2};
 ///
 /// Returns `KwaversError::Numerical(ConvergenceFailed)` if convergence is not
 /// achieved within `max_iter * restart` matrix-vector products.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub fn solve_gmres(
     a: &Array2<f64>,
     rhs: &Array1<f64>,
@@ -133,12 +136,12 @@ pub fn solve_gmres(
             for i in 0..j {
                 let hi = h[[i, j]];
                 let hi1 = h[[i + 1, j]];
-                h[[i, j]] = c_rot[i] * hi + s_rot[i] * hi1;
-                h[[i + 1, j]] = -s_rot[i] * hi + c_rot[i] * hi1;
+                h[[i, j]] = c_rot[i].mul_add(hi, s_rot[i] * hi1);
+                h[[i + 1, j]] = (-s_rot[i]).mul_add(hi, c_rot[i] * hi1);
             }
 
             // New Givens rotation
-            let denom = (h[[j, j]].powi(2) + h[[j + 1, j]].powi(2)).sqrt();
+            let denom = h[[j, j]].hypot(h[[j + 1, j]]);
             if denom < 1e-300 {
                 j_end = j + 1;
                 break;
@@ -199,7 +202,7 @@ pub fn solve_gmres(
     let r_final: Array1<f64> = rhs - &a.dot(&x);
     let final_res = r_final.dot(&r_final).sqrt() / rhs.dot(rhs).sqrt().max(1e-300);
     Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
-        method: "GMRES".to_string(),
+        method: "GMRES".to_owned(),
         iterations: max_iter * restart,
         error: final_res,
     }))
@@ -212,6 +215,9 @@ mod tests {
     /// GMRES must recover the exact solution of a well-conditioned 5×5 system.
     ///
     /// **Theorem** (Saad & Schultz 1986, Theorem 2.1): exact convergence in ≤N steps.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_gmres_matches_direct_small_system() {
         let n = 5usize;
@@ -242,6 +248,9 @@ mod tests {
     }
 
     /// GMRES must converge within N iterations for an N×N non-singular system.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_gmres_converges_within_n_iters() {
         let n = 8usize;
@@ -270,6 +279,9 @@ mod tests {
     }
 
     /// GMRES with non-converging tolerance must return ConvergenceFailed error.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_gmres_nonconvergence_returns_error() {
         let n = 3usize;

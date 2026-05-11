@@ -40,6 +40,9 @@ pub fn ulps_diff(a: f64, b: f64) -> u64 {
 }
 
 /// Check if two values are within N ULPs of each other
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn within_ulps(a: f64, b: f64, max_ulps: u64) -> bool {
     ulps_diff(a, b) <= max_ulps
 }
@@ -52,6 +55,9 @@ pub fn within_ulps(a: f64, b: f64, max_ulps: u64) -> bool {
 /// 2. NaN propagation
 /// 3. Infinity handling
 /// 4. Basic arithmetic determinism
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn verify_ieee754_compliance() -> Result<(), String> {
     let mut failures = Vec::new();
 
@@ -113,12 +119,18 @@ mod tests {
     use super::*;
 
     /// Test IEEE 754 compliance verification
+    /// # Panics
+    /// - Panics if `Platform should be IEEE 754 compliant`.
+    ///
     #[test]
     fn test_ieee754_compliance_check() {
         verify_ieee754_compliance().expect("Platform should be IEEE 754 compliant");
     }
 
     /// Test ULP distance calculation
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_ulp_calculation() {
         assert_eq!(ulps_diff(1.0, 1.0), 0, "Same value: 0 ULPs");
@@ -136,6 +148,9 @@ mod tests {
     }
 
     /// Test within_ulps function
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_within_ulps() {
         assert!(within_ulps(1.0, 1.0, 0), "Same value within 0 ULPs");

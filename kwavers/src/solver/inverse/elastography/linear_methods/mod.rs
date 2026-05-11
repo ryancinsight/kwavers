@@ -33,11 +33,11 @@
 //!
 //! ## Module layout
 //!
-//! - [`time_of_flight`]: scalar TOF inversion (Bercoff et al. 2004).
-//! - [`phase_gradient`]: 1D phase-gradient inversion (McLaughlin & Renzi 2006).
-//! - [`direct`]: Gauss-Seidel direct inversion of `∇²u + k²u = 0`.
-//! - [`volumetric`]: 3D multi-source median TOF inversion.
-//! - [`directional`]: 3D directional phase-gradient inversion.
+//! - `time_of_flight`: scalar TOF inversion (Bercoff et al. 2004).
+//! - `phase_gradient`: 1D phase-gradient inversion (McLaughlin & Renzi 2006).
+//! - `direct`: Gauss-Seidel direct inversion of `∇²u + k²u = 0`.
+//! - `volumetric`: 3D multi-source median TOF inversion.
+//! - `directional`: 3D directional phase-gradient inversion.
 //!
 //! ## References
 //!
@@ -78,17 +78,24 @@ pub struct ShearWaveInversion {
 
 impl ShearWaveInversion {
     /// Create new shear wave inversion processor
+    #[must_use] 
     pub fn new(config: ShearWaveInversionConfig) -> Self {
         Self { config }
     }
 
     /// Get current inversion method
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn method(&self) -> crate::domain::imaging::ultrasound::elastography::InversionMethod {
         self.config.method
     }
 
     /// Get configuration reference
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn config(&self) -> &ShearWaveInversionConfig {
         &self.config

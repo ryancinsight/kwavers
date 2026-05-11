@@ -4,6 +4,7 @@ use super::{
 };
 
 impl ConservationTracker {
+    #[must_use] 
     pub fn new(
         initial_energy: f64,
         initial_momentum: (f64, f64, f64),
@@ -68,15 +69,16 @@ impl ConservationTracker {
             max_energy_error,
             final_energy_error: energy_violations
                 .last()
-                .map(|d| d.relative_change.abs())
-                .unwrap_or(0.0),
+                .map_or(0.0, |d| d.relative_change.abs()),
         }
     }
 
+    #[must_use] 
     pub fn is_solution_valid(&self) -> bool {
         self.max_severity <= ViolationSeverity::Warning
     }
 
+    #[must_use] 
     pub fn critical_violations(&self) -> Vec<&ConservationDiagnostic> {
         self.history
             .iter()

@@ -3,6 +3,10 @@ use crate::clinical::imaging::chromophores::HemoglobinDatabase;
 use crate::domain::medium::properties::OpticalPropertyData;
 
 /// Compute blood optical properties from hemoglobin database
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
+#[must_use] 
 pub fn compute_blood_properties(
     hb_db: &HemoglobinDatabase,
     wavelength_nm: f64,
@@ -35,6 +39,10 @@ pub fn compute_blood_properties(
 }
 
 /// Compute tumor optical properties
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
+#[must_use] 
 pub fn compute_tumor_properties(
     hb_db: &HemoglobinDatabase,
     wavelength_nm: f64,
@@ -44,7 +52,7 @@ pub fn compute_tumor_properties(
     let blood_props = compute_blood_properties(hb_db, wavelength_nm, so2);
 
     // Scale absorption by blood volume fraction (~10% for tumors vs 2% for normal)
-    let mu_a = blood_props.absorption_coefficient * 0.1 + 0.5; // Background tissue absorption
+    let mu_a = blood_props.absorption_coefficient.mul_add(0.1, 0.5); // Background tissue absorption
 
     // Tumor scattering is slightly higher due to disorganized structure
     let mu_s = 120.0;
@@ -55,6 +63,7 @@ pub fn compute_tumor_properties(
 }
 
 /// Get tissue optical properties by type
+#[must_use] 
 pub fn get_tissue_properties(tissue_type: TissueType) -> OpticalPropertyData {
     match tissue_type {
         TissueType::SkinEpidermis => OpticalPropertyData::skin_epidermis(),

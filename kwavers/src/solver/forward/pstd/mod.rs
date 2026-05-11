@@ -80,6 +80,7 @@ pub mod config;
 pub mod data;
 pub mod derivatives; // Spectral derivatives (NEW)
 pub mod dg;
+pub mod extensions;
 #[cfg(feature = "gpu")]
 pub mod gpu_pstd;
 pub mod implementation;
@@ -93,3 +94,4 @@ pub use config::PSTDConfig;
 pub use derivatives::SpectralDerivativeOperator;
 pub use implementation::core::orchestrator::PSTDSolver;
 pub use plugin::PSTDPlugin;
+pub use extensions::{PstdElasticPlugin, SpectralElasticConfig};

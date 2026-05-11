@@ -22,6 +22,9 @@ pub struct SpectralUnmixer {
 
 impl SpectralUnmixer {
     /// Create unmixer from extinction matrix
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         extinction_matrix: Array2<f64>,
         wavelengths: Vec<f64>,
@@ -72,6 +75,9 @@ impl SpectralUnmixer {
     }
 
     /// Unmix single spectrum (one voxel)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn unmix_single(&self, absorption_spectrum: &Array1<f64>) -> Result<UnmixingResult> {
         let n_wavelengths = self.extinction_matrix.nrows();
 
@@ -122,6 +128,9 @@ impl SpectralUnmixer {
     }
 
     /// Unmix volumetric data (entire 3D image)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn unmix_volumetric(
         &self,
         absorption_maps: &[Array3<f64>],
@@ -177,12 +186,15 @@ impl SpectralUnmixer {
         })
     }
 
+    #[must_use] 
     pub fn wavelengths(&self) -> &[f64] {
         &self.wavelengths
     }
+    #[must_use] 
     pub fn chromophore_names(&self) -> &[String] {
         &self.chromophore_names
     }
+    #[must_use] 
     pub fn extinction_matrix(&self) -> &Array2<f64> {
         &self.extinction_matrix
     }

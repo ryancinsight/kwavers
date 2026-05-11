@@ -4,7 +4,7 @@
 use burn::module::{Module, Param};
 #[cfg(feature = "pinn")]
 use burn::tensor::{
-    backend::{AutodiffBackend, Backend},
+    backend::Backend,
     Tensor,
 };
 

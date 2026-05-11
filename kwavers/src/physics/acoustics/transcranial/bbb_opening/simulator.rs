@@ -19,6 +19,7 @@ pub struct BBBOpening {
 
 impl BBBOpening {
     /// Create new BBB opening simulation
+    #[must_use] 
     pub fn new(
         acoustic_pressure: Array3<f64>,
         microbubble_concentration: Array3<f64>,
@@ -41,6 +42,9 @@ impl BBBOpening {
     }
 
     /// Simulate BBB opening process
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn simulate_opening(&mut self) -> KwaversResult<()> {
         info!("Simulating BBB opening with parameters:");
         info!("  Frequency: {:.1} MHz", self.parameters.frequency / 1e6);
@@ -80,6 +84,7 @@ impl BBBOpening {
     }
 
     /// Get permeability enhancement results
+    #[must_use] 
     pub fn permeability(&self) -> &PermeabilityEnhancement {
         &self.permeability
     }

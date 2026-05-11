@@ -14,15 +14,22 @@ pub struct ComplianceValidator {
 
 impl ComplianceValidator {
     /// Create new compliance validator for IEC 60601-2-37.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new() -> Self {
         Self {
-            standard_version: "IEC 60601-2-37:2007+A1:2010".to_string(),
+            standard_version: "IEC 60601-2-37:2007+A1:2010".to_owned(),
             compliance_checks: Self::create_compliance_checks(),
             validation_results: HashMap::new(),
         }
     }
 
     /// Run all compliance checks against `system_config`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_compliance(
         &mut self,
         system_config: &SystemConfiguration,
@@ -45,11 +52,13 @@ impl ComplianceValidator {
     }
 
     /// Return `true` if all checks passed.
+    #[must_use] 
     pub fn is_overall_compliant(&self) -> bool {
         self.validation_results.values().all(|r| r.passed)
     }
 
     /// Get detailed result for a specific check ID.
+    #[must_use] 
     pub fn get_check_result(&self, check_id: &str) -> Option<&ComplianceResult> {
         self.validation_results.get(check_id)
     }
@@ -57,10 +66,9 @@ impl ComplianceValidator {
     fn create_compliance_checks() -> Vec<ComplianceCheck> {
         vec![
             ComplianceCheck {
-                id: "safety_limits".to_string(),
-                name: "Safety Limits Implementation".to_string(),
-                requirement: "Clause 201.12 - Essential performance: acoustic output control"
-                    .to_string(),
+                id: "safety_limits".to_owned(),
+                name: "Safety Limits Implementation".to_owned(),
+                requirement: "Clause 201.12 - Essential performance: acoustic output control".to_owned(),
                 validation_function: Arc::new(|config| {
                     let passed = config.safety_limits.max_intensity <= 3.0
                         && config.safety_limits.max_power <= 100.0
@@ -68,9 +76,9 @@ impl ComplianceValidator {
                     Ok(ComplianceResult {
                         passed,
                         details: if passed {
-                            "Safety limits meet IEC requirements".to_string()
+                            "Safety limits meet IEC requirements".to_owned()
                         } else {
-                            "Safety limits exceed IEC maximum values".to_string()
+                            "Safety limits exceed IEC maximum values".to_owned()
                         },
                         severity: if passed {
                             SafetyLevel::Normal
@@ -81,17 +89,17 @@ impl ComplianceValidator {
                 }),
             },
             ComplianceCheck {
-                id: "monitoring".to_string(),
-                name: "Real-time Monitoring".to_string(),
-                requirement: "Clause 201.12.4 - Acoustic output measurement accuracy".to_string(),
+                id: "monitoring".to_owned(),
+                name: "Real-time Monitoring".to_owned(),
+                requirement: "Clause 201.12.4 - Acoustic output measurement accuracy".to_owned(),
                 validation_function: Arc::new(|config| {
                     let passed = config.monitoring_enabled && config.interlocks_enabled;
                     Ok(ComplianceResult {
                         passed,
                         details: if passed {
-                            "Real-time monitoring and interlocks enabled".to_string()
+                            "Real-time monitoring and interlocks enabled".to_owned()
                         } else {
-                            "Monitoring or interlocks not properly configured".to_string()
+                            "Monitoring or interlocks not properly configured".to_owned()
                         },
                         severity: if passed {
                             SafetyLevel::Normal
@@ -102,15 +110,15 @@ impl ComplianceValidator {
                 }),
             },
             ComplianceCheck {
-                id: "emergency_stop".to_string(),
-                name: "Emergency Stop Functionality".to_string(),
-                requirement: "Clause 201.9 - Emergency stop accessible within 1 second".to_string(),
+                id: "emergency_stop".to_owned(),
+                name: "Emergency Stop Functionality".to_owned(),
+                requirement: "Clause 201.9 - Emergency stop accessible within 1 second".to_owned(),
                 validation_function: Arc::new(|config| {
                     let passed = config.emergency_stop_tested && config.interlocks_enabled;
                     Ok(ComplianceResult {
                         passed,
                         details: if passed {
-                            "Emergency stop tested and interlocks enabled".to_string()
+                            "Emergency stop tested and interlocks enabled".to_owned()
                         } else {
                             format!(
                                 "Emergency stop: tested={}, interlocks={}",

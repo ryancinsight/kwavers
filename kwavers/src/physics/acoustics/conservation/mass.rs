@@ -27,18 +27,8 @@ pub fn validate_mass_conservation(
         for j in 1..grid.ny - 1 {
             for k in 1..grid.nz - 1 {
                 let drho_dt = (density[[i, j, k]] - density_previous[[i, j, k]]) * dt_inv;
-                let div_flux = (density[[i + 1, j, k]] * velocity_x[[i + 1, j, k]]
-                    - density[[i - 1, j, k]] * velocity_x[[i - 1, j, k]])
-                    * 0.5
-                    * dx_inv
-                    + (density[[i, j + 1, k]] * velocity_y[[i, j + 1, k]]
-                        - density[[i, j - 1, k]] * velocity_y[[i, j - 1, k]])
-                        * 0.5
-                        * dy_inv
-                    + (density[[i, j, k + 1]] * velocity_z[[i, j, k + 1]]
-                        - density[[i, j, k - 1]] * velocity_z[[i, j, k - 1]])
-                        * 0.5
-                        * dz_inv;
+                let div_flux = (density[[i, j, k + 1]].mul_add(velocity_z[[i, j, k + 1]], -(density[[i, j, k - 1]] * velocity_z[[i, j, k - 1]])) * 0.5).mul_add(dz_inv, (density[[i + 1, j, k]].mul_add(velocity_x[[i + 1, j, k]], -(density[[i - 1, j, k]] * velocity_x[[i - 1, j, k]])) * 0.5).mul_add(dx_inv, density[[i, j + 1, k]].mul_add(velocity_y[[i, j + 1, k]], -(density[[i, j - 1, k]] * velocity_y[[i, j - 1, k]]))
+                        * 0.5 * dy_inv));
                 max_error = max_error.max((drho_dt + div_flux).abs());
             }
         }

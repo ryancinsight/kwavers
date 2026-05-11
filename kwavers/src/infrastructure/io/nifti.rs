@@ -43,6 +43,9 @@ impl NiftiReader {
     }
 
     /// Set voxel dimensions in mm
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_voxel_dims(mut self, dims: [f64; 3]) -> Self {
         self.voxel_dims = dims;
@@ -50,6 +53,10 @@ impl NiftiReader {
     }
 
     /// Load NIFTI file as 3D array
+    /// # Errors
+    /// - Returns [`KwaversError::Data`] if the precondition for a Data-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn load<P: AsRef<Path>>(&self, path: P) -> KwaversResult<Array3<f64>> {
         let path = path.as_ref();
 
@@ -158,6 +165,9 @@ impl NiftiReader {
     }
 
     /// Load NIFTI file with header information
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn load_with_header<P: AsRef<Path>>(
         &self,
         path: P,
@@ -185,6 +195,9 @@ impl NiftiReader {
     }
 
     /// Get basic information about a NIFTI file without loading the full volume
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn get_info<P: AsRef<Path>>(&self, path: P) -> KwaversResult<NiftiInfo> {
         let path = path.as_ref();
 
@@ -218,6 +231,9 @@ impl NiftiReader {
     }
 
     /// Save a 3D array as a NIFTI file
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn save<P: AsRef<Path>>(&self, path: P, data: &Array3<f64>) -> KwaversResult<()> {
         use std::fs::File;
         use std::io::Write;

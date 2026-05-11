@@ -20,6 +20,10 @@ pub struct BurnPINN2DTrainer<B: AutodiffBackend> {
 }
 
 impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
+    /// New trainer.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new_trainer(
         config: BurnPINN2DConfig,
         geometry: Geometry2D,
@@ -35,6 +39,10 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
         })
     }
 
+    /// Train.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn train(
         &mut self,
         x_data: &Array1<f64>,
@@ -58,7 +66,14 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
             |_, _| true,
         )
     }
-
+    /// Train with callback.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
     #[allow(clippy::too_many_arguments)]
     pub fn train_with_callback<F>(
         &mut self,

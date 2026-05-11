@@ -44,9 +44,6 @@ use std::collections::HashMap;
 /// while maintaining stability and accuracy.
 #[derive(Debug)]
 pub struct MultiRateTimeIntegrator {
-    /// Configuration for multi-rate integration
-    #[allow(dead_code)]
-    config: MultiRateConfig,
     /// Controller for managing multiple time scales
     controller: MultiRateController,
     /// Stability analyzer for CFL conditions
@@ -57,36 +54,29 @@ pub struct MultiRateTimeIntegrator {
     time_step_history: HashMap<String, Vec<f64>>,
     /// CFL safety factor
     cfl_safety_factor: f64,
-    /// Time scale separator for automatic detection
-    #[allow(dead_code)]
-    time_scale_separator: TimeScaleSeparator,
-    /// Conservation monitor
-    #[allow(dead_code)]
-    conservation_monitor: ConservationMonitor,
 }
 
 impl MultiRateTimeIntegrator {
     /// Create a new multi-rate time integrator
-    pub fn new(config: MultiRateConfig, grid: &Grid) -> Self {
+    pub fn new(config: MultiRateConfig, _grid: &Grid) -> Self {
         let controller = MultiRateController::new(config.clone());
         let stability_analyzer = StabilityAnalyzer::new(config.stability_factor);
         let coupling = SubcyclingStrategy::new(config.max_subcycles);
-        let time_scale_separator = TimeScaleSeparator::new(grid);
-        let conservation_monitor = ConservationMonitor::new(grid);
 
         Self {
-            config: config.clone(),
             controller,
             stability_analyzer,
             coupling: Box::new(coupling),
             time_step_history: HashMap::new(),
             cfl_safety_factor: config.cfl_safety_factor,
-            time_scale_separator,
-            conservation_monitor,
         }
     }
 
     /// Advance the solution using multi-rate time integration
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn advance(
         &mut self,
         fields: &mut HashMap<String, Array3<f64>>,
@@ -98,7 +88,7 @@ impl MultiRateTimeIntegrator {
         // Validate inputs
         if target_time <= global_time {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "target_time".to_string(),
+                field: "target_time".to_owned(),
                 value: target_time.to_string(),
                 constraint: format!("Must be greater than global_time {global_time}"),
             }));
@@ -143,6 +133,9 @@ impl MultiRateTimeIntegrator {
     }
 
     /// Compute stable time steps for each physics component
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn compute_component_time_steps(
         &self,
         fields: &HashMap<String, Array3<f64>>,
@@ -155,9 +148,9 @@ impl MultiRateTimeIntegrator {
                 // Get the field associated with this component
                 let field = fields.get(name).ok_or_else(|| {
                     KwaversError::Validation(ValidationError::FieldValidation {
-                        field: "fields".to_string(),
+                        field: "fields".to_owned(),
                         value: name.clone(),
-                        constraint: "Field not found for component".to_string(),
+                        constraint: "Field not found for component".to_owned(),
                     })
                 })?;
 
@@ -165,11 +158,11 @@ impl MultiRateTimeIntegrator {
                 let constraints = component.stability_constraints();
                 let mut constraint_map = std::collections::HashMap::new();
                 if let Some(max_wave_speed) = constraints.max_wave_speed {
-                    constraint_map.insert("max_wave_speed".to_string(), max_wave_speed);
+                    constraint_map.insert("max_wave_speed".to_owned(), max_wave_speed);
                 }
                 if let Some(diffusion_coefficient) = constraints.diffusion_coefficient {
                     constraint_map
-                        .insert("diffusion_coefficient".to_string(), diffusion_coefficient);
+                        .insert("diffusion_coefficient".to_owned(), diffusion_coefficient);
                 }
 
                 // Compute CFL-limited time step

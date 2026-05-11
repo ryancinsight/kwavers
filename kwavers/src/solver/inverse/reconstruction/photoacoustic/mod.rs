@@ -120,7 +120,7 @@ mod tests {
             1500.0,
             10e6,
         );
-        assert!(result.is_ok());
+        result.unwrap();
     }
 
     #[test]
@@ -147,6 +147,6 @@ mod tests {
             &reconstructor.config.sensor_positions,
             [10, 10, 10],
         );
-        assert!(result.is_ok());
+        result.unwrap();
     }
 }

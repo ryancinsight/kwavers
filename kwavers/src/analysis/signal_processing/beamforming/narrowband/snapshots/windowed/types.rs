@@ -57,27 +57,29 @@ pub struct SnapshotScenario {
 
 impl SnapshotScenario {
     /// Validate scenario invariants.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.frequency_hz.is_finite() || self.frequency_hz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "SnapshotScenario: frequency_hz must be finite and > 0".to_string(),
+                "SnapshotScenario: frequency_hz must be finite and > 0".to_owned(),
             ));
         }
         if !self.sampling_frequency_hz.is_finite() || self.sampling_frequency_hz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "SnapshotScenario: sampling_frequency_hz must be finite and > 0".to_string(),
+                "SnapshotScenario: sampling_frequency_hz must be finite and > 0".to_owned(),
             ));
         }
         if self.frequency_hz >= 0.5 * self.sampling_frequency_hz {
             return Err(KwaversError::InvalidInput(
-                "SnapshotScenario: frequency_hz must be < Nyquist (fs/2)".to_string(),
+                "SnapshotScenario: frequency_hz must be < Nyquist (fs/2)".to_owned(),
             ));
         }
         if let Some(bw) = self.fractional_bandwidth {
             if !bw.is_finite() || bw <= 0.0 || bw >= 1.0 {
                 return Err(KwaversError::InvalidInput(
-                    "SnapshotScenario: fractional_bandwidth must be finite and in (0,1) when provided"
-                        .to_string(),
+                    "SnapshotScenario: fractional_bandwidth must be finite and in (0,1) when provided".to_owned(),
                 ));
             }
         }
@@ -104,30 +106,33 @@ pub struct StftBinConfig {
 
 impl StftBinConfig {
     /// Validate invariants.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.sampling_frequency_hz.is_finite() || self.sampling_frequency_hz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "StftBinConfig: sampling_frequency_hz must be finite and > 0".to_string(),
+                "StftBinConfig: sampling_frequency_hz must be finite and > 0".to_owned(),
             ));
         }
         if !self.frequency_hz.is_finite() || self.frequency_hz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "StftBinConfig: frequency_hz must be finite and > 0".to_string(),
+                "StftBinConfig: frequency_hz must be finite and > 0".to_owned(),
             ));
         }
         if self.frequency_hz >= 0.5 * self.sampling_frequency_hz {
             return Err(KwaversError::InvalidInput(
-                "StftBinConfig: frequency_hz must be < Nyquist (fs/2)".to_string(),
+                "StftBinConfig: frequency_hz must be < Nyquist (fs/2)".to_owned(),
             ));
         }
         if self.frame_len_samples < 2 {
             return Err(KwaversError::InvalidInput(
-                "StftBinConfig: frame_len_samples must be >= 2".to_string(),
+                "StftBinConfig: frame_len_samples must be >= 2".to_owned(),
             ));
         }
         if self.hop_len_samples == 0 || self.hop_len_samples > self.frame_len_samples {
             return Err(KwaversError::InvalidInput(
-                "StftBinConfig: hop_len_samples must be in [1, frame_len_samples]".to_string(),
+                "StftBinConfig: hop_len_samples must be in [1, frame_len_samples]".to_owned(),
             ));
         }
         Ok(())
@@ -136,6 +141,7 @@ impl StftBinConfig {
     /// Resolve the FFT bin index for the target frequency.
     ///
     /// `k = round(f * N / fs)`, with `k ∈ [0, N-1]`.
+    #[must_use] 
     pub fn bin_index(&self) -> usize {
         let n = self.frame_len_samples as f64;
         let k = (self.frequency_hz * n / self.sampling_frequency_hz).round();
@@ -168,6 +174,9 @@ pub enum SnapshotSelection {
 
 impl SnapshotSelection {
     /// Resolve to a concrete snapshot method (deterministic for a given scenario).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn resolve(&self, n_samples: usize) -> KwaversResult<SnapshotMethod> {
         match self {
             Self::Explicit(m) => Ok(m.clone()),

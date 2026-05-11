@@ -31,15 +31,15 @@ pub fn validate_momentum_conservation(
                 let rho = density[[i, j, k]];
                 let dvx_dt = (velocity_x[[i, j, k]] - velocity_x_previous[[i, j, k]]) * dt_inv;
                 let dpx_dx = (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) * 0.5 * dx_inv;
-                max_err_x = max_err_x.max((rho * dvx_dt + dpx_dx).abs());
+                max_err_x = max_err_x.max(rho.mul_add(dvx_dt, dpx_dx).abs());
 
                 let dvy_dt = (velocity_y[[i, j, k]] - velocity_y_previous[[i, j, k]]) * dt_inv;
                 let dpy_dy = (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) * 0.5 * dy_inv;
-                max_err_y = max_err_y.max((rho * dvy_dt + dpy_dy).abs());
+                max_err_y = max_err_y.max(rho.mul_add(dvy_dt, dpy_dy).abs());
 
                 let dvz_dt = (velocity_z[[i, j, k]] - velocity_z_previous[[i, j, k]]) * dt_inv;
                 let dpz_dz = (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) * 0.5 * dz_inv;
-                max_err_z = max_err_z.max((rho * dvz_dt + dpz_dz).abs());
+                max_err_z = max_err_z.max(rho.mul_add(dvz_dt, dpz_dz).abs());
             }
         }
     }

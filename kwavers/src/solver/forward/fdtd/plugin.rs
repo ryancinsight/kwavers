@@ -22,16 +22,18 @@ pub struct FdtdPlugin {
 
 impl FdtdPlugin {
     /// Create a new FDTD plugin
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: FdtdConfig, _grid: &Grid) -> KwaversResult<Self> {
         Ok(Self {
             metadata: PluginMetadata {
-                id: "fdtd_solver".to_string(),
-                name: "FDTD Solver".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Finite-Difference Time Domain solver for acoustic wave propagation"
-                    .to_string(),
-                author: "Kwavers Team".to_string(),
-                license: "MIT".to_string(),
+                id: "fdtd_solver".to_owned(),
+                name: "FDTD Solver".to_owned(),
+                version: "1.0.0".to_owned(),
+                description: "Finite-Difference Time Domain solver for acoustic wave propagation".to_owned(),
+                author: "Kwavers Team".to_owned(),
+                license: "MIT".to_owned(),
             },
             state: PluginState::Initialized,
             config,
@@ -39,20 +41,6 @@ impl FdtdPlugin {
         })
     }
 
-    #[allow(dead_code)]
-    fn set_state(&mut self, state: PluginState) {
-        self.state = state;
-    }
-
-    #[allow(dead_code)]
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    #[allow(dead_code)]
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
 }
 
 impl crate::domain::plugin::Plugin for FdtdPlugin {
@@ -105,7 +93,7 @@ impl crate::domain::plugin::Plugin for FdtdPlugin {
         if fields.dim().0 <= UnifiedFieldType::VelocityZ.index() {
             return Err(crate::core::error::KwaversError::Physics(
                 crate::core::error::PhysicsError::InvalidFieldDimensions {
-                    expected: "pressure + 3 velocity components".to_string(),
+                    expected: "pressure + 3 velocity components".to_owned(),
                     actual: format!("{} components", fields.dim().0),
                 },
             ));
@@ -114,8 +102,8 @@ impl crate::domain::plugin::Plugin for FdtdPlugin {
         let solver = self.solver.as_mut().ok_or_else(|| {
             crate::core::error::KwaversError::Physics(
                 crate::core::error::PhysicsError::ModelNotInitialized {
-                    model: "FDTD Solver".to_string(),
-                    reason: "Solver not initialized by plugin lifecycle".to_string(),
+                    model: "FDTD Solver".to_owned(),
+                    reason: "Solver not initialized by plugin lifecycle".to_owned(),
                 },
             )
         })?;

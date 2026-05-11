@@ -7,14 +7,21 @@ use ndarray::{Array3, Array4, Axis, Zip};
 
 impl FwiProcessor {
     /// Apply physical constraints to velocity model.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_model_constraints(&self, model: &mut Array3<f64>) {
         use crate::core::constants::SOUND_SPEED_WATER;
         let min_velocity = SOUND_SPEED_WATER * 0.5; // 750 m/s
         let max_velocity = SOUND_SPEED_WATER * 4.0; // 6000 m/s
-        model.mapv_inplace(|v| v.clamp(min_velocity, max_velocity));
+        model.par_mapv_inplace(|v| v.clamp(min_velocity, max_velocity));
     }
 
     /// Validate timestep and model compatibility with the grid.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn validate_time_step(
         &self,
         model: &Array3<f64>,
@@ -35,8 +42,7 @@ impl FwiProcessor {
         if self.parameters.nt < 3 {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "FWI requires at least 3 time samples to form a second derivative"
-                        .to_string(),
+                    message: "FWI requires at least 3 time samples to form a second derivative".to_owned(),
                 },
             ));
         }
@@ -44,7 +50,7 @@ impl FwiProcessor {
         if self.parameters.dt <= 0.0 {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "FWI requires a positive time step".to_string(),
+                    message: "FWI requires a positive time step".to_owned(),
                 },
             ));
         }
@@ -52,8 +58,7 @@ impl FwiProcessor {
         if model.iter().any(|&v| !v.is_finite() || v <= 0.0) {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "FWI requires a finite, strictly positive sound speed model"
-                        .to_string(),
+                    message: "FWI requires a finite, strictly positive sound speed model".to_owned(),
                 },
             ));
         }
@@ -78,6 +83,9 @@ impl FwiProcessor {
     /// Uses CFL condition: `dt ≤ min(dx,dy,dz) / (c_max × √3)`.
     ///
     /// Reference: Courant et al. (1928). *Math. Ann.* 100(1), 32–74.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub(super) fn calculate_stable_timestep(
         &self,
         model: &Array3<f64>,
@@ -87,8 +95,7 @@ impl FwiProcessor {
         if !c_max.is_finite() || c_max <= 0.0 {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "FWI requires a strictly positive finite sound speed model"
-                        .to_string(),
+                    message: "FWI requires a strictly positive finite sound speed model".to_owned(),
                 },
             ));
         }
@@ -109,6 +116,9 @@ impl FwiProcessor {
     /// `p_{i±1} = p_i ± dt p'_i + dt² p''_i / 2 + O(dt³)`.
     /// Adding the two expansions and subtracting `2p_i` yields
     /// `(p_{i-1} - 2p_i + p_{i+1}) / dt² = p''_i + O(dt²)`.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub(super) fn pressure_second_derivative_into(
         &self,
         forward_history: &Array4<f64>,
@@ -140,7 +150,7 @@ impl FwiProcessor {
                 .and(&next)
                 .and(&next2)
                 .par_for_each(|d, &p0, &p1, &p2| {
-                    *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
+                    *d = (2.0f64.mul_add(-p1, p0) + p2) * inv_dt_sq;
                 });
             return Ok(());
         }
@@ -153,7 +163,7 @@ impl FwiProcessor {
                 .and(&prev)
                 .and(&current)
                 .par_for_each(|d, &p0, &p1, &p2| {
-                    *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
+                    *d = (2.0f64.mul_add(-p1, p0) + p2) * inv_dt_sq;
                 });
             return Ok(());
         }
@@ -165,7 +175,7 @@ impl FwiProcessor {
             .and(&current)
             .and(&next)
             .par_for_each(|d, &p0, &p1, &p2| {
-                *d = (p0 - 2.0 * p1 + p2) * inv_dt_sq;
+                *d = (2.0f64.mul_add(-p1, p0) + p2) * inv_dt_sq;
             });
         Ok(())
     }

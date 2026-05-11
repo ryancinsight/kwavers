@@ -8,6 +8,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::solver::forward::helmholtz::Preconditioner;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
+use rayon::prelude::*;
 use num_complex::Complex64;
 
 /// Diagonal preconditioner for Helmholtz equation
@@ -21,6 +22,9 @@ pub struct DiagonalPreconditioner {
 
 impl DiagonalPreconditioner {
     /// Create a new diagonal preconditioner
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(grid: &Grid) -> Self {
         let shape = (grid.nx, grid.ny, grid.nz);
@@ -33,6 +37,9 @@ impl DiagonalPreconditioner {
 
 impl Preconditioner for DiagonalPreconditioner {
     /// Apply diagonal preconditioner: M⁻¹x where M is diagonal
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply(
         &self,
         input: &ArrayView3<Complex64>,
@@ -41,7 +48,7 @@ impl Preconditioner for DiagonalPreconditioner {
         Zip::from(output)
             .and(input)
             .and(&self.diagonal)
-            .for_each(|out, &inp, &diag| {
+            .par_for_each(|out, &inp, &diag| {
                 if diag.norm_sqr() > 1e-12 {
                     *out = inp / diag;
                 } else {
@@ -53,33 +60,44 @@ impl Preconditioner for DiagonalPreconditioner {
     }
 
     /// Setup diagonal preconditioner for Helmholtz operator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if `diagonal contiguous`.
+    ///
     fn setup(&mut self, wavenumber: f64, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         let k_squared = wavenumber * wavenumber;
+        let (nx, ny, nz) = self.diagonal.dim();
+        let c0 = 1500.0_f64;
+        let rho0 = 1000.0_f64;
+        let laplacian_diag =
+            -6.0 / (grid.dx * grid.dx) - 6.0 / (grid.dy * grid.dy) - 6.0 / (grid.dz * grid.dz);
 
-        // Compute diagonal elements of Helmholtz operator: -∇² - k²(1+V)
-        Zip::indexed(&mut self.diagonal).for_each(|(i, j, k), diag| {
-            // Approximate Laplacian diagonal contribution
-            // For 3D Laplacian with second-order differences: -6/dx² per dimension
-            let laplacian_diag =
-                -6.0 / (grid.dx * grid.dx) - 6.0 / (grid.dy * grid.dy) - 6.0 / (grid.dz * grid.dz);
+        // Phase 1: sequential — dyn Medium not guaranteed Sync; collect heterogeneity values.
+        let heterogeneities: Vec<f64> = (0..nx)
+            .flat_map(|i| {
+                (0..ny).flat_map(move |j| {
+                    (0..nz).map(move |k| {
+                        let c = medium.sound_speed(i, j, k);
+                        let rho = medium.density(i, j, k);
+                        let contrast = (rho * c * c) / (rho0 * c0 * c0);
+                        1.0 - contrast
+                    })
+                })
+            })
+            .collect();
 
-            // Get medium properties
-            let c_local = medium.sound_speed(i, j, k);
-            let rho_local = medium.density(i, j, k);
-
-            // Reference values
-            let c0 = 1500.0; // m/s
-            let rho0 = 1000.0; // kg/m³
-
-            // Heterogeneity potential
-            let contrast = (rho_local * c_local * c_local) / (rho0 * c0 * c0);
-            let heterogeneity = 1.0 - contrast;
-
-            // Helmholtz diagonal: -∇² - k²(1+V)
-            let helmholtz_diag = laplacian_diag - k_squared * heterogeneity;
-
-            *diag = Complex64::new(helmholtz_diag, 0.0);
-        });
+        // Phase 2: parallel — compute diagonal elements from pre-collected values.
+        self.diagonal
+            .as_slice_mut()
+            .expect("diagonal contiguous")
+            .par_iter_mut()
+            .zip(heterogeneities.par_iter())
+            .for_each(|(diag, &heterogeneity)| {
+                let helmholtz_diag = k_squared.mul_add(-heterogeneity, laplacian_diag);
+                *diag = Complex64::new(helmholtz_diag, 0.0);
+            });
 
         self.wavenumber = Some(wavenumber);
         Ok(())

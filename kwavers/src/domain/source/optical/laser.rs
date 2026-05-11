@@ -42,6 +42,7 @@ pub struct GaussianLaser {
 
 impl GaussianLaser {
     /// Create a new Gaussian laser source
+    #[must_use] 
     pub fn new(config: LaserConfig, position: (f64, f64, f64), direction: (f64, f64, f64)) -> Self {
         // Create pulse signal
         let pulse_signal = vec![
@@ -60,6 +61,7 @@ impl GaussianLaser {
     }
 
     /// Get beam profile at a point
+    #[must_use] 
     pub fn beam_profile(&self, x: f64, y: f64, z: f64) -> f64 {
         // Calculate distance from beam axis
         let dx = x - self.position.0;
@@ -67,12 +69,12 @@ impl GaussianLaser {
         let dz = z - self.position.2;
 
         // Project onto plane perpendicular to beam direction
-        let dot = dx * self.direction.0 + dy * self.direction.1 + dz * self.direction.2;
-        let proj_x = dx - dot * self.direction.0;
-        let proj_y = dy - dot * self.direction.1;
-        let proj_z = dz - dot * self.direction.2;
+        let dot = dz.mul_add(self.direction.2, dx.mul_add(self.direction.0, dy * self.direction.1));
+        let proj_x = dot.mul_add(-self.direction.0, dx);
+        let proj_y = dot.mul_add(-self.direction.1, dy);
+        let proj_z = dot.mul_add(-self.direction.2, dz);
 
-        let r = (proj_x * proj_x + proj_y * proj_y + proj_z * proj_z).sqrt();
+        let r = proj_z.mul_add(proj_z, proj_x.mul_add(proj_x, proj_y * proj_y)).sqrt();
 
         // Gaussian beam profile
         let waist_squared = self.config.beam_waist * self.config.beam_waist;
@@ -101,14 +103,15 @@ impl super::OpticalSource for GaussianLaser {
 /// Laser source implementation
 #[derive(Debug)]
 pub struct LaserSource {
-    #[allow(dead_code)]
-    laser: GaussianLaser,
+    /// Retained to uphold `GaussianLaser` lifetime for trait-object callers.
+    _laser: GaussianLaser,
 }
 
 impl LaserSource {
+    #[must_use] 
     pub fn new(config: LaserConfig, position: (f64, f64, f64), direction: (f64, f64, f64)) -> Self {
         Self {
-            laser: GaussianLaser::new(config, position, direction),
+            _laser: GaussianLaser::new(config, position, direction),
         }
     }
 }

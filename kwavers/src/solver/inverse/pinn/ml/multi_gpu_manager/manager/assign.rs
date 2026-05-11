@@ -6,6 +6,9 @@ use crate::core::error::KwaversResult;
 
 impl MultiGpuManager {
     /// Assign work to GPUs using the configured load balancing algorithm.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn assign_work(&mut self, work_units: Vec<WorkUnit>) -> KwaversResult<()> {
         match &self.load_balancer {
             LoadBalancingAlgorithm::Static => self.assign_work_static(work_units),

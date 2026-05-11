@@ -4,7 +4,10 @@ use crate::domain::imaging::fusion::AffineTransform;
 use crate::physics::acoustics::imaging::fusion::types::RegisteredModality;
 use ndarray::ArrayView3;
 use std::collections::HashMap;
-
+/// Sorted modalities.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(crate) fn sorted_modalities(
     fusion: &MultiModalFusion,
 ) -> KwaversResult<Vec<(&str, &RegisteredModality)>> {
@@ -22,7 +25,12 @@ pub(crate) fn sorted_modalities(
         })
         .collect()
 }
-
+/// Common registered dims.
+/// # Errors
+/// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub(crate) fn common_registered_dims(
     modalities: &[(&str, &RegisteredModality)],
     algorithm_name: &str,
@@ -57,7 +65,7 @@ pub(crate) fn modality_quality_map(
 ) -> HashMap<String, f64> {
     modalities
         .iter()
-        .map(|(name, modality)| ((*name).to_string(), modality.quality_score))
+        .map(|(name, modality)| ((*name).to_owned(), modality.quality_score))
         .collect()
 }
 
@@ -66,13 +74,16 @@ pub(crate) fn identity_registration_transforms(
 ) -> HashMap<String, AffineTransform> {
     modalities
         .iter()
-        .map(|(name, _)| ((*name).to_string(), AffineTransform::identity()))
+        .map(|(name, _)| ((*name).to_owned(), AffineTransform::identity()))
         .collect()
 }
 
 /// Compute robust normalization bounds (1st and 99th percentiles)
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(crate) fn compute_robust_bounds(data: ArrayView3<'_, f64>) -> (f64, f64) {
-    let mut values: Vec<f64> = data.iter().cloned().filter(|v| v.is_finite()).collect();
+    let mut values: Vec<f64> = data.iter().copied().filter(|v| v.is_finite()).collect();
 
     if values.is_empty() {
         return (0.0, 0.0);

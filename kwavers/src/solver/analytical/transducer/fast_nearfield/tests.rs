@@ -8,8 +8,7 @@ use ndarray::Array2;
 #[test]
 fn test_fnm_solver_creation() {
     let config = FNMConfig::default();
-    let solver = FastNearfieldSolver::new(config);
-    assert!(solver.is_ok());
+    let _solver = FastNearfieldSolver::new(config).unwrap();
 }
 
 #[test]
@@ -46,8 +45,7 @@ fn test_precompute_factors() {
     solver.set_transducer(transducer);
     solver.set_medium(SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL);
 
-    let result = solver.precompute_factors(25e-3); // 25 mm
-    assert!(result.is_ok());
+    solver.precompute_factors(25e-3).unwrap(); // 25 mm
 
     // Check that factors were cached
     assert_eq!(solver.cached_z_distances().len(), 1);
@@ -75,10 +73,7 @@ fn test_field_computation() {
     // Uniform velocity distribution
     let velocity = Array2::<Complex64>::from_elem((16, 16), Complex64::new(1.0, 0.0));
 
-    let pressure = solver.compute_field(&velocity, 25e-3);
-    assert!(pressure.is_ok());
-
-    let pressure_field = pressure.unwrap();
+    let pressure_field = solver.compute_field(&velocity, 25e-3).unwrap();
     assert_eq!(pressure_field.dim(), (16, 16));
 
     // Check that result is not zero (basic sanity check)
@@ -117,6 +112,9 @@ fn test_memory_usage() {
 
 /// Solver defaults must equal the canonical water constants so that any code
 /// reading `solver.c0` / `solver.rho0` via `set_medium` round-trips correctly.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_fast_nearfield_defaults_match_water_constants() {
     let config = FNMConfig::default();

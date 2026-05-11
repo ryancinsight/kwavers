@@ -23,9 +23,9 @@ impl StiffnessTensor {
         let mut c = Array2::zeros((6, 6));
 
         // Diagonal terms
-        c[[0, 0]] = lambda + LAME_TO_STIFFNESS_FACTOR * mu; // C11
-        c[[1, 1]] = lambda + LAME_TO_STIFFNESS_FACTOR * mu; // C22
-        c[[2, 2]] = lambda + LAME_TO_STIFFNESS_FACTOR * mu; // C33
+        c[[0, 0]] = LAME_TO_STIFFNESS_FACTOR.mul_add(mu, lambda); // C11
+        c[[1, 1]] = LAME_TO_STIFFNESS_FACTOR.mul_add(mu, lambda); // C22
+        c[[2, 2]] = LAME_TO_STIFFNESS_FACTOR.mul_add(mu, lambda); // C33
         c[[3, 3]] = mu; // C44
         c[[4, 4]] = mu; // C55
         c[[5, 5]] = mu; // C66
@@ -45,6 +45,9 @@ impl StiffnessTensor {
     }
 
     /// Create transversely isotropic tensor (fiber direction along z)
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn transversely_isotropic(
         c11: f64,
         c12: f64,
@@ -55,9 +58,9 @@ impl StiffnessTensor {
         // Validate parameters
         if c11 <= 0.0 || c33 <= 0.0 || c44 <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "stiffness_components".to_string(),
+                field: "stiffness_components".to_owned(),
                 value: format!("c11={c11}, c33={c33}, c44={c44}"),
-                constraint: "Diagonal components must be positive".to_string(),
+                constraint: "Diagonal components must be positive".to_owned(),
             }));
         }
 
@@ -88,6 +91,9 @@ impl StiffnessTensor {
     }
 
     /// Create orthotropic stiffness tensor
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn orthotropic(components: [[f64; 6]; 6]) -> KwaversResult<Self> {
         let mut c = Array2::zeros((6, 6));
 
@@ -103,7 +109,7 @@ impl StiffnessTensor {
             for j in i + 1..6 {
                 if (c[[i, j]] - c[[j, i]]).abs() > SYMMETRY_TOLERANCE {
                     return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                        field: "stiffness_matrix".to_string(),
+                        field: "stiffness_matrix".to_owned(),
                         value: format!(
                             "C[{},{}]={}, C[{},{}]={}",
                             i,
@@ -113,7 +119,7 @@ impl StiffnessTensor {
                             i,
                             c[[j, i]]
                         ),
-                        constraint: "Matrix must be symmetric".to_string(),
+                        constraint: "Matrix must be symmetric".to_owned(),
                     }));
                 }
             }
@@ -154,7 +160,7 @@ impl StiffnessTensor {
         if n == 1 {
             return matrix[[0, 0]];
         } else if n == 2 {
-            return matrix[[0, 0]] * matrix[[1, 1]] - matrix[[0, 1]] * matrix[[1, 0]];
+            return matrix[[0, 0]].mul_add(matrix[[1, 1]], -(matrix[[0, 1]] * matrix[[1, 0]]));
         }
 
         // For larger matrices (3x3 and above), use nalgebra's LU decomposition
@@ -176,6 +182,9 @@ impl StiffnessTensor {
     }
 
     /// Get compliance matrix (inverse of stiffness)
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn compliance_matrix(&self) -> KwaversResult<Array2<f64>> {
         use nalgebra::DMatrix;
 
@@ -200,9 +209,9 @@ impl StiffnessTensor {
                 Ok(compliance)
             }
             None => Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "stiffness_matrix".to_string(),
-                value: "singular".to_string(),
-                constraint: "Stiffness matrix must be invertible".to_string(),
+                field: "stiffness_matrix".to_owned(),
+                value: "singular".to_owned(),
+                constraint: "Stiffness matrix must be invertible".to_owned(),
             })),
         }
     }

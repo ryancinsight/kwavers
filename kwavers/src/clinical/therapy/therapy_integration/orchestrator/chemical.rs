@@ -76,6 +76,9 @@ use super::super::state::AcousticField;
 /// - Suslick (1990): "Sonochemistry" - Chemical kinetics in cavitation
 /// - Mason (1999): "Sonochemistry and sonoluminescence" - Bubble dynamics
 /// - Pennes (1948): "Bioheat equation" - Temperature field modeling
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn update_chemical_reactions(
     chemical_model: &mut ChemicalModel,
     acoustic_field: &AcousticField,

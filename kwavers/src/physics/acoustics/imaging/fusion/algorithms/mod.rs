@@ -57,6 +57,10 @@ pub struct MultiModalFusion {
 
 impl MultiModalFusion {
     /// Create a new multi-modal fusion processor
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(config: FusionConfig) -> Self {
         Self {
             config,
@@ -65,6 +69,9 @@ impl MultiModalFusion {
     }
 
     /// Register ultrasound data for multi-modal image fusion
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn register_ultrasound(&mut self, ultrasound_data: &Array3<f64>) -> KwaversResult<()> {
         // Compute quality score from signal-to-noise ratio estimate
         let mean = ultrasound_data.mean().unwrap_or(0.0);
@@ -86,11 +93,14 @@ impl MultiModalFusion {
         };
 
         self.registered_data
-            .insert("ultrasound".to_string(), registered_data);
+            .insert("ultrasound".to_owned(), registered_data);
         Ok(())
     }
 
     /// Register photoacoustic data for fusion
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn register_photoacoustic(
         &mut self,
         reconstructed_image: &Array3<f64>,
@@ -101,11 +111,14 @@ impl MultiModalFusion {
         };
 
         self.registered_data
-            .insert("photoacoustic".to_string(), registered_data);
+            .insert("photoacoustic".to_owned(), registered_data);
         Ok(())
     }
 
     /// Register elastography data for fusion
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn register_elastography(
         &mut self,
         elasticity_map: &crate::domain::imaging::ultrasound::elastography::ElasticityMap,
@@ -116,11 +129,14 @@ impl MultiModalFusion {
         };
 
         self.registered_data
-            .insert("elastography".to_string(), registered_data);
+            .insert("elastography".to_owned(), registered_data);
         Ok(())
     }
 
     /// Register optical/sonoluminescence data for fusion
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn register_optical(
         &mut self,
         optical_intensity: &Array3<f64>,
@@ -130,7 +146,7 @@ impl MultiModalFusion {
         if optical_intensity.iter().any(|&x| x < 0.0) {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::ConstraintViolation {
-                    message: "Optical intensity values must be non-negative".to_string(),
+                    message: "Optical intensity values must be non-negative".to_owned(),
                 },
             ));
         }
@@ -154,6 +170,9 @@ impl MultiModalFusion {
     }
 
     /// Check if a modality is registered
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn is_modality_registered(&self, modality_name: &str) -> bool {
         self.registered_data.contains_key(modality_name)
@@ -173,7 +192,7 @@ impl MultiModalFusion {
         if self.registered_data.len() < 2 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::ConstraintViolation {
-                    message: "At least two modalities required for fusion".to_string(),
+                    message: "At least two modalities required for fusion".to_owned(),
                 },
             ));
         }
@@ -209,6 +228,7 @@ impl MultiModalFusion {
     /// # Returns
     ///
     /// HashMap mapping property names to 3D spatial maps
+    #[must_use] 
     pub fn extract_tissue_properties(
         &self,
         fused_result: &FusedImageResult,

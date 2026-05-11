@@ -21,7 +21,6 @@ fn test_church_acceleration_finite() {
     let mut state = BubbleState::at_equilibrium(&params);
     let result = model.calculate_acceleration(&mut state, 0.0, 0.0);
 
-    assert!(result.is_ok());
     let accel = result.unwrap();
     // Analytical theorem: at static equilibrium (R = R0, v = 0, P_ac = 0),
     // net forces (compressive + expansive) perfectly balance. Acceleration MUST be exactly 0.
@@ -86,7 +85,6 @@ fn test_marmottant_acceleration_finite() {
     let mut state = BubbleState::at_equilibrium(&params);
     let result = model.calculate_acceleration(&mut state, 0.0, 0.0);
 
-    assert!(result.is_ok());
     let accel = result.unwrap();
     // The Marmottant model computes p_gas = (p0 + 2σ_initial/R0)(R0/R)^3γ
     // but σ(R0) = χ(R0² - Rb²)/R0² ≠ σ_initial in general.

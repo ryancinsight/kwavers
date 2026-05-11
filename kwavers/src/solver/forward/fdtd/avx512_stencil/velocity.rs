@@ -25,6 +25,11 @@ impl Avx512StencilProcessor {
     /// * `u`   — velocity component field to update in-place
     /// * `p`   — current pressure field
     /// * `dim` — spatial dimension: 0 (x), 1 (y), 2 (z)
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_velocity_avx512(
         &self,
         u: &mut Array3<f64>,
@@ -33,12 +38,12 @@ impl Avx512StencilProcessor {
     ) -> KwaversResult<()> {
         if p.dim() != (self.nx, self.ny, self.nz) {
             return Err(KwaversError::InvalidInput(
-                "Pressure field dimensions mismatch".to_string(),
+                "Pressure field dimensions mismatch".to_owned(),
             ));
         }
         if dim > 2 {
             return Err(KwaversError::InvalidInput(
-                "Velocity dimension must be 0 (x), 1 (y), or 2 (z)".to_string(),
+                "Velocity dimension must be 0 (x), 1 (y), or 2 (z)".to_owned(),
             ));
         }
 
@@ -72,6 +77,12 @@ impl Avx512StencilProcessor {
     /// Loop bounds guarantee all pointer offsets ±stride remain within the
     /// allocated region (same argument as for the pressure kernel).
     /// `u_ptr` is an exclusive mutable pointer; `p_ptr` is immutable read-only.
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[allow(unsafe_code)]
     #[cfg(target_arch = "x86_64")]
     unsafe fn update_velocity_avx512_unsafe(
@@ -80,11 +91,11 @@ impl Avx512StencilProcessor {
         p: &Array3<f64>,
         dim: usize,
     ) -> KwaversResult<()> {
-        use std::arch::x86_64::*;
+        use std::arch::x86_64::{_mm512_set1_pd, _mm512_loadu_pd, _mm512_sub_pd, _mm512_mul_pd, _mm512_add_pd, _mm512_storeu_pd};
 
         if !is_x86_feature_detected!("avx512f") {
             return Err(KwaversError::FeatureNotAvailable(
-                "AVX-512F not available".to_string(),
+                "AVX-512F not available".to_owned(),
             ));
         }
 

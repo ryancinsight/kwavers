@@ -28,7 +28,7 @@ pub(crate) fn bessel_j(n: u32, x: f64) -> f64 {
     }
 
     let half_x = x / 2.0;
-    let mut term = half_x.powi(n as i32) / factorial_f64(n);
+    let mut term = half_x.powi(n as i32) / factorial(n);
     let mut sum = term;
     let half_x_sq = half_x * half_x;
 
@@ -42,7 +42,7 @@ pub(crate) fn bessel_j(n: u32, x: f64) -> f64 {
     sum
 }
 
-fn factorial_f64(n: u32) -> f64 {
+fn factorial(n: u32) -> f64 {
     const TABLE: [f64; 21] = [
         1.0,
         1.0,

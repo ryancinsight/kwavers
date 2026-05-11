@@ -90,8 +90,7 @@ fn test_material_interface_normal_incidence_water_tissue() {
     }
 
     let mut interface_bc = interface;
-    let result = interface_bc.apply_scalar_spatial(field.view_mut(), &grid_adapter, 0, 1e-6);
-    assert!(result.is_ok());
+    interface_bc.apply_scalar_spatial(field.view_mut(), &grid_adapter, 0, 1e-6).unwrap();
 
     let r_expected = interface_bc.reflection_coefficient();
     let t_expected = interface_bc.transmission_coefficient();
@@ -283,8 +282,7 @@ fn test_material_interface_field_continuity() {
     }
 
     let mut interface_bc = interface;
-    let result = interface_bc.apply_scalar_spatial(field.view_mut(), &grid_adapter, 0, 1e-6);
-    assert!(result.is_ok());
+    interface_bc.apply_scalar_spatial(field.view_mut(), &grid_adapter, 0, 1e-6).unwrap();
 
     let left_of_interface = field[[31, 32, 32]];
     let right_of_interface = field[[32, 32, 32]];
@@ -330,6 +328,5 @@ fn test_material_interface_zero_thickness() {
     let mut field = Array3::<f64>::ones((32, 32, 32));
 
     let mut interface_bc = interface;
-    let result = interface_bc.apply_scalar_spatial(field.view_mut(), &grid_adapter, 0, 1e-6);
-    assert!(result.is_ok());
+    interface_bc.apply_scalar_spatial(field.view_mut(), &grid_adapter, 0, 1e-6).unwrap();
 }

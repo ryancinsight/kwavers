@@ -8,6 +8,10 @@ use std::time::{Duration, Instant};
 use super::{RealtimeImagingPipeline, StreamingConfig, StreamingDataSource};
 
 impl StreamingDataSource {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: StreamingConfig) -> Self {
         Self {
             config,
@@ -15,7 +19,10 @@ impl StreamingDataSource {
             stop_signal: Arc::new(Mutex::new(false)),
         }
     }
-
+    /// Start streaming.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn start_streaming(
         &mut self,
         pipeline: Arc<Mutex<RealtimeImagingPipeline>>,
@@ -53,7 +60,10 @@ impl StreamingDataSource {
         self.generation_thread = Some(handle);
         Ok(())
     }
-
+    /// Stop streaming.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn stop_streaming(&mut self) -> KwaversResult<()> {
         {
             let mut stop = self.stop_signal.lock().unwrap_or_else(|e| e.into_inner());

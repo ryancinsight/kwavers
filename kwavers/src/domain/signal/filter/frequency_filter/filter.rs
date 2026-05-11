@@ -44,6 +44,9 @@ impl FrequencyFilter {
     /// - `dt`: Sampling interval (s).
     /// - `low_freq`: Lower cutoff (Hz).
     /// - `high_freq`: Upper cutoff (Hz).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn bandpass(
         &self,
         signal: &[f64],
@@ -60,6 +63,9 @@ impl FrequencyFilter {
     /// - `signal`: Input time-domain samples.
     /// - `dt`: Sampling interval (s).
     /// - `cutoff`: Cutoff frequency (Hz).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn lowpass(&self, signal: &[f64], dt: f64, cutoff: f64) -> KwaversResult<Vec<f64>> {
         self.apply_filter(signal, dt, |f| f <= cutoff)
     }
@@ -70,6 +76,9 @@ impl FrequencyFilter {
     /// - `signal`: Input time-domain samples.
     /// - `dt`: Sampling interval (s).
     /// - `cutoff`: Cutoff frequency (Hz).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn highpass(&self, signal: &[f64], dt: f64, cutoff: f64) -> KwaversResult<Vec<f64>> {
         self.apply_filter(signal, dt, |f| f >= cutoff)
     }
@@ -80,6 +89,9 @@ impl FrequencyFilter {
     /// - `signal`: Input samples (consumed).
     /// - `dt`: Sampling interval (s).
     /// - `time_window`: `(t_min, t_max)` — closed interval in seconds.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_time_window(
         &self,
         signal: Vec<f64>,
@@ -104,6 +116,9 @@ impl FrequencyFilter {
     /// Apply an arbitrary frequency response function.
     ///
     /// `resp(f)` returns `true` for frequencies to pass, `false` to zero out.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_filter<F>(&self, signal: &[f64], dt: f64, resp: F) -> KwaversResult<Vec<f64>>
     where
         F: Fn(f64) -> bool,
@@ -136,6 +151,9 @@ impl Filter for FrequencyFilter {
     /// Pass-through implementation of the `Filter` trait.
     ///
     /// Use `bandpass`, `lowpass`, or `highpass` for actual filtering.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply(&self, signal: &[f64], _dt: f64) -> KwaversResult<Vec<f64>> {
         Ok(signal.to_vec())
     }

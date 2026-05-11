@@ -70,6 +70,10 @@ impl<B: Backend> BurnDasBeamformer<B> {
     /// * `apodization` - Optional sensor weights [n_sensors]
     /// * `sampling_rate` - Sampling frequency (Hz)
     /// * `sound_speed` - Propagation velocity (m/s)
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn beamform(
         &self,
         rf_data: &Array3<f64>,

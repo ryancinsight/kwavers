@@ -46,21 +46,24 @@ impl FeatureConfig {
     /// - At least one feature type must be enabled
     /// - Window size must be odd and >= 3
     /// - Overlap must be in range [0.0, 1.0)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> Result<(), String> {
         if !self.morphological_features && !self.spectral_features && !self.texture_features {
-            return Err("At least one feature type must be enabled".to_string());
+            return Err("At least one feature type must be enabled".to_owned());
         }
 
         if self.window_size < 3 {
-            return Err("Window size must be >= 3".to_string());
+            return Err("Window size must be >= 3".to_owned());
         }
 
         if self.window_size.is_multiple_of(2) {
-            return Err("Window size must be odd".to_string());
+            return Err("Window size must be odd".to_owned());
         }
 
         if self.overlap < 0.0 || self.overlap >= 1.0 {
-            return Err("Overlap must be in range [0.0, 1.0)".to_string());
+            return Err("Overlap must be in range [0.0, 1.0)".to_owned());
         }
 
         Ok(())

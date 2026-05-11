@@ -45,7 +45,7 @@ impl ElectromagneticWaveEquation for ElectromagneticFdtdSolver {
             && fields.magnetic.iter().all(|v| v.is_finite());
 
         if !all_finite {
-            return Err("non-finite values detected in EM fields".to_string());
+            return Err("non-finite values detected in EM fields".to_owned());
         }
 
         Ok(())

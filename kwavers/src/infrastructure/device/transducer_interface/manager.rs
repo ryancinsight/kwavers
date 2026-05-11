@@ -27,6 +27,9 @@ impl std::fmt::Debug for DeviceManager {
 
 impl DeviceManager {
     /// Create new device manager.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -36,6 +39,9 @@ impl DeviceManager {
     }
 
     /// Register a device.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn register_device(
         &mut self,
         device_id: DeviceId,
@@ -58,29 +64,44 @@ impl DeviceManager {
     }
 
     /// List all device IDs.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn list_devices(&self) -> Vec<DeviceId> {
         self.devices.keys().cloned().collect()
     }
 
     /// Get number of connected devices.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn device_count(&self) -> usize {
         self.devices.len()
     }
 
     /// Enable automatic device discovery.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn enable_discovery(&mut self) -> KwaversResult<()> {
         self.discovery_enabled = true;
         Ok(())
     }
 
     /// Disable automatic device discovery.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn disable_discovery(&mut self) {
         self.discovery_enabled = false;
     }
 
     /// Remove device from registry.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn unregister_device(&mut self, device_id: &str) -> KwaversResult<()> {
         if self.devices.remove(device_id).is_some() {
             Ok(())

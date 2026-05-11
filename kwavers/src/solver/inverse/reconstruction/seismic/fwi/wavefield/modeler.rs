@@ -50,7 +50,7 @@ impl WavefieldModeler {
                     let u_p = previous[[i, j, k]];
                     let v2_local = v2[[i, j, k]];
 
-                    next[[i, j, k]] = 2.0 * u_c - u_p + dt * dt * v2_local * laplacian;
+                    next[[i, j, k]] = (dt * dt * v2_local).mul_add(laplacian, 2.0f64.mul_add(u_c, -u_p));
                 }
             }
         }
@@ -89,7 +89,11 @@ impl WavefieldModeler {
             std::mem::swap(&mut u_curr, &mut u_next);
         }
     }
-
+    /// Validate geometry.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn validate_geometry(&self, shape: (usize, usize, usize)) -> KwaversResult<()> {
         let (nx, ny, nz) = shape;
 
@@ -120,12 +124,16 @@ impl WavefieldModeler {
 
         Ok(())
     }
-
+    /// Validate timestep.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn validate_timestep(&self, velocity_model: &Array3<f64>) -> KwaversResult<f64> {
         if self.config.dt <= 0.0 || !self.config.dt.is_finite() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "WavefieldConfig.dt must be positive and finite".to_string(),
+                    message: "WavefieldConfig.dt must be positive and finite".to_owned(),
                 },
             ));
         }

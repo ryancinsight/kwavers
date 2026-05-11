@@ -79,8 +79,7 @@ pub fn flynn_threshold(
 ) -> f64 {
     use crate::core::constants::cavitation::FLYNN_COLLAPSE_COEFFICIENT;
     // P_Flynn = α * (P_0 + 2σ/R_n) - P_v, where α ≈ 0.83 (Flynn 1964)
-    FLYNN_COLLAPSE_COEFFICIENT * (ambient_pressure + 2.0 * surface_tension / nucleus_radius)
-        - vapor_pressure
+    FLYNN_COLLAPSE_COEFFICIENT.mul_add(ambient_pressure + 2.0 * surface_tension / nucleus_radius, -vapor_pressure)
 }
 
 /// Calculate mechanical index (MI)

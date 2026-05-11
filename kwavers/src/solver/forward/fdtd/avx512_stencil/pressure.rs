@@ -35,6 +35,11 @@ impl Avx512StencilProcessor {
     ///
     /// # Returns
     /// Updated pressure field at time step n+1.
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_pressure_avx512(
         &self,
         p_curr: &Array3<f64>,
@@ -43,13 +48,13 @@ impl Avx512StencilProcessor {
     ) -> KwaversResult<Array3<f64>> {
         if p_curr.shape() != p_prev.shape() || p_curr.shape() != u_div.shape() {
             return Err(KwaversError::InvalidInput(
-                "All fields must have identical dimensions".to_string(),
+                "All fields must have identical dimensions".to_owned(),
             ));
         }
         let shape = p_curr.dim();
         if shape != (self.nx, self.ny, self.nz) {
             return Err(KwaversError::InvalidInput(
-                "Field dimensions do not match processor configuration".to_string(),
+                "Field dimensions do not match processor configuration".to_owned(),
             ));
         }
 
@@ -88,6 +93,9 @@ impl Avx512StencilProcessor {
     /// - Neighbor offsets ±1, ±nx, ±(nx×ny) are bounded analogously.
     ///
     /// `p_new` is exclusively owned (no aliasing); `p_curr`/`p_prev`/`u_div` are immutable.
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    ///
     #[allow(unsafe_code)]
     #[cfg(target_arch = "x86_64")]
     unsafe fn update_pressure_avx512_unsafe(
@@ -97,11 +105,11 @@ impl Avx512StencilProcessor {
         u_div: &Array3<f64>,
         p_new: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        use std::arch::x86_64::*;
+        use std::arch::x86_64::{_mm512_set1_pd, _mm512_loadu_pd, _mm512_add_pd, _mm512_mul_pd, _mm512_fmadd_pd, _mm512_sub_pd, _mm512_storeu_pd};
 
         if !is_x86_feature_detected!("avx512f") {
             return Err(KwaversError::FeatureNotAvailable(
-                "AVX-512F not detected at runtime".to_string(),
+                "AVX-512F not detected at runtime".to_owned(),
             ));
         }
 

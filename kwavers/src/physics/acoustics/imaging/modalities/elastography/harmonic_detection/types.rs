@@ -79,7 +79,7 @@ impl HarmonicDisplacementField {
     /// A₂/A₁ ≈ Γ · A₁ / (8 G')      (small-strain approximation)
     /// ```
     ///
-    /// where G' [Pa] is the storage modulus. Solving for Γ requires knowing G'
+    /// where G' (Pa) is the storage modulus. Solving for Γ requires knowing G'
     /// and A₁ (absolute amplitude), which are not available without additional
     /// calibration data. This function stores the dimensionless harmonic ratio
     /// A₂/A₁ as a relative nonlinearity proxy pending external calibration.

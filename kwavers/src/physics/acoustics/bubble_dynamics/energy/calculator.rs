@@ -1,8 +1,7 @@
 //! Core Energy Balance Calculator definition
 
 use crate::core::constants::thermodynamic::T_AMBIENT;
-use uom::si::f64::{HeatCapacity, ThermalConductivity, ThermodynamicTemperature};
-use uom::si::heat_capacity::joule_per_kelvin;
+use uom::si::f64::{ThermalConductivity, ThermodynamicTemperature};
 use uom::si::thermal_conductivity::watt_per_meter_kelvin;
 use uom::si::thermodynamic_temperature::kelvin;
 
@@ -44,9 +43,6 @@ use crate::physics::acoustics::bubble_dynamics::BubbleParameters;
 pub struct EnergyBalanceCalculator {
     /// Thermal conductivity of the liquid
     pub thermal_conductivity: ThermalConductivity,
-    /// Specific heat capacity of the liquid
-    #[allow(dead_code)] // Stored for future bioheat equation calculations
-    pub specific_heat_liquid: HeatCapacity,
     /// Ambient temperature
     pub ambient_temperature: ThermodynamicTemperature,
     /// Enable chemical reaction energy tracking
@@ -64,9 +60,6 @@ impl EnergyBalanceCalculator {
         Self {
             thermal_conductivity: ThermalConductivity::new::<watt_per_meter_kelvin>(
                 params.thermal_conductivity,
-            ),
-            specific_heat_liquid: HeatCapacity::new::<joule_per_kelvin>(
-                params.specific_heat_liquid * params.rho_liquid,
             ),
             ambient_temperature: ThermodynamicTemperature::new::<kelvin>(T_AMBIENT),
             enable_chemical_reactions: true,
@@ -86,9 +79,6 @@ impl EnergyBalanceCalculator {
         Self {
             thermal_conductivity: ThermalConductivity::new::<watt_per_meter_kelvin>(
                 params.thermal_conductivity,
-            ),
-            specific_heat_liquid: HeatCapacity::new::<joule_per_kelvin>(
-                params.specific_heat_liquid * params.rho_liquid,
             ),
             ambient_temperature: ThermodynamicTemperature::new::<kelvin>(T_AMBIENT),
             enable_chemical_reactions: enable_chemical,

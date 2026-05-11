@@ -12,6 +12,10 @@ pub struct MUSICProcessor {
 
 impl MUSICProcessor {
     /// Create new MUSIC processor
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: &MUSICConfig) -> KwaversResult<Self> {
         config.config.validate()?;
 
@@ -19,14 +23,14 @@ impl MUSICProcessor {
 
         if num_sensors < 2 {
             return Err(KwaversError::InvalidInput(
-                "MUSIC requires at least 2 sensors".to_string(),
+                "MUSIC requires at least 2 sensors".to_owned(),
             ));
         }
 
         if let Some(k) = config.num_sources {
             if k == 0 {
                 return Err(KwaversError::InvalidInput(
-                    "Number of sources must be > 0".to_string(),
+                    "Number of sources must be > 0".to_owned(),
                 ));
             }
 
@@ -47,7 +51,7 @@ impl MUSICProcessor {
 
         if config.grid_resolution == 0 {
             return Err(KwaversError::InvalidInput(
-                "Grid resolution must be > 0".to_string(),
+                "Grid resolution must be > 0".to_owned(),
             ));
         }
 
@@ -59,6 +63,9 @@ impl MUSICProcessor {
     /// Estimate spatial covariance matrix from complex sensor snapshots.
     ///
     /// Returns R = (1/N) ∑ₙ x(n) x(n)^H ∈ ℂ^(M×M) with optional diagonal loading.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn estimate_covariance(
         &self,
         snapshots: &Array2<Complex<f64>>,
@@ -67,7 +74,7 @@ impl MUSICProcessor {
 
         if num_snapshots == 0 {
             return Err(KwaversError::InvalidInput(
-                "Cannot compute covariance from zero snapshots".to_string(),
+                "Cannot compute covariance from zero snapshots".to_owned(),
             ));
         }
 
@@ -111,7 +118,7 @@ impl MUSICProcessor {
             let dx = source_position[0] - sensor_pos[0];
             let dy = source_position[1] - sensor_pos[1];
             let dz = source_position[2] - sensor_pos[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             let phase = -k * distance;
             steering[m] = Complex::new(phase.cos(), phase.sin());

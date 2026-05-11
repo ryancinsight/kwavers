@@ -79,12 +79,15 @@ pub struct PerformanceParameters {
 
 impl SimulationParameters {
     /// Validate simulation parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.duration <= 0.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "duration".to_string(),
+                parameter: "duration".to_owned(),
                 value: self.duration.to_string(),
-                constraint: "Must be positive".to_string(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }
@@ -92,9 +95,9 @@ impl SimulationParameters {
         if let Some(dt) = self.dt {
             if dt <= 0.0 {
                 return Err(crate::core::error::ConfigError::InvalidValue {
-                    parameter: "dt".to_string(),
+                    parameter: "dt".to_owned(),
                     value: dt.to_string(),
-                    constraint: "Must be positive".to_string(),
+                    constraint: "Must be positive".to_owned(),
                 }
                 .into());
             }
@@ -102,27 +105,27 @@ impl SimulationParameters {
 
         if self.cfl <= 0.0 || self.cfl > 1.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "cfl".to_string(),
+                parameter: "cfl".to_owned(),
                 value: self.cfl.to_string(),
-                constraint: "Must be in (0, 1]".to_string(),
+                constraint: "Must be in (0, 1]".to_owned(),
             }
             .into());
         }
 
         if self.frequency <= 0.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "frequency".to_string(),
+                parameter: "frequency".to_owned(),
                 value: self.frequency.to_string(),
-                constraint: "Must be positive".to_string(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }
 
         if self.temperature < 0.0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "temperature".to_string(),
+                parameter: "temperature".to_owned(),
                 value: self.temperature.to_string(),
-                constraint: "Must be non-negative (Kelvin)".to_string(),
+                constraint: "Must be non-negative (Kelvin)".to_owned(),
             }
             .into());
         }
@@ -132,21 +135,25 @@ impl SimulationParameters {
 }
 
 impl OutputParameters {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.save_interval == 0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "save_interval".to_string(),
-                value: "0".to_string(),
-                constraint: "Must be positive".to_string(),
+                parameter: "save_interval".to_owned(),
+                value: "0".to_owned(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }
 
         if self.fields.is_empty() {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "fields".to_string(),
-                value: "empty".to_string(),
-                constraint: "Must specify at least one field to output".to_string(),
+                parameter: "fields".to_owned(),
+                value: "empty".to_owned(),
+                constraint: "Must specify at least one field to output".to_owned(),
             }
             .into());
         }
@@ -156,13 +163,17 @@ impl OutputParameters {
 }
 
 impl PerformanceParameters {
+    /// Validate.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if let Some(threads) = self.num_threads {
             if threads == 0 {
                 return Err(crate::core::error::ConfigError::InvalidValue {
-                    parameter: "num_threads".to_string(),
-                    value: "0".to_string(),
-                    constraint: "Must be positive".to_string(),
+                    parameter: "num_threads".to_owned(),
+                    value: "0".to_owned(),
+                    constraint: "Must be positive".to_owned(),
                 }
                 .into());
             }
@@ -170,18 +181,18 @@ impl PerformanceParameters {
 
         if self.cache_size == 0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "cache_size".to_string(),
-                value: "0".to_string(),
-                constraint: "Must be positive".to_string(),
+                parameter: "cache_size".to_owned(),
+                value: "0".to_owned(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }
 
         if self.chunk_size == 0 {
             return Err(crate::core::error::ConfigError::InvalidValue {
-                parameter: "chunk_size".to_string(),
-                value: "0".to_string(),
-                constraint: "Must be positive".to_string(),
+                parameter: "chunk_size".to_owned(),
+                value: "0".to_owned(),
+                constraint: "Must be positive".to_owned(),
             }
             .into());
         }

@@ -1,73 +1,43 @@
-//! Physics factory - Simulation orchestration
+//! Simulation-layer entry point for building a populated plugin manager.
 //!
-//! Creates the physics plugin manager from configuration.
+//! This module is a thin façade over [`crate::physics::factory::PhysicsCatalog`].
+//! Capability types ([`PhysicsConfig`], [`PhysicsModelConfig`],
+//! [`PhysicsModelType`]) live in `crate::physics::factory` (SSOT) and are
+//! re-exported here so callers in the simulation layer can keep a single
+//! `crate::simulation::factory` import surface.
 
-use crate::simulation::manager::PhysicsManager;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+pub use crate::physics::factory::{
+    AcousticSolver, BoundaryType, BubbleModel, NonlinearEquation, PhysicsCatalog, PhysicsConfig,
+    PhysicsModelConfig, PhysicsModelType,
+};
 
-/// Physics configuration with comprehensive validation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PhysicsConfig {
-    pub models: Vec<PhysicsModelConfig>,
-    pub global_parameters: HashMap<String, f64>,
-    pub plugin_paths: Vec<String>,
-}
+use crate::core::error::KwaversResult;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
+use crate::solver::plugin::PluginManager;
 
-impl PhysicsConfig {
-    /// Create new physics configuration
-    pub fn new() -> Self {
-        Self {
-            models: vec![PhysicsModelConfig::default()],
-            global_parameters: HashMap::new(),
-            plugin_paths: Vec::new(),
-        }
-    }
-
-    /// Validate configuration
-    pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
-        use crate::core::error::ConfigError;
-
-        if self.models.is_empty() {
-            return Err(ConfigError::InvalidValue {
-                parameter: "models".to_string(),
-                value: "empty".to_string(),
-                constraint: "At least one physics model is required".to_string(),
-            }
-            .into());
-        }
-
-        Ok(())
-    }
-}
-
-impl Default for PhysicsConfig {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Placeholder for physics model configuration
-/// This should be moved from physics::factory::models
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct PhysicsModelConfig {
-    pub enabled: bool,
-    pub parameters: HashMap<String, f64>,
-}
-
-/// Main physics factory interface
+/// Simulation-layer factory entry point.
+///
+/// Wraps [`PhysicsCatalog`] to provide the canonical
+/// `Configuration → PluginManager` construction path used by
+/// [`crate::simulation::manager::PhysicsManager`].
 #[derive(Debug)]
 pub struct PhysicsFactory;
 
 impl PhysicsFactory {
-    /// Create physics plugin manager from configuration
+    /// Build a plugin manager from validated configuration and runtime context.
+    ///
+    /// `dt` is the global integrator timestep. `medium` and `grid` are
+    /// borrowed only during plugin construction.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn create_physics(
         config: &PhysicsConfig,
-    ) -> crate::core::error::KwaversResult<crate::solver::plugin::PluginManager> {
-        // Validate through specialized validator
-        config.validate()?;
-
-        // Build through specialized manager
-        PhysicsManager::build(config)
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> KwaversResult<PluginManager> {
+        PhysicsCatalog::build(config, grid, medium, dt)
     }
 }

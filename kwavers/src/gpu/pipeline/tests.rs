@@ -12,8 +12,7 @@ fn test_pipeline_creation() {
         streaming_mode: false,
     };
 
-    let pipeline = RealtimeImagingPipeline::new(config);
-    assert!(pipeline.is_ok());
+    let _pipeline = RealtimeImagingPipeline::new(config).unwrap();
 }
 
 #[test]
@@ -29,10 +28,10 @@ fn test_pipeline_start_stop() {
 
     let mut pipeline = RealtimeImagingPipeline::new(config).unwrap();
 
-    assert!(pipeline.start().is_ok());
+    pipeline.start().unwrap();
     assert_eq!(pipeline.state(), PipelineState::Running);
 
-    assert!(pipeline.stop().is_ok());
+    pipeline.stop().unwrap();
     assert_eq!(pipeline.state(), PipelineState::Stopped);
 }
 
@@ -51,7 +50,7 @@ fn test_data_submission() {
     pipeline.start().unwrap();
 
     let rf_data = Array4::from_elem((4, 32, 1024, 1), 1.0);
-    assert!(pipeline.submit_rf_data(rf_data).is_ok());
+    pipeline.submit_rf_data(rf_data).unwrap();
 
     pipeline.stop().unwrap();
 }
@@ -75,7 +74,6 @@ fn test_frame_processing() {
     pipeline.process_pipeline().unwrap();
 
     let processed = pipeline.get_processed_frame();
-    assert!(processed.is_some());
 
     let frame = processed.unwrap();
     assert_eq!(frame.dim(), (16, 512, 1));

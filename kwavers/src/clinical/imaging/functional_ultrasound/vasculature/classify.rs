@@ -46,7 +46,7 @@ pub(super) fn classify_vessels(
 ) -> KwaversResult<VesselClassification> {
     if image.dim() != mask.dim() {
         return Err(KwaversError::InvalidInput(
-            "vessel image and mask shapes must match".to_string(),
+            "vessel image and mask shapes must match".to_owned(),
         ));
     }
 
@@ -161,12 +161,12 @@ pub(super) fn principal_axis(points: &[[usize; 3]]) -> [f64; 3] {
                 point[1] as f64 - mean[1],
                 point[2] as f64 - mean[2],
             ];
-            let proj = d[0] * axis[0] + d[1] * axis[1] + d[2] * axis[2];
+            let proj = d[2].mul_add(axis[2], d[0].mul_add(axis[0], d[1] * axis[1]));
             next[0] += proj * d[0];
             next[1] += proj * d[1];
             next[2] += proj * d[2];
         }
-        let norm = (next[0] * next[0] + next[1] * next[1] + next[2] * next[2]).sqrt();
+        let norm = next[2].mul_add(next[2], next[0].mul_add(next[0], next[1] * next[1])).sqrt();
         if norm <= 1e-12 {
             return axis;
         }

@@ -70,6 +70,9 @@ impl<B: Backend> PINN3DNetwork<B> {
     /// let config = BurnPINN3DConfig::default();
     /// let network = PINN3DNetwork::<Backend>::new(&config, &device);
     /// ```
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: &BurnPINN3DConfig, device: &B::Device) -> KwaversResult<Self> {
         config.validate()?;
         let input_size = 4; // (x, y, z, t)
@@ -188,6 +191,10 @@ impl<B: Backend> PINN3DNetwork<B> {
     ///     |x, y, z| 1500.0, // Constant wave speed
     /// );
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_pde_residual(
         &self,
         x: Tensor<B, 2>,
@@ -244,9 +251,9 @@ impl<B: Backend> PINN3DNetwork<B> {
             .div_scalar(eps * eps);
 
         // Compute wave speed c(x,y,z) at each collocation point
-        let x_vals = Self::extract_column_f32(&x)?;
-        let y_vals = Self::extract_column_f32(&y)?;
-        let z_vals = Self::extract_column_f32(&z)?;
+        let x_vals = Self::extract_column(&x)?;
+        let y_vals = Self::extract_column(&y)?;
+        let z_vals = Self::extract_column(&z)?;
         let c_values: Vec<f32> = x_vals
             .into_iter()
             .zip(y_vals)
@@ -274,7 +281,7 @@ impl<B: Backend> PINN3DNetwork<B> {
         Ok(u_tt.sub(laplacian.mul(c_squared)))
     }
 
-    fn extract_column_f32(t: &Tensor<B, 2>) -> KwaversResult<Vec<f32>> {
+    fn extract_column(t: &Tensor<B, 2>) -> KwaversResult<Vec<f32>> {
         let shape = t.shape();
         let dims = shape.dims.as_slice();
         let [n, m] = dims else {

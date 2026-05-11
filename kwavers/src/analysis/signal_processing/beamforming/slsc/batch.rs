@@ -4,6 +4,10 @@ use ndarray::Array2;
 use num_complex::Complex64;
 
 /// Batch processing for multiple frames
+/// # Errors
+/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn process_slsc_batch(
     data: &ndarray::Array3<Complex64>,
     config: &SlscConfig,
@@ -13,8 +17,8 @@ pub fn process_slsc_batch(
     if n_elements < 2 {
         return Err(KwaversError::Validation(
             crate::core::error::ValidationError::InvalidParameter {
-                parameter: "n_elements".to_string(),
-                reason: "SLSC requires at least 2 array elements".to_string(),
+                parameter: "n_elements".to_owned(),
+                reason: "SLSC requires at least 2 array elements".to_owned(),
             },
         ));
     }
@@ -29,9 +33,9 @@ pub fn process_slsc_batch(
             .into_dimensionality()
             .map_err(|_| {
                 KwaversError::Validation(crate::core::error::ValidationError::InvalidFormat {
-                    field: "frame_data".to_string(),
-                    expected: "Array2".to_string(),
-                    actual: "Array3 slice".to_string(),
+                    field: "frame_data".to_owned(),
+                    expected: "Array2".to_owned(),
+                    actual: "Array3 slice".to_owned(),
                 })
             })?;
 

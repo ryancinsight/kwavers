@@ -69,9 +69,9 @@ impl PhotoacousticOpticalProperties {
     #[must_use]
     pub fn blood(wavelength: f64) -> OpticalPropertyData {
         let absorption = if wavelength < 600.0 {
-            100.0 + (wavelength - 400.0) * 0.5
+            (wavelength - 400.0).mul_add(0.5, 100.0)
         } else {
-            50.0 + (wavelength - 600.0) * (-0.1)
+            (wavelength - 600.0).mul_add(-0.1 , 50.0)
         };
         let absorption = absorption.max(0.0_f64);
 
@@ -86,8 +86,8 @@ impl PhotoacousticOpticalProperties {
     #[must_use]
     pub fn soft_tissue(wavelength: f64) -> OpticalPropertyData {
         OpticalPropertyData {
-            absorption_coefficient: (0.1 + wavelength * 0.001).max(0.0_f64),
-            scattering_coefficient: (100.0 + wavelength * 0.1).max(0.0_f64),
+            absorption_coefficient: wavelength.mul_add(0.001, 0.1).max(0.0_f64),
+            scattering_coefficient: wavelength.mul_add(0.1, 100.0).max(0.0_f64),
             anisotropy: 0.8,
             refractive_index: 1.4,
         }
@@ -96,8 +96,8 @@ impl PhotoacousticOpticalProperties {
     #[must_use]
     pub fn tumor(wavelength: f64) -> OpticalPropertyData {
         OpticalPropertyData {
-            absorption_coefficient: (5.0 + wavelength * 0.01).max(0.0_f64),
-            scattering_coefficient: (120.0 + wavelength * 0.15).max(0.0_f64),
+            absorption_coefficient: wavelength.mul_add(0.01, 5.0).max(0.0_f64),
+            scattering_coefficient: wavelength.mul_add(0.15, 120.0).max(0.0_f64),
             anisotropy: 0.85,
             refractive_index: 1.4,
         }

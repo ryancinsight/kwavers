@@ -64,30 +64,57 @@ pub struct BackendCapabilities {
 /// Backend abstraction trait
 pub trait Backend {
     /// Get backend type
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn backend_type(&self) -> BackendType;
 
     /// Get backend capabilities
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn capabilities(&self) -> BackendCapabilities;
 
     /// Check if backend is available
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn is_available(&self) -> bool;
 
     /// Synchronize all operations
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn synchronize(&self) -> KwaversResult<()>;
 
     /// Get available compute devices
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn devices(&self) -> Vec<ComputeDevice>;
 
     /// Select a specific compute device
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn select_device(&mut self, device_id: usize) -> KwaversResult<()>;
 
     /// Execute 3D FFT
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn fft_3d(&self, data: &mut Array3<f64>) -> KwaversResult<()>;
 
     /// Execute 3D inverse FFT
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn ifft_3d(&self, data: &mut Array3<f64>) -> KwaversResult<()>;
 
     /// Element-wise multiplication
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn element_wise_multiply(
         &self,
         a: &Array3<f64>,
@@ -96,6 +123,9 @@ pub trait Backend {
     ) -> KwaversResult<()>;
 
     /// Apply spatial derivative
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_spatial_derivative(
         &self,
         field: &Array3<f64>,

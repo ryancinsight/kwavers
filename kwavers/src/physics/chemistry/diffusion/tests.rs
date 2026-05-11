@@ -2,6 +2,9 @@ use super::*;
 
 /// Boundary condition enforcement:
 /// a non-zero bubble concentration fixes the wall node exactly after a step.
+/// # Panics
+/// - Panics if `valid diffusion step should solve the tridiagonal system`.
+///
 #[test]
 fn test_dirichlet_boundary_condition() {
     let solver = RadicalDiffusionSolver::new(10e-6);
@@ -25,6 +28,9 @@ fn test_dirichlet_boundary_condition() {
 
 /// Far-field decay:
 /// the outer Dirichlet boundary remains zero after repeated diffusion steps.
+/// # Panics
+/// - Panics if `valid diffusion step should preserve far-field boundary`.
+///
 #[test]
 fn test_far_field_remains_zero() {
     let solver = RadicalDiffusionSolver::new(10e-6);
@@ -51,6 +57,9 @@ fn test_far_field_remains_zero() {
 
 /// Positivity:
 /// a non-negative step-function initial condition remains non-negative.
+/// # Panics
+/// - Panics if `valid diffusion step should keep concentrations non-negative`.
+///
 #[test]
 fn test_concentrations_non_negative() {
     let solver = RadicalDiffusionSolver::new(10e-6);
@@ -84,6 +93,9 @@ fn test_concentrations_non_negative() {
 
 /// Grid invariant:
 /// logarithmic radius nodes are strictly increasing and start at the bubble wall.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_radial_grid_strictly_increasing() {
     let solver = RadicalDiffusionSolver::new(5e-6);

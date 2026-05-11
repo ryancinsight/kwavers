@@ -163,7 +163,7 @@ impl BubbleState {
         let water_molecular_weight = 0.018; // kg/mol for water vapor
 
         // Mass of gas + mass of vapor
-        (self.n_gas * molecular_weight + self.n_vapor * water_molecular_weight) / AVOGADRO
+        self.n_gas.mul_add(molecular_weight, self.n_vapor * water_molecular_weight) / AVOGADRO
     }
 }
 

@@ -51,6 +51,9 @@ impl TetrahedralMesh {
     }
 
     /// Add node to mesh
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_node(&mut self, coordinates: [f64; 3], boundary_type: BoundaryType) -> usize {
         let index = self.nodes.len();
         self.nodes.push(MeshNode {
@@ -63,6 +66,10 @@ impl TetrahedralMesh {
     }
 
     /// Add tetrahedron element
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn add_element(&mut self, nodes: [usize; 4], material_id: usize) -> KwaversResult<usize> {
         // Validate node indices
         for &node_idx in &nodes {
@@ -109,6 +116,9 @@ impl TetrahedralMesh {
     }
 
     /// Calculate tetrahedron volume using scalar triple product
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     fn calculate_tetrahedron_volume(&self, nodes: [usize; 4]) -> KwaversResult<f64> {
         let p0 = self.nodes[nodes[0]].coordinates;
         let p1 = self.nodes[nodes[1]].coordinates;
@@ -121,15 +131,15 @@ impl TetrahedralMesh {
         let v3 = [p3[0] - p0[0], p3[1] - p0[1], p3[2] - p0[2]];
 
         // Scalar triple product: (v1 × v2) · v3
-        let cross_x = v1[1] * v2[2] - v1[2] * v2[1];
-        let cross_y = v1[2] * v2[0] - v1[0] * v2[2];
-        let cross_z = v1[0] * v2[1] - v1[1] * v2[0];
+        let cross_x = v1[1].mul_add(v2[2], -(v1[2] * v2[1]));
+        let cross_y = v1[2].mul_add(v2[0], -(v1[0] * v2[2]));
+        let cross_z = v1[0].mul_add(v2[1], -(v1[1] * v2[0]));
 
-        let volume = (cross_x * v3[0] + cross_y * v3[1] + cross_z * v3[2]).abs() / 6.0;
+        let volume = cross_z.mul_add(v3[2], cross_x.mul_add(v3[0], cross_y * v3[1])).abs() / 6.0;
 
         if volume < 1e-12 {
             return Err(KwaversError::InvalidInput(
-                "Degenerate tetrahedron with zero volume".to_string(),
+                "Degenerate tetrahedron with zero volume".to_owned(),
             ));
         }
 
@@ -140,6 +150,9 @@ impl TetrahedralMesh {
     ///
     /// Q = 6√2 * V / (∑_{edges} L_e^2)^{3/2}
     /// where V is volume, L_e are edge lengths.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn calculate_element_quality(&self, nodes: [usize; 4]) -> KwaversResult<f64> {
         let volume = self.calculate_tetrahedron_volume(nodes)?;
 
@@ -160,7 +173,7 @@ impl TetrahedralMesh {
             let dx = p1[0] - p2[0];
             let dy = p1[1] - p2[1];
             let dz = p1[2] - p2[2];
-            edge_sum_sq += dx * dx + dy * dy + dz * dz;
+            edge_sum_sq += dz.mul_add(dz, dx.mul_add(dx, dy * dy));
         }
 
         if edge_sum_sq < 1e-12 {
@@ -172,6 +185,10 @@ impl TetrahedralMesh {
     }
 
     /// Update mesh connectivity information
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn update_connectivity(&mut self, element_idx: usize) -> KwaversResult<()> {
         let nodes = self.elements[element_idx].nodes;
         let faces = self.get_element_faces(nodes);
@@ -270,6 +287,7 @@ impl TetrahedralMesh {
     }
 
     /// Find elements containing a point
+    #[must_use] 
     pub fn locate_point(&self, point: [f64; 3]) -> Vec<usize> {
         let mut containing_elements = Vec::new();
 

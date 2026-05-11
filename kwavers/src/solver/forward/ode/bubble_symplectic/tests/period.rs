@@ -18,6 +18,9 @@ use std::sync::Arc;
 /// Reference: Minnaert, M. (1933). *Philos. Mag.* **16**, 235–248.
 /// Error bound: Hairer et al. (2006) §I.3.1 — SV period error ~ (hω₀)²/24
 /// = (2π/200)²/24 ≈ 0.04% ≪ 0.5%.
+/// # Panics
+/// - Panics if `SV step must not fail`.
+///
 #[test]
 fn test_minnaert_period() {
     let r0 = 10e-6; // 10 µm

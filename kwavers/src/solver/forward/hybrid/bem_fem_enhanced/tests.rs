@@ -5,14 +5,14 @@ use super::types::{InterfaceQuality, ValidationResult};
 #[test]
 fn test_enhanced_config_default() {
     let config = EnhancedBemFemConfig::default();
-    assert!(config.burton_miller_config.is_some());
+    assert!(config.burton_miller_config.as_ref().unwrap().wavenumber > 0.0);
     assert!(config.adaptive_refinement);
 }
 
 #[test]
 fn test_enhanced_config_sphere_validation() {
     let config = EnhancedBemFemConfig::for_sphere_validation(0.1, 1000.0);
-    assert!(config.burton_miller_config.is_some());
+    assert!(config.burton_miller_config.as_ref().unwrap().frequency > 0.0);
     assert!(config.adaptive_refinement);
     assert_eq!(
         config.validation_frequencies.as_ref().map(|f| f.len()),

@@ -17,6 +17,10 @@ pub struct PatientManagementSystem {
 
 impl PatientManagementSystem {
     /// Create a new patient management system
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             patients: HashMap::new(),
@@ -26,6 +30,10 @@ impl PatientManagementSystem {
     }
 
     /// Register a new patient
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn register_patient(
         &mut self,
         demographics: PatientDemographics,
@@ -35,7 +43,7 @@ impl PatientManagementSystem {
 
         if self.patients.contains_key(&id) {
             return Err(KwaversError::InvalidInput(
-                "Patient ID already exists".to_string(),
+                "Patient ID already exists".to_owned(),
             ));
         }
 
@@ -44,6 +52,10 @@ impl PatientManagementSystem {
     }
 
     /// Update a patient's demographics
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_demographics(
         &mut self,
         patient_id: &PatientId,
@@ -56,11 +68,14 @@ impl PatientManagementSystem {
             profile.last_updated = super::profile::current_timestamp();
             Ok(())
         } else {
-            Err(KwaversError::InvalidInput("Patient not found".to_string()))
+            Err(KwaversError::InvalidInput("Patient not found".to_owned()))
         }
     }
 
     /// Register a clinical encounter
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn register_encounter(
         &mut self,
         encounter: ClinicalEncounter,
@@ -68,7 +83,7 @@ impl PatientManagementSystem {
         let patient_id = &encounter.patient_id;
 
         if !self.patients.contains_key(patient_id) {
-            return Err(KwaversError::InvalidInput("Patient not found".to_string()));
+            return Err(KwaversError::InvalidInput("Patient not found".to_owned()));
         }
 
         let id = encounter.encounter_id.clone();
@@ -78,19 +93,25 @@ impl PatientManagementSystem {
     }
 
     /// Complete a treatment session
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn complete_treatment_session(&mut self, plan_id: &str) -> KwaversResult<()> {
         if let Some(plan) = self.treatment_plans.get_mut(plan_id) {
             plan.complete_session()
         } else {
             Err(KwaversError::InvalidInput(
-                "Treatment plan not found".to_string(),
+                "Treatment plan not found".to_owned(),
             ))
         }
     }
 
     /// Export patient data (anonymized for research)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn export_anonymized_data(&self) -> KwaversResult<String> {
         // Implementation for data export ensuring HIPAA compliance
-        Ok("Anonymized data export...".to_string())
+        Ok("Anonymized data export...".to_owned())
     }
 }

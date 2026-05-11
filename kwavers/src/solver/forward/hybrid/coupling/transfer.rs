@@ -10,9 +10,6 @@ use std::collections::HashMap;
 pub struct TransferOperators {
     /// Operators for each field type
     operators: HashMap<String, TransferOperator>,
-    /// Interface geometry
-    #[allow(dead_code)]
-    geometry: InterfaceGeometry,
 }
 
 /// Individual transfer operator
@@ -28,34 +25,37 @@ pub struct TransferOperator {
 
 impl TransferOperators {
     /// Create new transfer operators
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(geometry: &InterfaceGeometry) -> KwaversResult<Self> {
         let mut operators = HashMap::new();
 
         // Create operators for standard fields
         operators.insert(
-            "pressure".to_string(),
+            "pressure".to_owned(),
             Self::create_operator(geometry, "pressure")?,
         );
         operators.insert(
-            "velocity_x".to_string(),
+            "velocity_x".to_owned(),
             Self::create_operator(geometry, "velocity_x")?,
         );
         operators.insert(
-            "velocity_y".to_string(),
+            "velocity_y".to_owned(),
             Self::create_operator(geometry, "velocity_y")?,
         );
         operators.insert(
-            "velocity_z".to_string(),
+            "velocity_z".to_owned(),
             Self::create_operator(geometry, "velocity_z")?,
         );
 
-        Ok(Self {
-            operators,
-            geometry: geometry.clone(),
-        })
+        Ok(Self { operators })
     }
 
     /// Create a transfer operator for a specific field
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn create_operator(
         geometry: &InterfaceGeometry,
         field_type: &str,
@@ -75,6 +75,9 @@ impl TransferOperators {
     }
 
     /// Generate source and target indices
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn generate_indices(
         geometry: &InterfaceGeometry,
         _field_type: &str,
@@ -116,9 +119,9 @@ impl TransferOperators {
             }
             _ => {
                 return Err(ValidationError::FieldValidation {
-                    field: "normal_direction".to_string(),
+                    field: "normal_direction".to_owned(),
                     value: format!("{}", geometry.normal_direction),
-                    constraint: "Must be 0, 1, or 2".to_string(),
+                    constraint: "Must be 0, 1, or 2".to_owned(),
                 }
                 .into());
             }
@@ -128,6 +131,9 @@ impl TransferOperators {
     }
 
     /// Apply transfer operators to fields
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply(&self, source: &Array3<f64>, target: &mut Array3<f64>) -> KwaversResult<()> {
         // Apply pressure transfer operator
         if let Some(op) = self.operators.get("pressure") {
@@ -138,6 +144,9 @@ impl TransferOperators {
     }
 
     /// Apply a single transfer operator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_operator(
         operator: &TransferOperator,
         source: &Array3<f64>,

@@ -25,6 +25,7 @@ pub struct SafetyMonitor {
 
 impl SafetyMonitor {
     /// Create new safety monitor
+    #[must_use] 
     pub fn new(grid_dims: (usize, usize, usize), perfusion_rate: f64, frequency: f64) -> Self {
         let temperature = Array3::from_elem(grid_dims, 37.0); // Body temperature
         let pressure = Array3::zeros(grid_dims);
@@ -53,6 +54,9 @@ impl SafetyMonitor {
     }
 
     /// Update safety monitoring with new field data
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_fields(
         &mut self,
         temperature: &Array3<f64>,

@@ -21,17 +21,17 @@ impl CoordinateSystem {
 
     /// Generate x-coordinate vector
     pub fn generate_x_vector(grid: &Grid) -> Array1<f64> {
-        Array1::from_shape_fn(grid.nx, |i| grid.origin[0] + i as f64 * grid.dx)
+        Array1::from_shape_fn(grid.nx, |i| (i as f64).mul_add(grid.dx, grid.origin[0]))
     }
 
     /// Generate y-coordinate vector
     pub fn generate_y_vector(grid: &Grid) -> Array1<f64> {
-        Array1::from_shape_fn(grid.ny, |j| grid.origin[1] + j as f64 * grid.dy)
+        Array1::from_shape_fn(grid.ny, |j| (j as f64).mul_add(grid.dy, grid.origin[1]))
     }
 
     /// Generate z-coordinate vector
     pub fn generate_z_vector(grid: &Grid) -> Array1<f64> {
-        Array1::from_shape_fn(grid.nz, |k| grid.origin[2] + k as f64 * grid.dz)
+        Array1::from_shape_fn(grid.nz, |k| (k as f64).mul_add(grid.dz, grid.origin[2]))
     }
 
     /// Generate 3D coordinate arrays
@@ -43,9 +43,9 @@ impl CoordinateSystem {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    x_coords[[i, j, k]] = grid.origin[0] + i as f64 * grid.dx;
-                    y_coords[[i, j, k]] = grid.origin[1] + j as f64 * grid.dy;
-                    z_coords[[i, j, k]] = grid.origin[2] + k as f64 * grid.dz;
+                    x_coords[[i, j, k]] = (i as f64).mul_add(grid.dx, grid.origin[0]);
+                    y_coords[[i, j, k]] = (j as f64).mul_add(grid.dy, grid.origin[1]);
+                    z_coords[[i, j, k]] = (k as f64).mul_add(grid.dz, grid.origin[2]);
                 }
             }
         }
@@ -109,9 +109,9 @@ impl CoordinateSystem {
             None
         } else {
             Some((
-                grid.origin[0] + (i as f64 + 0.5) * grid.dx,
-                grid.origin[1] + (j as f64 + 0.5) * grid.dy,
-                grid.origin[2] + (k as f64 + 0.5) * grid.dz,
+                (i as f64 + 0.5).mul_add(grid.dx, grid.origin[0]),
+                (j as f64 + 0.5).mul_add(grid.dy, grid.origin[1]),
+                (k as f64 + 0.5).mul_add(grid.dz, grid.origin[2]),
             ))
         }
     }
@@ -121,9 +121,9 @@ impl CoordinateSystem {
         x >= grid.origin[0]
             && y >= grid.origin[1]
             && z >= grid.origin[2]
-            && x < grid.origin[0] + grid.nx as f64 * grid.dx
-            && y < grid.origin[1] + grid.ny as f64 * grid.dy
-            && z < grid.origin[2] + grid.nz as f64 * grid.dz
+            && x < (grid.nx as f64).mul_add(grid.dx, grid.origin[0])
+            && y < (grid.ny as f64).mul_add(grid.dy, grid.origin[1])
+            && z < (grid.nz as f64).mul_add(grid.dz, grid.origin[2])
     }
 
     /// Generate centered coordinate vector for a given dimension
@@ -134,7 +134,7 @@ impl CoordinateSystem {
             Dimension::Z => (grid.nz, grid.dz, grid.origin[2]),
         };
         let length = n as f64 * d;
-        Array1::from_shape_fn(n, |i| o + (i as f64 * d) - length / 2.0 + d / 2.0)
+        Array1::from_shape_fn(n, |i| (i as f64).mul_add(d, o) - length / 2.0 + d / 2.0)
     }
 
     /// Generate 3D centered coordinate arrays
@@ -156,9 +156,9 @@ impl CoordinateSystem {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    x_coords[[i, j, k]] = origin[0] + i as f64 * dx - lx / 2.0 + dx / 2.0;
-                    y_coords[[i, j, k]] = origin[1] + j as f64 * dy - ly / 2.0 + dy / 2.0;
-                    z_coords[[i, j, k]] = origin[2] + k as f64 * dz - lz / 2.0 + dz / 2.0;
+                    x_coords[[i, j, k]] = (i as f64).mul_add(dx, origin[0]) - lx / 2.0 + dx / 2.0;
+                    y_coords[[i, j, k]] = (j as f64).mul_add(dy, origin[1]) - ly / 2.0 + dy / 2.0;
+                    z_coords[[i, j, k]] = (k as f64).mul_add(dz, origin[2]) - lz / 2.0 + dz / 2.0;
                 }
             }
         }

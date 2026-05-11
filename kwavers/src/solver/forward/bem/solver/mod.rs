@@ -80,7 +80,6 @@ pub struct BemSolver {
     /// Boundary triangles (vertex index triples, CCW outward winding)
     pub triangles: Vec<[usize; 3]>,
     /// Map from global mesh node index to local BEM node index
-    #[allow(dead_code)]
     pub(self) global_to_local_node: HashMap<usize, usize>,
     /// Boundary condition manager
     pub(self) boundary_manager: BemBoundaryManager,

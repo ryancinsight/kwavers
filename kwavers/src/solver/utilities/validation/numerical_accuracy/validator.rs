@@ -4,6 +4,12 @@ use crate::domain::medium::HomogeneousMedium;
 
 impl NumericalValidator {
     /// Create new validator with default test configuration
+    /// # Panics
+    /// - Panics if `Failed to create test grid`.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Failed to create test grid");
@@ -12,11 +18,17 @@ impl NumericalValidator {
     }
 
     /// Create validator with custom grid and medium
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_config(grid: Grid, medium: HomogeneousMedium) -> Self {
         Self { grid, medium }
     }
 
     /// Run comprehensive validation suite
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_all(&self) -> Result<ValidationResults, Box<dyn std::error::Error>> {
         let dispersion_tests = self.validate_dispersion()?;
         let stability_tests = self.validate_stability()?;

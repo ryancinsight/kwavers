@@ -6,6 +6,9 @@ use ndarray::Array2;
 
 impl SpectralCouplingInterface {
     /// Create spectral coupling interface
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         pstd_grid: &Grid,
         sem_mesh: &TetrahedralMesh,
@@ -19,16 +22,11 @@ impl SpectralCouplingInterface {
         let projection_matrix =
             Self::compute_projection_matrix(&pstd_points, &sem_nodes, pstd_grid, sem_mesh, config)?;
 
-        let (quadrature_points, quadrature_weights) =
-            Self::setup_interface_quadrature(&pstd_points, pstd_grid)?;
-
         Ok(Self {
             pstd_interface_points: pstd_points,
             sem_interface_nodes: sem_nodes,
             modal_transform,
             projection_matrix,
-            quadrature_points,
-            quadrature_weights,
         })
     }
 
@@ -53,7 +51,7 @@ impl SpectralCouplingInterface {
                         let dx = x - node.coordinates[0];
                         let dy = y - node.coordinates[1];
                         let dz = z - node.coordinates[2];
-                        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                        let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                         if distance < min_distance {
                             min_distance = distance;
@@ -77,7 +75,7 @@ impl SpectralCouplingInterface {
 
         if pstd_points.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "No interface points found between PSTD and SEM domains".to_string(),
+                "No interface points found between PSTD and SEM domains".to_owned(),
             ));
         }
 
@@ -155,7 +153,7 @@ impl SpectralCouplingInterface {
             let dx = x - node.coordinates[0];
             let dy = y - node.coordinates[1];
             let dz = z - node.coordinates[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             let sigma = config.coupling_order as f64 * 0.1;
             let weight = if distance < 1e-12 {
@@ -193,7 +191,7 @@ impl SpectralCouplingInterface {
             let dx = x - px;
             let dy = y - py;
             let dz = z - pz;
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             let sigma = config.coupling_order as f64 * 0.1;
             let weight = if distance < 1e-12 {
@@ -215,19 +213,4 @@ impl SpectralCouplingInterface {
         Ok(weights)
     }
 
-    fn setup_interface_quadrature(
-        pstd_points: &[(usize, usize, usize)],
-        pstd_grid: &Grid,
-    ) -> KwaversResult<(Vec<(f64, f64, f64)>, Vec<f64>)> {
-        let mut points = Vec::new();
-        let mut weights = Vec::new();
-
-        for &(i, j, k) in pstd_points {
-            let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
-            points.push((x, y, z));
-            weights.push(1.0 / pstd_points.len() as f64);
-        }
-
-        Ok((points, weights))
-    }
 }

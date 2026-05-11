@@ -16,7 +16,7 @@ impl KZKSolver {
         self.pressure.mapv(|c| c.re)
     }
 
-    /// Return the physical pressure waveform p(τ) [Pa] at transverse point (x, y).
+    /// Return the physical pressure waveform p(τ) (Pa) at transverse point (x, y).
     ///
     /// Returns `Re[pressure[x, y, 0..nt]]`.
     #[must_use]
@@ -28,9 +28,9 @@ impl KZKSolver {
         signal
     }
 
-    /// Calculate time-averaged acoustic intensity I = p²_rms / (ρ₀c₀) [W/m²].
+    /// Calculate time-averaged acoustic intensity I = p²_rms / (ρ₀c₀) (W/m²).
     ///
-    /// Uses the physical (real) pressure: I(i,j) = ⟨Re[p]²⟩_τ / (ρ₀c₀).
+    /// Uses the physical (real) pressure: `I(i,j) = ⟨Re[p]²⟩_τ / (ρ₀c₀)`.
     #[must_use]
     pub fn get_intensity(&self) -> Array2<f64> {
         let mut intensity = Array2::zeros((self.config.nx, self.config.ny));
@@ -50,7 +50,7 @@ impl KZKSolver {
         intensity
     }
 
-    /// Calculate peak positive pressure field max_τ |Re[p(x,y,τ)]| [Pa].
+    /// Calculate peak positive pressure field max_τ |Re[p(x,y,τ)]| (Pa).
     #[must_use]
     pub fn get_peak_pressure(&self) -> Array2<f64> {
         let mut peak = Array2::zeros((self.config.nx, self.config.ny));

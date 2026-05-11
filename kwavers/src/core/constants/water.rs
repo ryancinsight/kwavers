@@ -57,11 +57,7 @@ impl WaterProperties {
     #[must_use]
     pub fn density(temperature: f64) -> f64 {
         let t = temperature;
-        Self::JONES_A
-            + Self::JONES_B * t
-            + Self::JONES_C * t.powi(2)
-            + Self::JONES_D * t.powi(3)
-            + Self::JONES_E * t.powi(4)
+        Self::JONES_E.mul_add(t.powi(4), Self::JONES_D.mul_add(t.powi(3), Self::JONES_C.mul_add(t.powi(2), Self::JONES_B.mul_add(t, Self::JONES_A))))
     }
 
     /// Calculate water sound speed as function of temperature.
@@ -77,12 +73,7 @@ impl WaterProperties {
     #[must_use]
     pub fn sound_speed(temperature: f64) -> f64 {
         let t = temperature;
-        Self::SOUND_SPEED_C0
-            + Self::SOUND_SPEED_C1 * t
-            + Self::SOUND_SPEED_C2 * t.powi(2)
-            + Self::SOUND_SPEED_C3 * t.powi(3)
-            + Self::SOUND_SPEED_C4 * t.powi(4)
-            + Self::SOUND_SPEED_C5 * t.powi(5)
+        Self::SOUND_SPEED_C5.mul_add(t.powi(5), Self::SOUND_SPEED_C4.mul_add(t.powi(4), Self::SOUND_SPEED_C3.mul_add(t.powi(3), Self::SOUND_SPEED_C2.mul_add(t.powi(2), Self::SOUND_SPEED_C1.mul_add(t, Self::SOUND_SPEED_C0)))))
     }
 
     /// Calculate water nonlinear parameter B/A as function of temperature.
@@ -98,11 +89,7 @@ impl WaterProperties {
     #[must_use]
     pub fn nonlinear_parameter(temperature: f64) -> f64 {
         let t = temperature;
-        Self::BEYER_BA_C0
-            + Self::BEYER_BA_C1 * t
-            + Self::BEYER_BA_C2 * t.powi(2)
-            + Self::BEYER_BA_C3 * t.powi(3)
-            + Self::BEYER_BA_C4 * t.powi(4)
+        Self::BEYER_BA_C4.mul_add(t.powi(4), Self::BEYER_BA_C3.mul_add(t.powi(3), Self::BEYER_BA_C2.mul_add(t.powi(2), Self::BEYER_BA_C1.mul_add(t, Self::BEYER_BA_C0))))
     }
 
     /// Calculate ultrasonic absorption in distilled water.
@@ -136,14 +123,7 @@ impl WaterProperties {
         ];
 
         let t = temperature;
-        let a_on_fsqr = (A[0]
-            + A[1] * t
-            + A[2] * t.powi(2)
-            + A[3] * t.powi(3)
-            + A[4] * t.powi(4)
-            + A[5] * t.powi(5)
-            + A[6] * t.powi(6)
-            + A[7] * t.powi(7))
+        let a_on_fsqr = A[7].mul_add(t.powi(7), A[6].mul_add(t.powi(6), A[5].mul_add(t.powi(5), A[4].mul_add(t.powi(4), A[3].mul_add(t.powi(3), A[2].mul_add(t.powi(2), A[1].mul_add(t, A[0])))))))
             * 1e-17;
 
         NEPER2DB * 1e12 * frequency_mhz * frequency_mhz * a_on_fsqr
@@ -166,23 +146,23 @@ impl WaterProperties {
 
         // Boric acid contribution
         let f1 = 0.78 * (s / 35.0).sqrt() * (t / 26.0).exp();
-        let a1 = 8.86 / WaterProperties::sound_speed(t) * 10.0_f64.powf(0.78 * ph - 5.0);
+        let a1 = 8.86 / Self::sound_speed(t) * 10.0_f64.powf(0.78f64.mul_add(ph, -5.0));
         let p1 = 1.0;
         let boric = a1 * p1 * f1 * f * f / (f1 * f1 + f * f);
 
         // Magnesium sulfate contribution
         let f2 = 42.0 * (t / 17.0).exp();
-        let a2 = 21.44 * s / WaterProperties::sound_speed(t) * (1.0 + 0.025 * t);
-        let p2 = 1.0 - 1.37e-4 * d + 6.2e-9 * d * d;
+        let a2 = 21.44 * s / Self::sound_speed(t) * 0.025f64.mul_add(t, 1.0);
+        let p2 = (6.2e-9 * d).mul_add(d, 1.37e-4f64.mul_add(-d, 1.0));
         let magnesium = a2 * p2 * f2 * f * f / (f2 * f2 + f * f);
 
         // Pure water contribution
         let a3 = if t <= 20.0 {
-            4.937e-4 - 2.59e-5 * t + 9.11e-7 * t * t - 1.50e-8 * t * t * t
+            (1.50e-8 * t * t).mul_add(-t, (9.11e-7 * t).mul_add(t, 2.59e-5f64.mul_add(-t, 4.937e-4)))
         } else {
-            3.964e-4 - 1.146e-5 * t + 1.45e-7 * t * t - 6.5e-10 * t * t * t
+            (6.5e-10 * t * t).mul_add(-t, (1.45e-7 * t).mul_add(t, 1.146e-5f64.mul_add(-t, 3.964e-4)))
         };
-        let p3 = 1.0 - 3.83e-5 * d + 4.9e-10 * d * d;
+        let p3 = (4.9e-10 * d).mul_add(d, 3.83e-5f64.mul_add(-d, 1.0));
         let water = a3 * p3 * f * f;
 
         // Total absorption in dB/km, convert to Np/m

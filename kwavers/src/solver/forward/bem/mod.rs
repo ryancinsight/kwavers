@@ -8,7 +8,7 @@
 //!
 //! - [`solver`] — Core `BemSolver` struct, system assembly, and solve logic
 //! - [`field`] — Post-processing: vertex normals, incident wave fields, `BemSolution`
-//! - [`geometry`] — Triangle geometry utilities (distance, barycentric coords)
+//! - `geometry` — Triangle geometry utilities (distance, barycentric coords)
 //! - [`integrals`] — Numerical quadrature for boundary integrals (singular, near-field, far-field)
 //! - [`gmres`] — Preconditioned GMRES iterative solver (Saad & Schultz 1986)
 //! - [`green`] — Helmholtz Green's function and derivatives (SSOT)

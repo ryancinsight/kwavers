@@ -14,6 +14,7 @@ pub struct ModelRegularizer3D {
 
 impl ModelRegularizer3D {
     /// Create new regularizer from configuration
+    #[must_use] 
     pub fn new(config: RegularizationConfig) -> Self {
         Self { config }
     }
@@ -44,7 +45,7 @@ impl ModelRegularizer3D {
     /// Apply Tikhonov (L2) regularization
     /// Penalizes large model values: grad_reg = λ·m
     fn apply_tikhonov(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
-        Zip::from(gradient).and(model).for_each(|g, &m| {
+        Zip::from(gradient).and(model).par_for_each(|g, &m| {
             *g += self.config.tikhonov_weight * m;
         });
     }
@@ -62,10 +63,9 @@ impl ModelRegularizer3D {
                     let dy = model[[i, j + 1, k]] - model[[i, j, k]];
                     let dz = model[[i, j, k + 1]] - model[[i, j, k]];
 
-                    let grad_norm = (dx * dx + dy * dy + dz * dz + eps).sqrt();
+                    let grad_norm = (dz.mul_add(dz, dx.mul_add(dx, dy * dy)) + eps).sqrt();
 
-                    let tv_term = (3.0 * model[[i, j, k]]
-                        - model[[i + 1, j, k]]
+                    let tv_term = (3.0f64.mul_add(model[[i, j, k]], -model[[i + 1, j, k]])
                         - model[[i, j + 1, k]]
                         - model[[i, j, k + 1]])
                         / grad_norm;
@@ -85,18 +85,16 @@ impl ModelRegularizer3D {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    laplacian[[i, j, k]] = gradient[[i + 1, j, k]]
+                    laplacian[[i, j, k]] = 6.0f64.mul_add(-gradient[[i, j, k]], gradient[[i + 1, j, k]]
                         + gradient[[i - 1, j, k]]
                         + gradient[[i, j + 1, k]]
                         + gradient[[i, j - 1, k]]
-                        + gradient[[i, j, k + 1]]
-                        + gradient[[i, j, k - 1]]
-                        - 6.0 * gradient[[i, j, k]];
+                        + gradient[[i, j, k + 1]] + gradient[[i, j, k - 1]]);
                 }
             }
         }
 
-        Zip::from(gradient).and(&laplacian).for_each(|g, &lap| {
+        Zip::from(gradient).and(&laplacian).par_for_each(|g, &lap| {
             *g += self.config.smoothness_weight * lap;
         });
     }
@@ -104,7 +102,7 @@ impl ModelRegularizer3D {
     /// Apply L1 (Lasso) regularization
     /// Sparsity-promoting penalty: grad_reg = λ·sign(m)
     fn apply_l1(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
-        Zip::from(gradient).and(model).for_each(|g, &m| {
+        Zip::from(gradient).and(model).par_for_each(|g, &m| {
             *g += self.config.l1_weight * m.signum();
         });
     }

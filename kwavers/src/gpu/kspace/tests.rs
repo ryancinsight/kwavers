@@ -4,6 +4,9 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Zero shift must be the identity: output equals input.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_zero_shift_is_identity() {
     let (nx, ny, nz) = (4, 4, 4);
@@ -29,6 +32,9 @@ fn test_zero_shift_is_identity() {
 }
 
 /// Phase shift by 2π must be the identity.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_full_cycle_shift_is_identity() {
     let (nx, ny, nz) = (4, 1, 1);
@@ -53,6 +59,9 @@ fn test_full_cycle_shift_is_identity() {
 /// Quarter-cycle (π/2) shift on real-only spectrum gives pure imaginary output.
 ///
 /// exp(−i·(k·π/2)) for k = 1 rad/m, shift = π/2 m: phase = -π/2
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_quarter_cycle_shift() {
     let (nx, ny, nz) = (1, 1, 1);
@@ -74,6 +83,9 @@ fn test_quarter_cycle_shift() {
 }
 
 /// apply_shift and apply_shift_into produce identical output.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_into_matches_alloc() {
     let (nx, ny, nz) = (4, 3, 3);
@@ -103,6 +115,9 @@ fn test_into_matches_alloc() {
 }
 
 /// Magnitude is preserved by a unitary phase rotation.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_magnitude_preserved() {
     let (nx, ny, nz) = (3, 3, 3);
@@ -130,12 +145,18 @@ fn test_magnitude_preserved() {
 }
 
 /// Zero grid dimension returns an error.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_zero_dimension_error() {
     assert!(KspaceShiftGpu::new(0, 4, 4).is_err());
 }
 
 /// The `kspace_shift.wgsl` shader must declare the correct entry point and bindings.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_kspace_shift_wgsl_shader_content() {
     let src = include_str!("../shaders/kspace_shift.wgsl");
@@ -162,6 +183,9 @@ fn test_kspace_shift_wgsl_shader_content() {
 }
 
 /// `ShiftParams` pod layout: 6 fields × 4 bytes = 24 bytes, no padding.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_kspace_shift_params_pod_layout() {
     #[repr(C)]
@@ -179,6 +203,9 @@ fn test_kspace_shift_params_pod_layout() {
 }
 
 /// Wavenumber vector length mismatch returns an error.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_kv_length_mismatch_error() {
     let (nx, ny, nz) = (4, 4, 4);

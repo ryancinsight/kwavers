@@ -11,6 +11,10 @@ use ndarray::Array3;
 pub struct LineSensorFftReconstruction;
 
 impl LineSensorFftReconstruction {
+    /// Reconstruct.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn reconstruct(
         &self,
         scenario: &PhotoacousticScenario,

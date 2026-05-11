@@ -11,8 +11,6 @@ pub struct BayesianFilter {
     pub(super) state: [f64; 6],
     /// State covariance **P** ∈ ℝ^(6×6), stored row-major
     pub(super) covariance: Vec<f64>,
-    #[allow(dead_code)]
-    last_update_time: f64,
 }
 
 impl BayesianFilter {
@@ -20,17 +18,21 @@ impl BayesianFilter {
     ///
     /// Position diagonal: σ₀² (`initial_uncertainty²`)
     /// Velocity diagonal: 0.01 m²/s² (modest velocity prior)
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: &KalmanFilterConfig) -> KwaversResult<Self> {
         config.config.validate()?;
 
         if !config.process_noise.is_finite() || config.process_noise <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Invalid process noise".to_string(),
+                "Invalid process noise".to_owned(),
             ));
         }
         if !config.measurement_noise.is_finite() || config.measurement_noise <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Invalid measurement noise".to_string(),
+                "Invalid measurement noise".to_owned(),
             ));
         }
 
@@ -46,7 +48,6 @@ impl BayesianFilter {
             config: config.clone(),
             state: [0.0; 6],
             covariance,
-            last_update_time: 0.0,
         })
     }
 
@@ -58,8 +59,10 @@ impl BayesianFilter {
     /// F = [I₃  dt·I₃]    Q = q·diag(dt³/3 ×3, dt ×3)
     ///     [0₃   I₃  ]
     /// ```
-    #[allow(dead_code)]
-    pub(super) fn predict(&mut self, dt: f64) -> KwaversResult<()> {
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    pub fn predict(&mut self, dt: f64) -> KwaversResult<()> {
         if dt <= 0.0 {
             return Ok(());
         }
@@ -76,9 +79,9 @@ impl BayesianFilter {
                 let p_vp = p[(i + 3) * 6 + j];
                 let p_vv = p[(i + 3) * 6 + (j + 3)];
 
-                p[i * 6 + j] = p_pp + dt * (p_pv + p_vp) + dt * dt * p_vv;
-                p[i * 6 + (j + 3)] = p_pv + dt * p_vv;
-                p[(i + 3) * 6 + j] = p_vp + dt * p_vv;
+                p[i * 6 + j] = (dt * dt).mul_add(p_vv, dt.mul_add(p_pv + p_vp, p_pp));
+                p[i * 6 + (j + 3)] = dt.mul_add(p_vv, p_pv);
+                p[(i + 3) * 6 + j] = dt.mul_add(p_vv, p_vp);
             }
         }
 
@@ -88,7 +91,6 @@ impl BayesianFilter {
             p[(i + 3) * 6 + (i + 3)] += q * dt;
         }
 
-        self.last_update_time += dt;
         Ok(())
     }
 
@@ -101,8 +103,13 @@ impl BayesianFilter {
     /// 4. State update: x̂ += K · ỹ
     /// 5. Covariance update (Joseph form):
     ///    P = (I − K·H)·P·(I − K·H)ᵀ + K·R·Kᵀ
-    #[allow(dead_code)]
-    pub(super) fn update(&mut self, measurement: &[f64; 3]) -> KwaversResult<()> {
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    pub fn update(&mut self, measurement: &[f64; 3]) -> KwaversResult<()> {
         let innovation = [
             measurement[0] - self.state[0],
             measurement[1] - self.state[1],
@@ -134,9 +141,7 @@ impl BayesianFilter {
         let k: [f64; 18] = mat6x3_mul_mat3x3(&p_ht, &s_inv);
 
         for i in 0..6 {
-            self.state[i] += k[i * 3] * innovation[0]
-                + k[i * 3 + 1] * innovation[1]
-                + k[i * 3 + 2] * innovation[2];
+            self.state[i] += k[i * 3 + 2].mul_add(innovation[2], k[i * 3].mul_add(innovation[0], k[i * 3 + 1] * innovation[1]));
         }
 
         let p_old: [f64; 36] = self.covariance[..36].try_into().unwrap();
@@ -176,11 +181,14 @@ impl BayesianFilter {
     }
 
     /// Get current position estimate [x, y, z] \[m\].
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn get_state(&self) -> [f64; 3] {
         [self.state[0], self.state[1], self.state[2]]
     }
 
-    #[allow(dead_code)]
     fn get_uncertainty(&self) -> f64 {
         self.covariance[0].max(0.0).sqrt()
     }

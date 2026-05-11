@@ -40,6 +40,9 @@ fn test_air_properties() {
 ///   c_s = sqrt(μ / ρ)          ⇒   μ      = ρ·c_s²
 ///
 /// Test medium uses k-Wave example values (cp=1500, cs=800, ρ=1200).
+/// # Panics
+/// - Panics if `elastic_homogeneous must succeed for valid speeds`.
+///
 #[test]
 fn test_elastic_homogeneous_lame_inversion_satisfies_dispersion() {
     let grid = Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).unwrap();
@@ -72,6 +75,9 @@ fn test_elastic_homogeneous_lame_inversion_satisfies_dispersion() {
 /// Fluid limit: c_s = 0 must yield μ = 0 and λ = ρ·c_p² (acoustic bulk
 /// modulus). Verifies that an elastic medium with zero shear support
 /// reduces to a fluid identically.
+/// # Panics
+/// - Panics if `c_s = 0 must be permitted (fluid limit)`.
+///
 #[test]
 fn test_elastic_homogeneous_fluid_limit_zero_shear_speed() {
     let grid = Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).unwrap();
@@ -93,6 +99,9 @@ fn test_elastic_homogeneous_fluid_limit_zero_shear_speed() {
 /// Stability bound: c_s > c_p / √2 violates λ ≥ 0 (Poisson ratio ν < 0
 /// auxetic regime is rejected by `elastic_homogeneous`). The constructor
 /// must return `None` rather than producing an unstable medium.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_elastic_homogeneous_rejects_unstable_speeds() {
     let grid = Grid::new(4, 4, 4, 1e-4, 1e-4, 1e-4).unwrap();
@@ -112,6 +121,9 @@ fn test_elastic_homogeneous_rejects_unstable_speeds() {
 
 /// `set_lame_parameters` must reject non-finite, negative-μ, or negative-λ
 /// values; valid pairs must be applied verbatim.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_set_lame_parameters_validation_and_assignment() {
     let grid = Grid::new(4, 4, 4, 1e-4, 1e-4, 1e-4).unwrap();

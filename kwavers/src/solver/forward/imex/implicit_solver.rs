@@ -7,6 +7,9 @@ use std::fmt::Debug;
 /// Trait for implicit solvers
 pub trait ImplicitSolver: Debug + Send + Sync {
     /// Solve the implicit equation: F(y) = 0
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn solve<F>(&self, initial_guess: &Array3<f64>, residual_fn: F) -> KwaversResult<Array3<f64>>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>;
@@ -36,6 +39,9 @@ impl Default for LinearSolver {
 
 impl LinearSolver {
     /// Create a new linear solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(tolerance: f64, max_iterations: usize) -> Self {
         Self {
@@ -73,7 +79,7 @@ impl ImplicitSolver for LinearSolver {
 
         Err(KwaversError::Physics(
             crate::core::error::PhysicsError::ConvergenceFailure {
-                solver: "LinearSolver".to_string(),
+                solver: "LinearSolver".to_owned(),
                 iterations: self.max_iterations,
                 residual: last_norm,
             },
@@ -122,6 +128,9 @@ impl NonlinearSolver {
     }
 
     /// Set whether to use line search
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn with_line_search(mut self, line_search: bool) -> Self {
         self.line_search = line_search;
@@ -129,6 +138,9 @@ impl NonlinearSolver {
     }
 
     /// Approximate Jacobian-vector product using finite differences
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn jacobian_vector_product<F>(
         &self,
         y: &Array3<f64>,
@@ -158,6 +170,9 @@ impl NonlinearSolver {
     }
 
     /// Solve linear system using GMRES-like iteration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn solve_linear_system<F>(
         &self,
         y: &Array3<f64>,
@@ -197,7 +212,7 @@ impl NonlinearSolver {
             let beta = r_norm_sq_next / r_norm_sq;
             Zip::from(&mut p)
                 .and(&r)
-                .for_each(|pi, &ri| *pi = ri + beta * *pi);
+                .for_each(|pi, &ri| *pi = beta.mul_add(*pi, ri));
         }
 
         Ok(delta)
@@ -253,7 +268,7 @@ impl ImplicitSolver for NonlinearSolver {
 
         Err(KwaversError::Physics(
             crate::core::error::PhysicsError::ConvergenceFailure {
-                solver: "NonlinearSolver".to_string(),
+                solver: "NonlinearSolver".to_owned(),
                 iterations: self.max_iterations,
                 residual: last_norm,
             },

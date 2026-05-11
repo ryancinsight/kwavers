@@ -118,6 +118,9 @@ impl VisualizationConfig {
     }
 
     /// Create a configuration for debugging
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn debug() -> Self {
         Self {
             target_fps: LOW_TARGET_FPS,
@@ -133,6 +136,9 @@ impl VisualizationConfig {
     }
 
     /// Validate configuration parameters
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.target_fps <= 0.0 {
             return Err(crate::core::error::KwaversError::Validation(

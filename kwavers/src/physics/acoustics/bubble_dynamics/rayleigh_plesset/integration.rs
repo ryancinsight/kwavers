@@ -7,6 +7,9 @@ use crate::core::error::KwaversResult;
 ///
 /// This is the recommended integration method that uses adaptive time-stepping
 /// with sub-cycling to handle the stiff nature of bubble dynamics equations.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn integrate_bubble_dynamics_stable(
     solver: &crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel,
     state: &mut BubbleState,

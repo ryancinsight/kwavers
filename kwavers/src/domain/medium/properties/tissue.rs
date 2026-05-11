@@ -298,11 +298,15 @@ mod tests {
 
     #[test]
     fn test_tissue_properties_valid() {
-        assert!(WATER.validate().is_ok());
-        assert!(BRAIN_WHITE_MATTER.validate().is_ok());
-        assert!(SKULL.validate().is_ok());
-        assert!(LIVER.validate().is_ok());
-        assert!(BLOOD.validate().is_ok());
+        for (tissue, name) in [
+            (&WATER, "WATER"),
+            (&BRAIN_WHITE_MATTER, "BRAIN_WHITE_MATTER"),
+            (&SKULL, "SKULL"),
+            (&LIVER, "LIVER"),
+            (&BLOOD, "BLOOD"),
+        ] {
+            tissue.validate().unwrap_or_else(|e| panic!("{name} validation failed: {e:?}"));
+        }
     }
 
     #[test]

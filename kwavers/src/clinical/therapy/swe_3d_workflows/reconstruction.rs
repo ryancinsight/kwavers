@@ -70,6 +70,7 @@ impl MultiPlanarReconstruction {
     }
 
     /// Get slice at specific position and orientation.
+    #[must_use] 
     pub fn get_slice(
         &self,
         position: f64,
@@ -147,8 +148,10 @@ mod tests {
         assert!(!mpr.coronal_slices.is_empty());
 
         let first_axial_pos = mpr.slice_positions.axial[0];
-        let axial_slice = mpr.get_slice(first_axial_pos, SliceOrientation::Axial);
-        assert!(axial_slice.is_some());
+        let axial_slice = mpr
+            .get_slice(first_axial_pos, SliceOrientation::Axial)
+            .unwrap();
+        assert!(!axial_slice.young_modulus.is_empty());
     }
 
     #[test]

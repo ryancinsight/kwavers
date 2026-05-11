@@ -21,9 +21,9 @@ pub struct AcousticElasticCoupler {
     pub interface_mask: Array3<bool>,
     /// Fluid density [kg/m³]
     pub fluid_density: f64,
-    /// Fluid sound speed [m/s]
+    /// Fluid sound speed (m/s)
     pub fluid_sound_speed: f64,
-    /// Solid longitudinal wave speed [m/s]
+    /// Solid longitudinal wave speed (m/s)
     pub solid_c_longitudinal: f64,
     /// CFL safety factor
     pub cfl: f64,
@@ -31,6 +31,9 @@ pub struct AcousticElasticCoupler {
 
 impl AcousticElasticCoupler {
     /// Create a new coupler. The normal vector is automatically normalized.
+    /// # Errors
+    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    ///
     pub fn new(
         normal: [f64; 3],
         interface_mask: Array3<bool>,
@@ -116,6 +119,9 @@ impl AcousticElasticCoupler {
     }
 
     /// Apply coupling corrections over all interface cells.
+    /// # Errors
+    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    ///
     pub fn apply(
         &self,
         fluid_velocity: &mut [Array3<f64>; 3],

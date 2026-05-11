@@ -47,7 +47,10 @@ impl CattaneoVernotte {
             prev_flux_z: Array3::zeros(shape),
         }
     }
-
+    /// Update heat flux.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update_heat_flux(
         &mut self,
         temperature: &Array3<f64>,
@@ -74,8 +77,7 @@ impl CattaneoVernotte {
                         (temperature[[i + 1, j, k]] - temperature[[i - 1, j, k]]) / (2.0 * grid.dx);
 
                     let q_previous = self.heat_flux_x[[i, j, k]];
-                    self.heat_flux_x[[i, j, k]] = (q_previous
-                        - dt / tau * (q_previous + k_thermal * grad_t))
+                    self.heat_flux_x[[i, j, k]] = (dt / tau).mul_add(-k_thermal.mul_add(grad_t, q_previous), q_previous)
                         / (1.0 + dt / tau);
                 }
             }
@@ -93,8 +95,7 @@ impl CattaneoVernotte {
                         (temperature[[i, j + 1, k]] - temperature[[i, j - 1, k]]) / (2.0 * grid.dy);
 
                     let q_previous = self.heat_flux_y[[i, j, k]];
-                    self.heat_flux_y[[i, j, k]] = (q_previous
-                        - dt / tau * (q_previous + k_thermal * grad_t))
+                    self.heat_flux_y[[i, j, k]] = (dt / tau).mul_add(-k_thermal.mul_add(grad_t, q_previous), q_previous)
                         / (1.0 + dt / tau);
                 }
             }
@@ -112,8 +113,7 @@ impl CattaneoVernotte {
                         (temperature[[i, j, k + 1]] - temperature[[i, j, k - 1]]) / (2.0 * grid.dz);
 
                     let q_previous = self.heat_flux_z[[i, j, k]];
-                    self.heat_flux_z[[i, j, k]] = (q_previous
-                        - dt / tau * (q_previous + k_thermal * grad_t))
+                    self.heat_flux_z[[i, j, k]] = (dt / tau).mul_add(-k_thermal.mul_add(grad_t, q_previous), q_previous)
                         / (1.0 + dt / tau);
                 }
             }
@@ -143,7 +143,10 @@ impl CattaneoVernotte {
 
         div
     }
-
+    /// Update temperature.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_temperature(
         &mut self,
         temperature: &mut Array3<f64>,

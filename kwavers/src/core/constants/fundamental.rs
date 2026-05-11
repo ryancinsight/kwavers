@@ -19,9 +19,9 @@ pub const SOUND_SPEED_WATER_SIM: f64 = 1500.0;
 /// ±0.1 m/s over 0–100 °C.
 ///
 /// For temperature-dependent viscosity use
-/// [`crate::core::constants::state_dependent::StateDependent::dynamic_viscosity_water`]
+/// [`crate::core::constants::state_dependent::StateDependentConstants::dynamic_viscosity_water`]
 /// (Dortmund Data Bank VFT formula, < 2% vs NIST over 0–100 °C) or
-/// [`crate::core::constants::state_dependent::StateDependent::viscosity_arrhenius`]
+/// [`crate::core::constants::state_dependent::StateDependentConstants::viscosity_arrhenius`]
 /// for generic Arrhenius fluids.
 ///
 /// Reference: National Physical Laboratory acoustic properties database.

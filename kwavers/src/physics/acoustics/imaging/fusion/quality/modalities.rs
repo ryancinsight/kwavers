@@ -28,7 +28,7 @@ pub fn compute_pa_quality(reconstructed_image: &Array3<f64>) -> f64 {
     let cnr_score = (metrics.cnr / 5.0).min(1.0);
 
     // Weighted combination
-    0.6 * snr_score + 0.4 * cnr_score
+    0.6f64.mul_add(snr_score, 0.4 * cnr_score)
 }
 
 /// Compute elastography image quality score
@@ -56,7 +56,7 @@ pub fn compute_elastography_quality(elasticity_map: &ElasticityMap) -> f64 {
     let (min_e, _max_e, _mean_e) = elasticity_map.statistics();
     let realism_score = if min_e >= 0.0 { 1.0 } else { 0.5 };
 
-    0.3 * snr_score + 0.5 * cnr_score + 0.2 * realism_score
+    0.2f64.mul_add(realism_score, 0.3f64.mul_add(snr_score, 0.5 * cnr_score))
 }
 
 /// Compute optical image quality score
@@ -101,5 +101,5 @@ pub fn compute_optical_quality(optical_intensity: &Array3<f64>, wavelength: f64)
     let snr_factor = (snr / 10.0).min(1.0); // Normalize SNR to [0, 1]
 
     // Composite quality: base quality + wavelength factor + SNR factor
-    0.6 + 0.3 * wavelength_factor + 0.1 * snr_factor
+    0.1f64.mul_add(snr_factor, 0.3f64.mul_add(wavelength_factor, 0.6))
 }

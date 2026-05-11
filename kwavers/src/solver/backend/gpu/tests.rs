@@ -29,8 +29,7 @@ fn test_gpu_capabilities() {
 #[test]
 fn test_gpu_synchronize() {
     if let Ok(backend) = GPUBackend::new() {
-        let result = backend.synchronize();
-        assert!(result.is_ok());
+        backend.synchronize().unwrap();
     }
 }
 

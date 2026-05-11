@@ -21,6 +21,12 @@ pub struct LogarithmicSweep {
 
 impl LogarithmicSweep {
     /// Create new logarithmic sweep - USING all parameters
+    /// # Panics
+    /// - Panics if assertion fails: `Start frequency too low`.
+    /// - Panics if assertion fails: `Stop frequency too low`.
+    /// - Panics if assertion fails: `Duration too short`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(start_freq: f64, stop_freq: f64, duration: f64, amplitude: f64) -> Self {
         assert!(start_freq > MIN_FREQUENCY, "Start frequency too low");
@@ -95,7 +101,7 @@ impl FrequencySweep for LogarithmicSweep {
             TWO_PI * self.start_frequency * t
         } else {
             TWO_PI * self.start_frequency * self.duration / self.log_ratio
-                * ((self.log_ratio * normalized_time).exp() - 1.0)
+                * (self.log_ratio * normalized_time).exp_m1()
         }
     }
 

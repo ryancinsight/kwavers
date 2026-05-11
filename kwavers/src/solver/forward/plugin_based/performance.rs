@@ -57,7 +57,7 @@ impl PerformanceMonitor {
 
             let metrics = self
                 .plugin_metrics
-                .entry(plugin_name.to_string())
+                .entry(plugin_name.to_owned())
                 .or_default();
 
             metrics.total_time += elapsed;
@@ -74,7 +74,7 @@ impl PerformanceMonitor {
     pub fn record_memory(&mut self, plugin_name: &str, bytes: usize) {
         let metrics = self
             .plugin_metrics
-            .entry(plugin_name.to_string())
+            .entry(plugin_name.to_owned())
             .or_default();
         metrics.memory_allocated = bytes;
     }

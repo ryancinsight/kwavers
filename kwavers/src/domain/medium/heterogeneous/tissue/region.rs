@@ -39,28 +39,31 @@ impl TissueRegion {
     }
 
     /// Validate the region bounds
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.x_min >= self.x_max {
             return Err(ConfigError::InvalidValue {
-                parameter: "x bounds".to_string(),
+                parameter: "x bounds".to_owned(),
                 value: format!("[{}, {}]", self.x_min, self.x_max),
-                constraint: "x_min must be less than x_max".to_string(),
+                constraint: "x_min must be less than x_max".to_owned(),
             }
             .into());
         }
         if self.y_min >= self.y_max {
             return Err(ConfigError::InvalidValue {
-                parameter: "y bounds".to_string(),
+                parameter: "y bounds".to_owned(),
                 value: format!("[{}, {}]", self.y_min, self.y_max),
-                constraint: "y_min must be less than y_max".to_string(),
+                constraint: "y_min must be less than y_max".to_owned(),
             }
             .into());
         }
         if self.z_min >= self.z_max {
             return Err(ConfigError::InvalidValue {
-                parameter: "z bounds".to_string(),
+                parameter: "z bounds".to_owned(),
                 value: format!("[{}, {}]", self.z_min, self.z_max),
-                constraint: "z_min must be less than z_max".to_string(),
+                constraint: "z_min must be less than z_max".to_owned(),
             }
             .into());
         }

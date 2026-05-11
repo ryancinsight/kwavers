@@ -130,10 +130,9 @@ impl VolumetricArfField {
     ) -> KwaversResult<()> {
         if self.n_samples == 0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "n_samples".to_string(),
+                parameter: "n_samples".to_owned(),
                 value: 0.0,
-                reason: "must accumulate at least one pressure snapshot before finalizing"
-                    .to_string(),
+                reason: "must accumulate at least one pressure snapshot before finalizing".to_owned(),
             }));
         }
         let scale = 1.0 / self.n_samples as f64;
@@ -204,6 +203,9 @@ mod tests {
     ///   p = 1000 Pa, ρ = 1000 kg/m³, c = 1500 m/s, α = 5.0 Np/m
     ///   I = 1000² / (1000 · 1500) = 1e6/1.5e6 = 0.6667 W/m²
     ///   F = 2 · 5 · 0.6667 / 1500 = 4.444e-3 N/m³
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_uniform_field_analytical() {
         let (nx, ny, nz) = (4, 4, 4);
@@ -239,6 +241,9 @@ mod tests {
     }
 
     /// Zero absorption: F must be zero everywhere; I is non-zero.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_zero_absorption_yields_zero_arf() {
         let (nx, ny, nz) = (4, 4, 4);
@@ -264,6 +269,9 @@ mod tests {
     }
 
     /// Calling finalize with n_samples = 0 must return an error.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_finalize_before_accumulate_is_error() {
         let mut arf = VolumetricArfField::new(2, 2, 2);
@@ -278,6 +286,9 @@ mod tests {
     }
 
     /// Reset clears the accumulator but preserves the last finalized fields.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_reset_preserves_last_finalized() {
         let (nx, ny, nz) = (2, 2, 2);

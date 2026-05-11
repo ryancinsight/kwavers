@@ -49,11 +49,15 @@ pub struct ShockWaveGenerator {
 
 impl ShockWaveGenerator {
     /// Create new shock wave generator with given parameters.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(parameters: ShockWaveParameters, _grid: &Grid) -> KwaversResult<Self> {
         Ok(Self { parameters })
     }
 
     /// Get shock wave parameters.
+    #[must_use] 
     pub fn parameters(&self) -> &ShockWaveParameters {
         &self.parameters
     }
@@ -72,7 +76,7 @@ impl ShockWaveGenerator {
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;
 
-            let r2 = (x - cx).powi(2) + (y - cy).powi(2) + (z - cz).powi(2);
+            let r2 = (z - cz).mul_add(z - cz, (y - cy).mul_add(y - cy, (x - cx).powi(2)));
             let pos = self.parameters.peak_positive_pressure
                 * (-r2 / (2.0 * sigma_pos * sigma_pos)).exp();
             let neg = self.parameters.peak_negative_pressure
@@ -112,11 +116,17 @@ pub struct ShockWavePropagation {
 
 impl ShockWavePropagation {
     /// Create new propagation model.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(attenuation: f64, _grid: &Grid) -> KwaversResult<Self> {
         Ok(Self { attenuation })
     }
 
     /// Propagate shock wave.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn propagate_shock_wave(
         &self,
         field: &Array3<f64>,

@@ -25,7 +25,7 @@ pub struct WavefrontAnalysis {
     /// Detected wavefront type
     pub wavefront_type: WavefrontType,
 
-    /// Estimated source distance [m] (for spherical waves)
+    /// Estimated source distance (m) (for spherical waves)
     pub source_distance: Option<f64>,
 
     /// Wavefront propagation direction [x, y, z]
@@ -41,7 +41,7 @@ pub struct WavefrontAnalysis {
 /// Wavefront analyzer
 #[derive(Debug)]
 pub struct WavefrontAnalyzer {
-    /// Grid spacing [m]
+    /// Grid spacing (m)
     grid_spacing: f64,
 
     /// Plane wave detection threshold
@@ -50,10 +50,13 @@ pub struct WavefrontAnalyzer {
 
 impl WavefrontAnalyzer {
     /// Create new wavefront analyzer
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(grid_spacing: f64) -> KwaversResult<Self> {
         if !grid_spacing.is_finite() || grid_spacing <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Invalid grid spacing".to_string(),
+                "Invalid grid spacing".to_owned(),
             ));
         }
 
@@ -64,6 +67,9 @@ impl WavefrontAnalyzer {
     }
 
     /// Detect wavefront type from pressure field
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn detect_wavefront(
         &self,
         pressure_field: &Array3<f64>,
@@ -72,7 +78,7 @@ impl WavefrontAnalyzer {
 
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
-                "Field must be at least 3x3x3".to_string(),
+                "Field must be at least 3x3x3".to_owned(),
             ));
         }
 
@@ -101,13 +107,13 @@ impl WavefrontAnalyzer {
                     grad_sum[2] += dz;
 
                     // Laplacian (curvature)
-                    let d2x = (pressure_field[[i + 1, j, k]] - 2.0 * center
+                    let d2x = (2.0f64.mul_add(-center, pressure_field[[i + 1, j, k]])
                         + pressure_field[[i - 1, j, k]])
                         / (self.grid_spacing * self.grid_spacing);
-                    let d2y = (pressure_field[[i, j + 1, k]] - 2.0 * center
+                    let d2y = (2.0f64.mul_add(-center, pressure_field[[i, j + 1, k]])
                         + pressure_field[[i, j - 1, k]])
                         / (self.grid_spacing * self.grid_spacing);
-                    let d2z = (pressure_field[[i, j, k + 1]] - 2.0 * center
+                    let d2z = (2.0f64.mul_add(-center, pressure_field[[i, j, k + 1]])
                         + pressure_field[[i, j, k - 1]])
                         / (self.grid_spacing * self.grid_spacing);
 
@@ -120,7 +126,7 @@ impl WavefrontAnalyzer {
 
         if count == 0 {
             return Err(KwaversError::InvalidInput(
-                "Cannot compute gradients in small field".to_string(),
+                "Cannot compute gradients in small field".to_owned(),
             ));
         }
 
@@ -154,7 +160,7 @@ impl WavefrontAnalyzer {
         // Estimate propagation direction from mean pressure gradient.
         // The wavefront propagates in the direction of ∇p (high→low pressure).
         let grad_norm =
-            (grad_sum[0] * grad_sum[0] + grad_sum[1] * grad_sum[1] + grad_sum[2] * grad_sum[2])
+            grad_sum[2].mul_add(grad_sum[2], grad_sum[0].mul_add(grad_sum[0], grad_sum[1] * grad_sum[1]))
                 .sqrt();
         let propagation_direction = if grad_norm > 1e-30 {
             [
@@ -176,12 +182,18 @@ impl WavefrontAnalyzer {
     }
 
     /// Detect plane waves in pressure field
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn detect_plane_wave(&self, pressure_field: &Array3<f64>) -> KwaversResult<bool> {
         let analysis = self.detect_wavefront(pressure_field)?;
         Ok(analysis.wavefront_type == WavefrontType::Plane && analysis.confidence > 0.7)
     }
 
     /// Estimate source distance from spherical wavefront
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn estimate_source_distance(
         &self,
         pressure_field: &Array3<f64>,
@@ -202,8 +214,7 @@ mod tests {
 
     #[test]
     fn test_wavefront_analyzer_creation() {
-        let result = WavefrontAnalyzer::new(0.001);
-        assert!(result.is_ok());
+        let _analyzer = WavefrontAnalyzer::new(0.001).unwrap();
     }
 
     #[test]
@@ -226,10 +237,7 @@ mod tests {
         let analyzer = WavefrontAnalyzer::new(0.001).unwrap();
         let field = Array3::ones((10, 10, 10));
 
-        let result = analyzer.detect_wavefront(&field);
-        assert!(result.is_ok());
-
-        let analysis = result.unwrap();
+        let analysis = analyzer.detect_wavefront(&field).unwrap();
         assert_eq!(analysis.wavefront_type, WavefrontType::Plane);
     }
 
@@ -238,7 +246,7 @@ mod tests {
         let analyzer = WavefrontAnalyzer::new(0.001).unwrap();
         let field = Array3::ones((10, 10, 10));
 
-        let result = analyzer.detect_plane_wave(&field);
-        assert!(result.is_ok());
+        let is_plane = analyzer.detect_plane_wave(&field).unwrap();
+        assert!(is_plane);
     }
 }

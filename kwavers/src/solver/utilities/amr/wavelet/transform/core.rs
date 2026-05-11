@@ -14,12 +14,18 @@ pub struct WaveletTransform {
 
 impl WaveletTransform {
     /// Create a new wavelet transform
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(basis: WaveletBasis, levels: usize) -> Self {
         Self { basis, levels }
     }
 
     /// Forward wavelet transform
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn forward(&self, data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut result = data.clone();
 
@@ -33,6 +39,9 @@ impl WaveletTransform {
     }
 
     /// Inverse wavelet transform
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn inverse(&self, coeffs: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut result = coeffs.clone();
 
@@ -47,7 +56,7 @@ impl WaveletTransform {
 
     /// Threshold wavelet coefficients for compression
     pub fn threshold(&self, coeffs: &mut Array3<f64>, threshold: f64) {
-        coeffs.mapv_inplace(|c| if c.abs() < threshold { 0.0 } else { c });
+        coeffs.par_mapv_inplace(|c| if c.abs() < threshold { 0.0 } else { c });
     }
 
     /// Compute compression ratio

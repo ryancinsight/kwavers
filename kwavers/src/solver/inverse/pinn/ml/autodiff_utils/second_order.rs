@@ -24,6 +24,9 @@ use super::spatial::compute_divergence_2d;
 /// ∂²u/∂xᵢ² ≈ (u(xᵢ+ε) − 2u(xᵢ) + u(xᵢ−ε)) / ε²
 /// ```
 /// Truncation error O(ε²).
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn compute_second_derivative_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
@@ -99,6 +102,9 @@ where
 /// ```text
 /// ∇²u = ∂²u/∂x² + ∂²u/∂y²
 /// ```
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn compute_laplacian_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,
@@ -129,6 +135,9 @@ where
 /// ```
 /// Each partial derivative is approximated via forward finite difference (ε = 1e-5)
 /// applied to `compute_divergence_2d` to avoid nested `InnerBackend` tensor arithmetic.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn compute_gradient_of_divergence_2d<B, F>(
     forward_fn: F,
     input: &Tensor<B, 2>,

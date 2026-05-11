@@ -13,10 +13,7 @@ fn test_initial_pressure_computation() {
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let fluence = simulator.compute_fluence().unwrap();
-    let initial_pressure = simulator.compute_initial_pressure(&fluence);
-
-    assert!(initial_pressure.is_ok());
-    let pressure_data = initial_pressure.unwrap();
+    let pressure_data = simulator.compute_initial_pressure(&fluence).unwrap();
     assert_eq!(pressure_data.pressure.dim(), (16, 16, 8));
     assert!(pressure_data.max_pressure > 0.0);
 

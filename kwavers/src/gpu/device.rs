@@ -190,6 +190,9 @@ impl GpuDevice {
     /// # Returns
     ///
     /// Reference to the underlying `wgpu::Queue`.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
@@ -215,6 +218,9 @@ impl GpuDevice {
     /// # Ok(())
     /// # }
     /// ```
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn info(&self) -> &DeviceInfo {
         &self.info
     }

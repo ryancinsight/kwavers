@@ -108,6 +108,9 @@ impl std::fmt::Debug for AuthMiddleware {
 
 impl AuthMiddleware {
     /// Create new authentication middleware
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(jwt_secret: &str, jwt_config: JWTConfig) -> KwaversResult<Self> {
         let jwt_encoding_key = EncodingKey::from_secret(jwt_secret.as_bytes());
         let jwt_decoding_key = DecodingKey::from_secret(jwt_secret.as_bytes());

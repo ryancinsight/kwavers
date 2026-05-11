@@ -137,6 +137,9 @@ impl MeshBuilder {
     ///
     /// # Returns
     /// SEM mesh ready for simulation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn from_hexahedral_mesh(
         connectivity: Vec<Vec<usize>>,
         node_coords: Array2<f64>,
@@ -148,7 +151,10 @@ impl MeshBuilder {
 
     /// Create simple rectangular mesh for testing
     ///
-    /// Creates a single hexahedral element spanning [0,Lx] × [0,Ly] × [0,Lz]
+    /// Creates a single hexahedral element spanning `[0,Lx] × [0,Ly] × [0,Lz]`
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[must_use]
     pub fn create_rectangular_mesh(lx: f64, ly: f64, lz: f64, polynomial_degree: usize) -> SemMesh {
         // Define 8 corner nodes of a cube
@@ -186,6 +192,9 @@ impl MeshBuilder {
     }
 
     /// Validate mesh for SEM compatibility
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate_mesh(mesh: &SemMesh) -> KwaversResult<MeshQuality> {
         let quality = MeshQuality::assess(mesh);
 

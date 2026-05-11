@@ -26,7 +26,7 @@ pub fn validate_energy_conservation(
         .and(sound_speed)
         .for_each(|&p, &vx, &vy, &vz, &rho, &c| {
             if rho > 0.0 && c > 0.0 {
-                let kinetic = 0.5 * rho * (vx * vx + vy * vy + vz * vz);
+                let kinetic = 0.5 * rho * vz.mul_add(vz, vx.mul_add(vx, vy * vy));
                 let potential = p * p / (2.0 * rho * c * c);
                 total_energy += (kinetic + potential) * dv;
             }

@@ -74,6 +74,10 @@ impl CloudPINNService {
     /// 2. Serializes model for cloud storage.
     /// 3. Delegates to provider-specific deployment implementation.
     /// 4. Stores deployment handle for lifecycle management.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[cfg(feature = "pinn")]
     pub async fn deploy_model<B: burn::tensor::backend::AutodiffBackend>(
         &mut self,
@@ -279,6 +283,10 @@ impl CloudPINNService {
     }
 
     /// Validate that `config.provider` matches the service provider.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[cfg(feature = "pinn")]
     fn validate_provider_match(&self, config: &DeploymentConfig) -> KwaversResult<()> {
         if config.provider != self.provider {

@@ -37,9 +37,9 @@ impl FdtdSolver {
                     .zip(p_prev2.iter())
                     .zip(nl_coeff.iter().zip(nl_scratch.iter_mut()))
                 {
-                    let d2p_dt2 = (p - 2.0 * pp + pp2) * dt2_inv;
+                    let d2p_dt2 = (2.0f64.mul_add(-pp, p) + pp2) * dt2_inv;
                     let dp_dt = (p - pp) * dt_inv;
-                    let d2p2_dt2 = 2.0 * p * d2p_dt2 + 2.0 * dp_dt * dp_dt;
+                    let d2p2_dt2 = (2.0 * p).mul_add(d2p_dt2, 2.0 * dp_dt * dp_dt);
                     *nl = dt * nlc * d2p2_dt2;
                 }
             }
@@ -61,7 +61,7 @@ impl FdtdSolver {
 
         Zip::from(self.fields.p.view_mut())
             .and(nl_scratch.view())
-            .for_each(|p, &nl| *p += nl);
+            .par_for_each(|p, &nl| *p += nl);
     }
 
     /// Rotate pressure history: p^{n-2} ← p^{n-1} ← p^n (swap to avoid allocation).
@@ -70,11 +70,9 @@ impl FdtdSolver {
             if let Some(ref mut p_prev) = self.p_prev {
                 std::mem::swap(p_prev2, p_prev);
             }
-        } else {
-            if self.p_prev.is_some() {
-                self.p_prev2 = self.p_prev.take();
-                self.p_prev = Some(Array3::zeros(self.fields.p.dim()));
-            }
+        } else if self.p_prev.is_some() {
+            self.p_prev2 = self.p_prev.take();
+            self.p_prev = Some(Array3::zeros(self.fields.p.dim()));
         }
 
         if let Some(ref mut p_prev) = self.p_prev {

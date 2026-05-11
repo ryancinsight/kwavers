@@ -44,6 +44,9 @@ pub struct CEUSReconstruction {
 
 impl CEUSReconstruction {
     /// Create new CEUS reconstruction
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(_grid: &Grid) -> KwaversResult<Self> {
         let parameters = CEUSImagingParameters::default();
 
@@ -60,6 +63,9 @@ impl CEUSReconstruction {
     }
 
     /// Process frame of scattered signals into contrast image
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process_frame(&self, scattered_signals: &Array3<f64>) -> KwaversResult<ContrastImage> {
         // Apply nonlinear beamforming
         let beamformed = self.nonlinear_beamforming(scattered_signals)?;
@@ -95,6 +101,9 @@ impl CEUSReconstruction {
     /// Reference: Lediju MA et al. (2011). "Short-lag spatial coherence of
     /// backscattered echoes." *IEEE Trans Ultrason Ferroelectr Freq Control*
     /// 58(7), 1377–1388.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn nonlinear_beamforming(&self, signals: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut beamformed = signals.clone();
 
@@ -121,6 +130,9 @@ impl CEUSReconstruction {
     }
 
     /// Extract harmonic components
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn extract_harmonics(&self, beamformed: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut harmonic_image = Array3::zeros(beamformed.raw_dim());
         let (nx, ny, nz) = beamformed.dim();
@@ -142,6 +154,9 @@ impl CEUSReconstruction {
     }
 
     /// Apply contrast enhancement processing
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn contrast_enhancement(&self, harmonic_image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut enhanced = harmonic_image.clone();
 
@@ -163,19 +178,17 @@ impl CEUSReconstruction {
         }
 
         // Apply dynamic range compression
-        let max_intensity = enhanced.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let min_intensity = enhanced.iter().cloned().fold(f64::INFINITY, f64::min);
+        let max_intensity = enhanced.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let min_intensity = enhanced.iter().copied().fold(f64::INFINITY, f64::min);
 
         if max_intensity > min_intensity {
-            for intensity in enhanced.iter_mut() {
+            for intensity in &mut enhanced {
                 let normalized = (*intensity - min_intensity) / (max_intensity - min_intensity);
                 *intensity = (normalized * 255.0).clamp(0.0, 255.0);
             }
         } else {
             // If all values are the same, set to mid-range
-            for intensity in enhanced.iter_mut() {
-                *intensity = 127.5;
-            }
+            enhanced.fill(127.5);
         }
 
         Ok(enhanced)
@@ -193,7 +206,7 @@ impl ContrastImage {
     /// Get image statistics
     #[must_use]
     pub fn statistics(&self) -> ImageStatistics {
-        let values: Vec<f64> = self.intensity.iter().cloned().collect();
+        let values: Vec<f64> = self.intensity.iter().copied().collect();
 
         if values.is_empty() {
             return ImageStatistics::default();
@@ -203,8 +216,8 @@ impl ContrastImage {
         let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / values.len() as f64;
         let std_dev = variance.sqrt();
 
-        let min_val = values.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max_val = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let min_val = values.iter().copied().fold(f64::INFINITY, f64::min);
+        let max_val = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
         ImageStatistics {
             mean,

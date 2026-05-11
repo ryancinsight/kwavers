@@ -22,9 +22,7 @@ fn test_elastic_wave_solver_recording() -> KwaversResult<()> {
     let mut initial_field = ElasticWaveField::new(10, 10, 10);
     initial_field.uz[[5, 5, 5]] = 1.0;
     let _final_field = solver.propagate(&initial_field, 1e-4, None)?;
-    let recorded_data = solver.extract_recorded_data();
-    assert!(recorded_data.is_some());
-    let data = recorded_data.unwrap();
+    let data = solver.extract_recorded_data().unwrap();
     assert_eq!(data.shape(), &[1, 5]);
     Ok(())
 }

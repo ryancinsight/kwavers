@@ -6,6 +6,9 @@ use ndarray::Array3;
 
 /// Transfer from a grid to itself must be the identity.
 /// Conservation error must be < 1e-12.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_conservative_interpolator_same_grid() {
     let grid = Grid::new(16, 16, 16, 0.1, 0.1, 0.1).unwrap();
@@ -27,6 +30,9 @@ fn test_conservative_interpolator_same_grid() {
 
 /// 2:1 coarsening of a uniform field must yield a uniform target.
 /// Conservation error < 1e-10.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_conservative_interpolator_coarsening() {
     let source_grid = Grid::new(32, 32, 32, 0.1, 0.1, 0.1).unwrap();
@@ -52,6 +58,9 @@ fn test_conservative_interpolator_coarsening() {
 
 /// 1:2 refinement of a localized field: integral must be preserved.
 /// Conservation error < 1e-10.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_conservative_interpolator_refinement() {
     let source_grid = Grid::new(8, 8, 8, 0.2, 0.2, 0.2).unwrap();
@@ -76,6 +85,9 @@ fn test_conservative_interpolator_refinement() {
 
 /// Polynomial field f(x,y,z) = x + 2y + 3z: integral must be conserved on 2:1 coarsening.
 /// Conservation error < 1e-10 (Grandy 1999).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_conservation_polynomial_field() {
     let source_grid = Grid::new(20, 20, 20, 0.05, 0.05, 0.05).unwrap();

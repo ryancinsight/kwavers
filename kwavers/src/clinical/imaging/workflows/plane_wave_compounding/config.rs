@@ -48,7 +48,7 @@ impl Default for PlaneWaveConfig {
             depth: 0.1,
             axial_step: 0.0005,
             lateral_step: 0.0005,
-            apodization: "hann".to_string(),
+            apodization: "hann".to_owned(),
             coherent_compounding: true,
             dynamic_range: 40.0,
         }

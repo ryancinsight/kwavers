@@ -20,12 +20,18 @@ pub struct AmplitudeCorrector {
 
 impl AmplitudeCorrector {
     /// Create a new amplitude corrector
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(max_amplification: f64) -> Self {
         Self { max_amplification }
     }
 
     /// Apply amplitude correction including geometric spreading and absorption
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_correction(
         &self,
         signal: Vec<f64>,
@@ -85,6 +91,9 @@ impl AmplitudeCorrector {
     }
 
     /// Apply dispersion correction for frequency-dependent sound speed
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply_dispersion_correction(
         &self,
         signal: Vec<f64>,
@@ -117,7 +126,7 @@ impl AmplitudeCorrector {
             let fraction = original_index - idx_low as f64;
 
             if idx_low < n_original {
-                *resampled_val = signal[idx_low] * (1.0 - fraction) + signal[idx_high] * fraction;
+                *resampled_val = signal[idx_low].mul_add(1.0 - fraction, signal[idx_high] * fraction);
             }
         }
 

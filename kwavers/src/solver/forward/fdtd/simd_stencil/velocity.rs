@@ -12,6 +12,9 @@ impl SimdStencilProcessor {
     /// Writes into `self.vel_scratch`, then swaps heap pointers with `velocity`
     /// via `std::mem::swap` — zero copies, zero allocation.
     /// Loop is cache-tiled identically to `update_pressure` (Kamil et al. 2010).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_velocity(
         &mut self,
         velocity: &mut Array3<f64>,
@@ -19,7 +22,7 @@ impl SimdStencilProcessor {
     ) -> KwaversResult<()> {
         if velocity.shape() != pressure.shape() {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "Field dimensions must match".to_string(),
+                "Field dimensions must match".to_owned(),
             ));
         }
 
@@ -41,7 +44,7 @@ impl SimdStencilProcessor {
                                 let dp_dx = (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]])
                                     * half_dx_inv;
                                 self.vel_scratch[[i, j, k]] =
-                                    velocity[[i, j, k]] + self.velocity_coeff * dp_dx;
+                                    self.velocity_coeff.mul_add(dp_dx, velocity[[i, j, k]]);
                             }
                         }
                     }

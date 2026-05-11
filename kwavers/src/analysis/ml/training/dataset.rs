@@ -35,33 +35,47 @@ pub struct TrainingDataset {
 
 impl TrainingDataset {
     /// Create new training dataset
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(inputs: Array2<f64>, targets: Array2<f64>) -> KwaversResult<Self> {
         if inputs.dim().0 != targets.dim().0 {
             return Err(KwaversError::InvalidInput(
-                "inputs and targets must have same number of samples".to_string(),
+                "inputs and targets must have same number of samples".to_owned(),
             ));
         }
         Ok(Self { inputs, targets })
     }
 
     /// Get number of samples
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.inputs.dim().0
     }
 
     /// Check if dataset is empty
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Split dataset into training and validation sets
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn split(
         &self,
         validation_fraction: f64,
-    ) -> KwaversResult<(TrainingDataset, TrainingDataset)> {
+    ) -> KwaversResult<(Self, Self)> {
         if validation_fraction <= 0.0 || validation_fraction >= 1.0 {
             return Err(KwaversError::InvalidInput(
-                "validation_fraction must be in (0, 1)".to_string(),
+                "validation_fraction must be in (0, 1)".to_owned(),
             ));
         }
 
@@ -75,11 +89,11 @@ impl TrainingDataset {
         let val_targets = self.targets.slice(s![train_size.., ..]).to_owned();
 
         Ok((
-            TrainingDataset {
+            Self {
                 inputs: train_inputs,
                 targets: train_targets,
             },
-            TrainingDataset {
+            Self {
                 inputs: val_inputs,
                 targets: val_targets,
             },
@@ -87,11 +101,14 @@ impl TrainingDataset {
     }
 
     /// Get batch of specified size starting at offset
-    pub fn batch(&self, offset: usize, batch_size: usize) -> KwaversResult<TrainingDataset> {
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
+    pub fn batch(&self, offset: usize, batch_size: usize) -> KwaversResult<Self> {
         let n = self.len();
         if offset >= n {
             return Err(KwaversError::InvalidInput(
-                "offset exceeds dataset size".to_string(),
+                "offset exceeds dataset size".to_owned(),
             ));
         }
 
@@ -99,7 +116,7 @@ impl TrainingDataset {
         let batch_inputs = self.inputs.slice(s![offset..end, ..]).to_owned();
         let batch_targets = self.targets.slice(s![offset..end, ..]).to_owned();
 
-        Ok(TrainingDataset {
+        Ok(Self {
             inputs: batch_inputs,
             targets: batch_targets,
         })

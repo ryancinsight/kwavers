@@ -12,6 +12,10 @@ use num_complex::Complex64;
 ///
 /// # Output
 /// `(n_sensors, n_snapshots)` complex snapshots.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn extract_windowed_snapshots(
     sensor_data: &Array3<f64>,
     selection: &SnapshotSelection,
@@ -24,7 +28,7 @@ pub fn extract_windowed_snapshots(
     }
     if n_sensors == 0 || n_samples == 0 {
         return Err(KwaversError::InvalidInput(
-            "extract_windowed_snapshots requires n_sensors > 0 and n_samples > 0".to_string(),
+            "extract_windowed_snapshots requires n_sensors > 0 and n_samples > 0".to_owned(),
         ));
     }
 
@@ -37,6 +41,13 @@ pub fn extract_windowed_snapshots(
 /// Extract STFT-bin snapshots at `cfg.frequency_hz`.
 ///
 /// Each frame produces one complex snapshot across sensors.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 pub fn extract_stft_bin_snapshots(
     sensor_data: &Array3<f64>,
     cfg: &StftBinConfig,
@@ -51,7 +62,7 @@ pub fn extract_stft_bin_snapshots(
     }
     if n_sensors == 0 || n_samples == 0 {
         return Err(KwaversError::InvalidInput(
-            "extract_stft_bin_snapshots requires n_sensors > 0 and n_samples > 0".to_string(),
+            "extract_stft_bin_snapshots requires n_sensors > 0 and n_samples > 0".to_owned(),
         ));
     }
     if cfg.frame_len_samples > n_samples {

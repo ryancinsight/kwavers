@@ -84,23 +84,23 @@ pub struct LocalizationBeamformSearchConfig {
 
 impl LocalizationBeamformSearchConfig {
     /// Validate configuration invariants.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.core.sound_speed.is_finite() || self.core.sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "LocalizationBeamformSearchConfig: core.sound_speed must be finite and > 0"
-                    .to_string(),
+                "LocalizationBeamformSearchConfig: core.sound_speed must be finite and > 0".to_owned(),
             ));
         }
         if !self.core.sampling_frequency.is_finite() || self.core.sampling_frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "LocalizationBeamformSearchConfig: core.sampling_frequency must be finite and > 0"
-                    .to_string(),
+                "LocalizationBeamformSearchConfig: core.sampling_frequency must be finite and > 0".to_owned(),
             ));
         }
         if !self.core.reference_frequency.is_finite() || self.core.reference_frequency < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "LocalizationBeamformSearchConfig: core.reference_frequency must be finite and >= 0"
-                    .to_string(),
+                "LocalizationBeamformSearchConfig: core.reference_frequency must be finite and >= 0".to_owned(),
             ));
         }
 
@@ -114,14 +114,12 @@ impl LocalizationBeamformSearchConfig {
             } => {
                 if !frequency_hz.is_finite() || *frequency_hz <= 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "LocalizationBeamformSearchConfig: CaponMvdrSpectrum.frequency_hz must be finite and > 0"
-                            .to_string(),
+                        "LocalizationBeamformSearchConfig: CaponMvdrSpectrum.frequency_hz must be finite and > 0".to_owned(),
                     ));
                 }
                 if !diagonal_loading.is_finite() || *diagonal_loading < 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "LocalizationBeamformSearchConfig: CaponMvdrSpectrum.diagonal_loading must be finite and >= 0"
-                            .to_string(),
+                        "LocalizationBeamformSearchConfig: CaponMvdrSpectrum.diagonal_loading must be finite and >= 0".to_owned(),
                     ));
                 }
                 match covariance_domain {
@@ -131,8 +129,7 @@ impl LocalizationBeamformSearchConfig {
                     } => {
                         if *snapshot_step_samples == 0 {
                             return Err(KwaversError::InvalidInput(
-                                "LocalizationBeamformSearchConfig: CaponMvdrSpectrum.covariance_domain.ComplexBaseband.snapshot_step_samples must be >= 1"
-                                    .to_string(),
+                                "LocalizationBeamformSearchConfig: CaponMvdrSpectrum.covariance_domain.ComplexBaseband.snapshot_step_samples must be >= 1".to_owned(),
                             ));
                         }
                     }
@@ -148,31 +145,29 @@ impl LocalizationBeamformSearchConfig {
             } => {
                 if !search_radius_m.is_finite() || *search_radius_m <= 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "SearchGrid::CenteredCube: search_radius_m must be finite and > 0"
-                            .to_string(),
+                        "SearchGrid::CenteredCube: search_radius_m must be finite and > 0".to_owned(),
                     ));
                 }
                 if !grid_resolution_m.is_finite() || *grid_resolution_m <= 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "SearchGrid::CenteredCube: grid_resolution_m must be finite and > 0"
-                            .to_string(),
+                        "SearchGrid::CenteredCube: grid_resolution_m must be finite and > 0".to_owned(),
                     ));
                 }
                 if *min_points_per_axis < 2 {
                     return Err(KwaversError::InvalidInput(
-                        "SearchGrid::CenteredCube: min_points_per_axis must be >= 2".to_string(),
+                        "SearchGrid::CenteredCube: min_points_per_axis must be >= 2".to_owned(),
                     ));
                 }
             }
             SearchGrid::ExplicitPoints { points_m } => {
                 if points_m.is_empty() {
                     return Err(KwaversError::InvalidInput(
-                        "SearchGrid::ExplicitPoints: points_m must be non-empty".to_string(),
+                        "SearchGrid::ExplicitPoints: points_m must be non-empty".to_owned(),
                     ));
                 }
                 if points_m.iter().any(|p| p.iter().any(|v| !v.is_finite())) {
                     return Err(KwaversError::InvalidInput(
-                        "SearchGrid::ExplicitPoints: all coordinates must be finite".to_string(),
+                        "SearchGrid::ExplicitPoints: all coordinates must be finite".to_owned(),
                     ));
                 }
             }
@@ -218,6 +213,9 @@ pub struct BeamformingLocalizationInput {
 
 impl BeamformingLocalizationInput {
     /// Validate invariants for the beamforming-localization input.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self, expected_sensors: usize) -> KwaversResult<()> {
         let (n_sensors, channels, n_samples) = self.sensor_data.dim();
         if n_sensors != expected_sensors {
@@ -232,13 +230,12 @@ impl BeamformingLocalizationInput {
         }
         if n_samples == 0 {
             return Err(KwaversError::InvalidInput(
-                "BeamformingLocalizationInput: n_samples must be > 0".to_string(),
+                "BeamformingLocalizationInput: n_samples must be > 0".to_owned(),
             ));
         }
         if !self.sampling_frequency.is_finite() || self.sampling_frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BeamformingLocalizationInput: sampling_frequency must be finite and > 0"
-                    .to_string(),
+                "BeamformingLocalizationInput: sampling_frequency must be finite and > 0".to_owned(),
             ));
         }
         Ok(())

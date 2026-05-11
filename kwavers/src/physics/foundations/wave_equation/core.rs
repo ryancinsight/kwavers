@@ -31,18 +31,27 @@ pub trait WaveEquation: Send + Sync {
     /// where c_max is the maximum wave speed in the domain.
     fn cfl_timestep(&self) -> f64;
 
-    /// Evaluate the spatial differential operator L[u] at current state
+    /// Evaluate the spatial differential operator `L[u]` at current state
     ///
     /// Returns the right-hand side of the wave equation:
     /// ∂²u/∂t² = spatial_operator(u) + source
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn spatial_operator(&self, field: &ArrayD<f64>) -> ArrayD<f64>;
 
     /// Apply boundary conditions to field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_boundary_conditions(&mut self, field: &mut ArrayD<f64>);
 
     /// Check if the current state satisfies physics constraints
     ///
     /// Returns Ok(()) if constraints are satisfied, Err with violation description otherwise.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn check_constraints(&self, field: &ArrayD<f64>) -> Result<(), String>;
 }
 
@@ -88,17 +97,26 @@ pub trait AutodiffWaveEquation: Send {
     /// where c_max is the maximum wave speed in the domain.
     fn cfl_timestep(&self) -> f64;
 
-    /// Evaluate the spatial differential operator L[u] at current state
+    /// Evaluate the spatial differential operator `L[u]` at current state
     ///
     /// Returns the right-hand side of the wave equation:
     /// ∂²u/∂t² = spatial_operator(u) + source
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn spatial_operator(&self, field: &ArrayD<f64>) -> ArrayD<f64>;
 
     /// Apply boundary conditions to field
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_boundary_conditions(&mut self, field: &mut ArrayD<f64>);
 
     /// Check if the current state satisfies physics constraints
     ///
     /// Returns Ok(()) if constraints are satisfied, Err with violation description otherwise.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn check_constraints(&self, field: &ArrayD<f64>) -> Result<(), String>;
 }

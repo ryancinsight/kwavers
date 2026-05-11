@@ -6,6 +6,9 @@ use crate::core::error::{KwaversResult, PhysicsError};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 
 /// Update vapor content through evaporation or condensation.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(crate) fn update_mass_transfer(
     model: &KellerMiksisModel,
     state: &mut BubbleState,
@@ -30,7 +33,7 @@ pub(crate) fn update_mass_transfer(
     let n_total_new = state.n_gas + state.n_vapor;
     if n_total_new < 0.0 || n_total_new.is_nan() || n_total_new.is_infinite() {
         return Err(PhysicsError::InvalidParameter {
-            parameter: "vapor_content".to_string(),
+            parameter: "vapor_content".to_owned(),
             value: state.n_vapor,
             reason: format!(
                 "Invalid vapor content: n_vapor={}, n_total={}",

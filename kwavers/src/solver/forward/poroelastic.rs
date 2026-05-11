@@ -10,19 +10,19 @@ use crate::physics::mechanics::poroelastic::{BiotTheory, PoroelasticMaterial};
 #[derive(Debug)]
 pub struct PoroelasticSolver {
     grid: Grid,
-    #[allow(dead_code)]
-    material: PoroelasticMaterial,
     biot: BiotTheory,
 }
 
 impl PoroelasticSolver {
     /// Create new poroelastic solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: &Grid, material: &PoroelasticMaterial) -> KwaversResult<Self> {
         let biot = BiotTheory::new(material);
 
         Ok(Self {
             grid: grid.clone(),
-            material: material.clone(),
             biot,
         })
     }
@@ -30,6 +30,9 @@ impl PoroelasticSolver {
     /// Time step for explicit scheme
     ///
     /// CFL condition: Δt ≤ Δx / c_max
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_stable_timestep(&self) -> KwaversResult<f64> {
         let speeds = self.biot.compute_wave_speeds(1e6)?; // At 1 MHz
         let c_max = speeds.fast_wave;

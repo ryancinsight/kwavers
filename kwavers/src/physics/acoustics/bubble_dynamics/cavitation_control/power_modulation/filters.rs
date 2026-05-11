@@ -19,7 +19,7 @@ impl ExponentialFilter {
 
     /// Apply filter to input value
     pub fn filter(&mut self, input: f64) -> f64 {
-        self.state = self.alpha * input + (1.0 - self.alpha) * self.state;
+        self.state = self.alpha.mul_add(input, (1.0 - self.alpha) * self.state);
         self.state
     }
 

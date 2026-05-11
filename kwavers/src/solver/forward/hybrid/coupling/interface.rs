@@ -39,6 +39,9 @@ pub struct CouplingInterface {
 
 impl CouplingInterface {
     /// Apply coupling between domains
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_coupling(
         &mut self,
         fields: &mut Array4<f64>,
@@ -48,8 +51,8 @@ impl CouplingInterface {
         // Extract field data from source region
         let source_region = regions.first().ok_or_else(|| {
             KwaversError::Config(ConfigError::MissingParameter {
-                parameter: "source_region".to_string(),
-                section: "coupling".to_string(),
+                parameter: "source_region".to_owned(),
+                section: "coupling".to_owned(),
             })
         })?;
 
@@ -89,6 +92,9 @@ impl CouplingInterface {
     }
 
     /// Extract interface data from fields
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     fn extract_interface_data(
         &self,
         fields: &Array4<f64>,
@@ -125,9 +131,9 @@ impl CouplingInterface {
             }
             _ => {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
-                    parameter: "normal_direction".to_string(),
+                    parameter: "normal_direction".to_owned(),
                     value: self.geometry.normal_direction.to_string(),
-                    constraint: "Must be 0, 1, or 2".to_string(),
+                    constraint: "Must be 0, 1, or 2".to_owned(),
                 }))
             }
         }
@@ -136,6 +142,9 @@ impl CouplingInterface {
     }
 
     /// Apply conserved data to target region
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     fn apply_to_target(
         &self,
         fields: &mut Array4<f64>,
@@ -179,9 +188,9 @@ impl CouplingInterface {
             }
             _ => {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
-                    parameter: "normal_direction".to_string(),
+                    parameter: "normal_direction".to_owned(),
                     value: self.geometry.normal_direction.to_string(),
-                    constraint: "Must be 0, 1, or 2".to_string(),
+                    constraint: "Must be 0, 1, or 2".to_owned(),
                 }))
             }
         }
@@ -189,6 +198,9 @@ impl CouplingInterface {
         Ok(())
     }
     /// Create a new coupling interface
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         source_grid: &Grid,
         target_grid: &Grid,
@@ -210,6 +222,9 @@ impl CouplingInterface {
     }
 
     /// Transfer fields from source to target domain
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn transfer_fields(
         &mut self,
         source_fields: &Array3<f64>,
@@ -238,6 +253,9 @@ impl CouplingInterface {
     }
 
     /// Get interface coordinates
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     fn get_interface_coords(&self, _source: bool) -> KwaversResult<Vec<(f64, f64, f64)>> {
         let mut coords = Vec::with_capacity(self.geometry.num_points);
         let plane_pos = self.geometry.plane_position;
@@ -275,9 +293,9 @@ impl CouplingInterface {
             }
             _ => {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
-                    parameter: "normal_direction".to_string(),
+                    parameter: "normal_direction".to_owned(),
                     value: self.geometry.normal_direction.to_string(),
-                    constraint: "Must be 0, 1, or 2".to_string(),
+                    constraint: "Must be 0, 1, or 2".to_owned(),
                 }))
             }
         }

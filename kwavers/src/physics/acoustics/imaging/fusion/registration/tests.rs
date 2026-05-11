@@ -98,8 +98,7 @@ fn test_resample_identity_transform() {
 
 #[test]
 fn test_validate_registration_compatibility_valid() {
-    let result = validate_registration_compatibility((10, 10, 10), (20, 20, 20));
-    assert!(result.is_ok());
+    validate_registration_compatibility((10, 10, 10), (20, 20, 20)).unwrap();
 }
 
 #[test]

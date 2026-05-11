@@ -9,6 +9,12 @@ use wgpu;
 
 impl super::PipelineManager {
     /// Execute FFT 3D on GPU.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn execute_fft_3d(
         &self,
         data: &mut Array3<f64>,
@@ -81,6 +87,9 @@ impl super::PipelineManager {
     /// Execute inverse FFT 3D.
     ///
     /// Applies conjugate → FFT → conjugate → scale(1/N).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn execute_ifft_3d(
         &self,
         data: &mut Array3<f64>,
@@ -90,12 +99,18 @@ impl super::PipelineManager {
         let n = data.len() as f64;
         self.execute_fft_3d(data, context, buffer_manager)?;
         if n > 0.0 {
-            data.mapv_inplace(|v| v / n);
+            data.par_mapv_inplace(|v| v / n);
         }
         Ok(())
     }
 
     /// Execute element-wise multiply.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn execute_element_wise_multiply(
         &self,
         a: &Array3<f64>,
@@ -200,6 +215,10 @@ impl super::PipelineManager {
     ///
     /// `direction`: 0 = x (axis-0), 1 = y (axis-1), 2 = z (axis-2).
     /// Second-order central differences in the interior; first-order one-sided at boundaries.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn execute_spatial_derivative(
         &self,
         field: &Array3<f64>,

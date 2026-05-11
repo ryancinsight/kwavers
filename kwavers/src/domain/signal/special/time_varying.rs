@@ -25,6 +25,7 @@ impl TimeVaryingSignal {
     /// # Returns
     ///
     /// A new `TimeVaryingSignal` instance
+    #[must_use] 
     pub fn new(values: Vec<f64>, dt: f64) -> Self {
         // Estimate base frequency from signal using zero-crossing
         let base_frequency = if dt > 0.0 && !values.is_empty() {
@@ -46,26 +47,31 @@ impl TimeVaryingSignal {
     }
 
     /// Get the time step
+    #[must_use] 
     pub fn dt(&self) -> f64 {
         self.dt
     }
 
     /// Get the base frequency
+    #[must_use] 
     pub fn base_frequency(&self) -> f64 {
         self.base_frequency
     }
 
     /// Get the signal duration
+    #[must_use] 
     pub fn signal_duration(&self) -> f64 {
         self.dt * self.values.len() as f64
     }
 
     /// Get the number of samples
+    #[must_use] 
     pub fn num_samples(&self) -> usize {
         self.values.len()
     }
 
     /// Get a reference to the signal values
+    #[must_use] 
     pub fn values(&self) -> &[f64] {
         &self.values
     }

@@ -17,6 +17,9 @@ impl FwiProcessor {
     /// ## Theorem
     /// `J = (dt / 2) Σ_{r,t} (d_syn - d_obs)²` is non-negative and vanishes
     /// iff the synthetic and observed traces match pointwise.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_l2_objective(
         &self,
         observed: &Array2<f64>,
@@ -29,6 +32,9 @@ impl FwiProcessor {
     ///
     /// Returns `d_syn - d_obs`; time reversal is applied when constructing
     /// the pressure source signal.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_adjoint_source(
         &self,
         observed: &Array2<f64>,
@@ -57,6 +63,9 @@ impl FwiProcessor {
     /// incorrect gradient.
     ///
     /// Reference: Plessix (2006), GFJI 167(2), 495–503, eq. (2)–(6).
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub(super) fn build_adjoint_source(
         &self,
         residual: &Array2<f64>,
@@ -120,6 +129,10 @@ impl FwiProcessor {
     /// # References
     /// * Tromp et al. (2005): "Seismic tomography, adjoint methods"
     /// * Plessix (2006), GFJI 167(2), eq. (5)–(6)
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn adjoint_model(
         &self,
         adjoint_source: &GridSource,

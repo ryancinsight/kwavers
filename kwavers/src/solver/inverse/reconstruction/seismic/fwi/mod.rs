@@ -9,7 +9,7 @@ pub mod optimization;
 pub mod regularization;
 pub mod wavefield;
 
-use self::optimization::{ConjugateGradient, LineSearch};
+use self::optimization::ConjugateGradient;
 use self::regularization::Regularizer;
 use self::wavefield::WavefieldModeler;
 
@@ -26,9 +26,6 @@ pub struct FullWaveformInversion {
     velocity_model: Array3<f64>,
     /// Optimizer
     optimizer: ConjugateGradient,
-    /// Line search
-    #[allow(dead_code)]
-    line_search: LineSearch,
     /// Regularizer
     regularizer: Regularizer,
     /// Wavefield modeler
@@ -36,6 +33,10 @@ pub struct FullWaveformInversion {
 }
 
 impl FullWaveformInversion {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(config: SeismicImagingConfig) -> Self {
         let shape = (config.nx, config.ny, config.nz);
@@ -43,13 +44,15 @@ impl FullWaveformInversion {
             config,
             velocity_model: Array3::zeros(shape),
             optimizer: ConjugateGradient::new(),
-            line_search: LineSearch::new(),
             regularizer: Regularizer::new(),
             wavefield_modeler: WavefieldModeler::new(),
         }
     }
 
     /// Main FWI iteration
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn iterate(&mut self, observed_data: &Array2<f64>) -> KwaversResult<()> {
         // 1. Forward modeling
         let synthetic_data = self.wavefield_modeler.forward_model(&self.velocity_model)?;
@@ -92,7 +95,7 @@ impl FullWaveformInversion {
             let test_objective = self.compute_objective(&test_model, observed_data)?;
 
             // Armijo condition: f(x + αp) ≤ f(x) + c1·α·∇f(x)ᵀp
-            if test_objective <= current_objective + c1 * step_size * directional_derivative {
+            if test_objective <= (c1 * step_size).mul_add(directional_derivative, current_objective) {
                 break;
             }
 
@@ -107,6 +110,9 @@ impl FullWaveformInversion {
 
     /// Multi-scale FWI strategy
     /// Based on Bunks et al. (1995): "Multiscale seismic waveform inversion"
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn multiscale_inversion(
         &mut self,
         observed_data: &Array2<f64>,
@@ -132,6 +138,9 @@ impl FullWaveformInversion {
     /// ## Theorem
     /// For `J = (dt / 2) ||d_syn - d_obs||²`, the objective is non-negative
     /// and vanishes if and only if the traces match pointwise.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_data_objective(
         &self,
         observed_data: &Array2<f64>,
@@ -144,6 +153,9 @@ impl FullWaveformInversion {
     ///
     /// This delegates to the shared acoustic adjoint-state core so the
     /// reconstruction and seismic FWI paths use the same residual convention.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_adjoint_source(
         &self,
         observed_data: &Array2<f64>,
@@ -153,6 +165,9 @@ impl FullWaveformInversion {
     }
 
     /// Compute objective function value (L2 misfit)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn compute_objective(
         &mut self,
         model: &Array3<f64>,
@@ -175,6 +190,9 @@ impl FullWaveformInversion {
     /// # References
     /// - Butterworth (1930): "On the Theory of Filter Amplifiers"
     /// - Oppenheim & Schafer (2009): "Discrete-Time Signal Processing"
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_frequency_filter(
         &self,
         data: &Array2<f64>,
@@ -196,7 +214,7 @@ impl FullWaveformInversion {
         if sampling_frequency <= 0.0 || !sampling_frequency.is_finite() {
             return Err(crate::core::error::KwaversError::Validation(
                 crate::core::error::ValidationError::ConstraintViolation {
-                    message: "Sampling frequency must be positive and finite".to_string(),
+                    message: "Sampling frequency must be positive and finite".to_owned(),
                 },
             ));
         }

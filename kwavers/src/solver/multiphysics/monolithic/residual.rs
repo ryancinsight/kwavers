@@ -19,6 +19,9 @@ impl MonolithicCoupler {
     /// | LightFluence | D·∇²I − μ_a·I |
     /// | Temperature | κ·∇²T + μ_a·I/(ρ·cₚ) + α_ac·p²/(ρ·c·ρ·cₚ) |
     /// | Other | 0 (identity: F = u − u_prev) |
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_residual(
         &self,
         u: &Array3<f64>,
@@ -66,7 +69,7 @@ impl MonolithicCoupler {
                 UnifiedFieldType::Pressure => {
                     let c2 = coeff.sound_speed * coeff.sound_speed;
                     let mut r = laplacian_3d(&field_block, grid_dims, dx, dy, dz);
-                    r.mapv_inplace(|v| v * c2);
+                    r.par_mapv_inplace(|v| v * c2);
 
                     // Photoacoustic source: p₀ = Γ · μₐ · I
                     // Grüneisen ≈ 0.12 for water at 37 °C (not 1.0).
@@ -84,7 +87,7 @@ impl MonolithicCoupler {
                 UnifiedFieldType::LightFluence => {
                     let d = coeff.optical_diffusion();
                     let mut r = laplacian_3d(&field_block, grid_dims, dx, dy, dz);
-                    r.mapv_inplace(|v| v * d);
+                    r.par_mapv_inplace(|v| v * d);
                     r.zip_mut_with(&field_block, |r_val, &i_val| {
                         *r_val -= coeff.optical_absorption * i_val;
                     });
@@ -99,7 +102,7 @@ impl MonolithicCoupler {
                     let kappa = coeff.thermal_diffusivity();
                     let inv_rho_cp = 1.0 / (coeff.density * coeff.specific_heat);
                     let mut r = laplacian_3d(&field_block, grid_dims, dx, dy, dz);
-                    r.mapv_inplace(|v| v * kappa);
+                    r.par_mapv_inplace(|v| v * kappa);
 
                     // Optical absorption heating
                     if let Some(ref light_f) = light {
@@ -134,6 +137,9 @@ impl MonolithicCoupler {
     }
 
     /// Jacobian-vector product: J·v ≈ [F(u+εv) − F(u)] / ε
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn jacobian_vector_product(
         &self,
         v: &Array3<f64>,
@@ -155,6 +161,9 @@ impl MonolithicCoupler {
     }
 
     /// Line search: find step size α that reduces residual
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn line_search(
         &self,
         u: &Array3<f64>,
@@ -220,6 +229,9 @@ mod tests {
     /// The photoacoustic source is R_p += Γ · μₐ · I (Oraevsky & Karabutov 2003).
     /// With zero pressure (no Laplacian contribution), the entire residual at a
     /// lit voxel is Γ · μₐ · I, so halving Γ must halve the residual there.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_photoacoustic_source_scales_with_gruneisen() {
         let make_coupler = |gruneisen: f64| {

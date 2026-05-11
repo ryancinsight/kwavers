@@ -51,7 +51,10 @@ fn test_pstd_phase_velocity_accuracy() {
     // Treeby, B.E. & Cox, B.T. (2010) J. Biomed. Opt. 15(2):021314.
     println!("\n=== PSTD Phase Velocity Accuracy Test ===");
 
-    let n = 128_usize;
+    // n=64, nt=800: PPW=20, CFL=0.2 (same physics accuracy as n=128/nt=1000).
+    // cells traveled = 0.2·800 = 160; n_wraps = 2; residual s_peak = 32.
+    // Quantization error ±0.5/160 = 0.31% < 0.5% tolerance. ~8× faster than n=128.
+    let n = 64_usize;
     let c0 = 1500.0_f64;
     let rho0 = 1000.0_f64;
     let frequency = 1e6_f64;
@@ -59,7 +62,7 @@ fn test_pstd_phase_velocity_accuracy() {
     let dx = wavelength / 20.0; // 20 PPW
     let k = 2.0 * PI / wavelength;
     let dt = 0.2 * dx / c0; // CFL = 0.2
-    let nt = 1000_usize;
+    let nt = 800_usize;
 
     let mut config = PstdConfig::default();
     config.dt = dt;

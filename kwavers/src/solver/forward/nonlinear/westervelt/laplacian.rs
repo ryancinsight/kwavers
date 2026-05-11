@@ -11,6 +11,9 @@ use super::WesterveltFdtd;
 
 impl WesterveltFdtd {
     /// Calculate the Laplacian using finite differences
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn calculate_laplacian(&mut self, grid: &Grid) -> KwaversResult<()> {
         let pressure = &self.pressure;
         let laplacian = &mut self.laplacian;
@@ -35,9 +38,7 @@ impl WesterveltFdtd {
                             let pz_m = pressure[(i, j, k - 1)];
                             let pz_p = pressure[(i, j, k + 1)];
 
-                            laplacian[(i, j, k)] = (px_p - 2.0 * p + px_m) * dx2_inv
-                                + (py_p - 2.0 * p + py_m) * dy2_inv
-                                + (pz_p - 2.0 * p + pz_m) * dz2_inv;
+                            laplacian[(i, j, k)] = (2.0f64.mul_add(-p, pz_p) + pz_m).mul_add(dz2_inv, (2.0f64.mul_add(-p, px_p) + px_m).mul_add(dx2_inv, (2.0f64.mul_add(-p, py_p) + py_m) * dy2_inv));
                         }
                     }
                 }
@@ -63,7 +64,7 @@ impl WesterveltFdtd {
                             let p_xp2 = pressure[(i + 2, j, k)];
 
                             let d2_dx2 =
-                                (C0 * p_xm2 + C1 * p_xm1 + C2 * p_c + C1 * p_xp1 + C0 * p_xp2)
+                                C0.mul_add(p_xp2, C1.mul_add(p_xp1, C2.mul_add(p_c, C0.mul_add(p_xm2, C1 * p_xm1))))
                                     * dx2_inv;
 
                             // Y-direction stencil
@@ -73,7 +74,7 @@ impl WesterveltFdtd {
                             let p_yp2 = pressure[(i, j + 2, k)];
 
                             let d2_dy2 =
-                                (C0 * p_ym2 + C1 * p_ym1 + C2 * p_c + C1 * p_yp1 + C0 * p_yp2)
+                                C0.mul_add(p_yp2, C1.mul_add(p_yp1, C2.mul_add(p_c, C0.mul_add(p_ym2, C1 * p_ym1))))
                                     * dy2_inv;
 
                             // Z-direction stencil
@@ -83,7 +84,7 @@ impl WesterveltFdtd {
                             let p_zp2 = pressure[(i, j, k + 2)];
 
                             let d2_dz2 =
-                                (C0 * p_zm2 + C1 * p_zm1 + C2 * p_c + C1 * p_zp1 + C0 * p_zp2)
+                                C0.mul_add(p_zp2, C1.mul_add(p_zp1, C2.mul_add(p_c, C0.mul_add(p_zm2, C1 * p_zm1))))
                                     * dz2_inv;
 
                             laplacian[(i, j, k)] = d2_dx2 + d2_dy2 + d2_dz2;

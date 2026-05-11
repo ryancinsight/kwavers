@@ -44,10 +44,7 @@ fn test_therapy_orchestrator_creation() {
     let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
 
     let orchestrator =
-        TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone()));
-    assert!(orchestrator.is_ok());
-
-    let orchestrator = orchestrator.unwrap();
+        TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone())).unwrap();
     assert_eq!(
         orchestrator.config().primary_modality,
         TherapyModality::Histotripsy
@@ -58,6 +55,9 @@ fn test_therapy_orchestrator_creation() {
 #[test]
 #[ignore] // Integration test - requires full therapy simulation stack
 /// Test therapy step execution
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 fn test_therapy_step_execution() {
     let config = TherapySessionConfig {
         primary_modality: TherapyModality::Microbubble,
@@ -97,8 +97,7 @@ fn test_therapy_step_execution() {
 
     let dt = 0.1;
     for _ in 0..5 {
-        let result = orchestrator.execute_therapy_step(dt);
-        assert!(result.is_ok());
+        orchestrator.execute_therapy_step(dt).unwrap();
 
         let safety_status = orchestrator.check_safety_limits();
         assert_eq!(safety_status, SafetyStatus::Safe);
@@ -106,7 +105,7 @@ fn test_therapy_step_execution() {
 
     assert!(orchestrator.session_state().current_time > 0.0);
     assert!(orchestrator.session_state().progress > 0.0);
-    assert!(orchestrator.session_state().acoustic_field.is_some());
+    assert!(!orchestrator.session_state().acoustic_field.as_ref().unwrap().pressure.is_empty());
 }
 
 #[test]
@@ -148,8 +147,7 @@ fn test_safety_limit_checking() {
     let mut orchestrator =
         TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone())).unwrap();
 
-    let result = orchestrator.execute_therapy_step(1.0);
-    assert!(result.is_ok());
+    orchestrator.execute_therapy_step(1.0).unwrap();
 
     let safety_status = orchestrator.check_safety_limits();
     assert_eq!(safety_status, SafetyStatus::Safe);
@@ -201,12 +199,13 @@ fn test_safety_controller_integration() {
     let mut safety_actions_observed = false;
 
     for step in 0..max_steps {
-        let result = orchestrator.execute_therapy_step(dt);
-        assert!(result.is_ok(), "Step {} failed", step);
+        orchestrator
+            .execute_therapy_step(dt)
+            .unwrap_or_else(|e| panic!("Step {step} failed: {e:?}"));
 
         let state = orchestrator.session_state();
         assert!(state.current_time > 0.0);
-        assert!(state.acoustic_field.is_some());
+        assert!(!state.acoustic_field.as_ref().unwrap().pressure.is_empty());
 
         if orchestrator.should_stop() {
             safety_actions_observed = true;
@@ -265,8 +264,9 @@ fn test_intensity_tracker_integration() {
 
     let dt = 0.2;
     for step in 0..5 {
-        let result = orchestrator.execute_therapy_step(dt);
-        assert!(result.is_ok(), "Step {} failed", step);
+        orchestrator
+            .execute_therapy_step(dt)
+            .unwrap_or_else(|e| panic!("Step {step} failed: {e:?}"));
 
         let state = orchestrator.session_state();
 

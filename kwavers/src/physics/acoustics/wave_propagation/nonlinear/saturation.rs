@@ -13,7 +13,7 @@ use std::f64::consts::PI;
 /// As initial pressure increases to infinity, the pressure at a distance z
 /// approaches an asymptotic limit (saturation) due to nonlinear dissipation.
 ///
-/// Returns maximum un-focused pressure [Pa]
+/// Returns maximum un-focused pressure (Pa)
 #[must_use]
 pub fn acoustic_saturation_pressure(
     frequency: f64,
@@ -89,7 +89,7 @@ pub fn nonlinear_radiation_force(
 
     // Nonlinear correction (often minimal for F_rad, but included for completeness)
     // Higher harmonics scatter differently
-    let fnl_correction = 1.0 + (params.beta - 1.0) * 0.1;
+    let fnl_correction = (params.beta - 1.0).mul_add(0.1, 1.0);
 
     f_rad_linear * fnl_correction
 }

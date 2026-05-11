@@ -34,34 +34,37 @@ pub struct NeuralBeamformingConfig {
 
 impl NeuralBeamformingConfig {
     /// Validate configuration parameters.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.network_architecture.len() < 2 {
             return Err(KwaversError::InvalidInput(
-                "Network architecture must have at least 2 layers (input and output)".to_string(),
+                "Network architecture must have at least 2 layers (input and output)".to_owned(),
             ));
         }
 
         if self.physics_parameters.reciprocity_weight < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Reciprocity weight must be non-negative".to_string(),
+                "Reciprocity weight must be non-negative".to_owned(),
             ));
         }
 
         if self.physics_parameters.coherence_weight < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Coherence weight must be non-negative".to_string(),
+                "Coherence weight must be non-negative".to_owned(),
             ));
         }
 
         if self.physics_parameters.sparsity_weight < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Sparsity weight must be non-negative".to_string(),
+                "Sparsity weight must be non-negative".to_owned(),
             ));
         }
 
         if self.adaptation_parameters.learning_rate <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Learning rate must be positive".to_string(),
+                "Learning rate must be positive".to_owned(),
             ));
         }
 
@@ -69,19 +72,19 @@ impl NeuralBeamformingConfig {
             || self.adaptation_parameters.uncertainty_threshold > 1.0
         {
             return Err(KwaversError::InvalidInput(
-                "Uncertainty threshold must be in range [0, 1]".to_string(),
+                "Uncertainty threshold must be in range [0, 1]".to_owned(),
             ));
         }
 
         if self.batch_size == 0 {
             return Err(KwaversError::InvalidInput(
-                "Batch size must be positive".to_string(),
+                "Batch size must be positive".to_owned(),
             ));
         }
 
         if self.sensor_geometry.num_elements() < 2 {
             return Err(KwaversError::InvalidInput(
-                "Sensor array must have at least 2 elements".to_string(),
+                "Sensor array must have at least 2 elements".to_owned(),
             ));
         }
 

@@ -34,7 +34,7 @@ impl NonlinearElasticWaveSolver {
             }
         };
 
-        let flux = |u: f64| -> f64 { c * u + 0.5 * c * beta * (u * u) / u_ref };
+        let flux = |u: f64| -> f64 { c.mul_add(u, 0.5 * c * beta * (u * u) / u_ref) };
         let wave_speed = |u: f64| -> f64 { c + c * beta * u / u_ref };
 
         let prev = field.u_fundamental.clone();
@@ -65,8 +65,8 @@ impl NonlinearElasticWaveSolver {
 
                 for i in 0..nx {
                     let ip1 = (i + 1) % nx;
-                    let u_l = u_line[i] + 0.5 * slopes[i];
-                    let u_r = u_line[ip1] - 0.5 * slopes[ip1];
+                    let u_l = 0.5f64.mul_add(slopes[i], u_line[i]);
+                    let u_r = 0.5f64.mul_add(-slopes[ip1], u_line[ip1]);
                     let a = wave_speed(0.5 * (u_l + u_r));
                     f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
                 }
@@ -78,7 +78,7 @@ impl NonlinearElasticWaveSolver {
                 }
 
                 for i in 0..nx {
-                    u_stage[i] = u_line[i] + dt * rhs0[i];
+                    u_stage[i] = dt.mul_add(rhs0[i], u_line[i]);
                 }
 
                 // Stage 2: second RK stage
@@ -93,8 +93,8 @@ impl NonlinearElasticWaveSolver {
 
                 for i in 0..nx {
                     let ip1 = (i + 1) % nx;
-                    let u_l = u_stage[i] + 0.5 * slopes[i];
-                    let u_r = u_stage[ip1] - 0.5 * slopes[ip1];
+                    let u_l = 0.5f64.mul_add(slopes[i], u_stage[i]);
+                    let u_r = 0.5f64.mul_add(-slopes[ip1], u_stage[ip1]);
                     let a = wave_speed(0.5 * (u_l + u_r));
                     f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
                 }
@@ -106,7 +106,7 @@ impl NonlinearElasticWaveSolver {
                 }
 
                 for i in 0..nx {
-                    u_line[i] = 0.5 * u_line[i] + 0.5 * (u_stage[i] + dt * rhs1[i]);
+                    u_line[i] = 0.5f64.mul_add(u_line[i], 0.5 * dt.mul_add(rhs1[i], u_stage[i]));
                 }
 
                 // Artificial dissipation
@@ -116,7 +116,7 @@ impl NonlinearElasticWaveSolver {
                     for i in 0..nx {
                         let ip1 = (i + 1) % nx;
                         let im1 = (i + nx - 1) % nx;
-                        let lap = (u_line[ip1] - 2.0 * u_line[i] + u_line[im1]) * inv_dx2;
+                        let lap = (2.0f64.mul_add(-u_line[i], u_line[ip1]) + u_line[im1]) * inv_dx2;
                         u_line[i] += nu * dt * lap;
                     }
                 }

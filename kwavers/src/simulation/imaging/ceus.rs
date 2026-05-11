@@ -30,6 +30,10 @@ pub struct ContrastEnhancedUltrasound {
 }
 
 impl ContrastEnhancedUltrasound {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         grid: &Grid,
         medium: &dyn Medium,
@@ -51,10 +55,16 @@ impl ContrastEnhancedUltrasound {
     }
 
     /// Get microbubble concentration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_concentration(&self) -> f64 {
         self.microbubbles.get_concentration()
     }
-
+    /// Simulate imaging sequence.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn simulate_imaging_sequence(
         &mut self,
         injection_rate: f64,
@@ -79,11 +89,14 @@ impl ContrastEnhancedUltrasound {
         }
         Ok(images)
     }
-
+    /// Simulate bolus injection.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn simulate_bolus_injection(&self, total_bubbles: f64) -> KwaversResult<Vec<f64>> {
         if !total_bubbles.is_finite() || total_bubbles <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "simulate_bolus_injection: total_bubbles must be finite and > 0".to_string(),
+                "simulate_bolus_injection: total_bubbles must be finite and > 0".to_owned(),
             ));
         }
 
@@ -110,14 +123,17 @@ impl ContrastEnhancedUltrasound {
         let area = unscaled.iter().sum::<f64>() * dt;
         if !area.is_finite() || area <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "simulate_bolus_injection: invalid gamma-variate area".to_string(),
+                "simulate_bolus_injection: invalid gamma-variate area".to_owned(),
             ));
         }
 
         let scale = total_bubbles / area;
         Ok(unscaled.into_iter().map(|v| v * scale).collect())
     }
-
+    /// Simulate contrast signal.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn simulate_contrast_signal(
         &self,
         injection_profile_bubbles_per_s: &[f64],
@@ -125,12 +141,12 @@ impl ContrastEnhancedUltrasound {
     ) -> KwaversResult<Array4<f32>> {
         if injection_profile_bubbles_per_s.is_empty() {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "simulate_contrast_signal: injection_profile must be non-empty".to_string(),
+                "simulate_contrast_signal: injection_profile must be non-empty".to_owned(),
             ));
         }
         if !total_time_s.is_finite() || total_time_s <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "simulate_contrast_signal: total_time_s must be finite and > 0".to_string(),
+                "simulate_contrast_signal: total_time_s must be finite and > 0".to_owned(),
             ));
         }
 
@@ -147,21 +163,20 @@ impl ContrastEnhancedUltrasound {
                 let fy = j as f64 / (ny.saturating_sub(1).max(1) as f64);
                 for k in 0..nz {
                     let fz = k as f64 / (nz.saturating_sub(1).max(1) as f64);
-                    let mean_transit_time_s = 6.0 + 10.0 * (0.3 * fx + 0.5 * fy + 0.2 * fz);
+                    let mean_transit_time_s = 10.0f64.mul_add(0.2f64.mul_add(fz, 0.3f64.mul_add(fx, 0.5 * fy)), 6.0);
                     let decay = (-dt / mean_transit_time_s).exp();
 
-                    let local_gain = 1.0e-7_f64 * (1.0 + 0.2 * (fx - fy).abs());
+                    let local_gain = 1.0e-7_f64 * 0.2f64.mul_add((fx - fy).abs(), 1.0);
                     let mut concentration = 0.0_f64;
 
                     for (t, &inj_rate) in injection_profile_bubbles_per_s.iter().enumerate() {
                         if !inj_rate.is_finite() || inj_rate < 0.0 {
                             return Err(crate::core::error::KwaversError::InvalidInput(
-                                "simulate_contrast_signal: injection_profile contains invalid values"
-                                    .to_string(),
+                                "simulate_contrast_signal: injection_profile contains invalid values".to_owned(),
                             ));
                         }
 
-                        concentration = concentration * decay + inj_rate * dt;
+                        concentration = concentration.mul_add(decay, inj_rate * dt);
                         let s = baseline as f64 + local_gain * concentration;
                         signal[(t, i, j, k)] = (s as f32).max(1.0e-6);
                     }
@@ -171,7 +186,10 @@ impl ContrastEnhancedUltrasound {
 
         Ok(signal)
     }
-
+    /// Estimate perfusion.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn estimate_perfusion(
         &self,
         contrast_signal: &Array4<f32>,
@@ -180,14 +198,14 @@ impl ContrastEnhancedUltrasound {
         let (nt, nx, ny, nz) = contrast_signal.dim();
         if nt == 0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "estimate_perfusion: contrast_signal must have nt > 0".to_string(),
+                "estimate_perfusion: contrast_signal must have nt > 0".to_owned(),
             ));
         }
         if perfusion_model.mean_transit_time <= 0.0
             || !perfusion_model.mean_transit_time.is_finite()
         {
             return Err(crate::core::error::KwaversError::InvalidInput(
-                "estimate_perfusion: mean_transit_time must be finite and > 0".to_string(),
+                "estimate_perfusion: mean_transit_time must be finite and > 0".to_owned(),
             ));
         }
 

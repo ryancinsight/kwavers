@@ -24,6 +24,12 @@ pub enum PulseShape {
 }
 
 impl PulseTrain {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Pulse frequency must be positive`.
+    /// - Panics if assertion fails: `Carrier frequency must be positive`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(pulse_frequency: f64, carrier_frequency: f64, amplitude: f64) -> Self {
         assert!(pulse_frequency > 0.0, "Pulse frequency must be positive");
@@ -43,6 +49,10 @@ impl PulseTrain {
         }
     }
 
+    /// With duty cycle.
+    /// # Panics
+    /// - Panics if assertion fails: `Duty cycle must be in (0, 1]`.
+    ///
     #[must_use]
     pub fn with_duty_cycle(mut self, duty_cycle: f64) -> Self {
         assert!(
@@ -102,7 +112,7 @@ impl PulseTrain {
 impl Signal for PulseTrain {
     fn amplitude(&self, t: f64) -> f64 {
         let envelope = self.envelope(t);
-        let carrier = (2.0 * PI * self.carrier_frequency * t + self.phase).sin();
+        let carrier = (2.0 * PI * self.carrier_frequency).mul_add(t, self.phase).sin();
         self.amplitude * envelope * carrier
     }
 

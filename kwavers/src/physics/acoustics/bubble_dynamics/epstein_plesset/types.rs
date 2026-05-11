@@ -3,7 +3,7 @@
 /// Epstein-Plesset stability analysis results
 #[derive(Debug, Clone, PartialEq)]
 pub struct StabilityAnalysis {
-    /// Natural resonance frequency [Hz]
+    /// Natural resonance frequency (Hz)
     pub resonance_frequency: f64,
     /// Stability parameter (δω²) - determines oscillation type
     pub stability_parameter: f64,

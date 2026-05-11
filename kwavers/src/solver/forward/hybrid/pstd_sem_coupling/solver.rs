@@ -17,6 +17,9 @@ pub struct PstdSemSolver {
 
 impl PstdSemSolver {
     /// Create new coupled PSTD-SEM solver
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         config: PstdSemCouplingConfig,
         pstd_grid: Grid,
@@ -37,6 +40,9 @@ impl PstdSemSolver {
     }
 
     /// Perform coupled time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(&mut self) -> KwaversResult<f64> {
         self.coupler.reset_convergence();
 

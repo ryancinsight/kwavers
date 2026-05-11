@@ -4,6 +4,9 @@ use crate::core::error::{KwaversError, KwaversResult};
 ///
 /// Checks that source and target dimensions are within acceptable ratios
 /// to avoid excessive resampling artifacts.
+/// # Errors
+/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+///
 pub fn validate_registration_compatibility(
     source_dims: (usize, usize, usize),
     target_dims: (usize, usize, usize),

@@ -29,13 +29,13 @@ use std::fmt;
 /// 3. **Physical Bounds**: Release rate must be finite and non-negative
 #[derive(Debug, Clone)]
 pub struct DrugPayload {
-    /// Initial drug mass loaded [kg]
+    /// Initial drug mass loaded (kg)
     pub initial_mass: f64,
 
     /// Current drug concentration in bubble [kg/m³]
     pub concentration: f64,
 
-    /// Cumulative drug released to environment [kg]
+    /// Cumulative drug released to environment (kg)
     pub released_mass: f64,
 
     /// Drug loading configuration
@@ -53,6 +53,9 @@ pub struct DrugPayload {
 
 impl DrugPayload {
     /// Create new drug payload
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn new(
         concentration: f64,
         bubble_volume: f64,
@@ -61,23 +64,23 @@ impl DrugPayload {
     ) -> KwaversResult<Self> {
         if concentration < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "concentration".to_string(),
+                parameter: "concentration".to_owned(),
                 value: concentration,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         if bubble_volume < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "bubble_volume".to_string(),
+                parameter: "bubble_volume".to_owned(),
                 value: bubble_volume,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         if release_rate_constant < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "release_rate_constant".to_string(),
+                parameter: "release_rate_constant".to_owned(),
                 value: release_rate_constant,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
 
@@ -101,6 +104,9 @@ impl DrugPayload {
     }
 
     /// Create typical doxorubicin-loaded microbubble
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn doxorubicin(bubble_volume: f64) -> KwaversResult<Self> {
         const CONCENTRATION: f64 = 50.0;
         const RELEASE_RATE: f64 = 0.01;
@@ -113,6 +119,9 @@ impl DrugPayload {
     }
 
     /// Create typical gene therapy microbubble (plasmid DNA)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn gene_therapy(bubble_volume: f64) -> KwaversResult<Self> {
         const CONCENTRATION: f64 = 10.0;
         const RELEASE_RATE: f64 = 0.005;
@@ -137,7 +146,7 @@ impl DrugPayload {
         match shell_state {
             ShellState::Ruptured => 1.0,
             ShellState::Elastic | ShellState::Buckled => {
-                let enhancement = 1.0 + self.strain_enhancement_factor * shell_strain.abs().powi(2);
+                let enhancement = self.strain_enhancement_factor.mul_add(shell_strain.abs().powi(2), 1.0);
                 (self.baseline_permeability * enhancement).min(1.0)
             }
         }
@@ -150,6 +159,9 @@ impl DrugPayload {
     /// C(t+dt) = C(t) · exp(-k · P · dt)
     /// Released = (C(t) - C(t+dt)) · V
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn update_release(
         &mut self,
         bubble_volume: f64,
@@ -159,9 +171,9 @@ impl DrugPayload {
     ) -> KwaversResult<f64> {
         if dt < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "dt".to_string(),
+                parameter: "dt".to_owned(),
                 value: dt,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
 
@@ -185,7 +197,7 @@ impl DrugPayload {
         Ok(released_this_step)
     }
 
-    /// Remaining drug mass [kg]
+    /// Remaining drug mass (kg)
     #[must_use]
     pub fn remaining_mass(&self, bubble_volume: f64) -> f64 {
         self.concentration * bubble_volume
@@ -202,32 +214,38 @@ impl DrugPayload {
     }
 
     /// Check if payload is depleted
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn is_depleted(&self) -> bool {
         self.concentration < 1e-10
     }
 
     /// Validate drug payload state
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.concentration < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "concentration".to_string(),
+                parameter: "concentration".to_owned(),
                 value: self.concentration,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         if self.released_mass < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "released_mass".to_string(),
+                parameter: "released_mass".to_owned(),
                 value: self.released_mass,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         if self.release_rate_constant < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "release_rate_constant".to_string(),
+                parameter: "release_rate_constant".to_owned(),
                 value: self.release_rate_constant,
-                reason: "must be non-negative".to_string(),
+                reason: "must be non-negative".to_owned(),
             }));
         }
         Ok(())

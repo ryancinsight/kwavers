@@ -47,6 +47,11 @@ pub struct DgSimulationSolver {
 
 impl DgSimulationSolver {
     /// Construct the DG adapter from a high-level solver configuration.
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new<M: Medium>(
         config: &SolverConfiguration,
         grid: &Grid,
@@ -134,8 +139,7 @@ impl Solver for DgSimulationSolver {
 
     fn add_source(&mut self, _source: Box<dyn Source>) -> KwaversResult<()> {
         Err(KwaversError::FeatureNotAvailable(
-            "DiscontinuousGalerkin adapter does not yet define a Source-to-DG projection contract"
-                .to_string(),
+            "DiscontinuousGalerkin adapter does not yet define a Source-to-DG projection contract".to_owned(),
         ))
     }
 
@@ -159,7 +163,7 @@ impl Solver for DgSimulationSolver {
                 self.core.initialize_modal_coefficients(self.grid.nx, 1);
                 *self.core.modal_coefficients_mut().ok_or_else(|| {
                     KwaversError::InternalError(
-                        "DG modal coefficient allocation failed".to_string(),
+                        "DG modal coefficient allocation failed".to_owned(),
                     )
                 })? = coefficients;
             }
@@ -170,7 +174,7 @@ impl Solver for DgSimulationSolver {
                 .modal_coefficients()
                 .ok_or_else(|| {
                     KwaversError::InternalError(
-                        "DG modal coefficients missing after time step".to_string(),
+                        "DG modal coefficients missing after time step".to_owned(),
                     )
                 })?
                 .clone();

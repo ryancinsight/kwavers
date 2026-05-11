@@ -32,11 +32,11 @@ impl DirectivityPattern {
         let wavelength = 1540.0 / frequency; // Assume tissue
         let k = 2.0 * PI / wavelength;
 
-        let angles = Array1::linspace(-90.0, 90.0, num_points);
+        let angles: Array1<f64> = Array1::linspace(-90.0, 90.0, num_points);
         let mut amplitude = Array1::zeros(num_points);
 
         for (i, &angle_deg) in angles.iter().enumerate() {
-            let angle_rad = angle_deg * PI / 180.0;
+            let angle_rad = angle_deg.to_radians();
             let sin_theta = angle_rad.sin();
 
             // Directivity function for rectangular aperture
@@ -80,11 +80,11 @@ impl DirectivityPattern {
         let k = 2.0 * PI / wavelength;
         let radius = diameter / 2.0;
 
-        let angles = Array1::linspace(-90.0, 90.0, num_points);
+        let angles: Array1<f64> = Array1::linspace(-90.0, 90.0, num_points);
         let mut amplitude = Array1::zeros(num_points);
 
         for (i, &angle_deg) in angles.iter().enumerate() {
-            let angle_rad = angle_deg * PI / 180.0;
+            let angle_rad = angle_deg.to_radians();
             let sin_theta = angle_rad.sin();
 
             let arg = k * radius * sin_theta;
@@ -167,7 +167,7 @@ impl DirectivityPattern {
             // Asymptotic expansion for large x
             let inv_x = 1.0 / x;
             let phase = x - 3.0 * PI / 4.0;
-            (2.0 / (PI * x)).sqrt() * phase.cos() * (1.0 - 0.1875 * inv_x * inv_x)
+            (2.0 / (PI * x)).sqrt() * phase.cos() * (0.1875 * inv_x).mul_add(-inv_x, 1.0)
         }
     }
 
@@ -182,7 +182,7 @@ impl DirectivityPattern {
     pub fn directivity_index(&self) -> f64 {
         // DI = 10 * log10(4π / Ω)
         // where Ω is the beam solid angle
-        let beam_solid_angle = 2.0 * PI * (1.0 - (self.beamwidth_3db * PI / 180.0 / 2.0).cos());
+        let beam_solid_angle = 2.0 * PI * (1.0 - (self.beamwidth_3db.to_radians() / 2.0).cos());
         10.0 * (4.0 * PI / beam_solid_angle).log10()
     }
 }

@@ -104,7 +104,7 @@ fn recovery_attempt_tracks_metadata() {
 
     attempt.mark_failed(&KwaversError::InternalError("fail".to_string()));
     assert!(!attempt.succeeded);
-    assert!(attempt.recovery_error.is_some());
+    assert!(attempt.recovery_error.as_ref().unwrap().contains("fail"));
 }
 
 #[test]

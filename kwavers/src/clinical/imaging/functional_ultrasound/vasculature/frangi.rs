@@ -54,6 +54,9 @@ use ndarray::Array3;
 /// # Errors
 /// Never errors in practice; the `KwaversResult` signature accommodates future
 /// multi-scale extensions that may fail on memory allocation.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(super) fn compute_frangi_response(image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
     let (nx, ny, nz) = image.dim();
     let mut response = Array3::zeros((nx, ny, nz));
@@ -71,14 +74,14 @@ pub(super) fn compute_frangi_response(image: &Array3<f64>) -> KwaversResult<Arra
             for k in 1..nz - 1 {
                 let h = hessian_at(image, i, j, k);
                 let (l1, l2, l3) = symmetric_3x3_eigenvalues(h);
-                let s = (l1 * l1 + l2 * l2 + l3 * l3).sqrt();
+                let s = l3.mul_add(l3, l1.mul_add(l1, l2 * l2)).sqrt();
                 if s > s_max {
                     s_max = s;
                 }
             }
         }
     }
-    let c = s_max * 0.5 + 1e-30;
+    let c = s_max.mul_add(0.5, 1e-30);
     let two_c_sq = 2.0 * c * c;
 
     // Second pass: compute vesselness at each interior voxel.
@@ -99,7 +102,7 @@ pub(super) fn compute_frangi_response(image: &Array3<f64>) -> KwaversResult<Arra
 
                 let r_a = a2 / a3;
                 let r_b = a1 / (a2 * a3).sqrt().max(1e-30);
-                let s = (a1 * a1 + a2 * a2 + a3 * a3).sqrt();
+                let s = a3.mul_add(a3, a1.mul_add(a1, a2 * a2)).sqrt();
 
                 response[[i, j, k]] = (1.0 - (-r_a * r_a / two_alpha_sq).exp())
                     * (-r_b * r_b / two_beta_sq).exp()
@@ -116,9 +119,9 @@ pub(super) fn compute_frangi_response(image: &Array3<f64>) -> KwaversResult<Arra
 /// Returns `[H_xx, H_yy, H_zz, H_xy, H_xz, H_yz]`.
 pub(super) fn hessian_at(image: &Array3<f64>, i: usize, j: usize, k: usize) -> [f64; 6] {
     let c = image[[i, j, k]];
-    let hxx = image[[i + 1, j, k]] - 2.0 * c + image[[i - 1, j, k]];
-    let hyy = image[[i, j + 1, k]] - 2.0 * c + image[[i, j - 1, k]];
-    let hzz = image[[i, j, k + 1]] - 2.0 * c + image[[i, j, k - 1]];
+    let hxx = 2.0f64.mul_add(-c, image[[i + 1, j, k]]) + image[[i - 1, j, k]];
+    let hyy = 2.0f64.mul_add(-c, image[[i, j + 1, k]]) + image[[i, j - 1, k]];
+    let hzz = 2.0f64.mul_add(-c, image[[i, j, k + 1]]) + image[[i, j, k - 1]];
     let hxy = (image[[i + 1, j + 1, k]] - image[[i - 1, j + 1, k]] - image[[i + 1, j - 1, k]]
         + image[[i - 1, j - 1, k]])
         / 4.0;
@@ -145,13 +148,13 @@ pub(super) fn symmetric_3x3_eigenvalues(h: [f64; 6]) -> (f64, f64, f64) {
     let (a12, a13, a23) = (h[3], h[4], h[5]);
 
     let q = (a11 + a22 + a33) / 3.0;
-    let p1 = a12 * a12 + a13 * a13 + a23 * a23;
+    let p1 = a23.mul_add(a23, a12.mul_add(a12, a13 * a13));
 
     if p1 < 1e-30 {
         return (a11, a22, a33); // already diagonal
     }
 
-    let p2 = (a11 - q).powi(2) + (a22 - q).powi(2) + (a33 - q).powi(2) + 2.0 * p1;
+    let p2 = 2.0f64.mul_add(p1, (a33 - q).mul_add(a33 - q, (a22 - q).mul_add(a22 - q, (a11 - q).powi(2))));
     let p = (p2 / 6.0).sqrt();
     let inv_p = 1.0 / p;
 
@@ -169,9 +172,9 @@ pub(super) fn symmetric_3x3_eigenvalues(h: [f64; 6]) -> (f64, f64, f64) {
     let r = (det_b / 2.0).clamp(-1.0, 1.0);
     let phi = r.acos() / 3.0;
 
-    let eig1 = q + 2.0 * p * phi.cos();
-    let eig3 = q + 2.0 * p * (phi + std::f64::consts::TAU / 3.0).cos();
-    let eig2 = 3.0 * q - eig1 - eig3;
+    let eig1 = (2.0 * p).mul_add(phi.cos(), q);
+    let eig3 = (2.0 * p).mul_add((phi + std::f64::consts::TAU / 3.0).cos(), q);
+    let eig2 = 3.0f64.mul_add(q, -eig1) - eig3;
 
     (eig1, eig2, eig3)
 }

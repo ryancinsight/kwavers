@@ -16,9 +16,9 @@
 //! ```
 //!
 //! where:
-//! - u = (uₓ, uᵧ): displacement vector [m]
+//! - u = (uₓ, uᵧ): displacement vector (m)
 //! - ρ(x,y): density [kg/m³]
-//! - σ: Cauchy stress tensor [Pa]
+//! - σ: Cauchy stress tensor (Pa)
 //! - f = (fₓ, fᵧ): body force [N/m³]
 //!
 //! ## Constitutive Relation (Hooke's Law)
@@ -30,8 +30,8 @@
 //! ```
 //!
 //! where:
-//! - λ(x,y): Lamé's first parameter [Pa]
-//! - μ(x,y): Lamé's second parameter (shear modulus) [Pa]
+//! - λ(x,y): Lamé's first parameter (Pa)
+//! - μ(x,y): Lamé's second parameter (shear modulus) (Pa)
 //! - ε: strain tensor = ½(∇u + (∇u)ᵀ)
 //! - I: identity tensor
 //!

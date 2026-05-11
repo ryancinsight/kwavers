@@ -68,6 +68,7 @@ impl FeatureExtractor {
     /// # Arguments
     ///
     /// * `config` - Feature extraction configuration
+    #[must_use] 
     pub fn new(config: FeatureConfig) -> Self {
         Self { config }
     }
@@ -90,6 +91,9 @@ impl FeatureExtractor {
     ///
     /// Computational complexity: O(N·M) where N is volume size and M is window size
     /// Target: <20ms for 64x64x100 volume with default configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn extract_features(&self, volume: ArrayView3<f32>) -> KwaversResult<FeatureMap> {
         let mut morphological = HashMap::new();
         let mut spectral = HashMap::new();
@@ -97,25 +101,25 @@ impl FeatureExtractor {
 
         if self.config.morphological_features {
             morphological.insert(
-                "gradient_magnitude".to_string(),
+                "gradient_magnitude".to_owned(),
                 self.compute_gradient_magnitude(volume),
             );
-            morphological.insert("laplacian".to_string(), self.compute_laplacian(volume));
+            morphological.insert("laplacian".to_owned(), self.compute_laplacian(volume));
         }
 
         if self.config.spectral_features {
             spectral.insert(
-                "local_frequency".to_string(),
+                "local_frequency".to_owned(),
                 self.compute_local_frequency(volume),
             );
         }
 
         if self.config.texture_features {
             texture.insert(
-                "speckle_variance".to_string(),
+                "speckle_variance".to_owned(),
                 self.compute_speckle_variance(volume),
             );
-            texture.insert("homogeneity".to_string(), self.compute_homogeneity(volume));
+            texture.insert("homogeneity".to_owned(), self.compute_homogeneity(volume));
         }
 
         Ok(FeatureMap {
@@ -185,13 +189,11 @@ impl FeatureExtractor {
                     let center = volume[[x, y, z]];
 
                     // 7-point stencil approximation
-                    let laplacian = volume[[x + 1, y, z]]
+                    let laplacian = 6.0f32.mul_add(-center, volume[[x + 1, y, z]]
                         + volume[[x - 1, y, z]]
                         + volume[[x, y + 1, z]]
                         + volume[[x, y - 1, z]]
-                        + volume[[x, y, z + 1]]
-                        + volume[[x, y, z - 1]]
-                        - 6.0 * center;
+                        + volume[[x, y, z + 1]] + volume[[x, y, z - 1]]);
 
                     result[[x, y, z]] = laplacian;
                 }

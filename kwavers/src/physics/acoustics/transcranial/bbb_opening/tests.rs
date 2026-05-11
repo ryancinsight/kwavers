@@ -19,9 +19,7 @@ fn test_permeability_calculation() {
     let params = BBBParameters::default();
 
     let mut bbb = BBBOpening::new(pressure, bubbles, params);
-    let result = bbb.simulate_opening();
-
-    assert!(result.is_ok());
+    bbb.simulate_opening().unwrap();
     assert!(bbb
         .permeability
         .permeability_factor

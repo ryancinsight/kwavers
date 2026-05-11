@@ -109,6 +109,9 @@ mod tests {
     ///
     /// Reference: Sapareto & Dewey (1984), Table 1.
     /// At T = 37°C: R = 0.25, dose_rate = 0.25^(43−37) = 0.25^6 ≈ 2.441×10⁻⁴ CEM43 s⁻¹.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_cem43_dose_rate_at_body_temperature() {
         let mut monitor = SafetyMonitor::new((1, 1, 1), 0.01, 650e3);
@@ -129,6 +132,9 @@ mod tests {
     /// **Test: CEM43 dose rate at the 43 °C threshold**
     ///
     /// At T = 43°C: R switches to 0.5, exponent = 0 → dose_rate = 0.5^0 = 1.0 CEM43 s⁻¹.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_cem43_dose_rate_at_threshold() {
         let mut monitor = SafetyMonitor::new((1, 1, 1), 0.01, 650e3);
@@ -150,6 +156,9 @@ mod tests {
     ///
     /// At T = 50°C: R = 0.5, dose_rate = 0.5^(43−50) = 0.5^(−7) = 128 CEM43 s⁻¹.
     /// Corresponds to ablative HIFU where tissue damage accumulates rapidly.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_cem43_dose_rate_hifu_ablation() {
         let mut monitor = SafetyMonitor::new((1, 1, 1), 0.01, 650e3);
@@ -173,6 +182,9 @@ mod tests {
     /// **Test: CEM43 linear accumulation at threshold temperature**
     ///
     /// At T = 43°C, dose_rate = 1.0 CEM43/s → after N seconds: CEM43 = N.
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[test]
     fn test_cem43_accumulation_linear_at_threshold() {
         let mut monitor = SafetyMonitor::new((1, 1, 1), 0.01, 650e3);

@@ -37,7 +37,8 @@ mod tests {
         let work: Arc<dyn Fn() -> KwaversResult<()> + Send + Sync> = Arc::new(|| Ok(()));
         let item = WorkItem::new(1, TaskPriority::High, work, 1000).with_deadline(100, 1000); // Created at 1000, deadline is 1100
 
-        assert!(item.deadline.is_some());
+        let deadline = item.deadline.expect("with_deadline must set deadline to Some");
+        assert!(deadline > 0, "deadline must be a positive timestamp; got {deadline}");
         assert!(!item.is_overdue(1050));
         assert!(item.is_overdue(1150));
     }

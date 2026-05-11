@@ -38,6 +38,10 @@ pub struct BatchedPINNTrainer<B: AutodiffBackend> {
 }
 
 impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
         batch_size: usize,
@@ -63,7 +67,10 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
             },
         })
     }
-
+    /// Train batch.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn train_batch(
         &mut self,
         collocation_points: &Tensor<B, 2>,

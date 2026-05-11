@@ -60,6 +60,7 @@ pub struct SafetyMonitor {
 
 impl SafetyMonitor {
     /// Create new safety monitor with 10 Hz check interval.
+    #[must_use] 
     pub fn new(limits: SafetyLimits) -> Self {
         let check_interval = Duration::from_millis(100);
         Self {
@@ -90,48 +91,48 @@ impl SafetyMonitor {
         const MAX_PEAK_NEGATIVE_PRESSURE: f64 = 3.0e6;
         if params.peak_negative_pressure > MAX_PEAK_NEGATIVE_PRESSURE {
             self.violations.push(SafetyViolation {
-                parameter: "peak_negative_pressure".to_string(),
+                parameter: "peak_negative_pressure".to_owned(),
                 measured_value: params.peak_negative_pressure,
                 limit_value: MAX_PEAK_NEGATIVE_PRESSURE,
                 severity: SafetyLevel::Critical,
                 timestamp: Instant::now(),
-                message: "Peak negative pressure exceeds maximum safe limit".to_string(),
+                message: "Peak negative pressure exceeds maximum safe limit".to_owned(),
             });
             new_state = SafetyLevel::Critical;
         }
 
         if params.mechanical_index > 1.9 {
             self.violations.push(SafetyViolation {
-                parameter: "mechanical_index".to_string(),
+                parameter: "mechanical_index".to_owned(),
                 measured_value: params.mechanical_index,
                 limit_value: 1.9,
                 severity: SafetyLevel::Critical,
                 timestamp: Instant::now(),
-                message: "Mechanical index exceeds FDA safety limits".to_string(),
+                message: "Mechanical index exceeds FDA safety limits".to_owned(),
             });
             new_state = SafetyLevel::Critical;
         }
 
         if params.treatment_duration > self.limits.max_session_time {
             self.violations.push(SafetyViolation {
-                parameter: "treatment_duration".to_string(),
+                parameter: "treatment_duration".to_owned(),
                 measured_value: params.treatment_duration,
                 limit_value: self.limits.max_session_time,
                 severity: SafetyLevel::Critical,
                 timestamp: Instant::now(),
-                message: "Treatment duration exceeds maximum limit".to_string(),
+                message: "Treatment duration exceeds maximum limit".to_owned(),
             });
             new_state = SafetyLevel::Critical;
         }
 
         if params.frequency < 0.5e6 || params.frequency > 10e6 {
             self.violations.push(SafetyViolation {
-                parameter: "frequency".to_string(),
+                parameter: "frequency".to_owned(),
                 measured_value: params.frequency,
                 limit_value: 5e6,
                 severity: SafetyLevel::Warning,
                 timestamp: Instant::now(),
-                message: "Frequency outside typical therapeutic ultrasound range".to_string(),
+                message: "Frequency outside typical therapeutic ultrasound range".to_owned(),
             });
             if new_state < SafetyLevel::Warning {
                 new_state = SafetyLevel::Warning;
@@ -144,11 +145,13 @@ impl SafetyMonitor {
     }
 
     /// Get current safety state.
+    #[must_use] 
     pub fn safety_state(&self) -> SafetyLevel {
         self.current_state
     }
 
     /// Get list of current safety violations.
+    #[must_use] 
     pub fn violations(&self) -> &[SafetyViolation] {
         &self.violations
     }
@@ -159,6 +162,7 @@ impl SafetyMonitor {
     }
 
     /// Return `true` if emergency shutdown is required.
+    #[must_use] 
     pub fn requires_emergency_shutdown(&self) -> bool {
         self.current_state >= SafetyLevel::Critical
     }

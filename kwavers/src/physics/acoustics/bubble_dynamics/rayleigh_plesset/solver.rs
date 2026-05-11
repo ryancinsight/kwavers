@@ -1,7 +1,6 @@
 //! Rayleigh-Plesset equation solver for bubble dynamics
 
 use super::super::bubble_state::{BubbleParameters, BubbleState};
-use super::super::thermodynamics::{ThermodynamicsCalculator, VaporPressureModel};
 use crate::core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
 use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 
@@ -9,19 +8,12 @@ use crate::core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 #[derive(Debug)]
 pub struct RayleighPlessetSolver {
     params: BubbleParameters,
-    #[allow(dead_code)] // Thermodynamics calculator for bubble modeling
-    thermo_calc: ThermodynamicsCalculator,
 }
 
 impl RayleighPlessetSolver {
     #[must_use]
     pub fn new(params: BubbleParameters) -> Self {
-        // Use same thermodynamics engine as KellerMiksisModel for consistency
-        let thermo_calc = ThermodynamicsCalculator::new(VaporPressureModel::Wagner);
-        Self {
-            params,
-            thermo_calc,
-        }
+        Self { params }
     }
 
     /// Calculate bubble wall acceleration using Rayleigh-Plesset equation
@@ -119,7 +111,7 @@ impl RayleighPlessetSolver {
         // Van der Waals equation
         let n_moles = n_total / AVOGADRO;
 
-        n_moles * R_GAS * state.temperature / (volume - n_moles * b)
+        n_moles * R_GAS * state.temperature / n_moles.mul_add(-b, volume)
             - a * n_moles * n_moles / (volume * volume)
     }
 }

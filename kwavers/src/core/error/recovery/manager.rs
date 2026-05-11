@@ -49,6 +49,9 @@ impl RecoveryManager {
     }
 
     /// Backward-compatible alias.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn attempt_recovery(
         &mut self,
         error: &KwaversError,
@@ -58,6 +61,9 @@ impl RecoveryManager {
     }
 
     /// Typed recovery entrypoint for new call sites.
+    /// # Errors
+    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    ///
     pub fn recover_action(
         &mut self,
         error: &KwaversError,

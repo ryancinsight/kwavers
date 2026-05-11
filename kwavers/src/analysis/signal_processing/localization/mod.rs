@@ -70,13 +70,16 @@ pub struct SourceLocation {
     /// Confidence (0.0-1.0)
     pub confidence: f64,
 
-    /// Uncertainty radius [m]
+    /// Uncertainty radius (m)
     pub uncertainty: f64,
 }
 
 /// Localization algorithm trait
 pub trait LocalizationProcessor: Send + Sync {
     /// Localize source from time-delay measurements
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn localize(
         &self,
         time_delays: &[f64],
@@ -84,10 +87,16 @@ pub trait LocalizationProcessor: Send + Sync {
     ) -> KwaversResult<SourceLocation>;
 
     /// Get processor name
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn name(&self) -> &str;
 }
 
 /// Create a MUSIC-based localization processor
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn create_music_processor(
     config: &MUSICConfig,
 ) -> KwaversResult<Box<dyn LocalizationProcessor>> {
@@ -95,11 +104,17 @@ pub fn create_music_processor(
 }
 
 /// Create a TDOA-based localization processor
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn create_tdoa_processor(config: &TDOAConfig) -> KwaversResult<Box<dyn LocalizationProcessor>> {
     Ok(Box::new(TDOAProcessor::new(config)?))
 }
 
 /// Create a Bayesian filtering localization processor
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn create_bayesian_processor(
     config: &KalmanFilterConfig,
 ) -> KwaversResult<Box<dyn LocalizationProcessor>> {
@@ -113,21 +128,18 @@ mod tests {
     #[test]
     fn test_music_processor_creation() {
         let config = MUSICConfig::default();
-        let result = create_music_processor(&config);
-        assert!(result.is_ok());
+        let _processor = create_music_processor(&config).unwrap();
     }
 
     #[test]
     fn test_tdoa_processor_creation() {
         let config = TDOAConfig::default();
-        let result = create_tdoa_processor(&config);
-        assert!(result.is_ok());
+        let _processor = create_tdoa_processor(&config).unwrap();
     }
 
     #[test]
     fn test_bayesian_processor_creation() {
         let config = KalmanFilterConfig::default();
-        let result = create_bayesian_processor(&config);
-        assert!(result.is_ok());
+        let _processor = create_bayesian_processor(&config).unwrap();
     }
 }

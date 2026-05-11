@@ -20,6 +20,9 @@ use std::f64::consts::PI;
 /// # Returns
 ///
 /// Filtered 3D image
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn apply_gaussian_filter(
     image: &Array3<f64>,
     sigma: f64,
@@ -119,6 +122,9 @@ pub fn apply_gaussian_filter(
 /// # Returns
 ///
 /// Edge-preserved filtered 3D image
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn apply_bilateral_filter(
     image: &Array3<f64>,
     spatial_sigma: f64,

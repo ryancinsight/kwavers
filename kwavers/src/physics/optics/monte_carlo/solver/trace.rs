@@ -105,8 +105,7 @@ impl MonteCarloSolver {
                             let n_tissue = self
                                 .optical_map
                                 .get(ci, cj, 0)
-                                .map(|p| p.refractive_index)
-                                .unwrap_or(1.4);
+                                .map_or(1.4, |p| p.refractive_index);
                             let cos_i = (-photon.direction[2]).clamp(0.0, 1.0);
                             let r = fresnel_reflectance(n_tissue, 1.0, cos_i);
                             if rng.gen::<f64>() < r {
@@ -120,9 +119,8 @@ impl MonteCarloSolver {
                                     ck = nk;
                                 }
                                 continue;
-                            } else {
-                                atomic_add_f64(reflected_weight, photon.weight);
                             }
+                            atomic_add_f64(reflected_weight, photon.weight);
                         }
                         if config.boundary_reflection
                             && !(photon.position[2] <= 0.0 && photon.direction[2] < 0.0)

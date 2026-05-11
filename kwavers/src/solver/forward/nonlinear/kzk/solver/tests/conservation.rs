@@ -56,8 +56,12 @@ fn test_conservation_diagnostics_integration() {
         "solution must be valid after 4 steps"
     );
 
-    let summary = solver.get_conservation_summary();
-    assert!(summary.is_some(), "conservation summary must be available");
+    let summary = solver.get_conservation_summary().expect("conservation summary must be available");
+    // Summary string must be non-empty (tracker produces a diagnostic line).
+    assert!(
+        !summary.is_empty(),
+        "conservation summary string must not be empty"
+    );
 }
 
 /// Energy = p²/(2·ρ₀·c₀²) integrated over the domain volume.
@@ -65,6 +69,9 @@ fn test_conservation_diagnostics_integration() {
 /// With uniform pressure `p = P`, the analytical total energy is:
 /// `E = P²/(2·ρ₀·c₀²) · V`
 /// where `V = Lx · Ly · Lz = (nx·dx)·(ny·dx)·(nt·dt·c₀)`.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_conservation_energy_calculation() {
     let config = KZKConfig {
@@ -104,7 +111,18 @@ fn test_conservation_energy_calculation() {
 
 #[test]
 fn test_conservation_diagnostics_disable() {
-    let config = KZKConfig::default();
+    // Minimal grid: the disable behavior (enable→None→step survives) is grid-size-independent.
+    // KZKConfig::default() allocates 2×128×128×1000 Complex64 ≈ 524 MB unnecessarily here.
+    let config = KZKConfig {
+        nx: 8,
+        ny: 8,
+        nz: 16,
+        nt: 2,
+        dx: 1e-3,
+        dz: 1e-3,
+        dt: 1e-8,
+        ..Default::default()
+    };
     let mut solver = KZKSolver::new(config).unwrap();
 
     solver.enable_conservation_diagnostics(ConservationTolerances::default());
@@ -127,6 +145,9 @@ fn test_conservation_diagnostics_disable() {
 }
 
 /// The conservation check fires once at step 5 (check_interval = 5).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_conservation_check_interval() {
     let mut config = KZKConfig {

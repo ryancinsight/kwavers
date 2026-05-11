@@ -10,6 +10,9 @@ use ndarray::{Array1, Array3, ArrayView1, ArrayView3};
 /// All implementations must be `Send + Sync` to enable parallel computation.
 pub trait Interpolator: Send + Sync {
     /// Interpolate 1D data at target points.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn interpolate_1d(
         &self,
         data: ArrayView1<f64>,
@@ -17,6 +20,9 @@ pub trait Interpolator: Send + Sync {
     ) -> KwaversResult<Array1<f64>>;
 
     /// Interpolate 3D data at target points.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn interpolate_3d(
         &self,
         data: ArrayView3<f64>,

@@ -72,6 +72,9 @@ pub enum BasisType {
 
 /// Build Vandermonde matrix for given nodes and basis
 /// V_ij = phi_j(xi_i)
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn build_vandermonde(
     nodes: &Array1<f64>,
     poly_order: usize,
@@ -136,7 +139,7 @@ fn legendre_poly(n: usize, x: f64) -> f64 {
     let mut l_curr = x;
 
     for i in 1..n {
-        let l_next = ((2 * i + 1) as f64 * x * l_curr - i as f64 * l_prev) / ((i + 1) as f64);
+        let l_next = ((2 * i + 1) as f64 * x).mul_add(l_curr, -(i as f64 * l_prev)) / ((i + 1) as f64);
         l_prev = l_curr;
         l_curr = l_next;
     }
@@ -155,20 +158,23 @@ pub(super) fn chebyshev_t(n: usize, x: f64) -> f64 {
     let mut t_curr = x;
 
     for _ in 1..n {
-        let t_next = 2.0 * x * t_curr - t_prev;
+        let t_next = (2.0 * x).mul_add(t_curr, -t_prev);
         t_prev = t_curr;
         t_curr = t_next;
     }
 
     t_curr
 }
-
+/// Validate fourier nodes.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn validate_fourier_nodes(nodes: &Array1<f64>) -> KwaversResult<()> {
     const PERIODIC_ENDPOINT_TOL: f64 = 1e-12;
 
     if nodes.iter().any(|node| !node.is_finite()) {
         return Err(crate::core::error::KwaversError::InvalidInput(
-            "Fourier basis nodes must be finite".to_string(),
+            "Fourier basis nodes must be finite".to_owned(),
         ));
     }
 
@@ -181,7 +187,7 @@ pub(super) fn validate_fourier_nodes(nodes: &Array1<f64>) -> KwaversResult<()> {
 
     if has_left_endpoint && has_right_endpoint {
         return Err(crate::core::error::KwaversError::InvalidInput(
-            "Fourier basis on [-1,1) cannot include both periodic endpoints -1 and 1".to_string(),
+            "Fourier basis on [-1,1) cannot include both periodic endpoints -1 and 1".to_owned(),
         ));
     }
 

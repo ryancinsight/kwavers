@@ -70,6 +70,10 @@ pub enum LineReconInterpolation {
 /// * `data_order` - input axis order
 /// * `interp` - interpolation mode on the k-space frequency axis
 /// * `pos_cond` - if true, clamp negative output values to zero
+/// # Errors
+/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn kspace_line_recon(
     sensor_data: ArrayView2<'_, f64>,
     dy: f64,
@@ -90,9 +94,9 @@ pub fn kspace_line_recon(
 
     if data.nrows() < 2 || data.ncols() == 0 {
         return Err(KwaversError::Validation(ValidationError::FieldValidation {
-            field: "sensor_data".to_string(),
+            field: "sensor_data".to_owned(),
             value: format!("{:?}", data.dim()),
-            constraint: "expected at least two time samples and one detector column".to_string(),
+            constraint: "expected at least two time samples and one detector column".to_owned(),
         }));
     }
 
@@ -120,7 +124,7 @@ pub fn kspace_line_recon(
             let scale = if w == 0.0 && ky == 0.0 {
                 Complex64::new(c / 2.0, 0.0)
             } else {
-                let arg = (w / c).powi(2) - ky.powi(2);
+                let arg = ky.mul_add(-ky, (w / c).powi(2));
                 let root = Complex64::new(arg, 0.0).sqrt();
                 c * c * root / (2.0 * w)
             };
@@ -134,7 +138,7 @@ pub fn kspace_line_recon(
         let column = scaled.index_axis(Axis(1), j);
         let ky = ky_axis[j];
         for i in 0..nt {
-            let target_w = c * (kx_axis[i] * kx_axis[i] + ky * ky).sqrt();
+            let target_w = c * kx_axis[i].hypot(ky);
             interpolated[[i, j]] = interpolate_on_axis(&w_axis, column, target_w, interp);
         }
     }
@@ -149,7 +153,7 @@ pub fn kspace_line_recon(
         .mapv(|value| value.re * (4.0 / c));
 
     if pos_cond {
-        recon.mapv_inplace(|value| value.max(0.0));
+        recon.par_mapv_inplace(|value| value.max(0.0));
     }
 
     Ok(recon)
@@ -158,9 +162,9 @@ pub fn kspace_line_recon(
 fn validate_scalar(name: &str, value: f64) -> KwaversResult<()> {
     if !value.is_finite() || value <= 0.0 {
         return Err(KwaversError::Validation(ValidationError::FieldValidation {
-            field: name.to_string(),
+            field: name.to_owned(),
             value: value.to_string(),
-            constraint: "expected a finite, strictly positive scalar".to_string(),
+            constraint: "expected a finite, strictly positive scalar".to_owned(),
         }));
     }
     Ok(())

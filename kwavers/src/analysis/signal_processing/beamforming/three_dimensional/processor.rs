@@ -24,8 +24,7 @@ use wgpu;
 /// Real-time 3D beamforming processor with optional GPU acceleration
 #[derive(Debug)]
 pub struct BeamformingProcessor3D {
-    /// Configuration
-    #[allow(dead_code)] // Used in GPU feature-gated code
+    /// Configuration — used by both GPU and CPU execution paths.
     pub(crate) config: BeamformingConfig3D,
     #[cfg(feature = "gpu")]
     /// WGPU device
@@ -36,10 +35,6 @@ pub struct BeamformingProcessor3D {
     #[cfg(feature = "gpu")]
     /// Compute pipeline for delay-and-sum
     pub(crate) delay_sum_pipeline: wgpu::ComputePipeline,
-    #[cfg(feature = "gpu")]
-    /// Compute pipeline for dynamic focusing
-    #[allow(dead_code)]
-    pub(crate) dynamic_focus_pipeline: wgpu::ComputePipeline,
     #[cfg(feature = "gpu")]
     /// Bind group layouts
     pub(crate) bind_group_layouts: Vec<wgpu::BindGroupLayout>,
@@ -70,10 +65,9 @@ impl BeamformingProcessor3D {
             let _ = config;
             Err(KwaversError::System(
                 crate::core::error::SystemError::FeatureNotAvailable {
-                    feature: "gpu".to_string(),
+                    feature: "gpu".to_owned(),
                     reason:
-                        "GPU acceleration required for 3D beamforming. Enable with --features gpu"
-                            .to_string(),
+                        "GPU acceleration required for 3D beamforming. Enable with --features gpu".to_owned(),
                 },
             ))
         }
@@ -120,11 +114,6 @@ impl BeamformingProcessor3D {
             let delay_sum_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("3D Delay-and-Sum Shader"),
                 source: wgpu::ShaderSource::Wgsl(shaders::BEAMFORMING_3D_SHADER.into()),
-            });
-
-            let dynamic_focus_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("3D Dynamic Focus Shader"),
-                source: wgpu::ShaderSource::Wgsl(shaders::DYNAMIC_FOCUS_3D_SHADER.into()),
             });
 
             // Create bind group layout for GPU buffers
@@ -207,16 +196,6 @@ impl BeamformingProcessor3D {
                     cache: None,
                 });
 
-            let dynamic_focus_pipeline =
-                device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some("3D Dynamic Focus Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &dynamic_focus_shader,
-                    entry_point: Some("dynamic_focus_main"),
-                    compilation_options: Default::default(),
-                    cache: None,
-                });
-
             // Initialize streaming buffer if enabled
             let streaming_buffer = if config.enable_streaming {
                 Some(super::streaming::StreamingBuffer::new(
@@ -233,7 +212,6 @@ impl BeamformingProcessor3D {
                 device,
                 queue,
                 delay_sum_pipeline,
-                dynamic_focus_pipeline,
                 bind_group_layouts: vec![bind_group_layout],
                 streaming_buffer,
                 metrics: BeamformingMetrics::default(),
@@ -247,19 +225,11 @@ impl BeamformingProcessor3D {
         &self.metrics
     }
 
-    /// Create apodization weights for sidelobe reduction
+    /// Create apodization weights for sidelobe reduction.
+    ///
+    /// Delegates to [`super::apodization::create_apodization_weights`].
+    /// Called from the GPU delay-and-sum dispatch path in `processing/algorithms.rs`.
     #[cfg(feature = "gpu")]
-    #[allow(dead_code)] // Used in delay_and_sum processing
-    pub(super) fn create_apodization_weights(
-        &self,
-        window: &super::config::ApodizationWindow,
-    ) -> ndarray::Array3<f32> {
-        super::apodization::create_apodization_weights(self.config.num_elements_3d, window)
-    }
-
-    /// Create apodization weights (CPU fallback)
-    #[cfg(not(feature = "gpu"))]
-    #[allow(dead_code)] // CPU fallback version
     pub(super) fn create_apodization_weights(
         &self,
         window: &super::config::ApodizationWindow,
@@ -268,6 +238,9 @@ impl BeamformingProcessor3D {
     }
 
     /// Execute delay-and-sum beamforming on GPU
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[cfg(feature = "gpu")]
     pub(super) fn delay_and_sum_gpu(
         &self,
@@ -292,6 +265,9 @@ impl BeamformingProcessor3D {
     }
 
     /// Execute delay-and-sum subvolume processing on GPU
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[cfg(feature = "gpu")]
     pub(super) fn delay_and_sum_subvolume_gpu(
         &self,
@@ -317,23 +293,29 @@ impl BeamformingProcessor3D {
         )
     }
 
-    /// Calculate GPU memory usage
-    #[allow(dead_code)] // Used in metrics tracking
+    /// Calculate GPU memory usage.
+    ///
+    /// Delegates to [`super::metrics::calculate_gpu_memory_usage`].
+    /// Called from `processing/mod.rs` after each volume reconstruction.
+    #[cfg(feature = "gpu")]
     pub(super) fn calculate_gpu_memory_usage(&self) -> f64 {
         super::metrics::calculate_gpu_memory_usage(&self.config)
     }
 
-    /// Calculate CPU memory usage
+    /// Calculate streaming buffer CPU memory usage (GPU build).
+    ///
+    /// Delegates to [`super::metrics::calculate_cpu_memory_usage`].
     #[cfg(feature = "gpu")]
-    #[allow(dead_code)] // Used in metrics tracking
     pub(super) fn calculate_cpu_memory_usage(&self) -> f64 {
         super::metrics::calculate_cpu_memory_usage(&self.streaming_buffer)
     }
 
-    /// Calculate CPU memory usage (CPU-only version)
+    /// Calculate CPU memory usage (non-GPU build).
+    ///
+    /// Delegates to [`super::metrics::calculate_cpu_memory_usage`].
+    /// Returns `0.0`: no streaming buffer exists in CPU-only builds.
     #[cfg(not(feature = "gpu"))]
-    #[allow(dead_code)] // CPU fallback version
     pub(super) fn calculate_cpu_memory_usage(&self) -> f64 {
-        0.0
+        super::metrics::calculate_cpu_memory_usage(&None::<()>)
     }
 }

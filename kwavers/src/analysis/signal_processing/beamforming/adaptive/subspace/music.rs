@@ -42,6 +42,11 @@ impl MUSIC {
     /// ```text
     /// P_MUSIC(θ) = 1 / ||E_n^H a(θ)||²
     /// ```
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn pseudospectrum(
         &self,
         covariance: &Array2<Complex64>,
@@ -51,7 +56,7 @@ impl MUSIC {
 
         if n == 0 || covariance.ncols() != n {
             return Err(KwaversError::InvalidInput(
-                "MUSIC::pseudospectrum: covariance must be non-empty square matrix".to_string(),
+                "MUSIC::pseudospectrum: covariance must be non-empty square matrix".to_owned(),
             ));
         }
         if steering.len() != n {
@@ -68,11 +73,11 @@ impl MUSIC {
             )));
         }
 
-        for &val in steering.iter() {
+        for &val in steering {
             if !val.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::NaN {
-                    operation: "MUSIC::pseudospectrum".to_string(),
-                    inputs: "steering vector contains non-finite values".to_string(),
+                    operation: "MUSIC::pseudospectrum".to_owned(),
+                    inputs: "steering vector contains non-finite values".to_owned(),
                 }));
             }
         }

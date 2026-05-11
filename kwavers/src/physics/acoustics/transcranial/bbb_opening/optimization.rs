@@ -5,6 +5,7 @@ use super::types::BBBParameters;
 /// Extended BBB simulator methods for parameter optimization
 impl BBBOpening {
     /// Calculate optimal treatment parameters
+    #[must_use] 
     pub fn optimize_parameters(&self, target_region: &[(usize, usize, usize)]) -> BBBParameters {
         // Analyze current field to optimize parameters
         let mut max_pressure: f64 = 0.0;

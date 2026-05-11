@@ -34,6 +34,7 @@ pub struct LEDSource {
 
 impl LEDSource {
     /// Create a new LED array source
+    #[must_use] 
     pub fn new(config: LEDConfig, positions: Vec<(f64, f64, f64)>) -> Self {
         Self { config, positions }
     }
@@ -55,7 +56,7 @@ impl OpticalSource for LEDSource {
             let dx = x - pos.0;
             let dy = y - pos.1;
             let dz = z - pos.2;
-            let r = (dx * dx + dy * dy + dz * dz).sqrt();
+            let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             if r > 0.0 {
                 let angle = (dz / r).acos(); // Angle from normal

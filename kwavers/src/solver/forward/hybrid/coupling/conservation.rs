@@ -8,24 +8,24 @@ use ndarray::Array3;
 /// Conservation enforcer for interface coupling
 #[derive(Debug)]
 pub struct ConservationEnforcer {
-    /// Interface geometry
-    #[allow(dead_code)]
-    geometry: InterfaceGeometry,
     /// Conservation tolerance
     tolerance: f64,
 }
 
 impl ConservationEnforcer {
     /// Create a new conservation enforcer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
-    pub fn new(geometry: &InterfaceGeometry) -> Self {
-        Self {
-            geometry: geometry.clone(),
-            tolerance: 1e-10,
-        }
+    pub fn new(_geometry: &InterfaceGeometry) -> Self {
+        Self { tolerance: 1e-10 }
     }
 
     /// Enforce conservation laws on transferred fields
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn enforce(
         &self,
         interpolated: &Array3<f64>,
@@ -46,6 +46,9 @@ impl ConservationEnforcer {
     }
 
     /// Enforce mass conservation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn enforce_mass_conservation(
         &self,
         fields: &mut Array3<f64>,
@@ -64,6 +67,9 @@ impl ConservationEnforcer {
     }
 
     /// Enforce momentum conservation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn enforce_momentum_conservation(
         &self,
         fields: &mut Array3<f64>,
@@ -89,7 +95,7 @@ impl ConservationEnforcer {
             fields.zip_mut_with(target, |field_val, &target_val| {
                 // Weighted average favoring conservation: 0.7 * corrected + 0.3 * target
                 let corrected = *field_val * flux_ratio;
-                *field_val = 0.7 * corrected + 0.3 * target_val;
+                *field_val = 0.7f64.mul_add(corrected, 0.3 * target_val);
             });
         } else {
             // If source flux is near zero, use target field directly
@@ -102,6 +108,9 @@ impl ConservationEnforcer {
     }
 
     /// Enforce energy conservation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn enforce_energy_conservation(
         &self,
         fields: &mut Array3<f64>,

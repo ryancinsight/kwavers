@@ -56,6 +56,10 @@ impl SpectralFilter {
     ///
     /// * `cutoff` - Cutoff as fraction of Nyquist (typically 0.67 for 2/3 rule)
     /// * `filter_type` - Type of filter window
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(cutoff: f64, filter_type: FilterType) -> Self {
         Self {
             cutoff,
@@ -78,7 +82,7 @@ impl SpectralFilter {
         let (nx, ny, nz) = field.dim();
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(KwaversError::DimensionMismatch(
-                "SpectralFilter requires all dimensions to be non-zero".to_string(),
+                "SpectralFilter requires all dimensions to be non-zero".to_owned(),
             ));
         }
         if !(0.0..=1.0).contains(&self.cutoff) || !self.cutoff.is_finite() {
@@ -106,6 +110,7 @@ impl SpectralFilter {
     }
 
     /// Get filter transfer function H(k) for given wavenumber
+    #[must_use] 
     pub fn transfer_function(&self, k: f64, k_nyquist: f64) -> f64 {
         let k_normalized = k.abs() / k_nyquist;
 

@@ -71,11 +71,13 @@ impl Default for PhysicsCoefficients {
 
 impl PhysicsCoefficients {
     /// Thermal diffusivity κ = k / (ρ · cₚ)
+    #[must_use] 
     pub fn thermal_diffusivity(&self) -> f64 {
         self.thermal_conductivity / (self.density * self.specific_heat)
     }
 
     /// Optical diffusion coefficient D = 1 / (3 · (μ_a + μ_s'))
+    #[must_use] 
     pub fn optical_diffusion(&self) -> f64 {
         1.0 / (3.0 * (self.optical_absorption + self.reduced_scattering))
     }
@@ -131,6 +133,9 @@ mod tests {
     }
 
     /// Photoacoustic source term scales linearly with the Grüneisen parameter.
+    /// # Panics
+    /// - Panics if assertion fails: `Grüneisen parameter must be positive, got {}`.
+    ///
     #[test]
     fn test_photoacoustic_default_gruneisen_not_one() {
         let c = PhysicsCoefficients::default();

@@ -19,6 +19,9 @@ pub struct FdtdFemSolver {
 
 impl FdtdFemSolver {
     /// Create new coupled FDTD-FEM solver
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         config: FdtdFemCouplingConfig,
         fdtd_grid: Grid,
@@ -40,6 +43,9 @@ impl FdtdFemSolver {
     }
 
     /// Perform coupled time step
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn step(&mut self) -> KwaversResult<()> {
         self.coupler.reset_convergence();
 

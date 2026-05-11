@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::error::{KwaversError, KwaversResult};
 
 fn assert_invalid_dimension<T>(result: KwaversResult<T>, dim: usize) {
     match result {
@@ -11,6 +12,9 @@ fn assert_invalid_dimension<T>(result: KwaversResult<T>, dim: usize) {
 }
 
 /// `PerDimensionPML::get` must return `Err` for dimension > 2, not panic.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_per_dimension_pml_invalid_dim_returns_err() {
     let pml = PerDimensionPML::uniform(20);
@@ -22,6 +26,9 @@ fn test_per_dimension_pml_invalid_dim_returns_err() {
 }
 
 /// `PerDimensionAlpha::get` must return `Err` for dimension > 2, not panic.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_per_dimension_alpha_invalid_dim_returns_err() {
     let alpha = PerDimensionAlpha::uniform(2.0);

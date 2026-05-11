@@ -14,6 +14,9 @@ impl BjerknesCalculator {
     /// - V₁, V₂ are volume oscillation amplitudes
     /// - φ is phase difference between oscillations
     /// - d is center-to-center distance
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn secondary_bjerknes_force(
         &self,
         bubble1_radius: f64,
@@ -25,13 +28,13 @@ impl BjerknesCalculator {
     ) -> KwaversResult<BjerknesForce> {
         if bubble1_radius <= 0.0 || bubble2_radius <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Bubble radii must be positive".to_string(),
+                "Bubble radii must be positive".to_owned(),
             ));
         }
 
         if distance <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Distance must be positive".to_string(),
+                "Distance must be positive".to_owned(),
             ));
         }
 
@@ -91,6 +94,9 @@ impl BjerknesCalculator {
     }
 
     /// Calculate combined primary and secondary Bjerknes forces
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn total_bjerknes_force(
         &self,
         bubble1_radius: f64,

@@ -14,7 +14,7 @@
 //! ## Additive Mode
 //! For interior and volume sources (e.g., point sources, transducers):
 //! - **Normalized injection**: p += (mask / ||mask||) * amplitude(t)
-//! - Where ||mask|| is the L1 norm: ||mask|| = Σᵢⱼₖ |mask[i,j,k]|
+//! - Where ||mask|| is the L1 norm: `||mask|| = Σᵢⱼₖ |mask[i,j,k]|`
 //! - Preserves energy scaling and ensures amplitude independence from discretization
 //! - Used for all sources in PSTD and interior sources in FDTD
 //!

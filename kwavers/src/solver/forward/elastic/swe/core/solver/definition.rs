@@ -22,6 +22,10 @@ pub struct ElasticWaveSolver {
 }
 
 impl ElasticWaveSolver {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(grid: &Grid, medium: &dyn Medium, config: ElasticWaveConfig) -> KwaversResult<Self> {
         let (nx, ny, nz) = grid.dimensions();
         let density = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| medium.density(i, j, k));
@@ -33,9 +37,29 @@ impl ElasticWaveSolver {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
             medium.lame_mu(x, y, z, grid)
         });
+        // Compute σ_max from the medium's maximum P-wave speed so the PML
+        // provides the target reflection (1e-4) regardless of wave speed.
+        // σ_max = −ln(R) · c_max / (2 · L_pml)  (Collino & Tsogka 2001)
+        let c_max_p = lambda
+            .iter()
+            .zip(mu.iter())
+            .zip(density.iter())
+            .filter_map(|((la, mv), rho)| {
+                if *rho > 0.0 {
+                    Some((2.0f64.mul_add(*mv, *la) / *rho).sqrt())
+                } else {
+                    None
+                }
+            })
+            .fold(0.0_f64, f64::max);
+        let sigma_max = if c_max_p > 0.0 {
+            PMLBoundary::optimize_sigma_max(1e-4, c_max_p, grid, config.pml_thickness)
+        } else {
+            1e6 // fallback for degenerate media
+        };
         let pml_config = PMLConfig {
             thickness: config.pml_thickness,
-            sigma_max: 100.0,
+            sigma_max,
             profile_order: 2,
             reflection_target: 1e-4,
         };

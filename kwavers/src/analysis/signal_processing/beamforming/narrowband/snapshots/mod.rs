@@ -76,20 +76,23 @@ pub struct BasebandSnapshotConfig {
 
 impl BasebandSnapshotConfig {
     /// Validate invariants (mathematically necessary).
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.sampling_frequency_hz.is_finite() || self.sampling_frequency_hz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BasebandSnapshotConfig: sampling_frequency_hz must be finite and > 0".to_string(),
+                "BasebandSnapshotConfig: sampling_frequency_hz must be finite and > 0".to_owned(),
             ));
         }
         if !self.center_frequency_hz.is_finite() || self.center_frequency_hz <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BasebandSnapshotConfig: center_frequency_hz must be finite and > 0".to_string(),
+                "BasebandSnapshotConfig: center_frequency_hz must be finite and > 0".to_owned(),
             ));
         }
         if self.snapshot_step_samples == 0 {
             return Err(KwaversError::InvalidInput(
-                "BasebandSnapshotConfig: snapshot_step_samples must be >= 1".to_string(),
+                "BasebandSnapshotConfig: snapshot_step_samples must be >= 1".to_owned(),
             ));
         }
         Ok(())
@@ -126,7 +129,7 @@ fn analytic_signal_hilbert(signal: &[f64]) -> KwaversResult<Vec<Complex64>> {
     let n = signal.len();
     if n == 0 {
         return Err(KwaversError::InvalidInput(
-            "analytic_signal_hilbert: signal must be non-empty".to_string(),
+            "analytic_signal_hilbert: signal must be non-empty".to_owned(),
         ));
     }
 
@@ -175,17 +178,17 @@ fn downconvert_to_baseband(
 ) -> KwaversResult<Vec<Complex64>> {
     if analytic.is_empty() {
         return Err(KwaversError::InvalidInput(
-            "downconvert_to_baseband: analytic must be non-empty".to_string(),
+            "downconvert_to_baseband: analytic must be non-empty".to_owned(),
         ));
     }
     if !sampling_frequency_hz.is_finite() || sampling_frequency_hz <= 0.0 {
         return Err(KwaversError::InvalidInput(
-            "downconvert_to_baseband: sampling_frequency_hz must be finite and > 0".to_string(),
+            "downconvert_to_baseband: sampling_frequency_hz must be finite and > 0".to_owned(),
         ));
     }
     if !center_frequency_hz.is_finite() || center_frequency_hz <= 0.0 {
         return Err(KwaversError::InvalidInput(
-            "downconvert_to_baseband: center_frequency_hz must be finite and > 0".to_string(),
+            "downconvert_to_baseband: center_frequency_hz must be finite and > 0".to_owned(),
         ));
     }
 
@@ -239,8 +242,7 @@ pub fn extract_complex_baseband_snapshots(
     }
     if n_sensors == 0 || n_samples == 0 {
         return Err(KwaversError::InvalidInput(
-            "extract_complex_baseband_snapshots requires n_sensors > 0 and n_samples > 0"
-                .to_string(),
+            "extract_complex_baseband_snapshots requires n_sensors > 0 and n_samples > 0".to_owned(),
         ));
     }
 
@@ -248,7 +250,7 @@ pub fn extract_complex_baseband_snapshots(
     if step == 0 {
         // cfg.validate() already rejects this; keep totality explicit.
         return Err(KwaversError::InvalidInput(
-            "extract_complex_baseband_snapshots: snapshot_step_samples must be >= 1".to_string(),
+            "extract_complex_baseband_snapshots: snapshot_step_samples must be >= 1".to_owned(),
         ));
     }
 

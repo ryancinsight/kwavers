@@ -26,6 +26,9 @@ pub struct TherapyCalculator {
 
 impl TherapyCalculator {
     /// Create a new therapy calculator
+    /// # Panics
+    /// - Panics if `Valid thermal properties`.
+    ///
     pub fn new(modality: TherapyModality, parameters: TherapyParameters, grid: &Grid) -> Self {
         // Initialize components based on modality
         let thermal = if modality.has_thermal_effects() {
@@ -66,6 +69,9 @@ impl TherapyCalculator {
     }
 
     /// Calculate therapy effects
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calculate(
         &mut self,
         pressure: &Array3<f64>,
@@ -97,6 +103,9 @@ impl TherapyCalculator {
     }
 
     /// Calculate heat source from acoustic absorption
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn calculate_heat_source(
         &self,
         pressure: &Array3<f64>,
@@ -146,11 +155,13 @@ impl TherapyCalculator {
     }
 
     /// Check if treatment is complete
+    #[must_use] 
     pub fn is_complete(&self) -> bool {
         self.metrics.is_successful(self.get_target_dose(), 0.8)
     }
 
     /// Get treatment summary
+    #[must_use] 
     pub fn summary(&self) -> String {
         format!(
             "Therapy: {:?}\n\

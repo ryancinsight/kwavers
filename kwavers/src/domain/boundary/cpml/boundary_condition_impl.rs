@@ -31,7 +31,7 @@ impl BoundaryCondition for CPMLBoundary {
         };
 
         // Apply damping using sigma profiles
-        Zip::indexed(field).for_each(|(i, j, k), val| {
+        Zip::indexed(field).par_for_each(|(i, j, k), val| {
             let s_x = self.profiles.sigma_x[i];
             let s_y = self.profiles.sigma_y[j];
             let s_z = self.profiles.sigma_z[k];
@@ -59,7 +59,7 @@ impl BoundaryCondition for CPMLBoundary {
             self.estimate_dt_from_spacing(&spacing)
         };
 
-        Zip::indexed(field).for_each(|(i, j, k), val| {
+        Zip::indexed(field).par_for_each(|(i, j, k), val| {
             let s_x = self.profiles.sigma_x[i];
             let s_y = self.profiles.sigma_y[j];
             let s_z = self.profiles.sigma_z[k];

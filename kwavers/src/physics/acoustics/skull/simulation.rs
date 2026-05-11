@@ -43,6 +43,9 @@ pub struct TranscranialSimulation {
 
 impl TranscranialSimulation {
     /// Create new transcranial simulation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(grid: &Grid, skull_props: SkullProperties) -> KwaversResult<Self> {
         Ok(Self {
             grid: grid.clone(),
@@ -77,6 +80,10 @@ impl TranscranialSimulation {
     ///
     /// * `model_type` - "sphere", "ellipsoid", or "realistic"
     /// * `parameters` - Model-specific parameters
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_analytical_geometry(
         &mut self,
         model_type: &str,
@@ -109,11 +116,14 @@ impl TranscranialSimulation {
     /// corrections that compensate for skull-induced aberrations.
     ///
     /// Reference: Aubry et al. (2003) IEEE TUFFC
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_aberration_correction(&self, frequency: f64) -> KwaversResult<Array3<f64>> {
         let heterogeneous = self
             .heterogeneous
             .as_ref()
-            .ok_or_else(|| KwaversError::InvalidInput("Skull geometry not loaded".to_string()))?;
+            .ok_or_else(|| KwaversError::InvalidInput("Skull geometry not loaded".to_owned()))?;
 
         let correction = AberrationCorrection::new(&self.grid, heterogeneous);
         correction.compute_time_reversal_phases(frequency)
@@ -122,6 +132,9 @@ impl TranscranialSimulation {
     /// Estimate insertion loss through skull
     ///
     /// Returns expected pressure reduction factor
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn estimate_insertion_loss(&self, frequency: f64) -> KwaversResult<f64> {
         let attenuation_np_per_m = self.skull_props.attenuation_at_frequency(frequency);
 

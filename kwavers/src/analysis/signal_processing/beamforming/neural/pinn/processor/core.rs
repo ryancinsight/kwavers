@@ -46,6 +46,9 @@ impl std::fmt::Debug for NeuralBeamformingProcessor {
 
 impl NeuralBeamformingProcessor {
     /// Create new neural beamforming processor.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: PINNBeamformingConfig) -> KwaversResult<Self> {
         Ok(Self {
             config,
@@ -57,17 +60,26 @@ impl NeuralBeamformingProcessor {
     }
 
     /// Set the PINN provider for this processor (dependency injection).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[cfg(feature = "pinn")]
     pub fn set_provider(&mut self, provider: Box<dyn PinnBeamformingProvider>) {
         self.pinn_provider = Some(provider);
     }
 
     /// Return the number of cached steering vectors.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn steering_cache_len(&self) -> usize {
         self.steering_cache.len()
     }
 
     /// Process 4D RF data volume with PINN-enhanced beamforming.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn process_volume(
         &mut self,
         rf_data: &Array4<f32>,
@@ -76,6 +88,9 @@ impl NeuralBeamformingProcessor {
     }
 
     /// Process a frame-major RF volume without copying the input buffer.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(crate) fn process_volume_view(
         &mut self,
         rf_data: ArrayView4<'_, f32>,

@@ -10,6 +10,7 @@ pub struct ThreadAffinity {
 }
 
 impl ThreadAffinity {
+    #[must_use] 
     pub fn for_node(node: usize) -> Self {
         Self {
             node: Some(node),
@@ -18,6 +19,7 @@ impl ThreadAffinity {
         }
     }
 
+    #[must_use] 
     pub fn for_cpus(cpus: Vec<usize>) -> Self {
         Self {
             node: None,
@@ -26,6 +28,11 @@ impl ThreadAffinity {
         }
     }
 
+    /// Unrestricted.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn unrestricted() -> Self {
         Self {
             node: None,
@@ -34,11 +41,15 @@ impl ThreadAffinity {
         }
     }
 }
-
+/// Set thread affinity.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn set_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
     set_current_thread_affinity(affinity)
 }
 
+#[must_use] 
 pub fn current_numa_node() -> Option<usize> {
     #[cfg(target_os = "linux")]
     {
@@ -128,7 +139,7 @@ fn set_current_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
         if old_mask == 0 {
             return Err(KwaversError::System(
                 crate::core::error::SystemError::ResourceUnavailable {
-                    resource: "Failed to set thread affinity mask".to_string(),
+                    resource: "Failed to set thread affinity mask".to_owned(),
                 },
             ));
         }

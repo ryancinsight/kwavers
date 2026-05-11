@@ -6,6 +6,10 @@ use std::collections::HashMap;
 use wgpu;
 
 impl super::PipelineManager {
+    /// Compile fft pipeline.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compile_fft_pipeline(
         device: &wgpu::Device,
         pipelines: &mut HashMap<PipelineType, wgpu::ComputePipeline>,
@@ -53,7 +57,10 @@ impl super::PipelineManager {
 
         Ok(())
     }
-
+    /// Compile elementwise pipeline.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compile_elementwise_pipeline(
         device: &wgpu::Device,
         pipelines: &mut HashMap<PipelineType, wgpu::ComputePipeline>,
@@ -122,7 +129,10 @@ impl super::PipelineManager {
 
         Ok(())
     }
-
+    /// Compile derivative pipeline.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compile_derivative_pipeline(
         device: &wgpu::Device,
         pipelines: &mut HashMap<PipelineType, wgpu::ComputePipeline>,

@@ -56,8 +56,6 @@ fn test_shock_distance_prediction() {
     let distance_1mpa = tracker.predict_shock_distance(1e6);
     let distance_10mpa = tracker.predict_shock_distance(10e6);
 
-    assert!(distance_1mpa.is_some());
-    assert!(distance_10mpa.is_some());
     assert!(distance_10mpa.unwrap() < distance_1mpa.unwrap());
 }
 

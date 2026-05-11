@@ -392,3 +392,8 @@ path = "examples/seismic_imaging_demo.rs"
 [[example]]
 name = "seismic_imaging_3d_demo"
 path = "examples/seismic_imaging_3d_demo.rs"
+
+[[example]]
+name = "field_surrogate_demo"
+path = "examples/field_surrogate_demo.rs"
+required-features = ["pinn"]

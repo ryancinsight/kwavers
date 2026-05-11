@@ -14,6 +14,10 @@ pub struct BiotTheory {
 
 impl BiotTheory {
     /// Create new Biot theory calculator
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(material: &PoroelasticMaterial) -> Self {
         Self {
             material: material.clone(),
@@ -23,6 +27,9 @@ impl BiotTheory {
     /// Compute wave speeds (fast and slow P-waves)
     ///
     /// Solves Biot's characteristic equation for complex wave numbers
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute_wave_speeds(&self, _frequency: f64) -> KwaversResult<WaveSpeeds> {
         // Biot coefficients
         let phi = self.material.porosity;
@@ -31,7 +38,7 @@ impl BiotTheory {
         let alpha = self.material.tortuosity;
 
         // Effective densities
-        let rho_11 = (1.0 - phi) * rho_s + phi * rho_f * (alpha - 1.0);
+        let rho_11 = (1.0 - phi).mul_add(rho_s, phi * rho_f * (alpha - 1.0));
         let rho_22 = phi * rho_f * alpha;
 
         // Elastic wave propagation coefficients in porous media
@@ -40,13 +47,13 @@ impl BiotTheory {
         let g = self.material.shear_modulus;
 
         // P and Q moduli
-        let p_coeff = k_s + (4.0 / 3.0) * g;
+        let p_coeff = (4.0_f64 / 3.0).mul_add(g, k_s);
         let q_coeff = k_f * phi;
         let r_coeff = k_f * phi;
 
         // Solve for wave speeds using high-frequency approximation
         // Reference: Biot (1956) theory of wave propagation in porous media
-        let fast_wave = ((p_coeff + 2.0 * q_coeff + r_coeff) / rho_11).sqrt();
+        let fast_wave = ((2.0f64.mul_add(q_coeff, p_coeff) + r_coeff) / rho_11).sqrt();
         let slow_wave = (r_coeff / rho_22).sqrt();
 
         let shear_wave = (g / rho_11).sqrt();
@@ -61,6 +68,9 @@ impl BiotTheory {
     /// Compute attenuation coefficients for fast and slow waves
     ///
     /// Returns (alpha_fast, alpha_slow) in Np/m
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_attenuation(&self, frequency: f64) -> KwaversResult<(f64, f64)> {
         let omega = 2.0 * PI * frequency;
         let phi = self.material.porosity;

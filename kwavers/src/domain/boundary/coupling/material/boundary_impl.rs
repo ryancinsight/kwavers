@@ -31,7 +31,7 @@ impl BoundaryCondition for MaterialInterface {
         let normal = self.normal;
 
         let normal_mag =
-            (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]).sqrt();
+            normal[2].mul_add(normal[2], normal[0].mul_add(normal[0], normal[1] * normal[1])).sqrt();
         let normal_unit = [
             normal[0] / normal_mag,
             normal[1] / normal_mag,
@@ -55,9 +55,7 @@ impl BoundaryCondition for MaterialInterface {
                         point[1] - interface_pos[1],
                         point[2] - interface_pos[2],
                     ];
-                    let signed_distance = rel_pos[0] * normal_unit[0]
-                        + rel_pos[1] * normal_unit[1]
-                        + rel_pos[2] * normal_unit[2];
+                    let signed_distance = rel_pos[2].mul_add(normal_unit[2], rel_pos[0].mul_add(normal_unit[0], rel_pos[1] * normal_unit[1]));
 
                     if signed_distance < 0.0 && signed_distance.abs() < smooth_thickness {
                         incident_amplitude += field[[i, j, k]];
@@ -82,9 +80,7 @@ impl BoundaryCondition for MaterialInterface {
                         point[2] - interface_pos[2],
                     ];
 
-                    let signed_distance = rel_pos[0] * normal_unit[0]
-                        + rel_pos[1] * normal_unit[1]
-                        + rel_pos[2] * normal_unit[2];
+                    let signed_distance = rel_pos[2].mul_add(normal_unit[2], rel_pos[0].mul_add(normal_unit[0], rel_pos[1] * normal_unit[1]));
 
                     if signed_distance.abs() <= smooth_thickness {
                         let p_current = field[[i, j, k]];
@@ -97,7 +93,7 @@ impl BoundaryCondition for MaterialInterface {
                             if signed_distance.abs() < 1e-10 {
                                 let p_transmitted = t * incident_amplitude;
                                 field[[i, j, k]] =
-                                    0.5 * (p_current + p_reflected) + 0.5 * p_transmitted;
+                                    0.5f64.mul_add(p_current + p_reflected, 0.5 * p_transmitted);
                             } else {
                                 field[[i, j, k]] = p_current + reflection_weight * p_reflected;
                             }

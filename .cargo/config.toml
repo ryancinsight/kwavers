@@ -16,3 +16,10 @@ CMAKE_GENERATOR_x86_64_pc_windows_gnu = "Ninja"
 [alias]
 test-fast = "nextest run --profile local --lib --release"
 test-timeout = "nextest run --profile ci --lib --release"
+
+# On Windows GNU toolchain, MSYS2 ucrt64 DLLs must be on PATH so that the
+# test binary loader can find libstdc++-6.dll.  The api-ms-win-core-winrt-*
+# forwarding stub DLL must also be present in target/debug/deps.
+# Run tests via:
+#   $env:PATH = "D:\msys64\ucrt64\bin;D:\msys64\mingw64\bin;$env:PATH"
+#   cargo nextest run --lib

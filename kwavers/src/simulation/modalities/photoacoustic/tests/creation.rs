@@ -11,8 +11,7 @@ fn test_photoacoustic_creation() {
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
 
-    let simulator = PhotoacousticSimulator::new(grid, parameters, &medium);
-    assert!(simulator.is_ok());
+    let _simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 }
 
 #[test]

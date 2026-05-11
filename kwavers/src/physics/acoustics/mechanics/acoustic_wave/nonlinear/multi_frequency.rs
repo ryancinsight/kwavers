@@ -100,7 +100,7 @@ impl MultiFrequencyConfig {
         let frequencies: Vec<f64> = Array1::linspace(min_freq, max_freq, num_points).to_vec();
 
         Self {
-            frequencies: frequencies.clone(),
+            frequencies,
             weights: vec![1.0 / num_points as f64; num_points],
             track_harmonics: false,
             max_harmonic_order: 0,
@@ -127,6 +127,9 @@ impl MultiFrequencyConfig {
     /// # Returns
     ///
     /// The fundamental frequency \[Hz\], or None if no frequencies are configured
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[must_use]
     pub fn fundamental_frequency(&self) -> Option<f64> {
         self.frequencies

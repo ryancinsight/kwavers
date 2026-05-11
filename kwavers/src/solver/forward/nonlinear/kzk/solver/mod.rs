@@ -12,15 +12,15 @@
 //!
 //! # Module layout
 //!
-//! - [`stepping`]: operator-split propagation (`step`, `solve`,
+//! - `stepping`: operator-split propagation (`step`, `solve`,
 //!   `apply_diffraction`, `apply_absorption`, `apply_nonlinearity`) and the
 //!   conservation-diagnostics dispatch.
-//! - [`observables`]: real-valued physical observables derived from the
+//! - `observables`: real-valued physical observables derived from the
 //!   internal complex pressure field (`get_pressure`, `get_time_signal`,
 //!   `get_intensity`, `get_peak_pressure`).
-//! - [`conservation`]: the `ConservationDiagnostics` trait implementation
+//! - `conservation`: the `ConservationDiagnostics` trait implementation
 //!   (volumetric energy / momentum / mass).
-//! - [`traits`]: the physics-layer `KZKSolverTrait` bridge (RMS field,
+//! - `traits`: the physics-layer `KZKSolverTrait` bridge (RMS field,
 //!   peak-pressure delegation, `step_forward(dz)`).
 
 mod conservation;
@@ -106,6 +106,9 @@ impl KZKSolver {
     ///
     /// Initialises the complex pressure field to zero and constructs the
     /// spectral diffraction, absorption, and nonlinear sub-operators.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: KZKConfig) -> Result<Self, String> {
         super::validate_config(&config)?;
 
@@ -165,6 +168,7 @@ impl KZKSolver {
     ///
     /// Returns a summary of all conservation checks performed,
     /// including maximum severity and error magnitudes.
+    #[must_use] 
     pub fn get_conservation_summary(&self) -> Option<String> {
         self.conservation_tracker
             .as_ref()
@@ -174,6 +178,7 @@ impl KZKSolver {
     /// Check if solution satisfies conservation constraints
     ///
     /// Returns `true` if all conservation violations are within acceptable limits.
+    #[must_use] 
     pub fn is_solution_valid(&self) -> bool {
         self.conservation_tracker
             .as_ref()

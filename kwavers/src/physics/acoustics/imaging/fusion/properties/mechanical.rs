@@ -44,7 +44,7 @@ pub(crate) const BASELINE_SOFT_TISSUE_STIFFNESS_KPA: f64 = 20.0;
 pub(crate) const STIFFNESS_INTENSITY_COUPLING: f64 = 2.0;
 
 /// Exponent for the power-law empirical correlation between acoustic intensity and tissue density
-pub(crate) const DENSITY_NONLINEARITY_EXPONENT: f64 = 0.5;
+pub const DENSITY_NONLINEARITY_EXPONENT: f64 = 0.5;
 
 /// Compute composite tissue stiffness from multi-modal correlation
 ///
@@ -66,6 +66,7 @@ pub(crate) const DENSITY_NONLINEARITY_EXPONENT: f64 = 0.5;
 /// # Returns
 ///
 /// Stiffness map in kPa (typical range: 20-60 kPa if min_intensity=0.0)
+#[must_use] 
 pub fn compute_composite_stiffness(intensity_image: &Array3<f64>) -> Array3<f64> {
     intensity_image.mapv(|intensity| {
         let intensity_factor = 1.0 - intensity;
@@ -85,6 +86,7 @@ pub fn compute_composite_stiffness(intensity_image: &Array3<f64>) -> Array3<f64>
 /// # Returns
 ///
 /// Relative density map (normalized to [0, 1])
+#[must_use] 
 pub fn compute_tissue_density(intensity_image: &Array3<f64>) -> Array3<f64> {
-    intensity_image.mapv(|intensity| intensity.powf(DENSITY_NONLINEARITY_EXPONENT))
+    intensity_image.mapv(|intensity| intensity.sqrt())
 }

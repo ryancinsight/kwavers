@@ -22,6 +22,7 @@ impl EncounterId {
     }
 
     /// Get the underlying ID string
+    #[must_use] 
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -46,6 +47,7 @@ pub enum EncounterType {
 
 impl EncounterType {
     /// Get string representation
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::InitialConsultation => "Initial Consultation",
@@ -116,7 +118,7 @@ impl ClinicalEncounter {
             vital_signs: VitalSigns::default(),
             assessments: Vec::new(),
             treatment_plans: Vec::new(),
-            status: "active".to_string(),
+            status: "active".to_owned(),
         }
     }
 
@@ -138,20 +140,26 @@ impl ClinicalEncounter {
     }
 
     /// Add an assessment
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_assessment(&mut self, assessment: impl Into<String>) {
         self.assessments.push(assessment.into());
     }
 
     /// Close the encounter
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn close(&mut self) -> KwaversResult<()> {
         if self.status != "active" {
             return Err(KwaversError::InvalidInput(
-                "Encounter is not active".to_string(),
+                "Encounter is not active".to_owned(),
             ));
         }
 
         self.end_time = Some(current_timestamp());
-        self.status = "completed".to_string();
+        self.status = "completed".to_owned();
         Ok(())
     }
 }
@@ -173,11 +181,14 @@ pub struct VitalSigns {
 
 impl VitalSigns {
     /// Validate vital signs are within reasonable ranges
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if let Some(hr) = self.heart_rate_bpm {
             if !(30..=200).contains(&hr) {
                 return Err(KwaversError::InvalidInput(
-                    "Heart rate out of reasonable range".to_string(),
+                    "Heart rate out of reasonable range".to_owned(),
                 ));
             }
         }
@@ -185,7 +196,7 @@ impl VitalSigns {
         if let Some((sys, dia)) = self.blood_pressure {
             if !(70..=250).contains(&sys) || !(40..=150).contains(&dia) {
                 return Err(KwaversError::InvalidInput(
-                    "Blood pressure out of reasonable range".to_string(),
+                    "Blood pressure out of reasonable range".to_owned(),
                 ));
             }
         }
@@ -193,7 +204,7 @@ impl VitalSigns {
         if let Some(temp) = self.temperature_celsius {
             if !(35.0..=42.0).contains(&temp) {
                 return Err(KwaversError::InvalidInput(
-                    "Temperature out of reasonable range".to_string(),
+                    "Temperature out of reasonable range".to_owned(),
                 ));
             }
         }
@@ -201,7 +212,7 @@ impl VitalSigns {
         if let Some(o2) = self.oxygen_saturation_percent {
             if !(50.0..=100.0).contains(&o2) {
                 return Err(KwaversError::InvalidInput(
-                    "Oxygen saturation out of range".to_string(),
+                    "Oxygen saturation out of range".to_owned(),
                 ));
             }
         }

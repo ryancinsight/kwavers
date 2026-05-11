@@ -61,6 +61,9 @@ impl GpuThermalAcousticConfig {
     ///
     /// Acoustic CFL: c_max · Δt / Δx < 0.3.
     /// Thermal stability: α · Δt / Δx² < 0.25.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.nx == 0 || self.ny == 0 || self.nz == 0 {
             return Err(KwaversError::InvalidInput(

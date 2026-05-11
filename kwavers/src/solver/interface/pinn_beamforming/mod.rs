@@ -57,7 +57,7 @@ impl Default for PinnModelConfig {
             hidden_layers: 4,
             neurons_per_layer: 128,
             activation: ActivationFunction::Tanh,
-            version: "1.0.0".to_string(),
+            version: "1.0.0".to_owned(),
             num_parameters: 0,
             dimensions: vec![1, 2, 3],
             is_trained: false,
@@ -208,6 +208,9 @@ pub struct ModelInfo {
 /// Implement this trait to integrate custom PINN models with the beamforming pipeline.
 pub trait PinnBeamformingProvider: Send + Sync {
     /// Perform beamforming using PINN-predicted fields.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn beamform(
         &self,
         rf_data: &Array3<f32>,
@@ -215,6 +218,9 @@ pub trait PinnBeamformingProvider: Send + Sync {
     ) -> KwaversResult<PinnBeamformingResult>;
 
     /// Train the PINN model with training data.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn train(
         &mut self,
         training_data: &[(Array3<f32>, Array3<f32>)],
@@ -222,6 +228,9 @@ pub trait PinnBeamformingProvider: Send + Sync {
     ) -> KwaversResult<TrainingMetrics>;
 
     /// Estimate uncertainty in predictions.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn estimate_uncertainty(
         &self,
         rf_data: &Array3<f32>,
@@ -277,6 +286,9 @@ pub struct DistributedConfig {
 /// Extends the base provider with multi-GPU capabilities.
 pub trait DistributedPinnProvider: PinnBeamformingProvider {
     /// Perform distributed beamforming across multiple GPUs.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn beamform_distributed(
         &self,
         rf_data: &Array4<f32>,
@@ -319,6 +331,7 @@ impl std::fmt::Debug for PinnProviderRegistry {
 
 impl PinnProviderRegistry {
     /// Create a new empty registry.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             providers: std::collections::HashMap::new(),
@@ -331,11 +344,13 @@ impl PinnProviderRegistry {
     }
 
     /// Get a provider by name.
+    #[must_use] 
     pub fn get(&self, name: &str) -> Option<&dyn PinnBeamformingProvider> {
         self.providers.get(name).map(|b| &**b)
     }
 
     /// List available providers.
+    #[must_use] 
     pub fn list_providers(&self) -> Vec<String> {
         self.providers.keys().cloned().collect()
     }

@@ -28,6 +28,8 @@
 pub mod acoustics;
 pub mod chemistry;
 pub mod electromagnetic; // Electromagnetic wave implementations
+pub mod factory; // Capability-driven plugin catalog (PhysicsConfig → PluginManager)
+pub mod field_surrogate; // Cached focal-pressure kernels for fast planner queries
 pub mod foundations; // Physics specifications and wave equation traits
 pub mod optics; // Optical physics (elevated from electromagnetic)
 pub mod photoacoustics; // Photoacoustic physics (thermoelastic coupling)
@@ -105,8 +107,6 @@ pub use acoustics::{
     validate_conservation, // Conservation validation
     ConservationMetrics,   // Conservation metrics
 };
-
-pub mod plugin;
 
 /// Acoustic mechanics re-exported for backward compatibility
 ///

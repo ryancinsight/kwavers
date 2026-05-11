@@ -26,6 +26,9 @@ impl SlscBeamformer {
     }
 
     /// Get the current configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn config(&self) -> &SlscConfig {
         &self.config
@@ -47,8 +50,8 @@ impl SlscBeamformer {
         if n_elements < 2 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidParameter {
-                    parameter: "n_elements".to_string(),
-                    reason: "SLSC requires at least 2 array elements".to_string(),
+                    parameter: "n_elements".to_owned(),
+                    reason: "SLSC requires at least 2 array elements".to_owned(),
                 },
             ));
         }
@@ -72,14 +75,17 @@ impl SlscBeamformer {
     ///
     /// # Returns
     /// * Coherence values with shape (n_samples,)
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn process_parallel(&self, data: &Array2<Complex64>) -> KwaversResult<Array1<f64>> {
         let (n_elements, n_samples) = (data.nrows(), data.ncols());
 
         if n_elements < 2 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidParameter {
-                    parameter: "n_elements".to_string(),
-                    reason: "SLSC requires at least 2 array elements".to_string(),
+                    parameter: "n_elements".to_owned(),
+                    reason: "SLSC requires at least 2 array elements".to_owned(),
                 },
             ));
         }
@@ -130,14 +136,17 @@ impl SlscBeamformer {
     ///
     /// # Returns
     /// * Coherence volume with shape (n_beams, n_samples)
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn process_volume(&self, data: &Array3<Complex64>) -> KwaversResult<Array2<f64>> {
         let (n_elements, n_beams, n_samples) = (data.dim().0, data.dim().1, data.dim().2);
 
         if n_elements < 2 {
             return Err(KwaversError::Validation(
                 crate::core::error::ValidationError::InvalidParameter {
-                    parameter: "n_elements".to_string(),
-                    reason: "SLSC requires at least 2 array elements".to_string(),
+                    parameter: "n_elements".to_owned(),
+                    reason: "SLSC requires at least 2 array elements".to_owned(),
                 },
             ));
         }
@@ -171,6 +180,10 @@ impl SlscBeamformer {
     ///
     /// # Returns
     /// * Coherence image with shape (height, width)
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process_grid(
         &self,
         data: &Array2<Complex64>,
@@ -206,6 +219,9 @@ impl SlscBeamformer {
     ///
     /// # Returns
     /// * Scaled coherence values in [0, 1] range
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn create_coherence_map(
         &self,
         data: &Array2<Complex64>,
@@ -220,7 +236,7 @@ impl SlscBeamformer {
             map[[0, i]] = (db_value + dyn_range) / dyn_range;
         }
 
-        map.mapv_inplace(|v| v.clamp(0.0, 1.0));
+        map.par_mapv_inplace(|v| v.clamp(0.0, 1.0));
 
         Ok(map)
     }

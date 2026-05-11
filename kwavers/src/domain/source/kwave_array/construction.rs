@@ -36,7 +36,7 @@ impl KWaveArray {
         self
     }
 
-    /// Get the operating frequency [Hz].
+    /// Get the operating frequency (Hz).
     #[must_use]
     pub fn frequency(&self) -> f64 {
         self.frequency
@@ -124,9 +124,9 @@ impl KWaveArray {
     ///
     /// # Arguments
     /// * `position` - Center position `[x, y, z]` in metres
-    /// * `width`    - Width in x-direction [m]
-    /// * `height`   - Height in y-direction [m]
-    /// * `length`   - Length in z-direction [m]
+    /// * `width`    - Width in x-direction (m)
+    /// * `height`   - Height in y-direction (m)
+    /// * `length`   - Length in z-direction (m)
     pub fn add_rect_element(
         &mut self,
         position: (f64, f64, f64),
@@ -190,8 +190,8 @@ impl KWaveArray {
     ///
     /// # Arguments
     /// * `position` - Bowl center position `[x, y, z]` in metres
-    /// * `radius`   - Radius of curvature [m]
-    /// * `diameter` - Bowl aperture diameter [m]
+    /// * `radius`   - Radius of curvature (m)
+    /// * `diameter` - Bowl aperture diameter (m)
     pub fn add_bowl_element(
         &mut self,
         position: (f64, f64, f64),
@@ -210,6 +210,9 @@ impl KWaveArray {
     /// and outer aperture diameters. Mirrors k-wave-python's
     /// `add_annular_element`. Uses the same orientation convention as
     /// `add_bowl_element`.
+    /// # Panics
+    /// - Panics if `inner_diameter >= outer_diameter` or `inner_diameter < 0`.
+    ///
     pub fn add_annular_element(
         &mut self,
         position: (f64, f64, f64),

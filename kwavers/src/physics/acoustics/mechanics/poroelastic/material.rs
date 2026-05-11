@@ -44,6 +44,9 @@ impl Default for PoroelasticMaterial {
 
 impl PoroelasticMaterial {
     /// Create new poroelastic material with validation
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(
         porosity: f64,
         solid_density: f64,
@@ -57,27 +60,27 @@ impl PoroelasticMaterial {
     ) -> KwaversResult<Self> {
         if !(0.0..=1.0).contains(&porosity) {
             return Err(KwaversError::InvalidInput(
-                "Porosity must be between 0 and 1".to_string(),
+                "Porosity must be between 0 and 1".to_owned(),
             ));
         }
         if solid_density <= 0.0 || fluid_density <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Densities must be positive".to_string(),
+                "Densities must be positive".to_owned(),
             ));
         }
         if solid_bulk_modulus <= 0.0 || fluid_bulk_modulus <= 0.0 || shear_modulus <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Moduli must be positive".to_string(),
+                "Moduli must be positive".to_owned(),
             ));
         }
         if permeability <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Permeability must be positive".to_string(),
+                "Permeability must be positive".to_owned(),
             ));
         }
         if tortuosity < 1.0 {
             return Err(KwaversError::InvalidInput(
-                "Tortuosity must be ≥ 1".to_string(),
+                "Tortuosity must be ≥ 1".to_owned(),
             ));
         }
 
@@ -95,6 +98,9 @@ impl PoroelasticMaterial {
     }
 
     /// Create from tissue type
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn from_tissue_type(tissue: &str) -> KwaversResult<Self> {
         match tissue {
             "trabecular_bone" => Ok(Self::default()),
@@ -139,11 +145,13 @@ impl PoroelasticMaterial {
     }
 
     /// Calculate bulk density ρ = (1-φ)ρ_s + φρ_f
+    #[must_use] 
     pub fn bulk_density(&self) -> f64 {
-        (1.0 - self.porosity) * self.solid_density + self.porosity * self.fluid_density
+        (1.0 - self.porosity).mul_add(self.solid_density, self.porosity * self.fluid_density)
     }
 
     /// Calculate effective bulk modulus (Gassmann's equation)
+    #[must_use] 
     pub fn effective_bulk_modulus(&self) -> f64 {
         let k_s = self.solid_bulk_modulus;
         let k_f = self.fluid_bulk_modulus;
@@ -157,6 +165,7 @@ impl PoroelasticMaterial {
     /// Calculate characteristic frequency (Biot critical frequency)
     ///
     /// ω_c = (φ η) / (κ ρ_f α)
+    #[must_use] 
     pub fn characteristic_frequency(&self) -> f64 {
         let phi = self.porosity;
         let eta = self.fluid_viscosity;

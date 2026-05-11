@@ -5,6 +5,7 @@ use super::super::KWaveArray;
 impl KWaveArray {
     /// Broadcast a single time signal to all elements, returning
     /// `[n_elements, n_times]`.
+    #[must_use] 
     pub fn get_distributed_source_signal(&self, signal: &ndarray::Array1<f64>) -> Array2<f64> {
         let n_elements = self.elements.len();
         let n_times = signal.len();
@@ -21,6 +22,9 @@ impl KWaveArray {
     ///
     /// `per_element_signals` must have `n_elements` rows. Returns `Err` if the
     /// row count doesn't match.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_distributed_source_signal_per_element(
         &self,
         per_element_signals: &Array2<f64>,

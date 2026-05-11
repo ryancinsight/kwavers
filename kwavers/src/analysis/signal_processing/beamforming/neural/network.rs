@@ -67,16 +67,20 @@ impl NeuralBeamformingNetwork {
     ///
     /// - architecture.len() >= 2 (at least input and output layers)
     /// - All layer sizes > 0
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(architecture: &[usize]) -> KwaversResult<Self> {
         if architecture.len() < 2 {
             return Err(KwaversError::InvalidInput(
-                "Architecture must have at least 2 layers (input and output)".to_string(),
+                "Architecture must have at least 2 layers (input and output)".to_owned(),
             ));
         }
 
         if architecture.contains(&0) {
             return Err(KwaversError::InvalidInput(
-                "All layer sizes must be > 0".to_string(),
+                "All layer sizes must be > 0".to_owned(),
             ));
         }
 
@@ -94,6 +98,7 @@ impl NeuralBeamformingNetwork {
     }
 
     /// Get network architecture specification.
+    #[must_use] 
     pub fn architecture(&self) -> &[usize] {
         &self.architecture
     }
@@ -114,6 +119,9 @@ impl NeuralBeamformingNetwork {
     /// 1. Concatenate input features with steering angle
     /// 2. Forward through each layer with tanh activation
     /// 3. Return output (no final activation)
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn forward(
         &self,
         features: &ndarray::Array1<f32>,
@@ -145,6 +153,9 @@ impl NeuralBeamformingNetwork {
     /// # Returns
     ///
     /// Physics-constrained network output.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[cfg(feature = "pinn")]
     pub fn forward_physics_informed(
         &self,
@@ -166,6 +177,9 @@ impl NeuralBeamformingNetwork {
     ///
     /// * `feedback` - Performance metrics and scalar error gradient
     /// * `learning_rate` - Global step size for the feedback update
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn adapt(
         &mut self,
         feedback: &BeamformingFeedback,
@@ -197,6 +211,9 @@ impl NeuralBeamformingNetwork {
     /// # Returns
     ///
     /// Input tensor shaped (1, 1, 7) for network processing.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     fn concatenate_features(
         &self,
         features: &ndarray::Array1<f32>,
@@ -211,7 +228,7 @@ impl NeuralBeamformingNetwork {
 
         if steering_angles.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "No steering angles provided".to_string(),
+                "No steering angles provided".to_owned(),
             ));
         }
 
@@ -287,7 +304,6 @@ mod tests {
             signal_quality: 0.8,
         };
 
-        let result = net.adapt(&feedback, 0.01);
-        assert!(result.is_ok());
+        net.adapt(&feedback, 0.01).unwrap();
     }
 }

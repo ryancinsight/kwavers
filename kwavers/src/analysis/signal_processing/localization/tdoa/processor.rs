@@ -1,7 +1,6 @@
 //! TDOAProcessor implementation.
 
-use super::functions::{cross_correlation_delay, gcc_phat_delay};
-use super::types::{TDOAConfig, TimeDelayMethod};
+use super::types::TDOAConfig;
 use crate::analysis::signal_processing::localization::{LocalizationProcessor, SourceLocation};
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -13,18 +12,22 @@ pub struct TDOAProcessor {
 
 impl TDOAProcessor {
     /// Create new TDOA processor
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: &TDOAConfig) -> KwaversResult<Self> {
         config.config.validate()?;
 
         if config.refinement_iterations == 0 {
             return Err(KwaversError::InvalidInput(
-                "Refinement iterations must be > 0".to_string(),
+                "Refinement iterations must be > 0".to_owned(),
             ));
         }
 
         if config.convergence_tolerance <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Convergence tolerance must be > 0".to_string(),
+                "Convergence tolerance must be > 0".to_owned(),
             ));
         }
 
@@ -33,49 +36,10 @@ impl TDOAProcessor {
         })
     }
 
-    /// Estimate time delays between all unique sensor pairs.
-    ///
-    /// Returns a flat vector of length `N*(N−1)/2` where `N` is the number of
-    /// sensors. The entry at index `pair(i,j)` (i < j) is the time delay
-    /// `τ_ij` such that  `signal_j(t) ≈ signal_i(t − τ_ij)`.
-    ///
-    /// Positive delay means sensor j received the signal *later* than sensor i.
-    ///
-    /// The estimation method is controlled by [`TDOAConfig::method`]:
-    /// - [`TimeDelayMethod::CrossCorrelation`]: direct cross-correlation peak
-    /// - [`TimeDelayMethod::GeneralizedCrossCorrelation`]: GCC with uniform weight
-    /// - [`TimeDelayMethod::GCCWithPHAT`]: GCC with Phase Transform weighting
-    #[allow(dead_code)]
-    fn estimate_time_delays(&self, sensor_signals: &[Vec<f64>]) -> Vec<f64> {
-        let num_sensors = sensor_signals.len();
-        let num_pairs = num_sensors * (num_sensors - 1) / 2;
-        let mut time_delays = vec![0.0; num_pairs];
-        let dt = 1.0 / self.config.config.sampling_frequency;
-
-        let mut idx = 0;
-        for i in 0..num_sensors {
-            for j in i + 1..num_sensors {
-                let delay = match self.config.method {
-                    TimeDelayMethod::CrossCorrelation => {
-                        cross_correlation_delay(&sensor_signals[i], &sensor_signals[j], dt)
-                    }
-                    TimeDelayMethod::GeneralizedCrossCorrelation | TimeDelayMethod::GCCWithPHAT => {
-                        // GCC-PHAT: use the same cross-correlation approach
-                        // but normalise by amplitude.  A full FFT-based PHAT
-                        // This is the time-domain equivalent of the spectral path.
-                        gcc_phat_delay(&sensor_signals[i], &sensor_signals[j], dt)
-                    }
-                };
-                time_delays[idx] = delay;
-                idx += 1;
-            }
-        }
-
-        time_delays
-    }
-
     /// Newton-Raphson refinement for source position
-    #[allow(dead_code)]
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn refine_position(
         &self,
         initial_position: &[f64; 3],
@@ -95,7 +59,7 @@ impl TDOAProcessor {
                 let dx = position[0] - sensor_pos[0];
                 let dy = position[1] - sensor_pos[1];
                 let dz = position[2] - sensor_pos[2];
-                let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                 if distance > 1e-6 {
                     jacobian[i][0] = dx / (distance * c);
@@ -125,28 +89,26 @@ impl TDOAProcessor {
             }
 
             // Solve 3×3 system via Cramer's rule
-            let det = jtj[0][0] * (jtj[1][1] * jtj[2][2] - jtj[1][2] * jtj[2][1])
-                - jtj[0][1] * (jtj[1][0] * jtj[2][2] - jtj[1][2] * jtj[2][0])
-                + jtj[0][2] * (jtj[1][0] * jtj[2][1] - jtj[1][1] * jtj[2][0]);
+            let det = jtj[0][2].mul_add(jtj[1][0].mul_add(jtj[2][1], -(jtj[1][1] * jtj[2][0])), jtj[0][0].mul_add(jtj[1][1].mul_add(jtj[2][2], -(jtj[1][2] * jtj[2][1])), -(jtj[0][1] * jtj[1][0].mul_add(jtj[2][2], -(jtj[1][2] * jtj[2][0])))));
 
             if det.abs() > 1e-30 {
                 let inv_det = 1.0 / det;
                 // Cofactor matrix (transposed = inverse * det for symmetric)
                 let inv = [
                     [
-                        (jtj[1][1] * jtj[2][2] - jtj[1][2] * jtj[2][1]) * inv_det,
-                        (jtj[0][2] * jtj[2][1] - jtj[0][1] * jtj[2][2]) * inv_det,
-                        (jtj[0][1] * jtj[1][2] - jtj[0][2] * jtj[1][1]) * inv_det,
+                        jtj[1][1].mul_add(jtj[2][2], -(jtj[1][2] * jtj[2][1])) * inv_det,
+                        jtj[0][2].mul_add(jtj[2][1], -(jtj[0][1] * jtj[2][2])) * inv_det,
+                        jtj[0][1].mul_add(jtj[1][2], -(jtj[0][2] * jtj[1][1])) * inv_det,
                     ],
                     [
-                        (jtj[1][2] * jtj[2][0] - jtj[1][0] * jtj[2][2]) * inv_det,
-                        (jtj[0][0] * jtj[2][2] - jtj[0][2] * jtj[2][0]) * inv_det,
-                        (jtj[0][2] * jtj[1][0] - jtj[0][0] * jtj[1][2]) * inv_det,
+                        jtj[1][2].mul_add(jtj[2][0], -(jtj[1][0] * jtj[2][2])) * inv_det,
+                        jtj[0][0].mul_add(jtj[2][2], -(jtj[0][2] * jtj[2][0])) * inv_det,
+                        jtj[0][2].mul_add(jtj[1][0], -(jtj[0][0] * jtj[1][2])) * inv_det,
                     ],
                     [
-                        (jtj[1][0] * jtj[2][1] - jtj[1][1] * jtj[2][0]) * inv_det,
-                        (jtj[0][1] * jtj[2][0] - jtj[0][0] * jtj[2][1]) * inv_det,
-                        (jtj[0][0] * jtj[1][1] - jtj[0][1] * jtj[1][0]) * inv_det,
+                        jtj[1][0].mul_add(jtj[2][1], -(jtj[1][1] * jtj[2][0])) * inv_det,
+                        jtj[0][1].mul_add(jtj[2][0], -(jtj[0][0] * jtj[2][1])) * inv_det,
+                        jtj[0][0].mul_add(jtj[1][1], -(jtj[0][1] * jtj[1][0])) * inv_det,
                     ],
                 ];
 
@@ -170,13 +132,13 @@ impl LocalizationProcessor for TDOAProcessor {
     ) -> KwaversResult<SourceLocation> {
         if sensor_positions.len() < 3 {
             return Err(KwaversError::InvalidInput(
-                "Need at least 3 sensors for 3D localization".to_string(),
+                "Need at least 3 sensors for 3D localization".to_owned(),
             ));
         }
 
         if time_delays.is_empty() {
             return Err(KwaversError::InvalidInput(
-                "No time delay data provided".to_string(),
+                "No time delay data provided".to_owned(),
             ));
         }
 
@@ -207,7 +169,7 @@ impl LocalizationProcessor for TDOAProcessor {
             let dx = refined_position[0] - sensor_pos[0];
             let dy = refined_position[1] - sensor_pos[1];
             let dz = refined_position[2] - sensor_pos[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
             let predicted_delay = distance / c;
             let residual = predicted_delay - time_delays.get(i).copied().unwrap_or(0.0);
             rss += residual * residual;

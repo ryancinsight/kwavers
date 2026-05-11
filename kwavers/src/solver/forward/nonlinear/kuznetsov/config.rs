@@ -155,6 +155,9 @@ impl KuznetsovConfig {
     }
 
     /// Create configuration for linear wave equation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn linear() -> Self {
         Self {
@@ -167,6 +170,9 @@ impl KuznetsovConfig {
     }
 
     /// Validate configuration parameters
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn validate(&self, grid: &Grid) -> Result<(), KwaversError> {
         // Check CFL factor
         if self.cfl_factor <= 0.0 || self.cfl_factor > MAX_CFL_FACTOR {
@@ -203,18 +209,18 @@ impl KuznetsovConfig {
             && (self.k_space_correction_order != 2 && self.k_space_correction_order != 4)
         {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "k_space_correction_order".to_string(),
+                field: "k_space_correction_order".to_owned(),
                 value: self.k_space_correction_order.to_string(),
-                constraint: "must be 2 or 4".to_string(),
+                constraint: "must be 2 or 4".to_owned(),
             }));
         }
 
         // Check spatial order
         if self.spatial_order != 2 && self.spatial_order != 4 && self.spatial_order != 6 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "spatial_order".to_string(),
+                field: "spatial_order".to_owned(),
                 value: self.spatial_order.to_string(),
-                constraint: "must be 2, 4, or 6".to_string(),
+                constraint: "must be 2, 4, or 6".to_owned(),
             }));
         }
 

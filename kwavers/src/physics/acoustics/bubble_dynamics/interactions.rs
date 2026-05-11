@@ -36,7 +36,7 @@ impl BubbleInteractions {
         let mut interaction_field = Array3::zeros(grid_shape);
 
         // For each grid point
-        ndarray::Zip::indexed(&mut interaction_field).for_each(|(i, j, k), field_val| {
+        ndarray::Zip::indexed(&mut interaction_field).par_for_each(|(i, j, k), field_val| {
             let total_interaction = bubbles
                 .iter()
                 .filter(|((bi, bj, bk), _)| !(i == *bi && j == *bj && k == *bk)) // Skip self-interaction
@@ -45,7 +45,7 @@ impl BubbleInteractions {
                     let dx = (i as f64 - *bi as f64) * grid_spacing.0;
                     let dy = (j as f64 - *bj as f64) * grid_spacing.1;
                     let dz = (k as f64 - *bk as f64) * grid_spacing.2;
-                    let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+                    let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                     if distance < self.cutoff_distance && distance > 0.0 {
                         // Bjerknes force contribution
@@ -74,7 +74,7 @@ impl BubbleInteractions {
         let primary = volume_rate / (4.0 * std::f64::consts::PI * distance.powi(2));
         let secondary = volume * bubble.wall_acceleration / (distance.powi(2));
 
-        primary + 0.1 * secondary
+        0.1f64.mul_add(secondary, primary)
     }
 }
 
@@ -147,7 +147,7 @@ impl CollectiveEffects {
         gas_sound_speed: f64,
     ) -> f64 {
         // Wood's equation for sound speed in bubbly liquid
-        let mixture_density = (1.0 - void_fraction) * liquid_density + void_fraction * gas_density;
+        let mixture_density = (1.0 - void_fraction).mul_add(liquid_density, void_fraction * gas_density);
         let compressibility = (1.0 - void_fraction) / (liquid_density * liquid_sound_speed.powi(2))
             + void_fraction / (gas_density * gas_sound_speed.powi(2));
 

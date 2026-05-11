@@ -13,7 +13,7 @@ fn test_create_drug_payload() {
     assert_eq!(payload.released_mass, 0.0);
     assert_eq!(payload.release_fraction(), 0.0);
     assert!(!payload.is_depleted());
-    assert!(payload.validate().is_ok());
+    payload.validate().unwrap();
 }
 
 #[test]
@@ -23,7 +23,7 @@ fn test_doxorubicin_payload() {
 
     assert_eq!(payload.concentration, 50.0);
     assert_eq!(payload.loading_mode, DrugLoadingMode::ShellEmbedded);
-    assert!(payload.validate().is_ok());
+    payload.validate().unwrap();
 }
 
 #[test]

@@ -43,7 +43,7 @@ fn test_physics_parameters_presets() {
 
     let tissue = PhysicsParameters::acoustic_tissue();
     assert_eq!(tissue.wave_speed, 1540.0);
-    assert!(tissue.nonlinearity.is_some());
+    assert!(tissue.nonlinearity.unwrap() > 0.0);
 }
 
 #[test]

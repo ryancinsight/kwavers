@@ -16,6 +16,9 @@ pub struct GpuContext {
 
 impl GpuContext {
     /// Create a new GPU context
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(_config: &VisualizationConfig) -> KwaversResult<Self> {
         #[cfg(feature = "gpu-visualization")]
         {
@@ -68,6 +71,9 @@ impl GpuContext {
     }
 
     /// Upload data to GPU
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn upload_volume(&mut self, data: &[f32]) -> KwaversResult<()> {
         #[cfg(feature = "gpu-visualization")]
         {

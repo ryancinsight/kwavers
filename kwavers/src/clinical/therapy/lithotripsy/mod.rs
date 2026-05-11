@@ -49,11 +49,11 @@ pub struct LithotripsyParameters {
     pub cloud_parameters: CloudParameters,
     /// Bioeffects assessment parameters
     pub bioeffects_parameters: BioeffectsParameters,
-    /// Treatment frequency [Hz]
+    /// Treatment frequency (Hz)
     pub treatment_frequency: f64,
     /// Number of shock waves to deliver
     pub num_shock_waves: usize,
-    /// Time between shock waves [s]
+    /// Time between shock waves (s)
     pub interpulse_delay: f64,
     /// Stone geometry (3D binary mask)
     pub stone_geometry: Array3<f64>,
@@ -79,11 +79,11 @@ impl Default for LithotripsyParameters {
 pub struct SimulationResults {
     /// Final stone damage field
     pub final_stone_damage: Array3<f64>,
-    /// Fragment size distribution [m]
+    /// Fragment size distribution (m)
     pub fragment_sizes: Vec<f64>,
-    /// Total eroded mass [kg]
+    /// Total eroded mass (kg)
     pub total_eroded_mass: f64,
-    /// Treatment time [s]
+    /// Treatment time (s)
     pub treatment_time: f64,
     /// Number of shock waves delivered
     pub shock_waves_delivered: usize,
@@ -122,15 +122,17 @@ pub struct LithotripsySimulator {
 
 impl LithotripsySimulator {
     /// Create new lithotripsy simulator
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(params: LithotripsyParameters, grid: Grid) -> KwaversResult<Self> {
         // Validate stone geometry matches grid
         if params.stone_geometry.dim() != grid.dimensions() {
             return Err(crate::core::error::KwaversError::Validation(
                 crate::core::error::ValidationError::FieldValidation {
-                    field: "stone_geometry".to_string(),
+                    field: "stone_geometry".to_owned(),
                     value: format!("{:?}", params.stone_geometry.dim()),
-                    constraint: format!("Must match grid dimensions {:?}", grid.dimensions())
-                        .to_string(),
+                    constraint: format!("Must match grid dimensions {:?}", grid.dimensions()),
                 },
             ));
         }
@@ -169,6 +171,9 @@ impl LithotripsySimulator {
     }
 
     /// Run complete lithotripsy simulation
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_simulation(&mut self) -> KwaversResult<&SimulationResults> {
         let initial_volume = self.calculate_stone_volume();
         self.results.stone_volume_history.push(initial_volume);
@@ -182,14 +187,17 @@ impl LithotripsySimulator {
 
         Ok(&self.results)
     }
-
+    /// Advance.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn advance(&mut self, dt: f64) -> KwaversResult<()> {
         if self.params.interpulse_delay <= 0.0 {
             return Err(crate::core::error::KwaversError::Validation(
                 crate::core::error::ValidationError::FieldValidation {
-                    field: "interpulse_delay".to_string(),
+                    field: "interpulse_delay".to_owned(),
                     value: self.params.interpulse_delay.to_string(),
-                    constraint: "Must be positive".to_string(),
+                    constraint: "Must be positive".to_owned(),
                 },
             ));
         }
@@ -347,13 +355,13 @@ impl LithotripsySimulator {
 /// Current simulation state snapshot
 #[derive(Debug, Clone)]
 pub struct LithotripsyState {
-    /// Current simulation time [s]
+    /// Current simulation time (s)
     pub simulation_time: f64,
     /// Number of shock waves delivered
     pub shock_waves_delivered: usize,
-    /// Current stone volume [m³]
+    /// Current stone volume (m³)
     pub stone_volume: f64,
-    /// Total eroded mass [kg]
+    /// Total eroded mass (kg)
     pub eroded_mass: f64,
     /// Current safety assessment
     pub safety_assessment: SafetyAssessment,

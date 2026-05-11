@@ -6,6 +6,10 @@ use std::f64::consts::PI;
 use super::ModifiedBornSolver;
 
 impl ModifiedBornSolver {
+    /// Apply viscoacoustic green.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn apply_viscoacoustic_green(
         &mut self,
         wavenumber: f64,
@@ -50,7 +54,7 @@ impl ModifiedBornSolver {
                 let dist_x = (i as f64 - ni as f64) * dx;
                 let dist_y = (j as f64 - nj as f64) * dy;
                 let dist_z = (k as f64 - nk as f64) * dz;
-                let r = (dist_x * dist_x + dist_y * dist_y + dist_z * dist_z).sqrt();
+                let r = dist_z.mul_add(dist_z, dist_x.mul_add(dist_x, dist_y * dist_y)).sqrt();
 
                 if r > 1e-12 {
                     let source_val = heterogeneity[[ni, nj, nk]];

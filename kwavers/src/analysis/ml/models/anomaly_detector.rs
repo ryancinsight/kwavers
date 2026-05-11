@@ -17,6 +17,9 @@ impl AnomalyDetectorModel {
     /// **Implementation Status**: Statistical threshold model (non-ML baseline)
     /// Returns standard 3-sigma anomaly detector suitable for Gaussian-distributed acoustic data.
     /// Full neural network loading deferred to Sprint 125+ ML infrastructure enhancement.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
         Ok(Self::new(3.0)) // Standard 3-sigma threshold per Chauvenet's criterion
     }
@@ -26,29 +29,45 @@ impl AnomalyDetectorModel {
     /// **Implementation Status**: Statistical threshold model (non-ML baseline)
     /// Neural network implementation deferred pending ML framework selection (burn/candle).
     /// Current implementation provides functional anomaly detection via statistical methods.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn from_weights(_weights: Array2<f32>, _bias: Option<Array1<f32>>) -> Self {
         Self::new(3.0) // Standard 3-sigma threshold
     }
 
     /// Get metadata
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
 
     /// Run inference
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         self.predict(input)
     }
 
+    /// Create a threshold-based anomaly detector.
+    ///
+    /// `threshold` is the detection cutoff in units of the input's native scale
+    /// (e.g., 3.0 for a 3-σ Gaussian detector per Chauvenet's criterion).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(threshold: f32) -> Self {
         Self {
             threshold,
             metadata: ModelMetadata {
-                name: "AnomalyDetector".to_string(),
-                version: "1.0.0".to_string(),
+                name: "AnomalyDetector".to_owned(),
+                version: "1.0.0".to_owned(),
                 input_shape: vec![1],
                 output_shape: vec![1],
                 accuracy: 0.95_f64,

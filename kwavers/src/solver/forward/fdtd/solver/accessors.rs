@@ -49,8 +49,7 @@ impl GenericFdtdSolver<Array3<f64>> {
                  boundaries. CPML requires finite-difference gradient arrays that are \
                  not produced by the spectral path. Either set \
                  `kspace_correction = KSpaceCorrectionMode::None` or use a \
-                 non-CPML absorbing layer."
-                    .to_string(),
+                 non-CPML absorbing layer.".to_owned(),
             ));
         }
         info!("Enabling C-PML boundary conditions");
@@ -86,24 +85,33 @@ impl GenericFdtdSolver<Array3<f64>> {
         self.metrics.merge(other_metrics);
     }
 
-    /// Extract recorded sensor data as Array2<f64>
+    /// Extract recorded sensor data as `Array2<f64>`
     /// Returns None if no sensors are configured or no data has been recorded
     pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
     }
 
     /// Borrow the full allocated recorded sensor buffer without cloning.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn recorded_sensor_data_view(&self) -> Option<ArrayView2<'_, f64>> {
         self.sensor_recorder.pressure_data_view()
     }
 
     /// Borrow only populated recorded sensor samples without cloning.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn recorded_sensor_prefix_view(&self) -> Option<ArrayView2<'_, f64>> {
         self.sensor_recorder.recorded_pressure_view()
     }
-
+    /// Run orchestrated.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn run_orchestrated(
         &mut self,
         steps: usize,
@@ -133,6 +141,9 @@ mod tests {
     ///
     /// Uses a 16³ grid with dx=dy=dz=1 mm, homogeneous water-like medium,
     /// no source, and a 4-cell CPML (fits inside the 16-cell grid).
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn build_solver(kspace_correction: KSpaceCorrectionMode) -> FdtdSolver {
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
@@ -156,15 +167,17 @@ mod tests {
     /// Permitting the combination silently bypasses the CPML corrections.
     /// The guard at the top of `enable_cpml` detects this state and returns
     /// `InvalidInput` before any boundary allocation occurs.
+    /// # Panics
+    /// - Panics with `"expected KwaversError::InvalidInput for Spectral+CPML, got {:?}"`.
+    ///
     #[test]
     fn enable_cpml_rejects_spectral_kspace_correction() {
         let mut solver = build_solver(KSpaceCorrectionMode::Spectral);
         let cpml_config = CPMLConfig::with_thickness(4);
         let result = solver.enable_cpml(cpml_config, 1e-7, 1500.0);
 
-        let err = result.expect_err(
-            "enable_cpml must return Err when kspace_correction = Spectral",
-        );
+        let err =
+            result.expect_err("enable_cpml must return Err when kspace_correction = Spectral");
         let KwaversError::InvalidInput(ref msg) = err else {
             panic!(
                 "expected KwaversError::InvalidInput for Spectral+CPML, got {:?}",
@@ -189,6 +202,9 @@ mod tests {
     /// `None` mode uses finite-difference stencils; CPML gradient corrections
     /// are applied at each step.  The guard passes and `CPMLBoundary` is
     /// constructed from the supplied config, grid, and time step.
+    /// # Panics
+    /// - Panics if `enable_cpml must succeed when kspace_correction = None`.
+    ///
     #[test]
     fn enable_cpml_accepts_none_kspace_correction() {
         let mut solver = build_solver(KSpaceCorrectionMode::None);

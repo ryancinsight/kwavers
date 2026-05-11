@@ -12,10 +12,7 @@ fn test_kuznetsov_creation() {
     let config = config::KuznetsovConfig::default();
     let solver = solver::KuznetsovWave::new(config, &grid);
 
-    assert!(
-        solver.is_ok(),
-        "Should create KuznetsovWave solver successfully"
-    );
+    let _solver = solver.unwrap();
 }
 
 #[test]

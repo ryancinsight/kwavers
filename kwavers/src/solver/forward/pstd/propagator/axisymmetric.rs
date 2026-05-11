@@ -21,7 +21,7 @@ pub struct AsContext {
     pub nx: usize,
     pub nr: usize,
     pub nr_exp: usize,
-    /// r_sg[m] = (m + 0.5) * dr
+    /// r_sg(m) = (m + 0.5) * dr
     pub r_sg: Array1<f64>,
     /// i * kz * exp(+i*kz*dr/2)
     pub ddy_k_shift_pos: Array1<Complex64>,
@@ -63,11 +63,17 @@ pub struct AsContext {
     pub duxdx: Array2<f64>,
     /// du_r/dr + u_r/r -- filled by compute_density_divs.
     pub duzdr: Array2<f64>,
+    /// Scratch coefficient buffer for density update, shape (nx, nr).
+    /// Eliminates the per-step Array2 allocation in update_density_as.
+    pub coef: Array2<f64>,
 }
 
 impl AsContext {
     /// Construct AsContext from grid and solver parameters.
     /// Pre-allocates all expansion and k-space scratch buffers.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(
         nx: usize,
         nr: usize,
@@ -120,7 +126,7 @@ impl AsContext {
         }));
 
         let kappa_2d = Array2::from_shape_fn((nx, nr_exp), |(i, k)| {
-            let k2d = (kx[i].powi(2) + kz[k].powi(2)).sqrt();
+            let k2d = kx[i].hypot(kz[k]);
             let arg = c_ref * k2d * dt / 2.0;
             if arg.abs() < 1e-12 {
                 1.0
@@ -160,6 +166,7 @@ impl AsContext {
             dpdr: zn(),
             duxdx: zn(),
             duzdr: zn(),
+            coef: zn(),
         })
     }
 
@@ -172,8 +179,8 @@ impl AsContext {
     /// Algorithm:
     ///  1. WS-expand p into p_exp.
     ///  2. ak = kappa_2d * FFT2(p_exp).
-    ///  3. g = ddx_k_shift_pos[row]*ak; IFFT g in-place; dpdx = Re(g)[..,0..nr].
-    ///  4. g = ddy_k_shift_pos[col]*ak; IFFT g in-place; dpdr = Re(g)[..,0..nr].
+    ///  3. `g = ddx_k_shift_pos[row]*ak`; IFFT g in-place; `dpdx = Re(g)[..,0..nr]`.
+    ///  4. `g = ddy_k_shift_pos[col]*ak`; IFFT g in-place; `dpdr = Re(g)[..,0..nr]`.
     ///
     /// No extra 1/N factor: apollo-fft inverse_complex_inplace uses FFTW-compatible
     /// 1/N normalisation, so IFFT(FFT(x)) = x without additional scaling.
@@ -188,7 +195,7 @@ impl AsContext {
         plan.forward_into(&self.p_exp, &mut self.ak);
         Zip::from(&mut self.ak)
             .and(&self.kappa_2d)
-            .for_each(|c, &k| *c *= k);
+            .par_for_each(|c, &k| *c *= k);
 
         // grad_x
         for i in 0..nx {
@@ -200,7 +207,7 @@ impl AsContext {
         plan.inverse_complex_inplace(&mut self.g);
         Zip::from(&mut self.dpdx)
             .and(self.g.slice(s![.., 0..nr]))
-            .for_each(|o, v| *o = v.re);
+            .par_for_each(|o, v| *o = v.re);
 
         // grad_r
         for k in 0..nr_exp {
@@ -212,7 +219,7 @@ impl AsContext {
         plan.inverse_complex_inplace(&mut self.g);
         Zip::from(&mut self.dpdr)
             .and(self.g.slice(s![.., 0..nr]))
-            .for_each(|o, v| *o = v.re);
+            .par_for_each(|o, v| *o = v.re);
     }
 
     /// Compute divergences duxdx and duzdr from ux and uz (shape (nx, nr)).
@@ -239,14 +246,14 @@ impl AsContext {
         // uz_on_r = uz / r_sg (staggered radial positions)
         Zip::indexed(&mut self.uz_on_r)
             .and(&self.uz_2d)
-            .for_each(|(_i, k), o, &v| *o = v / self.r_sg[k]);
+            .par_for_each(|(_i, k), o, &v| *o = v / self.r_sg[k]);
 
         // div_x
         Self::ws_expand(&self.ux_2d, &mut self.ux_exp, nr);
         plan.forward_into(&self.ux_exp, &mut self.ak);
         Zip::from(&mut self.ak)
             .and(&self.kappa_2d)
-            .for_each(|c, &k| *c *= k);
+            .par_for_each(|c, &k| *c *= k);
         for i in 0..nx {
             let op = self.ddx_k_shift_neg[i];
             Zip::from(self.g.slice_mut(s![i, ..]))
@@ -256,7 +263,7 @@ impl AsContext {
         plan.inverse_complex_inplace(&mut self.g);
         Zip::from(&mut self.duxdx)
             .and(self.g.slice(s![.., 0..nr]))
-            .for_each(|o, v| *o = v.re);
+            .par_for_each(|o, v| *o = v.re);
 
         // div_r_cylindrical
         Self::hahs_expand(&self.uz_2d, &mut self.uz_exp, nr);
@@ -276,7 +283,7 @@ impl AsContext {
         plan.inverse_complex_inplace(&mut self.ak);
         Zip::from(&mut self.duzdr)
             .and(self.ak.slice(s![.., 0..nr]))
-            .for_each(|o, v| *o = v.re);
+            .par_for_each(|o, v| *o = v.re);
     }
 
     // ---- Domain expansion -- associated functions ------------------------

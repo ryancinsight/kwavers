@@ -15,12 +15,16 @@ pub struct HyperbolicSweep {
     stop_frequency: f64,
     duration: f64,
     amplitude: f64,
-    #[allow(dead_code)]
-    hyperbolic_rate: f64,
 }
 
 impl HyperbolicSweep {
     /// Create new hyperbolic sweep - USING all parameters
+    /// # Panics
+    /// - Panics if assertion fails: `Start frequency too low`.
+    /// - Panics if assertion fails: `Stop frequency too low`.
+    /// - Panics if assertion fails: `Duration too short`.
+    /// - Panics if assertion fails: `Amplitude must be non-negative`.
+    ///
     #[must_use]
     pub fn new(start_freq: f64, stop_freq: f64, duration: f64, amplitude: f64) -> Self {
         assert!(start_freq > MIN_FREQUENCY, "Start frequency too low");
@@ -28,16 +32,11 @@ impl HyperbolicSweep {
         assert!(duration > MIN_SWEEP_DURATION, "Duration too short");
         assert!(amplitude >= 0.0, "Amplitude must be non-negative");
 
-        // Calculate hyperbolic rate avoiding singularity
-        let t_safe = duration * SINGULARITY_AVOIDANCE_FACTOR;
-        let hyperbolic_rate = (stop_freq - start_freq) * t_safe / duration;
-
         Self {
             start_frequency: start_freq,
             stop_frequency: stop_freq,
             duration,
             amplitude,
-            hyperbolic_rate,
         }
     }
 }

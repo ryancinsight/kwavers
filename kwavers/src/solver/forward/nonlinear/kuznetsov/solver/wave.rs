@@ -41,6 +41,9 @@ pub struct KuznetsovWave {
 
 impl KuznetsovWave {
     /// Create a new Kuznetsov wave solver
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: KuznetsovConfig, grid: &Grid) -> KwaversResult<Self> {
         config.validate(grid)?;
         let workspace = KuznetsovWorkspace::new(grid)?;

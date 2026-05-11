@@ -44,17 +44,27 @@ impl CoreMedium for HeterogeneousMedium {
     }
 
     /// Get reference frequency for absorption calculations
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
 
     /// Check if medium properties are spatially varying
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[inline]
     fn is_homogeneous(&self) -> bool {
         false
     }
 
     /// Validate medium properties against grid dimensions
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn validate(&self, grid: &Grid) -> KwaversResult<()> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         let expected_shape = [nx, ny, nz];
@@ -129,6 +139,22 @@ impl AcousticProperties for HeterogeneousMedium {
 
         let freq_ratio = frequency / self.reference_frequency;
         base_absorption * freq_ratio.powf(exponent)
+    }
+
+    /// Power-law prefactor α₀ [dB/(MHz^y·cm)] at the given continuous coordinates.
+    ///
+    /// Returns the spatially interpolated absorption prefactor from `self.absorption`.
+    /// The default trait implementation returns 0.0 (lossless), so this override is
+    /// required for `effective_alpha_db` in the solver to pick up the medium's field.
+    fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        TrilinearInterpolator::get_field_value(
+            &self.absorption,
+            x,
+            y,
+            z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
     }
 
     /// Per-voxel power-law exponent y at the given continuous coordinates.

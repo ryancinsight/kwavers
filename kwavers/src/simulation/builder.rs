@@ -3,7 +3,7 @@
 //! Provides a fluent, type-safe API for building configurations without
 //! dealing with nested public fields.
 
-use super::*;
+use super::{Configuration, SimulationParameters};
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::config::BoundaryParameters;
 use crate::domain::medium::config::MediumParameters;
@@ -20,6 +20,7 @@ pub struct ConfigurationBuilder {
 
 impl ConfigurationBuilder {
     /// Create a new configuration builder
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             config: Configuration::default(),
@@ -27,30 +28,35 @@ impl ConfigurationBuilder {
     }
 
     /// Set simulation parameters
+    #[must_use] 
     pub fn simulation(mut self, params: SimulationParameters) -> Self {
         self.config.simulation = params;
         self
     }
 
     /// Set grid spacing
+    #[must_use] 
     pub fn grid_spacing(mut self, spacing: [f64; 3]) -> Self {
         self.config.grid.spacing = spacing;
         self
     }
 
     /// Set grid dimensions
+    #[must_use] 
     pub fn grid_dimensions(mut self, nx: usize, ny: usize, nz: usize) -> Self {
         self.config.grid.dimensions = [nx, ny, nz];
         self
     }
 
     /// Set medium properties
+    #[must_use] 
     pub fn medium(mut self, params: MediumParameters) -> Self {
         self.config.medium = params;
         self
     }
 
     /// Set sound speed range
+    #[must_use] 
     pub fn sound_speed_range(mut self, min: f64, max: f64) -> Self {
         self.config.medium.sound_speed_min = Some(min);
         self.config.medium.sound_speed_max = Some(max);
@@ -58,60 +64,76 @@ impl ConfigurationBuilder {
     }
 
     /// Set source configuration
+    #[must_use] 
     pub fn source(mut self, params: SourceParameters) -> Self {
         self.config.source = params;
         self
     }
 
     /// Set boundary conditions
+    #[must_use] 
     pub fn boundary(mut self, params: BoundaryParameters) -> Self {
         self.config.boundary = params;
         self
     }
 
     /// Set solver parameters
+    #[must_use] 
     pub fn solver(mut self, params: SolverConfiguration) -> Self {
         self.config.solver = params;
         self
     }
 
     /// Set spatial order
+    #[must_use] 
     pub fn spatial_order(mut self, order: usize) -> Self {
         self.config.solver.spatial_order = order;
         self
     }
 
     /// Set output configuration
+    #[must_use] 
     pub fn output(mut self, params: OutputParameters) -> Self {
         self.config.output = params;
         self
     }
 
     /// Set performance tuning
+    #[must_use] 
     pub fn performance(mut self, params: PerformanceParameters) -> Self {
         self.config.performance = params;
         self
     }
 
     /// Set validation settings
+    #[must_use] 
     pub fn validation(mut self, params: ValidationParameters) -> Self {
         self.config.validation = params;
         self
     }
 
     /// Set time step
+    #[must_use] 
     pub fn time_step(mut self, dt: f64) -> Self {
         self.config.simulation.dt = Some(dt);
         self
     }
 
     /// Set simulation frequency
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn frequency(mut self, freq: f64) -> Self {
         self.config.simulation.frequency = freq;
         self
     }
 
     /// Set CFL number
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn cfl(mut self, cfl: f64) -> Self {
         self.config.simulation.cfl = cfl;
         self
@@ -121,6 +143,9 @@ impl ConfigurationBuilder {
     ///
     /// This method runs validation to ensure the configuration is complete
     /// and consistent before returning it.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn build(self) -> KwaversResult<Configuration> {
         self.config.validate()?;
         Ok(self.config)
@@ -131,6 +156,7 @@ impl ConfigurationBuilder {
     /// Returns the configuration without running validation. Use this if you
     /// need to perform custom validation or if the configuration is intentionally
     /// incomplete for testing purposes.
+    #[must_use] 
     pub fn build_unchecked(self) -> Configuration {
         self.config
     }

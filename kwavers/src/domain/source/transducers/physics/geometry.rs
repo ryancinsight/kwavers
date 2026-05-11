@@ -46,17 +46,17 @@ impl ElementGeometry {
         // Validate dimensions
         if width <= 0.0 || height <= 0.0 || thickness <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "element_dimensions".to_string(),
+                parameter: "element_dimensions".to_owned(),
                 value: format!("width={width}, height={height}, thickness={thickness}"),
-                constraint: "All dimensions must be positive".to_string(),
+                constraint: "All dimensions must be positive".to_owned(),
             }));
         }
 
         if kerf < 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "kerf".to_string(),
+                parameter: "kerf".to_owned(),
                 value: kerf.to_string(),
-                constraint: "Kerf must be non-negative".to_string(),
+                constraint: "Kerf must be non-negative".to_owned(),
             }));
         }
 
@@ -67,7 +67,7 @@ impl ElementGeometry {
         // Validate aspect ratio (Hunt et al., 1983)
         if !(super::MIN_ASPECT_RATIO..=super::MAX_ASPECT_RATIO).contains(&aspect_ratio) {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "aspect_ratio".to_string(),
+                parameter: "aspect_ratio".to_owned(),
                 value: aspect_ratio.to_string(),
                 constraint: format!(
                     "Aspect ratio must be between {} and {}",
@@ -81,7 +81,7 @@ impl ElementGeometry {
         let kerf_ratio = kerf / width;
         if !(super::MIN_KERF_RATIO..=super::MAX_KERF_RATIO).contains(&kerf_ratio) {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "kerf_ratio".to_string(),
+                parameter: "kerf_ratio".to_owned(),
                 value: kerf_ratio.to_string(),
                 constraint: format!(
                     "Kerf ratio must be between {} and {}",

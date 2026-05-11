@@ -55,12 +55,10 @@ impl HybridBeamformingMetrics {
     /// Update metrics with new frame processing results.
     pub fn update(&mut self, processing_time: f64, confidence: f64) {
         self.total_frames_processed += 1;
-        self.average_processing_time = (self.average_processing_time
-            * (self.total_frames_processed - 1) as f64
-            + processing_time)
+        self.average_processing_time = self.average_processing_time.mul_add((self.total_frames_processed - 1) as f64, processing_time)
             / self.total_frames_processed as f64;
         self.average_confidence =
-            (self.average_confidence * (self.total_frames_processed - 1) as f64 + confidence)
+            self.average_confidence.mul_add((self.total_frames_processed - 1) as f64, confidence)
                 / self.total_frames_processed as f64;
     }
 }

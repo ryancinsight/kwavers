@@ -91,11 +91,18 @@ pub struct PINNTrainer {
 
 impl PINNTrainer {
     /// Create a new PINN trainer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: PINNConfig) -> KwaversResult<Self> {
         Ok(Self { config })
     }
 
     /// Train the PINN model with progress updates
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn train_with_progress(
         &mut self,
         progress_sender: mpsc::Sender<crate::api::TrainingProgress>,

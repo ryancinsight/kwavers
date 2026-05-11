@@ -54,12 +54,12 @@ impl ApodizationWindow {
     #[must_use]
     pub fn to_shader_id(&self) -> u32 {
         match self {
-            ApodizationWindow::Rectangular => 0,
-            ApodizationWindow::Hamming => 1,
-            ApodizationWindow::Hann => 2,
-            ApodizationWindow::Blackman => 3,
-            ApodizationWindow::Gaussian { .. } => 4,
-            ApodizationWindow::Custom(_) => 5,
+            Self::Rectangular => 0,
+            Self::Hamming => 1,
+            Self::Hann => 2,
+            Self::Blackman => 3,
+            Self::Gaussian { .. } => 4,
+            Self::Custom(_) => 5,
         }
     }
 }

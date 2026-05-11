@@ -21,17 +21,17 @@ pub(super) fn thomas_solve(
     d_prime[0] = rhs[0] / diag[0];
 
     for i in 1..n {
-        let pivot = diag[i] - lower[i] * c_prime[i - 1];
+        let pivot = lower[i].mul_add(-c_prime[i - 1], diag[i]);
         if pivot.abs() < 1e-300 {
             return None;
         }
         c_prime[i] = upper[i] / pivot;
-        d_prime[i] = (rhs[i] - lower[i] * d_prime[i - 1]) / pivot;
+        d_prime[i] = lower[i].mul_add(-d_prime[i - 1], rhs[i]) / pivot;
     }
 
     x[n - 1] = d_prime[n - 1];
     for i in (0..n - 1).rev() {
-        x[i] = d_prime[i] - c_prime[i] * x[i + 1];
+        x[i] = c_prime[i].mul_add(-x[i + 1], d_prime[i]);
     }
 
     Some(x)

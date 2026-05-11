@@ -14,14 +14,6 @@ use std::sync::Arc;
 /// Spectral operator for computing derivatives in Fourier space
 #[derive(Debug)]
 pub struct SpectralOperator {
-    /// Grid dimensions
-    #[allow(dead_code)] // Grid dimensions for spectral operations
-    nx: usize,
-    #[allow(dead_code)]
-    ny: usize,
-    #[allow(dead_code)]
-    nz: usize,
-
     /// Pre-computed wavenumber vectors
     kx_vec: Array1<f64>,
     ky_vec: Array1<f64>,
@@ -96,9 +88,6 @@ impl SpectralOperator {
         let grad_z_hat = Array3::<Complex64>::zeros((nx, ny, nz));
 
         Self {
-            nx,
-            ny,
-            nz,
             kx_vec,
             ky_vec,
             kz_vec,
@@ -112,6 +101,11 @@ impl SpectralOperator {
     }
 
     /// Compute Laplacian using spectral methods with pre-allocated workspace
+    /// # Panics
+    /// - Panics if `kx_vec contiguous`.
+    /// - Panics if `ky_vec contiguous`.
+    /// - Panics if `kz_vec contiguous`.
+    ///
     pub fn compute_laplacian_workspace(
         &mut self,
         field: &Array3<f64>,
@@ -121,13 +115,12 @@ impl SpectralOperator {
         self.fft.forward_into(field, &mut self.field_hat);
 
         // Apply Laplacian operator in k-space: ∇²f = -(kx² + ky² + kz²) * f_hat
-        Zip::indexed(&mut self.field_hat).for_each(|(i, j, k), f| {
-            let kx = self.kx_vec[i];
-            let ky = self.ky_vec[j];
-            let kz = self.kz_vec[k];
-
-            let k_squared = kx * kx + ky * ky + kz * kz;
-            *f = -k_squared * *f;
+        let kx_s = self.kx_vec.as_slice().expect("kx_vec contiguous");
+        let ky_s = self.ky_vec.as_slice().expect("ky_vec contiguous");
+        let kz_s = self.kz_vec.as_slice().expect("kz_vec contiguous");
+        Zip::indexed(&mut self.field_hat).par_for_each(|(i, j, k), f| {
+            let k_sq = kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
+            *f = -k_sq * *f;
         });
 
         self.fft
@@ -135,6 +128,11 @@ impl SpectralOperator {
     }
 
     /// Compute gradient using spectral methods with pre-allocated workspace
+    /// # Panics
+    /// - Panics if `kx_vec contiguous`.
+    /// - Panics if `ky_vec contiguous`.
+    /// - Panics if `kz_vec contiguous`.
+    ///
     pub fn compute_gradient_workspace(
         &mut self,
         field: &Array3<f64>,
@@ -146,19 +144,17 @@ impl SpectralOperator {
         self.fft.forward_into(field, &mut self.field_hat);
 
         // Apply gradient operators in k-space: ∂f/∂x = i*kx*f_hat
+        let kx_s = self.kx_vec.as_slice().expect("kx_vec contiguous");
+        let ky_s = self.ky_vec.as_slice().expect("ky_vec contiguous");
+        let kz_s = self.kz_vec.as_slice().expect("kz_vec contiguous");
         Zip::indexed(&mut self.grad_x_hat)
             .and(&mut self.grad_y_hat)
             .and(&mut self.grad_z_hat)
             .and(&self.field_hat)
-            .for_each(|(i, j, k), gx, gy, gz, &f| {
-                let kx = self.kx_vec[i];
-                let ky = self.ky_vec[j];
-                let kz = self.kz_vec[k];
-
-                // Gradient in k-space: ∂f/∂x = i*kx*f_hat
-                *gx = Complex64::new(0.0, kx) * f;
-                *gy = Complex64::new(0.0, ky) * f;
-                *gz = Complex64::new(0.0, kz) * f;
+            .par_for_each(|(i, j, k), gx, gy, gz, &f| {
+                *gx = Complex64::new(0.0, kx_s[i]) * f;
+                *gy = Complex64::new(0.0, ky_s[j]) * f;
+                *gz = Complex64::new(0.0, kz_s[k]) * f;
             });
 
         self.fft

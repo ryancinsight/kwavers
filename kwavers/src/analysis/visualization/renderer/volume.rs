@@ -14,6 +14,9 @@ pub struct VolumeRenderer {
 
 impl VolumeRenderer {
     /// Create a new volume renderer
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: &VisualizationConfig) -> KwaversResult<Self> {
         Ok(Self {
             config: config.clone(),
@@ -22,6 +25,9 @@ impl VolumeRenderer {
     }
 
     /// Render with draft quality
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn render_draft(
         &self,
         field: &Array3<f64>,
@@ -32,6 +38,9 @@ impl VolumeRenderer {
     }
 
     /// Render with production quality
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn render_production(
         &self,
         field: &Array3<f64>,
@@ -42,6 +51,9 @@ impl VolumeRenderer {
     }
 
     /// Render with publication quality
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn render_publication(
         &self,
         field: &Array3<f64>,
@@ -52,6 +64,9 @@ impl VolumeRenderer {
     }
 
     /// Internal rendering implementation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn render_internal(
         &self,
         field: &Array3<f64>,

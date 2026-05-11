@@ -26,7 +26,7 @@ impl Default for DivergingWaveConfig {
         let n_elem = 128usize;
         let pitch = 3.0e-4; // 0.3 mm
         let x_start = -(n_elem as f64 - 1.0) / 2.0 * pitch;
-        let element_positions: Vec<f64> = (0..n_elem).map(|i| x_start + i as f64 * pitch).collect();
+        let element_positions: Vec<f64> = (0..n_elem).map(|i| (i as f64).mul_add(pitch, x_start)).collect();
 
         Self {
             element_positions,

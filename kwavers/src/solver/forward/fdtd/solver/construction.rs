@@ -26,6 +26,10 @@ use super::super::source_handler::SourceHandler;
 
 impl GenericFdtdSolver<Array3<f64>> {
     /// Create a new FDTD solver
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         config: FdtdConfig,
         grid: &Grid,
@@ -111,11 +115,10 @@ impl GenericFdtdSolver<Array3<f64>> {
             let rho0_ref = materials.rho0.mean().unwrap_or(1000.0);
             let Some(kspace_ops) = kspace_ops.as_mut() else {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
-                    parameter: "kspace_correction".to_string(),
-                    value: "spectral".to_string(),
+                    parameter: "kspace_correction".to_owned(),
+                    value: "spectral".to_owned(),
                     constraint:
-                        "spectral k-space correction requires precomputed k-space operators"
-                            .to_string(),
+                        "spectral k-space correction requires precomputed k-space operators".to_owned(),
                 }));
             };
             kspace_ops.initialize_ivp_velocity(
@@ -139,7 +142,7 @@ impl GenericFdtdSolver<Array3<f64>> {
                         let bn = crate::domain::medium::nonlinearity_at(medium, x, y, z, grid);
                         let c = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
                         // β = 1 + B/(2A) where B/A is returned by nonlinearity_at
-                        beta[[i, j, k]] = 1.0 + bn * 0.5;
+                        beta[[i, j, k]] = bn.mul_add(0.5, 1.0);
                         c4[[i, j, k]] = c.powi(4);
                     }
                 }

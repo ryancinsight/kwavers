@@ -18,6 +18,10 @@ pub struct StabilityConstraints {
 }
 
 impl Time {
+    /// New.
+    /// # Panics
+    /// - Panics if assertion fails: `Time step and number of steps must be positive`.
+    ///
     #[must_use]
     pub fn new(dt: f64, n_steps: usize) -> Self {
         assert!(
@@ -32,6 +36,10 @@ impl Time {
         Self { dt, n_steps, t_max }
     }
 
+    /// From grid and duration.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn from_grid_and_duration(
         dx: f64,

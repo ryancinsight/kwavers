@@ -88,7 +88,7 @@ impl CavitationDetector for SubharmonicDetector {
         let (sub2_level, sub3_level) = self.detect_subharmonic_components(signal);
 
         // Combine subharmonic levels
-        let total_subharmonic = (sub2_level + sub3_level * 1.5).min(1.0);
+        let total_subharmonic = sub3_level.mul_add(1.5, sub2_level).min(1.0);
 
         // Apply sensitivity scaling
         let scaled_level = total_subharmonic * self.sensitivity;

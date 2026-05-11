@@ -43,6 +43,9 @@ impl DiffusionSolver {
     }
 
     /// Create solver from spatially-varying optical property map.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         grid: Grid,
         optical_properties: Array3<OpticalPropertyData>,
@@ -87,6 +90,9 @@ impl DiffusionSolver {
     }
 
     /// Create solver with uniform optical properties (homogeneous medium).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn uniform(
         grid: Grid,
         optical_properties: OpticalPropertyData,

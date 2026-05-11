@@ -56,10 +56,10 @@ impl TranscranialAberrationCorrection {
         let f011 = field[[i0, j0 + 1, k0 + 1]];
         let f111 = field[[i0 + 1, j0 + 1, k0 + 1]];
 
-        let fx00 = f000 * (1.0 - tx) + f100 * tx;
-        let fx10 = f010 * (1.0 - tx) + f110 * tx;
-        let fx01 = f001 * (1.0 - tx) + f101 * tx;
-        let fx11 = f011 * (1.0 - tx) + f111 * tx;
+        let fx00 = f000.mul_add(1.0 - tx, f100 * tx);
+        let fx10 = f010.mul_add(1.0 - tx, f110 * tx);
+        let fx01 = f001.mul_add(1.0 - tx, f101 * tx);
+        let fx11 = f011.mul_add(1.0 - tx, f111 * tx);
 
         let fxy0 = fx00 * (1.0 - ty) + fx10 * ty;
         let fxy1 = fx01 * (1.0 - ty) + fx11 * ty;
@@ -84,7 +84,7 @@ impl TranscranialAberrationCorrection {
     ) -> f64 {
         let (nx, ny, nz) = field.dim();
 
-        let i_peak = field.iter().cloned().fold(0.0_f64, f64::max);
+        let i_peak = field.iter().copied().fold(0.0_f64, f64::max);
         if i_peak <= 0.0 {
             return 0.0;
         }
@@ -122,11 +122,11 @@ impl TranscranialAberrationCorrection {
     /// For each axis α ∈ {x, y, z}, the FWHM of the 1D profile through the peak
     /// voxel is:
     /// ```text
-    ///   FWHM_α = (last_half_max_index − first_half_max_index) · Δα   [m]
+    ///   FWHM_α = (last_half_max_index − first_half_max_index) · Δα   (m)
     /// ```
     /// The scalar focal spot size is the geometric mean of the three FWHM values:
     /// ```text
-    ///   FWHM_geom = (FWHM_x · FWHM_y · FWHM_z)^(1/3)   [m]
+    ///   FWHM_geom = (FWHM_x · FWHM_y · FWHM_z)^(1/3)   (m)
     /// ```
     ///
     /// ## References
@@ -139,7 +139,7 @@ impl TranscranialAberrationCorrection {
     ) -> f64 {
         let (nx, ny, nz) = field.dim();
 
-        let i_peak = field.iter().cloned().fold(0.0_f64, f64::max);
+        let i_peak = field.iter().copied().fold(0.0_f64, f64::max);
         if i_peak <= 0.0 {
             return 0.0;
         }

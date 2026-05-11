@@ -28,19 +28,6 @@ pub struct RealtimePipelineConfig {
     pub streaming_mode: bool,
 }
 
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct ComputePipeline {
-    pub(super) pipeline: wgpu::ComputePipeline,
-    pub(super) layout: wgpu::PipelineLayout,
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct PipelineLayout {
-    pub(super) layout: wgpu::PipelineLayout,
-}
-
 /// Real-time imaging pipeline
 #[derive(Debug)]
 pub struct RealtimeImagingPipeline {

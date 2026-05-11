@@ -141,6 +141,9 @@ impl<'a, B: AutodiffBackend> ModuleMapper<B> for GradientUpdateMapper3D<'a, B> {
     }
 
     /// Pass through bool parameters unchanged
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn map_bool<const D: usize>(
         &mut self,
         tensor: Param<Tensor<B, D, Bool>>,
@@ -159,7 +162,7 @@ mod tests {
 
     type TestBackend = Autodiff<NdArray>;
 
-    fn scalar_f32(t: &Tensor<TestBackend, 1>) -> KwaversResult<f32> {
+    fn extract_scalar(t: &Tensor<TestBackend, 1>) -> KwaversResult<f32> {
         let data = t.clone().into_data();
         let slice = data.as_slice::<f32>().map_err(|e| {
             KwaversError::System(SystemError::InvalidOperation {
@@ -250,7 +253,7 @@ mod tests {
         // Initial loss
         let output_initial = network.forward(x.clone(), y.clone(), z.clone(), t.clone());
         let loss_initial = (output_initial - target.clone()).powf_scalar(2.0).mean();
-        let loss_initial_val = scalar_f32(&loss_initial)?;
+        let loss_initial_val = extract_scalar(&loss_initial)?;
         assert!(loss_initial_val.is_finite());
 
         // Train for 10 steps
@@ -264,7 +267,7 @@ mod tests {
         // Final loss
         let output_final = network.forward(x, y, z, t);
         let loss_final = (output_final - target).powf_scalar(2.0).mean();
-        let loss_final_val = scalar_f32(&loss_final)?;
+        let loss_final_val = extract_scalar(&loss_final)?;
 
         assert!(loss_final_val.is_finite());
         Ok(())
@@ -307,8 +310,8 @@ mod tests {
         let loss1 = (out1 - target.clone()).powf_scalar(2.0).mean();
         let loss2 = (out2 - target).powf_scalar(2.0).mean();
 
-        let loss1_val = scalar_f32(&loss1)?;
-        let loss2_val = scalar_f32(&loss2)?;
+        let loss1_val = extract_scalar(&loss1)?;
+        let loss2_val = extract_scalar(&loss2)?;
 
         // Larger learning rate should (usually) produce bigger change
         // This is a weak test due to non-linearities, but checks basic behavior

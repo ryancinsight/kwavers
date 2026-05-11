@@ -43,7 +43,7 @@ pub enum GpuError {
 impl fmt::Display for GpuError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GpuError::OutOfMemory {
+            Self::OutOfMemory {
                 requested,
                 available,
                 current,
@@ -54,16 +54,16 @@ impl fmt::Display for GpuError {
                     requested, available, current
                 )
             }
-            GpuError::DeviceLost { operation } => {
+            Self::DeviceLost { operation } => {
                 write!(f, "GPU device lost during operation: {}", operation)
             }
-            GpuError::MapFailure { size, details } => {
+            Self::MapFailure { size, details } => {
                 write!(f, "GPU buffer map failure ({} bytes): {}", size, details)
             }
-            GpuError::Validation { message } => {
+            Self::Validation { message } => {
                 write!(f, "GPU validation error: {}", message)
             }
-            GpuError::Timeout {
+            Self::Timeout {
                 operation,
                 duration_ms,
             } => {

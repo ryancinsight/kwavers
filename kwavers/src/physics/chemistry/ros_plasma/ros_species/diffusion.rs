@@ -57,15 +57,9 @@ impl ROSConcentrations {
                             let center_val = conc[[i, j, k]];
 
                             // Compute Laplacian using neighboring values
-                            let laplacian = (conc[[i + 1, j, k]] - 2.0 * center_val
-                                + conc[[i - 1, j, k]])
-                                * dx2_inv
-                                + (conc[[i, j + 1, k]] - 2.0 * center_val + conc[[i, j - 1, k]])
-                                    * dy2_inv
-                                + (conc[[i, j, k + 1]] - 2.0 * center_val + conc[[i, j, k - 1]])
-                                    * dz2_inv;
+                            let laplacian = (2.0f64.mul_add(-center_val, conc[[i, j, k + 1]]) + conc[[i, j, k - 1]]).mul_add(dz2_inv, (2.0f64.mul_add(-center_val, conc[[i + 1, j, k]]) + conc[[i - 1, j, k]]).mul_add(dx2_inv, (2.0f64.mul_add(-center_val, conc[[i, j + 1, k]]) + conc[[i, j - 1, k]]) * dy2_inv));
 
-                            new_conc[[i, j, k]] = center_val + d * laplacian * dt;
+                            new_conc[[i, j, k]] = (d * laplacian).mul_add(dt, center_val);
                         }
                     }
                 }
@@ -103,8 +97,8 @@ impl ROSConcentrations {
                 for i in 1..shape.0 - 1 {
                     let rhs = conc[[i, j, k]]
                         + alpha
-                            * (conc[[i + 1, j, k]] - 2.0 * conc[[i, j, k]] + conc[[i - 1, j, k]]);
-                    temp[[i, j, k]] = rhs / (1.0 + 2.0 * alpha);
+                            * (2.0f64.mul_add(-conc[[i, j, k]], conc[[i + 1, j, k]]) + conc[[i - 1, j, k]]);
+                    temp[[i, j, k]] = rhs / 2.0f64.mul_add(alpha, 1.0);
                 }
             }
         }

@@ -118,6 +118,9 @@ fn test_config_validation() {
 }
 
 /// A pure sine at the fundamental has zero energy at all harmonics.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_harmonic_ratios_pure_sine_is_zero() {
     let config = ShockCapturingConfig {
@@ -151,6 +154,9 @@ fn test_harmonic_ratios_pure_sine_is_zero() {
 }
 
 /// Synthesised signal with known second harmonic amplitude yields correct ratio.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_harmonic_ratios_known_second_harmonic() {
     let config = ShockCapturingConfig {
@@ -192,6 +198,9 @@ fn test_harmonic_ratios_known_second_harmonic() {
 }
 
 /// Zero pressure field returns empty ratios.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_harmonic_ratios_zero_field_returns_empty() {
     let config = ShockCapturingConfig::default();
@@ -205,6 +214,9 @@ fn test_harmonic_ratios_zero_field_returns_empty() {
 }
 
 /// Invalid frequency (zero) returns empty ratios without error.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_harmonic_ratios_invalid_frequency_returns_empty() {
     let config = ShockCapturingConfig::default();

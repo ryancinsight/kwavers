@@ -50,6 +50,9 @@ impl ReverseTimeMigration {
     ///
     /// `pressure_previous` holds the field at `t - dt` (staggered two-level
     /// leapfrog storage; caller swaps after this call).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn update_wavefield(
         &self,
         pressure: &mut Array3<f64>,
@@ -75,11 +78,7 @@ impl ReverseTimeMigration {
             .and(&pressure.slice(s![3..nx - 1, 2..ny - 2, 2..nz - 2]))
             .and(&pressure.slice(s![4..nx, 2..ny - 2, 2..nz - 2]))
             .par_for_each(|lap, &pm2, &pm1, &p0, &pp1, &pp2| {
-                *lap += (FD_COEFF_2 * pm2
-                    + FD_COEFF_1 * pm1
-                    + FD_COEFF_0 * p0
-                    + FD_COEFF_1 * pp1
-                    + FD_COEFF_2 * pp2)
+                *lap += FD_COEFF_2.mul_add(pp2, FD_COEFF_1.mul_add(pp1, FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1))))
                     / dx2;
             });
 
@@ -91,11 +90,7 @@ impl ReverseTimeMigration {
             .and(&pressure.slice(s![2..nx - 2, 3..ny - 1, 2..nz - 2]))
             .and(&pressure.slice(s![2..nx - 2, 4..ny, 2..nz - 2]))
             .par_for_each(|lap, &pm2, &pm1, &p0, &pp1, &pp2| {
-                *lap += (FD_COEFF_2 * pm2
-                    + FD_COEFF_1 * pm1
-                    + FD_COEFF_0 * p0
-                    + FD_COEFF_1 * pp1
-                    + FD_COEFF_2 * pp2)
+                *lap += FD_COEFF_2.mul_add(pp2, FD_COEFF_1.mul_add(pp1, FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1))))
                     / dy2;
             });
 
@@ -107,11 +102,7 @@ impl ReverseTimeMigration {
             .and(&pressure.slice(s![2..nx - 2, 2..ny - 2, 3..nz - 1]))
             .and(&pressure.slice(s![2..nx - 2, 2..ny - 2, 4..nz]))
             .par_for_each(|lap, &pm2, &pm1, &p0, &pp1, &pp2| {
-                *lap += (FD_COEFF_2 * pm2
-                    + FD_COEFF_1 * pm1
-                    + FD_COEFF_0 * p0
-                    + FD_COEFF_1 * pp1
-                    + FD_COEFF_2 * pp2)
+                *lap += FD_COEFF_2.mul_add(pp2, FD_COEFF_1.mul_add(pp1, FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1))))
                     / dz2;
             });
 
@@ -121,7 +112,7 @@ impl ReverseTimeMigration {
             .and(&laplacian)
             .and(&self.velocity_model)
             .par_for_each(|p, &p_prev, &lap, &vel| {
-                *p = 2.0 * *p - p_prev + vel * vel * dt * dt * lap;
+                *p = (vel * vel * dt * dt).mul_add(lap, 2.0f64.mul_add(*p, -p_prev));
             });
 
         Ok(())

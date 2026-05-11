@@ -7,6 +7,10 @@ use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 impl<B: AutodiffBackend> MetaLearner<B> {
+    /// Compute gradients and loss.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_gradients_and_loss(
         &self,
         model: &BurnPINN2DWave<B>,

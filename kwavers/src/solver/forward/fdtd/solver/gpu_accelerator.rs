@@ -8,6 +8,10 @@ use ndarray::Array3;
 use crate::core::error::KwaversResult;
 
 pub trait FdtdGpuAccelerator: Send + Sync + std::fmt::Debug {
+    /// Propagate one acoustic time step on the GPU device.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if the GPU kernel launch fails or a device error occurs.
     fn propagate_acoustic_wave(
         &self,
         pressure: &Array3<f64>,

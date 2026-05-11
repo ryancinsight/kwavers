@@ -40,11 +40,17 @@ pub struct CylindricalTopology {
 
 impl CylindricalTopology {
     /// Create a new cylindrical topology
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(nz: usize, nr: usize, dz: f64, dr: f64) -> KwaversResult<Self> {
         Self::with_origin(nz, nr, dz, dr, 0.0, 0.0)
     }
 
     /// Create a cylindrical topology with custom origin
+    /// # Errors
+    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    ///
     pub fn with_origin(
         nz: usize,
         nr: usize,
@@ -55,30 +61,30 @@ impl CylindricalTopology {
     ) -> KwaversResult<Self> {
         if nz == 0 || nr == 0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "cylindrical grid dimensions".to_string(),
+                parameter: "cylindrical grid dimensions".to_owned(),
                 value: format!("nz={}, nr={}", nz, nr),
-                constraint: "Must be positive".to_string(),
+                constraint: "Must be positive".to_owned(),
             }));
         }
 
         if dz <= 0.0 || dr <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "cylindrical grid spacing".to_string(),
+                parameter: "cylindrical grid spacing".to_owned(),
                 value: format!("dz={}, dr={}", dz, dr),
-                constraint: "Must be positive".to_string(),
+                constraint: "Must be positive".to_owned(),
             }));
         }
 
         if !dz.is_finite() || !dr.is_finite() {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "cylindrical grid spacing".to_string(),
+                parameter: "cylindrical grid spacing".to_owned(),
                 value: format!("dz={}, dr={}", dz, dr),
-                constraint: "Must be finite".to_string(),
+                constraint: "Must be finite".to_owned(),
             }));
         }
 
-        let z_coords = Array1::from_shape_fn(nz, |i| z0 + i as f64 * dz);
-        let r_coords = Array1::from_shape_fn(nr, |j| r0 + j as f64 * dr);
+        let z_coords = Array1::from_shape_fn(nz, |i| (i as f64).mul_add(dz, z0));
+        let r_coords = Array1::from_shape_fn(nr, |j| (j as f64).mul_add(dr, r0));
         let kz = Self::compute_fft_wavenumbers(nz, dz);
         let kr = Self::compute_hankel_wavenumbers(nr, dr, r0);
 
@@ -116,7 +122,7 @@ impl CylindricalTopology {
     /// Uses zeros of J₀ Bessel function: j₀ₘ ≈ (m - 0.25) * π for large m.
     /// Wavenumbers are k_m = j₀ₘ / r_max.
     fn compute_hankel_wavenumbers(nr: usize, dr: f64, r0: f64) -> Array1<f64> {
-        let r_max = r0 + nr as f64 * dr;
+        let r_max = (nr as f64).mul_add(dr, r0);
         Array1::from_shape_fn(nr, |m| {
             if m == 0 {
                 0.0
@@ -128,58 +134,69 @@ impl CylindricalTopology {
     }
 
     /// Get axial coordinates array
+    #[must_use] 
     pub fn z_coordinates(&self) -> &Array1<f64> {
         &self.z_coords
     }
 
     /// Get radial coordinates array
+    #[must_use] 
     pub fn r_coordinates(&self) -> &Array1<f64> {
         &self.r_coords
     }
 
     /// Get axial wavenumbers
+    #[must_use] 
     pub fn kz_wavenumbers(&self) -> &Array1<f64> {
         &self.kz
     }
 
     /// Get radial wavenumbers (Hankel transform)
+    #[must_use] 
     pub fn kr_wavenumbers(&self) -> &Array1<f64> {
         &self.kr
     }
 
     #[inline]
+    #[must_use] 
     pub fn z_at(&self, i: usize) -> f64 {
-        self.z0 + i as f64 * self.dz
+        (i as f64).mul_add(self.dz, self.z0)
     }
 
     #[inline]
+    #[must_use] 
     pub fn r_at(&self, j: usize) -> f64 {
-        self.r0 + j as f64 * self.dr
+        (j as f64).mul_add(self.dr, self.r0)
     }
 
     #[inline]
+    #[must_use] 
     pub fn iz_for(&self, z: f64) -> usize {
         let rel = z - self.z0;
         ((rel / self.dz).round() as usize).min(self.nz - 1)
     }
 
     #[inline]
+    #[must_use] 
     pub fn ir_for(&self, r: f64) -> usize {
         let rel = r - self.r0;
         ((rel / self.dr).round() as usize).min(self.nr - 1)
     }
 
     #[inline]
+    #[must_use] 
     pub fn z_max(&self) -> f64 {
-        self.z0 + (self.nz - 1) as f64 * self.dz
+        ((self.nz - 1) as f64).mul_add(self.dz, self.z0)
     }
 
     #[inline]
+    #[must_use] 
     pub fn r_max(&self) -> f64 {
-        self.r0 + (self.nr - 1) as f64 * self.dr
+        ((self.nr - 1) as f64).mul_add(self.dr, self.r0)
     }
 
     /// Create 2D meshgrid of z coordinates
+    #[must_use] 
     pub fn z_mesh(&self) -> Array2<f64> {
         let mut mesh = Array2::zeros((self.nz, self.nr));
         for i in 0..self.nz {
@@ -192,6 +209,7 @@ impl CylindricalTopology {
     }
 
     /// Create 2D meshgrid of r coordinates
+    #[must_use] 
     pub fn r_mesh(&self) -> Array2<f64> {
         let mut mesh = Array2::zeros((self.nz, self.nr));
         for i in 0..self.nz {
@@ -205,6 +223,7 @@ impl CylindricalTopology {
     /// Calculate area element for integration: r * dr * dz
     ///
     /// At r = 0, uses half-cell width to avoid singularity: 0.5 * dr² * dz
+    #[must_use] 
     pub fn area_element(&self, j: usize) -> f64 {
         let r = self.r_coords[j];
         if j == 0 && self.r0.abs() < 1e-15 {
@@ -215,6 +234,7 @@ impl CylindricalTopology {
     }
 
     /// Calculate volume of rotation for full 3D: 2π * r * dr * dz
+    #[must_use] 
     pub fn volume_element(&self, j: usize) -> f64 {
         2.0 * PI * self.area_element(j)
     }
@@ -246,8 +266,8 @@ impl GridTopology for CylindricalTopology {
     }
 
     fn indices_to_coordinates(&self, indices: [usize; 3]) -> [f64; 3] {
-        let z = self.z0 + indices[0] as f64 * self.dz;
-        let r = self.r0 + indices[1] as f64 * self.dr;
+        let z = (indices[0] as f64).mul_add(self.dz, self.z0);
+        let r = (indices[1] as f64).mul_add(self.dr, self.r0);
         [z, r, 0.0]
     }
 

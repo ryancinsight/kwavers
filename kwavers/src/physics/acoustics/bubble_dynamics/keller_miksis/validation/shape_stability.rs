@@ -11,6 +11,9 @@ use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel
 /// must not be immediately flagged as unstable at equilibrium radius.
 ///
 /// Rationale: seed amplitude = 1 Å ≪ 0.3 × R₀ ≈ 1.5 µm for a 5 µm bubble.
+/// # Panics
+/// - Panics if assertion fails: `BubbleState::is_shape_unstable must default to false`.
+///
 #[test]
 fn test_shape_modes_seeded_but_stable_at_equilibrium() {
     let params = BubbleParameters::default();
@@ -33,6 +36,9 @@ fn test_shape_modes_seeded_but_stable_at_equilibrium() {
 /// Method: Directly set mode n=2 amplitude to 35% of the bubble radius
 /// (> 30% Plesset threshold), then call `update_shape_stability` with a
 /// zero timestep so no further integration occurs.
+/// # Panics
+/// - Panics if assertion fails: `Amplitude 35%·R must set is_shape_unstable = true (threshold = 30%·R)`.
+///
 #[test]
 fn test_update_shape_stability_detects_breakup() {
     let params = BubbleParameters::default();
@@ -54,6 +60,9 @@ fn test_update_shape_stability_detects_breakup() {
 /// of R̈ → shape mode growth via the Plesset-Prosperetti driving term G_n.
 ///
 /// Reference: Brennen (1995) §3.2 — G₂ = (n-1)[R̈/R − …] > 0 during collapse.
+/// # Panics
+/// - Panics if assertion fails: `Mode n=2 must grow during violent collapse: a_final={:.3e} m, a0={:.3e} m`.
+///
 #[test]
 fn test_shape_modes_grow_during_violent_collapse() {
     let params = BubbleParameters::default();
@@ -87,6 +96,9 @@ fn test_shape_modes_grow_during_violent_collapse() {
 /// Tolerance: 5% growth (symplectic Euler has O(h²) energy drift).
 ///
 /// Reference: Leimkuhler & Reich (2004) §VIII.2.
+/// # Panics
+/// - Panics if assertion fails: `Mode n=2 must remain bounded at rest: a_final/a0={:.4}`.
+///
 #[test]
 fn test_shape_modes_bounded_at_rest() {
     let params = BubbleParameters::default();

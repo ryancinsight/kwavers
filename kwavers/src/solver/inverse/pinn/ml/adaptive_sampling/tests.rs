@@ -51,7 +51,6 @@ fn test_adaptive_sampler_creation() {
     let strategy = SamplingStrategy::default();
 
     let sampler = AdaptiveCollocationSampler::<TestBackend>::new(100, domain, strategy);
-    assert!(sampler.is_ok());
 
     let sampler = sampler.unwrap();
     assert_eq!(sampler.total_points, 100);

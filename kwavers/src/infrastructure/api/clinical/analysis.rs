@@ -16,6 +16,9 @@ use crate::clinical::imaging::workflows::neural::AIBeamformingResult;
 use super::state::{ClinicalAppState, ClinicalSession};
 
 /// Get clinical session status endpoint
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub async fn get_session_status(
     State(state): State<ClinicalAppState>,
     Path(session_id): Path<String>,
@@ -50,6 +53,9 @@ pub async fn get_session_status(
 }
 
 /// Clinical analysis endpoint - AI-enhanced beamforming
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 #[cfg(feature = "pinn")]
 pub async fn analyze_clinical(
     State(state): State<ClinicalAppState>,

@@ -27,6 +27,9 @@ fn test_focus_delays() {
 }
 
 /// `get_element_delays` returns zero for both elements of a symmetric two-element array.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_get_element_delays_symmetric_array() {
     let mut array = KWaveArray::with_params(1e6, 1500.0);
@@ -41,6 +44,9 @@ fn test_get_element_delays_symmetric_array() {
 }
 
 /// All delays are non-negative and the minimum delay is exactly 0.
+/// # Panics
+/// - Panics if assertion fails: `all delays must be non-negative`.
+///
 #[test]
 fn test_get_element_delays_non_negative_min_zero() {
     let mut array = KWaveArray::with_params(1e6, 1500.0);

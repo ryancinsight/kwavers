@@ -73,6 +73,9 @@ impl FemBoundaryManager {
     /// * `mass` - Global mass matrix (modified in-place)
     /// * `rhs` - Right-hand side load vector (modified in-place)
     /// * `wavenumber` - Wavenumber k for radiation conditions
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn apply_all(
         &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
@@ -111,15 +114,15 @@ impl FemBoundaryManager {
 
     fn invalid_value(parameter: &str, value: f64, reason: &str) -> KwaversError {
         KwaversError::Validation(ValidationError::InvalidValue {
-            parameter: parameter.to_string(),
+            parameter: parameter.to_owned(),
             value,
-            reason: reason.to_string(),
+            reason: reason.to_owned(),
         })
     }
 
     fn invalid_parameter(parameter: &str, reason: impl Into<String>) -> KwaversError {
         KwaversError::Validation(ValidationError::InvalidParameter {
-            parameter: parameter.to_string(),
+            parameter: parameter.to_owned(),
             reason: reason.into(),
         })
     }
@@ -182,6 +185,9 @@ impl FemBoundaryManager {
     /// - Set diagonal K_ii = 1, zero off-diagonal elements in row i
     /// - Zero mass matrix row i
     /// - Set RHS[i] = g_i
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_dirichlet(
         &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
@@ -204,6 +210,9 @@ impl FemBoundaryManager {
     ///
     /// For Neumann conditions ∂u/∂n = g, the contribution appears
     /// in the load vector: f_i += ∫_∂Ω g φ_i dS
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_neumann(
         &self,
         rhs: &mut Array1<Complex64>,
@@ -222,6 +231,9 @@ impl FemBoundaryManager {
     /// For Robin conditions ∂u/∂n + αu = g, we modify:
     /// - Stiffness diagonal: K_ii += α
     /// - Load vector: f_i += g
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_robin(
         &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,
@@ -247,6 +259,9 @@ impl FemBoundaryManager {
     /// Apply radiation boundary conditions (Sommerfeld ABC)
     ///
     /// The Sommerfeld radiation condition: ∂u/∂n - iku ≈ 0
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn apply_radiation(
         &self,
         stiffness: &mut CompressedSparseRowMatrix<Complex64>,

@@ -73,6 +73,10 @@ impl std::fmt::Debug for DistributedNeuralBeamformingProcessor {
 #[cfg(feature = "pinn")]
 impl DistributedNeuralBeamformingProcessor {
     /// Create new distributed neural beamforming processor.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(
         beamforming_config: PINNBeamformingConfig,
         distributed_config: DistributedConfig,
@@ -141,11 +145,21 @@ impl DistributedNeuralBeamformingProcessor {
     }
 
     /// Get fault tolerance configuration.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fault_tolerance_config(&self) -> &FaultToleranceState {
         &self.fault_tolerance
     }
 
     /// Process RF data using distributed neural beamforming.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub async fn process_volume_distributed(
         &mut self,
         rf_data: &Array4<f32>,

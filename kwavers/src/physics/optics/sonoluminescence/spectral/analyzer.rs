@@ -66,6 +66,9 @@ impl SpectralAnalyzer {
     }
 
     /// Calculate time-averaged spectrum
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     #[must_use]
     pub fn time_averaged_spectrum(&self) -> Option<EmissionSpectrum> {
         if self.spectra_history.is_empty() {

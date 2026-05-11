@@ -21,8 +21,6 @@ use std::sync::Arc;
 
 use crate::core::error::{KwaversError, KwaversResult, SystemError};
 
-use super::geometry::Geometry3D;
-
 mod speed_fn;
 #[cfg(test)]
 mod tests;
@@ -36,6 +34,11 @@ pub struct WaveSpeedGrid3D<B: Backend> {
 }
 
 impl<B: Backend> WaveSpeedGrid3D<B> {
+    /// Try new.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn try_new(grid: Tensor<B, 3>, bbox: [f32; 6]) -> KwaversResult<Self> {
         let shape = grid.shape();
         let dims = match shape.dims.as_slice() {

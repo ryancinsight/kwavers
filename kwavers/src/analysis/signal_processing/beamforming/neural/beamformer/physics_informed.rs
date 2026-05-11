@@ -7,6 +7,10 @@ use super::super::types::HybridBeamformingResult;
 use super::NeuralBeamformer;
 
 impl NeuralBeamformer {
+    /// Process physics informed.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn process_physics_informed(
         &self,
         rf_data: &Array4<f32>,

@@ -29,6 +29,7 @@ impl MultiDirectionalPush {
     /// Create orthogonal push pattern for comprehensive 3D coverage
     ///
     /// Generates pushes along x, y, z axes from a central location
+    #[must_use] 
     pub fn orthogonal_pattern(center: [f64; 3], spacing: f64) -> Self {
         let pushes = vec![
             // +X direction
@@ -89,13 +90,14 @@ impl MultiDirectionalPush {
     /// Create compound push pattern for enhanced shear wave generation
     ///
     /// Uses multiple pushes at different angles for better wave interference
+    #[must_use] 
     pub fn compound_pattern(center: [f64; 3], radius: f64, n_pushes: usize) -> Self {
         let mut pushes = Vec::new();
 
         for i in 0..n_pushes {
             let angle = 2.0 * PI * (i as f64) / (n_pushes as f64);
-            let x = center[0] + radius * angle.cos();
-            let y = center[1] + radius * angle.sin();
+            let x = radius.mul_add(angle.cos(), center[0]);
+            let y = radius.mul_add(angle.sin(), center[1]);
             let z = center[2];
 
             // Alternate between different depths for 3D coverage
@@ -138,6 +140,9 @@ impl MultiDirectionalPush {
     /// Create focused push pattern for targeted 3D SWE
     ///
     /// Concentrates pushes in a specific region of interest
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn focused_pattern(roi_center: [f64; 3], roi_size: [f64; 3], density: usize) -> Self {
         let mut pushes = Vec::new();
 
@@ -149,16 +154,14 @@ impl MultiDirectionalPush {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let x = roi_center[0] + (i as f64 - nx as f64 / 2.0) * 0.005;
-                    let y = roi_center[1] + (j as f64 - ny as f64 / 2.0) * 0.005;
-                    let z = roi_center[2] + (k as f64 - nz as f64 / 2.0) * 0.005;
+                    let x = (i as f64 - nx as f64 / 2.0).mul_add(0.005, roi_center[0]);
+                    let y = (j as f64 - ny as f64 / 2.0).mul_add(0.005, roi_center[1]);
+                    let z = (k as f64 - nz as f64 / 2.0).mul_add(0.005, roi_center[2]);
 
                     // Weight pushes based on distance from ROI center
-                    let distance = ((x - roi_center[0]).powi(2)
-                        + (y - roi_center[1]).powi(2)
-                        + (z - roi_center[2]).powi(2))
+                    let distance = (z - roi_center[2]).mul_add(z - roi_center[2], (y - roi_center[1]).mul_add(y - roi_center[1], (x - roi_center[0]).powi(2)))
                     .sqrt();
-                    let max_distance = roi_size.iter().cloned().fold(0.0, f64::max) / 2.0;
+                    let max_distance = roi_size.iter().copied().fold(0.0, f64::max) / 2.0;
                     let weight = (1.0 - distance / max_distance).max(0.1);
 
                     pushes.push(DirectionalPush {
@@ -174,13 +177,9 @@ impl MultiDirectionalPush {
         // Limit total pushes for computational efficiency
         if pushes.len() > density {
             pushes.sort_by(|a, b| {
-                let dist_a = ((a.location[0] - roi_center[0]).powi(2)
-                    + (a.location[1] - roi_center[1]).powi(2)
-                    + (a.location[2] - roi_center[2]).powi(2))
+                let dist_a = (a.location[2] - roi_center[2]).mul_add(a.location[2] - roi_center[2], (a.location[1] - roi_center[1]).mul_add(a.location[1] - roi_center[1], (a.location[0] - roi_center[0]).powi(2)))
                 .sqrt();
-                let dist_b = ((b.location[0] - roi_center[0]).powi(2)
-                    + (b.location[1] - roi_center[1]).powi(2)
-                    + (b.location[2] - roi_center[2]).powi(2))
+                let dist_b = (b.location[2] - roi_center[2]).mul_add(b.location[2] - roi_center[2], (b.location[1] - roi_center[1]).mul_add(b.location[1] - roi_center[1], (b.location[0] - roi_center[0]).powi(2)))
                 .sqrt();
                 dist_a.partial_cmp(&dist_b).unwrap()
             });

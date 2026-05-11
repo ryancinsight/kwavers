@@ -20,6 +20,9 @@ pub struct FieldArrays {
 }
 
 /// Initialize field arrays for spectral solver
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn initialize_field_arrays(grid: &Grid, _medium: &dyn Medium) -> KwaversResult<FieldArrays> {
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let nz_c = nz / 2 + 1;

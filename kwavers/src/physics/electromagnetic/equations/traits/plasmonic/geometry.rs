@@ -54,7 +54,7 @@ fn prolate_depolarization_factors(r: f64, c: f64) -> (f64, f64, f64) {
     let e = (1.0 - (r * r) / (c * c)).sqrt();
     let denom = 2.0 * e * e * e;
     let lz = if denom > 0.0 {
-        let term = ((1.0 + e) / (1.0 - e)).ln() - 2.0 * e;
+        let term = 2.0f64.mul_add(-e, ((1.0 + e) / (1.0 - e)).ln());
         (1.0 - e * e) / denom * term
     } else {
         1.0 / 3.0

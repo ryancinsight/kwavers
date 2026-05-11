@@ -18,6 +18,9 @@ fn uniform_array(n: usize, pitch: f64) -> DivergingWave {
 /// PRF_max = c / (2·z_max).
 ///
 /// For c=1540 m/s, z_max=40 mm: PRF_max = 19 250 Hz.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_max_prf_formula() {
     let dw = uniform_array(8, 3.0e-4);
@@ -35,6 +38,9 @@ fn test_max_prf_formula() {
 ///
 /// This matches a plane-wave normal-incidence transmit delay at z, confirming
 /// the virtual-source formula collapses correctly on axis.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_on_axis_tx_delay_equals_z_over_c() {
     let dw = uniform_array(9, 3.0e-4); // 9 elements → center at index 4 (x=0)
@@ -54,6 +60,9 @@ fn test_on_axis_tx_delay_equals_z_over_c() {
 }
 
 /// Receive delay at z=0 from a scatterer directly on the element face equals zero.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_receive_delay_at_face_is_zero() {
     let dw = uniform_array(8, 3.0e-4);
@@ -66,6 +75,9 @@ fn test_receive_delay_at_face_is_zero() {
 /// Transmit delays are non-negative for all imaging depths z ≥ 0.
 ///
 /// This follows from ||(x−xᵢ, z+F)|| ≥ F for any (x, z) with z ≥ 0 and F > 0.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_transmit_delays_non_negative() {
     let dw = uniform_array(8, 3.0e-4);
@@ -86,6 +98,9 @@ fn test_transmit_delays_non_negative() {
 
 /// Lateral symmetry: for symmetric element array and on-axis x=0,
 /// the transmit delay from element i must equal that from the mirror element.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_lateral_symmetry() {
     let n = 8;
@@ -105,6 +120,9 @@ fn test_lateral_symmetry() {
 }
 
 /// STA delay = transmit + receive.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_sta_delay_is_sum() {
     let dw = uniform_array(8, 3.0e-4);
@@ -120,6 +138,9 @@ fn test_sta_delay_is_sum() {
 }
 
 /// Hann apodization weight at distance 0 from centre of aperture must equal 1.0.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_hann_apodization_center_is_one() {
     let dw = uniform_array(8, 3.0e-4);
@@ -142,6 +163,9 @@ fn test_hann_apodization_center_is_one() {
 }
 
 /// Elements outside the F-number cone receive zero weight.
+/// # Panics
+/// - Panics if assertion fails: `Element {elem} outside aperture must have w=0, got {w}`.
+///
 #[test]
 fn test_hann_apodization_out_of_aperture_is_zero() {
     let dw = uniform_array(8, 3.0e-4);
@@ -165,6 +189,9 @@ fn test_hann_apodization_out_of_aperture_is_zero() {
 }
 
 /// transmit_delay_surface shape must be [n_elements × (nx·nz)].
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_transmit_delay_surface_shape() {
     let dw = uniform_array(8, 3.0e-4);
@@ -179,6 +206,9 @@ fn test_transmit_delay_surface_shape() {
 }
 
 /// sta_delay_table shape must be [n_tx × n_rx × (nx·nz)].
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_sta_delay_table_shape() {
     let dw = uniform_array(4, 3.0e-4);
@@ -193,6 +223,9 @@ fn test_sta_delay_table_shape() {
 }
 
 /// Transmit delay is consistent between scalar method and delay table.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_transmit_delay_surface_matches_scalar() {
     let dw = uniform_array(4, 3.0e-4);
@@ -210,6 +243,9 @@ fn test_transmit_delay_surface_matches_scalar() {
 }
 
 /// At normal incidence (all center, z=20mm), STA delay must be 2z/c.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_monostatic_sta_delay_equals_round_trip() {
     let dw = uniform_array(9, 3.0e-4);
@@ -226,6 +262,9 @@ fn test_monostatic_sta_delay_equals_round_trip() {
 }
 
 /// Out-of-range element index returns an error.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_out_of_range_index_errors() {
     let dw = uniform_array(4, 3.0e-4);

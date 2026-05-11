@@ -50,11 +50,20 @@ pub trait ElectromagneticWaveEquation: Send + Sync {
     }
 
     /// Solve Maxwell's equations for one time step
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn step_maxwell(&mut self, dt: f64) -> Result<(), String>;
 
     /// Apply electromagnetic boundary conditions
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_em_boundary_conditions(&mut self, fields: &mut EMFields);
 
     /// Check electromagnetic physics constraints
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn check_em_constraints(&self, fields: &EMFields) -> Result<(), String>;
 }

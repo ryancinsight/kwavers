@@ -31,6 +31,9 @@ mod tests {
 
     /// Test machine epsilon constant correctness
     /// IEEE 754 double precision: 2^(-52)
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_machine_epsilon_constant() {
         let expected = 2.0_f64.powi(-52);

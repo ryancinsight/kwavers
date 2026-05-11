@@ -14,10 +14,10 @@ use ndarray::ArrayD;
 /// ```
 ///
 /// where:
-/// - u(x,t) is displacement vector [m]
-/// - σ is stress tensor [Pa]
-/// - ε is strain tensor [dimensionless]
-/// - C is elastic modulus tensor [Pa]
+/// - u(x,t) is displacement vector (m)
+/// - σ is stress tensor (Pa)
+/// - ε is strain tensor (dimensionless)
+/// - C is elastic modulus tensor (Pa)
 /// - ρ(x) is density [kg/m³]
 /// - f(x,t) is body force [N/m³]
 ///
@@ -25,10 +25,10 @@ use ndarray::ArrayD;
 ///
 /// For autodiff-based implementations (PINN), see [`AutodiffElasticWaveEquation`].
 pub trait ElasticWaveEquation: WaveEquation {
-    /// Get Lamé first parameter λ(x) [Pa]
+    /// Get Lamé first parameter λ(x) (Pa)
     fn lame_lambda(&self) -> ArrayD<f64>;
 
-    /// Get Lamé second parameter μ(x) (shear modulus) [Pa]
+    /// Get Lamé second parameter μ(x) (shear modulus) (Pa)
     fn lame_mu(&self) -> ArrayD<f64>;
 
     /// Get density field ρ(x) [kg/m³]
@@ -49,7 +49,7 @@ pub trait ElasticWaveEquation: WaveEquation {
     /// E = ∫ (½ρ|∂u/∂t|² + ½σ:ε) dV
     fn elastic_energy(&self, displacement: &ArrayD<f64>, velocity: &ArrayD<f64>) -> f64;
 
-    /// Get P-wave (longitudinal) speed [m/s]
+    /// Get P-wave (longitudinal) speed (m/s)
     fn p_wave_speed(&self) -> ArrayD<f64> {
         let lambda = self.lame_lambda();
         let mu = self.lame_mu();
@@ -57,7 +57,7 @@ pub trait ElasticWaveEquation: WaveEquation {
         ((lambda + 2.0 * mu) / rho).mapv(f64::sqrt)
     }
 
-    /// Get S-wave (shear) speed [m/s]
+    /// Get S-wave (shear) speed (m/s)
     fn s_wave_speed(&self) -> ArrayD<f64> {
         let mu = self.lame_mu();
         let rho = self.density();
@@ -89,10 +89,10 @@ pub trait ElasticWaveEquation: WaveEquation {
 /// The validation framework provides separate functions for each trait hierarchy
 /// but enforces identical mathematical requirements.
 pub trait AutodiffElasticWaveEquation: AutodiffWaveEquation {
-    /// Get Lamé first parameter λ(x) [Pa]
+    /// Get Lamé first parameter λ(x) (Pa)
     fn lame_lambda(&self) -> ArrayD<f64>;
 
-    /// Get Lamé second parameter μ(x) (shear modulus) [Pa]
+    /// Get Lamé second parameter μ(x) (shear modulus) (Pa)
     fn lame_mu(&self) -> ArrayD<f64>;
 
     /// Get density field ρ(x) [kg/m³]
@@ -113,7 +113,7 @@ pub trait AutodiffElasticWaveEquation: AutodiffWaveEquation {
     /// E = ∫ (½ρ|∂u/∂t|² + ½σ:ε) dV
     fn elastic_energy(&self, displacement: &ArrayD<f64>, velocity: &ArrayD<f64>) -> f64;
 
-    /// Get P-wave (longitudinal) speed [m/s]
+    /// Get P-wave (longitudinal) speed (m/s)
     fn p_wave_speed(&self) -> ArrayD<f64> {
         let lambda = self.lame_lambda();
         let mu = self.lame_mu();
@@ -121,7 +121,7 @@ pub trait AutodiffElasticWaveEquation: AutodiffWaveEquation {
         ((lambda + 2.0 * mu) / rho).mapv(f64::sqrt)
     }
 
-    /// Get S-wave (shear) speed [m/s]
+    /// Get S-wave (shear) speed (m/s)
     fn s_wave_speed(&self) -> ArrayD<f64> {
         let mu = self.lame_mu();
         let rho = self.density();

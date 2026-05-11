@@ -126,7 +126,7 @@ impl SemSolver {
                         }
 
                         let val =
-                            w[b] * w[c] * xi_sum + w[a] * w[c] * eta_sum + w[a] * w[b] * zeta_sum;
+                            (w[a] * w[b]).mul_add(zeta_sum, (w[b] * w[c]).mul_add(xi_sum, w[a] * w[c] * eta_sum));
 
                         let g = self.element_local_to_global_dof(eid, a, b, c, n);
                         ku[g] += val;
@@ -139,6 +139,9 @@ impl SemSolver {
     }
 
     /// Compute nodal acceleration ü_i = −(K·u)_i / M_ii
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn compute_acceleration(&self) -> KwaversResult<Array1<f64>> {
         let ku = self.apply_stiffness(&self.solution);
         let n_dofs = self.solution.len();

@@ -43,6 +43,9 @@ impl MultiRateController {
     /// The global time step is set to the MAXIMUM stable time step among all
     /// components (i.e., the slowest component's time step). Faster components
     /// then take multiple sub-steps within each global step.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn determine_time_steps(
         &mut self,
         component_time_steps: &HashMap<String, f64>,
@@ -50,9 +53,9 @@ impl MultiRateController {
     ) -> KwaversResult<(f64, HashMap<String, usize>)> {
         if component_time_steps.is_empty() {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "component_time_steps".to_string(),
-                value: "empty".to_string(),
-                constraint: "Must have at least one component".to_string(),
+                field: "component_time_steps".to_owned(),
+                value: "empty".to_owned(),
+                constraint: "Must have at least one component".to_owned(),
             }));
         }
 

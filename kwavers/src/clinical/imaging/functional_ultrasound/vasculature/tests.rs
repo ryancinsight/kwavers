@@ -5,8 +5,8 @@ use super::*;
 #[test]
 fn test_vessel_segmentation_creation() {
     let image = Array3::ones((10, 10, 10));
-    let result = VesselSegmentation::segment(&image);
-    assert!(result.is_ok());
+    let seg = VesselSegmentation::segment(&image).unwrap();
+    assert_eq!(seg.mask.dim(), (10, 10, 10));
 }
 
 #[test]
@@ -54,9 +54,7 @@ fn test_vessel_classification_uses_static_contrast_and_geometry() {
 #[test]
 fn test_frangi_response_shape_and_nonnegativity() {
     let image = Array3::ones((10, 10, 10));
-    let result = compute_frangi_response(&image);
-    assert!(result.is_ok());
-    let response = result.unwrap();
+    let response = compute_frangi_response(&image).unwrap();
     assert_eq!(response.dim(), (10, 10, 10));
     assert!(
         response.iter().all(|&v| v >= 0.0),

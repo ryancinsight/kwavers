@@ -64,6 +64,9 @@ pub struct DicomSeriesVolume {
 /// multiple series (for the multi-series case, the error message lists every
 /// `(uid, modality, file_count)` so the caller can re-invoke
 /// [`load_series_with_uid`] with an explicit UID).
+/// # Panics
+/// - Panics if `len == 1`.
+///
 pub fn select_unique_series<P: AsRef<Path>>(path: P) -> KwaversResult<DicomSeriesInfo> {
     let series = scan_dicom_directory(path.as_ref()).map_err(|e| {
         KwaversError::InternalError(format!(

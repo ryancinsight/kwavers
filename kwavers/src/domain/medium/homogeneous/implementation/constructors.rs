@@ -89,7 +89,7 @@ impl HomogeneousMedium {
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 343.0),
             absorption_cache: Array3::from_elem(
                 (grid.nx, grid.ny, grid.nz),
-                1.84e-11 * 1.0_f64.powf(2.0),
+                1.84e-11 * 1.0_f64.powi(2),
             ),
             nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.4),
             lame_lambda: 1.204 * 343.0 * 343.0,
@@ -132,7 +132,7 @@ impl HomogeneousMedium {
         medium.sound_speed_cache = Array3::from_elem(shape, sound_speed);
 
         let nu = poisson_ratio;
-        medium.lame_lambda = youngs_modulus * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+        medium.lame_lambda = youngs_modulus * nu / ((1.0 + nu) * 2.0f64.mul_add(-nu, 1.0));
         medium.lame_mu = youngs_modulus / (2.0 * (1.0 + nu));
 
         medium.viscosity = 0.001;
@@ -212,7 +212,7 @@ impl HomogeneousMedium {
         }
 
         let mu = density * c_shear * c_shear;
-        let lambda = density * (c_compression * c_compression - 2.0 * c_shear * c_shear);
+        let lambda = density * c_compression.mul_add(c_compression, -(2.0 * c_shear * c_shear));
 
         // Build a baseline acoustic-only homogeneous medium at c_p, then
         // overwrite Lamé parameters with the elastic-derived values.
@@ -241,6 +241,9 @@ impl HomogeneousMedium {
     /// Returns `Err` if either value is non-finite or negative; positivity is
     /// enforced for `μ` (shear modulus) and non-negativity for `λ`. Both are
     /// physically required for a passive isotropic elastic solid.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_lame_parameters(&mut self, lame_lambda: f64, lame_mu: f64) -> Result<(), &'static str> {
         if !lame_lambda.is_finite() {
             return Err("lame_lambda must be finite");

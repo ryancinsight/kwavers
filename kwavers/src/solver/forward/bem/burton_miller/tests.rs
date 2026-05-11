@@ -65,6 +65,9 @@ fn test_distance() {
 
 /// Parallel normals n_x = n_y = ẑ, field point y above collocation x.
 /// ∂²G/(∂n_x ∂n_y) = G * [k² + 2ik/r − 2/r²]
+/// # Panics
+/// - Panics if assertion fails: `parallel normals: |result − expected| = {:.3e}`.
+///
 #[test]
 fn test_hypersingular_parallel_normals_matches_formula() {
     let k = 2.0_f64;
@@ -88,6 +91,9 @@ fn test_hypersingular_parallel_normals_matches_formula() {
 }
 
 /// Static limit k=0: ∂²G/(∂n_x ∂n_y) = (nxny − 3coscos)/(4πr³).
+/// # Panics
+/// - Panics if assertion fails: `static limit: |result − expected| = {:.3e}`.
+///
 #[test]
 fn test_hypersingular_static_limit_matches_dipole_kernel() {
     let k = 0.0_f64;
@@ -111,6 +117,9 @@ fn test_hypersingular_static_limit_matches_dipole_kernel() {
 }
 
 /// Perpendicular normals → result ≈ 0.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_hypersingular_all_perpendicular_is_zero() {
     let k = 5.0_f64;
@@ -131,6 +140,9 @@ fn test_hypersingular_all_perpendicular_is_zero() {
 }
 
 /// Near-singularity guard: r < 1e-10 returns exactly zero.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_hypersingular_near_singular_returns_zero() {
     let cfg = BurtonMillerConfig::new(1000.0, 1500.0);

@@ -77,6 +77,7 @@ pub struct TransmissionSchedule {
 
 impl TransmissionSchedule {
     /// Number of transmission events.
+    #[must_use] 
     pub fn n_events(&self) -> usize {
         self.events.len()
     }
@@ -99,6 +100,10 @@ impl TransmissionSequencer {
     /// # Arguments
     /// * `sound_speed` - Speed of sound in the medium (m/s)
     /// * `max_depth`   - Maximum imaging depth (m)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn new(sound_speed: f64, max_depth: f64) -> Self {
         Self {
             sound_speed,
@@ -110,6 +115,9 @@ impl TransmissionSequencer {
     /// Set a specific PRF (must be ≤ PRF_max).
     ///
     /// Returns `Err` if the requested PRF exceeds the maximum allowed.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn with_prf(mut self, prf: f64) -> KwaversResult<Self> {
         let prf_max = self.max_prf();
         if prf > prf_max * (1.0 + 1e-9) {
@@ -128,11 +136,13 @@ impl TransmissionSequencer {
     /// ```text
     ///   PRF_max = c / (2 · z_max)
     /// ```
+    #[must_use] 
     pub fn max_prf(&self) -> f64 {
         self.sound_speed / (2.0 * self.max_depth)
     }
 
     /// Effective PRF: override if set, otherwise PRF_max.
+    #[must_use] 
     pub fn effective_prf(&self) -> f64 {
         self.prf_override.unwrap_or_else(|| self.max_prf())
     }
@@ -142,6 +152,7 @@ impl TransmissionSequencer {
     /// ```text
     ///   f_frame = PRF / N_ang
     /// ```
+    #[must_use] 
     pub fn frame_rate(&self, n_angles: usize) -> f64 {
         self.effective_prf() / n_angles as f64
     }
@@ -152,6 +163,7 @@ impl TransmissionSequencer {
     ///
     /// # Arguments
     /// * `tilt_angles` - Slice of tilt angles in radians
+    #[must_use] 
     pub fn sequential_schedule(&self, tilt_angles: &[f64]) -> TransmissionSchedule {
         let prf = self.effective_prf();
         let pri = 1.0 / prf;
@@ -194,6 +206,7 @@ impl TransmissionSequencer {
     ///
     /// # Arguments
     /// * `tilt_angles` - Slice of tilt angles in radians (will be reordered)
+    #[must_use] 
     pub fn interleaved_schedule(&self, tilt_angles: &[f64]) -> TransmissionSchedule {
         let n = tilt_angles.len();
         let half = n / 2;
@@ -243,10 +256,13 @@ impl TransmissionSequencer {
     ///
     /// # Arguments
     /// * `n_elements` - Number of transducer elements
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn sta_schedule(&self, n_elements: usize) -> KwaversResult<TransmissionSchedule> {
         if n_elements == 0 {
             return Err(KwaversError::InvalidInput(
-                "n_elements must be > 0".to_string(),
+                "n_elements must be > 0".to_owned(),
             ));
         }
         let prf = self.effective_prf();
@@ -270,6 +286,7 @@ impl TransmissionSequencer {
     }
 
     /// Flash sequence: single unfocused plane wave (θ=0°), maximum frame rate.
+    #[must_use] 
     pub fn flash_schedule(&self) -> TransmissionSchedule {
         self.sequential_schedule(&[0.0])
     }

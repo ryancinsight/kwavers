@@ -23,6 +23,9 @@ use crate::physics::acoustics::imaging::modalities::ceus::microbubble::BubbleRes
 
 impl CloudDynamics {
     /// Handle bubble-bubble interactions (coalescence check)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn handle_interactions(&mut self) -> KwaversResult<()> {
         let mut coalescence_events = Vec::new();
 
@@ -55,7 +58,7 @@ impl CloudDynamics {
         let dx = self.bubbles[i].position[0] - self.bubbles[j].position[0];
         let dy = self.bubbles[i].position[1] - self.bubbles[j].position[1];
         let dz = self.bubbles[i].position[2] - self.bubbles[j].position[2];
-        (dx * dx + dy * dy + dz * dz).sqrt()
+        dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
     }
 
     /// Handle bubble coalescence with volume and momentum conservation
@@ -77,13 +80,13 @@ impl CloudDynamics {
 
         let mut new_velocity = [0.0; 3];
         for (k, val) in new_velocity.iter_mut().enumerate() {
-            *val = (bubble1.velocity[k] * mass1 + bubble2.velocity[k] * mass2) / total_mass;
+            *val = bubble1.velocity[k].mul_add(mass1, bubble2.velocity[k] * mass2) / total_mass;
         }
 
         // New position (center of mass)
         let mut new_position = [0.0; 3];
         for (k, val) in new_position.iter_mut().enumerate() {
-            *val = (bubble1.position[k] * mass1 + bubble2.position[k] * mass2) / total_mass;
+            *val = bubble1.position[k].mul_add(mass1, bubble2.position[k] * mass2) / total_mass;
         }
 
         // Update bubble i to be the merged bubble
@@ -97,6 +100,9 @@ impl CloudDynamics {
     }
 
     /// Handle bubble dissolution
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn handle_dissolution(&mut self) -> KwaversResult<()> {
         for bubble in &mut self.bubbles {
             if bubble.active && bubble.current_radius < 0.5e-6 {
@@ -119,7 +125,7 @@ impl CloudDynamics {
             // Volume oscillation amplitude from radial pulsation
             let volume_amp = if response.radius.len() > 1 {
                 let r0 = response.radius[0];
-                let r_max = response.radius.iter().cloned().fold(0.0_f64, f64::max);
+                let r_max = response.radius.iter().copied().fold(0.0_f64, f64::max);
                 (r_max - r0) / r0
             } else {
                 0.0

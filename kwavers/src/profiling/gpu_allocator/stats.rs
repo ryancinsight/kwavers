@@ -19,6 +19,7 @@ pub struct GpuAllocationStats {
 
 impl GpuAllocationStats {
     /// Memory utilization ratio `current_bytes / device_capacity` (0.0 to 1.0).
+    #[must_use] 
     pub fn utilization(&self) -> f64 {
         if self.device_capacity == 0 {
             0.0
@@ -28,6 +29,7 @@ impl GpuAllocationStats {
     }
 
     /// Peak utilization ratio `peak_bytes / device_capacity` (0.0 to 1.0).
+    #[must_use] 
     pub fn peak_utilization(&self) -> f64 {
         if self.device_capacity == 0 {
             0.0
@@ -37,12 +39,14 @@ impl GpuAllocationStats {
     }
 
     /// Available memory in bytes considering the given `safety_factor`.
+    #[must_use] 
     pub fn available_bytes(&self, safety_factor: f64) -> usize {
         let threshold = (self.device_capacity as f64 * safety_factor) as usize;
         threshold.saturating_sub(self.current_bytes)
     }
 
     /// Return `true` if allocating `size` bytes would exceed the budget.
+    #[must_use] 
     pub fn would_exceed_budget(&self, size: usize, safety_factor: f64) -> bool {
         let threshold = (self.device_capacity as f64 * safety_factor) as usize;
         self.current_bytes + size > threshold

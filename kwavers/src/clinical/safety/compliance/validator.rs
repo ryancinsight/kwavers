@@ -10,6 +10,10 @@ use super::{
 };
 
 impl EnhancedComplianceValidator {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: ComplianceConfig) -> KwaversResult<Self> {
         config.validate()?;
 
@@ -21,7 +25,10 @@ impl EnhancedComplianceValidator {
             accumulated_dose: 0.0,
         })
     }
-
+    /// Audit parameters.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn audit_parameters(
         &mut self,
         params: &TherapyParameters,
@@ -32,10 +39,10 @@ impl EnhancedComplianceValidator {
         // Frequency range check
         let freq_warning = self.config.frequency_range.1 * 0.8;
         checks.push(ComplianceCheck::new(
-            "Frequency Range".to_string(),
+            "Frequency Range".to_owned(),
             params.frequency,
             self.config.frequency_range.1,
-            "Hz".to_string(),
+            "Hz".to_owned(),
             freq_warning,
         ));
 
@@ -53,10 +60,10 @@ impl EnhancedComplianceValidator {
         let estimated_mi = params.mechanical_index;
 
         checks.push(ComplianceCheck::new(
-            "Mechanical Index".to_string(),
+            "Mechanical Index".to_owned(),
             estimated_mi,
             tissue_mi_limit,
-            "MI".to_string(),
+            "MI".to_owned(),
             tissue_mi_limit * 0.8,
         ));
 
@@ -86,10 +93,10 @@ impl EnhancedComplianceValidator {
         // Temperature rise check
         let estimated_temp_rise = self.estimate_temperature_rise(params);
         checks.push(ComplianceCheck::new(
-            "Maximum Temperature Rise".to_string(),
+            "Maximum Temperature Rise".to_owned(),
             estimated_temp_rise,
             self.config.max_temp_rise,
-            "°C".to_string(),
+            "°C".to_owned(),
             self.config.max_temp_rise * 0.8,
         ));
 
@@ -102,10 +109,10 @@ impl EnhancedComplianceValidator {
 
         // Session duration check
         checks.push(ComplianceCheck::new(
-            "Session Duration".to_string(),
+            "Session Duration".to_owned(),
             params.duration,
             self.config.max_session_time,
-            "s".to_string(),
+            "s".to_owned(),
             self.config.max_session_time * 0.8,
         ));
 
@@ -161,18 +168,24 @@ impl EnhancedComplianceValidator {
         let delta_t = q_vol * t_eff / (TISSUE_DENSITY * TISSUE_HEAT_CAPACITY);
         delta_t.min(self.config.max_temp_rise * 2.0)
     }
-
+    /// Start session.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn start_session(&mut self) {
         self.session_start = Some(Instant::now());
         self.accumulated_time = 0.0;
     }
-
+    /// End session.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn end_session(&mut self) -> KwaversResult<SessionMetrics> {
         let elapsed = if let Some(start) = self.session_start {
             start.elapsed().as_secs_f64()
         } else {
             return Err(KwaversError::InvalidInput(
-                "No session in progress".to_string(),
+                "No session in progress".to_owned(),
             ));
         };
 
@@ -187,14 +200,17 @@ impl EnhancedComplianceValidator {
         })
     }
 
+    #[must_use] 
     pub fn audit_history(&self) -> Vec<ComplianceAudit> {
         self.audit_trail.iter().cloned().collect()
     }
 
+    #[must_use] 
     pub fn latest_audit(&self) -> Option<&ComplianceAudit> {
         self.audit_trail.back()
     }
 
+    #[must_use] 
     pub fn generate_report(&self) -> ComplianceReport {
         let total_audits = self.audit_trail.len();
         let compliant_audits = self
@@ -224,11 +240,11 @@ impl EnhancedComplianceValidator {
             non_compliant_audits,
             compliance_percentage,
             system_status: if non_compliant_audits > 0 {
-                "UNSAFE - Non-compliant audits detected".to_string()
+                "UNSAFE - Non-compliant audits detected".to_owned()
             } else if warning_audits > 0 {
-                "CAUTION - Warnings detected".to_string()
+                "CAUTION - Warnings detected".to_owned()
             } else {
-                "SAFE - All audits compliant".to_string()
+                "SAFE - All audits compliant".to_owned()
             },
         }
     }

@@ -26,6 +26,9 @@ pub struct BayesianPINN<B: AutodiffBackend> {
 
 impl<B: AutodiffBackend> BayesianPINN<B> {
     /// Create a new Bayesian PINN.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         base_model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
         config: PinnUncertaintyConfig,
@@ -48,6 +51,9 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
     }
 
     /// Calibrate uncertainty estimates using validation data.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calibrate(
         &mut self,
         calibration_inputs: &[Vec<f32>],
@@ -72,6 +78,9 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
     }
 
     /// Predict with uncertainty quantification.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn predict_with_uncertainty(
         &mut self,
         input: &[f32],
@@ -85,6 +94,9 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
     }
 
     /// Deep ensemble prediction.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn ensemble_prediction(
         &mut self,
         input: &[f32],
@@ -109,6 +121,9 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
     }
 
     /// Compute uncertainty statistics from predictions.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     fn compute_uncertainty_stats(
         &mut self,
         predictions: &[Vec<f32>],
@@ -179,6 +194,10 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
     }
 
     /// Get model prediction for ensemble member.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn model_prediction(
         &self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
@@ -202,18 +221,27 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
     }
 
     /// Compute predictive entropy.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_predictive_entropy(&self, variances: &[f32]) -> f32 {
         let avg_variance = variances.iter().sum::<f32>() / variances.len() as f32;
         0.5 * (1.0 + (2.0 * std::f32::consts::PI * avg_variance).ln())
     }
 
     /// Compute reliability score.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_reliability_score(&self, variances: &[f32]) -> f32 {
         let avg_variance = variances.iter().sum::<f32>() / variances.len() as f32;
         1.0 / (1.0 + avg_variance / self.config.variance_threshold as f32)
     }
 
     /// Update calibration metrics.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn _update_calibration_metrics(
         &mut self,
         calibration_data: &[(Vec<f32>, f32)],

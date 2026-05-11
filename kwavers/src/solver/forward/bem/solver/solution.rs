@@ -31,6 +31,9 @@ impl BemSolver {
     }
 
     /// Get local BEM node index for a global mesh node index
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn local_index(&self, global_idx: usize) -> Option<usize> {
         self.global_to_local_node.get(&global_idx).copied()
@@ -40,6 +43,12 @@ impl BemSolver {
     ///
     /// Solves the Burton–Miller CFIE:
     ///   (H + α·D)·p = (G + α·(0.5I + H'))·∂p/∂n_inc
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn solve_rigid(
         &mut self,
         p_inc: Vec<Complex64>,
@@ -113,6 +122,12 @@ impl BemSolver {
     }
 
     /// Solve the BEM system applying boundary conditions.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn solve(
         &mut self,
         wavenumber: f64,
@@ -147,6 +162,9 @@ impl BemSolver {
     }
 
     /// Compute scattered field at evaluation points using the BEM representation formula.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn compute_scattered_field(
         &self,
         evaluation_points: &Array1<[f64; 3]>,
@@ -156,7 +174,7 @@ impl BemSolver {
 
         let points_slice = evaluation_points.as_slice().ok_or_else(|| {
             crate::core::error::KwaversError::InvalidInput(
-                "Evaluation points array must be contiguous for parallel processing".to_string(),
+                "Evaluation points array must be contiguous for parallel processing".to_owned(),
             )
         })?;
 

@@ -15,6 +15,7 @@ pub struct PerfusionMap {
 
 impl PerfusionMap {
     /// Get perfusion statistics for a region of interest
+    #[must_use] 
     pub fn roi_statistics(
         &self,
         x_range: (usize, usize),
@@ -59,6 +60,7 @@ pub struct PerfusionStatistics {
 }
 
 impl PerfusionStatistics {
+    #[must_use] 
     pub fn from_samples(peaks: &[f64], ttp: &[f64], auc: &[f64]) -> Self {
         let n = peaks.len() as f64;
         let mean_peak = peaks.iter().sum::<f64>() / n;

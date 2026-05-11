@@ -17,8 +17,6 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use ndarray::Array3;
-
 use super::config::NonlinearSWEConfig;
 use super::material::HyperelasticModel;
 use super::numerics::NumericsOperators;
@@ -36,26 +34,21 @@ pub struct NonlinearElasticWaveSolver {
     pub(super) grid: Grid,
     pub(super) _material: HyperelasticModel,
     pub(super) config: NonlinearSWEConfig,
-    #[allow(dead_code)]
-    pub(super) lambda: Array3<f64>,
-    #[allow(dead_code)]
-    pub(super) mu: Array3<f64>,
-    #[allow(dead_code)]
-    pub(super) density: Array3<f64>,
     pub(super) attenuation_np_per_m: f64,
     pub(super) numerics: NumericsOperators,
 }
 
 impl NonlinearElasticWaveSolver {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         grid: &Grid,
         medium: &dyn Medium,
         material: HyperelasticModel,
         config: NonlinearSWEConfig,
     ) -> KwaversResult<Self> {
-        let lambda = medium.lame_lambda_array();
-        let mu = medium.lame_mu_array();
-        let density = medium.density_array().to_owned();
         let attenuation_np_per_m = medium
             .optical_absorption_coefficient(0.0, 0.0, 0.0, grid)
             .max(0.0);
@@ -66,9 +59,6 @@ impl NonlinearElasticWaveSolver {
             grid: grid.clone(),
             _material: material,
             config,
-            lambda,
-            mu,
-            density,
             attenuation_np_per_m,
             numerics,
         })

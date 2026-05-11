@@ -34,9 +34,6 @@ fn test_bem_system_assembly() {
 
     solver.assemble_system().unwrap();
 
-    assert!(solver.h_matrix.is_some());
-    assert!(solver.g_matrix.is_some());
-
     let h = solver.h_matrix.unwrap();
     let g = solver.g_matrix.unwrap();
 

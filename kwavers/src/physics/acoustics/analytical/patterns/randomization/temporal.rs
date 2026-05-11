@@ -15,6 +15,9 @@ pub struct TimeRandomization {
 
 impl TimeRandomization {
     /// Create new temporal randomizer
+    /// # Panics
+    /// - Panics if assertion fails: `Switching period must be >= {MIN_SWITCHING_PERIOD} seconds`.
+    ///
     #[must_use]
     pub fn new(switching_period: f64) -> Self {
         assert!(

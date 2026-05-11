@@ -24,6 +24,7 @@ impl Default for ArchitectureValidator {
 
 impl ArchitectureValidator {
     /// Create new architecture validator.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             module_layers: HashMap::new(),
@@ -32,11 +33,17 @@ impl ArchitectureValidator {
     }
 
     /// Register a module at a specific layer.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn register_module(&mut self, module: impl Into<String>, layer: ArchitectureLayer) {
         self.module_layers.insert(module.into(), layer);
     }
 
     /// Add a dependency between modules.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn add_dependency(&mut self, from: impl Into<String>, to: impl Into<String>) {
         self.dependencies
             .entry(from.into())
@@ -45,6 +52,9 @@ impl ArchitectureValidator {
     }
 
     /// Validate the architecture.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate(&self) -> KwaversResult<ValidationResult> {
         let mut violations = Vec::new();
         let mut total_deps = 0;
@@ -97,6 +107,9 @@ impl ArchitectureValidator {
     }
 
     /// Check for circular dependencies using depth-first search.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn check_circular_dependencies(
         &self,
         violations: &mut Vec<LayerViolation>,
@@ -114,6 +127,9 @@ impl ArchitectureValidator {
     }
 
     /// Depth-first search for cycle detection.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     fn dfs_check_cycle(
         &self,
         module: &str,
@@ -121,8 +137,8 @@ impl ArchitectureValidator {
         rec_stack: &mut HashSet<String>,
         violations: &mut Vec<LayerViolation>,
     ) -> KwaversResult<()> {
-        visited.insert(module.to_string());
-        rec_stack.insert(module.to_string());
+        visited.insert(module.to_owned());
+        rec_stack.insert(module.to_owned());
 
         if let Some(deps) = self.dependencies.get(module) {
             for dep in deps {
@@ -132,13 +148,13 @@ impl ArchitectureValidator {
                     let module_layer = *self
                         .module_layers
                         .get(module)
-                        .ok_or_else(|| KwaversError::InvalidInput("Unknown module".to_string()))?;
+                        .ok_or_else(|| KwaversError::InvalidInput("Unknown module".to_owned()))?;
                     let dep_layer = *self.module_layers.get(dep).ok_or_else(|| {
-                        KwaversError::InvalidInput("Unknown dependency".to_string())
+                        KwaversError::InvalidInput("Unknown dependency".to_owned())
                     })?;
 
                     violations.push(LayerViolation {
-                        module: module.to_string(),
+                        module: module.to_owned(),
                         layer: module_layer,
                         invalid_dependency: dep.clone(),
                         dependency_layer: dep_layer,
@@ -153,6 +169,7 @@ impl ArchitectureValidator {
     }
 
     /// Generate a human-readable validation report.
+    #[must_use] 
     pub fn report(&self, result: &ValidationResult) -> String {
         let mut report = String::new();
 

@@ -117,14 +117,12 @@ impl KuznetsovWave {
                                 * self.workspace.pressure_prev[[i, j, k]];
                             let p2_prev2 = self.workspace.pressure_prev2[[i, j, k]]
                                 * self.workspace.pressure_prev2[[i, j, k]];
-                            let d2p2_dt2 = (p2 - 2.0 * p2_prev + p2_prev2) / (dt * dt);
+                            let d2p2_dt2 = (2.0f64.mul_add(-p2_prev, p2) + p2_prev2) / (dt * dt);
                             rhs[[i, j, k]] += -coeff * d2p2_dt2;
                         }
 
                         if include_diffusion {
-                            let d3p_dt3 = (pressure[[i, j, k]]
-                                - 3.0 * self.workspace.pressure_prev[[i, j, k]]
-                                + 3.0 * self.workspace.pressure_prev2[[i, j, k]]
+                            let d3p_dt3 = (3.0f64.mul_add(self.workspace.pressure_prev2[[i, j, k]], 3.0f64.mul_add(-self.workspace.pressure_prev[[i, j, k]], pressure[[i, j, k]]))
                                 - self.workspace.pressure_prev3[[i, j, k]])
                                 / dt.powi(3);
                             rhs[[i, j, k]] += self.config.acoustic_diffusivity * d3p_dt3;

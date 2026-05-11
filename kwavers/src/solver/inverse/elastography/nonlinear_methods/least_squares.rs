@@ -24,6 +24,9 @@ use ndarray::Array3;
 /// # References
 ///
 /// - Nocedal & Wright (2006). *Numerical Optimization*, §10.3.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn nonlinear_least_squares_inversion(
     harmonic_field: &HarmonicDisplacementField,
     _grid: &Grid,
@@ -58,8 +61,7 @@ pub(super) fn nonlinear_least_squares_inversion(
                 }
 
                 let mut ba_estimate = beta_s_from_amplitudes(measured_a1, measured_a2, config)
-                    .map(ba_from_beta_s)
-                    .unwrap_or(5.0)
+                    .map_or(5.0, ba_from_beta_s)
                     .clamp(0.0, 20.0);
 
                 let mut converged = false;
@@ -73,11 +75,11 @@ pub(super) fn nonlinear_least_squares_inversion(
                     let (da1_dba, da2_dba) =
                         forward_model_derivative(ba_estimate, measured_a1, config);
 
-                    let jt_j = da1_dba * da1_dba + da2_dba * da2_dba;
+                    let jt_j = da1_dba.mul_add(da1_dba, da2_dba * da2_dba);
                     if jt_j.abs() < f64::EPSILON {
                         break;
                     }
-                    let delta_ba = (residual_a1 * da1_dba + residual_a2 * da2_dba) / jt_j;
+                    let delta_ba = residual_a1.mul_add(da1_dba, residual_a2 * da2_dba) / jt_j;
                     ba_estimate = (ba_estimate + delta_ba).clamp(0.0, 20.0);
 
                     if delta_ba.abs() < config.tolerance {

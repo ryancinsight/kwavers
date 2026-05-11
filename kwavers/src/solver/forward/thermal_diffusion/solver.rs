@@ -78,16 +78,13 @@ impl ThermalDiffusionSolver {
                 for i in 1..nx - 1 {
                     for j in 1..ny - 1 {
                         for k in 1..nz - 1 {
-                            let d2_dx2 = (self.temperature[[i + 1, j, k]]
-                                - 2.0 * self.temperature[[i, j, k]]
+                            let d2_dx2 = (2.0f64.mul_add(-self.temperature[[i, j, k]], self.temperature[[i + 1, j, k]])
                                 + self.temperature[[i - 1, j, k]])
                                 * dx2_inv;
-                            let d2_dy2 = (self.temperature[[i, j + 1, k]]
-                                - 2.0 * self.temperature[[i, j, k]]
+                            let d2_dy2 = (2.0f64.mul_add(-self.temperature[[i, j, k]], self.temperature[[i, j + 1, k]])
                                 + self.temperature[[i, j - 1, k]])
                                 * dy2_inv;
-                            let d2_dz2 = (self.temperature[[i, j, k + 1]]
-                                - 2.0 * self.temperature[[i, j, k]]
+                            let d2_dz2 = (2.0f64.mul_add(-self.temperature[[i, j, k]], self.temperature[[i, j, k + 1]])
                                 + self.temperature[[i, j, k - 1]])
                                 * dz2_inv;
 
@@ -108,25 +105,13 @@ impl ThermalDiffusionSolver {
                 for i in 2..nx - 2 {
                     for j in 2..ny - 2 {
                         for k in 2..nz - 2 {
-                            let d2_dx2 = (C0 * self.temperature[[i - 2, j, k]]
-                                + C1 * self.temperature[[i - 1, j, k]]
-                                + C2 * self.temperature[[i, j, k]]
-                                + C1 * self.temperature[[i + 1, j, k]]
-                                + C0 * self.temperature[[i + 2, j, k]])
+                            let d2_dx2 = C0.mul_add(self.temperature[[i + 2, j, k]], C1.mul_add(self.temperature[[i + 1, j, k]], C2.mul_add(self.temperature[[i, j, k]], C0.mul_add(self.temperature[[i - 2, j, k]], C1 * self.temperature[[i - 1, j, k]]))))
                                 * dx2_inv;
 
-                            let d2_dy2 = (C0 * self.temperature[[i, j - 2, k]]
-                                + C1 * self.temperature[[i, j - 1, k]]
-                                + C2 * self.temperature[[i, j, k]]
-                                + C1 * self.temperature[[i, j + 1, k]]
-                                + C0 * self.temperature[[i, j + 2, k]])
+                            let d2_dy2 = C0.mul_add(self.temperature[[i, j + 2, k]], C1.mul_add(self.temperature[[i, j + 1, k]], C2.mul_add(self.temperature[[i, j, k]], C0.mul_add(self.temperature[[i, j - 2, k]], C1 * self.temperature[[i, j - 1, k]]))))
                                 * dy2_inv;
 
-                            let d2_dz2 = (C0 * self.temperature[[i, j, k - 2]]
-                                + C1 * self.temperature[[i, j, k - 1]]
-                                + C2 * self.temperature[[i, j, k]]
-                                + C1 * self.temperature[[i, j, k + 1]]
-                                + C0 * self.temperature[[i, j, k + 2]])
+                            let d2_dz2 = C0.mul_add(self.temperature[[i, j, k + 2]], C1.mul_add(self.temperature[[i, j, k + 1]], C2.mul_add(self.temperature[[i, j, k]], C0.mul_add(self.temperature[[i, j, k - 2]], C1 * self.temperature[[i, j, k - 1]]))))
                                 * dz2_inv;
 
                             self.laplacian_workspace[[i, j, k]] = d2_dx2 + d2_dy2 + d2_dz2;
@@ -142,7 +127,10 @@ impl ThermalDiffusionSolver {
 
         Ok(())
     }
-
+    /// Update.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update(
         &mut self,
         medium: &dyn Medium,
@@ -205,7 +193,7 @@ impl ThermalDiffusionSolver {
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
                 let source = external_source.map_or(0.0, |s| s[[i, j, k]]);
 
-                *temp += dt * (alpha * lap + source);
+                *temp += dt * alpha.mul_add(lap, source);
             });
 
         Ok(())

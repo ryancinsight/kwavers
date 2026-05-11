@@ -116,6 +116,10 @@ impl FrequencyProfile {
     ///
     /// # Returns
     /// Profile value at the given frequency (dimensionless scaling factor)
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
+    #[must_use] 
     pub fn evaluate(&self, frequency: f64) -> f64 {
         match self {
             Self::Flat => 1.0,
@@ -151,7 +155,7 @@ impl FrequencyProfile {
                 let (f0, v0) = points[idx - 1];
                 let (f1, v1) = points[idx];
                 let t = (frequency - f0) / (f1 - f0);
-                v0 + t * (v1 - v0)
+                t.mul_add(v1 - v0, v0)
             }
         }
     }

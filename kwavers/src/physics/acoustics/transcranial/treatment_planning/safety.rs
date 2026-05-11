@@ -7,6 +7,9 @@ use ndarray::Array3;
 
 impl TreatmentPlanner {
     /// Validate safety constraints
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn validate_safety(
         &self,
         temperature: &Array3<f64>,
@@ -16,7 +19,7 @@ impl TreatmentPlanner {
         let constraints = SafetyConstraints::default();
 
         // Check temperature limits
-        for &temp in temperature.iter() {
+        for &temp in temperature {
             if temp > constraints.max_brain_temp {
                 return Err(crate::core::error::KwaversError::Validation(
                     crate::core::error::ValidationError::ConstraintViolation {

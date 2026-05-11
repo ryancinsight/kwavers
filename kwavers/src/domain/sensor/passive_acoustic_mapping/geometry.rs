@@ -57,7 +57,7 @@ impl ArrayGeometry {
     #[must_use]
     pub fn element_positions(&self) -> Vec<[f64; 3]> {
         match self {
-            ArrayGeometry::Linear {
+            Self::Linear {
                 elements,
                 pitch,
                 center,
@@ -77,7 +77,7 @@ impl ArrayGeometry {
                 positions
             }
 
-            ArrayGeometry::Planar {
+            Self::Planar {
                 elements_x,
                 elements_y,
                 pitch_x,
@@ -103,7 +103,7 @@ impl ArrayGeometry {
                 positions
             }
 
-            ArrayGeometry::Circular {
+            Self::Circular {
                 elements,
                 radius,
                 center,
@@ -126,7 +126,7 @@ impl ArrayGeometry {
                 positions
             }
 
-            ArrayGeometry::Hemispherical {
+            Self::Hemispherical {
                 elements_theta,
                 elements_phi,
                 radius,
@@ -141,8 +141,8 @@ impl ArrayGeometry {
                         let phi = 2.0 * std::f64::consts::PI * j as f64 / *elements_phi as f64;
 
                         positions.push([
-                            center[0] + radius * theta.sin() * phi.cos(),
-                            center[1] + radius * theta.sin() * phi.sin(),
+                            (radius * theta.sin()).mul_add(phi.cos(), center[0]),
+                            (radius * theta.sin()).mul_add(phi.sin(), center[1]),
                             center[2] + radius * theta.cos(),
                         ]);
                     }
@@ -150,7 +150,7 @@ impl ArrayGeometry {
                 positions
             }
 
-            ArrayGeometry::Arbitrary { positions } => positions.clone(),
+            Self::Arbitrary { positions } => positions.clone(),
         }
     }
 
@@ -158,19 +158,19 @@ impl ArrayGeometry {
     #[must_use]
     pub fn num_elements(&self) -> usize {
         match self {
-            ArrayGeometry::Linear { elements, .. } => *elements,
-            ArrayGeometry::Planar {
+            Self::Linear { elements, .. } => *elements,
+            Self::Planar {
                 elements_x,
                 elements_y,
                 ..
             } => elements_x * elements_y,
-            ArrayGeometry::Circular { elements, .. } => *elements,
-            ArrayGeometry::Hemispherical {
+            Self::Circular { elements, .. } => *elements,
+            Self::Hemispherical {
                 elements_theta,
                 elements_phi,
                 ..
             } => elements_theta * elements_phi,
-            ArrayGeometry::Arbitrary { positions } => positions.len(),
+            Self::Arbitrary { positions } => positions.len(),
         }
     }
 }

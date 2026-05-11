@@ -1,14 +1,17 @@
-//! Streaming buffer for real-time 4D ultrasound processing
+//! Streaming buffer for real-time 4D ultrasound processing.
 //!
 //! Implements circular buffering for continuous RF data acquisition and
 //! processing in real-time volumetric imaging applications.
+//!
+//! Only compiled when the `gpu` feature is enabled — `StreamingBuffer` is
+//! stored inside `BeamformingProcessor3D` which requires GPU device handles.
 
-// Imports used in GPU feature-gated methods
-#![allow(unused_imports)]
+#[cfg(feature = "gpu")]
 use crate::core::error::{KwaversError, KwaversResult};
+#[cfg(feature = "gpu")]
 use ndarray::{Array3, Array4};
 
-/// Streaming buffer for real-time data processing
+/// Streaming buffer for real-time data processing.
 ///
 /// Implements a circular buffer for continuous RF data acquisition,
 /// supporting 4D ultrasound (3D volumes over time) with minimal latency.
@@ -21,6 +24,7 @@ use ndarray::{Array3, Array4};
 /// # References
 /// - Jensen & Svendsen (1992): "Real-time ultrasound imaging systems"
 /// - Tanter & Fink (2014): "Ultrafast imaging in biomedical ultrasound"
+#[cfg(feature = "gpu")]
 #[derive(Debug)]
 pub struct StreamingBuffer {
     /// RF data buffer (frames × channels × samples × 1)
@@ -33,22 +37,14 @@ pub struct StreamingBuffer {
     capacity: usize,
 }
 
+#[cfg(feature = "gpu")]
 impl StreamingBuffer {
-    /// Create new streaming buffer with specified capacity
+    /// Create new streaming buffer with specified capacity.
     ///
     /// # Arguments
     /// - `frames`: Number of frames to buffer
     /// - `channels`: Number of transducer channels
     /// - `samples`: Number of samples per channel
-    ///
-    /// # Returns
-    /// Initialized streaming buffer with zero-filled data
-    ///
-    /// # Example
-    /// ```ignore
-    /// let buffer = StreamingBuffer::new(16, 1024, 2048);
-    /// ```
-    #[cfg(feature = "gpu")]
     pub fn new(frames: usize, channels: usize, samples: usize) -> Self {
         Self {
             rf_buffer: Array4::<f32>::zeros((frames, channels, samples, 1)),
@@ -58,26 +54,19 @@ impl StreamingBuffer {
         }
     }
 
-    /// Add a frame to the streaming buffer
+    /// Add a frame to the streaming buffer.
     ///
     /// Copies frame data into the circular buffer at the current write position.
     /// Advances write pointer modulo capacity.
     ///
-    /// # Arguments
-    /// - `frame`: RF data frame (channels × samples × 1)
-    ///
     /// # Returns
     /// - `Ok(true)`: Buffer is full (ready for processing)
     /// - `Ok(false)`: Buffer still accumulating frames
-    /// - `Err`: Frame dimensions mismatch
-    ///
     /// # Errors
-    /// Returns error if frame dimensions don't match buffer configuration.
-    #[cfg(feature = "gpu")]
+    /// Returns [`KwaversError::InvalidInput`] if frame dimensions don't match the buffer configuration.
     pub fn add_frame(&mut self, frame: &Array3<f32>) -> KwaversResult<bool> {
         let (channels, samples, _) = frame.dim();
 
-        // Validate frame dimensions against buffer
         let expected_channels = self.rf_buffer.dim().1;
         let expected_samples = self.rf_buffer.dim().2;
 
@@ -88,60 +77,48 @@ impl StreamingBuffer {
             )));
         }
 
-        // Copy frame data into buffer at write position
         for c in 0..channels {
             for s in 0..samples {
                 self.rf_buffer[[self.write_pos, c, s, 0]] = frame[[c, s, 0]];
             }
         }
 
-        // Advance write pointer (circular)
         self.write_pos = (self.write_pos + 1) % self.capacity;
-
-        // Check if buffer is full (write caught up to read)
         Ok(self.write_pos == self.read_pos)
     }
 
-    /// Get current volume data from the buffer
+    /// Get current volume data from the buffer.
     ///
     /// Returns reference to the complete buffered RF data volume.
-    /// Used for volumetric reconstruction after buffer fills.
-    ///
-    /// # Returns
-    /// Reference to RF buffer (frames × channels × samples × 1)
-    #[cfg(feature = "gpu")]
     pub fn get_volume_data(&self) -> &Array4<f32> {
         &self.rf_buffer
     }
 
-    /// Get buffer capacity (number of frames)
-    #[allow(dead_code)]
+    /// Get buffer capacity (number of frames).
     pub fn capacity(&self) -> usize {
         self.capacity
     }
 
-    /// Get current write position
-    #[allow(dead_code)]
+    /// Get current write position.
     pub fn write_position(&self) -> usize {
         self.write_pos
     }
 
-    /// Get current read position
-    #[allow(dead_code)]
+    /// Get current read position.
     pub fn read_position(&self) -> usize {
         self.read_pos
     }
 
-    /// Reset buffer to initial state
-    #[allow(dead_code)]
+    /// Reset buffer to initial state.
     pub fn reset(&mut self) {
         self.write_pos = 0;
         self.read_pos = 0;
         self.rf_buffer.fill(0.0);
     }
 
-    /// Get RF buffer size in bytes
-    #[allow(dead_code)]
+    /// Get RF buffer size in bytes.
+    ///
+    /// Called from `metrics::calculate_cpu_memory_usage`.
     pub fn rf_buffer_size_bytes(&self) -> usize {
         self.rf_buffer.len() * std::mem::size_of::<f32>()
     }
@@ -164,20 +141,18 @@ mod tests {
         let mut buffer = StreamingBuffer::new(4, 8, 16);
         let frame = Array3::<f32>::zeros((8, 16, 1));
 
-        // First 3 frames should not fill the buffer
         assert!(!buffer.add_frame(&frame).unwrap());
         assert!(!buffer.add_frame(&frame).unwrap());
         assert!(!buffer.add_frame(&frame).unwrap());
 
-        // 4th frame fills the buffer
+        // Fourth frame fills the buffer — write_pos wraps to 0 == read_pos.
         assert!(buffer.add_frame(&frame).unwrap());
     }
 
     #[test]
     fn test_streaming_buffer_dimension_mismatch() {
         let mut buffer = StreamingBuffer::new(4, 8, 16);
-        let wrong_frame = Array3::<f32>::zeros((10, 16, 1)); // Wrong channels
-
+        let wrong_frame = Array3::<f32>::zeros((10, 16, 1));
         assert!(buffer.add_frame(&wrong_frame).is_err());
     }
 
@@ -196,10 +171,7 @@ mod tests {
     #[test]
     fn test_rf_buffer_size_bytes() {
         let buffer = StreamingBuffer::new(4, 8, 16);
-        let size_bytes = buffer.rf_buffer_size_bytes();
-
         // 4 frames × 8 channels × 16 samples × 1 × 4 bytes/f32
-        let expected_size = (4 * 8 * 16) * 4;
-        assert_eq!(size_bytes, expected_size);
+        assert_eq!(buffer.rf_buffer_size_bytes(), 4 * 8 * 16 * 4);
     }
 }

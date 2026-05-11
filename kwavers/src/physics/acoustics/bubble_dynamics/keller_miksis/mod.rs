@@ -102,10 +102,10 @@
 //! * The denominator `(1 - Ṙ/c_L) R` can approach zero near bubble collapse;
 //!   the solver clamps Ṙ/c_L < 0.99 and R > R_min to prevent division by
 //!   zero.
-//! * `ThermodynamicsCalculator`, `MassTransferModel`, and
-//!   `EnergyBalanceCalculator` are held as reserved fields; full coupling
-//!   (heat conduction into the liquid shell, non-condensable gas diffusion)
-//!   are reserved for future full thermodynamic coupling.
+//! * `ThermodynamicsCalculator` drives vapor pressure in the mass-transfer
+//!   update via `model.thermo_calc.vapor_pressure(state.temperature)`.
+//!   Full conduction coupling (heat conduction into the liquid shell,
+//!   non-condensable gas diffusion) is a tracked backlog item.
 //! * Secondary Bjerknes coupling between neighbouring bubbles in a cloud
 //!   is implemented in
 //!   [`crate::physics::acoustics::bubble_dynamics::bubble_field::BubbleField`]:
@@ -139,9 +139,8 @@ pub mod validation;
 
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
-use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 use crate::physics::acoustics::bubble_dynamics::thermodynamics::{
-    MassTransferModel, ThermodynamicsCalculator, VaporPressureModel,
+    ThermodynamicsCalculator, VaporPressureModel,
 };
 use shape_instability::{advance_shape_modes, ShapeModeState};
 
@@ -157,7 +156,6 @@ use shape_instability::{advance_shape_modes, ShapeModeState};
 /// timestep *after* the main K-M step.
 ///
 /// **Literature**: Keller & Miksis (1980), Hamilton & Blackstock Ch.11
-/// **Note**: Thermodynamic calculators reserved for full conduction coupling.
 #[derive(Debug, Clone)]
 pub struct KellerMiksisModel {
     pub(crate) params: BubbleParameters,
@@ -165,12 +163,8 @@ pub struct KellerMiksisModel {
     /// Seeded with sub-nanometre noise at construction; evolved by
     /// [`KellerMiksisModel::update_shape_stability`].
     pub shape_modes: ShapeModeState,
-    #[allow(dead_code)] // Reserved for future thermodynamic coupling
+    /// Thermodynamics calculator — drives vapor pressure in mass-transfer update.
     pub(crate) thermo_calc: ThermodynamicsCalculator,
-    #[allow(dead_code)] // Reserved for future mass transfer modeling
-    pub(crate) mass_transfer: MassTransferModel,
-    #[allow(dead_code)] // Reserved for future energy balance calculations
-    pub(crate) energy_calculator: EnergyBalanceCalculator,
 }
 
 impl KellerMiksisModel {
@@ -178,8 +172,6 @@ impl KellerMiksisModel {
     pub fn new(params: BubbleParameters) -> Self {
         // Use Wagner equation by default for highest accuracy
         let thermo_calc = ThermodynamicsCalculator::new(VaporPressureModel::Wagner);
-        let mass_transfer = MassTransferModel::new(params.accommodation_coeff);
-        let energy_calculator = EnergyBalanceCalculator::new(&params);
 
         // Seed mode n=2 with 1 Å perturbation — below measurable noise but
         // sufficient to track Rayleigh-Taylor instability onset.
@@ -191,11 +183,9 @@ impl KellerMiksisModel {
         }
 
         Self {
-            params: params.clone(),
+            params,
             shape_modes,
             thermo_calc,
-            mass_transfer,
-            energy_calculator,
         }
     }
 
@@ -242,6 +232,9 @@ impl KellerMiksisModel {
 
     /// Return `true` if any surface shape mode amplitude currently exceeds the
     /// Plesset (1954) 30%-radius breakup criterion.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn is_shape_unstable(&self, r: f64) -> bool {
         self.shape_modes.is_unstable(r)
@@ -250,6 +243,9 @@ impl KellerMiksisModel {
     /// Calculate bubble wall acceleration using Keller-Miksis equation
     ///
     /// Delegates to equation module.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
@@ -264,6 +260,9 @@ impl KellerMiksisModel {
     ///
     /// No-op when `BubbleParameters::use_thermal_effects` is `false`.
     /// Delegates to thermodynamics module otherwise.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
         if !self.params.use_thermal_effects {
             return Ok(());
@@ -275,6 +274,9 @@ impl KellerMiksisModel {
     ///
     /// No-op when `BubbleParameters::use_mass_transfer` is `false`.
     /// Delegates to thermodynamics module otherwise.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
         if !self.params.use_mass_transfer {
             return Ok(());
@@ -283,6 +285,10 @@ impl KellerMiksisModel {
     }
 
     /// Calculate molar heat capacity at constant volume (Cv)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    #[must_use] 
     pub fn molar_heat_capacity_cv(&self, state: &BubbleState) -> f64 {
         state.gas_species.molar_heat_capacity_cv()
     }
@@ -290,6 +296,9 @@ impl KellerMiksisModel {
     /// Calculate Van der Waals pressure
     ///
     /// Delegates to thermodynamics module.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_vdw_pressure(&self, state: &BubbleState) -> KwaversResult<f64> {
         thermodynamics::calculate_vdw_pressure(state)
     }

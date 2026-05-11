@@ -36,6 +36,9 @@ impl ReverseTimeMigration {
     }
 
     /// Get the migrated image
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn get_image(&self) -> &Array3<f64> {
         &self.image

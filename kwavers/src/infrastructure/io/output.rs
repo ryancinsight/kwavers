@@ -10,6 +10,10 @@ use std::io::{self, Write};
 
 // Note: Field indices imported from physics::field_indices for SSOT
 
+/// Save pressure data.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> io::Result<()> {
     info!("Saving pressure data to {}", filename);
     let mut file = File::create(filename)?;
@@ -38,6 +42,10 @@ pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> i
     Ok(())
 }
 
+/// Save light data.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::Result<()> {
     info!("Saving light data to {}", filename);
     let mut file = File::create(filename)?;
@@ -66,6 +74,10 @@ pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::
     Ok(())
 }
 
+/// Generate summary.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
     info!("Generating summary to {}", filename);
     let mut file = File::create(filename)?;
@@ -101,6 +113,9 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
 ///
 /// Writes data as (x, y, z, value) rows for easy import into
 /// analysis tools (MATLAB, Python, R, etc.).
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn save_data_csv(data: &Array3<f64>, filename: &str) -> io::Result<()> {
     info!("Saving data to CSV: {}", filename);
     let mut file = File::create(filename)?;

@@ -17,6 +17,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Surface tension [N/m]
+    #[must_use] 
     pub fn surface_tension_water(&self, temperature: f64) -> f64 {
         const T_CRITICAL: f64 = 647.096; // K (IAPWS critical temperature)
         const B: f64 = 0.2358; // N/m (amplitude)
@@ -30,7 +31,7 @@ impl StateDependentConstants {
         }
 
         let tau = 1.0 - t_kelvin / T_CRITICAL;
-        let sigma = B * tau.powf(MU) * (1.0 + BETA * tau);
+        let sigma = B * tau.powf(MU) * BETA.mul_add(tau, 1.0);
 
         sigma.max(0.0)
     }
@@ -51,7 +52,8 @@ impl StateDependentConstants {
     /// * `temperature` - Temperature [°C]
     ///
     /// # Returns
-    /// Vapor pressure [Pa]
+    /// Vapor pressure (Pa)
+    #[must_use] 
     pub fn vapor_pressure_water(&self, temperature: f64) -> f64 {
         const A: f64 = 8.07131;
         const B: f64 = 1730.63;
@@ -72,11 +74,12 @@ impl StateDependentConstants {
     ///
     /// # Arguments
     /// * `temperature` - Temperature [°C]
-    /// * `nuclei_radius` - Bubble nuclei radius [m]
-    /// * `ambient_pressure` - Ambient pressure [Pa]
+    /// * `nuclei_radius` - Bubble nuclei radius (m)
+    /// * `ambient_pressure` - Ambient pressure (Pa)
     ///
     /// # Returns
-    /// Cavitation threshold pressure amplitude (negative = tension) [Pa]
+    /// Cavitation threshold pressure amplitude (negative = tension) (Pa)
+    #[must_use] 
     pub fn cavitation_threshold(
         &self,
         temperature: f64,

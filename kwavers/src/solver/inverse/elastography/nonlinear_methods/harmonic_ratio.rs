@@ -21,6 +21,9 @@ use ndarray::Array3;
 /// # References
 ///
 /// - Rénier et al. (2008), JASA 124(5) 2856, Eq. 7–8.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub(super) fn harmonic_ratio_inversion(
     harmonic_field: &HarmonicDisplacementField,
     _grid: &Grid,

@@ -29,6 +29,9 @@ impl ReverseTimeMigration {
     /// Forward-propagate the source wavelet; return the (possibly
     /// decimated-then-reconstructed) `Array4<f64>` of shape
     /// `(n_time_steps, nx, ny, nz)`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn forward_propagation(
         &self,
         source_position: (usize, usize, usize),
@@ -67,6 +70,9 @@ impl ReverseTimeMigration {
     /// Backward-propagate receiver data (time-reversed injection).
     ///
     /// Returns `Array4<f64>` of shape `(n_time_steps, nx, ny, nz)`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn backward_propagation(
         &self,
         shot_data: &ndarray::Array2<f64>,
@@ -96,6 +102,9 @@ impl ReverseTimeMigration {
 
     /// Reconstruct a full `n_time_steps`-frame wavefield from a decimated
     /// snapshot array via linear interpolation.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn reconstruct_full_wavefield(
         &self,
         decimated: Array4<f64>,
@@ -119,8 +128,8 @@ impl ReverseTimeMigration {
                 Zip::from(full.slice_mut(s![t, .., .., ..]))
                     .and(&snap1)
                     .and(&snap2)
-                    .for_each(|f, &s1, &s2| {
-                        *f = (1.0 - weight) * s1 + weight * s2;
+                    .par_for_each(|f, &s1, &s2| {
+                        *f = (1.0 - weight).mul_add(s1, weight * s2);
                     });
             }
         }

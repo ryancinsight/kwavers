@@ -17,12 +17,12 @@ impl ElasticityMapExt for ElasticityMap {
         let min = self
             .youngs_modulus
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::INFINITY, f64::min);
         let max = self
             .youngs_modulus
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::NEG_INFINITY, f64::max);
         let mean = self.youngs_modulus.mean().unwrap_or(0.0);
         (min, max, mean)
@@ -43,12 +43,12 @@ impl NonlinearParameterMapExt for NonlinearParameterMap {
         let min = self
             .nonlinearity_parameter
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::INFINITY, f64::min);
         let max = self
             .nonlinearity_parameter
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::NEG_INFINITY, f64::max);
         let mean = self.nonlinearity_parameter.mean().unwrap_or(0.0);
         (min, max, mean)
@@ -58,12 +58,12 @@ impl NonlinearParameterMapExt for NonlinearParameterMap {
         let min = self
             .estimation_quality
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::INFINITY, f64::min);
         let max = self
             .estimation_quality
             .iter()
-            .cloned()
+            .copied()
             .fold(f64::NEG_INFINITY, f64::max);
         let mean = self.estimation_quality.mean().unwrap_or(0.0);
         (min, max, mean)
@@ -91,6 +91,7 @@ impl NonlinearParameterMapExt for NonlinearParameterMap {
 ///
 /// - Fung, Y.C. (1993). "Biomechanics: Mechanical Properties of Living Tissues"
 /// - Duck, F.A. (1990). "Physical Properties of Tissue"
+#[must_use] 
 pub fn elasticity_map_from_speed(shear_wave_speed: Array3<f64>, density: f64) -> ElasticityMap {
     ElasticityMap::from_shear_wave_speed(shear_wave_speed, density)
 }

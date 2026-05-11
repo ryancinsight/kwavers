@@ -28,11 +28,11 @@ impl Default for GhostCellConfig {
 /// Ghost cell method smoother
 #[derive(Debug, Clone)]
 pub struct GhostCellMethod {
-    #[allow(dead_code)] // Used in apply() method implementation
     config: GhostCellConfig,
 }
 
 impl GhostCellMethod {
+    #[must_use] 
     pub fn new(config: GhostCellConfig) -> Self {
         Self { config }
     }
@@ -53,6 +53,9 @@ impl GhostCellMethod {
     /// # References
     ///
     /// - Mittal & Iaccarino (2005). "Immersed boundary methods". *Annual Review of Fluid Mechanics*.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn apply(
         &self,
         property: &Array3<f64>,

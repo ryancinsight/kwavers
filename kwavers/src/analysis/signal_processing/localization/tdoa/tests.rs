@@ -5,8 +5,7 @@ use crate::analysis::signal_processing::localization::LocalizationProcessor;
 #[test]
 fn test_tdoa_processor_creation() {
     let config = TDOAConfig::default();
-    let result = TDOAProcessor::new(&config);
-    assert!(result.is_ok());
+    let _processor = TDOAProcessor::new(&config).unwrap();
 }
 
 #[test]
@@ -39,6 +38,6 @@ fn test_tdoa_localization() {
     ];
 
     let time_delays = vec![0.0, 0.0001, 0.00015, 0.0002];
-    let result = processor.localize(&time_delays, &sensor_positions);
-    assert!(result.is_ok());
+    let loc = processor.localize(&time_delays, &sensor_positions).unwrap();
+    assert!(loc.position.iter().all(|x| x.is_finite()));
 }

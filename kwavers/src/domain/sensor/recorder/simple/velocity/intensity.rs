@@ -71,6 +71,9 @@ impl SensorRecorder {
     // ── time-averaged intensity ───────────────────────────────────────────────
 
     /// Time-averaged x-intensity: `<p * ux>_t`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_i_avg_x(&self) -> Option<Array1<f64>> {
         Some(self.average_intensity(self.ix_sum.as_ref()?))
@@ -79,28 +82,43 @@ impl SensorRecorder {
     /// Fill caller-owned storage with time-averaged x-intensity.
     ///
     /// This avoids allocating a new `Array1` on repeated diagnostic reads.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_i_avg_x(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_average_intensity_component(self.ix_sum.as_ref(), out, "I_avg_x")
     }
 
     /// Time-averaged y-intensity: `<p * uy>_t`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_i_avg_y(&self) -> Option<Array1<f64>> {
         Some(self.average_intensity(self.iy_sum.as_ref()?))
     }
 
     /// Fill caller-owned storage with time-averaged y-intensity.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_i_avg_y(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_average_intensity_component(self.iy_sum.as_ref(), out, "I_avg_y")
     }
 
     /// Time-averaged z-intensity: `<p * uz>_t`.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     #[must_use]
     pub fn extract_i_avg_z(&self) -> Option<Array1<f64>> {
         Some(self.average_intensity(self.iz_sum.as_ref()?))
     }
 
     /// Fill caller-owned storage with time-averaged z-intensity.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn fill_i_avg_z(&self, out: &mut Array1<f64>) -> KwaversResult<()> {
         self.fill_average_intensity_component(self.iz_sum.as_ref(), out, "I_avg_z")
     }
@@ -110,6 +128,9 @@ impl SensorRecorder {
     /// Divide a running intensity sum by the number of recorded steps.
     ///
     /// Returns a zero vector before any step has been recorded.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn average_intensity(&self, sum: &Array1<f64>) -> Array1<f64> {
         let mut out = Array1::zeros(sum.len());
         let _ = self.fill_average_intensity(sum, &mut out);

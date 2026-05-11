@@ -73,7 +73,7 @@ impl Source for TransducerArray2D {
             let dx = x - ex;
             let dy = y - ey;
             let dz = z - ez;
-            let dist_sq = dx * dx + dy * dy + dz * dz;
+            let dist_sq = dz.mul_add(dz, dx.mul_add(dx, dy * dy));
 
             let tol = (element.width.max(element.length) / 2.0).max(grid.dx);
 

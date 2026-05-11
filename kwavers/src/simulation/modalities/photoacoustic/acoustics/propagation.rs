@@ -28,6 +28,9 @@ use ndarray::Array3;
 /// # Numerical Stability
 ///
 /// CFL condition enforced: Δt ≤ CFL · Δx_min / c
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn propagate_acoustic_wave(
     grid: &Grid,
     initial_pressure: &InitialPressure,
@@ -75,14 +78,9 @@ pub fn propagate_acoustic_wave(
 
                     let center = p_curr_loop[[i, j, k]];
 
-                    let lap = (p_curr_loop[[ip, j, k]] - 2.0 * center + p_curr_loop[[im, j, k]])
-                        * inv_dx2
-                        + (p_curr_loop[[i, jp, k]] - 2.0 * center + p_curr_loop[[i, jm, k]])
-                            * inv_dy2
-                        + (p_curr_loop[[i, j, kp]] - 2.0 * center + p_curr_loop[[i, j, km]])
-                            * inv_dz2;
+                    let lap = (2.0f64.mul_add(-center, p_curr_loop[[i, j, kp]]) + p_curr_loop[[i, j, km]]).mul_add(inv_dz2, (2.0f64.mul_add(-center, p_curr_loop[[ip, j, k]]) + p_curr_loop[[im, j, k]]).mul_add(inv_dx2, (2.0f64.mul_add(-center, p_curr_loop[[i, jp, k]]) + p_curr_loop[[i, jm, k]]) * inv_dy2));
 
-                    p_next[[i, j, k]] = 2.0 * center - p_prev_loop[[i, j, k]] + c2_dt2 * lap;
+                    p_next[[i, j, k]] = c2_dt2.mul_add(lap, 2.0f64.mul_add(center, -p_prev_loop[[i, j, k]]));
                 }
             }
         }

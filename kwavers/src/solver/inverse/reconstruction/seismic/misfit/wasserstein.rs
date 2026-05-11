@@ -15,6 +15,9 @@ use ndarray::Array2;
 
 impl MisfitFunction {
     /// Wasserstein distance misfit (1-Wasserstein via CDF L1 distance).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn wasserstein_misfit(
         &self,
         observed: &Array2<f64>,
@@ -60,6 +63,9 @@ impl MisfitFunction {
     /// Wasserstein adjoint source (optimal transport gradient).
     ///
     /// For the 1D case: adjoint = sign(F_syn − F_obs) weighted by probability mass.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn wasserstein_adjoint_source(
         &self,
         observed: &Array2<f64>,

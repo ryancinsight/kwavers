@@ -52,9 +52,9 @@ impl DirectionalWaveTracker {
         for direction in &directions {
             // Define tracking region along the wave propagation direction
             let region_center = [
-                center[0] + direction[0] * roi_size[0] * 0.25,
-                center[1] + direction[1] * roi_size[1] * 0.25,
-                center[2] + direction[2] * roi_size[2] * 0.25,
+                (direction[0] * roi_size[0]).mul_add(0.25, center[0]),
+                (direction[1] * roi_size[1]).mul_add(0.25, center[1]),
+                (direction[2] * roi_size[2]).mul_add(0.25, center[2]),
             ];
 
             tracking_regions.push(TrackingRegion {

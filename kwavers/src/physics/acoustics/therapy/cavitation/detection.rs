@@ -23,10 +23,9 @@ impl TherapyCavitationDetector {
 
     /// Per-voxel Blake threshold detection: cavitates iff `−p > P_Blake`.
     fn detect_by_threshold(&self, pressure: &Array3<f64>, cavitation: &mut Array3<bool>) {
-        cavitation
-            .iter_mut()
-            .zip(pressure.iter())
-            .for_each(|(cav, &p)| {
+        ndarray::Zip::from(cavitation)
+            .and(pressure)
+            .par_for_each(|cav, &p| {
                 *cav = -p > self.blake_threshold;
             });
     }
@@ -46,10 +45,9 @@ impl TherapyCavitationDetector {
     fn detect_by_spectral(&self, pressure: &Array3<f64>, cavitation: &mut Array3<bool>) {
         let effective_threshold = self.resonance_effective_threshold(DEFAULT_NUCLEUS_RADIUS);
 
-        cavitation
-            .iter_mut()
-            .zip(pressure.iter())
-            .for_each(|(cav, &p)| {
+        ndarray::Zip::from(cavitation)
+            .and(pressure)
+            .par_for_each(|cav, &p| {
                 *cav = -p > effective_threshold;
             });
     }
@@ -57,9 +55,9 @@ impl TherapyCavitationDetector {
     pub(super) fn resonance_effective_threshold(&self, r0: f64) -> f64 {
         let f0 = self.minnaert_frequency(r0);
         let f_over_f0 = self.frequency / f0;
-        let detuning = 1.0 - f_over_f0 * f_over_f0;
+        let detuning = f_over_f0.mul_add(-f_over_f0, 1.0);
         let dissipation = f_over_f0 / BUBBLE_Q_FACTOR;
-        let denominator = (detuning * detuning + dissipation * dissipation).sqrt();
+        let denominator = detuning.hypot(dissipation);
         let enhancement = if denominator < 1.0 {
             1.0 / denominator
         } else {

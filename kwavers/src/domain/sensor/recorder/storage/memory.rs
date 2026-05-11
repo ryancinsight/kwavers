@@ -14,6 +14,9 @@ pub struct MemoryStorage {
 
 impl MemoryStorage {
     /// Create memory storage
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn create() -> Self {
         Self {
@@ -23,6 +26,9 @@ impl MemoryStorage {
     }
 
     /// Get stored data
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn get_data(&self, name: &str) -> Option<&Vec<Array3<f64>>> {
         self.data.get(name)
@@ -37,7 +43,7 @@ impl StorageBackend for MemoryStorage {
 
     fn store_field(&mut self, name: &str, field: &Array3<f64>, _step: usize) -> KwaversResult<()> {
         self.data
-            .entry(name.to_string())
+            .entry(name.to_owned())
             .or_default()
             .push(field.clone());
         Ok(())

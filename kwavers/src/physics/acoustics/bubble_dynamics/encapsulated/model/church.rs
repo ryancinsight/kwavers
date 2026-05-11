@@ -14,6 +14,9 @@ pub struct ChurchModel {
 
 impl ChurchModel {
     /// Create new Church model with shell properties
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(params: BubbleParameters, mut shell: ShellProperties) -> Self {
         // Compute critical radii for the shell
@@ -23,6 +26,9 @@ impl ChurchModel {
     }
 
     /// Calculate bubble wall acceleration with shell effects (Church model)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
@@ -51,7 +57,7 @@ impl ChurchModel {
         // This represents the elastic restoring force from shell deformation
         let d = self.shell.thickness;
         let g = self.shell.shear_modulus;
-        let shell_elastic = 12.0 * g * (d / r) * ((r / r0).powi(2) - 1.0);
+        let shell_elastic = 12.0 * g * (d / r) * (r / r0).mul_add(r / r0, -1.0);
 
         // Shell viscosity term: 12μ_s(d/R)(dR/dt)/R
         // This represents the viscous damping from shell material

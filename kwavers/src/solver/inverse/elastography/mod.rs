@@ -233,9 +233,10 @@ mod tests {
 
         let config = ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight);
         let inversion = ShearWaveInversion::new(config);
-        let result = inversion.reconstruct(&displacement, &grid);
-
-        assert!(result.is_ok(), "Linear inversion pipeline should succeed");
+        let map = inversion
+            .reconstruct(&displacement, &grid)
+            .expect("Linear inversion pipeline should succeed");
+        assert_eq!(map.shear_wave_speed.dim(), (20, 20, 20));
     }
 
     #[test]
@@ -291,11 +292,7 @@ mod tests {
             let inversion = NonlinearInversion::new(config);
             let result = inversion.reconstruct(&harmonic_field, &grid);
 
-            assert!(
-                result.is_ok(),
-                "Nonlinear method {:?} should succeed in integration test",
-                method
-            );
+            result.unwrap_or_else(|e| panic!("Nonlinear method {:?} failed: {e}", method));
         }
     }
 
@@ -303,7 +300,7 @@ mod tests {
     fn test_config_validation() {
         let valid_config =
             ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_density(1050.0);
-        assert!(valid_config.validate().is_ok());
+        valid_config.validate().unwrap();
 
         let invalid_config =
             ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight).with_density(-100.0);

@@ -38,6 +38,9 @@ impl TreatmentPlanner {
     ///
     /// Reference: O'Neil HT (1949), *J Acoust Soc Am* 21(5):516–526;
     /// Daum DR & Hynynen K (1999), *IEEE Trans Biomed Eng* 46(9):1070–1082.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn simulate_acoustic_field(
         &self,
         setup: &TransducerSetup,
@@ -63,7 +66,7 @@ impl TreatmentPlanner {
                         let dx = xv - element[0];
                         let dy = yv - element[1];
                         let dz = zv - element[2];
-                        let r = (dx * dx + dy * dy + dz * dz).sqrt();
+                        let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
                         if r < 1e-9 {
                             continue;
                         }
@@ -101,12 +104,15 @@ impl TreatmentPlanner {
     ///
     /// Solving:
     /// ```text
-    /// ΔT = Q / (W_b · ρ_b · c_b)  [K]  (steady-state, no diffusion)
+    /// ΔT = Q / (W_b · ρ_b · c_b)  (K)  (steady-state, no diffusion)
     /// ```
     ///
     /// Reference: Pennes HH (1948). "Analysis of tissue and arterial blood temperatures
     /// in the resting human forearm." *J Appl Physiol* 1(2):93–122.
     /// Nyborg WL (1988). *Phys Med Biol* 33(7):785–792.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn calculate_thermal_response(
         &self,
         acoustic_field: &Array3<f64>,

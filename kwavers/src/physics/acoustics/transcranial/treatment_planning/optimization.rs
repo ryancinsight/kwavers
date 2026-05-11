@@ -43,6 +43,9 @@ impl TreatmentPlanner {
     /// - Daum DR & Hynynen K (1999). "A 256-element ultrasonic phased array system for
     ///   the treatment of large volumes of deep seated tissue." *IEEE Trans Biomed Eng*
     ///   46(9):1070–1082.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(crate) fn optimize_transducer_setup(
         &self,
         targets: &[TargetVolume],
@@ -77,9 +80,7 @@ impl TreatmentPlanner {
         let element_phases: Vec<f64> = element_positions
             .iter()
             .map(|&pos| {
-                let dist = ((pos[0] - target_center[0]).powi(2)
-                    + (pos[1] - target_center[1]).powi(2)
-                    + (pos[2] - target_center[2]).powi(2))
+                let dist = (pos[2] - target_center[2]).mul_add(pos[2] - target_center[2], (pos[1] - target_center[1]).mul_add(pos[1] - target_center[1], (pos[0] - target_center[0]).powi(2)))
                 .sqrt();
                 -k * dist
             })

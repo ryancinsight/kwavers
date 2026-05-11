@@ -2,7 +2,7 @@
 //!
 //! # Pre-allocated scratch buffer
 //!
-//! `scratch` (Array2<Complex64>, shape (nx, ny)) is allocated once in
+//! `scratch` (`Array2<Complex64>`, shape (nx, ny)) is allocated once in
 //! `ParabolicDiffractionOperator::new` and reused on every `apply_complex` call.
 //! The 2-D FFT plan is obtained from `FFT_CACHE_2D` (cached per shape).
 //!

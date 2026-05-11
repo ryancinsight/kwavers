@@ -13,11 +13,17 @@ impl EigenDecomposition {
     /// Uses Jacobi eigenvalue algorithm — suitable for small matrices (< 100×100).
     ///
     /// Returns `(eigenvalues, eigenvectors)` sorted descending.
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn eigendecomposition(matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
         let n = matrix.nrows();
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
-                operation: "eigendecomposition".to_string(),
+                operation: "eigendecomposition".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
                 actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
             }));
@@ -27,7 +33,7 @@ impl EigenDecomposition {
             for j in (i + 1)..n {
                 if (matrix[[i, j]] - matrix[[j, i]]).abs() > 1e-10 {
                     return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
-                        "Matrix must be symmetric for real eigendecomposition".to_string(),
+                        "Matrix must be symmetric for real eigendecomposition".to_owned(),
                     )));
                 }
             }
@@ -114,18 +120,25 @@ impl EigenDecomposition {
     /// ## Algorithm
     ///
     /// Complex Jacobi with Hermitian Givens rotations (Golub & Van Loan 2013, §8.5):
-    /// 1. Find largest off-diagonal element |H[p,q]|
-    /// 2. Compute complex Givens rotation to zero out H[p,q]
+    /// 1. Find largest off-diagonal element |H\[p,q\]|
+    /// 2. Compute complex Givens rotation to zero out H\[p,q\]
     /// 3. Apply: H ← U† H U
     /// 4. Accumulate: V ← V U
     /// 5. Repeat until convergence
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn hermitian_eigendecomposition_complex(
         matrix: &Array2<Complex<f64>>,
     ) -> KwaversResult<(Array1<f64>, Array2<Complex<f64>>)> {
         let n = matrix.nrows();
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
-                operation: "hermitian_eigendecomposition_complex".to_string(),
+                operation: "hermitian_eigendecomposition_complex".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
                 actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
             }));

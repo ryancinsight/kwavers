@@ -56,6 +56,9 @@ impl ThermalIndexCalculator {
     }
 
     /// Calculate thermal index from acoustic power in watts.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn calculate(
         &self,
         acoustic_power_w: f64,
@@ -140,9 +143,9 @@ impl ThermalIndexCalculator {
 
     fn invalid_value(parameter: &str, value: f64, reason: &str) -> KwaversError {
         KwaversError::Validation(ValidationError::InvalidValue {
-            parameter: parameter.to_string(),
+            parameter: parameter.to_owned(),
             value,
-            reason: reason.to_string(),
+            reason: reason.to_owned(),
         })
     }
 }

@@ -33,6 +33,9 @@ fn make_test_skull(
 }
 
 /// Phase in a pure-water grid must be zero everywhere.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_zero_phase_in_water() {
     let grid = Grid::new(8, 8, 16, 1e-3, 1e-3, 1e-3).unwrap();
@@ -48,6 +51,9 @@ fn test_zero_phase_in_water() {
 }
 
 /// A uniform bone slab must produce `Delta k * thickness`.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_uniform_bone_slab_phase() {
     let f = 500e3_f64;
@@ -73,6 +79,9 @@ fn test_uniform_bone_slab_phase() {
 }
 
 /// Correction phases must be the exact negation of aberration phases.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_correction_is_negation_of_aberration() {
     let grid = Grid::new(6, 6, 12, 1e-3, 1e-3, 1e-3).unwrap();
@@ -90,6 +99,9 @@ fn test_correction_is_negation_of_aberration() {
 }
 
 /// Element corrections must equal the negation of the aperture phase map.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_element_corrections_match_aperture_map() {
     let grid = Grid::new(8, 8, 12, 1e-3, 1e-3, 1e-3).unwrap();
@@ -112,6 +124,9 @@ fn test_element_corrections_match_aperture_map() {
 }
 
 /// Mismatched element coordinate arrays must return a dimension error.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_element_corrections_reject_mismatched_lengths() {
     let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap();
@@ -122,6 +137,9 @@ fn test_element_corrections_reject_mismatched_lengths() {
 }
 
 /// Phase changes monotonically through a faster-than-water bone slab, then stays flat.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_phase_monotone_through_bone_then_flat() {
     let grid = Grid::new(4, 4, 20, 1e-3, 1e-3, 1e-3).unwrap();
@@ -142,6 +160,9 @@ fn test_phase_monotone_through_bone_then_flat() {
 }
 
 /// Uniform skull properties produce a spatially uniform aperture map.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_phase_spatially_uniform_for_uniform_skull() {
     let grid = Grid::new(6, 6, 10, 1e-3, 1e-3, 1e-3).unwrap();
@@ -157,6 +178,9 @@ fn test_phase_spatially_uniform_for_uniform_skull() {
 }
 
 /// Phase correction scales linearly with frequency.
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 #[test]
 fn test_phase_scales_linearly_with_frequency() {
     let grid = Grid::new(4, 4, 12, 1e-3, 1e-3, 1e-3).unwrap();

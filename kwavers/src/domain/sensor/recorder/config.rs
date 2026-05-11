@@ -48,7 +48,7 @@ impl RecorderConfig {
     #[must_use]
     pub fn create(filename: &str) -> Self {
         Self {
-            filename: filename.to_string(),
+            filename: filename.to_owned(),
             record_pressure: true,
             record_light: true,
             record_temperature: false,
@@ -143,27 +143,30 @@ impl Default for RecorderConfig {
 
 impl RecordingMode {
     /// Returns true if this mode records time series data
+    #[must_use] 
     pub fn is_time_series(&self) -> bool {
-        matches!(self, RecordingMode::TimeSeries)
+        matches!(self, Self::TimeSeries)
     }
 
     /// Returns true if this mode records statistics (max, min, rms, final)
+    #[must_use] 
     pub fn is_statistical(&self) -> bool {
-        !matches!(self, RecordingMode::TimeSeries)
+        !matches!(self, Self::TimeSeries)
     }
 
     /// Get the corresponding field name in k-Wave output
+    #[must_use] 
     pub fn kwave_field_name(&self) -> &'static str {
         match self {
-            RecordingMode::TimeSeries => "p",
-            RecordingMode::MaxPressure => "p_max",
-            RecordingMode::MinPressure => "p_min",
-            RecordingMode::RmsPressure => "p_rms",
-            RecordingMode::FinalPressure => "p_final",
-            RecordingMode::MaxPressureAll => "p_max_all",
-            RecordingMode::MinPressureAll => "p_min_all",
-            RecordingMode::MaxMinPressure => "p_max_min",
-            RecordingMode::AllStatistics => "p_all_stats",
+            Self::TimeSeries => "p",
+            Self::MaxPressure => "p_max",
+            Self::MinPressure => "p_min",
+            Self::RmsPressure => "p_rms",
+            Self::FinalPressure => "p_final",
+            Self::MaxPressureAll => "p_max_all",
+            Self::MinPressureAll => "p_min_all",
+            Self::MaxMinPressure => "p_max_min",
+            Self::AllStatistics => "p_all_stats",
         }
     }
 }

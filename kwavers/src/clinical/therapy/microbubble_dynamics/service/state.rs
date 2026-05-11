@@ -13,6 +13,9 @@ use super::MicrobubbleDynamicsService;
 
 impl MicrobubbleDynamicsService {
     /// Extract Keller-Miksis parameters from microbubble state
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn extract_bubble_parameters(
         state: &MicrobubbleState,
     ) -> KwaversResult<BubbleParameters> {
@@ -59,6 +62,9 @@ impl MicrobubbleDynamicsService {
     }
 
     /// Convert domain state to Keller-Miksis bubble state
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn domain_to_km_state(
         bubble: &MicrobubbleState,
         _shell: &MarmottantShellProperties,

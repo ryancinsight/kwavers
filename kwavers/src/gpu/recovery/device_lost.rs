@@ -57,12 +57,18 @@ impl DeviceLostRecovery {
     }
 
     /// Create a recovery strategy with a pre-seeded zeroed checkpoint.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn with_zeroed_checkpoint(n_cells: usize) -> Self {
         let checkpoint = Arc::new(Mutex::new(Some(GpuCheckpoint::zeroed(n_cells))));
         Self::with_checkpoint(checkpoint)
     }
 
     /// Replace the currently stored checkpoint.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_checkpoint(&self, checkpoint: GpuCheckpoint) -> KwaversResult<()> {
         let mut guard = self.checkpoint.lock().map_err(|_| {
             KwaversError::InternalError("DeviceLostRecovery: checkpoint mutex poisoned".to_string())

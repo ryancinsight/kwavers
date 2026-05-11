@@ -5,6 +5,10 @@ use wgpu::util::DeviceExt;
 
 impl NeuralNetworkShader {
     /// Perform matrix multiplication on GPU: `Y = W·X + b` with INT8 quantized weights.
+    /// # Errors
+    /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn matmul(
         &self,
         input: &[f32],
@@ -175,6 +179,10 @@ impl NeuralNetworkShader {
         Ok(result)
     }
 
+    /// Matmul cpu quantized.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn matmul_cpu_quantized(
         &self,
         input: &[f32],
@@ -206,11 +214,17 @@ impl NeuralNetworkShader {
 
         Ok(output)
     }
-
+    /// Has gpu acceleration.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn has_gpu_acceleration(&self) -> bool {
         true
     }
-
+    /// Validate activation type.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub(super) fn validate_activation_type(activation_type: u32) -> KwaversResult<()> {
         use super::ActivationKind;
         if ActivationKind::from_u32(activation_type).is_some() {

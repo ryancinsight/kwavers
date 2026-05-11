@@ -119,27 +119,48 @@ impl Default for MultiPhysicsConfig {
 /// Interface for physics solvers that can participate in coupling
 pub trait CoupledPhysicsSolver: Send + Sync {
     /// Get the physics domain type
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn domain_type(&self) -> PhysicsDomain;
 
     /// Get the computational grid
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn grid(&self) -> &Grid;
 
     /// Get current field values
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_field(&self, field_name: &str) -> KwaversResult<ArrayView3<'_, f64>>;
 
     /// Set field values (for coupling updates)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn set_field(&mut self, field_name: &str, field: ArrayView3<f64>) -> KwaversResult<()>;
 
     /// Perform a single time step
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn step(&mut self, dt: f64) -> KwaversResult<()>;
 
     /// Get coupling source terms from this physics domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn get_coupling_source(
         &self,
         target_domain: PhysicsDomain,
     ) -> KwaversResult<Option<Array3<f64>>>;
 
     /// Apply coupling source terms to this physics domain
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn apply_coupling_source(
         &mut self,
         source_domain: PhysicsDomain,

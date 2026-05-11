@@ -23,6 +23,9 @@ pub(super) struct ResolutionLevel {
 
 impl AdaptiveResolution {
     /// Create adaptive resolution system
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn new(base_grid: &Grid, max_levels: usize) -> Self {
         let mut resolution_levels = Vec::new();
 
@@ -49,7 +52,7 @@ impl AdaptiveResolution {
             });
         }
 
-        let quality_thresholds = (0..max_levels).map(|i| 0.9 - i as f64 * 0.1).collect();
+        let quality_thresholds = (0..max_levels).map(|i| (i as f64).mul_add(-0.1, 0.9)).collect();
 
         Self {
             base_grid: base_grid.clone(),
@@ -59,6 +62,9 @@ impl AdaptiveResolution {
     }
 
     /// Adaptively solve 3D SWE with resolution levels
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn adaptive_solve(
         &self,
         initial_displacement: &Array3<f64>,
@@ -95,7 +101,7 @@ impl AdaptiveResolution {
 
         Ok(AdaptiveSolution {
             steps: solutions.clone(),
-            final_quality: solutions.last().map(|s| s.quality).unwrap_or(0.0),
+            final_quality: solutions.last().map_or(0.0, |s| s.quality),
             total_computation_time: solutions.iter().map(|s| s.computation_time).sum(),
         })
     }
@@ -140,10 +146,10 @@ impl AdaptiveResolution {
                     let c011 = data[[x0, y1, z1]];
                     let c111 = data[[x1, y1, z1]];
 
-                    let c00 = c000 * (1.0 - wx) + c100 * wx;
-                    let c01 = c001 * (1.0 - wx) + c101 * wx;
-                    let c10 = c010 * (1.0 - wx) + c110 * wx;
-                    let c11 = c011 * (1.0 - wx) + c111 * wx;
+                    let c00 = c000.mul_add(1.0 - wx, c100 * wx);
+                    let c01 = c001.mul_add(1.0 - wx, c101 * wx);
+                    let c10 = c010.mul_add(1.0 - wx, c110 * wx);
+                    let c11 = c011.mul_add(1.0 - wx, c111 * wx);
 
                     let c0 = c00 * (1.0 - wy) + c10 * wy;
                     let c1 = c01 * (1.0 - wy) + c11 * wy;
@@ -158,11 +164,11 @@ impl AdaptiveResolution {
 
     fn simulate_solve_quality(&self, displacement: &Array3<f64>, level: &ResolutionLevel) -> f64 {
         let base_quality = 0.7;
-        let resolution_bonus = 0.1 * (level.scale_factor.ln() / (2.0_f64).ln()).min(1.0);
+        let resolution_bonus = 0.1 * level.scale_factor.log2().min(1.0);
 
         let signal_strength = displacement
             .iter()
-            .cloned()
+            .copied()
             .fold(0.0_f64, |a, b| a + b.abs())
             / displacement.len() as f64;
         let signal_bonus = (signal_strength * 1000.0).min(0.1);

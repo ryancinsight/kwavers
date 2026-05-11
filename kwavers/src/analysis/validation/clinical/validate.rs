@@ -12,6 +12,9 @@ use std::collections::HashMap;
 
 impl ClinicalValidator {
     /// Validate B-mode imaging performance against FDA 510(k) requirements.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_bmode(
         &self,
         quality_metrics: &ImageQualityMetrics,
@@ -23,33 +26,33 @@ impl ClinicalValidator {
         let mut recommendations = Vec::new();
 
         metrics.insert(
-            "contrast_resolution".to_string(),
+            "contrast_resolution".to_owned(),
             quality_metrics.contrast_resolution,
         );
         metrics.insert(
-            "axial_resolution".to_string(),
+            "axial_resolution".to_owned(),
             quality_metrics.axial_resolution,
         );
         metrics.insert(
-            "lateral_resolution".to_string(),
+            "lateral_resolution".to_owned(),
             quality_metrics.lateral_resolution,
         );
-        metrics.insert("dynamic_range".to_string(), quality_metrics.dynamic_range);
-        metrics.insert("snr".to_string(), quality_metrics.snr);
+        metrics.insert("dynamic_range".to_owned(), quality_metrics.dynamic_range);
+        metrics.insert("snr".to_owned(), quality_metrics.snr);
         metrics.insert(
-            "distance_error".to_string(),
+            "distance_error".to_owned(),
             accuracy_metrics.distance_error_percent,
         );
         metrics.insert(
-            "area_error".to_string(),
+            "area_error".to_owned(),
             accuracy_metrics.area_error_percent,
         );
         metrics.insert(
-            "mechanical_index".to_string(),
+            "mechanical_index".to_owned(),
             safety_indices.mechanical_index,
         );
         metrics.insert(
-            "thermal_index".to_string(),
+            "thermal_index".to_owned(),
             safety_indices.thermal_index_soft,
         );
 
@@ -58,7 +61,7 @@ impl ClinicalValidator {
             .get(&(ClinicalStandard::FDA510k, ClinicalCategory::BMode))
             .ok_or_else(|| {
                 KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-                    message: "FDA 510(k) B-mode requirements not found".to_string(),
+                    message: "FDA 510(k) B-mode requirements not found".to_owned(),
                 })
             })?;
 
@@ -102,7 +105,7 @@ impl ClinicalValidator {
                         safety_name, actual_value, max_value
                     ));
                     recommendations
-                        .push("Reduce acoustic output to meet safety requirements".to_string());
+                        .push("Reduce acoustic output to meet safety requirements".to_owned());
                 }
             }
         }
@@ -120,6 +123,9 @@ impl ClinicalValidator {
     }
 
     /// Validate Doppler imaging with default thresholds.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate_doppler(
         &self,
         velocity_accuracy: f64,
@@ -138,6 +144,9 @@ impl ClinicalValidator {
     }
 
     /// Validate Doppler imaging with configurable thresholds.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn validate_doppler_with_thresholds(
         &self,
         velocity_accuracy: f64,
@@ -150,11 +159,11 @@ impl ClinicalValidator {
         let mut issues = Vec::new();
         let mut recommendations = Vec::new();
 
-        metrics.insert("velocity_error".to_string(), velocity_accuracy);
-        metrics.insert("angle_error".to_string(), angle_accuracy);
-        metrics.insert("sensitivity".to_string(), sensitivity);
+        metrics.insert("velocity_error".to_owned(), velocity_accuracy);
+        metrics.insert("angle_error".to_owned(), angle_accuracy);
+        metrics.insert("sensitivity".to_owned(), sensitivity);
         metrics.insert(
-            "mechanical_index".to_string(),
+            "mechanical_index".to_owned(),
             safety_indices.mechanical_index,
         );
 
@@ -170,7 +179,7 @@ impl ClinicalValidator {
                 sensitivity, min_sensitivity
             ));
             recommendations
-                .push("Improve Doppler sensitivity through beamforming optimization".to_string());
+                .push("Improve Doppler sensitivity through beamforming optimization".to_owned());
         }
         if velocity_accuracy > max_velocity_error {
             passed = false;
@@ -178,7 +187,7 @@ impl ClinicalValidator {
                 "Velocity accuracy ({:.1}%) exceeds maximum error ({:.1}%)",
                 velocity_accuracy, max_velocity_error
             ));
-            recommendations.push("Calibrate Doppler frequency estimation".to_string());
+            recommendations.push("Calibrate Doppler frequency estimation".to_owned());
         }
         if angle_accuracy > max_angle_error {
             passed = false;
@@ -186,12 +195,10 @@ impl ClinicalValidator {
                 "Angle accuracy ({:.1}°) exceeds maximum error ({:.1}°)",
                 angle_accuracy, max_angle_error
             ));
-            recommendations.push("Improve beam steering angle accuracy".to_string());
+            recommendations.push("Improve beam steering angle accuracy".to_owned());
         }
 
-        let clinical_score = 100.0
-            - (velocity_accuracy + angle_accuracy) * 2.0
-            - (min_sensitivity - sensitivity).max(0.0) * 5.0;
+        let clinical_score = (min_sensitivity - sensitivity).max(0.0).mul_add(-5.0, (velocity_accuracy + angle_accuracy).mul_add(-2.0, 100.0));
 
         Ok(ClinicalValidationResult {
             passed,
@@ -204,6 +211,9 @@ impl ClinicalValidator {
     }
 
     /// Validate safety indices against IEC 60601-2-37.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn validate_safety(
         &self,
         safety_indices: &SafetyIndices,
@@ -213,30 +223,30 @@ impl ClinicalValidator {
         let mut recommendations = Vec::new();
 
         metrics.insert(
-            "mechanical_index_max".to_string(),
+            "mechanical_index_max".to_owned(),
             safety_indices.mechanical_index,
         );
         metrics.insert(
-            "thermal_index_bone_max".to_string(),
+            "thermal_index_bone_max".to_owned(),
             safety_indices.thermal_index_bone,
         );
         metrics.insert(
-            "thermal_index_soft_max".to_string(),
+            "thermal_index_soft_max".to_owned(),
             safety_indices.thermal_index_soft,
         );
         metrics.insert(
-            "thermal_index_cranial_max".to_string(),
+            "thermal_index_cranial_max".to_owned(),
             safety_indices.thermal_index_cranial,
         );
-        metrics.insert("spta_max".to_string(), safety_indices.spta_intensity);
-        metrics.insert("sppa_max".to_string(), safety_indices.sppa_intensity);
+        metrics.insert("spta_max".to_owned(), safety_indices.spta_intensity);
+        metrics.insert("sppa_max".to_owned(), safety_indices.sppa_intensity);
 
         let reqs = self
             .requirements
             .get(&(ClinicalStandard::IEC60601_2_37, ClinicalCategory::Safety))
             .ok_or_else(|| {
                 KwaversError::Validation(crate::core::error::ValidationError::ConstraintViolation {
-                    message: "IEC 60601-2-37 safety requirements not found".to_string(),
+                    message: "IEC 60601-2-37 safety requirements not found".to_owned(),
                 })
             })?;
 
@@ -261,7 +271,7 @@ impl ClinicalValidator {
                         "sppa_max" => "Reduce pulse average intensity",
                         _ => "Reduce acoustic output parameters",
                     };
-                    recommendations.push(recommendation.to_string());
+                    recommendations.push(recommendation.to_owned());
                 }
             }
         }

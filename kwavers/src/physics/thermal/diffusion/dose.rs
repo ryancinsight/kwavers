@@ -25,6 +25,10 @@ pub struct ThermalDoseCalculator {
 }
 
 impl ThermalDoseCalculator {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
@@ -33,7 +37,10 @@ impl ThermalDoseCalculator {
             max_dose_time: 0.0,
         }
     }
-
+    /// Update dose.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn update_dose(
         &mut self,
         temperature: &Array3<f64>,

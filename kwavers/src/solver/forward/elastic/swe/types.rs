@@ -126,6 +126,7 @@ pub struct ElasticWaveField {
 }
 
 impl ElasticWaveField {
+    #[must_use] 
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             ux: Array3::zeros((nx, ny, nz)),
@@ -142,12 +143,12 @@ impl ElasticWaveField {
     pub fn displacement_magnitude(&self) -> Array3<f64> {
         let mut out = self.ux.clone();
         out.zip_mut_with(&self.uy, |o, &y| {
-            *o = *o * *o + y * y;
+            *o = (*o).mul_add(*o, y * y);
         });
         out.zip_mut_with(&self.uz, |o, &z| {
             *o += z * z;
         });
-        out.mapv_inplace(f64::sqrt);
+        out.par_mapv_inplace(f64::sqrt);
         out
     }
 }

@@ -55,6 +55,9 @@ impl<B: Backend> BurnPINN3DWave<B> {
     /// # Returns
     ///
     /// Tensor [n_ic, 1] containing velocity IC values
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub(crate) fn extract_velocity_initial_condition_tensor(
         _x_data: &[f32],
         _y_data: &[f32],
@@ -97,7 +100,10 @@ impl<B: Backend> BurnPINN3DWave<B> {
             device,
         ))
     }
-
+    /// Extract initial condition tensors.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub(crate) fn extract_initial_condition_tensors(
         x_data: &[f32],
         y_data: &[f32],

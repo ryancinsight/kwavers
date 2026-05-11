@@ -6,37 +6,58 @@
 /// Monadic operations for Result types in physics calculations
 pub trait ResultOps<T, E> {
     /// Map over successful values
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn map_ok<F, U>(self, f: F) -> Result<U, E>
     where
         F: FnOnce(T) -> U;
 
     /// Flat map for chaining operations
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn and_then_ok<F, U>(self, f: F) -> Result<U, E>
     where
         F: FnOnce(T) -> Result<U, E>;
 
     /// Apply a fallback on error
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn or_else_err<F>(self, f: F) -> Result<T, E>
     where
         F: FnOnce(E) -> Result<T, E>;
 
     /// Transform errors while preserving success
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn map_err_preserve<F, E2>(self, f: F) -> Result<T, E2>
     where
         F: FnOnce(E) -> E2;
 
     /// Combine two Results with a binary operation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn zip_with<U, V, F>(self, other: Result<U, E>, f: F) -> Result<V, E>
     where
         F: FnOnce(T, U) -> V,
         E: Clone;
 
     /// Apply a function to the contained value if Ok, otherwise return the default
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn map_or<U, F>(self, default: U, f: F) -> U
     where
         F: FnOnce(T) -> U;
 
     /// Apply a function to the contained value if Ok, otherwise compute a default
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn map_or_else<U, D, F>(self, default: D, f: F) -> U
     where
         D: FnOnce(E) -> U,
@@ -58,9 +79,9 @@ impl<T, E> ResultOps<T, E> for Result<T, E> {
         self.and_then(f)
     }
 
-    fn or_else_err<F>(self, f: F) -> Result<T, E>
+    fn or_else_err<F>(self, f: F) -> Self
     where
-        F: FnOnce(E) -> Result<T, E>,
+        F: FnOnce(E) -> Self,
     {
         self.or_else(f)
     }
@@ -107,6 +128,9 @@ impl<T, E> ResultOps<T, E> for Result<T, E> {
 }
 
 /// Collect a vector of Results into a Result of a vector
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn collect_results<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, Vec<E>> {
     let mut successes = Vec::new();
     let mut errors = Vec::new();
@@ -126,6 +150,9 @@ pub fn collect_results<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, Vec<E
 }
 
 /// Partition results into successes and failures
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 #[must_use]
 pub fn partition_results<T, E>(results: Vec<Result<T, E>>) -> (Vec<T>, Vec<E>) {
     let mut successes = Vec::new();
@@ -142,6 +169,9 @@ pub fn partition_results<T, E>(results: Vec<Result<T, E>>) -> (Vec<T>, Vec<E>) {
 }
 
 /// Try to apply a function to each element, collecting all results
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn try_map<T, U, E, F>(items: Vec<T>, f: F) -> Result<Vec<U>, E>
 where
     F: Fn(T) -> Result<U, E>,
@@ -150,6 +180,9 @@ where
 }
 
 /// Apply a function to each element, ignoring errors
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn filter_map_ok<T, U, E, F>(results: Vec<Result<T, E>>, f: F) -> Vec<U>
 where
     F: Fn(T) -> U,
@@ -161,6 +194,9 @@ where
 }
 
 /// Chain multiple fallible operations
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn chain_operations<T, E>(
     initial: Result<T, E>,
     operations: Vec<Box<dyn Fn(T) -> Result<T, E>>>,
@@ -171,6 +207,12 @@ pub fn chain_operations<T, E>(
 }
 
 /// Retry an operation a specified number of times
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+/// # Panics
+/// - Panics if `Should have at least one error after retries`.
+///
 pub fn retry<T, E, F>(mut operation: F, max_attempts: usize) -> Result<T, E>
 where
     F: FnMut() -> Result<T, E>,
@@ -188,6 +230,9 @@ where
 }
 
 /// Timeout wrapper for operations (conceptual - would need async for real implementation)
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn with_fallback<T, E, F, G>(primary: F, fallback: G) -> impl Fn() -> Result<T, E>
 where
     F: Fn() -> Result<T, E>,

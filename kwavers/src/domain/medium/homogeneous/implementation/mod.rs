@@ -82,7 +82,10 @@ impl HomogeneousMedium {
             grid_shape: (grid.nx, grid.ny, grid.nz),
         }
     }
-
+    /// Set acoustic properties.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
     pub fn set_acoustic_properties(
         &mut self,
         absorption_alpha: f64,
@@ -91,25 +94,25 @@ impl HomogeneousMedium {
     ) -> KwaversResult<()> {
         if !absorption_alpha.is_finite() || absorption_alpha < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "absorption_alpha".to_string(),
+                parameter: "absorption_alpha".to_owned(),
                 value: absorption_alpha,
-                reason: "Absorption coefficient must be finite and non-negative".to_string(),
+                reason: "Absorption coefficient must be finite and non-negative".to_owned(),
             }));
         }
 
         if !absorption_power.is_finite() || absorption_power < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "absorption_power".to_string(),
+                parameter: "absorption_power".to_owned(),
                 value: absorption_power,
-                reason: "Absorption power must be finite and non-negative".to_string(),
+                reason: "Absorption power must be finite and non-negative".to_owned(),
             }));
         }
 
         if !nonlinearity.is_finite() || nonlinearity < 0.0 {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
-                parameter: "nonlinearity".to_string(),
+                parameter: "nonlinearity".to_owned(),
                 value: nonlinearity,
-                reason: "Nonlinearity must be finite and non-negative".to_string(),
+                reason: "Nonlinearity must be finite and non-negative".to_owned(),
             }));
         }
 
@@ -122,6 +125,38 @@ impl HomogeneousMedium {
         self.absorption_cache = Array3::from_elem(self.grid_shape, alpha_at_ref);
         self.nonlinearity_cache = Array3::from_elem(self.grid_shape, self.nonlinearity);
 
+        Ok(())
+    }
+
+    /// Set thermal properties on an existing homogeneous medium.
+    ///
+    /// `thermal_conductivity` [W/(m·K)] and `specific_heat` [J/(kg·K)] must be
+    /// finite and strictly positive. `thermal_diffusivity = k / (ρ·cp)` is computed
+    /// implicitly through the `ThermalProperties` trait implementation.
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    ///
+    pub fn set_thermal_properties(
+        &mut self,
+        thermal_conductivity: f64,
+        specific_heat: f64,
+    ) -> KwaversResult<()> {
+        if !thermal_conductivity.is_finite() || thermal_conductivity <= 0.0 {
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "thermal_conductivity".to_owned(),
+                value: thermal_conductivity,
+                reason: "must be finite and positive".to_owned(),
+            }));
+        }
+        if !specific_heat.is_finite() || specific_heat <= 0.0 {
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "specific_heat".to_owned(),
+                value: specific_heat,
+                reason: "must be finite and positive".to_owned(),
+            }));
+        }
+        self.thermal_conductivity = thermal_conductivity;
+        self.specific_heat = specific_heat;
         Ok(())
     }
 }

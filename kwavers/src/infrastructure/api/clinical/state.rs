@@ -60,6 +60,9 @@ pub struct ClinicalAppState {
 #[cfg(feature = "pinn")]
 impl ClinicalAppState {
     /// Create new clinical app state
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(auth_middleware: Arc<crate::api::auth::AuthMiddleware>) -> KwaversResult<Self> {
         // Initialize AI processor with default config
         let config = AIBeamformingConfig::default();
@@ -91,6 +94,9 @@ impl ClinicalAppState {
 impl ClinicalAppState {
     /// Create new clinical app state with fallback clinical functionality
     /// Provides basic clinical workflow support without PINN-based ML features
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(auth_middleware: Arc<crate::api::auth::AuthMiddleware>) -> KwaversResult<Self> {
         let mut state = Self {
             auth_middleware,
@@ -108,6 +114,9 @@ impl ClinicalAppState {
     }
 
     /// Initialize basic clinical devices for fallback operation
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn initialize_basic_devices(state: &mut ClinicalAppState) -> KwaversResult<()> {
         let mut registry = state
             .device_registry
@@ -152,6 +161,9 @@ impl ClinicalAppState {
     }
 
     /// Initialize basic clinical workflows
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn initialize_clinical_workflows(state: &mut ClinicalAppState) -> KwaversResult<()> {
         let mut sessions = state
             .active_sessions

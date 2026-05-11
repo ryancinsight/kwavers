@@ -82,6 +82,13 @@ impl<M: Medium> MediumParameters for MediumDescriptor<'_, M> {
 
 impl SimulationSolverFactory {
     /// Create a concrete solver for a simulation.
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     pub fn create_solver<M: Medium>(
         solver_type: SolverType,
         config: SolverConfiguration,
@@ -132,7 +139,7 @@ impl SimulationSolverFactory {
                 Ok(Box::new(DgSimulationSolver::new(&config, grid, medium)?))
             }
             SolverType::FEM => Err(KwaversError::FeatureNotAvailable(
-                "Simulation factory cannot assemble FEM from Grid until a real Grid-to-TetrahedralMesh generator and frequency-domain source/boundary contract are available".to_string(),
+                "Simulation factory cannot assemble FEM from Grid until a real Grid-to-TetrahedralMesh generator and frequency-domain source/boundary contract are available".to_owned(),
             )),
         }
     }

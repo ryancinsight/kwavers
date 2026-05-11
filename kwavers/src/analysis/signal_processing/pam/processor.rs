@@ -16,10 +16,17 @@ impl std::fmt::Debug for PAMProcessor {
 }
 
 impl PAMProcessor {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: PAMConfig) -> KwaversResult<Self> {
         Ok(Self { config })
     }
-
+    /// Process.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process(&mut self, beamformed_data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let shape = beamformed_data.shape();
         let (nx, ny, nt) = (shape[0], shape[1], shape[2]);
@@ -53,7 +60,7 @@ impl PAMProcessor {
     fn compute_spectrum(&mut self, time_series: &[f64]) -> KwaversResult<Vec<f64>> {
         let spectrum = fft_1d_array(&ndarray::Array1::from_vec(time_series.to_vec()))
             .iter()
-            .map(|c| (c.re * c.re + c.im * c.im).sqrt())
+            .map(|c| c.re.hypot(c.im))
             .collect();
         Ok(spectrum)
     }
@@ -115,12 +122,18 @@ impl PAMProcessor {
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .map_or(0, |(idx, _)| idx)
     }
-
+    /// Config.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn config(&self) -> &PAMConfig {
         &self.config
     }
-
+    /// Set config.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn set_config(&mut self, config: PAMConfig) -> KwaversResult<()> {
         self.config = config;
         Ok(())

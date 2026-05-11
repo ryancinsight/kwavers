@@ -55,12 +55,16 @@ impl SvdClutterFilter {
     /// ```
     ///
     /// Returns `(B, k)` where k is the tissue rank used.
+    /// # Errors
+    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn filter(&self, iq_data: &Array2<f64>) -> KwaversResult<(Array2<f64>, usize)> {
         let (n_px, n_t) = (iq_data.nrows(), iq_data.ncols());
         if n_px == 0 || n_t == 0 {
             return Err(KwaversError::Numerical(NumericalError::SolverFailed {
-                method: "SVD clutter filter".to_string(),
-                reason: "empty IQ data matrix".to_string(),
+                method: "SVD clutter filter".to_owned(),
+                reason: "empty IQ data matrix".to_owned(),
             }));
         }
 
@@ -86,7 +90,7 @@ impl SvdClutterFilter {
             let sigma_k = sigma.slice(s![0..k]).to_owned();
             let v_k = vt.slice(s![.., 0..k]).to_owned();
             let vt_k = v_k.t().to_owned();
-            let mut us = u_k.clone();
+            let mut us = u_k;
             for (j, &s_j) in sigma_k.iter().enumerate() {
                 for i in 0..n_px {
                     us[[i, j]] *= s_j;
@@ -117,6 +121,9 @@ impl SvdClutterFilter {
 /// - `μ_MP(β)` = theoretical median of the Marchenko-Pastur distribution with parameter β
 ///
 /// Returns the number of singular values that exceed the threshold (tissue rank k).
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
 pub(super) fn svht_threshold(sigma: &Array1<f64>, n_rows: usize, n_cols: usize) -> usize {
     let (n, m) = if n_rows <= n_cols {
         (n_rows, n_cols)
@@ -126,7 +133,7 @@ pub(super) fn svht_threshold(sigma: &Array1<f64>, n_rows: usize, n_cols: usize) 
     let beta = n as f64 / m as f64;
 
     // ω(β) polynomial approximation (Gavish & Donoho 2014, eq. 11)
-    let omega = 0.56 * beta.powi(3) - 0.95 * beta.powi(2) + 1.82 * beta + 1.43;
+    let omega = 1.82f64.mul_add(beta, 0.56f64.mul_add(beta.powi(3), -(0.95 * beta.powi(2)))) + 1.43;
 
     let mut s_sorted: Vec<f64> = sigma.iter().copied().collect();
     s_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -178,7 +185,7 @@ fn mp_median(beta: f64) -> f64 {
             let phi = (k as f64 + 0.5) * dphi;
             let sin_phi = phi.sin();
             let cos_phi = phi.cos();
-            let xv = lb + range * sin_phi * sin_phi;
+            let xv = (range * sin_phi).mul_add(sin_phi, lb);
             let sin2 = 2.0 * sin_phi * cos_phi;
             let integrand = range * range * sin2 * sin2 / (2.0 * std::f64::consts::PI * beta * xv);
             sum += integrand * dphi;

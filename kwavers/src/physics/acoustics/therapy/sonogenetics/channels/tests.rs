@@ -3,6 +3,9 @@ use approx::assert_relative_eq;
 use ndarray::Array3;
 
 /// At Delta T = T_half, P_open must equal exactly 0.5.
+/// # Panics
+/// - Panics with `"MscLG22S must use Boltzmann model"`.
+///
 #[test]
 fn test_boltzmann_half_activation() {
     let params = MechanoChannel::MscLG22S.canonical_params();
@@ -17,6 +20,9 @@ fn test_boltzmann_half_activation() {
 }
 
 /// Well below T_half, P_open must match the analytical closed-state scale.
+/// # Panics
+/// - Panics with `"expected Boltzmann"`.
+///
 #[test]
 fn test_boltzmann_deep_closed() {
     let params = MechanoChannel::MscLG22S.canonical_params();
@@ -34,6 +40,9 @@ fn test_boltzmann_deep_closed() {
 }
 
 /// Well above T_half, P_open must be close to 1.
+/// # Panics
+/// - Panics with `"expected Boltzmann"`.
+///
 #[test]
 fn test_boltzmann_deep_open() {
     let params = MechanoChannel::MscLG22S.canonical_params();
@@ -51,6 +60,9 @@ fn test_boltzmann_deep_open() {
 }
 
 /// Boltzmann opening probability is monotonically increasing with tension.
+/// # Panics
+/// - Panics with `"expected Boltzmann"`.
+///
 #[test]
 fn test_boltzmann_monotone() {
     let params = MechanoChannel::Piezo1.canonical_params();
@@ -73,6 +85,9 @@ fn test_boltzmann_monotone() {
 }
 
 /// Absolute temperature must be positive.
+/// # Panics
+/// - Panics with `"expected Boltzmann"`.
+///
 #[test]
 fn test_boltzmann_zero_temperature_is_error() {
     let params = MechanoChannel::MscLG22S.canonical_params();
@@ -85,6 +100,9 @@ fn test_boltzmann_zero_temperature_is_error() {
 }
 
 /// At P_rad = P_half, P_open = 0.5.
+/// # Panics
+/// - Panics with `"hsTRPA1 must use PressureThreshold model"`.
+///
 #[test]
 fn test_pressure_threshold_half_activation() {
     let params = MechanoChannel::HsTrpa1.canonical_params();
@@ -99,6 +117,9 @@ fn test_pressure_threshold_half_activation() {
 }
 
 /// Zero or negative sigmoid steepness is invalid.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_pressure_threshold_zero_steepness_is_error() {
     let mut pp = PressureThresholdParams {
@@ -125,6 +146,9 @@ fn test_ion_current_analytical() {
 }
 
 /// At P_open = 0, current is zero regardless of driving force.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_ion_current_zero_when_closed() {
     let p_open = Array3::zeros((2, 2, 2));
@@ -135,6 +159,9 @@ fn test_ion_current_zero_when_closed() {
 }
 
 /// At V_m = E_rev, current is zero regardless of P_open.
+/// # Panics
+/// - Panics if an internal precondition is violated.
+///
 #[test]
 fn test_ion_current_zero_at_reversal() {
     let p_open = Array3::from_elem((2, 2, 2), 0.8_f64);
@@ -146,6 +173,13 @@ fn test_ion_current_zero_at_reversal() {
 }
 
 /// All canonical parameters must be positive where positivity is required.
+/// # Panics
+/// - Panics if assertion fails: `{ch:?}: gating_area must be > 0`.
+/// - Panics if assertion fails: `{ch:?}: half_tension must be > 0`.
+/// - Panics if assertion fails: `{ch:?}: conductance must be > 0`.
+/// - Panics if assertion fails: `{ch:?}: half_pressure must be > 0`.
+/// - Panics if assertion fails: `{ch:?}: steepness must be > 0`.
+///
 #[test]
 fn test_canonical_params_are_positive() {
     for ch in [
@@ -185,6 +219,11 @@ fn test_canonical_params_are_positive() {
 
 /// G22N encodes lower mechanical threshold than G22S; MscS remains lower
 /// conductance than MscL.
+/// # Panics
+/// - Panics with `"MscLG22S must use Boltzmann model"`.
+/// - Panics with `"MscLG22N must use Boltzmann model"`.
+/// - Panics with `"MscS must use Boltzmann model"`.
+///
 #[test]
 fn test_bacterial_channel_variant_ordering() {
     let GatingModel::Boltzmann(g22s) = MechanoChannel::MscLG22S.canonical_params() else {

@@ -15,9 +15,9 @@
 //!
 //! Where:
 //! - u(x,t): Acoustic pressure or displacement field [Pa or m]
-//! - c: Speed of sound in the medium [m/s]
-//! - x: Spatial coordinate [m]
-//! - t: Time coordinate [s]
+//! - c: Speed of sound in the medium (m/s)
+//! - x: Spatial coordinate (m)
+//! - t: Time coordinate (s)
 //!
 //! **Derivation**: From conservation of mass (∂ρ/∂t + ∇·(ρv) = 0) and momentum
 //! (ρ∂v/∂t + ∇p = 0) with linearization assumptions (small perturbations, p = c²ρ).
@@ -147,7 +147,7 @@ impl<B: AutodiffBackend> BurnPINN1DWave<B> {
     ///
     /// * `x` - Spatial coordinates [batch_size, 1] in meters
     /// * `t` - Time coordinates [batch_size, 1] in seconds
-    /// * `wave_speed` - Speed of sound c [m/s], typically 343 m/s for air at 20°C
+    /// * `wave_speed` - Speed of sound c (m/s), typically 343 m/s for air at 20°C
     ///
     /// # Returns
     ///
@@ -227,7 +227,7 @@ impl<B: AutodiffBackend> BurnPINN1DWave<B> {
     /// * `x_boundary` - Spatial coordinates at boundaries [n_bc, 1]
     /// * `t_boundary` - Time coordinates at boundaries [n_bc, 1]
     /// * `u_boundary` - Boundary condition values [n_bc, 1]
-    /// * `wave_speed` - Speed of sound c [m/s]
+    /// * `wave_speed` - Speed of sound c (m/s)
     /// * `loss_weights` - Weights for loss components (λ_data, λ_pde, λ_bc)
     ///
     /// # Returns

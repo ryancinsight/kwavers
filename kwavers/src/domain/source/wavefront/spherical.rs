@@ -78,11 +78,13 @@ impl SphericalSource {
     }
 
     /// Get the wave number (k = 2π/λ)
+    #[must_use] 
     pub fn wave_number(&self) -> f64 {
         self.wave_number
     }
 
     /// Get the wave type
+    #[must_use] 
     pub fn wave_type(&self) -> SphericalWaveType {
         self.config.wave_type
     }
@@ -93,7 +95,7 @@ impl SphericalSource {
         let dx = x - self.config.center.0;
         let dy = y - self.config.center.1;
         let dz = z - self.config.center.2;
-        let distance = (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt();
+        let distance = dz.mul_add(dz, dy.mul_add(dy, dx.powi(2))).sqrt();
 
         // Handle singularity at center
         if distance == 0.0 {
@@ -163,35 +165,42 @@ pub struct SphericalBuilder {
 }
 
 impl SphericalBuilder {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[must_use] 
     pub fn center(mut self, center: (f64, f64, f64)) -> Self {
         self.config.center = center;
         self
     }
 
+    #[must_use] 
     pub fn wavelength(mut self, wavelength: f64) -> Self {
         self.config.wavelength = wavelength;
         self
     }
 
+    #[must_use] 
     pub fn wave_type(mut self, wave_type: SphericalWaveType) -> Self {
         self.config.wave_type = wave_type;
         self
     }
 
+    #[must_use] 
     pub fn source_type(mut self, source_type: SourceField) -> Self {
         self.config.source_type = source_type;
         self
     }
 
+    #[must_use] 
     pub fn phase(mut self, phase: f64) -> Self {
         self.config.phase = phase;
         self
     }
 
+    #[must_use] 
     pub fn attenuation(mut self, attenuation: f64) -> Self {
         self.config.attenuation = attenuation;
         self

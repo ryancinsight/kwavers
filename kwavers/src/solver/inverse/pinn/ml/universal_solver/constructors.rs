@@ -10,6 +10,9 @@ use std::collections::HashMap;
 
 impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     /// Create a new universal PINN solver
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> KwaversResult<Self> {
         Ok(Self {
             physics_registry: PhysicsDomainRegistry::new(),
@@ -23,6 +26,9 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     ///
     /// Registers acoustic wave, electromagnetic (electrostatic, magnetostatic,
     /// quasi-static), and thermal domains.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn with_all_domains() -> KwaversResult<Self> {
         let mut solver = Self::new()?;
 
@@ -65,6 +71,9 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     }
 
     /// Create universal solver for cavitation-sonoluminescence-electromagnetic coupling.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn with_cavitation_sonoluminescence_coupling() -> KwaversResult<Self> {
         let mut solver = Self::new()?;
 

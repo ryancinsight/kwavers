@@ -10,6 +10,10 @@ pub struct OpticalValidationCase {
 }
 
 /// Validate the diffusion approximation regime.
+/// # Errors
+/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn validate_diffusion_regime(scenario: &PhotoacousticScenario) -> KwaversResult<()> {
     let props = scenario
         .optical_map
@@ -19,7 +23,7 @@ pub fn validate_diffusion_regime(scenario: &PhotoacousticScenario) -> KwaversRes
             scenario.grid.nz / 2,
         )
         .ok_or_else(|| {
-            KwaversError::InvalidInput("failed to sample optical properties".to_string())
+            KwaversError::InvalidInput("failed to sample optical properties".to_owned())
         })?;
     let mu_a = props.absorption_coefficient;
     let mu_s_prime = props.reduced_scattering();

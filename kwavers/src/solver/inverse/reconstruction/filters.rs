@@ -7,6 +7,9 @@ use std::f64::consts::PI;
 use super::config::FilterType;
 
 /// Apply reconstruction filter to sensor data
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn apply_reconstruction_filter(
     data: &Array2<f64>,
     filter_type: &FilterType,
@@ -23,6 +26,9 @@ pub fn apply_reconstruction_filter(
 }
 
 /// Ram-Lak (ramp) filter
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
     let n = data.dim().1;
     let mut filtered = Array2::zeros(data.dim());
@@ -57,6 +63,9 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
 /// # References
 /// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
 /// - Shepp & Logan (1974): "The Fourier reconstruction of a head section"
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
     let mut filtered = Array2::zeros(data.dim());
 
@@ -86,6 +95,9 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
 ///
 /// # References
 /// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
     let mut filtered = Array2::zeros(data.dim());
 
@@ -106,13 +118,16 @@ fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<
 }
 
 /// Hamming window filter
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 fn apply_hamming_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResult<Array2<f64>> {
     let n = data.dim().1;
     let mut filtered = data.clone();
 
     for sensor_idx in 0..data.dim().0 {
         for i in 0..n {
-            let window = 0.54 - 0.46 * (2.0 * PI * i as f64 / (n - 1) as f64).cos();
+            let window = 0.46f64.mul_add(-(2.0 * PI * i as f64 / (n - 1) as f64).cos(), 0.54);
             filtered[[sensor_idx, i]] *= window;
         }
     }
@@ -121,6 +136,9 @@ fn apply_hamming_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResul
 }
 
 /// Hann window filter
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 fn apply_hann_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResult<Array2<f64>> {
     let n = data.dim().1;
     let mut filtered = data.clone();

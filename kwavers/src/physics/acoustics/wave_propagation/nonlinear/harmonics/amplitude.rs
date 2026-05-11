@@ -2,7 +2,7 @@ use super::super::NonlinearParameters;
 use crate::physics::acoustics::wave_propagation::nonlinear::burgers::fubini_harmonic_amplitude;
 use crate::physics::acoustics::wave_propagation::nonlinear::shock::shock_formation_distance;
 
-/// Second harmonic pressure amplitude at axial distance z [Pa].
+/// Second harmonic pressure amplitude at axial distance z (Pa).
 ///
 /// ## Algorithm
 /// 1. Shock formation distance: z_shock = ρ₀c₀³/(β ω P₀)
@@ -23,7 +23,7 @@ pub fn second_harmonic_amplitude(
     nth_harmonic_amplitude(fundamental_pressure, frequency, distance, 2, params)
 }
 
-/// Nth harmonic pressure amplitude at axial distance z [Pa].
+/// Nth harmonic pressure amplitude at axial distance z (Pa).
 ///
 /// ```text
 /// Pₙ(z) = P₀ × Bₙ(σ) × exp(−α(n·f₀) · z)
@@ -32,6 +32,9 @@ pub fn second_harmonic_amplitude(
 /// ## References
 /// - Aanonsen et al. (1984) J. Acoust. Soc. Am. 75(3), eq. (6).
 /// - Hamilton & Blackstock (1998) §4.3, eq. (4.3.7).
+/// # Panics
+/// - Panics if assertion fails: `harmonic order must be ≥ 1`.
+///
 #[must_use]
 pub fn nth_harmonic_amplitude(
     fundamental_pressure: f64,

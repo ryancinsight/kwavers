@@ -41,7 +41,10 @@ impl TryFrom<SerializableGrid> for Grid {
         })
     }
 }
-
+/// Serialize grid.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn serialize_grid(grid: &Grid) -> KwaversResult<Vec<u8>> {
     let serializable = SerializableGrid::from(grid);
     let mut serializer = AllocSerializer::<256>::default();
@@ -50,12 +53,18 @@ pub fn serialize_grid(grid: &Grid) -> KwaversResult<Vec<u8>> {
         .map_err(|error| KwaversError::InvalidInput(format!("Serialization failed: {error}")))?;
     Ok(serializer.into_serializer().into_inner().to_vec())
 }
-
+/// Access serializable grid.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
 pub fn access_serializable_grid(bytes: &[u8]) -> KwaversResult<&ArchivedSerializableGrid> {
     check_archived_root::<SerializableGrid>(bytes)
         .map_err(|error| KwaversError::InvalidInput(format!("Invalid archived grid: {error}")))
 }
-
+/// Deserialize grid.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
 pub fn deserialize_grid(bytes: &[u8]) -> KwaversResult<Grid> {
     let archived = access_serializable_grid(bytes)?;
     let deserialized: SerializableGrid = archived

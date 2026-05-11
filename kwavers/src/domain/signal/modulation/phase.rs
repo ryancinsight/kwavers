@@ -10,6 +10,10 @@ pub struct PhaseModulation {
 }
 
 impl PhaseModulation {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new(params: ModulationParams) -> Self {
         Self { params }
@@ -37,13 +41,13 @@ impl Modulation for PhaseModulation {
 
         if signal.len() != t.len() {
             return Err(KwaversError::InvalidInput(
-                "Signal and time arrays must have same length".to_string(),
+                "Signal and time arrays must have same length".to_owned(),
             ));
         }
 
         if self.params.modulation_index == 0.0 {
             return Err(KwaversError::InvalidInput(
-                "Modulation index must be non-zero".to_string(),
+                "Modulation index must be non-zero".to_owned(),
             ));
         }
 

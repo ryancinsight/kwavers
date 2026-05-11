@@ -65,6 +65,7 @@ pub enum StencilStrategy {
 
 impl StencilStrategy {
     /// Get string representation
+    #[must_use] 
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Scalar => "Scalar",
@@ -75,6 +76,7 @@ impl StencilStrategy {
     }
 
     /// Select best available strategy
+    #[must_use] 
     pub fn select_best() -> Self {
         let config = get_simd_config();
         match config.level {
@@ -85,6 +87,7 @@ impl StencilStrategy {
     }
 
     /// Verify strategy is available on this system
+    #[must_use] 
     pub fn is_available(&self) -> bool {
         match self {
             Self::Scalar => true,
@@ -140,6 +143,9 @@ pub struct FdtdStencilDispatcher {
 
 impl FdtdStencilDispatcher {
     /// Create new dispatcher with automatic strategy selection
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(
         nx: usize,
         ny: usize,
@@ -152,6 +158,10 @@ impl FdtdStencilDispatcher {
     }
 
     /// Create dispatcher with explicit strategy
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn with_strategy(
         nx: usize,
         ny: usize,
@@ -163,7 +173,7 @@ impl FdtdStencilDispatcher {
         // Validate dimensions
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
-                "Grid dimensions must be >= 3".to_string(),
+                "Grid dimensions must be >= 3".to_owned(),
             ));
         }
 
@@ -195,6 +205,12 @@ impl FdtdStencilDispatcher {
     ///
     /// Routes to appropriate implementation based on strategy selection.
     /// Takes `&mut self` to reuse the pre-allocated scratch buffer on the scalar path.
+    /// # Errors
+    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn update_pressure(
         &mut self,
         p_curr: &Array3<f64>,
@@ -204,13 +220,13 @@ impl FdtdStencilDispatcher {
         // Validate dimensions match
         if p_curr.shape() != p_prev.shape() || p_curr.shape() != u_div.shape() {
             return Err(KwaversError::InvalidInput(
-                "All fields must have identical dimensions".to_string(),
+                "All fields must have identical dimensions".to_owned(),
             ));
         }
 
         if p_curr.dim() != (self.nx, self.ny, self.nz) {
             return Err(KwaversError::InvalidInput(
-                "Field dimensions do not match processor configuration".to_string(),
+                "Field dimensions do not match processor configuration".to_owned(),
             ));
         }
 
@@ -252,7 +268,7 @@ impl FdtdStencilDispatcher {
             StencilStrategy::Auto => {
                 // Should not reach here (Auto is converted in constructor)
                 Err(KwaversError::InternalError(
-                    "Auto strategy not resolved".to_string(),
+                    "Auto strategy not resolved".to_owned(),
                 ))
             }
         }
@@ -268,6 +284,9 @@ impl FdtdStencilDispatcher {
     /// is still allocated for the next invocation because this API returns
     /// ownership. The write-pass itself remains the only per-cell work in the
     /// steady state.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn update_pressure_scalar(
         &mut self,
         p_curr: &Array3<f64>,
@@ -278,17 +297,14 @@ impl FdtdStencilDispatcher {
         for k in 1..self.nz - 1 {
             for j in 1..self.ny - 1 {
                 for i in 1..self.nx - 1 {
-                    let laplacian = p_curr[[i - 1, j, k]]
+                    let laplacian = 6.0f64.mul_add(-p_curr[[i, j, k]], p_curr[[i - 1, j, k]]
                         + p_curr[[i + 1, j, k]]
                         + p_curr[[i, j - 1, k]]
                         + p_curr[[i, j + 1, k]]
-                        + p_curr[[i, j, k - 1]]
-                        + p_curr[[i, j, k + 1]]
-                        - 6.0 * p_curr[[i, j, k]];
+                        + p_curr[[i, j, k - 1]] + p_curr[[i, j, k + 1]]);
 
                     // Leapfrog: p^{n+1} = 2·p^n − p^{n−1} + c²·Δt²·∇²p^n
-                    self.p_scratch[[i, j, k]] = 2.0 * p_curr[[i, j, k]] - p_prev[[i, j, k]]
-                        + self.pressure_coeff * laplacian;
+                    self.p_scratch[[i, j, k]] = self.pressure_coeff.mul_add(laplacian, 2.0f64.mul_add(p_curr[[i, j, k]], -p_prev[[i, j, k]]));
                 }
             }
         }
@@ -302,11 +318,13 @@ impl FdtdStencilDispatcher {
     }
 
     /// Get current strategy
+    #[must_use] 
     pub fn strategy(&self) -> StencilStrategy {
         self.strategy
     }
 
     /// Get performance metrics
+    #[must_use] 
     pub fn metrics(&self) -> DispatchMetrics {
         let config = get_simd_config();
         DispatchMetrics {

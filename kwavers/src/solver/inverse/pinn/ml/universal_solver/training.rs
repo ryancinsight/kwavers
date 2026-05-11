@@ -20,6 +20,12 @@ use std::time::Instant;
 
 impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     /// Solve physics problem for a single domain
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     pub fn solve_physics_domain(
         &mut self,
         domain_name: &str,
@@ -106,6 +112,9 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     }
 
     /// Generate physics-aware collocation points
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn generate_collocation_points(
         &self,
         geometry: &Geometry2D,
@@ -163,6 +172,9 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     }
 
     /// Initialize a neural network model for a physics domain
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn initialize_model(
         &self,
         _domain: &dyn PhysicsDomain<B>,
@@ -179,6 +191,12 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     }
 
     /// Train the neural network model
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
+    /// # Panics
+    /// - Panics if an internal invariant assumed to hold at this call site is violated.
+    ///
     fn train_model(
         model: &mut crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
         domain: &dyn PhysicsDomain<B>,

@@ -11,6 +11,10 @@ use super::HILBERT_SPECTRUM;
 use super::{PipelineState, PipelineStats, RealtimeImagingPipeline, RealtimePipelineConfig};
 
 impl RealtimeImagingPipeline {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: RealtimePipelineConfig) -> KwaversResult<Self> {
         use crate::gpu::memory::UnifiedMemoryManager;
         use std::collections::VecDeque;
@@ -34,7 +38,10 @@ impl RealtimeImagingPipeline {
             state: PipelineState::Stopped,
         })
     }
-
+    /// Start.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn start(&mut self) -> KwaversResult<()> {
         info!("Starting real-time imaging pipeline...");
         info!(
@@ -53,7 +60,10 @@ impl RealtimeImagingPipeline {
         info!("Pipeline started successfully");
         Ok(())
     }
-
+    /// Stop.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn stop(&mut self) -> KwaversResult<()> {
         debug!("Stopping real-time imaging pipeline...");
         self.state = PipelineState::Stopping;
@@ -71,7 +81,10 @@ impl RealtimeImagingPipeline {
         info!("Pipeline stopped");
         Ok(())
     }
-
+    /// Submit rf data.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn submit_rf_data(&mut self, rf_data: Array4<f32>) -> KwaversResult<()> {
         if self.state != PipelineState::Running {
             return Err(KwaversError::InvalidInput(
@@ -90,12 +103,18 @@ impl RealtimeImagingPipeline {
         buffer.push_back(rf_data);
         Ok(())
     }
-
+    /// Get processed frame.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn get_processed_frame(&mut self) -> Option<Array3<f32>> {
         let mut buffer = self.output_buffer.lock().unwrap_or_else(|e| e.into_inner());
         buffer.pop_front()
     }
-
+    /// Process pipeline.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process_pipeline(&mut self) -> KwaversResult<()> {
         if self.state != PipelineState::Running {
             return Ok(());

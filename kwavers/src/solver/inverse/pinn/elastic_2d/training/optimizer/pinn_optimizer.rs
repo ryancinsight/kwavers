@@ -7,6 +7,8 @@ use super::state::{MomentumState, PersistentAdamState};
 #[cfg(feature = "pinn")]
 use super::types::OptimizerAlgorithm;
 #[cfg(feature = "pinn")]
+use burn::module::Module;
+#[cfg(feature = "pinn")]
 use burn::tensor::backend::AutodiffBackend;
 
 /// Gradient descent optimizer for PINN training with persistent state.

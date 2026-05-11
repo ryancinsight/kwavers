@@ -9,6 +9,9 @@ impl BemSolver {
     ///
     /// Use this constructor when the boundary surface has already been extracted.
     /// Triangles must follow CCW outward-normal winding convention.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
     pub fn new(
         config: BemConfig,
         vertices: Vec<[f64; 3]>,
@@ -40,6 +43,9 @@ impl BemSolver {
     ///
     /// Only faces shared by exactly one element (boundary faces) are included.
     /// Outward normal orientation is determined by the position of the interior node.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn from_mesh(config: BemConfig, mesh: &TetrahedralMesh) -> KwaversResult<Self> {
         let mut nodes: Vec<[f64; 3]> = Vec::new();
         let mut triangles_local: Vec<[usize; 3]> = Vec::new();
@@ -81,12 +87,12 @@ impl BemSolver {
             let v1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
             let v2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
 
-            let nx = v1[1] * v2[2] - v1[2] * v2[1];
-            let ny = v1[2] * v2[0] - v1[0] * v2[2];
-            let nz = v1[0] * v2[1] - v1[1] * v2[0];
+            let nx = v1[1].mul_add(v2[2], -(v1[2] * v2[1]));
+            let ny = v1[2].mul_add(v2[0], -(v1[0] * v2[2]));
+            let nz = v1[0].mul_add(v2[1], -(v1[1] * v2[0]));
 
             let v_in = [p_in[0] - p0[0], p_in[1] - p0[1], p_in[2] - p0[2]];
-            let dot = nx * v_in[0] + ny * v_in[1] + nz * v_in[2];
+            let dot = nz.mul_add(v_in[2], nx.mul_add(v_in[0], ny * v_in[1]));
 
             let final_face_nodes = if dot > 0.0 {
                 [face_nodes[0], face_nodes[2], face_nodes[1]]

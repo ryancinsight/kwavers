@@ -193,8 +193,8 @@ pub const ABSORPTION_POWER: f64 = 1.05;
 /// One neper (Np) is the natural-logarithm amplitude ratio; one decibel (dB) is
 /// the base-10 logarithm amplitude ratio scaled by 20:
 ///
-///   20 log₁₀(A₂/A₁) [dB] = 20 ln(A₂/A₁) / ln(10) [dB]
-///   ln(A₂/A₁) [Np]
+///   20 log₁₀(A₂/A₁) (dB) = 20 ln(A₂/A₁) / ln(10) (dB)
+///   ln(A₂/A₁) (Np)
 ///
 /// Therefore:  1 dB = ln(10) / 20 Np
 ///
@@ -226,6 +226,9 @@ mod tests {
     use super::*;
 
     /// Verify DB_TO_NP × NP_TO_DB == 1 to machine precision (round-trip identity).
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_db_np_round_trip() {
         let product = DB_TO_NP * NP_TO_DB;
@@ -236,6 +239,9 @@ mod tests {
     }
 
     /// Confirm the exact relationship DB_TO_NP = ln(10)/20.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_db_to_np_exact_value() {
         let exact = std::f64::consts::LN_10 / 20.0;
@@ -246,6 +252,9 @@ mod tests {
     }
 
     /// Confirm NP_TO_DB = 20/ln(10), the exact Np→dB scale factor.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_np_to_db_exact_value() {
         let exact = 20.0 / std::f64::consts::LN_10;
@@ -257,6 +266,9 @@ mod tests {
 
     /// 1 dB amplitude ratio ≈ 1.12202 linear; 1 Np ≈ 2.71828 linear.
     /// The conversion must satisfy: exp(DB_TO_NP) ≈ 10^(1/20).
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[test]
     fn test_db_to_np_amplitude_consistency() {
         let amp_from_db = 10_f64.powf(1.0 / 20.0); // 10^(1/20)

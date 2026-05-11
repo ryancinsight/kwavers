@@ -18,6 +18,10 @@ pub struct MultiGpuContext {
 
 impl MultiGpuContext {
     /// Create a new multi-GPU context.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub async fn new() -> KwaversResult<Self> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -203,6 +207,9 @@ impl MultiGpuContext {
     }
 
     /// Initiate data transfer between GPUs.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn initiate_transfer(
         &mut self,
         from_gpu: usize,

@@ -14,6 +14,10 @@ pub struct PassiveAcousticMapper {
 }
 
 impl PassiveAcousticMapper {
+    /// New.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn new(config: PAMConfig, geometry: ArrayGeometry) -> KwaversResult<Self> {
         config.beamforming.validate()?;
 
@@ -27,7 +31,11 @@ impl PassiveAcousticMapper {
             beamformer,
         })
     }
-
+    /// Process.
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn process(
         &mut self,
         sensor_data: &Array3<f64>,
@@ -52,14 +60,12 @@ impl PassiveAcousticMapper {
                 .mvdr_unsteered_weights_time_series(sensor_data, diagonal_loading)?,
             PamBeamformingMethod::Music { .. } => {
                 return Err(KwaversError::InvalidInput(
-                    "PAM beamforming: MUSIC is not yet wired to the shared subspace implementation. Use DelayAndSum or CaponDiagonalLoading for PAM mapping."
-                        .to_string(),
+                    "PAM beamforming: MUSIC is not yet wired to the shared subspace implementation. Use DelayAndSum or CaponDiagonalLoading for PAM mapping.".to_owned(),
                 ));
             }
             PamBeamformingMethod::EigenspaceMinVariance { .. } => {
                 return Err(KwaversError::InvalidInput(
-                    "PAM beamforming: EigenspaceMinVariance is not yet wired to the shared subspace implementation. Use DelayAndSum or CaponDiagonalLoading for PAM mapping."
-                        .to_string(),
+                    "PAM beamforming: EigenspaceMinVariance is not yet wired to the shared subspace implementation. Use DelayAndSum or CaponDiagonalLoading for PAM mapping.".to_owned(),
                 ));
             }
             PamBeamformingMethod::TimeExposureAcoustics => {
@@ -71,8 +77,8 @@ impl PassiveAcousticMapper {
                     &weights,
                 )?;
 
-                let mut squared = das.clone();
-                squared.mapv_inplace(|x| x * x);
+                let mut squared = das;
+                squared.par_mapv_inplace(|x| x * x);
 
                 let integrated = squared.sum_axis(Axis(2));
                 let (nx, ny) = (integrated.shape()[0], integrated.shape()[1]);
@@ -90,12 +96,18 @@ impl PassiveAcousticMapper {
 
         self.processor.process(&beamformed)
     }
-
+    /// Config.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn config(&self) -> &PAMConfig {
         self.processor.config()
     }
-
+    /// Set config.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn set_config(&mut self, config: PAMConfig) -> KwaversResult<()> {
         config.beamforming.validate()?;
 

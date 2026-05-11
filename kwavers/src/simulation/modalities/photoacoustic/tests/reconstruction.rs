@@ -14,10 +14,9 @@ fn test_analytical_validation() {
     let parameters = crate::domain::imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
-    let error = simulator.validate_analytical();
-    assert!(error.is_ok());
+    let error = simulator.validate_analytical().unwrap();
     assert!(
-        error.unwrap() < 1.0,
+        error < 1.0,
         "Relative error should be reasonable (< 100%)"
     );
 }

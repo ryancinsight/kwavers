@@ -82,9 +82,9 @@ impl Solver for GenericFdtdSolver<Array3<f64>> {
             SolverFeature::GpuAcceleration => {
                 if enable && self.gpu_accelerator.is_none() {
                     return Err(KwaversError::Config(ConfigError::InvalidValue {
-                        parameter: "enable_gpu_acceleration".to_string(),
-                        value: "true".to_string(),
-                        constraint: "GPU accelerator must be configured".to_string(),
+                        parameter: "enable_gpu_acceleration".to_owned(),
+                        value: "true".to_owned(),
+                        constraint: "GPU accelerator must be configured".to_owned(),
                     }));
                 }
                 self.config.enable_gpu_acceleration = enable;

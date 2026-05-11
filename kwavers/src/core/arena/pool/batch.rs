@@ -16,6 +16,9 @@ pub struct BufferBatch {
 
 impl BufferBatch {
     /// Create an empty batch.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -26,6 +29,9 @@ impl BufferBatch {
     /// Acquire `count` buffers from the pool.
     ///
     /// Either all `count` buffers are acquired, or none are.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn acquire(pool: &Arc<BufferPool>, count: usize) -> KwaversResult<Self> {
         let mut buffers = Vec::with_capacity(count);
 
@@ -55,6 +61,9 @@ impl BufferBatch {
     }
 
     /// Access buffer at index as byte slice.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn get(&self, index: usize) -> &[u8] {
         assert!(index < self.buffers.len(), "buffer index out of bounds");
@@ -62,6 +71,9 @@ impl BufferBatch {
     }
 
     /// Access buffer at index as mutable byte slice.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn get_mut(&mut self, index: usize) -> &mut [u8] {
         assert!(index < self.buffers.len(), "buffer index out of bounds");
@@ -69,6 +81,9 @@ impl BufferBatch {
     }
 
     /// Access buffer as typed slice.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn get_typed<T>(&self, index: usize) -> &[T] {
         assert!(index < self.buffers.len(), "buffer index out of bounds");
@@ -76,6 +91,9 @@ impl BufferBatch {
     }
 
     /// Access buffer as mutable typed slice.
+    /// # Panics
+    /// - Panics if an internal precondition is violated.
+    ///
     #[must_use]
     pub fn get_typed_mut<T>(&mut self, index: usize) -> &mut [T] {
         assert!(index < self.buffers.len(), "buffer index out of bounds");
@@ -99,6 +117,9 @@ pub struct NumaPoolManager {
 
 impl NumaPoolManager {
     /// Create pool manager with one pool per detected NUMA node.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new(config: PoolConfig) -> KwaversResult<Self> {
         let topology = super::super::numa::NumaTopology::detect();
         let mut pools = Vec::with_capacity(topology.node_count);
@@ -116,6 +137,9 @@ impl NumaPoolManager {
     }
 
     /// Acquire buffer from pool on specified NUMA node, with fallback.
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    ///
     pub fn acquire_on_node(&self, node: i32) -> KwaversResult<PooledBuffer> {
         if node >= 0 && (node as usize) < self.pools.len() {
             if let Some(ref pool) = self.pools[node as usize] {
@@ -131,7 +155,7 @@ impl NumaPoolManager {
 
         Err(KwaversError::System(
             crate::core::error::SystemError::ResourceUnavailable {
-                resource: "NUMA pool".to_string(),
+                resource: "NUMA pool".to_owned(),
             },
         ))
     }

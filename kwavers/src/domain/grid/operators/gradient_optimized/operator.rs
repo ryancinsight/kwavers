@@ -47,35 +47,41 @@ impl Default for GradientOperatorBuilder {
 
 impl GradientOperatorBuilder {
     /// Create a new builder
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Set parallel computation
+    #[must_use] 
     pub fn with_parallel(mut self, parallel: bool) -> Self {
         self.parallel = parallel;
         self
     }
 
     /// Set caching
+    #[must_use] 
     pub fn with_caching(mut self, caching: bool) -> Self {
         self.caching = caching;
         self
     }
 
     /// Set chunk size
+    #[must_use] 
     pub fn with_chunk_size(mut self, chunk_size: usize) -> Self {
         self.chunk_size = chunk_size;
         self
     }
 
     /// Set boundary strategy
+    #[must_use] 
     pub fn with_boundary_strategy(mut self, strategy: BoundaryStrategy) -> Self {
         self.boundary_strategy = strategy;
         self
     }
 
     /// Build the gradient operator
+    #[must_use] 
     pub fn build(&self) -> GradientOperator {
         GradientOperator {
             parallel: self.parallel,
@@ -101,6 +107,9 @@ pub struct GradientOperator {
 
 impl GradientOperator {
     /// Compute gradient using optimized configuration
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn compute<T>(
         &self,
         field: &ArrayView3<T>,

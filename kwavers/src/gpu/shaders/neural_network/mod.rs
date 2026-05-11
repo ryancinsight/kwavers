@@ -59,6 +59,10 @@ pub struct NeuralNetworkShader {
 }
 
 impl NeuralNetworkShader {
+    /// New.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub async fn new(device: &GpuDevice) -> KwaversResult<Self> {
         let shader_module = device
             .device()

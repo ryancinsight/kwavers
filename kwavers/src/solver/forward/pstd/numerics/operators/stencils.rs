@@ -17,6 +17,9 @@ pub struct StencilWeights {
 }
 
 /// Compute derivative stencils for given order and accuracy
+/// # Errors
+/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+///
 pub fn compute_derivative_stencils(
     order: usize,
     accuracy: usize,
@@ -27,9 +30,9 @@ pub fn compute_derivative_stencils(
         (2, 2) => Ok(second_order_second_derivative()),
         (2, 4) => Ok(fourth_order_second_derivative()),
         _ => Err(KwaversError::Validation(ValidationError::FieldValidation {
-            field: "stencil_config".to_string(),
+            field: "stencil_config".to_owned(),
             value: format!("order={}, accuracy={}", order, accuracy),
-            constraint: "Supported combinations: (1,2), (1,4), (2,2), (2,4)".to_string(),
+            constraint: "Supported combinations: (1,2), (1,4), (2,2), (2,4)".to_owned(),
         })),
     }
 }

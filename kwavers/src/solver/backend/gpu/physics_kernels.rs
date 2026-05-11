@@ -146,6 +146,9 @@ pub struct PhysicsKernelRegistry {
 
 impl PhysicsKernelRegistry {
     /// Create new kernel registry
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn new() -> Self {
         Self {
             kernels: HashMap::new(),
@@ -154,6 +157,9 @@ impl PhysicsKernelRegistry {
     }
 
     /// Register a physics kernel
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn register(&mut self, kernel: PhysicsKernel) -> KwaversResult<()> {
         self.kernels.insert(kernel.domain, kernel);
         Ok(())
@@ -285,7 +291,7 @@ mod tests {
 
         registry.register(kernel).unwrap();
 
-        assert!(registry.get_kernel(PhysicsDomain::AcousticFDTD).is_some());
+        assert_eq!(registry.get_kernel(PhysicsDomain::AcousticFDTD).unwrap().domain, PhysicsDomain::AcousticFDTD);
         assert!(registry.get_kernel(PhysicsDomain::Absorption).is_none());
     }
 

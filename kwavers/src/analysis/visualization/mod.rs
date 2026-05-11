@@ -137,8 +137,7 @@ mod tests {
     #[test]
     fn test_engine_creation() {
         let config = VisualizationConfig::default();
-        let engine = VisualizationEngine::create(config);
-        assert!(engine.is_ok());
+        let _engine = VisualizationEngine::create(config).unwrap();
     }
 
     #[test]
@@ -146,8 +145,7 @@ mod tests {
         let config = VisualizationConfig::default();
         let mut engine = VisualizationEngine::create(config).unwrap();
 
-        let result = engine.update_parameter("frequency", 2.0e6);
-        assert!(result.is_ok());
+        engine.update_parameter("frequency", 2.0e6).unwrap();
     }
 
     #[test]
@@ -158,9 +156,7 @@ mod tests {
         let grid = create_test_grid();
         let field = create_test_field();
 
-        // Should not fail even without GPU context
-        let result = pollster::block_on(engine.render_field(&field, FieldType::Pressure, &grid));
-        assert!(result.is_ok());
+        pollster::block_on(engine.render_field(&field, FieldType::Pressure, &grid)).unwrap();
     }
 
     #[test]
@@ -176,9 +172,7 @@ mod tests {
             FieldType::LightFluence,
         ];
 
-        // Should not fail even without GPU context
-        let result = pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid));
-        assert!(result.is_ok());
+        pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid)).unwrap();
     }
 
     #[test]
@@ -186,15 +180,14 @@ mod tests {
         let grid = create_test_grid();
         let field = create_test_field();
 
-        let result = fallback::render_field(&field, FieldType::Pressure, &grid);
-        assert!(result.is_ok());
+        fallback::render_field(&field, FieldType::Pressure, &grid).unwrap();
     }
 
     #[test]
     fn test_visualization_config_validation() {
         // Valid config
         let valid_config = VisualizationConfig::default();
-        assert!(valid_config.validate().is_ok());
+        valid_config.validate().unwrap();
 
         // Invalid target_fps
         let invalid_config = VisualizationConfig {

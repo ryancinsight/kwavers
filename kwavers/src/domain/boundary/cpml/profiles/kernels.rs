@@ -7,7 +7,6 @@
 
 use ndarray::Array1;
 
-const KWAVE_PML_ORDER: f64 = 4.0;
 
 pub(super) struct CollocatedProfileMut<'a> {
     sigma: &'a mut Array1<f64>,
@@ -65,13 +64,13 @@ pub(super) fn compute_collocated_profile(
 
     for i in 0..thickness.min(n) {
         let q = (thickness - i) as f64 / thickness as f64;
-        assign(i, pml_alpha * (sound_speed / dx) * q.powf(KWAVE_PML_ORDER));
+        assign(i, pml_alpha * (sound_speed / dx) * q.powi(4));
     }
 
     let right_start = n.saturating_sub(thickness);
     for i in right_start..n {
         let q = (i - right_start + 1) as f64 / thickness as f64;
-        assign(i, pml_alpha * (sound_speed / dx) * q.powf(KWAVE_PML_ORDER));
+        assign(i, pml_alpha * (sound_speed / dx) * q.powi(4));
     }
 }
 
@@ -97,14 +96,14 @@ pub(super) fn compute_staggered_profile(
 
     for i in 0..thickness.min(n) {
         let q = (t - i as f64 - 0.5) / t;
-        sigma_sg[i] = pml_alpha * (sound_speed / dx) * q.abs().powf(KWAVE_PML_ORDER);
+        sigma_sg[i] = pml_alpha * (sound_speed / dx) * q.abs().powi(4);
     }
 
     let right_start = n.saturating_sub(thickness);
     for i in right_start..n {
         let j = (i - right_start) as f64;
         let q = (j + 1.5) / t;
-        sigma_sg[i] = pml_alpha * (sound_speed / dx) * q.powf(KWAVE_PML_ORDER);
+        sigma_sg[i] = pml_alpha * (sound_speed / dx) * q.powi(4);
     }
 }
 

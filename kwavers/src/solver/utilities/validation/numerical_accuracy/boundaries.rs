@@ -2,6 +2,10 @@ use super::{BoundaryResults, NumericalValidator};
 use crate::domain::grid::Grid;
 
 impl NumericalValidator {
+    /// Validate boundaries.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub(super) fn validate_boundaries(
         &self,
     ) -> Result<BoundaryResults, Box<dyn std::error::Error>> {
@@ -26,6 +30,9 @@ impl NumericalValidator {
     /// - CPML: R < 10^(-60/20) ≈ 0.001 (Roden & Gedney 2000, §IV)
     /// - PML:  R < 10^(-40/20) = 0.01  (Berenger 1994, §3)
     /// - ABC:  R < 10^(-20/20) = 0.1   (Engquist & Majda 1977)
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn test_boundary_reflection(
         &self,
         boundary_type: &str,

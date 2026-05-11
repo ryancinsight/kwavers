@@ -3,30 +3,65 @@ use ndarray::{Array2, Array3};
 
 #[test]
 fn test_physics_loss_config_default() {
+    // default: sound_speed=343.0, frequency=1e6, lambda_data_init=0.8, lambda_physics_init=0.2
     let config = PhysicsLossConfig::default();
-    assert!(config.validate().is_ok());
+    config.validate().unwrap();
+    assert!(
+        config.sound_speed > 0.0,
+        "default sound_speed must be positive, got {}",
+        config.sound_speed
+    );
+    assert!(
+        config.frequency > 0.0,
+        "default frequency must be positive, got {}",
+        config.frequency
+    );
+    assert!(
+        config.history_window > 0,
+        "default history_window must be > 0, got {}",
+        config.history_window
+    );
 }
 
 #[test]
 fn test_physics_loss_config_validation() {
     let mut config = PhysicsLossConfig::default();
     config.sound_speed = 0.0;
-    assert!(config.validate().is_err());
+    let err = config.validate().unwrap_err();
+    assert!(
+        format!("{err:?}").contains("sound_speed"),
+        "zero sound_speed error must mention 'sound_speed'; got: {err:?}"
+    );
 
     config.sound_speed = 343.0;
     config.frequency = -100.0;
-    assert!(config.validate().is_err());
+    let err = config.validate().unwrap_err();
+    assert!(
+        format!("{err:?}").contains("frequency"),
+        "negative frequency error must mention 'frequency'; got: {err:?}"
+    );
 
     config.frequency = 1_000_000.0;
     config.history_window = 0;
-    assert!(config.validate().is_err());
+    let err = config.validate().unwrap_err();
+    assert!(
+        format!("{err:?}").contains("history_window"),
+        "zero history_window error must mention 'history_window'; got: {err:?}"
+    );
 }
 
 #[test]
 fn test_physics_loss_creation() {
+    // k = 2πf/c = 2π·1e6/343 ≈ 18313 rad/m
     let config = PhysicsLossConfig::default();
-    let loss = PhysicsInformedLoss::new(config);
-    assert!(loss.is_ok());
+    let loss = PhysicsInformedLoss::new(config).unwrap();
+    let k_expected = 2.0 * std::f64::consts::PI * 1_000_000.0 / 343.0;
+    assert!(
+        (loss.wave_number() - k_expected).abs() < 1.0,
+        "wave_number = {} (expected ≈ {k_expected})",
+        loss.wave_number()
+    );
+    assert!(loss.wave_number() > 0.0, "wave_number must be positive");
 }
 
 #[test]

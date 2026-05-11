@@ -11,6 +11,10 @@ pub struct PhotoacousticOrchestrator {
 }
 
 impl PhotoacousticOrchestrator {
+    /// Execute.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub fn execute(
         &self,
         scenario: &PhotoacousticScenario,

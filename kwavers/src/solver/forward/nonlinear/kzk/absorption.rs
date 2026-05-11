@@ -35,12 +35,12 @@
 //!
 //! Strang splitting calls `apply` four times per z-step: twice with
 //! `step_size = dz/2` and twice with (effectively) `step_size = dz` for the
-//! full nonlinear pass.  The attenuation mask H[k] = exp(−α(f_k)·Δz) depends
+//! full nonlinear pass.  The attenuation mask `H[k] = exp(−α(f_k)·Δz)` depends
 //! only on `step_size`; both variants are pre-computed in `new()` and stored
 //! as `h_mask_half` (dz/2) and `h_mask_full` (dz).  The per-call `Vec`
 //! allocation and `powf` re-computation are eliminated on the hot path.
 //!
-//! `waveform` (Array1<Complex64>, length nt) is likewise pre-allocated and
+//! `waveform` (`Array1<Complex64>`, length nt) is likewise pre-allocated and
 //! reused across all spatial-point iterations, replacing one 16 KB allocation
 //! per (i,j) pair.
 //!
@@ -82,11 +82,11 @@ pub struct AbsorptionOperator {
     power: f64,
     /// Grid/medium configuration
     config: KZKConfig,
-    /// Pre-computed attenuation mask H[k] = exp(−α(f_k) · dz/2).
+    /// Pre-computed attenuation mask `H[k] = exp(−α(f_k) · dz/2)`.
     ///
     /// Length nt.  Applied when `step_size ≈ config.dz / 2`.
     h_mask_half: Vec<f64>,
-    /// Pre-computed attenuation mask H[k] = exp(−α(f_k) · dz).
+    /// Pre-computed attenuation mask `H[k] = exp(−α(f_k) · dz)`.
     ///
     /// Length nt.  Applied when `step_size ≈ config.dz`.
     h_mask_full: Vec<f64>,
@@ -159,8 +159,8 @@ impl AbsorptionOperator {
     /// For each DFT bin k = 0..nt:
     /// ```text
     /// pos_k = k  if k ≤ nt/2,  else  nt − k      (fold negative freqs)
-    /// f_k   = pos_k / (nt · Δτ)                    [Hz]
-    /// H_k   = exp(−α₀ · f_k^y · step_size)         [dimensionless]
+    /// f_k   = pos_k / (nt · Δτ)                    (Hz)
+    /// H_k   = exp(−α₀ · f_k^y · step_size)         (dimensionless)
     /// ```
     /// DC bin (k=0) stays 1.0 (no attenuation at zero frequency).
     fn build_mask(alpha0_np: f64, power: f64, nt: usize, dt: f64, step_size: f64) -> Vec<f64> {
@@ -176,7 +176,7 @@ impl AbsorptionOperator {
         mask
     }
 
-    /// Apply spectrally-resolved power-law absorption for one axial step `step_size` [m].
+    /// Apply spectrally-resolved power-law absorption for one axial step `step_size` (m).
     ///
     /// ## Algorithm
     ///
@@ -229,7 +229,7 @@ impl AbsorptionOperator {
         // well within IEEE 754 double representability for the exact dz/2.0
         // literal that the solver passes.
         let h_mask: &Vec<f64> =
-            if (step_size - self.config.dz * 0.5).abs() <= self.config.dz * 1e-10 {
+            if self.config.dz.mul_add(-0.5, step_size).abs() <= self.config.dz * 1e-10 {
                 &self.h_mask_half
             } else {
                 &self.h_mask_full
@@ -277,10 +277,10 @@ impl AbsorptionOperator {
         self.alpha0_np_per_m_per_hz_y * frequency_hz.powf(self.power)
     }
 
-    /// Return the 1/e amplitude penetration depth at frequency `frequency_hz` [Hz].
+    /// Return the 1/e amplitude penetration depth at frequency `frequency_hz` (Hz).
     ///
     /// ```text
-    /// d(f) = 1 / α(f)   [m]
+    /// d(f) = 1 / α(f)   (m)
     /// ```
     #[must_use]
     pub fn penetration_depth(&self, frequency_hz: f64) -> f64 {

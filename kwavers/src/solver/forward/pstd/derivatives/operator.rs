@@ -139,6 +139,9 @@ impl SpectralDerivativeOperator {
     }
 
     /// Compute 2/3-rule dealiasing filter (sets |k| > 2π/(3Δx) to zero).
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn compute_dealiasing_filter(n: usize, dx: f64) -> Array1<f64> {
         let mut filter = Array1::ones(n);
         let cutoff = 2.0 * std::f64::consts::PI / (3.0 * dx);
@@ -152,6 +155,9 @@ impl SpectralDerivativeOperator {
     }
 
     /// Compute x-derivative via spectral method (FFT along x pencils).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn derivative_x(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         self.validate_field(field)?;
         let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
@@ -161,6 +167,9 @@ impl SpectralDerivativeOperator {
     }
 
     /// Compute y-derivative via spectral method (FFT along y pencils).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn derivative_y(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         self.validate_field(field)?;
         let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
@@ -170,6 +179,9 @@ impl SpectralDerivativeOperator {
     }
 
     /// Compute z-derivative via spectral method (FFT along z pencils).
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn derivative_z(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         self.validate_field(field)?;
         let mut derivative = Array3::zeros([self.nx, self.ny, self.nz]);
@@ -206,6 +218,9 @@ impl SpectralDerivativeOperator {
     }
 
     /// Parallelises over j (Axis 1): each rayon thread processes all nz pencils for one j.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn derivative_along_x_impl(
         &self,
         field: &ArrayView3<f64>,
@@ -241,6 +256,9 @@ impl SpectralDerivativeOperator {
     }
 
     /// Parallelises over i (Axis 0): each rayon thread processes all nz pencils for one i.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn derivative_along_y_impl(
         &self,
         field: &ArrayView3<f64>,
@@ -276,6 +294,9 @@ impl SpectralDerivativeOperator {
     }
 
     /// Parallelises over i (Axis 0): each rayon thread processes all ny pencils for one i.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     fn derivative_along_z_impl(
         &self,
         field: &ArrayView3<f64>,

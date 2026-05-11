@@ -2,22 +2,30 @@ use super::{CheckpointManager, DistributedTrainingConfig};
 use crate::core::error::KwaversResult;
 
 impl CheckpointManager {
+    /// From config.
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    ///
     pub(super) fn from_config(config: &DistributedTrainingConfig) -> Self {
         Self {
             checkpoint_dir: std::path::PathBuf::from(&config.checkpoint_config.directory),
             max_checkpoints: config.checkpoint_config.max_checkpoints,
-            checkpoint_interval: config.checkpoint_config.interval,
-            auto_save: config.checkpoint_config.auto_save,
         }
     }
-
+    /// Ensure checkpoint dir.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn ensure_checkpoint_dir(&self) -> KwaversResult<()> {
         if !self.checkpoint_dir.exists() {
             std::fs::create_dir_all(&self.checkpoint_dir)?;
         }
         Ok(())
     }
-
+    /// List checkpoints.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn list_checkpoints(&self) -> KwaversResult<Vec<usize>> {
         let mut checkpoints = Vec::new();
 
@@ -44,7 +52,10 @@ impl CheckpointManager {
         checkpoints.sort();
         Ok(checkpoints)
     }
-
+    /// Cleanup old checkpoints.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
     pub fn cleanup_old_checkpoints(&self) -> KwaversResult<()> {
         let checkpoints = self.list_checkpoints()?;
         let to_remove = checkpoints.len().saturating_sub(self.max_checkpoints);

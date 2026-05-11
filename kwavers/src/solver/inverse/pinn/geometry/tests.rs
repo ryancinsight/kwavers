@@ -42,7 +42,6 @@ fn test_multi_region_locate() {
     );
 
     let loc = multi.locate_point(&[0.5, 0.5], 1e-6);
-    assert!(loc.is_some());
     assert_eq!(loc.unwrap().0, 0);
 }
 

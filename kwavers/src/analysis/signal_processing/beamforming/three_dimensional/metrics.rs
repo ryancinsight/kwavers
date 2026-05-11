@@ -3,6 +3,7 @@
 //! Utilities for tracking and calculating memory consumption for GPU and CPU
 //! resources used in 3D beamforming operations.
 
+#[cfg(feature = "gpu")]
 use crate::analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 #[cfg(feature = "gpu")]
 use crate::analysis::signal_processing::beamforming::three_dimensional::streaming::StreamingBuffer;
@@ -20,8 +21,8 @@ use crate::analysis::signal_processing::beamforming::three_dimensional::streamin
 /// # Returns
 /// Estimated GPU memory usage in MB
 ///
-/// Note: Currently used only in tests. Will be integrated for resource planning.
-#[allow(dead_code)]
+/// Called from `processor.rs::calculate_gpu_memory_usage()` (GPU builds) and from unit tests.
+#[cfg(feature = "gpu")]
 pub fn calculate_gpu_memory_usage(config: &BeamformingConfig3D) -> f64 {
     // RF data buffer size
     // Memory estimation for RF data buffering
@@ -80,19 +81,18 @@ pub fn calculate_cpu_memory_usage(streaming_buffer: &Option<StreamingBuffer>) ->
     rf_data_size as f64 / (1024.0 * 1024.0) // Convert to MB
 }
 
-/// Calculate CPU memory usage (CPU-only version)
+/// Calculate CPU memory usage (CPU-only build).
 ///
-/// # Returns
-/// CPU memory usage in MB (0.0 in CPU-only mode)
+/// Returns `0.0`: no streaming buffer exists in CPU-only builds.
 #[cfg(not(feature = "gpu"))]
-#[allow(dead_code)]
 pub fn calculate_cpu_memory_usage(_streaming_buffer: &Option<()>) -> f64 {
     // No GPU buffers in CPU-only mode
     0.0
 }
 
-#[cfg(test)]
-mod tests {
+/// GPU memory tests — only valid when GPU feature is enabled.
+#[cfg(all(test, feature = "gpu"))]
+mod gpu_tests {
     use super::*;
 
     #[test]
@@ -100,30 +100,13 @@ mod tests {
         let config = BeamformingConfig3D::default();
         let memory_mb = calculate_gpu_memory_usage(&config);
 
-        // Should have reasonable memory estimate
+        // Analytical bounds:
+        // Default: 128×128×128 volume (~8 MB) + 16 frames × 32×32×16 elements × 1024 samples × 4 B (~512 MB)
+        let expected_volume = 128.0 * 128.0 * 128.0 * 4.0 / (1024.0 * 1024.0);
+        let expected_rf = 16.0 * 32.0 * 32.0 * 16.0 * 1024.0 * 4.0 / (1024.0 * 1024.0);
         assert!(memory_mb > 0.0);
-        assert!(memory_mb < 10000.0); // Less than 10GB for default config
-
-        // Rough calculation check:
-        // Default: 128x128x128 volume + 16 frames × 32×32×16 elements × 1024 samples
-        let expected_volume = 128.0 * 128.0 * 128.0 * 4.0 / (1024.0 * 1024.0); // ~8MB
-        let expected_rf = 16.0 * 32.0 * 32.0 * 16.0 * 1024.0 * 4.0 / (1024.0 * 1024.0); // ~512MB
-
-        // Total should be in reasonable range
         assert!(memory_mb > expected_volume);
         assert!(memory_mb < expected_rf * 2.0);
-    }
-
-    #[test]
-    fn test_cpu_memory_calculation_no_buffer() {
-        let streaming_buffer = None;
-        let memory_mb = calculate_cpu_memory_usage(&streaming_buffer);
-
-        #[cfg(feature = "gpu")]
-        assert_eq!(memory_mb, 0.0);
-
-        #[cfg(not(feature = "gpu"))]
-        assert_eq!(memory_mb, 0.0);
     }
 
     #[test]
@@ -132,17 +115,23 @@ mod tests {
             volume_dims: (64, 64, 64),
             ..Default::default()
         };
-
         let config2 = BeamformingConfig3D {
             volume_dims: (128, 128, 128),
             ..Default::default()
         };
+        // 128³ volume is 8× larger than 64³ — larger estimate expected.
+        assert!(calculate_gpu_memory_usage(&config2) > calculate_gpu_memory_usage(&config1));
+    }
+}
 
-        let mem1 = calculate_gpu_memory_usage(&config1);
-        let mem2 = calculate_gpu_memory_usage(&config2);
+/// CPU memory tests — run in both feature configurations.
+#[cfg(test)]
+mod cpu_tests {
+    use super::*;
 
-        // Larger volume should use more memory
-        // 128³ is 8× larger than 64³
-        assert!(mem2 > mem1);
+    #[test]
+    fn test_cpu_memory_calculation_no_buffer() {
+        let memory_mb = calculate_cpu_memory_usage(&None);
+        assert_eq!(memory_mb, 0.0);
     }
 }
