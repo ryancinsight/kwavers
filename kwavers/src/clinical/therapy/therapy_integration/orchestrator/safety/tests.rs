@@ -76,9 +76,9 @@ fn test_mechanical_index_calculation() {
     )
     .unwrap();
 
-    // MI = PNP / (sqrt(f) * 1e6)
-    // MI = 0.5e6 / (sqrt(1e6) * 1e6) = 0.5e6 / (1000 * 1e6) = 0.5e6 / 1e9 = 0.0005
-    assert!((safety_metrics.mechanical_index - 0.0005).abs() < 0.0001);
+    // MI (FDA 510(k) / IEC 62359): MI = pnp_Pa / (1e3 × sqrt(f_Hz))
+    // MI = 0.5e6 / (1e3 × sqrt(1e6)) = 0.5e6 / (1e3 × 1e3) = 0.5e6 / 1e6 = 0.5
+    assert!((safety_metrics.mechanical_index - 0.5).abs() < 0.001);
 }
 
 #[test]

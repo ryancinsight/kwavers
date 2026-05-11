@@ -79,20 +79,20 @@ pub fn update_safety_metrics(
     dt: f64,
     cavitation_activity: Option<&ndarray::Array3<f64>>,
 ) -> KwaversResult<()> {
-    // Calculate thermal index (IEC 62359 compliant)
-    let pressure_rms = acoustic_field
-        .pressure
-        .iter()
-        .map(|&p| p * p)
-        .sum::<f64>()
-        .sqrt()
-        / acoustic_field.pressure.len() as f64;
+    // Calculate thermal index (IEC 62359 compliant).
+    // RMS pressure: P_rms = sqrt( mean(p²) ) = sqrt( Σp² / N )
+    let n = acoustic_field.pressure.len() as f64;
+    let sum_sq: f64 = acoustic_field.pressure.iter().map(|&p| p * p).sum();
+    let pressure_rms = (sum_sq / n).sqrt();
 
     safety_metrics.thermal_index = pressure_rms * acoustic_params.frequency.sqrt() / 1e6;
 
-    // Calculate mechanical index (FDA guidance compliant)
+    // Mechanical Index (FDA 510(k) guidance, IEC 62359):
+    // MI = p_neg_peak_derated (MPa) / sqrt(f_center (MHz))
+    //    = (pnp_Pa / 1e6) / sqrt(f_Hz / 1e6)
+    //    = pnp_Pa / (1e3 × sqrt(f_Hz))
     safety_metrics.mechanical_index =
-        acoustic_params.pnp / (acoustic_params.frequency.sqrt() * 1e6);
+        acoustic_params.pnp / (acoustic_params.frequency.sqrt() * 1e3);
 
     // Update cavitation dose (time-integrated cavitation activity)
     if let Some(cavitation) = cavitation_activity {

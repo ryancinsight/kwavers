@@ -13,9 +13,6 @@ pub struct IntensityTracker {
     /// Maximum window size (seconds) for temporal averaging
     max_window_duration: f64,
 
-    /// Time step between measurements (seconds)
-    dt: f64,
-
     /// History of instantaneous intensity measurements
     intensity_history: Vec<InstantaneousIntensity>,
 
@@ -59,7 +56,6 @@ impl IntensityTracker {
 
         Ok(Self {
             max_window_duration,
-            dt,
             intensity_history: Vec::new(),
             current_metrics: TemporalIntensityMetrics::default(),
             thermal_dose: ThermalDose::default(),

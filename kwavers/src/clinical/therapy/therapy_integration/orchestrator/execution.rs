@@ -12,19 +12,27 @@
 //! - Beam width and intensity profiles
 //! - Distance-dependent attenuation
 //!
+//! ## Temperature Output
+//!
+//! All temperature fields returned by this module are in **degrees Celsius (°C)**,
+//! consistent with the `IntensityTracker::update_thermal_dose` contract which
+//! applies CEM43 thresholds at 37 °C and 43 °C.
+//!
 //! ## References
 //!
 //! - O'Neil (1949): "Gaussian beam propagation in focused ultrasound"
 //! - IEC 62359:2010: "Field characterization methods"
+//! - Pennes (1948): "Analysis of tissue and arterial blood temperatures"
+//! - Nyborg (1981): "Heat generation by ultrasound in a relaxing medium"
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 
 use super::super::config::AcousticTherapyParams;
 use super::super::state::AcousticField;
 
-/// Generate acoustic field for therapy
+/// Generate acoustic field for therapy.
 ///
 /// Creates a focused acoustic field using Gaussian beam approximation.
 /// The field is centered at the specified focal depth with a Gaussian intensity profile.
@@ -42,6 +50,10 @@ use super::super::state::AcousticField;
 ///
 /// Uses Gaussian beam approximation: P(r) = P₀·exp(−r²/w²), where r is the
 /// distance from the focal point and w = 5 mm is the beam width.
+///
+/// Acoustic radiation force creates particle velocity v = P/(ρ₀·c₀) along the
+/// propagation direction. For a plane-wave approximation the x-component is
+/// `vx = p/(ρ₀·c₀)` and the transverse components are zero.
 ///
 /// ## Limitation
 ///
@@ -66,110 +78,106 @@ pub fn generate_acoustic_field(
     grid: &Grid,
     acoustic_params: &AcousticTherapyParams,
 ) -> KwaversResult<AcousticField> {
-    // Create focused acoustic field based on therapy parameters
     let (nx, ny, nz) = grid.dimensions();
-    let mut pressure = Array3::zeros((nx, ny, nz));
-    let velocity = Array3::zeros((nx, ny, nz));
+    let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
+    let velocity_zero = Array3::<f64>::zeros((nx, ny, nz));
 
-    // Create focused pressure field using Gaussian beam approximation
-    let focal_point = (acoustic_params.focal_depth, 0.0, 0.0);
-    let beam_width = 0.005; // 5mm beam width (typical for therapeutic ultrasound)
+    // Gaussian beam approximation: P(r) = P₀ · exp(−r²/w²)
+    // Focal point is along the x-axis at the configured focal depth.
+    let focal_x = acoustic_params.focal_depth;
+    let beam_width_sq = 0.005_f64 * 0.005; // (5 mm)²
 
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+    let dx = grid.dx;
+    let dy = grid.dy;
+    let dz = grid.dz;
+    let pnp = acoustic_params.pnp;
 
-                // Distance from focal point
-                let dx = x - focal_point.0;
-                let dy = y - focal_point.1;
-                let dz = z - focal_point.2;
-                let r = (dx * dx + dy * dy + dz * dz).sqrt();
+    Zip::indexed(pressure.view_mut()).par_for_each(|(i, j, k), p| {
+        let x = i as f64 * dx - focal_x;
+        let y = j as f64 * dy;
+        let z = k as f64 * dz;
+        let r_sq = x * x + y * y + z * z;
+        let beam_profile = (-r_sq / beam_width_sq).exp();
+        *p = pnp * beam_profile;
+    });
 
-                // Gaussian beam profile
-                let beam_profile = (-r * r / (beam_width * beam_width)).exp();
-
-                // Pressure field using Gaussian beam approximation
-                // Reference: O'Neil (1949) Gaussian beam propagation in focused ultrasound
-                pressure[[i, j, k]] = acoustic_params.pnp * beam_profile;
-            }
-        }
-    }
+    // Plane-wave approximation for the axial velocity component:
+    // v_x = p / (ρ₀·c₀).  Transverse components are zero.
+    // ρ₀·c₀ = 1.54 × 10⁶ Pa·s/m (water reference impedance).
+    const Z_WATER: f64 = 1.54e6;
+    let velocity_x = pressure.mapv(|p| p / Z_WATER);
 
     Ok(AcousticField {
         pressure,
-        velocity_x: velocity.clone(),
-        velocity_y: velocity.clone(),
-        velocity_z: velocity,
+        velocity_x,
+        velocity_y: velocity_zero.clone(),
+        velocity_z: velocity_zero,
     })
 }
 
-/// Update acoustic heating for therapy
+/// Calculate acoustic absorption heating.
 ///
-/// Calculates temperature rise due to acoustic absorption heating.
-/// Uses the Pennes bioheat equation with acoustic heating source term.
-///
-/// # Arguments
-///
-/// - `acoustic_field`: Current acoustic field
-/// - `grid`: Computational grid
-/// - `dt`: Time step (s)
-/// - `focal_depth`: Focal depth for distance-based spreading (m)
-///
-/// # Returns
-///
-/// 3D temperature field (K)
+/// Returns a 3-D array of **Celsius (°C)** temperatures representing the
+/// instantaneous temperature distribution after one therapy step of duration `dt`.
 ///
 /// # Physics Model
 ///
-/// Acoustic absorption heating:
-/// - Q_acoustic = α * |p|² / (ρ * c)
-/// - where α is attenuation coefficient, p is pressure, ρ is density, c is sound speed
+/// Acoustic absorption heating: Q = α · p² / (ρ₀ · c₀)
+/// where α = 0.5 Np/m (soft tissue, Nyborg 1981), ρ₀ = 1000 kg/m³, c₀ = 1540 m/s.
 ///
-/// Distance-based spreading:
-/// - Temperature rise decreases with distance from focus using exponential decay
-/// - Characteristic length: 1 cm (typical for focused ultrasound)
+/// Temperature rise: ΔT = Q · exp(−r/L) · dt / (ρ₀ · c_p) with characteristic
+/// focal length L = 10 mm and specific heat capacity c_p = 3600 J/(kg·K).
+///
+/// The ambient temperature T₀ = 37 °C is the baseline for CEM43 evaluation.
+///
+/// # Returns
+///
+/// 3-D array of temperatures in **degrees Celsius**, with
+/// `T_min = 37.0 °C` (no heating outside focal zone) and
+/// `T_max = 37.0 + ΔT_peak`.
 ///
 /// # References
 ///
 /// - Pennes (1948): "Analysis of tissue and arterial blood temperatures"
 /// - Nyborg (1981): "Heat generation by ultrasound in a relaxing medium"
+/// - Sapareto & Dewey (1984): "Thermal dose determination in cancer therapy"
 pub fn calculate_acoustic_heating(
     acoustic_field: &AcousticField,
     grid: &Grid,
     dt: f64,
     focal_depth: f64,
 ) -> Array3<f64> {
-    let ambient_temp = 310.0; // 37°C in Kelvin
-    let mut temperature = Array3::from_elem(acoustic_field.pressure.dim(), ambient_temp);
+    // Baseline body temperature in Celsius — consistent with CEM43 threshold (37 °C).
+    const AMBIENT_CELSIUS: f64 = 37.0;
 
-    // Calculate acoustic absorption heating from pressure field
-    // Q_acoustic = α * |p|² / (ρ * c) where α is attenuation coefficient
-    let alpha = 0.5; // 0.5 Np/m typical for soft tissue
-    let rho = 1000.0; // kg/m³
-    let c = 1540.0; // m/s
-    let heating_factor = alpha / (rho * c);
+    // Tissue constants for soft tissue (Nyborg 1981).
+    const ALPHA_NP_M: f64 = 0.5; // absorption coefficient (Np/m)
+    const RHO: f64 = 1000.0; // kg/m³
+    const C0: f64 = 1540.0; // m/s
+    const C_P: f64 = 3600.0; // specific heat capacity J/(kg·K) (ICRP 2002)
+    const L_FOCAL: f64 = 0.01; // focal characteristic length (10 mm)
 
-    // Add acoustic heating with spatial spreading
-    for (index, &pressure) in acoustic_field.pressure.indexed_iter() {
-        // Acoustic heating proportional to intensity (pressure²)
-        let heating = heating_factor * pressure * pressure;
+    // Q = α p² / (ρ₀ c₀); ΔT = Q dt / (ρ₀ c_p)
+    // Combined: ΔT = α p² dt / (ρ₀² c₀ c_p)
+    let heating_scale = ALPHA_NP_M * dt / (RHO * RHO * C0 * C_P);
 
-        // Apply distance-based spreading from focal point
-        let (i, j, k) = index;
-        let x = i as f64 * grid.dx - focal_depth;
-        let y = j as f64 * grid.dy;
-        let z = k as f64 * grid.dz;
-        let r = (x * x + y * y + z * z).sqrt();
+    let dx = grid.dx;
+    let dy = grid.dy;
+    let dz = grid.dz;
 
-        // Temperature rise decreases with distance from focus
-        let distance_factor = (-r / 0.01).exp(); // 1cm characteristic length
-        let temp_rise = heating * distance_factor * dt * 1e-6; // Convert to temperature rise
+    let mut temperature = Array3::<f64>::from_elem(acoustic_field.pressure.dim(), AMBIENT_CELSIUS);
 
-        temperature[index] = ambient_temp + temp_rise;
-    }
+    Zip::indexed(temperature.view_mut())
+        .and(acoustic_field.pressure.view())
+        .par_for_each(|(i, j, k), t, &p| {
+            // Radial distance from focal point (on the x-axis).
+            let x = i as f64 * dx - focal_depth;
+            let y = j as f64 * dy;
+            let z = k as f64 * dz;
+            let r = (x * x + y * y + z * z).sqrt();
+            let distance_factor = (-r / L_FOCAL).exp();
+            *t = AMBIENT_CELSIUS + heating_scale * p * p * distance_factor;
+        });
 
     temperature
 }

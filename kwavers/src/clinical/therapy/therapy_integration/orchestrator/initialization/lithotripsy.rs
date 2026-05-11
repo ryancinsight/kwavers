@@ -6,7 +6,9 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 #[cfg(feature = "nifti")]
 use crate::domain::imaging::medical::{CTImageLoader, MedicalImageLoader};
-use log::{info, warn};
+#[cfg(feature = "nifti")]
+use log::info;
+use log::warn;
 use ndarray::Array3;
 
 use super::super::super::config::TherapySessionConfig;

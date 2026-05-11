@@ -150,9 +150,19 @@ impl TherapyIntegrationOrchestrator {
 
         let corrected_field = acoustic_field;
 
-        let intensity_metrics = self.intensity_tracker.record_intensity(
+        // Acoustic impedance field Z = ρ₀ · c₀ (Rayl = kg/(m²·s)).
+        // Derived from the medium's per-voxel density and sound-speed arrays.
+        let impedance = {
+            let rho = self.medium.density_array();
+            let c = self.medium.sound_speed_array();
+            &rho * &c
+        };
+
+        // Record intensity for thermal-dose accumulation tracking; return value not used
+        // directly (TI is derived from the temperature field, not from SPTA).
+        self.intensity_tracker.record_intensity(
             &corrected_field.pressure,
-            &Array3::ones(corrected_field.pressure.dim()),
+            &impedance,
             self.session_state.current_time,
         )?;
 
@@ -166,10 +176,22 @@ impl TherapyIntegrationOrchestrator {
         self.intensity_tracker
             .update_thermal_dose(&temperature_field, dt)?;
 
-        // SPTA is in W/m²; TI ≈ SPTA × 1e-4 (W/m² → W/cm² → dimensionless index).
-        self.session_state.safety_metrics.thermal_index = intensity_metrics.spta * 1e-4;
+        // Thermal Index (IEC 62359): TI ≈ ΔT_max (°C) — ratio of acoustic power to power
+        // required for a 1 °C rise. The computed temperature field (in °C, baseline 37 °C)
+        // gives the best available proxy in the Gaussian heating model.
+        // TI = T_max - T_ambient; T_ambient = 37 °C per CEM43 convention.
+        let t_max = temperature_field
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+        self.session_state.safety_metrics.thermal_index = (t_max - 37.0).max(0.0);
+
+        // Mechanical Index (FDA 510(k) guidance, IEC 62359):
+        // MI = p_neg_peak_derated (MPa) / sqrt(f_center (MHz))
+        //    = (pnp_Pa / 1e6) / sqrt(f_Hz / 1e6)
+        //    = pnp_Pa / (1e3 × sqrt(f_Hz))
         self.session_state.safety_metrics.mechanical_index = self.config.acoustic_params.pnp
-            / (1e6 * (self.config.acoustic_params.frequency).sqrt());
+            / (1e3 * (self.config.acoustic_params.frequency).sqrt());
         self.session_state.safety_metrics.temperature_rise = temperature_field.clone();
 
         let safety_action = self.safety_controller.evaluate_safety(
@@ -227,13 +249,12 @@ impl TherapyIntegrationOrchestrator {
             self.session_state.progress = progress;
         }
 
-        safety::update_safety_metrics(
-            &mut self.session_state.safety_metrics,
-            &corrected_field,
-            &self.config.acoustic_params,
-            dt,
-            self.session_state.cavitation_activity.as_ref(),
-        )?;
+        // NOTE: safety_metrics.{thermal_index, mechanical_index, temperature_rise} are set
+        // above from SPTA and PNP before the safety-controller evaluation.
+        // safety_metrics.cavitation_dose is accumulated in the cavitation block above.
+        // update_safety_metrics() is NOT called here to avoid overwriting the SPTA-derived
+        // TI with the P_rms formula (wrong for therapy bandwidths) and to avoid
+        // double-counting cavitation dose when cavitation_activity is Some.
 
         self.session_state.acoustic_field = Some(corrected_field);
 
