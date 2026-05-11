@@ -89,3 +89,83 @@ impl Default for CavitationDose {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `CavitationDose::new` produces a fully zeroed accumulator.
+    #[test]
+    fn cavitation_dose_new_is_fully_zeroed() {
+        let d = CavitationDose::new();
+        assert_eq!(d.total_dose, 0.0);
+        assert_eq!(d.sample_count, 0);
+        assert_eq!(d.peak_intensity, 0.0);
+        assert_eq!(d.last_event_time, 0.0);
+    }
+
+    /// `average_intensity` returns 0 when no samples have been recorded.
+    #[test]
+    fn average_intensity_zero_with_no_samples() {
+        let d = CavitationDose::new();
+        assert_eq!(d.average_intensity(), 0.0);
+    }
+
+    /// `update` accumulates total_dose as Σ(I·dt).
+    ///
+    /// Three calls with intensity=0.5 and dt=1e-4 s:
+    /// total_dose = 3 × 0.5 × 1e-4 = 1.5e-4.
+    #[test]
+    fn dose_update_accumulates_total_dose() {
+        let mut d = CavitationDose::new();
+        for step in 0..3 {
+            d.update(0.5, 1e-4, step as f64 * 1e-4);
+        }
+        assert!(
+            (d.total_dose - 1.5e-4).abs() < 1e-18,
+            "total_dose must be 1.5e-4 (got {:.6e})",
+            d.total_dose
+        );
+        assert_eq!(d.sample_count, 3);
+    }
+
+    /// `average_intensity` divides the running sum by sample_count.
+    ///
+    /// Three calls with intensities [0.2, 0.5, 0.8]: avg = 0.5.
+    #[test]
+    fn average_intensity_equals_sum_divided_by_count() {
+        let mut d = CavitationDose::new();
+        d.update(0.2, 1e-4, 0.0);
+        d.update(0.5, 1e-4, 1e-4);
+        d.update(0.8, 1e-4, 2e-4);
+        assert!(
+            (d.average_intensity() - 0.5).abs() < 1e-15,
+            "average_intensity must be 0.5 (got {:.6})",
+            d.average_intensity()
+        );
+    }
+
+    /// `peak_intensity` stores the maximum intensity seen across all updates.
+    #[test]
+    fn peak_intensity_is_maximum_across_all_updates() {
+        let mut d = CavitationDose::new();
+        d.update(0.3, 1e-4, 0.0);
+        d.update(0.9, 1e-4, 1e-4); // peak
+        d.update(0.1, 1e-4, 2e-4);
+        assert!(
+            (d.peak_intensity - 0.9).abs() < 1e-15,
+            "peak_intensity must be 0.9 (got {:.3})",
+            d.peak_intensity
+        );
+    }
+
+    /// `CavitationState::default` produces a non-cavitating zero-intensity state.
+    #[test]
+    fn cavitation_state_default_not_cavitating_and_zero_fields() {
+        let s = CavitationState::default();
+        assert!(!s.is_cavitating);
+        assert_eq!(s.intensity, 0.0);
+        assert_eq!(s.duration, 0.0);
+        assert_eq!(s.mechanical_index, 0.0);
+    }
+}

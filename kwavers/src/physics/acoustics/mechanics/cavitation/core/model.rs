@@ -182,6 +182,10 @@ impl CavitationCore for CavitationModel {
         pressure < -threshold
     }
 
+    /// Cavitation index: (P₀ + p − Pᵥ) / (P₀ − Pᵥ).
+    ///
+    /// - p = 0 → index = 1.0 (ambient, no cavitation).
+    /// - p = Pᵥ − P₀ → index = 0.0 (onset of cavitation).
     fn cavitation_index(&self, pressure: f64, vapor_pressure: f64, ambient_pressure: f64) -> f64 {
         (ambient_pressure + pressure - vapor_pressure) / (ambient_pressure - vapor_pressure)
     }
@@ -223,5 +227,67 @@ impl CavitationCore for CavitationModel {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array3;
+
+    /// `CavitationModel::new` defaults to the MechanicalIndex threshold model.
+    #[test]
+    fn new_defaults_to_mechanical_index_model() {
+        let m = CavitationModel::new((4, 4, 4));
+        assert_eq!(m.threshold_model, ThresholdModel::MechanicalIndex);
+        assert_eq!(m.states.dim(), (4, 4, 4));
+    }
+
+    /// `detect_cavitation` returns true when pressure is more negative than -threshold.
+    #[test]
+    fn detect_cavitation_true_when_pressure_below_negative_threshold() {
+        let m = CavitationModel::new((2, 2, 2));
+        assert!(m.detect_cavitation(-200.0, 100.0), "p=-200 < -100 → cavitation");
+        assert!(!m.detect_cavitation(-50.0, 100.0), "p=-50 > -100 → no cavitation");
+        assert!(!m.detect_cavitation(0.0, 100.0), "p=0 > -100 → no cavitation");
+    }
+
+    /// `cavitation_index` at p=0 (ambient pressure, no rarefaction) equals 1.0.
+    ///
+    /// Analytical: (P₀ + 0 − Pᵥ) / (P₀ − Pᵥ) = 1.0.
+    #[test]
+    fn cavitation_index_unity_at_zero_pressure_perturbation() {
+        let m = CavitationModel::new((2, 2, 2));
+        let p0 = m.params.p0;
+        let pv = m.params.pv;
+        let ci = m.cavitation_index(0.0, pv, p0);
+        assert!((ci - 1.0).abs() < 1e-12, "cavitation_index at p=0 must be 1.0 (got {ci:.6})");
+    }
+
+    /// `cavitation_index` at p = Pᵥ − P₀ (cavitation onset) equals 0.0.
+    #[test]
+    fn cavitation_index_zero_at_cavitation_onset() {
+        let m = CavitationModel::new((2, 2, 2));
+        let p0 = m.params.p0;
+        let pv = m.params.pv;
+        let p_onset = pv - p0; // (P₀ + (Pᵥ-P₀) - Pᵥ) = 0
+        let ci = m.cavitation_index(p_onset, pv, p0);
+        assert!((ci).abs() < 1e-12, "cavitation_index at onset must be 0.0 (got {ci:.6})");
+    }
+
+    /// `CavitationCore::update` marks cells with pressure below -threshold as cavitating.
+    #[test]
+    fn update_marks_cavitating_cells_and_leaves_others_clear() {
+        let mut m = CavitationModel::new((2, 2, 2));
+        // MechanicalIndex threshold = APFEL_HOLLAND_CAVITATION_THRESHOLD_1MHZ_PA = 0.7e6 Pa
+        // Any pressure < -0.7e6 triggers cavitation.
+        let mut field = Array3::<f64>::zeros((2, 2, 2));
+        field[[0, 0, 0]] = -1.0e6; // below -0.7MPa → cavitating
+        field[[1, 1, 1]] = 0.0; // not below threshold
+
+        m.update(&field, 1e-6).unwrap();
+
+        assert!(m.states[[0, 0, 0]].is_cavitating, "cell [0,0,0] must be cavitating");
+        assert!(!m.states[[1, 1, 1]].is_cavitating, "cell [1,1,1] must not be cavitating");
     }
 }
