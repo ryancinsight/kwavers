@@ -64,3 +64,43 @@ impl PoroelasticSimulation {
     // Solver creation removed to decouple physics from solver layer.
     // Use crate::solver::forward::poroelastic::PoroelasticSolver directly.
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use crate::physics::acoustics::mechanics::poroelastic::PoroelasticMaterial;
+
+    fn make_sim() -> PoroelasticSimulation {
+        let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
+        let material = PoroelasticMaterial::from_tissue_type("trabecular_bone").unwrap();
+        PoroelasticSimulation::new(&grid, material).unwrap()
+    }
+
+    /// `new` constructs a simulation for a valid trabecular-bone material.
+    #[test]
+    fn new_succeeds_with_trabecular_bone() {
+        let sim = make_sim();
+        // Porosity of trabecular bone is 0.3
+        assert!((sim.material.porosity - 0.3).abs() < 1e-10);
+    }
+
+    /// `compute_wave_speeds` delegates to BiotTheory and returns positive values.
+    #[test]
+    fn compute_wave_speeds_returns_positive_values() {
+        let sim = make_sim();
+        let speeds = sim.compute_wave_speeds(1e6).unwrap();
+        assert!(speeds.fast_wave > 0.0, "fast_wave must be positive");
+        assert!(speeds.slow_wave > 0.0, "slow_wave must be positive");
+        assert!(speeds.shear_wave > 0.0, "shear_wave must be positive");
+    }
+
+    /// `compute_attenuation` returns two positive attenuation coefficients.
+    #[test]
+    fn compute_attenuation_returns_positive_coefficients() {
+        let sim = make_sim();
+        let (alpha_fast, alpha_slow) = sim.compute_attenuation(1e6).unwrap();
+        assert!(alpha_fast > 0.0, "alpha_fast must be positive");
+        assert!(alpha_slow > 0.0, "alpha_slow must be positive");
+    }
+}

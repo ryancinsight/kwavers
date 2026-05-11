@@ -94,3 +94,75 @@ impl BiotTheory {
         Ok((alpha_fast, alpha_slow))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::physics::acoustics::mechanics::poroelastic::PoroelasticMaterial;
+
+    fn bone() -> PoroelasticMaterial {
+        PoroelasticMaterial::default() // trabecular bone
+    }
+
+    /// Fast P-wave must be greater than slow P-wave for trabecular bone at 1 MHz.
+    ///
+    /// Physics: the fast Biot wave involves in-phase solid–fluid motion; the slow
+    /// wave is a diffusion-like mode and propagates much more slowly.
+    #[test]
+    fn compute_wave_speeds_fast_greater_than_slow_for_bone() {
+        let biot = BiotTheory::new(&bone());
+        let speeds = biot.compute_wave_speeds(1e6).unwrap();
+        assert!(speeds.fast_wave > 0.0, "fast_wave must be positive");
+        assert!(speeds.slow_wave > 0.0, "slow_wave must be positive");
+        assert!(speeds.shear_wave > 0.0, "shear_wave must be positive");
+        assert!(
+            speeds.fast_wave > speeds.slow_wave,
+            "fast_wave ({:.1}) must exceed slow_wave ({:.1})",
+            speeds.fast_wave,
+            speeds.slow_wave
+        );
+    }
+
+    /// Shear wave speed equals sqrt(G/ρ₁₁) analytically.
+    ///
+    /// For default bone: G=3.5e9, ρ₁₁=(1-φ)ρ_s+φρ_f(α-1)=1550 → c_S≈1503 m/s.
+    #[test]
+    fn compute_wave_speeds_shear_wave_consistent_with_analytical() {
+        let m = bone();
+        let phi = m.porosity;
+        let rho_11 =
+            (1.0 - phi) * m.solid_density + phi * m.fluid_density * (m.tortuosity - 1.0);
+        let expected_shear = (m.shear_modulus / rho_11).sqrt();
+
+        let biot = BiotTheory::new(&m);
+        let speeds = biot.compute_wave_speeds(1e6).unwrap();
+        assert!(
+            (speeds.shear_wave - expected_shear).abs() < 1.0,
+            "shear_wave {:.1} must match analytical {expected_shear:.1}",
+            speeds.shear_wave
+        );
+    }
+
+    /// Both attenuation coefficients must be positive at 1 MHz.
+    #[test]
+    fn compute_attenuation_both_coefficients_positive() {
+        let biot = BiotTheory::new(&bone());
+        let (af, as_) = biot.compute_attenuation(1e6).unwrap();
+        assert!(af > 0.0, "alpha_fast must be positive (got {af:.3e})");
+        assert!(as_ > 0.0, "alpha_slow must be positive (got {as_:.3e})");
+    }
+
+    /// The slow Biot wave has much higher attenuation than the fast wave.
+    ///
+    /// Physics: the slow wave is a diffusion-dominated mode; its attenuation
+    /// scales as ω² / c_slow³ which is much larger than ω² / c_fast³.
+    #[test]
+    fn compute_attenuation_slow_wave_dominates_fast_wave() {
+        let biot = BiotTheory::new(&bone());
+        let (alpha_fast, alpha_slow) = biot.compute_attenuation(1e6).unwrap();
+        assert!(
+            alpha_slow > alpha_fast,
+            "slow-wave attenuation ({alpha_slow:.3e}) must exceed fast-wave ({alpha_fast:.3e})"
+        );
+    }
+}

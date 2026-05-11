@@ -166,7 +166,7 @@ impl PoroelasticMaterial {
     /// Calculate characteristic frequency (Biot critical frequency)
     ///
     /// ω_c = (φ η) / (κ ρ_f α)
-    #[must_use] 
+    #[must_use]
     pub fn characteristic_frequency(&self) -> f64 {
         let phi = self.porosity;
         let eta = self.fluid_viscosity;
@@ -175,5 +175,108 @@ impl PoroelasticMaterial {
         let alpha = self.tortuosity;
 
         (phi * eta) / (kappa * rho_f * alpha)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `bulk_density` implements the linear mixture rule: ρ = (1-φ)ρ_s + φρ_f.
+    ///
+    /// Analytical for trabecular bone default:
+    ///   φ=0.3, ρ_s=2000, ρ_f=1000 → ρ = 0.7·2000 + 0.3·1000 = 1700 kg/m³.
+    #[test]
+    fn bulk_density_follows_mixture_rule_for_default_bone() {
+        let m = PoroelasticMaterial::default();
+        let expected = (1.0 - m.porosity) * m.solid_density + m.porosity * m.fluid_density;
+        assert!(
+            (m.bulk_density() - expected).abs() < 1e-10,
+            "bulk_density: got {}, expected {expected}",
+            m.bulk_density()
+        );
+        // Numerical: 0.7·2000 + 0.3·1000 = 1700
+        assert!((m.bulk_density() - 1700.0).abs() < 1e-6);
+    }
+
+    /// `effective_bulk_modulus` implements Gassmann's equation:
+    /// K_eff = 1 / ((1-φ)/K_s + φ/K_f).
+    ///
+    /// Analytical for default bone:
+    ///   φ=0.3, K_s=10e9, K_f=2.25e9.
+    ///   K_eff = 1/(0.7/10e9 + 0.3/2.25e9) = 1/(7e-11 + 1.333e-10) ≈ 4.918e9 Pa.
+    #[test]
+    fn effective_bulk_modulus_follows_gassmann_equation() {
+        let m = PoroelasticMaterial::default();
+        let expected = 1.0 / ((1.0 - m.porosity) / m.solid_bulk_modulus
+            + m.porosity / m.fluid_bulk_modulus);
+        let got = m.effective_bulk_modulus();
+        assert!(
+            (got - expected).abs() < 1.0, // 1 Pa tolerance
+            "effective_bulk_modulus: got {got:.3e} expected {expected:.3e}"
+        );
+        // Sanity: between fluid and solid moduli
+        assert!(got > m.fluid_bulk_modulus * 0.5, "K_eff must exceed K_f/2");
+        assert!(got < m.solid_bulk_modulus, "K_eff must be less than K_s");
+    }
+
+    /// `characteristic_frequency` implements ω_c = φ·η / (κ·ρ_f·α).
+    ///
+    /// Analytical for default bone:
+    ///   φ=0.3, η=1e-3, κ=1e-9, ρ_f=1000, α=1.5.
+    ///   ω_c = 0.3·1e-3 / (1e-9·1000·1.5) = 3e-4 / 1.5e-6 = 200 rad/s.
+    #[test]
+    fn characteristic_frequency_matches_analytical_biot_formula() {
+        let m = PoroelasticMaterial::default();
+        let expected =
+            m.porosity * m.fluid_viscosity / (m.permeability * m.fluid_density * m.tortuosity);
+        let got = m.characteristic_frequency();
+        assert!(
+            (got - expected).abs() < 1e-6,
+            "characteristic_frequency: got {got:.3e} expected {expected:.3e}"
+        );
+        assert!((got - 200.0).abs() < 1e-6, "ω_c must be 200 rad/s for default bone");
+    }
+
+    /// `new` rejects porosity outside (0, 1].
+    #[test]
+    fn new_rejects_invalid_porosity() {
+        let ok = || (0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5_f64);
+        let (_, rs, rf, ks, kf, g, k, eta, tor) = ok();
+
+        assert!(PoroelasticMaterial::new(-0.1, rs, rf, ks, kf, g, k, eta, tor).is_err(), "negative porosity");
+        assert!(PoroelasticMaterial::new(1.5, rs, rf, ks, kf, g, k, eta, tor).is_err(), "porosity > 1");
+    }
+
+    /// `new` rejects non-positive densities.
+    #[test]
+    fn new_rejects_nonpositive_densities() {
+        let (phi, _, rf, ks, kf, g, k, eta, tor) = (0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5_f64);
+        assert!(PoroelasticMaterial::new(phi, 0.0, rf, ks, kf, g, k, eta, tor).is_err(), "zero solid_density");
+        assert!(PoroelasticMaterial::new(phi, 2000.0, 0.0, ks, kf, g, k, eta, tor).is_err(), "zero fluid_density");
+    }
+
+    /// `new` rejects tortuosity < 1.
+    #[test]
+    fn new_rejects_tortuosity_below_one() {
+        let r = PoroelasticMaterial::new(0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 0.8);
+        assert!(r.is_err(), "tortuosity=0.8 < 1.0 must be rejected");
+    }
+
+    /// `from_tissue_type` accepts all four defined tissue strings.
+    #[test]
+    fn from_tissue_type_accepts_all_known_tissues() {
+        for tissue in &["trabecular_bone", "cortical_bone", "liver", "lung"] {
+            let r = PoroelasticMaterial::from_tissue_type(tissue);
+            assert!(r.is_ok(), "{tissue} must be a known tissue type");
+            let m = r.unwrap();
+            assert!(m.bulk_density() > 0.0, "{tissue} bulk_density must be positive");
+        }
+    }
+
+    /// `from_tissue_type` rejects an unknown tissue name.
+    #[test]
+    fn from_tissue_type_rejects_unknown_tissue() {
+        assert!(PoroelasticMaterial::from_tissue_type("cartilage").is_err());
     }
 }
