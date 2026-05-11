@@ -123,3 +123,69 @@ impl SpectralVelocityFields {
         real_fields
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::fields::{StressFields, VelocityFields};
+
+    /// FFT → IFFT round-trip for stress fields must recover the real-valued input
+    /// to floating-point precision (tolerance = N · ε_mach · 10 where N = 512).
+    #[test]
+    fn spectral_stress_from_real_to_real_round_trip_is_identity() {
+        let (nx, ny, nz) = (8, 8, 8);
+        let mut real = StressFields::new(nx, ny, nz);
+        for ((i, j, k), v) in real.txx.indexed_iter_mut() {
+            *v = (i + 2 * j + 3 * k) as f64;
+        }
+        for ((i, j, k), v) in real.txy.indexed_iter_mut() {
+            *v = (i * j + k + 1) as f64;
+        }
+
+        let spectral = SpectralStressFields::from_real(&real);
+        let recovered = spectral.to_real();
+
+        let tol = 512.0 * f64::EPSILON * 10.0;
+        for ((orig, rec), label) in real
+            .txx.iter().zip(recovered.txx.iter()).map(|p| (p, "txx"))
+            .chain(real.txy.iter().zip(recovered.txy.iter()).map(|p| (p, "txy")))
+        {
+            assert!(
+                (orig - rec).abs() < tol,
+                "{label} round-trip error {:.3e} > tol {:.3e}",
+                (orig - rec).abs(),
+                tol
+            );
+        }
+    }
+
+    /// FFT → IFFT round-trip for velocity fields must recover the real-valued
+    /// input to floating-point precision.
+    #[test]
+    fn spectral_velocity_from_real_to_real_round_trip_is_identity() {
+        let (nx, ny, nz) = (8, 8, 8);
+        let mut real = VelocityFields::new(nx, ny, nz);
+        for ((i, j, k), v) in real.vx.indexed_iter_mut() {
+            *v = (i + j * 3 + k * 7) as f64 * 0.1;
+        }
+        for ((i, j, k), v) in real.vy.indexed_iter_mut() {
+            *v = (i * 2 + j + k * 5) as f64 * 0.05;
+        }
+
+        let spectral = SpectralVelocityFields::from_real(&real);
+        let recovered = spectral.to_real();
+
+        let tol = 512.0 * f64::EPSILON * 10.0;
+        for ((orig, rec), label) in real
+            .vx.iter().zip(recovered.vx.iter()).map(|p| (p, "vx"))
+            .chain(real.vy.iter().zip(recovered.vy.iter()).map(|p| (p, "vy")))
+        {
+            assert!(
+                (orig - rec).abs() < tol,
+                "{label} round-trip error {:.3e} > tol {:.3e}",
+                (orig - rec).abs(),
+                tol
+            );
+        }
+    }
+}

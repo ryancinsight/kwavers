@@ -152,3 +152,69 @@ impl AnisotropicElasticProperties {
         Self::new(props.density, stiffness)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Constructs the isotropic Voigt stiffness tensor from Lamé parameters and
+    /// verifies the analytical values:
+    ///   c11 = λ + 2μ,  c12 = λ,  c44 = μ,  all coupling off-diagonals = 0.
+    ///
+    /// Reference: Ting (1996), *Anisotropic Elasticity*, §2.3.
+    #[test]
+    fn isotropic_stiffness_tensor_is_analytically_correct() {
+        let rho = 2700.0_f64; // aluminum
+        let lambda = 51.0e9_f64;
+        let mu = 26.0e9_f64;
+
+        let props = AnisotropicElasticProperties::isotropic(rho, lambda, mu).unwrap();
+        let s = &props.stiffness;
+        let tol = 1.0_f64; // 1 Pa
+
+        // Bulk diagonal terms: c11 = λ + 2μ = 103 GPa
+        let c11 = lambda + 2.0 * mu;
+        assert!((s[0][0] - c11).abs() < tol, "c11");
+        assert!((s[1][1] - c11).abs() < tol, "c22");
+        assert!((s[2][2] - c11).abs() < tol, "c33");
+
+        // Coupling terms: c12 = c13 = c23 = λ
+        assert!((s[0][1] - lambda).abs() < tol, "c12");
+        assert!((s[0][2] - lambda).abs() < tol, "c13");
+        assert!((s[1][2] - lambda).abs() < tol, "c23");
+
+        // Shear terms: c44 = c55 = c66 = μ
+        assert!((s[3][3] - mu).abs() < tol, "c44");
+        assert!((s[4][4] - mu).abs() < tol, "c55");
+        assert!((s[5][5] - mu).abs() < tol, "c66");
+
+        // Off-diagonal coupling blocks must be zero for isotropic symmetry
+        assert_eq!(s[0][3], 0.0, "c14");
+        assert_eq!(s[1][4], 0.0, "c25");
+        assert_eq!(s[2][5], 0.0, "c36");
+
+        // Symmetry invariant
+        for i in 0..6 {
+            for j in i + 1..6 {
+                assert!((s[i][j] - s[j][i]).abs() < tol, "symmetry C[{i}][{j}]");
+            }
+        }
+    }
+
+    /// `isotropic` with μ = 0 must fail: shear moduli (C44, C55, C66) must be
+    /// positive for an elastic solid.
+    #[test]
+    fn isotropic_rejects_zero_shear_modulus() {
+        assert!(
+            AnisotropicElasticProperties::isotropic(1000.0, 2.25e9, 0.0).is_err(),
+            "zero shear modulus must be rejected"
+        );
+    }
+
+    /// Non-positive density must be rejected.
+    #[test]
+    fn isotropic_rejects_nonpositive_density() {
+        assert!(AnisotropicElasticProperties::isotropic(0.0, 51.0e9, 26.0e9).is_err());
+        assert!(AnisotropicElasticProperties::isotropic(-1.0, 51.0e9, 26.0e9).is_err());
+    }
+}

@@ -4,10 +4,9 @@
 //! components following SOLID principles.
 
 use ndarray::{Array3, ArrayView3};
-use num_complex::Complex;
 
-/// Type alias for complex 3D arrays used in spectral methods
-pub type Complex3D = Array3<Complex<f64>>;
+/// Re-exported from [`super::fields`] — single canonical definition.
+pub use super::fields::Complex3D;
 
 /// Parameters for the spectral elastic stress update.
 ///

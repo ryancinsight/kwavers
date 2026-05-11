@@ -9,7 +9,8 @@ pub mod mode_conversion;
 pub mod parameters;
 pub mod properties;
 pub mod spectral_fields;
-pub mod tests;
+#[cfg(test)]
+mod tests;
 
 use crate::core::error::{KwaversResult, PhysicsError};
 use crate::domain::grid::Grid;

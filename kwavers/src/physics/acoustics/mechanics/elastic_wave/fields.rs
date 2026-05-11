@@ -74,3 +74,42 @@ impl VelocityFields {
         self.vz.fill(0.0);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// After filling all stress components with non-zero values, `reset` zeroes
+    /// every element.
+    #[test]
+    fn stress_fields_reset_zeroes_all_components() {
+        let mut f = StressFields::new(4, 4, 4);
+        f.txx.fill(1.0);
+        f.tyy.fill(2.0);
+        f.tzz.fill(3.0);
+        f.txy.fill(4.0);
+        f.txz.fill(5.0);
+        f.tyz.fill(6.0);
+        f.reset();
+        for v in f
+            .txx.iter().chain(f.tyy.iter()).chain(f.tzz.iter())
+            .chain(f.txy.iter()).chain(f.txz.iter()).chain(f.tyz.iter())
+        {
+            assert_eq!(*v, 0.0);
+        }
+    }
+
+    /// After filling all velocity components with non-zero values, `reset`
+    /// zeroes every element.
+    #[test]
+    fn velocity_fields_reset_zeroes_all_components() {
+        let mut f = VelocityFields::new(4, 4, 4);
+        f.vx.fill(1.5);
+        f.vy.fill(2.5);
+        f.vz.fill(3.5);
+        f.reset();
+        for v in f.vx.iter().chain(f.vy.iter()).chain(f.vz.iter()) {
+            assert_eq!(*v, 0.0);
+        }
+    }
+}
