@@ -141,3 +141,71 @@ fn calculate_far_field_distance(grid: &Grid, wavelength: f64, method: &FarFieldM
         FarFieldMethod::Exact => 10.0 * aperture.powi(2) / wavelength,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use ndarray::{Array2, Array3};
+
+    // ── BeamPatternConfig::default ────────────────────────────────────────────
+
+    /// Default config: 1 MHz, 1500 m/s, Fraunhofer method, 1° angular resolution.
+    #[test]
+    fn beam_pattern_config_default_values_match_documentation() {
+        let cfg = BeamPatternConfig::default();
+        assert!((cfg.frequency  - 1e6).abs()  < 1.0,   "frequency must be 1 MHz");
+        assert!((cfg.sound_speed - 1500.0).abs() < 1e-10, "sound_speed must be 1500 m/s");
+        assert!((cfg.angular_resolution - PI / 180.0).abs() < 1e-12, "resolution must be 1°");
+        assert!(matches!(cfg.far_field_method, FarFieldMethod::Fraunhofer));
+    }
+
+    // ── calculate_directivity ─────────────────────────────────────────────────
+
+    /// Uniform pattern (all ones) → max=1, mean=1 → DI = 10·log10(1/1) = 0 dB.
+    #[test]
+    fn calculate_directivity_zero_db_for_uniform_pattern() {
+        let pattern = Array2::<f64>::ones((10, 10));
+        let di = calculate_directivity(&pattern);
+        assert!(di.abs() < 1e-10, "uniform pattern must give DI=0 dB (got {di:.6})");
+    }
+
+    /// Zero pattern (all zeros) → mean=0 → DI = 0.0 (guarded branch).
+    #[test]
+    fn calculate_directivity_zero_for_zero_pattern() {
+        let pattern = Array2::<f64>::zeros((10, 10));
+        let di = calculate_directivity(&pattern);
+        assert_eq!(di, 0.0, "zero pattern must return DI=0 (got {di})");
+    }
+
+    // ── calculate_beam_pattern ────────────────────────────────────────────────
+
+    /// Beam pattern output is normalised to [0, 1] and has correct angular shape.
+    ///
+    /// Uses 30° angular resolution to keep the test fast (12×6 direction grid).
+    #[test]
+    fn calculate_beam_pattern_normalised_and_correct_shape() {
+        let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap();
+        let mut field = Array3::<f64>::zeros((4, 4, 4));
+        field[[2, 2, 2]] = 1000.0;
+
+        let cfg = BeamPatternConfig {
+            frequency: 1e6,
+            sound_speed: 1500.0,
+            far_field_method: FarFieldMethod::Fraunhofer,
+            angular_resolution: PI / 6.0, // 30° → n_theta=12, n_phi=6
+        };
+
+        let pattern = calculate_beam_pattern(field.view(), &grid, &cfg).unwrap();
+
+        let n_theta = ((2.0 * PI) / (PI / 6.0)) as usize;
+        let n_phi   = (PI / (PI / 6.0)) as usize;
+        assert_eq!(pattern.dim(), (n_theta, n_phi), "pattern shape must match angular sampling");
+        assert!(
+            pattern.iter().all(|&v| v >= 0.0 && v <= 1.0 + 1e-10),
+            "all pattern values must be in [0, 1]"
+        );
+        let max_val = pattern.iter().cloned().fold(0.0_f64, f64::max);
+        assert!((max_val - 1.0).abs() < 1e-10, "pattern maximum must be 1.0 (got {max_val:.6})");
+    }
+}

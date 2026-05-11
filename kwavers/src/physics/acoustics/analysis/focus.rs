@@ -164,3 +164,87 @@ pub fn calculate_beam_width(
 
     Ok(widths)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
+    use ndarray::Array3;
+
+    fn small_grid() -> Grid {
+        Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap()
+    }
+
+    // ── find_focus ────────────────────────────────────────────────────────────
+
+    /// Spike at [4,3,2] → find_focus returns (4·dx, 3·dy, 2·dz).
+    #[test]
+    fn find_focus_locates_pressure_spike() {
+        let grid = small_grid();
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        field[[4, 3, 2]] = 1000.0;
+
+        let loc = find_focus(field.view(), &grid).unwrap();
+
+        assert!((loc[0] - 4.0 * grid.dx).abs() < 1e-14, "focus x");
+        assert!((loc[1] - 3.0 * grid.dy).abs() < 1e-14, "focus y");
+        assert!((loc[2] - 2.0 * grid.dz).abs() < 1e-14, "focus z");
+    }
+
+    /// Zero field → find_focus returns origin (max stays at 0 → indices [0,0,0]).
+    #[test]
+    fn find_focus_returns_origin_for_zero_field() {
+        let grid = small_grid();
+        let field = Array3::<f64>::zeros((8, 8, 8));
+        let loc = find_focus(field.view(), &grid).unwrap();
+        assert_eq!(loc, [0.0, 0.0, 0.0]);
+    }
+
+    // ── find_focal_plane ──────────────────────────────────────────────────────
+
+    /// All energy concentrated in z-slice 5 → find_focal_plane(axis=2) = 5.
+    #[test]
+    fn find_focal_plane_locates_energy_slice_along_z() {
+        let grid = small_grid();
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        for ix in 0..8 {
+            for iy in 0..8 {
+                field[[ix, iy, 5]] = 10.0;
+            }
+        }
+
+        let plane = find_focal_plane(field.view(), &grid, 2).unwrap();
+        assert_eq!(plane, 5, "focal z-plane must be 5");
+    }
+
+    /// Invalid axis (3) → Err.
+    #[test]
+    fn find_focal_plane_errors_for_invalid_axis() {
+        let grid = small_grid();
+        let field = Array3::<f64>::zeros((8, 8, 8));
+        assert!(find_focal_plane(field.view(), &grid, 3).is_err(),
+            "axis=3 must return Err");
+    }
+
+    // ── calculate_beam_width ──────────────────────────────────────────────────
+
+    /// Invalid axis → Err.
+    #[test]
+    fn calculate_beam_width_errors_for_invalid_axis() {
+        let grid = small_grid();
+        let field = Array3::<f64>::zeros((8, 8, 8));
+        assert!(calculate_beam_width(field.view(), &grid, 5, -6.0).is_err(),
+            "axis=5 must return Err");
+    }
+
+    /// Zero field → all slice widths are 0.0 (no pressure above threshold).
+    #[test]
+    fn calculate_beam_width_zero_for_zero_field() {
+        let grid = small_grid();
+        let field = Array3::<f64>::zeros((8, 8, 8));
+        let widths = calculate_beam_width(field.view(), &grid, 2, -6.0).unwrap();
+        assert_eq!(widths.len(), grid.nz);
+        assert!(widths.iter().all(|&w| w == 0.0),
+            "zero field must yield zero beam widths");
+    }
+}
