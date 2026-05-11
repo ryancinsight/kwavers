@@ -20,6 +20,7 @@
 //! `physics/acoustics/mechanics/elastic_wave/tests.rs` asserts the
 //! theorem in the spectral domain.
 
+mod kspace;
 mod orchestrator;
 mod pml;
 mod types;

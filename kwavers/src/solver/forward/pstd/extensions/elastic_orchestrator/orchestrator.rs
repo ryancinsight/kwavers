@@ -17,6 +17,7 @@
 //!    points into the recorder matrices.
 
 use super::super::PstdElasticPlugin;
+use super::kspace::{build_kappa, max_p_wave_speed};
 use super::pml::ElasticPml;
 use super::types::{ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdVelocitySource};
 use crate::core::error::KwaversResult;
@@ -93,6 +94,12 @@ pub struct ElasticPstdOrchestrator {
     /// Pre-built complex derivative operators with the half-cell k-shift
     /// baked in (matches KWave.jl `pstd_elastic_2d`'s `ddx_k_shift_pos/neg`).
     derivative_ops: StaggeredDerivativeOps,
+    /// k-space correction factor `sinc(c_ref·dt·|k|/2)` (Tabei et al. 2002).
+    /// Pre-computed at construction from the medium's maximum P-wave speed.
+    /// Applied to every spectral derivative during stress and velocity updates,
+    /// eliminating temporal dispersion and allowing CFL → 1.0 without
+    /// first-order phase error (Treeby & Cox 2010, Eq. 18).
+    pub(super) kappa: Array3<f64>,
     /// Optional real-space exponential PML applied each step to the
     /// post-IFFT velocity field. `None` ⇒ periodic boundary (pristine
     /// FFT, suitable for short propagation where wraparound is benign);
@@ -145,10 +152,14 @@ impl ElasticPstdOrchestrator {
         let derivative_ops =
             StaggeredDerivativeOps::build(&kx, &ky, &kz, grid.dx, grid.dy, grid.dz);
 
+        let c_ref = max_p_wave_speed(&medium);
+        let kappa = build_kappa(&kx, &ky, &kz, (nx, ny, nz), c_ref, dt);
+
         Ok(Self {
             plugin: PstdElasticPlugin::default(),
             medium,
             derivative_ops,
+            kappa,
             pml: None,
             velocity: VelocityFields::new(nx, ny, nz),
             spectral_stress: SpectralStressFields::new(nx, ny, nz),
@@ -223,6 +234,7 @@ impl ElasticPstdOrchestrator {
                 lame_mu: &self.medium.lame_mu,
                 density: self.medium.density.view(),
                 dt: self.dt,
+                kappa: &self.kappa,
             };
             self.plugin
                 .apply_stress_update_in_place(&stress_params, &mut self.spectral_stress_next);
@@ -245,6 +257,7 @@ impl ElasticPstdOrchestrator {
                 dkz_op: &self.derivative_ops.dkz_pos,
                 density: self.medium.density.view(),
                 dt: self.dt,
+                kappa: &self.kappa,
             };
             self.plugin
                 .apply_velocity_update_in_place(&velocity_params, &mut self.spectral_velocity_next);
@@ -376,6 +389,12 @@ fn grid_spacing_from_wavenumber(d_op: &Array3<num_complex::Complex<f64>>, n: usi
 
 fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
     let mut k = Array3::<f64>::zeros((n, 1, 1));
+    // n = 1: only the DC mode (k = 0) exists; the loop below would
+    // incorrectly place (0 - 1)·dk at index 0 due to n/2 = 0 skipping
+    // the positive-frequency branch. Return the all-zero array directly.
+    if n <= 1 {
+        return k;
+    }
     let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
     for i in 0..n / 2 {
         k[[i, 0, 0]] = i as f64 * dk;

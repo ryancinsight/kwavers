@@ -35,6 +35,13 @@ pub type Complex3D = Array3<Complex<f64>>;
 /// matches KWave.jl `pstd_elastic_2d`'s `ddx_k_shift_neg` used during the
 /// stress update. Caller owns the choice; the kernel merely consumes the
 /// pre-built operator.
+///
+/// # k-space correction (Tabei et al. 2002)
+///
+/// `kappa[i,j,k] = sinc(c_ref · dt · |k| / 2)` is the Treeby–Cox spectral
+/// correction factor that eliminates temporal dispersion at all CFL values.
+/// Use `Array3::ones(shape)` for unit kappa (no correction, preserves the
+/// O(dt²) leapfrog accuracy).
 #[derive(Debug)]
 pub struct StressUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
@@ -57,6 +64,9 @@ pub struct StressUpdateParams<'a> {
     pub lame_mu: &'a Array3<f64>,
     pub density: ArrayView3<'a, f64>,
     pub dt: f64,
+    /// k-space correction factor `sinc(c_ref·dt·|k|/2)` (Tabei et al. 2002).
+    /// Pass `Array3::ones(shape)` for no correction (unit kappa).
+    pub kappa: &'a Array3<f64>,
 }
 
 /// Parameters for the spectral elastic velocity update.
@@ -83,4 +93,7 @@ pub struct VelocityUpdateParams<'a> {
     pub dkz_op: &'a Complex3D,
     pub density: ArrayView3<'a, f64>,
     pub dt: f64,
+    /// k-space correction factor `sinc(c_ref·dt·|k|/2)` (Tabei et al. 2002).
+    /// Pass `Array3::ones(shape)` for no correction (unit kappa).
+    pub kappa: &'a Array3<f64>,
 }

@@ -73,6 +73,11 @@ fn pstd_elastic_plugin_reduces_to_acoustic_when_mu_is_zero() {
     // single-step semantics so the theorem assertion below is exact.
     let stress_current = SpectralStressFields::new(nx, ny, nz);
 
+    // Unit kappa (no k-space correction) preserves the theorem assertion:
+    // with kappa = 1 everywhere the kernel is identical to the uncorrected
+    // leapfrog scheme, so the μ = 0 ⇒ zero-shear invariant holds exactly.
+    let unit_kappa = Array3::<f64>::ones((nx, ny, nz));
+
     let params = StressUpdateParams {
         vx_fft: &vx_fft,
         vy_fft: &vy_fft,
@@ -90,6 +95,7 @@ fn pstd_elastic_plugin_reduces_to_acoustic_when_mu_is_zero() {
         lame_mu: &lame_mu,
         density: density.view(),
         dt: 1e-7,
+        kappa: &unit_kappa,
     };
 
     let mut out = SpectralStressFields::new(nx, ny, nz);

@@ -137,13 +137,17 @@ impl PstdElasticPlugin {
 
         // ndarray 0.16 Zip supports at most 6 producers (index counts as 1).
         // Pass A — normal stresses: out = current + dt · (λ·∇·v + 2μ·∂vα/∂α).
+        // kappa[i,j,k] = sinc(c_ref·dt·|k|/2) is the Tabei et al. (2002)
+        // k-space correction that eliminates temporal dispersion; kappa = 1
+        // everywhere recovers the uncorrected O(dt²) leapfrog scheme.
         Zip::indexed(out.txx.view_mut())
             .and(out.tyy.view_mut())
             .and(out.tzz.view_mut())
             .par_for_each(|(i, j, k), o_txx, o_tyy, o_tzz| {
-                let dkx = params.dkx_op[[i, 0, 0]];
-                let dky = params.dky_op[[j, 0, 0]];
-                let dkz = params.dkz_op[[k, 0, 0]];
+                let kap = params.kappa[[i, j, k]];
+                let dkx = params.dkx_op[[i, 0, 0]] * kap;
+                let dky = params.dky_op[[j, 0, 0]] * kap;
+                let dkz = params.dkz_op[[k, 0, 0]] * kap;
 
                 let vx = params.vx_fft[[i, j, k]];
                 let vy = params.vy_fft[[i, j, k]];
@@ -166,9 +170,10 @@ impl PstdElasticPlugin {
             .and(out.txz.view_mut())
             .and(out.tyz.view_mut())
             .par_for_each(|(i, j, k), o_txy, o_txz, o_tyz| {
-                let dkx = params.dkx_op[[i, 0, 0]];
-                let dky = params.dky_op[[j, 0, 0]];
-                let dkz = params.dkz_op[[k, 0, 0]];
+                let kap = params.kappa[[i, j, k]];
+                let dkx = params.dkx_op[[i, 0, 0]] * kap;
+                let dky = params.dky_op[[j, 0, 0]] * kap;
+                let dkz = params.dkz_op[[k, 0, 0]] * kap;
 
                 let vx = params.vx_fft[[i, j, k]];
                 let vy = params.vy_fft[[i, j, k]];
@@ -217,9 +222,10 @@ impl PstdElasticPlugin {
                     return;
                 }
 
-                let dkx = params.dkx_op[[i, 0, 0]];
-                let dky = params.dky_op[[j, 0, 0]];
-                let dkz = params.dkz_op[[k, 0, 0]];
+                let kap = params.kappa[[i, j, k]];
+                let dkx = params.dkx_op[[i, 0, 0]] * kap;
+                let dky = params.dky_op[[j, 0, 0]] * kap;
+                let dkz = params.dkz_op[[k, 0, 0]] * kap;
                 let c_dt_rho = Complex::new(params.dt / rho, 0.0);
 
                 let dtxx_dx = dkx * params.txx_fft[[i, j, k]];
