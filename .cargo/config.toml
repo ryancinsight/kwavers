@@ -7,11 +7,11 @@ rustflags = ["-C", "target-cpu=native"]
 # Native DICOM codecs (`openjpeg-sys`, `charls-sys`) require a working C/C++
 # toolchain. Use Clang and Ninja on the Windows GNU target to avoid the broken
 # gcc/MSYS Makefiles path observed in release builds.
-CC_x86_64_pc_windows_gnu = "clang"
-CXX_x86_64_pc_windows_gnu = "clang++"
-CC = "clang"
-CXX = "clang++"
-CMAKE_GENERATOR_x86_64_pc_windows_gnu = "Ninja"
+CC_x86_64_pc_windows_gnu = { value = "clang", force = false }
+CXX_x86_64_pc_windows_gnu = { value = "clang++", force = false }
+CC = { value = "clang", force = false }
+CXX = { value = "clang++", force = false }
+CMAKE_GENERATOR_x86_64_pc_windows_gnu = { value = "Ninja", force = false }
 
 [alias]
 test-fast = "nextest run --profile local --lib --release"
