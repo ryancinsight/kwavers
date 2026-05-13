@@ -41,21 +41,32 @@ The inversion solves:
 where `L` is the four-neighbor graph Laplacian on the active CT-derived tissue
 support. The passive histotripsy channel replaces the transmit path with a
 receiver-only subharmonic sensitivity at `f0/2`. The nonlinear channel uses the
-same aperture with a second-harmonic row family at `2f0`. Fusion gates active
-lesion FWI by passive subharmonic support and harmonic contrast.
+same aperture with second-harmonic rows at `2f0` and ultraharmonic rows at
+`1.5f0`. Fusion gates active lesion FWI by passive subharmonic support plus
+harmonic and ultraharmonic contrast; the generated metrics report the fused map
+separately from the individual channels.
 
 ## Device Placement
 
-The brain case places all 1024 elements on a circular projection of the
-hemispherical helmet around the CT-derived head support. The abdominal cases
-place a concave 256-element therapy arc outside the anterior skin point aligned
-with the target centroid. A central 64-receiver imaging line occupies the
-therapy-head cutout. The PyO3 result exports `placement_metrics`, including
-minimum body clearance and distance from the CT-derived skin-contact point to
-the nearest aperture element. The figure renderer expands the CT axes to include
-the complete aperture, so the INSIGHTEC-like helmet around the head and the
-HistoSonics-like skin-adjacent abdominal receiver line are visible on the
-RITK-loaded CT slice.
+The brain case places all 1024 elements on a circular projection for the
+slice-level FWI operator and also emits a separate CT-derived 3-D helmet
+placement view. The 3-D view renders the head surface, dense skull/calvarium
+surface points, the calvarium helmet element cloud, sampled beam paths, and the
+first dense-bone intersection on each sampled beam. The helmet cap is limited to
+the superior skull support determined from the CT axial area profile, so the
+visualized elements cover the calvarium instead of extending down the neck. The
+abdominal cases place a concave 256-element therapy arc outside the anterior
+skin point aligned with the target centroid. A central 64-receiver imaging line
+occupies the therapy-head cutout. The PyO3 result exports `placement_metrics`
+and a separate full-CT `placement_context`; figure 1 uses the uncropped patient
+slice for kidney and liver so the skin interface is visible relative to the
+stomach/hip cross-section rather than only the local tumor field of view.
+
+The Verasonics-like role in this simulation is the programmable acquisition
+contract rather than a fixed clinical transducer geometry: each case exposes
+source count, receiver offsets, frequency list, pressure scale, and raw
+same-aperture active/passive channel synthesis through
+`run_theranostic_fwi_from_ritk`.
 
 The simulated pressure scale is explicit. The brain case uses a diagnostic
 receive/imaging pressure of `1.5e5 Pa`. The kidney and liver histotripsy cases
@@ -75,6 +86,7 @@ Outputs:
 
 - `docs/book/figures/ch29/fig01_device_placement_on_ct.{png,pdf}`
 - `docs/book/figures/ch29/fig02_exposure_and_reconstruction.{png,pdf}`
+- `docs/book/figures/ch29/fig03_brain_helmet_3d_placement.{png,pdf}`
 - `docs/book/figures/ch29/metrics.json`
 
 ## Research Alignment

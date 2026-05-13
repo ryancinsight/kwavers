@@ -96,8 +96,18 @@ if _extension_override:
                     try:
                         shutil.copy2(_python3_dll, _stable_abi_dll)
                     except PermissionError:
-                        if not _stable_abi_dll.exists():
-                            raise
+                        if (
+                            not _stable_abi_dll.exists()
+                            or _stable_abi_dll.stat().st_size != _python3_dll.stat().st_size
+                        ):
+                            _runtime_dir = _extension_dir / f"_pykwavers_runtime_{os.getpid()}"
+                            _runtime_dir.mkdir(parents=True, exist_ok=True)
+                            _runtime_extension_path = _runtime_dir / _extension_path.name
+                            shutil.copy2(_extension_path, _runtime_extension_path)
+                            shutil.copy2(_python3_dll, _runtime_dir / "libpython3.dll")
+                            _extension_path = _runtime_extension_path
+                            _extension_dir = _runtime_dir
+                            _stable_abi_dll = _runtime_dir / "libpython3.dll"
                 break
         os.add_dll_directory(str(_extension_dir))
     _loader = importlib.machinery.ExtensionFileLoader(
@@ -140,6 +150,7 @@ from ._pykwavers import (
     FocalKernel,
     KernelCube,
     place_kernel_at_focus,
+    plan_brain_helmet_placement_from_ritk_ct,
     run_seismic_helmet_fwi_from_ritk_ct,
     run_seismic_helmet_fwi_volume_from_ritk_ct,
     run_theranostic_fwi_from_ritk,
@@ -212,6 +223,7 @@ __all__ = [
     "run_seismic_helmet_fwi_from_ritk_ct",
     "run_seismic_helmet_fwi_volume_from_ritk_ct",
     "run_theranostic_fwi_from_ritk",
+    "plan_brain_helmet_placement_from_ritk_ct",
     "passive_acoustic_map_das",
     "beamform_image_delay_and_sum",
     # Submodules

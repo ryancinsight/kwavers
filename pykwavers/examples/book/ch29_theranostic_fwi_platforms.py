@@ -96,26 +96,28 @@ def run_case(case: dict[str, object]) -> dict[str, object]:
 def render_layouts(results: list[dict[str, object]]) -> Path:
     fig, axes = plt.subplots(1, len(results), figsize=(15, 4.8), constrained_layout=True)
     for ax, result in zip(axes, results):
-        ct = np.asarray(result["ct_hu"], dtype=float)
-        dx = float(result["spacing_m"])
-        extent = image_extent(ct, dx)
-        therapy_x = np.asarray(result["therapy_x_m"], dtype=float)
-        therapy_y = np.asarray(result["therapy_y_m"], dtype=float)
-        imaging_x = np.asarray(result["imaging_x_m"], dtype=float)
-        imaging_y = np.asarray(result["imaging_y_m"], dtype=float)
+        ct = np.asarray(result["placement_ct_hu"], dtype=float)
+        spacing = tuple(float(v) for v in result["placement_spacing_m"])
+        extent = image_extent_xy(ct, spacing)
+        therapy_points = np.asarray(result["placement_therapy_points_m"], dtype=float)
+        imaging_points = np.asarray(result["placement_imaging_points_m"], dtype=float)
+        therapy_x = therapy_points[:, 0]
+        therapy_y = therapy_points[:, 1]
+        imaging_x = imaging_points[:, 0] if imaging_points.size else np.array([], dtype=float)
+        imaging_y = imaging_points[:, 1] if imaging_points.size else np.array([], dtype=float)
         ax.imshow(ct.T, cmap="gray", origin="lower", extent=extent, vmin=-200, vmax=300)
-        contour_mask(ax, np.asarray(result["target_mask"], dtype=bool), extent, "yellow", 1.1)
-        contour_mask(ax, np.asarray(result["body_mask"], dtype=bool), extent, "cyan", 0.8)
+        contour_mask(ax, np.asarray(result["placement_target_mask"], dtype=bool), extent, "yellow", 1.1)
+        contour_mask(ax, np.asarray(result["placement_body_mask"], dtype=bool), extent, "cyan", 0.8)
         ax.scatter(therapy_x, therapy_y, s=2.0, c="#e74c3c", alpha=0.50, label="therapy tx/rx")
         if imaging_x.size > 0:
             ax.scatter(imaging_x, imaging_y, s=6.0, c="#2e86de", alpha=0.80, label="central imaging rx")
-        focus = result["focus_m"]
-        skin = result["skin_contact_m"]
+        focus = result["placement_focus_m"]
+        skin = result["placement_skin_contact_m"]
         ax.scatter([focus[0]], [focus[1]], marker="x", s=45, c="white", linewidths=1.6)
         ax.scatter([skin[0]], [skin[1]], marker="o", s=24, c="lime", edgecolors="black", linewidths=0.5)
         ax.set_title(
             f"{result['anatomy']}: {short_device_name(result)}\n"
-            f"{result['element_count']} elements, {placement_label(result)}"
+            f"full CT slice, {result['element_count']} elements, {placement_label(result)}"
         )
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
@@ -161,6 +163,66 @@ def render_reconstructions(results: list[dict[str, object]]) -> Path:
     return path
 
 
+def render_brain_helmet_3d(placement: dict[str, object]) -> Path:
+    head = np.asarray(placement["head_surface_points_m"], dtype=float)
+    skull = np.asarray(placement["skull_surface_points_m"], dtype=float)
+    elements = np.asarray(placement["therapy_elements_m"], dtype=float)
+    starts = np.asarray(placement["beam_start_points_m"], dtype=float)
+    ends = np.asarray(placement["beam_end_points_m"], dtype=float)
+    intersections = np.asarray(placement["skull_intersections_m"], dtype=float)
+    focus = np.asarray(placement["focus_m"], dtype=float)
+
+    fig = plt.figure(figsize=(13.5, 6.2), constrained_layout=True)
+    ax_a = fig.add_subplot(1, 2, 1, projection="3d")
+    ax_b = fig.add_subplot(1, 2, 2, projection="3d")
+    for ax in (ax_a, ax_b):
+        ax.scatter(head[:, 0], head[:, 1], head[:, 2], s=0.9, c="#b8c0cc", alpha=0.16, depthshade=False)
+        ax.scatter(skull[:, 0], skull[:, 1], skull[:, 2], s=1.5, c="#f2d7a0", alpha=0.38, depthshade=False)
+        ax.scatter(elements[:, 0], elements[:, 1], elements[:, 2], s=5.0, c="#d94f45", alpha=0.62, depthshade=False)
+        if intersections.size:
+            ax.scatter(
+                intersections[:, 0],
+                intersections[:, 1],
+                intersections[:, 2],
+                s=16,
+                c="#ffff33",
+                edgecolors="black",
+                linewidths=0.25,
+                depthshade=False,
+            )
+        ax.scatter([focus[0]], [focus[1]], [focus[2]], marker="x", s=80, c="white", linewidths=2.0)
+        for start, end in zip(starts, ends):
+            ax.plot(
+                [start[0], end[0]],
+                [start[1], end[1]],
+                [start[2], end[2]],
+                c="#ff8c00",
+                lw=0.55,
+                alpha=0.42,
+            )
+        set_equal_3d_limits(ax, [head, skull, elements])
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("y [m]")
+        ax.set_zlabel("z [m]")
+    ax_a.view_init(elev=18, azim=-68)
+    ax_a.set_title(
+        "1024-element helmet around CT head\n"
+        "red: tx/rx elements, yellow: CT skull entry points",
+        fontsize=10,
+    )
+    ax_b.view_init(elev=4, azim=-8)
+    ax_b.set_title(
+        "calvarial beam paths into brain target\n"
+        f"skull-intersection fraction={float(placement['intersection_fraction']):.2f}",
+        fontsize=10,
+    )
+    path = OUT_DIR / "fig03_brain_helmet_3d_placement.png"
+    fig.savefig(path, dpi=180)
+    fig.savefig(path.with_suffix(".pdf"))
+    plt.close(fig)
+    return path
+
+
 def image_extent(image: np.ndarray, spacing_m: float) -> list[float]:
     nx, ny = image.shape
     return [
@@ -168,6 +230,16 @@ def image_extent(image: np.ndarray, spacing_m: float) -> list[float]:
         0.5 * (nx - 1) * spacing_m,
         -0.5 * (ny - 1) * spacing_m,
         0.5 * (ny - 1) * spacing_m,
+    ]
+
+
+def image_extent_xy(image: np.ndarray, spacing_m: tuple[float, float]) -> list[float]:
+    nx, ny = image.shape
+    return [
+        -0.5 * (nx - 1) * spacing_m[0],
+        0.5 * (nx - 1) * spacing_m[0],
+        -0.5 * (ny - 1) * spacing_m[1],
+        0.5 * (ny - 1) * spacing_m[1],
     ]
 
 
@@ -180,7 +252,11 @@ def short_device_name(result: dict[str, object]) -> str:
 
 def placement_label(result: dict[str, object]) -> str:
     metrics = result["placement_metrics"]
-    gap_mm = 1.0e3 * float(metrics["skin_contact_to_nearest_aperture_m"])
+    gap_m = result.get(
+        "placement_context_skin_gap_m",
+        metrics["skin_contact_to_nearest_aperture_m"],
+    )
+    gap_mm = 1.0e3 * float(gap_m)
     clearance_mm = 1.0e3 * float(metrics["min_body_clearance_m"])
     if str(result["anatomy"]) == "brain":
         return f"helmet clearance {clearance_mm:.1f} mm"
@@ -209,23 +285,53 @@ def contour_mask(ax: plt.Axes, mask: np.ndarray, extent: list[float], color: str
     ax.contour(x, y, mask.T.astype(float), levels=[0.5], colors=color, linewidths=width)
 
 
-def write_metrics(results: list[dict[str, object]], figures: list[Path]) -> Path:
+def set_equal_3d_limits(ax: plt.Axes, clouds: list[np.ndarray]) -> None:
+    stacked = np.vstack([cloud for cloud in clouds if cloud.size])
+    mins = np.min(stacked, axis=0)
+    maxs = np.max(stacked, axis=0)
+    center = 0.5 * (mins + maxs)
+    radius = 0.52 * float(np.max(maxs - mins))
+    ax.set_xlim(center[0] - radius, center[0] + radius)
+    ax.set_ylim(center[1] - radius, center[1] + radius)
+    ax.set_zlim(center[2] - radius, center[2] + radius)
+    ax.set_box_aspect((1.0, 1.0, 1.0))
+
+
+def write_metrics(
+    results: list[dict[str, object]],
+    figures: list[Path],
+    brain_helmet_3d: dict[str, object],
+) -> Path:
     payload = {
         "chapter": 29,
         "analysis": "same-device ultrasound treatment plus FWI/RTM monitoring",
         "simulation_type": "RITK-loaded CT/NIfTI, kwavers PyO3 theranostic FWI",
         "figures": [str(path) for path in figures],
+        "brain_helmet_3d": {
+            "geometry_model": brain_helmet_3d["geometry_model"],
+            "element_count": int(brain_helmet_3d["element_count"]),
+            "helmet_radius_m": float(brain_helmet_3d["helmet_radius_m"]),
+            "beam_probe_count": int(np.asarray(brain_helmet_3d["beam_start_points_m"]).shape[0]),
+            "skull_intersection_count": int(np.asarray(brain_helmet_3d["skull_intersections_m"]).shape[0]),
+            "skull_intersection_fraction": float(brain_helmet_3d["intersection_fraction"]),
+            "skull_hu_threshold": float(brain_helmet_3d["skull_hu_threshold"]),
+        },
         "cases": [
             {
                 "anatomy": result["anatomy"],
                 "device_model": result["device_model"],
                 "geometry_model": result["geometry_model"],
+                "placement_context_model": result["placement_context_model"],
                 "operator_model": result["operator_model"],
                 "element_count": int(result["element_count"]),
                 "source_pressure_pa": float(result["source_pressure_pa"]),
                 "measurements": int(result["measurements"]),
                 "active_voxels": int(result["active_voxels"]),
                 "spacing_m": float(result["spacing_m"]),
+                "placement_slice_index": int(result["placement_slice_index"]),
+                "placement_spacing_m": [float(v) for v in result["placement_spacing_m"]],
+                "placement_context_skin_gap_m": float(result["placement_context_skin_gap_m"]),
+                "placement_context_surface_points": int(result["placement_context_surface_points"]),
                 "placement_metrics": result["placement_metrics"],
                 "metrics": result["metrics"],
             }
@@ -240,8 +346,19 @@ def write_metrics(results: list[dict[str, object]], figures: list[Path]) -> Path
 def run() -> dict[str, object]:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     results = [run_case(case) for case in CASES]
-    figures = [render_layouts(results), render_reconstructions(results)]
-    metrics = write_metrics(results, figures)
+    brain_helmet_3d = kw.plan_brain_helmet_placement_from_ritk_ct(
+        str(CASES[0]["ct"]),
+        element_count=int(CASES[0]["elements"]),
+        surface_stride=int(os.environ.get("KWAVERS_CH29_3D_SURFACE_STRIDE", "7")),
+        body_hu_threshold=float(os.environ.get("KWAVERS_CH29_3D_BODY_HU_THRESHOLD", "20.0")),
+        skull_hu_threshold=float(os.environ.get("KWAVERS_CH29_3D_SKULL_HU_THRESHOLD", "300.0")),
+    )
+    figures = [
+        render_layouts(results),
+        render_reconstructions(results),
+        render_brain_helmet_3d(brain_helmet_3d),
+    ]
+    metrics = write_metrics(results, figures, brain_helmet_3d)
     return {"figures": [str(path) for path in figures], "metrics": str(metrics)}
 
 

@@ -25,6 +25,7 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "run_seismic_helmet_fwi_from_ritk_ct")
     assert hasattr(kw, "run_seismic_helmet_fwi_volume_from_ritk_ct")
     assert hasattr(kw, "run_theranostic_fwi_from_ritk")
+    assert hasattr(kw, "plan_brain_helmet_placement_from_ritk_ct")
 
 
 def test_heterogeneous_medium_and_mask_sensor_surface():

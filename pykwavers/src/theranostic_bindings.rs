@@ -2,10 +2,12 @@
 
 use kwavers::solver::inverse::seismic::brain_helmet::{resample_head_slice, select_head_slice};
 use kwavers::solver::inverse::seismic::theranostic::{
-    placement_metrics, prepare_abdominal_slice, prepare_brain_slice, run_theranostic_fwi,
-    AnatomyKind, DevicePlacementMetrics, ReconstructionMetrics, TheranosticFwiConfig,
+    build_abdominal_placement_context, build_brain_placement_context, placement_metrics,
+    plan_brain_helmet_placement, prepare_abdominal_slice, prepare_brain_slice, run_theranostic_fwi,
+    AnatomyKind, DevicePlacementMetrics, PlacementContext, PlacementPoint3, Point3,
+    ReconstructionMetrics, TheranosticFwiConfig,
 };
-use ndarray::{Array1, Array3};
+use ndarray::{Array1, Array2, Array3};
 use numpy::IntoPyArray;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -61,13 +63,19 @@ fn run_theranostic_fwi_from_ritk<'py>(
         config.source_pressure_pa = pressure;
     }
 
-    let prepared = match anatomy {
+    let (prepared, placement_context) = match anatomy {
         AnatomyKind::Brain => {
             let selected = select_head_slice(&ct).map_err(kwavers_to_py)?;
             let resampled =
                 resample_head_slice(&ct, spacing_mm, selected, grid_size).map_err(kwavers_to_py)?;
-            prepare_brain_slice(resampled.hu, resampled.spacing_m, selected)
-                .map_err(kwavers_to_py)?
+            let placement_context =
+                build_brain_placement_context(&ct, spacing_mm, selected, &config)
+                    .map_err(kwavers_to_py)?;
+            (
+                prepare_brain_slice(resampled.hu, resampled.spacing_m, selected)
+                    .map_err(kwavers_to_py)?,
+                placement_context,
+            )
         }
         AnatomyKind::Liver | AnatomyKind::Kidney => {
             let seg_path = segmentation_nifti_path.ok_or_else(|| {
@@ -75,14 +83,96 @@ fn run_theranostic_fwi_from_ritk<'py>(
             })?;
             let (seg, _) = load_ritk_nifti(Path::new(seg_path))?;
             let labels = labels_from_volume(seg);
-            prepare_abdominal_slice(anatomy, &ct, &labels, spacing_mm, grid_size)
-                .map_err(kwavers_to_py)?
+            let placement_context =
+                build_abdominal_placement_context(anatomy, &ct, &labels, spacing_mm, &config)
+                    .map_err(kwavers_to_py)?;
+            (
+                prepare_abdominal_slice(anatomy, &ct, &labels, spacing_mm, grid_size)
+                    .map_err(kwavers_to_py)?,
+                placement_context,
+            )
         }
     };
     let result = py
         .detach(|| run_theranostic_fwi(prepared, &config))
         .map_err(kwavers_to_py)?;
-    result_to_dict(py, result, &config)
+    result_to_dict(py, result, &config, placement_context)
+}
+
+#[pyfunction]
+#[pyo3(signature = (
+    ct_nifti_path,
+    element_count = 1024,
+    surface_stride = 6,
+    body_hu_threshold = -350.0,
+    skull_hu_threshold = 300.0
+))]
+fn plan_brain_helmet_placement_from_ritk_ct<'py>(
+    py: Python<'py>,
+    ct_nifti_path: &str,
+    element_count: usize,
+    surface_stride: usize,
+    body_hu_threshold: f64,
+    skull_hu_threshold: f64,
+) -> PyResult<Bound<'py, PyDict>> {
+    let (mut ct, spacing_mm) = load_ritk_nifti(Path::new(ct_nifti_path))?;
+    ct.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+    let placement = py
+        .detach(|| {
+            plan_brain_helmet_placement(
+                &ct,
+                spacing_mm,
+                element_count,
+                surface_stride,
+                body_hu_threshold,
+                skull_hu_threshold,
+            )
+        })
+        .map_err(kwavers_to_py)?;
+    let out = PyDict::new(py);
+    out.set_item(
+        "head_surface_points_m",
+        points3_to_array(&placement.head_surface_points_m).into_pyarray(py),
+    )?;
+    out.set_item(
+        "skull_surface_points_m",
+        points3_to_array(&placement.skull_surface_points_m).into_pyarray(py),
+    )?;
+    out.set_item(
+        "therapy_elements_m",
+        points3_to_array(&placement.therapy_elements_m).into_pyarray(py),
+    )?;
+    out.set_item(
+        "beam_start_points_m",
+        points3_to_array(&placement.beam_start_points_m).into_pyarray(py),
+    )?;
+    out.set_item(
+        "beam_end_points_m",
+        points3_to_array(&placement.beam_end_points_m).into_pyarray(py),
+    )?;
+    out.set_item(
+        "skull_intersections_m",
+        points3_to_array(&placement.skull_intersections_m).into_pyarray(py),
+    )?;
+    out.set_item(
+        "focus_m",
+        (
+            placement.focus_m.x_m,
+            placement.focus_m.y_m,
+            placement.focus_m.z_m,
+        ),
+    )?;
+    out.set_item("helmet_radius_m", placement.helmet_radius_m)?;
+    out.set_item("intersection_fraction", placement.intersection_fraction)?;
+    out.set_item("element_count", element_count)?;
+    out.set_item("surface_stride", surface_stride)?;
+    out.set_item("body_hu_threshold", body_hu_threshold)?;
+    out.set_item("skull_hu_threshold", skull_hu_threshold)?;
+    out.set_item(
+        "geometry_model",
+        "ct_derived_calvarium_1024_element_helmet_with_skull_intersections",
+    )?;
+    Ok(out)
 }
 
 fn labels_from_volume(volume: Array3<f64>) -> Array3<i16> {
@@ -93,11 +183,30 @@ fn result_to_dict<'py>(
     py: Python<'py>,
     result: kwavers::solver::inverse::seismic::theranostic::TheranosticFwiResult,
     config: &TheranosticFwiConfig,
+    placement_context: PlacementContext,
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
     let prepared = result.prepared;
     let layout = result.layout;
     let placement = placement_metrics(&layout, &prepared.body_mask, prepared.spacing_m);
+    let placement_context_model = placement_context.model_name.clone();
+    let placement_spacing_m = (placement_context.spacing_x_m, placement_context.spacing_y_m);
+    let placement_focus_m = (
+        placement_context.focus_m.x_m,
+        placement_context.focus_m.y_m,
+        placement_context.focus_m.z_m,
+    );
+    let placement_skin_contact_m = (
+        placement_context.skin_contact_m.x_m,
+        placement_context.skin_contact_m.y_m,
+        placement_context.skin_contact_m.z_m,
+    );
+    let placement_context_skin_gap_m = placement_context_skin_gap(&placement_context);
+    let placement_context_surface_points = placement_context.body_surface_points_m.len();
+    let placement_therapy_points = placement_points3_to_array(&placement_context.therapy_points_m);
+    let placement_imaging_points = placement_points3_to_array(&placement_context.imaging_points_m);
+    let placement_body_surface_points =
+        placement_points3_to_array(&placement_context.body_surface_points_m);
     out.set_item("anatomy", prepared.anatomy.label())?;
     out.set_item("device_model", layout.model_name.clone())?;
     out.set_item("ct_hu", prepared.ct_hu.into_pyarray(py))?;
@@ -165,6 +274,37 @@ fn result_to_dict<'py>(
     out.set_item("source_pressure_pa", config.source_pressure_pa)?;
     out.set_item("geometry_model", layout.model_name.clone())?;
     out.set_item("placement_metrics", placement_dict(py, &placement)?)?;
+    out.set_item("placement_context_model", placement_context_model)?;
+    out.set_item("placement_ct_hu", placement_context.ct_hu.into_pyarray(py))?;
+    out.set_item(
+        "placement_body_mask",
+        placement_context.body_mask.into_pyarray(py),
+    )?;
+    out.set_item(
+        "placement_target_mask",
+        placement_context.target_mask.into_pyarray(py),
+    )?;
+    out.set_item("placement_spacing_m", placement_spacing_m)?;
+    out.set_item("placement_slice_index", placement_context.slice_index)?;
+    out.set_item(
+        "placement_therapy_points_m",
+        placement_therapy_points.into_pyarray(py),
+    )?;
+    out.set_item(
+        "placement_imaging_points_m",
+        placement_imaging_points.into_pyarray(py),
+    )?;
+    out.set_item(
+        "placement_body_surface_points_m",
+        placement_body_surface_points.into_pyarray(py),
+    )?;
+    out.set_item("placement_focus_m", placement_focus_m)?;
+    out.set_item("placement_skin_contact_m", placement_skin_contact_m)?;
+    out.set_item("placement_context_skin_gap_m", placement_context_skin_gap_m)?;
+    out.set_item(
+        "placement_context_surface_points",
+        placement_context_surface_points,
+    )?;
     out.set_item("operator_model", "finite_frequency_same_aperture_fwi_rtm")?;
     out.set_item("measurements", result.measurements)?;
     out.set_item("active_voxels", result.active_voxels)?;
@@ -213,6 +353,36 @@ fn point_axis(
     )
 }
 
+fn points3_to_array(points: &[Point3]) -> Array2<f64> {
+    Array2::from_shape_fn((points.len(), 3), |(row, col)| match col {
+        0 => points[row].x_m,
+        1 => points[row].y_m,
+        _ => points[row].z_m,
+    })
+}
+
+fn placement_points3_to_array(points: &[PlacementPoint3]) -> Array2<f64> {
+    Array2::from_shape_fn((points.len(), 3), |(row, col)| match col {
+        0 => points[row].x_m,
+        1 => points[row].y_m,
+        _ => points[row].z_m,
+    })
+}
+
+fn placement_context_skin_gap(context: &PlacementContext) -> f64 {
+    context
+        .therapy_points_m
+        .iter()
+        .chain(context.imaging_points_m.iter())
+        .map(|point| {
+            ((point.x_m - context.skin_contact_m.x_m).powi(2)
+                + (point.y_m - context.skin_contact_m.y_m).powi(2)
+                + (point.z_m - context.skin_contact_m.z_m).powi(2))
+            .sqrt()
+        })
+        .fold(f64::INFINITY, f64::min)
+}
+
 fn metric_dict<'py>(
     py: Python<'py>,
     metrics: &ReconstructionMetrics,
@@ -231,5 +401,9 @@ fn kwavers_to_py(err: kwavers::core::error::KwaversError) -> PyErr {
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(run_theranostic_fwi_from_ritk, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        plan_brain_helmet_placement_from_ritk_ct,
+        m
+    )?)?;
     Ok(())
 }

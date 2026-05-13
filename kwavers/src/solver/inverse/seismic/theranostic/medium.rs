@@ -2,6 +2,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3};
+use std::collections::VecDeque;
 
 use super::config::{AnatomyKind, C_REF_M_S};
 
@@ -85,7 +86,9 @@ pub fn prepare_abdominal_slice(
     let slice_index = largest_target_slice(label_volume)?;
     let ct_slice = ct_volume_hu.slice(s![.., .., slice_index]).to_owned();
     let label_slice = label_volume.slice(s![.., .., slice_index]).to_owned();
-    let bbox = target_bbox(&label_slice, 18)?;
+    let target_seed = target_seed_index(&label_slice)?;
+    let body_component = connected_body_component(&ct_slice, &label_slice, target_seed)?;
+    let bbox = square_bbox_from_mask(&body_component, 6)?;
     let ct_crop = ct_slice
         .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
         .to_owned();
@@ -93,7 +96,7 @@ pub fn prepare_abdominal_slice(
         .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
         .to_owned();
     let ct = resample_f64(&ct_crop, grid_size);
-    let label = resample_i16(&label_crop, grid_size);
+    let label = resample_labels_max(&label_crop, grid_size);
     let spacing_m = ((bbox.1 - bbox.0 + 1) as f64 * spacing_mm[0] * 1.0e-3)
         .max((bbox.3 - bbox.2 + 1) as f64 * spacing_mm[1] * 1.0e-3)
         / grid_size as f64;
@@ -180,7 +183,7 @@ fn abdominal_properties(
     (speed, attenuation, body, organ, target)
 }
 
-fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> {
+pub(crate) fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> {
     let (_, _, nz) = label.dim();
     let mut best = None;
     for z in 0..nz {
@@ -200,12 +203,91 @@ fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> {
         })
 }
 
-fn target_bbox(label: &Array2<i16>, margin: usize) -> KwaversResult<(usize, usize, usize, usize)> {
-    let (nx, ny) = label.dim();
+fn target_seed_index(label: &Array2<i16>) -> KwaversResult<(usize, usize)> {
+    for ((ix, iy), value) in label.indexed_iter() {
+        if *value == 2 {
+            return Ok((ix, iy));
+        }
+    }
+    Err(KwaversError::InvalidInput(
+        "target seed is empty".to_owned(),
+    ))
+}
+
+fn connected_body_component(
+    ct: &Array2<f64>,
+    label: &Array2<i16>,
+    seed: (usize, usize),
+) -> KwaversResult<Array2<bool>> {
+    let (nx, ny) = ct.dim();
+    let mut component = Array2::<bool>::from_elem((nx, ny), false);
+    if !is_abdominal_body_candidate(ct[[seed.0, seed.1]], label[[seed.0, seed.1]]) {
+        return Err(KwaversError::InvalidInput(
+            "target seed is not inside abdominal body support".to_owned(),
+        ));
+    }
+    let mut queue = VecDeque::from([seed]);
+    component[[seed.0, seed.1]] = true;
+    while let Some((ix, iy)) = queue.pop_front() {
+        for (nx_i, ny_i) in body_neighbors(ix, iy, nx, ny) {
+            if component[[nx_i, ny_i]]
+                || !is_abdominal_body_candidate(ct[[nx_i, ny_i]], label[[nx_i, ny_i]])
+            {
+                continue;
+            }
+            component[[nx_i, ny_i]] = true;
+            queue.push_back((nx_i, ny_i));
+        }
+    }
+    let count = component.iter().filter(|active| **active).count();
+    if count < 16 {
+        return Err(KwaversError::InvalidInput(format!(
+            "abdominal body component is too small: {count}"
+        )));
+    }
+    Ok(component)
+}
+
+fn is_abdominal_body_candidate(hu: f64, label: i16) -> bool {
+    hu > -450.0 || label > 0
+}
+
+fn body_neighbors(
+    ix: usize,
+    iy: usize,
+    nx: usize,
+    ny: usize,
+) -> impl Iterator<Item = (usize, usize)> {
+    let mut neighbors = [(ix, iy); 4];
+    let mut count = 0;
+    if ix > 0 {
+        neighbors[count] = (ix - 1, iy);
+        count += 1;
+    }
+    if ix + 1 < nx {
+        neighbors[count] = (ix + 1, iy);
+        count += 1;
+    }
+    if iy > 0 {
+        neighbors[count] = (ix, iy - 1);
+        count += 1;
+    }
+    if iy + 1 < ny {
+        neighbors[count] = (ix, iy + 1);
+        count += 1;
+    }
+    neighbors.into_iter().take(count)
+}
+
+fn square_bbox_from_mask(
+    mask: &Array2<bool>,
+    margin: usize,
+) -> KwaversResult<(usize, usize, usize, usize)> {
+    let (nx, ny) = mask.dim();
     let mut bbox: Option<(usize, usize, usize, usize)> = None;
     for ix in 0..nx {
         for iy in 0..ny {
-            if label[[ix, iy]] == 2 {
+            if mask[[ix, iy]] {
                 bbox = Some(match bbox {
                     None => (ix, ix, iy, iy),
                     Some((x0, x1, y0, y1)) => (x0.min(ix), x1.max(ix), y0.min(iy), y1.max(iy)),
@@ -213,15 +295,20 @@ fn target_bbox(label: &Array2<i16>, margin: usize) -> KwaversResult<(usize, usiz
             }
         }
     }
-    bbox.map(|(x0, x1, y0, y1)| {
-        (
-            x0.saturating_sub(margin),
-            (x1 + margin).min(nx - 1),
-            y0.saturating_sub(margin),
-            (y1 + margin).min(ny - 1),
-        )
-    })
-    .ok_or_else(|| KwaversError::InvalidInput("target bbox is empty".to_owned()))
+    let (x0, x1, y0, y1) =
+        bbox.ok_or_else(|| KwaversError::InvalidInput("body bbox is empty".to_owned()))?;
+    let x0 = x0.saturating_sub(margin);
+    let x1 = (x1 + margin).min(nx - 1);
+    let y0 = y0.saturating_sub(margin);
+    let y1 = (y1 + margin).min(ny - 1);
+    let side = (x1 - x0 + 1).max(y1 - y0 + 1).min(nx).min(ny);
+    let cx2 = x0 + x1;
+    let cy2 = y0 + y1;
+    let mut sx = ((cx2 + 1).saturating_sub(side)) / 2;
+    let mut sy = ((cy2 + 1).saturating_sub(side)) / 2;
+    sx = sx.min(nx - side);
+    sy = sy.min(ny - side);
+    Ok((sx, sx + side - 1, sy, sy + side - 1))
 }
 
 fn resample_f64(input: &Array2<f64>, size: usize) -> Array2<f64> {
@@ -233,12 +320,20 @@ fn resample_f64(input: &Array2<f64>, size: usize) -> Array2<f64> {
     })
 }
 
-fn resample_i16(input: &Array2<i16>, size: usize) -> Array2<i16> {
+fn resample_labels_max(input: &Array2<i16>, size: usize) -> Array2<i16> {
     let (nx, ny) = input.dim();
     Array2::from_shape_fn((size, size), |(ix, iy)| {
-        let x = (ix as f64 * (nx - 1) as f64 / (size - 1) as f64).round() as usize;
-        let y = (iy as f64 * (ny - 1) as f64 / (size - 1) as f64).round() as usize;
-        input[[x.min(nx - 1), y.min(ny - 1)]]
+        let x0 = (ix * nx) / size;
+        let x1 = (((ix + 1) * nx).saturating_sub(1)) / size;
+        let y0 = (iy * ny) / size;
+        let y1 = (((iy + 1) * ny).saturating_sub(1)) / size;
+        let mut label = 0;
+        for x in x0..=x1.min(nx - 1) {
+            for y in y0..=y1.min(ny - 1) {
+                label = label.max(input[[x, y]]);
+            }
+        }
+        label
     })
 }
 

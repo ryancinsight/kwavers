@@ -4,6 +4,7 @@ use std::f64::consts::{PI, TAU};
 
 use ndarray::Array2;
 
+use super::aperture::{abdominal_arc_spec, ABDOMINAL_SKIN_CLEARANCE_M};
 use super::config::{AnatomyKind, TheranosticFwiConfig};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -77,11 +78,8 @@ fn abdominal_layout(
     focus: Point2,
 ) -> DeviceLayout {
     let skin = anterior_skin_contact(body_mask, spacing_m, focus);
-    let radius = config
-        .focal_radius_m
-        .max((focus.x_m - skin.x_m).abs() + 0.02);
-    let half_angle = (config.lateral_extent_m / (2.0 * radius)).min(0.96).asin();
-    let cutout = (config.central_cutout_m / (2.0 * radius)).min(0.90).asin();
+    let depth = (focus.x_m - skin.x_m).max(0.0);
+    let arc = abdominal_arc_spec(config, depth);
     let left = config.element_count / 2;
     let right = config.element_count - left;
     let mut elements = Vec::with_capacity(config.element_count);
@@ -91,7 +89,13 @@ fn abdominal_layout(
         } else {
             0.0
         };
-        elements.push(abdominal_arc_point(focus, radius, -half_angle, -cutout, t));
+        elements.push(abdominal_arc_point(
+            focus,
+            arc.radius_m,
+            -arc.half_angle_rad,
+            -arc.cutout_angle_rad,
+            t,
+        ));
     }
     for idx in 0..right {
         let t = if right > 1 {
@@ -99,7 +103,13 @@ fn abdominal_layout(
         } else {
             0.0
         };
-        elements.push(abdominal_arc_point(focus, radius, cutout, half_angle, t));
+        elements.push(abdominal_arc_point(
+            focus,
+            arc.radius_m,
+            arc.cutout_angle_rad,
+            arc.half_angle_rad,
+            t,
+        ));
     }
     let receiver_count = 64;
     let imaging_receivers = (0..receiver_count)
@@ -110,7 +120,7 @@ fn abdominal_layout(
                 0.5
             };
             Point2 {
-                x_m: skin.x_m - 0.003,
+                x_m: skin.x_m - ABDOMINAL_SKIN_CLEARANCE_M,
                 y_m: skin.y_m + (t - 0.5) * config.central_cutout_m,
             }
         })
