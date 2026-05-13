@@ -130,3 +130,8 @@ title  = "Passive Acoustic Mapping"
 number = 24
 script = "ch24_bbb_lifu_opening.py"
 title  = "LIFU-Mediated BBB Opening"
+
+[[chapter]]
+number = 29
+script = "ch29_theranostic_fwi_platforms.py"
+title  = "Same-Device Therapeutic Ultrasound and FWI/RTM Monitoring"

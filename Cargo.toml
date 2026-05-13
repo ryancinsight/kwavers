@@ -4,8 +4,22 @@ resolver = "2"
 
 [workspace.dependencies]
 # Required so Cargo can parse ritk-io/Cargo.toml (which inherits from its own workspace).
+ritk-core = { path = "ritk/crates/ritk-core" }
+ritk-dicom = { path = "ritk/crates/ritk-dicom" }
+ritk-codecs = { path = "ritk/crates/ritk-codecs" }
+ritk-nifti = { path = "ritk/crates/ritk-nifti" }
+ritk-nrrd = { path = "ritk/crates/ritk-nrrd" }
+ritk-metaimage = { path = "ritk/crates/ritk-metaimage" }
+ritk-mgh = { path = "ritk/crates/ritk-mgh" }
+ritk-analyze = { path = "ritk/crates/ritk-analyze" }
+ritk-vtk = { path = "ritk/crates/ritk-vtk" }
+ritk-io = { path = "ritk/crates/ritk-io" }
+ritk-model = { path = "ritk/crates/ritk-model" }
+ritk-registration = { path = "ritk/crates/ritk-registration" }
 burn = { version = "0.19", features = ["wgpu", "autodiff"] }
 burn-ndarray = "0.19"
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
+numpy = "0.22"
 nalgebra = { version = "0.33", features = ["serde-serialize"] }
 dicom = "0.8.0"
 nifti = "0.17.0"
@@ -18,6 +32,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rayon = "1.9"
 ndarray = { version = "0.16", features = ["rayon"] }
+gaia = { path = "gaia", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
 tokio = { version = "1.0", features = ["full"] }
@@ -33,6 +48,7 @@ dirs = "5.0"
 sha2 = "0.10"
 hex = "0.4"
 image = "0.24"
+jpeg-decoder = "0.3.2"
 tiff = "0.9"
 onnx-ir = "0.20.1"
 openjpeg-sys = "1.0"

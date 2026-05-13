@@ -1,0 +1,176 @@
+{
+  "chapter": 29,
+  "analysis": "same-device ultrasound treatment plus FWI/RTM monitoring",
+  "simulation_type": "RITK-loaded CT/NIfTI, kwavers PyO3 theranostic FWI",
+  "figures": [
+    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig01_device_placement_on_ct.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig02_exposure_and_reconstruction.png"
+  ],
+  "cases": [
+    {
+      "anatomy": "brain",
+      "device_model": "insightec_like_1024_element_helmet_projection",
+      "geometry_model": "insightec_like_1024_element_helmet_projection",
+      "operator_model": "finite_frequency_same_aperture_fwi_rtm",
+      "element_count": 1024,
+      "source_pressure_pa": 150000.0,
+      "measurements": 28672,
+      "active_voxels": 1139,
+      "spacing_m": 0.004312970797220866,
+      "placement_metrics": {
+        "min_body_clearance_m": 0.015001188154651283,
+        "mean_body_clearance_m": 0.04059761663682307,
+        "max_body_clearance_m": 0.06034853903112363,
+        "skin_contact_to_nearest_aperture_m": 0.123594454915879
+      },
+      "metrics": {
+        "anatomy": {
+          "pearson": 0.47523056498389216,
+          "nrmse": 0.37456874722245953,
+          "dice_equal_area": 0.6820083682008368,
+          "cnr": 1.642234291397903
+        },
+        "active_lesion": {
+          "pearson": 0.5477355673427783,
+          "nrmse": 0.08504628532973,
+          "dice_equal_area": 0.5,
+          "cnr": 10.644981311617041
+        },
+        "subharmonic": {
+          "pearson": 0.7413863652075305,
+          "nrmse": 0.06374711723439791,
+          "dice_equal_area": 1.0,
+          "cnr": 15.495870140010002
+        },
+        "harmonic": {
+          "pearson": 0.4864160472810513,
+          "nrmse": 0.05698870192006966,
+          "dice_equal_area": 0.5,
+          "cnr": 8.803934112009768
+        },
+        "ultraharmonic": {
+          "pearson": 0.42072838594300915,
+          "nrmse": 0.08656705767913174,
+          "dice_equal_area": 0.0,
+          "cnr": 7.650382047164325
+        },
+        "fusion": {
+          "pearson": 0.9322359067244035,
+          "nrmse": 0.026226749276003162,
+          "dice_equal_area": 1.0,
+          "cnr": 34.63013178061773
+        }
+      }
+    },
+    {
+      "anatomy": "kidney",
+      "device_model": "histosonics_like_256_element_skin_coupled_arc",
+      "geometry_model": "histosonics_like_256_element_skin_coupled_arc",
+      "operator_model": "finite_frequency_same_aperture_fwi_rtm",
+      "element_count": 256,
+      "source_pressure_pa": 28000000.0,
+      "measurements": 11136,
+      "active_voxels": 2704,
+      "spacing_m": 0.0011322115384615385,
+      "placement_metrics": {
+        "min_body_clearance_m": 0.003000020266334575,
+        "mean_body_clearance_m": 0.08378240004682239,
+        "max_body_clearance_m": 0.11139033433843622,
+        "skin_contact_to_nearest_aperture_m": 0.003016750081322949
+      },
+      "metrics": {
+        "anatomy": {
+          "pearson": 0.4429150413185495,
+          "nrmse": 0.08179729823258233,
+          "dice_equal_area": 0.0,
+          "cnr": 1.0255208376651186
+        },
+        "active_lesion": {
+          "pearson": 0.7761006273888392,
+          "nrmse": 0.06363606656317787,
+          "dice_equal_area": 0.6,
+          "cnr": 5.617899878951233
+        },
+        "subharmonic": {
+          "pearson": 0.26194080347057264,
+          "nrmse": 0.1686735426678924,
+          "dice_equal_area": 0.11428571428571428,
+          "cnr": 1.3168392156903135
+        },
+        "harmonic": {
+          "pearson": 0.7602257567512842,
+          "nrmse": 0.08190992039820973,
+          "dice_equal_area": 0.4411764705882353,
+          "cnr": 4.307528503570685
+        },
+        "ultraharmonic": {
+          "pearson": 0.8042936415559448,
+          "nrmse": 0.07233973369600633,
+          "dice_equal_area": 0.6,
+          "cnr": 6.023621838858506
+        },
+        "fusion": {
+          "pearson": 0.7616016193488232,
+          "nrmse": 0.06405280059387024,
+          "dice_equal_area": 0.5142857142857142,
+          "cnr": 6.365888695575727
+        }
+      }
+    },
+    {
+      "anatomy": "liver",
+      "device_model": "histosonics_like_256_element_skin_coupled_arc",
+      "geometry_model": "histosonics_like_256_element_skin_coupled_arc",
+      "operator_model": "finite_frequency_same_aperture_fwi_rtm",
+      "element_count": 256,
+      "source_pressure_pa": 28000000.0,
+      "measurements": 11136,
+      "active_voxels": 2704,
+      "spacing_m": 0.0029747596153846157,
+      "placement_metrics": {
+        "min_body_clearance_m": 0.003000365592711812,
+        "mean_body_clearance_m": 0.045805040655770894,
+        "max_body_clearance_m": 0.07410679177528771,
+        "skin_contact_to_nearest_aperture_m": 0.003016750081322949
+      },
+      "metrics": {
+        "anatomy": {
+          "pearson": 0.37683238923990336,
+          "nrmse": 0.1275710010413882,
+          "dice_equal_area": 0.417910447761194,
+          "cnr": 1.781075701733018
+        },
+        "active_lesion": {
+          "pearson": 0.7878695883309511,
+          "nrmse": 0.03639303364743107,
+          "dice_equal_area": 0.7142857142857143,
+          "cnr": 14.396720969047651
+        },
+        "subharmonic": {
+          "pearson": 0.3396351109750049,
+          "nrmse": 0.09132685467170029,
+          "dice_equal_area": 0.42857142857142855,
+          "cnr": 4.971381850871887
+        },
+        "harmonic": {
+          "pearson": 0.8885726602439631,
+          "nrmse": 0.03562611397329982,
+          "dice_equal_area": 0.8571428571428571,
+          "cnr": 18.037209360499826
+        },
+        "ultraharmonic": {
+          "pearson": 0.842543766304818,
+          "nrmse": 0.0565669575192606,
+          "dice_equal_area": 0.8571428571428571,
+          "cnr": 16.498704503464552
+        },
+        "fusion": {
+          "pearson": 0.8950285735209826,
+          "nrmse": 0.022637687861997456,
+          "dice_equal_area": 0.8571428571428571,
+          "cnr": 27.392069406750636
+        }
+      }
+    }
+  ]
+}

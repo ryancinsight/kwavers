@@ -29,6 +29,8 @@ This directory is the source tree for the in-repository book on ultrasound physi
 - [Passive Acoustic Mapping](passive_acoustic_mapping.md)
 - [LIFU-Mediated Blood–Brain Barrier Opening](bbb_lifu_opening.md)
 
+- [Same-Device Therapeutic Ultrasound and FWI/RTM Monitoring](theranostic_fwi_platforms.md)
+
 ## Figure Sources
 
 Figures are generated SVG assets committed with the chapter text so documentation builds remain reproducible without network access.

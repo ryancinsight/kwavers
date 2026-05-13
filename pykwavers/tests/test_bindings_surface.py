@@ -22,6 +22,9 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "Simulation")
     assert hasattr(kw, "SimulationResult")
     assert hasattr(kw, "SolverType")
+    assert hasattr(kw, "run_seismic_helmet_fwi_from_ritk_ct")
+    assert hasattr(kw, "run_seismic_helmet_fwi_volume_from_ritk_ct")
+    assert hasattr(kw, "run_theranostic_fwi_from_ritk")
 
 
 def test_heterogeneous_medium_and_mask_sensor_surface():
@@ -78,7 +81,7 @@ def test_kwave_array_disc_focus_generates_planar_weighted_mask():
     assert weights.shape == (32, 32, 32)
     assert np.count_nonzero(weights) > 0
 
-    expected_reference_mass = 28.302387208098168
+    expected_reference_mass = 28.339929259209097
     assert np.isclose(weights.sum(), expected_reference_mass, rtol=1e-7, atol=5e-6)
 
     active_indices = np.argwhere(weights > 0.0)

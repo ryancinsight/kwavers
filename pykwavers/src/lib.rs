@@ -102,9 +102,12 @@ use std::sync::Arc;
 // Utility Function Bindings
 // ============================================================================
 
-mod utils_bindings;
-mod thermal_bindings;
 mod field_surrogate_bindings;
+mod ritk_image;
+mod seismic_bindings;
+mod theranostic_bindings;
+mod thermal_bindings;
+mod utils_bindings;
 
 // ============================================================================
 // Error Handling
@@ -683,19 +686,15 @@ impl Medium {
         let default_grid = KwaversGrid::default();
         let grid_ref = grid.map(|g| &g.inner).unwrap_or(&default_grid);
 
-        let medium = HomogeneousMedium::elastic_homogeneous(
-            density,
-            c_compression,
-            c_shear,
-            grid_ref,
-        )
-        .ok_or_else(|| {
-            PyValueError::new_err(
-                "Invalid elastic parameters. Requirements: density > 0, \
+        let medium =
+            HomogeneousMedium::elastic_homogeneous(density, c_compression, c_shear, grid_ref)
+                .ok_or_else(|| {
+                    PyValueError::new_err(
+                        "Invalid elastic parameters. Requirements: density > 0, \
                  c_compression > 0, c_shear ≥ 0, 2·c_shear² ≤ c_compression². \
                  (Stability bound: ν ≥ 0; recovers fluid medium when c_shear = 0.)",
-            )
-        })?;
+                    )
+                })?;
 
         Ok(Medium {
             inner: MediumInner::Homogeneous(Box::new(medium)),
@@ -1280,7 +1279,10 @@ impl Source {
         let mask_f64 = mask_arr.mapv(|b| if b { 1.0 } else { 0.0 });
         let amplitude = [&ux, &uy, &uz]
             .iter()
-            .filter_map(|sig| sig.as_ref().map(|s| s.as_array().iter().fold(0.0_f64, |a, &v| a.max(v.abs()))))
+            .filter_map(|sig| {
+                sig.as_ref()
+                    .map(|s| s.as_array().iter().fold(0.0_f64, |a, &v| a.max(v.abs())))
+            })
             .fold(0.0_f64, f64::max);
         Ok(Source {
             source_type: "elastic_velocity_source".to_string(),
@@ -3267,9 +3269,10 @@ impl Simulation {
                         self.solver_type
                     )));
                 }
-                let mask_f64 = src.mask.as_ref().ok_or_else(|| {
-                    PyValueError::new_err("elastic velocity-source mask missing")
-                })?;
+                let mask_f64 = src
+                    .mask
+                    .as_ref()
+                    .ok_or_else(|| PyValueError::new_err("elastic velocity-source mask missing"))?;
                 // Convert f64 mask → bool mask for the kwavers config layer.
                 let mask_bool = mask_f64.mapv(|v| v != 0.0);
                 elastic_velocity_source = Some((
@@ -4254,16 +4257,17 @@ impl Simulation {
         } = result;
 
         // Full-grid pressure-statistics arrays (cavitation-kernel use).
-        let (p_max_3d, p_min_3d, p_rms_3d, p_final_3d) = if let Some((mx, mn, rm, fn_)) = full_grid_stats {
-            (
-                Some(PyArray3::from_owned_array(py, mx).into()),
-                Some(PyArray3::from_owned_array(py, mn).into()),
-                Some(PyArray3::from_owned_array(py, rm).into()),
-                Some(PyArray3::from_owned_array(py, fn_).into()),
-            )
-        } else {
-            (None, None, None, None)
-        };
+        let (p_max_3d, p_min_3d, p_rms_3d, p_final_3d) =
+            if let Some((mx, mn, rm, fn_)) = full_grid_stats {
+                (
+                    Some(PyArray3::from_owned_array(py, mx).into()),
+                    Some(PyArray3::from_owned_array(py, mn).into()),
+                    Some(PyArray3::from_owned_array(py, rm).into()),
+                    Some(PyArray3::from_owned_array(py, fn_).into()),
+                )
+            } else {
+                (None, None, None, None)
+            };
 
         // Pressure statistics → numpy arrays.
         let p_max = stats
@@ -4330,10 +4334,18 @@ impl Simulation {
                 p_min,
                 p_rms,
                 p_final,
-                p_max_field: p_max_3d.as_ref().map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
-                p_min_field: p_min_3d.as_ref().map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
-                p_rms_field: p_rms_3d.as_ref().map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
-                p_final_field: p_final_3d.as_ref().map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
+                p_max_field: p_max_3d
+                    .as_ref()
+                    .map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
+                p_min_field: p_min_3d
+                    .as_ref()
+                    .map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
+                p_rms_field: p_rms_3d
+                    .as_ref()
+                    .map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
+                p_final_field: p_final_3d
+                    .as_ref()
+                    .map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
                 ux,
                 uy,
                 uz,
@@ -5065,8 +5077,7 @@ impl Simulation {
         )>,
     ) -> KwaversResult<SimulationRunResult> {
         // Local alias to keep the existing axis-decode block readable.
-        let grid_source_axis_suffix: Option<String> =
-            elastic_ivp_axis.map(|s| s.to_string());
+        let grid_source_axis_suffix: Option<String> = elastic_ivp_axis.map(|s| s.to_string());
         use kwavers::solver::forward::elastic::swe::{
             ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
         };
@@ -5083,7 +5094,8 @@ impl Simulation {
             return Err(kwavers::core::error::KwaversError::InvalidInput(
                 "SolverType.Elastic requires either Source.from_initial_displacement(...) \
                  (initial-value problem) or Source.from_elastic_velocity_source(...) \
-                 (driven velocity source). No source was supplied.".to_string(),
+                 (driven velocity source). No source was supplied."
+                    .to_string(),
             ));
         }
 
@@ -5109,54 +5121,55 @@ impl Simulation {
 
         // Validate and convert the velocity-source bundle into the
         // kwavers `ElasticVelocitySource` type.
-        let elastic_vsrc_kw: Option<
-            kwavers::solver::forward::elastic::swe::ElasticVelocitySource,
-        > = if let Some((mask, ux_sig, uy_sig, uz_sig, mode_str)) = elastic_velocity_source {
-            if mask.dim() != (nx, ny, nz) {
-                return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
-                    "Elastic velocity-source mask shape {:?} must equal grid ({}, {}, {})",
-                    mask.dim(),
-                    nx,
-                    ny,
-                    nz
-                )));
-            }
-            let validate_signal = |sig: &Option<ndarray::Array1<f64>>, name: &str| -> KwaversResult<()> {
-                if let Some(s) = sig {
-                    if s.len() != time_steps {
-                        return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
+        let elastic_vsrc_kw: Option<kwavers::solver::forward::elastic::swe::ElasticVelocitySource> =
+            if let Some((mask, ux_sig, uy_sig, uz_sig, mode_str)) = elastic_velocity_source {
+                if mask.dim() != (nx, ny, nz) {
+                    return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
+                        "Elastic velocity-source mask shape {:?} must equal grid ({}, {}, {})",
+                        mask.dim(),
+                        nx,
+                        ny,
+                        nz
+                    )));
+                }
+                let validate_signal = |sig: &Option<ndarray::Array1<f64>>,
+                                       name: &str|
+                 -> KwaversResult<()> {
+                    if let Some(s) = sig {
+                        if s.len() != time_steps {
+                            return Err(kwavers::core::error::KwaversError::InvalidInput(format!(
                             "Elastic velocity-source {} signal length {} must equal time_steps {}",
                             name,
                             s.len(),
                             time_steps,
                         )));
+                        }
                     }
-                }
-                Ok(())
+                    Ok(())
+                };
+                validate_signal(&ux_sig, "ux")?;
+                validate_signal(&uy_sig, "uy")?;
+                validate_signal(&uz_sig, "uz")?;
+                let kw_mode = match mode_str.as_str() {
+                    "dirichlet" => {
+                        kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Dirichlet
+                    }
+                    _ => {
+                        kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Additive
+                    }
+                };
+                Some(
+                    kwavers::solver::forward::elastic::swe::ElasticVelocitySource {
+                        mask,
+                        ux_signal: ux_sig,
+                        uy_signal: uy_sig,
+                        uz_signal: uz_sig,
+                        mode: kw_mode,
+                    },
+                )
+            } else {
+                None
             };
-            validate_signal(&ux_sig, "ux")?;
-            validate_signal(&uy_sig, "uy")?;
-            validate_signal(&uz_sig, "uz")?;
-            let kw_mode = match mode_str.as_str() {
-                "dirichlet" => {
-                    kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Dirichlet
-                }
-                _ => {
-                    kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Additive
-                }
-            };
-            Some(
-                kwavers::solver::forward::elastic::swe::ElasticVelocitySource {
-                    mask,
-                    ux_signal: ux_sig,
-                    uy_signal: uy_sig,
-                    uz_signal: uz_sig,
-                    mode: kw_mode,
-                },
-            )
-        } else {
-            None
-        };
 
         // Build the elastic config — single uniform PML thickness (Phase A.2).
         let pml_thickness = pml_size.unwrap_or(10);
@@ -5200,8 +5213,7 @@ impl Simulation {
         // `field.{vx, vy, vz}`. See the theorem block on
         // `extract_recorded_velocity_components` in
         // kwavers/src/solver/forward/elastic/swe/core/solver/propagation.rs.
-        let (ux_data, uy_data, uz_data) =
-            solver.extract_recorded_velocity_components();
+        let (ux_data, uy_data, uz_data) = solver.extract_recorded_velocity_components();
 
         Ok(SimulationRunResult {
             sensor_data,
@@ -5216,7 +5228,7 @@ impl Simulation {
             i_avg_y: None,
             i_avg_z: None,
             velocity_stats: None,
-            full_grid_stats: None,  // elastic-wave path doesn't use pressure stats
+            full_grid_stats: None, // elastic-wave path doesn't use pressure stats
         })
     }
 
@@ -6678,6 +6690,8 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     utils_bindings::register_utils(m)?;
     thermal_bindings::register_thermal(m)?;
     field_surrogate_bindings::register(m)?;
+    seismic_bindings::register(m)?;
+    theranostic_bindings::register(m)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

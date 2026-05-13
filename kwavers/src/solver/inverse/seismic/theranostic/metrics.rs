@@ -1,0 +1,113 @@
+//! Value-semantic metrics for theranostic FWI outputs.
+
+use ndarray::Array2;
+
+#[derive(Clone, Debug)]
+pub struct ReconstructionMetrics {
+    pub pearson: f64,
+    pub nrmse: f64,
+    pub dice_equal_area: f64,
+    pub cnr: f64,
+}
+
+pub fn metrics_for(
+    target: &Array2<f64>,
+    recon: &Array2<f64>,
+    mask: &Array2<bool>,
+) -> ReconstructionMetrics {
+    let t = masked_values(target, mask);
+    let r = masked_values(recon, mask);
+    ReconstructionMetrics {
+        pearson: pearson(&t, &r),
+        nrmse: nrmse(&t, &r),
+        dice_equal_area: dice_equal_area(&r, &positive_mask(&t)),
+        cnr: cnr(&r, &positive_mask(&t)),
+    }
+}
+
+pub fn masked_values(image: &Array2<f64>, mask: &Array2<bool>) -> Vec<f64> {
+    image
+        .iter()
+        .zip(mask.iter())
+        .filter_map(|(value, active)| active.then_some(*value))
+        .collect()
+}
+
+pub fn pearson(a: &[f64], b: &[f64]) -> f64 {
+    if a.len() != b.len() || a.len() < 2 {
+        return 0.0;
+    }
+    let ma = a.iter().sum::<f64>() / a.len() as f64;
+    let mb = b.iter().sum::<f64>() / b.len() as f64;
+    let mut num = 0.0;
+    let mut da = 0.0;
+    let mut db = 0.0;
+    for (x, y) in a.iter().zip(b.iter()) {
+        let xa = *x - ma;
+        let yb = *y - mb;
+        num += xa * yb;
+        da += xa * xa;
+        db += yb * yb;
+    }
+    num / (da.sqrt() * db.sqrt()).max(1.0e-30)
+}
+
+pub fn nrmse(a: &[f64], b: &[f64]) -> f64 {
+    if a.len() != b.len() || a.is_empty() {
+        return 0.0;
+    }
+    let mse = a
+        .iter()
+        .zip(b.iter())
+        .map(|(x, y)| (*x - *y).powi(2))
+        .sum::<f64>()
+        / a.len() as f64;
+    let span = a.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+        - a.iter().copied().fold(f64::INFINITY, f64::min);
+    mse.sqrt() / span.abs().max(1.0e-12)
+}
+
+pub fn dice_equal_area(score: &[f64], target: &[bool]) -> f64 {
+    if score.len() != target.len() || score.is_empty() {
+        return 0.0;
+    }
+    let count = target.iter().filter(|v| **v).count();
+    if count == 0 {
+        return 0.0;
+    }
+    let mut ordered = score.to_vec();
+    ordered.sort_by(f64::total_cmp);
+    let threshold = ordered[ordered.len().saturating_sub(count)];
+    let mut tp = 0usize;
+    let mut pred = 0usize;
+    for (value, truth) in score.iter().zip(target.iter()) {
+        let selected = *value >= threshold;
+        pred += usize::from(selected);
+        tp += usize::from(selected && *truth);
+    }
+    2.0 * tp as f64 / (pred + count).max(1) as f64
+}
+
+pub fn cnr(score: &[f64], target: &[bool]) -> f64 {
+    let mut lesion = Vec::new();
+    let mut background = Vec::new();
+    for (value, truth) in score.iter().zip(target.iter()) {
+        if *truth {
+            lesion.push(*value);
+        } else {
+            background.push(*value);
+        }
+    }
+    if lesion.is_empty() || background.len() < 2 {
+        return 0.0;
+    }
+    let ml = lesion.iter().sum::<f64>() / lesion.len() as f64;
+    let mb = background.iter().sum::<f64>() / background.len() as f64;
+    let vb = background.iter().map(|v| (*v - mb).powi(2)).sum::<f64>() / background.len() as f64;
+    (ml - mb) / vb.sqrt().max(1.0e-12)
+}
+
+fn positive_mask(values: &[f64]) -> Vec<bool> {
+    let max_value = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    values.iter().map(|v| *v >= 0.45 * max_value).collect()
+}

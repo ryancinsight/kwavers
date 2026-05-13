@@ -7492,11 +7492,13 @@ name = "pykwavers"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "burn",
  "kwavers",
  "ndarray",
  "num-complex",
  "numpy",
  "pyo3",
+ "ritk-io",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -8119,6 +8121,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "ritk-analyze"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "ritk-core",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "ritk-codecs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "image 0.24.9",
+ "jpeg-decoder",
+ "openjpeg-sys",
+ "proptest",
+]
+
+[[package]]
 name = "ritk-core"
 version = "0.1.0"
 dependencies = [
@@ -8126,6 +8151,7 @@ dependencies = [
  "burn",
  "burn-ndarray",
  "bytemuck",
+ "gaia",
  "nalgebra 0.33.3",
  "proptest",
  "rayon",
@@ -8134,6 +8160,19 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.17",
  "tracing",
+]
+
+[[package]]
+name = "ritk-dicom"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dicom",
+ "dicom-pixeldata",
+ "image 0.24.9",
+ "proptest",
+ "ritk-codecs",
+ "tempfile",
 ]
 
 [[package]]
@@ -8153,19 +8192,53 @@ dependencies = [
  "dicom-pixeldata",
  "dicom-transfer-syntax-registry",
  "flate2",
+ "gaia",
  "image 0.24.9",
  "nalgebra 0.33.3",
  "ndarray",
- "nifti",
  "openjpeg-sys",
  "rayon",
+ "ritk-analyze",
+ "ritk-codecs",
  "ritk-core",
+ "ritk-dicom",
+ "ritk-metaimage",
+ "ritk-mgh",
+ "ritk-nifti",
+ "ritk-nrrd",
+ "ritk-vtk",
  "tempfile",
  "thiserror 2.0.17",
  "tiff 0.9.1",
  "tracing",
  "zune-core",
  "zune-jpegxl",
+]
+
+[[package]]
+name = "ritk-metaimage"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "nalgebra 0.33.3",
+ "ritk-core",
+ "tempfile",
+]
+
+[[package]]
+name = "ritk-mgh"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "flate2",
+ "nalgebra 0.33.3",
+ "ritk-core",
+ "tempfile",
+ "tracing",
 ]
 
 [[package]]
@@ -8184,6 +8257,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "ritk-nifti"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "nalgebra 0.33.3",
+ "ndarray",
+ "nifti",
+ "ritk-core",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "ritk-nrrd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "bytemuck",
+ "nalgebra 0.33.3",
+ "ritk-core",
+ "tempfile",
+]
+
+[[package]]
 name = "ritk-registration"
 version = "0.1.0"
 dependencies = [
@@ -8199,6 +8300,18 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "walkdir",
+]
+
+[[package]]
+name = "ritk-vtk"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "burn",
+ "burn-ndarray",
+ "ritk-core",
+ "tempfile",
+ "tracing",
 ]
 
 [[package]]
