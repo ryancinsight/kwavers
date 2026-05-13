@@ -48,12 +48,13 @@ separately from the individual channels.
 
 The current kwavers implementation is a reduced finite-frequency inverse model,
 not a full stored-wavefield adjoint Westervelt/Rayleigh-Plesset inversion. The
-production contract is explicit: `kwavers::solver::inverse::seismic::theranostic`
-owns CT-derived support masks, source/receiver geometry, pressure-calibrated
-exposure synthesis, row construction, and a preconditioned CG solve of the
-regularized normal equations. The active-support graph Laplacian is precomputed
-once, and each CG step reuses row, normal-operator, and Laplacian workspaces
-instead of allocating a full image mask inside every iteration.
+production contract is explicit: `kwavers::clinical::therapy::theranostic_guidance`
+owns patient CT workflow, anatomy selection, device-placement analogs, exposure
+synthesis, and reconstruction reporting. Reusable seismic FWI and RTM kernels
+remain under `kwavers::solver::inverse::seismic`. The active same-aperture
+inverse in this chapter precomputes its support graph Laplacian once, and each
+CG step reuses row, normal-operator, and Laplacian workspaces instead of
+allocating a full image mask inside every iteration.
 
 ## Device Placement
 
@@ -72,7 +73,13 @@ border. A central 64-receiver imaging line occupies the therapy-head cutout.
 The PyO3 result exports `placement_metrics` and a separate full-CT
 `placement_context`; figure 1 uses the uncropped patient slice for kidney and
 liver so the skin interface is visible relative to the stomach/hip
-cross-section rather than only the local tumor field of view.
+cross-section rather than only the local tumor field of view. If an abdominal
+segmentation slice contains multiple disconnected label-2 regions, one Chapter
+29 run represents one physical sonication and therefore selects the largest
+connected label-2 treatment component for focus placement, exposure synthesis,
+lesion-source definition, metrics, and plotted contours. Covering all separated
+targets requires a staged multi-sonication plan rather than one single-focus
+exposure.
 
 The Verasonics-like role in this simulation is the programmable acquisition
 contract rather than a fixed clinical transducer geometry: each case exposes

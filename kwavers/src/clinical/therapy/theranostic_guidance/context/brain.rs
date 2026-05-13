@@ -5,9 +5,9 @@ use std::f64::consts::PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3};
 
+use super::super::TheranosticFwiConfig;
 use super::surface::{nearest_surface_point, surface_points_3d};
 use super::{distance_3d, validate_spacing, volume_bbox, volume_center, PlacementContext, Point3};
-use crate::solver::inverse::seismic::theranostic::TheranosticFwiConfig;
 
 pub fn build_brain_placement_context(
     ct_volume_hu: &Array3<f64>,

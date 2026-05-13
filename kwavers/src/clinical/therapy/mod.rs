@@ -12,6 +12,7 @@ pub mod microbubble_dynamics;
 pub mod modalities;
 pub mod parameters;
 pub mod swe_3d_workflows;
+pub mod theranostic_guidance;
 
 pub mod therapy_integration;
 

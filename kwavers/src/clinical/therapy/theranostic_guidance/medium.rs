@@ -86,15 +86,24 @@ pub fn prepare_abdominal_slice(
     let slice_index = largest_target_slice(label_volume)?;
     let ct_slice = ct_volume_hu.slice(s![.., .., slice_index]).to_owned();
     let label_slice = label_volume.slice(s![.., .., slice_index]).to_owned();
-    let target_seed = target_seed_index(&label_slice)?;
+    let treatment_target = largest_connected_target_component(&label_slice)?;
+    let target_seed = target_seed_index(&treatment_target)?;
     let body_component = connected_body_component(&ct_slice, &label_slice, target_seed)?;
     let bbox = square_bbox_from_mask(&body_component, 6)?;
     let ct_crop = ct_slice
         .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
         .to_owned();
-    let label_crop = label_slice
+    let mut label_crop = label_slice
         .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
         .to_owned();
+    let target_crop = treatment_target
+        .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
+        .to_owned();
+    for ((ix, iy), label) in label_crop.indexed_iter_mut() {
+        if *label == 2 && !target_crop[[ix, iy]] {
+            *label = 1;
+        }
+    }
     let ct = resample_f64(&ct_crop, grid_size);
     let label = resample_labels_max(&label_crop, grid_size);
     let spacing_m = ((bbox.1 - bbox.0 + 1) as f64 * spacing_mm[0] * 1.0e-3)
@@ -203,9 +212,63 @@ pub(crate) fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> 
         })
 }
 
-fn target_seed_index(label: &Array2<i16>) -> KwaversResult<(usize, usize)> {
-    for ((ix, iy), value) in label.indexed_iter() {
-        if *value == 2 {
+pub(super) fn largest_connected_target_component(
+    label: &Array2<i16>,
+) -> KwaversResult<Array2<bool>> {
+    let (nx, ny) = label.dim();
+    let mut visited = Array2::<bool>::from_elem((nx, ny), false);
+    let mut best = Vec::new();
+    for ix in 0..nx {
+        for iy in 0..ny {
+            if visited[[ix, iy]] || label[[ix, iy]] != 2 {
+                continue;
+            }
+            let component = target_component(label, &mut visited, ix, iy);
+            if component.len() > best.len() {
+                best = component;
+            }
+        }
+    }
+    if best.is_empty() {
+        return Err(KwaversError::InvalidInput(
+            "segmentation contains no connected label-2 target component".to_owned(),
+        ));
+    }
+    let mut target = Array2::<bool>::from_elem((nx, ny), false);
+    for (ix, iy) in best {
+        target[[ix, iy]] = true;
+    }
+    Ok(target)
+}
+
+fn target_component(
+    label: &Array2<i16>,
+    visited: &mut Array2<bool>,
+    seed_x: usize,
+    seed_y: usize,
+) -> Vec<(usize, usize)> {
+    let (nx, ny) = label.dim();
+    let mut component = Vec::new();
+    let mut queue = VecDeque::from([(seed_x, seed_y)]);
+    visited[[seed_x, seed_y]] = true;
+    while let Some((ix, iy)) = queue.pop_front() {
+        if label[[ix, iy]] != 2 {
+            continue;
+        }
+        component.push((ix, iy));
+        for (next_x, next_y) in body_neighbors(ix, iy, nx, ny) {
+            if !visited[[next_x, next_y]] && label[[next_x, next_y]] == 2 {
+                visited[[next_x, next_y]] = true;
+                queue.push_back((next_x, next_y));
+            }
+        }
+    }
+    component
+}
+
+fn target_seed_index(target: &Array2<bool>) -> KwaversResult<(usize, usize)> {
+    for ((ix, iy), active) in target.indexed_iter() {
+        if *active {
             return Ok((ix, iy));
         }
     }

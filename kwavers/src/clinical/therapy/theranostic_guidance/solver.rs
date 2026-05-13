@@ -13,6 +13,16 @@ use super::operator::{
     vector_from_image, ActiveGrid, RowMatrix,
 };
 
+/// Canonical model identifier exported through PyO3 and figure metadata.
+///
+/// # Contract
+///
+/// The identifier changes only when the mathematical inverse operator changes.
+/// The current model uses finite-frequency same-aperture rows and solves the
+/// graph-Laplacian-regularized normal equations by preconditioned conjugate
+/// gradients.
+pub const THERANOSTIC_OPERATOR_MODEL: &str = "finite_frequency_same_aperture_graph_laplacian_pcg";
+
 #[derive(Clone, Debug)]
 pub struct TheranosticFwiResult {
     pub prepared: PreparedTheranosticSlice,

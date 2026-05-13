@@ -1,12 +1,12 @@
 //! Python bindings for same-device therapy/imaging FWI simulations.
 
-use kwavers::solver::inverse::seismic::brain_helmet::{resample_head_slice, select_head_slice};
-use kwavers::solver::inverse::seismic::theranostic::{
+use kwavers::clinical::therapy::theranostic_guidance::{
     build_abdominal_placement_context, build_brain_placement_context, placement_metrics,
     plan_brain_helmet_placement, prepare_abdominal_slice, prepare_brain_slice, run_theranostic_fwi,
     AnatomyKind, DevicePlacementMetrics, PlacementContext, PlacementPoint3, Point3,
-    ReconstructionMetrics, TheranosticFwiConfig,
+    ReconstructionMetrics, TheranosticFwiConfig, THERANOSTIC_OPERATOR_MODEL,
 };
+use kwavers::solver::inverse::seismic::brain_helmet::{resample_head_slice, select_head_slice};
 use ndarray::{Array1, Array2, Array3};
 use numpy::IntoPyArray;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -181,7 +181,7 @@ fn labels_from_volume(volume: Array3<f64>) -> Array3<i16> {
 
 fn result_to_dict<'py>(
     py: Python<'py>,
-    result: kwavers::solver::inverse::seismic::theranostic::TheranosticFwiResult,
+    result: kwavers::clinical::therapy::theranostic_guidance::TheranosticFwiResult,
     config: &TheranosticFwiConfig,
     placement_context: PlacementContext,
 ) -> PyResult<Bound<'py, PyDict>> {
@@ -305,7 +305,7 @@ fn result_to_dict<'py>(
         "placement_context_surface_points",
         placement_context_surface_points,
     )?;
-    out.set_item("operator_model", "finite_frequency_same_aperture_fwi_rtm")?;
+    out.set_item("operator_model", THERANOSTIC_OPERATOR_MODEL)?;
     out.set_item("measurements", result.measurements)?;
     out.set_item("active_voxels", result.active_voxels)?;
     out.set_item(
@@ -342,7 +342,7 @@ fn placement_dict<'py>(
 }
 
 fn point_axis(
-    points: &[kwavers::solver::inverse::seismic::theranostic::Point2],
+    points: &[kwavers::clinical::therapy::theranostic_guidance::Point2],
     x_axis: bool,
 ) -> Array1<f64> {
     Array1::from(

@@ -159,50 +159,50 @@
         0.000703125,
         0.000703125
       ],
-      "placement_context_skin_gap_m": 0.003016750081322947,
+      "placement_context_skin_gap_m": 0.0030167500813229387,
       "placement_context_surface_points": 312,
       "placement_metrics": {
-        "min_body_clearance_m": 0.00020640379071192456,
-        "mean_body_clearance_m": 0.01115892227469409,
-        "max_body_clearance_m": 0.03752845762351325,
-        "skin_contact_to_nearest_aperture_m": 0.0030167500813229396
+        "min_body_clearance_m": 0.0028585799341716467,
+        "mean_body_clearance_m": 0.03116596818950987,
+        "max_body_clearance_m": 0.054856318184223325,
+        "skin_contact_to_nearest_aperture_m": 0.003016750081322947
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.6206290608133483,
-          "nrmse": 0.1300415189832386,
-          "dice_equal_area": 0.5957446808510638,
-          "cnr": 3.191114987220195
+          "pearson": 0.6661913941580078,
+          "nrmse": 0.12903208096986782,
+          "dice_equal_area": 0.6170212765957447,
+          "cnr": 3.98653533285749
         },
         "active_lesion": {
-          "pearson": 0.9384776468238674,
-          "nrmse": 0.024566866125134576,
+          "pearson": 0.9176070500455437,
+          "nrmse": 0.016340099039508137,
           "dice_equal_area": 1.0,
-          "cnr": 23.17032664633031
+          "cnr": 29.859892444329425
         },
         "subharmonic": {
-          "pearson": 0.5807292833757085,
-          "nrmse": 0.09521548818434586,
-          "dice_equal_area": 0.75,
-          "cnr": 7.143175866657113
+          "pearson": 0.7006739770272068,
+          "nrmse": 0.04426678152172453,
+          "dice_equal_area": 1.0,
+          "cnr": 15.992723866380338
         },
         "harmonic": {
-          "pearson": 0.9333029700184983,
-          "nrmse": 0.030456811293697213,
+          "pearson": 0.9407161205106657,
+          "nrmse": 0.017680299612539856,
           "dice_equal_area": 1.0,
-          "cnr": 22.267441180351316
+          "cnr": 32.62430049787807
         },
         "ultraharmonic": {
-          "pearson": 0.9679714407337382,
-          "nrmse": 0.03743083261118508,
+          "pearson": 0.9459167328955903,
+          "nrmse": 0.024302830860424347,
           "dice_equal_area": 1.0,
-          "cnr": 26.39690666787984
+          "cnr": 31.43595859339942
         },
         "fusion": {
-          "pearson": 0.952257113126986,
-          "nrmse": 0.020710944448881427,
-          "dice_equal_area": 0.9166666666666666,
-          "cnr": 29.547226995418885
+          "pearson": 0.9568812319388245,
+          "nrmse": 0.011402807265678537,
+          "dice_equal_area": 1.0,
+          "cnr": 49.704165133996085
         }
       }
     }

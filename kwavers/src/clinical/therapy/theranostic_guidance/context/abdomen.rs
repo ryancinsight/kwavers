@@ -10,7 +10,10 @@ use super::super::aperture::{
     abdominal_imaging_point_2d, AbdominalApertureFrame,
 };
 use super::super::skin::nearest_external_skin_point;
-use super::super::{medium::largest_target_slice, AnatomyKind, TheranosticFwiConfig};
+use super::super::{
+    medium::{largest_connected_target_component, largest_target_slice},
+    AnatomyKind, TheranosticFwiConfig,
+};
 use super::surface::surface_points_2d;
 use super::{centroid_2d, centroid_index, validate_spacing, PlacementContext, Point3};
 
@@ -32,7 +35,7 @@ pub fn build_abdominal_placement_context(
     let slice_index = largest_target_slice(label_volume)?;
     let ct_slice = ct_volume_hu.slice(s![.., .., slice_index]).to_owned();
     let label_slice = label_volume.slice(s![.., .., slice_index]).to_owned();
-    let target_mask = label_slice.mapv(|label| label == 2);
+    let target_mask = largest_connected_target_component(&label_slice)?;
     let tissue = Array2::from_shape_fn(ct_slice.dim(), |idx| {
         ct_slice[idx] > -450.0 || label_slice[idx] > 0
     });

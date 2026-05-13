@@ -1,11 +1,20 @@
 use ndarray::{Array2, Array3};
+use std::collections::VecDeque;
 
 use super::operator::active_grid;
 use super::{
     build_abdominal_placement_context, placement_metrics, plan_brain_helmet_placement,
     prepare_abdominal_slice, prepare_brain_slice, run_theranostic_fwi, AnatomyKind,
-    PlacementPoint3, Point2, TheranosticFwiConfig,
+    PlacementPoint3, Point2, TheranosticFwiConfig, THERANOSTIC_OPERATOR_MODEL,
 };
+
+#[test]
+fn theranostic_operator_model_names_graph_laplacian_pcg_contract() {
+    assert_eq!(
+        THERANOSTIC_OPERATOR_MODEL,
+        "finite_frequency_same_aperture_graph_laplacian_pcg"
+    );
+}
 
 #[test]
 fn abdominal_theranostic_fwi_recovers_lesion_support() {
@@ -150,6 +159,61 @@ fn abdominal_preprocessing_keeps_external_skin_between_target_and_aperture() {
 }
 
 #[test]
+fn abdominal_preprocessing_selects_one_connected_treatment_component() {
+    let mut ct = Array3::<f64>::from_elem((72, 72, 3), -950.0);
+    let mut label = Array3::<i16>::zeros((72, 72, 3));
+    for z in 0..3 {
+        for x in 0..72 {
+            for y in 0..72 {
+                let body =
+                    ((x as f64 - 36.0) / 31.0).powi(2) + ((y as f64 - 36.0) / 28.0).powi(2) <= 1.0;
+                let organ =
+                    ((x as f64 - 39.0) / 22.0).powi(2) + ((y as f64 - 36.0) / 19.0).powi(2) <= 1.0;
+                let larger_tumor =
+                    ((x as f64 - 52.0) / 5.0).powi(2) + ((y as f64 - 37.0) / 4.0).powi(2) <= 1.0;
+                let smaller_tumor =
+                    ((x as f64 - 28.0) / 2.6).powi(2) + ((y as f64 - 24.0) / 2.2).powi(2) <= 1.0;
+                if body {
+                    ct[[x, y, z]] = -35.0;
+                }
+                if organ {
+                    ct[[x, y, z]] = 70.0;
+                    label[[x, y, z]] = 1;
+                }
+                if larger_tumor || smaller_tumor {
+                    ct[[x, y, z]] = 125.0;
+                    label[[x, y, z]] = 2;
+                }
+            }
+        }
+    }
+
+    let prepared =
+        prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.0, 1.0, 2.5], 64).unwrap();
+    let mut config = TheranosticFwiConfig::new(AnatomyKind::Liver);
+    config.element_count = 32;
+    config.receiver_offsets = vec![8];
+    config.frequencies_hz = vec![500_000.0];
+    config.iterations = 2;
+    let result = run_theranostic_fwi(prepared.clone(), &config).unwrap();
+    let focus_distance = nearest_mask_distance_m(
+        &prepared.target_mask,
+        prepared.spacing_m,
+        result.layout.focus_m,
+    );
+
+    assert_eq!(
+        connected_mask_components(&prepared.target_mask),
+        1,
+        "one Chapter 29 abdominal solve must represent one connected sonication target component"
+    );
+    assert!(
+        focus_distance <= prepared.spacing_m,
+        "single-focus layout must focus inside the selected connected target, distance={focus_distance}"
+    );
+}
+
+#[test]
 fn abdominal_placement_context_uses_uncropped_patient_slice() {
     let mut ct = Array3::<f64>::from_elem((96, 96, 3), -950.0);
     let mut label = Array3::<i16>::zeros((96, 96, 3));
@@ -210,6 +274,73 @@ fn abdominal_placement_context_uses_uncropped_patient_slice() {
         max_aperture_skin_projection_m < 0.0,
         "abdominal aperture must remain outside the local skin tangent plane: projection={max_aperture_skin_projection_m}"
     );
+}
+
+fn connected_mask_components(mask: &Array2<bool>) -> usize {
+    let (nx, ny) = mask.dim();
+    let mut visited = Array2::<bool>::from_elem((nx, ny), false);
+    let mut components = 0;
+    for ix in 0..nx {
+        for iy in 0..ny {
+            if !mask[[ix, iy]] || visited[[ix, iy]] {
+                continue;
+            }
+            components += 1;
+            let mut queue = VecDeque::from([(ix, iy)]);
+            visited[[ix, iy]] = true;
+            while let Some((x, y)) = queue.pop_front() {
+                for (next_x, next_y) in mask_neighbors(x, y, nx, ny) {
+                    if mask[[next_x, next_y]] && !visited[[next_x, next_y]] {
+                        visited[[next_x, next_y]] = true;
+                        queue.push_back((next_x, next_y));
+                    }
+                }
+            }
+        }
+    }
+    components
+}
+
+fn nearest_mask_distance_m(mask: &Array2<bool>, spacing_m: f64, point: Point2) -> f64 {
+    let (nx, ny) = mask.dim();
+    let cx = (nx - 1) as f64 * 0.5;
+    let cy = (ny - 1) as f64 * 0.5;
+    mask.indexed_iter()
+        .filter_map(|((ix, iy), active)| {
+            active.then(|| {
+                let x_m = (ix as f64 - cx) * spacing_m;
+                let y_m = (iy as f64 - cy) * spacing_m;
+                (x_m - point.x_m).hypot(y_m - point.y_m)
+            })
+        })
+        .fold(f64::INFINITY, f64::min)
+}
+
+fn mask_neighbors(
+    ix: usize,
+    iy: usize,
+    nx: usize,
+    ny: usize,
+) -> impl Iterator<Item = (usize, usize)> {
+    let mut neighbors = [(ix, iy); 4];
+    let mut count = 0;
+    if ix > 0 {
+        neighbors[count] = (ix - 1, iy);
+        count += 1;
+    }
+    if iy > 0 {
+        neighbors[count] = (ix, iy - 1);
+        count += 1;
+    }
+    if ix + 1 < nx {
+        neighbors[count] = (ix + 1, iy);
+        count += 1;
+    }
+    if iy + 1 < ny {
+        neighbors[count] = (ix, iy + 1);
+        count += 1;
+    }
+    neighbors.into_iter().take(count)
 }
 
 #[test]
