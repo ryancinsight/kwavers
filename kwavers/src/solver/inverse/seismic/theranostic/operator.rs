@@ -10,6 +10,45 @@ use super::medium::PreparedTheranosticSlice;
 pub struct ActiveGrid {
     pub indices: Vec<(usize, usize)>,
     pub points_m: Vec<Point2>,
+    neighbor_indices: Vec<[Option<usize>; 4]>,
+}
+
+impl ActiveGrid {
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.indices.len()
+    }
+
+    /// Apply the graph Laplacian on the active CT-derived tissue support.
+    ///
+    /// # Theorem
+    ///
+    /// Let `G = (V, E)` be the undirected four-neighbor graph induced by the
+    /// active tissue mask, and let `(Lx)_i = deg(i)x_i - sum_{j in N(i)}x_j`.
+    /// Then `x^T L x = sum_{(i,j) in E} (x_i - x_j)^2 >= 0`.
+    ///
+    /// # Proof sketch
+    ///
+    /// Expanding `x^T L x` yields one `deg(i)x_i^2` term per vertex and one
+    /// `-x_i x_j` term for each directed neighbor relation. Because the graph
+    /// is undirected, each edge contributes
+    /// `x_i^2 + x_j^2 - 2x_i x_j = (x_i - x_j)^2`, proving positive
+    /// semidefiniteness and validating its use as an H1 smoothing penalty in
+    /// the normal equations.
+    pub fn graph_laplacian_into(&self, values: &[f32], out: &mut [f32]) {
+        debug_assert_eq!(values.len(), self.indices.len());
+        debug_assert_eq!(out.len(), self.indices.len());
+        for (row, neighbors) in self.neighbor_indices.iter().enumerate() {
+            let center = values[row];
+            let mut degree = 0.0;
+            let mut sum = 0.0;
+            for neighbor in neighbors.iter().flatten() {
+                degree += 1.0;
+                sum += values[*neighbor];
+            }
+            out[row] = degree * center - sum;
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -68,8 +107,10 @@ pub fn active_grid(mask: &Array2<bool>, spacing_m: f64) -> ActiveGrid {
     let cy = (ny - 1) as f64 * 0.5;
     let mut indices = Vec::new();
     let mut points_m = Vec::new();
+    let mut active_lookup = vec![None; nx * ny];
     for ((ix, iy), active) in mask.indexed_iter() {
         if *active {
+            active_lookup[linear_index(ix, iy, ny)] = Some(indices.len());
             indices.push((ix, iy));
             points_m.push(Point2 {
                 x_m: (ix as f64 - cx) * spacing_m,
@@ -77,7 +118,64 @@ pub fn active_grid(mask: &Array2<bool>, spacing_m: f64) -> ActiveGrid {
             });
         }
     }
-    ActiveGrid { indices, points_m }
+    let neighbor_indices = indices
+        .iter()
+        .map(|(ix, iy)| active_neighbors(*ix, *iy, nx, ny, &active_lookup))
+        .collect();
+    ActiveGrid {
+        indices,
+        points_m,
+        neighbor_indices,
+    }
+}
+
+fn active_neighbors(
+    ix: usize,
+    iy: usize,
+    nx: usize,
+    ny: usize,
+    active_lookup: &[Option<usize>],
+) -> [Option<usize>; 4] {
+    let mut out = [None; 4];
+    let mut count = 0;
+    for (jx, jy) in lattice_neighbors(ix, iy, nx, ny) {
+        if let Some(active) = active_lookup[linear_index(jx, jy, ny)] {
+            out[count] = Some(active);
+            count += 1;
+        }
+    }
+    out
+}
+
+fn lattice_neighbors(
+    ix: usize,
+    iy: usize,
+    nx: usize,
+    ny: usize,
+) -> impl Iterator<Item = (usize, usize)> {
+    let mut out = [(ix, iy); 4];
+    let mut count = 0;
+    if ix > 0 {
+        out[count] = (ix - 1, iy);
+        count += 1;
+    }
+    if iy > 0 {
+        out[count] = (ix, iy - 1);
+        count += 1;
+    }
+    if ix + 1 < nx {
+        out[count] = (ix + 1, iy);
+        count += 1;
+    }
+    if iy + 1 < ny {
+        out[count] = (ix, iy + 1);
+        count += 1;
+    }
+    out.into_iter().take(count)
+}
+
+fn linear_index(ix: usize, iy: usize, ny: usize) -> usize {
+    ix * ny + iy
 }
 
 pub fn vector_from_image(image: &Array2<f64>, active: &ActiveGrid) -> Vec<f32> {
@@ -233,16 +331,14 @@ fn build_pitch_catch_matrix(
             for offset in &config.receiver_offsets {
                 let receiver = layout.therapy_elements
                     [receiver_index(source_idx, *offset, layout.therapy_elements.len())];
-                fill_pitch_catch_row(
-                    matrix.row_mut(row),
-                    prepared,
-                    active,
+                let kernel = PitchCatchKernel {
                     source,
                     receiver,
                     k,
                     frequency_mhz,
                     harmonic,
-                );
+                };
+                fill_pitch_catch_row(matrix.row_mut(row), prepared, active, kernel);
                 row += 1;
             }
         }
@@ -250,23 +346,28 @@ fn build_pitch_catch_matrix(
     matrix
 }
 
-fn fill_pitch_catch_row(
-    row: &mut [f32],
-    prepared: &PreparedTheranosticSlice,
-    active: &ActiveGrid,
+#[derive(Clone, Copy, Debug)]
+struct PitchCatchKernel {
     source: Point2,
     receiver: Point2,
     k: f64,
     frequency_mhz: f64,
     harmonic: f64,
+}
+
+fn fill_pitch_catch_row(
+    row: &mut [f32],
+    prepared: &PreparedTheranosticSlice,
+    active: &ActiveGrid,
+    kernel: PitchCatchKernel,
 ) {
     for (idx, point) in active.points_m.iter().copied().enumerate() {
-        let ds = distance(point, source).max(prepared.spacing_m);
-        let dr = distance(point, receiver).max(prepared.spacing_m);
+        let ds = distance(point, kernel.source).max(prepared.spacing_m);
+        let dr = distance(point, kernel.receiver).max(prepared.spacing_m);
         let (ix, iy) = active.indices[idx];
         let alpha = prepared.attenuation_np_per_m_mhz[[ix, iy]];
-        let attenuation = (-alpha * frequency_mhz * (ds + dr)).exp();
-        let nonlinear = if harmonic > 1.0 {
+        let attenuation = (-alpha * kernel.frequency_mhz * (ds + dr)).exp();
+        let nonlinear = if kernel.harmonic > 1.0 {
             0.18 * (ds + dr)
         } else {
             1.0
@@ -275,7 +376,7 @@ fn fill_pitch_catch_row(
             * prepared.spacing_m
             * nonlinear
             * attenuation
-            * (k * (ds + dr)).cos()
+            * (kernel.k * (ds + dr)).cos()
             / (ds * dr).sqrt()) as f32;
     }
     normalize_row(row);

@@ -15,6 +15,7 @@ mod helmet3d;
 mod medium;
 mod metrics;
 mod operator;
+mod skin;
 mod solver;
 
 pub use config::{AnatomyKind, TheranosticFwiConfig};

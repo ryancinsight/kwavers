@@ -69,10 +69,6 @@ pub(super) fn volume_center(
     }
 }
 
-pub(super) fn distance_2d(a: Point3, b: Point3) -> f64 {
-    (a.x_m - b.x_m).hypot(a.y_m - b.y_m)
-}
-
 pub(super) fn distance_3d(a: Point3, b: Point3) -> f64 {
     ((a.x_m - b.x_m).powi(2) + (a.y_m - b.y_m).powi(2) + (a.z_m - b.z_m).powi(2)).sqrt()
 }

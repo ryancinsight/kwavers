@@ -2,10 +2,15 @@
 
 use std::f64::consts::{PI, TAU};
 
+use crate::core::error::KwaversResult;
 use ndarray::Array2;
 
-use super::aperture::{abdominal_arc_spec, ABDOMINAL_SKIN_CLEARANCE_M};
+use super::aperture::{
+    abdominal_aperture_frame, abdominal_arc_point_2d, abdominal_arc_spec,
+    abdominal_imaging_point_2d,
+};
 use super::config::{AnatomyKind, TheranosticFwiConfig};
+use super::skin::nearest_external_skin_point;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point2 {
@@ -35,14 +40,15 @@ pub fn build_device_layout(
     body_mask: &Array2<bool>,
     target_mask: &Array2<bool>,
     spacing_m: f64,
-) -> DeviceLayout {
+) -> KwaversResult<DeviceLayout> {
     let focus = centroid_or_center(target_mask, body_mask, spacing_m);
-    match config.anatomy {
+    let layout = match config.anatomy {
         AnatomyKind::Brain => helmet_layout(config, body_mask, spacing_m, focus),
         AnatomyKind::Liver | AnatomyKind::Kidney => {
-            abdominal_layout(config, body_mask, spacing_m, focus)
+            abdominal_layout(config, body_mask, spacing_m, focus)?
         }
-    }
+    };
+    Ok(layout)
 }
 
 fn helmet_layout(
@@ -76,10 +82,14 @@ fn abdominal_layout(
     body_mask: &Array2<bool>,
     spacing_m: f64,
     focus: Point2,
-) -> DeviceLayout {
-    let skin = anterior_skin_contact(body_mask, spacing_m, focus);
-    let depth = (focus.x_m - skin.x_m).max(0.0);
-    let arc = abdominal_arc_spec(config, depth);
+) -> KwaversResult<DeviceLayout> {
+    let skin = nearest_external_skin_point(body_mask, spacing_m, spacing_m, focus.x_m, focus.y_m)?;
+    let skin = Point2 {
+        x_m: skin.x_m,
+        y_m: skin.y_m,
+    };
+    let frame = abdominal_aperture_frame(focus.x_m, focus.y_m, skin.x_m, skin.y_m);
+    let arc = abdominal_arc_spec(config, frame.depth_m);
     let left = config.element_count / 2;
     let right = config.element_count - left;
     let mut elements = Vec::with_capacity(config.element_count);
@@ -90,6 +100,7 @@ fn abdominal_layout(
             0.0
         };
         elements.push(abdominal_arc_point(
+            frame,
             focus,
             arc.radius_m,
             -arc.half_angle_rad,
@@ -104,6 +115,7 @@ fn abdominal_layout(
             0.0
         };
         elements.push(abdominal_arc_point(
+            frame,
             focus,
             arc.radius_m,
             arc.cutout_angle_rad,
@@ -119,27 +131,31 @@ fn abdominal_layout(
             } else {
                 0.5
             };
-            Point2 {
-                x_m: skin.x_m - ABDOMINAL_SKIN_CLEARANCE_M,
-                y_m: skin.y_m + (t - 0.5) * config.central_cutout_m,
-            }
+            let (x_m, y_m) =
+                abdominal_imaging_point_2d(frame, skin.x_m, skin.y_m, config.central_cutout_m, t);
+            Point2 { x_m, y_m }
         })
         .collect();
-    DeviceLayout {
+    Ok(DeviceLayout {
         therapy_elements: elements,
         imaging_receivers,
         focus_m: focus,
         skin_contact_m: skin,
         model_name: "histosonics_like_256_element_skin_coupled_arc".to_owned(),
-    }
+    })
 }
 
-fn abdominal_arc_point(focus: Point2, radius: f64, a: f64, b: f64, t: f64) -> Point2 {
+fn abdominal_arc_point(
+    frame: super::aperture::AbdominalApertureFrame,
+    focus: Point2,
+    radius: f64,
+    a: f64,
+    b: f64,
+    t: f64,
+) -> Point2 {
     let theta = a + (b - a) * t;
-    Point2 {
-        x_m: focus.x_m - radius * theta.cos(),
-        y_m: focus.y_m + radius * theta.sin(),
-    }
+    let (x_m, y_m) = abdominal_arc_point_2d(frame, focus.x_m, focus.y_m, radius, theta);
+    Point2 { x_m, y_m }
 }
 
 pub fn receiver_index(source: usize, offset: usize, count: usize) -> usize {
@@ -176,12 +192,11 @@ fn centroid_or_center(mask: &Array2<bool>, fallback: &Array2<bool>, spacing_m: f
 fn body_radius(mask: &Array2<bool>, spacing_m: f64) -> f64 {
     let center = centered_origin(mask);
     mask.indexed_iter()
-        .filter_map(|((ix, iy), active)| {
-            active.then(|| {
-                let x = (ix as f64 - center.0) * spacing_m;
-                let y = (iy as f64 - center.1) * spacing_m;
-                (x * x + y * y).sqrt()
-            })
+        .filter(|(_, active)| **active)
+        .map(|((ix, iy), _)| {
+            let x = (ix as f64 - center.0) * spacing_m;
+            let y = (iy as f64 - center.1) * spacing_m;
+            (x * x + y * y).sqrt()
         })
         .fold(0.0, f64::max)
 }
@@ -227,25 +242,6 @@ fn nearest_body_boundary_point(mask: &Array2<bool>, spacing_m: f64, focus: Point
         best
     } else {
         nearest_body_point(mask, spacing_m, focus)
-    }
-}
-
-fn anterior_skin_contact(mask: &Array2<bool>, spacing_m: f64, focus: Point2) -> Point2 {
-    let (nx, ny) = mask.dim();
-    let center = centered_origin(mask);
-    let iy = ((focus.y_m / spacing_m) + center.1).round() as isize;
-    let iy = iy.clamp(0, ny.saturating_sub(1) as isize) as usize;
-    for ix in 0..nx {
-        if mask[[ix, iy]] {
-            return Point2 {
-                x_m: (ix as f64 - center.0) * spacing_m,
-                y_m: (iy as f64 - center.1) * spacing_m,
-            };
-        }
-    }
-    Point2 {
-        x_m: -0.5 * nx as f64 * spacing_m,
-        y_m: focus.y_m,
     }
 }
 

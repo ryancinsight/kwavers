@@ -175,14 +175,14 @@ fn surface_points(
     max_z: usize,
 ) -> Vec<Point3> {
     mask.indexed_iter()
-        .filter_map(|((ix, iy, iz), active)| {
-            (*active
+        .filter(|&((ix, iy, iz), active)| {
+            *active
                 && iz >= min_z
                 && iz <= max_z
                 && is_surface(mask, ix, iy, iz)
-                && (ix + iy + iz) % stride == 0)
-                .then(|| voxel_to_point(ix, iy, iz, spacing_m, center_index))
+                && (ix + iy + iz) % stride == 0
         })
+        .map(|((ix, iy, iz), _)| voxel_to_point(ix, iy, iz, spacing_m, center_index))
         .collect()
 }
 
@@ -194,11 +194,10 @@ fn body_radius(
     max_z: usize,
 ) -> f64 {
     mask.indexed_iter()
-        .filter_map(|((ix, iy, iz), active)| {
-            (*active && iz >= min_z && iz <= max_z).then(|| {
-                let point = voxel_to_point(ix, iy, iz, spacing_m, center_index);
-                point.x_m.hypot(point.y_m).hypot(point.z_m)
-            })
+        .filter(|&((_, _, iz), active)| *active && iz >= min_z && iz <= max_z)
+        .map(|((ix, iy, iz), _)| {
+            let point = voxel_to_point(ix, iy, iz, spacing_m, center_index);
+            point.x_m.hypot(point.y_m).hypot(point.z_m)
         })
         .fold(0.0, f64::max)
 }

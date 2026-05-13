@@ -1,9 +1,10 @@
 use ndarray::{Array2, Array3};
 
+use super::operator::active_grid;
 use super::{
     build_abdominal_placement_context, placement_metrics, plan_brain_helmet_placement,
     prepare_abdominal_slice, prepare_brain_slice, run_theranostic_fwi, AnatomyKind,
-    TheranosticFwiConfig,
+    PlacementPoint3, Point2, TheranosticFwiConfig,
 };
 
 #[test]
@@ -75,6 +76,23 @@ fn abdominal_theranostic_fwi_recovers_lesion_support() {
 }
 
 #[test]
+fn active_grid_graph_laplacian_matches_four_neighbor_energy() {
+    let mask = Array2::<bool>::from_elem((2, 2), true);
+    let active = active_grid(&mask, 1.0);
+    let values = [1.0_f32, 2.0, 3.0, 4.0];
+    let mut laplacian = [0.0_f32; 4];
+    active.graph_laplacian_into(&values, &mut laplacian);
+    let graph_energy = values
+        .iter()
+        .zip(laplacian.iter())
+        .map(|(value, lap)| value * lap)
+        .sum::<f32>();
+
+    assert_eq!(laplacian, [-3.0, -1.0, 1.0, 3.0]);
+    assert_eq!(graph_energy, 10.0);
+}
+
+#[test]
 fn abdominal_preprocessing_keeps_external_skin_between_target_and_aperture() {
     let mut ct = Array3::<f64>::from_elem((96, 96, 3), -950.0);
     let mut label = Array3::<i16>::zeros((96, 96, 3));
@@ -110,21 +128,24 @@ fn abdominal_preprocessing_keeps_external_skin_between_target_and_aperture() {
     config.frequencies_hz = vec![500_000.0];
     config.iterations = 3;
     let result = run_theranostic_fwi(prepared, &config).unwrap();
-    let nearest_imaging_x = result
+    let target_depth_m = distance_2d(result.layout.skin_contact_m, result.layout.focus_m);
+    let max_aperture_skin_projection_m = result
         .layout
-        .imaging_receivers
+        .therapy_elements
         .iter()
-        .map(|point| point.x_m)
-        .fold(f64::INFINITY, f64::min);
-    let target_depth_m = result.layout.focus_m.x_m - result.layout.skin_contact_m.x_m;
+        .chain(result.layout.imaging_receivers.iter())
+        .map(|point| {
+            skin_normal_projection_2d(*point, result.layout.skin_contact_m, result.layout.focus_m)
+        })
+        .fold(f64::NEG_INFINITY, f64::max);
 
     assert!(
-        target_depth_m > 0.060,
-        "skin contact must come from the external CT body boundary, depth={target_depth_m}"
+        target_depth_m > 0.020,
+        "skin contact must come from the nearest external CT body boundary rather than the ROI crop edge, depth={target_depth_m}"
     );
     assert!(
-        nearest_imaging_x < result.layout.skin_contact_m.x_m,
-        "central imaging receiver must remain outside the skin contact point"
+        max_aperture_skin_projection_m < 0.0,
+        "therapy and imaging aperture must remain outside the local skin tangent plane: projection={max_aperture_skin_projection_m}"
     );
 }
 
@@ -141,6 +162,8 @@ fn abdominal_placement_context_uses_uncropped_patient_slice() {
                     ((x as f64 - 61.0) / 18.0).powi(2) + ((y as f64 - 48.0) / 14.0).powi(2) <= 1.0;
                 let tumor =
                     ((x as f64 - 70.0) / 4.0).powi(2) + ((y as f64 - 48.0) / 3.0).powi(2) <= 1.0;
+                let internal_air =
+                    ((x as f64 - 65.0) / 3.0).powi(2) + ((y as f64 - 48.0) / 4.0).powi(2) <= 1.0;
                 if body {
                     ct[[x, y, z]] = -35.0;
                 }
@@ -151,6 +174,10 @@ fn abdominal_placement_context_uses_uncropped_patient_slice() {
                 if tumor {
                     ct[[x, y, z]] = 120.0;
                     label[[x, y, z]] = 2;
+                }
+                if internal_air {
+                    ct[[x, y, z]] = -950.0;
+                    label[[x, y, z]] = 0;
                 }
             }
         }
@@ -165,20 +192,23 @@ fn abdominal_placement_context_uses_uncropped_patient_slice() {
         &config,
     )
     .unwrap();
-    let aperture_max_x = context
+    let max_aperture_skin_projection_m = context
         .therapy_points_m
         .iter()
         .chain(context.imaging_points_m.iter())
-        .map(|point| point.x_m)
+        .map(|point| skin_normal_projection_3d(*point, context.skin_contact_m, context.focus_m))
         .fold(f64::NEG_INFINITY, f64::max);
 
     assert_eq!(context.ct_hu.dim(), (96, 96));
     assert_eq!(context.therapy_points_m.len(), 32);
     assert_eq!(context.imaging_points_m.len(), 64);
     assert!(
-        aperture_max_x < context.skin_contact_m.x_m,
-        "abdominal aperture must remain outside patient skin: aperture_max_x={aperture_max_x}, skin_x={}",
-        context.skin_contact_m.x_m
+        context.skin_contact_m.x_m > context.focus_m.x_m,
+        "right-sided target must use the nearest external right skin boundary rather than a fixed left-edge contact"
+    );
+    assert!(
+        max_aperture_skin_projection_m < 0.0,
+        "abdominal aperture must remain outside the local skin tangent plane: projection={max_aperture_skin_projection_m}"
     );
 }
 
@@ -281,4 +311,49 @@ fn brain_helmet_3d_uses_calvarium_cap_not_inferior_hemisphere() {
         "helmet cap must cover the superior calvarium: max_z={max_element_z}"
     );
     assert!(placement.intersection_fraction > 0.0);
+}
+
+#[test]
+fn active_grid_graph_laplacian_matches_edge_energy() {
+    let mut mask = Array2::<bool>::from_elem((3, 3), false);
+    mask[[1, 0]] = true;
+    mask[[1, 1]] = true;
+    mask[[1, 2]] = true;
+    mask[[2, 1]] = true;
+    let active = active_grid(&mask, 1.0);
+    let values = vec![1.0_f32, 2.0, 4.0, 8.0];
+    let mut laplacian = vec![0.0_f32; active.len()];
+    active.graph_laplacian_into(&values, &mut laplacian);
+    let energy = values
+        .iter()
+        .zip(laplacian.iter())
+        .map(|(value, lap)| f64::from(*value) * f64::from(*lap))
+        .sum::<f64>();
+
+    assert_eq!(laplacian, vec![-1.0, -7.0, 2.0, 6.0]);
+    assert_eq!(energy, 41.0);
+}
+
+fn distance_2d(a: Point2, b: Point2) -> f64 {
+    (a.x_m - b.x_m).hypot(a.y_m - b.y_m)
+}
+
+fn skin_normal_projection_2d(point: Point2, skin: Point2, focus: Point2) -> f64 {
+    let depth = distance_2d(skin, focus);
+    let normal_x = (focus.x_m - skin.x_m) / depth;
+    let normal_y = (focus.y_m - skin.y_m) / depth;
+    (point.x_m - skin.x_m) * normal_x + (point.y_m - skin.y_m) * normal_y
+}
+
+fn skin_normal_projection_3d(
+    point: PlacementPoint3,
+    skin: PlacementPoint3,
+    focus: PlacementPoint3,
+) -> f64 {
+    let dx = focus.x_m - skin.x_m;
+    let dy = focus.y_m - skin.y_m;
+    let depth = dx.hypot(dy);
+    let normal_x = dx / depth;
+    let normal_y = dy / depth;
+    (point.x_m - skin.x_m) * normal_x + (point.y_m - skin.y_m) * normal_y
 }

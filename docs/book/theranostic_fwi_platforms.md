@@ -46,6 +46,15 @@ same aperture with second-harmonic rows at `2f0` and ultraharmonic rows at
 harmonic and ultraharmonic contrast; the generated metrics report the fused map
 separately from the individual channels.
 
+The current kwavers implementation is a reduced finite-frequency inverse model,
+not a full stored-wavefield adjoint Westervelt/Rayleigh-Plesset inversion. The
+production contract is explicit: `kwavers::solver::inverse::seismic::theranostic`
+owns CT-derived support masks, source/receiver geometry, pressure-calibrated
+exposure synthesis, row construction, and a preconditioned CG solve of the
+regularized normal equations. The active-support graph Laplacian is precomputed
+once, and each CG step reuses row, normal-operator, and Laplacian workspaces
+instead of allocating a full image mask inside every iteration.
+
 ## Device Placement
 
 The brain case places all 1024 elements on a circular projection for the
@@ -55,12 +64,15 @@ surface points, the calvarium helmet element cloud, sampled beam paths, and the
 first dense-bone intersection on each sampled beam. The helmet cap is limited to
 the superior skull support determined from the CT axial area profile, so the
 visualized elements cover the calvarium instead of extending down the neck. The
-abdominal cases place a concave 256-element therapy arc outside the anterior
-skin point aligned with the target centroid. A central 64-receiver imaging line
-occupies the therapy-head cutout. The PyO3 result exports `placement_metrics`
-and a separate full-CT `placement_context`; figure 1 uses the uncropped patient
-slice for kidney and liver so the skin interface is visible relative to the
-stomach/hip cross-section rather than only the local tumor field of view.
+abdominal cases place a concave 256-element therapy arc outside the nearest
+external skin point to the target centroid, using a local skin-normal aperture
+frame instead of a fixed left/right display axis. Internal gas pockets are
+excluded from the skin candidate set by flood-filling exterior air from the CT
+border. A central 64-receiver imaging line occupies the therapy-head cutout.
+The PyO3 result exports `placement_metrics` and a separate full-CT
+`placement_context`; figure 1 uses the uncropped patient slice for kidney and
+liver so the skin interface is visible relative to the stomach/hip
+cross-section rather than only the local tumor field of view.
 
 The Verasonics-like role in this simulation is the programmable acquisition
 contract rather than a fixed clinical transducer geometry: each case exposes
@@ -112,12 +124,15 @@ The implemented channels follow the current research direction as of
   ([JASA, 2025](https://pubmed.ncbi.nlm.nih.gov/40197542/)); polar-coordinate
   structural-prior INR-FWI targets cycle skipping in ring-array USCT
   ([MICCAI 2025](https://papers.miccai.org/miccai-2025/0662-Paper2163.html)).
-- 2026 FWI misfits and memory discipline: squared-Wasserstein ultrasonic
-  phased-array FWI reports lower cycle-skipping sensitivity and a low-memory
-  adjoint strategy without storing full wavefields
-  ([arXiv 2602.22378](https://arxiv.org/abs/2602.22378)); this motivates the
+- Recent FWI cycle-skipping controls: low-frequency extrapolation by sparse
+  deconvolution targets the missing-low-frequency problem in practical USCT
+  ([Ultrasound Med. Biol., 2025](https://www.sciencedirect.com/science/article/pii/S0301562925001097)),
+  and the HV metric is a signed-signal transport alternative to `L2` and
+  Wasserstein objectives for time-domain FWI
+  ([arXiv 2508.17122](https://arxiv.org/abs/2508.17122)). These motivate the
   next kwavers step of replacing reduced rows with a full adjoint
-  Westervelt/Rayleigh-Plesset path rather than expanding Python-side plotting.
+  Westervelt/Rayleigh-Plesset path and an explicit misfit strategy trait rather
+  than expanding Python-side plotting.
 - RTM/FWI method split: ultrasonic full-matrix-capture studies compare TFM,
   RTM, and FWI, with RTM serving as a one-pass localization image and FWI as
   the iterative material-property update
@@ -132,6 +147,10 @@ The implemented channels follow the current research direction as of
   receive-only treatment-monitoring analog, and 2025 higher-order DMAS work
   reports improved point-spread resolution with linear complexity
   ([Ultrasonics, 2025](https://www.sciencedirect.com/science/article/pii/S0041624X25000903)).
+- Receive-capable histotripsy feedback: acoustic-feedback work identifies the
+  limitation of transmit-only histotripsy systems and motivates arrays that use
+  therapy elements as receivers for cavitation and damage monitoring
+  ([University of Michigan dissertation, 2025](https://deepblue.lib.umich.edu/items/00da5ec9-07b2-4410-b9ee-7155f81c7484)).
 - Platform constraints: Edison is described publicly as pulsed therapy with
   continuous bubble-cloud visualization
   ([HistoSonics](https://histosonics.com/our-technology-2/)); Exablate Neuro
@@ -149,4 +168,6 @@ second-harmonic, and ultraharmonic data for RTM/FWI updates.
 
 The next complete increment is a 3-D adjoint Westervelt/Rayleigh-Plesset
 variant that estimates `c`, `alpha`, and a cavitation source density jointly
-instead of using reduced harmonic rows.
+instead of using reduced harmonic rows. The design constraint for that increment
+is the same one used here: the forward/adjoint solver must be kwavers-owned and
+RITK-backed, while Python remains limited to plotting and animation.

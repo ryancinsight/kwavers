@@ -50,7 +50,7 @@ pub fn build_brain_placement_context(
         radius.max(config.focal_radius_m),
         superior_positive,
     );
-    let surface_stride = ((nx.max(ny).max(nz) / 96).max(1)).min(8);
+    let surface_stride = (nx.max(ny).max(nz) / 96).clamp(1, 8);
     let body_surface_points_m =
         surface_points_3d(&body, sx, sy, sz, Some(calvarium_range), surface_stride);
 

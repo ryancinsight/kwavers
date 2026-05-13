@@ -5,13 +5,14 @@ use std::collections::VecDeque;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3};
 
-use super::super::aperture::{abdominal_arc_spec, ABDOMINAL_SKIN_CLEARANCE_M};
-use super::super::{medium::largest_target_slice, AnatomyKind, TheranosticFwiConfig};
-use super::surface::{boundary_points_2d, surface_points_2d};
-use super::{
-    centered_origin_2d, centroid_2d, centroid_index, distance_2d, validate_spacing,
-    PlacementContext, Point3,
+use super::super::aperture::{
+    abdominal_aperture_frame, abdominal_arc_point_2d, abdominal_arc_spec,
+    abdominal_imaging_point_2d, AbdominalApertureFrame,
 };
+use super::super::skin::nearest_external_skin_point;
+use super::super::{medium::largest_target_slice, AnatomyKind, TheranosticFwiConfig};
+use super::surface::surface_points_2d;
+use super::{centroid_2d, centroid_index, validate_spacing, PlacementContext, Point3};
 
 pub fn build_abdominal_placement_context(
     anatomy: AnatomyKind,
@@ -42,9 +43,14 @@ pub fn build_abdominal_placement_context(
     let focus_2d = centroid_2d(&target_mask, sx, sy).ok_or_else(|| {
         KwaversError::InvalidInput("abdominal placement target mask is empty".to_owned())
     })?;
-    let skin = left_skin_contact(&body_mask, sx, sy, focus_2d)?;
-    let depth = (focus_2d.x_m - skin.x_m).max(0.0);
-    let arc = abdominal_arc_spec(config, depth);
+    let skin_2d = nearest_external_skin_point(&body_mask, sx, sy, focus_2d.x_m, focus_2d.y_m)?;
+    let skin = Point3 {
+        x_m: skin_2d.x_m,
+        y_m: skin_2d.y_m,
+        z_m: 0.0,
+    };
+    let frame = abdominal_aperture_frame(focus_2d.x_m, focus_2d.y_m, skin.x_m, skin.y_m);
+    let arc = abdominal_arc_spec(config, frame.depth_m);
     let focus = Point3 {
         x_m: focus_2d.x_m,
         y_m: focus_2d.y_m,
@@ -52,13 +58,14 @@ pub fn build_abdominal_placement_context(
     };
     let therapy_points_m = abdominal_arc_points(
         config.element_count,
+        frame,
         focus,
         arc.radius_m,
         arc.half_angle_rad,
         arc.cutout_angle_rad,
     );
-    let imaging_points_m = abdominal_imaging_points(skin, config.central_cutout_m, 64);
-    let surface_stride = ((ct_slice.dim().0.max(ct_slice.dim().1) / 192).max(1)).min(6);
+    let imaging_points_m = abdominal_imaging_points(frame, skin, config.central_cutout_m, 64);
+    let surface_stride = (ct_slice.dim().0.max(ct_slice.dim().1) / 192).clamp(1, 6);
     let body_surface_points_m =
         surface_points_2d(&body_mask, sx, sy, sz, slice_index, surface_stride);
 
@@ -83,6 +90,7 @@ pub fn build_abdominal_placement_context(
 
 fn abdominal_arc_points(
     count: usize,
+    frame: AbdominalApertureFrame,
     focus: Point3,
     radius: f64,
     half_angle: f64,
@@ -97,7 +105,14 @@ fn abdominal_arc_points(
         } else {
             0.0
         };
-        points.push(abdominal_arc_point(focus, radius, -half_angle, -cutout, t));
+        points.push(abdominal_arc_point(
+            frame,
+            focus,
+            radius,
+            -half_angle,
+            -cutout,
+            t,
+        ));
     }
     for idx in 0..right {
         let t = if right > 1 {
@@ -105,21 +120,36 @@ fn abdominal_arc_points(
         } else {
             0.0
         };
-        points.push(abdominal_arc_point(focus, radius, cutout, half_angle, t));
+        points.push(abdominal_arc_point(
+            frame, focus, radius, cutout, half_angle, t,
+        ));
     }
     points
 }
 
-fn abdominal_arc_point(focus: Point3, radius: f64, a: f64, b: f64, t: f64) -> Point3 {
+fn abdominal_arc_point(
+    frame: AbdominalApertureFrame,
+    focus: Point3,
+    radius: f64,
+    a: f64,
+    b: f64,
+    t: f64,
+) -> Point3 {
     let theta = a + (b - a) * t;
+    let (x_m, y_m) = abdominal_arc_point_2d(frame, focus.x_m, focus.y_m, radius, theta);
     Point3 {
-        x_m: focus.x_m - radius * theta.cos(),
-        y_m: focus.y_m + radius * theta.sin(),
+        x_m,
+        y_m,
         z_m: focus.z_m,
     }
 }
 
-fn abdominal_imaging_points(skin: Point3, aperture_m: f64, count: usize) -> Vec<Point3> {
+fn abdominal_imaging_points(
+    frame: AbdominalApertureFrame,
+    skin: Point3,
+    aperture_m: f64,
+    count: usize,
+) -> Vec<Point3> {
     (0..count)
         .map(|idx| {
             let t = if count > 1 {
@@ -127,9 +157,10 @@ fn abdominal_imaging_points(skin: Point3, aperture_m: f64, count: usize) -> Vec<
             } else {
                 0.5
             };
+            let (x_m, y_m) = abdominal_imaging_point_2d(frame, skin.x_m, skin.y_m, aperture_m, t);
             Point3 {
-                x_m: skin.x_m - ABDOMINAL_SKIN_CLEARANCE_M,
-                y_m: skin.y_m + (t - 0.5) * aperture_m,
+                x_m,
+                y_m,
                 z_m: skin.z_m,
             }
         })
@@ -170,31 +201,4 @@ fn connected_body_component(
         ));
     }
     Ok(body)
-}
-
-fn left_skin_contact(
-    body: &Array2<bool>,
-    spacing_x_m: f64,
-    spacing_y_m: f64,
-    focus: Point3,
-) -> KwaversResult<Point3> {
-    let (nx, ny) = body.dim();
-    let center = centered_origin_2d(nx, ny);
-    let iy = ((focus.y_m / spacing_y_m) + center.1)
-        .round()
-        .clamp(0.0, ny.saturating_sub(1) as f64) as usize;
-    for ix in 0..nx {
-        if body[[ix, iy]] {
-            return Ok(Point3 {
-                x_m: (ix as f64 - center.0) * spacing_x_m,
-                y_m: (iy as f64 - center.1) * spacing_y_m,
-                z_m: 0.0,
-            });
-        }
-    }
-    let boundary = boundary_points_2d(body, spacing_x_m, spacing_y_m, 1);
-    boundary
-        .into_iter()
-        .min_by(|a, b| distance_2d(*a, focus).total_cmp(&distance_2d(*b, focus)))
-        .ok_or_else(|| KwaversError::InvalidInput("abdominal body boundary is empty".to_owned()))
 }

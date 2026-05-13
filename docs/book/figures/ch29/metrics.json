@@ -22,7 +22,7 @@
       "device_model": "insightec_like_1024_element_helmet_projection",
       "geometry_model": "insightec_like_1024_element_helmet_projection",
       "placement_context_model": "insightec_like_1024_element_calvarium_helmet_3d",
-      "operator_model": "finite_frequency_same_aperture_fwi_rtm",
+      "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
       "element_count": 1024,
       "source_pressure_pa": 150000.0,
       "measurements": 28672,
@@ -85,7 +85,7 @@
       "device_model": "histosonics_like_256_element_skin_coupled_arc",
       "geometry_model": "histosonics_like_256_element_skin_coupled_arc",
       "placement_context_model": "kidney_histosonics_like_256_element_full_patient_skin_arc",
-      "operator_model": "finite_frequency_same_aperture_fwi_rtm",
+      "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
       "element_count": 256,
       "source_pressure_pa": 28000000.0,
       "measurements": 11136,
@@ -96,50 +96,50 @@
         0.0005,
         0.0009199218750000001
       ],
-      "placement_context_skin_gap_m": 0.0030167500813229487,
+      "placement_context_skin_gap_m": 0.003016750081322934,
       "placement_context_surface_points": 321,
       "placement_metrics": {
-        "min_body_clearance_m": 0.0030000676462830014,
-        "mean_body_clearance_m": 0.011721611872107993,
-        "max_body_clearance_m": 0.01951121959812648,
-        "skin_contact_to_nearest_aperture_m": 0.0030167500813229487
+        "min_body_clearance_m": 0.002080069709621782,
+        "mean_body_clearance_m": 0.034339825039783646,
+        "max_body_clearance_m": 0.06509036287420225,
+        "skin_contact_to_nearest_aperture_m": 0.003016750081322953
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.24569692566543985,
-          "nrmse": 0.1504822333918135,
-          "dice_equal_area": 0.43137254901960786,
-          "cnr": 1.8117771585043543
+          "pearson": 0.6450822719901148,
+          "nrmse": 0.12894784478395938,
+          "dice_equal_area": 0.6274509803921569,
+          "cnr": 5.624904583591233
         },
         "active_lesion": {
-          "pearson": 0.6645879053950107,
-          "nrmse": 0.058843905815316545,
-          "dice_equal_area": 0.5555555555555556,
-          "cnr": 9.737843839805986
+          "pearson": 0.9908890240536182,
+          "nrmse": 0.007170154918155431,
+          "dice_equal_area": 1.0,
+          "cnr": 31.420466438885466
         },
         "subharmonic": {
-          "pearson": 0.39800125989566526,
-          "nrmse": 0.09279586415844991,
-          "dice_equal_area": 0.4444444444444444,
-          "cnr": 4.806130963544203
+          "pearson": 0.8297905532440023,
+          "nrmse": 0.038633363323243616,
+          "dice_equal_area": 1.0,
+          "cnr": 18.548912557358914
         },
         "harmonic": {
-          "pearson": 0.6999239373037657,
-          "nrmse": 0.05704350924132471,
-          "dice_equal_area": 0.6666666666666666,
-          "cnr": 12.321183397831698
+          "pearson": 0.9722374496474935,
+          "nrmse": 0.01746958879488287,
+          "dice_equal_area": 1.0,
+          "cnr": 29.894803429934537
         },
         "ultraharmonic": {
-          "pearson": 0.8984090719331916,
-          "nrmse": 0.05045676470421474,
-          "dice_equal_area": 0.8888888888888888,
-          "cnr": 21.105960016044992
+          "pearson": 0.9854702730499117,
+          "nrmse": 0.025792703894133028,
+          "dice_equal_area": 1.0,
+          "cnr": 32.4814958648297
         },
         "fusion": {
-          "pearson": 0.8606944900191866,
-          "nrmse": 0.037833590902278835,
-          "dice_equal_area": 0.7777777777777778,
-          "cnr": 26.752854896492376
+          "pearson": 0.9772849136025006,
+          "nrmse": 0.011066954082077984,
+          "dice_equal_area": 1.0,
+          "cnr": 52.39800565010731
         }
       }
     },
@@ -148,7 +148,7 @@
       "device_model": "histosonics_like_256_element_skin_coupled_arc",
       "geometry_model": "histosonics_like_256_element_skin_coupled_arc",
       "placement_context_model": "liver_histosonics_like_256_element_full_patient_skin_arc",
-      "operator_model": "finite_frequency_same_aperture_fwi_rtm",
+      "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
       "element_count": 256,
       "source_pressure_pa": 28000000.0,
       "measurements": 11136,
@@ -159,50 +159,50 @@
         0.000703125,
         0.000703125
       ],
-      "placement_context_skin_gap_m": 0.003016750081322949,
+      "placement_context_skin_gap_m": 0.003016750081322947,
       "placement_context_surface_points": 312,
       "placement_metrics": {
-        "min_body_clearance_m": 0.003000025728508377,
-        "mean_body_clearance_m": 0.025871888357508893,
-        "max_body_clearance_m": 0.03503274578918629,
-        "skin_contact_to_nearest_aperture_m": 0.003016750081322949
+        "min_body_clearance_m": 0.00020640379071192456,
+        "mean_body_clearance_m": 0.01115892227469409,
+        "max_body_clearance_m": 0.03752845762351325,
+        "skin_contact_to_nearest_aperture_m": 0.0030167500813229396
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.37966709648247715,
-          "nrmse": 0.14441192737267694,
-          "dice_equal_area": 0.425531914893617,
-          "cnr": 1.7153353892726135
+          "pearson": 0.6206290608133483,
+          "nrmse": 0.1300415189832386,
+          "dice_equal_area": 0.5957446808510638,
+          "cnr": 3.191114987220195
         },
         "active_lesion": {
-          "pearson": 0.8339207101851777,
-          "nrmse": 0.04304159553863045,
-          "dice_equal_area": 0.875,
-          "cnr": 15.906346648455285
+          "pearson": 0.9384776468238674,
+          "nrmse": 0.024566866125134576,
+          "dice_equal_area": 1.0,
+          "cnr": 23.17032664633031
         },
         "subharmonic": {
-          "pearson": 0.5959702692501364,
-          "nrmse": 0.09752790739335448,
+          "pearson": 0.5807292833757085,
+          "nrmse": 0.09521548818434586,
           "dice_equal_area": 0.75,
-          "cnr": 8.006582799541288
+          "cnr": 7.143175866657113
         },
         "harmonic": {
-          "pearson": 0.9149880278130155,
-          "nrmse": 0.030872854900069097,
-          "dice_equal_area": 0.875,
-          "cnr": 21.074671353930075
+          "pearson": 0.9333029700184983,
+          "nrmse": 0.030456811293697213,
+          "dice_equal_area": 1.0,
+          "cnr": 22.267441180351316
         },
         "ultraharmonic": {
-          "pearson": 0.8950029230962725,
-          "nrmse": 0.048976828878853094,
-          "dice_equal_area": 0.875,
-          "cnr": 18.13395193961475
+          "pearson": 0.9679714407337382,
+          "nrmse": 0.03743083261118508,
+          "dice_equal_area": 1.0,
+          "cnr": 26.39690666787984
         },
         "fusion": {
-          "pearson": 0.944763488414046,
-          "nrmse": 0.0204882452783305,
-          "dice_equal_area": 0.875,
-          "cnr": 26.798379584353267
+          "pearson": 0.952257113126986,
+          "nrmse": 0.020710944448881427,
+          "dice_equal_area": 0.9166666666666666,
+          "cnr": 29.547226995418885
         }
       }
     }

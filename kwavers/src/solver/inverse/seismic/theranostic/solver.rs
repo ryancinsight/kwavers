@@ -46,10 +46,10 @@ pub fn run_theranostic_fwi(
         &prepared.body_mask,
         &prepared.target_mask,
         prepared.spacing_m,
-    );
+    )?;
     let active_mask = &prepared.body_mask;
     let active = active_grid(active_mask, prepared.spacing_m);
-    if active.indices.len() < 16 {
+    if active.len() < 16 {
         return Err(KwaversError::InvalidInput(
             "theranostic active support has fewer than 16 voxels".to_owned(),
         ));
@@ -63,25 +63,15 @@ pub fn run_theranostic_fwi(
 
     let anatomy_target = target_contrast(&prepared);
     let anatomy_vec = vector_from_image(&anatomy_target, &active);
-    let (anatomy_recon_vec, mut history) = solve_inverse(
-        &fundamental,
-        &anatomy_vec,
-        &active,
-        active_mask.dim(),
-        config,
-    );
+    let (anatomy_recon_vec, mut history) =
+        solve_inverse(&fundamental, &anatomy_vec, &active, config);
     let anatomy_reconstruction = image_from_vector(&anatomy_recon_vec, &active, active_mask.dim());
 
     let mut lesion_speed = lesion_target.clone();
     lesion_speed.mapv_inplace(|v| v * config.lesion_delta_c_m_s / C_REF_M_S);
     let lesion_speed_vec = vector_from_image(&lesion_speed, &active);
-    let (active_vec, active_history) = solve_inverse(
-        &fundamental,
-        &lesion_speed_vec,
-        &active,
-        active_mask.dim(),
-        config,
-    );
+    let (active_vec, active_history) =
+        solve_inverse(&fundamental, &lesion_speed_vec, &active, config);
     history.extend(active_history);
     let active_lesion_reconstruction = normalize_positive(
         &image_from_vector(&negated(&active_vec), &active, active_mask.dim()),
@@ -89,13 +79,7 @@ pub fn run_theranostic_fwi(
     );
 
     let sub_target_vec = vector_from_image(&lesion_target, &active);
-    let (sub_vec, sub_history) = solve_inverse(
-        &passive,
-        &sub_target_vec,
-        &active,
-        active_mask.dim(),
-        config,
-    );
+    let (sub_vec, sub_history) = solve_inverse(&passive, &sub_target_vec, &active, config);
     history.extend(sub_history);
     let subharmonic_reconstruction = normalize_positive(
         &image_from_vector(&sub_vec, &active, active_mask.dim()),
@@ -104,8 +88,7 @@ pub fn run_theranostic_fwi(
 
     let harmonic_target = harmonic_target(&prepared, &lesion_target);
     let harmonic_vec = vector_from_image(&harmonic_target, &active);
-    let (harmonic_out, harmonic_history) =
-        solve_inverse(&harmonic, &harmonic_vec, &active, active_mask.dim(), config);
+    let (harmonic_out, harmonic_history) = solve_inverse(&harmonic, &harmonic_vec, &active, config);
     history.extend(harmonic_history);
     let harmonic_reconstruction = normalize_positive(
         &image_from_vector(&harmonic_out, &active, active_mask.dim()),
@@ -114,13 +97,8 @@ pub fn run_theranostic_fwi(
 
     let ultraharmonic_target = ultraharmonic_target(&prepared, &lesion_target);
     let ultraharmonic_vec = vector_from_image(&ultraharmonic_target, &active);
-    let (ultra_out, ultra_history) = solve_inverse(
-        &ultraharmonic,
-        &ultraharmonic_vec,
-        &active,
-        active_mask.dim(),
-        config,
-    );
+    let (ultra_out, ultra_history) =
+        solve_inverse(&ultraharmonic, &ultraharmonic_vec, &active, config);
     history.extend(ultra_history);
     let ultraharmonic_reconstruction = normalize_positive(
         &image_from_vector(&ultra_out, &active, active_mask.dim()),
@@ -165,15 +143,32 @@ pub fn run_theranostic_fwi(
         fused_metrics,
         objective_history: history,
         measurements: fundamental.rows + passive.rows + harmonic.rows + ultraharmonic.rows,
-        active_voxels: active.indices.len(),
+        active_voxels: active.len(),
     })
 }
 
+/// Solve the Tikhonov-H1 normal equations for one simulated acquisition channel.
+///
+/// # Theorem
+///
+/// For sensitivity matrix `A`, scalar `lambda > 0`, nonnegative
+/// graph-Laplacian weight `gamma`, and active-support Laplacian `L`, the system
+/// `(A^T A + lambda I + gamma L)x = A^T d` is symmetric positive definite on
+/// the active voxels. Preconditioned conjugate gradients therefore minimizes
+/// `0.5||Ax-d||_2^2 + 0.5 lambda ||x||_2^2 + 0.5 gamma x^T L x`.
+///
+/// # Proof sketch
+///
+/// `A^T A` is positive semidefinite. `L` is positive semidefinite by the
+/// graph-energy identity documented on `ActiveGrid`. Adding `lambda I` with
+/// `lambda > 0` makes the quadratic form strictly positive for every nonzero
+/// `x`, which is the PCG convergence condition. The implementation reuses row,
+/// normal-operator, and Laplacian workspaces so the iteration count, not hidden
+/// allocation churn, determines runtime cost.
 fn solve_inverse(
     matrix: &RowMatrix,
     target: &[f32],
     active: &ActiveGrid,
-    shape: (usize, usize),
     config: &TheranosticFwiConfig,
 ) -> (Vec<f32>, Vec<f64>) {
     let mut data = vec![0.0; matrix.rows];
@@ -187,7 +182,18 @@ fn solve_inverse(
     }
     let mut x = vec![0.0; matrix.cols];
     let mut hx = vec![0.0; matrix.cols];
-    normal_apply(matrix, &x, active, shape, config, &mut hx);
+    let mut row_workspace = vec![0.0; matrix.rows];
+    let mut lap_workspace = vec![0.0; matrix.cols];
+    let mut prediction_workspace = vec![0.0; matrix.rows];
+    normal_apply(
+        matrix,
+        &x,
+        active,
+        config,
+        &mut hx,
+        &mut row_workspace,
+        &mut lap_workspace,
+    );
     let mut r = rhs
         .iter()
         .zip(hx.iter())
@@ -200,10 +206,26 @@ fn solve_inverse(
         .collect::<Vec<_>>();
     let mut p = z.clone();
     let mut rz_old = dot(&r, &z);
-    let mut history = vec![objective(matrix, &x, &data, active, shape, config)];
+    let mut history = vec![objective(
+        matrix,
+        &x,
+        &data,
+        active,
+        config,
+        &mut prediction_workspace,
+        &mut lap_workspace,
+    )];
+    let mut ap = vec![0.0; matrix.cols];
     for _ in 0..config.iterations {
-        let mut ap = vec![0.0; matrix.cols];
-        normal_apply(matrix, &p, active, shape, config, &mut ap);
+        normal_apply(
+            matrix,
+            &p,
+            active,
+            config,
+            &mut ap,
+            &mut row_workspace,
+            &mut lap_workspace,
+        );
         let denom = dot(&p, &ap);
         if denom <= 0.0 {
             break;
@@ -215,7 +237,15 @@ fn solve_inverse(
             .zip(r.iter().zip(diag.iter()))
             .for_each(|(zv, (rv, dv))| *zv = rv / dv);
         let rz_new = dot(&r, &z);
-        history.push(objective(matrix, &x, &data, active, shape, config));
+        history.push(objective(
+            matrix,
+            &x,
+            &data,
+            active,
+            config,
+            &mut prediction_workspace,
+            &mut lap_workspace,
+        ));
         if rz_new <= 1.0e-16 * rz_old.max(1.0) {
             break;
         }
@@ -232,15 +262,15 @@ fn normal_apply(
     matrix: &RowMatrix,
     x: &[f32],
     active: &ActiveGrid,
-    shape: (usize, usize),
     config: &TheranosticFwiConfig,
     out: &mut [f32],
+    row_workspace: &mut [f32],
+    lap_workspace: &mut [f32],
 ) {
-    let mut tmp = vec![0.0; matrix.rows];
-    matrix.matvec(x, &mut tmp);
-    matrix.t_matvec(&tmp, out);
-    let lap = laplacian(active, shape, x);
-    for ((dst, xv), lv) in out.iter_mut().zip(x.iter()).zip(lap.iter()) {
+    matrix.matvec(x, row_workspace);
+    matrix.t_matvec(row_workspace, out);
+    active.graph_laplacian_into(x, lap_workspace);
+    for ((dst, xv), lv) in out.iter_mut().zip(x.iter()).zip(lap_workspace.iter()) {
         *dst += config.regularization as f32 * *xv + config.smoothness_weight as f32 * *lv;
     }
 }
@@ -250,63 +280,24 @@ fn objective(
     x: &[f32],
     data: &[f32],
     active: &ActiveGrid,
-    shape: (usize, usize),
     config: &TheranosticFwiConfig,
+    prediction: &mut [f32],
+    lap_workspace: &mut [f32],
 ) -> f64 {
-    let mut prediction = vec![0.0; matrix.rows];
-    matrix.matvec(x, &mut prediction);
+    matrix.matvec(x, prediction);
     let residual = prediction
         .iter()
         .zip(data.iter())
         .map(|(p, d)| (*p - *d).powi(2) as f64)
         .sum::<f64>();
     let norm = x.iter().map(|v| (*v as f64).powi(2)).sum::<f64>();
-    let lap = laplacian(active, shape, x);
+    active.graph_laplacian_into(x, lap_workspace);
     let smooth = x
         .iter()
-        .zip(lap.iter())
+        .zip(lap_workspace.iter())
         .map(|(a, b)| *a as f64 * *b as f64)
         .sum::<f64>();
     0.5 * residual + 0.5 * config.regularization * norm + 0.5 * config.smoothness_weight * smooth
-}
-
-fn laplacian(active: &ActiveGrid, shape: (usize, usize), values: &[f32]) -> Vec<f32> {
-    let mut image = Array2::<f32>::zeros(shape);
-    let mut active_image = Array2::<bool>::from_elem(shape, false);
-    for ((ix, iy), value) in active.indices.iter().zip(values.iter()) {
-        image[[*ix, *iy]] = *value;
-        active_image[[*ix, *iy]] = true;
-    }
-    let mut out = Vec::with_capacity(active.indices.len());
-    for (ix, iy) in &active.indices {
-        let mut degree = 0.0;
-        let mut sum = 0.0;
-        for (nx, ny) in neighbors(*ix, *iy, shape) {
-            if active_image[[nx, ny]] {
-                degree += 1.0;
-                sum += image[[nx, ny]];
-            }
-        }
-        out.push(degree * image[[*ix, *iy]] - sum);
-    }
-    out
-}
-
-fn neighbors(ix: usize, iy: usize, shape: (usize, usize)) -> impl Iterator<Item = (usize, usize)> {
-    let mut out = Vec::with_capacity(4);
-    if ix > 0 {
-        out.push((ix - 1, iy));
-    }
-    if iy > 0 {
-        out.push((ix, iy - 1));
-    }
-    if ix + 1 < shape.0 {
-        out.push((ix + 1, iy));
-    }
-    if iy + 1 < shape.1 {
-        out.push((ix, iy + 1));
-    }
-    out.into_iter()
 }
 
 fn lesion_source(prepared: &PreparedTheranosticSlice, exposure: &Array2<f64>) -> Array2<f64> {
