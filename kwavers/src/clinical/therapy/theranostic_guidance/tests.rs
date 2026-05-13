@@ -1,7 +1,6 @@
 use ndarray::{Array2, Array3};
 use std::collections::VecDeque;
 
-use super::operator::active_grid;
 use super::{
     build_abdominal_placement_context, placement_metrics, plan_brain_helmet_placement,
     prepare_abdominal_slice, prepare_brain_slice, run_theranostic_fwi, AnatomyKind,
@@ -82,23 +81,11 @@ fn abdominal_theranostic_fwi_recovers_lesion_support() {
         result.subharmonic_metrics.dice_equal_area
     );
     assert!(result.measurements > 0);
-}
-
-#[test]
-fn active_grid_graph_laplacian_matches_four_neighbor_energy() {
-    let mask = Array2::<bool>::from_elem((2, 2), true);
-    let active = active_grid(&mask, 1.0);
-    let values = [1.0_f32, 2.0, 3.0, 4.0];
-    let mut laplacian = [0.0_f32; 4];
-    active.graph_laplacian_into(&values, &mut laplacian);
-    let graph_energy = values
-        .iter()
-        .zip(laplacian.iter())
-        .map(|(value, lap)| value * lap)
-        .sum::<f32>();
-
-    assert_eq!(laplacian, [-3.0, -1.0, 1.0, 3.0]);
-    assert_eq!(graph_energy, 10.0);
+    assert_eq!(
+        result.operator_backend,
+        "matrix_free_finite_frequency_same_aperture"
+    );
+    assert!(result.operator_storage_values < result.dense_operator_values);
 }
 
 #[test]
@@ -393,6 +380,7 @@ fn brain_helmet_layout_uses_requested_element_count() {
     assert!(placement.min_body_clearance_m >= 0.010);
     assert!(result.active_voxels > 16);
     assert!(result.active_metrics.cnr > 0.0);
+    assert!(result.operator_storage_values < result.dense_operator_values);
     let exposure_peak = result.exposure.iter().copied().fold(0.0, f64::max);
     assert!(
         (exposure_peak - config.source_pressure_pa).abs() <= config.source_pressure_pa * 1.0e-12,
@@ -442,27 +430,6 @@ fn brain_helmet_3d_uses_calvarium_cap_not_inferior_hemisphere() {
         "helmet cap must cover the superior calvarium: max_z={max_element_z}"
     );
     assert!(placement.intersection_fraction > 0.0);
-}
-
-#[test]
-fn active_grid_graph_laplacian_matches_edge_energy() {
-    let mut mask = Array2::<bool>::from_elem((3, 3), false);
-    mask[[1, 0]] = true;
-    mask[[1, 1]] = true;
-    mask[[1, 2]] = true;
-    mask[[2, 1]] = true;
-    let active = active_grid(&mask, 1.0);
-    let values = vec![1.0_f32, 2.0, 4.0, 8.0];
-    let mut laplacian = vec![0.0_f32; active.len()];
-    active.graph_laplacian_into(&values, &mut laplacian);
-    let energy = values
-        .iter()
-        .zip(laplacian.iter())
-        .map(|(value, lap)| f64::from(*value) * f64::from(*lap))
-        .sum::<f64>();
-
-    assert_eq!(laplacian, vec![-1.0, -7.0, 2.0, 6.0]);
-    assert_eq!(energy, 41.0);
 }
 
 fn distance_2d(a: Point2, b: Point2) -> f64 {

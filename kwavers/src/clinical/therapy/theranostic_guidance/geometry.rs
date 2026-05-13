@@ -3,6 +3,7 @@
 use std::f64::consts::{PI, TAU};
 
 use crate::core::error::KwaversResult;
+use crate::solver::inverse::same_aperture::PlanarPoint;
 use ndarray::Array2;
 
 use super::aperture::{
@@ -12,11 +13,7 @@ use super::aperture::{
 use super::config::{AnatomyKind, TheranosticFwiConfig};
 use super::skin::nearest_external_skin_point;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Point2 {
-    pub x_m: f64,
-    pub y_m: f64,
-}
+pub type Point2 = PlanarPoint;
 
 #[derive(Clone, Debug)]
 pub struct DeviceLayout {
@@ -156,10 +153,6 @@ fn abdominal_arc_point(
     let theta = a + (b - a) * t;
     let (x_m, y_m) = abdominal_arc_point_2d(frame, focus.x_m, focus.y_m, radius, theta);
     Point2 { x_m, y_m }
-}
-
-pub fn receiver_index(source: usize, offset: usize, count: usize) -> usize {
-    (source + offset) % count
 }
 
 fn centroid_or_center(mask: &Array2<bool>, fallback: &Array2<bool>, spacing_m: f64) -> Point2 {

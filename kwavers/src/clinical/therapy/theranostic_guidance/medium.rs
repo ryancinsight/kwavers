@@ -1,10 +1,11 @@
 //! CT and segmentation preprocessing for theranostic FWI slices.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::solver::inverse::same_aperture::C_REF_M_S;
 use ndarray::{s, Array2, Array3};
 use std::collections::VecDeque;
 
-use super::config::{AnatomyKind, C_REF_M_S};
+use super::config::AnatomyKind;
 
 #[derive(Clone, Debug)]
 pub struct PreparedTheranosticSlice {

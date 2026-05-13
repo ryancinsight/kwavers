@@ -11,11 +11,11 @@
 mod aperture;
 mod config;
 mod context;
+mod exposure;
 mod geometry;
 mod helmet3d;
 mod medium;
 mod metrics;
-mod operator;
 mod skin;
 mod solver;
 
@@ -28,7 +28,10 @@ pub use geometry::{placement_metrics, DeviceLayout, DevicePlacementMetrics, Poin
 pub use helmet3d::{plan_brain_helmet_placement, BrainHelmetPlacement3D, Point3};
 pub use medium::{prepare_abdominal_slice, prepare_brain_slice, PreparedTheranosticSlice};
 pub use metrics::ReconstructionMetrics;
-pub use solver::{run_theranostic_fwi, TheranosticFwiResult, THERANOSTIC_OPERATOR_MODEL};
+pub use solver::{
+    run_theranostic_fwi, TheranosticFwiResult, THERANOSTIC_OPERATOR_BACKEND,
+    THERANOSTIC_OPERATOR_MODEL,
+};
 
 #[cfg(test)]
 mod tests;

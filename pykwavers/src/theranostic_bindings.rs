@@ -186,6 +186,9 @@ fn result_to_dict<'py>(
     placement_context: PlacementContext,
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
+    let operator_backend = result.operator_backend.clone();
+    let operator_storage_values = result.operator_storage_values;
+    let dense_operator_values = result.dense_operator_values;
     let prepared = result.prepared;
     let layout = result.layout;
     let placement = placement_metrics(&layout, &prepared.body_mask, prepared.spacing_m);
@@ -306,6 +309,9 @@ fn result_to_dict<'py>(
         placement_context_surface_points,
     )?;
     out.set_item("operator_model", THERANOSTIC_OPERATOR_MODEL)?;
+    out.set_item("operator_backend", operator_backend)?;
+    out.set_item("operator_storage_values", operator_storage_values)?;
+    out.set_item("dense_operator_values", dense_operator_values)?;
     out.set_item("measurements", result.measurements)?;
     out.set_item("active_voxels", result.active_voxels)?;
     out.set_item(

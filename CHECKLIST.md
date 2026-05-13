@@ -24,6 +24,7 @@
 - [x] Signals: Implement in `kwavers`, wrap in `pykwavers`, validate vs `k-wave`
 - [x] Sensors: Implement in `kwavers`, wrap in `pykwavers`, validate vs `k-wave`
 - [x] Solvers: Implement in `kwavers` (using BURN for GPU/Autodiff for PINN), wrap in `pykwavers`, validate vs `k-wave`
+- [x] [minor] Chapter 29 same-aperture inverse SSOT migration: extract active/passive finite-frequency row assembly, harmonic/ultraharmonic rows, active-support graph indexing, and graph-Laplacian PCG into `solver::inverse::same_aperture`; clinical theranostic workflow now uses that solver kernel while retaining only CT/anatomy/device placement, exposure, fusion, and reporting helpers.
 - [x] FWI physics: implement acoustic L2 objective, receiver-order adjoint injection, CFL validation, and second-derivative gradient tests
 - [x] Reconstruction FWI: implement sign-correct residuals, `dt`-scaled objective, checkpointed replay adjoint accumulation, timestep validation, and encoded-gradient aggregation
 - [x] Shared acoustic adjoint-state core: consolidate L2 residuals, objective scaling, time reversal, and signed-correlation accumulation across FWI paths

@@ -22,6 +22,7 @@ pub mod acoustic_fwi;
 pub mod elastography;
 pub mod pinn;
 pub mod reconstruction;
+pub mod same_aperture;
 pub mod seismic;
 pub mod time_reversal;
 

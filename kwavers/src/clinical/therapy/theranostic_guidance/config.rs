@@ -2,8 +2,6 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-pub const C_REF_M_S: f64 = 1540.0;
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AnatomyKind {
     Brain,

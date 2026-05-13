@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.image import AxesImage
 import numpy as np
 
 
@@ -72,6 +73,65 @@ CASES = (
     },
 )
 
+RECONSTRUCTION_CHANNELS = (
+    ("active_lesion_reconstruction", "active FWI"),
+    ("subharmonic_reconstruction", "subharmonic RTM/FWI"),
+    ("harmonic_reconstruction", "harmonic FWI"),
+    ("ultraharmonic_reconstruction", "ultraharmonic FWI"),
+    ("fused_reconstruction", "fusion"),
+)
+
+RECONSTRUCTION_FIGURE_COLUMNS = (
+    ("ct_hu", "gray", "CT + target + tx/rx"),
+    ("exposure", "magma", "simulated exposure"),
+    ("lesion_target", "magma", "lesion target"),
+    ("active_lesion_reconstruction", "viridis", "active FWI"),
+    ("subharmonic_reconstruction", "viridis", "subharmonic RTM/FWI"),
+    ("harmonic_reconstruction", "viridis", "harmonic FWI"),
+    ("ultraharmonic_reconstruction", "viridis", "ultraharmonic FWI"),
+    ("fused_reconstruction", "viridis", "fusion"),
+)
+
+
+def placement_arrays(result: dict[str, object]) -> tuple[np.ndarray, list[float], np.ndarray, np.ndarray]:
+    ct = np.asarray(result["placement_ct_hu"], dtype=float)
+    spacing = tuple(float(v) for v in result["placement_spacing_m"])
+    extent = image_extent_xy(ct, spacing)
+    therapy_points = np.asarray(result["placement_therapy_points_m"], dtype=float)
+    imaging_points = np.asarray(result["placement_imaging_points_m"], dtype=float)
+    return ct, extent, therapy_points, imaging_points
+
+
+def plot_placement_ct(
+    ax: plt.Axes,
+    result: dict[str, object],
+    *,
+    show_legend: bool,
+    target_color: str = "yellow",
+) -> AxesImage:
+    ct, extent, therapy_points, imaging_points = placement_arrays(result)
+    therapy_x = therapy_points[:, 0]
+    therapy_y = therapy_points[:, 1]
+    imaging_x = imaging_points[:, 0] if imaging_points.size else np.array([], dtype=float)
+    imaging_y = imaging_points[:, 1] if imaging_points.size else np.array([], dtype=float)
+
+    im = ax.imshow(ct.T, cmap="gray", origin="lower", extent=extent, vmin=-200, vmax=300)
+    contour_mask(ax, np.asarray(result["placement_target_mask"], dtype=bool), extent, target_color, 1.1)
+    contour_mask(ax, np.asarray(result["placement_body_mask"], dtype=bool), extent, "cyan", 0.8)
+    ax.scatter(therapy_x, therapy_y, s=2.0, c="#e74c3c", alpha=0.50, label="therapy tx/rx")
+    if imaging_x.size > 0:
+        ax.scatter(imaging_x, imaging_y, s=6.0, c="#2e86de", alpha=0.80, label="central imaging rx")
+    focus = result["placement_focus_m"]
+    skin = result["placement_skin_contact_m"]
+    ax.scatter([focus[0]], [focus[1]], marker="x", s=45, c="white", linewidths=1.6)
+    ax.scatter([skin[0]], [skin[1]], marker="o", s=24, c="lime", edgecolors="black", linewidths=0.5)
+    ax.set_aspect("equal")
+    ax.set_xlim(*axis_limits(extent[:2], therapy_x, imaging_x))
+    ax.set_ylim(*axis_limits(extent[2:], therapy_y, imaging_y))
+    if show_legend:
+        ax.legend(loc="lower right", fontsize=7, frameon=True)
+    return im
+
 
 def run_case(case: dict[str, object]) -> dict[str, object]:
     if not Path(case["ct"]).exists():
@@ -96,35 +156,13 @@ def run_case(case: dict[str, object]) -> dict[str, object]:
 def render_layouts(results: list[dict[str, object]]) -> Path:
     fig, axes = plt.subplots(1, len(results), figsize=(15, 4.8), constrained_layout=True)
     for ax, result in zip(axes, results):
-        ct = np.asarray(result["placement_ct_hu"], dtype=float)
-        spacing = tuple(float(v) for v in result["placement_spacing_m"])
-        extent = image_extent_xy(ct, spacing)
-        therapy_points = np.asarray(result["placement_therapy_points_m"], dtype=float)
-        imaging_points = np.asarray(result["placement_imaging_points_m"], dtype=float)
-        therapy_x = therapy_points[:, 0]
-        therapy_y = therapy_points[:, 1]
-        imaging_x = imaging_points[:, 0] if imaging_points.size else np.array([], dtype=float)
-        imaging_y = imaging_points[:, 1] if imaging_points.size else np.array([], dtype=float)
-        ax.imshow(ct.T, cmap="gray", origin="lower", extent=extent, vmin=-200, vmax=300)
-        contour_mask(ax, np.asarray(result["placement_target_mask"], dtype=bool), extent, "yellow", 1.1)
-        contour_mask(ax, np.asarray(result["placement_body_mask"], dtype=bool), extent, "cyan", 0.8)
-        ax.scatter(therapy_x, therapy_y, s=2.0, c="#e74c3c", alpha=0.50, label="therapy tx/rx")
-        if imaging_x.size > 0:
-            ax.scatter(imaging_x, imaging_y, s=6.0, c="#2e86de", alpha=0.80, label="central imaging rx")
-        focus = result["placement_focus_m"]
-        skin = result["placement_skin_contact_m"]
-        ax.scatter([focus[0]], [focus[1]], marker="x", s=45, c="white", linewidths=1.6)
-        ax.scatter([skin[0]], [skin[1]], marker="o", s=24, c="lime", edgecolors="black", linewidths=0.5)
+        plot_placement_ct(ax, result, show_legend=True)
         ax.set_title(
             f"{result['anatomy']}: {short_device_name(result)}\n"
             f"full CT slice, {result['element_count']} elements, {placement_label(result)}"
         )
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
-        ax.set_aspect("equal")
-        ax.set_xlim(*axis_limits(extent[:2], therapy_x, imaging_x))
-        ax.set_ylim(*axis_limits(extent[2:], therapy_y, imaging_y))
-        ax.legend(loc="lower right", fontsize=7, frameon=True)
     path = OUT_DIR / "fig01_device_placement_on_ct.png"
     fig.savefig(path, dpi=180)
     fig.savefig(path.with_suffix(".pdf"))
@@ -133,22 +171,18 @@ def render_layouts(results: list[dict[str, object]]) -> Path:
 
 
 def render_reconstructions(results: list[dict[str, object]]) -> Path:
-    columns = (
-        ("exposure", "magma", "simulated exposure"),
-        ("lesion_target", "magma", "lesion target"),
-        ("active_lesion_reconstruction", "viridis", "active FWI"),
-        ("subharmonic_reconstruction", "viridis", "subharmonic RTM/FWI"),
-        ("harmonic_reconstruction", "viridis", "harmonic FWI"),
-        ("ultraharmonic_reconstruction", "viridis", "ultraharmonic FWI"),
-        ("fused_reconstruction", "viridis", "fusion"),
-    )
-    fig, axes = plt.subplots(len(results), len(columns), figsize=(18.5, 8.4), constrained_layout=True)
+    columns = RECONSTRUCTION_FIGURE_COLUMNS
+    fig, axes = plt.subplots(len(results), len(columns), figsize=(21.0, 8.4), constrained_layout=True)
     for row, result in enumerate(results):
         for col, (key, cmap, title) in enumerate(columns):
             ax = axes[row, col]
-            image = np.asarray(result[key], dtype=float)
-            im = ax.imshow(image.T, cmap=cmap, origin="lower", vmin=0.0, vmax=max(float(np.max(image)), 1.0e-12))
-            ax.contour(np.asarray(result["target_mask"], dtype=bool).T, levels=[0.5], colors="white", linewidths=0.7)
+            if key == "ct_hu":
+                im = plot_placement_ct(ax, result, show_legend=False, target_color="white")
+                ax.set_xlabel(short_device_name(result), fontsize=7)
+            else:
+                image = np.asarray(result[key], dtype=float)
+                im = ax.imshow(image.T, cmap=cmap, origin="lower", vmin=0.0, vmax=max(float(np.max(image)), 1.0e-12))
+                ax.contour(np.asarray(result["target_mask"], dtype=bool).T, levels=[0.5], colors="white", linewidths=0.7)
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"{result['anatomy']} {title}" if col == 0 else title, fontsize=9)
@@ -217,6 +251,40 @@ def render_brain_helmet_3d(placement: dict[str, object]) -> Path:
         fontsize=10,
     )
     path = OUT_DIR / "fig03_brain_helmet_3d_placement.png"
+    fig.savefig(path, dpi=180)
+    fig.savefig(path.with_suffix(".pdf"))
+    plt.close(fig)
+    return path
+
+
+def render_dynamic_range_diagnostics(results: list[dict[str, object]]) -> Path:
+    fig, axes = plt.subplots(
+        len(results),
+        len(RECONSTRUCTION_CHANNELS),
+        figsize=(15.0, 8.2),
+        constrained_layout=True,
+    )
+    last_image = None
+    for row, result in enumerate(results):
+        diagnostics = reconstruction_diagnostics(result)
+        target = np.asarray(result["target_mask"], dtype=bool)
+        for col, (key, title) in enumerate(RECONSTRUCTION_CHANNELS):
+            ax = axes[row, col]
+            image = np.asarray(result[key], dtype=float)
+            db_image = normalized_db(image)
+            last_image = ax.imshow(db_image.T, cmap="magma", origin="lower", vmin=-40.0, vmax=0.0)
+            ax.contour(target.T, levels=[0.5], colors="white", linewidths=0.7)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            channel = diagnostics[key]
+            ax.set_title(f"{result['anatomy']} {title}" if col == 0 else title, fontsize=8.5)
+            ax.set_xlabel(
+                f"outside peak {channel['outside_peak_db']:.1f} dB\n"
+                f"outside energy {100.0 * channel['outside_energy_fraction']:.1f}%"
+            )
+    if last_image is not None:
+        fig.colorbar(last_image, ax=axes.ravel().tolist(), fraction=0.018, pad=0.01, label="relative amplitude [dB]")
+    path = OUT_DIR / "fig04_reconstruction_dynamic_range_diagnostics.png"
     fig.savefig(path, dpi=180)
     fig.savefig(path.with_suffix(".pdf"))
     plt.close(fig)
@@ -297,6 +365,43 @@ def set_equal_3d_limits(ax: plt.Axes, clouds: list[np.ndarray]) -> None:
     ax.set_box_aspect((1.0, 1.0, 1.0))
 
 
+def normalized_db(image: np.ndarray, floor_db: float = -40.0) -> np.ndarray:
+    values = np.asarray(image, dtype=float)
+    peak = float(np.max(np.abs(values)))
+    if peak <= 0.0 or not np.isfinite(peak):
+        return np.full(values.shape, floor_db, dtype=float)
+    ratio = np.maximum(np.abs(values) / peak, 10.0 ** (floor_db / 20.0))
+    return np.maximum(20.0 * np.log10(ratio), floor_db)
+
+
+def reconstruction_diagnostics(result: dict[str, object]) -> dict[str, dict[str, float]]:
+    target = np.asarray(result["target_mask"], dtype=bool)
+    body = np.asarray(result.get("body_mask", np.ones_like(target)), dtype=bool)
+    outside = body & ~target
+    diagnostics: dict[str, dict[str, float]] = {}
+    for key, _ in RECONSTRUCTION_CHANNELS:
+        image = np.asarray(result[key], dtype=float)
+        peak = float(np.max(np.abs(image)))
+        outside_peak = float(np.max(np.abs(image[outside]))) if np.any(outside) else 0.0
+        total_energy = float(np.sum(image[body] ** 2)) if np.any(body) else 0.0
+        outside_energy = float(np.sum(image[outside] ** 2)) if np.any(outside) else 0.0
+        outside_peak_ratio = outside_peak / peak if peak > 0.0 else 0.0
+        outside_energy_fraction = outside_energy / total_energy if total_energy > 0.0 else 0.0
+        diagnostics[key] = {
+            "peak": peak,
+            "outside_peak_ratio": outside_peak_ratio,
+            "outside_peak_db": ratio_to_db(outside_peak_ratio),
+            "outside_energy_fraction": outside_energy_fraction,
+        }
+    return diagnostics
+
+
+def ratio_to_db(ratio: float, floor_db: float = -120.0) -> float:
+    if ratio <= 0.0 or not np.isfinite(ratio):
+        return floor_db
+    return max(20.0 * float(np.log10(ratio)), floor_db)
+
+
 def write_metrics(
     results: list[dict[str, object]],
     figures: list[Path],
@@ -323,6 +428,9 @@ def write_metrics(
                 "geometry_model": result["geometry_model"],
                 "placement_context_model": result["placement_context_model"],
                 "operator_model": result["operator_model"],
+                "operator_backend": result["operator_backend"],
+                "operator_storage_values": int(result["operator_storage_values"]),
+                "dense_operator_values": int(result["dense_operator_values"]),
                 "element_count": int(result["element_count"]),
                 "source_pressure_pa": float(result["source_pressure_pa"]),
                 "measurements": int(result["measurements"]),
@@ -334,6 +442,7 @@ def write_metrics(
                 "placement_context_surface_points": int(result["placement_context_surface_points"]),
                 "placement_metrics": result["placement_metrics"],
                 "metrics": result["metrics"],
+                "reconstruction_diagnostics": reconstruction_diagnostics(result),
             }
             for result in results
         ],
@@ -357,6 +466,7 @@ def run() -> dict[str, object]:
         render_layouts(results),
         render_reconstructions(results),
         render_brain_helmet_3d(brain_helmet_3d),
+        render_dynamic_range_diagnostics(results),
     ]
     metrics = write_metrics(results, figures, brain_helmet_3d)
     return {"figures": [str(path) for path in figures], "metrics": str(metrics)}

@@ -1,17 +1,18 @@
 //! Same-device exposure synthesis, FWI, RTM, and harmonic reconstruction.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::solver::inverse::same_aperture::{
+    active_grid, fundamental_operator, harmonic_operator, image_from_vector, passive_operator,
+    solve_tikhonov_h1, ultraharmonic_operator, vector_from_image, LinearOperator, PcgSettings,
+    SameApertureMedium, SameApertureSettings, C_REF_M_S, SAME_APERTURE_OPERATOR_MODEL,
+};
 use ndarray::Array2;
 
-use super::config::{TheranosticFwiConfig, C_REF_M_S};
+use super::config::TheranosticFwiConfig;
+use super::exposure::{exposure_map, normalize_positive};
 use super::geometry::{angle_span, build_device_layout, DeviceLayout};
 use super::medium::{target_contrast, PreparedTheranosticSlice};
 use super::metrics::{metrics_for, ReconstructionMetrics};
-use super::operator::{
-    active_grid, build_fundamental_matrix, build_harmonic_matrix, build_passive_matrix,
-    build_ultraharmonic_matrix, exposure_map, image_from_vector, normalize_positive,
-    vector_from_image, ActiveGrid, RowMatrix,
-};
 
 /// Canonical model identifier exported through PyO3 and figure metadata.
 ///
@@ -21,7 +22,8 @@ use super::operator::{
 /// The current model uses finite-frequency same-aperture rows and solves the
 /// graph-Laplacian-regularized normal equations by preconditioned conjugate
 /// gradients.
-pub const THERANOSTIC_OPERATOR_MODEL: &str = "finite_frequency_same_aperture_graph_laplacian_pcg";
+pub const THERANOSTIC_OPERATOR_MODEL: &str = SAME_APERTURE_OPERATOR_MODEL;
+pub const THERANOSTIC_OPERATOR_BACKEND: &str = "matrix_free_finite_frequency_same_aperture";
 
 #[derive(Clone, Debug)]
 pub struct TheranosticFwiResult {
@@ -44,6 +46,9 @@ pub struct TheranosticFwiResult {
     pub objective_history: Vec<f64>,
     pub measurements: usize,
     pub active_voxels: usize,
+    pub operator_backend: String,
+    pub operator_storage_values: usize,
+    pub dense_operator_values: usize,
 }
 
 pub fn run_theranostic_fwi(
@@ -64,54 +69,83 @@ pub fn run_theranostic_fwi(
             "theranostic active support has fewer than 16 voxels".to_owned(),
         ));
     }
-    let fundamental = build_fundamental_matrix(&prepared, &layout, &active, config);
-    let harmonic = build_harmonic_matrix(&prepared, &layout, &active, config);
-    let ultraharmonic = build_ultraharmonic_matrix(&prepared, &layout, &active, config);
-    let passive = build_passive_matrix(&prepared, &layout, &active, config);
+    let medium = SameApertureMedium {
+        attenuation_np_per_m_mhz: &prepared.attenuation_np_per_m_mhz,
+        spacing_m: prepared.spacing_m,
+    };
+    let settings = SameApertureSettings {
+        frequencies_hz: &config.frequencies_hz,
+        receiver_offsets: &config.receiver_offsets,
+    };
+    let fundamental = fundamental_operator(medium, &layout.therapy_elements, &active, settings);
+    let harmonic = harmonic_operator(medium, &layout.therapy_elements, &active, settings);
+    let ultraharmonic = ultraharmonic_operator(medium, &layout.therapy_elements, &active, settings);
+    let passive = passive_operator(
+        medium,
+        &layout.therapy_elements,
+        &layout.imaging_receivers,
+        &active,
+        &config.frequencies_hz,
+    );
+    let measurements = fundamental.rows() + passive.rows() + harmonic.rows() + ultraharmonic.rows();
+    let operator_storage_values = fundamental.storage_values()
+        + passive.storage_values()
+        + harmonic.storage_values()
+        + ultraharmonic.storage_values();
+    let dense_operator_values = fundamental.dense_values()
+        + passive.dense_values()
+        + harmonic.dense_values()
+        + ultraharmonic.dense_values();
+    let inverse_settings = inverse_settings(config);
     let exposure = exposure_map(&prepared, &layout, config);
     let lesion_target = lesion_source(&prepared, &exposure);
 
     let anatomy_target = target_contrast(&prepared);
     let anatomy_vec = vector_from_image(&anatomy_target, &active);
-    let (anatomy_recon_vec, mut history) =
-        solve_inverse(&fundamental, &anatomy_vec, &active, config);
-    let anatomy_reconstruction = image_from_vector(&anatomy_recon_vec, &active, active_mask.dim());
+    let anatomy_result = solve_tikhonov_h1(&fundamental, &anatomy_vec, &active, inverse_settings);
+    let mut history = anatomy_result.objective_history;
+    let anatomy_reconstruction =
+        image_from_vector(&anatomy_result.model, &active, active_mask.dim());
 
     let mut lesion_speed = lesion_target.clone();
     lesion_speed.mapv_inplace(|v| v * config.lesion_delta_c_m_s / C_REF_M_S);
     let lesion_speed_vec = vector_from_image(&lesion_speed, &active);
-    let (active_vec, active_history) =
-        solve_inverse(&fundamental, &lesion_speed_vec, &active, config);
-    history.extend(active_history);
+    let active_result =
+        solve_tikhonov_h1(&fundamental, &lesion_speed_vec, &active, inverse_settings);
+    history.extend(active_result.objective_history);
     let active_lesion_reconstruction = normalize_positive(
-        &image_from_vector(&negated(&active_vec), &active, active_mask.dim()),
+        &image_from_vector(&negated(&active_result.model), &active, active_mask.dim()),
         active_mask,
     );
 
     let sub_target_vec = vector_from_image(&lesion_target, &active);
-    let (sub_vec, sub_history) = solve_inverse(&passive, &sub_target_vec, &active, config);
-    history.extend(sub_history);
+    let sub_result = solve_tikhonov_h1(&passive, &sub_target_vec, &active, inverse_settings);
+    history.extend(sub_result.objective_history);
     let subharmonic_reconstruction = normalize_positive(
-        &image_from_vector(&sub_vec, &active, active_mask.dim()),
+        &image_from_vector(&sub_result.model, &active, active_mask.dim()),
         active_mask,
     );
 
     let harmonic_target = harmonic_target(&prepared, &lesion_target);
     let harmonic_vec = vector_from_image(&harmonic_target, &active);
-    let (harmonic_out, harmonic_history) = solve_inverse(&harmonic, &harmonic_vec, &active, config);
-    history.extend(harmonic_history);
+    let harmonic_result = solve_tikhonov_h1(&harmonic, &harmonic_vec, &active, inverse_settings);
+    history.extend(harmonic_result.objective_history);
     let harmonic_reconstruction = normalize_positive(
-        &image_from_vector(&harmonic_out, &active, active_mask.dim()),
+        &image_from_vector(&harmonic_result.model, &active, active_mask.dim()),
         active_mask,
     );
 
     let ultraharmonic_target = ultraharmonic_target(&prepared, &lesion_target);
     let ultraharmonic_vec = vector_from_image(&ultraharmonic_target, &active);
-    let (ultra_out, ultra_history) =
-        solve_inverse(&ultraharmonic, &ultraharmonic_vec, &active, config);
-    history.extend(ultra_history);
+    let ultra_result = solve_tikhonov_h1(
+        &ultraharmonic,
+        &ultraharmonic_vec,
+        &active,
+        inverse_settings,
+    );
+    history.extend(ultra_result.objective_history);
     let ultraharmonic_reconstruction = normalize_positive(
-        &image_from_vector(&ultra_out, &active, active_mask.dim()),
+        &image_from_vector(&ultra_result.model, &active, active_mask.dim()),
         active_mask,
     );
 
@@ -152,162 +186,12 @@ pub fn run_theranostic_fwi(
         ultraharmonic_metrics,
         fused_metrics,
         objective_history: history,
-        measurements: fundamental.rows + passive.rows + harmonic.rows + ultraharmonic.rows,
+        measurements,
         active_voxels: active.len(),
+        operator_backend: THERANOSTIC_OPERATOR_BACKEND.to_owned(),
+        operator_storage_values,
+        dense_operator_values,
     })
-}
-
-/// Solve the Tikhonov-H1 normal equations for one simulated acquisition channel.
-///
-/// # Theorem
-///
-/// For sensitivity matrix `A`, scalar `lambda > 0`, nonnegative
-/// graph-Laplacian weight `gamma`, and active-support Laplacian `L`, the system
-/// `(A^T A + lambda I + gamma L)x = A^T d` is symmetric positive definite on
-/// the active voxels. Preconditioned conjugate gradients therefore minimizes
-/// `0.5||Ax-d||_2^2 + 0.5 lambda ||x||_2^2 + 0.5 gamma x^T L x`.
-///
-/// # Proof sketch
-///
-/// `A^T A` is positive semidefinite. `L` is positive semidefinite by the
-/// graph-energy identity documented on `ActiveGrid`. Adding `lambda I` with
-/// `lambda > 0` makes the quadratic form strictly positive for every nonzero
-/// `x`, which is the PCG convergence condition. The implementation reuses row,
-/// normal-operator, and Laplacian workspaces so the iteration count, not hidden
-/// allocation churn, determines runtime cost.
-fn solve_inverse(
-    matrix: &RowMatrix,
-    target: &[f32],
-    active: &ActiveGrid,
-    config: &TheranosticFwiConfig,
-) -> (Vec<f32>, Vec<f64>) {
-    let mut data = vec![0.0; matrix.rows];
-    matrix.matvec(target, &mut data);
-    add_deterministic_noise(&mut data, config.noise_fraction);
-    let mut rhs = vec![0.0; matrix.cols];
-    matrix.t_matvec(&data, &mut rhs);
-    let mut diag = matrix.normal_diag();
-    for value in &mut diag {
-        *value += config.regularization as f32 + 1.0e-6;
-    }
-    let mut x = vec![0.0; matrix.cols];
-    let mut hx = vec![0.0; matrix.cols];
-    let mut row_workspace = vec![0.0; matrix.rows];
-    let mut lap_workspace = vec![0.0; matrix.cols];
-    let mut prediction_workspace = vec![0.0; matrix.rows];
-    normal_apply(
-        matrix,
-        &x,
-        active,
-        config,
-        &mut hx,
-        &mut row_workspace,
-        &mut lap_workspace,
-    );
-    let mut r = rhs
-        .iter()
-        .zip(hx.iter())
-        .map(|(b, h)| b - h)
-        .collect::<Vec<_>>();
-    let mut z = r
-        .iter()
-        .zip(diag.iter())
-        .map(|(rv, dv)| rv / dv)
-        .collect::<Vec<_>>();
-    let mut p = z.clone();
-    let mut rz_old = dot(&r, &z);
-    let mut history = vec![objective(
-        matrix,
-        &x,
-        &data,
-        active,
-        config,
-        &mut prediction_workspace,
-        &mut lap_workspace,
-    )];
-    let mut ap = vec![0.0; matrix.cols];
-    for _ in 0..config.iterations {
-        normal_apply(
-            matrix,
-            &p,
-            active,
-            config,
-            &mut ap,
-            &mut row_workspace,
-            &mut lap_workspace,
-        );
-        let denom = dot(&p, &ap);
-        if denom <= 0.0 {
-            break;
-        }
-        let alpha = rz_old / denom;
-        axpy(alpha, &p, &mut x);
-        axpy(-alpha, &ap, &mut r);
-        z.iter_mut()
-            .zip(r.iter().zip(diag.iter()))
-            .for_each(|(zv, (rv, dv))| *zv = rv / dv);
-        let rz_new = dot(&r, &z);
-        history.push(objective(
-            matrix,
-            &x,
-            &data,
-            active,
-            config,
-            &mut prediction_workspace,
-            &mut lap_workspace,
-        ));
-        if rz_new <= 1.0e-16 * rz_old.max(1.0) {
-            break;
-        }
-        let beta = rz_new / rz_old;
-        for (pv, zv) in p.iter_mut().zip(z.iter()) {
-            *pv = *zv + beta * *pv;
-        }
-        rz_old = rz_new;
-    }
-    (x, history)
-}
-
-fn normal_apply(
-    matrix: &RowMatrix,
-    x: &[f32],
-    active: &ActiveGrid,
-    config: &TheranosticFwiConfig,
-    out: &mut [f32],
-    row_workspace: &mut [f32],
-    lap_workspace: &mut [f32],
-) {
-    matrix.matvec(x, row_workspace);
-    matrix.t_matvec(row_workspace, out);
-    active.graph_laplacian_into(x, lap_workspace);
-    for ((dst, xv), lv) in out.iter_mut().zip(x.iter()).zip(lap_workspace.iter()) {
-        *dst += config.regularization as f32 * *xv + config.smoothness_weight as f32 * *lv;
-    }
-}
-
-fn objective(
-    matrix: &RowMatrix,
-    x: &[f32],
-    data: &[f32],
-    active: &ActiveGrid,
-    config: &TheranosticFwiConfig,
-    prediction: &mut [f32],
-    lap_workspace: &mut [f32],
-) -> f64 {
-    matrix.matvec(x, prediction);
-    let residual = prediction
-        .iter()
-        .zip(data.iter())
-        .map(|(p, d)| (*p - *d).powi(2) as f64)
-        .sum::<f64>();
-    let norm = x.iter().map(|v| (*v as f64).powi(2)).sum::<f64>();
-    active.graph_laplacian_into(x, lap_workspace);
-    let smooth = x
-        .iter()
-        .zip(lap_workspace.iter())
-        .map(|(a, b)| *a as f64 * *b as f64)
-        .sum::<f64>();
-    0.5 * residual + 0.5 * config.regularization * norm + 0.5 * config.smoothness_weight * smooth
 }
 
 fn lesion_source(prepared: &PreparedTheranosticSlice, exposure: &Array2<f64>) -> Array2<f64> {
@@ -365,27 +249,15 @@ fn fuse_maps(
     normalize_positive(&fused, mask)
 }
 
-fn add_deterministic_noise(data: &mut [f32], fraction: f64) {
-    if fraction <= 0.0 || data.is_empty() {
-        return;
-    }
-    let rms = (data.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / data.len() as f64).sqrt();
-    let sigma = (fraction * rms) as f32;
-    for (idx, value) in data.iter_mut().enumerate() {
-        *value += sigma * ((idx as f32 * 12.9898).sin() + 0.5 * (idx as f32 * 78.233).cos());
-    }
-}
-
 fn negated(values: &[f32]) -> Vec<f32> {
     values.iter().map(|v| -*v).collect()
 }
 
-fn axpy(alpha: f32, x: &[f32], y: &mut [f32]) {
-    for (yv, xv) in y.iter_mut().zip(x.iter()) {
-        *yv += alpha * *xv;
+fn inverse_settings(config: &TheranosticFwiConfig) -> PcgSettings {
+    PcgSettings {
+        iterations: config.iterations,
+        regularization: config.regularization,
+        smoothness_weight: config.smoothness_weight,
+        noise_fraction: config.noise_fraction,
     }
-}
-
-fn dot(a: &[f32], b: &[f32]) -> f32 {
-    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
 }
