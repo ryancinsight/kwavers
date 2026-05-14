@@ -12,6 +12,10 @@ ritk-nrrd = { path = "ritk/crates/ritk-nrrd" }
 ritk-metaimage = { path = "ritk/crates/ritk-metaimage" }
 ritk-mgh = { path = "ritk/crates/ritk-mgh" }
 ritk-analyze = { path = "ritk/crates/ritk-analyze" }
+ritk-png = { path = "ritk/crates/ritk-png" }
+ritk-jpeg = { path = "ritk/crates/ritk-jpeg" }
+ritk-tiff = { path = "ritk/crates/ritk-tiff" }
+ritk-minc = { path = "ritk/crates/ritk-minc" }
 ritk-vtk = { path = "ritk/crates/ritk-vtk" }
 ritk-io = { path = "ritk/crates/ritk-io" }
 ritk-model = { path = "ritk/crates/ritk-model" }
@@ -52,9 +56,11 @@ jpeg-decoder = "0.3.2"
 tiff = "0.9"
 onnx-ir = "0.20.1"
 openjpeg-sys = "1.0"
+openjp2 = { version = "0.6.1", default-features = false, features = ["std"] }
+jpeg2k = { version = "0.10.1", default-features = false, features = ["openjp2"] }
 dicom-core = "0.8"
 dicom-pixeldata = { version = "0.8", features = ["native"] }
-dicom-transfer-syntax-registry = { version = "0.8", features = ["native", "jpegxl", "charls", "openjpeg-sys"] }
+dicom-transfer-syntax-registry = { version = "0.8", features = ["native", "jpegxl", "charls", "openjp2"] }
 consus-hdf5 = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
 consus-core = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
 consus-compression = { git = "https://github.com/ryancinsight/consus", features = ["std", "deflate"] }

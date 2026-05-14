@@ -1,6 +1,6 @@
 use crate::core::error::KwaversResult;
 use crate::math::fft::shift_operators::{generate_kappa, generate_shift_1d, generate_source_kappa};
-use crate::math::fft::{get_fft_for_grid, Complex64, ProcessorFft3d};
+use crate::math::fft::{get_fft_for_grid, Complex64, Fft3dInOutExt, ProcessorFft3d};
 use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_source_kappa;
 use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;

@@ -5,7 +5,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{PluginMetadata, PluginState};
-use crate::math::fft::{Shape3D, FFT_CACHE};
+use crate::math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
 

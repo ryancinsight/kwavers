@@ -9,7 +9,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::math::fft::get_fft_for_grid;
+use crate::math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use ndarray::{Array3, ArrayView2, Zip};
 use num_complex::Complex64;
 use std::f64::consts::PI;
