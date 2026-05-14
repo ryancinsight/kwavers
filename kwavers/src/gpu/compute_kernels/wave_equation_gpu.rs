@@ -79,12 +79,9 @@ impl WaveEquationGpu {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let dpx =
-                        (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) / (2.0 * grid.dx);
-                    let dpy =
-                        (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) / (2.0 * grid.dy);
-                    let dpz =
-                        (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    let dpx = (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) / (2.0 * grid.dx);
+                    let dpy = (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) / (2.0 * grid.dy);
+                    let dpz = (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) / (2.0 * grid.dz);
                     let grad_magnitude = (dpx * dpx + dpy * dpy + dpz * dpz).sqrt();
                     new_velocity[[i, j, k]] -= grad_scale * grad_magnitude;
                 }

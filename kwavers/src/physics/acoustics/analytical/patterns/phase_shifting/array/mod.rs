@@ -46,7 +46,8 @@ impl PhaseArray {
     pub fn configure_linear(num_elements: usize, spacing: f64, frequency: f64) -> Self {
         let mut positions = Array2::zeros((num_elements, 3));
         for i in 0..num_elements {
-            positions[[i, 0]] = (i as f64).mul_add(spacing, -((num_elements - 1) as f64 * spacing / 2.0));
+            positions[[i, 0]] =
+                (i as f64).mul_add(spacing, -((num_elements - 1) as f64 * spacing / 2.0));
         }
         Self::new(positions, frequency)
     }
@@ -182,8 +183,12 @@ impl PhaseArray {
             for j in i + 1..self.element_positions.nrows() {
                 let pos1 = self.element_positions.row(i);
                 let pos2 = self.element_positions.row(j);
-                let spacing = (pos2[2] - pos1[2]).mul_add(pos2[2] - pos1[2], (pos2[1] - pos1[1]).mul_add(pos2[1] - pos1[1], (pos2[0] - pos1[0]).powi(2)))
-                .sqrt();
+                let spacing = (pos2[2] - pos1[2])
+                    .mul_add(
+                        pos2[2] - pos1[2],
+                        (pos2[1] - pos1[1]).mul_add(pos2[1] - pos1[1], (pos2[0] - pos1[0]).powi(2)),
+                    )
+                    .sqrt();
                 if spacing < min_spacing {
                     min_spacing = spacing;
                 }
@@ -201,8 +206,15 @@ impl PhaseArray {
             }
         }
 
-        let aperture_size = (max_extent[2] - min_extent[2]).mul_add(max_extent[2] - min_extent[2], (max_extent[1] - min_extent[1]).mul_add(max_extent[1] - min_extent[1], (max_extent[0] - min_extent[0]).powi(2)))
-        .sqrt();
+        let aperture_size = (max_extent[2] - min_extent[2])
+            .mul_add(
+                max_extent[2] - min_extent[2],
+                (max_extent[1] - min_extent[1]).mul_add(
+                    max_extent[1] - min_extent[1],
+                    (max_extent[0] - min_extent[0]).powi(2),
+                ),
+            )
+            .sqrt();
 
         PerformanceMetrics {
             element_spacing_ratio: min_spacing / wavelength,
@@ -244,8 +256,11 @@ mod tests {
         let freq = 1e6_f64;
         let arr = PhaseArray::configure_linear(n, spacing, freq);
 
-        assert_eq!(arr.element_positions.nrows(), n,
-            "linear array must have {n} elements");
+        assert_eq!(
+            arr.element_positions.nrows(),
+            n,
+            "linear array must have {n} elements"
+        );
 
         // Y and Z columns must be zero (linear in X only)
         for i in 0..n {
@@ -254,22 +269,33 @@ mod tests {
         }
         // First element at −(n−1)/2 · spacing
         let expected_first = -((n - 1) as f64 * spacing / 2.0);
-        assert!((arr.element_positions[[0, 0]] - expected_first).abs() < 1e-15,
-            "first element position: expected {expected_first}, got {}", arr.element_positions[[0, 0]]);
+        assert!(
+            (arr.element_positions[[0, 0]] - expected_first).abs() < 1e-15,
+            "first element position: expected {expected_first}, got {}",
+            arr.element_positions[[0, 0]]
+        );
     }
 
     /// configure_rectangular produces nx×ny elements.
     #[test]
     fn configure_rectangular_produces_correct_element_count() {
         let arr = PhaseArray::configure_rectangular(4, 3, 500e-6, 500e-6, 1e6);
-        assert_eq!(arr.element_positions.nrows(), 12, "4×3 array must have 12 elements");
+        assert_eq!(
+            arr.element_positions.nrows(),
+            12,
+            "4×3 array must have 12 elements"
+        );
     }
 
     /// configure_circular produces num_rings × elements_per_ring elements.
     #[test]
     fn configure_circular_produces_correct_element_count() {
         let arr = PhaseArray::configure_circular(3, 8, 1e-3, 1e6);
-        assert_eq!(arr.element_positions.nrows(), 24, "3 rings × 8 elements = 24");
+        assert_eq!(
+            arr.element_positions.nrows(),
+            24,
+            "3 rings × 8 elements = 24"
+        );
     }
 
     /// check_performance reports correct element count and grating-lobe-free status.
@@ -282,14 +308,20 @@ mod tests {
         let arr = PhaseArray::configure_linear(8, 600e-6, 1e6);
         let metrics = arr.check_performance();
         assert_eq!(metrics.num_elements, 8);
-        assert!(metrics.grating_lobe_free,
-            "0.4λ spacing must be grating-lobe-free (ratio={:.3})", metrics.element_spacing_ratio);
+        assert!(
+            metrics.grating_lobe_free,
+            "0.4λ spacing must be grating-lobe-free (ratio={:.3})",
+            metrics.element_spacing_ratio
+        );
 
         // Spacing = 0.6·λ = 900 µm > λ/2 → not grating-lobe-free
         let arr2 = PhaseArray::configure_linear(8, 900e-6, 1e6);
         let metrics2 = arr2.check_performance();
-        assert!(!metrics2.grating_lobe_free,
-            "0.6λ spacing must NOT be grating-lobe-free (ratio={:.3})", metrics2.element_spacing_ratio);
+        assert!(
+            !metrics2.grating_lobe_free,
+            "0.6λ spacing must NOT be grating-lobe-free (ratio={:.3})",
+            metrics2.element_spacing_ratio
+        );
     }
 
     /// calculate_intensity at the center of an on-axis focused array is finite and positive.
@@ -297,7 +329,9 @@ mod tests {
     fn calculate_intensity_at_origin_is_finite_and_positive() {
         let arr = PhaseArray::configure_linear(8, 750e-6, 1e6);
         let intensity = arr.calculate_intensity(0.0, 0.0, 0.01);
-        assert!(intensity.is_finite() && intensity > 0.0,
-            "intensity must be finite and positive (got {intensity})");
+        assert!(
+            intensity.is_finite() && intensity > 0.0,
+            "intensity must be finite and positive (got {intensity})"
+        );
     }
 }

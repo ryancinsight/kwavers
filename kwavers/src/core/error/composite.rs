@@ -26,7 +26,7 @@ pub struct MultiError {
 
 impl MultiError {
     /// Create a new empty MultiError
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self { errors: Vec::new() }
     }
@@ -40,7 +40,7 @@ impl MultiError {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.errors.is_empty()
     }
@@ -49,7 +49,7 @@ impl MultiError {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.errors.len()
     }

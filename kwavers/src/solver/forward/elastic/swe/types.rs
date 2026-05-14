@@ -126,7 +126,7 @@ pub struct ElasticWaveField {
 }
 
 impl ElasticWaveField {
-    #[must_use] 
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             ux: Array3::zeros((nx, ny, nz)),

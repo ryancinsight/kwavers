@@ -274,7 +274,9 @@ impl GilmoreSolver {
 
         // ── k₂ : evaluated at (t + dt/2, y_n + dt/2·k₁) ───────────────────
         let mut s2 = state.clone();
-        s2.radius = (0.5 * dt).mul_add(k1_r, state.radius).max(f64::MIN_POSITIVE);
+        s2.radius = (0.5 * dt)
+            .mul_add(k1_r, state.radius)
+            .max(f64::MIN_POSITIVE);
         s2.wall_velocity = (0.5 * dt).mul_add(k1_v, state.wall_velocity);
         let k2_r = s2.wall_velocity;
         let k2_v = self
@@ -283,7 +285,9 @@ impl GilmoreSolver {
 
         // ── k₃ : evaluated at (t + dt/2, y_n + dt/2·k₂) ───────────────────
         let mut s3 = state.clone();
-        s3.radius = (0.5 * dt).mul_add(k2_r, state.radius).max(f64::MIN_POSITIVE);
+        s3.radius = (0.5 * dt)
+            .mul_add(k2_r, state.radius)
+            .max(f64::MIN_POSITIVE);
         s3.wall_velocity = (0.5 * dt).mul_add(k2_v, state.wall_velocity);
         let k3_r = s3.wall_velocity;
         let k3_v = self
@@ -301,10 +305,16 @@ impl GilmoreSolver {
 
         // ── Combine via standard Butcher weights ────────────────────────────
         let mut out = state.clone();
-        out.radius = (dt / 6.0).mul_add(2.0f64.mul_add(k3_r, 2.0f64.mul_add(k2_r, k1_r)) + k4_r, state.radius)
+        out.radius = (dt / 6.0)
+            .mul_add(
+                2.0f64.mul_add(k3_r, 2.0f64.mul_add(k2_r, k1_r)) + k4_r,
+                state.radius,
+            )
             .max(f64::MIN_POSITIVE);
-        out.wall_velocity =
-            (dt / 6.0).mul_add(2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v, state.wall_velocity);
+        out.wall_velocity = (dt / 6.0).mul_add(
+            2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v,
+            state.wall_velocity,
+        );
         // Store the k₄ acceleration as the best available approximation of the
         // acceleration at the end of the step (used by downstream diagnostics).
         out.wall_acceleration = k4_v;

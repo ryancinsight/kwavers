@@ -65,9 +65,7 @@ impl TransducerHardware for MockTransducer {
             HardwareCommand::SetPower(power) => {
                 if !(0.0..=100.0).contains(&power) {
                     self.last_error = Some("Power must be 0-100%".to_owned());
-                    return Err(KwaversError::InvalidInput(
-                        "Invalid power range".to_owned(),
-                    ));
+                    return Err(KwaversError::InvalidInput("Invalid power range".to_owned()));
                 }
                 self.current_power_percent = power;
                 if power > 0.0 && self.state == TransducerState::Idle {

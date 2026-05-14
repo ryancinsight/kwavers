@@ -122,7 +122,7 @@ impl SubmissionDocument {
     }
 
     /// Generate submission checklist
-    #[must_use] 
+    #[must_use]
     pub fn generate_checklist(&self) -> HashMap<String, bool> {
         let mut checklist = HashMap::new();
 
@@ -217,7 +217,7 @@ impl SubmissionDocument {
     }
 
     /// Get submission statistics
-    #[must_use] 
+    #[must_use]
     pub fn statistics(&self) -> HashMap<String, String> {
         let mut stats = HashMap::new();
 

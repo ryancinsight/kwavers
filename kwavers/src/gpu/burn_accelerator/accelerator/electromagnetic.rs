@@ -52,8 +52,8 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         );
 
         let (ex_new, ey_new, ez_new) = self.update_electric_field(
-            &ex_t, &ey_t, &ez_t, &hx_new, &hy_new, &hz_new, &eps_t, &sig_t, dt as f32,
-            dx as f32, dy as f32, dz as f32,
+            &ex_t, &ey_t, &ez_t, &hx_new, &hy_new, &hz_new, &eps_t, &sig_t, dt as f32, dx as f32,
+            dy as f32, dz as f32,
         );
 
         Ok((

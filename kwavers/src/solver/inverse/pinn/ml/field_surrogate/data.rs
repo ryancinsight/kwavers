@@ -131,10 +131,7 @@ impl KernelCubeSampler {
     /// at inference time — it must match the planner's expected
     /// input range. Pass `None` to derive it from the kernels'
     /// largest spatial extent.
-    pub fn new(
-        kernels: &[FocalKernel],
-        coord_halves_override: Option<CoordHalves>,
-    ) -> Self {
+    pub fn new(kernels: &[FocalKernel], coord_halves_override: Option<CoordHalves>) -> Self {
         // Default construction uses the legacy linear transform so
         // existing tests and downstream callers keep their semantics.
         // For the C-8 signed-log1p path, use
@@ -167,14 +164,16 @@ impl KernelCubeSampler {
         coord_halves_override: Option<CoordHalves>,
         transforms_override: Option<OutputTransforms>,
     ) -> KwaversResult<Self> {
-        let (f0_min, f0_max) = kernels.iter().fold(
-            (f32::INFINITY, f32::NEG_INFINITY),
-            |(lo, hi), k| (lo.min(k.f0 as f32), hi.max(k.f0 as f32)),
-        );
-        let (pnp_min, pnp_max) = kernels.iter().fold(
-            (f32::INFINITY, f32::NEG_INFINITY),
-            |(lo, hi), k| (lo.min(k.pnp_realised as f32), hi.max(k.pnp_realised as f32)),
-        );
+        let (f0_min, f0_max) = kernels
+            .iter()
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(lo, hi), k| {
+                (lo.min(k.f0 as f32), hi.max(k.f0 as f32))
+            });
+        let (pnp_min, pnp_max) = kernels
+            .iter()
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(lo, hi), k| {
+                (lo.min(k.pnp_realised as f32), hi.max(k.pnp_realised as f32))
+            });
         let f0_range = if (f0_max - f0_min).abs() < 1.0 {
             // Single-frequency cube — clamp to a 1-Hz range so
             // normalisation stays stable.
@@ -226,7 +225,11 @@ impl KernelCubeSampler {
                 hy = hy.max((ny as f32) * dx * 0.5);
                 hz = hz.max((nz as f32) * dx * 0.5);
             }
-            CoordHalves { hx_m: hx, hy_m: hy, hz_m: hz }
+            CoordHalves {
+                hx_m: hx,
+                hy_m: hy,
+                hz_m: hz,
+            }
         });
 
         // Flatten interior voxels of every kernel into the dataset.
@@ -250,10 +253,8 @@ impl KernelCubeSampler {
             let (fx, fy, fz) = kernel.focus_idx;
             let f0 = kernel.f0 as f32;
             let pnp = kernel.pnp_realised as f32;
-            let f0_norm =
-                2.0 * (f0 - f0_range.0) / (f0_range.1 - f0_range.0) - 1.0;
-            let pnp_norm =
-                2.0 * (pnp - pnp_range.0) / (pnp_range.1 - pnp_range.0) - 1.0;
+            let f0_norm = 2.0 * (f0 - f0_range.0) / (f0_range.1 - f0_range.0) - 1.0;
+            let pnp_norm = 2.0 * (pnp - pnp_range.0) / (pnp_range.1 - pnp_range.0) - 1.0;
             for i in 1..(nx - 1) {
                 for j in 1..(ny - 1) {
                     for kk in 1..(nz - 1) {
@@ -292,9 +293,7 @@ impl KernelCubeSampler {
                         // voxels under signed-log1p and undo the
                         // focal-peak concentration the importance
                         // CDF is built for.
-                        let raw_mag = (p_pa / output_scales.p_max_pa)
-                            .abs()
-                            .clamp(0.0, 1.0);
+                        let raw_mag = (p_pa / output_scales.p_max_pa).abs().clamp(0.0, 1.0);
                         p_magnitude.push(raw_mag);
                     }
                 }
@@ -360,11 +359,9 @@ impl KernelCubeSampler {
                 debug_assert_eq!(self.cumulative_weights.len(), self.n);
                 let total = *self.cumulative_weights.last().unwrap_or(&0.0);
                 let target = u * total;
-                let result = self
-                    .cumulative_weights
-                    .binary_search_by(|w| {
-                        w.partial_cmp(&target).unwrap_or(std::cmp::Ordering::Equal)
-                    });
+                let result = self.cumulative_weights.binary_search_by(|w| {
+                    w.partial_cmp(&target).unwrap_or(std::cmp::Ordering::Equal)
+                });
                 let idx = match result {
                     Ok(i) | Err(i) => i,
                 };
@@ -409,22 +406,11 @@ impl KernelCubeSampler {
             f0_buf.push(self.f0_phys_hz[idx]);
             group_buf.push(self.group_ids[idx]);
         }
-        let inputs = Tensor::<B, 2>::from_data(
-            TensorData::new(input_buf, [batch_size, 5]),
-            device,
-        );
-        let targets = Tensor::<B, 2>::from_data(
-            TensorData::new(target_buf, [batch_size, 3]),
-            device,
-        );
-        let f0_phys_hz = Tensor::<B, 1>::from_data(
-            TensorData::new(f0_buf, [batch_size]),
-            device,
-        );
-        let group_ids = Tensor::<B, 1>::from_data(
-            TensorData::new(group_buf, [batch_size]),
-            device,
-        );
+        let inputs = Tensor::<B, 2>::from_data(TensorData::new(input_buf, [batch_size, 5]), device);
+        let targets =
+            Tensor::<B, 2>::from_data(TensorData::new(target_buf, [batch_size, 3]), device);
+        let f0_phys_hz = Tensor::<B, 1>::from_data(TensorData::new(f0_buf, [batch_size]), device);
+        let group_ids = Tensor::<B, 1>::from_data(TensorData::new(group_buf, [batch_size]), device);
         TrainingBatch {
             inputs,
             targets,

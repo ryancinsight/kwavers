@@ -62,7 +62,7 @@ impl Default for SvdClutterFilterConfig {
 
 impl SvdClutterFilterConfig {
     /// Create configuration with manual rank selection
-    #[must_use] 
+    #[must_use]
     pub fn with_fixed_rank(clutter_rank: usize) -> Self {
         Self {
             clutter_rank,
@@ -75,7 +75,7 @@ impl SvdClutterFilterConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_auto_rank(energy_threshold: f64) -> Self {
         Self {
             auto_rank_selection: true,
@@ -270,7 +270,7 @@ impl SvdClutterFilter {
     ///
     /// Power Doppler image (n_pixels,) where each value is the temporal
     /// variance of the filtered signal at that pixel
-    #[must_use] 
+    #[must_use]
     pub fn compute_power_doppler(&self, filtered_data: &Array2<f64>) -> Array1<f64> {
         let (n_pixels, n_frames) = filtered_data.dim();
         let mut power_doppler = Array1::zeros(n_pixels);
@@ -302,7 +302,7 @@ impl SvdClutterFilter {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> &SvdClutterFilterConfig {
         &self.config
     }

@@ -7,8 +7,8 @@
 
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
 use super::SonoluminescenceCoupledDomain;
+use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
 
 impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
     /// Interpolate the sonoluminescence emission field at query coordinates
@@ -97,8 +97,7 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
         let y_grad_2 = y.clone().require_grad();
         let t_grad_2 = t.clone().require_grad();
 
-        let magnetic_field_2 =
-            model.forward(x_grad_2.clone(), y_grad_2.clone(), t_grad_2.clone());
+        let magnetic_field_2 = model.forward(x_grad_2.clone(), y_grad_2.clone(), t_grad_2.clone());
         let grad_magnetic = magnetic_field_2.backward();
         let b_dx = x_grad_2
             .grad(&grad_magnetic)
@@ -121,8 +120,7 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
 
         let current_density = self.compute_light_sources(x, y, t, physics_params);
 
-        let ampere_residual =
-            e_dy - e_dx + b_dt * mu_0_f32 + current_density.clone() * mu_0_f32;
+        let ampere_residual = e_dy - e_dx + b_dt * mu_0_f32 + current_density.clone() * mu_0_f32;
         let faraday_residual =
             b_dx - b_dy - mu_0_f32 * epsilon_0_f32 * e_dt - current_density * mu_0_f32;
 

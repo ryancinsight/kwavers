@@ -65,8 +65,15 @@ pub(super) fn volumetric_time_of_flight_inversion(
                     let mut speed_estimates = Vec::new();
 
                     for push_pos in &push_locations {
-                        let distance = (voxel_pos[2] - push_pos[2]).mul_add(voxel_pos[2] - push_pos[2], (voxel_pos[1] - push_pos[1]).mul_add(voxel_pos[1] - push_pos[1], (voxel_pos[0] - push_pos[0]).powi(2)))
-                        .sqrt();
+                        let distance = (voxel_pos[2] - push_pos[2])
+                            .mul_add(
+                                voxel_pos[2] - push_pos[2],
+                                (voxel_pos[1] - push_pos[1]).mul_add(
+                                    voxel_pos[1] - push_pos[1],
+                                    (voxel_pos[0] - push_pos[0]).powi(2),
+                                ),
+                            )
+                            .sqrt();
 
                         if distance > 1e-6 {
                             let max_push_disp = push_locations

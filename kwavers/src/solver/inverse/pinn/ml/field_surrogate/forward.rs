@@ -89,14 +89,9 @@ impl GridQueryParams {
             )));
         }
         if self.dx_m <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "dx_m must be > 0".into(),
-            ));
+            return Err(KwaversError::InvalidInput("dx_m must be > 0".into()));
         }
-        if self.coord_half_m.0 <= 0.0
-            || self.coord_half_m.1 <= 0.0
-            || self.coord_half_m.2 <= 0.0
-        {
+        if self.coord_half_m.0 <= 0.0 || self.coord_half_m.1 <= 0.0 || self.coord_half_m.2 <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "coord_half_m components must be > 0".into(),
             ));
@@ -107,9 +102,7 @@ impl GridQueryParams {
             ));
         }
         if self.batch_size == 0 {
-            return Err(KwaversError::InvalidInput(
-                "batch_size must be > 0".into(),
-            ));
+            return Err(KwaversError::InvalidInput("batch_size must be > 0".into()));
         }
         Ok(())
     }
@@ -181,21 +174,15 @@ pub fn infer_grid<B: Backend>(
             buf_in.push(pnp_n);
         }
 
-        let input = Tensor::<B, 2>::from_data(
-            TensorData::new(buf_in.clone(), [n, 5]),
-            device,
-        );
+        let input = Tensor::<B, 2>::from_data(TensorData::new(buf_in.clone(), [n, 5]), device);
         let output = network.forward(input);
         // Output is `[n, 3]`; copy to host as f32 then denormalise.
         let out_data = output.into_data();
-        let out_vec: Vec<f32> = out_data
-            .convert::<f32>()
-            .into_vec()
-            .map_err(|e| {
-                KwaversError::InvalidInput(format!(
-                    "ParamFieldPINN forward returned unexpected tensor data: {e:?}"
-                ))
-            })?;
+        let out_vec: Vec<f32> = out_data.convert::<f32>().into_vec().map_err(|e| {
+            KwaversError::InvalidInput(format!(
+                "ParamFieldPINN forward returned unexpected tensor data: {e:?}"
+            ))
+        })?;
         debug_assert_eq!(out_vec.len(), n * OUTPUT_DIM);
 
         for off in 0..n {

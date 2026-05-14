@@ -179,7 +179,11 @@ mod tests {
     use super::*;
 
     fn make_damage() -> CavitationDamage {
-        CavitationDamage::new((4, 4, 4), MaterialProperties::default(), DamageParameters::default())
+        CavitationDamage::new(
+            (4, 4, 4),
+            MaterialProperties::default(),
+            DamageParameters::default(),
+        )
     }
 
     /// A freshly constructed damage model has zero total damage and zero erosion.
@@ -214,7 +218,10 @@ mod tests {
     fn calculate_damage_increment_zero_for_zero_impact_pressure() {
         let d = make_damage();
         let increment = d.calculate_damage_increment(0.0, 1e-6, 0);
-        assert_eq!(increment, 0.0, "zero pressure must give zero damage increment");
+        assert_eq!(
+            increment, 0.0,
+            "zero pressure must give zero damage increment"
+        );
     }
 
     /// `calculate_erosion_rate` returns zero when impact pressure < material hardness.
@@ -234,7 +241,10 @@ mod tests {
     fn calculate_erosion_rate_positive_above_hardness() {
         let d = make_damage();
         let rate = d.calculate_erosion_rate(3e9, 1e-6, 100.0);
-        assert!(rate > 0.0, "erosion must be positive when p > hardness (got {rate:.3e})");
+        assert!(
+            rate > 0.0,
+            "erosion must be positive when p > hardness (got {rate:.3e})"
+        );
     }
 
     /// `erosion_depth` at t=0 is identically zero (no time elapsed).

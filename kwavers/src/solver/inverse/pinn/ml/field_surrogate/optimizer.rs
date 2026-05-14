@@ -44,10 +44,7 @@ struct ParamFieldGradMapper<'a, B: AutodiffBackend> {
 }
 
 impl<'a, B: AutodiffBackend> ModuleMapper<B> for ParamFieldGradMapper<'a, B> {
-    fn map_float<const D: usize>(
-        &mut self,
-        tensor: Param<Tensor<B, D>>,
-    ) -> Param<Tensor<B, D>> {
+    fn map_float<const D: usize>(&mut self, tensor: Param<Tensor<B, D>>) -> Param<Tensor<B, D>> {
         let is_require_grad = tensor.is_require_grad();
         let grad_opt = tensor.grad(self.grads);
         let mut inner = (*tensor).clone().inner();

@@ -103,8 +103,8 @@ impl BubbleParameters {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::gas_dynamics::GasType;
+    use super::*;
 
     /// Default BubbleParameters matches documented water/air-bubble values.
     ///
@@ -115,7 +115,10 @@ mod tests {
         assert_eq!(p.r0, 5e-6, "equilibrium radius = 5 µm");
         assert_eq!(p.p0, 101_325.0, "ambient pressure = 1 atm");
         assert_eq!(p.rho_liquid, 998.0, "water density ≈ 998 kg/m³ at 20°C");
-        assert!((p.sigma - 0.0728).abs() < 1e-10, "surface tension ≈ 72.8 mN/m");
+        assert!(
+            (p.sigma - 0.0728).abs() < 1e-10,
+            "surface tension ≈ 72.8 mN/m"
+        );
         assert!((p.gamma - 1.4).abs() < 1e-10, "air γ = 1.4 (diatomic)");
     }
 
@@ -136,8 +139,15 @@ mod tests {
     #[test]
     fn with_pure_gas_replaces_composition_with_single_species() {
         let p = BubbleParameters::default().with_pure_gas(GasType::Ar);
-        assert_eq!(p.gas_composition.len(), 1, "must have exactly one gas species");
-        let &fraction = p.gas_composition.get(&GasType::Ar).expect("Ar must be present");
+        assert_eq!(
+            p.gas_composition.len(),
+            1,
+            "must have exactly one gas species"
+        );
+        let &fraction = p
+            .gas_composition
+            .get(&GasType::Ar)
+            .expect("Ar must be present");
         assert!((fraction - 1.0).abs() < 1e-14, "Ar fraction must be 1.0");
     }
 
@@ -148,7 +158,13 @@ mod tests {
     fn effective_vdw_constants_positive_for_air_mixture() {
         let p = BubbleParameters::default();
         let (a, b) = p.effective_vdw_constants();
-        assert!(a > 0.0 && a.is_finite(), "a_mix must be positive finite (got {a:.6e})");
-        assert!(b > 0.0 && b.is_finite(), "b_mix must be positive finite (got {b:.6e})");
+        assert!(
+            a > 0.0 && a.is_finite(),
+            "a_mix must be positive finite (got {a:.6e})"
+        );
+        assert!(
+            b > 0.0 && b.is_finite(),
+            "b_mix must be positive finite (got {b:.6e})"
+        );
     }
 }

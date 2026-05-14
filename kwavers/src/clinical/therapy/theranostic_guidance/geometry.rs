@@ -10,7 +10,7 @@ use super::aperture::{
     abdominal_aperture_frame, abdominal_arc_point_2d, abdominal_arc_spec,
     abdominal_imaging_point_2d,
 };
-use super::config::{AnatomyKind, TheranosticFwiConfig};
+use super::config::{AnatomyKind, TheranosticInverseConfig};
 use super::skin::nearest_external_skin_point;
 
 pub type Point2 = PlanarPoint;
@@ -33,7 +33,7 @@ pub struct DevicePlacementMetrics {
 }
 
 pub fn build_device_layout(
-    config: &TheranosticFwiConfig,
+    config: &TheranosticInverseConfig,
     body_mask: &Array2<bool>,
     target_mask: &Array2<bool>,
     spacing_m: f64,
@@ -49,7 +49,7 @@ pub fn build_device_layout(
 }
 
 fn helmet_layout(
-    config: &TheranosticFwiConfig,
+    config: &TheranosticInverseConfig,
     body_mask: &Array2<bool>,
     spacing_m: f64,
     focus: Point2,
@@ -75,7 +75,7 @@ fn helmet_layout(
 }
 
 fn abdominal_layout(
-    config: &TheranosticFwiConfig,
+    config: &TheranosticInverseConfig,
     body_mask: &Array2<bool>,
     spacing_m: f64,
     focus: Point2,

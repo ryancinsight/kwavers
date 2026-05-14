@@ -28,7 +28,7 @@ pub struct TemperatureDependentMaterial {
 }
 
 impl TemperatureDependentMaterial {
-    #[must_use] 
+    #[must_use]
     pub fn water() -> Self {
         Self {
             acoustic: TemperatureDependentAcoustic::water(),
@@ -36,7 +36,7 @@ impl TemperatureDependentMaterial {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn soft_tissue() -> Self {
         Self {
             acoustic: TemperatureDependentAcoustic::soft_tissue(),
@@ -44,7 +44,7 @@ impl TemperatureDependentMaterial {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn liver() -> Self {
         Self {
             acoustic: TemperatureDependentAcoustic::liver(),
@@ -52,7 +52,7 @@ impl TemperatureDependentMaterial {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn properties_at_temperature(&self, temperature: f64) -> MaterialPropertiesAtT {
         let density = self.acoustic.density(temperature);
         MaterialPropertiesAtT {

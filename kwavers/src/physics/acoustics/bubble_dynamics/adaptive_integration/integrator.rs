@@ -176,11 +176,16 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         let error_v = (state_full.wall_velocity - state_half.wall_velocity).abs();
 
         // Compute error norm
-        let scale_r = self.config.rtol.mul_add(state_half.radius.abs(), self.config.atol);
-        let scale_v = self.config.rtol.mul_add(state_half.wall_velocity.abs(), self.config.atol);
+        let scale_r = self
+            .config
+            .rtol
+            .mul_add(state_half.radius.abs(), self.config.atol);
+        let scale_v = self
+            .config
+            .rtol
+            .mul_add(state_half.wall_velocity.abs(), self.config.atol);
 
-        let error_norm =
-            (error_r / scale_r).hypot(error_v / scale_v) / 2.0_f64.sqrt();
+        let error_norm = (error_r / scale_r).hypot(error_v / scale_v) / 2.0_f64.sqrt();
 
         // Compute new time step based on error
         let dt_next = if error_norm > 0.0 {
@@ -232,17 +237,17 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         // k2
         state.radius = (0.5 * dt).mul_add(k1_v, state0.radius);
         state.wall_velocity = (0.5 * dt).mul_add(k1_a, state0.wall_velocity);
-        let k2_a = self
-            .solver
-            .calculate_acceleration(state, p_acoustic, dp_dt, 0.5f64.mul_add(dt, t))?;
+        let k2_a =
+            self.solver
+                .calculate_acceleration(state, p_acoustic, dp_dt, 0.5f64.mul_add(dt, t))?;
         let k2_v = state.wall_velocity;
 
         // k3
         state.radius = (0.5 * dt).mul_add(k2_v, state0.radius);
         state.wall_velocity = (0.5 * dt).mul_add(k2_a, state0.wall_velocity);
-        let k3_a = self
-            .solver
-            .calculate_acceleration(state, p_acoustic, dp_dt, 0.5f64.mul_add(dt, t))?;
+        let k3_a =
+            self.solver
+                .calculate_acceleration(state, p_acoustic, dp_dt, 0.5f64.mul_add(dt, t))?;
         let k3_v = state.wall_velocity;
 
         // k4
@@ -254,9 +259,14 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         let k4_v = state.wall_velocity;
 
         // Combine
-        state.radius = (dt / 6.0).mul_add(2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v, state0.radius);
-        state.wall_velocity =
-            (dt / 6.0).mul_add(2.0f64.mul_add(k3_a, 2.0f64.mul_add(k2_a, k1_a)) + k4_a, state0.wall_velocity);
+        state.radius = (dt / 6.0).mul_add(
+            2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v,
+            state0.radius,
+        );
+        state.wall_velocity = (dt / 6.0).mul_add(
+            2.0f64.mul_add(k3_a, 2.0f64.mul_add(k2_a, k1_a)) + k4_a,
+            state0.wall_velocity,
+        );
 
         // Update derived quantities
         state.update_compression(r0);

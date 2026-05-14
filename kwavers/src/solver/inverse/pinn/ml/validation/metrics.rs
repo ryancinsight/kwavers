@@ -45,7 +45,12 @@ pub fn compute_validation_metrics(
         0.0
     };
 
-    Ok(ValidationMetrics { mean_absolute_error, rmse, relative_l2_error, max_error })
+    Ok(ValidationMetrics {
+        mean_absolute_error,
+        rmse,
+        relative_l2_error,
+        max_error,
+    })
 }
 
 /// Compute Pearson correlation coefficient between reference and prediction.
@@ -100,5 +105,9 @@ pub fn compute_mean_relative_error(
         }
     }
 
-    Ok(if count > 0 { sum_relative_error / count as f64 } else { 0.0 })
+    Ok(if count > 0 {
+        sum_relative_error / count as f64
+    } else {
+        0.0
+    })
 }

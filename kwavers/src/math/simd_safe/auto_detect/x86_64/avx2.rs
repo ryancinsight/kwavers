@@ -50,9 +50,12 @@ pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multipl
     assert_eq!(a.shape(), c.shape());
 
     // Safe fallback implementation
-    ndarray::Zip::from(c).and(a).and(b).par_for_each(|c, &a, &b| {
-        *c += multiplier * a * b;
-    });
+    ndarray::Zip::from(c)
+        .and(a)
+        .and(b)
+        .par_for_each(|c, &a, &b| {
+            *c += multiplier * a * b;
+        });
 }
 
 #[cfg(test)]

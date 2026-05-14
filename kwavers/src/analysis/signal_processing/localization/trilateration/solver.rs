@@ -95,8 +95,12 @@ impl Trilateration {
             position[1] += update[1];
             position[2] += update[2];
 
-            let update_norm =
-                update[2].mul_add(update[2], update[0].mul_add(update[0], update[1] * update[1])).sqrt();
+            let update_norm = update[2]
+                .mul_add(
+                    update[2],
+                    update[0].mul_add(update[0], update[1] * update[1]),
+                )
+                .sqrt();
             if update_norm < self.config.convergence_tolerance {
                 converged = true;
                 break;

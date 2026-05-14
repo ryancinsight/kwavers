@@ -98,7 +98,7 @@ impl NeuralBeamformingNetwork {
     }
 
     /// Get network architecture specification.
-    #[must_use] 
+    #[must_use]
     pub fn architecture(&self) -> &[usize] {
         &self.architecture
     }

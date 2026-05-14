@@ -39,7 +39,12 @@ impl VascularPhantomBuilder {
     /// Add vessel segment (cylinder)
     #[must_use]
     pub fn add_vessel(mut self, start: [f64; 3], end: [f64; 3], radius: f64, so2: f64) -> Self {
-        self.vessels.push(VesselGeometry { start, end, radius, so2 });
+        self.vessels.push(VesselGeometry {
+            start,
+            end,
+            radius,
+            so2,
+        });
         self
     }
 

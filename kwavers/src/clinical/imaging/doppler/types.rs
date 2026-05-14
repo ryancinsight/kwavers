@@ -16,7 +16,7 @@ pub enum FlowDirection {
 
 impl FlowDirection {
     /// Classify flow direction from velocity
-    #[must_use] 
+    #[must_use]
     pub fn from_velocity(velocity: f64, threshold: f64) -> Self {
         if velocity > threshold {
             Self::Toward
@@ -46,7 +46,7 @@ pub struct VelocityEstimate {
 
 impl VelocityEstimate {
     /// Create a new velocity estimate
-    #[must_use] 
+    #[must_use]
     pub fn new(velocity: f64, variance: f64) -> Self {
         let direction = FlowDirection::from_velocity(velocity, 0.01);
         Self {
@@ -58,7 +58,7 @@ impl VelocityEstimate {
     }
 
     /// Check if estimate is reliable based on variance threshold
-    #[must_use] 
+    #[must_use]
     pub fn is_reliable(&self, threshold: f64) -> bool {
         self.variance < threshold
     }
@@ -83,7 +83,7 @@ pub struct DopplerResult {
 
 impl DopplerResult {
     /// Get velocity at a specific location
-    #[must_use] 
+    #[must_use]
     pub fn velocity_at(&self, depth: usize, beam: usize) -> Option<VelocityEstimate> {
         if depth < self.velocity.nrows() && beam < self.velocity.ncols() {
             Some(VelocityEstimate::new(
@@ -96,7 +96,7 @@ impl DopplerResult {
     }
 
     /// Calculate maximum velocity in the map
-    #[must_use] 
+    #[must_use]
     pub fn max_velocity(&self) -> f64 {
         self.velocity
             .iter()
@@ -104,13 +104,13 @@ impl DopplerResult {
     }
 
     /// Calculate minimum velocity in the map
-    #[must_use] 
+    #[must_use]
     pub fn min_velocity(&self) -> f64 {
         self.velocity.iter().fold(f64::INFINITY, |a, &b| a.min(b))
     }
 
     /// Get velocity range (min, max)
-    #[must_use] 
+    #[must_use]
     pub fn velocity_range(&self) -> (f64, f64) {
         (self.min_velocity(), self.max_velocity())
     }

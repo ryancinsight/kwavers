@@ -27,7 +27,10 @@ pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f
         .and(&bubble_states.velocity)
         .and(&bubble_states.compression_ratio)
         .par_for_each(|out, &r, &v, &compression| {
-            *out = IMPACT_ENERGY_COEFFICIENT * liquid_density * v.powi(2) * r.powi(3)
+            *out = IMPACT_ENERGY_COEFFICIENT
+                * liquid_density
+                * v.powi(2)
+                * r.powi(3)
                 * compression.powi(2);
         });
 
@@ -85,11 +88,17 @@ mod tests {
         let risk = ErosionPattern::risk_map(&field, threshold);
 
         assert!(risk[[0, 0, 0]], "cell above threshold must be high-risk");
-        assert!(!risk[[1, 1, 1]], "cell below threshold must not be high-risk");
+        assert!(
+            !risk[[1, 1, 1]],
+            "cell below threshold must not be high-risk"
+        );
         // Cells equal to threshold (none here) would also be false (strict >)
         let eq_field = Array3::<f64>::from_elem((2, 2, 2), 1.0);
         let risk_eq = ErosionPattern::risk_map(&eq_field, 1.0);
-        assert!(!risk_eq[[0, 0, 0]], "cell equal to threshold must not be high-risk");
+        assert!(
+            !risk_eq[[0, 0, 0]],
+            "cell equal to threshold must not be high-risk"
+        );
     }
 
     /// `erosion_potential` formula: damage × (1 + 0.1·v) × |n|.

@@ -191,6 +191,7 @@ impl PSTDSolver {
             div_uz: Array3::zeros(shape),
             as_ctx: None,
             dirichlet_pml_bypass_x: Vec::new(),
+            pml_bypass_plane_scratch: Array3::zeros((0, grid.ny, grid.nz)),
         };
 
         if solver.config.kspace_method == KSpaceMethod::FullKSpace {

@@ -7,7 +7,7 @@ use std::f64::consts::PI;
 
 impl TheoremValidator {
     /// Run comprehensive theorem validation suite
-    #[must_use] 
+    #[must_use]
     pub fn run_comprehensive_validation(&self) -> Vec<TheoremValidation> {
         let mut results = Vec::new();
 
@@ -97,7 +97,7 @@ impl TheoremValidator {
     }
 
     /// Generate validation report
-    #[must_use] 
+    #[must_use]
     pub fn generate_validation_report(&self, validations: &[TheoremValidation]) -> String {
         let mut report = String::new();
         report.push_str("# Theorem Validation Report\n\n");

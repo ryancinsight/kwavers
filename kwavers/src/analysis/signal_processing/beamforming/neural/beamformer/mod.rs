@@ -93,12 +93,12 @@ impl NeuralBeamformer {
         Ok(())
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn metrics(&self) -> &HybridBeamformingMetrics {
         &self.metrics
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> &NeuralBeamformingConfig {
         &self.config
     }

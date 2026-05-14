@@ -91,7 +91,10 @@ impl Avx512StencilProcessor {
         p: &Array3<f64>,
         dim: usize,
     ) -> KwaversResult<()> {
-        use std::arch::x86_64::{_mm512_set1_pd, _mm512_loadu_pd, _mm512_sub_pd, _mm512_mul_pd, _mm512_add_pd, _mm512_storeu_pd};
+        use std::arch::x86_64::{
+            _mm512_add_pd, _mm512_loadu_pd, _mm512_mul_pd, _mm512_set1_pd, _mm512_storeu_pd,
+            _mm512_sub_pd,
+        };
 
         if !is_x86_feature_detected!("avx512f") {
             return Err(KwaversError::FeatureNotAvailable(

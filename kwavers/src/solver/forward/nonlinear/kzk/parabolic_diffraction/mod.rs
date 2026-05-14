@@ -53,9 +53,10 @@
 //!   diffractive field propagation." J. Acoust. Soc. Am. 90(1), 488–499.
 //!   DOI: 10.1121/1.401277
 
-use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
-use ndarray::{Array2, ArrayViewMut2};
+use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
+use ndarray::{Array2, ArrayViewMut2, Zip};
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 use super::KZKConfig;
 
@@ -90,6 +91,14 @@ pub struct KzkDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
+    /// Cached 2-D FFT plan for the transverse `(nx, ny)` slice shape.
+    fft_plan: Arc<Fft2d>,
+    /// Reusable complex field/spectrum buffer.
+    ///
+    /// The real-field API stores the input as `re + 0i`, transforms the buffer
+    /// in place, applies the diagonal diffraction propagator, transforms back,
+    /// and writes the real part to the caller's field view.
+    scratch: Array2<Complex64>,
 }
 
 impl std::fmt::Debug for KzkDiffractionOperator {
@@ -146,10 +155,15 @@ impl KzkDiffractionOperator {
             }
         }
 
+        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny });
+        let scratch = Array2::zeros((nx, ny));
+
         Self {
             config: config.clone(),
             kx2,
             ky2,
+            fft_plan,
+            scratch,
         }
     }
 
@@ -158,16 +172,22 @@ impl KzkDiffractionOperator {
         self.apply_with_step(field, step_size, 0);
     }
 
+    /// Apply one real-field parabolic diffraction sub-step.
+    ///
+    /// # Contract
+    /// The spectral propagator is diagonal, so the same complex buffer can
+    /// represent the real input, forward spectrum, phase-shifted spectrum, and
+    /// inverse result. This is equivalent to the allocating path
+    /// `complex -> FFT -> multiply -> IFFT -> real`, but performs no heap
+    /// allocation after construction.
     fn apply_with_step(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64, _step: usize) {
-        let nx = self.config.nx;
-        let ny = self.config.ny;
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
 
-        // Convert to complex field
-        let complex_field = field.mapv(|x| Complex64::new(x, 0.0));
+        Zip::from(&mut self.scratch)
+            .and(field.view())
+            .par_for_each(|s, &x| *s = Complex64::new(x, 0.0));
 
-        // 2D FFT using central cache
-        let mut complex_field_fft = fft_2d_complex(&complex_field);
+        self.fft_plan.forward_complex_inplace(&mut self.scratch);
 
         // Parabolic diffraction propagator (see module theorem):
         //
@@ -178,33 +198,25 @@ impl KzkDiffractionOperator {
         // corresponds to the complex-conjugate propagator and must not be used.
         //
         // Refs: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
-        for i in 0..nx {
-            for j in 0..ny {
-                let kt2 = self.kx2[[i, j]] + self.ky2[[i, j]];
-                let phase = kt2 * step_size / (2.0 * k0);
-                // exp(−i·phase): negative sign is physically correct
-                complex_field_fft[[i, j]] *= Complex64::from_polar(1.0, -phase);
-            }
-        }
+        Zip::indexed(&mut self.scratch).par_for_each(|(i, j), value| {
+            let kt2 = self.kx2[[i, j]] + self.ky2[[i, j]];
+            let phase = kt2 * step_size / (2.0 * k0);
+            *value *= Complex64::from_polar(1.0, -phase);
+        });
 
-        // Inverse 2D FFT: result is complex
-        let recovered = ifft_2d_complex(&complex_field_fft);
+        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
 
-        // Extract real part
-        for i in 0..nx {
-            for j in 0..ny {
-                field[[i, j]] = recovered[[i, j]].re;
-            }
-        }
+        Zip::from(field)
+            .and(&self.scratch)
+            .par_for_each(|out, value| *out = value.re);
     }
 
     #[cfg(test)]
-    fn fft_2d_forward(&self, data: Array2<Complex64>) -> Array2<Complex64> {
-        fft_2d_complex(&data)
-    }
+    fn fft_round_trip_into(&mut self, data: &Array2<Complex64>, recovered: &mut Array2<Complex64>) {
+        self.scratch.assign(data);
+        self.fft_plan.forward_complex_inplace(&mut self.scratch);
+        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
 
-    #[cfg(test)]
-    fn fft_2d_inverse(&self, data: Array2<Complex64>) -> Array2<Complex64> {
-        ifft_2d_complex(&data)
+        recovered.assign(&self.scratch);
     }
 }

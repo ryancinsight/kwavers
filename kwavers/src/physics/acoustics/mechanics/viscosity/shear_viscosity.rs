@@ -95,7 +95,7 @@ mod tests {
         let t = 300.0_f64;
         let eta1 = model.viscosity(0.0, 0.0, 0.0, t);
         let eta2 = model.viscosity(0.1, 0.5, 0.9, t);
-        let eta3 = model.viscosity(100.0, -50.0, 3.14, t);
+        let eta3 = model.viscosity(100.0, -50.0, 12.5, t);
         assert_eq!(eta1, eta2, "viscosity must be position-independent");
         assert_eq!(eta1, eta3, "viscosity must be position-independent");
     }

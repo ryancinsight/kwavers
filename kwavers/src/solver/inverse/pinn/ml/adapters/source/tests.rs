@@ -104,7 +104,10 @@ fn test_focal_properties_extraction() {
         "Spot size should be 1mm, got {}",
         focal_props.spot_size
     );
-    assert!(focal_props.f_number.is_some(), "F-number should be available");
+    assert!(
+        focal_props.f_number.is_some(),
+        "F-number should be available"
+    );
     assert!(
         focal_props.focal_gain.is_some(),
         "Focal gain should be available"

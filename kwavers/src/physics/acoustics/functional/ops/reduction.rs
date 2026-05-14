@@ -82,7 +82,10 @@ mod tests {
     fn product_equals_factorial_8_for_sequential_elements() {
         let field = two_by_two();
         let p = field.product();
-        assert_eq!(p, 40320_i32, "product of 1..=8 must be 8! = 40320 (got {p})");
+        assert_eq!(
+            p, 40320_i32,
+            "product of 1..=8 must be 8! = 40320 (got {p})"
+        );
     }
 
     /// min() returns reference to the smallest element (1 for 1..=8).

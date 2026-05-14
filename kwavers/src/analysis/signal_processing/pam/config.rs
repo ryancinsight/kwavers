@@ -52,7 +52,8 @@ impl PamBeamformingConfig {
             PamBeamformingMethod::CaponDiagonalLoading { diagonal_loading } => {
                 if !diagonal_loading.is_finite() || diagonal_loading < 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "PAM beamforming config: diagonal_loading must be finite and >= 0".to_owned(),
+                        "PAM beamforming config: diagonal_loading must be finite and >= 0"
+                            .to_owned(),
                     ));
                 }
             }
@@ -68,7 +69,8 @@ impl PamBeamformingConfig {
             } => {
                 if signal_subspace_dimension == 0 {
                     return Err(KwaversError::InvalidInput(
-                        "PAM beamforming config: ESMV requires signal_subspace_dimension >= 1".to_owned(),
+                        "PAM beamforming config: ESMV requires signal_subspace_dimension >= 1"
+                            .to_owned(),
                     ));
                 }
             }

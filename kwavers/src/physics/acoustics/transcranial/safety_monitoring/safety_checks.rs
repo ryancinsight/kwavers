@@ -56,7 +56,7 @@ impl SafetyMonitor {
     }
 
     /// Get current safety status
-    #[must_use] 
+    #[must_use]
     pub fn safety_status(&self) -> SafetyStatus {
         let max_temp = self.temperature.iter().fold(0.0_f64, |a, &b| a.max(b));
         let max_dose = self
@@ -91,7 +91,7 @@ impl SafetyMonitor {
     }
 
     /// Get treatment progress towards target dose
-    #[must_use] 
+    #[must_use]
     pub fn treatment_progress(&self, target_dose: f64) -> TreatmentProgress {
         let max_current_dose = self
             .thermal_dose
@@ -120,7 +120,7 @@ impl SafetyMonitor {
     }
 
     /// Generate safety report
-    #[must_use] 
+    #[must_use]
     pub fn safety_report(&self) -> SafetyReport {
         let status = self.safety_status();
         let progress = self.treatment_progress(self.thresholds.max_thermal_dose);
@@ -142,7 +142,8 @@ impl SafetyMonitor {
         match status.temperature_status {
             SafetyLevel::Critical => {
                 recommendations.push(
-                    "CRITICAL: Temperature exceeds safe limits. Stop treatment immediately.".to_owned(),
+                    "CRITICAL: Temperature exceeds safe limits. Stop treatment immediately."
+                        .to_owned(),
                 );
             }
             SafetyLevel::Warning => {
@@ -154,9 +155,8 @@ impl SafetyMonitor {
 
         match status.thermal_dose_status {
             SafetyLevel::Critical => {
-                recommendations.push(
-                    "CRITICAL: Thermal dose exceeds safe limits. Stop treatment.".to_owned(),
-                );
+                recommendations
+                    .push("CRITICAL: Thermal dose exceeds safe limits. Stop treatment.".to_owned());
             }
             SafetyLevel::Warning => {
                 recommendations
@@ -168,12 +168,14 @@ impl SafetyMonitor {
         match status.mechanical_index_status {
             SafetyLevel::Critical => {
                 recommendations.push(
-                    "CRITICAL: Mechanical index exceeds safety limit. Reduce acoustic power.".to_owned(),
+                    "CRITICAL: Mechanical index exceeds safety limit. Reduce acoustic power."
+                        .to_owned(),
                 );
             }
             SafetyLevel::Warning => {
                 recommendations.push(
-                    "WARNING: Mechanical index approaching limit. Reduce pressure amplitude.".to_owned(),
+                    "WARNING: Mechanical index approaching limit. Reduce pressure amplitude."
+                        .to_owned(),
                 );
             }
             _ => {}

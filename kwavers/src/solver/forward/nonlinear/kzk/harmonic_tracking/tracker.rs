@@ -17,7 +17,7 @@ impl HarmonicTracker {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(config: HarmonicConfig) -> Self {
         Self {
             config,
@@ -61,7 +61,7 @@ impl HarmonicTracker {
     }
 
     /// Get analysis history.
-    #[must_use] 
+    #[must_use]
     pub fn history(&self) -> &[HarmonicAnalysis] {
         &self.history
     }
@@ -78,7 +78,7 @@ impl HarmonicTracker {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> HarmonicConfig {
         self.config
     }

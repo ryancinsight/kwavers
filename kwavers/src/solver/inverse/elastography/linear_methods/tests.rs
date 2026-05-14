@@ -110,7 +110,11 @@ fn test_volumetric_tof_with_single_peak() {
     displacement.uz[[10, 10, 10]] = 5.0; // Single push location
 
     let map = volumetric_time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0).unwrap();
-    assert_eq!(map.shear_wave_speed.dim(), (20, 20, 20), "output must span full 20×20×20 grid");
+    assert_eq!(
+        map.shear_wave_speed.dim(),
+        (20, 20, 20),
+        "output must span full 20×20×20 grid"
+    );
 }
 
 #[test]

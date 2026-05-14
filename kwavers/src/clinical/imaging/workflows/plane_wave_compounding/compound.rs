@@ -104,10 +104,7 @@ impl PlaneWaveCompound {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn generate_plane_wave(
-        &self,
-        angle_idx: usize,
-    ) -> KwaversResult<Array2<Complex<f64>>> {
+    pub fn generate_plane_wave(&self, angle_idx: usize) -> KwaversResult<Array2<Complex<f64>>> {
         if angle_idx >= self.config.num_angles {
             return Err(KwaversError::InvalidInput(format!(
                 "angle_idx {} out of range",
@@ -164,7 +161,10 @@ impl PlaneWaveCompound {
             "blackman" => {
                 for (i, w) in apod.iter_mut().enumerate() {
                     let nn = i as f64 / (n as f64 - 1.0);
-                    *w = 0.08f64.mul_add((4.0 * PI * nn).cos(), 0.5f64.mul_add(-(2.0 * PI * nn).cos(), 0.42));
+                    *w = 0.08f64.mul_add(
+                        (4.0 * PI * nn).cos(),
+                        0.5f64.mul_add(-(2.0 * PI * nn).cos(), 0.42),
+                    );
                 }
             }
             _ => {
@@ -289,7 +289,7 @@ impl PlaneWaveCompound {
     /// as a one-cell-thick volume with `(nx, ny, nz) = (lateral, 1, axial)`.
     /// The time step uses the same acoustic CFL factor as the coupled solver
     /// default: `dt = 0.3 min(dx, dy, dz) / c_ref`.
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> crate::solver::forward::coupled::ThermalAcousticConfig {
         let mut thermal = crate::solver::forward::coupled::ThermalAcousticConfig::default();
         thermal.nx = self.num_lateral;
@@ -304,31 +304,31 @@ impl PlaneWaveCompound {
     }
 
     /// Number of configured plane wave angles.
-    #[must_use] 
+    #[must_use]
     pub fn num_angles(&self) -> usize {
         self.config.num_angles
     }
 
     /// Plane wave angles in degrees.
-    #[must_use] 
+    #[must_use]
     pub fn get_angles(&self) -> Vec<f64> {
         self.angles.iter().map(|&a| a.to_degrees()).collect()
     }
 
     /// Log-compressed display image (values in \[0,1\]).
-    #[must_use] 
+    #[must_use]
     pub fn display_image(&self) -> &Array2<f64> {
         &self.display_image
     }
 
     /// Raw coherently compounded complex image.
-    #[must_use] 
+    #[must_use]
     pub fn compounded_image(&self) -> &Array2<Complex<f64>> {
         &self.compounded_image
     }
 
     /// Image grid dimensions: `(num_axial, num_lateral)`.
-    #[must_use] 
+    #[must_use]
     pub fn dimensions(&self) -> (usize, usize) {
         (self.num_axial, self.num_lateral)
     }
@@ -336,7 +336,7 @@ impl PlaneWaveCompound {
     /// Estimated frame rate: `(speedup_factor, practical_fps)`.
     ///
     /// Reference: 30 fps focused beam; speedup = N_angles.
-    #[must_use] 
+    #[must_use]
     pub fn frame_rate_estimate(&self) -> (f64, f64) {
         let focused_fps = 30.0;
         let speedup = self.config.num_angles as f64;

@@ -22,7 +22,7 @@ pub fn scale_field_swar(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>)
     }
 }
 
-#[must_use] 
+#[must_use]
 pub fn norm_swar(field: &Array3<f64>) -> f64 {
     if let Some(field_slice) = field.as_slice() {
         let sum_of_squares: f64 = field_slice.iter().map(|&x| x * x).sum();

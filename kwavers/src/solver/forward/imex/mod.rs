@@ -101,12 +101,8 @@ impl IMEXSchemeType {
         G: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
         match self {
-            Self::RungeKutta(rk) => {
-                rk.step(field, dt, explicit_rhs, implicit_rhs, implicit_solver)
-            }
-            Self::BDF(bdf) => {
-                bdf.step(field, dt, explicit_rhs, implicit_rhs, implicit_solver)
-            }
+            Self::RungeKutta(rk) => rk.step(field, dt, explicit_rhs, implicit_rhs, implicit_solver),
+            Self::BDF(bdf) => bdf.step(field, dt, explicit_rhs, implicit_rhs, implicit_solver),
         }
     }
 

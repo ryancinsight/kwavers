@@ -22,28 +22,28 @@ impl Default for SimulationConfig {
 
 impl SimulationConfig {
     /// Set number of photons
-    #[must_use] 
+    #[must_use]
     pub fn num_photons(mut self, n: usize) -> Self {
         self.num_photons = n;
         self
     }
 
     /// Set maximum steps per photon
-    #[must_use] 
+    #[must_use]
     pub fn max_steps(mut self, n: usize) -> Self {
         self.max_steps = n;
         self
     }
 
     /// Set Russian roulette threshold
-    #[must_use] 
+    #[must_use]
     pub fn russian_roulette_threshold(mut self, threshold: f64) -> Self {
         self.russian_roulette_threshold = threshold;
         self
     }
 
     /// Enable/disable boundary reflection
-    #[must_use] 
+    #[must_use]
     pub fn boundary_reflection(mut self, enabled: bool) -> Self {
         self.boundary_reflection = enabled;
         self

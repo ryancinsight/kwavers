@@ -159,9 +159,12 @@ impl WavefrontAnalyzer {
 
         // Estimate propagation direction from mean pressure gradient.
         // The wavefront propagates in the direction of ∇p (high→low pressure).
-        let grad_norm =
-            grad_sum[2].mul_add(grad_sum[2], grad_sum[0].mul_add(grad_sum[0], grad_sum[1] * grad_sum[1]))
-                .sqrt();
+        let grad_norm = grad_sum[2]
+            .mul_add(
+                grad_sum[2],
+                grad_sum[0].mul_add(grad_sum[0], grad_sum[1] * grad_sum[1]),
+            )
+            .sqrt();
         let propagation_direction = if grad_norm > 1e-30 {
             [
                 grad_sum[0] / grad_norm,

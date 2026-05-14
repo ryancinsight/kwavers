@@ -2,6 +2,8 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 
+use super::misfit::WaveformMisfit;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AnatomyKind {
     Brain,
@@ -48,7 +50,7 @@ impl AnatomyKind {
 }
 
 #[derive(Clone, Debug)]
-pub struct TheranosticFwiConfig {
+pub struct TheranosticInverseConfig {
     pub anatomy: AnatomyKind,
     pub element_count: usize,
     pub grid_size: usize,
@@ -63,9 +65,12 @@ pub struct TheranosticFwiConfig {
     pub source_pressure_pa: f64,
     pub lesion_delta_c_m_s: f64,
     pub noise_fraction: f64,
+    pub inverse_encoding_rows_per_code: usize,
+    pub waveform_misfit: WaveformMisfit,
+    pub waveform_misfit_scale_fraction: f64,
 }
 
-impl TheranosticFwiConfig {
+impl TheranosticInverseConfig {
     #[must_use]
     pub fn new(anatomy: AnatomyKind) -> Self {
         Self {
@@ -95,6 +100,9 @@ impl TheranosticFwiConfig {
             },
             lesion_delta_c_m_s: -35.0,
             noise_fraction: 0.012,
+            inverse_encoding_rows_per_code: 2,
+            waveform_misfit: WaveformMisfit::Charbonnier,
+            waveform_misfit_scale_fraction: 0.012,
         }
     }
 
@@ -129,18 +137,34 @@ impl TheranosticFwiConfig {
                 "theranostic receiver_offsets must lie in 1..element_count".to_owned(),
             ));
         }
+        if self.inverse_encoding_rows_per_code == 0 {
+            return Err(KwaversError::InvalidInput(
+                "theranostic inverse_encoding_rows_per_code must be at least 1".to_owned(),
+            ));
+        }
         for (name, value) in [
             ("regularization", self.regularization),
             ("smoothness_weight", self.smoothness_weight),
             ("focal_radius_m", self.focal_radius_m),
             ("source_pressure_pa", self.source_pressure_pa),
             ("noise_fraction", self.noise_fraction),
+            (
+                "waveform_misfit_scale_fraction",
+                self.waveform_misfit_scale_fraction,
+            ),
         ] {
             if !value.is_finite() || value < 0.0 {
                 return Err(KwaversError::InvalidInput(format!(
                     "{name} must be finite and non-negative"
                 )));
             }
+        }
+        if matches!(self.waveform_misfit, WaveformMisfit::Charbonnier)
+            && self.waveform_misfit_scale_fraction <= 0.0
+        {
+            return Err(KwaversError::InvalidInput(
+                "charbonnier waveform misfit requires positive scale fraction".to_owned(),
+            ));
         }
         Ok(())
     }

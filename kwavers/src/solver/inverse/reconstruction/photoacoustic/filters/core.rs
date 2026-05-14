@@ -21,7 +21,7 @@ pub struct Filters {
 
 impl Filters {
     /// Create new filter operations
-    #[must_use] 
+    #[must_use]
     pub fn new(_config: &PhotoacousticConfig) -> Self {
         Self {
             filter_type: FilterType::RamLak, // Default filter type
@@ -270,7 +270,7 @@ impl Filters {
     /// # Note
     /// This method is exposed as `pub` for integration testing. Not part of stable public API.
     #[doc(hidden)]
-    #[must_use] 
+    #[must_use]
     pub fn create_hamming_filter(&self, n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {
@@ -294,7 +294,7 @@ impl Filters {
     /// # Note
     /// This method is exposed as `pub` for integration testing. Not part of stable public API.
     #[doc(hidden)]
-    #[must_use] 
+    #[must_use]
     pub fn create_hann_filter(&self, n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {

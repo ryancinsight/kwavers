@@ -69,9 +69,12 @@ impl SpatiallyVaryingAbsorption {
                     let y = j as f64 * dy;
                     let z = k as f64 * dz;
 
-                    let dist =
-                        (z - center.2).mul_add(z - center.2, (y - center.1).mul_add(y - center.1, (x - center.0).powi(2)))
-                            .sqrt();
+                    let dist = (z - center.2)
+                        .mul_add(
+                            z - center.2,
+                            (y - center.1).mul_add(y - center.1, (x - center.0).powi(2)),
+                        )
+                        .sqrt();
 
                     if dist <= radius {
                         self.alpha_0_field[[i, j, k]] = alpha_0;
@@ -102,8 +105,10 @@ impl SpatiallyVaryingAbsorption {
                     let y = j as f64 * dy;
                     let z = k as f64 * dz;
 
-                    let dist_sq =
-                        (z - center.2).mul_add(z - center.2, (y - center.1).mul_add(y - center.1, (x - center.0).powi(2)));
+                    let dist_sq = (z - center.2).mul_add(
+                        z - center.2,
+                        (y - center.1).mul_add(y - center.1, (x - center.0).powi(2)),
+                    );
 
                     let weight = (-dist_sq / (2.0 * sigma * sigma)).exp();
 

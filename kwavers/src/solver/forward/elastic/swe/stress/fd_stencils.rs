@@ -20,8 +20,10 @@ pub fn fd1_x(f: ArrayView3<f64>, i: usize, j: usize, k: usize, nx: usize, dx: f6
             (f[[i + 1, j, k]] - f[[i - 1, j, k]]) / (2.0 * dx)
         }
     } else {
-        (8.0f64.mul_add(-f[[i - 1, j, k]], 8.0f64.mul_add(f[[i + 1, j, k]], -f[[i + 2, j, k]]))
-            + f[[i - 2, j, k]])
+        (8.0f64.mul_add(
+            -f[[i - 1, j, k]],
+            8.0f64.mul_add(f[[i + 1, j, k]], -f[[i + 2, j, k]]),
+        ) + f[[i - 2, j, k]])
             / (12.0 * dx)
     }
 }
@@ -44,8 +46,10 @@ pub fn fd1_y(f: ArrayView3<f64>, i: usize, j: usize, k: usize, ny: usize, dy: f6
             (f[[i, j + 1, k]] - f[[i, j - 1, k]]) / (2.0 * dy)
         }
     } else {
-        (8.0f64.mul_add(-f[[i, j - 1, k]], 8.0f64.mul_add(f[[i, j + 1, k]], -f[[i, j + 2, k]]))
-            + f[[i, j - 2, k]])
+        (8.0f64.mul_add(
+            -f[[i, j - 1, k]],
+            8.0f64.mul_add(f[[i, j + 1, k]], -f[[i, j + 2, k]]),
+        ) + f[[i, j - 2, k]])
             / (12.0 * dy)
     }
 }
@@ -68,8 +72,10 @@ pub fn fd1_z(f: ArrayView3<f64>, i: usize, j: usize, k: usize, nz: usize, dz: f6
             (f[[i, j, k + 1]] - f[[i, j, k - 1]]) / (2.0 * dz)
         }
     } else {
-        (8.0f64.mul_add(-f[[i, j, k - 1]], 8.0f64.mul_add(f[[i, j, k + 1]], -f[[i, j, k + 2]]))
-            + f[[i, j, k - 2]])
+        (8.0f64.mul_add(
+            -f[[i, j, k - 1]],
+            8.0f64.mul_add(f[[i, j, k + 1]], -f[[i, j, k + 2]]),
+        ) + f[[i, j, k - 2]])
             / (12.0 * dz)
     }
 }

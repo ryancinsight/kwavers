@@ -216,7 +216,7 @@ impl NumericOps<Self> for f32 {}
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
-#[must_use] 
+#[must_use]
 pub fn norm_l2(array: &ndarray::Array3<f64>) -> f64 {
     VectorOperations::norm_l2(array)
 }

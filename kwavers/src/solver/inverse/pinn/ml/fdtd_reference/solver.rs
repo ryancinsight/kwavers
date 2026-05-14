@@ -41,17 +41,24 @@ impl FDTD1DWaveSolver {
                     u_current[i] = amplitude * (-dist.powi(2) / (2.0 * width.powi(2))).exp();
                 }
             }
-            InitialCondition::SineWave { frequency, amplitude } => {
+            InitialCondition::SineWave {
+                frequency,
+                amplitude,
+            } => {
                 for i in 0..nx {
                     let x = i as f64 * config.dx;
-                    u_current[i] =
-                        amplitude * (2.0 * std::f64::consts::PI * frequency * x).sin();
+                    u_current[i] = amplitude * (2.0 * std::f64::consts::PI * frequency * x).sin();
                 }
             }
             InitialCondition::Custom => {}
         }
 
-        Ok(Self { config, u_current, u_previous, current_step: 0 })
+        Ok(Self {
+            config,
+            u_current,
+            u_previous,
+            current_step: 0,
+        })
     }
 
     /// Advance one time step (central difference, Dirichlet BC at boundaries).
@@ -68,13 +75,8 @@ impl FDTD1DWaveSolver {
         let mut u_next = Array1::zeros(nx);
 
         for i in 1..nx - 1 {
-            u_next[i] = 2.0f64.mul_add(
-                self.u_current[i],
-                -self.u_previous[i],
-            ) + alpha
-                * (self.u_current[i + 1]
-                    - 2.0 * self.u_current[i]
-                    + self.u_current[i - 1]);
+            u_next[i] = 2.0f64.mul_add(self.u_current[i], -self.u_previous[i])
+                + alpha * (self.u_current[i + 1] - 2.0 * self.u_current[i] + self.u_current[i - 1]);
         }
 
         // Dirichlet boundary conditions

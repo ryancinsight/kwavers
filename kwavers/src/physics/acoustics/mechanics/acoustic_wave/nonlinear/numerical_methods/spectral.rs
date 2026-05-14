@@ -82,8 +82,7 @@ impl NonlinearWave {
                         1.0
                     };
                     *val =
-                        pk * Complex::new(sinc_factor * (-c * c * k_mag_sq * dt * dt), 0.0)
-                            .exp();
+                        pk * Complex::new(sinc_factor * (-c * c * k_mag_sq * dt * dt), 0.0).exp();
                 });
         }
 
@@ -131,17 +130,23 @@ impl NonlinearWave {
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
 
-        Zip::indexed(&mut grad_x_k).and(&field_k).par_for_each(|(i, _j, _k), val, &fk| {
-            *val = fk * Complex::new(0.0, kx_s[i]);
-        });
+        Zip::indexed(&mut grad_x_k)
+            .and(&field_k)
+            .par_for_each(|(i, _j, _k), val, &fk| {
+                *val = fk * Complex::new(0.0, kx_s[i]);
+            });
 
-        Zip::indexed(&mut grad_y_k).and(&field_k).par_for_each(|(_i, j, _k), val, &fk| {
-            *val = fk * Complex::new(0.0, ky_s[j]);
-        });
+        Zip::indexed(&mut grad_y_k)
+            .and(&field_k)
+            .par_for_each(|(_i, j, _k), val, &fk| {
+                *val = fk * Complex::new(0.0, ky_s[j]);
+            });
 
-        Zip::indexed(&mut grad_z_k).and(&field_k).par_for_each(|(_i, _j, k), val, &fk| {
-            *val = fk * Complex::new(0.0, kz_s[k]);
-        });
+        Zip::indexed(&mut grad_z_k)
+            .and(&field_k)
+            .par_for_each(|(_i, _j, k), val, &fk| {
+                *val = fk * Complex::new(0.0, kz_s[k]);
+            });
 
         // Transform back to spatial domain
         Ok((
@@ -382,7 +387,9 @@ mod tests {
         w.precompute_k_squared(&grid);
 
         let pressure = Array3::<f64>::zeros((8, 8, 8));
-        let corrected = w.apply_k_space_correction(&pressure, &medium, &grid).unwrap();
+        let corrected = w
+            .apply_k_space_correction(&pressure, &medium, &grid)
+            .unwrap();
 
         let tol = 512.0 * f64::EPSILON * 10.0;
         for &v in corrected.iter() {

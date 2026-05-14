@@ -16,6 +16,8 @@ pub trait LinearOperator {
 
     fn t_matvec(&self, y: &[f32], out: &mut [f32]);
 
+    fn row_values(&self, row: usize, out: &mut [f32]);
+
     #[must_use]
     fn normal_diag(&self) -> Vec<f32>;
 

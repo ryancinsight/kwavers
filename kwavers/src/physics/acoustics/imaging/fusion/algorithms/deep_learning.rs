@@ -72,7 +72,8 @@ pub(crate) fn fuse_deep_learning(fusion: &MultiModalFusion) -> KwaversResult<Fus
 
                 if denominator <= 0.0 || !denominator.is_finite() {
                     return Err(KwaversError::InvalidInput(
-                        "DeepFusion attention produced an invalid attention normalization".to_owned(),
+                        "DeepFusion attention produced an invalid attention normalization"
+                            .to_owned(),
                     ));
                 }
 

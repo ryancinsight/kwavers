@@ -45,7 +45,8 @@ pub fn compute_diffusive_term_workspace(
         .and(pressure_prev2)
         .and(pressure_prev3)
         .par_for_each(|diff, &p, &p_prev, &p_prev2, &p_prev3| {
-            let d3p_dt3 = (THIRD_ORDER_DIFF_COEFF.mul_add(p_prev2, THIRD_ORDER_DIFF_COEFF.mul_add(-p_prev, p))
+            let d3p_dt3 = (THIRD_ORDER_DIFF_COEFF
+                .mul_add(p_prev2, THIRD_ORDER_DIFF_COEFF.mul_add(-p_prev, p))
                 - p_prev3)
                 / dt_cubed;
             *diff = coeff * d3p_dt3;

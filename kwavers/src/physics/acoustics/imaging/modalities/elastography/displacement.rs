@@ -33,7 +33,7 @@ pub struct DisplacementField {
 
 impl DisplacementField {
     /// Create zero displacement field
-    #[must_use] 
+    #[must_use]
     pub fn zeros(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             ux: Array3::zeros((nx, ny, nz)),
@@ -148,7 +148,6 @@ impl DisplacementEstimator {
         // Full 3D vector displacement tracking available in advanced implementations
         Ok(DisplacementField { ux, uy, uz })
     }
-
 }
 
 #[cfg(test)]

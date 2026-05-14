@@ -96,7 +96,7 @@ pub struct HarmonicImagingParameters {
 
 impl HarmonicImaging {
     /// Create new harmonic imaging system
-    #[must_use] 
+    #[must_use]
     pub fn new(fundamental_freq: f64) -> Self {
         let harmonic_frequencies = vec![
             fundamental_freq * 2.0, // Second harmonic
@@ -116,7 +116,7 @@ impl HarmonicImaging {
     }
 
     /// Extract harmonic components from scattered signal
-    #[must_use] 
+    #[must_use]
     pub fn extract_harmonics(&self, signal: &[f64], sample_rate: f64) -> Vec<f64> {
         self.harmonic_frequencies
             .iter()

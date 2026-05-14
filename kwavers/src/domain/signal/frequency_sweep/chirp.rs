@@ -100,7 +100,10 @@ impl FrequencySweep for LinearChirp {
         if t < 0.0 || t > self.duration {
             return 0.0;
         }
-        TWO_PI * self.start_frequency.mul_add(t, 0.5 * self.sweep_rate * t * t)
+        TWO_PI
+            * self
+                .start_frequency
+                .mul_add(t, 0.5 * self.sweep_rate * t * t)
     }
 
     fn sweep_rate(&self, t: f64) -> f64 {

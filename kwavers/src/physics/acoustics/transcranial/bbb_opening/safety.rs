@@ -5,7 +5,7 @@ use super::types::{SafetyValidation, TreatmentProtocol};
 /// Safety and protocol generation for BBB Opening
 impl BBBOpening {
     /// Generate treatment protocol
-    #[must_use] 
+    #[must_use]
     pub fn generate_protocol(&self) -> TreatmentProtocol {
         let target_mi = self.parameters.target_mi;
         let duration = self.parameters.duration;

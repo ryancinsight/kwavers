@@ -143,9 +143,11 @@ impl PSTDSolver {
                     let c_sq = self.c_ref * self.c_ref;
                     match self.velocity_source_grad_masks.get(idx) {
                         Some(Some(grad_mask)) => {
-                            Zip::from(&mut self.dpx).and(grad_mask).par_for_each(|s, &gm| {
-                                *s -= c_sq * amp * gm;
-                            });
+                            Zip::from(&mut self.dpx)
+                                .and(grad_mask)
+                                .par_for_each(|s, &gm| {
+                                    *s -= c_sq * amp * gm;
+                                });
                         }
                         Some(None) => {}
                         None => {
@@ -164,7 +166,8 @@ impl PSTDSolver {
             KwaversError::Config(crate::core::error::ConfigError::InvalidValue {
                 parameter: "kspace_operators".to_owned(),
                 value: "None".to_owned(),
-                constraint: "k-space operators must be initialized for FullKSpace method".to_owned(),
+                constraint: "k-space operators must be initialized for FullKSpace method"
+                    .to_owned(),
             })
         })?;
 

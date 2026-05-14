@@ -91,7 +91,9 @@ impl Velocity3D {
 
     #[must_use]
     pub fn magnitude(&self) -> f64 {
-        self.vz.mul_add(self.vz, self.vx.mul_add(self.vx, self.vy * self.vy)).sqrt()
+        self.vz
+            .mul_add(self.vz, self.vx.mul_add(self.vx, self.vy * self.vy))
+            .sqrt()
     }
 }
 

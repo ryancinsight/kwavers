@@ -155,8 +155,10 @@ impl CentralDifference4 {
         for i in 2..nx - 2 {
             for j in 0..ny {
                 for k in 0..nz {
-                    dst[[i, j, k]] = (8.0f64.mul_add(-field[[i - 1, j, k]], 8.0f64.mul_add(field[[i + 1, j, k]], -field[[i + 2, j, k]]))
-                        + field[[i - 2, j, k]])
+                    dst[[i, j, k]] = (8.0f64.mul_add(
+                        -field[[i - 1, j, k]],
+                        8.0f64.mul_add(field[[i + 1, j, k]], -field[[i + 2, j, k]]),
+                    ) + field[[i - 2, j, k]])
                         * inv12dx;
                 }
             }
@@ -194,8 +196,10 @@ impl CentralDifference4 {
         for i in 0..nx {
             for j in 2..ny - 2 {
                 for k in 0..nz {
-                    dst[[i, j, k]] = (8.0f64.mul_add(-field[[i, j - 1, k]], 8.0f64.mul_add(field[[i, j + 1, k]], -field[[i, j + 2, k]]))
-                        + field[[i, j - 2, k]])
+                    dst[[i, j, k]] = (8.0f64.mul_add(
+                        -field[[i, j - 1, k]],
+                        8.0f64.mul_add(field[[i, j + 1, k]], -field[[i, j + 2, k]]),
+                    ) + field[[i, j - 2, k]])
                         * inv12dy;
                 }
             }
@@ -233,8 +237,10 @@ impl CentralDifference4 {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 2..nz - 2 {
-                    dst[[i, j, k]] = (8.0f64.mul_add(-field[[i, j, k - 1]], 8.0f64.mul_add(field[[i, j, k + 1]], -field[[i, j, k + 2]]))
-                        + field[[i, j, k - 2]])
+                    dst[[i, j, k]] = (8.0f64.mul_add(
+                        -field[[i, j, k - 1]],
+                        8.0f64.mul_add(field[[i, j, k + 1]], -field[[i, j, k + 2]]),
+                    ) + field[[i, j, k - 2]])
                         * inv12dz;
                 }
             }

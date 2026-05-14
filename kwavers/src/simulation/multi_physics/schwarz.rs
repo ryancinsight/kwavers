@@ -41,7 +41,7 @@ pub struct SchwarzCoupling {
 
 impl SchwarzCoupling {
     /// Create a new Schwarz coupling with the given parameters.
-    #[must_use] 
+    #[must_use]
     pub fn new(theta: f64, max_iter: usize, tolerance: f64) -> Self {
         Self {
             theta,

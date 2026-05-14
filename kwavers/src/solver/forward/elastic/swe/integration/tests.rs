@@ -6,7 +6,11 @@ use crate::solver::forward::elastic::swe::boundary::{PMLBoundary, PMLConfig};
 use crate::solver::forward::elastic::swe::types::ElasticWaveField;
 use ndarray::Array3;
 
-fn make_integrator(grid: &Grid, lambda_val: f64, mu_val: f64) -> (Array3<f64>, Array3<f64>, Array3<f64>, PMLBoundary) {
+fn make_integrator(
+    grid: &Grid,
+    lambda_val: f64,
+    mu_val: f64,
+) -> (Array3<f64>, Array3<f64>, Array3<f64>, PMLBoundary) {
     let (nx, ny, nz) = grid.dimensions();
     let lambda = Array3::<f64>::from_elem((nx, ny, nz), lambda_val);
     let mu = Array3::<f64>::from_elem((nx, ny, nz), mu_val);

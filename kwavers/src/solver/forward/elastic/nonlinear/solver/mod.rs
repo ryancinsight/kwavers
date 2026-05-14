@@ -14,12 +14,12 @@
 //! - Chen, S., et al. (2013). "Harmonic motion detection in ultrasound elastography."
 //!   IEEE Trans. Medical Imaging, 32(5), 863-874.
 
-use crate::core::error::KwaversResult;
-use crate::domain::grid::Grid;
-use crate::domain::medium::Medium;
 use super::config::NonlinearSWEConfig;
 use super::material::HyperelasticModel;
 use super::numerics::NumericsOperators;
+use crate::core::error::KwaversResult;
+use crate::domain::grid::Grid;
+use crate::domain::medium::Medium;
 
 mod harmonics;
 mod propagation;

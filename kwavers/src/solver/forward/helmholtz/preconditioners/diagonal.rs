@@ -8,8 +8,8 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::solver::forward::helmholtz::Preconditioner;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
-use rayon::prelude::*;
 use num_complex::Complex64;
+use rayon::prelude::*;
 
 /// Diagonal preconditioner for Helmholtz equation
 #[derive(Debug)]

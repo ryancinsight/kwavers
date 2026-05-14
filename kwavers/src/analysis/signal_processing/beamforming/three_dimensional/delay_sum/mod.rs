@@ -19,6 +19,6 @@ mod processor;
 mod tests;
 
 #[cfg(feature = "gpu")]
-pub use processor::DelaySumGPU;
-#[cfg(feature = "gpu")]
 pub(super) use processor::dynamic_focus_dispatch::DynamicFocusGPU;
+#[cfg(feature = "gpu")]
+pub use processor::DelaySumGPU;

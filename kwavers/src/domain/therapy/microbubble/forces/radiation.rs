@@ -32,7 +32,9 @@ impl RadiationForce {
 
     #[must_use]
     pub fn magnitude(&self) -> f64 {
-        self.fz.mul_add(self.fz, self.fx.mul_add(self.fx, self.fy * self.fy)).sqrt()
+        self.fz
+            .mul_add(self.fz, self.fx.mul_add(self.fx, self.fy * self.fy))
+            .sqrt()
     }
 
     #[must_use]

@@ -57,9 +57,11 @@ impl GradientComputer {
 
         // Apply preconditioning if available
         if let Some(ref precond) = self.preconditioner {
-            Zip::from(&mut gradient).and(precond).par_for_each(|grad, &p| {
-                *grad *= p;
-            });
+            Zip::from(&mut gradient)
+                .and(precond)
+                .par_for_each(|grad, &p| {
+                    *grad *= p;
+                });
         }
 
         gradient
@@ -154,9 +156,11 @@ impl GradientComputer {
 
         let mut encoded = Array3::zeros(shape);
         for (gradient, &weight) in source_gradients.iter().zip(encoding_weights.iter()) {
-            Zip::from(&mut encoded).and(gradient).par_for_each(|acc, &g| {
-                *acc += weight * g;
-            });
+            Zip::from(&mut encoded)
+                .and(gradient)
+                .par_for_each(|acc, &g| {
+                    *acc += weight * g;
+                });
         }
 
         Ok(encoded)

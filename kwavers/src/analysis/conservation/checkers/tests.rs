@@ -86,7 +86,10 @@ fn test_conservation_violation_detection() -> KwaversResult<()> {
         .error_message
         .as_deref()
         .expect("error_message must be Some when check fails");
-    assert!(!msg.is_empty(), "error_message must be non-empty when check fails");
+    assert!(
+        !msg.is_empty(),
+        "error_message must be non-empty when check fails"
+    );
 
     Ok(())
 }
@@ -96,10 +99,22 @@ fn test_infer_law_from_name() -> KwaversResult<()> {
     let grid = Grid::new(8, 8, 8, 0.1, 0.1, 0.1)?;
     let checker = ConservationChecker::new(grid, 1e-6);
 
-    assert_eq!(checker.infer_law_from_name("pressure"),    ConservationLaw::Charge);
-    assert_eq!(checker.infer_law_from_name("density"),     ConservationLaw::Mass);
-    assert_eq!(checker.infer_law_from_name("velocity_x"),  ConservationLaw::Momentum);
-    assert_eq!(checker.infer_law_from_name("thermal_energy"), ConservationLaw::Energy);
+    assert_eq!(
+        checker.infer_law_from_name("pressure"),
+        ConservationLaw::Charge
+    );
+    assert_eq!(
+        checker.infer_law_from_name("density"),
+        ConservationLaw::Mass
+    );
+    assert_eq!(
+        checker.infer_law_from_name("velocity_x"),
+        ConservationLaw::Momentum
+    );
+    assert_eq!(
+        checker.infer_law_from_name("thermal_energy"),
+        ConservationLaw::Energy
+    );
 
     Ok(())
 }

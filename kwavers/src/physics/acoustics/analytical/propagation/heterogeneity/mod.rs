@@ -81,8 +81,12 @@ mod tests {
         let grid = small_grid();
         let model = HeterogeneityModel::new(&grid, base, var);
         for &v in model.sound_speed_var.iter() {
-            assert!(v >= base * (1.0 - var) && v <= base * (1.0 + var),
-                "value {v} outside [{}, {}]", base * (1.0 - var), base * (1.0 + var));
+            assert!(
+                v >= base * (1.0 - var) && v <= base * (1.0 + var),
+                "value {v} outside [{}, {}]",
+                base * (1.0 - var),
+                base * (1.0 + var)
+            );
         }
     }
 
@@ -104,8 +108,10 @@ mod tests {
         let grid = small_grid();
         let model = HeterogeneityModel::new(&grid, base, 0.0);
         for &v in model.sound_speed_var.iter() {
-            assert!((v - base).abs() < 1e-10,
-                "expected {base} with zero variance, got {v}");
+            assert!(
+                (v - base).abs() < 1e-10,
+                "expected {base} with zero variance, got {v}"
+            );
         }
     }
 }

@@ -93,7 +93,7 @@ impl GpuAllocationTracker {
     /// # Arguments
     /// * `device_capacity` — Estimated device memory capacity in bytes.
     /// * `config` — Allocation configuration.
-    #[must_use] 
+    #[must_use]
     pub fn new(device_capacity: usize, config: GpuAllocationConfig) -> Arc<Self> {
         let budget_bytes = (device_capacity as f64 * config.safety_factor) as usize;
         Arc::new(Self {
@@ -108,7 +108,7 @@ impl GpuAllocationTracker {
     }
 
     /// Create with default configuration (90% safety factor).
-    #[must_use] 
+    #[must_use]
     pub fn with_capacity(device_capacity: usize) -> Arc<Self> {
         Self::new(device_capacity, GpuAllocationConfig::default())
     }

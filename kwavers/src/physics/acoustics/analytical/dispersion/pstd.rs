@@ -56,7 +56,9 @@ impl DispersionAnalysis {
         let kx_dx = kx * dx;
         let ky_dy = ky * dy;
         let kz_dz = kz * dz;
-        let k_h_magnitude = kz_dz.mul_add(kz_dz, kx_dx.mul_add(kx_dx, ky_dy * ky_dy)).sqrt();
+        let k_h_magnitude = kz_dz
+            .mul_add(kz_dz, kx_dx.mul_add(kx_dx, ky_dy * ky_dy))
+            .sqrt();
 
         let anisotropy_correction = match order {
             2 => 0.02 * k_h_magnitude.powi(2),
@@ -129,7 +131,9 @@ mod tests {
 
         let d2 = DispersionAnalysis::pstd_dispersion(k, dx, 2);
         let d4 = DispersionAnalysis::pstd_dispersion(k, dx, 4);
-        assert!(d4.abs() < d2.abs(),
-            "order-4 error={d4:.4e} must be smaller than order-2 error={d2:.4e}");
+        assert!(
+            d4.abs() < d2.abs(),
+            "order-4 error={d4:.4e} must be smaller than order-2 error={d2:.4e}"
+        );
     }
 }

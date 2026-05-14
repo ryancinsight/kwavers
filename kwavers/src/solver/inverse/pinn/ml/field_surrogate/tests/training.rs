@@ -23,11 +23,7 @@ fn make_synthetic_batch(
 ) -> TrainingBatch<AB> {
     use burn::tensor::Distribution;
     // Inputs: uniform in [-1, 1]^5
-    let inputs = Tensor::<AB, 2>::random(
-        [n, 5],
-        Distribution::Uniform(-1.0, 1.0),
-        device,
-    );
+    let inputs = Tensor::<AB, 2>::random([n, 5], Distribution::Uniform(-1.0, 1.0), device);
     // Pull data back to host to compute targets analytically.
     let host_data: Vec<f32> = inputs
         .clone()
@@ -45,25 +41,20 @@ fn make_synthetic_batch(
         let f0_norm = host_data[i * 5 + 3];
         let r2 = x * x + y * y + z * z;
         let env = (-r2 / 0.5).exp(); // sigma² = 0.25 in normalised units
-        // (p_min_norm, p_max_norm, p_rms_norm) — same shape, different scales
+                                     // (p_min_norm, p_max_norm, p_rms_norm) — same shape, different scales
         targets[i * 3] = -env * 0.95;
         targets[i * 3 + 1] = env * 0.95;
         targets[i * 3 + 2] = env * 0.7;
         // Map f0_norm in [-1, 1] back to physical Hz in [0.5, 1.0] MHz
         f0_vec[i] = 0.75e6 + 0.25e6 * f0_norm;
     }
-    let targets =
-        Tensor::<AB, 2>::from_data(TensorData::new(targets, [n, 3]), device);
-    let f0_phys =
-        Tensor::<AB, 1>::from_data(TensorData::new(f0_vec, [n]), device);
+    let targets = Tensor::<AB, 2>::from_data(TensorData::new(targets, [n, 3]), device);
+    let f0_phys = Tensor::<AB, 1>::from_data(TensorData::new(f0_vec, [n]), device);
     // Synthetic batch is treated as drawn from a single virtual
     // kernel; the per-group prominence loop then collapses to the
     // same batch-wide aggregation Phase C-9 exercised, keeping the
     // training-loss-decreases test sensitive to gradient flow.
-    let group_ids = Tensor::<AB, 1>::from_data(
-        TensorData::new(vec![0.0_f32; n], [n]),
-        device,
-    );
+    let group_ids = Tensor::<AB, 1>::from_data(TensorData::new(vec![0.0_f32; n], [n]), device);
     TrainingBatch {
         inputs,
         targets,
@@ -94,7 +85,11 @@ fn test_trainer_step_returns_finite_metrics() {
     let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
     let batch = make_synthetic_batch(&device, 0, 64);
     let m = trainer.step(batch);
-    assert!(m.data.is_finite() && m.data >= 0.0, "data loss = {}", m.data);
+    assert!(
+        m.data.is_finite() && m.data >= 0.0,
+        "data loss = {}",
+        m.data
+    );
     assert!(m.helmholtz == 0.0, "weight-0 helmholtz must be exactly 0");
     assert!(m.total.is_finite() && m.total >= 0.0);
 }
@@ -204,7 +199,10 @@ fn test_trainer_with_helmholtz_weight_runs_finite() {
         let batch = make_synthetic_batch(&device, step as u64, 32);
         let m = trainer.step(batch);
         assert!(m.data.is_finite(), "data loss not finite at step {step}");
-        assert!(m.helmholtz.is_finite(), "helm loss not finite at step {step}");
+        assert!(
+            m.helmholtz.is_finite(),
+            "helm loss not finite at step {step}"
+        );
         assert!(m.total.is_finite(), "total loss not finite at step {step}");
     }
 }

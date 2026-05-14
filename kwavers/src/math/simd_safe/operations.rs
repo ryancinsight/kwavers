@@ -12,13 +12,13 @@ use ndarray::Array3;
 /// selects the actual code path; this constant records the expected maximum width for
 /// each architecture so it can be referenced in loop-unroll and tiling decisions.
 #[cfg(target_arch = "x86_64")]
-pub const SIMD_WIDTH: usize =4;
+pub const SIMD_WIDTH: usize = 4;
 
 #[cfg(target_arch = "aarch64")]
-pub const SIMD_WIDTH: usize =2;
+pub const SIMD_WIDTH: usize = 2;
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
-pub const SIMD_WIDTH: usize =1;
+pub const SIMD_WIDTH: usize = 1;
 
 /// Portable SIMD operations
 #[derive(Debug)]

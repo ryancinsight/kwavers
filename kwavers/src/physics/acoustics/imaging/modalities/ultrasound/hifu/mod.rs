@@ -58,8 +58,12 @@ pub fn compute_pressure_field(
                 let z = k as f64 * grid.dz;
 
                 // Distance from geometric focus point (paraxial approximation)
-                let r =
-                    (z - focus_z).mul_add(z - focus_z, (y - focus_y).mul_add(y - focus_y, (x - focus_x).powi(2))).sqrt();
+                let r = (z - focus_z)
+                    .mul_add(
+                        z - focus_z,
+                        (y - focus_y).mul_add(y - focus_y, (x - focus_x).powi(2)),
+                    )
+                    .sqrt();
 
                 if r > 1e-6 {
                     // Focused ultrasound field: Gaussian beam profile approximation
@@ -179,13 +183,13 @@ impl ThermalDose {
     }
 
     /// Get thermal dose at specific location
-    #[must_use] 
+    #[must_use]
     pub fn dose_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self.cem43[[i, j, k]]
     }
 
     /// Check if ablation threshold reached (CEM43 > 240)
-    #[must_use] 
+    #[must_use]
     pub fn ablation_threshold_reached(&self) -> Array3<bool> {
         self.cem43.mapv(|dose| dose > 240.0)
     }

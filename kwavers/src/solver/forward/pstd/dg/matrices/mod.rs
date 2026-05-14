@@ -268,7 +268,8 @@ fn legendre_poly_and_deriv(n: usize, x: f64) -> (f64, f64) {
     let mut l_curr = x;
 
     for i in 1..n {
-        let l_next = ((2 * i + 1) as f64 * x).mul_add(l_curr, -(i as f64 * l_prev)) / ((i + 1) as f64);
+        let l_next =
+            ((2 * i + 1) as f64 * x).mul_add(l_curr, -(i as f64 * l_prev)) / ((i + 1) as f64);
         l_prev = l_curr;
         l_curr = l_next;
     }
@@ -348,7 +349,6 @@ fn real_fourier_basis_derivative(mode: usize, theta: f64) -> f64 {
         -angular_wavenumber * (wavenumber * theta).sin()
     }
 }
-
 
 #[cfg(test)]
 mod tests;

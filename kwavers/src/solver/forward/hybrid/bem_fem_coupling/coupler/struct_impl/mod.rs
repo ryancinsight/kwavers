@@ -53,8 +53,7 @@ impl BemFemCoupler {
         let fem_interpolator = TrilinearInterpolator::new(dx, dy, dz);
 
         let bem_config = BemConfig::default();
-        let boundary_verts: Vec<[f64; 3]> =
-            fem_mesh.nodes.iter().map(|n| n.coordinates).collect();
+        let boundary_verts: Vec<[f64; 3]> = fem_mesh.nodes.iter().map(|n| n.coordinates).collect();
         let boundary_tris: Vec<[usize; 3]> = fem_mesh
             .boundary_faces
             .keys()

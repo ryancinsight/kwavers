@@ -103,7 +103,8 @@ impl FrequencySweep for SteppedSweep {
         }
 
         let step = self.get_step_index(t);
-        self.frequency_step.mul_add(step as f64, self.start_frequency)
+        self.frequency_step
+            .mul_add(step as f64, self.start_frequency)
     }
 
     fn phase(&self, t: f64) -> f64 {
@@ -121,7 +122,9 @@ impl FrequencySweep for SteppedSweep {
         }
 
         // Add phase from current step
-        let current_freq = self.frequency_step.mul_add(step as f64, self.start_frequency);
+        let current_freq = self
+            .frequency_step
+            .mul_add(step as f64, self.start_frequency);
         let time_in_step = (step as f64).mul_add(-self.step_duration, t);
         phase += TWO_PI * current_freq * time_in_step;
 

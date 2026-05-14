@@ -78,8 +78,10 @@ impl OperatorSplittingSolver {
                     + pressure[[i - 1, 0, 0]])
                     / (self.dx * self.dx);
 
-                pressure_next[[i, 0, 0]] =
-                    (dt2 * c2).mul_add(laplacian, 2.0f64.mul_add(pressure[[i, 0, 0]], -pressure_prev[[i, 0, 0]]));
+                pressure_next[[i, 0, 0]] = (dt2 * c2).mul_add(
+                    laplacian,
+                    2.0f64.mul_add(pressure[[i, 0, 0]], -pressure_prev[[i, 0, 0]]),
+                );
             }
         } else {
             // 2D/3D case
@@ -114,7 +116,10 @@ impl OperatorSplittingSolver {
                         let laplacian = laplacian_x + laplacian_y + laplacian_z;
 
                         // Leapfrog time integration
-                        pressure_next[[i, j, k]] = (dt2 * c2).mul_add(laplacian, 2.0f64.mul_add(pressure[[i, j, k]], -pressure_prev[[i, j, k]]));
+                        pressure_next[[i, j, k]] = (dt2 * c2).mul_add(
+                            laplacian,
+                            2.0f64.mul_add(pressure[[i, j, k]], -pressure_prev[[i, j, k]]),
+                        );
                     }
                 }
             }

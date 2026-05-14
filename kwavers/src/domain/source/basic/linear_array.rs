@@ -92,8 +92,13 @@ impl LinearArray {
             .enumerate()
             .for_each(|(i, delay)| {
                 let x_elem = (i as f64).mul_add(spacing, start_x);
-                let distance = (self.z_pos - focus_z).mul_add(self.z_pos - focus_z, (self.y_pos - focus_y).mul_add(self.y_pos - focus_y, (x_elem - focus_x).powi(2)))
-                .sqrt();
+                let distance = (self.z_pos - focus_z)
+                    .mul_add(
+                        self.z_pos - focus_z,
+                        (self.y_pos - focus_y)
+                            .mul_add(self.y_pos - focus_y, (x_elem - focus_x).powi(2)),
+                    )
+                    .sqrt();
                 *delay = distance / c; // Time delay, not phase delay
             });
         debug!(

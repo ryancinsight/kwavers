@@ -77,10 +77,7 @@ impl crate::domain::plugin::Plugin for HybridPlugin {
         // The boundary is taken from the context.
         use crate::domain::source::{NullSource, Source};
         let null_source = NullSource::new();
-        let source: &dyn Source = context
-            .sources
-            .first()
-            .map_or(&null_source, |s| s.as_ref());
+        let source: &dyn Source = context.sources.first().map_or(&null_source, |s| s.as_ref());
         let boundary = &mut *context.boundary;
 
         solver.update(fields, medium, source, boundary, dt, t)

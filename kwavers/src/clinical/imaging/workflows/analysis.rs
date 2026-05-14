@@ -104,7 +104,8 @@ pub fn generate_diagnostic_recommendations(
     if diagnostic_score >= 40.0 {
         // High suspicion case
         recommendations.push(DiagnosticRecommendation {
-            finding: "High suspicion of tissue abnormality requiring immediate attention".to_owned(),
+            finding: "High suspicion of tissue abnormality requiring immediate attention"
+                .to_owned(),
             confidence: f64::min(75.0 + diagnostic_score * 0.5, 98.0),
             recommendations: vec![
                 "Urgent biopsy recommended within 1-2 weeks".to_owned(),
@@ -164,7 +165,7 @@ pub fn generate_diagnostic_recommendations(
     Ok(recommendations)
 }
 
-#[must_use] 
+#[must_use]
 pub fn calculate_confidence_score(
     fused_result: &FusedImageResult,
     tissue_properties: &HashMap<String, Array3<f64>>,

@@ -23,7 +23,7 @@ impl Default for GpuAllocationConfig {
 
 impl GpuAllocationConfig {
     /// Create configuration with a custom safety factor clamped to `[0.0, 1.0]`.
-    #[must_use] 
+    #[must_use]
     pub fn with_safety_factor(safety_factor: f64) -> Self {
         Self {
             safety_factor: safety_factor.clamp(0.0, 1.0),

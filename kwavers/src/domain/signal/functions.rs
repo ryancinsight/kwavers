@@ -175,8 +175,13 @@ pub fn tone_burst_series(spec: &ToneBurstSpec) -> KwaversResult<Vec<f64>> {
         amplitude,
         phase,
     } = spec;
-    let (sample_rate_hz, signal_freq_hz, num_cycles, amplitude, phase) =
-        (*sample_rate_hz, *signal_freq_hz, *num_cycles, *amplitude, *phase);
+    let (sample_rate_hz, signal_freq_hz, num_cycles, amplitude, phase) = (
+        *sample_rate_hz,
+        *signal_freq_hz,
+        *num_cycles,
+        *amplitude,
+        *phase,
+    );
     let (signal_offset, signal_length) = (*signal_offset, *signal_length);
 
     if !sample_rate_hz.is_finite() || sample_rate_hz <= 0.0 {

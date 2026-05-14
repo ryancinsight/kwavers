@@ -44,7 +44,9 @@ fn test_prf_at_max_is_valid() {
     let prf_max = seq.max_prf();
     let seq2 = seq.with_prf(prf_max).expect("PRF = PRF_max must succeed");
     // prf_override must be set to the exact requested value.
-    let stored = seq2.prf_override.expect("prf_override must be Some after with_prf");
+    let stored = seq2
+        .prf_override
+        .expect("prf_override must be Some after with_prf");
     assert!(
         (stored - prf_max).abs() < 1e-6,
         "prf_override = {stored} (expected {prf_max})"

@@ -6,6 +6,7 @@
 pub mod acoustic_optical;
 pub mod coupled_solver;
 pub mod field_coupling;
+pub mod fluid_structure;
 pub mod monolithic;
 pub mod photoacoustic;
 pub mod thermal_optical;

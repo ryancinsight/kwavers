@@ -32,4 +32,3 @@ pub fn infinite_medium_point_source(
 
     (source_power / (4.0 * std::f64::consts::PI * d * r)) * (-mu_eff * r).exp()
 }
-

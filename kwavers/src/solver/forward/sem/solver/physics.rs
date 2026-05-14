@@ -125,8 +125,10 @@ impl SemSolver {
                             zeta_sum += ld[[c, r]] * q_zeta[[a, b, r]];
                         }
 
-                        let val =
-                            (w[a] * w[b]).mul_add(zeta_sum, (w[b] * w[c]).mul_add(xi_sum, w[a] * w[c] * eta_sum));
+                        let val = (w[a] * w[b]).mul_add(
+                            zeta_sum,
+                            (w[b] * w[c]).mul_add(xi_sum, w[a] * w[c] * eta_sum),
+                        );
 
                         let g = self.element_local_to_global_dof(eid, a, b, c, n);
                         ku[g] += val;

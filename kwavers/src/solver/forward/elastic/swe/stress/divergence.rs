@@ -1,7 +1,7 @@
 //! Two-pass elastic stress tensor divergence computation.
 
-use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
 use super::super::types::ElasticWaveField;
+use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 

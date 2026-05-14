@@ -37,12 +37,10 @@ impl BemFemCoupler {
         let f = wavenumber * c / (2.0 * std::f64::consts::PI);
         self.bem_solver.config.frequency = f;
         self.bem_solver.config.wavenumber = wavenumber;
-        self.bem_solver.config.coupling_alpha =
-            num_complex::Complex64::new(0.0, 1.0 / wavenumber);
+        self.bem_solver.config.coupling_alpha = num_complex::Complex64::new(0.0, 1.0 / wavenumber);
         self.bem_solver.invalidate_matrix();
 
-        let normals =
-            compute_vertex_normals(&self.bem_solver.vertices, &self.bem_solver.triangles);
+        let normals = compute_vertex_normals(&self.bem_solver.vertices, &self.bem_solver.triangles);
         let (p_inc, dp_inc_dn) = plane_wave_incident(
             &self.bem_solver.vertices,
             &normals,
@@ -111,8 +109,8 @@ impl BemFemCoupler {
                         let k_val = grads[i].dot(&grads[j]) * volume;
                         let delta = if i == j { 1.0 } else { 0.0 };
                         let m_val = (1.0 + delta) * volume / 20.0;
-                        let val = Complex64::from(k_val)
-                            - Complex64::from(wavenumber.powi(2) * m_val);
+                        let val =
+                            Complex64::from(k_val) - Complex64::from(wavenumber.powi(2) * m_val);
                         coo.add_triplet(n_indices[i], n_indices[j], val);
                     }
                 }
@@ -169,8 +167,7 @@ impl BemFemCoupler {
         let solver = IterativeSolver::create(config);
 
         let initial_guess = Array1::from_vec(fem_field.to_vec());
-        let solution =
-            solver.bicgstab_complex(matrix, rhs.view(), Some(initial_guess.view()))?;
+        let solution = solver.bicgstab_complex(matrix, rhs.view(), Some(initial_guess.view()))?;
 
         for i in 0..num_nodes {
             fem_field[i] = solution[i];

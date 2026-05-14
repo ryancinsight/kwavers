@@ -37,8 +37,12 @@ pub fn calculate_field_metrics(
     let (peak_location, peak_pressure) = find_peak_pressure(pressure_field, grid)?;
 
     // Calculate focal distance
-    let focal_distance =
-        peak_location[2].mul_add(peak_location[2], peak_location[1].mul_add(peak_location[1], peak_location[0].powi(2))).sqrt();
+    let focal_distance = peak_location[2]
+        .mul_add(
+            peak_location[2],
+            peak_location[1].mul_add(peak_location[1], peak_location[0].powi(2)),
+        )
+        .sqrt();
 
     // Calculate beam width at focus
     let beam_width = calculate_beam_width_at_location(
@@ -205,8 +209,17 @@ mod tests {
 
         let metrics = calculate_field_metrics(field.view(), &grid, 1000.0, 1500.0).unwrap();
 
-        assert!(metrics.peak_pressure > 0.0, "peak_pressure must be positive");
-        assert!(metrics.total_power >= 0.0, "total_power must be non-negative");
-        assert!(metrics.spatial_peak_intensity > 0.0, "spatial_peak_intensity positive");
+        assert!(
+            metrics.peak_pressure > 0.0,
+            "peak_pressure must be positive"
+        );
+        assert!(
+            metrics.total_power >= 0.0,
+            "total_power must be non-negative"
+        );
+        assert!(
+            metrics.spatial_peak_intensity > 0.0,
+            "spatial_peak_intensity positive"
+        );
     }
 }

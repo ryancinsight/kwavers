@@ -105,8 +105,7 @@ pub fn directional_smoothing(speed_field: &mut Array3<f64>) {
                 let z_dir = (speed_field[[i, j, k - 1]] + speed_field[[i, j, k + 1]]) / 2.0;
 
                 smoothed[[i, j, k]] =
-                    (center.mul_add(0.4, x_dir * 0.2) + y_dir * 0.2 + z_dir * 0.2)
-                        .clamp(0.5, 10.0);
+                    (center.mul_add(0.4, x_dir * 0.2) + y_dir * 0.2 + z_dir * 0.2).clamp(0.5, 10.0);
             }
         }
     }

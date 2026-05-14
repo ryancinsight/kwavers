@@ -5,9 +5,7 @@ use ndarray::{Array3, Zip};
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::{
-    kernel::FocalKernel, placement::place_kernel_at_focus, resample::resample_trilinear,
-};
+use super::{kernel::FocalKernel, placement::place_kernel_at_focus, resample::resample_trilinear};
 
 /// Bilinear interpolator across a sparse `(f0, pnp)` kernel sweep.
 ///
@@ -197,11 +195,9 @@ impl KernelCube {
         // the entire inner loop.
         let mut blend = env_lo;
         let inv_alpha = 1.0 - alpha;
-        Zip::from(&mut blend)
-            .and(&env_hi)
-            .par_for_each(|lo, &hi| {
-                *lo = (*lo).mul_add(inv_alpha, hi * alpha);
-            });
+        Zip::from(&mut blend).and(&env_hi).par_for_each(|lo, &hi| {
+            *lo = (*lo).mul_add(inv_alpha, hi * alpha);
+        });
         let peak = blend.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if peak > 0.0 {
             blend.mapv_inplace(|v| v / peak);

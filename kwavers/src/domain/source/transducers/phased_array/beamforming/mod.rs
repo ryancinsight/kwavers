@@ -177,7 +177,7 @@ impl BeamformingCalculator {
     /// # Panics
     /// - Panics if `Focus delay calculation failed - invalid geometry or medium parameters`.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn calculate_focus_delays(
         &self,
         element_positions: &[(f64, f64, f64)],

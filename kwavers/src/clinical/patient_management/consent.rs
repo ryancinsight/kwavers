@@ -20,7 +20,7 @@ pub enum ConsentType {
 
 impl ConsentType {
     /// Get string representation
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::GeneralTreatment => "General Treatment",
@@ -78,7 +78,7 @@ impl ConsentRecord {
     }
 
     /// Check if consent is currently valid
-    #[must_use] 
+    #[must_use]
     pub fn is_valid(&self) -> bool {
         if self.status != "active" {
             return false;

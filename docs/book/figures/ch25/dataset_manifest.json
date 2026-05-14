@@ -1,0 +1,68 @@
+{
+  "sources": [
+    {
+      "license": "sample data distributed in repository",
+      "name": "NiiVue cranial CT/T1/T2 sample",
+      "path": "D:\\kwavers\\data\\niivue\\CT_Philips.nii.gz",
+      "present": true,
+      "role": "runnable local CT/MRI default",
+      "source_url": "https://github.com/niivue/niivue-images"
+    },
+    {
+      "license": "CC BY 3.0 US",
+      "name": "RIRE patient 109 CT",
+      "path": "D:\\kwavers\\data\\rire_patient_109\\patient_109_ct.nii.gz",
+      "present": true,
+      "role": "same-patient CT skull acoustic map",
+      "source_url": "https://rire.insight-journal.org/download_data"
+    },
+    {
+      "license": "RIRE-derived mirror; source dataset CC BY 3.0 US",
+      "name": "RIRE patient 109 MR-T1/T2",
+      "path": "D:\\kwavers\\data\\rire_patient_109\\patient_109_mr_t1.nii.gz",
+      "present": true,
+      "role": "same-patient MRI for CT/MR registration",
+      "source_url": "https://pyscience.wordpress.com/2014/11/02/multi-modal-image-segmentation-with-python-simpleitk/"
+    },
+    {
+      "license": "MNI/McGill permissive atlas terms",
+      "name": "MNI ICBM152 nonlinear 2009c symmetric",
+      "path": "D:\\kwavers\\data\\mni_icbm152_2009c\\mni_icbm152_nlin_sym_09c\\mni_icbm152_t1_tal_nlin_sym_09c.nii",
+      "present": true,
+      "role": "atlas and target coordinate frame",
+      "source_url": "https://www.mcgill.ca/bic/node/73"
+    },
+    {
+      "license": "CC BY 4.0",
+      "name": "CFB-GBM",
+      "path": "D:\\kwavers\\data\\cfb_gbm_sample",
+      "present": false,
+      "role": "preferred same-patient CT/MRI/segmentation cohort",
+      "source_url": "https://www.cancerimagingarchive.net/collection/cfb-gbm/"
+    },
+    {
+      "license": "CT: CC BY 3.0 US; segmentation: deterministic local annotation",
+      "name": "RIRE CT-space segmentation sample",
+      "path": "D:\\kwavers\\data\\ct_segmentation_sample",
+      "present": true,
+      "role": "executable CT+segmentation BBB planning contract",
+      "source_url": "https://rire.insight-journal.org/download_data"
+    },
+    {
+      "license": "CC BY 4.0",
+      "name": "UPenn-GBM subject sub-002",
+      "path": "D:\\kwavers\\data\\upenn_gbm_sample",
+      "present": true,
+      "role": "local executable GBM MRI/segmentation sample",
+      "source_url": "https://github.com/data-nih/tcia/releases/tag/upenn-gbm"
+    },
+    {
+      "license": "NIH controlled access",
+      "name": "GLIS-RT",
+      "path": null,
+      "present": false,
+      "role": "DICOM GBM/glioma CT/MR/RTSTRUCT fallback",
+      "source_url": "https://www.cancerimagingarchive.net/collection/glis-rt/"
+    }
+  ]
+}

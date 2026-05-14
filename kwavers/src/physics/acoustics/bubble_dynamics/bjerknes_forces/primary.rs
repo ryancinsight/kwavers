@@ -80,7 +80,8 @@ mod tests {
         // f2/f1 = (10/5)² = 4
         assert!(
             (f2 / f1 - 4.0).abs() < 1e-12,
-            "force ratio must be 4 when radius doubles (got {:.6})", f2 / f1
+            "force ratio must be 4 when radius doubles (got {:.6})",
+            f2 / f1
         );
     }
 
@@ -88,6 +89,9 @@ mod tests {
     #[test]
     fn primary_bjerknes_force_negative_for_positive_gradient() {
         let f = calc().primary_bjerknes_force(5e-6, 1e5, 1e3).unwrap();
-        assert!(f < 0.0, "positive gradient must give negative force (got {f:.3e})");
+        assert!(
+            f < 0.0,
+            "positive gradient must give negative force (got {f:.3e})"
+        );
     }
 }

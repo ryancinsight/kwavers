@@ -135,7 +135,10 @@ mod tests {
     #[test]
     fn mass_transfer_coefficient_positive_for_physical_inputs() {
         let h = default_calc().mass_transfer_coefficient(T_BOILING_WATER, 0.04);
-        assert!(h > 0.0 && h.is_finite(), "mass_transfer_coefficient must be positive finite (got {h:.3e})");
+        assert!(
+            h > 0.0 && h.is_finite(),
+            "mass_transfer_coefficient must be positive finite (got {h:.3e})"
+        );
     }
 
     /// `thermal_conductivity_vapor` is positive and increases with temperature.

@@ -99,7 +99,7 @@ impl LinearSolver {
         for i in 0..nx - 1 {
             for j in 0..ny - 1 {
                 for k in 0..nz - 1 {
-                    let idx   = i * ny * nz + j * nz + k;
+                    let idx = i * ny * nz + j * nz + k;
                     let idx_x = (i + 1) * ny * nz + j * nz + k;
                     let idx_y = i * ny * nz + (j + 1) * nz + k;
                     let idx_z = i * ny * nz + j * nz + (k + 1);
@@ -114,10 +114,8 @@ impl LinearSolver {
 
                         if grad_mag > threshold {
                             let factor = (grad_mag - threshold) / grad_mag;
-                            result[idx] = factor.mul_add(
-                                x[idx] - (x[idx_x] + x[idx_y] + x[idx_z]) / 3.0,
-                                x[idx],
-                            );
+                            result[idx] = factor
+                                .mul_add(x[idx] - (x[idx_x] + x[idx_y] + x[idx_z]) / 3.0, x[idx]);
                         }
                     }
                 }
@@ -126,5 +124,4 @@ impl LinearSolver {
 
         Ok(result)
     }
-
 }

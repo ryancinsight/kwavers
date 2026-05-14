@@ -18,25 +18,25 @@ pub struct MCResult {
 
 impl MCResult {
     /// Get absorbed energy map (J/m³)
-    #[must_use] 
+    #[must_use]
     pub fn absorbed_energy(&self) -> &[f64] {
         &self.absorbed_energy
     }
 
     /// Get fluence map (J/m²)
-    #[must_use] 
+    #[must_use]
     pub fn fluence(&self) -> &[f64] {
         &self.fluence
     }
 
     /// Get total absorbed energy (J)
-    #[must_use] 
+    #[must_use]
     pub fn total_absorbed_energy(&self) -> f64 {
         self.absorbed_energy.iter().sum()
     }
 
     /// Get fluence normalized by number of photons
-    #[must_use] 
+    #[must_use]
     pub fn normalized_fluence(&self) -> Vec<f64> {
         let norm = 1.0 / self.num_photons as f64;
         self.fluence.iter().map(|&f| f * norm).collect()
@@ -46,7 +46,7 @@ impl MCResult {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn dimensions(&self) -> GridDimensions {
         self.dimensions
     }
@@ -58,7 +58,7 @@ impl MCResult {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn diffuse_reflectance(&self) -> f64 {
         self.diffuse_reflectance
     }

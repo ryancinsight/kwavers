@@ -16,10 +16,10 @@ pub enum ConservationLaw {
 impl std::fmt::Display for ConservationLaw {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Mass     => write!(f, "Mass"),
+            Self::Mass => write!(f, "Mass"),
             Self::Momentum => write!(f, "Momentum"),
-            Self::Energy   => write!(f, "Energy"),
-            Self::Charge   => write!(f, "Charge"),
+            Self::Energy => write!(f, "Energy"),
+            Self::Charge => write!(f, "Charge"),
         }
     }
 }

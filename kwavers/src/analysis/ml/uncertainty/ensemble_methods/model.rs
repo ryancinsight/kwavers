@@ -1,10 +1,10 @@
 use crate::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
-#[cfg(feature = "pinn")]
-use ndarray::{Array1, Array2};
 #[cfg(not(feature = "pinn"))]
 use ndarray::Array2;
+#[cfg(feature = "pinn")]
+use ndarray::{Array1, Array2};
 
 /// Individual ensemble model
 #[derive(Debug, Clone)]

@@ -120,7 +120,7 @@ pub fn normalize_features(features: &mut [Array3<f32>]) {
 /// let stacked = concatenate_features(&features);
 /// assert_eq!(stacked.shape(), &[1, 5, 256, 256]);
 /// ```
-#[must_use] 
+#[must_use]
 pub fn concatenate_features(features: &[Array3<f32>]) -> ndarray::Array4<f32> {
     if features.is_empty() {
         return ndarray::Array4::zeros((0, 0, 0, 0));

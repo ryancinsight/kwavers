@@ -25,7 +25,11 @@ mod tests {
     /// RefractionAngles stores all fields correctly, including None critical angle.
     #[test]
     fn stores_fields_with_no_critical_angle() {
-        let a = RefractionAngles { incident: PI / 6.0, refracted: PI / 4.0, critical: None };
+        let a = RefractionAngles {
+            incident: PI / 6.0,
+            refracted: PI / 4.0,
+            critical: None,
+        };
         assert!((a.incident - PI / 6.0).abs() < 1e-15);
         assert!((a.refracted - PI / 4.0).abs() < 1e-15);
         assert!(a.critical.is_none());
@@ -35,10 +39,16 @@ mod tests {
     #[test]
     fn stores_critical_angle_when_present() {
         let theta_c = (1500.0_f64 / 3400.0).asin(); // water–bone critical angle ≈ 26.2°
-        let a = RefractionAngles { incident: 0.1, refracted: 0.0, critical: Some(theta_c) };
+        let a = RefractionAngles {
+            incident: 0.1,
+            refracted: 0.0,
+            critical: Some(theta_c),
+        };
         let stored = a.critical.expect("critical angle must be Some");
-        assert!((stored - theta_c).abs() < 1e-15,
-            "stored critical={stored}, expected={theta_c}");
+        assert!(
+            (stored - theta_c).abs() < 1e-15,
+            "stored critical={stored}, expected={theta_c}"
+        );
     }
 
     /// Clone produces an equal copy including the Option field.
@@ -68,12 +78,18 @@ mod tests {
         let theta_i = 20.0_f64.to_radians();
         let theta_t = ((c2 / c1) * theta_i.sin()).asin();
 
-        let a = RefractionAngles { incident: theta_i, refracted: theta_t, critical: None };
+        let a = RefractionAngles {
+            incident: theta_i,
+            refracted: theta_t,
+            critical: None,
+        };
 
         // Verify Snell's law: c1·sin(θ_t) ≈ c2·sin(θ_i)
         let lhs = c1 * a.refracted.sin();
         let rhs = c2 * a.incident.sin();
-        assert!((lhs - rhs).abs() < 1e-10,
-            "Snell: c1·sin(θ_t)={lhs:.6}, c2·sin(θ_i)={rhs:.6}");
+        assert!(
+            (lhs - rhs).abs() < 1e-10,
+            "Snell: c1·sin(θ_t)={lhs:.6}, c2·sin(θ_i)={rhs:.6}"
+        );
     }
 }

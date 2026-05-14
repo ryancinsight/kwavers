@@ -19,7 +19,8 @@ fn test_keller_miksis_equilibrium() {
 
     let mut state = BubbleState::at_equilibrium(&params);
 
-    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
+    let accel = model
+        .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
         .expect("Equilibrium calculation should succeed");
 
     assert!(
@@ -43,7 +44,8 @@ fn test_keller_miksis_compression() {
     state.radius = 3e-6;
     state.wall_velocity = -10.0;
 
-    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
+    let accel = model
+        .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
         .expect("Compression calculation should succeed");
     assert!(accel.is_finite(), "Acceleration should be finite");
 }
@@ -62,7 +64,8 @@ fn test_keller_miksis_expansion() {
     state.radius = 8e-6;
     state.wall_velocity = 20.0;
 
-    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
+    let accel = model
+        .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
         .expect("Expansion calculation should succeed");
     assert!(
         accel < 0.0,
@@ -84,7 +87,8 @@ fn test_keller_miksis_acoustic_forcing() {
     let p_acoustic = -50000.0;
     let t = 0.25e-6;
 
-    let accel = model.calculate_acceleration(&mut state, p_acoustic, 0.0, t)
+    let accel = model
+        .calculate_acceleration(&mut state, p_acoustic, 0.0, t)
         .expect("Acoustic forcing calculation should succeed");
     assert!(accel > 0.0, "Negative pressure should cause expansion");
 }
@@ -111,7 +115,8 @@ fn test_radiation_damping_term() {
     let p_acoustic = 50000.0;
     let dp_dt = 1e8;
 
-    let accel_with_damping = model.calculate_acceleration(&mut state, p_acoustic, dp_dt, 0.0)
+    let accel_with_damping = model
+        .calculate_acceleration(&mut state, p_acoustic, dp_dt, 0.0)
         .expect("Calculation with dp/dt should succeed");
     assert!(accel_with_damping.is_finite());
 }
@@ -124,7 +129,9 @@ fn test_mach_number_tracking() {
 
     state.wall_velocity = 150.0;
 
-    model.calculate_acceleration(&mut state, 0.0, 0.0, 0.0).unwrap();
+    model
+        .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
+        .unwrap();
     let expected_mach = 150.0 / params.c_liquid;
     assert!(
         (state.mach_number - expected_mach).abs() < 1e-10,

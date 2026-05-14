@@ -102,10 +102,7 @@ impl CalibrationManager {
 
             b_vector[i - 1] = dist_diff.mul_add(
                 dist_diff,
-                -pos[2].mul_add(
-                    pos[2],
-                    pos[0].mul_add(pos[0], pos[1] * pos[1]),
-                ),
+                -pos[2].mul_add(pos[2], pos[0].mul_add(pos[0], pos[1] * pos[1])),
             ) + ref_pos[2].mul_add(
                 ref_pos[2],
                 ref_pos[0].mul_add(ref_pos[0], ref_pos[1] * ref_pos[1]),

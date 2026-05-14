@@ -52,7 +52,7 @@
 //!   absorbing layer model to the linear elastodynamic problem in anisotropic
 //!   heterogeneous media. Geophysics **66**(1), 294–307.
 
-use super::pml::build_axis_alpha_beta;
+use super::pml::{build_axis_alpha_beta, ElasticPmlSpec};
 use ndarray::{Array1, Array3};
 
 /// Pre-computed per-axis exponential and integration coefficients for the
@@ -76,30 +76,42 @@ pub struct ElasticSplitFieldPml {
 impl ElasticSplitFieldPml {
     /// Build the split-field PML for a `(nx, ny, nz)` grid.
     ///
-    /// Parameters follow the same convention as [`super::pml::ElasticPml::new`]:
-    /// `c_max` is the maximum wave speed in the medium, `r0` is the target
-    /// theoretical reflection coefficient, and the polynomial order p = 4
-    /// (Roden & Gedney 2000 optimal for spectral solvers) is fixed.
+    /// Parameters follow [`ElasticPmlSpec`]: `c_max` is the maximum wave
+    /// speed in the medium, `r0` is the target theoretical reflection
+    /// coefficient, and the polynomial order p = 4 (Roden & Gedney 2000
+    /// optimal for spectral solvers) is fixed.
     #[must_use]
-    pub fn new(
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        thickness_cells: (usize, usize, usize),
-        dx: f64,
-        dy: f64,
-        dz: f64,
-        c_max: f64,
-        dt: f64,
-        r0: f64,
-    ) -> Self {
+    pub fn new(spec: ElasticPmlSpec) -> Self {
         const P: f64 = 4.0;
-        let (alpha_x, beta_x) =
-            build_axis_alpha_beta(nx, thickness_cells.0, dx, c_max, dt, r0, P);
-        let (alpha_y, beta_y) =
-            build_axis_alpha_beta(ny, thickness_cells.1, dy, c_max, dt, r0, P);
-        let (alpha_z, beta_z) =
-            build_axis_alpha_beta(nz, thickness_cells.2, dz, c_max, dt, r0, P);
+        let (nx, ny, nz) = spec.shape;
+        let (dx, dy, dz) = spec.spacing;
+        let (alpha_x, beta_x) = build_axis_alpha_beta(
+            nx,
+            spec.thickness_cells.0,
+            dx,
+            spec.c_max,
+            spec.dt,
+            spec.r0,
+            P,
+        );
+        let (alpha_y, beta_y) = build_axis_alpha_beta(
+            ny,
+            spec.thickness_cells.1,
+            dy,
+            spec.c_max,
+            spec.dt,
+            spec.r0,
+            P,
+        );
+        let (alpha_z, beta_z) = build_axis_alpha_beta(
+            nz,
+            spec.thickness_cells.2,
+            dz,
+            spec.c_max,
+            spec.dt,
+            spec.r0,
+            P,
+        );
         Self {
             alpha_x,
             beta_x,
@@ -107,7 +119,7 @@ impl ElasticSplitFieldPml {
             beta_y,
             alpha_z,
             beta_z,
-            thickness_cells,
+            thickness_cells: spec.thickness_cells,
         }
     }
 

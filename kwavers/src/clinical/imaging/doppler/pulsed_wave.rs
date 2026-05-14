@@ -99,7 +99,7 @@ pub struct PulsedWaveDoppler {
 }
 
 impl PulsedWaveDoppler {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: PWDConfig) -> Self {
         Self { config }
     }
@@ -173,7 +173,7 @@ impl PulsedWaveDoppler {
     ///
     /// Uses the Doppler equation: `v[k] = k·f_prf/fft_size · c / (2·f₀·cos θ)`.
     /// Maximum alias-free velocity: `v_max = f_prf·c/(4·f₀·cos θ)`.
-    #[must_use] 
+    #[must_use]
     pub fn velocity_axis(&self) -> Array1<f64> {
         let fft_size = self.config.fft_size;
         let out_len = fft_size / 2 + 1;
@@ -191,7 +191,7 @@ impl PulsedWaveDoppler {
     /// ```
     ///
     /// Above this velocity, Doppler aliasing occurs (Evans & McDicken 2000, §3.5).
-    #[must_use] 
+    #[must_use]
     pub fn max_velocity(&self) -> f64 {
         let cos_theta = self.config.beam_angle.cos().max(1e-6);
         self.config.prf * self.config.c_sound / (4.0 * self.config.center_frequency * cos_theta)

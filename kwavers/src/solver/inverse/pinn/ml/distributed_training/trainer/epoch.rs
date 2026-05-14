@@ -34,8 +34,8 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         initial_points: &[(f64, f64, f64)],
         target_values: &[f64],
     ) -> KwaversResult<Vec<(BurnTrainingMetrics2D, Vec<f32>)>> {
-        use crate::solver::inverse::pinn::ml::BurnLossWeights2D;
         use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D;
+        use crate::solver::inverse::pinn::ml::BurnLossWeights2D;
 
         // Build tensor helper: &[(f64,f64,f64)] → three [N,1] tensors.
         fn to_xyz_tensors<B: AutodiffBackend>(
@@ -47,7 +47,11 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             let yv: Vec<f32> = pts.iter().map(|p| p.1 as f32).collect();
             let tv: Vec<f32> = pts.iter().map(|p| p.2 as f32).collect();
             let pad = |v: Vec<f32>| {
-                if v.is_empty() { vec![0.0_f32] } else { v }
+                if v.is_empty() {
+                    vec![0.0_f32]
+                } else {
+                    v
+                }
             };
             let x = Tensor::<B, 1>::from_floats(pad(xv).as_slice(), device).reshape([n, 1]);
             let y = Tensor::<B, 1>::from_floats(pad(yv).as_slice(), device).reshape([n, 1]);
@@ -65,8 +69,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         for replica_idx in 0..n_replicas {
             let device = B::Device::default();
 
-            let (x_colloc, y_colloc, t_colloc) =
-                to_xyz_tensors::<B>(collocation_points, &device);
+            let (x_colloc, y_colloc, t_colloc) = to_xyz_tensors::<B>(collocation_points, &device);
             let (x_bc, y_bc, t_bc) = to_xyz_tensors::<B>(boundary_points, &device);
             let (x_ic, y_ic, t_ic) = to_xyz_tensors::<B>(initial_points, &device);
 
@@ -103,16 +106,11 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
                     loss_weights,
                 );
 
-            let total_val =
-                total_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let data_val =
-                data_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let pde_val =
-                pde_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let bc_val =
-                bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let ic_val =
-                ic_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let total_val = total_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let data_val = data_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let pde_val = pde_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let bc_val = bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let ic_val = ic_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
 
             if total_val.is_finite() {
                 let grads = total_loss.backward();
@@ -151,24 +149,36 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         let mut ic_loss = 0.0_f64;
 
         for (metrics, _) in gpu_results {
-            if let Some(tl) = metrics.total_loss.last() { total_loss += tl; }
-            if let Some(dl) = metrics.data_loss.last()  { data_loss  += dl; }
-            if let Some(pl) = metrics.pde_loss.last()   { pde_loss   += pl; }
-            if let Some(bl) = metrics.bc_loss.last()    { bc_loss    += bl; }
-            if let Some(il) = metrics.ic_loss.last()    { ic_loss    += il; }
+            if let Some(tl) = metrics.total_loss.last() {
+                total_loss += tl;
+            }
+            if let Some(dl) = metrics.data_loss.last() {
+                data_loss += dl;
+            }
+            if let Some(pl) = metrics.pde_loss.last() {
+                pde_loss += pl;
+            }
+            if let Some(bl) = metrics.bc_loss.last() {
+                bc_loss += bl;
+            }
+            if let Some(il) = metrics.ic_loss.last() {
+                ic_loss += il;
+            }
         }
 
         let n = n_gpus as f64;
         let g = &mut self.coordinator.training_state.global_metrics;
         g.total_loss.push(total_loss / n);
-        g.data_loss.push(data_loss  / n);
-        g.pde_loss.push(pde_loss   / n);
-        g.bc_loss.push(bc_loss    / n);
-        g.ic_loss.push(ic_loss    / n);
+        g.data_loss.push(data_loss / n);
+        g.pde_loss.push(pde_loss / n);
+        g.bc_loss.push(bc_loss / n);
+        g.ic_loss.push(ic_loss / n);
 
         Ok(())
     }
 }
 
 // Suppress unused-import for TrainingState referenced only by the parent impl.
-const _: fn() = || { let _: TrainingState; };
+const _: fn() = || {
+    let _: TrainingState;
+};

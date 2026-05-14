@@ -92,6 +92,6 @@ pub mod utils;
 
 pub use config::PSTDConfig;
 pub use derivatives::SpectralDerivativeOperator;
+pub use extensions::{PstdElasticPlugin, SpectralElasticConfig};
 pub use implementation::core::orchestrator::PSTDSolver;
 pub use plugin::PSTDPlugin;
-pub use extensions::{PstdElasticPlugin, SpectralElasticConfig};

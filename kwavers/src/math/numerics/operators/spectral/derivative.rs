@@ -14,11 +14,10 @@
 
 use super::trait_def::SpectralOperator;
 use super::{FilterType, SpectralFilter};
-use crate::core::error::{KwaversResult, NumericalError};
-use crate::math::fft::{Complex64, Shape1D, FFT_CACHE_1D};
-use ndarray::{Array1, Array3, ArrayView3, Axis};
+use crate::core::error::{KwaversError, KwaversResult, NumericalError};
+use crate::math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
+use ndarray::{Array1, Array3, ArrayView3};
 use std::f64::consts::PI;
-use std::sync::Arc;
 
 /// Pseudospectral derivative operator using FFT
 ///
@@ -94,47 +93,30 @@ impl PseudospectralDerivative {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn derivative_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-
-        if nx != self.kx.len() {
-            return Err(NumericalError::InvalidGridSpacing {
-                dx: self.dx,
-                dy: self.dy,
-                dz: self.dz,
-            }
-            .into());
-        }
-
-        let mut derivative = Array3::zeros((nx, ny, nz));
-        let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: nx });
-        let ifft = Arc::clone(&fft);
-
-        for j in 0..ny {
-            for k in 0..nz {
-                let mut buffer = Array1::<Complex64>::from_iter(
-                    field
-                        .index_axis(Axis(1), j)
-                        .index_axis(Axis(1), k)
-                        .iter()
-                        .map(|&x| Complex64::new(x, 0.0)),
-                );
-
-                fft.forward_complex_inplace(&mut buffer);
-
-                for (idx, kx_val) in self.kx.iter().enumerate() {
-                    buffer[idx] *= Complex64::new(0.0, *kx_val);
-                }
-
-                // apollo-fft applies 1/N normalisation; no extra scale needed.
-                ifft.inverse_complex_inplace(&mut buffer);
-
-                for (idx, val) in buffer.iter().enumerate() {
-                    derivative[[idx, j, k]] = val.re;
-                }
-            }
-        }
-
+        let mut derivative = Array3::zeros(field.dim());
+        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().0);
+        self.derivative_x_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
+    }
+
+    /// Compute ∂u/∂x into caller-owned workspaces.
+    ///
+    /// The implementation reuses one complex line buffer across every `(y,z)`
+    /// pencil. This preserves the Fourier differentiation theorem while
+    /// eliminating the per-line `Array1` allocations used by the allocating
+    /// wrapper.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::DimensionMismatch`] when either workspace shape
+    /// does not match `field`, or propagates invalid-grid diagnostics when the
+    /// field axis length is inconsistent with the operator wavenumber vector.
+    pub fn derivative_x_into(
+        &self,
+        field: ArrayView3<f64>,
+        line_workspace: &mut Array1<Complex64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        self.derivative_axis_into::<0>(field, line_workspace, output)
     }
 
     /// Compute spectral derivative in Y direction: ∂u/∂y = F⁻¹{ik_y F{u}}
@@ -142,47 +124,29 @@ impl PseudospectralDerivative {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn derivative_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-
-        if ny != self.ky.len() {
-            return Err(NumericalError::InvalidGridSpacing {
-                dx: self.dx,
-                dy: self.dy,
-                dz: self.dz,
-            }
-            .into());
-        }
-
-        let mut derivative = Array3::zeros((nx, ny, nz));
-        let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: ny });
-        let ifft = Arc::clone(&fft);
-
-        for i in 0..nx {
-            for k in 0..nz {
-                let mut buffer = Array1::<Complex64>::from_iter(
-                    field
-                        .index_axis(Axis(0), i)
-                        .index_axis(Axis(1), k)
-                        .iter()
-                        .map(|&x| Complex64::new(x, 0.0)),
-                );
-
-                fft.forward_complex_inplace(&mut buffer);
-
-                for (idx, ky_val) in self.ky.iter().enumerate() {
-                    buffer[idx] *= Complex64::new(0.0, *ky_val);
-                }
-
-                // apollo-fft applies 1/N normalisation; no extra scale needed.
-                ifft.inverse_complex_inplace(&mut buffer);
-
-                for (idx, val) in buffer.iter().enumerate() {
-                    derivative[[i, idx, k]] = val.re;
-                }
-            }
-        }
-
+        let mut derivative = Array3::zeros(field.dim());
+        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().1);
+        self.derivative_y_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
+    }
+
+    /// Compute ∂u/∂y into caller-owned workspaces.
+    ///
+    /// The implementation reuses one complex line buffer across every `(x,z)`
+    /// pencil. This is the same monomorphized Fourier kernel used by the
+    /// allocating wrapper and differs only in workspace ownership.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::DimensionMismatch`] when either workspace shape
+    /// does not match `field`, or propagates invalid-grid diagnostics when the
+    /// field axis length is inconsistent with the operator wavenumber vector.
+    pub fn derivative_y_into(
+        &self,
+        field: ArrayView3<f64>,
+        line_workspace: &mut Array1<Complex64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        self.derivative_axis_into::<1>(field, line_workspace, output)
     }
 
     /// Compute spectral derivative in Z direction: ∂u/∂z = F⁻¹{ik_z F{u}}
@@ -190,48 +154,152 @@ impl PseudospectralDerivative {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn derivative_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-
-        if nz != self.kz.len() {
-            return Err(NumericalError::InvalidGridSpacing {
-                dx: self.dx,
-                dy: self.dy,
-                dz: self.dz,
-            }
-            .into());
-        }
-
-        let mut derivative = Array3::zeros((nx, ny, nz));
-        let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: nz });
-        let ifft = Arc::clone(&fft);
-
-        for i in 0..nx {
-            for j in 0..ny {
-                let mut buffer = Array1::<Complex64>::from_iter(
-                    field
-                        .index_axis(Axis(0), i)
-                        .index_axis(Axis(0), j)
-                        .iter()
-                        .map(|&x| Complex64::new(x, 0.0)),
-                );
-
-                fft.forward_complex_inplace(&mut buffer);
-
-                for (idx, kz_val) in self.kz.iter().enumerate() {
-                    buffer[idx] *= Complex64::new(0.0, *kz_val);
-                }
-
-                // apollo-fft applies 1/N normalisation; no extra scale needed.
-                ifft.inverse_complex_inplace(&mut buffer);
-
-                for (idx, val) in buffer.iter().enumerate() {
-                    derivative[[i, j, idx]] = val.re;
-                }
-            }
-        }
-
+        let mut derivative = Array3::zeros(field.dim());
+        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().2);
+        self.derivative_z_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
     }
+
+    /// Compute ∂u/∂z into caller-owned workspaces.
+    ///
+    /// The implementation reuses one complex line buffer across every `(x,y)`
+    /// pencil. This is the same monomorphized Fourier kernel used by the
+    /// allocating wrapper and differs only in workspace ownership.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::DimensionMismatch`] when either workspace shape
+    /// does not match `field`, or propagates invalid-grid diagnostics when the
+    /// field axis length is inconsistent with the operator wavenumber vector.
+    pub fn derivative_z_into(
+        &self,
+        field: ArrayView3<f64>,
+        line_workspace: &mut Array1<Complex64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        self.derivative_axis_into::<2>(field, line_workspace, output)
+    }
+
+    /// Monomorphized Fourier differentiation kernel for one Cartesian axis.
+    ///
+    /// `AXIS` is a structural compile-time parameter, so the compiler emits
+    /// separate x/y/z specializations and strips the inactive loop branches.
+    /// Variation is encoded in the type system instead of three cloned
+    /// algorithm bodies.
+    fn derivative_axis_into<const AXIS: usize>(
+        &self,
+        field: ArrayView3<f64>,
+        line_workspace: &mut Array1<Complex64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = field.dim();
+        validate_output_shape(output.dim(), field.dim())?;
+
+        match AXIS {
+            0 => {
+                validate_axis_len(nx, self.kx.len(), self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.len(), nx)?;
+                let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: nx });
+                for j in 0..ny {
+                    for k in 0..nz {
+                        for i in 0..nx {
+                            line_workspace[i] = Complex64::new(field[[i, j, k]], 0.0);
+                        }
+                        differentiate_line(line_workspace, &self.kx, &fft);
+                        for i in 0..nx {
+                            output[[i, j, k]] = line_workspace[i].re;
+                        }
+                    }
+                }
+            }
+            1 => {
+                validate_axis_len(ny, self.ky.len(), self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.len(), ny)?;
+                let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: ny });
+                for i in 0..nx {
+                    for k in 0..nz {
+                        for j in 0..ny {
+                            line_workspace[j] = Complex64::new(field[[i, j, k]], 0.0);
+                        }
+                        differentiate_line(line_workspace, &self.ky, &fft);
+                        for j in 0..ny {
+                            output[[i, j, k]] = line_workspace[j].re;
+                        }
+                    }
+                }
+            }
+            2 => {
+                validate_axis_len(nz, self.kz.len(), self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.len(), nz)?;
+                let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: nz });
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            line_workspace[k] = Complex64::new(field[[i, j, k]], 0.0);
+                        }
+                        differentiate_line(line_workspace, &self.kz, &fft);
+                        for k in 0..nz {
+                            output[[i, j, k]] = line_workspace[k].re;
+                        }
+                    }
+                }
+            }
+            _ => unreachable!("PseudospectralDerivative only supports axes 0, 1, and 2"),
+        }
+
+        Ok(())
+    }
+}
+
+fn differentiate_line(
+    line_workspace: &mut Array1<Complex64>,
+    wavenumbers: &Array1<f64>,
+    fft: &std::sync::Arc<Fft1d>,
+) {
+    fft.forward_complex_inplace(line_workspace);
+
+    for (value, &k_axis) in line_workspace.iter_mut().zip(wavenumbers.iter()) {
+        *value *= Complex64::new(0.0, k_axis);
+    }
+
+    // apollo-fft applies 1/N normalisation; no extra scale needed.
+    fft.inverse_complex_inplace(line_workspace);
+}
+
+fn validate_axis_len(
+    field_len: usize,
+    expected_len: usize,
+    dx: f64,
+    dy: f64,
+    dz: f64,
+) -> KwaversResult<()> {
+    if field_len != expected_len {
+        return Err(NumericalError::InvalidGridSpacing { dx, dy, dz }.into());
+    }
+
+    Ok(())
+}
+
+fn validate_line_workspace(actual: usize, expected: usize) -> KwaversResult<()> {
+    if actual != expected {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "PseudospectralDerivative line workspace length {actual} must match axis length {expected}"
+        )));
+    }
+
+    Ok(())
+}
+
+fn validate_output_shape(
+    actual: (usize, usize, usize),
+    expected: (usize, usize, usize),
+) -> KwaversResult<()> {
+    if actual != expected {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "PseudospectralDerivative output shape {actual:?} must match field shape {expected:?}"
+        )));
+    }
+
+    Ok(())
 }
 
 impl SpectralOperator for PseudospectralDerivative {

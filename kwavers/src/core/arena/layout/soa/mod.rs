@@ -175,7 +175,7 @@ impl SoAFieldStorage {
 
     /// Create a 3D view of field `index` with given dimensions
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn field_view3(
         &self,
         index: usize,

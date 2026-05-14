@@ -8,7 +8,7 @@ use std::fmt::Write as FmtWrite;
 
 impl ConservationReport {
     /// Create a new conservation report
-    #[must_use] 
+    #[must_use]
     pub fn new(
         _title: String,
         metadata: ReportMetadata,
@@ -62,7 +62,8 @@ impl ConservationReport {
             recommendations.push("⚠ Large conservation errors detected - consider:".to_owned());
             recommendations.push("  1. Refining spatial grid".to_owned());
             recommendations.push(
-                "  2. Using conservative discretization (mass-conservative interpolation)".to_owned(),
+                "  2. Using conservative discretization (mass-conservative interpolation)"
+                    .to_owned(),
             );
             recommendations.push("  3. Checking boundary conditions".to_owned());
         }
@@ -79,7 +80,7 @@ impl ConservationReport {
     }
 
     /// Format report as human-readable text
-    #[must_use] 
+    #[must_use]
     pub fn to_text(&self) -> String {
         let mut output = String::new();
 

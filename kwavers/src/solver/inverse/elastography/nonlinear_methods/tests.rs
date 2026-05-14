@@ -154,8 +154,11 @@ fn test_harmonic_ratio_inversion() {
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::HarmonicRatio);
     let map = harmonic_ratio_inversion(&harmonic_field, &grid, &config).unwrap();
-    assert_eq!(map.nonlinearity_parameter.dim(), (10, 10, 10),
-        "harmonic ratio output must span the full 10×10×10 grid");
+    assert_eq!(
+        map.nonlinearity_parameter.dim(),
+        (10, 10, 10),
+        "harmonic ratio output must span the full 10×10×10 grid"
+    );
 }
 
 #[test]
@@ -165,8 +168,11 @@ fn test_nonlinear_least_squares_inversion() {
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares);
     let map = nonlinear_least_squares_inversion(&harmonic_field, &grid, &config).unwrap();
-    assert_eq!(map.nonlinearity_parameter.dim(), (10, 10, 10),
-        "nonlinear least squares output must span the full 10×10×10 grid");
+    assert_eq!(
+        map.nonlinearity_parameter.dim(),
+        (10, 10, 10),
+        "nonlinear least squares output must span the full 10×10×10 grid"
+    );
 }
 
 #[test]
@@ -176,8 +182,11 @@ fn test_bayesian_inversion() {
 
     let config = NonlinearInversionConfig::new(NonlinearInversionMethod::BayesianInversion);
     let map = bayesian_inversion(&harmonic_field, &grid, &config).unwrap();
-    assert_eq!(map.nonlinearity_parameter.dim(), (10, 10, 10),
-        "bayesian inversion output must span the full 10×10×10 grid");
+    assert_eq!(
+        map.nonlinearity_parameter.dim(),
+        (10, 10, 10),
+        "bayesian inversion output must span the full 10×10×10 grid"
+    );
 }
 
 #[test]

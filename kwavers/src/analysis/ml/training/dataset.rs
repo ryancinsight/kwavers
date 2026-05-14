@@ -51,7 +51,7 @@ impl TrainingDataset {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.inputs.dim().0
     }
@@ -60,7 +60,7 @@ impl TrainingDataset {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -69,10 +69,7 @@ impl TrainingDataset {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn split(
-        &self,
-        validation_fraction: f64,
-    ) -> KwaversResult<(Self, Self)> {
+    pub fn split(&self, validation_fraction: f64) -> KwaversResult<(Self, Self)> {
         if validation_fraction <= 0.0 || validation_fraction >= 1.0 {
             return Err(KwaversError::InvalidInput(
                 "validation_fraction must be in (0, 1)".to_owned(),

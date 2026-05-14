@@ -74,7 +74,7 @@ pub struct ErrorIntegral {
 }
 
 impl ErrorIntegral {
-    #[must_use] 
+    #[must_use]
     pub fn new(limit: f64) -> Self {
         Self { value: 0.0, limit }
     }
@@ -110,8 +110,12 @@ mod tests {
     #[test]
     fn default_pid_config_output_ordering() {
         let cfg = PIDConfig::default();
-        assert!(cfg.output_min < cfg.output_max,
-            "output_min ({}) must be < output_max ({})", cfg.output_min, cfg.output_max);
+        assert!(
+            cfg.output_min < cfg.output_max,
+            "output_min ({}) must be < output_max ({})",
+            cfg.output_min,
+            cfg.output_max
+        );
         assert!(cfg.sample_time > 0.0, "sample_time must be positive");
         assert!(cfg.integral_limit > 0.0, "integral_limit must be positive");
     }
@@ -132,8 +136,11 @@ mod tests {
     fn error_integral_update_clamps_at_limit() {
         let mut ei = ErrorIntegral::new(1.0);
         ei.update(2.0, 1.0); // error * dt = 2 > limit
-        assert!((ei.value - 1.0).abs() < 1e-15,
-            "integral must be clamped at limit=1.0, got {}", ei.value);
+        assert!(
+            (ei.value - 1.0).abs() < 1e-15,
+            "integral must be clamped at limit=1.0, got {}",
+            ei.value
+        );
     }
 
     /// ErrorIntegral::reset sets value to zero.
@@ -152,7 +159,10 @@ mod tests {
     fn error_integral_accumulates_below_limit() {
         let mut ei = ErrorIntegral::new(10.0);
         ei.update(0.5, 2.0);
-        assert!((ei.value - 1.0).abs() < 1e-15,
-            "integral must be 1.0 (got {})", ei.value);
+        assert!(
+            (ei.value - 1.0).abs() < 1e-15,
+            "integral must be 1.0 (got {})",
+            ei.value
+        );
     }
 }

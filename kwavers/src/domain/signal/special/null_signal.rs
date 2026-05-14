@@ -12,7 +12,7 @@ pub struct NullSignal;
 
 impl NullSignal {
     /// Create a new null signal
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self
     }

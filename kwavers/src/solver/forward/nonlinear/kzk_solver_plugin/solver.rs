@@ -124,9 +124,8 @@ impl KzkSolverPlugin {
                     crate::core::error::PhysicsError::InvalidParameter {
                         parameter: "frequency_operators".to_owned(),
                         value: 0.0,
-                        reason:
-                            "KZK operators not initialized - call initialize_operators first"
-                                .to_owned(),
+                        reason: "KZK operators not initialized - call initialize_operators first"
+                            .to_owned(),
                     },
                 ))?;
 

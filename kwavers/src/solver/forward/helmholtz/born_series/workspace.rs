@@ -25,7 +25,7 @@ pub struct BornWorkspace {
 
 impl BornWorkspace {
     /// Create a new workspace with specified dimensions
-    #[must_use] 
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         let shape = (nx, ny, nz);
         Self {
@@ -56,7 +56,7 @@ impl BornWorkspace {
     }
 
     /// Get statically pre-allocated memory in bytes.
-    #[must_use] 
+    #[must_use]
     pub fn memory_usage_bytes(&self) -> usize {
         let complex_size = std::mem::size_of::<Complex64>();
         let real_size = std::mem::size_of::<f64>();

@@ -17,7 +17,7 @@ impl BiotTheory {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(material: &PoroelasticMaterial) -> Self {
         Self {
             material: material.clone(),
@@ -130,8 +130,7 @@ mod tests {
     fn compute_wave_speeds_shear_wave_consistent_with_analytical() {
         let m = bone();
         let phi = m.porosity;
-        let rho_11 =
-            (1.0 - phi) * m.solid_density + phi * m.fluid_density * (m.tortuosity - 1.0);
+        let rho_11 = (1.0 - phi) * m.solid_density + phi * m.fluid_density * (m.tortuosity - 1.0);
         let expected_shear = (m.shear_modulus / rho_11).sqrt();
 
         let biot = BiotTheory::new(&m);

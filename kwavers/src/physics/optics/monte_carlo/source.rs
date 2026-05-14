@@ -26,13 +26,13 @@ pub enum PhotonSource {
 
 impl PhotonSource {
     /// Create pencil beam source
-    #[must_use] 
+    #[must_use]
     pub fn pencil_beam(origin: [f64; 3], direction: [f64; 3]) -> Self {
         Self::PencilBeam { origin, direction }
     }
 
     /// Create Gaussian beam source
-    #[must_use] 
+    #[must_use]
     pub fn gaussian(origin: [f64; 3], direction: [f64; 3], beam_waist: f64) -> Self {
         Self::Gaussian {
             origin,
@@ -42,7 +42,7 @@ impl PhotonSource {
     }
 
     /// Create isotropic point source
-    #[must_use] 
+    #[must_use]
     pub fn isotropic(origin: [f64; 3]) -> Self {
         Self::Isotropic { origin }
     }

@@ -86,13 +86,13 @@ impl GridSensorSet {
     }
 
     /// Alias for len() for compatibility
-    #[must_use] 
+    #[must_use]
     pub fn num_sensors(&self) -> usize {
         self.len()
     }
 
     /// Alias for sample_scalar
-    #[must_use] 
+    #[must_use]
     pub fn sample(&self, field: &Array3<f64>) -> Vec<Option<f64>> {
         self.sample_scalar(field)
     }

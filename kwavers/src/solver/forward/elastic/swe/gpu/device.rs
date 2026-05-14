@@ -30,7 +30,7 @@ impl GPUDevice {
     }
 
     /// Get optimal block size for 3D computations
-    #[must_use] 
+    #[must_use]
     pub fn optimal_block_size(&self, grid_dims: [usize; 3]) -> [usize; 3] {
         let mut block_size = [8, 8, 8];
 

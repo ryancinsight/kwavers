@@ -55,13 +55,13 @@ impl BemFemSolver {
     }
 
     /// Get the coupling interface
-    #[must_use] 
+    #[must_use]
     pub fn interface(&self) -> &BemFemInterface {
         &self.coupler.interface
     }
 
     /// Get convergence information
-    #[must_use] 
+    #[must_use]
     pub fn convergence_info(&self) -> (bool, usize, &[f64]) {
         (
             self.coupler.has_converged(),
@@ -71,7 +71,7 @@ impl BemFemSolver {
     }
 
     /// Get configuration
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> &BemFemCouplingConfig {
         &self.config
     }

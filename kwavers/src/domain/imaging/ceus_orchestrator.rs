@@ -67,7 +67,7 @@ impl CEUSOrchestrators {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             default_creator: None,
@@ -106,7 +106,8 @@ impl CEUSOrchestrators {
         self.default_creator.as_ref().ok_or_else(|| {
             crate::core::error::KwaversError::FeatureNotAvailable(
                 "CEUS orchestrator registry has no default factory; register a concrete CEUS \
-                 implementation before requesting default orchestration".to_owned(),
+                 implementation before requesting default orchestration"
+                    .to_owned(),
             )
         })?(grid, medium, bubble_concentration, bubble_size)
     }

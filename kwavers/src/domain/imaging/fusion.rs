@@ -98,7 +98,7 @@ impl Default for AffineTransform {
 
 impl AffineTransform {
     /// Create an identity transformation (no change)
-    #[must_use] 
+    #[must_use]
     pub fn identity() -> Self {
         Self::default()
     }
@@ -107,7 +107,7 @@ impl AffineTransform {
     ///
     /// Extracts rotation, translation, and scale from a homogeneous
     /// transformation matrix stored in column-major order.
-    #[must_use] 
+    #[must_use]
     pub fn from_homogeneous(homogeneous: &[f64; 16]) -> Self {
         // Extract rotation matrix (upper-left 3x3)
         let rotation = [
@@ -120,12 +120,24 @@ impl AffineTransform {
         let translation = [homogeneous[3], homogeneous[7], homogeneous[11]];
 
         // Extract scale factors from rotation matrix (assuming no shear)
-        let scale_x =
-            rotation[2][0].mul_add(rotation[2][0], rotation[1][0].mul_add(rotation[1][0], rotation[0][0].powi(2))).sqrt();
-        let scale_y =
-            rotation[2][1].mul_add(rotation[2][1], rotation[1][1].mul_add(rotation[1][1], rotation[0][1].powi(2))).sqrt();
-        let scale_z =
-            rotation[2][2].mul_add(rotation[2][2], rotation[1][2].mul_add(rotation[1][2], rotation[0][2].powi(2))).sqrt();
+        let scale_x = rotation[2][0]
+            .mul_add(
+                rotation[2][0],
+                rotation[1][0].mul_add(rotation[1][0], rotation[0][0].powi(2)),
+            )
+            .sqrt();
+        let scale_y = rotation[2][1]
+            .mul_add(
+                rotation[2][1],
+                rotation[1][1].mul_add(rotation[1][1], rotation[0][1].powi(2)),
+            )
+            .sqrt();
+        let scale_z = rotation[2][2]
+            .mul_add(
+                rotation[2][2],
+                rotation[1][2].mul_add(rotation[1][2], rotation[0][2].powi(2)),
+            )
+            .sqrt();
 
         let scale = [scale_x, scale_y, scale_z];
 
@@ -137,7 +149,7 @@ impl AffineTransform {
     }
 
     /// Apply the transformation to a 3D point
-    #[must_use] 
+    #[must_use]
     pub fn transform_point(&self, point: [f64; 3]) -> [f64; 3] {
         // Apply scaling
         let scaled = [
@@ -148,9 +160,18 @@ impl AffineTransform {
 
         // Apply rotation
         let rotated = [
-            self.rotation[0][2].mul_add(scaled[2], self.rotation[0][0].mul_add(scaled[0], self.rotation[0][1] * scaled[1])),
-            self.rotation[1][2].mul_add(scaled[2], self.rotation[1][0].mul_add(scaled[0], self.rotation[1][1] * scaled[1])),
-            self.rotation[2][2].mul_add(scaled[2], self.rotation[2][0].mul_add(scaled[0], self.rotation[2][1] * scaled[1])),
+            self.rotation[0][2].mul_add(
+                scaled[2],
+                self.rotation[0][0].mul_add(scaled[0], self.rotation[0][1] * scaled[1]),
+            ),
+            self.rotation[1][2].mul_add(
+                scaled[2],
+                self.rotation[1][0].mul_add(scaled[0], self.rotation[1][1] * scaled[1]),
+            ),
+            self.rotation[2][2].mul_add(
+                scaled[2],
+                self.rotation[2][0].mul_add(scaled[0], self.rotation[2][1] * scaled[1]),
+            ),
         ];
 
         // Apply translation

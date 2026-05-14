@@ -20,7 +20,7 @@ mod benefit;
 mod pulse;
 mod regime;
 
-pub use benefit::{BenefitDetriment, intrinsic_threshold_pa};
+pub use benefit::{intrinsic_threshold_pa, BenefitDetriment};
 pub use pulse::PulsePattern;
 pub use regime::HistotripsyRegime;
 
@@ -113,7 +113,9 @@ impl HistotripsyScenario {
     /// using the peak-positive pressure as the worst-case envelope.
     #[must_use]
     pub fn pulse_average_intensity_w_m2(&self) -> f64 {
-        let p = self.peak_positive_pressure_pa.max(self.peak_negative_pressure_pa.abs());
+        let p = self
+            .peak_positive_pressure_pa
+            .max(self.peak_negative_pressure_pa.abs());
         p * p / (2.0 * Z_TISSUE)
     }
 
@@ -185,7 +187,9 @@ impl HistotripsyScenario {
             frequency_hz: 1.0e6,
             peak_negative_pressure_pa: -15.0e6,
             peak_positive_pressure_pa: 85.0e6,
-            pulse: PulsePattern::ShockFormed { duration_s: 10.0e-3 },
+            pulse: PulsePattern::ShockFormed {
+                duration_s: 10.0e-3,
+            },
             treatment_duration_s: 1200.0,
             focal_volume_mm3: 30.0,
             bd: BenefitDetriment {

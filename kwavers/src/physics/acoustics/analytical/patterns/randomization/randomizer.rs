@@ -144,9 +144,9 @@ impl PhaseRandomizer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::distribution::PhaseDistribution;
     use super::super::scheme::RandomizationScheme;
+    use super::*;
 
     /// Initial phases are all zero before any update.
     #[test]
@@ -156,8 +156,10 @@ mod tests {
             PhaseDistribution::Uniform,
             8,
         );
-        assert!(r.phases().iter().all(|&p| p == 0.0),
-            "all phases must be zero at construction");
+        assert!(
+            r.phases().iter().all(|&p| p == 0.0),
+            "all phases must be zero at construction"
+        );
     }
 
     /// After reset, phases return to zero.
@@ -171,8 +173,10 @@ mod tests {
         // Exceed the period to trigger randomization
         r.update(2e-4);
         r.reset();
-        assert!(r.phases().iter().all(|&p| p == 0.0),
-            "phases must be zero after reset");
+        assert!(
+            r.phases().iter().all(|&p| p == 0.0),
+            "phases must be zero after reset"
+        );
     }
 
     /// Temporal update below period → phases remain zero.
@@ -185,8 +189,10 @@ mod tests {
             6,
         );
         r.update(period * 0.5); // below threshold
-        assert!(r.phases().iter().all(|&p| p == 0.0),
-            "phases must remain zero when update < period");
+        assert!(
+            r.phases().iter().all(|&p| p == 0.0),
+            "phases must remain zero when update < period"
+        );
     }
 
     /// Temporal update at or above period triggers randomization.
@@ -203,7 +209,9 @@ mod tests {
         r.update(period); // exactly at period → should trigger
         let phases: Vec<f64> = r.phases().to_vec();
         assert!(
-            phases.iter().all(|&p| (p - 0.0).abs() < 1e-14 || (p - PI).abs() < 1e-14),
+            phases
+                .iter()
+                .all(|&p| (p - 0.0).abs() < 1e-14 || (p - PI).abs() < 1e-14),
             "Binary distribution must produce phases in {{0, π}}: {phases:?}"
         );
     }
@@ -222,7 +230,10 @@ mod tests {
         let original = field.clone();
         r.apply_to_field(&mut field);
         for (a, b) in field.iter().zip(original.iter()) {
-            assert!((a - b).abs() < 1e-14, "field must be unchanged with zero phases");
+            assert!(
+                (a - b).abs() < 1e-14,
+                "field must be unchanged with zero phases"
+            );
         }
     }
 }

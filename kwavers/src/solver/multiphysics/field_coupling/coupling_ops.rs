@@ -1,7 +1,7 @@
 use super::FieldCoupler;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use ndarray::Array3;
 
@@ -15,6 +15,7 @@ impl FieldCoupler {
         fields: &mut [Array3<f64>],
         dt: f64,
     ) -> KwaversResult<()> {
+        validate_coupled_field_set(fields)?;
         self.couple_acoustic_to_optical(fields, dt)?;
         self.couple_optical_to_thermal(fields, dt)?;
         self.couple_acoustic_to_thermal(fields, dt)?;
@@ -30,6 +31,7 @@ impl FieldCoupler {
         fields: &mut [Array3<f64>],
         dt: f64,
     ) -> KwaversResult<()> {
+        validate_coupled_field_set(fields)?;
         let mut previous_fields = fields.to_vec();
 
         for iteration in 0..self.max_iterations {
@@ -39,7 +41,7 @@ impl FieldCoupler {
                 break;
             }
 
-            previous_fields = fields.to_vec();
+            copy_fields_into(&mut previous_fields, fields);
 
             if iteration > 0 {
                 self.apply_relaxation(&previous_fields, fields);
@@ -58,19 +60,15 @@ impl FieldCoupler {
         fields: &mut [Array3<f64>],
         dt: f64,
     ) -> KwaversResult<()> {
+        validate_coupled_field_set(fields)?;
         let gradients = self.calculate_field_gradients(fields);
         let coupling_strength = self.adjust_coupling_strength(&gradients);
         self.apply_coupling_with_strength(fields, dt, coupling_strength)
     }
 
     /// Couple acoustic field to optical field (photoelastic effect).
-    fn couple_acoustic_to_optical(
-        &self,
-        fields: &mut [Array3<f64>],
-        dt: f64,
-    ) -> KwaversResult<()> {
-        let pressure = fields[PRESSURE_IDX].clone();
-        let intensity = &mut fields[LIGHT_IDX];
+    fn couple_acoustic_to_optical(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
+        let (pressure, intensity) = read_write_fields::<PRESSURE_IDX, LIGHT_IDX>(fields)?;
 
         for ((i, j, k), &p) in pressure.indexed_iter() {
             let delta_n = 1e-12 * p;
@@ -82,13 +80,8 @@ impl FieldCoupler {
     }
 
     /// Couple optical field to thermal field (absorption heating).
-    fn couple_optical_to_thermal(
-        &self,
-        fields: &mut [Array3<f64>],
-        dt: f64,
-    ) -> KwaversResult<()> {
-        let intensity = fields[LIGHT_IDX].clone();
-        let temperature = &mut fields[TEMPERATURE_IDX];
+    fn couple_optical_to_thermal(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
+        let (intensity, temperature) = read_write_fields::<LIGHT_IDX, TEMPERATURE_IDX>(fields)?;
 
         let absorption_coefficient = 10.0; // 10 m⁻¹ (typical for tissue)
 
@@ -102,13 +95,8 @@ impl FieldCoupler {
     }
 
     /// Couple acoustic field to thermal field (absorption heating).
-    fn couple_acoustic_to_thermal(
-        &self,
-        fields: &mut [Array3<f64>],
-        dt: f64,
-    ) -> KwaversResult<()> {
-        let pressure = fields[PRESSURE_IDX].clone();
-        let temperature = &mut fields[TEMPERATURE_IDX];
+    fn couple_acoustic_to_thermal(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
+        let (pressure, temperature) = read_write_fields::<PRESSURE_IDX, TEMPERATURE_IDX>(fields)?;
 
         let absorption_coefficient = 0.5; // 0.5 Np/m (typical for tissue)
 
@@ -209,4 +197,77 @@ impl FieldCoupler {
         };
         temp_coupler.apply_weak_coupling(fields, dt)
     }
+}
+
+fn validate_coupled_field_set(fields: &[Array3<f64>]) -> KwaversResult<()> {
+    validate_field_index::<PRESSURE_IDX>(fields.len())?;
+    validate_field_index::<TEMPERATURE_IDX>(fields.len())?;
+    validate_field_index::<LIGHT_IDX>(fields.len())?;
+    validate_coupled_shapes::<PRESSURE_IDX, TEMPERATURE_IDX>(
+        &fields[PRESSURE_IDX],
+        &fields[TEMPERATURE_IDX],
+    )?;
+    validate_coupled_shapes::<PRESSURE_IDX, LIGHT_IDX>(&fields[PRESSURE_IDX], &fields[LIGHT_IDX])
+}
+
+/// Copy the current iteration state into existing snapshot buffers.
+///
+/// Strong coupling needs one previous-state volume per field for convergence
+/// testing. Reusing those volumes avoids one `Vec<Array3<_>>` allocation and
+/// one owned array allocation per non-converged iteration.
+fn copy_fields_into(target: &mut [Array3<f64>], source: &[Array3<f64>]) {
+    for (target_field, source_field) in target.iter_mut().zip(source.iter()) {
+        target_field.assign(source_field);
+    }
+}
+
+/// Borrow one read-only field and one mutable field without cloning volumes.
+///
+/// `READ` and `WRITE` are structural field-index parameters. The compiler
+/// specializes the split path for each coupling edge, while the implementation
+/// keeps one authoritative disjoint-borrow and shape-validation contract.
+fn read_write_fields<const READ: usize, const WRITE: usize>(
+    fields: &mut [Array3<f64>],
+) -> KwaversResult<(&Array3<f64>, &mut Array3<f64>)> {
+    validate_field_index::<READ>(fields.len())?;
+    validate_field_index::<WRITE>(fields.len())?;
+    if READ == WRITE {
+        return Err(KwaversError::InvalidInput(format!(
+            "FieldCoupler requires distinct read/write indices, got {READ}"
+        )));
+    }
+
+    let (read, write) = if READ < WRITE {
+        let (left, right) = fields.split_at_mut(WRITE);
+        (&left[READ], &mut right[0])
+    } else {
+        let (left, right) = fields.split_at_mut(READ);
+        (&right[0], &mut left[WRITE])
+    };
+
+    validate_coupled_shapes::<READ, WRITE>(read, write)?;
+    Ok((read, write))
+}
+
+fn validate_field_index<const INDEX: usize>(len: usize) -> KwaversResult<()> {
+    if INDEX >= len {
+        return Err(KwaversError::InvalidInput(format!(
+            "FieldCoupler requires field index {INDEX}, but only {len} fields were provided"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_coupled_shapes<const READ: usize, const WRITE: usize>(
+    read: &Array3<f64>,
+    write: &Array3<f64>,
+) -> KwaversResult<()> {
+    if read.dim() != write.dim() {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "FieldCoupler edge {READ}->{WRITE} requires matching shapes, got read {:?} and write {:?}",
+            read.dim(),
+            write.dim()
+        )));
+    }
+    Ok(())
 }

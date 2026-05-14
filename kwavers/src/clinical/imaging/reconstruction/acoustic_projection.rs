@@ -81,7 +81,7 @@ impl AcousticProjectionGeometry {
     ///                  = α_dB × 1.15129e-4
     /// ```
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn alpha_nepers_per_m_per_hz(&self) -> f64 {
         self.attenuation_db_cm_mhz * (10.0_f64.ln() / 20.0) * 100.0 * 1e-6
     }

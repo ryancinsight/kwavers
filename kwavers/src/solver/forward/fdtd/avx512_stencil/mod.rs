@@ -77,7 +77,7 @@ pub struct Avx512StencilProcessor {
 
 impl Avx512StencilProcessor {
     /// Get performance metrics from last update.
-    #[must_use] 
+    #[must_use]
     pub fn get_metrics(&self) -> Avx512Metrics {
         Avx512Metrics {
             grid_size: (self.nx, self.ny, self.nz),

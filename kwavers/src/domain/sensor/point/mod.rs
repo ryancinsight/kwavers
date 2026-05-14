@@ -56,7 +56,7 @@ impl PointSensorConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(locations: Vec<[f64; 3]>) -> Self {
         Self { locations }
     }
@@ -154,7 +154,26 @@ impl InterpolationData {
         let j1 = (j + 1).min(shape[1] - 1);
         let k1 = (k + 1).min(shape[2] - 1);
 
-        weights[7].mul_add(field[[i1, j1, k1]], weights[6].mul_add(field[[i, j1, k1]], weights[5].mul_add(field[[i1, j, k1]], weights[4].mul_add(field[[i, j, k1]], weights[3].mul_add(field[[i1, j1, k]], weights[2].mul_add(field[[i, j1, k]], weights[0].mul_add(field[[i, j, k]], weights[1] * field[[i1, j, k]])))))))
+        weights[7].mul_add(
+            field[[i1, j1, k1]],
+            weights[6].mul_add(
+                field[[i, j1, k1]],
+                weights[5].mul_add(
+                    field[[i1, j, k1]],
+                    weights[4].mul_add(
+                        field[[i, j, k1]],
+                        weights[3].mul_add(
+                            field[[i1, j1, k]],
+                            weights[2].mul_add(
+                                field[[i, j1, k]],
+                                weights[0]
+                                    .mul_add(field[[i, j, k]], weights[1] * field[[i1, j, k]]),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
     }
 }
 
@@ -215,7 +234,7 @@ impl PointSensor {
     }
 
     /// Get time history for specific sensor as 1D array.
-    #[must_use] 
+    #[must_use]
     pub fn time_history(&self, sensor_idx: usize) -> Option<Array1<f64>> {
         self.time_history
             .get(sensor_idx)
@@ -223,7 +242,7 @@ impl PointSensor {
     }
 
     /// Get all time histories as 2D array [n_sensors × n_timesteps].
-    #[must_use] 
+    #[must_use]
     pub fn all_time_histories(&self) -> Array2<f64> {
         let n_sensors = self.locations.len();
         let n_timesteps = self.n_timesteps;
@@ -237,17 +256,17 @@ impl PointSensor {
         histories
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn locations(&self) -> &[[f64; 3]] {
         &self.locations
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn n_sensors(&self) -> usize {
         self.locations.len()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn n_timesteps(&self) -> usize {
         self.n_timesteps
     }

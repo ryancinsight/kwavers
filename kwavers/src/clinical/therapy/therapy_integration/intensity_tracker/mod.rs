@@ -24,10 +24,10 @@
 //! - FDA 510(k) Guidance - Acoustic Output Measurement
 //! - Sapareto & Dewey (1984) - Thermal dose determination
 
-pub mod tracker;
 #[cfg(test)]
 mod tests;
+pub mod tracker;
 pub mod types;
 
 pub use tracker::IntensityTracker;
-pub use types::{InstantaneousIntensity, ThermalDose, TemporalIntensityMetrics};
+pub use types::{InstantaneousIntensity, TemporalIntensityMetrics, ThermalDose};

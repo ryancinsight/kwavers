@@ -37,7 +37,9 @@ impl Default for BesselConfig {
     fn default() -> Self {
         let wavelength = 1.5e-3_f64; // 1mm wavelength
         let radial_wavenumber = 1000.0_f64; // k_r = 1000 rad/m
-        let axial_wavenumber = radial_wavenumber.mul_add(-radial_wavenumber, (2.0 * PI / wavelength).powi(2)).sqrt();
+        let axial_wavenumber = radial_wavenumber
+            .mul_add(-radial_wavenumber, (2.0 * PI / wavelength).powi(2))
+            .sqrt();
 
         Self {
             center: (0.0, 0.0, 0.0),
@@ -71,19 +73,19 @@ impl BesselSource {
     }
 
     /// Get the radial wave number (k_r)
-    #[must_use] 
+    #[must_use]
     pub fn radial_wavenumber(&self) -> f64 {
         self.config.radial_wavenumber
     }
 
     /// Get the axial wave number (k_z)
-    #[must_use] 
+    #[must_use]
     pub fn axial_wavenumber(&self) -> f64 {
         self.config.axial_wavenumber
     }
 
     /// Get the Bessel function order
-    #[must_use] 
+    #[must_use]
     pub fn order(&self) -> usize {
         self.config.order
     }
@@ -152,7 +154,10 @@ impl BesselSource {
         let bessel_value = self.bessel_j(self.config.order, radial_distance);
 
         // Phase term
-        let phase_term = self.config.axial_wavenumber.mul_add(z_dist, self.config.phase);
+        let phase_term = self
+            .config
+            .axial_wavenumber
+            .mul_add(z_dist, self.config.phase);
 
         // Total amplitude
         bessel_value * phase_term.cos()
@@ -214,54 +219,64 @@ pub struct BesselBuilder {
 }
 
 impl BesselBuilder {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn center(mut self, center: (f64, f64, f64)) -> Self {
         self.config.center = center;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn direction(mut self, direction: (f64, f64, f64)) -> Self {
         self.config.direction = direction;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn wavelength(mut self, wavelength: f64) -> Self {
         self.config.wavelength = wavelength;
         // Recalculate axial wave number when wavelength changes
-        self.config.axial_wavenumber =
-            self.config.radial_wavenumber.mul_add(-self.config.radial_wavenumber, (2.0 * PI / wavelength).powi(2)).sqrt();
+        self.config.axial_wavenumber = self
+            .config
+            .radial_wavenumber
+            .mul_add(
+                -self.config.radial_wavenumber,
+                (2.0 * PI / wavelength).powi(2),
+            )
+            .sqrt();
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn radial_wavenumber(mut self, radial_wavenumber: f64) -> Self {
         self.config.radial_wavenumber = radial_wavenumber;
         // Recalculate axial wave number when radial wave number changes
-        self.config.axial_wavenumber =
-            radial_wavenumber.mul_add(-radial_wavenumber, (2.0 * PI / self.config.wavelength).powi(2)).sqrt();
+        self.config.axial_wavenumber = radial_wavenumber
+            .mul_add(
+                -radial_wavenumber,
+                (2.0 * PI / self.config.wavelength).powi(2),
+            )
+            .sqrt();
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn order(mut self, order: usize) -> Self {
         self.config.order = order;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn source_type(mut self, source_type: SourceField) -> Self {
         self.config.source_type = source_type;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn phase(mut self, phase: f64) -> Self {
         self.config.phase = phase;
         self

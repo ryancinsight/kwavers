@@ -161,8 +161,12 @@ impl BowlTransducer {
                     config.focus[1] - pos[1],
                     config.focus[2] - pos[2],
                 ];
-                let norm_mag =
-                    norm_vec[2].mul_add(norm_vec[2], norm_vec[1].mul_add(norm_vec[1], norm_vec[0].powi(2))).sqrt();
+                let norm_mag = norm_vec[2]
+                    .mul_add(
+                        norm_vec[2],
+                        norm_vec[1].mul_add(norm_vec[1], norm_vec[0].powi(2)),
+                    )
+                    .sqrt();
                 let normal = [
                     norm_vec[0] / norm_mag,
                     norm_vec[1] / norm_mag,
@@ -217,8 +221,12 @@ impl BowlTransducer {
 
                                 for (i, &pos) in self.element_positions.iter().enumerate() {
                                     // Distance from element to grid point
-                                    let r = (z - pos[2]).mul_add(z - pos[2], (y - pos[1]).mul_add(y - pos[1], (x - pos[0]).powi(2)))
-                                    .sqrt();
+                                    let r = (z - pos[2])
+                                        .mul_add(
+                                            z - pos[2],
+                                            (y - pos[1]).mul_add(y - pos[1], (x - pos[0]).powi(2)),
+                                        )
+                                        .sqrt();
 
                                     if r > 0.0 {
                                         // Apply directivity if enabled
@@ -259,8 +267,12 @@ impl BowlTransducer {
 
                         let mut pressure = 0.0;
                         for (i, &pos) in self.element_positions.iter().enumerate() {
-                            let r = (z - pos[2]).mul_add(z - pos[2], (y - pos[1]).mul_add(y - pos[1], (x - pos[0]).powi(2)))
-                            .sqrt();
+                            let r = (z - pos[2])
+                                .mul_add(
+                                    z - pos[2],
+                                    (y - pos[1]).mul_add(y - pos[1], (x - pos[0]).powi(2)),
+                                )
+                                .sqrt();
                             if r > 0.0 {
                                 let directivity = if self.config.apply_directivity {
                                     self.calculate_directivity(i, [x, y, z])
@@ -292,8 +304,15 @@ impl BowlTransducer {
         self.element_positions
             .iter()
             .map(|&pos| {
-                let distance = (self.config.focus[2] - pos[2]).mul_add(self.config.focus[2] - pos[2], (self.config.focus[1] - pos[1]).mul_add(self.config.focus[1] - pos[1], (self.config.focus[0] - pos[0]).powi(2)))
-                .sqrt();
+                let distance = (self.config.focus[2] - pos[2])
+                    .mul_add(
+                        self.config.focus[2] - pos[2],
+                        (self.config.focus[1] - pos[1]).mul_add(
+                            self.config.focus[1] - pos[1],
+                            (self.config.focus[0] - pos[0]).powi(2),
+                        ),
+                    )
+                    .sqrt();
                 distance / speed_of_sound
             })
             .collect()
@@ -306,7 +325,9 @@ impl BowlTransducer {
 
         // Vector from element to target
         let dir = [target[0] - pos[0], target[1] - pos[1], target[2] - pos[2]];
-        let dir_mag = dir[2].mul_add(dir[2], dir[1].mul_add(dir[1], dir[0].powi(2))).sqrt();
+        let dir_mag = dir[2]
+            .mul_add(dir[2], dir[1].mul_add(dir[1], dir[0].powi(2)))
+            .sqrt();
 
         if dir_mag > 0.0 {
             // Cosine of angle between normal and direction

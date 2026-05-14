@@ -104,8 +104,14 @@ mod tests {
         let iface = make_interface(1500.0, 1500.0);
         let r = InterfaceProperties::normal_reflection_coefficient(&iface);
         let t = InterfaceProperties::normal_transmission_coefficient(&iface);
-        assert!(r.abs() < 1e-14, "R must be 0 for matched impedance (got {r:.3e})");
-        assert!((t - 1.0).abs() < 1e-14, "T must be 1 for matched impedance (got {t:.6})");
+        assert!(
+            r.abs() < 1e-14,
+            "R must be 0 for matched impedance (got {r:.3e})"
+        );
+        assert!(
+            (t - 1.0).abs() < 1e-14,
+            "T must be 1 for matched impedance (got {t:.6})"
+        );
     }
 
     /// Concrete mismatch: Z₁ = 1000, Z₂ = 3000.

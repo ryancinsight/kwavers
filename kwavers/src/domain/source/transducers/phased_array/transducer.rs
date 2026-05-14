@@ -174,8 +174,9 @@ impl PhasedArrayTransducer {
                     let _propagation_time = distance / self.sound_speed;
 
                     // Calculate directivity
-                    let theta = (x - element.position.0).hypot(y - element.position.1)
-                    .atan2(z - element.position.2);
+                    let theta = (x - element.position.0)
+                        .hypot(y - element.position.1)
+                        .atan2(z - element.position.2);
                     let directivity =
                         element.directivity(theta, self.config.frequency, self.sound_speed);
 
@@ -261,8 +262,9 @@ impl Source for PhasedArrayTransducer {
                     let modulated = element.apply_modulation(signal_value, retarded_time);
 
                     // Calculate directivity
-                    let theta = (x - element.position.0).hypot(y - element.position.1)
-                    .atan2(z - element.position.2);
+                    let theta = (x - element.position.0)
+                        .hypot(y - element.position.1)
+                        .atan2(z - element.position.2);
                     let directivity =
                         element.directivity(theta, self.config.frequency, self.sound_speed);
 

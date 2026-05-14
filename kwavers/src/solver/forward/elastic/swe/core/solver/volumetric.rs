@@ -35,13 +35,8 @@ impl ElasticWaveSolver {
         }
         let (nx, ny, nz) = self.grid.dimensions();
         let mut current_field = ElasticWaveField::new(nx, ny, nz);
-        let integrator = TimeIntegrator::new(
-            &self.grid,
-            &self.lambda,
-            &self.mu,
-            &self.density,
-            &self.pml,
-        );
+        let integrator =
+            TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
         let dt = if self.config.time_step > 0.0 {
             self.config.time_step
         } else {
@@ -107,13 +102,8 @@ impl ElasticWaveSolver {
             }
             initial_field.uz.zip_mut_with(disp, |a, &b| *a += b);
         }
-        let integrator = TimeIntegrator::new(
-            &self.grid,
-            &self.lambda,
-            &self.mu,
-            &self.density,
-            &self.pml,
-        );
+        let integrator =
+            TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
         let dt = if self.config.time_step > 0.0 {
             self.config.time_step
         } else {

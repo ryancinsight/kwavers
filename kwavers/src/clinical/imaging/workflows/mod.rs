@@ -78,7 +78,8 @@ mod tests {
 
     #[test]
     fn test_diagnostic_recommendations() {
-        let workflow = ClinicalWorkflowOrchestrator::new(ClinicalWorkflowConfig::default()).unwrap();
+        let workflow =
+            ClinicalWorkflowOrchestrator::new(ClinicalWorkflowConfig::default()).unwrap();
         // State must be Initializing before any examination
         matches!(workflow.get_state(), WorkflowState::Initializing);
     }

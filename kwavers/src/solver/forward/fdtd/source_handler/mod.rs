@@ -74,7 +74,8 @@ impl SourceHandler {
         if source.p_signal.is_some() && source.p_mask.is_none() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "Pressure source signal provided without pressure source mask".to_owned(),
+                    message: "Pressure source signal provided without pressure source mask"
+                        .to_owned(),
                 },
             ));
         }
@@ -82,7 +83,8 @@ impl SourceHandler {
         if source.u_signal.is_some() && source.u_mask.is_none() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "Velocity source signal provided without velocity source mask".to_owned(),
+                    message: "Velocity source signal provided without velocity source mask"
+                        .to_owned(),
                 },
             ));
         }
@@ -164,7 +166,8 @@ impl SourceHandler {
         if source.p_mask.is_some() {
             let signal = source.p_signal.as_ref().ok_or_else(|| {
                 KwaversError::Validation(ValidationError::ConstraintViolation {
-                    message: "Pressure source mask provided without pressure source signal".to_owned(),
+                    message: "Pressure source mask provided without pressure source signal"
+                        .to_owned(),
                 })
             })?;
 
@@ -193,7 +196,8 @@ impl SourceHandler {
         if source.u_mask.is_some() {
             let signal = source.u_signal.as_ref().ok_or_else(|| {
                 KwaversError::Validation(ValidationError::ConstraintViolation {
-                    message: "Velocity source mask provided without velocity source signal".to_owned(),
+                    message: "Velocity source mask provided without velocity source signal"
+                        .to_owned(),
                 })
             })?;
 
@@ -244,32 +248,32 @@ impl SourceHandler {
         })
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn has_initial_pressure(&self) -> bool {
         self.source.p0.is_some()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn has_initial_velocity(&self) -> bool {
         self.source.u0.is_some()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn has_pressure_source(&self) -> bool {
         self.source.p_signal.is_some() && !self.p_indices.is_empty()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn has_velocity_source(&self) -> bool {
         self.source.u_signal.is_some() && !self.u_indices.is_empty()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn pressure_mode(&self) -> SourceMode {
         self.source.p_mode
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn velocity_mode(&self) -> SourceMode {
         self.source.u_mode
     }

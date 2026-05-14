@@ -11,7 +11,7 @@ pub struct KSpaceCalculator;
 
 impl KSpaceCalculator {
     /// Generate k-space wavenumbers for one dimension
-    #[must_use] 
+    #[must_use]
     pub fn generate_k_vector(n: usize, dx: f64) -> Array1<f64> {
         Array1::from_vec(apollo::fftfreq(n, dx)).mapv(|cycles_per_unit| 2.0 * PI * cycles_per_unit)
     }
@@ -22,7 +22,7 @@ impl KSpaceCalculator {
     /// - Panics if `ky contiguous`.
     /// - Panics if `kz contiguous`.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn generate_k_squared(
         nx: usize,
         ny: usize,
@@ -48,12 +48,14 @@ impl KSpaceCalculator {
     }
 
     /// Calculate maximum stable k-space value
-    #[must_use] 
+    #[must_use]
     pub fn max_k_stable(dx: f64, dy: f64, dz: f64) -> f64 {
         let kx_max = PI / dx;
         let ky_max = PI / dy;
         let kz_max = PI / dz;
-        kz_max.mul_add(kz_max, ky_max.mul_add(ky_max, kx_max.powi(2))).sqrt()
+        kz_max
+            .mul_add(kz_max, ky_max.mul_add(ky_max, kx_max.powi(2)))
+            .sqrt()
     }
 
     /// Calculate k-space correction factor for heterogeneous media

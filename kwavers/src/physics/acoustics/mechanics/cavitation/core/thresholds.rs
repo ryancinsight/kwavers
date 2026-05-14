@@ -79,7 +79,10 @@ pub fn flynn_threshold(
 ) -> f64 {
     use crate::core::constants::cavitation::FLYNN_COLLAPSE_COEFFICIENT;
     // P_Flynn = α * (P_0 + 2σ/R_n) - P_v, where α ≈ 0.83 (Flynn 1964)
-    FLYNN_COLLAPSE_COEFFICIENT.mul_add(ambient_pressure + 2.0 * surface_tension / nucleus_radius, -vapor_pressure)
+    FLYNN_COLLAPSE_COEFFICIENT.mul_add(
+        ambient_pressure + 2.0 * surface_tension / nucleus_radius,
+        -vapor_pressure,
+    )
 }
 
 /// Calculate mechanical index (MI)
@@ -140,7 +143,10 @@ mod tests {
             "Neppiras threshold: got {got:.1} expected {expected:.1}"
         );
         // Numerical: 0.5·(98995 + 29120) = 64057.5 Pa
-        assert!((got - 64_057.5).abs() < 1.0, "Neppiras: must be ~64057.5 Pa");
+        assert!(
+            (got - 64_057.5).abs() < 1.0,
+            "Neppiras: must be ~64057.5 Pa"
+        );
     }
 
     /// Flynn threshold: P_F = α·(P₀ + 2σ/R₀) − Pᵥ, where α=0.83.
@@ -187,8 +193,17 @@ mod tests {
     /// `flynn_criterion`: violent collapse when R_max/R₀ > 2.
     #[test]
     fn flynn_criterion_true_above_two_and_false_below() {
-        assert!(flynn_criterion(2.1 * R0, R0), "R_max/R0=2.1 must trigger violent collapse");
-        assert!(!flynn_criterion(1.9 * R0, R0), "R_max/R0=1.9 must not trigger violent collapse");
-        assert!(!flynn_criterion(2.0 * R0, R0), "R_max/R0=2.0 exactly is not > 2 → false");
+        assert!(
+            flynn_criterion(2.1 * R0, R0),
+            "R_max/R0=2.1 must trigger violent collapse"
+        );
+        assert!(
+            !flynn_criterion(1.9 * R0, R0),
+            "R_max/R0=1.9 must not trigger violent collapse"
+        );
+        assert!(
+            !flynn_criterion(2.0 * R0, R0),
+            "R_max/R0=2.0 exactly is not > 2 → false"
+        );
     }
 }

@@ -78,8 +78,13 @@ impl ReverseTimeMigration {
             .and(&pressure.slice(s![3..nx - 1, 2..ny - 2, 2..nz - 2]))
             .and(&pressure.slice(s![4..nx, 2..ny - 2, 2..nz - 2]))
             .par_for_each(|lap, &pm2, &pm1, &p0, &pp1, &pp2| {
-                *lap += FD_COEFF_2.mul_add(pp2, FD_COEFF_1.mul_add(pp1, FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1))))
-                    / dx2;
+                *lap += FD_COEFF_2.mul_add(
+                    pp2,
+                    FD_COEFF_1.mul_add(
+                        pp1,
+                        FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1)),
+                    ),
+                ) / dx2;
             });
 
         // y-direction
@@ -90,8 +95,13 @@ impl ReverseTimeMigration {
             .and(&pressure.slice(s![2..nx - 2, 3..ny - 1, 2..nz - 2]))
             .and(&pressure.slice(s![2..nx - 2, 4..ny, 2..nz - 2]))
             .par_for_each(|lap, &pm2, &pm1, &p0, &pp1, &pp2| {
-                *lap += FD_COEFF_2.mul_add(pp2, FD_COEFF_1.mul_add(pp1, FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1))))
-                    / dy2;
+                *lap += FD_COEFF_2.mul_add(
+                    pp2,
+                    FD_COEFF_1.mul_add(
+                        pp1,
+                        FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1)),
+                    ),
+                ) / dy2;
             });
 
         // z-direction
@@ -102,8 +112,13 @@ impl ReverseTimeMigration {
             .and(&pressure.slice(s![2..nx - 2, 2..ny - 2, 3..nz - 1]))
             .and(&pressure.slice(s![2..nx - 2, 2..ny - 2, 4..nz]))
             .par_for_each(|lap, &pm2, &pm1, &p0, &pp1, &pp2| {
-                *lap += FD_COEFF_2.mul_add(pp2, FD_COEFF_1.mul_add(pp1, FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1))))
-                    / dz2;
+                *lap += FD_COEFF_2.mul_add(
+                    pp2,
+                    FD_COEFF_1.mul_add(
+                        pp1,
+                        FD_COEFF_0.mul_add(p0, FD_COEFF_2.mul_add(pm2, FD_COEFF_1 * pm1)),
+                    ),
+                ) / dz2;
             });
 
         // ── Leapfrog pressure update: p^{n+1} = 2p^n − p^{n-1} + c²dt²∇²p ─

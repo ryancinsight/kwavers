@@ -157,7 +157,7 @@ pub fn mat3_cofactor(f: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
         ],
         [
             -f[0][1].mul_add(f[2][2], -(f[0][2] * f[2][1])), // C₁₀ = −(F₀₁F₂₂ − F₀₂F₂₁)
-            f[0][0].mul_add(f[2][2], -(f[0][2] * f[2][0])),    // C₁₁ = +(F₀₀F₂₂ − F₀₂F₂₀)
+            f[0][0].mul_add(f[2][2], -(f[0][2] * f[2][0])),  // C₁₁ = +(F₀₀F₂₂ − F₀₂F₂₀)
             -f[0][0].mul_add(f[2][1], -(f[0][1] * f[2][0])), // C₁₂ = −(F₀₀F₂₁ − F₀₁F₂₀)
         ],
         [
@@ -241,7 +241,13 @@ pub fn first_pk_stress(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3
         }
     }
     let i2 = 0.5 * i1.mul_add(i1, -tr_c2);
-    let j_det = f[0][2].mul_add(f[1][0].mul_add(f[2][1], -(f[1][1] * f[2][0])), f[0][0].mul_add(f[1][1].mul_add(f[2][2], -(f[1][2] * f[2][1])), -(f[0][1] * f[1][0].mul_add(f[2][2], -(f[1][2] * f[2][0])))));
+    let j_det = f[0][2].mul_add(
+        f[1][0].mul_add(f[2][1], -(f[1][1] * f[2][0])),
+        f[0][0].mul_add(
+            f[1][1].mul_add(f[2][2], -(f[1][2] * f[2][1])),
+            -(f[0][1] * f[1][0].mul_add(f[2][2], -(f[1][2] * f[2][0]))),
+        ),
+    );
 
     // Energy derivatives (∂W/∂I₁, ∂W/∂I₂, ∂W/∂J)
     let dw_di1 = compute_strain_energy_derivative_wrt_i1(model, i1, i2, j_det, Some(f));
@@ -265,8 +271,10 @@ pub fn first_pk_stress(model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> [[f64; 3
     let mut p = [[0.0_f64; 3]; 3];
     for i in 0..3 {
         for cap_a in 0..3 {
-            p[i][cap_a] = (2.0 * dw_di1).mul_add(f[i][cap_a], 2.0 * dw_di2 * i1.mul_add(f[i][cap_a], -fc[i][cap_a]))
-                + dw_dj * cof_f[i][cap_a];
+            p[i][cap_a] = (2.0 * dw_di1).mul_add(
+                f[i][cap_a],
+                2.0 * dw_di2 * i1.mul_add(f[i][cap_a], -fc[i][cap_a]),
+            ) + dw_dj * cof_f[i][cap_a];
         }
     }
     p

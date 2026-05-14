@@ -283,13 +283,13 @@ impl ConformalPredictor {
     }
 
     /// Check if predictor is calibrated
-    #[must_use] 
+    #[must_use]
     pub fn is_calibrated(&self) -> bool {
         self.is_calibrated
     }
 
     /// Get calibration summary
-    #[must_use] 
+    #[must_use]
     pub fn calibration_summary(&self) -> CalibrationSummary {
         if !self.is_calibrated {
             return CalibrationSummary {

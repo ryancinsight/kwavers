@@ -95,6 +95,9 @@ fn test_nonrigid_fusion_succeeds() {
 
     let fused = fusion.fuse().expect("NonRigid fusion should succeed");
     // Confidence map must span the fused image shape.
-    assert_eq!(fused.confidence_map.dim(), fused.intensity_image.dim(),
-        "confidence_map and intensity_image must have identical dimensions");
+    assert_eq!(
+        fused.confidence_map.dim(),
+        fused.intensity_image.dim(),
+        "confidence_map and intensity_image must have identical dimensions"
+    );
 }

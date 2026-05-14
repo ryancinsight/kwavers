@@ -24,8 +24,7 @@ fn test_from_arrays_with_optional() {
     let ba = Array3::from_elem((10, 10, 10), 6.0);
 
     let medium =
-        HeterogeneousFactory::from_arrays(c, rho, Some(alpha), Some(yexp), Some(ba), 1e6)
-            .unwrap();
+        HeterogeneousFactory::from_arrays(c, rho, Some(alpha), Some(yexp), Some(ba), 1e6).unwrap();
 
     assert_eq!(medium.absorption[[0, 0, 0]], 0.5);
     assert_eq!(medium.alpha_power[[0, 0, 0]], 1.5);

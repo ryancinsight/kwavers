@@ -115,24 +115,32 @@ impl PennesSolver {
         for k in 1..self.nz - 1 {
             for j in 1..self.ny - 1 {
                 for i in 1..self.nx - 1 {
-                    let laplacian_x = (2.0f64.mul_add(-self.temperature_prev[[i, j, k]], self.temperature_prev[[i + 1, j, k]])
-                        + self.temperature_prev[[i - 1, j, k]])
+                    let laplacian_x = (2.0f64.mul_add(
+                        -self.temperature_prev[[i, j, k]],
+                        self.temperature_prev[[i + 1, j, k]],
+                    ) + self.temperature_prev[[i - 1, j, k]])
                         / (self.dx * self.dx);
 
-                    let laplacian_y = (2.0f64.mul_add(-self.temperature_prev[[i, j, k]], self.temperature_prev[[i, j + 1, k]])
-                        + self.temperature_prev[[i, j - 1, k]])
+                    let laplacian_y = (2.0f64.mul_add(
+                        -self.temperature_prev[[i, j, k]],
+                        self.temperature_prev[[i, j + 1, k]],
+                    ) + self.temperature_prev[[i, j - 1, k]])
                         / (self.dy * self.dy);
 
-                    let laplacian_z = (2.0f64.mul_add(-self.temperature_prev[[i, j, k]], self.temperature_prev[[i, j, k + 1]])
-                        + self.temperature_prev[[i, j, k - 1]])
+                    let laplacian_z = (2.0f64.mul_add(
+                        -self.temperature_prev[[i, j, k]],
+                        self.temperature_prev[[i, j, k + 1]],
+                    ) + self.temperature_prev[[i, j, k - 1]])
                         / (self.dz * self.dz);
 
                     let laplacian = laplacian_x + laplacian_y + laplacian_z;
 
                     let t = self.temperature_prev[[i, j, k]];
-                    let dt_dt = alpha.mul_add(laplacian, -(perfusion_term * (t - self.arterial_temperature)))
-                        + self.metabolic_heat
-                            / (self.properties.density * self.properties.specific_heat)
+                    let dt_dt = alpha.mul_add(
+                        laplacian,
+                        -(perfusion_term * (t - self.arterial_temperature)),
+                    ) + self.metabolic_heat
+                        / (self.properties.density * self.properties.specific_heat)
                         + heat_source[[i, j, k]]
                             / (self.properties.density * self.properties.specific_heat);
 

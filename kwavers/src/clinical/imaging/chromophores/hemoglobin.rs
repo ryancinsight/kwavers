@@ -15,7 +15,7 @@ pub struct HemoglobinDatabase {
 
 impl HemoglobinDatabase {
     /// Create hemoglobin database with standard literature values
-    #[must_use] 
+    #[must_use]
     pub fn standard() -> Self {
         let hbo2_data = vec![
             (450, 106_112.0),
@@ -114,8 +114,9 @@ impl HemoglobinDatabase {
         hb_concentration_molar: f64,
     ) -> Result<f64> {
         let (eps_hbo2, eps_hb) = self.extinction_pair(wavelength_nm)?;
-        let mu_a =
-            2.303 * eps_hbo2.mul_add(hbo2_concentration_molar, eps_hb * hb_concentration_molar) * 100.0;
+        let mu_a = 2.303
+            * eps_hbo2.mul_add(hbo2_concentration_molar, eps_hb * hb_concentration_molar)
+            * 100.0;
         Ok(mu_a)
     }
     /// Oxygen saturation.
@@ -133,7 +134,7 @@ impl HemoglobinDatabase {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn typical_blood_parameters() -> (f64, f64, f64) {
         (2.3e-3, 0.98, 0.75)
     }
@@ -154,15 +155,15 @@ impl HemoglobinDatabase {
         self.absorption_coefficient(wavelength_nm, total * so2, total * (1.0 - so2))
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn isosbestic_points() -> Vec<u32> {
         vec![500, 545, 570, 584, 797]
     }
-    #[must_use] 
+    #[must_use]
     pub fn hbo2_spectrum(&self) -> &ExtinctionSpectrum {
         &self.hbo2
     }
-    #[must_use] 
+    #[must_use]
     pub fn hb_spectrum(&self) -> &ExtinctionSpectrum {
         &self.hb
     }

@@ -99,6 +99,9 @@ impl WENOLimiter {
         let d1111 = d211 - d111;
 
         // Sum of squares of derivatives
-        (1421461.0 / 2275.0 * d1111).mul_add(d1111, (781.0 / 20.0 * d111).mul_add(d111, d1.mul_add(d1, 13.0 / 3.0 * d11 * d11)))
+        (1421461.0 / 2275.0 * d1111).mul_add(
+            d1111,
+            (781.0 / 20.0 * d111).mul_add(d111, d1.mul_add(d1, 13.0 / 3.0 * d11 * d11)),
+        )
     }
 }

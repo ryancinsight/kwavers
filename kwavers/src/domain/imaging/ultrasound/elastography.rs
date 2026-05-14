@@ -47,7 +47,7 @@ impl ElasticityMap {
     /// For incompressible isotropic tissue:
     /// - Shear modulus: μ = ρcs²
     /// - Young's modulus: E = 3μ = 3ρcs² (Poisson's ratio ≈ 0.5)
-    #[must_use] 
+    #[must_use]
     pub fn from_shear_wave_speed(shear_wave_speed: Array3<f64>, density: f64) -> Self {
         let (nx, ny, nz) = shear_wave_speed.dim();
         let mut shear_modulus = Array3::zeros((nx, ny, nz));

@@ -147,7 +147,8 @@ impl CollectiveEffects {
         gas_sound_speed: f64,
     ) -> f64 {
         // Wood's equation for sound speed in bubbly liquid
-        let mixture_density = (1.0 - void_fraction).mul_add(liquid_density, void_fraction * gas_density);
+        let mixture_density =
+            (1.0 - void_fraction).mul_add(liquid_density, void_fraction * gas_density);
         let compressibility = (1.0 - void_fraction) / (liquid_density * liquid_sound_speed.powi(2))
             + void_fraction / (gas_density * gas_sound_speed.powi(2));
 

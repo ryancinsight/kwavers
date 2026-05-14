@@ -186,6 +186,12 @@ impl RotationMatrix {
     /// Calculate determinant
     fn determinant(&self) -> f64 {
         let r = &self.r;
-        r[[0, 2]].mul_add(r[[1, 0]].mul_add(r[[2, 1]], -(r[[1, 1]] * r[[2, 0]])), r[[0, 0]].mul_add(r[[1, 1]].mul_add(r[[2, 2]], -(r[[1, 2]] * r[[2, 1]])), -(r[[0, 1]] * r[[1, 0]].mul_add(r[[2, 2]], -(r[[1, 2]] * r[[2, 0]])))))
+        r[[0, 2]].mul_add(
+            r[[1, 0]].mul_add(r[[2, 1]], -(r[[1, 1]] * r[[2, 0]])),
+            r[[0, 0]].mul_add(
+                r[[1, 1]].mul_add(r[[2, 2]], -(r[[1, 2]] * r[[2, 1]])),
+                -(r[[0, 1]] * r[[1, 0]].mul_add(r[[2, 2]], -(r[[1, 2]] * r[[2, 0]]))),
+            ),
+        )
     }
 }

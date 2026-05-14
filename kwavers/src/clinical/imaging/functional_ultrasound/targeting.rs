@@ -24,7 +24,7 @@ pub struct StereotacticCoordinates {
 
 impl StereotacticCoordinates {
     /// Create new stereotactic coordinates
-    #[must_use] 
+    #[must_use]
     pub fn new(ap: f64, ml: f64, dv: f64) -> Self {
         Self {
             ap,
@@ -35,13 +35,13 @@ impl StereotacticCoordinates {
     }
 
     /// Convert to [x, y, z] array
-    #[must_use] 
+    #[must_use]
     pub fn to_array(&self) -> [f64; 3] {
         [self.ap, self.ml, self.dv]
     }
 
     /// Validate coordinates are within brain bounds
-    #[must_use] 
+    #[must_use]
     pub fn is_valid(&self) -> bool {
         // Standard mouse brain bounds (relative to Bregma)
         self.ap >= -4.0
@@ -53,7 +53,7 @@ impl StereotacticCoordinates {
     }
 
     /// Check if coordinates are in safe region (away from ventricles/major vessels)
-    #[must_use] 
+    #[must_use]
     pub fn is_safe(&self) -> bool {
         // Simplified safety check
         self.is_valid() && self.dv > 0.5 && self.dv < 7.5
@@ -65,7 +65,6 @@ impl StereotacticCoordinates {
 pub struct TargetingSystem {
     /// Bregma reference point in atlas coordinates (mm)
     bregma: [f64; 3],
-
 }
 
 impl TargetingSystem {
@@ -158,7 +157,7 @@ impl TargetingSystem {
     }
 
     /// Get distance between two coordinates (mm)
-    #[must_use] 
+    #[must_use]
     pub fn distance(&self, from: &StereotacticCoordinates, to: &StereotacticCoordinates) -> f64 {
         let dx = to.ap - from.ap;
         let dy = to.ml - from.ml;
@@ -168,7 +167,7 @@ impl TargetingSystem {
     }
 
     /// Get Bregma coordinates
-    #[must_use] 
+    #[must_use]
     pub fn bregma(&self) -> [f64; 3] {
         self.bregma
     }

@@ -70,26 +70,29 @@ impl GaussianSource {
     }
 
     /// Get the beam waist radius (w0)
-    #[must_use] 
+    #[must_use]
     pub fn waist_radius(&self) -> f64 {
         self.config.waist_radius
     }
 
     /// Get the Rayleigh range (depth of focus)
-    #[must_use] 
+    #[must_use]
     pub fn rayleigh_range(&self) -> f64 {
         self.rayleigh_range
     }
 
     /// Get the focal point position
-    #[must_use] 
+    #[must_use]
     pub fn focal_point(&self) -> (f64, f64, f64) {
         self.config.focal_point
     }
 
     /// Calculate beam radius at distance z from focus
     fn beam_radius_at(&self, z: f64) -> f64 {
-        self.config.waist_radius * (z / self.rayleigh_range).mul_add(z / self.rayleigh_range, 1.0).sqrt()
+        self.config.waist_radius
+            * (z / self.rayleigh_range)
+                .mul_add(z / self.rayleigh_range, 1.0)
+                .sqrt()
     }
 
     /// Calculate Gaussian amplitude at position (x, y, z)
@@ -231,42 +234,42 @@ pub struct GaussianBuilder {
 }
 
 impl GaussianBuilder {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn focal_point(mut self, focal_point: (f64, f64, f64)) -> Self {
         self.config.focal_point = focal_point;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn waist_radius(mut self, waist_radius: f64) -> Self {
         self.config.waist_radius = waist_radius;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn wavelength(mut self, wavelength: f64) -> Self {
         self.config.wavelength = wavelength;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn direction(mut self, direction: (f64, f64, f64)) -> Self {
         self.config.direction = direction;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn source_type(mut self, source_type: SourceField) -> Self {
         self.config.source_type = source_type;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn phase(mut self, phase: f64) -> Self {
         self.config.phase = phase;
         self

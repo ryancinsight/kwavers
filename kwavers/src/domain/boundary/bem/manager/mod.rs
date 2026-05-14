@@ -31,7 +31,9 @@ impl BemBoundaryManager {
     /// Create new boundary manager.
     #[must_use]
     pub fn new() -> Self {
-        Self { conditions: Vec::new() }
+        Self {
+            conditions: Vec::new(),
+        }
     }
 
     /// Clear all boundary conditions.
@@ -41,17 +43,20 @@ impl BemBoundaryManager {
 
     /// Add Dirichlet boundary condition.
     pub fn add_dirichlet(&mut self, node_values: Vec<(usize, Complex64)>) {
-        self.conditions.push(BemBoundaryCondition::Dirichlet(node_values));
+        self.conditions
+            .push(BemBoundaryCondition::Dirichlet(node_values));
     }
 
     /// Add Neumann boundary condition.
     pub fn add_neumann(&mut self, node_derivatives: Vec<(usize, Complex64)>) {
-        self.conditions.push(BemBoundaryCondition::Neumann(node_derivatives));
+        self.conditions
+            .push(BemBoundaryCondition::Neumann(node_derivatives));
     }
 
     /// Add Robin boundary condition.
     pub fn add_robin(&mut self, node_conditions: Vec<(usize, f64, Complex64)>) {
-        self.conditions.push(BemBoundaryCondition::Robin(node_conditions));
+        self.conditions
+            .push(BemBoundaryCondition::Robin(node_conditions));
     }
 
     /// Add radiation boundary condition.

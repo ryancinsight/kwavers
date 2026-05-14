@@ -37,7 +37,7 @@ use std::collections::HashMap;
 /// # Returns
 ///
 /// HashMap mapping property names to 3D spatial maps
-#[must_use] 
+#[must_use]
 pub fn extract_tissue_properties(fused_result: &FusedImageResult) -> HashMap<String, Array3<f64>> {
     let mut properties = HashMap::new();
 

@@ -17,7 +17,7 @@ impl PSTDKSOperators {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(k_grid: PSTDKSGrid) -> Self {
         let (nx, ny, nz) = k_grid.dimensions();
         Self {

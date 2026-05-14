@@ -75,3 +75,56 @@ impl DutyCycleController {
         peak_power * self.current_duty_cycle
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
+    use super::*;
+
+    /// new(0.5) clamps to [MIN, MAX] and stores 0.5 when 0.5 ∈ [MIN, MAX].
+    #[test]
+    fn new_stores_initial_duty_cycle_within_bounds() {
+        let dc = DutyCycleController::new(0.5);
+        assert!(
+            (dc.get_duty_cycle() - 0.5).abs() < 1e-15,
+            "initial duty cycle must be 0.5; got {}",
+            dc.get_duty_cycle()
+        );
+    }
+
+    /// new with out-of-range value clamps to MIN_DUTY_CYCLE.
+    #[test]
+    fn new_clamps_below_minimum() {
+        let dc = DutyCycleController::new(0.0); // below MIN_DUTY_CYCLE=0.01
+        assert!(
+            (dc.get_duty_cycle() - MIN_DUTY_CYCLE).abs() < 1e-15,
+            "clamped duty cycle must equal MIN_DUTY_CYCLE={MIN_DUTY_CYCLE}; got {}",
+            dc.get_duty_cycle()
+        );
+    }
+
+    /// average_power = peak * current_duty_cycle (linear by definition).
+    ///
+    /// With initial_duty_cycle=0.5, peak=2.0 → average = 1.0.
+    #[test]
+    fn average_power_is_linear_in_duty_cycle() {
+        let dc = DutyCycleController::new(0.5);
+        let avg = dc.average_power(2.0);
+        assert!(
+            (avg - 1.0).abs() < 1e-14,
+            "average_power must be 1.0; got {avg}"
+        );
+    }
+
+    /// set_limits enforces that current_duty_cycle is clamped to the new bounds.
+    #[test]
+    fn set_limits_clamps_current_duty_cycle() {
+        let mut dc = DutyCycleController::new(MAX_DUTY_CYCLE); // starts at 0.95
+        dc.set_limits(MIN_DUTY_CYCLE, 0.6); // new max=0.6
+        assert!(
+            dc.get_duty_cycle() <= 0.6,
+            "duty cycle must be clamped to new max 0.6; got {}",
+            dc.get_duty_cycle()
+        );
+    }
+}

@@ -163,7 +163,8 @@ impl ContrastEnhancedUltrasound {
                 let fy = j as f64 / (ny.saturating_sub(1).max(1) as f64);
                 for k in 0..nz {
                     let fz = k as f64 / (nz.saturating_sub(1).max(1) as f64);
-                    let mean_transit_time_s = 10.0f64.mul_add(0.2f64.mul_add(fz, 0.3f64.mul_add(fx, 0.5 * fy)), 6.0);
+                    let mean_transit_time_s =
+                        10.0f64.mul_add(0.2f64.mul_add(fz, 0.3f64.mul_add(fx, 0.5 * fy)), 6.0);
                     let decay = (-dt / mean_transit_time_s).exp();
 
                     let local_gain = 1.0e-7_f64 * 0.2f64.mul_add((fx - fy).abs(), 1.0);

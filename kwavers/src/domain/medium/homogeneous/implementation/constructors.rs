@@ -244,7 +244,11 @@ impl HomogeneousMedium {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn set_lame_parameters(&mut self, lame_lambda: f64, lame_mu: f64) -> Result<(), &'static str> {
+    pub fn set_lame_parameters(
+        &mut self,
+        lame_lambda: f64,
+        lame_mu: f64,
+    ) -> Result<(), &'static str> {
         if !lame_lambda.is_finite() {
             return Err("lame_lambda must be finite");
         }

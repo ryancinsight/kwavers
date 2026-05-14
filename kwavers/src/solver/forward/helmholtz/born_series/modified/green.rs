@@ -54,7 +54,9 @@ impl ModifiedBornSolver {
                 let dist_x = (i as f64 - ni as f64) * dx;
                 let dist_y = (j as f64 - nj as f64) * dy;
                 let dist_z = (k as f64 - nk as f64) * dz;
-                let r = dist_z.mul_add(dist_z, dist_x.mul_add(dist_x, dist_y * dist_y)).sqrt();
+                let r = dist_z
+                    .mul_add(dist_z, dist_x.mul_add(dist_x, dist_y * dist_y))
+                    .sqrt();
 
                 if r > 1e-12 {
                     let source_val = heterogeneity[[ni, nj, nk]];

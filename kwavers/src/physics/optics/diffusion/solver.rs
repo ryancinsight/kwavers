@@ -150,11 +150,29 @@ impl LightDiffusionModelTrait for LightDiffusion {
                     // Source term from sonoluminescence
                     let source_term = self.emission_spectrum[[i, j, k]];
 
-                    let laplacian_phi = (LAPLACIAN_CENTER_COEFF.mul_add(center_val, light_field[[i, j, k + 1]]) + light_field[[i, j, k - 1]]).mul_add(dz2_inv, (LAPLACIAN_CENTER_COEFF.mul_add(center_val, light_field[[i + 1, j, k]]) + light_field[[i - 1, j, k]]).mul_add(dx2_inv, (LAPLACIAN_CENTER_COEFF.mul_add(center_val, light_field[[i, j + 1, k]])
-                            + light_field[[i, j - 1, k]]) * dy2_inv));
+                    let laplacian_phi = (LAPLACIAN_CENTER_COEFF
+                        .mul_add(center_val, light_field[[i, j, k + 1]])
+                        + light_field[[i, j, k - 1]])
+                    .mul_add(
+                        dz2_inv,
+                        (LAPLACIAN_CENTER_COEFF.mul_add(center_val, light_field[[i + 1, j, k]])
+                            + light_field[[i - 1, j, k]])
+                        .mul_add(
+                            dx2_inv,
+                            (LAPLACIAN_CENTER_COEFF
+                                .mul_add(center_val, light_field[[i, j + 1, k]])
+                                + light_field[[i, j - 1, k]])
+                                * dy2_inv,
+                        ),
+                    );
 
                     // Update using diffusion equation: ∂φ/∂t = D∇²φ - μₐφ + S
-                    let update = dt.mul_add(diffusion_coefficient.mul_add(laplacian_phi, -(absorption_coeff * center_val)) + source_term, center_val);
+                    let update = dt.mul_add(
+                        diffusion_coefficient
+                            .mul_add(laplacian_phi, -(absorption_coeff * center_val))
+                            + source_term,
+                        center_val,
+                    );
 
                     // Ensure non-negative values (physical constraint)
                     updated_field[[i, j, k]] = update.max(0.0);

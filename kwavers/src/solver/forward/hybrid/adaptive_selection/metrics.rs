@@ -78,7 +78,9 @@ impl SpectralMetrics {
         let kx_max = PI / grid.dx;
         let ky_max = PI / grid.dy;
         let kz_max = PI / grid.dz;
-        let k_max_norm = kz_max.mul_add(kz_max, ky_max.mul_add(ky_max, kx_max.powi(2))).sqrt();
+        let k_max_norm = kz_max
+            .mul_add(kz_max, ky_max.mul_add(ky_max, kx_max.powi(2)))
+            .sqrt();
         let k_high_cutoff = k_max_norm * 0.5;
 
         for k_idx in 0..nz {

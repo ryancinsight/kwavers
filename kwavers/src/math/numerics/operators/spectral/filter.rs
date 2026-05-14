@@ -22,7 +22,7 @@
 //! invariant because `H(0,0,0)=1`.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::fft::{fft_3d_array, ifft_3d_array};
+use crate::math::fft::{fft_3d_array_into, ifft_3d_array_into, Complex64};
 use ndarray::{Array3, ArrayView3};
 use std::f64::consts::PI;
 
@@ -59,7 +59,7 @@ impl SpectralFilter {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(cutoff: f64, filter_type: FilterType) -> Self {
         Self {
             cutoff,
@@ -79,21 +79,48 @@ impl SpectralFilter {
     /// Returns [`KwaversError::InvalidInput`] for empty arrays or invalid cutoff
     /// values.
     pub fn apply(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        if nx == 0 || ny == 0 || nz == 0 {
-            return Err(KwaversError::DimensionMismatch(
-                "SpectralFilter requires all dimensions to be non-zero".to_owned(),
-            ));
-        }
-        if !(0.0..=1.0).contains(&self.cutoff) || !self.cutoff.is_finite() {
-            return Err(KwaversError::InvalidInput(format!(
-                "SpectralFilter cutoff must be finite and within [0, 1], got {}",
-                self.cutoff
-            )));
-        }
+        validate_filter_input(self.cutoff, field.dim())?;
 
-        let real_field = field.to_owned();
-        let mut spectrum = fft_3d_array(&real_field);
+        let mut output = Array3::zeros(field.dim());
+        let mut spectrum = Array3::zeros(field.dim());
+        self.apply_into(field, &mut spectrum, &mut output)?;
+        Ok(output)
+    }
+
+    /// Apply the filter using caller-owned spectrum and output workspaces.
+    ///
+    /// # Contract
+    ///
+    /// The real output buffer is first used as a staging copy for `field`, then
+    /// overwritten by `IFFT(H ⊙ FFT(field))`. This removes the extra owned
+    /// `field.to_owned()` copy from the convenience path and gives hot callers
+    /// a zero-reallocation API:
+    ///
+    /// ```text
+    /// out ← field
+    /// spectrum ← FFT(out)
+    /// spectrum[k] ← H(k) · spectrum[k]
+    /// out ← IFFT(spectrum)
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::DimensionMismatch`] when either workspace does
+    /// not match `field.dim()`, and [`KwaversError::InvalidInput`] for invalid
+    /// cutoff values.
+    pub fn apply_into(
+        &self,
+        field: ArrayView3<f64>,
+        spectrum: &mut Array3<Complex64>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        let (nx, ny, nz) = field.dim();
+        validate_filter_input(self.cutoff, field.dim())?;
+        validate_workspace("spectrum", spectrum.dim(), field.dim())?;
+        validate_workspace("output", output.dim(), field.dim())?;
+
+        output.assign(&field);
+        fft_3d_array_into(output, spectrum);
 
         for i in 0..nx {
             let hx = self.transfer_function(normalized_mode(i, nx), 1.0);
@@ -106,11 +133,12 @@ impl SpectralFilter {
             }
         }
 
-        Ok(ifft_3d_array(&spectrum))
+        ifft_3d_array_into(spectrum, output);
+        Ok(())
     }
 
     /// Get filter transfer function H(k) for given wavenumber
-    #[must_use] 
+    #[must_use]
     pub fn transfer_function(&self, k: f64, k_nyquist: f64) -> f64 {
         let k_normalized = k.abs() / k_nyquist;
 
@@ -130,6 +158,37 @@ impl SpectralFilter {
             1.0
         }
     }
+}
+
+fn validate_filter_input(cutoff: f64, shape: (usize, usize, usize)) -> KwaversResult<()> {
+    let (nx, ny, nz) = shape;
+    if nx == 0 || ny == 0 || nz == 0 {
+        return Err(KwaversError::DimensionMismatch(
+            "SpectralFilter requires all dimensions to be non-zero".to_owned(),
+        ));
+    }
+
+    if !(0.0..=1.0).contains(&cutoff) || !cutoff.is_finite() {
+        return Err(KwaversError::InvalidInput(format!(
+            "SpectralFilter cutoff must be finite and within [0, 1], got {cutoff}"
+        )));
+    }
+
+    Ok(())
+}
+
+fn validate_workspace(
+    name: &str,
+    actual: (usize, usize, usize),
+    expected: (usize, usize, usize),
+) -> KwaversResult<()> {
+    if actual != expected {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "SpectralFilter {name} workspace shape {actual:?} must match field shape {expected:?}"
+        )));
+    }
+
+    Ok(())
 }
 
 fn normalized_mode(index: usize, n: usize) -> f64 {

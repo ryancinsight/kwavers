@@ -14,7 +14,7 @@ pub struct ProductionBenchmarks {
 }
 
 impl ProductionBenchmarks {
-    #[must_use] 
+    #[must_use]
     pub fn new(grid_size: usize, iterations: usize) -> Self {
         Self {
             grid_size,
@@ -24,7 +24,7 @@ impl ProductionBenchmarks {
 
     /// Benchmark FDTD solver performance against SRS requirement
     /// Target: >1M grid updates per second per core
-    #[must_use] 
+    #[must_use]
     pub fn benchmark_fdtd_throughput(&self) -> BenchmarkResult {
         let start = Instant::now();
 
@@ -51,7 +51,7 @@ impl ProductionBenchmarks {
 
     /// Benchmark memory usage against SRS NFR-003
     /// Target: <2GB RAM for typical simulations (500³ grid)
-    #[must_use] 
+    #[must_use]
     pub fn benchmark_memory_usage(&self) -> BenchmarkResult {
         let start = Instant::now();
 
@@ -72,7 +72,7 @@ impl ProductionBenchmarks {
     }
 
     /// Benchmark safe vectorization performance
-    #[must_use] 
+    #[must_use]
     pub fn benchmark_vectorization(&self) -> BenchmarkResult {
         use ndarray::Array3;
 
@@ -100,7 +100,7 @@ impl ProductionBenchmarks {
     }
 
     /// Run all production benchmarks
-    #[must_use] 
+    #[must_use]
     pub fn run_all(&self) -> Vec<BenchmarkResult> {
         vec![
             self.benchmark_fdtd_throughput(),
@@ -121,7 +121,7 @@ pub struct BenchmarkResult {
 }
 
 impl BenchmarkResult {
-    #[must_use] 
+    #[must_use]
     pub fn report(&self) -> String {
         let status = if self.passed { "PASS" } else { "FAIL" };
         format!(
@@ -138,7 +138,7 @@ impl BenchmarkResult {
 }
 
 /// Generate production benchmark report
-#[must_use] 
+#[must_use]
 pub fn run_production_benchmarks() -> String {
     let benchmarks = ProductionBenchmarks::new(100, 1000); // 100³ grid, 1000 iterations
     let results = benchmarks.run_all();

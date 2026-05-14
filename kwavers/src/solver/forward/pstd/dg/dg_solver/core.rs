@@ -106,7 +106,7 @@ impl DGSolver {
     }
 
     /// Check if modal coefficients are initialized
-    #[must_use] 
+    #[must_use]
     pub fn has_modal_coefficients(&self) -> bool {
         self.modal_coefficients.is_some()
     }

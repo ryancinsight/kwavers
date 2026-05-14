@@ -56,7 +56,9 @@ fn test_all_implants_valid() {
     ];
 
     for implant in implants {
-        implant.validate().unwrap_or_else(|e| panic!("Implant validation failed: {e:?}"));
+        implant
+            .validate()
+            .unwrap_or_else(|e| panic!("Implant validation failed: {e:?}"));
     }
 }
 

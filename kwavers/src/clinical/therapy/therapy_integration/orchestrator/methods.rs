@@ -1,18 +1,22 @@
-use crate::clinical::therapy::therapy_integration::config::TherapyModality;
-use crate::clinical::therapy::therapy_integration::safety_controller::{SafetyController, TherapyAction};
-use crate::clinical::therapy::therapy_integration::state::{SafetyMetrics, SafetyStatus, TherapySessionState};
-use crate::clinical::therapy::therapy_integration::intensity_tracker::IntensityTracker;
 use crate::clinical::therapy::therapy_integration::acoustic::AcousticWaveSolver;
+use crate::clinical::therapy::therapy_integration::config::TherapyModality;
+use crate::clinical::therapy::therapy_integration::intensity_tracker::IntensityTracker;
+use crate::clinical::therapy::therapy_integration::safety_controller::{
+    SafetyController, TherapyAction,
+};
+use crate::clinical::therapy::therapy_integration::state::{
+    SafetyMetrics, SafetyStatus, TherapySessionState,
+};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::Array3;
 
-use super::{
-    TherapyIntegrationOrchestrator,
-    cavitation, chemical, execution, initialization, lithotripsy, microbubble, safety,
-};
 use super::super::config::TherapySessionConfig;
+use super::{
+    cavitation, chemical, execution, initialization, lithotripsy, microbubble, safety,
+    TherapyIntegrationOrchestrator,
+};
 
 impl TherapyIntegrationOrchestrator {
     /// Create new therapy integration orchestrator

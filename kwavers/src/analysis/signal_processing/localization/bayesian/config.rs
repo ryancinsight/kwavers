@@ -25,7 +25,7 @@ pub enum KalmanFilterType {
 }
 
 impl KalmanFilterConfig {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: LocalizationConfig, filter_type: KalmanFilterType) -> Self {
         Self {
             config,
@@ -36,19 +36,19 @@ impl KalmanFilterConfig {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_process_noise(mut self, noise: f64) -> Self {
         self.process_noise = noise;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_measurement_noise(mut self, noise: f64) -> Self {
         self.measurement_noise = noise;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_initial_uncertainty(mut self, uncertainty: f64) -> Self {
         self.initial_uncertainty = uncertainty;
         self

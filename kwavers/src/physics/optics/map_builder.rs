@@ -50,7 +50,7 @@ pub struct PropertyStats {
 
 impl PropertyStats {
     /// Compute statistics from an array
-    #[must_use] 
+    #[must_use]
     pub fn from_array(array: &Array3<f64>) -> Self {
         let values: Vec<f64> = array.iter().copied().collect();
         Self::from_values(&values)
@@ -79,19 +79,19 @@ impl PropertyStats {
 
 impl OpticalPropertyMap {
     /// Compute statistics for absorption coefficient distribution
-    #[must_use] 
+    #[must_use]
     pub fn absorption_stats(&self) -> PropertyStats {
         PropertyStats::from_array(&self.mu_a)
     }
 
     /// Compute statistics for scattering coefficient distribution
-    #[must_use] 
+    #[must_use]
     pub fn scattering_stats(&self) -> PropertyStats {
         PropertyStats::from_array(&self.mu_s_prime)
     }
 
     /// Compute statistics for refractive index distribution
-    #[must_use] 
+    #[must_use]
     pub fn refractive_index_stats(&self) -> PropertyStats {
         PropertyStats::from_array(&self.refractive_index)
     }

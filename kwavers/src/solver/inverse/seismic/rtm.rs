@@ -150,12 +150,18 @@ impl RtmProcessor {
         k: usize,
         grid: &Grid,
     ) -> f64 {
-        let d2_dx2 = 2.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]] + field[[i - 1, j, k]])
-            / (grid.dx * grid.dx);
-        let d2_dy2 = 2.0f64.mul_add(-field[[i, j, k]], field[[i, j + 1, k]] + field[[i, j - 1, k]])
-            / (grid.dy * grid.dy);
-        let d2_dz2 = 2.0f64.mul_add(-field[[i, j, k]], field[[i, j, k + 1]] + field[[i, j, k - 1]])
-            / (grid.dz * grid.dz);
+        let d2_dx2 = 2.0f64.mul_add(
+            -field[[i, j, k]],
+            field[[i + 1, j, k]] + field[[i - 1, j, k]],
+        ) / (grid.dx * grid.dx);
+        let d2_dy2 = 2.0f64.mul_add(
+            -field[[i, j, k]],
+            field[[i, j + 1, k]] + field[[i, j - 1, k]],
+        ) / (grid.dy * grid.dy);
+        let d2_dz2 = 2.0f64.mul_add(
+            -field[[i, j, k]],
+            field[[i, j, k + 1]] + field[[i, j, k - 1]],
+        ) / (grid.dz * grid.dz);
 
         d2_dx2 + d2_dy2 + d2_dz2
     }

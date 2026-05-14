@@ -25,7 +25,11 @@ mod tests {
     /// ReflectionCoefficients stores all three fields correctly.
     #[test]
     fn stores_amplitude_phase_energy() {
-        let r = ReflectionCoefficients { amplitude: 0.3, phase: PI, energy: 0.09 };
+        let r = ReflectionCoefficients {
+            amplitude: 0.3,
+            phase: PI,
+            energy: 0.09,
+        };
         assert!((r.amplitude - 0.3).abs() < 1e-15);
         assert!((r.phase - PI).abs() < 1e-15);
         assert!((r.energy - 0.09).abs() < 1e-15);
@@ -34,7 +38,11 @@ mod tests {
     /// Clone produces an independent copy with identical values.
     #[test]
     fn clone_produces_equal_values() {
-        let original = ReflectionCoefficients { amplitude: 0.5, phase: 0.0, energy: 0.25 };
+        let original = ReflectionCoefficients {
+            amplitude: 0.5,
+            phase: 0.0,
+            energy: 0.25,
+        };
         let cloned = original.clone();
         assert!((original.amplitude - cloned.amplitude).abs() < 1e-15);
         assert!((original.phase - cloned.phase).abs() < 1e-15);
@@ -47,11 +55,17 @@ mod tests {
     #[test]
     fn energy_equals_amplitude_squared_for_lossless_interface() {
         let r = 0.4_f64;
-        let coeff = ReflectionCoefficients { amplitude: r, phase: 0.0, energy: r * r };
+        let coeff = ReflectionCoefficients {
+            amplitude: r,
+            phase: 0.0,
+            energy: r * r,
+        };
         let computed_energy = coeff.amplitude * coeff.amplitude;
         assert!(
             (coeff.energy - computed_energy).abs() < 1e-15,
-            "energy={}, amplitude²={}", coeff.energy, computed_energy
+            "energy={}, amplitude²={}",
+            coeff.energy,
+            computed_energy
         );
     }
 }

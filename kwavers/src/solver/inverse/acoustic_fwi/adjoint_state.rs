@@ -68,7 +68,7 @@ pub fn l2_objective(
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
-#[must_use] 
+#[must_use]
 pub fn reverse_time_axis(data: &Array2<f64>) -> Array2<f64> {
     data.slice(s![.., ..;-1]).to_owned()
 }

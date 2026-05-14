@@ -49,7 +49,7 @@ pub trait FieldLayoutInfo {
 /// # Panics
 /// - Panics if an internal precondition is violated.
 ///
-#[must_use] 
+#[must_use]
 pub fn packed_struct_size(field_sizes: &[usize], field_alignments: &[usize]) -> usize {
     assert_eq!(field_sizes.len(), field_alignments.len());
 

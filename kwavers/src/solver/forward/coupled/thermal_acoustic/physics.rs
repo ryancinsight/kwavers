@@ -77,8 +77,9 @@ impl ThermalAcousticCoupler {
                     let metabolic_term = self.config.q_met / rho_c;
                     let acoustic_term = self.acoustic_heating[[i, j, k]] / rho_c;
 
-                    let d_t_dt =
-                        k_thermal.mul_add(laplacian_t, perfusion_term) + metabolic_term + acoustic_term;
+                    let d_t_dt = k_thermal.mul_add(laplacian_t, perfusion_term)
+                        + metabolic_term
+                        + acoustic_term;
 
                     self.temperature[[i, j, k]] = dt.mul_add(d_t_dt, t);
                 }

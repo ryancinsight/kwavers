@@ -17,7 +17,7 @@ impl VectorOperations {
     ///
     /// # Returns
     /// L2 norm (square root of sum of squares)
-    #[must_use] 
+    #[must_use]
     pub fn norm_l2(array: &Array3<f64>) -> f64 {
         let mut sum_sq = 0.0;
         for &val in array {
@@ -33,7 +33,7 @@ impl VectorOperations {
     ///
     /// # Returns
     /// L2 norm (square root of sum of squares)
-    #[must_use] 
+    #[must_use]
     pub fn norm_l2_3d(array: &Array3<f64>) -> f64 {
         Self::norm_l2(array)
     }
@@ -64,7 +64,7 @@ impl VectorOperations {
     ///
     /// # Returns
     /// L2 norm (Euclidean norm)
-    #[must_use] 
+    #[must_use]
     pub fn vector_norm_l2(vector: &[f64]) -> f64 {
         let mut sum_sq = 0.0;
         for &x in vector {
@@ -81,7 +81,7 @@ impl VectorOperations {
     ///
     /// # Returns
     /// Dot product, or None if vectors have different lengths
-    #[must_use] 
+    #[must_use]
     pub fn dot_product(a: &[f64], b: &[f64]) -> Option<f64> {
         if a.len() != b.len() {
             return None;
@@ -102,7 +102,7 @@ impl VectorOperations {
     ///
     /// # Returns
     /// Cross product vector
-    #[must_use] 
+    #[must_use]
     pub fn cross_product(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
         [
             a[1].mul_add(b[2], -(a[2] * b[1])),

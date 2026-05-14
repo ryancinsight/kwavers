@@ -257,7 +257,8 @@ impl MieCalculator {
 
         for n in 0..an.len() {
             let n_f64 = (n + 1) as f64;
-            let weight = 2.0f64.mul_add(n_f64, 1.0) / ((n_f64 * (n_f64 + 1.0)) * 2.0f64.mul_add(n_f64, 1.0));
+            let weight =
+                2.0f64.mul_add(n_f64, 1.0) / ((n_f64 * (n_f64 + 1.0)) * 2.0f64.mul_add(n_f64, 1.0));
 
             sum1 += weight * (an[n] * bn[n].conj() + bn[n] * an[n].conj()).re;
             sum2 += 2.0f64.mul_add(n_f64, 1.0) * (an[n].norm_sqr() + bn[n].norm_sqr());

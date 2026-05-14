@@ -233,7 +233,7 @@ impl<'a> FieldBufferGuard<'a> {
 
     /// Convert to 3D view
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn as_view3(&self, nx: usize, ny: usize, nz: usize) -> Option<ArrayView3<'_, f64>> {
         ArrayView3::from_shape((nx, ny, nz), self.data).ok()
     }

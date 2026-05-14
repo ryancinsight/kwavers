@@ -54,11 +54,7 @@ pub fn find_push_locations(displacement: &DisplacementField, grid: &Grid) -> Vec
                 }
 
                 if is_local_max {
-                    locations.push([
-                        i as f64 * grid.dx,
-                        j as f64 * grid.dy,
-                        k as f64 * grid.dz,
-                    ]);
+                    locations.push([i as f64 * grid.dx, j as f64 * grid.dy, k as f64 * grid.dz]);
                 }
             }
         }

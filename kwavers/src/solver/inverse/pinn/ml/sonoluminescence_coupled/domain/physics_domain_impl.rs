@@ -86,7 +86,11 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for SonoluminescenceCoupledDomain<B> {
                 );
                 weights.insert(
                     "spectral_weight".to_string(),
-                    if self.config.spectral_resolution { 1.0 } else { 0.0 },
+                    if self.config.spectral_resolution {
+                        1.0
+                    } else {
+                        0.0
+                    },
                 );
                 weights
             },

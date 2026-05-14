@@ -242,7 +242,8 @@ pub fn extract_complex_baseband_snapshots(
     }
     if n_sensors == 0 || n_samples == 0 {
         return Err(KwaversError::InvalidInput(
-            "extract_complex_baseband_snapshots requires n_sensors > 0 and n_samples > 0".to_owned(),
+            "extract_complex_baseband_snapshots requires n_sensors > 0 and n_samples > 0"
+                .to_owned(),
         ));
     }
 

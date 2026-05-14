@@ -45,7 +45,8 @@ impl CovariancePostProcess {
             Self::SpatialSmoothing { subarray_size } => {
                 if *subarray_size == 0 {
                     return Err(KwaversError::InvalidInput(
-                        "CovariancePostProcess::SpatialSmoothing: subarray_size must be >= 1".to_owned(),
+                        "CovariancePostProcess::SpatialSmoothing: subarray_size must be >= 1"
+                            .to_owned(),
                     ));
                 }
                 Ok(())

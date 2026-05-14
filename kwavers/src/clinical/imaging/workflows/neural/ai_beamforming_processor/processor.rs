@@ -157,7 +157,8 @@ impl AIEnhancedBeamformingProcessor {
             for x in 0..64 {
                 for y in 0..64 {
                     let angle = angles.get(frame).copied().unwrap_or(0.0);
-                    let steering_delay = (x as f32).mul_add(angle.sin(), y as f32 * angle.cos()) * 0.01;
+                    let steering_delay =
+                        (x as f32).mul_add(angle.sin(), y as f32 * angle.cos()) * 0.01;
                     let mut sum = 0.0;
                     let channel_limit = nchan.min(10);
                     for chan in 0..channel_limit {
@@ -256,7 +257,7 @@ impl AIEnhancedBeamformingProcessor {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> &AIBeamformingConfig {
         &self.config
     }

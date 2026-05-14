@@ -12,7 +12,7 @@ use super::super::aperture::{
 use super::super::skin::nearest_external_skin_point;
 use super::super::{
     medium::{largest_connected_target_component, largest_target_slice},
-    AnatomyKind, TheranosticFwiConfig,
+    AnatomyKind, TheranosticInverseConfig,
 };
 use super::surface::surface_points_2d;
 use super::{centroid_2d, centroid_index, validate_spacing, PlacementContext, Point3};
@@ -22,7 +22,7 @@ pub fn build_abdominal_placement_context(
     ct_volume_hu: &Array3<f64>,
     label_volume: &Array3<i16>,
     spacing_mm: [f64; 3],
-    config: &TheranosticFwiConfig,
+    config: &TheranosticInverseConfig,
 ) -> KwaversResult<PlacementContext> {
     if ct_volume_hu.dim() != label_volume.dim() {
         return Err(KwaversError::InvalidInput(format!(

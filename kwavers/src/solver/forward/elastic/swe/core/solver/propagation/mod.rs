@@ -21,13 +21,8 @@ impl ElasticWaveSolver {
         body_force: Option<&ElasticBodyForceConfig>,
     ) -> KwaversResult<ElasticWaveField> {
         let mut current_field = initial_field.clone();
-        let integrator = TimeIntegrator::new(
-            &self.grid,
-            &self.lambda,
-            &self.mu,
-            &self.density,
-            &self.pml,
-        );
+        let integrator =
+            TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
         let dt = if self.config.time_step > 0.0 {
             self.config.time_step
         } else {
@@ -221,13 +216,8 @@ impl ElasticWaveSolver {
         body_force: Option<&ElasticBodyForceConfig>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let mut current_field = initial_field.clone();
-        let integrator = TimeIntegrator::new(
-            &self.grid,
-            &self.lambda,
-            &self.mu,
-            &self.density,
-            &self.pml,
-        );
+        let integrator =
+            TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
         let dt = if self.config.time_step > 0.0 {
             self.config.time_step
         } else {

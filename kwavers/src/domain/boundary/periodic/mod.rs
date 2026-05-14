@@ -59,12 +59,12 @@ impl Default for PeriodicConfig {
 }
 
 impl PeriodicConfig {
-    #[must_use] 
+    #[must_use]
     pub fn all() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn new(periodic_x: bool, periodic_y: bool, periodic_z: bool) -> Self {
         Self {
             periodic_x,
@@ -77,7 +77,7 @@ impl PeriodicConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_bloch_phase(mut self, bloch_phase: [f64; 3]) -> Self {
         self.bloch_phase = bloch_phase;
         self

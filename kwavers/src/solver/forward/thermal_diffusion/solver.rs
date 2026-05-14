@@ -105,12 +105,30 @@ impl ThermalDiffusionSolver {
         for i in i_range {
             for j in j_range.clone() {
                 for k in k_range.clone() {
-                    let d2_dx2 =
-                        Self::second_derivative_axis::<0, ORDER>(&self.temperature, i, j, k, dx2_inv, grid.nx);
-                    let d2_dy2 =
-                        Self::second_derivative_axis::<1, ORDER>(&self.temperature, i, j, k, dy2_inv, grid.ny);
-                    let d2_dz2 =
-                        Self::second_derivative_axis::<2, ORDER>(&self.temperature, i, j, k, dz2_inv, grid.nz);
+                    let d2_dx2 = Self::second_derivative_axis::<0, ORDER>(
+                        &self.temperature,
+                        i,
+                        j,
+                        k,
+                        dx2_inv,
+                        grid.nx,
+                    );
+                    let d2_dy2 = Self::second_derivative_axis::<1, ORDER>(
+                        &self.temperature,
+                        i,
+                        j,
+                        k,
+                        dy2_inv,
+                        grid.ny,
+                    );
+                    let d2_dz2 = Self::second_derivative_axis::<2, ORDER>(
+                        &self.temperature,
+                        i,
+                        j,
+                        k,
+                        dz2_inv,
+                        grid.nz,
+                    );
 
                     self.laplacian_workspace[[i, j, k]] = d2_dx2 + d2_dy2 + d2_dz2;
                 }
@@ -202,7 +220,10 @@ impl ThermalDiffusionSolver {
             _ => unreachable!("AXIS is a const-generic selector in 0..3"),
         };
 
-        C0.mul_add(p2, C1.mul_add(p1, C2.mul_add(center, C1.mul_add(m1, C0 * m2)))) * inv_h2
+        C0.mul_add(
+            p2,
+            C1.mul_add(p1, C2.mul_add(center, C1.mul_add(m1, C0 * m2))),
+        ) * inv_h2
     }
 
     /// Update.
@@ -339,9 +360,8 @@ mod tests {
     fn second_order_laplacian_keeps_singleton_axis_active_for_other_axes() {
         let grid = Grid::new(5, 5, 1, 1.0, 1.0, 1.0).unwrap();
         let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
-        let field = Array3::from_shape_fn((5, 5, 1), |(i, j, _)| {
-            (i * i) as f64 + 2.0 * (j * j) as f64
-        });
+        let field =
+            Array3::from_shape_fn((5, 5, 1), |(i, j, _)| (i * i) as f64 + 2.0 * (j * j) as f64);
         solver.set_temperature(field);
 
         solver.calculate_laplacian(&grid).unwrap();
@@ -354,9 +374,8 @@ mod tests {
     fn fourth_order_laplacian_falls_back_per_axis_on_narrow_dimensions() {
         let grid = Grid::new(7, 3, 1, 1.0, 1.0, 1.0).unwrap();
         let mut solver = ThermalDiffusionSolver::new(config(4), &grid);
-        let field = Array3::from_shape_fn((7, 3, 1), |(i, j, _)| {
-            (i * i) as f64 + 3.0 * (j * j) as f64
-        });
+        let field =
+            Array3::from_shape_fn((7, 3, 1), |(i, j, _)| (i * i) as f64 + 3.0 * (j * j) as f64);
         solver.set_temperature(field);
 
         solver.calculate_laplacian(&grid).unwrap();

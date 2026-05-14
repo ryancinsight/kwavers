@@ -164,17 +164,17 @@ impl SimdStencilProcessor {
         Ok(())
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn tile_stats(&self) -> (usize, usize, usize) {
         (self.num_tiles_x, self.num_tiles_y, self.num_tiles_z)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn total_tiles(&self) -> usize {
         self.num_tiles_x * self.num_tiles_y * self.num_tiles_z
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> SimdStencilConfig {
         self.config
     }

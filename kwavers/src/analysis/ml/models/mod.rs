@@ -109,7 +109,10 @@ mod tests {
 
         assert_eq!(output.shape(), &[5, 1]);
         for val in output.iter() {
-            assert!(*val >= 0.0 && *val <= 1.0, "probability out of [0,1]: {val}");
+            assert!(
+                *val >= 0.0 && *val <= 1.0,
+                "probability out of [0,1]: {val}"
+            );
         }
         // Mean=0 → p=0.5 analytically.
         assert!((output[[0, 0]] - 0.5).abs() < 1e-5);

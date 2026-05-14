@@ -10,7 +10,7 @@ use super::SensorRecorder;
 
 impl SensorRecorder {
     /// Sensor indices in Fortran order (x-fastest).
-    #[must_use] 
+    #[must_use]
     pub fn sensor_indices(&self) -> &[(usize, usize, usize)] {
         &self.sensor_indices
     }
@@ -24,7 +24,7 @@ impl SensorRecorder {
     // ── Pressure extraction ──────────────────────────────────────────────────
 
     /// Clone the full recorded pressure buffer `(n_sensors, expected_steps)`.
-    #[must_use] 
+    #[must_use]
     pub fn extract_pressure_data(&self) -> Option<Array2<f64>> {
         self.pressure.clone()
     }

@@ -4,6 +4,7 @@ use crate::math::numerics::operators::TrilinearInterpolator;
 use ndarray::ArrayView3;
 use std::collections::HashMap;
 
+use super::residual::max_abs_difference;
 use super::{ConservationEnforcer, CoupledPhysicsSolver, CouplingInterface, PhysicsDomain};
 
 /// Field coupling manager for conservative interpolation between domains
@@ -22,7 +23,7 @@ impl FieldCoupler {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             interpolators: HashMap::new(),
@@ -90,11 +91,7 @@ impl FieldCoupler {
         // Update target field
         target_solver.set_field(field_name, relaxed_field.view())?;
 
-        // Return residual for convergence checking
-        let residual = (&relaxed_field - &current_target)
-            .mapv(|x| x.abs())
-            .mean()
-            .unwrap_or(0.0);
+        let residual = max_abs_difference(relaxed_field.view(), current_target.view())?;
         Ok(residual)
     }
 
@@ -142,10 +139,7 @@ impl FieldCoupler {
         let relaxed_field = &interpolated * relaxation + &current_target * (1.0 - relaxation);
         target_solver.set_field(field_name, relaxed_field.view())?;
 
-        let residual = (&relaxed_field - &current_target)
-            .mapv(|x| x.abs())
-            .mean()
-            .unwrap_or(0.0);
+        let residual = max_abs_difference(relaxed_field.view(), current_target.view())?;
         Ok(residual)
     }
 }

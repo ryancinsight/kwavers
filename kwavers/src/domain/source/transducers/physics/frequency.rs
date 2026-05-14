@@ -234,7 +234,9 @@ impl FrequencyResponse {
         let z = self.impedance[center_idx];
 
         let reflection_coeff = (z - z0) / (z + z0);
-        let transmission: f64 = reflection_coeff.norm().mul_add(-reflection_coeff.norm(), 1.0);
+        let transmission: f64 = reflection_coeff
+            .norm()
+            .mul_add(-reflection_coeff.norm(), 1.0);
 
         -10.0 * transmission.log10()
     }

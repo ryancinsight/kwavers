@@ -17,7 +17,9 @@ pub struct MemoryCompression {
 
 impl MemoryCompression {
     pub fn new() -> Self {
-        Self { compressed_blocks: HashMap::new() }
+        Self {
+            compressed_blocks: HashMap::new(),
+        }
     }
 
     /// Compress the memory block referenced by `handle`.

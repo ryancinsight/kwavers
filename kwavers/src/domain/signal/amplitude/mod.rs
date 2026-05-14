@@ -69,7 +69,10 @@ impl PowerModulation {
 impl Amplitude for PowerModulation {
     fn amplitude(&self, t: f64) -> f64 {
         self.base_amplitude
-            * self.modulation_depth.mul_add((2.0 * std::f64::consts::PI * self.modulation_freq * t).sin(), 1.0)
+            * self.modulation_depth.mul_add(
+                (2.0 * std::f64::consts::PI * self.modulation_freq * t).sin(),
+                1.0,
+            )
     }
     fn clone_box(&self) -> Box<dyn Amplitude> {
         Box::new(self.clone())

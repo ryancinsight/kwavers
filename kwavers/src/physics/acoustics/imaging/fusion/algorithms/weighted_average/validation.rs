@@ -36,7 +36,8 @@ pub fn validate_weighted_average_inputs(fusion: &MultiModalFusion) -> KwaversRes
     if !total_weight.is_finite() || total_weight <= 0.0 {
         return Err(KwaversError::Validation(
             crate::core::error::ValidationError::ConstraintViolation {
-                message: "FusionConfig.modality_weights must sum to a positive finite value".to_owned(),
+                message: "FusionConfig.modality_weights must sum to a positive finite value"
+                    .to_owned(),
             },
         ));
     }

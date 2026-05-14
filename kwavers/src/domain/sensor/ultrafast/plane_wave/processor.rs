@@ -32,7 +32,7 @@ impl PlaneWave {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(config: PlaneWaveConfig) -> Self {
         Self { config }
     }
@@ -41,7 +41,7 @@ impl PlaneWave {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn functional_ultrasound(element_positions: Vec<f64>) -> Self {
         Self::new(PlaneWaveConfig {
             element_positions,
@@ -137,7 +137,8 @@ impl PlaneWave {
         for &y in y_pixels {
             for _x in x_pixels {
                 for (elem_idx, &x_elem) in self.config.element_positions.iter().enumerate() {
-                    delays[[elem_idx, pixel_idx]] = (2.0 * x_elem).mul_add(sin_theta, y * cos_theta) / c;
+                    delays[[elem_idx, pixel_idx]] =
+                        (2.0 * x_elem).mul_add(sin_theta, y * cos_theta) / c;
                 }
                 pixel_idx += 1;
             }
@@ -175,7 +176,7 @@ impl PlaneWave {
     }
 
     /// Number of compounding angles.
-    #[must_use] 
+    #[must_use]
     pub fn num_angles(&self) -> usize {
         self.config.tilt_angles.len()
     }
@@ -184,7 +185,7 @@ impl PlaneWave {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn angles_degrees(&self) -> Vec<f64> {
         self.config
             .tilt_angles
@@ -197,7 +198,7 @@ impl PlaneWave {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn compounded_frame_rate(&self, prf: f64) -> f64 {
         prf / self.num_angles() as f64
     }

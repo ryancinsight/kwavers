@@ -40,6 +40,7 @@
 pub mod conservation;
 pub mod coupler;
 pub mod interface;
+mod residual;
 pub mod schwarz;
 pub mod solver;
 

@@ -32,8 +32,11 @@ mod tests {
         let mut cfg = BjerknesConfig::default();
         cfg.frequency = 500e3;
         let calc = BjerknesCalculator::new(cfg);
-        assert!((calc.config().frequency - 500e3).abs() < 1e-6,
-            "frequency not stored: {}", calc.config().frequency);
+        assert!(
+            (calc.config().frequency - 500e3).abs() < 1e-6,
+            "frequency not stored: {}",
+            calc.config().frequency
+        );
     }
 
     /// Debug output is non-empty.

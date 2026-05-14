@@ -51,14 +51,11 @@ impl<'a> DelaySumGPU<'a> {
         for ex in 0..self.config.num_elements_3d.0 {
             for ey in 0..self.config.num_elements_3d.1 {
                 for ez in 0..self.config.num_elements_3d.2 {
-                    let x = ((self.config.num_elements_3d.0 - 1) as f32)
-                        .mul_add(-0.5, ex as f32)
+                    let x = ((self.config.num_elements_3d.0 - 1) as f32).mul_add(-0.5, ex as f32)
                         * self.config.element_spacing_3d.0 as f32;
-                    let y = ((self.config.num_elements_3d.1 - 1) as f32)
-                        .mul_add(-0.5, ey as f32)
+                    let y = ((self.config.num_elements_3d.1 - 1) as f32).mul_add(-0.5, ey as f32)
                         * self.config.element_spacing_3d.1 as f32;
-                    let z = ((self.config.num_elements_3d.2 - 1) as f32)
-                        .mul_add(-0.5, ez as f32)
+                    let z = ((self.config.num_elements_3d.2 - 1) as f32).mul_add(-0.5, ez as f32)
                         * self.config.element_spacing_3d.2 as f32;
                     element_positions.extend_from_slice(&[x, y, z]);
                 }

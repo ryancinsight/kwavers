@@ -97,9 +97,8 @@ impl BayesianPINN {
         confidence_intervals.insert("68%".to_owned(), (ci_68_lower, ci_68_upper));
 
         let mean_uncertainty = uncertainty.iter().sum::<f32>() / uncertainty.len() as f32;
-        let mean_prediction_magnitude =
-            mean_prediction.iter().map(|x: &f32| x.abs()).sum::<f32>()
-                / mean_prediction.len() as f32;
+        let mean_prediction_magnitude = mean_prediction.iter().map(|x: &f32| x.abs()).sum::<f32>()
+            / mean_prediction.len() as f32;
 
         let reliability_score = if mean_prediction_magnitude > 0.0 {
             1.0 / (1.0 + mean_uncertainty / mean_prediction_magnitude)

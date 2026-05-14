@@ -1,11 +1,13 @@
 {
   "chapter": 29,
-  "analysis": "same-device ultrasound treatment plus FWI/RTM monitoring",
-  "simulation_type": "RITK-loaded CT/NIfTI, kwavers PyO3 theranostic FWI",
+  "analysis": "same-device ultrasound treatment plus finite-frequency inverse and source-encoded linear RTM monitoring",
+  "simulation_type": "RITK-loaded CT/NIfTI, kwavers PyO3 theranostic inverse",
   "figures": [
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig01_device_placement_on_ct.png",
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig02_exposure_and_reconstruction.png",
-    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig03_brain_helmet_3d_placement.png"
+    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig03_brain_helmet_3d_placement.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig04_reconstruction_dynamic_range_diagnostics.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig05_nonlinear_3d_westervelt_rp_cavitation.png"
   ],
   "brain_helmet_3d": {
     "geometry_model": "ct_derived_calvarium_1024_element_helmet_with_skull_intersections",
@@ -23,9 +25,27 @@
       "geometry_model": "insightec_like_1024_element_helmet_projection",
       "placement_context_model": "insightec_like_1024_element_calvarium_helmet_3d",
       "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
+      "operator_backend": "matrix_free_finite_frequency_same_aperture",
+      "operator_storage_values": 307212,
+      "dense_operator_values": 16328704,
+      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
+      "is_full_wave_inversion": false,
+      "uses_nonlinear_wave_propagation": false,
+      "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
+      "waveform_misfit": "charbonnier",
+      "waveform_misfit_scale": 167.67498779296875,
+      "waveform_objective": 0.0003692761461262784,
+      "waveform_receiver_count": 1024,
+      "waveform_time_steps": 952,
+      "waveform_dt_s": 3.6807097042105114e-07,
+      "waveform_residual_energy": 0.0007398859194607059,
+      "waveform_observed_energy": 190331634405874.1,
       "element_count": 1024,
       "source_pressure_pa": 150000.0,
-      "measurements": 28672,
+      "measurements": 14336,
+      "encoded_measurements": 14336,
+      "unencoded_measurements": 28672,
+      "inverse_encoding_rows_per_code": 2,
       "active_voxels": 1139,
       "spacing_m": 0.004312970797220866,
       "placement_slice_index": 6,
@@ -43,40 +63,84 @@
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.47523056498389216,
-          "nrmse": 0.37456874722245953,
-          "dice_equal_area": 0.6820083682008368,
-          "cnr": 1.642234291397903
+          "pearson": 0.35526151154888874,
+          "nrmse": 0.3843750799439138,
+          "dice_equal_area": 0.5648535564853556,
+          "cnr": 1.0195809709881094
         },
         "active_lesion": {
-          "pearson": 0.5477355673427783,
-          "nrmse": 0.08504628532973,
+          "pearson": 0.5459682394024337,
+          "nrmse": 0.0825869667178998,
           "dice_equal_area": 0.5,
-          "cnr": 10.644981311617041
+          "cnr": 10.638144512162553
+        },
+        "waveform_rtm": {
+          "pearson": 0.12806427870570783,
+          "nrmse": 0.11088810046571636,
+          "dice_equal_area": 0.0,
+          "cnr": 2.0083729702069215
         },
         "subharmonic": {
-          "pearson": 0.7413863652075305,
-          "nrmse": 0.06374711723439791,
+          "pearson": 0.7495032342347654,
+          "nrmse": 0.061780150250153335,
           "dice_equal_area": 1.0,
-          "cnr": 15.495870140010002
+          "cnr": 15.723369933081404
         },
         "harmonic": {
-          "pearson": 0.4864160472810513,
-          "nrmse": 0.05698870192006966,
-          "dice_equal_area": 0.5,
-          "cnr": 8.803934112009768
+          "pearson": 0.5792186533016185,
+          "nrmse": 0.05832381721194351,
+          "dice_equal_area": 0.75,
+          "cnr": 11.160296928616296
         },
         "ultraharmonic": {
-          "pearson": 0.42072838594300915,
-          "nrmse": 0.08656705767913174,
-          "dice_equal_area": 0.0,
-          "cnr": 7.650382047164325
+          "pearson": 0.6421957296995213,
+          "nrmse": 0.07342366856471289,
+          "dice_equal_area": 0.75,
+          "cnr": 13.643246152874013
         },
         "fusion": {
-          "pearson": 0.9322359067244035,
-          "nrmse": 0.026226749276003162,
+          "pearson": 0.9509901557148132,
+          "nrmse": 0.02253575580066026,
           "dice_equal_area": 1.0,
-          "cnr": 34.63013178061773
+          "cnr": 38.770596009345354
+        }
+      },
+      "reconstruction_diagnostics": {
+        "active_lesion_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.7215949413167567
+        },
+        "waveform_rtm_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.97377846787079
+        },
+        "subharmonic_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.3348676448704071,
+          "outside_peak_db": -9.502536244966269,
+          "outside_energy_fraction": 0.4597902349546513
+        },
+        "harmonic_reconstruction": {
+          "peak": 0.6458278195842317,
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.6810407839334628
+        },
+        "ultraharmonic_reconstruction": {
+          "peak": 0.7777526347865088,
+          "outside_peak_ratio": 0.9180743046067926,
+          "outside_peak_db": -0.74244335255945,
+          "outside_energy_fraction": 0.6185771586696187
+        },
+        "fused_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.40363771860540465,
+          "outside_peak_db": -7.880165143212241,
+          "outside_energy_fraction": 0.12283895793911191
         }
       }
     },
@@ -86,9 +150,27 @@
       "geometry_model": "histosonics_like_256_element_skin_coupled_arc",
       "placement_context_model": "kidney_histosonics_like_256_element_full_patient_skin_arc",
       "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
+      "operator_backend": "matrix_free_finite_frequency_same_aperture",
+      "operator_storage_values": 118668,
+      "dense_operator_values": 7138176,
+      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
+      "is_full_wave_inversion": false,
+      "uses_nonlinear_wave_propagation": false,
+      "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
+      "waveform_misfit": "charbonnier",
+      "waveform_misfit_scale": 9700.5302734375,
+      "waveform_objective": 3135592061668.26,
+      "waveform_receiver_count": 320,
+      "waveform_time_steps": 3283,
+      "waveform_dt_s": 7.917310412745082e-07,
+      "waveform_residual_energy": 3949175238565.009,
+      "waveform_observed_energy": 6.865139058886719e+17,
       "element_count": 256,
       "source_pressure_pa": 28000000.0,
-      "measurements": 11136,
+      "measurements": 5568,
+      "encoded_measurements": 5568,
+      "unencoded_measurements": 11136,
+      "inverse_encoding_rows_per_code": 2,
       "active_voxels": 1282,
       "spacing_m": 0.009057692307692308,
       "placement_slice_index": 175,
@@ -106,40 +188,84 @@
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.6450822719901148,
-          "nrmse": 0.12894784478395938,
-          "dice_equal_area": 0.6274509803921569,
-          "cnr": 5.624904583591233
+          "pearson": 0.5425240254723847,
+          "nrmse": 0.1385428706282274,
+          "dice_equal_area": 0.5686274509803921,
+          "cnr": 3.653612004004755
         },
         "active_lesion": {
-          "pearson": 0.9908890240536182,
-          "nrmse": 0.007170154918155431,
+          "pearson": 0.9556857349140426,
+          "nrmse": 0.01707024156008626,
           "dice_equal_area": 1.0,
-          "cnr": 31.420466438885466
+          "cnr": 26.967644805601342
+        },
+        "waveform_rtm": {
+          "pearson": 0.2785233277288584,
+          "nrmse": 0.2049749242860738,
+          "dice_equal_area": 0.25,
+          "cnr": 4.007223853035945
         },
         "subharmonic": {
-          "pearson": 0.8297905532440023,
-          "nrmse": 0.038633363323243616,
+          "pearson": 0.8164982444776843,
+          "nrmse": 0.04151247672680525,
           "dice_equal_area": 1.0,
-          "cnr": 18.548912557358914
+          "cnr": 17.824945437058293
         },
         "harmonic": {
-          "pearson": 0.9722374496474935,
-          "nrmse": 0.01746958879488287,
+          "pearson": 0.9063121607163465,
+          "nrmse": 0.029392259555772255,
           "dice_equal_area": 1.0,
-          "cnr": 29.894803429934537
+          "cnr": 23.13402435823674
         },
         "ultraharmonic": {
-          "pearson": 0.9854702730499117,
-          "nrmse": 0.025792703894133028,
+          "pearson": 0.9492626078327235,
+          "nrmse": 0.035328393152413776,
           "dice_equal_area": 1.0,
-          "cnr": 32.4814958648297
+          "cnr": 29.53064466221978
         },
         "fusion": {
-          "pearson": 0.9772849136025006,
-          "nrmse": 0.011066954082077984,
+          "pearson": 0.976041985003224,
+          "nrmse": 0.011234108034793746,
           "dice_equal_area": 1.0,
-          "cnr": 52.39800565010731
+          "cnr": 50.34638791798895
+        }
+      },
+      "reconstruction_diagnostics": {
+        "active_lesion_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.10723540930773456,
+          "outside_peak_db": -19.39323572425561,
+          "outside_energy_fraction": 0.09873659917620611
+        },
+        "waveform_rtm_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.9043874359537896
+        },
+        "subharmonic_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.21551442823890604,
+          "outside_peak_db": -13.330472988507264,
+          "outside_energy_fraction": 0.3175588006645236
+        },
+        "harmonic_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.3380113291045877,
+          "outside_peak_db": -9.421374865147973,
+          "outside_energy_fraction": 0.20058151546723094
+        },
+        "ultraharmonic_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.12239572358699728,
+          "outside_peak_db": -18.244675116850658,
+          "outside_energy_fraction": 0.11350646708871993
+        },
+        "fused_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.04061833682871815,
+          "outside_peak_db": -27.82555726653062,
+          "outside_energy_fraction": 0.015159509974128444
         }
       }
     },
@@ -149,9 +275,27 @@
       "geometry_model": "histosonics_like_256_element_skin_coupled_arc",
       "placement_context_model": "liver_histosonics_like_256_element_full_patient_skin_arc",
       "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
+      "operator_backend": "matrix_free_finite_frequency_same_aperture",
+      "operator_storage_values": 118668,
+      "dense_operator_values": 8485632,
+      "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
+      "is_full_wave_inversion": false,
+      "uses_nonlinear_wave_propagation": false,
+      "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
+      "waveform_misfit": "charbonnier",
+      "waveform_misfit_scale": 12171.4462890625,
+      "waveform_objective": 464065.86692167335,
+      "waveform_receiver_count": 320,
+      "waveform_time_steps": 3797,
+      "waveform_dt_s": 5.524370598187209e-07,
+      "waveform_residual_energy": 928131.1657107015,
+      "waveform_observed_energy": 1.250006995028777e+18,
       "element_count": 256,
       "source_pressure_pa": 28000000.0,
-      "measurements": 11136,
+      "measurements": 5568,
+      "encoded_measurements": 5568,
+      "unencoded_measurements": 11136,
+      "inverse_encoding_rows_per_code": 2,
       "active_voxels": 1524,
       "spacing_m": 0.006044170673076924,
       "placement_slice_index": 58,
@@ -169,40 +313,212 @@
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.6661913941580078,
-          "nrmse": 0.12903208096986782,
-          "dice_equal_area": 0.6170212765957447,
-          "cnr": 3.98653533285749
+          "pearson": 0.5322730137585605,
+          "nrmse": 0.13990678233891354,
+          "dice_equal_area": 0.46808510638297873,
+          "cnr": 2.58589960561585
         },
         "active_lesion": {
-          "pearson": 0.9176070500455437,
-          "nrmse": 0.016340099039508137,
-          "dice_equal_area": 1.0,
-          "cnr": 29.859892444329425
+          "pearson": 0.8117486962039494,
+          "nrmse": 0.027007943138222024,
+          "dice_equal_area": 0.5,
+          "cnr": 24.129822494791878
+        },
+        "waveform_rtm": {
+          "pearson": 0.1999617505570538,
+          "nrmse": 0.14156188818264612,
+          "dice_equal_area": 0.0,
+          "cnr": 3.1553905831159605
         },
         "subharmonic": {
-          "pearson": 0.7006739770272068,
-          "nrmse": 0.04426678152172453,
-          "dice_equal_area": 1.0,
-          "cnr": 15.992723866380338
+          "pearson": 0.6972377532817519,
+          "nrmse": 0.04544258863428729,
+          "dice_equal_area": 0.5,
+          "cnr": 15.47225453056227
         },
         "harmonic": {
-          "pearson": 0.9407161205106657,
-          "nrmse": 0.017680299612539856,
+          "pearson": 0.895454136363263,
+          "nrmse": 0.024094841605501786,
           "dice_equal_area": 1.0,
-          "cnr": 32.62430049787807
+          "cnr": 29.698472544372144
         },
         "ultraharmonic": {
-          "pearson": 0.9459167328955903,
-          "nrmse": 0.024302830860424347,
+          "pearson": 0.8993627758489295,
+          "nrmse": 0.031081182291993817,
           "dice_equal_area": 1.0,
-          "cnr": 31.43595859339942
+          "cnr": 28.75749520207168
         },
         "fusion": {
-          "pearson": 0.9568812319388245,
-          "nrmse": 0.011402807265678537,
+          "pearson": 0.9519869458964161,
+          "nrmse": 0.012051615534518669,
           "dice_equal_area": 1.0,
-          "cnr": 49.704165133996085
+          "cnr": 47.86849471847454
+        }
+      },
+      "reconstruction_diagnostics": {
+        "active_lesion_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.35312955997895207,
+          "outside_peak_db": -9.041318534695879,
+          "outside_energy_fraction": 0.36237563204884765
+        },
+        "waveform_rtm_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 1.0,
+          "outside_peak_db": 0.0,
+          "outside_energy_fraction": 0.9447020525000533
+        },
+        "subharmonic_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.3422023527807622,
+          "outside_peak_db": -9.314340176658773,
+          "outside_energy_fraction": 0.5370573245498801
+        },
+        "harmonic_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.23100153901830822,
+          "outside_peak_db": -12.727702533331808,
+          "outside_energy_fraction": 0.22998234839229845
+        },
+        "ultraharmonic_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.12942658986981334,
+          "outside_peak_db": -17.759529829229102,
+          "outside_energy_fraction": 0.22886064507038612
+        },
+        "fused_reconstruction": {
+          "peak": 1.0,
+          "outside_peak_ratio": 0.04334435647042687,
+          "outside_peak_db": -27.26134881187763,
+          "outside_energy_fraction": 0.04474035675199748
+        }
+      }
+    }
+  ],
+  "nonlinear_3d_cases": [
+    {
+      "anatomy": "brain",
+      "model_family": "westervelt_3d_discrete_adjoint_fwi_plus_rayleigh_plesset_passive_inverse",
+      "propagator_model": "heterogeneous_westervelt_fdtd_3d_second_order_discrete_adjoint",
+      "cavitation_inverse_model": "rayleigh_plesset_subharmonic_green_projected_gradient_inverse",
+      "aperture_model": "insightec_like_calvarium_helmet_3d_westervelt_sources",
+      "is_full_wave_inversion": true,
+      "uses_nonlinear_wave_propagation": true,
+      "uses_rayleigh_plesset": true,
+      "grid_size": 48,
+      "time_steps": 5690,
+      "dt_s": 3.606344266650462e-07,
+      "active_voxels": 51031,
+      "element_count": 96,
+      "receiver_count": 48,
+      "source_encoding_count": 3,
+      "checkpoint_interval_steps": 128,
+      "frequency_hz": 650000.0,
+      "source_pressure_pa": 150000.0,
+      "lesion_delta_c_m_s": -35.0,
+      "lesion_delta_beta": 0.85,
+      "sound_speed_regularization": 0.002,
+      "nonlinearity_regularization": 0.001,
+      "gradient_smoothing_steps": 2,
+      "metrics": {
+        "fwi": {
+          "dice_equal_area": 0.07692307692307693,
+          "cnr": 13.272415966475277,
+          "nrmse": 0.015867286633839246
+        },
+        "rayleigh_plesset_cavitation": {
+          "dice_equal_area": 0.08695652173913043,
+          "cnr": 4.714061054573601,
+          "nrmse": 0.031048967835049013
+        },
+        "fusion": {
+          "dice_equal_area": 0.0,
+          "cnr": 11.070064396661634,
+          "nrmse": 0.01615008483727271
+        }
+      }
+    },
+    {
+      "anatomy": "kidney",
+      "model_family": "westervelt_3d_discrete_adjoint_fwi_plus_rayleigh_plesset_passive_inverse",
+      "propagator_model": "heterogeneous_westervelt_fdtd_3d_second_order_discrete_adjoint",
+      "cavitation_inverse_model": "rayleigh_plesset_subharmonic_green_projected_gradient_inverse",
+      "aperture_model": "kidney_histosonics_like_skin_coupled_3d_westervelt_sources",
+      "is_full_wave_inversion": true,
+      "uses_nonlinear_wave_propagation": true,
+      "uses_rayleigh_plesset": true,
+      "grid_size": 52,
+      "time_steps": 6179,
+      "dt_s": 2.1744809255468865e-07,
+      "active_voxels": 139973,
+      "element_count": 96,
+      "receiver_count": 48,
+      "source_encoding_count": 3,
+      "checkpoint_interval_steps": 128,
+      "frequency_hz": 750000.0,
+      "source_pressure_pa": 6000000.0,
+      "lesion_delta_c_m_s": -35.0,
+      "lesion_delta_beta": 0.85,
+      "sound_speed_regularization": 0.002,
+      "nonlinearity_regularization": 0.001,
+      "gradient_smoothing_steps": 2,
+      "metrics": {
+        "fwi": {
+          "dice_equal_area": 0.148,
+          "cnr": 5.747972069123222,
+          "nrmse": 0.07025219620239248
+        },
+        "rayleigh_plesset_cavitation": {
+          "dice_equal_area": 0.13333333333333333,
+          "cnr": 2.1716505145328258,
+          "nrmse": 0.06900560605553929
+        },
+        "fusion": {
+          "dice_equal_area": 0.08266666666666667,
+          "cnr": 3.488242554426778,
+          "nrmse": 0.07108413616039062
+        }
+      }
+    },
+    {
+      "anatomy": "liver",
+      "model_family": "westervelt_3d_discrete_adjoint_fwi_plus_rayleigh_plesset_passive_inverse",
+      "propagator_model": "heterogeneous_westervelt_fdtd_3d_second_order_discrete_adjoint",
+      "cavitation_inverse_model": "rayleigh_plesset_subharmonic_green_projected_gradient_inverse",
+      "aperture_model": "liver_histosonics_like_skin_coupled_3d_westervelt_sources",
+      "is_full_wave_inversion": true,
+      "uses_nonlinear_wave_propagation": true,
+      "uses_rayleigh_plesset": true,
+      "grid_size": 52,
+      "time_steps": 6168,
+      "dt_s": 5.39309710898669e-07,
+      "active_voxels": 70376,
+      "element_count": 96,
+      "receiver_count": 48,
+      "source_encoding_count": 3,
+      "checkpoint_interval_steps": 128,
+      "frequency_hz": 750000.0,
+      "source_pressure_pa": 6000000.0,
+      "lesion_delta_c_m_s": -35.0,
+      "lesion_delta_beta": 0.85,
+      "sound_speed_regularization": 0.002,
+      "nonlinearity_regularization": 0.001,
+      "gradient_smoothing_steps": 2,
+      "metrics": {
+        "fwi": {
+          "dice_equal_area": 0.5392670157068062,
+          "cnr": 15.837675607706466,
+          "nrmse": 0.04517501373239294
+        },
+        "rayleigh_plesset_cavitation": {
+          "dice_equal_area": 0.005847953216374269,
+          "cnr": 0.5710237650066843,
+          "nrmse": 0.07463268692597967
+        },
+        "fusion": {
+          "dice_equal_area": 0.5130890052356021,
+          "cnr": 11.708605160028153,
+          "nrmse": 0.04671087578792289
         }
       }
     }

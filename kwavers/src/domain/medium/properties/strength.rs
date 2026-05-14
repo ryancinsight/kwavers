@@ -101,13 +101,13 @@ impl StrengthPropertyData {
     }
 
     /// Estimate hardness from yield strength (H ≈ 3σ_y for metals)
-    #[must_use] 
+    #[must_use]
     pub fn estimate_hardness(yield_strength: f64) -> f64 {
         3.0 * yield_strength
     }
 
     /// Steel properties (mild steel)
-    #[must_use] 
+    #[must_use]
     pub fn steel() -> Self {
         Self {
             yield_strength: 250e6,
@@ -121,7 +121,7 @@ impl StrengthPropertyData {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn bone() -> Self {
         Self {
             yield_strength: 130e6,

@@ -96,7 +96,10 @@ impl CPMLConfig {
     /// Suppress inner z-PML cells for one-sided axisymmetric radial PML (builder).
     #[must_use]
     pub fn with_radial_inner_z_transparent(self) -> Self {
-        Self { radial_inner_z_transparent: true, ..self }
+        Self {
+            radial_inner_z_transparent: true,
+            ..self
+        }
     }
 
     /// Set per-dimension sigma absorption factors (builder; k-Wave `pml_alpha` vector).
@@ -140,18 +143,14 @@ impl CPMLConfig {
             .into());
         }
 
-        if self.per_dimension.x == 0
-            && self.per_dimension.y == 0
-            && self.per_dimension.z == 0
-        {
+        if self.per_dimension.x == 0 && self.per_dimension.y == 0 && self.per_dimension.z == 0 {
             return Err(ConfigError::InvalidValue {
                 parameter: "per_dimension".to_owned(),
                 value: format!(
                     "({}, {}, {})",
                     self.per_dimension.x, self.per_dimension.y, self.per_dimension.z
                 ),
-                constraint:
-                    "At least one per-dimension PML thickness must be positive".to_owned(),
+                constraint: "At least one per-dimension PML thickness must be positive".to_owned(),
             }
             .into());
         }
@@ -213,8 +212,8 @@ impl CPMLConfig {
         let cos_theta = cos_theta.max(MIN_COS_THETA_FOR_REFLECTION);
         let m = self.polynomial_order;
         let thickness = self.per_dimension.max_thickness() as f64;
-        let sigma_max = self.sigma_factor * (m + 1.0) * sound_speed
-            / (150.0 * std::f64::consts::PI * dx);
+        let sigma_max =
+            self.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);
         self.target_reflection * (-(m + 1.0) * sigma_max * thickness * cos_theta).exp()
     }
 
@@ -232,8 +231,8 @@ impl CPMLConfig {
         let cos_theta = cos_theta.max(MIN_COS_THETA_FOR_REFLECTION);
         let m = self.polynomial_order;
         let thickness = self.per_dimension.get(dim)? as f64;
-        let sigma_max = self.sigma_factor * (m + 1.0) * sound_speed
-            / (150.0 * std::f64::consts::PI * dx);
+        let sigma_max =
+            self.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);
         Ok(self.target_reflection * (-(m + 1.0) * sigma_max * thickness * cos_theta).exp())
     }
 }

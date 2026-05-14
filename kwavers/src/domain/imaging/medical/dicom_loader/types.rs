@@ -29,7 +29,7 @@ impl std::fmt::Display for DicomModality {
 
 impl DicomModality {
     /// Parse modality from a DICOM string code.
-    #[must_use] 
+    #[must_use]
     pub fn from_code(code: &str) -> Self {
         match code {
             "CT" => Self::CT,

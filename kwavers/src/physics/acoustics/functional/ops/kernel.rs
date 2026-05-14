@@ -1,6 +1,6 @@
 //! Kernel and windowed operations over fields
 
-use ndarray::Array3;
+use ndarray::{Array3, ArrayView3};
 use rayon::prelude::*;
 use std::ops::Add;
 
@@ -20,18 +20,20 @@ pub fn apply_kernel<T, K, U>(
     combine: impl Fn(&T, &K) -> U + Sync + Send,
 ) -> Array3<U>
 where
-    T: Clone + Send + Sync,
-    K: Clone + Send + Sync + PartialEq + Default,
-    U: Clone + Send + Sync + Default + Add<Output = U>,
+    T: Sync,
+    K: Sync + PartialEq + Default,
+    U: Default + Add<Output = U>,
 {
     let (nx, ny, nz) = field.dim();
     let (kx, ky, kz) = kernel.dim();
     let (hx, hy, hz) = (kx / 2, ky / 2, kz / 2);
 
-    // Pre-compute non-zero kernel elements for sparse optimization
+    // Pre-compute non-zero kernel references once. This keeps sparse kernel
+    // evaluation borrowed and avoids requiring coefficient cloning.
+    let default_kernel = K::default();
     let non_zero_kernel: Vec<((usize, usize, usize), &K)> = kernel
         .indexed_iter()
-        .filter(|(_, kval)| **kval != K::default())
+        .filter(|(_, kval)| *kval != &default_kernel)
         .collect();
 
     Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
@@ -62,27 +64,29 @@ pub fn apply_kernel_parallel<T, K, U>(
     combine: impl Fn(&T, &K) -> U + Sync + Send,
 ) -> Array3<U>
 where
-    T: Clone + Send + Sync,
-    K: Clone + Send + Sync + PartialEq + Default,
-    U: Clone + Send + Sync + Default + Add<Output = U>,
+    T: Sync,
+    K: Sync + PartialEq + Default,
+    U: Send + Default + Add<Output = U>,
 {
     let (nx, ny, nz) = field.dim();
     let (kx, ky, kz) = kernel.dim();
     let (hx, hy, hz) = (kx / 2, ky / 2, kz / 2);
 
-    let non_zero_kernel: Vec<((usize, usize, usize), K)> = kernel
+    let default_kernel = K::default();
+    let non_zero_kernel: Vec<((usize, usize, usize), &K)> = kernel
         .indexed_iter()
-        .filter(|(_, kval)| **kval != K::default())
-        .map(|(idx, kval)| (idx, kval.clone()))
+        .filter(|(_, kval)| *kval != &default_kernel)
         .collect();
 
-    let indices: Vec<(usize, usize, usize)> = (0..nx)
-        .flat_map(|i| (0..ny).flat_map(move |j| (0..nz).map(move |k| (i, j, k))))
-        .collect();
-
-    let flat_results: Vec<U> = indices
-        .par_iter()
-        .map(|&(i, j, k)| {
+    let total = nx * ny * nz;
+    let yz = ny * nz;
+    let flat_results: Vec<U> = (0..total)
+        .into_par_iter()
+        .map(|flat| {
+            let i = flat / yz;
+            let rem = flat % yz;
+            let j = rem / nz;
+            let k = rem % nz;
             non_zero_kernel
                 .iter()
                 .filter_map(|((ki, kj, kk), kval)| {
@@ -111,9 +115,7 @@ pub fn windowed_operation<T, U, F>(
     operation: F,
 ) -> Array3<U>
 where
-    T: Clone,
-    U: Clone + Default,
-    F: Fn(&Array3<T>) -> U,
+    F: Fn(ArrayView3<'_, T>) -> U,
 {
     let (nx, ny, nz) = field.dim();
     let (wx, wy, wz) = window_size;
@@ -127,12 +129,8 @@ where
         let z_start = k.saturating_sub(hwz);
         let z_end = (k + hwz + 1).min(nz);
 
-        if x_end > x_start && y_end > y_start && z_end > z_start {
-            let window = field.slice(ndarray::s![x_start..x_end, y_start..y_end, z_start..z_end]);
-            operation(&window.to_owned())
-        } else {
-            U::default()
-        }
+        let window = field.slice(ndarray::s![x_start..x_end, y_start..y_end, z_start..z_end]);
+        operation(window)
     })
 }
 
@@ -140,19 +138,29 @@ where
 mod tests {
     use super::*;
 
+    #[derive(Debug, Default, PartialEq, Eq)]
+    struct NonCloneScalar(i32);
+
+    impl Add for NonCloneScalar {
+        type Output = Self;
+
+        fn add(self, rhs: Self) -> Self::Output {
+            Self(self.0 + rhs.0)
+        }
+    }
+
     /// compose_operations(op1, op2) applies op1 then op2 sequentially.
     ///
     /// op1: ×2, op2: +1 → compose(v) = 2v+1. At uniform v=3: result = 7.
     #[test]
     fn compose_operations_applies_in_sequence() {
         let field: Array3<f64> = Array3::from_elem((3, 3, 3), 3.0);
-        let result = compose_operations(
-            &field,
-            |f| f.mapv(|x| x * 2.0),
-            |f| f.mapv(|x| x + 1.0),
-        );
+        let result = compose_operations(&field, |f| f.mapv(|x| x * 2.0), |f| f.mapv(|x| x + 1.0));
         for &v in result.iter() {
-            assert!((v - 7.0).abs() < 1e-14, "compose(×2,+1) at 3.0 must give 7.0 (got {v})");
+            assert!(
+                (v - 7.0).abs() < 1e-14,
+                "compose(×2,+1) at 3.0 must give 7.0 (got {v})"
+            );
         }
     }
 
@@ -161,9 +169,7 @@ mod tests {
     /// Identity-weight kernel (centre=1) → output equals input.
     #[test]
     fn apply_kernel_parallel_matches_sequential_result() {
-        let field: Array3<f64> = Array3::from_shape_fn((5, 5, 5), |(i, j, k)| {
-            (i + j + k) as f64
-        });
+        let field: Array3<f64> = Array3::from_shape_fn((5, 5, 5), |(i, j, k)| (i + j + k) as f64);
         let mut kernel = Array3::<f64>::zeros((3, 3, 3));
         kernel[[1, 1, 1]] = 1.0; // identity kernel
 
@@ -172,8 +178,51 @@ mod tests {
 
         for ((i, j, k), &sv) in seq.indexed_iter() {
             let pv = par[[i, j, k]];
-            assert!((pv - sv).abs() < 1e-14,
-                "[{i},{j},{k}]: sequential={sv:.4}, parallel={pv:.4}");
+            assert!(
+                (pv - sv).abs() < 1e-14,
+                "[{i},{j},{k}]: sequential={sv:.4}, parallel={pv:.4}"
+            );
         }
+    }
+
+    /// Borrowed sparse kernel evaluation must not require `Clone` on field,
+    /// kernel, or output values.
+    ///
+    /// Center-only kernel: `u_out(i,j,k)=2u(i,j,k)`.
+    #[test]
+    fn apply_kernel_accepts_non_clone_scalars() {
+        let field =
+            Array3::from_shape_fn((3, 3, 3), |(i, j, k)| NonCloneScalar((i + j + k) as i32));
+        let kernel = Array3::from_shape_fn((3, 3, 3), |(i, j, k)| {
+            if (i, j, k) == (1, 1, 1) {
+                NonCloneScalar(2)
+            } else {
+                NonCloneScalar(0)
+            }
+        });
+
+        let seq = apply_kernel(&field, &kernel, |f, k| NonCloneScalar(f.0 * k.0));
+        let par = apply_kernel_parallel(&field, &kernel, |f, k| NonCloneScalar(f.0 * k.0));
+
+        assert_eq!(seq[[2, 1, 0]].0, 6);
+        assert_eq!(par[[2, 1, 0]].0, 6);
+    }
+
+    /// Windowed operations receive borrowed views rather than owned windows.
+    ///
+    /// For `u(i,j,k)=i+j+k`, the centered 3³ window around `(1,1,1)` has
+    /// mean 3 by symmetry.
+    #[test]
+    fn windowed_operation_passes_borrowed_views() {
+        let field =
+            Array3::from_shape_fn((3, 3, 3), |(i, j, k)| NonCloneScalar((i + j + k) as i32));
+
+        let result = windowed_operation(&field, (3, 3, 3), |window| {
+            let sum: i32 = window.iter().map(|value| value.0).sum();
+            sum / window.len() as i32
+        });
+
+        assert_eq!(result[[1, 1, 1]], 3);
+        assert_eq!(result[[0, 0, 0]], 1);
     }
 }

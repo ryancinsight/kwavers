@@ -70,7 +70,7 @@ impl MultiPlanarReconstruction {
     }
 
     /// Get slice at specific position and orientation.
-    #[must_use] 
+    #[must_use]
     pub fn get_slice(
         &self,
         position: f64,

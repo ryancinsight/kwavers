@@ -92,19 +92,31 @@ impl CentralDifference6 {
         for i in 3..nx - 3 {
             for j in 0..ny {
                 for k in 0..nz {
-                    dst[[i, j, k]] = (9.0f64.mul_add(-field[[i + 2, j, k]], 45.0f64.mul_add(field[[i + 1, j, k]], 45.0f64.mul_add(-field[[i - 1, j, k]], 9.0f64.mul_add(field[[i - 2, j, k]], -field[[i - 3, j, k]]))))
-                        + field[[i + 3, j, k]])
+                    dst[[i, j, k]] = (9.0f64.mul_add(
+                        -field[[i + 2, j, k]],
+                        45.0f64.mul_add(
+                            field[[i + 1, j, k]],
+                            45.0f64.mul_add(
+                                -field[[i - 1, j, k]],
+                                9.0f64.mul_add(field[[i - 2, j, k]], -field[[i - 3, j, k]]),
+                            ),
+                        ),
+                    ) + field[[i + 3, j, k]])
                         * inv60dx;
                 }
             }
         }
         for j in 0..ny {
             for k in 0..nz {
-                dst[[2, j, k]] = (8.0f64.mul_add(-field[[1, j, k]], 8.0f64.mul_add(field[[3, j, k]], -field[[4, j, k]]))
-                    + field[[0, j, k]])
+                dst[[2, j, k]] = (8.0f64.mul_add(
+                    -field[[1, j, k]],
+                    8.0f64.mul_add(field[[3, j, k]], -field[[4, j, k]]),
+                ) + field[[0, j, k]])
                     * inv12dx;
-                dst[[nx - 3, j, k]] = (8.0f64.mul_add(-field[[nx - 4, j, k]], 8.0f64.mul_add(field[[nx - 2, j, k]], -field[[nx - 1, j, k]]))
-                    + field[[nx - 5, j, k]])
+                dst[[nx - 3, j, k]] = (8.0f64.mul_add(
+                    -field[[nx - 4, j, k]],
+                    8.0f64.mul_add(field[[nx - 2, j, k]], -field[[nx - 1, j, k]]),
+                ) + field[[nx - 5, j, k]])
                     * inv12dx;
                 dst[[1, j, k]] = (field[[2, j, k]] - field[[0, j, k]]) * inv2dx;
                 dst[[nx - 2, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 3, j, k]]) * inv2dx;
@@ -136,19 +148,31 @@ impl CentralDifference6 {
         for i in 0..nx {
             for j in 3..ny - 3 {
                 for k in 0..nz {
-                    dst[[i, j, k]] = (9.0f64.mul_add(-field[[i, j + 2, k]], 45.0f64.mul_add(field[[i, j + 1, k]], 45.0f64.mul_add(-field[[i, j - 1, k]], 9.0f64.mul_add(field[[i, j - 2, k]], -field[[i, j - 3, k]]))))
-                        + field[[i, j + 3, k]])
+                    dst[[i, j, k]] = (9.0f64.mul_add(
+                        -field[[i, j + 2, k]],
+                        45.0f64.mul_add(
+                            field[[i, j + 1, k]],
+                            45.0f64.mul_add(
+                                -field[[i, j - 1, k]],
+                                9.0f64.mul_add(field[[i, j - 2, k]], -field[[i, j - 3, k]]),
+                            ),
+                        ),
+                    ) + field[[i, j + 3, k]])
                         * inv60dy;
                 }
             }
         }
         for i in 0..nx {
             for k in 0..nz {
-                dst[[i, 2, k]] = (8.0f64.mul_add(-field[[i, 1, k]], 8.0f64.mul_add(field[[i, 3, k]], -field[[i, 4, k]]))
-                    + field[[i, 0, k]])
+                dst[[i, 2, k]] = (8.0f64.mul_add(
+                    -field[[i, 1, k]],
+                    8.0f64.mul_add(field[[i, 3, k]], -field[[i, 4, k]]),
+                ) + field[[i, 0, k]])
                     * inv12dy;
-                dst[[i, ny - 3, k]] = (8.0f64.mul_add(-field[[i, ny - 4, k]], 8.0f64.mul_add(field[[i, ny - 2, k]], -field[[i, ny - 1, k]]))
-                    + field[[i, ny - 5, k]])
+                dst[[i, ny - 3, k]] = (8.0f64.mul_add(
+                    -field[[i, ny - 4, k]],
+                    8.0f64.mul_add(field[[i, ny - 2, k]], -field[[i, ny - 1, k]]),
+                ) + field[[i, ny - 5, k]])
                     * inv12dy;
                 dst[[i, 1, k]] = (field[[i, 2, k]] - field[[i, 0, k]]) * inv2dy;
                 dst[[i, ny - 2, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 3, k]]) * inv2dy;
@@ -180,19 +204,31 @@ impl CentralDifference6 {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 3..nz - 3 {
-                    dst[[i, j, k]] = (9.0f64.mul_add(-field[[i, j, k + 2]], 45.0f64.mul_add(field[[i, j, k + 1]], 45.0f64.mul_add(-field[[i, j, k - 1]], 9.0f64.mul_add(field[[i, j, k - 2]], -field[[i, j, k - 3]]))))
-                        + field[[i, j, k + 3]])
+                    dst[[i, j, k]] = (9.0f64.mul_add(
+                        -field[[i, j, k + 2]],
+                        45.0f64.mul_add(
+                            field[[i, j, k + 1]],
+                            45.0f64.mul_add(
+                                -field[[i, j, k - 1]],
+                                9.0f64.mul_add(field[[i, j, k - 2]], -field[[i, j, k - 3]]),
+                            ),
+                        ),
+                    ) + field[[i, j, k + 3]])
                         * inv60dz;
                 }
             }
         }
         for i in 0..nx {
             for j in 0..ny {
-                dst[[i, j, 2]] = (8.0f64.mul_add(-field[[i, j, 1]], 8.0f64.mul_add(field[[i, j, 3]], -field[[i, j, 4]]))
-                    + field[[i, j, 0]])
+                dst[[i, j, 2]] = (8.0f64.mul_add(
+                    -field[[i, j, 1]],
+                    8.0f64.mul_add(field[[i, j, 3]], -field[[i, j, 4]]),
+                ) + field[[i, j, 0]])
                     * inv12dz;
-                dst[[i, j, nz - 3]] = (8.0f64.mul_add(-field[[i, j, nz - 4]], 8.0f64.mul_add(field[[i, j, nz - 2]], -field[[i, j, nz - 1]]))
-                    + field[[i, j, nz - 5]])
+                dst[[i, j, nz - 3]] = (8.0f64.mul_add(
+                    -field[[i, j, nz - 4]],
+                    8.0f64.mul_add(field[[i, j, nz - 2]], -field[[i, j, nz - 1]]),
+                ) + field[[i, j, nz - 5]])
                     * inv12dz;
                 dst[[i, j, 1]] = (field[[i, j, 2]] - field[[i, j, 0]]) * inv2dz;
                 dst[[i, j, nz - 2]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 3]]) * inv2dz;

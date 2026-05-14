@@ -41,10 +41,10 @@
 //!     └─ Inverse Solvers  → use DifferentiableTensor (Burn)
 //! ```
 
+pub mod convert;
 mod ndarray_tensor;
 mod traits;
 mod types;
-pub mod convert;
 
 pub use ndarray_tensor::NdArrayTensor;
 pub use traits::{TensorMut, TensorView};

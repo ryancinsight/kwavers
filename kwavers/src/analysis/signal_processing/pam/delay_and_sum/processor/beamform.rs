@@ -206,8 +206,7 @@ impl DelayAndSumPAM {
                 .collect(),
             ApodizationType::Hanning => (0..n)
                 .map(|i| {
-                    0.5 * (1.0
-                        - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos())
+                    0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos())
                 })
                 .collect(),
             ApodizationType::Blackman => (0..n)

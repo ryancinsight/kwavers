@@ -71,7 +71,8 @@ pub fn create_apodization_weights(
                 for j in 0..ny {
                     for k in 0..nz {
                         let r = compute_normalized_radius(i, j, k, nx, ny, nz);
-                        weights[[i, j, k]] = 0.46f32.mul_add(-(std::f32::consts::PI * r).cos(), 0.54);
+                        weights[[i, j, k]] =
+                            0.46f32.mul_add(-(std::f32::consts::PI * r).cos(), 0.54);
                     }
                 }
             }
@@ -95,7 +96,10 @@ pub fn create_apodization_weights(
                 for j in 0..ny {
                     for k in 0..nz {
                         let r = compute_normalized_radius(i, j, k, nx, ny, nz);
-                        weights[[i, j, k]] = 0.08f32.mul_add((2.0 * std::f32::consts::PI * r).cos(), 0.5f32.mul_add(-(std::f32::consts::PI * r).cos(), 0.42));
+                        weights[[i, j, k]] = 0.08f32.mul_add(
+                            (2.0 * std::f32::consts::PI * r).cos(),
+                            0.5f32.mul_add(-(std::f32::consts::PI * r).cos(), 0.42),
+                        );
                     }
                 }
             }

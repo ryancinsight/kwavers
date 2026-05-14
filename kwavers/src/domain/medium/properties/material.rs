@@ -125,7 +125,7 @@ pub struct MaterialProperties {
 
 impl MaterialProperties {
     /// Create material properties with core parameters
-    #[must_use] 
+    #[must_use]
     pub fn new(
         sound_speed: f64,
         density: f64,
@@ -242,7 +242,7 @@ impl MaterialProperties {
     }
 
     /// Calculate acoustic impedance mismatch ratio
-    #[must_use] 
+    #[must_use]
     pub fn impedance_ratio(&self, other: &Self) -> f64 {
         let z1 = self.impedance;
         let z2 = other.impedance;
@@ -250,7 +250,7 @@ impl MaterialProperties {
     }
 
     /// Calculate reflection coefficient at normal incidence
-    #[must_use] 
+    #[must_use]
     pub fn reflection_coefficient(&self, other: &Self) -> f64 {
         let z1 = self.impedance;
         let z2 = other.impedance;
@@ -258,19 +258,19 @@ impl MaterialProperties {
     }
 
     /// Calculate transmission coefficient at normal incidence
-    #[must_use] 
+    #[must_use]
     pub fn transmission_coefficient(&self, other: &Self) -> f64 {
         1.0 - self.reflection_coefficient(other)
     }
 
     /// Absorption coefficient at given frequency
-    #[must_use] 
+    #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         self.absorption_coefficient * frequency.powf(self.absorption_exponent)
     }
 
     /// Attenuation in dB/cm at given frequency
-    #[must_use] 
+    #[must_use]
     pub fn attenuation_db_cm(&self, frequency: f64) -> f64 {
         let alpha = self.absorption_at_frequency(frequency);
         // Convert Np/m to dB/cm: dB = 20·log₁₀(e) · Np · 0.01

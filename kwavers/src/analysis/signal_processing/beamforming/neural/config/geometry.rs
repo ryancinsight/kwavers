@@ -18,7 +18,7 @@ pub struct SensorGeometry {
 
 impl SensorGeometry {
     /// Create linear array geometry.
-    #[must_use] 
+    #[must_use]
     pub fn linear_array(
         num_elements: usize,
         pitch: f64,
@@ -40,7 +40,7 @@ impl SensorGeometry {
     }
 
     /// Create phased array geometry (2D).
-    #[must_use] 
+    #[must_use]
     pub fn phased_array(
         nx: usize,
         ny: usize,
@@ -67,7 +67,7 @@ impl SensorGeometry {
     }
 
     /// Get number of sensor elements.
-    #[must_use] 
+    #[must_use]
     pub fn num_elements(&self) -> usize {
         self.positions.len()
     }

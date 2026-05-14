@@ -76,7 +76,9 @@ impl DynamicFocusing {
         }
 
         for point in &points {
-            let focal_distance = point[2].mul_add(point[2], point[1].mul_add(point[1], point[0].powi(2))).sqrt();
+            let focal_distance = point[2]
+                .mul_add(point[2], point[1].mul_add(point[1], point[0].powi(2)))
+                .sqrt();
             if focal_distance < MIN_FOCAL_DISTANCE {
                 return Err(crate::core::error::KwaversError::InvalidInput(format!(
                     "Focal distance below minimum of {} mm",
@@ -106,8 +108,12 @@ impl DynamicFocusing {
         self.phase_distribution.fill(0.0);
 
         for focal_point in &self.focal_points {
-            let reference_distance =
-                focal_point[2].mul_add(focal_point[2], focal_point[1].mul_add(focal_point[1], focal_point[0].powi(2))).sqrt();
+            let reference_distance = focal_point[2]
+                .mul_add(
+                    focal_point[2],
+                    focal_point[1].mul_add(focal_point[1], focal_point[0].powi(2)),
+                )
+                .sqrt();
 
             for i in 0..self.element_positions.nrows() {
                 let pos = self.element_positions.row(i);

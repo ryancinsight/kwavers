@@ -19,7 +19,7 @@ impl NonlinearOperator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(config: &HASConfig) -> Self {
         Self {
             beta: config.nonlinearity,

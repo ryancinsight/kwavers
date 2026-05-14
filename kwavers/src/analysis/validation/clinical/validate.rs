@@ -43,10 +43,7 @@ impl ClinicalValidator {
             "distance_error".to_owned(),
             accuracy_metrics.distance_error_percent,
         );
-        metrics.insert(
-            "area_error".to_owned(),
-            accuracy_metrics.area_error_percent,
-        );
+        metrics.insert("area_error".to_owned(), accuracy_metrics.area_error_percent);
         metrics.insert(
             "mechanical_index".to_owned(),
             safety_indices.mechanical_index,
@@ -198,7 +195,10 @@ impl ClinicalValidator {
             recommendations.push("Improve beam steering angle accuracy".to_owned());
         }
 
-        let clinical_score = (min_sensitivity - sensitivity).max(0.0).mul_add(-5.0, (velocity_accuracy + angle_accuracy).mul_add(-2.0, 100.0));
+        let clinical_score = (min_sensitivity - sensitivity).max(0.0).mul_add(
+            -5.0,
+            (velocity_accuracy + angle_accuracy).mul_add(-2.0, 100.0),
+        );
 
         Ok(ClinicalValidationResult {
             passed,

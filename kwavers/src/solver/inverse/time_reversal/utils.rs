@@ -8,16 +8,17 @@ pub struct TimeReversalUtils;
 
 impl TimeReversalUtils {
     /// Apply time reversal to recorded signals
+    ///
+    /// For `signals[s, t]`, the reversed output is
+    /// `signals[s, n_t - 1 - t]`. The implementation constructs the output
+    /// directly from that involution, avoiding a full matrix clone followed by
+    /// per-row swaps.
     #[must_use]
     pub fn time_reverse_signals(signals: &Array2<f64>) -> Array2<f64> {
-        let mut reversed = signals.clone();
-        for mut row in reversed.rows_mut() {
-            let n = row.len();
-            for i in 0..n / 2 {
-                row.swap(i, n - 1 - i);
-            }
-        }
-        reversed
+        let (n_sensors, n_samples) = signals.dim();
+        Array2::from_shape_fn((n_sensors, n_samples), |(sensor, sample)| {
+            signals[[sensor, n_samples - 1 - sample]]
+        })
     }
 
     /// Focus calculation for time reversal
@@ -30,5 +31,51 @@ impl TimeReversalUtils {
         } else {
             0.0
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TimeReversalUtils;
+    use ndarray::{array, Array2};
+
+    #[test]
+    fn time_reverse_signals_reverses_each_sensor_row() {
+        let signals = array![[1.0, 2.0, 3.0, 4.0], [10.0, 20.0, 30.0, 40.0]];
+
+        let reversed = TimeReversalUtils::time_reverse_signals(&signals);
+
+        assert_eq!(
+            reversed,
+            array![[4.0, 3.0, 2.0, 1.0], [40.0, 30.0, 20.0, 10.0]]
+        );
+        assert_eq!(signals[[0, 0]], 1.0);
+        assert_eq!(signals[[1, 3]], 40.0);
+    }
+
+    #[test]
+    fn time_reverse_signals_is_involution_for_rectangular_data() {
+        let signals =
+            Array2::from_shape_fn((3, 5), |(sensor, sample)| (10 * sensor + sample) as f64);
+
+        let reversed = TimeReversalUtils::time_reverse_signals(&signals);
+        let restored = TimeReversalUtils::time_reverse_signals(&reversed);
+
+        assert_eq!(restored, signals);
+    }
+
+    #[test]
+    fn time_reverse_signals_handles_single_sample_and_empty_sensors() {
+        let single_sample = array![[5.0], [7.0], [11.0]];
+        let empty_sensors = Array2::<f64>::zeros((0, 4));
+
+        assert_eq!(
+            TimeReversalUtils::time_reverse_signals(&single_sample),
+            single_sample
+        );
+        assert_eq!(
+            TimeReversalUtils::time_reverse_signals(&empty_sensors).dim(),
+            (0, 4)
+        );
     }
 }

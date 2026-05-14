@@ -145,8 +145,12 @@ impl MatrixArray {
                 let iy = idx / self.num_x;
                 let x_elem = (ix as f64).mul_add(dx, start_x);
                 let y_elem = (iy as f64).mul_add(dy, start_y);
-                let distance = (self.z_pos - focus_z).mul_add(self.z_pos - focus_z, (y_elem - focus_y).mul_add(y_elem - focus_y, (x_elem - focus_x).powi(2)))
-                .sqrt();
+                let distance = (self.z_pos - focus_z)
+                    .mul_add(
+                        self.z_pos - focus_z,
+                        (y_elem - focus_y).mul_add(y_elem - focus_y, (x_elem - focus_x).powi(2)),
+                    )
+                    .sqrt();
                 *delay = distance / c;
             });
         debug!("Adjusted focus to ({}, {}, {})", focus_x, focus_y, focus_z);

@@ -68,7 +68,10 @@ impl UnifiedMedicalImageLoader {
             )));
         }
         let strategy = create_loader(path)?;
-        Ok(Self { strategy, file_path: path.to_owned() })
+        Ok(Self {
+            strategy,
+            file_path: path.to_owned(),
+        })
     }
 
     /// Create CT NIFTI loader

@@ -62,7 +62,7 @@ impl Default for AutocorrelationConfig {
 
 impl AutocorrelationConfig {
     /// Create configuration for cardiac imaging
-    #[must_use] 
+    #[must_use]
     pub fn cardiac() -> Self {
         Self {
             center_frequency: 2.5e6,
@@ -73,7 +73,7 @@ impl AutocorrelationConfig {
     }
 
     /// Create configuration for vascular imaging
-    #[must_use] 
+    #[must_use]
     pub fn vascular() -> Self {
         Self {
             center_frequency: 7.5e6,
@@ -84,13 +84,13 @@ impl AutocorrelationConfig {
     }
 
     /// Calculate Nyquist velocity limit (maximum unambiguous velocity)
-    #[must_use] 
+    #[must_use]
     pub fn nyquist_velocity(&self) -> f64 {
         (self.prf * self.speed_of_sound) / (4.0 * self.center_frequency * self.beam_angle.cos())
     }
 
     /// Calculate velocity resolution (minimum detectable velocity difference)
-    #[must_use] 
+    #[must_use]
     pub fn velocity_resolution(&self) -> f64 {
         self.speed_of_sound / (2.0 * self.center_frequency * self.prf * (self.ensemble_size as f64))
     }
@@ -107,7 +107,7 @@ pub struct AutocorrelationEstimator {
 
 impl AutocorrelationEstimator {
     /// Create a new autocorrelation estimator
-    #[must_use] 
+    #[must_use]
     pub fn new(config: AutocorrelationConfig) -> Self {
         Self { config }
     }
@@ -245,7 +245,7 @@ impl AutocorrelationEstimator {
     /// Apply variance-based quality filtering
     ///
     /// Rejects velocity estimates with variance above threshold
-    #[must_use] 
+    #[must_use]
     pub fn filter_by_variance(
         &self,
         velocity: &Array2<f64>,

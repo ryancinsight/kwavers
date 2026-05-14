@@ -129,9 +129,11 @@ mod tests {
         let source = Array3::<f64>::zeros((4, 4, 4));
 
         assert_eq!(w.call_count, 0);
-        w.update_wave_inner(&pressure, &source, &medium, &grid, 0).unwrap();
+        w.update_wave_inner(&pressure, &source, &medium, &grid, 0)
+            .unwrap();
         assert_eq!(w.call_count, 1, "call_count must be 1 after one call");
-        w.update_wave_inner(&pressure, &source, &medium, &grid, 1).unwrap();
+        w.update_wave_inner(&pressure, &source, &medium, &grid, 1)
+            .unwrap();
         assert_eq!(w.call_count, 2, "call_count must be 2 after two calls");
     }
 
@@ -146,7 +148,9 @@ mod tests {
         let pressure = Array3::<f64>::zeros((4, 4, 4));
         let source = Array3::<f64>::zeros((4, 4, 4));
 
-        let result = w.update_wave_inner(&pressure, &source, &medium, &grid, 0).unwrap();
+        let result = w
+            .update_wave_inner(&pressure, &source, &medium, &grid, 0)
+            .unwrap();
         assert_eq!(
             result.dim(),
             (4, 4, 4),

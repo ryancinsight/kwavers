@@ -133,8 +133,7 @@ impl IterativeMethods {
                 let nk = (k as i32 + dk) as usize;
 
                 if ni < grid_size_est && nj < grid_size_est && nk < grid_size_est {
-                    let neighbor_idx =
-                        ni * grid_size_est * grid_size_est + nj * grid_size_est + nk;
+                    let neighbor_idx = ni * grid_size_est * grid_size_est + nj * grid_size_est + nk;
                     if neighbor_idx < n {
                         laplacian += x[neighbor_idx];
                         count += 1;

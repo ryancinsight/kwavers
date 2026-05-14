@@ -8,7 +8,10 @@ fn test_conformal_predictor_creation() {
     };
     let predictor = ConformalPredictor::new(config).unwrap();
     // Before calibration: no scores and not calibrated.
-    assert!(!predictor.is_calibrated(), "fresh predictor must not be calibrated");
+    assert!(
+        !predictor.is_calibrated(),
+        "fresh predictor must not be calibrated"
+    );
     assert!(
         predictor.calibration_scores.is_empty(),
         "calibration_scores must be empty before calibrate()"
@@ -61,7 +64,10 @@ fn test_conformal_calibration() {
     ];
 
     predictor.calibrate(&predictions, &targets).unwrap();
-    assert!(predictor.is_calibrated(), "predictor must be calibrated after calibrate()");
+    assert!(
+        predictor.is_calibrated(),
+        "predictor must be calibrated after calibrate()"
+    );
     assert_eq!(
         predictor.calibration_scores.len(),
         2,
@@ -91,7 +97,10 @@ fn test_conformity_score_computation() {
         err < 1e-5,
         "conformity score = {score} (expected 0.2 for uniform offset 0.2)"
     );
-    assert!(score > 0.0, "conformity score must be positive for non-matching prediction");
+    assert!(
+        score > 0.0,
+        "conformity score must be positive for non-matching prediction"
+    );
 }
 
 #[test]

@@ -252,13 +252,13 @@ impl AdaptiveFilter {
     }
 
     /// Get the history of CBR estimates.
-    #[must_use] 
+    #[must_use]
     pub fn cbr_history(&self) -> &[f64] {
         &self.cbr_history
     }
 
     /// Get the current estimated CBR in dB.
-    #[must_use] 
+    #[must_use]
     pub fn current_cbr_db(&self) -> Option<f64> {
         self.cbr_history.last().map(|&cbr| 10.0 * cbr.log10())
     }

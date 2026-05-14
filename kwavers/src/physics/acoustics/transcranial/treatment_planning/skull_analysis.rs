@@ -29,7 +29,8 @@ impl TreatmentPlanner {
                         // Bone threshold
                         speed_map[[i, j, k]] = (hu - 300.0).mul_add(2.0, 3000.0); // m/s
                         density_map[[i, j, k]] = (hu - 300.0).mul_add(0.5, 1800.0); // kg/m³
-                        attenuation_map[[i, j, k]] = (hu - 300.0).mul_add(0.01, 5.0); // dB/MHz/cm
+                        attenuation_map[[i, j, k]] = (hu - 300.0).mul_add(0.01, 5.0);
+                    // dB/MHz/cm
                     } else if hu > -200.0 {
                         // Tissue
                         speed_map[[i, j, k]] = 1500.0;

@@ -66,18 +66,26 @@ mod tests {
         let grid = small_grid();
         let s = (grid.nx, grid.ny, grid.nz);
         let vel = Array3::from_elem(s, 0.1_f64);
-        let p   = Array3::from_elem(s, 1000.0_f64);
+        let p = Array3::from_elem(s, 1000.0_f64);
         let rho = Array3::from_elem(s, 1000.0_f64);
 
         let (ex, ey, ez) = validate_momentum_conservation(
-            &vel, &vel, &vel,
-            &vel, &vel, &vel, // current = previous → dv/dt = 0
+            &vel, &vel, &vel, &vel, &vel, &vel, // current = previous → dv/dt = 0
             &p, &rho, 1e-6, &grid,
         );
 
-        assert_eq!(ex, 0.0, "max_err_x must be 0 for uniform static field (got {ex:.3e})");
-        assert_eq!(ey, 0.0, "max_err_y must be 0 for uniform static field (got {ey:.3e})");
-        assert_eq!(ez, 0.0, "max_err_z must be 0 for uniform static field (got {ez:.3e})");
+        assert_eq!(
+            ex, 0.0,
+            "max_err_x must be 0 for uniform static field (got {ex:.3e})"
+        );
+        assert_eq!(
+            ey, 0.0,
+            "max_err_y must be 0 for uniform static field (got {ey:.3e})"
+        );
+        assert_eq!(
+            ez, 0.0,
+            "max_err_z must be 0 for uniform static field (got {ez:.3e})"
+        );
     }
 
     /// All-zero velocity and pressure → residual exactly 0 on every axis.
@@ -86,12 +94,10 @@ mod tests {
         let grid = small_grid();
         let s = (grid.nx, grid.ny, grid.nz);
         let zero = Array3::<f64>::zeros(s);
-        let rho  = Array3::from_elem(s, 1000.0_f64);
+        let rho = Array3::from_elem(s, 1000.0_f64);
 
         let (ex, ey, ez) = validate_momentum_conservation(
-            &zero, &zero, &zero,
-            &zero, &zero, &zero,
-            &zero, &rho, 1e-6, &grid,
+            &zero, &zero, &zero, &zero, &zero, &zero, &zero, &rho, 1e-6, &grid,
         );
 
         assert_eq!(ex, 0.0);
@@ -109,19 +115,16 @@ mod tests {
         let s = (grid.nx, grid.ny, grid.nz);
         let dt = 1e-6_f64;
         let delta_vx = 0.1_f64;
-        let rho_val  = 1000.0_f64;
-        let vx       = Array3::from_elem(s, delta_vx);
-        let vx_prev  = Array3::<f64>::zeros(s);
-        let vy       = Array3::<f64>::zeros(s);
-        let vz       = Array3::<f64>::zeros(s);
-        let p        = Array3::from_elem(s, 1000.0_f64); // uniform → ∇p = 0
-        let rho      = Array3::from_elem(s, rho_val);
+        let rho_val = 1000.0_f64;
+        let vx = Array3::from_elem(s, delta_vx);
+        let vx_prev = Array3::<f64>::zeros(s);
+        let vy = Array3::<f64>::zeros(s);
+        let vz = Array3::<f64>::zeros(s);
+        let p = Array3::from_elem(s, 1000.0_f64); // uniform → ∇p = 0
+        let rho = Array3::from_elem(s, rho_val);
 
-        let (ex, ey, ez) = validate_momentum_conservation(
-            &vx, &vy, &vz,
-            &vx_prev, &vy, &vz,
-            &p, &rho, dt, &grid,
-        );
+        let (ex, ey, ez) =
+            validate_momentum_conservation(&vx, &vy, &vz, &vx_prev, &vy, &vz, &p, &rho, dt, &grid);
 
         let expected_x = rho_val * delta_vx / dt;
         assert!(

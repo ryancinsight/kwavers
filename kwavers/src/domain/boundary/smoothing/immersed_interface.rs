@@ -43,7 +43,7 @@ pub struct ImmersedInterfaceMethod {
 }
 
 impl ImmersedInterfaceMethod {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: IIMConfig) -> Self {
         Self { config }
     }

@@ -95,7 +95,8 @@ impl FullWaveformInversion {
             let test_objective = self.compute_objective(&test_model, observed_data)?;
 
             // Armijo condition: f(x + αp) ≤ f(x) + c1·α·∇f(x)ᵀp
-            if test_objective <= (c1 * step_size).mul_add(directional_derivative, current_objective) {
+            if test_objective <= (c1 * step_size).mul_add(directional_derivative, current_objective)
+            {
                 break;
             }
 

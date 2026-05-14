@@ -19,7 +19,7 @@ pub struct BBBOpening {
 
 impl BBBOpening {
     /// Create new BBB opening simulation
-    #[must_use] 
+    #[must_use]
     pub fn new(
         acoustic_pressure: Array3<f64>,
         microbubble_concentration: Array3<f64>,
@@ -84,7 +84,7 @@ impl BBBOpening {
     }
 
     /// Get permeability enhancement results
-    #[must_use] 
+    #[must_use]
     pub fn permeability(&self) -> &PermeabilityEnhancement {
         &self.permeability
     }

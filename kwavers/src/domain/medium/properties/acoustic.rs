@@ -127,7 +127,7 @@ impl AcousticPropertyData {
     ///
     /// Determines reflection/transmission coefficients at interfaces.
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn impedance(&self) -> f64 {
         self.density * self.sound_speed
     }
@@ -142,7 +142,7 @@ impl AcousticPropertyData {
     ///
     /// Absorption coefficient in Np/m (Nepers per meter)
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn absorption_at_frequency(&self, freq_mhz: f64) -> f64 {
         self.absorption_coefficient * freq_mhz.powf(self.absorption_power)
     }
@@ -151,13 +151,13 @@ impl AcousticPropertyData {
     ///
     /// Alternative parameterization used in some nonlinear wave equations.
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn nonlinearity_coefficient(&self) -> f64 {
         1.0 + self.nonlinearity / 2.0
     }
 
     /// Water properties at 20°C
-    #[must_use] 
+    #[must_use]
     pub fn water() -> Self {
         Self {
             density: 998.0,
@@ -169,7 +169,7 @@ impl AcousticPropertyData {
     }
 
     /// Soft tissue properties (generic)
-    #[must_use] 
+    #[must_use]
     pub fn soft_tissue() -> Self {
         Self {
             density: 1050.0,
@@ -187,7 +187,7 @@ impl AcousticPropertyData {
     /// - Sound speed: ~1570 m/s
     /// - Attenuation: ~0.5 dB/(MHz·cm) = ~0.58 Np/(MHz·m)
     /// - B/A: ~6.8
-    #[must_use] 
+    #[must_use]
     pub fn liver() -> Self {
         Self {
             density: 1060.0,
@@ -205,7 +205,7 @@ impl AcousticPropertyData {
     /// - Sound speed: ~1540 m/s
     /// - Attenuation: ~0.6 dB/(MHz·cm) = ~0.69 Np/(MHz·m)
     /// - B/A: ~6.5
-    #[must_use] 
+    #[must_use]
     pub fn brain() -> Self {
         Self {
             density: 1040.0,
@@ -223,7 +223,7 @@ impl AcousticPropertyData {
     /// - Sound speed: ~1560 m/s
     /// - Attenuation: ~0.7 dB/(MHz·cm) = ~0.81 Np/(MHz·m)
     /// - B/A: ~6.7
-    #[must_use] 
+    #[must_use]
     pub fn kidney() -> Self {
         Self {
             density: 1050.0,
@@ -241,7 +241,7 @@ impl AcousticPropertyData {
     /// - Sound speed: ~1580 m/s
     /// - Attenuation: ~1.0 dB/(MHz·cm) = ~1.15 Np/(MHz·m)
     /// - B/A: ~7.4
-    #[must_use] 
+    #[must_use]
     pub fn muscle() -> Self {
         Self {
             density: 1070.0,
@@ -262,7 +262,7 @@ impl AcousticPropertyData {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn fat() -> Self {
         Self {
             density: 950.0,

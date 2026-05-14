@@ -161,7 +161,9 @@ pub fn compute_singular_integrals(
                     v.mul_add(dp2[1] - dp1[1], dp1[1]),
                     v.mul_add(dp2[2] - dp1[2], dp1[2]),
                 ];
-                let dir_norm = dir[2].mul_add(dir[2], dir[0].mul_add(dir[0], dir[1] * dir[1])).sqrt();
+                let dir_norm = dir[2]
+                    .mul_add(dir[2], dir[0].mul_add(dir[0], dir[1] * dir[1]))
+                    .sqrt();
                 Complex64::new(area / (2.0 * PI * dir_norm.max(1e-20)), 0.0)
             } else {
                 let (g_val, _) = green_helmholtz(k, p0, r_field);

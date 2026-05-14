@@ -111,8 +111,7 @@ impl EnergyBalanceCalculator {
         const NUSSELT_BASE: f64 = 2.0;
         const NUSSELT_PECLET_COEFF: f64 = 0.6;
 
-        let nusselt =
-            NUSSELT_PECLET_COEFF.mul_add(peclet_number.sqrt(), NUSSELT_BASE);
+        let nusselt = NUSSELT_PECLET_COEFF.mul_add(peclet_number.sqrt(), NUSSELT_BASE);
 
         // Heat transfer coefficient: h = Nu * k / r
         let radius = Length::new::<uom::si::length::meter>(state.radius);

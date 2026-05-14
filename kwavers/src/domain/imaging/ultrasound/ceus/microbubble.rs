@@ -30,7 +30,7 @@ pub struct Microbubble {
 
 impl Microbubble {
     /// Create new microbubble with typical contrast agent properties
-    #[must_use] 
+    #[must_use]
     pub fn new(radius: f64, shell_elasticity: f64, shell_viscosity: f64) -> Self {
         Self {
             radius_eq: radius * 1e-6,                 // Convert μm to m
@@ -43,7 +43,7 @@ impl Microbubble {
     }
 
     /// Create SonoVue-like microbubble (typical clinical contrast agent)
-    #[must_use] 
+    #[must_use]
     pub fn sono_vue() -> Self {
         Self::new(1.5, 1.0, 0.5) // 1.5 μm radius, 1 kPa elasticity, 0.5 Pa·s viscosity
     }
@@ -52,7 +52,7 @@ impl Microbubble {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn definit_y() -> Self {
         Self::new(2.0, 2.5, 1.0) // 2.0 μm radius, 2.5 kPa elasticity, 1.0 Pa·s viscosity
     }
@@ -138,7 +138,8 @@ impl Microbubble {
         let delta_tot = (delta_rad + delta_vis + delta_sh).max(1e-12);
 
         let big_omega = omega / omega0;
-        let denom = (delta_tot * big_omega).mul_add(delta_tot * big_omega, (1.0 - big_omega * big_omega).powi(2));
+        let denom = (delta_tot * big_omega)
+            .mul_add(delta_tot * big_omega, (1.0 - big_omega * big_omega).powi(2));
 
         // σ_s = 4π R² (ωR/c_L)² / denom
         let ka = omega * r / C_L; // dimensionless acoustic size parameter

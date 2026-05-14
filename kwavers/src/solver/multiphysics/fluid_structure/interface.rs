@@ -22,6 +22,29 @@ pub struct FsiInterface {
     pub interface_mask: Array3<bool>,
 }
 
+/// Construction contract for [`FsiInterface`].
+///
+/// The material, normal, and grid-shape fields form one invariant boundary:
+/// validation either accepts the complete interface specification or rejects it
+/// before any mask allocation occurs.
+#[derive(Debug, Clone, Copy)]
+pub struct FsiInterfaceSpec {
+    /// Fluid density [kg/m³]
+    pub fluid_density: f64,
+    /// Fluid sound speed [m/s]
+    pub fluid_sound_speed: f64,
+    /// Solid density [kg/m³]
+    pub solid_density: f64,
+    /// Solid longitudinal wave speed [m/s]
+    pub solid_c_l: f64,
+    /// Solid transverse wave speed [m/s]
+    pub solid_c_t: f64,
+    /// Interface normal vector (pointing from fluid to solid)
+    pub normal: [f64; 3],
+    /// Grid dimensions `(nx, ny, nz)` for the interface mask.
+    pub grid_shape: (usize, usize, usize),
+}
+
 impl FsiInterface {
     /// Create new fluid-structure interface
     ///
@@ -35,17 +58,17 @@ impl FsiInterface {
     /// # Errors
     /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
     ///
-    pub fn new(
-        fluid_density: f64,
-        fluid_sound_speed: f64,
-        solid_density: f64,
-        solid_c_l: f64,
-        solid_c_t: f64,
-        normal: [f64; 3],
-        nx: usize,
-        ny: usize,
-        nz: usize,
-    ) -> KwaversResult<Self> {
+    pub fn new(spec: FsiInterfaceSpec) -> KwaversResult<Self> {
+        let FsiInterfaceSpec {
+            fluid_density,
+            fluid_sound_speed,
+            solid_density,
+            solid_c_l,
+            solid_c_t,
+            normal,
+            grid_shape: (nx, ny, nz),
+        } = spec;
+
         // Validate material properties
         if solid_c_t >= solid_c_l {
             return Err(KwaversError::InternalError(format!(
@@ -136,17 +159,15 @@ mod tests {
     ///
     #[test]
     fn test_fsi_interface_creation() {
-        let interface = FsiInterface::new(
-            1000.0,          // water density
-            1500.0,          // water sound speed
-            7850.0,          // steel density
-            5960.0,          // steel longitudinal speed
-            3240.0,          // steel transverse speed
-            [1.0, 0.0, 0.0], // x-normal interface
-            64,
-            64,
-            64,
-        );
+        let interface = FsiInterface::new(FsiInterfaceSpec {
+            fluid_density: 1000.0,
+            fluid_sound_speed: 1500.0,
+            solid_density: 7850.0,
+            solid_c_l: 5960.0,
+            solid_c_t: 3240.0,
+            normal: [1.0, 0.0, 0.0],
+            grid_shape: (64, 64, 64),
+        });
         let i = interface.unwrap();
         assert!((i.normal[0] - 1.0).abs() < 1e-10); // Normalized
     }
@@ -157,17 +178,15 @@ mod tests {
     ///
     #[test]
     fn test_invalid_wave_speeds() {
-        let interface = FsiInterface::new(
-            1000.0,
-            1500.0,
-            7850.0,
-            3000.0, // c_l < c_t - invalid!
-            3240.0,
-            [1.0, 0.0, 0.0],
-            64,
-            64,
-            64,
-        );
+        let interface = FsiInterface::new(FsiInterfaceSpec {
+            fluid_density: 1000.0,
+            fluid_sound_speed: 1500.0,
+            solid_density: 7850.0,
+            solid_c_l: 3000.0, // c_l < c_t - invalid!
+            solid_c_t: 3240.0,
+            normal: [1.0, 0.0, 0.0],
+            grid_shape: (64, 64, 64),
+        });
         assert!(interface.is_err());
     }
 }

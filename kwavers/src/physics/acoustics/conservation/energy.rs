@@ -46,15 +46,34 @@ mod tests {
         Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap()
     }
 
-    fn make_fields(p: f64, v: f64, rho: f64, c: f64) -> (Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>) {
+    fn make_fields(
+        p: f64,
+        v: f64,
+        rho: f64,
+        c: f64,
+    ) -> (
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+        Array3<f64>,
+    ) {
         let s = (4, 4, 4);
-        let pressure    = Array3::from_elem(s, p);
-        let velocity_x  = Array3::from_elem(s, v);
-        let velocity_y  = Array3::zeros(s);
-        let velocity_z  = Array3::zeros(s);
-        let density     = Array3::from_elem(s, rho);
+        let pressure = Array3::from_elem(s, p);
+        let velocity_x = Array3::from_elem(s, v);
+        let velocity_y = Array3::zeros(s);
+        let velocity_z = Array3::zeros(s);
+        let density = Array3::from_elem(s, rho);
         let sound_speed = Array3::from_elem(s, c);
-        (pressure, velocity_x, velocity_y, velocity_z, density, sound_speed)
+        (
+            pressure,
+            velocity_x,
+            velocity_y,
+            velocity_z,
+            density,
+            sound_speed,
+        )
     }
 
     /// When `initial_energy` equals the computed total, relative error = 0.
@@ -75,7 +94,8 @@ mod tests {
         let cell_energy = (kinetic + potential) * dv;
         let initial_energy = cell_energy * (4.0_f64).powi(3);
 
-        let error = validate_energy_conservation(&p, &vx, &vy, &vz, &rho, &c, initial_energy, &grid);
+        let error =
+            validate_energy_conservation(&p, &vx, &vy, &vz, &rho, &c, initial_energy, &grid);
         assert!(error.abs() < 1e-12, "error must be 0 (got {error:.3e})");
     }
 
@@ -86,6 +106,9 @@ mod tests {
         let grid = small_grid();
         let (p, vx, vy, vz, rho, c) = make_fields(0.0, 0.0, 1000.0, 1500.0);
         let error = validate_energy_conservation(&p, &vx, &vy, &vz, &rho, &c, 0.0, &grid);
-        assert_eq!(error, 0.0, "zero fields with zero initial energy must give 0 error");
+        assert_eq!(
+            error, 0.0,
+            "zero fields with zero initial energy must give 0 error"
+        );
     }
 }

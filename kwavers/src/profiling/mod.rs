@@ -28,7 +28,7 @@ pub use gpu_allocator::{GpuAllocationConfig, GpuAllocationStats, GpuAllocationTr
 pub const PROFILING_VERSION: &str = "4.0.0-sprint220";
 
 /// Module initialization check
-#[must_use] 
+#[must_use]
 pub fn is_initialized() -> bool {
     true // Module is always ready
 }

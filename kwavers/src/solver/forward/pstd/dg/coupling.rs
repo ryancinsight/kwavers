@@ -7,7 +7,7 @@ pub struct HybridCoupler {
 }
 
 impl HybridCoupler {
-    #[must_use] 
+    #[must_use]
     pub fn new(tolerance: f64) -> Self {
         Self { tolerance }
     }

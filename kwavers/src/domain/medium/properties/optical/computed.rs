@@ -46,7 +46,11 @@ impl OpticalPropertyData {
     #[must_use]
     pub fn mean_free_path(&self) -> f64 {
         let mu_t = self.total_attenuation();
-        if mu_t > 0.0 { 1.0 / mu_t } else { f64::INFINITY }
+        if mu_t > 0.0 {
+            1.0 / mu_t
+        } else {
+            f64::INFINITY
+        }
     }
 
     /// Transport mean free path l_tr = 1/(μ_a + μ_s') (m)
@@ -54,7 +58,11 @@ impl OpticalPropertyData {
     #[must_use]
     pub fn transport_mean_free_path(&self) -> f64 {
         let mu_tr = self.absorption_coefficient + self.reduced_scattering();
-        if mu_tr > 0.0 { 1.0 / mu_tr } else { f64::INFINITY }
+        if mu_tr > 0.0 {
+            1.0 / mu_tr
+        } else {
+            f64::INFINITY
+        }
     }
 
     /// Albedo α = μ_s / μ_t (dimensionless)
@@ -62,7 +70,11 @@ impl OpticalPropertyData {
     #[must_use]
     pub fn albedo(&self) -> f64 {
         let mu_t = self.total_attenuation();
-        if mu_t > 0.0 { self.scattering_coefficient / mu_t } else { 0.0 }
+        if mu_t > 0.0 {
+            self.scattering_coefficient / mu_t
+        } else {
+            0.0
+        }
     }
 
     /// Fresnel reflectance at normal incidence R₀

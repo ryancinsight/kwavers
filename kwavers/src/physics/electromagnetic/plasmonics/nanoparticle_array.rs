@@ -40,8 +40,15 @@ impl NanoparticleArray {
         let mut total_field = num_complex::Complex::new(1.0, 0.0); // Baseline incident field = 1
 
         for (particle, position) in &self.particles {
-            let distance = (evaluation_point[2] - position[2]).mul_add(evaluation_point[2] - position[2], (evaluation_point[1] - position[1]).mul_add(evaluation_point[1] - position[1], (evaluation_point[0] - position[0]).powi(2)))
-            .sqrt();
+            let distance = (evaluation_point[2] - position[2])
+                .mul_add(
+                    evaluation_point[2] - position[2],
+                    (evaluation_point[1] - position[1]).mul_add(
+                        evaluation_point[1] - position[1],
+                        (evaluation_point[0] - position[0]).powi(2),
+                    ),
+                )
+                .sqrt();
 
             if distance > particle.radius {
                 // Determine coherent dipole radiating field

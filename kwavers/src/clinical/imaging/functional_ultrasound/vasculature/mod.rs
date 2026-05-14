@@ -146,7 +146,8 @@ impl VesselSegmentation {
             || !beam_angle_rad.is_finite()
         {
             return Err(KwaversError::InvalidInput(
-                "Doppler velocity inputs must be finite with positive frequency and sound speed".to_owned(),
+                "Doppler velocity inputs must be finite with positive frequency and sound speed"
+                    .to_owned(),
             ));
         }
 

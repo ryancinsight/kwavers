@@ -4,9 +4,9 @@
 //! enforcement, performance monitoring, and async I/O for checkpoints.
 
 mod orchestrator;
-mod types;
 #[cfg(test)]
 mod tests;
+mod types;
 
 pub use orchestrator::RealtimeSimulationOrchestrator;
 pub use types::{RealtimeConfig, SimulationStatistics, StepResult};

@@ -53,7 +53,7 @@ impl ConservationViolationDetector {
     /// # Arguments
     ///
     /// * `error_threshold` - Relative error threshold for violation (e.g., 1e-3)
-    #[must_use] 
+    #[must_use]
     pub fn new(error_threshold: f64) -> Self {
         Self {
             violations: Vec::new(),
@@ -107,25 +107,25 @@ impl ConservationViolationDetector {
     }
 
     /// Get all violations recorded so far
-    #[must_use] 
+    #[must_use]
     pub fn all_violations(&self) -> &[ConservationViolation] {
         &self.violations
     }
 
     /// Get violations for a specific conservation law
-    #[must_use] 
+    #[must_use]
     pub fn violations_for_law(&self, law: ConservationLaw) -> Vec<&ConservationViolation> {
         self.violations.iter().filter(|v| v.law == law).collect()
     }
 
     /// Get most recent violations (last N)
-    #[must_use] 
+    #[must_use]
     pub fn recent_violations(&self, n: usize) -> Vec<&ConservationViolation> {
         self.violations.iter().rev().take(n).collect()
     }
 
     /// Check if violations are becoming worse (trending upward)
-    #[must_use] 
+    #[must_use]
     pub fn is_trend_worsening(&self, window_size: usize) -> bool {
         if self.violations.len() < window_size * 2 {
             return false;

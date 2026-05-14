@@ -80,14 +80,14 @@ impl GaussianBeam {
     }
 
     /// Rayleigh range z_R = πw₀²/λ (m)
-    #[must_use] 
+    #[must_use]
     pub fn rayleigh_range(&self) -> f64 {
         let wavelength = self.sound_speed / self.frequency;
         PI * self.waist_radius.powi(2) / wavelength
     }
 
     /// Beam width w(z) = w₀√(1 + (z/z_R)²) (m)
-    #[must_use] 
+    #[must_use]
     pub fn beam_width(&self, z: f64) -> f64 {
         let z_rel = z - self.focal_z;
         let z_r = self.rayleigh_range();
@@ -95,7 +95,7 @@ impl GaussianBeam {
     }
 
     /// Gouy phase φ(z) = arctan(z/z_R) (rad)
-    #[must_use] 
+    #[must_use]
     pub fn gouy_phase(&self, z: f64) -> f64 {
         let z_rel = z - self.focal_z;
         let z_r = self.rayleigh_range();
@@ -103,7 +103,7 @@ impl GaussianBeam {
     }
 
     /// Evaluate Gaussian beam pressure (real part) at given position and time.
-    #[must_use] 
+    #[must_use]
     pub fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
         let r = x.hypot(y);
         let z_rel = z - self.focal_z;

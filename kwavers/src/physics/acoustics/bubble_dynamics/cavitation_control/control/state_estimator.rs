@@ -38,14 +38,33 @@ impl StateEstimator {
 
         // Exponential smoothing
         let smoothed = CavitationMetrics {
-            intensity: self.alpha.mul_add(metrics.intensity, (1.0 - self.alpha) * last.intensity),
-            subharmonic_level: self.alpha.mul_add(metrics.subharmonic_level, (1.0 - self.alpha) * last.subharmonic_level),
-            ultraharmonic_level: self.alpha.mul_add(metrics.ultraharmonic_level, (1.0 - self.alpha) * last.ultraharmonic_level),
-            broadband_level: self.alpha.mul_add(metrics.broadband_level, (1.0 - self.alpha) * last.broadband_level),
-            harmonic_distortion: self.alpha.mul_add(metrics.harmonic_distortion, (1.0 - self.alpha) * last.harmonic_distortion),
-            harmonic_content: self.alpha.mul_add(metrics.harmonic_content, (1.0 - self.alpha) * last.harmonic_content),
+            intensity: self
+                .alpha
+                .mul_add(metrics.intensity, (1.0 - self.alpha) * last.intensity),
+            subharmonic_level: self.alpha.mul_add(
+                metrics.subharmonic_level,
+                (1.0 - self.alpha) * last.subharmonic_level,
+            ),
+            ultraharmonic_level: self.alpha.mul_add(
+                metrics.ultraharmonic_level,
+                (1.0 - self.alpha) * last.ultraharmonic_level,
+            ),
+            broadband_level: self.alpha.mul_add(
+                metrics.broadband_level,
+                (1.0 - self.alpha) * last.broadband_level,
+            ),
+            harmonic_distortion: self.alpha.mul_add(
+                metrics.harmonic_distortion,
+                (1.0 - self.alpha) * last.harmonic_distortion,
+            ),
+            harmonic_content: self.alpha.mul_add(
+                metrics.harmonic_content,
+                (1.0 - self.alpha) * last.harmonic_content,
+            ),
             cavitation_dose: metrics.cavitation_dose, // Don't smooth cumulative dose
-            confidence: self.alpha.mul_add(metrics.confidence, (1.0 - self.alpha) * last.confidence),
+            confidence: self
+                .alpha
+                .mul_add(metrics.confidence, (1.0 - self.alpha) * last.confidence),
             state: metrics.state, // Use current state
         };
 

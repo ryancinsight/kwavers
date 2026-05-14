@@ -46,7 +46,7 @@ impl SensorRecorder {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn checkpoint_state(&self) -> Option<(Array2<f64>, usize, usize)> {
         self.checkpoint_state_view()
             .map(|(view, next_step, expected_steps)| (view.to_owned(), next_step, expected_steps))

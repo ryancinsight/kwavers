@@ -186,7 +186,8 @@ fn apodization_weights(n: usize, kind: ImagingDasApodization) -> Vec<f64> {
         ImagingDasApodization::Hanning => cosine_window(n, 0.5, 0.5),
         ImagingDasApodization::Blackman => (0..n)
             .map(|i| {
-                let phi = 2.0 * std::f64::consts::PI * i as f64 / (n.saturating_sub(1).max(1)) as f64;
+                let phi =
+                    2.0 * std::f64::consts::PI * i as f64 / (n.saturating_sub(1).max(1)) as f64;
                 0.42 - 0.5 * phi.cos() + 0.08 * (2.0 * phi).cos()
             })
             .collect(),
@@ -258,7 +259,8 @@ mod tests {
                 grid.push([depth, lateral, 0.0]);
             }
         }
-        let grid_arr = Array2::from_shape_vec((grid.len(), 3), grid.into_iter().flatten().collect()).unwrap();
+        let grid_arr =
+            Array2::from_shape_vec((grid.len(), 3), grid.into_iter().flatten().collect()).unwrap();
 
         let config = ImagingDasConfig::new(c, fs, ImagingDasApodization::Rectangular).unwrap();
         let image = beamform_image_das(
@@ -282,15 +284,23 @@ mod tests {
 
         // Source at (10 mm, 0). Grid step: 0.5 mm depth, 0.2 mm lateral. Peak
         // must land within one cell.
-        assert!((peak_depth - source[0]).abs() <= 0.5e-3 + 1e-9,
-            "peak depth {peak_depth} not within 0.5 mm of source depth {}", source[0]);
-        assert!((peak_lat - source[1]).abs() <= 0.2e-3 + 1e-9,
-            "peak lateral {peak_lat} not within 0.2 mm of source lateral {}", source[1]);
+        assert!(
+            (peak_depth - source[0]).abs() <= 0.5e-3 + 1e-9,
+            "peak depth {peak_depth} not within 0.5 mm of source depth {}",
+            source[0]
+        );
+        assert!(
+            (peak_lat - source[1]).abs() <= 0.2e-3 + 1e-9,
+            "peak lateral {peak_lat} not within 0.2 mm of source lateral {}",
+            source[1]
+        );
         // For a Gaussian of sigma=2dt the largest fractional-sample offset
         // (≤0.5 dt) attenuates the linearly-interpolated peak to ≈0.97. With 8
         // sensors averaged this floors at ~0.95.
-        assert!(*peak_val > 0.95,
-            "peak image value {peak_val} should be ≈ 1.0 (sum of 8 pulse peaks / 8)");
+        assert!(
+            *peak_val > 0.95,
+            "peak image value {peak_val} should be ≈ 1.0 (sum of 8 pulse peaks / 8)"
+        );
     }
 
     #[test]
@@ -316,7 +326,9 @@ mod tests {
     fn rejects_non_positive_sound_speed() {
         assert!(ImagingDasConfig::new(0.0, 1.0e6, ImagingDasApodization::Rectangular).is_err());
         assert!(ImagingDasConfig::new(-1.0, 1.0e6, ImagingDasApodization::Rectangular).is_err());
-        assert!(ImagingDasConfig::new(f64::NAN, 1.0e6, ImagingDasApodization::Rectangular).is_err());
+        assert!(
+            ImagingDasConfig::new(f64::NAN, 1.0e6, ImagingDasApodization::Rectangular).is_err()
+        );
     }
 
     #[test]

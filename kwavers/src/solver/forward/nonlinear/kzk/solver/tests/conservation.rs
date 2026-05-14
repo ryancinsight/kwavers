@@ -56,7 +56,9 @@ fn test_conservation_diagnostics_integration() {
         "solution must be valid after 4 steps"
     );
 
-    let summary = solver.get_conservation_summary().expect("conservation summary must be available");
+    let summary = solver
+        .get_conservation_summary()
+        .expect("conservation summary must be available");
     // Summary string must be non-empty (tracker produces a diagnostic line).
     assert!(
         !summary.is_empty(),

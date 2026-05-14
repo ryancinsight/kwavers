@@ -35,7 +35,7 @@ pub struct RealTimeSirtPipeline {
 
 impl RealTimeSirtPipeline {
     /// Create a new streaming SIRT pipeline.
-    #[must_use] 
+    #[must_use]
     pub fn new(config: RealTimeSirtConfig) -> Self {
         Self {
             config,
@@ -290,13 +290,13 @@ impl RealTimeSirtPipeline {
     }
 
     /// Chronological slice of all processed frames.
-    #[must_use] 
+    #[must_use]
     pub fn frame_history(&self) -> &[ReconstructionFrame] {
         &self.frame_history
     }
 
     /// Average throughput since pipeline creation (fps).
-    #[must_use] 
+    #[must_use]
     pub fn avg_frame_rate(&self) -> f64 {
         if self.frame_count == 0 {
             return 0.0;
@@ -310,7 +310,7 @@ impl RealTimeSirtPipeline {
     }
 
     /// Total number of frames processed.
-    #[must_use] 
+    #[must_use]
     pub fn frame_count(&self) -> usize {
         self.frame_count
     }

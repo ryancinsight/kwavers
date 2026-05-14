@@ -19,9 +19,7 @@ pub fn compute_spectral_correction_dispatch(
         CorrectionMethod::Treeby2010 => {
             compute_treeby2010_correction(grid, dt, c_ref, cfl_number, max_correction)
         }
-        CorrectionMethod::LiuPSTD => {
-            compute_liu_pstd_correction(grid, dt, c_ref, max_correction)
-        }
+        CorrectionMethod::LiuPSTD => compute_liu_pstd_correction(grid, dt, c_ref, max_correction),
         CorrectionMethod::LowDispersionPSTD => {
             compute_low_dispersion_pstd_correction(grid, dt, c_ref, max_correction)
         }
@@ -123,9 +121,7 @@ fn compute_treeby2010_correction(
                 } else {
                     arg.sin() / arg
                 };
-                kappa[[i, j, k]] = correction
-                    .min(max_correction)
-                    .max(1.0 / max_correction);
+                kappa[[i, j, k]] = correction.min(max_correction).max(1.0 / max_correction);
             }
         }
     }

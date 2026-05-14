@@ -39,7 +39,10 @@ use super::kernel::FocalKernel;
 ///
 #[must_use]
 pub fn resample_trilinear(kernel: &FocalKernel, target_dx_m: f64) -> FocalKernel {
-    debug_assert!(target_dx_m > 0.0, "resample_trilinear: target_dx_m must be > 0");
+    debug_assert!(
+        target_dx_m > 0.0,
+        "resample_trilinear: target_dx_m must be > 0"
+    );
     if (target_dx_m - kernel.dx_m).abs() < 1e-9 {
         return kernel.clone();
     }

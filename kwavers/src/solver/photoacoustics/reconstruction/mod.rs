@@ -125,28 +125,45 @@ impl PhotoacousticReconstructionModel {
         let c110 = field[[x_ceil, y_ceil, z_floor]];
         let c111 = field[[x_ceil, y_ceil, z_ceil]];
 
-        (c111 * x_weight * y_weight).mul_add(z_weight, (c110 * x_weight * y_weight).mul_add(1.0 - z_weight, (c101 * x_weight * (1.0 - y_weight)).mul_add(z_weight, (c100 * x_weight * (1.0 - y_weight)).mul_add(1.0 - z_weight, (c011 * (1.0 - x_weight) * y_weight).mul_add(z_weight, (c010 * (1.0 - x_weight) * y_weight).mul_add(1.0 - z_weight, (c000 * (1.0 - x_weight) * (1.0 - y_weight)).mul_add(1.0 - z_weight, c001 * (1.0 - x_weight) * (1.0 - y_weight) * z_weight)))))))
+        (c111 * x_weight * y_weight).mul_add(
+            z_weight,
+            (c110 * x_weight * y_weight).mul_add(
+                1.0 - z_weight,
+                (c101 * x_weight * (1.0 - y_weight)).mul_add(
+                    z_weight,
+                    (c100 * x_weight * (1.0 - y_weight)).mul_add(
+                        1.0 - z_weight,
+                        (c011 * (1.0 - x_weight) * y_weight).mul_add(
+                            z_weight,
+                            (c010 * (1.0 - x_weight) * y_weight).mul_add(
+                                1.0 - z_weight,
+                                (c000 * (1.0 - x_weight) * (1.0 - y_weight)).mul_add(
+                                    1.0 - z_weight,
+                                    c001 * (1.0 - x_weight) * (1.0 - y_weight) * z_weight,
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
     }
 }
 
 fn is_planar(sensor_positions: &[[f64; 3]]) -> bool {
-    sensor_positions
-        .first()
-        .is_some_and(|first| {
-            sensor_positions
-                .iter()
-                .all(|p| (p[2] - first[2]).abs() < 1e-12)
-        })
+    sensor_positions.first().is_some_and(|first| {
+        sensor_positions
+            .iter()
+            .all(|p| (p[2] - first[2]).abs() < 1e-12)
+    })
 }
 
 fn is_line(sensor_positions: &[[f64; 3]]) -> bool {
-    sensor_positions
-        .first()
-        .is_some_and(|first| {
-            sensor_positions
-                .iter()
-                .all(|p| (p[1] - first[1]).abs() < 1e-12 && (p[2] - first[2]).abs() < 1e-12)
-        })
+    sensor_positions.first().is_some_and(|first| {
+        sensor_positions
+            .iter()
+            .all(|p| (p[1] - first[1]).abs() < 1e-12 && (p[2] - first[2]).abs() < 1e-12)
+    })
 }
 
 #[cfg(test)]

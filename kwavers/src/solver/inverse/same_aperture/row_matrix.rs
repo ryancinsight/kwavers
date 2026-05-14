@@ -90,6 +90,11 @@ impl LinearOperator for RowMatrix {
         self.t_matvec_impl(y, out);
     }
 
+    fn row_values(&self, row: usize, out: &mut [f32]) {
+        debug_assert_eq!(out.len(), self.cols);
+        out.copy_from_slice(self.row(row));
+    }
+
     fn normal_diag(&self) -> Vec<f32> {
         self.normal_diag_impl()
     }

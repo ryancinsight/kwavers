@@ -14,7 +14,7 @@ pub struct BurtonMillerConfig {
 }
 
 impl BurtonMillerConfig {
-    #[must_use] 
+    #[must_use]
     pub fn new(frequency: f64, sound_speed: f64) -> Self {
         let wavenumber = 2.0 * PI * frequency / sound_speed;
         let coupling_alpha = Complex64::new(0.0, -1.0 / wavenumber);
@@ -28,7 +28,7 @@ impl BurtonMillerConfig {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_coupling_alpha(mut self, alpha: Complex64) -> Self {
         self.coupling_alpha = alpha;
         self

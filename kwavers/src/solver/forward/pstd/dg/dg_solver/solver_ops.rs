@@ -185,8 +185,14 @@ impl DGSolver {
                 let u_plus_right = coeffs[(right_elem, 0, var)];
 
                 // Lax–Friedrichs: f*(u⁻,u⁺) = 0.5 c(u⁻+u⁺) − 0.5 c(u⁺−u⁻)
-                let flux_left = (0.5 * wave_speed).mul_add(u_minus_left + u_plus_left, -(0.5 * wave_speed * (u_plus_left - u_minus_left)));
-                let flux_right = (0.5 * wave_speed).mul_add(u_minus_right + u_plus_right, -(0.5 * wave_speed * (u_plus_right - u_minus_right)));
+                let flux_left = (0.5 * wave_speed).mul_add(
+                    u_minus_left + u_plus_left,
+                    -(0.5 * wave_speed * (u_plus_left - u_minus_left)),
+                );
+                let flux_right = (0.5 * wave_speed).mul_add(
+                    u_minus_right + u_plus_right,
+                    -(0.5 * wave_speed * (u_plus_right - u_minus_right)),
+                );
 
                 let f_int_left = wave_speed * u_plus_left;
                 let f_int_right = wave_speed * u_minus_right;

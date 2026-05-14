@@ -133,10 +133,15 @@ fn test_cube_construction_rejects_missing_corner() {
 
 #[test]
 fn test_cube_query_corner_returns_normalized_envelope() {
-    let kernels: Vec<FocalKernel> = [(0.5e6, 15.0e6), (0.5e6, 30.0e6), (1.0e6, 15.0e6), (1.0e6, 30.0e6)]
-        .iter()
-        .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
-        .collect();
+    let kernels: Vec<FocalKernel> = [
+        (0.5e6, 15.0e6),
+        (0.5e6, 30.0e6),
+        (1.0e6, 15.0e6),
+        (1.0e6, 30.0e6),
+    ]
+    .iter()
+    .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
+    .collect();
     let cube = KernelCube::new(kernels).unwrap();
     let env = cube.query(1.0e6, 30.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
     let max = env.iter().copied().fold(f64::NEG_INFINITY, f64::max);
@@ -148,10 +153,15 @@ fn test_cube_query_corner_returns_normalized_envelope() {
 
 #[test]
 fn test_cube_query_clamps_outside_sweep() {
-    let kernels: Vec<FocalKernel> = [(0.5e6, 15.0e6), (0.5e6, 30.0e6), (1.0e6, 15.0e6), (1.0e6, 30.0e6)]
-        .iter()
-        .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
-        .collect();
+    let kernels: Vec<FocalKernel> = [
+        (0.5e6, 15.0e6),
+        (0.5e6, 30.0e6),
+        (1.0e6, 15.0e6),
+        (1.0e6, 30.0e6),
+    ]
+    .iter()
+    .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
+    .collect();
     let cube = KernelCube::new(kernels).unwrap();
     let target_shape = (60, 40, 40);
     let target_focus = (45, 20, 20);
@@ -170,10 +180,15 @@ fn test_cube_query_clamps_outside_sweep() {
 
 #[test]
 fn test_cube_query_pnp_amplitude_invariant() {
-    let kernels: Vec<FocalKernel> = [(0.5e6, 15.0e6), (0.5e6, 30.0e6), (1.0e6, 15.0e6), (1.0e6, 30.0e6)]
-        .iter()
-        .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
-        .collect();
+    let kernels: Vec<FocalKernel> = [
+        (0.5e6, 15.0e6),
+        (0.5e6, 30.0e6),
+        (1.0e6, 15.0e6),
+        (1.0e6, 30.0e6),
+    ]
+    .iter()
+    .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
+    .collect();
     let cube = KernelCube::new(kernels).unwrap();
     let env_15 = cube.query(1.0e6, 15.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
     let env_30 = cube.query(1.0e6, 30.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
@@ -222,10 +237,15 @@ fn test_cube_blend_in_place_zero_extra_allocation() {
     // Functional test that the in-place blend produces the same result
     // as the previous out-of-place implementation. Exercises the new
     // Zip-based blend path inside KernelCube::query.
-    let kernels: Vec<FocalKernel> = [(0.5e6, 15.0e6), (0.5e6, 30.0e6), (1.0e6, 15.0e6), (1.0e6, 30.0e6)]
-        .iter()
-        .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
-        .collect();
+    let kernels: Vec<FocalKernel> = [
+        (0.5e6, 15.0e6),
+        (0.5e6, 30.0e6),
+        (1.0e6, 15.0e6),
+        (1.0e6, 30.0e6),
+    ]
+    .iter()
+    .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
+    .collect();
     let cube = KernelCube::new(kernels).unwrap();
     let env_a = cube.query(0.6e6, 20.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
     let env_b = cube.query(0.6e6, 20.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
@@ -243,8 +263,8 @@ fn test_helmholtz_residual_zero_on_plane_wave() {
     let f0 = 1.0e6;
     let c0 = HELMHOLTZ_C0_WATER;
     let k = 2.0 * std::f64::consts::PI * f0 / c0; // ~4189 m^-1
-    let lam = 2.0 * std::f64::consts::PI / k;     // ~1.5 mm
-    let dx = lam / 16.0;                          // 16 PPW for low FD error
+    let lam = 2.0 * std::f64::consts::PI / k; // ~1.5 mm
+    let dx = lam / 16.0; // 16 PPW for low FD error
     let n = 32usize;
     let mut p = Array3::<f64>::zeros((n, n, n));
     for i in 0..n {
@@ -327,10 +347,15 @@ fn test_helmholtz_residual_kernel_wrapper_matches_field() {
 
 #[test]
 fn test_cube_query_midpoint_blends_and_renormalizes() {
-    let kernels: Vec<FocalKernel> = [(0.5e6, 15.0e6), (0.5e6, 30.0e6), (1.0e6, 15.0e6), (1.0e6, 30.0e6)]
-        .iter()
-        .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
-        .collect();
+    let kernels: Vec<FocalKernel> = [
+        (0.5e6, 15.0e6),
+        (0.5e6, 30.0e6),
+        (1.0e6, 15.0e6),
+        (1.0e6, 30.0e6),
+    ]
+    .iter()
+    .map(|&(f0, pnp)| synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, f0, pnp))
+    .collect();
     let cube = KernelCube::new(kernels).unwrap();
     let env_mid = cube.query(0.75e6, 20.0e6, (60, 40, 40), (45, 20, 20), 0.5e-3);
     let max = env_mid.iter().copied().fold(f64::NEG_INFINITY, f64::max);

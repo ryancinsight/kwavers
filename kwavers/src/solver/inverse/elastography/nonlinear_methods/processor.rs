@@ -16,7 +16,7 @@ pub struct NonlinearInversion {
 }
 
 impl NonlinearInversion {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: NonlinearInversionConfig) -> Self {
         Self { config }
     }

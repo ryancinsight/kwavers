@@ -16,7 +16,8 @@ impl WavefieldModeler {
         if !v_max.is_finite() || v_max <= 0.0 {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "Velocity model must contain a finite, strictly positive maximum".to_owned(),
+                    message: "Velocity model must contain a finite, strictly positive maximum"
+                        .to_owned(),
                 },
             ));
         }

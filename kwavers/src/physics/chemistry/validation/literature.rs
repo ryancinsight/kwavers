@@ -19,7 +19,7 @@ pub struct LiteratureValue {
 
 impl LiteratureValue {
     /// Create literature value from nominal ± uncertainty
-    #[must_use] 
+    #[must_use]
     pub fn new(nominal: f64, uncertainty: f64) -> Self {
         let percent = uncertainty / nominal;
         Self {
@@ -31,7 +31,7 @@ impl LiteratureValue {
     }
 
     /// Create from literature range
-    #[must_use] 
+    #[must_use]
     pub fn from_range(min: f64, max: f64) -> Self {
         let nominal = (min + max) / 2.0;
         let uncertainty = (max - min) / 2.0;
@@ -44,13 +44,13 @@ impl LiteratureValue {
     }
 
     /// Check if simulated value is within acceptable range
-    #[must_use] 
+    #[must_use]
     pub fn is_within_range(&self, simulated: f64) -> bool {
         simulated >= self.min && simulated <= self.max
     }
 
     /// Percent difference from nominal
-    #[must_use] 
+    #[must_use]
     pub fn percent_difference(&self, simulated: f64) -> f64 {
         100.0 * (simulated - self.nominal).abs() / self.nominal
     }

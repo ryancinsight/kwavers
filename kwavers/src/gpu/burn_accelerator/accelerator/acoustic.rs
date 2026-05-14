@@ -33,8 +33,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         let rho_tensor = self.array_to_tensor(density);
         let c_tensor = self.array_to_tensor(sound_speed);
 
-        let divergence =
-            self.compute_divergence(&vx_tensor, &vy_tensor, &vz_tensor, dx, dy, dz);
+        let divergence = self.compute_divergence(&vx_tensor, &vy_tensor, &vz_tensor, dx, dy, dz);
 
         let c_squared = c_tensor.powf_scalar(2.0);
         let rho_c_squared = rho_tensor * c_squared;

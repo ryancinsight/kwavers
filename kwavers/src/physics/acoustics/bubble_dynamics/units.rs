@@ -68,15 +68,9 @@ impl Default for BubbleParameters {
         };
 
         // Default: Air bubble
-        gas_composition
-            .mole_fractions
-            .insert("N2".to_owned(), 0.78);
-        gas_composition
-            .mole_fractions
-            .insert("O2".to_owned(), 0.21);
-        gas_composition
-            .mole_fractions
-            .insert("Ar".to_owned(), 0.01);
+        gas_composition.mole_fractions.insert("N2".to_owned(), 0.78);
+        gas_composition.mole_fractions.insert("O2".to_owned(), 0.21);
+        gas_composition.mole_fractions.insert("Ar".to_owned(), 0.01);
 
         gas_composition
             .molecular_weights

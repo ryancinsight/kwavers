@@ -164,10 +164,14 @@ impl IntegratedSonoluminescence {
                     let k4_r = state_k4.wall_velocity;
 
                     // Final RK4 update
-                    let new_radius =
-                        (dt / 6.0).mul_add(2.0f64.mul_add(k3_r, 2.0f64.mul_add(k2_r, k1_r)) + k4_r, state.radius);
-                    let new_velocity =
-                        (dt / 6.0).mul_add(2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v, state.wall_velocity);
+                    let new_radius = (dt / 6.0).mul_add(
+                        2.0f64.mul_add(k3_r, 2.0f64.mul_add(k2_r, k1_r)) + k4_r,
+                        state.radius,
+                    );
+                    let new_velocity = (dt / 6.0).mul_add(
+                        2.0f64.mul_add(k3_v, 2.0f64.mul_add(k2_v, k1_v)) + k4_v,
+                        state.wall_velocity,
+                    );
 
                     state.radius = new_radius;
                     state.wall_velocity = new_velocity;

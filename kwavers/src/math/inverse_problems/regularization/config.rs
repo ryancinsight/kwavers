@@ -32,7 +32,7 @@ impl Default for RegularizationConfig {
 
 impl RegularizationConfig {
     /// Create new configuration with no regularization
-    #[must_use] 
+    #[must_use]
     pub fn none() -> Self {
         Self {
             tikhonov_weight: 0.0,
@@ -45,42 +45,42 @@ impl RegularizationConfig {
     }
 
     /// Enable Tikhonov (L2) regularization
-    #[must_use] 
+    #[must_use]
     pub fn with_tikhonov(mut self, weight: f64) -> Self {
         self.tikhonov_weight = weight;
         self
     }
 
     /// Enable Total Variation regularization
-    #[must_use] 
+    #[must_use]
     pub fn with_tv(mut self, weight: f64) -> Self {
         self.tv_weight = weight;
         self
     }
 
     /// Enable smoothness regularization
-    #[must_use] 
+    #[must_use]
     pub fn with_smoothness(mut self, weight: f64) -> Self {
         self.smoothness_weight = weight;
         self
     }
 
     /// Enable L1 (Lasso) regularization
-    #[must_use] 
+    #[must_use]
     pub fn with_l1(mut self, weight: f64) -> Self {
         self.l1_weight = weight;
         self
     }
 
     /// Enable depth weighting
-    #[must_use] 
+    #[must_use]
     pub fn with_depth_weighting(mut self, exponent: f64) -> Self {
         self.depth_weighting_exponent = exponent;
         self
     }
 
     /// Check if any regularization is active
-    #[must_use] 
+    #[must_use]
     pub fn is_active(&self) -> bool {
         self.tikhonov_weight > 0.0
             || self.tv_weight > 0.0

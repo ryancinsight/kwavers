@@ -328,11 +328,23 @@ impl TransducerArray2D {
             }
 
             if let Some(focus) = focus_point {
-                let dist_to_focus = (element.position.2 - focus.2).mul_add(element.position.2 - focus.2, (element.position.1 - focus.1).mul_add(element.position.1 - focus.1, (element.position.0 - focus.0).powi(2)))
-                .sqrt();
+                let dist_to_focus = (element.position.2 - focus.2)
+                    .mul_add(
+                        element.position.2 - focus.2,
+                        (element.position.1 - focus.1).mul_add(
+                            element.position.1 - focus.1,
+                            (element.position.0 - focus.0).powi(2),
+                        ),
+                    )
+                    .sqrt();
 
-                let dist_center_to_focus = (center_pos.2 - focus.2).mul_add(center_pos.2 - focus.2, (center_pos.1 - focus.1).mul_add(center_pos.1 - focus.1, (center_pos.0 - focus.0).powi(2)))
-                .sqrt();
+                let dist_center_to_focus = (center_pos.2 - focus.2)
+                    .mul_add(
+                        center_pos.2 - focus.2,
+                        (center_pos.1 - focus.1)
+                            .mul_add(center_pos.1 - focus.1, (center_pos.0 - focus.0).powi(2)),
+                    )
+                    .sqrt();
 
                 delay += (dist_to_focus - dist_center_to_focus) / c;
             }

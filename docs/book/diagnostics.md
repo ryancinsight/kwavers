@@ -363,9 +363,121 @@ where Δt is the push pulse duration (~1 ms) and I₀ is the focal intensity.
 
 ---
 
-## 5.7 Image Quality Metrics
+## 5.7 Ultrasonic Speed-of-Sound Shift Imaging
 
-### 5.7.1 Spatial Resolution Metrics
+Speed-of-sound shift imaging estimates a perturbation map δc(r) = c(r) − c₀ from
+differential ultrasonic travel-time shifts measured across a transmit/receive aperture.
+It is distinct from B-mode reflectivity: the data are phase or time shifts relative to a
+reference sound speed, and the image is a quantitative sound-speed contrast.
+
+For a straight transmit/receive ray Γᵣ with observed-minus-reference time shift δtᵣ:
+
+```
+δtᵣ = ∫_{Γᵣ} [1/(c₀ + δc(r)) − 1/c₀] ds
+    ≈ −1/c₀² ∫_{Γᵣ} δc(r) ds                                      (5.23)
+```
+
+After voxelization with exact ray/pixel intersection lengths ℓᵣᵥ:
+
+```
+Σ_v ℓᵣᵥ δc_v = −c₀² δtᵣ                                           (5.24)
+```
+
+**Dense regime.** Dense shift imaging uses all measured aperture rows and solves:
+
+```
+min_δc  1/2 ||Aδc − b||₂² + λ/2 ||δc||₂² + γ/2 δcᵀLδc              (5.25)
+```
+
+where L is the active-pixel graph Laplacian. This produces a spatially dense quantitative
+sound-speed shift field for diffuse thermal, fat, fibrosis, or skull-aberration contexts.
+
+**Sparse regime.** Sparse shift imaging uses a deterministic row subset and an L1 prior:
+
+```
+min_δc  1/2 ||A_Sδc − b_S||₂² + λ/2 ||δc||₂² + γ/2 δcᵀLδc
+        + μ ||δc||₁                                                 (5.26)
+```
+
+This targets compact lesions, focal ablation changes, or localized acoustic-property
+changes when a full aperture sweep is not available. The implementation keeps dense and
+sparse behavior in one API: `ShiftSampling` selects measurement rows and `ShiftPrior`
+selects the image prior, while the forward operator remains the same straight-ray
+speed-shift model. Ray assembly traverses only the crossed grid cells and stores
+nonzero segment lengths in flat row-offset, column, and length arrays, so
+construction and operator storage scale with ray path length rather than the full
+active-pixel count. Iterative inversion uses caller-reusable PCG/ISTA scratch
+buffers through `SoundSpeedShiftWorkspace`, so repeated dense or sparse
+reconstructions over compatible grids retain row, Laplacian, prediction,
+residual, diagonal, and power-iteration allocations instead of rebuilding them
+for each solve.
+
+**Fixed-acquisition planning.** When the aperture, active mask, propagation
+model, sensitivity model, and sampling policy are fixed across a time series,
+`SoundSpeedShiftPlan` caches the generated acquisition rows and the assembled
+operator. A frame then supplies only the measured shift vector in original
+acquisition order:
+
+```
+b_S^(n)[r] = -c0^2 Delta t_i(r)^(n)
+```
+
+where `i(r)` is the original acquisition-row index retained by the sampled
+operator row. This preserves the inverse model in (5.25)-(5.26) while
+amortizing curved-array row generation, curved-ray subsegment traversal, and
+finite-frequency weight assembly across repeated frames.
+For frame batches, the same plan drives all frames through one solver workspace
+and one reusable sampled-row RHS buffer. `SoundSpeedShiftBatchConfig` defaults
+to compact objective retention:
+
+```
+summary_n = (J_n(0), J_n(final), iteration_count_n).                         (5.27)
+```
+
+Full per-frame objective histories are retained only when explicitly requested,
+so long time series do not store every solver objective value by default.
+
+**Curved-array acquisition.** A 2-D curved array is represented as a circular
+arc:
+
+```
+p_i = c + r[cos(theta_0 + i Delta theta), sin(theta_0 + i Delta theta)]      (5.28)
+```
+
+`CurvedArrayShiftScan` emits same-aperture pitch-catch rows in deterministic
+transmitter-major order with receiver index `(i + offset) mod N`. These rows
+are ordinary `SoundSpeedShiftSample` values, so curved-array acquisition does
+not create a separate inverse model; it supplies curved-array transmitter and
+receiver coordinates to the same straight-ray operator in (5.24)-(5.26).
+
+**Curved-ray and finite-frequency sensitivity.** The same reconstruction API
+also supports a circular-arc propagation row:
+
+```
+Γ_r = union_k [q_k, q_{k+1}],   q_k on the transmitter-receiver circular arc.  (5.29)
+```
+
+Each subsegment uses the same exact segment/pixel traversal as the straight-ray
+case, so the curved row is a sum of exact voxel intersections over the declared
+piecewise-linear circular-arc discretization. For finite-frequency sensitivity,
+each subsegment uses a compact Fresnel tube around the propagation path:
+
+```
+K_vk = exp(-d(v, Γ_k)^2 / (2σ_k²)),   σ_k² = λ s_k(L - s_k) / L.              (5.30)
+```
+
+The implementation normalizes the active voxel weights on each subsegment so a
+uniform sound-speed shift integrates to the geometric path length. This keeps the
+linearized shift equation in (5.24) dimensionally identical while broadening
+sensitivity to off-axis pixels.
+
+Implemented in `kwavers::clinical::imaging::reconstruction::sound_speed_shift`.
+
+---
+
+## 5.8 Image Quality Metrics
+
+### 5.8.1 Spatial Resolution Metrics
 
 **Definition 5.8 (FWHM).** Full-width at half-maximum of the PSF cross-section. Measured
 from a point target or wire phantom.
@@ -373,7 +485,7 @@ from a point target or wire phantom.
 **Definition 5.9 (Lateral Resolution, Axial Resolution).** Measured FWHM in lateral and
 axial directions for the combined transmit-receive PSF h(x,z).
 
-### 5.7.2 Contrast Metrics
+### 5.8.2 Contrast Metrics
 
 **Definition 5.10 (CR, CNR, gCNR).** For lesion intensity distribution p_l and background
 p_b:
@@ -388,7 +500,7 @@ transformations.
 *Proof.* The overlap integral OVL = ∫ min(p_l(x), p_b(x)) dx is invariant under monotone
 reparameterization by the change-of-variables theorem. □
 
-### 5.7.3 Validation Pass Criteria
+### 5.8.3 Validation Pass Criteria
 
 | Metric | Formula | Pass criterion |
 |--------|---------|----------------|
@@ -401,7 +513,7 @@ reparameterization by the change-of-variables theorem. □
 
 ---
 
-## 5.8 Code Mapping
+## 5.9 Code Mapping
 
 | Modality | kwavers module | Key struct/fn |
 |----------|---------------|---------------|
@@ -419,10 +531,11 @@ reparameterization by the change-of-variables theorem. □
 | ULM super-resolution | `functional_ultrasound::ulm::super_resolution` | `SuperResolutionReconstructor` |
 | SWE velocity mapping | `functional_ultrasound::ulm::velocity_mapping` | `VelocityMapper` |
 | Vasculature analysis | `functional_ultrasound::vasculature` | `FrangiFilter` |
+| Speed-of-sound shift | `clinical::imaging::reconstruction::sound_speed_shift` | `reconstruct_sound_speed_shift()` |
 
 ---
 
-## 5.9 Worked Example: B-Mode SNR after Coherent Compounding
+## 5.10 Worked Example: B-Mode SNR after Coherent Compounding
 
 **Setup.** 16 plane-wave angles, single plane-wave SNR = 20 dB (√100 = 10 amplitude ratio).
 
@@ -481,4 +594,7 @@ versus ~30 frames/s for focused scanning with 128 lines.
    *IEEE Trans. Ultrason. Ferroelectr. Freq. Control*, **67**(4), 745–759.
    https://doi.org/10.1109/TUFFC.2019.2956855
 
-10. ULTRA-SR benchmark: https://doi.org/10.1109/TMI.2024.3388048
+10. Dines, K. A., & Kak, A. C. (1979). Ultrasonic attenuation tomography of soft
+   tissues. *Ultrasonic Imaging*, **1**(1), 16–33.
+
+11. ULTRA-SR benchmark: https://doi.org/10.1109/TMI.2024.3388048

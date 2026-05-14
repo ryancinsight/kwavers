@@ -141,7 +141,7 @@ impl StftBinConfig {
     /// Resolve the FFT bin index for the target frequency.
     ///
     /// `k = round(f * N / fs)`, with `k ∈ [0, N-1]`.
-    #[must_use] 
+    #[must_use]
     pub fn bin_index(&self) -> usize {
         let n = self.frame_len_samples as f64;
         let k = (self.frequency_hz * n / self.sampling_frequency_hz).round();

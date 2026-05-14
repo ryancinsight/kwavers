@@ -69,7 +69,8 @@ impl PSTDSolver {
             AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
-                        message: "Relaxation absorption modes are not supported by spectral solver".to_owned(),
+                        message: "Relaxation absorption modes are not supported by spectral solver"
+                            .to_owned(),
                     },
                 ));
             }
@@ -108,11 +109,9 @@ impl PSTDSolver {
         self.fft.forward_r2c_into(&self.dpz, &mut self.grad_k);
         {
             let n1 = abs.nabla1.slice(s![.., .., ..nz_c]);
-            Zip::from(&mut self.grad_k)
-                .and(&n1)
-                .par_for_each(|gk, &n| {
-                    *gk *= n; // n: f64; nabla1 is real-valued
-                });
+            Zip::from(&mut self.grad_k).and(&n1).par_for_each(|gk, &n| {
+                *gk *= n; // n: f64; nabla1 is real-valued
+            });
         }
         self.fft
             .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
@@ -123,11 +122,9 @@ impl PSTDSolver {
         self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
         {
             let n2 = abs.nabla2.slice(s![.., .., ..nz_c]);
-            Zip::from(&mut self.grad_k)
-                .and(&n2)
-                .par_for_each(|gk, &n| {
-                    *gk *= n; // n: f64; nabla2 is real-valued
-                });
+            Zip::from(&mut self.grad_k).and(&n2).par_for_each(|gk, &n| {
+                *gk *= n; // n: f64; nabla2 is real-valued
+            });
         }
         self.fft
             .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.ux_k);

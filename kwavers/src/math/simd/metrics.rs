@@ -8,7 +8,7 @@ pub struct SimdPerformance;
 
 impl SimdPerformance {
     /// Get SIMD performance metrics
-    #[must_use] 
+    #[must_use]
     pub fn get_metrics() -> SimdMetrics {
         let config = SimdConfig::detect();
 

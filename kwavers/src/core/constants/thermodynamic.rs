@@ -227,14 +227,14 @@ pub const EMISSIVITY_VAPOR: f64 = 0.1;
 
 /// Convert temperature from Kelvin to Celsius
 #[inline]
-#[must_use] 
+#[must_use]
 pub fn kelvin_to_celsius(kelvin: f64) -> f64 {
     kelvin + ABSOLUTE_ZERO_C
 }
 
 /// Convert temperature from Celsius to Kelvin
 #[inline]
-#[must_use] 
+#[must_use]
 pub fn celsius_to_kelvin(celsius: f64) -> f64 {
     celsius - ABSOLUTE_ZERO_C
 }

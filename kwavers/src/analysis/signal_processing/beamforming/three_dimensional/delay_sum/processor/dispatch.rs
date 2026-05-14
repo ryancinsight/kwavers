@@ -7,6 +7,8 @@
 //! Both methods are only compiled when the `gpu` feature is enabled.
 
 #[cfg(feature = "gpu")]
+use super::super::params::Params;
+#[cfg(feature = "gpu")]
 use super::DelaySumGPU;
 #[cfg(feature = "gpu")]
 use crate::analysis::signal_processing::beamforming::three_dimensional::config::ApodizationWindow;
@@ -14,8 +16,6 @@ use crate::analysis::signal_processing::beamforming::three_dimensional::config::
 use crate::core::error::KwaversResult;
 #[cfg(feature = "gpu")]
 use ndarray::{Array3, Array4};
-#[cfg(feature = "gpu")]
-use super::super::params::Params;
 #[cfg(feature = "gpu")]
 use wgpu::util::DeviceExt;
 
@@ -68,13 +68,13 @@ impl<'a> DelaySumGPU<'a> {
 
         let output_volume = Array3::<f32>::zeros((vol_x, vol_y, vol_z));
         let output_flat: Vec<f32> = output_volume.as_slice().unwrap_or(&[]).to_vec();
-        let output_buffer =
-            self.device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Output Volume Buffer"),
-                    contents: bytemuck::cast_slice(&output_flat),
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-                });
+        let output_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Output Volume Buffer"),
+                contents: bytemuck::cast_slice(&output_flat),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            });
 
         let apodization_flat: Vec<f32> = apodization_weights.as_slice().unwrap_or(&[]).to_vec();
         let apodization_buffer =
@@ -134,13 +134,13 @@ impl<'a> DelaySumGPU<'a> {
             apodization_window: apodization_window_u32,
         };
 
-        let params_buffer =
-            self.device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Parameters Buffer"),
-                    contents: bytemuck::bytes_of(&params),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                });
+        let params_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Parameters Buffer"),
+                contents: bytemuck::bytes_of(&params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("3D Beamforming Bind Group"),
@@ -189,18 +189,17 @@ impl<'a> DelaySumGPU<'a> {
             ],
         });
 
-        let mut encoder =
-            self.device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("3D Beamforming Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("3D Beamforming Encoder"),
+            });
 
         {
-            let mut compute_pass =
-                encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("3D Beamforming Pass"),
-                    timestamp_writes: None,
-                });
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("3D Beamforming Pass"),
+                timestamp_writes: None,
+            });
 
             compute_pass.set_pipeline(self.pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
@@ -224,13 +223,7 @@ impl<'a> DelaySumGPU<'a> {
             mapped_at_creation: false,
         });
 
-        encoder.copy_buffer_to_buffer(
-            &output_buffer,
-            0,
-            &staging_buffer,
-            0,
-            staging_buffer.size(),
-        );
+        encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, staging_buffer.size());
 
         self.queue.submit(Some(encoder.finish()));
 

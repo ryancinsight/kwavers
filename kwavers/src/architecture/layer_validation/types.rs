@@ -27,7 +27,7 @@ pub enum ArchitectureLayer {
 
 impl ArchitectureLayer {
     /// Get string representation.
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Core => "Core (Layer 0)",
@@ -45,13 +45,13 @@ impl ArchitectureLayer {
     /// Check if one layer can depend on another.
     ///
     /// Layer N can depend on Layer 0..N-1 (strictly downward).
-    #[must_use] 
+    #[must_use]
     pub fn can_depend_on(dependor: Self, dependency: Self) -> bool {
         dependor > dependency
     }
 
     /// Get the maximum layer a given layer can depend on.
-    #[must_use] 
+    #[must_use]
     pub fn max_dependency(layer: Self) -> Self {
         match layer {
             Self::Core => Self::Core,
@@ -130,7 +130,7 @@ pub enum ViolationType {
 
 impl ViolationType {
     /// Get string representation.
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::UpwardDependency => "Upward Dependency",

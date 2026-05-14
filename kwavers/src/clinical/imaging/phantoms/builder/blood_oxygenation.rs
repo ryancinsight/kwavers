@@ -78,7 +78,11 @@ impl BloodOxygenationPhantomBuilder {
     /// Add tumor region (typically hypoxic: sO₂ ≈ 0.50-0.70)
     #[must_use]
     pub fn add_tumor(mut self, center: [f64; 3], radius: f64, so2: f64) -> Self {
-        self.tumors.push(TumorSpec { center, radius, so2 });
+        self.tumors.push(TumorSpec {
+            center,
+            radius,
+            so2,
+        });
         self
     }
 

@@ -19,7 +19,13 @@ pub fn contrast_harmonic_response(pressure: f64, frequency: f64, bubble_resonanc
     const DAMPING: f64 = 0.1;
     const BUBBLE_NONLINEARITY_SCALE: f64 = 1e-6;
 
-    let resonance_enhancement =
-        1.0 / omega_ratio.mul_add(-omega_ratio, 1.0).mul_add(omega_ratio.mul_add(-omega_ratio, 1.0), DAMPING.powi(2) * omega_ratio.powi(2)).sqrt();
+    let resonance_enhancement = 1.0
+        / omega_ratio
+            .mul_add(-omega_ratio, 1.0)
+            .mul_add(
+                omega_ratio.mul_add(-omega_ratio, 1.0),
+                DAMPING.powi(2) * omega_ratio.powi(2),
+            )
+            .sqrt();
     BUBBLE_NONLINEARITY_SCALE * pressure.powi(2) * resonance_enhancement
 }

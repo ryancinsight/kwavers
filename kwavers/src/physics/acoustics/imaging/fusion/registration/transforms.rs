@@ -30,8 +30,17 @@ pub(crate) fn apply_inverse_transform(transform: &[f64; 16], point: [f64; 3]) ->
     ];
 
     [
-        rot[2][0].mul_add(shifted[2], rot[0][0].mul_add(shifted[0], rot[1][0] * shifted[1])),
-        rot[2][1].mul_add(shifted[2], rot[0][1].mul_add(shifted[0], rot[1][1] * shifted[1])),
-        rot[2][2].mul_add(shifted[2], rot[0][2].mul_add(shifted[0], rot[1][2] * shifted[1])),
+        rot[2][0].mul_add(
+            shifted[2],
+            rot[0][0].mul_add(shifted[0], rot[1][0] * shifted[1]),
+        ),
+        rot[2][1].mul_add(
+            shifted[2],
+            rot[0][1].mul_add(shifted[0], rot[1][1] * shifted[1]),
+        ),
+        rot[2][2].mul_add(
+            shifted[2],
+            rot[0][2].mul_add(shifted[0], rot[1][2] * shifted[1]),
+        ),
     ]
 }

@@ -123,7 +123,10 @@ impl FdtdFemCoupler {
         for (&fem_idx, &fdtd_value) in self.interface.fem_indices.iter().zip(fdtd_values.iter()) {
             if fem_idx < fem_field.len() {
                 let current_value = fem_field[fem_idx];
-                fem_field[fem_idx] = self.config.relaxation_factor.mul_add(fdtd_value, (1.0 - self.config.relaxation_factor) * current_value);
+                fem_field[fem_idx] = self.config.relaxation_factor.mul_add(
+                    fdtd_value,
+                    (1.0 - self.config.relaxation_factor) * current_value,
+                );
             }
         }
         Ok(())
@@ -163,7 +166,10 @@ impl FdtdFemCoupler {
 
         for (&(i, j, k), &fem_value) in self.interface.fdtd_indices.iter().zip(fem_values.iter()) {
             let current_value = fdtd_field[[i, j, k]];
-            let new_value = self.config.relaxation_factor.mul_add(fem_value, (1.0 - self.config.relaxation_factor) * current_value);
+            let new_value = self.config.relaxation_factor.mul_add(
+                fem_value,
+                (1.0 - self.config.relaxation_factor) * current_value,
+            );
 
             let residual = (new_value - current_value).abs();
             if residual > max_residual {
@@ -187,11 +193,15 @@ impl FdtdFemCoupler {
     fn apply_interface_smoothing(&self, field: &mut Array3<f64>, grid: &Grid) -> KwaversResult<()> {
         for &(i, j, k) in &self.interface.fdtd_indices {
             if i > 0 && i < grid.nx - 1 && j > 0 && j < grid.ny - 1 && k > 0 && k < grid.nz - 1 {
-                let laplacian = 6.0f64.mul_add(-field[[i, j, k]], field[[i - 1, j, k]]
-                    + field[[i + 1, j, k]]
-                    + field[[i, j - 1, k]]
-                    + field[[i, j + 1, k]]
-                    + field[[i, j, k - 1]] + field[[i, j, k + 1]]);
+                let laplacian = 6.0f64.mul_add(
+                    -field[[i, j, k]],
+                    field[[i - 1, j, k]]
+                        + field[[i + 1, j, k]]
+                        + field[[i, j - 1, k]]
+                        + field[[i, j + 1, k]]
+                        + field[[i, j, k - 1]]
+                        + field[[i, j, k + 1]],
+                );
                 field[[i, j, k]] += 0.1 * laplacian;
             }
         }
@@ -202,7 +212,7 @@ impl FdtdFemCoupler {
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn check_convergence(&self) -> bool {
         if self.convergence_history.len() < 2 {
             return false;
@@ -212,7 +222,7 @@ impl FdtdFemCoupler {
     }
 
     /// Get convergence history
-    #[must_use] 
+    #[must_use]
     pub fn convergence_history(&self) -> &[f64] {
         &self.convergence_history
     }

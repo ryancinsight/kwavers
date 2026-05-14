@@ -152,7 +152,10 @@ fn test_esmv_diagonal_loading_stability() {
     );
     // If high loading succeeded, all weights must be finite.
     if let Ok(weights) = result_high {
-        assert!(!weights.is_empty(), "high-loading weights must be non-empty");
+        assert!(
+            !weights.is_empty(),
+            "high-loading weights must be non-empty"
+        );
         for &w in &weights {
             assert!(w.is_finite(), "high-loading weight {w} must be finite");
         }

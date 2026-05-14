@@ -10,7 +10,7 @@ pub struct ThreadAffinity {
 }
 
 impl ThreadAffinity {
-    #[must_use] 
+    #[must_use]
     pub fn for_node(node: usize) -> Self {
         Self {
             node: Some(node),
@@ -19,7 +19,7 @@ impl ThreadAffinity {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn for_cpus(cpus: Vec<usize>) -> Self {
         Self {
             node: None,
@@ -32,7 +32,7 @@ impl ThreadAffinity {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn unrestricted() -> Self {
         Self {
             node: None,
@@ -49,7 +49,7 @@ pub fn set_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
     set_current_thread_affinity(affinity)
 }
 
-#[must_use] 
+#[must_use]
 pub fn current_numa_node() -> Option<usize> {
     #[cfg(target_os = "linux")]
     {

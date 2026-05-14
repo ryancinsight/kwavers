@@ -6,7 +6,7 @@ use crate::domain::medium::properties::OpticalPropertyData;
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
-#[must_use] 
+#[must_use]
 pub fn compute_blood_properties(
     hb_db: &HemoglobinDatabase,
     wavelength_nm: f64,
@@ -42,7 +42,7 @@ pub fn compute_blood_properties(
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
-#[must_use] 
+#[must_use]
 pub fn compute_tumor_properties(
     hb_db: &HemoglobinDatabase,
     wavelength_nm: f64,
@@ -63,7 +63,7 @@ pub fn compute_tumor_properties(
 }
 
 /// Get tissue optical properties by type
-#[must_use] 
+#[must_use]
 pub fn get_tissue_properties(tissue_type: TissueType) -> OpticalPropertyData {
     match tissue_type {
         TissueType::SkinEpidermis => OpticalPropertyData::skin_epidermis(),

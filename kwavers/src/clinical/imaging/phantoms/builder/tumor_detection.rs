@@ -39,7 +39,11 @@ impl TumorDetectionPhantomBuilder {
     /// Add tumor lesion
     #[must_use]
     pub fn add_tumor(mut self, center: [f64; 3], radius: f64, so2: f64) -> Self {
-        self.tumors.push(TumorSpec { center, radius, so2 });
+        self.tumors.push(TumorSpec {
+            center,
+            radius,
+            so2,
+        });
         self
     }
 

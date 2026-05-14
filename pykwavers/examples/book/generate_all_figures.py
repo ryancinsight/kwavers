@@ -119,8 +119,10 @@ def run_chapter(ch_num: int, script_name: str, ch_title: str) -> bool:
 
     t0 = time.perf_counter()
     try:
-        spec = importlib.util.spec_from_file_location(f"ch{ch_num:02d}", script_path)
+        module_name = f"ch{ch_num:02d}"
+        spec = importlib.util.spec_from_file_location(module_name, script_path)
         mod = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = mod
         spec.loader.exec_module(mod)
         elapsed = time.perf_counter() - t0
         print(f"  [OK] Chapter {ch_num} completed in {elapsed:.1f}s")

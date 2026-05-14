@@ -38,8 +38,8 @@ fn tone_burst(
         }
     };
 
-    let signal = kwavers::domain::signal::tone_burst_series(
-        &kwavers::domain::signal::ToneBurstSpec {
+    let signal =
+        kwavers::domain::signal::tone_burst_series(&kwavers::domain::signal::ToneBurstSpec {
             sample_rate_hz,
             signal_freq_hz,
             num_cycles,
@@ -48,9 +48,8 @@ fn tone_burst(
             window: window_type,
             amplitude,
             phase,
-        },
-    )
-    .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
+        })
+        .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
 
     let array = PyArray1::from_vec(py, signal);
     Ok(array.into())

@@ -4,9 +4,9 @@
 //! beamforming, including single-volume and real-time streaming modes.
 
 mod algorithms;
-mod validation;
 #[cfg(test)]
 mod tests;
+mod validation;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, Array4};

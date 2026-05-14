@@ -132,6 +132,31 @@ script = "ch24_bbb_lifu_opening.py"
 title  = "LIFU-Mediated BBB Opening"
 
 [[chapter]]
+number = 25
+script = "ch25_transcranial_brain_fus_planning.py"
+title  = "Transcranial HIFU and BBB Treatment Planning"
+
+[[chapter]]
+number = 26
+script = "ch26_neuromodulation.py"
+title  = "Low-Intensity Ultrasound Neuromodulation"
+
+[[chapter]]
+number = 27
+script = "ch27_seismic_fwi_brain_imaging.py"
+title  = "Seismic Full-Waveform Brain Imaging"
+
+[[chapter]]
+number = 28
+script = "ch28_abdominal_histotripsy_fwi.py"
+title  = "Abdominal Histotripsy FWI Targeting and Lesion Monitoring"
+
+[[chapter]]
 number = 29
 script = "ch29_theranostic_fwi_platforms.py"
-title  = "Same-Device Therapeutic Ultrasound and FWI/RTM Monitoring"
+title  = "Same-Device Therapeutic Ultrasound, Finite-Frequency Inverse, and RTM Monitoring"
+
+[[chapter]]
+number = 30
+script = "ch30_intravascular_ultrasound.py"
+title  = "Intravascular Ultrasound Imaging and Therapy"

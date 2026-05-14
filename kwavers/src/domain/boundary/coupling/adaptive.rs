@@ -94,7 +94,7 @@ impl AdaptiveBoundary {
     /// # Returns
     ///
     /// New `AdaptiveBoundary` initialized at base absorption level
-    #[must_use] 
+    #[must_use]
     pub fn new(
         base_absorption: f64,
         energy_threshold: f64,
@@ -139,8 +139,9 @@ impl AdaptiveBoundary {
         // α(t+Δt) = α(t) × (1-β) + α_target × β
         // where β = 1 - exp(-λ·Δt)
         let alpha = 1.0 - (-self.adaptation_rate * dt).exp();
-        self.current_absorption =
-            self.current_absorption.mul_add(1.0 - alpha, target_absorption * alpha);
+        self.current_absorption = self
+            .current_absorption
+            .mul_add(1.0 - alpha, target_absorption * alpha);
     }
 
     /// Get current absorption coefficient
@@ -148,7 +149,7 @@ impl AdaptiveBoundary {
     /// # Returns
     ///
     /// Current absorption coefficient α(t)
-    #[must_use] 
+    #[must_use]
     pub fn current_absorption(&self) -> f64 {
         self.current_absorption
     }

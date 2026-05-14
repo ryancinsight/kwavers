@@ -18,7 +18,7 @@
 
 use super::super::PstdElasticPlugin;
 use super::kspace::{build_kappa, grid_spacing_from_wavenumber, max_p_wave_speed, wavenumber_axis};
-use super::pml::ElasticPml;
+use super::pml::{ElasticPml, ElasticPmlSpec};
 use super::source_sensor::{
     inject_velocity_source, inject_velocity_source_subfields, record_sensors, validate_source,
 };
@@ -27,12 +27,12 @@ use super::split_field_step::propagate_split_field_step;
 use super::types::{ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdVelocitySource};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
+use crate::math::fft::{fft_3d_array_into, ifft_3d_array_into};
 use crate::physics::acoustics::mechanics::elastic_wave::{
     fields::VelocityFields,
     parameters::{StressUpdateParams, VelocityUpdateParams},
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
 };
-use crate::math::fft::{fft_3d_array_into, ifft_3d_array_into};
 use ndarray::{Array2, Array3};
 use num_complex::Complex;
 
@@ -225,7 +225,9 @@ impl ElasticPstdOrchestrator {
                 inject_velocity_source(&mut self.velocity, src, step);
             }
 
-            if self.split_pml.is_some() {
+            if let (Some(pml), Some(state)) =
+                (self.split_pml.as_ref(), self.split_pml_state.as_mut())
+            {
                 // ── Bérenger split-field PML path ─────────────────────────
                 // Phase 4 of the split-field step overwrites `velocity` with
                 // the sum of velocity sub-fields.  To ensure source-injected
@@ -233,13 +235,9 @@ impl ElasticPstdOrchestrator {
                 // injected into the x-directional velocity sub-fields before
                 // the step.  The invariant `vx = vxx + vxy + vxz` is then
                 // maintained: vxx absorbs the source, vxy/vxz are unchanged.
-                if let (Some(src), Some(state)) =
-                    (source, self.split_pml_state.as_mut())
-                {
-                    inject_velocity_source_subfields(state, src, step);
+                if let Some(src) = source {
+                    inject_velocity_source_subfields(state.as_mut(), src, step);
                 }
-                let pml = self.split_pml.as_ref().unwrap();
-                let state = self.split_pml_state.as_mut().unwrap().as_mut();
                 propagate_split_field_step(
                     &mut self.velocity,
                     &mut self.spectral_stress,
@@ -247,7 +245,7 @@ impl ElasticPstdOrchestrator {
                     &mut self.spectral_velocity_in,
                     &mut self.spectral_velocity_next,
                     pml,
-                    state,
+                    state.as_mut(),
                     &self.medium,
                     &self.derivative_ops.dkx_neg,
                     &self.derivative_ops.dky_neg,
@@ -258,6 +256,10 @@ impl ElasticPstdOrchestrator {
                     &self.kappa,
                     &mut self.scratch_r,
                 );
+            } else if self.split_pml.is_some() {
+                return Err(crate::core::error::KwaversError::InvalidInput(
+                    "Split-field PML requires persistent split-field state".to_owned(),
+                ));
             } else {
                 // ── Standard leapfrog path (no split-field PML) ───────────
                 fft_3d_array_into(&self.velocity.vx, &mut self.spectral_velocity_in.vx);
@@ -283,10 +285,8 @@ impl ElasticPstdOrchestrator {
                     dt: self.dt,
                     kappa: &self.kappa,
                 };
-                self.plugin.apply_stress_update_in_place(
-                    &stress_params,
-                    &mut self.spectral_stress_next,
-                );
+                self.plugin
+                    .apply_stress_update_in_place(&stress_params, &mut self.spectral_stress_next);
 
                 let velocity_params = VelocityUpdateParams {
                     vx_fft: &self.spectral_velocity_in.vx,
@@ -311,18 +311,9 @@ impl ElasticPstdOrchestrator {
                 );
 
                 std::mem::swap(&mut self.spectral_stress, &mut self.spectral_stress_next);
-                ifft_3d_array_into(
-                    &mut self.spectral_velocity_next.vx,
-                    &mut self.velocity.vx,
-                );
-                ifft_3d_array_into(
-                    &mut self.spectral_velocity_next.vy,
-                    &mut self.velocity.vy,
-                );
-                ifft_3d_array_into(
-                    &mut self.spectral_velocity_next.vz,
-                    &mut self.velocity.vz,
-                );
+                ifft_3d_array_into(&mut self.spectral_velocity_next.vx, &mut self.velocity.vx);
+                ifft_3d_array_into(&mut self.spectral_velocity_next.vy, &mut self.velocity.vy);
+                ifft_3d_array_into(&mut self.spectral_velocity_next.vz, &mut self.velocity.vz);
 
                 if let Some(pml) = self.pml.as_ref() {
                     pml.apply_to_field(&mut self.velocity.vx);
@@ -370,18 +361,14 @@ impl ElasticPstdOrchestrator {
         let dx = grid_spacing_from_wavenumber(&self.derivative_ops.dkx_pos, nx);
         let dy = grid_spacing_from_wavenumber(&self.derivative_ops.dky_pos, ny);
         let dz = grid_spacing_from_wavenumber(&self.derivative_ops.dkz_pos, nz);
-        self.pml = Some(ElasticPml::new(
-            nx,
-            ny,
-            nz,
+        self.pml = Some(ElasticPml::new(ElasticPmlSpec {
+            shape: (nx, ny, nz),
             thickness_cells,
-            dx,
-            dy,
-            dz,
+            spacing: (dx, dy, dz),
             c_max,
-            self.dt,
+            dt: self.dt,
             r0,
-        ));
+        }));
     }
 
     /// Disable any attached PML and revert to periodic boundaries.
@@ -406,18 +393,14 @@ impl ElasticPstdOrchestrator {
         let dx = grid_spacing_from_wavenumber(&self.derivative_ops.dkx_pos, nx);
         let dy = grid_spacing_from_wavenumber(&self.derivative_ops.dky_pos, ny);
         let dz = grid_spacing_from_wavenumber(&self.derivative_ops.dkz_pos, nz);
-        self.split_pml = Some(ElasticSplitFieldPml::new(
-            nx,
-            ny,
-            nz,
+        self.split_pml = Some(ElasticSplitFieldPml::new(ElasticPmlSpec {
+            shape: (nx, ny, nz),
             thickness_cells,
-            dx,
-            dy,
-            dz,
+            spacing: (dx, dy, dz),
             c_max,
-            self.dt,
+            dt: self.dt,
             r0,
-        ));
+        }));
         self.split_pml_state = Some(Box::new(SplitFieldState::new(nx, ny, nz)));
     }
 
@@ -449,4 +432,3 @@ impl ElasticPstdOrchestrator {
         self.step_index
     }
 }
-

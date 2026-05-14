@@ -19,8 +19,10 @@ pub fn compute_invariants(_model: &HyperelasticModel, f: &[[f64; 3]; 3]) -> (f64
 
     // Strain invariants
     let i1 = lambda_sq.iter().sum::<f64>();
-    let i2 =
-        lambda_sq[2].mul_add(lambda_sq[0], lambda_sq[0].mul_add(lambda_sq[1], lambda_sq[1] * lambda_sq[2]));
+    let i2 = lambda_sq[2].mul_add(
+        lambda_sq[0],
+        lambda_sq[0].mul_add(lambda_sq[1], lambda_sq[1] * lambda_sq[2]),
+    );
     let j = lambda.iter().product::<f64>();
 
     (i1, i2, j)
@@ -153,8 +155,14 @@ pub fn matrix_eigenvalues(m: &[[f64; 3]; 3]) -> [f64; 3] {
         a[q][k] = a[k][q];
 
         // Update diagonal and off-diagonal elements
-        a[p][p] = (2.0 * apq * sin_theta).mul_add(-cos_theta, (app * cos_theta).mul_add(cos_theta, aqq * sin_theta * sin_theta));
-        a[q][q] = (2.0 * apq * sin_theta).mul_add(cos_theta, (app * sin_theta).mul_add(sin_theta, aqq * cos_theta * cos_theta));
+        a[p][p] = (2.0 * apq * sin_theta).mul_add(
+            -cos_theta,
+            (app * cos_theta).mul_add(cos_theta, aqq * sin_theta * sin_theta),
+        );
+        a[q][q] = (2.0 * apq * sin_theta).mul_add(
+            cos_theta,
+            (app * sin_theta).mul_add(sin_theta, aqq * cos_theta * cos_theta),
+        );
         a[p][q] = 0.0;
         a[q][p] = 0.0;
     }

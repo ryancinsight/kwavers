@@ -12,7 +12,7 @@ pub struct ClinicalValidator {
 }
 
 impl ClinicalValidator {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }

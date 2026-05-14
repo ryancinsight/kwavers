@@ -1,0 +1,91 @@
+{
+  "contract": {
+    "authoritative_planning_order": [
+      "same-patient CT plus CT-space segmentation",
+      "same-patient CT plus MRI-derived segmentation registered into CT space",
+      "MRI-space segmentation with explicit non-CT-backed boundary"
+    ],
+    "simulation_rejection_rules": [
+      "do not infer skull acoustics from MRI-only GBM data",
+      "do not treat cross-subject sample CT as same-patient evidence",
+      "do not use synthetic CT or MRI unless a real NIfTI output and QC metrics are present"
+    ]
+  },
+  "plan": {
+    "actions": [
+      {
+        "action": "accept_ct_space_segmentation",
+        "artifact_paths": [],
+        "boundary": "Skull acoustics and BBB subspot dose can use the same CT-space voxel spacing.",
+        "inputs": [
+          "ct",
+          "segmentation"
+        ],
+        "outputs": [
+          "ct_space_tumor_mask"
+        ],
+        "rationale": "The segmentation is already defined on the CT planning lattice.",
+        "reference": null,
+        "status": "ready"
+      }
+    ],
+    "available_modalities": [
+      "ct",
+      "segmentation"
+    ],
+    "dataset": "RIRE-CT-segmentation",
+    "missing_modalities": [
+      "t1",
+      "t1gd",
+      "flair",
+      "t2"
+    ],
+    "planning_space": "ct",
+    "references": [
+      {
+        "boundary": "not executed by the Chapter 25 script; synthetic outputs must be generated outside this repo, registered to the planning lattice, and quality checked before use",
+        "name": "cWDM",
+        "role": "paired high-resolution 3D medical image translation; missing brain MRI modality synthesis from available modalities; CT-to-MR or MR-to-CT is treated as a paired-translation candidate only when a trained checkpoint and output NIfTI are supplied",
+        "url": "https://huggingface.co/papers/2411.17203"
+      },
+      {
+        "boundary": "MRI-only bridge; it does not provide skull CT acoustics and cannot make an MRI-space case CT-backed",
+        "name": "SLaM-DiMM",
+        "role": "missing T1w, T1ce, T2w, or FLAIR MRI synthesis from available brain MRI modalities",
+        "url": "https://huggingface.co/papers/2509.16019"
+      },
+      {
+        "boundary": "not a substitute for expert GBM segmentation unless target-label validation and local review are added",
+        "name": "NV-Segment-CTMR",
+        "role": "research 3D CT/MR segmentation reference for anatomical prompt-based masks",
+        "url": "https://huggingface.co/nvidia/NV-Segment-CTMR"
+      }
+    ],
+    "requirements": [
+      {
+        "boundary": "required for same-patient skull-acoustic GBM treatment simulation",
+        "evidence": "D:\\kwavers\\data\\rire_patient_109\\patient_109_ct.nii.gz; D:\\kwavers\\data\\ct_segmentation_sample\\segmentation.nii.gz",
+        "name": "ct_segmentation_pair",
+        "required_for": "skull phase correction, attenuation, reflection, and CT-space BBB dose",
+        "satisfied": true
+      },
+      {
+        "boundary": "sufficient for tumor geometry but not for skull acoustics",
+        "evidence": "D:\\kwavers\\data\\ct_segmentation_sample\\segmentation.nii.gz",
+        "name": "mri_segmentation_pair",
+        "required_for": "GBM target delineation and MRI-space subspot geometry",
+        "satisfied": false
+      },
+      {
+        "boundary": "required before an MRI-derived tumor mask can become CT-backed",
+        "evidence": "D:\\kwavers\\data\\rire_patient_109\\patient_109_ct.nii.gz",
+        "name": "ct_mri_pair",
+        "required_for": "same-subject CT/MRI registration and CT-space tumor transfer",
+        "satisfied": false
+      }
+    ],
+    "simulation_ready": true,
+    "simulation_scope": "ct_space_skull_acoustics_and_bbb_subspot_simulation",
+    "skull_acoustics_same_subject": true
+  }
+}

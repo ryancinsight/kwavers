@@ -15,7 +15,7 @@
 
 use kwavers::grid::Grid;
 use kwavers::solver::forward::pstd::extensions::{
-    ElasticPml, ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSourceMode,
+    ElasticPml, ElasticPmlSpec, ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSourceMode,
     ElasticPstdVelocitySource,
 };
 use ndarray::{Array1, Array3};
@@ -81,9 +81,7 @@ fn p_wave_arrival_time_matches_analytical() {
     let amp = 1.0e-6_f64;
     let signal: Array1<f64> = Array1::from_iter((0..nt).map(|n| {
         if n < n_in {
-            let env = 0.5
-                * (1.0
-                    - (2.0 * std::f64::consts::PI * (n as f64) / (n_in as f64)).cos());
+            let env = 0.5 * (1.0 - (2.0 * std::f64::consts::PI * (n as f64) / (n_in as f64)).cos());
             amp * env * (2.0 * std::f64::consts::PI * f0 * (n as f64) * dt).sin()
         } else {
             0.0
@@ -93,9 +91,7 @@ fn p_wave_arrival_time_matches_analytical() {
     let src_x = 8usize;
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     // Extend through all z so the slab behaves as a 2-D problem
-    src_mask
-        .slice_mut(ndarray::s![src_x, .., ..])
-        .fill(true);
+    src_mask.slice_mut(ndarray::s![src_x, .., ..]).fill(true);
     let source = ElasticPstdVelocitySource {
         mask: src_mask,
         ux: Some(signal),
@@ -233,10 +229,7 @@ fn acoustic_fluid_limit_zero_shear_stress_after_propagation() {
         ("σ_xz", &stress.txz),
         ("σ_yz", &stress.tyz),
     ] {
-        let max = arr
-            .iter()
-            .map(|c| c.norm())
-            .fold(0.0_f64, f64::max);
+        let max = arr.iter().map(|c| c.norm()).fold(0.0_f64, f64::max);
         assert_eq!(
             arr.iter().filter(|c| **c != zero).count(),
             0,
@@ -291,8 +284,7 @@ fn pml_attenuates_field_in_absorbing_layer_vs_without_pml() {
     let amp = 1.0e-6_f64;
     let signal: Array1<f64> = Array1::from_iter((0..nt).map(|n| {
         if n < n_in {
-            let env =
-                0.5 * (1.0 - (2.0 * std::f64::consts::PI * (n as f64) / (n_in as f64)).cos());
+            let env = 0.5 * (1.0 - (2.0 * std::f64::consts::PI * (n as f64) / (n_in as f64)).cos());
             amp * env * (2.0 * std::f64::consts::PI * f0 * (n as f64) * dt).sin()
         } else {
             0.0
@@ -301,9 +293,7 @@ fn pml_attenuates_field_in_absorbing_layer_vs_without_pml() {
 
     let src_x = 12usize;
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
-    src_mask
-        .slice_mut(ndarray::s![src_x, .., ..])
-        .fill(true);
+    src_mask.slice_mut(ndarray::s![src_x, .., ..]).fill(true);
 
     // Sensor inside the would-be PML region (last ~10 cells from the
     // x = nx-1 boundary, but spaced safely inside the absorbing layer).
@@ -374,6 +364,13 @@ fn pml_attenuates_field_in_absorbing_layer_vs_without_pml() {
 
     // Sanity-check the unused PML import path (also catches set_pml /
     // clear_pml regressions).
-    let _: ElasticPml = ElasticPml::new(8, 8, 8, (2, 0, 0), 1e-3, 1e-3, 1e-3, 1500.0, 1e-7, 1e-4);
+    let _: ElasticPml = ElasticPml::new(ElasticPmlSpec {
+        shape: (8, 8, 8),
+        thickness_cells: (2, 0, 0),
+        spacing: (1e-3, 1e-3, 1e-3),
+        c_max: 1500.0,
+        dt: 1e-7,
+        r0: 1e-4,
+    });
     orch_pml.clear_pml();
 }

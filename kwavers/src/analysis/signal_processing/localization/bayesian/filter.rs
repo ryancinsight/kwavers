@@ -141,7 +141,10 @@ impl BayesianFilter {
         let k: [f64; 18] = mat6x3_mul_mat3x3(&p_ht, &s_inv);
 
         for i in 0..6 {
-            self.state[i] += k[i * 3 + 2].mul_add(innovation[2], k[i * 3].mul_add(innovation[0], k[i * 3 + 1] * innovation[1]));
+            self.state[i] += k[i * 3 + 2].mul_add(
+                innovation[2],
+                k[i * 3].mul_add(innovation[0], k[i * 3 + 1] * innovation[1]),
+            );
         }
 
         let p_old: [f64; 36] = self.covariance[..36].try_into().unwrap();
@@ -184,7 +187,7 @@ impl BayesianFilter {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn get_state(&self) -> [f64; 3] {
         [self.state[0], self.state[1], self.state[2]]
     }

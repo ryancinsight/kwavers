@@ -35,7 +35,7 @@ pub struct CTImageLoader {
 
 impl CTImageLoader {
     /// Create new CT image loader.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             data: None,
@@ -47,7 +47,7 @@ impl CTImageLoader {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn data(&self) -> Option<&Array3<f64>> {
         self.data.as_ref()
     }
@@ -56,7 +56,7 @@ impl CTImageLoader {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn ct_metadata(&self) -> Option<&CTMetadata> {
         self.metadata.as_ref()
     }
@@ -243,7 +243,7 @@ impl CTImageLoader {
     }
 
     /// Compute min/max Hounsfield Unit values in the CT volume.
-    #[must_use] 
+    #[must_use]
     pub fn compute_hu_range(hounsfield: &Array3<f64>) -> (f64, f64) {
         let mut min_hu = f64::INFINITY;
         let mut max_hu = f64::NEG_INFINITY;
@@ -302,7 +302,7 @@ impl CTImageLoader {
     ///
     /// Bone (HU > 700): c(HU) = 2800 + (HU - 700) × 2.0 m/s
     /// Soft tissue: c = 1500 m/s
-    #[must_use] 
+    #[must_use]
     pub fn hu_to_sound_speed(hu: f64) -> f64 {
         if hu > 700.0 {
             (hu - 700.0).mul_add(2.0, 2800.0)
@@ -315,7 +315,7 @@ impl CTImageLoader {
     ///
     /// Bone (HU > 700): ρ(HU) = 1700 + (HU - 700) × 0.2 kg/m³
     /// Soft tissue: ρ = 1000 kg/m³
-    #[must_use] 
+    #[must_use]
     pub fn hu_to_density(hu: f64) -> f64 {
         if hu > 700.0 {
             (hu - 700.0).mul_add(0.2, 1700.0)

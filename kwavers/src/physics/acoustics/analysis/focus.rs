@@ -222,8 +222,10 @@ mod tests {
     fn find_focal_plane_errors_for_invalid_axis() {
         let grid = small_grid();
         let field = Array3::<f64>::zeros((8, 8, 8));
-        assert!(find_focal_plane(field.view(), &grid, 3).is_err(),
-            "axis=3 must return Err");
+        assert!(
+            find_focal_plane(field.view(), &grid, 3).is_err(),
+            "axis=3 must return Err"
+        );
     }
 
     // ── calculate_beam_width ──────────────────────────────────────────────────
@@ -233,8 +235,10 @@ mod tests {
     fn calculate_beam_width_errors_for_invalid_axis() {
         let grid = small_grid();
         let field = Array3::<f64>::zeros((8, 8, 8));
-        assert!(calculate_beam_width(field.view(), &grid, 5, -6.0).is_err(),
-            "axis=5 must return Err");
+        assert!(
+            calculate_beam_width(field.view(), &grid, 5, -6.0).is_err(),
+            "axis=5 must return Err"
+        );
     }
 
     /// Zero field → all slice widths are 0.0 (no pressure above threshold).
@@ -244,7 +248,9 @@ mod tests {
         let field = Array3::<f64>::zeros((8, 8, 8));
         let widths = calculate_beam_width(field.view(), &grid, 2, -6.0).unwrap();
         assert_eq!(widths.len(), grid.nz);
-        assert!(widths.iter().all(|&w| w == 0.0),
-            "zero field must yield zero beam widths");
+        assert!(
+            widths.iter().all(|&w| w == 0.0),
+            "zero field must yield zero beam widths"
+        );
     }
 }

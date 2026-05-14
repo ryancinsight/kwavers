@@ -117,8 +117,7 @@ impl TranscranialAberrationCorrection {
         let amplitudes = vec![1.0_f64; n];
 
         // Focal gain improvement from the pre-correction aberration.
-        let focal_gain_db =
-            Self::focal_gain_improvement_db(&forward_phases);
+        let focal_gain_db = Self::focal_gain_improvement_db(&forward_phases);
 
         // Quality: coherence of (forward_phase + correction_phase) = coherence of zeros.
         // Deviates from 1 only when near-zero-magnitude field samples introduce arg() noise.

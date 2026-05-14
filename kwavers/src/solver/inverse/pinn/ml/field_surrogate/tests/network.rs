@@ -48,10 +48,7 @@ fn test_forward_xyz_params_shape() {
 
     let batch = 8usize;
     let mk = |fill: f32| {
-        Tensor::<B, 2>::from_data(
-            TensorData::new(vec![fill; batch], [batch, 1]),
-            &device,
-        )
+        Tensor::<B, 2>::from_data(TensorData::new(vec![fill; batch], [batch, 1]), &device)
     };
     let out = net.forward_xyz_params(mk(0.1), mk(0.2), mk(0.3), mk(0.4), mk(0.5));
     assert_eq!(out.dims(), [batch, 3]);

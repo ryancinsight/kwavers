@@ -22,7 +22,7 @@ impl ShearWaveInversionConfig {
     /// # Arguments
     ///
     /// * `method` - Inversion algorithm to use
-    #[must_use] 
+    #[must_use]
     pub fn new(method: InversionMethod) -> Self {
         Self {
             method,
@@ -36,7 +36,7 @@ impl ShearWaveInversionConfig {
     /// # Arguments
     ///
     /// * `density` - Tissue density in kg/m³
-    #[must_use] 
+    #[must_use]
     pub fn with_density(mut self, density: f64) -> Self {
         self.density = density;
         self
@@ -50,7 +50,7 @@ impl ShearWaveInversionConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_frequency(mut self, frequency: f64) -> Self {
         self.frequency = frequency;
         self
@@ -125,7 +125,7 @@ impl NonlinearInversionConfig {
     /// # Arguments
     ///
     /// * `method` - Nonlinear inversion algorithm to use
-    #[must_use] 
+    #[must_use]
     pub fn new(method: NonlinearInversionMethod) -> Self {
         Self {
             method,
@@ -145,7 +145,7 @@ impl NonlinearInversionConfig {
     ///
     /// * `density`        - Tissue density [kg/m³]
     /// * `acoustic_speed` - Compressional wave speed (m/s)
-    #[must_use] 
+    #[must_use]
     pub fn with_tissue_properties(mut self, density: f64, acoustic_speed: f64) -> Self {
         self.density = density;
         self.acoustic_speed = acoustic_speed;
@@ -159,7 +159,7 @@ impl NonlinearInversionConfig {
     /// * `shear_wave_speed`    - Shear wave speed (m/s)
     /// * `excitation_frequency` - SWE push-pulse frequency (Hz)
     /// * `propagation_distance` - Effective harmonic-accumulation depth (m)
-    #[must_use] 
+    #[must_use]
     pub fn with_shear_properties(
         mut self,
         shear_wave_speed: f64,
@@ -181,7 +181,7 @@ impl NonlinearInversionConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_convergence(mut self, max_iterations: usize, tolerance: f64) -> Self {
         self.max_iterations = max_iterations;
         self.tolerance = tolerance;

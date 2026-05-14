@@ -44,7 +44,7 @@ pub struct FocalSpot {
 }
 
 impl FocalSpot {
-    #[must_use] 
+    #[must_use]
     pub fn estimate_from_transducer(transducer: &HIFUTransducer) -> Self {
         let wavelength = SOUND_SPEED_WATER_SIM / transducer.frequency;
         let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm;
@@ -74,16 +74,16 @@ impl FocalSpot {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_safe(&self, tissue_type: TissueType) -> bool {
         self.mechanical_index < tissue_type.safety_limit()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn focal_volume_cm3(&self) -> f64 {
         self.focal_volume_mm3 / 1000.0
     }
-    #[must_use] 
+    #[must_use]
     pub fn volume_minus6db_cm3(&self) -> f64 {
         self.volume_minus6db_mm3 / 1000.0
     }
@@ -100,7 +100,7 @@ pub struct AblationTarget {
 }
 
 impl AblationTarget {
-    #[must_use] 
+    #[must_use]
     pub fn new(
         name: String,
         location_mm: (f64, f64, f64),
@@ -116,24 +116,24 @@ impl AblationTarget {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_safety_margin(mut self, margin_mm: f64) -> Self {
         self.safety_margin_mm = margin_mm;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn volume_mm3(&self) -> f64 {
         self.dimensions_mm.0 * self.dimensions_mm.1 * self.dimensions_mm.2
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn volume_with_margin_mm3(&self) -> f64 {
         let (m, d) = (self.safety_margin_mm, self.dimensions_mm);
         2.0f64.mul_add(m, d.0) * 2.0f64.mul_add(m, d.1) * 2.0f64.mul_add(m, d.2)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_focal_spot_adequate(&self, focal_spot: &FocalSpot) -> bool {
         let min_target_dim = self.dimensions_mm.0.min(self.dimensions_mm.1);
         focal_spot.lateral_width_mm >= min_target_dim * 0.5
@@ -149,7 +149,7 @@ pub struct ThermalDose {
 }
 
 impl ThermalDose {
-    #[must_use] 
+    #[must_use]
     pub fn estimate_from_focal_spot(
         focal_spot: &FocalSpot,
         frequency_hz: f64,
@@ -193,11 +193,11 @@ impl ThermalDose {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_sufficient_for_ablation(&self) -> bool {
         self.cem43 >= 240.0
     }
-    #[must_use] 
+    #[must_use]
     pub fn margin_to_ablation(&self) -> f64 {
         240.0 - self.cem43
     }
@@ -227,7 +227,7 @@ pub struct TreatmentFeasibility {
 }
 
 impl TreatmentFeasibility {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             is_feasible: true,

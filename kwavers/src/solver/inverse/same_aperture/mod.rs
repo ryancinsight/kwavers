@@ -7,6 +7,7 @@
 //! and graph-H1 regularized PCG.
 
 mod active_grid;
+mod encoded;
 mod finite_frequency;
 mod graph_pcg;
 mod linear_operator;
@@ -14,6 +15,7 @@ mod operator;
 mod row_matrix;
 
 pub use active_grid::{active_grid, image_from_vector, vector_from_image, ActiveGrid, PlanarPoint};
+pub use encoded::{encode_measurements, EncodedOperator, EncodingSpec};
 pub use finite_frequency::{
     build_fundamental_matrix, build_harmonic_matrix, build_passive_matrix,
     build_ultraharmonic_matrix, fundamental_operator, harmonic_operator, passive_operator,

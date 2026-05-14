@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use ndarray::Array3;
 
 use crate::physics::acoustics::bubble_dynamics::{
-    bubble_field::BubbleField,
-    bubble_state::BubbleState,
-    gilmore::GilmoreSolver,
+    bubble_field::BubbleField, bubble_state::BubbleState, gilmore::GilmoreSolver,
 };
 
 /// Per-model runtime engine, created lazily in [`Plugin::initialize`].

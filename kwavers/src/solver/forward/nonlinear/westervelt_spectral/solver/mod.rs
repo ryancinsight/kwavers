@@ -264,7 +264,19 @@ pub(super) fn compute_laplacian_fd(field: &Array3<f64>, grid: &Grid) -> Array3<f
     for k in 1..nz - 1 {
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
-                laplacian[[i, j, k]] = (2.0f64.mul_add(-field[[i, j, k]], field[[i, j, k + 1]]) + field[[i, j, k - 1]]).mul_add(dz2_inv, (2.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]]) + field[[i - 1, j, k]]).mul_add(dx2_inv, (2.0f64.mul_add(-field[[i, j, k]], field[[i, j + 1, k]]) + field[[i, j - 1, k]]) * dy2_inv));
+                laplacian[[i, j, k]] = (2.0f64.mul_add(-field[[i, j, k]], field[[i, j, k + 1]])
+                    + field[[i, j, k - 1]])
+                .mul_add(
+                    dz2_inv,
+                    (2.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]])
+                        + field[[i - 1, j, k]])
+                    .mul_add(
+                        dx2_inv,
+                        (2.0f64.mul_add(-field[[i, j, k]], field[[i, j + 1, k]])
+                            + field[[i, j - 1, k]])
+                            * dy2_inv,
+                    ),
+                );
             }
         }
     }

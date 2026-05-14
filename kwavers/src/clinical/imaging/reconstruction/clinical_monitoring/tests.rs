@@ -21,7 +21,9 @@ fn test_frame_quality_recording() {
     let config = MonitoringConfig::default();
     let mut monitor = ClinicalMonitor::new(config);
 
-    monitor.record_frame_quality(1, 50.0, 25.0, 0.8, 1.5, 0.1).unwrap();
+    monitor
+        .record_frame_quality(1, 50.0, 25.0, 0.8, 1.5, 0.1)
+        .unwrap();
     assert_eq!(monitor.performance_metrics.total_frames, 1);
 }
 

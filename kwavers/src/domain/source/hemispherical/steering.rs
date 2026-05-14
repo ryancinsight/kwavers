@@ -120,5 +120,10 @@ impl SteeringController {
 
 /// Calculate distance between two points
 fn calculate_distance(p1: [f64; 3], p2: [f64; 3]) -> f64 {
-    (p2[2] - p1[2]).mul_add(p2[2] - p1[2], (p2[1] - p1[1]).mul_add(p2[1] - p1[1], (p2[0] - p1[0]).powi(2))).sqrt()
+    (p2[2] - p1[2])
+        .mul_add(
+            p2[2] - p1[2],
+            (p2[1] - p1[1]).mul_add(p2[1] - p1[1], (p2[0] - p1[0]).powi(2)),
+        )
+        .sqrt()
 }

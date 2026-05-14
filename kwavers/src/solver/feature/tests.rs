@@ -34,7 +34,9 @@ fn test_feature_manager() {
     let mut manager = FeatureManager::new();
 
     // Test enabling available feature
-    manager.enable_feature(SolverFeature::Reconstruction).unwrap();
+    manager
+        .enable_feature(SolverFeature::Reconstruction)
+        .unwrap();
     assert!(manager.is_enabled(SolverFeature::Reconstruction));
 
     // Test enabling unavailable feature (should be available by default)
@@ -44,7 +46,9 @@ fn test_feature_manager() {
     let limited_features = SolverFeatureSet::RECONSTRUCTION | SolverFeatureSet::GPU_ACCELERATION;
     let mut limited_manager = FeatureManager::with_available_features(limited_features);
 
-    limited_manager.enable_feature(SolverFeature::Reconstruction).unwrap();
+    limited_manager
+        .enable_feature(SolverFeature::Reconstruction)
+        .unwrap();
     assert!(limited_manager
         .enable_feature(SolverFeature::TimeReversal)
         .is_err());

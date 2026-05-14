@@ -74,7 +74,7 @@ impl MultiRegionDomain {
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(
         regions: Vec<Box<dyn GeometricDomain>>,
         material_ids: Vec<usize>,
@@ -98,7 +98,7 @@ impl MultiRegionDomain {
     }
 
     /// Find which region contains a given point
-    #[must_use] 
+    #[must_use]
     pub fn locate_point(&self, point: &[f64], tolerance: f64) -> Option<(usize, PointLocation)> {
         for (i, region) in self.regions.iter().enumerate() {
             let loc = region.classify_point(point, tolerance);
@@ -110,7 +110,7 @@ impl MultiRegionDomain {
     }
 
     /// Sample interface points between regions
-    #[must_use] 
+    #[must_use]
     pub fn sample_interface_points(
         &self,
         n_points_per_interface: usize,

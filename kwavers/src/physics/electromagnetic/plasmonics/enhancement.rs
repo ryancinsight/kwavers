@@ -83,8 +83,12 @@ impl PlasmonicEnhancement {
         // For single particle, enhancement is approximately |E_local|/|E_incident| ≈ 1 + α/(4π ε₀ r³)
         // where r is distance from particle center
 
-        let distance_from_center =
-            position[2].mul_add(position[2], position[1].mul_add(position[1], position[0].powi(2))).sqrt();
+        let distance_from_center = position[2]
+            .mul_add(
+                position[2],
+                position[1].mul_add(position[1], position[0].powi(2)),
+            )
+            .sqrt();
         let min_distance = self.mie_theory.radius * 1.1; // Just outside particle boundary
         let effective_distance = distance_from_center.max(min_distance);
 

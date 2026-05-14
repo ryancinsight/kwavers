@@ -49,7 +49,9 @@ impl WorkspacePool {
             }
         };
 
-        let workspace = pool.pop().unwrap_or_else(|| SolverWorkspace::new(&self.grid));
+        let workspace = pool
+            .pop()
+            .unwrap_or_else(|| SolverWorkspace::new(&self.grid));
 
         Ok(WorkspaceGuard {
             workspace: Some(workspace),

@@ -28,7 +28,7 @@ impl PhysicsInformedLoss {
     /// Compute wave equation MSE residual for 3D field using 7-point Laplacian stencil.
     ///
     /// `R(r) = ∇²u + k²u`, interior points only.
-    #[must_use] 
+    #[must_use]
     pub fn wave_equation_residual_3d(&self, field: &Array3<f64>) -> f64 {
         let (nx, ny, nz) = field.dim();
 
@@ -40,11 +40,15 @@ impl PhysicsInformedLoss {
                 for k in 1..nz - 1 {
                     let u_center = field[[i, j, k]];
 
-                    let laplacian = 6.0f64.mul_add(-u_center, field[[i - 1, j, k]]
-                        + field[[i + 1, j, k]]
-                        + field[[i, j - 1, k]]
-                        + field[[i, j + 1, k]]
-                        + field[[i, j, k - 1]] + field[[i, j, k + 1]]);
+                    let laplacian = 6.0f64.mul_add(
+                        -u_center,
+                        field[[i - 1, j, k]]
+                            + field[[i + 1, j, k]]
+                            + field[[i, j - 1, k]]
+                            + field[[i, j + 1, k]]
+                            + field[[i, j, k - 1]]
+                            + field[[i, j, k + 1]],
+                    );
 
                     let residual = self.wave_number.powi(2).mul_add(u_center, laplacian);
 
@@ -62,7 +66,7 @@ impl PhysicsInformedLoss {
     }
 
     /// Compute wave equation MSE residual for 2D field using 5-point Laplacian stencil.
-    #[must_use] 
+    #[must_use]
     pub fn wave_equation_residual_2d(&self, field: &Array2<f64>) -> f64 {
         let (nx, ny) = field.dim();
 
@@ -73,8 +77,10 @@ impl PhysicsInformedLoss {
             for j in 1..ny - 1 {
                 let u_center = field[[i, j]];
 
-                let laplacian =
-                    4.0f64.mul_add(-u_center, field[[i - 1, j]] + field[[i + 1, j]] + field[[i, j - 1]] + field[[i, j + 1]]);
+                let laplacian = 4.0f64.mul_add(
+                    -u_center,
+                    field[[i - 1, j]] + field[[i + 1, j]] + field[[i, j - 1]] + field[[i, j + 1]],
+                );
 
                 let residual = self.wave_number.powi(2).mul_add(u_center, laplacian);
 
@@ -91,7 +97,7 @@ impl PhysicsInformedLoss {
     }
 
     /// Reciprocity loss: MSE between forward and reverse impulse responses.
-    #[must_use] 
+    #[must_use]
     pub fn reciprocity_loss(forward: &Array2<f64>, reverse: &Array2<f64>) -> f64 {
         if forward.dim() != reverse.dim() {
             return f64::INFINITY;
@@ -102,7 +108,7 @@ impl PhysicsInformedLoss {
     }
 
     /// Coherence loss: sum of squared phase differences between adjacent spatial points.
-    #[must_use] 
+    #[must_use]
     pub fn coherence_loss(amplitudes: &Array2<f64>, phases: &Array2<f64>) -> f64 {
         if amplitudes.dim() != phases.dim() {
             return f64::INFINITY;
@@ -186,14 +192,17 @@ impl PhysicsInformedLoss {
             WeightSchedule::Exponential { decay_rate } => {
                 let decay_factor = (-decay_rate * self.current_epoch as f64).exp();
                 lambda_physics = self.config.lambda_physics_init * decay_factor;
-                lambda_data = lambda_physics.mul_add(1.0 - decay_factor, self.config.lambda_data_init);
+                lambda_data =
+                    lambda_physics.mul_add(1.0 - decay_factor, self.config.lambda_data_init);
             }
             WeightSchedule::Linear { total_epochs } => {
                 let epoch_frac = (self.current_epoch as f64) / (total_epochs as f64);
                 let factor = 1.0 - epoch_frac.min(1.0);
                 lambda_physics = self.config.lambda_physics_init * factor;
-                lambda_data =
-                    self.config.lambda_physics_init.mul_add(1.0 - factor, self.config.lambda_data_init);
+                lambda_data = self
+                    .config
+                    .lambda_physics_init
+                    .mul_add(1.0 - factor, self.config.lambda_data_init);
             }
             WeightSchedule::Adaptive => {
                 lambda_physics = self.adaptive_weight_schedule(data_loss, physics_loss)?;
@@ -229,7 +238,7 @@ impl PhysicsInformedLoss {
         Ok(lambda_physics.min(1.0))
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn loss_history(&self) -> Vec<LossComponents> {
         self.loss_history.iter().copied().collect()
     }
@@ -239,12 +248,12 @@ impl PhysicsInformedLoss {
         self.loss_history.clear();
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn current_epoch(&self) -> usize {
         self.current_epoch
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn wave_number(&self) -> f64 {
         self.wave_number
     }

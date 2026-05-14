@@ -30,7 +30,7 @@ pub struct LocalizationConfig {
 
 impl LocalizationConfig {
     /// Create new localization configuration
-    #[must_use] 
+    #[must_use]
     pub fn new(sensor_positions: Vec<[f64; 3]>, sampling_frequency: f64, sound_speed: f64) -> Self {
         Self {
             sensor_positions,
@@ -44,14 +44,14 @@ impl LocalizationConfig {
     }
 
     /// Set time window
-    #[must_use] 
+    #[must_use]
     pub fn with_time_window(mut self, window: f64) -> Self {
         self.time_window = window;
         self
     }
 
     /// Set search bounds
-    #[must_use] 
+    #[must_use]
     pub fn with_search_bounds(
         mut self,
         min_x: f64,
@@ -69,7 +69,7 @@ impl LocalizationConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_grid_resolution(mut self, resolution: usize) -> Self {
         self.grid_resolution = resolution;
         self
@@ -79,7 +79,7 @@ impl LocalizationConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_confidence_threshold(mut self, threshold: f64) -> Self {
         self.confidence_threshold = threshold.clamp(0.0, 1.0);
         self
@@ -124,19 +124,19 @@ impl LocalizationConfig {
     }
 
     /// Get wavelength at frequency (m)
-    #[must_use] 
+    #[must_use]
     pub fn wavelength(&self, frequency: f64) -> f64 {
         self.sound_speed / frequency
     }
 
     /// Get time step (s)
-    #[must_use] 
+    #[must_use]
     pub fn time_step(&self) -> f64 {
         1.0 / self.sampling_frequency
     }
 
     /// Get number of samples in time window
-    #[must_use] 
+    #[must_use]
     pub fn num_samples(&self) -> usize {
         (self.sampling_frequency * self.time_window) as usize
     }

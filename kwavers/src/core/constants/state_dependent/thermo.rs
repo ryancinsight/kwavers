@@ -17,7 +17,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Surface tension [N/m]
-    #[must_use] 
+    #[must_use]
     pub fn surface_tension_water(&self, temperature: f64) -> f64 {
         const T_CRITICAL: f64 = 647.096; // K (IAPWS critical temperature)
         const B: f64 = 0.2358; // N/m (amplitude)
@@ -53,7 +53,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Vapor pressure (Pa)
-    #[must_use] 
+    #[must_use]
     pub fn vapor_pressure_water(&self, temperature: f64) -> f64 {
         const A: f64 = 8.07131;
         const B: f64 = 1730.63;
@@ -79,7 +79,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Cavitation threshold pressure amplitude (negative = tension) (Pa)
-    #[must_use] 
+    #[must_use]
     pub fn cavitation_threshold(
         &self,
         temperature: f64,

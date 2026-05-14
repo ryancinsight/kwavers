@@ -5,8 +5,8 @@ use super::stats::ConvergentBornStats;
 use crate::core::error::KwaversResult;
 use crate::domain::medium::Medium;
 use ndarray::{ArrayView3, ArrayViewMut3, Zip};
-use rayon::prelude::*;
 use num_complex::Complex64;
+use rayon::prelude::*;
 
 impl ConvergentBornSolver {
     /// Solve the Helmholtz equation using Convergent Born Series.

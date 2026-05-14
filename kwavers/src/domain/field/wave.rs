@@ -17,7 +17,7 @@ pub type WaveFields = GenericWaveFields<Array3<f64>>;
 
 impl WaveFields {
     /// Create new zero-initialized wave fields with given shape
-    #[must_use] 
+    #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
             p: Array3::zeros(shape),
@@ -28,7 +28,7 @@ impl WaveFields {
     }
 
     /// Get velocity components as a tuple
-    #[must_use] 
+    #[must_use]
     pub fn velocity(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.ux, &self.uy, &self.uz)
     }

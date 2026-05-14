@@ -80,8 +80,15 @@ impl TreatmentPlanner {
         let element_phases: Vec<f64> = element_positions
             .iter()
             .map(|&pos| {
-                let dist = (pos[2] - target_center[2]).mul_add(pos[2] - target_center[2], (pos[1] - target_center[1]).mul_add(pos[1] - target_center[1], (pos[0] - target_center[0]).powi(2)))
-                .sqrt();
+                let dist = (pos[2] - target_center[2])
+                    .mul_add(
+                        pos[2] - target_center[2],
+                        (pos[1] - target_center[1]).mul_add(
+                            pos[1] - target_center[1],
+                            (pos[0] - target_center[0]).powi(2),
+                        ),
+                    )
+                    .sqrt();
                 -k * dist
             })
             .collect();

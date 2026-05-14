@@ -22,8 +22,7 @@ impl Multilateration {
         let mut jtr = [0.0; 3];
         for (i, (j_row, &r)) in jacobian.iter().zip(residuals.iter()).enumerate() {
             let weight = if self.config.use_weighted_ls {
-                1.0 / (self.sensor_uncertainties[i + 1]
-                    * self.sensor_uncertainties[i + 1])
+                1.0 / (self.sensor_uncertainties[i + 1] * self.sensor_uncertainties[i + 1])
             } else {
                 1.0
             };
@@ -39,8 +38,7 @@ impl Multilateration {
         let mut jtj = [[0.0; 3]; 3];
         for (i, j_row) in jacobian.iter().enumerate() {
             let weight = if self.config.use_weighted_ls {
-                1.0 / (self.sensor_uncertainties[i + 1]
-                    * self.sensor_uncertainties[i + 1])
+                1.0 / (self.sensor_uncertainties[i + 1] * self.sensor_uncertainties[i + 1])
             } else {
                 1.0
             };
@@ -61,11 +59,7 @@ impl Multilateration {
         Ok(trace.sqrt())
     }
 
-    pub(super) fn solve_3x3(
-        &self,
-        a: &[[f64; 3]; 3],
-        b: &[f64; 3],
-    ) -> KwaversResult<[f64; 3]> {
+    pub(super) fn solve_3x3(&self, a: &[[f64; 3]; 3], b: &[f64; 3]) -> KwaversResult<[f64; 3]> {
         const REGULARIZATION: f64 = 1e-12;
 
         let mut aug = [[0.0; 4]; 3];

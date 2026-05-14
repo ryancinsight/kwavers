@@ -49,9 +49,8 @@ impl AsyncFileWriter {
         #[cfg(target_endian = "little")]
         if let Some(slice) = array.as_slice() {
             // SAFETY: f64 has no padding bytes; alignment of u8 is 1; length is exact.
-            let bytes = unsafe {
-                std::slice::from_raw_parts(slice.as_ptr().cast::<u8>(), slice.len() * 8)
-            };
+            let bytes =
+                unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<u8>(), slice.len() * 8) };
             file.write_all(bytes).await.map_err(KwaversError::Io)?;
             file.sync_all().await.map_err(KwaversError::Io)?;
             return Ok(());

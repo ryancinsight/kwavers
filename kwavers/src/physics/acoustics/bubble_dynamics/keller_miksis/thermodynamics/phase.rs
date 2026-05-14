@@ -72,7 +72,8 @@ mod tests {
             assert!(
                 p_high > p_low,
                 "p_sat must increase with T: p({})={p_low:.1} < p({})={p_high:.1}",
-                w[0], w[1]
+                w[0],
+                w[1]
             );
         }
     }
@@ -98,7 +99,8 @@ mod tests {
         // Within 0.4% of NIST reference 2256900 J/kg
         assert!(
             (lv - 2_256_900.0).abs() / 2_256_900.0 < 0.004,
-            "L_v(100°C) must be ≈2257 kJ/kg (got {:.1} kJ/kg)", lv / 1000.0
+            "L_v(100°C) must be ≈2257 kJ/kg (got {:.1} kJ/kg)",
+            lv / 1000.0
         );
     }
 
@@ -110,6 +112,9 @@ mod tests {
         let lv0 = latent_heat_water_j_per_kg(0.0);
         let lv1 = latent_heat_water_j_per_kg(1.0);
         let slope = lv1 - lv0;
-        assert!((slope - (-2369.0)).abs() < 1e-9, "slope must be -2369 J/(kg·°C) (got {slope:.3})");
+        assert!(
+            (slope - (-2369.0)).abs() < 1e-9,
+            "slope must be -2369 J/(kg·°C) (got {slope:.3})"
+        );
     }
 }

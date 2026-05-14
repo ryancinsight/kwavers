@@ -31,7 +31,7 @@ impl Default for VolumetricROI {
 
 impl VolumetricROI {
     /// Create ROI for liver fibrosis assessment
-    #[must_use] 
+    #[must_use]
     pub fn liver_roi(center: [f64; 3]) -> Self {
         Self {
             center,
@@ -44,7 +44,7 @@ impl VolumetricROI {
     }
 
     /// Create ROI for breast lesion assessment
-    #[must_use] 
+    #[must_use]
     pub fn breast_roi(center: [f64; 3]) -> Self {
         Self {
             center,
@@ -57,7 +57,7 @@ impl VolumetricROI {
     }
 
     /// Create ROI for prostate assessment
-    #[must_use] 
+    #[must_use]
     pub fn prostate_roi(center: [f64; 3]) -> Self {
         Self {
             center,
@@ -70,7 +70,7 @@ impl VolumetricROI {
     }
 
     /// Check if a point is within the ROI
-    #[must_use] 
+    #[must_use]
     pub fn contains_point(&self, point: [f64; 3]) -> bool {
         // Simple axis-aligned bounding box check
         // In practice, this should account for orientation

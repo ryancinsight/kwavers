@@ -1,6 +1,6 @@
 //! IntensityTracker implementation.
 
-use super::types::{InstantaneousIntensity, ThermalDose, TemporalIntensityMetrics};
+use super::types::{InstantaneousIntensity, TemporalIntensityMetrics, ThermalDose};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 

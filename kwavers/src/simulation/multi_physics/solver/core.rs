@@ -4,6 +4,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::collections::HashMap;
 
+use super::super::residual::max_abs_difference;
 use super::super::{
     CoupledPhysicsSolver, CouplingStrategy, FieldCoupler, MultiPhysicsConfig, PhysicsDomain,
 };
@@ -37,7 +38,7 @@ impl MultiPhysicsSolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(config: MultiPhysicsConfig) -> Self {
         Self {
             config,
@@ -122,10 +123,7 @@ impl MultiPhysicsSolver {
         for (domain, solver) in &self.solvers {
             if let Some(old_field) = snapshots.get(domain) {
                 if let Ok(new_field) = solver.get_field("pressure") {
-                    let residual = (&new_field - old_field)
-                        .mapv(|x| x.abs())
-                        .mean()
-                        .unwrap_or(0.0);
+                    let residual = max_abs_difference(new_field, old_field.view())?;
                     max_residual = max_residual.max(residual);
                 }
             }
@@ -150,10 +148,7 @@ impl MultiPhysicsSolver {
             for (domain, solver) in &self.solvers {
                 if let Some(old_field) = snapshots.get(domain) {
                     if let Ok(new_field) = solver.get_field("pressure") {
-                        let r = (&new_field - old_field)
-                            .mapv(|x| x.abs())
-                            .mean()
-                            .unwrap_or(0.0);
+                        let r = max_abs_difference(new_field, old_field.view())?;
                         residual = residual.max(r);
                     }
                 }
@@ -251,9 +246,7 @@ impl MultiPhysicsSolver {
                     continue;
                 };
                 if let Ok(new_field) = solver.get_field("pressure") {
-                    let r = ndarray::Zip::from(&new_field)
-                        .and(old_field)
-                        .fold(0.0_f64, |acc, &a, &b| acc.max((a - b).abs()));
+                    let r = max_abs_difference(new_field, old_field.view())?;
                     residual = residual.max(r);
                 }
             }
@@ -266,7 +259,7 @@ impl MultiPhysicsSolver {
     }
 
     /// Get convergence history
-    #[must_use] 
+    #[must_use]
     pub fn convergence_history(&self) -> &[f64] {
         &self.convergence_history
     }
@@ -275,7 +268,7 @@ impl MultiPhysicsSolver {
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn has_converged(&self) -> bool {
         if self.convergence_history.is_empty() {
             return false;

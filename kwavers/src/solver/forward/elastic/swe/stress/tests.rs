@@ -18,7 +18,10 @@ fn test_fd1_x_linear_field() {
     // Interior points: derivative should equal A.
     for i in 2..nx - 2 {
         let d = fd1_x(f.view(), i, 0, 0, nx, dx);
-        assert!((d - a).abs() < 1e-10, "fd1_x at i={i}: got {d}, expected {a}");
+        assert!(
+            (d - a).abs() < 1e-10,
+            "fd1_x at i={i}: got {d}, expected {a}"
+        );
     }
 }
 
@@ -37,7 +40,10 @@ fn test_fd1_y_linear_field() {
     }
     for j in 2..ny - 2 {
         let d = fd1_y(f.view(), 0, j, 0, ny, dy);
-        assert!((d - b).abs() < 1e-10, "fd1_y at j={j}: got {d}, expected {b}");
+        assert!(
+            (d - b).abs() < 1e-10,
+            "fd1_y at j={j}: got {d}, expected {b}"
+        );
     }
 }
 
@@ -56,7 +62,10 @@ fn test_fd1_z_linear_field() {
     }
     for k in 2..nz - 2 {
         let d = fd1_z(f.view(), 0, 0, k, nz, dz);
-        assert!((d - c).abs() < 1e-10, "fd1_z at k={k}: got {d}, expected {c}");
+        assert!(
+            (d - c).abs() < 1e-10,
+            "fd1_z at k={k}: got {d}, expected {c}"
+        );
     }
 }
 

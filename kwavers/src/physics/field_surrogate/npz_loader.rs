@@ -60,9 +60,7 @@ fn read_scalar_f64<R: std::io::Read + std::io::Seek>(
     name: &str,
     path: &Path,
 ) -> KwaversResult<f64> {
-    let arr: Array1<f64> = npz
-        .by_name(name)
-        .map_err(|e| map_read_err(name, path, e))?;
+    let arr: Array1<f64> = npz.by_name(name).map_err(|e| map_read_err(name, path, e))?;
     if arr.len() != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "FocalKernel npz `{}`: expected scalar `{name}`, got shape {:?}",
@@ -118,10 +116,7 @@ fn read_focus_idx<R: std::io::Read + std::io::Seek>(
 /// - A required array is missing or has an incompatible dtype/shape.
 /// - The stored `focus_idx` falls outside `field`'s shape.
 /// - `target_pnp_pa` is requested but `pnp_realised` is non-positive.
-pub fn load_focal_kernel(
-    path: &Path,
-    target_pnp_pa: Option<f64>,
-) -> KwaversResult<FocalKernel> {
+pub fn load_focal_kernel(path: &Path, target_pnp_pa: Option<f64>) -> KwaversResult<FocalKernel> {
     let file = File::open(path).map_err(|e| {
         KwaversError::InvalidInput(format!(
             "FocalKernel npz `{}`: open failed: {e}",

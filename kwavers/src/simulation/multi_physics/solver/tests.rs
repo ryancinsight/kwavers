@@ -95,7 +95,8 @@ fn test_explicit_coupling() {
     solver.add_solver(acoustic_solver).unwrap();
 
     let residual = solver.step_coupled(1e-6).unwrap();
-    assert!(residual >= 0.0);
+    assert_eq!(residual, 1.0);
+    assert_eq!(solver.convergence_history(), &[1.0]);
 }
 
 /// Monolithic coupling with a single physics domain is equivalent to uncoupled:
@@ -117,17 +118,17 @@ fn test_monolithic_coupling_single_domain() {
     solver.add_solver(acoustic_solver).unwrap();
 
     let residual = solver.step_coupled(1e-6).unwrap();
-    assert!(residual >= 0.0);
-    assert!(!solver.convergence_history().is_empty());
+    assert_eq!(residual, 0.0);
+    assert_eq!(solver.convergence_history(), &[1.0, 0.0]);
 }
 
-/// Monolithic coupling with two identical domains must produce a finite,
-/// non-negative residual and populate the convergence history.
+/// Monolithic coupling with two identical domains reaches the exact fixed point
+/// after one corrective iteration.
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
 #[test]
-fn test_monolithic_coupling_two_domains_residual_nonnegative() {
+fn test_monolithic_coupling_two_domains_reaches_fixed_point() {
     let mut solver = MultiPhysicsSolver::new(MultiPhysicsConfig {
         coupling_strategy: CouplingStrategy::Monolithic,
         max_iterations: 5,
@@ -151,9 +152,6 @@ fn test_monolithic_coupling_two_domains_residual_nonnegative() {
         .unwrap();
 
     let residual = solver.step_coupled(1e-6).unwrap();
-    assert!(
-        residual >= 0.0 && residual.is_finite(),
-        "Monolithic residual must be finite non-negative, got {residual}"
-    );
-    assert!(!solver.convergence_history().is_empty());
+    assert_eq!(residual, 0.0);
+    assert_eq!(solver.convergence_history(), &[1.0, 0.0]);
 }

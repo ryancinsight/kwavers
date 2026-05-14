@@ -65,10 +65,22 @@ impl AcousticForwardModel {
                         let km = k.saturating_sub(1);
                         let kp = (k + 1).min(nz - 1);
                         let center = workspace.current[[i, j, k]];
-                        let laplacian = (2.0f64.mul_add(-center, workspace.current[[i, j, kp]]) + workspace.current[[i, j, km]]).mul_add(inv_dz2, (2.0f64.mul_add(-center, workspace.current[[ip, j, k]]) + workspace.current[[im, j, k]]).mul_add(inv_dx2, (2.0f64.mul_add(-center, workspace.current[[i, jp, k]])
-                                + workspace.current[[i, jm, k]]) * inv_dy2));
-                        workspace.next[[i, j, k]] =
-                            2.0f64.mul_add(center, -workspace.previous[[i, j, k]]) + c2_dt2 * laplacian;
+                        let laplacian = (2.0f64.mul_add(-center, workspace.current[[i, j, kp]])
+                            + workspace.current[[i, j, km]])
+                        .mul_add(
+                            inv_dz2,
+                            (2.0f64.mul_add(-center, workspace.current[[ip, j, k]])
+                                + workspace.current[[im, j, k]])
+                            .mul_add(
+                                inv_dx2,
+                                (2.0f64.mul_add(-center, workspace.current[[i, jp, k]])
+                                    + workspace.current[[i, jm, k]])
+                                    * inv_dy2,
+                            ),
+                        );
+                        workspace.next[[i, j, k]] = 2.0f64
+                            .mul_add(center, -workspace.previous[[i, j, k]])
+                            + c2_dt2 * laplacian;
                     }
                 }
             }

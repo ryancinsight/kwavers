@@ -81,7 +81,11 @@ impl HeterogeneousFactory {
                     if 2.0 * cs * cs > cp * cp {
                         return Err(format!(
                             "Stability violated at voxel ({},{},{}): 2·c_s²={:.4} > c_p²={:.4}",
-                            i, j, k, 2.0 * cs * cs, cp * cp
+                            i,
+                            j,
+                            k,
+                            2.0 * cs * cs,
+                            cp * cp
                         ));
                     }
 

@@ -67,15 +67,9 @@ impl<B: Backend> DynamicTanh<B> {
     #[must_use]
     pub fn with_init(alpha: f32, gamma: f32, beta: f32, device: &B::Device) -> Self {
         Self {
-            alpha: Param::from_tensor(
-                Tensor::<B, 1>::from_floats([alpha], device),
-            ),
-            gamma: Param::from_tensor(
-                Tensor::<B, 1>::from_floats([gamma], device),
-            ),
-            beta: Param::from_tensor(
-                Tensor::<B, 1>::from_floats([beta], device),
-            ),
+            alpha: Param::from_tensor(Tensor::<B, 1>::from_floats([alpha], device)),
+            gamma: Param::from_tensor(Tensor::<B, 1>::from_floats([gamma], device)),
+            beta: Param::from_tensor(Tensor::<B, 1>::from_floats([beta], device)),
         }
     }
 

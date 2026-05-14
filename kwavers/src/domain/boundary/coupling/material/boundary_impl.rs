@@ -30,8 +30,12 @@ impl BoundaryCondition for MaterialInterface {
         let interface_pos = self.position;
         let normal = self.normal;
 
-        let normal_mag =
-            normal[2].mul_add(normal[2], normal[0].mul_add(normal[0], normal[1] * normal[1])).sqrt();
+        let normal_mag = normal[2]
+            .mul_add(
+                normal[2],
+                normal[0].mul_add(normal[0], normal[1] * normal[1]),
+            )
+            .sqrt();
         let normal_unit = [
             normal[0] / normal_mag,
             normal[1] / normal_mag,
@@ -55,7 +59,10 @@ impl BoundaryCondition for MaterialInterface {
                         point[1] - interface_pos[1],
                         point[2] - interface_pos[2],
                     ];
-                    let signed_distance = rel_pos[2].mul_add(normal_unit[2], rel_pos[0].mul_add(normal_unit[0], rel_pos[1] * normal_unit[1]));
+                    let signed_distance = rel_pos[2].mul_add(
+                        normal_unit[2],
+                        rel_pos[0].mul_add(normal_unit[0], rel_pos[1] * normal_unit[1]),
+                    );
 
                     if signed_distance < 0.0 && signed_distance.abs() < smooth_thickness {
                         incident_amplitude += field[[i, j, k]];
@@ -80,7 +87,10 @@ impl BoundaryCondition for MaterialInterface {
                         point[2] - interface_pos[2],
                     ];
 
-                    let signed_distance = rel_pos[2].mul_add(normal_unit[2], rel_pos[0].mul_add(normal_unit[0], rel_pos[1] * normal_unit[1]));
+                    let signed_distance = rel_pos[2].mul_add(
+                        normal_unit[2],
+                        rel_pos[0].mul_add(normal_unit[0], rel_pos[1] * normal_unit[1]),
+                    );
 
                     if signed_distance.abs() <= smooth_thickness {
                         let p_current = field[[i, j, k]];

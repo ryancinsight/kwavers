@@ -95,7 +95,7 @@ pub struct BoundarySmoothing {
 
 impl BoundarySmoothing {
     /// Create a new boundary smoothing processor
-    #[must_use] 
+    #[must_use]
     pub fn new(config: BoundarySmoothingConfig) -> Self {
         Self { config }
     }

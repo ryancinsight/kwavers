@@ -50,7 +50,7 @@ pub struct AffineTransform3D {
 
 impl AffineTransform3D {
     /// Create identity transformation
-    #[must_use] 
+    #[must_use]
     pub fn identity() -> Self {
         Self {
             matrix: [
@@ -62,15 +62,21 @@ impl AffineTransform3D {
     }
 
     /// Transform a point
-    #[must_use] 
+    #[must_use]
     pub fn transform_point(&self, p: &[f64; 3]) -> [f64; 3] {
         [
-            self.matrix[0][2].mul_add(p[2], self.matrix[0][0].mul_add(p[0], self.matrix[0][1] * p[1]))
-                + self.matrix[0][3],
-            self.matrix[1][2].mul_add(p[2], self.matrix[1][0].mul_add(p[0], self.matrix[1][1] * p[1]))
-                + self.matrix[1][3],
-            self.matrix[2][2].mul_add(p[2], self.matrix[2][0].mul_add(p[0], self.matrix[2][1] * p[1]))
-                + self.matrix[2][3],
+            self.matrix[0][2].mul_add(
+                p[2],
+                self.matrix[0][0].mul_add(p[0], self.matrix[0][1] * p[1]),
+            ) + self.matrix[0][3],
+            self.matrix[1][2].mul_add(
+                p[2],
+                self.matrix[1][0].mul_add(p[0], self.matrix[1][1] * p[1]),
+            ) + self.matrix[1][3],
+            self.matrix[2][2].mul_add(
+                p[2],
+                self.matrix[2][0].mul_add(p[0], self.matrix[2][1] * p[1]),
+            ) + self.matrix[2][3],
         ]
     }
 }
@@ -94,7 +100,6 @@ pub struct FunctionalUltrasoundGPS {
 
     /// Continuous tracking filter
     tracking: TrackingFilter,
-
 }
 
 impl FunctionalUltrasoundGPS {

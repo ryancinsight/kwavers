@@ -28,7 +28,7 @@ impl ValidatedKinetics {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             oh_recombination: LiteratureValue::from_range(4.5e9, 5.5e9),
@@ -104,7 +104,7 @@ pub struct ValidationResult {
 
 impl ValidationResult {
     /// Print validation report
-    #[must_use] 
+    #[must_use]
     pub fn report(&self) -> String {
         format!(
             "Reaction: {}\n  Simulated: {:.3e} M⁻¹·s⁻¹\n  Literature: {:.3e} ± {:.3e} M⁻¹·s⁻¹\n  Range: [{:.3e}, {:.3e}]\n  Within range: {}\n  Difference: {:.1}%",

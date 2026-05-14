@@ -1,7 +1,7 @@
-"""Chapter 29: same-device therapy and FWI/RTM monitoring simulations.
+"""Chapter 29: same-device therapy, finite-frequency inverse, and RTM monitoring.
 
 The computation is owned by kwavers through the PyO3 wrapper
-``run_theranostic_fwi_from_ritk``. Python only selects the public CT/NIfTI
+``run_theranostic_inverse_from_ritk``. Python only selects the public CT/NIfTI
 inputs, runs the wrapper, and renders figures.
 """
 
@@ -74,10 +74,11 @@ CASES = (
 )
 
 RECONSTRUCTION_CHANNELS = (
-    ("active_lesion_reconstruction", "active FWI"),
-    ("subharmonic_reconstruction", "subharmonic RTM/FWI"),
-    ("harmonic_reconstruction", "harmonic FWI"),
-    ("ultraharmonic_reconstruction", "ultraharmonic FWI"),
+    ("active_lesion_reconstruction", "active Born inverse"),
+    ("waveform_rtm_reconstruction", "linear acoustic RTM"),
+    ("subharmonic_reconstruction", "subharmonic inverse"),
+    ("harmonic_reconstruction", "harmonic inverse"),
+    ("ultraharmonic_reconstruction", "ultraharmonic inverse"),
     ("fused_reconstruction", "fusion"),
 )
 
@@ -85,10 +86,11 @@ RECONSTRUCTION_FIGURE_COLUMNS = (
     ("ct_hu", "gray", "CT + target + tx/rx"),
     ("exposure", "magma", "simulated exposure"),
     ("lesion_target", "magma", "lesion target"),
-    ("active_lesion_reconstruction", "viridis", "active FWI"),
-    ("subharmonic_reconstruction", "viridis", "subharmonic RTM/FWI"),
-    ("harmonic_reconstruction", "viridis", "harmonic FWI"),
-    ("ultraharmonic_reconstruction", "viridis", "ultraharmonic FWI"),
+    ("active_lesion_reconstruction", "viridis", "active Born inverse"),
+    ("waveform_rtm_reconstruction", "viridis", "linear acoustic RTM"),
+    ("subharmonic_reconstruction", "viridis", "subharmonic inverse"),
+    ("harmonic_reconstruction", "viridis", "harmonic inverse"),
+    ("ultraharmonic_reconstruction", "viridis", "ultraharmonic inverse"),
     ("fused_reconstruction", "viridis", "fusion"),
 )
 
@@ -139,7 +141,7 @@ def run_case(case: dict[str, object]) -> dict[str, object]:
     seg = case["seg"]
     if seg is not None and not Path(seg).exists():
         raise FileNotFoundError(seg)
-    return kw.run_theranostic_fwi_from_ritk(
+    return kw.run_theranostic_inverse_from_ritk(
         str(case["ct"]),
         None if seg is None else str(seg),
         anatomy=str(case["name"]),
@@ -150,6 +152,48 @@ def run_case(case: dict[str, object]) -> dict[str, object]:
         receiver_offsets=list(case["offsets"]),
         source_pressure_pa=float(case["pressure"]),
         noise_fraction=float(os.environ.get("KWAVERS_CH29_NOISE_FRACTION", "0.012")),
+        inverse_encoding_rows_per_code=int(os.environ.get("KWAVERS_CH29_INVERSE_ENCODING_ROWS_PER_CODE", "2")),
+    )
+
+
+def run_nonlinear_case(case: dict[str, object]) -> dict[str, object]:
+    if not Path(case["ct"]).exists():
+        raise FileNotFoundError(case["ct"])
+    seg = case["seg"]
+    if seg is not None and not Path(seg).exists():
+        raise FileNotFoundError(seg)
+    grid = nonlinear_grid_size(case)
+    iterations = int(os.environ.get("KWAVERS_CH29_NONLINEAR_ITERATIONS", "3"))
+    return kw.run_theranostic_nonlinear_3d_from_ritk(
+        str(case["ct"]),
+        None if seg is None else str(seg),
+        anatomy=str(case["name"]),
+        grid_size=grid,
+        element_count=int(os.environ.get("KWAVERS_CH29_NONLINEAR_ELEMENTS", "96")),
+        receiver_count=int(os.environ.get("KWAVERS_CH29_NONLINEAR_RECEIVERS", "48")),
+        source_encoding_count=int(os.environ.get("KWAVERS_CH29_NONLINEAR_ENCODINGS", "3")),
+        checkpoint_interval_steps=int(os.environ.get("KWAVERS_CH29_CHECKPOINT_INTERVAL", "128")),
+        iterations=iterations,
+        frequency_hz=float(case["freq"][-1]),
+        source_pressure_pa=float(case["pressure"] if case["name"] == "brain" else 6.0e6),
+        cycles=float(os.environ.get("KWAVERS_CH29_NONLINEAR_CYCLES", "3.0")),
+        lesion_delta_c_m_s=float(os.environ.get("KWAVERS_CH29_NONLINEAR_DELTA_C", "-35.0")),
+        lesion_delta_beta=float(os.environ.get("KWAVERS_CH29_NONLINEAR_DELTA_BETA", "0.85")),
+        sound_speed_regularization=float(os.environ.get("KWAVERS_CH29_NONLINEAR_C_REG", "0.002")),
+        nonlinearity_regularization=float(os.environ.get("KWAVERS_CH29_NONLINEAR_BETA_REG", "0.001")),
+        gradient_smoothing_steps=int(os.environ.get("KWAVERS_CH29_NONLINEAR_SMOOTHING", "2")),
+        bubble_time_steps_per_period=int(os.environ.get("KWAVERS_CH29_RP_STEPS_PER_PERIOD", "64")),
+        cavitation_iterations=int(os.environ.get("KWAVERS_CH29_CAVITATION_ITERATIONS", "24")),
+    )
+
+
+def nonlinear_grid_size(case: dict[str, object]) -> int:
+    case_grid_key = f"KWAVERS_CH29_{str(case['name']).upper()}_NONLINEAR_GRID"
+    return int(
+        os.environ.get(
+            case_grid_key,
+            os.environ.get("KWAVERS_CH29_NONLINEAR_GRID", str(case["grid"])),
+        )
     )
 
 
@@ -164,15 +208,14 @@ def render_layouts(results: list[dict[str, object]]) -> Path:
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
     path = OUT_DIR / "fig01_device_placement_on_ct.png"
-    fig.savefig(path, dpi=180)
-    fig.savefig(path.with_suffix(".pdf"))
+    save_figure(fig, path)
     plt.close(fig)
     return path
 
 
 def render_reconstructions(results: list[dict[str, object]]) -> Path:
     columns = RECONSTRUCTION_FIGURE_COLUMNS
-    fig, axes = plt.subplots(len(results), len(columns), figsize=(21.0, 8.4), constrained_layout=True)
+    fig, axes = plt.subplots(len(results), len(columns), figsize=(23.5, 8.4), constrained_layout=True)
     for row, result in enumerate(results):
         for col, (key, cmap, title) in enumerate(columns):
             ax = axes[row, col]
@@ -191,8 +234,62 @@ def render_reconstructions(results: list[dict[str, object]]) -> Path:
                 ax.set_xlabel(f"Dice={metrics['dice_equal_area']:.2f}, CNR={metrics['cnr']:.2f}")
             plt.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
     path = OUT_DIR / "fig02_exposure_and_reconstruction.png"
-    fig.savefig(path, dpi=180)
-    fig.savefig(path.with_suffix(".pdf"))
+    save_figure(fig, path)
+    plt.close(fig)
+    return path
+
+
+def render_nonlinear_3d(results: list[dict[str, object]]) -> Path:
+    columns = (
+        ("ct_hu", "gray", "CT + target + tx/rx"),
+        ("westervelt_peak_pressure_pa", "magma", "simulated exposure"),
+        ("target_mask", "magma", "lesion target"),
+        ("multiparameter_fwi_score", "viridis", "source-encoded Westervelt FWI"),
+        ("reconstructed_delta_beta", "viridis", "nonlinear beta inverse"),
+        ("cavitation_source_density", "viridis", "RP cavitation source"),
+        ("reconstructed_cavitation_density", "viridis", "passive cavitation inverse"),
+        ("nonlinear_fusion_score", "viridis", "fusion"),
+    )
+    fig, axes = plt.subplots(len(results), len(columns), figsize=(23.5, 8.4), constrained_layout=True)
+    for row, result in enumerate(results):
+        z = target_slice_index(np.asarray(result["target_mask"], dtype=bool))
+        extent = image_extent(np.asarray(result["ct_hu"], dtype=float)[:, :, z], float(result["spacing_m"]))
+        slab = target_slab_bounds(np.asarray(result["target_mask"], dtype=bool), z)
+        target = np.max(np.asarray(result["target_mask"], dtype=bool)[:, :, slab[0] : slab[1]], axis=2)
+        for col, (key, cmap, title) in enumerate(columns):
+            ax = axes[row, col]
+            if key == "ct_hu":
+                image = np.asarray(result[key], dtype=float)[:, :, z]
+                im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=extent, vmin=-200, vmax=300)
+                plot_projected_3d_points(ax, result, z)
+            elif key == "target_mask":
+                image = target.astype(float)
+                im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=extent, vmin=0.0, vmax=1.0)
+            elif key in {"multiparameter_fwi_score", "nonlinear_fusion_score"}:
+                image = slab_projection(np.asarray(result[key], dtype=float), slab, mode="max")
+                im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=extent, vmin=0.0, vmax=1.0)
+            elif key == "reconstructed_delta_beta":
+                image = slab_projection(np.maximum(np.asarray(result[key], dtype=float), 0.0), slab, mode="max")
+                im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=extent, vmin=0.0, vmax=max(float(np.max(image)), 1.0e-12))
+            else:
+                volume = np.asarray(result[key], dtype=float)
+                image = slab_projection(volume, slab, mode="max")
+                im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=extent)
+            contour_mask(ax, target, extent, "white", 0.8)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_title(f"{result['anatomy']} {title}" if col == 0 else title, fontsize=8.5)
+            if col == len(columns) - 1:
+                fwi = result["metrics"]["fwi"]
+                cav = result["metrics"]["rayleigh_plesset_cavitation"]
+                fusion = result["metrics"]["fusion"]
+                ax.set_xlabel(
+                    f"FWI={fwi['dice_equal_area']:.2f}; RP={cav['dice_equal_area']:.2f}; "
+                    f"fusion={fusion['dice_equal_area']:.2f}"
+                )
+            plt.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
+    path = OUT_DIR / "fig05_nonlinear_3d_westervelt_rp_cavitation.png"
+    save_figure(fig, path)
     plt.close(fig)
     return path
 
@@ -251,8 +348,7 @@ def render_brain_helmet_3d(placement: dict[str, object]) -> Path:
         fontsize=10,
     )
     path = OUT_DIR / "fig03_brain_helmet_3d_placement.png"
-    fig.savefig(path, dpi=180)
-    fig.savefig(path.with_suffix(".pdf"))
+    save_figure(fig, path)
     plt.close(fig)
     return path
 
@@ -285,8 +381,7 @@ def render_dynamic_range_diagnostics(results: list[dict[str, object]]) -> Path:
     if last_image is not None:
         fig.colorbar(last_image, ax=axes.ravel().tolist(), fraction=0.018, pad=0.01, label="relative amplitude [dB]")
     path = OUT_DIR / "fig04_reconstruction_dynamic_range_diagnostics.png"
-    fig.savefig(path, dpi=180)
-    fig.savefig(path.with_suffix(".pdf"))
+    save_figure(fig, path)
     plt.close(fig)
     return path
 
@@ -301,6 +396,14 @@ def image_extent(image: np.ndarray, spacing_m: float) -> list[float]:
     ]
 
 
+def save_figure(fig: plt.Figure, path: Path) -> None:
+    fig.savefig(path, dpi=260)
+    try:
+        fig.savefig(path.with_suffix(".pdf"))
+    except PermissionError:
+        pass
+
+
 def image_extent_xy(image: np.ndarray, spacing_m: tuple[float, float]) -> list[float]:
     nx, ny = image.shape
     return [
@@ -309,6 +412,40 @@ def image_extent_xy(image: np.ndarray, spacing_m: tuple[float, float]) -> list[f
         -0.5 * (ny - 1) * spacing_m[1],
         0.5 * (ny - 1) * spacing_m[1],
     ]
+
+
+def target_slice_index(mask: np.ndarray) -> int:
+    counts = np.sum(mask, axis=(0, 1))
+    return int(np.argmax(counts))
+
+
+def target_slab_bounds(mask: np.ndarray, z_index: int) -> tuple[int, int]:
+    half_width = max(1, min(3, mask.shape[2] // 8))
+    z0 = max(0, z_index - half_width)
+    z1 = min(mask.shape[2], z_index + half_width + 1)
+    return z0, z1
+
+
+def slab_projection(volume: np.ndarray, slab: tuple[int, int], *, mode: str) -> np.ndarray:
+    data = np.asarray(volume[:, :, slab[0] : slab[1]], dtype=float)
+    if mode == "mean":
+        return np.mean(data, axis=2)
+    return np.max(data, axis=2)
+
+
+def plot_projected_3d_points(ax: plt.Axes, result: dict[str, object], z_index: int) -> None:
+    spacing = float(result["spacing_m"])
+    z_m = (z_index - 0.5 * (np.asarray(result["ct_hu"]).shape[2] - 1)) * spacing
+    for key, color, size, alpha in (
+        ("therapy_points_m", "#e74c3c", 4.0, 0.45),
+        ("receiver_points_m", "#2e86de", 7.0, 0.75),
+    ):
+        points = np.asarray(result[key], dtype=float)
+        if points.size == 0:
+            continue
+        near = np.abs(points[:, 2] - z_m) <= 2.5 * spacing
+        if np.any(near):
+            ax.scatter(points[near, 0], points[near, 1], s=size, c=color, alpha=alpha)
 
 
 def short_device_name(result: dict[str, object]) -> str:
@@ -404,13 +541,14 @@ def ratio_to_db(ratio: float, floor_db: float = -120.0) -> float:
 
 def write_metrics(
     results: list[dict[str, object]],
+    nonlinear_results: list[dict[str, object]],
     figures: list[Path],
     brain_helmet_3d: dict[str, object],
 ) -> Path:
     payload = {
         "chapter": 29,
-        "analysis": "same-device ultrasound treatment plus FWI/RTM monitoring",
-        "simulation_type": "RITK-loaded CT/NIfTI, kwavers PyO3 theranostic FWI",
+        "analysis": "same-device ultrasound treatment plus finite-frequency inverse and source-encoded linear RTM monitoring",
+        "simulation_type": "RITK-loaded CT/NIfTI, kwavers PyO3 theranostic inverse",
         "figures": [str(path) for path in figures],
         "brain_helmet_3d": {
             "geometry_model": brain_helmet_3d["geometry_model"],
@@ -431,9 +569,24 @@ def write_metrics(
                 "operator_backend": result["operator_backend"],
                 "operator_storage_values": int(result["operator_storage_values"]),
                 "dense_operator_values": int(result["dense_operator_values"]),
+                "inverse_model_family": result["inverse_model_family"],
+                "is_full_wave_inversion": bool(result["is_full_wave_inversion"]),
+                "uses_nonlinear_wave_propagation": bool(result["uses_nonlinear_wave_propagation"]),
+                "waveform_model": result["waveform_model"],
+                "waveform_misfit": result["waveform_misfit"],
+                "waveform_misfit_scale": float(result["waveform_misfit_scale"]),
+                "waveform_objective": float(result["waveform_objective"]),
+                "waveform_receiver_count": int(result["waveform_receiver_count"]),
+                "waveform_time_steps": int(result["waveform_time_steps"]),
+                "waveform_dt_s": float(result["waveform_dt_s"]),
+                "waveform_residual_energy": float(result["waveform_residual_energy"]),
+                "waveform_observed_energy": float(result["waveform_observed_energy"]),
                 "element_count": int(result["element_count"]),
                 "source_pressure_pa": float(result["source_pressure_pa"]),
                 "measurements": int(result["measurements"]),
+                "encoded_measurements": int(result["encoded_measurements"]),
+                "unencoded_measurements": int(result["unencoded_measurements"]),
+                "inverse_encoding_rows_per_code": int(result["inverse_encoding_rows_per_code"]),
                 "active_voxels": int(result["active_voxels"]),
                 "spacing_m": float(result["spacing_m"]),
                 "placement_slice_index": int(result["placement_slice_index"]),
@@ -446,6 +599,35 @@ def write_metrics(
             }
             for result in results
         ],
+        "nonlinear_3d_cases": [
+            {
+                "anatomy": result["anatomy"],
+                "model_family": result["model_family"],
+                "propagator_model": result["propagator_model"],
+                "cavitation_inverse_model": result["cavitation_inverse_model"],
+                "aperture_model": result["aperture_model"],
+                "is_full_wave_inversion": bool(result["is_full_wave_inversion"]),
+                "uses_nonlinear_wave_propagation": bool(result["uses_nonlinear_wave_propagation"]),
+                "uses_rayleigh_plesset": bool(result["uses_rayleigh_plesset"]),
+                "grid_size": int(result["grid_size"]),
+                "time_steps": int(result["time_steps"]),
+                "dt_s": float(result["dt_s"]),
+                "active_voxels": int(result["active_voxels"]),
+                "element_count": int(result["element_count"]),
+                "receiver_count": int(result["receiver_count"]),
+                "source_encoding_count": int(result["source_encoding_count"]),
+                "checkpoint_interval_steps": int(result["checkpoint_interval_steps"]),
+                "frequency_hz": float(result["frequency_hz"]),
+                "source_pressure_pa": float(result["source_pressure_pa"]),
+                "lesion_delta_c_m_s": float(result["lesion_delta_c_m_s"]),
+                "lesion_delta_beta": float(result["lesion_delta_beta"]),
+                "sound_speed_regularization": float(result["sound_speed_regularization"]),
+                "nonlinearity_regularization": float(result["nonlinearity_regularization"]),
+                "gradient_smoothing_steps": int(result["gradient_smoothing_steps"]),
+                "metrics": result["metrics"],
+            }
+            for result in nonlinear_results
+        ],
     }
     path = OUT_DIR / "metrics.json"
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -455,6 +637,7 @@ def write_metrics(
 def run() -> dict[str, object]:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     results = [run_case(case) for case in CASES]
+    nonlinear_results = [run_nonlinear_case(case) for case in CASES]
     brain_helmet_3d = kw.plan_brain_helmet_placement_from_ritk_ct(
         str(CASES[0]["ct"]),
         element_count=int(CASES[0]["elements"]),
@@ -467,8 +650,9 @@ def run() -> dict[str, object]:
         render_reconstructions(results),
         render_brain_helmet_3d(brain_helmet_3d),
         render_dynamic_range_diagnostics(results),
+        render_nonlinear_3d(nonlinear_results),
     ]
-    metrics = write_metrics(results, figures, brain_helmet_3d)
+    metrics = write_metrics(results, nonlinear_results, figures, brain_helmet_3d)
     return {"figures": [str(path) for path in figures], "metrics": str(metrics)}
 
 

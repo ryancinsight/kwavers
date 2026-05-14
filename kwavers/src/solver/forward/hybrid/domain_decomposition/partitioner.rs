@@ -89,7 +89,11 @@ impl DomainPartitioner {
                         && j < metrics.homogeneity.dim().1
                         && k < metrics.homogeneity.dim().2
                     {
-                        sum += metrics.spectral_content[[i, j, k]].mul_add(0.2, metrics.homogeneity[[i, j, k]].mul_add(0.4, metrics.smoothness[[i, j, k]] * 0.4));
+                        sum += metrics.spectral_content[[i, j, k]].mul_add(
+                            0.2,
+                            metrics.homogeneity[[i, j, k]]
+                                .mul_add(0.4, metrics.smoothness[[i, j, k]] * 0.4),
+                        );
                         count += 1;
                     }
                 }

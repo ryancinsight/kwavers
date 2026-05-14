@@ -185,8 +185,10 @@ impl EigenSolver {
                             }
                         }
 
-                        let h_pp_new = (2.0 * s * c).mul_add(-h_pq.re, (c * c).mul_add(h_pp, s * s * h_qq));
-                        let h_qq_new = (2.0 * s * c).mul_add(h_pq.re, (s * s).mul_add(h_pp, c * c * h_qq));
+                        let h_pp_new =
+                            (2.0 * s * c).mul_add(-h_pq.re, (c * c).mul_add(h_pp, s * s * h_qq));
+                        let h_qq_new =
+                            (2.0 * s * c).mul_add(h_pq.re, (s * s).mul_add(h_pp, c * c * h_qq));
 
                         h[[p, p]] = Complex::new(h_pp_new, 0.0);
                         h[[q, q]] = Complex::new(h_qq_new, 0.0);

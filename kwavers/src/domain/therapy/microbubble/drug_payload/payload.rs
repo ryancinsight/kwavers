@@ -146,7 +146,9 @@ impl DrugPayload {
         match shell_state {
             ShellState::Ruptured => 1.0,
             ShellState::Elastic | ShellState::Buckled => {
-                let enhancement = self.strain_enhancement_factor.mul_add(shell_strain.abs().powi(2), 1.0);
+                let enhancement = self
+                    .strain_enhancement_factor
+                    .mul_add(shell_strain.abs().powi(2), 1.0);
                 (self.baseline_permeability * enhancement).min(1.0)
             }
         }

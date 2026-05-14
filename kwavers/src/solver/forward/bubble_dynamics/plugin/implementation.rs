@@ -8,9 +8,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use crate::physics::acoustics::bubble_dynamics::{
-    bubble_field::BubbleField,
-    bubble_state::BubbleState,
-    gilmore::GilmoreSolver,
+    bubble_field::BubbleField, bubble_state::BubbleState, gilmore::GilmoreSolver,
 };
 use crate::physics::factory::models::BubbleModel;
 

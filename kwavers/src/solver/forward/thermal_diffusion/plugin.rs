@@ -26,7 +26,8 @@ impl ThermalDiffusionPlugin {
                 name: "ThermalDiffusion".to_owned(),
                 version: "1.0.0".to_owned(),
                 author: "Kwavers Team".to_owned(),
-                description: "Thermal diffusion solver with bioheat and hyperbolic models".to_owned(),
+                description: "Thermal diffusion solver with bioheat and hyperbolic models"
+                    .to_owned(),
                 license: "MIT".to_owned(),
             },
             solver: None,
@@ -70,10 +71,9 @@ impl crate::domain::plugin::Plugin for ThermalDiffusionPlugin {
     ) -> KwaversResult<()> {
         if let Some(ref mut solver) = self.solver {
             let heat_source = if fields.shape()[0] > UnifiedFieldType::Temperature as usize + 1 {
-                Some(fields.index_axis(
-                    ndarray::Axis(0),
-                    UnifiedFieldType::Temperature as usize + 1,
-                ))
+                Some(
+                    fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Temperature as usize + 1),
+                )
             } else {
                 None
             };

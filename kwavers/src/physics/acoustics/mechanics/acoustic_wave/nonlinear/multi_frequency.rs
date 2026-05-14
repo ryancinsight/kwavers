@@ -206,7 +206,11 @@ mod tests {
         assert_eq!(cfg.frequencies.len(), n);
         for (idx, &f) in cfg.frequencies.iter().enumerate() {
             let expected = fundamental * (idx + 1) as f64;
-            assert!((f - expected).abs() < 1.0, "harmonic {}: {f} vs {expected}", idx + 1);
+            assert!(
+                (f - expected).abs() < 1.0,
+                "harmonic {}: {f} vs {expected}",
+                idx + 1
+            );
         }
         assert!(cfg.track_harmonics);
         assert_eq!(cfg.max_harmonic_order, n);

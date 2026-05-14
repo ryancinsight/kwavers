@@ -38,7 +38,7 @@ pub struct SafetyThresholds {
 }
 
 impl SafetyThresholds {
-    #[must_use] 
+    #[must_use]
     pub fn new(
         max_temperature: f64,
         max_thermal_dose: f64,
@@ -75,7 +75,7 @@ pub enum SafetyLevel {
 }
 
 impl SafetyLevel {
-    #[must_use] 
+    #[must_use]
     pub fn from_value(current: f64, limit: f64) -> Self {
         let ratio = current / limit;
         if ratio >= 1.0 {

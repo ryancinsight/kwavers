@@ -22,7 +22,7 @@ impl EncounterId {
     }
 
     /// Get the underlying ID string
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -47,7 +47,7 @@ pub enum EncounterType {
 
 impl EncounterType {
     /// Get string representation
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::InitialConsultation => "Initial Consultation",

@@ -128,7 +128,11 @@ mod tests {
         buf.push(4); // evicts 1
         assert_eq!(buf.len(), 3);
         let values: Vec<i32> = buf.iter().copied().collect();
-        assert_eq!(values, vec![2, 3, 4], "oldest element must be evicted: {values:?}");
+        assert_eq!(
+            values,
+            vec![2, 3, 4],
+            "oldest element must be evicted: {values:?}"
+        );
     }
 
     /// HistoryBuffer::is_empty() is true for new buffer and false after push.

@@ -22,9 +22,12 @@ pub fn generate_spherical_skull(
     for i in 0..grid.nx {
         for j in 0..grid.ny {
             for k in 0..grid.nz {
-                let r =
-                    (k as f64 - cz).mul_add(k as f64 - cz, (j as f64 - cy).mul_add(j as f64 - cy, (i as f64 - cx).powi(2)))
-                        .sqrt();
+                let r = (k as f64 - cz)
+                    .mul_add(
+                        k as f64 - cz,
+                        (j as f64 - cy).mul_add(j as f64 - cy, (i as f64 - cx).powi(2)),
+                    )
+                    .sqrt();
 
                 if r >= inner_radius && r <= outer_radius {
                     mask[[i, j, k]] = 1.0;

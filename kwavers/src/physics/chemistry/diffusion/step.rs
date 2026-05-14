@@ -80,8 +80,9 @@ fn build_rhs(
 
     let inv_dxi2 = 1.0 / (dxi * dxi);
     for j in 1..n - 1 {
-        let laplacian =
-            (2.0f64.mul_add(-concentration[j], concentration[j + 1]) + concentration[j - 1]) * inv_dxi2;
+        let laplacian = (2.0f64.mul_add(-concentration[j], concentration[j + 1])
+            + concentration[j - 1])
+            * inv_dxi2;
         let first_derivative = (concentration[j + 1] - concentration[j - 1]) / (2.0 * dxi * dxi);
         rhs[j] = alpha.mul_add(laplacian + first_derivative, concentration[j]);
     }

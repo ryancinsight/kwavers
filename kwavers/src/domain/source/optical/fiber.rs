@@ -37,7 +37,7 @@ pub struct FiberSource {
 
 impl FiberSource {
     /// Create a new fiber optic source
-    #[must_use] 
+    #[must_use]
     pub fn new(config: FiberConfig, position: (f64, f64, f64)) -> Self {
         Self { config, position }
     }

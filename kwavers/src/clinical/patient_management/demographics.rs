@@ -19,7 +19,7 @@ impl PatientId {
     }
 
     /// Get the underlying ID string
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -57,7 +57,7 @@ impl PatientDemographics {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn calculate_bmi(&self) -> f64 {
         let height_m = self.height_cm / 100.0;
         self.weight_kg / (height_m * height_m)

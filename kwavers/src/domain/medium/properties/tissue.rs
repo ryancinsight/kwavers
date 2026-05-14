@@ -305,7 +305,9 @@ mod tests {
             (&LIVER, "LIVER"),
             (&BLOOD, "BLOOD"),
         ] {
-            tissue.validate().unwrap_or_else(|e| panic!("{name} validation failed: {e:?}"));
+            tissue
+                .validate()
+                .unwrap_or_else(|e| panic!("{name} validation failed: {e:?}"));
         }
     }
 

@@ -85,9 +85,7 @@ fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f
                             "Loaded CT scan: {} voxels, {:.2}mm spacing, HU range [{:.0}, {:.0}]",
                             format_args!(
                                 "{}×{}×{}",
-                                metadata.dimensions.0,
-                                metadata.dimensions.1,
-                                metadata.dimensions.2
+                                metadata.dimensions.0, metadata.dimensions.1, metadata.dimensions.2
                             ),
                             metadata.voxel_spacing_mm.0,
                             metadata.hu_range.0,

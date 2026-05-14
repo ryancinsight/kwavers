@@ -50,7 +50,10 @@ impl KWaveArray {
     pub(super) fn bowl_surface_area(radius: f64, diameter: f64) -> f64 {
         let half_aperture = diameter / 2.0;
         let h = if radius > half_aperture {
-            radius - radius.mul_add(radius, -(half_aperture * half_aperture)).sqrt()
+            radius
+                - radius
+                    .mul_add(radius, -(half_aperture * half_aperture))
+                    .sqrt()
         } else {
             radius
         };

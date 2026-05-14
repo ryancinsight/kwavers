@@ -13,7 +13,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use ndarray::{Array3, Array4, Axis};
+use ndarray::{Array4, ArrayView3, Axis};
 use std::collections::HashMap;
 
 /// Time scale information for a physics component
@@ -73,8 +73,7 @@ impl TimeScaleSeparator {
             let field = fields.index_axis(Axis(0), f);
 
             // Compute characteristic time scales
-            let (grad_max, laplacian_max) =
-                self.compute_spatial_derivatives(&field.to_owned(), &self.grid)?;
+            let (grad_max, laplacian_max) = self.compute_spatial_derivatives(field, &self.grid)?;
 
             // Acoustic time scale: τ_acoustic ~ 1/√(c²∇²)
             if laplacian_max > tolerance {
@@ -118,34 +117,30 @@ impl TimeScaleSeparator {
     ///
     fn compute_spatial_derivatives(
         &self,
-        field: &Array3<f64>,
+        field: ArrayView3<'_, f64>,
         grid: &Grid,
     ) -> KwaversResult<(f64, f64)> {
         let (nx, ny, nz) = field.dim();
         let mut grad_max: f64 = 0.0;
         let mut laplacian_max: f64 = 0.0;
 
+        if nx < 3 || ny < 3 || nz < 3 {
+            return Ok((grad_max, laplacian_max));
+        }
+
         // Compute gradients and Laplacian
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    // Gradient magnitude
-                    let dx = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * grid.dx);
-                    let dy = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * grid.dy);
-                    let dz = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    let dx = first_derivative::<0>(field, i, j, k, grid);
+                    let dy = first_derivative::<1>(field, i, j, k, grid);
+                    let dz = first_derivative::<2>(field, i, j, k, grid);
                     let grad_mag = (dx * dx + dy * dy + dz * dz).sqrt();
                     grad_max = grad_max.max(grad_mag);
 
-                    // Laplacian
-                    let d2x = (2.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]])
-                        + field[[i - 1, j, k]])
-                        / (grid.dx * grid.dx);
-                    let d2y = (2.0f64.mul_add(-field[[i, j, k]], field[[i, j + 1, k]])
-                        + field[[i, j - 1, k]])
-                        / (grid.dy * grid.dy);
-                    let d2z = (2.0f64.mul_add(-field[[i, j, k]], field[[i, j, k + 1]])
-                        + field[[i, j, k - 1]])
-                        / (grid.dz * grid.dz);
+                    let d2x = second_derivative::<0>(field, i, j, k, grid);
+                    let d2y = second_derivative::<1>(field, i, j, k, grid);
+                    let d2z = second_derivative::<2>(field, i, j, k, grid);
                     let laplacian = (d2x + d2y + d2z).abs();
                     laplacian_max = laplacian_max.max(laplacian);
                 }
@@ -178,5 +173,63 @@ impl TimeScaleSeparator {
         }
 
         subcycles
+    }
+}
+
+/// Monomorphized central first derivative along one Cartesian axis.
+///
+/// `AXIS` is a structural parameter. The optimizer emits one concrete stencil
+/// per axis and removes inactive branches, while the caller keeps a single
+/// authoritative finite-difference contract.
+#[inline]
+fn first_derivative<const AXIS: usize>(
+    field: ArrayView3<'_, f64>,
+    i: usize,
+    j: usize,
+    k: usize,
+    grid: &Grid,
+) -> f64 {
+    let h = axis_spacing::<AXIS>(grid);
+    let (forward, backward) = axis_neighbors::<AXIS>(field, i, j, k);
+    (forward - backward) / (2.0 * h)
+}
+
+/// Monomorphized second central derivative along one Cartesian axis.
+#[inline]
+fn second_derivative<const AXIS: usize>(
+    field: ArrayView3<'_, f64>,
+    i: usize,
+    j: usize,
+    k: usize,
+    grid: &Grid,
+) -> f64 {
+    let h = axis_spacing::<AXIS>(grid);
+    let center = field[[i, j, k]];
+    let (forward, backward) = axis_neighbors::<AXIS>(field, i, j, k);
+    (2.0f64.mul_add(-center, forward) + backward) / (h * h)
+}
+
+#[inline]
+fn axis_neighbors<const AXIS: usize>(
+    field: ArrayView3<'_, f64>,
+    i: usize,
+    j: usize,
+    k: usize,
+) -> (f64, f64) {
+    match AXIS {
+        0 => (field[[i + 1, j, k]], field[[i - 1, j, k]]),
+        1 => (field[[i, j + 1, k]], field[[i, j - 1, k]]),
+        2 => (field[[i, j, k + 1]], field[[i, j, k - 1]]),
+        _ => unreachable!("TimeScaleSeparator only supports axes 0, 1, and 2"),
+    }
+}
+
+#[inline]
+fn axis_spacing<const AXIS: usize>(grid: &Grid) -> f64 {
+    match AXIS {
+        0 => grid.dx,
+        1 => grid.dy,
+        2 => grid.dz,
+        _ => unreachable!("TimeScaleSeparator only supports axes 0, 1, and 2"),
     }
 }

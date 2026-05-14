@@ -10,7 +10,7 @@ impl ShockCapture {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(config: super::ShockCapturingConfig) -> Self {
         Self {
             config,
@@ -177,7 +177,7 @@ impl ShockCapture {
     }
 
     /// Get shock detection history
-    #[must_use] 
+    #[must_use]
     pub fn history(&self) -> &[ShockDetectionResult] {
         &self.history
     }
@@ -188,7 +188,7 @@ impl ShockCapture {
     }
 
     /// Get configuration
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> super::ShockCapturingConfig {
         self.config
     }

@@ -71,7 +71,9 @@ fn test_beamforming() {
     let rf_data = Array4::<f32>::from_elem((100, 10, 20, 1), 1.0);
     let angles = vec![0.0; 20];
 
-    let volume = processor.perform_beamforming(rf_data.view(), &angles).unwrap();
+    let volume = processor
+        .perform_beamforming(rf_data.view(), &angles)
+        .unwrap();
     assert_eq!(volume.dim(), (64, 64, 20));
 }
 
@@ -92,7 +94,9 @@ fn test_full_pipeline() {
     let rf_data = Array4::<f32>::from_elem((100, 10, 20, 1), 0.5);
     let angles = vec![0.0; 20];
 
-    let ai_result = processor.process_ai_enhanced(rf_data.view(), &angles).unwrap();
+    let ai_result = processor
+        .process_ai_enhanced(rf_data.view(), &angles)
+        .unwrap();
     assert_eq!(ai_result.volume.dim(), (64, 64, 20));
     assert!(ai_result.performance.total_time_ms > 0.0);
     assert!(!ai_result.features.is_empty());

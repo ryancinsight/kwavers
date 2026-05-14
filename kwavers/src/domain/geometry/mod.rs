@@ -106,7 +106,7 @@ pub enum Dimension {
 }
 
 impl Dimension {
-    #[must_use] 
+    #[must_use]
     pub fn as_usize(&self) -> usize {
         match self {
             Self::One => 1,

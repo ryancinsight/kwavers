@@ -12,8 +12,13 @@ impl KWaveArray {
         self.get_element_positions()
             .iter()
             .map(|(ex, ey, ez)| {
-                let dist = (ez - focus_point.2).mul_add(ez - focus_point.2, (ey - focus_point.1).mul_add(ey - focus_point.1, (ex - focus_point.0).powi(2)))
-                .sqrt();
+                let dist = (ez - focus_point.2)
+                    .mul_add(
+                        ez - focus_point.2,
+                        (ey - focus_point.1)
+                            .mul_add(ey - focus_point.1, (ex - focus_point.0).powi(2)),
+                    )
+                    .sqrt();
                 dist / c
             })
             .collect()
@@ -39,8 +44,13 @@ impl KWaveArray {
         let distances: Vec<f64> = positions
             .iter()
             .map(|(ex, ey, ez)| {
-                (ez - focus_point.2).mul_add(ez - focus_point.2, (ey - focus_point.1).mul_add(ey - focus_point.1, (ex - focus_point.0).powi(2)))
-                .sqrt()
+                (ez - focus_point.2)
+                    .mul_add(
+                        ez - focus_point.2,
+                        (ey - focus_point.1)
+                            .mul_add(ey - focus_point.1, (ex - focus_point.0).powi(2)),
+                    )
+                    .sqrt()
             })
             .collect();
         let d_max = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
@@ -81,7 +91,10 @@ impl KWaveArray {
                 }
                 (0..n)
                     .map(|i| {
-                        0.46f64.mul_add(-(2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos(), 0.54)
+                        0.46f64.mul_add(
+                            -(2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos(),
+                            0.54,
+                        )
                     })
                     .collect()
             }

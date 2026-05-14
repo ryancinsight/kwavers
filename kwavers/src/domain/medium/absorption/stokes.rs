@@ -62,7 +62,16 @@ impl StokesAbsorption {
         let viscosity = 1.002e-3 * (20.0 / (t + 1.0)).exp();
 
         // Sound speed (Bilaniuk & Wong 1993)
-        let sound_speed = 2.787860e-9f64.mul_add(t.powi(5), 1.398845e-6f64.mul_add(-t.powi(4), 3.287156e-4f64.mul_add(t.powi(3), (5.799136e-2 * t).mul_add(-t, 5.038813f64.mul_add(t, 1402.385)))));
+        let sound_speed = 2.787860e-9f64.mul_add(
+            t.powi(5),
+            1.398845e-6f64.mul_add(
+                -t.powi(4),
+                3.287156e-4f64.mul_add(
+                    t.powi(3),
+                    (5.799136e-2 * t).mul_add(-t, 5.038813f64.mul_add(t, 1402.385)),
+                ),
+            ),
+        );
 
         // Density (IAPWS-95 formulation for water properties)
         // Polynomial approximation from Wagner & Pruß (2002) valid for 0-100°C at atmospheric pressure
@@ -73,7 +82,16 @@ impl StokesAbsorption {
         // References:
         // - Wagner & Pruß (2002): "IAPWS formulation 1995 for the thermodynamic properties of ordinary water"
         // - Lemmon et al. (2005): "Thermodynamic properties of water and steam"
-        let density = 6.536332e-9f64.mul_add(t.powi(5), 1.120083e-6f64.mul_add(-t.powi(4), 1.001685e-4f64.mul_add(t.powi(3), (9.095290e-3 * t).mul_add(-t, 6.793952e-2f64.mul_add(t, 999.842594)))));
+        let density = 6.536332e-9f64.mul_add(
+            t.powi(5),
+            1.120083e-6f64.mul_add(
+                -t.powi(4),
+                1.001685e-4f64.mul_add(
+                    t.powi(3),
+                    (9.095290e-3 * t).mul_add(-t, 6.793952e-2f64.mul_add(t, 999.842594)),
+                ),
+            ),
+        );
 
         let params = StokesParameters {
             viscosity,

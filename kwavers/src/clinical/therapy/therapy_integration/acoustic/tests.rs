@@ -129,5 +129,9 @@ fn test_spta_intensity_validation() {
     solver.spta_intensity(-1.0).unwrap_err();
     solver.spta_intensity(0.0).unwrap_err();
 
-    assert_eq!(solver.spta_intensity(1.0).unwrap(), 0.0, "zero-field SPTA intensity must be 0.0");
+    assert_eq!(
+        solver.spta_intensity(1.0).unwrap(),
+        0.0,
+        "zero-field SPTA intensity must be 0.0"
+    );
 }

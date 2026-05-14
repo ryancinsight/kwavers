@@ -139,11 +139,14 @@ impl LaplacianOperator {
                 let i = i + 1;
                 let j = j + 1;
                 let k = k + 1;
-                let d2_dx2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i + 1, j, k]]) + input[[i - 1, j, k]])
+                let d2_dx2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i + 1, j, k]])
+                    + input[[i - 1, j, k]])
                     * self.dx2_inv;
-                let d2_dy2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j + 1, k]]) + input[[i, j - 1, k]])
+                let d2_dy2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j + 1, k]])
+                    + input[[i, j - 1, k]])
                     * self.dy2_inv;
-                let d2_dz2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, k + 1]]) + input[[i, j, k - 1]])
+                let d2_dz2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, k + 1]])
+                    + input[[i, j, k - 1]])
                     * self.dz2_inv;
                 *out = d2_dx2 + d2_dy2 + d2_dz2;
             },
@@ -172,8 +175,10 @@ impl LaplacianOperator {
                         d2_dy2 += coeff * (input[[i, j + offset, k]] + input[[i, j - offset, k]]);
                         d2_dz2 += coeff * (input[[i, j, k + offset]] + input[[i, j, k - offset]]);
                     }
-                    output[[i, j, k]] =
-                        d2_dz2.mul_add(self.dz2_inv, d2_dx2.mul_add(self.dx2_inv, d2_dy2 * self.dy2_inv));
+                    output[[i, j, k]] = d2_dz2.mul_add(
+                        self.dz2_inv,
+                        d2_dx2.mul_add(self.dx2_inv, d2_dy2 * self.dy2_inv),
+                    );
                 }
             }
         }
@@ -207,14 +212,16 @@ impl LaplacianOperator {
             for j in 0..ny {
                 for i in 0..radius.min(nx) {
                     if i < nx - 2 {
-                        output[[i, j, k]] = (2.0f64.mul_add(-input[[i + 1, j, k]], input[[i, j, k]])
+                        output[[i, j, k]] = (2.0f64
+                            .mul_add(-input[[i + 1, j, k]], input[[i, j, k]])
                             + input[[i + 2, j, k]])
                             * self.dx2_inv;
                     }
                 }
                 for i in (nx - radius)..nx {
                     if i >= 2 {
-                        output[[i, j, k]] = (2.0f64.mul_add(-input[[i - 1, j, k]], input[[i, j, k]])
+                        output[[i, j, k]] = (2.0f64
+                            .mul_add(-input[[i - 1, j, k]], input[[i, j, k]])
                             + input[[i - 2, j, k]])
                             * self.dx2_inv;
                     }
@@ -240,7 +247,18 @@ impl LaplacianOperator {
                     let jp = if j == ny - 1 { 0 } else { j + 1 };
                     let km = if k == 0 { nz - 1 } else { k - 1 };
                     let kp = if k == nz - 1 { 0 } else { k + 1 };
-                    output[[i, j, k]] = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, km]]) + input[[i, j, kp]]).mul_add(self.dz2_inv, (2.0f64.mul_add(-input[[i, j, k]], input[[im, j, k]]) + input[[ip, j, k]]).mul_add(self.dx2_inv, (2.0f64.mul_add(-input[[i, j, k]], input[[i, jm, k]]) + input[[i, jp, k]]) * self.dy2_inv));
+                    output[[i, j, k]] = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, km]])
+                        + input[[i, j, kp]])
+                    .mul_add(
+                        self.dz2_inv,
+                        (2.0f64.mul_add(-input[[i, j, k]], input[[im, j, k]]) + input[[ip, j, k]])
+                            .mul_add(
+                                self.dx2_inv,
+                                (2.0f64.mul_add(-input[[i, j, k]], input[[i, jm, k]])
+                                    + input[[i, jp, k]])
+                                    * self.dy2_inv,
+                            ),
+                    );
                 }
             }
         }

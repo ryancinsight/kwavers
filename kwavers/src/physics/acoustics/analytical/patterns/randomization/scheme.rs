@@ -51,8 +51,10 @@ mod tests {
     fn default_is_temporal_1ms() {
         match RandomizationScheme::default() {
             RandomizationScheme::Temporal { period } => {
-                assert!((period - 1e-3).abs() < 1e-15,
-                    "default period must be 1e-3, got {period}");
+                assert!(
+                    (period - 1e-3).abs() < 1e-15,
+                    "default period must be 1e-3, got {period}"
+                );
             }
             other => panic!("expected Temporal, got {other:?}"),
         }
@@ -61,7 +63,9 @@ mod tests {
     /// Spatial variant stores correlation length.
     #[test]
     fn spatial_stores_correlation() {
-        let s = RandomizationScheme::Spatial { correlation: 2.5e-3 };
+        let s = RandomizationScheme::Spatial {
+            correlation: 2.5e-3,
+        };
         match s {
             RandomizationScheme::Spatial { correlation } => {
                 assert!((correlation - 2.5e-3).abs() < 1e-18);
@@ -73,9 +77,15 @@ mod tests {
     /// SpatioTemporal stores both fields.
     #[test]
     fn spatiotemporal_stores_both_fields() {
-        let st = RandomizationScheme::SpatioTemporal { period: 1e-4, correlation: 1e-3 };
+        let st = RandomizationScheme::SpatioTemporal {
+            period: 1e-4,
+            correlation: 1e-3,
+        };
         match st {
-            RandomizationScheme::SpatioTemporal { period, correlation } => {
+            RandomizationScheme::SpatioTemporal {
+                period,
+                correlation,
+            } => {
                 assert!((period - 1e-4).abs() < 1e-18);
                 assert!((correlation - 1e-3).abs() < 1e-18);
             }

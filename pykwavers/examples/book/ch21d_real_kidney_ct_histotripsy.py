@@ -79,20 +79,49 @@ class Tissue:
     cp: float
     kappa: float
     perfusion: float
+    # Intrinsic cavitation threshold at 1 MHz (Pa).
+    # Tissue-specific values from Vlaisavljevich 2015/2016 and Maxwell 2013.
+    # float('inf') = no intrinsic cavitation (rigid scatterer or gas interface).
+    pt_pa_1mhz: float = 28.2e6   # default: water-based global reference (Vlaisavljevich 2015)
+    # 1σ width of the Maxwell 2013 erf-CDF threshold distribution (Pa).
+    pt_sigma_pa: float = 0.96e6  # default: water-based σ (Maxwell 2013)
 
 
-AIR    = Tissue(0, "air",       1.2, 343.0,    0.0,  1.0,    1005.0, 0.026, 0.0)
-SKIN   = Tissue(1, "skin",   1109.0, 1624.0,  21.158, 1.10, 3391.0, 0.37, 1.06)
-FAT    = Tissue(2, "fat",     911.0, 1440.0,   4.836, 1.10, 2348.0, 0.21, 0.43)
-MUSCLE = Tissue(3, "muscle", 1090.0, 1588.0,   8.054, 1.10, 3421.0, 0.49, 0.67)
-BONE   = Tissue(4, "bone",   1908.0, 4080.0, 250.0,   1.0,  1313.0, 0.32, 0.10)
+#  Acoustic/thermal: Duck 1990 / IT'IS Foundation v4.1 / Mast 2000
+#  Cavitation thresholds: Vlaisavljevich 2015 (JASA 138:1864) — water baseline;
+#    Vlaisavljevich 2016 (JASA 140:3504) — porcine tissue data; Maxwell 2013
+#    (JASA 134:1765) — erf-CDF model; Hall 2007 (J Urol 178:2174) — in vivo
+#    porcine kidney histotripsy; Roberts 2014 (BJU Int) — RCC clinical context.
+AIR    = Tissue(0, "air",       1.2, 343.0,    0.0,  1.0,    1005.0, 0.026, 0.0,
+                pt_pa_1mhz=float('inf'), pt_sigma_pa=1.0)
+SKIN   = Tissue(1, "skin",   1109.0, 1624.0,  21.158, 1.10, 3391.0, 0.37, 1.06,
+                # Water-rich dermis; no specific histotripsy data — assume near muscle.
+                pt_pa_1mhz=26.0e6, pt_sigma_pa=3.0e6)
+FAT    = Tissue(2, "fat",     911.0, 1440.0,   4.836, 1.10, 2348.0, 0.21, 0.43,
+                # Vlaisavljevich 2015: lipid-rich tissues ~13–16 MPa.
+                pt_pa_1mhz=14.0e6, pt_sigma_pa=2.0e6)
+MUSCLE = Tissue(3, "muscle", 1090.0, 1588.0,   8.054, 1.10, 3421.0, 0.49, 0.67,
+                # Vlaisavljevich 2015: skeletal muscle 23–27 MPa.
+                pt_pa_1mhz=25.0e6, pt_sigma_pa=2.0e6)
+BONE   = Tissue(4, "bone",   1908.0, 4080.0, 250.0,   1.0,  1313.0, 0.32, 0.10,
+                # Cortical bone: no intrinsic cavitation.
+                pt_pa_1mhz=float('inf'), pt_sigma_pa=1.0)
 # Kidney parenchyma + RCC (renal cell carcinoma): properties from
 # Duck 1990, IT'IS Foundation v4.1, Mast 2000. Kidney perfusion is
 # extremely high (~58 ml/100 g/min ≈ 9.7 kg/m³/s) — among the highest
 # of any organ — which gives renal histotripsy markedly different
 # bulk-thermal behaviour vs liver despite similar acoustic properties.
-KIDNEY = Tissue(5, "kidney", 1066.0, 1567.0,   8.000, 1.10, 3763.0, 0.53, 9.7)
-TUMOR  = Tissue(6, "rcc",    1050.0, 1550.0,  12.000, 1.10, 3750.0, 0.55, 5.5)
+KIDNEY = Tissue(5, "kidney", 1066.0, 1567.0,   8.000, 1.10, 3763.0, 0.53, 9.7,
+                # Kidney parenchyma is highly vascular and water-rich.
+                # Vlaisavljevich 2015 / Hall 2007 (J Urol 178:2174) suggest
+                # threshold 22–26 MPa at 1 MHz; mean 24.0 MPa, σ = 3.0 MPa.
+                pt_pa_1mhz=24.0e6, pt_sigma_pa=3.0e6)
+TUMOR  = Tissue(6, "rcc",    1050.0, 1550.0,  12.000, 1.10, 3750.0, 0.55, 5.5,
+                # RCC: variable histology (clear-cell, papillary, chromophobe).
+                # Clear-cell RCC (~75 % of cases) has lipid-rich cytoplasm and
+                # variable necrosis — lower threshold than normal parenchyma.
+                # Inferred from Maxwell 2013 tumor data context: 21.5 MPa, σ=2 MPa.
+                pt_pa_1mhz=21.5e6, pt_sigma_pa=2.0e6)
 
 TISSUES = [AIR, SKIN, FAT, MUSCLE, BONE, KIDNEY, TUMOR]
 
@@ -365,10 +394,15 @@ def focused_bowl_pressure(info, props, f0, source_pa) -> np.ndarray:
     env = np.exp(-r_lat2 / (2.0 * (w_lat / 2.355) ** 2)) * np.exp(
         -((X - x_focus) ** 2) / (2.0 * (w_axial / 2.355) ** 2)
     )
-    # Layered absorption integrated along central beam ray.
-    alpha_x = props["alpha"][:, focus_idx[1], focus_idx[2]]
-    cum_atten = np.exp(-np.cumsum(alpha_x) * dx)
-    p = source_pa * env * cum_atten[:, None, None]
+    # 3D heterogeneous attenuation: cumulative path integral along each (j,k)
+    # column from the transducer face to each depth voxel.
+    # For each lateral position (j,k), integrate α(x,j,k)·dx from x=0 inward.
+    # Replaces the 1D central-axis approximation (focus_idx j,k applied to all
+    # lateral positions) with per-ray integrals under the paraxial approximation
+    # valid for the 50mm-aperture / 120mm-ROC bowl (f# = 1.2).
+    # props["alpha"] shape: (Nx, Ny, Nz) in Np/m
+    cum_atten_3d = np.exp(-np.cumsum(props["alpha"], axis=0) * dx)
+    p = source_pa * env * cum_atten_3d
     return p.astype(np.float32)
 
 
@@ -378,14 +412,97 @@ def focused_bowl_pressure(info, props, f0, source_pa) -> np.ndarray:
 
 
 def intrinsic_threshold(f0: float) -> float:
-    """Vlaisavljevich 2015 frequency-dependent intrinsic threshold (Pa)."""
+    """Vlaisavljevich 2015 frequency-dependent intrinsic threshold (Pa).
+
+    Global water-based reference: p_t(f) = 28.2 MPa + 1.4 MPa · log₁₀(f / 1 MHz).
+    Use intrinsic_threshold_tissue_pa() for tissue-specific physics.
+    """
     return 28.2e6 + 1.4e6 * np.log10(f0 / 1e6)
 
 
+def intrinsic_threshold_tissue_pa(tissue: "Tissue", f0: float, T_C: float = 20.0) -> float:
+    """Tissue-specific, frequency- and temperature-dependent intrinsic threshold.
+
+    Model: Vlaisavljevich 2015/2016, Maxwell 2013.
+      p_t(f, T) = p_{t,1MHz} + 1.4 MPa · log₁₀(f / 1 MHz) − 0.3 MPa · max(0, T − 20)
+
+    Temperature correction: −0.3 MPa/°C empirical (Vlaisavljevich 2015 Fig. 7).
+    Reference temperature 20 °C matches in-vitro calibration standard.
+
+    Parameters
+    ----------
+    tissue : Tissue instance with pt_pa_1mhz field set
+    f0     : driving frequency (Hz)
+    T_C    : local temperature (°C, default 20.0 = in-vitro reference)
+
+    Returns
+    -------
+    p_t : threshold magnitude (Pa); inf for tissue with no intrinsic cavitation
+    """
+    if not np.isfinite(tissue.pt_pa_1mhz):
+        return float('inf')
+    freq_shift = 1.4e6 * np.log10(max(f0, 1.0) / 1e6)
+    temp_shift = -0.3e6 * max(0.0, T_C - 20.0)
+    return tissue.pt_pa_1mhz + freq_shift + temp_shift
+
+
 def cav_probability(p, f0):
+    """Global water-based Maxwell 2013 erf-CDF (kept for backward compatibility).
+
+    Prefer cav_probability_tissue() for tissue-specific physics.
+    """
     pt = 28.2e6 + 1.4e6 * np.log10(f0 / 1e6)
     sigma = 0.96e6
     return 0.5 * (1.0 + erf((p - pt) / (sigma * np.sqrt(2.0))))
+
+
+def cav_probability_tissue(
+    p_field: np.ndarray,
+    label_vol: np.ndarray,
+    f0: float,
+    T_field: np.ndarray | None = None,
+) -> np.ndarray:
+    """Per-voxel tissue-specific Maxwell 2013 erf-CDF cavitation probability.
+
+    Each voxel is assigned a threshold p_t and width σ from its tissue label,
+    then:  P_cav(x) = 0.5 · (1 + erf((|p(x)| − p_t(label, f, T)) / (σ · √2)))
+
+    Labels absent from TISSUES use the global water reference (28.2 MPa, σ=0.96 MPa).
+    Tissues with pt_pa_1mhz = inf (AIR, BONE) return P_cav = 0.
+
+    Parameters
+    ----------
+    p_field   : (Nx, Ny, Nz) rarefactional pressure magnitudes (Pa, ≥ 0)
+    label_vol : (Nx, Ny, Nz) int tissue labels matching TISSUES list
+    f0        : driving frequency (Hz)
+    T_field   : (Nx, Ny, Nz) temperature field (°C); None → 20 °C everywhere
+
+    Returns
+    -------
+    pcav : (Nx, Ny, Nz) float32 in [0, 1]
+    """
+    freq_shift = 1.4e6 * np.log10(max(f0, 1.0) / 1e6)
+    pt_field    = np.full(p_field.shape, 28.2e6 + freq_shift, dtype=np.float64)
+    sigma_field = np.full(p_field.shape, 0.96e6,              dtype=np.float64)
+
+    for tissue in TISSUES:
+        mask = label_vol == tissue.label
+        if not mask.any():
+            continue
+        if not np.isfinite(tissue.pt_pa_1mhz):
+            pt_field[mask]    = 1.0e15
+            sigma_field[mask] = 1.0
+            continue
+        pt_base = tissue.pt_pa_1mhz + freq_shift
+        if T_field is not None:
+            temp_corr = -0.3e6 * np.maximum(0.0, T_field[mask] - 20.0)
+            pt_field[mask] = pt_base + temp_corr
+        else:
+            pt_field[mask] = pt_base
+        sigma_field[mask] = tissue.pt_sigma_pa
+
+    pcav = 0.5 * (1.0 + erf((p_field - pt_field) / (sigma_field * np.sqrt(2.0))))
+    return pcav.astype(np.float32)
 
 
 def collapse_strength(p, f0):
@@ -420,9 +537,11 @@ def thermal_maps(p_field, props, sc):
 
 
 def predicted_lesion(p_field, props, sc, info, label_vol):
-    pcav = cav_probability(p_field, sc.f0)
-    coll = collapse_strength(p_field, sc.f0)
+    # Thermal maps first: T_transient feeds the temperature correction for p_t.
     cem43, T_steady, T_transient = thermal_maps(p_field, props, sc)
+    # Per-voxel tissue-specific cavitation probability with temperature correction.
+    pcav = cav_probability_tissue(p_field, label_vol, sc.f0, T_field=T_transient)
+    coll = collapse_strength(p_field, sc.f0)
 
     pulses_per_pt = max(sc.pulses_per_point, 1)
     # Cavitation-cloud radius scales with overpressure (Vlaisavljevich
@@ -432,7 +551,15 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
     # p > p_t kernel and is the correct ablation-mask construction at
     # any grid spacing where dx > λ/4.
     lam_m = 1540.0 / sc.f0
-    cloud_r_m = lam_m / 4.0 * max(sc.pnp / intrinsic_threshold(sc.f0), 1.0)
+    # Use focal-tissue threshold, not the global water reference.
+    _fi0, _fi1, _fi2 = info["focus_idx"]
+    _focus_label   = int(label_vol[_fi0, _fi1, _fi2])
+    _focus_tissue  = next((t for t in TISSUES if t.label == _focus_label), TUMOR)
+    _focus_T_C     = float(T_transient[_fi0, _fi1, _fi2])
+    pt_focal       = intrinsic_threshold_tissue_pa(_focus_tissue, sc.f0, _focus_T_C)
+    if not np.isfinite(pt_focal):
+        pt_focal = intrinsic_threshold(sc.f0)
+    cloud_r_m = lam_m / 4.0 * max(sc.pnp / pt_focal, 1.0)
     cloud_vox = max(int(round(cloud_r_m / info["dx"])), 1)
     if sc.regime == "intrinsic":
         p_acc = 1.0 - (1.0 - pcav) ** pulses_per_pt

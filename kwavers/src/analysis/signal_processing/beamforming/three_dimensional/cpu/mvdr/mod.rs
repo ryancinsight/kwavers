@@ -158,7 +158,10 @@ pub fn mvdr_cpu(
             return 0.0;
         }
         let alpha = tau_s - n0 as f32;
-        alpha.mul_add(rf_data[[frame, ch, n0 + 1, 0]] - rf_data[[frame, ch, n0, 0]], rf_data[[frame, ch, n0, 0]])
+        alpha.mul_add(
+            rf_data[[frame, ch, n0 + 1, 0]] - rf_data[[frame, ch, n0, 0]],
+            rf_data[[frame, ch, n0, 0]],
+        )
     };
 
     // Number of overlapping sub-apertures in each dimension.

@@ -288,7 +288,7 @@ impl KellerMiksisModel {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn molar_heat_capacity_cv(&self, state: &BubbleState) -> f64 {
         state.gas_species.molar_heat_capacity_cv()
     }

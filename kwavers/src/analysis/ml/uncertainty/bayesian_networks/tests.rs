@@ -36,7 +36,9 @@ fn test_prediction_statistics() {
         .map(|i| Array2::from_elem((10, 20), i as f32))
         .collect();
 
-    let result = bayesian.compute_prediction_statistics(&predictions).unwrap();
+    let result = bayesian
+        .compute_prediction_statistics(&predictions)
+        .unwrap();
 
     assert_eq!(result.mean_prediction.dim(), (10, 20));
     assert_eq!(result.uncertainty.dim(), (10, 20));

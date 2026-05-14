@@ -24,7 +24,11 @@ impl BatchFieldHandle {
         let temp_config = BatchFieldConfig::for_3d_fields(nx, ny, nz, 2);
         let primary = SoAFieldBuffer::new(primary_config)?;
         let temp = SoAFieldBuffer::new(temp_config)?;
-        Ok(Self { primary, temp, config: primary_config })
+        Ok(Self {
+            primary,
+            temp,
+            config: primary_config,
+        })
     }
 
     /// Get pressure field (index 0).

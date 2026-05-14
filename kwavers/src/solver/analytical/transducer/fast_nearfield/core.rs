@@ -280,7 +280,7 @@ impl FastNearfieldSolver {
     }
 
     /// Get cached z-distances
-    #[must_use] 
+    #[must_use]
     pub fn cached_z_distances(&self) -> Vec<f64> {
         self.cached_factors
             .keys()
@@ -294,7 +294,7 @@ impl FastNearfieldSolver {
     }
 
     /// Get memory usage estimate (bytes)
-    #[must_use] 
+    #[must_use]
     pub fn memory_usage(&self) -> usize {
         let mut total = 0;
 

@@ -25,7 +25,7 @@ impl<F> std::fmt::Debug for FieldTransform<F> {
 
 impl<F> FieldTransform<F>
 where
-    F: Clone + Send + Sync + 'static,
+    F: Send + Sync + 'static,
 {
     /// Create a new empty transformation pipeline
     #[must_use]
@@ -79,7 +79,7 @@ where
 
 impl<F> Default for FieldTransform<F>
 where
-    F: Clone + Send + Sync + 'static,
+    F: Send + Sync + 'static,
 {
     fn default() -> Self {
         Self::new()
@@ -103,7 +103,7 @@ impl<F> std::fmt::Debug for ReversibleTransform<F> {
 
 impl<F> ReversibleTransform<F>
 where
-    F: Clone + Send + Sync + 'static,
+    F: Send + Sync + 'static,
 {
     pub fn new<G>(forward: FieldTransform<F>, inverse: G) -> Self
     where
@@ -138,35 +138,18 @@ where
     /// Create a scaling transformation
     #[must_use]
     pub fn scale(factor: f64) -> Self {
-        Self::new().then(move |field| field.mapv(|x| x * factor))
+        Self::new().then(move |field| field.mapv_into(|x| x * factor))
     }
+}
 
+impl<T> Array3Transform<T>
+where
+    T: Copy + Send + Sync + 'static + std::ops::Add<Output = T> + std::ops::Div<f64, Output = T>,
+{
     /// Create a smoothing transformation using a simple kernel
     #[must_use]
-    pub fn smooth() -> Self
-    where
-        T: Default + std::ops::Add<Output = T> + std::ops::Div<f64, Output = T>,
-    {
-        Self::new().then(|field| {
-            let mut result = field.clone();
-            let (nx, ny, nz) = field.dim();
-
-            for i in 1..nx - 1 {
-                for j in 1..ny - 1 {
-                    for k in 1..nz - 1 {
-                        let sum = field[[i - 1, j, k]].clone()
-                            + field[[i + 1, j, k]].clone()
-                            + field[[i, j - 1, k]].clone()
-                            + field[[i, j + 1, k]].clone()
-                            + field[[i, j, k - 1]].clone()
-                            + field[[i, j, k + 1]].clone()
-                            + field[[i, j, k]].clone();
-                        result[[i, j, k]] = sum / 7.0;
-                    }
-                }
-            }
-            result
-        })
+    pub fn smooth() -> Self {
+        Self::new().then(smooth_field)
     }
 }
 
@@ -177,7 +160,64 @@ where
     /// Create a scaling transformation for 2D fields
     #[must_use]
     pub fn scale(factor: f64) -> Self {
-        Self::new().then(move |field| field.mapv(|x| x * factor))
+        Self::new().then(move |field| field.mapv_into(|x| x * factor))
+    }
+}
+
+/// Apply the seven-point smoothing stencil with one output allocation.
+///
+/// Boundary cells are copied from the input because the centered stencil is not
+/// defined there. Interior cells use the axis-neighbor helper below, whose
+/// `AXIS` and `FORWARD` const parameters produce one inlined specialization per
+/// structural stencil direction.
+fn smooth_field<T>(field: Array3<T>) -> Array3<T>
+where
+    T: Copy + std::ops::Add<Output = T> + std::ops::Div<f64, Output = T>,
+{
+    let shape = field.dim();
+    Array3::from_shape_fn(shape, |idx| {
+        if is_boundary(idx, shape) {
+            field[idx]
+        } else {
+            smooth_interior_cell(&field, idx)
+        }
+    })
+}
+
+fn is_boundary((i, j, k): (usize, usize, usize), (nx, ny, nz): (usize, usize, usize)) -> bool {
+    i == 0 || j == 0 || k == 0 || i + 1 == nx || j + 1 == ny || k + 1 == nz
+}
+
+#[inline]
+fn smooth_interior_cell<T>(field: &Array3<T>, (i, j, k): (usize, usize, usize)) -> T
+where
+    T: Copy + std::ops::Add<Output = T> + std::ops::Div<f64, Output = T>,
+{
+    let sum = axis_neighbor::<0, false, T>(field, i, j, k)
+        + axis_neighbor::<0, true, T>(field, i, j, k)
+        + axis_neighbor::<1, false, T>(field, i, j, k)
+        + axis_neighbor::<1, true, T>(field, i, j, k)
+        + axis_neighbor::<2, false, T>(field, i, j, k)
+        + axis_neighbor::<2, true, T>(field, i, j, k)
+        + field[[i, j, k]];
+    sum / 7.0
+}
+
+#[inline]
+fn axis_neighbor<const AXIS: usize, const FORWARD: bool, T: Copy>(
+    field: &Array3<T>,
+    i: usize,
+    j: usize,
+    k: usize,
+) -> T {
+    match (AXIS, FORWARD) {
+        (0, false) => field[[i - 1, j, k]],
+        (0, true) => field[[i + 1, j, k]],
+        (1, false) => field[[i, j - 1, k]],
+        (1, true) => field[[i, j + 1, k]],
+        (2, false) => field[[i, j, k - 1]],
+        (2, true) => field[[i, j, k + 1]],
+        _ => unreachable!("Array3 smoothing only supports axes 0, 1, and 2"),
     }
 }
 
@@ -186,6 +226,9 @@ mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
     use ndarray::Array3;
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct NonCloneValue(i32);
 
     #[test]
     fn test_generic_transform() {
@@ -196,5 +239,38 @@ mod tests {
 
         let result = transform.apply(field);
         assert_abs_diff_eq!(result[[2, 2, 2]], 3.0);
+    }
+
+    #[test]
+    fn transform_pipeline_accepts_non_clone_owned_values() {
+        let transform = FieldTransform::new()
+            .then(|value: NonCloneValue| NonCloneValue(value.0 + 3))
+            .then(|value: NonCloneValue| NonCloneValue(value.0 * 2));
+
+        let result = transform.apply(NonCloneValue(4));
+
+        assert_eq!(result, NonCloneValue(14));
+    }
+
+    #[test]
+    fn smooth_preserves_boundaries_and_matches_quadratic_stencil() {
+        let field = Array3::from_shape_fn((5, 5, 5), |(i, j, k)| (i * i + j * j + k * k) as f64);
+        let transform = Array3Transform::<f64>::smooth();
+
+        let result = transform.apply(field);
+
+        assert_abs_diff_eq!(result[[0, 2, 2]], 8.0);
+        assert_abs_diff_eq!(result[[2, 2, 2]], 90.0 / 7.0, epsilon = 1e-15);
+    }
+
+    #[test]
+    fn smooth_handles_domains_without_interior_stencil() {
+        let field = Array3::from_shape_fn((1, 2, 3), |(i, j, k)| (i + j + k) as f64);
+        let transform = Array3Transform::<f64>::smooth();
+
+        let result = transform.apply(field);
+
+        assert_abs_diff_eq!(result[[0, 0, 0]], 0.0);
+        assert_abs_diff_eq!(result[[0, 1, 2]], 3.0);
     }
 }

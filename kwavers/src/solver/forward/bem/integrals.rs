@@ -255,14 +255,18 @@ pub(crate) fn compute_singular_integrals(
             let dir_y = v10[1] + v * v21[1];
             let dir_z = v10[2] + v * v21[2];
 
-            let r_dist = u * dir_z.mul_add(dir_z, dir_x.mul_add(dir_x, dir_y * dir_y)).sqrt();
+            let r_dist = u * dir_z
+                .mul_add(dir_z, dir_x.mul_add(dir_x, dir_y * dir_y))
+                .sqrt();
 
             // Jacobian: J = 2·Area·u
             let jac = 2.0 * area * u;
 
             let g_val = if r_dist < 1e-12 {
                 // Limit u→0: G·J → 2·Area / (4π·|dir|)
-                let dir_norm = dir_z.mul_add(dir_z, dir_x.mul_add(dir_x, dir_y * dir_y)).sqrt();
+                let dir_norm = dir_z
+                    .mul_add(dir_z, dir_x.mul_add(dir_x, dir_y * dir_y))
+                    .sqrt();
                 Complex64::new(2.0 * area / (4.0 * PI * dir_norm), 0.0)
             } else {
                 Complex64::new(0.0, k * r_dist).exp() / (4.0 * PI * r_dist) * jac

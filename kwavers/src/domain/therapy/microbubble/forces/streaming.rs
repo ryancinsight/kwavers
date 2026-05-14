@@ -36,7 +36,9 @@ impl StreamingVelocity {
     ///
     #[must_use]
     pub fn speed(&self) -> f64 {
-        self.vz.mul_add(self.vz, self.vx.mul_add(self.vx, self.vy * self.vy)).sqrt()
+        self.vz
+            .mul_add(self.vz, self.vx.mul_add(self.vx, self.vy * self.vy))
+            .sqrt()
     }
 }
 
@@ -69,8 +71,13 @@ pub fn calculate_acoustic_streaming_velocity(
     let decay = 1.0 / r_ratio.powi(2);
     let v_magnitude = re * mach_sq * radius_equilibrium * omega * decay;
 
-    let dir_mag =
-        direction.2.mul_add(direction.2, direction.0.mul_add(direction.0, direction.1 * direction.1)).sqrt();
+    let dir_mag = direction
+        .2
+        .mul_add(
+            direction.2,
+            direction.0.mul_add(direction.0, direction.1 * direction.1),
+        )
+        .sqrt();
     if dir_mag < 1e-10 {
         return Ok(StreamingVelocity::zero());
     }

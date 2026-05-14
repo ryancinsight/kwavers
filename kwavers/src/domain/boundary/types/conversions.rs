@@ -26,12 +26,8 @@ impl From<ElectromagneticBoundaryType> for BoundaryType {
             ElectromagneticBoundaryType::PerfectElectricConductor => Self::Dirichlet,
             ElectromagneticBoundaryType::PerfectMagneticConductor => Self::Neumann,
             ElectromagneticBoundaryType::Absorbing => Self::Absorbing,
-            ElectromagneticBoundaryType::Periodic { k_bloch: _ } => {
-                Self::Periodic { phase: 0.0 }
-            }
-            ElectromagneticBoundaryType::Impedance { impedance } => {
-                Self::Impedance { impedance }
-            }
+            ElectromagneticBoundaryType::Periodic { k_bloch: _ } => Self::Periodic { phase: 0.0 },
+            ElectromagneticBoundaryType::Impedance { impedance } => Self::Impedance { impedance },
         }
     }
 }

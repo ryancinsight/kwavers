@@ -3,8 +3,8 @@ mod epoch;
 mod persistence;
 
 use super::{
-    CheckpointManager, DistributedPinnTrainer, DistributedTrainingConfig,
-    PerformanceStats, TrainingCheckpoint, TrainingCoordinator, TrainingState,
+    CheckpointManager, DistributedPinnTrainer, DistributedTrainingConfig, PerformanceStats,
+    TrainingCheckpoint, TrainingCoordinator, TrainingState,
 };
 use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::{

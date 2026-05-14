@@ -78,7 +78,9 @@ pub fn find_interfaces_pointwise<M: CoreMedium + ?Sized>(
                     let drhoz_z = (rho_zp - rho_zm) / (zp - zm);
 
                     // Normalize gradient to unit normal
-                    let grad_mag = drhoz_z.mul_add(drhoz_z, drhox.mul_add(drhox, drhoz * drhoz)).sqrt();
+                    let grad_mag = drhoz_z
+                        .mul_add(drhoz_z, drhox.mul_add(drhox, drhoz * drhoz))
+                        .sqrt();
                     let normal = if grad_mag > 1e-10 {
                         [drhox / grad_mag, drhoz / grad_mag, drhoz_z / grad_mag]
                     } else {

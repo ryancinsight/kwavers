@@ -28,8 +28,12 @@ This directory is the source tree for the in-repository book on ultrasound physi
 - [Simulation Orchestration: The Capability Catalog](simulation_orchestration.md)
 - [Passive Acoustic Mapping](passive_acoustic_mapping.md)
 - [LIFU-Mediated Blood–Brain Barrier Opening](bbb_lifu_opening.md)
-
-- [Same-Device Therapeutic Ultrasound and FWI/RTM Monitoring](theranostic_fwi_platforms.md)
+- [Transcranial HIFU and BBB Treatment Planning](hifu_transcranial_ablation.md)
+- [Low-Intensity Ultrasound Neuromodulation](neuromodulation.md)
+- [Seismic Full-Waveform Brain Imaging](seismic_fwi_brain_imaging.md)
+- [Abdominal Histotripsy FWI Targeting and Lesion Monitoring](abdominal_histotripsy_fwi.md)
+- [Same-Device Therapeutic Ultrasound, Finite-Frequency Inverse, and RTM Monitoring](theranostic_fwi_platforms.md)
+- [Intravascular Ultrasound Imaging and Therapy](intravascular_ultrasound.md)
 
 ## Figure Sources
 

@@ -154,7 +154,9 @@ impl MUSICProcessor {
                 let dx = position[0] - existing.position[0];
                 let dy = position[1] - existing.position[1];
                 let dz = position[2] - existing.position[2];
-                if dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt() < self.config.min_source_separation {
+                if dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
+                    < self.config.min_source_separation
+                {
                     too_close = true;
                     break;
                 }

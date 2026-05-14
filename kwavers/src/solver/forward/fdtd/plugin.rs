@@ -31,7 +31,8 @@ impl FdtdPlugin {
                 id: "fdtd_solver".to_owned(),
                 name: "FDTD Solver".to_owned(),
                 version: "1.0.0".to_owned(),
-                description: "Finite-Difference Time Domain solver for acoustic wave propagation".to_owned(),
+                description: "Finite-Difference Time Domain solver for acoustic wave propagation"
+                    .to_owned(),
                 author: "Kwavers Team".to_owned(),
                 license: "MIT".to_owned(),
             },
@@ -40,7 +41,6 @@ impl FdtdPlugin {
             solver: None,
         })
     }
-
 }
 
 impl crate::domain::plugin::Plugin for FdtdPlugin {

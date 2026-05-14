@@ -33,7 +33,7 @@ impl FemAssembly {
     }
 
     /// Pre-allocate sparse matrices with estimated sparsity
-    #[must_use] 
+    #[must_use]
     pub fn preallocate_matrices(
         &self,
         num_nodes: usize,

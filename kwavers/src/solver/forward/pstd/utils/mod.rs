@@ -100,7 +100,9 @@ pub fn compute_k_magnitude(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>)
         .and(ky)
         .and(kz)
         .par_for_each(|km, &kx_val, &ky_val, &kz_val| {
-            *km = kz_val.mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val)).sqrt();
+            *km = kz_val
+                .mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val))
+                .sqrt();
         });
 
     k_mag
@@ -122,14 +124,16 @@ pub fn compute_kspace_correction_factors(
     match correction_type {
         CorrectionType::Liu1997 => {
             // Liu (1997) correction: sinc function
-            Zip::from(&mut correction).and(kx).and(ky).and(kz).par_for_each(
-                |c, &kx_val, &ky_val, &kz_val| {
+            Zip::from(&mut correction)
+                .and(kx)
+                .and(ky)
+                .and(kz)
+                .par_for_each(|c, &kx_val, &ky_val, &kz_val| {
                     let sinc_x = sinc(kx_val * grid.dx / 2.0);
                     let sinc_y = sinc(ky_val * grid.dy / 2.0);
                     let sinc_z = sinc(kz_val * grid.dz / 2.0);
                     *c = sinc_x * sinc_y * sinc_z;
-                },
-            );
+                });
         }
         CorrectionType::Treeby2010 => {
             // Treeby & Cox (2010) k-space correction: sinc(c_ref * dt * |k| / 2)
@@ -145,14 +149,16 @@ pub fn compute_kspace_correction_factors(
             // Although np.sinc (Python kspaceFirstOrder3D.py line 298) uses normalised
             // sinc, the Python-precomputed kappa is NOT saved to disk — the C++ binary
             // recomputes kappa internally using sin(x)/x.
-            Zip::from(&mut correction).and(kx).and(ky).and(kz).par_for_each(
-                |c, &kx_val, &ky_val, &kz_val| {
+            Zip::from(&mut correction)
+                .and(kx)
+                .and(ky)
+                .and(kz)
+                .par_for_each(|c, &kx_val, &ky_val, &kz_val| {
                     let k_sq = kz_val.mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val));
                     let k_mag = k_sq.sqrt();
                     let arg = c_ref * dt * k_mag / 2.0;
                     *c = sinc(arg);
-                },
-            );
+                });
         }
         CorrectionType::None => {
             // No correction (array initialized to 1.0)
@@ -213,20 +219,24 @@ pub fn apply_antialiasing_filter(
             let transition_width = 0.1 * k_max_squared;
             let cutoff = 0.8 * k_max_squared;
 
-            Zip::from(&mut filter).and(k_squared).par_for_each(|f, &k2| {
-                if k2 > cutoff {
-                    let x = (k2 - cutoff) / transition_width;
-                    *f = 0.5 * (1.0 - x.tanh());
-                }
-            });
+            Zip::from(&mut filter)
+                .and(k_squared)
+                .par_for_each(|f, &k2| {
+                    if k2 > cutoff {
+                        let x = (k2 - cutoff) / transition_width;
+                        *f = 0.5 * (1.0 - x.tanh());
+                    }
+                });
         }
         FilterType::Sharp => {
             // Sharp cutoff at Nyquist
-            Zip::from(&mut filter).and(k_squared).par_for_each(|f, &k2| {
-                if k2 > k_max_squared {
-                    *f = 0.0;
-                }
-            });
+            Zip::from(&mut filter)
+                .and(k_squared)
+                .par_for_each(|f, &k2| {
+                    if k2 > k_max_squared {
+                        *f = 0.0;
+                    }
+                });
         }
         FilterType::None => {
             // No filtering

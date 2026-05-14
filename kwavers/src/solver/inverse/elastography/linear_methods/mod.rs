@@ -78,7 +78,7 @@ pub struct ShearWaveInversion {
 
 impl ShearWaveInversion {
     /// Create new shear wave inversion processor
-    #[must_use] 
+    #[must_use]
     pub fn new(config: ShearWaveInversionConfig) -> Self {
         Self { config }
     }

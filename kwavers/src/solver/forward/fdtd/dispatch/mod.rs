@@ -65,7 +65,7 @@ pub enum StencilStrategy {
 
 impl StencilStrategy {
     /// Get string representation
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Scalar => "Scalar",
@@ -76,7 +76,7 @@ impl StencilStrategy {
     }
 
     /// Select best available strategy
-    #[must_use] 
+    #[must_use]
     pub fn select_best() -> Self {
         let config = get_simd_config();
         match config.level {
@@ -87,7 +87,7 @@ impl StencilStrategy {
     }
 
     /// Verify strategy is available on this system
-    #[must_use] 
+    #[must_use]
     pub fn is_available(&self) -> bool {
         match self {
             Self::Scalar => true,
@@ -297,14 +297,21 @@ impl FdtdStencilDispatcher {
         for k in 1..self.nz - 1 {
             for j in 1..self.ny - 1 {
                 for i in 1..self.nx - 1 {
-                    let laplacian = 6.0f64.mul_add(-p_curr[[i, j, k]], p_curr[[i - 1, j, k]]
-                        + p_curr[[i + 1, j, k]]
-                        + p_curr[[i, j - 1, k]]
-                        + p_curr[[i, j + 1, k]]
-                        + p_curr[[i, j, k - 1]] + p_curr[[i, j, k + 1]]);
+                    let laplacian = 6.0f64.mul_add(
+                        -p_curr[[i, j, k]],
+                        p_curr[[i - 1, j, k]]
+                            + p_curr[[i + 1, j, k]]
+                            + p_curr[[i, j - 1, k]]
+                            + p_curr[[i, j + 1, k]]
+                            + p_curr[[i, j, k - 1]]
+                            + p_curr[[i, j, k + 1]],
+                    );
 
                     // Leapfrog: p^{n+1} = 2·p^n − p^{n−1} + c²·Δt²·∇²p^n
-                    self.p_scratch[[i, j, k]] = self.pressure_coeff.mul_add(laplacian, 2.0f64.mul_add(p_curr[[i, j, k]], -p_prev[[i, j, k]]));
+                    self.p_scratch[[i, j, k]] = self.pressure_coeff.mul_add(
+                        laplacian,
+                        2.0f64.mul_add(p_curr[[i, j, k]], -p_prev[[i, j, k]]),
+                    );
                 }
             }
         }
@@ -318,13 +325,13 @@ impl FdtdStencilDispatcher {
     }
 
     /// Get current strategy
-    #[must_use] 
+    #[must_use]
     pub fn strategy(&self) -> StencilStrategy {
         self.strategy
     }
 
     /// Get performance metrics
-    #[must_use] 
+    #[must_use]
     pub fn metrics(&self) -> DispatchMetrics {
         let config = get_simd_config();
         DispatchMetrics {

@@ -51,7 +51,7 @@ pub struct CavitationCloudDynamics {
 
 impl CavitationCloudDynamics {
     /// Create new cavitation cloud dynamics model with parameters and grid dimensions.
-    #[must_use] 
+    #[must_use]
     pub fn new(parameters: CloudParameters, dimensions: (usize, usize, usize)) -> Self {
         Self {
             parameters,
@@ -61,7 +61,7 @@ impl CavitationCloudDynamics {
     }
 
     /// Get cloud parameters.
-    #[must_use] 
+    #[must_use]
     pub fn parameters(&self) -> &CloudParameters {
         &self.parameters
     }
@@ -132,7 +132,8 @@ impl CavitationCloudDynamics {
             let current_density = *density;
             let growth = drive * (max_density - current_density).max(0.0) * growth_rate;
             let collapse = (1.0 - drive) * current_density * collapse_rate;
-            let updated = (growth - collapse).mul_add(dt, current_density)
+            let updated = (growth - collapse)
+                .mul_add(dt, current_density)
                 .clamp(0.0, max_density)
                 .max(0.0);
 
@@ -150,13 +151,13 @@ impl CavitationCloudDynamics {
     }
 
     /// Get total eroded mass at specific time (time is ignored in this simple stateful model).
-    #[must_use] 
+    #[must_use]
     pub fn total_eroded_mass(&self, _time: f64) -> f64 {
         self.accumulated_eroded_mass
     }
 
     /// Get cloud density field.
-    #[must_use] 
+    #[must_use]
     pub fn cloud_density(&self) -> &Array3<f64> {
         &self.density_field
     }

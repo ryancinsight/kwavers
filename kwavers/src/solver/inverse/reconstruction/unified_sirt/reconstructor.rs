@@ -23,7 +23,7 @@ pub struct SirtReconstructor {
 
 impl SirtReconstructor {
     /// Create a new reconstructor with the given configuration.
-    #[must_use] 
+    #[must_use]
     pub fn new(config: SirtConfig) -> Self {
         Self { config }
     }

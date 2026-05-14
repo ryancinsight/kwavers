@@ -60,7 +60,7 @@ pub struct SafetyMonitor {
 
 impl SafetyMonitor {
     /// Create new safety monitor with 10 Hz check interval.
-    #[must_use] 
+    #[must_use]
     pub fn new(limits: SafetyLimits) -> Self {
         let check_interval = Duration::from_millis(100);
         Self {
@@ -145,13 +145,13 @@ impl SafetyMonitor {
     }
 
     /// Get current safety state.
-    #[must_use] 
+    #[must_use]
     pub fn safety_state(&self) -> SafetyLevel {
         self.current_state
     }
 
     /// Get list of current safety violations.
-    #[must_use] 
+    #[must_use]
     pub fn violations(&self) -> &[SafetyViolation] {
         &self.violations
     }
@@ -162,7 +162,7 @@ impl SafetyMonitor {
     }
 
     /// Return `true` if emergency shutdown is required.
-    #[must_use] 
+    #[must_use]
     pub fn requires_emergency_shutdown(&self) -> bool {
         self.current_state >= SafetyLevel::Critical
     }

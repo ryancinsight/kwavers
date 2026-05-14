@@ -26,8 +26,7 @@
 mod scenario;
 
 pub use scenario::{
-    BenefitDetriment, HistotripsyRegime, HistotripsyScenario, PulsePattern,
-    intrinsic_threshold_pa,
+    intrinsic_threshold_pa, BenefitDetriment, HistotripsyRegime, HistotripsyScenario, PulsePattern,
 };
 
 #[cfg(test)]

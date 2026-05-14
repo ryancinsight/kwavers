@@ -115,7 +115,13 @@ pub(super) fn compute_jacobian(
     }
 
     // ── Determinant (Sarrus / cofactor expansion along row 0) ─────────────
-    let det = j[[0, 2]].mul_add(j[[1, 0]].mul_add(j[[2, 1]], -(j[[1, 1]] * j[[2, 0]])), j[[0, 0]].mul_add(j[[1, 1]].mul_add(j[[2, 2]], -(j[[1, 2]] * j[[2, 1]])), -(j[[0, 1]] * j[[1, 0]].mul_add(j[[2, 2]], -(j[[1, 2]] * j[[2, 0]])))));
+    let det = j[[0, 2]].mul_add(
+        j[[1, 0]].mul_add(j[[2, 1]], -(j[[1, 1]] * j[[2, 0]])),
+        j[[0, 0]].mul_add(
+            j[[1, 1]].mul_add(j[[2, 2]], -(j[[1, 2]] * j[[2, 1]])),
+            -(j[[0, 1]] * j[[1, 0]].mul_add(j[[2, 2]], -(j[[1, 2]] * j[[2, 0]]))),
+        ),
+    );
 
     if det.abs() < 1e-12 {
         return Err(NumericalError::SingularMatrix {

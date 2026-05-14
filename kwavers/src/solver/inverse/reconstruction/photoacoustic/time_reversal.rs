@@ -84,7 +84,8 @@ impl TimeReversal {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    k_squared[[i, j, k]] = kz[k].mul_add(kz[k], ky[j].mul_add(ky[j], kx[i].powi(2)));
+                    k_squared[[i, j, k]] =
+                        kz[k].mul_add(kz[k], ky[j].mul_add(ky[j], kx[i].powi(2)));
                 }
             }
         }

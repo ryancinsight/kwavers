@@ -25,7 +25,13 @@ impl PlaneWaveSolution {
         let omega = 2.0 * PI * frequency;
 
         // Normalize direction vector
-        let norm = direction.2.mul_add(direction.2, direction.1.mul_add(direction.1, direction.0.powi(2))).sqrt();
+        let norm = direction
+            .2
+            .mul_add(
+                direction.2,
+                direction.1.mul_add(direction.1, direction.0.powi(2)),
+            )
+            .sqrt();
         let dir = (direction.0 / norm, direction.1 / norm, direction.2 / norm);
 
         // Apply dispersion correction for k-space methods
@@ -39,7 +45,8 @@ impl PlaneWaveSolution {
                     let y = j as f64 * grid.dy;
                     let z = k_idx as f64 * grid.dz;
 
-                    let phase = k_dispersed * dir.2.mul_add(z, dir.0.mul_add(x, dir.1 * y)) - omega * time;
+                    let phase =
+                        k_dispersed * dir.2.mul_add(z, dir.0.mul_add(x, dir.1 * y)) - omega * time;
                     field[[i, j, k_idx]] = amplitude * phase.sin();
                 }
             }
@@ -93,12 +100,11 @@ mod tests {
     #[test]
     fn plane_wave_zero_at_origin_t0_x_direction() {
         let grid = water_grid_one_wavelength();
-        let field = PlaneWaveSolution::generate(
-            &grid, 1e6, 10.0, 1500.0, 0.0, (1.0, 0.0, 0.0),
-        );
+        let field = PlaneWaveSolution::generate(&grid, 1e6, 10.0, 1500.0, 0.0, (1.0, 0.0, 0.0));
         assert!(
             field[[0, 0, 0]].abs() < 1e-13,
-            "field at origin must be 0 (got {:.3e})", field[[0, 0, 0]]
+            "field at origin must be 0 (got {:.3e})",
+            field[[0, 0, 0]]
         );
     }
 
@@ -109,9 +115,8 @@ mod tests {
     fn plane_wave_bounded_by_amplitude_everywhere() {
         let grid = water_grid_one_wavelength();
         let amplitude = 7.0_f64;
-        let field = PlaneWaveSolution::generate(
-            &grid, 1e6, amplitude, 1500.0, 0.0, (1.0, 0.0, 0.0),
-        );
+        let field =
+            PlaneWaveSolution::generate(&grid, 1e6, amplitude, 1500.0, 0.0, (1.0, 0.0, 0.0));
         for &v in field.iter() {
             assert!(
                 v.abs() <= amplitude * 1.01,
@@ -124,9 +129,7 @@ mod tests {
     #[test]
     fn plane_wave_shape_matches_grid() {
         let grid = water_grid_one_wavelength();
-        let field = PlaneWaveSolution::generate(
-            &grid, 1e6, 1.0, 1500.0, 0.0, (1.0, 0.0, 0.0),
-        );
+        let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, 0.0, (1.0, 0.0, 0.0));
         assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
     }
 
@@ -142,13 +145,11 @@ mod tests {
         let f = 1e6_f64;
         let c = 1500.0_f64;
         let lam = c / f;
-        let dx = lam / nx as f64;   // N grid points per wavelength
+        let dx = lam / nx as f64; // N grid points per wavelength
         let grid = Grid::new(nx, 4, 4, dx, dx, dx).unwrap();
 
         let amplitude = 5.0_f64;
-        let field = PlaneWaveSolution::generate(
-            &grid, f, amplitude, c, 0.0, (1.0, 0.0, 0.0),
-        );
+        let field = PlaneWaveSolution::generate(&grid, f, amplitude, c, 0.0, (1.0, 0.0, 0.0));
 
         // At i = nx/4: k·x = (2π/λ)·(λ/4) = π/2
         let k = 2.0 * PI * f / c;

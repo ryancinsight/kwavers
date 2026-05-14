@@ -50,7 +50,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Dynamic viscosity [Pa·s]
-    #[must_use] 
+    #[must_use]
     pub fn dynamic_viscosity_water(&self, temperature: f64) -> f64 {
         const A: f64 = 2.414e-5; // Pa·s  — pre-exponential factor
         const B: f64 = 247.8; // °C    — activation parameter
@@ -109,7 +109,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Kinematic viscosity [m²/s]
-    #[must_use] 
+    #[must_use]
     pub fn kinematic_viscosity_water(&self, temperature: f64) -> f64 {
         let eta = self.dynamic_viscosity_water(temperature);
         let rho = WaterProperties::density(temperature);
@@ -128,7 +128,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Thermal diffusivity [m²/s]
-    #[must_use] 
+    #[must_use]
     pub fn thermal_diffusivity_water(&self, temperature: f64) -> f64 {
         const K_THERM: f64 = 0.598; // W/(m·K) at 20°C
         const CP: f64 = 4182.0; // J/(kg·K)
@@ -146,7 +146,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Prandtl number (dimensionless)
-    #[must_use] 
+    #[must_use]
     pub fn prandtl_number_water(&self, temperature: f64) -> f64 {
         let nu = self.kinematic_viscosity_water(temperature);
         let kappa = self.thermal_diffusivity_water(temperature);
@@ -162,7 +162,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Reynolds number (dimensionless)
-    #[must_use] 
+    #[must_use]
     pub fn reynolds_number_water(&self, velocity: f64, length: f64, temperature: f64) -> f64 {
         let rho = WaterProperties::density(temperature);
         let eta = self.dynamic_viscosity_water(temperature);

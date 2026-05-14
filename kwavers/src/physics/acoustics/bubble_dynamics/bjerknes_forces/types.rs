@@ -82,9 +82,12 @@ mod tests {
     #[test]
     fn coalescence_distance_less_than_interaction_range() {
         let cfg = BjerknesConfig::default();
-        assert!(cfg.coalescence_distance < cfg.interaction_range,
+        assert!(
+            cfg.coalescence_distance < cfg.interaction_range,
             "coalescence_distance ({}) must be < interaction_range ({})",
-            cfg.coalescence_distance, cfg.interaction_range);
+            cfg.coalescence_distance,
+            cfg.interaction_range
+        );
     }
 
     /// InteractionType variants are distinct.

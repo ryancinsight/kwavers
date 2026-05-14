@@ -14,7 +14,7 @@ pub enum DeviceClass {
 
 impl DeviceClass {
     /// Get string representation
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::ClassI => "Class I",
@@ -24,7 +24,7 @@ impl DeviceClass {
     }
 
     /// Get risk level description
-    #[must_use] 
+    #[must_use]
     pub fn risk_level(&self) -> &'static str {
         match self {
             Self::ClassI => "Low Risk",

@@ -118,27 +118,27 @@ impl PhysicsLossConfig {
         Ok(())
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_loss_weights(mut self, lambda_data: f64, lambda_physics: f64) -> Self {
         self.lambda_data_init = lambda_data;
         self.lambda_physics_init = lambda_physics;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_wave_params(mut self, sound_speed: f64, frequency: f64) -> Self {
         self.sound_speed = sound_speed;
         self.frequency = frequency;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_schedule(mut self, schedule: WeightSchedule) -> Self {
         self.weight_schedule = schedule;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn without_history(mut self) -> Self {
         self.track_history = false;
         self

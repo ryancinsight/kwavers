@@ -287,7 +287,6 @@ impl IterativeBornSolver {
 
     /// Compute residual for convergence check
     fn compute_residual<M: Medium>(&self, wavenumber: f64, medium: &M) -> f64 {
-
         let mut residual_sum = 0.0;
         let k_squared = wavenumber * wavenumber;
 

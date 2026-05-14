@@ -19,7 +19,7 @@ pub struct PerformanceMetrics {
 
 impl PerformanceMetrics {
     /// Calculate performance statistics
-    #[must_use] 
+    #[must_use]
     pub fn statistics(&self) -> PerformanceStatistics {
         let average_kernel_time = if self.kernels_executed > 0 {
             self.total_kernel_time / self.kernels_executed as f64

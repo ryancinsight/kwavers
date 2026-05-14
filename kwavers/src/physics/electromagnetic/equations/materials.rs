@@ -18,7 +18,7 @@ impl EMMaterialUtils {
     ///
     /// - `shape`: Grid dimensions (e.g., `[nx, ny, nz]` for 3D)
     /// - `props`: Canonical electromagnetic property data
-    #[must_use] 
+    #[must_use]
     pub fn create_uniform_distribution(
         shape: &[usize],
         props: crate::domain::medium::properties::ElectromagneticPropertyData,
@@ -54,7 +54,7 @@ pub struct EMMaterialDistribution {
 
 impl EMMaterialDistribution {
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn vacuum(shape: &[usize]) -> Self {
         let props = crate::domain::medium::properties::ElectromagneticPropertyData::vacuum();
         EMMaterialUtils::create_uniform_distribution(shape, props)
@@ -113,14 +113,14 @@ impl EMMaterialDistribution {
 
     /// Get shape of the material distribution grid
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn shape(&self) -> &[usize] {
         self.permittivity.shape()
     }
 
     /// Get number of dimensions
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn ndim(&self) -> usize {
         self.permittivity.ndim()
     }

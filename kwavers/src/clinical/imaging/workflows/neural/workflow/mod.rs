@@ -71,7 +71,7 @@ impl RealTimeWorkflow {
     /// Create new real-time workflow manager
     ///
     /// Initializes empty performance history and quality metrics.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             performance_history: Vec::new(),
@@ -208,7 +208,7 @@ impl RealTimeWorkflow {
     /// # Returns
     ///
     /// true if average processing time is below 100ms threshold
-    #[must_use] 
+    #[must_use]
     pub fn meets_performance_target(&self) -> bool {
         self.quality_metrics
             .get("avg_processing_time")
@@ -229,7 +229,7 @@ impl RealTimeWorkflow {
     /// # Returns
     ///
     /// Health status string
-    #[must_use] 
+    #[must_use]
     pub fn get_health_status(&self) -> String {
         let avg_time = self
             .quality_metrics
@@ -263,7 +263,7 @@ impl RealTimeWorkflow {
     }
 
     /// Get number of workflow executions tracked
-    #[must_use] 
+    #[must_use]
     pub fn execution_count(&self) -> usize {
         self.performance_history.len()
     }

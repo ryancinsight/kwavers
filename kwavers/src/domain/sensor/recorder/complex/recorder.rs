@@ -55,13 +55,13 @@ pub struct Recorder {
 
 impl Recorder {
     /// Get reference to the sensor
-    #[must_use] 
+    #[must_use]
     pub fn sensor(&self) -> &GridSensorSet {
         &self.sensor
     }
 
     /// Get pressure data as Array2 for compatibility
-    #[must_use] 
+    #[must_use]
     pub fn pressure_data(&self) -> Option<Array2<f64>> {
         if self.pressure_sensor_data.is_empty() {
             return None;
@@ -81,7 +81,7 @@ impl Recorder {
     }
 
     /// Get light data as Array2 for compatibility
-    #[must_use] 
+    #[must_use]
     pub fn light_data(&self) -> Option<Array2<f64>> {
         if self.light_sensor_data.is_empty() {
             return None;

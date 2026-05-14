@@ -252,25 +252,31 @@ impl PSTDSolver {
 
             match source.source_type() {
                 SourceField::VelocityX => {
-                    Zip::from(&mut self.fields.ux).and(mask).par_for_each(|u, &m| {
-                        if m.abs() > 1e-12 {
-                            *u += m * amp;
-                        }
-                    });
+                    Zip::from(&mut self.fields.ux)
+                        .and(mask)
+                        .par_for_each(|u, &m| {
+                            if m.abs() > 1e-12 {
+                                *u += m * amp;
+                            }
+                        });
                 }
                 SourceField::VelocityY => {
-                    Zip::from(&mut self.fields.uy).and(mask).par_for_each(|u, &m| {
-                        if m.abs() > 1e-12 {
-                            *u += m * amp;
-                        }
-                    });
+                    Zip::from(&mut self.fields.uy)
+                        .and(mask)
+                        .par_for_each(|u, &m| {
+                            if m.abs() > 1e-12 {
+                                *u += m * amp;
+                            }
+                        });
                 }
                 SourceField::VelocityZ => {
-                    Zip::from(&mut self.fields.uz).and(mask).par_for_each(|u, &m| {
-                        if m.abs() > 1e-12 {
-                            *u += m * amp;
-                        }
-                    });
+                    Zip::from(&mut self.fields.uz)
+                        .and(mask)
+                        .par_for_each(|u, &m| {
+                            if m.abs() > 1e-12 {
+                                *u += m * amp;
+                            }
+                        });
                 }
                 SourceField::Pressure => {}
             }

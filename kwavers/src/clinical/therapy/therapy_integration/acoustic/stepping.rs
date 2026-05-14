@@ -1,5 +1,5 @@
-use crate::core::error::{KwaversError, KwaversResult};
 use super::AcousticWaveSolver;
+use crate::core::error::{KwaversError, KwaversResult};
 
 impl AcousticWaveSolver {
     /// Advance simulation by one time step.

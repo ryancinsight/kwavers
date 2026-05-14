@@ -85,7 +85,11 @@ impl ValidationReport {
             self.fdtd_time_secs,
             self.pinn_time_secs,
             self.speedup_factor,
-            if self.passes(0.10) { "✅ PASS" } else { "❌ FAIL" }
+            if self.passes(0.10) {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            }
         )
     }
 }
@@ -141,7 +145,11 @@ pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
     let correlation = compute_correlation(&fdtd_solution, &pinn_prediction)?;
     let mean_relative_error = compute_mean_relative_error(&fdtd_solution, &pinn_prediction)?;
     let num_points = fdtd_solution.len();
-    let speedup_factor = if pinn_time > 0.0 { fdtd_time / pinn_time } else { f64::INFINITY };
+    let speedup_factor = if pinn_time > 0.0 {
+        fdtd_time / pinn_time
+    } else {
+        f64::INFINITY
+    };
 
     Ok(ValidationReport {
         metrics,

@@ -17,14 +17,20 @@ mod tests {
     #[test]
     fn constants_satisfy_ordering_invariants() {
         // Liquid density must be positive
-        assert!(DEFAULT_RHO_LIQUID > 0.0,
-            "DEFAULT_RHO_LIQUID must be positive, got {DEFAULT_RHO_LIQUID}");
+        assert!(
+            DEFAULT_RHO_LIQUID > 0.0,
+            "DEFAULT_RHO_LIQUID must be positive, got {DEFAULT_RHO_LIQUID}"
+        );
         // Grid spacings must be positive
         let (dx, dy, dz) = DEFAULT_GRID_SPACING;
-        assert!(dx > 0.0 && dy > 0.0 && dz > 0.0,
-            "grid spacings must be positive: ({dx}, {dy}, {dz})");
+        assert!(
+            dx > 0.0 && dy > 0.0 && dz > 0.0,
+            "grid spacings must be positive: ({dx}, {dy}, {dz})"
+        );
         // Coupling threshold must be in (0, 1)
-        assert!(DEFAULT_COUPLING_THRESHOLD > 0.0 && DEFAULT_COUPLING_THRESHOLD < 1.0,
-            "coupling threshold {DEFAULT_COUPLING_THRESHOLD} must be in (0, 1)");
+        assert!(
+            DEFAULT_COUPLING_THRESHOLD > 0.0 && DEFAULT_COUPLING_THRESHOLD < 1.0,
+            "coupling threshold {DEFAULT_COUPLING_THRESHOLD} must be in (0, 1)"
+        );
     }
 }

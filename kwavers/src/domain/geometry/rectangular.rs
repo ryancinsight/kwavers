@@ -19,7 +19,7 @@ impl RectangularDomain {
     /// # Panics
     /// - Panics if assertion fails: `Invalid 1D domain bounds`.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new_1d(x_min: f64, x_max: f64) -> Self {
         assert!(x_max > x_min, "Invalid 1D domain bounds");
         Self {
@@ -32,7 +32,7 @@ impl RectangularDomain {
     /// # Panics
     /// - Panics if assertion fails: `Invalid 2D domain bounds`.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new_2d(x_min: f64, x_max: f64, y_min: f64, y_max: f64) -> Self {
         assert!(x_max > x_min && y_max > y_min, "Invalid 2D domain bounds");
         Self {
@@ -45,7 +45,7 @@ impl RectangularDomain {
     /// # Panics
     /// - Panics if assertion fails: `Invalid 3D domain bounds`.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new_3d(x_min: f64, x_max: f64, y_min: f64, y_max: f64, z_min: f64, z_max: f64) -> Self {
         assert!(
             x_max > x_min && y_max > y_min && z_max > z_min,
@@ -57,7 +57,7 @@ impl RectangularDomain {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn lengths(&self) -> Vec<f64> {
         self.min
             .iter()
@@ -66,7 +66,7 @@ impl RectangularDomain {
             .collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn center(&self) -> Vec<f64> {
         self.min
             .iter()

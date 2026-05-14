@@ -307,12 +307,18 @@ impl TimeStepper for AdamsBashforth {
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
                     let f_nm2 = &self.rhs_history[self.rhs_history.len() - 2];
 
-                    Zip::from(field).and(f_n).and(f_nm1).and(f_nm2).par_for_each(
-                        |r, fn_val, fnm1_val, fnm2_val| {
+                    Zip::from(field)
+                        .and(f_n)
+                        .and(f_nm1)
+                        .and(f_nm2)
+                        .par_for_each(|r, fn_val, fnm1_val, fnm2_val| {
                             *r += dt
-                                * (5.0_f64 / 12.0).mul_add(*fnm2_val, (23.0_f64 / 12.0).mul_add(*fn_val, -(16.0_f64 / 12.0 * *fnm1_val)));
-                        },
-                    );
+                                * (5.0_f64 / 12.0).mul_add(
+                                    *fnm2_val,
+                                    (23.0_f64 / 12.0)
+                                        .mul_add(*fn_val, -(16.0_f64 / 12.0 * *fnm1_val)),
+                                );
+                        });
                 }
             }
             _ => {

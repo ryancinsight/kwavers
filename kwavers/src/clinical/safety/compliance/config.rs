@@ -53,19 +53,19 @@ impl ComplianceConfig {
         Ok(())
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_power_limit(mut self, watts: f64) -> Self {
         self.max_power = watts;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_intensity_limit(mut self, w_cm2: f64) -> Self {
         self.max_intensity = w_cm2;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_tissue_type(mut self, tissue: TissueType) -> Self {
         self.tissue_type = tissue;
         self

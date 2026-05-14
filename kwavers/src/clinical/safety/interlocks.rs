@@ -35,7 +35,7 @@ pub struct InterlockSystem {
 
 impl InterlockSystem {
     /// Create new interlock system (disabled by default).
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             interlocks: HashMap::new(),
@@ -109,7 +109,7 @@ impl InterlockSystem {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn is_system_enabled(&self) -> bool {
         self.system_enabled && !self.emergency_stop_active
     }

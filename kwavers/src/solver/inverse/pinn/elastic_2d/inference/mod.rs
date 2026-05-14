@@ -296,7 +296,7 @@ impl Predictor {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(_model: ()) -> Self {
         Self {
             _phantom: std::marker::PhantomData,

@@ -8,14 +8,22 @@ fn test_ensemble_quantifier_creation() {
         num_samples: 10,
     };
     let q = EnsembleQuantifier::new(config).unwrap();
-    assert_eq!(q.ensemble_models.len(), 5, "ensemble must have exactly 5 models");
+    assert_eq!(
+        q.ensemble_models.len(),
+        5,
+        "ensemble must have exactly 5 models"
+    );
 }
 
 #[test]
 fn test_bootstrap_sampling() {
     let quantifier = EnsembleQuantifier::new(EnsembleConfig::default()).unwrap();
     let indices = quantifier.bootstrap_sample(100);
-    assert_eq!(indices.len(), 100, "bootstrap must return exactly 100 indices");
+    assert_eq!(
+        indices.len(),
+        100,
+        "bootstrap must return exactly 100 indices"
+    );
     for &idx in &indices {
         assert!(idx < 100, "bootstrap index {idx} out of range [0,100)");
     }
@@ -35,7 +43,9 @@ fn test_ensemble_statistics() {
     ];
     let weights = vec![1.0_f64, 1.0, 1.0];
 
-    let result = quantifier.compute_ensemble_statistics(&predictions, &weights).unwrap();
+    let result = quantifier
+        .compute_ensemble_statistics(&predictions, &weights)
+        .unwrap();
 
     assert_eq!(result.mean_prediction.dim(), (5, 5));
     assert_eq!(result.uncertainty.dim(), (5, 5));
@@ -90,13 +100,18 @@ fn test_ensemble_diversity() {
         diversity_err < 1e-5,
         "diversity = {diversity} (expected 2.0)"
     );
-    assert!(diversity > 0.0, "diverse ensemble must have positive diversity");
+    assert!(
+        diversity > 0.0,
+        "diverse ensemble must have positive diversity"
+    );
 }
 
 #[test]
 fn test_ensemble_statistics_empty_rejects() {
     let quantifier = EnsembleQuantifier::new(EnsembleConfig::default()).unwrap();
-    let err = quantifier.compute_ensemble_statistics(&[], &[]).unwrap_err();
+    let err = quantifier
+        .compute_ensemble_statistics(&[], &[])
+        .unwrap_err();
     let msg = format!("{err:?}");
     assert!(
         msg.contains("No predictions"),

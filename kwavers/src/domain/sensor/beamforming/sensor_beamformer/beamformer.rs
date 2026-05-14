@@ -109,8 +109,13 @@ impl SensorBeamformer {
                     let y = origin[1] + y_rel;
                     for &z_rel in &z_coords {
                         let z = origin[2] + z_rel;
-                        let dist = (z - sensor_pos[2]).mul_add(z - sensor_pos[2], (y - sensor_pos[1]).mul_add(y - sensor_pos[1], (x - sensor_pos[0]).powi(2)))
-                        .sqrt();
+                        let dist = (z - sensor_pos[2])
+                            .mul_add(
+                                z - sensor_pos[2],
+                                (y - sensor_pos[1])
+                                    .mul_add(y - sensor_pos[1], (x - sensor_pos[0]).powi(2)),
+                            )
+                            .sqrt();
                         delays[[sensor_idx, grid_idx]] = dist / sound_speed;
                         grid_idx += 1;
                     }
@@ -245,8 +250,12 @@ impl SensorBeamformer {
         for i in 0..self.sensor_positions.len() - 1 {
             let pos1 = self.sensor_positions[i];
             let pos2 = self.sensor_positions[i + 1];
-            total += (pos1[2] - pos2[2]).mul_add(pos1[2] - pos2[2], (pos1[1] - pos2[1]).mul_add(pos1[1] - pos2[1], (pos1[0] - pos2[0]).powi(2)))
-            .sqrt();
+            total += (pos1[2] - pos2[2])
+                .mul_add(
+                    pos1[2] - pos2[2],
+                    (pos1[1] - pos2[1]).mul_add(pos1[1] - pos2[1], (pos1[0] - pos2[0]).powi(2)),
+                )
+                .sqrt();
             count += 1;
         }
 

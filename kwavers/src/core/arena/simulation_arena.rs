@@ -112,7 +112,7 @@ impl ThreadLocalArena {
     }
 
     /// Snapshot of current allocation statistics.
-    #[must_use] 
+    #[must_use]
     pub fn stats(&self) -> ArenaStats {
         self.arena.borrow().stats()
     }

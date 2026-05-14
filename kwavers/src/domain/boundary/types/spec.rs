@@ -25,7 +25,7 @@ pub struct BoundarySpec {
 
 impl BoundarySpec {
     /// Create a new boundary specification.
-    #[must_use] 
+    #[must_use]
     pub fn new(
         face: BoundaryFace,
         boundary_type: BoundaryType,
@@ -40,7 +40,7 @@ impl BoundarySpec {
     }
 
     /// Create a time-dependent boundary specification.
-    #[must_use] 
+    #[must_use]
     pub fn time_dependent(
         face: BoundaryFace,
         boundary_type: BoundaryType,

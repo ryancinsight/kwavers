@@ -154,8 +154,7 @@ impl BrainAtlas {
                     };
 
                     annotation[[i, j, k]] = region;
-                    reference_image[[i, j, k]] =
-                        Self::region_intensity(region, ap, ml, dv);
+                    reference_image[[i, j, k]] = Self::region_intensity(region, ap, ml, dv);
                 }
             }
         }
@@ -188,8 +187,7 @@ impl BrainAtlas {
     /// Intensity = base_level · depth_attenuation + 0.2 · vascular_prior
     pub(super) fn region_intensity(region: u32, ap: f64, ml: f64, dv: f64) -> f64 {
         let base = 0.07f64.mul_add(region as f64, 0.15);
-        let vascular_prior =
-            (-(ml * ml) / 2.0).exp() * (1.0 - (ap / 4.0).abs()).max(0.0);
+        let vascular_prior = (-(ml * ml) / 2.0).exp() * (1.0 - (ap / 4.0).abs()).max(0.0);
         let depth_attenuation = (-0.08 * dv).exp();
         base * depth_attenuation + 0.2 * vascular_prior
     }

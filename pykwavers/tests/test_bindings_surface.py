@@ -24,7 +24,9 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "SolverType")
     assert hasattr(kw, "run_seismic_helmet_fwi_from_ritk_ct")
     assert hasattr(kw, "run_seismic_helmet_fwi_volume_from_ritk_ct")
-    assert hasattr(kw, "run_theranostic_fwi_from_ritk")
+    assert hasattr(kw, "run_theranostic_inverse_from_ritk")
+    assert hasattr(kw, "run_theranostic_nonlinear_3d_from_ritk")
+    assert not hasattr(kw, "run_theranostic_fwi_from_ritk")
     assert hasattr(kw, "plan_brain_helmet_placement_from_ritk_ct")
 
 

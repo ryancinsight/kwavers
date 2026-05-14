@@ -145,10 +145,18 @@ mod tests {
     #[test]
     fn secondary_bjerknes_force_errors_for_invalid_geometry() {
         let c = calc();
-        assert!(c.secondary_bjerknes_force(0.0, 5e-6, 1e-15, 1e-15, 0.0, 10e-6).is_err());
-        assert!(c.secondary_bjerknes_force(5e-6, 0.0, 1e-15, 1e-15, 0.0, 10e-6).is_err());
-        assert!(c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 0.0).is_err());
-        assert!(c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, -1e-6).is_err());
+        assert!(c
+            .secondary_bjerknes_force(0.0, 5e-6, 1e-15, 1e-15, 0.0, 10e-6)
+            .is_err());
+        assert!(c
+            .secondary_bjerknes_force(5e-6, 0.0, 1e-15, 1e-15, 0.0, 10e-6)
+            .is_err());
+        assert!(c
+            .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 0.0)
+            .is_err());
+        assert!(c
+            .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, -1e-6)
+            .is_err());
     }
 
     /// Phase=0 (in-phase) → attractive interaction.
@@ -178,10 +186,18 @@ mod tests {
     /// Distance beyond interaction_range → all forces zero, Neutral.
     #[test]
     fn secondary_bjerknes_force_zero_beyond_interaction_range() {
-        let cfg = BjerknesConfig { interaction_range: 50e-6, ..BjerknesConfig::default() };
+        let cfg = BjerknesConfig {
+            interaction_range: 50e-6,
+            ..BjerknesConfig::default()
+        };
         let c = BjerknesCalculator::new(cfg);
-        let result = c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 100e-6).unwrap();
-        assert_eq!(result.secondary, 0.0, "force must be 0 beyond interaction range");
+        let result = c
+            .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 100e-6)
+            .unwrap();
+        assert_eq!(
+            result.secondary, 0.0,
+            "force must be 0 beyond interaction range"
+        );
         assert_eq!(result.interaction_type, InteractionType::Neutral);
     }
 
@@ -194,9 +210,19 @@ mod tests {
             ..BjerknesConfig::default()
         };
         let c = BjerknesCalculator::new(cfg);
-        let near = c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 2e-6).unwrap();
-        let far = c.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 20e-6).unwrap();
-        assert!(near.coalescing, "must coalesce when d < coalescence_distance");
-        assert!(!far.coalescing, "must not coalesce when d > coalescence_distance");
+        let near = c
+            .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 2e-6)
+            .unwrap();
+        let far = c
+            .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 20e-6)
+            .unwrap();
+        assert!(
+            near.coalescing,
+            "must coalesce when d < coalescence_distance"
+        );
+        assert!(
+            !far.coalescing,
+            "must not coalesce when d > coalescence_distance"
+        );
     }
 }

@@ -88,7 +88,7 @@ impl SpatiallyVaryingAbsorption {
         Ok(self)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_dispersion_correction(mut self, enabled: bool) -> Self {
         self.dispersion_correction = enabled;
         self

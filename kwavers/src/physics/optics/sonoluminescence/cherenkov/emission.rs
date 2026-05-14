@@ -67,7 +67,8 @@ pub fn calculate_cherenkov_emission(
 
             // Local refractive index: piezo-optic + thermo-optic correction
             let increased_n = n_base * COMPRESSION_REFRACTIVE_COEFFICIENT.mul_add(comp - 1.0, 1.0);
-            let n_local = THERMAL_REFRACTIVE_COEFFICIENT.mul_add(-(temp - REFERENCE_TEMPERATURE), increased_n)
+            let n_local = THERMAL_REFRACTIVE_COEFFICIENT
+                .mul_add(-(temp - REFERENCE_TEMPERATURE), increased_n)
                 .max(1.0);
 
             let critical = SPEED_OF_LIGHT / n_local;

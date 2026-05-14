@@ -70,14 +70,17 @@ impl ConservationMonitor {
                 quantities.momentum.1 - initial.momentum.1,
                 quantities.momentum.2 - initial.momentum.2,
             );
-            let p_mag = initial.momentum.2.mul_add(
-                initial.momentum.2,
-                initial
-                    .momentum
-                    .1
-                    .mul_add(initial.momentum.1, initial.momentum.0.powi(2)),
-            )
-            .sqrt();
+            let p_mag = initial
+                .momentum
+                .2
+                .mul_add(
+                    initial.momentum.2,
+                    initial
+                        .momentum
+                        .1
+                        .mul_add(initial.momentum.1, initial.momentum.0.powi(2)),
+                )
+                .sqrt();
             dp.2.mul_add(dp.2, dp.1.mul_add(dp.1, dp.0.powi(2))).sqrt() / p_mag.max(1e-10)
         };
 
@@ -87,14 +90,17 @@ impl ConservationMonitor {
                 quantities.angular_momentum.1 - initial.angular_momentum.1,
                 quantities.angular_momentum.2 - initial.angular_momentum.2,
             );
-            let l_mag = initial.angular_momentum.2.mul_add(
-                initial.angular_momentum.2,
-                initial.angular_momentum.1.mul_add(
-                    initial.angular_momentum.1,
-                    initial.angular_momentum.0.powi(2),
-                ),
-            )
-            .sqrt();
+            let l_mag = initial
+                .angular_momentum
+                .2
+                .mul_add(
+                    initial.angular_momentum.2,
+                    initial.angular_momentum.1.mul_add(
+                        initial.angular_momentum.1,
+                        initial.angular_momentum.0.powi(2),
+                    ),
+                )
+                .sqrt();
             dl.2.mul_add(dl.2, dl.1.mul_add(dl.1, dl.0.powi(2))).sqrt() / l_mag.max(1e-10)
         };
 
@@ -201,8 +207,7 @@ impl ConservationMonitor {
                             crate::domain::medium::sound_speed_at(medium, x, y, z, &self.grid);
 
                         // Potential energy density: Ep = p²/(2ρc²)
-                        let potential_energy =
-                            p * p / (2.0 * density * sound_speed * sound_speed);
+                        let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);
 
                         // Kinetic energy density: Ek = ρv²/2
                         let kinetic_energy = 0.5
@@ -242,8 +247,7 @@ impl ConservationMonitor {
                 let time = self.history.times[i];
 
                 // Compute errors relative to initial
-                let mass_error =
-                    (quantities.mass - initial.mass).abs() / initial.mass.max(1e-10);
+                let mass_error = (quantities.mass - initial.mass).abs() / initial.mass.max(1e-10);
                 let energy_error =
                     (quantities.energy - initial.energy).abs() / initial.energy.max(1e-10);
 
@@ -253,16 +257,18 @@ impl ConservationMonitor {
                         quantities.momentum.1 - initial.momentum.1,
                         quantities.momentum.2 - initial.momentum.2,
                     );
-                    let p_mag = initial.momentum.2.mul_add(
-                        initial.momentum.2,
-                        initial
-                            .momentum
-                            .1
-                            .mul_add(initial.momentum.1, initial.momentum.0.powi(2)),
-                    )
-                    .sqrt();
-                    dp.2.mul_add(dp.2, dp.1.mul_add(dp.1, dp.0.powi(2))).sqrt()
-                        / p_mag.max(1e-10)
+                    let p_mag = initial
+                        .momentum
+                        .2
+                        .mul_add(
+                            initial.momentum.2,
+                            initial
+                                .momentum
+                                .1
+                                .mul_add(initial.momentum.1, initial.momentum.0.powi(2)),
+                        )
+                        .sqrt();
+                    dp.2.mul_add(dp.2, dp.1.mul_add(dp.1, dp.0.powi(2))).sqrt() / p_mag.max(1e-10)
                 };
 
                 let angular_momentum_error = {
@@ -271,16 +277,18 @@ impl ConservationMonitor {
                         quantities.angular_momentum.1 - initial.angular_momentum.1,
                         quantities.angular_momentum.2 - initial.angular_momentum.2,
                     );
-                    let l_mag = initial.angular_momentum.2.mul_add(
-                        initial.angular_momentum.2,
-                        initial.angular_momentum.1.mul_add(
-                            initial.angular_momentum.1,
-                            initial.angular_momentum.0.powi(2),
-                        ),
-                    )
-                    .sqrt();
-                    dl.2.mul_add(dl.2, dl.1.mul_add(dl.1, dl.0.powi(2))).sqrt()
-                        / l_mag.max(1e-10)
+                    let l_mag = initial
+                        .angular_momentum
+                        .2
+                        .mul_add(
+                            initial.angular_momentum.2,
+                            initial.angular_momentum.1.mul_add(
+                                initial.angular_momentum.1,
+                                initial.angular_momentum.0.powi(2),
+                            ),
+                        )
+                        .sqrt();
+                    dl.2.mul_add(dl.2, dl.1.mul_add(dl.1, dl.0.powi(2))).sqrt() / l_mag.max(1e-10)
                 };
 
                 errors.push(ConservationError {

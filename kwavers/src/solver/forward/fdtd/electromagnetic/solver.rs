@@ -5,7 +5,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::field::EMFields;
 use crate::domain::grid::Grid;
 use crate::physics::electromagnetic::equations::EMMaterialDistribution;
-use ndarray::{Array3, Array4};
+use ndarray::{Array3, Array4, ArrayD, Ix4};
 
 impl ElectromagneticFdtdSolver {
     /// Create a new electromagnetic FDTD solver
@@ -62,7 +62,35 @@ impl ElectromagneticFdtdSolver {
         })
     }
 
+    /// Recompute cell-centered EM fields from the Yee-staggered state.
+    ///
+    /// The cache invariant is `electric.shape() == magnetic.shape() ==
+    /// [nx, ny, nz, 3]`. Converting the dynamic arrays to `Ix4` once per cache
+    /// update keeps indexing statically arity-checked inside the hot loop and
+    /// avoids constructing an `IxDyn` index for every stored component.
     pub(super) fn update_field_cache(&mut self) {
+        debug_assert_eq!(
+            self.fields_cache.electric.shape(),
+            &[self.grid.nx, self.grid.ny, self.grid.nz, 3]
+        );
+        debug_assert_eq!(
+            self.fields_cache.magnetic.shape(),
+            &[self.grid.nx, self.grid.ny, self.grid.nz, 3]
+        );
+
+        let mut electric = self
+            .fields_cache
+            .electric
+            .view_mut()
+            .into_dimensionality::<Ix4>()
+            .expect("electric field cache is allocated as [nx, ny, nz, 3]");
+        let mut magnetic = self
+            .fields_cache
+            .magnetic
+            .view_mut()
+            .into_dimensionality::<Ix4>()
+            .expect("magnetic field cache is allocated as [nx, ny, nz, 3]");
+
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {
                 for k in 0..self.grid.nz {
@@ -86,16 +114,36 @@ impl ElectromagneticFdtdSolver {
                     let hy_c = 0.5 * (self.hy[[i, j, k]] + self.hy[[i, j + 1, k]]);
                     let hz_c = 0.5 * (self.hz[[i, j, k]] + self.hz[[i, j, k + 1]]);
 
-                    self.fields_cache.electric[ndarray::IxDyn(&[i, j, k, 0])] = ex_c;
-                    self.fields_cache.electric[ndarray::IxDyn(&[i, j, k, 1])] = ey_c;
-                    self.fields_cache.electric[ndarray::IxDyn(&[i, j, k, 2])] = ez_c;
+                    electric[[i, j, k, 0]] = ex_c;
+                    electric[[i, j, k, 1]] = ey_c;
+                    electric[[i, j, k, 2]] = ez_c;
 
-                    self.fields_cache.magnetic[ndarray::IxDyn(&[i, j, k, 0])] = hx_c;
-                    self.fields_cache.magnetic[ndarray::IxDyn(&[i, j, k, 1])] = hy_c;
-                    self.fields_cache.magnetic[ndarray::IxDyn(&[i, j, k, 2])] = hz_c;
+                    magnetic[[i, j, k, 0]] = hx_c;
+                    magnetic[[i, j, k, 1]] = hy_c;
+                    magnetic[[i, j, k, 2]] = hz_c;
                 }
             }
         }
+    }
+
+    /// Copy the authoritative field cache into caller-owned output storage.
+    ///
+    /// Shape-compatible buffers are reused with `assign`, so repeated boundary
+    /// applications do not allocate or clone field arrays. A shape mismatch is
+    /// repaired by allocating the required shape once and then copying values;
+    /// this preserves the trait contract while keeping the steady-state path
+    /// allocation-free.
+    pub(super) fn copy_field_cache_into(&self, fields: &mut EMFields) {
+        assign_array(&mut fields.electric, &self.fields_cache.electric);
+        assign_array(&mut fields.magnetic, &self.fields_cache.magnetic);
+        assign_optional_array(
+            &mut fields.displacement,
+            self.fields_cache.displacement.as_ref(),
+        );
+        assign_optional_array(
+            &mut fields.flux_density,
+            self.fields_cache.flux_density.as_ref(),
+        );
     }
 
     pub(super) fn permittivity_at(&self, i: usize, j: usize, k: usize) -> f64 {
@@ -246,8 +294,32 @@ impl ElectromagneticFdtdSolver {
         let dy = self.grid.dy;
         let dz = self.grid.dz;
 
-        let denominator =
-            c_max * (1.0 / dz).mul_add(1.0 / dz, (1.0 / dy).mul_add(1.0 / dy, (1.0 / dx).powi(2))).sqrt();
+        let denominator = c_max
+            * (1.0 / dz)
+                .mul_add(1.0 / dz, (1.0 / dy).mul_add(1.0 / dy, (1.0 / dx).powi(2)))
+                .sqrt();
         0.99 / denominator // 0.99 for stability margin
+    }
+}
+
+fn assign_array(target: &mut ArrayD<f64>, source: &ArrayD<f64>) {
+    if target.raw_dim() != source.raw_dim() {
+        *target = ArrayD::zeros(source.raw_dim());
+    }
+
+    target.assign(source);
+}
+
+fn assign_optional_array(target: &mut Option<ArrayD<f64>>, source: Option<&ArrayD<f64>>) {
+    match source {
+        Some(source) => match target {
+            Some(target) => assign_array(target, source),
+            None => {
+                let mut array = ArrayD::zeros(source.raw_dim());
+                array.assign(source);
+                *target = Some(array);
+            }
+        },
+        None => *target = None,
     }
 }

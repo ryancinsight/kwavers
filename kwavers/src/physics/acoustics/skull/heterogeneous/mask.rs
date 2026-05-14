@@ -49,7 +49,7 @@ impl HeterogeneousSkull {
     }
 
     /// Generate a binary mask from CT data (1.0 = bone, 0.0 = tissue).
-    #[must_use] 
+    #[must_use]
     pub fn generate_mask_from_ct(ct_data: &Array3<f64>) -> Array3<f64> {
         ct_data.mapv(|hu| if hu > 700.0 { 1.0 } else { 0.0 })
     }

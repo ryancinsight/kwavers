@@ -84,7 +84,7 @@ impl ModelOrderConfig {
     }
 
     /// Set information criterion
-    #[must_use] 
+    #[must_use]
     pub fn with_criterion(mut self, criterion: ModelOrderCriterion) -> Self {
         self.criterion = criterion;
         self
@@ -94,7 +94,7 @@ impl ModelOrderConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_eigenvalue_threshold(mut self, threshold: f64) -> Self {
         self.eigenvalue_threshold = threshold;
         self
@@ -104,7 +104,7 @@ impl ModelOrderConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_max_sources(mut self, max_sources: usize) -> Self {
         self.max_sources = Some(max_sources);
         self
@@ -167,7 +167,7 @@ pub struct ModelOrderResult {
 
 impl ModelOrderResult {
     /// Get signal subspace eigenvalues
-    #[must_use] 
+    #[must_use]
     pub fn signal_eigenvalues(&self) -> Vec<f64> {
         self.signal_indices
             .iter()
@@ -176,7 +176,7 @@ impl ModelOrderResult {
     }
 
     /// Get noise subspace eigenvalues
-    #[must_use] 
+    #[must_use]
     pub fn noise_eigenvalues(&self) -> Vec<f64> {
         self.noise_indices
             .iter()
@@ -185,7 +185,7 @@ impl ModelOrderResult {
     }
 
     /// Estimate noise variance (average of noise eigenvalues)
-    #[must_use] 
+    #[must_use]
     pub fn noise_variance(&self) -> f64 {
         let noise_eigs = self.noise_eigenvalues();
         if noise_eigs.is_empty() {

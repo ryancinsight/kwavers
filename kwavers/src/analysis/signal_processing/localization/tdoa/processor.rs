@@ -89,7 +89,13 @@ impl TDOAProcessor {
             }
 
             // Solve 3×3 system via Cramer's rule
-            let det = jtj[0][2].mul_add(jtj[1][0].mul_add(jtj[2][1], -(jtj[1][1] * jtj[2][0])), jtj[0][0].mul_add(jtj[1][1].mul_add(jtj[2][2], -(jtj[1][2] * jtj[2][1])), -(jtj[0][1] * jtj[1][0].mul_add(jtj[2][2], -(jtj[1][2] * jtj[2][0])))));
+            let det = jtj[0][2].mul_add(
+                jtj[1][0].mul_add(jtj[2][1], -(jtj[1][1] * jtj[2][0])),
+                jtj[0][0].mul_add(
+                    jtj[1][1].mul_add(jtj[2][2], -(jtj[1][2] * jtj[2][1])),
+                    -(jtj[0][1] * jtj[1][0].mul_add(jtj[2][2], -(jtj[1][2] * jtj[2][0]))),
+                ),
+            );
 
             if det.abs() > 1e-30 {
                 let inv_det = 1.0 / det;

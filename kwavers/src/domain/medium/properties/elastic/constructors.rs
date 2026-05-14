@@ -20,7 +20,11 @@ impl ElasticPropertyData {
         if nu <= -1.0 || nu >= 0.5 {
             return Err(format!("Poisson's ratio {} violates bounds (-1, 0.5)", nu));
         }
-        Ok(Self { density, lambda, mu })
+        Ok(Self {
+            density,
+            lambda,
+            mu,
+        })
     }
 
     /// Construct from engineering parameters (Young's modulus E, Poisson's ratio ν).
@@ -48,7 +52,10 @@ impl ElasticPropertyData {
             return Err(format!("Density must be positive, got {}", density));
         }
         if youngs_modulus <= 0.0 {
-            return Err(format!("Young's modulus must be positive, got {}", youngs_modulus));
+            return Err(format!(
+                "Young's modulus must be positive, got {}",
+                youngs_modulus
+            ));
         }
         if poisson_ratio <= -1.0 || poisson_ratio >= 0.5 {
             return Err(format!(
@@ -59,7 +66,11 @@ impl ElasticPropertyData {
         let lambda = youngs_modulus * poisson_ratio
             / ((1.0 + poisson_ratio) * 2.0f64.mul_add(-poisson_ratio, 1.0));
         let mu = youngs_modulus / (2.0 * (1.0 + poisson_ratio));
-        Ok(Self { density, lambda, mu })
+        Ok(Self {
+            density,
+            lambda,
+            mu,
+        })
     }
 
     /// Construct from wave speeds (inverse problem).

@@ -128,7 +128,7 @@ impl HASConfig {
     }
 
     /// Calculate acoustic impedance Z = ρc
-    #[must_use] 
+    #[must_use]
     pub fn impedance(&self) -> f64 {
         self.density * self.sound_speed
     }
@@ -137,7 +137,7 @@ impl HASConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn attenuation_at_frequency(&self, frequency: f64) -> f64 {
         let freq_mhz = frequency / 1e6;
         // Convert dB/cm/MHz to Np/m
@@ -187,10 +187,7 @@ impl HybridAngularSpectrum {
     pub fn new(grid: &Grid, config: HASConfig) -> KwaversResult<Self> {
         let solver = HybridAngularSpectrumSolver::new(grid, &config)?;
 
-        Ok(Self {
-            config,
-            solver,
-        })
+        Ok(Self { config, solver })
     }
 
     /// Propagate pressure field over specified distance

@@ -1,4 +1,5 @@
 use super::orchestrator::ElasticPstdOrchestrator;
+use super::pml::ElasticPmlSpec;
 use super::split_field_pml::ElasticSplitFieldPml;
 use super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource};
 use crate::domain::grid::Grid;
@@ -75,26 +76,19 @@ fn split_field_pml_alpha_beta_are_valid_integrator_coefficients() {
     let c_max = 1500.0_f64;
     let dt = 1e-7_f64;
     let r0 = 1e-4_f64;
-    let pml = ElasticSplitFieldPml::new(
-        nx,
-        nx,
-        nx,
-        (thickness, thickness, thickness),
-        dx,
-        dx,
-        dx,
+    let pml = ElasticSplitFieldPml::new(ElasticPmlSpec {
+        shape: (nx, nx, nx),
+        thickness_cells: (thickness, thickness, thickness),
+        spacing: (dx, dx, dx),
         c_max,
         dt,
         r0,
-    );
+    });
     let (alpha_x, beta_x) = pml.x_coeffs();
     for i in 0..nx {
         let a = alpha_x[i];
         let b = beta_x[i];
-        assert!(
-            a > 0.0 && a <= 1.0,
-            "alpha_x[{i}] = {a:.6e} not in (0, 1]"
-        );
+        assert!(a > 0.0 && a <= 1.0, "alpha_x[{i}] = {a:.6e} not in (0, 1]");
         assert!(b > 0.0, "beta_x[{i}] = {b:.6e} not positive");
         if i >= thickness && i < nx - thickness {
             assert_eq!(a, 1.0, "interior alpha_x[{i}] must be exactly 1.0");
@@ -138,7 +132,10 @@ fn split_field_pml_quiescent_state_stays_zero() {
         .chain(orch.velocity().vy.iter())
         .chain(orch.velocity().vz.iter())
         .fold(0.0_f64, |m, v| m.max(v.abs()));
-    assert_eq!(max_v, 0.0, "quiescent state must remain zero under split-field PML");
+    assert_eq!(
+        max_v, 0.0,
+        "quiescent state must remain zero under split-field PML"
+    );
 }
 
 /// Differential equivalence: zero-thickness split-field PML reproduces the
@@ -183,19 +180,27 @@ fn split_field_pml_zero_thickness_reproduces_standard_leapfrog() {
     };
 
     // Standard leapfrog path (no PML).
-    let mut orch_std =
-        ElasticPstdOrchestrator::new(&grid, make_medium(), dt).unwrap();
-    let _ = orch_std.propagate(n_steps, Some(&make_source()), None).unwrap();
+    let mut orch_std = ElasticPstdOrchestrator::new(&grid, make_medium(), dt).unwrap();
+    let _ = orch_std
+        .propagate(n_steps, Some(&make_source()), None)
+        .unwrap();
 
     // Split-field path with zero-thickness PML (α=1, β=dt everywhere).
-    let mut orch_sf =
-        ElasticPstdOrchestrator::new(&grid, make_medium(), dt).unwrap();
+    let mut orch_sf = ElasticPstdOrchestrator::new(&grid, make_medium(), dt).unwrap();
     orch_sf.set_split_field_pml((0, 0, 0), cp, 1e-4);
-    let _ = orch_sf.propagate(n_steps, Some(&make_source()), None).unwrap();
+    let _ = orch_sf
+        .propagate(n_steps, Some(&make_source()), None)
+        .unwrap();
 
     let v_std = orch_std.velocity();
     let v_sf = orch_sf.velocity();
-    let norm: f64 = v_std.vx.iter().map(|x| x * x).sum::<f64>().sqrt().max(1e-300);
+    let norm: f64 = v_std
+        .vx
+        .iter()
+        .map(|x| x * x)
+        .sum::<f64>()
+        .sqrt()
+        .max(1e-300);
     let diff: f64 = v_std
         .vx
         .iter()
@@ -258,9 +263,8 @@ fn split_field_pml_attenuates_outgoing_wave() {
 
     // Continuous-tone source at grid centre for all n_steps so the interior
     // maintains a sustained field while the PML absorbs the outgoing wave.
-    let signal = Array1::from_iter(
-        (0..n_steps).map(|n| amp * (2.0 * PI * 1e6 * n as f64 * dt).sin()),
-    );
+    let signal =
+        Array1::from_iter((0..n_steps).map(|n| amp * (2.0 * PI * 1e6 * n as f64 * dt).sin()));
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     src_mask[[nx / 2, ny / 2, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {

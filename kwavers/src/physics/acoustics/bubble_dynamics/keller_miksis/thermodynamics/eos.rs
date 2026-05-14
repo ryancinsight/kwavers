@@ -50,9 +50,7 @@ pub(crate) fn calculate_vdw_pressure(state: &BubbleState) -> KwaversResult<f64> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::physics::acoustics::bubble_dynamics::bubble_state::{
-        BubbleParameters, BubbleState,
-    };
+    use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 
     fn equilibrium_state() -> BubbleState {
         BubbleState::at_equilibrium(&BubbleParameters::default())
@@ -72,8 +70,7 @@ mod tests {
 
         // Ideal gas reference
         let volume = 4.0 / 3.0 * std::f64::consts::PI * state.radius.powi(3);
-        let n_moles =
-            (state.n_gas + state.n_vapor) / crate::core::constants::AVOGADRO;
+        let n_moles = (state.n_gas + state.n_vapor) / crate::core::constants::AVOGADRO;
         let p_ideal = n_moles * crate::core::constants::GAS_CONSTANT * state.temperature / volume;
 
         let rel_err = (p - p_ideal).abs() / p_ideal;
@@ -88,7 +85,10 @@ mod tests {
     fn vdw_pressure_positive_for_equilibrium_state() {
         let state = equilibrium_state();
         let p = calculate_vdw_pressure(&state).unwrap();
-        assert!(p > 0.0 && p.is_finite(), "VdW pressure must be positive finite (got {p:.3e})");
+        assert!(
+            p > 0.0 && p.is_finite(),
+            "VdW pressure must be positive finite (got {p:.3e})"
+        );
     }
 
     /// VdW returns Err when bubble volume ≤ excluded volume (unphysical collapse).
@@ -100,6 +100,9 @@ mod tests {
         // Radius so small the bubble volume is essentially zero
         state.radius = 1e-15;
         let result = calculate_vdw_pressure(&state);
-        assert!(result.is_err(), "must return Err when volume <= excluded volume");
+        assert!(
+            result.is_err(),
+            "must return Err when volume <= excluded volume"
+        );
     }
 }

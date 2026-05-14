@@ -167,9 +167,18 @@ mod tests {
     fn gas_type_gamma_by_molecular_structure() {
         assert!((GasType::N2.gamma() - 1.4).abs() < 1e-10, "N₂ diatomic");
         assert!((GasType::O2.gamma() - 1.4).abs() < 1e-10, "O₂ diatomic");
-        assert!((GasType::Ar.gamma() - 5.0 / 3.0).abs() < 1e-10, "Ar monatomic");
-        assert!((GasType::He.gamma() - 5.0 / 3.0).abs() < 1e-10, "He monatomic");
-        assert!((GasType::CO2.gamma() - 1.289).abs() < 1e-10, "CO₂ triatomic");
+        assert!(
+            (GasType::Ar.gamma() - 5.0 / 3.0).abs() < 1e-10,
+            "Ar monatomic"
+        );
+        assert!(
+            (GasType::He.gamma() - 5.0 / 3.0).abs() < 1e-10,
+            "He monatomic"
+        );
+        assert!(
+            (GasType::CO2.gamma() - 1.289).abs() < 1e-10,
+            "CO₂ triatomic"
+        );
     }
 
     // ── GasSpecies ───────────────────────────────────────────────────────────
@@ -178,8 +187,14 @@ mod tests {
     #[test]
     fn gas_species_gamma_matches_species() {
         assert!((GasSpecies::Air.gamma() - 1.4).abs() < 1e-10, "Air γ=1.4");
-        assert!((GasSpecies::Argon.gamma() - 5.0 / 3.0).abs() < 1e-10, "Ar γ=5/3");
-        assert!((GasSpecies::Xenon.gamma() - 5.0 / 3.0).abs() < 1e-10, "Xe γ=5/3");
+        assert!(
+            (GasSpecies::Argon.gamma() - 5.0 / 3.0).abs() < 1e-10,
+            "Ar γ=5/3"
+        );
+        assert!(
+            (GasSpecies::Xenon.gamma() - 5.0 / 3.0).abs() < 1e-10,
+            "Xe γ=5/3"
+        );
     }
 
     /// `Custom` variant stores gamma and molecular weight verbatim.
@@ -187,7 +202,10 @@ mod tests {
     fn gas_species_custom_stores_values_verbatim() {
         let g = 1.3_f64;
         let mw = 0.044_f64;
-        let s = GasSpecies::Custom { gamma: g, molecular_weight: mw };
+        let s = GasSpecies::Custom {
+            gamma: g,
+            molecular_weight: mw,
+        };
         assert!((s.gamma() - g).abs() < 1e-15);
         assert!((s.molecular_weight() - mw).abs() < 1e-15);
     }

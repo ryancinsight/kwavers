@@ -27,8 +27,25 @@ pub fn validate_mass_conservation(
         for j in 1..grid.ny - 1 {
             for k in 1..grid.nz - 1 {
                 let drho_dt = (density[[i, j, k]] - density_previous[[i, j, k]]) * dt_inv;
-                let div_flux = (density[[i, j, k + 1]].mul_add(velocity_z[[i, j, k + 1]], -(density[[i, j, k - 1]] * velocity_z[[i, j, k - 1]])) * 0.5).mul_add(dz_inv, (density[[i + 1, j, k]].mul_add(velocity_x[[i + 1, j, k]], -(density[[i - 1, j, k]] * velocity_x[[i - 1, j, k]])) * 0.5).mul_add(dx_inv, density[[i, j + 1, k]].mul_add(velocity_y[[i, j + 1, k]], -(density[[i, j - 1, k]] * velocity_y[[i, j - 1, k]]))
-                        * 0.5 * dy_inv));
+                let div_flux = (density[[i, j, k + 1]].mul_add(
+                    velocity_z[[i, j, k + 1]],
+                    -(density[[i, j, k - 1]] * velocity_z[[i, j, k - 1]]),
+                ) * 0.5)
+                    .mul_add(
+                        dz_inv,
+                        (density[[i + 1, j, k]].mul_add(
+                            velocity_x[[i + 1, j, k]],
+                            -(density[[i - 1, j, k]] * velocity_x[[i - 1, j, k]]),
+                        ) * 0.5)
+                            .mul_add(
+                                dx_inv,
+                                density[[i, j + 1, k]].mul_add(
+                                    velocity_y[[i, j + 1, k]],
+                                    -(density[[i, j - 1, k]] * velocity_y[[i, j - 1, k]]),
+                                ) * 0.5
+                                    * dy_inv,
+                            ),
+                    );
                 max_error = max_error.max((drho_dt + div_flux).abs());
             }
         }
@@ -54,16 +71,25 @@ mod tests {
     fn mass_conservation_zero_error_for_uniform_static_field() {
         let grid = small_grid();
         let s = (grid.nx, grid.ny, grid.nz);
-        let density          = Array3::from_elem(s, 1000.0_f64);
+        let density = Array3::from_elem(s, 1000.0_f64);
         let density_previous = Array3::from_elem(s, 1000.0_f64);
-        let velocity_x       = Array3::zeros(s);
-        let velocity_y       = Array3::zeros(s);
-        let velocity_z       = Array3::zeros(s);
+        let velocity_x = Array3::zeros(s);
+        let velocity_y = Array3::zeros(s);
+        let velocity_z = Array3::zeros(s);
 
         let error = validate_mass_conservation(
-            &density, &density_previous, &velocity_x, &velocity_y, &velocity_z, 1e-6, &grid,
+            &density,
+            &density_previous,
+            &velocity_x,
+            &velocity_y,
+            &velocity_z,
+            1e-6,
+            &grid,
         );
-        assert_eq!(error, 0.0, "uniform static field must give zero mass continuity error");
+        assert_eq!(
+            error, 0.0,
+            "uniform static field must give zero mass continuity error"
+        );
     }
 
     /// Linear density gradient with zero velocity: ∂ρ/∂t=0, divergence of zero velocity=0
@@ -83,9 +109,11 @@ mod tests {
         let density_prev = density.clone();
         let zero = Array3::<f64>::zeros((nx, ny, nz));
 
-        let error = validate_mass_conservation(
-            &density, &density_prev, &zero, &zero, &zero, 1e-6, &grid,
+        let error =
+            validate_mass_conservation(&density, &density_prev, &zero, &zero, &zero, 1e-6, &grid);
+        assert_eq!(
+            error, 0.0,
+            "static gradient field with zero velocity must give zero error"
         );
-        assert_eq!(error, 0.0, "static gradient field with zero velocity must give zero error");
     }
 }

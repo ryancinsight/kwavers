@@ -73,7 +73,8 @@ impl WesterveltFdtd {
                         let f_ref = 1.0e6_f64; // 1 MHz reference frequency (matches alpha query above)
                         let omega_ref = 2.0 * std::f64::consts::PI * f_ref; // ω = 2π·f_ref
                         let delta = 2.0 * alpha * c.powi(3) / omega_ref.powi(2);
-                        delta * dt / c.powi(2) * (2.0f64.mul_add(-p_prev, p) + p_prev2[[i, j, k]]) / (dt * dt)
+                        delta * dt / c.powi(2) * (2.0f64.mul_add(-p_prev, p) + p_prev2[[i, j, k]])
+                            / (dt * dt)
                     } else {
                         0.0
                     }
@@ -98,9 +99,11 @@ impl WesterveltFdtd {
                     let lap_p = (2.0f64.mul_add(-p, self.pressure[(i + 1, j, k)])
                         + self.pressure[(i - 1, j, k)])
                         / dx2
-                        + (2.0f64.mul_add(-p, self.pressure[(i, j + 1, k)]) + self.pressure[(i, j - 1, k)])
+                        + (2.0f64.mul_add(-p, self.pressure[(i, j + 1, k)])
+                            + self.pressure[(i, j - 1, k)])
                             / dy2
-                        + (2.0f64.mul_add(-p, self.pressure[(i, j, k + 1)]) + self.pressure[(i, j, k - 1)])
+                        + (2.0f64.mul_add(-p, self.pressure[(i, j, k + 1)])
+                            + self.pressure[(i, j, k - 1)])
                             / dz2;
 
                     self.config.artificial_viscosity * dt * lap_p
@@ -108,9 +111,28 @@ impl WesterveltFdtd {
                     0.0
                 };
 
-                // Update equation: p^{n+1} = 2p^n - p^{n-1} + linear + nonlinear + absorption + viscosity
-                *p_next =
-                    2.0f64.mul_add(p, -p_prev) + linear_term - nl_coeff * nl - absorption_term + visc_term;
+                // Westervelt explicit leapfrog update (Hamilton & Blackstock 1998 §3.5):
+                //   p_tt = c^2 \nabla^2 p + (\beta / (\rho c^2)) \partial^2(p^2)/\partial t^2
+                //        + (\delta / c^2) \partial^3 p / \partial t^3.
+                // The nonlinear contribution to p^{n+1} must be POSITIVE for forward
+                // steepening (peaks at fixed x arrive earlier than linear). A negative
+                // sign produces non-physical reverse steepening.
+                //
+                // Absorption discretization (limitation): the strict Stokes-Kirchhoff
+                // term is `+(delta/c^2)·p_ttt`, whose 4-point backward discretization
+                // requires `p_{n-3}` — this solver only stores three pressure
+                // histories. The implemented form `delta·(p_n − 2 p_{n-1} + p_{n-2})
+                // / (c^2·dt)` is dimensionally `(delta·dt/c^2)·p_tt(n-1)` (a Kelvin-
+                // Voigt-like lagged-velocity proxy), applied here with a negative
+                // sign so the resulting plane-wave dispersion has Im(omega) > 0 and
+                // the wave decays. The damping rate matches Stokes-Kirchhoff to
+                // leading order in `delta/(c^2·dt)`, but the form is NOT a strict
+                // p_ttt discretization and is NOT a frequency-dependent power-law
+                // absorption. For physical power-law absorption use the PSTD
+                // fractional-Laplacian path (Treeby & Cox 2010).
+                *p_next = 2.0f64.mul_add(p, -p_prev) + linear_term + nl_coeff * nl
+                    - absorption_term
+                    + visc_term;
 
                 // No explicit pressure clamping - allows natural shock formation through nonlinearity
                 // Stability maintained through CFL conditions and artificial viscosity

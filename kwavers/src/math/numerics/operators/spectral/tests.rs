@@ -1,6 +1,7 @@
 use super::derivative::PseudospectralDerivative;
 use super::filter::{FilterType, SpectralFilter};
 use super::trait_def::SpectralOperator;
+use crate::math::fft::Complex64;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 use std::f64::consts::PI;
@@ -103,6 +104,75 @@ fn spectral_filter_removes_rejected_nyquist_mode_and_preserves_low_mode() {
         let expected = (low_k * i as f64 * dx).sin();
         assert_abs_diff_eq!(filtered[[i, 0, 0]], expected, epsilon = 1e-12);
     }
+}
+
+#[test]
+fn spectral_filter_apply_into_reuses_workspaces_and_matches_apply() {
+    let nx = 16;
+    let ny = 4;
+    let nz = 2;
+    let filter = SpectralFilter::new(0.5, FilterType::SharpCutoff);
+    let mut field = Array3::zeros((nx, ny, nz));
+
+    for i in 0..nx {
+        let low_mode = (2.0 * PI * i as f64 / nx as f64).sin();
+        let rejected_mode = if i.is_multiple_of(2) { 0.25 } else { -0.25 };
+        for j in 0..ny {
+            for k in 0..nz {
+                field[[i, j, k]] = low_mode + rejected_mode + 0.125 * j as f64;
+            }
+        }
+    }
+
+    let expected = filter.apply(field.view()).unwrap();
+    let mut spectrum = Array3::<Complex64>::zeros((nx, ny, nz));
+    let mut output = Array3::<f64>::zeros((nx, ny, nz));
+    let spectrum_ptr = spectrum.as_ptr();
+    let output_ptr = output.as_ptr();
+
+    filter
+        .apply_into(field.view(), &mut spectrum, &mut output)
+        .unwrap();
+
+    assert_eq!(spectrum.as_ptr(), spectrum_ptr);
+    assert_eq!(output.as_ptr(), output_ptr);
+    for (actual, expected) in output.iter().zip(expected.iter()) {
+        assert_abs_diff_eq!(*actual, *expected, epsilon = 1e-12);
+    }
+
+    field.mapv_inplace(|value| 0.5 * value);
+    let expected_second = filter.apply(field.view()).unwrap();
+    filter
+        .apply_into(field.view(), &mut spectrum, &mut output)
+        .unwrap();
+
+    assert_eq!(spectrum.as_ptr(), spectrum_ptr);
+    assert_eq!(output.as_ptr(), output_ptr);
+    for (actual, expected) in output.iter().zip(expected_second.iter()) {
+        assert_abs_diff_eq!(*actual, *expected, epsilon = 1e-12);
+    }
+}
+
+#[test]
+fn spectral_filter_apply_into_rejects_mismatched_workspaces() {
+    let filter = SpectralFilter::new(0.5, FilterType::SharpCutoff);
+    let field = Array3::<f64>::zeros((4, 4, 4));
+    let mut spectrum = Array3::<Complex64>::zeros((4, 4, 3));
+    let mut output = Array3::<f64>::zeros((4, 4, 4));
+
+    let error = filter
+        .apply_into(field.view(), &mut spectrum, &mut output)
+        .unwrap_err();
+
+    assert!(format!("{error}").contains("spectrum workspace shape"));
+
+    spectrum = Array3::<Complex64>::zeros((4, 4, 4));
+    output = Array3::<f64>::zeros((4, 3, 4));
+    let error = filter
+        .apply_into(field.view(), &mut spectrum, &mut output)
+        .unwrap_err();
+
+    assert!(format!("{error}").contains("output workspace shape"));
 }
 
 #[test]
@@ -227,6 +297,78 @@ fn test_derivative_z_sine_wave() {
 }
 
 #[test]
+fn spectral_derivative_into_reuses_workspace_and_matches_allocating() {
+    let nx = 16;
+    let ny = 8;
+    let nz = 4;
+    let op = PseudospectralDerivative::new(nx, ny, nz, 0.1, 0.2, 0.3).unwrap();
+    let mut field = Array3::zeros((nx, ny, nz));
+
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                field[[i, j, k]] = (2.0 * PI * i as f64 / nx as f64).sin()
+                    + 0.25 * (2.0 * PI * j as f64 / ny as f64).cos()
+                    + 0.125 * (2.0 * PI * k as f64 / nz as f64).sin();
+            }
+        }
+    }
+
+    let expected_x = op.derivative_x(field.view()).unwrap();
+    let mut line_x = ndarray::Array1::<Complex64>::zeros(nx);
+    let mut out_x = Array3::<f64>::zeros((nx, ny, nz));
+    let line_x_ptr = line_x.as_ptr();
+    let out_x_ptr = out_x.as_ptr();
+    op.derivative_x_into(field.view(), &mut line_x, &mut out_x)
+        .unwrap();
+    assert_eq!(line_x.as_ptr(), line_x_ptr);
+    assert_eq!(out_x.as_ptr(), out_x_ptr);
+    assert_arrays_close(&out_x, &expected_x, 1e-12);
+
+    let expected_y = op.derivative_y(field.view()).unwrap();
+    let mut line_y = ndarray::Array1::<Complex64>::zeros(ny);
+    let mut out_y = Array3::<f64>::zeros((nx, ny, nz));
+    let line_y_ptr = line_y.as_ptr();
+    let out_y_ptr = out_y.as_ptr();
+    op.derivative_y_into(field.view(), &mut line_y, &mut out_y)
+        .unwrap();
+    assert_eq!(line_y.as_ptr(), line_y_ptr);
+    assert_eq!(out_y.as_ptr(), out_y_ptr);
+    assert_arrays_close(&out_y, &expected_y, 1e-12);
+
+    let expected_z = op.derivative_z(field.view()).unwrap();
+    let mut line_z = ndarray::Array1::<Complex64>::zeros(nz);
+    let mut out_z = Array3::<f64>::zeros((nx, ny, nz));
+    let line_z_ptr = line_z.as_ptr();
+    let out_z_ptr = out_z.as_ptr();
+    op.derivative_z_into(field.view(), &mut line_z, &mut out_z)
+        .unwrap();
+    assert_eq!(line_z.as_ptr(), line_z_ptr);
+    assert_eq!(out_z.as_ptr(), out_z_ptr);
+    assert_arrays_close(&out_z, &expected_z, 1e-12);
+}
+
+#[test]
+fn spectral_derivative_into_rejects_mismatched_workspaces() {
+    let op = PseudospectralDerivative::new(4, 4, 4, 0.1, 0.1, 0.1).unwrap();
+    let field = Array3::<f64>::zeros((4, 4, 4));
+    let mut line = ndarray::Array1::<Complex64>::zeros(3);
+    let mut output = Array3::<f64>::zeros((4, 4, 4));
+
+    let error = op
+        .derivative_x_into(field.view(), &mut line, &mut output)
+        .unwrap_err();
+    assert!(format!("{error}").contains("line workspace length"));
+
+    line = ndarray::Array1::<Complex64>::zeros(4);
+    output = Array3::<f64>::zeros((4, 4, 3));
+    let error = op
+        .derivative_x_into(field.view(), &mut line, &mut output)
+        .unwrap_err();
+    assert!(format!("{error}").contains("output shape"));
+}
+
+#[test]
 fn test_derivative_of_constant_is_zero() {
     let nx = 32;
     let ny = 32;
@@ -247,6 +389,13 @@ fn test_derivative_of_constant_is_zero() {
                 assert_abs_diff_eq!(deriv_z[[i, j, k]], 0.0, epsilon = 1e-12);
             }
         }
+    }
+}
+
+fn assert_arrays_close(actual: &Array3<f64>, expected: &Array3<f64>, epsilon: f64) {
+    assert_eq!(actual.dim(), expected.dim());
+    for (actual, expected) in actual.iter().zip(expected.iter()) {
+        assert_abs_diff_eq!(*actual, *expected, epsilon = epsilon);
     }
 }
 

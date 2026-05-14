@@ -36,7 +36,7 @@ impl std::fmt::Debug for CollocationSampler {
 }
 
 impl CollocationSampler {
-    #[must_use] 
+    #[must_use]
     pub fn new(
         domain: Box<dyn GeometricDomain>,
         strategy: SamplingStrategy,
@@ -49,7 +49,7 @@ impl CollocationSampler {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn sample_interior(&self, n_points: usize) -> Array2<f64> {
         match self.strategy {
             SamplingStrategy::Uniform => self.domain.sample_interior(n_points, self.seed),
@@ -61,7 +61,7 @@ impl CollocationSampler {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn sample_boundary(&self, n_points: usize) -> Array2<f64> {
         match self.strategy {
             SamplingStrategy::Uniform => self.domain.sample_boundary(n_points, self.seed),

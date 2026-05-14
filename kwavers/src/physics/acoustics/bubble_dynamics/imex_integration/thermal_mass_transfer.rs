@@ -13,8 +13,8 @@
 
 use super::integrator::BubbleIMEXIntegrator;
 use crate::core::constants::thermodynamic::{
-    NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, R_GAS,
-    SHERWOOD_PECLET_EXPONENT, T_AMBIENT, VAPOR_DIFFUSION_COEFFICIENT,
+    NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, R_GAS, SHERWOOD_PECLET_EXPONENT, T_AMBIENT,
+    VAPOR_DIFFUSION_COEFFICIENT,
 };
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::bubble_dynamics::BubbleState;
@@ -41,8 +41,7 @@ impl BubbleIMEXIntegrator {
             let thermal_diffusivity =
                 params.thermal_conductivity / (params.rho_liquid * params.specific_heat_liquid);
             let peclet = (2.0 * r * v.abs()) / thermal_diffusivity;
-            let nusselt =
-                NUSSELT_PECLET_COEFF.mul_add(peclet.sqrt(), NUSSELT_CONSTANT);
+            let nusselt = NUSSELT_PECLET_COEFF.mul_add(peclet.sqrt(), NUSSELT_CONSTANT);
             let h = nusselt * params.thermal_conductivity / (2.0 * r);
 
             let compression_heating = -(gamma - 1.0) * temperature * v / r;
@@ -61,8 +60,8 @@ impl BubbleIMEXIntegrator {
             let thermal_diffusivity =
                 params.thermal_conductivity / (params.rho_liquid * params.specific_heat_liquid);
             let peclet = (2.0 * r * v.abs()) / thermal_diffusivity;
-            let sherwood =
-                NUSSELT_PECLET_COEFF.mul_add(peclet.powf(SHERWOOD_PECLET_EXPONENT), NUSSELT_CONSTANT);
+            let sherwood = NUSSELT_PECLET_COEFF
+                .mul_add(peclet.powf(SHERWOOD_PECLET_EXPONENT), NUSSELT_CONSTANT);
             let k_mass = sherwood * d_vapor / (2.0 * r);
 
             let driving_force = p_vapor_eq - p_vapor_actual;

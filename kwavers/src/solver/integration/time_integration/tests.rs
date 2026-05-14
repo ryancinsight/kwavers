@@ -7,11 +7,12 @@
 
 use super::multi_rate_controller::MultiRateController;
 use super::stability::{CFLCondition, StabilityAnalyzer};
+use super::time_scale_separation::TimeScaleSeparator;
 use super::time_stepper::{AdamsBashforth, AdamsBashforthConfig, RK4Config, RungeKutta4};
 use super::traits::{MultiRateConfig, TimeStepper};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use ndarray::Array3;
+use ndarray::{Array3, Array4};
 use std::collections::HashMap;
 
 #[test]
@@ -125,5 +126,56 @@ fn multi_rate_controller_selects_slowest_global_step_and_fast_subcycles() -> Kwa
     assert_eq!(controller.total_steps(), 1);
     assert_eq!(controller.subcycle_counts()["acoustic"], 5);
     assert_eq!(controller.efficiency_ratio(), 15.0 / 9.0);
+    Ok(())
+}
+
+#[test]
+fn time_scale_separator_matches_quadratic_closed_form() -> KwaversResult<()> {
+    let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0)?;
+    let mut fields = Array4::zeros((1, 5, 5, 5));
+
+    for i in 0..5 {
+        for j in 0..5 {
+            for k in 0..5 {
+                fields[[0, i, j, k]] = (i * i + j * j + k * k) as f64;
+            }
+        }
+    }
+
+    let mut separator = TimeScaleSeparator::new(&grid);
+    let scales = separator.analyze(&fields, 1e-12)?;
+
+    let grad_max = 6.0 * 3.0_f64.sqrt();
+    let laplacian_max = 6.0_f64;
+    let expected_diffusive = 1.0 / grad_max;
+    let expected_acoustic = 1.0 / laplacian_max.sqrt();
+
+    assert_eq!(scales.len(), 2);
+    assert!(
+        (scales[0] - expected_diffusive).abs() < 1e-15,
+        "diffusive scale {}, expected {}",
+        scales[0],
+        expected_diffusive
+    );
+    assert!(
+        (scales[1] - expected_acoustic).abs() < 1e-15,
+        "acoustic scale {}, expected {}",
+        scales[1],
+        expected_acoustic
+    );
+    assert!(!separator.is_stiff());
+    Ok(())
+}
+
+#[test]
+fn time_scale_separator_handles_domains_without_central_stencil() -> KwaversResult<()> {
+    let grid = Grid::new(2, 3, 3, 1.0, 1.0, 1.0)?;
+    let fields = Array4::from_elem((2, 2, 3, 3), 7.0);
+    let mut separator = TimeScaleSeparator::new(&grid);
+
+    let scales = separator.analyze(&fields, 1e-12)?;
+
+    assert!(scales.is_empty());
+    assert!(!separator.is_stiff());
     Ok(())
 }

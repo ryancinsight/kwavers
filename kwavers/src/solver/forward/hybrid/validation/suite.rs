@@ -224,8 +224,14 @@ fn exact_second_derivative(x: f64) -> f64 {
 }
 
 fn sixth_order_second_derivative(x: f64, h: f64) -> f64 {
-    (1.5f64.mul_add(manufactured_mode(x + h), 1.5f64.mul_add(manufactured_mode(x - h), manufactured_mode(3.0f64.mul_add(-h, x)) / 90.0 - 3.0 * manufactured_mode(2.0f64.mul_add(-h, x)) / 20.0) - 49.0 * manufactured_mode(x) / 18.0)
-        - 3.0 * manufactured_mode(2.0f64.mul_add(h, x)) / 20.0
+    (1.5f64.mul_add(
+        manufactured_mode(x + h),
+        1.5f64.mul_add(
+            manufactured_mode(x - h),
+            manufactured_mode(3.0f64.mul_add(-h, x)) / 90.0
+                - 3.0 * manufactured_mode(2.0f64.mul_add(-h, x)) / 20.0,
+        ) - 49.0 * manufactured_mode(x) / 18.0,
+    ) - 3.0 * manufactured_mode(2.0f64.mul_add(h, x)) / 20.0
         + manufactured_mode(3.0f64.mul_add(h, x)) / 90.0)
         / h.powi(2)
 }

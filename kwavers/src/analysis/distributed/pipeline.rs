@@ -91,7 +91,7 @@ impl PipelineCoordinator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn aggregate_metrics(&self) -> Vec<PoolMetrics> {
         self.stages.iter().map(|stage| stage.metrics()).collect()
     }
@@ -100,7 +100,7 @@ impl PipelineCoordinator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn num_stages(&self) -> usize {
         self.stages.len()
     }

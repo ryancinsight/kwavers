@@ -134,69 +134,69 @@ impl CylindricalTopology {
     }
 
     /// Get axial coordinates array
-    #[must_use] 
+    #[must_use]
     pub fn z_coordinates(&self) -> &Array1<f64> {
         &self.z_coords
     }
 
     /// Get radial coordinates array
-    #[must_use] 
+    #[must_use]
     pub fn r_coordinates(&self) -> &Array1<f64> {
         &self.r_coords
     }
 
     /// Get axial wavenumbers
-    #[must_use] 
+    #[must_use]
     pub fn kz_wavenumbers(&self) -> &Array1<f64> {
         &self.kz
     }
 
     /// Get radial wavenumbers (Hankel transform)
-    #[must_use] 
+    #[must_use]
     pub fn kr_wavenumbers(&self) -> &Array1<f64> {
         &self.kr
     }
 
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn z_at(&self, i: usize) -> f64 {
         (i as f64).mul_add(self.dz, self.z0)
     }
 
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn r_at(&self, j: usize) -> f64 {
         (j as f64).mul_add(self.dr, self.r0)
     }
 
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn iz_for(&self, z: f64) -> usize {
         let rel = z - self.z0;
         ((rel / self.dz).round() as usize).min(self.nz - 1)
     }
 
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn ir_for(&self, r: f64) -> usize {
         let rel = r - self.r0;
         ((rel / self.dr).round() as usize).min(self.nr - 1)
     }
 
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn z_max(&self) -> f64 {
         ((self.nz - 1) as f64).mul_add(self.dz, self.z0)
     }
 
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn r_max(&self) -> f64 {
         ((self.nr - 1) as f64).mul_add(self.dr, self.r0)
     }
 
     /// Create 2D meshgrid of z coordinates
-    #[must_use] 
+    #[must_use]
     pub fn z_mesh(&self) -> Array2<f64> {
         let mut mesh = Array2::zeros((self.nz, self.nr));
         for i in 0..self.nz {
@@ -209,7 +209,7 @@ impl CylindricalTopology {
     }
 
     /// Create 2D meshgrid of r coordinates
-    #[must_use] 
+    #[must_use]
     pub fn r_mesh(&self) -> Array2<f64> {
         let mut mesh = Array2::zeros((self.nz, self.nr));
         for i in 0..self.nz {
@@ -223,7 +223,7 @@ impl CylindricalTopology {
     /// Calculate area element for integration: r * dr * dz
     ///
     /// At r = 0, uses half-cell width to avoid singularity: 0.5 * dr² * dz
-    #[must_use] 
+    #[must_use]
     pub fn area_element(&self, j: usize) -> f64 {
         let r = self.r_coords[j];
         if j == 0 && self.r0.abs() < 1e-15 {
@@ -234,7 +234,7 @@ impl CylindricalTopology {
     }
 
     /// Calculate volume of rotation for full 3D: 2π * r * dr * dz
-    #[must_use] 
+    #[must_use]
     pub fn volume_element(&self, j: usize) -> f64 {
         2.0 * PI * self.area_element(j)
     }

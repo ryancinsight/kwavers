@@ -73,7 +73,8 @@ impl AnisotropicElasticProperties {
         }
 
         // Check second principal minor (2x2 upper-left)
-        let det_2x2 = stiffness[0][0].mul_add(stiffness[1][1], -(stiffness[0][1] * stiffness[1][0]));
+        let det_2x2 =
+            stiffness[0][0].mul_add(stiffness[1][1], -(stiffness[0][1] * stiffness[1][0]));
         if det_2x2 <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "C11*C22 - C12^2".to_owned(),
@@ -84,7 +85,15 @@ impl AnisotropicElasticProperties {
         }
 
         // Check third principal minor (3x3 upper-left)
-        let det_3x3 = stiffness[0][2].mul_add(stiffness[1][0].mul_add(stiffness[2][1], -(stiffness[1][1] * stiffness[2][0])), stiffness[0][0].mul_add(stiffness[1][1].mul_add(stiffness[2][2], -(stiffness[1][2] * stiffness[2][1])), -(stiffness[0][1] * stiffness[1][0].mul_add(stiffness[2][2], -(stiffness[1][2] * stiffness[2][0])))));
+        let det_3x3 = stiffness[0][2].mul_add(
+            stiffness[1][0].mul_add(stiffness[2][1], -(stiffness[1][1] * stiffness[2][0])),
+            stiffness[0][0].mul_add(
+                stiffness[1][1].mul_add(stiffness[2][2], -(stiffness[1][2] * stiffness[2][1])),
+                -(stiffness[0][1]
+                    * stiffness[1][0]
+                        .mul_add(stiffness[2][2], -(stiffness[1][2] * stiffness[2][0]))),
+            ),
+        );
         if det_3x3 <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "det(C_3x3)".to_owned(),

@@ -118,7 +118,8 @@ impl PluginManager {
                 .record_plugin_execution(&plugin.metadata().id, plugin_duration);
         }
 
-        self.performance_metrics.record_total_execution(start.elapsed());
+        self.performance_metrics
+            .record_total_execution(start.elapsed());
         Ok(())
     }
 }

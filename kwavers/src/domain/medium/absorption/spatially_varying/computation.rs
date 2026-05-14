@@ -22,7 +22,7 @@ impl SpatiallyVaryingAbsorption {
         alpha
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn compute_absorption_field(&self, frequency: f64) -> Array3<f64> {
         let (nx, ny, nz) = self.alpha_0_field.dim();
         let mut alpha_field = Array3::zeros((nx, ny, nz));
@@ -67,10 +67,12 @@ impl SpatiallyVaryingAbsorption {
 
         let alpha_field = self.compute_absorption_field(frequency);
 
-        Zip::from(field).and(&alpha_field).par_for_each(|f, &alpha| {
-            let attenuation = (-alpha * dx).exp();
-            *f *= attenuation;
-        });
+        Zip::from(field)
+            .and(&alpha_field)
+            .par_for_each(|f, &alpha| {
+                let attenuation = (-alpha * dx).exp();
+                *f *= attenuation;
+            });
 
         Ok(())
     }
@@ -94,10 +96,12 @@ impl SpatiallyVaryingAbsorption {
 
         let alpha_field = self.compute_absorption_field(frequency);
 
-        Zip::from(field).and(&alpha_field).par_for_each(|f, &alpha| {
-            let attenuation = (-alpha * ds / 3.0_f64.sqrt()).exp();
-            *f *= attenuation;
-        });
+        Zip::from(field)
+            .and(&alpha_field)
+            .par_for_each(|f, &alpha| {
+                let attenuation = (-alpha * ds / 3.0_f64.sqrt()).exp();
+                *f *= attenuation;
+            });
 
         Ok(())
     }

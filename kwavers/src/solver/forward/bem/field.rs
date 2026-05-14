@@ -30,7 +30,7 @@ pub struct BemSolution {
 ///
 /// Max, N.L. (1999). "Weights for computing vertex normals from facet normals."
 /// *Journal of Graphics Tools*, 4(2), 1–6.
-#[must_use] 
+#[must_use]
 pub fn compute_vertex_normals(vertices: &[[f64; 3]], triangles: &[[usize; 3]]) -> Vec<[f64; 3]> {
     let nv = vertices.len();
     let mut normals = vec![[0.0f64; 3]; nv];
@@ -92,7 +92,7 @@ pub fn compute_vertex_normals(vertices: &[[f64; 3]], triangles: &[[usize; 3]]) -
 ///
 /// Colton, D. & Kress, R. (1998). *Inverse Acoustic and Electromagnetic Scattering Theory*,
 /// 2nd ed., Springer. §3.1.
-#[must_use] 
+#[must_use]
 pub fn plane_wave_incident(
     vertices: &[[f64; 3]],
     normals: &[[f64; 3]],
@@ -100,10 +100,13 @@ pub fn plane_wave_incident(
     wavenumber: f64,
     amplitude: Complex64,
 ) -> (Vec<Complex64>, Vec<Complex64>) {
-    let dlen =
-        direction[2].mul_add(direction[2], direction[0].mul_add(direction[0], direction[1] * direction[1]))
-            .sqrt()
-            .max(1e-15);
+    let dlen = direction[2]
+        .mul_add(
+            direction[2],
+            direction[0].mul_add(direction[0], direction[1] * direction[1]),
+        )
+        .sqrt()
+        .max(1e-15);
     let d = [
         direction[0] / dlen,
         direction[1] / dlen,

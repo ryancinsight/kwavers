@@ -9,8 +9,12 @@ fn test_gilmore_initialization() {
     assert!(solver.tait_b > 0.0);
     assert!(solver.tait_n > 1.0);
     // Enthalpy at ambient pressure must be positive (Tait EOS guarantee for p0 > 0).
-    let h_ambient =
-        GilmoreSolver::calculate_enthalpy(params.p0, params.rho_liquid, solver.tait_b, solver.tait_n);
+    let h_ambient = GilmoreSolver::calculate_enthalpy(
+        params.p0,
+        params.rho_liquid,
+        solver.tait_b,
+        solver.tait_n,
+    );
     assert!(h_ambient > 0.0, "h_ambient = {h_ambient}");
 }
 

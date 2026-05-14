@@ -51,7 +51,11 @@ impl ElasticWaveSolver {
     /// dt = 4 × 10⁻⁸ s).
     pub fn extract_recorded_velocity_components(
         &self,
-    ) -> (Option<Array2<f64>>, Option<Array2<f64>>, Option<Array2<f64>>) {
+    ) -> (
+        Option<Array2<f64>>,
+        Option<Array2<f64>>,
+        Option<Array2<f64>>,
+    ) {
         (
             self.sensor_recorder.extract_ux_data(),
             self.sensor_recorder.extract_uy_data(),
@@ -72,7 +76,11 @@ impl ElasticWaveSolver {
     )]
     pub fn extract_recorded_displacement_components(
         &self,
-    ) -> (Option<Array2<f64>>, Option<Array2<f64>>, Option<Array2<f64>>) {
+    ) -> (
+        Option<Array2<f64>>,
+        Option<Array2<f64>>,
+        Option<Array2<f64>>,
+    ) {
         self.extract_recorded_velocity_components()
     }
 

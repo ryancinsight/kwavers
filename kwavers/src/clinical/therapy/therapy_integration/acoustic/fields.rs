@@ -1,8 +1,8 @@
+use super::AcousticWaveSolver;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::source::Source;
 use ndarray::Array3;
 use std::sync::Arc;
-use super::AcousticWaveSolver;
 
 impl AcousticWaveSolver {
     /// Get current pressure field (Pa).
@@ -68,7 +68,11 @@ impl AcousticWaveSolver {
             .zip(impedance.iter())
             .fold(0.0_f64, |max_val, (&acc_p2, &z)| {
                 let val = (acc_p2 * normalization) / z;
-                if val.is_nan() { max_val } else { max_val.max(val) }
+                if val.is_nan() {
+                    max_val
+                } else {
+                    max_val.max(val)
+                }
             });
 
         Ok(i_spta / 1e4)

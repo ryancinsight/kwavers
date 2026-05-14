@@ -43,9 +43,9 @@ impl SpatialOrder {
     #[must_use]
     pub fn cfl_limit(&self) -> f64 {
         match self {
-            Self::Second => 1.0 / (3.0_f64).sqrt(), // 1/√3 ≈ 0.577
+            Self::Second => 1.0 / (3.0_f64).sqrt(),  // 1/√3 ≈ 0.577
             Self::Fourth => 1.0 / (15.0_f64).sqrt(), // 1/√15 ≈ 0.258
-            Self::Sixth => 1.0 / (27.0_f64).sqrt(), // 1/√27 ≈ 0.192
+            Self::Sixth => 1.0 / (27.0_f64).sqrt(),  // 1/√27 ≈ 0.192
         }
     }
 

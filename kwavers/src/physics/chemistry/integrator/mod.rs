@@ -37,7 +37,10 @@ mod types;
 mod tests;
 
 use self::rhs::{collect_species, eval_rhs, eval_rhs_at};
-use self::tableau::{A21, C2, A31, A32, C3, A43, A41, A42, C4, A54, A53, A51, A52, C5, A65, A64, A63, A61, A62, B6, B5, B4, B1, B3, E7, E6, E5, E4, E1, E3};
+use self::tableau::{
+    A21, A31, A32, A41, A42, A43, A51, A52, A53, A54, A61, A62, A63, A64, A65, B1, B3, B4, B5, B6,
+    C2, C3, C4, C5, E1, E3, E4, E5, E6, E7,
+};
 pub use self::types::{IntegrationStats, IntegratorError};
 use crate::physics::chemistry::ros_plasma::radical_kinetics::RadicalKinetics;
 use crate::physics::chemistry::ros_plasma::ros_species::ROSSpecies;
@@ -162,24 +165,44 @@ impl RadicalIntegrator {
             eval_rhs_at(&kinetics, &species_list, &ytmp, C3.mul_add(h, t), &mut k3);
 
             for i in 0..n {
-                ytmp[i] = h.mul_add(A43.mul_add(k3[i], A41.mul_add(k1[i], A42 * k2[i])), y[i]).max(0.0);
+                ytmp[i] = h
+                    .mul_add(A43.mul_add(k3[i], A41.mul_add(k1[i], A42 * k2[i])), y[i])
+                    .max(0.0);
             }
             eval_rhs_at(&kinetics, &species_list, &ytmp, C4.mul_add(h, t), &mut k4);
 
             for i in 0..n {
-                ytmp[i] =
-                    h.mul_add(A54.mul_add(k4[i], A53.mul_add(k3[i], A51.mul_add(k1[i], A52 * k2[i]))), y[i]).max(0.0);
+                ytmp[i] = h
+                    .mul_add(
+                        A54.mul_add(k4[i], A53.mul_add(k3[i], A51.mul_add(k1[i], A52 * k2[i]))),
+                        y[i],
+                    )
+                    .max(0.0);
             }
             eval_rhs_at(&kinetics, &species_list, &ytmp, C5.mul_add(h, t), &mut k5);
 
             for i in 0..n {
-                ytmp[i] = h.mul_add(A65.mul_add(k5[i], A64.mul_add(k4[i], A63.mul_add(k3[i], A61.mul_add(k1[i], A62 * k2[i])))), y[i])
+                ytmp[i] = h
+                    .mul_add(
+                        A65.mul_add(
+                            k5[i],
+                            A64.mul_add(k4[i], A63.mul_add(k3[i], A61.mul_add(k1[i], A62 * k2[i]))),
+                        ),
+                        y[i],
+                    )
                     .max(0.0);
             }
             eval_rhs_at(&kinetics, &species_list, &ytmp, t + h, &mut k6);
 
             for i in 0..n {
-                y5[i] = h.mul_add(B6.mul_add(k6[i], B5.mul_add(k5[i], B4.mul_add(k4[i], B1.mul_add(k1[i], B3 * k3[i])))), y[i])
+                y5[i] = h
+                    .mul_add(
+                        B6.mul_add(
+                            k6[i],
+                            B5.mul_add(k5[i], B4.mul_add(k4[i], B1.mul_add(k1[i], B3 * k3[i]))),
+                        ),
+                        y[i],
+                    )
                     .max(0.0);
             }
 
@@ -188,8 +211,13 @@ impl RadicalIntegrator {
             let mut err_max = 0.0_f64;
             for i in 0..n {
                 let sc = self.rtol.mul_add(y5[i].abs(), self.atol);
-                let e = h
-                    * E7.mul_add(k7[i], E6.mul_add(k6[i], E5.mul_add(k5[i], E4.mul_add(k4[i], E1.mul_add(k1[i], E3 * k3[i])))));
+                let e = h * E7.mul_add(
+                    k7[i],
+                    E6.mul_add(
+                        k6[i],
+                        E5.mul_add(k5[i], E4.mul_add(k4[i], E1.mul_add(k1[i], E3 * k3[i]))),
+                    ),
+                );
                 err_max = err_max.max((e / sc).abs());
             }
 

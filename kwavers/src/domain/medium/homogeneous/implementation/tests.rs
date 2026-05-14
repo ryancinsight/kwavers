@@ -1,5 +1,7 @@
 use crate::domain::grid::Grid;
-use crate::domain::medium::{core::CoreMedium, elastic::ElasticProperties, viscous::ViscousProperties};
+use crate::domain::medium::{
+    core::CoreMedium, elastic::ElasticProperties, viscous::ViscousProperties,
+};
 
 use super::HomogeneousMedium;
 
@@ -56,7 +58,12 @@ fn test_elastic_homogeneous_lame_inversion_satisfies_dispersion() {
     // Lamé parameters per closed form
     let mu = med.lame_mu_value();
     let lambda = med.lame_lambda_value();
-    assert!((mu - rho * cs * cs).abs() < 1e-6, "μ mismatch: {} vs {}", mu, rho * cs * cs);
+    assert!(
+        (mu - rho * cs * cs).abs() < 1e-6,
+        "μ mismatch: {} vs {}",
+        mu,
+        rho * cs * cs
+    );
     assert!(
         (lambda - rho * (cp * cp - 2.0 * cs * cs)).abs() < 1e-6,
         "λ mismatch: {} vs {}",
@@ -68,8 +75,16 @@ fn test_elastic_homogeneous_lame_inversion_satisfies_dispersion() {
     // and shear_wave_speed must recover the input speeds within float epsilon.
     let cp_back = med.compressional_wave_speed(0.0, 0.0, 0.0, &grid);
     let cs_back = med.shear_wave_speed(0.0, 0.0, 0.0, &grid);
-    assert!((cp_back - cp).abs() < 1e-9, "c_p round-trip: got {}", cp_back);
-    assert!((cs_back - cs).abs() < 1e-9, "c_s round-trip: got {}", cs_back);
+    assert!(
+        (cp_back - cp).abs() < 1e-9,
+        "c_p round-trip: got {}",
+        cp_back
+    );
+    assert!(
+        (cs_back - cs).abs() < 1e-9,
+        "c_s round-trip: got {}",
+        cs_back
+    );
 }
 
 /// Fluid limit: c_s = 0 must yield μ = 0 and λ = ρ·c_p² (acoustic bulk
@@ -107,7 +122,10 @@ fn test_elastic_homogeneous_rejects_unstable_speeds() {
     let grid = Grid::new(4, 4, 4, 1e-4, 1e-4, 1e-4).unwrap();
     // c_s² · 2 > c_p² ⇒ λ < 0 — must reject
     let res = HomogeneousMedium::elastic_homogeneous(1000.0, 1500.0, 1200.0, &grid);
-    assert!(res.is_none(), "Unstable elastic configuration must be rejected");
+    assert!(
+        res.is_none(),
+        "Unstable elastic configuration must be rejected"
+    );
 
     // Density / speed positivity
     assert!(HomogeneousMedium::elastic_homogeneous(0.0, 1500.0, 800.0, &grid).is_none());

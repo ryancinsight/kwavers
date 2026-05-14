@@ -212,5 +212,4 @@ impl SpectralCouplingInterface {
 
         Ok(weights)
     }
-
 }

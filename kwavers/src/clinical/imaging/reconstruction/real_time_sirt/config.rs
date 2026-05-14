@@ -56,7 +56,7 @@ impl Default for RealTimeSirtConfig {
 
 impl RealTimeSirtConfig {
     /// High-quality diagnostic mode (slower, more iterations).
-    #[must_use] 
+    #[must_use]
     pub fn diagnostic_quality(mut self) -> Self {
         self.sirt_config = self.sirt_config.with_iterations(20).with_relaxation(0.4);
         self.max_frame_time_ms = 200.0;
@@ -65,7 +65,7 @@ impl RealTimeSirtConfig {
     }
 
     /// High-throughput streaming mode (fewer iterations, higher fps).
-    #[must_use] 
+    #[must_use]
     pub fn fast_streaming(mut self) -> Self {
         self.sirt_config = self.sirt_config.with_iterations(5).with_relaxation(0.6);
         self.max_frame_time_ms = 50.0;
@@ -74,21 +74,21 @@ impl RealTimeSirtConfig {
     }
 
     /// Enable Gaussian output smoothing with `sigma` grid points.
-    #[must_use] 
+    #[must_use]
     pub fn with_output_smoothing(mut self, sigma: f64) -> Self {
         self.output_smoothing_sigma = Some(sigma);
         self
     }
 
     /// Zero output intensities below `threshold`.
-    #[must_use] 
+    #[must_use]
     pub fn with_intensity_threshold(mut self, threshold: f64) -> Self {
         self.intensity_threshold = Some(threshold);
         self
     }
 
     /// Use the physics-based acoustic projection model with `geometry`.
-    #[must_use] 
+    #[must_use]
     pub fn with_acoustic_projection(mut self, geometry: AcousticProjectionGeometry) -> Self {
         self.transducer_geometry = Some(geometry);
         self

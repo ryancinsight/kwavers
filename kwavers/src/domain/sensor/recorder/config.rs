@@ -143,19 +143,19 @@ impl Default for RecorderConfig {
 
 impl RecordingMode {
     /// Returns true if this mode records time series data
-    #[must_use] 
+    #[must_use]
     pub fn is_time_series(&self) -> bool {
         matches!(self, Self::TimeSeries)
     }
 
     /// Returns true if this mode records statistics (max, min, rms, final)
-    #[must_use] 
+    #[must_use]
     pub fn is_statistical(&self) -> bool {
         !matches!(self, Self::TimeSeries)
     }
 
     /// Get the corresponding field name in k-Wave output
-    #[must_use] 
+    #[must_use]
     pub fn kwave_field_name(&self) -> &'static str {
         match self {
             Self::TimeSeries => "p",

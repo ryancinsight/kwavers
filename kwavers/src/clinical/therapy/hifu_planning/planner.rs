@@ -1,3 +1,4 @@
+use super::schedule::SonicationSchedule;
 use super::types::{
     AblationTarget, FocalSpot, HIFUTransducer, HIFUTreatmentPlan, ThermalDose, TreatmentFeasibility,
 };
@@ -15,7 +16,7 @@ impl HIFUPlanner {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(transducer: HIFUTransducer) -> Self {
         Self { transducer }
     }
@@ -40,12 +41,13 @@ impl HIFUPlanner {
             therapy_params.duty_cycle,
             therapy_params.treatment_duration,
         );
+        let sonication_schedule = self.plan_sonication_schedule(&target, therapy_params)?;
         let mut feasibility = TreatmentFeasibility::new();
-        feasibility.focal_coverage_adequate = target.is_focal_spot_adequate(&focal_spot);
+        feasibility.focal_coverage_adequate = sonication_schedule.coverage_guaranteed;
         if !feasibility.focal_coverage_adequate {
             feasibility
                 .issues
-                .push("Focal spot may not adequately cover target".to_owned());
+                .push("Subspot grid does not prove full target coverage".to_owned());
         }
         feasibility.mi_within_limits = focal_spot.is_safe(target.tissue_type);
         if !feasibility.mi_within_limits {
@@ -55,11 +57,11 @@ impl HIFUPlanner {
                 target.tissue_type.safety_limit()
             ));
         }
-        feasibility.thermal_dose_achievable = thermal_dose.is_sufficient_for_ablation();
+        feasibility.thermal_dose_achievable = sonication_schedule.all_subspots_reach_ablation();
         if !feasibility.thermal_dose_achievable {
             feasibility.issues.push(format!(
-                "Thermal dose {:.0} CEM43 below ablation threshold 240",
-                thermal_dose.cem43
+                "Minimum subspot thermal dose {:.0} CEM43 below ablation threshold 240",
+                sonication_schedule.minimum_subspot_cem43
             ));
         }
         feasibility.access_path_clear = true;
@@ -74,7 +76,27 @@ impl HIFUPlanner {
         })
     }
 
-    #[must_use] 
+    /// Plan a target-covering sonication schedule without changing the
+    /// `HIFUTreatmentPlan` struct layout.
+    ///
+    /// # Errors
+    /// Returns [`Err`] when the target dimensions, safety margin, focal widths,
+    /// or treatment duration are non-finite or non-positive.
+    pub fn plan_sonication_schedule(
+        &self,
+        target: &AblationTarget,
+        therapy_params: &TherapyParameters,
+    ) -> KwaversResult<SonicationSchedule> {
+        let focal_spot = FocalSpot::estimate_from_transducer(&self.transducer);
+        let frequency = if therapy_params.frequency > 0.0 {
+            therapy_params.frequency
+        } else {
+            self.transducer.frequency
+        };
+        SonicationSchedule::plan(target, &focal_spot, therapy_params, frequency)
+    }
+
+    #[must_use]
     pub fn transducer(&self) -> &HIFUTransducer {
         &self.transducer
     }

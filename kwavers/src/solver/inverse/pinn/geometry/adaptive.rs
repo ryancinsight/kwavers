@@ -28,7 +28,7 @@ impl std::fmt::Debug for AdaptiveRefinement {
 }
 
 impl AdaptiveRefinement {
-    #[must_use] 
+    #[must_use]
     pub fn new(sampler: CollocationSampler, initial_points: Array2<f64>, threshold: f64) -> Self {
         let n_points = initial_points.nrows();
         Self {

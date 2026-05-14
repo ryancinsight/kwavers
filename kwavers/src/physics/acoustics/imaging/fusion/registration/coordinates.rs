@@ -10,7 +10,7 @@
 /// # Returns
 ///
 /// Array of coordinate vectors [x_coords, y_coords, z_coords]
-#[must_use] 
+#[must_use]
 pub fn generate_coordinate_arrays(
     dims: (usize, usize, usize),
     resolution: [f64; 3],

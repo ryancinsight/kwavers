@@ -291,7 +291,13 @@ mod tests {
 
         registry.register(kernel).unwrap();
 
-        assert_eq!(registry.get_kernel(PhysicsDomain::AcousticFDTD).unwrap().domain, PhysicsDomain::AcousticFDTD);
+        assert_eq!(
+            registry
+                .get_kernel(PhysicsDomain::AcousticFDTD)
+                .unwrap()
+                .domain,
+            PhysicsDomain::AcousticFDTD
+        );
         assert!(registry.get_kernel(PhysicsDomain::Absorption).is_none());
     }
 

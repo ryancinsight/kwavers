@@ -107,9 +107,12 @@ impl SimdAuto {
     }
 
     fn fallback_fma(&self, a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multiplier: f64) {
-        ndarray::Zip::from(c).and(a).and(b).par_for_each(|c, &a, &b| {
-            *c += multiplier * a * b;
-        });
+        ndarray::Zip::from(c)
+            .and(a)
+            .and(b)
+            .par_for_each(|c, &a, &b| {
+                *c += multiplier * a * b;
+            });
     }
 }
 

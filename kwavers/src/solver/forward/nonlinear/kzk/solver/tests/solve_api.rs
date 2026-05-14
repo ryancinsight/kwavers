@@ -114,7 +114,9 @@ fn test_kzk_solve_full_propagation() {
     let mut solver = KZKSolver::new(config).unwrap();
     solver.set_source(Array2::from_elem((4, 4), 100.0_f64), 1e6);
 
-    solver.solve(nz).unwrap_or_else(|e| panic!("solve(nz={nz}) must succeed; got: {e:?}"));
+    solver
+        .solve(nz)
+        .unwrap_or_else(|e| panic!("solve(nz={nz}) must succeed; got: {e:?}"));
     assert_eq!(
         solver.current_z_step, nz,
         "step counter must equal nz after full propagation"

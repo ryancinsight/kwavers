@@ -43,7 +43,7 @@ impl ColorFlowImaging {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(config: ColorFlowConfig) -> Self {
         let estimator = AutocorrelationEstimator::new(config.autocorrelation.clone());
         let wall_filter = WallFilter::new(config.wall_filter.clone());

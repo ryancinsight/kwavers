@@ -1,7 +1,7 @@
 //! Sequential medium property iterator.
 
-use crate::domain::medium::{AcousticProperties, CoreMedium, Medium};
 use crate::domain::grid::Grid;
+use crate::domain::medium::{AcousticProperties, CoreMedium, Medium};
 
 /// Iterator over medium properties at each grid point
 #[derive(Debug)]

@@ -40,7 +40,7 @@ pub fn validate_covariance_matrix(covariance: &Array2<Complex64>) -> KwaversResu
 ///
 /// Returns `true` if ||A − A^H||_∞ ≤ tolerance.
 /// A is Hermitian iff `A[i,j] = A[j,i]^*` for all i,j.
-#[must_use] 
+#[must_use]
 pub fn is_hermitian(matrix: &Array2<Complex64>, tolerance: f64) -> bool {
     let n = matrix.nrows();
     if n != matrix.ncols() {

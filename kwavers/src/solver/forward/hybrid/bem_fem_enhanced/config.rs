@@ -48,7 +48,7 @@ impl Default for EnhancedBemFemConfig {
 
 impl EnhancedBemFemConfig {
     /// Create configuration for sphere-in-half-space validation problem.
-    #[must_use] 
+    #[must_use]
     pub fn for_sphere_validation(_radius: f64, frequency: f64) -> Self {
         let mut config = Self::default();
 
@@ -64,28 +64,28 @@ impl EnhancedBemFemConfig {
     }
 
     /// Enable Burton-Miller formulation with specified frequency.
-    #[must_use] 
+    #[must_use]
     pub fn with_burton_miller(mut self, frequency: f64, sound_speed: f64) -> Self {
         self.burton_miller_config = Some(BurtonMillerConfig::new(frequency, sound_speed));
         self
     }
 
     /// Disable Burton-Miller (use standard BEM — for comparison).
-    #[must_use] 
+    #[must_use]
     pub fn without_burton_miller(mut self) -> Self {
         self.burton_miller_config = None;
         self
     }
 
     /// Enable or disable adaptive interface refinement.
-    #[must_use] 
+    #[must_use]
     pub fn with_adaptive_refinement(mut self, enabled: bool) -> Self {
         self.adaptive_refinement = enabled;
         self
     }
 
     /// Set target interface error for adaptive refinement.
-    #[must_use] 
+    #[must_use]
     pub fn with_target_error(mut self, error: f64) -> Self {
         self.target_interface_error = error;
         self

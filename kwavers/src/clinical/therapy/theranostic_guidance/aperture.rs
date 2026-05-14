@@ -1,6 +1,6 @@
 //! Shared aperture constraints for abdominal same-device arrays.
 
-use super::config::TheranosticFwiConfig;
+use super::config::TheranosticInverseConfig;
 
 pub(crate) const ABDOMINAL_SKIN_CLEARANCE_M: f64 = 0.003;
 
@@ -43,7 +43,7 @@ pub(crate) struct AbdominalApertureFrame {
 /// elements inside the patient support.
 #[must_use]
 pub(crate) fn abdominal_arc_spec(
-    config: &TheranosticFwiConfig,
+    config: &TheranosticInverseConfig,
     target_depth_m: f64,
 ) -> AbdominalArcSpec {
     let depth_m = target_depth_m.max(0.0);

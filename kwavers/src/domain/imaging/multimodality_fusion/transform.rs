@@ -27,7 +27,7 @@ pub enum TransformationType {
 
 impl RegistrationTransform {
     /// Create identity transformation
-    #[must_use] 
+    #[must_use]
     pub fn identity() -> Self {
         let mut matrix = Array2::zeros((4, 4));
         for i in 0..4 {
@@ -43,7 +43,7 @@ impl RegistrationTransform {
     }
 
     /// Apply transformation to 3D point
-    #[must_use] 
+    #[must_use]
     pub fn apply_to_point(&self, point: (f64, f64, f64)) -> (f64, f64, f64) {
         // Convert to homogeneous coordinates
         let p = [point.0, point.1, point.2, 1.0];

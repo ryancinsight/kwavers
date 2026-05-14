@@ -112,7 +112,9 @@ impl PulseTrain {
 impl Signal for PulseTrain {
     fn amplitude(&self, t: f64) -> f64 {
         let envelope = self.envelope(t);
-        let carrier = (2.0 * PI * self.carrier_frequency).mul_add(t, self.phase).sin();
+        let carrier = (2.0 * PI * self.carrier_frequency)
+            .mul_add(t, self.phase)
+            .sin();
         self.amplitude * envelope * carrier
     }
 

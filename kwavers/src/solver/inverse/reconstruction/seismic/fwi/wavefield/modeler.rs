@@ -51,7 +51,8 @@ impl WavefieldModeler {
                     let u_p = previous[[i, j, k]];
                     let v2_local = v2[[i, j, k]];
 
-                    next[[i, j, k]] = (dt * dt * v2_local).mul_add(laplacian, 2.0f64.mul_add(u_c, -u_p));
+                    next[[i, j, k]] =
+                        (dt * dt * v2_local).mul_add(laplacian, 2.0f64.mul_add(u_c, -u_p));
                 }
             }
         }

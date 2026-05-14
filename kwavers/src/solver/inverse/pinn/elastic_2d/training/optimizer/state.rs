@@ -3,10 +3,7 @@
 #[cfg(feature = "pinn")]
 use burn::module::{Module, Param};
 #[cfg(feature = "pinn")]
-use burn::tensor::{
-    backend::Backend,
-    Tensor,
-};
+use burn::tensor::{backend::Backend, Tensor};
 
 /// Persistent state for Adam optimizer with moment buffers.
 ///

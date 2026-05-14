@@ -13,7 +13,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Speed of sound (m/s)
-    #[must_use] 
+    #[must_use]
     pub fn sound_speed_water(&self, temperature: f64, pressure: f64) -> f64 {
         let c0 = WaterProperties::sound_speed(temperature);
 
@@ -35,7 +35,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Nonlinear parameter B/A (dimensionless)
-    #[must_use] 
+    #[must_use]
     pub fn nonlinear_parameter_water(&self, temperature: f64) -> f64 {
         WaterProperties::nonlinear_parameter(temperature)
     }
@@ -50,7 +50,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Attenuation coefficient [Np/m]
-    #[must_use] 
+    #[must_use]
     pub fn attenuation_coefficient_water(&self, frequency: f64, temperature: f64) -> f64 {
         WaterProperties::absorption_coefficient(
             frequency,
@@ -78,7 +78,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Attenuation coefficient [Np/m]
-    #[must_use] 
+    #[must_use]
     pub fn attenuation_coefficient_tissue(&self, frequency: f64, temperature: f64) -> f64 {
         const ALPHA_0: f64 = 0.5; // dB/(cm·MHz^b)
         const B: f64 = 1.5; // Frequency exponent
@@ -101,7 +101,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Acoustic impedance [kg/(m²·s)] or (Rayl)
-    #[must_use] 
+    #[must_use]
     pub fn acoustic_impedance_water(&self, temperature: f64, pressure: f64) -> f64 {
         let rho = WaterProperties::density(temperature);
         let c = self.sound_speed_water(temperature, pressure);
@@ -116,7 +116,7 @@ impl StateDependentConstants {
     ///
     /// # Returns
     /// Bulk modulus (Pa)
-    #[must_use] 
+    #[must_use]
     pub fn bulk_modulus_water(&self, temperature: f64, pressure: f64) -> f64 {
         let rho = WaterProperties::density(temperature);
         let c = self.sound_speed_water(temperature, pressure);

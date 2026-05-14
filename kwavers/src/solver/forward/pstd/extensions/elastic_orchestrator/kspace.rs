@@ -54,7 +54,11 @@ pub(super) fn max_p_wave_speed(medium: &ElasticPstdMedium) -> f64 {
         .zip(medium.lame_mu.iter())
         .zip(medium.density.iter())
         .map(|((&l, &m), &r)| {
-            if r > 0.0 { ((l + 2.0 * m) / r).sqrt() } else { 0.0 }
+            if r > 0.0 {
+                ((l + 2.0 * m) / r).sqrt()
+            } else {
+                0.0
+            }
         })
         .fold(0.0_f64, f64::max)
 }
@@ -99,10 +103,7 @@ pub(super) fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
 /// `k[1] = dk = 2π / (n·dx)`. Hence `|D[1]| = dk` and
 /// `dx = 2π / (n·|D[1]|)`. Returns `1.0` for degenerate axes (`n < 2` or
 /// `|D[1]| = 0`).
-pub(super) fn grid_spacing_from_wavenumber(
-    d_op: &Array3<Complex<f64>>,
-    n: usize,
-) -> f64 {
+pub(super) fn grid_spacing_from_wavenumber(d_op: &Array3<Complex<f64>>, n: usize) -> f64 {
     if n < 2 {
         return 1.0;
     }
@@ -126,7 +127,11 @@ pub(super) fn build_kappa(
             + ky[[j, 0, 0]] * ky[[j, 0, 0]]
             + kz[[k, 0, 0]] * kz[[k, 0, 0]];
         let arg = 0.5 * c_ref * dt * k_sq.sqrt();
-        if arg < 1e-12 { 1.0 } else { arg.sin() / arg }
+        if arg < 1e-12 {
+            1.0
+        } else {
+            arg.sin() / arg
+        }
     })
 }
 
@@ -202,7 +207,9 @@ pub(super) fn spectral_mul_z(
 #[cfg(test)]
 mod tests {
     use super::super::orchestrator::ElasticPstdOrchestrator;
-    use super::super::types::{ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource};
+    use super::super::types::{
+        ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource,
+    };
     use crate::domain::grid::Grid;
     use ndarray::{Array1, Array3};
     use std::f64::consts::PI;

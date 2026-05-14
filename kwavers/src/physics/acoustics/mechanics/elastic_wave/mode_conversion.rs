@@ -223,7 +223,8 @@ impl StiffnessTensor {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "stiffness_matrix".to_owned(),
                 value: 0.0, // Indicates eigenvalue issue
-                reason: "Stiffness matrix must be positive definite for physical stability".to_owned(),
+                reason: "Stiffness matrix must be positive definite for physical stability"
+                    .to_owned(),
             }
             .into());
         }
@@ -253,7 +254,14 @@ impl StiffnessTensor {
         }
 
         // Check 3x3 minor
-        let det3 = matrix[[0, 2]].mul_add(matrix[[0, 1]].mul_add(matrix[[1, 2]], -(matrix[[0, 2]] * matrix[[1, 1]])), matrix[[0, 0]].mul_add(matrix[[1, 1]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[1, 2]])), -(matrix[[0, 1]] * matrix[[0, 1]].mul_add(matrix[[2, 2]], -(matrix[[0, 2]] * matrix[[1, 2]])))));
+        let det3 = matrix[[0, 2]].mul_add(
+            matrix[[0, 1]].mul_add(matrix[[1, 2]], -(matrix[[0, 2]] * matrix[[1, 1]])),
+            matrix[[0, 0]].mul_add(
+                matrix[[1, 1]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[1, 2]])),
+                -(matrix[[0, 1]]
+                    * matrix[[0, 1]].mul_add(matrix[[2, 2]], -(matrix[[0, 2]] * matrix[[1, 2]]))),
+            ),
+        );
         if det3 <= 0.0 {
             return false;
         }
@@ -354,7 +362,10 @@ mod tests {
     #[test]
     fn stiffness_tensor_validate_accepts_valid_isotropic_tensor() {
         let t = StiffnessTensor::isotropic(1e10, 5e9, 2700.0).unwrap();
-        assert!(t.validate().is_ok(), "valid isotropic tensor must pass validate");
+        assert!(
+            t.validate().is_ok(),
+            "valid isotropic tensor must pass validate"
+        );
     }
 
     /// `StiffnessTensor::validate` rejects an asymmetric matrix.
@@ -376,9 +387,21 @@ mod tests {
     #[test]
     fn stiffness_tensor_isotropic_rejects_invalid_parameters() {
         // signature: isotropic(lambda, mu, density)
-        assert!(StiffnessTensor::isotropic(1e10, 5e9, 0.0).is_err(), "zero density");
-        assert!(StiffnessTensor::isotropic(1e10, 5e9, -1.0).is_err(), "negative density");
-        assert!(StiffnessTensor::isotropic(1e10, 0.0, 2700.0).is_err(), "zero mu");
-        assert!(StiffnessTensor::isotropic(1e10, -1.0, 2700.0).is_err(), "negative mu");
+        assert!(
+            StiffnessTensor::isotropic(1e10, 5e9, 0.0).is_err(),
+            "zero density"
+        );
+        assert!(
+            StiffnessTensor::isotropic(1e10, 5e9, -1.0).is_err(),
+            "negative density"
+        );
+        assert!(
+            StiffnessTensor::isotropic(1e10, 0.0, 2700.0).is_err(),
+            "zero mu"
+        );
+        assert!(
+            StiffnessTensor::isotropic(1e10, -1.0, 2700.0).is_err(),
+            "negative mu"
+        );
     }
 }

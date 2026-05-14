@@ -79,19 +79,19 @@ impl PistonSource {
     }
 
     /// Get the piston radius
-    #[must_use] 
+    #[must_use]
     pub fn radius(&self) -> f64 {
         self.radius
     }
 
     /// Get the piston diameter
-    #[must_use] 
+    #[must_use]
     pub fn diameter(&self) -> f64 {
         self.config.diameter
     }
 
     /// Get the piston center position
-    #[must_use] 
+    #[must_use]
     pub fn center(&self) -> (f64, f64, f64) {
         self.config.center
     }
@@ -198,36 +198,36 @@ pub struct PistonBuilder {
 }
 
 impl PistonBuilder {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn center(mut self, center: (f64, f64, f64)) -> Self {
         self.config.center = center;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn diameter(mut self, diameter: f64) -> Self {
         self.config.diameter = diameter;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn normal(mut self, normal: (f64, f64, f64)) -> Self {
         self.config.normal = normal;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn source_type(mut self, source_type: SourceField) -> Self {
         self.config.source_type = source_type;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn apodization(mut self, apodization: PistonApodization) -> Self {
         self.config.apodization = apodization;
         self

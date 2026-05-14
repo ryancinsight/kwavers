@@ -44,3 +44,39 @@ impl Default for DetectorParameters {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Default DetectorParameters satisfies Nyquist: sample_rate > 2 * fundamental_freq.
+    #[test]
+    fn default_detector_parameters_nyquist_satisfied() {
+        let p = DetectorParameters::default();
+        assert!(
+            p.sample_rate > 2.0 * p.fundamental_freq,
+            "sample_rate ({}) must exceed 2·fundamental_freq ({})",
+            p.sample_rate,
+            p.fundamental_freq
+        );
+    }
+
+    /// Default sensitivity is 1.0 and temporal_averaging is true.
+    #[test]
+    fn default_detector_parameters_sensitivity_and_flags() {
+        let p = DetectorParameters::default();
+        assert!((p.sensitivity - 1.0).abs() < 1e-15);
+        assert!(p.temporal_averaging);
+        assert!(!p.adaptive_threshold);
+    }
+
+    /// Clone produces a copy with identical field values.
+    #[test]
+    fn detector_parameters_clone_equal() {
+        let p = DetectorParameters::default();
+        let c = p.clone();
+        assert!((p.fundamental_freq - c.fundamental_freq).abs() < 1e-15);
+        assert!((p.sample_rate - c.sample_rate).abs() < 1e-15);
+        assert!((p.sensitivity - c.sensitivity).abs() < 1e-15);
+    }
+}

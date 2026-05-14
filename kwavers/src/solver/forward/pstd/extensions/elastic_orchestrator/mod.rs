@@ -32,7 +32,7 @@ mod types;
 mod tests;
 
 pub use orchestrator::ElasticPstdOrchestrator;
-pub use pml::ElasticPml;
+pub use pml::{ElasticPml, ElasticPmlSpec};
 pub use split_field_pml::{ElasticSplitFieldPml, SplitFieldState};
 pub use types::{
     ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdSourceMode, ElasticPstdVelocitySource,

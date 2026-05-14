@@ -31,7 +31,8 @@ impl ShockCapture {
                 let laplacian_val = (2.0f64.mul_add(-pressure[[x, z]], pressure[[x + 1, z]])
                     + pressure[[x - 1, z]])
                     / (dx * dx)
-                    + (2.0f64.mul_add(-pressure[[x, z]], pressure[[x, z + 1]]) + pressure[[x, z - 1]])
+                    + (2.0f64.mul_add(-pressure[[x, z]], pressure[[x, z + 1]])
+                        + pressure[[x, z - 1]])
                         / (dz * dz);
                 laplacian[[x - 1, z - 1]] = laplacian_val;
             }
@@ -81,9 +82,9 @@ impl ShockCapture {
             for z in z_min..=z_max {
                 if z > 0 && z < nz - 1 {
                     for x in 1..nx - 1 {
-                        let smoothed =
-                            (2.0f64.mul_add(pressure[[x, z]], pressure[[x, z - 1]]) + pressure[[x, z + 1]])
-                                / 4.0;
+                        let smoothed = (2.0f64.mul_add(pressure[[x, z]], pressure[[x, z - 1]])
+                            + pressure[[x, z + 1]])
+                            / 4.0;
                         pressure[[x, z]] = smoothed;
                     }
                 }

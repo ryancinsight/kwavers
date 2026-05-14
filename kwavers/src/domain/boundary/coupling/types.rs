@@ -119,7 +119,7 @@ impl FrequencyProfile {
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn evaluate(&self, frequency: f64) -> f64 {
         match self {
             Self::Flat => 1.0,

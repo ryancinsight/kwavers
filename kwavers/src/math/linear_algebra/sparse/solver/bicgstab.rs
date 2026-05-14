@@ -4,8 +4,8 @@
 //! - van der Vorst (1992): "Bi-CGSTAB: A fast and smoothly converging variant of Bi-CG"
 //! - Sleijpen & Fokkema (1993): complex extension
 
-use super::IterativeSolver;
 use super::super::csr::CompressedSparseRowMatrix;
+use super::IterativeSolver;
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, ArrayView1};
 use num_complex::Complex64;

@@ -1,0 +1,456 @@
+{
+  "ct_path": "data\\rire_patient_109\\patient_109_ct.nii.gz",
+  "grid_size": 56,
+  "source_slice_index": 6,
+  "source_volume_index": 8,
+  "volume_shape": [
+    56,
+    56,
+    56
+  ],
+  "selected_iterations": 12,
+  "visible_reconstruction": true,
+  "visibility_fraction_threshold": 0.35,
+  "minimum_objective_reduction": 0.5,
+  "element_count": 1024,
+  "frequencies_hz": [
+    200000.0,
+    350000.0,
+    500000.0,
+    650000.0,
+    800000.0
+  ],
+  "receiver_offsets": [
+    512,
+    384,
+    640,
+    256,
+    768,
+    128,
+    448,
+    576
+  ],
+  "inversion_dimensionality": "3d_volume",
+  "geometry_model": "hemispherical_cap",
+  "operator_model": "matrix_free_born_3d_local_attenuation",
+  "slice_offset_m": -0.07208822618212019,
+  "frequency_continuation": true,
+  "sobolev_radius_voxels": 1,
+  "sobolev_weight": 0.35,
+  "enhancement_gain": 0.65,
+  "edge_preserving_weight": 0.0001,
+  "edge_preserving_epsilon": 0.004,
+  "edge_preserving_step": 0.12,
+  "edge_preserving_iterations": 1,
+  "figure06_display_regularization": "mask-aware diffusion plus clipped residual detail; no CT-target blending",
+  "attenuation_model": true,
+  "nonlinear_harmonic_model": true,
+  "source_pressure_mpa": 0.15,
+  "nonlinear_beta": 4.5,
+  "harmonic_count": 2,
+  "metrics": {
+    "initial_objective": 6.332384883419532,
+    "final_objective": 0.05195486712430162,
+    "objective_reduction_fraction": 0.9917953712415147,
+    "migration_pearson_correlation": 0.3318825192380512,
+    "migration_normalized_rmse": 0.023802218007083126,
+    "migration_dynamic_range_m_s": 114.7506242090385,
+    "pearson_correlation": 0.8568790602489539,
+    "normalized_rmse": 0.0026429334479559446,
+    "enhanced_dynamic_range_m_s": 27.92583369014733,
+    "active_voxels": 39630,
+    "measurements": 81920,
+    "continuation_stages": 5,
+    "target_dynamic_range_m_s": 24.66745089621122,
+    "reconstruction_dynamic_range_m_s": 20.70756819491703
+  },
+  "multislice": {
+    "slice_offsets": [
+      -8,
+      -6,
+      -4,
+      -2,
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16
+    ],
+    "slice_indices": [
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24
+    ],
+    "metrics": [
+      {
+        "source_volume_index": 2,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.851903302031194,
+        "normalized_rmse": 0.004130812858285831,
+        "migration_pearson_correlation": 0.40233670765817864,
+        "migration_normalized_rmse": 0.034684661648447836,
+        "migration_dynamic_range_m_s": 178.3620557986112,
+        "enhanced_dynamic_range_m_s": 43.2352075149588,
+        "target_dynamic_range_m_s": 39.8252914028119,
+        "reconstruction_dynamic_range_m_s": 33.1370096947669,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 141
+      },
+      {
+        "source_volume_index": 4,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8144569788866328,
+        "normalized_rmse": 0.0040431993299435386,
+        "migration_pearson_correlation": 0.19171789894896618,
+        "migration_normalized_rmse": 0.021438084540283692,
+        "migration_dynamic_range_m_s": 111.2059047323653,
+        "enhanced_dynamic_range_m_s": 36.510577078628785,
+        "target_dynamic_range_m_s": 36.07226467747114,
+        "reconstruction_dynamic_range_m_s": 24.20397375881521,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 286
+      },
+      {
+        "source_volume_index": 6,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.822123291988806,
+        "normalized_rmse": 0.0035977396993080906,
+        "migration_pearson_correlation": 0.18158553359925683,
+        "migration_normalized_rmse": 0.02531209908048662,
+        "migration_dynamic_range_m_s": 131.609762828464,
+        "enhanced_dynamic_range_m_s": 34.667051417760376,
+        "target_dynamic_range_m_s": 33.90613588064821,
+        "reconstruction_dynamic_range_m_s": 24.44979242358727,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 363
+      },
+      {
+        "source_volume_index": 8,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8017037608792617,
+        "normalized_rmse": 0.0036608553811173688,
+        "migration_pearson_correlation": 0.2229246520206798,
+        "migration_normalized_rmse": 0.025923205158830336,
+        "migration_dynamic_range_m_s": 139.98356513307544,
+        "enhanced_dynamic_range_m_s": 33.3874031245216,
+        "target_dynamic_range_m_s": 30.07163936889583,
+        "reconstruction_dynamic_range_m_s": 23.265103822887113,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 437
+      },
+      {
+        "source_volume_index": 10,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8796064576995487,
+        "normalized_rmse": 0.003474027394355515,
+        "migration_pearson_correlation": 0.25962042380165784,
+        "migration_normalized_rmse": 0.027373760351101766,
+        "migration_dynamic_range_m_s": 137.25836770426326,
+        "enhanced_dynamic_range_m_s": 40.95698690356721,
+        "target_dynamic_range_m_s": 39.646276698508245,
+        "reconstruction_dynamic_range_m_s": 31.058490570419963,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 551
+      },
+      {
+        "source_volume_index": 12,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8454719494017057,
+        "normalized_rmse": 0.0035944706323015655,
+        "migration_pearson_correlation": 0.26916327346585683,
+        "migration_normalized_rmse": 0.021836301284223418,
+        "migration_dynamic_range_m_s": 114.21684162903466,
+        "enhanced_dynamic_range_m_s": 35.28949081937844,
+        "target_dynamic_range_m_s": 33.869078458731565,
+        "reconstruction_dynamic_range_m_s": 25.869526923242802,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 692
+      },
+      {
+        "source_volume_index": 14,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8363100296634859,
+        "normalized_rmse": 0.0034076221188726157,
+        "migration_pearson_correlation": 0.34639602234430034,
+        "migration_normalized_rmse": 0.023038687813933704,
+        "migration_dynamic_range_m_s": 118.41746870080988,
+        "enhanced_dynamic_range_m_s": 34.10314589858763,
+        "target_dynamic_range_m_s": 27.859116024471405,
+        "reconstruction_dynamic_range_m_s": 23.850236377465535,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 904
+      },
+      {
+        "source_volume_index": 16,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8254849245826991,
+        "normalized_rmse": 0.003246523467738715,
+        "migration_pearson_correlation": 0.24560553592550358,
+        "migration_normalized_rmse": 0.02365532116090448,
+        "migration_dynamic_range_m_s": 122.37831571821425,
+        "enhanced_dynamic_range_m_s": 31.245004976822884,
+        "target_dynamic_range_m_s": 26.480487710636453,
+        "reconstruction_dynamic_range_m_s": 21.127680868524976,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 1003
+      },
+      {
+        "source_volume_index": 18,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8359097296423084,
+        "normalized_rmse": 0.003243916770954218,
+        "migration_pearson_correlation": 0.25192592556331955,
+        "migration_normalized_rmse": 0.025465518858841532,
+        "migration_dynamic_range_m_s": 134.6390655276689,
+        "enhanced_dynamic_range_m_s": 30.54342227421421,
+        "target_dynamic_range_m_s": 28.224598905226912,
+        "reconstruction_dynamic_range_m_s": 21.594853890563854,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 1078
+      },
+      {
+        "source_volume_index": 20,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8336539308533262,
+        "normalized_rmse": 0.0030391613856848372,
+        "migration_pearson_correlation": 0.21410670823789502,
+        "migration_normalized_rmse": 0.02351806443372203,
+        "migration_dynamic_range_m_s": 119.95865389316464,
+        "enhanced_dynamic_range_m_s": 28.167858158878744,
+        "target_dynamic_range_m_s": 24.6328644413436,
+        "reconstruction_dynamic_range_m_s": 19.95764185148414,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 1114
+      },
+      {
+        "source_volume_index": 22,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.8535021446850248,
+        "normalized_rmse": 0.0032124447380597492,
+        "migration_pearson_correlation": 0.097435113592998,
+        "migration_normalized_rmse": 0.023782248967366616,
+        "migration_dynamic_range_m_s": 112.44150561467995,
+        "enhanced_dynamic_range_m_s": 28.70069672128534,
+        "target_dynamic_range_m_s": 26.140590318771956,
+        "reconstruction_dynamic_range_m_s": 20.11879568176937,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 1166
+      },
+      {
+        "source_volume_index": 24,
+        "visible_reconstruction": true,
+        "pearson_correlation": 0.856153909349232,
+        "normalized_rmse": 0.002924074947874878,
+        "migration_pearson_correlation": 0.38865069683478315,
+        "migration_normalized_rmse": 0.018091785630470984,
+        "migration_dynamic_range_m_s": 90.12535757420142,
+        "enhanced_dynamic_range_m_s": 28.005087452271482,
+        "target_dynamic_range_m_s": 26.766362563056873,
+        "reconstruction_dynamic_range_m_s": 20.76026368685166,
+        "objective_reduction_fraction": 0.9917953712415147,
+        "active_voxels": 1171
+      }
+    ]
+  },
+  "centroid_roi": {
+    "half_width_mm": 35.0,
+    "slice_indices": [
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24
+    ],
+    "skipped_empty_slice_indices": [],
+    "regions": [
+      {
+        "source_slice_index": 2,
+        "centroid_voxel": [
+          26.73758865248227,
+          31.26950354609929
+        ],
+        "bounds_voxels": [
+          17,
+          38,
+          21,
+          42
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 4,
+        "centroid_voxel": [
+          26.653846153846153,
+          32.12937062937063
+        ],
+        "bounds_voxels": [
+          17,
+          38,
+          22,
+          43
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 6,
+        "centroid_voxel": [
+          26.36914600550964,
+          33.4931129476584
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          23,
+          44
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 8,
+        "centroid_voxel": [
+          26.098398169336384,
+          34.58352402745995
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          25,
+          46
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 10,
+        "centroid_voxel": [
+          26.19600725952813,
+          32.952813067150636
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          23,
+          44
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 12,
+        "centroid_voxel": [
+          25.929190751445088,
+          32.10693641618497
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          22,
+          43
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 14,
+        "centroid_voxel": [
+          25.811946902654867,
+          31.52654867256637
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          22,
+          43
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 16,
+        "centroid_voxel": [
+          25.839481555333997,
+          30.879361914257228
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          21,
+          42
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 18,
+        "centroid_voxel": [
+          25.944341372912803,
+          30.664192949907235
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          21,
+          42
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 20,
+        "centroid_voxel": [
+          25.874326750448834,
+          30.53500897666068
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          21,
+          42
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 22,
+        "centroid_voxel": [
+          25.97598627787307,
+          29.771012006861064
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          20,
+          41
+        ],
+        "half_width_mm": 35.0
+      },
+      {
+        "source_slice_index": 24,
+        "centroid_voxel": [
+          25.920580700256192,
+          29.783091374893253
+        ],
+        "bounds_voxels": [
+          16,
+          37,
+          20,
+          41
+        ],
+        "half_width_mm": 35.0
+      }
+    ]
+  }
+}

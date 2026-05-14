@@ -37,7 +37,7 @@ impl UncertaintyEstimator {
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(dropout_rate: f64) -> Self {
         debug_assert!(
             (0.0..=1.0).contains(&dropout_rate),
@@ -48,7 +48,7 @@ impl UncertaintyEstimator {
     }
 
     /// Get the configured dropout rate.
-    #[must_use] 
+    #[must_use]
     pub fn dropout_rate(&self) -> f64 {
         self.dropout_rate
     }

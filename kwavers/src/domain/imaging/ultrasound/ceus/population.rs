@@ -39,7 +39,7 @@ impl MicrobubblePopulation {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn get_concentration(&self) -> f64 {
         self.concentration
     }
@@ -142,7 +142,8 @@ impl MicrobubblePopulation {
             let delta_rad = omega0 * omega0 * radius_eq / sound_speed;
             let delta = delta_visc + delta_rad;
 
-            let denom = (delta * omega).mul_add(delta * omega, (omega0 * omega0 - omega * omega).powi(2));
+            let denom =
+                (delta * omega).mul_add(delta * omega, (omega0 * omega0 - omega * omega).powi(2));
             if denom <= 0.0 || !denom.is_finite() {
                 return Err(KwaversError::Validation(ValidationError::InvalidValue {
                     parameter: "scattering_denom".to_owned(),

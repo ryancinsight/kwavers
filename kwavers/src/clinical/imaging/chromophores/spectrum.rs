@@ -65,14 +65,14 @@ impl ExtinctionSpectrum {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn wavelength_range(&self) -> Option<(u32, u32)> {
         let min = self.data.keys().next().copied()?;
         let max = self.data.keys().next_back().copied()?;
         Some((min, max))
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }

@@ -69,7 +69,10 @@ impl NonlinearWave {
 
                     // Compute nonlinear term: N = (β/ρ₀c₀⁴) * [p∇²p + (∇p)²]
                     let p_lap = pressure[[i, j, k]] * laplacian[[i, j, k]];
-                    let grad_squared = grad_z[[i, j, k]].mul_add(grad_z[[i, j, k]], grad_y[[i, j, k]].mul_add(grad_y[[i, j, k]], grad_x[[i, j, k]].powi(2)));
+                    let grad_squared = grad_z[[i, j, k]].mul_add(
+                        grad_z[[i, j, k]],
+                        grad_y[[i, j, k]].mul_add(grad_y[[i, j, k]], grad_x[[i, j, k]].powi(2)),
+                    );
 
                     nonlinear_term[[i, j, k]] = prefactor * (p_lap + grad_squared);
                 }

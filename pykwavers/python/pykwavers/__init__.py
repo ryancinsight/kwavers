@@ -75,7 +75,39 @@ import sys
 from pathlib import Path
 
 # Import Rust extension module
+def _newer_local_extension() -> Path | None:
+    """Return a newer workspace-built extension when the package copy is stale.
+
+    The in-tree Python package is used during book generation and pytest runs.
+    On Windows, `maturin develop` can leave `python/pykwavers/_pykwavers.pyd`
+    older than `target/release/pykwavers.dll`; importing the stale package copy
+    then fails before tests can set `PYKWAVERS_EXTENSION_PATH`.  The explicit
+    environment override still wins.  This fallback only applies inside a
+    source checkout where target artifacts exist and are newer than the package
+    extension.
+    """
+    if os.name != "nt":
+        return None
+    package_extension = Path(__file__).with_name("_pykwavers.pyd")
+    repo_root = Path(__file__).resolve().parents[3]
+    candidates = (
+        repo_root / "target" / "release" / "pykwavers.dll",
+        repo_root / "target" / "maturin" / "pykwavers.dll",
+        repo_root / "target" / "debug" / "pykwavers.dll",
+    )
+    package_mtime = package_extension.stat().st_mtime if package_extension.exists() else -1.0
+    available = [path for path in candidates if path.exists()]
+    newer = [path for path in available if path.stat().st_mtime > package_mtime]
+    if not newer:
+        return None
+    return max(newer, key=lambda path: path.stat().st_mtime)
+
+
 _extension_override = os.getenv("PYKWAVERS_EXTENSION_PATH")
+if not _extension_override:
+    local_extension = _newer_local_extension()
+    if local_extension is not None:
+        _extension_override = str(local_extension)
 if _extension_override:
     _extension_path = Path(_extension_override).expanduser().resolve()
     if os.name == "nt":
@@ -153,7 +185,8 @@ from ._pykwavers import (
     plan_brain_helmet_placement_from_ritk_ct,
     run_seismic_helmet_fwi_from_ritk_ct,
     run_seismic_helmet_fwi_volume_from_ritk_ct,
-    run_theranostic_fwi_from_ritk,
+    run_theranostic_inverse_from_ritk,
+    run_theranostic_nonlinear_3d_from_ritk,
     resample_to_target_grid,
     kspace_line_recon,
     time_reversal_reconstruction,
@@ -222,7 +255,8 @@ __all__ = [
     "time_reversal_reconstruction",
     "run_seismic_helmet_fwi_from_ritk_ct",
     "run_seismic_helmet_fwi_volume_from_ritk_ct",
-    "run_theranostic_fwi_from_ritk",
+    "run_theranostic_inverse_from_ritk",
+    "run_theranostic_nonlinear_3d_from_ritk",
     "plan_brain_helmet_placement_from_ritk_ct",
     "passive_acoustic_map_das",
     "beamform_image_delay_and_sum",

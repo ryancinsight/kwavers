@@ -22,7 +22,7 @@ impl GPUMemoryPool {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(_total_memory: usize, alignment: usize) -> Self {
         Self {
             available_blocks: Vec::new(),
@@ -65,7 +65,7 @@ impl GPUMemoryPool {
     }
 
     /// Get memory usage statistics
-    #[must_use] 
+    #[must_use]
     pub fn memory_stats(&self) -> MemoryStats {
         let total_blocks = self.available_blocks.len();
         let average_block_size = self.total_allocated.checked_div(total_blocks).unwrap_or(0);

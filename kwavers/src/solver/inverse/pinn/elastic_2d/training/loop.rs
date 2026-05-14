@@ -111,7 +111,8 @@ pub fn train_pinn<B: AutodiffBackend>(
             training_data.boundary.y.clone(),
             training_data.boundary.t.clone(),
         );
-        let bc_loss = loss_computer.boundary_loss::<B>(out_bc, training_data.boundary.values.clone());
+        let bc_loss =
+            loss_computer.boundary_loss::<B>(out_bc, training_data.boundary.values.clone());
 
         // ── Initial condition loss ────────────────────────────────────────────
         let out_ic = model.forward(
@@ -152,7 +153,11 @@ pub fn train_pinn<B: AutodiffBackend>(
             .map(|t| t.clone().into_data().as_slice::<f32>().unwrap()[0] as f64)
             .unwrap_or(0.0);
 
-        if !total_val.is_finite() || !pde_val.is_finite() || !bc_val.is_finite() || !ic_val.is_finite() {
+        if !total_val.is_finite()
+            || !pde_val.is_finite()
+            || !bc_val.is_finite()
+            || !ic_val.is_finite()
+        {
             return Err(KwaversError::Numerical(
                 crate::core::error::NumericalError::NaN {
                     operation: "train_pinn".to_string(),
@@ -176,14 +181,22 @@ pub fn train_pinn<B: AutodiffBackend>(
         if epoch % config.log_every == 0 || epoch + 1 == config.max_epochs {
             log::info!(
                 "train_pinn epoch {}/{}: total={:.4e} pde={:.4e} bc={:.4e} ic={:.4e} lr={:.2e}",
-                epoch + 1, config.max_epochs, total_val, pde_val, bc_val, ic_val, lr
+                epoch + 1,
+                config.max_epochs,
+                total_val,
+                pde_val,
+                bc_val,
+                ic_val,
+                lr
             );
         }
 
         if metrics.has_converged(config.convergence_tolerance, config.convergence_window) {
             log::info!(
                 "train_pinn converged at epoch {} (tolerance={:.2e}, window={})",
-                epoch + 1, config.convergence_tolerance, config.convergence_window
+                epoch + 1,
+                config.convergence_tolerance,
+                config.convergence_window
             );
             break;
         }

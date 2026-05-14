@@ -104,8 +104,15 @@ impl VesselCooling {
         let mut total_cooling = 0.0;
 
         for &(vi, vj, vk, radius) in &self.vessels {
-            let distance = ((k as f64 - vk as f64) * dx).mul_add((k as f64 - vk as f64) * dx, ((j as f64 - vj as f64) * dx).mul_add((j as f64 - vj as f64) * dx, ((i as f64 - vi as f64) * dx).powi(2)))
-            .sqrt();
+            let distance = ((k as f64 - vk as f64) * dx)
+                .mul_add(
+                    (k as f64 - vk as f64) * dx,
+                    ((j as f64 - vj as f64) * dx).mul_add(
+                        (j as f64 - vj as f64) * dx,
+                        ((i as f64 - vi as f64) * dx).powi(2),
+                    ),
+                )
+                .sqrt();
 
             if distance < radius {
                 // Inside vessel - strong cooling dependent on flow velocity

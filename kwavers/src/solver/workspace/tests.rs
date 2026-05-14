@@ -73,12 +73,18 @@ fn scratch_arena_clear_zeros_solver_workspace() {
         ws.fft_buffer.iter().all(|c| c.re == 0.0 && c.im == 0.0),
         "fft_buffer not zeroed"
     );
-    assert!(ws.real_buffer.iter().all(|&v| v == 0.0), "real_buffer not zeroed");
+    assert!(
+        ws.real_buffer.iter().all(|&v| v == 0.0),
+        "real_buffer not zeroed"
+    );
     assert!(
         ws.k_space_buffer.iter().all(|&v| v == 0.0),
         "k_space_buffer not zeroed"
     );
-    assert!(ws.temp_buffer.iter().all(|&v| v == 0.0), "temp_buffer not zeroed");
+    assert!(
+        ws.temp_buffer.iter().all(|&v| v == 0.0),
+        "temp_buffer not zeroed"
+    );
 }
 
 #[test]

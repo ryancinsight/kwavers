@@ -38,8 +38,7 @@ fn test_version_info() {
 
 #[test]
 fn test_grid_creation_minimal() {
-    let grid =
-        crate::domain::grid::Grid::new(8, 8, 8, 0.001, 0.001, 0.001).expect("Grid creation");
+    let grid = crate::domain::grid::Grid::new(8, 8, 8, 0.001, 0.001, 0.001).expect("Grid creation");
     assert_eq!(grid.nx, 8);
     assert_eq!(grid.ny, 8);
     assert_eq!(grid.nz, 8);
@@ -48,8 +47,7 @@ fn test_grid_creation_minimal() {
 
 #[test]
 fn test_medium_basic_properties() {
-    let grid =
-        crate::domain::grid::Grid::new(4, 4, 4, 0.001, 0.001, 0.001).expect("Grid creation");
+    let grid = crate::domain::grid::Grid::new(4, 4, 4, 0.001, 0.001, 0.001).expect("Grid creation");
     let medium = crate::domain::medium::HomogeneousMedium::new(
         crate::physics::constants::DENSITY_WATER,
         crate::physics::constants::SOUND_SPEED_WATER,
@@ -60,12 +58,9 @@ fn test_medium_basic_properties() {
 
     assert!(medium.is_homogeneous());
     assert!(
-        (medium.sound_speed(0, 0, 0) - crate::physics::constants::SOUND_SPEED_WATER).abs()
-            < 1e-6
+        (medium.sound_speed(0, 0, 0) - crate::physics::constants::SOUND_SPEED_WATER).abs() < 1e-6
     );
-    assert!(
-        (medium.density(0, 0, 0) - crate::physics::constants::DENSITY_WATER).abs() < 1e-6
-    );
+    assert!((medium.density(0, 0, 0) - crate::physics::constants::DENSITY_WATER).abs() < 1e-6);
 }
 
 #[test]
@@ -85,8 +80,7 @@ fn test_physics_constants_validation() {
 
 #[test]
 fn test_cfl_calculation_basic() {
-    let grid =
-        crate::domain::grid::Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).expect("Grid creation");
+    let grid = crate::domain::grid::Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).expect("Grid creation");
     let sound_speed = 1500.0;
     let cfl = 0.4; // Conservative CFL for 3D
     let min_dx = grid.dx.min(grid.dy).min(grid.dz);

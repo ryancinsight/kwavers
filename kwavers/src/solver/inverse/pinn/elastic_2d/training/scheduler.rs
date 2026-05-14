@@ -43,7 +43,7 @@ pub struct LRScheduler {
 
 impl LRScheduler {
     /// Create new scheduler
-    #[must_use] 
+    #[must_use]
     pub fn new(initial_lr: f64, scheduler: LearningRateScheduler) -> Self {
         Self {
             initial_lr,
@@ -56,31 +56,31 @@ impl LRScheduler {
     }
 
     /// Create constant learning rate scheduler
-    #[must_use] 
+    #[must_use]
     pub fn constant(lr: f64) -> Self {
         Self::new(lr, LearningRateScheduler::Constant)
     }
 
     /// Create exponential decay scheduler
-    #[must_use] 
+    #[must_use]
     pub fn exponential(lr: f64, decay_rate: f64) -> Self {
         Self::new(lr, LearningRateScheduler::Exponential { decay_rate })
     }
 
     /// Create step decay scheduler
-    #[must_use] 
+    #[must_use]
     pub fn step_decay(lr: f64, factor: f64, step_size: usize) -> Self {
         Self::new(lr, LearningRateScheduler::Step { factor, step_size })
     }
 
     /// Create cosine annealing scheduler
-    #[must_use] 
+    #[must_use]
     pub fn cosine_annealing(lr: f64, lr_min: f64) -> Self {
         Self::new(lr, LearningRateScheduler::CosineAnnealing { lr_min })
     }
 
     /// Create reduce-on-plateau scheduler
-    #[must_use] 
+    #[must_use]
     pub fn reduce_on_plateau(lr: f64, factor: f64, patience: usize, threshold: f64) -> Self {
         Self::new(
             lr,
@@ -93,7 +93,7 @@ impl LRScheduler {
     }
 
     /// Get current learning rate
-    #[must_use] 
+    #[must_use]
     pub fn get_lr(&self) -> f64 {
         self.current_lr
     }

@@ -60,7 +60,7 @@ impl MultiModalFusion {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(config: FusionConfig) -> Self {
         Self {
             config,
@@ -228,7 +228,7 @@ impl MultiModalFusion {
     /// # Returns
     ///
     /// HashMap mapping property names to 3D spatial maps
-    #[must_use] 
+    #[must_use]
     pub fn extract_tissue_properties(
         &self,
         fused_result: &FusedImageResult,

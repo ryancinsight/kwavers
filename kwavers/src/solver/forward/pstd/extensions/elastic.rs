@@ -157,12 +157,12 @@ impl PstdElasticPlugin {
                 let mu = params.lame_mu[[i, j, k]];
                 let div_v = dkx * vx + dky * vy + dkz * vz;
 
-                *o_txx = params.txx_fft[[i, j, k]]
-                    + c_dt * (lambda * div_v + 2.0 * mu * (dkx * vx));
-                *o_tyy = params.tyy_fft[[i, j, k]]
-                    + c_dt * (lambda * div_v + 2.0 * mu * (dky * vy));
-                *o_tzz = params.tzz_fft[[i, j, k]]
-                    + c_dt * (lambda * div_v + 2.0 * mu * (dkz * vz));
+                *o_txx =
+                    params.txx_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dkx * vx));
+                *o_tyy =
+                    params.tyy_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dky * vy));
+                *o_tzz =
+                    params.tzz_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dkz * vz));
             });
 
         // Pass B — shear stresses: out = current + dt · μ · (∂vα/∂β + ∂vβ/∂α).

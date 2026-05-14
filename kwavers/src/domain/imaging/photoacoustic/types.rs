@@ -71,7 +71,7 @@ impl PhotoacousticOpticalProperties {
         let absorption = if wavelength < 600.0 {
             (wavelength - 400.0).mul_add(0.5, 100.0)
         } else {
-            (wavelength - 600.0).mul_add(-0.1 , 50.0)
+            (wavelength - 600.0).mul_add(-0.1, 50.0)
         };
         let absorption = absorption.max(0.0_f64);
 

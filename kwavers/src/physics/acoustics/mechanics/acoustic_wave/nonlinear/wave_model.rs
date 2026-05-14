@@ -263,7 +263,10 @@ mod tests {
         let medium = HomogeneousMedium::water(&grid); // c ≈ 1500 m/s
         let dt = 1e-7_f64; // CFL = 1500·1e-7/0.001 = 0.15 < 0.45
         let w = NonlinearWave::new(&grid, dt);
-        assert!(w.is_stable(&medium, &grid), "CFL 0.15 < 0.45 should be stable");
+        assert!(
+            w.is_stable(&medium, &grid),
+            "CFL 0.15 < 0.45 should be stable"
+        );
     }
 
     /// Very large dt (CFL > 0.45) must be unstable.
@@ -274,7 +277,10 @@ mod tests {
         let medium = HomogeneousMedium::water(&grid);
         let dt = 1e-3_f64; // CFL ≈ 1500·1e-3/0.001 = 1500 >> 0.45
         let w = NonlinearWave::new(&grid, dt);
-        assert!(!w.is_stable(&medium, &grid), "CFL 1500 >> 0.45 should be unstable");
+        assert!(
+            !w.is_stable(&medium, &grid),
+            "CFL 1500 >> 0.45 should be unstable"
+        );
     }
 
     /// Analytical: dt_stable = safety·threshold·min_dx/c_max = 0.9·0.5·0.001/1500 = 3e-7 s.
@@ -287,8 +293,14 @@ mod tests {
         let dt_stable = w.get_stable_timestep(&medium, &grid);
         // c_water ≈ 1500; safety=0.9; threshold=0.5
         // dt_stable ≈ 0.9·0.5·0.001/1500 = 3e-7 s (within ±10% for exact c)
-        assert!(dt_stable > 1e-8, "stable timestep must be positive (got {dt_stable:.3e})");
-        assert!(dt_stable < 1e-5, "stable timestep for water/mm grid must be sub-microsecond");
+        assert!(
+            dt_stable > 1e-8,
+            "stable timestep must be positive (got {dt_stable:.3e})"
+        );
+        assert!(
+            dt_stable < 1e-5,
+            "stable timestep for water/mm grid must be sub-microsecond"
+        );
     }
 
     #[test]

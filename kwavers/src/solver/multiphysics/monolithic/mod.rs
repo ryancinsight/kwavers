@@ -70,7 +70,9 @@
 pub mod config;
 pub mod coupler;
 pub mod residual;
-pub mod utils;
+pub(in crate::solver::multiphysics::monolithic) mod residual_metric;
+pub(in crate::solver::multiphysics::monolithic) mod spatial_operator;
+pub(in crate::solver::multiphysics::monolithic) mod state_vector;
 
 pub use config::{CouplingConvergenceInfo, NewtonKrylovConfig, PhysicsCoefficients};
 pub use coupler::MonolithicCoupler;

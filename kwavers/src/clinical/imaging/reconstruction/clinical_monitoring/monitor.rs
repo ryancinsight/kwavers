@@ -23,7 +23,7 @@ pub struct ClinicalMonitor {
 
 impl ClinicalMonitor {
     /// Create new clinical monitor
-    #[must_use] 
+    #[must_use]
     pub fn new(config: MonitoringConfig) -> Self {
         let history_cap = config.history_window;
         Self {
@@ -63,8 +63,10 @@ impl ClinicalMonitor {
 
         self.performance_metrics.total_frames += 1;
         self.performance_metrics.avg_processing_time_ms =
-            self.performance_metrics.avg_processing_time_ms.mul_add((self.performance_metrics.total_frames - 1) as f64, processing_time_ms)
-                / self.performance_metrics.total_frames as f64;
+            self.performance_metrics.avg_processing_time_ms.mul_add(
+                (self.performance_metrics.total_frames - 1) as f64,
+                processing_time_ms,
+            ) / self.performance_metrics.total_frames as f64;
         self.performance_metrics.max_processing_time_ms = self
             .performance_metrics
             .max_processing_time_ms
@@ -189,25 +191,25 @@ impl ClinicalMonitor {
     }
 
     /// Get frame quality history
-    #[must_use] 
+    #[must_use]
     pub fn frame_history(&self) -> Vec<FrameQualityRecord> {
         self.frame_history.iter().cloned().collect()
     }
 
     /// Get safety event log
-    #[must_use] 
+    #[must_use]
     pub fn safety_log(&self) -> Vec<SafetyEvent> {
         self.safety_log.iter().cloned().collect()
     }
 
     /// Get performance metrics
-    #[must_use] 
+    #[must_use]
     pub fn performance_metrics(&self) -> &PerformanceMetrics {
         &self.performance_metrics
     }
 
     /// Get session summary report
-    #[must_use] 
+    #[must_use]
     pub fn generate_report(&self) -> MonitoringReport {
         let uptime = self.start_time.elapsed().as_secs_f64();
 

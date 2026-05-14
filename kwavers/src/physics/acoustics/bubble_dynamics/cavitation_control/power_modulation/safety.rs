@@ -79,3 +79,60 @@ impl Default for SafetyLimiter {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::constants::MECHANICAL_INDEX_LIMIT;
+    use super::*;
+
+    /// check_mechanical_index: MI = pressure / sqrt(frequency).
+    /// For P=1 MPa, f=1 MHz: MI=1.0 ≤ MECHANICAL_INDEX_LIMIT (1.9) → true.
+    #[test]
+    fn mechanical_index_safe_when_below_limit() {
+        let lim = SafetyLimiter::new();
+        assert!(
+            lim.check_mechanical_index(1.0, 1.0),
+            "MI=1.0 must be within limit={MECHANICAL_INDEX_LIMIT}"
+        );
+    }
+
+    /// For P=2 MPa, f=0.5 MHz: MI=2/sqrt(0.5)=2.828 > 1.9 → false.
+    #[test]
+    fn mechanical_index_unsafe_above_limit() {
+        let lim = SafetyLimiter::new();
+        let mi = 2.0_f64 / 0.5_f64.sqrt();
+        assert!(
+            mi > MECHANICAL_INDEX_LIMIT,
+            "computed MI={mi:.3} must exceed limit for this test to be meaningful"
+        );
+        assert!(
+            !lim.check_mechanical_index(2.0, 0.5),
+            "MI={mi:.3} must exceed limit={MECHANICAL_INDEX_LIMIT}"
+        );
+    }
+
+    /// reset zeroes last_output; subsequent initial limit call is not rate-limited.
+    #[test]
+    fn safety_limiter_reset_allows_ramp() {
+        let mut lim = SafetyLimiter::new();
+        lim.limit(0.5); // set last_output to 0.5
+        lim.reset(); // last_output → 0
+                     // After reset, initial ramp-up is allowed (max_change = amplitude)
+        let out = lim.limit(0.8);
+        assert!(
+            (out - 0.8).abs() < 1e-14,
+            "first limit after reset must allow full amplitude; got {out}"
+        );
+    }
+
+    /// limit clamps amplitude above max_amplitude=1.0.
+    #[test]
+    fn safety_limiter_clamps_above_max() {
+        let mut lim = SafetyLimiter::new();
+        let out = lim.limit(1.5); // > max_amplitude=1.0
+        assert!(
+            out <= 1.0,
+            "output must not exceed max_amplitude=1.0; got {out}"
+        );
+    }
+}

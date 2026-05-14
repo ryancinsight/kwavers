@@ -36,7 +36,7 @@ impl GMRESSolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(config: GMRESConfig) -> Self {
         Self {
             config,
@@ -182,13 +182,13 @@ impl GMRESSolver {
     }
 
     /// Get residual history.
-    #[must_use] 
+    #[must_use]
     pub fn residual_history(&self) -> &[f64] {
         &self.residual_history
     }
 
     /// Get total iteration count.
-    #[must_use] 
+    #[must_use]
     pub fn iteration_count(&self) -> usize {
         self.iteration_count
     }

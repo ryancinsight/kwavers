@@ -10,7 +10,7 @@ pub struct BatchFieldAllocator {
 
 impl BatchFieldAllocator {
     /// Create new batch field allocator.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             pools: std::collections::HashMap::new(),
@@ -22,7 +22,7 @@ impl BatchFieldAllocator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_numa_node(mut self, node: u32) -> Self {
         self.preferred_numa = Some(node);
         self
@@ -83,7 +83,7 @@ impl BatchFieldAllocator {
     }
 
     /// Total pooled buffers.
-    #[must_use] 
+    #[must_use]
     pub fn pool_size(&self) -> usize {
         self.pools.values().map(|v| v.len()).sum()
     }

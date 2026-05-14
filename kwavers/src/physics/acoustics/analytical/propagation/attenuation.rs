@@ -142,8 +142,13 @@ impl AttenuationCalculator {
                     let y = j as f64 * grid_spacing[1];
                     let z = k as f64 * grid_spacing[2];
 
-                    let distance = (z - source_position[2]).mul_add(z - source_position[2], (y - source_position[1]).mul_add(y - source_position[1], (x - source_position[0]).powi(2)))
-                    .sqrt();
+                    let distance = (z - source_position[2])
+                        .mul_add(
+                            z - source_position[2],
+                            (y - source_position[1])
+                                .mul_add(y - source_position[1], (x - source_position[0]).powi(2)),
+                        )
+                        .sqrt();
 
                     field[(i, j, k)] *= (-self.absorption_coefficient * distance).exp();
                 }

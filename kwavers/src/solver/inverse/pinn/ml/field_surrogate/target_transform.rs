@@ -47,10 +47,7 @@ pub enum TargetTransform {
     /// `T(p) = sign(p) · log1p(|p| / p_eps_pa) / t_max`;
     /// `T⁻¹(t) = sign(t) · p_eps_pa · expm1(|t| · t_max)`.
     /// `t_max` is precomputed so that `T(p_max_pa) = 1`.
-    SignedLog1p {
-        p_eps_pa: f32,
-        t_max: f32,
-    },
+    SignedLog1p { p_eps_pa: f32, t_max: f32 },
 }
 
 impl TargetTransform {
@@ -168,7 +165,10 @@ mod tests {
             let n = t.forward(p);
             assert!(n.abs() <= 1.0 + 1e-6);
             let back = t.inverse(n);
-            assert!((back - p).abs() < 1.0, "linear round-trip mismatch: {p} → {n} → {back}");
+            assert!(
+                (back - p).abs() < 1.0,
+                "linear round-trip mismatch: {p} → {n} → {back}"
+            );
         }
     }
 
@@ -185,13 +185,16 @@ mod tests {
         let t = TargetTransform::signed_log1p(30.0e6, 30.0).unwrap();
         // Six orders of magnitude in |p|.
         for &p in &[
-            -3.0e7_f32, -3.0e6, -3.0e5, -3.0e4, -3.0e3, -3.0e2, -30.0,
-            0.0,
-            30.0, 3.0e2, 3.0e3, 3.0e4, 3.0e5, 3.0e6, 3.0e7,
+            -3.0e7_f32, -3.0e6, -3.0e5, -3.0e4, -3.0e3, -3.0e2, -30.0, 0.0, 30.0, 3.0e2, 3.0e3,
+            3.0e4, 3.0e5, 3.0e6, 3.0e7,
         ] {
             let n = t.forward(p);
             let back = t.inverse(n);
-            let rel = if p.abs() > 0.0 { (back - p).abs() / p.abs() } else { back.abs() };
+            let rel = if p.abs() > 0.0 {
+                (back - p).abs() / p.abs()
+            } else {
+                back.abs()
+            };
             assert!(
                 rel < 1.0e-4,
                 "signed-log1p round-trip violated for p={p}: n={n}, back={back}, rel={rel}"
@@ -206,7 +209,10 @@ mod tests {
         for k in -10..=10 {
             let p = (k as f32) * 1.0e6;
             let n = t.forward(p);
-            assert!(n >= prev - 1e-7, "non-monotonic at p={p}: prev={prev}, n={n}");
+            assert!(
+                n >= prev - 1e-7,
+                "non-monotonic at p={p}: prev={prev}, n={n}"
+            );
             prev = n;
         }
     }
@@ -223,8 +229,14 @@ mod tests {
         let log = TargetTransform::signed_log1p(p_max, p_eps).unwrap();
         let n_lin = lin.forward(p_eps);
         let n_log = log.forward(p_eps);
-        assert!(n_lin < 1.0e-5, "linear should produce near-zero norm at p_eps: {n_lin}");
-        assert!(n_log > 0.01, "log1p should lift p_eps to a non-trivial norm: {n_log}");
+        assert!(
+            n_lin < 1.0e-5,
+            "linear should produce near-zero norm at p_eps: {n_lin}"
+        );
+        assert!(
+            n_log > 0.01,
+            "log1p should lift p_eps to a non-trivial norm: {n_log}"
+        );
     }
 
     #[test]

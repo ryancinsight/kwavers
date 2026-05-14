@@ -186,15 +186,15 @@ impl SpectralUnmixer {
         })
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn wavelengths(&self) -> &[f64] {
         &self.wavelengths
     }
-    #[must_use] 
+    #[must_use]
     pub fn chromophore_names(&self) -> &[String] {
         &self.chromophore_names
     }
-    #[must_use] 
+    #[must_use]
     pub fn extinction_matrix(&self) -> &Array2<f64> {
         &self.extinction_matrix
     }

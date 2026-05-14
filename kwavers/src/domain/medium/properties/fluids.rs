@@ -361,7 +361,9 @@ mod tests {
         ];
 
         for fluid in fluids {
-            fluid.validate().unwrap_or_else(|e| panic!("Fluid validation failed: {e:?}"));
+            fluid
+                .validate()
+                .unwrap_or_else(|e| panic!("Fluid validation failed: {e:?}"));
         }
     }
 }

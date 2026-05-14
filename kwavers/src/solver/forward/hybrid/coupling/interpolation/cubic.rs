@@ -49,7 +49,11 @@ impl InterpolationManager {
         let cubic_basis = |t: f64, v0: f64, v1: f64, v2: f64, v3: f64| -> f64 {
             let t2 = t * t;
             let t3 = t2 * t;
-            0.5 * (3.0f64.mul_add(-v2, 3.0f64.mul_add(v1, -v0)) + v3).mul_add(t3, (4.0f64.mul_add(v2, 2.0f64.mul_add(v0, -(5.0 * v1))) - v3).mul_add(t2, 2.0f64.mul_add(v1, (-v0 + v2) * t)))
+            0.5 * (3.0f64.mul_add(-v2, 3.0f64.mul_add(v1, -v0)) + v3).mul_add(
+                t3,
+                (4.0f64.mul_add(v2, 2.0f64.mul_add(v0, -(5.0 * v1))) - v3)
+                    .mul_add(t2, 2.0f64.mul_add(v1, (-v0 + v2) * t)),
+            )
         };
 
         for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take(result.len()) {

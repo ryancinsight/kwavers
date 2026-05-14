@@ -154,9 +154,15 @@ mod tests {
     #[test]
     fn beam_pattern_config_default_values_match_documentation() {
         let cfg = BeamPatternConfig::default();
-        assert!((cfg.frequency  - 1e6).abs()  < 1.0,   "frequency must be 1 MHz");
-        assert!((cfg.sound_speed - 1500.0).abs() < 1e-10, "sound_speed must be 1500 m/s");
-        assert!((cfg.angular_resolution - PI / 180.0).abs() < 1e-12, "resolution must be 1°");
+        assert!((cfg.frequency - 1e6).abs() < 1.0, "frequency must be 1 MHz");
+        assert!(
+            (cfg.sound_speed - 1500.0).abs() < 1e-10,
+            "sound_speed must be 1500 m/s"
+        );
+        assert!(
+            (cfg.angular_resolution - PI / 180.0).abs() < 1e-12,
+            "resolution must be 1°"
+        );
         assert!(matches!(cfg.far_field_method, FarFieldMethod::Fraunhofer));
     }
 
@@ -167,7 +173,10 @@ mod tests {
     fn calculate_directivity_zero_db_for_uniform_pattern() {
         let pattern = Array2::<f64>::ones((10, 10));
         let di = calculate_directivity(&pattern);
-        assert!(di.abs() < 1e-10, "uniform pattern must give DI=0 dB (got {di:.6})");
+        assert!(
+            di.abs() < 1e-10,
+            "uniform pattern must give DI=0 dB (got {di:.6})"
+        );
     }
 
     /// Zero pattern (all zeros) → mean=0 → DI = 0.0 (guarded branch).
@@ -199,13 +208,20 @@ mod tests {
         let pattern = calculate_beam_pattern(field.view(), &grid, &cfg).unwrap();
 
         let n_theta = ((2.0 * PI) / (PI / 6.0)) as usize;
-        let n_phi   = (PI / (PI / 6.0)) as usize;
-        assert_eq!(pattern.dim(), (n_theta, n_phi), "pattern shape must match angular sampling");
+        let n_phi = (PI / (PI / 6.0)) as usize;
+        assert_eq!(
+            pattern.dim(),
+            (n_theta, n_phi),
+            "pattern shape must match angular sampling"
+        );
         assert!(
             pattern.iter().all(|&v| v >= 0.0 && v <= 1.0 + 1e-10),
             "all pattern values must be in [0, 1]"
         );
         let max_val = pattern.iter().cloned().fold(0.0_f64, f64::max);
-        assert!((max_val - 1.0).abs() < 1e-10, "pattern maximum must be 1.0 (got {max_val:.6})");
+        assert!(
+            (max_val - 1.0).abs() < 1e-10,
+            "pattern maximum must be 1.0 (got {max_val:.6})"
+        );
     }
 }

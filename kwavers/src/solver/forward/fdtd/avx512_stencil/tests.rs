@@ -39,7 +39,9 @@ fn test_pressure_update_dimensions() {
         let p_curr = Array3::zeros((16, 16, 16));
         let p_prev = Array3::zeros((16, 16, 16));
         let u_div = Array3::zeros((16, 16, 16));
-        processor.update_pressure_avx512(&p_curr, &p_prev, &u_div).unwrap();
+        processor
+            .update_pressure_avx512(&p_curr, &p_prev, &u_div)
+            .unwrap();
     }
 }
 

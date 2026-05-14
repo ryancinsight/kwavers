@@ -74,7 +74,7 @@ pub(crate) fn trilinear_interpolate(image: &Array3<f64>, coords: [f64; 3], dims:
 /// # Returns
 ///
 /// Resampled image on the target grid
-#[must_use] 
+#[must_use]
 pub fn resample_to_target_grid(
     source_image: &Array3<f64>,
     transform: &[f64; 16],

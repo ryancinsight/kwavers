@@ -72,7 +72,7 @@ pub struct SpectralAnalysis {
 }
 
 impl SpectralAnalysis {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: SpectralConfig) -> Self {
         Self { config }
     }
@@ -180,7 +180,7 @@ impl SpectralAnalysis {
     /// Frequency axis for the PSD output (Hz).
     ///
     /// Returns `fft_size/2 + 1` frequencies from 0 to `sample_rate/2`.
-    #[must_use] 
+    #[must_use]
     pub fn frequency_axis(&self, sample_rate: f64) -> Array1<f64> {
         let out_len = self.config.fft_size / 2 + 1;
         Array1::from_shape_fn(out_len, |k| {

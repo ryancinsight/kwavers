@@ -71,7 +71,11 @@ fn test_adaptive_epsilon() {
 
     let mut integrator = BubbleIMEXIntegrator::with_defaults(solver);
 
-    integrator.step(&mut small_state, 0.0, 0.0, 1e-12, 0.0).unwrap();
+    integrator
+        .step(&mut small_state, 0.0, 0.0, 1e-12, 0.0)
+        .unwrap();
 
-    integrator.step(&mut large_state, 0.0, 0.0, 1e-6, 0.0).unwrap();
+    integrator
+        .step(&mut large_state, 0.0, 0.0, 1e-6, 0.0)
+        .unwrap();
 }

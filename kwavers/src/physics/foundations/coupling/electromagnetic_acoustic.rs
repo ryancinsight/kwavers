@@ -69,8 +69,15 @@ pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {
         evaluation_position: &[f64],
         wavelength: f64,
     ) -> f64 {
-        let r = (evaluation_position[2] - source_position[2]).mul_add(evaluation_position[2] - source_position[2], (evaluation_position[1] - source_position[1]).mul_add(evaluation_position[1] - source_position[1], (evaluation_position[0] - source_position[0]).powi(2)))
-        .sqrt();
+        let r = (evaluation_position[2] - source_position[2])
+            .mul_add(
+                evaluation_position[2] - source_position[2],
+                (evaluation_position[1] - source_position[1]).mul_add(
+                    evaluation_position[1] - source_position[1],
+                    (evaluation_position[0] - source_position[0]).powi(2),
+                ),
+            )
+            .sqrt();
 
         if r == 0.0 {
             return 0.0;

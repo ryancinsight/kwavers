@@ -66,7 +66,7 @@ pub const DENSITY_NONLINEARITY_EXPONENT: f64 = 0.5;
 /// # Returns
 ///
 /// Stiffness map in kPa (typical range: 20-60 kPa if min_intensity=0.0)
-#[must_use] 
+#[must_use]
 pub fn compute_composite_stiffness(intensity_image: &Array3<f64>) -> Array3<f64> {
     intensity_image.mapv(|intensity| {
         let intensity_factor = 1.0 - intensity;
@@ -86,7 +86,7 @@ pub fn compute_composite_stiffness(intensity_image: &Array3<f64>) -> Array3<f64>
 /// # Returns
 ///
 /// Relative density map (normalized to [0, 1])
-#[must_use] 
+#[must_use]
 pub fn compute_tissue_density(intensity_image: &Array3<f64>) -> Array3<f64> {
     intensity_image.mapv(|intensity| intensity.sqrt())
 }

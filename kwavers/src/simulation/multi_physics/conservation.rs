@@ -11,7 +11,7 @@ pub struct ConservationEnforcer {
 
 impl ConservationEnforcer {
     /// Create new conservation enforcer
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self { tolerance: 1e-10 }
     }

@@ -137,7 +137,7 @@ pub struct BubbleSymplecticIntegrator {
 
 impl BubbleSymplecticIntegrator {
     /// Create integrator with default config.
-    #[must_use] 
+    #[must_use]
     pub fn with_defaults(model: Arc<KellerMiksisModel>) -> Self {
         Self {
             model,
@@ -149,7 +149,7 @@ impl BubbleSymplecticIntegrator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(model: Arc<KellerMiksisModel>, config: SymplecticConfig) -> Self {
         Self { model, config }
     }

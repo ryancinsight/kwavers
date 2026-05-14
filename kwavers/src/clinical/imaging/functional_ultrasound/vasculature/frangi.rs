@@ -154,7 +154,10 @@ pub(super) fn symmetric_3x3_eigenvalues(h: [f64; 6]) -> (f64, f64, f64) {
         return (a11, a22, a33); // already diagonal
     }
 
-    let p2 = 2.0f64.mul_add(p1, (a33 - q).mul_add(a33 - q, (a22 - q).mul_add(a22 - q, (a11 - q).powi(2))));
+    let p2 = 2.0f64.mul_add(
+        p1,
+        (a33 - q).mul_add(a33 - q, (a22 - q).mul_add(a22 - q, (a11 - q).powi(2))),
+    );
     let p = (p2 / 6.0).sqrt();
     let inv_p = 1.0 / p;
 

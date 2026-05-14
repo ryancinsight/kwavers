@@ -189,7 +189,7 @@ pub fn scale_field_neon(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>)
 }
 
 #[cfg(not(target_arch = "aarch64"))]
-#[must_use] 
+#[must_use]
 pub fn norm_neon(field: &Array3<f64>) -> f64 {
     let mut sum = 0.0;
     let mut compensation = 0.0;

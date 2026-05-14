@@ -148,8 +148,7 @@ impl ClinicalDecisionSupport {
 
         let voxel_volume_mm3 = self.config.voxel_size_mm.powi(3);
         let lesion_volume_mm3 = component_voxels.len() as f32 * voxel_volume_mm3;
-        let equivalent_radius_mm =
-            (3.0 * lesion_volume_mm3 / (4.0 * std::f32::consts::PI)).cbrt();
+        let equivalent_radius_mm = (3.0 * lesion_volume_mm3 / (4.0 * std::f32::consts::PI)).cbrt();
         2.0 * equivalent_radius_mm
     }
 

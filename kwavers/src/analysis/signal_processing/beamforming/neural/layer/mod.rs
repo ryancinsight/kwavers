@@ -147,25 +147,25 @@ impl NeuralLayer {
     }
 
     /// Get input feature dimension.
-    #[must_use] 
+    #[must_use]
     pub fn input_size(&self) -> usize {
         self.input_size
     }
 
     /// Get output feature dimension.
-    #[must_use] 
+    #[must_use]
     pub fn output_size(&self) -> usize {
         self.output_size
     }
 
     /// Access weight matrix (for inspection/testing).
-    #[must_use] 
+    #[must_use]
     pub fn weights(&self) -> &Array2<f32> {
         &self.weights
     }
 
     /// Access bias vector (for inspection/testing).
-    #[must_use] 
+    #[must_use]
     pub fn biases(&self) -> &Array1<f32> {
         &self.biases
     }

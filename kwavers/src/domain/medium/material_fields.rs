@@ -13,7 +13,7 @@ pub type MaterialFields = GenericMaterialFields<Array3<f64>>;
 
 impl MaterialFields {
     /// Create new zero-initialized material fields with given shape
-    #[must_use] 
+    #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
             rho0: Array3::zeros(shape),

@@ -135,7 +135,8 @@ impl SubcyclingStrategy {
             for j in 0..ny {
                 for k in 0..nz {
                     field[[i, j, k]] += (dt / 6.0)
-                        * (2.0f64.mul_add(k3[[i, j, k]], 2.0f64.mul_add(k2[[i, j, k]], k1[[i, j, k]]))
+                        * (2.0f64
+                            .mul_add(k3[[i, j, k]], 2.0f64.mul_add(k2[[i, j, k]], k1[[i, j, k]]))
                             + k4[[i, j, k]]);
                 }
             }
@@ -167,11 +168,15 @@ impl SubcyclingStrategy {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // 7-point stencil Laplacian
-                    let laplacian = 6.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]]
-                        + field[[i - 1, j, k]]
-                        + field[[i, j + 1, k]]
-                        + field[[i, j - 1, k]]
-                        + field[[i, j, k + 1]] + field[[i, j, k - 1]]);
+                    let laplacian = 6.0f64.mul_add(
+                        -field[[i, j, k]],
+                        field[[i + 1, j, k]]
+                            + field[[i - 1, j, k]]
+                            + field[[i, j + 1, k]]
+                            + field[[i, j - 1, k]]
+                            + field[[i, j, k + 1]]
+                            + field[[i, j, k - 1]],
+                    );
 
                     derivative[[i, j, k]] = alpha * laplacian;
                 }

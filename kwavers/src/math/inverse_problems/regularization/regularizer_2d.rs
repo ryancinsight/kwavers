@@ -13,7 +13,7 @@ pub struct ModelRegularizer2D {
 
 impl ModelRegularizer2D {
     /// Create new 2D regularizer
-    #[must_use] 
+    #[must_use]
     pub fn new(config: RegularizationConfig) -> Self {
         Self { config }
     }
@@ -57,8 +57,9 @@ impl ModelRegularizer2D {
                 let dy = model[[i, j + 1]] - model[[i, j]];
 
                 let grad_norm = (dx.mul_add(dx, dy * dy) + eps).sqrt();
-                let tv_term =
-                    (3.0f64.mul_add(model[[i, j]], -model[[i + 1, j]]) - model[[i, j + 1]]) / grad_norm;
+                let tv_term = (3.0f64.mul_add(model[[i, j]], -model[[i + 1, j]])
+                    - model[[i, j + 1]])
+                    / grad_norm;
 
                 gradient[[i, j]] += self.config.tv_weight * tv_term;
             }
@@ -71,9 +72,13 @@ impl ModelRegularizer2D {
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
-                laplacian[[i, j]] = 4.0f64.mul_add(-gradient[[i, j]], gradient[[i + 1, j]]
-                    + gradient[[i - 1, j]]
-                    + gradient[[i, j + 1]] + gradient[[i, j - 1]]);
+                laplacian[[i, j]] = 4.0f64.mul_add(
+                    -gradient[[i, j]],
+                    gradient[[i + 1, j]]
+                        + gradient[[i - 1, j]]
+                        + gradient[[i, j + 1]]
+                        + gradient[[i, j - 1]],
+                );
             }
         }
 

@@ -1,0 +1,138 @@
+{
+  "essential_tremor": {
+    "lesion_voxels": 1,
+    "max_cavitation_probability": 0.0013632405316457152,
+    "max_cem43_min": 7372215.0,
+    "peak_mi": 1.2403473854064941,
+    "peak_pressure_pa": 1000000.0,
+    "peak_temperature_c": 71.94058227539062,
+    "target_index": [
+      24,
+      29,
+      23
+    ],
+    "target_mni_mm": [
+      14.0,
+      -18.0,
+      2.0
+    ]
+  },
+  "gbm": {
+    "affine_sample_ct_to_mri": null,
+    "bbb_opened_fraction": 1.0,
+    "covered_fraction": 1.0,
+    "ct": "D:\\kwavers\\data\\rire_patient_109\\patient_109_ct.nii.gz",
+    "ct_backed": true,
+    "dataset": "RIRE-CT-segmentation",
+    "executed": true,
+    "flair": null,
+    "modality_bridge": {
+      "actions": [
+        {
+          "action": "accept_ct_space_segmentation",
+          "artifact_paths": [],
+          "boundary": "Skull acoustics and BBB subspot dose can use the same CT-space voxel spacing.",
+          "inputs": [
+            "ct",
+            "segmentation"
+          ],
+          "outputs": [
+            "ct_space_tumor_mask"
+          ],
+          "rationale": "The segmentation is already defined on the CT planning lattice.",
+          "reference": null,
+          "status": "ready"
+        }
+      ],
+      "available_modalities": [
+        "ct",
+        "segmentation"
+      ],
+      "dataset": "RIRE-CT-segmentation",
+      "missing_modalities": [
+        "t1",
+        "t1gd",
+        "flair",
+        "t2"
+      ],
+      "planning_space": "ct",
+      "references": [
+        {
+          "boundary": "not executed by the Chapter 25 script; synthetic outputs must be generated outside this repo, registered to the planning lattice, and quality checked before use",
+          "name": "cWDM",
+          "role": "paired high-resolution 3D medical image translation; missing brain MRI modality synthesis from available modalities; CT-to-MR or MR-to-CT is treated as a paired-translation candidate only when a trained checkpoint and output NIfTI are supplied",
+          "url": "https://huggingface.co/papers/2411.17203"
+        },
+        {
+          "boundary": "MRI-only bridge; it does not provide skull CT acoustics and cannot make an MRI-space case CT-backed",
+          "name": "SLaM-DiMM",
+          "role": "missing T1w, T1ce, T2w, or FLAIR MRI synthesis from available brain MRI modalities",
+          "url": "https://huggingface.co/papers/2509.16019"
+        },
+        {
+          "boundary": "not a substitute for expert GBM segmentation unless target-label validation and local review are added",
+          "name": "NV-Segment-CTMR",
+          "role": "research 3D CT/MR segmentation reference for anatomical prompt-based masks",
+          "url": "https://huggingface.co/nvidia/NV-Segment-CTMR"
+        }
+      ],
+      "requirements": [
+        {
+          "boundary": "required for same-patient skull-acoustic GBM treatment simulation",
+          "evidence": "D:\\kwavers\\data\\rire_patient_109\\patient_109_ct.nii.gz; D:\\kwavers\\data\\ct_segmentation_sample\\segmentation.nii.gz",
+          "name": "ct_segmentation_pair",
+          "required_for": "skull phase correction, attenuation, reflection, and CT-space BBB dose",
+          "satisfied": true
+        },
+        {
+          "boundary": "sufficient for tumor geometry but not for skull acoustics",
+          "evidence": "D:\\kwavers\\data\\ct_segmentation_sample\\segmentation.nii.gz",
+          "name": "mri_segmentation_pair",
+          "required_for": "GBM target delineation and MRI-space subspot geometry",
+          "satisfied": false
+        },
+        {
+          "boundary": "required before an MRI-derived tumor mask can become CT-backed",
+          "evidence": "D:\\kwavers\\data\\rire_patient_109\\patient_109_ct.nii.gz",
+          "name": "ct_mri_pair",
+          "required_for": "same-subject CT/MRI registration and CT-space tumor transfer",
+          "satisfied": false
+        }
+      ],
+      "simulation_ready": true,
+      "simulation_scope": "ct_space_skull_acoustics_and_bbb_subspot_simulation",
+      "skull_acoustics_same_subject": true
+    },
+    "peak_bbb_permeability": 0.8604709506034851,
+    "peak_inertial_cavitation_risk": 0.06527376174926758,
+    "segmentation_space": "ct",
+    "subspots": 2182,
+    "t1gd": null
+  },
+  "registration": {
+    "executed": true,
+    "message": "RITK NIfTI read and metric-guarded registration executed",
+    "method": "same_patient_nifti_affine_world_resampling + subject_mri_atlas_affine + metric_guarded_ritk_syn(t1=rejected,atlas=rejected)",
+    "mse_atlas_after": 0.2357423721616294,
+    "mse_atlas_before": 0.2357423721616294,
+    "mse_t1_after": 0.13137726401749794,
+    "mse_t1_before": 0.13137726401749794,
+    "ncc_atlas_after": -0.13864744984031588,
+    "ncc_atlas_before": -0.13864744984031588,
+    "ncc_t1_after": -0.0066965413632058286,
+    "ncc_t1_before": -0.0066965413632058286,
+    "nmi_atlas_after": 1.0324188334525235,
+    "nmi_atlas_before": 1.0324188334525235,
+    "nmi_t1_after": 1.0114258706300014,
+    "nmi_t1_before": 1.0114258706300014
+  },
+  "transducer": {
+    "elements": 1024,
+    "frequency_hz": 650000.0,
+    "mean_amplitude_weight": 0.39747814053355923,
+    "mean_skull_path_m": 0.008795964905104713,
+    "min_amplitude_weight": 0.012762132004157146,
+    "phase_span_rad": 6.26525053451748,
+    "radius_m": 0.15
+  }
+}

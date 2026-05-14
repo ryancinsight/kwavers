@@ -10,11 +10,11 @@ mod tests;
 use crate::core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use burn::tensor::backend::Backend;
+use model::EnsembleModel;
 #[cfg(not(feature = "pinn"))]
 use ndarray::Array2;
 #[cfg(feature = "pinn")]
 use ndarray::Array2;
-use model::EnsembleModel;
 use std::collections::HashMap;
 
 /// Configuration for ensemble methods
@@ -211,7 +211,11 @@ impl EnsembleQuantifier {
             }
         }
 
-        if count > 0 { total_diversity / count as f64 } else { 0.0 }
+        if count > 0 {
+            total_diversity / count as f64
+        } else {
+            0.0
+        }
     }
 
     /// Get ensemble result with detailed statistics

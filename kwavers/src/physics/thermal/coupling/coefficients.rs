@@ -74,19 +74,23 @@ impl TemperatureCoefficients {
     /// Sound speed at temperature
     #[must_use]
     pub fn sound_speed(&self, base_sound_speed: f64, temperature: f64, reference_temp: f64) -> f64 {
-        self.sound_speed_coeff.mul_add(temperature - reference_temp, base_sound_speed)
+        self.sound_speed_coeff
+            .mul_add(temperature - reference_temp, base_sound_speed)
     }
 
     /// Density at temperature
     #[must_use]
     pub fn density(&self, base_density: f64, temperature: f64, reference_temp: f64) -> f64 {
-        self.density_coeff.mul_add(temperature - reference_temp, base_density)
+        self.density_coeff
+            .mul_add(temperature - reference_temp, base_density)
     }
 
     /// Absorption at temperature
     #[must_use]
     pub fn absorption(&self, base_absorption: f64, temperature: f64, reference_temp: f64) -> f64 {
-        self.absorption_coeff.mul_add(temperature - reference_temp, base_absorption).max(0.0)
+        self.absorption_coeff
+            .mul_add(temperature - reference_temp, base_absorption)
+            .max(0.0)
     }
 }
 

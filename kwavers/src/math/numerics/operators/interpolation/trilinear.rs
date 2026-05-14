@@ -31,7 +31,7 @@ impl TrilinearInterpolator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(dx: f64, dy: f64, dz: f64) -> Self {
         Self { dx, dy, dz }
     }
@@ -81,12 +81,16 @@ impl TrilinearInterpolator {
         let w011 = (1.0 - tx) * ty * tz;
         let w111 = tx * ty * tz;
 
-        let value = w111.mul_add(data[[i + 1, j + 1, k + 1]], w000 * data[[i, j, k]]
-            + w100 * data[[i + 1, j, k]]
-            + w010 * data[[i, j + 1, k]]
-            + w110 * data[[i + 1, j + 1, k]]
-            + w001 * data[[i, j, k + 1]]
-            + w101 * data[[i + 1, j, k + 1]] + w011 * data[[i, j + 1, k + 1]]);
+        let value = w111.mul_add(
+            data[[i + 1, j + 1, k + 1]],
+            w000 * data[[i, j, k]]
+                + w100 * data[[i + 1, j, k]]
+                + w010 * data[[i, j + 1, k]]
+                + w110 * data[[i + 1, j + 1, k]]
+                + w001 * data[[i, j, k + 1]]
+                + w101 * data[[i + 1, j, k + 1]]
+                + w011 * data[[i, j + 1, k + 1]],
+        );
 
         Ok(value)
     }

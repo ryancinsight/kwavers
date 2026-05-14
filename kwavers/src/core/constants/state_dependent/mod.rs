@@ -53,7 +53,7 @@ impl Default for StateDependentConstants {
 
 impl StateDependentConstants {
     /// Create new state-dependent constants calculator with custom reference state
-    #[must_use] 
+    #[must_use]
     pub fn new(reference_temperature: f64, reference_pressure: f64) -> Self {
         Self {
             reference_temperature,

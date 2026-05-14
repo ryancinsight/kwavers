@@ -38,7 +38,11 @@ impl WesterveltFdtd {
                             let pz_m = pressure[(i, j, k - 1)];
                             let pz_p = pressure[(i, j, k + 1)];
 
-                            laplacian[(i, j, k)] = (2.0f64.mul_add(-p, pz_p) + pz_m).mul_add(dz2_inv, (2.0f64.mul_add(-p, px_p) + px_m).mul_add(dx2_inv, (2.0f64.mul_add(-p, py_p) + py_m) * dy2_inv));
+                            laplacian[(i, j, k)] = (2.0f64.mul_add(-p, pz_p) + pz_m).mul_add(
+                                dz2_inv,
+                                (2.0f64.mul_add(-p, px_p) + px_m)
+                                    .mul_add(dx2_inv, (2.0f64.mul_add(-p, py_p) + py_m) * dy2_inv),
+                            );
                         }
                     }
                 }
@@ -63,9 +67,10 @@ impl WesterveltFdtd {
                             let p_xp1 = pressure[(i + 1, j, k)];
                             let p_xp2 = pressure[(i + 2, j, k)];
 
-                            let d2_dx2 =
-                                C0.mul_add(p_xp2, C1.mul_add(p_xp1, C2.mul_add(p_c, C0.mul_add(p_xm2, C1 * p_xm1))))
-                                    * dx2_inv;
+                            let d2_dx2 = C0.mul_add(
+                                p_xp2,
+                                C1.mul_add(p_xp1, C2.mul_add(p_c, C0.mul_add(p_xm2, C1 * p_xm1))),
+                            ) * dx2_inv;
 
                             // Y-direction stencil
                             let p_ym2 = pressure[(i, j - 2, k)];
@@ -73,9 +78,10 @@ impl WesterveltFdtd {
                             let p_yp1 = pressure[(i, j + 1, k)];
                             let p_yp2 = pressure[(i, j + 2, k)];
 
-                            let d2_dy2 =
-                                C0.mul_add(p_yp2, C1.mul_add(p_yp1, C2.mul_add(p_c, C0.mul_add(p_ym2, C1 * p_ym1))))
-                                    * dy2_inv;
+                            let d2_dy2 = C0.mul_add(
+                                p_yp2,
+                                C1.mul_add(p_yp1, C2.mul_add(p_c, C0.mul_add(p_ym2, C1 * p_ym1))),
+                            ) * dy2_inv;
 
                             // Z-direction stencil
                             let p_zm2 = pressure[(i, j, k - 2)];
@@ -83,9 +89,10 @@ impl WesterveltFdtd {
                             let p_zp1 = pressure[(i, j, k + 1)];
                             let p_zp2 = pressure[(i, j, k + 2)];
 
-                            let d2_dz2 =
-                                C0.mul_add(p_zp2, C1.mul_add(p_zp1, C2.mul_add(p_c, C0.mul_add(p_zm2, C1 * p_zm1))))
-                                    * dz2_inv;
+                            let d2_dz2 = C0.mul_add(
+                                p_zp2,
+                                C1.mul_add(p_zp1, C2.mul_add(p_c, C0.mul_add(p_zm2, C1 * p_zm1))),
+                            ) * dz2_inv;
 
                             laplacian[(i, j, k)] = d2_dx2 + d2_dy2 + d2_dz2;
                         }

@@ -33,7 +33,9 @@ pub struct StreamingTransferManager {
 
 impl StreamingTransferManager {
     pub fn new() -> Self {
-        Self { active_transfers: Vec::new() }
+        Self {
+            active_transfers: Vec::new(),
+        }
     }
 
     /// Zero-copy transfer through a shared unified memory region.

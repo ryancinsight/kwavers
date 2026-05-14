@@ -15,10 +15,7 @@ impl BeamformingTrainer {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub(super) fn compute_epoch_loss(
-        &self,
-        dataset: &TrainingDataset,
-    ) -> KwaversResult<f64> {
+    pub(super) fn compute_epoch_loss(&self, dataset: &TrainingDataset) -> KwaversResult<f64> {
         let mut total_loss = 0.0;
         let mut num_batches = 0;
 
@@ -104,8 +101,8 @@ impl BeamformingTrainer {
         }
 
         if self.physics_loss.sparsity_weight > 0.0 && !batch.targets.is_empty() {
-            loss += self.physics_loss.sparsity_weight
-                * PhysicsLoss::sparsity_violation(&batch.targets);
+            loss +=
+                self.physics_loss.sparsity_weight * PhysicsLoss::sparsity_violation(&batch.targets);
         }
 
         if self.physics_loss.reciprocity_weight > 0.0 {

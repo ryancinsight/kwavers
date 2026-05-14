@@ -67,9 +67,18 @@ impl WENOLimiter {
         let q2 = v[2] / 3.0 + 5.0 * v[3] / 6.0 - v[4] / 6.0;
 
         // Smoothness indicators (Jiang-Shu)
-        let beta0 = (13.0_f64 / 12.0).mul_add((2.0f64.mul_add(-v[1], v[0]) + v[2]).powi(2), STENCIL_COEFF_1_4 * 3.0f64.mul_add(v[2], 4.0f64.mul_add(-v[1], v[0])).powi(2));
-        let beta1 = (13.0_f64 / 12.0).mul_add((2.0f64.mul_add(-v[2], v[1]) + v[3]).powi(2), STENCIL_COEFF_1_4 * (v[1] - v[3]).powi(2));
-        let beta2 = (13.0_f64 / 12.0).mul_add((2.0f64.mul_add(-v[3], v[2]) + v[4]).powi(2), STENCIL_COEFF_1_4 * (3.0f64.mul_add(v[2], -(4.0 * v[3])) + v[4]).powi(2));
+        let beta0 = (13.0_f64 / 12.0).mul_add(
+            (2.0f64.mul_add(-v[1], v[0]) + v[2]).powi(2),
+            STENCIL_COEFF_1_4 * 3.0f64.mul_add(v[2], 4.0f64.mul_add(-v[1], v[0])).powi(2),
+        );
+        let beta1 = (13.0_f64 / 12.0).mul_add(
+            (2.0f64.mul_add(-v[2], v[1]) + v[3]).powi(2),
+            STENCIL_COEFF_1_4 * (v[1] - v[3]).powi(2),
+        );
+        let beta2 = (13.0_f64 / 12.0).mul_add(
+            (2.0f64.mul_add(-v[3], v[2]) + v[4]).powi(2),
+            STENCIL_COEFF_1_4 * (3.0f64.mul_add(v[2], -(4.0 * v[3])) + v[4]).powi(2),
+        );
 
         // Optimal weights
         let d0 = WENO_WEIGHT_0;

@@ -53,6 +53,91 @@ impl PhaseShifter {
         self.quantization_enabled = enable;
     }
 
+    #[inline]
+    fn apply_phase_quantization(enabled: bool, phase: f64) -> f64 {
+        if enabled {
+            quantize_phase(phase, DEFAULT_QUANTIZATION_LEVELS)
+        } else {
+            phase
+        }
+    }
+
+    fn focal_distance(point: &[f64]) -> KwaversResult<f64> {
+        if point.len() != 3 {
+            return Err(crate::core::error::KwaversError::InvalidInput(
+                "Focal points must be 3D coordinates".to_owned(),
+            ));
+        }
+
+        let focal_distance = point[2]
+            .mul_add(point[2], point[1].mul_add(point[1], point[0].powi(2)))
+            .sqrt();
+
+        if focal_distance < MIN_FOCAL_DISTANCE {
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Focal distance below minimum of {} mm",
+                MIN_FOCAL_DISTANCE * 1000.0
+            )));
+        }
+
+        Ok(focal_distance)
+    }
+
+    /// Fill the cached phase buffer from focal-point slices.
+    ///
+    /// # Contract
+    ///
+    /// The iterator is traversed once for validation before the cached phase
+    /// buffer is mutated. This preserves the rejection invariant: invalid
+    /// focal input leaves the last valid phase pattern intact. The same
+    /// kernel serves public vector-backed focal points and flat packed
+    /// `[x, y, z]` dispatch, so multi-focus phase synthesis has one
+    /// authoritative implementation.
+    fn calculate_multipoint_phases_from_slices<'b, I>(
+        &mut self,
+        focal_points: I,
+        num_points: usize,
+    ) -> KwaversResult<Array1<f64>>
+    where
+        I: Clone + Iterator<Item = &'b [f64]>,
+    {
+        if num_points > MAX_FOCAL_POINTS {
+            return Err(crate::core::error::KwaversError::InvalidInput(format!(
+                "Number of focal points exceeds maximum of {MAX_FOCAL_POINTS}"
+            )));
+        }
+
+        for focal_point in focal_points.clone() {
+            Self::focal_distance(focal_point)?;
+        }
+
+        let k = 2.0 * PI / self.wavelength;
+        let num_points_f64 = num_points as f64;
+        self.phase_offsets.fill(0.0);
+
+        for focal_point in focal_points {
+            let focal_distance = Self::focal_distance(focal_point)?;
+
+            for (i, phase) in self.phase_offsets.iter_mut().enumerate() {
+                let position = self.element_positions.row(i);
+                let dx = focal_point[0] - position[0];
+                let dy = focal_point[1] - position[1];
+                let dz = focal_point[2] - position[2];
+                let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
+
+                *phase += (-k * (distance - focal_distance)) / num_points_f64;
+            }
+        }
+
+        if self.quantization_enabled {
+            for phase in &mut self.phase_offsets {
+                *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
+            }
+        }
+
+        Ok(self.phase_offsets.clone())
+    }
+
     /// Calculate phase shifts for linear steering.
     ///
     /// # Algorithm
@@ -77,19 +162,18 @@ impl PhaseShifter {
         }
 
         let k = 2.0 * PI / self.wavelength;
-        let mut phases = Array1::zeros(self.element_positions.nrows());
+        let quantization_enabled = self.quantization_enabled;
+        self.phase_offsets.fill(0.0);
 
-        for (i, phase) in phases.iter_mut().enumerate() {
+        for (i, phase) in self.phase_offsets.iter_mut().enumerate() {
             let position = self.element_positions.row(i);
-            *phase = -k * position[0] * angle_rad.sin();
-
-            if self.quantization_enabled {
-                *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
-            }
+            *phase = Self::apply_phase_quantization(
+                quantization_enabled,
+                -k * position[0] * angle_rad.sin(),
+            );
         }
 
-        self.phase_offsets = phases.clone();
-        Ok(phases)
+        Ok(self.phase_offsets.clone())
     }
 
     /// Calculate phase shifts for spherical focusing
@@ -100,35 +184,26 @@ impl PhaseShifter {
         &mut self,
         focal_point: &[f64; 3],
     ) -> KwaversResult<Array1<f64>> {
-        let focal_distance =
-            focal_point[2].mul_add(focal_point[2], focal_point[1].mul_add(focal_point[1], focal_point[0].powi(2))).sqrt();
-
-        if focal_distance < MIN_FOCAL_DISTANCE {
-            return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                "Focal distance below minimum of {} mm",
-                MIN_FOCAL_DISTANCE * 1000.0
-            )));
-        }
+        let focal_distance = Self::focal_distance(focal_point)?;
 
         let k = 2.0 * PI / self.wavelength;
-        let mut phases = Array1::zeros(self.element_positions.nrows());
+        let quantization_enabled = self.quantization_enabled;
+        self.phase_offsets.fill(0.0);
 
-        for (i, phase) in phases.iter_mut().enumerate() {
+        for (i, phase) in self.phase_offsets.iter_mut().enumerate() {
             let position = self.element_positions.row(i);
             let dx = focal_point[0] - position[0];
             let dy = focal_point[1] - position[1];
             let dz = focal_point[2] - position[2];
             let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
-            *phase = -k * (distance - focal_distance);
-
-            if self.quantization_enabled {
-                *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
-            }
+            *phase = Self::apply_phase_quantization(
+                quantization_enabled,
+                -k * (distance - focal_distance),
+            );
         }
 
-        self.phase_offsets = phases.clone();
-        Ok(phases)
+        Ok(self.phase_offsets.clone())
     }
 
     /// Calculate phase shifts for multiple focal points
@@ -145,47 +220,10 @@ impl PhaseShifter {
             )));
         }
 
-        let k = 2.0 * PI / self.wavelength;
-        let mut phases = Array1::zeros(self.element_positions.nrows());
-        let num_points = focal_points.len() as f64;
-
-        for focal_point in focal_points {
-            if focal_point.len() != 3 {
-                return Err(crate::core::error::KwaversError::InvalidInput(
-                    "Focal points must be 3D coordinates".to_owned(),
-                ));
-            }
-
-            let focal_distance =
-                focal_point[2].mul_add(focal_point[2], focal_point[1].mul_add(focal_point[1], focal_point[0].powi(2))).sqrt();
-
-            if focal_distance < MIN_FOCAL_DISTANCE {
-                return Err(crate::core::error::KwaversError::InvalidInput(format!(
-                    "Focal distance below minimum of {} mm",
-                    MIN_FOCAL_DISTANCE * 1000.0
-                )));
-            }
-
-            for (i, phase) in phases.iter_mut().enumerate() {
-                let position = self.element_positions.row(i);
-                let dx = focal_point[0] - position[0];
-                let dy = focal_point[1] - position[1];
-                let dz = focal_point[2] - position[2];
-                let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
-
-                // Superposition with equal weighting
-                *phase += (-k * (distance - focal_distance)) / num_points;
-            }
-        }
-
-        if self.quantization_enabled {
-            for phase in &mut phases {
-                *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
-            }
-        }
-
-        self.phase_offsets = phases.clone();
-        Ok(phases)
+        self.calculate_multipoint_phases_from_slices(
+            focal_points.iter().map(Vec::as_slice),
+            focal_points.len(),
+        )
     }
 
     /// Get current phase offsets
@@ -205,6 +243,11 @@ impl PhaseShifter {
     /// - [`ShiftingStrategy::Focused`]: `target = [x, y, z]` in metres.
     /// - [`ShiftingStrategy::MultiFocus`]: packed `[x, y, z]` triples in metres.
     /// - [`ShiftingStrategy::Custom`]: one phase per array element.
+    ///
+    /// The internal phase buffer is reused across calls. The returned
+    /// [`Array1`] is the owned snapshot required by the public API; callers
+    /// that only need a borrowed view can read [`Self::get_phase_offsets`]
+    /// after this method returns.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -233,9 +276,10 @@ impl PhaseShifter {
                     ));
                 }
 
-                let focal_points: Vec<Vec<f64>> =
-                    target.chunks_exact(3).map(|chunk| chunk.to_vec()).collect();
-                self.calculate_multipoint_phases(&focal_points)
+                self.calculate_multipoint_phases_from_slices(
+                    target.chunks_exact(3),
+                    target.len() / 3,
+                )
             }
             ShiftingStrategy::Custom => {
                 if target.len() != self.element_positions.nrows() {
@@ -246,16 +290,16 @@ impl PhaseShifter {
                     )));
                 }
 
-                let mut phases = Array1::zeros(self.element_positions.nrows());
-                for (phase, &target_phase) in phases.iter_mut().zip(target) {
-                    *phase = wrap_phase(target_phase);
-                    if self.quantization_enabled {
-                        *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
-                    }
+                self.phase_offsets.fill(0.0);
+                let quantization_enabled = self.quantization_enabled;
+                for (phase, &target_phase) in self.phase_offsets.iter_mut().zip(target) {
+                    *phase = Self::apply_phase_quantization(
+                        quantization_enabled,
+                        wrap_phase(target_phase),
+                    );
                 }
 
-                self.phase_offsets = phases.clone();
-                Ok(phases)
+                Ok(self.phase_offsets.clone())
             }
         }
     }
@@ -336,6 +380,48 @@ mod tests {
         assert_relative_eq!(phases[0], expected_left, epsilon = 1e-12);
         assert_relative_eq!(phases[1], 0.0, epsilon = 1e-12);
         assert_relative_eq!(phases[2], -expected_left, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn phase_application_reuses_cached_buffer_for_equal_array_length() {
+        let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+        let phase_buffer = shifter.get_phase_offsets().as_ptr();
+
+        let linear = shifter.apply_phases(&[15.0]).unwrap();
+        assert_eq!(shifter.get_phase_offsets().as_ptr(), phase_buffer);
+        assert_relative_eq!(linear[1], 0.0, epsilon = 1e-12);
+
+        shifter.set_strategy(ShiftingStrategy::Focused);
+        let focused = shifter.apply_phases(&[0.0, 0.0, 0.02]).unwrap();
+        assert_eq!(shifter.get_phase_offsets().as_ptr(), phase_buffer);
+        assert_relative_eq!(focused[1], 0.0, epsilon = 1e-12);
+
+        shifter.set_strategy(ShiftingStrategy::MultiFocus);
+        let multifocus = shifter
+            .apply_phases(&[0.0, 0.0, 0.02, 0.001, 0.0, 0.02])
+            .unwrap();
+        assert_eq!(shifter.get_phase_offsets().as_ptr(), phase_buffer);
+        assert_eq!(multifocus.len(), 3);
+
+        shifter.set_strategy(ShiftingStrategy::Custom);
+        let custom = shifter.apply_phases(&[0.0, PI, 3.0 * PI]).unwrap();
+        assert_eq!(shifter.get_phase_offsets().as_ptr(), phase_buffer);
+        assert_relative_eq!(custom[2], PI, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn invalid_multifocus_input_preserves_last_valid_phase_offsets() {
+        let mut shifter = PhaseShifter::new(linear_array(), 1.0e6);
+        shifter.set_strategy(ShiftingStrategy::Focused);
+        let valid = shifter.apply_phases(&[0.0, 0.0, 0.02]).unwrap();
+
+        shifter.set_strategy(ShiftingStrategy::MultiFocus);
+        let err = shifter
+            .apply_phases(&[0.0, 0.0, 0.02, 0.0, 0.0, 0.0005])
+            .unwrap_err();
+
+        assert!(format!("{err}").contains("Focal distance below minimum"));
+        assert_eq!(shifter.get_phase_offsets(), &valid);
     }
 
     #[test]

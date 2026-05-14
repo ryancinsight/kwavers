@@ -86,7 +86,12 @@ impl LineSearch {
             .as_slice()
             .expect("gradient contiguous")
             .par_iter()
-            .zip(direction.as_slice().expect("direction contiguous").par_iter())
+            .zip(
+                direction
+                    .as_slice()
+                    .expect("direction contiguous")
+                    .par_iter(),
+            )
             .map(|(&g, &d)| g * d)
             .sum();
 
@@ -160,7 +165,12 @@ impl ConjugateGradient {
                 .as_slice()
                 .expect("gradient contiguous")
                 .par_iter()
-                .zip(grad_diff.as_slice().expect("grad_diff contiguous").par_iter())
+                .zip(
+                    grad_diff
+                        .as_slice()
+                        .expect("grad_diff contiguous")
+                        .par_iter(),
+                )
                 .map(|(&g, &d)| g * d)
                 .sum();
             let denominator: f64 = prev_grad

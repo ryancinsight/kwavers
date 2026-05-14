@@ -120,9 +120,12 @@ fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
             for k in 1..nz - 1 {
                 let center = field[[i, j, k]];
 
-                let d2x = (2.0f64.mul_add(-center, field[[i + 1, j, k]]) + field[[i - 1, j, k]]) * idx2;
-                let d2y = (2.0f64.mul_add(-center, field[[i, j + 1, k]]) + field[[i, j - 1, k]]) * idy2;
-                let d2z = (2.0f64.mul_add(-center, field[[i, j, k + 1]]) + field[[i, j, k - 1]]) * idz2;
+                let d2x =
+                    (2.0f64.mul_add(-center, field[[i + 1, j, k]]) + field[[i - 1, j, k]]) * idx2;
+                let d2y =
+                    (2.0f64.mul_add(-center, field[[i, j + 1, k]]) + field[[i, j - 1, k]]) * idy2;
+                let d2z =
+                    (2.0f64.mul_add(-center, field[[i, j, k + 1]]) + field[[i, j, k - 1]]) * idz2;
 
                 laplacian[[i, j, k]] = d2x + d2y + d2z;
             }

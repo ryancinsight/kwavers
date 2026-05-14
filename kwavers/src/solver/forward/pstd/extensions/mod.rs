@@ -35,6 +35,6 @@ pub use elastic::{
     SpectralVelocityUpdateInputs,
 };
 pub use elastic_orchestrator::{
-    ElasticPml, ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSensorData,
+    ElasticPml, ElasticPmlSpec, ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSensorData,
     ElasticPstdSourceMode, ElasticPstdVelocitySource,
 };

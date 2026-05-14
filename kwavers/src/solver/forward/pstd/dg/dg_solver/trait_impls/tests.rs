@@ -90,7 +90,10 @@ fn test_project_reconstruct_round_trip() {
                 assert!(
                     err < 1e-11,
                     "Round-trip error at [e={},i={},v={}]: {:.2e} (must be < 1e-11)",
-                    e, i, v, err
+                    e,
+                    i,
+                    v,
+                    err
                 );
             }
         }

@@ -65,13 +65,13 @@ pub struct ValidationResult {
 
 impl ValidationResult {
     /// Check if validation passed (no spurious resonances, error below threshold).
-    #[must_use] 
+    #[must_use]
     pub fn passed(&self, error_threshold: f64) -> bool {
         !self.spurious_resonance_detected && self.interface_error < error_threshold
     }
 
     /// Get summary as string.
-    #[must_use] 
+    #[must_use]
     pub fn summary(&self) -> String {
         format!(
             "Enhanced BEM-FEM Validation @ {:.1} Hz:\n  \

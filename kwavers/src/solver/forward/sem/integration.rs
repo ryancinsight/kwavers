@@ -84,7 +84,11 @@ impl NewmarkIntegrator {
         let dt2 = self.dt * self.dt;
 
         for i in 0..self.displacement.len() {
-            self.displacement[i] = (0.5 * dt2).mul_add(acceleration[i], self.dt.mul_add(self.velocity_prev[i], self.displacement_prev[i]));
+            self.displacement[i] = (0.5 * dt2).mul_add(
+                acceleration[i],
+                self.dt
+                    .mul_add(self.velocity_prev[i], self.displacement_prev[i]),
+            );
         }
 
         for i in 0..self.velocity.len() {
@@ -212,7 +216,8 @@ impl SemExplicitIntegrator {
         }
 
         for i in 0..self.field.len() {
-            let field_next = dt2.mul_add(rhs[i], 2.0f64.mul_add(self.field[i], -self.field_prev[i]));
+            let field_next =
+                dt2.mul_add(rhs[i], 2.0f64.mul_add(self.field[i], -self.field_prev[i]));
             self.field_prev[i] = self.field[i];
             self.field[i] = field_next;
         }

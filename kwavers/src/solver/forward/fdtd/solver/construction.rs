@@ -118,7 +118,8 @@ impl GenericFdtdSolver<Array3<f64>> {
                     parameter: "kspace_correction".to_owned(),
                     value: "spectral".to_owned(),
                     constraint:
-                        "spectral k-space correction requires precomputed k-space operators".to_owned(),
+                        "spectral k-space correction requires precomputed k-space operators"
+                            .to_owned(),
                 }));
             };
             kspace_ops.initialize_ivp_velocity(

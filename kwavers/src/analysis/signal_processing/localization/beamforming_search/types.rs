@@ -90,12 +90,14 @@ impl LocalizationBeamformSearchConfig {
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.core.sound_speed.is_finite() || self.core.sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "LocalizationBeamformSearchConfig: core.sound_speed must be finite and > 0".to_owned(),
+                "LocalizationBeamformSearchConfig: core.sound_speed must be finite and > 0"
+                    .to_owned(),
             ));
         }
         if !self.core.sampling_frequency.is_finite() || self.core.sampling_frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "LocalizationBeamformSearchConfig: core.sampling_frequency must be finite and > 0".to_owned(),
+                "LocalizationBeamformSearchConfig: core.sampling_frequency must be finite and > 0"
+                    .to_owned(),
             ));
         }
         if !self.core.reference_frequency.is_finite() || self.core.reference_frequency < 0.0 {
@@ -145,12 +147,14 @@ impl LocalizationBeamformSearchConfig {
             } => {
                 if !search_radius_m.is_finite() || *search_radius_m <= 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "SearchGrid::CenteredCube: search_radius_m must be finite and > 0".to_owned(),
+                        "SearchGrid::CenteredCube: search_radius_m must be finite and > 0"
+                            .to_owned(),
                     ));
                 }
                 if !grid_resolution_m.is_finite() || *grid_resolution_m <= 0.0 {
                     return Err(KwaversError::InvalidInput(
-                        "SearchGrid::CenteredCube: grid_resolution_m must be finite and > 0".to_owned(),
+                        "SearchGrid::CenteredCube: grid_resolution_m must be finite and > 0"
+                            .to_owned(),
                     ));
                 }
                 if *min_points_per_axis < 2 {
@@ -235,7 +239,8 @@ impl BeamformingLocalizationInput {
         }
         if !self.sampling_frequency.is_finite() || self.sampling_frequency <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BeamformingLocalizationInput: sampling_frequency must be finite and > 0".to_owned(),
+                "BeamformingLocalizationInput: sampling_frequency must be finite and > 0"
+                    .to_owned(),
             ));
         }
         Ok(())

@@ -52,12 +52,7 @@ pub const HELMHOLTZ_C0_WATER: f64 = 1500.0;
 /// The output array has the same shape as `p`. Boundary voxels (the
 /// one-cell shell on every face) are zero.
 #[must_use]
-pub fn helmholtz_residual_field(
-    p: &Array3<f64>,
-    dx_m: f64,
-    f0: f64,
-    c0: f64,
-) -> Array3<f64> {
+pub fn helmholtz_residual_field(p: &Array3<f64>, dx_m: f64, f0: f64, c0: f64) -> Array3<f64> {
     debug_assert!(dx_m > 0.0);
     debug_assert!(f0 > 0.0);
     debug_assert!(c0 > 0.0);
@@ -73,9 +68,12 @@ pub fn helmholtz_residual_field(
         for j in 1..(ny - 1) {
             for kk in 1..(nz - 1) {
                 let pc = p[[i, j, kk]];
-                let lap = (p[[i + 1, j, kk]] - 2.0 * pc + p[[i - 1, j, kk]]
-                    + p[[i, j + 1, kk]] - 2.0 * pc + p[[i, j - 1, kk]]
-                    + p[[i, j, kk + 1]] - 2.0 * pc + p[[i, j, kk - 1]])
+                let lap = (p[[i + 1, j, kk]] - 2.0 * pc + p[[i - 1, j, kk]] + p[[i, j + 1, kk]]
+                    - 2.0 * pc
+                    + p[[i, j - 1, kk]]
+                    + p[[i, j, kk + 1]]
+                    - 2.0 * pc
+                    + p[[i, j, kk - 1]])
                     * inv_dx2;
                 r[[i, j, kk]] = lap + k2 * pc;
             }

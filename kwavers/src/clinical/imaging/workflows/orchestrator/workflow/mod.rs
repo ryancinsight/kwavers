@@ -3,8 +3,13 @@
 mod acquisition;
 
 use super::super::analysis::{calculate_confidence_score, generate_diagnostic_recommendations};
-use super::super::config::{ClinicalWorkflowConfig, ClinicalApplication, PhotoacousticConfig, ElastographyConfig};
-use super::super::results::{ClinicalExaminationResult, AcquisitionResult, ProcessingResult, AnalysisResult, PerformanceMetrics};
+use super::super::config::{
+    ClinicalApplication, ClinicalWorkflowConfig, ElastographyConfig, PhotoacousticConfig,
+};
+use super::super::results::{
+    AcquisitionResult, AnalysisResult, ClinicalExaminationResult, PerformanceMetrics,
+    ProcessingResult,
+};
 #[allow(unused_imports)]
 use super::super::simulation::generate_realistic_rf_volume;
 use super::super::simulation::{
@@ -286,13 +291,13 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     /// Get current workflow state.
-    #[must_use] 
+    #[must_use]
     pub fn get_state(&self) -> WorkflowState {
         self.state.clone()
     }
 
     /// Check if workflow meets real-time constraints.
-    #[must_use] 
+    #[must_use]
     pub fn check_realtime_performance(&self) -> bool {
         if !self.config.real_time_enabled {
             return true;

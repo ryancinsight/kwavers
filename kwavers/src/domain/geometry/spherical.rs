@@ -19,7 +19,7 @@ impl SphericalDomain {
     /// # Panics
     /// - Panics if assertion fails: `Radius must be positive`.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new_2d(x0: f64, y0: f64, radius: f64) -> Self {
         assert!(radius > 0.0, "Radius must be positive");
         Self {
@@ -32,7 +32,7 @@ impl SphericalDomain {
     /// # Panics
     /// - Panics if assertion fails: `Radius must be positive`.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new_3d(x0: f64, y0: f64, z0: f64, radius: f64) -> Self {
         assert!(radius > 0.0, "Radius must be positive");
         Self {
@@ -177,7 +177,8 @@ impl GeometricDomain for SphericalDomain {
                         let factor = 2.0 * (1.0_f64 - s).sqrt();
                         points[[i, 0]] = (self.radius * x1).mul_add(factor, self.center[0]);
                         points[[i, 1]] = (self.radius * x2).mul_add(factor, self.center[1]);
-                        points[[i, 2]] = self.radius.mul_add(2.0f64.mul_add(-s, 1.0), self.center[2]);
+                        points[[i, 2]] =
+                            self.radius.mul_add(2.0f64.mul_add(-s, 1.0), self.center[2]);
                         break;
                     }
                 },

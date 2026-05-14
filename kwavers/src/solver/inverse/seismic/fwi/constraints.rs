@@ -42,7 +42,8 @@ impl FwiProcessor {
         if self.parameters.nt < 3 {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "FWI requires at least 3 time samples to form a second derivative".to_owned(),
+                    message: "FWI requires at least 3 time samples to form a second derivative"
+                        .to_owned(),
                 },
             ));
         }
@@ -58,7 +59,8 @@ impl FwiProcessor {
         if model.iter().any(|&v| !v.is_finite() || v <= 0.0) {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
-                    message: "FWI requires a finite, strictly positive sound speed model".to_owned(),
+                    message: "FWI requires a finite, strictly positive sound speed model"
+                        .to_owned(),
                 },
             ));
         }

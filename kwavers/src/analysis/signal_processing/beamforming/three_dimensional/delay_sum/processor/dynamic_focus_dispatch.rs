@@ -81,14 +81,21 @@ impl<'a> DynamicFocusGPU<'a> {
         let min_depth = 0.0f32;
         let max_depth = vol_z as f32 * self.config.voxel_spacing.2 as f32;
         let num_focus_zones = DEFAULT_NUM_FOCUS_ZONES;
-        let total_elements =
-            self.config.num_elements_3d.0 * self.config.num_elements_3d.1 * self.config.num_elements_3d.2;
+        let total_elements = self.config.num_elements_3d.0
+            * self.config.num_elements_3d.1
+            * self.config.num_elements_3d.2;
 
         // --- CPU pre-computation of delay table [num_focus_zones × total_elements] ---
         let element_positions = self.create_element_positions();
         // element_positions is flat [x0,y0,z0, x1,y1,z1, …] → repack as [(x,y,z)]
         let elem_pos: Vec<[f32; 3]> = (0..total_elements)
-            .map(|i| [element_positions[3 * i], element_positions[3 * i + 1], element_positions[3 * i + 2]])
+            .map(|i| {
+                [
+                    element_positions[3 * i],
+                    element_positions[3 * i + 1],
+                    element_positions[3 * i + 2],
+                ]
+            })
             .collect();
 
         let mut focus_delays = vec![0.0f32; num_focus_zones as usize * total_elements];
@@ -116,46 +123,55 @@ impl<'a> DynamicFocusGPU<'a> {
 
         // --- GPU buffer uploads ---
         let rf_flat: Vec<f32> = rf_data.as_slice().unwrap_or(&[]).to_vec();
-        let rf_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("DF RF Data"),
-            contents: bytemuck::cast_slice(&rf_flat),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        });
+        let rf_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("DF RF Data"),
+                contents: bytemuck::cast_slice(&rf_flat),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
 
         let output_flat = vec![0.0f32; vol_x * vol_y * vol_z];
-        let output_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("DF Output Volume"),
-            contents: bytemuck::cast_slice(&output_flat),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-        });
+        let output_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("DF Output Volume"),
+                contents: bytemuck::cast_slice(&output_flat),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            });
 
         let apodization_flat: Vec<f32> = apodization_weights.as_slice().unwrap_or(&[]).to_vec();
-        let apodization_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("DF Apodization"),
-            contents: bytemuck::cast_slice(&apodization_flat),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
+        let apodization_buffer =
+            self.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("DF Apodization"),
+                    contents: bytemuck::cast_slice(&apodization_flat),
+                    usage: wgpu::BufferUsages::STORAGE,
+                });
 
         let element_positions_buffer =
-            self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("DF Element Positions"),
-                contents: bytemuck::cast_slice(&element_positions),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
+            self.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("DF Element Positions"),
+                    contents: bytemuck::cast_slice(&element_positions),
+                    usage: wgpu::BufferUsages::STORAGE,
+                });
 
         let focus_delays_buffer =
-            self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("DF Focus Delays"),
-                contents: bytemuck::cast_slice(&focus_delays),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
+            self.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("DF Focus Delays"),
+                    contents: bytemuck::cast_slice(&focus_delays),
+                    usage: wgpu::BufferUsages::STORAGE,
+                });
 
         let aperture_masks_buffer =
-            self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("DF Aperture Masks"),
-                contents: bytemuck::cast_slice(&aperture_masks),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
+            self.device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("DF Aperture Masks"),
+                    contents: bytemuck::cast_slice(&aperture_masks),
+                    usage: wgpu::BufferUsages::STORAGE,
+                });
 
         let apodization_window_u32 = match apodization_window {
             ApodizationWindow::Rectangular => 0,
@@ -201,29 +217,54 @@ impl<'a> DynamicFocusGPU<'a> {
             _padding6: 0,
         };
 
-        let params_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("DF Params"),
-            contents: bytemuck::bytes_of(&params),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
+        let params_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("DF Params"),
+                contents: bytemuck::bytes_of(&params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Dynamic Focus Bind Group"),
             layout: self.bind_group_layout,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: rf_buffer.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: output_buffer.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: params_buffer.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: apodization_buffer.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 4, resource: element_positions_buffer.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 5, resource: focus_delays_buffer.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 6, resource: aperture_masks_buffer.as_entire_binding() },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: rf_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: output_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: params_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: apodization_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: element_positions_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: focus_delays_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: aperture_masks_buffer.as_entire_binding(),
+                },
             ],
         });
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Dynamic Focus Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Dynamic Focus Encoder"),
+            });
 
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -269,14 +310,11 @@ impl<'a> DynamicFocusGPU<'a> {
         for ex in 0..self.config.num_elements_3d.0 {
             for ey in 0..self.config.num_elements_3d.1 {
                 for ez in 0..self.config.num_elements_3d.2 {
-                    let x = ((self.config.num_elements_3d.0 - 1) as f32)
-                        .mul_add(-0.5, ex as f32)
+                    let x = ((self.config.num_elements_3d.0 - 1) as f32).mul_add(-0.5, ex as f32)
                         * self.config.element_spacing_3d.0 as f32;
-                    let y = ((self.config.num_elements_3d.1 - 1) as f32)
-                        .mul_add(-0.5, ey as f32)
+                    let y = ((self.config.num_elements_3d.1 - 1) as f32).mul_add(-0.5, ey as f32)
                         * self.config.element_spacing_3d.1 as f32;
-                    let z = ((self.config.num_elements_3d.2 - 1) as f32)
-                        .mul_add(-0.5, ez as f32)
+                    let z = ((self.config.num_elements_3d.2 - 1) as f32).mul_add(-0.5, ez as f32)
                         * self.config.element_spacing_3d.2 as f32;
                     positions.extend_from_slice(&[x, y, z]);
                 }

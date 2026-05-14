@@ -7,7 +7,6 @@
 
 use ndarray::Array1;
 
-
 pub(super) struct CollocatedProfileMut<'a> {
     sigma: &'a mut Array1<f64>,
     kappa: &'a mut Array1<f64>,

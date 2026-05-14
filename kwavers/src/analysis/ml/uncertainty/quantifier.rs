@@ -266,7 +266,7 @@ impl UncertaintyQuantifier {
     }
 
     /// Generate uncertainty report.
-    #[must_use] 
+    #[must_use]
     pub fn generate_report<'a>(
         &self,
         results: &'a [Box<dyn UncertaintyResult>],

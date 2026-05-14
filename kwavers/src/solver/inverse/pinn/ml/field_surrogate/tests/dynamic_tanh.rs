@@ -12,16 +12,9 @@ fn test_default_init_recovers_vanilla_tanh() {
     let device = Default::default();
     let dyt = DynamicTanh::<B>::new(&device);
     let xs: [f32; 5] = [-2.0, -0.5, 0.0, 0.5, 2.0];
-    let input = Tensor::<B, 2>::from_data(
-        TensorData::new(xs.to_vec(), [5, 1]),
-        &device,
-    );
+    let input = Tensor::<B, 2>::from_data(TensorData::new(xs.to_vec(), [5, 1]), &device);
     let out = dyt.forward(input);
-    let out_vec: Vec<f32> = out
-        .into_data()
-        .convert::<f32>()
-        .into_vec()
-        .unwrap();
+    let out_vec: Vec<f32> = out.into_data().convert::<f32>().into_vec().unwrap();
     for (i, &x) in xs.iter().enumerate() {
         let expected = x.tanh();
         let diff = (out_vec[i] - expected).abs();
@@ -49,10 +42,7 @@ fn test_forward_applies_affine_then_tanh_then_affine() {
     // output is exactly β = -1 (since tanh(0) = 0).
     let device = Default::default();
     let dyt = DynamicTanh::<B>::with_init(2.0, 3.0, -1.0, &device);
-    let input = Tensor::<B, 2>::from_data(
-        TensorData::new(vec![0.0_f32, 1.0_f32], [2, 1]),
-        &device,
-    );
+    let input = Tensor::<B, 2>::from_data(TensorData::new(vec![0.0_f32, 1.0_f32], [2, 1]), &device);
     let out_vec: Vec<f32> = dyt
         .forward(input)
         .into_data()
@@ -60,12 +50,18 @@ fn test_forward_applies_affine_then_tanh_then_affine() {
         .into_vec()
         .unwrap();
     // x=0 → tanh(0)=0 → γ·0 + β = β = -1
-    assert!((out_vec[0] + 1.0).abs() < 1e-5,
-            "x=0 case: got {}, expected -1", out_vec[0]);
+    assert!(
+        (out_vec[0] + 1.0).abs() < 1e-5,
+        "x=0 case: got {}, expected -1",
+        out_vec[0]
+    );
     // x=1 → tanh(2)=0.9640 → 3·0.9640 - 1 = 1.8920
     let expected = 3.0 * 2.0_f32.tanh() - 1.0;
-    assert!((out_vec[1] - expected).abs() < 1e-4,
-            "x=1 case: got {}, expected {expected}", out_vec[1]);
+    assert!(
+        (out_vec[1] - expected).abs() < 1e-4,
+        "x=1 case: got {}, expected {expected}",
+        out_vec[1]
+    );
 }
 
 #[test]

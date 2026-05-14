@@ -101,7 +101,8 @@ impl TimeCoupling for AveragingStrategy {
                                 };
 
                                 // Hermite basis functions
-                                let h00 = 2.0f64.mul_add(theta.powi(3), -(3.0 * theta.powi(2))) + 1.0;
+                                let h00 =
+                                    2.0f64.mul_add(theta.powi(3), -(3.0 * theta.powi(2))) + 1.0;
                                 let h10 = 2.0f64.mul_add(-theta.powi(2), theta.powi(3)) + theta;
                                 let h01 = (-2.0f64).mul_add(theta.powi(3), 3.0 * theta.powi(2));
                                 let h11 = theta.mul_add(-theta, theta.powi(3));

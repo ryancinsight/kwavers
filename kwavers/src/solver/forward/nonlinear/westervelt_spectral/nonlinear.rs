@@ -50,7 +50,8 @@ pub fn compute_nonlinear_term(
                     let dp_dt = (p_curr - p_prev) / dt;
 
                     // Westervelt nonlinear term
-                    let p_squared_second_deriv = (2.0 * p_curr).mul_add(d2p_dt2, 2.0 * dp_dt.powi(2));
+                    let p_squared_second_deriv =
+                        (2.0 * p_curr).mul_add(d2p_dt2, 2.0 * dp_dt.powi(2));
                     nonlinear_coeff * p_squared_second_deriv
                 } else {
                     // Bootstrap for first iteration
@@ -97,7 +98,19 @@ pub fn compute_viscoelastic_term(
     for k in 1..nz - 1 {
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
-                let laplacian_dp_dt = (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i, j, k + 1]]) + dp_dt[[i, j, k - 1]]).mul_add(dz2_inv, (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i + 1, j, k]]) + dp_dt[[i - 1, j, k]]).mul_add(dx2_inv, (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i, j + 1, k]]) + dp_dt[[i, j - 1, k]]) * dy2_inv));
+                let laplacian_dp_dt = (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i, j, k + 1]])
+                    + dp_dt[[i, j, k - 1]])
+                .mul_add(
+                    dz2_inv,
+                    (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i + 1, j, k]])
+                        + dp_dt[[i - 1, j, k]])
+                    .mul_add(
+                        dx2_inv,
+                        (2.0f64.mul_add(-dp_dt[[i, j, k]], dp_dt[[i, j + 1, k]])
+                            + dp_dt[[i, j - 1, k]])
+                            * dy2_inv,
+                    ),
+                );
 
                 let eta_s = eta_s_arr[[i, j, k]];
                 let eta_b = eta_b_arr[[i, j, k]];

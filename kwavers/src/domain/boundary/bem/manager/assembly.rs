@@ -1,7 +1,7 @@
 //! BEM linear system assembly and solution reconstruction.
 
-use super::BemBoundaryManager;
 use super::super::types::BemBoundaryCondition;
+use super::BemBoundaryManager;
 use crate::core::error::KwaversResult;
 use crate::math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use ndarray::Array1;
@@ -52,10 +52,7 @@ impl BemBoundaryManager {
                     NodeBc::Dirichlet(p_known) => {
                         b[i] -= val * p_known;
                     }
-                    NodeBc::Neumann(_)
-                    | NodeBc::Robin(_, _)
-                    | NodeBc::Radiation
-                    | NodeBc::None => {
+                    NodeBc::Neumann(_) | NodeBc::Robin(_, _) | NodeBc::Radiation | NodeBc::None => {
                         row_entries.push((col, val));
                     }
                 }

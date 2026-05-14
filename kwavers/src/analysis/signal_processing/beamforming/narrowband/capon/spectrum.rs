@@ -108,7 +108,8 @@ pub fn capon_spatial_spectrum_point(
     if !denom_re.is_finite() || denom_re <= 1e-18 {
         return Err(KwaversError::Numerical(
             crate::core::error::NumericalError::InvalidOperation(
-                "capon_spatial_spectrum_point: non-positive or non-finite MVDR denominator".to_owned(),
+                "capon_spatial_spectrum_point: non-positive or non-finite MVDR denominator"
+                    .to_owned(),
             ),
         ));
     }

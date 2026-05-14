@@ -73,6 +73,29 @@ pub struct ElasticPml {
     damping_z: Array1<f64>,
 }
 
+/// Immutable construction parameters shared by real-space and split-field
+/// elastic PMLs.
+///
+/// The grid shape, spacing, layer thickness, time step, wave-speed bound, and
+/// target reflection coefficient form one Roden-Gedney profile contract. Both
+/// PML variants consume this same specification so their per-axis damping
+/// profiles cannot diverge.
+#[derive(Debug, Clone, Copy)]
+pub struct ElasticPmlSpec {
+    /// Grid shape `(nx, ny, nz)`.
+    pub shape: (usize, usize, usize),
+    /// Absorbing-layer thickness in cells per side along each axis.
+    pub thickness_cells: (usize, usize, usize),
+    /// Grid spacing `(dx, dy, dz)` in metres.
+    pub spacing: (f64, f64, f64),
+    /// Maximum elastic wave speed in metres per second.
+    pub c_max: f64,
+    /// Time step in seconds.
+    pub dt: f64,
+    /// Target theoretical reflection coefficient at normal incidence.
+    pub r0: f64,
+}
+
 impl ElasticPml {
     /// Build a PML for a `(nx, ny, nz)` grid with the given per-axis
     /// thickness in cells.
@@ -87,24 +110,39 @@ impl ElasticPml {
     /// The polynomial order `p = 4` is hard-coded as the literature
     /// optimum for spectral solvers (Treeby & Cox 2010 Appendix B).
     #[must_use]
-    pub fn new(
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        thickness_cells: (usize, usize, usize),
-        dx: f64,
-        dy: f64,
-        dz: f64,
-        c_max: f64,
-        dt: f64,
-        r0: f64,
-    ) -> Self {
+    pub fn new(spec: ElasticPmlSpec) -> Self {
         const P: f64 = 4.0;
-        let damping_x = build_axis_damping(nx, thickness_cells.0, dx, c_max, dt, r0, P);
-        let damping_y = build_axis_damping(ny, thickness_cells.1, dy, c_max, dt, r0, P);
-        let damping_z = build_axis_damping(nz, thickness_cells.2, dz, c_max, dt, r0, P);
+        let (nx, ny, nz) = spec.shape;
+        let (dx, dy, dz) = spec.spacing;
+        let damping_x = build_axis_damping(
+            nx,
+            spec.thickness_cells.0,
+            dx,
+            spec.c_max,
+            spec.dt,
+            spec.r0,
+            P,
+        );
+        let damping_y = build_axis_damping(
+            ny,
+            spec.thickness_cells.1,
+            dy,
+            spec.c_max,
+            spec.dt,
+            spec.r0,
+            P,
+        );
+        let damping_z = build_axis_damping(
+            nz,
+            spec.thickness_cells.2,
+            dz,
+            spec.c_max,
+            spec.dt,
+            spec.r0,
+            P,
+        );
         Self {
-            thickness_cells,
+            thickness_cells: spec.thickness_cells,
             damping_x,
             damping_y,
             damping_z,
@@ -234,9 +272,34 @@ const _PI_REFERENCE: f64 = PI;
 mod tests {
     use super::*;
 
+    fn spec(
+        shape: (usize, usize, usize),
+        thickness_cells: (usize, usize, usize),
+        spacing: (f64, f64, f64),
+        c_max: f64,
+        dt: f64,
+        r0: f64,
+    ) -> ElasticPmlSpec {
+        ElasticPmlSpec {
+            shape,
+            thickness_cells,
+            spacing,
+            c_max,
+            dt,
+            r0,
+        }
+    }
+
     #[test]
     fn no_thickness_means_unit_damping() {
-        let pml = ElasticPml::new(16, 16, 16, (0, 0, 0), 1e-3, 1e-3, 1e-3, 1500.0, 1e-7, 1e-4);
+        let pml = ElasticPml::new(spec(
+            (16, 16, 16),
+            (0, 0, 0),
+            (1e-3, 1e-3, 1e-3),
+            1500.0,
+            1e-7,
+            1e-4,
+        ));
         let (dx, dy, dz) = pml.damping_axes();
         for v in dx.iter().chain(dy.iter()).chain(dz.iter()) {
             assert_eq!(*v, 1.0, "no-PML damping must be exactly 1.0 everywhere");
@@ -245,7 +308,14 @@ mod tests {
 
     #[test]
     fn damping_is_monotonic_and_in_unit_interval() {
-        let pml = ElasticPml::new(32, 32, 32, (8, 8, 8), 1e-3, 1e-3, 1e-3, 1500.0, 1e-7, 1e-4);
+        let pml = ElasticPml::new(spec(
+            (32, 32, 32),
+            (8, 8, 8),
+            (1e-3, 1e-3, 1e-3),
+            1500.0,
+            1e-7,
+            1e-4,
+        ));
         let (dx, _, _) = pml.damping_axes();
         // Inside the absorbing layer at index 0, damping is strongest
         // (smallest value); at the inner edge of the layer (index = thickness)
@@ -274,18 +344,14 @@ mod tests {
         let ny = 4usize;
         let nz = 4usize;
         let thickness = 4usize;
-        let pml = ElasticPml::new(
-            nx,
-            ny,
-            nz,
+        let pml = ElasticPml::new(spec(
+            (nx, ny, nz),
             (thickness, 0, 0),
-            1e-3,
-            1e-3,
-            1e-3,
+            (1e-3, 1e-3, 1e-3),
             1500.0,
             1e-7,
             1e-4,
-        );
+        ));
 
         let mut field = Array3::<f64>::ones((nx, ny, nz));
         let n_passes = 50usize;
@@ -338,7 +404,14 @@ mod tests {
         let c_max = 1500.0_f64;
         let dt = 1e-7_f64;
         let r0 = 1e-4_f64;
-        let pml = ElasticPml::new(nx, 4, 4, (thickness, 0, 0), dx, 1e-3, 1e-3, c_max, dt, r0);
+        let pml = ElasticPml::new(spec(
+            (nx, 4, 4),
+            (thickness, 0, 0),
+            (dx, 1e-3, 1e-3),
+            c_max,
+            dt,
+            r0,
+        ));
 
         let (dx_axis, _, _) = pml.damping_axes();
 

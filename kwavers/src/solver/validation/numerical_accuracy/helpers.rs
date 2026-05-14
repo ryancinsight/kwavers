@@ -56,4 +56,3 @@ pub(crate) fn compute_laplacian_3d(field: &Array3<f64>, dx: f64) -> Array3<f64> 
     }
     lap
 }
-

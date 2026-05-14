@@ -161,16 +161,13 @@ where
         }
 
         let predictions = {
-            let model_lock = self.model.lock().map_err(|e| {
-                KwaversError::InternalError(format!("Failed to lock model: {e}"))
-            })?;
+            let model_lock = self
+                .model
+                .lock()
+                .map_err(|e| KwaversError::InternalError(format!("Failed to lock model: {e}")))?;
             match model_lock.as_ref() {
                 Some(model) => model.predict(&x_flat, &t_flat, &self.device)?,
-                None => {
-                    return Err(KwaversError::InternalError(
-                        "Model not initialized".into(),
-                    ))
-                }
+                None => return Err(KwaversError::InternalError("Model not initialized".into())),
             }
         };
 
@@ -254,9 +251,10 @@ where
 
         // Store trained model; release lock before mutating self.
         {
-            let mut model_lock = self.model.lock().map_err(|e| {
-                KwaversError::InternalError(format!("Failed to lock model: {e}"))
-            })?;
+            let mut model_lock = self
+                .model
+                .lock()
+                .map_err(|e| KwaversError::InternalError(format!("Failed to lock model: {e}")))?;
             *model_lock = Some(trainer.pinn().clone());
         }
 

@@ -200,17 +200,17 @@ impl EnhancedComplianceValidator {
         })
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn audit_history(&self) -> Vec<ComplianceAudit> {
         self.audit_trail.iter().cloned().collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn latest_audit(&self) -> Option<&ComplianceAudit> {
         self.audit_trail.back()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn generate_report(&self) -> ComplianceReport {
         let total_audits = self.audit_trail.len();
         let compliant_audits = self

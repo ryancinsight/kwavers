@@ -20,7 +20,7 @@ pub struct EMFields {
 
 impl EMFields {
     /// Create new EM fields from electric and magnetic components
-    #[must_use] 
+    #[must_use]
     pub fn new(electric: ArrayD<f64>, magnetic: ArrayD<f64>) -> Self {
         Self {
             electric,
@@ -34,7 +34,7 @@ impl EMFields {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn with_auxiliary(
         electric: ArrayD<f64>,
         magnetic: ArrayD<f64>,
@@ -285,7 +285,7 @@ impl PoyntingVector {
     /// Get total power flow through a surface
     ///
     /// Computes ∫ S · dA over the specified surface
-    #[must_use] 
+    #[must_use]
     pub fn total_power(&self, surface_normal: &[f64], surface_area: f64) -> f64 {
         let ndim = self.vector.ndim();
         let components = if ndim >= 1 {

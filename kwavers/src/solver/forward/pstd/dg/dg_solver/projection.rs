@@ -87,7 +87,7 @@ impl DGSolver {
     }
 
     /// Get modal coefficients reference
-    #[must_use] 
+    #[must_use]
     pub fn modal_coefficients(&self) -> Option<&Array3<f64>> {
         self.modal_coefficients.as_ref()
     }

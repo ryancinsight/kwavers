@@ -55,7 +55,10 @@ mod tests {
             is_conserved: false,
         };
         assert!(!m.is_conserved);
-        assert!(m.energy_error > 1.0, "energy_error must store the large violation value");
+        assert!(
+            m.energy_error > 1.0,
+            "energy_error must store the large violation value"
+        );
     }
 
     /// Debug output is non-empty (no panic; structural completeness check).

@@ -71,7 +71,7 @@ pub enum BubbleModel {
 
 impl PhysicsModelConfig {
     /// Create linear acoustics configuration
-    #[must_use] 
+    #[must_use]
     pub fn linear_acoustics(solver: AcousticSolver) -> Self {
         Self {
             model_type: PhysicsModelType::LinearAcoustics {
@@ -84,7 +84,7 @@ impl PhysicsModelConfig {
     }
 
     /// Create nonlinear acoustics configuration
-    #[must_use] 
+    #[must_use]
     pub fn nonlinear_acoustics(equation: NonlinearEquation, harmonics: usize) -> Self {
         Self {
             model_type: PhysicsModelType::NonlinearAcoustics {

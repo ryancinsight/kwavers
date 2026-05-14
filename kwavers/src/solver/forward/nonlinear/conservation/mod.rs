@@ -199,12 +199,24 @@ pub trait ConservationDiagnostics {
         diagnostics.push(self.check_energy_conservation(initial_energy, step, time, tolerances));
 
         let current_momentum = self.calculate_total_momentum();
-        let initial_momentum_mag =
-            initial_momentum.2.mul_add(initial_momentum.2, initial_momentum.1.mul_add(initial_momentum.1, initial_momentum.0.powi(2)))
-                .sqrt();
-        let current_momentum_mag =
-            current_momentum.2.mul_add(current_momentum.2, current_momentum.1.mul_add(current_momentum.1, current_momentum.0.powi(2)))
-                .sqrt();
+        let initial_momentum_mag = initial_momentum
+            .2
+            .mul_add(
+                initial_momentum.2,
+                initial_momentum
+                    .1
+                    .mul_add(initial_momentum.1, initial_momentum.0.powi(2)),
+            )
+            .sqrt();
+        let current_momentum_mag = current_momentum
+            .2
+            .mul_add(
+                current_momentum.2,
+                current_momentum
+                    .1
+                    .mul_add(current_momentum.1, current_momentum.0.powi(2)),
+            )
+            .sqrt();
         diagnostics.push(ConservationDiagnostic::new(
             ConservationLaw::Momentum,
             initial_momentum_mag,

@@ -34,7 +34,7 @@ pub struct LEDSource {
 
 impl LEDSource {
     /// Create a new LED array source
-    #[must_use] 
+    #[must_use]
     pub fn new(config: LEDConfig, positions: Vec<(f64, f64, f64)>) -> Self {
         Self { config, positions }
     }

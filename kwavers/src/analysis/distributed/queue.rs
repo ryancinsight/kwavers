@@ -39,8 +39,7 @@ pub struct ThreadPoolConfig {
 
 impl Default for ThreadPoolConfig {
     fn default() -> Self {
-        let num_threads = std::thread::available_parallelism()
-            .map_or(4, |n| n.get());
+        let num_threads = std::thread::available_parallelism().map_or(4, |n| n.get());
 
         Self {
             num_threads,
@@ -80,7 +79,7 @@ impl std::fmt::Debug for WorkQueue {
 
 impl WorkQueue {
     /// Create a new work queue with the given configuration
-    #[must_use] 
+    #[must_use]
     pub fn new(config: ThreadPoolConfig) -> Self {
         let scheduler = Arc::new(RealTimeScheduler::new());
         let work_time = Arc::new(AtomicU64::new(0));
@@ -174,7 +173,7 @@ impl WorkQueue {
     }
 
     /// Get current metrics
-    #[must_use] 
+    #[must_use]
     pub fn metrics(&self) -> PoolMetrics {
         let task_metrics = self.scheduler.metrics();
         let work = self.work_time.load(Ordering::Relaxed);

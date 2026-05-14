@@ -92,28 +92,28 @@ impl TrainingConfig {
     }
 
     /// Builder pattern: set number of epochs
-    #[must_use] 
+    #[must_use]
     pub fn with_epochs(mut self, epochs: usize) -> Self {
         self.num_epochs = epochs;
         self
     }
 
     /// Builder pattern: set batch size
-    #[must_use] 
+    #[must_use]
     pub fn with_batch_size(mut self, batch_size: usize) -> Self {
         self.batch_size = batch_size;
         self
     }
 
     /// Builder pattern: set learning rate
-    #[must_use] 
+    #[must_use]
     pub fn with_learning_rate(mut self, lr: f64) -> Self {
         self.learning_rate = lr.clamp(1e-8, 1.0);
         self
     }
 
     /// Builder pattern: set loss weights
-    #[must_use] 
+    #[must_use]
     pub fn with_loss_weights(mut self, lambda_data: f64, lambda_physics: f64) -> Self {
         let sum = lambda_data + lambda_physics;
         self.lambda_data = lambda_data / sum;
@@ -122,7 +122,7 @@ impl TrainingConfig {
     }
 
     /// Builder pattern: enable gradient clipping
-    #[must_use] 
+    #[must_use]
     pub fn with_gradient_clip(mut self, clip_norm: f64) -> Self {
         self.gradient_clip = if clip_norm > 0.0 {
             Some(clip_norm)

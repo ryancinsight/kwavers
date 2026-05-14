@@ -1,0 +1,55 @@
+{
+  "chapter": 30,
+  "analysis": "intravascular ultrasound imaging plus localized microbubble therapy",
+  "dataset": {
+    "name": "IVUS-Net / IVUS Challenge public segmentation corpus",
+    "frame_shape": [
+      384,
+      384
+    ],
+    "annotated_boundaries": [
+      "lumen",
+      "media-adventitia"
+    ],
+    "imaging_frequency_hz": 20000000.0,
+    "source_urls": [
+      "https://github.com/Kulbear/ivus-segmentation-icsm2018",
+      "https://arxiv.org/abs/1806.03583",
+      "http://www.cvc.uab.es/IVUSchallenge2011/dataset.html"
+    ],
+    "local_role": "External validation target for lumen and vessel-wall contours; clinical frames are not redistributed by this repository."
+  },
+  "transducer": {
+    "catheter_radius_m": 0.00055,
+    "imaging_frequency_hz": 20000000.0,
+    "imaging_elements": 64,
+    "therapy_frequency_hz": 1500000.0,
+    "therapy_pressure_pa": 300000.0,
+    "therapy_sector_count": 4,
+    "therapy_azimuth_rad": -0.72,
+    "therapy_sector_width_rad": 0.5,
+    "therapy_sonication_s": 45.0,
+    "therapy_duty_cycle": 0.05,
+    "maximum_imaging_radius_m": 0.01,
+    "pullback_step_m": 0.0005
+  },
+  "computed_metrics": {
+    "imaging_wavelength_um": 77.0,
+    "therapy_wavelength_mm": 1.0266666666666666,
+    "lumen_area_mm2": 7.103354716440935,
+    "plaque_area_mm2": 8.623959533434718,
+    "bmode_dynamic_range_db": 60.0,
+    "bmode_mean_lumen_intensity": 0.6781779438043297,
+    "bmode_mean_wall_intensity": 0.7595463055706663,
+    "therapy_mechanical_index": 0.24441586707352853,
+    "therapy_peak_delta_t_c": 0.3171240635670549,
+    "therapy_target_to_offtarget_deposition_ratio": 1792.851304067644
+  },
+  "figures": [
+    "D:\\kwavers\\docs\\book\\figures\\ch30\\fig01_dataset_and_anatomy.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch30\\fig02_transducer_design.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch30\\fig03_ivus_bmode_simulation.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch30\\fig04_microbubble_therapy_map.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch30\\fig05_intravascular_usage_sequence.png"
+  ]
+}

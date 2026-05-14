@@ -189,7 +189,7 @@ fn test_fft_round_trip() {
         ..Default::default()
     };
 
-    let op = KzkDiffractionOperator::new(&config);
+    let mut op = KzkDiffractionOperator::new(&config);
 
     // Create test data
     let mut original = Array2::zeros((64, 64));
@@ -210,8 +210,10 @@ fn test_fft_round_trip() {
     }
 
     // Forward then inverse FFT
-    let fft_data = op.fft_2d_forward(complex_data.clone());
-    let recovered = op.fft_2d_inverse(fft_data);
+    let scratch_ptr = op.scratch.as_ptr();
+    let mut recovered = Array2::zeros((64, 64));
+    op.fft_round_trip_into(&complex_data, &mut recovered);
+    assert_eq!(op.scratch.as_ptr(), scratch_ptr);
 
     // Check recovery
     let mut max_error = 0.0;

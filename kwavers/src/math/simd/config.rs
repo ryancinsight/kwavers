@@ -38,7 +38,7 @@ impl Default for SimdConfig {
 
 impl SimdConfig {
     /// Detect available SIMD capabilities
-    #[must_use] 
+    #[must_use]
     pub fn detect() -> Self {
         // Check for x86 SIMD features
         #[cfg(target_arch = "x86_64")]

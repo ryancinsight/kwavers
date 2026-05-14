@@ -135,8 +135,16 @@ impl ThermodynamicsCalculator {
             return P_CRITICAL_WATER;
         }
 
-        let ln_pr = A6.mul_add(tau.powf(7.5), A5.mul_add(tau.powi(4), A4.mul_add(tau.powf(3.5), A3.mul_add(tau.powi(3), A1.mul_add(tau, A2 * tau.powf(1.5))))))
-            / (temperature / T_CRITICAL_WATER);
+        let ln_pr = A6.mul_add(
+            tau.powf(7.5),
+            A5.mul_add(
+                tau.powi(4),
+                A4.mul_add(
+                    tau.powf(3.5),
+                    A3.mul_add(tau.powi(3), A1.mul_add(tau, A2 * tau.powf(1.5))),
+                ),
+            ),
+        ) / (temperature / T_CRITICAL_WATER);
 
         P_CRITICAL_WATER * ln_pr.exp()
     }
@@ -194,7 +202,10 @@ impl ThermodynamicsCalculator {
         const D: f64 = -2.2195983e-3;
 
         let t_ratio = T_TRIPLE_WATER / temperature;
-        let log10_p = C.mul_add(1.0 - 1.0 / t_ratio, A.mul_add(t_ratio - 1.0, B * t_ratio.log10())) + D;
+        let log10_p = C.mul_add(
+            1.0 - 1.0 / t_ratio,
+            A.mul_add(t_ratio - 1.0, B * t_ratio.log10()),
+        ) + D;
 
         P_TRIPLE_WATER * 10_f64.powf(log10_p)
     }
@@ -230,7 +241,10 @@ mod tests {
     fn vapor_pressure_clamps_to_critical_above_critical_temperature() {
         let calc = ThermodynamicsCalculator::default();
         let p = calc.vapor_pressure(T_CRITICAL_WATER + 50.0);
-        assert_eq!(p, P_CRITICAL_WATER, "must return P_CRITICAL above T_critical");
+        assert_eq!(
+            p, P_CRITICAL_WATER,
+            "must return P_CRITICAL above T_critical"
+        );
     }
 
     /// Antoine model at 100 °C gives ≈1 atm within 0.5%.
@@ -288,7 +302,8 @@ mod tests {
             assert!(
                 p_hi > p_lo,
                 "p({}) = {p_lo:.1} must be less than p({}) = {p_hi:.1}",
-                w[0], w[1]
+                w[0],
+                w[1]
             );
         }
     }

@@ -75,7 +75,6 @@ pub(super) fn propagate_split_field_step(
     let op_y_pos = dky_pos.as_slice().expect("dky_pos contiguous");
     let op_z_pos = dkz_pos.as_slice().expect("dkz_pos contiguous");
 
-    // ═══════════════════════════════════════════════════════════════════════
     // PHASE 1 — Stress sub-field updates.
     //
     // Each sub-field sf_{αβ} driven by ∂_β v_α:
@@ -84,7 +83,6 @@ pub(super) fn propagate_split_field_step(
     // vspec (spectral_velocity_in.{vx,vy,vz}) holds FFT(v_α) for current
     // velocity component. cspec (spectral_velocity_next.vx) is the product
     // vspec × op × kappa, IFFT'd into scratch_r for each derivative.
-    // ═══════════════════════════════════════════════════════════════════════
 
     // ── Derivatives of vx ────────────────────────────────────────────────
     fft_3d_array_into(&velocity.vx, &mut spectral_velocity_in.vx);
@@ -269,11 +267,9 @@ pub(super) fn propagate_split_field_step(
             *tyy_z = az * *tyy_z + bz * lam * g;
         });
 
-    // ═══════════════════════════════════════════════════════════════════════
     // PHASE 2 — Sum stress sub-fields and FFT each total component.
     //
     // spectral_stress.{txx,...} are used as scratch FFT output buffers.
-    // ═══════════════════════════════════════════════════════════════════════
 
     // txx = txx_x + txx_y + txx_z
     Zip::from(scratch_r.view_mut())
@@ -320,7 +316,6 @@ pub(super) fn propagate_split_field_step(
         .for_each(|out, &a, &b| *out = a + b);
     fft_3d_array_into(scratch_r, &mut spectral_stress.tyz);
 
-    // ═══════════════════════════════════════════════════════════════════════
     // PHASE 3 — Velocity sub-field updates.
     //
     // Each sub-field vsf_{α,β} driven by ∂_β σ_{αβ}:
@@ -328,7 +323,6 @@ pub(super) fn propagate_split_field_step(
     //
     // spectral_stress_next.{txx,...} used as scratch cspec for derivative
     // products; IFFT'd into scratch_r per sub-field group.
-    // ═══════════════════════════════════════════════════════════════════════
 
     // ── vx sub-fields: vxx ← ∂_x txx, vxy ← ∂_y txy, vxz ← ∂_z txz ────
 
@@ -480,9 +474,7 @@ pub(super) fn propagate_split_field_step(
             *vzz = az * *vzz + bz * div / rho;
         });
 
-    // ═══════════════════════════════════════════════════════════════════════
     // PHASE 4 — Sum velocity sub-fields → real-space total velocity.
-    // ═══════════════════════════════════════════════════════════════════════
     Zip::from(velocity.vx.view_mut())
         .and(&state.vxx)
         .and(&state.vxy)
@@ -499,4 +491,3 @@ pub(super) fn propagate_split_field_step(
         .and(&state.vzz)
         .for_each(|out, &a, &b, &c| *out = a + b + c);
 }
-

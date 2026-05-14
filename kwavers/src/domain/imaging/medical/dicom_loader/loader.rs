@@ -24,7 +24,7 @@ pub struct DicomImageLoader {
 
 impl DicomImageLoader {
     /// Create a new, empty DICOM image loader.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             data: None,
@@ -36,7 +36,7 @@ impl DicomImageLoader {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn data(&self) -> Option<&Array3<f64>> {
         self.data.as_ref()
     }
@@ -45,7 +45,7 @@ impl DicomImageLoader {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn dicom_metadata(&self) -> Option<&DicomMetadata> {
         self.metadata.as_ref()
     }
@@ -115,7 +115,7 @@ impl DicomImageLoader {
     /// Convert a DICOM pixel value to Hounsfield Units (CT only).
     ///
     /// Formula: `HU = pixel_value × rescale_slope + rescale_intercept`
-    #[must_use] 
+    #[must_use]
     pub fn to_hounsfield_units(
         pixel_value: f64,
         rescale_slope: f64,
@@ -131,7 +131,7 @@ impl DicomImageLoader {
     /// - `image_orientation` — Image Orientation (Patient): `[xx, xy, xz, yx, yy, yz]`
     /// - `pixel_spacing` — Pixel Spacing: `[dx, dy]`
     /// - `slice_thickness` — Slice Thickness
-    #[must_use] 
+    #[must_use]
     pub fn compute_affine(
         image_position: &[f64; 3],
         image_orientation: &[f64; 6],

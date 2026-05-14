@@ -91,8 +91,9 @@ impl SchwarzBoundary {
 
                             let robin_value = (beta - grad_neighbor) / alpha;
 
-                            interface_field[[i, j, k]] =
-                                (alpha.mul_add(u_neighbor, u_interface) + robin_value) / (2.0 + alpha);
+                            interface_field[[i, j, k]] = (alpha.mul_add(u_neighbor, u_interface)
+                                + robin_value)
+                                / (2.0 + alpha);
                         }
                     }
                 }
@@ -101,7 +102,8 @@ impl SchwarzBoundary {
                 // Optimized Schwarz with relaxation.
                 // u_new = (1−θ)·u_old + θ·u_neighbor.
                 interface_field.zip_mut_with(neighbor_field, |i, &n| {
-                    *i = (1.0 - self.relaxation_parameter).mul_add(*i, self.relaxation_parameter * n);
+                    *i = (1.0 - self.relaxation_parameter)
+                        .mul_add(*i, self.relaxation_parameter * n);
                 });
             }
         }

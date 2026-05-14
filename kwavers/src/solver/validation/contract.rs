@@ -108,7 +108,7 @@ impl MemoryBudget {
     /// THEOREM: Initial Memory Budget
     /// At initialization, transient allocations are zero.
     /// Peak tracking begins from the first timestep.
-    #[must_use] 
+    #[must_use]
     pub fn new(workspace_bytes: usize) -> Self {
         Self {
             workspace_bytes,

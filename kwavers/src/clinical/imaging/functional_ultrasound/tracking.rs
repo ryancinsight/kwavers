@@ -74,13 +74,13 @@ impl TrackingFilter {
     }
 
     /// Get current position estimate
-    #[must_use] 
+    #[must_use]
     pub fn get_position(&self) -> [f64; 3] {
         self.position
     }
 
     /// Get position uncertainty
-    #[must_use] 
+    #[must_use]
     pub fn get_uncertainty(&self) -> f64 {
         self.uncertainty
     }

@@ -58,14 +58,10 @@ fn sampler_default_uses_linear_transform() {
 fn sampler_with_signed_log1p_emits_targets_in_unit_interval() {
     let kernels = cube();
     let p_max_pa = 30.0e6_f32;
-    let transforms = OutputTransforms::signed_log1p(
-        p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3,
-    )
-    .unwrap();
-    let sampler = KernelCubeSampler::with_transforms(
-        &kernels, None, transforms,
-    )
-    .expect("sampler build");
+    let transforms =
+        OutputTransforms::signed_log1p(p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3).unwrap();
+    let sampler =
+        KernelCubeSampler::with_transforms(&kernels, None, transforms).expect("sampler build");
 
     let device = Default::default();
     let batch = sampler.batch::<AB>(&device, 0, 512);
@@ -101,10 +97,7 @@ fn signed_log1p_lifts_sub_epsilon_targets_above_linear() {
     // focal-peak underprediction.
     let p_max_pa = 30.0e6_f32;
     let lin = OutputTransforms::linear(p_max_pa, p_max_pa, p_max_pa * 0.7).unwrap();
-    let log = OutputTransforms::signed_log1p(
-        p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3,
-    )
-    .unwrap();
+    let log = OutputTransforms::signed_log1p(p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3).unwrap();
     let p_probe = p_max_pa * 1.0e-3;
     let n_lin = lin.p_max.forward(p_probe);
     let n_log = log.p_max.forward(p_probe);
@@ -125,10 +118,8 @@ fn infer_grid_signed_log1p_round_trips_through_untrained_network() {
     let device = Default::default();
     let net = ParamFieldPINNNetwork::<B>::new(&cfg, &device).unwrap();
     let p_max_pa = 30.0e6_f32;
-    let transforms = OutputTransforms::signed_log1p(
-        p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3,
-    )
-    .unwrap();
+    let transforms =
+        OutputTransforms::signed_log1p(p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3).unwrap();
     let params = GridQueryParams {
         shape: (6, 4, 4),
         focus_idx: (3, 2, 2),

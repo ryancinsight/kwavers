@@ -80,7 +80,7 @@ impl Default for Config {
 }
 
 impl Config {
-    #[must_use] 
+    #[must_use]
     pub fn forward_problem(lambda: f64, mu: f64, rho: f64) -> Self {
         Self {
             optimize_lambda: false,
@@ -100,7 +100,7 @@ impl Config {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn inverse_problem(lambda_guess: f64, mu_guess: f64, rho_guess: f64) -> Self {
         Self {
             optimize_lambda: true,

@@ -143,7 +143,8 @@ impl PhysicsTestUtils {
                     for k in 0..grid.nz {
                         // Linear interpolation for sub-grid accuracy
                         let interpolated_value = if i_floor + 1 < grid.nx {
-                            field2[[i_floor, j, k]].mul_add(1.0 - i_frac, field2[[i_floor + 1, j, k]] * i_frac)
+                            field2[[i_floor, j, k]]
+                                .mul_add(1.0 - i_frac, field2[[i_floor + 1, j, k]] * i_frac)
                         } else {
                             field2[[i_floor, j, k]]
                         };
@@ -188,15 +189,15 @@ mod tests {
     #[test]
     fn analytical_plane_wave_zero_at_origin_for_t0() {
         let grid = small_grid();
-        let field = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
-            &grid, 1e6, 2.0, 1500.0, 0.0,
-        );
+        let field =
+            PhysicsTestUtils::analytical_plane_wave_with_dispersion(&grid, 1e6, 2.0, 1500.0, 0.0);
         // At t=0 and i=0: phase = k_dispersed·0 = 0 → sin(0) = 0.
         for j in 0..grid.ny {
             for k in 0..grid.nz {
                 assert!(
                     field[[0, j, k]].abs() < 1e-14,
-                    "field at i=0, t=0 must be 0 (got {:.3e})", field[[0, j, k]]
+                    "field at i=0, t=0 must be 0 (got {:.3e})",
+                    field[[0, j, k]]
                 );
             }
         }
@@ -239,6 +240,9 @@ mod tests {
         let zero = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
         let nonzero = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
         let ratio = PhysicsTestUtils::measure_energy_conservation(&zero, &nonzero, &grid);
-        assert_eq!(ratio, 0.0, "energy ratio must be 0 when initial field is zero");
+        assert_eq!(
+            ratio, 0.0,
+            "energy ratio must be 0 when initial field is zero"
+        );
     }
 }

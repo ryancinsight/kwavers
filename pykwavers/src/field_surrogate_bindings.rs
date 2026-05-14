@@ -175,9 +175,8 @@ impl KernelCube {
     #[new]
     fn new(kernels: Vec<FocalKernel>) -> PyResult<Self> {
         let owned: Vec<KwaversFocalKernel> = kernels.into_iter().map(|k| k.inner).collect();
-        let inner = KwaversKernelCube::new(owned).map_err(|e| {
-            PyValueError::new_err(format!("KernelCube construction failed: {e}"))
-        })?;
+        let inner = KwaversKernelCube::new(owned)
+            .map_err(|e| PyValueError::new_err(format!("KernelCube construction failed: {e}")))?;
         Ok(KernelCube { inner })
     }
 

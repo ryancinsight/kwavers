@@ -232,7 +232,7 @@ impl PressureFieldStatistics {
     }
 
     /// Sample all pressure statistics at sensor positions.
-    #[must_use] 
+    #[must_use]
     pub fn sample_at_positions(&self, positions: &[(usize, usize, usize)]) -> SampledStatistics {
         SampledStatistics {
             p_max: self.sample_p_max(positions),

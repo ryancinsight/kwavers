@@ -194,8 +194,14 @@ fn invert(
     let mut model = vec![0.0; active.len()];
     let stages = continuation_rows(config, data.len());
     let all_rows: Vec<usize> = (0..data.len()).collect();
+    let regularization = (config, active, shape);
     let mut history = vec![composite_objective(
-        operator, data, &model, &all_rows, row_norms, config, active, shape,
+        operator,
+        data,
+        &model,
+        &all_rows,
+        row_norms,
+        regularization,
     )];
 
     for (stage_idx, rows) in stages.iter().enumerate() {
@@ -216,12 +222,16 @@ fn invert(
             diagonal: &diagonal,
         }
         .solve(stage_iterations, &mut model, &mut history);
-        let current_objective = composite_objective(
-            operator, data, &model, &all_rows, row_norms, config, active, shape,
-        );
+        let current_objective =
+            composite_objective(operator, data, &model, &all_rows, row_norms, regularization);
         if let Some(projected) = edge_preserving_projection(&model, active, shape, config) {
             let projected_objective = composite_objective(
-                operator, data, &projected, &all_rows, row_norms, config, active, shape,
+                operator,
+                data,
+                &projected,
+                &all_rows,
+                row_norms,
+                regularization,
             );
             if projected_objective <= current_objective {
                 model = projected;
@@ -261,15 +271,14 @@ impl StagePcgContext<'_> {
         let mut z = self.precondition(&residual);
         let mut direction = z.clone();
         let mut rz_old = dot(&residual, &z);
+        let regularization = (self.config, self.active, self.shape);
         let mut stage_objective = composite_objective(
             self.operator,
             self.data,
             model,
             self.rows,
             self.row_norms,
-            self.config,
-            self.active,
-            self.shape,
+            regularization,
         );
         if rz_old <= 0.0 || !rz_old.is_finite() {
             return;
@@ -302,9 +311,7 @@ impl StagePcgContext<'_> {
                     &trial,
                     self.rows,
                     self.row_norms,
-                    self.config,
-                    self.active,
-                    self.shape,
+                    regularization,
                 );
                 if trial_objective <= stage_objective {
                     accepted_model = trial;
@@ -329,9 +336,7 @@ impl StagePcgContext<'_> {
                 model,
                 self.all_rows,
                 self.row_norms,
-                self.config,
-                self.active,
-                self.shape,
+                regularization,
             ));
 
             z = self.precondition(&residual);
@@ -368,10 +373,9 @@ fn composite_objective(
     model: &[f64],
     rows: &[usize],
     row_norms: &[f64],
-    config: &BrainHelmetFwiConfig,
-    active: &[VolumeVoxel],
-    shape: (usize, usize, usize),
+    regularization: (&BrainHelmetFwiConfig, &[VolumeVoxel], (usize, usize, usize)),
 ) -> f64 {
+    let (config, active, shape) = regularization;
     operator.objective(data, model, rows, row_norms, config.regularization)
         + edge_preserving_penalty(model, active, shape, config)
 }

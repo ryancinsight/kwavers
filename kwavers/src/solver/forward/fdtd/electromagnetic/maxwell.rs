@@ -31,7 +31,7 @@ impl ElectromagneticWaveEquation for ElectromagneticFdtdSolver {
     fn apply_em_boundary_conditions(&mut self, fields: &mut EMFields) {
         self.apply_pec_boundaries();
         self.update_field_cache();
-        *fields = self.fields_cache.clone();
+        self.copy_field_cache_into(fields);
     }
 
     fn check_em_constraints(&self, fields: &EMFields) -> Result<(), String> {

@@ -65,7 +65,7 @@ mod density_cartesian;
 use crate::core::error::KwaversResult;
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::solver::geometry::Geometry;
-use ndarray::{s, Zip};
+use ndarray::Zip;
 
 impl PSTDSolver {
     /// Update pressure field from density perturbation (Equation of State)
@@ -137,7 +137,11 @@ impl PSTDSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub(crate) fn apply_pml_to_density(&mut self) -> KwaversResult<()> {
-        if let Some(boundary) = self.boundary.as_deref_mut() {
+        let Some(mut boundary) = self.boundary.take() else {
+            return Ok(());
+        };
+
+        let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
                 boundary.apply_acoustic_directional(
                     self.rhox.view_mut(),
@@ -158,49 +162,34 @@ impl PSTDSolver {
                     2,
                 )?;
             } else {
-                // Save density at bypass rows, apply full PML, then restore.
-                let saved_rx: Vec<_> = self
-                    .dirichlet_pml_bypass_x
-                    .iter()
-                    .map(|&i| self.rhox.slice(s![i, .., ..]).to_owned())
-                    .collect();
-                let saved_ry: Vec<_> = self
-                    .dirichlet_pml_bypass_x
-                    .iter()
-                    .map(|&i| self.rhoy.slice(s![i, .., ..]).to_owned())
-                    .collect();
-                let saved_rz: Vec<_> = self
-                    .dirichlet_pml_bypass_x
-                    .iter()
-                    .map(|&i| self.rhoz.slice(s![i, .., ..]).to_owned())
-                    .collect();
+                self.resize_pml_bypass_scratch();
+                let rows = self.dirichlet_pml_bypass_x.as_slice();
+                let grid = self.grid.as_ref();
+                let step = self.time_step_index;
 
-                boundary.apply_acoustic_directional(
-                    self.rhox.view_mut(),
-                    self.grid.as_ref(),
-                    self.time_step_index,
-                    0,
+                Self::apply_x_plane_pml_bypass(
+                    &mut self.rhox,
+                    rows,
+                    &mut self.pml_bypass_plane_scratch,
+                    |field| boundary.apply_acoustic_directional(field, grid, step, 0),
                 )?;
-                boundary.apply_acoustic_directional(
-                    self.rhoy.view_mut(),
-                    self.grid.as_ref(),
-                    self.time_step_index,
-                    1,
+                Self::apply_x_plane_pml_bypass(
+                    &mut self.rhoy,
+                    rows,
+                    &mut self.pml_bypass_plane_scratch,
+                    |field| boundary.apply_acoustic_directional(field, grid, step, 1),
                 )?;
-                boundary.apply_acoustic_directional(
-                    self.rhoz.view_mut(),
-                    self.grid.as_ref(),
-                    self.time_step_index,
-                    2,
+                Self::apply_x_plane_pml_bypass(
+                    &mut self.rhoz,
+                    rows,
+                    &mut self.pml_bypass_plane_scratch,
+                    |field| boundary.apply_acoustic_directional(field, grid, step, 2),
                 )?;
-
-                for (idx, &row) in self.dirichlet_pml_bypass_x.iter().enumerate() {
-                    self.rhox.slice_mut(s![row, .., ..]).assign(&saved_rx[idx]);
-                    self.rhoy.slice_mut(s![row, .., ..]).assign(&saved_ry[idx]);
-                    self.rhoz.slice_mut(s![row, .., ..]).assign(&saved_rz[idx]);
-                }
             }
-        }
-        Ok(())
+            Ok(())
+        })();
+
+        self.boundary = Some(boundary);
+        result
     }
 }

@@ -48,7 +48,7 @@ pub struct GruneisenParameter {
 #[allow(deprecated)]
 impl GruneisenParameter {
     /// Create a new Grüneisen parameter
-    #[must_use] 
+    #[must_use]
     pub fn new(value: f64) -> Self {
         Self {
             value,
@@ -58,14 +58,14 @@ impl GruneisenParameter {
     }
 
     /// Create with temperature dependence
-    #[must_use] 
+    #[must_use]
     pub fn with_temperature_dependence(mut self, coeff: f64) -> Self {
         self.temperature_coefficient = Some(coeff);
         self
     }
 
     /// Create with pressure dependence
-    #[must_use] 
+    #[must_use]
     pub fn with_pressure_dependence(mut self, coeff: f64) -> Self {
         self.pressure_coefficient = Some(coeff);
         self
@@ -96,12 +96,15 @@ impl GruneisenParameter {
     ///   solids." J. Acoust. Soc. Am. 64(6), 1652–1663. DOI: 10.1121/1.382132
     /// - Wang, L.V. & Wu, H.-I. (2012). *Biomedical Optics: Principles and Imaging*,
     ///   §2.3. Wiley-Interscience. ISBN 978-0-471-74304-0.
-    #[must_use] 
+    #[must_use]
     pub fn get_value(&self, temperature: f64, pressure: f64) -> f64 {
         let dt = temperature - BODY_TEMPERATURE_C; // deviation from 37 °C
         let dp = pressure - P_ATM; // deviation from 101 325 Pa
         self.value
-            * self.pressure_coefficient.unwrap_or(0.0).mul_add(dp, self.temperature_coefficient.unwrap_or(0.0).mul_add(dt, 1.0))
+            * self.pressure_coefficient.unwrap_or(0.0).mul_add(
+                dp,
+                self.temperature_coefficient.unwrap_or(0.0).mul_add(dt, 1.0),
+            )
     }
 }
 
@@ -120,7 +123,7 @@ pub struct OpticalAbsorption {
 
 impl OpticalAbsorption {
     /// Create optical absorption properties
-    #[must_use] 
+    #[must_use]
     pub fn new(mu_a: f64, mu_s_prime: f64, g: f64, wavelength: f64) -> Self {
         Self {
             absorption_coefficient: mu_a,
@@ -131,19 +134,19 @@ impl OpticalAbsorption {
     }
 
     /// Get total attenuation coefficient μ_t = μ_a + μ_s'
-    #[must_use] 
+    #[must_use]
     pub fn total_attenuation(&self) -> f64 {
         self.absorption_coefficient + self.reduced_scattering
     }
 
     /// Get optical penetration depth δ = 1/μ_t
-    #[must_use] 
+    #[must_use]
     pub fn penetration_depth(&self) -> f64 {
         1.0 / self.total_attenuation()
     }
 
     /// Get albedo (scattering probability) a = μ_s' / μ_t
-    #[must_use] 
+    #[must_use]
     pub fn albedo(&self) -> f64 {
         let mu_t = self.total_attenuation();
         if mu_t > 0.0 {
@@ -160,7 +163,7 @@ pub struct TissueOpticalProperties;
 
 impl TissueOpticalProperties {
     /// Get optical properties for a specific tissue type at wavelength
-    #[must_use] 
+    #[must_use]
     pub fn get_properties(tissue_type: &str, wavelength: f64) -> Option<OpticalAbsorption> {
         match tissue_type {
             "blood" => Some(OpticalAbsorption::new(
@@ -216,7 +219,7 @@ pub enum BeamProfile {
 
 impl PulsedLaser {
     /// Create a new pulsed laser
-    #[must_use] 
+    #[must_use]
     pub fn new(peak_power: f64, pulse_duration: f64, wavelength: f64) -> Self {
         Self {
             peak_power,
@@ -228,7 +231,7 @@ impl PulsedLaser {
     }
 
     /// Compute peak fluence (J/m²)
-    #[must_use] 
+    #[must_use]
     pub fn peak_fluence(&self) -> f64 {
         match &self.beam_profile {
             BeamProfile::Gaussian { beam_radius } => {
@@ -254,7 +257,7 @@ impl PulsedLaser {
     }
 
     /// Compute average power (W)
-    #[must_use] 
+    #[must_use]
     pub fn average_power(&self) -> f64 {
         self.peak_power * self.pulse_duration * self.repetition_rate
     }

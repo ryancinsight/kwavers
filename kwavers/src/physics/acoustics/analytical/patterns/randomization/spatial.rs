@@ -99,8 +99,10 @@ mod tests {
         let phases = sr.generate_correlated_phases(&positions);
         assert_eq!(phases.len(), 8);
         for &p in phases.iter() {
-            assert!(p >= 0.0 && p < MAX_PHASE_SHIFT,
-                "phase {p} out of [0, MAX_PHASE_SHIFT)");
+            assert!(
+                p >= 0.0 && p < MAX_PHASE_SHIFT,
+                "phase {p} out of [0, MAX_PHASE_SHIFT)"
+            );
         }
     }
 

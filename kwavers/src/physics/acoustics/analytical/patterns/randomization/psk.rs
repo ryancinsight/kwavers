@@ -96,7 +96,10 @@ mod tests {
         let bpsk = PhaseShiftKeying::bpsk(DT);
         let p = bpsk.current_phase();
         // After construction, current_symbol=0 → phase=0
-        assert!((p - 0.0).abs() < 1e-15, "initial BPSK phase must be 0 (got {p})");
+        assert!(
+            (p - 0.0).abs() < 1e-15,
+            "initial BPSK phase must be 0 (got {p})"
+        );
     }
 
     /// QPSK has 4 states; generate_sequence returns length-N array with values ∈ {0, π/2, π, 3π/2}.

@@ -51,7 +51,7 @@ impl Default for BoundaryDirections {
 
 impl BoundaryDirections {
     /// Enable all six faces.
-    #[must_use] 
+    #[must_use]
     pub const fn all() -> Self {
         Self {
             x_min: true,
@@ -64,7 +64,7 @@ impl BoundaryDirections {
     }
 
     /// Disable all faces.
-    #[must_use] 
+    #[must_use]
     pub const fn none() -> Self {
         Self {
             x_min: false,
@@ -77,7 +77,7 @@ impl BoundaryDirections {
     }
 
     /// Enable only XY-plane faces (for 2D simulations).
-    #[must_use] 
+    #[must_use]
     pub const fn xy_plane() -> Self {
         Self {
             x_min: true,

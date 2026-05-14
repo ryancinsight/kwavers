@@ -146,13 +146,13 @@ impl PoroelasticMaterial {
     }
 
     /// Calculate bulk density ρ = (1-φ)ρ_s + φρ_f
-    #[must_use] 
+    #[must_use]
     pub fn bulk_density(&self) -> f64 {
         (1.0 - self.porosity).mul_add(self.solid_density, self.porosity * self.fluid_density)
     }
 
     /// Calculate effective bulk modulus (Gassmann's equation)
-    #[must_use] 
+    #[must_use]
     pub fn effective_bulk_modulus(&self) -> f64 {
         let k_s = self.solid_bulk_modulus;
         let k_f = self.fluid_bulk_modulus;
@@ -208,8 +208,8 @@ mod tests {
     #[test]
     fn effective_bulk_modulus_follows_gassmann_equation() {
         let m = PoroelasticMaterial::default();
-        let expected = 1.0 / ((1.0 - m.porosity) / m.solid_bulk_modulus
-            + m.porosity / m.fluid_bulk_modulus);
+        let expected =
+            1.0 / ((1.0 - m.porosity) / m.solid_bulk_modulus + m.porosity / m.fluid_bulk_modulus);
         let got = m.effective_bulk_modulus();
         assert!(
             (got - expected).abs() < 1.0, // 1 Pa tolerance
@@ -235,25 +235,46 @@ mod tests {
             (got - expected).abs() < 1e-6,
             "characteristic_frequency: got {got:.3e} expected {expected:.3e}"
         );
-        assert!((got - 200.0).abs() < 1e-6, "ω_c must be 200 rad/s for default bone");
+        assert!(
+            (got - 200.0).abs() < 1e-6,
+            "ω_c must be 200 rad/s for default bone"
+        );
     }
 
     /// `new` rejects porosity outside (0, 1].
     #[test]
     fn new_rejects_invalid_porosity() {
-        let ok = || (0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5_f64);
+        let ok = || {
+            (
+                0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5_f64,
+            )
+        };
         let (_, rs, rf, ks, kf, g, k, eta, tor) = ok();
 
-        assert!(PoroelasticMaterial::new(-0.1, rs, rf, ks, kf, g, k, eta, tor).is_err(), "negative porosity");
-        assert!(PoroelasticMaterial::new(1.5, rs, rf, ks, kf, g, k, eta, tor).is_err(), "porosity > 1");
+        assert!(
+            PoroelasticMaterial::new(-0.1, rs, rf, ks, kf, g, k, eta, tor).is_err(),
+            "negative porosity"
+        );
+        assert!(
+            PoroelasticMaterial::new(1.5, rs, rf, ks, kf, g, k, eta, tor).is_err(),
+            "porosity > 1"
+        );
     }
 
     /// `new` rejects non-positive densities.
     #[test]
     fn new_rejects_nonpositive_densities() {
-        let (phi, _, rf, ks, kf, g, k, eta, tor) = (0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5_f64);
-        assert!(PoroelasticMaterial::new(phi, 0.0, rf, ks, kf, g, k, eta, tor).is_err(), "zero solid_density");
-        assert!(PoroelasticMaterial::new(phi, 2000.0, 0.0, ks, kf, g, k, eta, tor).is_err(), "zero fluid_density");
+        let (phi, _, rf, ks, kf, g, k, eta, tor) = (
+            0.3, 2000.0, 1000.0, 10e9, 2.25e9, 3.5e9, 1e-9, 1e-3, 1.5_f64,
+        );
+        assert!(
+            PoroelasticMaterial::new(phi, 0.0, rf, ks, kf, g, k, eta, tor).is_err(),
+            "zero solid_density"
+        );
+        assert!(
+            PoroelasticMaterial::new(phi, 2000.0, 0.0, ks, kf, g, k, eta, tor).is_err(),
+            "zero fluid_density"
+        );
     }
 
     /// `new` rejects tortuosity < 1.
@@ -270,7 +291,10 @@ mod tests {
             let r = PoroelasticMaterial::from_tissue_type(tissue);
             assert!(r.is_ok(), "{tissue} must be a known tissue type");
             let m = r.unwrap();
-            assert!(m.bulk_density() > 0.0, "{tissue} bulk_density must be positive");
+            assert!(
+                m.bulk_density() > 0.0,
+                "{tissue} bulk_density must be positive"
+            );
         }
     }
 

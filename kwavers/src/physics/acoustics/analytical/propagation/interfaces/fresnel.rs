@@ -111,7 +111,8 @@ impl FresnelCalculator {
 
         // Fresnel equations for S-polarization
         // rs = (n1*cos(θi) - n2*cos(θt)) / (n1*cos(θi) + n2*cos(θt))
-        let rs = self.n1.mul_add(cos_i, -(self.n2 * cos_t)) / self.n1.mul_add(cos_i, self.n2 * cos_t);
+        let rs =
+            self.n1.mul_add(cos_i, -(self.n2 * cos_t)) / self.n1.mul_add(cos_i, self.n2 * cos_t);
 
         // ts = 2*n1*cos(θi) / (n1*cos(θi) + n2*cos(θt))
         let ts = (2.0 * self.n1 * cos_i) / self.n1.mul_add(cos_i, self.n2 * cos_t);
@@ -133,7 +134,8 @@ impl FresnelCalculator {
 
         // Fresnel equations for P-polarization
         // rp = (n2*cos(θi) - n1*cos(θt)) / (n2*cos(θi) + n1*cos(θt))
-        let rp = self.n2.mul_add(cos_i, -(self.n1 * cos_t)) / self.n2.mul_add(cos_i, self.n1 * cos_t);
+        let rp =
+            self.n2.mul_add(cos_i, -(self.n1 * cos_t)) / self.n2.mul_add(cos_i, self.n1 * cos_t);
 
         // tp = 2*n1*cos(θi) / (n2*cos(θi) + n1*cos(θt))
         let tp = (2.0 * self.n1 * cos_i) / self.n2.mul_add(cos_i, self.n1 * cos_t);
@@ -164,7 +166,9 @@ impl FresnelCalculator {
         match polarization {
             Polarization::TransverseElectric => Ok(coeffs.rs * coeffs.rs),
             Polarization::TransverseMagnetic => Ok(coeffs.rp * coeffs.rp),
-            Polarization::Unpolarized => Ok(coeffs.rs.mul_add(coeffs.rs, coeffs.rp * coeffs.rp) / 2.0),
+            Polarization::Unpolarized => {
+                Ok(coeffs.rs.mul_add(coeffs.rs, coeffs.rp * coeffs.rp) / 2.0)
+            }
             _ => Ok(coeffs.reflection_amplitude * coeffs.reflection_amplitude),
         }
     }

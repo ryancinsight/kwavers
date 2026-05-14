@@ -122,7 +122,8 @@ impl SemBasis {
                 for _ in 0..10 {
                     let (p, dp) = Self::legendre_and_derivative(n_points - 1, x);
                     let numerator = (1.0 - x * x) * dp;
-                    let denominator = (-2.0 * x).mul_add(dp, (n_points - 1) as f64 * (n_points) as f64 * p);
+                    let denominator =
+                        (-2.0 * x).mul_add(dp, (n_points - 1) as f64 * (n_points) as f64 * p);
 
                     if denominator.abs() > 1e-15 {
                         x += numerator / denominator;
@@ -167,8 +168,10 @@ impl SemBasis {
 
         for k in 1..n {
             let p2 = ((2 * k + 1) as f64 * x).mul_add(p1, -(k as f64 * p0)) / (k + 1) as f64;
-            let dp2 = (k as f64).mul_add(-dp0, ((2 * k + 1) as f64).mul_add(p1, (2 * k + 1) as f64 * x * dp1))
-                / (k + 1) as f64;
+            let dp2 = (k as f64).mul_add(
+                -dp0,
+                ((2 * k + 1) as f64).mul_add(p1, (2 * k + 1) as f64 * x * dp1),
+            ) / (k + 1) as f64;
 
             p0 = p1;
             p1 = p2;

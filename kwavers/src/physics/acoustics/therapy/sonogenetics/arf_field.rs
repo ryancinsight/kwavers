@@ -132,7 +132,8 @@ impl VolumetricArfField {
             return Err(KwaversError::Validation(ValidationError::InvalidValue {
                 parameter: "n_samples".to_owned(),
                 value: 0.0,
-                reason: "must accumulate at least one pressure snapshot before finalizing".to_owned(),
+                reason: "must accumulate at least one pressure snapshot before finalizing"
+                    .to_owned(),
             }));
         }
         let scale = 1.0 / self.n_samples as f64;

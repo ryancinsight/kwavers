@@ -5,6 +5,7 @@
 # will have compiled files and executables
 debug/
 target/
+external/
 
 # Binary executables without extensions
 fft_demo
@@ -34,6 +35,16 @@ test_octree
 *.so
 *.dll
 *.exe
+
+# Windows linker import-library artifacts emitted at the repo root during native builds
+api-ms-*.def
+api-ms-*.exp
+api-ms-*.lib
+
+# Oversized clinical-imaging sample volumes (>100 MB; exceeds GitHub upload cap).
+# These are fetched into the working tree from public dataset mirrors; the
+# data/<dataset>/README.md inside each sample directory documents the source.
+data/kits19_sample/case_*.nii.gz
 # Core dumps (be specific to avoid excluding src files)
 /core
 /core.*

@@ -49,7 +49,8 @@ impl GenericFdtdSolver<Array3<f64>> {
                  boundaries. CPML requires finite-difference gradient arrays that are \
                  not produced by the spectral path. Either set \
                  `kspace_correction = KSpaceCorrectionMode::None` or use a \
-                 non-CPML absorbing layer.".to_owned(),
+                 non-CPML absorbing layer."
+                    .to_owned(),
             ));
         }
         info!("Enabling C-PML boundary conditions");

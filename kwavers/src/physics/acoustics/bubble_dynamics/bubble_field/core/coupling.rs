@@ -32,7 +32,9 @@ impl BubbleField {
                 let delta_x = (pos_i.0 as f64 - pos_j.0 as f64) * dx;
                 let delta_y = (pos_i.1 as f64 - pos_j.1 as f64) * dy;
                 let delta_z = (pos_i.2 as f64 - pos_j.2 as f64) * dz;
-                let d_ij = delta_z.mul_add(delta_z, delta_x.mul_add(delta_x, delta_y * delta_y)).sqrt();
+                let d_ij = delta_z
+                    .mul_add(delta_z, delta_x.mul_add(delta_x, delta_y * delta_y))
+                    .sqrt();
 
                 if d_ij == 0.0 || state_i.radius / d_ij < self.coupling_threshold {
                     continue;

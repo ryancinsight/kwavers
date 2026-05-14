@@ -10,7 +10,7 @@ pub struct FftSimdOps {
 
 impl FftSimdOps {
     /// Create new FFT SIMD operations
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             config: SimdConfig::detect(),
@@ -75,7 +75,9 @@ impl FftSimdOps {
         real2: &[f32],
         imag2: &[f32],
     ) {
-        use std::arch::x86_64::{_mm256_loadu_ps, _mm256_sub_ps, _mm256_mul_ps, _mm256_add_ps, _mm256_storeu_ps};
+        use std::arch::x86_64::{
+            _mm256_add_ps, _mm256_loadu_ps, _mm256_mul_ps, _mm256_storeu_ps, _mm256_sub_ps,
+        };
 
         let len = real1
             .len()

@@ -19,7 +19,7 @@ pub struct HIFUTransducer {
 
 impl HIFUTransducer {
     /// Create a new single-element focused transducer
-    #[must_use] 
+    #[must_use]
     pub fn new_single_element(
         frequency: f64,
         acoustic_power: f64,
@@ -76,7 +76,7 @@ impl HIFUTreatmentPlan {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(target: TreatmentTarget, protocol: TreatmentProtocol) -> Self {
         Self {
             target,

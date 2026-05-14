@@ -61,8 +61,7 @@ impl GradientFieldUpdater {
         for j in 0..ny {
             for k in 0..nz {
                 self.grad_x[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / dx;
-                self.grad_x[[nx - 1, j, k]] =
-                    (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / dx;
+                self.grad_x[[nx - 1, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / dx;
             }
         }
 
@@ -79,8 +78,7 @@ impl GradientFieldUpdater {
         for i in 0..nx {
             for k in 0..nz {
                 self.grad_y[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / dy;
-                self.grad_y[[i, ny - 1, k]] =
-                    (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / dy;
+                self.grad_y[[i, ny - 1, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / dy;
             }
         }
 
@@ -97,8 +95,7 @@ impl GradientFieldUpdater {
         for i in 0..nx {
             for j in 0..ny {
                 self.grad_z[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / dz;
-                self.grad_z[[i, j, nz - 1]] =
-                    (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / dz;
+                self.grad_z[[i, j, nz - 1]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / dz;
             }
         }
     }

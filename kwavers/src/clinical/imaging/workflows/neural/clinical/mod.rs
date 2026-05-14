@@ -21,7 +21,7 @@ pub struct ClinicalDecisionSupport {
 
 impl ClinicalDecisionSupport {
     /// Create new clinical decision support system
-    #[must_use] 
+    #[must_use]
     pub fn new(thresholds: ClinicalThresholds) -> Self {
         Self { config: thresholds }
     }

@@ -17,7 +17,7 @@ impl ComplianceValidator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             standard_version: "IEC 60601-2-37:2007+A1:2010".to_owned(),
@@ -52,13 +52,13 @@ impl ComplianceValidator {
     }
 
     /// Return `true` if all checks passed.
-    #[must_use] 
+    #[must_use]
     pub fn is_overall_compliant(&self) -> bool {
         self.validation_results.values().all(|r| r.passed)
     }
 
     /// Get detailed result for a specific check ID.
-    #[must_use] 
+    #[must_use]
     pub fn get_check_result(&self, check_id: &str) -> Option<&ComplianceResult> {
         self.validation_results.get(check_id)
     }
@@ -68,7 +68,8 @@ impl ComplianceValidator {
             ComplianceCheck {
                 id: "safety_limits".to_owned(),
                 name: "Safety Limits Implementation".to_owned(),
-                requirement: "Clause 201.12 - Essential performance: acoustic output control".to_owned(),
+                requirement: "Clause 201.12 - Essential performance: acoustic output control"
+                    .to_owned(),
                 validation_function: Arc::new(|config| {
                     let passed = config.safety_limits.max_intensity <= 3.0
                         && config.safety_limits.max_power <= 100.0

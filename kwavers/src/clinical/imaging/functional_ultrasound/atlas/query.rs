@@ -32,17 +32,17 @@ impl BrainAtlas {
     #[must_use]
     pub fn get_region_name(&self, region_id: u32) -> &'static str {
         match region_id {
-            1  => "Prefrontal Cortex",
-            2  => "Motor Cortex",
-            3  => "Somatosensory Cortex",
-            4  => "Visual Cortex",
-            5  => "Auditory Cortex",
-            6  => "Hippocampus",
-            7  => "Amygdala",
-            8  => "Cerebellum",
-            9  => "Thalamus",
+            1 => "Prefrontal Cortex",
+            2 => "Motor Cortex",
+            3 => "Somatosensory Cortex",
+            4 => "Visual Cortex",
+            5 => "Auditory Cortex",
+            6 => "Hippocampus",
+            7 => "Amygdala",
+            8 => "Cerebellum",
+            9 => "Thalamus",
             10 => "Hypothalamus",
-            _  => "Unknown Region",
+            _ => "Unknown Region",
         }
     }
 

@@ -185,19 +185,19 @@ impl BeamformingTrainer {
     }
 
     /// Get training history
-    #[must_use] 
+    #[must_use]
     pub fn history(&self) -> &TrainingHistory {
         &self.history
     }
 
     /// Get current configuration
-    #[must_use] 
+    #[must_use]
     pub fn config(&self) -> &TrainingConfig {
         &self.config
     }
 
     /// Get physics loss configuration
-    #[must_use] 
+    #[must_use]
     pub fn physics_loss(&self) -> &PhysicsLoss {
         &self.physics_loss
     }

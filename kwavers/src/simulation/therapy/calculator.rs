@@ -155,13 +155,13 @@ impl TherapyCalculator {
     }
 
     /// Check if treatment is complete
-    #[must_use] 
+    #[must_use]
     pub fn is_complete(&self) -> bool {
         self.metrics.is_successful(self.get_target_dose(), 0.8)
     }
 
     /// Get treatment summary
-    #[must_use] 
+    #[must_use]
     pub fn summary(&self) -> String {
         format!(
             "Therapy: {:?}\n\

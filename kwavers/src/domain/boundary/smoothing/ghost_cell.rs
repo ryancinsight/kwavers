@@ -32,7 +32,7 @@ pub struct GhostCellMethod {
 }
 
 impl GhostCellMethod {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: GhostCellConfig) -> Self {
         Self { config }
     }

@@ -55,7 +55,8 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
 
     let sampling_frequency_hz = cfg.sampling_frequency_hz.ok_or_else(|| {
         KwaversError::InvalidInput(
-            "capon_spatial_spectrum_point_complex_baseband: cfg.sampling_frequency_hz is required".to_owned(),
+            "capon_spatial_spectrum_point_complex_baseband: cfg.sampling_frequency_hz is required"
+                .to_owned(),
         )
     })?;
 

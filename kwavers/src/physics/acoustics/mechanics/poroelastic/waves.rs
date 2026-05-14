@@ -37,9 +37,18 @@ mod tests {
             slow_wave: 200.0,
             shear_wave: 1200.0,
         };
-        assert_eq!(ws.fast_wave, 2500.0, "fast_wave must match constructed value");
-        assert_eq!(ws.slow_wave, 200.0, "slow_wave must match constructed value");
-        assert_eq!(ws.shear_wave, 1200.0, "shear_wave must match constructed value");
+        assert_eq!(
+            ws.fast_wave, 2500.0,
+            "fast_wave must match constructed value"
+        );
+        assert_eq!(
+            ws.slow_wave, 200.0,
+            "slow_wave must match constructed value"
+        );
+        assert_eq!(
+            ws.shear_wave, 1200.0,
+            "shear_wave must match constructed value"
+        );
     }
 
     /// Physical ordering: fast P-wave speed > slow P-wave speed (Biot theory).

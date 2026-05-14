@@ -33,7 +33,7 @@ impl SafetyAuditLogger {
     /// Create new audit logger with a maximum entry capacity.
     ///
     /// When the capacity is exceeded, the oldest entry is removed (FIFO).
-    #[must_use] 
+    #[must_use]
     pub fn new(max_entries: usize) -> Self {
         Self {
             log_entries: Arc::new(Mutex::new(Vec::new())),
@@ -99,7 +99,7 @@ impl SafetyAuditLogger {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn get_entries(&self) -> Vec<AuditEntry> {
         self.log_entries
             .lock()
@@ -122,8 +122,7 @@ impl SafetyAuditLogger {
         let reference = entries.first().map(|e| e.timestamp);
 
         for entry in entries.iter() {
-            let elapsed_ms = reference
-                .map_or(0, |r| entry.timestamp.duration_since(r).as_millis());
+            let elapsed_ms = reference.map_or(0, |r| entry.timestamp.duration_since(r).as_millis());
 
             let meta_pairs: Vec<String> = entry
                 .metadata

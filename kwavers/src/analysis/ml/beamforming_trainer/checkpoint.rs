@@ -24,8 +24,7 @@ impl BeamformingTrainer {
             KwaversError::InternalError(format!("Failed to create checkpoint dir: {e}"))
         })?;
 
-        let checkpoint_path =
-            format!("{}/checkpoint_epoch_{:04}.json", checkpoint_dir, epoch);
+        let checkpoint_path = format!("{}/checkpoint_epoch_{:04}.json", checkpoint_dir, epoch);
 
         let state = format!(
             concat!(
@@ -56,9 +55,8 @@ impl BeamformingTrainer {
             self.physics_loss.sparsity_weight,
         );
 
-        std::fs::write(&checkpoint_path, state).map_err(|e| {
-            KwaversError::InternalError(format!("Failed to write checkpoint: {e}"))
-        })?;
+        std::fs::write(&checkpoint_path, state)
+            .map_err(|e| KwaversError::InternalError(format!("Failed to write checkpoint: {e}")))?;
 
         if self.config.verbose {
             debug!("Saved checkpoint: {checkpoint_path}");

@@ -36,7 +36,9 @@ fn test_beamforming_uncertainty() {
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
 
     let image = Array3::from_elem((32, 32, 16), 1.0_f32);
-    let result = quantifier.quantify_beamforming_uncertainty(&image, 0.8).unwrap();
+    let result = quantifier
+        .quantify_beamforming_uncertainty(&image, 0.8)
+        .unwrap();
     assert_eq!(result.uncertainty_map.dim(), (32, 32, 16));
     let confidence_err = (result.confidence_score - 0.8).abs();
     assert!(
@@ -45,7 +47,11 @@ fn test_beamforming_uncertainty() {
         result.confidence_score
     );
     // Uniform field: zero spatial variance → uncertainty_map is all zeros.
-    let max_unc = result.uncertainty_map.iter().cloned().fold(0.0_f32, f32::max);
+    let max_unc = result
+        .uncertainty_map
+        .iter()
+        .cloned()
+        .fold(0.0_f32, f32::max);
     assert!(
         max_unc < 1e-6,
         "uniform image must produce zero uncertainty_map; got max={max_unc}"

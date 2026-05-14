@@ -57,7 +57,7 @@ pub struct TrainingMetrics {
 
 impl TrainingMetrics {
     /// Create new empty metrics
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             total_loss: Vec::new(),
@@ -95,13 +95,13 @@ impl TrainingMetrics {
     }
 
     /// Get final loss value
-    #[must_use] 
+    #[must_use]
     pub fn final_loss(&self) -> Option<f64> {
         self.total_loss.last().copied()
     }
 
     /// Get average epoch time
-    #[must_use] 
+    #[must_use]
     pub fn average_epoch_time(&self) -> f64 {
         if self.epoch_times.is_empty() {
             0.0

@@ -32,26 +32,26 @@ pub mod acoustic_properties {
     pub const FREQUENCY_RANGE: (f64, f64) = (1000.0, 10_000_000.0);
 
     /// Validate density value against physical constraints
-    #[must_use] 
+    #[must_use]
     pub fn is_valid_density(density: f64) -> bool {
         density > 0.0 && density.is_finite()
     }
 
     /// Validate sound speed value against physical constraints
-    #[must_use] 
+    #[must_use]
     pub fn is_valid_sound_speed(sound_speed: f64) -> bool {
         sound_speed > 0.0 && sound_speed.is_finite()
     }
 
     /// Validate acoustic impedance calculation
-    #[must_use] 
+    #[must_use]
     pub fn is_valid_acoustic_impedance(density: f64, sound_speed: f64) -> bool {
         let impedance = density * sound_speed;
         impedance.is_finite() && impedance > 0.0
     }
 
     /// Validate frequency scaling doesn't cause overflow
-    #[must_use] 
+    #[must_use]
     pub fn is_valid_frequency_scaling(base_absorption: f64, frequency: f64, ref_freq: f64) -> bool {
         if ref_freq <= 0.0 {
             return false;

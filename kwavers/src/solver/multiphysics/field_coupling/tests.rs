@@ -1,7 +1,9 @@
 use super::{CouplingStrategy, FieldCoupler};
 use crate::core::constants::{
-    fundamental::DENSITY_WATER_NOMINAL, thermodynamic::SPECIFIC_HEAT_WATER,
+    fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE},
+    thermodynamic::SPECIFIC_HEAT_WATER,
 };
+use crate::core::error::KwaversError;
 use ndarray::Array3;
 
 /// A large-magnitude field with a small *relative* change must be reported
@@ -88,4 +90,83 @@ fn test_specific_heat_water_within_literature_range() {
         SPECIFIC_HEAT_WATER > 4150.0 && SPECIFIC_HEAT_WATER < 4220.0,
         "SPECIFIC_HEAT_WATER ({SPECIFIC_HEAT_WATER}) outside NIST range [4150, 4220] J/(kg·K)"
     );
+}
+
+/// Weak coupling must evaluate the three physical coupling edges without
+/// mutating the source pressure field.
+///
+/// Analytical references:
+/// - photoelastic modulation: `I₁ = I₀(1 + s·10⁻¹²p·dt)`
+/// - optical heating: `ΔT_o = μ_a I₁ dt / (ρc_p)`
+/// - acoustic absorption heating: `ΔT_a = αp²dt / (ρ²c_pc)`
+/// # Panics
+/// - Panics if a value differs from the analytical coupling update.
+///
+#[test]
+fn weak_coupling_updates_targets_from_source_fields() {
+    let coupler = FieldCoupler::new(CouplingStrategy::Weak);
+    let pressure = 2.0e6_f64;
+    let temperature = 37.0_f64;
+    let light = 4.0_f64;
+    let dt = 0.5_f64;
+    let mut fields = vec![
+        Array3::from_elem((2, 2, 2), pressure),
+        Array3::from_elem((2, 2, 2), temperature),
+        Array3::from_elem((2, 2, 2), light),
+    ];
+
+    coupler
+        .couple_fields(&mut fields, dt)
+        .expect("weak coupling fields have matching dimensions");
+
+    let expected_light = light * (1.0 + 1.0e-12 * pressure * dt);
+    let expected_optical_delta =
+        10.0 * expected_light * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
+    let acoustic_intensity = pressure * pressure / (DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
+    let expected_acoustic_delta =
+        0.5 * acoustic_intensity * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
+    let expected_temperature = temperature + expected_optical_delta + expected_acoustic_delta;
+
+    assert_eq!(fields[0][[0, 0, 0]], pressure);
+    assert!(
+        (fields[2][[0, 0, 0]] - expected_light).abs() < 1e-12,
+        "light {}, expected {}",
+        fields[2][[0, 0, 0]],
+        expected_light
+    );
+    assert!(
+        (fields[1][[0, 0, 0]] - expected_temperature).abs() < 1e-12,
+        "temperature {}, expected {}",
+        fields[1][[0, 0, 0]],
+        expected_temperature
+    );
+}
+
+/// Coupling requires collocated pressure, thermal, and optical volumes.
+/// # Panics
+/// - Panics if mismatch rejection fails or if validation mutates any field.
+///
+#[test]
+fn weak_coupling_rejects_mismatched_shapes_before_mutation() {
+    let coupler = FieldCoupler::new(CouplingStrategy::Weak);
+    let mut fields = vec![
+        Array3::from_elem((2, 2, 2), 1.0),
+        Array3::from_elem((2, 2, 2), 2.0),
+        Array3::from_elem((1, 2, 2), 3.0),
+    ];
+
+    let err = coupler
+        .couple_fields(&mut fields, 1.0)
+        .expect_err("mismatched optical field shape must be rejected");
+
+    match err {
+        KwaversError::DimensionMismatch(message) => {
+            assert!(message.contains("FieldCoupler edge"));
+            assert!(message.contains("matching shapes"));
+        }
+        other => panic!("expected dimension mismatch, got {other:?}"),
+    }
+    assert_eq!(fields[0][[0, 0, 0]], 1.0);
+    assert_eq!(fields[1][[0, 0, 0]], 2.0);
+    assert_eq!(fields[2][[0, 0, 0]], 3.0);
 }

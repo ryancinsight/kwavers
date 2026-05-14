@@ -52,7 +52,9 @@ impl AdaptiveResolution {
             });
         }
 
-        let quality_thresholds = (0..max_levels).map(|i| (i as f64).mul_add(-0.1, 0.9)).collect();
+        let quality_thresholds = (0..max_levels)
+            .map(|i| (i as f64).mul_add(-0.1, 0.9))
+            .collect();
 
         Self {
             base_grid: base_grid.clone(),

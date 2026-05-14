@@ -60,12 +60,7 @@ impl SourceHandler {
     /// `grid.nα == 1` means there is no propagation along α), the per-axis
     /// scale is still computed and applied; the velocity field along that
     /// axis is simply zero everywhere so the multiplication is a no-op.
-    pub fn prepare_velocity_source_scaling(
-        &mut self,
-        grid: &Grid,
-        c0: &Array3<f64>,
-        dt: f64,
-    ) {
+    pub fn prepare_velocity_source_scaling(&mut self, grid: &Grid, c0: &Array3<f64>, dt: f64) {
         if self.u_indices.is_empty() {
             self.u_scale_x.clear();
             self.u_scale_y.clear();

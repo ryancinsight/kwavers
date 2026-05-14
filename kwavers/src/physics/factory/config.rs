@@ -15,7 +15,7 @@ pub struct PhysicsConfig {
 
 impl PhysicsConfig {
     /// Create new physics configuration
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             models: vec![PhysicsModelConfig::default()],
@@ -28,7 +28,7 @@ impl PhysicsConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn add_model(mut self, model: PhysicsModelConfig) -> Self {
         self.models.push(model);
         self
@@ -38,7 +38,7 @@ impl PhysicsConfig {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn set_parameter(mut self, key: String, value: f64) -> Self {
         self.global_parameters.insert(key, value);
         self

@@ -163,7 +163,9 @@ impl BubbleState {
         let water_molecular_weight = 0.018; // kg/mol for water vapor
 
         // Mass of gas + mass of vapor
-        self.n_gas.mul_add(molecular_weight, self.n_vapor * water_molecular_weight) / AVOGADRO
+        self.n_gas
+            .mul_add(molecular_weight, self.n_vapor * water_molecular_weight)
+            / AVOGADRO
     }
 }
 
@@ -192,7 +194,10 @@ mod tests {
         assert_eq!(s.wall_velocity, 0.0, "initial wall velocity must be 0");
         assert_eq!(s.wall_acceleration, 0.0, "initial acceleration must be 0");
         assert_eq!(s.temperature, T_AMBIENT, "initial temperature = T_ambient");
-        assert_eq!(s.compression_ratio, 1.0, "compression ratio = 1 at equilibrium");
+        assert_eq!(
+            s.compression_ratio, 1.0,
+            "compression ratio = 1 at equilibrium"
+        );
     }
 
     /// `volume` = (4/3)πR³.
@@ -210,20 +215,29 @@ mod tests {
     fn surface_area_matches_analytical_formula() {
         let s = default_state();
         let expected = 4.0 * PI * s.radius.powi(2);
-        assert!((s.surface_area() - expected).abs() < 1e-22, "surface area formula");
+        assert!(
+            (s.surface_area() - expected).abs() < 1e-22,
+            "surface area formula"
+        );
     }
 
     /// `is_violent_collapse` requires is_collapsing AND (Mach>0.3 OR compression>5).
     #[test]
     fn is_violent_collapse_requires_collapsing_flag_and_mach_or_compression() {
         let mut s = default_state();
-        assert!(!s.is_violent_collapse(), "equilibrium: not violent collapse");
+        assert!(
+            !s.is_violent_collapse(),
+            "equilibrium: not violent collapse"
+        );
 
         // collapsing with low Mach and low compression
         s.is_collapsing = true;
         s.mach_number = 0.1;
         s.compression_ratio = 2.0;
-        assert!(!s.is_violent_collapse(), "collapsing but Mach<0.3 and comp<5");
+        assert!(
+            !s.is_violent_collapse(),
+            "collapsing but Mach<0.3 and comp<5"
+        );
 
         // collapsing with high Mach
         s.mach_number = 0.5;
@@ -232,7 +246,10 @@ mod tests {
         // collapsing with high compression only
         s.mach_number = 0.1;
         s.compression_ratio = 6.0;
-        assert!(s.is_violent_collapse(), "violent: collapsing AND compression>5");
+        assert!(
+            s.is_violent_collapse(),
+            "violent: collapsing AND compression>5"
+        );
     }
 
     /// `total_molecules` = n_gas + n_vapor.

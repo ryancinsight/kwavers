@@ -242,9 +242,9 @@ fn test_pstd_2d_ivp_no_rhoz_dc_bias() -> KwaversResult<()> {
     // k-Wave stability analysis; pml_alpha = 2 (k-Wave default).
     let pml_thickness = 16usize;
     let dt = 0.3 * dx / c0; // CFL=0.3
-    // Run long enough for the wave to reach the PML and be absorbed:
-    //   t_cross = (nx/2 - pml_thickness) * dx / c0   (inner domain half-width)
-    //   nt_absorb ≈ 3 × t_cross / dt  (generous factor for PML absorption)
+                            // Run long enough for the wave to reach the PML and be absorbed:
+                            //   t_cross = (nx/2 - pml_thickness) * dx / c0   (inner domain half-width)
+                            //   nt_absorb ≈ 3 × t_cross / dt  (generous factor for PML absorption)
     let t_cross = ((nx / 2 - pml_thickness) as f64) * dx / c0;
     let nt = (3.0 * t_cross / dt).ceil() as usize;
 

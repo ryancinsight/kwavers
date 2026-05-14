@@ -10,7 +10,7 @@ impl ThermalAcousticCoupler {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new_default() -> Self {
         Self::new(ThermalAcousticConfig::default()).expect("default config is valid")
     }
@@ -200,31 +200,31 @@ impl ThermalAcousticCoupler {
     }
 
     /// Get current pressure field
-    #[must_use] 
+    #[must_use]
     pub fn pressure(&self) -> &Array3<f64> {
         &self.pressure
     }
 
     /// Get current temperature field
-    #[must_use] 
+    #[must_use]
     pub fn temperature(&self) -> &Array3<f64> {
         &self.temperature
     }
 
     /// Get current acoustic heating
-    #[must_use] 
+    #[must_use]
     pub fn acoustic_heating(&self) -> &Array3<f64> {
         &self.acoustic_heating
     }
 
     /// Get total simulation time
-    #[must_use] 
+    #[must_use]
     pub fn total_time(&self) -> f64 {
         self.total_time
     }
 
     /// Get step count
-    #[must_use] 
+    #[must_use]
     pub fn step_count(&self) -> u64 {
         self.step_count
     }

@@ -7,9 +7,9 @@
 //! Treatment Time, and per-Organ Dose.
 
 pub mod controller;
-pub mod types;
 #[cfg(test)]
 mod tests;
+pub mod types;
 
 pub use controller::SafetyController;
 pub use types::TherapyAction;

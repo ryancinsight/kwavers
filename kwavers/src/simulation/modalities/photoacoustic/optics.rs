@@ -96,8 +96,9 @@ pub fn initialize_optical_properties(
                 }
 
                 // Add spherical tumor
-                let tumor_dist =
-                    (z - 0.015).mul_add(z - 0.015, (y - 0.02).mul_add(y - 0.02, (x - 0.02).powi(2))).sqrt();
+                let tumor_dist = (z - 0.015)
+                    .mul_add(z - 0.015, (y - 0.02).mul_add(y - 0.02, (x - 0.02).powi(2)))
+                    .sqrt();
                 if tumor_dist < 0.005 {
                     // 5mm diameter tumor
                     properties[[i, j, k]] =

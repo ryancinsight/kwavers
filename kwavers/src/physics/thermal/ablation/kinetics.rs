@@ -53,7 +53,7 @@ pub struct AblationKinetics {
 
 impl AblationKinetics {
     /// Create custom ablation kinetics
-    #[must_use] 
+    #[must_use]
     pub fn new(
         frequency_factor: f64,
         activation_energy: f64,
@@ -71,7 +71,7 @@ impl AblationKinetics {
     /// Protein denaturation kinetics (Henriques model)
     /// Reference: Henriques (1947) - thermal injury to skin
     /// A = 1.0e44 [1/s], E_a = 284 kJ/mol
-    #[must_use] 
+    #[must_use]
     pub fn protein_denaturation() -> Self {
         Self {
             frequency_factor: 1.0e44,     // [1/s]
@@ -84,7 +84,7 @@ impl AblationKinetics {
     /// Collagen denaturation kinetics
     /// Reference: Lepock et al. (1993) - collagen triple helix dissociation
     /// Lower activation energy than protein, faster denaturation
-    #[must_use] 
+    #[must_use]
     pub fn collagen_denaturation() -> Self {
         Self {
             frequency_factor: 1.0e44,     // [1/s]
@@ -97,7 +97,7 @@ impl AblationKinetics {
     /// HIFU ablation kinetics (tissue necrosis)
     /// Reference: Sapareto & Dewey (1984) - thermal dose model
     /// Higher frequency factor for faster ablation kinetics
-    #[must_use] 
+    #[must_use]
     pub fn hifu_ablation() -> Self {
         Self {
             frequency_factor: 1.0e47,     // [1/s] - higher for faster tissue necrosis
@@ -116,7 +116,7 @@ impl AblationKinetics {
     ///
     /// # Returns
     /// Damage accumulation rate [1/s]
-    #[must_use] 
+    #[must_use]
     pub fn damage_rate(&self, temperature: f64) -> f64 {
         let r = 8.314; // Universal gas constant [J/mol/K]
         self.frequency_factor * (-self.activation_energy / (r * temperature)).exp()
@@ -135,7 +135,7 @@ impl AblationKinetics {
     /// - Ω < 1: No significant damage
     /// - Ω = 1: 63.2% protein denaturation
     /// - Ω > 1: Irreversible damage
-    #[must_use] 
+    #[must_use]
     pub fn accumulated_damage(current_damage: f64, damage_rate: f64, dt: f64) -> f64 {
         damage_rate.mul_add(dt, current_damage)
     }
@@ -146,13 +146,13 @@ impl AblationKinetics {
     /// - 1.0 = fully viable
     /// - 0.37 = 63% damage (Ω=1)
     /// - 0.0 = completely ablated
-    #[must_use] 
+    #[must_use]
     pub fn viability(&self, damage: f64) -> f64 {
         (-damage).exp()
     }
 
     /// Is tissue ablated?
-    #[must_use] 
+    #[must_use]
     pub fn is_ablated(&self, damage: f64) -> bool {
         damage >= self.damage_threshold
     }

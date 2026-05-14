@@ -11,7 +11,7 @@ pub struct ModelRegularizer1D {
 
 impl ModelRegularizer1D {
     /// Create new 1D regularizer
-    #[must_use] 
+    #[must_use]
     pub fn new(config: RegularizationConfig) -> Self {
         Self { config }
     }

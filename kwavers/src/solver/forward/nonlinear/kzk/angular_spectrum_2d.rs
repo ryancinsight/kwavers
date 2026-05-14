@@ -1,6 +1,7 @@
-use crate::math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
-use ndarray::{Array2, ArrayViewMut2};
+use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
+use ndarray::{Array2, ArrayViewMut2, Zip};
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 use super::KZKConfig;
 
@@ -9,6 +10,10 @@ pub struct AngularSpectrum2D {
     config: KZKConfig,
     kx: Array2<f64>,
     ky: Array2<f64>,
+    /// Cached 2-D FFT plan for the transverse `(nx, ny)` slice shape.
+    fft_plan: Arc<Fft2d>,
+    /// Reusable complex field/spectrum buffer for in-place angular-spectrum propagation.
+    scratch: Array2<Complex64>,
 }
 
 impl std::fmt::Debug for AngularSpectrum2D {
@@ -58,54 +63,55 @@ impl AngularSpectrum2D {
             }
         }
 
+        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny });
+        let scratch = Array2::zeros((nx, ny));
+
         Self {
             config: config.clone(),
             kx,
             ky,
+            fft_plan,
+            scratch,
         }
     }
 
-    /// Apply angular spectrum propagation
+    /// Apply angular spectrum propagation using the cached 2-D FFT workspace.
+    ///
+    /// # Contract
+    /// The angular-spectrum transfer function is diagonal in transverse
+    /// wavenumber space. Therefore a single complex scratch buffer can hold
+    /// the real input, its spectrum, and the inverse-transformed result without
+    /// changing the mathematical operator. This removes one real-to-complex
+    /// allocation plus one allocating forward and inverse FFT per propagation.
     pub fn propagate(&mut self, field: &mut ArrayViewMut2<f64>, distance: f64) {
-        let nx = self.config.nx;
-        let ny = self.config.ny;
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
 
-        // Convert to complex
-        let complex_field = field.mapv(|x| Complex64::new(x, 0.0));
+        Zip::from(&mut self.scratch)
+            .and(field.view())
+            .par_for_each(|s, &x| *s = Complex64::new(x, 0.0));
 
-        // 2D FFT using central cache
-        let mut complex_field_fft = fft_2d_complex(&complex_field);
+        self.fft_plan.forward_complex_inplace(&mut self.scratch);
 
-        // Apply transfer function
-        for i in 0..nx {
-            for j in 0..ny {
-                let kx = self.kx[[i, j]];
-                let ky = self.ky[[i, j]];
-                let kt2 = kx.mul_add(kx, ky * ky);
+        Zip::indexed(&mut self.scratch).par_for_each(|(i, j), value| {
+            let kx = self.kx[[i, j]];
+            let ky = self.ky[[i, j]];
+            let kt2 = kx.mul_add(kx, ky * ky);
 
-                if kt2 < k0 * k0 {
-                    // Propagating waves
-                    let kz = (k0 * k0 - kt2).sqrt();
-                    let phase = kz * distance;
-                    complex_field_fft[[i, j]] *= Complex64::from_polar(1.0, phase);
-                } else {
-                    // Evanescent waves - exponential decay
-                    let alpha = (kt2 - k0 * k0).sqrt();
-                    complex_field_fft[[i, j]] *= (-alpha * distance).exp();
-                }
+            if kt2 < k0 * k0 {
+                let kz = (k0 * k0 - kt2).sqrt();
+                let phase = kz * distance;
+                *value *= Complex64::from_polar(1.0, phase);
+            } else {
+                let alpha = (kt2 - k0 * k0).sqrt();
+                *value *= (-alpha * distance).exp();
             }
-        }
+        });
 
-        // Inverse 2D FFT: result is normalized
-        let recovered = ifft_2d_complex(&complex_field_fft);
+        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
 
-        // Extract real part
-        for i in 0..nx {
-            for j in 0..ny {
-                field[[i, j]] = recovered[[i, j]].re;
-            }
-        }
+        Zip::from(field)
+            .and(&self.scratch)
+            .par_for_each(|out, value| *out = value.re);
     }
 }
 
@@ -140,8 +146,13 @@ mod tests {
         }
 
         // Propagate small distance
+        let scratch_ptr = op.scratch.as_ptr();
         let mut field_view = field.view_mut();
         op.propagate(&mut field_view, 10e-3);
+        let center_after_propagation = field_view[[64, 64]];
+        op.propagate(&mut field_view, 0.0);
+        assert_eq!(op.scratch.as_ptr(), scratch_ptr);
+        assert!((field_view[[64, 64]] - center_after_propagation).abs() < 1e-10);
 
         // Should still have reasonable values (allow for phase shift)
         let center = field[[64, 64]];

@@ -17,7 +17,7 @@ impl DoseController {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(safety_limits: SafetyLimits) -> Self {
         Self {
             safety_limits,
@@ -111,13 +111,13 @@ impl DoseController {
     }
 
     /// Get remaining dose capacity (J).
-    #[must_use] 
+    #[must_use]
     pub fn remaining_dose_capacity(&self) -> f64 {
         self.safety_limits.max_total_dose - self.accumulated_dose
     }
 
     /// Get treatment history.
-    #[must_use] 
+    #[must_use]
     pub fn treatment_history(&self) -> &[TreatmentRecord] {
         &self.treatment_history
     }

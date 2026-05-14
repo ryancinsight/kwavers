@@ -7,7 +7,7 @@ use super::validator::ClinicalValidator;
 
 impl ClinicalValidator {
     /// Generate comprehensive clinical validation report (Markdown).
-    #[must_use] 
+    #[must_use]
     pub fn generate_validation_report(
         &self,
         bmode_result: Option<&ClinicalValidationResult>,

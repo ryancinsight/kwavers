@@ -89,11 +89,15 @@ impl Regularizer {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    laplacian[[i, j, k]] = 6.0f64.mul_add(-gradient[[i, j, k]], gradient[[i + 1, j, k]]
-                        + gradient[[i - 1, j, k]]
-                        + gradient[[i, j + 1, k]]
-                        + gradient[[i, j - 1, k]]
-                        + gradient[[i, j, k + 1]] + gradient[[i, j, k - 1]]);
+                    laplacian[[i, j, k]] = 6.0f64.mul_add(
+                        -gradient[[i, j, k]],
+                        gradient[[i + 1, j, k]]
+                            + gradient[[i - 1, j, k]]
+                            + gradient[[i, j + 1, k]]
+                            + gradient[[i, j - 1, k]]
+                            + gradient[[i, j, k + 1]]
+                            + gradient[[i, j, k - 1]],
+                    );
                 }
             }
         }

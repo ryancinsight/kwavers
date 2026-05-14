@@ -68,7 +68,7 @@ impl FeatureExtractor {
     /// # Arguments
     ///
     /// * `config` - Feature extraction configuration
-    #[must_use] 
+    #[must_use]
     pub fn new(config: FeatureConfig) -> Self {
         Self { config }
     }
@@ -189,11 +189,15 @@ impl FeatureExtractor {
                     let center = volume[[x, y, z]];
 
                     // 7-point stencil approximation
-                    let laplacian = 6.0f32.mul_add(-center, volume[[x + 1, y, z]]
-                        + volume[[x - 1, y, z]]
-                        + volume[[x, y + 1, z]]
-                        + volume[[x, y - 1, z]]
-                        + volume[[x, y, z + 1]] + volume[[x, y, z - 1]]);
+                    let laplacian = 6.0f32.mul_add(
+                        -center,
+                        volume[[x + 1, y, z]]
+                            + volume[[x - 1, y, z]]
+                            + volume[[x, y + 1, z]]
+                            + volume[[x, y - 1, z]]
+                            + volume[[x, y, z + 1]]
+                            + volume[[x, y, z - 1]],
+                    );
 
                     result[[x, y, z]] = laplacian;
                 }

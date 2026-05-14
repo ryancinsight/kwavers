@@ -75,7 +75,7 @@ impl SafetyAssessment {
     /// | MI | 1.9 | FDA 510(k) guideline |
     /// | TI | 6.0 | IEC 62359 |
     /// | Damage probability | 0.05 | 5 % threshold |
-    #[must_use] 
+    #[must_use]
     pub fn check_safety_limits(mut self) -> Self {
         self.violations.clear();
 
@@ -136,7 +136,7 @@ pub struct BioeffectsModel {
 impl BioeffectsModel {
     /// Create new bioeffects model.
     /// Caller passes (dimensions, params)
-    #[must_use] 
+    #[must_use]
     pub fn new(_dimensions: (usize, usize, usize), parameters: BioeffectsParameters) -> Self {
         Self {
             parameters,
@@ -145,7 +145,7 @@ impl BioeffectsModel {
     }
 
     /// Get model parameters.
-    #[must_use] 
+    #[must_use]
     pub fn parameters(&self) -> &BioeffectsParameters {
         &self.parameters
     }
@@ -226,13 +226,13 @@ impl BioeffectsModel {
     }
 
     /// Check safety status.
-    #[must_use] 
+    #[must_use]
     pub fn check_safety(&self) -> &SafetyAssessment {
         &self.assessment
     }
 
     /// Get current assessment (alias/same as check_safety for now)
-    #[must_use] 
+    #[must_use]
     pub fn current_assessment(&self) -> &SafetyAssessment {
         &self.assessment
     }

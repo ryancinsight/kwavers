@@ -164,8 +164,14 @@ fn elastic_wave_detect_interfaces_marks_density_jump() {
 
     let mask = ew.interface_mask.as_ref().unwrap();
     assert_eq!(mask.dim(), (nx, ny, nz));
-    assert!(mask[[jump_i - 1, 1, 1]], "cell left of jump must be flagged");
-    assert!(mask[[jump_i + 1, 1, 1]], "cell right of jump must be flagged");
+    assert!(
+        mask[[jump_i - 1, 1, 1]],
+        "cell left of jump must be flagged"
+    );
+    assert!(
+        mask[[jump_i + 1, 1, 1]],
+        "cell right of jump must be flagged"
+    );
     assert!(!mask[[1, 1, 1]], "uniform interior must not be flagged");
 }
 

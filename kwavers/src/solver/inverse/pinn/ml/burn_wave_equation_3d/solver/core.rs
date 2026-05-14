@@ -274,7 +274,10 @@ mod tests {
 
         assert!(solver.pinn.hidden_layer_count() > 0);
         // Verify the stored function returns the expected constant speed
-        assert_eq!(solver.wave_speed_fn.as_ref().unwrap().get(0.5, 0.5, 0.5), 1500.0);
+        assert_eq!(
+            solver.wave_speed_fn.as_ref().unwrap().get(0.5, 0.5, 0.5),
+            1500.0
+        );
         Ok(())
     }
 

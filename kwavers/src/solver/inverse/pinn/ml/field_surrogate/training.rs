@@ -33,8 +33,8 @@ use burn::optim::lr_scheduler::LrScheduler;
 use burn::optim::{Adam, AdamConfig, GradientsParams, Optimizer};
 use burn::tensor::{backend::AutodiffBackend, ElementConversion, Tensor, TensorData};
 
-use crate::core::error::{KwaversError, KwaversResult};
 use super::network::ParamFieldPINNNetwork;
+use crate::core::error::{KwaversError, KwaversResult};
 
 /// Hyperparameters for the field-surrogate trainer.
 ///
@@ -117,9 +117,7 @@ impl TrainingConfig {
             ));
         }
         if self.c0_m_per_s <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "c0_m_per_s must be > 0".into(),
-            ));
+            return Err(KwaversError::InvalidInput("c0_m_per_s must be > 0".into()));
         }
         if self.peak_prominence_weight < 0.0 {
             return Err(KwaversError::InvalidInput(
@@ -256,9 +254,7 @@ fn helmholtz_residual_tensor<B: AutodiffBackend>(
     let plus_z = batch.inputs.clone() + one_hot(2, 1.0, inv_hz);
     let minus_z = batch.inputs.clone() + one_hot(2, -1.0, inv_hz);
 
-    let pick_pmax = |t: Tensor<B, 2>| -> Tensor<B, 1> {
-        t.slice([0..n, 1..2]).reshape([n])
-    };
+    let pick_pmax = |t: Tensor<B, 2>| -> Tensor<B, 1> { t.slice([0..n, 1..2]).reshape([n]) };
     let p_xp = pick_pmax(network.forward(plus_x));
     let p_xm = pick_pmax(network.forward(minus_x));
     let p_yp = pick_pmax(network.forward(plus_y));
@@ -268,8 +264,7 @@ fn helmholtz_residual_tensor<B: AutodiffBackend>(
 
     // Sum of finite-difference second-difference contributions across
     // all three axes (still dimensionless, equal to eps_m² · ∇²p̂).
-    let lap_sum = p_xp + p_xm + p_yp + p_ym + p_zp + p_zm
-        - p_center.clone().mul_scalar(6.0);
+    let lap_sum = p_xp + p_xm + p_yp + p_ym + p_zp + p_zm - p_center.clone().mul_scalar(6.0);
 
     // Per-sample (k·eps_m)². Tensor of shape [n].
     let k_eps = batch
@@ -312,19 +307,14 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
     /// Construct a trainer from a fresh network + config.
     /// # Errors
     /// Propagates [`TrainingConfig::validate`] errors.
-    pub fn new(
-        network: ParamFieldPINNNetwork<B>,
-        config: TrainingConfig,
-    ) -> KwaversResult<Self> {
+    pub fn new(network: ParamFieldPINNNetwork<B>, config: TrainingConfig) -> KwaversResult<Self> {
         config.validate()?;
         let optimizer = AdamConfig::new().init();
         let lr_scheduler = match config.cosine_schedule {
             Some((max_iter, min_lr)) if max_iter > 0 => {
-                let sched_cfg = CosineAnnealingLrSchedulerConfig::new(
-                    config.learning_rate as f64,
-                    max_iter,
-                )
-                .with_min_lr(min_lr);
+                let sched_cfg =
+                    CosineAnnealingLrSchedulerConfig::new(config.learning_rate as f64, max_iter)
+                        .with_min_lr(min_lr);
                 Some(sched_cfg.init().map_err(KwaversError::InvalidInput)?)
             }
             _ => None,
@@ -390,10 +380,9 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
                 let mask_bool = batch.group_ids.clone().equal_elem(g as f32);
                 let mask = mask_bool.float();
                 let inv_mask = mask.clone().mul_scalar(-1.0).add_scalar(1.0);
-                let pred_masked = pred_pmax.clone() * mask.clone()
-                    + inv_mask.clone().mul_scalar(OUT_FILL);
-                let tgt_masked = tgt_pmax.clone() * mask
-                    + inv_mask.mul_scalar(OUT_FILL);
+                let pred_masked =
+                    pred_pmax.clone() * mask.clone() + inv_mask.clone().mul_scalar(OUT_FILL);
+                let tgt_masked = tgt_pmax.clone() * mask + inv_mask.mul_scalar(OUT_FILL);
                 let gap_g = pred_masked.max() - tgt_masked.max();
                 prom_acc = prom_acc + gap_g.powf_scalar(2.0);
             }
@@ -421,8 +410,7 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
         } else {
             0.0
         };
-        let data_value: f32 =
-            data_loss.into_scalar().elem::<f32>() * self.config.data_weight;
+        let data_value: f32 = data_loss.into_scalar().elem::<f32>() * self.config.data_weight;
         let total_value: f32 = total.clone().into_scalar().elem::<f32>();
 
         // Backward + Adam parameter update. Use the cosine-scheduled
@@ -470,8 +458,10 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
 // is auto-derived for any type marked `#[derive(Module)]`.
 impl<B: AutodiffBackend> ParamFieldPINNTrainer<B>
 where
-    ParamFieldPINNNetwork<B>: AutodiffModule<B,
-        InnerModule = ParamFieldPINNNetwork<<B as AutodiffBackend>::InnerBackend>>,
+    ParamFieldPINNNetwork<B>: AutodiffModule<
+        B,
+        InnerModule = ParamFieldPINNNetwork<<B as AutodiffBackend>::InnerBackend>,
+    >,
 {
     /// Move the network into a non-autodiff backend `B::InnerBackend`
     /// after training is complete — typically used to detach the

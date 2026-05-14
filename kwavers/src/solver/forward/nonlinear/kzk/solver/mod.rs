@@ -168,7 +168,7 @@ impl KZKSolver {
     ///
     /// Returns a summary of all conservation checks performed,
     /// including maximum severity and error magnitudes.
-    #[must_use] 
+    #[must_use]
     pub fn get_conservation_summary(&self) -> Option<String> {
         self.conservation_tracker
             .as_ref()
@@ -178,7 +178,7 @@ impl KZKSolver {
     /// Check if solution satisfies conservation constraints
     ///
     /// Returns `true` if all conservation violations are within acceptable limits.
-    #[must_use] 
+    #[must_use]
     pub fn is_solution_valid(&self) -> bool {
         self.conservation_tracker
             .as_ref()

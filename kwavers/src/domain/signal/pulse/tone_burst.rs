@@ -124,7 +124,9 @@ impl ToneBurst {
 impl Signal for ToneBurst {
     fn amplitude(&self, t: f64) -> f64 {
         let (window, relative_time) = self.window(t);
-        let carrier = (2.0 * PI * self.center_frequency).mul_add(relative_time, self.phase).sin();
+        let carrier = (2.0 * PI * self.center_frequency)
+            .mul_add(relative_time, self.phase)
+            .sin();
         self.amplitude * window * carrier
     }
 

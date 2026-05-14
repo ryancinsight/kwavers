@@ -135,7 +135,7 @@ impl HungarianTracker {
 
     /// Finalise tracking: terminate all remaining active tracks and return all tracks
     /// with length ≥ `min_track_length`.
-    #[must_use] 
+    #[must_use]
     pub fn finalize(mut self) -> Vec<BubbleTrack> {
         for mut t in self.active_tracks.drain(..) {
             t.active = false;

@@ -87,7 +87,7 @@ impl HeterogeneousMedium {
     ///
     /// **Evidence-Based Design**: Following Hamilton & Blackstock (1998)
     /// acoustic parameter initialization standards.
-    #[must_use] 
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize, use_trilinear_interpolation: bool) -> Self {
         Self {
             use_trilinear_interpolation,
@@ -131,7 +131,7 @@ impl HeterogeneousMedium {
     /// Saves no memory relative to `new` because the struct layout is fixed;
     /// use this to signal acoustic-only intent at the call site.
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn new_acoustic_only(
         nx: usize,
         ny: usize,

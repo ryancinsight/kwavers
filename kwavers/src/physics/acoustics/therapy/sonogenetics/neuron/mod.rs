@@ -149,8 +149,7 @@ impl LifNeuron {
 
         let p = &self.params;
         let dv = (dt / p.capacitance_f)
-            * (-p.leak_conductance_s)
-                .mul_add(self.membrane_voltage_v - p.leak_reversal_v, i_ion);
+            * (-p.leak_conductance_s).mul_add(self.membrane_voltage_v - p.leak_reversal_v, i_ion);
         self.membrane_voltage_v += dv;
 
         if self.membrane_voltage_v >= self.params.threshold_v {

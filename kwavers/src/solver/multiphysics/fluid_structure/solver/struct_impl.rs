@@ -46,6 +46,18 @@ pub struct FluidStructureSolver {
     pub p_fluid_ghost: Array3<f64>,
     /// Ghost traction values (solid domain): t_ghost[d] = −p · n̂[d]
     pub t_solid_ghost: [Array3<f64>; 3],
+    /// Previous ghost pressure workspace for relaxation.
+    ///
+    /// This buffer is solver-owned so each Dirichlet-Neumann iteration can
+    /// preserve the prior ghost state with `assign` instead of allocating a
+    /// full-volume clone.  It has the same shape as `p_fluid_ghost`.
+    p_fluid_ghost_prev: Array3<f64>,
+    /// Previous ghost traction workspace for relaxation.
+    ///
+    /// Each component shares the exact dimensions of `t_solid_ghost[d]`.
+    /// The fixed array keeps the three Cartesian components statically routed
+    /// without heap-dispatched trait objects or per-iteration `Vec` allocation.
+    t_solid_ghost_prev: [Array3<f64>; 3],
 }
 
 impl FluidStructureSolver {
@@ -59,6 +71,12 @@ impl FluidStructureSolver {
             tolerance: 1e-6,
             p_fluid_ghost: Array3::zeros((nx, ny, nz)),
             t_solid_ghost: [
+                Array3::zeros((nx, ny, nz)),
+                Array3::zeros((nx, ny, nz)),
+                Array3::zeros((nx, ny, nz)),
+            ],
+            p_fluid_ghost_prev: Array3::zeros((nx, ny, nz)),
+            t_solid_ghost_prev: [
                 Array3::zeros((nx, ny, nz)),
                 Array3::zeros((nx, ny, nz)),
                 Array3::zeros((nx, ny, nz)),
@@ -86,29 +104,35 @@ impl FluidStructureSolver {
         let mut converged = false;
 
         while !converged && iteration < max_iterations {
-            let p_ghost_prev = self.p_fluid_ghost.clone();
-            let t_ghost_prev = [
-                self.t_solid_ghost[0].clone(),
-                self.t_solid_ghost[1].clone(),
-                self.t_solid_ghost[2].clone(),
-            ];
+            self.p_fluid_ghost_prev.assign(&self.p_fluid_ghost);
+            for (prev, current) in self
+                .t_solid_ghost_prev
+                .iter_mut()
+                .zip(self.t_solid_ghost.iter())
+            {
+                prev.assign(current);
+            }
 
             self.exchange_ghost_cells(fluid_pressure, solid_stress)?;
 
             if iteration > 0 {
                 let omega = self.relaxation;
                 ndarray::Zip::from(&mut self.p_fluid_ghost)
-                    .and(&p_ghost_prev)
-                    .par_for_each(|new_val, &prev| *new_val = omega * *new_val + (1.0 - omega) * prev);
+                    .and(&self.p_fluid_ghost_prev)
+                    .par_for_each(|new_val, &prev| {
+                        *new_val = omega * *new_val + (1.0 - omega) * prev
+                    });
                 for (tsg, tgp) in self
                     .t_solid_ghost
                     .iter_mut()
-                    .zip(t_ghost_prev.iter())
+                    .zip(self.t_solid_ghost_prev.iter())
                     .take(3)
                 {
-                    ndarray::Zip::from(tsg).and(tgp).par_for_each(|new_val, &prev| {
-                        *new_val = omega * *new_val + (1.0 - omega) * prev
-                    });
+                    ndarray::Zip::from(tsg)
+                        .and(tgp)
+                        .par_for_each(|new_val, &prev| {
+                            *new_val = omega * *new_val + (1.0 - omega) * prev
+                        });
                 }
             }
 
@@ -141,12 +165,10 @@ impl FluidStructureSolver {
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
         let (sx, sy, sz) = (nx as i64, ny as i64, nz as i64);
 
-        let mut p_new = Array3::<f64>::zeros((nx, ny, nz));
-        let mut t_new: [Array3<f64>; 3] = [
-            Array3::zeros((nx, ny, nz)),
-            Array3::zeros((nx, ny, nz)),
-            Array3::zeros((nx, ny, nz)),
-        ];
+        self.p_fluid_ghost.fill(0.0);
+        for traction_component in self.t_solid_ghost.iter_mut() {
+            traction_component.fill(0.0);
+        }
 
         for i in 0..nx {
             for j in 0..ny {
@@ -170,10 +192,10 @@ impl FluidStructureSolver {
                         + 2.0 * n0 * n2 * sxz
                         + 2.0 * n1 * n2 * syz;
 
-                    p_new[(i, j, k)] = sigma_nn;
-                    t_new[0][(i, j, k)] = -p * n0;
-                    t_new[1][(i, j, k)] = -p * n1;
-                    t_new[2][(i, j, k)] = -p * n2;
+                    self.p_fluid_ghost[(i, j, k)] = sigma_nn;
+                    self.t_solid_ghost[0][(i, j, k)] = -p * n0;
+                    self.t_solid_ghost[1][(i, j, k)] = -p * n1;
+                    self.t_solid_ghost[2][(i, j, k)] = -p * n2;
                 }
             }
         }
@@ -200,30 +222,26 @@ impl FluidStructureSolver {
                                 continue;
                             }
 
-                            let phi_interface = p_new[(i, j, k)];
+                            let phi_interface = self.p_fluid_ghost[(i, j, k)];
                             let phi_interior =
                                 if ii >= 0 && ii < sx && ji >= 0 && ji < sy && ki >= 0 && ki < sz {
                                     fluid_pressure[[ii as usize, ji as usize, ki as usize]]
                                 } else {
                                     phi_interface
                                 };
-                            p_new[[ig as usize, jg as usize, kg as usize]] =
+                            self.p_fluid_ghost[[ig as usize, jg as usize, kg as usize]] =
                                 2.0 * phi_interface - phi_interior;
 
-                            for t_new_dim in t_new.iter_mut().take(3) {
-                                let t_iface = t_new_dim[(i, j, k)];
-                                t_new_dim[[ig as usize, jg as usize, kg as usize]] = t_iface;
+                            for traction_component in self.t_solid_ghost.iter_mut().take(3) {
+                                let t_iface = traction_component[(i, j, k)];
+                                traction_component[[ig as usize, jg as usize, kg as usize]] =
+                                    t_iface;
                             }
                         }
                     }
                 }
             }
         }
-
-        self.p_fluid_ghost = p_new;
-        self.t_solid_ghost[0] = t_new[0].clone();
-        self.t_solid_ghost[1] = t_new[1].clone();
-        self.t_solid_ghost[2] = t_new[2].clone();
 
         Ok(())
     }

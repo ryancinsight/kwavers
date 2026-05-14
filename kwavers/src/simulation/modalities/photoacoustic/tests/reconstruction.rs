@@ -15,10 +15,7 @@ fn test_analytical_validation() {
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let error = simulator.validate_analytical().unwrap();
-    assert!(
-        error < 1.0,
-        "Relative error should be reasonable (< 100%)"
-    );
+    assert!(error < 1.0, "Relative error should be reasonable (< 100%)");
 }
 
 #[test]

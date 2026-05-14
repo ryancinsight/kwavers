@@ -13,7 +13,7 @@ pub enum LimiterType {
 }
 
 /// Compute numerical flux at interface
-#[must_use] 
+#[must_use]
 pub fn compute_numerical_flux(
     left: f64,
     right: f64,
@@ -45,7 +45,7 @@ pub fn compute_numerical_flux(
 
 /// Apply slope limiter
 /// Returns the limited slope or value based on two slopes/differences a and b.
-#[must_use] 
+#[must_use]
 pub fn apply_limiter(limiter_type: LimiterType, a: f64, b: f64) -> f64 {
     // Minmod: zero if signs opposite, else min magnitude
     let minmod = |x: f64, y: f64| -> f64 {

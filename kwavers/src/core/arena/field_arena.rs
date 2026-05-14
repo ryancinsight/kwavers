@@ -34,7 +34,7 @@ pub struct ArenaConfig {
 
 impl ArenaConfig {
     /// Configuration for 3-D field operations (`nx × ny × nz` elements each).
-    #[must_use] 
+    #[must_use]
     pub fn for_3d_fields(nx: usize, ny: usize, nz: usize, max_concurrent: usize) -> Self {
         Self {
             max_fields: max_concurrent,
@@ -45,7 +45,7 @@ impl ArenaConfig {
     }
 
     /// Configuration for 2-D field operations (`nx × ny` elements each).
-    #[must_use] 
+    #[must_use]
     pub fn for_2d_fields(nx: usize, ny: usize, max_concurrent: usize) -> Self {
         Self {
             max_fields: max_concurrent,
@@ -56,7 +56,7 @@ impl ArenaConfig {
     }
 
     /// Total memory requirement in bytes.
-    #[must_use] 
+    #[must_use]
     pub fn total_memory_bytes(&self) -> usize {
         self.max_fields * self.field_size * self.element_size
     }

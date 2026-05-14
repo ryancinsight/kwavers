@@ -61,7 +61,7 @@ impl SphericalWave {
     }
 
     /// p(r, t) = (A/r) sin(kr − ωt + φ); returns 0 for r < 1e-10.
-    #[must_use] 
+    #[must_use]
     pub fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
         let dx = x - self.source_position[0];
         let dy = y - self.source_position[1];

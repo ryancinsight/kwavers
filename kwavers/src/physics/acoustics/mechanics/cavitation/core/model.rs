@@ -247,9 +247,18 @@ mod tests {
     #[test]
     fn detect_cavitation_true_when_pressure_below_negative_threshold() {
         let m = CavitationModel::new((2, 2, 2));
-        assert!(m.detect_cavitation(-200.0, 100.0), "p=-200 < -100 → cavitation");
-        assert!(!m.detect_cavitation(-50.0, 100.0), "p=-50 > -100 → no cavitation");
-        assert!(!m.detect_cavitation(0.0, 100.0), "p=0 > -100 → no cavitation");
+        assert!(
+            m.detect_cavitation(-200.0, 100.0),
+            "p=-200 < -100 → cavitation"
+        );
+        assert!(
+            !m.detect_cavitation(-50.0, 100.0),
+            "p=-50 > -100 → no cavitation"
+        );
+        assert!(
+            !m.detect_cavitation(0.0, 100.0),
+            "p=0 > -100 → no cavitation"
+        );
     }
 
     /// `cavitation_index` at p=0 (ambient pressure, no rarefaction) equals 1.0.
@@ -261,7 +270,10 @@ mod tests {
         let p0 = m.params.p0;
         let pv = m.params.pv;
         let ci = m.cavitation_index(0.0, pv, p0);
-        assert!((ci - 1.0).abs() < 1e-12, "cavitation_index at p=0 must be 1.0 (got {ci:.6})");
+        assert!(
+            (ci - 1.0).abs() < 1e-12,
+            "cavitation_index at p=0 must be 1.0 (got {ci:.6})"
+        );
     }
 
     /// `cavitation_index` at p = Pᵥ − P₀ (cavitation onset) equals 0.0.
@@ -272,7 +284,10 @@ mod tests {
         let pv = m.params.pv;
         let p_onset = pv - p0; // (P₀ + (Pᵥ-P₀) - Pᵥ) = 0
         let ci = m.cavitation_index(p_onset, pv, p0);
-        assert!((ci).abs() < 1e-12, "cavitation_index at onset must be 0.0 (got {ci:.6})");
+        assert!(
+            (ci).abs() < 1e-12,
+            "cavitation_index at onset must be 0.0 (got {ci:.6})"
+        );
     }
 
     /// `CavitationCore::update` marks cells with pressure below -threshold as cavitating.
@@ -287,7 +302,13 @@ mod tests {
 
         m.update(&field, 1e-6).unwrap();
 
-        assert!(m.states[[0, 0, 0]].is_cavitating, "cell [0,0,0] must be cavitating");
-        assert!(!m.states[[1, 1, 1]].is_cavitating, "cell [1,1,1] must not be cavitating");
+        assert!(
+            m.states[[0, 0, 0]].is_cavitating,
+            "cell [0,0,0] must be cavitating"
+        );
+        assert!(
+            !m.states[[1, 1, 1]].is_cavitating,
+            "cell [1,1,1] must not be cavitating"
+        );
     }
 }

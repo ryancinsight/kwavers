@@ -29,13 +29,13 @@ pub struct DivergingWave {
 
 impl DivergingWave {
     /// Create a new diverging wave processor with the given configuration.
-    #[must_use] 
+    #[must_use]
     pub fn new(config: DivergingWaveConfig) -> Self {
         Self { config }
     }
 
     /// Create with default cardiac imaging configuration (128 elements, 0.3 mm pitch).
-    #[must_use] 
+    #[must_use]
     pub fn cardiac(element_positions: Vec<f64>) -> Self {
         Self::new(DivergingWaveConfig {
             element_positions,
@@ -44,7 +44,7 @@ impl DivergingWave {
     }
 
     /// Number of transducer elements.
-    #[must_use] 
+    #[must_use]
     pub fn n_elements(&self) -> usize {
         self.config.element_positions.len()
     }
@@ -132,7 +132,7 @@ impl DivergingWave {
     /// ```
     ///
     /// Reference: Synnevåg et al. (2007), *IEEE TUFFC* 54(11):2213–2220, Eq. (1).
-    #[must_use] 
+    #[must_use]
     pub fn hann_apodization(&self, x: f64, z: f64, elem_idx: usize) -> f64 {
         let xj = self.config.element_positions[elem_idx];
         let f = self.config.virtual_source_depth;
@@ -154,7 +154,7 @@ impl DivergingWave {
     /// ```text
     ///   PRF_max = c / (2 · z_max)     (Hz)
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn max_prf(&self, z_max: f64) -> f64 {
         self.config.sound_speed / (2.0 * z_max)
     }

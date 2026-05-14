@@ -25,6 +25,9 @@ mod tests {
     fn debug_non_empty() {
         let sc = ScatteringCalculator::new(500e3, 3400.0);
         let s = format!("{sc:?}");
-        assert!(!s.is_empty(), "ScatteringCalculator debug must not be empty");
+        assert!(
+            !s.is_empty(),
+            "ScatteringCalculator debug must not be empty"
+        );
     }
 }

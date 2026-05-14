@@ -3,14 +3,14 @@
 use crate::solver::inverse::same_aperture::{PlanarPoint, C_REF_M_S};
 use ndarray::Array2;
 
-use super::config::TheranosticFwiConfig;
+use super::config::TheranosticInverseConfig;
 use super::geometry::DeviceLayout;
 use super::medium::PreparedTheranosticSlice;
 
 pub fn exposure_map(
     prepared: &PreparedTheranosticSlice,
     layout: &DeviceLayout,
-    config: &TheranosticFwiConfig,
+    config: &TheranosticInverseConfig,
 ) -> Array2<f64> {
     let (nx, ny) = prepared.ct_hu.dim();
     let cx = (nx - 1) as f64 * 0.5;

@@ -22,9 +22,10 @@ pub fn window_value(window: WindowType, normalized_time: f64) -> f64 {
         WindowType::Rectangular => 1.0,
         WindowType::Hann => 0.5 * (1.0 - (2.0 * PI * normalized_time).cos()),
         WindowType::Hamming => 0.46f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.54),
-        WindowType::Blackman => {
-            0.08f64.mul_add((4.0 * PI * normalized_time).cos(), 0.5f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.42))
-        }
+        WindowType::Blackman => 0.08f64.mul_add(
+            (4.0 * PI * normalized_time).cos(),
+            0.5f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.42),
+        ),
         WindowType::Gaussian => {
             let sigma = 0.4;
             let arg = (normalized_time - 0.5) / sigma;

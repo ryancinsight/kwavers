@@ -1,7 +1,7 @@
 use super::{ComplianceCheck, ComplianceStatus};
 
 impl ComplianceCheck {
-    #[must_use] 
+    #[must_use]
     pub fn new(
         name: String,
         measured: f64,
@@ -27,12 +27,12 @@ impl ComplianceCheck {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn percent_of_limit(&self) -> f64 {
         (self.measured / self.limit) * 100.0
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn margin_to_limit(&self) -> f64 {
         100.0 - self.percent_of_limit()
     }

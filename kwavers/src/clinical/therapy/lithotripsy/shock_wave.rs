@@ -57,7 +57,7 @@ impl ShockWaveGenerator {
     }
 
     /// Get shock wave parameters.
-    #[must_use] 
+    #[must_use]
     pub fn parameters(&self) -> &ShockWaveParameters {
         &self.parameters
     }

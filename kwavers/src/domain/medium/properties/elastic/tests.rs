@@ -17,11 +17,19 @@ fn test_elastic_wave_speeds() {
     let steel = ElasticPropertyData::steel();
 
     let cp = steel.p_wave_speed();
-    assert!(cp > 5000.0 && cp < 7000.0, "P-wave speed {} out of expected range", cp);
+    assert!(
+        cp > 5000.0 && cp < 7000.0,
+        "P-wave speed {} out of expected range",
+        cp
+    );
 
     let cs = steel.s_wave_speed();
     assert!(cs < cp);
-    assert!(cs > 2500.0 && cs < 4000.0, "S-wave speed {} out of expected range", cs);
+    assert!(
+        cs > 2500.0 && cs < 4000.0,
+        "S-wave speed {} out of expected range",
+        cs
+    );
 }
 
 #[test]

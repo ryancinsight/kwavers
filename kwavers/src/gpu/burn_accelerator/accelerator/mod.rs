@@ -37,7 +37,10 @@ impl<B: Backend> BurnGpuAccelerator<B> {
                 },
             ));
         }
-        Ok(Self { device: B::Device::default(), _backend: PhantomData })
+        Ok(Self {
+            device: B::Device::default(),
+            _backend: PhantomData,
+        })
     }
 
     /// Get the Burn device.
@@ -104,7 +107,16 @@ impl<B: Backend> FdtdGpuAccelerator for BurnGpuAccelerator<B> {
         dz: f64,
     ) -> KwaversResult<Array3<f64>> {
         BurnGpuAccelerator::propagate_acoustic_wave(
-            self, pressure, velocity_x, velocity_y, velocity_z, density, sound_speed, dt, dx, dy,
+            self,
+            pressure,
+            velocity_x,
+            velocity_y,
+            velocity_z,
+            density,
+            sound_speed,
+            dt,
+            dx,
+            dy,
             dz,
         )
     }

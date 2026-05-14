@@ -77,26 +77,42 @@ mod tests {
     #[test]
     fn default_feedback_config_amplitude_ordering() {
         let cfg = FeedbackConfig::default();
-        assert!(cfg.min_amplitude < cfg.max_amplitude,
-            "min_amplitude ({}) must be < max_amplitude ({})", cfg.min_amplitude, cfg.max_amplitude);
+        assert!(
+            cfg.min_amplitude < cfg.max_amplitude,
+            "min_amplitude ({}) must be < max_amplitude ({})",
+            cfg.min_amplitude,
+            cfg.max_amplitude
+        );
     }
 
     /// SafetyLimits::default satisfies intensity ordering: max_intensity < emergency threshold.
     #[test]
     fn default_safety_limits_intensity_ordering() {
         let lim = SafetyLimits::default();
-        assert!(lim.max_intensity < lim.emergency_stop_threshold,
+        assert!(
+            lim.max_intensity < lim.emergency_stop_threshold,
             "max_intensity ({}) must be < emergency_stop_threshold ({})",
-            lim.max_intensity, lim.emergency_stop_threshold);
-        assert!(lim.max_temperature > 37.0, // above body temperature
-            "max temperature ({}) must be above 37°C", lim.max_temperature);
+            lim.max_intensity,
+            lim.emergency_stop_threshold
+        );
+        assert!(
+            lim.max_temperature > 37.0, // above body temperature
+            "max temperature ({}) must be above 37°C",
+            lim.max_temperature
+        );
     }
 
     /// ControlStrategy variants are pairwise distinct.
     #[test]
     fn control_strategy_variants_distinct() {
-        assert_ne!(ControlStrategy::AmplitudeOnly, ControlStrategy::PulseWidthModulation);
-        assert_ne!(ControlStrategy::FrequencyModulation, ControlStrategy::Combined);
+        assert_ne!(
+            ControlStrategy::AmplitudeOnly,
+            ControlStrategy::PulseWidthModulation
+        );
+        assert_ne!(
+            ControlStrategy::FrequencyModulation,
+            ControlStrategy::Combined
+        );
     }
 
     /// Clone produces equal copy of FeedbackConfig.

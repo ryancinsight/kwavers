@@ -135,7 +135,10 @@ impl TetrahedralMesh {
         let cross_y = v1[2].mul_add(v2[0], -(v1[0] * v2[2]));
         let cross_z = v1[0].mul_add(v2[1], -(v1[1] * v2[0]));
 
-        let volume = cross_z.mul_add(v3[2], cross_x.mul_add(v3[0], cross_y * v3[1])).abs() / 6.0;
+        let volume = cross_z
+            .mul_add(v3[2], cross_x.mul_add(v3[0], cross_y * v3[1]))
+            .abs()
+            / 6.0;
 
         if volume < 1e-12 {
             return Err(KwaversError::InvalidInput(
@@ -287,7 +290,7 @@ impl TetrahedralMesh {
     }
 
     /// Find elements containing a point
-    #[must_use] 
+    #[must_use]
     pub fn locate_point(&self, point: [f64; 3]) -> Vec<usize> {
         let mut containing_elements = Vec::new();
 

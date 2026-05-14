@@ -17,7 +17,7 @@ pub struct TrainingHistory {
 
 impl TrainingHistory {
     /// Create empty training history
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             epochs: Vec::new(),
@@ -37,7 +37,7 @@ impl TrainingHistory {
     }
 
     /// Get convergence rate (loss improvement per epoch)
-    #[must_use] 
+    #[must_use]
     pub fn convergence_rate(&self) -> f64 {
         if self.epochs.len() < 2 {
             return 0.0;

@@ -47,7 +47,7 @@ pub struct AbsorptionOperator {
 
 impl AbsorptionOperator {
     /// Construct an `AbsorptionOperator` from a `HASConfig`.
-    #[must_use] 
+    #[must_use]
     pub fn new(config: &HASConfig) -> Self {
         Self {
             attenuation_coeff: config.attenuation_coeff,

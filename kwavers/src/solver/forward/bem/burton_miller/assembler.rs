@@ -13,7 +13,7 @@ pub struct BurtonMillerAssembler {
 }
 
 impl BurtonMillerAssembler {
-    #[must_use] 
+    #[must_use]
     pub fn new(config: BurtonMillerConfig) -> Self {
         Self { config }
     }

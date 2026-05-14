@@ -248,12 +248,10 @@ impl super::PipelineManager {
                             result[[0, j, k]] = field[[1, j, k]] - field[[0, j, k]];
                         }
                         for i in 1..nx.saturating_sub(1) {
-                            result[[i, j, k]] =
-                                (field[[i + 1, j, k]] - field[[i - 1, j, k]]) * 0.5;
+                            result[[i, j, k]] = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) * 0.5;
                         }
                         if nx >= 2 {
-                            result[[nx - 1, j, k]] =
-                                field[[nx - 1, j, k]] - field[[nx - 2, j, k]];
+                            result[[nx - 1, j, k]] = field[[nx - 1, j, k]] - field[[nx - 2, j, k]];
                         }
                     }
                 }
@@ -265,12 +263,10 @@ impl super::PipelineManager {
                             result[[i, 0, k]] = field[[i, 1, k]] - field[[i, 0, k]];
                         }
                         for j in 1..ny.saturating_sub(1) {
-                            result[[i, j, k]] =
-                                (field[[i, j + 1, k]] - field[[i, j - 1, k]]) * 0.5;
+                            result[[i, j, k]] = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) * 0.5;
                         }
                         if ny >= 2 {
-                            result[[i, ny - 1, k]] =
-                                field[[i, ny - 1, k]] - field[[i, ny - 2, k]];
+                            result[[i, ny - 1, k]] = field[[i, ny - 1, k]] - field[[i, ny - 2, k]];
                         }
                     }
                 }
@@ -282,12 +278,10 @@ impl super::PipelineManager {
                             result[[i, j, 0]] = field[[i, j, 1]] - field[[i, j, 0]];
                         }
                         for k in 1..nz.saturating_sub(1) {
-                            result[[i, j, k]] =
-                                (field[[i, j, k + 1]] - field[[i, j, k - 1]]) * 0.5;
+                            result[[i, j, k]] = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) * 0.5;
                         }
                         if nz >= 2 {
-                            result[[i, j, nz - 1]] =
-                                field[[i, j, nz - 1]] - field[[i, j, nz - 2]];
+                            result[[i, j, nz - 1]] = field[[i, j, nz - 1]] - field[[i, j, nz - 2]];
                         }
                     }
                 }

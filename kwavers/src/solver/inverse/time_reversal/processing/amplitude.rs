@@ -127,7 +127,8 @@ impl AmplitudeCorrector {
             let fraction = original_index - idx_low as f64;
 
             if idx_low < n_original {
-                *resampled_val = signal[idx_low].mul_add(1.0 - fraction, signal[idx_high] * fraction);
+                *resampled_val =
+                    signal[idx_low].mul_add(1.0 - fraction, signal[idx_high] * fraction);
             }
         }
 

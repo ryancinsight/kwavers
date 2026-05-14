@@ -23,7 +23,9 @@ fn test_sensitivity_analyzer_creation() {
 fn test_parameter_sample_generation() {
     let analyzer = SensitivityAnalyzer::new(SensitivityConfig::default()).unwrap();
     let parameter_ranges = vec![(0.0, 1.0), (1.0, 2.0)];
-    let samples = analyzer.generate_parameter_samples(&parameter_ranges, 10).unwrap();
+    let samples = analyzer
+        .generate_parameter_samples(&parameter_ranges, 10)
+        .unwrap();
 
     assert_eq!(samples.len(), 10, "must produce exactly 10 samples");
     for sample in &samples {
@@ -60,8 +62,14 @@ fn test_sensitivity_analysis() {
         "param_0 total-sensitivity {sens0:.4} must be ≥ param_1 {sens1:.4} (ratio 4:0.25 in model)"
     );
     // Both indices must be non-negative (variance fractions).
-    assert!(sens0 >= 0.0, "total sensitivity must be non-negative, got {sens0}");
-    assert!(sens1 >= 0.0, "total sensitivity must be non-negative, got {sens1}");
+    assert!(
+        sens0 >= 0.0,
+        "total sensitivity must be non-negative, got {sens0}"
+    );
+    assert!(
+        sens1 >= 0.0,
+        "total sensitivity must be non-negative, got {sens1}"
+    );
 }
 
 #[test]
@@ -72,10 +80,18 @@ fn test_morris_screening() {
     let model_fn = |params: &Array1<f64>| Array1::from_vec(vec![params[0] + params[1]]);
     let parameter_ranges = vec![(0.0, 1.0), (0.0, 1.0)];
 
-    let results = analyzer.morris_screening(model_fn, &parameter_ranges, 5, 10).unwrap();
+    let results = analyzer
+        .morris_screening(model_fn, &parameter_ranges, 5, 10)
+        .unwrap();
 
-    assert!(!results.mu.is_empty(), "Morris μ must contain entries for all parameters");
-    assert!(!results.sigma.is_empty(), "Morris σ must contain entries for all parameters");
+    assert!(
+        !results.mu.is_empty(),
+        "Morris μ must contain entries for all parameters"
+    );
+    assert!(
+        !results.sigma.is_empty(),
+        "Morris σ must contain entries for all parameters"
+    );
 
     // For an additive model μ entries must be non-negative.
     for (idx, &val) in results.mu.iter().enumerate() {

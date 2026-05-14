@@ -268,7 +268,7 @@ unsafe fn norm_avx2_inner(field: &[f64]) -> f64 {
 }
 
 #[cfg(target_arch = "x86_64")]
-#[must_use] 
+#[must_use]
 pub fn norm_avx2(field: &Array3<f64>) -> f64 {
     if let Some(field_slice) = field.as_slice() {
         unsafe { norm_avx2_inner(field_slice) }

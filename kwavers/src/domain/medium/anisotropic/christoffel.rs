@@ -31,20 +31,83 @@ impl ChristoffelEquation {
         let n = direction;
 
         // Γik = Cijkl * nj * nl (Einstein summation)
-        gamma[[0, 0]] = 2.0f64.mul_add((c[[4, 5]] * n[1]).mul_add(n[2], (c[[0, 5]] * n[0]).mul_add(n[1], c[[0, 4]] * n[0] * n[2])), (c[[4, 4]] * n[2]).mul_add(n[2], (c[[0, 0]] * n[0]).mul_add(n[0], c[[5, 5]] * n[1] * n[1])));
+        gamma[[0, 0]] = 2.0f64.mul_add(
+            (c[[4, 5]] * n[1]).mul_add(
+                n[2],
+                (c[[0, 5]] * n[0]).mul_add(n[1], c[[0, 4]] * n[0] * n[2]),
+            ),
+            (c[[4, 4]] * n[2]).mul_add(
+                n[2],
+                (c[[0, 0]] * n[0]).mul_add(n[0], c[[5, 5]] * n[1] * n[1]),
+            ),
+        );
 
-        gamma[[1, 1]] = 2.0f64.mul_add((c[[1, 3]] * n[1]).mul_add(n[2], (c[[1, 5]] * n[0]).mul_add(n[1], c[[3, 5]] * n[0] * n[2])), (c[[3, 3]] * n[2]).mul_add(n[2], (c[[5, 5]] * n[0]).mul_add(n[0], c[[1, 1]] * n[1] * n[1])));
+        gamma[[1, 1]] = 2.0f64.mul_add(
+            (c[[1, 3]] * n[1]).mul_add(
+                n[2],
+                (c[[1, 5]] * n[0]).mul_add(n[1], c[[3, 5]] * n[0] * n[2]),
+            ),
+            (c[[3, 3]] * n[2]).mul_add(
+                n[2],
+                (c[[5, 5]] * n[0]).mul_add(n[0], c[[1, 1]] * n[1] * n[1]),
+            ),
+        );
 
-        gamma[[2, 2]] = 2.0f64.mul_add((c[[2, 3]] * n[1]).mul_add(n[2], (c[[3, 4]] * n[0]).mul_add(n[1], c[[2, 4]] * n[0] * n[2])), (c[[2, 2]] * n[2]).mul_add(n[2], (c[[4, 4]] * n[0]).mul_add(n[0], c[[3, 3]] * n[1] * n[1])));
+        gamma[[2, 2]] = 2.0f64.mul_add(
+            (c[[2, 3]] * n[1]).mul_add(
+                n[2],
+                (c[[3, 4]] * n[0]).mul_add(n[1], c[[2, 4]] * n[0] * n[2]),
+            ),
+            (c[[2, 2]] * n[2]).mul_add(
+                n[2],
+                (c[[4, 4]] * n[0]).mul_add(n[0], c[[3, 3]] * n[1] * n[1]),
+            ),
+        );
 
         // Off-diagonal terms (symmetric)
-        gamma[[0, 1]] = ((c[[1, 4]] + c[[3, 5]]) * n[1]).mul_add(n[2], ((c[[0, 3]] + c[[4, 5]]) * n[0]).mul_add(n[2], ((c[[0, 1]] + c[[5, 5]]) * n[0]).mul_add(n[1], (c[[3, 4]] * n[2]).mul_add(n[2], (c[[0, 5]] * n[0]).mul_add(n[0], c[[1, 5]] * n[1] * n[1])))));
+        gamma[[0, 1]] = ((c[[1, 4]] + c[[3, 5]]) * n[1]).mul_add(
+            n[2],
+            ((c[[0, 3]] + c[[4, 5]]) * n[0]).mul_add(
+                n[2],
+                ((c[[0, 1]] + c[[5, 5]]) * n[0]).mul_add(
+                    n[1],
+                    (c[[3, 4]] * n[2]).mul_add(
+                        n[2],
+                        (c[[0, 5]] * n[0]).mul_add(n[0], c[[1, 5]] * n[1] * n[1]),
+                    ),
+                ),
+            ),
+        );
         gamma[[1, 0]] = gamma[[0, 1]];
 
-        gamma[[0, 2]] = ((c[[2, 5]] + c[[3, 4]]) * n[1]).mul_add(n[2], ((c[[0, 2]] + c[[4, 4]]) * n[0]).mul_add(n[2], ((c[[0, 3]] + c[[4, 5]]) * n[0]).mul_add(n[1], (c[[2, 4]] * n[2]).mul_add(n[2], (c[[0, 4]] * n[0]).mul_add(n[0], c[[3, 5]] * n[1] * n[1])))));
+        gamma[[0, 2]] = ((c[[2, 5]] + c[[3, 4]]) * n[1]).mul_add(
+            n[2],
+            ((c[[0, 2]] + c[[4, 4]]) * n[0]).mul_add(
+                n[2],
+                ((c[[0, 3]] + c[[4, 5]]) * n[0]).mul_add(
+                    n[1],
+                    (c[[2, 4]] * n[2]).mul_add(
+                        n[2],
+                        (c[[0, 4]] * n[0]).mul_add(n[0], c[[3, 5]] * n[1] * n[1]),
+                    ),
+                ),
+            ),
+        );
         gamma[[2, 0]] = gamma[[0, 2]];
 
-        gamma[[1, 2]] = ((c[[1, 2]] + c[[3, 3]]) * n[1]).mul_add(n[2], ((c[[2, 5]] + c[[3, 4]]) * n[0]).mul_add(n[2], ((c[[1, 4]] + c[[3, 5]]) * n[0]).mul_add(n[1], (c[[2, 3]] * n[2]).mul_add(n[2], (c[[4, 5]] * n[0]).mul_add(n[0], c[[1, 3]] * n[1] * n[1])))));
+        gamma[[1, 2]] = ((c[[1, 2]] + c[[3, 3]]) * n[1]).mul_add(
+            n[2],
+            ((c[[2, 5]] + c[[3, 4]]) * n[0]).mul_add(
+                n[2],
+                ((c[[1, 4]] + c[[3, 5]]) * n[0]).mul_add(
+                    n[1],
+                    (c[[2, 3]] * n[2]).mul_add(
+                        n[2],
+                        (c[[4, 5]] * n[0]).mul_add(n[0], c[[1, 3]] * n[1] * n[1]),
+                    ),
+                ),
+            ),
+        );
         gamma[[2, 1]] = gamma[[1, 2]];
 
         gamma
@@ -75,9 +138,28 @@ impl ChristoffelEquation {
 
         let trace = matrix[[0, 0]] + matrix[[1, 1]] + matrix[[2, 2]];
 
-        let minor_sum = matrix[[1, 2]].mul_add(-matrix[[2, 1]], matrix[[1, 1]].mul_add(matrix[[2, 2]], matrix[[0, 2]].mul_add(-matrix[[2, 0]], matrix[[0, 0]].mul_add(matrix[[2, 2]], matrix[[0, 0]].mul_add(matrix[[1, 1]], -(matrix[[0, 1]] * matrix[[1, 0]]))))));
+        let minor_sum = matrix[[1, 2]].mul_add(
+            -matrix[[2, 1]],
+            matrix[[1, 1]].mul_add(
+                matrix[[2, 2]],
+                matrix[[0, 2]].mul_add(
+                    -matrix[[2, 0]],
+                    matrix[[0, 0]].mul_add(
+                        matrix[[2, 2]],
+                        matrix[[0, 0]].mul_add(matrix[[1, 1]], -(matrix[[0, 1]] * matrix[[1, 0]])),
+                    ),
+                ),
+            ),
+        );
 
-        let det = matrix[[0, 2]].mul_add(matrix[[1, 0]].mul_add(matrix[[2, 1]], -(matrix[[1, 1]] * matrix[[2, 0]])), matrix[[0, 0]].mul_add(matrix[[1, 1]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[2, 1]])), -(matrix[[0, 1]] * matrix[[1, 0]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[2, 0]])))));
+        let det = matrix[[0, 2]].mul_add(
+            matrix[[1, 0]].mul_add(matrix[[2, 1]], -(matrix[[1, 1]] * matrix[[2, 0]])),
+            matrix[[0, 0]].mul_add(
+                matrix[[1, 1]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[2, 1]])),
+                -(matrix[[0, 1]]
+                    * matrix[[1, 0]].mul_add(matrix[[2, 2]], -(matrix[[1, 2]] * matrix[[2, 0]]))),
+            ),
+        );
 
         // Use Cardano's formula for cubic equation
         let p = minor_sum - trace * trace / 3.0;

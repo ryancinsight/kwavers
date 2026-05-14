@@ -126,8 +126,8 @@ impl SpectralVelocityFields {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::fields::{StressFields, VelocityFields};
+    use super::*;
 
     /// FFT → IFFT round-trip for stress fields must recover the real-valued input
     /// to floating-point precision (tolerance = N · ε_mach · 10 where N = 512).
@@ -147,8 +147,16 @@ mod tests {
 
         let tol = 512.0 * f64::EPSILON * 10.0;
         for ((orig, rec), label) in real
-            .txx.iter().zip(recovered.txx.iter()).map(|p| (p, "txx"))
-            .chain(real.txy.iter().zip(recovered.txy.iter()).map(|p| (p, "txy")))
+            .txx
+            .iter()
+            .zip(recovered.txx.iter())
+            .map(|p| (p, "txx"))
+            .chain(
+                real.txy
+                    .iter()
+                    .zip(recovered.txy.iter())
+                    .map(|p| (p, "txy")),
+            )
         {
             assert!(
                 (orig - rec).abs() < tol,
@@ -177,7 +185,10 @@ mod tests {
 
         let tol = 512.0 * f64::EPSILON * 10.0;
         for ((orig, rec), label) in real
-            .vx.iter().zip(recovered.vx.iter()).map(|p| (p, "vx"))
+            .vx
+            .iter()
+            .zip(recovered.vx.iter())
+            .map(|p| (p, "vx"))
             .chain(real.vy.iter().zip(recovered.vy.iter()).map(|p| (p, "vy")))
         {
             assert!(

@@ -59,11 +59,12 @@ impl CalibrationManager {
         measurements: &Array2<f64>,
         dt: f64,
     ) -> KwaversResult<Array2<f64>> {
-        let kalman = self.kalman_state.as_mut().ok_or(
-            crate::core::error::KwaversError::InvalidInput(
-                "Kalman filter not initialized".to_owned(),
-            ),
-        )?;
+        let kalman =
+            self.kalman_state
+                .as_mut()
+                .ok_or(crate::core::error::KwaversError::InvalidInput(
+                    "Kalman filter not initialized".to_owned(),
+                ))?;
 
         let num_elements = measurements.nrows();
         let state_dim = kalman.state.len();
@@ -94,8 +95,7 @@ impl CalibrationManager {
         // Update
         let z = DVector::from_iterator(meas_dim, measurements.iter().copied());
         let y = z - &h_matrix * &kalman.state;
-        let s =
-            &h_matrix * &kalman.covariance * h_matrix.transpose() + &kalman.measurement_noise;
+        let s = &h_matrix * &kalman.covariance * h_matrix.transpose() + &kalman.measurement_noise;
         let k = &kalman.covariance
             * h_matrix.transpose()
             * s.try_inverse()

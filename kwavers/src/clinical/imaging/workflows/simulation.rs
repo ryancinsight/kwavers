@@ -5,7 +5,7 @@ use ndarray::Array3;
 #[cfg(feature = "gpu")]
 use crate::analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 
-#[must_use] 
+#[must_use]
 pub fn generate_realistic_rf_volume(
     volume_dims: (usize, usize, usize),
     sound_speed: f64,
@@ -18,7 +18,14 @@ pub fn generate_realistic_rf_volume(
     for elev in 0..num_elev {
         for lat in 0..num_lat {
             for depth in 0..num_depth {
-                let distance = (elev as f64 - num_elev as f64 / 2.0).powi(2).mul_add(0.0001, (lat as f64 - num_lat as f64 / 2.0).powi(2).mul_add(0.0001, depth as f64 * sound_speed / sampling_frequency))
+                let distance = (elev as f64 - num_elev as f64 / 2.0)
+                    .powi(2)
+                    .mul_add(
+                        0.0001,
+                        (lat as f64 - num_lat as f64 / 2.0)
+                            .powi(2)
+                            .mul_add(0.0001, depth as f64 * sound_speed / sampling_frequency),
+                    )
                     .sqrt();
 
                 let attenuation = (-0.5 * distance * 100.0).exp();
@@ -56,7 +63,7 @@ pub fn generate_realistic_rf_data(config: &BeamformingConfig3D) -> Array3<f64> {
 }
 
 /// Generate realistic photoacoustic data
-#[must_use] 
+#[must_use]
 pub fn generate_realistic_pa_data(_config: &PhotoacousticConfig) -> (Vec<Array3<f64>>, Vec<f64>) {
     // Generate time-resolved pressure fields
     let time_points = vec![0.0, 2e-6, 4e-6, 6e-6, 8e-6]; // 5 time points
@@ -69,8 +76,12 @@ pub fn generate_realistic_pa_data(_config: &PhotoacousticConfig) -> (Vec<Array3<
         for z in 0..64 {
             for y in 0..128 {
                 for x in 0..128 {
-                    let r = (z as f64 - 32.0).mul_add(z as f64 - 32.0, (y as f64 - 64.0).mul_add(y as f64 - 64.0, (x as f64 - 64.0).powi(2)))
-                    .sqrt()
+                    let r = (z as f64 - 32.0)
+                        .mul_add(
+                            z as f64 - 32.0,
+                            (y as f64 - 64.0).mul_add(y as f64 - 64.0, (x as f64 - 64.0).powi(2)),
+                        )
+                        .sqrt()
                         * 0.001; // distance in meters
                     let propagation_time = r / 1540.0; // speed of sound
 
@@ -117,7 +128,7 @@ pub fn reconstruct_pa_image(
 }
 
 /// Compute photoacoustic SNR
-#[must_use] 
+#[must_use]
 pub fn compute_pa_snr(image: &Array3<f64>) -> f64 {
     let mean = image.mean().unwrap_or(0.0);
     let variance = image.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / image.len() as f64;
@@ -131,7 +142,7 @@ pub fn compute_pa_snr(image: &Array3<f64>) -> f64 {
 }
 
 /// Generate realistic elastography data
-#[must_use] 
+#[must_use]
 pub fn generate_realistic_elastography_data(
     _config: &ElastographyConfig,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {

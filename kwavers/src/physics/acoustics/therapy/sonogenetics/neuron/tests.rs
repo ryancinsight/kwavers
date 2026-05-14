@@ -78,7 +78,10 @@ fn test_refractory_clamp() {
             break;
         }
     }
-    assert!(spiked_once, "should have spiked with I = 1 nA over 200 steps");
+    assert!(
+        spiked_once,
+        "should have spiked with I = 1 nA over 200 steps"
+    );
 }
 
 /// Zero time step returns an error.

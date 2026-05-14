@@ -146,7 +146,26 @@ impl ReflectionTransmissionCoefficients {
 
 #[cfg(test)]
 mod tests {
+    use super::super::interface::FsiInterfaceSpec;
     use super::*;
+
+    fn interface_spec(
+        solid_density: f64,
+        solid_c_l: f64,
+        solid_c_t: f64,
+        normal: [f64; 3],
+    ) -> FsiInterfaceSpec {
+        FsiInterfaceSpec {
+            fluid_density: 1000.0,
+            fluid_sound_speed: 1500.0,
+            solid_density,
+            solid_c_l,
+            solid_c_t,
+            normal,
+            grid_shape: (64, 64, 64),
+        }
+    }
+
     /// Test reflection coefficient for normal incidence
     ///
     /// **Validation**: Water-Steel interface should have R ≈ 0.935
@@ -156,18 +175,8 @@ mod tests {
     ///
     #[test]
     fn test_normal_reflection_water_steel() {
-        let interface = FsiInterface::new(
-            1000.0, // water
-            1500.0,
-            7850.0, // steel
-            5960.0,
-            3240.0,
-            [1.0, 0.0, 0.0],
-            64,
-            64,
-            64,
-        )
-        .unwrap();
+        let interface =
+            FsiInterface::new(interface_spec(7850.0, 5960.0, 3240.0, [1.0, 0.0, 0.0])).unwrap();
 
         let coeffs = ReflectionTransmissionCoefficients::normal_incidence(&interface);
 
@@ -187,18 +196,8 @@ mod tests {
     ///
     #[test]
     fn test_energy_conservation() {
-        let interface = FsiInterface::new(
-            1000.0,
-            1500.0,
-            2700.0, // aluminum
-            6320.0,
-            3080.0,
-            [0.0, 1.0, 0.0],
-            64,
-            64,
-            64,
-        )
-        .unwrap();
+        let interface =
+            FsiInterface::new(interface_spec(2700.0, 6320.0, 3080.0, [0.0, 1.0, 0.0])).unwrap();
 
         let coeffs = ReflectionTransmissionCoefficients::normal_incidence(&interface);
         assert!(coeffs.verify_energy_conservation().is_ok());
@@ -210,18 +209,8 @@ mod tests {
     ///
     #[test]
     fn test_oblique_reflection_angles() {
-        let interface = FsiInterface::new(
-            1000.0,
-            1500.0,
-            7850.0,
-            5960.0,
-            3240.0,
-            [1.0, 0.0, 0.0],
-            64,
-            64,
-            64,
-        )
-        .unwrap();
+        let interface =
+            FsiInterface::new(interface_spec(7850.0, 5960.0, 3240.0, [1.0, 0.0, 0.0])).unwrap();
 
         for angle_deg in [0.0, 15.0, 30.0, 45.0] {
             let theta = angle_deg * std::f64::consts::PI / 180.0;

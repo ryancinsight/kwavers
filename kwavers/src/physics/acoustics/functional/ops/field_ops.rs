@@ -59,7 +59,7 @@ pub trait FieldOps {
         F: Fn(&Self::Item) -> bool;
 }
 
-impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
+impl<T: Send + Sync> FieldOps for Array3<T> {
     type Item = T;
 
     fn map_field<F, U>(&self, mut f: F) -> Array3<U>
@@ -112,14 +112,23 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
         U: Send + Sync,
         Self::Item: Sync,
     {
-        let shape = self.dim();
-        let result: Vec<U> = self
-            .iter()
-            .collect::<Vec<_>>()
+        let (nx, ny, nz) = self.dim();
+        let yz = ny * nz;
+
+        // Derive coordinates from the flat index inside each Rayon task. This
+        // removes the temporary `Vec<&T>` while preserving owned output order.
+        let result: Vec<U> = (0..nx * ny * nz)
             .into_par_iter()
-            .map(f)
+            .map(|flat| {
+                let i = flat / yz;
+                let rem = flat % yz;
+                let j = rem / nz;
+                let k = rem % nz;
+                f(&self[[i, j, k]])
+            })
             .collect();
 
+        let shape = (nx, ny, nz);
         Array3::from_shape_vec(shape, result).expect("Shape mismatch in parallel map operation")
     }
 
@@ -156,6 +165,9 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
 mod tests {
     use super::*;
 
+    #[derive(Debug, PartialEq, Eq)]
+    struct NonCloneValue(i32);
+
     fn small() -> Array3<f64> {
         Array3::from_shape_fn((2, 2, 2), |(i, j, k)| (i + j + k + 1) as f64)
     }
@@ -168,8 +180,10 @@ mod tests {
         for ((i, j, k), &orig) in field.indexed_iter() {
             let expected = orig * 2.0;
             let got = doubled[[i, j, k]];
-            assert!((got - expected).abs() < 1e-14,
-                "[{i},{j},{k}]: got {got}, expected {expected}");
+            assert!(
+                (got - expected).abs() < 1e-14,
+                "[{i},{j},{k}]: got {got}, expected {expected}"
+            );
         }
     }
 
@@ -179,7 +193,10 @@ mod tests {
         let field = small();
         let expected: f64 = field.iter().sum();
         let got = field.fold_field(0.0, |acc, &x| acc + x);
-        assert!((got - expected).abs() < 1e-14, "fold sum: got {got}, expected {expected}");
+        assert!(
+            (got - expected).abs() < 1e-14,
+            "fold sum: got {got}, expected {expected}"
+        );
     }
 
     /// scan_field(0, +) produces running totals; last element equals total sum.
@@ -190,7 +207,10 @@ mod tests {
         let total: f64 = field.iter().sum();
         // Last element in row-major traversal accumulates all values
         let last = *scan.iter().last().unwrap();
-        assert!((last - total).abs() < 1e-14, "scan last={last}, total={total}");
+        assert!(
+            (last - total).abs() < 1e-14,
+            "scan last={last}, total={total}"
+        );
     }
 
     /// find_element(>2) returns the first element > 2 with its index.
@@ -211,8 +231,10 @@ mod tests {
         let field = small();
         let count_above_1 = field.count_matching(|&x| x > 1.0);
         let expected = field.iter().filter(|&&x| x > 1.0).count();
-        assert_eq!(count_above_1, expected,
-            "count_matching > 1 must be {expected} (got {count_above_1})");
+        assert_eq!(
+            count_above_1, expected,
+            "count_matching > 1 must be {expected} (got {count_above_1})"
+        );
         assert!(count_above_1 > 0, "must be at least one element > 1");
     }
 
@@ -224,7 +246,10 @@ mod tests {
 
         let mut spiked = field.clone();
         spiked[[1, 1, 1]] = 99.0;
-        assert!(spiked.any(|&x| x > 10.0), "spike at [1,1,1] must trigger any()");
+        assert!(
+            spiked.any(|&x| x > 10.0),
+            "spike at [1,1,1] must trigger any()"
+        );
     }
 
     /// all(>0): true for positive field; false when a zero element is present.
@@ -235,6 +260,25 @@ mod tests {
 
         let mut with_zero = field.clone();
         with_zero[[0, 0, 0]] = 0.0;
-        assert!(!with_zero.all(|&x| x > 0.0), "zero element must break all()");
+        assert!(
+            !with_zero.all(|&x| x > 0.0),
+            "zero element must break all()"
+        );
+    }
+
+    /// Read-only field operations must not require cloneable elements.
+    #[test]
+    fn read_only_ops_accept_non_clone_elements() {
+        let field = Array3::from_shape_fn((2, 2, 2), |(i, j, k)| NonCloneValue((i + j + k) as i32));
+
+        let mapped = field.map_field(|value| value.0 * 3);
+        let par_mapped = field.par_map_field(|value| value.0 * 3);
+        let folded = field.fold_field(0, |acc, value| acc + value.0);
+        let filtered: Vec<_> = field.filter_indices(|value| value.0 == 2).collect();
+
+        assert_eq!(mapped[[1, 1, 1]], 9);
+        assert_eq!(par_mapped[[1, 1, 1]], 9);
+        assert_eq!(folded, 12);
+        assert_eq!(filtered, vec![(0, 1, 1), (1, 0, 1), (1, 1, 0)]);
     }
 }

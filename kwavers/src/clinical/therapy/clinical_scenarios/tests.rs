@@ -94,7 +94,11 @@ fn mechanical_index_matches_aium_definition() {
     assert!(approx_eq(s.mechanical_index(), 30.0, 1.0e-9));
     // Thrombolysis: 32 MPa / sqrt(1.5) ≈ 26.13.
     let t = HistotripsyScenario::thrombolysis_1_5mhz();
-    assert!(approx_eq(t.mechanical_index(), 32.0 / (1.5_f64).sqrt(), 1.0e-9));
+    assert!(approx_eq(
+        t.mechanical_index(),
+        32.0 / (1.5_f64).sqrt(),
+        1.0e-9
+    ));
 }
 
 #[test]

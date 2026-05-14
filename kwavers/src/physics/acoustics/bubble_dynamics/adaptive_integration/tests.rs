@@ -58,7 +58,11 @@ fn test_adaptive_integration() {
     }
 
     result.expect("Integration failed");
-    assert!(state.radius > 0.0, "radius must be positive after integration, got {}", state.radius);
+    assert!(
+        state.radius > 0.0,
+        "radius must be positive after integration, got {}",
+        state.radius
+    );
 
     // Check that sub-cycling occurred
     let stats = integrator.statistics();

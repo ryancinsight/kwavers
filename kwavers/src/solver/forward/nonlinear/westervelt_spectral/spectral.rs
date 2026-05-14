@@ -165,4 +165,3 @@ pub fn apply_kspace_correction(
         }
     }
 }
-

@@ -189,8 +189,8 @@ pub fn update_microbubble_dynamics(
         &mut drug,
         acoustic_pressure,
         pressure_gradient,
-        0.0,    // dP_ac/dt [Pa/s] — slowly-varying approximation
-        0.0,    // time (could track cumulative time)
+        0.0, // dP_ac/dt [Pa/s] — slowly-varying approximation
+        0.0, // time (could track cumulative time)
         dt_bub,
     )?;
 

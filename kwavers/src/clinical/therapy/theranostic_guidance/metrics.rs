@@ -1,4 +1,4 @@
-//! Value-semantic metrics for theranostic FWI outputs.
+//! Value-semantic metrics for theranostic inverse outputs.
 
 use ndarray::Array2;
 

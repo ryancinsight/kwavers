@@ -23,7 +23,6 @@
 //! - Koene & Robertsson (2012) Geophysics 77(1):T1-T11
 
 use super::DispersionAnalysis;
-use std::f64::consts::PI;
 
 impl DispersionAnalysis {
     /// Calculate numerical dispersion for FDTD method (1D)
@@ -73,7 +72,13 @@ impl DispersionAnalysis {
         let sin_ky_dy_half = (0.5 * ky * dy).sin();
         let sin_kz_dz_half = (0.5 * kz * dz).sin();
 
-        let sin_squared_omega_dt_half = (cfl_z * cfl_z * sin_kz_dz_half).mul_add(sin_kz_dz_half, (cfl_x * cfl_x * sin_kx_dx_half).mul_add(sin_kx_dx_half, cfl_y * cfl_y * sin_ky_dy_half * sin_ky_dy_half));
+        let sin_squared_omega_dt_half = (cfl_z * cfl_z * sin_kz_dz_half).mul_add(
+            sin_kz_dz_half,
+            (cfl_x * cfl_x * sin_kx_dx_half).mul_add(
+                sin_kx_dx_half,
+                cfl_y * cfl_y * sin_ky_dy_half * sin_ky_dy_half,
+            ),
+        );
 
         let sin_squared_clamped = sin_squared_omega_dt_half.clamp(0.0, 1.0);
         let sin_half_omega_dt = sin_squared_clamped.sqrt();
@@ -93,6 +98,7 @@ impl DispersionAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     /// 1D FDTD dispersion is zero at k=0 (no wave → no error).
     #[test]
@@ -135,7 +141,9 @@ mod tests {
 
         let pos = DispersionAnalysis::fdtd_dispersion(k, dx, dt, c);
         let neg = DispersionAnalysis::fdtd_dispersion(-k, dx, dt, c);
-        assert!((pos - neg).abs() < 1e-14,
-            "fdtd_dispersion must be even in k: pos={pos}, neg={neg}");
+        assert!(
+            (pos - neg).abs() < 1e-14,
+            "fdtd_dispersion must be even in k: pos={pos}, neg={neg}"
+        );
     }
 }

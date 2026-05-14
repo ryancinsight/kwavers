@@ -71,7 +71,8 @@ impl EigenspaceMV {
 
         if n == 0 || covariance.ncols() != n {
             return Err(KwaversError::InvalidInput(
-                "EigenspaceMV::compute_weights: covariance must be non-empty square matrix".to_owned(),
+                "EigenspaceMV::compute_weights: covariance must be non-empty square matrix"
+                    .to_owned(),
             ));
         }
         if steering.len() != n {
@@ -147,7 +148,8 @@ impl EigenspaceMV {
 
         if a_h_r_inv_ps_a.norm() < 1e-12 {
             return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
-                "EigenspaceMV::compute_weights: denominator near zero (signal subspace mismatch)".to_owned(),
+                "EigenspaceMV::compute_weights: denominator near zero (signal subspace mismatch)"
+                    .to_owned(),
             )));
         }
 

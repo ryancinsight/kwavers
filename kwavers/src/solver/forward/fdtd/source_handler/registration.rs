@@ -36,7 +36,8 @@ impl SourceHandler {
                 if self.source.p_mask.is_some() || self.source.p_signal.is_some() {
                     return Err(KwaversError::Validation(
                         ValidationError::ConstraintViolation {
-                            message: "Multiple pressure sources are not supported in SourceHandler".to_owned(),
+                            message: "Multiple pressure sources are not supported in SourceHandler"
+                                .to_owned(),
                         },
                     ));
                 }
@@ -66,7 +67,8 @@ impl SourceHandler {
                 if self.source.u_mask.is_some() || self.source.u_signal.is_some() {
                     return Err(KwaversError::Validation(
                         ValidationError::ConstraintViolation {
-                            message: "Multiple velocity sources are not supported in SourceHandler".to_owned(),
+                            message: "Multiple velocity sources are not supported in SourceHandler"
+                                .to_owned(),
                         },
                     ));
                 }

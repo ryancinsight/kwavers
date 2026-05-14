@@ -1,4 +1,4 @@
-//! CT and segmentation preprocessing for theranostic FWI slices.
+//! CT and segmentation preprocessing for theranostic inverse slices.
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::same_aperture::C_REF_M_S;

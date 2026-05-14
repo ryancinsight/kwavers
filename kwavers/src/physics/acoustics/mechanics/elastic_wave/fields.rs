@@ -92,8 +92,13 @@ mod tests {
         f.tyz.fill(6.0);
         f.reset();
         for v in f
-            .txx.iter().chain(f.tyy.iter()).chain(f.tzz.iter())
-            .chain(f.txy.iter()).chain(f.txz.iter()).chain(f.tyz.iter())
+            .txx
+            .iter()
+            .chain(f.tyy.iter())
+            .chain(f.tzz.iter())
+            .chain(f.txy.iter())
+            .chain(f.txz.iter())
+            .chain(f.tyz.iter())
         {
             assert_eq!(*v, 0.0);
         }

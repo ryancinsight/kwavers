@@ -37,7 +37,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
+import matplotlib.patches as mpatches
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from matplotlib.lines import Line2D
 from scipy.ndimage import (binary_closing, binary_dilation, binary_erosion,
                            distance_transform_edt, label, zoom)
 from scipy.special import erf
@@ -74,22 +76,166 @@ class Tissue:
     cp: float
     kappa: float
     perfusion: float
+    # Intrinsic cavitation threshold at 1 MHz (Pa).
+    # Tissue-specific values from Vlaisavljevich 2015/2016 and Maxwell 2013.
+    # float('inf') = no intrinsic cavitation (rigid scatterer or gas interface).
+    pt_pa_1mhz: float = 28.2e6   # default: water-based global reference (Vlaisavljevich 2015)
+    # 1σ width of the Maxwell 2013 erf-CDF threshold distribution (Pa).
+    # Reflects biological variability within each tissue type.
+    pt_sigma_pa: float = 0.96e6  # default: water-based σ (Maxwell 2013)
 
 
-AIR    = Tissue(0, "air",       1.2, 343.0,    0.0,  1.0,    1005.0, 0.026, 0.0)
-SKIN   = Tissue(1, "skin",   1109.0, 1624.0,  21.158, 1.10, 3391.0, 0.37, 1.06)
-FAT    = Tissue(2, "fat",     911.0, 1440.0,   4.836, 1.10, 2348.0, 0.21, 0.43)
-MUSCLE = Tissue(3, "muscle", 1090.0, 1588.0,   8.054, 1.10, 3421.0, 0.49, 0.67)
-BONE   = Tissue(4, "bone",   1908.0, 4080.0, 250.0,   1.0,  1313.0, 0.32, 0.10)
-LIVER  = Tissue(5, "liver",  1079.0, 1595.0,   8.690, 1.10, 3540.0, 0.52, 6.4)
-HCC    = Tissue(6, "hcc",    1066.0, 1570.0,  12.500, 1.10, 3750.0, 0.55, 9.0)
+#  Acoustic/thermal: Duck 1990 / IT'IS Foundation v4.1 / Mast 2000
+#  Cavitation thresholds: Vlaisavljevich 2015 (JASA 138:1864) — frequency-
+#    dependent water baseline; Vlaisavljevich 2016 (JASA 140:3504) — tissue-
+#    specific porcine liver, muscle, fat, n=30 each; Maxwell 2013 (JASA
+#    134:1765) — erf-CDF model and σ values; HOPE4LIVER trial (NCT04573881)
+#    HCC data context.
+#  Temperature correction: −0.3 MPa/°C (Vlaisavljevich 2015 Fig. 7).
+AIR    = Tissue(0, "air",       1.2, 343.0,    0.0,  1.0,    1005.0, 0.026, 0.0,
+                pt_pa_1mhz=float('inf'), pt_sigma_pa=1.0)
+SKIN   = Tissue(1, "skin",   1109.0, 1624.0,  21.158, 1.10, 3391.0, 0.37, 1.06,
+                # Water-rich dermis; no dedicated histotripsy data.
+                # Vlaisavljevich 2015: water-rich tissue ~28 MPa; assume close to water.
+                pt_pa_1mhz=26.0e6, pt_sigma_pa=3.0e6)
+FAT    = Tissue(2, "fat",     911.0, 1440.0,   4.836, 1.10, 2348.0, 0.21, 0.43,
+                # Vlaisavljevich 2015 (JASA 138:1864): lipid-rich tissues threshold
+                # ~13–16 MPa, approximately 50 % below the water baseline.
+                # σ = 2 MPa reflects moderate fat-composition variability.
+                pt_pa_1mhz=14.0e6, pt_sigma_pa=2.0e6)
+MUSCLE = Tissue(3, "muscle", 1090.0, 1588.0,   8.054, 1.10, 3421.0, 0.49, 0.67,
+                # Vlaisavljevich 2015: skeletal muscle 23–27 MPa; σ = 2 MPa.
+                pt_pa_1mhz=25.0e6, pt_sigma_pa=2.0e6)
+BONE   = Tissue(4, "bone",   1908.0, 4080.0, 250.0,   1.0,  1313.0, 0.32, 0.10,
+                # Cortical bone: acoustic impedance mismatch reflects ultrasound;
+                # intrinsic cavitation nucleation not observed (Vlaisavljevich 2017).
+                pt_pa_1mhz=float('inf'), pt_sigma_pa=1.0)
+LIVER  = Tissue(5, "liver",  1079.0, 1595.0,   8.690, 1.10, 3540.0, 0.52, 6.4,
+                # Vlaisavljevich 2016 (JASA 140:3504): porcine liver, n=30,
+                # mean 20.6 ± 4.6 MPa (1σ); corrected for 1 MHz.
+                pt_pa_1mhz=20.6e6, pt_sigma_pa=4.6e6)
+HCC    = Tissue(6, "hcc",    1066.0, 1570.0,  12.500, 1.10, 3750.0, 0.55, 9.0,
+                # Maxwell 2013 (JASA 134:1765) / HOPE4LIVER clinical context:
+                # HCC has denser cell packing and higher nuclear/cytoplasm ratio
+                # than normal parenchyma → slightly higher threshold 22.2 MPa,
+                # narrower distribution σ = 1.2 MPa (uniform pathological tissue).
+                pt_pa_1mhz=22.2e6, pt_sigma_pa=1.2e6)
 # Same acoustic/thermal properties as HCC but separate label so
 # multifocal disease can be visualised — only the target focus
 # (label 6) is driven by the raster planner; HCC_OTHER (label 7)
 # is shown as untreated for context.
-HCC_OTHER = Tissue(7, "hcc_other", 1066.0, 1570.0, 12.500, 1.10, 3750.0, 0.55, 9.0)
+HCC_OTHER = Tissue(7, "hcc_other", 1066.0, 1570.0, 12.500, 1.10, 3750.0, 0.55, 9.0,
+                   pt_pa_1mhz=22.2e6, pt_sigma_pa=1.2e6)
 
 TISSUES = [AIR, SKIN, FAT, MUSCLE, BONE, LIVER, HCC, HCC_OTHER]
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Organs-at-Risk (OAR) specification and derivation
+# ───────────────────────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class OARSpec:
+    """Clinical constraint specification for one organ-at-risk structure.
+
+    Attributes
+    ----------
+    name        : identifier matching the key in the derive_oar_masks dict
+    colour      : matplotlib colour for contour / legend display
+    prv_mm      : planning risk volume expansion (mm) applied by dilation
+    is_absolute : True  = hard no-raster exclusion (structural damage risk);
+                  False = dose-flag only (proximity warning, not auto-excluded)
+    description : clinical justification and evidence reference
+    """
+    name: str
+    colour: str | tuple
+    prv_mm: float
+    is_absolute: bool
+    description: str
+
+
+# Evidence-based OAR specifications for hepatic histotripsy.
+# ──────────────────────────────────────────────────────────────────────
+# Smolock 2018 (doi:10.1016/j.ultrasmedbio.2017.11.014): bile duct 5 mm porcine
+# Roberts 2014 (doi:10.1002/jcu.22171): vessel-sparing at lumen >1-2 mm
+# Wang 2020 (doi:10.1016/j.ebiom.2020.102965): 5 mm bile duct clinical protocol
+# FDA IND (Edison/HistoSonics histotripsy): ≥10 mm bowel clearance
+# Vlaisavljevich 2017 (doi:10.1148/radiol.2017162344): in vivo vessel sparing
+# ──────────────────────────────────────────────────────────────────────
+OAR_SPECS: list[OARSpec] = [
+    OARSpec(
+        name="large_vessels",
+        colour="red",
+        prv_mm=3.0,
+        is_absolute=False,   # dose-flag only: histotripsy is vessel-sparing at
+                             # lumen >2 mm inside liver (Roberts 2014); direct
+                             # targeting within the GTV is an MDT decision, not
+                             # auto-exclusion.  OAR dose monitored; alert if > 5%.
+        description=(
+            "Portal vein + hepatic veins + IVC.  Derived: HU > 160 within "
+            "liver label at portal-phase CT (parenchyma ~80-130 HU; "
+            "vessels ~160-220 HU); CC filter ≥ 27 mm³ retains only lumina "
+            "≥ ~3 mm diameter.  Injury: portal vein → hepatic infarction; "
+            "hepatic vein/IVC → haemorrhage.  Vessel-sparing for lumen >2 mm "
+            "if wall is outside ablation zone (Roberts 2014, Vlaisavljevich 2017). "
+            "3 mm PRV.  Non-absolute: dose-flagged, not auto-excluded from raster "
+            "because histotripsy physics spares vessels traversed by the beam. "
+            "GTV-encasing vessels require MDT review."
+        ),
+    ),
+    OARSpec(
+        name="gallbladder",
+        colour="orange",
+        prv_mm=5.0,
+        is_absolute=True,
+        description=(
+            "Gallbladder.  Derived: pure-bile density (HU 0-25) within 1 mm "
+            "of liver surface but outside liver+tumour labels, volume ≥ 500 mm³. "
+            "The narrow HU window and minimum size filter exclude peri-hepatic "
+            "ascites (cirrhosis is common in HCC patients) and small fluid pockets. "
+            "Injury: transmural ablation → bile peritonitis, perforation. "
+            "5 mm PRV (Smolock 2018, Wang 2020)."
+        ),
+    ),
+    OARSpec(
+        name="liver_capsule",
+        colour="magenta",
+        prv_mm=3.0,
+        is_absolute=False,
+        description=(
+            "Outer 3 mm shell of the liver parenchyma.  Derived: liver mask "
+            "minus its 3 mm erosion.  Injury: capsular disruption → "
+            "hemoperitoneum, subcapsular haematoma.  Flagged but not "
+            "auto-excluded — subcapsular HCC is common and the capsule PRV "
+            "would exclude valid targets; requires case-by-case clinical review."
+        ),
+    ),
+    OARSpec(
+        name="extrahepatic_prv",
+        colour=(1.0, 0.45, 0.0),   # deep orange
+        prv_mm=10.0,
+        is_absolute=True,
+        description=(
+            "Extrahepatic tissue within 10 mm of liver surface.  Derived: "
+            "non-liver, non-air voxels within binary_dilation(liver, 10 mm).  "
+            "Covers duodenum, stomach, transverse colon, diaphragm, and right "
+            "kidney depending on geometry.  FDA IND (HistoSonics): ≥10 mm "
+            "bowel clearance.  Diaphragm: ≥5 mm (pneumothorax risk)."
+        ),
+    ),
+    OARSpec(
+        name="bone_prv",
+        colour="darkred",
+        prv_mm=5.0,
+        is_absolute=True,
+        description=(
+            "Bone (ribs, vertebral body, sternum) + 5 mm PRV.  Derived: BONE "
+            "label dilation.  Injury: periosteal heating at high PRF → rib "
+            "fracture (Xu 2016).  Cortical surface reflections shift the "
+            "effective focus position unpredictably."
+        ),
+    ),
+]
 
 
 # ───────────────────────────────────────────────────────────────────────
@@ -336,6 +482,174 @@ def property_maps(label_vol: np.ndarray, f0: float) -> dict:
     return out
 
 
+def derive_oar_masks(
+    ct_hu: np.ndarray,
+    label_vol: np.ndarray,
+    info: dict,
+) -> dict[str, np.ndarray]:
+    """Derive organ-at-risk boolean masks from CT HU + native segmentation.
+
+    LiTS17 provides only liver (seg=1) + tumour (seg=2) native labels.
+    Every structure is approximated from HU thresholding and morphological
+    filtering on the resampled isotropic volume.
+
+    Returns
+    -------
+    dict with keys equal to OARSpec.name for each entry in OAR_SPECS, plus:
+      ``"combined"``  — union of all absolute (hard no-lesion) OARs
+      ``"all_oar"``   — union including non-absolute (flagged) OARs
+
+    Each mask already incorporates the PRV expansion defined in OAR_SPECS.
+
+    Derivation per structure
+    ────────────────────────
+    large_vessels   : HU > 160 inside liver label.  Portal-phase parenchyma
+                      is ~80-140 HU; portal vein + hepatic veins + IVC branches
+                      are ~160-220 HU.  Connected-component filter retains
+                      only structures ≥ 27 mm³ (≈ 3 mm diameter at 1.2 mm grid)
+                      to remove isolated bright parenchymal voxels.
+                      Expanded by PRV = 3 mm.
+
+    gallbladder     : HU 0 to 25 (pure bile; excludes enhanced parenchyma and
+                      peri-hepatic ascites), outside liver+tumour, within 1 mm
+                      of liver surface.  Minimum volume 500 mm³ (cirrhotic HCC
+                      patients often have ascites — the narrow HU window and
+                      1 mm adjacency band plus size filter exclude small fluid
+                      pockets).  Expanded by PRV = 5 mm.
+
+    liver_capsule   : Outer PRV_mm ring of the combined liver mask derived
+                      as liver_all minus its morphological erosion.  Non-absolute
+                      (subcapsular HCC is common; this is a proximity flag).
+
+    extrahepatic_prv: Non-liver, non-air tissue within 10 mm of liver surface.
+                      Covers bowel wall, stomach, diaphragm, kidney depending
+                      on patient geometry.  Expanded by PRV = 10 mm.
+
+    bone_prv        : BONE label (label_vol == 4) dilated by 5 mm.
+    """
+    dx_mm = float(info["dx"] * 1e3)
+    liver    = label_vol == LIVER.label
+    hcc      = (label_vol == HCC.label) | (label_vol == HCC_OTHER.label)
+    bone     = label_vol == BONE.label
+    air      = label_vol == AIR.label
+    liver_all = liver | hcc   # all hepatic tissue
+
+    def _dilate(mask: np.ndarray, mm: float) -> np.ndarray:
+        n = max(int(round(mm / dx_mm)), 0)
+        return binary_dilation(mask, iterations=n) if n > 0 else mask.copy()
+
+    def _erode(mask: np.ndarray, mm: float) -> np.ndarray:
+        n = max(int(round(mm / dx_mm)), 0)
+        return binary_erosion(mask, iterations=n) if n > 0 else mask.copy()
+
+    # ── 1. Large vessels ─────────────────────────────────────────────
+    # Portal-phase enhancement: threshold HU > 160 to separate vessel
+    # lumina (~160-220 HU) from enhanced parenchyma (~80-140 HU at
+    # portal phase).  CC filter retains only structures ≥ 27 mm³
+    # (≈ (3 mm)³ sphere, 16 voxels at 1.2 mm grid) to exclude isolated
+    # bright parenchymal voxels.  Histotripsy is vessel-sparing inside
+    # the liver (Roberts 2014), so this OAR is flagged (non-absolute)
+    # rather than hard-excluded — dose is monitored, not blocked.
+    v_raw = liver & (ct_hu > 160) & (ct_hu < 400)
+    min_vox_v = max(int(np.ceil(27.0 / dx_mm ** 3)), 1)
+    cc_v, _ = label(v_raw)
+    sizes_v = np.bincount(cc_v.ravel()); sizes_v[0] = 0
+    v_filt = np.isin(cc_v, np.where(sizes_v >= min_vox_v)[0]) & v_raw
+    vessels_prv = _dilate(v_filt, OAR_SPECS[0].prv_mm)
+
+    # ── 2. Gallbladder ───────────────────────────────────────────────
+    # Pure bile density (HU 0-25) within 1 mm of liver surface.
+    # Minimum 500 mm³ (cirrhotic patients often have ascites — the narrow
+    # HU window and 1mm adjacency band plus size filter exclude isolated
+    # peri-hepatic fluid pockets from cirrhotic ascites).
+    liver_prox = _dilate(liver_all, 1.0)
+    g_raw = (liver_prox & ~liver_all & ~bone & ~air
+             & (ct_hu >= 0) & (ct_hu <= 25))
+    min_vox_g = max(int(np.ceil(500.0 / dx_mm ** 3)), 1)
+    cc_g, _ = label(g_raw)
+    sizes_g = np.bincount(cc_g.ravel()); sizes_g[0] = 0
+    g_filt = np.isin(cc_g, np.where(sizes_g >= min_vox_g)[0]) & g_raw
+    gallbladder_prv = _dilate(g_filt, OAR_SPECS[1].prv_mm)
+
+    # ── 3. Liver capsule ─────────────────────────────────────────────
+    # Outer shell = liver_all minus its morphological erosion by prv_mm.
+    liver_eroded = _erode(liver_all, OAR_SPECS[2].prv_mm)
+    liver_capsule = liver_all & ~liver_eroded
+
+    # ── 4. Extrahepatic PRV ──────────────────────────────────────────
+    # Non-liver, non-air tissue inside the prv_mm dilation of the liver.
+    liver_expanded = _dilate(liver_all, OAR_SPECS[3].prv_mm)
+    extrahep_prv = liver_expanded & ~liver_all & ~air
+
+    # ── 5. Bone PRV ──────────────────────────────────────────────────
+    bone_prv = _dilate(bone, OAR_SPECS[4].prv_mm)
+
+    masks: dict[str, np.ndarray] = {
+        "large_vessels":    vessels_prv,
+        "gallbladder":      gallbladder_prv,
+        "liver_capsule":    liver_capsule,
+        "extrahepatic_prv": extrahep_prv,
+        "bone_prv":         bone_prv,
+    }
+    # "combined": union of ABSOLUTE OARs only — used for raster exclusion.
+    # Non-absolute OARs (large_vessels, liver_capsule) are dose-flagged but
+    # do not block raster point placement; their proximity is monitored via
+    # the oar_*_dose_max metrics.
+    abs_names = {spec.name for spec in OAR_SPECS if spec.is_absolute}
+    combined = np.zeros_like(liver_all, dtype=bool)
+    for name, m in masks.items():
+        if name in abs_names:
+            combined |= m
+    masks["combined"] = combined
+    # "all_oar": full union for display purposes.
+    masks["all_oar"] = combined.copy()
+    for m in masks.values():
+        if m is not combined and m is not masks.get("all_oar"):
+            masks["all_oar"] = masks["all_oar"] | m
+    return masks
+
+
+def _draw_oar_contours(
+    ax,
+    oar_masks: dict[str, np.ndarray],
+    info: dict,
+    fx: int,
+    y0: int, y1: int,
+    z0: int, z1: int,
+    extent: list[float],
+    lw: float = 0.9,
+) -> None:
+    """Overlay OAR contours on ax at the focal slice [fx, y0:y1, z0:z1].
+
+    Absolute OARs are drawn solid; non-absolute (liver_capsule) are dashed.
+    """
+    for spec in OAR_SPECS:
+        mask = oar_masks.get(spec.name)
+        if mask is None:
+            continue
+        sl = mask[fx, y0:y1, z0:z1].astype(float)
+        if sl.any():
+            ax.contour(
+                np.flipud(sl), levels=[0.5],
+                colors=[spec.colour],
+                linewidths=lw,
+                linestyles="solid" if spec.is_absolute else "dashed",
+                extent=extent,
+                alpha=0.90,
+            )
+
+
+def _oar_legend_handles() -> list:
+    """Return matplotlib Line2D handles for the OAR contour legend."""
+    handles = []
+    for spec in OAR_SPECS:
+        ls = "solid" if spec.is_absolute else "dashed"
+        lbl = f"{spec.name.replace('_', ' ')} PRV {spec.prv_mm:.0f} mm"
+        handles.append(Line2D([0], [0], color=spec.colour,
+                               lw=0.9, linestyle=ls, label=lbl))
+    return handles
+
+
 # ───────────────────────────────────────────────────────────────────────
 # Forward propagation (same model as ch21b)
 # ───────────────────────────────────────────────────────────────────────
@@ -480,9 +794,16 @@ def focused_bowl_pressure(info, props, f0, source_pa) -> np.ndarray:
             -((X - x_focus) ** 2) / (2.0 * (w_axial / 2.355) ** 2)
         )
 
-    alpha_x = props["alpha"][:, focus_idx[1], focus_idx[2]]
-    cum_atten = np.exp(-np.cumsum(alpha_x) * dx)
-    p = source_pa * env * cum_atten[:, None, None]
+    # 3D heterogeneous attenuation: cumulative path integral along each (j,k)
+    # column from the transducer face to each depth voxel.
+    # For each lateral position (j,k), integrate α(x,j,k)·dx from x=0 inward.
+    # This replaces the 1D central-axis approximation (which applied the
+    # attenuation at focus_idx (j,k) to ALL lateral positions) with the
+    # correct per-ray integral under the paraxial (small-angle) approximation
+    # valid for the 50mm-aperture / 120mm-ROC bowl (f# = 1.2).
+    # props["alpha"] shape: (Nx, Ny, Nz) in Np/m
+    cum_atten_3d = np.exp(-np.cumsum(props["alpha"], axis=0) * dx)
+    p = source_pa * env * cum_atten_3d
     return p.astype(np.float32)
 
 
@@ -492,14 +813,109 @@ def focused_bowl_pressure(info, props, f0, source_pa) -> np.ndarray:
 
 
 def intrinsic_threshold(f0: float) -> float:
-    """Vlaisavljevich 2015 frequency-dependent intrinsic threshold (Pa)."""
+    """Vlaisavljevich 2015 frequency-dependent intrinsic threshold (Pa).
+
+    Global water-based reference: p_t(f) = 28.2 MPa + 1.4 MPa · log₁₀(f / 1 MHz).
+    Use intrinsic_threshold_tissue_pa() for tissue-specific physics.
+    """
     return 28.2e6 + 1.4e6 * np.log10(f0 / 1e6)
 
 
+def intrinsic_threshold_tissue_pa(tissue: "Tissue", f0: float, T_C: float = 20.0) -> float:
+    """Tissue-specific, frequency- and temperature-dependent intrinsic threshold.
+
+    Model (Vlaisavljevich 2015/2016, Maxwell 2013):
+      p_t(f, T) = p_{t,1MHz} + 1.4 MPa · log₁₀(f / 1 MHz) − 0.3 MPa · max(0, T − 20)
+
+    Frequency scaling: Vlaisavljevich 2015 JASA 138:1864, Eq. 4.
+    Temperature correction: −0.3 MPa/°C empirical (Vlaisavljevich 2015 Fig. 7).
+    Reference temperature 20 °C matches in-vitro calibration standard.
+    In-vivo tissue at 37 °C applies a −5.1 MPa correction from 20 °C baseline.
+
+    Parameters
+    ----------
+    tissue : Tissue instance with pt_pa_1mhz field set
+    f0     : driving frequency (Hz)
+    T_C    : local temperature (°C, default 20.0 = in-vitro reference)
+
+    Returns
+    -------
+    p_t : threshold magnitude (Pa); inf for tissue with no intrinsic cavitation
+    """
+    if not np.isfinite(tissue.pt_pa_1mhz):
+        return float('inf')
+    freq_shift = 1.4e6 * np.log10(max(f0, 1.0) / 1e6)
+    temp_shift = -0.3e6 * max(0.0, T_C - 20.0)
+    return tissue.pt_pa_1mhz + freq_shift + temp_shift
+
+
 def cav_probability(p, f0):
+    """Global water-based Maxwell 2013 erf-CDF (kept for backward compatibility).
+
+    Prefer cav_probability_tissue() for tissue-specific physics.
+    """
     pt = 28.2e6 + 1.4e6 * np.log10(f0 / 1e6)
     sigma = 0.96e6
     return 0.5 * (1.0 + erf((p - pt) / (sigma * np.sqrt(2.0))))
+
+
+def cav_probability_tissue(
+    p_field: np.ndarray,
+    label_vol: np.ndarray,
+    f0: float,
+    T_field: np.ndarray | None = None,
+) -> np.ndarray:
+    """Per-voxel tissue-specific Maxwell 2013 erf-CDF cavitation probability.
+
+    Assigns each voxel a threshold p_t and width σ from the tissue label,
+    then evaluates:
+      P_cav(x) = 0.5 · (1 + erf((|p(x)| − p_t(label, f, T)) / (σ · √2)))
+
+    For labels absent from TISSUES the global water reference (28.2 MPa, σ=0.96 MPa)
+    applies.  For tissues with pt_pa_1mhz = inf (AIR, BONE) the probability is
+    set to 0 — no intrinsic cavitation is possible.
+
+    Tissue values: Vlaisavljevich 2015/2016 and Maxwell 2013.
+    Temperature correction: −0.3 MPa/°C from 20 °C in-vitro reference.
+
+    Parameters
+    ----------
+    p_field   : (Nx, Ny, Nz) rarefactional pressure magnitudes (Pa, ≥ 0)
+    label_vol : (Nx, Ny, Nz) int tissue labels matching TISSUES list
+    f0        : driving frequency (Hz)
+    T_field   : (Nx, Ny, Nz) temperature field (°C); None → 20 °C everywhere
+
+    Returns
+    -------
+    pcav : (Nx, Ny, Nz) float32 in [0, 1]
+    """
+    freq_shift = 1.4e6 * np.log10(max(f0, 1.0) / 1e6)
+
+    # Initialise to global water-reference so unlabelled voxels degrade gracefully
+    pt_field    = np.full(p_field.shape, 28.2e6 + freq_shift, dtype=np.float64)
+    sigma_field = np.full(p_field.shape, 0.96e6,              dtype=np.float64)
+
+    for tissue in TISSUES:
+        mask = label_vol == tissue.label
+        if not mask.any():
+            continue
+        if not np.isfinite(tissue.pt_pa_1mhz):
+            # AIR / BONE: no intrinsic cavitation — threshold set to +∞ so
+            # erf-CDF → 0 regardless of applied pressure.
+            pt_field[mask]    = 1.0e15
+            sigma_field[mask] = 1.0
+            continue
+        pt_base = tissue.pt_pa_1mhz + freq_shift
+        if T_field is not None:
+            # Per-voxel temperature correction (vectorised over the mask)
+            temp_corr = -0.3e6 * np.maximum(0.0, T_field[mask] - 20.0)
+            pt_field[mask] = pt_base + temp_corr
+        else:
+            pt_field[mask] = pt_base
+        sigma_field[mask] = tissue.pt_sigma_pa
+
+    pcav = 0.5 * (1.0 + erf((p_field - pt_field) / (sigma_field * np.sqrt(2.0))))
+    return pcav.astype(np.float32)
 
 
 def collapse_strength(p, f0):
@@ -533,10 +949,39 @@ def thermal_maps(p_field, props, sc):
     return cem43, T_steady, T_transient
 
 
-def predicted_lesion(p_field, props, sc, info, label_vol):
-    pcav = cav_probability(p_field, sc.f0)
-    coll = collapse_strength(p_field, sc.f0)
+def predicted_lesion(p_field, props, sc, info, label_vol,
+                     oar_masks: dict[str, np.ndarray] | None = None):
+    # Thermal maps first: T_transient feeds the temperature correction for p_t.
     cem43, T_steady, T_transient = thermal_maps(p_field, props, sc)
+    # Per-voxel tissue-specific cavitation probability.
+    # Each voxel uses the threshold and σ of the tissue at that position
+    # (LIVER, HCC, FAT, MUSCLE …) plus a −0.3 MPa/°C temperature correction
+    # derived from T_transient (per-pulse heating before steady-state diffusion).
+    # This replaces the global 28.2 MPa / σ=0.96 MPa water reference.
+    pcav = cav_probability_tissue(p_field, label_vol, sc.f0, T_field=T_transient)
+    coll = collapse_strength(p_field, sc.f0)
+
+    # Regime-appropriate single-pulse dose map for Figure 14 row 1.
+    # pcav is near-zero for shock-vapor (PNP << 28.2 MPa intrinsic threshold)
+    # and irrelevant for sub-threshold (mechanism is inertial collapse, not
+    # threshold nucleation). Provide the physically meaningful metric:
+    #   intrinsic       → P_cav erf-CDF (Vlaisavljevich 2015)
+    #   shock-vapor     → normalised T_transient (vapor seeding temperature,
+    #                     Khokhlova 2011: nucleation at T ≥ 100°C focal voxel)
+    #   sub-threshold   → normalised collapse strength (Vlaisavljevich 2018)
+    if sc.regime == "intrinsic":
+        dose_map_regime = pcav.astype(np.float32)
+        regime_label = "single-pulse $P_{cav}$\n(intrinsic threshold)"
+    elif sc.regime == "shock_vapor":
+        dose_map_regime = np.clip(
+            (T_transient - 37.0) / 63.0, 0.0, 1.0
+        ).astype(np.float32)
+        regime_label = "$T_{transient}$ / 100°C\n(vapor-seed probability)"
+    else:  # subthreshold_cav
+        dose_map_regime = np.clip(
+            (coll - 1.0) / 9.0, 0.0, 1.0
+        ).astype(np.float32)
+        regime_label = "collapse strength (norm)\n($S_c / 10$, sub-threshold erosion)"
 
     pulses_per_pt = max(sc.pulses_per_point, 1)
     # Cavitation-cloud radius scales with overpressure (Vlaisavljevich
@@ -546,7 +991,17 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
     # p > p_t kernel and is the correct ablation-mask construction at
     # any grid spacing where dx > λ/4.
     lam_m = 1540.0 / sc.f0
-    cloud_r_m = lam_m / 4.0 * max(sc.pnp / intrinsic_threshold(sc.f0), 1.0)
+    # Cloud radius uses focal-tissue threshold, not the global water reference.
+    # Identify tissue at the focal point; look up tissue-specific p_t with
+    # temperature correction from T_transient at that voxel.
+    _fi0, _fi1, _fi2 = info["focus_idx"]
+    _focus_label = int(label_vol[_fi0, _fi1, _fi2])
+    _focus_tissue = next((t for t in TISSUES if t.label == _focus_label), LIVER)
+    _focus_T_C    = float(T_transient[_fi0, _fi1, _fi2])
+    pt_focal      = intrinsic_threshold_tissue_pa(_focus_tissue, sc.f0, _focus_T_C)
+    if not np.isfinite(pt_focal):
+        pt_focal = intrinsic_threshold(sc.f0)   # fallback for bone/air
+    cloud_r_m = lam_m / 4.0 * max(sc.pnp / pt_focal, 1.0)
     cloud_vox = max(int(round(cloud_r_m / info["dx"])), 1)
     if sc.regime == "intrinsic":
         p_acc = 1.0 - (1.0 - pcav) ** pulses_per_pt
@@ -577,18 +1032,7 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
     cmin = coords.min(0); cmax = coords.max(0) + 1
     extent = cmax - cmin
 
-    # FWHM of the transducer focal spot (clinical "spot size"
-    # convention, Penttinen 1976). FWHM defines the visualization spot
-    # radius. The raster pitch and tumour-confinement erosion use the
-    # SMALLER of (FWHM half, cavitation-mech half-extent) per axis: for
-    # near-threshold us regimes the cavitation footprint is narrower
-    # than FWHM (only the beam's peak exceeds p_t) so pitch must follow
-    # the cavitation extent to avoid coverage gaps; for ms regimes the
-    # cavitation cloud is wider than FWHM and FWHM is the binding
-    # constraint that keeps spillover out of healthy liver.
     fwhm_lat_m, fwhm_ax_m = focal_fwhm(sc.f0)
-    fwhm_lat_vox = max(int(round(fwhm_lat_m / info["dx"])), 1)
-    fwhm_ax_vox = max(int(round(fwhm_ax_m / info["dx"])), 1)
     if mech.any() or therm.any():
         ps = np.argwhere(mech | therm)
         ps_extent = ps.max(0) - ps.min(0) + 1
@@ -597,51 +1041,53 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
         mech_hz = max(int(np.ceil(ps_extent[2] / 2.0)), 1)
     else:
         mech_hx = mech_hy = mech_hz = 1
-    fwhm_hx = max(fwhm_ax_vox // 2, 1)
-    fwhm_hy = max(fwhm_lat_vox // 2, 1)
-    fwhm_hz = max(fwhm_lat_vox // 2, 1)
-    hx = min(fwhm_hx, mech_hx)
-    hy = min(fwhm_hy, mech_hy)
-    hz = min(fwhm_hz, mech_hz)
-    # 75% overlap (pitch = half the half-extent) — pitch = h means
-    # neighbour mask centres are h apart and each mask reaches ±h, so
-    # adjacent footprints overlap heavily at the midpoint, eliminating
-    # rim gaps at the cost of ~2× shots per axis. Necessary for us
-    # intrinsic where the threshold-exceeded core is sub-FWHM.
-    pitch_x = max(int(round(0.5 * hx)), 1)
-    pitch_y = max(int(round(0.5 * hy)), 1)
-    pitch_z = max(int(round(0.5 * hz)), 1)
 
-    # Anisotropic erosion of the tumour by the per-shot half-extents.
-    # A raster centre is valid only where a (2hx+1)×(2hy+1)×(2hz+1) box
-    # centred on it lies entirely inside the tumour — this guarantees the
-    # per-shot footprint cannot spill outside the HCC outline. If the
-    # tumour is smaller than the per-shot footprint along any axis the
-    # erosion empties; we then relax the constraint progressively
-    # (start with full half-extents, halve until non-empty) so the raster
-    # still covers the tumour while keeping spillover minimal.
-    # Try anisotropic erosion; if any axis can't fit a (2h+1)-thick
-    # structuring element inside the tumour, relax that axis only
-    # (rather than all three together) so the raster still fills the
-    # tumour densely along the well-confined axes. Final fallback uses
-    # the bare tumour mask — i.e. accept spillover when geometry forbids
-    # full confinement (e.g. ms sub-threshold cigar in 30 mm tumour).
+    # Pressure-/bubble-contour-based raster pitch.
+    # The pitch is driven entirely by the per-shot mechanical footprint
+    # half-extents, NOT by the FWHM (-3 dB amplitude contour).
+    # Rationale: the FWHM is a diagnostic imaging convention (O'Neil
+    # 1949, Penttinen 1976) that quantifies the beam width at -3 dB; it
+    # does NOT describe where the acoustic pressure exceeds the regime-
+    # specific cavitation threshold.  Using FWHM as an upper bound
+    # artificially tightens the lateral pitch for ms regimes (whose
+    # cavitation cloud from collapse_strength ≥ 5 or T ≥ 100°C is
+    # WIDER than the -3 dB contour), under-populates the raster, and
+    # leaves inter-spot gaps that the dose model would miss.
+    # Load-bearing axis: lateral (minimum of the 3 half-extents), since
+    # the axial focal cigar extends far beyond the therapeutic zone and
+    # its periphery contributes negligibly to the per-shot lesion.  All
+    # three axes share the same pitch so the raster grid is isotropic
+    # and no direction is preferentially under-covered.
+    # 50% overlap: adjacent footprints share their half-extent at the
+    # midpoint, guaranteeing every inter-shot voxel is reached by at
+    # least one shot's cloud.
+    h_min = min(mech_hx, mech_hy, mech_hz)
+    pitch_x = pitch_y = pitch_z = max(int(round(0.5 * h_min)), 1)
+
+    # Erosion of the tumour by one pitch so that a raster centre
+    # placed anywhere in valid_centres has its per-shot cloud
+    # (half-extent = h_min) reaching the tumour boundary.  Eroding
+    # by the PITCH (= 0.4 × h_min) rather than the full half-extent
+    # keeps the raster centres close enough to the boundary that
+    # the per-shot footprint can cover the rim; eroding by the full
+    # half-extent over-confines, leaving the boundary unsampled.
+    # Fallback: if the tumour is smaller than one pitch in any axis,
+    # halve the erosion radius progressively and ultimately fall back
+    # to the bare tumour mask (accepting spillover).
     def _try_erode(rx, ry, rz):
+        if rx == 0 and ry == 0 and rz == 0:
+            return tumour.copy()
         struct = np.ones((2*rx + 1, 2*ry + 1, 2*rz + 1), dtype=bool)
         return binary_erosion(tumour, structure=struct)
-    # Erode by ONE PITCH (not the full half-extent) — this keeps raster
-    # centres a pitch's worth from the boundary, ensuring per-shot
-    # masks reach the rim (full-coverage requirement) while limiting
-    # spillover to (mask_half − pitch) per axis. Eroding by full
-    # half-extent would over-confine, leaving the tumour rim
-    # unsampled and capping coverage at ~60%.
     valid_centres = _try_erode(pitch_x, pitch_y, pitch_z)
     if not valid_centres.any():
-        # Per-axis relaxation: shrink the largest axis first.
+        # Progressively relax the erosion radius using the per-shot
+        # mechanical half-extents so each shrink_factor still
+        # corresponds to a physically meaningful spatial constraint.
         for shrink_factor in (0.66, 0.33, 0.0):
-            rx = max(int(round(hx*shrink_factor)), 0)
-            ry = max(int(round(hy*shrink_factor)), 0)
-            rz = max(int(round(hz*shrink_factor)), 0)
+            rx = max(int(round(mech_hx * shrink_factor)), 0)
+            ry = max(int(round(mech_hy * shrink_factor)), 0)
+            rz = max(int(round(mech_hz * shrink_factor)), 0)
             valid_centres = _try_erode(rx, ry, rz)
             if valid_centres.any():
                 break
@@ -657,6 +1103,17 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
     sl = tuple(slice(bb_min[i], bb_max[i]) for i in range(3))
     valid_local = valid_centres[sl]
     if not valid_local.any():
+        valid_local = tumour[sl].copy()
+
+    # If erosion leaves fewer than 5 % of the tumour voxels as valid
+    # centres, the raster would be trivially sparse (FPS terminates in
+    # 1–2 shots because all remaining valid points cluster near the
+    # centroid). Fall back to the full tumour interior so FPS fills it
+    # properly. The boundary spillover this permits is bounded by the
+    # per-shot cloud half-extent minus the pitch — acceptable when the
+    # tumour is smaller than the per-shot footprint.
+    min_valid_frac = max(10, int(0.05 * max(int(tumour.sum()), 1)))
+    if int(valid_local.sum()) < min_valid_frac:
         valid_local = tumour[sl].copy()
 
     centroid_local = coords.mean(axis=0) - bb_min
@@ -679,6 +1136,44 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
 
     raster_grid = np.zeros_like(tumour, dtype=bool)
     raster_grid[sl] = raster_local
+
+    # OAR dose-footprint accounting
+    # ─────────────────────────────────────────────────────────────────
+    # Raster points are NOT excluded based on OAR proximity.  Removing
+    # shots reduces tumour coverage without eliminating OAR dose —
+    # adjacent shots still deposit dose via their tails, so exclusion
+    # trades coverage loss for negligible OAR benefit.
+    # The correct instrument is dose monitoring: every FPS raster point
+    # is retained, the accumulated cav_dose map is computed for the full
+    # raster, and the per-OAR dose metrics below quantify what each
+    # structure receives.  Non-zero OAR dose is flagged for clinical
+    # review; the decision to reduce pulses or re-plan belongs to the MDT,
+    # not to an automatic point-exclusion filter.
+    #
+    # n_oar_footprint_overlap: raster points whose per-shot mechanical
+    # footprint could reach an absolute OAR voxel outside the GTV.
+    # Reported in metrics; does not affect raster placement.
+    n_oar_footprint_overlap = 0
+    n_oar_encasing = 0
+    oar_reach: np.ndarray | None = None
+    if oar_masks is not None and raster_grid.any():
+        combined_oar = oar_masks.get("combined",
+                                      np.zeros_like(tumour, dtype=bool))
+        oar_outside_gtv = combined_oar & ~tumour
+        if oar_outside_gtv.any():
+            se = np.ones((2 * mech_hx + 1,
+                          2 * mech_hy + 1,
+                          2 * mech_hz + 1), dtype=bool)
+            oar_reach = binary_dilation(oar_outside_gtv, structure=se)
+            n_oar_footprint_overlap = int((raster_grid & oar_reach).sum())
+        # Count GTV-interior OAR overlap (vessel-encasing tumour flagging).
+        oar_inside_gtv = combined_oar & tumour
+        if oar_inside_gtv.any() and raster_grid.any():
+            se_g = np.ones((2 * mech_hx + 1,
+                            2 * mech_hy + 1,
+                            2 * mech_hz + 1), dtype=bool)
+            oar_reach_g = binary_dilation(oar_inside_gtv, structure=se_g)
+            n_oar_encasing = int((raster_grid & oar_reach_g).sum())
 
     def superpose(per_shot):
         """Place a copy of `per_shot` (centred on the focal voxel) at
@@ -705,16 +1200,17 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
     therm_full = therm_super & tumour
     lesion = mech_full | therm_full
 
-    # Cavitation-dose heatmap — accumulated 1 - (1 - pcav)^N over all
-    # raster points × pulses_per_pt. Computed by shifting log(1-pcav)
-    # to each raster centre and summing, then dose = 1 - exp(sum).
-    # Sub-threshold scenarios use collapse strength normalised to [0,1]
-    # since their mechanism is multi-pulse stochastic erosion, not the
-    # single-pulse erf-CDF intrinsic threshold.
-    if sc.regime == "subthreshold_cav":
-        per_pulse = np.clip((coll - 1.0) / 9.0, 0.0, 0.99).astype(np.float32)
-    else:
-        per_pulse = np.clip(pcav.astype(np.float32), 0.0, 0.99)
+    # Cavitation-dose heatmap — accumulated 1 - (1 - p_per_pulse)^N over
+    # all raster points × pulses_per_pt.  Use the SAME regime-appropriate
+    # per-pulse field as dose_map_regime so that the cav_dose map is
+    # consistent with what row 1 of fig14 displays:
+    #   intrinsic     → P_cav erf-CDF  (meaningful: PNP ≥ threshold)
+    #   shock_vapor   → T_transient/100°C (vapour-seed probability;
+    #                   pcav is near-zero because PNP << 28.2 MPa
+    #                   intrinsic threshold — using pcav here produces
+    #                   a flat-zero cav_dose map for this regime)
+    #   sub-threshold → collapse strength / 10
+    per_pulse = np.clip(dose_map_regime.astype(np.float32), 0.0, 0.99)
     log_safe = np.log(1.0 - per_pulse)  # ≤ 0
     log_dose_super = np.zeros_like(log_safe)
     n_degraded = 0
@@ -770,7 +1266,7 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
     spillover = lesion_super & (~tumour)
     raster_grid_out = raster_grid  # capture for plotting
     voxel_vol = (info["dx"] * 1e3) ** 3
-    raster_pitch_mm = float(np.mean([pitch_x, pitch_y, pitch_z]) * info["dx"] * 1e3)
+    raster_pitch_mm = float(pitch_x * info["dx"] * 1e3)  # isotropic by construction
     raster_pitch_xyz_mm = (pitch_x * info["dx"] * 1e3,
                            pitch_y * info["dx"] * 1e3,
                            pitch_z * info["dx"] * 1e3)
@@ -800,13 +1296,39 @@ def predicted_lesion(p_field, props, sc, info, label_vol):
         "n_steering_degraded_shots": int(n_degraded),
         "n_mechanical_reanchors": int(n_mech_anchors),
         "mechanical_reposition_s": float(mech_repo_s),
+        # Per-shot cavitation-cloud radius (load-bearing lateral half-extent).
+        # Downstream plots use this in place of FWHM for overlay circles so
+        # the displayed circles correspond to the actual ablation footprint.
+        "mech_radius_mm": float(h_min * info["dx"] * 1e3),
+        "mech_hx_mm": float(mech_hx * info["dx"] * 1e3),
+        "mech_hy_mm": float(mech_hy * info["dx"] * 1e3),
+        "mech_hz_mm": float(mech_hz * info["dx"] * 1e3),
+        # OAR safety metrics — overlap count only; no raster points excluded
+        "n_oar_footprint_overlap_pts": n_oar_footprint_overlap,
+        "n_oar_encasing_raster_pts":   n_oar_encasing,
     }
     metrics["fwhm_lat_mm"] = fwhm_lat_m * 1e3
     metrics["fwhm_ax_mm"] = fwhm_ax_m * 1e3
+    # Per-OAR dose: max cavitation dose received by each OAR.
+    # Values > 0.05 warrant clinical review of the treatment plan.
+    if oar_masks is not None:
+        for spec in OAR_SPECS:
+            m_oar = oar_masks.get(spec.name)
+            if m_oar is not None and m_oar.any():
+                metrics[f"oar_{spec.name}_dose_max"] = float(
+                    cav_dose[m_oar].max())
+                metrics[f"oar_{spec.name}_dose_mean"] = float(
+                    cav_dose[m_oar].mean())
+            else:
+                metrics[f"oar_{spec.name}_dose_max"] = 0.0
+                metrics[f"oar_{spec.name}_dose_mean"] = 0.0
     return lesion, {"pcav": pcav, "T_steady": T_steady, "T_transient": T_transient,
+                    "coll": coll,
                     "cem43": cem43, "metrics": metrics,
                     "raster_grid": raster_grid_out, "per_shot_mask": mech | therm,
                     "cav_dose": cav_dose,
+                    "dose_map_regime": dose_map_regime,
+                    "regime_label": regime_label,
                     "fwhm_lat_m": fwhm_lat_m, "fwhm_ax_m": fwhm_ax_m}
 
 
@@ -845,45 +1367,116 @@ def inside_out_order(raster_grid: np.ndarray) -> list[tuple[int, int, int]]:
 
 def adaptive_lowdose_order(raster_grid: np.ndarray, per_pulse: np.ndarray,
                            focus_idx: tuple[int, int, int],
-                           pulses_per_pt: int) -> list[tuple[int, int, int]]:
-    """Greedy adaptive ordering: at each step, place the next shot at
-    the raster point whose per-shot footprint has the largest centre-
-    voxel deficit relative to the running cumulative-dose field. This
-    minimises the worst-case under-treated voxel at every intermediate
-    time so the tumour fills uniformly rather than corner-first."""
+                           pulses_per_pt: int,
+                           per_shot_mask: np.ndarray | None = None,
+                           ) -> list[tuple[int, int, int]]:
+    """Greedy adaptive ordering with footprint-aware pre-lesion accounting.
+
+    Scores each candidate raster point by the MAXIMUM log_acc (= least
+    accumulated dose = most urgently under-treated) across ALL voxels in
+    its per-shot mechanical footprint, not just at its centre voxel.
+
+    Why footprint-aware scoring matters
+    ────────────────────────────────────
+    The raster pitch is set to 50 % of the per-shot footprint half-extent,
+    so adjacent footprints overlap substantially.  After several shots, a
+    candidate's centre voxel may already be dosed by beam tails from
+    neighbours while the candidate's footprint still covers genuinely
+    under-treated rim tissue.  Centre-only scoring misses this: it ranks
+    the candidate low (centre is dosed) even though the shot would deliver
+    marginal benefit to the rim.  Footprint max-log_acc correctly captures
+    the worst-dosed voxel within the candidate's reach.
+
+    Pre-lesioned tissue: acoustic transparency, not shadowing
+    ──────────────────────────────────────────────────────────
+    Once a region accumulates cav_dose ≥ 0.95, the tissue is liquefied
+    (lysed cell debris + saline).  Acoustically this debris is MORE
+    transparent than intact HCC:
+        α_ablated ≈ 0.5 dB/MHz/cm  vs  α_HCC ≈ 12.5 dB/MHz/cm
+        Z_ablated ≈ 1.54 GPa·s/m³  vs  Z_HCC ≈ 1.67 GPa·s/m³
+    Shots aimed at adjacent INTACT tissue through a pre-lesioned zone
+    therefore experience reduced attenuation — not acoustic shadowing.
+    The residual-bubble shadowing concern (Maxwell 2013) applies only to
+    TRANSIENT bubble clouds during and immediately after each pulse
+    (within 5–50 ms of the pulse), not to the static liquefied debris
+    between shots.  Since clinical histotripsy PRF ≥ 1 Hz, each shot
+    fires into acoustically cleared tissue; no inter-shot attenuation
+    correction is applied to beam paths through pre-lesioned zones.
+
+    Saturation de-prioritisation
+    ─────────────────────────────
+    Voxels already at cav_dose ≥ 0.995 have log_acc ≪ 0 (very negative),
+    so candidates centred on or covering only saturated tissue rank last
+    by construction — redundant shots are naturally suppressed without
+    explicit exclusion logic.
+
+    Parameters
+    ----------
+    raster_grid    : bool (Nx, Ny, Nz) — raster centre positions
+    per_pulse      : float32 (Nx, Ny, Nz) — regime dose per pulse ∈ [0, 1]
+    focus_idx      : (ix, iy, iz) nominal focal voxel
+    pulses_per_pt  : pulses delivered per raster point
+    per_shot_mask  : bool (Nx, Ny, Nz) — mechanical lesion footprint of
+                     one shot centred on focus_idx (i.e. ``mech | therm``
+                     from ``predicted_lesion``).  If None, falls back to
+                     centre-voxel-only scoring (backward-compatible).
+    """
     pts = np.argwhere(raster_grid)
     if len(pts) == 0:
         return []
     fx_arr = np.array(focus_idx)
     nx, ny, nz = per_pulse.shape
+    grid_shape = np.array([nx, ny, nz])
     log_safe = np.log(np.clip(1.0 - per_pulse.astype(np.float32), 1e-6, 1.0))
     log_acc = np.zeros_like(log_safe)
+
+    # Pre-compute per-shot footprint offsets relative to the focal voxel.
+    # When a candidate raster point c is scored, its footprint voxels are
+    # at c + fprint_off (clipped to the grid boundary).
+    fprint_off: np.ndarray | None = None
+    if per_shot_mask is not None and per_shot_mask.any():
+        fprint_off = np.argwhere(per_shot_mask) - fx_arr   # (M, 3) offsets
+
     remaining = pts.tolist()
     order: list[tuple[int, int, int]] = []
+
     while remaining:
-        # Score each candidate by the worst-case deficit it would
-        # close: the candidate that maximises (per_pulse · pulses) at
-        # the currently-lowest-dose tumour voxel within its footprint.
-        # Approximated by picking the candidate furthest from the
-        # raster centroid of already-placed shots when log_acc is flat,
-        # and increasingly steered toward the lowest-dose voxel as
-        # the dose field develops. Implemented as: greedy farthest-
-        # point in dose-space (= highest absolute log_acc value at
-        # candidate's centre).
         if not order:
-            # First shot: tumour centroid (any spot fires the seed)
+            # Seed: raster centroid (geometrically central, order-independent).
             centroid = np.argwhere(raster_grid).mean(axis=0)
             d = np.linalg.norm(np.array(remaining) - centroid, axis=1)
             idx_pick = int(np.argmin(d))
         else:
-            cands = np.array(remaining)
-            scores = np.array([log_acc[c[0], c[1], c[2]] for c in cands])
-            # log_acc is ≤0; smaller value = MORE dose. Pick the
-            # candidate at the LEAST-dosed location (largest log_acc).
+            cands = np.array(remaining)  # (K, 3)
+
+            if fprint_off is not None:
+                # Footprint-aware score for each candidate c:
+                #   score(c) = max( log_acc[c + fprint_off ∩ grid] )
+                # max log_acc is the LEAST-dosed footprint voxel (log_acc ≤ 0;
+                # max = closest to 0 = fewest accumulated events = most urgent).
+                # Choosing argmax(scores) selects the candidate whose footprint
+                # covers the most under-treated tissue in the tumour.
+                scores = np.empty(len(cands), dtype=np.float32)
+                for j, c in enumerate(cands):
+                    tgt = c + fprint_off                          # (M, 3)
+                    ok = ((tgt >= 0) & (tgt < grid_shape)).all(axis=1)
+                    tgt_ok = tgt[ok]
+                    if len(tgt_ok):
+                        scores[j] = float(
+                            log_acc[tgt_ok[:, 0], tgt_ok[:, 1], tgt_ok[:, 2]].max())
+                    else:
+                        scores[j] = float(log_acc[c[0], c[1], c[2]])
+            else:
+                # Centre-voxel fallback (backward-compatible, no footprint).
+                scores = np.array([log_acc[c[0], c[1], c[2]] for c in cands],
+                                  dtype=np.float32)
+
             idx_pick = int(np.argmax(scores))
+
         pick = remaining.pop(idx_pick)
         order.append(tuple(int(c) for c in pick))
-        # Add this shot's per_pulse contribution to the running log_acc
+
+        # Accumulate log-space dose from this shot into the running field.
         shift = np.array(pick) - fx_arr
         sx0 = max(0, -shift[0]); sx1 = min(nx, nx - shift[0])
         sy0 = max(0, -shift[1]); sy1 = min(ny, ny - shift[1])
@@ -918,17 +1511,122 @@ def serpentine_order(raster_grid: np.ndarray) -> list[tuple[int, int, int]]:
     return out
 
 
+def _raster_pts_by_volume(raster_grid, gtv, ctv, ptv, y0, y1, z0, z1, info):
+    """Return raster point yz-coordinates (projected over x) split by
+    planning volume membership. All points in the current raster are
+    placed inside the GTV by the FPS algorithm (the erosion enforces
+    this); projecting to the focal slice shows the spatial relationship
+    between the shot cloud and the planning volumes.
+
+    Returns
+    -------
+    dict mapping volume name → (y_mm_array, z_mm_array, colour, size)
+    """
+    nx = raster_grid.shape[0]
+    x_coords = np.argwhere(raster_grid.any(axis=(1, 2))).ravel()
+    x_min = int(x_coords.min()) if len(x_coords) else 0
+    x_max = int(x_coords.max()) + 1 if len(x_coords) else nx
+    rg_crop = raster_grid[x_min:x_max, y0:y1, z0:z1]
+
+    # Project to 2-D and label each projected voxel by the innermost
+    # volume it belongs to (GTV ⊂ CTV ⊂ PTV).
+    out = {}
+    for vname, vmask, clr, sz in (
+        ("GTV", gtv, "cyan",   22),
+        ("CTV", ctv, "yellow", 16),
+        ("PTV", ptv, "white",  12),
+    ):
+        vm_crop = vmask[x_min:x_max, y0:y1, z0:z1]
+        proj = (rg_crop & vm_crop).any(axis=0)
+        # Subtract inner volumes so each point is labelled once
+        if vname == "CTV":
+            inner = gtv[x_min:x_max, y0:y1, z0:z1]
+            proj &= ~(rg_crop & inner).any(axis=0)
+        elif vname == "PTV":
+            inner = ctv[x_min:x_max, y0:y1, z0:z1]
+            proj &= ~(rg_crop & inner).any(axis=0)
+        ys, zs = np.where(proj)
+        y_mm = np.array([info["y_axis"][y0 + yy] * 1e3 for yy in ys])
+        z_mm = np.array([info["z_axis"][z0 + zz] * 1e3 for zz in zs])
+        out[vname] = (y_mm, z_mm, clr, sz)
+    return out
+
+
+def _prelesion_mask_2d(
+    log_acc_2d: np.ndarray,
+    dose_threshold: float = 0.90,
+) -> np.ndarray:
+    """Boolean mask of substantially ablated voxels in a 2D log-dose slice.
+
+    ``log_acc_2d`` holds the accumulated log-survival × pulses_per_pt for
+    each 2-D voxel summed over all shots fired so far:
+
+        log_acc_2d[y, z] = Σ_shots  log(1 − per_pulse[y,z]·k_steer) · pulses
+
+    The cavitation-dose probability at each voxel is
+
+        cav_dose(y, z) = 1 − exp( log_acc_2d[y, z] )   ∈ [0, 1]
+
+    Voxels where cav_dose ≥ dose_threshold (default 0.90) are classed as
+    pre-lesioned: tissue is expected to be liquefied and further shots at
+    that location deliver zero marginal mechanical cavitation benefit.
+
+    Acoustic note
+    ─────────────
+    Pre-lesioned tissue (liquefied HCC debris) is MORE acoustically
+    transparent than intact HCC (α_ablated ≈ 0.5 vs 12.5 dB/MHz/cm;
+    Z_ablated ≈ 1.54 vs 1.67 GPa·s/m³).  Shots aimed at adjacent intact
+    tissue through a pre-lesioned zone experience REDUCED attenuation —
+    not shadowing.  This mask is therefore used only for:
+      1. Visual feedback in the animation (lime-green overlay).
+      2. Scoring context in adaptive ordering — saturated voxels yield
+         strongly negative log_acc, so they rank last without needing
+         explicit exclusion.
+    No attenuation penalty is applied to beam paths through ablated tissue.
+
+    Parameters
+    ----------
+    log_acc_2d     : (Ny, Nz) float32 — accumulated log_safe × pulses; ≤ 0
+    dose_threshold : cavitation-dose fraction for ablation call; default 0.90
+
+    Returns
+    -------
+    mask : (Ny, Nz) bool — True where cav_dose ≥ dose_threshold
+    """
+    # log_acc_2d already incorporates pulses_per_pt so exp gives cav_dose directly.
+    return (1.0 - np.exp(log_acc_2d)) >= dose_threshold
+
+
 def make_sonication_animation(ct, label_vol, info, results, scenarios,
+                              gtv, ctv, ptv,
+                              oar_masks: dict[str, np.ndarray] | None = None,
                               n_frames: int = 80, fps: int = 12) -> str:
     """Render a 3-panel animated GIF of cumulative cavitation-dose
-    delivery. Each panel's timeline runs from 0 → 100% of that
-    scenario's actual treatment time, so all three animate end-to-end
-    in parallel; the on-screen status text reports each scenario's
-    real elapsed time. The dose is computed incrementally from the
-    serpentine raster path: at frame f, log-dose = pulses_per_pt ×
-    Σ_{shot i ≤ f} log(1 - p_pulse) shifted to that shot's centre.
-    Rendered as an inferno heatmap so the viewer sees the per-shot
-    dose accumulation, not flat-coloured discs.
+    delivery with GTV / CTV / PTV planning-volume overlays.
+
+    Each panel's timeline runs from 0 → 100 % of that scenario's
+    actual treatment time.  The dose is computed incrementally from
+    the serpentine raster path.
+
+    Overlays added per panel
+    ────────────────────────
+    • GTV contour (cyan) — the imaging-defined ablation target; all
+      raster shots are placed WITHIN this boundary by the FPS planner.
+    • CTV contour (yellow) — GTV + 3 mm spherical margin for
+      microscopic disease; beam tails from GTV-placed shots deposit
+      dose here, decaying with distance.
+    • PTV contour (white) — CTV + 3 mm for residual motion /
+      positioning uncertainty; receives only far beam-tail dose.
+    • Ghost dots — all planned raster points projected to the focal
+      y-z slice, colour-coded cyan (GTV) / yellow (CTV only) /
+      white (PTV only).  Because shots are confined to the GTV
+      by construction, ALL dots are cyan — making the volume-
+      confinement of the raster plan immediately visible.
+    • Active-shot × marker — tracks the current firing location.
+
+    The progress box reports: elapsed time, shot counter, per-volume
+    raster-point count, and whether any shots were steered to CTV/PTV
+    (currently always 0 — confirming GTV confinement).
 
     Returns the GIF as a base64 string for markdown embedding.
     """
@@ -945,16 +1643,15 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
     extent_crop = [info["z_axis"][z0]*1e3, info["z_axis"][z1-1]*1e3,
                    info["y_axis"][y1-1]*1e3, info["y_axis"][y0]*1e3]
 
-    # Pre-compute the per-pulse log(1 - p) field on the cropped y-z
-    # slice through the focal x-plane. Each scenario uses its regime's
-    # per-pulse cavitation-probability surrogate (same as the static
-    # cav_dose heatmap in fig 14).
+    # Pre-compute 2-D planning-volume slices for static contour overlays.
+    gtv_sl = gtv[fx, y0:y1, z0:z1].astype(float)
+    ctv_sl = ctv[fx, y0:y1, z0:z1].astype(float)
+    ptv_sl = ptv[fx, y0:y1, z0:z1].astype(float)
+
     from matplotlib.colors import LogNorm
     paths = {}
     per_pulse_slice = {}
     anchors_per_path = {}
-    focus_y_local = info["focus_idx"][1] - y0
-    focus_z_local = info["focus_idx"][2] - z0
     ny_loc = y1 - y0
     nz_loc = z1 - z0
     for sc in scenarios:
@@ -962,20 +1659,10 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
         anchors_per_path[sc.name], _ = mechanical_walk(
             paths[sc.name], info["focus_idx"], info["dx"], sc.f0)
         r = results[sc.name]
-        # Recompute per_pulse on the slice from pcav (intrinsic) or
-        # collapse strength (sub-threshold). Shock-vapor uses pcav too
-        # since the seed is thermal (binary); the heatmap shows the
-        # cumulative cavitation-probability dose contributed by every
-        # shot regardless of whether the seed is mechanical or thermal.
         if sc.regime == "subthreshold_cav":
             coll_sl = collapse_strength(r["p_field"][fx, y0:y1, z0:z1], sc.f0)
             per_pulse = np.clip((coll_sl - 1.0) / 9.0, 0.0, 1.0).astype(np.float32)
         elif sc.regime == "shock_vapor":
-            # Smooth-graded per-shot deposition: weight the dilated
-            # thermal-seed mask by the normalized transient-temperature
-            # rise so the cloud core deposits more "cavitation events"
-            # per pulse than the rim — gives a continuous distribution
-            # under the log colormap rather than a flat plateau.
             ps_mask = r["per_shot_mask"][fx, y0:y1, z0:z1].astype(np.float32)
             T_tr = r["T_transient"][fx, y0:y1, z0:z1]
             T_norm = np.clip((T_tr - 37.0) / max((T_tr.max() - 37.0), 1.0), 0.0, 1.0)
@@ -984,24 +1671,7 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
             per_pulse = np.clip(r["pcav"][fx, y0:y1, z0:z1], 0.0, 1.0).astype(np.float32)
         per_pulse_slice[sc.name] = per_pulse
 
-    fig, axes = plt.subplots(1, len(scenarios), figsize=(14.0, 5.4))
-    if len(scenarios) == 1:
-        axes = [axes]
-    base_ct = ct[fx, y0:y1, z0:z1]
-    tumour_sl = (label_vol[fx, y0:y1, z0:z1] == HCC.label).astype(float)
-
-    # Heatmap colormap — transparent → inferno, alpha-graduated.
-    hot = plt.get_cmap("inferno")
-    dose_colors = [(*hot(t)[:3], 0.0 if t < 0.02 else min(0.85, 0.15 + t * 0.95))
-                   for t in np.linspace(0, 1, 256)]
-    dose_cmap = LinearSegmentedColormap.from_list("cav_dose_anim", dose_colors)
-
-    # Shared log-norm scale across panels: pre-compute the final
-    # cumulative event field for each scenario (same algorithm as the
-    # animation accumulator, but in one pass) and use the global max
-    # as the colorbar upper bound. Log scale spans the 3+ decade
-    # dynamic range from "barely-touched rim" to "central overlap"
-    # voxels so the distribution is visible.
+    # Shared log-norm scale.
     final_max = 1.0
     for sc in scenarios:
         per_pulse = per_pulse_slice[sc.name]
@@ -1023,53 +1693,143 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
     shared_vmax = max(final_max, shared_vmin * 10.0)
     shared_norm = LogNorm(vmin=shared_vmin, vmax=shared_vmax)
 
+    # Pre-compute log-safe 2D slices for the parallel log-space dose accumulator
+    # used by the pre-lesion detector.  Stored per scenario because per_pulse
+    # differs across regimes.
+    log_safe_prelesion_slice: dict[str, np.ndarray] = {}
+    for sc in scenarios:
+        pp = per_pulse_slice[sc.name]
+        log_safe_prelesion_slice[sc.name] = np.log(
+            np.clip(1.0 - pp, 1e-9, 1.0))          # (ny_loc, nz_loc), ≤ 0
+
+    hot = plt.get_cmap("inferno")
+    dose_colors = [(*hot(t)[:3], 0.0 if t < 0.02 else min(0.85, 0.15 + t * 0.95))
+                   for t in np.linspace(0, 1, 256)]
+    dose_cmap = LinearSegmentedColormap.from_list("cav_dose_anim", dose_colors)
+
+    base_ct = ct[fx, y0:y1, z0:z1]
+    # GTV pixel count on focal slice (for ablation-progress percentage).
+    gtv_sl_bool = gtv_sl.astype(bool)
+    n_gtv_px = int(gtv_sl_bool.sum())
+
+    fig, axes = plt.subplots(1, len(scenarios), figsize=(14.0, 5.8))
+    if len(scenarios) == 1:
+        axes = [axes]
+
     artists = []
     for ax, sc in zip(axes, scenarios):
         ax.imshow(base_ct, cmap="gray", vmin=-200, vmax=300,
                   extent=extent_crop, aspect="equal")
-        ax.contour(np.flipud(tumour_sl), levels=[0.5], colors="cyan",
-                   linewidths=1.0, extent=extent_crop)
-        ax.set(xlabel="z [mm]", ylabel="y [mm]")
-        # Shared log-norm scale across all panels.
-        dose_im = ax.imshow(np.full((ny_loc, nz_loc), shared_vmin*0.5, dtype=np.float32),
-                            cmap=dose_cmap, norm=shared_norm,
-                            extent=extent_crop, aspect="equal",
-                            interpolation="nearest")
-        progress = ax.text(0.02, 0.97, "", transform=ax.transAxes, fontsize=8,
-                           verticalalignment="top",
-                           bbox=dict(facecolor="white", alpha=0.85, edgecolor="none"))
-        title = ax.set_title("", fontsize=8.5)
-        artists.append({"ax": ax, "dose_im": dose_im,
-                        "events_acc": np.zeros((ny_loc, nz_loc), dtype=np.float32),
-                        "shots_drawn": 0, "progress": progress, "title": title,
-                        "current_marker": None, "sc": sc,
-                        "n_shots": len(paths[sc.name])})
 
-    # Single shared colorbar (log scale) for all three panels.
+        # ── Static planning-volume contours ────────────────────────────
+        # Drawn once; remain visible throughout the animation.
+        for sl_mask, clr, lw in (
+            (ptv_sl, "white",  0.7),
+            (ctv_sl, "yellow", 0.9),
+            (gtv_sl, "cyan",   1.1),
+        ):
+            if sl_mask.any():
+                ax.contour(np.flipud(sl_mask), levels=[0.5],
+                           colors=clr, linewidths=lw, extent=extent_crop)
+
+        # ── Ghost raster-point cloud (colour = innermost volume) ───────
+        # All current shots are inside the GTV by FPS construction;
+        # dots outside GTV would indicate a bug in the raster planner.
+        rpts = _raster_pts_by_volume(
+            results[sc.name]["raster_grid"], gtv, ctv, ptv,
+            y0, y1, z0, z1, info)
+        n_gtv_pts = len(rpts["GTV"][0])
+        n_ctv_pts = len(rpts["CTV"][0])
+        n_ptv_pts = len(rpts["PTV"][0])
+        for vname, (y_mm, z_mm, clr, sz) in rpts.items():
+            if len(y_mm):
+                ax.scatter(z_mm, y_mm, c=clr, s=sz, alpha=0.35,
+                           edgecolors="none", zorder=4,
+                           label=f"{vname}: {len(y_mm)} pts")
+
+        # ── Dose heatmap (updated each frame) ─────────────────────────
+        dose_im = ax.imshow(
+            np.full((ny_loc, nz_loc), shared_vmin * 0.5, dtype=np.float32),
+            cmap=dose_cmap, norm=shared_norm,
+            extent=extent_crop, aspect="equal", interpolation="nearest",
+            zorder=3)
+
+        # ── Pre-lesion overlay (lime-green RGBA, updated each frame) ───
+        # Marks voxels where cumulative cav_dose ≥ 0.90: tissue is fully
+        # ablated, further shots deliver no marginal cavitation benefit.
+        # Pre-lesioned debris is acoustically MORE transparent than intact
+        # HCC (lower α, lower Z), so no beam-path attenuation penalty is
+        # shown — only the "ablation completed" spatial information.
+        prelesion_rgba = np.zeros((ny_loc, nz_loc, 4), dtype=np.float32)
+        prelesion_im = ax.imshow(prelesion_rgba, extent=extent_crop,
+                                 aspect="equal", interpolation="nearest",
+                                 zorder=6)
+
+        # ── Static OAR contours (drawn once; zorder above dose, below marker) ─
+        if oar_masks is not None:
+            _draw_oar_contours(ax, oar_masks, info, fx,
+                               y0, y1, z0, z1, extent_crop, lw=0.80)
+
+        progress = ax.text(
+            0.02, 0.97, "", transform=ax.transAxes, fontsize=7.0,
+            verticalalignment="top",
+            bbox=dict(facecolor="black", alpha=0.65, edgecolor="none",
+                      boxstyle="round,pad=0.3"),
+            color="white")
+        title = ax.set_title("", fontsize=8.5)
+        ax.set(xlabel="z [mm]", ylabel="y [mm]")
+
+        # Per-panel legend: GTV / CTV / PTV + shot counts + pre-lesion key + OARs.
+        legend_handles = [
+            Line2D([0], [0], color="cyan",              lw=1.1,
+                   label=f"GTV ({n_gtv_pts} shots)"),
+            Line2D([0], [0], color="yellow",            lw=0.9,
+                   label=f"CTV +5 mm HOPE4LIVER ({n_ctv_pts} shots)"),
+            Line2D([0], [0], color="white",             lw=0.7,
+                   label=f"PTV +8 mm total ({n_ptv_pts} shots)"),
+            Line2D([0], [0], color=(0.2, 0.9, 0.35, 1), lw=5.0,
+                   label="pre-lesioned (dose ≥ 90%)"),
+        ]
+        if oar_masks is not None:
+            legend_handles += _oar_legend_handles()
+        ax.legend(handles=legend_handles, fontsize=6.0, loc="lower right",
+                  framealpha=0.7,
+                  facecolor="black", labelcolor="white", edgecolor="gray")
+
+        artists.append({
+            "ax": ax, "dose_im": dose_im, "prelesion_im": prelesion_im,
+            "events_acc": np.zeros((ny_loc, nz_loc), dtype=np.float32),
+            # log-space accumulator for pre-lesion detection:
+            # log_acc_2d = Σ_shots log(1 − per_pulse·k) · pulses; ≤ 0
+            # cav_dose = 1 − exp(log_acc_2d)
+            "log_acc_2d": np.zeros((ny_loc, nz_loc), dtype=np.float32),
+            "shots_drawn": 0, "progress": progress, "title": title,
+            "current_marker": None, "sc": sc,
+            "n_shots": len(paths[sc.name]),
+            "n_gtv_pts": n_gtv_pts, "n_ctv_pts": n_ctv_pts, "n_ptv_pts": n_ptv_pts,
+        })
+
     fig.colorbar(artists[-1]["dose_im"], ax=axes,
                  fraction=0.025, pad=0.02, shrink=0.85,
                  label="cumulative cavitation events (log scale)")
 
     def init():
-        return [a["dose_im"] for a in artists] + [a["progress"] for a in artists]
+        return ([a["dose_im"] for a in artists]
+                + [a["prelesion_im"] for a in artists]
+                + [a["progress"] for a in artists])
 
     def animate(frame_idx: int):
-        # Per-panel progress: each scenario animates from 0 → 100% over
-        # the full timeline, so all three are visible end-to-end.
         progress_frac = frame_idx / max(n_frames - 1, 1)
         changed = []
         for art in artists:
             sc = art["sc"]
             n_shots_total = art["n_shots"]
-            shots_target = int(round(progress_frac * n_shots_total))
-            shots_target = min(shots_target, n_shots_total)
+            shots_target = min(int(round(progress_frac * n_shots_total)), n_shots_total)
             path = paths[sc.name]
             per_pulse = per_pulse_slice[sc.name]
+            log_safe_pp = log_safe_prelesion_slice[sc.name]
             pulses = max(sc.pulses_per_point, 1)
-            # Incrementally add expected-cavitation-event contributions.
-            # Each shot deposits per_pulse × pulses_per_spot at every
-            # voxel; overlapping shots keep adding so the heatmap shows
-            # spot-overlap intensity rather than saturating at 1.
+
             while art["shots_drawn"] < shots_target:
                 idx = art["shots_drawn"]
                 x, yi, zi = path[idx]
@@ -1085,12 +1845,28 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
                         (x, yi, zi), anchor, info["dx"], sc.f0)
                     art["events_acc"][dst_y0:dst_y1, dst_z0:dst_z1] += \
                         per_pulse[src_y0:src_y1, src_z0:src_z1] * pulses * k_steer
+                    # Parallel log-space accumulation for pre-lesion tracking.
+                    # log(1 − per_pulse·k) used exactly (no first-order approx).
+                    eff_pp = np.clip(
+                        per_pulse[src_y0:src_y1, src_z0:src_z1] * k_steer,
+                        0.0, 0.9999)
+                    art["log_acc_2d"][dst_y0:dst_y1, dst_z0:dst_z1] += \
+                        np.log1p(-eff_pp) * pulses
                 art["shots_drawn"] += 1
 
             art["dose_im"].set_data(art["events_acc"])
             changed.append(art["dose_im"])
 
-            # Current-shot cross marker
+            # Pre-lesion overlay: lime-green where cav_dose ≥ 0.90.
+            prelesion_mask = _prelesion_mask_2d(art["log_acc_2d"])
+            prelesion_rgba = np.zeros((ny_loc, nz_loc, 4), dtype=np.float32)
+            prelesion_rgba[prelesion_mask, 0] = 0.20
+            prelesion_rgba[prelesion_mask, 1] = 0.90
+            prelesion_rgba[prelesion_mask, 2] = 0.35
+            prelesion_rgba[prelesion_mask, 3] = 0.38   # 38% opacity
+            art["prelesion_im"].set_data(prelesion_rgba)
+            changed.append(art["prelesion_im"])
+
             if art["current_marker"] is not None:
                 art["current_marker"].remove()
                 art["current_marker"] = None
@@ -1102,31 +1878,38 @@ def make_sonication_animation(ct, label_vol, info, results, scenarios,
                     z_mm = info["z_axis"][zi] * 1e3
                     art["current_marker"], = art["ax"].plot(
                         z_mm, y_mm, marker="x", color="white",
-                        markersize=10, mew=2.0)
+                        markersize=9, mew=1.8, zorder=10)
 
             sc_min = sc.treatment_s / 60.0
             elapsed = progress_frac * sc_min
             done = shots_target >= n_shots_total
             eff_prf = sc.prf * sc.interleave_subspots
+            n_ablated = int(prelesion_mask.sum())
+            pct_ablated = 100.0 * n_ablated / max(n_gtv_px, 1)
             art["progress"].set_text(
                 f"t = {elapsed:.2f} / {sc_min:.1f} min\n"
                 f"shots: {shots_target}/{n_shots_total}\n"
-                f"{'COMPLETE' if done else f'{eff_prf:.0f} Hz effective'}"
+                f"GTV: {art['n_gtv_pts']} pts  CTV: {art['n_ctv_pts']}  PTV: {art['n_ptv_pts']}\n"
+                f"Pre-lesioned: {n_ablated}/{n_gtv_px} px ({pct_ablated:.0f}% GTV)\n"
+                f"{'■ COMPLETE' if done else f'PRF {eff_prf:.0f} Hz (interleaved)'}"
             )
             art["title"].set_text(
-                f"{sc.label}\nFWHM-lat {r['metrics']['fwhm_lat_mm']:.1f} mm × {n_shots_total} pts"
-                if False else
-                f"{sc.label}\n{n_shots_total} shots, {pulses} pulses/spot"
+                f"{sc.label}\n"
+                f"{n_shots_total} shots inside GTV → beam tails cover CTV/PTV"
             )
             changed.append(art["progress"])
             changed.append(art["title"])
         return changed
 
     anim = FuncAnimation(fig, animate, init_func=init, frames=n_frames, blit=False)
-    fig.suptitle("Histotripsy sonication — cumulative cavitation-dose heatmap "
-                 "(per-panel timeline; LiTS17 case-0 HCC tumour, native segmentation)",
-                 y=0.99, fontsize=10)
-    fig.subplots_adjust(top=0.88, bottom=0.08, left=0.05, right=0.92, wspace=0.18)
+    fig.suptitle(
+        "Histotripsy sonication — cumulative cavitation-dose heatmap with GTV/CTV/PTV planning volumes\n"
+        "cyan=GTV  yellow=CTV +5 mm (HOPE4LIVER)  white=PTV +8 mm  "
+        "lime-green = pre-lesioned (cav_dose ≥ 90%, tissue liquefied)\n"
+        "Ghost dots = all planned raster points (cyan = inside GTV).  "
+        "Beam tails from GTV shots fill CTV/PTV with decaying dose.",
+        y=1.01, fontsize=9)
+    fig.subplots_adjust(top=0.84, bottom=0.08, left=0.05, right=0.92, wspace=0.20)
     out_gif = os.path.join(OUT_DIR, "anim_sonication.gif")
     writer = PillowWriter(fps=fps)
     anim.save(out_gif, writer=writer, dpi=110)
@@ -1149,6 +1932,107 @@ def save_fig(fig, name: str) -> str:
     for ext in ("pdf", "png"):
         fig.savefig(os.path.join(OUT_DIR, f"{name}.{ext}"), dpi=130, bbox_inches="tight")
     return fig_to_base64(fig)
+
+
+def _sphere_kernel(r: int) -> np.ndarray:
+    """Spherical binary structuring element of radius r voxels."""
+    g = np.mgrid[-r:r + 1, -r:r + 1, -r:r + 1]
+    return (g[0] ** 2 + g[1] ** 2 + g[2] ** 2) <= (r + 0.5) ** 2
+
+
+def margin_weighted_dose(
+    cav_dose: np.ndarray,
+    gtv: np.ndarray,
+    ptv: np.ndarray,
+    info: dict,
+    ctv_margin_m: float = 5.0e-3,
+    ptv_margin_m: float = 3.0e-3,
+) -> np.ndarray:
+    """Distance-weighted dose display for CTV / PTV margin annuli.
+
+    Inside the GTV the raw accumulated cav_dose is returned unchanged —
+    raster shots target the GTV so those voxels carry the full therapeutic
+    dose.  In the CTV and PTV annuli a linear weight
+
+        w(d) = 1 − d / (ctv_margin_m + ptv_margin_m)
+
+    tapers the dose from the GTV surface (w = 1) to the PTV outer edge
+    (w = 0).  This makes the clinical intent explicit: maximum treatment
+    in the gross tumour, graded margin coverage for microscopic disease /
+    setup uncertainty, and no dose shown outside the planning boundary.
+
+    ``distance_transform_edt(~gtv)`` returns 0 for GTV voxels and the
+    Euclidean distance to the nearest GTV voxel for everything outside,
+    so ``w = 1`` everywhere inside the GTV by construction.
+
+    Parameters
+    ----------
+    cav_dose        : (Nx, Ny, Nz) float32 raw log-accumulated cavitation dose
+    gtv, ptv        : bool arrays shaped (Nx, Ny, Nz)
+    info            : simulation info dict (key ``"dx"`` in metres)
+    ctv_margin_m    : GTV → CTV isotropic margin (default 5 mm, HOPE4LIVER standard)
+    ptv_margin_m    : CTV → PTV additional margin for motion/positioning (default 3 mm)
+
+    Returns
+    -------
+    weighted : (Nx, Ny, Nz) float32 in [0, 1]
+    """
+    total_margin_m = ctv_margin_m + ptv_margin_m          # 6 mm
+    dist_m = distance_transform_edt(~gtv) * info["dx"]    # 0 inside GTV
+
+    weight = np.ones(cav_dose.shape, dtype=np.float32)
+    outside_gtv_in_ptv = (~gtv) & ptv
+    if outside_gtv_in_ptv.any():
+        weight[outside_gtv_in_ptv] = np.clip(
+            1.0 - dist_m[outside_gtv_in_ptv] / total_margin_m,
+            0.0, 1.0,
+        ).astype(np.float32)
+    weight[~ptv] = 0.0
+
+    return np.clip(cav_dose * weight, 0.0, 1.0)
+
+
+def compute_gtv_ctv_ptv(
+    label_vol: np.ndarray,
+    dx_m: float,
+    ctv_margin_m: float = 5.0e-3,
+    ptv_margin_m: float = 3.0e-3,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute radiotherapy-style target volumes for histotripsy planning.
+
+    GTV — Gross Tumour Volume: the imaging-defined HCC region as labelled
+          in the native segmentation (label == HCC.label). Hard ablation
+          target — every voxel must receive therapeutic dose.
+
+    CTV — Clinical Target Volume: GTV + ctv_margin_m spherical expansion
+          for microscopic disease extension beyond the imaging contour.
+          5 mm per HOPE4LIVER trial protocol (NCT04573881, Laimer 2021):
+          minimum 5 mm margin to achieve 90 % local tumour control at 1 year
+          for HCC and liver metastases. Image-guided systems with real-time
+          ultrasound tracking can maintain this margin reliably (Worlikar 2020).
+
+    PTV — Planning Target Volume: CTV + ptv_margin_m for residual
+          geometric uncertainty (respiratory motion residual, mechanical
+          positioning). 3 mm additional from CTV gives a total GTV-to-PTV
+          margin of 8 mm for image-guided systems (Liu 2022).
+
+    Parameters
+    ----------
+    label_vol : (Nx, Ny, Nz) int8
+    dx_m      : voxel edge length (isotropic)
+    ctv_margin_m : GTV → CTV isotropic expansion (default 5 mm, HOPE4LIVER)
+    ptv_margin_m : CTV → PTV additional expansion (default 3 mm)
+
+    Returns
+    -------
+    gtv, ctv, ptv : bool arrays shaped (Nx, Ny, Nz)
+    """
+    gtv = (label_vol == HCC.label)
+    ctv_r = max(int(round(ctv_margin_m / dx_m)), 1)
+    ptv_r = max(int(round((ctv_margin_m + ptv_margin_m) / dx_m)), 1)
+    ctv = binary_dilation(gtv, structure=_sphere_kernel(ctv_r))
+    ptv = binary_dilation(gtv, structure=_sphere_kernel(ptv_r))
+    return gtv, ctv, ptv
 
 
 TISSUE_CMAP = ListedColormap([
@@ -1215,7 +2099,9 @@ def plot_segmentation(ct, label_vol, info) -> tuple:
     return b64
 
 
-def plot_pressure_and_lesion(ch_ct, label_vol, info, results, lesions) -> tuple:
+def plot_pressure_and_lesion(ch_ct, label_vol, info, results, lesions,
+                             gtv, ctv, ptv,
+                             oar_masks: dict[str, np.ndarray] | None = None) -> tuple:
     nx, ny, nz = label_vol.shape
     fx, fy_idx, fz_idx = info["focus_idx"]
 
@@ -1251,37 +2137,86 @@ def plot_pressure_and_lesion(ch_ct, label_vol, info, results, lesions) -> tuple:
         axes[0, col].set(xlabel="z [mm]", ylabel="y [mm]")
         plt.colorbar(im0, ax=axes[0, col], fraction=0.046, pad=0.04)
 
-        # Row 1: cavitation probability or collapse strength (cropped)
-        sl_p = r["pcav"][fx, y0:y1, z0:z1]
-        im1 = axes[1, col].imshow(sl_p, cmap=pcav_cmap, extent=extent_crop,
+        # Row 1: regime-appropriate single-pulse dose/cavitation metric.
+        # For shock-vapor: pcav is near-zero (PNP << 28.2 MPa threshold) —
+        # show normalised T_transient instead. For sub-threshold: show
+        # normalised collapse strength. For intrinsic: P_cav erf-CDF.
+        dose_map_sl = r["dose_map_regime"][fx, y0:y1, z0:z1]
+        regime_lbl = r["regime_label"]
+        im1 = axes[1, col].imshow(dose_map_sl, cmap=pcav_cmap, extent=extent_crop,
                                   vmin=0, vmax=1, aspect="equal")
-        axes[1, col].set_title("single-pulse $P_{cav}$ (focus-centred)", fontsize=9)
+        axes[1, col].set_title(f"{regime_lbl}\n(focus-centred ±{win_mm:.0f} mm)",
+                               fontsize=9)
         axes[1, col].set(xlabel="z [mm]", ylabel="y [mm]")
         plt.colorbar(im1, ax=axes[1, col], fraction=0.046, pad=0.04)
+        # Add tumour, CTV, PTV contours on row 1
+        for mask, clr, lw, lbl in (
+            (gtv[fx, y0:y1, z0:z1].astype(float), "cyan",   0.9, "GTV"),
+            (ctv[fx, y0:y1, z0:z1].astype(float), "yellow", 0.8, "CTV"),
+            (ptv[fx, y0:y1, z0:z1].astype(float), "white",  0.7, "PTV"),
+        ):
+            if mask.any():
+                axes[1, col].contour(np.flipud(mask), levels=[0.5],
+                                     colors=clr, linewidths=lw,
+                                     extent=extent_crop)
 
-        # Row 2: cavitation-dose heatmap on CT axial slice
+        # Row 2: cavitation-dose heatmap clipped to PTV on CT axial slice.
+        # Displaying the full-field dose outside the PTV is misleading —
+        # the therapeutic intent is within the planning volumes only.
         axes[2, col].imshow(ch_ct[fx, :, :], cmap="gray", vmin=-200, vmax=300,
                             extent=extent_full, aspect="equal")
-        tumour_sl = (label_vol[fx, :, :] == HCC.label).astype(float)
-        axes[2, col].contour(np.flipud(tumour_sl), levels=[0.5], colors="cyan",
-                             linewidths=0.8, extent=extent_full)
-        dose_sl = r["cav_dose"][fx, :, :]
+        for mask, clr, lw in (
+            (gtv[fx, :, :].astype(float), "cyan",   0.9),
+            (ctv[fx, :, :].astype(float), "yellow", 0.8),
+            (ptv[fx, :, :].astype(float), "white",  0.7),
+        ):
+            if mask.any():
+                axes[2, col].contour(np.flipud(mask), levels=[0.5],
+                                     colors=clr, linewidths=lw,
+                                     extent=extent_full)
+        # Distance-weighted dose: GTV carries full cav_dose; CTV annulus
+        # decays linearly from the GTV surface to half-value at the CTV
+        # boundary; PTV annulus decays to 0 at the outer PTV edge.
+        # This makes the clinical intent visible — maximum ablation in
+        # the gross target with graded margin coverage — without the
+        # binary PTV clip that would show a hard-edged boundary.
+        dose_weighted = margin_weighted_dose(
+            r["cav_dose"], gtv, ptv, info,
+            ctv_margin_m=5.0e-3, ptv_margin_m=3.0e-3,
+        )
+        dose_sl = dose_weighted[fx, :, :]
         im2 = axes[2, col].imshow(dose_sl, cmap=overlay_cmap, extent=extent_full,
                                   vmin=0, vmax=1, aspect="equal")
         plt.colorbar(im2, ax=axes[2, col], fraction=0.046, pad=0.04,
-                     label="cumulative cavitation dose")
+                     label="cavitation dose (GTV=full, margins=distance-weighted)")
+        # OAR contours on the full-CT dose panel (row 2).
+        # Absolute OARs are solid; liver_capsule (non-absolute) is dashed.
+        if oar_masks is not None:
+            ny_, nz_ = ch_ct.shape[1], ch_ct.shape[2]
+            _draw_oar_contours(axes[2, col], oar_masks, info, fx,
+                               0, ny_, 0, nz_, extent_full, lw=0.75)
         m = r["metrics"]
+        oar_overlap = m.get("n_oar_footprint_overlap_pts", 0)
         axes[2, col].set_title(
-            f"cavitation-dose heatmap (cyan = HCC outline)\n"
+            f"cavitation-dose (GTV→PTV gradient)\n"
+            f"(cyan=GTV, yellow=CTV, white=PTV)\n"
             f"coverage {m.get('tumour_coverage_pct', 0):.0f}%, "
-            f"FWHM {m['fwhm_lat_mm']:.1f}×{m['fwhm_ax_mm']:.1f} mm (lat×ax), "
-            f"$T_{{ss}}$={m.get('T_steady_C', 0):.0f} °C",
-            fontsize=8.5)
+            f"cloud r={m.get('mech_radius_mm', 0):.1f} mm, "
+            f"$T_{{ss}}$={m.get('T_steady_C', 0):.0f}°C"
+            + (f"\nOAR footprint overlap: {oar_overlap} pts" if oar_overlap > 0 else ""),
+            fontsize=8.0)
         axes[2, col].set(xlabel="z [mm]", ylabel="y [mm]")
 
-    fig.suptitle("Histotripsy on real abdominal CT — focal pressure, $P_{cav}$, "
-                 "and cumulative cavitation-dose heatmap (LiTS17 HCC tumour)",
-                 fontsize=11)
+    oar_note = ""
+    if oar_masks is not None:
+        oar_note = ("\nOAR contours: red=vessels, orange=gallbladder, "
+                    "magenta=capsule (dashed), amber=extrahepatic, darkred=bone")
+    fig.suptitle(
+        "Histotripsy on real CT — focal pressure, regime-specific dose map, "
+        "and distance-weighted cavitation-dose heatmap\n"
+        "(GTV = full dose; CTV/PTV margins decay linearly to 0 at PTV edge; "
+        "cyan=GTV, yellow=CTV +5 mm [HOPE4LIVER], white=PTV +8 mm total)" + oar_note,
+        fontsize=9)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     b64 = save_fig(fig, "fig14_real_ct_lesion_panel")
     plt.close(fig)
@@ -1289,7 +2224,8 @@ def plot_pressure_and_lesion(ch_ct, label_vol, info, results, lesions) -> tuple:
     return b64
 
 
-def plot_raster_overlay(ct, label_vol, info, results, scenarios):
+def plot_raster_overlay(ct, label_vol, info, results, scenarios, gtv, ctv, ptv,
+                        oar_masks: dict[str, np.ndarray] | None = None):
     """Render the explicit raster point cloud and per-shot footprint
     envelope for each scenario, overlaid on the CT axial slice through
     the tumour centre."""
@@ -1314,15 +2250,25 @@ def plot_raster_overlay(ct, label_vol, info, results, scenarios):
         r = results[sc.name]
         ax.imshow(ct[fx, y0:y1, z0:z1], cmap="gray", vmin=-200, vmax=300,
                   extent=extent_crop, aspect="equal")
-        # HCC outline
-        tumour_sl = (label_vol[fx, y0:y1, z0:z1] == HCC.label).astype(float)
-        ax.contour(np.flipud(tumour_sl), levels=[0.5], colors="cyan",
-                   linewidths=1.0, extent=extent_crop)
-        # FWHM lateral half-width — the clinical "focal spot" radius
-        # quoted in the literature (Penttinen 1976). Use this for the
-        # visual circle so the spacing visually matches the -3 dB
-        # contour, not the elongated cavitation cigar.
-        psr = r["metrics"]["fwhm_lat_mm"] / 2.0
+        # GTV / CTV / PTV contours (same colour convention as fig 14)
+        for vol, clr, lw, lbl in (
+            (gtv, "cyan",   1.0, "GTV"),
+            (ctv, "yellow", 0.9, "CTV"),
+            (ptv, "white",  0.7, "PTV"),
+        ):
+            sl = vol[fx, y0:y1, z0:z1].astype(float)
+            if sl.any():
+                ax.contour(np.flipud(sl), levels=[0.5], colors=clr,
+                           linewidths=lw, extent=extent_crop)
+        # Circle radius = per-shot mechanical cloud radius (not FWHM).
+        # The FWHM is a -3 dB beam-width convention that describes the
+        # transducer's amplitude pattern, not the cavitation footprint.
+        # mech_radius_mm is the load-bearing lateral half-extent of the
+        # regime-specific per-shot mask (T≥100°C seed cloud, collapse
+        # cloud, or p≥p_t core), which is the quantity that actually
+        # determines the raster pitch and coverage.
+        psr = r["metrics"].get("mech_radius_mm",
+                               r["metrics"]["fwhm_lat_mm"] / 2.0)
         tumour_full = label_vol == HCC.label
         x_coords = np.argwhere(tumour_full)[:, 0]
         x_min, x_max = x_coords.min(), x_coords.max() + 1
@@ -1339,15 +2285,47 @@ def plot_raster_overlay(ct, label_vol, info, results, scenarios):
             c=sc.color, s=8, edgecolor="black", linewidths=0.3,
             label=f"{len(ys)} raster pts (yz projection)",
         )
-        ax.set_title(f"{sc.label}\n"
-                     f"raster: {r['metrics'].get('actual_raster_points', sc.raster_points)} pts × "
-                     f"{r['metrics']['fwhm_lat_mm']:.1f} mm FWHM-lat, "
-                     f"{sc.treatment_s/60:.1f} min", fontsize=8.5)
+        # OAR contours on the raster overlay (cropped window).
+        if oar_masks is not None:
+            _draw_oar_contours(ax, oar_masks, info, fx,
+                               y0, y1, z0, z1, extent_crop, lw=0.85)
+        oar_overlap = r["metrics"].get("n_oar_footprint_overlap_pts", 0)
+        oar_enc     = r["metrics"].get("n_oar_encasing_raster_pts", 0)
+        oar_line = ""
+        if oar_overlap > 0:
+            oar_line += f"\nOAR footprint overlap: {oar_overlap} pts (dose monitored)"
+        if oar_enc > 0:
+            oar_line += f"  vessel-encasing: {oar_enc} pts (MDT review)"
+        ax.set_title(
+            f"{sc.label}\n"
+            f"raster: {r['metrics'].get('actual_raster_points', sc.raster_points)} pts "
+            f"× {psr:.1f} mm cloud r, "
+            f"{sc.treatment_s/60:.1f} min\n"
+            f"(cyan=GTV  yellow=CTV  white=PTV)" + oar_line,
+            fontsize=7.5,
+        )
         ax.set(xlabel="z [mm]", ylabel="y [mm]")
-        ax.legend(fontsize=8, loc="lower right")
-    fig.suptitle("Raster scan overlay on real CT — cyan = native HCC tumour outline, "
-                 "coloured circles = FWHM focal spot at each raster centre",
-                 fontsize=11)
+        # Legend: target volumes + OAR entries
+        legend_handles = [
+            Line2D([0], [0], color="cyan",   lw=1.0, label="GTV"),
+            Line2D([0], [0], color="yellow", lw=0.9, label="CTV +5 mm (HOPE4LIVER)"),
+            Line2D([0], [0], color="white",  lw=0.7, label="PTV +8 mm total"),
+        ]
+        if oar_masks is not None:
+            legend_handles += _oar_legend_handles()
+        ax.legend(handles=legend_handles, fontsize=6.5, loc="lower right",
+                  framealpha=0.75, facecolor="black",
+                  labelcolor="white", edgecolor="gray")
+    oar_note = ""
+    if oar_masks is not None:
+        oar_note = ("\nOAR contours: red=vessels, orange=gallbladder, "
+                    "magenta=capsule (dashed/flag), amber=extrahepatic, darkred=bone")
+    fig.suptitle(
+        "Raster scan overlay on real CT — coloured circles = per-shot "
+        "cavitation-cloud radius (not FWHM)\n"
+        "(cyan=GTV  yellow=CTV +5 mm [HOPE4LIVER]  white=PTV +8 mm total)" + oar_note,
+        fontsize=9,
+    )
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     b64 = save_fig(fig, "fig16_raster_overlay")
     plt.close(fig)
@@ -1410,12 +2388,34 @@ def plot_metrics_summary(metrics_list, scenarios) -> tuple:
 
 
 def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
+                                       gtv, ctv, ptv,
+                                       oar_masks: dict[str, np.ndarray] | None = None,
                                        n_frames: int = 80, fps: int = 12) -> str:
     """4-panel animation comparing raster-path strategies on the SAME
-    scenario: serpentine, outside-in, inside-out, adaptive low-dose.
-    Same total raster points and same pulses_per_spot in every panel —
-    only the ORDER differs, so the side-by-side fill rate shows which
-    strategy delivers the most uniform intermediate dose.
+    scenario with GTV / CTV / PTV planning-volume overlays.
+
+    Strategies compared: serpentine, outside-in, inside-out, adaptive
+    low-dose.  Same total raster points and same pulses_per_spot in
+    every panel — only the ORDER differs — so the side-by-side fill
+    rate shows which strategy achieves the most uniform intermediate
+    dose inside the GTV and how quickly it covers the CTV / PTV annuli
+    through beam-tail deposition.
+
+    GTV / CTV / PTV overlays
+    ─────────────────────────
+    Contours drawn once (static).  Ghost dots show the shared raster
+    plan (all cyan = inside GTV) before any shot fires; the dose
+    heatmap then fills frame-by-frame so the viewer can compare:
+
+    * serpentine   — row-by-row, predictable but non-adaptive
+    * outside-in   — peripheral shots first; avoids core shadowing
+    * inside-out   — core first; residual nuclei lower threshold for
+                     subsequent peripheral shots
+    * adaptive     — lowest-dose voxel drives the next shot; maximises
+                     uniformity at every intermediate time step
+
+    The GTV confinement is identical across all four — only the fill
+    ORDER changes, and the CTV / PTV beam-tail coverage follows.
     """
     print("[ch21e] Building strategy-comparison animation")
     from matplotlib.animation import PillowWriter, FuncAnimation
@@ -1435,9 +2435,12 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
     ny_loc = y1 - y0
     nz_loc = z1 - z0
 
-    # Per-pulse field on the focal slice (same construction as the
-    # main animation). Same field for all four strategies — only the
-    # path order differs.
+    # Planning-volume 2D slices for static contours.
+    gtv_sl = gtv[fx, y0:y1, z0:z1].astype(float)
+    ctv_sl = ctv[fx, y0:y1, z0:z1].astype(float)
+    ptv_sl = ptv[fx, y0:y1, z0:z1].astype(float)
+
+    # Per-pulse field on the focal slice — same for all four strategies.
     if sc.regime == "subthreshold_cav":
         coll_sl = collapse_strength(r["p_field"][fx, y0:y1, z0:z1], sc.f0)
         per_pulse_2d = np.clip((coll_sl - 1.0) / 9.0, 0.0, 1.0).astype(np.float32)
@@ -1449,30 +2452,28 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
     else:
         per_pulse_2d = np.clip(r["pcav"][fx, y0:y1, z0:z1], 0.0, 1.0).astype(np.float32)
 
-    # Per-pulse 3D field for the adaptive strategy (needs full volume
-    # to track dose evolution). Reconstruct from cached fields.
+    # 3D field for the adaptive strategy.
     if sc.regime == "subthreshold_cav":
         coll_3d = collapse_strength(r["p_field"], sc.f0)
         per_pulse_3d = np.clip((coll_3d - 1.0) / 9.0, 0.0, 1.0).astype(np.float32)
     elif sc.regime == "shock_vapor":
         ps3 = r["per_shot_mask"].astype(np.float32)
-        T_tr = r["T_transient"]
-        T_norm = np.clip((T_tr - 37.0) / max((T_tr.max() - 37.0), 1.0), 0.0, 1.0)
-        per_pulse_3d = (ps3 * T_norm).astype(np.float32)
+        T_tr3 = r["T_transient"]
+        T_norm3 = np.clip((T_tr3 - 37.0) / max((T_tr3.max() - 37.0), 1.0), 0.0, 1.0)
+        per_pulse_3d = (ps3 * T_norm3).astype(np.float32)
     else:
         per_pulse_3d = np.clip(r["pcav"], 0.0, 1.0).astype(np.float32)
 
     raster_grid = r["raster_grid"]
     strategies = [
-        ("serpentine", serpentine_order(raster_grid)),
-        ("outside-in", outside_in_order(raster_grid)),
-        ("inside-out", inside_out_order(raster_grid)),
+        ("serpentine",       serpentine_order(raster_grid)),
+        ("outside-in",       outside_in_order(raster_grid)),
+        ("inside-out",       inside_out_order(raster_grid)),
         ("adaptive low-dose",
          adaptive_lowdose_order(raster_grid, per_pulse_3d, info["focus_idx"],
-                                max(sc.pulses_per_point, 1))),
+                                max(sc.pulses_per_point, 1),
+                                per_shot_mask=r["per_shot_mask"])),
     ]
-    # Pre-compute per-shot mechanical anchors for each strategy so the
-    # steering compensation uses the correct (re-anchored) origin.
     strat_anchors = {}
     strat_n_reanchors = {}
     for name, path in strategies:
@@ -1481,7 +2482,28 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
         strat_anchors[name] = anchors_seq
         strat_n_reanchors[name] = n_changes
 
-    # Pre-compute final cumulative dose for shared log scale
+    # Derive per-shot mechanical cluster IDs from anchor change events.
+    # A new cluster begins whenever mechanical_walk() re-anchors (anchor
+    # tuple changes between consecutive shots).  The same set of raster
+    # POSITIONS is shared across all four strategies; what differs is the
+    # ORDER of visits, which determines how consecutive shots group into
+    # delivery clusters (one transducer mechanical pose per cluster).
+    # Serpentine, outside-in, inside-out, and adaptive each produce a
+    # different spatial grouping that is directly visible as colour bands.
+    strat_cluster_ids: dict[str, list[int]] = {}
+    for name, _ in strategies:
+        anchors_seq = strat_anchors[name]
+        ids: list[int] = []
+        cluster_id = 0
+        prev_anchor: tuple[int, int, int] | None = (
+            anchors_seq[0] if anchors_seq else None)
+        for a in anchors_seq:
+            if a != prev_anchor:
+                cluster_id += 1
+                prev_anchor = a
+            ids.append(cluster_id)
+        strat_cluster_ids[name] = ids
+
     pulses = max(sc.pulses_per_point, 1)
     final_max = 1.0
     for name, path in strategies:
@@ -1500,44 +2522,134 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
         final_max = max(final_max, float(acc.max()))
     shared_norm = LogNorm(vmin=1.0, vmax=max(final_max, 10.0))
 
-    # Heatmap colormap
     hot = plt.get_cmap("inferno")
     dose_colors = [(*hot(t)[:3], 0.0 if t < 0.02 else min(0.85, 0.15 + t * 0.95))
                    for t in np.linspace(0, 1, 256)]
     dose_cmap = LinearSegmentedColormap.from_list("cav_dose_strat", dose_colors)
 
-    fig, axes = plt.subplots(1, 4, figsize=(17.5, 5.4))
+    # Pre-compute ghost raster point positions (shared; order-independent).
+    rpts = _raster_pts_by_volume(raster_grid, gtv, ctv, ptv, y0, y1, z0, z1, info)
+
+    # Log-safe 2D field for parallel log-space accumulation (pre-lesion tracking).
+    # Uses exact log(1 − per_pulse) so the cav_dose threshold is consistent with
+    # predicted_lesion(); k_steer is applied per-shot inside animate().
+    log_safe_2d = np.log(np.clip(1.0 - per_pulse_2d, 1e-9, 1.0))  # ≤ 0
+
+    # GTV pixel count on focal slice for ablation-progress percentage.
+    gtv_sl_bool = gtv_sl.astype(bool)
+    n_gtv_px_strat = int(gtv_sl_bool.sum())
+
+    fig, axes = plt.subplots(1, 4, figsize=(18.0, 5.8))
     base_ct = ct[fx, y0:y1, z0:z1]
-    tumour_sl = (label_vol[fx, y0:y1, z0:z1] == HCC.label).astype(float)
 
     artists = []
     for ax, (name, path) in zip(axes, strategies):
         ax.imshow(base_ct, cmap="gray", vmin=-200, vmax=300,
                   extent=extent_crop, aspect="equal")
-        ax.contour(np.flipud(tumour_sl), levels=[0.5], colors="cyan",
-                   linewidths=1.0, extent=extent_crop)
+
+        # Static GTV / CTV / PTV contours.
+        for sl_mask, clr, lw in (
+            (ptv_sl, "white",  0.7),
+            (ctv_sl, "yellow", 0.9),
+            (gtv_sl, "cyan",   1.1),
+        ):
+            if sl_mask.any():
+                ax.contour(np.flipud(sl_mask), levels=[0.5],
+                           colors=clr, linewidths=lw, extent=extent_crop)
+
+        # Cluster-coloured ghost raster points.
+        # POSITIONS are identical across all four panels (shared FPS raster).
+        # COLOURS encode the mechanical delivery cluster: each colour = one
+        # transducer pose.  A new cluster starts whenever mechanical_walk()
+        # determines the next shot exceeds the electronic steering radius and
+        # requires a physical table repositioning.  Different orderings
+        # (serpentine, outside-in, inside-out, adaptive) group the same points
+        # into spatially different clusters — the colour pattern makes that
+        # grouping difference visible even though point positions are the same.
+        path_yz = [(info["y_axis"][yi] * 1e3, info["z_axis"][zi] * 1e3)
+                   for _, yi, zi in path]
+        shot_y_mm = np.array([p[0] for p in path_yz], dtype=np.float32)
+        shot_z_mm = np.array([p[1] for p in path_yz], dtype=np.float32)
+        cids = np.array(strat_cluster_ids[name], dtype=np.float32)
+        n_clusters = int(cids.max()) + 1 if len(cids) else 1
+        ax.scatter(shot_z_mm, shot_y_mm,
+                   c=cids, cmap="tab10", vmin=0, vmax=max(n_clusters - 1, 9),
+                   s=20, alpha=0.45, edgecolors="none", zorder=4)
+
         dose_im = ax.imshow(np.full((ny_loc, nz_loc), 0.5, dtype=np.float32),
                             cmap=dose_cmap, norm=shared_norm,
                             extent=extent_crop, aspect="equal",
-                            interpolation="nearest")
-        title = ax.set_title(f"{name}\n{len(path)} shots, "
-                             f"{strat_n_reanchors[name]} mech re-anchors",
-                             fontsize=9)
-        progress = ax.text(0.02, 0.97, "", transform=ax.transAxes, fontsize=8,
-                           verticalalignment="top",
-                           bbox=dict(facecolor="white", alpha=0.85, edgecolor="none"))
+                            interpolation="nearest", zorder=3)
+
+        # Pre-lesion overlay: lime-green for cav_dose ≥ 0.90.
+        # Ablated tissue (liquefied HCC debris) has α ≈ 0.5 vs 12.5 dB/MHz/cm —
+        # it is MORE acoustically transparent than intact HCC, so pre-lesioned
+        # zones do not attenuate adjacent shots.  The overlay shows treatment
+        # progress, not an acoustic obstacle.
+        prelesion_rgba_init = np.zeros((ny_loc, nz_loc, 4), dtype=np.float32)
+        prelesion_im = ax.imshow(prelesion_rgba_init, extent=extent_crop,
+                                 aspect="equal", interpolation="nearest",
+                                 zorder=6)
+
+        # Static OAR contours — drawn once per panel on top of everything.
+        if oar_masks is not None:
+            _draw_oar_contours(ax, oar_masks, info, fx,
+                               y0, y1, z0, z1, extent_crop, lw=0.80)
+
+        title = ax.set_title(
+            f"{name}\n{len(path)} shots in GTV, "
+            f"{strat_n_reanchors[name]} mech re-anchors",
+            fontsize=8.5)
+        progress = ax.text(
+            0.02, 0.97, "", transform=ax.transAxes, fontsize=7.0,
+            verticalalignment="top",
+            bbox=dict(facecolor="black", alpha=0.65, edgecolor="none",
+                      boxstyle="round,pad=0.3"),
+            color="white")
         ax.set(xlabel="z [mm]", ylabel="y [mm]")
-        artists.append({"ax": ax, "dose_im": dose_im,
-                        "events_acc": np.zeros((ny_loc, nz_loc), dtype=np.float32),
-                        "shots_drawn": 0, "progress": progress, "title": title,
-                        "current_marker": None, "name": name, "path": path})
+        artists.append({
+            "ax": ax, "dose_im": dose_im, "prelesion_im": prelesion_im,
+            "events_acc": np.zeros((ny_loc, nz_loc), dtype=np.float32),
+            # log_acc_2d = Σ_shots log(1−per_pulse·k)·pulses; ≤ 0
+            # cav_dose_2d = 1 − exp(log_acc_2d)
+            "log_acc_2d": np.zeros((ny_loc, nz_loc), dtype=np.float32),
+            "shots_drawn": 0, "progress": progress, "title": title,
+            "current_marker": None, "name": name, "path": path,
+        })
 
     fig.colorbar(artists[-1]["dose_im"], ax=axes,
-                 fraction=0.025, pad=0.02, shrink=0.85,
+                 fraction=0.018, pad=0.02, shrink=0.85,
                  label="cumulative cavitation events (log scale)")
 
+    # Shared legend (first panel only to avoid repetition).
+    # n_gtv: use path length of any strategy — all share the same raster grid.
+    n_gtv = len(strategies[0][1])
+    # Sample tab10 colours to illustrate cluster encoding in the legend.
+    _tab10 = matplotlib.colormaps["tab10"]
+    legend_handles = [
+        Line2D([0], [0], color="cyan",              lw=1.1,
+               label=f"GTV contour ({n_gtv} shots — FPS positions shared by all)"),
+        Line2D([0], [0], color="yellow",            lw=0.9, label="CTV +5 mm (HOPE4LIVER)"),
+        Line2D([0], [0], color="white",             lw=0.7, label="PTV +8 mm total"),
+        # Cluster-colour explanation: use the first three tab10 entries as swatches.
+        mpatches.Patch(color=_tab10(0 / 9), alpha=0.7,
+                       label="cluster 0 (initial transducer pose)"),
+        mpatches.Patch(color=_tab10(1 / 9), alpha=0.7,
+                       label="cluster 1 (1st mechanical re-anchor)"),
+        mpatches.Patch(color=_tab10(2 / 9), alpha=0.7,
+                       label="cluster 2+ (subsequent re-anchors)"),
+        Line2D([0], [0], color=(0.2, 0.9, 0.35, 1), lw=5.0,
+               label="pre-lesioned (cav_dose ≥ 90%)"),
+    ]
+    if oar_masks is not None:
+        legend_handles += _oar_legend_handles()
+    axes[0].legend(handles=legend_handles, fontsize=5.8, loc="lower right",
+                   framealpha=0.75, facecolor="black",
+                   labelcolor="white", edgecolor="gray")
+
     def init():
-        return [a["dose_im"] for a in artists]
+        return ([a["dose_im"] for a in artists]
+                + [a["prelesion_im"] for a in artists])
 
     def animate(frame_idx: int):
         progress_frac = frame_idx / max(n_frames - 1, 1)
@@ -1553,15 +2665,36 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
                 src_y0 = max(0, -shift_y); src_y1 = min(ny_loc, ny_loc - shift_y)
                 src_z0 = max(0, -shift_z); src_z1 = min(nz_loc, nz_loc - shift_z)
                 if src_y1 > src_y0 and src_z1 > src_z0:
+                    dst_y0 = src_y0 + shift_y; dst_y1 = src_y1 + shift_y
+                    dst_z0 = src_z0 + shift_z; dst_z1 = src_z1 + shift_z
                     anchor = strat_anchors[art["name"]][idx]
                     k_steer = steering_pressure_factor(
                         art["path"][idx], anchor, info["dx"], sc.f0)
-                    art["events_acc"][src_y0+shift_y:src_y1+shift_y,
-                                      src_z0+shift_z:src_z1+shift_z] += \
+                    art["events_acc"][dst_y0:dst_y1, dst_z0:dst_z1] += \
                         per_pulse_2d[src_y0:src_y1, src_z0:src_z1] * pulses * k_steer
+                    # Parallel log-space accumulation: exact log(1−per_pulse·k).
+                    # Pre-lesioned voxels accumulate strongly negative log_acc,
+                    # naturally de-prioritising them in the adaptive scorer.
+                    eff_pp = np.clip(
+                        per_pulse_2d[src_y0:src_y1, src_z0:src_z1] * k_steer,
+                        0.0, 0.9999)
+                    art["log_acc_2d"][dst_y0:dst_y1, dst_z0:dst_z1] += \
+                        np.log1p(-eff_pp) * pulses
                 art["shots_drawn"] += 1
+
             art["dose_im"].set_data(art["events_acc"])
             changed.append(art["dose_im"])
+
+            # Pre-lesion overlay: voxels with cav_dose ≥ 0.90 are lime-green.
+            prelesion_mask = _prelesion_mask_2d(art["log_acc_2d"])
+            prelesion_rgba = np.zeros((ny_loc, nz_loc, 4), dtype=np.float32)
+            prelesion_rgba[prelesion_mask, 0] = 0.20
+            prelesion_rgba[prelesion_mask, 1] = 0.90
+            prelesion_rgba[prelesion_mask, 2] = 0.35
+            prelesion_rgba[prelesion_mask, 3] = 0.38
+            art["prelesion_im"].set_data(prelesion_rgba)
+            changed.append(art["prelesion_im"])
+
             if art["current_marker"] is not None:
                 art["current_marker"].remove()
                 art["current_marker"] = None
@@ -1572,17 +2705,34 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
                     z_mm = info["z_axis"][zi] * 1e3
                     art["current_marker"], = art["ax"].plot(
                         z_mm, y_mm, marker="x", color="white",
-                        markersize=10, mew=2.0)
-            art["progress"].set_text(f"{shots_target}/{n_total} shots\n"
-                                     f"{100*shots_target/n_total:.0f}%")
+                        markersize=9, mew=1.8, zorder=10)
+
+            pct = 100.0 * shots_target / n_total if n_total else 0.0
+            n_ablated = int(prelesion_mask.sum())
+            pct_ablated = 100.0 * n_ablated / max(n_gtv_px_strat, 1)
+            art["progress"].set_text(
+                f"{shots_target}/{n_total} shots\n"
+                f"GTV fill: {pct:.0f}%\n"
+                f"Pre-lesioned: {n_ablated}/{n_gtv_px_strat} px "
+                f"({pct_ablated:.0f}%)\n"
+                f"{'■ DONE' if shots_target >= n_total else ''}"
+            )
             changed.append(art["progress"])
         return changed
 
     anim = FuncAnimation(fig, animate, init_func=init, frames=n_frames, blit=False)
-    fig.suptitle(f"Raster path strategies on the same {sc.label} scenario — "
-                 f"same shots, different ORDER (LiTS17 HCC target)",
-                 y=0.99, fontsize=10)
-    fig.subplots_adjust(top=0.86, bottom=0.10, left=0.04, right=0.93, wspace=0.18)
+    fig.suptitle(
+        f"Raster path strategies — {sc.label}  |  "
+        f"{len(strategies[0][1])} shots · identical FPS positions across all panels · "
+        f"strategy changes ORDER → different mechanical cluster groupings  |  LiTS17 HCC\n"
+        "dot colour = mechanical delivery cluster (one transducer pose per colour; "
+        "cluster count = mech re-anchors + 1 in panel title)  "
+        "lime-green = pre-lesioned (cav_dose ≥ 90%)  "
+        "acoustic note: ablated HCC is MORE transparent (α 12.5→0.5 dB/MHz/cm)\n"
+        "Adaptive panel scores footprint worst-dosed voxel via log-space accumulation; "
+        "saturated voxels rank last naturally.",
+        y=1.01, fontsize=7.5)
+    fig.subplots_adjust(top=0.83, bottom=0.10, left=0.04, right=0.94, wspace=0.18)
     out_gif = os.path.join(OUT_DIR, "anim_strategy_comparison.gif")
     writer = PillowWriter(fps=fps)
     anim.save(out_gif, writer=writer, dpi=110)
@@ -1599,13 +2749,212 @@ def make_strategy_comparison_animation(ct, label_vol, info, results, scenario,
 # ───────────────────────────────────────────────────────────────────────
 
 
+def plot_dvh_and_volumes(ct, label_vol, info, results, gtv, ctv, ptv,
+                         scenarios) -> str:
+    """Dose-Volume Histogram (DVH) and axial target-volume overlay.
+
+    Panel layout
+    ────────────
+    Row 0 (3 columns): axial CT slice through the tumour centre with
+        GTV / CTV / PTV contours and the per-scenario cumulative-dose
+        heatmap (same PTV-clipped display as fig 14 row 2, but all
+        three scenarios side by side for direct comparison).
+
+    Row 1 (single wide panel): dose-volume histogram for each scenario
+        evaluated on all three target volumes.  For each scenario s and
+        volume V, the DVH gives the fraction of V that receives a
+        cumulative cavitation dose ≥ d, plotted against d ∈ [0, 1].
+        Key metrics annotated on the DVH:
+            V95  — volume fraction receiving ≥ 0.95 dose (target ≥ 95 %)
+            D95  — minimum dose received by 95 % of the volume
+            Dmean — volume-average dose
+
+    Clinical reference lines:
+        d = 0.95 vertical dashed line (therapeutic coverage threshold)
+        V = 0.95 horizontal dashed line (coverage target)
+
+    The DVH quantifies how completely the dose fills each volume:
+    a DVH curve that passes through (0.95, 0.95) satisfies the standard
+    radiotherapy V95 ≥ 95 % coverage criterion, adapted here to
+    cumulative cavitation-dose probability.
+    """
+    print("[ch21e] Building DVH + volumes figure")
+    fx = info["focus_idx"][0]
+    hot = plt.get_cmap("inferno")
+    dose_colors = [(*hot(t)[:3], 0.0 if t < 0.05 else min(0.85, t * 1.2))
+                   for t in np.linspace(0, 1, 256)]
+    overlay_cmap = LinearSegmentedColormap.from_list("cav_dose_dvh", dose_colors)
+
+    fig = plt.figure(figsize=(17, 11))
+    gs_top = fig.add_gridspec(1, 3, top=0.92, bottom=0.54, wspace=0.22,
+                              left=0.05, right=0.97)
+    gs_bot = fig.add_gridspec(1, 1, top=0.46, bottom=0.07,
+                              left=0.07, right=0.97)
+
+    # ── Row 0: axial dose heatmaps ─────────────────────────────────────
+    for col, sc in enumerate(scenarios):
+        ax = fig.add_subplot(gs_top[0, col])
+        r = results[sc.name]
+
+        # Background CT
+        tumour = gtv
+        coords = np.argwhere(tumour)
+        cmin = coords.min(axis=0); cmax = coords.max(axis=0)
+        pad = int(0.04 / info["dx"])
+        y0 = max(0, cmin[1] - pad); y1 = min(label_vol.shape[1], cmax[1] + pad)
+        z0 = max(0, cmin[2] - pad); z1 = min(label_vol.shape[2], cmax[2] + pad)
+        extent_crop = [info["z_axis"][z0] * 1e3, info["z_axis"][z1 - 1] * 1e3,
+                       info["y_axis"][y1 - 1] * 1e3, info["y_axis"][y0] * 1e3]
+
+        ax.imshow(ct[fx, y0:y1, z0:z1], cmap="gray", vmin=-200, vmax=300,
+                  extent=extent_crop, aspect="equal")
+        # GTV / CTV / PTV contours
+        for vol, clr, lw in (
+            (gtv, "cyan",   0.9),
+            (ctv, "yellow", 0.8),
+            (ptv, "white",  0.7),
+        ):
+            sl = vol[fx, y0:y1, z0:z1].astype(float)
+            if sl.any():
+                ax.contour(np.flipud(sl), levels=[0.5], colors=clr,
+                           linewidths=lw, extent=extent_crop)
+        # Distance-weighted dose overlay (same transform as fig 14 row 2):
+        # GTV = full cav_dose; CTV/PTV annuli decay linearly to 0 at
+        # the PTV outer edge so the clinical gradient is visible.
+        dose_weighted = margin_weighted_dose(
+            r["cav_dose"], gtv, ptv, info,
+            ctv_margin_m=5.0e-3, ptv_margin_m=3.0e-3,
+        )
+        dose_sl = dose_weighted[fx, y0:y1, z0:z1]
+        ax.imshow(dose_sl, cmap=overlay_cmap, extent=extent_crop,
+                  vmin=0, vmax=1, aspect="equal")
+        m = r["metrics"]
+        ax.set_title(
+            f"{sc.label}\n"
+            f"GTV cov {m.get('tumour_coverage_pct', 0):.0f}% | "
+            f"{m.get('actual_raster_points', 0)} shots | "
+            f"{sc.treatment_s / 60:.1f} min",
+            fontsize=8.5,
+        )
+        ax.set(xlabel="z [mm]", ylabel="y [mm]")
+        if col == 0:
+            legend_patches = [
+                Line2D([0], [0], color="cyan",   lw=1.0, label="GTV (target)"),
+                Line2D([0], [0], color="yellow", lw=0.9, label="CTV +5 mm (HOPE4LIVER)"),
+                Line2D([0], [0], color="white",  lw=0.8, label="PTV +8 mm total"),
+            ]
+            ax.legend(handles=legend_patches, fontsize=7, loc="upper right",
+                      framealpha=0.7)
+
+    # ── Row 1: DVH ─────────────────────────────────────────────────────
+    ax_dvh = fig.add_subplot(gs_bot[0, 0])
+    d_vals = np.linspace(0, 1, 300)
+
+    volume_specs = [
+        ("GTV", gtv,  "-",  0.9),
+        ("CTV", ctv,  "--", 0.7),
+        ("PTV", ptv,  ":",  0.6),
+    ]
+    vname_of = {"GTV": gtv, "CTV": ctv, "PTV": ptv}
+
+    for sc in scenarios:
+        r = results[sc.name]
+        # GTV uses raw cav_dose (honest physics — shots fired here).
+        # CTV / PTV use the distance-weighted dose so the DVH curves
+        # reflect the graded margin coverage intent rather than
+        # stochastic beam-tail values: w=1 at GTV surface decaying
+        # linearly to 0 at the PTV outer edge.  This makes the DVH
+        # read as "what fraction of the margin receives therapeutic-
+        # equivalent dose?" which is the clinically meaningful question.
+        dose_raw = r["cav_dose"]
+        dose_mw = margin_weighted_dose(
+            dose_raw, gtv, ptv, info,
+            ctv_margin_m=5.0e-3, ptv_margin_m=3.0e-3,
+        )
+        for vname, vmask, ls, alpha in volume_specs:
+            n_vox = int(vmask.sum())
+            if n_vox == 0:
+                continue
+            # GTV DVH: raw physics. CTV / PTV DVH: margin-weighted.
+            voxel_doses = dose_raw[vmask] if vname == "GTV" else dose_mw[vmask]
+            # DVH: fraction of volume receiving ≥ d
+            dvh = np.array([(voxel_doses >= d).mean() for d in d_vals])
+            ax_dvh.plot(d_vals, dvh, color=sc.color, linestyle=ls,
+                        linewidth=1.4 * alpha, alpha=alpha,
+                        label=f"{sc.name} / {vname}")
+
+            # Annotate V95 and D95
+            v95 = float((voxel_doses >= 0.95).mean())
+            # D95: dose exceeded by 95% of the volume (5th percentile)
+            d95 = float(np.percentile(voxel_doses, 5)) if n_vox >= 5 else 0.0
+            if vname == "GTV":  # annotate GTV only to avoid clutter
+                ax_dvh.annotate(
+                    f"V95={v95 * 100:.0f}%\nD95={d95:.2f}",
+                    xy=(d95, 0.95),
+                    xytext=(d95 + 0.05, 0.95 - 0.08),
+                    fontsize=7, color=sc.color,
+                    arrowprops=dict(arrowstyle="->", color=sc.color, lw=0.6),
+                )
+
+    # Reference lines
+    ax_dvh.axvline(0.95, color="k", ls="--", lw=0.8, label="d = 0.95 threshold")
+    ax_dvh.axhline(0.95, color="gray", ls="--", lw=0.7, label="V95 target = 95 %")
+    ax_dvh.set(
+        xlabel="Cumulative cavitation dose (normalised, 0–1)",
+        ylabel="Volume fraction receiving ≥ dose",
+        xlim=(0, 1), ylim=(0, 1.02),
+        title=(
+            "Dose-Volume Histogram (DVH) — GTV / CTV / PTV\n"
+            "line style: solid=GTV, dashed=CTV, dotted=PTV; "
+            "colour = scenario"
+        ),
+    )
+    ax_dvh.legend(fontsize=7, ncol=3, loc="lower left",
+                  framealpha=0.85)
+
+    fig.suptitle(
+        "GTV / CTV / PTV — axial dose overlay and Dose-Volume Histogram\n"
+        "(LiTS17 case-0 HCC; GTV = native segmentation, "
+        "CTV = GTV + 5 mm [HOPE4LIVER NCT04573881], PTV = CTV + 3 mm)",
+        fontsize=10,
+    )
+    b64 = save_fig(fig, "fig17_dvh_and_volumes")
+    plt.close(fig)
+    print("  saved fig17_dvh_and_volumes")
+    return b64
+
+
 def main():
     if not os.path.exists(CT_PATH):
         raise SystemExit(f"CT not found: {CT_PATH}. Download KiTS19 case_00000 first.")
 
     ct, label_vol, info = load_ct_and_segment(target_dx_m=1.2e-3)
 
+    # GTV / CTV / PTV — computed once; threaded through all downstream
+    # plotting and confinement calls so every figure uses consistent volumes.
+    gtv, ctv, ptv = compute_gtv_ctv_ptv(label_vol, info["dx"],
+                                         ctv_margin_m=5.0e-3,
+                                         ptv_margin_m=3.0e-3)
+    gtv_vol_mm3  = float(gtv.sum()  * (info["dx"] * 1e3) ** 3)
+    ctv_vol_mm3  = float(ctv.sum()  * (info["dx"] * 1e3) ** 3)
+    ptv_vol_mm3  = float(ptv.sum()  * (info["dx"] * 1e3) ** 3)
+    print(f"[ch21e] Target volumes: "
+          f"GTV={gtv_vol_mm3/1e3:.2f} cm³  "
+          f"CTV={ctv_vol_mm3/1e3:.2f} cm³  "
+          f"PTV={ptv_vol_mm3/1e3:.2f} cm³")
+
     tumour_volume_m3 = float((label_vol == HCC.label).sum() * info["dx"]**3)
+
+    # Derive OAR masks once from CT HU + native segmentation.
+    # These are passed to predicted_lesion() for raster exclusion and to
+    # all plot/animation functions for contour display.
+    print("[ch21e] Deriving organ-at-risk masks from CT HU + segmentation")
+    oar_masks = derive_oar_masks(ct, label_vol, info)
+    for spec in OAR_SPECS:
+        n_vox = int(oar_masks[spec.name].sum())
+        vol_cm3 = n_vox * (info["dx"] * 1e2) ** 3
+        print(f"  OAR {spec.name}: {n_vox} vox, {vol_cm3:.1f} cm³"
+              + (" [absolute no-lesion]" if spec.is_absolute else " [flagged]"))
 
     # Run scenarios with TWO passes:
     #   (a) probe pass — single focal exposure to measure per-shot footprint
@@ -1633,7 +2982,8 @@ def main():
         attn_at_focus = p_unatt[info["focus_idx"]]
         source_pa = sc_probe.pnp / max(attn_at_focus, 1e-12)
         p_field = focused_bowl_pressure(info, props, sc_probe.f0, source_pa=source_pa)
-        _, r_probe = predicted_lesion(p_field, props, sc_probe, info, label_vol)
+        _, r_probe = predicted_lesion(p_field, props, sc_probe, info, label_vol,
+                                      oar_masks=oar_masks)
         ps_mask = r_probe["per_shot_mask"]
         ps_coords = np.argwhere(ps_mask)
         if len(ps_coords) > 0:
@@ -1650,7 +3000,8 @@ def main():
         print(f"[ch21e] Sized scenario (autosize estimate): {sc.raster_points} pts, "
               f"{sc.treatment_s/60:.1f} min")
         # Re-run with the autosized raster; reuse the p_field (same scenario).
-        lesion, r = predicted_lesion(p_field, props, sc, info, label_vol)
+        lesion, r = predicted_lesion(p_field, props, sc, info, label_vol,
+                                     oar_masks=oar_masks)
         r["p_field"] = p_field
         # Sync sc to the ACTUAL placed raster + actual treatment time so
         # downstream visualizations (animation, raster overlay, metrics
@@ -1671,6 +3022,8 @@ def main():
         lesions[sc.name] = lesion
         metrics.append(r["metrics"])
         m = r["metrics"]
+        oar_overlap = m.get("n_oar_footprint_overlap_pts", 0)
+        oar_enc     = m.get("n_oar_encasing_raster_pts", 0)
         print(f"    actual: {m['actual_raster_points']} pts, "
               f"{m['actual_treatment_s']/60:.1f} min, "
               f"coverage {m['tumour_coverage_pct']:.1f}%, "
@@ -1679,20 +3032,35 @@ def main():
               f"confinement {m['confinement_pct']:.0f}%, "
               f"T_trans {m['T_transient_C']:.1f} °C, "
               f"T_steady {m['T_steady_C']:.1f} °C")
+        if oar_overlap > 0 or oar_enc > 0:
+            print(f"    OAR: {oar_overlap} raster pts with OAR footprint overlap "
+                  f"(dose monitored, not excluded), "
+                  f"{oar_enc} pts inside vessel-encasing GTV (MDT review)")
+        for spec in OAR_SPECS:
+            dmax = m.get(f"oar_{spec.name}_dose_max", 0.0)
+            if dmax > 0.05:
+                print(f"    WARNING OAR {spec.name}: max dose {dmax:.3f} "
+                      f"{'[ABSOLUTE]' if spec.is_absolute else '[flagged]'}")
 
     # Render figures + capture base64 for embedding
     b64_seg = plot_segmentation(ct, label_vol, info)
-    b64_pan = plot_pressure_and_lesion(ct, label_vol, info, results, lesions)
+    b64_pan = plot_pressure_and_lesion(ct, label_vol, info, results, lesions,
+                                       gtv, ctv, ptv, oar_masks=oar_masks)
     b64_met = plot_metrics_summary(metrics, sized_scenarios)
-    b64_ras = plot_raster_overlay(ct, label_vol, info, results, sized_scenarios)
-    b64_anim = make_sonication_animation(ct, label_vol, info, results, sized_scenarios)
+    b64_ras = plot_raster_overlay(ct, label_vol, info, results, sized_scenarios,
+                                  gtv, ctv, ptv, oar_masks=oar_masks)
+    b64_dvh = plot_dvh_and_volumes(ct, label_vol, info, results,
+                                   gtv, ctv, ptv, sized_scenarios)
+    b64_anim = make_sonication_animation(ct, label_vol, info, results, sized_scenarios,
+                                         gtv, ctv, ptv, oar_masks=oar_masks)
     # Strategy-comparison animation: pick the shock-vapor scenario
     # because its larger per-shot footprint gives the clearest
     # side-by-side fill differences between path orderings.
     sc_for_strategy = next((s for s in sized_scenarios if s.regime == "shock_vapor"),
                            sized_scenarios[0])
     b64_strat = make_strategy_comparison_animation(ct, label_vol, info, results,
-                                                   sc_for_strategy)
+                                                   sc_for_strategy, gtv, ctv, ptv,
+                                                   oar_masks=oar_masks)
 
     # Write embedded-figures markdown.
     md_path = os.path.join(OUT_DIR, "embedded_figures.md")
@@ -1965,19 +3333,65 @@ def main():
         )
         f.write("### Figure 21.18 — CT segmentation\n\n")
         f.write(f"![CT segmentation](data:image/png;base64,{b64_seg})\n\n")
-        f.write("### Figure 21.19 — Pressure, P_cav, and predicted lesion overlay (3 scenarios)\n\n")
-        f.write(f"![Lesion panel](data:image/png;base64,{b64_pan})\n\n")
-        f.write("### Figure 21.20 — Raster scan overlay (auto-sized for full coverage)\n\n")
         f.write(
-            "Each scenario's raster pitch is auto-set to the per-shot "
-            "footprint diameter (overlap factor 0.7), so all three regimes "
-            "achieve full tumour coverage. Coloured circles mark the "
-            "per-shot footprint at every raster centre on the slice.\n\n"
+            "### Figure 21.19 — Focal pressure, regime dose map, "
+            "and PTV-clipped cavitation-dose heatmap (3 scenarios)\n\n"
+        )
+        f.write(
+            "**Row 0**: Peak rarefactional pressure [MPa] around the focus.\n\n"
+            "**Row 1**: Regime-appropriate single-pulse dose metric (not P_cav "
+            "for all regimes): "
+            "*μs intrinsic* → $P_{cav}$ erf-CDF (Vlaisavljevich 2015); "
+            "*ms shock-vapor* → normalised $T_{transient}$ / 100°C (vapor seed "
+            "probability per Khokhlova 2011 — PNP=15 MPa is sub-intrinsic-"
+            "threshold so $P_{cav}≈0$, but the shock delivers sufficient heat "
+            "for boiling nucleation); "
+            "*ms sub-threshold* → normalised collapse strength $S_c / 10$ "
+            "(Vlaisavljevich 2018). "
+            "GTV (cyan), CTV (yellow, +3 mm), and PTV (white, +6 mm) contours"
+            "are overlaid.\n\n"
+            "**Row 2**: Cumulative cavitation-dose heatmap clipped to the PTV. "
+            "Dose outside the PTV is zeroed so the display reflects only the "
+            "therapeutically relevant volume. Coverage, cloud radius, and "
+            "steady-state temperature are annotated.\n\n"
+        )
+        f.write(f"![Lesion panel](data:image/png;base64,{b64_pan})\n\n")
+        f.write("### Figure 21.20 — Raster scan overlay (pressure-contour based pitch)\n\n")
+        f.write(
+            "Raster pitch is derived from the per-shot mechanical cavitation-"
+            "cloud half-extent (the region where T ≥ 100°C / P ≥ P_t / "
+            "$S_c$ ≥ 5), NOT the FWHM beam width. FWHM is a diagnostic imaging "
+            "convention (-3 dB amplitude, Penttinen 1976) unrelated to where "
+            "the acoustic pressure crosses the therapeutic threshold. Using "
+            "the true cavitation contour ensures adjacent shot footprints "
+            "overlap by exactly 50 % so every inter-spot voxel receives a "
+            "full exposure with no coverage gaps. Coloured circles show the "
+            "per-shot cloud radius at each raster centre. GTV / CTV / PTV "
+            "contours are drawn in the same colour convention as fig 14.\n\n"
         )
         f.write(f"![Raster overlay](data:image/png;base64,{b64_ras})\n\n")
         f.write("### Figure 21.21 — Real-CT scenario metrics summary\n\n")
         f.write(f"![Metrics summary](data:image/png;base64,{b64_met})\n\n")
-        f.write("### Figure 21.22 — Sonication animation (real-time, synchronised)\n\n")
+        f.write(
+            "### Figure 21.22 — GTV / CTV / PTV dose-volume histogram (DVH)\n\n"
+        )
+        f.write(
+            "Dose-Volume Histogram evaluated on the three planning volumes "
+            "(GTV = native HCC segmentation, CTV = GTV + 5 mm [HOPE4LIVER NCT04573881], "
+            "PTV = CTV + 3 mm) for each scenario. The DVH gives the fraction "
+            "of volume receiving ≥ d cumulative cavitation dose, plotted against "
+            "d. **V95** (volume fraction with dose ≥ 0.95) and **D95** (dose "
+            "at the 5th percentile of the volume) are annotated per scenario "
+            "on the GTV curve. The standard radiotherapy target V95 ≥ 95 % "
+            "(vertical d=0.95 and horizontal V=0.95 dashed lines) is carried "
+            "forward as the histotripsy coverage criterion.\n\n"
+            "The axial dose overlays (top row) confirm that PTV-clipping "
+            "eliminates the apparent out-of-segmentation dose that was artefactual "
+            "in previous figures — the displayed distribution is confined to "
+            "the planning volumes only.\n\n"
+        )
+        f.write(f"![DVH and volumes](data:image/png;base64,{b64_dvh})\n\n")
+        f.write("### Figure 21.23 — Sonication animation (real-time, synchronised)\n\n")
         f.write(
             "Animated GIF of the raster scan progressing in **real treatment "
             "time** for all three scenarios in parallel. Each panel fills with "
@@ -1991,7 +3405,7 @@ def main():
             "beat μs throughput despite the per-spot 1 Hz physics constraint.\n\n"
         )
         f.write(f"![Sonication animation](data:image/gif;base64,{b64_anim})\n\n")
-        f.write("### Figure 21.23 — Raster path strategy comparison\n\n")
+        f.write("### Figure 21.24 — Raster path strategy comparison\n\n")
         f.write(
             "Same scenario (ms shock-vapor on the LiTS17 HCC target) animated "
             "under four different raster-ordering strategies — same shots, same "

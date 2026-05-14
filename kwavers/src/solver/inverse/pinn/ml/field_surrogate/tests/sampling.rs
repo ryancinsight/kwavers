@@ -65,7 +65,10 @@ fn test_sampler_emits_distinct_group_ids_per_kernel() {
         assert!(g.is_finite(), "non-finite group id: {g}");
         let idx = g as usize;
         assert!(idx < 4, "group id {idx} out of range");
-        assert!((g - idx as f32).abs() < 1e-6, "group id not an integer: {g}");
+        assert!(
+            (g - idx as f32).abs() < 1e-6,
+            "group id not an integer: {g}"
+        );
         seen[idx] = true;
     }
     assert!(
@@ -135,13 +138,13 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
     // > 50 % of cumulative probability mass under exponent=2.
     let total = sampler.len();
     let n_focal = (total / 64).max(1); // ~1.5 % of voxels closest to peak
-    // Without direct access to private fields, this test verifies
-    // that the empirical distribution is *non-uniform* by running
-    // many batches and checking the highest |p| input row appears
-    // disproportionately often. We do this by checking that
-    // sampling 10 batches × 256 produces inputs whose mean magnitude
-    // exceeds the dataset average — which it must, by construction,
-    // for any exponent > 0.
+                                       // Without direct access to private fields, this test verifies
+                                       // that the empirical distribution is *non-uniform* by running
+                                       // many batches and checking the highest |p| input row appears
+                                       // disproportionately often. We do this by checking that
+                                       // sampling 10 batches × 256 produces inputs whose mean magnitude
+                                       // exceeds the dataset average — which it must, by construction,
+                                       // for any exponent > 0.
     let mut mean_abs_x_pred = 0.0_f64;
     let n_batches = 10usize;
     let batch_size = 256usize;

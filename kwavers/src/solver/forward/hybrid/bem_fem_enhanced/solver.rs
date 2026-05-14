@@ -45,7 +45,7 @@ pub struct EnhancedBemFemSolver {
 
 impl EnhancedBemFemSolver {
     /// Create new enhanced solver.
-    #[must_use] 
+    #[must_use]
     pub fn new(config: EnhancedBemFemConfig) -> Self {
         Self {
             config,
@@ -179,7 +179,7 @@ impl EnhancedBemFemSolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn interface_quality(&self) -> Option<&InterfaceQuality> {
         self.interface_quality.as_ref()
     }
@@ -188,7 +188,7 @@ impl EnhancedBemFemSolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn refinement_history(&self) -> &[RefinementStep] {
         &self.refinement_history
     }

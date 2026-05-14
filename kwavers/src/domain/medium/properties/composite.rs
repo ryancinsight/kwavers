@@ -44,7 +44,7 @@ pub struct MaterialProperties {
 
 impl MaterialProperties {
     /// Create acoustic-only material (e.g., water, air)
-    #[must_use] 
+    #[must_use]
     pub fn acoustic_only(acoustic: AcousticPropertyData) -> Self {
         Self {
             acoustic,
@@ -57,7 +57,7 @@ impl MaterialProperties {
     }
 
     /// Create elastic material with acoustic coupling
-    #[must_use] 
+    #[must_use]
     pub fn elastic(acoustic: AcousticPropertyData, elastic: ElasticPropertyData) -> Self {
         Self {
             acoustic,
@@ -70,13 +70,13 @@ impl MaterialProperties {
     }
 
     /// Create builder for multi-physics composition
-    #[must_use] 
+    #[must_use]
     pub fn builder() -> MaterialPropertiesBuilder {
         MaterialPropertiesBuilder::default()
     }
 
     /// Water at 20°C (acoustic + thermal)
-    #[must_use] 
+    #[must_use]
     pub fn water() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData::water())
@@ -85,7 +85,7 @@ impl MaterialProperties {
     }
 
     /// Soft tissue (acoustic + thermal + EM)
-    #[must_use] 
+    #[must_use]
     pub fn soft_tissue() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData::soft_tissue())
@@ -95,7 +95,7 @@ impl MaterialProperties {
     }
 
     /// Cortical bone (acoustic + elastic + thermal + strength)
-    #[must_use] 
+    #[must_use]
     pub fn bone() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData {
@@ -115,7 +115,7 @@ impl MaterialProperties {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn steel() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData {
@@ -167,42 +167,42 @@ pub struct MaterialPropertiesBuilder {
 
 impl MaterialPropertiesBuilder {
     /// Set acoustic properties (required)
-    #[must_use] 
+    #[must_use]
     pub fn acoustic(mut self, acoustic: AcousticPropertyData) -> Self {
         self.acoustic = Some(acoustic);
         self
     }
 
     /// Set elastic properties (optional)
-    #[must_use] 
+    #[must_use]
     pub fn elastic(mut self, elastic: ElasticPropertyData) -> Self {
         self.elastic = Some(elastic);
         self
     }
 
     /// Set electromagnetic properties (optional)
-    #[must_use] 
+    #[must_use]
     pub fn electromagnetic(mut self, em: ElectromagneticPropertyData) -> Self {
         self.electromagnetic = Some(em);
         self
     }
 
     /// Set optical properties (optional)
-    #[must_use] 
+    #[must_use]
     pub fn optical(mut self, optical: OpticalPropertyData) -> Self {
         self.optical = Some(optical);
         self
     }
 
     /// Set strength properties (optional)
-    #[must_use] 
+    #[must_use]
     pub fn strength(mut self, strength: StrengthPropertyData) -> Self {
         self.strength = Some(strength);
         self
     }
 
     /// Set thermal properties (optional)
-    #[must_use] 
+    #[must_use]
     pub fn thermal(mut self, thermal: ThermalPropertyData) -> Self {
         self.thermal = Some(thermal);
         self
@@ -213,7 +213,7 @@ impl MaterialPropertiesBuilder {
     /// # Panics
     ///
     /// Panics if acoustic properties are not set
-    #[must_use] 
+    #[must_use]
     pub fn build(self) -> MaterialProperties {
         MaterialProperties {
             acoustic: self.acoustic.expect("Acoustic properties are required"),

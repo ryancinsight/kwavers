@@ -7,9 +7,9 @@
 //! - `checker` — `ConservationChecker` struct and full impl.
 
 mod checker;
-mod types;
 #[cfg(test)]
 mod tests;
+mod types;
 
 pub use checker::ConservationChecker;
 pub use types::{ConservationLaw, ConservationResult, ConservedQuantity};

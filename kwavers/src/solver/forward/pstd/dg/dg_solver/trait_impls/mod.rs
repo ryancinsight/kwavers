@@ -165,8 +165,9 @@ impl DGOperations for DGSolver {
 
         for e in 0..n_elements {
             for var in 0..n_vars {
-                let c_col: Array1<f64> =
-                    (0..self.n_nodes).map(|i| coefficients[[e, i, var]]).collect();
+                let c_col: Array1<f64> = (0..self.n_nodes)
+                    .map(|i| coefficients[[e, i, var]])
+                    .collect();
                 let f_col = v.dot(&c_col);
                 for i in 0..self.n_nodes {
                     field[[e, i, var]] = f_col[i];

@@ -94,7 +94,7 @@ impl ElectromagneticPropertyData {
 
     /// Electromagnetic wave speed c = c₀/√(ε_r μ_r) (m/s)
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn wave_speed(&self) -> f64 {
         const C0: f64 = 299_792_458.0;
         C0 / (self.permittivity * self.permeability).sqrt()
@@ -102,7 +102,7 @@ impl ElectromagneticPropertyData {
 
     /// Intrinsic impedance Z = Z₀√(μ_r/ε_r) (Ω)
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn impedance(&self) -> f64 {
         const Z0: f64 = 376.730_313_668;
         Z0 * (self.permeability / self.permittivity).sqrt()
@@ -110,13 +110,13 @@ impl ElectromagneticPropertyData {
 
     /// Refractive index n = √(ε_r μ_r)
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub fn refractive_index(&self) -> f64 {
         (self.permittivity * self.permeability).sqrt()
     }
 
     /// Skin depth δ = √(2/(ωμσ)) at angular frequency ω
-    #[must_use] 
+    #[must_use]
     pub fn skin_depth(&self, frequency_hz: f64) -> f64 {
         if self.conductivity == 0.0 {
             return f64::INFINITY;
@@ -128,7 +128,7 @@ impl ElectromagneticPropertyData {
     }
 
     /// Vacuum properties
-    #[must_use] 
+    #[must_use]
     pub fn vacuum() -> Self {
         Self {
             permittivity: 1.0,
@@ -139,7 +139,7 @@ impl ElectromagneticPropertyData {
     }
 
     /// Water properties (at RF frequencies)
-    #[must_use] 
+    #[must_use]
     pub fn water() -> Self {
         Self {
             permittivity: 80.0,
@@ -153,7 +153,7 @@ impl ElectromagneticPropertyData {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn tissue() -> Self {
         Self {
             permittivity: 50.0,

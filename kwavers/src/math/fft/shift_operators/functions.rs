@@ -66,7 +66,7 @@ use std::f64::consts::PI;
 ///
 /// # Panics
 /// Never panics; all arithmetic is well-defined for all `n ≥ 1`.
-#[must_use] 
+#[must_use]
 pub fn generate_shift_1d(n: usize, dk: f64, ds: f64) -> (Array1<Complex64>, Array1<Complex64>) {
     let i_unit = Complex64::new(0.0, 1.0);
     let mut shift_pos = Array1::zeros(n);

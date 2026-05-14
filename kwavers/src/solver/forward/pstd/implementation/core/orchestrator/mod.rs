@@ -97,6 +97,12 @@ pub struct PSTDSolver {
     /// those rows (save before, restore after), matching KWave.jl's CPML bypass at TR
     /// source cells and allowing the Dirichlet pressure to drive waves normally.
     pub(crate) dirichlet_pml_bypass_x: Vec<usize>,
+    /// Reusable yz-plane scratch for preserving Dirichlet-PML bypass rows.
+    ///
+    /// Shape is `(dirichlet_pml_bypass_x.len(), ny, nz)`. Velocity and density
+    /// components reuse the same buffer sequentially, eliminating per-step
+    /// `Array2` allocations in the bypass path.
+    pub(crate) pml_bypass_plane_scratch: Array3<f64>,
 }
 
 impl PSTDSolver {
@@ -111,12 +117,12 @@ impl PSTDSolver {
             });
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn sensor_indices(&self) -> &[(usize, usize, usize)] {
         self.sensor_recorder.sensor_indices()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn extract_pressure_data(&self) -> Option<Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
     }
@@ -145,13 +151,14 @@ impl PSTDSolver {
     /// forced pressure to drive velocity and density without split-field damping.
     pub fn set_dirichlet_pml_bypass_x(&mut self, rows: Vec<usize>) {
         self.dirichlet_pml_bypass_x = rows;
+        self.resize_pml_bypass_scratch();
     }
 
     /// Pressure field.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn pressure_field(&self) -> &Array3<f64> {
         &self.fields.p
     }
@@ -159,7 +166,7 @@ impl PSTDSolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.fields.ux, &self.fields.uy, &self.fields.uz)
     }

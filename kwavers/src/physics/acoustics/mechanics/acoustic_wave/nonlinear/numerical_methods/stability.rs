@@ -135,9 +135,17 @@ mod tests {
         // !NaN.is_finite() = true → zeroed.
         assert_eq!(field[[0, 0, 0]], 0.0, "NaN must be zeroed");
         // Inf: Inf.abs() > 1e8 → clamped to signum(Inf)·1e8 = +1e8; is_finite() → stays.
-        assert_eq!(field[[1, 1, 1]], 1e8, "Inf must be clamped to +max_pressure");
+        assert_eq!(
+            field[[1, 1, 1]],
+            1e8,
+            "Inf must be clamped to +max_pressure"
+        );
         // -Inf: similar → -1e8.
-        assert_eq!(field[[2, 2, 2]], -1e8, "NegInf must be clamped to -max_pressure");
+        assert_eq!(
+            field[[2, 2, 2]],
+            -1e8,
+            "NegInf must be clamped to -max_pressure"
+        );
     }
 
     /// `compute_adaptive_timestep` returns a positive, finite time step for water.
@@ -150,9 +158,15 @@ mod tests {
         let w = NonlinearWave::new(&grid, 1e-7);
 
         let dt = w.compute_adaptive_timestep(&medium, &grid);
-        assert!(dt > 0.0, "adaptive timestep must be positive (got {dt:.3e})");
+        assert!(
+            dt > 0.0,
+            "adaptive timestep must be positive (got {dt:.3e})"
+        );
         assert!(dt.is_finite(), "adaptive timestep must be finite");
         // For water c≈1500, safety=0.9: dt_cfl = 0.9·0.001/(π·1500) ≈ 1.91e-7
-        assert!(dt < 1e-5, "adaptive timestep must be sub-microsecond for water/mm grid");
+        assert!(
+            dt < 1e-5,
+            "adaptive timestep must be sub-microsecond for water/mm grid"
+        );
     }
 }

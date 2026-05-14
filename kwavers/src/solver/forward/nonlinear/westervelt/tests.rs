@@ -71,7 +71,10 @@ fn test_conservation_diagnostics_integration() {
     assert!(initial_energy < 1e-10);
 
     // Verify tracker is enabled with zero initial energy
-    assert_eq!(solver.conservation_tracker.as_ref().unwrap().initial_energy, 0.0);
+    assert_eq!(
+        solver.conservation_tracker.as_ref().unwrap().initial_energy,
+        0.0
+    );
     assert!(solver.is_solution_valid());
 
     // Disable and check

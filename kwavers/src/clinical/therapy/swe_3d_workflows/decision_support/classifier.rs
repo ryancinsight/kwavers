@@ -41,10 +41,7 @@ impl Default for ClinicalDecisionSupport {
         );
 
         // Liver fibrosis METAVIR thresholds (kPa): F0F1|F2, F2|F3, F3|F4.
-        classification_thresholds.insert(
-            "liver_metavir".to_owned(),
-            vec![6.5, 8.5, 11.0],
-        );
+        classification_thresholds.insert("liver_metavir".to_owned(), vec![6.5, 8.5, 11.0]);
 
         reference_ranges.insert(
             "breast_normal".to_owned(),
@@ -93,8 +90,7 @@ impl ClinicalDecisionSupport {
             FibrosisStage::F4
         };
 
-        let confidence = if stats.std_modulus / stats.mean_modulus < 0.3
-            && stats.mean_quality > 0.7
+        let confidence = if stats.std_modulus / stats.mean_modulus < 0.3 && stats.mean_quality > 0.7
         {
             ClassificationConfidence::High
         } else if stats.std_modulus / stats.mean_modulus < 0.5 && stats.mean_quality > 0.5 {
@@ -129,8 +125,7 @@ impl ClinicalDecisionSupport {
             (5, 0.95)
         };
 
-        let confidence = if stats.std_modulus / stats.mean_modulus < 0.4
-            && stats.mean_quality > 0.8
+        let confidence = if stats.std_modulus / stats.mean_modulus < 0.4 && stats.mean_quality > 0.8
         {
             ClassificationConfidence::High
         } else if stats.std_modulus / stats.mean_modulus < 0.6 && stats.mean_quality > 0.6 {

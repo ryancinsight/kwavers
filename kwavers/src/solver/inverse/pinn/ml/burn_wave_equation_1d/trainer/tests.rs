@@ -179,4 +179,3 @@ fn test_multiple_training_runs() {
         .unwrap();
     assert_eq!(metrics2.epochs_completed, 5);
 }
-

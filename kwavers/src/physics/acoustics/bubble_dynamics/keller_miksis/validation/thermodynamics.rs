@@ -31,7 +31,8 @@ fn test_mass_transfer_evaporation() {
     state.pressure_internal = 101325.0;
 
     let n_vapor_initial = state.n_vapor;
-    model.update_mass_transfer(&mut state, 1e-6)
+    model
+        .update_mass_transfer(&mut state, 1e-6)
         .expect("Mass transfer should succeed");
     assert!(
         state.n_vapor >= n_vapor_initial,
@@ -64,7 +65,8 @@ fn test_temperature_adiabatic_heating() {
     state.wall_velocity = -100.0;
     let t_initial = state.temperature;
 
-    model.update_temperature(&mut state, 1e-9)
+    model
+        .update_temperature(&mut state, 1e-9)
         .expect("Temperature update should succeed (compression)");
     assert!(
         state.temperature > t_initial,
@@ -86,7 +88,8 @@ fn test_temperature_cooling() {
     state.n_gas = 1e15;
 
     let t_initial = state.temperature;
-    model.update_temperature(&mut state, 1e-8)
+    model
+        .update_temperature(&mut state, 1e-8)
         .expect("Temperature update should succeed (cooling)");
     let t_final = state.temperature;
 
@@ -107,7 +110,8 @@ fn test_vdw_pressure_calculation() {
     let model = KellerMiksisModel::new(params.clone());
     let state = BubbleState::new(&params);
 
-    let p_vdw = model.calculate_vdw_pressure(&state)
+    let p_vdw = model
+        .calculate_vdw_pressure(&state)
         .expect("VdW pressure calculation should succeed");
     assert!(p_vdw > 0.0, "VdW pressure should be positive");
     assert!(p_vdw.is_finite(), "VdW pressure should be finite");

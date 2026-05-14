@@ -100,12 +100,12 @@ impl PeriodicBoundaryCondition {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_bloch(&self) -> bool {
         self.config.bloch_phase.iter().any(|&p| p.abs() > 1e-12)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn bloch_phase(&self) -> [f64; 3] {
         self.config.bloch_phase
     }

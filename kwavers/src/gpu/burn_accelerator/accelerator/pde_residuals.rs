@@ -28,12 +28,15 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         let c = params.wave_speed.unwrap_or(1480.0) as f32;
         let shape = u.shape();
 
-        let u_t_plus =
-            u.clone().slice([0..shape[0], 0..shape[1], 0..shape[2], 2..shape[3]]);
-        let u_t_minus =
-            u.clone().slice([0..shape[0], 0..shape[1], 0..shape[2], 0..shape[3] - 2]);
-        let u_center =
-            u.clone().slice([0..shape[0], 0..shape[1], 0..shape[2], 1..shape[3] - 1]);
+        let u_t_plus = u
+            .clone()
+            .slice([0..shape[0], 0..shape[1], 0..shape[2], 2..shape[3]]);
+        let u_t_minus = u
+            .clone()
+            .slice([0..shape[0], 0..shape[1], 0..shape[2], 0..shape[3] - 2]);
+        let u_center = u
+            .clone()
+            .slice([0..shape[0], 0..shape[1], 0..shape[2], 1..shape[3] - 1]);
 
         let dt_sq = (params.dt as f32) * (params.dt as f32);
         let d2u_dt2 = u_t_plus

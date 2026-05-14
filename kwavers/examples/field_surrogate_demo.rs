@@ -32,8 +32,8 @@ use ndarray::Array3;
 
 use kwavers::physics::field_surrogate::{discover_focal_kernels, FocalKernel};
 use kwavers::solver::inverse::pinn::ml::field_surrogate::{
-    KernelCubeSampler, ParamFieldPINNConfig, ParamFieldPINNNetwork,
-    ParamFieldPINNTrainer, SamplingMode, TrainingConfig,
+    KernelCubeSampler, ParamFieldPINNConfig, ParamFieldPINNNetwork, ParamFieldPINNTrainer,
+    SamplingMode, TrainingConfig,
 };
 
 type AB = Autodiff<NdArray<f32>>;
@@ -60,9 +60,7 @@ fn make_penttinen_kernel(
         let dx_phys = ((i as f64) - (focus.0 as f64)) * dx_m;
         let dy_phys = ((j as f64) - (focus.1 as f64)) * dx_m;
         let dz_phys = ((k as f64) - (focus.2 as f64)) * dx_m;
-        let r2 = (dx_phys / sx).powi(2)
-            + (dy_phys / sy).powi(2)
-            + (dz_phys / sz).powi(2);
+        let r2 = (dx_phys / sx).powi(2) + (dy_phys / sy).powi(2) + (dz_phys / sz).powi(2);
         *v = pnp * (-0.5 * r2).exp();
     }
     FocalKernel::new(field, dx_m, focus, f0, pnp, 1.0e6, fwhm_lat, fwhm_ax)
@@ -129,11 +127,9 @@ fn main() {
     // genuinely beneficial (e.g. high-dynamic-range field-magnitude
     // regression), but the production demo stays with the linear
     // transform which the C-7 sweep selected.
-    let p_max_pa = kernels
-        .iter()
-        .fold(0.0_f64, |acc, k| {
-            acc.max(k.field.iter().fold(0.0_f64, |a, &v| a.max(v.abs())))
-        }) as f32;
+    let p_max_pa = kernels.iter().fold(0.0_f64, |acc, k| {
+        acc.max(k.field.iter().fold(0.0_f64, |a, &v| a.max(v.abs())))
+    }) as f32;
     let mut sampler = KernelCubeSampler::new(&kernels, None);
     println!(
         "[demo] sampler: {} voxels, halves {:?} m, transforms {:?}, p_max={p_max_pa:.3e} Pa",
@@ -229,7 +225,11 @@ fn main() {
     fs::create_dir_all(&target_dir).expect("create target dir");
     let csv_path = target_dir.join("training_history.csv");
     let mut f = File::create(&csv_path).expect("open csv");
-    writeln!(f, "step,data_loss,helmholtz_loss,prominence_loss,total_loss").unwrap();
+    writeln!(
+        f,
+        "step,data_loss,helmholtz_loss,prominence_loss,total_loss"
+    )
+    .unwrap();
     for (i, (d, h, p, t)) in history.iter().enumerate() {
         writeln!(f, "{i},{d},{h},{p},{t}").unwrap();
     }
@@ -325,5 +325,9 @@ fn main() {
             rmse,
         );
     }
-    println!("[demo] wrote {} and {}", csv_path.display(), line_path.display());
+    println!(
+        "[demo] wrote {} and {}",
+        csv_path.display(),
+        line_path.display()
+    );
 }

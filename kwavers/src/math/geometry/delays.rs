@@ -112,7 +112,10 @@ pub fn plane_wave_phase_delays(
         )));
     }
 
-    let dir_norm_sq = direction[2].mul_add(direction[2], direction[1].mul_add(direction[1], direction[0].powi(2)));
+    let dir_norm_sq = direction[2].mul_add(
+        direction[2],
+        direction[1].mul_add(direction[1], direction[0].powi(2)),
+    );
 
     if !dir_norm_sq.is_finite() {
         return Err(KwaversError::InvalidInput(
@@ -140,7 +143,10 @@ pub fn plane_wave_phase_delays(
             )));
         }
 
-        let dot_product = pos[2].mul_add(direction[2], pos[0].mul_add(direction[0], pos[1] * direction[1]));
+        let dot_product = pos[2].mul_add(
+            direction[2],
+            pos[0].mul_add(direction[0], pos[1] * direction[1]),
+        );
 
         if !dot_product.is_finite() {
             return Err(KwaversError::InvalidInput(format!(

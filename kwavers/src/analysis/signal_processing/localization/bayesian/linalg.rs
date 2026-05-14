@@ -6,7 +6,13 @@ use crate::core::error::{KwaversError, KwaversResult};
 ///
 #[inline]
 fn det3(a: &[f64; 9]) -> f64 {
-    a[2].mul_add(a[3].mul_add(a[7], -(a[4] * a[6])), a[0].mul_add(a[4].mul_add(a[8], -(a[5] * a[7])), -(a[1] * a[3].mul_add(a[8], -(a[5] * a[6])))))
+    a[2].mul_add(
+        a[3].mul_add(a[7], -(a[4] * a[6])),
+        a[0].mul_add(
+            a[4].mul_add(a[8], -(a[5] * a[7])),
+            -(a[1] * a[3].mul_add(a[8], -(a[5] * a[6]))),
+        ),
+    )
 }
 
 /// Invert a 3×3 symmetric positive-definite matrix using Cramer's rule.

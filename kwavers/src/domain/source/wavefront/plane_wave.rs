@@ -73,13 +73,13 @@ impl PlaneWaveSource {
     }
 
     /// Get the wave number (k = 2π/λ)
-    #[must_use] 
+    #[must_use]
     pub fn wave_number(&self) -> f64 {
         self.wave_number
     }
 
     /// Get the propagation direction
-    #[must_use] 
+    #[must_use]
     pub fn direction(&self) -> (f64, f64, f64) {
         self.config.direction
     }
@@ -140,8 +140,13 @@ impl Source for PlaneWaveSource {
 
                     // Spatial phase: k • r = kx*x + ky*y + kz*z
                     let spatial_phase = self.wave_number
-                        * (self.config.direction.2.mul_add(z, self.config.direction.0.mul_add(x, self.config.direction.1 * y))
-                            + self.config.phase);
+                        * (self.config.direction.2.mul_add(
+                            z,
+                            self.config
+                                .direction
+                                .0
+                                .mul_add(x, self.config.direction.1 * y),
+                        ) + self.config.phase);
 
                     *val = spatial_phase.cos(); // Spatial variation of the wave
                 }
@@ -171,8 +176,13 @@ impl Source for PlaneWaveSource {
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
         // Plane wave source term: A * cos(k•r - ωt + φ)
         let spatial_phase = self.wave_number
-            * (self.config.direction.2.mul_add(z, self.config.direction.0.mul_add(x, self.config.direction.1 * y))
-                + self.config.phase);
+            * (self.config.direction.2.mul_add(
+                z,
+                self.config
+                    .direction
+                    .0
+                    .mul_add(x, self.config.direction.1 * y),
+            ) + self.config.phase);
 
         let temporal_phase = self.signal.amplitude(t);
         spatial_phase.cos() * temporal_phase
@@ -186,36 +196,36 @@ pub struct PlaneWaveBuilder {
 }
 
 impl PlaneWaveBuilder {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn direction(mut self, direction: (f64, f64, f64)) -> Self {
         self.config.direction = direction;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn wavelength(mut self, wavelength: f64) -> Self {
         self.config.wavelength = wavelength;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn phase(mut self, phase: f64) -> Self {
         self.config.phase = phase;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn source_type(mut self, source_type: SourceField) -> Self {
         self.config.source_type = source_type;
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn injection_mode(mut self, mode: InjectionMode) -> Self {
         self.config.injection_mode = mode;
         self

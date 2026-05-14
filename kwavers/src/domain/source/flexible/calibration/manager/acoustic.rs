@@ -33,9 +33,8 @@ impl CalibrationManager {
                                     if di == 1 && dj == 1 && dk == 1 {
                                         continue;
                                     }
-                                    let neighbor = pressure_field
-                                        [[i + di - 1, j + dj - 1, k + dk - 1]]
-                                        .abs();
+                                    let neighbor =
+                                        pressure_field[[i + di - 1, j + dj - 1, k + dk - 1]].abs();
                                     if neighbor > val {
                                         is_max = false;
                                         break 'outer;
@@ -68,14 +67,13 @@ impl CalibrationManager {
             let mut best_match = 0;
 
             for (j, reflector) in reflectors.iter().enumerate() {
-                let dist = (peak[2] - reflector[2]).mul_add(
-                    peak[2] - reflector[2],
-                    (peak[1] - reflector[1]).mul_add(
-                        peak[1] - reflector[1],
-                        (peak[0] - reflector[0]).powi(2),
-                    ),
-                )
-                .sqrt();
+                let dist = (peak[2] - reflector[2])
+                    .mul_add(
+                        peak[2] - reflector[2],
+                        (peak[1] - reflector[1])
+                            .mul_add(peak[1] - reflector[1], (peak[0] - reflector[0]).powi(2)),
+                    )
+                    .sqrt();
 
                 if dist < min_dist {
                     min_dist = dist;
@@ -117,8 +115,7 @@ impl CalibrationManager {
     ) {
         let num_correspondences = correspondences.len();
         let num_elements = positions.nrows();
-        let correspondence_ratio =
-            num_correspondences as f64 / num_elements.max(1) as f64;
+        let correspondence_ratio = num_correspondences as f64 / num_elements.max(1) as f64;
 
         self.data.quality_metrics.position_uncertainty = 1e-3 / correspondence_ratio;
         self.data.quality_metrics.orientation_uncertainty = 1e-2 / correspondence_ratio;

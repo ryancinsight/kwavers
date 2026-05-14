@@ -32,13 +32,13 @@ use kwavers::physics::thermal::diffusion::ThermalDiffusionConfig;
 use kwavers::solver::forward::thermal_diffusion::ThermalDiffusionSolver;
 
 // ── Defaults (soft tissue, ICRU Report 44) ──────────────────────────────────
-const DEFAULT_K: f64 = 0.5;        // thermal conductivity [W/(m·K)]
-const DEFAULT_RHO: f64 = 1000.0;   // density [kg/m³]
-const DEFAULT_CP: f64 = 3600.0;    // specific heat [J/(kg·K)]
-const DEFAULT_WB: f64 = 5e-3;      // blood perfusion rate [1/s]
+const DEFAULT_K: f64 = 0.5; // thermal conductivity [W/(m·K)]
+const DEFAULT_RHO: f64 = 1000.0; // density [kg/m³]
+const DEFAULT_CP: f64 = 3600.0; // specific heat [J/(kg·K)]
+const DEFAULT_WB: f64 = 5e-3; // blood perfusion rate [1/s]
 const DEFAULT_RHO_B: f64 = 1050.0; // blood density [kg/m³]
-const DEFAULT_CPB: f64 = 3840.0;   // blood specific heat [J/(kg·K)]
-const DEFAULT_TA_C: f64 = 37.0;    // arterial temperature [°C]
+const DEFAULT_CPB: f64 = 3840.0; // blood specific heat [J/(kg·K)]
+const DEFAULT_TA_C: f64 = 37.0; // arterial temperature [°C]
 
 // ── Result ───────────────────────────────────────────────────────────────────
 

@@ -148,7 +148,10 @@ mod tests {
     fn derated_pressure_unchanged_at_zero_depth() {
         let p = 1e5_f64;
         let derated = calculate_derated_pressure(p, 1e6, 0.0);
-        assert_eq!(derated, p, "derated pressure at depth=0 must equal original");
+        assert_eq!(
+            derated, p,
+            "derated pressure at depth=0 must equal original"
+        );
     }
 
     /// At f=1 MHz, depth=10 cm: attenuation_dB = 0.3 × 10 × 1 = 3 dB
@@ -158,7 +161,10 @@ mod tests {
         let p = 1.0_f64;
         let derated = calculate_derated_pressure(p, 1e6, 0.10); // 10 cm = 0.10 m
         let expected = 10.0_f64.powf(-3.0 / 20.0);
-        assert!((derated - expected).abs() < 1e-14, "3 dB at 10cm (got {derated:.6})");
+        assert!(
+            (derated - expected).abs() < 1e-14,
+            "3 dB at 10cm (got {derated:.6})"
+        );
     }
 
     // ── calculate_ispta ───────────────────────────────────────────────────────
@@ -172,7 +178,10 @@ mod tests {
         let duty = 0.1_f64;
         let ispta = calculate_ispta(&field, rho, c, duty);
         let expected = 2.0_f64.powi(2) / (2.0 * rho * c) * duty;
-        assert!((ispta - expected).abs() < 1e-20, "ISPTA formula (got {ispta:.3e})");
+        assert!(
+            (ispta - expected).abs() < 1e-20,
+            "ISPTA formula (got {ispta:.3e})"
+        );
     }
 
     // ── calculate_isppa ───────────────────────────────────────────────────────
@@ -186,6 +195,9 @@ mod tests {
         let c = 1500.0_f64;
         let isppa = calculate_isppa(&field, rho, c);
         let expected = 3.0_f64.powi(2) / (2.0 * rho * c);
-        assert!((isppa - expected).abs() < 1e-20, "ISPPA formula (got {isppa:.3e})");
+        assert!(
+            (isppa - expected).abs() < 1e-20,
+            "ISPPA formula (got {isppa:.3e})"
+        );
     }
 }

@@ -146,11 +146,15 @@ impl PstdSemCoupler {
     fn apply_stabilization(&self, field: &mut Array3<f64>, grid: &Grid) -> KwaversResult<()> {
         for &(i, j, k) in &self.interface.pstd_interface_points {
             if i > 0 && i < grid.nx - 1 && j > 0 && j < grid.ny - 1 && k > 0 && k < grid.nz - 1 {
-                let laplacian = 6.0f64.mul_add(-field[[i, j, k]], field[[i - 1, j, k]]
-                    + field[[i + 1, j, k]]
-                    + field[[i, j - 1, k]]
-                    + field[[i, j + 1, k]]
-                    + field[[i, j, k - 1]] + field[[i, j, k + 1]]);
+                let laplacian = 6.0f64.mul_add(
+                    -field[[i, j, k]],
+                    field[[i - 1, j, k]]
+                        + field[[i + 1, j, k]]
+                        + field[[i, j - 1, k]]
+                        + field[[i, j + 1, k]]
+                        + field[[i, j, k - 1]]
+                        + field[[i, j, k + 1]],
+                );
                 field[[i, j, k]] += self.config.stabilization_alpha * laplacian;
             }
         }
@@ -158,7 +162,7 @@ impl PstdSemCoupler {
     }
 
     /// Get convergence history
-    #[must_use] 
+    #[must_use]
     pub fn convergence_history(&self) -> &[f64] {
         &self.convergence_history
     }
@@ -167,7 +171,7 @@ impl PstdSemCoupler {
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn has_converged(&self, tolerance: f64) -> bool {
         if self.convergence_history.len() < 2 {
             return false;

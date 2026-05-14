@@ -7,8 +7,16 @@ fn test_trainer_creation() {
     let config = TrainingConfig::default();
     let physics_loss = PhysicsLoss::default();
     let trainer = BeamformingTrainer::new(config, physics_loss).unwrap();
-    assert_eq!(trainer.config().num_epochs, 100, "default num_epochs must be 100");
-    assert_eq!(trainer.config().batch_size, 32, "default batch_size must be 32");
+    assert_eq!(
+        trainer.config().num_epochs,
+        100,
+        "default num_epochs must be 100"
+    );
+    assert_eq!(
+        trainer.config().batch_size,
+        32,
+        "default batch_size must be 32"
+    );
     assert!(
         (trainer.config().learning_rate - 0.001).abs() < 1e-12,
         "default learning_rate must be 0.001"
@@ -49,7 +57,10 @@ fn test_trainer_simple_training() {
 
     let h = trainer.train(&dataset, None).unwrap();
     assert_eq!(h.epochs.len(), 5, "must record exactly 5 epoch metrics");
-    assert!(h.best_val_loss.is_finite(), "best_val_loss must be finite after training");
+    assert!(
+        h.best_val_loss.is_finite(),
+        "best_val_loss must be finite after training"
+    );
 }
 
 #[test]

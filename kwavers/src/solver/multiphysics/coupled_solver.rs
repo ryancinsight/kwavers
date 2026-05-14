@@ -3,7 +3,7 @@
 //! This module implements a unified solver for coupled acoustic-optical-thermal simulations.
 
 use crate::core::error::KwaversResult;
-use crate::domain::field::indices::{TOTAL_FIELDS, PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX};
+use crate::domain::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX, TOTAL_FIELDS};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::solver::multiphysics::field_coupling::{CouplingStrategy, FieldCoupler};

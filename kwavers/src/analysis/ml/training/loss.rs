@@ -33,7 +33,7 @@ impl PhysicsLoss {
     ///
     /// For a reciprocal system: response(A→B) = response(B→A)
     /// Violation = ||forward - reverse||²
-    #[must_use] 
+    #[must_use]
     pub fn reciprocity_violation(forward: &Array2<f64>, reverse: &Array2<f64>) -> f64 {
         if forward.dim() != reverse.dim() {
             return f64::INFINITY;
@@ -46,7 +46,7 @@ impl PhysicsLoss {
     ///
     /// Adjacent elements should have similar phases (continuous wavefront)
     /// Violation = sum_i |phase(i+1) - phase(i)|
-    #[must_use] 
+    #[must_use]
     pub fn coherence_violation(phases: &Array2<f64>) -> f64 {
         let mut violation = 0.0;
         for i in 0..phases.dim().0 - 1 {
@@ -64,7 +64,7 @@ impl PhysicsLoss {
     }
 
     /// Compute sparsity constraint (L1 regularization on weights)
-    #[must_use] 
+    #[must_use]
     pub fn sparsity_violation(weights: &Array2<f64>) -> f64 {
         weights.iter().map(|w| w.abs()).sum::<f64>() / weights.len() as f64
     }

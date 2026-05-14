@@ -19,7 +19,7 @@ impl TaskPriority {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Low => "Low",
@@ -79,14 +79,14 @@ impl WorkItem {
     }
 
     /// Set a deadline for the task
-    #[must_use] 
+    #[must_use]
     pub fn with_deadline(mut self, deadline_ms: u64, current_timestamp: u64) -> Self {
         self.deadline = Some(current_timestamp + deadline_ms);
         self
     }
 
     /// Check if task has exceeded deadline
-    #[must_use] 
+    #[must_use]
     pub fn is_overdue(&self, current_timestamp: u64) -> bool {
         if let Some(deadline) = self.deadline {
             current_timestamp > deadline
@@ -96,7 +96,7 @@ impl WorkItem {
     }
 
     /// Get task age in milliseconds
-    #[must_use] 
+    #[must_use]
     pub fn age_ms(&self, current_timestamp: u64) -> u64 {
         current_timestamp.saturating_sub(self.queued_time)
     }

@@ -72,5 +72,5 @@ pub mod interface;
 pub mod solver;
 
 pub use coefficients::ReflectionTransmissionCoefficients;
-pub use interface::FsiInterface;
+pub use interface::{FsiInterface, FsiInterfaceSpec};
 pub use solver::FluidStructureSolver;

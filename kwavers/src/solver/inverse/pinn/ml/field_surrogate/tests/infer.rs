@@ -22,7 +22,8 @@ fn test_infer_grid_shape_and_finiteness() {
         pnp_range: (15.0e6, 30.0e6),
         output_transforms: super::super::target_transform::OutputTransforms::linear(
             30.0e6, 30.0e6, 21.0e6,
-        ).unwrap(),
+        )
+        .unwrap(),
         batch_size: 64,
     };
     let (p_min, p_max, p_rms) = infer_grid(&net, &params, &device).unwrap();
@@ -30,7 +31,10 @@ fn test_infer_grid_shape_and_finiteness() {
     assert_eq!(p_max.dim(), (8, 6, 6));
     assert_eq!(p_rms.dim(), (8, 6, 6));
     for v in p_min.iter().chain(p_max.iter()).chain(p_rms.iter()) {
-        assert!(v.is_finite(), "untrained network produced non-finite output");
+        assert!(
+            v.is_finite(),
+            "untrained network produced non-finite output"
+        );
     }
 }
 
@@ -66,7 +70,8 @@ fn test_infer_grid_batch_size_invariance() {
         pnp_range: (15.0e6, 30.0e6),
         output_transforms: super::super::target_transform::OutputTransforms::linear(
             30.0e6, 30.0e6, 21.0e6,
-        ).unwrap(),
+        )
+        .unwrap(),
         batch_size: bs,
     };
     let (a_min, a_max, a_rms) = infer_grid(&net, &make_params(7), &device).unwrap();

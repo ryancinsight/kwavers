@@ -97,7 +97,12 @@ fn test_high_activation_energy_q10() {
 fn test_kinetics_database_completeness() {
     let kinetics = ValidatedKinetics::new();
 
-    assert!(kinetics.validate("oh_recombination", 5e9).unwrap().within_range);
+    assert!(
+        kinetics
+            .validate("oh_recombination", 5e9)
+            .unwrap()
+            .within_range
+    );
     kinetics.validate("superoxide_dismutation", 1.5e8).unwrap();
     kinetics.validate("peroxide_hydroxyl", 2.7e7).unwrap();
     kinetics.validate("ozone_hydroxyl", 1e8).unwrap();

@@ -1,0 +1,22 @@
+{
+  "T_centre_final_C": 41.99383098272204,
+  "T_max_final_C": 41.99383098272204,
+  "blood_specific_heat": 3617.0,
+  "blood_temperature": 37.0,
+  "cx_1based": 64,
+  "cy_1based": 64,
+  "density": 1040.0,
+  "dt": 0.05,
+  "dx": 0.0005,
+  "dy": 0.0005,
+  "engine": "KWave.jl/kwave_diffusion_2D",
+  "initial_temperature": 37.0,
+  "nt": 600,
+  "nx": 128,
+  "ny": 128,
+  "perfusion_rate_kg_per_m3_s": 9.45,
+  "q_peak": 1000000.0,
+  "q_sigma_m": 0.003,
+  "specific_heat": 3650.0,
+  "thermal_conductivity": 0.52
+}

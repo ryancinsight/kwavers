@@ -280,13 +280,13 @@ impl GPUElasticWaveSolver3D {
     }
 
     /// Get performance metrics
-    #[must_use] 
+    #[must_use]
     pub fn performance_metrics(&self) -> &PerformanceMetrics {
         &self.performance_metrics
     }
 
     /// Get memory statistics
-    #[must_use] 
+    #[must_use]
     pub fn memory_stats(&self) -> MemoryStats {
         self.memory_pool.memory_stats()
     }

@@ -119,7 +119,11 @@ fn test_therapy_step_execution() {
         orchestrator.execute_therapy_step(DT).unwrap();
 
         let safety_status = orchestrator.check_safety_limits();
-        assert_eq!(safety_status, SafetyStatus::Safe, "step {step}: expected Safe");
+        assert_eq!(
+            safety_status,
+            SafetyStatus::Safe,
+            "step {step}: expected Safe"
+        );
 
         let state = orchestrator.session_state();
 

@@ -56,7 +56,11 @@ impl MemoryPool {
         self.total_allocated = self.total_allocated.saturating_add(size);
         self.peak_allocated = self.peak_allocated.max(self.total_allocated);
 
-        let block = MemoryBlock { offset, size, compressed: false };
+        let block = MemoryBlock {
+            offset,
+            size,
+            compressed: false,
+        };
         self.allocations.push(block.clone());
 
         Ok(MemoryHandle {

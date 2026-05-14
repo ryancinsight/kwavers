@@ -66,7 +66,7 @@ impl PhysicsConstraints {
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(reciprocity_weight: f64, coherence_weight: f64, sparsity_weight: f64) -> Self {
         debug_assert!(
             (0.0..=1.0).contains(&reciprocity_weight),
@@ -92,19 +92,19 @@ impl PhysicsConstraints {
     }
 
     /// Get reciprocity constraint weight.
-    #[must_use] 
+    #[must_use]
     pub fn reciprocity_weight(&self) -> f64 {
         self.reciprocity_weight
     }
 
     /// Get coherence constraint weight.
-    #[must_use] 
+    #[must_use]
     pub fn coherence_weight(&self) -> f64 {
         self.coherence_weight
     }
 
     /// Get sparsity constraint weight.
-    #[must_use] 
+    #[must_use]
     pub fn sparsity_weight(&self) -> f64 {
         self.sparsity_weight
     }

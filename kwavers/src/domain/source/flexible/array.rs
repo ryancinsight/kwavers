@@ -139,7 +139,9 @@ impl FlexibleTransducerArray {
             ];
 
             // Normalize
-            let mag = normal[2].mul_add(normal[2], normal[1].mul_add(normal[1], normal[0].powi(2))).sqrt();
+            let mag = normal[2]
+                .mul_add(normal[2], normal[1].mul_add(normal[1], normal[0].powi(2)))
+                .sqrt();
             if mag > 0.0 {
                 normals[[i, 0]] = normal[0] / mag;
                 normals[[i, 1]] = normal[1] / mag;

@@ -36,7 +36,7 @@ pub struct RealTimeScheduler {
 
 impl RealTimeScheduler {
     /// Create a new real-time scheduler
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             queue: Arc::new(Mutex::new(Vec::new())),
@@ -104,7 +104,7 @@ impl RealTimeScheduler {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn next_task(&self) -> Option<WorkItem> {
         let mut queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         if queue.is_empty() {
@@ -146,7 +146,7 @@ impl RealTimeScheduler {
     }
 
     /// Get current metrics
-    #[must_use] 
+    #[must_use]
     pub fn metrics(&self) -> TaskMetrics {
         let submitted = self.submitted.load(Ordering::Relaxed);
         let completed = self.completed.load(Ordering::Relaxed);
@@ -188,7 +188,7 @@ impl RealTimeScheduler {
     }
 
     /// Check if scheduler is shutdown
-    #[must_use] 
+    #[must_use]
     pub fn is_shutdown(&self) -> bool {
         self.shutdown.load(Ordering::Relaxed)
     }
@@ -200,7 +200,7 @@ impl RealTimeScheduler {
     }
 
     /// Get queue depth
-    #[must_use] 
+    #[must_use]
     pub fn queue_depth(&self) -> usize {
         let queue = self.queue.lock().unwrap_or_else(|e| e.into_inner());
         queue.len()

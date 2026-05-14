@@ -74,7 +74,8 @@ impl BeamformingProcessor3D {
                 crate::core::error::SystemError::FeatureNotAvailable {
                     feature: "gpu".to_owned(),
                     reason:
-                        "GPU acceleration required for 3D beamforming. Enable with --features gpu".to_owned(),
+                        "GPU acceleration required for 3D beamforming. Enable with --features gpu"
+                            .to_owned(),
                 },
             ))
         }

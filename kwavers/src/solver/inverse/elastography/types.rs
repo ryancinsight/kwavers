@@ -91,7 +91,7 @@ impl NonlinearParameterMapExt for NonlinearParameterMap {
 ///
 /// - Fung, Y.C. (1993). "Biomechanics: Mechanical Properties of Living Tissues"
 /// - Duck, F.A. (1990). "Physical Properties of Tissue"
-#[must_use] 
+#[must_use]
 pub fn elasticity_map_from_speed(shear_wave_speed: Array3<f64>, density: f64) -> ElasticityMap {
     ElasticityMap::from_shear_wave_speed(shear_wave_speed, density)
 }

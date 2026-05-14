@@ -35,7 +35,7 @@ impl MultimodalityFusionManager {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             sessions: HashMap::new(),
@@ -161,7 +161,7 @@ impl MultimodalityFusionManager {
     }
 
     /// Get session
-    #[must_use] 
+    #[must_use]
     pub fn get_session(&self, session_id: &str) -> Option<&MultimodalitySession> {
         self.sessions.get(session_id)
     }

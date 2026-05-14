@@ -110,12 +110,12 @@ impl DopplerDefaults {
 
     /// Maximum velocity before aliasing (m/s)
     /// For cardiac: ±1.5 m/s, vascular: ±0.5 m/s
-    #[must_use] 
+    #[must_use]
     pub fn max_velocity_cardiac() -> f64 {
         (Self::CARDIAC_PRF * Self::SPEED_OF_SOUND) / (4.0 * Self::CARDIAC_FREQUENCY)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn max_velocity_vascular() -> f64 {
         (Self::VASCULAR_PRF * Self::SPEED_OF_SOUND) / (4.0 * Self::VASCULAR_FREQUENCY)
     }

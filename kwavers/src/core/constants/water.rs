@@ -57,7 +57,13 @@ impl WaterProperties {
     #[must_use]
     pub fn density(temperature: f64) -> f64 {
         let t = temperature;
-        Self::JONES_E.mul_add(t.powi(4), Self::JONES_D.mul_add(t.powi(3), Self::JONES_C.mul_add(t.powi(2), Self::JONES_B.mul_add(t, Self::JONES_A))))
+        Self::JONES_E.mul_add(
+            t.powi(4),
+            Self::JONES_D.mul_add(
+                t.powi(3),
+                Self::JONES_C.mul_add(t.powi(2), Self::JONES_B.mul_add(t, Self::JONES_A)),
+            ),
+        )
     }
 
     /// Calculate water sound speed as function of temperature.
@@ -73,7 +79,19 @@ impl WaterProperties {
     #[must_use]
     pub fn sound_speed(temperature: f64) -> f64 {
         let t = temperature;
-        Self::SOUND_SPEED_C5.mul_add(t.powi(5), Self::SOUND_SPEED_C4.mul_add(t.powi(4), Self::SOUND_SPEED_C3.mul_add(t.powi(3), Self::SOUND_SPEED_C2.mul_add(t.powi(2), Self::SOUND_SPEED_C1.mul_add(t, Self::SOUND_SPEED_C0)))))
+        Self::SOUND_SPEED_C5.mul_add(
+            t.powi(5),
+            Self::SOUND_SPEED_C4.mul_add(
+                t.powi(4),
+                Self::SOUND_SPEED_C3.mul_add(
+                    t.powi(3),
+                    Self::SOUND_SPEED_C2.mul_add(
+                        t.powi(2),
+                        Self::SOUND_SPEED_C1.mul_add(t, Self::SOUND_SPEED_C0),
+                    ),
+                ),
+            ),
+        )
     }
 
     /// Calculate water nonlinear parameter B/A as function of temperature.
@@ -89,7 +107,14 @@ impl WaterProperties {
     #[must_use]
     pub fn nonlinear_parameter(temperature: f64) -> f64 {
         let t = temperature;
-        Self::BEYER_BA_C4.mul_add(t.powi(4), Self::BEYER_BA_C3.mul_add(t.powi(3), Self::BEYER_BA_C2.mul_add(t.powi(2), Self::BEYER_BA_C1.mul_add(t, Self::BEYER_BA_C0))))
+        Self::BEYER_BA_C4.mul_add(
+            t.powi(4),
+            Self::BEYER_BA_C3.mul_add(
+                t.powi(3),
+                Self::BEYER_BA_C2
+                    .mul_add(t.powi(2), Self::BEYER_BA_C1.mul_add(t, Self::BEYER_BA_C0)),
+            ),
+        )
     }
 
     /// Calculate ultrasonic absorption in distilled water.
@@ -123,8 +148,19 @@ impl WaterProperties {
         ];
 
         let t = temperature;
-        let a_on_fsqr = A[7].mul_add(t.powi(7), A[6].mul_add(t.powi(6), A[5].mul_add(t.powi(5), A[4].mul_add(t.powi(4), A[3].mul_add(t.powi(3), A[2].mul_add(t.powi(2), A[1].mul_add(t, A[0])))))))
-            * 1e-17;
+        let a_on_fsqr = A[7].mul_add(
+            t.powi(7),
+            A[6].mul_add(
+                t.powi(6),
+                A[5].mul_add(
+                    t.powi(5),
+                    A[4].mul_add(
+                        t.powi(4),
+                        A[3].mul_add(t.powi(3), A[2].mul_add(t.powi(2), A[1].mul_add(t, A[0]))),
+                    ),
+                ),
+            ),
+        ) * 1e-17;
 
         NEPER2DB * 1e12 * frequency_mhz * frequency_mhz * a_on_fsqr
     }
@@ -158,9 +194,15 @@ impl WaterProperties {
 
         // Pure water contribution
         let a3 = if t <= 20.0 {
-            (1.50e-8 * t * t).mul_add(-t, (9.11e-7 * t).mul_add(t, 2.59e-5f64.mul_add(-t, 4.937e-4)))
+            (1.50e-8 * t * t).mul_add(
+                -t,
+                (9.11e-7 * t).mul_add(t, 2.59e-5f64.mul_add(-t, 4.937e-4)),
+            )
         } else {
-            (6.5e-10 * t * t).mul_add(-t, (1.45e-7 * t).mul_add(t, 1.146e-5f64.mul_add(-t, 3.964e-4)))
+            (6.5e-10 * t * t).mul_add(
+                -t,
+                (1.45e-7 * t).mul_add(t, 1.146e-5f64.mul_add(-t, 3.964e-4)),
+            )
         };
         let p3 = (4.9e-10 * d).mul_add(d, 3.83e-5f64.mul_add(-d, 1.0));
         let water = a3 * p3 * f * f;

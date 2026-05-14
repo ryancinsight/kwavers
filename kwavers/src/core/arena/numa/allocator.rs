@@ -9,7 +9,7 @@ pub struct NumaAllocator {
 }
 
 impl NumaAllocator {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         let topology = NumaTopology::detect();
         Self {
@@ -18,18 +18,18 @@ impl NumaAllocator {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_policy(policy: NumaPolicy) -> Self {
         let topology = NumaTopology::detect();
         Self { policy, topology }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn policy(&self) -> NumaPolicy {
         self.policy
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn topology(&self) -> &NumaTopology {
         &self.topology
     }

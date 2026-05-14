@@ -21,7 +21,7 @@ impl AblationField {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    #[must_use] 
+    #[must_use]
     pub fn new(shape: (usize, usize, usize), kinetics: AblationKinetics) -> Self {
         let (nx, ny, nz) = shape;
         Self {
@@ -78,25 +78,25 @@ impl AblationField {
     }
 
     /// Get damage field
-    #[must_use] 
+    #[must_use]
     pub fn damage(&self) -> &Array3<f64> {
         &self.damage
     }
 
     /// Get viability field
-    #[must_use] 
+    #[must_use]
     pub fn viability(&self) -> &Array3<f64> {
         &self.viability
     }
 
     /// Get ablation field
-    #[must_use] 
+    #[must_use]
     pub fn ablated(&self) -> &Array3<bool> {
         &self.ablated
     }
 
     /// Total ablated volume (count of ablated voxels)
-    #[must_use] 
+    #[must_use]
     pub fn ablated_volume(&self) -> usize {
         self.ablated.iter().filter(|&&x| x).count()
     }

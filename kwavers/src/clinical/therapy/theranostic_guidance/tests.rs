@@ -3,8 +3,10 @@ use std::collections::VecDeque;
 
 use super::{
     build_abdominal_placement_context, placement_metrics, plan_brain_helmet_placement,
-    prepare_abdominal_slice, prepare_brain_slice, run_theranostic_fwi, AnatomyKind,
-    PlacementPoint3, Point2, TheranosticFwiConfig, THERANOSTIC_OPERATOR_MODEL,
+    prepare_abdominal_slice, prepare_brain_slice, run_theranostic_inverse, AnatomyKind,
+    PlacementPoint3, Point2, TheranosticInverseConfig, WaveformMisfit,
+    THERANOSTIC_FULL_WAVE_INVERSION, THERANOSTIC_INVERSE_MODEL_FAMILY,
+    THERANOSTIC_NONLINEAR_WAVE_PROPAGATION, THERANOSTIC_OPERATOR_MODEL, THERANOSTIC_WAVEFORM_MODEL,
 };
 
 #[test]
@@ -13,10 +15,26 @@ fn theranostic_operator_model_names_graph_laplacian_pcg_contract() {
         THERANOSTIC_OPERATOR_MODEL,
         "finite_frequency_same_aperture_graph_laplacian_pcg"
     );
+    assert_eq!(
+        THERANOSTIC_WAVEFORM_MODEL,
+        "source_encoded_time_domain_acoustic_adjoint_rtm"
+    );
+    assert_eq!(
+        THERANOSTIC_INVERSE_MODEL_FAMILY,
+        "reduced_born_normal_equation_plus_linear_acoustic_rtm"
+    );
+    assert!(!THERANOSTIC_FULL_WAVE_INVERSION);
+    assert!(!THERANOSTIC_NONLINEAR_WAVE_PROPAGATION);
+    assert_eq!(
+        TheranosticInverseConfig::new(AnatomyKind::Kidney)
+            .waveform_misfit
+            .label(),
+        "charbonnier"
+    );
 }
 
 #[test]
-fn abdominal_theranostic_fwi_recovers_lesion_support() {
+fn abdominal_theranostic_inverse_recovers_lesion_support() {
     let mut ct = Array3::<f64>::from_elem((42, 42, 3), -900.0);
     let mut label = Array3::<i16>::zeros((42, 42, 3));
     for z in 0..3 {
@@ -44,12 +62,12 @@ fn abdominal_theranostic_fwi_recovers_lesion_support() {
     }
     let prepared =
         prepare_abdominal_slice(AnatomyKind::Kidney, &ct, &label, [1.4, 1.4, 3.0], 42).unwrap();
-    let mut config = TheranosticFwiConfig::new(AnatomyKind::Kidney);
+    let mut config = TheranosticInverseConfig::new(AnatomyKind::Kidney);
     config.element_count = 32;
     config.receiver_offsets = vec![8, 12];
     config.frequencies_hz = vec![260_000.0, 520_000.0];
     config.iterations = 10;
-    let result = run_theranostic_fwi(prepared, &config).unwrap();
+    let result = run_theranostic_inverse(prepared, &config).unwrap();
     let placement = placement_metrics(
         &result.layout,
         &result.prepared.body_mask,
@@ -81,11 +99,48 @@ fn abdominal_theranostic_fwi_recovers_lesion_support() {
         result.subharmonic_metrics.dice_equal_area
     );
     assert!(result.measurements > 0);
+    assert_eq!(result.measurements, result.encoded_measurements);
+    assert_eq!(
+        result.inverse_encoding_rows_per_code,
+        config.inverse_encoding_rows_per_code
+    );
+    assert!(
+        result.unencoded_measurements > result.encoded_measurements,
+        "source encoding must reduce clinical inverse rows: encoded={}, unencoded={}",
+        result.encoded_measurements,
+        result.unencoded_measurements
+    );
     assert_eq!(
         result.operator_backend,
         "matrix_free_finite_frequency_same_aperture"
     );
     assert!(result.operator_storage_values < result.dense_operator_values);
+    assert_eq!(result.waveform.model_name, THERANOSTIC_WAVEFORM_MODEL);
+    assert_eq!(
+        result.waveform.misfit_name,
+        WaveformMisfit::Charbonnier.label()
+    );
+    assert!(result.waveform.misfit_scale > 0.0);
+    assert!(result.waveform.objective_value > 0.0);
+    assert_eq!(
+        result.inverse_model_family,
+        THERANOSTIC_INVERSE_MODEL_FAMILY
+    );
+    assert!(!result.is_full_wave_inversion);
+    assert!(!result.uses_nonlinear_wave_propagation);
+    assert_eq!(
+        result.waveform.receiver_count,
+        result.layout.therapy_elements.len() + result.layout.imaging_receivers.len()
+    );
+    assert!(result.waveform.time_steps >= 96);
+    assert!(result.waveform.dt_s > 0.0);
+    assert!(result.waveform.observed_energy > 0.0);
+    assert!(result.waveform.residual_energy > 0.0);
+    assert!(
+        result.waveform_metrics.cnr > 0.0,
+        "waveform cnr={}",
+        result.waveform_metrics.cnr
+    );
 }
 
 #[test]
@@ -118,12 +173,12 @@ fn abdominal_preprocessing_keeps_external_skin_between_target_and_aperture() {
 
     let prepared =
         prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.5, 1.5, 3.0], 40).unwrap();
-    let mut config = TheranosticFwiConfig::new(AnatomyKind::Liver);
+    let mut config = TheranosticInverseConfig::new(AnatomyKind::Liver);
     config.element_count = 32;
     config.receiver_offsets = vec![8];
     config.frequencies_hz = vec![500_000.0];
     config.iterations = 3;
-    let result = run_theranostic_fwi(prepared, &config).unwrap();
+    let result = run_theranostic_inverse(prepared, &config).unwrap();
     let target_depth_m = distance_2d(result.layout.skin_contact_m, result.layout.focus_m);
     let max_aperture_skin_projection_m = result
         .layout
@@ -177,12 +232,12 @@ fn abdominal_preprocessing_selects_one_connected_treatment_component() {
 
     let prepared =
         prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.0, 1.0, 2.5], 64).unwrap();
-    let mut config = TheranosticFwiConfig::new(AnatomyKind::Liver);
+    let mut config = TheranosticInverseConfig::new(AnatomyKind::Liver);
     config.element_count = 32;
     config.receiver_offsets = vec![8];
     config.frequencies_hz = vec![500_000.0];
     config.iterations = 2;
-    let result = run_theranostic_fwi(prepared.clone(), &config).unwrap();
+    let result = run_theranostic_inverse(prepared.clone(), &config).unwrap();
     let focus_distance = nearest_mask_distance_m(
         &prepared.target_mask,
         prepared.spacing_m,
@@ -233,7 +288,7 @@ fn abdominal_placement_context_uses_uncropped_patient_slice() {
             }
         }
     }
-    let mut config = TheranosticFwiConfig::new(AnatomyKind::Liver);
+    let mut config = TheranosticInverseConfig::new(AnatomyKind::Liver);
     config.element_count = 32;
     let context = build_abdominal_placement_context(
         AnatomyKind::Liver,
@@ -349,12 +404,12 @@ fn brain_helmet_layout_uses_requested_element_count() {
         }
     }
     let prepared = prepare_brain_slice(ct, 0.002, 0).unwrap();
-    let mut config = TheranosticFwiConfig::new(AnatomyKind::Brain);
+    let mut config = TheranosticInverseConfig::new(AnatomyKind::Brain);
     config.element_count = 64;
     config.receiver_offsets = vec![16, 32];
     config.frequencies_hz = vec![220_000.0];
     config.iterations = 6;
-    let result = run_theranostic_fwi(prepared, &config).unwrap();
+    let result = run_theranostic_inverse(prepared, &config).unwrap();
     let placement = placement_metrics(
         &result.layout,
         &result.prepared.body_mask,
@@ -380,6 +435,12 @@ fn brain_helmet_layout_uses_requested_element_count() {
     assert!(placement.min_body_clearance_m >= 0.010);
     assert!(result.active_voxels > 16);
     assert!(result.active_metrics.cnr > 0.0);
+    assert_eq!(result.measurements, result.encoded_measurements);
+    assert_eq!(
+        result.inverse_encoding_rows_per_code,
+        config.inverse_encoding_rows_per_code
+    );
+    assert!(result.unencoded_measurements > result.encoded_measurements);
     assert!(result.operator_storage_values < result.dense_operator_values);
     let exposure_peak = result.exposure.iter().copied().fold(0.0, f64::max);
     assert!(

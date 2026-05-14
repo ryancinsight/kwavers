@@ -174,8 +174,12 @@ impl TranscranialAberrationCorrection {
                 target_point[1] - transducer_pos[1],
                 target_point[2] - transducer_pos[2],
             ];
-            let path_length =
-                path_vector[2].mul_add(path_vector[2], path_vector[1].mul_add(path_vector[1], path_vector[0].powi(2))).sqrt();
+            let path_length = path_vector[2]
+                .mul_add(
+                    path_vector[2],
+                    path_vector[1].mul_add(path_vector[1], path_vector[0].powi(2)),
+                )
+                .sqrt();
 
             let num_samples: usize = 100;
             let ds = path_length / num_samples as f64;

@@ -55,8 +55,11 @@ impl PIDController {
         }
 
         // Proportional term with setpoint weighting
-        let p_term =
-            self.config.gains.kp * self.config.setpoint_weighting.mul_add(self.setpoint, -measurement);
+        let p_term = self.config.gains.kp
+            * self
+                .config
+                .setpoint_weighting
+                .mul_add(self.setpoint, -measurement);
 
         // Integral term with anti-windup
         self.integral.update(error, self.config.sample_time);
@@ -126,5 +129,73 @@ impl PIDController {
     #[must_use]
     pub fn integral_value(&self) -> f64 {
         self.integral.value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::core::{PIDConfig, PIDGains};
+    use super::*;
+
+    /// P-only controller (ki=kd=0, setpoint_weighting=1): first update with setpoint=1,
+    /// measurement=0 yields proportional_term = kp*(1·sp - meas) = kp*error = 1.0.
+    #[test]
+    fn pid_p_only_first_update_proportional_equals_error() {
+        let cfg = PIDConfig {
+            gains: PIDGains {
+                kp: 1.0,
+                ki: 0.0,
+                kd: 0.0,
+            },
+            setpoint_weighting: 1.0,
+            ..PIDConfig::default()
+        };
+        let mut ctrl = PIDController::new(cfg);
+        ctrl.set_setpoint(1.0);
+        let out = ctrl.update(0.0);
+        assert!(
+            (out.proportional_term - 1.0).abs() < 1e-14,
+            "proportional_term must be 1.0; got {}",
+            out.proportional_term
+        );
+        assert!((out.error - 1.0).abs() < 1e-14);
+        assert!(!out.saturated);
+    }
+
+    /// P-only with gain > output_max saturates output to output_max.
+    #[test]
+    fn pid_saturates_output_above_max() {
+        let cfg = PIDConfig {
+            gains: PIDGains {
+                kp: 5.0,
+                ki: 0.0,
+                kd: 0.0,
+            },
+            output_max: 1.0,
+            setpoint_weighting: 1.0,
+            ..PIDConfig::default()
+        };
+        let mut ctrl = PIDController::new(cfg);
+        ctrl.set_setpoint(1.0);
+        let out = ctrl.update(0.0); // p_term = 5.0 > 1.0
+        assert!(
+            (out.control_signal - 1.0).abs() < 1e-14,
+            "saturated control_signal must be clamped to 1.0; got {}",
+            out.control_signal
+        );
+        assert!(out.saturated);
+    }
+
+    /// reset clears integral and marks controller as un-initialized.
+    #[test]
+    fn pid_reset_clears_integral() {
+        let mut ctrl = PIDController::new(PIDConfig::default());
+        ctrl.set_setpoint(1.0);
+        ctrl.update(0.0); // accumulate integral
+        ctrl.reset();
+        assert!(
+            ctrl.integral_value().abs() < 1e-30,
+            "integral must be zero after reset"
+        );
     }
 }

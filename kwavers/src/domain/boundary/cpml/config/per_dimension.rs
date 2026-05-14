@@ -18,7 +18,11 @@ impl PerDimensionPML {
     /// Uniform PML thickness for all dimensions.
     #[must_use]
     pub fn uniform(thickness: usize) -> Self {
-        Self { x: thickness, y: thickness, z: thickness }
+        Self {
+            x: thickness,
+            y: thickness,
+            z: thickness,
+        }
     }
 
     /// Per-dimension PML thickness.
@@ -86,7 +90,11 @@ impl PerDimensionAlpha {
     /// Uniform alpha across all dimensions (k-Wave default: 2.0).
     #[must_use]
     pub fn uniform(alpha: f64) -> Self {
-        Self { x: alpha, y: alpha, z: alpha }
+        Self {
+            x: alpha,
+            y: alpha,
+            z: alpha,
+        }
     }
 
     /// Per-dimension alpha.

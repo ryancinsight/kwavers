@@ -1,6 +1,5 @@
 //! `PlaneWaveConfig` — plane wave imaging configuration.
 
-
 /// Plane wave imaging configuration.
 #[derive(Debug, Clone)]
 pub struct PlaneWaveConfig {

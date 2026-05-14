@@ -331,7 +331,7 @@ impl std::fmt::Debug for PinnProviderRegistry {
 
 impl PinnProviderRegistry {
     /// Create a new empty registry.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             providers: std::collections::HashMap::new(),
@@ -344,13 +344,13 @@ impl PinnProviderRegistry {
     }
 
     /// Get a provider by name.
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<&dyn PinnBeamformingProvider> {
         self.providers.get(name).map(|b| &**b)
     }
 
     /// List available providers.
-    #[must_use] 
+    #[must_use]
     pub fn list_providers(&self) -> Vec<String> {
         self.providers.keys().cloned().collect()
     }

@@ -166,7 +166,9 @@ pub(super) fn principal_axis(points: &[[usize; 3]]) -> [f64; 3] {
             next[1] += proj * d[1];
             next[2] += proj * d[2];
         }
-        let norm = next[2].mul_add(next[2], next[0].mul_add(next[0], next[1] * next[1])).sqrt();
+        let norm = next[2]
+            .mul_add(next[2], next[0].mul_add(next[0], next[1] * next[1]))
+            .sqrt();
         if norm <= 1e-12 {
             return axis;
         }

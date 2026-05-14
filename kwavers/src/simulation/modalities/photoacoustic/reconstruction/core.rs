@@ -121,7 +121,28 @@ pub fn interpolate_detector_signal(
     let c101 = field[[x_ceil, y_floor, z_ceil]];
     let c110 = field[[x_ceil, y_ceil, z_floor]];
     let c111 = field[[x_ceil, y_ceil, z_ceil]];
-    (c111 * x_weight * y_weight).mul_add(z_weight, (c110 * x_weight * y_weight).mul_add(1.0 - z_weight, (c101 * x_weight * (1.0 - y_weight)).mul_add(z_weight, (c100 * x_weight * (1.0 - y_weight)).mul_add(1.0 - z_weight, (c011 * (1.0 - x_weight) * y_weight).mul_add(z_weight, (c010 * (1.0 - x_weight) * y_weight).mul_add(1.0 - z_weight, (c000 * (1.0 - x_weight) * (1.0 - y_weight)).mul_add(1.0 - z_weight, c001 * (1.0 - x_weight) * (1.0 - y_weight) * z_weight)))))))
+    (c111 * x_weight * y_weight).mul_add(
+        z_weight,
+        (c110 * x_weight * y_weight).mul_add(
+            1.0 - z_weight,
+            (c101 * x_weight * (1.0 - y_weight)).mul_add(
+                z_weight,
+                (c100 * x_weight * (1.0 - y_weight)).mul_add(
+                    1.0 - z_weight,
+                    (c011 * (1.0 - x_weight) * y_weight).mul_add(
+                        z_weight,
+                        (c010 * (1.0 - x_weight) * y_weight).mul_add(
+                            1.0 - z_weight,
+                            (c000 * (1.0 - x_weight) * (1.0 - y_weight)).mul_add(
+                                1.0 - z_weight,
+                                c001 * (1.0 - x_weight) * (1.0 - y_weight) * z_weight,
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
 }
 
 pub fn compute_detector_positions(grid: &Grid, n_detectors: usize) -> Vec<(f64, f64, f64)> {

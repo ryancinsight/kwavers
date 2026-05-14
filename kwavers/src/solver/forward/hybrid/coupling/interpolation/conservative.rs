@@ -75,8 +75,9 @@ impl InterpolationManager {
                         let yj = (jj as f64).mul_add(dy, min_y);
                         let zk = (kk as f64).mul_add(dz, min_z);
 
-                        let dist =
-                            (tz - zk).mul_add(tz - zk, (ty - yj).mul_add(ty - yj, (tx - xi).powi(2))).sqrt();
+                        let dist = (tz - zk)
+                            .mul_add(tz - zk, (ty - yj).mul_add(ty - yj, (tx - xi).powi(2)))
+                            .sqrt();
                         let weight = (source_volume / (1.0 + dist)).max(1e-10);
 
                         total_weighted_value += source_field[[ii, jj, kk]] * weight;

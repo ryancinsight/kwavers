@@ -26,7 +26,9 @@ fn test_treatment_plan_generation() {
     };
 
     let spec = TransducerSpecification::default();
-    let plan = planner.generate_plan("test_patient", &[target], &spec).unwrap();
+    let plan = planner
+        .generate_plan("test_patient", &[target], &spec)
+        .unwrap();
     assert_eq!(plan.patient_id, "test_patient");
 }
 

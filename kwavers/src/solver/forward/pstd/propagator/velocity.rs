@@ -237,7 +237,11 @@ impl PSTDSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_pml_to_velocity(&mut self) -> KwaversResult<()> {
-        if let Some(boundary) = self.boundary.as_deref_mut() {
+        let Some(mut boundary) = self.boundary.take() else {
+            return Ok(());
+        };
+
+        let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
                 boundary.apply_velocity_pml_directional(
                     self.fields.ux.view_mut(),
@@ -258,52 +262,34 @@ impl PSTDSolver {
                     2,
                 )?;
             } else {
-                // Save velocity at bypass rows, apply full PML, then restore.
-                // This prevents split-field damping at Dirichlet TR source cells so
-                // the forced pressure can drive waves into the domain (mirrors KWave.jl
-                // CPML bypass at time_reversal_boundary_data cells).
-                let saved_ux: Vec<_> = self
-                    .dirichlet_pml_bypass_x
-                    .iter()
-                    .map(|&i| self.fields.ux.slice(s![i, .., ..]).to_owned())
-                    .collect();
-                let saved_uy: Vec<_> = self
-                    .dirichlet_pml_bypass_x
-                    .iter()
-                    .map(|&i| self.fields.uy.slice(s![i, .., ..]).to_owned())
-                    .collect();
-                let saved_uz: Vec<_> = self
-                    .dirichlet_pml_bypass_x
-                    .iter()
-                    .map(|&i| self.fields.uz.slice(s![i, .., ..]).to_owned())
-                    .collect();
+                self.resize_pml_bypass_scratch();
+                let rows = self.dirichlet_pml_bypass_x.as_slice();
+                let grid = self.grid.as_ref();
+                let step = self.time_step_index;
 
-                boundary.apply_velocity_pml_directional(
-                    self.fields.ux.view_mut(),
-                    self.grid.as_ref(),
-                    self.time_step_index,
-                    0,
+                Self::apply_x_plane_pml_bypass(
+                    &mut self.fields.ux,
+                    rows,
+                    &mut self.pml_bypass_plane_scratch,
+                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 0),
                 )?;
-                boundary.apply_velocity_pml_directional(
-                    self.fields.uy.view_mut(),
-                    self.grid.as_ref(),
-                    self.time_step_index,
-                    1,
+                Self::apply_x_plane_pml_bypass(
+                    &mut self.fields.uy,
+                    rows,
+                    &mut self.pml_bypass_plane_scratch,
+                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 1),
                 )?;
-                boundary.apply_velocity_pml_directional(
-                    self.fields.uz.view_mut(),
-                    self.grid.as_ref(),
-                    self.time_step_index,
-                    2,
+                Self::apply_x_plane_pml_bypass(
+                    &mut self.fields.uz,
+                    rows,
+                    &mut self.pml_bypass_plane_scratch,
+                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 2),
                 )?;
-
-                for (idx, &row) in self.dirichlet_pml_bypass_x.iter().enumerate() {
-                    self.fields.ux.slice_mut(s![row, .., ..]).assign(&saved_ux[idx]);
-                    self.fields.uy.slice_mut(s![row, .., ..]).assign(&saved_uy[idx]);
-                    self.fields.uz.slice_mut(s![row, .., ..]).assign(&saved_uz[idx]);
-                }
             }
-        }
-        Ok(())
+            Ok(())
+        })();
+
+        self.boundary = Some(boundary);
+        result
     }
 }

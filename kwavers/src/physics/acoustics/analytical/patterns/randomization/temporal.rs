@@ -66,8 +66,8 @@ impl TimeRandomization {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::constants::{MAX_PHASE_SHIFT, MIN_SWITCHING_PERIOD};
+    use super::*;
 
     /// update returns false when time has not crossed the period.
     #[test]
@@ -93,8 +93,10 @@ mod tests {
         let mut tr = TimeRandomization::new(MIN_SWITCHING_PERIOD);
         for _ in 0..16 {
             let p = tr.generate_phase();
-            assert!(p >= 0.0 && p < MAX_PHASE_SHIFT,
-                "phase {p} out of [0, MAX_PHASE_SHIFT)");
+            assert!(
+                p >= 0.0 && p < MAX_PHASE_SHIFT,
+                "phase {p} out of [0, MAX_PHASE_SHIFT)"
+            );
         }
     }
 

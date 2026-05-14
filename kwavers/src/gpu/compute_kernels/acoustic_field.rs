@@ -55,9 +55,7 @@ impl AcousticFieldKernel {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Acoustic Field Shader"),
-            source: wgpu::ShaderSource::Wgsl(
-                include_str!("../shaders/acoustic_field.wgsl").into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/acoustic_field.wgsl").into()),
         });
 
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -146,13 +144,13 @@ impl AcousticFieldKernel {
             .map(|&x| x as f32)
             .collect();
 
-        let input_buffer =
-            self.device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Input Pressure Buffer"),
-                    contents: bytemuck::cast_slice(&pressure_f32),
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                });
+        let input_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Input Pressure Buffer"),
+                contents: bytemuck::cast_slice(&pressure_f32),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
 
         let output_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Output Pressure Buffer"),
@@ -190,13 +188,13 @@ impl AcousticFieldKernel {
             _padding2: [0.0; 7],
         };
 
-        let params_buffer =
-            self.device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Parameters Buffer"),
-                    contents: bytemuck::bytes_of(&params),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                });
+        let params_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Parameters Buffer"),
+                contents: bytemuck::bytes_of(&params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Acoustic Field Bind Group"),
@@ -217,11 +215,11 @@ impl AcousticFieldKernel {
             ],
         });
 
-        let mut encoder =
-            self.device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Acoustic Field Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Acoustic Field Encoder"),
+            });
 
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {

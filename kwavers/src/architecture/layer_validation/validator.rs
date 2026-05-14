@@ -24,7 +24,7 @@ impl Default for ArchitectureValidator {
 
 impl ArchitectureValidator {
     /// Create new architecture validator.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             module_layers: HashMap::new(),
@@ -169,7 +169,7 @@ impl ArchitectureValidator {
     }
 
     /// Generate a human-readable validation report.
-    #[must_use] 
+    #[must_use]
     pub fn report(&self, result: &ValidationResult) -> String {
         let mut report = String::new();
 

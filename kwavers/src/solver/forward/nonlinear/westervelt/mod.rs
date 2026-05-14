@@ -83,7 +83,7 @@
 //! ```text
 //! p^{n+1} = 2p^n - p^{n-1} + (c₀Δt)² ∇²p^n
 //!           - (δΔt/c₀²)(p^n - 2p^{n-1} + p^{n-2})/Δt²
-//!           - (βΔt²/ρ₀c₀²) ∂²(p²)/∂t²|^n
+//!           + (βΔt²/ρ₀c₀²) ∂²(p²)/∂t²|^n
 //! ```
 //!
 //! where the nonlinear term is evaluated via the product rule:
@@ -92,6 +92,18 @@
 //! ∂²(p²)/∂t²|^n ≈ 2p^n (p^n - 2p^{n-1} + p^{n-2})/Δt²
 //!                  + 2[(p^n - p^{n-1})/Δt]²
 //! ```
+//!
+//! ### Sign convention
+//!
+//! The nonlinear contribution to `p^{n+1}` is **positive** (the explicit
+//! update adds `+ q·∂²(p²)/∂t²` with `q = β·Δt² / (ρ₀·c₀²) > 0`). Equivalently,
+//! solving the Westervelt equation
+//! `∇²p − (1/c²)·p_tt + (β/(ρ₀c⁴))·∂²(p²)/∂t² = 0` for `p_tt` produces
+//! `p_tt = c²·∇²p + (β/(ρ₀c²))·∂²(p²)/∂t²` with the nonlinear coefficient
+//! positive on the right-hand side. This is the sign required for physical
+//! forward steepening — compressions travel faster than rarefactions and
+//! peaks at a fixed downstream receiver arrive earlier than the linear
+//! prediction.
 //!
 //! ### Spatial Laplacian
 //!

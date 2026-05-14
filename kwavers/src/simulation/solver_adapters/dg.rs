@@ -139,7 +139,8 @@ impl Solver for DgSimulationSolver {
 
     fn add_source(&mut self, _source: Box<dyn Source>) -> KwaversResult<()> {
         Err(KwaversError::FeatureNotAvailable(
-            "DiscontinuousGalerkin adapter does not yet define a Source-to-DG projection contract".to_owned(),
+            "DiscontinuousGalerkin adapter does not yet define a Source-to-DG projection contract"
+                .to_owned(),
         ))
     }
 
@@ -162,9 +163,7 @@ impl Solver for DgSimulationSolver {
                 let coefficients = self.core.project_to_basis(&self.pressure)?;
                 self.core.initialize_modal_coefficients(self.grid.nx, 1);
                 *self.core.modal_coefficients_mut().ok_or_else(|| {
-                    KwaversError::InternalError(
-                        "DG modal coefficient allocation failed".to_owned(),
-                    )
+                    KwaversError::InternalError("DG modal coefficient allocation failed".to_owned())
                 })? = coefficients;
             }
 
