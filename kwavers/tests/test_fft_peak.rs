@@ -1,4 +1,4 @@
-use kwavers::math::fft::{Complex64, ProcessorFft3d, Shape3D};
+use kwavers::math::fft::{Complex64, Fft3dInOutExt, ProcessorFft3d, Shape3D};
 use ndarray::Array3;
 
 #[test]

@@ -1,3 +1,11 @@
+[profile.default]
+# Per-test slow-warn at 10 s and forced termination at 60 s (six 10 s windows)
+# prevents runaway tests from blocking the lib suite. Global suite cap is 15 min.
+# This matches the kwavers standards.yaml policy: "cargo nextest with a strict
+# 60-second [per-test] timeout when available".
+global-timeout = "15m"
+slow-timeout = { period = "10s", terminate-after = 6, grace-period = "5s" }
+
 [profile.ci]
 test-threads = 4
 retries = 0
