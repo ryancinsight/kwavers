@@ -1,10 +1,9 @@
-use ndarray::{Array2, Array3};
+use ndarray::Array3;
 
 use super::super::{
     build_abdominal_placement_context, placement_metrics, prepare_abdominal_slice,
-    run_theranostic_inverse, AnatomyKind, PlacementPoint3, Point2, TheranosticInverseConfig,
-    WaveformMisfit, THERANOSTIC_FULL_WAVE_INVERSION, THERANOSTIC_INVERSE_MODEL_FAMILY,
-    THERANOSTIC_NONLINEAR_WAVE_PROPAGATION, THERANOSTIC_OPERATOR_MODEL, THERANOSTIC_WAVEFORM_MODEL,
+    run_theranostic_inverse, AnatomyKind, TheranosticInverseConfig, WaveformMisfit,
+    THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_WAVEFORM_MODEL,
 };
 use super::helpers::{
     connected_mask_components, distance_2d, nearest_mask_distance_m, skin_normal_projection_2d,

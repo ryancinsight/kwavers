@@ -2,8 +2,7 @@ use ndarray::{Array2, Array3};
 
 use super::super::{
     placement_metrics, plan_brain_helmet_placement, prepare_brain_slice, run_theranostic_inverse,
-    AnatomyKind, TheranosticInverseConfig, THERANOSTIC_INVERSE_MODEL_FAMILY,
-    THERANOSTIC_WAVEFORM_MODEL,
+    AnatomyKind, TheranosticInverseConfig,
 };
 
 #[test]
