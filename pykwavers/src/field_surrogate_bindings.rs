@@ -240,7 +240,7 @@ impl KernelCube {
                 "target_focus_idx {target_focus_idx:?} out of bounds for shape {target_shape:?}"
             )));
         }
-        let env = py.allow_threads(|| {
+        let env = py.detach(|| {
             self.inner
                 .query(f0, pnp, target_shape, target_focus_idx, target_dx_m)
         });
@@ -280,7 +280,7 @@ fn place_kernel_at_focus<'py>(
             "target_focus_idx {target_focus_idx:?} out of bounds for shape {target_shape:?}"
         )));
     }
-    let placed = py.allow_threads(|| {
+    let placed = py.detach(|| {
         let resampled = match target_dx_m {
             Some(dx) if (dx - kernel.inner.dx_m).abs() > 1e-9 => {
                 resample_trilinear(&kernel.inner, dx)

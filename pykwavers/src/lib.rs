@@ -102,6 +102,7 @@ use std::sync::Arc;
 // Utility Function Bindings
 // ============================================================================
 
+mod fft_bindings;
 mod field_surrogate_bindings;
 mod ritk_image;
 mod seismic_bindings;
@@ -6692,6 +6693,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     field_surrogate_bindings::register(m)?;
     seismic_bindings::register(m)?;
     theranostic_bindings::register(m)?;
+    fft_bindings::register(m)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
