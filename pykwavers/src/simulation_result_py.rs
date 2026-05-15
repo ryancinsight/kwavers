@@ -3,10 +3,13 @@
 use kwavers::domain::sensor::recorder::pressure_statistics::SampledStatistics;
 use kwavers::domain::sensor::recorder::simple::SensorRecorder;
 use kwavers::domain::sensor::recorder::velocity_statistics::SampledVelocityStats;
-use ndarray::{Array3};
+use ndarray::Array3;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
+
+/// Full-grid pressure statistics bundle: (p_max, p_min, p_rms, p_final).
+pub(crate) type FullGridStats = Option<(Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>)>;
 
 // ============================================================================
 // Internal run result bundle
@@ -21,7 +24,7 @@ use pyo3::types::PyAny;
 /// any pressure-statistics mode was requested. Returns `None` otherwise.
 pub(crate) fn extract_full_grid_stats(
     recorder: &SensorRecorder,
-) -> Option<(Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>)> {
+) -> FullGridStats {
     let stats = recorder.full_pressure_statistics()?;
     Some((
         stats.get_p_max().clone(),
@@ -59,7 +62,7 @@ pub(crate) struct SimulationRunResult {
     /// Full-grid pressure-statistics field (kernel-generation use).
     /// `(p_max, p_min, p_rms, p_final)` — each `Array3<f64>` shape
     /// `(nx, ny, nz)`. `None` when no `p_*` mode was requested.
-    pub full_grid_stats: Option<(Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>)>,
+    pub full_grid_stats: FullGridStats,
 }
 
 // ============================================================================

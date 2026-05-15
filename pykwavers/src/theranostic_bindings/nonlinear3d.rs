@@ -38,6 +38,7 @@ use super::helpers::{
     cavitation_iterations = 24,
     cavitation_regularization = 1.0e-4
 ))]
+#[allow(clippy::too_many_arguments)]
 pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
     py: Python<'py>,
     ct_nifti_path: &str,

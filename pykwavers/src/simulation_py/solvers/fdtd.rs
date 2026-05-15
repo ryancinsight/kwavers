@@ -37,7 +37,7 @@ impl Simulation {
         record_modes: &[String],
         record_start_index: usize,
     ) -> KwaversResult<SimulationRunResult> {
-        use kwavers::domain::medium::traits::Medium as MediumTrait;
+        
 
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
         let transducer_ordered_indices = transducer_sensor

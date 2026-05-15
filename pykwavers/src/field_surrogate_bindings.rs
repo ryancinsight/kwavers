@@ -49,6 +49,7 @@ impl FocalKernel {
     /// fwhm_ax_m : float
     ///     Penttinen 1976 axial focal FWHM [m].
     #[new]
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (field, dx_m, focus_idx, f0, pnp_realised, source_pa,
                          fwhm_lat_m, fwhm_ax_m))]
     fn new(

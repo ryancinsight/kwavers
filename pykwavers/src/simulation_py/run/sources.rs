@@ -28,13 +28,7 @@ pub(crate) fn process_source_for_run(
     dynamic_sources: &mut Vec<Box<dyn KwaversSource>>,
     has_mask_source: &mut bool,
     elastic_ivp_axis: &mut Option<String>,
-    elastic_velocity_source: &mut Option<(
-        ndarray::Array3<bool>,
-        Option<ndarray::Array1<f64>>,
-        Option<ndarray::Array1<f64>>,
-        Option<ndarray::Array1<f64>>,
-        String,
-    )>,
+    elastic_velocity_source: &mut super::super::ElasticVelocitySource,
 ) -> PyResult<()> {
     if src.source_type == "kwave_array" {
         if *has_mask_source {

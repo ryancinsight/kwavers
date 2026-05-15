@@ -15,6 +15,7 @@ pub use brain::prepare_brain_slice;
 pub(crate) use abdominal::{largest_connected_target_component, largest_target_slice};
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::numerics::operators::interpolation::bilinear_index_space;
 use crate::solver::inverse::same_aperture::C_REF_M_S;
 use ndarray::Array2;
 
@@ -89,21 +90,6 @@ pub(super) fn median_in_mask(values: &Array2<f64>, mask: &Array2<bool>) -> Optio
     Some(selected[selected.len() / 2])
 }
 
-/// Bilinear interpolation on a 2-D array at continuous coordinates `(x, y)`.
-pub(super) fn bilinear(input: &Array2<f64>, x: f64, y: f64) -> f64 {
-    let (nx, ny) = input.dim();
-    let x0 = x.floor().clamp(0.0, (nx - 1) as f64) as usize;
-    let y0 = y.floor().clamp(0.0, (ny - 1) as f64) as usize;
-    let x1 = (x0 + 1).min(nx - 1);
-    let y1 = (y0 + 1).min(ny - 1);
-    let tx = x - x0 as f64;
-    let ty = y - y0 as f64;
-    (1.0 - tx) * (1.0 - ty) * input[[x0, y0]]
-        + tx * (1.0 - ty) * input[[x1, y0]]
-        + (1.0 - tx) * ty * input[[x0, y1]]
-        + tx * ty * input[[x1, y1]]
-}
-
 /// Resample a continuous 2-D field to a square `size × size` grid via bilinear
 /// interpolation.
 pub(super) fn resample_f64(input: &Array2<f64>, size: usize) -> Array2<f64> {
@@ -111,7 +97,7 @@ pub(super) fn resample_f64(input: &Array2<f64>, size: usize) -> Array2<f64> {
     Array2::from_shape_fn((size, size), |(ix, iy)| {
         let x = ix as f64 * (nx - 1) as f64 / (size - 1) as f64;
         let y = iy as f64 * (ny - 1) as f64 / (size - 1) as f64;
-        bilinear(input, x, y)
+        bilinear_index_space(input, x, y)
     })
 }
 

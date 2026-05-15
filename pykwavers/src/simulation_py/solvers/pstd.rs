@@ -40,7 +40,7 @@ impl Simulation {
         record_modes: &[String],
     ) -> KwaversResult<(PSTDSolver, KwaversGrid, ndarray::Array3<bool>)> {
         use kwavers::core::error::ValidationError;
-        use kwavers::domain::medium::traits::Medium as MediumTrait;
+        
 
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
         let transducer_ordered_indices = transducer_sensor

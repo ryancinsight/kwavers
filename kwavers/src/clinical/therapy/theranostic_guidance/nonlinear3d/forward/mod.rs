@@ -1,14 +1,18 @@
 //! Source-encoded 3-D Westervelt forward propagation.
 
-use rayon::prelude::*;
+mod source;
+mod stencil;
 
 use super::absorption::{AbsorptionBuilder, FractionalLaplacianAbsorption};
 #[cfg(test)]
 use super::checkpoint::HistorySegment;
 use super::checkpoint::{ForwardHistory, HistoryReplayWorkspace};
-use super::encoding::{focused_delay_s, max_source_focus_distance_m, SourceEncoding};
+use super::encoding::SourceEncoding;
 use super::stencil::sponge;
 use super::types::{flat_index, Nonlinear3dAperture, Nonlinear3dConfig};
+
+use source::{build_source_plan, inject_sources, DriveContext};
+use stencil::{record_receivers, update_cells, update_peak, UpdateCells};
 
 #[derive(Clone, Debug)]
 pub(super) struct ForwardResult {
@@ -341,160 +345,4 @@ pub(super) fn replay_history_segment_into(
         std::mem::swap(&mut workspace.current, &mut workspace.next);
         workspace.segment.set_state(step + 1, &workspace.current);
     }
-}
-
-struct SourcePlan {
-    source_cells: Vec<usize>,
-    max_focus_distance: f64,
-    reference_speed: f64,
-    weight_norm: f64,
-}
-
-fn build_source_plan(
-    speed: &[f64],
-    n: usize,
-    spacing_m: f64,
-    aperture: &Nonlinear3dAperture,
-    encoding: SourceEncoding,
-) -> SourcePlan {
-    let source_cells = aperture
-        .sources
-        .iter()
-        .map(|idx| flat_index(*idx, n))
-        .collect::<Vec<_>>();
-    let max_focus_distance =
-        max_source_focus_distance_m(&aperture.sources, aperture.focus, spacing_m);
-    let focus_cell = flat_index(aperture.focus, n);
-    let reference_speed = speed[focus_cell].max(343.0);
-    let weight_norm = aperture
-        .sources
-        .iter()
-        .enumerate()
-        .map(|(source, _)| encoding.source_weight(source, aperture.sources.len()).abs())
-        .sum::<f64>()
-        .max(1.0);
-    SourcePlan {
-        source_cells,
-        max_focus_distance,
-        reference_speed,
-        weight_norm,
-    }
-}
-
-struct UpdateCells<'a> {
-    next: &'a mut [f64],
-    current: &'a [f64],
-    previous: &'a [f64],
-    older: &'a [f64],
-    speed: &'a [f64],
-    density: &'a [f64],
-    beta: &'a [f64],
-    sponge: &'a [f64],
-}
-
-fn update_cells(buffers: UpdateCells<'_>, n: usize, dt: f64, inv_dx2: f64, step: usize) {
-    let n2 = n * n;
-    let dt2 = dt * dt;
-    let inv_dt = 1.0 / dt;
-    let inv_dt2 = 1.0 / dt2;
-    buffers
-        .next
-        .par_iter_mut()
-        .enumerate()
-        .for_each(|(i, dst)| {
-            let z = i % n;
-            let y = (i / n) % n;
-            let x = i / n2;
-            if x == 0 || y == 0 || z == 0 || x + 1 == n || y + 1 == n || z + 1 == n {
-                *dst = 0.0;
-                return;
-            }
-            let center = buffers.current[i];
-            let prev = buffers.previous[i];
-            let lap = (buffers.current[i - n2]
-                + buffers.current[i + n2]
-                + buffers.current[i - n]
-                + buffers.current[i + n]
-                + buffers.current[i - 1]
-                + buffers.current[i + 1]
-                - 6.0 * center)
-                * inv_dx2;
-            let nl = nonlinear_term_inline(center, prev, buffers.older[i], inv_dt, inv_dt2, step);
-            let c = buffers.speed[i];
-            let q = buffers.beta[i] * dt2 / (buffers.density[i] * c * c).max(1.0e-18);
-            let raw = 2.0_f64.mul_add(center, -prev) + (c * dt).powi(2) * lap + q * nl;
-            *dst = buffers.sponge[i] * raw;
-        });
-}
-
-struct DriveContext<'a> {
-    aperture: &'a Nonlinear3dAperture,
-    config: &'a Nonlinear3dConfig,
-    schedule: TimeSchedule,
-    encoding: SourceEncoding,
-    spacing_m: f64,
-    max_focus_distance: f64,
-    reference_speed: f64,
-    weight_norm: f64,
-}
-
-fn inject_sources(next: &mut [f64], source_cells: &[usize], drive: &DriveContext<'_>, step: usize) {
-    let time = step as f64 * drive.schedule.dt_s;
-    for (source_idx, cell) in source_cells.iter().enumerate() {
-        let delay = focused_delay_s(
-            drive.aperture.sources[source_idx],
-            drive.aperture.focus,
-            drive.max_focus_distance,
-            drive.spacing_m,
-            drive.reference_speed,
-        );
-        let signal = source_signal(time - delay, drive.config)
-            * drive
-                .encoding
-                .source_weight(source_idx, drive.aperture.sources.len())
-            / drive.weight_norm;
-        next[*cell] += signal;
-    }
-}
-
-fn record_receivers(traces: &mut [f64], receiver_cells: &[usize], next: &[f64], step: usize) {
-    for (receiver, cell) in receiver_cells.iter().copied().enumerate() {
-        traces[step * receiver_cells.len() + receiver] = next[cell];
-    }
-}
-
-fn update_peak(peak: &mut [f64], next: &[f64], source_mask: &[bool]) {
-    for ((dst, value), is_source) in peak.iter_mut().zip(next.iter()).zip(source_mask.iter()) {
-        if !*is_source {
-            *dst = (*dst).max(value.abs());
-        }
-    }
-}
-
-#[inline(always)]
-fn nonlinear_term_inline(
-    center: f64,
-    prev: f64,
-    older: f64,
-    inv_dt: f64,
-    inv_dt2: f64,
-    step: usize,
-) -> f64 {
-    let dp_dt = (center - prev) * inv_dt;
-    if step >= 2 {
-        let d2 = (center - 2.0 * prev + older) * inv_dt2;
-        2.0 * center * d2 + 2.0 * dp_dt * dp_dt
-    } else {
-        2.0 * dp_dt * dp_dt
-    }
-}
-
-fn source_signal(t: f64, config: &Nonlinear3dConfig) -> f64 {
-    let duration = config.cycles / config.frequency_hz;
-    if t < 0.0 || t >= duration {
-        return 0.0;
-    }
-    let phase = 2.0 * std::f64::consts::PI * config.frequency_hz * t;
-    let window = (std::f64::consts::PI * t / duration).sin().powi(2);
-    config.source_pressure_pa * phase.sin() * window
 }

@@ -10,6 +10,7 @@ mod conditioning;
 mod config;
 mod linear_algebra;
 mod medium;
+mod metrics;
 mod sensitivity;
 mod transducer;
 mod volume;

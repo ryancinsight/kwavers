@@ -36,6 +36,7 @@ use super::helpers::{
     waveform_misfit = "charbonnier",
     waveform_misfit_scale_fraction = 0.012
 ))]
+#[allow(clippy::too_many_arguments)]
 pub fn run_theranostic_inverse_from_ritk<'py>(
     py: Python<'py>,
     ct_nifti_path: &str,

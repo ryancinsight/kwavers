@@ -7,6 +7,15 @@ mod tests;
 
 pub use gpu::GpuPstdSession;
 
+/// Elastic velocity source bundle: (mask, ux_signal, uy_signal, uz_signal, mode).
+pub(crate) type ElasticVelocitySource = Option<(
+    ndarray::Array3<bool>,
+    Option<ndarray::Array1<f64>>,
+    Option<ndarray::Array1<f64>>,
+    Option<ndarray::Array1<f64>>,
+    String,
+)>;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
@@ -17,7 +26,6 @@ use kwavers::solver::forward::pstd::config::CompatibilityMode;
 use crate::grid_py::Grid;
 use crate::medium_py::Medium;
 use crate::sensor_py::Sensor;
-use crate::simulation_result_py::SimulationResult;
 use crate::solver_type_bindings::SolverType;
 use crate::source_py::Source;
 use crate::transducer_array_py::TransducerArray2D;

@@ -2,9 +2,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use kwavers::core::error::KwaversError;
-use kwavers::domain::medium::traits::Medium as MediumTrait;
 use kwavers::domain::source::{GridSource, Source as KwaversSource};
-use kwavers::solver::forward::pstd::config::CompatibilityMode;
 
 use crate::simulation_result_py::SimulationResult;
 use crate::solver_type_bindings::SolverType;
@@ -59,13 +57,7 @@ impl Simulation {
         let mut dynamic_sources: Vec<Box<dyn KwaversSource>> = Vec::new();
         let mut has_mask_source = false;
         let mut elastic_ivp_axis: Option<String> = None;
-        let mut elastic_velocity_source: Option<(
-            ndarray::Array3<bool>,
-            Option<ndarray::Array1<f64>>,
-            Option<ndarray::Array1<f64>>,
-            Option<ndarray::Array1<f64>>,
-            String,
-        )> = None;
+        let mut elastic_velocity_source: super::ElasticVelocitySource = None;
 
         for src in &self.sources {
             super::run::process_source_for_run(

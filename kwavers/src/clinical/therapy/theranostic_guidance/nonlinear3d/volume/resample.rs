@@ -2,6 +2,8 @@
 
 use ndarray::Array3;
 
+use crate::math::numerics::operators::interpolation::trilinear_index_space;
+
 use super::bbox::BBox;
 
 pub(super) fn resample_scalar(input: &Array3<f64>, bbox: BBox, n: usize) -> Array3<f64> {
@@ -9,7 +11,7 @@ pub(super) fn resample_scalar(input: &Array3<f64>, bbox: BBox, n: usize) -> Arra
         let x = map_coord(ix, n, bbox.x0, bbox.x1);
         let y = map_coord(iy, n, bbox.y0, bbox.y1);
         let z = map_coord(iz, n, bbox.z0, bbox.z1);
-        trilinear(input, x, y, z)
+        trilinear_index_space(input, x, y, z)
     })
 }
 
@@ -52,24 +54,3 @@ fn map_range(idx: usize, n: usize, min: usize, max: usize) -> (usize, usize) {
     (start.min(max), end.min(max))
 }
 
-fn trilinear(input: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
-    let dims = input.dim();
-    let x0 = x.floor().clamp(0.0, (dims.0 - 1) as f64) as usize;
-    let y0 = y.floor().clamp(0.0, (dims.1 - 1) as f64) as usize;
-    let z0 = z.floor().clamp(0.0, (dims.2 - 1) as f64) as usize;
-    let x1 = (x0 + 1).min(dims.0 - 1);
-    let y1 = (y0 + 1).min(dims.1 - 1);
-    let z1 = (z0 + 1).min(dims.2 - 1);
-    let tx = x - x0 as f64;
-    let ty = y - y0 as f64;
-    let tz = z - z0 as f64;
-    let c00 = lerp(input[[x0, y0, z0]], input[[x1, y0, z0]], tx);
-    let c10 = lerp(input[[x0, y1, z0]], input[[x1, y1, z0]], tx);
-    let c01 = lerp(input[[x0, y0, z1]], input[[x1, y0, z1]], tx);
-    let c11 = lerp(input[[x0, y1, z1]], input[[x1, y1, z1]], tx);
-    lerp(lerp(c00, c10, ty), lerp(c01, c11, ty), tz)
-}
-
-fn lerp(a: f64, b: f64, t: f64) -> f64 {
-    a + t * (b - a)
-}

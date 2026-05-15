@@ -2,16 +2,8 @@ mod session;
 
 pub use session::GpuPstdSession;
 
-use kwavers::core::error::{KwaversError, KwaversResult};
-use kwavers::domain::grid::Grid as KwaversGrid;
-use kwavers::domain::sensor::recorder::pressure_statistics::SampledStatistics;
-use kwavers::domain::source::GridSource;
 
-use crate::medium_py::MediumInner;
-use crate::sensor_py::Sensor;
-use crate::transducer_array_py::TransducerArray2D;
 
-use super::Simulation;
 
 /// GPU-resident PSTD implementation (requires `gpu` feature).
 ///

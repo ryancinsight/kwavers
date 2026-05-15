@@ -20,15 +20,9 @@ impl Simulation {
         pml_size: Option<usize>,
         _pml_inside: bool,
         elastic_ivp_axis: Option<&str>,
-        elastic_velocity_source: Option<(
-            ndarray::Array3<bool>,
-            Option<ndarray::Array1<f64>>,
-            Option<ndarray::Array1<f64>>,
-            Option<ndarray::Array1<f64>>,
-            String,
-        )>,
+        elastic_velocity_source: super::super::ElasticVelocitySource,
     ) -> KwaversResult<SimulationRunResult> {
-        use kwavers::domain::medium::traits::Medium as MediumTrait;
+        
         use kwavers::solver::forward::elastic::swe::{
             ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
         };
@@ -96,13 +90,15 @@ impl Simulation {
             };
 
         let pml_thickness = pml_size.unwrap_or(10);
-        let mut config = ElasticWaveConfig::default();
-        config.time_step = dt;
-        config.simulation_time = dt * (time_steps as f64);
-        config.pml_thickness = pml_thickness;
-        config.save_every = 1;
-        config.sensor_mask = sensor_mask;
-        config.velocity_source = elastic_vsrc_kw;
+        let config = ElasticWaveConfig {
+            time_step: dt,
+            simulation_time: dt * (time_steps as f64),
+            pml_thickness,
+            save_every: 1,
+            sensor_mask,
+            velocity_source: elastic_vsrc_kw,
+            ..ElasticWaveConfig::default()
+        };
 
         let medium_ref: &dyn kwavers::domain::medium::traits::Medium = medium.as_medium();
         let mut solver = ElasticWaveSolver::new(grid, medium_ref, config)?;
@@ -140,15 +136,9 @@ impl Simulation {
         time_steps: usize,
         dt: f64,
         sensor: Option<&Sensor>,
-        elastic_velocity_source: Option<(
-            ndarray::Array3<bool>,
-            Option<ndarray::Array1<f64>>,
-            Option<ndarray::Array1<f64>>,
-            Option<ndarray::Array1<f64>>,
-            String,
-        )>,
+        elastic_velocity_source: super::super::ElasticVelocitySource,
     ) -> KwaversResult<SimulationRunResult> {
-        use kwavers::domain::medium::traits::Medium as MediumTrait;
+
         use kwavers::solver::forward::pstd::extensions::{
             ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSourceMode,
             ElasticPstdVelocitySource,

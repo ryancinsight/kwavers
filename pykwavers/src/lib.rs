@@ -51,12 +51,10 @@
 //! Date: 2026-02-04
 //! Sprint: 217 Session 9 - Python Integration via PyO3
 
-use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
 mod pam_bindings;
 
-use kwavers::core::error::KwaversError;
 // ============================================================================
 // Utility Function Bindings
 // ============================================================================
@@ -73,10 +71,6 @@ mod utils_bindings;
 // Error Handling
 // ============================================================================
 
-/// Convert kwavers errors to Python exceptions
-fn kwavers_error_to_py(err: KwaversError) -> PyErr {
-    PyRuntimeError::new_err(format!("kwavers error: {}", err))
-}
 
 /// Convert k-Wave absorption units dB/(MHz^y·cm) to Np/m at the given frequency.
 ///
@@ -183,7 +177,6 @@ pub use simulation_py::{Simulation, GpuPstdSession};
 
 mod simulation_result_py;
 pub(crate) use simulation_result_py::SimulationResult;
-pub(crate) use simulation_result_py::{extract_full_grid_stats, SimulationRunResult};
 
 // ============================================================================
 // Module Definition

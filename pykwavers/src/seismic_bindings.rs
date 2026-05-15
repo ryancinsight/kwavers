@@ -41,6 +41,7 @@ use crate::ritk_image::load_ritk_nifti;
     source_pressure_mpa = 0.15,
     nonlinear_beta = 4.5
 ))]
+#[allow(clippy::too_many_arguments)]
 fn run_seismic_helmet_fwi_from_ritk_ct<'py>(
     py: Python<'py>,
     ct_nifti_path: &str,
@@ -233,6 +234,7 @@ fn run_seismic_helmet_fwi_from_ritk_ct<'py>(
     source_pressure_mpa = 0.15,
     nonlinear_beta = 4.5
 ))]
+#[allow(clippy::too_many_arguments)]
 fn run_seismic_helmet_fwi_volume_from_ritk_ct<'py>(
     py: Python<'py>,
     ct_nifti_path: &str,

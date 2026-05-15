@@ -1,14 +1,13 @@
 pub(crate) mod helpers;
 mod methods;
 
-pub(crate) use helpers::{apodization_to_string, parse_apodization_type, pressure_signal_to_matrix};
+pub(crate) use helpers::pressure_signal_to_matrix;
 
-use ndarray::{Array1, Array2, Array3, Axis};
+use ndarray::{Array2, Array3, Axis};
 use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::kwave_array_py::KWaveArray;
 
 /// Acoustic source for wave excitation.
 ///

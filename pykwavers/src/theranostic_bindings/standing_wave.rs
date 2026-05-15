@@ -41,6 +41,7 @@ use pyo3::types::PyDict;
     line_search_max = 12,
     n_snapshots = 5
 ))]
+#[allow(clippy::too_many_arguments)]
 pub fn run_standing_wave_suppression_py<'py>(
     py: Python<'py>,
     nx: usize,

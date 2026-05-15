@@ -1,7 +1,7 @@
 mod sources;
 mod helpers;
 
-pub(crate) use sources::{parse_source_mode, process_source_for_run};
+pub(crate) use sources::process_source_for_run;
 
 use pyo3::prelude::*;
 use pyo3::exceptions::PyRuntimeError;

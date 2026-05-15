@@ -101,7 +101,7 @@ pub(super) fn swi_from_profile(intensity: &[f64], config: &StandingWaveOptConfig
         .map(|k| dft_amplitude(intensity, k as f64))
         .fold(f64::NEG_INFINITY, f64::max);
     // SWI = 2 |DFT{I}[k_sw]| / DFT{I}[0] (DC = unnormalised sum)
-    (2.0 * sw_amp / dc).min(1.0).max(0.0)
+    (2.0 * sw_amp / dc).clamp(0.0, 1.0)
 }
 
 /// Extract the focal-axis intensity profile and compute SWI.

@@ -8,12 +8,14 @@
 //! - Press et al. (2007). *Numerical Recipes*. Chapter 3.
 //! - de Boor, C. (2001). *A Practical Guide to Splines*.
 
+pub mod bilinear;
 pub mod linear;
 #[cfg(test)]
 mod tests;
 pub mod traits;
 pub mod trilinear;
 
+pub use bilinear::bilinear_index_space;
 pub use linear::LinearInterpolator;
 pub use traits::Interpolator;
-pub use trilinear::TrilinearInterpolator;
+pub use trilinear::{trilinear_index_space, TrilinearInterpolator};
