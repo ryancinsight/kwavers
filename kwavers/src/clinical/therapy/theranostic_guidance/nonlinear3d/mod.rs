@@ -13,6 +13,7 @@ mod cavitation;
 mod checkpoint;
 mod encoding;
 mod forward;
+mod grid;
 mod metrics;
 mod optimization;
 mod regularization;

@@ -1,10 +1,17 @@
-//! Types for the separated nonlinear 3-D theranostic inversion path.
+//! Configuration, volume, aperture, and result types for the nonlinear 3-D solver.
+//!
+//! Grid-index arithmetic lives in [`super::grid`]; it is re-exported here so
+//! that all existing `use super::types::{GridIndex, flat_index, grid_point_m}`
+//! imports in sibling modules continue to compile unchanged.
 
 use ndarray::Array3;
 
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::{AnatomyKind, Point3};
+
+// Re-export geometry primitives — SSOT is `grid.rs`.
+pub(crate) use super::grid::{flat_index, grid_point_m, GridIndex};
 
 pub const THERANOSTIC_NONLINEAR_3D_MODEL: &str =
     "westervelt_3d_discrete_adjoint_fwi_plus_rayleigh_plesset_passive_inverse";
@@ -162,13 +169,6 @@ impl Nonlinear3dConfig {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct GridIndex {
-    pub x: usize,
-    pub y: usize,
-    pub z: usize,
-}
-
 #[derive(Clone, Debug)]
 pub(crate) struct Nonlinear3dVolume {
     pub anatomy: AnatomyKind,
@@ -258,17 +258,3 @@ pub struct Nonlinear3dResult {
     pub uses_rayleigh_plesset: bool,
 }
 
-#[must_use]
-pub(crate) fn flat_index(idx: GridIndex, n: usize) -> usize {
-    (idx.x * n + idx.y) * n + idx.z
-}
-
-#[must_use]
-pub(crate) fn grid_point_m(idx: GridIndex, n: usize, spacing_m: f64) -> Point3 {
-    let center = 0.5 * (n - 1) as f64;
-    Point3 {
-        x_m: (idx.x as f64 - center) * spacing_m,
-        y_m: (idx.y as f64 - center) * spacing_m,
-        z_m: (idx.z as f64 - center) * spacing_m,
-    }
-}

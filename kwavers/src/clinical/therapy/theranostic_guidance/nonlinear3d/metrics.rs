@@ -1,7 +1,12 @@
 //! Value-semantic 3-D reconstruction metrics.
+//!
+//! `dice_equal_area` and `cnr` are the canonical implementations in
+//! [`super::super::metrics`]; this module delegates to them to maintain
+//! SSOT and avoid behavioural drift between the 2-D and 3-D metric paths.
 
 use ndarray::Array3;
 
+use super::super::metrics::{cnr, dice_equal_area};
 use super::types::VolumeReconstructionMetrics;
 
 pub(crate) fn metrics_from_score(
@@ -20,7 +25,7 @@ pub(crate) fn metrics_from_score(
     VolumeReconstructionMetrics {
         dice_equal_area: dice_equal_area(&scores, &truth),
         cnr: cnr(&scores, &truth),
-        nrmse: nrmse(&scores, &truth),
+        nrmse: binary_rmse(&scores, &truth),
     }
 }
 
@@ -45,49 +50,12 @@ pub(crate) fn fused_score(
     })
 }
 
-fn dice_equal_area(score: &[f64], target: &[bool]) -> f64 {
-    let count = target.iter().filter(|active| **active).count();
-    if count == 0 || score.is_empty() {
-        return 0.0;
-    }
-    let mut ordered = score.to_vec();
-    ordered.sort_by(f64::total_cmp);
-    let threshold = ordered[ordered.len().saturating_sub(count)];
-    let mut true_positive = 0usize;
-    let mut predicted = 0usize;
-    for (value, truth) in score.iter().zip(target.iter()) {
-        let active = *value >= threshold;
-        predicted += usize::from(active);
-        true_positive += usize::from(active && *truth);
-    }
-    2.0 * true_positive as f64 / (predicted + count).max(1) as f64
-}
-
-fn cnr(score: &[f64], target: &[bool]) -> f64 {
-    let lesion = score
-        .iter()
-        .zip(target.iter())
-        .filter_map(|(value, active)| active.then_some(*value))
-        .collect::<Vec<_>>();
-    let background = score
-        .iter()
-        .zip(target.iter())
-        .filter_map(|(value, active)| (!active).then_some(*value))
-        .collect::<Vec<_>>();
-    if lesion.is_empty() || background.len() < 2 {
-        return 0.0;
-    }
-    let lesion_mean = mean(&lesion);
-    let background_mean = mean(&background);
-    let background_var = background
-        .iter()
-        .map(|value| (value - background_mean).powi(2))
-        .sum::<f64>()
-        / background.len() as f64;
-    (lesion_mean - background_mean) / background_var.sqrt().max(1.0e-12)
-}
-
-fn nrmse(score: &[f64], target: &[bool]) -> f64 {
+/// Binary RMSE of a continuous score against a Boolean target mask.
+///
+/// Differs from the continuous `nrmse` in [`super::super::metrics`]: here the
+/// reference signal is `{0, 1}` rather than a second continuous array, so no
+/// range normalisation is meaningful — the denominator is simply `n`.
+fn binary_rmse(score: &[f64], target: &[bool]) -> f64 {
     if score.is_empty() {
         return 0.0;
     }
@@ -103,6 +71,3 @@ fn nrmse(score: &[f64], target: &[bool]) -> f64 {
     mse.sqrt()
 }
 
-fn mean(values: &[f64]) -> f64 {
-    values.iter().sum::<f64>() / values.len().max(1) as f64
-}

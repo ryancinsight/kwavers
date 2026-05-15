@@ -7,8 +7,6 @@ use numpy::IntoPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use super::helpers::kwavers_to_py;
-
 #[pyfunction(name = "run_standing_wave_suppression")]
 #[pyo3(signature = (
     nx = 128,
