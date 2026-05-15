@@ -20,6 +20,7 @@ mod misfit;
 mod nonlinear3d;
 mod skin;
 mod solver;
+pub mod standing_wave_opt;
 mod waveform;
 
 pub use config::{AnatomyKind, TheranosticInverseConfig};
@@ -42,6 +43,7 @@ pub use solver::{
     THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_NONLINEAR_WAVE_PROPAGATION,
     THERANOSTIC_OPERATOR_BACKEND, THERANOSTIC_OPERATOR_MODEL,
 };
+pub use standing_wave_opt::{run_standing_wave_suppression, StandingWaveOptConfig, StandingWaveOptResult};
 pub use waveform::{
     simulate_waveform_adjoint_rtm, WaveformSimulationResult, THERANOSTIC_WAVEFORM_MODEL,
 };
