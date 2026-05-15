@@ -118,7 +118,13 @@ pub fn build_vandermonde(
             for i in 0..n_nodes {
                 let theta = fourier_theta(nodes[i]);
                 for j in 0..n_modes {
-                    v[[i, j]] = real_fourier_basis(j, theta);
+                    // For even N=2M the last mode (j=N-1, which is odd) would
+                    // normally be sin(Mθ), but sin(Mθ) = sin(jπ) = 0 at every
+                    // equispaced node x_j = -1+2j/N (discrete Nyquist degeneracy).
+                    // Replace it with the non-degenerate Nyquist cosine cos(Mθ),
+                    // which completes the real Fourier basis and is invertible.
+                    // Reference: Brigham (1988) §4.3; Hesthaven & Warburton (2008) §5.3.
+                    v[[i, j]] = fourier_vandermonde_entry(n_modes, j, theta);
                 }
             }
         }
@@ -200,6 +206,12 @@ pub(super) fn fourier_theta(x: f64) -> f64 {
     std::f64::consts::PI * (x + 1.0)
 }
 
+/// Evaluate the real Fourier basis function `φ_mode` at angle `theta = π(x+1)`.
+///
+/// The basis ordering is:
+/// - mode 0: 1 (constant)
+/// - mode 2k-1: sin(kθ), k ≥ 1
+/// - mode 2k:   cos(kθ), k ≥ 1
 pub(super) fn real_fourier_basis(mode: usize, theta: f64) -> f64 {
     if mode == 0 {
         return 1.0;
@@ -210,6 +222,23 @@ pub(super) fn real_fourier_basis(mode: usize, theta: f64) -> f64 {
         (wavenumber * theta).sin()
     } else {
         (wavenumber * theta).cos()
+    }
+}
+
+/// Evaluate the real Fourier Vandermonde entry for basis size `n_modes`.
+///
+/// Handles the discrete Nyquist degeneracy: for even `n_modes = 2M`, mode `N-1`
+/// (which is odd) would normally map to `sin(Mθ)`, but `sin(Mθ) = 0` at every
+/// equispaced node `x_j = -1 + 2j/N`.  The non-degenerate replacement is the
+/// Nyquist cosine `cos(Mθ)`, which keeps the Vandermonde invertible.
+#[inline]
+pub(super) fn fourier_vandermonde_entry(n_modes: usize, mode: usize, theta: f64) -> f64 {
+    let is_nyquist = n_modes.is_multiple_of(2) && mode == n_modes - 1;
+    if is_nyquist {
+        let k = (n_modes / 2) as f64;
+        (k * theta).cos()
+    } else {
+        real_fourier_basis(mode, theta)
     }
 }
 

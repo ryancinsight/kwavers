@@ -20,7 +20,7 @@ use crate::domain::source::{
 use std::f64::consts::PI;
 use std::sync::Arc;
 
-const DEFAULT_SOUND_SPEED: f64 = 1500.0; // m/s (Water)
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 /// Factory for creating sources
 #[derive(Debug)]
@@ -45,7 +45,7 @@ impl SourceFactory {
 
         // Common conversions
         let position = (config.position[0], config.position[1], config.position[2]);
-        let wavelength = DEFAULT_SOUND_SPEED / config.frequency;
+        let wavelength = SOUND_SPEED_WATER_SIM / config.frequency;
         let direction = match config.focus {
             Some(f) => (f[0], f[1], f[2]),
             None => (0.0, 0.0, 1.0), // Default z-direction
@@ -142,12 +142,12 @@ impl SourceFactory {
                     num_elements,
                     position,
                     signal,
-                    DEFAULT_SOUND_SPEED,
+                    SOUND_SPEED_WATER_SIM,
                     config.frequency,
                     RectangularApodization,
                 );
                 if let Some(focus) = config.focus {
-                    array.adjust_focus(focus[0], focus[1], focus[2], DEFAULT_SOUND_SPEED);
+                    array.adjust_focus(focus[0], focus[1], focus[2], SOUND_SPEED_WATER_SIM);
                 }
                 Ok(Box::new(array))
             }
@@ -163,12 +163,12 @@ impl SourceFactory {
                     n_side,
                     position,
                     signal,
-                    DEFAULT_SOUND_SPEED,
+                    SOUND_SPEED_WATER_SIM,
                     config.frequency,
                     RectangularApodization,
                 );
                 if let Some(focus) = config.focus {
-                    array.adjust_focus(focus[0], focus[1], focus[2], DEFAULT_SOUND_SPEED);
+                    array.adjust_focus(focus[0], focus[1], focus[2], SOUND_SPEED_WATER_SIM);
                 }
                 Ok(Box::new(array))
             }

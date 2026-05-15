@@ -1,5 +1,6 @@
 use super::super::super::basis::BasisType;
 use super::super::super::config::DGConfig;
+use super::super::super::quadrature::fourier_periodic_nodes;
 use super::super::super::traits::DGOperations;
 use super::super::core::DGSolver;
 use crate::domain::grid::Grid;
@@ -173,4 +174,144 @@ fn test_polynomial_reproduction() {
             "Polynomial reproduction error at node {i}: {err:.2e} (must be < 1e-11)"
         );
     }
+}
+
+// ─── Fourier DG constructor tests ────────────────────────────────────────────
+
+/// Build a minimal test grid.
+fn make_grid(n: usize) -> Arc<Grid> {
+    Arc::new(Grid::new(n, n, n, 1.0, 1.0, 1.0).expect("Grid::new failed in test"))
+}
+
+/// **Equispaced nodes**: `fourier_periodic_nodes(N)` must produce
+/// `x_j = -1 + 2j/N` and `w_j = 2/N` for all `j < N`.
+#[test]
+fn fourier_periodic_nodes_generates_equispaced_nodes_and_uniform_weights() {
+    let n = 8_usize;
+    let (nodes, weights) = fourier_periodic_nodes(n).expect("fourier_periodic_nodes failed");
+
+    assert_eq!(nodes.len(), n);
+    assert_eq!(weights.len(), n);
+
+    let expected_weight = 2.0 / n as f64;
+    for j in 0..n {
+        let expected_node = -1.0 + 2.0 * j as f64 / n as f64;
+        assert!(
+            (nodes[j] - expected_node).abs() < 1e-15,
+            "node[{j}] = {}, expected {expected_node}",
+            nodes[j]
+        );
+        assert!(
+            (weights[j] - expected_weight).abs() < 1e-15,
+            "weight[{j}] = {}, expected {expected_weight}",
+            weights[j]
+        );
+    }
+}
+
+/// **Minimum-N rejection**: `fourier_periodic_nodes(1)` must return `Config` error.
+#[test]
+fn fourier_periodic_nodes_rejects_n_less_than_2() {
+    let err = fourier_periodic_nodes(1).unwrap_err();
+    assert!(format!("{err}").contains(">= 2") || format!("{err}").contains("fourier_nodes"));
+}
+
+/// **DGSolver::new_fourier constructs successfully**: basis type is Fourier,
+/// `n_nodes = poly_order + 1`, and lift matrix is all-zero (periodic element).
+#[test]
+fn new_fourier_constructs_with_correct_metadata_and_zero_lift() {
+    let poly_order = 7; // N = 8 equispaced nodes
+    let config = DGConfig { polynomial_order: poly_order, ..DGConfig::default() };
+    let grid = make_grid(poly_order + 1);
+
+    let solver = DGSolver::new_fourier(config, grid).expect("new_fourier failed");
+
+    assert_eq!(solver.config.basis_type, BasisType::Fourier);
+    assert_eq!(solver.n_nodes, poly_order + 1);
+
+    // Lift matrix must be all-zero (no net boundary flux in a periodic element).
+    let lift = &*solver.lift_matrix;
+    assert_eq!(lift.shape(), &[poly_order + 1, 2]);
+    for &v in lift.iter() {
+        assert_eq!(v, 0.0, "lift entry must be exactly 0.0");
+    }
+}
+
+/// **Uniform mass matrix**: every diagonal entry of the mass matrix equals `2/N`.
+#[test]
+fn new_fourier_mass_matrix_has_uniform_diagonal_entries() {
+    let n = 6_usize; // N = 6 equispaced nodes
+    let config = DGConfig { polynomial_order: n - 1, ..DGConfig::default() };
+    let grid = make_grid(n);
+    let solver = DGSolver::new_fourier(config, grid).expect("new_fourier failed");
+
+    let expected = 2.0 / n as f64;
+    let m = &*solver.mass_matrix;
+    for i in 0..n {
+        assert!(
+            (m[[i, i]] - expected).abs() < 1e-14,
+            "M[{i},{i}] = {}, expected {expected}",
+            m[[i, i]]
+        );
+        for j in 0..n {
+            if i != j {
+                assert!(
+                    m[[i, j]].abs() < 1e-14,
+                    "off-diagonal M[{i},{j}] = {} (must be 0)",
+                    m[[i, j]]
+                );
+            }
+        }
+    }
+}
+
+/// **Spectral derivative exactness**: D · sin(π(x+1)) = π·cos(π(x+1)) at every node,
+/// because `sin(π(x+1))` is exactly the first sine mode of the Fourier basis.
+///
+/// ## Proof
+///
+/// Let θ(x) = π(x+1). With `φ₁(x) = sin(θ)`, d/dx φ₁ = π cos(θ).
+/// The N-node Fourier DG differentiates degree ≤ ⌊N/2⌋ trig polynomials exactly;
+/// for N ≥ 4 the sine mode of wavenumber 1 is within range.
+#[test]
+fn new_fourier_differentiation_matrix_is_spectrally_exact_for_first_sine_mode() {
+    let n = 8_usize;
+    let config = DGConfig { polynomial_order: n - 1, ..DGConfig::default() };
+    let grid = make_grid(n);
+    let solver = DGSolver::new_fourier(config, grid).expect("new_fourier failed");
+
+    let xi = &*solver.xi_nodes;
+    let d = &*solver.diff_matrix;
+
+    // f_j = sin(π(x_j + 1)),  df/dx = π cos(π(x_j + 1)).
+    let f: Vec<f64> = (0..n).map(|j| (std::f64::consts::PI * (xi[j] + 1.0)).sin()).collect();
+    let df_exact: Vec<f64> =
+        (0..n).map(|j| std::f64::consts::PI * (std::f64::consts::PI * (xi[j] + 1.0)).cos()).collect();
+
+    for i in 0..n {
+        let df_computed: f64 = (0..n).map(|j| d[[i, j]] * f[j]).sum();
+        let err = (df_computed - df_exact[i]).abs();
+        assert!(
+            err < 1e-11,
+            "D·sin(π(x+1)) error at node {i}: computed={df_computed:.6e}, exact={:.6e}, err={err:.2e}",
+            df_exact[i]
+        );
+    }
+}
+
+/// **GLL path still rejects Fourier**: `DGSolver::new` with `BasisType::Fourier` must
+/// return an error because GLL nodes include both endpoints and violate periodicity.
+#[test]
+fn dg_solver_new_still_rejects_fourier_basis_type_via_gll_path() {
+    let config = DGConfig {
+        polynomial_order: 4,
+        basis_type: BasisType::Fourier,
+        ..DGConfig::default()
+    };
+    let grid = make_grid(5);
+    let err = DGSolver::new(config, grid).unwrap_err();
+    assert!(
+        format!("{err}").contains("periodic nodes"),
+        "expected 'periodic nodes' in error, got: {err}"
+    );
 }

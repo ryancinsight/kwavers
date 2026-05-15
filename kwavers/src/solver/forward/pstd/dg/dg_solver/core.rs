@@ -10,7 +10,7 @@ use super::super::matrices::{
     compute_diff_matrix, compute_lift_matrix, compute_mass_matrix, compute_stiffness_matrix,
     matrix_inverse,
 };
-use super::super::quadrature::gauss_lobatto_quadrature;
+use super::super::quadrature::{fourier_periodic_nodes, gauss_lobatto_quadrature};
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, NumericalError};
 use crate::domain::grid::Grid;
@@ -88,6 +88,69 @@ impl DGSolver {
 
         // Compute lift matrix for boundary terms
         let lift_matrix = compute_lift_matrix(&mass_matrix, n_nodes)?;
+
+        Ok(Self {
+            config,
+            grid,
+            n_nodes,
+            xi_nodes: Arc::new(xi_nodes),
+            weights: Arc::new(weights),
+            vandermonde: Arc::new(vandermonde),
+            vandermonde_inv: Arc::new(vandermonde_inv),
+            mass_matrix: Arc::new(mass_matrix),
+            stiffness_matrix: Arc::new(stiffness_matrix),
+            diff_matrix: Arc::new(diff_matrix),
+            lift_matrix: Arc::new(lift_matrix),
+            modal_coefficients: None,
+        })
+    }
+
+    /// Create a DG solver using the real Fourier basis on equispaced periodic nodes.
+    ///
+    /// ## Contract
+    ///
+    /// Nodes `x_j = -1 + 2j/N`, `j = 0,...,N-1` lie on `[-1, 1)` and satisfy the
+    /// Fourier periodicity constraint (no duplicate endpoints). Weights are `w_j = 2/N`
+    /// so that the N-point trapezoidal rule integrates real trigonometric polynomials of
+    /// degree ≤ `⌊N/2⌋` exactly (Davis & Rabinowitz 1984, §2.9). The differentiation
+    /// matrix is constructed via the spectral derivative formula:
+    /// ```text
+    ///   d/dx sin(kπ(x+1)) = kπ cos(kπ(x+1))
+    ///   d/dx cos(kπ(x+1)) = -kπ sin(kπ(x+1))
+    /// ```
+    /// The lift matrix is zero for a purely periodic element: there is no net boundary
+    /// flux at the periodic endpoints within a single element, so face corrections do
+    /// not project onto interior DOFs. Inter-element coupling for multi-element Fourier
+    /// DG is handled at the orchestrator level.
+    ///
+    /// `config.basis_type` is overridden to `BasisType::Fourier`; all other fields apply.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::Config`] when `polynomial_order + 1 < 2`.
+    /// Propagates matrix construction errors.
+    pub fn new_fourier(mut config: DGConfig, grid: Arc<Grid>) -> KwaversResult<Self> {
+        config.basis_type = BasisType::Fourier;
+        let n_nodes = config.polynomial_order + 1;
+
+        // Equispaced periodic quadrature — exact for the real Fourier basis.
+        let (xi_nodes, weights) = fourier_periodic_nodes(n_nodes)?;
+
+        // Vandermonde matrix using real Fourier columns.
+        let vandermonde = build_vandermonde(&xi_nodes, config.polynomial_order, BasisType::Fourier)?;
+
+        // V⁻¹ for modal projection; well-conditioned for equispaced nodes and N ≥ 2.
+        let vandermonde_inv = matrix_inverse(&vandermonde)?;
+
+        // Diagonal mass matrix: M_ii = w_i = 2/N.
+        let mass_matrix = compute_mass_matrix(&vandermonde, &weights)?;
+
+        // Stiffness and differentiation matrices from the Fourier spectral derivative.
+        let stiffness_matrix =
+            compute_stiffness_matrix(&vandermonde, &xi_nodes, &weights, BasisType::Fourier)?;
+        let diff_matrix = compute_diff_matrix(&vandermonde, &xi_nodes, BasisType::Fourier)?;
+
+        // Zero lift: no net boundary flux within a periodic element.
+        let lift_matrix = Array2::zeros((n_nodes, 2));
 
         Ok(Self {
             config,

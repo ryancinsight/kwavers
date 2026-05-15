@@ -140,7 +140,16 @@ pub fn compute_diff_matrix(
             for i in 0..n {
                 let theta = fourier_theta(nodes[i]);
                 for j in 0..n_modes {
-                    vr[[i, j]] = real_fourier_basis_derivative(j, theta);
+                    // Nyquist mode for even N: the basis column is cos((N/2)θ)
+                    // (not the degenerate sin((N/2)θ)), so its derivative is
+                    // -(N/2)π sin((N/2)θ).  Must match `fourier_vandermonde_entry`.
+                    let is_nyquist = n_modes.is_multiple_of(2) && j == n_modes - 1;
+                    vr[[i, j]] = if is_nyquist {
+                        let k = (n_modes / 2) as f64;
+                        -k * std::f64::consts::PI * (k * theta).sin()
+                    } else {
+                        real_fourier_basis_derivative(j, theta)
+                    };
                 }
             }
         }
