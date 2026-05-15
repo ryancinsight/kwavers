@@ -31,6 +31,7 @@ pub mod linear_algebra;
 pub mod numerics;
 pub mod simd;
 pub mod simd_safe;
+pub mod statistics;
 
 // ============================================================================
 // EXPLICIT RE-EXPORTS (Core Mathematical API)

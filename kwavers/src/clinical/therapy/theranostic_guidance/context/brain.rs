@@ -37,9 +37,9 @@ pub fn build_brain_placement_context(
         .unwrap_or(slice_index);
     let superior_positive = areas[nz - 1] < areas[0];
     let calvarium_range = if superior_positive {
-        peak_z..=bbox.5
+        peak_z..=bbox.z1
     } else {
-        bbox.4..=peak_z
+        bbox.z0..=peak_z
     };
     let center = centroid_3d(&body, sx, sy, sz, Some(calvarium_range.clone()))
         .unwrap_or_else(|| volume_center(nx, ny, nz, sx, sy, sz));

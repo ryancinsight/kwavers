@@ -26,10 +26,9 @@ mod waveform;
 pub use config::{AnatomyKind, TheranosticInverseConfig};
 pub use context::{
     build_abdominal_placement_context, build_brain_placement_context, PlacementContext,
-    Point3 as PlacementPoint3,
 };
-pub use geometry::{placement_metrics, DeviceLayout, DevicePlacementMetrics, Point2};
-pub use helmet3d::{plan_brain_helmet_placement, BrainHelmetPlacement3D, Point3};
+pub use geometry::{placement_metrics, DeviceLayout, DevicePlacementMetrics, Point2, Point3};
+pub use helmet3d::{plan_brain_helmet_placement, BrainHelmetPlacement3D};
 pub use medium::{prepare_abdominal_slice, prepare_brain_slice, PreparedTheranosticSlice};
 pub use metrics::ReconstructionMetrics;
 pub use misfit::WaveformMisfit;

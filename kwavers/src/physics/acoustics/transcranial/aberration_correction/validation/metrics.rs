@@ -1,3 +1,4 @@
+use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use super::super::phase_correction::TranscranialAberrationCorrection;
 use ndarray::Array3;
 
@@ -30,42 +31,11 @@ impl TranscranialAberrationCorrection {
         let yj = (target_point[1] / self.grid.dy).clamp(0.0, ny.saturating_sub(2) as f64);
         let zk = (target_point[2] / self.grid.dz).clamp(0.0, nz.saturating_sub(2) as f64);
 
-        let p2_interp = Self::trilinear_interpolate(field, xi, yj, zk);
+        let p2_interp = trilinear_index_space(field, xi, yj, zk);
         let rho0 = 1000.0_f64;
         p2_interp / (2.0 * rho0 * self.reference_speed)
     }
 
-    /// Trilinear interpolation at fractional grid position (xi, yj, zk).
-    ///
-    /// ## Precondition
-    /// `0 ≤ xi ≤ nx−2`, `0 ≤ yj ≤ ny−2`, `0 ≤ zk ≤ nz−2` (caller must clamp).
-    pub(crate) fn trilinear_interpolate(field: &Array3<f64>, xi: f64, yj: f64, zk: f64) -> f64 {
-        let i0 = xi.floor() as usize;
-        let j0 = yj.floor() as usize;
-        let k0 = zk.floor() as usize;
-        let tx = xi - xi.floor();
-        let ty = yj - yj.floor();
-        let tz = zk - zk.floor();
-
-        let f000 = field[[i0, j0, k0]];
-        let f100 = field[[i0 + 1, j0, k0]];
-        let f010 = field[[i0, j0 + 1, k0]];
-        let f001 = field[[i0, j0, k0 + 1]];
-        let f110 = field[[i0 + 1, j0 + 1, k0]];
-        let f101 = field[[i0 + 1, j0, k0 + 1]];
-        let f011 = field[[i0, j0 + 1, k0 + 1]];
-        let f111 = field[[i0 + 1, j0 + 1, k0 + 1]];
-
-        let fx00 = f000.mul_add(1.0 - tx, f100 * tx);
-        let fx10 = f010.mul_add(1.0 - tx, f110 * tx);
-        let fx01 = f001.mul_add(1.0 - tx, f101 * tx);
-        let fx11 = f011.mul_add(1.0 - tx, f111 * tx);
-
-        let fxy0 = fx00 * (1.0 - ty) + fx10 * ty;
-        let fxy1 = fx01 * (1.0 - ty) + fx11 * ty;
-
-        fxy0 * (1.0 - tz) + fxy1 * tz
-    }
 
     /// Calculate peak sidelobe level relative to the main lobe (linear ratio).
     ///

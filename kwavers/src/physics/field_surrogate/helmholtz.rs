@@ -40,7 +40,7 @@ use super::kernel::FocalKernel;
 /// kernel cube is generated on a homogeneous water-equivalent medium,
 /// so `c0 = 1500` is the canonical reference; callers can override
 /// for tissue or layered media.
-pub const HELMHOLTZ_C0_WATER: f64 = 1500.0;
+pub const HELMHOLTZ_C0_WATER: f64 = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 /// Compute the Helmholtz residual `R = ∇²p + k²p` at every voxel.
 ///

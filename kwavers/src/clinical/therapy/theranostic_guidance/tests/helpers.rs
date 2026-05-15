@@ -1,7 +1,7 @@
 use ndarray::Array2;
 use std::collections::VecDeque;
 
-use super::super::{PlacementPoint3, Point2};
+use super::super::{Point2, Point3};
 
 pub(super) fn connected_mask_components(mask: &Array2<bool>) -> usize {
     let (nx, ny) = mask.dim();
@@ -82,9 +82,9 @@ pub(super) fn skin_normal_projection_2d(point: Point2, skin: Point2, focus: Poin
 }
 
 pub(super) fn skin_normal_projection_3d(
-    point: PlacementPoint3,
-    skin: PlacementPoint3,
-    focus: PlacementPoint3,
+    point: Point3,
+    skin: Point3,
+    focus: Point3,
 ) -> f64 {
     let dx = focus.x_m - skin.x_m;
     let dy = focus.y_m - skin.y_m;

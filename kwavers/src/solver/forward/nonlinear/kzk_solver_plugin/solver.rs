@@ -74,8 +74,8 @@ impl KzkSolverPlugin {
 
         for (f_idx, &freq) in frequencies.iter().enumerate() {
             let omega = 2.0 * PI * freq;
-            const NOMINAL_SOUND_SPEED: f64 = 1500.0;
-            let k = omega / NOMINAL_SOUND_SPEED;
+            use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+            let k = omega / SOUND_SPEED_WATER_SIM;
 
             for i in 0..grid.nx {
                 for j in 0..grid.ny {
@@ -243,8 +243,8 @@ impl KzkSolverPlugin {
         field: &Array3<f64>,
         propagation_distance: f64,
     ) -> KwaversResult<Array3<f64>> {
-        const SOUND_SPEED: f64 = 1500.0;
-        let time_shift = propagation_distance / SOUND_SPEED;
+        use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+        let time_shift = propagation_distance / SOUND_SPEED_WATER_SIM;
         self.retarded_time_window = Some(time_shift);
         Ok(field.clone())
     }

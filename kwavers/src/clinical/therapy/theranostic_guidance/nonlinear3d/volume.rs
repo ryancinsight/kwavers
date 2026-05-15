@@ -15,7 +15,7 @@ mod material;
 mod resample;
 mod validation;
 
-pub(crate) use centroid::centroid_index;
+pub(crate) use centroid::{centroid_float, centroid_index};
 
 pub(crate) fn prepare_volume(
     anatomy: AnatomyKind,

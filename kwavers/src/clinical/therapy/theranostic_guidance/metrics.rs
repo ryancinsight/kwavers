@@ -1,5 +1,6 @@
 //! Value-semantic metrics for theranostic inverse outputs.
 
+use crate::math::statistics::{nrmse, pearson};
 use ndarray::Array2;
 
 #[derive(Clone, Debug)]
@@ -31,40 +32,6 @@ pub fn masked_values(image: &Array2<f64>, mask: &Array2<bool>) -> Vec<f64> {
         .zip(mask.iter())
         .filter_map(|(value, active)| active.then_some(*value))
         .collect()
-}
-
-pub fn pearson(a: &[f64], b: &[f64]) -> f64 {
-    if a.len() != b.len() || a.len() < 2 {
-        return 0.0;
-    }
-    let ma = a.iter().sum::<f64>() / a.len() as f64;
-    let mb = b.iter().sum::<f64>() / b.len() as f64;
-    let mut num = 0.0;
-    let mut da = 0.0;
-    let mut db = 0.0;
-    for (x, y) in a.iter().zip(b.iter()) {
-        let xa = *x - ma;
-        let yb = *y - mb;
-        num += xa * yb;
-        da += xa * xa;
-        db += yb * yb;
-    }
-    num / (da.sqrt() * db.sqrt()).max(1.0e-30)
-}
-
-pub fn nrmse(a: &[f64], b: &[f64]) -> f64 {
-    if a.len() != b.len() || a.is_empty() {
-        return 0.0;
-    }
-    let mse = a
-        .iter()
-        .zip(b.iter())
-        .map(|(x, y)| (*x - *y).powi(2))
-        .sum::<f64>()
-        / a.len() as f64;
-    let span = a.iter().copied().fold(f64::NEG_INFINITY, f64::max)
-        - a.iter().copied().fold(f64::INFINITY, f64::min);
-    mse.sqrt() / span.abs().max(1.0e-12)
 }
 
 pub fn dice_equal_area(score: &[f64], target: &[bool]) -> f64 {

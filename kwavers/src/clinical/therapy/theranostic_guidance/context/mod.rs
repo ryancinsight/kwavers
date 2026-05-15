@@ -14,13 +14,7 @@ use ndarray::{Array2, Array3};
 
 pub use abdomen::build_abdominal_placement_context;
 pub use brain::build_brain_placement_context;
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Point3 {
-    pub x_m: f64,
-    pub y_m: f64,
-    pub z_m: f64,
-}
+pub(super) use super::geometry::{centered_origin_2d, IndexBounds3, Point3};
 
 #[derive(Clone, Debug)]
 pub struct PlacementContext {
@@ -48,10 +42,6 @@ pub(super) fn validate_spacing(spacing_mm: [f64; 3]) -> KwaversResult<()> {
         ));
     }
     Ok(())
-}
-
-pub(super) fn centered_origin_2d(nx: usize, ny: usize) -> (f64, f64) {
-    ((nx - 1) as f64 * 0.5, (ny - 1) as f64 * 0.5)
 }
 
 pub(super) fn volume_center(
@@ -107,29 +97,21 @@ pub(super) fn centroid_index(mask: &Array2<bool>) -> Option<(usize, usize)> {
     (count > 0.0).then_some(((sx / count).round() as usize, (sy / count).round() as usize))
 }
 
-pub(super) fn volume_bbox(
-    mask: &Array3<bool>,
-) -> KwaversResult<(usize, usize, usize, usize, usize, usize)> {
-    let (nx, ny, nz) = mask.dim();
-    let mut bbox: Option<(usize, usize, usize, usize, usize, usize)> = None;
-    for ix in 0..nx {
-        for iy in 0..ny {
-            for iz in 0..nz {
-                if mask[[ix, iy, iz]] {
-                    bbox = Some(match bbox {
-                        None => (ix, ix, iy, iy, iz, iz),
-                        Some((x0, x1, y0, y1, z0, z1)) => (
-                            x0.min(ix),
-                            x1.max(ix),
-                            y0.min(iy),
-                            y1.max(iy),
-                            z0.min(iz),
-                            z1.max(iz),
-                        ),
-                    });
-                }
-            }
+pub(super) fn volume_bbox(mask: &Array3<bool>) -> KwaversResult<IndexBounds3> {
+    let mut b = IndexBounds3 {
+        x0: usize::MAX, x1: 0,
+        y0: usize::MAX, y1: 0,
+        z0: usize::MAX, z1: 0,
+    };
+    let mut any = false;
+    for ((ix, iy, iz), active) in mask.indexed_iter() {
+        if *active {
+            b.x0 = b.x0.min(ix); b.x1 = b.x1.max(ix);
+            b.y0 = b.y0.min(iy); b.y1 = b.y1.max(iy);
+            b.z0 = b.z0.min(iz); b.z1 = b.z1.max(iz);
+            any = true;
         }
     }
-    bbox.ok_or_else(|| KwaversError::InvalidInput("placement body volume is empty".to_owned()))
+    any.then_some(b)
+        .ok_or_else(|| KwaversError::InvalidInput("placement body volume is empty".to_owned()))
 }

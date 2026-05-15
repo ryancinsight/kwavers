@@ -1,6 +1,7 @@
 //! CT slice preparation and CT-to-acoustic property mapping.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::numerics::operators::interpolation::bilinear_index_space;
 use ndarray::{s, Array2, Array3};
 
 use super::config::{C_BONE_M_S, C_BRAIN_REF_M_S, C_WATER_M_S};
@@ -108,7 +109,7 @@ pub fn resample_head_slice(
         let x = x0 as f64 + ix as f64 * sx;
         for iy in 0..grid_size {
             let y = y0 as f64 + iy as f64 * sy;
-            out[[ix, iy]] = bilinear(&slice, x, y);
+            out[[ix, iy]] = bilinear_index_space(&slice, x, y);
         }
     }
 
@@ -228,20 +229,6 @@ fn head_bbox(slice: &Array2<f64>) -> KwaversResult<(usize, usize, usize, usize)>
     })
 }
 
-fn bilinear(slice: &Array2<f64>, x: f64, y: f64) -> f64 {
-    let (nx, ny) = slice.dim();
-    let x0 = x.floor().clamp(0.0, (nx - 1) as f64) as usize;
-    let y0 = y.floor().clamp(0.0, (ny - 1) as f64) as usize;
-    let x1 = (x0 + 1).min(nx - 1);
-    let y1 = (y0 + 1).min(ny - 1);
-    let tx = x - x0 as f64;
-    let ty = y - y0 as f64;
-    let v00 = slice[[x0, y0]];
-    let v10 = slice[[x1, y0]];
-    let v01 = slice[[x0, y1]];
-    let v11 = slice[[x1, y1]];
-    (1.0 - tx) * (1.0 - ty) * v00 + tx * (1.0 - ty) * v10 + (1.0 - tx) * ty * v01 + tx * ty * v11
-}
 
 fn head_centroid(slice: &Array2<f64>) -> Option<(f64, f64)> {
     let mut sx = 0.0;

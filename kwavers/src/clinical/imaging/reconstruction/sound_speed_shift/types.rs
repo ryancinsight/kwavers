@@ -178,7 +178,7 @@ pub struct SoundSpeedShiftWorkspace {
 impl Default for SoundSpeedShiftConfig {
     fn default() -> Self {
         Self {
-            reference_sound_speed_m_s: 1540.0,
+            reference_sound_speed_m_s: crate::core::constants::fundamental::SOUND_SPEED_TISSUE,
             spacing_m: 5.0e-4,
             iterations: 64,
             tikhonov_weight: 1.0e-8,

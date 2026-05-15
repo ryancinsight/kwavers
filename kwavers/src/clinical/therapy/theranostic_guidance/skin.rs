@@ -5,6 +5,8 @@ use std::collections::VecDeque;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 
+use super::geometry::centered_origin_2d;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct SkinPoint2 {
     pub x_m: f64,
@@ -36,7 +38,7 @@ pub(crate) fn nearest_external_skin_point(
 ) -> KwaversResult<SkinPoint2> {
     let exterior = exterior_air(body);
     let (nx, ny) = body.dim();
-    let center = centered_origin(nx, ny);
+    let center = centered_origin_2d(nx, ny);
     let mut best = None;
     let mut best_distance = f64::INFINITY;
     for ix in 0..nx {
@@ -129,6 +131,3 @@ fn neighbors(ix: usize, iy: usize, nx: usize, ny: usize) -> impl Iterator<Item =
     points.into_iter().take(count)
 }
 
-fn centered_origin(nx: usize, ny: usize) -> (f64, f64) {
-    ((nx - 1) as f64 * 0.5, (ny - 1) as f64 * 0.5)
-}

@@ -58,14 +58,14 @@ pub fn calculate_acoustic_streaming_velocity(
     direction: (f64, f64, f64),
 ) -> KwaversResult<StreamingVelocity> {
     const KINEMATIC_VISCOSITY: f64 = 1e-6; // Water at 37°C [m²/s]
-    const SOUND_SPEED: f64 = 1540.0; // Soft tissue [m/s]
+    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 
     if distance <= radius_equilibrium {
         return Ok(StreamingVelocity::zero());
     }
 
     let omega = 2.0 * std::f64::consts::PI * frequency;
-    let mach_sq = (wall_velocity_amplitude / SOUND_SPEED).powi(2);
+    let mach_sq = (wall_velocity_amplitude / SOUND_SPEED_TISSUE).powi(2);
     let re = (radius_equilibrium.powi(2) * omega) / KINEMATIC_VISCOSITY;
     let r_ratio = distance / radius_equilibrium;
     let decay = 1.0 / r_ratio.powi(2);

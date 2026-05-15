@@ -5,9 +5,11 @@ use crate::core::error::{KwaversError, KwaversResult};
 /// Reference element count for an INSIGHTEC-style hemispherical array.
 pub const INSIGHTEC_ELEMENT_COUNT: usize = 1024;
 
+use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+
 /// Acoustic properties used by the CT-to-speed model.
-pub const C_WATER_M_S: f64 = 1500.0;
-pub const C_BRAIN_REF_M_S: f64 = 1540.0;
+pub const C_WATER_M_S: f64 = SOUND_SPEED_WATER_SIM;
+pub const C_BRAIN_REF_M_S: f64 = SOUND_SPEED_TISSUE;
 pub const C_BONE_M_S: f64 = 2900.0;
 
 /// Numerical configuration for the finite-frequency encoded inversion.

@@ -3,11 +3,11 @@
 mod pcg;
 
 use crate::core::error::KwaversResult;
+use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
 use ndarray::Array3;
 
 use super::{
     config::{BrainHelmetFwiConfig, C_BRAIN_REF_M_S},
-    metrics::{normalized_rmse, pearson, percentile_range},
     transducer::HelmetHemisphereGeometry,
     volume::AcousticVolume,
     volume_operator::{VolumeOperator, VolumeVoxel},

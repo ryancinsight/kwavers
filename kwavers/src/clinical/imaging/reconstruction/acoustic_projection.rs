@@ -61,7 +61,7 @@ impl Default for AcousticProjectionGeometry {
         Self {
             element_x: (0..128).map(|i| (i as f64 - 63.5) * 3e-4).collect(),
             element_z: 0.0,
-            sound_speed: 1540.0,
+            sound_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE,
             attenuation_db_cm_mhz: 0.5,
             center_frequency_hz: 5e6,
             voxel_spacing: (3e-4, 3e-4, 3e-4),

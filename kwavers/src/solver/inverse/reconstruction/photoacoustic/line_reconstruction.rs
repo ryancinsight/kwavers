@@ -235,6 +235,7 @@ fn interpolate_on_axis(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::array;
 
     #[test]
@@ -244,7 +245,7 @@ mod tests {
             sensor.view(),
             0.1e-3,
             1.0e-8,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             LineReconDataOrder::Ty,
             LineReconInterpolation::Linear,
             true,
@@ -266,7 +267,7 @@ mod tests {
             sensor_ty.view(),
             0.1e-3,
             1.0e-8,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             LineReconDataOrder::Ty,
             LineReconInterpolation::Nearest,
             false,
@@ -276,7 +277,7 @@ mod tests {
             sensor_ty.t(),
             0.1e-3,
             1.0e-8,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             LineReconDataOrder::Yt,
             LineReconInterpolation::Nearest,
             false,

@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 /// Reference values from Treeby et al. (2010) k-Wave paper
 pub mod treeby_2010 {
-    pub const SOUND_SPEED: f64 = 1500.0;
-    pub const DENSITY: f64 = 1000.0;
+    pub const SOUND_SPEED: f64 = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    pub const DENSITY: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     pub const FREQUENCY: f64 = 1.0e6;
     pub const ABSORPTION_COEF: f64 = 0.0;
     pub const GRID_SIZE: (usize, usize, usize) = (128, 128, 128);
@@ -25,8 +25,8 @@ pub mod treeby_2010 {
 /// Reference values from Pinton et al. (2009) elastic wave validation
 pub mod pinton_2009 {
     pub const SHEAR_SPEED: f64 = 3.0;
-    pub const COMPRESSIONAL_SPEED: f64 = 1540.0;
-    pub const DENSITY: f64 = 1000.0;
+    pub const COMPRESSIONAL_SPEED: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+    pub const DENSITY: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     pub const FDTD_CONVERGENCE_ORDER: f64 = 2.0;
     pub const FDTD_CFL_STABILITY: f64 = 0.3;
     pub const MAX_ENERGY_ERROR: f64 = 0.01;

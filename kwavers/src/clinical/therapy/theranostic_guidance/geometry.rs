@@ -15,6 +15,30 @@ use super::skin::nearest_external_skin_point;
 
 pub type Point2 = PlanarPoint;
 
+/// 3-D point in physical space [m].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Point3 {
+    pub x_m: f64,
+    pub y_m: f64,
+    pub z_m: f64,
+}
+
+/// Grid center in fractional index coordinates: `((n-1)/2, (m-1)/2)`.
+pub(super) fn centered_origin_2d(nx: usize, ny: usize) -> (f64, f64) {
+    ((nx - 1) as f64 * 0.5, (ny - 1) as f64 * 0.5)
+}
+
+/// 3-D inclusive bounding box in voxel index space.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct IndexBounds3 {
+    pub x0: usize,
+    pub x1: usize,
+    pub y0: usize,
+    pub y1: usize,
+    pub z0: usize,
+    pub z1: usize,
+}
+
 #[derive(Clone, Debug)]
 pub struct DeviceLayout {
     pub therapy_elements: Vec<Point2>,

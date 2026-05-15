@@ -4,12 +4,8 @@ use ndarray::{s, Array3};
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Point3 {
-    pub x_m: f64,
-    pub y_m: f64,
-    pub z_m: f64,
-}
+use super::geometry::Point3;
+use super::nonlinear3d::volume::centroid_float;
 
 #[derive(Clone, Debug)]
 pub struct BrainHelmetPlacement3D {
@@ -67,7 +63,7 @@ pub fn plan_brain_helmet_placement(
     } else {
         peak_z
     };
-    let center_index = centroid_index_in_z_range(&body_mask, calvarium_min_z, calvarium_max_z)
+    let center_index = centroid_float(&body_mask, Some((calvarium_min_z, calvarium_max_z)))
         .unwrap_or([
             0.5 * (bounds.min[0] + bounds.max[0]) as f64,
             0.5 * (bounds.min[1] + bounds.max[1]) as f64,
@@ -237,20 +233,6 @@ fn axial_areas(mask: &Array3<bool>) -> Vec<usize> {
                 .count()
         })
         .collect()
-}
-
-fn centroid_index_in_z_range(mask: &Array3<bool>, min_z: usize, max_z: usize) -> Option<[f64; 3]> {
-    let mut sum = [0.0; 3];
-    let mut count = 0.0;
-    for ((ix, iy, iz), active) in mask.indexed_iter() {
-        if *active && iz >= min_z && iz <= max_z {
-            sum[0] += ix as f64;
-            sum[1] += iy as f64;
-            sum[2] += iz as f64;
-            count += 1.0;
-        }
-    }
-    (count > 0.0).then_some([sum[0] / count, sum[1] / count, sum[2] / count])
 }
 
 fn sample_beams(

@@ -60,7 +60,7 @@ pub const GRADIENT_SMOOTHING_RADIUS: usize = 3;
 pub const GRADIENT_CLIPPING_THRESHOLD: f64 = 1e3;
 
 /// Water layer velocity (m/s) for marine seismic
-pub const WATER_VELOCITY: f64 = 1500.0;
+pub const WATER_VELOCITY: f64 = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 /// Typical sediment velocity (m/s)
 pub const SEDIMENT_VELOCITY: f64 = 2000.0;

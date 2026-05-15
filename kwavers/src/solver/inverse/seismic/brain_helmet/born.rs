@@ -1,6 +1,7 @@
 //! Finite-frequency Born inversion for CT-derived brain speed contrast.
 
 use crate::core::error::KwaversResult;
+use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
 use ndarray::Array2;
 
 use super::{
@@ -13,7 +14,6 @@ use super::{
         matrix_vector, migration_contrast, normal_equation_diagonal_rows, normalized_gradient_rows,
         objective, objective_rows,
     },
-    metrics::{normalized_rmse, pearson, percentile_range},
     medium::AcousticSlice,
     sensitivity::build_sensitivity_matrix,
     transducer::HelmetHemisphereGeometry,

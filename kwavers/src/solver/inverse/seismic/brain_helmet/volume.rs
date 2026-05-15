@@ -1,6 +1,7 @@
 //! CT volume preparation and CT-to-acoustic property mapping for 3-D inversion.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
 
 use super::{
@@ -159,7 +160,7 @@ pub fn resample_head_volume(
                 let x = x0 as f64 + ix as f64 * sx;
                 let y = y0 as f64 + iy as f64 * sy;
                 let z = z0 as f64 + iz as f64 * sz;
-                out[[ix, iy, iz]] = trilinear(volume_hu, x, y, z);
+                out[[ix, iy, iz]] = trilinear_index_space(volume_hu, x, y, z);
             }
         }
     }
@@ -239,23 +240,3 @@ fn head_bbox3(volume: &Array3<f64>) -> KwaversResult<(usize, usize, usize, usize
     })
 }
 
-fn trilinear(volume: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
-    let (nx, ny, nz) = volume.dim();
-    let x0 = x.floor().clamp(0.0, (nx - 1) as f64) as usize;
-    let y0 = y.floor().clamp(0.0, (ny - 1) as f64) as usize;
-    let z0 = z.floor().clamp(0.0, (nz - 1) as f64) as usize;
-    let x1 = (x0 + 1).min(nx - 1);
-    let y1 = (y0 + 1).min(ny - 1);
-    let z1 = (z0 + 1).min(nz - 1);
-    let tx = x - x0 as f64;
-    let ty = y - y0 as f64;
-    let tz = z - z0 as f64;
-
-    let c00 = volume[[x0, y0, z0]] * (1.0 - tx) + volume[[x1, y0, z0]] * tx;
-    let c10 = volume[[x0, y1, z0]] * (1.0 - tx) + volume[[x1, y1, z0]] * tx;
-    let c01 = volume[[x0, y0, z1]] * (1.0 - tx) + volume[[x1, y0, z1]] * tx;
-    let c11 = volume[[x0, y1, z1]] * (1.0 - tx) + volume[[x1, y1, z1]] * tx;
-    let c0 = c00 * (1.0 - ty) + c10 * ty;
-    let c1 = c01 * (1.0 - ty) + c11 * ty;
-    c0 * (1.0 - tz) + c1 * tz
-}

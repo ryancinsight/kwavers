@@ -80,6 +80,7 @@ impl Reconstructor for PhotoacousticReconstructor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::Array2;
 
     #[test]
@@ -88,7 +89,7 @@ mod tests {
             algorithm: PhotoacousticAlgorithm::UniversalBackProjection,
             sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
             grid_size: [100, 100, 100],
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             sampling_frequency: 10e6,
             envelope_detection: false,
             bandpass_filter: None,
@@ -104,7 +105,7 @@ mod tests {
             algorithm: PhotoacousticAlgorithm::UniversalBackProjection,
             sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
             grid_size: [10, 10, 10],
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             sampling_frequency: 10e6,
             envelope_detection: false,
             bandpass_filter: None,
@@ -117,7 +118,7 @@ mod tests {
             sensor_data.view(),
             &reconstructor.config.sensor_positions,
             [10, 10, 10],
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             10e6,
         );
         result.unwrap();
@@ -133,7 +134,7 @@ mod tests {
             },
             sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
             grid_size: [10, 10, 10],
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             sampling_frequency: 10e6,
             envelope_detection: false,
             bandpass_filter: None,

@@ -85,7 +85,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             multi_bubble_effects: false,
             nonlinear_acoustic: true,
             center_frequency: 2.5e6,
-            sound_speed: 1540.0,
+            sound_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE,
             domain_size: vec![0.1, 0.1, 0.1],
         };
         let cavitation_domain = super::super::cavitation_coupled::CavitationCoupledDomain::new(

@@ -1,6 +1,7 @@
-use super::super::phase_correction::TranscranialAberrationCorrection;
 use crate::domain::grid::Grid;
+use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
+use super::super::phase_correction::TranscranialAberrationCorrection;
 
 fn make_correction() -> TranscranialAberrationCorrection {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
@@ -33,7 +34,7 @@ fn gaussian_field(
 #[test]
 fn test_trilinear_at_grid_node() {
     let field = gaussian_field(8, 8, 8, 4.0, 4.0, 4.0, 1.5);
-    let result = TranscranialAberrationCorrection::trilinear_interpolate(&field, 3.0, 3.0, 3.0);
+    let result = trilinear_index_space(&field, 3.0, 3.0, 3.0);
     assert!((result - field[[3, 3, 3]]).abs() < 1e-12);
 }
 
@@ -42,7 +43,7 @@ fn test_trilinear_midpoint_is_average() {
     let mut field = Array3::zeros((4, 4, 4));
     field[[0, 0, 0]] = 2.0;
     field[[1, 0, 0]] = 4.0;
-    let result = TranscranialAberrationCorrection::trilinear_interpolate(&field, 0.5, 0.0, 0.0);
+    let result = trilinear_index_space(&field, 0.5, 0.0, 0.0);
     assert!(
         (result - 3.0).abs() < 1e-12,
         "midpoint should be 3.0, got {result}"

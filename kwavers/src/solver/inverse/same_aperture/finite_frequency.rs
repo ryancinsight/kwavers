@@ -6,7 +6,7 @@ use super::active_grid::{ActiveGrid, PlanarPoint};
 use super::operator::FiniteFrequencyOperator;
 use super::row_matrix::RowMatrix;
 
-pub const C_REF_M_S: f64 = 1540.0;
+pub const C_REF_M_S: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 
 #[derive(Clone, Copy, Debug)]
 pub struct SameApertureMedium<'a> {

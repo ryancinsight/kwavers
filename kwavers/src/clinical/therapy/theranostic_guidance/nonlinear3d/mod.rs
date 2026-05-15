@@ -19,7 +19,7 @@ mod optimization;
 mod regularization;
 mod stencil;
 mod types;
-mod volume;
+pub(crate) mod volume;
 mod westervelt;
 
 use ndarray::Array3;

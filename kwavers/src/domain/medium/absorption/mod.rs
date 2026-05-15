@@ -96,9 +96,8 @@ impl AbsorptionCalculator {
         let alpha = self.absorption_coefficient(frequency);
 
         // Apply exponential decay: exp(-α * c * dt)
-        // Assuming c = 1500 m/s for simplicity (should be passed as parameter)
-        const SOUND_SPEED: f64 = 1500.0;
-        let decay = (-alpha * SOUND_SPEED * dt).exp();
+        use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+        let decay = (-alpha * SOUND_SPEED_WATER_SIM * dt).exp();
 
         field.par_mapv_inplace(|x| x * decay);
 

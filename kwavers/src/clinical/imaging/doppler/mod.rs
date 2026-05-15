@@ -106,7 +106,7 @@ impl DopplerDefaults {
     pub const OBSTETRIC_ENSEMBLE_SIZE: usize = 10;
 
     /// Speed of sound in soft tissue (m/s)
-    pub const SPEED_OF_SOUND: f64 = 1540.0;
+    pub const SPEED_OF_SOUND: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 
     /// Maximum velocity before aliasing (m/s)
     /// For cardiac: ±1.5 m/s, vascular: ±0.5 m/s
