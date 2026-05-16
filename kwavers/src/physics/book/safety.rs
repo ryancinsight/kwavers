@@ -1,0 +1,190 @@
+//! Ultrasound dosimetry and safety indices for book chapter ch15.
+//!
+//! Covers: Mechanical Index (MI), Thermal Index soft tissue (TIS) and bone
+//! (TIB), CEM43 cumulative dose, Arrhenius damage integral, and FDA output
+//! limits.
+
+/// Mechanical Index (MI).
+///
+/// ```text
+/// MI = p_neg / (1e6 · √(f_MHz))   [dimensionless]
+/// ```
+/// where `p_neg` is in Pa and `f_MHz = f_hz / 1e6`.
+///
+/// FDA limit: MI ≤ 1.9 (general) or 0.23 (ophthalmic).
+///
+/// # Reference
+/// IEC 62359 (2017) §7.2; NCRP Report 140.
+#[inline]
+pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> f64 {
+    let f_mhz = f_hz / 1.0e6;
+    p_neg_pa / (1.0e6 * f_mhz.sqrt())
+}
+
+/// Thermal Index for soft tissue (TIS).
+///
+/// Simplified IEC 62359 formula:
+/// ```text
+/// TIS = W_stp [mW] / (210 · f_MHz)
+/// ```
+///
+/// # Arguments
+/// * `wstp_mw` – spatial-temporal peak power at the focus [mW]
+/// * `f_mhz` – centre frequency [MHz]
+///
+/// # Reference
+/// IEC 62359 (2017) §8.3.2.
+#[inline]
+pub fn thermal_index_soft_tissue(wstp_mw: f64, f_mhz: f64) -> f64 {
+    wstp_mw / (210.0 * f_mhz)
+}
+
+/// Thermal Index for bone (TIB).
+///
+/// Simplified formula:
+/// ```text
+/// TIB = W [mW] · f_MHz / 40.0
+/// ```
+///
+/// # Reference
+/// IEC 62359 (2017) §8.4.
+#[inline]
+pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> f64 {
+    w_mw * f_mhz / 40.0
+}
+
+/// CEM43 cumulative equivalent minutes at 43 °C.
+///
+/// Computed at each time step i as the running sum:
+/// ```text
+/// CEM43[i] = Σ_{j=0}^{i} (dt/60) · R^(43 − T[j])
+/// R = 0.5  if T[j] ≥ 43 °C
+/// R = 0.25 if T[j] < 43 °C
+/// ```
+///
+/// # Arguments
+/// * `t_celsius` – temperature time series [°C]
+/// * `dt_s` – time step [s]
+///
+/// Returns cumulative CEM43 at each time step [min].
+///
+/// # Reference
+/// Sapareto & Dewey (1984), *Int. J. Radiat. Oncol. Biol. Phys.* 10, 787.
+pub fn cem43_cumulative(t_celsius: &[f64], dt_s: f64) -> Vec<f64> {
+    let dt_min = dt_s / 60.0;
+    let mut cem = 0.0_f64;
+    t_celsius
+        .iter()
+        .map(|&t| {
+            let r: f64 = if t >= 43.0 { 0.5 } else { 0.25 };
+            cem += dt_min * r.powf(43.0 - t);
+            cem
+        })
+        .collect()
+}
+
+/// Arrhenius thermal damage integral.
+///
+/// ```text
+/// Ω = A · ∫ exp(−Ea / (R_gas · T_K(t))) dt
+/// ```
+/// computed by the rectangle rule:
+/// ```text
+/// Ω ≈ A · Σ_i exp(−Ea / (R_gas · (T[i] + 273.15))) · dt
+/// ```
+/// `Ω ≥ 1` indicates irreversible damage (63% cell kill at Ω = 1).
+///
+/// # Arguments
+/// * `t_celsius` – temperature time series [°C]
+/// * `dt_s` – time step [s]
+/// * `a_per_s` – frequency factor A [s⁻¹]
+/// * `ea_j_mol` – activation energy Ea [J/mol]
+///
+/// # Reference
+/// Henriques & Moritz (1947), *Am. J. Pathol.* 23, 531;
+/// Bhowmick et al. (2002) for muscle tissue parameters.
+pub fn arrhenius_damage_integral(t_celsius: &[f64], dt_s: f64, a_per_s: f64, ea_j_mol: f64) -> f64 {
+    const R_GAS: f64 = 8.314_462_618; // J/(mol·K)
+    t_celsius.iter().fold(0.0_f64, |acc, &t| {
+        let t_k = t + 273.15;
+        acc + a_per_s * (-ea_j_mol / (R_GAS * t_k)).exp() * dt_s
+    })
+}
+
+/// FDA ISPTA.3 output limit.
+///
+/// ```text
+/// ISPTA.3 ≤ 720 mW/cm²
+/// ```
+///
+/// # Reference
+/// FDA (2019) *Guidance for Industry and FDA Staff: Criteria for Significant
+/// Risk Investigations of Magnetic Resonance Diagnostic Devices*, Table 1.
+#[inline]
+pub fn fda_ispta_limit_mw_cm2() -> f64 {
+    720.0
+}
+
+/// FDA ISPPA.3 output limit.
+///
+/// ```text
+/// ISPPA.3 ≤ 190 W/cm²
+/// ```
+///
+/// # Reference
+/// FDA (2019) ibid., Table 1.
+#[inline]
+pub fn fda_isppa_limit_w_cm2() -> f64 {
+    190.0
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mi_dimensional_check() {
+        // At 1 MPa negative, 1 MHz: MI = 1.0
+        let mi = mechanical_index(1.0e6, 1.0e6);
+        assert!((mi - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn cem43_flat_43c() {
+        // At exactly 43°C, R = 0.5, 0.5^0 = 1 → each step contributes dt/60
+        let t = vec![43.0; 6];
+        let dt = 10.0; // seconds
+        let c = cem43_cumulative(&t, dt);
+        let expected: Vec<f64> = (1..=6).map(|i| i as f64 * dt / 60.0).collect();
+        for (got, exp) in c.iter().zip(expected.iter()) {
+            assert!((got - exp).abs() < 1e-10, "got={} exp={}", got, exp);
+        }
+    }
+
+    #[test]
+    fn cem43_below_threshold_smaller() {
+        // Below 43°C (R=0.25), increments are smaller than at 43°C
+        let t_above = vec![43.0; 3];
+        let t_below = vec![37.0; 3];
+        let dt = 1.0;
+        let c_above = cem43_cumulative(&t_above, dt);
+        let c_below = cem43_cumulative(&t_below, dt);
+        assert!(c_below.last().unwrap() < c_above.last().unwrap());
+    }
+
+    #[test]
+    fn arrhenius_positive() {
+        // 70°C for 1 s with muscle parameters (A ≈ 3.1e98, Ea ≈ 6.28e5 J/mol)
+        let t = vec![70.0; 100];
+        let omega = arrhenius_damage_integral(&t, 0.01, 3.1e98, 6.28e5);
+        assert!(omega > 0.0);
+    }
+
+    #[test]
+    fn fda_limits_positive() {
+        assert!(fda_ispta_limit_mw_cm2() > 0.0);
+        assert!(fda_isppa_limit_w_cm2() > 0.0);
+    }
+}

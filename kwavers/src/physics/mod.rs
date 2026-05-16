@@ -26,6 +26,7 @@
 //! See ARCHITECTURE_AUDIT_REPORT.md for detailed namespace management strategy.
 
 pub mod acoustics;
+pub mod book; // Analytical physics functions for book chapter examples
 pub mod chemistry;
 pub mod electromagnetic; // Electromagnetic wave implementations
 pub mod factory; // Capability-driven plugin catalog (PhysicsConfig → PluginManager)

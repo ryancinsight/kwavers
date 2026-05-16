@@ -53,6 +53,7 @@
 
 use pyo3::prelude::*;
 
+mod book_bindings;
 mod pam_bindings;
 
 // ============================================================================
@@ -209,6 +210,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     seismic_bindings::register(m)?;
     theranostic_bindings::register(m)?;
     fft_bindings::register(m)?;
+    book_bindings::register_book(m)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
