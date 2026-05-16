@@ -166,9 +166,19 @@ signal-to-clutter ratio SCR, the variance of the velocity estimate is
 Var(v̂) ≈ v_max² (1 − |R(1)|²) / (π² M |R(1)|²)                         (5.12)
 ```
 
-*Proof.* The phase of R(1) is Gaussian for high SCR; its variance is 1/(M SNR) by the
-Cramér-Rao bound for phase estimation. Converting phase variance to velocity variance
-via dv/dφ = v_max/π gives (5.12). □
+*Proof.* The Doppler phase of the lag-1 autocorrelation `R(1) = |R(1)|exp(iΦ)` encodes
+velocity as `Φ = 2π f_d T_PRF = π v / v_max`, where `v_max = c₀/(4 f₀ T_PRF)` is the
+Nyquist velocity.  For `M` independent ensemble samples at high SCR, `Φ` has Gaussian
+distribution with variance `σ²_Φ = (1 − |R(1)|²) / (M |R(1)|²)` by the Cramér-Rao
+bound for circular phase estimation (Kay 1993, §3.7).  The velocity is a linear function
+of phase: `v = (v_max/π) Φ`, so the velocity variance is
+
+```
+Var(v̂) = (v_max/π)² · σ²_Φ = v_max²(1 − |R(1)|²) / (π² M |R(1)|²).
+```
+
+The Jacobian `dv/dΦ = v_max/π` is the phase-to-velocity scale factor from the Doppler
+relation above. □
 
 Implemented in `kwavers::clinical::imaging::doppler::autocorrelation`.
 
@@ -209,16 +219,30 @@ diagnostic frequencies.
 *Proof sketch.* The full Rayleigh-Plesset equation linearized about R₀ gives a damped
 harmonic oscillator (5.13). Natural frequency follows from the restoring coefficient. □
 
-**Theorem 5.6 (Scattered Pressure from a Single Bubble).** In the far field, the
-scattered pressure is
+**Theorem 5.6 (Scattered Pressure from a Single Bubble).** In the far field
+(`kr ≫ 1`, equivalently `r ≫ λ/(2π) ≈ R₀/kR₀`; for `R₀ = 2 μm` and `f = 2 MHz`,
+`λ/(2π) ≈ 119 μm`, so the approximation holds for `r ≳ 1 mm` — well within
+clinical imaging depth), the scattered pressure is
 
 ```
 p_s(r) = ρ_l R₀ R̈ / r · exp(−ikr)                                        (5.15)
 ```
 
-proportional to the bubble wall acceleration R̈. Below the resonance frequency this
-scales as ω² R₀³ (Rayleigh scattering). At resonance the scattering cross-section
-far exceeds the geometric cross-section (σ_s ≫ πR₀²).
+proportional to the bubble wall acceleration R̈. *Proof sketch:* The full multipole
+expansion of the radiated pressure retains only the monopole term at `kr ≪ 1` bubble
+size (source compactness), giving `p_s = ρ_l Ṡ_bubble / (4πr)` where `Ṡ = d²(4πR³/3)/dt²
+= 4π R₀(2Ṙ² + RR̈) ≈ 4π R₀² R̈` (linearized about `R₀` with `Ṙ ≪ 1`). □
+
+Below the resonance frequency this scales as `ω² R₀³` (Rayleigh scattering).
+At resonance the scattering cross-section far exceeds the geometric cross-section
+(`σ_s ≫ πR₀²`).
+
+**Scope note:** Eq. (5.13) assumes shell stiffness χ is a constant (linear shell
+model).  At mechanical index MI > 0.3, lipid and polymer shells exhibit
+strain-dependent stiffness and rupture; the linear model loses validity exactly where
+clinical contrast imaging is performed.  The kwavers implementation uses the constant-χ
+linearized model for resonance frequency estimation and `BubbleDynamics` uses the
+full nonlinear RP ODE for CEUS/cavitation simulation.
 
 ### 5.4.2 Nonlinear Bubble Scattering for Contrast Imaging
 

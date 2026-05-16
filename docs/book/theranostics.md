@@ -150,15 +150,28 @@ MR thermometry precision: ~1–2 °C at 3 T with TE = 15 ms.
 ### 7.3.2 Closed-Loop HIFU Controller
 
 **Theorem 7.6 (Closed-Loop Thermal Dose Monotonicity).** Let D_k be the cumulative
-CEM43 dose at step k and u_k ≥ 0 the acoustic power. The dose update:
+CEM43 dose at step k and u_k ≥ 0 the acoustic power.  Define the CEM43 dose rate:
 
 ```
-D_{k+1} = D_k + φ(u_k, T_k) Δt                                           (7.9)
+φ(T) = R(T)^(T − 43)   where R(T) = 0.25 (T > 43 °C), R(T) = 0.50 (T ≤ 43 °C)
 ```
 
-with φ(u, T) ≥ 0 (Eq. 6.5), is monotone non-decreasing: D_{k+1} ≥ D_k for all k.
+The dose update
 
-*Proof.* φ ≥ 0 and Δt > 0 → D_{k+1} − D_k = φ Δt ≥ 0. Induction over k. □
+```
+D_{k+1} = D_k + φ(T_k) Δt                                                (7.9)
+```
+
+is monotone non-decreasing: D_{k+1} ≥ D_k for all k.
+
+*Proof.* Since `R(T) ∈ {0.25, 0.50} ⊂ (0, 1]`, every real power `R^x = exp(x ln R)`
+is strictly positive.  Therefore `φ(T) = R^(T−43) > 0` for all finite `T`.  With
+`Δt > 0`, `D_{k+1} − D_k = φ(T_k) Δt > 0`.  By induction the sequence {D_k} is
+strictly increasing. □
+
+**Corollary 7.1 (Irreversibility).** Because φ > 0, dose is strictly monotone — it
+cannot be reduced by decreasing power.  Safety constraints `D_k ≤ D_max` must be
+enforced by pre-treatment planning (Chapter 6) rather than post-onset power reduction.
 
 **Corollary 7.1 (Safety Constraint).** A bounded safety constraint D_k ≤ D_max cannot be
 enforced by reducing u_k alone once violated, since dose is non-decreasing. This motivates
@@ -178,7 +191,11 @@ Initialize: acoustic field model; tissue state estimate x̂_0; dose D_0 = 0
 Loop (k = 0, 1, 2, ...):
   1. ACQUIRE: diagnostic image y_k (B-mode, MR thermometry, PCD spectrum)
   2. REGISTER: align y_k to therapy frame using deformable registration (RITK)
-  3. ESTIMATE: x̂_k = KalmanFilter(x̂_{k-1}, y_k, model)  (temperature, dose, bubble state)
+  3. ESTIMATE: x̂_k = KalmanFilter(x̂_{k-1}, y_k, model)
+                 State vector: x = [T (°C), D (CEM43), ρ_b (mm⁻³), c_s (m/s)]ᵀ ∈ ℝ⁴
+                 Process noise Q = diag(σ²_T, σ²_D, σ²_b, σ²_c) from acoustic model uncertainty
+                 Obs. noise  R = diag(σ²_thermo, σ²_dose, σ²_PCD, σ²_RTT) per modality
+                 H maps state → observed: MR phase → T, CEM43 integrator → D, PCD RMS → ρ_b
   4. PREDICT: D̂_{k+1} = D_k + φ(u_k, x̂_k) Δt
   5. PLAN: select u_{k+1} such that D̂_{k+1} ≤ D_target and MI(u_{k+1}) ≤ MI_safe
   6. DELIVER: apply u_{k+1} for Δt seconds
@@ -219,10 +236,20 @@ fractional drug uptake enhancement ε relative to passive diffusion scales as
 
 where p_A is the driving pressure amplitude and f₀ the frequency.
 
-*Proof sketch.* Microstreaming velocity near an oscillating bubble scales as
-u_s ∝ R₀ f₀ p_A/(ρ_l c₀). Membrane shear stress τ ∝ μ_l u_s / δ (δ ≈ pore size).
-Drug uptake ∝ permeability ∝ τ ∝ R₀ f₀ p_A μ_l/(ρ_l c₀ δ). Taking the ratio to
-passive diffusion (τ = 0) gives (7.11). □
+*Proof sketch (dilute-bubble approximation, one bubble per voxel).* Microstreaming
+velocity near a single oscillating bubble in unbounded fluid scales as
+`u_s ∝ R₀ f₀ p_A/(ρ_l c₀)` (Longuet-Higgins 1998; streaming is proportional to
+the oscillation velocity `Ṙ_max ≈ p_A/(ρ_l c₀)` and to the bubble size `R₀`).
+Membrane shear stress `τ ∝ μ_l u_s / δ` (Stokes boundary layer, `δ = pore size`).
+Drug uptake per-bubble ∝ permeability ∝ τ ∝ `R₀ f₀ p_A / (ρ_l c₀ δ)`. The ratio
+to passive diffusion (τ = 0, i.e. p_A → 0) gives (7.11).
+
+**Scope limitation.** The scaling (7.11) holds for a single isolated bubble in the
+dilute limit (bubble volume fraction < 1%).  For clinical BBB opening
+(bubble concentration ≈ 10⁴–10⁷ mm⁻³), bubble–bubble hydrodynamic coupling,
+secondary Bjerknes forces, and collective microstreaming modify the effective shear
+field.  Eq. (7.11) is a single-bubble lower bound; collective enhancement depends on
+concentration and spacing (Garbin et al. 2009). □
 
 ### 7.5.2 Dose–Response Relationship
 

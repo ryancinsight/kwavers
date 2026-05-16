@@ -56,6 +56,46 @@ FWI reconstruction.
 
 ## Mathematical Contract
 
+### Definition: Same-Device Aperture Contract
+
+Let `E = {e_k ∈ ℝ³ : k = 1, …, N}` be the N element positions of the treatment
+array in the patient coordinate frame.  The same-device contract holds iff
+every transmitter index `s` and every receiver index `r` used in the imaging
+inverse satisfy `s ∈ {1, …, N}` and `r ∈ {1, …, N}` — i.e. both are drawn
+from the same element set as the therapy aperture.
+
+**Consequence for the sensitivity operator:**
+The active pitch-catch matrix `A ∈ ℝ^(m × n)` has rows indexed by transmit-receive
+pairs `(s, r) ∈ E × E` and columns indexed by tissue voxels `j`.  No additional
+imaging hardware (receive-only probe, rotating gantry) introduces elements
+outside `E`.  The passive subharmonic, second-harmonic, and ultraharmonic rows
+are indexed by `r ∈ E` for the receiver and carry no transmit index (passive).
+The RTM wavefields inject and receive on the same `E` grid.
+
+**Tomotherapy analogy:** In X-ray tomotherapy the same MLC-modulated gantry
+position both irradiates the target and generates portal imaging data for
+position verification.  Here the same phased-array aperture simultaneously
+drives therapeutic pressure (therapy elements emitting) and samples acoustic
+field data (the same or coaxial receive elements).  The contractual constraint
+is that this be a single physical device position — no offline imaging session
+with a separate probe.
+
+### Theorem: Same-Aperture Operator Rank
+
+Let `A ∈ ℝ^(m × n)` be the same-device active Born operator with `m` pitch-catch
+pairs drawn from `N` element positions and `n` active tissue voxels.  The
+number of independent measurement rows is bounded by `m ≤ N²`.  For the
+implemented abdominal case `N = 256`, `m_encoded ≤ 65,536`; for the brain case
+`N = 1024`, `m_encoded ≤ 1,048,576`.  The actual encoded row count is
+`⌊N_freq × N_receivers_used / rows_per_code⌋`, always `≤ N²`.
+
+This bound motivates the deterministic row encoding: for `n ≫ N`, the problem
+is underdetermined even at maximum transmit-receive diversity, and graph-Laplacian
+regularization (`γ L`) provides the missing null-space structure through spatial
+smoothness on the CT-derived tissue support.
+
+---
+
 For active pitch-catch imaging, the same source and receiver elements used for
 treatment generate finite-frequency Born data:
 
@@ -278,14 +318,33 @@ integration. For transcranial cases this correctly tracks the skull-versus-
 soft-tissue attenuation contrast and the subharmonic `y = 2` skull scaling on
 every ray instead of using a single tissue-typical scalar.
 
-The Rayleigh-Plesset source map computes the period-doubling observable
-`max_t |R(t) - R(t - T)| / R0`. The implementation stores one drive-period
-ring buffer of radius samples, which is algebraically equivalent to retaining
-the full radius history for this observable because the recurrence reads only
-the sample one period behind the current RK4 state. The passive simulated data
-is generated from the active-voxel source vector used by the Green-operator
-columns, so the receiver data and inverse model share the same active-support
-indexing.
+**Why the period-doubling observable isolates inertial cavitation:**
+Under linear (stable) bubble oscillation at drive frequency `f₀`, the
+radius evolves as `R(t) = R₀ + ε·cos(ω₀t + φ)`.  Period-doubling occurs
+when the Floquet multiplier of the linearized Rayleigh-Plesset eigenvalue
+problem crosses −1, signalling a period-2 bifurcation at `f₀/2` (subharmonic).
+For a period-2 orbit, `R(t + T) = R(t)` with `T = 2/f₀`, but
+`R(t + 1/f₀) ≠ R(t)`.  Therefore `|R(t) − R(t − 1/f₀)|` is nonzero in the
+period-doubling regime and zero (to leading order) in the linear regime.
+Normalising by `R₀` and taking the maximum over one period gives the
+dimensionless period-doubling amplitude:
+
+```text
+δ_PD = max_t |R(t) - R(t - T_drive)| / R₀,   T_drive = 1/f₀
+```
+
+which is `≈ 0` for stable bubbles, large (O(1)) for inertially collapsing
+bubbles, and intermediate for subharmonic-emitting bubbles.  This distinguishes
+the passive subharmonic emission source (Dirichlet cavitation indicator) from
+stable liner oscillation without requiring a threshold pressure or a
+classification network.
+
+The kwavers implementation stores one drive-period ring buffer of radius samples
+(O(f₀/f_sample) samples), algebraically equivalent to retaining the full radius
+history for this scalar because the recurrence reads only the sample one period
+behind the current RK4 state. The passive simulated data is generated from the
+active-voxel source vector used by the Green-operator columns, so the receiver
+data and inverse model share the same active-support indexing.
 
 ### Theorem: Positive Normal Operator
 
@@ -421,6 +480,63 @@ energy fractions. Those dB diagnostics separate finite-frequency aperture
 sidelobes from treated tissue response; coherent rings visible in the same-
 aperture inverse maps are point-spread-function structure, not additional targets.
 
+## Minimal Usage Example
+
+```python
+import pykwavers as kw
+import numpy as np
+
+# Same-device workflow: one CT path, one anatomy string, same aperture
+# for therapy and monitoring. NIfTI files do not need to exist;
+# synthetic CT phantoms are used automatically when paths are absent.
+
+result = kw.run_theranostic_inverse_from_ritk(
+    ct_nifti_path="data/my_patient/ct.nii.gz",   # or "/nonexistent" for synthetic
+    segmentation_nifti_path=None,                  # required for abdomen + real CT
+    anatomy="brain",                               # "brain", "liver", or "kidney"
+    grid_size=48,                                  # 3-D FDTD cube size for nonlinear
+    element_count=1024,                            # same-device element count
+    iterations=12,
+    frequencies_hz=[220e3, 650e3],                # multi-frequency Born rows
+    receiver_offsets=[256, 384, 512, 640],         # within 0..element_count
+    source_pressure_pa=1.5e5,                      # diagnostic: 150 kPa
+    target_fraction_xyz=(0.59, 0.50, 0.49),        # VIM-like atlas fraction
+    noise_fraction=0.012,
+    waveform_misfit="charbonnier",                 # robust adjoint injection
+)
+
+# Inspect the same-device operator evidence
+print("operator backend:", result["operator_backend"])    # "matrix_free_row"
+print("dense operator values:", result["dense_operator_values"])  # 0 (not stored)
+print("encoded measurements:", result["encoded_measurements"])
+print("unencoded measurements:", result["unencoded_measurements"])
+print("is_full_wave_inversion:", result["is_full_wave_inversion"])  # False
+
+# Reconstruction channels (all from the same E aperture)
+active = np.asarray(result["active_lesion_reconstruction"])
+rtm    = np.asarray(result["waveform_rtm_reconstruction"])
+fused  = np.asarray(result["fused_reconstruction"])
+print("fusion Dice:", result["metrics"]["fusion"]["dice_equal_area"])
+print("fusion CNR:", result["metrics"]["fusion"]["cnr"])
+```
+
+The nonlinear 3-D branch (separate call):
+
+```python
+nonlinear_result = kw.run_theranostic_nonlinear_3d_from_ritk(
+    ct_nifti_path="data/my_patient/ct.nii.gz",
+    anatomy="brain",
+    grid_size=48,
+    element_count=1024,
+    frequency_hz=650e3,
+    source_pressure_pa=1.5e5,
+    target_fraction_xyz=(0.59, 0.50, 0.49),
+)
+print("is_full_wave_inversion:", nonlinear_result["is_full_wave_inversion"])  # True
+print("uses_nonlinear_wave_propagation:",
+      nonlinear_result["uses_nonlinear_wave_propagation"])                    # True
+```
+
 ## Figures
 
 Run:
@@ -457,13 +573,19 @@ as Figure 2 by default: `48^3` for brain and `52^3` for kidney/liver nonlinear
 Westervelt/Rayleigh-Plesset volumes. Figure 5 also reuses the Figure 2 brain
 scene target, therapy aperture, imaging receivers, and sampled source-to-focus
 beam paths in the CT column so the linear and nonlinear panels are visually
-audited against the same experimental setup. The nonlinear solver
-still computes on a cropped isotropic 3-D cube for tractable Westervelt FWI,
-but its exported crop bounds are rendered inside the uncropped Figure 2
+audited against the same experimental setup. The Figure 5 `planned exposure`
+column is the Figure 2 pressure-calibrated exposure field plotted in the same
+placement axes. The separate `Westervelt FDTD peak` column is the nonlinear
+3-D pressure-peak diagnostic on the cropped simulation cube. The nonlinear
+solver still computes on a cropped isotropic 3-D cube for tractable Westervelt
+FWI, but its exported crop bounds are rendered inside the uncropped Figure 2
 placement axes; the panels therefore share the same visual CT field of view
-without geometrically stretching the nonlinear crop. Reduced inverse metrics
-also report the encoded and unencoded measurement counts used by deterministic
-row encoding.
+without geometrically stretching the nonlinear crop. Abdominal nonlinear source
+selection inherits the Figure 2 target-slice skin-contact direction before the
+3-D crop is built, so kidney sources approach from the superior displayed arc
+and liver sources approach from the inferior-left displayed arc. Reduced inverse
+metrics also report the encoded and unencoded measurement counts used by
+deterministic row encoding.
 
 Figure 6 adds the controlled Figure 2/Figure 5 comparison path. It runs a
 matched linear case with the nonlinear grid size, element count, drive
@@ -471,21 +593,22 @@ frequency, and source pressure, then evaluates the linear fields and nonlinear
 3-D slab fields on the same nonlinear crop projection. The target overlay and
 therapy aperture overlay are fixed to that common frame; the metrics record
 the remaining projected 2-D-vs-3-D aperture residual from the source wrappers.
-The 2026-05-16 run gives mean common-grid linear-fusion Dice `0.504`,
-nonlinear-fusion Dice `0.263`, and nonlinear peak-pressure outside-target
-energy fraction `0.981`. Per-case nonlinear outside-target peak-pressure
-energy fractions are `0.994` for brain, `0.959` for kidney, and `0.989` for
-liver. The residual projected aperture distances from the original Figure 2
-linear layout to the Figure 5 3-D aperture are `73.25 mm`, `133.50 mm`, and
-`41.94 mm`. The nonlinear FWI objectives decrease for brain
-`0.5077 -> 0.3367`, kidney `1.4029 -> 1.0649`, and liver
-`2.5897e-6 -> 2.3725e-6`, so the nonlinear inverse is not stalled; it is
-localizing a pressure/cavitation response whose energy has spread outside the
-planned target. The observed visual degradation is therefore not a pixel-grid
-resolution artifact. It comes from comparing the normalized reduced linear
-fusion channel against a cropped 3-D nonlinear pressure/cavitation inverse
-whose peak-pressure support and aperture geometry differ from the 2-D linear
-Figure 2 abstraction.
+The 2026-05-16 post-alignment run gives mean common-grid linear-fusion Dice
+`0.331`, nonlinear-fusion Dice `0.665`, and nonlinear peak-pressure
+outside-target energy fraction `0.964`. Per-case nonlinear outside-target
+peak-pressure energy fractions are `0.951` for brain, `0.965` for kidney, and
+`0.976` for liver. The residual projected aperture distances from the original
+Figure 2 linear layout to the Figure 5 3-D aperture are `45.91 mm`, `105.36 mm`,
+and `35.57 mm`. The nonlinear FWI objectives decrease for brain
+`0.7072 -> 0.0541`, kidney `0.8344 -> 0.3427`, and liver
+`8.1186e-6 -> 5.2076e-6`, so the nonlinear inverse is not stalled. The common-
+grid comparison rejects display resolution as the primary failure mode. After
+correcting the source weighting, using histotripsy-scale brain drive, and
+expanding the brain aperture to the requested element count, nonlinear fusion
+is stronger than the reduced linear fusion on this common frame. The remaining
+defect is cavitation specificity: the passive cavitation reconstruction still
+has zero equal-area Dice in all three cases because the 3-D Westervelt pressure
+and Rayleigh-Plesset source remain dominated by off-target energy.
 
 ### Acoustic Scalar Model
 
