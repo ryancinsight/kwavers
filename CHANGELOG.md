@@ -4,13 +4,54 @@
 
 ### Changed
 
+- [patch] Ch27 (seismic_fwi_brain_imaging): add Theorem 27.1 Born Linearity with
+  formal proof (single-scatter assumption linearizes p_s = Am + O(m²); AᵀA+λI
+  strictly positive-definite for λ>0); add Born validity scope and skull exclusion
+  rationale; add §27.7 Minimal usage example for run_seismic_helmet_fwi_volume_from_ritk_ct;
+  replace "Pending" elastic FWI table entry with explicit deferral note; renumber
+  §27.8→27.9.
+
+- [patch] Ch29 (theranostic_fwi_platforms): add Definition: Same-Device Aperture
+  Contract (E={e_k}, all tx/rx indices in {1,…,N}); add Theorem: Same-Aperture
+  Operator Rank (m ≤ N²); add Period-doubling observable derivation via Floquet
+  theory (δ_PD = max_t|R(t)−R(t−T)|/R₀ isolates inertial cavitation); add minimal
+  PyO3 usage example.
+
+- [patch] Ch5 (diagnostics): add complete Cramér-Rao Jacobian (Φ=πv/v_max →
+  dv/dΦ=v_max/π → Var(v̂)=v_max²(1−|R(1)|²)/(π²M|R(1)|²)); add explicit kr≫1
+  far-field condition (r≳1mm for R₀=2μm, f=2MHz); add shell stiffness scope note.
+
+- [patch] Ch7 (theranostics): inline CEM43 dose rate definition and R^x>0 proof
+  in Theorem 7.6; rename Corollary 7.1 to "Irreversibility"; specify 4-state
+  KalmanFilter vector [T,D,ρ_b,c_s]; add dilute-bubble scope in Theorem 7.7.
+
+- [patch] Ch31 (clinical_device_geometry): fix bowl radius theorem to
+  R = d_f/cos(θ_max) (was 1.15×‖F-S‖); rewrite algorithm section to match actual
+  exterior flood-fill BFS + approach-angle penalty (W_z=4.0, W_y=6.0);
+  fix ch31 metrics channel_keys to match Rust dict keys without _reconstruction suffix.
+
+- [patch] Ch6 (therapy): fix ΔT unit (°C total, not °C/s); simplify focal gain
+  formula to G = ka²/(2R_f); correct 479→60-80°C explanation (thermal conduction
+  + perfusion, not "thermal diffusion"); fix CEM43 time units (1s = 1/60 min →
+  CEM43 ≈ 2184 min, not 131,072 min).
+
+- [patch] Ch3 (nonlinear_acoustics): expand Theorem 3.6 Burgers proof (explicit
+  τ integration with radiation BC, 2p∂p/∂τ identity); add Jacobi–Anger–Kepler
+  identity proof sketch (3.23); expand second-harmonic growth proof (P₂ ∝ z via
+  driven wave equation); fix Kuznetsov Eq. 3A.1 non-standard "·2" notation.
+
 - [patch] Added a Chapter 29 controlled linear-vs-nonlinear comparison path:
   the generator now runs a matched linear case at the nonlinear grid, element
   count, frequency, and pressure, evaluates both branches on the nonlinear
   crop projection, writes `fig06_controlled_linear_nonlinear_comparison`,
   `controlled_comparison_metrics.json`, and `controlled_comparison_fields.npz`,
   and records the measured pressure-spread/aperture-residual explanation in the
-  chapter text and metrics manifest.
+  chapter text and metrics manifest. The nonlinear histotripsy path now gates
+  Rayleigh-Plesset cavitation by mechanical index, preserves per-element source
+  drive before calibration, reports actual realized aperture counts, expands the
+  brain cap aperture to the requested element count when skull-labeled grid
+  cells are sparse, and uses histotripsy-scale drive for all three Chapter 29
+  targets.
 
 - [patch] Added `CANONICAL_BRAIN_SCENE` as the CT-aligned source of truth for
   the Chapter 25 brain target and transducer pose. Figure 2 phase correction,
