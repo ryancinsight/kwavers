@@ -7,6 +7,8 @@ import nibabel as nib
 import numpy as np
 from scipy.ndimage import binary_closing, binary_fill_holes, zoom
 
+from .scene import CANONICAL_BRAIN_SCENE, BrainSceneDefinition
+
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIG_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch25"
@@ -73,10 +75,26 @@ class GbmCasePaths:
     ct: Path | None
     segmentation_space: str
     t1: Path | None
-    t1gd: Path
-    flair: Path
+    t1gd: Path | None
+    flair: Path | None
     t2: Path | None
     segmentation: Path
+
+
+@dataclass(frozen=True)
+class GbmLoadedCase:
+    dataset: str
+    segmentation_space: str
+    ct: Volume | None
+    t1: Volume | None
+    t1gd: Volume | None
+    flair: Volume | None
+    t2: Volume | None
+    segmentation: Volume
+    tumor: np.ndarray
+    planning_reference: Volume
+    planning_reference_modality: str
+    available_modalities: tuple[str, ...]
 
 
 def dataset_sources() -> list[DatasetSource]:
@@ -167,12 +185,7 @@ def discover_cfb_gbm_case(root: Path = GBM_ROOT) -> GbmCasePaths | None:
             "t2": _first_existing(case_dir, ("t2.nii.gz", "T2.nii.gz")),
             "segmentation": _first_existing(case_dir, ("seg.nii.gz", "segmentation.nii.gz", "mask.nii.gz")),
         }
-        if (
-            paths["ct"] is not None
-            and paths["segmentation"] is not None
-            and paths["t1gd"] is not None
-            and paths["flair"] is not None
-        ):
+        if paths["ct"] is not None and paths["segmentation"] is not None:
             candidates.append(GbmCasePaths(**paths))
     return candidates[0] if candidates else None
 
@@ -187,8 +200,8 @@ def discover_ct_segmentation_case(root: Path = CT_SEGMENTATION_ROOT) -> GbmCaseP
         ct=ct,
         segmentation_space="ct",
         t1=None,
-        t1gd=ct,
-        flair=ct,
+        t1gd=None,
+        flair=None,
         t2=None,
         segmentation=segmentation,
     )
@@ -212,7 +225,8 @@ def discover_upenn_gbm_case(root: Path = UPENN_GBM_ROOT) -> GbmCasePaths | None:
                 "t2": _first_existing(case_dir, (f"{prefix}_T2w.nii.gz",)),
                 "segmentation": _first_existing(case_dir, (f"{prefix}_seg.nii.gz",)),
             }
-            if paths["t1gd"] is not None and paths["flair"] is not None and paths["segmentation"] is not None:
+            has_mri = any(paths[name] is not None for name in ("t1", "t1gd", "flair", "t2"))
+            if has_mri and paths["segmentation"] is not None:
                 return GbmCasePaths(**paths)
     return None
 
@@ -279,7 +293,7 @@ def brain_mask_from_ct(ct_hu: np.ndarray) -> np.ndarray:
 
 def load_default_brain_triplet(
     shape: tuple[int, int, int] = (64, 80, 64),
-    target_world_mm: tuple[float, float, float] = (14.0, -18.0, 2.0),
+    scene: BrainSceneDefinition = CANONICAL_BRAIN_SCENE,
 ) -> BrainTriplet:
     ct_path = LOCAL_RIRE_CT if LOCAL_RIRE_CT.exists() else LOCAL_CT
     t1_path = LOCAL_RIRE_T1 if LOCAL_RIRE_T1.exists() else LOCAL_T1
@@ -294,12 +308,7 @@ def load_default_brain_triplet(
     atlas_mask_raw = load_nifti(LOCAL_MNI_MASK, "MNI152 brain mask")
     atlas_mask = resample_volume(atlas_mask_raw, shape, order=0)
     brain_mask = brain_mask_from_ct(ct.data)
-    target_index = atlas_world_to_target_mask_index(
-        atlas_mask_raw.affine,
-        atlas_mask_raw.data > 0.5,
-        brain_mask,
-        np.asarray(target_world_mm, dtype=np.float64),
-    )
+    target_index = scene.target.resolve_index(brain_mask)
 
     return BrainTriplet(
         ct_hu=ct,
@@ -309,7 +318,7 @@ def load_default_brain_triplet(
         skull_mask=skull_mask_from_ct(ct.data),
         brain_mask=brain_mask,
         target_index=target_index,
-        target_world_mm=target_world_mm,
+        target_world_mm=scene.target.source_world_mm,
     )
 
 
@@ -348,15 +357,70 @@ def atlas_world_to_target_mask_index(
 def load_gbm_case(
     shape: tuple[int, int, int] = (64, 80, 64),
     paths: GbmCasePaths | None = None,
-) -> tuple[Volume | None, Volume, Volume, np.ndarray, str, str] | None:
+) -> GbmLoadedCase | None:
     paths = paths or discover_gbm_case()
     if paths is None:
         return None
     ct = resample_volume(load_nifti(paths.ct, f"{paths.dataset} CT"), shape, order=1) if paths.ct is not None else None
-    t1gd = resample_volume(load_nifti(paths.t1gd, f"{paths.dataset} T1Gd"), shape, order=1)
-    flair = resample_volume(load_nifti(paths.flair, f"{paths.dataset} FLAIR"), shape, order=1)
+    t1 = _load_optional_volume(paths.t1, f"{paths.dataset} T1", shape)
+    t1gd = _load_optional_volume(paths.t1gd, f"{paths.dataset} T1Gd", shape)
+    flair = _load_optional_volume(paths.flair, f"{paths.dataset} FLAIR", shape)
+    t2 = _load_optional_volume(paths.t2, f"{paths.dataset} T2", shape)
     seg = resample_volume(load_nifti(paths.segmentation, f"{paths.dataset} segmentation"), shape, order=0)
     tumor = seg.data > 0.5
     if not np.any(tumor):
         raise ValueError(f"GBM segmentation contains no foreground voxels: {paths.segmentation}")
-    return ct, t1gd, flair, tumor, paths.dataset, paths.segmentation_space
+    planning_modality, planning_reference = _planning_reference_volume(paths.segmentation_space, ct, t1, t1gd, flair, t2)
+    return GbmLoadedCase(
+        dataset=paths.dataset,
+        segmentation_space=paths.segmentation_space,
+        ct=ct,
+        t1=t1,
+        t1gd=t1gd,
+        flair=flair,
+        t2=t2,
+        segmentation=seg,
+        tumor=tumor,
+        planning_reference=planning_reference,
+        planning_reference_modality=planning_modality,
+        available_modalities=_loaded_modalities(ct, t1, t1gd, flair, t2),
+    )
+
+
+def _load_optional_volume(path: Path | None, name: str, shape: tuple[int, int, int]) -> Volume | None:
+    if path is None:
+        return None
+    return resample_volume(load_nifti(path, name), shape, order=1)
+
+
+def _planning_reference_volume(
+    segmentation_space: str,
+    ct: Volume | None,
+    t1: Volume | None,
+    t1gd: Volume | None,
+    flair: Volume | None,
+    t2: Volume | None,
+) -> tuple[str, Volume]:
+    if segmentation_space == "ct":
+        if ct is None:
+            raise ValueError("CT-space segmentation requires a real CT volume")
+        return "ct", ct
+    for modality, volume in (("flair", flair), ("t1gd", t1gd), ("t2", t2), ("t1", t1)):
+        if volume is not None:
+            return modality, volume
+    raise ValueError("MRI-space segmentation requires at least one real MRI volume")
+
+
+def _loaded_modalities(
+    ct: Volume | None,
+    t1: Volume | None,
+    t1gd: Volume | None,
+    flair: Volume | None,
+    t2: Volume | None,
+) -> tuple[str, ...]:
+    modalities = []
+    for name, volume in (("ct", ct), ("t1", t1), ("t1gd", t1gd), ("flair", flair), ("t2", t2)):
+        if volume is not None:
+            modalities.append(name)
+    modalities.append("segmentation")
+    return tuple(modalities)

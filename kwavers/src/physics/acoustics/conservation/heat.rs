@@ -1,8 +1,14 @@
 //! Acoustic-to-thermal coupling source terms.
 
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 
 /// Compute volumetric heat source from acoustic absorption [W/m^3].
+///
+/// ## Formula
+/// ```text
+/// Q = 2α c e    where e = P²/(2ρc²) + ½ρ|v|²
+/// ```
+/// Expanding: `Q = α·P²/(ρc) + αρc|v|²`
 #[must_use]
 pub fn acoustic_heat_source(
     pressure: &Array3<f64>,
@@ -13,28 +19,30 @@ pub fn acoustic_heat_source(
     sound_speed: &Array3<f64>,
     absorption: &Array3<f64>,
 ) -> Array3<f64> {
-    let (nx, ny, nz) = pressure.dim();
-    let mut q = Array3::zeros((nx, ny, nz));
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                let rho = density[[i, j, k]];
-                let c = sound_speed[[i, j, k]];
-                if rho > 0.0 && c > 0.0 {
-                    let p = pressure[[i, j, k]];
-                    let vx = velocity_x[[i, j, k]];
-                    let vy = velocity_y[[i, j, k]];
-                    let vz = velocity_z[[i, j, k]];
-                    let alpha = absorption[[i, j, k]];
-                    let energy_density = (0.5 * rho).mul_add(
-                        vz.mul_add(vz, vx.mul_add(vx, vy * vy)),
-                        p * p / (2.0 * rho * c * c),
-                    );
-                    q[[i, j, k]] = 2.0 * alpha * c * energy_density;
-                }
+    let shape = pressure.dim();
+    // Pass 1: |v|² per cell (≤6 Zip arity limit: 3 velocity + 1 output = 4 total).
+    let mut v_sq = Array3::zeros(shape);
+    Zip::from(&mut v_sq)
+        .and(velocity_x)
+        .and(velocity_y)
+        .and(velocity_z)
+        .par_for_each(|vs, &vx, &vy, &vz| {
+            *vs = vz.mul_add(vz, vx.mul_add(vx, vy * vy));
+        });
+    // Pass 2: Q = 2αce  where  e = P²/(2ρc²) + ½ρ|v|²  (6 arrays: q,p,v_sq,ρ,c,α).
+    let mut q = Array3::zeros(shape);
+    Zip::from(&mut q)
+        .and(pressure)
+        .and(&v_sq)
+        .and(density)
+        .and(sound_speed)
+        .and(absorption)
+        .par_for_each(|qv, &p, &vs, &rho, &c, &alpha| {
+            if rho > 0.0 && c > 0.0 {
+                let energy_density = (0.5 * rho).mul_add(vs, p * p / (2.0 * rho * c * c));
+                *qv = 2.0 * alpha * c * energy_density;
             }
-        }
-    }
+        });
     q
 }
 

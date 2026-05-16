@@ -46,7 +46,7 @@ fn standing_wave_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::standing_wave_1d(p0, k, x_slice, omega_t);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute a 1-D plane-wave pressure field.
@@ -74,7 +74,7 @@ fn plane_wave_pressure_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::plane_wave_pressure_1d(amplitude, k, x_slice, omega_t);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute spherical-wave pressure at radial distances *r*.
@@ -100,7 +100,7 @@ fn spherical_wave_pressure(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::spherical_wave_pressure(amplitude, k, r_slice);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the pressure reflection coefficient at a planar interface.
@@ -156,7 +156,7 @@ fn power_law_attenuation_np_m(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::power_law_attenuation_np_m(f_slice, alpha0, y);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute power-law absorption α(f) = α0 * f^y in dB/(cm·MHz^y).
@@ -180,7 +180,7 @@ fn absorption_power_law_db_cm(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::absorption_power_law_db_cm(f_slice, alpha0, y);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute FDTD numerical phase error for a 1-D Yee grid.
@@ -202,7 +202,7 @@ fn fdtd_phase_error_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::fdtd_phase_error_1d(kh_slice, cfl);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute PSTD numerical phase error.
@@ -222,7 +222,7 @@ fn pstd_phase_error(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::pstd_phase_error(kh_slice);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute k-space dispersion-correction phase error.
@@ -244,7 +244,7 @@ fn kspace_correction_error(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::kspace_correction_error(kh_slice, cfl);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the FDTD CFL stability limit for an n-dimensional grid.
@@ -292,7 +292,7 @@ fn fubini_harmonic_spectrum(
     sigma: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = wave::fubini_harmonic_spectrum(n_max, sigma);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the shock formation distance for a finite-amplitude plane wave.
@@ -359,7 +359,7 @@ fn westervelt_harmonic_evolution(
     let flat: Vec<f64> = rows.into_iter().flatten().collect();
     let arr2d = Array2::from_shape_vec((nz, n_max), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray_bound(py).unbind())
+    Ok(arr2d.into_pyarray(py).unbind())
 }
 
 // ============================================================================
@@ -387,7 +387,7 @@ fn circular_piston_directivity(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::circular_piston_directivity(t_slice, ka);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the linear-array factor as a function of angle.
@@ -415,7 +415,7 @@ fn linear_array_factor(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::linear_array_factor(t_slice, k, d_m, n, steer_rad);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute grating-lobe angles for a uniform linear array.
@@ -436,7 +436,7 @@ fn grating_lobe_angles(
     steer_rad: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = transducer::grating_lobe_angles(k, d_m, steer_rad);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute element apodization weights for a given window type.
@@ -458,7 +458,7 @@ fn apodization_weights(
     window_type: String,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = transducer::apodization_weights(n, &window_type);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute time-delay laws for 2-D geometric focusing.
@@ -489,7 +489,7 @@ fn delay_law_focus_2d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::delay_law_focus_2d(ex, ez, x_f, z_f, c);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the complex 2-D beam pattern for a phased array.
@@ -549,8 +549,8 @@ fn beam_pattern_2d(
     let imag_arr = Array2::from_shape_vec((nx, nz), imag_flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        real_arr.into_pyarray_bound(py).unbind(),
-        imag_arr.into_pyarray_bound(py).unbind(),
+        real_arr.into_pyarray(py).unbind(),
+        imag_arr.into_pyarray(py).unbind(),
     ))
 }
 
@@ -579,7 +579,7 @@ fn circular_piston_onaxis(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::circular_piston_onaxis(z_s, radius_m, freq_hz, p0_pa, c);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the on-axis pressure of a focused-bowl (spherically focused) transducer.
@@ -610,7 +610,7 @@ fn focused_bowl_onaxis(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         transducer::focused_bowl_onaxis(z_s, bowl_radius_m, focal_length_m, freq_hz, p0_pa, c);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute band-limited interpolation (BLI) stencil weights.
@@ -636,7 +636,7 @@ fn bli_stencil_weights(
     let flat: Vec<f64> = rows.into_iter().flatten().collect();
     let arr2d = Array2::from_shape_vec((n_delta, n_stencil), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray_bound(py).unbind())
+    Ok(arr2d.into_pyarray(py).unbind())
 }
 
 // ============================================================================
@@ -733,8 +733,8 @@ fn rayleigh_plesset_rk4(
         r0_m, rdot0, p_ac_pa, freq_hz, t_s, p0_pa, rho, sigma, mu, kappa, p_v_pa,
     );
     Ok((
-        r.into_pyarray_bound(py).unbind(),
-        rdot.into_pyarray_bound(py).unbind(),
+        r.into_pyarray(py).unbind(),
+        rdot.into_pyarray(py).unbind(),
     ))
 }
 
@@ -782,8 +782,8 @@ fn keller_miksis_rk4(
         r0_m, rdot0, p_ac_pa, freq_hz, t_s, p0_pa, rho, sigma, mu, kappa, p_v_pa, c_liquid,
     );
     Ok((
-        r.into_pyarray_bound(py).unbind(),
-        rdot.into_pyarray_bound(py).unbind(),
+        r.into_pyarray(py).unbind(),
+        rdot.into_pyarray(py).unbind(),
     ))
 }
 
@@ -809,8 +809,8 @@ fn bubble_power_spectrum(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (freqs, psd) = cavitation::bubble_power_spectrum(r_s, dt_s, n_fft);
     Ok((
-        freqs.into_pyarray_bound(py).unbind(),
-        psd.into_pyarray_bound(py).unbind(),
+        freqs.into_pyarray(py).unbind(),
+        psd.into_pyarray(py).unbind(),
     ))
 }
 
@@ -835,7 +835,7 @@ fn water_sound_speed_temperature(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = tissue::water_sound_speed_temperature(t_s);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the density of water as a function of temperature.
@@ -855,7 +855,7 @@ fn water_density_temperature(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = tissue::water_density_temperature(t_s);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Return the B/A nonlinearity parameter for a named medium.
@@ -893,7 +893,7 @@ fn tissue_absorption_db_cm(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = tissue::tissue_absorption_db_cm(f_s, &tissue);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the Kramers–Kronig consistent sound speed dispersion.
@@ -921,7 +921,7 @@ fn kramers_kronig_sound_speed(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = tissue::kramers_kronig_sound_speed(f_s, alpha0, y, f_ref_hz, c_ref);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Return tabulated acoustic properties for a named tissue.
@@ -1005,7 +1005,7 @@ fn cem43_cumulative(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::cem43_cumulative(t_s, dt_s);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the Arrhenius thermal-damage integral Ω.
@@ -1077,7 +1077,7 @@ fn skull_insertion_loss_two_way_db(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = skull_mod::skull_insertion_loss_two_way_db(f_s, thickness_cm, alpha0);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Generate a random phase screen modelling skull aberration.
@@ -1098,7 +1098,7 @@ fn skull_phase_screen(
     seed: u64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = skull_mod::skull_phase_screen(n, sigma_phi_rad, seed);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Convert Hounsfield units to sound speed using the Schneider model.
@@ -1118,7 +1118,7 @@ fn hu_to_sound_speed_schneider(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = skull_mod::hu_to_sound_speed_schneider(h_s);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Convert Hounsfield units to density using the Schneider model.
@@ -1138,7 +1138,7 @@ fn hu_to_density_schneider(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = skull_mod::hu_to_density_schneider(h_s);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the Strehl ratio for a given wavefront-error standard deviation.
@@ -1182,7 +1182,7 @@ fn skull_surface_temperature_rise(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         skull_mod::skull_surface_temperature_rise(t_s, heat_flux, k_skull, rho_skull, cp_skull);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the complex transmission coefficient through a skull layer
@@ -1201,24 +1201,20 @@ fn skull_surface_temperature_rise(
 #[pyfunction]
 #[pyo3(signature = (f_hz, z_water, z_skull, z_brain, c_skull, d_skull_m))]
 fn skull_transfer_matrix_transmission(
-    f_hz: PyReadonlyArray1<f64>,
+    py: Python<'_>,
+    f_hz: f64,
     z_water: f64,
     z_skull: f64,
     z_brain: f64,
     c_skull: f64,
     d_skull_m: f64,
 ) -> PyResult<PyObject> {
-    let f_s = f_hz
-        .as_slice()
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let c: Complex64 = skull_mod::skull_transfer_matrix_transmission(
-        f_s, z_water, z_skull, z_brain, c_skull, d_skull_m,
+        f_hz, z_water, z_skull, z_brain, c_skull, d_skull_m,
     );
-    Python::with_gil(|py| {
-        let builtins = py.import_bound("builtins")?;
-        let py_complex = builtins.getattr("complex")?;
-        Ok(py_complex.call1((c.re, c.im))?.into())
-    })
+    let builtins = py.import("builtins")?;
+    let py_complex = builtins.getattr("complex")?;
+    Ok(py_complex.call1((c.re, c.im))?.into())
 }
 
 /// Compute the skull transmission spectrum (magnitude and phase).
@@ -1251,8 +1247,8 @@ fn skull_transmission_spectrum(
         f_s, z_water, z_skull, z_brain, c_skull, d_skull_m,
     );
     Ok((
-        mag.into_pyarray_bound(py).unbind(),
-        phase.into_pyarray_bound(py).unbind(),
+        mag.into_pyarray(py).unbind(),
+        phase.into_pyarray(py).unbind(),
     ))
 }
 
@@ -1277,7 +1273,7 @@ fn hbo2_molar_absorption(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::hbo2_molar_absorption(w_s);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Return the molar absorption spectrum of deoxyhaemoglobin (Hb).
@@ -1297,7 +1293,7 @@ fn hb_molar_absorption(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::hb_molar_absorption(w_s);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the Grüneisen parameter of water as a function of temperature.
@@ -1317,7 +1313,7 @@ fn gruneisen_parameter_water(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::gruneisen_parameter_water(t_s);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the photoacoustic pressure signal from an absorbing sphere.
@@ -1357,7 +1353,7 @@ fn pa_sphere_pressure_signal(
         r_det_m,
         initial_pressure_pa,
     );
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the photoacoustic axial resolution.
@@ -1400,7 +1396,7 @@ fn spectroscopic_unmixing_lstsq(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::spectroscopic_unmixing_lstsq(&spectra_vecs, meas_slice);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 // ============================================================================
@@ -1445,10 +1441,12 @@ fn voigt_complex_modulus(
     let om_s = omega_arr
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let (real, imag) = elastography::voigt_complex_modulus(om_s, mu_pa, eta_pa_s);
+    let result = elastography::voigt_complex_modulus(om_s, mu_pa, eta_pa_s);
+    let real: Vec<f64> = result.iter().map(|c| c.re).collect();
+    let imag: Vec<f64> = result.iter().map(|c| c.im).collect();
     Ok((
-        real.into_pyarray_bound(py).unbind(),
-        imag.into_pyarray_bound(py).unbind(),
+        real.into_pyarray(py).unbind(),
+        imag.into_pyarray(py).unbind(),
     ))
 }
 
@@ -1474,10 +1472,12 @@ fn springpot_complex_modulus(
     let om_s = omega_arr
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let (real, imag) = elastography::springpot_complex_modulus(om_s, g0, alpha_exp);
+    let result = elastography::springpot_complex_modulus(om_s, g0, alpha_exp);
+    let real: Vec<f64> = result.iter().map(|c| c.re).collect();
+    let imag: Vec<f64> = result.iter().map(|c| c.im).collect();
     Ok((
-        real.into_pyarray_bound(py).unbind(),
-        imag.into_pyarray_bound(py).unbind(),
+        real.into_pyarray(py).unbind(),
+        imag.into_pyarray(py).unbind(),
     ))
 }
 
@@ -1504,7 +1504,7 @@ fn voigt_shear_wave_dispersion(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = elastography::voigt_shear_wave_dispersion(f_s, mu_pa, eta_pa_s, rho);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the 2-D MRE displacement field for a harmonic shear wave.
@@ -1548,7 +1548,7 @@ fn mre_displacement_field(
     );
     let arr2d = Array2::from_shape_vec((nx, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray_bound(py).unbind())
+    Ok(arr2d.into_pyarray(py).unbind())
 }
 
 // ============================================================================
@@ -1576,7 +1576,7 @@ fn lateral_psf_sinc2(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = imaging::lateral_psf_sinc2(x_s, f_number, wavelength_m);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the axial point-spread function using a rectangular-spectrum model.
@@ -1600,7 +1600,7 @@ fn axial_psf_rect(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = imaging::axial_psf_rect(z_s, c, bandwidth_hz);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the Doppler frequency shift.
@@ -1644,7 +1644,7 @@ fn pw_compounding_lateral_psf(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = imaging::pw_compounding_lateral_psf(x_s, n_angles, f_number, wavelength_m);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the −6 dB lateral resolution.
@@ -1713,7 +1713,7 @@ fn bioheat_focal_temperature_rise(
         cb_blood,
         t_body_c,
     );
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the HIFU focal pressure gain (ratio of focal to source pressure).
@@ -1776,7 +1776,7 @@ fn gaussian_power_deposition_2d(
     );
     let arr2d = Array2::from_shape_vec((nr, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray_bound(py).unbind())
+    Ok(arr2d.into_pyarray(py).unbind())
 }
 
 // ============================================================================
@@ -1805,7 +1805,7 @@ fn helmholtz_1d_fd_matrix(
     let flat = inverse_mod::helmholtz_1d_fd_matrix(n, k, dx);
     let arr2d = Array2::from_shape_vec((n, n), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray_bound(py).unbind())
+    Ok(arr2d.into_pyarray(py).unbind())
 }
 
 /// Compute the singular values of a dense matrix.
@@ -1830,7 +1830,7 @@ fn matrix_singular_values(
         .flat_map(|i| (0..ncols).map(move |j| m[[i, j]]))
         .collect();
     let result = inverse_mod::matrix_singular_values(&flat, nrows, ncols);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the L-curve (residual norm vs. solution norm) for Tikhonov regularisation.
@@ -1866,8 +1866,8 @@ fn tikhonov_lcurve(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (res, sol) = inverse_mod::tikhonov_lcurve(&a_flat, b_s, nrows, ncols, lam_s);
     Ok((
-        res.into_pyarray_bound(py).unbind(),
-        sol.into_pyarray_bound(py).unbind(),
+        res.into_pyarray(py).unbind(),
+        sol.into_pyarray(py).unbind(),
     ))
 }
 
@@ -1914,8 +1914,8 @@ fn born_inversion_regularized(
         &gr_flat, &gi_flat, yr_s, yi_s, nrows, ncols, lambda,
     );
     Ok((
-        re.into_pyarray_bound(py).unbind(),
-        im.into_pyarray_bound(py).unbind(),
+        re.into_pyarray(py).unbind(),
+        im.into_pyarray(py).unbind(),
     ))
 }
 
@@ -1937,7 +1937,7 @@ fn adjoint_gradient_convergence(
     decay: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = inverse_mod::adjoint_gradient_convergence(n_iter, initial_error, decay);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 // ============================================================================
@@ -1967,7 +1967,7 @@ fn hill_activation_probability(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = sonogenetics::hill_activation_probability(p_s, p_threshold_pa, hill_n);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the 1-D acoustic radiation force density.
@@ -1993,7 +1993,7 @@ fn radiation_force_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = sonogenetics::radiation_force_1d(i_s, alpha_np_m, c);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the steady acoustic streaming velocity (Eckart streaming).
@@ -2092,26 +2092,17 @@ fn focused_gaussian_beam_2d(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let nx = x_s.len();
     let nz = z_s.len();
+    let skull_transmission = Complex64::new(skull_transmission_real, skull_transmission_imag);
     let (real_flat, imag_flat) = rtm_mod::focused_gaussian_beam_2d(
-        x_s,
-        z_s,
-        x_f,
-        z_f,
-        freq_hz,
-        c_brain,
-        w0_m,
-        skull_transmission_real,
-        skull_transmission_imag,
-        r_back,
-        z_back,
+        x_s, z_s, x_f, z_f, freq_hz, c_brain, w0_m, skull_transmission, r_back, z_back,
     );
     let real_arr = Array2::from_shape_vec((nx, nz), real_flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let imag_arr = Array2::from_shape_vec((nx, nz), imag_flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        real_arr.into_pyarray_bound(py).unbind(),
-        imag_arr.into_pyarray_bound(py).unbind(),
+        real_arr.into_pyarray(py).unbind(),
+        imag_arr.into_pyarray(py).unbind(),
     ))
 }
 
@@ -2153,8 +2144,8 @@ fn backprop_green_function_2d(
     let imag_arr = Array2::from_shape_vec((nx, nz), imag_flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        real_arr.into_pyarray_bound(py).unbind(),
-        imag_arr.into_pyarray_bound(py).unbind(),
+        real_arr.into_pyarray(py).unbind(),
+        imag_arr.into_pyarray(py).unbind(),
     ))
 }
 
@@ -2197,7 +2188,7 @@ fn rtm_imaging_condition(
     let flat = rtm_mod::rtm_imaging_condition(&fr_flat, &fi_flat, &br_flat, &bi_flat, nx, nz);
     let arr2d = Array2::from_shape_vec((nx, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray_bound(py).unbind())
+    Ok(arr2d.into_pyarray(py).unbind())
 }
 
 /// Fuse multiple single-frequency RTM images by coherent averaging.
@@ -2225,10 +2216,10 @@ fn rtm_multi_frequency_fusion(
             (0..nx).flat_map(|i| (0..nz).map(move |j| arr[[i, j]])).collect()
         })
         .collect();
-    let flat = rtm_mod::rtm_multi_frequency_fusion(&vecs, nx, nz);
+    let flat = rtm_mod::rtm_multi_frequency_fusion(&vecs);
     let arr2d = Array2::from_shape_vec((nx, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray_bound(py).unbind())
+    Ok(arr2d.into_pyarray(py).unbind())
 }
 
 /// Compute temporal modulation frequencies for transcranial standing-wave suppression.
@@ -2251,7 +2242,7 @@ fn temporal_modulation_frequencies(
     d_back_m: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = rtm_mod::temporal_modulation_frequencies(f0_hz, m_steps, c, d_back_m);
-    Ok(result.into_pyarray_bound(py).unbind())
+    Ok(result.into_pyarray(py).unbind())
 }
 
 /// Compute the standing-wave suppression gain factor.

@@ -26,10 +26,17 @@ impl SoundSpeedShiftOperator {
     #[must_use]
     pub(super) fn image_from_model(&self, model: &[f64]) -> Array2<f64> {
         let mut image = Array2::<f64>::zeros(self.shape);
+        self.image_from_model_into(model, &mut image);
+        image
+    }
+
+    pub(super) fn image_from_model_into(&self, model: &[f64], image: &mut Array2<f64>) {
+        debug_assert_eq!(image.dim(), self.shape);
+        debug_assert_eq!(model.len(), self.active.len());
+        image.fill(0.0);
         for ((ix, iy), value) in self.active.indices.iter().zip(model.iter()) {
             image[[*ix, *iy]] = *value;
         }
-        image
     }
 
     #[must_use]

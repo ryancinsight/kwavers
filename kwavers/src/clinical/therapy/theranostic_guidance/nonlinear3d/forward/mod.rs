@@ -45,6 +45,7 @@ pub(super) struct ForwardInput<'a> {
     pub(super) config: &'a Nonlinear3dConfig,
     pub(super) schedule: TimeSchedule,
     pub(super) encoding: SourceEncoding,
+    pub(super) source_scale: f64,
     pub(super) retain_history: bool,
 }
 
@@ -61,6 +62,7 @@ pub(super) struct ReplayInput<'a> {
     pub(super) config: &'a Nonlinear3dConfig,
     pub(super) schedule: TimeSchedule,
     pub(super) encoding: SourceEncoding,
+    pub(super) source_scale: f64,
     pub(super) sponge: &'a [f64],
     pub(super) step: usize,
 }
@@ -134,14 +136,9 @@ pub(super) fn forward_with_schedule(input: ForwardInput<'_>) -> ForwardResult {
         )
     });
     let drive = DriveContext {
-        aperture: input.aperture,
         config: input.config,
         schedule: input.schedule,
-        encoding: input.encoding,
-        spacing_m: input.spacing_m,
-        max_focus_distance: source_plan.max_focus_distance,
-        reference_speed: source_plan.reference_speed,
-        weight_norm: source_plan.weight_norm,
+        source_scale: input.source_scale,
     };
     let inv_dx2 = 1.0 / (input.spacing_m * input.spacing_m);
     for step in 0..steps {
@@ -164,7 +161,7 @@ pub(super) fn forward_with_schedule(input: ForwardInput<'_>) -> ForwardResult {
         if let Some(op) = absorption.as_mut() {
             op.apply(&current, &previous, &mut next);
         }
-        inject_sources(&mut next, &source_plan.source_cells, &drive, step);
+        inject_sources(&mut next, &source_plan, &drive, step);
         record_receivers(&mut traces, &receiver_cells, &next, step);
         update_peak(&mut peak, &next, &source_mask);
         std::mem::swap(&mut older, &mut previous);
@@ -218,14 +215,9 @@ pub(super) fn forward_dense_history_for_test(input: ForwardInput<'_>) -> Vec<f64
         input.encoding,
     );
     let drive = DriveContext {
-        aperture: input.aperture,
         config: input.config,
         schedule: input.schedule,
-        encoding: input.encoding,
-        spacing_m: input.spacing_m,
-        max_focus_distance: source_plan.max_focus_distance,
-        reference_speed: source_plan.reference_speed,
-        weight_norm: source_plan.weight_norm,
+        source_scale: input.source_scale,
     };
     let sponge = sponge(input.n);
     let mut absorption = build_absorption(
@@ -262,7 +254,7 @@ pub(super) fn forward_dense_history_for_test(input: ForwardInput<'_>) -> Vec<f64
         if let Some(op) = absorption.as_mut() {
             op.apply(&current, &previous, &mut next);
         }
-        inject_sources(&mut next, &source_plan.source_cells, &drive, step);
+        inject_sources(&mut next, &source_plan, &drive, step);
         std::mem::swap(&mut older, &mut previous);
         std::mem::swap(&mut previous, &mut current);
         std::mem::swap(&mut current, &mut next);
@@ -297,14 +289,9 @@ pub(super) fn replay_history_segment_into(
         input.encoding,
     );
     let drive = DriveContext {
-        aperture: input.aperture,
         config: input.config,
         schedule: input.schedule,
-        encoding: input.encoding,
-        spacing_m: input.spacing_m,
-        max_focus_distance: source_plan.max_focus_distance,
-        reference_speed: source_plan.reference_speed,
-        weight_norm: source_plan.weight_norm,
+        source_scale: input.source_scale,
     };
     // Reproduce the lossy forward exactly so the replayed pressure states
     // match the originals bit-for-bit when absorption is active. The
@@ -339,7 +326,7 @@ pub(super) fn replay_history_segment_into(
         if let Some(op) = absorption.as_mut() {
             op.apply(&workspace.current, &workspace.previous, &mut workspace.next);
         }
-        inject_sources(&mut workspace.next, &source_plan.source_cells, &drive, step);
+        inject_sources(&mut workspace.next, &source_plan, &drive, step);
         std::mem::swap(&mut workspace.older, &mut workspace.previous);
         std::mem::swap(&mut workspace.previous, &mut workspace.current);
         std::mem::swap(&mut workspace.current, &mut workspace.next);

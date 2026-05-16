@@ -45,7 +45,7 @@ fn map_read_err<E: std::fmt::Debug>(name: &str, path: &Path, err: E) -> KwaversE
     ))
 }
 
-fn read_field_f64<R: std::io::Read + std::io::Seek>(
+fn read_field<R: std::io::Read + std::io::Seek>(
     npz: &mut NpzReader<R>,
     path: &Path,
 ) -> KwaversResult<Array3<f64>> {
@@ -55,7 +55,7 @@ fn read_field_f64<R: std::io::Read + std::io::Seek>(
     Ok(arr)
 }
 
-fn read_scalar_f64<R: std::io::Read + std::io::Seek>(
+fn read_scalar<R: std::io::Read + std::io::Seek>(
     npz: &mut NpzReader<R>,
     name: &str,
     path: &Path,
@@ -133,15 +133,15 @@ pub fn load_focal_kernel(path: &Path, target_pnp_pa: Option<f64>) -> KwaversResu
     // `p_min` is non-positive on disk (peak rarefactional is the
     // *minimum* of the signed pressure record). Negate to recover the
     // non-negative magnitude FocalKernel expects.
-    let p_min: Array3<f64> = read_field_f64(&mut npz, path)?;
+    let p_min: Array3<f64> = read_field(&mut npz, path)?;
     let field: Array3<f64> = p_min.mapv(|v| -v);
 
-    let dx_m = read_scalar_f64(&mut npz, "dx", path)?;
-    let f0 = read_scalar_f64(&mut npz, "f0", path)?;
-    let mut pnp_realised = read_scalar_f64(&mut npz, "pnp_realised", path)?;
-    let mut source_pa = read_scalar_f64(&mut npz, "source_pa", path)?;
-    let fwhm_lat_m = read_scalar_f64(&mut npz, "fwhm_lat_m", path)?;
-    let fwhm_ax_m = read_scalar_f64(&mut npz, "fwhm_ax_m", path)?;
+    let dx_m = read_scalar(&mut npz, "dx", path)?;
+    let f0 = read_scalar(&mut npz, "f0", path)?;
+    let mut pnp_realised = read_scalar(&mut npz, "pnp_realised", path)?;
+    let mut source_pa = read_scalar(&mut npz, "source_pa", path)?;
+    let fwhm_lat_m = read_scalar(&mut npz, "fwhm_lat_m", path)?;
+    let fwhm_ax_m = read_scalar(&mut npz, "fwhm_ax_m", path)?;
     let focus_idx = read_focus_idx(&mut npz, path)?;
 
     if dx_m <= 0.0 {

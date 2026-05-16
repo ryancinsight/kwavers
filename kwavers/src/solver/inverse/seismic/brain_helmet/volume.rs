@@ -239,4 +239,3 @@ fn head_bbox3(volume: &Array3<f64>) -> KwaversResult<(usize, usize, usize, usize
         KwaversError::InvalidInput("CT volume has no non-air head support".to_owned())
     })
 }
-

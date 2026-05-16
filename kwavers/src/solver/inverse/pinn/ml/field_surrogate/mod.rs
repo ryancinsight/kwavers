@@ -29,24 +29,26 @@
 #![cfg(feature = "pinn")]
 
 pub mod config;
-pub mod data;
 pub mod dynamic_tanh;
 pub mod forward;
 pub mod network;
 pub mod optimizer;
+pub mod sampler;
 pub mod target_transform;
 pub mod training;
+pub mod types;
 
 #[cfg(test)]
 mod tests;
 
 pub use config::ParamFieldPINNConfig;
-pub use data::{CoordHalves, KernelCubeSampler, OutputScales, ParamRanges, SamplingMode};
 pub use dynamic_tanh::DynamicTanh;
 pub use forward::{infer_grid, GridQueryParams};
 pub use network::ParamFieldPINNNetwork;
 pub use optimizer::ParamFieldOptimizer;
+pub use sampler::KernelCubeSampler;
 pub use target_transform::{OutputTransforms, TargetTransform};
 pub use training::{
     ParamFieldPINNTrainer, StepMetrics, TrainingBatch, TrainingConfig, TrainingMetrics,
 };
+pub use types::{CoordHalves, OutputScales, ParamRanges, SamplingMode};

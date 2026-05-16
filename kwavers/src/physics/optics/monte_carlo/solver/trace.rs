@@ -8,7 +8,7 @@ use crate::physics::optics::monte_carlo::config::SimulationConfig;
 use crate::physics::optics::monte_carlo::interfaces::{apply_fresnel, fresnel_reflectance};
 use crate::physics::optics::monte_carlo::photon::Photon;
 use crate::physics::optics::monte_carlo::utils::{
-    atomic_add_f64, normalize, photon_step_to_boundary, scatter_photon,
+    atomic_add, normalize, photon_step_to_boundary, scatter_photon,
 };
 
 impl MonteCarloSolver {
@@ -29,7 +29,7 @@ impl MonteCarloSolver {
                 Some(idx) => idx,
                 None => {
                     if photon.position[2] < 0.0 {
-                        atomic_add_f64(reflected_weight, photon.weight);
+                        atomic_add(reflected_weight, photon.weight);
                     }
                     break;
                 }
@@ -73,7 +73,7 @@ impl MonteCarloSolver {
                     photon.position[2] += s_remaining * photon.direction[2];
 
                     if voxel_idx < fluence.len() {
-                        atomic_add_f64(&fluence[voxel_idx], photon.weight * s_remaining);
+                        atomic_add(&fluence[voxel_idx], photon.weight * s_remaining);
                     }
 
                     let albedo = self
@@ -83,7 +83,7 @@ impl MonteCarloSolver {
                     let absorbed = photon.weight * (1.0 - albedo);
                     photon.weight -= absorbed;
                     if voxel_idx < absorbed_energy.len() {
-                        atomic_add_f64(&absorbed_energy[voxel_idx], absorbed);
+                        atomic_add(&absorbed_energy[voxel_idx], absorbed);
                     }
 
                     break true;
@@ -94,7 +94,7 @@ impl MonteCarloSolver {
                 photon.position[2] += s_to_boundary * photon.direction[2];
 
                 if voxel_idx < fluence.len() {
-                    atomic_add_f64(&fluence[voxel_idx], photon.weight * s_to_boundary);
+                    atomic_add(&fluence[voxel_idx], photon.weight * s_to_boundary);
                 }
 
                 s_remaining -= s_to_boundary;
@@ -120,7 +120,7 @@ impl MonteCarloSolver {
                                 }
                                 continue;
                             }
-                            atomic_add_f64(reflected_weight, photon.weight);
+                            atomic_add(reflected_weight, photon.weight);
                         }
                         if config.boundary_reflection
                             && !(photon.position[2] <= 0.0 && photon.direction[2] < 0.0)

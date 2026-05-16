@@ -128,7 +128,9 @@ fn westervelt_recurrence_fubini_absolute_at_gamma_half_matches_aanonsen_1984() {
 
         // Hard sinusoidal source with `sin²` envelope ramp.
         let envelope = if t_curr < burst_duration {
-            (std::f64::consts::PI * t_curr / burst_duration).sin().powi(2)
+            (std::f64::consts::PI * t_curr / burst_duration)
+                .sin()
+                .powi(2)
         } else {
             0.0
         };
@@ -183,8 +185,7 @@ fn westervelt_recurrence_fubini_absolute_at_gamma_half_matches_aanonsen_1984() {
     let ratio = amp_second_harmonic / amp_fundamental;
 
     // Empirical Γ from the **observed** `|P_1|` at the receiver.
-    let gamma_empirical =
-        beta * omega * target_distance_m * amp_fundamental / (rho * c.powi(3));
+    let gamma_empirical = beta * omega * target_distance_m * amp_fundamental / (rho * c.powi(3));
     assert!(
         gamma_empirical > 0.05 && gamma_empirical < 1.5,
         "empirical Γ must be in the pre/near-shock regime: got Γ = {gamma_empirical:.4} \
@@ -194,8 +195,7 @@ fn westervelt_recurrence_fubini_absolute_at_gamma_half_matches_aanonsen_1984() {
     // Fubini analytical at the empirical Γ: `|P_2|/|P_1| = J_2(2Γ) / (2 · J_1(Γ))`.
     let fubini_at_empirical_gamma =
         bessel_j2(2.0 * gamma_empirical) / (2.0 * bessel_j1(gamma_empirical));
-    let relative_error =
-        (ratio - fubini_at_empirical_gamma).abs() / fubini_at_empirical_gamma;
+    let relative_error = (ratio - fubini_at_empirical_gamma).abs() / fubini_at_empirical_gamma;
     assert!(
         relative_error < 0.15,
         "Aanonsen-1984 Fubini empirical-Γ regression: \

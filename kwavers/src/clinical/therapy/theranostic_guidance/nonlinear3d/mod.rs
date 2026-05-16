@@ -45,9 +45,17 @@ pub fn run_theranostic_nonlinear_3d(
     label_volume: Option<&Array3<i16>>,
     spacing_mm: [f64; 3],
     config: &Nonlinear3dConfig,
+    target_fraction_xyz: Option<[f64; 3]>,
 ) -> KwaversResult<Nonlinear3dResult> {
     config.validate()?;
-    let volume = prepare_volume(anatomy, ct_hu, label_volume, spacing_mm, config)?;
+    let volume = prepare_volume(
+        anatomy,
+        ct_hu,
+        label_volume,
+        spacing_mm,
+        config,
+        target_fraction_xyz,
+    )?;
     let aperture = build_aperture(&volume, config)?;
     let fwi = run_fwi(&volume, &aperture, config);
     let cavitation = run_cavitation_inverse(&volume, &aperture, &fwi.peak_pressure_pa, config);
@@ -85,6 +93,9 @@ pub fn run_theranostic_nonlinear_3d(
         therapy_points_m: aperture.therapy_points_m,
         receiver_points_m: aperture.receiver_points_m,
         spacing_m: volume.spacing_m,
+        source_dimensions: volume.source_dimensions,
+        source_spacing_m: volume.source_spacing_m,
+        crop_bounds_index: volume.crop_bounds_index,
         dt_s: fwi.dt_s,
         time_steps: fwi.time_steps,
         active_voxels,

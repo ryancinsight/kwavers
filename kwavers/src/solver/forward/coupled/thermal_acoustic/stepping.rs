@@ -1,6 +1,6 @@
 use super::{ThermalAcousticConfig, ThermalAcousticCoupler};
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 
 impl ThermalAcousticCoupler {
     /// Create new thermal-acoustic coupler with default configuration
@@ -139,63 +139,91 @@ impl ThermalAcousticCoupler {
         Ok(())
     }
 
-    /// Advance acoustic equations one time step
+    /// Advance acoustic equations one time step.
     ///
-    /// Uses FDTD-like scheme:
-    /// - ρ ∂u/∂t = -∇p
-    /// - ∂p/∂t = -ρc² ∇·u
+    /// Explicit staggered FDTD: reads from `_prev` fields (no intra-step dependencies)
+    /// → all velocity components and the pressure update are fully data-parallel.
+    ///
+    /// Velocity components are updated in three separate parallel passes to allow
+    /// simultaneous mutable access to each field while sharing immutable borrows of
+    /// `pressure_prev` and `density`.
     fn step_acoustic(&mut self) {
         let dt = self.config.dt;
         let dx = self.config.dx;
         let dy = self.config.dy;
         let dz = self.config.dz;
+        let nx = self.config.nx;
+        let ny = self.config.ny;
+        let nz = self.config.nz;
 
-        for k in 1..self.config.nz - 1 {
-            for j in 1..self.config.ny - 1 {
-                for i in 1..self.config.nx - 1 {
-                    let rho = self.density[[i, j, k]];
-                    if rho > 0.0 {
-                        let dp_dx = (self.pressure_prev[[i + 1, j, k]]
-                            - self.pressure_prev[[i - 1, j, k]])
-                            / (2.0 * dx);
-                        let dp_dy = (self.pressure_prev[[i, j + 1, k]]
-                            - self.pressure_prev[[i, j - 1, k]])
-                            / (2.0 * dy);
-                        let dp_dz = (self.pressure_prev[[i, j, k + 1]]
-                            - self.pressure_prev[[i, j, k - 1]])
-                            / (2.0 * dz);
-
-                        self.velocity_x[[i, j, k]] =
-                            (dt / rho).mul_add(-dp_dx, self.velocity_x_prev[[i, j, k]]);
-                        self.velocity_y[[i, j, k]] =
-                            (dt / rho).mul_add(-dp_dy, self.velocity_y_prev[[i, j, k]]);
-                        self.velocity_z[[i, j, k]] =
-                            (dt / rho).mul_add(-dp_dz, self.velocity_z_prev[[i, j, k]]);
-                    }
+        // --- Velocity update ---
+        // ρ ∂u/∂t = −∇p   (reads pressure_prev, writes velocity_{x,y,z})
+        {
+            let pp = &self.pressure_prev;
+            let dens = &self.density;
+            let vxp = &self.velocity_x_prev;
+            Zip::indexed(self.velocity_x.view_mut()).par_for_each(|(i, j, k), vx| {
+                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                    return;
                 }
-            }
+                let rho = dens[[i, j, k]];
+                if rho > 0.0 {
+                    let dp_dx = (pp[[i + 1, j, k]] - pp[[i - 1, j, k]]) / (2.0 * dx);
+                    *vx = (dt / rho).mul_add(-dp_dx, vxp[[i, j, k]]);
+                }
+            });
+        }
+        {
+            let pp = &self.pressure_prev;
+            let dens = &self.density;
+            let vyp = &self.velocity_y_prev;
+            Zip::indexed(self.velocity_y.view_mut()).par_for_each(|(i, j, k), vy| {
+                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                    return;
+                }
+                let rho = dens[[i, j, k]];
+                if rho > 0.0 {
+                    let dp_dy = (pp[[i, j + 1, k]] - pp[[i, j - 1, k]]) / (2.0 * dy);
+                    *vy = (dt / rho).mul_add(-dp_dy, vyp[[i, j, k]]);
+                }
+            });
+        }
+        {
+            let pp = &self.pressure_prev;
+            let dens = &self.density;
+            let vzp = &self.velocity_z_prev;
+            Zip::indexed(self.velocity_z.view_mut()).par_for_each(|(i, j, k), vz| {
+                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                    return;
+                }
+                let rho = dens[[i, j, k]];
+                if rho > 0.0 {
+                    let dp_dz = (pp[[i, j, k + 1]] - pp[[i, j, k - 1]]) / (2.0 * dz);
+                    *vz = (dt / rho).mul_add(-dp_dz, vzp[[i, j, k]]);
+                }
+            });
         }
 
-        for k in 1..self.config.nz - 1 {
-            for j in 1..self.config.ny - 1 {
-                for i in 1..self.config.nx - 1 {
-                    let rho_c_sq = self.density[[i, j, k]]
-                        * self.sound_speed[[i, j, k]]
-                        * self.sound_speed[[i, j, k]];
-
-                    let du_dx = (self.velocity_x[[i + 1, j, k]] - self.velocity_x[[i - 1, j, k]])
-                        / (2.0 * dx);
-                    let dv_dy = (self.velocity_y[[i, j + 1, k]] - self.velocity_y[[i, j - 1, k]])
-                        / (2.0 * dy);
-                    let dw_dz = (self.velocity_z[[i, j, k + 1]] - self.velocity_z[[i, j, k - 1]])
-                        / (2.0 * dz);
-
-                    let div_u = du_dx + dv_dy + dw_dz;
-
-                    self.pressure[[i, j, k]] =
-                        (rho_c_sq * dt).mul_add(-div_u, self.pressure_prev[[i, j, k]]);
+        // --- Pressure update ---
+        // ∂p/∂t = −ρc² ∇·u  (reads velocity just written above + pressure_prev)
+        {
+            let vx = &self.velocity_x;
+            let vy = &self.velocity_y;
+            let vz = &self.velocity_z;
+            let dens = &self.density;
+            let ss = &self.sound_speed;
+            let pp = &self.pressure_prev;
+            Zip::indexed(self.pressure.view_mut()).par_for_each(|(i, j, k), p| {
+                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                    return;
                 }
-            }
+                let rho_c_sq = dens[[i, j, k]] * ss[[i, j, k]] * ss[[i, j, k]];
+                let du_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * dx);
+                let dv_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * dy);
+                let dw_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * dz);
+                let div_u = du_dx + dv_dy + dw_dz;
+                *p = (rho_c_sq * dt).mul_add(-div_u, pp[[i, j, k]]);
+            });
         }
     }
 

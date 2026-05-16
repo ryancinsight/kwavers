@@ -23,7 +23,7 @@ fn brain_helmet_layout_uses_requested_element_count() {
             }
         }
     }
-    let prepared = prepare_brain_slice(ct, 0.002, 0).unwrap();
+    let prepared = prepare_brain_slice(ct, 0.002, 0, None).unwrap();
     let mut config = TheranosticInverseConfig::new(AnatomyKind::Brain);
     config.element_count = 64;
     config.receiver_offsets = vec![16, 32];
@@ -89,7 +89,8 @@ fn brain_helmet_3d_uses_calvarium_cap_not_inferior_hemisphere() {
         }
     }
     let placement =
-        plan_brain_helmet_placement(&ct, [1.0, 1.0, 2.0], 128, 2, -300.0, 300.0).unwrap();
+        plan_brain_helmet_placement(&ct, [1.0, 1.0, 2.0], 128, 2, -300.0, 300.0, None, None)
+            .unwrap();
     let min_element_z = placement
         .therapy_elements_m
         .iter()

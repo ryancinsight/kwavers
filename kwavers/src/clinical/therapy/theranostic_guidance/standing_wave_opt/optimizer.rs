@@ -85,7 +85,11 @@ fn backtrack(
     let slope: f64 = grad.iter().map(|g| g * g).sum(); // ‖∇f‖²
     let mut alpha = config.line_search_alpha0;
     for _ in 0..config.line_search_max {
-        let phi_trial: Vec<f64> = phases.iter().zip(grad).map(|(&p, &g)| p - alpha * g).collect();
+        let phi_trial: Vec<f64> = phases
+            .iter()
+            .zip(grad)
+            .map(|(&p, &g)| p - alpha * g)
+            .collect();
         let (f_trial, _, _, _, _) = objective(&phi_trial, g_re, g_im, p_focal_ref, config);
         if f_trial <= f0 - config.armijo_c1 * alpha * slope {
             return alpha;
@@ -130,8 +134,7 @@ pub(super) fn run_optimization(
     let ny = config.ny;
 
     // Evaluate initial DAS state
-    let (_, swi0, p_focal0, init_re, init_im) =
-        objective(&phases, &g_re, &g_im, 1.0, config);
+    let (_, swi0, p_focal0, init_re, init_im) = objective(&phases, &g_re, &g_im, 1.0, config);
     let p_focal_ref = p_focal0.max(1e-30);
 
     let (obj0, _, _, _, _) = objective(&phases, &g_re, &g_im, p_focal_ref, config);
@@ -167,7 +170,11 @@ pub(super) fn run_optimization(
         let grad = gradient(&phases, &g_re, &g_im, p_focal_ref, config);
         let alpha = backtrack(&phases, &grad, f0, &g_re, &g_im, p_focal_ref, config);
         phases = wrap_phases(
-            phases.iter().zip(&grad).map(|(&p, &g)| p - alpha * g).collect(),
+            phases
+                .iter()
+                .zip(&grad)
+                .map(|(&p, &g)| p - alpha * g)
+                .collect(),
         );
 
         let (obj_k, swi_k, pf_k, p_re_k, p_im_k) =

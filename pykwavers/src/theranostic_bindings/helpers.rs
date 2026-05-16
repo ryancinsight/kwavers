@@ -1,7 +1,7 @@
 //! Shared private helpers for theranostic_bindings sub-modules.
 
 use kwavers::clinical::therapy::theranostic_guidance::{
-    DevicePlacementMetrics, PlacementContext, PlacementPoint3, Point3, ReconstructionMetrics,
+    DevicePlacementMetrics, PlacementContext, Point3, ReconstructionMetrics,
     VolumeReconstructionMetrics,
 };
 use kwavers::core::error::KwaversError;
@@ -10,9 +10,7 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-pub(super) fn labels_from_volume(
-    volume: ndarray::Array3<f64>,
-) -> ndarray::Array3<i16> {
+pub(super) fn labels_from_volume(volume: ndarray::Array3<f64>) -> ndarray::Array3<i16> {
     volume.mapv(|value| value.round().clamp(i16::MIN as f64, i16::MAX as f64) as i16)
 }
 
@@ -62,14 +60,6 @@ pub(super) fn point_axis(
 }
 
 pub(super) fn points3_to_array(points: &[Point3]) -> Array2<f64> {
-    Array2::from_shape_fn((points.len(), 3), |(row, col)| match col {
-        0 => points[row].x_m,
-        1 => points[row].y_m,
-        _ => points[row].z_m,
-    })
-}
-
-pub(super) fn placement_points3_to_array(points: &[PlacementPoint3]) -> Array2<f64> {
     Array2::from_shape_fn((points.len(), 3), |(row, col)| match col {
         0 => points[row].x_m,
         1 => points[row].y_m,

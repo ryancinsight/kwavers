@@ -1,10 +1,11 @@
 //! `run_theranostic_inverse_from_ritk` pyfunction and result serialization.
 
 use kwavers::clinical::therapy::theranostic_guidance::{
-    AnatomyKind, TheranosticInverseConfig, WaveformMisfit,
     build_abdominal_placement_context, build_brain_placement_context, placement_metrics,
     prepare_abdominal_slice, prepare_brain_slice, run_theranostic_inverse,
-    PlacementContext, THERANOSTIC_OPERATOR_MODEL,
+    synthetic::{synthetic_abdominal_kidney_phantom, synthetic_abdominal_liver_phantom, synthetic_brain_phantom},
+    target_index_from_mask_fraction_3d, AnatomyKind, PlacementContext, TheranosticInverseConfig,
+    WaveformMisfit, THERANOSTIC_OPERATOR_MODEL,
 };
 use kwavers::solver::inverse::seismic::brain_helmet::{resample_head_slice, select_head_slice};
 use ndarray::Array1;
@@ -14,11 +15,11 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
-use crate::ritk_image::load_ritk_nifti;
 use super::helpers::{
-    kwavers_to_py, labels_from_volume, metric_dict, placement_context_skin_gap,
-    placement_dict, placement_points3_to_array, point_axis,
+    kwavers_to_py, labels_from_volume, metric_dict, placement_context_skin_gap, placement_dict,
+    point_axis, points3_to_array,
 };
+use crate::ritk_image::load_ritk_nifti;
 
 #[pyfunction]
 #[pyo3(signature = (
@@ -31,6 +32,7 @@ use super::helpers::{
     frequencies_hz = None,
     receiver_offsets = None,
     source_pressure_pa = None,
+    target_fraction_xyz = None,
     noise_fraction = 0.012,
     inverse_encoding_rows_per_code = 2,
     waveform_misfit = "charbonnier",
@@ -48,14 +50,31 @@ pub fn run_theranostic_inverse_from_ritk<'py>(
     frequencies_hz: Option<Vec<f64>>,
     receiver_offsets: Option<Vec<usize>>,
     source_pressure_pa: Option<f64>,
+    target_fraction_xyz: Option<(f64, f64, f64)>,
     noise_fraction: f64,
     inverse_encoding_rows_per_code: usize,
     waveform_misfit: &str,
     waveform_misfit_scale_fraction: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
     let anatomy = AnatomyKind::from_name(anatomy).map_err(kwavers_to_py)?;
-    let (mut ct, spacing_mm) = load_ritk_nifti(Path::new(ct_nifti_path))?;
-    ct.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+    let ct_path = Path::new(ct_nifti_path);
+    let (ct, spacing_mm) = if ct_path.exists() {
+        let (mut ct, spacing_mm) = load_ritk_nifti(ct_path)?;
+        ct.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+        (ct, spacing_mm)
+    } else {
+        match anatomy {
+            AnatomyKind::Brain => synthetic_brain_phantom(),
+            AnatomyKind::Liver => {
+                let (ct, _, spacing_mm) = synthetic_abdominal_liver_phantom();
+                (ct, spacing_mm)
+            }
+            AnatomyKind::Kidney => {
+                let (ct, _, spacing_mm) = synthetic_abdominal_kidney_phantom();
+                (ct, spacing_mm)
+            }
+        }
+    };
     let mut config = TheranosticInverseConfig::new(anatomy);
     config.grid_size = grid_size;
     config.iterations = iterations;
@@ -79,24 +98,61 @@ pub fn run_theranostic_inverse_from_ritk<'py>(
 
     let (prepared, placement_context) = match anatomy {
         AnatomyKind::Brain => {
-            let selected = select_head_slice(&ct).map_err(kwavers_to_py)?;
+            let target_fraction = target_fraction_xyz.map(|(x, y, z)| [x, y, z]);
+            let selected = if let Some(fraction) = target_fraction {
+                let brain = ct.mapv(|hu| hu > -300.0 && hu < 300.0);
+                if brain.iter().any(|active| *active) {
+                    target_index_from_mask_fraction_3d(&brain, fraction).map_err(kwavers_to_py)?[2]
+                } else {
+                    let body = ct.mapv(|hu| hu > -300.0);
+                    target_index_from_mask_fraction_3d(&body, fraction).map_err(kwavers_to_py)?[2]
+                }
+            } else {
+                select_head_slice(&ct).map_err(kwavers_to_py)?
+            };
             let resampled =
                 resample_head_slice(&ct, spacing_mm, selected, grid_size).map_err(kwavers_to_py)?;
             let placement_context =
-                build_brain_placement_context(&ct, spacing_mm, selected, &config)
+                build_brain_placement_context(&ct, spacing_mm, selected, &config, target_fraction)
                     .map_err(kwavers_to_py)?;
             (
-                prepare_brain_slice(resampled.hu, resampled.spacing_m, selected)
-                    .map_err(kwavers_to_py)?,
+                prepare_brain_slice(
+                    resampled.hu,
+                    resampled.spacing_m,
+                    selected,
+                    target_fraction.map(|fraction| [fraction[0], fraction[1]]),
+                )
+                .map_err(kwavers_to_py)?,
                 placement_context,
             )
         }
         AnatomyKind::Liver | AnatomyKind::Kidney => {
-            let seg_path = segmentation_nifti_path.ok_or_else(|| {
-                PyValueError::new_err("segmentation_nifti_path is required for liver and kidney")
-            })?;
-            let (seg, _) = load_ritk_nifti(Path::new(seg_path))?;
-            let labels = labels_from_volume(seg);
+            // Load segmentation labels: from NIfTI when available, else synthetic.
+            let labels = if let Some(seg_path_str) = segmentation_nifti_path {
+                let seg_path = Path::new(seg_path_str);
+                if seg_path.exists() {
+                    let (seg, _) = load_ritk_nifti(seg_path)?;
+                    labels_from_volume(seg)
+                } else {
+                    // Paired synthetic segmentation matching the CT phantom.
+                    match anatomy {
+                        AnatomyKind::Liver => synthetic_abdominal_liver_phantom().1,
+                        AnatomyKind::Kidney => synthetic_abdominal_kidney_phantom().1,
+                        _ => unreachable!(),
+                    }
+                }
+            } else if !ct_path.exists() {
+                // No seg path provided and CT is also synthetic: use synthetic label.
+                match anatomy {
+                    AnatomyKind::Liver => synthetic_abdominal_liver_phantom().1,
+                    AnatomyKind::Kidney => synthetic_abdominal_kidney_phantom().1,
+                    _ => unreachable!(),
+                }
+            } else {
+                return Err(PyValueError::new_err(
+                    "segmentation_nifti_path is required for liver and kidney when using real CT",
+                ));
+            };
             let placement_context =
                 build_abdominal_placement_context(anatomy, &ct, &labels, spacing_mm, &config)
                     .map_err(kwavers_to_py)?;
@@ -110,7 +166,7 @@ pub fn run_theranostic_inverse_from_ritk<'py>(
     let result = py
         .detach(|| run_theranostic_inverse(prepared, &config))
         .map_err(kwavers_to_py)?;
-    result_to_dict(py, result, &config, placement_context)
+    result_to_dict(py, result, &config, placement_context, target_fraction_xyz)
 }
 
 fn result_to_dict<'py>(
@@ -118,6 +174,7 @@ fn result_to_dict<'py>(
     result: kwavers::clinical::therapy::theranostic_guidance::TheranosticInverseResult,
     config: &TheranosticInverseConfig,
     placement_context: PlacementContext,
+    target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
     let operator_backend = result.operator_backend.clone();
@@ -143,10 +200,9 @@ fn result_to_dict<'py>(
     );
     let placement_context_skin_gap_m = placement_context_skin_gap(&placement_context);
     let placement_context_surface_points = placement_context.body_surface_points_m.len();
-    let placement_therapy_points = placement_points3_to_array(&placement_context.therapy_points_m);
-    let placement_imaging_points = placement_points3_to_array(&placement_context.imaging_points_m);
-    let placement_body_surface_points =
-        placement_points3_to_array(&placement_context.body_surface_points_m);
+    let placement_therapy_points = points3_to_array(&placement_context.therapy_points_m);
+    let placement_imaging_points = points3_to_array(&placement_context.imaging_points_m);
+    let placement_body_surface_points = points3_to_array(&placement_context.body_surface_points_m);
     out.set_item("anatomy", prepared.anatomy.label())?;
     out.set_item("device_model", layout.model_name.clone())?;
     out.set_item("ct_hu", prepared.ct_hu.into_pyarray(py))?;
@@ -216,6 +272,9 @@ fn result_to_dict<'py>(
     out.set_item("frequencies_hz", config.frequencies_hz.clone())?;
     out.set_item("receiver_offsets", config.receiver_offsets.clone())?;
     out.set_item("source_pressure_pa", config.source_pressure_pa)?;
+    if let Some((x, y, z)) = target_fraction_xyz {
+        out.set_item("target_fraction_xyz", (x, y, z))?;
+    }
     out.set_item("geometry_model", layout.model_name.clone())?;
     out.set_item("placement_metrics", placement_dict(py, &placement)?)?;
     out.set_item("placement_context_model", placement_context_model)?;

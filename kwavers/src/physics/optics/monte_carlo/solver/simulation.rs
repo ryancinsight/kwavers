@@ -21,8 +21,8 @@ impl MonteCarloSolver {
         let num_photons = config.num_photons;
         let chunk_size = (num_photons / rayon::current_num_threads()).max(1000);
         let total_voxels = total_voxels(&self.grid);
-        let absorbed_energy = Arc::new(new_atomic_f64_vec(total_voxels));
-        let fluence = Arc::new(new_atomic_f64_vec(total_voxels));
+        let absorbed_energy = Arc::new(new_atomic_vec(total_voxels));
+        let fluence = Arc::new(new_atomic_vec(total_voxels));
         let reflected_weight = Arc::new(AtomicU64::new(0));
 
         (0..num_photons)
@@ -50,8 +50,8 @@ impl MonteCarloSolver {
                 }
             });
 
-        let absorbed_energy = atomic_vec_to_f64(&absorbed_energy);
-        let fluence = atomic_vec_to_f64(&fluence);
+        let absorbed_energy = collect_atomic_vec(&absorbed_energy);
+        let fluence = collect_atomic_vec(&fluence);
         let reflected = f64::from_bits(reflected_weight.load(Ordering::Relaxed));
         let diffuse_reflectance = reflected / num_photons as f64;
 
@@ -69,11 +69,11 @@ fn total_voxels(grid: &Grid3D) -> usize {
     grid.nx * grid.ny * grid.nz
 }
 
-fn new_atomic_f64_vec(len: usize) -> Vec<AtomicU64> {
+fn new_atomic_vec(len: usize) -> Vec<AtomicU64> {
     (0..len).map(|_| AtomicU64::new(0)).collect()
 }
 
-fn atomic_vec_to_f64(values: &[AtomicU64]) -> Vec<f64> {
+fn collect_atomic_vec(values: &[AtomicU64]) -> Vec<f64> {
     values
         .iter()
         .map(|value| f64::from_bits(value.load(Ordering::Relaxed)))

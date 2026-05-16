@@ -33,11 +33,11 @@
 //! `#[ignore]`'d as Tier-2 (~10 s runtime). Run on demand with
 //! `cargo test --lib --package kwavers -- --ignored harmonic_generation`.
 
-use super::super::super::Point3;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture};
 use super::super::Nonlinear3dConfig;
+use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
 
 #[test]
@@ -119,6 +119,7 @@ fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
         config: &config,
         schedule,
         encoding: SourceEncoding { index: 0, count: 1 },
+        source_scale: 1.0,
         retain_history: false,
     });
 

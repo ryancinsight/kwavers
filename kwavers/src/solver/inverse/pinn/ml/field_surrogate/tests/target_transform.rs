@@ -10,10 +10,10 @@
 use ndarray::Array3;
 
 use super::super::config::ParamFieldPINNConfig;
-use super::super::data::KernelCubeSampler;
 use super::super::forward::{infer_grid, GridQueryParams};
 use super::super::network::ParamFieldPINNNetwork;
 use super::super::target_transform::{OutputTransforms, TargetTransform};
+use super::super::KernelCubeSampler;
 use super::{AB, B};
 use crate::physics::field_surrogate::FocalKernel;
 

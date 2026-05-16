@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import nibabel as nib
 import numpy as np
 import pytest
 
@@ -10,7 +11,8 @@ BOOK_DIR = Path(__file__).resolve().parents[1] / "examples" / "book"
 sys.path.insert(0, str(BOOK_DIR))
 
 from transcranial_planning import data as planning_data  # noqa: E402
-from transcranial_planning.data import Volume, load_default_brain_triplet, load_gbm_case, resample_volume  # noqa: E402
+from transcranial_planning.benchmark import summarize_benchmark_result  # noqa: E402
+from transcranial_planning.data import GbmCasePaths, Volume, load_default_brain_triplet, load_gbm_case, resample_volume  # noqa: E402
 from transcranial_planning.data import brain_mask_from_ct  # noqa: E402
 from transcranial_planning.metrics import normalized_mutual_information, registration_quality  # noqa: E402
 from transcranial_planning.modality_bridge import (  # noqa: E402
@@ -23,6 +25,7 @@ from transcranial_planning.registration import (  # noqa: E402
     affine_register_moving_to_fixed,
     register_triplet_with_ritk,
 )
+from transcranial_planning.scene import CANONICAL_BRAIN_SCENE  # noqa: E402
 from transcranial_planning.simulation import (  # noqa: E402
     acoustic_observables,
     bbb_opening_from_subspots,
@@ -45,6 +48,23 @@ def test_insightec_geometry_has_1024_elements_on_hemisphere_radius():
     assert positions.shape == (1024, 3)
     assert np.allclose(radii, config.radius_m, rtol=0.0, atol=1.0e-12)
     assert np.all(positions[:, 2] < 0.0)
+
+
+def test_canonical_brain_scene_resolves_target_and_transducer_geometry_once():
+    mask = np.zeros((48, 60, 48), dtype=bool)
+    mask[8:36, 5:54, 1:47] = True
+
+    target_index = CANONICAL_BRAIN_SCENE.target.resolve_index(mask)
+    config = TransducerConfig.from_scene(CANONICAL_BRAIN_SCENE)
+    fus_kwargs = CANONICAL_BRAIN_SCENE.fus_pykwavers_kwargs()
+    benchmark_kwargs = CANONICAL_BRAIN_SCENE.benchmark_pykwavers_kwargs()
+
+    assert target_index == (24, 29, 23)
+    assert config.element_count == CANONICAL_BRAIN_SCENE.transducer.element_count == 1024
+    assert config.radius_m == CANONICAL_BRAIN_SCENE.transducer.radius_m
+    assert fus_kwargs["target_fraction_xyz"] == CANONICAL_BRAIN_SCENE.target.fraction_xyz
+    assert benchmark_kwargs["target_fraction_xyz"] == CANONICAL_BRAIN_SCENE.target.fraction_xyz
+    assert benchmark_kwargs["aperture_diameter_m"] == CANONICAL_BRAIN_SCENE.transducer.aperture_diameter_m
 
 
 def test_phase_correction_depends_on_skull_path_length():
@@ -148,30 +168,33 @@ def test_local_upenn_gbm_sample_executes_segmentation_branch():
     case = load_gbm_case(shape=(16, 20, 16))
 
     assert case is not None
-    ct, t1gd, flair, tumor, dataset, segmentation_space = case
-    assert dataset in {"CFB-GBM", "UPenn-GBM", "RIRE-CT-segmentation"}
-    assert segmentation_space in {"ct", "mri"}
-    assert t1gd.data.shape == (16, 20, 16)
-    assert flair.data.shape == (16, 20, 16)
-    assert tumor.shape == (16, 20, 16)
-    assert np.count_nonzero(tumor) > 0
-    if segmentation_space == "mri":
-        assert ct is None
-    if segmentation_space == "ct":
-        assert ct is not None
+    assert case.dataset in {"CFB-GBM", "UPenn-GBM", "RIRE-CT-segmentation"}
+    assert case.segmentation_space in {"ct", "mri"}
+    assert case.planning_reference.data.shape == (16, 20, 16)
+    assert case.tumor.shape == (16, 20, 16)
+    assert np.count_nonzero(case.tumor) > 0
+    assert "segmentation" in case.available_modalities
+    if case.segmentation_space == "mri":
+        assert case.ct is None
+        assert case.planning_reference_modality in {"flair", "t1gd", "t2", "t1"}
+    if case.segmentation_space == "ct":
+        assert case.ct is not None
+        assert case.planning_reference_modality == "ct"
 
 
 def test_ct_segmentation_path_is_first_class_for_bbb_planning():
     case = load_gbm_case(shape=(16, 20, 16))
 
     assert case is not None
-    ct, _t1gd, _flair, tumor, _dataset, segmentation_space = case
-    assert segmentation_space == "ct"
-    assert ct is not None
-    plan = gbm_subspot_plan(tumor, ct.spacing_m, pitch_m=3.0e-3)
-    result = bbb_opening_from_subspots(tumor, plan, ct.spacing_m)
+    assert case.segmentation_space == "ct"
+    assert case.ct is not None
+    assert case.t1gd is None
+    assert case.flair is None
+    assert case.available_modalities == ("ct", "segmentation")
+    plan = gbm_subspot_plan(case.tumor, case.ct.spacing_m, pitch_m=3.0e-3)
+    result = bbb_opening_from_subspots(case.tumor, plan, case.ct.spacing_m)
     assert plan.indices.shape[0] > 0
-    assert float(result.permeability[tumor].max()) > 0.0
+    assert float(result.permeability[case.tumor].max()) > 0.0
 
 
 def test_modality_bridge_marks_ct_space_segmentation_as_same_subject_ready():
@@ -210,6 +233,77 @@ def test_modality_bridge_keeps_upenn_mri_case_non_ct_backed():
     expected_suffixes = ("bridge\\synthetic_ct_cwdm.nii.gz", "bridge/synthetic_ct_cwdm.nii.gz")
     assert any(path.endswith(expected_suffixes) for path in synthetic_ct.artifact_paths)
     assert any(reference.name == "SLaM-DiMM" for reference in plan.references)
+
+
+def test_ct_segmentation_discovery_does_not_invent_mri_paths():
+    paths = planning_data.discover_ct_segmentation_case()
+
+    assert paths is not None
+    assert paths.ct is not None
+    assert paths.t1 is None
+    assert paths.t1gd is None
+    assert paths.flair is None
+    assert paths.t2 is None
+    assert paths.segmentation_space == "ct"
+
+
+def test_ct_backed_case_with_only_ct_and_segmentation_loads(tmp_path):
+    ct_path, seg_path = tmp_path / "ct.nii.gz", tmp_path / "segmentation.nii.gz"
+    ct = np.zeros((5, 6, 7), dtype=np.float32)
+    ct[2:4, 2:5, 2:5] = 800.0
+    seg = np.zeros_like(ct)
+    seg[2:4, 2:5, 2:5] = 1.0
+    nib.save(nib.Nifti1Image(ct, np.eye(4)), ct_path)
+    nib.save(nib.Nifti1Image(seg, np.eye(4)), seg_path)
+    paths = GbmCasePaths(
+        dataset="unit-ct-seg",
+        ct=ct_path,
+        segmentation_space="ct",
+        t1=None,
+        t1gd=None,
+        flair=None,
+        t2=None,
+        segmentation=seg_path,
+    )
+
+    case = load_gbm_case(shape=(5, 6, 7), paths=paths)
+
+    assert case is not None
+    assert case.ct is not None
+    assert case.t1gd is None
+    assert case.flair is None
+    assert case.planning_reference.source_path == ct_path
+    assert case.available_modalities == ("ct", "segmentation")
+    assert np.count_nonzero(case.tumor) == np.count_nonzero(seg)
+
+
+def test_mri_segmentation_bridge_accepts_single_real_mri_modality(tmp_path):
+    flair, seg = tmp_path / "sub-999_FLAIR.nii.gz", tmp_path / "sub-999_seg.nii.gz"
+    flair.touch()
+    seg.touch()
+    paths = GbmCasePaths(
+        dataset="unit-mri-seg",
+        ct=None,
+        segmentation_space="mri",
+        t1=None,
+        t1gd=None,
+        flair=flair,
+        t2=None,
+        segmentation=seg,
+    )
+
+    plan = build_modality_bridge_plan(paths)
+
+    assert plan.simulation_ready
+    assert plan.planning_space == "mri"
+    assert plan.available_modalities == ("flair", "segmentation")
+    assert "t1gd" in plan.missing_modalities
+    mri_pair = next(requirement for requirement in plan.requirements if requirement.name == "mri_segmentation_pair")
+    assert mri_pair.satisfied
+    action = next(action for action in plan.actions if action.action == "accept_mri_space_segmentation")
+    assert action.inputs == ("flair", "segmentation")
+    assert any(reference.name == "Holder-MI incomplete MRI segmentation" for reference in plan.references)
+    assert any(reference.name == "TextBraTS" for reference in plan.references)
 
 
 def test_ct_brain_mask_uses_skull_fill_not_background_hu():
@@ -422,3 +516,38 @@ def test_ritk_nifti_registration_uses_moving_output_not_fixed_return():
     assert result.mse_t1_after >= 0.0
     assert result.mse_atlas_after >= 0.0
     assert result.ncc_t1_after < 0.95
+
+
+def test_skull_adaptive_benchmark_summary_preserves_tfuscapes_metrics():
+    result = {
+        "benchmark_model": "ct_conditioned_skull_aware_aperture_vs_uncorrected_baseline",
+        "frequency_hz": 650_000.0,
+        "target_peak_pa": 1.0e6,
+        "focus_index": (3, 4, 5),
+        "active_elements": np.array([True, False, True, True]),
+        "placement": {
+            "aperture_diameter_m": 0.120,
+            "radius_of_curvature_m": 0.150,
+            "mean_skull_length_m": 0.006,
+            "mean_amplitude_weight": 0.72,
+        },
+        "metrics": {
+            "relative_l2": 0.18,
+            "focal_position_error_m": 0.002,
+            "max_pressure_error_percent": 12.5,
+        },
+        "paper_structural_comparison": {
+            "reference_setup": "TFUScapes stores pseudo-CT and k-Wave pressure maps",
+            "kwavers_setup": "kwavers stores CT HU and skull-aware pressure",
+            "not_implemented": "DeepTFUS neural surrogate training",
+        },
+    }
+
+    summary = summarize_benchmark_result(result)
+
+    assert summary["active_element_count"] == 3
+    assert summary["focus_index"] == [3, 4, 5]
+    assert summary["relative_l2"] == 0.18
+    assert summary["focal_position_error_m"] == 0.002
+    assert summary["max_pressure_error_percent"] == 12.5
+    assert "DeepTFUS" in summary["paper_structural_comparison"]["not_implemented"]

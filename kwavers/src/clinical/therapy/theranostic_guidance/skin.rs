@@ -130,4 +130,3 @@ fn neighbors(ix: usize, iy: usize, nx: usize, ny: usize) -> impl Iterator<Item =
     }
     points.into_iter().take(count)
 }
-

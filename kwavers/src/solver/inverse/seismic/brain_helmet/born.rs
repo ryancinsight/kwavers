@@ -260,4 +260,3 @@ fn invert(
         stages: stages.len(),
     }
 }
-

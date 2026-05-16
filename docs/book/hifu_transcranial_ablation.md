@@ -36,6 +36,14 @@ The workflow covers:
 - BBB-opening subspot treatment over the segmented GBM volume using the Chapter
   24 acoustic-dose convention.
 
+The CT-aligned brain target and transducer pose are stored once in
+`pykwavers/examples/book/transcranial_planning/scene.py` as
+`CANONICAL_BRAIN_SCENE`. Figure 2 phase-correction output, the Chapter 29
+brain Figure 5 nonlinear branch, the 3-D helmet placement view, and the
+skull-adaptive transcranial benchmark resolve their target index from this
+scene definition instead of carrying separate centroid or element-count
+defaults.
+
 ## 25.2 Registration contract
 
 Let `C(x)` be the CT volume, `M(x)` the subject MRI, and `A(x)` the atlas T1.
@@ -105,6 +113,19 @@ missing.  The executable order is deterministic:
    explicitly non-CT-backed until same-patient CT or an accepted synthetic CT
    artifact is supplied.
 
+The ingest contract treats missing MRI channels as missing inputs, not as
+aliases to CT or another modality.  CT-space BBB planning requires only real CT
+plus a CT-space segmentation.  MRI-space GBM planning requires a real
+segmentation plus at least one real in-space MRI volume for spacing and visual
+QC; the preferred reference order is FLAIR, T1-Gd, T2, then T1.  This follows
+the missing-modality design constraint in Cheng et al. 2025
+(`https://huggingface.co/papers/2507.01254`): modality availability is an input
+state and processing adapts to the observed set.  TextBraTS
+(`https://huggingface.co/papers/2506.16784`) is recorded as a design reference
+for optional structured report context; report text can guide segmentation
+review, but it cannot replace measured image volumes or expert tumor masks in
+this pipeline.
+
 Missing-modality synthesis is an external artifact boundary, not an in-script
 fallback.  cWDM
 (`https://huggingface.co/papers/2411.17203`) is recorded as the paired 3-D
@@ -169,8 +190,11 @@ than being reported as metadata only.
 
 ## 25.4 Essential-tremor ablation
 
-The chapter targets the VIM-like atlas coordinate `(14, -18, 2)` mm and solves
-a Rayleigh superposition field normalized to the prescribed focal pressure.
+The chapter targets the VIM-like atlas coordinate `(14, -18, 2)` mm after that
+coordinate has been mapped once into the CT brain-support fraction recorded in
+`CANONICAL_BRAIN_SCENE`. All CT-lattice figure and simulation paths resolve the
+target index from that fraction, then solve a Rayleigh superposition field
+normalized to the prescribed focal pressure.
 Thermal response uses the Pennes bioheat model:
 
 $$
@@ -197,8 +221,9 @@ preferred CT-backed dataset when a local case is available.
 
 When a CT-space segmentation is present, subspot planning uses the CT voxel
 spacing and the same CT skull acoustic map used for phase/attenuation
-correction.  UPenn-GBM remains an MRI-segmentation fallback only; it is not used
-to infer skull acoustics.
+correction.  The CT-space fixture does not populate fake T1-Gd or FLAIR paths.
+UPenn-GBM remains an MRI-segmentation fallback only; it is not used to infer
+skull acoustics.
 
 $$
 D(x) = \sum_j \mathrm{MI}^2 t_\mathrm{on}
@@ -224,14 +249,85 @@ Generated optional figures:
 - `modality_bridge_manifest.json` for the CT/MRI/segmentation readiness and
   synthesis-boundary contract
 
-## 25.6 Verification
+## 25.6 Skull-adaptive transcranial benchmark
+
+The skull-adaptive benchmark is the Chapter 25 execution path that maps the
+TFUScapes/DeepTFUS paper structure into the existing kwavers brain pipeline
+without creating a parallel demonstration.  The reference paper is
+`https://huggingface.co/papers/2505.12998`, with manuscript text at
+`https://ar5iv.org/pdf/2505.12998` and the public project record at
+`https://github.com/camma-public/tfuscapes`.
+
+Already implemented before the benchmark:
+
+- RITK-backed CT NIfTI ingestion and CT/MRI/MNI registration/QC.
+- Insightec-like hemispherical transducer construction.
+- CT HU to density, sound speed, impedance, attenuation, phase delay, and
+  amplitude transmission.
+- Rayleigh pressure synthesis from skull-corrected per-element phases and
+  amplitudes.
+- Brain and skull masks derived from the CT planning lattice.
+
+The benchmark adds `run_skull_adaptive_transcranial_benchmark` in `kwavers`
+and `pykwavers.run_transcranial_skull_adaptive_benchmark_from_ritk_ct` in the
+Python package.  The pipeline:
+
+1. Loads the measured CT into the existing planning lattice.
+2. Builds the CT skull and brain masks with the same HU and intracranial
+   conventions used by Chapter 25.
+3. Computes per-element skull rays, phase correction, amplitude transmission,
+   and skull path length.
+4. Selects the active skull-aware aperture from the existing hemispherical
+   helmet by choosing the best-transmission skull-hit anchor and retaining
+   elements inside a configured aperture diameter.
+5. Computes a skull-aware reference pressure field and an uncorrected baseline
+   pressure field over the same active aperture.
+6. Reports structural paper metrics: relative L2 pressure error, focal-position
+   error in meters, and maximum-pressure error in percent.
+
+The executable Python call is:
+
+```python
+import pykwavers as kw
+from transcranial_planning.scene import CANONICAL_BRAIN_SCENE
+
+result = kw.run_transcranial_skull_adaptive_benchmark_from_ritk_ct(
+    "data/rire_patient_109/patient_109_ct.nii.gz",
+    grid_size=32,
+    **CANONICAL_BRAIN_SCENE.benchmark_pykwavers_kwargs(),
+)
+print(result["metrics"])
+print(result["placement"])
+```
+
+The result contains the reference and baseline pressure volumes, active element
+mask, element coordinates, phase delays, skull path lengths, amplitude weights,
+the resolved `target_fraction_xyz`, placement metadata, metric values, and a
+`paper_structural_comparison` record.
+The helper `pykwavers/examples/book/transcranial_planning/benchmark.py` converts
+that result into a JSON-serializable summary for book scripts and notebooks.
+
+Structural comparison to the paper:
+
+| Paper structure | kwavers benchmark structure | Current boundary |
+| --- | --- | --- |
+| TFUScapes stores pseudo-CT volumes, transducer coordinates, and k-Wave pressure maps. | The benchmark stores measured CT HU, active helmet coordinates, skull-aware Rayleigh pressure, and uncorrected baseline pressure. | The pressure backend is the existing deterministic Chapter 25 Rayleigh path, not the paper's full k-Wave simulation backend. |
+| Transducer placement adapts to subject skull geometry. | Aperture placement is CT-conditioned by skull-ray transmission, skull path length, and the existing helmet geometry. | The aperture is selected deterministically from the Insightec-like helmet rather than through a learned pose model. |
+| DeepTFUS is trained and evaluated with relative L2, focal-position error, and max-pressure error. | The benchmark reports the same metric families for corrected reference versus uncorrected baseline. | Neural surrogate training, TFUScapes-scale dataset generation, and DeepTFUS inference are not implemented in this path. |
+
+## 25.7 Verification
 
 The focused tests are:
 
 - `pykwavers/tests/test_transcranial_planning.py`
 - `pykwavers/tests/test_book_therapy_chapters.py`
 
-The tests assert 1024-element geometry, skull-dependent phase correction,
+The tests assert the canonical brain scene target index, 1024-element geometry,
+skull-dependent phase correction,
 thermal lesion formation, segmented tumor subspot coverage, BBB permeability
 inside the tumor, modality-bridge readiness boundaries, and
-manifest/documentation coverage for Chapters 24 and 25.
+manifest/documentation coverage for Chapters 24 and 25.  The benchmark-specific
+checks assert CT-conditioned aperture selection, nonzero skull interaction,
+reference pressure normalization, relative-L2/focal-position/max-pressure
+metric calculation, and Python summary preservation of TFUScapes-aligned metric
+names.

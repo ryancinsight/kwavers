@@ -201,7 +201,7 @@ pub(crate) fn photon_step_to_boundary(
 }
 
 /// Atomic add for f64 (using bits as u64)
-pub(crate) fn atomic_add_f64(atomic: &AtomicU64, value: f64) {
+pub(crate) fn atomic_add(atomic: &AtomicU64, value: f64) {
     let mut old = atomic.load(Ordering::Relaxed);
     loop {
         let old_f64 = f64::from_bits(old);

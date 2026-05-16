@@ -72,10 +72,8 @@ pub(super) fn compute_green_function(
     let c2: Array2<f64> = c_map.mapv(|c| c * c);
 
     // Propagation time (round trip source→far edge→back) for steady state
-    let prop_steps =
-        ((2.0 * nx as f64 * dx / config.c_ref_m_s / dt).ceil() as usize).max(20);
-    let burst_steps =
-        ((config.burst_cycles / (config.frequency_hz * dt)).ceil() as usize).max(10);
+    let prop_steps = ((2.0 * nx as f64 * dx / config.c_ref_m_s / dt).ceil() as usize).max(20);
+    let burst_steps = ((config.burst_cycles / (config.frequency_hz * dt)).ceil() as usize).max(10);
     let skip_steps =
         ((config.accum_skip_cycles / (config.frequency_hz * dt)).ceil() as usize).max(10);
     let total_steps = prop_steps + burst_steps + skip_steps;
@@ -108,9 +106,7 @@ pub(super) fn compute_green_function(
         p_next[[config.source_x, element_y]] += (omega * t).sin();
 
         // PML absorption
-        Zip::from(&mut p_next)
-            .and(damp)
-            .for_each(|pn, &d| *pn *= d);
+        Zip::from(&mut p_next).and(damp).for_each(|pn, &d| *pn *= d);
 
         // Lock-in accumulation: G(x,y) += p(x,y,t) × exp(−iωt)
         if step >= accum_start {

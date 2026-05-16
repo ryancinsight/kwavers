@@ -21,6 +21,7 @@ mod construction;
 mod interface;
 mod source;
 mod stepping;
+pub mod thermal;
 
 /// Core PSTD solver implementing the pseudospectral method
 pub struct PSTDSolver {
@@ -86,6 +87,11 @@ pub struct PSTDSolver {
     pub(crate) div_uz: Array3<f64>,
     /// Axisymmetric WSWA-FFT context — `Some` when `config.geometry == CylindricalAS`.
     pub(crate) as_ctx: Option<AsContext>,
+    /// Per-cell acoustic absorption coefficient α(ω_c) [Np/m] at the simulation center frequency.
+    ///
+    /// Populated by `populate_alpha_np_m_at_frequency(omega_c)` using the stored `AbsorptionKernel`.
+    /// Zero for lossless simulations (no thermal heating). Used by `compute_acoustic_heat_source()`.
+    pub(crate) alpha_np_m: Array3<f64>,
     /// X-row indices at which split-field PML is bypassed during TR Dirichlet reconstruction.
     ///
     /// When `enforce_pressure_dirichlet` forces p[sensor] = data[t], the sensor cell must

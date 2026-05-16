@@ -4,16 +4,22 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .scene import CANONICAL_BRAIN_SCENE, BrainSceneDefinition
+
 
 @dataclass(frozen=True)
 class TransducerConfig:
-    element_count: int = 1024
-    frequency_hz: float = 650.0e3
-    radius_m: float = 0.150
-    cap_min_polar_rad: float = 0.22
-    cap_max_polar_rad: float = 1.18
-    brain_sound_speed_m_s: float = 1540.0
-    skull_sound_speed_m_s: float = 2800.0
+    element_count: int = CANONICAL_BRAIN_SCENE.transducer.element_count
+    frequency_hz: float = CANONICAL_BRAIN_SCENE.transducer.frequency_hz
+    radius_m: float = CANONICAL_BRAIN_SCENE.transducer.radius_m
+    cap_min_polar_rad: float = CANONICAL_BRAIN_SCENE.transducer.cap_min_polar_rad
+    cap_max_polar_rad: float = CANONICAL_BRAIN_SCENE.transducer.cap_max_polar_rad
+    brain_sound_speed_m_s: float = CANONICAL_BRAIN_SCENE.transducer.brain_sound_speed_m_s
+    skull_sound_speed_m_s: float = CANONICAL_BRAIN_SCENE.transducer.skull_sound_speed_m_s
+
+    @classmethod
+    def from_scene(cls, scene: BrainSceneDefinition = CANONICAL_BRAIN_SCENE) -> "TransducerConfig":
+        return cls(**scene.transducer_config_kwargs())
 
 
 @dataclass(frozen=True)

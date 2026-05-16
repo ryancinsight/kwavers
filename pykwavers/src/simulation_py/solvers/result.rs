@@ -30,6 +30,8 @@ impl Simulation {
             i_avg_z,
             velocity_stats,
             full_grid_stats,
+            thermal_temperature,
+            thermal_dose,
         } = result;
 
         let (p_max_3d, p_min_3d, p_rms_3d, p_final_3d) =
@@ -90,6 +92,11 @@ impl Simulation {
         )
         .into();
 
+        // K → °C conversion for thermal outputs at the Python boundary.
+        let thermal_temp_py = thermal_temperature
+            .map(|t| PyArray3::from_owned_array(py, t.mapv(|v| v - 273.15)).into());
+        let thermal_dose_py = thermal_dose.map(|d| PyArray3::from_owned_array(py, d).into());
+
         let n_sensors = sensor_data.nrows();
         if n_sensors <= 1 {
             let sensor_1d = sensor_data.row(0).to_owned();
@@ -118,8 +125,26 @@ impl Simulation {
                 p_final_field: p_final_3d
                     .as_ref()
                     .map(|p: &Py<PyArray3<f64>>| p.clone_ref(py)),
-                ux, uy, uz, ix, iy, iz, i_avg_x, i_avg_y, i_avg_z,
-                ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms,
+                ux,
+                uy,
+                uz,
+                ix,
+                iy,
+                iz,
+                i_avg_x,
+                i_avg_y,
+                i_avg_z,
+                ux_max,
+                ux_min,
+                ux_rms,
+                uy_max,
+                uy_min,
+                uy_rms,
+                uz_max,
+                uz_min,
+                uz_rms,
+                thermal_temperature: thermal_temp_py,
+                thermal_dose: thermal_dose_py,
             })
         } else {
             Ok(SimulationResult {
@@ -139,8 +164,26 @@ impl Simulation {
                 p_min_field: p_min_3d,
                 p_rms_field: p_rms_3d,
                 p_final_field: p_final_3d,
-                ux, uy, uz, ix, iy, iz, i_avg_x, i_avg_y, i_avg_z,
-                ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms,
+                ux,
+                uy,
+                uz,
+                ix,
+                iy,
+                iz,
+                i_avg_x,
+                i_avg_y,
+                i_avg_z,
+                ux_max,
+                ux_min,
+                ux_rms,
+                uy_max,
+                uy_min,
+                uy_rms,
+                uz_max,
+                uz_min,
+                uz_rms,
+                thermal_temperature: thermal_temp_py,
+                thermal_dose: thermal_dose_py,
             })
         }
     }

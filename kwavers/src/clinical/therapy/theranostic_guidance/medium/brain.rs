@@ -18,12 +18,14 @@
 use crate::core::error::KwaversResult;
 use ndarray::Array2;
 
+use super::super::scene::target_index_from_mask_fraction_2d;
 use super::{validate_masks, AnatomyKind, PreparedTheranosticSlice};
 
 pub fn prepare_brain_slice(
     ct_hu: Array2<f64>,
     spacing_m: f64,
     source_slice_index: usize,
+    target_fraction_xy: Option<[f64; 2]>,
 ) -> KwaversResult<PreparedTheranosticSlice> {
     let (nx, ny) = ct_hu.dim();
     let mut label = Array2::<i16>::zeros((nx, ny));
@@ -53,7 +55,7 @@ pub fn prepare_brain_slice(
             organ[[ix, iy]] = central && (-40.0..=140.0).contains(&hu);
         }
     }
-    let target = synthetic_deep_target(&organ, spacing_m);
+    let target = synthetic_deep_target(&organ, spacing_m, target_fraction_xy)?;
     validate_masks(&body, &target)?;
     Ok(PreparedTheranosticSlice {
         anatomy: AnatomyKind::Brain,
@@ -115,17 +117,24 @@ fn head_centroid_bool(mask: &Array2<bool>) -> (f64, f64) {
 ///
 /// Semi-axes: rx = 6 mm, ry = 8 mm (physical), centred on the organ centroid.
 /// Used when a real segmentation is unavailable.
-fn synthetic_deep_target(organ: &Array2<bool>, spacing_m: f64) -> Array2<bool> {
+fn synthetic_deep_target(
+    organ: &Array2<bool>,
+    spacing_m: f64,
+    target_fraction_xy: Option<[f64; 2]>,
+) -> KwaversResult<Array2<bool>> {
     let (nx, ny) = organ.dim();
-    let center = head_centroid_bool(organ);
+    let center = if let Some(fraction) = target_fraction_xy {
+        let (ix, iy) = target_index_from_mask_fraction_2d(organ, fraction)?;
+        (ix as f64, iy as f64)
+    } else {
+        head_centroid_bool(organ)
+    };
     let rx = 6.0e-3 / spacing_m;
     let ry = 8.0e-3 / spacing_m;
-    Array2::from_shape_fn((nx, ny), |(ix, iy)| {
+    Ok(Array2::from_shape_fn((nx, ny), |(ix, iy)| {
         organ[[ix, iy]]
-            && ((ix as f64 - center.0) / rx).powi(2)
-                + ((iy as f64 - center.1) / ry).powi(2)
-                <= 1.0
-    })
+            && ((ix as f64 - center.0) / rx).powi(2) + ((iy as f64 - center.1) / ry).powi(2) <= 1.0
+    }))
 }
 
 /// Linear HU-to-sound-speed for brain soft tissue.

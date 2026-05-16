@@ -81,11 +81,7 @@ pub(super) fn skin_normal_projection_2d(point: Point2, skin: Point2, focus: Poin
     (point.x_m - skin.x_m) * normal_x + (point.y_m - skin.y_m) * normal_y
 }
 
-pub(super) fn skin_normal_projection_3d(
-    point: Point3,
-    skin: Point3,
-    focus: Point3,
-) -> f64 {
+pub(super) fn skin_normal_projection_3d(point: Point3, skin: Point3, focus: Point3) -> f64 {
     let dx = focus.x_m - skin.x_m;
     let dy = focus.y_m - skin.y_m;
     let depth = dx.hypot(dy);

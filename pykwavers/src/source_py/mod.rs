@@ -1,13 +1,14 @@
+mod array;
+mod elastic;
 pub(crate) mod helpers;
-mod methods;
+mod velocity;
 
 pub(crate) use helpers::pressure_signal_to_matrix;
 
 use ndarray::{Array2, Array3, Axis};
-use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-
 
 /// Acoustic source for wave excitation.
 ///
@@ -274,184 +275,6 @@ impl Source {
             signal: None,
             source_mode: "additive".to_string(),
             initial_pressure: Some(p0_arr),
-            velocity_signal: None,
-            direction: None,
-            kwave_array: None,
-            elastic_ux_signal_1d: None,
-            elastic_uy_signal_1d: None,
-            elastic_uz_signal_1d: None,
-        })
-    }
-
-    /// Create a particle-velocity source mask for the **elastic** solver.
-    ///
-    /// Equivalent to k-Wave's ``source.u_mask`` / ``source.ux`` /
-    /// ``source.uy`` / ``source.uz`` inputs to ``pstdElastic2D`` /
-    /// ``pstdElastic3D``. At each time step, the integrator's post-step
-    /// velocity field is **assigned** at every grid point inside ``mask``
-    /// with the supplied component signal sample for that step (Dirichlet
-    /// override semantics — matches k-Wave's default for velocity sources
-    /// in pstdElastic).
-    ///
-    /// Phase A.3 of ADR 007. Signals are 1-D ndarrays (broadcast across
-    /// all mask points); per-point signal matrices ship in Phase A.4.
-    ///
-    /// Parameters
-    /// ----------
-    /// mask : ndarray (3D bool)
-    ///     Boolean grid mask marking source-active points.
-    /// ux : ndarray (1D float64), optional
-    ///     Time signal for vx at each step. ``None`` disables vx injection.
-    /// uy : ndarray (1D float64), optional
-    ///     Time signal for vy at each step.
-    /// uz : ndarray (1D float64), optional
-    ///     Time signal for vz at each step.
-    /// mode : {"additive", "dirichlet"}, default "additive"
-    ///     Injection mode.
-    ///
-    /// Raises
-    /// ------
-    /// ValueError
-    ///     If ``mask`` has no active points, has wrong dim, all three
-    ///     signals are ``None``, or ``mode`` is not one of
-    ///     ``"additive"``/``"dirichlet"``.
-    #[staticmethod]
-    #[pyo3(signature = (mask, ux=None, uy=None, uz=None, mode=None))]
-    fn from_elastic_velocity_source(
-        mask: PyReadonlyArray3<bool>,
-        ux: Option<PyReadonlyArray1<f64>>,
-        uy: Option<PyReadonlyArray1<f64>>,
-        uz: Option<PyReadonlyArray1<f64>>,
-        mode: Option<&str>,
-    ) -> PyResult<Self> {
-        // Normalise the mode string up-front so we can fail fast with a
-        // helpful error message before touching the signal arrays.
-        let normalised_mode = match mode.unwrap_or("additive").to_ascii_lowercase().as_str() {
-            "additive" => "additive",
-            "dirichlet" => "dirichlet",
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "mode must be 'additive' or 'dirichlet'; got '{}'",
-                    other
-                )));
-            }
-        };
-        let mask_arr = mask.as_array();
-        if mask_arr.ndim() != 3 {
-            return Err(PyValueError::new_err("mask must be a 3D bool ndarray"));
-        }
-        let n_active = mask_arr.iter().filter(|&&v| v).count();
-        if n_active == 0 {
-            return Err(PyValueError::new_err(
-                "mask must have at least one active point",
-            ));
-        }
-        if ux.is_none() && uy.is_none() && uz.is_none() {
-            return Err(PyValueError::new_err(
-                "At least one of ux, uy, uz must be provided",
-            ));
-        }
-        let convert = |opt: Option<PyReadonlyArray1<f64>>| -> Option<ndarray::Array1<f64>> {
-            opt.map(|sig| sig.as_array().to_owned())
-        };
-        // Carry the bool mask through `mask: Option<Array3<f64>>` (the
-        // existing carrier slot) by converting True/False to 1.0/0.0; the
-        // dispatch reads non-zero as active.
-        let mask_f64 = mask_arr.mapv(|b| if b { 1.0 } else { 0.0 });
-        let amplitude = [&ux, &uy, &uz]
-            .iter()
-            .filter_map(|sig| {
-                sig.as_ref()
-                    .map(|s| s.as_array().iter().fold(0.0_f64, |a, &v| a.max(v.abs())))
-            })
-            .fold(0.0_f64, f64::max);
-        Ok(Source {
-            source_type: "elastic_velocity_source".to_string(),
-            frequency: 0.0,
-            amplitude,
-            position: None,
-            mask: Some(mask_f64),
-            signal: None,
-            // Carry mode through the existing string-typed source_mode slot;
-            // the elastic-routing branch in Simulation::run reads it.
-            source_mode: normalised_mode.to_string(),
-            initial_pressure: None,
-            velocity_signal: None,
-            direction: None,
-            kwave_array: None,
-            elastic_ux_signal_1d: convert(ux),
-            elastic_uy_signal_1d: convert(uy),
-            elastic_uz_signal_1d: convert(uz),
-        })
-    }
-
-    /// Create an initial-displacement source for the **elastic** solver.
-    ///
-    /// Sets the initial value of one displacement component (`ux`, `uy`, or
-    /// `uz`) on the elastic wavefield while the other two components and
-    /// all three velocity components are initialised to zero. The elastic
-    /// solver then propagates this initial-value-problem under
-    /// `ρ·∂²u/∂t² = (λ+μ)·∇(∇·u) + μ·∇²u`.
-    ///
-    /// This is the elastic analogue of `Source.from_initial_pressure`. It
-    /// is required because the elastic field state vector is
-    /// `(ux, uy, uz, vx, vy, vz)` rather than `p`, so a single
-    /// initial-pressure scalar is not the natural input.
-    ///
-    /// Parameters
-    /// ----------
-    /// field : ndarray
-    ///     2D or 3D initial displacement [m] for the chosen axis.
-    ///     A 2D field is lifted to a single-slice 3D volume with ``nz=1``.
-    /// axis : {"x", "y", "z"}, default "z"
-    ///     Which displacement component to initialise. Other components
-    ///     start at zero. Must be lower-case "x", "y", or "z".
-    ///
-    /// Raises
-    /// ------
-    /// ValueError
-    ///     If ``field`` is not a 2-D or 3-D float64 ndarray, is all zeros,
-    ///     or ``axis`` is not one of ``"x"``, ``"y"``, ``"z"``.
-    #[staticmethod]
-    #[pyo3(signature = (field, axis="z"))]
-    fn from_initial_displacement(field: &Bound<'_, PyAny>, axis: &str) -> PyResult<Self> {
-        let field_arr: Array3<f64> = if let Ok(f3) = field.extract::<PyReadonlyArray3<f64>>() {
-            f3.as_array().to_owned()
-        } else if let Ok(f2) = field.extract::<PyReadonlyArray2<f64>>() {
-            f2.as_array().insert_axis(Axis(2)).to_owned()
-        } else {
-            return Err(PyValueError::new_err(
-                "Initial displacement must be a 2D or 3D ndarray of float64 values",
-            ));
-        };
-        if field_arr.iter().all(|&v| v == 0.0) {
-            return Err(PyValueError::new_err("Initial displacement is all zeros"));
-        }
-        let axis_norm = match axis {
-            "x" | "X" => "x",
-            "y" | "Y" => "y",
-            "z" | "Z" => "z",
-            other => {
-                return Err(PyValueError::new_err(format!(
-                    "axis must be 'x', 'y', or 'z'; got '{}'",
-                    other
-                )))
-            }
-        };
-        let amplitude = field_arr.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
-        // source_type encodes both the elastic-IVP role and the axis target.
-        // The dispatch path inspects the prefix `elastic_u0_` to route into
-        // run_elastic_impl, then reads the suffix to choose the component.
-        let source_type = format!("elastic_u0_{}", axis_norm);
-        Ok(Source {
-            source_type,
-            frequency: 0.0,
-            amplitude,
-            position: None,
-            mask: None,
-            signal: None,
-            source_mode: "additive".to_string(),
-            initial_pressure: Some(field_arr),
             velocity_signal: None,
             direction: None,
             kwave_array: None,

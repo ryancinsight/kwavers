@@ -1,5 +1,5 @@
-use ndarray::Array1;
 use kwavers::domain::signal::Signal;
+use ndarray::Array1;
 
 /// Simple sine wave signal for testing
 #[derive(Clone)]

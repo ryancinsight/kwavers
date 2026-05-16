@@ -4,7 +4,9 @@ use super::super::active_grid::{ActiveGrid, PlanarPoint};
 use super::super::finite_frequency::{SameApertureMedium, SameApertureSettings};
 use super::super::row_matrix::RowMatrix;
 use super::dot::distance;
-use super::rows::{compute_row_norms, passive_rows, pitch_catch_rows, write_passive_row, write_pitch_catch_row};
+use super::rows::{
+    compute_row_norms, passive_rows, pitch_catch_rows, write_passive_row, write_pitch_catch_row,
+};
 use rayon::prelude::*;
 
 #[derive(Clone, Debug)]

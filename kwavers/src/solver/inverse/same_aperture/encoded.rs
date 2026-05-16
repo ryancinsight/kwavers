@@ -161,17 +161,43 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
         self.row_values_with_scratch(row, out, &mut scratch);
     }
 
+    /// Compute the diagonal of `B^T B` where `B` is the encoded operator.
+    ///
+    /// # Algorithm
+    ///
+    /// `(B^T B)_{jj} = sum_i B_{ij}^2`. Each encoded row `i` contributes
+    /// its squared column values to the accumulator. Rows are independent,
+    /// so the sum parallelizes with Rayon's fold-reduce pattern.
+    /// Each Rayon thread maintains a partial `cols`-length accumulator,
+    /// avoiding contention. The final reduce sums partial accumulators.
+    ///
+    /// Total memory: `O(threads * cols)` — e.g. 8 threads × 4096 cols × 4 B ≈ 128 KB.
     fn normal_diag(&self) -> Vec<f32> {
-        let mut diag = vec![0.0_f32; self.cols()];
-        let mut row = vec![0.0_f32; self.cols()];
-        let mut scratch = vec![0.0_f32; self.cols()];
-        for encoded in 0..self.rows() {
-            self.row_values_with_scratch(encoded, &mut row, &mut scratch);
-            for (dst, value) in diag.iter_mut().zip(row.iter()) {
-                *dst += *value * *value;
-            }
-        }
-        diag
+        use rayon::prelude::*;
+        let cols = self.cols();
+        (0..self.rows())
+            .into_par_iter()
+            .fold(
+                || vec![0.0_f32; cols],
+                |mut acc, encoded| {
+                    let mut row = vec![0.0_f32; cols];
+                    let mut scratch = vec![0.0_f32; cols];
+                    self.row_values_with_scratch(encoded, &mut row, &mut scratch);
+                    for (dst, v) in acc.iter_mut().zip(row.iter()) {
+                        *dst += v * v;
+                    }
+                    acc
+                },
+            )
+            .reduce(
+                || vec![0.0_f32; cols],
+                |mut a, b| {
+                    for (av, bv) in a.iter_mut().zip(b.iter()) {
+                        *av += bv;
+                    }
+                    a
+                },
+            )
     }
 
     fn storage_values(&self) -> usize {

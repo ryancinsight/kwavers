@@ -12,9 +12,9 @@ mod surface;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array2, Array3};
 
+pub(super) use super::geometry::{centered_origin_2d, IndexBounds3, Point3};
 pub use abdomen::build_abdominal_placement_context;
 pub use brain::build_brain_placement_context;
-pub(super) use super::geometry::{centered_origin_2d, IndexBounds3, Point3};
 
 #[derive(Clone, Debug)]
 pub struct PlacementContext {
@@ -99,16 +99,22 @@ pub(super) fn centroid_index(mask: &Array2<bool>) -> Option<(usize, usize)> {
 
 pub(super) fn volume_bbox(mask: &Array3<bool>) -> KwaversResult<IndexBounds3> {
     let mut b = IndexBounds3 {
-        x0: usize::MAX, x1: 0,
-        y0: usize::MAX, y1: 0,
-        z0: usize::MAX, z1: 0,
+        x0: usize::MAX,
+        x1: 0,
+        y0: usize::MAX,
+        y1: 0,
+        z0: usize::MAX,
+        z1: 0,
     };
     let mut any = false;
     for ((ix, iy, iz), active) in mask.indexed_iter() {
         if *active {
-            b.x0 = b.x0.min(ix); b.x1 = b.x1.max(ix);
-            b.y0 = b.y0.min(iy); b.y1 = b.y1.max(iy);
-            b.z0 = b.z0.min(iz); b.z1 = b.z1.max(iz);
+            b.x0 = b.x0.min(ix);
+            b.x1 = b.x1.max(ix);
+            b.y0 = b.y0.min(iy);
+            b.y1 = b.y1.max(iy);
+            b.z0 = b.z0.min(iz);
+            b.z1 = b.z1.max(iz);
             any = true;
         }
     }

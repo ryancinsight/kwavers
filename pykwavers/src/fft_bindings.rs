@@ -8,9 +8,7 @@
 use kwavers::math::fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array};
 use ndarray::{Array1, Array3};
 use num_complex::Complex64;
-use numpy::{
-    IntoPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3,
-};
+use numpy::{IntoPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -29,7 +27,9 @@ pub fn fft1<'py>(
 ) -> PyResult<Py<PyArray1<Complex64>>> {
     let arr: Array1<f64> = signal.as_array().to_owned();
     if arr.is_empty() {
-        return Err(PyValueError::new_err("fft1: input signal must be non-empty"));
+        return Err(PyValueError::new_err(
+            "fft1: input signal must be non-empty",
+        ));
     }
     let spectrum = py.detach(|| fft_1d_array(&arr));
     Ok(spectrum.into_pyarray(py).into())

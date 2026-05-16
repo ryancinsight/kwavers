@@ -126,7 +126,10 @@ fn initial_and_final_fields_differ() {
         .zip(result.final_field_re.iter())
         .map(|(&a, &b)| (a - b).abs())
         .sum();
-    assert!(diff > 0.0, "initial and final fields are identical — phases were not updated");
+    assert!(
+        diff > 0.0,
+        "initial and final fields are identical — phases were not updated"
+    );
 }
 
 #[test]

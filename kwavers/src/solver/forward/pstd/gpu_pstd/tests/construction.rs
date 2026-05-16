@@ -1,6 +1,6 @@
 //! GPU PSTD solver construction tests.
 
-use super::super::GpuPstdSolver;
+use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
 use std::sync::Arc;
 
 /// Verify GpuPstdSolver can be constructed and runs without error.
@@ -58,8 +58,35 @@ fn test_gpu_pstd_solver_new() {
     let zeros: Vec<f32> = vec![0.0f32; n * n * n];
 
     let solver = GpuPstdSolver::new(
-        device, queue, &grid, &c0v, &rho0v, dt, nt, c0, &ones, &ones, &ones, &ones, &ones, &ones,
-        &zeros, &zeros, &zeros, &zeros, &zeros, false, false,
+        device,
+        queue,
+        &grid,
+        MediumArrays {
+            c0_flat: &c0v,
+            rho0_flat: &rho0v,
+        },
+        SolverParams {
+            dt,
+            nt,
+            c_ref: c0,
+            nonlinear: false,
+            absorbing: false,
+        },
+        PmlArrays {
+            x: &ones,
+            y: &ones,
+            z: &ones,
+            sgx: &ones,
+            sgy: &ones,
+            sgz: &ones,
+        },
+        AbsorptionArrays {
+            bon_a_flat: &zeros,
+            nabla1: &zeros,
+            nabla2: &zeros,
+            tau: &zeros,
+            eta: &zeros,
+        },
     );
 
     assert!(

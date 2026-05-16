@@ -100,6 +100,7 @@ pub(crate) fn initialize_absorption_operators(
             // which is the classical viscous decay rate [Blackstock 2000, Eq. 10-13].
 
             let mut tau = Array3::zeros(shape);
+            let mut alpha_si_stokes = Array3::zeros(shape);
             let eta = Array3::zeros(shape);
 
             for k in 0..grid.nz {
@@ -112,9 +113,9 @@ pub(crate) fn initialize_absorption_operators(
                         let eta_b = medium.bulk_viscosity(x, y_coord, z, grid);
 
                         if rho0 > 0.0 && c0 > 0.0 {
-                            let alpha_si =
-                                (4.0 * eta_s / 3.0 + eta_b) / (2.0 * rho0 * c0 * c0 * c0);
-                            tau[[i, j, k]] = -2.0 * alpha_si * c0;
+                            let a_si = (4.0 * eta_s / 3.0 + eta_b) / (2.0 * rho0 * c0 * c0 * c0);
+                            tau[[i, j, k]] = -2.0 * a_si * c0;
+                            alpha_si_stokes[[i, j, k]] = a_si;
                         }
                     }
                 }
@@ -140,6 +141,7 @@ pub(crate) fn initialize_absorption_operators(
                 eta,
                 nabla1,
                 nabla2,
+                alpha_si: alpha_si_stokes,
             }))
         }
         AbsorptionMode::PowerLaw {
@@ -158,6 +160,7 @@ pub(crate) fn initialize_absorption_operators(
 
             let mut tau = Array3::zeros(shape);
             let mut eta = Array3::zeros(shape);
+            let mut alpha_si_field = Array3::zeros(shape);
 
             for k in 0..grid.nz {
                 for j in 0..grid.ny {
@@ -187,6 +190,7 @@ pub(crate) fn initialize_absorption_operators(
                             * alpha_0_si
                             * c0_val.powf(y)
                             * (std::f64::consts::PI * y / 2.0).tan();
+                        alpha_si_field[[i, j, k]] = alpha_0_si;
                     }
                 }
             }
@@ -214,6 +218,7 @@ pub(crate) fn initialize_absorption_operators(
                 eta,
                 nabla1,
                 nabla2,
+                alpha_si: alpha_si_field,
             }))
         }
         AbsorptionMode::MultiRelaxation { .. } | AbsorptionMode::Causal { .. } => Err(

@@ -205,3 +205,47 @@ def test_chapter29_reconstruction_diagnostics_quantify_outside_target_sidelobes(
     assert np.isclose(active["outside_peak_ratio"], 0.1)
     assert np.isclose(active["outside_peak_db"], -20.0)
     assert np.isclose(active["outside_energy_fraction"], 0.01 / 1.01)
+
+
+def test_chapter29_controlled_comparison_uses_common_target_and_records_histories():
+    import ch29_theranostic_fwi_platforms as ch29
+
+    target = np.zeros((4, 4, 3), dtype=bool)
+    target[1, 1, 1] = True
+    target[1, 2, 1] = True
+    linear_target = np.max(target, axis=2).astype(float)
+    nonlinear_fusion = np.zeros_like(target, dtype=float)
+    nonlinear_fusion[1, 1, 1] = 1.0
+    nonlinear_fusion[2, 2, 1] = 0.5
+    linear = {
+        "anatomy": "brain",
+        "fused_reconstruction": linear_target,
+        "active_lesion_reconstruction": linear_target,
+        "exposure": linear_target,
+        "spacing_m": 1.0,
+        "focus_m": (0.0, 0.0),
+        "therapy_x_m": np.asarray([-1.0, 1.0]),
+        "therapy_y_m": np.asarray([0.0, 0.0]),
+    }
+    nonlinear = {
+        "anatomy": "brain",
+        "target_mask": target,
+        "crop_bounds_index": [0, 3, 0, 3, 0, 2],
+        "source_dimensions": [4, 4, 3],
+        "source_spacing_m": [1.0, 1.0, 1.0],
+        "westervelt_peak_pressure_pa": target.astype(float),
+        "multiparameter_fwi_score": nonlinear_fusion,
+        "reconstructed_cavitation_density": nonlinear_fusion,
+        "nonlinear_fusion_score": nonlinear_fusion,
+        "therapy_points_m": np.asarray([[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
+        "fwi_objective_history": np.asarray([2.0, 1.25]),
+        "cavitation_objective_history": np.asarray([1.0, 0.8]),
+    }
+
+    comparison = ch29.build_controlled_comparison([linear], [nonlinear])[0]
+
+    assert comparison["common_grid_shape"] == [4, 4]
+    assert comparison["geometry"]["common_target_voxels"] == 2
+    assert comparison["comparison_metrics"]["linear_fusion"]["dice_equal_area"] == 1.0
+    assert comparison["objective_history"]["nonlinear_fwi"] == [2.0, 1.25]
+    assert "linear fusion Dice" in comparison["technical_explanation"]

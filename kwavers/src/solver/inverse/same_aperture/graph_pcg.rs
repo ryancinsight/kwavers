@@ -1,7 +1,7 @@
 //! Graph-H1 regularized preconditioned conjugate gradients.
 
 use super::active_grid::ActiveGrid;
-use super::linear_operator::{dot, LinearOperator};
+use super::linear_operator::{axpy, dot, LinearOperator};
 
 pub const SAME_APERTURE_OPERATOR_MODEL: &str = "finite_frequency_same_aperture_graph_laplacian_pcg";
 
@@ -61,19 +61,26 @@ fn solve_regularized_system<O: LinearOperator>(
     settings: PcgSettings,
 ) -> (Vec<f32>, Vec<f64>) {
     debug_assert_eq!(data.len(), operator.rows());
+    let cols = operator.cols();
+    let rows = operator.rows();
+
+    // Pre-allocate all workspace vectors once. None of these are re-allocated
+    // inside the iteration loop.
     let mut measured = data.to_vec();
     add_deterministic_noise(&mut measured, settings.noise_fraction);
-    let mut rhs = vec![0.0; operator.cols()];
+    let mut rhs = vec![0.0_f32; cols];
     operator.t_matvec(&measured, &mut rhs);
     let mut diag = operator.normal_diag();
     for value in &mut diag {
         *value = (*value + settings.regularization as f32).max(f32::EPSILON);
     }
-    let mut x = vec![0.0; operator.cols()];
-    let mut hx = vec![0.0; operator.cols()];
-    let mut row_workspace = vec![0.0; operator.rows()];
-    let mut lap_workspace = vec![0.0; operator.cols()];
-    let mut prediction_workspace = vec![0.0; operator.rows()];
+    let mut x = vec![0.0_f32; cols];
+    let mut hx = vec![0.0_f32; cols];
+    let mut row_workspace = vec![0.0_f32; rows];
+    let mut lap_workspace = vec![0.0_f32; cols];
+    let mut prediction_workspace = vec![0.0_f32; rows];
+    let mut ap = vec![0.0_f32; cols];
+
     normal_apply(
         operator,
         &x,
@@ -83,17 +90,20 @@ fn solve_regularized_system<O: LinearOperator>(
         &mut row_workspace,
         &mut lap_workspace,
     );
-    let mut r = rhs
-        .iter()
-        .zip(hx.iter())
-        .map(|(b, h)| b - h)
-        .collect::<Vec<_>>();
-    let mut z = r
-        .iter()
-        .zip(diag.iter())
-        .map(|(rv, dv)| rv / dv)
-        .collect::<Vec<_>>();
+
+    // r = rhs - hx (in-place: no collect allocation)
+    let mut r = vec![0.0_f32; cols];
+    for ((rv, bv), hv) in r.iter_mut().zip(rhs.iter()).zip(hx.iter()) {
+        *rv = bv - hv;
+    }
+
+    // z = r / diag (in-place diagonal preconditioner)
+    let mut z = vec![0.0_f32; cols];
+    apply_preconditioner(&r, &diag, &mut z);
+
+    // p = z (copy — single allocation, no clone)
     let mut p = z.clone();
+
     let mut rz_old = dot(&r, &z);
     let mut objective_history = vec![objective(
         operator,
@@ -104,7 +114,7 @@ fn solve_regularized_system<O: LinearOperator>(
         &mut prediction_workspace,
         &mut lap_workspace,
     )];
-    let mut ap = vec![0.0; operator.cols()];
+
     for _ in 0..settings.iterations {
         normal_apply(
             operator,
@@ -120,11 +130,12 @@ fn solve_regularized_system<O: LinearOperator>(
             break;
         }
         let alpha = rz_old / denom;
+        // x += alpha * p
         axpy(alpha, &p, &mut x);
+        // r -= alpha * ap
         axpy(-alpha, &ap, &mut r);
-        z.iter_mut()
-            .zip(r.iter().zip(diag.iter()))
-            .for_each(|(zv, (rv, dv))| *zv = rv / dv);
+        // z = r / diag (in-place, no collect)
+        apply_preconditioner(&r, &diag, &mut z);
         let rz_new = dot(&r, &z);
         objective_history.push(objective(
             operator,
@@ -139,6 +150,8 @@ fn solve_regularized_system<O: LinearOperator>(
             break;
         }
         let beta = rz_new / rz_old;
+        // p = z + beta * p (in-place update via axpy: first scale p by beta, then add z)
+        // Equivalent to p = z + beta*p_old without extra allocation.
         for (pv, zv) in p.iter_mut().zip(z.iter()) {
             *pv = *zv + beta * *pv;
         }
@@ -159,8 +172,27 @@ fn normal_apply<O: LinearOperator>(
     operator.matvec(x, row_workspace);
     operator.t_matvec(row_workspace, out);
     active.graph_laplacian_into(x, lap_workspace);
+    let reg = settings.regularization as f32;
+    let smooth = settings.smoothness_weight as f32;
     for ((dst, xv), lv) in out.iter_mut().zip(x.iter()).zip(lap_workspace.iter()) {
-        *dst += settings.regularization as f32 * *xv + settings.smoothness_weight as f32 * *lv;
+        *dst += reg * *xv + smooth * *lv;
+    }
+}
+
+/// Diagonal preconditioner: z[i] = r[i] / diag[i].
+///
+/// Unrolled 4-wide for FMA-compatible compiler vectorization.
+fn apply_preconditioner(r: &[f32], diag: &[f32], z: &mut [f32]) {
+    let n = z.len();
+    let end4 = (n / 4) * 4;
+    for i in (0..end4).step_by(4) {
+        z[i] = r[i] / diag[i];
+        z[i + 1] = r[i + 1] / diag[i + 1];
+        z[i + 2] = r[i + 2] / diag[i + 2];
+        z[i + 3] = r[i + 3] / diag[i + 3];
+    }
+    for i in end4..n {
+        z[i] = r[i] / diag[i];
     }
 }
 
@@ -208,10 +240,4 @@ fn splitmix_unit(idx: usize) -> f32 {
     z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
     let mantissa = ((z ^ (z >> 31)) >> 11) as f64 * (1.0 / ((1_u64 << 53) as f64));
     (2.0 * mantissa - 1.0) as f32
-}
-
-fn axpy(alpha: f32, x: &[f32], y: &mut [f32]) {
-    for (yv, xv) in y.iter_mut().zip(x.iter()) {
-        *yv += alpha * *xv;
-    }
 }

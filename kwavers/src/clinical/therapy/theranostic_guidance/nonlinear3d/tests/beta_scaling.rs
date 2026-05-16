@@ -8,11 +8,11 @@
 //!    forward-steepening signature per leading-order weak-nonlinear theory
 //!    (Hamilton & Blackstock 1998 §4.3: `|P_2| ∝ β · |P_1|² · z`).
 
-use super::super::super::Point3;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture};
 use super::super::Nonlinear3dConfig;
+use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
 
 /// Linear-baseline negative-control for the Westervelt nonlinearity:
@@ -91,6 +91,7 @@ fn linear_westervelt_with_beta_zero_produces_symmetric_pressure_trace_within_fdt
         config: &config,
         schedule,
         encoding: SourceEncoding { index: 0, count: 1 },
+        source_scale: 1.0,
         retain_history: false,
     });
 
@@ -200,6 +201,7 @@ fn westervelt_steepening_signature_scales_linearly_with_beta_per_weak_nonlinear_
             config: &config,
             schedule,
             encoding: SourceEncoding { index: 0, count: 1 },
+            source_scale: 1.0,
             retain_history: false,
         });
         let traces = &result.traces;

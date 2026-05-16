@@ -11,10 +11,23 @@ pub(super) fn solve_dense_pcg(
     config: SoundSpeedShiftConfig,
     workspace: &mut SoundSpeedShiftWorkspace,
 ) {
+    let mut normal_diagonal = vec![0.0; operator.cols()];
+    operator.normal_diag_into(&mut normal_diagonal);
+    solve_dense_pcg_with_diagonal(operator, data, config, workspace, &normal_diagonal);
+}
+
+pub(super) fn solve_dense_pcg_with_diagonal(
+    operator: &SoundSpeedShiftOperator,
+    data: &[f64],
+    config: SoundSpeedShiftConfig,
+    workspace: &mut SoundSpeedShiftWorkspace,
+    normal_diagonal: &[f64],
+) {
     workspace.prepare(operator.rows(), operator.cols());
+    debug_assert_eq!(normal_diagonal.len(), operator.cols());
     operator.t_matvec(data, &mut workspace.rhs);
     let rhs_norm = dot(&workspace.rhs, &workspace.rhs).sqrt().max(f64::EPSILON);
-    operator.normal_diag_into(&mut workspace.diagonal);
+    workspace.diagonal.copy_from_slice(normal_diagonal);
     for value in &mut workspace.diagonal {
         *value = (*value + config.tikhonov_weight).max(f64::EPSILON);
     }

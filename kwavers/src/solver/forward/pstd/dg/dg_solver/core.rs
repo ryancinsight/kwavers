@@ -136,7 +136,8 @@ impl DGSolver {
         let (xi_nodes, weights) = fourier_periodic_nodes(n_nodes)?;
 
         // Vandermonde matrix using real Fourier columns.
-        let vandermonde = build_vandermonde(&xi_nodes, config.polynomial_order, BasisType::Fourier)?;
+        let vandermonde =
+            build_vandermonde(&xi_nodes, config.polynomial_order, BasisType::Fourier)?;
 
         // V⁻¹ for modal projection; well-conditioned for equispaced nodes and N ≥ 2.
         let vandermonde_inv = matrix_inverse(&vandermonde)?;

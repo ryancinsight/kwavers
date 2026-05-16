@@ -19,6 +19,8 @@ pub mod beam;
 pub mod core;
 pub mod focus;
 pub mod shifter;
+#[cfg(test)]
+mod tests;
 
 // Re-export main types
 pub use array::{PerformanceMetrics, PhaseArray};

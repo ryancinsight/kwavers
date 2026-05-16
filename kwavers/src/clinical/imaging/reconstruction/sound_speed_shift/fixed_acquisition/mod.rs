@@ -8,6 +8,7 @@ mod reconstruction;
 mod tests;
 mod types;
 mod validation;
+mod workspace;
 
 pub use types::{
     SoundSpeedShiftBatch, SoundSpeedShiftBatchConfig, SoundSpeedShiftBatchFrame,

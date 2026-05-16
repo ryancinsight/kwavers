@@ -1,6 +1,6 @@
 //! Test helpers for GPU PSTD solver tests.
 
-use super::super::GpuPstdSolver;
+use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
 use std::sync::Arc;
 
 pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
@@ -56,39 +56,47 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
         Arc::new(device),
         Arc::new(queue),
         &grid,
-        &c0_flat,
-        &rho0_flat,
-        dt,
-        nt,
-        c0,
-        &pml,
-        &pml,
-        &pml,
-        &pml,
-        &pml,
-        &pml,
-        &bon_a,
-        &pml,
-        &pml,
-        &pml,
-        &pml,
-        false,
-        false,
+        MediumArrays {
+            c0_flat: &c0_flat,
+            rho0_flat: &rho0_flat,
+        },
+        SolverParams {
+            dt,
+            nt,
+            c_ref: c0,
+            nonlinear: false,
+            absorbing: false,
+        },
+        PmlArrays {
+            x: &pml,
+            y: &pml,
+            z: &pml,
+            sgx: &pml,
+            sgy: &pml,
+            sgz: &pml,
+        },
+        AbsorptionArrays {
+            bon_a_flat: &bon_a,
+            nabla1: &pml,
+            nabla2: &pml,
+            tau: &pml,
+            eta: &pml,
+        },
     )
     .ok()
 }
-/// Read buffer f32.
+/// Read a typed GPU buffer back to the CPU via a staging buffer.
 /// # Panics
 /// - Panics if `buffer readback callback`.
 /// - Panics if `buffer map`.
 ///
-pub(super) fn read_buffer_f32(
+pub(super) fn read_buffer<T: bytemuck::Pod>(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     buffer: &wgpu::Buffer,
     len: usize,
-) -> Vec<f32> {
-    let byte_size = (len * std::mem::size_of::<f32>()) as u64;
+) -> Vec<T> {
+    let byte_size = (len * std::mem::size_of::<T>()) as u64;
     let staging = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("gpu_pstd_test_readback"),
         size: byte_size,

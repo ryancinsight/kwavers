@@ -5,6 +5,7 @@ use std::f64::consts::PI;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3};
 
+use super::super::scene::target_index_from_mask_fraction_3d;
 use super::super::TheranosticInverseConfig;
 use super::surface::{nearest_surface_point, surface_points_3d};
 use super::{distance_3d, validate_spacing, volume_bbox, volume_center, PlacementContext, Point3};
@@ -14,6 +15,7 @@ pub fn build_brain_placement_context(
     spacing_mm: [f64; 3],
     slice_index: usize,
     config: &TheranosticInverseConfig,
+    target_fraction_xyz: Option<[f64; 3]>,
 ) -> KwaversResult<PlacementContext> {
     validate_spacing(spacing_mm)?;
     let (nx, ny, nz) = ct_volume_hu.dim();
@@ -27,6 +29,12 @@ pub fn build_brain_placement_context(
     let sy = spacing_mm[1] * 1.0e-3;
     let sz = spacing_mm[2] * 1.0e-3;
     let body = ct_volume_hu.mapv(|hu| hu > -300.0);
+    let brain = ct_volume_hu.mapv(|hu| hu > -300.0 && hu < 300.0);
+    let target_support = if brain.iter().any(|active| *active) {
+        &brain
+    } else {
+        &body
+    };
     let bbox = volume_bbox(&body)?;
     let areas = axial_areas(&body);
     let peak_z = areas
@@ -41,8 +49,13 @@ pub fn build_brain_placement_context(
     } else {
         bbox.z0..=peak_z
     };
-    let center = centroid_3d(&body, sx, sy, sz, Some(calvarium_range.clone()))
-        .unwrap_or_else(|| volume_center(nx, ny, nz, sx, sy, sz));
+    let center = if let Some(fraction) = target_fraction_xyz {
+        let target_index = target_index_from_mask_fraction_3d(target_support, fraction)?;
+        point_from_index(target_index, nx, ny, nz, sx, sy, sz)
+    } else {
+        centroid_3d(&body, sx, sy, sz, Some(calvarium_range.clone()))
+            .unwrap_or_else(|| volume_center(nx, ny, nz, sx, sy, sz))
+    };
     let radius = calvarium_radius(&body, sx, sy, sz, center, calvarium_range.clone()) + 0.015;
     let therapy_points_m = helmet_cap_points(
         config.element_count,
@@ -98,6 +111,22 @@ fn helmet_cap_points(
             }
         })
         .collect()
+}
+
+fn point_from_index(
+    index: [usize; 3],
+    nx: usize,
+    ny: usize,
+    nz: usize,
+    sx: f64,
+    sy: f64,
+    sz: f64,
+) -> Point3 {
+    Point3 {
+        x_m: (index[0] as f64 - (nx - 1) as f64 * 0.5) * sx,
+        y_m: (index[1] as f64 - (ny - 1) as f64 * 0.5) * sy,
+        z_m: (index[2] as f64 - (nz - 1) as f64 * 0.5) * sz,
+    }
 }
 
 fn synthetic_focus_mask(body: &Array2<bool>, spacing_m: f64, focus: (f64, f64)) -> Array2<bool> {

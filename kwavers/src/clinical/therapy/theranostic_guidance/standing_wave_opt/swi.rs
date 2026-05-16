@@ -71,7 +71,10 @@ fn dft_amplitude(x: &[f64], k: f64) -> f64 {
     let n = x.len() as f64;
     let omega = 2.0 * PI * k / n;
     let (re, im) = x.iter().enumerate().fold((0.0, 0.0), |(re, im), (j, &v)| {
-        (re + v * (omega * j as f64).cos(), im - v * (omega * j as f64).sin())
+        (
+            re + v * (omega * j as f64).cos(),
+            im - v * (omega * j as f64).sin(),
+        )
     });
     (re * re + im * im).sqrt()
 }

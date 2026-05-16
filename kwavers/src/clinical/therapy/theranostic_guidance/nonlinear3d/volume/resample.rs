@@ -53,4 +53,3 @@ fn map_range(idx: usize, n: usize, min: usize, max: usize) -> (usize, usize) {
     let end = min + (((idx + 1) * width).saturating_sub(1)) / n;
     (start.min(max), end.min(max))
 }
-

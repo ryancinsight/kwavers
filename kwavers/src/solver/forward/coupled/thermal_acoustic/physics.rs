@@ -1,90 +1,106 @@
 use super::ThermalAcousticCoupler;
 use crate::core::constants::RHO_C_SOFT_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
+use ndarray::Zip;
 
 impl ThermalAcousticCoupler {
-    /// Update material properties based on current temperature
+    /// Update material properties based on current temperature.
     ///
-    /// Uses linear temperature dependence:
-    /// - c(T) = c_ref + dc/dT * (T - T_ref)
-    /// - ρ(T) = ρ_ref + dρ/dT * (T - T_ref)
+    /// Linear temperature dependence:
+    /// - `c(T) = c_ref + dc/dT · (T − T_ref)`
+    /// - `ρ(T) = ρ_ref + dρ/dT · (T − T_ref)`
     pub(super) fn update_material_properties(&mut self) {
-        for idx in self.temperature.indexed_iter() {
-            let (i, j, k) = idx.0;
-            let t = self.temperature[[i, j, k]];
-            let d_t = t - self.config.t_ref;
-
-            self.sound_speed[[i, j, k]] = self.config.dc_d_t.mul_add(d_t, self.config.c_ref);
-            self.density[[i, j, k]] = self.config.drho_d_t.mul_add(d_t, self.config.rho_ref);
-        }
+        let d_t_offset = self.config.t_ref;
+        let dc_dt = self.config.dc_d_t;
+        let c_ref = self.config.c_ref;
+        let drho_dt = self.config.drho_d_t;
+        let rho_ref = self.config.rho_ref;
+        // Split borrows: temperature (read), sound_speed + density (write).
+        let temperature = &self.temperature;
+        let sound_speed = &mut self.sound_speed;
+        let density = &mut self.density;
+        Zip::from(sound_speed.view_mut())
+            .and(density.view_mut())
+            .and(temperature.view())
+            .par_for_each(|c, rho, &t| {
+                let d_t = t - d_t_offset;
+                *c = dc_dt.mul_add(d_t, c_ref);
+                *rho = drho_dt.mul_add(d_t, rho_ref);
+            });
     }
 
-    /// Compute acoustic heating source from pressure field
+    /// Compute acoustic heating source from pressure field.
     ///
-    /// Uses formula: Q = α|p|² / (ρc)
-    /// where α is attenuation coefficient, p is pressure amplitude
+    /// `Q = α·p²/(ρ·c)` (|p|² = p² for real pressure field)
     pub(super) fn compute_acoustic_heating(&mut self) {
-        for k in 0..self.config.nz {
-            for j in 0..self.config.ny {
-                for i in 0..self.config.nx {
-                    let p = self.pressure_prev[[i, j, k]].abs();
-                    let rho = self.density[[i, j, k]];
-                    let c = self.sound_speed[[i, j, k]];
-
-                    if rho > 0.0 && c > 0.0 {
-                        let intensity = (p * p) / (rho * c);
-                        self.acoustic_heating[[i, j, k]] = self.config.alpha_ac * intensity;
-                    } else {
-                        self.acoustic_heating[[i, j, k]] = 0.0;
-                    }
+        let alpha_ac = self.config.alpha_ac;
+        let pressure_prev = &self.pressure_prev;
+        let density = &self.density;
+        let sound_speed = &self.sound_speed;
+        let acoustic_heating = &mut self.acoustic_heating;
+        Zip::from(acoustic_heating.view_mut())
+            .and(pressure_prev.view())
+            .and(density.view())
+            .and(sound_speed.view())
+            .par_for_each(|q, &p, &rho, &c| {
+                if rho > 0.0 && c > 0.0 {
+                    *q = alpha_ac * (p * p) / (rho * c);
+                } else {
+                    *q = 0.0;
                 }
-            }
-        }
+            });
     }
 
-    /// Advance thermal equation (Pennes bioheat) one time step
+    /// Advance thermal equation (Pennes bioheat) one time step.
     ///
-    /// ρc ∂T/∂t = ∇·(k∇T) + w_b c_b (T_a - T) + Q_met + Q_ac
+    /// `ρc ∂T/∂t = ∇·(k∇T) + w_b·c_b·(T_a − T) + Q_met + Q_ac`
+    ///
+    /// Interior uses explicit FD Laplacian with reads from `temperature_prev`
+    /// (no dependency between elements) → fully data-parallel.
+    /// Boundary cells are set by `apply_boundary_conditions` after the update.
     pub(super) fn step_thermal(&mut self) {
         let dt = self.config.dt;
         let dx = self.config.dx;
         let dy = self.config.dy;
         let dz = self.config.dz;
-
         let k_thermal = self.config.alpha_thermal;
         // Volumetric heat capacity: ρ·c_p = 1050 kg/m³ × 3600 J/(kg·°C) = 3 780 000 J/(m³·°C).
         // Using SPECIFIC_HEAT_TISSUE alone (3600) would be a 1050× dimensional error.
         let rho_c = RHO_C_SOFT_TISSUE;
+        let nx = self.config.nx;
+        let ny = self.config.ny;
+        let nz = self.config.nz;
+        let w_b = self.config.w_b;
+        let t_arterial = self.config.t_arterial;
+        let q_met = self.config.q_met;
 
-        for k in 1..self.config.nz - 1 {
-            for j in 1..self.config.ny - 1 {
-                for i in 1..self.config.nx - 1 {
-                    let t = self.temperature_prev[[i, j, k]];
+        // Split borrows: temperature_prev + acoustic_heating (read), temperature (write).
+        let temperature_prev = &self.temperature_prev;
+        let acoustic_heating = &self.acoustic_heating;
+        let temperature = &mut self.temperature;
 
-                    let d2_t_dx2 = (2.0f64.mul_add(-t, self.temperature_prev[[i + 1, j, k]])
-                        + self.temperature_prev[[i - 1, j, k]])
-                        / (dx * dx);
-                    let d2_t_dy2 = (2.0f64.mul_add(-t, self.temperature_prev[[i, j + 1, k]])
-                        + self.temperature_prev[[i, j - 1, k]])
-                        / (dy * dy);
-                    let d2_t_dz2 = (2.0f64.mul_add(-t, self.temperature_prev[[i, j, k + 1]])
-                        + self.temperature_prev[[i, j, k - 1]])
-                        / (dz * dz);
-
-                    let laplacian_t = d2_t_dx2 + d2_t_dy2 + d2_t_dz2;
-
-                    let perfusion_term = self.config.w_b * (self.config.t_arterial - t);
-                    let metabolic_term = self.config.q_met / rho_c;
-                    let acoustic_term = self.acoustic_heating[[i, j, k]] / rho_c;
-
-                    let d_t_dt = k_thermal.mul_add(laplacian_t, perfusion_term)
-                        + metabolic_term
-                        + acoustic_term;
-
-                    self.temperature[[i, j, k]] = dt.mul_add(d_t_dt, t);
-                }
+        Zip::indexed(temperature.view_mut()).par_for_each(|(i, j, k), t_new| {
+            if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                return;
             }
-        }
+            let t = temperature_prev[[i, j, k]];
+            let d2_t_dx2 = (2.0f64.mul_add(-t, temperature_prev[[i + 1, j, k]])
+                + temperature_prev[[i - 1, j, k]])
+                / (dx * dx);
+            let d2_t_dy2 = (2.0f64.mul_add(-t, temperature_prev[[i, j + 1, k]])
+                + temperature_prev[[i, j - 1, k]])
+                / (dy * dy);
+            let d2_t_dz2 = (2.0f64.mul_add(-t, temperature_prev[[i, j, k + 1]])
+                + temperature_prev[[i, j, k - 1]])
+                / (dz * dz);
+            let laplacian_t = d2_t_dx2 + d2_t_dy2 + d2_t_dz2;
+            let perfusion_term = w_b * (t_arterial - t);
+            let metabolic_term = q_met / rho_c;
+            let acoustic_term = acoustic_heating[[i, j, k]] / rho_c;
+            let d_t_dt =
+                k_thermal.mul_add(laplacian_t, perfusion_term) + metabolic_term + acoustic_term;
+            *t_new = dt.mul_add(d_t_dt, t);
+        });
 
         self.apply_boundary_conditions();
     }

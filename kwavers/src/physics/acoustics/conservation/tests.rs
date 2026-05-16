@@ -149,10 +149,27 @@ fn test_second_law_violation_detected() {
     let volume =
         (grid.nx as f64 * grid.dx) * (grid.ny as f64 * grid.dy) * (grid.nz as f64 * grid.dz);
     let e_init = 1000.0 * 1000.0 / (2.0 * 1000.0 * 1500.0 * 1500.0) * volume;
-    let metrics = validate_conservation(
-        &p, &v, &v, &v, &rho, &c, &alpha, 310.0, None, None, None, None, None, e_init, 1e-6, &grid,
-        1.0,
-    );
+    let state = AcousticStateRefs {
+        pressure: &p,
+        velocity_x: &v,
+        velocity_y: &v,
+        velocity_z: &v,
+        density: &rho,
+        sound_speed: &c,
+        absorption: &alpha,
+    };
+    let prev = PreviousFields {
+        pressure: None,
+        velocity: None,
+        density: None,
+    };
+    let params = ConservationParams {
+        initial_energy: e_init,
+        dt: 1e-6,
+        temperature: 310.0,
+        tolerance: 1.0,
+    };
+    let metrics = validate_conservation(state, prev, params, &grid);
     assert!(metrics.entropy_production_rate < 0.0);
     assert!(!metrics.is_conserved);
 }

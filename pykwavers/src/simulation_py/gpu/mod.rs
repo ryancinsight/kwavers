@@ -2,9 +2,6 @@ mod session;
 
 pub use session::GpuPstdSession;
 
-
-
-
 /// GPU-resident PSTD implementation (requires `gpu` feature).
 ///
 /// When the `gpu` feature is disabled this function is compiled but never
@@ -29,7 +26,9 @@ pub(crate) fn run_gpu_pstd_impl(
     use kwavers::domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
     use kwavers::domain::medium::traits::Medium as MediumTrait;
     use kwavers::physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
-    use kwavers::solver::forward::pstd::gpu_pstd::GpuPstdSolver;
+    use kwavers::solver::forward::pstd::gpu_pstd::{
+        AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
+    };
     use ndarray::Array2;
 
     let nx = grid.nx;
@@ -76,12 +75,36 @@ pub(crate) fn run_gpu_pstd_impl(
     let mut pml_z_3d = vec![1.0f32; total];
 
     if pml_inside {
-        let pml_sgx_1d: Vec<f32> = profiles.sigma_x_sgx.iter().map(|&s| (-s * dt * 0.5).exp() as f32).collect();
-        let pml_sgy_1d: Vec<f32> = profiles.sigma_y_sgy.iter().map(|&s| (-s * dt * 0.5).exp() as f32).collect();
-        let pml_sgz_1d: Vec<f32> = profiles.sigma_z_sgz.iter().map(|&s| (-s * dt * 0.5).exp() as f32).collect();
-        let pml_x_1d: Vec<f32> = profiles.sigma_x.iter().map(|&s| (-s * dt * 0.5).exp() as f32).collect();
-        let pml_y_1d: Vec<f32> = profiles.sigma_y.iter().map(|&s| (-s * dt * 0.5).exp() as f32).collect();
-        let pml_z_1d: Vec<f32> = profiles.sigma_z.iter().map(|&s| (-s * dt * 0.5).exp() as f32).collect();
+        let pml_sgx_1d: Vec<f32> = profiles
+            .sigma_x_sgx
+            .iter()
+            .map(|&s| (-s * dt * 0.5).exp() as f32)
+            .collect();
+        let pml_sgy_1d: Vec<f32> = profiles
+            .sigma_y_sgy
+            .iter()
+            .map(|&s| (-s * dt * 0.5).exp() as f32)
+            .collect();
+        let pml_sgz_1d: Vec<f32> = profiles
+            .sigma_z_sgz
+            .iter()
+            .map(|&s| (-s * dt * 0.5).exp() as f32)
+            .collect();
+        let pml_x_1d: Vec<f32> = profiles
+            .sigma_x
+            .iter()
+            .map(|&s| (-s * dt * 0.5).exp() as f32)
+            .collect();
+        let pml_y_1d: Vec<f32> = profiles
+            .sigma_y
+            .iter()
+            .map(|&s| (-s * dt * 0.5).exp() as f32)
+            .collect();
+        let pml_z_1d: Vec<f32> = profiles
+            .sigma_z
+            .iter()
+            .map(|&s| (-s * dt * 0.5).exp() as f32)
+            .collect();
 
         for ix in 0..nx {
             for iy in 0..ny {
@@ -113,7 +136,9 @@ pub(crate) fn run_gpu_pstd_impl(
     let sensor_mask = Simulation::create_sensor_mask(grid, sensor, transducer_sensor);
     let mut sensor_indices: Vec<u32> = Vec::new();
     {
-        let flat = sensor_mask.as_slice().expect("sensor_mask must be C-contiguous");
+        let flat = sensor_mask
+            .as_slice()
+            .expect("sensor_mask must be C-contiguous");
         for (i, &v) in flat.iter().enumerate() {
             if v {
                 sensor_indices.push(i as u32);
@@ -121,7 +146,11 @@ pub(crate) fn run_gpu_pstd_impl(
         }
     }
 
-    let n_dim_active = [nx > 1, ny > 1, nz > 1].iter().filter(|&&d| d).count().max(1);
+    let n_dim_active = [nx > 1, ny > 1, nz > 1]
+        .iter()
+        .filter(|&&d| d)
+        .count()
+        .max(1);
     let dx_min = grid.dx.min(grid.dy).min(grid.dz);
     let mass_source_scale = 2.0 * dt / (n_dim_active as f64 * c_ref * dx_min);
     let density_scale = n_dim_active as f64 / 3.0;
@@ -142,7 +171,11 @@ pub(crate) fn run_gpu_pstd_impl(
         let n_sig_cols = p_signal.shape()[1].min(time_steps);
         source_signals = vec![0.0f32; n_src * time_steps];
         for (src_idx, _) in source_indices.iter().enumerate() {
-            let sig_row = if n_sig_rows == 1 { 0 } else { src_idx.min(n_sig_rows - 1) };
+            let sig_row = if n_sig_rows == 1 {
+                0
+            } else {
+                src_idx.min(n_sig_rows - 1)
+            };
             for step in 0..n_sig_cols {
                 source_signals[src_idx * time_steps + step] =
                     (p_signal[[sig_row, step]] * combined_scale as f64) as f32;
@@ -191,12 +224,14 @@ pub(crate) fn run_gpu_pstd_impl(
     let has_absorption = effective_alpha_db > 0.0;
 
     let bon_a_flat: Vec<f32> = if has_nonlinear {
-        (0..total).map(|flat| {
-            let ix = flat / (ny * nz);
-            let iy = (flat % (ny * nz)) / nz;
-            let iz = flat % nz;
-            (medium.as_medium().nonlinearity(ix, iy, iz) / 2.0) as f32
-        }).collect()
+        (0..total)
+            .map(|flat| {
+                let ix = flat / (ny * nz);
+                let iy = (flat % (ny * nz)) / nz;
+                let iz = flat % nz;
+                (medium.as_medium().nonlinearity(ix, iy, iz) / 2.0) as f32
+            })
+            .collect()
     } else {
         vec![0.0f32; total]
     };
@@ -220,9 +255,21 @@ pub(crate) fn run_gpu_pstd_impl(
                 let iy = (flat % (ny * nz)) / nz;
                 let iz = flat % nz;
 
-                let kix = if ix <= nx / 2 { ix as f64 } else { (nx - ix) as f64 } * dk_x;
-                let kiy = if iy <= ny / 2 { iy as f64 } else { (ny - iy) as f64 } * dk_y;
-                let kiz = if iz <= nz / 2 { iz as f64 } else { (nz - iz) as f64 } * dk_z;
+                let kix = if ix <= nx / 2 {
+                    ix as f64
+                } else {
+                    (nx - ix) as f64
+                } * dk_x;
+                let kiy = if iy <= ny / 2 {
+                    iy as f64
+                } else {
+                    (ny - iy) as f64
+                } * dk_y;
+                let kiz = if iz <= nz / 2 {
+                    iz as f64
+                } else {
+                    (nz - iz) as f64
+                } * dk_z;
                 let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
 
                 if k_mag > singularity_thresh {
@@ -247,15 +294,42 @@ pub(crate) fn run_gpu_pstd_impl(
         };
 
     let mut solver = GpuPstdSolver::with_auto_device(
-        grid, &c0_flat, &rho0_flat, dt, time_steps, c_ref,
-        &pml_x_3d, &pml_y_3d, &pml_z_3d, &pml_sgx_3d, &pml_sgy_3d, &pml_sgz_3d,
-        &bon_a_flat, &absorb_nabla1_flat, &absorb_nabla2_flat, &absorb_tau_flat, &absorb_eta_flat,
-        has_nonlinear, has_absorption,
+        grid,
+        MediumArrays {
+            c0_flat: &c0_flat,
+            rho0_flat: &rho0_flat,
+        },
+        SolverParams {
+            dt,
+            nt: time_steps,
+            c_ref,
+            nonlinear: has_nonlinear,
+            absorbing: has_absorption,
+        },
+        PmlArrays {
+            x: &pml_x_3d,
+            y: &pml_y_3d,
+            z: &pml_z_3d,
+            sgx: &pml_sgx_3d,
+            sgy: &pml_sgy_3d,
+            sgz: &pml_sgz_3d,
+        },
+        AbsorptionArrays {
+            bon_a_flat: &bon_a_flat,
+            nabla1: &absorb_nabla1_flat,
+            nabla2: &absorb_nabla2_flat,
+            tau: &absorb_tau_flat,
+            eta: &absorb_eta_flat,
+        },
     )
     .map_err(|e| KwaversError::Io(std::io::Error::other(e)))?;
 
     let sensor_data_f32 = solver.run(
-        &sensor_indices, &source_indices, &source_signals, &vel_x_indices, &vel_x_signals,
+        &sensor_indices,
+        &source_indices,
+        &source_signals,
+        &vel_x_indices,
+        &vel_x_signals,
     );
 
     let n_sensors = sensor_indices.len();

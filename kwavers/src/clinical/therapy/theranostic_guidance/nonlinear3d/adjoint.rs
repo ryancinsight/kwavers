@@ -24,6 +24,7 @@ pub(super) struct GradientInput<'a> {
     pub(super) config: &'a Nonlinear3dConfig,
     pub(super) schedule: TimeSchedule,
     pub(super) encoding: SourceEncoding,
+    pub(super) source_scale: f64,
     pub(super) dt: f64,
     pub(super) observed_energy: f64,
 }
@@ -78,6 +79,7 @@ pub(super) fn gradient(input: GradientInput<'_>) -> ParameterGradient {
                 config: input.config,
                 schedule: input.schedule,
                 encoding: input.encoding,
+                source_scale: input.source_scale,
                 sponge: &sponge_weights,
                 step: next_unprocessed - 1,
             },
@@ -129,7 +131,9 @@ pub(super) fn gradient(input: GradientInput<'_>) -> ParameterGradient {
     grad
 }
 
-fn build_absorption_for_adjoint(input: &GradientInput<'_>) -> Option<FractionalLaplacianAbsorption> {
+fn build_absorption_for_adjoint(
+    input: &GradientInput<'_>,
+) -> Option<FractionalLaplacianAbsorption> {
     let alpha = input.attenuation_np_per_m_mhz?;
     let y_field = input.attenuation_power_law_y?;
     FractionalLaplacianAbsorption::maybe_new(AbsorptionBuilder {

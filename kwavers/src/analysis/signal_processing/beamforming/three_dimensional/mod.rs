@@ -45,6 +45,7 @@ pub mod config;
 pub(super) mod cpu;
 mod delay_sum;
 mod metrics;
+mod mvdr;
 mod processing;
 mod processor;
 mod saft;

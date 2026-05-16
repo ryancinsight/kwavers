@@ -22,7 +22,6 @@ impl Simulation {
         elastic_ivp_axis: Option<&str>,
         elastic_velocity_source: super::super::ElasticVelocitySource,
     ) -> KwaversResult<SimulationRunResult> {
-        
         use kwavers::solver::forward::elastic::swe::{
             ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
         };
@@ -46,7 +45,10 @@ impl Simulation {
                 if u0.dim() != (nx, ny, nz) {
                     return Err(KwaversError::InvalidInput(format!(
                         "Elastic initial displacement shape {:?} must equal grid ({}, {}, {})",
-                        u0.dim(), nx, ny, nz
+                        u0.dim(),
+                        nx,
+                        ny,
+                        nz
                     )));
                 }
                 Some(u0)
@@ -61,10 +63,15 @@ impl Simulation {
                 if mask.dim() != (nx, ny, nz) {
                     return Err(KwaversError::InvalidInput(format!(
                         "Elastic velocity-source mask shape {:?} must equal grid ({}, {}, {})",
-                        mask.dim(), nx, ny, nz
+                        mask.dim(),
+                        nx,
+                        ny,
+                        nz
                     )));
                 }
-                let validate_signal = |sig: &Option<ndarray::Array1<f64>>, name: &str| -> KwaversResult<()> {
+                let validate_signal = |sig: &Option<ndarray::Array1<f64>>,
+                                       name: &str|
+                 -> KwaversResult<()> {
                     if let Some(s) = sig {
                         if s.len() != time_steps {
                             return Err(KwaversError::InvalidInput(format!(
@@ -79,12 +86,22 @@ impl Simulation {
                 validate_signal(&uy_sig, "uy")?;
                 validate_signal(&uz_sig, "uz")?;
                 let kw_mode = match mode_str.as_str() {
-                    "dirichlet" => kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Dirichlet,
-                    _ => kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Additive,
+                    "dirichlet" => {
+                        kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Dirichlet
+                    }
+                    _ => {
+                        kwavers::solver::forward::elastic::swe::ElasticVelocitySourceMode::Additive
+                    }
                 };
-                Some(kwavers::solver::forward::elastic::swe::ElasticVelocitySource {
-                    mask, ux_signal: ux_sig, uy_signal: uy_sig, uz_signal: uz_sig, mode: kw_mode,
-                })
+                Some(
+                    kwavers::solver::forward::elastic::swe::ElasticVelocitySource {
+                        mask,
+                        ux_signal: ux_sig,
+                        uy_signal: uy_sig,
+                        uz_signal: uz_sig,
+                        mode: kw_mode,
+                    },
+                )
             } else {
                 None
             };
@@ -121,10 +138,21 @@ impl Simulation {
         let (ux_data, uy_data, uz_data) = solver.extract_recorded_velocity_components();
 
         Ok(SimulationRunResult {
-            sensor_data, stats: None, ux_data, uy_data, uz_data,
-            ix_data: None, iy_data: None, iz_data: None,
-            i_avg_x: None, i_avg_y: None, i_avg_z: None,
-            velocity_stats: None, full_grid_stats: None,
+            sensor_data,
+            stats: None,
+            ux_data,
+            uy_data,
+            uz_data,
+            ix_data: None,
+            iy_data: None,
+            iz_data: None,
+            i_avg_x: None,
+            i_avg_y: None,
+            i_avg_z: None,
+            velocity_stats: None,
+            full_grid_stats: None,
+            thermal_temperature: None,
+            thermal_dose: None,
         })
     }
 
@@ -138,7 +166,6 @@ impl Simulation {
         sensor: Option<&Sensor>,
         elastic_velocity_source: super::super::ElasticVelocitySource,
     ) -> KwaversResult<SimulationRunResult> {
-
         use kwavers::solver::forward::pstd::extensions::{
             ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSourceMode,
             ElasticPstdVelocitySource,
@@ -149,7 +176,11 @@ impl Simulation {
         let lame_mu = medium_ref.lame_mu_array();
         let density = medium_ref.density_array().to_owned();
 
-        let pstd_medium = ElasticPstdMedium { lame_lambda, lame_mu, density };
+        let pstd_medium = ElasticPstdMedium {
+            lame_lambda,
+            lame_mu,
+            density,
+        };
         let mut orch = ElasticPstdOrchestrator::new(grid, pstd_medium, dt)?;
 
         let source = elastic_velocity_source.map(|(mask, ux, uy, uz, mode_str)| {
@@ -157,7 +188,13 @@ impl Simulation {
                 "dirichlet" => ElasticPstdSourceMode::Dirichlet,
                 _ => ElasticPstdSourceMode::Additive,
             };
-            ElasticPstdVelocitySource { mask, ux, uy, uz, mode }
+            ElasticPstdVelocitySource {
+                mask,
+                ux,
+                uy,
+                uz,
+                mode,
+            }
         });
 
         let sensor_mask: Option<ndarray::Array3<bool>> = sensor.and_then(|s| s.mask.clone());
@@ -169,11 +206,21 @@ impl Simulation {
             .unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
 
         Ok(SimulationRunResult {
-            sensor_data, stats: None,
-            ux_data: recorded.vx, uy_data: recorded.vy, uz_data: recorded.vz,
-            ix_data: None, iy_data: None, iz_data: None,
-            i_avg_x: None, i_avg_y: None, i_avg_z: None,
-            velocity_stats: None, full_grid_stats: None,
+            sensor_data,
+            stats: None,
+            ux_data: recorded.vx,
+            uy_data: recorded.vy,
+            uz_data: recorded.vz,
+            ix_data: None,
+            iy_data: None,
+            iz_data: None,
+            i_avg_x: None,
+            i_avg_y: None,
+            i_avg_z: None,
+            velocity_stats: None,
+            full_grid_stats: None,
+            thermal_temperature: None,
+            thermal_dose: None,
         })
     }
 }

@@ -4,6 +4,135 @@
 
 ### Changed
 
+- [patch] Added a Chapter 29 controlled linear-vs-nonlinear comparison path:
+  the generator now runs a matched linear case at the nonlinear grid, element
+  count, frequency, and pressure, evaluates both branches on the nonlinear
+  crop projection, writes `fig06_controlled_linear_nonlinear_comparison`,
+  `controlled_comparison_metrics.json`, and `controlled_comparison_fields.npz`,
+  and records the measured pressure-spread/aperture-residual explanation in the
+  chapter text and metrics manifest.
+
+- [patch] Added `CANONICAL_BRAIN_SCENE` as the CT-aligned source of truth for
+  the Chapter 25 brain target and transducer pose. Figure 2 phase correction,
+  Chapter 29 Figure 5 brain nonlinear simulation, 3-D helmet placement, and the
+  skull-adaptive benchmark now consume the same target fraction, 1024-element
+  helmet geometry, cap angles, acoustic speeds, pressure scale, and HU
+  thresholds instead of deriving independent centroids or defaults.
+
+- [patch] Optimized the Chapter 29 nonlinear 3-D FWI iteration workspace:
+  `run_fwi` now reuses one residual trace buffer across source-encoded shots,
+  and `apply_line_search` owns a `LineSearchWorkspace` that overwrites
+  candidate `c`/`beta` buffers in place for each backtracking scale instead of
+  allocating two model vectors per candidate. Removed stale pykwavers checkpoint
+  imports so the PyO3 crate checks without warning noise on this path.
+
+- [patch] Hardened the Chapter 25 GBM modality bridge for imperfect modality
+  sets: CT-space segmentation no longer fabricates T1-Gd/FLAIR paths, CT-backed
+  BBB planning accepts real CT plus segmentation only, MRI-space planning
+  accepts segmentation plus any real in-space MRI reference, and the manifest
+  records the 2025 Holder-MI incomplete-MRI and TextBraTS references as
+  contract-level design inputs. Focused transcranial planning tests pass 24/24
+  and the Chapter 25 executable completes with CT-space GBM BBB metrics.
+
+- [major] Replaced the public P-STD
+  `PSTDSolver::run_orchestrated_with_thermal(...)` positional argument list
+  with `ThermalOrchestrationInput<'_>`. The equations and loop order are
+  unchanged; the public call site now names acoustic step count, thermal
+  solver, thermal medium, center angular frequency, thermal timestep, coupling
+  ratio, volumetric heat capacity, and background heat rate explicitly.
+
+- [patch] Corrected and optimized the Chapter 29 nonlinear 3-D cavitation path:
+  passive cavitation data now uses the active-voxel source vector required by
+  `PassiveOperator` column indexing, the Rayleigh-Plesset period-doubling
+  observable uses a one-period radius ring buffer equivalent to full-history
+  indexing, and the passive Tikhonov inverse reuses prediction/residual/gradient
+  workspaces through `apply_into`/`normal_gradient_into` instead of allocating
+  per iteration. Completed the split-module cleanup exposed by fresh Rust
+  diagnostics so canonical directory modules are the only module definitions.
+
+- [patch] Optimized same-aperture inverse solver (`solver::inverse::same_aperture`):
+  `dot` and `axpy` kernels use 8-lane unrolled accumulators enabling compiler AVX2
+  auto-vectorization (`vmulps`/`vfmadd231ps`); `EncodedOperator::normal_diag`
+  parallelized via Rayon fold-reduce (one `cols`-length acc per thread, no per-row
+  allocation); PCG inner loop eliminates `collect::<Vec<_>>()` for `r`/`z`
+  initialization in favour of in-place writes; diagonal preconditioner factored
+  into a 4-unrolled `apply_preconditioner` helper. All 6 same_aperture unit tests
+  pass; zero new warnings.
+
+- [patch] Removed stale monolithic `pykwavers/src/simulation_py/gpu/session.rs`
+  (superseded by `session/` directory split into `construction.rs`, `control.rs`,
+  `run.rs`). Removed phantom `PlacementPoint3` type from `theranostic_bindings/helpers.rs`
+  and updated `inverse.rs` callers to use the canonical `points3_to_array`. Both
+  crates compile with zero errors.
+
+- [patch] `helmet3d.rs`: extracted named constants (`CAP_UNIT_Z_MIN`, `CAP_UNIT_Z_MAX`,
+  `HELMET_SKIN_MARGIN_M`, `HELMET_RADIUS_MIN_M`, `BEAM_SAMPLE_COUNT`, `BEAM_TRACE_STEPS`,
+  `ORIENTATION_PROBE_FRACTION`); replaced fragile single-slice superior-orientation
+  heuristic with bottom-quartile vs top-quartile body-area comparison; added empty-calvarium
+  guard and module-level theorem documenting assumptions; documented `body_radius` 3-D
+  Euclidean semantics and `calvarium_cap_elements` Fibonacci distribution invariant.
+
+- [patch] `solver.rs`: extracted `FUSED_WEIGHT_ACTIVE` (0.40), `FUSED_WEIGHT_SUBHARMONIC`
+  (0.25), `FUSED_WEIGHT_HARMONIC` (0.20), `FUSED_WEIGHT_ULTRAHARMONIC` (0.15), and
+  `FUSED_GATE_FLOOR` (0.25) as named constants with derivation documented in module
+  header; removed anonymous floating-point literals from `fuse_maps`.
+
+- [patch] Removed unused import `flat_index` from
+  `clinical/therapy/theranostic_guidance/nonlinear3d/westervelt/fwi.rs`.
+  Zero warnings in kwavers library.
+
+- [patch] Split `pykwavers/src/bubble_bindings.rs` (593 lines) into
+  `bubble_bindings/{mod,rayleigh_plesset,keller_miksis,cem43,arrhenius,hodgkin_huxley}.rs`;
+  wired `register_bubble` into `lib.rs`; all six physics functions now exposed in pykwavers.
+  pykwavers compiles clean with zero errors.
+
+- [patch] Split `apollo-fft` 500-line structural violations: `dimension_3d.rs` (1,899 lines)
+  into `dimension_3d/{mod,precision_bridge,axis_pass_f64,axis_pass_f32,r2c,r2c_row,
+  r2c_axis_pass,tests}.rs`; `radix_composite.rs` (868 lines) into
+  `radix_composite/{mod,stage,tests}.rs`; `dimension_2d.rs` (739 lines) into
+  `dimension_2d/{mod,axis_pass,tests}.rs`. All files ≤ 500 lines. `cargo check -p apollo-fft`
+  and `cargo check -p kwavers` both clean.
+
+- [patch] Parallelized all sequential nested loops in acoustic-thermal pipeline:
+  `acoustic_heat_source()` in `physics::acoustics::conservation::heat` now uses two
+  `Zip::par_for_each` passes (kinetic energy + heat source), replacing 3-nested
+  sequential loops; `ThermalAcousticCoupler::update_material_properties()`,
+  `compute_acoustic_heating()`, `step_thermal()`, and `step_acoustic()` in
+  `solver::forward::coupled::thermal_acoustic` replaced with `Zip::par_for_each`
+  and field-destructured `Zip::indexed().par_for_each` patterns. All 15
+  heat-source and thermal-acoustic tests pass.
+
+- [minor] Implemented PSTD → thermal coupling API: added `alpha_si: Array3<f64>`
+  to `AbsorptionKernel` (stored per-cell during PowerLaw/Stokes initialization);
+  added `alpha_np_m: Array3<f64>` to `PSTDSolver`; added
+  `populate_alpha_np_m_at_frequency(omega_c)` to scale α_SI → α(ω_c) [Np/m],
+  `set_alpha_np_m(alpha)` for external override, and
+  `compute_acoustic_heat_source() → Array3<f64>` that calls the existing
+  `acoustic_heat_source()` function — all in new
+  `orchestrator/thermal.rs`. Callers pass the result to
+  `ThermalDiffusionSolver::update(medium, grid, dt, Some(q.view()))`.
+
+- [minor] Wired acoustic→thermal coupled time loop into pykwavers `Simulation`:
+  added `PSTDSolver::run_orchestrated_with_thermal(ThermalOrchestrationInput {
+  ... })` to `orchestrator/thermal.rs`; added
+  `ThermalCouplingConfig` and `run_pstd_with_thermal_impl()` to
+  `pykwavers/src/simulation_py/thermal_coupling.rs`; exposed
+  `Simulation.set_thermal(center_frequency, n_acoustic_per_thermal, …)`,
+  `Simulation.clear_thermal()`, and `Simulation.has_thermal` to Python;
+  `Simulation.run()` with `SolverType.PSTD` and thermal config attached now
+  runs the coupled loop and populates `result.thermal_temperature` (°C,
+  nx×ny×nz) and `result.thermal_dose` (CEM43 min, nx×ny×nz). Both crates build
+  clean with zero errors.
+
+- [patch] Fixed pre-existing `Nonlinear3dResult` struct initializer in
+  `nonlinear3d/mod.rs` missing `source_dimensions`, `source_spacing_m`,
+  `crop_bounds_index` fields (values taken from `volume`).
+
+- [patch] Parallelized axisymmetric velocity update in PSTD solver
+  (`propagator/velocity.rs`): changed two `Zip::for_each` to `Zip::par_for_each`
+  for the `ux` and `uz` updates in `update_velocity_as`, consistent with the 84
+  parallel loops in all other PSTD spatial operations.
+
 - [patch] Closed the nonlinear 3-D volume and absorption 500-line structural-limit
   gaps by splitting `clinical::therapy::theranostic_guidance::nonlinear3d::volume`
   (521 lines) into `volume/{mod,validation,bbox,mask,resample,material,
@@ -18,6 +147,15 @@
   -- -D warnings` is clean.
 
 ### Added
+
+- [minor] Added a Chapter 25 skull-adaptive transcranial benchmark grounded in
+  the existing brain FUS workflow. `kwavers` now exposes
+  `run_skull_adaptive_transcranial_benchmark` for CT-conditioned helmet
+  aperture selection, skull-aware reference pressure, uncorrected baseline
+  pressure, and TFUScapes-aligned relative-L2, focal-position, and max-pressure
+  metrics. `pykwavers` exposes
+  `run_transcranial_skull_adaptive_benchmark_from_ritk_ct`, plus a book helper
+  that summarizes the benchmark without duplicating the planning pipeline.
 
 - [minor] Added Treeby-Cox 2010 fractional-Laplacian power-law absorption
   to the nonlinear 3-D theranostic Westervelt FDTD

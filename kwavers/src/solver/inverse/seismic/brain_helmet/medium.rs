@@ -229,7 +229,6 @@ fn head_bbox(slice: &Array2<f64>) -> KwaversResult<(usize, usize, usize, usize)>
     })
 }
 
-
 fn head_centroid(slice: &Array2<f64>) -> Option<(f64, f64)> {
     let mut sx = 0.0;
     let mut sy = 0.0;

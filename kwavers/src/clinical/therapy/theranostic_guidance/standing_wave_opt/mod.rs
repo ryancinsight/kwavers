@@ -20,8 +20,8 @@ mod swi;
 pub use config::StandingWaveOptConfig;
 pub use result::StandingWaveOptResult;
 
-use medium::{build_sound_speed, pml_damping};
 use fdtd::compute_all_green_functions;
+use medium::{build_sound_speed, pml_damping};
 use optimizer::run_optimization;
 
 /// Run the standing-wave suppression pipeline and return the full result.

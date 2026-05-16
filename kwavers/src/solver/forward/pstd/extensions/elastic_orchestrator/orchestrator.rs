@@ -23,7 +23,8 @@ use super::source_sensor::{
     inject_velocity_source, inject_velocity_source_subfields, record_sensors, validate_source,
 };
 use super::split_field_pml::{ElasticSplitFieldPml, SplitFieldState};
-use super::split_field_step::propagate_split_field_step;
+use super::split_field_step::{propagate_split_field_step, SpectralOperators, SpectralScratch};
+use super::staggered_ops::StaggeredDerivativeOps;
 use super::types::{ElasticPstdMedium, ElasticPstdSensorData, ElasticPstdVelocitySource};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -34,58 +35,6 @@ use crate::physics::acoustics::mechanics::elastic_wave::{
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
 };
 use ndarray::{Array2, Array3};
-use num_complex::Complex;
-
-/// Pre-built complex spectral derivative operators for the staggered-grid
-/// PSTD scheme used by KWave.jl `pstd_elastic_2d` (Treeby & Cox 2010, eq.
-/// 16). For each axis α, the operator stored here is
-///
-/// ```text
-///   D_α^±[k_α] = i · k_α · exp(± i · k_α · Δα / 2)
-/// ```
-///
-/// so the plugin's spectral derivative collapses to `D_α^± · F_α` instead
-/// of the collocated `i · k_α · F_α`. The `+` set is used for `∇·σ`
-/// (velocity update — sampled at the velocity grid), the `−` set for
-/// `∇v` (stress update — sampled at the stress grid). Without the shift
-/// the orchestrator runs a collocated-grid scheme, which numerically
-/// disagrees with KWave.jl at non-trivial wavenumbers (matched-mode
-/// peak_ratio sat at 0.13–0.23 instead of ≈ 1.0 prior to this change).
-#[derive(Debug)]
-struct StaggeredDerivativeOps {
-    dkx_pos: Array3<Complex<f64>>,
-    dky_pos: Array3<Complex<f64>>,
-    dkz_pos: Array3<Complex<f64>>,
-    dkx_neg: Array3<Complex<f64>>,
-    dky_neg: Array3<Complex<f64>>,
-    dkz_neg: Array3<Complex<f64>>,
-}
-
-impl StaggeredDerivativeOps {
-    fn build(
-        kx: &Array3<f64>,
-        ky: &Array3<f64>,
-        kz: &Array3<f64>,
-        dx: f64,
-        dy: f64,
-        dz: f64,
-    ) -> Self {
-        let make = |k: &Array3<f64>, d: f64, sign: f64| -> Array3<Complex<f64>> {
-            k.mapv(|kv| {
-                let shift = Complex::new(0.0, sign * kv * d * 0.5).exp();
-                Complex::new(0.0, kv) * shift
-            })
-        };
-        Self {
-            dkx_pos: make(kx, dx, 1.0),
-            dky_pos: make(ky, dy, 1.0),
-            dkz_pos: make(kz, dz, 1.0),
-            dkx_neg: make(kx, dx, -1.0),
-            dky_neg: make(ky, dy, -1.0),
-            dkz_neg: make(kz, dz, -1.0),
-        }
-    }
-}
 
 /// Top-level orchestrator state.
 ///
@@ -240,20 +189,24 @@ impl ElasticPstdOrchestrator {
                 }
                 propagate_split_field_step(
                     &mut self.velocity,
-                    &mut self.spectral_stress,
-                    &mut self.spectral_stress_next,
-                    &mut self.spectral_velocity_in,
-                    &mut self.spectral_velocity_next,
+                    SpectralScratch {
+                        stress: &mut self.spectral_stress,
+                        stress_next: &mut self.spectral_stress_next,
+                        velocity_in: &mut self.spectral_velocity_in,
+                        velocity_next: &mut self.spectral_velocity_next,
+                    },
                     pml,
                     state.as_mut(),
                     &self.medium,
-                    &self.derivative_ops.dkx_neg,
-                    &self.derivative_ops.dky_neg,
-                    &self.derivative_ops.dkz_neg,
-                    &self.derivative_ops.dkx_pos,
-                    &self.derivative_ops.dky_pos,
-                    &self.derivative_ops.dkz_pos,
-                    &self.kappa,
+                    SpectralOperators {
+                        dkx_neg: &self.derivative_ops.dkx_neg,
+                        dky_neg: &self.derivative_ops.dky_neg,
+                        dkz_neg: &self.derivative_ops.dkz_neg,
+                        dkx_pos: &self.derivative_ops.dkx_pos,
+                        dky_pos: &self.derivative_ops.dky_pos,
+                        dkz_pos: &self.derivative_ops.dkz_pos,
+                        kappa: &self.kappa,
+                    },
                     &mut self.scratch_r,
                 );
             } else if self.split_pml.is_some() {

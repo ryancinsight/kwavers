@@ -126,7 +126,7 @@ def plot_transducer_phase(triplet: BrainTriplet, phase: PhaseCorrection) -> None
     pos = phase.element_positions_m * 1.0e3
     sc = ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2], c=phase.phases_rad, s=6, cmap="twilight")
     ax.scatter([0], [0], [0], c="red", s=25, marker="+")
-    ax.set_title("1024-element hemispherical array")
+    ax.set_title(f"{phase.element_positions_m.shape[0]}-element CT-aligned hemisphere")
     ax.set_xlabel("x mm")
     ax.set_ylabel("y mm")
     ax.set_zlabel("z mm")

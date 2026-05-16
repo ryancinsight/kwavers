@@ -1,7 +1,7 @@
 //! `run_theranostic_nonlinear_3d_from_ritk` pyfunction and result serialization.
 
 use kwavers::clinical::therapy::theranostic_guidance::{
-    AnatomyKind, Nonlinear3dConfig, run_theranostic_nonlinear_3d,
+    run_theranostic_nonlinear_3d, AnatomyKind, Nonlinear3dConfig,
 };
 use numpy::IntoPyArray;
 use pyo3::exceptions::PyValueError;
@@ -9,10 +9,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
+use super::helpers::{kwavers_to_py, labels_from_volume, metric3d_dict, points3_to_array};
 use crate::ritk_image::load_ritk_nifti;
-use super::helpers::{
-    kwavers_to_py, labels_from_volume, metric3d_dict, points3_to_array,
-};
 
 #[pyfunction]
 #[pyo3(signature = (
@@ -25,6 +23,7 @@ use super::helpers::{
     source_encoding_count = 3,
     checkpoint_interval_steps = 128,
     iterations = 2,
+    target_fraction_xyz = None,
     frequency_hz = None,
     source_pressure_pa = None,
     cycles = 3.0,
@@ -35,6 +34,7 @@ use super::helpers::{
     gradient_smoothing_steps = 2,
     bubble_radius_m = 2.0e-6,
     bubble_time_steps_per_period = 96,
+    inertial_mi_threshold = 1.9,
     cavitation_iterations = 24,
     cavitation_regularization = 1.0e-4
 ))]
@@ -50,6 +50,7 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
     source_encoding_count: usize,
     checkpoint_interval_steps: usize,
     iterations: usize,
+    target_fraction_xyz: Option<(f64, f64, f64)>,
     frequency_hz: Option<f64>,
     source_pressure_pa: Option<f64>,
     cycles: f64,
@@ -60,6 +61,7 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
     gradient_smoothing_steps: usize,
     bubble_radius_m: f64,
     bubble_time_steps_per_period: usize,
+    inertial_mi_threshold: f64,
     cavitation_iterations: usize,
     cavitation_regularization: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
@@ -90,6 +92,7 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
     config.gradient_smoothing_steps = gradient_smoothing_steps;
     config.bubble_radius_m = bubble_radius_m;
     config.bubble_time_steps_per_period = bubble_time_steps_per_period;
+    config.inertial_mi_threshold = inertial_mi_threshold;
     config.cavitation_iterations = cavitation_iterations;
     config.cavitation_regularization = cavitation_regularization;
     if let Some(count) = element_count {
@@ -102,15 +105,25 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
         config.source_pressure_pa = pressure;
     }
     let result = py
-        .detach(|| run_theranostic_nonlinear_3d(anatomy, &ct, labels.as_ref(), spacing_mm, &config))
+        .detach(|| {
+            run_theranostic_nonlinear_3d(
+                anatomy,
+                &ct,
+                labels.as_ref(),
+                spacing_mm,
+                &config,
+                target_fraction_xyz.map(|(x, y, z)| [x, y, z]),
+            )
+        })
         .map_err(kwavers_to_py)?;
-    nonlinear3d_result_to_dict(py, result, &config)
+    nonlinear3d_result_to_dict(py, result, &config, target_fraction_xyz)
 }
 
 pub(super) fn nonlinear3d_result_to_dict<'py>(
     py: Python<'py>,
     result: kwavers::clinical::therapy::theranostic_guidance::Nonlinear3dResult,
     config: &Nonlinear3dConfig,
+    target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
     use ndarray::Array1;
     let out = PyDict::new(py);
@@ -187,15 +200,23 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("time_steps", result.time_steps)?;
     out.set_item("active_voxels", result.active_voxels)?;
     out.set_item("grid_size", config.grid_size)?;
-    out.set_item("element_count", config.element_count)?;
-    out.set_item("receiver_count", config.receiver_count)?;
+    out.set_item("requested_element_count", config.element_count)?;
+    out.set_item("requested_receiver_count", config.receiver_count)?;
+    out.set_item("element_count", result.therapy_points_m.len())?;
+    out.set_item("receiver_count", result.receiver_points_m.len())?;
     out.set_item("source_encoding_count", config.source_encoding_count)?;
+    out.set_item("source_dimensions", result.source_dimensions.to_vec())?;
+    out.set_item("source_spacing_m", result.source_spacing_m.to_vec())?;
+    out.set_item("crop_bounds_index", result.crop_bounds_index.to_vec())?;
     out.set_item(
         "checkpoint_interval_steps",
         config.checkpoint_interval_steps,
     )?;
     out.set_item("frequency_hz", config.frequency_hz)?;
     out.set_item("source_pressure_pa", config.source_pressure_pa)?;
+    if let Some((x, y, z)) = target_fraction_xyz {
+        out.set_item("target_fraction_xyz", (x, y, z))?;
+    }
     out.set_item("cycles", config.cycles)?;
     out.set_item("lesion_delta_c_m_s", config.lesion_delta_c_m_s)?;
     out.set_item("lesion_delta_beta", config.lesion_delta_beta)?;
@@ -209,6 +230,16 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     )?;
     out.set_item("gradient_smoothing_steps", config.gradient_smoothing_steps)?;
     out.set_item("bubble_radius_m", config.bubble_radius_m)?;
+    out.set_item(
+        "bubble_time_steps_per_period",
+        config.bubble_time_steps_per_period,
+    )?;
+    out.set_item("inertial_mi_threshold", config.inertial_mi_threshold)?;
+    out.set_item("cavitation_iterations", config.cavitation_iterations)?;
+    out.set_item(
+        "cavitation_regularization",
+        config.cavitation_regularization,
+    )?;
     out.set_item("aperture_model", result.aperture_model)?;
     out.set_item("model_family", result.model_family)?;
     out.set_item("propagator_model", result.propagator_model)?;

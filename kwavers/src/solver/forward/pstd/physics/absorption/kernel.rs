@@ -13,4 +13,10 @@ pub(crate) struct AbsorptionKernel {
     pub nabla1: Array3<f64>,
     /// Spectral nabla2 operator |k|^(y−1) in FFT wavenumber order [Eq. 10]
     pub nabla2: Array3<f64>,
+    /// Per-cell α_SI coefficient [Np/((rad/s)^y·m)].
+    ///
+    /// Converts to physical absorption at center angular frequency ω_c via
+    /// `α(ω_c) [Np/m] = alpha_si · ω_c^y`.
+    /// Used by `PSTDSolver::compute_acoustic_heat_source()` for thermal coupling.
+    pub alpha_si: Array3<f64>,
 }

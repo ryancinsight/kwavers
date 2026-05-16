@@ -180,13 +180,13 @@ pub(crate) fn time_reversal_reconstruction_impl(
     sampling_frequency: f64,
     pml_size: Option<usize>,
 ) -> kwavers::core::error::KwaversResult<Array3<f64>> {
+    use kwavers::domain::boundary::cpml::CPMLConfig;
     use kwavers::domain::medium::HomogeneousMedium;
     use kwavers::domain::source::grid_source::SourceMode;
     use kwavers::domain::source::GridSource;
     use kwavers::solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
     use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
     use kwavers::solver::interface::solver::Solver as SolverTrait;
-    use kwavers::domain::boundary::cpml::CPMLConfig;
 
     if sound_speed <= 0.0 || !sound_speed.is_finite() {
         return Err(KwaversError::Validation(

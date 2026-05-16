@@ -13,13 +13,7 @@ pub(super) struct UpdateCells<'a> {
     pub(super) sponge: &'a [f64],
 }
 
-pub(super) fn update_cells(
-    buffers: UpdateCells<'_>,
-    n: usize,
-    dt: f64,
-    inv_dx2: f64,
-    step: usize,
-) {
+pub(super) fn update_cells(buffers: UpdateCells<'_>, n: usize, dt: f64, inv_dx2: f64, step: usize) {
     let n2 = n * n;
     let dt2 = dt * dt;
     let inv_dt = 1.0 / dt;
@@ -46,8 +40,7 @@ pub(super) fn update_cells(
                 + buffers.current[i + 1]
                 - 6.0 * center)
                 * inv_dx2;
-            let nl =
-                nonlinear_term_inline(center, prev, buffers.older[i], inv_dt, inv_dt2, step);
+            let nl = nonlinear_term_inline(center, prev, buffers.older[i], inv_dt, inv_dt2, step);
             let c = buffers.speed[i];
             let q = buffers.beta[i] * dt2 / (buffers.density[i] * c * c).max(1.0e-18);
             let raw = 2.0_f64.mul_add(center, -prev) + (c * dt).powi(2) * lap + q * nl;

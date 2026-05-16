@@ -271,13 +271,21 @@ G_s(r, s) = exp(-integral alpha_s(t) dt along [s -> r]) * cos(k_s * |r - s|)
           / (4 pi |r - s|)
 ```
 
-where `alpha_s(t) = alpha_1MHz(position) * f_s_MHz` uses a `y = 1` power-law
-(leading-order biological tissue; superlinear `y ≈ 1.05 - 1.1` is a
-queued increment). The path integral samples the attenuation field along the
-straight line from source to receiver with trilinear interpolation and
-trapezoidal-rule integration. For transcranial cases this correctly tracks
-the ~26× skull-versus-soft-tissue attenuation contrast on every ray instead
-of using a single tissue-typical scalar.
+where `alpha_s(t) = alpha_1MHz(position) * f_s_MHz^y(position)`. The path
+integral samples both the attenuation and exponent fields along the straight
+line from source to receiver with trilinear interpolation and trapezoidal-rule
+integration. For transcranial cases this correctly tracks the skull-versus-
+soft-tissue attenuation contrast and the subharmonic `y = 2` skull scaling on
+every ray instead of using a single tissue-typical scalar.
+
+The Rayleigh-Plesset source map computes the period-doubling observable
+`max_t |R(t) - R(t - T)| / R0`. The implementation stores one drive-period
+ring buffer of radius samples, which is algebraically equivalent to retaining
+the full radius history for this observable because the recurrence reads only
+the sample one period behind the current RK4 state. The passive simulated data
+is generated from the active-voxel source vector used by the Green-operator
+columns, so the receiver data and inverse model share the same active-support
+indexing.
 
 ### Theorem: Positive Normal Operator
 
@@ -354,13 +362,17 @@ satisfies `m^T L m = sum_(i,j in E) (m_i - m_j)^2 >= 0`. Adding
 
 ## Device Placement
 
-The brain case places all 1024 elements on a circular projection for the
-slice-level finite-frequency inverse operator and also emits a separate CT-derived 3-D helmet
-placement view. The 3-D view renders the head surface, dense skull/calvarium
-surface points, the calvarium helmet element cloud, sampled beam paths, and the
-first dense-bone intersection on each sampled beam. The helmet cap is limited to
-the superior skull support determined from the CT axial area profile, so the
-visualized elements cover the calvarium instead of extending down the neck. The
+The brain case reads the CT-aligned target and transducer pose from
+`CANONICAL_BRAIN_SCENE` in
+`pykwavers/examples/book/transcranial_planning/scene.py`. The slice-level
+finite-frequency inverse, Figure 5 nonlinear branch, and separate CT-derived
+3-D helmet placement resolve the same target fraction against their CT support
+and use the same 1024-element, 650 kHz, 0.150 m helmet definition. The 3-D view
+renders the head surface, dense skull/calvarium surface points, the calvarium
+helmet element cloud, sampled beam paths, and the first dense-bone intersection
+on each sampled beam. The helmet cap is limited to the superior skull support
+determined from the CT axial area profile, so the visualized elements cover the
+calvarium instead of extending down the neck. The
 abdominal cases place a concave 256-element therapy arc outside the nearest
 external skin point to the target centroid, using a local skin-normal aperture
 frame instead of a fixed left/right display axis. Internal gas pockets are
@@ -424,19 +436,89 @@ Outputs:
 - `docs/book/figures/ch29/fig03_brain_helmet_3d_placement.{png,pdf}`
 - `docs/book/figures/ch29/fig04_reconstruction_dynamic_range_diagnostics.{png,pdf}`
 - `docs/book/figures/ch29/fig05_nonlinear_3d_westervelt_rp_cavitation.{png,pdf}`
+- `docs/book/figures/ch29/fig06_controlled_linear_nonlinear_comparison.{png,pdf}`
 - `docs/book/figures/ch29/metrics.json`
+- `docs/book/figures/ch29/controlled_comparison_metrics.json`
+- `docs/book/figures/ch29/controlled_comparison_fields.npz`
 
-The metrics file records reconstruction quality, placement geometry,
+The metrics file records reconstruction quality, placement geometry, the
+canonical brain scene manifest,
 outside-target sidelobe diagnostics, matrix-free operator storage evidence,
 RTM waveform misfit metadata, nonlinear 3-D Westervelt/Rayleigh-Plesset
 metrics, nonlinear source-encoding/regularization controls, and model-fidelity
-flags, including the nonlinear forward-checkpoint interval. The reduced inverse cases report
+flags, including the nonlinear forward-checkpoint interval. The nonlinear FWI
+loop reuses one residual trace workspace across source encodings and one
+candidate `c`/`beta` workspace across line-search scales; this changes allocator
+pressure only, not the objective or update equations. The reduced inverse cases report
 `is_full_wave_inversion = false`; the separate nonlinear 3-D cases report
 `is_full_wave_inversion = true`, `uses_nonlinear_wave_propagation = true`, and
 `uses_rayleigh_plesset = true`. Figure 5 uses the same per-case grid contract
 as Figure 2 by default: `48^3` for brain and `52^3` for kidney/liver nonlinear
-Westervelt/Rayleigh-Plesset volumes. Reduced inverse metrics also report the
-encoded and unencoded measurement counts used by deterministic row encoding.
+Westervelt/Rayleigh-Plesset volumes. Figure 5 also reuses the Figure 2 brain
+scene target, therapy aperture, imaging receivers, and sampled source-to-focus
+beam paths in the CT column so the linear and nonlinear panels are visually
+audited against the same experimental setup. The nonlinear solver
+still computes on a cropped isotropic 3-D cube for tractable Westervelt FWI,
+but its exported crop bounds are rendered inside the uncropped Figure 2
+placement axes; the panels therefore share the same visual CT field of view
+without geometrically stretching the nonlinear crop. Reduced inverse metrics
+also report the encoded and unencoded measurement counts used by deterministic
+row encoding.
+
+Figure 6 adds the controlled Figure 2/Figure 5 comparison path. It runs a
+matched linear case with the nonlinear grid size, element count, drive
+frequency, and source pressure, then evaluates the linear fields and nonlinear
+3-D slab fields on the same nonlinear crop projection. The target overlay and
+therapy aperture overlay are fixed to that common frame; the metrics record
+the remaining projected 2-D-vs-3-D aperture residual from the source wrappers.
+The 2026-05-16 run gives mean common-grid linear-fusion Dice `0.504`,
+nonlinear-fusion Dice `0.263`, and nonlinear peak-pressure outside-target
+energy fraction `0.981`. Per-case nonlinear outside-target peak-pressure
+energy fractions are `0.994` for brain, `0.959` for kidney, and `0.989` for
+liver. The residual projected aperture distances from the original Figure 2
+linear layout to the Figure 5 3-D aperture are `73.25 mm`, `133.50 mm`, and
+`41.94 mm`. The nonlinear FWI objectives decrease for brain
+`0.5077 -> 0.3367`, kidney `1.4029 -> 1.0649`, and liver
+`2.5897e-6 -> 2.3725e-6`, so the nonlinear inverse is not stalled; it is
+localizing a pressure/cavitation response whose energy has spread outside the
+planned target. The observed visual degradation is therefore not a pixel-grid
+resolution artifact. It comes from comparing the normalized reduced linear
+fusion channel against a cropped 3-D nonlinear pressure/cavitation inverse
+whose peak-pressure support and aperture geometry differ from the 2-D linear
+Figure 2 abstraction.
+
+### Acoustic Scalar Model
+
+The Figure 5 nonlinear branch is a scalar acoustic pressure model. It uses
+CT-derived sound speed, density, nonlinearity coefficient, attenuation, a
+heterogeneous Westervelt pressure update, and a Rayleigh-Plesset cavitation
+post-process. It does not use elastic displacement, shear speed, shear modulus,
+Lame parameters, or mode-converted skull shear propagation. Elastic skull
+effects remain outside this chapter's nonlinear implementation contract.
+
+The nonlinear 3-D material map treats cells outside the body mask as coupling
+fluid rather than CT air. This matches the Figure 2 placement abstraction,
+where therapy elements couple through water/gel before entering tissue. Air
+pockets inside the body retain the gas sound-speed and high-attenuation
+contract, but exterior CT background does not slow the simulation to a
+343 m/s gas domain or distort the source focusing delays.
+
+### FDTD/PSTD Choice
+
+The nonlinear branch uses FDTD for the Westervelt forward and discrete adjoint
+because every operator in the inversion has a local transpose: heterogeneous
+`c`, `rho`, `beta`, attenuation fields, source injection, receiver sampling,
+sponge damping, sparse checkpoints, and the `dtt(p^2)` nonlinearity. This gives
+an exact discrete-adjoint implementation for the recurrence actually used by
+the inverse.
+
+PSTD or k-space propagation would reduce numerical dispersion in smooth media,
+but it would add global FFT operators, boundary bookkeeping, and heterogeneous
+coefficient products whose adjoint must be derived and verified as the new
+single source of truth. The current spectral component is limited to the
+fractional-Laplacian absorption operator; the primary Westervelt inverse remains
+FDTD until a full spectral forward/adjoint pair is implemented and differentially
+verified.
 
 ## Research Alignment
 

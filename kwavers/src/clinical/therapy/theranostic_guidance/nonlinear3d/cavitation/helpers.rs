@@ -11,19 +11,6 @@ pub(super) fn active_indices(body: &[bool]) -> Vec<usize> {
         .collect()
 }
 
-pub(super) fn positive_mask(values: &[f64], body: &[bool]) -> Vec<bool> {
-    let peak = values
-        .iter()
-        .zip(body.iter())
-        .filter_map(|(value, active)| active.then_some(*value))
-        .fold(0.0, f64::max);
-    values
-        .iter()
-        .zip(body.iter())
-        .map(|(value, active)| *active && *value >= 0.35 * peak)
-        .collect()
-}
-
 pub(super) fn normalize(values: &[f64], body: &[bool]) -> Vec<f64> {
     let peak = values
         .iter()

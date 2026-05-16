@@ -2,78 +2,74 @@
 
 use super::{
     entropy_production_rate, validate_energy_conservation, validate_mass_conservation,
-    validate_momentum_conservation, ConservationMetrics,
+    validate_momentum_conservation, AcousticStateRefs, ConservationMetrics, ConservationParams,
+    PreviousFields,
 };
 use crate::domain::grid::Grid;
-use ndarray::Array3;
 
 /// Run all conservation checks and return consolidated metrics.
-#[allow(clippy::too_many_arguments)]
 #[must_use]
 pub fn validate_conservation(
-    pressure: &Array3<f64>,
-    velocity_x: &Array3<f64>,
-    velocity_y: &Array3<f64>,
-    velocity_z: &Array3<f64>,
-    density: &Array3<f64>,
-    sound_speed: &Array3<f64>,
-    absorption: &Array3<f64>,
-    temperature: f64,
-    _pressure_previous: Option<&Array3<f64>>,
-    velocity_x_previous: Option<&Array3<f64>>,
-    velocity_y_previous: Option<&Array3<f64>>,
-    velocity_z_previous: Option<&Array3<f64>>,
-    density_previous: Option<&Array3<f64>>,
-    initial_energy: f64,
-    dt: f64,
+    state: AcousticStateRefs<'_>,
+    prev: PreviousFields<'_>,
+    params: ConservationParams,
     grid: &Grid,
-    tolerance: f64,
 ) -> ConservationMetrics {
     let energy_error = validate_energy_conservation(
-        pressure,
-        velocity_x,
-        velocity_y,
-        velocity_z,
-        density,
-        sound_speed,
-        initial_energy,
+        state.pressure,
+        state.velocity_x,
+        state.velocity_y,
+        state.velocity_z,
+        state.density,
+        state.sound_speed,
+        params.initial_energy,
         grid,
     );
-    let mass_error = if let Some(rho_prev) = density_previous {
+    let mass_error = if let Some(rho_prev) = prev.density {
         validate_mass_conservation(
-            density, rho_prev, velocity_x, velocity_y, velocity_z, dt, grid,
+            state.density,
+            rho_prev,
+            state.velocity_x,
+            state.velocity_y,
+            state.velocity_z,
+            params.dt,
+            grid,
         )
     } else {
         0.0
     };
-    let momentum_error = if let (Some(vx_prev), Some(vy_prev), Some(vz_prev)) = (
-        velocity_x_previous,
-        velocity_y_previous,
-        velocity_z_previous,
-    ) {
+    let momentum_error = if let Some(v_prev) = prev.velocity {
         validate_momentum_conservation(
-            velocity_x, velocity_y, velocity_z, vx_prev, vy_prev, vz_prev, pressure, density, dt,
+            state.velocity_x,
+            state.velocity_y,
+            state.velocity_z,
+            v_prev.x,
+            v_prev.y,
+            v_prev.z,
+            state.pressure,
+            state.density,
+            params.dt,
             grid,
         )
     } else {
         (0.0, 0.0, 0.0)
     };
     let ds_dt = entropy_production_rate(
-        pressure,
-        velocity_x,
-        velocity_y,
-        velocity_z,
-        density,
-        sound_speed,
-        absorption,
-        temperature,
+        state.pressure,
+        state.velocity_x,
+        state.velocity_y,
+        state.velocity_z,
+        state.density,
+        state.sound_speed,
+        state.absorption,
+        params.temperature,
         grid,
     );
-    let is_conserved = energy_error < tolerance
-        && mass_error < tolerance
-        && momentum_error.0 < tolerance
-        && momentum_error.1 < tolerance
-        && momentum_error.2 < tolerance
+    let is_conserved = energy_error < params.tolerance
+        && mass_error < params.tolerance
+        && momentum_error.0 < params.tolerance
+        && momentum_error.1 < params.tolerance
+        && momentum_error.2 < params.tolerance
         && ds_dt >= 0.0;
 
     ConservationMetrics {
@@ -116,10 +112,27 @@ mod tests {
         let n = (s.0 * s.1 * s.2) as f64;
         let init = 1000.0_f64.powi(2) / (2.0 * 1000.0 * 1500.0_f64.powi(2)) * dv * n;
 
-        let m = validate_conservation(
-            &p, &v, &v, &v, &rho, &c, &alpha, 310.0, None, None, None, None, None, init, 1e-6,
-            &grid, 1e-4,
-        );
+        let state = AcousticStateRefs {
+            pressure: &p,
+            velocity_x: &v,
+            velocity_y: &v,
+            velocity_z: &v,
+            density: &rho,
+            sound_speed: &c,
+            absorption: &alpha,
+        };
+        let prev = PreviousFields {
+            pressure: None,
+            velocity: None,
+            density: None,
+        };
+        let params = ConservationParams {
+            initial_energy: init,
+            dt: 1e-6,
+            temperature: 310.0,
+            tolerance: 1e-4,
+        };
+        let m = validate_conservation(state, prev, params, &grid);
 
         assert_eq!(
             m.mass_error, 0.0,
@@ -151,10 +164,27 @@ mod tests {
         let n = (s.0 * s.1 * s.2) as f64;
         let init = p0.powi(2) / (2.0 * rho0 * c0.powi(2)) * dv * n;
 
-        let m = validate_conservation(
-            &p, &v, &v, &v, &rho, &c, &alpha, 310.0, None, None, None, None, None, init, 1e-6,
-            &grid, 1e-4,
-        );
+        let state = AcousticStateRefs {
+            pressure: &p,
+            velocity_x: &v,
+            velocity_y: &v,
+            velocity_z: &v,
+            density: &rho,
+            sound_speed: &c,
+            absorption: &alpha,
+        };
+        let prev = PreviousFields {
+            pressure: None,
+            velocity: None,
+            density: None,
+        };
+        let params = ConservationParams {
+            initial_energy: init,
+            dt: 1e-6,
+            temperature: 310.0,
+            tolerance: 1e-4,
+        };
+        let m = validate_conservation(state, prev, params, &grid);
 
         assert!(
             m.energy_error < 1e-10,

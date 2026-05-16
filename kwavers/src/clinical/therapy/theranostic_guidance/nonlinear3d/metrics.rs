@@ -70,4 +70,3 @@ fn binary_rmse(score: &[f64], target: &[bool]) -> f64 {
         / score.len() as f64;
     mse.sqrt()
 }
-

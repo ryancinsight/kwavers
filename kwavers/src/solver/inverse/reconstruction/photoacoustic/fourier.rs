@@ -10,9 +10,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::signal::window_value;
 use crate::domain::signal::WindowType;
-use crate::math::fft::{
-    fft_1d_array, ifft_1d_array, Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE,
-};
+use crate::math::fft::{fft_1d_array, ifft_1d_array, Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE};
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use std::f64::consts::PI;
 

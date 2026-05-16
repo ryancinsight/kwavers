@@ -6,6 +6,7 @@ use crate::core::error::KwaversResult;
 
 use super::super::curved_array::CurvedArrayShiftScan;
 use super::super::operator::SoundSpeedShiftOperator;
+use super::super::solver::compute_solver_metrics;
 use super::super::types::{SoundSpeedShiftConfig, SoundSpeedShiftSample};
 use super::types::SoundSpeedShiftPlan;
 
@@ -26,9 +27,11 @@ impl SoundSpeedShiftPlan {
         config: SoundSpeedShiftConfig,
     ) -> KwaversResult<Self> {
         let operator = SoundSpeedShiftOperator::new(&samples, active_mask, config)?;
+        let metrics = compute_solver_metrics(&operator, config);
         Ok(Self {
             samples,
             operator,
+            metrics,
             config,
             shape: active_mask.dim(),
         })

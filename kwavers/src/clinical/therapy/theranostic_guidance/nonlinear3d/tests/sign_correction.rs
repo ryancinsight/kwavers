@@ -14,11 +14,11 @@
 //! inverts the asymmetry — peaks would *round* while troughs sharpen, which
 //! is non-physical.
 
-use super::super::super::Point3;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture};
 use super::super::Nonlinear3dConfig;
+use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
 
 #[test]
@@ -84,6 +84,7 @@ fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign()
         config: &config,
         schedule,
         encoding: SourceEncoding { index: 0, count: 1 },
+        source_scale: 1.0,
         retain_history: false,
     });
 

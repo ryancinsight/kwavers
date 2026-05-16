@@ -35,7 +35,7 @@ pub use fixed_acquisition::{
     SoundSpeedShiftFrameSummary, SoundSpeedShiftObjectiveHistoryPolicy, SoundSpeedShiftPlan,
 };
 use operator::SoundSpeedShiftOperator;
-use solver::solve_shift;
+use solver::{solve_shift, solve_shift_with_metrics, SoundSpeedShiftSolverMetrics};
 pub use types::{
     ShiftPrior, ShiftPropagation, ShiftSampling, ShiftSensitivity, SoundSpeedShiftConfig,
     SoundSpeedShiftImage, SoundSpeedShiftSample, SoundSpeedShiftWorkspace,
@@ -153,9 +153,27 @@ fn solve_operator_frame(
     solve_shift(operator, data, config, workspace);
 }
 
+pub(in crate::clinical::imaging::reconstruction::sound_speed_shift) fn solve_operator_frame_with_metrics(
+    operator: &SoundSpeedShiftOperator,
+    data: &[f64],
+    config: SoundSpeedShiftConfig,
+    workspace: &mut SoundSpeedShiftWorkspace,
+    metrics: &SoundSpeedShiftSolverMetrics,
+) {
+    solve_shift_with_metrics(operator, data, config, workspace, metrics);
+}
+
 fn solved_image_from_operator(
     operator: &SoundSpeedShiftOperator,
     workspace: &SoundSpeedShiftWorkspace,
 ) -> Array2<f64> {
     operator.image_from_model(&workspace.solution)
+}
+
+pub(in crate::clinical::imaging::reconstruction::sound_speed_shift) fn solved_image_from_operator_into(
+    operator: &SoundSpeedShiftOperator,
+    workspace: &SoundSpeedShiftWorkspace,
+    image: &mut Array2<f64>,
+) {
+    operator.image_from_model_into(&workspace.solution, image);
 }

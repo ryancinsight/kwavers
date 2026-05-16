@@ -7,7 +7,8 @@
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig02_exposure_and_reconstruction.png",
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig03_brain_helmet_3d_placement.png",
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig04_reconstruction_dynamic_range_diagnostics.png",
-    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig05_nonlinear_3d_westervelt_rp_cavitation.png"
+    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig05_nonlinear_3d_westervelt_rp_cavitation.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig06_controlled_linear_nonlinear_comparison.png"
   ],
   "brain_helmet_3d": {
     "geometry_model": "ct_derived_calvarium_1024_element_helmet_with_skull_intersections",
@@ -436,7 +437,39 @@
           "cnr": 11.070064396661634,
           "nrmse": 0.01615008483727271
         }
-      }
+      },
+      "fwi_objective_history": [
+        0.5076518345458849,
+        0.41461900084137027,
+        0.36094489973021454,
+        0.33666558949229086
+      ],
+      "cavitation_objective_history": [
+        0.0008130939843605342,
+        0.0008092633146244408,
+        0.0008054521837934409,
+        0.0008016604847484357,
+        0.0007978881109986746,
+        0.0007941349566777437,
+        0.0007904009165425315,
+        0.0007866858859698349,
+        0.0007829897609538114,
+        0.0007793124380951511,
+        0.0007756538146051123,
+        0.0007720137882965954,
+        0.0007683922575770649,
+        0.0007647891214504922,
+        0.0007612042795148128,
+        0.0007576376319457577,
+        0.0007540890795189375,
+        0.0007505585236054094,
+        0.0007470458661261668,
+        0.0007435510095990874,
+        0.0007400738570754356,
+        0.000736614312186797,
+        0.0007331722791313751,
+        0.0007297476626558999
+      ]
     },
     {
       "anatomy": "kidney",
@@ -478,7 +511,39 @@
           "cnr": 3.488242554426778,
           "nrmse": 0.07108413616039062
         }
-      }
+      },
+      "fwi_objective_history": [
+        1.4028757709261457,
+        1.1946951768266234,
+        1.0648897761468745,
+        1.0648897761468745
+      ],
+      "cavitation_objective_history": [
+        38.04731336572738,
+        37.84046358248528,
+        37.63477275702885,
+        37.430234229114234,
+        37.22684137761624,
+        37.02458762030381,
+        36.8234664136155,
+        36.62347125246715,
+        36.424595669862285,
+        36.22683323676834,
+        36.03017756193518,
+        35.834622291636,
+        35.640161109535825,
+        35.446787736349386,
+        35.254495929572066,
+        35.06327948324739,
+        34.87313222769135,
+        34.684048029370715,
+        34.49602079070154,
+        34.30904445004266,
+        34.12311298132141,
+        33.93822039385916,
+        33.75436073186287,
+        33.5715280744859
+      ]
     },
     {
       "anatomy": "liver",
@@ -520,7 +585,447 @@
           "cnr": 11.708605160028153,
           "nrmse": 0.04671087578792289
         }
-      }
+      },
+      "fwi_objective_history": [
+        2.589671248507965e-06,
+        2.474048399795121e-06,
+        2.425004710906858e-06,
+        2.3724663111632533e-06
+      ],
+      "cavitation_objective_history": [
+        6.1592651133109735,
+        6.126800418413095,
+        6.094516718021589,
+        6.062412958418805,
+        6.030488092243997,
+        5.998741078432843,
+        5.9671708821876335,
+        5.93577647494742,
+        5.904556834354821,
+        5.873510944190261,
+        5.842637794355182,
+        5.811936380777992,
+        5.781405705503932,
+        5.75104477648742,
+        5.720852607701096,
+        5.690828219067575,
+        5.660970636345459,
+        5.631278891175453,
+        5.601752020999797,
+        5.572389068991,
+        5.54318908408919,
+        5.514151120933208,
+        5.4852742399531325,
+        5.456557507106123
+      ]
     }
-  ]
+  ],
+  "controlled_linear_nonlinear_comparison": {
+    "comparison_contract": "linear and nonlinear outputs evaluated on the nonlinear 3-D crop projection; linear fields are physically resampled to that grid, and both panels use the same projected nonlinear target and therapy aperture",
+    "figure": "D:\\kwavers\\docs\\book\\figures\\ch29\\fig06_controlled_linear_nonlinear_comparison.png",
+    "field_archive": "D:\\kwavers\\docs\\book\\figures\\ch29\\controlled_comparison_fields.npz",
+    "summary": {
+      "case_count": 3,
+      "mean_linear_fusion_dice_equal_area": 0.5037348272642389,
+      "mean_nonlinear_fusion_dice_equal_area": 0.26260504201680673,
+      "mean_dice_gap_linear_minus_nonlinear": 0.24112978524743217,
+      "mean_nonlinear_pressure_outside_energy_fraction": 0.9806566217396139,
+      "dominant_observation": "the common-grid comparison rejects display resolution as the primary cause; the measured divergence is nonlinear 3-D pressure/cavitation energy spread combined with the residual projected 2-D-vs-3-D aperture difference"
+    },
+    "cases": [
+      {
+        "anatomy": "brain",
+        "common_grid_shape": [
+          48,
+          48
+        ],
+        "common_extent_m": [
+          -0.10330912862718106,
+          0.10330912862718106,
+          -0.10330912862718106,
+          0.10330912862718106
+        ],
+        "geometry": {
+          "comparison_frame": "nonlinear_crop_xy_projection",
+          "linear_focus_to_common_target_centroid_m": 0.007248836776064917,
+          "linear_element_count": 1024,
+          "nonlinear_element_count": 338,
+          "median_nearest_projected_element_distance_m": 0.07324539183966933,
+          "common_target_voxels": 7,
+          "common_target_centroid_m": [
+            -0.00408212362356642,
+            0.00785023773762775
+          ]
+        },
+        "comparison_metrics": {
+          "linear_exposure": {
+            "dice_equal_area": 0.2857142857142857,
+            "cnr": 3.458470557390949,
+            "nrmse": 3.3213416986005293,
+            "pearson": 0.22282378066855466,
+            "target_peak": 1.0,
+            "outside_peak": 0.9993907630103369,
+            "outside_energy_fraction": 0.9528076248227763
+          },
+          "linear_active": {
+            "dice_equal_area": 0.42857142857142855,
+            "cnr": 1.4922426374567404,
+            "nrmse": 1.1634305664240594,
+            "pearson": 0.3854065702975036,
+            "target_peak": 0.9961326295956783,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.7352821834869856
+          },
+          "linear_fusion": {
+            "dice_equal_area": 0.5714285714285714,
+            "cnr": 1.2240257864502937,
+            "nrmse": 0.9562820816171258,
+            "pearson": 0.45351567824972794,
+            "target_peak": 1.0,
+            "outside_peak": 0.9759940128329672,
+            "outside_energy_fraction": 0.5274418849184772
+          },
+          "nonlinear_pressure": {
+            "dice_equal_area": 0.0,
+            "cnr": 1.3578212142616626,
+            "nrmse": 1.9972480997611555,
+            "pearson": 0.053413950759629826,
+            "target_peak": 0.14905356879389622,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9943935153264936
+          },
+          "nonlinear_fwi": {
+            "dice_equal_area": 0.2857142857142857,
+            "cnr": 6.817670559943927,
+            "nrmse": 1.278542569235616,
+            "pearson": 0.4803646648222315,
+            "target_peak": 0.8981797718037556,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.7593770725732731
+          },
+          "nonlinear_cavitation": {
+            "dice_equal_area": 0.0,
+            "cnr": -0.4660440800909182,
+            "nrmse": 1.843637469322839,
+            "pearson": -0.018577455145782986,
+            "target_peak": 0.0461353979251497,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9998430559495691
+          },
+          "nonlinear_fusion": {
+            "dice_equal_area": 0.2857142857142857,
+            "cnr": 6.305600153699065,
+            "nrmse": 1.5823011585701647,
+            "pearson": 0.407672324487893,
+            "target_peak": 0.8981797718037555,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.8322523383105558
+          }
+        },
+        "cross_model_metrics": {
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.4420490831617345,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.22337700052399453,
+          "linear_fusion_hotspot_distance_grid_cells": 2.0,
+          "nonlinear_pressure_to_fusion_pearson": 0.4776103735166167
+        },
+        "objective_history": {
+          "nonlinear_fwi": [
+            0.5076518345458849,
+            0.41461900084137027,
+            0.36094489973021454,
+            0.33666558949229086
+          ],
+          "nonlinear_cavitation": [
+            0.0008130939843605342,
+            0.0008092633146244408,
+            0.0008054521837934409,
+            0.0008016604847484357,
+            0.0007978881109986746,
+            0.0007941349566777437,
+            0.0007904009165425315,
+            0.0007866858859698349,
+            0.0007829897609538114,
+            0.0007793124380951511,
+            0.0007756538146051123,
+            0.0007720137882965954,
+            0.0007683922575770649,
+            0.0007647891214504922,
+            0.0007612042795148128,
+            0.0007576376319457577,
+            0.0007540890795189375,
+            0.0007505585236054094,
+            0.0007470458661261668,
+            0.0007435510095990874,
+            0.0007400738570754356,
+            0.000736614312186797,
+            0.0007331722791313751,
+            0.0007297476626558999
+          ]
+        },
+        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.571 and nonlinear fusion Dice is 0.286. Nonlinear peak-pressure outside-target energy is 0.994, linear/nonlinear fusion Pearson is 0.442, and nonlinear FWI objective drop is 1.710e-01. The residual projected aperture mismatch from the original runs is 73.25 mm; therefore the matched artifact localizes the observed visual loss to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+      },
+      {
+        "anatomy": "kidney",
+        "common_grid_shape": [
+          52,
+          52
+        ],
+        "common_extent_m": [
+          -0.0535,
+          0.0805,
+          -0.0188583984375,
+          0.1154501953125
+        ],
+        "geometry": {
+          "comparison_frame": "nonlinear_crop_xy_projection",
+          "linear_focus_to_common_target_centroid_m": 0.004591686100067837,
+          "linear_element_count": 256,
+          "nonlinear_element_count": 256,
+          "median_nearest_projected_element_distance_m": 0.13349590487878812,
+          "common_target_voxels": 102,
+          "common_target_centroid_m": [
+            0.005179738562091509,
+            0.06327071281177915
+          ]
+        },
+        "comparison_metrics": {
+          "linear_exposure": {
+            "dice_equal_area": 0.5686274509803921,
+            "cnr": 1.5354001714568337,
+            "nrmse": 1.0232615311626052,
+            "pearson": 0.48255476769949995,
+            "target_peak": 1.0,
+            "outside_peak": 0.5106281366135157,
+            "outside_energy_fraction": 0.7133116439238727
+          },
+          "linear_active": {
+            "dice_equal_area": 0.7156862745098039,
+            "cnr": 2.203725667927157,
+            "nrmse": 0.6774523677117665,
+            "pearson": 0.7357622942456763,
+            "target_peak": 1.0,
+            "outside_peak": 0.6290329224735688,
+            "outside_energy_fraction": 0.2687483149680462
+          },
+          "linear_fusion": {
+            "dice_equal_area": 0.7254901960784313,
+            "cnr": 1.8649063132052077,
+            "nrmse": 0.6920137143797004,
+            "pearson": 0.7461694417466695,
+            "target_peak": 1.0,
+            "outside_peak": 0.5003399133416699,
+            "outside_energy_fraction": 0.12717495692184788
+          },
+          "nonlinear_pressure": {
+            "dice_equal_area": 0.0,
+            "cnr": 0.510199082731205,
+            "nrmse": 1.1455381199727843,
+            "pearson": 0.07805866993577326,
+            "target_peak": 0.2711700828605677,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9590397178022537
+          },
+          "nonlinear_fwi": {
+            "dice_equal_area": 0.35294117647058826,
+            "cnr": 3.7909552269061306,
+            "nrmse": 0.9221033178506272,
+            "pearson": 0.5449938838841242,
+            "target_peak": 0.8656217475850795,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.6622988865572512
+          },
+          "nonlinear_cavitation": {
+            "dice_equal_area": 0.0,
+            "cnr": -0.43451604611187,
+            "nrmse": 1.325279934059046,
+            "pearson": -0.06454528712062309,
+            "target_peak": 0.33422767072238685,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9839347196278208
+          },
+          "nonlinear_fusion": {
+            "dice_equal_area": 0.3235294117647059,
+            "cnr": 3.551496952777447,
+            "nrmse": 0.9889990414219367,
+            "pearson": 0.525969351444344,
+            "target_peak": 0.8722805226001857,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.6951795617322791
+          }
+        },
+        "cross_model_metrics": {
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.5367554167398294,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.20739397280028032,
+          "linear_fusion_hotspot_distance_grid_cells": 7.810249675906654,
+          "nonlinear_pressure_to_fusion_pearson": 0.19073005794142495
+        },
+        "objective_history": {
+          "nonlinear_fwi": [
+            1.4028757709261457,
+            1.1946951768266234,
+            1.0648897761468745,
+            1.0648897761468745
+          ],
+          "nonlinear_cavitation": [
+            38.04731336572738,
+            37.84046358248528,
+            37.63477275702885,
+            37.430234229114234,
+            37.22684137761624,
+            37.02458762030381,
+            36.8234664136155,
+            36.62347125246715,
+            36.424595669862285,
+            36.22683323676834,
+            36.03017756193518,
+            35.834622291636,
+            35.640161109535825,
+            35.446787736349386,
+            35.254495929572066,
+            35.06327948324739,
+            34.87313222769135,
+            34.684048029370715,
+            34.49602079070154,
+            34.30904445004266,
+            34.12311298132141,
+            33.93822039385916,
+            33.75436073186287,
+            33.5715280744859
+          ]
+        },
+        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.725 and nonlinear fusion Dice is 0.324. Nonlinear peak-pressure outside-target energy is 0.959, linear/nonlinear fusion Pearson is 0.537, and nonlinear FWI objective drop is 3.380e-01. The residual projected aperture mismatch from the original runs is 133.50 mm; therefore the matched artifact localizes the observed visual loss to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+      },
+      {
+        "anatomy": "liver",
+        "common_grid_shape": [
+          52,
+          52
+        ],
+        "common_extent_m": [
+          -0.17964843749999998,
+          0.1402734375,
+          -0.17964843749999998,
+          0.1550390625
+        ],
+        "geometry": {
+          "comparison_frame": "nonlinear_crop_xy_projection",
+          "linear_focus_to_common_target_centroid_m": 0.02220887643273779,
+          "linear_element_count": 256,
+          "nonlinear_element_count": 256,
+          "median_nearest_projected_element_distance_m": 0.04194255609713971,
+          "common_target_voxels": 28,
+          "common_target_centroid_m": [
+            -0.044107306985294116,
+            -0.013242187499999983
+          ]
+        },
+        "comparison_metrics": {
+          "linear_exposure": {
+            "dice_equal_area": 0.21428571428571427,
+            "cnr": 1.6681950224361257,
+            "nrmse": 1.5261383716381418,
+            "pearson": 0.22823968888719962,
+            "target_peak": 1.0,
+            "outside_peak": 0.8810940152559764,
+            "outside_energy_fraction": 0.9174337206774562
+          },
+          "linear_active": {
+            "dice_equal_area": 0.14285714285714285,
+            "cnr": 0.6771969485480251,
+            "nrmse": 1.0485298870954876,
+            "pearson": 0.19549915641441415,
+            "target_peak": 1.0,
+            "outside_peak": 0.8721542538715528,
+            "outside_energy_fraction": 0.8141871762175292
+          },
+          "linear_fusion": {
+            "dice_equal_area": 0.21428571428571427,
+            "cnr": 0.626045546539693,
+            "nrmse": 0.964860055470638,
+            "pearson": 0.26221759421235985,
+            "target_peak": 1.0,
+            "outside_peak": 0.8324777835260682,
+            "outside_energy_fraction": 0.5937053958163565
+          },
+          "nonlinear_pressure": {
+            "dice_equal_area": 0.0,
+            "cnr": 0.578054947368391,
+            "nrmse": 2.3531437967575766,
+            "pearson": 0.04369121846656918,
+            "target_peak": 0.3160899960331063,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9885366320900946
+          },
+          "nonlinear_fwi": {
+            "dice_equal_area": 0.4642857142857143,
+            "cnr": 1.786359897629794,
+            "nrmse": 0.8189339533886218,
+            "pearson": 0.5712536675471076,
+            "target_peak": 1.0,
+            "outside_peak": 0.5822956808560968,
+            "outside_energy_fraction": 0.47005854358605603
+          },
+          "nonlinear_cavitation": {
+            "dice_equal_area": 0.0,
+            "cnr": 0.43237792106138884,
+            "nrmse": 1.2953261938196858,
+            "pearson": 0.03331244151683731,
+            "target_peak": 0.1412375393058877,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9917182624471742
+          },
+          "nonlinear_fusion": {
+            "dice_equal_area": 0.17857142857142858,
+            "cnr": 1.5756561637932915,
+            "nrmse": 1.2318414367090926,
+            "pearson": 0.2261648409497462,
+            "target_peak": 0.5535777128215205,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9186966865811648
+          }
+        },
+        "cross_model_metrics": {
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.1807313671683556,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.19061092741309574,
+          "linear_fusion_hotspot_distance_grid_cells": 18.384776310850235,
+          "nonlinear_pressure_to_fusion_pearson": 0.5496109328651992
+        },
+        "objective_history": {
+          "nonlinear_fwi": [
+            2.589671248507965e-06,
+            2.474048399795121e-06,
+            2.425004710906858e-06,
+            2.3724663111632533e-06
+          ],
+          "nonlinear_cavitation": [
+            6.1592651133109735,
+            6.126800418413095,
+            6.094516718021589,
+            6.062412958418805,
+            6.030488092243997,
+            5.998741078432843,
+            5.9671708821876335,
+            5.93577647494742,
+            5.904556834354821,
+            5.873510944190261,
+            5.842637794355182,
+            5.811936380777992,
+            5.781405705503932,
+            5.75104477648742,
+            5.720852607701096,
+            5.690828219067575,
+            5.660970636345459,
+            5.631278891175453,
+            5.601752020999797,
+            5.572389068991,
+            5.54318908408919,
+            5.514151120933208,
+            5.4852742399531325,
+            5.456557507106123
+          ]
+        },
+        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.214 and nonlinear fusion Dice is 0.179. Nonlinear peak-pressure outside-target energy is 0.989, linear/nonlinear fusion Pearson is 0.181, and nonlinear FWI objective drop is 2.172e-07. The residual projected aperture mismatch from the original runs is 41.94 mm; therefore the matched artifact localizes the observed visual loss to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+      }
+    ]
+  }
 }

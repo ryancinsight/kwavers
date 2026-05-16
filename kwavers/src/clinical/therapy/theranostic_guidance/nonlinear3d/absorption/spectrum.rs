@@ -43,12 +43,9 @@ pub(super) fn spectral_filter(n: usize, field: &[f64], weights: &Array3<f64>) ->
         .copy_from_slice(field);
     let mut spectrum = Array3::<Complex64>::zeros((n, n, nz_c));
     fft_3d_r2c_into(&spatial, &mut spectrum);
-    spectrum
-        .iter_mut()
-        .zip(weights.iter())
-        .for_each(|(z, &w)| {
-            *z *= w;
-        });
+    spectrum.iter_mut().zip(weights.iter()).for_each(|(z, &w)| {
+        *z *= w;
+    });
     let mut scratch = Array3::<Complex64>::zeros((n, n, nz_c));
     ifft_3d_r2c_into(&spectrum, &mut spatial, &mut scratch);
     spatial

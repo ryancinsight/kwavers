@@ -119,7 +119,7 @@ mod tests {
     use crate::solver::workspace::ScratchArena;
 
     #[test]
-    fn scratch_arena_memory_bytes_is_14n_f64() {
+    fn scratch_arena_memory_bytes_is_14_per_voxel() {
         let grid = Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).unwrap();
         let ws = KuznetsovWorkspace::new(&grid).unwrap();
         let n = 8 * 8 * 8;

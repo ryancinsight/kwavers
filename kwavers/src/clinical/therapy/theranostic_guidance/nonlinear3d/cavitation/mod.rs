@@ -14,10 +14,12 @@ mod passive_inverse;
 use ndarray::Array3;
 
 use super::metrics::metrics_from_score;
-use super::types::{Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume, VolumeReconstructionMetrics};
+use super::types::{
+    Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume, VolumeReconstructionMetrics,
+};
 
 use forward::cavitation_source;
-use helpers::{active_indices, normalize, positive_mask, unflatten};
+use helpers::{active_indices, normalize, unflatten};
 use passive_inverse::{solve_projected_tikhonov, PassiveOperator};
 
 #[derive(Clone, Debug)]
@@ -39,19 +41,23 @@ pub(crate) fn run_cavitation_inverse(
     let source = cavitation_source(volume, peak_pressure, config);
     let source_vec = source.iter().copied().collect::<Vec<_>>();
     let active = active_indices(&body);
+    let source_active = active
+        .iter()
+        .map(|&cell| source_vec[cell])
+        .collect::<Vec<_>>();
     let operator = PassiveOperator::new(volume, aperture, &active, config);
-    let data = operator.apply(&source_vec);
+    let data = operator.apply(&source_active);
     let inverse = solve_projected_tikhonov(&operator, &data, config);
     let mut reconstructed = vec![0.0; n * n * n];
     for (col, cell) in active.iter().enumerate() {
         reconstructed[*cell] = inverse.model[col];
     }
-    let source_mask = positive_mask(&source_vec, &body);
+    let target_mask = volume.target_mask.iter().copied().collect::<Vec<_>>();
     let score = normalize(&reconstructed, &body);
     CavitationResult {
         source_density: source,
         reconstructed_density: unflatten(&reconstructed, n),
         objective_history: inverse.objective_history,
-        metrics: metrics_from_score(&score, &source_mask, &body),
+        metrics: metrics_from_score(&score, &target_mask, &body),
     }
 }

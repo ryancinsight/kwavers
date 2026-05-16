@@ -4,7 +4,9 @@ use std::cmp::Ordering;
 
 use crate::core::error::{KwaversError, KwaversResult};
 
+use super::super::abdominal3d::helpers::{exterior_air_mask, nearest_exterior_skin_point};
 use super::super::AnatomyKind;
+use super::super::Point3;
 use super::types::{
     grid_point_m, GridIndex, Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume,
 };
@@ -55,7 +57,8 @@ fn brain_candidates(volume: &Nonlinear3dVolume) -> Vec<GridIndex> {
     let peak_z = axial_peak(&volume.body_mask);
     let target = centroid_index(&volume.target_mask).unwrap_or(volume.focus);
     let superior_positive = peak_z <= n / 2;
-    let mut candidates = boundary_cells(&volume.body_mask)
+    let exterior = exterior_air_mask(&volume.body_mask);
+    let mut candidates = exterior_boundary_cells(&volume.body_mask, &exterior)
         .into_iter()
         .filter(|idx| {
             if volume.ct_hu[[idx.x, idx.y, idx.z]] < 250.0 {
@@ -77,9 +80,14 @@ fn brain_candidates(volume: &Nonlinear3dVolume) -> Vec<GridIndex> {
 
 fn abdominal_candidates(volume: &Nonlinear3dVolume) -> Vec<GridIndex> {
     let focus = volume.focus;
-    let skin = nearest_boundary(&volume.body_mask, focus).unwrap_or(focus);
-    let direction = unit_vector(focus, skin);
-    let mut candidates = boundary_cells(&volume.body_mask)
+    let exterior = exterior_air_mask(&volume.body_mask);
+    let skin = exterior_skin_grid_index(volume, &exterior)
+        .or_else(|| nearest_boundary(&volume.body_mask, focus))
+        .unwrap_or(focus);
+    let direction = volume
+        .aperture_direction
+        .unwrap_or_else(|| unit_vector(focus, skin));
+    let mut candidates = exterior_boundary_cells(&volume.body_mask, &exterior)
         .into_iter()
         .filter(|idx| dot(unit_vector(focus, *idx), direction) > 0.25)
         .collect::<Vec<_>>();
@@ -91,6 +99,62 @@ fn abdominal_candidates(volume: &Nonlinear3dVolume) -> Vec<GridIndex> {
             .total_cmp(&angle_about_direction(*b, focus, direction))
     });
     candidates
+}
+
+fn exterior_skin_grid_index(
+    volume: &Nonlinear3dVolume,
+    exterior: &ndarray::Array3<bool>,
+) -> Option<GridIndex> {
+    let n = volume.body_mask.dim().0;
+    let center = [0.5 * (n - 1) as f64; 3];
+    let spacing = [volume.spacing_m; 3];
+    let focus_m = grid_point_m(volume.focus, n, volume.spacing_m);
+    nearest_exterior_skin_point(&volume.body_mask, exterior, spacing, center, focus_m)
+        .ok()
+        .map(|point| point_to_grid_index(point, n, volume.spacing_m))
+}
+
+fn point_to_grid_index(point: Point3, n: usize, spacing_m: f64) -> GridIndex {
+    let center = 0.5 * (n - 1) as f64;
+    let to_index = |value_m: f64| -> usize {
+        (value_m / spacing_m + center)
+            .round()
+            .clamp(0.0, (n - 1) as f64) as usize
+    };
+    GridIndex {
+        x: to_index(point.x_m),
+        y: to_index(point.y_m),
+        z: to_index(point.z_m),
+    }
+}
+
+fn exterior_boundary_cells(
+    mask: &ndarray::Array3<bool>,
+    exterior: &ndarray::Array3<bool>,
+) -> Vec<GridIndex> {
+    let mut out = Vec::new();
+    for ((x, y, z), active) in mask.indexed_iter() {
+        if *active && touches_exterior(mask, exterior, x, y, z) {
+            out.push(GridIndex { x, y, z });
+        }
+    }
+    out
+}
+
+fn touches_exterior(
+    mask: &ndarray::Array3<bool>,
+    exterior: &ndarray::Array3<bool>,
+    x: usize,
+    y: usize,
+    z: usize,
+) -> bool {
+    let (nx, ny, nz) = mask.dim();
+    (x > 0 && !mask[[x - 1, y, z]] && exterior[[x - 1, y, z]])
+        || (x + 1 < nx && !mask[[x + 1, y, z]] && exterior[[x + 1, y, z]])
+        || (y > 0 && !mask[[x, y - 1, z]] && exterior[[x, y - 1, z]])
+        || (y + 1 < ny && !mask[[x, y + 1, z]] && exterior[[x, y + 1, z]])
+        || (z > 0 && !mask[[x, y, z - 1]] && exterior[[x, y, z - 1]])
+        || (z + 1 < nz && !mask[[x, y, z + 1]] && exterior[[x, y, z + 1]])
 }
 
 fn boundary_cells(mask: &ndarray::Array3<bool>) -> Vec<GridIndex> {

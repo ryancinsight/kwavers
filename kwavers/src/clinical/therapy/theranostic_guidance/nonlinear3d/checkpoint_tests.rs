@@ -125,6 +125,7 @@ impl Fixture {
             config: &self.config,
             schedule: self.schedule,
             encoding: self.encoding,
+            source_scale: 1.0,
             retain_history,
         }
     }
@@ -147,6 +148,7 @@ impl Fixture {
             config: &self.config,
             schedule: self.schedule,
             encoding: self.encoding,
+            source_scale: 1.0,
             sponge: &self.sponge,
             step,
         }
@@ -174,6 +176,7 @@ impl Fixture {
             config: &self.config,
             schedule: self.schedule,
             encoding: self.encoding,
+            source_scale: 1.0,
             dt: self.schedule.dt_s,
             observed_energy,
         }

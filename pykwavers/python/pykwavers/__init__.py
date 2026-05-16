@@ -142,6 +142,11 @@ if _extension_override:
                             _stable_abi_dll = _runtime_dir / "libpython3.dll"
                 break
         os.add_dll_directory(str(_extension_dir))
+        # Also add the package directory: GNU-toolchain DLLs (libstdc++, libgcc,
+        # libwinpthread) are co-located with _pykwavers.pyd, not with the target dll.
+        _pkg_dir_override = str(Path(__file__).parent)
+        if _pkg_dir_override != str(_extension_dir):
+            os.add_dll_directory(_pkg_dir_override)
     _loader = importlib.machinery.ExtensionFileLoader(
         f"{__name__}._pykwavers",
         str(_extension_path),
@@ -156,6 +161,11 @@ if _extension_override:
     _module = importlib.util.module_from_spec(_spec)
     sys.modules[f"{__name__}._pykwavers"] = _module
     _loader.exec_module(_module)
+elif os.name == "nt":
+    # The override path was not taken (pyd is current), but libpython3.dll lives
+    # next to the pyd.  Add the package directory so Windows DLL search finds it.
+    _pkg_dir = str(Path(__file__).parent)
+    os.add_dll_directory(_pkg_dir)
 
 # Import Python submodules for comparison and validation
 from . import comparison, kwave_bridge, kwave_python_bridge
@@ -182,7 +192,10 @@ from ._pykwavers import (
     FocalKernel,
     KernelCube,
     place_kernel_at_focus,
+    plan_abdominal_array_placement_from_ritk_ct,
     plan_brain_helmet_placement_from_ritk_ct,
+    run_transcranial_fus_planning_from_ritk_ct,
+    run_transcranial_skull_adaptive_benchmark_from_ritk_ct,
     run_seismic_helmet_fwi_from_ritk_ct,
     run_seismic_helmet_fwi_volume_from_ritk_ct,
     run_theranostic_inverse_from_ritk,
@@ -250,6 +263,8 @@ __all__ = [
     # Phase 22: PID, Registration, Bubble Field
     "PIDController",
     "BubbleField",
+    "plan_abdominal_array_placement_from_ritk_ct",
+    "plan_brain_helmet_placement_from_ritk_ct",
     "resample_to_target_grid",
     "kspace_line_recon",
     "time_reversal_reconstruction",
@@ -257,7 +272,8 @@ __all__ = [
     "run_seismic_helmet_fwi_volume_from_ritk_ct",
     "run_theranostic_inverse_from_ritk",
     "run_theranostic_nonlinear_3d_from_ritk",
-    "plan_brain_helmet_placement_from_ritk_ct",
+    "run_transcranial_fus_planning_from_ritk_ct",
+    "run_transcranial_skull_adaptive_benchmark_from_ritk_ct",
     "passive_acoustic_map_das",
     "beamform_image_delay_and_sum",
     # Submodules

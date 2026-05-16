@@ -37,8 +37,6 @@ impl Simulation {
         record_modes: &[String],
         record_start_index: usize,
     ) -> KwaversResult<SimulationRunResult> {
-        
-
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
         let transducer_ordered_indices = transducer_sensor
             .map(|trans| Self::create_transducer_ordered_indices(grid, &trans.inner));
@@ -121,6 +119,8 @@ impl Simulation {
             i_avg_z: None,
             velocity_stats: None,
             full_grid_stats,
+            thermal_temperature: None,
+            thermal_dose: None,
         })
     }
 }

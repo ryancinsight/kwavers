@@ -221,7 +221,10 @@ fn fourier_periodic_nodes_rejects_n_less_than_2() {
 #[test]
 fn new_fourier_constructs_with_correct_metadata_and_zero_lift() {
     let poly_order = 7; // N = 8 equispaced nodes
-    let config = DGConfig { polynomial_order: poly_order, ..DGConfig::default() };
+    let config = DGConfig {
+        polynomial_order: poly_order,
+        ..DGConfig::default()
+    };
     let grid = make_grid(poly_order + 1);
 
     let solver = DGSolver::new_fourier(config, grid).expect("new_fourier failed");
@@ -241,7 +244,10 @@ fn new_fourier_constructs_with_correct_metadata_and_zero_lift() {
 #[test]
 fn new_fourier_mass_matrix_has_uniform_diagonal_entries() {
     let n = 6_usize; // N = 6 equispaced nodes
-    let config = DGConfig { polynomial_order: n - 1, ..DGConfig::default() };
+    let config = DGConfig {
+        polynomial_order: n - 1,
+        ..DGConfig::default()
+    };
     let grid = make_grid(n);
     let solver = DGSolver::new_fourier(config, grid).expect("new_fourier failed");
 
@@ -276,7 +282,10 @@ fn new_fourier_mass_matrix_has_uniform_diagonal_entries() {
 #[test]
 fn new_fourier_differentiation_matrix_is_spectrally_exact_for_first_sine_mode() {
     let n = 8_usize;
-    let config = DGConfig { polynomial_order: n - 1, ..DGConfig::default() };
+    let config = DGConfig {
+        polynomial_order: n - 1,
+        ..DGConfig::default()
+    };
     let grid = make_grid(n);
     let solver = DGSolver::new_fourier(config, grid).expect("new_fourier failed");
 
@@ -284,9 +293,12 @@ fn new_fourier_differentiation_matrix_is_spectrally_exact_for_first_sine_mode() 
     let d = &*solver.diff_matrix;
 
     // f_j = sin(π(x_j + 1)),  df/dx = π cos(π(x_j + 1)).
-    let f: Vec<f64> = (0..n).map(|j| (std::f64::consts::PI * (xi[j] + 1.0)).sin()).collect();
-    let df_exact: Vec<f64> =
-        (0..n).map(|j| std::f64::consts::PI * (std::f64::consts::PI * (xi[j] + 1.0)).cos()).collect();
+    let f: Vec<f64> = (0..n)
+        .map(|j| (std::f64::consts::PI * (xi[j] + 1.0)).sin())
+        .collect();
+    let df_exact: Vec<f64> = (0..n)
+        .map(|j| std::f64::consts::PI * (std::f64::consts::PI * (xi[j] + 1.0)).cos())
+        .collect();
 
     for i in 0..n {
         let df_computed: f64 = (0..n).map(|j| d[[i, j]] * f[j]).sum();

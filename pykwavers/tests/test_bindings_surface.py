@@ -28,6 +28,8 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "run_theranostic_nonlinear_3d_from_ritk")
     assert not hasattr(kw, "run_theranostic_fwi_from_ritk")
     assert hasattr(kw, "plan_brain_helmet_placement_from_ritk_ct")
+    assert hasattr(kw, "run_transcranial_fus_planning_from_ritk_ct")
+    assert hasattr(kw, "run_transcranial_skull_adaptive_benchmark_from_ritk_ct")
 
 
 def test_heterogeneous_medium_and_mask_sensor_surface():

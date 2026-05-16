@@ -1,7 +1,7 @@
+use super::super::phase_correction::TranscranialAberrationCorrection;
 use crate::domain::grid::Grid;
 use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
-use super::super::phase_correction::TranscranialAberrationCorrection;
 
 fn make_correction() -> TranscranialAberrationCorrection {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();

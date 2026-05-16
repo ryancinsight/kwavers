@@ -1,29 +1,41 @@
 //! GPU PSTD run tests — pressure source, velocity source, multi-source, and benchmark.
 
-use super::super::GpuPstdSolver;
+use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
 
 fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
     let n3 = 32 * 32 * 32;
+    let c0v = vec![1500.0f32; n3];
+    let rho0v = vec![1000.0f32; n3];
+    let ones = vec![1.0f32; n3];
+    let zeros = vec![0.0f32; n3];
     GpuPstdSolver::with_auto_device(
         &crate::domain::grid::Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap(),
-        &vec![1500.0f32; n3],
-        &vec![1000.0f32; n3],
-        0.3e-3 / 1500.0,
-        nt,
-        1500.0,
-        &vec![1.0f32; n3],
-        &vec![1.0f32; n3],
-        &vec![1.0f32; n3],
-        &vec![1.0f32; n3],
-        &vec![1.0f32; n3],
-        &vec![1.0f32; n3],
-        &vec![0.0f32; n3],
-        &vec![0.0f32; n3],
-        &vec![0.0f32; n3],
-        &vec![0.0f32; n3],
-        &vec![0.0f32; n3],
-        false,
-        false,
+        MediumArrays {
+            c0_flat: &c0v,
+            rho0_flat: &rho0v,
+        },
+        SolverParams {
+            dt: 0.3e-3 / 1500.0,
+            nt,
+            c_ref: 1500.0,
+            nonlinear: false,
+            absorbing: false,
+        },
+        PmlArrays {
+            x: &ones,
+            y: &ones,
+            z: &ones,
+            sgx: &ones,
+            sgy: &ones,
+            sgz: &ones,
+        },
+        AbsorptionArrays {
+            bon_a_flat: &zeros,
+            nabla1: &zeros,
+            nabla2: &zeros,
+            tau: &zeros,
+            eta: &zeros,
+        },
     )
     .ok()
 }
@@ -114,26 +126,38 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
     let dt = 0.3e-4 / 1500.0;
     let nt = 64usize;
 
+    let c0v = vec![1500.0f32; total];
+    let rho0v = vec![1000.0f32; total];
+    let ones = vec![1.0f32; total];
+    let zeros = vec![0.0f32; total];
     let solver = GpuPstdSolver::with_auto_device(
         &crate::domain::grid::Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4).unwrap(),
-        &vec![1500.0f32; total],
-        &vec![1000.0f32; total],
-        dt,
-        nt,
-        1500.0,
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![0.0f32; total],
-        &vec![0.0f32; total],
-        &vec![0.0f32; total],
-        &vec![0.0f32; total],
-        &vec![0.0f32; total],
-        false,
-        false,
+        MediumArrays {
+            c0_flat: &c0v,
+            rho0_flat: &rho0v,
+        },
+        SolverParams {
+            dt,
+            nt,
+            c_ref: 1500.0,
+            nonlinear: false,
+            absorbing: false,
+        },
+        PmlArrays {
+            x: &ones,
+            y: &ones,
+            z: &ones,
+            sgx: &ones,
+            sgy: &ones,
+            sgz: &ones,
+        },
+        AbsorptionArrays {
+            bon_a_flat: &zeros,
+            nabla1: &zeros,
+            nabla2: &zeros,
+            tau: &zeros,
+            eta: &zeros,
+        },
     );
 
     let Some(mut solver) = solver.ok() else {
@@ -179,26 +203,38 @@ fn bench_gpu_pstd_bmode_grid() {
     let nt = 50;
     let total = nx * ny * nz;
 
+    let c0v = vec![c0 as f32; total];
+    let rho0v = vec![1000.0f32; total];
+    let ones = vec![1.0f32; total];
+    let zeros = vec![0.0f32; total];
     let solver = GpuPstdSolver::with_auto_device(
         &crate::domain::grid::Grid::new(nx, ny, nz, dx, dx, dx).unwrap(),
-        &vec![c0 as f32; total],
-        &vec![1000.0f32; total],
-        dt,
-        nt,
-        c0,
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![1.0f32; total],
-        &vec![0.0f32; total],
-        &vec![0.0f32; total],
-        &vec![0.0f32; total],
-        &vec![0.0f32; total],
-        &vec![0.0f32; total],
-        false,
-        false,
+        MediumArrays {
+            c0_flat: &c0v,
+            rho0_flat: &rho0v,
+        },
+        SolverParams {
+            dt,
+            nt,
+            c_ref: c0,
+            nonlinear: false,
+            absorbing: false,
+        },
+        PmlArrays {
+            x: &ones,
+            y: &ones,
+            z: &ones,
+            sgx: &ones,
+            sgy: &ones,
+            sgz: &ones,
+        },
+        AbsorptionArrays {
+            bon_a_flat: &zeros,
+            nabla1: &zeros,
+            nabla2: &zeros,
+            tau: &zeros,
+            eta: &zeros,
+        },
     );
 
     let Some(mut solver) = solver.ok() else {

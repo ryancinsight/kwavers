@@ -2,6 +2,7 @@
 
 use ndarray::{Array2, Array3};
 
+use super::super::geometry::{is_boundary_2d, is_boundary_3d};
 use super::{centered_origin_2d, distance_3d, Point3};
 
 pub(super) fn surface_points_3d(
@@ -78,32 +79,4 @@ pub(super) fn nearest_surface_point(points: &[Point3], focus: Point3) -> Option<
         .iter()
         .copied()
         .min_by(|a, b| distance_3d(*a, focus).total_cmp(&distance_3d(*b, focus)))
-}
-
-fn is_boundary_3d(mask: &Array3<bool>, ix: usize, iy: usize, iz: usize) -> bool {
-    let (nx, ny, nz) = mask.dim();
-    ix == 0
-        || iy == 0
-        || iz == 0
-        || ix + 1 == nx
-        || iy + 1 == ny
-        || iz + 1 == nz
-        || !mask[[ix - 1, iy, iz]]
-        || !mask[[ix + 1, iy, iz]]
-        || !mask[[ix, iy - 1, iz]]
-        || !mask[[ix, iy + 1, iz]]
-        || !mask[[ix, iy, iz - 1]]
-        || !mask[[ix, iy, iz + 1]]
-}
-
-fn is_boundary_2d(mask: &Array2<bool>, ix: usize, iy: usize) -> bool {
-    let (nx, ny) = mask.dim();
-    ix == 0
-        || iy == 0
-        || ix + 1 == nx
-        || iy + 1 == ny
-        || !mask[[ix - 1, iy]]
-        || !mask[[ix + 1, iy]]
-        || !mask[[ix, iy - 1]]
-        || !mask[[ix, iy + 1]]
 }

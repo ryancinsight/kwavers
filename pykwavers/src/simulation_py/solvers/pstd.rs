@@ -40,7 +40,6 @@ impl Simulation {
         record_modes: &[String],
     ) -> KwaversResult<(PSTDSolver, KwaversGrid, ndarray::Array3<bool>)> {
         use kwavers::core::error::ValidationError;
-        
 
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
         let transducer_ordered_indices = transducer_sensor
@@ -53,14 +52,12 @@ impl Simulation {
         let (sim_grid, grid_source, sensor_mask, effective_pml_inside) =
             if !pml_inside && thickness > 0 {
                 if transducer_sensor.is_some() {
-                    return Err(KwaversError::Validation(
-                        ValidationError::FieldValidation {
-                            field: "pml_inside".to_string(),
-                            value: "false".to_string(),
-                            constraint: "pml_inside=false is not supported with transducer sensors"
-                                .to_string(),
-                        },
-                    ));
+                    return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                        field: "pml_inside".to_string(),
+                        value: "false".to_string(),
+                        constraint: "pml_inside=false is not supported with transducer sensors"
+                            .to_string(),
+                    }));
                 }
                 let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
                 let p = thickness;
@@ -221,9 +218,24 @@ impl Simulation {
         record_start_index: usize,
     ) -> KwaversResult<SimulationRunResult> {
         let (mut solver, _sim_grid, _sensor_mask) = Self::prepare_pstd_solver(
-            grid, medium, time_steps, dt, compatibility_mode, enable_nonlinear,
-            alpha_coeff_db, alpha_power, grid_source, sources, sensor, transducer_sensor,
-            pml_size, pml_size_xyz, pml_inside, pml_alpha_xyz, axisymmetric, record_modes,
+            grid,
+            medium,
+            time_steps,
+            dt,
+            compatibility_mode,
+            enable_nonlinear,
+            alpha_coeff_db,
+            alpha_power,
+            grid_source,
+            sources,
+            sensor,
+            transducer_sensor,
+            pml_size,
+            pml_size_xyz,
+            pml_inside,
+            pml_alpha_xyz,
+            axisymmetric,
+            record_modes,
         )?;
 
         solver.run_orchestrated(time_steps)?;
@@ -232,23 +244,33 @@ impl Simulation {
         let full_data = solver
             .sensor_recorder
             .recorded_pressure_view()
-            .ok_or_else(|| {
-                KwaversError::Io(std::io::Error::other("No sensor data recorded"))
-            })?;
+            .ok_or_else(|| KwaversError::Io(std::io::Error::other("No sensor data recorded")))?;
         let sensor_data =
             Self::trim_initial_recorder_view(full_data, time_steps, record_start_index);
 
-        let ux_data = solver.sensor_recorder.recorded_ux_view()
+        let ux_data = solver
+            .sensor_recorder
+            .recorded_ux_view()
             .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
-        let uy_data = solver.sensor_recorder.recorded_uy_view()
+        let uy_data = solver
+            .sensor_recorder
+            .recorded_uy_view()
             .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
-        let uz_data = solver.sensor_recorder.recorded_uz_view()
+        let uz_data = solver
+            .sensor_recorder
+            .recorded_uz_view()
             .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
-        let ix_data = solver.sensor_recorder.recorded_ix_view()
+        let ix_data = solver
+            .sensor_recorder
+            .recorded_ix_view()
             .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
-        let iy_data = solver.sensor_recorder.recorded_iy_view()
+        let iy_data = solver
+            .sensor_recorder
+            .recorded_iy_view()
             .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
-        let iz_data = solver.sensor_recorder.recorded_iz_view()
+        let iz_data = solver
+            .sensor_recorder
+            .recorded_iz_view()
             .map(|d| Self::trim_initial_recorder_view(d, time_steps, record_start_index));
         let i_avg_x = solver.sensor_recorder.extract_i_avg_x();
         let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
@@ -257,9 +279,21 @@ impl Simulation {
         let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 
         Ok(SimulationRunResult {
-            sensor_data, stats, ux_data, uy_data, uz_data,
-            ix_data, iy_data, iz_data, i_avg_x, i_avg_y, i_avg_z,
-            velocity_stats, full_grid_stats,
+            sensor_data,
+            stats,
+            ux_data,
+            uy_data,
+            uz_data,
+            ix_data,
+            iy_data,
+            iz_data,
+            i_avg_x,
+            i_avg_y,
+            i_avg_z,
+            velocity_stats,
+            full_grid_stats,
+            thermal_temperature: None,
+            thermal_dose: None,
         })
     }
 
@@ -286,9 +320,24 @@ impl Simulation {
         checkpoint_path: &std::path::Path,
     ) -> KwaversResult<()> {
         let (mut solver, _sim_grid, _sensor_mask) = Self::prepare_pstd_solver(
-            grid, medium, total_steps, dt, compatibility_mode, enable_nonlinear,
-            alpha_coeff_db, alpha_power, grid_source, sources, sensor, transducer_sensor,
-            pml_size, pml_size_xyz, pml_inside, pml_alpha_xyz, false, &[],
+            grid,
+            medium,
+            total_steps,
+            dt,
+            compatibility_mode,
+            enable_nonlinear,
+            alpha_coeff_db,
+            alpha_power,
+            grid_source,
+            sources,
+            sensor,
+            transducer_sensor,
+            pml_size,
+            pml_size_xyz,
+            pml_inside,
+            pml_alpha_xyz,
+            false,
+            &[],
         )?;
         solver.run_to_checkpoint(checkpoint_steps, checkpoint_path)
     }
@@ -318,33 +367,58 @@ impl Simulation {
         record_modes: &[String],
     ) -> KwaversResult<SimulationRunResult> {
         let (mut solver, _sim_grid, _sensor_mask) = Self::prepare_pstd_solver(
-            grid, medium, total_steps, dt, compatibility_mode, enable_nonlinear,
-            alpha_coeff_db, alpha_power, grid_source, sources, sensor, transducer_sensor,
-            pml_size, pml_size_xyz, pml_inside, pml_alpha_xyz, false, record_modes,
+            grid,
+            medium,
+            total_steps,
+            dt,
+            compatibility_mode,
+            enable_nonlinear,
+            alpha_coeff_db,
+            alpha_power,
+            grid_source,
+            sources,
+            sensor,
+            transducer_sensor,
+            pml_size,
+            pml_size_xyz,
+            pml_inside,
+            pml_alpha_xyz,
+            false,
+            record_modes,
         )?;
 
         checkpoint.validate_restore_contract(grid.nx, grid.ny, grid.nz, total_steps, dt)?;
 
         let full_data = solver
             .run_from_checkpoint_loaded(checkpoint, checkpoint_path, remaining_steps)?
-            .ok_or_else(|| {
-                KwaversError::Io(std::io::Error::other("No sensor data recorded"))
-            })?;
+            .ok_or_else(|| KwaversError::Io(std::io::Error::other("No sensor data recorded")))?;
 
         let stats = solver.sensor_recorder.extract_all_stats();
         let sensor_data = Self::trim_initial_recorder_sample(full_data, total_steps, 1);
 
-        let ux_data = solver.sensor_recorder.recorded_ux_view()
+        let ux_data = solver
+            .sensor_recorder
+            .recorded_ux_view()
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
-        let uy_data = solver.sensor_recorder.recorded_uy_view()
+        let uy_data = solver
+            .sensor_recorder
+            .recorded_uy_view()
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
-        let uz_data = solver.sensor_recorder.recorded_uz_view()
+        let uz_data = solver
+            .sensor_recorder
+            .recorded_uz_view()
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
-        let ix_data = solver.sensor_recorder.recorded_ix_view()
+        let ix_data = solver
+            .sensor_recorder
+            .recorded_ix_view()
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
-        let iy_data = solver.sensor_recorder.recorded_iy_view()
+        let iy_data = solver
+            .sensor_recorder
+            .recorded_iy_view()
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
-        let iz_data = solver.sensor_recorder.recorded_iz_view()
+        let iz_data = solver
+            .sensor_recorder
+            .recorded_iz_view()
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
         let i_avg_x = solver.sensor_recorder.extract_i_avg_x();
         let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
@@ -353,9 +427,21 @@ impl Simulation {
         let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 
         Ok(SimulationRunResult {
-            sensor_data, stats, ux_data, uy_data, uz_data,
-            ix_data, iy_data, iz_data, i_avg_x, i_avg_y, i_avg_z,
-            velocity_stats, full_grid_stats,
+            sensor_data,
+            stats,
+            ux_data,
+            uy_data,
+            uz_data,
+            ix_data,
+            iy_data,
+            iz_data,
+            i_avg_x,
+            i_avg_y,
+            i_avg_z,
+            velocity_stats,
+            full_grid_stats,
+            thermal_temperature: None,
+            thermal_dose: None,
         })
     }
 }

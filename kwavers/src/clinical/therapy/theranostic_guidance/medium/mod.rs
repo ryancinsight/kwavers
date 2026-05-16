@@ -11,8 +11,8 @@ mod abdominal;
 mod brain;
 
 pub use abdominal::prepare_abdominal_slice;
-pub use brain::prepare_brain_slice;
 pub(crate) use abdominal::{largest_connected_target_component, largest_target_slice};
+pub use brain::prepare_brain_slice;
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::bilinear_index_space;
@@ -92,7 +92,7 @@ pub(super) fn median_in_mask(values: &Array2<f64>, mask: &Array2<bool>) -> Optio
 
 /// Resample a continuous 2-D field to a square `size × size` grid via bilinear
 /// interpolation.
-pub(super) fn resample_f64(input: &Array2<f64>, size: usize) -> Array2<f64> {
+pub(super) fn resample(input: &Array2<f64>, size: usize) -> Array2<f64> {
     let (nx, ny) = input.dim();
     Array2::from_shape_fn((size, size), |(ix, iy)| {
         let x = ix as f64 * (nx - 1) as f64 / (size - 1) as f64;

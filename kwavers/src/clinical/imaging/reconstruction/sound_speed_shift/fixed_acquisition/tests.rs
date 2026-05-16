@@ -165,7 +165,10 @@ fn batch_reconstruction_uses_compact_summaries_by_default() {
     assert!(batch.frames[0].summary.objective_iterations > 0);
     assert!(batch.frames[0].summary.objective_final <= batch.frames[0].summary.objective_initial);
     assert_image_close(
-        &batch.frames[0].sound_speed_shift_m_s,
+        batch.frames[0]
+            .sound_speed_shift_m_s
+            .as_ref()
+            .expect("default batch retention must retain reconstructed image"),
         &direct.sound_speed_shift_m_s,
         1.0e-12,
     );

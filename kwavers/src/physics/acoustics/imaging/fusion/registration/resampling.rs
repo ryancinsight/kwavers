@@ -42,7 +42,12 @@ pub fn resample_to_target_grid(
                 let source_coords = apply_inverse_transform(transform, target_coords);
 
                 // Trilinear interpolation
-                let value = trilinear_index_space(source_image, source_coords[0], source_coords[1], source_coords[2]);
+                let value = trilinear_index_space(
+                    source_image,
+                    source_coords[0],
+                    source_coords[1],
+                    source_coords[2],
+                );
                 resampled[[i, j, k]] = value;
             }
         }

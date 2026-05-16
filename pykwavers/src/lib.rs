@@ -60,6 +60,7 @@ mod pam_bindings;
 // Utility Function Bindings
 // ============================================================================
 
+mod bubble_bindings;
 mod fft_bindings;
 mod field_surrogate_bindings;
 mod ritk_image;
@@ -71,7 +72,6 @@ mod utils_bindings;
 // ============================================================================
 // Error Handling
 // ============================================================================
-
 
 /// Convert k-Wave absorption units dB/(MHz^y·cm) to Np/m at the given frequency.
 ///
@@ -163,14 +163,12 @@ pub use transducer_array_py::TransducerArray2D;
 mod sensor_py;
 pub use sensor_py::Sensor;
 
-
 // ============================================================================
 // Simulation: Main Interface
 // ============================================================================
 
 mod simulation_py;
-pub use simulation_py::{Simulation, GpuPstdSession};
-
+pub use simulation_py::{GpuPstdSession, Simulation};
 
 // ============================================================================
 // Simulation Result + internal run-result bundle
@@ -211,6 +209,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     theranostic_bindings::register(m)?;
     fft_bindings::register(m)?;
     book_bindings::register_book(m)?;
+    bubble_bindings::register_bubble(m)?;
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -224,4 +223,3 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
 // ============================================================================
 
 mod misc_bindings;
-

@@ -43,6 +43,18 @@
     "planning_space": "ct",
     "references": [
       {
+        "boundary": "design input only; the Chapter 25 bridge records available modalities and never fabricates absent channels",
+        "name": "Holder-MI incomplete MRI segmentation",
+        "role": "incomplete brain MRI segmentation reference using modality-specific processing with available-input adaptation",
+        "url": "https://huggingface.co/papers/2507.01254"
+      },
+      {
+        "boundary": "text or report context is an optional modality; it cannot replace measured image volumes or expert tumor segmentation",
+        "name": "TextBraTS",
+        "role": "volume-level brain tumor MRI plus structured text reference for segmentation-context fusion",
+        "url": "https://huggingface.co/papers/2506.16784"
+      },
+      {
         "boundary": "not executed by the Chapter 25 script; synthetic outputs must be generated outside this repo, registered to the planning lattice, and quality checked before use",
         "name": "cWDM",
         "role": "paired high-resolution 3D medical image translation; missing brain MRI modality synthesis from available modalities; CT-to-MR or MR-to-CT is treated as a paired-translation candidate only when a trained checkpoint and output NIfTI are supplied",

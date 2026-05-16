@@ -204,14 +204,14 @@ impl PSTDSolver {
         Zip::from(self.fields.ux.slice_mut(s![.., 0, ..]))
             .and(self.materials.rho0.slice(s![.., 0, ..]))
             .and(&ctx.dpdx)
-            .for_each(|u, &rho, &dp| {
+            .par_for_each(|u, &rho, &dp| {
                 *u -= (dt / rho) * dp;
             });
 
         Zip::from(self.fields.uz.slice_mut(s![.., 0, ..]))
             .and(self.materials.rho0.slice(s![.., 0, ..]))
             .and(&ctx.dpdr)
-            .for_each(|u, &rho, &dp| {
+            .par_for_each(|u, &rho, &dp| {
                 *u -= (dt / rho) * dp;
             });
 

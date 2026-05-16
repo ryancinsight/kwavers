@@ -25,6 +25,7 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
         Some(&labels),
         [2.0, 2.0, 2.0],
         &config,
+        None,
     )
     .expect("nonlinear 3-D fixture must run");
 
@@ -117,14 +118,21 @@ fn nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_through_skull() {
     config.source_encoding_count = 2;
     config.iterations = 1;
     config.frequency_hz = 650_000.0; // INSIGHTEC-like
-    config.source_pressure_pa = 1.5e5;
+    config.source_pressure_pa =
+        2.0 * config.inertial_mi_threshold * (config.frequency_hz * 1.0e-6).sqrt() * 1.0e6;
     config.cycles = 2.0;
     config.bubble_time_steps_per_period = 24;
     config.cavitation_iterations = 6;
 
-    let result =
-        run_theranostic_nonlinear_3d(AnatomyKind::Brain, &ct, None, [1.5, 1.5, 1.5], &config)
-            .expect("nonlinear 3-D brain fixture must run");
+    let result = run_theranostic_nonlinear_3d(
+        AnatomyKind::Brain,
+        &ct,
+        None,
+        [1.5, 1.5, 1.5],
+        &config,
+        Some([0.55, 0.50, 0.50]),
+    )
+    .expect("nonlinear 3-D brain fixture must run");
 
     assert!(result.is_full_wave_inversion);
     assert!(result.uses_nonlinear_wave_propagation);
@@ -154,9 +162,8 @@ fn nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_through_skull() {
             > 0.0,
         "Westervelt peak pressure must be positive after the source-encoded transmissions",
     );
-    // Cavitation source density must be positive — at 1.5e5 Pa diagnostic
-    // pressure the Rayleigh-Plesset response is small but should be
-    // detectable inside at least one voxel.
+    // Cavitation source density must be positive when the configured
+    // histotripsy drive exceeds the inertial-cavitation MI threshold.
     assert!(
         result
             .cavitation_source_density
@@ -164,7 +171,19 @@ fn nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_through_skull() {
             .copied()
             .fold(0.0, f64::max)
             > 0.0,
-        "cavitation source density must respond to the simulated peak pressure",
+        "cavitation source density must respond to the simulated peak pressure; peak_pressure_pa={}, peak_mi={}",
+        result
+            .westervelt_peak_pressure_pa
+            .iter()
+            .copied()
+            .fold(0.0, f64::max),
+        result
+            .westervelt_peak_pressure_pa
+            .iter()
+            .copied()
+            .fold(0.0, f64::max)
+            * 1.0e-6
+            / (config.frequency_hz * 1.0e-6).sqrt(),
     );
     assert!(result.fwi_objective_history.iter().all(|v| v.is_finite()));
     assert!(

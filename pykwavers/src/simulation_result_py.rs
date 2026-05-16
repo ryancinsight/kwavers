@@ -22,9 +22,7 @@ pub(crate) type FullGridStats = Option<(Array3<f64>, Array3<f64>, Array3<f64>, A
 /// The FDTD path never populates velocity fields; the PSTD path does.
 /// Extract full-grid `(p_max, p_min, p_rms, p_final)` from a recorder if
 /// any pressure-statistics mode was requested. Returns `None` otherwise.
-pub(crate) fn extract_full_grid_stats(
-    recorder: &SensorRecorder,
-) -> FullGridStats {
+pub(crate) fn extract_full_grid_stats(recorder: &SensorRecorder) -> FullGridStats {
     let stats = recorder.full_pressure_statistics()?;
     Some((
         stats.get_p_max().clone(),
@@ -63,6 +61,11 @@ pub(crate) struct SimulationRunResult {
     /// `(p_max, p_min, p_rms, p_final)` — each `Array3<f64>` shape
     /// `(nx, ny, nz)`. `None` when no `p_*` mode was requested.
     pub full_grid_stats: FullGridStats,
+    /// Final temperature field (nx, ny, nz) [K]. `None` for acoustic-only runs.
+    pub thermal_temperature: Option<Array3<f64>>,
+    /// CEM43 thermal dose field (nx, ny, nz) [min]. `None` when dose tracking
+    /// is disabled or for acoustic-only runs.
+    pub thermal_dose: Option<Array3<f64>>,
 }
 
 // ============================================================================
@@ -184,6 +187,12 @@ pub struct SimulationResult {
     /// RMS uz at each sensor position [m/s] (None if not requested)
     #[pyo3(get)]
     pub uz_rms: Option<Py<PyArray1<f64>>>,
+    /// Final temperature field (nx, ny, nz) [°C]. `None` for acoustic-only runs.
+    #[pyo3(get)]
+    pub thermal_temperature: Option<Py<PyArray3<f64>>>,
+    /// CEM43 thermal dose field (nx, ny, nz) [min]. `None` when not requested.
+    #[pyo3(get)]
+    pub thermal_dose: Option<Py<PyArray3<f64>>>,
 }
 
 #[pymethods]

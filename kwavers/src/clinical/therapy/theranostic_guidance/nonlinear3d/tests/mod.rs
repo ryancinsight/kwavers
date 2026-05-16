@@ -20,3 +20,5 @@ mod fubini_1d;
 mod harmonic_presence;
 mod pipeline;
 mod sign_correction;
+
+pub(super) use super::super::Point3;

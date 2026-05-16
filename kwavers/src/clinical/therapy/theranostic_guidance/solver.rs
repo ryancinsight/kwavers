@@ -1,6 +1,38 @@
 //! Same-device exposure synthesis, finite-frequency inverse, RTM, and harmonic reconstruction.
+//!
+//! # Fusion weight derivation
+//!
+//! The fused lesion score is a convex combination of four independent lesion estimates
+//! modulated by a passive-channel confidence gate:
+//!
+//! ```text
+//! F = (w_a·A + w_s·S + w_h·H + w_u·U) · (0.25 + 0.75·max(S, U))
+//! ```
+//!
+//! Weights are chosen so that the two highest-SNR channels (active Born inverse and
+//! subharmonic passive) dominate, while harmonic and ultraharmonic provide contrast
+//! refinement. The gate suppresses fused output in regions with no subharmonic or
+//! ultraharmonic cavitation signature.
+//!
+//! | Channel | Symbol | Weight | Rationale |
+//! |---------|--------|--------|-----------|
+//! | Active Born inverse | A | 0.40 | Highest SNR; directly images sound-speed contrast |
+//! | Subharmonic passive | S | 0.25 | Second strongest cavitation marker |
+//! | Harmonic inverse    | H | 0.20 | Tissue-nonlinearity contrast; correlated with A |
+//! | Ultraharmonic passive| U| 0.15 | Lowest SNR; broadband cavitation marker |
 
 use crate::core::error::{KwaversError, KwaversResult};
+
+/// Fusion weight for the active Born inverse channel (highest SNR).
+const FUSED_WEIGHT_ACTIVE: f64 = 0.40;
+/// Fusion weight for the subharmonic passive channel.
+const FUSED_WEIGHT_SUBHARMONIC: f64 = 0.25;
+/// Fusion weight for the harmonic inverse channel.
+const FUSED_WEIGHT_HARMONIC: f64 = 0.20;
+/// Fusion weight for the ultraharmonic passive channel (lowest SNR).
+const FUSED_WEIGHT_ULTRAHARMONIC: f64 = 0.15;
+/// Minimum confidence gate floor applied to the passive cavitation gate.
+const FUSED_GATE_FLOOR: f64 = 0.25;
 use crate::solver::inverse::same_aperture::{
     active_grid, fundamental_operator, harmonic_operator, image_from_vector, passive_operator,
     solve_tikhonov_h1, ultraharmonic_operator, vector_from_image, EncodedOperator, LinearOperator,
@@ -282,8 +314,11 @@ fn fuse_maps(
 ) -> Array2<f64> {
     let fused = Array2::from_shape_fn(a.dim(), |idx| {
         if mask[idx] {
-            (0.40 * a[idx] + 0.25 * s[idx] + 0.20 * h[idx] + 0.15 * u[idx])
-                * (0.25 + 0.75 * s[idx].max(u[idx]))
+            (FUSED_WEIGHT_ACTIVE * a[idx]
+                + FUSED_WEIGHT_SUBHARMONIC * s[idx]
+                + FUSED_WEIGHT_HARMONIC * h[idx]
+                + FUSED_WEIGHT_ULTRAHARMONIC * u[idx])
+                * (FUSED_GATE_FLOOR + (1.0 - FUSED_GATE_FLOOR) * s[idx].max(u[idx]))
         } else {
             0.0
         }

@@ -20,7 +20,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3};
 use std::collections::VecDeque;
 
-use super::{resample_f64, resample_labels_max, validate_masks, AnatomyKind, PreparedTheranosticSlice};
+use super::{resample, resample_labels_max, validate_masks, AnatomyKind, PreparedTheranosticSlice};
 
 pub fn prepare_abdominal_slice(
     anatomy: AnatomyKind,
@@ -57,7 +57,7 @@ pub fn prepare_abdominal_slice(
             *label = 1;
         }
     }
-    let ct = resample_f64(&ct_crop, grid_size);
+    let ct = resample(&ct_crop, grid_size);
     let label = resample_labels_max(&label_crop, grid_size);
     let spacing_m = ((bbox.1 - bbox.0 + 1) as f64 * spacing_mm[0] * 1.0e-3)
         .max((bbox.3 - bbox.2 + 1) as f64 * spacing_mm[1] * 1.0e-3)

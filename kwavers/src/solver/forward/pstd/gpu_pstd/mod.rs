@@ -48,6 +48,8 @@ mod time_loop;
 
 use std::sync::Arc;
 
+pub use pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
+
 /// Per-run timing profile for GPU PSTD execution.
 ///
 /// Durations are measured on the host and include queue submission / wait costs.

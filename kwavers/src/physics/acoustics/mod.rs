@@ -42,7 +42,8 @@ pub mod wave_propagation;
 // Conservation validation (physical correctness checks)
 pub use conservation::{
     validate_conservation, validate_energy_conservation, validate_mass_conservation,
-    validate_momentum_conservation, ConservationMetrics,
+    validate_momentum_conservation, AcousticStateRefs, ConservationMetrics, ConservationParams,
+    PreviousFields, VelocityFieldRefs,
 };
 
 // Physics state management

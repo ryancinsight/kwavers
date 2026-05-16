@@ -190,6 +190,7 @@ impl PSTDSolver {
             div_uy: Array3::zeros(shape),
             div_uz: Array3::zeros(shape),
             as_ctx: None,
+            alpha_np_m: Array3::zeros(shape),
             dirichlet_pml_bypass_x: Vec::new(),
             pml_bypass_plane_scratch: Array3::zeros((0, grid.ny, grid.nz)),
         };

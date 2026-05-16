@@ -95,6 +95,18 @@ class ModalityBridgePlan:
 def bridge_references() -> tuple[BridgeReference, ...]:
     return (
         BridgeReference(
+            "Holder-MI incomplete MRI segmentation",
+            "https://huggingface.co/papers/2507.01254",
+            "incomplete brain MRI segmentation reference using modality-specific processing with available-input adaptation",
+            "design input only; the Chapter 25 bridge records available modalities and never fabricates absent channels",
+        ),
+        BridgeReference(
+            "TextBraTS",
+            "https://huggingface.co/papers/2506.16784",
+            "volume-level brain tumor MRI plus structured text reference for segmentation-context fusion",
+            "text or report context is an optional modality; it cannot replace measured image volumes or expert tumor segmentation",
+        ),
+        BridgeReference(
             "cWDM",
             "https://huggingface.co/papers/2411.17203",
             "paired high-resolution 3D medical image translation; missing brain MRI modality synthesis from available modalities; CT-to-MR or MR-to-CT is treated as a paired-translation candidate only when a trained checkpoint and output NIfTI are supplied",
@@ -158,7 +170,7 @@ def build_modality_bridge_plan(
     actions = list(_base_actions(paths, missing, sample_ct_path))
     actions.extend(_synthesis_actions(paths, available, missing))
     ct_space = paths.ct is not None and paths.segmentation_space == "ct"
-    mri_space = paths.ct is None and paths.segmentation_space == "mri"
+    mri_space = paths.ct is None and paths.segmentation_space == "mri" and bool(_available_mri_modalities(paths))
     return ModalityBridgePlan(
         dataset=paths.dataset,
         planning_space=paths.segmentation_space,
@@ -198,9 +210,9 @@ def _available_modalities(paths: GbmCasePaths) -> tuple[str, ...]:
         modalities.append("ct")
     if paths.t1 is not None:
         modalities.append("t1")
-    if _is_real_mri_path(paths, paths.t1gd):
+    if paths.t1gd is not None:
         modalities.append("t1gd")
-    if _is_real_mri_path(paths, paths.flair):
+    if paths.flair is not None:
         modalities.append("flair")
     if paths.t2 is not None:
         modalities.append("t2")
@@ -214,9 +226,9 @@ def _missing_modalities(paths: GbmCasePaths) -> tuple[str, ...]:
         missing.append("ct")
     if paths.t1 is None:
         missing.append("t1")
-    if not _is_real_mri_path(paths, paths.t1gd):
+    if paths.t1gd is None:
         missing.append("t1gd")
-    if not _is_real_mri_path(paths, paths.flair):
+    if paths.flair is None:
         missing.append("flair")
     if paths.t2 is None:
         missing.append("t2")
@@ -225,15 +237,10 @@ def _missing_modalities(paths: GbmCasePaths) -> tuple[str, ...]:
 
 def _pairing_requirements(paths: GbmCasePaths) -> tuple[PairingRequirement, ...]:
     ct_segmentation = paths.ct is not None and paths.segmentation_space == "ct"
-    t1gd = paths.t1gd if _is_real_mri_path(paths, paths.t1gd) else None
-    flair = paths.flair if _is_real_mri_path(paths, paths.flair) else None
-    mri_segmentation = (
-        paths.segmentation_space == "mri"
-        and t1gd is not None
-        and flair is not None
-    )
+    available_mri = _available_mri_paths(paths)
+    mri_segmentation = paths.segmentation_space == "mri" and bool(available_mri)
     ct_mri = paths.ct is not None and (
-        paths.t1 is not None or t1gd is not None or flair is not None
+        paths.t1 is not None or paths.t1gd is not None or paths.flair is not None or paths.t2 is not None
     )
     return (
         PairingRequirement(
@@ -247,14 +254,14 @@ def _pairing_requirements(paths: GbmCasePaths) -> tuple[PairingRequirement, ...]
             "mri_segmentation_pair",
             "GBM target delineation and MRI-space subspot geometry",
             mri_segmentation,
-            _evidence(t1gd, flair, paths.segmentation),
+            _evidence(*available_mri, paths.segmentation),
             "sufficient for tumor geometry but not for skull acoustics",
         ),
         PairingRequirement(
             "ct_mri_pair",
             "same-subject CT/MRI registration and CT-space tumor transfer",
             ct_mri,
-            _evidence(paths.ct, paths.t1, t1gd, flair),
+            _evidence(paths.ct, paths.t1, paths.t1gd, paths.flair, paths.t2),
             "required before an MRI-derived tumor mask can become CT-backed",
         ),
     )
@@ -279,20 +286,22 @@ def _base_actions(
         )
     if "ct" in missing and paths.segmentation_space == "mri":
         sample_status = "available" if sample_ct_path.exists() else "unavailable"
+        available_mri = _available_mri_modalities(paths)
+        fixed_modality = _planning_reference_modality(paths)
         return (
             BridgeAction(
                 "accept_mri_space_segmentation",
                 "ready_with_boundary",
-                ("t1gd", "flair", "segmentation"),
+                (*available_mri, "segmentation"),
                 ("mri_space_tumor_mask",),
-                "The UPenn-style case supplies real co-registered MRI and expert tumor segmentation.",
+                "The discovered case supplies real co-registered MRI and expert tumor segmentation.",
                 "BBB subspot geometry can execute in MRI space; skull phase correction remains outside the GBM branch until same-patient CT or accepted synthetic CT is supplied.",
                 None,
             ),
             BridgeAction(
                 "registered_sample_ct_visual_qc",
                 sample_status,
-                ("sample_ct", "t1gd"),
+                ("sample_ct", fixed_modality),
                 ("ct_contour_overlay",),
                 "A sample CT can be affine-resampled to the MRI lattice to inspect gross alignment behavior.",
                 "This is visual QC only and never promotes an MRI-only GBM case to CT-backed skull acoustics.",
@@ -346,19 +355,6 @@ def _synthesis_actions(
                 _artifact_paths(paths, tuple(f"synthetic_{modality}_slam_dimm.nii.gz" for modality in missing_mri)),
             )
         )
-    if paths.segmentation is None:
-        actions.append(
-            BridgeAction(
-                "external_segmentation_candidate",
-                "external_required",
-                available,
-                ("segmentation",),
-                "NV-Segment-CTMR is a research reference for prompt-based 3D CT/MR segmentation.",
-                "A generated mask must be target-label validated before it can replace expert GBM segmentation.",
-                "NV-Segment-CTMR",
-                _artifact_paths(paths, ("segmentation.nii.gz", "segmentation_nv_segment_ctmr.nii.gz")),
-            )
-        )
     return tuple(actions)
 
 
@@ -375,14 +371,30 @@ def _evidence(*paths: Path | None) -> str:
     return "; ".join(present) if present else "missing"
 
 
-def _is_real_mri_path(paths: GbmCasePaths, candidate: Path | None) -> bool:
-    if candidate is None:
-        return False
-    if paths.ct is not None and candidate == paths.ct:
-        return False
-    return True
-
-
 def _artifact_paths(paths: GbmCasePaths, names: tuple[str, ...]) -> tuple[str, ...]:
     bridge_dir = paths.segmentation.parent / "bridge"
     return tuple(str(bridge_dir / name) for name in names)
+
+
+def _available_mri_modalities(paths: GbmCasePaths) -> tuple[str, ...]:
+    return tuple(name for name, path in _mri_items(paths) if path is not None)
+
+
+def _available_mri_paths(paths: GbmCasePaths) -> tuple[Path, ...]:
+    return tuple(path for _name, path in _mri_items(paths) if path is not None)
+
+
+def _planning_reference_modality(paths: GbmCasePaths) -> str:
+    for name, path in (("flair", paths.flair), ("t1gd", paths.t1gd), ("t2", paths.t2), ("t1", paths.t1)):
+        if path is not None:
+            return name
+    return "mri"
+
+
+def _mri_items(paths: GbmCasePaths) -> tuple[tuple[str, Path | None], ...]:
+    return (
+        ("t1", paths.t1),
+        ("t1gd", paths.t1gd),
+        ("flair", paths.flair),
+        ("t2", paths.t2),
+    )

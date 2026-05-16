@@ -110,8 +110,7 @@ pub fn run_standing_wave_suppression_py<'py>(
         n_snapshots,
     };
 
-    let result = py
-        .detach(|| run_standing_wave_suppression(&config));
+    let result = py.detach(|| run_standing_wave_suppression(&config));
 
     let dict = PyDict::new(py);
 
@@ -133,10 +132,7 @@ pub fn run_standing_wave_suppression_py<'py>(
 
     // Element positions
     let eys: Vec<i64> = result.element_ys.iter().map(|&v| v as i64).collect();
-    dict.set_item(
-        "element_ys",
-        ndarray::Array1::from(eys).into_pyarray(py),
-    )?;
+    dict.set_item("element_ys", ndarray::Array1::from(eys).into_pyarray(py))?;
 
     // Time series
     dict.set_item(
@@ -163,13 +159,23 @@ pub fn run_standing_wave_suppression_py<'py>(
     )?;
 
     // Field snapshots
-    let snap_iters: Vec<i64> = result.snapshot_iterations.iter().map(|&v| v as i64).collect();
+    let snap_iters: Vec<i64> = result
+        .snapshot_iterations
+        .iter()
+        .map(|&v| v as i64)
+        .collect();
     dict.set_item(
         "snapshot_iterations",
         ndarray::Array1::from(snap_iters).into_pyarray(py),
     )?;
-    dict.set_item("snapshot_fields_re", result.snapshot_fields_re.into_pyarray(py))?;
-    dict.set_item("snapshot_fields_im", result.snapshot_fields_im.into_pyarray(py))?;
+    dict.set_item(
+        "snapshot_fields_re",
+        result.snapshot_fields_re.into_pyarray(py),
+    )?;
+    dict.set_item(
+        "snapshot_fields_im",
+        result.snapshot_fields_im.into_pyarray(py),
+    )?;
 
     // Initial and final fields
     dict.set_item("initial_field_re", result.initial_field_re.into_pyarray(py))?;

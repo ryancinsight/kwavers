@@ -55,6 +55,7 @@ from transcranial_planning.registration import (  # noqa: E402
     register_triplet_with_ritk,
 )
 from transcranial_planning.modality_bridge import modality_bridge_manifest  # noqa: E402
+from transcranial_planning.scene import CANONICAL_BRAIN_SCENE  # noqa: E402
 from transcranial_planning.simulation import (  # noqa: E402
     acoustic_observables,
     bbb_opening_from_subspots,
@@ -71,7 +72,8 @@ from transcranial_planning.transducer import (  # noqa: E402
 def run() -> dict:
     print("[ch25] Loading local CT/MRI/MNI volumes")
     FIG_DIR.mkdir(parents=True, exist_ok=True)
-    triplet = load_default_brain_triplet(shape=(48, 60, 48))
+    scene = CANONICAL_BRAIN_SCENE
+    triplet = load_default_brain_triplet(shape=(48, 60, 48), scene=scene)
     sources = dataset_sources()
     write_json("dataset_manifest.json", dataset_manifest(sources))
 
@@ -80,7 +82,7 @@ def run() -> dict:
     plot_registration_inputs(triplet, registration)
 
     print("[ch25] Building 1024-element transducer and skull phase correction")
-    transducer = TransducerConfig()
+    transducer = TransducerConfig.from_scene(scene)
     phase = phase_correction_through_ct(
         triplet.ct_hu.data,
         triplet.ct_hu.spacing_m,
@@ -129,14 +131,15 @@ def run() -> dict:
         }
         print(f"  GBM path not executed: {gbm_payload['reason']}")
     else:
-        ct, t1gd, flair, tumor, dataset, segmentation_space = gbm
+        ct = gbm.ct
+        tumor = gbm.tumor
         affine_ct_payload: dict[str, object] | None = None
-        if ct is None and segmentation_space == "mri" and LOCAL_RIRE_CT.exists():
+        if ct is None and gbm.segmentation_space == "mri" and LOCAL_RIRE_CT.exists():
             print("[ch25] Affine-registering sample CT to GBM MRI for visual QC")
             sample_ct = load_nifti(LOCAL_RIRE_CT, "RIRE sample CT")
             affine_ct = affine_register_moving_to_fixed(
                 sample_ct,
-                t1gd,
+                gbm.planning_reference,
                 "Affine-registered sample CT in GBM MRI space",
             )
             plot_affine_registration_qc(affine_ct, tumor)
@@ -150,7 +153,7 @@ def run() -> dict:
                 "edge_overlap": float(affine_ct.edge_overlap),
                 "visual_qc": str(FIG_DIR / "fig06_affine_ct_to_mri_qc.png"),
             }
-        planning_volume = ct if ct is not None and segmentation_space == "ct" else t1gd
+        planning_volume = ct if ct is not None and gbm.segmentation_space == "ct" else gbm.planning_reference
         plan = gbm_subspot_plan(tumor, planning_volume.spacing_m, pitch_m=3.0e-3)
         plot_gbm_plan(tumor, plan)
         bbb = bbb_opening_from_subspots(
@@ -163,27 +166,23 @@ def run() -> dict:
             focal_radius_m=2.0e-3,
         )
         plot_gbm_bbb_opening(tumor, bbb)
-        t1gd_is_ct_surrogate = (
-            ct is not None and segmentation_space == "ct" and t1gd.source_path == ct.source_path
-        )
-        flair_is_ct_surrogate = (
-            ct is not None and segmentation_space == "ct" and flair.source_path == ct.source_path
-        )
-        reported_t1gd = None if t1gd_is_ct_surrogate else str(t1gd.source_path)
-        reported_flair = None if flair_is_ct_surrogate else str(flair.source_path)
         gbm_payload = {
             "executed": True,
-            "dataset": dataset,
-            "segmentation_space": segmentation_space,
+            "dataset": gbm.dataset,
+            "segmentation_space": gbm.segmentation_space,
             "ct": str(ct.source_path) if ct is not None else None,
-            "t1gd": reported_t1gd,
-            "flair": reported_flair,
+            "t1": str(gbm.t1.source_path) if gbm.t1 is not None else None,
+            "t1gd": str(gbm.t1gd.source_path) if gbm.t1gd is not None else None,
+            "flair": str(gbm.flair.source_path) if gbm.flair is not None else None,
+            "t2": str(gbm.t2.source_path) if gbm.t2 is not None else None,
+            "available_modalities": list(gbm.available_modalities),
+            "planning_reference_modality": gbm.planning_reference_modality,
             "subspots": int(plan.indices.shape[0]),
             "covered_fraction": float(plan.covered_fraction),
             "bbb_opened_fraction": float(np.count_nonzero(bbb.opened_mask & tumor) / np.count_nonzero(tumor)),
             "peak_bbb_permeability": float(bbb.permeability.max()),
             "peak_inertial_cavitation_risk": float(bbb.inertial_cavitation_risk.max()),
-            "ct_backed": bool(ct is not None and segmentation_space == "ct"),
+            "ct_backed": bool(ct is not None and gbm.segmentation_space == "ct"),
             "affine_sample_ct_to_mri": affine_ct_payload,
             "modality_bridge": bridge_manifest["plan"],
         }
@@ -206,6 +205,7 @@ def run() -> dict:
             "mse_atlas_before": registration.mse_atlas_before,
             "mse_atlas_after": registration.mse_atlas_after,
         },
+        "scene": scene.to_manifest(),
         "transducer": {
             "elements": transducer.element_count,
             "frequency_hz": transducer.frequency_hz,

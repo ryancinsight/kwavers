@@ -1,5 +1,5 @@
-mod result;
+mod dispatch;
+mod elastic;
 mod fdtd;
 mod pstd;
-mod elastic;
-mod dispatch;
+mod result;

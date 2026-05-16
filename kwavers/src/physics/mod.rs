@@ -105,8 +105,8 @@ pub mod traits {
 
 /// Conservation validation
 pub use acoustics::{
-    validate_conservation, // Conservation validation
-    ConservationMetrics,   // Conservation metrics
+    validate_conservation, AcousticStateRefs, ConservationMetrics, ConservationParams,
+    PreviousFields, VelocityFieldRefs,
 };
 
 /// Acoustic mechanics re-exported for backward compatibility

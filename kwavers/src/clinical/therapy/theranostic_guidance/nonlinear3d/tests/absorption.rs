@@ -21,11 +21,11 @@
 //! `#[ignore]`'d (~10 s runtime, two forward runs). Run on demand with
 //! `cargo test --lib --package kwavers -- --ignored absorption_decay`.
 
-use super::super::super::Point3;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture};
 use super::super::Nonlinear3dConfig;
+use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
 
 #[test]
@@ -98,9 +98,9 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
     config.cycles = 6.0;
     config.cfl = 0.4;
     let dt = config.cfl * spacing_m / (c0 * 3.0_f64.sqrt());
-    let travel_steps_far =
-        ((receiver_indices.last().unwrap().x - source_idx.x) as f64 * spacing_m / (c0 * dt)).ceil()
-            as usize;
+    let travel_steps_far = ((receiver_indices.last().unwrap().x - source_idx.x) as f64 * spacing_m
+        / (c0 * dt))
+        .ceil() as usize;
     let period_steps = (1.0 / (frequency_hz * dt)).round() as usize;
     let pulse_steps = (config.cycles * period_steps as f64).ceil() as usize;
     let steps = travel_steps_far + pulse_steps + 4 * period_steps;
@@ -113,8 +113,8 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
     let max_step_before_reflection = |recv_index: usize| -> usize {
         let r_to_boundary_voxels = n - receiver_indices[recv_index].x;
         let extra_round_trip_steps = (2 * r_to_boundary_voxels) as f64 * spacing_m / (c0 * dt);
-        let pulse_arrival = (receiver_indices[recv_index].x - source_idx.x) as f64 * spacing_m
-            / (c0 * dt);
+        let pulse_arrival =
+            (receiver_indices[recv_index].x - source_idx.x) as f64 * spacing_m / (c0 * dt);
         let reflection_return = pulse_arrival + extra_round_trip_steps;
         (reflection_return - period_steps as f64).floor().max(2.0) as usize
     };
@@ -132,6 +132,7 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
             config: &config,
             schedule,
             encoding: SourceEncoding { index: 0, count: 1 },
+            source_scale: 1.0,
             retain_history: false,
         });
         (0..n_recv)
@@ -180,8 +181,7 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
     let alpha_fit = -slope;
 
     let alpha_analytical = alpha0_np_per_m_at_1mhz * (frequency_hz / 1.0e6).powf(y_exponent);
-    let relative_error =
-        (alpha_fit - alpha_analytical).abs() / alpha_analytical.abs().max(1.0e-12);
+    let relative_error = (alpha_fit - alpha_analytical).abs() / alpha_analytical.abs().max(1.0e-12);
 
     assert!(
         relative_error < 0.35,

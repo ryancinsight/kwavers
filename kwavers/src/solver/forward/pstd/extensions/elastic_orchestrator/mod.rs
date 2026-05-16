@@ -26,6 +26,7 @@ mod pml;
 mod source_sensor;
 mod split_field_pml;
 mod split_field_step;
+mod staggered_ops;
 mod types;
 
 #[cfg(test)]

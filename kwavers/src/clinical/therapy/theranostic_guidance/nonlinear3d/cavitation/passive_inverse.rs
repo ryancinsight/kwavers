@@ -9,6 +9,7 @@
 use ndarray::Array3;
 use rayon::prelude::*;
 
+use crate::core::constants::SOUND_SPEED_TISSUE;
 use crate::math::numerics::operators::interpolation::trilinear_index_space;
 
 use super::super::types::{
@@ -18,6 +19,7 @@ use super::helpers::grid_index;
 
 pub(super) struct PassiveOperator {
     pub(super) values: Vec<f64>,
+    pub(super) rows: usize,
     pub(super) cols: usize,
 }
 
@@ -37,7 +39,7 @@ impl PassiveOperator {
         // subharmonic frequency.
         let subharmonic_hz = 0.5 * config.frequency_hz;
         let subharmonic_mhz = subharmonic_hz * 1.0e-6;
-        let c_ref_m_s = 1540.0_f64;
+        let c_ref_m_s = SOUND_SPEED_TISSUE;
         let k_subharmonic = 2.0 * std::f64::consts::PI * subharmonic_hz / c_ref_m_s;
         let spacing_m = volume.spacing_m;
         let min_distance_m = 0.5 * spacing_m;
@@ -89,35 +91,56 @@ impl PassiveOperator {
                         / (4.0 * std::f64::consts::PI * r);
                 }
             });
-        Self { values, cols }
+        Self { values, rows, cols }
     }
 
     pub(super) fn apply(&self, model: &[f64]) -> Vec<f64> {
-        let cols = self.cols;
-        self.values
-            .par_chunks(cols)
-            .map(|row| row.iter().zip(model.iter()).map(|(a, x)| a * x).sum())
-            .collect()
+        let mut out = vec![0.0; self.rows];
+        self.apply_into(model, &mut out);
+        out
     }
 
-    pub(super) fn normal_gradient(&self, residual: &[f64], model: &[f64], lambda: f64) -> Vec<f64> {
+    pub(super) fn apply_into(&self, model: &[f64], out: &mut [f64]) {
+        debug_assert_eq!(model.len(), self.cols);
+        debug_assert_eq!(out.len(), self.rows);
         let cols = self.cols;
+        if cols == 0 {
+            out.par_iter_mut().for_each(|value| *value = 0.0);
+            return;
+        }
+        out.par_iter_mut()
+            .zip(self.values.par_chunks(cols))
+            .for_each(|(out_value, row)| {
+                *out_value = row.iter().zip(model.iter()).map(|(a, x)| a * x).sum();
+            });
+    }
+
+    pub(super) fn normal_gradient_into(
+        &self,
+        residual: &[f64],
+        model: &[f64],
+        lambda: f64,
+        grad: &mut [f64],
+    ) {
+        debug_assert_eq!(residual.len(), self.rows);
+        debug_assert_eq!(model.len(), self.cols);
+        debug_assert_eq!(grad.len(), self.cols);
         // Column-parallel A^T r + lambda * model; each grad cell sums
         // contributions from every row of `values` (the dense Green's matrix).
-        (0..cols)
-            .into_par_iter()
-            .map(|col| {
+        let cols = self.cols;
+        grad.par_iter_mut()
+            .enumerate()
+            .for_each(|(col, grad_value)| {
                 let mut sum = lambda * model[col];
                 for (row, residual_value) in residual.iter().enumerate() {
                     sum += self.values[row * cols + col] * residual_value;
                 }
-                sum
-            })
-            .collect()
+                *grad_value = sum;
+            });
     }
 
     pub(super) fn frobenius_norm_squared(&self) -> f64 {
-        self.values.iter().map(|value| value * value).sum()
+        self.values.par_iter().map(|value| value * value).sum()
     }
 }
 
@@ -134,22 +157,30 @@ pub(super) fn solve_projected_tikhonov(
     let lambda = config.cavitation_regularization;
     let step = 1.0 / (operator.frobenius_norm_squared() + lambda).max(1.0e-18);
     let mut model = vec![0.0; operator.cols];
+    let mut prediction = vec![0.0; operator.rows];
+    let mut residual = vec![0.0; operator.rows];
+    let mut grad = vec![0.0; operator.cols];
     let mut objective_history = Vec::with_capacity(config.cavitation_iterations);
     for _ in 0..config.cavitation_iterations {
-        let prediction = operator.apply(&model);
-        let residual = prediction
-            .iter()
-            .zip(data.iter())
-            .map(|(p, d)| p - d)
-            .collect::<Vec<_>>();
+        operator.apply_into(&model, &mut prediction);
+        residual
+            .par_iter_mut()
+            .zip(prediction.par_iter())
+            .zip(data.par_iter())
+            .for_each(|((residual_value, prediction_value), data_value)| {
+                *residual_value = prediction_value - data_value;
+            });
         objective_history.push(
-            0.5 * residual.iter().map(|value| value * value).sum::<f64>()
-                + 0.5 * lambda * model.iter().map(|value| value * value).sum::<f64>(),
+            0.5 * residual.par_iter().map(|value| value * value).sum::<f64>()
+                + 0.5 * lambda * model.par_iter().map(|value| value * value).sum::<f64>(),
         );
-        let grad = operator.normal_gradient(&residual, &model, lambda);
-        for (value, g) in model.iter_mut().zip(grad.iter()) {
-            *value = (*value - step * g).max(0.0);
-        }
+        operator.normal_gradient_into(&residual, &model, lambda, &mut grad);
+        model
+            .par_iter_mut()
+            .zip(grad.par_iter())
+            .for_each(|(value, g)| {
+                *value = (*value - step * g).max(0.0);
+            });
     }
     InverseResult {
         model,
@@ -227,4 +258,69 @@ fn integrate_power_law_attenuation_along_ray(
         integral += alpha_at_fs * weight;
     }
     integral * step_m
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::clinical::therapy::theranostic_guidance::{
+        nonlinear3d::types::Nonlinear3dConfig, AnatomyKind,
+    };
+
+    #[test]
+    fn apply_into_matches_allocating_operator_product() {
+        let operator = PassiveOperator {
+            values: vec![1.0, 2.0, -1.0, 0.5],
+            rows: 2,
+            cols: 2,
+        };
+        let model = [3.0, 4.0];
+        let allocating = operator.apply(&model);
+        let mut reusable = [0.0; 2];
+
+        operator.apply_into(&model, &mut reusable);
+
+        assert_eq!(allocating, vec![11.0, -1.0]);
+        assert_eq!(reusable, [11.0, -1.0]);
+    }
+
+    #[test]
+    fn normal_gradient_into_matches_tikhonov_normal_equation() {
+        let operator = PassiveOperator {
+            values: vec![1.0, 2.0, -1.0, 0.5],
+            rows: 2,
+            cols: 2,
+        };
+        let residual = [5.0, -2.0];
+        let model = [3.0, 4.0];
+        let lambda = 0.25;
+        let mut grad = [0.0; 2];
+
+        operator.normal_gradient_into(&residual, &model, lambda, &mut grad);
+
+        assert_eq!(grad, [7.75, 10.0]);
+    }
+
+    #[test]
+    fn projected_tikhonov_reuses_workspaces_and_reduces_objective() {
+        let operator = PassiveOperator {
+            values: vec![1.0, 0.0, 0.0, 1.0],
+            rows: 2,
+            cols: 2,
+        };
+        let data = [2.0, 1.0];
+        let mut config = Nonlinear3dConfig::new(AnatomyKind::Kidney);
+        config.cavitation_iterations = 4;
+        config.cavitation_regularization = 0.0;
+
+        let result = solve_projected_tikhonov(&operator, &data, &config);
+
+        assert_eq!(result.objective_history.len(), 4);
+        assert!(
+            result.objective_history[3] < result.objective_history[0],
+            "projected gradient objective must decrease for identity operator"
+        );
+        assert!(result.model[0] > 0.0);
+        assert!(result.model[1] > 0.0);
+    }
 }

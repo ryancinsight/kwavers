@@ -29,9 +29,11 @@ pub mod geometry;
 pub mod inverse_problems;
 pub mod linear_algebra;
 pub mod numerics;
+pub mod signal;
 pub mod simd;
 pub mod simd_safe;
 pub mod statistics;
+pub mod vector3;
 
 // ============================================================================
 // EXPLICIT RE-EXPORTS (Core Mathematical API)

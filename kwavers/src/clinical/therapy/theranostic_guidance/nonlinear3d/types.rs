@@ -40,6 +40,7 @@ pub struct Nonlinear3dConfig {
     pub gradient_smoothing_steps: usize,
     pub bubble_radius_m: f64,
     pub bubble_time_steps_per_period: usize,
+    pub inertial_mi_threshold: f64,
     pub cavitation_iterations: usize,
     pub cavitation_regularization: f64,
 }
@@ -78,6 +79,7 @@ impl Nonlinear3dConfig {
             gradient_smoothing_steps: 2,
             bubble_radius_m: 2.0e-6,
             bubble_time_steps_per_period: 96,
+            inertial_mi_threshold: 1.9,
             cavitation_iterations: 24,
             cavitation_regularization: 1.0e-4,
         }
@@ -123,6 +125,7 @@ impl Nonlinear3dConfig {
                 self.nonlinearity_regularization,
             ),
             ("bubble_radius_m", self.bubble_radius_m),
+            ("inertial_mi_threshold", self.inertial_mi_threshold),
             ("cavitation_regularization", self.cavitation_regularization),
         ] {
             if !value.is_finite() || value < 0.0 {
@@ -137,6 +140,7 @@ impl Nonlinear3dConfig {
             ("cycles", self.cycles),
             ("cfl", self.cfl),
             ("bubble_radius_m", self.bubble_radius_m),
+            ("inertial_mi_threshold", self.inertial_mi_threshold),
             ("cavitation_regularization", self.cavitation_regularization),
         ] {
             if value <= 0.0 {
@@ -198,6 +202,10 @@ pub(crate) struct Nonlinear3dVolume {
     /// 4× — critical for transcranial subharmonic cavitation receive paths.
     pub attenuation_power_law_y: Array3<f64>,
     pub spacing_m: f64,
+    pub source_dimensions: [usize; 3],
+    pub source_spacing_m: [f64; 3],
+    pub crop_bounds_index: [usize; 6],
+    pub aperture_direction: Option<[f64; 3]>,
     pub focus: GridIndex,
 }
 
@@ -243,6 +251,9 @@ pub struct Nonlinear3dResult {
     pub therapy_points_m: Vec<Point3>,
     pub receiver_points_m: Vec<Point3>,
     pub spacing_m: f64,
+    pub source_dimensions: [usize; 3],
+    pub source_spacing_m: [f64; 3],
+    pub crop_bounds_index: [usize; 6],
     pub dt_s: f64,
     pub time_steps: usize,
     pub active_voxels: usize,
@@ -257,4 +268,3 @@ pub struct Nonlinear3dResult {
     pub uses_nonlinear_wave_propagation: bool,
     pub uses_rayleigh_plesset: bool,
 }
-

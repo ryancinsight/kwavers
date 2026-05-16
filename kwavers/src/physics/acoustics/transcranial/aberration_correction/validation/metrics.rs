@@ -1,5 +1,5 @@
-use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use super::super::phase_correction::TranscranialAberrationCorrection;
+use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
 
 impl TranscranialAberrationCorrection {
@@ -35,7 +35,6 @@ impl TranscranialAberrationCorrection {
         let rho0 = 1000.0_f64;
         p2_interp / (2.0 * rho0 * self.reference_speed)
     }
-
 
     /// Calculate peak sidelobe level relative to the main lobe (linear ratio).
     ///

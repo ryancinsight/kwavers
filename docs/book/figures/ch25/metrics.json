@@ -19,6 +19,10 @@
   },
   "gbm": {
     "affine_sample_ct_to_mri": null,
+    "available_modalities": [
+      "ct",
+      "segmentation"
+    ],
     "bbb_opened_fraction": 1.0,
     "covered_fraction": 1.0,
     "ct": "D:\\kwavers\\data\\rire_patient_109\\patient_109_ct.nii.gz",
@@ -57,6 +61,18 @@
       ],
       "planning_space": "ct",
       "references": [
+        {
+          "boundary": "design input only; the Chapter 25 bridge records available modalities and never fabricates absent channels",
+          "name": "Holder-MI incomplete MRI segmentation",
+          "role": "incomplete brain MRI segmentation reference using modality-specific processing with available-input adaptation",
+          "url": "https://huggingface.co/papers/2507.01254"
+        },
+        {
+          "boundary": "text or report context is an optional modality; it cannot replace measured image volumes or expert tumor segmentation",
+          "name": "TextBraTS",
+          "role": "volume-level brain tumor MRI plus structured text reference for segmentation-context fusion",
+          "url": "https://huggingface.co/papers/2506.16784"
+        },
         {
           "boundary": "not executed by the Chapter 25 script; synthetic outputs must be generated outside this repo, registered to the planning lattice, and quality checked before use",
           "name": "cWDM",
@@ -105,9 +121,12 @@
     },
     "peak_bbb_permeability": 0.8604709506034851,
     "peak_inertial_cavitation_risk": 0.06527376174926758,
+    "planning_reference_modality": "ct",
     "segmentation_space": "ct",
     "subspots": 2182,
-    "t1gd": null
+    "t1": null,
+    "t1gd": null,
+    "t2": null
   },
   "registration": {
     "executed": true,

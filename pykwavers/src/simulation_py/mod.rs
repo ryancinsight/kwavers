@@ -1,9 +1,11 @@
-pub(crate) mod helpers;
+mod checkpoint;
 mod config;
+pub(crate) mod gpu;
+pub(crate) mod helpers;
 mod run;
 mod solvers;
-pub(crate) mod gpu;
 mod tests;
+mod thermal_coupling;
 
 pub use gpu::GpuPstdSession;
 
@@ -65,6 +67,9 @@ pub struct Simulation {
     /// Axisymmetric (CylindricalAS) geometry: 2-D simulation in the (axial, radial) plane.
     /// Grid convention: nx=Nz_axial, ny=1, nz=Nr_radial. Only valid for PSTD and FDTD solvers.
     pub(crate) axisymmetric: bool,
+    /// Optional acoustic→thermal coupling configuration.
+    /// When set, PSTD `run()` drives the coupled thermal loop.
+    pub(crate) thermal: Option<thermal_coupling::ThermalCouplingConfig>,
 }
 
 #[pymethods]
@@ -162,6 +167,7 @@ impl Simulation {
             alpha_coeff: 0.0,
             alpha_power: 1.5,
             axisymmetric: false,
+            thermal: None,
         })
     }
 

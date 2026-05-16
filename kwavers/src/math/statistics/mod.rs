@@ -62,12 +62,7 @@ pub fn nrmse(a: &[f64], b: &[f64]) -> f64 {
     if a.len() != b.len() || a.is_empty() {
         return 0.0;
     }
-    let mse = a
-        .iter()
-        .zip(b)
-        .map(|(x, y)| (x - y).powi(2))
-        .sum::<f64>()
-        / a.len() as f64;
+    let mse = a.iter().zip(b).map(|(x, y)| (x - y).powi(2)).sum::<f64>() / a.len() as f64;
     let span = a.iter().copied().fold(f64::NEG_INFINITY, f64::max)
         - a.iter().copied().fold(f64::INFINITY, f64::min);
     mse.sqrt() / span.abs().max(1.0e-12)

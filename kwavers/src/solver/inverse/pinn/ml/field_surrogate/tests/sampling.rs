@@ -10,7 +10,7 @@
 
 use ndarray::Array3;
 
-use super::super::data::{KernelCubeSampler, SamplingMode};
+use super::super::{KernelCubeSampler, SamplingMode};
 use super::AB;
 use crate::physics::field_surrogate::FocalKernel;
 

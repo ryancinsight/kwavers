@@ -1,11 +1,48 @@
 //! CT-derived 3-D helmet placement for visual verification.
+//!
+//! # Theorem (Calvarium region extraction)
+//!
+//! For a head-only CT with voxels ordered along z:
+//! Let `A(z)` be the number of body-mask voxels in axial slice `z`.
+//! Define `peak_z = argmax_z A(z)`. For a typical head CT, `peak_z` falls
+//! at the temporoparietal junction — the widest cranial cross-section.
+//! The region `z > peak_z` (superior to the widest slice) constitutes the
+//! calvarium (skull dome). Elements restricted to this z-range will cover the
+//! calvarium, not the jaw or neck.
+//!
+//! Superior orientation is estimated by comparing the summed body-mask area in
+//! the inferior third of the volume against the superior third. The end with
+//! MORE body mask area is classified as inferior, because the jaw/neck
+//! region has a larger cross-section than the vertex.
+//!
+//! # Assumptions
+//!
+//! - Input CT covers the head only (brain CT), not the full torso.
+//! - Voxel body threshold (−350 HU) captures all head/neck tissue.
+//! - The z-axis is approximately aligned with the inferior-superior axis.
 
 use ndarray::{s, Array3};
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::geometry::Point3;
+use super::geometry::{is_boundary_3d, Point3};
 use super::nonlinear3d::volume::centroid_float;
+use super::scene::target_index_from_mask_fraction_3d;
+
+/// Fraction of the unit sphere covered below the equator (sin = 0.28 → ~16° below equator).
+const CAP_UNIT_Z_MIN: f64 = -0.28;
+/// Fraction of the unit sphere covered toward the superior pole (cos = 0.98 → ~11° from pole).
+const CAP_UNIT_Z_MAX: f64 = 0.98;
+/// Clearance gap in metres between skull outer surface and the helmet inner surface.
+const HELMET_SKIN_MARGIN_M: f64 = 0.015;
+/// Minimum allowed helmet radius in metres (150 mm).
+const HELMET_RADIUS_MIN_M: f64 = 0.150;
+/// Number of beam paths sampled for visual and metric output.
+const BEAM_SAMPLE_COUNT: usize = 72;
+/// Number of DDA steps per beam for skull-intersection ray tracing.
+const BEAM_TRACE_STEPS: usize = 320;
+/// Fraction of z-range used at each end to estimate inferior/superior orientation.
+const ORIENTATION_PROBE_FRACTION: f64 = 0.25;
 
 #[derive(Clone, Debug)]
 pub struct BrainHelmetPlacement3D {
@@ -20,6 +57,21 @@ pub struct BrainHelmetPlacement3D {
     pub intersection_fraction: f64,
 }
 
+/// Plan 3-D InSightec-like helmet element placement from a head CT volume.
+///
+/// # Arguments
+///
+/// - `ct_hu` — 3-D array with shape `[NX, NY, NZ]`, values in Hounsfield units.
+/// - `spacing_mm` — voxel spacing in millimetres for each axis.
+/// - `element_count` — total number of therapy elements on the helmet shell.
+/// - `surface_stride` — stride for thinning the surface point clouds (1 = dense).
+/// - `body_hu_threshold` — HU threshold separating tissue from air (−350 HU).
+/// - `skull_hu_threshold` — HU threshold separating bone from soft tissue (300 HU).
+///
+/// # Returns
+///
+/// Placement geometry centred at the calvarium centroid. All coordinates are in
+/// metres and expressed relative to the calvarium centroid (origin = focus point).
 pub fn plan_brain_helmet_placement(
     ct_hu: &Array3<f64>,
     spacing_mm: [f64; 3],
@@ -27,6 +79,8 @@ pub fn plan_brain_helmet_placement(
     surface_stride: usize,
     body_hu_threshold: f64,
     skull_hu_threshold: f64,
+    target_fraction_xyz: Option<[f64; 3]>,
+    scene_radius_m: Option<f64>,
 ) -> KwaversResult<BrainHelmetPlacement3D> {
     if element_count < 16 {
         return Err(KwaversError::InvalidInput(
@@ -43,16 +97,34 @@ pub fn plan_brain_helmet_placement(
     }
     let body_mask = ct_hu.mapv(|hu| hu.is_finite() && hu >= body_hu_threshold);
     let skull_mask = ct_hu.mapv(|hu| hu.is_finite() && hu >= skull_hu_threshold);
+    let brain_mask =
+        ct_hu.mapv(|hu| hu.is_finite() && hu >= body_hu_threshold && hu < skull_hu_threshold);
+    let target_support = if brain_mask.iter().any(|active| *active) {
+        &brain_mask
+    } else {
+        &body_mask
+    };
     let bounds = body_bounds(&body_mask)?;
     let areas = axial_areas(&body_mask);
+    let nz = areas.len();
     let peak_z = areas
         .iter()
         .enumerate()
         .max_by_key(|(_, area)| **area)
         .map(|(idx, _)| idx)
         .unwrap_or((bounds.min[2] + bounds.max[2]) / 2);
-    let superior_positive =
-        areas.last().copied().unwrap_or(0) < areas.first().copied().unwrap_or(0);
+
+    // Estimate which end of the z-axis is superior (vertex of skull = small area).
+    // Compare summed area in the bottom ORIENTATION_PROBE_FRACTION of slices against
+    // the top ORIENTATION_PROBE_FRACTION. The end with MORE area is inferior
+    // (jaw/neck has larger cross-section than vertex).
+    let probe = ((nz as f64 * ORIENTATION_PROBE_FRACTION) as usize).max(1);
+    let inferior_sum: usize = areas[..probe.min(nz)].iter().sum();
+    let superior_sum: usize = areas[nz.saturating_sub(probe)..].iter().sum();
+    // superior_positive = true  means z = 0 is inferior, z = max is superior.
+    // superior_positive = false means z = 0 is superior, z = max is inferior.
+    let superior_positive = inferior_sum > superior_sum;
+
     let calvarium_min_z = if superior_positive {
         peak_z
     } else {
@@ -63,17 +135,34 @@ pub fn plan_brain_helmet_placement(
     } else {
         peak_z
     };
-    let center_index = centroid_float(&body_mask, Some((calvarium_min_z, calvarium_max_z)))
-        .unwrap_or([
+    if calvarium_max_z <= calvarium_min_z {
+        return Err(KwaversError::InvalidInput(
+            "Calvarium region is empty after orientation detection; verify CT covers the head."
+                .to_owned(),
+        ));
+    }
+
+    let center_index = if let Some(fraction) = target_fraction_xyz {
+        let target_index = target_index_from_mask_fraction_3d(target_support, fraction)?;
+        [
+            target_index[0] as f64,
+            target_index[1] as f64,
+            target_index[2] as f64,
+        ]
+    } else {
+        centroid_float(&body_mask, Some((calvarium_min_z, calvarium_max_z))).unwrap_or([
             0.5 * (bounds.min[0] + bounds.max[0]) as f64,
             0.5 * (bounds.min[1] + bounds.max[1]) as f64,
             0.5 * (calvarium_min_z + calvarium_max_z) as f64,
-        ]);
+        ])
+    };
     let spacing_m = [
         spacing_mm[0] * 1.0e-3,
         spacing_mm[1] * 1.0e-3,
         spacing_mm[2] * 1.0e-3,
     ];
+    // The focal point is placed at the calvarium centroid (coordinate origin).
+    // All output coordinates are expressed relative to this origin.
     let focus = Point3 {
         x_m: 0.0,
         y_m: 0.0,
@@ -96,6 +185,9 @@ pub fn plan_brain_helmet_placement(
         calvarium_min_z,
         calvarium_max_z,
     );
+    // Helmet sphere radius = maximum 3-D distance from the calvarium centroid to any
+    // calvarium skull voxel, plus a clearance margin. This ensures the spherical shell
+    // lies entirely outside the skull across the full calvarium region.
     let head_radius = body_radius(
         &body_mask,
         spacing_m,
@@ -103,7 +195,18 @@ pub fn plan_brain_helmet_placement(
         calvarium_min_z,
         calvarium_max_z,
     );
-    let helmet_radius_m = (head_radius + 0.015).max(0.150);
+    let requested_radius_m = match scene_radius_m {
+        Some(radius) if radius.is_finite() && radius > 0.0 => radius,
+        Some(_) => {
+            return Err(KwaversError::InvalidInput(
+                "scene_radius_m must be positive and finite".to_owned(),
+            ));
+        }
+        None => HELMET_RADIUS_MIN_M,
+    };
+    let helmet_radius_m = (head_radius + HELMET_SKIN_MARGIN_M)
+        .max(requested_radius_m)
+        .max(HELMET_RADIUS_MIN_M);
     let therapy_elements_m =
         calvarium_cap_elements(element_count, helmet_radius_m, focus, superior_positive);
     let (beam_start_points_m, beam_end_points_m, skull_intersections_m) = sample_beams(
@@ -175,13 +278,16 @@ fn surface_points(
             *active
                 && iz >= min_z
                 && iz <= max_z
-                && is_surface(mask, ix, iy, iz)
+                && is_boundary_3d(mask, ix, iy, iz)
                 && (ix + iy + iz) % stride == 0
         })
         .map(|((ix, iy, iz), _)| voxel_to_point(ix, iy, iz, spacing_m, center_index))
         .collect()
 }
 
+/// Compute the maximum 3-D distance from the calvarium centroid to any body voxel
+/// in the calvarium region. This equals the spherical shell radius needed to fully
+/// enclose the calvarium.
 fn body_radius(
     mask: &Array3<bool>,
     spacing_m: [f64; 3],
@@ -193,11 +299,18 @@ fn body_radius(
         .filter(|&((_, _, iz), active)| *active && iz >= min_z && iz <= max_z)
         .map(|((ix, iy, iz), _)| {
             let point = voxel_to_point(ix, iy, iz, spacing_m, center_index);
-            point.x_m.hypot(point.y_m).hypot(point.z_m)
+            (point.x_m * point.x_m + point.y_m * point.y_m + point.z_m * point.z_m).sqrt()
         })
-        .fold(0.0, f64::max)
+        .fold(0.0_f64, f64::max)
 }
 
+/// Distribute `count` therapy elements on the calvarium cap of a sphere of `radius_m`
+/// centred at `focus`, using the Fibonacci spiral to achieve near-uniform spacing.
+///
+/// The cap spans from `CAP_UNIT_Z_MIN` (slightly below the equatorial plane) to
+/// `CAP_UNIT_Z_MAX` (near the pole), matching the InSightec ExAblate Neuro
+/// geometrical coverage of the skull dome. The `superior_positive` flag flips the
+/// z-axis direction so the cap is always oriented toward the anatomical superior pole.
 fn calvarium_cap_elements(
     count: usize,
     radius_m: f64,
@@ -205,14 +318,12 @@ fn calvarium_cap_elements(
     superior_positive: bool,
 ) -> Vec<Point3> {
     let golden = std::f64::consts::PI * (3.0 - 5.0_f64.sqrt());
-    let z_min = -0.28;
-    let z_max = 0.98;
-    let sign = if superior_positive { 1.0 } else { -1.0 };
+    let sign = if superior_positive { 1.0_f64 } else { -1.0_f64 };
     (0..count)
         .map(|idx| {
             let t = (idx as f64 + 0.5) / count as f64;
-            let z_unit = z_min + (z_max - z_min) * t;
-            let radial = (1.0 - z_unit * z_unit).sqrt();
+            let z_unit = CAP_UNIT_Z_MIN + (CAP_UNIT_Z_MAX - CAP_UNIT_Z_MIN) * t;
+            let radial = (1.0 - z_unit * z_unit).max(0.0).sqrt();
             let phi = idx as f64 * golden;
             Point3 {
                 x_m: focus.x_m + radius_m * radial * phi.cos(),
@@ -242,7 +353,7 @@ fn sample_beams(
     spacing_m: [f64; 3],
     center_index: [f64; 3],
 ) -> (Vec<Point3>, Vec<Point3>, Vec<Point3>) {
-    let beam_count = 72usize.min(elements.len()).max(1);
+    let beam_count = BEAM_SAMPLE_COUNT.min(elements.len()).max(1);
     let step = (elements.len() / beam_count).max(1);
     let mut starts = Vec::new();
     let mut ends = Vec::new();
@@ -266,9 +377,8 @@ fn first_skull_intersection(
     spacing_m: [f64; 3],
     center_index: [f64; 3],
 ) -> Option<Point3> {
-    let steps = 320usize;
-    for step in 0..=steps {
-        let t = step as f64 / steps as f64;
+    for step in 0..=BEAM_TRACE_STEPS {
+        let t = step as f64 / BEAM_TRACE_STEPS as f64;
         let point = Point3 {
             x_m: start.x_m + t * (end.x_m - start.x_m),
             y_m: start.y_m + t * (end.y_m - start.y_m),
@@ -296,22 +406,6 @@ fn point_in_mask(
     }
     let (ix, iy, iz) = (ix as usize, iy as usize, iz as usize);
     ix < shape.0 && iy < shape.1 && iz < shape.2 && mask[[ix, iy, iz]]
-}
-
-fn is_surface(mask: &Array3<bool>, ix: usize, iy: usize, iz: usize) -> bool {
-    let (nx, ny, nz) = mask.dim();
-    ix == 0
-        || iy == 0
-        || iz == 0
-        || ix + 1 == nx
-        || iy + 1 == ny
-        || iz + 1 == nz
-        || !mask[[ix - 1, iy, iz]]
-        || !mask[[ix + 1, iy, iz]]
-        || !mask[[ix, iy - 1, iz]]
-        || !mask[[ix, iy + 1, iz]]
-        || !mask[[ix, iy, iz - 1]]
-        || !mask[[ix, iy, iz + 1]]
 }
 
 fn voxel_to_point(

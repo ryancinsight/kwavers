@@ -4,8 +4,8 @@ use ndarray::Array3;
 
 use crate::core::error::{KwaversError, KwaversResult};
 
+use super::super::super::scene::target_index_from_mask_fraction_3d;
 use super::super::super::AnatomyKind;
-use super::bbox::physical_distance;
 use super::centroid::centroid_float;
 
 pub(super) fn body_mask_full(
@@ -38,10 +38,11 @@ pub(super) fn masks(
     ct: &Array3<f64>,
     label: &Array3<i16>,
     spacing_m: f64,
+    target_fraction_xyz: Option<[f64; 3]>,
 ) -> KwaversResult<(Array3<bool>, Array3<bool>)> {
     let body = body_mask_full(anatomy, ct, Some(label));
     let target = match anatomy {
-        AnatomyKind::Brain => synthetic_brain_target(&body, spacing_m),
+        AnatomyKind::Brain => synthetic_brain_target(ct, &body, spacing_m, target_fraction_xyz)?,
         AnatomyKind::Liver | AnatomyKind::Kidney => label.mapv(|value| value == 2),
     };
     let body_count = body.iter().filter(|active| **active).count();
@@ -54,23 +55,39 @@ pub(super) fn masks(
     Ok((body, target))
 }
 
-fn synthetic_brain_target(body: &Array3<bool>, spacing_m: f64) -> Array3<bool> {
+fn synthetic_brain_target(
+    ct: &Array3<f64>,
+    body: &Array3<bool>,
+    spacing_m: f64,
+    target_fraction_xyz: Option<[f64; 3]>,
+) -> KwaversResult<Array3<bool>> {
     let n = body.dim().0;
-    let center = centroid_float(body).unwrap_or([
-        0.5 * (n - 1) as f64,
-        0.5 * (n - 1) as f64,
-        0.5 * (n - 1) as f64,
-    ]);
+    let brain_support = Array3::from_shape_fn(body.dim(), |idx| body[idx] && ct[idx] < 300.0);
+    let support = if brain_support.iter().any(|active| *active) {
+        &brain_support
+    } else {
+        body
+    };
+    let center = if let Some(fraction) = target_fraction_xyz {
+        let index = target_index_from_mask_fraction_3d(support, fraction)?;
+        [index[0] as f64, index[1] as f64, index[2] as f64]
+    } else {
+        centroid_float(body, None).unwrap_or([
+            0.5 * (n - 1) as f64,
+            0.5 * (n - 1) as f64,
+            0.5 * (n - 1) as f64,
+        ])
+    };
     let rx = (6.0e-3 / spacing_m).max(1.3);
     let ry = (8.0e-3 / spacing_m).max(1.3);
     let rz = (6.0e-3 / spacing_m).max(1.3);
-    Array3::from_shape_fn(body.dim(), |(ix, iy, iz)| {
+    Ok(Array3::from_shape_fn(body.dim(), |(ix, iy, iz)| {
         body[[ix, iy, iz]]
             && ((ix as f64 - center[0]) / rx).powi(2)
                 + ((iy as f64 - center[1]) / ry).powi(2)
                 + ((iz as f64 - center[2]) / rz).powi(2)
                 <= 1.0
-    })
+    }))
 }
 
 pub(super) fn inversion_mask(
@@ -111,40 +128,4 @@ pub(super) fn inversion_mask(
         }
         false
     })
-}
-
-pub(super) fn nearest_boundary(
-    body: &Array3<bool>,
-    focus: [f64; 3],
-    spacing_mm: [f64; 3],
-) -> KwaversResult<[f64; 3]> {
-    let mut best = None;
-    for ((ix, iy, iz), active) in body.indexed_iter() {
-        if *active && is_boundary(body, ix, iy, iz) {
-            let point = [ix as f64, iy as f64, iz as f64];
-            let distance = physical_distance(focus, point, spacing_mm);
-            if best.is_none_or(|(_, current)| distance < current) {
-                best = Some((point, distance));
-            }
-        }
-    }
-    best.map(|(point, _)| point).ok_or_else(|| {
-        KwaversError::InvalidInput("body mask has no external 3-D boundary".to_owned())
-    })
-}
-
-fn is_boundary(mask: &Array3<bool>, ix: usize, iy: usize, iz: usize) -> bool {
-    let (nx, ny, nz) = mask.dim();
-    ix == 0
-        || iy == 0
-        || iz == 0
-        || ix + 1 == nx
-        || iy + 1 == ny
-        || iz + 1 == nz
-        || !mask[[ix - 1, iy, iz]]
-        || !mask[[ix + 1, iy, iz]]
-        || !mask[[ix, iy - 1, iz]]
-        || !mask[[ix, iy + 1, iz]]
-        || !mask[[ix, iy, iz - 1]]
-        || !mask[[ix, iy, iz + 1]]
 }

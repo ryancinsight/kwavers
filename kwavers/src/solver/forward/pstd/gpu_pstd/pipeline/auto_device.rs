@@ -3,6 +3,7 @@
 //! SRP: changes when adapter selection policy or device descriptor changes.
 
 use super::super::GpuPstdSolver;
+use super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use crate::domain::grid::Grid;
 use std::sync::Arc;
 
@@ -12,27 +13,12 @@ impl GpuPstdSolver {
     ///
     /// This constructor owns the wgpu device lifecycle, so callers do not need
     /// to add `wgpu` or `pollster` as direct dependencies.
-    #[allow(clippy::too_many_arguments)]
     pub fn with_auto_device(
         grid: &Grid,
-        c0_flat: &[f32],
-        rho0_flat: &[f32],
-        dt: f64,
-        nt: usize,
-        c_ref: f64,
-        pml_x: &[f32],
-        pml_y: &[f32],
-        pml_z: &[f32],
-        pml_sgx: &[f32],
-        pml_sgy: &[f32],
-        pml_sgz: &[f32],
-        bon_a_flat: &[f32],
-        absorb_nabla1: &[f32],
-        absorb_nabla2: &[f32],
-        absorb_tau: &[f32],
-        absorb_eta: &[f32],
-        nonlinear: bool,
-        absorbing: bool,
+        medium: MediumArrays<'_>,
+        solver: SolverParams,
+        pml: PmlArrays<'_>,
+        absorption: AbsorptionArrays<'_>,
     ) -> Result<Self, String> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -69,24 +55,10 @@ impl GpuPstdSolver {
             Arc::new(device),
             Arc::new(queue),
             grid,
-            c0_flat,
-            rho0_flat,
-            dt,
-            nt,
-            c_ref,
-            pml_x,
-            pml_y,
-            pml_z,
-            pml_sgx,
-            pml_sgy,
-            pml_sgz,
-            bon_a_flat,
-            absorb_nabla1,
-            absorb_nabla2,
-            absorb_tau,
-            absorb_eta,
-            nonlinear,
-            absorbing,
+            medium,
+            solver,
+            pml,
+            absorption,
         )
     }
 }

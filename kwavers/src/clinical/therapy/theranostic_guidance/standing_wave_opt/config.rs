@@ -132,10 +132,7 @@ impl StandingWaveOptConfig {
                 (dy * dy + ddx * ddx).sqrt()
             })
             .collect();
-        let t_max = distances
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max);
+        let t_max = distances.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         distances
             .iter()
             .map(|&d| -omega * (t_max / c - d / c))

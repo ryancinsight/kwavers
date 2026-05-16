@@ -12,9 +12,20 @@ pub(super) fn solve_sparse_ista(
     workspace: &mut SoundSpeedShiftWorkspace,
 ) {
     workspace.prepare(operator.rows(), operator.cols());
-    operator.t_matvec(data, &mut workspace.rhs);
     let lipschitz = estimate_lipschitz(operator, config, workspace).max(f64::EPSILON);
-    let step = 1.0 / lipschitz;
+    solve_sparse_ista_with_lipschitz(operator, data, config, workspace, lipschitz);
+}
+
+pub(super) fn solve_sparse_ista_with_lipschitz(
+    operator: &SoundSpeedShiftOperator,
+    data: &[f64],
+    config: SoundSpeedShiftConfig,
+    workspace: &mut SoundSpeedShiftWorkspace,
+    lipschitz: f64,
+) {
+    workspace.prepare(operator.rows(), operator.cols());
+    operator.t_matvec(data, &mut workspace.rhs);
+    let step = 1.0 / lipschitz.max(f64::EPSILON);
     let threshold = config.sparsity_weight * step;
     workspace.solution.fill(0.0);
     workspace.objective_history.clear();
