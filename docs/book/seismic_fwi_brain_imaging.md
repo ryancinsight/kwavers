@@ -88,6 +88,37 @@ Outputs:
   deep midline inspection from pons-level through thalamus-level slices.
 - Objective history and visibility metrics.
 
+**Theorem 27.1 (Born Linearity).** Let the true sound-speed field be
+`c(x) = c₀ + δc(x)` with relative contrast `m(x) = δc(x)/c₀`.  Under the
+single-scattering (first Born) approximation `|m(x)| ≪ 1`, every multiply
+scattered wave is O(m²) and is dropped.  The scattered pressure at receiver `r`
+from source `s` at frequency `f` satisfies
+
+$$
+p_s(s,r,f) = \int_V G(r,x,f)\,\delta c(x)\,G(x,s,f)\,dV(x)
+= \sum_{x\in V_{\mathrm{active}}} A_{srfx}\,m(x) + O(m^2),
+$$
+
+where `G(a,b,f)` is the background Green's function evaluated along the path
+`a→b` at frequency `f`.  The operator `A: ℝⁿ → ℝᵍ` is linear in `m`; the
+forward model `d = Am` is therefore linear.  For regularization coefficient
+`λ > 0` the normal equations `(AᵀA + λI)m = Aᵀd` are strictly positive-definite
+and have a unique minimizer.
+
+*Proof sketch.* Each row `A_{srfx}` is determined entirely by background Green's
+function evaluations (source and receiver path lengths, attenuation, and wave
+number); it does not depend on `m(x)`.  Linearity of `d = Am` follows from
+linearity of row summation.  Strict positive definiteness of `AᵀA + λI` follows
+because `λ > 0` lower-bounds every eigenvalue, regardless of the rank of `A`.
+The unique minimizer is the global minimum of the convex quadratic `J`. □
+
+**Scope limitation.** The Born approximation is valid when `|δc/c₀| ≲ 0.03`
+and `k|m|L ≲ 1`, where `L` is the scatterer diameter.  For skull bone
+(`c_skull ≈ 2900 m/s`, contrast ≈ 0.88) this condition fails; the skull is
+therefore excluded from the inversion domain and held fixed at its CT-derived
+value.  Soft-tissue brain contrast (`|δc/c₀| ≲ 0.02`) remains within the Born
+regime for the carrier frequencies used here.
+
 The inverse problem minimizes:
 
 $$
@@ -279,7 +310,7 @@ to the physical FWI reconstruction.
 | Tissue-harmonic FWI | Active inter-burst harmonic bands | `c`, `alpha`, `beta` | Nonlinear contrast at `2f0` | Weak second-harmonic row model |
 | Passive cavitation source inversion | Passive intra-burst | `q_cav(x,t)` | Real-time bubble-cloud tracking | Subharmonic source FWI in custom simulator |
 | Bubble-dynamics nonlinear FWI | Passive and active | Bubble state plus acoustic fields | Sub/ultraharmonic histotripsy feedback | Emission-band diagnostics; bubble state pending |
-| Elastic/shear FWI | Post-burst mechanical wave data | `mu`, `lambda`, `rho` | Lesion stiffness confirmation | Pending |
+| Elastic/shear FWI | Post-burst mechanical wave data | `mu`, `lambda`, `rho` | Lesion stiffness confirmation | Not implemented; deferred to a future therapy-tracking orchestrator (requires shear-wave forward model outside current Born acoustic operator) |
 
 Therapy monitoring must separate active inter-burst transmissions from passive
 cavitation emissions during therapy bursts.  The current implementation covers
@@ -308,7 +339,65 @@ image as cavitation support rather than as a boundary-resolution measurement.
 
 ---
 
-## 27.7 Reproducible figures
+## 27.7 Minimal usage example
+
+The PyO3 binding exposes the full pipeline via a single call.  No NumPy,
+SciPy, nibabel, or pydicom dependency is required on the Python side.
+
+```python
+import pykwavers
+
+# Load CT, build acoustic model, run Born FWI, return reconstructed volume.
+result = pykwavers.run_seismic_helmet_fwi_volume_from_ritk_ct(
+    ct_nifti_path="data/rire_patient_109/patient_109_ct.nii.gz",
+    element_count=1024,
+    frequencies_hz=[200_000, 350_000, 500_000, 650_000, 800_000],
+    receiver_offsets=[512, 384, 640, 256, 768, 128, 448, 576],
+    grid_size=56,
+    iterations=12,
+    regularization=1e-3,
+    source_pressure_mpa=0.15,
+    nonlinear_beta=4.5,
+    attenuation_model=True,
+    nonlinear_harmonic_model=True,
+    edge_preserving_weight=1e-4,
+    edge_preserving_epsilon=4e-3,
+    edge_preserving_step=0.12,
+    edge_preserving_iterations=1,
+)
+
+# result["reconstruction_m_s"]  — 3-D f64 array, shape (Nx, Ny, Nz), m/s
+# result["target_m_s"]          — CT-derived ground-truth sound speed
+# result["brain_mask"]          — bool array, inversion domain
+# result["skull_mask"]          — bool array, fixed CT-derived skull
+# result["metrics"]["pearson"]        — Pearson r vs CT target (active voxels)
+# result["metrics"]["normalized_rmse"]
+# result["metrics"]["objective_reduction_fraction"]
+# result["metrics"]["active_voxels"]
+# result["metrics"]["measurements"]
+# result["metrics"]["continuation_stages"]
+
+# Same-device theranostic: pass the same result dict to the therapy pipeline.
+therapy = pykwavers.run_theranostic_nonlinear_3d_from_ritk(
+    ct_nifti_path="data/rire_patient_109/patient_109_ct.nii.gz",
+    anatomy="brain",
+    element_count=1024,
+    source_pressure_pa=150_000,
+    target_fraction_xyz=[0.5926, 0.5, 0.4889],
+    skull_hu_threshold=300.0,
+    body_hu_threshold=-350.0,
+)
+# therapy["inverse_results"]["fusion"]["pearson"] — same-aperture fusion metric
+```
+
+The `run_seismic_helmet_fwi_volume_from_ritk_ct` call performs all
+computation in Rust: CT ingest via RITK, acoustic model assembly, Born
+sensitivity matrix construction, adjoint migration, and the regularized
+PCG iteration.  The 1024-element hemispherical helmet geometry satisfies the
+same-device aperture contract (§29.2): every element index used as a
+transmitter also appears as a receiver.
+
+## 27.8 Reproducible figures
 
 Run:
 
@@ -382,7 +471,7 @@ each reconstruction family. The latest generated fusion metrics are:
 
 ---
 
-## 27.8 Boundary of replication
+## 27.9 Boundary of replication
 
 The published npj Digital Medicine study is a full 3-D time-domain FWI pipeline.
 This chapter is a bounded in-repository reproduction of the acquisition and
