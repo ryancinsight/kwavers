@@ -1,0 +1,47 @@
+{
+  "chapter": "21f",
+  "analysis": "pancreatic PDAC histotripsy treatment planning",
+  "dataset": "MSD Task07_Pancreas imagesTs (real PDAC CECT, HU auto-segmented)",
+  "array": "128-element curved abdominal therapy array, 500 kHz, ROC=100 mm",
+  "dx_m": 0.0012,
+  "focus_depth_mm": 106.8,
+  "r_tumour_mm": 14.34325714959896,
+  "scenarios": [
+    {
+      "scenario": "us_intrinsic",
+      "raster_points": 101,
+      "treatment_min": 0.8416666666666667,
+      "lesion_volume_mm3": 8042.111999999999,
+      "tumour_volume_mm3": 12360.383999999998,
+      "tumour_coverage_pct": 65.06360967426255,
+      "T_transient_C": 37.002784729003906,
+      "T_steady_C": 37.388240814208984,
+      "fwhm_lat_mm": 6.204000000000001,
+      "fwhm_ax_mm": 44.0
+    },
+    {
+      "scenario": "ms_shock_vapor",
+      "raster_points": 153,
+      "treatment_min": 1.59375,
+      "lesion_volume_mm3": 12125.375999999998,
+      "tumour_volume_mm3": 12360.383999999998,
+      "tumour_coverage_pct": 98.09869984621837,
+      "T_transient_C": 100.0,
+      "T_steady_C": 100.0,
+      "fwhm_lat_mm": 6.204000000000001,
+      "fwhm_ax_mm": 44.0
+    },
+    {
+      "scenario": "ms_subthr_cav",
+      "raster_points": 284,
+      "treatment_min": 2.9583333333333335,
+      "lesion_volume_mm3": 11862.719999999998,
+      "tumour_volume_mm3": 12360.383999999998,
+      "tumour_coverage_pct": 95.97371732140361,
+      "T_transient_C": 39.55691146850586,
+      "T_steady_C": 54.82743835449219,
+      "fwhm_lat_mm": 6.204000000000001,
+      "fwhm_ax_mm": 44.0
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+use numpy::PyArray2;
+use numpy::PyReadonlyArray3;
+use pyo3::exceptions::PyRuntimeError;
+use pyo3::prelude::*;
+
+use super::GpuPstdSession;
+
+#[pymethods]
+impl GpuPstdSession {
+    /// Run one scan line with updated medium (sound_speed, density).
+    pub fn run_scan_line<'py>(
+        &mut self,
+        _py: Python<'py>,
+        _sound_speed: PyReadonlyArray3<f64>,
+        _density: PyReadonlyArray3<f64>,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        #[cfg(not(feature = "gpu"))]
+        {
+            Err(PyRuntimeError::new_err("GPU feature not enabled"))
+        }
+
+        #[cfg(feature = "gpu")]
+        {
+            use std::borrow::Cow;
+
+            let total_t0 = std::time::Instant::now();
+            let ss_arr = _sound_speed.as_array();
+            let rho_arr = _density.as_array();
+
+            let c0_flat: Cow<'_, [f64]> = match ss_arr.as_slice() {
+                Some(slice) => Cow::Borrowed(slice),
+                None => Cow::Owned(ss_arr.iter().copied().collect()),
+            };
+            let rho0_flat: Cow<'_, [f64]> = match rho_arr.as_slice() {
+                Some(slice) => Cow::Borrowed(slice),
+                None => Cow::Owned(rho_arr.iter().copied().collect()),
+            };
+
+            let upload_t0 = std::time::Instant::now();
+            self.solver
+                .update_medium_variable(c0_flat.as_ref(), rho0_flat.as_ref());
+            let medium_upload_ns = upload_t0.elapsed().as_nanos() as u64;
+
+            let result = self.run_scan_line_cached(_py);
+            self.last_medium_variable_upload_ns = medium_upload_ns;
+            self.last_medium_static_upload_ns = 0;
+            self.last_medium_upload_ns = medium_upload_ns;
+            self.last_total_ns = total_t0.elapsed().as_nanos() as u64;
+            result
+        }
+    }
+
+    /// Run one scan line using the currently resident medium buffers.
+    pub fn run_scan_line_cached<'py>(
+        &mut self,
+        _py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyArray2<f64>>> {
+        #[cfg(not(feature = "gpu"))]
+        {
+            Err(PyRuntimeError::new_err("GPU feature not enabled"))
+        }
+
+        #[cfg(feature = "gpu")]
+        {
+            let total_t0 = std::time::Instant::now();
+            self.last_medium_upload_ns = 0;
+            self.last_medium_variable_upload_ns = 0;
+            self.last_medium_static_upload_ns = 0;
+            let time_steps = self.time_steps;
+
+            let source_indices: Vec<u32> = Vec::new();
+            let source_signals: Vec<f32> = Vec::new();
+
+            let solver_t0 = std::time::Instant::now();
+            let sensor_data_f32 = self.solver.run(
+                &self.sensor_indices,
+                &source_indices,
+                &source_signals,
+                &self.vel_x_indices,
+                &self.vel_x_signals,
+            );
+            self.last_solver_run_ns = solver_t0.elapsed().as_nanos() as u64;
+
+            let materialize_t0 = std::time::Instant::now();
+            let n_sensors = self.sensor_indices.len();
+            let out_flat: Vec<f64> = sensor_data_f32.iter().map(|&v| v as f64).collect();
+            let out = ndarray::Array2::from_shape_vec((n_sensors, time_steps), out_flat)
+                .expect("sensor_data shape mismatch");
+            self.last_materialize_ns = materialize_t0.elapsed().as_nanos() as u64;
+            if self.last_medium_upload_ns == 0 {
+                self.last_total_ns = total_t0.elapsed().as_nanos() as u64;
+            }
+
+            Ok(PyArray2::from_owned_array(_py, out))
+        }
+    }
+}
