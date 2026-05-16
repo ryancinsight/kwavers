@@ -8,8 +8,8 @@
 //   elastography, imaging, thermal, inverse, sonogenetics, rtm
 
 use kwavers::physics::book::{
-    cavitation, elastography, imaging, inverse as inverse_mod, photoacoustics,
-    rtm as rtm_mod, safety, skull as skull_mod, sonogenetics, thermal, tissue, transducer, wave,
+    cavitation, elastography, imaging, inverse as inverse_mod, photoacoustics, rtm as rtm_mod,
+    safety, skull as skull_mod, sonogenetics, thermal, tissue, transducer, wave,
 };
 use ndarray::Array2;
 use num_complex::Complex64;
@@ -214,10 +214,7 @@ fn fdtd_phase_error_1d(
 ///     Relative phase error array.
 #[pyfunction]
 #[pyo3(signature = (kh,))]
-fn pstd_phase_error(
-    py: Python<'_>,
-    kh: PyReadonlyArray1<f64>,
-) -> PyResult<Py<PyArray1<f64>>> {
+fn pstd_phase_error(py: Python<'_>, kh: PyReadonlyArray1<f64>) -> PyResult<Py<PyArray1<f64>>> {
     let kh_slice = kh
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -286,11 +283,7 @@ fn fubini_harmonic_amplitude(n: u32, sigma: f64) -> PyResult<f64> {
 ///     Array of normalised harmonic amplitudes, length *n_max*.
 #[pyfunction]
 #[pyo3(signature = (n_max, sigma))]
-fn fubini_harmonic_spectrum(
-    py: Python<'_>,
-    n_max: u32,
-    sigma: f64,
-) -> PyResult<Py<PyArray1<f64>>> {
+fn fubini_harmonic_spectrum(py: Python<'_>, n_max: u32, sigma: f64) -> PyResult<Py<PyArray1<f64>>> {
     let result = wave::fubini_harmonic_spectrum(n_max, sigma);
     Ok(result.into_pyarray(py).unbind())
 }
@@ -732,10 +725,7 @@ fn rayleigh_plesset_rk4(
     let (r, rdot) = cavitation::rayleigh_plesset_rk4(
         r0_m, rdot0, p_ac_pa, freq_hz, t_s, p0_pa, rho, sigma, mu, kappa, p_v_pa,
     );
-    Ok((
-        r.into_pyarray(py).unbind(),
-        rdot.into_pyarray(py).unbind(),
-    ))
+    Ok((r.into_pyarray(py).unbind(), rdot.into_pyarray(py).unbind()))
 }
 
 /// Integrate the Keller–Miksis equation with RK4.
@@ -781,10 +771,7 @@ fn keller_miksis_rk4(
     let (r, rdot) = cavitation::keller_miksis_rk4(
         r0_m, rdot0, p_ac_pa, freq_hz, t_s, p0_pa, rho, sigma, mu, kappa, p_v_pa, c_liquid,
     );
-    Ok((
-        r.into_pyarray(py).unbind(),
-        rdot.into_pyarray(py).unbind(),
-    ))
+    Ok((r.into_pyarray(py).unbind(), rdot.into_pyarray(py).unbind()))
 }
 
 /// Compute the power spectrum of a bubble radius time series.
@@ -1031,7 +1018,9 @@ fn arrhenius_damage_integral(
     let t_s = t_celsius
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(safety::arrhenius_damage_integral(t_s, dt_s, a_per_s, ea_j_mol))
+    Ok(safety::arrhenius_damage_integral(
+        t_s, dt_s, a_per_s, ea_j_mol,
+    ))
 }
 
 /// Return the FDA ISPTA diagnostic-ultrasound limit (720 mW/cm²).
@@ -1243,9 +1232,8 @@ fn skull_transmission_spectrum(
     let f_s = f_hz
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let (mag, phase) = skull_mod::skull_transmission_spectrum(
-        f_s, z_water, z_skull, z_brain, c_skull, d_skull_m,
-    );
+    let (mag, phase) =
+        skull_mod::skull_transmission_spectrum(f_s, z_water, z_skull, z_brain, c_skull, d_skull_m);
     Ok((
         mag.into_pyarray(py).unbind(),
         phase.into_pyarray(py).unbind(),
@@ -1729,7 +1717,9 @@ fn bioheat_focal_temperature_rise(
 #[pyfunction]
 #[pyo3(signature = (aperture_m, f_number, freq_hz, c))]
 fn hifu_focal_pressure_gain(aperture_m: f64, f_number: f64, freq_hz: f64, c: f64) -> PyResult<f64> {
-    Ok(thermal::hifu_focal_pressure_gain(aperture_m, f_number, freq_hz, c))
+    Ok(thermal::hifu_focal_pressure_gain(
+        aperture_m, f_number, freq_hz, c,
+    ))
 }
 
 /// Compute the 2-D Gaussian power-deposition distribution.
@@ -1803,8 +1793,8 @@ fn helmholtz_1d_fd_matrix(
     dx: f64,
 ) -> PyResult<Py<PyArray2<f64>>> {
     let flat = inverse_mod::helmholtz_1d_fd_matrix(n, k, dx);
-    let arr2d = Array2::from_shape_vec((n, n), flat)
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+    let arr2d =
+        Array2::from_shape_vec((n, n), flat).map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr2d.into_pyarray(py).unbind())
 }
 
@@ -1865,10 +1855,7 @@ fn tikhonov_lcurve(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (res, sol) = inverse_mod::tikhonov_lcurve(&a_flat, b_s, nrows, ncols, lam_s);
-    Ok((
-        res.into_pyarray(py).unbind(),
-        sol.into_pyarray(py).unbind(),
-    ))
+    Ok((res.into_pyarray(py).unbind(), sol.into_pyarray(py).unbind()))
 }
 
 /// Solve a Born-inversion problem with Tikhonov regularisation.
@@ -1913,10 +1900,7 @@ fn born_inversion_regularized(
     let (re, im) = inverse_mod::born_inversion_regularized(
         &gr_flat, &gi_flat, yr_s, yi_s, nrows, ncols, lambda,
     );
-    Ok((
-        re.into_pyarray(py).unbind(),
-        im.into_pyarray(py).unbind(),
-    ))
+    Ok((re.into_pyarray(py).unbind(), im.into_pyarray(py).unbind()))
 }
 
 /// Compute the adjoint-gradient convergence curve.
@@ -2033,12 +2017,7 @@ fn acoustic_streaming_velocity(
 ///     ISPTA [W/cm²].
 #[pyfunction]
 #[pyo3(signature = (p_pa, dt_s, rho, c))]
-fn ispta_w_cm2(
-    p_pa: PyReadonlyArray1<f64>,
-    dt_s: f64,
-    rho: f64,
-    c: f64,
-) -> PyResult<f64> {
+fn ispta_w_cm2(p_pa: PyReadonlyArray1<f64>, dt_s: f64, rho: f64, c: f64) -> PyResult<f64> {
     let p_s = p_pa
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -2094,7 +2073,16 @@ fn focused_gaussian_beam_2d(
     let nz = z_s.len();
     let skull_transmission = Complex64::new(skull_transmission_real, skull_transmission_imag);
     let (real_flat, imag_flat) = rtm_mod::focused_gaussian_beam_2d(
-        x_s, z_s, x_f, z_f, freq_hz, c_brain, w0_m, skull_transmission, r_back, z_back,
+        x_s,
+        z_s,
+        x_f,
+        z_f,
+        freq_hz,
+        c_brain,
+        w0_m,
+        skull_transmission,
+        r_back,
+        z_back,
     );
     let real_arr = Array2::from_shape_vec((nx, nz), real_flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -2137,8 +2125,7 @@ fn backprop_green_function_2d(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let nx = x_s.len();
     let nz = z_s.len();
-    let (real_flat, imag_flat) =
-        rtm_mod::backprop_green_function_2d(x_s, z_s, x_f, z_f, k_br);
+    let (real_flat, imag_flat) = rtm_mod::backprop_green_function_2d(x_s, z_s, x_f, z_f, k_br);
     let real_arr = Array2::from_shape_vec((nx, nz), real_flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let imag_arr = Array2::from_shape_vec((nx, nz), imag_flat)
@@ -2181,10 +2168,18 @@ fn rtm_imaging_condition(
     let fi = p_fwd_imag.as_array();
     let br = p_bwd_real.as_array();
     let bi = p_bwd_imag.as_array();
-    let fr_flat: Vec<f64> = (0..nx).flat_map(|i| (0..nz).map(move |j| fr[[i, j]])).collect();
-    let fi_flat: Vec<f64> = (0..nx).flat_map(|i| (0..nz).map(move |j| fi[[i, j]])).collect();
-    let br_flat: Vec<f64> = (0..nx).flat_map(|i| (0..nz).map(move |j| br[[i, j]])).collect();
-    let bi_flat: Vec<f64> = (0..nx).flat_map(|i| (0..nz).map(move |j| bi[[i, j]])).collect();
+    let fr_flat: Vec<f64> = (0..nx)
+        .flat_map(|i| (0..nz).map(move |j| fr[[i, j]]))
+        .collect();
+    let fi_flat: Vec<f64> = (0..nx)
+        .flat_map(|i| (0..nz).map(move |j| fi[[i, j]]))
+        .collect();
+    let br_flat: Vec<f64> = (0..nx)
+        .flat_map(|i| (0..nz).map(move |j| br[[i, j]]))
+        .collect();
+    let bi_flat: Vec<f64> = (0..nx)
+        .flat_map(|i| (0..nz).map(move |j| bi[[i, j]]))
+        .collect();
     let flat = rtm_mod::rtm_imaging_condition(&fr_flat, &fi_flat, &br_flat, &bi_flat, nx, nz);
     let arr2d = Array2::from_shape_vec((nx, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -2213,7 +2208,9 @@ fn rtm_multi_frequency_fusion(
         .iter()
         .map(|img| {
             let arr = img.as_array();
-            (0..nx).flat_map(|i| (0..nz).map(move |j| arr[[i, j]])).collect()
+            (0..nx)
+                .flat_map(|i| (0..nz).map(move |j| arr[[i, j]]))
+                .collect()
         })
         .collect();
     let flat = rtm_mod::rtm_multi_frequency_fusion(&vecs);

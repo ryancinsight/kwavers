@@ -112,10 +112,7 @@ pub fn pw_compounding_lateral_psf(
     wavelength_m: f64,
 ) -> Vec<f64> {
     let eff_width = 0.886 * f_number * wavelength_m / (n_angles as f64).sqrt();
-    x_arr
-        .iter()
-        .map(|&x| sinc2(x / eff_width))
-        .collect()
+    x_arr.iter().map(|&x| sinc2(x / eff_width)).collect()
 }
 
 // ─── Resolution limit ─────────────────────────────────────────────────────────

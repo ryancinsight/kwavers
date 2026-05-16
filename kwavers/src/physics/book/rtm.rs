@@ -111,9 +111,7 @@ pub fn backprop_green_function_2d(
 
     for (ix, &x) in x_arr.iter().enumerate() {
         for (iz, &z) in z_arr.iter().enumerate() {
-            let r_f = ((x - x_f).powi(2) + (z - z_f).powi(2))
-                .sqrt()
-                .max(1e-12); // regularise singularity
+            let r_f = ((x - x_f).powi(2) + (z - z_f).powi(2)).sqrt().max(1e-12); // regularise singularity
             let phase = -k_br * r_f;
             let amp = 1.0 / r_f.sqrt();
             let idx = ix * nz + iz;

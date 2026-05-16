@@ -122,8 +122,7 @@ pub fn rayleigh_plesset_rk4(
         let r_clamped = r.max(1e-15); // guard against collapse to zero
         let p_gas = p_gas0 * (r0_m / r_clamped).powf(3.0 * kappa) - p_v_pa;
         let p_ac = p_ac_pa * (omega * t).sin();
-        let rddot = (p_gas - p0_pa - p_ac - 2.0 * sigma / r_clamped
-            - 4.0 * mu * rdot / r_clamped)
+        let rddot = (p_gas - p0_pa - p_ac - 2.0 * sigma / r_clamped - 4.0 * mu * rdot / r_clamped)
             / (rho * r_clamped)
             - 1.5 * rdot * rdot / r_clamped;
         (rdot, rddot)
@@ -280,7 +279,7 @@ pub fn bubble_power_spectrum(r_arr: &[f64], dt_s: f64, n_fft: usize) -> (Vec<f64
         // One-sided PSD: double for k > 0 and k < N/2
         let scale = if k == 0 || k == n / 2 { 1.0 } else { 2.0 };
         power[k] = scale * mag_sq / (n_f * n_f * dt_s.recip()); // [m²/Hz]... wait: /= fs
-        // Correct: S[k] = |X[k]|²·dt / N  for one-sided
+                                                                // Correct: S[k] = |X[k]|²·dt / N  for one-sided
         power[k] = scale * mag_sq * dt_s / n_f;
         f_arr[k] = k as f64 / (n_f * dt_s);
     }
@@ -331,7 +330,9 @@ mod tests {
 
     #[test]
     fn bubble_spectrum_length() {
-        let r: Vec<f64> = (0..64).map(|i| 10e-6 + 1e-7 * (i as f64 * 0.1).sin()).collect();
+        let r: Vec<f64> = (0..64)
+            .map(|i| 10e-6 + 1e-7 * (i as f64 * 0.1).sin())
+            .collect();
         let (f, p) = bubble_power_spectrum(&r, 1e-9, 64);
         assert_eq!(f.len(), 33);
         assert_eq!(p.len(), 33);

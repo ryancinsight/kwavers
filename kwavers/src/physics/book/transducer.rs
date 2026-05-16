@@ -4,8 +4,8 @@
 //! apodization windows, delay laws, 2-D beam patterns, on-axis pressure
 //! profiles, and bandlimited interpolation stencils.
 
-use std::f64::consts::PI;
 use num_complex::Complex64;
+use std::f64::consts::PI;
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 
@@ -172,14 +172,12 @@ pub fn apodization_weights(n: usize, window_type: &str) -> Vec<f64> {
 /// * `elem_x`, `elem_z` – element positions [m]
 /// * `x_f`, `z_f` – focal point [m]
 /// * `c` – sound speed [m/s]
-pub fn delay_law_focus_2d(
-    elem_x: &[f64],
-    elem_z: &[f64],
-    x_f: f64,
-    z_f: f64,
-    c: f64,
-) -> Vec<f64> {
-    assert_eq!(elem_x.len(), elem_z.len(), "element arrays must have equal length");
+pub fn delay_law_focus_2d(elem_x: &[f64], elem_z: &[f64], x_f: f64, z_f: f64, c: f64) -> Vec<f64> {
+    assert_eq!(
+        elem_x.len(),
+        elem_z.len(),
+        "element arrays must have equal length"
+    );
     let r: Vec<f64> = elem_x
         .iter()
         .zip(elem_z.iter())
@@ -353,7 +351,11 @@ pub fn bli_stencil_weights(delta: &[f64], n_stencil: usize) -> Vec<Vec<f64>> {
                 .map(|j| {
                     let j_off = (j as i64 - half) as f64; // relative sample index
                     let x = j_off - d;
-                    let sinc = if x.abs() < 1e-12 { 1.0 } else { (PI * x).sin() / (PI * x) };
+                    let sinc = if x.abs() < 1e-12 {
+                        1.0
+                    } else {
+                        (PI * x).sin() / (PI * x)
+                    };
                     // Hamming window over the stencil
                     let window = 0.54 - 0.46 * (2.0 * PI * j as f64 / nm1).cos();
                     sinc * window
@@ -384,8 +386,7 @@ fn bessel_j1(x: f64) -> f64 {
                         + y * (-2_972_611.439 + y * (15_704.482_60 + y * (-30.160_366_06))))));
         let den = 144_725_228_442.0
             + y * (2_300_535_178.0
-                + y * (18_583_304.74
-                    + y * (99_447.433_94 + y * (376.999_139_7 + y))));
+                + y * (18_583_304.74 + y * (99_447.433_94 + y * (376.999_139_7 + y))));
         num / den
     } else {
         let z = 8.0 / ax;
@@ -393,15 +394,17 @@ fn bessel_j1(x: f64) -> f64 {
         let xx = ax - 2.356_194_490_2;
         let p = 1.0
             + y * (0.183_105e-2
-                + y * (-3.516_396_496e-5
-                    + y * (2.457_520_174e-5 - y * 2.400_505_341e-7)));
+                + y * (-3.516_396_496e-5 + y * (2.457_520_174e-5 - y * 2.400_505_341e-7)));
         let q = 0.046_874_999_95
             + y * (-2.002_690_873e-4
-                + y * (8.449_199_096e-5
-                    + y * (-8.822_898_7e-5 + y * 1.050_343_160e-6)));
+                + y * (8.449_199_096e-5 + y * (-8.822_898_7e-5 + y * 1.050_343_160e-6)));
         (2.0 / (PI * ax)).sqrt() * (p * xx.cos() - z * q * xx.sin())
     };
-    if x < 0.0 { -r } else { r }
+    if x < 0.0 {
+        -r
+    } else {
+        r
+    }
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

@@ -50,7 +50,17 @@ const HU_TARGET: f64 = 70.0;
 
 /// Ellipsoid radial parameter; inside when ≤ 1.
 #[inline]
-fn ell(ix: usize, iy: usize, iz: usize, cx: f64, cy: f64, cz: f64, rx: f64, ry: f64, rz: f64) -> f64 {
+fn ell(
+    ix: usize,
+    iy: usize,
+    iz: usize,
+    cx: f64,
+    cy: f64,
+    cz: f64,
+    rx: f64,
+    ry: f64,
+    rz: f64,
+) -> f64 {
     let dx = (ix as f64 - cx) / rx;
     let dy = (iy as f64 - cy) / ry;
     let dz = (iz as f64 - cz) / rz;

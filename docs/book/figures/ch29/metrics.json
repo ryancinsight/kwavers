@@ -626,11 +626,11 @@
     "field_archive": "D:\\kwavers\\docs\\book\\figures\\ch29\\controlled_comparison_fields.npz",
     "summary": {
       "case_count": 3,
-      "mean_linear_fusion_dice_equal_area": 0.5037348272642389,
-      "mean_nonlinear_fusion_dice_equal_area": 0.26260504201680673,
-      "mean_dice_gap_linear_minus_nonlinear": 0.24112978524743217,
-      "mean_nonlinear_pressure_outside_energy_fraction": 0.9806566217396139,
-      "dominant_observation": "the common-grid comparison rejects display resolution as the primary cause; the measured divergence is nonlinear 3-D pressure/cavitation energy spread combined with the residual projected 2-D-vs-3-D aperture difference"
+      "mean_linear_fusion_dice_equal_area": 0.33125551919380813,
+      "mean_nonlinear_fusion_dice_equal_area": 0.6653160874759753,
+      "mean_dice_gap_linear_minus_nonlinear": -0.3340605682821671,
+      "mean_nonlinear_pressure_outside_energy_fraction": 0.9640238561611699,
+      "dominant_observation": "the common-grid comparison rejects display resolution as the primary cause; after histotripsy-scale drive and corrected source weighting, nonlinear fusion improves, while the cavitation-specific divergence remains localized to off-target 3-D pressure/cavitation energy spread and residual projected 2-D-vs-3-D aperture difference"
     },
     "cases": [
       {
@@ -647,122 +647,122 @@
         ],
         "geometry": {
           "comparison_frame": "nonlinear_crop_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.007248836776064917,
+          "linear_focus_to_common_target_centroid_m": 0.012437618014146303,
           "linear_element_count": 1024,
-          "nonlinear_element_count": 338,
-          "median_nearest_projected_element_distance_m": 0.07324539183966933,
-          "common_target_voxels": 7,
+          "nonlinear_element_count": 1024,
+          "median_nearest_projected_element_distance_m": 0.04590565434725204,
+          "common_target_voxels": 9,
           "common_target_centroid_m": [
-            -0.00408212362356642,
-            0.00785023773762775
+            0.019782599098821917,
+            0.002198066566535775
           ]
         },
         "comparison_metrics": {
           "linear_exposure": {
-            "dice_equal_area": 0.2857142857142857,
-            "cnr": 3.458470557390949,
-            "nrmse": 3.3213416986005293,
-            "pearson": 0.22282378066855466,
-            "target_peak": 1.0,
-            "outside_peak": 0.9993907630103369,
-            "outside_energy_fraction": 0.9528076248227763
+            "dice_equal_area": 0.1111111111111111,
+            "cnr": 3.1957215885197545,
+            "nrmse": 1.1184028633247467,
+            "pearson": 0.18526248149638458,
+            "target_peak": 0.20009013801310438,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9627213692750856
           },
           "linear_active": {
-            "dice_equal_area": 0.42857142857142855,
-            "cnr": 1.4922426374567404,
-            "nrmse": 1.1634305664240594,
-            "pearson": 0.3854065702975036,
-            "target_peak": 0.9961326295956783,
+            "dice_equal_area": 0.1111111111111111,
+            "cnr": 0.3978442115797971,
+            "nrmse": 1.1114920402185706,
+            "pearson": 0.03880177220212682,
+            "target_peak": 0.2093854316244107,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.7352821834869856
+            "outside_energy_fraction": 0.9831213311428385
           },
           "linear_fusion": {
-            "dice_equal_area": 0.5714285714285714,
-            "cnr": 1.2240257864502937,
-            "nrmse": 0.9562820816171258,
-            "pearson": 0.45351567824972794,
-            "target_peak": 1.0,
-            "outside_peak": 0.9759940128329672,
-            "outside_energy_fraction": 0.5274418849184772
+            "dice_equal_area": 0.1111111111111111,
+            "cnr": 0.6159314576759153,
+            "nrmse": 1.0425277499016747,
+            "pearson": 0.046460729414669125,
+            "target_peak": 0.10385477958432954,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9895115663244133
           },
           "nonlinear_pressure": {
-            "dice_equal_area": 0.0,
-            "cnr": 1.3578212142616626,
-            "nrmse": 1.9972480997611555,
-            "pearson": 0.053413950759629826,
-            "target_peak": 0.14905356879389622,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9943935153264936
+            "dice_equal_area": 0.8888888888888888,
+            "cnr": 5.503035586664066,
+            "nrmse": 3.5795033148802733,
+            "pearson": 0.2824677277448577,
+            "target_peak": 1.0,
+            "outside_peak": 0.6954854878268248,
+            "outside_energy_fraction": 0.9506903881701918
           },
           "nonlinear_fwi": {
-            "dice_equal_area": 0.2857142857142857,
-            "cnr": 6.817670559943927,
-            "nrmse": 1.278542569235616,
-            "pearson": 0.4803646648222315,
-            "target_peak": 0.8981797718037556,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.7593770725732731
+            "dice_equal_area": 0.8888888888888888,
+            "cnr": 11.203884176288755,
+            "nrmse": 1.142748077087934,
+            "pearson": 0.6011840275651424,
+            "target_peak": 1.0,
+            "outside_peak": 0.8023004581398997,
+            "outside_energy_fraction": 0.6330117503523279
           },
           "nonlinear_cavitation": {
             "dice_equal_area": 0.0,
-            "cnr": -0.4660440800909182,
-            "nrmse": 1.843637469322839,
-            "pearson": -0.018577455145782986,
-            "target_peak": 0.0461353979251497,
+            "cnr": 0.34328837598125306,
+            "nrmse": 2.125229496949258,
+            "pearson": 0.016411486807227513,
+            "target_peak": 0.14178693944138338,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9998430559495691
+            "outside_energy_fraction": 0.9969529796769605
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.2857142857142857,
-            "cnr": 6.305600153699065,
-            "nrmse": 1.5823011585701647,
-            "pearson": 0.407672324487893,
-            "target_peak": 0.8981797718037555,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.8322523383105558
+            "dice_equal_area": 0.8888888888888888,
+            "cnr": 10.93826271298968,
+            "nrmse": 1.1698024307123265,
+            "pearson": 0.592652700309747,
+            "target_peak": 1.0,
+            "outside_peak": 0.7849272946901916,
+            "outside_energy_fraction": 0.650563525166145
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.4420490831617345,
-          "linear_exposure_vs_nonlinear_pressure_pearson": 0.22337700052399453,
-          "linear_fusion_hotspot_distance_grid_cells": 2.0,
-          "nonlinear_pressure_to_fusion_pearson": 0.4776103735166167
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.2482455384833238,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.5125725633362804,
+          "linear_fusion_hotspot_distance_grid_cells": 2.8284271247461903,
+          "nonlinear_pressure_to_fusion_pearson": 0.42671098108099687
         },
         "objective_history": {
           "nonlinear_fwi": [
-            0.5076518345458849,
-            0.41461900084137027,
-            0.36094489973021454,
-            0.33666558949229086
+            0.7072260331069474,
+            0.5700627256188748,
+            0.05408990844450237,
+            0.05408990844450237
           ],
           "nonlinear_cavitation": [
-            0.0008130939843605342,
-            0.0008092633146244408,
-            0.0008054521837934409,
-            0.0008016604847484357,
-            0.0007978881109986746,
-            0.0007941349566777437,
-            0.0007904009165425315,
-            0.0007866858859698349,
-            0.0007829897609538114,
-            0.0007793124380951511,
-            0.0007756538146051123,
-            0.0007720137882965954,
-            0.0007683922575770649,
-            0.0007647891214504922,
-            0.0007612042795148128,
-            0.0007576376319457577,
-            0.0007540890795189375,
-            0.0007505585236054094,
-            0.0007470458661261668,
-            0.0007435510095990874,
-            0.0007400738570754356,
-            0.000736614312186797,
-            0.0007331722791313751,
-            0.0007297476626558999
+            19903855996.068012,
+            19882146131.032963,
+            19860464285.239616,
+            19838810416.85438,
+            19817184484.114513,
+            19795586445.327656,
+            19774016258.871845,
+            19752473883.19543,
+            19730959276.818104,
+            19709472398.326466,
+            19688013206.37648,
+            19666581659.693047,
+            19645177717.06963,
+            19623801337.370968,
+            19602452479.528427,
+            19581131102.55252,
+            19559837165.51744,
+            19538570627.5576,
+            19517331447.87597,
+            19496119585.74676,
+            19474935000.512672,
+            19453777651.584805,
+            19432647498.44218,
+            19411544500.631355
           ]
         },
-        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.571 and nonlinear fusion Dice is 0.286. Nonlinear peak-pressure outside-target energy is 0.994, linear/nonlinear fusion Pearson is 0.442, and nonlinear FWI objective drop is 1.710e-01. The residual projected aperture mismatch from the original runs is 73.25 mm; therefore the matched artifact localizes the observed visual loss to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.111 and nonlinear fusion Dice is 0.889. Nonlinear peak-pressure outside-target energy is 0.951, linear/nonlinear fusion Pearson is 0.248, and nonlinear FWI objective drop is 6.531e-01. The residual projected aperture mismatch from the original runs is 45.91 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       },
       {
         "anatomy": "kidney",
@@ -771,129 +771,129 @@
           52
         ],
         "common_extent_m": [
-          -0.0535,
-          0.0805,
-          -0.0188583984375,
-          0.1154501953125
+          -0.08,
+          0.089,
+          0.0206982421875,
+          0.18996386718750002
         ],
         "geometry": {
           "comparison_frame": "nonlinear_crop_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.004591686100067837,
+          "linear_focus_to_common_target_centroid_m": 0.004836520632943656,
           "linear_element_count": 256,
           "nonlinear_element_count": 256,
-          "median_nearest_projected_element_distance_m": 0.13349590487878812,
-          "common_target_voxels": 102,
+          "median_nearest_projected_element_distance_m": 0.10535920858484343,
+          "common_target_voxels": 69,
           "common_target_centroid_m": [
-            0.005179738562091509,
-            0.06327071281177915
+            0.005436487638533666,
+            0.06177606081495099
           ]
         },
         "comparison_metrics": {
           "linear_exposure": {
-            "dice_equal_area": 0.5686274509803921,
-            "cnr": 1.5354001714568337,
-            "nrmse": 1.0232615311626052,
-            "pearson": 0.48255476769949995,
+            "dice_equal_area": 0.5797101449275363,
+            "cnr": 1.777607484824551,
+            "nrmse": 0.9842743291576663,
+            "pearson": 0.4734831339392758,
             "target_peak": 1.0,
-            "outside_peak": 0.5106281366135157,
-            "outside_energy_fraction": 0.7133116439238727
+            "outside_peak": 0.47439891620671026,
+            "outside_energy_fraction": 0.6999506953426509
           },
           "linear_active": {
-            "dice_equal_area": 0.7156862745098039,
-            "cnr": 2.203725667927157,
-            "nrmse": 0.6774523677117665,
-            "pearson": 0.7357622942456763,
+            "dice_equal_area": 0.7681159420289855,
+            "cnr": 2.301733868942085,
+            "nrmse": 0.6565473586973558,
+            "pearson": 0.7669592054458445,
             "target_peak": 1.0,
-            "outside_peak": 0.6290329224735688,
-            "outside_energy_fraction": 0.2687483149680462
+            "outside_peak": 0.5339347373085666,
+            "outside_energy_fraction": 0.2051416555941773
           },
           "linear_fusion": {
-            "dice_equal_area": 0.7254901960784313,
-            "cnr": 1.8649063132052077,
-            "nrmse": 0.6920137143797004,
-            "pearson": 0.7461694417466695,
+            "dice_equal_area": 0.7536231884057971,
+            "cnr": 1.8829360238719086,
+            "nrmse": 0.6985225590887131,
+            "pearson": 0.7593978372402193,
             "target_peak": 1.0,
-            "outside_peak": 0.5003399133416699,
-            "outside_energy_fraction": 0.12717495692184788
+            "outside_peak": 0.42386713706774043,
+            "outside_energy_fraction": 0.09769285599562372
           },
           "nonlinear_pressure": {
             "dice_equal_area": 0.0,
-            "cnr": 0.510199082731205,
-            "nrmse": 1.1455381199727843,
-            "pearson": 0.07805866993577326,
-            "target_peak": 0.2711700828605677,
+            "cnr": 0.7953329655300485,
+            "nrmse": 1.4533202378635228,
+            "pearson": 0.09605698994213673,
+            "target_peak": 0.3621281058185944,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9590397178022537
+            "outside_energy_fraction": 0.9649061932034658
           },
           "nonlinear_fwi": {
-            "dice_equal_area": 0.35294117647058826,
-            "cnr": 3.7909552269061306,
-            "nrmse": 0.9221033178506272,
-            "pearson": 0.5449938838841242,
-            "target_peak": 0.8656217475850795,
+            "dice_equal_area": 0.6231884057971014,
+            "cnr": 3.848182652022706,
+            "nrmse": 0.7708634113735219,
+            "pearson": 0.6312895975246214,
+            "target_peak": 0.7705286040106599,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.6622988865572512
+            "outside_energy_fraction": 0.5478701128113301
           },
           "nonlinear_cavitation": {
             "dice_equal_area": 0.0,
-            "cnr": -0.43451604611187,
-            "nrmse": 1.325279934059046,
-            "pearson": -0.06454528712062309,
-            "target_peak": 0.33422767072238685,
+            "cnr": -0.08885396204259824,
+            "nrmse": 1.1338735809816607,
+            "pearson": -0.010877366653432726,
+            "target_peak": 0.13795571734874176,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9839347196278208
+            "outside_energy_fraction": 0.9871932809630725
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.3235294117647059,
-            "cnr": 3.551496952777447,
-            "nrmse": 0.9889990414219367,
-            "pearson": 0.525969351444344,
-            "target_peak": 0.8722805226001857,
+            "dice_equal_area": 0.6231884057971014,
+            "cnr": 3.7142401059934307,
+            "nrmse": 0.7899817270611406,
+            "pearson": 0.618230309708628,
+            "target_peak": 0.7771835848414996,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.6951795617322791
+            "outside_energy_fraction": 0.572677999617802
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.5367554167398294,
-          "linear_exposure_vs_nonlinear_pressure_pearson": 0.20739397280028032,
-          "linear_fusion_hotspot_distance_grid_cells": 7.810249675906654,
-          "nonlinear_pressure_to_fusion_pearson": 0.19073005794142495
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.6015929034116896,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.040158257595499965,
+          "linear_fusion_hotspot_distance_grid_cells": 7.280109889280518,
+          "nonlinear_pressure_to_fusion_pearson": 0.20755286018264427
         },
         "objective_history": {
           "nonlinear_fwi": [
-            1.4028757709261457,
-            1.1946951768266234,
-            1.0648897761468745,
-            1.0648897761468745
+            0.8343852423617347,
+            0.6402557815504776,
+            0.34269784251028595,
+            0.34269784251028595
           ],
           "nonlinear_cavitation": [
-            38.04731336572738,
-            37.84046358248528,
-            37.63477275702885,
-            37.430234229114234,
-            37.22684137761624,
-            37.02458762030381,
-            36.8234664136155,
-            36.62347125246715,
-            36.424595669862285,
-            36.22683323676834,
-            36.03017756193518,
-            35.834622291636,
-            35.640161109535825,
-            35.446787736349386,
-            35.254495929572066,
-            35.06327948324739,
-            34.87313222769135,
-            34.684048029370715,
-            34.49602079070154,
-            34.30904445004266,
-            34.12311298132141,
-            33.93822039385916,
-            33.75436073186287,
-            33.5715280744859
+            53938598197.218216,
+            53707544691.17935,
+            53477536091.66135,
+            53248567444.72449,
+            53020633820.83197,
+            52793730314.81926,
+            52567852045.84309,
+            52342994157.01757,
+            52119151815.43316,
+            51896320212.23549,
+            51674494562.25519,
+            51453670104.31602,
+            51233842099.91955,
+            51015005834.37855,
+            50797156616.059525,
+            50580289776.53415,
+            50364400670.82728,
+            50149484676.45266,
+            49935537195.50815,
+            49722553650.082825,
+            49510529485.49414,
+            49299460169.33181,
+            49089341191.73711,
+            48880168066.06003
           ]
         },
-        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.725 and nonlinear fusion Dice is 0.324. Nonlinear peak-pressure outside-target energy is 0.959, linear/nonlinear fusion Pearson is 0.537, and nonlinear FWI objective drop is 3.380e-01. The residual projected aperture mismatch from the original runs is 133.50 mm; therefore the matched artifact localizes the observed visual loss to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.754 and nonlinear fusion Dice is 0.623. Nonlinear peak-pressure outside-target energy is 0.965, linear/nonlinear fusion Pearson is 0.602, and nonlinear FWI objective drop is 4.917e-01. The residual projected aperture mismatch from the original runs is 105.36 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       },
       {
         "anatomy": "liver",
@@ -903,128 +903,128 @@
         ],
         "common_extent_m": [
           -0.17964843749999998,
-          0.1402734375,
+          0.17964843749999998,
           -0.17964843749999998,
-          0.1550390625
+          0.14097656249999999
         ],
         "geometry": {
           "comparison_frame": "nonlinear_crop_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.02220887643273779,
+          "linear_focus_to_common_target_centroid_m": 0.029020829143903654,
           "linear_element_count": 256,
           "nonlinear_element_count": 256,
-          "median_nearest_projected_element_distance_m": 0.04194255609713971,
-          "common_target_voxels": 28,
+          "median_nearest_projected_element_distance_m": 0.035565455940248736,
+          "common_target_voxels": 31,
           "common_target_centroid_m": [
-            -0.044107306985294116,
-            -0.013242187499999983
+            -0.04329288721537001,
+            -0.006458209796015192
           ]
         },
         "comparison_metrics": {
           "linear_exposure": {
-            "dice_equal_area": 0.21428571428571427,
-            "cnr": 1.6681950224361257,
-            "nrmse": 1.5261383716381418,
-            "pearson": 0.22823968888719962,
-            "target_peak": 1.0,
-            "outside_peak": 0.8810940152559764,
-            "outside_energy_fraction": 0.9174337206774562
+            "dice_equal_area": 0.12903225806451613,
+            "cnr": 1.498637136334543,
+            "nrmse": 1.184232350496568,
+            "pearson": 0.20977113604115505,
+            "target_peak": 0.6026151661253905,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9227112523335421
           },
           "linear_active": {
-            "dice_equal_area": 0.14285714285714285,
-            "cnr": 0.6771969485480251,
-            "nrmse": 1.0485298870954876,
-            "pearson": 0.19549915641441415,
-            "target_peak": 1.0,
-            "outside_peak": 0.8721542538715528,
-            "outside_energy_fraction": 0.8141871762175292
+            "dice_equal_area": 0.12903225806451613,
+            "cnr": 0.717707101759321,
+            "nrmse": 1.0139242364530971,
+            "pearson": 0.14057006860562202,
+            "target_peak": 0.37765836402460445,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9127434677805782
           },
           "linear_fusion": {
-            "dice_equal_area": 0.21428571428571427,
-            "cnr": 0.626045546539693,
-            "nrmse": 0.964860055470638,
-            "pearson": 0.26221759421235985,
-            "target_peak": 1.0,
-            "outside_peak": 0.8324777835260682,
-            "outside_energy_fraction": 0.5937053958163565
+            "dice_equal_area": 0.12903225806451613,
+            "cnr": 0.61530564143385,
+            "nrmse": 0.9933018338478962,
+            "pearson": 0.13679249568332807,
+            "target_peak": 0.28005693414508454,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.8900640255647438
           },
           "nonlinear_pressure": {
             "dice_equal_area": 0.0,
-            "cnr": 0.578054947368391,
-            "nrmse": 2.3531437967575766,
-            "pearson": 0.04369121846656918,
-            "target_peak": 0.3160899960331063,
+            "cnr": 1.2051376103999685,
+            "nrmse": 2.7077515931735405,
+            "pearson": 0.1044333927326764,
+            "target_peak": 0.5717323306608834,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9885366320900946
+            "outside_energy_fraction": 0.976474987109852
           },
           "nonlinear_fwi": {
-            "dice_equal_area": 0.4642857142857143,
-            "cnr": 1.786359897629794,
-            "nrmse": 0.8189339533886218,
-            "pearson": 0.5712536675471076,
+            "dice_equal_area": 0.4838709677419355,
+            "cnr": 2.254884406116917,
+            "nrmse": 0.8524367632453578,
+            "pearson": 0.5910323313802,
             "target_peak": 1.0,
-            "outside_peak": 0.5822956808560968,
-            "outside_energy_fraction": 0.47005854358605603
+            "outside_peak": 0.7292905206123468,
+            "outside_energy_fraction": 0.5147392968053701
           },
           "nonlinear_cavitation": {
             "dice_equal_area": 0.0,
-            "cnr": 0.43237792106138884,
-            "nrmse": 1.2953261938196858,
-            "pearson": 0.03331244151683731,
-            "target_peak": 0.1412375393058877,
+            "cnr": 0.5638049117596696,
+            "nrmse": 2.122182877735974,
+            "pearson": 0.05014648921460909,
+            "target_peak": 0.4743754467461864,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9917182624471742
+            "outside_energy_fraction": 0.9862815615179459
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.17857142857142858,
-            "cnr": 1.5756561637932915,
-            "nrmse": 1.2318414367090926,
-            "pearson": 0.2261648409497462,
-            "target_peak": 0.5535777128215205,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9186966865811648
+            "dice_equal_area": 0.4838709677419355,
+            "cnr": 2.11512685067249,
+            "nrmse": 1.2505805532638126,
+            "pearson": 0.41955115192206743,
+            "target_peak": 1.0,
+            "outside_peak": 0.7618192412057833,
+            "outside_energy_fraction": 0.7818585165312482
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.1807313671683556,
-          "linear_exposure_vs_nonlinear_pressure_pearson": 0.19061092741309574,
-          "linear_fusion_hotspot_distance_grid_cells": 18.384776310850235,
-          "nonlinear_pressure_to_fusion_pearson": 0.5496109328651992
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.28334003393137724,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.35111689241790994,
+          "linear_fusion_hotspot_distance_grid_cells": 2.23606797749979,
+          "nonlinear_pressure_to_fusion_pearson": 0.5624305000167307
         },
         "objective_history": {
           "nonlinear_fwi": [
-            2.589671248507965e-06,
-            2.474048399795121e-06,
-            2.425004710906858e-06,
-            2.3724663111632533e-06
+            8.118573387322901e-06,
+            6.981389671211777e-06,
+            6.879293175176989e-06,
+            5.207629401354147e-06
           ],
           "nonlinear_cavitation": [
-            6.1592651133109735,
-            6.126800418413095,
-            6.094516718021589,
-            6.062412958418805,
-            6.030488092243997,
-            5.998741078432843,
-            5.9671708821876335,
-            5.93577647494742,
-            5.904556834354821,
-            5.873510944190261,
-            5.842637794355182,
-            5.811936380777992,
-            5.781405705503932,
-            5.75104477648742,
-            5.720852607701096,
-            5.690828219067575,
-            5.660970636345459,
-            5.631278891175453,
-            5.601752020999797,
-            5.572389068991,
-            5.54318908408919,
-            5.514151120933208,
-            5.4852742399531325,
-            5.456557507106123
+            75049719808.99487,
+            74705327924.14435,
+            74362610249.11351,
+            74021558236.31467,
+            73682163383.80136,
+            73344417234.9225,
+            73008311377.99077,
+            72673837446.19827,
+            72340987116.52039,
+            72009752110.54324,
+            71680124193.63873,
+            71352095174.80121,
+            71025656906.7479,
+            70700801285.21649,
+            70377520249.00806,
+            70055805779.67728,
+            69735649903.23398,
+            69417044687.06616,
+            69099982239.10298,
+            68784454710.06918,
+            68470454292.345955,
+            68157973220.19249,
+            67847003769.757904,
+            67537538257.302284
           ]
         },
-        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.214 and nonlinear fusion Dice is 0.179. Nonlinear peak-pressure outside-target energy is 0.989, linear/nonlinear fusion Pearson is 0.181, and nonlinear FWI objective drop is 2.172e-07. The residual projected aperture mismatch from the original runs is 41.94 mm; therefore the matched artifact localizes the observed visual loss to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.129 and nonlinear fusion Dice is 0.484. Nonlinear peak-pressure outside-target energy is 0.976, linear/nonlinear fusion Pearson is 0.283, and nonlinear FWI objective drop is 2.911e-06. The residual projected aperture mismatch from the original runs is 35.57 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       }
     ]
   }

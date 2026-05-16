@@ -3,7 +3,10 @@
 use kwavers::clinical::therapy::theranostic_guidance::{
     build_abdominal_placement_context, build_brain_placement_context, placement_metrics,
     prepare_abdominal_slice, prepare_brain_slice, run_theranostic_inverse,
-    synthetic::{synthetic_abdominal_kidney_phantom, synthetic_abdominal_liver_phantom, synthetic_brain_phantom},
+    synthetic::{
+        synthetic_abdominal_kidney_phantom, synthetic_abdominal_liver_phantom,
+        synthetic_brain_phantom,
+    },
     target_index_from_mask_fraction_3d, AnatomyKind, PlacementContext, TheranosticInverseConfig,
     WaveformMisfit, THERANOSTIC_OPERATOR_MODEL,
 };

@@ -5,8 +5,7 @@
 //! (see `kwavers::clinical::therapy::theranostic_guidance::synthetic`).
 
 use kwavers::clinical::therapy::theranostic_guidance::{
-    plan_brain_helmet_placement,
-    synthetic::synthetic_brain_phantom,
+    plan_brain_helmet_placement, synthetic::synthetic_brain_phantom,
 };
 use numpy::IntoPyArray;
 use pyo3::prelude::*;

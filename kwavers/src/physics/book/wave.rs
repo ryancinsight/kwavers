@@ -250,7 +250,9 @@ pub fn fubini_harmonic_amplitude(n: u32, sigma: f64) -> f64 {
 ///
 /// Returns a `Vec<f64>` of length `n_max` where index 0 corresponds to n = 1.
 pub fn fubini_harmonic_spectrum(n_max: u32, sigma: f64) -> Vec<f64> {
-    (1..=n_max).map(|n| fubini_harmonic_amplitude(n, sigma)).collect()
+    (1..=n_max)
+        .map(|n| fubini_harmonic_amplitude(n, sigma))
+        .collect()
 }
 
 /// Shock-formation distance for a sinusoidal plane wave (Fubini–Euler criterion).
@@ -382,8 +384,8 @@ fn bessel_j1_n(n: u32, x: f64) -> f64 {
         return 0.0;
     }
     j_n_unnorm * j0_exact / (f_prev) // f_prev is now J_0_unnorm at end of loop
-    // NOTE: this isn't quite right because loop structure assigns f_prev after
-    // last iteration. Use a cleaner two-buffer approach instead:
+                                     // NOTE: this isn't quite right because loop structure assigns f_prev after
+                                     // last iteration. Use a cleaner two-buffer approach instead:
 }
 
 /// Bessel J₀(x) via Horner-evaluated Chebyshev approximation.
@@ -412,8 +414,12 @@ fn bessel_j0(x: f64) -> f64 {
         let z = 8.0 / ax;
         let y = z * z;
         let xx = ax - 0.785_398_163_4_f64;
-        let p1 = 1.0 + y * (-0.001098628627 + y * (0.000002734510407 + y * (-2.073370639e-6 + y * 2.093887211e-7)));
-        let q1 = -0.01562499995 + y * (0.0001430488765 + y * (-6.911147651e-5 + y * (7.621095161e-5 - y * 9.34935152e-7)));
+        let p1 = 1.0
+            + y * (-0.001098628627
+                + y * (0.000002734510407 + y * (-2.073370639e-6 + y * 2.093887211e-7)));
+        let q1 = -0.01562499995
+            + y * (0.0001430488765
+                + y * (-6.911147651e-5 + y * (7.621095161e-5 - y * 9.34935152e-7)));
         (2.0 / (PI * ax)).sqrt() * (p1 * xx.cos() - z * q1 * xx.sin())
     }
 }
@@ -443,8 +449,12 @@ fn bessel_j1(x: f64) -> f64 {
         let z = 8.0 / ax;
         let y = z * z;
         let xx = ax - 2.356_194_490_2_f64;
-        let p1 = 1.0 + y * (0.00183105e-2 + y * (-3.516396496e-5 + y * (2.457520174e-5 - y * 2.400505341e-7)));
-        let q1 = 0.04687499995 + y * (-0.0002002690873 + y * (8.449199096e-5 + y * (-8.8228987e-5 + y * 1.050343160e-6)));
+        let p1 = 1.0
+            + y * (0.00183105e-2
+                + y * (-3.516396496e-5 + y * (2.457520174e-5 - y * 2.400505341e-7)));
+        let q1 = 0.04687499995
+            + y * (-0.0002002690873
+                + y * (8.449199096e-5 + y * (-8.8228987e-5 + y * 1.050343160e-6)));
         sign * (2.0 / (PI * ax)).sqrt() * (p1 * xx.cos() - z * q1 * xx.sin())
     };
     result * sign
@@ -471,7 +481,7 @@ fn bessel_jn(n: u32, x: f64) -> f64 {
             // Choose starting index: n + max(30, n)
             let m_start = n_us + n_us.max(30);
             let mut bjp = 0.0_f64; // J_{m+1}
-            let mut bj = 1.0_f64;  // J_m (seed)
+            let mut bj = 1.0_f64; // J_m (seed)
             let mut bj0 = 0.0_f64;
             let mut bj1 = 0.0_f64;
             let mut ans = 0.0_f64;
@@ -506,10 +516,14 @@ fn bessel_jn(n: u32, x: f64) -> f64 {
             // Use sum formula: J0 + 2*sum_{k=1}^{inf} J_{2k} = 1 is error-prone.
             // Instead normalise via whichever of J0/J1 is larger in magnitude.
             let scale = if bj0.abs() >= bj1.abs() {
-                if bj0.abs() < 1e-300 { return 0.0; }
+                if bj0.abs() < 1e-300 {
+                    return 0.0;
+                }
                 j0_true / bj0
             } else {
-                if bj1.abs() < 1e-300 { return 0.0; }
+                if bj1.abs() < 1e-300 {
+                    return 0.0;
+                }
                 j1_true / bj1
             };
             ans * scale
@@ -523,28 +537,23 @@ fn bessel_j1_clean(x: f64) -> f64 {
     let sign = x.signum();
     let r = if ax < 8.0 {
         let y = x * x;
-        let num = x * (72362614232.0
-            + y * (-7895059235.0
-                + y * (242396853.1
-                    + y * (-2972611.439
-                        + y * (15704.48260 + y * (-30.16036606))))));
+        let num = x
+            * (72362614232.0
+                + y * (-7895059235.0
+                    + y * (242396853.1
+                        + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))));
         let den = 144725228442.0
-            + y * (2300535178.0
-                + y * (18583304.74
-                    + y * (99447.43394 + y * (376.9991397 + y))));
+            + y * (2300535178.0 + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y))));
         num / den
     } else {
         let z = 8.0 / ax;
         let y = z * z;
         let xx = ax - 2.356_194_490_2;
         let p = 1.0
-            + y * (0.183105e-2
-                + y * (-3.516396496e-5
-                    + y * (2.457520174e-5 - y * 2.400505341e-7)));
+            + y * (0.183105e-2 + y * (-3.516396496e-5 + y * (2.457520174e-5 - y * 2.400505341e-7)));
         let q = 0.04687499995
             + y * (-0.2002690873e-3
-                + y * (8.449199096e-5
-                    + y * (-8.8228987e-5 + y * 1.050343160e-6)));
+                + y * (8.449199096e-5 + y * (-8.8228987e-5 + y * 1.050343160e-6)));
         (2.0 / (PI * ax)).sqrt() * (p * xx.cos() - z * q * xx.sin())
     };
     // J1 is an odd function

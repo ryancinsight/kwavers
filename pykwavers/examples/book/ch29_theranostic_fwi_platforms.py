@@ -72,14 +72,18 @@ kw = load_pykwavers_extension()  # noqa: E402
 
 
 INERTIAL_MI_THRESHOLD = float(os.environ.get("KWAVERS_CH29_INERTIAL_MI_THRESHOLD", "1.9"))
+HISTOTRIPSY_SOURCE_PRESSURE_PA = float(os.environ.get("KWAVERS_CH29_HISTOTRIPSY_SOURCE_PRESSURE_PA", "28.0e6"))
 BRAIN_HISTOTRIPSY_SOURCE_PRESSURE_PA = float(
     os.environ.get(
         "KWAVERS_CH29_BRAIN_HISTOTRIPSY_SOURCE_PRESSURE_PA",
         str(
-            2.0
-            * INERTIAL_MI_THRESHOLD
-            * np.sqrt(CANONICAL_BRAIN_SCENE.transducer.frequency_hz * 1.0e-6)
-            * 1.0e6
+            max(
+                HISTOTRIPSY_SOURCE_PRESSURE_PA,
+                2.0
+                * INERTIAL_MI_THRESHOLD
+                * np.sqrt(CANONICAL_BRAIN_SCENE.transducer.frequency_hz * 1.0e-6)
+                * 1.0e6,
+            )
         ),
     )
 )
@@ -107,7 +111,7 @@ CASES = (
         "elements": 256,
         "freq": [250_000.0, 500_000.0, 750_000.0],
         "offsets": [32, 64, 96, 128],
-        "pressure": 28.0e6,
+        "pressure": HISTOTRIPSY_SOURCE_PRESSURE_PA,
     },
     {
         "name": "liver",
@@ -118,7 +122,7 @@ CASES = (
         "elements": 256,
         "freq": [250_000.0, 500_000.0, 750_000.0],
         "offsets": [32, 64, 96, 128],
-        "pressure": 28.0e6,
+        "pressure": HISTOTRIPSY_SOURCE_PRESSURE_PA,
     },
 )
 CASES_BY_NAME = {str(case["name"]): case for case in CASES}

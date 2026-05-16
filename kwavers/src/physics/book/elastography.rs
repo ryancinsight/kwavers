@@ -90,12 +90,7 @@ pub fn springpot_complex_modulus(omega_arr: &[f64], g0: f64, alpha_exp: f64) -> 
 ///
 /// # Reference
 /// Catheline et al. (2004), *J. Acoust. Soc. Am.* 116, 3736.
-pub fn voigt_shear_wave_dispersion(
-    f_arr: &[f64],
-    mu_pa: f64,
-    eta_pa_s: f64,
-    rho: f64,
-) -> Vec<f64> {
+pub fn voigt_shear_wave_dispersion(f_arr: &[f64], mu_pa: f64, eta_pa_s: f64, rho: f64) -> Vec<f64> {
     f_arr
         .iter()
         .map(|&f| {

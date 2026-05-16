@@ -160,8 +160,15 @@ mod tests {
     fn bioheat_at_t0_is_body_temp() {
         let t = bioheat_focal_temperature_rise(
             &[0.0],
-            10.0, 1e-6, 0.5, 1060.0, 3600.0,
-            5.0, 1060.0, 3770.0, 37.0,
+            10.0,
+            1e-6,
+            0.5,
+            1060.0,
+            3600.0,
+            5.0,
+            1060.0,
+            3770.0,
+            37.0,
         );
         assert!((t[0] - 37.0).abs() < 1e-8);
     }
@@ -170,12 +177,17 @@ mod tests {
     fn bioheat_monotone_increasing() {
         let tvec: Vec<f64> = (0..10).map(|i| i as f64 * 0.1).collect();
         let temp = bioheat_focal_temperature_rise(
-            &tvec,
-            10.0, 1e-6, 0.5, 1060.0, 3600.0,
-            5.0, 1060.0, 3770.0, 37.0,
+            &tvec, 10.0, 1e-6, 0.5, 1060.0, 3600.0, 5.0, 1060.0, 3770.0, 37.0,
         );
         for i in 1..temp.len() {
-            assert!(temp[i] >= temp[i - 1], "T[{}]={} < T[{}]={}", i, temp[i], i-1, temp[i-1]);
+            assert!(
+                temp[i] >= temp[i - 1],
+                "T[{}]={} < T[{}]={}",
+                i,
+                temp[i],
+                i - 1,
+                temp[i - 1]
+            );
         }
     }
 
@@ -184,16 +196,30 @@ mod tests {
         let t_long = 3600.0_f64; // 1 hour — far beyond τ
         let t = bioheat_focal_temperature_rise(
             &[0.0, t_long],
-            10.0, 1e-6, 0.5, 1060.0, 3600.0,
-            5.0, 1060.0, 3770.0, 37.0,
+            10.0,
+            1e-6,
+            0.5,
+            1060.0,
+            3600.0,
+            5.0,
+            1060.0,
+            3770.0,
+            37.0,
         );
         // Should saturate: T(∞) < T_body + some bound
         assert!(t[1] > 37.0 && t[1] < 200.0);
         // Verify saturation: T(t_long) ≈ T(t_long/2)
         let t_half = bioheat_focal_temperature_rise(
             &[t_long / 2.0],
-            10.0, 1e-6, 0.5, 1060.0, 3600.0,
-            5.0, 1060.0, 3770.0, 37.0,
+            10.0,
+            1e-6,
+            0.5,
+            1060.0,
+            3600.0,
+            5.0,
+            1060.0,
+            3770.0,
+            37.0,
         );
         assert!((t[1] - t_half[0]).abs() / t[1].abs() < 0.01);
     }
@@ -208,9 +234,7 @@ mod tests {
     fn gaussian_deposition_peak_at_focus() {
         let r = vec![0.0];
         let z: Vec<f64> = vec![-5e-3, 0.0, 5e-3];
-        let q = gaussian_power_deposition_2d(
-            &r, &z, 1e6, 0.0, 1e6, 1500.0, 1060.0, 1.0, 1e-3,
-        );
+        let q = gaussian_power_deposition_2d(&r, &z, 1e6, 0.0, 1e6, 1500.0, 1060.0, 1.0, 1e-3);
         // Q at focus (z=0) should exceed Q at z=±5mm
         assert!(q[1] > q[0] && q[1] > q[2]);
     }

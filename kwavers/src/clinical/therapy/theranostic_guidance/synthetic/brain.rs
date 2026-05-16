@@ -96,7 +96,18 @@ pub fn synthetic_brain_phantom() -> (Array3<f64>, [f64; 3]) {
                     continue; // air; already initialised
                 }
                 let r_mid = head_r(x, y, z, cx, cy, cz, mx, my, mz_inf, mz_sup);
-                let r_inner = head_r(x, y, z, cx, cy, cz, inner_rx, inner_ry, inner_rz_inf, inner_rz_sup);
+                let r_inner = head_r(
+                    x,
+                    y,
+                    z,
+                    cx,
+                    cy,
+                    cz,
+                    inner_rx,
+                    inner_ry,
+                    inner_rz_inf,
+                    inner_rz_sup,
+                );
 
                 ct[[x, y, z]] = if r_inner <= 1.0 {
                     HU_BRAIN

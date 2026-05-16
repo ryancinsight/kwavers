@@ -5,10 +5,10 @@
 //! solid surface temperature rise, and transfer-matrix skull transmission.
 
 use num_complex::Complex64;
-use std::f64::consts::PI;
 use rand::SeedableRng;
-use rand_distr::{Distribution, Normal};
 use rand_chacha::ChaCha8Rng;
+use rand_distr::{Distribution, Normal};
+use std::f64::consts::PI;
 
 // ─── Insertion loss ───────────────────────────────────────────────────────────
 
@@ -25,11 +25,7 @@ use rand_chacha::ChaCha8Rng;
 ///
 /// # Reference
 /// Deffieux & Konofagou (2010), *Ultrasound Med. Biol.* 36, 1718.
-pub fn skull_insertion_loss_two_way_db(
-    f_mhz: &[f64],
-    thickness_cm: f64,
-    alpha0: f64,
-) -> Vec<f64> {
+pub fn skull_insertion_loss_two_way_db(f_mhz: &[f64], thickness_cm: f64, alpha0: f64) -> Vec<f64> {
     f_mhz
         .iter()
         .map(|&f| alpha0 * f.powf(1.2) * 2.0 * thickness_cm)
@@ -69,7 +65,13 @@ pub fn skull_phase_screen(n: usize, sigma_phi_rad: f64, seed: u64) -> Vec<f64> {
 /// Schneider et al. (1996), *Phys. Med. Biol.* 41, 111.
 pub fn hu_to_sound_speed_schneider(hu: &[f64]) -> Vec<f64> {
     hu.iter()
-        .map(|&h| if h < 0.0 { 1500.0 + 0.50 * h } else { 1500.0 + 0.76 * h })
+        .map(|&h| {
+            if h < 0.0 {
+                1500.0 + 0.50 * h
+            } else {
+                1500.0 + 0.76 * h
+            }
+        })
         .collect()
 }
 
@@ -193,7 +195,8 @@ pub fn skull_transmission_spectrum(
     let mut mags = Vec::with_capacity(f_hz.len());
     let mut phases = Vec::with_capacity(f_hz.len());
     for &f in f_hz {
-        let t = skull_transfer_matrix_transmission(f, z_water, z_skull, z_brain, c_skull, d_skull_m);
+        let t =
+            skull_transfer_matrix_transmission(f, z_water, z_skull, z_brain, c_skull, d_skull_m);
         mags.push(t.norm());
         phases.push(t.arg());
     }

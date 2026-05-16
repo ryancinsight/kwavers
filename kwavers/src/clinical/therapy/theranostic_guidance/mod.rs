@@ -11,7 +11,6 @@
 mod abdominal3d;
 mod aperture;
 mod config;
-pub mod synthetic;
 mod context;
 mod exposure;
 mod geometry;
@@ -24,6 +23,7 @@ mod scene;
 mod skin;
 mod solver;
 pub mod standing_wave_opt;
+pub mod synthetic;
 mod transcranial_fus;
 mod waveform;
 

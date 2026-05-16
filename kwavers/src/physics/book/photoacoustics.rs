@@ -145,22 +145,31 @@ pub fn pa_axial_resolution(bandwidth_hz: f64, c: f64) -> f64 {
 ///
 /// # Reference
 /// Beard (2011), *Interface Focus* 1, 602.
-pub fn spectroscopic_unmixing_lstsq(
-    spectra_matrix: &[Vec<f64>],
-    measurements: &[f64],
-) -> Vec<f64> {
+pub fn spectroscopic_unmixing_lstsq(spectra_matrix: &[Vec<f64>], measurements: &[f64]) -> Vec<f64> {
     let n_wav = spectra_matrix.len();
-    let n_chrom = if n_wav > 0 { spectra_matrix[0].len() } else { 0 };
-    assert_eq!(measurements.len(), n_wav, "spectra rows must match measurement length");
+    let n_chrom = if n_wav > 0 {
+        spectra_matrix[0].len()
+    } else {
+        0
+    };
+    assert_eq!(
+        measurements.len(),
+        n_wav,
+        "spectra rows must match measurement length"
+    );
 
     // Compute AtA (n_chrom × n_chrom) and Atb (n_chrom)
     let mut ata = vec![vec![0.0_f64; n_chrom]; n_chrom];
     let mut atb = vec![0.0_f64; n_chrom];
     for i in 0..n_chrom {
         for j in 0..n_chrom {
-            ata[i][j] = (0..n_wav).map(|k| spectra_matrix[k][i] * spectra_matrix[k][j]).sum();
+            ata[i][j] = (0..n_wav)
+                .map(|k| spectra_matrix[k][i] * spectra_matrix[k][j])
+                .sum();
         }
-        atb[i] = (0..n_wav).map(|k| spectra_matrix[k][i] * measurements[k]).sum();
+        atb[i] = (0..n_wav)
+            .map(|k| spectra_matrix[k][i] * measurements[k])
+            .sum();
     }
 
     gaussian_elimination(&ata, &atb)

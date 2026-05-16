@@ -163,6 +163,11 @@ mod tests {
         let p = vec![p0; n];
         let ispta = ispta_w_cm2(&p, dt, rho, c);
         let expected = p0 * p0 / (rho * c) * 1e-4;
-        assert!((ispta - expected).abs() / expected < 1e-10, "got={} expected={}", ispta, expected);
+        assert!(
+            (ispta - expected).abs() / expected < 1e-10,
+            "got={} expected={}",
+            ispta,
+            expected
+        );
     }
 }

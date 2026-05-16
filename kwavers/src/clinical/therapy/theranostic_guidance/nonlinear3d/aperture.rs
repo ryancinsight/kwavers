@@ -17,7 +17,7 @@ pub(crate) fn build_aperture(
     config: &Nonlinear3dConfig,
 ) -> KwaversResult<Nonlinear3dAperture> {
     let candidates = match volume.anatomy {
-        AnatomyKind::Brain => brain_candidates(volume),
+        AnatomyKind::Brain => brain_candidates(volume, config.element_count),
         AnatomyKind::Liver | AnatomyKind::Kidney => abdominal_candidates(volume),
     };
     if candidates.len() < 4 {
@@ -52,30 +52,46 @@ pub(crate) fn build_aperture(
     })
 }
 
-fn brain_candidates(volume: &Nonlinear3dVolume) -> Vec<GridIndex> {
+fn brain_candidates(volume: &Nonlinear3dVolume, requested_count: usize) -> Vec<GridIndex> {
     let n = volume.body_mask.dim().0;
     let peak_z = axial_peak(&volume.body_mask);
     let target = centroid_index(&volume.target_mask).unwrap_or(volume.focus);
     let superior_positive = peak_z <= n / 2;
     let exterior = exterior_air_mask(&volume.body_mask);
-    let mut candidates = exterior_boundary_cells(&volume.body_mask, &exterior)
-        .into_iter()
-        .filter(|idx| {
-            if volume.ct_hu[[idx.x, idx.y, idx.z]] < 250.0 {
-                return false;
-            }
-            if superior_positive {
-                idx.z >= peak_z && idx.z >= target.z
-            } else {
-                idx.z <= peak_z && idx.z <= target.z
-            }
-        })
+    let boundary = exterior_boundary_cells(&volume.body_mask, &exterior);
+    let mut candidates = boundary
+        .iter()
+        .copied()
+        .filter(|idx| is_brain_cap_cell(*idx, peak_z, target, superior_positive))
+        .filter(|idx| volume.ct_hu[[idx.x, idx.y, idx.z]] >= 250.0)
         .collect::<Vec<_>>();
+    if candidates.len() < requested_count {
+        candidates.extend(
+            boundary
+                .into_iter()
+                .filter(|idx| is_brain_cap_cell(*idx, peak_z, target, superior_positive)),
+        );
+        candidates.sort_by_key(|idx| (idx.x, idx.y, idx.z));
+        candidates.dedup();
+    }
     if candidates.len() < 8 {
         candidates = boundary_cells(&volume.body_mask);
     }
     sort_by_spherical_angle(&mut candidates, target);
     candidates
+}
+
+fn is_brain_cap_cell(
+    idx: GridIndex,
+    peak_z: usize,
+    target: GridIndex,
+    superior_positive: bool,
+) -> bool {
+    if superior_positive {
+        idx.z >= peak_z && idx.z >= target.z
+    } else {
+        idx.z <= peak_z && idx.z <= target.z
+    }
 }
 
 fn abdominal_candidates(volume: &Nonlinear3dVolume) -> Vec<GridIndex> {

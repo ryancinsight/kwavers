@@ -26,6 +26,7 @@
 - [x] Solvers: Implement in `kwavers` (using BURN for GPU/Autodiff for PINN), wrap in `pykwavers`, validate vs `k-wave`
 - [x] FWI physics: implement acoustic L2 objective, receiver-order adjoint injection, CFL validation, and second-derivative gradient tests
 - [x] Reconstruction FWI: implement sign-correct residuals, `dt`-scaled objective, checkpointed replay adjoint accumulation, timestep validation, and encoded-gradient aggregation
+- [x] [patch] Chapter 29 histotripsy comparison: gate nonlinear cavitation by MI, preserve calibrated per-element source drive, realize the requested brain cap aperture where grid support permits, regenerate controlled linear/nonlinear fields, and document remaining off-target cavitation spread.
 - [x] Shared acoustic adjoint-state core: consolidate L2 residuals, objective scaling, time reversal, and signed-correlation accumulation across FWI paths
 - [x] GPU acoustic field path: enforce workgroup limits, correct uniform layout, and fuse velocity updates to remove temporary gradient volumes
 - [x] GPU allocation tracking: publish `kwavers::profiling`, validate guard-based RAII budgets, and verify FDTD pressure roundtrip with the current constructors
@@ -726,3 +727,11 @@
   * **RITK axis contract**: the Chapter 25 adapter transposes internal NumPy XYZ volumes to RITK ZYX image memory order at `ritk.Image` construction and transposes `to_numpy()` outputs back to XYZ, matching `ritk.io.read_image` for NIfTI files.
   * **Acceptance contract**: RITK deformable outputs are accepted only when NMI and the weighted multimodal score do not regress; otherwise the affine result remains authoritative.
   * **QC contract**: `fig01_registered_ct_mri_mni.png` now shows axial, coronal, and sagittal target planes with the same CT skull contour across CT, T1, and MNI panels.
+- [x] [patch] Book chapter mathematical accuracy pass (2026-05-16):
+  * Ch31: fix metrics channel_keys (remove _reconstruction suffix); correct bowl radius theorem to R=d_f/cos(θ_max); rewrite skin-detection algorithm to match exterior flood-fill BFS + approach-angle penalty.
+  * Ch29: add Definition: Same-Device Aperture Contract; add Theorem: Same-Aperture Operator Rank (m≤N²); add period-doubling observable derivation via Floquet theory; add minimal PyO3 usage example.
+  * Ch5: add Cramér-Rao Jacobian derivation; add kr≫1 far-field condition with numerical bound; add shell stiffness scope note.
+  * Ch7: inline CEM43 monotonicity proof (R^x>0); specify 4-state KalmanFilter; add dilute-bubble scope.
+  * Ch27: add Theorem 27.1 Born Linearity with proof; replace "Pending" elastic FWI row with explicit deferral; add minimal usage example.
+  * Ch6: fix ΔT unit (°C not °C/s); fix G=ka²/(2R_f); correct 479→60-80°C reduction; fix CEM43 time units (2184 min not 131,072 min).
+  * Ch3: expand Theorem 3.6 Burgers proof; add Jacobi-Anger-Kepler identity proof sketch; expand P₂∝z derivation; fix Kuznetsov Eq 3A.1 notation.
