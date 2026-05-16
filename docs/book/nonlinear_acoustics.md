@@ -319,8 +319,21 @@ the KZK equation (3.17) with ∇⊥² ≡ 0 reduces to the Burgers equation:
 ∂p/∂z = (δ/(2c₀³))∂²p/∂τ² + (β/(ρ₀c₀³))p ∂p/∂τ                        (3.19)
 ```
 
-*Proof.* Set ∇⊥²p = 0 in (3.17) and integrate once with respect to τ:
-∂p/∂z·(integrated) → (3.19). □
+*Proof.* Set ∇⊥²p = 0 in the KZK equation (3.17):
+
+```
+∂²p/∂z∂τ = (δ/2c₀³)∂³p/∂τ³ + (β/2ρ₀c₀³)∂²(p²)/∂τ²
+```
+
+Integrate both sides once with respect to τ from −∞ to τ, using the
+radiation condition p → 0 as τ → −∞ (no precursor):
+
+```
+∂p/∂z = (δ/2c₀³)∂²p/∂τ² + (β/2ρ₀c₀³)∂(p²)/∂τ
+       = (δ/2c₀³)∂²p/∂τ² + (β/ρ₀c₀³)p ∂p/∂τ
+```
+
+where the last equality uses ∂(p²)/∂τ = 2p ∂p/∂τ.  This is exactly (3.19). □
 
 **Corollary 3.2 (Lossless Burgers — Inviscid Limit).** Setting δ = 0 in (3.19) gives
 
@@ -357,11 +370,19 @@ p = P₀ sin(ω₀(τ + βp z/(ρ₀c₀³)))                                   
 
 via the method of characteristics: each characteristic is τ - βp z/(ρ₀c₀³) = const.
 
-*Step 2.* Expand p in (3.22) as a Fourier series in τ using Kepler's equation identity:
+*Step 2.* Expand p in (3.22) as a Fourier series in τ using the
+Jacobi–Anger–Kepler identity:
 
 ```
-sin(x + a sin x) = 2 Σ_{n=1}^∞ J_n(na)/n · sin(nx)                      (3.23)
+sin(x + a sin x) = 2 Σ_{n=1}^∞ J_n(na)/n · sin(nx),   |a| < 1          (3.23)
 ```
+
+**Proof of (3.23).** Write sin(x + a sin x) = Im[exp(i(x + a sin x))].
+Expand exp(ia sin x) using the Jacobi–Anger expansion
+exp(ia sin x) = Σ_{n=−∞}^{∞} J_n(a) exp(inx), multiply by exp(ix),
+and take the imaginary part.  The n-th harmonic amplitude is
+∫₀^{2π} sin(x + a sin x) sin(nx) dx / π = 2J_n(na)/n (Blackstock 1966,
+Appendix B; cf. Watson 1944, §2.3).
 
 Substituting x = ω₀τ and a = σ = βP₀ω₀z/(ρ₀c₀³) yields (3.21). □
 
@@ -400,8 +421,28 @@ The radiated second-harmonic pressure amplitude grows as
 P₂ ∝ β f₀² P₀² / (ρ₀ c₀⁴)                                               (3.27)
 ```
 
-*Proof.* Direct computation using cos²x = (1 + cos 2x)/2 and ∂²cos(2ω₀t)/∂t² = −4ω₀²cos(2ω₀t).
-The driven wave equation at 2ω₀ has a growing particular solution proportional to z. □
+*Proof.* Substitute p = P₁ cos(ω₀τ) into the nonlinear source term of (3.17):
+
+```
+(β/ρ₀c₀³) ∂²(p²)/∂τ² = (βP₁²/ρ₀c₀³) ∂²cos²(ω₀τ)/∂τ²
+```
+
+Using cos²θ = (1 + cos 2θ)/2:
+
+```
+∂²cos²(ω₀τ)/∂τ² = ∂²[(1 + cos 2ω₀τ)/2]/∂τ² = −2ω₀² cos(2ω₀τ)
+```
+
+The source term at 2ω₀ is S = −2βP₁²ω₀²/(ρ₀c₀³) cos(2ω₀τ).  The
+driven propagation equation for the second-harmonic amplitude P₂(z) is:
+
+```
+∂²P₂/∂z∂τ = S/2  →  ∂P₂/∂z = S z / (2 · 2ω₀) at resonance
+```
+
+Integrating: P₂(z) ∝ βω₀P₁²z/(ρ₀c₀³).  Since k₀ = ω₀/c₀ and
+f₀ = ω₀/(2π), the proportionality constant gives P₂ ∝ βf₀²P₀²z/(ρ₀c₀⁴),
+which is (3.27). □
 
 ---
 
@@ -639,10 +680,14 @@ Let Φ be the velocity potential (u = ∇Φ, irrotational flow). The full Kuznet
 in Φ (Kuznetsov 1971, eq. 3.13) is
 
 ```
-∇²Φ − (1/c₀²)Φ_tt = ∂/∂t[|∇Φ|²] / c₀²
-                   + ((β−1)/c₀⁴)(∂Φ/∂t)(∂²Φ/∂t²)·2
+∇²Φ − (1/c₀²)Φ_tt = (1/c₀²) ∂/∂t[|∇Φ|²]
+                   + (2(β−1)/c₀⁴)(∂Φ/∂t)(∂²Φ/∂t²)
                    − (δ/c₀⁴)(∂³Φ/∂t³)                                   (3A.1)
 ```
+
+Here `2(β−1)/c₀⁴ · Φ_t · Φ_tt = (β−1)/c₀⁴ · ∂/∂t(Φ_t²)`, equivalently
+written using the product rule.  The factor 2 belongs to the coefficient,
+not to the trailing term.
 
 Converting (3A.1) to pressure via p = −ρ₀ Φ_t + ρ₀|∇Φ|²/2 recovers (3.14).
 

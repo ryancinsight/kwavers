@@ -94,11 +94,12 @@ Neglecting perfusion and conduction (short exposures, τ < 1 s), Eq. (6.3) reduc
 At HIFU focal intensities (I = 5000 W/cm² = 5×10⁷ W/m², α = 5 Np/m, τ = 1 s):
 
 ```
-ΔT = 2 × 5 × 5×10⁷ × 1 / (1060 × 3600) ≈ 131 °C / s
+ΔT = 2αIτ / (ρ_t c_p) = 2 × 5 × 5×10⁷ × 1 / (1060 × 3600) ≈ 131 °C
 ```
 
-This confirms the thermal ablation mechanism: tissue reaches 60 °C (protein denaturation)
-within ≈ 0.17 s at typical HIFU intensities.
+This is the adiabatic temperature rise after τ = 1 s (τ is included in the
+numerator; the result has units of °C, not °C/s).  Tissue reaches 60 °C
+(protein denaturation) within ≈ 0.17 s at typical HIFU intensities.
 
 ---
 
@@ -335,11 +336,18 @@ Output: thermal dose map CEM43(r), peak pressure field, MI/TI
 
 **Setup.** Liver tumor, 1 MHz HIFU, a = 35 mm, R_f = 80 mm, face pressure P₀ = 300 kPa.
 - Surface intensity: I_face = P₀²/(2ρ₀c₀) = (3×10⁵)²/(2×1060×1540) ≈ 27.5 W/cm²
-- Focal gain: G = kπa²/(2πR_f) = (2π×10⁶/1540)×(0.035)²/(2×0.08) ≈ 30.8
+- Focal gain: G = ka²/(2R_f) = (2π×10⁶/1540)×(0.035)²/(2×0.08) ≈ 30.8
+  (kπa²/(2πR_f) = ka²/(2R_f); the π factors cancel)
 - Focal intensity: I_focal = G² × I_face ≈ 949 × 27.5 ≈ 26,100 W/cm² = 2.61 × 10⁸ W/m²
 - Heat source at focus: Q = 2α I = 2 × 7 × 2.61×10⁸ ≈ 3.66 × 10⁹ W/m³
-- Temperature rise (no perfusion, τ = 0.5 s): ΔT = Q τ/(ρ c_p) = 3.66×10⁹×0.5/3816×10³ ≈ 479 °C — dominated by thermal diffusion, so in practice ΔT ≈ 60–80 °C
-- CEM43 from 60 °C isothermal hold of 1 s: 0.5^(43−60) × 1 = 0.5^{−17} × 1 ≈ 131,072 min >> 240 min threshold
+- Adiabatic temperature rise (τ = 0.5 s, no conduction/perfusion):
+  ΔT_adiabatic = Q τ/(ρ c_p) = 3.66×10⁹×0.5/(1060×3600) ≈ 479 °C.
+  The adiabatic estimate neglects thermal conduction (κ∇²T term in Eq. 6.3)
+  and blood perfusion (W_b term).  Including both at clinical sonication pulse
+  lengths (τ ≪ thermal diffusion time L²/κ) reduces peak focal ΔT to
+  ≈ 60–80 °C in practice.
+- CEM43 from 60 °C isothermal hold of 1 s (= 1/60 min):
+  CEM43 = 0.5^(43−60) × (1/60 min) = 2^17/60 ≈ 2184 min >> 240 min threshold
 
 Ablation is achieved in < 1 s per sonication at these parameters, consistent with
 HIFU clinical outcomes (Jolesz 2014).
