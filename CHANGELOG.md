@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+### Added (2026-05-17)
+
+- [patch] `nonlinear3d::stencil`: replace `nonlinear_term` (3-level, used
+  P^n-2/older) with `westervelt_cell_terms` returning `WesterveltCellTerms`
+  struct. New form: `D[n] = 1 − 2βp[n]/(ρc²)`, `N[n] = c²dt²Lp[n] +
+  2β(p[n]−p[n-1])²/(ρc²)`. Denominator D[n] > 0 at histotripsy drives;
+  reduces to linear acoustic update when β=0; eliminates need for older buffer.
+
+- [patch] `nonlinear3d::adjoint`: remove `adj_older` from `AccumulateInput`
+  and `accumulate_step`; update gradient computation to `westervelt_cell_terms`;
+  remove `older_for_step` usage; consistent with 2-level forward stencil.
+
+- [patch] `nonlinear3d::checkpoint`: remove dead `older_for_step` from
+  `HistorySegment` (pub(super), never called).
+
+- [patch] `nonlinear3d::forward::stencil`: remove dead `older` field from
+  `UpdateCells` struct; Westervelt 2-level scheme reads only current and previous.
+
+### Fixed (2026-05-17)
+
+- [patch] `docs/book/cavitation_and_bubbles.md` Theorem 7.6 proof: integrand
+  was `R dR` but correct form from energy integral ṙ²=(2p∞/3ρL)(R₀³/R³−1) is
+  `R^(3/2) dR`; beta function corrected from `B(2/3, 1/2)` to `B(5/6, 1/2) ≈
+  2.241`; gamma values updated (Γ(5/6)≈1.129, Γ(4/3)≈0.893); coefficient
+  updated 0.9146→0.9147 matching Rayleigh (1917).
+
+- [patch] `docs/book/cavitation_and_bubbles.md` §7.4.2 Blake threshold derivation:
+  exponent typo `R₀^0` → `R₀^3` (dimensional consistency).
+
+- [patch] `docs/book/cavitation_and_bubbles.md` §7.15 Minnaert summary table:
+  `p_g0` → `p_0` with "(large-bubble limit)" note; §7.16 validation claim
+  corrected from "matches (7.6)" to "matches large-bubble approx (7.7); valid
+  for R₀ ≳ 1 μm; (7.6) required below 1 μm".
+
+- [patch] `docs/book/abdominal_histotripsy_fwi.md`: Rayleigh-Plesset subharmonic
+  source sign error — vapor pressure was `+p_v` (unphysical, promotes collapse
+  acceleration) → `−p_v` (correct: vapor pressure opposes bubble contraction).
+
+- [patch] `kwavers/src/physics/book/cavitation.rs` `rayleigh_collapse_time_s`:
+  add derivation comment `B(5/6,1/2)·√(3/2)/3 = Γ(5/6)Γ(1/2)/Γ(4/3) ≈ 2.241
+  → 0.9147`.
+
 ### Added
 
 - [patch] `physics::book::rtm`: add `backprop_green_function_3d` (3-D spherical
