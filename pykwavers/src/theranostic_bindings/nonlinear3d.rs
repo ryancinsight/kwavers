@@ -27,6 +27,8 @@ use crate::ritk_image::load_ritk_nifti;
     frequency_hz = None,
     source_pressure_pa = None,
     cycles = 3.0,
+    treatment_window_radius_m = 0.04,
+    min_points_per_wavelength = 6.0,
     lesion_delta_c_m_s = -35.0,
     lesion_delta_beta = 0.85,
     sound_speed_regularization = 2.0e-3,
@@ -54,6 +56,8 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
     frequency_hz: Option<f64>,
     source_pressure_pa: Option<f64>,
     cycles: f64,
+    treatment_window_radius_m: f64,
+    min_points_per_wavelength: f64,
     lesion_delta_c_m_s: f64,
     lesion_delta_beta: f64,
     sound_speed_regularization: f64,
@@ -85,6 +89,8 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
     config.checkpoint_interval_steps = checkpoint_interval_steps;
     config.iterations = iterations;
     config.cycles = cycles;
+    config.treatment_window_radius_m = treatment_window_radius_m;
+    config.min_points_per_wavelength = min_points_per_wavelength;
     config.lesion_delta_c_m_s = lesion_delta_c_m_s;
     config.lesion_delta_beta = lesion_delta_beta;
     config.sound_speed_regularization = sound_speed_regularization;
@@ -208,6 +214,20 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("source_dimensions", result.source_dimensions.to_vec())?;
     out.set_item("source_spacing_m", result.source_spacing_m.to_vec())?;
     out.set_item("crop_bounds_index", result.crop_bounds_index.to_vec())?;
+    out.set_item(
+        "treatment_window_radius_m",
+        result.treatment_window_radius_m,
+    )?;
+    out.set_item("wavelength_min_m", result.wavelength_min_m)?;
+    out.set_item(
+        "points_per_wavelength_min",
+        result.points_per_wavelength_min,
+    )?;
+    out.set_item(
+        "min_points_per_wavelength",
+        config.min_points_per_wavelength,
+    )?;
+    out.set_item("resolution_meets_min_ppw", result.resolution_meets_min_ppw)?;
     out.set_item(
         "checkpoint_interval_steps",
         config.checkpoint_interval_steps,

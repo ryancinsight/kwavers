@@ -19,6 +19,7 @@ from matplotlib.image import AxesImage
 import numpy as np
 
 from ch29_controlled_comparison import (
+    CONTROLLED_COMPARISON_COLUMNS,
     build_controlled_comparison,
     controlled_comparison_payload,
     render_controlled_comparison,
@@ -95,7 +96,7 @@ CASES = (
         "title": "Brain helmet",
         "ct": REPO_ROOT / "data" / "rire_patient_109" / "patient_109_ct.nii.gz",
         "seg": None,
-        "grid": int(os.environ.get("KWAVERS_CH29_BRAIN_GRID", "48")),
+        "grid": int(os.environ.get("KWAVERS_CH29_BRAIN_GRID", "64")),
         "elements": CANONICAL_BRAIN_SCENE.transducer.element_count,
         "freq": [220_000.0, CANONICAL_BRAIN_SCENE.transducer.frequency_hz],
         "offsets": [256, 384, 512, 640],
@@ -107,7 +108,7 @@ CASES = (
         "title": "Kidney histotripsy head",
         "ct": REPO_ROOT / "data" / "kits19_sample" / "case_00000.nii.gz",
         "seg": REPO_ROOT / "data" / "kits19_sample" / "segmentation_00000.nii.gz",
-        "grid": int(os.environ.get("KWAVERS_CH29_ABDOMEN_GRID", "52")),
+        "grid": int(os.environ.get("KWAVERS_CH29_ABDOMEN_GRID", "64")),
         "elements": 256,
         "freq": [250_000.0, 500_000.0, 750_000.0],
         "offsets": [32, 64, 96, 128],
@@ -118,7 +119,7 @@ CASES = (
         "title": "Liver histotripsy head",
         "ct": REPO_ROOT / "data" / "lits17_sample" / "volume-0.nii",
         "seg": REPO_ROOT / "data" / "lits17_sample" / "segmentation-0.nii",
-        "grid": int(os.environ.get("KWAVERS_CH29_ABDOMEN_GRID", "52")),
+        "grid": int(os.environ.get("KWAVERS_CH29_ABDOMEN_GRID", "64")),
         "elements": 256,
         "freq": [250_000.0, 500_000.0, 750_000.0],
         "offsets": [32, 64, 96, 128],
@@ -204,15 +205,20 @@ def nonlinear_crop_extent_from_case(case: dict[str, object]) -> list[float]:
     if case["seg"] is not None:
         label = np.rint(np.asarray(nib.load(str(case["seg"])).get_fdata(), dtype=float)).astype(np.int16)
     anatomy = str(case["name"])
+    treatment_window_radius_m = nonlinear_treatment_window_radius_m(case)
     if anatomy == "brain":
         body = ct > -300.0
-        bounds = body_cube_bounds(body, spacing_mm)
+        if treatment_window_radius_m > 0.0:
+            center = brain_target_center_index(ct, body, case)
+            bounds = cube_from_center_radius(body.shape, center, treatment_window_radius_m, spacing_mm * 1.0e-3)
+        else:
+            bounds = body_cube_bounds(body, spacing_mm)
     else:
         if label is None:
             raise ValueError(f"{anatomy} nonlinear crop requires segmentation")
         body = (ct > -450.0) | (label > 0)
         target = label == 2
-        bounds = path_cube_bounds(body, target, spacing_mm)
+        bounds = path_cube_bounds(body, target, spacing_mm, treatment_window_radius_m)
     dims = np.asarray(ct.shape, dtype=float)
     spacing_m = spacing_mm * 1.0e-3
     return nonlinear_extent_from_metadata(np.asarray(bounds, dtype=float), dims, spacing_m)
@@ -237,16 +243,50 @@ def body_cube_bounds(body: np.ndarray, spacing_mm: np.ndarray) -> list[int]:
     return cube_from_center_radius(body.shape, center, radius_m, spacing_m)
 
 
-def path_cube_bounds(body: np.ndarray, target: np.ndarray, spacing_mm: np.ndarray) -> list[int]:
+def path_cube_bounds(
+    body: np.ndarray,
+    target: np.ndarray,
+    spacing_mm: np.ndarray,
+    treatment_window_radius_m: float = 0.0,
+) -> list[int]:
     spacing_m = spacing_mm * 1.0e-3
     focus = centroid_float(target)
+    target_bounds = mask_bounds(target)
+    if treatment_window_radius_m > 0.0:
+        target_radius_m = max_distance_to_bounds(focus, target_bounds, spacing_m)
+        radius_m = max(treatment_window_radius_m, target_radius_m + 0.012)
+        return cube_from_center_radius(body.shape, focus, radius_m, spacing_m)
     skin = nearest_boundary(body, focus, spacing_m)
     center = 0.5 * (focus + skin)
-    target_bounds = mask_bounds(target)
     target_radius_m = max_distance_to_bounds(center, target_bounds, spacing_m)
     skin_distance_m = physical_distance(focus, skin, spacing_m)
     radius_m = max(target_radius_m, 0.55 * skin_distance_m) + 0.025
     return cube_from_center_radius(body.shape, center, radius_m, spacing_m)
+
+
+def brain_target_center_index(ct: np.ndarray, body: np.ndarray, case: dict[str, object]) -> np.ndarray:
+    support = np.asarray(body, dtype=bool) & (np.asarray(ct, dtype=float) < 300.0)
+    if not np.any(support):
+        support = np.asarray(body, dtype=bool)
+    scene = case_scene(case)
+    if scene is not None:
+        return fraction_index(support, scene.target.fraction_xyz).astype(float)
+    return centroid_float(support)
+
+
+def fraction_index(mask: np.ndarray, fraction: tuple[float, ...]) -> np.ndarray:
+    values = np.asarray(mask, dtype=bool)
+    if values.ndim != len(fraction):
+        raise ValueError("target fraction dimensionality must match support mask")
+    if any((not np.isfinite(value)) or value < 0.0 or value > 1.0 for value in fraction):
+        raise ValueError("target fractions must be finite values in [0, 1]")
+    coordinates = np.argwhere(values)
+    if coordinates.size == 0:
+        raise ValueError("target support mask is empty")
+    lo = coordinates.min(axis=0).astype(np.float64)
+    hi = coordinates.max(axis=0).astype(np.float64)
+    resolved = np.floor(lo + np.asarray(fraction, dtype=np.float64) * (hi - lo) + 0.5)
+    return np.clip(resolved, lo, hi).astype(int)
 
 
 def mask_bounds(mask: np.ndarray) -> list[int]:
@@ -453,6 +493,8 @@ def run_nonlinear_case(case: dict[str, object]) -> dict[str, object]:
         frequency_hz=nonlinear_frequency_hz(case),
         source_pressure_pa=nonlinear_source_pressure_pa(case),
         cycles=float(os.environ.get("KWAVERS_CH29_NONLINEAR_CYCLES", "3.0")),
+        treatment_window_radius_m=nonlinear_treatment_window_radius_m(case),
+        min_points_per_wavelength=float(os.environ.get("KWAVERS_CH29_MIN_POINTS_PER_WAVELENGTH", "6.0")),
         lesion_delta_c_m_s=float(os.environ.get("KWAVERS_CH29_NONLINEAR_DELTA_C", "-35.0")),
         lesion_delta_beta=float(os.environ.get("KWAVERS_CH29_NONLINEAR_DELTA_BETA", "0.85")),
         sound_speed_regularization=float(os.environ.get("KWAVERS_CH29_NONLINEAR_C_REG", "0.002")),
@@ -471,6 +513,16 @@ def nonlinear_frequency_hz(case: dict[str, object]) -> float:
 
 def nonlinear_source_pressure_pa(case: dict[str, object]) -> float:
     return float(os.environ.get("KWAVERS_CH29_NONLINEAR_SOURCE_PRESSURE_PA", str(case["pressure"])))
+
+
+def nonlinear_treatment_window_radius_m(case: dict[str, object]) -> float:
+    case_key = f"KWAVERS_CH29_{str(case['name']).upper()}_TREATMENT_WINDOW_RADIUS_M"
+    return float(
+        os.environ.get(
+            case_key,
+            os.environ.get("KWAVERS_CH29_TREATMENT_WINDOW_RADIUS_M", "0.04"),
+        )
+    )
 
 
 def nonlinear_grid_size(case: dict[str, object]) -> int:
@@ -585,18 +637,40 @@ def render_nonlinear_3d(results: list[dict[str, object]], placement_results: lis
                     origin="lower",
                     extent=placement_extent,
                     vmin=0.0,
-                    vmax=max(float(np.max(image)), 1.0e-12),
+                    vmax=positive_display_vmax(image, 99.8),
+                    interpolation="lanczos",
+                )
+                plot_beam_paths_2d(
+                    ax,
+                    np.asarray(placement["placement_therapy_points_m"], dtype=float),
+                    np.asarray(placement["placement_focus_m"], dtype=float),
                 )
                 contour_mask(ax, resize_mask(placement_target_outline, image.shape), placement_extent, "white", 0.8)
                 contour_mask(ax, expected_lesion_mask, placement_extent, "yellow", 0.9)
             elif key == "target_mask":
                 image = expected_lesion
-                im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=placement_extent, vmin=0.0, vmax=1.0)
+                im = ax.imshow(
+                    image.T,
+                    cmap=cmap,
+                    origin="lower",
+                    extent=placement_extent,
+                    vmin=0.0,
+                    vmax=1.0,
+                    interpolation="nearest",
+                )
                 contour_mask(ax, resize_mask(placement_target_outline, image.shape), placement_extent, "white", 0.8)
                 contour_mask(ax, expected_lesion_mask, placement_extent, "yellow", 1.1)
             elif key in {"multiparameter_fwi_score", "nonlinear_fusion_score"}:
                 image = slab_projection(np.asarray(result[key], dtype=float), slab, mode="max")
-                im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=nonlinear_extent, vmin=0.0, vmax=1.0)
+                im = ax.imshow(
+                    image.T,
+                    cmap=cmap,
+                    origin="lower",
+                    extent=nonlinear_extent,
+                    vmin=0.0,
+                    vmax=1.0,
+                    interpolation=nonlinear_panel_interpolation(key),
+                )
             elif key == "reconstructed_delta_beta":
                 image = slab_projection(np.maximum(np.asarray(result[key], dtype=float), 0.0), slab, mode="max")
                 im = ax.imshow(
@@ -605,12 +679,21 @@ def render_nonlinear_3d(results: list[dict[str, object]], placement_results: lis
                     origin="lower",
                     extent=nonlinear_extent,
                     vmin=0.0,
-                    vmax=max(float(np.max(image)), 1.0e-12),
+                    vmax=positive_display_vmax(image),
+                    interpolation=nonlinear_panel_interpolation(key),
                 )
             else:
                 volume = np.asarray(result[key], dtype=float)
                 image = slab_projection(volume, slab, mode="max")
-                im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=nonlinear_extent)
+                im = ax.imshow(
+                    image.T,
+                    cmap=cmap,
+                    origin="lower",
+                    extent=nonlinear_extent,
+                    vmin=0.0,
+                    vmax=positive_display_vmax(image),
+                    interpolation=nonlinear_panel_interpolation(key),
+                )
             if key not in {"ct_hu", "planned_exposure"}:
                 contour_mask(ax, target, nonlinear_extent, "white", 0.8)
             if key not in {"ct_hu", "target_mask", "planned_exposure"}:
@@ -622,6 +705,8 @@ def render_nonlinear_3d(results: list[dict[str, object]], placement_results: lis
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"{result['anatomy']} {title}" if col == 0 else title, fontsize=8.5)
+            if key == "westervelt_peak_pressure_pa":
+                ax.set_xlabel(nonlinear_resolution_label(result), fontsize=7)
             if col == len(columns) - 1:
                 fwi = result["metrics"]["fwi"]
                 cav = result["metrics"]["rayleigh_plesset_cavitation"]
@@ -785,6 +870,27 @@ def slab_projection(volume: np.ndarray, slab: tuple[int, int], *, mode: str) -> 
     if mode == "mean":
         return np.mean(data, axis=2)
     return np.max(data, axis=2)
+
+
+def positive_display_vmax(image: np.ndarray, percentile: float = 99.5) -> float:
+    values = np.asarray(image, dtype=float)
+    positive = values[np.isfinite(values) & (values > 0.0)]
+    if positive.size == 0:
+        return 1.0e-12
+    return max(float(np.percentile(positive, percentile)), 1.0e-12)
+
+
+def nonlinear_panel_interpolation(key: str) -> str:
+    if key == "target_mask":
+        return "nearest"
+    return "lanczos"
+
+
+def nonlinear_resolution_label(result: dict[str, object]) -> str:
+    spacing_mm = 1.0e3 * float(result.get("spacing_m", 0.0))
+    ppw = float(result.get("points_per_wavelength_min", np.nan))
+    window_mm = 1.0e3 * float(result.get("treatment_window_radius_m", 0.0))
+    return f"dx={spacing_mm:.2f} mm; PPW={ppw:.1f}; window={window_mm:.0f} mm"
 
 
 def lesion_mask(image: np.ndarray) -> np.ndarray:
@@ -991,6 +1097,11 @@ def write_metrics(
                 "source_dimensions": [int(v) for v in result["source_dimensions"]],
                 "source_spacing_m": [float(v) for v in result["source_spacing_m"]],
                 "crop_bounds_index": [int(v) for v in result["crop_bounds_index"]],
+                "treatment_window_radius_m": float(result.get("treatment_window_radius_m", 0.0)),
+                "wavelength_min_m": float(result.get("wavelength_min_m", 0.0)),
+                "points_per_wavelength_min": float(result.get("points_per_wavelength_min", 0.0)),
+                "min_points_per_wavelength": float(result.get("min_points_per_wavelength", 0.0)),
+                "resolution_meets_min_ppw": bool(result.get("resolution_meets_min_ppw", False)),
                 "element_count": int(result["element_count"]),
                 "receiver_count": int(result["receiver_count"]),
                 "source_encoding_count": int(result["source_encoding_count"]),

@@ -9,9 +9,26 @@ from typing import Callable
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ch29_controlled_placement import (
+    add_ct_frame_fields,
+    apply_placement_axes,
+    ct_frame_key,
+    placement_fields,
+    plot_placement_context,
+)
+
 COMPARISON_FIGURE_NAME = "fig06_controlled_linear_nonlinear_comparison.png"
 COMPARISON_METRICS_NAME = "controlled_comparison_metrics.json"
 COMPARISON_FIELDS_NAME = "controlled_comparison_fields.npz"
+CONTROLLED_COMPARISON_COLUMNS = (
+    ("placement_ct_hu", "gray", "CT + target + tx/rx"),
+    ("common_target", "gray", "matched target"),
+    ("linear_exposure", "magma", "linear exposure"),
+    ("nonlinear_pressure", "magma", "nonlinear peak pressure"),
+    ("linear_fusion", "viridis", "linear fusion"),
+    ("nonlinear_fusion", "viridis", "nonlinear fusion"),
+    ("fusion_difference", "coolwarm", "nonlinear - linear"),
+)
 
 def build_controlled_comparison(
     linear_results: list[dict[str, object]],
@@ -31,29 +48,25 @@ def render_controlled_comparison(
     out_dir: Path,
     save_figure: Callable[[plt.Figure, Path], None],
 ) -> Path:
-    columns = (
-        ("common_target", "gray", "matched target"),
-        ("linear_exposure", "magma", "linear exposure"),
-        ("nonlinear_pressure", "magma", "nonlinear peak pressure"),
-        ("linear_fusion", "viridis", "linear fusion"),
-        ("nonlinear_fusion", "viridis", "nonlinear fusion"),
-        ("fusion_difference", "coolwarm", "nonlinear - linear"),
-    )
+    columns = CONTROLLED_COMPARISON_COLUMNS
     fig, axes = plt.subplots(
         len(comparisons),
         len(columns),
-        figsize=(18.0, 3.6 * len(comparisons)),
+        figsize=(21.0, 3.6 * len(comparisons)),
         constrained_layout=True,
     )
     axes_2d = np.asarray(axes, dtype=object).reshape(len(comparisons), len(columns))
     for row, comparison in enumerate(comparisons):
-        extent = comparison["common_extent_m"]
-        target = np.asarray(comparison["fields"]["common_target"], dtype=bool)
-        points = np.asarray(comparison["fields"]["therapy_points_xy_m"], dtype=float)
+        fields = comparison["fields"]
+        extent = [float(v) for v in np.asarray(fields["placement_extent_m"], dtype=float)]
+        target = np.asarray(fields[ct_frame_key("common_target")], dtype=bool)
+        points = np.asarray(fields["placement_therapy_points_xy_m"], dtype=float)
         for col, (key, cmap, title) in enumerate(columns):
             ax = axes_2d[row, col]
-            image = np.asarray(comparison["fields"][key], dtype=float)
-            if key == "fusion_difference":
+            if key == "placement_ct_hu":
+                im = plot_placement_context(ax, comparison)
+            elif key == "fusion_difference":
+                image = np.asarray(fields[ct_frame_key(key)], dtype=float)
                 vmax = max(float(np.max(np.abs(image))), 1.0e-12)
                 im = ax.imshow(
                     image.T,
@@ -64,10 +77,13 @@ def render_controlled_comparison(
                     vmax=vmax,
                 )
             else:
+                image = np.asarray(fields[ct_frame_key(key)], dtype=float)
                 im = ax.imshow(image.T, cmap=cmap, origin="lower", extent=extent)
-            _contour_mask(ax, target, extent, "white", 0.7)
-            if points.size:
-                ax.scatter(points[:, 0], points[:, 1], s=2.0, c="#ffcf33", alpha=0.34)
+            if key != "placement_ct_hu":
+                _contour_mask(ax, target, extent, "white", 0.7)
+                if points.size:
+                    ax.scatter(points[:, 0], points[:, 1], s=2.0, c="#ffcf33", alpha=0.34)
+                apply_placement_axes(ax, fields)
             ax.set_aspect("equal")
             ax.set_xticks([])
             ax.set_yticks([])
@@ -113,8 +129,8 @@ def controlled_comparison_payload(
     return {
         "comparison_contract": (
             "linear and nonlinear outputs evaluated on the nonlinear 3-D crop projection; "
-            "linear fields are physically resampled to that grid, and both panels use the "
-            "same projected nonlinear target and therapy aperture"
+            "linear fields are physically resampled to that grid for metrics, then every "
+            "display field is embedded in the full-resolution controlled CT placement grid"
         ),
         "figure": None if figure is None else str(figure),
         "field_archive": None if fields is None else str(fields),
@@ -133,12 +149,17 @@ def comparison_summary(comparisons: list[dict[str, object]]) -> dict[str, object
         case["comparison_metrics"]["nonlinear_pressure"]["outside_energy_fraction"]
         for case in comparisons
     ]
+    source_outside = [
+        case["comparison_metrics"]["nonlinear_cavitation_source"]["outside_energy_fraction"]
+        for case in comparisons
+    ]
     return {
         "case_count": len(comparisons),
         "mean_linear_fusion_dice_equal_area": float(np.mean(linear_dice)),
         "mean_nonlinear_fusion_dice_equal_area": float(np.mean(nonlinear_dice)),
         "mean_dice_gap_linear_minus_nonlinear": float(np.mean(linear_dice) - np.mean(nonlinear_dice)),
         "mean_nonlinear_pressure_outside_energy_fraction": float(np.mean(pressure_outside)),
+        "mean_nonlinear_cavitation_source_outside_energy_fraction": float(np.mean(source_outside)),
         "dominant_observation": dominant_observation(comparisons),
     }
 
@@ -165,16 +186,24 @@ def dominant_observation(comparisons: list[dict[str, object]]) -> str:
         case["comparison_metrics"]["nonlinear_pressure"]["outside_energy_fraction"]
         for case in comparisons
     ]
+    source_outside = [
+        case["comparison_metrics"]["nonlinear_cavitation_source"]["outside_energy_fraction"]
+        for case in comparisons
+    ]
     aperture_residual = [
         case["geometry"]["median_nearest_projected_element_distance_m"] for case in comparisons
     ]
-    if float(np.mean(pressure_outside)) > 0.90 and float(np.mean(aperture_residual)) > 0.02:
+    if (
+        float(np.mean(pressure_outside)) > 0.90
+        and float(np.mean(source_outside)) > 0.90
+        and float(np.mean(aperture_residual)) > 0.02
+    ):
         return (
             "the common-grid comparison rejects display resolution as the primary cause; "
             "after histotripsy-scale drive and corrected source weighting, nonlinear fusion "
             "improves, while the cavitation-specific divergence remains localized to "
-            "off-target 3-D pressure/cavitation energy spread and residual projected "
-            "2-D-vs-3-D aperture difference"
+            "the MI-gated Rayleigh-Plesset source support, passive cavitation reconstruction, "
+            "and residual projected 2-D-vs-3-D aperture difference"
         )
     if float(np.mean(gaps)) > 0.20 and float(np.mean(pressure_outside)) > 0.50:
         return "the nonlinear branch loses target localization after propagation and separated inversion"
@@ -188,6 +217,7 @@ def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) ->
     linear_extent = _linear_extent(linear)
 
     fields = {
+        **placement_fields(linear),
         "common_target": common_target,
         "linear_exposure": _normalize01(
             _resample_to_extent(np.asarray(linear["exposure"], dtype=float), linear_extent, common_shape, common_extent)
@@ -213,12 +243,16 @@ def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) ->
         "nonlinear_cavitation": _slab_projection(
             np.asarray(nonlinear["reconstructed_cavitation_density"], dtype=float), slab, mode="max"
         ),
+        "nonlinear_cavitation_source": _slab_projection(
+            np.asarray(nonlinear["cavitation_source_density"], dtype=float), slab, mode="max"
+        ),
         "nonlinear_fusion": _slab_projection(
             np.asarray(nonlinear["nonlinear_fusion_score"], dtype=float), slab, mode="max"
         ),
         "therapy_points_xy_m": np.asarray(nonlinear["therapy_points_m"], dtype=float)[:, :2],
     }
     fields["fusion_difference"] = fields["nonlinear_fusion"] - fields["linear_fusion"]
+    add_ct_frame_fields(fields, common_extent)
 
     metrics = {
         "linear_exposure": _field_metrics(fields["linear_exposure"], common_target),
@@ -226,6 +260,7 @@ def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) ->
         "linear_fusion": _field_metrics(fields["linear_fusion"], common_target),
         "nonlinear_pressure": _field_metrics(fields["nonlinear_pressure"], common_target),
         "nonlinear_fwi": _field_metrics(fields["nonlinear_fwi"], common_target),
+        "nonlinear_cavitation_source": _field_metrics(fields["nonlinear_cavitation_source"], common_target),
         "nonlinear_cavitation": _field_metrics(fields["nonlinear_cavitation"], common_target),
         "nonlinear_fusion": _field_metrics(fields["nonlinear_fusion"], common_target),
     }
@@ -270,20 +305,12 @@ def _nonlinear_extent(result: dict[str, object]) -> list[float]:
     ]
 def _target_slice_index(mask: np.ndarray) -> int:
     return int(np.argmax(np.sum(mask, axis=(0, 1))))
-
-
 def _target_slab_bounds(mask: np.ndarray, z_index: int) -> tuple[int, int]:
     half_width = max(1, min(3, mask.shape[2] // 8))
     return max(0, z_index - half_width), min(mask.shape[2], z_index + half_width + 1)
-
-
 def _slab_projection(volume: np.ndarray, slab: tuple[int, int], *, mode: str) -> np.ndarray:
     data = np.asarray(volume[:, :, slab[0] : slab[1]], dtype=float)
-    if mode == "mean":
-        return np.mean(data, axis=2)
-    return np.max(data, axis=2)
-
-
+    return np.mean(data, axis=2) if mode == "mean" else np.max(data, axis=2)
 def _resample_to_extent(
     image: np.ndarray,
     source_extent: list[float],
@@ -318,46 +345,36 @@ def _resample_to_extent(
                 + wx * wy * image[x1, y1]
             )
     return out
-
-
 def _field_metrics(field: np.ndarray, target: np.ndarray) -> dict[str, float]:
     values = _normalize01(field)
     active = np.asarray(target, dtype=bool)
     outside = ~active
-    top = _equal_area_mask(values, active)
-    dice = _dice(top, active)
     target_values = values[active]
     outside_values = values[outside]
     target_energy = float(np.sum(values[active] ** 2))
     total_energy = float(np.sum(values**2))
     return {
-        "dice_equal_area": dice,
+        "dice_equal_area": _dice(_equal_area_mask(values, active), active),
         "cnr": _cnr(target_values, outside_values),
         "nrmse": _nrmse(values, active.astype(float)),
         "pearson": _pearson(values, active.astype(float)),
         "target_peak": float(np.max(target_values)) if target_values.size else 0.0,
         "outside_peak": float(np.max(outside_values)) if outside_values.size else 0.0,
         "outside_energy_fraction": 1.0 - target_energy / total_energy if total_energy > 0.0 else 0.0,
+        "hotspot_distance_to_target_grid_cells": _hotspot_distance_to_target(values, active),
     }
-
-
 def _cross_model_metrics(fields: dict[str, np.ndarray], target: np.ndarray) -> dict[str, float]:
     return {
-        "linear_fusion_vs_nonlinear_fusion_pearson": _pearson(
-            fields["linear_fusion"], fields["nonlinear_fusion"]
-        ),
-        "linear_exposure_vs_nonlinear_pressure_pearson": _pearson(
-            fields["linear_exposure"], fields["nonlinear_pressure"]
-        ),
-        "linear_fusion_hotspot_distance_grid_cells": _hotspot_distance(
-            fields["linear_fusion"], fields["nonlinear_fusion"], target
-        ),
-        "nonlinear_pressure_to_fusion_pearson": _pearson(
-            fields["nonlinear_pressure"], fields["nonlinear_fusion"]
+        "linear_fusion_vs_nonlinear_fusion_pearson": _pearson(fields["linear_fusion"], fields["nonlinear_fusion"]),
+        "linear_exposure_vs_nonlinear_pressure_pearson": _pearson(fields["linear_exposure"], fields["nonlinear_pressure"]),
+        "linear_fusion_hotspot_distance_grid_cells": _hotspot_distance(fields["linear_fusion"], fields["nonlinear_fusion"], target),
+        "nonlinear_pressure_to_fusion_pearson": _pearson(fields["nonlinear_pressure"], fields["nonlinear_fusion"]),
+        "nonlinear_pressure_to_cavitation_source_pearson": _pearson(fields["nonlinear_pressure"], fields["nonlinear_cavitation_source"]),
+        "nonlinear_cavitation_source_to_reconstruction_pearson": _pearson(fields["nonlinear_cavitation_source"], fields["nonlinear_cavitation"]),
+        "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": _hotspot_distance(
+            fields["nonlinear_cavitation_source"], fields["nonlinear_cavitation"], target
         ),
     }
-
-
 def _geometry_metrics(
     linear: dict[str, object],
     nonlinear: dict[str, object],
@@ -379,8 +396,6 @@ def _geometry_metrics(
         "common_target_voxels": int(np.count_nonzero(common_target)),
         "common_target_centroid_m": [float(v) for v in nonlinear_focus],
     }
-
-
 def _technical_explanation(
     metrics: dict[str, dict[str, float]],
     cross: dict[str, float],
@@ -390,6 +405,8 @@ def _technical_explanation(
     linear_dice = metrics["linear_fusion"]["dice_equal_area"]
     nonlinear_dice = metrics["nonlinear_fusion"]["dice_equal_area"]
     outside = metrics["nonlinear_pressure"]["outside_energy_fraction"]
+    source_distance = metrics["nonlinear_cavitation_source"]["hotspot_distance_to_target_grid_cells"]
+    reconstructed_distance = metrics["nonlinear_cavitation"]["hotspot_distance_to_target_grid_cells"]
     fwi_history = objective_history["nonlinear_fwi"]
     objective_drop = fwi_history[0] - fwi_history[-1] if len(fwi_history) >= 2 else 0.0
     return (
@@ -397,24 +414,19 @@ def _technical_explanation(
         f"Dice is {nonlinear_dice:.3f}. Nonlinear peak-pressure outside-target energy is "
         f"{outside:.3f}, linear/nonlinear fusion Pearson is "
         f"{cross['linear_fusion_vs_nonlinear_fusion_pearson']:.3f}, and nonlinear FWI objective "
-        f"drop is {objective_drop:.3e}. The residual projected aperture mismatch from the original "
+        f"drop is {objective_drop:.3e}. The Rayleigh-Plesset source and passive reconstruction "
+        f"hotspots are {source_distance:.2f} and {reconstructed_distance:.2f} grid cells from the "
+        f"target centroid. The residual projected aperture mismatch from the original "
         f"runs is {1.0e3 * float(geometry['median_nearest_projected_element_distance_m']):.2f} mm; "
         "therefore the matched artifact localizes the remaining channel difference to nonlinear "
         "pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image "
         "resolution alone."
     )
-
-
 def _normalize01(image: np.ndarray) -> np.ndarray:
-    values = np.asarray(image, dtype=float)
-    values = np.where(np.isfinite(values), values, 0.0)
+    values = np.where(np.isfinite(np.asarray(image, dtype=float)), np.asarray(image, dtype=float), 0.0)
     low = float(np.min(values))
     high = float(np.max(values))
-    if high <= low:
-        return np.zeros(values.shape, dtype=float)
-    return (values - low) / (high - low)
-
-
+    return np.zeros(values.shape, dtype=float) if high <= low else (values - low) / (high - low)
 def _equal_area_mask(values: np.ndarray, target: np.ndarray) -> np.ndarray:
     count = int(np.count_nonzero(target))
     if count <= 0:
@@ -424,50 +436,36 @@ def _equal_area_mask(values: np.ndarray, target: np.ndarray) -> np.ndarray:
     out = np.zeros(flat.shape, dtype=bool)
     out[selected] = True
     return out.reshape(values.shape)
-
-
 def _dice(a: np.ndarray, b: np.ndarray) -> float:
     denom = int(np.count_nonzero(a)) + int(np.count_nonzero(b))
-    if denom == 0:
-        return 1.0
-    return 2.0 * int(np.count_nonzero(a & b)) / denom
-
-
+    return 1.0 if denom == 0 else 2.0 * int(np.count_nonzero(a & b)) / denom
 def _cnr(target_values: np.ndarray, outside_values: np.ndarray) -> float:
     if target_values.size == 0 or outside_values.size == 0:
         return 0.0
     denom = np.sqrt(0.5 * (np.var(target_values) + np.var(outside_values))).item()
-    if denom <= 0.0:
-        return 0.0
-    return float((np.mean(target_values) - np.mean(outside_values)) / denom)
-
-
+    return 0.0 if denom <= 0.0 else float((np.mean(target_values) - np.mean(outside_values)) / denom)
 def _nrmse(a: np.ndarray, b: np.ndarray) -> float:
     denom = np.sqrt(np.mean(b**2)).item()
-    if denom <= 0.0:
-        return 0.0
-    return float(np.sqrt(np.mean((np.asarray(a, dtype=float) - b) ** 2)) / denom)
-
-
+    return 0.0 if denom <= 0.0 else float(np.sqrt(np.mean((np.asarray(a, dtype=float) - b) ** 2)) / denom)
 def _pearson(a: np.ndarray, b: np.ndarray) -> float:
     x = np.asarray(a, dtype=float).ravel()
     y = np.asarray(b, dtype=float).ravel()
     x = x - float(np.mean(x))
     y = y - float(np.mean(y))
     denom = float(np.linalg.norm(x) * np.linalg.norm(y))
-    if denom <= 0.0:
-        return 0.0
-    return float(np.dot(x, y) / denom)
-
-
+    return 0.0 if denom <= 0.0 else float(np.dot(x, y) / denom)
 def _hotspot_distance(a: np.ndarray, b: np.ndarray, target: np.ndarray) -> float:
     if target.size == 0:
         return 0.0
     ia = np.array(np.unravel_index(int(np.argmax(a)), a.shape), dtype=float)
     ib = np.array(np.unravel_index(int(np.argmax(b)), b.shape), dtype=float)
     return float(np.linalg.norm(ia - ib))
-
-
+def _hotspot_distance_to_target(field: np.ndarray, target: np.ndarray) -> float:
+    coords = np.argwhere(target)
+    if coords.size == 0:
+        return 0.0
+    hotspot = np.array(np.unravel_index(int(np.argmax(field)), field.shape), dtype=float)
+    return float(np.linalg.norm(hotspot - np.mean(coords, axis=0)))
 def _mask_centroid_m(mask: np.ndarray, extent: list[float]) -> np.ndarray:
     coords = np.argwhere(mask)
     if coords.size == 0:
@@ -475,8 +473,6 @@ def _mask_centroid_m(mask: np.ndarray, extent: list[float]) -> np.ndarray:
     x = np.linspace(extent[0], extent[1], mask.shape[0])
     y = np.linspace(extent[2], extent[3], mask.shape[1])
     return np.array([float(np.mean(x[coords[:, 0]])), float(np.mean(y[coords[:, 1]]))])
-
-
 def _median_nearest_distance(a: np.ndarray, b: np.ndarray) -> float:
     if a.size == 0 or b.size == 0:
         return 0.0
@@ -485,13 +481,9 @@ def _median_nearest_distance(a: np.ndarray, b: np.ndarray) -> float:
         delta = b - point[np.newaxis, :]
         distances.append(float(np.min(np.sum(delta * delta, axis=1)) ** 0.5))
     return float(np.median(distances))
-
-
 def _contour_mask(ax: plt.Axes, mask: np.ndarray, extent: list[float], color: str, width: float) -> None:
     x = np.linspace(extent[0], extent[1], mask.shape[0])
     y = np.linspace(extent[2], extent[3], mask.shape[1])
     ax.contour(x, y, mask.T.astype(float), levels=[0.5], colors=color, linewidths=width)
-
-
 def _float_list(values: object) -> list[float]:
     return [float(value) for value in np.asarray(values, dtype=float).ravel()]

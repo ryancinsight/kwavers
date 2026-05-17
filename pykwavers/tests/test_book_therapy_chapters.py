@@ -113,6 +113,18 @@ def test_chapter29_fig02_reconstruction_grid_starts_with_ct_context():
     assert all("FWI" not in title for _, _, title in ch29.RECONSTRUCTION_FIGURE_COLUMNS)
 
 
+def test_chapter29_controlled_comparison_grid_starts_with_ct_context():
+    import ch29_theranostic_fwi_platforms as ch29
+
+    first_key, first_cmap, first_title = ch29.CONTROLLED_COMPARISON_COLUMNS[0]
+    second_key = ch29.CONTROLLED_COMPARISON_COLUMNS[1][0]
+
+    assert first_key == "placement_ct_hu"
+    assert first_cmap == "gray"
+    assert first_title == "CT + target + tx/rx"
+    assert second_key == "common_target"
+
+
 def test_chapter29_fig05_defaults_to_fig02_case_grids(monkeypatch):
     import ch29_theranostic_fwi_platforms as ch29
 
@@ -126,7 +138,7 @@ def test_chapter29_fig05_defaults_to_fig02_case_grids(monkeypatch):
 
     default_grids = {case["name"]: ch29.nonlinear_grid_size(case) for case in ch29.CASES}
 
-    assert default_grids == {"brain": 48, "kidney": 52, "liver": 52}
+    assert default_grids == {"brain": 64, "kidney": 64, "liver": 64}
 
     monkeypatch.setenv("KWAVERS_CH29_NONLINEAR_GRID", "40")
     assert {case["name"]: ch29.nonlinear_grid_size(case) for case in ch29.CASES} == {
@@ -217,6 +229,9 @@ def test_chapter29_controlled_comparison_uses_common_target_and_records_historie
     nonlinear_fusion = np.zeros_like(target, dtype=float)
     nonlinear_fusion[1, 1, 1] = 1.0
     nonlinear_fusion[2, 2, 1] = 0.5
+    placement_target = np.zeros((6, 6), dtype=bool)
+    placement_target[2, 2] = True
+    placement_target[2, 3] = True
     linear = {
         "anatomy": "brain",
         "fused_reconstruction": linear_target,
@@ -226,6 +241,14 @@ def test_chapter29_controlled_comparison_uses_common_target_and_records_historie
         "focus_m": (0.0, 0.0),
         "therapy_x_m": np.asarray([-1.0, 1.0]),
         "therapy_y_m": np.asarray([0.0, 0.0]),
+        "placement_ct_hu": np.zeros((6, 6), dtype=float),
+        "placement_spacing_m": [1.0, 1.0],
+        "placement_target_mask": placement_target,
+        "placement_body_mask": np.ones((6, 6), dtype=bool),
+        "placement_therapy_points_m": np.asarray([[-1.0, 0.0], [1.0, 0.0]], dtype=float),
+        "placement_imaging_points_m": np.asarray([[0.0, 1.0]], dtype=float),
+        "placement_focus_m": [0.0, 0.0],
+        "placement_skin_contact_m": [0.0, 1.0],
     }
     nonlinear = {
         "anatomy": "brain",
@@ -235,6 +258,7 @@ def test_chapter29_controlled_comparison_uses_common_target_and_records_historie
         "source_spacing_m": [1.0, 1.0, 1.0],
         "westervelt_peak_pressure_pa": target.astype(float),
         "multiparameter_fwi_score": nonlinear_fusion,
+        "cavitation_source_density": nonlinear_fusion,
         "reconstructed_cavitation_density": nonlinear_fusion,
         "nonlinear_fusion_score": nonlinear_fusion,
         "therapy_points_m": np.asarray([[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
@@ -245,7 +269,12 @@ def test_chapter29_controlled_comparison_uses_common_target_and_records_historie
     comparison = ch29.build_controlled_comparison([linear], [nonlinear])[0]
 
     assert comparison["common_grid_shape"] == [4, 4]
+    assert comparison["fields"]["placement_ct_hu"].shape == (6, 6)
+    assert comparison["fields"]["ct_frame_linear_fusion"].shape == (6, 6)
+    assert comparison["fields"]["ct_frame_nonlinear_fusion"].shape == (6, 6)
+    assert comparison["fields"]["ct_frame_common_target"].dtype == np.bool_
     assert comparison["geometry"]["common_target_voxels"] == 2
     assert comparison["comparison_metrics"]["linear_fusion"]["dice_equal_area"] == 1.0
+    assert comparison["comparison_metrics"]["nonlinear_cavitation_source"]["target_peak"] == 1.0
     assert comparison["objective_history"]["nonlinear_fwi"] == [2.0, 1.25]
     assert "linear fusion Dice" in comparison["technical_explanation"]
