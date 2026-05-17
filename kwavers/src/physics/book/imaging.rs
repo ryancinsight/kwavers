@@ -186,8 +186,11 @@ mod tests {
         let lam = 1500.0 / 2e6;
         let psf1 = lateral_psf_sinc2(&[0.5e-3], 2.0, lam);
         let psf4 = pw_compounding_lateral_psf(&[0.5e-3], 4, 2.0, lam);
-        // 4-angle compounding → narrower PSF → higher value at off-axis point
-        assert!(psf4[0] > psf1[0], "psf4={} psf1={}", psf4[0], psf1[0]);
+        // 4-angle compounding narrows the PSF (FWHM radius 1.33mm → 0.665mm).
+        // At x=0.5mm the compound PSF is past its −6 dB point while the
+        // single-angle PSF is still within its mainlobe → psf4 ≪ psf1.
+        // sinc²: u1≈0.376 → 0.613, u4≈0.752 → 0.088.
+        assert!(psf4[0] < psf1[0], "psf4={} psf1={}", psf4[0], psf1[0]);
     }
 
     #[test]
