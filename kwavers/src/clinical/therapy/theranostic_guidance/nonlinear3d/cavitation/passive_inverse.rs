@@ -63,6 +63,9 @@ impl PassiveOperator {
         let attenuation_field = &volume.attenuation_np_per_m_mhz;
         let power_law_y_field = &volume.attenuation_power_law_y;
         let mut values = vec![0.0_f64; rows.saturating_mul(cols)];
+        if cols == 0 {
+            return Self { values, rows, cols };
+        }
         // Row-parallel dense Green's-function fill: each row depends only on
         // the row's receiver position and reads `active` immutably.
         values
@@ -322,5 +325,22 @@ mod tests {
         );
         assert!(result.model[0] > 0.0);
         assert!(result.model[1] > 0.0);
+    }
+
+    #[test]
+    fn projected_tikhonov_accepts_empty_source_support() {
+        let operator = PassiveOperator {
+            values: Vec::new(),
+            rows: 2,
+            cols: 0,
+        };
+        let data = [0.0, 0.0];
+        let mut config = Nonlinear3dConfig::new(AnatomyKind::Kidney);
+        config.cavitation_iterations = 3;
+
+        let result = solve_projected_tikhonov(&operator, &data, &config);
+
+        assert!(result.model.is_empty());
+        assert_eq!(result.objective_history, vec![0.0, 0.0, 0.0]);
     }
 }

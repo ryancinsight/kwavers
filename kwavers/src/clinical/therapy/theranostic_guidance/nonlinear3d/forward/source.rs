@@ -1,11 +1,11 @@
 //! Source geometry, encoding, signal generation, and grid injection.
 
 use super::super::encoding::{focused_delay_s, max_source_focus_distance_m, SourceEncoding};
-use super::super::types::{flat_index, Nonlinear3dAperture, Nonlinear3dConfig};
+use super::super::types::{flat_index, GridIndex, Nonlinear3dAperture, Nonlinear3dConfig};
 use super::TimeSchedule;
 
 pub(super) struct SourcePlan {
-    pub(super) source_cells: Vec<usize>,
+    pub(super) source_stencils: Vec<Vec<(usize, f64)>>,
     pub(super) focused_delays_s: Vec<f64>,
     pub(super) encoding_weights: Vec<f64>,
 }
@@ -23,10 +23,10 @@ pub(super) fn build_source_plan(
     aperture: &Nonlinear3dAperture,
     encoding: SourceEncoding,
 ) -> SourcePlan {
-    let source_cells = aperture
+    let source_stencils = aperture
         .sources
         .iter()
-        .map(|idx| flat_index(*idx, n))
+        .map(|idx| finite_source_stencil(*idx, n))
         .collect::<Vec<_>>();
     let max_focus_distance =
         max_source_focus_distance_m(&aperture.sources, aperture.focus, spacing_m);
@@ -56,10 +56,60 @@ pub(super) fn build_source_plan(
         .map(|weight| weight.signum())
         .collect::<Vec<_>>();
     SourcePlan {
-        source_cells,
+        source_stencils,
         focused_delays_s,
         encoding_weights,
     }
+}
+
+pub(super) fn source_cells(source_plan: &SourcePlan) -> impl Iterator<Item = usize> + '_ {
+    source_plan
+        .source_stencils
+        .iter()
+        .flat_map(|stencil| stencil.iter().map(|(cell, _)| *cell))
+}
+
+fn finite_source_stencil(idx: GridIndex, n: usize) -> Vec<(usize, f64)> {
+    let mut entries = Vec::with_capacity(27);
+    for dx in -1..=1 {
+        for dy in -1..=1 {
+            for dz in -1..=1 {
+                let x = idx.x as isize + dx;
+                let y = idx.y as isize + dy;
+                let z = idx.z as isize + dz;
+                if x <= 0
+                    || y <= 0
+                    || z <= 0
+                    || x >= (n - 1) as isize
+                    || y >= (n - 1) as isize
+                    || z >= (n - 1) as isize
+                {
+                    continue;
+                }
+                let distance2 = (dx * dx + dy * dy + dz * dz) as f64;
+                let weight = 1.0 / (1.0 + distance2);
+                entries.push((
+                    flat_index(
+                        GridIndex {
+                            x: x as usize,
+                            y: y as usize,
+                            z: z as usize,
+                        },
+                        n,
+                    ),
+                    weight,
+                ));
+            }
+        }
+    }
+    if entries.is_empty() {
+        return vec![(flat_index(idx, n), 1.0)];
+    }
+    let sum = entries.iter().map(|(_, weight)| *weight).sum::<f64>();
+    entries
+        .into_iter()
+        .map(|(cell, weight)| (cell, weight / sum))
+        .collect()
 }
 
 pub(super) fn inject_sources(
@@ -69,14 +119,16 @@ pub(super) fn inject_sources(
     step: usize,
 ) {
     let time = step as f64 * drive.schedule.dt_s;
-    for ((cell, delay), weight) in source_plan
-        .source_cells
+    for ((stencil, delay), weight) in source_plan
+        .source_stencils
         .iter()
         .zip(source_plan.focused_delays_s.iter())
         .zip(source_plan.encoding_weights.iter())
     {
         let signal = source_signal(time - delay, drive.config, drive.source_scale) * weight;
-        next[*cell] += signal;
+        for (cell, cell_weight) in stencil {
+            next[*cell] += signal * cell_weight;
+        }
     }
 }
 
@@ -134,5 +186,10 @@ mod tests {
         );
 
         assert_eq!(plan.encoding_weights, vec![1.0, 1.0, 1.0, 1.0]);
+        assert_eq!(plan.source_stencils.len(), 4);
+        for stencil in &plan.source_stencils {
+            let weight_sum = stencil.iter().map(|(_, weight)| *weight).sum::<f64>();
+            assert!((weight_sum - 1.0).abs() < 1.0e-12);
+        }
     }
 }

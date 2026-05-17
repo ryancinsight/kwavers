@@ -4,6 +4,7 @@ use ndarray::Array3;
 
 use crate::core::error::{KwaversError, KwaversResult};
 
+use super::super::scene::target_index_from_mask_fraction_3d;
 use super::super::AnatomyKind;
 use super::types::{Nonlinear3dConfig, Nonlinear3dVolume};
 
@@ -36,6 +37,14 @@ pub(crate) fn prepare_volume(
         spacing_mm[2] * 1.0e-3,
     ];
     let body = mask::body_mask_full(anatomy, ct_hu, label_volume);
+    let brain_target_center_index = match anatomy {
+        AnatomyKind::Brain => Some(brain_target_center_index(
+            &body,
+            ct_hu,
+            target_fraction_xyz,
+        )?),
+        AnatomyKind::Liver | AnatomyKind::Kidney => None,
+    };
     let target = match anatomy {
         AnatomyKind::Brain => None,
         AnatomyKind::Liver | AnatomyKind::Kidney => {
@@ -61,7 +70,9 @@ pub(crate) fn prepare_volume(
         &body,
         target.as_ref(),
         aperture_skin_index,
+        brain_target_center_index,
         spacing_mm,
+        config.treatment_window_radius_m,
     )?;
     let crop_bounds_index = [bbox.x0, bbox.x1, bbox.y0, bbox.y1, bbox.z0, bbox.z1];
     let n = config.grid_size;
@@ -72,8 +83,18 @@ pub(crate) fn prepare_volume(
         Array3::<i16>::zeros((n, n, n))
     };
     let spacing_m = resample::isotropic_spacing_m(bbox, spacing_mm, n);
-    let (body_mask, target_mask) =
-        mask::masks(anatomy, &ct, &label, spacing_m, target_fraction_xyz)?;
+    let resampled_brain_target_center = match (anatomy, brain_target_center_index) {
+        (AnatomyKind::Brain, Some(center)) => Some(map_index_to_resampled_grid(center, bbox, n)),
+        _ => None,
+    };
+    let (body_mask, target_mask) = mask::masks(
+        anatomy,
+        &ct,
+        &label,
+        spacing_m,
+        target_fraction_xyz,
+        resampled_brain_target_center,
+    )?;
     let inversion_mask = mask::inversion_mask(&target_mask, &body_mask, spacing_m);
     let focus = centroid_index(&target_mask).ok_or_else(|| {
         KwaversError::InvalidInput("nonlinear 3-D target support is empty".to_owned())
@@ -115,6 +136,46 @@ pub(crate) fn prepare_volume(
         aperture_direction,
         focus,
     })
+}
+
+fn brain_target_center_index(
+    body: &Array3<bool>,
+    ct_hu: &Array3<f64>,
+    target_fraction_xyz: Option<[f64; 3]>,
+) -> KwaversResult<[f64; 3]> {
+    let brain_support = Array3::from_shape_fn(body.dim(), |idx| body[idx] && ct_hu[idx] < 300.0);
+    let support = if brain_support.iter().any(|active| *active) {
+        &brain_support
+    } else {
+        body
+    };
+    if let Some(fraction) = target_fraction_xyz {
+        let index = target_index_from_mask_fraction_3d(support, fraction)?;
+        Ok([index[0] as f64, index[1] as f64, index[2] as f64])
+    } else {
+        centroid_float(support, None)
+            .or_else(|| centroid_float(body, None))
+            .ok_or_else(|| KwaversError::InvalidInput("brain body support is empty".to_owned()))
+    }
+}
+
+fn map_index_to_resampled_grid(
+    index: [f64; 3],
+    bbox: crate::clinical::therapy::theranostic_guidance::geometry::IndexBounds3,
+    n: usize,
+) -> [f64; 3] {
+    [
+        map_axis_to_resampled_grid(index[0], bbox.x0, bbox.x1, n),
+        map_axis_to_resampled_grid(index[1], bbox.y0, bbox.y1, n),
+        map_axis_to_resampled_grid(index[2], bbox.z0, bbox.z1, n),
+    ]
+}
+
+fn map_axis_to_resampled_grid(index: f64, min: usize, max: usize, n: usize) -> f64 {
+    if n <= 1 || max == min {
+        return 0.0;
+    }
+    ((index - min as f64) * (n - 1) as f64 / (max - min) as f64).clamp(0.0, (n - 1) as f64)
 }
 
 fn focus_to_skin_direction(

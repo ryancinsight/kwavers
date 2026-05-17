@@ -38,7 +38,11 @@ const SPACING_MM: f64 = 1.5;
 const HU_AIR: f64 = -1000.0;
 const HU_SCALP: f64 = 35.0; // soft tissue; < skull_hu_threshold
 const HU_SKULL: f64 = 700.0; // cortical bone; > skull_hu_threshold
-const HU_BRAIN: f64 = 40.0; // soft tissue; < skull_hu_threshold
+                             // Brain interior layers (all < skull_hu_threshold = 300)
+const HU_GRAY_MATTER: f64 = 37.0; // cortical and deep gray matter (c ≈ 1560 m/s)
+const HU_WHITE_MATTER: f64 = 28.0; // deep white matter tracts (c ≈ 1580 m/s)
+const HU_CSF: f64 = 10.0; // cerebrospinal fluid in lateral ventricles (c ≈ 1515 m/s)
+const HU_THALAMUS: f64 = 38.0; // thalamic nuclei — primary histotripsy target
 
 /// Asymmetric half-ellipsoid radial parameter.
 ///
@@ -66,11 +70,65 @@ fn head_r(
     dx * dx + dy * dy + dzn * dzn
 }
 
+/// True if voxel `(ix, iy, iz)` is inside a lateral ventricle.
+///
+/// The lateral ventricles are modelled as two mirror-symmetric ellipsoidal CSF
+/// spaces flanking the midline, located superior and slightly posterior to the
+/// geometric brain centre.  Their primary acoustic effect is to form a CSF
+/// channel that reduces skull-to-target attenuation in transcranial sonication.
+///
+/// Geometry (voxels, relative to brain centre at `(cx, cy, cz)`):
+/// - Body centres: `(cx ± 8, cy, cz + 2)`
+/// - Semi-axes: `(a_lat=5, a_ant=4, a_sup=8)` voxels
+///
+/// # Reference
+/// Drury et al. (1996) MNI152 ventricle atlas; 1.5 mm isotropic spacing.
+#[inline]
+fn in_lateral_ventricle(ix: usize, iy: usize, iz: usize, cx: f64, cy: f64, cz: f64) -> bool {
+    let dz = (iz as f64 - (cz + 2.0)) / 8.0;
+    let dy = (iy as f64 - cy) / 4.0;
+    let dx_l = (ix as f64 - (cx - 8.0)) / 5.0;
+    let dx_r = (ix as f64 - (cx + 8.0)) / 5.0;
+    dx_l * dx_l + dy * dy + dz * dz <= 1.0 || dx_r * dx_r + dy * dy + dz * dz <= 1.0
+}
+
+/// True if voxel `(ix, iy, iz)` is inside the bilateral thalamic nuclei.
+///
+/// The thalami are modelled as two ovoid deep-gray-matter structures at the
+/// geometric centre of the brain, slightly inferior and lateral to the midline.
+/// They are the standard stereotaxic target for deep-brain histotripsy
+/// (essential-tremor, Parkinson's disease).
+///
+/// Geometry (voxels): centres at `(cx ± 5, cy, cz − 4)`, semi-axes `(4, 4, 5)`.
+///
+/// # Reference
+/// Behrens et al. (2003), *Nat. Neurosci.* 6, 750 (thalamic parcellation atlas).
+#[inline]
+fn in_thalamus(ix: usize, iy: usize, iz: usize, cx: f64, cy: f64, cz: f64) -> bool {
+    let dz = (iz as f64 - (cz - 4.0)) / 5.0;
+    let dy = (iy as f64 - cy) / 4.0;
+    let dx_l = (ix as f64 - (cx - 5.0)) / 4.0;
+    let dx_r = (ix as f64 - (cx + 5.0)) / 4.0;
+    dx_l * dx_l + dy * dy + dz * dz <= 1.0 || dx_r * dx_r + dy * dy + dz * dz <= 1.0
+}
+
 /// Synthetic brain CT phantom.
 ///
 /// Returns `(ct_hu, spacing_mm)`.
 /// - `ct_hu`: shape `[NX, NY, NZ]` with values in Hounsfield units.
 /// - `spacing_mm`: isotropic 1.5 mm.
+///
+/// ## Anatomical layers (outward to inward)
+///
+/// | Region              | HU   | Acoustic property         |
+/// |---------------------|------|---------------------------|
+/// | Air                 | −1000| opaque                    |
+/// | Scalp               | 35   | c ≈ 1550 m/s              |
+/// | Cortical skull      | 700  | c ≈ 2900 m/s, α high      |
+/// | Cortical gray matter| 37   | c ≈ 1560 m/s              |
+/// | White matter        | 28   | c ≈ 1580 m/s              |
+/// | Lateral ventricles  | 10   | c ≈ 1515 m/s (CSF)        |
+/// | Thalamic nuclei     | 38   | c ≈ 1560 m/s (target)     |
 pub fn synthetic_brain_phantom() -> (Array3<f64>, [f64; 3]) {
     let (cx, cy, cz) = (64.0_f64, 64.0, 64.0);
 
@@ -110,7 +168,16 @@ pub fn synthetic_brain_phantom() -> (Array3<f64>, [f64; 3]) {
                 );
 
                 ct[[x, y, z]] = if r_inner <= 1.0 {
-                    HU_BRAIN
+                    // Brain interior: check anatomical sub-structures first.
+                    if in_lateral_ventricle(x, y, z, cx, cy, cz) {
+                        HU_CSF // lateral ventricles (CSF)
+                    } else if in_thalamus(x, y, z, cx, cy, cz) {
+                        HU_THALAMUS // thalamic nuclei — histotripsy target
+                    } else if r_inner > 0.92 {
+                        HU_GRAY_MATTER // cortical mantle (~3 mm at 1.5 mm/voxel)
+                    } else {
+                        HU_WHITE_MATTER // deep white matter
+                    }
                 } else if r_mid <= 1.0 {
                     HU_SKULL
                 } else {

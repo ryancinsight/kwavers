@@ -4,8 +4,9 @@
 //! the acoustic forcing amplitude in the Rayleigh-Plesset ODE. The source
 //! density is the maximum period-doubled radius response, which is then mapped
 //! to passive receivers by a subharmonic Green operator. The inverse solves a
-//! nonnegative Tikhonov problem by projected gradient descent with step bounded
-//! by the Frobenius norm of the discrete operator.
+//! nonnegative Tikhonov problem over the MI-gated Rayleigh-Plesset source
+//! support by projected gradient descent with step bounded by the Frobenius
+//! norm of the discrete operator.
 
 mod forward;
 mod helpers;
@@ -40,7 +41,12 @@ pub(crate) fn run_cavitation_inverse(
     let body = volume.body_mask.iter().copied().collect::<Vec<_>>();
     let source = cavitation_source(volume, peak_pressure, config);
     let source_vec = source.iter().copied().collect::<Vec<_>>();
-    let active = active_indices(&body);
+    let source_support = source_vec
+        .iter()
+        .zip(body.iter())
+        .map(|(value, active)| *active && *value > 0.0)
+        .collect::<Vec<_>>();
+    let active = active_indices(&source_support);
     let source_active = active
         .iter()
         .map(|&cell| source_vec[cell])

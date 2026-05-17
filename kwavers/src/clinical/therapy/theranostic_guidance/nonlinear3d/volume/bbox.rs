@@ -11,22 +11,57 @@ use super::super::super::skin::nearest_external_skin_point;
 use super::super::super::AnatomyKind;
 use super::centroid::centroid_float;
 
+const TARGET_TO_WINDOW_MARGIN_M: f64 = 0.012;
+
 pub(super) fn crop_bbox(
     anatomy: AnatomyKind,
     body: &Array3<bool>,
     target: Option<&Array3<bool>>,
     aperture_skin_index: Option<[f64; 3]>,
+    target_center_index: Option<[f64; 3]>,
     spacing_mm: [f64; 3],
+    treatment_window_radius_m: f64,
 ) -> KwaversResult<IndexBounds3> {
     match anatomy {
-        AnatomyKind::Brain => body_cube_bbox(body, spacing_mm),
+        AnatomyKind::Brain => brain_cube_bbox(
+            body,
+            target_center_index,
+            spacing_mm,
+            treatment_window_radius_m,
+        ),
         AnatomyKind::Liver | AnatomyKind::Kidney => {
             let target = target.ok_or_else(|| {
                 KwaversError::InvalidInput("abdominal target mask is required".to_owned())
             })?;
-            path_cube_bbox(body, target, aperture_skin_index, spacing_mm)
+            path_cube_bbox(
+                body,
+                target,
+                aperture_skin_index,
+                spacing_mm,
+                treatment_window_radius_m,
+            )
         }
     }
+}
+
+fn brain_cube_bbox(
+    body: &Array3<bool>,
+    target_center_index: Option<[f64; 3]>,
+    spacing_mm: [f64; 3],
+    treatment_window_radius_m: f64,
+) -> KwaversResult<IndexBounds3> {
+    if treatment_window_radius_m > 0.0 {
+        let center = target_center_index.ok_or_else(|| {
+            KwaversError::InvalidInput("brain treatment-window target index is required".to_owned())
+        })?;
+        return Ok(cube_from_center_radius(
+            body.dim(),
+            center,
+            treatment_window_radius_m,
+            spacing_mm,
+        ));
+    }
+    body_cube_bbox(body, spacing_mm)
 }
 
 fn body_cube_bbox(body: &Array3<bool>, spacing_mm: [f64; 3]) -> KwaversResult<IndexBounds3> {
@@ -57,10 +92,22 @@ fn path_cube_bbox(
     target: &Array3<bool>,
     aperture_skin_index: Option<[f64; 3]>,
     spacing_mm: [f64; 3],
+    treatment_window_radius_m: f64,
 ) -> KwaversResult<IndexBounds3> {
     let focus = centroid_float(target, None).ok_or_else(|| {
         KwaversError::InvalidInput("abdominal nonlinear target mask is empty".to_owned())
     })?;
+    let target_bounds = mask_bounds(target)?;
+    if treatment_window_radius_m > 0.0 {
+        let target_radius_m = max_distance_to_bbox(focus, target_bounds, spacing_mm);
+        let radius_m = treatment_window_radius_m.max(target_radius_m + TARGET_TO_WINDOW_MARGIN_M);
+        return Ok(cube_from_center_radius(
+            body.dim(),
+            focus,
+            radius_m,
+            spacing_mm,
+        ));
+    }
     let skin = aperture_skin_index.ok_or_else(|| {
         KwaversError::InvalidInput("abdominal aperture skin index is required".to_owned())
     })?;
@@ -69,7 +116,6 @@ fn path_cube_bbox(
         0.5 * (focus[1] + skin[1]),
         0.5 * (focus[2] + skin[2]),
     ];
-    let target_bounds = mask_bounds(target)?;
     let target_radius_m = max_distance_to_bbox(center, target_bounds, spacing_mm);
     let skin_distance_m = physical_distance(focus, skin, spacing_mm);
     let radius_m = target_radius_m.max(0.55 * skin_distance_m) + 0.025;

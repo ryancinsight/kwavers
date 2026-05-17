@@ -39,10 +39,17 @@ pub(super) fn masks(
     label: &Array3<i16>,
     spacing_m: f64,
     target_fraction_xyz: Option<[f64; 3]>,
+    target_center_index: Option<[f64; 3]>,
 ) -> KwaversResult<(Array3<bool>, Array3<bool>)> {
     let body = body_mask_full(anatomy, ct, Some(label));
     let target = match anatomy {
-        AnatomyKind::Brain => synthetic_brain_target(ct, &body, spacing_m, target_fraction_xyz)?,
+        AnatomyKind::Brain => synthetic_brain_target(
+            ct,
+            &body,
+            spacing_m,
+            target_fraction_xyz,
+            target_center_index,
+        )?,
         AnatomyKind::Liver | AnatomyKind::Kidney => label.mapv(|value| value == 2),
     };
     let body_count = body.iter().filter(|active| **active).count();
@@ -60,6 +67,7 @@ fn synthetic_brain_target(
     body: &Array3<bool>,
     spacing_m: f64,
     target_fraction_xyz: Option<[f64; 3]>,
+    target_center_index: Option<[f64; 3]>,
 ) -> KwaversResult<Array3<bool>> {
     let n = body.dim().0;
     let brain_support = Array3::from_shape_fn(body.dim(), |idx| body[idx] && ct[idx] < 300.0);
@@ -68,7 +76,9 @@ fn synthetic_brain_target(
     } else {
         body
     };
-    let center = if let Some(fraction) = target_fraction_xyz {
+    let center = if let Some(center) = target_center_index {
+        center
+    } else if let Some(fraction) = target_fraction_xyz {
         let index = target_index_from_mask_fraction_3d(support, fraction)?;
         [index[0] as f64, index[1] as f64, index[2] as f64]
     } else {

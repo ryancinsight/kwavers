@@ -11,7 +11,7 @@ use super::encoding::SourceEncoding;
 use super::stencil::sponge;
 use super::types::{flat_index, Nonlinear3dAperture, Nonlinear3dConfig};
 
-use source::{build_source_plan, inject_sources, DriveContext};
+use source::{build_source_plan, inject_sources, source_cells, DriveContext};
 use stencil::{record_receivers, update_cells, update_peak, UpdateCells};
 
 #[derive(Clone, Debug)]
@@ -101,8 +101,8 @@ pub(super) fn forward_with_schedule(input: ForwardInput<'_>) -> ForwardResult {
         input.encoding,
     );
     let mut source_mask = vec![false; cells];
-    for cell in &source_plan.source_cells {
-        source_mask[*cell] = true;
+    for cell in source_cells(&source_plan) {
+        source_mask[cell] = true;
     }
     let receiver_cells = input
         .aperture

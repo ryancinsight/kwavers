@@ -59,6 +59,9 @@ pub fn run_theranostic_nonlinear_3d(
     let aperture = build_aperture(&volume, config)?;
     let fwi = run_fwi(&volume, &aperture, config);
     let cavitation = run_cavitation_inverse(&volume, &aperture, &fwi.peak_pressure_pa, config);
+    let wavelength_min_m = minimum_wavelength_m(&volume.true_sound_speed_m_s, config.frequency_hz);
+    let points_per_wavelength_min = wavelength_min_m / volume.spacing_m;
+    let resolution_meets_min_ppw = points_per_wavelength_min >= config.min_points_per_wavelength;
     let fusion_score = fused_score(
         &fwi.multiparameter_fwi_score,
         &cavitation.reconstructed_density,
@@ -96,6 +99,10 @@ pub fn run_theranostic_nonlinear_3d(
         source_dimensions: volume.source_dimensions,
         source_spacing_m: volume.source_spacing_m,
         crop_bounds_index: volume.crop_bounds_index,
+        treatment_window_radius_m: config.treatment_window_radius_m,
+        wavelength_min_m,
+        points_per_wavelength_min,
+        resolution_meets_min_ppw,
         dt_s: fwi.dt_s,
         time_steps: fwi.time_steps,
         active_voxels,
@@ -110,6 +117,19 @@ pub fn run_theranostic_nonlinear_3d(
         uses_nonlinear_wave_propagation: true,
         uses_rayleigh_plesset: true,
     })
+}
+
+fn minimum_wavelength_m(sound_speed_m_s: &Array3<f64>, frequency_hz: f64) -> f64 {
+    let min_speed = sound_speed_m_s
+        .iter()
+        .copied()
+        .filter(|value| value.is_finite() && *value > 0.0)
+        .fold(f64::INFINITY, f64::min);
+    if min_speed.is_finite() && frequency_hz > 0.0 {
+        min_speed / frequency_hz
+    } else {
+        0.0
+    }
 }
 
 #[cfg(test)]

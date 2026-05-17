@@ -33,6 +33,13 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
     assert!(result.uses_nonlinear_wave_propagation);
     assert!(result.uses_rayleigh_plesset);
     assert_eq!(result.ct_hu.dim(), (12, 12, 12));
+    assert!((result.treatment_window_radius_m - config.treatment_window_radius_m).abs() < 1.0e-12);
+    assert!(result.wavelength_min_m > 0.0);
+    assert!(result.points_per_wavelength_min > 0.0);
+    assert_eq!(
+        result.resolution_meets_min_ppw,
+        result.points_per_wavelength_min >= config.min_points_per_wavelength
+    );
     assert!(result.active_voxels > 32);
     assert!(result.target_mask.iter().filter(|active| **active).count() >= 2);
     assert!(
