@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+### Added
+
+- [patch] `physics::book::rtm`: add `backprop_green_function_3d` (3-D spherical
+  1/(4πr) amplitude law), `rtm_source_normalized_condition` (Guitton 2007
+  source-amplitude-free imaging condition for skull shadow zones), and
+  `rtm_aperture_weighted_fusion` (per-element solid-angle/transmission-weighted
+  migration fusion). Eight new value-semantic tests covering exact amplitude
+  ratios, shadow-zone bias removal, equal-weight equivalence, and zero-weight
+  fallback. Applies to 1024-element transcranial RTM brain imaging.
+
+- [patch] `physics::book::cavitation`: add `mechanical_index` (FDA MI = |P−| [MPa]
+  / √f [MHz]; Apfel & Holland 1991), `inertial_cavitation_dose` (collapse-event
+  weighted sum (R_max/R₀)³; Duryea et al. 2015), `histotripsy_lesion_radius_m`
+  (energy-balance Rayleigh-collapse model R_L = R₀·(P₀·ICD/σ_y)^(1/3); Maxwell
+  et al. 2011, Vlaisavljevich et al. 2015), and `period_doubling_ratio`
+  (subharmonic S(f₀/2)/S(f₀) via ±1-bin spectral integration; Cramer et al. 2021).
+  Fix dead-code double-assignment in `bubble_power_spectrum`. Seven new
+  value-semantic tests including zero-ICD guard, strong-drive collapse detection,
+  cube-root ICD scaling, and spectral ratio monotonicity.
+
+- [patch] `nonlinear3d::aperture`: replace azimuth-only `sort_by_spherical_angle`
+  + 1-D stride `select_evenly` in `brain_candidates` with Fibonacci golden-angle
+  sphere lattice (`fibonacci_sphere_select`). Theorem: golden angle φ_g ≈ 2.400
+  rad minimises maximum nearest-neighbour angular gap over N points on a sphere
+  (Álvarez 2001). For 1024 elements this reduces coherent grating lobes in RTM/FWI
+  reconstructions vs the prior azimuth-sorted stride. Calvarium HU threshold
+  relaxed from 250 to 200 to include cancellous bone.
+
+- [patch] `synthetic::brain`: add stratified brain anatomy — gray matter cortex
+  (HU 37, r_inner > 0.92), white matter (HU 28, interior), CSF lateral ventricles
+  (HU 10, bilateral ellipsoidal), thalamic nuclei (HU 38, bilateral deep-brain
+  histotripsy target at stereotaxic centre). Replaces single-HU brain interior with
+  a five-class tissue model that correctly represents c and α variations relevant
+  to transcranial wave propagation and RTM imaging.
+
 ### Changed
 
 - [patch] Ch27 (seismic_fwi_brain_imaging): add Theorem 27.1 Born Linearity with
@@ -52,6 +87,24 @@
   brain cap aperture to the requested element count when skull-labeled grid
   cells are sparse, and uses histotripsy-scale drive for all three Chapter 29
   targets.
+
+- [patch] Refined the Chapter 29 passive cavitation inverse and controlled
+  diagnostics: the passive subharmonic Green inverse now solves only over the
+  MI-gated Rayleigh-Plesset source support, handles empty source support
+  explicitly, and removes an unused nonlinear aperture helper. The controlled
+  comparison now archives the projected `nonlinear_cavitation_source` field and
+  records hotspot distance-to-target plus source-to-reconstruction metrics.
+  Regenerated metrics show mean common-grid nonlinear fusion Dice `0.565` vs
+  linear `0.331`, while mean MI-gated source outside-target energy `0.949`
+  localizes the remaining cavitation failure before passive inversion.
+
+- [patch] Updated Chapter 29 Figure 6 to match the Figure 2/Figure 5 context
+  layout: the controlled comparison now renders every row in the full-resolution
+  CT placement frame, including target/body contours, therapy tx/rx elements,
+  central imaging receivers, focus, and skin-contact marker. The compressed
+  controlled field archive now stores `ct_frame_*` display fields, so linear
+  and nonlinear reconstructions share the same CT pixel grid instead of a
+  smaller nonlinear subsection.
 
 - [patch] Added `CANONICAL_BRAIN_SCENE` as the CT-aligned source of truth for
   the Chapter 25 brain target and transducer pose. Figure 2 phase correction,

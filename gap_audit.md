@@ -25,10 +25,14 @@
   projected aperture mismatch. The follow-on correction changes the nonlinear
   histotripsy path from diagnostic-like response to MI-gated inertial
   cavitation, preserves per-element source drive before calibration, reports
-  actual aperture counts, and expands the brain cap aperture to the requested
-  grid-supported element count. Regenerated controlled metrics show nonlinear
-  fusion improves over the reduced linear path, while passive cavitation still
-  fails lesion Dice because the pressure/cavitation source remains off target.
+  actual aperture counts, expands the brain cap aperture to the requested
+  grid-supported element count, and constrains passive cavitation inversion to
+  the MI-gated Rayleigh-Plesset source support. The controlled Figure 6 artifact
+  now renders every comparison field on the same full-resolution CT/transducer
+  placement grid as Figure 2 and Figure 5. Regenerated controlled metrics show
+  nonlinear fusion improves over the reduced linear path, while passive
+  cavitation still fails lesion Dice because the MI-gated source support remains
+  off target before passive inversion.
 - Closed the CT-aligned brain pose/target drift gap: `CANONICAL_BRAIN_SCENE`
   now stores the VIM-like target fraction and Insightec-like transducer pose
   once, and the Chapter 25 figure workflow, Chapter 29 Figure 5 brain
@@ -137,6 +141,38 @@
 - The ultrasound physics book no longer has only therapy, diagnostics, and theranostics chapters; `docs/book/` now has 20 domain chapters with reproducible SVG figures and module-linked validation contracts.
 - Chapter 29 no longer renders same-device therapy/imaging platforms without CT-relative placement evidence. The active theranostic Rust module exports aperture-body clearance and skin-contact distance metrics for INSIGHTEC-like helmet and HistoSonics-like abdominal layouts; the PyO3 wrapper serializes those metrics; the figure script expands axes to include the complete aperture; tests assert nonzero helmet clearance and millimeter-scale abdominal skin coupling.
 - MATLAB-free external benchmarking is now available through `external/k-wave-julia/benchmarks/kwavers`: KWave.jl provides native 1-D, 2-D, and 3-D reference traces, pykwavers runs matching active grids with singleton inactive axes for lower-dimensional cases, and the generated artifacts record solver time plus correlation, relative L2, max absolute difference, peak-ratio metrics, one-sample IVP timing alignment, sensor/PML placement, acceptance status, aligned pressure traces, residuals, scatter comparison, per-dimension timing plots, and aggregate dimension-sweep plots.
+
+## Resolved Since Last Audit (2026-05-16)
+
+- Closed the RTM 2-D-only physics gap in `physics::book::rtm`: added 3-D spherical
+  Green's function `backprop_green_function_3d` (1/(4πr) amplitude, critical for
+  correct migration weighting in 3-D transcranial RTM), source-normalised imaging
+  condition `rtm_source_normalized_condition` (Guitton 2007: divides by forward
+  field energy, removes skull-reflection amplitude bias vs plain cross-correlation),
+  and `rtm_aperture_weighted_fusion` (per-element transmission-weighted fusion).
+  All 8 new value-semantic tests pass.
+
+- Closed the histotripsy lesion reconstruction analytics gap in
+  `physics::book::cavitation`: added `mechanical_index` (FDA gating for cavitation
+  nucleation), `inertial_cavitation_dose` (collapse-event Σ(R_max/R₀)³ dose
+  metric), `histotripsy_lesion_radius_m` (energy-balance model R_L = R₀·(P₀·ICD/σ_y)^(1/3)
+  from Rayleigh collapse PdV work), and `period_doubling_ratio` (subharmonic
+  spectral ratio for passive cavitation monitoring). Fixed dead-code double
+  assignment in `bubble_power_spectrum`. All 7 new tests pass.
+
+- Closed the 1024-element helmet aperture uniformity gap in
+  `nonlinear3d::aperture::brain_candidates`: replaced azimuth-only sort + 1-D
+  stride selection with Fibonacci golden-angle sphere lattice
+  `fibonacci_sphere_select`. Theorem: golden angle minimises max nearest-neighbour
+  gap (Álvarez 2001); for 1024 elements this eliminates the prior azimuthal
+  clustering that created grating lobes in RTM. Calvarium HU threshold lowered
+  from 250 → 200 to include cancellous bone elements.
+
+- Closed the synthetic brain phantom single-tissue gap in
+  `synthetic::brain`: replaced uniform HU_BRAIN with five-class anatomy —
+  gray matter cortex (HU 37), white matter (HU 28), CSF lateral ventricles
+  (HU 10), thalamic nuclei (HU 38, stereotaxic histotripsy target). This enables
+  correct sound-speed and attenuation variation for transcranial RTM/FWI validation.
 
 ## Residual Risks (2026-04-27)
 - Full `kwavers` library tests pass, but `solver::forward::nonlinear::kzk::solver::tests::test_conservation_diagnostics_disable` exceeds the 60-second progress threshold. The next increment should profile the production KZK path and optimize it without reducing test coverage.

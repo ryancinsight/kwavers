@@ -267,14 +267,17 @@ asserts the forward physics is sign-correct.
 
 ### Algorithm: Rayleigh-Plesset Cavitation Inverse
 
-For each active voxel, the nonlinear branch integrates the incompressible
-Rayleigh-Plesset ODE with the local Westervelt peak pressure as the acoustic
-forcing amplitude. The voxel source density is the maximum period-doubled
-radius response, so the passive source depends on bubble dynamics rather than
-on a hand-labeled lesion mask. A subharmonic Green operator maps that source to
-the same receiver aperture, and the inverse solves a nonnegative Tikhonov
-problem by projected gradient descent with a step bounded by the operator
-Frobenius norm.
+For each body voxel, the nonlinear branch first evaluates the FDA mechanical
+index `MI = |P-|[MPa] / sqrt(f0[MHz])`. Voxels below the configured inertial
+cavitation threshold are assigned zero source density. Voxels above that gate
+integrate the incompressible Rayleigh-Plesset ODE with the local Westervelt
+peak pressure as the acoustic forcing amplitude. The voxel source density is
+the maximum period-doubled radius response, so the passive source depends on
+bubble dynamics rather than on a hand-labeled lesion mask. A subharmonic Green
+operator maps that source to the same receiver aperture, and the inverse solves
+a nonnegative Tikhonov problem over the MI-gated Rayleigh-Plesset source support
+by projected gradient descent with a step bounded by the operator Frobenius
+norm.
 
 The subharmonic Green operator is now **heterogeneous** and **path-integrated**.
 The kwavers `Nonlinear3dVolume` carries a per-voxel `attenuation_np_per_m_mhz`
@@ -334,17 +337,18 @@ dimensionless period-doubling amplitude:
 ```
 
 which is `≈ 0` for stable bubbles, large (O(1)) for inertially collapsing
-bubbles, and intermediate for subharmonic-emitting bubbles.  This distinguishes
+bubbles, and intermediate for subharmonic-emitting bubbles.  The implementation
+uses the mechanical-index gate to restrict the source domain to inertial
+cavitation candidates, then uses this period-doubling observable to distinguish
 the passive subharmonic emission source (Dirichlet cavitation indicator) from
-stable liner oscillation without requiring a threshold pressure or a
-classification network.
+stable linear oscillation without using lesion labels or a learned classifier.
 
 The kwavers implementation stores one drive-period ring buffer of radius samples
 (O(f₀/f_sample) samples), algebraically equivalent to retaining the full radius
 history for this scalar because the recurrence reads only the sample one period
 behind the current RK4 state. The passive simulated data is generated from the
-active-voxel source vector used by the Green-operator columns, so the receiver
-data and inverse model share the same active-support indexing.
+same MI-gated source-support vector used by the Green-operator columns, so the
+receiver data and inverse model share the same physically admissible support.
 
 ### Theorem: Positive Normal Operator
 
@@ -590,25 +594,35 @@ deterministic row encoding.
 Figure 6 adds the controlled Figure 2/Figure 5 comparison path. It runs a
 matched linear case with the nonlinear grid size, element count, drive
 frequency, and source pressure, then evaluates the linear fields and nonlinear
-3-D slab fields on the same nonlinear crop projection. The target overlay and
-therapy aperture overlay are fixed to that common frame; the metrics record
-the remaining projected 2-D-vs-3-D aperture residual from the source wrappers.
+3-D slab fields on the same nonlinear crop projection for metrics. For display,
+every Figure 6 panel is embedded in the full-resolution CT placement grid used
+by the far-left CT panel. That CT-frame view includes target/body contours,
+therapy tx/rx elements, central imaging receivers, focus, and skin-contact
+marker, and the reconstruction panels use the same CT extent and pixel grid
+instead of a smaller nonlinear subsection. The metrics record the remaining
+projected 2-D-vs-3-D aperture residual from the source wrappers.
 The 2026-05-16 post-alignment run gives mean common-grid linear-fusion Dice
-`0.331`, nonlinear-fusion Dice `0.665`, and nonlinear peak-pressure
-outside-target energy fraction `0.964`. Per-case nonlinear outside-target
-peak-pressure energy fractions are `0.951` for brain, `0.965` for kidney, and
-`0.976` for liver. The residual projected aperture distances from the original
-Figure 2 linear layout to the Figure 5 3-D aperture are `45.91 mm`, `105.36 mm`,
-and `35.57 mm`. The nonlinear FWI objectives decrease for brain
-`0.7072 -> 0.0541`, kidney `0.8344 -> 0.3427`, and liver
-`8.1186e-6 -> 5.2076e-6`, so the nonlinear inverse is not stalled. The common-
-grid comparison rejects display resolution as the primary failure mode. After
-correcting the source weighting, using histotripsy-scale brain drive, and
-expanding the brain aperture to the requested element count, nonlinear fusion
-is stronger than the reduced linear fusion on this common frame. The remaining
-defect is cavitation specificity: the passive cavitation reconstruction still
-has zero equal-area Dice in all three cases because the 3-D Westervelt pressure
-and Rayleigh-Plesset source remain dominated by off-target energy.
+`0.331`, nonlinear-fusion Dice `0.565`, nonlinear peak-pressure outside-target
+energy fraction `0.965`, and MI-gated Rayleigh-Plesset source outside-target
+energy fraction `0.949`. Per-case nonlinear outside-target peak-pressure energy
+fractions are `0.954` for brain, `0.965` for kidney, and `0.976` for liver;
+per-case outside-target source energy fractions are `1.000`, `0.878`, and
+`0.969`. The residual projected aperture distances from the original Figure 2
+linear layout to the Figure 5 3-D aperture are `45.66 mm`, `105.36 mm`, and
+`35.57 mm`. The nonlinear FWI objectives decrease for brain
+`0.5239 -> 0.0632`, kidney `0.8344 -> 0.3427`, and liver
+`8.1186e-6 -> 5.2076e-6`, so the nonlinear inverse is not stalled. The field
+archive now includes `nonlinear_cavitation_source` projections, hotspot
+distance-to-target metrics, and `ct_frame_*` full-resolution display fields.
+The common-grid comparison rejects display
+resolution as the primary failure mode. After correcting the source weighting,
+using histotripsy-scale drive, expanding the brain aperture to the requested
+element count, and constraining the passive inverse to the MI-gated source
+support, nonlinear fusion remains stronger than the reduced linear fusion on
+average. The remaining defect is upstream cavitation specificity: passive
+cavitation equal-area Dice is still zero in all three cases because the
+Westervelt peak-pressure field drives the Rayleigh-Plesset source support
+outside the lesion before passive inversion.
 
 ### Acoustic Scalar Model
 

@@ -27,9 +27,13 @@
   the nonlinear pressure outside-target energy plus residual projected aperture
   distance. The follow-on histotripsy correction gates Rayleigh-Plesset
   cavitation by mechanical index, preserves calibrated per-element source
-  weights, expands the brain cap aperture to the requested element count, and
-  shows nonlinear fusion now exceeds the reduced linear fusion while passive
-  cavitation remains dominated by off-target pressure energy.
+  weights, expands the brain cap aperture to the requested element count,
+  constrains passive cavitation inversion to the MI-gated source support, and
+  records source-support hotspot metrics. Figure 6 now renders every comparison
+  panel on the full-resolution CT/transducer placement grid used by Figure
+  2/Figure 5. Nonlinear fusion still exceeds the reduced linear fusion on
+  average, while passive cavitation remains dominated by off-target MI-gated
+  Rayleigh-Plesset source energy.
 - Closed five KWave.jl parity gaps (physics with no equivalent in `external/k-wave-python/examples/`) via `pykwavers/examples/{diff_bioheat_1d,ewp_elastic_2d,pr_time_reversal_2d,us_phased_array_3d,us_beamforming_2d}_jl_compare.py` paired with `run_kwave_julia_*.jl` drivers and a `_run_julia_parity_sweep.py` harness; bioheat 1D / TR 2D / phased-array 3D / beamforming 2D land PASS. The elastic 2D pair lands as a diagnostic that surfaces a pre-existing pykwavers `SolverType.Elastic` source-scaling regression (also breaks the historical `external/elastic_julia_parity/compare_elastic.py` matched-mode peak ratios — separate fix required).
 - Closed the vendored `k-wave-python` 2-D FFT line-sensor parity gap in `pykwavers` via native `kspace_line_recon`, the non-square 2-D FFT axis fix, and Python binding export.
 - Closed the vendored `k-wave-python` 3-D planar-sensor time-reversal parity gap in `pykwavers` by caching the reconstructed fields and preserving the exact forward pressure/sensor ordering contract.
