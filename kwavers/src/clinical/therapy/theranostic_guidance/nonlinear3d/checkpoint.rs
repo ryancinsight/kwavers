@@ -188,7 +188,6 @@ impl HistorySegment {
             self.state(step - 1)
         }
     }
-
 }
 
 impl HistoryReplayWorkspace {

@@ -62,7 +62,7 @@ fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign()
 
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Liver);
     config.frequency_hz = 1.0e6;
-    config.source_pressure_pa = 5.0e6;
+    config.source_pressure_pa = 20.0e6;
     config.cycles = 12.0;
     config.cfl = 0.4;
     let dt = config.cfl * spacing_m / (c0 * 3.0_f64.sqrt());

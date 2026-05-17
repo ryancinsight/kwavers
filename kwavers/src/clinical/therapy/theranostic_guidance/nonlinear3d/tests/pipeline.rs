@@ -14,7 +14,7 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
     config.source_encoding_count = 2;
     config.iterations = 1;
     config.frequency_hz = 300_000.0;
-    config.source_pressure_pa = 2.0e6;
+    config.source_pressure_pa = 28.0e6;
     config.cycles = 2.0;
     config.bubble_time_steps_per_period = 24;
     config.cavitation_iterations = 6;
@@ -51,12 +51,18 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
             >= result.target_mask.iter().filter(|active| **active).count()
     );
     assert!(
-        result
-            .westervelt_peak_pressure_pa
-            .iter()
-            .copied()
-            .fold(0.0, f64::max)
-            > 0.0
+        result.source_scale.is_finite() && result.source_scale > 0.0 && result.source_scale <= 1.0,
+        "calibrated source scale must be finite and non-amplifying; got {}",
+        result.source_scale,
+    );
+    let peak_pressure = result
+        .westervelt_peak_pressure_pa
+        .iter()
+        .copied()
+        .fold(0.0, f64::max);
+    assert!(
+        peak_pressure.is_finite() && peak_pressure > 0.0 && peak_pressure < 1.0e9,
+        "histotripsy Westervelt peak must be finite and below the soft-tissue bulk-modulus scale; got {peak_pressure:.3e} Pa"
     );
     assert!(
         result
@@ -125,8 +131,7 @@ fn nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_through_skull() {
     config.source_encoding_count = 2;
     config.iterations = 1;
     config.frequency_hz = 650_000.0; // INSIGHTEC-like
-    config.source_pressure_pa =
-        2.0 * config.inertial_mi_threshold * (config.frequency_hz * 1.0e-6).sqrt() * 1.0e6;
+    config.source_pressure_pa = 28.0e6;
     config.cycles = 2.0;
     config.bubble_time_steps_per_period = 24;
     config.cavitation_iterations = 6;
@@ -161,13 +166,18 @@ fn nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_through_skull() {
     // Westervelt peak pressure must be positive somewhere inside the
     // skull-bounded support.
     assert!(
-        result
-            .westervelt_peak_pressure_pa
-            .iter()
-            .copied()
-            .fold(0.0, f64::max)
-            > 0.0,
-        "Westervelt peak pressure must be positive after the source-encoded transmissions",
+        result.source_scale.is_finite() && result.source_scale > 0.0 && result.source_scale <= 1.0,
+        "calibrated source scale must be finite and non-amplifying; got {}",
+        result.source_scale,
+    );
+    let peak_pressure = result
+        .westervelt_peak_pressure_pa
+        .iter()
+        .copied()
+        .fold(0.0, f64::max);
+    assert!(
+        peak_pressure.is_finite() && peak_pressure > 0.0 && peak_pressure < 1.0e9,
+        "Westervelt peak pressure must be finite after source-encoded transmissions; got {peak_pressure:.3e} Pa",
     );
     // Cavitation source density must be positive when the configured
     // histotripsy drive exceeds the inertial-cavitation MI threshold.
@@ -179,18 +189,8 @@ fn nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_through_skull() {
             .fold(0.0, f64::max)
             > 0.0,
         "cavitation source density must respond to the simulated peak pressure; peak_pressure_pa={}, peak_mi={}",
-        result
-            .westervelt_peak_pressure_pa
-            .iter()
-            .copied()
-            .fold(0.0, f64::max),
-        result
-            .westervelt_peak_pressure_pa
-            .iter()
-            .copied()
-            .fold(0.0, f64::max)
-            * 1.0e-6
-            / (config.frequency_hz * 1.0e-6).sqrt(),
+        peak_pressure,
+        peak_pressure * 1.0e-6 / (config.frequency_hz * 1.0e-6).sqrt(),
     );
     assert!(result.fwi_objective_history.iter().all(|v| v.is_finite()));
     assert!(
