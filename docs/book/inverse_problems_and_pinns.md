@@ -121,7 +121,7 @@ $\omega = c_0 k$, the right-hand side becomes $-\omega^2 \cdot 2\delta c/c_0^3 \
 
 Using the free-space Green's function $G(\mathbf{r},\mathbf{r}') = e^{ik|\mathbf{r}-\mathbf{r}'|}/(4\pi|\mathbf{r}-\mathbf{r}'|)$,
 
-$$\boxed{p_{\text{sc}}(\mathbf{r}, \omega) \approx \frac{\omega^2}{c_0^2}\int_\Omega \frac{\delta c(\mathbf{r}')}{c_0} G(\mathbf{r},\mathbf{r}') p_{\text{inc}}(\mathbf{r}') \, dV'}$$
+$$\boxed{p_{\text{sc}}(\mathbf{r}, \omega) \approx \frac{\omega^2}{c_0^2}\int_\Omega \frac{2\delta c(\mathbf{r}')}{c_0} G(\mathbf{r},\mathbf{r}') p_{\text{inc}}(\mathbf{r}') \, dV'}$$
 
 **Validity condition:** The Born approximation requires $k|\delta c|L/c_0 \ll 1$ where $L$ is the size
 of the scattering region. For 1 MHz ultrasound ($k \approx 420$ rad/m) and a 10 mm inclusion with
