@@ -16,6 +16,7 @@ from ch29_controlled_placement import (
     placement_fields,
     plot_placement_context,
 )
+from ch29_pressure_diagnostics import pressure_field_diagnostics
 
 COMPARISON_FIGURE_NAME = "fig06_controlled_linear_nonlinear_comparison.png"
 COMPARISON_METRICS_NAME = "controlled_comparison_metrics.json"
@@ -216,6 +217,9 @@ def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) ->
     common_shape = common_target.shape
     linear_extent = _linear_extent(linear)
 
+    raw_pressure_projection = _slab_projection(
+        np.asarray(nonlinear["westervelt_peak_pressure_pa"], dtype=float), slab, mode="max"
+    )
     fields = {
         **placement_fields(linear),
         "common_target": common_target,
@@ -234,9 +238,7 @@ def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) ->
             common_shape,
             common_extent,
         ),
-        "nonlinear_pressure": _normalize01(
-            _slab_projection(np.asarray(nonlinear["westervelt_peak_pressure_pa"], dtype=float), slab, mode="max")
-        ),
+        "nonlinear_pressure": _normalize01(raw_pressure_projection),
         "nonlinear_fwi": _slab_projection(
             np.asarray(nonlinear["multiparameter_fwi_score"], dtype=float), slab, mode="max"
         ),
@@ -254,11 +256,22 @@ def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) ->
     fields["fusion_difference"] = fields["nonlinear_fusion"] - fields["linear_fusion"]
     add_ct_frame_fields(fields, common_extent)
 
+    pressure_metrics = _field_metrics(fields["nonlinear_pressure"], common_target)
+    pressure_metrics.update(
+        pressure_field_diagnostics(
+            raw_pressure_projection,
+            common_target,
+            frequency_hz=float(nonlinear.get("frequency_hz", 1.0e6)),
+            source_pressure_pa=float(nonlinear.get("source_pressure_pa", 0.0)),
+            source_scale=float(nonlinear.get("source_scale", 1.0)),
+            inertial_mi_threshold=float(nonlinear.get("inertial_mi_threshold", 1.9)),
+        )
+    )
     metrics = {
         "linear_exposure": _field_metrics(fields["linear_exposure"], common_target),
         "linear_active": _field_metrics(fields["linear_active"], common_target),
         "linear_fusion": _field_metrics(fields["linear_fusion"], common_target),
-        "nonlinear_pressure": _field_metrics(fields["nonlinear_pressure"], common_target),
+        "nonlinear_pressure": pressure_metrics,
         "nonlinear_fwi": _field_metrics(fields["nonlinear_fwi"], common_target),
         "nonlinear_cavitation_source": _field_metrics(fields["nonlinear_cavitation_source"], common_target),
         "nonlinear_cavitation": _field_metrics(fields["nonlinear_cavitation"], common_target),

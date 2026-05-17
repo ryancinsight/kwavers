@@ -26,6 +26,7 @@ from ch29_controlled_comparison import (
     write_controlled_comparison_fields,
     write_controlled_comparison_metrics,
 )
+from ch29_pressure_diagnostics import pressure_diagnostics
 
 
 BOOK_DIR = Path(__file__).resolve().parent
@@ -1108,6 +1109,8 @@ def write_metrics(
                 "checkpoint_interval_steps": int(result["checkpoint_interval_steps"]),
                 "frequency_hz": float(result["frequency_hz"]),
                 "source_pressure_pa": float(result["source_pressure_pa"]),
+                "source_scale": float(result.get("source_scale", 1.0)),
+                "pressure_diagnostics": pressure_diagnostics(result),
                 "inertial_mi_threshold": float(result.get("inertial_mi_threshold", INERTIAL_MI_THRESHOLD)),
                 "bubble_time_steps_per_period": int(
                     result.get(
