@@ -189,14 +189,6 @@ impl HistorySegment {
         }
     }
 
-    #[must_use]
-    pub(super) fn older_for_step(&self, step: usize) -> &[f64] {
-        match step.checked_sub(self.start_step) {
-            Some(0) => &self.older_at_start,
-            Some(1) => &self.previous_at_start,
-            _ => self.state(step - 2),
-        }
-    }
 }
 
 impl HistoryReplayWorkspace {
