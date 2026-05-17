@@ -2,6 +2,80 @@
 
 ## Unreleased
 
+### Added (2026-05-17) — Book Physics Structural Splits
+
+- [patch] `physics::book::wave` directory split: replace monolithic `wave.rs` (641 lines) with
+  `wave/{mod,bessel,dispersion,linear,nonlinear,tests}`. `bessel.rs` (120 lines) — `bessel_j0`,
+  `bessel_j1_clean`, `bessel_jn` (Miller downward recurrence, two-buffer normalisation),
+  `pub(crate) jn`; `dispersion.rs` (84 lines) — CFL, phase-error, k-space correction functions;
+  `linear.rs` (118 lines) — plane-wave, spherical-wave, reflection/transmission, attenuation
+  functions; `nonlinear.rs` (110 lines) — Fubini harmonic series, Westervelt harmonic evolution,
+  shock-formation distance; `mod.rs` (27 lines) — re-exports; `tests.rs` (57 lines) — all wave tests.
+  Dead code removed: `bessel_j1` (double-sign error in negative-x path) and `bessel_j1_n`
+  (normalisation bookkeeping bug, marked "not quite right" in original) both eliminated.
+  `fubini_harmonic_amplitude` now routes exclusively through the clean `jn` Miller-recurrence
+  driver, activating the correct two-buffer normalisation path.
+
+- [patch] `physics::book::cavitation` directory split: replace monolithic `cavitation.rs`
+  (586 lines) with `cavitation/{mod,dynamics,histotripsy,power_spectrum,tests}`.
+  `dynamics.rs` (218 lines) — Minnaert resonance, Blake threshold, Rayleigh collapse time,
+  Rayleigh-Plesset and Keller-Miksis RK4 integrators; `histotripsy.rs` (85 lines) —
+  `mechanical_index`, `inertial_cavitation_dose`, `histotripsy_lesion_radius_m`;
+  `power_spectrum.rs` (88 lines) — `bubble_power_spectrum` (O(N²) DFT), `period_doubling_ratio`;
+  `mod.rs` (18 lines) — re-exports; `tests.rs` (142 lines) — all 12 cavitation tests.
+
+- [patch] `physics::book::rtm` directory split: replace monolithic `rtm.rs` (526 lines) with
+  `rtm/{mod,backprop,beam,condition,temporal,tests}`. `backprop.rs` (91 lines) — 2-D and 3-D
+  Green's function back-propagators; `beam.rs` (67 lines) — Gaussian beam with skull transmission
+  and standing-wave factor; `condition.rs` (142 lines) — Claerbout cross-correlation, multi-frequency
+  fusion, Guitton source-normalized condition, aperture-weighted fusion; `temporal.rs` (41 lines) —
+  modulation frequencies and suppression gain; `mod.rs` (21 lines) — re-exports; `tests.rs`
+  (135 lines) — all 13 RTM tests.
+
+### Fixed (2026-05-17) — Book Physics and Test Correctness
+
+- [patch] `physics::book::wave::nonlinear::fubini_harmonic_amplitude`: eliminate dead
+  `bessel_j1_n` call (known-buggy normalisation); route through `jn` (Miller two-buffer
+  recurrence). Fixes silent incorrect Bessel output for harmonic orders n ≥ 2.
+
+- [patch] `solver::forward::nonlinear::westervelt::tests::absorption_causes_amplitude_decay_not_growth`:
+  replace inaccessible direct field assignment `medium.absorption = 5.0` with public setter
+  `medium.set_acoustic_properties(5.0, 1.0, medium.nonlinearity).unwrap()`.
+
+- [patch] `physics::book::imaging::compounding_narrower_than_single`: fix assertion from
+  `psf4[0] > psf1[0]` (wrong direction) to `psf4[0] < psf1[0]`. Plane-wave compounding
+  narrows the PSF: eff_width_4 = 0.886·F#·λ/√4 = 0.665 mm; sinc²(u₄) ≈ 0.088 < sinc²(u₁) ≈ 0.613
+  at x = 0.5 mm.
+
+### Added (2026-05-17) — Image Reconstruction Optimization
+
+- [patch] `solver::inverse::seismic::brain_helmet::volume_born::pcg`:
+  replace `smooth_active_values_3d` 3-D neighbourhood scan (O(N·(2r+1)³)) with
+  three separable 1-D prefix-sum box-filter passes (O(N + 6·NX·NY·NZ)).  The
+  Z-axis pass uses Rayon `par_chunks_mut` for cache-friendly parallelism.  For
+  r=2 on a 56³ active region the inner-loop work falls ~12×.  A parallel
+  indicator array preserves the existing semantics: only active-voxel values
+  contribute to each neighbourhood average.  Removed the `ndarray::Array3`
+  index table that required O(NX·NY·NZ) initialisation.
+
+- [patch] `math::linear_algebra::iterative::lsqr::matfree`: new module adding
+  `MatFreeOperator` trait (`rows`, `cols`, `matvec`, `t_matvec`) and
+  `solve_lsqr_matfree` — damped LSQR (Paige & Saunders 1982) over any
+  operator implementing the trait.  Uses only `Vec<f64>` scratch buffers (no
+  ndarray); carries `objective_history` (0.5·φ̄² per iteration) for convergence
+  monitoring.
+
+- [patch] `clinical::imaging::reconstruction::sound_speed_shift`: add
+  `ShiftPrior::Lsqr { damping: f64 }` as a third solver option alongside Dense
+  (PCG) and Sparse (ISTA).  The new `solver::lsqr::solve_shift_lsqr` wraps
+  `SoundSpeedShiftOperator` via `ShiftOperatorAdapter: MatFreeOperator` and
+  calls `solve_lsqr_matfree`.  All match arms on `ShiftPrior` updated; `Eq`
+  derive removed from `SoundSpeedShiftBatchStreamSummary` (f64 field).
+
+- [patch] removed stale monolithic `physics::book::cavitation.rs` (superseded
+  by `cavitation/` split in a prior session) which was causing an E0761
+  module-conflict error.
+
 ### Added (2026-05-17)
 
 - [patch] `nonlinear3d::stencil`: replace `nonlinear_term` (3-level, used
@@ -21,6 +95,13 @@
   `UpdateCells` struct; Westervelt 2-level scheme reads only current and previous.
 
 ### Fixed (2026-05-17)
+
+- [patch] `solver::forward::nonlinear::westervelt`: corrected the 4th-order
+  finite-difference Laplacian coefficient placement, implemented the documented
+  6th-order stencil, changed unsupported `spatial_order` from silent downgrade
+  to typed validation error, and reused the nonlinear-term and next-pressure
+  workspaces during updates. Added quadratic-field stencil exactness,
+  unsupported-order rejection, and workspace-reuse tests.
 
 - [patch] `docs/book/cavitation_and_bubbles.md` Theorem 7.6 proof: integrand
   was `R dR` but correct form from energy integral ṙ²=(2p∞/3ρL)(R₀³/R³−1) is

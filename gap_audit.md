@@ -116,6 +116,7 @@
 - The Chapter 29 nonlinear-FWI absence gap is closed for a bounded 3-D branch separate from the reduced linear workflow: `clinical::therapy::theranostic_guidance::nonlinear3d` owns CT-derived volume resampling, skin/calvarium same-aperture placement, deterministic focused source encodings, heterogeneous Westervelt FDTD propagation, the discrete adjoint for the implemented nonlinear recurrence, multiparameter `c/beta` gradients, CT/segmentation-derived target-ROI inversion masks, body-restricted `H1` regularization, Sobolev gradient smoothing, Rayleigh-Plesset period-doubling cavitation source generation, passive subharmonic nonnegative inversion, Rust-side nonlinear fusion scoring, PyO3 export, Figure 5 generation, and value-semantic Rust verification. Remaining work is thermoviscous/shock-capturing stabilization for higher histotripsy pressures and joint `c/alpha/rho/beta/bubble-density` inversion with higher-order robust trace misfits, not relabeling the linear RTM path.
 - The Chapter 29 nonlinear cavitation data-alignment and allocator-pressure gap is closed for the separated Rayleigh-Plesset/passive block: simulated passive data is generated from the same active-voxel source vector used by the Green operator columns, the RP period-doubling observable uses an algebraically equivalent one-period ring buffer, and the passive inverse reuses prediction/residual/gradient workspaces across iterations.
 - The Chapter 29 nonlinear FWI iteration allocator gap is closed for residual and line-search candidate storage: the source-encoded loop reuses one residual trace vector, and backtracking reuses one `LineSearchWorkspace` for candidate sound-speed and beta models instead of allocating full vectors for every scale.
+- The canonical Westervelt FDTD finite-difference path no longer carries an incorrect 4th-order Laplacian stencil or an undocumented O6 gap. `solver::forward::nonlinear::westervelt` now applies the correct centered O4 coefficients, implements O6, returns typed validation errors for unsupported spatial orders, and reuses nonlinear/next-pressure workspaces during updates. Focused tests prove exact `laplacian(x^2+y^2+z^2)=6` on complete O2/O4/O6 stencils, preserve invalid-order configuration state, and verify pressure/nonlinear buffer pointer stability. (module-conflict gap from stale `wave.rs` and `ShiftPrior::Eq` conflict both closed 2026-05-17; see CHANGELOG.)
 - The clinical imaging module no longer lacks dense and sparse ultrasonic speed-of-sound shift imaging. `clinical::imaging::reconstruction::sound_speed_shift` now reconstructs `delta c = c - c0` from differential travel-time shifts using the linearized straight-ray contract, exact segment/pixel intersection lengths, dense Tikhonov/H1 PCG, deterministic sparse row selection, and sparse L1 proximal reconstruction. Chapter 5 documents the approach and focused Rust tests pin forward sign, dense recovery, sparse localization, and invalid sampling rejection.
 - The clinical speed-of-sound shift construction hot path no longer scales as `O(rows × active_pixels)`. Ray assembly now clips each segment to the image bounds, inserts exact parametric cell-boundary cuts, emits only crossed active cells, and preserves the previous per-cell intersection formula as a test oracle. Remaining extension work is 3-D curved-ray or finite-frequency sensitivity, not 2-D straight-ray assembly cost.
 - The clinical speed-of-sound shift operator no longer concentrates construction, algebra, graph indexing, validation, and row storage in one flat file, and row storage no longer allocates one segment vector per selected measurement. `operator/{construction,algebra,graph,row_storage,validation}.rs` share one `SoundSpeedShiftOperator` SSOT, while `RayRowStorage` stores selected sample indices, row offsets, active columns, and segment lengths in flat arrays. Focused tests pin storage reconstruction and crossed-cell nonzero scaling.
@@ -141,6 +142,62 @@
 - The ultrasound physics book no longer has only therapy, diagnostics, and theranostics chapters; `docs/book/` now has 20 domain chapters with reproducible SVG figures and module-linked validation contracts.
 - Chapter 29 no longer renders same-device therapy/imaging platforms without CT-relative placement evidence. The active theranostic Rust module exports aperture-body clearance and skin-contact distance metrics for INSIGHTEC-like helmet and HistoSonics-like abdominal layouts; the PyO3 wrapper serializes those metrics; the figure script expands axes to include the complete aperture; tests assert nonzero helmet clearance and millimeter-scale abdominal skin coupling.
 - MATLAB-free external benchmarking is now available through `external/k-wave-julia/benchmarks/kwavers`: KWave.jl provides native 1-D, 2-D, and 3-D reference traces, pykwavers runs matching active grids with singleton inactive axes for lower-dimensional cases, and the generated artifacts record solver time plus correlation, relative L2, max absolute difference, peak-ratio metrics, one-sample IVP timing alignment, sensor/PML placement, acceptance status, aligned pressure traces, residuals, scatter comparison, per-dimension timing plots, and aggregate dimension-sweep plots.
+
+## Resolved Since Last Audit (2026-05-17) — Session 2
+
+- Closed the `physics::book::wave` 500-line structural limit violation: `wave.rs` (641 lines)
+  split into `wave/{mod,bessel,dispersion,linear,nonlinear,tests}`. Dead code eliminated:
+  `bessel_j1` (double-sign bug in negative-x return path) and `bessel_j1_n` (normalisation
+  bookkeeping error, annotated "not quite right" in original) both removed. Root cause was that
+  `fubini_harmonic_amplitude` called the dead buggy `bessel_j1_n` instead of the clean
+  Miller-recurrence `jn` driver. Fix routes `fubini_harmonic_amplitude` through `jn`, which uses
+  Miller downward recurrence with two-buffer normalisation. All 6 resulting files ≤120 lines.
+
+- Closed the `physics::book::cavitation` 500-line structural limit violation: `cavitation.rs`
+  (586 lines) split into `cavitation/{mod,dynamics,histotripsy,power_spectrum,tests}`.
+  All 12 cavitation tests preserved and pass in the new layout. Largest file: `dynamics.rs`
+  (218 lines).
+
+- Closed the `physics::book::rtm` 500-line structural limit violation: `rtm.rs` (526 lines)
+  split into `rtm/{mod,backprop,beam,condition,temporal,tests}`. All 13 RTM tests preserved
+  and pass. Largest file: `condition.rs` (142 lines).
+
+- Closed the Westervelt test compile error: `absorption_causes_amplitude_decay_not_growth`
+  directly assigned `medium.absorption = 5.0` (field is `pub(super)`); corrected to
+  `medium.set_acoustic_properties(5.0, 1.0, medium.nonlinearity).unwrap()`. 5/5 Westervelt
+  tests pass.
+
+- Closed the imaging PSF test logic inversion: `compounding_narrower_than_single` asserted
+  `psf4[0] > psf1[0]` but plane-wave compounding narrows PSF (lower value at off-axis point).
+  Correct assertion: `psf4[0] < psf1[0]`. Math: eff_width_4 = 0.886·F#·λ/√4 = 0.665 mm;
+  u₄(x=0.5mm) ≈ 0.752 → sinc²≈0.088; u₁ ≈ 0.376 → sinc²≈0.613.
+
+- Full nextest run post-split: 4110/4113 PASS, 3 pre-existing 60 s timeouts
+  (`fdtd_pstd_comparison::test_plane_wave_propagation`,
+  `python_validation_integration_test::test_full_validation_suite`,
+  `python_validation_integration_test::test_generate_ci_report`). No regressions.
+
+## Resolved Since Last Audit (2026-05-17)
+
+- Closed the Sobolev-smoother O(N·r³) performance gap in
+  `solver::inverse::seismic::brain_helmet::volume_born::pcg::smooth_active_values_3d`:
+  replaced the 3-D neighbourhood index scan with three separable 1-D prefix-sum
+  box-filter passes (scatter → X filter → Y filter → Z filter → gather).  A
+  parallel indicator array preserves the active-only averaging semantics.  For
+  r=2 on a 56³ brain-FWI region the inner-loop work drops ~12×; the Z pass uses
+  Rayon `par_chunks_mut`.  Removed the `ndarray::Array3` index table allocation.
+
+- Closed the matrix-free LSQR absence gap: added
+  `math::linear_algebra::iterative::lsqr::matfree` exposing `MatFreeOperator`
+  trait and `solve_lsqr_matfree` (damped LSQR, Paige & Saunders 1982) over any
+  operator pair `(matvec, t_matvec)`.  Added `ShiftPrior::Lsqr { damping }` to
+  the sound-speed shift pipeline with `solver::lsqr::solve_shift_lsqr` wrapping
+  `SoundSpeedShiftOperator` via `ShiftOperatorAdapter`.  For overdetermined
+  systems LSQR converges without a normal-equation diagonal precomputation step.
+
+- Closed the stale-monolith compiler-error gap: deleted `physics::book::cavitation.rs`
+  (E0761 conflict with `cavitation/` split) and `physics::book::wave.rs` (already
+  deleted; confirmed absent).  52/52 targeted module tests pass.
 
 ## Resolved Since Last Audit (2026-05-16)
 
