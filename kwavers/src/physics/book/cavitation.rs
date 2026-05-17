@@ -55,6 +55,9 @@ pub fn blake_threshold_pa(r0_m: f64, p0_pa: f64, sigma_n_m: f64) -> f64 {
 /// t_c = 0.9147 · R_max · √(ρ/P_∞)   [s]
 /// ```
 ///
+/// Coefficient = B(5/6, 1/2)·√(3/2)/3 where B is the beta function;
+/// evaluated as Γ(5/6)Γ(1/2)/Γ(4/3) ≈ 2.241, giving 2.241·√(3/2)/3 ≈ 0.9147.
+///
 /// # Arguments
 /// * `rmax_m` – maximum bubble radius [m]
 /// * `p_inf_pa` – driving pressure at infinity (usually ambient) [Pa]

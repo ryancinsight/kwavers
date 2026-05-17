@@ -281,7 +281,7 @@ P_B = p_{g0}\left(\frac{R_0}{R^*}\right)^3 - \frac{2\sigma}{R^*}.
 $$
 
 Using $R^{*3} = (R^{*2})(R^{*}) = (3p_{g0}R_0^3/2\sigma)R^*$ and
-$(R_0/R^*)^3 = 2\sigma R^{*} / (3 p_{g0} R_0^0)$ is cumbersome; the compact
+$(R_0/R^*)^3 = 2\sigma R^{*} / (3 p_{g0} R_0^3)$ is cumbersome; the compact
 form follows from eliminating $R^*$ algebraically.  With
 $p_{g0} = p_0 + 2\sigma/R_0$:
 
@@ -532,58 +532,75 @@ $R_0$ to $R = 0$ under constant far-field pressure $p_\infty$ (no gas, no
 surface tension, no viscosity) is*
 
 $$
-t_c = 0.9146\, R_0 \sqrt{\frac{\rho_L}{p_\infty}}.
+t_c = 0.9147\, R_0 \sqrt{\frac{\rho_L}{p_\infty}}.
 \tag{7.10}
 $$
 
-*Proof.* From (7.9):
+*Proof.* The energy integral of RP (zero gas, no surface tension, no viscosity)
+is obtained by multiplying $R\ddot{R} + \tfrac{3}{2}\dot{R}^2 = -p_\infty/\rho_L$
+by $2\dot{R}$ and integrating with $\dot{R}(R_0)=0$:
 
 $$
-dt = \frac{dR}{\dot{R}} = -\sqrt{\frac{3\rho_L}{2p_\infty}}
-\frac{R\,dR}{\sqrt{R_0^3 - R^3}}.
+\dot{R}^2 = \frac{2p_\infty}{3\rho_L}\!\left(\frac{R_0^3}{R^3}-1\right)
+= \frac{2p_\infty}{3\rho_L}\cdot\frac{R_0^3 - R^3}{R^3}.
+$$
+
+Hence $|\dot{R}| = \sqrt{2p_\infty/(3\rho_L)}\cdot R^{-3/2}\sqrt{R_0^3-R^3}$ and
+
+$$
+dt = \frac{dR}{|\dot{R}|} = \sqrt{\frac{3\rho_L}{2p_\infty}}
+\frac{R^{3/2}\,dR}{\sqrt{R_0^3 - R^3}}.
 $$
 
 Integrate from $R_0$ to $0$:
 
 $$
 t_c = \sqrt{\frac{3\rho_L}{2p_\infty}}\int_0^{R_0}
-\frac{R\,dR}{\sqrt{R_0^3 - R^3}}.
+\frac{R^{3/2}\,dR}{\sqrt{R_0^3 - R^3}}.
 $$
 
-Substitute $u = (R/R_0)^3$, $du = 3(R/R_0)^2 dR/R_0$:
+Substitute $u = (R/R_0)^3$, so $R = R_0 u^{1/3}$, $dR = (R_0/3)u^{-2/3}du$:
 
 $$
-t_c = \sqrt{\frac{3\rho_L}{2p_\infty}}\cdot R_0 \cdot \frac{1}{3}
-\int_0^1 u^{-1/3}(1-u)^{-1/2}\,du
-= R_0\sqrt{\frac{\rho_L}{6p_\infty}}\cdot
-B\!\left(\tfrac{2}{3},\tfrac{1}{2}\right),
+\frac{R^{3/2}\,dR}{\sqrt{R_0^3-R^3}}
+= \frac{R_0^{3/2}u^{1/2}\cdot(R_0/3)u^{-2/3}}{R_0^{3/2}(1-u)^{1/2}}\,du
+= \frac{R_0}{3}\,u^{-1/6}(1-u)^{-1/2}\,du,
+$$
+
+so
+
+$$
+t_c = \sqrt{\frac{3\rho_L}{2p_\infty}}\cdot \frac{R_0}{3}
+\int_0^1 u^{5/6-1}(1-u)^{1/2-1}\,du
+= \sqrt{\frac{3\rho_L}{2p_\infty}}\cdot \frac{R_0}{3}\cdot
+B\!\left(\tfrac{5}{6},\tfrac{1}{2}\right),
 $$
 
 where $B(a,b) = \Gamma(a)\Gamma(b)/\Gamma(a+b)$ is the beta function.  Using
-$\Gamma(2/3) \approx 1.3541$, $\Gamma(1/2) = \sqrt{\pi} \approx 1.7725$,
-$\Gamma(7/6) \approx 0.9273$:
+$\Gamma(5/6) \approx 1.1290$, $\Gamma(1/2) = \sqrt{\pi} \approx 1.7725$,
+$\Gamma(4/3) \approx 0.8930$:
 
 $$
-B\!\left(\tfrac{2}{3},\tfrac{1}{2}\right)
-= \frac{\Gamma(2/3)\,\Gamma(1/2)}{\Gamma(7/6)}
-\approx \frac{1.3541 \times 1.7725}{0.9273}
-\approx 2.588.
+B\!\left(\tfrac{5}{6},\tfrac{1}{2}\right)
+= \frac{\Gamma(5/6)\,\Gamma(1/2)}{\Gamma(4/3)}
+\approx \frac{1.1290 \times 1.7725}{0.8930}
+\approx 2.241.
 $$
 
 Therefore:
 
 $$
-t_c = R_0\sqrt{\frac{\rho_L}{6p_\infty}}\cdot 2.588
-= R_0\sqrt{\frac{\rho_L}{p_\infty}}\cdot \frac{2.588}{\sqrt{6}}
-= 0.9146\, R_0 \sqrt{\frac{\rho_L}{p_\infty}}. \quad\blacksquare
+t_c = R_0\sqrt{\frac{3\rho_L}{2p_\infty}}\cdot\frac{2.241}{3}
+= R_0\sqrt{\frac{\rho_L}{p_\infty}}\cdot\frac{2.241\,\sqrt{3/2}}{3}
+= 0.9147\, R_0 \sqrt{\frac{\rho_L}{p_\infty}}. \quad\blacksquare
 $$
 
 *Numerical example:* $R_0 = 100\,\mu\text{m}$, $p_\infty = 101\,325\,\text{Pa}$,
 $\rho_L = 998\,\text{kg/m}^3$:
 
 $$
-t_c = 0.9146 \times 10^{-4} \times \sqrt{\frac{998}{101\,325}}
-\approx 0.9146 \times 10^{-4} \times 9.924 \times 10^{-2}
+t_c = 0.9147 \times 10^{-4} \times \sqrt{\frac{998}{101\,325}}
+\approx 0.9147 \times 10^{-4} \times 9.924 \times 10^{-2}
 \approx 9.08\,\mu\text{s}.
 $$
 
@@ -1068,9 +1085,9 @@ inhomogeneous sound speed field that can incorporate bubble-cloud effects.
 |---|---|---|
 | RP equation | $R\ddot R + \tfrac{3}{2}\dot R^2 = (p_b - p_\infty)/\rho_L$ | `bubble_dynamics::rayleigh_plesset` |
 | KM equation | $(1-\dot R/c_L)R\ddot R + \cdots$ | `bubble_dynamics::keller_miksis` |
-| Minnaert $f_0$ | $(2\pi R_0)^{-1}\sqrt{3\gamma p_{g0}/\rho_L}$ | `bubble_dynamics::bubble_state` |
+| Minnaert $f_0$ (large-bubble limit) | $(2\pi R_0)^{-1}\sqrt{3\gamma p_0/\rho_L}$ (7.7; $R_0 \gg 2\sigma/p_0$) | `bubble_dynamics::bubble_state` |
 | Blake threshold | $P_B = p_{g0}(R_0/R^*)^3 - 2\sigma/R^*$ | `therapy::cavitation::constants` |
-| Rayleigh collapse time | $t_c = 0.9146 R_0\sqrt{\rho_L/p_\infty}$ | `thermodynamics::collapse` |
+| Rayleigh collapse time | $t_c = 0.9147 R_0\sqrt{\rho_L/p_\infty}$ (= $B(2/3,1/2)/\sqrt{6}$) | `thermodynamics::collapse` |
 | Primary Bjerknes | $\mathbf{F}_1 = -V\nabla p$ | `bjerknes_forces::primary` |
 | Secondary Bjerknes | $F_{12} = -\rho_L \ddot V_1 V_2/(4\pi d^2)$ | `bjerknes_forces::secondary` |
 | Shell RP (Marmottant) | $+4\chi(R/R_{\text{buck}})^2/R$ correction | `encapsulated::model::marmottant` |
@@ -1084,8 +1101,11 @@ All bubble dynamics models are verified against analytical solutions and
 published experimental data:
 
 1. **Minnaert frequency:** `kwavers::analysis::validation::theorem_validation`
-   checks that computed $f_0$ matches (7.6) within $0.01\%$ across
-   $R_0 \in [0.1, 100]\,\mu\text{m}$.
+   checks that computed $f_0$ matches the large-bubble approximation (7.7)
+   within $0.01\%$ across $R_0 \in [1, 100]\,\mu\text{m}$.
+   The full surface-tension correction (7.6) is not implemented;
+   for $R_0 \lesssim 1\,\mu\text{m}$ the discrepancy between (7.6) and (7.7)
+   exceeds $10\%$ and (7.6) must be used.
 
 2. **Rayleigh collapse time:** Integration of (7.1) with zero gas pressure
    is compared to the analytical result (7.10); agreement within $0.1\%$ is

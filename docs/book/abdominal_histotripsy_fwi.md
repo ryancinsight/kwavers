@@ -87,7 +87,7 @@ Rayleigh-Plesset radius integration driven by the simulated lesion pressure:
 
 ```text
 rho (R R_ddot + 3/2 R_dot^2)
-  = p_g0 (R0/R)^(3 gamma) + p_v - p0 - p_ac(t)
+  = p_g0 (R0/R)^(3 gamma) - p_v - p0 - p_ac(t)
     - 2 sigma/R - 4 mu R_dot/R
 ```
 
