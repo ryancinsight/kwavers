@@ -232,6 +232,148 @@ pub fn standing_wave_suppression_gain(r_back: f64) -> f64 {
     (1.0 + r_back).powi(2) / (1.0 + r_back * r_back)
 }
 
+// ─── 3-D Green's function backpropagation ────────────────────────────────────
+
+/// 3-D free-space Green's function backpropagation from a focal point.
+///
+/// ```text
+/// G(x,y,z) = exp(−i·k·r) / (4π·r)
+/// r = √((x−x_f)² + (y−y_f)² + (z−z_f)²)
+/// ```
+/// The `1/r` amplitude law is the 3-D spherical-wave decay (cf. `1/√r` in 2-D).
+/// Singularity at `r = 0` is regularised by a 10 μm floor.
+///
+/// Output: `(real_flat, imag_flat)` for an NX × NY × NZ grid, row-major `[x][y][z]`.
+///
+/// # Reference
+/// Aki & Richards (2002), *Quantitative Seismology* §4.1.
+pub fn backprop_green_function_3d(
+    x_arr: &[f64],
+    y_arr: &[f64],
+    z_arr: &[f64],
+    x_f: f64,
+    y_f: f64,
+    z_f: f64,
+    k: f64,
+) -> (Vec<f64>, Vec<f64>) {
+    let nx = x_arr.len();
+    let ny = y_arr.len();
+    let nz = z_arr.len();
+    let n = nx * ny * nz;
+    let mut real_out = vec![0.0_f64; n];
+    let mut imag_out = vec![0.0_f64; n];
+    let scale = 1.0 / (4.0 * PI);
+
+    for (ix, &x) in x_arr.iter().enumerate() {
+        for (iy, &y) in y_arr.iter().enumerate() {
+            for (iz, &z) in z_arr.iter().enumerate() {
+                let r = ((x - x_f).powi(2) + (y - y_f).powi(2) + (z - z_f).powi(2))
+                    .sqrt()
+                    .max(1e-5);
+                let amp = scale / r;
+                let phase = -k * r;
+                let idx = (ix * ny + iy) * nz + iz;
+                real_out[idx] = amp * phase.cos();
+                imag_out[idx] = amp * phase.sin();
+            }
+        }
+    }
+    (real_out, imag_out)
+}
+
+// ─── Source-normalised imaging condition ─────────────────────────────────────
+
+/// Source-normalised RTM imaging condition.
+///
+/// Removes the source-amplitude footprint by dividing the cross-correlation by
+/// the forward-field energy at each image point:
+/// ```text
+/// I_SN(x) = Re[P_fwd · conj(P_bwd)] / (|P_fwd|² + ε)
+/// ```
+/// where `ε = stab_frac · max_x(|P_fwd(x)|²)` prevents division by zero in
+/// skull shadow zones. Result is normalised to `[0, 1]`.
+///
+/// This condition substantially reduces skull-reflection artefacts and
+/// low-illumination bias that afflict the plain cross-correlation condition
+/// for transcranial 1024-element apertures.
+///
+/// # Arguments
+/// * `p_fwd_real`, `p_fwd_imag` – forward field (element source or encoded stack)
+/// * `p_bwd_real`, `p_bwd_imag` – backward (receiver-injected adjoint) field
+/// * `stab_frac` – stabilisation fraction (typical: 1e-4)
+///
+/// # Reference
+/// Guitton, Valenciano & Bevc (2007), *Geophysics* 72, S35.
+/// Whitmore (1983), *SEG Annual Meeting* 827.
+pub fn rtm_source_normalized_condition(
+    p_fwd_real: &[f64],
+    p_fwd_imag: &[f64],
+    p_bwd_real: &[f64],
+    p_bwd_imag: &[f64],
+    stab_frac: f64,
+) -> Vec<f64> {
+    let n = p_fwd_real.len();
+    let max_fwd_energy = p_fwd_real
+        .iter()
+        .zip(p_fwd_imag.iter())
+        .map(|(&re, &im)| re * re + im * im)
+        .fold(0.0_f64, f64::max);
+    let eps = stab_frac * max_fwd_energy;
+    let mut img = vec![0.0_f64; n];
+    for i in 0..n {
+        let cross = p_fwd_real[i] * p_bwd_real[i] + p_fwd_imag[i] * p_bwd_imag[i];
+        let fwd_e = p_fwd_real[i] * p_fwd_real[i] + p_fwd_imag[i] * p_fwd_imag[i];
+        img[i] = (cross / (fwd_e + eps)).max(0.0);
+    }
+    let max_val = img.iter().cloned().fold(0.0_f64, f64::max);
+    if max_val > 0.0 {
+        img.iter_mut().for_each(|v| *v /= max_val);
+    }
+    img
+}
+
+// ─── Aperture-weighted multi-element fusion ───────────────────────────────────
+
+/// Fuse RTM images from multiple aperture elements with per-element weights.
+///
+/// ```text
+/// I_W(x) = Σ_s w_s · I_s(x) / Σ_s w_s
+/// ```
+/// Weights can encode element solid angle, CT-derived skull transmission, or
+/// aperture-diversity scores. All-zero weight vector falls back to uniform mean.
+///
+/// # Reference
+/// Margrave (2003), *CREWES Research Report* §3.2 (aperture weighting in migration).
+pub fn rtm_aperture_weighted_fusion(images: &[Vec<f64>], weights: &[f64]) -> Vec<f64> {
+    if images.is_empty() {
+        return Vec::new();
+    }
+    assert_eq!(
+        images.len(),
+        weights.len(),
+        "image count must equal weight count"
+    );
+    let n = images[0].len();
+    let w_sum: f64 = weights.iter().sum();
+    let (eff_weights, w_total): (&[f64], f64) = if w_sum > 0.0 {
+        (weights, w_sum)
+    } else {
+        // uniform fallback – keep original slice reference and supply the count
+        (weights, weights.len() as f64)
+    };
+    let uniform = w_sum <= 0.0;
+    let mut out = vec![0.0_f64; n];
+    for (img, &w) in images.iter().zip(eff_weights.iter()) {
+        assert_eq!(img.len(), n, "all images must have the same length");
+        let w_eff = if uniform { 1.0 } else { w };
+        for (o, &v) in out.iter_mut().zip(img.iter()) {
+            *o += w_eff * v;
+        }
+    }
+    out.iter_mut().for_each(|v| *v /= w_total);
+    out
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -308,5 +450,77 @@ mod tests {
         let g1 = standing_wave_suppression_gain(0.2);
         let g2 = standing_wave_suppression_gain(0.5);
         assert!(g1 > 1.0 && g2 > g1);
+    }
+
+    #[test]
+    fn backprop_3d_amplitude_inverse_r() {
+        // 3-D Green's function: complex magnitude |G| = 1/(4π·r) → |G₁|/|G₂| = r₂/r₁.
+        // Must use complex magnitude √(re²+im²) because the phase shifts re and im independently.
+        let x = vec![0.0];
+        let y = vec![0.0];
+        let z = vec![0.01, 0.02];
+        let (re, im) = backprop_green_function_3d(&x, &y, &z, 0.0, 0.0, 0.0, 1000.0);
+        // r₁ = 0.01 → |G₁| = 1/(4π·0.01)
+        // r₂ = 0.02 → |G₂| = 1/(4π·0.02); ratio = r₂/r₁ = 2.0
+        let mag0 = (re[0] * re[0] + im[0] * im[0]).sqrt();
+        let mag1 = (re[1] * re[1] + im[1] * im[1]).sqrt();
+        let ratio = mag0 / mag1;
+        assert!((ratio - 2.0).abs() < 1e-6, "ratio={}", ratio);
+    }
+
+    #[test]
+    fn backprop_3d_grid_length() {
+        let x = vec![0.0, 0.01];
+        let y = vec![0.0, 0.01, 0.02];
+        let z = vec![0.0, 0.01, 0.02, 0.03];
+        let (re, im) = backprop_green_function_3d(&x, &y, &z, 0.0, 0.0, 0.0, 500.0);
+        assert_eq!(re.len(), 2 * 3 * 4);
+        assert_eq!(im.len(), 2 * 3 * 4);
+    }
+
+    #[test]
+    fn source_normalized_max_one() {
+        let fwd_r = vec![1.0, 2.0, 3.0];
+        let fwd_i = vec![0.0, 0.0, 0.0];
+        let bwd_r = vec![0.5, 1.5, 2.0];
+        let bwd_i = vec![0.0, 0.0, 0.0];
+        let img = rtm_source_normalized_condition(&fwd_r, &fwd_i, &bwd_r, &bwd_i, 1e-4);
+        let max = img.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        assert!((max - 1.0).abs() < 1e-9, "max={}", max);
+    }
+
+    #[test]
+    fn source_normalized_removes_amplitude_bias() {
+        // Point with large forward amplitude but proportionally small backward amplitude
+        // should not dominate over a point with small forward but matching backward.
+        // P_fwd = [100, 1], P_bwd = [50, 1] → ratio: [0.5, 1.0] → SN should peak at index 1.
+        let fwd_r = vec![100.0, 1.0];
+        let fwd_i = vec![0.0, 0.0];
+        let bwd_r = vec![50.0, 1.0];
+        let bwd_i = vec![0.0, 0.0];
+        let img = rtm_source_normalized_condition(&fwd_r, &fwd_i, &bwd_r, &bwd_i, 1e-6);
+        // SN[0] = 50/100 = 0.5, SN[1] = 1/1 = 1.0 → after normalisation: [0.5, 1.0]
+        assert!(img[1] > img[0], "img={:?}", img);
+    }
+
+    #[test]
+    fn aperture_weighted_fusion_equal_weights() {
+        let a = vec![0.0, 2.0, 4.0];
+        let b = vec![2.0, 4.0, 6.0];
+        let fused_w = rtm_aperture_weighted_fusion(&[a.clone(), b.clone()], &[1.0, 1.0]);
+        let fused_u = rtm_multi_frequency_fusion(&[a, b]);
+        for (w, u) in fused_w.iter().zip(fused_u.iter()) {
+            assert!((w - u).abs() < 1e-12, "w={} u={}", w, u);
+        }
+    }
+
+    #[test]
+    fn aperture_weighted_fusion_zero_weights_uniform_fallback() {
+        let a = vec![0.0, 1.0];
+        let b = vec![2.0, 3.0];
+        let fused = rtm_aperture_weighted_fusion(&[a, b], &[0.0, 0.0]);
+        // Zero weights → uniform mean: [1.0, 2.0]
+        assert!((fused[0] - 1.0).abs() < 1e-12, "fused={:?}", fused);
+        assert!((fused[1] - 2.0).abs() < 1e-12, "fused={:?}", fused);
     }
 }

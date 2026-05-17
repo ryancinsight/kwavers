@@ -276,15 +276,148 @@ pub fn bubble_power_spectrum(r_arr: &[f64], dt_s: f64, n_fft: usize) -> (Vec<f64
             im -= rj * phi.sin();
         }
         let mag_sq = re * re + im * im;
-        // One-sided PSD: double for k > 0 and k < N/2
+        // One-sided PSD: double for interior bins; S[k] = |X[k]|²·Δt/N [m²/Hz]
         let scale = if k == 0 || k == n / 2 { 1.0 } else { 2.0 };
-        power[k] = scale * mag_sq / (n_f * n_f * dt_s.recip()); // [m²/Hz]... wait: /= fs
-                                                                // Correct: S[k] = |X[k]|²·dt / N  for one-sided
         power[k] = scale * mag_sq * dt_s / n_f;
         f_arr[k] = k as f64 / (n_f * dt_s);
     }
 
     (f_arr, power)
+}
+
+// ─── Mechanical index ─────────────────────────────────────────────────────────
+
+/// FDA mechanical index: peak negative pressure normalised by √(frequency).
+///
+/// ```text
+/// MI = |P_neg| [MPa] / √(f [MHz])
+/// ```
+/// FDA safety guideline for diagnostic imaging: MI < 1.9.
+/// Histotripsy (intrinsic threshold) requires MI > 3 for microsecond pulses.
+///
+/// # Reference
+/// Apfel & Holland (1991), *Ultrasound Med. Biol.* 17, 179.
+#[inline]
+pub fn mechanical_index(p_neg_pa: f64, freq_hz: f64) -> f64 {
+    let p_neg_mpa = p_neg_pa.abs() * 1e-6;
+    let f_mhz = freq_hz * 1e-6;
+    p_neg_mpa / f_mhz.sqrt()
+}
+
+// ─── Inertial cavitation dose ─────────────────────────────────────────────────
+
+/// Inertial cavitation dose (ICD) from a bubble radius time series.
+///
+/// Accumulates the normalised collapse strength over all detected inertial
+/// collapse events.  A collapse event is a local minimum of `R` below `R₀`
+/// coinciding with a sign change of `Ṙ` from negative to non-negative:
+/// ```text
+/// ICD = Σ_{collapse events i} (R_max_i / R₀)³   [dimensionless]
+/// ```
+/// `R_max_i` is the maximum bubble radius reached during the expansion phase
+/// immediately preceding the ith collapse.  The cubic weighting is proportional
+/// to the maximum volume ratio and therefore to the inertial energy.
+///
+/// # Reference
+/// Duryea et al. (2015), *Ultrasound Med. Biol.* 41, 1937.
+pub fn inertial_cavitation_dose(r_arr: &[f64], rdot_arr: &[f64], r0_m: f64) -> f64 {
+    let r0 = r0_m.max(1e-15);
+    let n = r_arr.len().min(rdot_arr.len());
+    if n < 2 {
+        return 0.0;
+    }
+    let mut dose = 0.0_f64;
+    let mut r_max = r0;
+    for i in 0..n - 1 {
+        let r = r_arr[i].max(1e-15);
+        r_max = r_max.max(r);
+        // Inertial collapse: velocity reversal from negative to non-negative below R₀
+        let is_min = rdot_arr[i] < 0.0 && rdot_arr[i + 1] >= 0.0 && r < r0;
+        if is_min {
+            dose += (r_max / r0).powi(3);
+            r_max = r0; // reset for next expansion–collapse cycle
+        }
+    }
+    dose
+}
+
+// ─── Histotripsy lesion radius ────────────────────────────────────────────────
+
+/// Estimated histotripsy lesion radius from cavitation energy balance.
+///
+/// ## Derivation
+/// The Rayleigh–Plesset energy released during inertial collapse equals the
+/// PdV work against ambient pressure over the bubble volume excursion:
+/// ```text
+/// E_collapse ≈ (4π/3) · P₀ · R_max³    [per event]
+/// ```
+/// Summing over all ICD events: `E_total = (4π/3) · P₀ · R₀³ · ICD`.
+/// Setting `E_total = σ_y · (4π/3) · R_L³` and solving for `R_L`:
+/// ```text
+/// R_L = R₀ · (P₀ · ICD / σ_y)^(1/3)   [m]
+/// ```
+///
+/// # Arguments
+/// * `icd` – dimensionless inertial cavitation dose (from `inertial_cavitation_dose`)
+/// * `r0_m` – equilibrium bubble radius [m]
+/// * `p0_pa` – ambient pressure [Pa]
+/// * `tissue_yield_stress_pa` – tensile yield stress of tissue [Pa]
+///   (brain white matter: 1–4 kPa; Vlaisavljevich et al. 2015)
+///
+/// # Reference
+/// Maxwell et al. (2011), *J. Acoust. Soc. Am.* 130, 2012.
+/// Vlaisavljevich et al. (2015), *Ultrasound Med. Biol.* 41, 2896.
+#[inline]
+pub fn histotripsy_lesion_radius_m(
+    icd: f64,
+    r0_m: f64,
+    p0_pa: f64,
+    tissue_yield_stress_pa: f64,
+) -> f64 {
+    let sigma_y = tissue_yield_stress_pa.max(1.0);
+    // R_L = R₀ · (P₀ · ICD / σ_y)^(1/3)
+    r0_m * (p0_pa * icd / sigma_y).cbrt()
+}
+
+// ─── Period-doubling ratio ────────────────────────────────────────────────────
+
+/// Subharmonic period-doubling ratio from a bubble power spectrum.
+///
+/// Computes the spectral energy ratio of the half-harmonic (f₀/2) to the
+/// fundamental (f₀) — a passive acoustic marker of inertial cavitation:
+/// ```text
+/// PD_ratio = S(f₀/2) / S(f₀)
+/// ```
+/// Each band is integrated over a ±2-bin window. Values above ~0.1 indicate
+/// onset of subharmonic emission consistent with histotripsy bubble activity.
+///
+/// # Reference
+/// Cramer et al. (2021), *Ultrasound Med. Biol.* 47, 2102.
+pub fn period_doubling_ratio(f_arr: &[f64], power_arr: &[f64], freq_hz: f64) -> f64 {
+    if f_arr.len() < 2 || power_arr.is_empty() {
+        return 0.0;
+    }
+    let df = f_arr[1] - f_arr[0];
+    let band_energy = |target_hz: f64| -> f64 {
+        let idx = f_arr
+            .iter()
+            .enumerate()
+            .min_by(|(_, a), (_, b)| (**a - target_hz).abs().total_cmp(&(**b - target_hz).abs()))
+            .map(|(i, _)| i)
+            .unwrap_or(0);
+        // ±1 bin window (3 bins) reduces cross-contamination between
+        // fundamental and sub-harmonic bins while accommodating minor leakage.
+        let lo = idx.saturating_sub(1);
+        let hi = (idx + 2).min(power_arr.len());
+        power_arr[lo..hi].iter().sum::<f64>() * df
+    };
+    let s_fund = band_energy(freq_hz);
+    let s_sub = band_energy(freq_hz * 0.5);
+    if s_fund > 0.0 {
+        s_sub / s_fund
+    } else {
+        0.0
+    }
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -326,6 +459,114 @@ mod tests {
         );
         assert_eq!(r.len(), 5);
         assert_eq!(v.len(), 5);
+    }
+
+    #[test]
+    fn mechanical_index_known_value() {
+        // 1 MPa at 1 MHz → MI = 1.0
+        let mi = mechanical_index(1e6, 1e6);
+        assert!((mi - 1.0).abs() < 1e-9, "mi={}", mi);
+    }
+
+    #[test]
+    fn mechanical_index_scales_inversely_with_sqrt_freq() {
+        // MI at 4 MHz should be half of MI at 1 MHz for same pressure
+        let mi_1 = mechanical_index(1e6, 1e6);
+        let mi_4 = mechanical_index(1e6, 4e6);
+        assert!((mi_1 / mi_4 - 2.0).abs() < 1e-9, "ratio={}", mi_1 / mi_4);
+    }
+
+    #[test]
+    fn icd_zero_driving_gives_zero() {
+        // Zero acoustic drive → bubble stays at R₀ → no collapse events → ICD = 0
+        let t: Vec<f64> = (0..100).map(|i| i as f64 * 1e-9).collect();
+        let (r, rdot) = rayleigh_plesset_rk4(
+            10e-6, 0.0, 0.0, 1e6, &t, 101_325.0, 998.0, 0.0725, 0.001, 1.4, 2_330.0,
+        );
+        let icd = inertial_cavitation_dose(&r, &rdot, 10e-6);
+        assert_eq!(icd, 0.0, "icd={}", icd);
+    }
+
+    #[test]
+    fn icd_strong_driving_nonzero() {
+        // Strong driving (10× P₀) over 5 acoustic cycles should trigger at least one collapse
+        let f0 = 500e3_f64;
+        let n_pts = 2000usize;
+        let dt = 1.0 / (20.0 * f0);
+        let t: Vec<f64> = (0..n_pts).map(|i| i as f64 * dt).collect();
+        let r0 = 5e-6;
+        let (r, rdot) = rayleigh_plesset_rk4(
+            r0, 0.0, 5e6, f0, &t, 101_325.0, 998.0, 0.0725, 0.001, 1.4, 2_330.0,
+        );
+        let icd = inertial_cavitation_dose(&r, &rdot, r0);
+        assert!(
+            icd > 0.0,
+            "expected ICD > 0 for strong driving, got {}",
+            icd
+        );
+    }
+
+    #[test]
+    fn lesion_radius_scales_with_icd_cube_root() {
+        // R_L ∝ ICD^(1/3) when all other parameters are fixed
+        let r0 = 5e-6;
+        let p0 = 101_325.0;
+        let sigma_y = 2000.0; // 2 kPa — brain white matter
+        let r1 = histotripsy_lesion_radius_m(1.0, r0, p0, sigma_y);
+        let r8 = histotripsy_lesion_radius_m(8.0, r0, p0, sigma_y);
+        // ICD 8× → radius 2× (cube root)
+        assert!((r8 / r1 - 2.0).abs() < 1e-9, "r8/r1={}", r8 / r1);
+    }
+
+    #[test]
+    fn lesion_radius_dimensional_consistency() {
+        // With ICD = 1.0, R_L = R₀ · (P₀/σ_y)^(1/3)
+        let r0 = 5e-6;
+        let p0 = 101_325.0;
+        let sigma_y = 101_325.0; // same as P₀ → R_L = R₀
+        let r_l = histotripsy_lesion_radius_m(1.0, r0, p0, sigma_y);
+        assert!((r_l - r0).abs() < 1e-18, "r_l={}, r0={}", r_l, r0);
+    }
+
+    #[test]
+    fn period_doubling_ratio_no_subharmonic_is_small() {
+        // Pure fundamental with no half-harmonic → PD ratio near 0.
+        // Place f0 at DFT bin 8 and f0/2 at bin 4 so ±1-bin windows [7,9] and [3,5]
+        // do not overlap: separation = 3 bins, window width = 3 bins.
+        let n = 512usize;
+        let f0 = 1e6_f64;
+        let fs = f0 * n as f64 / 8.0; // fs = 64 MHz; df = 125 kHz; f0 = bin 8
+        let dt = 1.0 / fs;
+        let r: Vec<f64> = (0..n)
+            .map(|i| 1e-7 * (2.0 * PI * f0 * i as f64 * dt).sin())
+            .collect();
+        let (f_arr, p_arr) = bubble_power_spectrum(&r, dt, n);
+        let pd = period_doubling_ratio(&f_arr, &p_arr, f0);
+        assert!(pd < 0.1, "expected near-zero PD ratio, got {}", pd);
+    }
+
+    #[test]
+    fn period_doubling_ratio_dominant_subharmonic_exceeds_one() {
+        // Subharmonic amplitude 3× fundamental → power ratio ~9 → PD ratio >> 1.
+        // Same bin placement as no-subharmonic test: f0=bin 8, f0/2=bin 4.
+        let n = 512usize;
+        let f0 = 1e6_f64;
+        let fs = f0 * n as f64 / 8.0;
+        let dt = 1.0 / fs;
+        let r: Vec<f64> = (0..n)
+            .map(|i| {
+                let t = i as f64 * dt;
+                1e-7 * (2.0 * PI * f0 * t).sin()             // fundamental
+                    + 3e-7 * (2.0 * PI * f0 * 0.5 * t).sin() // dominant subharmonic
+            })
+            .collect();
+        let (f_arr, p_arr) = bubble_power_spectrum(&r, dt, n);
+        let pd = period_doubling_ratio(&f_arr, &p_arr, f0);
+        assert!(
+            pd > 1.0,
+            "expected PD ratio > 1 for dominant subharmonic, got {}",
+            pd
+        );
     }
 
     #[test]
