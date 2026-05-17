@@ -5,7 +5,7 @@ use super::checkpoint::ForwardHistory;
 use super::checkpoint::HistoryReplayWorkspace;
 use super::encoding::SourceEncoding;
 use super::forward::{replay_history_segment_into, ReplayInput, TimeSchedule};
-use super::stencil::{index, laplacian, nonlinear_term, sponge};
+use super::stencil::{index, laplacian, sponge, westervelt_cell_terms, WesterveltCellTerms};
 use super::types::{flat_index, Nonlinear3dAperture, Nonlinear3dConfig};
 
 pub(super) struct GradientInput<'a> {
@@ -93,24 +93,17 @@ pub(super) fn gradient(input: GradientInput<'_>) -> ParameterGradient {
             } else {
                 curr
             };
-            let older = if step >= 2 {
-                segment.older_for_step(step)
-            } else {
-                curr
-            };
             if let Some(op) = absorption.as_ref() {
                 op.apply_transpose(&adj_next, &mut adj_curr, &mut adj_prev);
             }
             accumulate_step(AccumulateInput {
                 adj_curr: &mut adj_curr,
                 adj_prev: &mut adj_prev,
-                adj_older: &mut adj_older,
                 grad: &mut grad,
                 adj_next: &adj_next,
                 step,
                 curr,
                 prev,
-                older,
                 input: &input,
                 sponge: &sponge_weights,
             });
@@ -149,19 +142,18 @@ fn build_absorption_for_adjoint(
 struct AccumulateInput<'a> {
     adj_curr: &'a mut [f64],
     adj_prev: &'a mut [f64],
-    adj_older: &'a mut [f64],
     grad: &'a mut ParameterGradient,
     adj_next: &'a [f64],
     step: usize,
     curr: &'a [f64],
     prev: &'a [f64],
-    older: &'a [f64],
     input: &'a GradientInput<'a>,
     sponge: &'a [f64],
 }
 
 fn accumulate_step(acc: AccumulateInput<'_>) {
     let input = acc.input;
+    let _ = acc.step;
     for x in 1..input.n - 1 {
         for y in 1..input.n - 1 {
             for z in 1..input.n - 1 {
@@ -170,41 +162,43 @@ fn accumulate_step(acc: AccumulateInput<'_>) {
                 if lambda == 0.0 {
                     continue;
                 }
+                let c = input.speed[i];
+                let lap = laplacian(acc.curr, x, y, z, input.n, input.spacing_m);
+                let terms = westervelt_cell_terms(
+                    acc.curr[i],
+                    acc.prev[i],
+                    lap,
+                    c,
+                    input.density[i],
+                    input.beta[i],
+                    input.dt,
+                );
                 acc.adj_curr[i] += 2.0 * lambda;
-                if acc.step >= 1 {
-                    acc.adj_prev[i] -= lambda;
-                }
-                let a = (input.speed[i] * input.dt).powi(2) / (input.spacing_m * input.spacing_m);
-                add_laplacian_transpose(acc.adj_curr, i, input.n, a * lambda);
-                let nl = nonlinear_term(acc.curr, acc.prev, acc.older, i, input.dt, acc.step);
-                add_nonlinear_transpose(NonlinearTransposeInput {
+                acc.adj_prev[i] -= lambda;
+                let inv_denom = terms.denominator.recip();
+                let lap_scale =
+                    (c * input.dt).powi(2) / (input.spacing_m * input.spacing_m) * inv_denom;
+                add_laplacian_transpose(acc.adj_curr, i, input.n, lap_scale * lambda);
+                add_finite_amplitude_transpose(FiniteAmplitudeTransposeInput {
                     adj_curr: acc.adj_curr,
                     adj_prev: acc.adj_prev,
-                    adj_older: acc.adj_older,
-                    step: acc.step,
                     i,
-                    dt: input.dt,
-                    q: input.beta[i] * input.dt * input.dt
-                        / (input.density[i] * input.speed[i] * input.speed[i]).max(1.0e-18),
                     lambda,
-                    p: acc.curr[i],
-                    p_prev: acc.prev[i],
-                    p_older: acc.older[i],
+                    terms,
                 });
                 if input.body[i] {
-                    let lap = laplacian(acc.curr, x, y, z, input.n, input.spacing_m);
-                    let c = input.speed[i];
-                    // d(p_{n+1})/dc = 2 c dt^2 \nabla^2 p + d(q)/dc * nl
-                    // with the corrected forward `+q nl` and q = beta dt^2 / (rho c^2):
-                    //   d(q)/dc = -2 beta dt^2 / (rho c^3)
-                    // so d(+q nl)/dc = -(2 beta dt^2 / (rho c^3)) * nl. The leading
-                    // 2 c dt^2 Laplacian sensitivity is unchanged.
-                    let d_update_dc = 2.0 * c * input.dt * input.dt * lap
-                        - 2.0 * input.beta[i] * input.dt * input.dt * nl
-                            / (input.density[i] * c.powi(3)).max(1.0e-18);
-                    acc.grad.sound_speed[i] += lambda * d_update_dc;
+                    let inv_denom2 = inv_denom * inv_denom;
+                    let dbeta = 1.0 / (input.density[i] * c * c).max(1.0e-18);
+                    let d_n_dbeta = 2.0 * dbeta * terms.pressure_increment.powi(2);
+                    let d_d_dbeta = -2.0 * dbeta * acc.curr[i];
                     let d_update_dbeta =
-                        input.dt * input.dt * nl / (input.density[i] * c * c).max(1.0e-18);
+                        d_n_dbeta * inv_denom - terms.numerator * d_d_dbeta * inv_denom2;
+                    let db_dc = -2.0 * terms.pressure_to_bulk_modulus / c.max(1.0e-18);
+                    let d_n_dc = 2.0 * c * input.dt * input.dt * lap
+                        + 2.0 * db_dc * terms.pressure_increment.powi(2);
+                    let d_d_dc = -2.0 * db_dc * acc.curr[i];
+                    let d_update_dc = d_n_dc * inv_denom - terms.numerator * d_d_dc * inv_denom2;
+                    acc.grad.sound_speed[i] += lambda * d_update_dc;
                     acc.grad.beta[i] += lambda * d_update_dbeta;
                 }
             }
@@ -241,38 +235,23 @@ fn add_laplacian_transpose(adj: &mut [f64], i: usize, n: usize, value: f64) {
     adj[i + 1] += value;
 }
 
-struct NonlinearTransposeInput<'a> {
+struct FiniteAmplitudeTransposeInput<'a> {
     adj_curr: &'a mut [f64],
     adj_prev: &'a mut [f64],
-    adj_older: &'a mut [f64],
-    step: usize,
     i: usize,
-    dt: f64,
-    q: f64,
     lambda: f64,
-    p: f64,
-    p_prev: f64,
-    p_older: f64,
+    terms: WesterveltCellTerms,
 }
 
-fn add_nonlinear_transpose(input: NonlinearTransposeInput<'_>) {
-    // For forward `p_{n+1} += q * nl`, the adjoint contributions are
-    // `adj[step-k] += q * (dnl/dp_{n-k}) * lambda` (positive sign), matching
-    // the chain-rule transpose of the corrected forward.
-    let inv_dt2 = 1.0 / (input.dt * input.dt);
-    if input.step >= 2 {
-        let d_curr = (8.0 * input.p - 8.0 * input.p_prev + 2.0 * input.p_older) * inv_dt2;
-        let d_prev = (-8.0 * input.p + 4.0 * input.p_prev) * inv_dt2;
-        let d_older = 2.0 * input.p * inv_dt2;
-        input.adj_curr[input.i] += input.q * d_curr * input.lambda;
-        input.adj_prev[input.i] += input.q * d_prev * input.lambda;
-        input.adj_older[input.i] += input.q * d_older * input.lambda;
-    } else if input.step >= 1 {
-        let d_curr = 4.0 * (input.p - input.p_prev) * inv_dt2;
-        let d_prev = -d_curr;
-        input.adj_curr[input.i] += input.q * d_curr * input.lambda;
-        input.adj_prev[input.i] += input.q * d_prev * input.lambda;
-    } else {
-        input.adj_curr[input.i] += input.q * 4.0 * input.p * inv_dt2 * input.lambda;
+fn add_finite_amplitude_transpose(input: FiniteAmplitudeTransposeInput<'_>) {
+    let b = input.terms.pressure_to_bulk_modulus;
+    if b == 0.0 {
+        return;
     }
+    let inv_denom = input.terms.denominator.recip();
+    let inv_denom2 = inv_denom * inv_denom;
+    input.adj_curr[input.i] += input.lambda
+        * (4.0 * b * input.terms.pressure_increment * inv_denom
+            + 2.0 * b * input.terms.numerator * inv_denom2);
+    input.adj_prev[input.i] -= input.lambda * 4.0 * b * input.terms.pressure_increment * inv_denom;
 }

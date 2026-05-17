@@ -70,37 +70,40 @@ pub(super) fn source_cells(source_plan: &SourcePlan) -> impl Iterator<Item = usi
 }
 
 fn finite_source_stencil(idx: GridIndex, n: usize) -> Vec<(usize, f64)> {
-    let mut entries = Vec::with_capacity(27);
-    for dx in -1..=1 {
-        for dy in -1..=1 {
-            for dz in -1..=1 {
-                let x = idx.x as isize + dx;
-                let y = idx.y as isize + dy;
-                let z = idx.z as isize + dz;
-                if x <= 0
-                    || y <= 0
-                    || z <= 0
-                    || x >= (n - 1) as isize
-                    || y >= (n - 1) as isize
-                    || z >= (n - 1) as isize
-                {
-                    continue;
-                }
-                let distance2 = (dx * dx + dy * dy + dz * dz) as f64;
-                let weight = 1.0 / (1.0 + distance2);
-                entries.push((
-                    flat_index(
-                        GridIndex {
-                            x: x as usize,
-                            y: y as usize,
-                            z: z as usize,
-                        },
-                        n,
-                    ),
-                    weight,
-                ));
-            }
+    let offsets = [
+        (0, 0, 0, 1.0),
+        (-1, 0, 0, 0.5),
+        (1, 0, 0, 0.5),
+        (0, -1, 0, 0.5),
+        (0, 1, 0, 0.5),
+        (0, 0, -1, 0.5),
+        (0, 0, 1, 0.5),
+    ];
+    let mut entries = Vec::with_capacity(offsets.len());
+    for (dx, dy, dz, weight) in offsets {
+        let x = idx.x as isize + dx;
+        let y = idx.y as isize + dy;
+        let z = idx.z as isize + dz;
+        if x <= 0
+            || y <= 0
+            || z <= 0
+            || x >= (n - 1) as isize
+            || y >= (n - 1) as isize
+            || z >= (n - 1) as isize
+        {
+            continue;
         }
+        entries.push((
+            flat_index(
+                GridIndex {
+                    x: x as usize,
+                    y: y as usize,
+                    z: z as usize,
+                },
+                n,
+            ),
+            weight,
+        ));
     }
     if entries.is_empty() {
         return vec![(flat_index(idx, n), 1.0)];

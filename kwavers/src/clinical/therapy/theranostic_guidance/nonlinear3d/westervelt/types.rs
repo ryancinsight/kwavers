@@ -12,6 +12,7 @@ pub(crate) struct WesterveltFwiResult {
     pub peak_pressure_pa: Array3<f64>,
     pub objective_history: Vec<f64>,
     pub metrics: VolumeReconstructionMetrics,
+    pub source_scale: f64,
     pub dt_s: f64,
     pub time_steps: usize,
 }

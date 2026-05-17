@@ -12,20 +12,44 @@ pub(super) fn laplacian(field: &[f64], x: usize, y: usize, z: usize, n: usize, d
         / (dx * dx)
 }
 
-pub(super) fn nonlinear_term(
-    curr: &[f64],
-    prev: &[f64],
-    older: &[f64],
-    i: usize,
+#[derive(Clone, Copy, Debug)]
+pub(super) struct WesterveltCellTerms {
+    pub pressure_to_bulk_modulus: f64,
+    pub denominator: f64,
+    pub numerator: f64,
+    pub pressure_increment: f64,
+}
+
+/// Finite-amplitude Westervelt cell terms.
+///
+/// Starting from
+/// `(1 - 2 βp/(ρc²)) p_tt = c²∇²p + 2 β/(ρc²) p_t²`, the leapfrog update is
+/// `p[n+1] = 2p[n] - p[n-1] + numerator / denominator`.
+/// Solving the pressure-dependent inertia term in the denominator prevents the
+/// explicit `p * p_tt` feedback loop from creating nonphysical runaway peaks at
+/// histotripsy drive while reducing exactly to the linear acoustic update when
+/// `β = 0`.
+pub(super) fn westervelt_cell_terms(
+    center: f64,
+    previous: f64,
+    laplacian: f64,
+    speed: f64,
+    density: f64,
+    beta: f64,
     dt: f64,
-    step: usize,
-) -> f64 {
-    let dp = (curr[i] - prev[i]) / dt;
-    if step >= 2 {
-        let d2 = (curr[i] - 2.0 * prev[i] + older[i]) / (dt * dt);
-        2.0 * curr[i] * d2 + 2.0 * dp * dp
-    } else {
-        2.0 * dp * dp
+) -> WesterveltCellTerms {
+    let c2 = speed * speed;
+    let inv_bulk = 1.0 / (density * c2).max(1.0e-18);
+    let pressure_to_bulk_modulus = beta * inv_bulk;
+    let pressure_increment = center - previous;
+    let denominator = 1.0 - 2.0 * pressure_to_bulk_modulus * center;
+    let numerator =
+        c2 * dt * dt * laplacian + 2.0 * pressure_to_bulk_modulus * pressure_increment.powi(2);
+    WesterveltCellTerms {
+        pressure_to_bulk_modulus,
+        denominator,
+        numerator,
+        pressure_increment,
     }
 }
 

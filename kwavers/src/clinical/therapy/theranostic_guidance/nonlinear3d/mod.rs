@@ -105,6 +105,7 @@ pub fn run_theranostic_nonlinear_3d(
         resolution_meets_min_ppw,
         dt_s: fwi.dt_s,
         time_steps: fwi.time_steps,
+        source_scale: fwi.source_scale,
         active_voxels,
         fwi_metrics: fwi.metrics,
         cavitation_metrics: cavitation.metrics,

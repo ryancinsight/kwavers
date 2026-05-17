@@ -250,6 +250,7 @@ pub fn run_fwi(
         peak_pressure_pa: unflatten(&therapy_peak, n),
         objective_history,
         metrics: metrics_from_score(&score_vec, &target, &body),
+        source_scale,
         dt_s: schedule.dt_s,
         time_steps: schedule.time_steps,
     }

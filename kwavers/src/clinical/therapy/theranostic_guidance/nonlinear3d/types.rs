@@ -267,6 +267,7 @@ pub struct Nonlinear3dResult {
     pub resolution_meets_min_ppw: bool,
     pub dt_s: f64,
     pub time_steps: usize,
+    pub source_scale: f64,
     pub active_voxels: usize,
     pub fwi_metrics: VolumeReconstructionMetrics,
     pub cavitation_metrics: VolumeReconstructionMetrics,

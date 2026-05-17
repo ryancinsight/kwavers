@@ -204,6 +204,7 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("spacing_m", result.spacing_m)?;
     out.set_item("dt_s", result.dt_s)?;
     out.set_item("time_steps", result.time_steps)?;
+    out.set_item("source_scale", result.source_scale)?;
     out.set_item("active_voxels", result.active_voxels)?;
     out.set_item("grid_size", config.grid_size)?;
     out.set_item("requested_element_count", config.element_count)?;

@@ -8,11 +8,11 @@
 //! # Theorem
 //!
 //! For recurrence
-//! `p[n+1] = S * (2 p[n] - p[n-1] + c^2 dt^2 L p[n] + q dtt(p^2)[n] + s[n])`
-//! with fixed sponge `S`, fixed density and nonlinearity coefficient
-//! `q = beta dt^2 / (rho c^2)`, the reverse sweep in `gradient` computes the
-//! exact derivative of the discrete trace least-squares objective with respect
-//! to the nodal sound speed.
+//! `p[n+1] = S * (2p[n] - p[n-1] + N[n] / D[n] + s[n])`, where
+//! `N[n] = c^2 dt^2 Lp[n] + 2 beta (p[n] - p[n-1])^2 / (rho c^2)` and
+//! `D[n] = 1 - 2 beta p[n] / (rho c^2)`, the reverse sweep in `gradient`
+//! computes the exact derivative of the discrete trace least-squares objective
+//! with respect to the nodal sound speed and nonlinearity coefficient.
 //!
 //! # Proof sketch
 //!
