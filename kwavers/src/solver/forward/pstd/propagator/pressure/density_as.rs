@@ -62,10 +62,13 @@ impl PSTDSolver {
                 *rho -= dt * c * du;
             });
 
-        // Copy divergences into 3-D scratch buffers for pressure-side absorption.
-        self.dpx.slice_mut(s![.., 0, ..]).assign(&ctx.duxdx);
-        self.dpy.fill(0.0);
-        self.dpz.slice_mut(s![.., 0, ..]).assign(&ctx.duzdr);
+        // Write divergences into div_ux/div_uy/div_uz (the divergence cache).
+        // `apply_absorption_to_pressure` reads from div_u* at Step 1 to build
+        // ρ₀·∇·u — writing to dpx/dpy/dpz here left the AS divergences out of
+        // the absorption L1 term.
+        self.div_ux.slice_mut(s![.., 0, ..]).assign(&ctx.duxdx);
+        self.div_uy.fill(0.0);
+        self.div_uz.slice_mut(s![.., 0, ..]).assign(&ctx.duzdr);
         self.as_ctx = Some(ctx);
 
         self.apply_pml_to_density()?; // post-step PML
