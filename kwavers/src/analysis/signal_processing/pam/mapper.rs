@@ -4,7 +4,7 @@ use super::PamBeamformingMethod;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::sensor::beamforming::processor::BeamformingProcessor;
 use crate::domain::sensor::beamforming::BeamformingCoreConfig;
-use crate::domain::sensor::passive_acoustic_mapping::geometry::ArrayGeometry;
+use crate::domain::sensor::passive_acoustic_mapping::geometry::PamArrayGeometry;
 use ndarray::{Array3, Axis};
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ impl PassiveAcousticMapper {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new(config: PAMConfig, geometry: ArrayGeometry) -> KwaversResult<Self> {
+    pub fn new(config: PAMConfig, geometry: PamArrayGeometry) -> KwaversResult<Self> {
         config.beamforming.validate()?;
 
         let element_positions = geometry.element_positions();

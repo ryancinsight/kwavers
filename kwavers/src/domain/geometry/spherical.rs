@@ -1,7 +1,7 @@
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
-use super::{Dimension, GeometricDomain, PointLocation};
+use super::{GeometricDomain, GeometryDimension, PointLocation};
 
 /// Circular/spherical domain
 ///
@@ -52,10 +52,10 @@ impl SphericalDomain {
 }
 
 impl GeometricDomain for SphericalDomain {
-    fn dimension(&self) -> Dimension {
+    fn dimension(&self) -> GeometryDimension {
         match self.center.len() {
-            2 => Dimension::Two,
-            3 => Dimension::Three,
+            2 => GeometryDimension::Two,
+            3 => GeometryDimension::Three,
             _ => unreachable!("SphericalDomain only constructed with 2-3 dimensions"),
         }
     }

@@ -122,6 +122,7 @@ pub mod boundary;
 pub mod core;
 pub mod gpu;
 pub mod integration;
+pub mod scratch;
 pub mod stress;
 pub mod types;
 
@@ -132,10 +133,11 @@ pub use types::{
     VolumetricWaveConfig, WaveFrontTracker,
 };
 
-pub use boundary::{PMLBoundary, PMLConfig};
+pub use boundary::{PMLBoundary, SwePmlConfig};
 pub use core::ElasticWaveSolver;
 pub use gpu::{AdaptiveResolution, GPUDevice, GPUElasticWaveSolver3D};
 pub use integration::TimeIntegrator;
+pub use scratch::ElasticStepScratch;
 
 // Note: The elastic wave solver was originally misplaced in:
 // physics/acoustics/imaging/modalities/elastography/elastic_wave_solver.rs

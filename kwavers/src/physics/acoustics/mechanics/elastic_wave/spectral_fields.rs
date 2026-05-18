@@ -1,7 +1,57 @@
-//! Spectral field representations for elastic wave propagation
+//! Spectral Field Representations for Elastic Wave Propagation
 //!
-//! This module provides complex-valued field structures required for
-//! spectral methods using FFT-based derivatives.
+//! Provides complex-valued field containers for FFT-based (pseudo-spectral)
+//! methods.  Physical fields are real-valued; their Fourier transforms are
+//! complex and used to compute spatial derivatives in the wavenumber domain.
+//!
+//! ## Mathematical Foundation
+//!
+//! For a real field f(x) on a periodic domain of length L with N grid points,
+//! the DFT pair is:
+//!
+//! ```text
+//! F[k] = Σ_{n=0}^{N-1} f[n] · exp(−2πi k n / N)
+//! f[n] = (1/N) Σ_{k=0}^{N-1} F[k] · exp(+2πi k n / N)
+//! ```
+//!
+//! Spatial derivatives in the wavenumber domain become multiplications:
+//! `∂f/∂x ↔ ik_x · F[k_x]` where `k_x = 2πn/(N·dx)`.
+//!
+//! ## Theorem (Plancherel – Round-Trip Identity)
+//!
+//! **Statement.** For a real-valued array f ∈ ℝ^N stored as f64:
+//!
+//! ```text
+//! IFFT(FFT(f)) = f    (up to floating-point rounding)
+//! ```
+//!
+//! with round-trip error bounded by `|f_recovered - f| ≤ N · ε_mach · ‖F‖_∞`
+//! where ε_mach ≈ 2.2 × 10⁻¹⁶ for f64.
+//!
+//! **Proof sketch.** The DFT is a unitary transformation (Parseval's theorem
+//! applies); the numerical FFT implements it with O(N log N) floating-point
+//! operations each introducing at most O(ε_mach) relative error.  The accumulated
+//! error is O(log N · ε_mach) per element, bounded by N · ε_mach for the
+//! worst-case sum.
+//!
+//! **Consequence.** `from_real` followed by `to_real` recovers the original
+//! physical field to within round-trip error.  The tests below verify this
+//! bound for 8×8×8 grids (N = 512): tolerance = 512 · ε_mach · 10.
+//!
+//! ## Theorem (Spectral Derivative Exactness)
+//!
+//! For a bandlimited signal (no aliasing), multiplication by `i·k` in the
+//! wavenumber domain is *exact* — there is no truncation error.  For an
+//! N-point DFT, the Nyquist bin (k = N/2) must be zeroed to preserve
+//! real-valued output after IFFT.  This is the standard spectral differentiation
+//! algorithm used in k-space and PSTD methods.
+//!
+//! ## References
+//!
+//! - Fornberg B. (1998). *A Practical Guide to Pseudospectral Methods*.
+//!   Cambridge University Press, §1.4 (differentiation matrices).
+//! - Kreiss H.O., Oliger J. (1972). SIAM J. Numer. Anal. 9(1), 112–128.
+//!   (spectral accuracy for periodic problems)
 
 use ndarray::Array3;
 use num_complex::Complex;

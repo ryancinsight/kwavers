@@ -42,5 +42,6 @@ pub use computation::LossComputer;
 /// Re-export data structures from data module
 #[cfg(feature = "pinn")]
 pub use data::{
-    BoundaryData, BoundaryType, CollocationData, InitialData, LossComponents, ObservationData,
+    BoundaryData, CollocationData, ElasticBoundaryCondition, ElasticPinnLossComponents,
+    InitialData, ObservationData,
 };

@@ -1,4 +1,4 @@
-use super::super::types::{TumorSpec, VesselSpec, VesselType};
+use super::super::types::{PhantomVesselType, TumorSpec, VesselSpec};
 use super::super::utils::{compute_blood_properties, compute_tumor_properties};
 use crate::clinical::imaging::chromophores::HemoglobinDatabase;
 use crate::domain::grid::GridDimensions;
@@ -46,7 +46,7 @@ impl BloodOxygenationPhantomBuilder {
             center,
             radius,
             so2,
-            vessel_type: VesselType::Artery,
+            vessel_type: PhantomVesselType::Artery,
         });
         self
     }
@@ -58,7 +58,7 @@ impl BloodOxygenationPhantomBuilder {
             center,
             radius,
             so2,
-            vessel_type: VesselType::Vein,
+            vessel_type: PhantomVesselType::Vein,
         });
         self
     }
@@ -70,7 +70,7 @@ impl BloodOxygenationPhantomBuilder {
             center,
             radius,
             so2,
-            vessel_type: VesselType::Capillary,
+            vessel_type: PhantomVesselType::Capillary,
         });
         self
     }

@@ -1,14 +1,14 @@
 use super::mesh::TetrahedralMesh;
-use super::types::BoundaryType;
+use super::types::MeshBoundaryType;
 use crate::domain::grid::Grid;
 
 #[test]
 fn tetrahedron_volume_unit_is_one_sixth() {
     let mut mesh = TetrahedralMesh::new();
-    let n0 = mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    let n1 = mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+    let n0 = mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n1 = mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n2 = mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    let n3 = mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
     let e0 = mesh.add_element([n0, n1, n2, n3], 0).unwrap();
     let vol = mesh.elements[e0].volume;
     assert!((vol - 1.0 / 6.0).abs() < 1e-12);
@@ -17,10 +17,10 @@ fn tetrahedron_volume_unit_is_one_sixth() {
 #[test]
 fn point_location_barycentric_is_correct() {
     let mut mesh = TetrahedralMesh::new();
-    let n0 = mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    let n1 = mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+    let n0 = mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n1 = mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n2 = mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    let n3 = mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
     mesh.add_element([n0, n1, n2, n3], 0).unwrap();
 
     let inside = mesh.locate_point([0.1, 0.1, 0.1]);
@@ -36,11 +36,11 @@ fn point_location_barycentric_is_correct() {
 #[test]
 fn adjacency_is_symmetric_for_shared_face() {
     let mut mesh = TetrahedralMesh::new();
-    let n0 = mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    let n1 = mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
-    let n4 = mesh.add_node([0.0, 0.0, -1.0], BoundaryType::Interior);
+    let n0 = mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n1 = mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n2 = mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    let n3 = mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
+    let n4 = mesh.add_node([0.0, 0.0, -1.0], MeshBoundaryType::Interior);
     let e0 = mesh.add_element([n0, n1, n2, n3], 0).unwrap();
     let e1 = mesh.add_element([n0, n1, n2, n4], 0).unwrap();
 
@@ -51,12 +51,12 @@ fn adjacency_is_symmetric_for_shared_face() {
 #[test]
 fn non_manifold_face_is_rejected() {
     let mut mesh = TetrahedralMesh::new();
-    let n0 = mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    let n1 = mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
-    let n4 = mesh.add_node([0.0, 0.0, -1.0], BoundaryType::Interior);
-    let n5 = mesh.add_node([0.0, 0.0, 2.0], BoundaryType::Interior);
+    let n0 = mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n1 = mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n2 = mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    let n3 = mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
+    let n4 = mesh.add_node([0.0, 0.0, -1.0], MeshBoundaryType::Interior);
+    let n5 = mesh.add_node([0.0, 0.0, 2.0], MeshBoundaryType::Interior);
 
     mesh.add_element([n0, n1, n2, n3], 0).unwrap();
     mesh.add_element([n0, n1, n2, n4], 0).unwrap();

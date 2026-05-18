@@ -1,5 +1,6 @@
-use super::constants::{ATMOSPHERIC_PRESSURE, WATER_SURFACE_TENSION, WATER_VAPOR_PRESSURE};
+use super::constants::{WATER_SURFACE_TENSION, WATER_VAPOR_PRESSURE};
 use super::*;
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use ndarray::Array3;
 
 fn detector() -> TherapyCavitationDetector {

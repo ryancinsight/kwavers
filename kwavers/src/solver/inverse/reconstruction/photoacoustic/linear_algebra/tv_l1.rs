@@ -4,9 +4,9 @@ use ndarray::{Array1, Array2, ArrayView1};
 
 use crate::core::error::KwaversResult;
 
-use super::LinearSolver;
+use super::PhotoacousticLinearSolver;
 
-impl LinearSolver {
+impl PhotoacousticLinearSolver {
     /// Solve using Total Variation regularization.
     ///
     /// min ‖Ax − b‖² + λ TV(x)

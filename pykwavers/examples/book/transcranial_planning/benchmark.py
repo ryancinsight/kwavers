@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,8 @@ def run_skull_adaptive_benchmark(
     grid_size: int = 32,
     element_count: int | None = None,
     aperture_diameter_m: float | None = None,
+    kwargs_overrides: Mapping[str, Any] | None = None,
+    summarize: bool = True,
 ) -> dict[str, Any]:
     import pykwavers as kw
 
@@ -25,11 +28,13 @@ def run_skull_adaptive_benchmark(
         kwargs["element_count"] = element_count
     if aperture_diameter_m is not None:
         kwargs["aperture_diameter_m"] = aperture_diameter_m
+    if kwargs_overrides is not None:
+        kwargs.update(dict(kwargs_overrides))
     result = kw.run_transcranial_skull_adaptive_benchmark_from_ritk_ct(
         str(ct_path),
         **kwargs,
     )
-    return summarize_benchmark_result(result)
+    return summarize_benchmark_result(result) if summarize else result
 
 
 def summarize_benchmark_result(result: dict[str, Any]) -> dict[str, Any]:

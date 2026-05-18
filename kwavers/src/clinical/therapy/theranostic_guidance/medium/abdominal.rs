@@ -76,6 +76,9 @@ pub fn prepare_abdominal_slice(
         target_mask: target,
         spacing_m,
         source_slice_index: slice_index,
+        source_dimensions: [ct_volume_hu.dim().0, ct_volume_hu.dim().1],
+        source_spacing_m: [spacing_mm[0] * 1.0e-3, spacing_mm[1] * 1.0e-3],
+        crop_bounds_index: [bbox.0, bbox.1, bbox.2, bbox.3],
     })
 }
 

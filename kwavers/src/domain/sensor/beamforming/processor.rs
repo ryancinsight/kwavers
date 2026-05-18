@@ -3,7 +3,7 @@
 // Import config from domain layer (single source of truth for configuration)
 use crate::core::error::KwaversResult;
 use crate::domain::sensor::beamforming::BeamformingConfig;
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::{EigenDecomposition, LinearAlgebra};
 use ndarray::{Array1, Array2, Array3};
 
 /// Beamforming processor for array algorithms
@@ -51,7 +51,7 @@ impl BeamformingProcessor {
         &self,
         matrix: &Array2<f64>,
     ) -> KwaversResult<(ndarray::Array1<f64>, Array2<f64>)> {
-        LinearAlgebra::eigendecomposition(matrix)
+        EigenDecomposition::eigendecomposition(matrix)
     }
 
     /// Compute matrix inverse

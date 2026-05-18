@@ -1,8 +1,7 @@
 //! Conservation enforcement for interface coupling
 
 use super::InterfaceGeometry;
-use crate::core::constants::numerical::SYMMETRIC_CORRECTION_FACTOR;
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 
 /// Conservation enforcer for interface coupling
@@ -31,104 +30,67 @@ impl ConservationEnforcer {
         interpolated: &Array3<f64>,
         target: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
+        if interpolated.dim() != target.dim() {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: format!("{:?}", target.dim()),
+                    actual: format!("{:?}", interpolated.dim()),
+                },
+            ));
+        }
+
         let mut conserved = interpolated.clone();
 
-        // Check and enforce mass conservation
-        self.enforce_mass_conservation(&mut conserved, target)?;
-
-        // Check and enforce momentum conservation
-        self.enforce_momentum_conservation(&mut conserved, target)?;
-
-        // Check and enforce energy conservation
-        self.enforce_energy_conservation(&mut conserved, target)?;
+        self.enforce_integral_and_energy(&mut conserved, interpolated, target);
 
         Ok(conserved)
     }
 
-    /// Enforce mass conservation
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// Enforce target interface integral and quadratic energy.
     ///
-    fn enforce_mass_conservation(
+    /// ## Theorem
+    ///
+    /// Let `u` be the interpolated pressure trace and `t` the target pressure
+    /// trace over `N` interface points. Set `m_t = sum(t)/N`,
+    /// `z = u - mean(u)`, and `v = m_t + alpha z`. Then
+    /// `sum(v)=sum(t)` for every `alpha` because `sum(z)=0`. If
+    /// `||z||_2 > 0`, choosing
+    /// `alpha = sqrt((||t||_2^2 - N m_t^2) / ||z||_2^2)` also gives
+    /// `||v||_2 = ||t||_2`. The numerator is non-negative by Cauchy's
+    /// inequality. If `z` is zero, the least-distorting conservative field is
+    /// the constant target mean.
+    fn enforce_integral_and_energy(
         &self,
         fields: &mut Array3<f64>,
-        _target: &Array3<f64>,
-    ) -> KwaversResult<()> {
-        // Calculate total mass before and after
-        let total_mass: f64 = fields.iter().sum();
-
-        if total_mass.abs() > self.tolerance {
-            // Normalize to conserve mass
-            let correction = 1.0 / total_mass;
-            fields.map_inplace(|x| *x *= correction);
-        }
-
-        Ok(())
-    }
-
-    /// Enforce momentum conservation
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    fn enforce_momentum_conservation(
-        &self,
-        fields: &mut Array3<f64>,
+        interpolated: &Array3<f64>,
         target: &Array3<f64>,
-    ) -> KwaversResult<()> {
-        // Momentum conservation for acoustic waves: ρ₀ ∂v/∂t = -∇p
-        // For pressure fields at interfaces, momentum flux continuity requires:
-        // ∫ p·n dS = ∫ p_target·n dS (flux balance)
-        //
-        // We enforce weak momentum conservation by matching the momentum flux integral
-        // across the interface. This is more accurate than simple pressure averaging.
-
-        // Calculate momentum flux (proportional to pressure for acoustic waves)
-        let source_flux: f64 = fields.iter().sum();
-        let target_flux: f64 = target.iter().sum();
-
-        // If fluxes differ significantly, apply correction factor to conserve momentum
-        if source_flux.abs() > self.tolerance {
-            let flux_ratio = target_flux / source_flux;
-
-            // Apply momentum-conserving correction with spatial weighting
-            // This preserves the field structure while matching total momentum
-            fields.zip_mut_with(target, |field_val, &target_val| {
-                // Weighted average favoring conservation: 0.7 * corrected + 0.3 * target
-                let corrected = *field_val * flux_ratio;
-                *field_val = 0.7f64.mul_add(corrected, 0.3 * target_val);
-            });
-        } else {
-            // If source flux is near zero, use target field directly
-            fields.zip_mut_with(target, |field_val, &target_val| {
-                *field_val = SYMMETRIC_CORRECTION_FACTOR * (*field_val + target_val);
-            });
-        }
-
-        Ok(())
-    }
-
-    /// Enforce energy conservation
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    fn enforce_energy_conservation(
-        &self,
-        fields: &mut Array3<f64>,
-        target: &Array3<f64>,
-    ) -> KwaversResult<()> {
-        // Calculate total energy
-        let source_energy: f64 = fields.iter().map(|x| x * x).sum();
+    ) {
+        let n = target.len() as f64;
+        let source_sum: f64 = interpolated.iter().sum();
+        let source_mean = source_sum / n;
+        let target_sum: f64 = target.iter().sum();
+        let target_mean = target_sum / n;
         let target_energy: f64 = target.iter().map(|x| x * x).sum();
+        let centered_energy: f64 = interpolated
+            .iter()
+            .map(|&x| {
+                let centered = x - source_mean;
+                centered * centered
+            })
+            .sum();
 
-        if source_energy > self.tolerance {
-            let energy_ratio = (target_energy / source_energy).sqrt();
-            if (energy_ratio - 1.0).abs() > self.tolerance {
-                // Scale to conserve energy
-                fields.map_inplace(|x| *x *= energy_ratio);
-            }
+        if centered_energy <= self.tolerance {
+            fields.fill(target_mean);
+            return;
         }
 
-        Ok(())
+        let constant_energy = n * target_mean * target_mean;
+        let variable_energy = (target_energy - constant_energy).max(0.0);
+        let scale = (variable_energy / centered_energy).sqrt();
+
+        fields.zip_mut_with(interpolated, |field_value, &source_value| {
+            *field_value = target_mean + scale * (source_value - source_mean);
+        });
     }
 
     /// Get conservation metrics
@@ -139,6 +101,62 @@ impl ConservationEnforcer {
             momentum_error: (0.0, 0.0, 0.0),
             energy_error: 0.0,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn geometry() -> InterfaceGeometry {
+        InterfaceGeometry {
+            normal_direction: 0,
+            plane_position: 0.0,
+            extent: (1.0, 1.0),
+            area: 1.0,
+            num_points: 4,
+        }
+    }
+
+    fn sum(field: &Array3<f64>) -> f64 {
+        field.iter().sum()
+    }
+
+    fn energy(field: &Array3<f64>) -> f64 {
+        field.iter().map(|x| x * x).sum()
+    }
+
+    #[test]
+    fn enforcement_matches_target_integral_and_energy() {
+        let enforcer = ConservationEnforcer::new(&geometry());
+        let interpolated = Array3::from_shape_vec((2, 2, 1), vec![1.0, 2.0, 4.0, 8.0]).unwrap();
+        let target = Array3::from_shape_vec((2, 2, 1), vec![3.0, 5.0, 6.0, 10.0]).unwrap();
+
+        let conserved = enforcer.enforce(&interpolated, &target).unwrap();
+
+        assert!((sum(&conserved) - sum(&target)).abs() < 1e-12);
+        assert!((energy(&conserved) - energy(&target)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn enforcement_preserves_identical_interface() {
+        let enforcer = ConservationEnforcer::new(&geometry());
+        let interpolated = Array3::from_shape_vec((2, 2, 1), vec![1.0, -2.0, 4.0, 8.0]).unwrap();
+
+        let conserved = enforcer.enforce(&interpolated, &interpolated).unwrap();
+
+        assert_eq!(conserved, interpolated);
+    }
+
+    #[test]
+    fn enforcement_rejects_shape_mismatch() {
+        let enforcer = ConservationEnforcer::new(&geometry());
+        let interpolated = Array3::zeros((2, 2, 1));
+        let target = Array3::zeros((2, 1, 1));
+
+        let error = enforcer.enforce(&interpolated, &target).unwrap_err();
+
+        assert!(format!("{error}").contains("GridDimension mismatch"));
     }
 }
 

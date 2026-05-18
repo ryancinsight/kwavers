@@ -34,9 +34,9 @@ mod tests;
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 
-use super::absorption::AbsorptionOperator;
+use super::absorption::KzkAbsorptionOperator;
 use super::complex_parabolic_diffraction::ParabolicDiffractionOperator;
-use super::nonlinearity::NonlinearOperator;
+use super::nonlinearity::KzkNonlinearOperator;
 use super::KZKConfig;
 use crate::math::fft::Complex64;
 use crate::solver::forward::nonlinear::conservation::{
@@ -69,9 +69,9 @@ pub struct KZKSolver {
     /// Complex-field parabolic diffraction operator H = exp(−ik_T²Δz/(2k₀)).
     pub(super) complex_diffraction: ParabolicDiffractionOperator,
     /// Absorption operator (spectral, operates on complex waveform)
-    pub(super) absorption: AbsorptionOperator,
+    pub(super) absorption: KzkAbsorptionOperator,
     /// Nonlinear operator (operates on Re[p] only)
-    pub(super) nonlinear: NonlinearOperator,
+    pub(super) nonlinear: KzkNonlinearOperator,
     /// Conservation diagnostics tracker
     pub(super) conservation_tracker: Option<ConservationTracker>,
     /// Current z-step (for tracking propagation)
@@ -116,8 +116,8 @@ impl KZKSolver {
         let pressure_prev = Array3::<Complex64>::zeros((config.nx, config.ny, config.nt));
 
         let complex_diffraction = ParabolicDiffractionOperator::new(&config);
-        let absorption = AbsorptionOperator::new(&config);
-        let nonlinear = NonlinearOperator::new(&config);
+        let absorption = KzkAbsorptionOperator::new(&config);
+        let nonlinear = KzkNonlinearOperator::new(&config);
 
         Ok(Self {
             config,
@@ -197,7 +197,7 @@ impl KZKSolver {
         self.config.frequency = frequency;
         // Re-initialize operators with updated frequency.
         self.complex_diffraction = ParabolicDiffractionOperator::new(&self.config);
-        self.absorption = AbsorptionOperator::new(&self.config);
+        self.absorption = KzkAbsorptionOperator::new(&self.config);
 
         // Set source as time-harmonic signal (real-valued at z=0).
         let omega = 2.0 * PI * frequency;

@@ -1,7 +1,7 @@
 //! Bayesian PINN with uncertainty quantification via deep ensembles.
 
 use super::types::{
-    PinnUncertaintyConfig, PredictionWithUncertainty, UncertaintyMethod, UncertaintyStats,
+    PinnUncertaintyConfig, PinnUncertaintyMethod, PredictionWithUncertainty, UncertaintyStats,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::AutodiffBackend;
@@ -11,7 +11,7 @@ use super::conformal::ConformalPredictor;
 
 /// Bayesian PINN with uncertainty quantification.
 #[derive(Debug)]
-pub struct BayesianPINN<B: AutodiffBackend> {
+pub struct PinnBayesianPINN<B: AutodiffBackend> {
     /// Ensemble of models for uncertainty estimation.
     pub(super) ensemble: Vec<crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>>,
     /// Uncertainty configuration.
@@ -24,7 +24,7 @@ pub struct BayesianPINN<B: AutodiffBackend> {
     pub stats: UncertaintyStats,
 }
 
-impl<B: AutodiffBackend> BayesianPINN<B> {
+impl<B: AutodiffBackend> PinnBayesianPINN<B> {
     /// Create a new Bayesian PINN.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -109,12 +109,12 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
         }
 
         let mut stats =
-            self.compute_uncertainty_stats(&predictions, UncertaintyMethod::DeepEnsemble)?;
+            self.compute_uncertainty_stats(&predictions, PinnUncertaintyMethod::DeepEnsemble)?;
 
         if let Some(cp) = &self.conformal_predictor {
             let (lower, upper) = cp.predict_conformal(input)?;
             stats.confidence_interval = (vec![lower], vec![upper]);
-            stats.method = UncertaintyMethod::Hybrid;
+            stats.method = PinnUncertaintyMethod::Hybrid;
         }
 
         Ok(stats)
@@ -127,7 +127,7 @@ impl<B: AutodiffBackend> BayesianPINN<B> {
     fn compute_uncertainty_stats(
         &mut self,
         predictions: &[Vec<f32>],
-        method: UncertaintyMethod,
+        method: PinnUncertaintyMethod,
     ) -> KwaversResult<PredictionWithUncertainty> {
         if predictions.is_empty() {
             return Err(KwaversError::System(

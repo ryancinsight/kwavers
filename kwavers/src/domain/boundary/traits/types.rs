@@ -2,7 +2,7 @@
 
 /// Field type enumeration for multi-physics support.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FieldType {
+pub enum BoundaryFieldType {
     /// Acoustic pressure field (Pa).
     Pressure,
     /// Velocity field components (m/s).

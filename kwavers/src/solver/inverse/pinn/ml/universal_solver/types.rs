@@ -3,8 +3,8 @@
 //! SRP: changes when the public API data shapes change.
 
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryConditionSpec, InitialConditionSpec, PhysicsLossWeights, PhysicsParameters,
-    PhysicsValidationMetric,
+    InitialConditionSpec, PhysicsLossWeights, PhysicsValidationMetric, PinnBoundaryConditionSpec,
+    PinnDomainPhysicsParameters,
 };
 use std::collections::HashMap;
 use std::time::Duration;
@@ -14,8 +14,8 @@ use std::time::Duration;
 pub struct UniversalTrainingConfig {
     pub epochs: usize,
     pub learning_rate: f64,
-    pub lr_decay: Option<LearningRateSchedule>,
-    pub optimizer: OptimizerType,
+    pub lr_decay: Option<UniversalSolverLrSchedule>,
+    pub optimizer: UniversalSolverOptimizerType,
     pub collocation_points: usize,
     pub boundary_points: usize,
     pub initial_points: usize,
@@ -31,8 +31,8 @@ impl Default for UniversalTrainingConfig {
         Self {
             epochs: 1000,
             learning_rate: 0.001,
-            lr_decay: Some(LearningRateSchedule::Exponential { gamma: 0.995 }),
-            optimizer: OptimizerType::Adam {
+            lr_decay: Some(UniversalSolverLrSchedule::Exponential { gamma: 0.995 }),
+            optimizer: UniversalSolverOptimizerType::Adam {
                 beta1: 0.9,
                 beta2: 0.999,
                 epsilon: 1e-8,
@@ -55,7 +55,7 @@ impl Default for UniversalTrainingConfig {
 
 /// Learning rate decay schedules
 #[derive(Debug, Clone)]
-pub enum LearningRateSchedule {
+pub enum UniversalSolverLrSchedule {
     /// Exponential decay: lr *= gamma^epoch
     Exponential { gamma: f64 },
     /// Step decay: lr *= gamma every step_size epochs
@@ -66,7 +66,7 @@ pub enum LearningRateSchedule {
 
 /// Optimizer types for PINN training
 #[derive(Debug, Clone)]
-pub enum OptimizerType {
+pub enum UniversalSolverOptimizerType {
     Adam {
         beta1: f64,
         beta2: f64,
@@ -105,7 +105,7 @@ pub struct UniversalSolverStats {
     pub loss_history: Vec<HashMap<String, f64>>,
     pub physics_metrics: Vec<PhysicsValidationMetric>,
     pub convergence_info: ConvergenceInfo,
-    pub memory_stats: Option<MemoryStats>,
+    pub memory_stats: Option<UniversalSolverMemoryStats>,
 }
 
 impl Default for UniversalSolverStats {
@@ -148,7 +148,7 @@ pub struct ConvergenceInfo {
 
 /// Memory usage statistics
 #[derive(Debug, Clone)]
-pub struct MemoryStats {
+pub struct UniversalSolverMemoryStats {
     pub peak_gpu_memory_mb: f64,
     pub peak_cpu_memory_mb: f64,
     pub final_gpu_memory_mb: f64,
@@ -167,8 +167,8 @@ pub struct PhysicsSolution<B: burn::tensor::backend::AutodiffBackend> {
 #[derive(Debug, Clone)]
 pub struct DomainInfo {
     pub domain_name: String,
-    pub physics_params: PhysicsParameters,
-    pub boundary_conditions: Vec<BoundaryConditionSpec>,
+    pub physics_params: PinnDomainPhysicsParameters,
+    pub boundary_conditions: Vec<PinnBoundaryConditionSpec>,
     pub initial_conditions: Vec<InitialConditionSpec>,
 }
 

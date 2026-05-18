@@ -44,7 +44,7 @@ impl Default for BBBParameters {
 
 /// Treatment protocol for BBB opening
 #[derive(Debug, Clone)]
-pub struct TreatmentProtocol {
+pub struct BbbTreatmentProtocol {
     pub frequency: f64,        // Hz
     pub target_mi: f64,        // MI
     pub duration: f64,         // seconds

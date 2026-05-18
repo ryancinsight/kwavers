@@ -2,7 +2,7 @@ use super::AcousticWaveSolver;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
+use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use crate::simulation::backends::acoustic::{AcousticSolverBackend, FdtdBackend};
 use ndarray::Array3;
 
@@ -33,7 +33,7 @@ impl AcousticWaveSolver {
         grid: &Grid,
         medium: &dyn Medium,
     ) -> KwaversResult<Box<dyn AcousticSolverBackend>> {
-        let backend = FdtdBackend::new(grid, medium, SpatialOrder::Second)?;
+        let backend = FdtdBackend::new(grid, medium, AcousticSpatialOrder::Second)?;
         Ok(Box::new(backend))
     }
 }

@@ -13,7 +13,7 @@
 //! | [`layout`] | [`SoAFieldStorage`], [`FieldLayout`], [`TiledIterator3D`], NUMA-aware layout |
 //! | [`batch`] | [`BatchFieldAllocator`], [`SoAFieldBuffer`], [`TempBufferPool`] |
 //! | [`pool`] | [`BufferPool`], [`PooledBuffer`], [`NumaPoolManager`] |
-//! | [`numa`] | [`NumaTopology`], [`NumaPolicy`], [`NumaAllocator`] |
+//! | [`numa`] | [`NumaTopology`], [`ArenaLayoutNumaPolicy`], [`NumaAllocator`] |
 //!
 //! # Design Principles
 //!
@@ -48,8 +48,8 @@ pub use batch::{
 };
 pub use field_arena::{ArenaConfig, ArenaStats, FieldArena};
 pub use layout::{
-    align_up, cache_aligned_size, packed_struct_size, CacheBlockSize, FieldBufferGuard,
-    FieldLayout, FieldPool, NumaAwareAllocator, NumaPolicy, SoAFieldStorage, TiledIterator3D,
+    align_up, cache_aligned_size, packed_struct_size, ArenaLayoutNumaPolicy, CacheBlockSize,
+    FieldBufferGuard, FieldLayout, FieldPool, NumaAwareAllocator, SoAFieldStorage, TiledIterator3D,
     CACHE_LINE_SIZE, ELEMENTS_PER_CACHE_LINE,
 };
 pub use numa::{

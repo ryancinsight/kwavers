@@ -16,8 +16,8 @@ pub use crate::core::arena::batch::{
 };
 pub use crate::core::arena::field_arena::{ArenaConfig, ArenaStats, FieldArena};
 pub use crate::core::arena::layout::{
-    align_up, cache_aligned_size, packed_struct_size, CacheBlockSize, FieldBufferGuard,
-    FieldLayout, FieldPool, NumaAwareAllocator, NumaPolicy, SoAFieldStorage, TiledIterator3D,
+    align_up, cache_aligned_size, packed_struct_size, ArenaLayoutNumaPolicy, CacheBlockSize,
+    FieldBufferGuard, FieldLayout, FieldPool, NumaAwareAllocator, SoAFieldStorage, TiledIterator3D,
     CACHE_LINE_SIZE, ELEMENTS_PER_CACHE_LINE,
 };
 pub use crate::core::arena::numa::{

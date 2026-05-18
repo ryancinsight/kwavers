@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 
 /// Performance metrics for real-time simulation
 #[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+pub struct GpuStepMetrics {
     /// Average step execution time (milliseconds)
     pub avg_step_time_ms: f64,
 
@@ -71,7 +71,7 @@ pub struct BudgetAnalysis {
 
 /// Real-time performance monitor
 #[derive(Debug)]
-pub struct PerformanceMonitor {
+pub struct GpuPerformanceMonitor {
     /// Step execution times (milliseconds)
     step_times: VecDeque<f64>,
 
@@ -97,7 +97,7 @@ pub struct PerformanceMonitor {
     budget_violations: u64,
 }
 
-impl PerformanceMonitor {
+impl GpuPerformanceMonitor {
     /// Create new performance monitor
     pub fn new(budget_ms: f64, window_size: usize) -> Self {
         Self {
@@ -157,7 +157,7 @@ impl PerformanceMonitor {
     }
 
     /// Get current performance metrics
-    pub fn get_metrics(&self) -> PerformanceMetrics {
+    pub fn get_metrics(&self) -> GpuStepMetrics {
         let avg_step = self.calculate_average(&self.step_times);
         let p95_step = self.calculate_percentile(&self.step_times, 0.95);
         let p99_step = self.calculate_percentile(&self.step_times, 0.99);
@@ -190,7 +190,7 @@ impl PerformanceMonitor {
             0.0
         };
 
-        PerformanceMetrics {
+        GpuStepMetrics {
             avg_step_time_ms: avg_step,
             p95_step_time_ms: p95_step,
             p99_step_time_ms: p99_step,
@@ -301,14 +301,14 @@ mod tests {
 
     #[test]
     fn test_monitor_creation() {
-        let monitor = PerformanceMonitor::new(10.0, 100);
+        let monitor = GpuPerformanceMonitor::new(10.0, 100);
         assert_eq!(monitor.budget_ms, 10.0);
         assert_eq!(monitor.total_steps, 0);
     }
 
     #[test]
     fn test_step_recording() {
-        let mut monitor = PerformanceMonitor::new(10.0, 10);
+        let mut monitor = GpuPerformanceMonitor::new(10.0, 10);
 
         monitor.record_step(5.0);
         monitor.record_step(8.0);
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_budget_violation_detection() {
-        let mut monitor = PerformanceMonitor::new(10.0, 10);
+        let mut monitor = GpuPerformanceMonitor::new(10.0, 10);
 
         monitor.record_step(8.0);
         monitor.record_step(12.0); // Exceeds budget
@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_bottleneck_detection() {
-        let mut monitor = PerformanceMonitor::new(10.0, 10);
+        let mut monitor = GpuPerformanceMonitor::new(10.0, 10);
 
         // Simulate high transfer overhead
         for _ in 0..5 {
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn test_percentile_calculation() {
-        let mut monitor = PerformanceMonitor::new(100.0, 100);
+        let mut monitor = GpuPerformanceMonitor::new(100.0, 100);
 
         for i in 1..=100 {
             monitor.record_step(i as f64);

@@ -117,12 +117,12 @@ pub use burn_wave_equation_1d::{
 pub mod trainer;
 
 #[cfg(all(feature = "pinn", feature = "api"))]
-pub use trainer::{Geometry, PINNConfig, PINNTrainer, PhysicsParams, TrainingConfig};
+pub use trainer::{BurnPinnTrainingConfig, Geometry, PINNConfig, PINNTrainer, PhysicsParams};
 
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_2d::{
     BoundaryCondition2D, BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave,
-    BurnTrainingMetrics2D, Geometry2D, InterfaceCondition,
+    BurnTrainingMetrics2D, BurnWave2dInterfaceCondition, Geometry2D,
 };
 
 #[cfg(feature = "pinn")]
@@ -191,9 +191,9 @@ pub mod adaptive_sampling;
 
 #[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
-    CommunicationChannel, DataTransfer, DecompositionStrategy, FaultTolerance, GpuDeviceInfo,
-    LoadBalancingAlgorithm, MultiGpuManager, PerformanceMonitor, PerformanceSummary,
-    TransferStatus, WorkUnit,
+    CommunicationChannel, DataTransfer, FaultTolerance, GpuDeviceInfo, LoadBalancingAlgorithm,
+    MultiGpuDecompositionStrategy, MultiGpuManager, MultiGpuPerformanceMonitor, PerformanceSummary,
+    PinnMultiGpuTransferStatus, WorkUnit,
 };
 
 #[cfg(all(feature = "pinn", feature = "api"))]
@@ -216,14 +216,14 @@ pub use quantization::{
 #[cfg(feature = "pinn")]
 pub use edge_runtime::{
     Architecture, DataType, EdgeRuntime, ExecutionKernel, HardwareCapabilities, IOSpecification,
-    MemoryAllocator, PerformanceMonitor as EdgePerformanceMonitor,
+    MemoryAllocator, MultiGpuPerformanceMonitor as EdgePerformanceMonitor,
 };
 
 // Sprint 154: Meta-Learning & Transfer Learning
 #[cfg(feature = "pinn")]
 pub use meta_learning::{
-    MetaLearner, MetaLearningConfig, MetaLearningStats, MetaLoss, PhysicsParameters, PhysicsTask,
-    SamplingStrategy, TaskData, TaskSampler,
+    MetaLearner, MetaLearningConfig, MetaLearningPhysicsParameters, MetaLearningSamplingStrategy,
+    MetaLearningStats, MetaLoss, PhysicsTask, TaskData, TaskSampler,
 };
 
 #[cfg(feature = "pinn")]
@@ -257,18 +257,19 @@ pub use electromagnetic::{EMProblemType, ElectromagneticBoundarySpec, Electromag
 pub use sonoluminescence_coupled::{SonoluminescenceCoupledDomain, SonoluminescenceCouplingConfig};
 
 #[cfg(all(feature = "pinn", feature = "gpu"))]
-pub use electromagnetic_gpu::{BoundaryCondition, EMConfig, EMFieldData, GPUEMSolver};
+pub use electromagnetic_gpu::{EMConfig, EMFieldData, ElectromagneticBc, GPUEMSolver};
 
 #[cfg(feature = "pinn")]
 pub use universal_solver::{
-    ConvergenceInfo, DomainInfo, EarlyStoppingConfig, GeometricFeature, LearningRateSchedule,
-    MemoryStats, PhysicsSolution, UniversalPINNSolver, UniversalSolverStats,
-    UniversalTrainingConfig,
+    ConvergenceInfo, DomainInfo, EarlyStoppingConfig, GeometricFeature, PhysicsSolution,
+    UniversalPINNSolver, UniversalSolverLrSchedule, UniversalSolverMemoryStats,
+    UniversalSolverStats, UniversalTrainingConfig,
 };
 
 #[cfg(feature = "pinn")]
 pub use gpu_accelerator::{
-    BatchedPINNTrainer, CudaBuffer, CudaKernelManager, CudaStream, MemoryPoolType, TrainingStep,
+    BatchedPINNTrainer, CudaBuffer, CudaKernelManager, CudaStream, PinnGpuMemoryPoolType,
+    TrainingStep,
 };
 
 #[cfg(feature = "pinn")]
@@ -279,8 +280,8 @@ pub mod uncertainty_quantification;
 
 #[cfg(feature = "pinn")]
 pub use uncertainty_quantification::{
-    BayesianPINN, ConformalPredictor, PinnUncertaintyConfig, PredictionWithUncertainty,
-    UncertaintyMethod, UncertaintyStats,
+    ConformalPredictor, PinnBayesianPINN, PinnUncertaintyConfig, PinnUncertaintyMethod,
+    PredictionWithUncertainty, UncertaintyStats,
 };
 
 // #[cfg(feature = "pinn")]

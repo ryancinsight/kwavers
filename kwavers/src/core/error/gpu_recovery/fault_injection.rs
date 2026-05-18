@@ -13,47 +13,47 @@ use super::telemetry::{
 
 /// Fault scenario types for injection
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum FaultScenario {
+pub enum GpuFaultScenario {
     DeviceLost,
     OutOfMemory,
     Timeout,
     Validation,
 }
 
-impl FaultScenario {
+impl GpuFaultScenario {
     pub fn target_rate(&self) -> f64 {
         match self {
-            FaultScenario::DeviceLost => DEVICE_LOST_TARGET_RATE,
-            FaultScenario::OutOfMemory => OOM_TARGET_RATE,
-            FaultScenario::Timeout => TIMEOUT_TARGET_RATE,
-            FaultScenario::Validation => 0.95,
+            GpuFaultScenario::DeviceLost => DEVICE_LOST_TARGET_RATE,
+            GpuFaultScenario::OutOfMemory => OOM_TARGET_RATE,
+            GpuFaultScenario::Timeout => TIMEOUT_TARGET_RATE,
+            GpuFaultScenario::Validation => 0.95,
         }
     }
 
     pub fn latency_budget_ms(&self) -> u64 {
         match self {
-            FaultScenario::DeviceLost => DEVICE_LOST_LATENCY_BUDGET_MS,
-            FaultScenario::OutOfMemory => OOM_LATENCY_BUDGET_MS,
-            FaultScenario::Timeout => TIMEOUT_LATENCY_BUDGET_MS,
-            FaultScenario::Validation => VALIDATION_LATENCY_BUDGET_MS,
+            GpuFaultScenario::DeviceLost => DEVICE_LOST_LATENCY_BUDGET_MS,
+            GpuFaultScenario::OutOfMemory => OOM_LATENCY_BUDGET_MS,
+            GpuFaultScenario::Timeout => TIMEOUT_LATENCY_BUDGET_MS,
+            GpuFaultScenario::Validation => VALIDATION_LATENCY_BUDGET_MS,
         }
     }
 
     pub fn to_error(&self) -> GpuError {
         match self {
-            FaultScenario::DeviceLost => GpuError::DeviceLost {
+            GpuFaultScenario::DeviceLost => GpuError::DeviceLost {
                 operation: "fault_injection".to_string(),
             },
-            FaultScenario::OutOfMemory => GpuError::OutOfMemory {
+            GpuFaultScenario::OutOfMemory => GpuError::OutOfMemory {
                 requested: 1024 * 1024 * 1024,
                 available: 512 * 1024 * 1024,
                 current: 100 * 1024 * 1024 * 10,
             },
-            FaultScenario::Timeout => GpuError::Timeout {
+            GpuFaultScenario::Timeout => GpuError::Timeout {
                 operation: "fault_injection".to_string(),
                 duration_ms: 5000,
             },
-            FaultScenario::Validation => GpuError::Validation {
+            GpuFaultScenario::Validation => GpuError::Validation {
                 message: "fault injection validation error".to_string(),
             },
         }
@@ -91,7 +91,7 @@ impl FaultInjectionConfig {
 /// Result of a single fault injection trial
 #[derive(Debug, Clone)]
 pub struct TrialResult {
-    pub scenario: FaultScenario,
+    pub scenario: GpuFaultScenario,
     pub recovered: bool,
     pub latency: Duration,
     pub error: Option<std::sync::Arc<KwaversError>>,
@@ -101,14 +101,14 @@ pub struct TrialResult {
 /// Batch results for statistical validation
 #[derive(Debug, Clone)]
 pub struct FaultInjectionReport {
-    pub results_by_scenario: HashMap<FaultScenario, Vec<TrialResult>>,
+    pub results_by_scenario: HashMap<GpuFaultScenario, Vec<TrialResult>>,
     pub config: FaultInjectionConfig,
     pub start_time: Instant,
     pub end_time: Instant,
 }
 
 impl FaultInjectionReport {
-    pub fn success_rate(&self, scenario: FaultScenario) -> f64 {
+    pub fn success_rate(&self, scenario: GpuFaultScenario) -> f64 {
         let results = self.results_by_scenario.get(&scenario);
         match results {
             None => 0.0,
@@ -123,7 +123,7 @@ impl FaultInjectionReport {
         }
     }
 
-    pub fn avg_latency(&self, scenario: FaultScenario) -> Duration {
+    pub fn avg_latency(&self, scenario: GpuFaultScenario) -> Duration {
         let results = self.results_by_scenario.get(&scenario);
         match results {
             None => Duration::ZERO,
@@ -138,11 +138,11 @@ impl FaultInjectionReport {
         }
     }
 
-    pub fn meets_target(&self, scenario: FaultScenario) -> bool {
+    pub fn meets_target(&self, scenario: GpuFaultScenario) -> bool {
         self.success_rate(scenario) >= scenario.target_rate()
     }
 
-    pub fn meets_latency_budget(&self, scenario: FaultScenario) -> bool {
+    pub fn meets_latency_budget(&self, scenario: GpuFaultScenario) -> bool {
         let avg = self.avg_latency(scenario);
         avg < Duration::from_millis(scenario.latency_budget_ms())
     }
@@ -213,7 +213,7 @@ impl FaultInjector {
         }
     }
 
-    pub fn inject_fault(&self, scenario: FaultScenario) -> TrialResult {
+    pub fn inject_fault(&self, scenario: GpuFaultScenario) -> TrialResult {
         let error = scenario.to_error();
         let ctx = RecoveryContext::new(ErrorLocation::new("fault_injection.rs", 1, "inject"));
 
@@ -230,9 +230,9 @@ impl FaultInjector {
         }
     }
 
-    pub fn run_suite(&self, scenarios: &[FaultScenario]) -> FaultInjectionReport {
+    pub fn run_suite(&self, scenarios: &[GpuFaultScenario]) -> FaultInjectionReport {
         let start_time = Instant::now();
-        let mut results_by_scenario: HashMap<FaultScenario, Vec<TrialResult>> = HashMap::new();
+        let mut results_by_scenario: HashMap<GpuFaultScenario, Vec<TrialResult>> = HashMap::new();
 
         for scenario in scenarios {
             let mut results = Vec::with_capacity(self.config.trials_per_scenario);
@@ -253,7 +253,7 @@ impl FaultInjector {
         }
     }
 
-    pub fn run_trials(&self, scenario: FaultScenario, n: usize) -> Vec<TrialResult> {
+    pub fn run_trials(&self, scenario: GpuFaultScenario, n: usize) -> Vec<TrialResult> {
         (0..n).map(|_| self.inject_fault(scenario)).collect()
     }
 

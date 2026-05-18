@@ -18,7 +18,7 @@
 use crate::core::error::{KwaversError, KwaversResult, SystemError};
 use crate::solver::interface::pinn_beamforming::{
     ModelInfo, PinnBeamformingConfig, PinnBeamformingProvider, PinnBeamformingResult,
-    TrainingMetrics, UncertaintyConfig,
+    PinnBeamformingUncertaintyConfig, TrainingMetrics,
 };
 use burn::tensor::backend::AutodiffBackend;
 use ndarray::{Array1, Array2, Array3};
@@ -273,7 +273,7 @@ where
     fn estimate_uncertainty(
         &self,
         rf_data: &Array3<f32>,
-        config: &UncertaintyConfig,
+        config: &PinnBeamformingUncertaintyConfig,
     ) -> KwaversResult<Array3<f32>> {
         self.ensure_model_initialized()?;
 

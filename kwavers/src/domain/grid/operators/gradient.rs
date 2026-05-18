@@ -1,6 +1,6 @@
 //! Gradient operations module
 
-use super::coefficients::{FDCoefficients, SpatialOrder};
+use super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3};
@@ -16,7 +16,7 @@ use num_traits::Float;
 pub fn gradient<T>(
     field: &ArrayView3<T>,
     grid: &Grid,
-    order: SpatialOrder,
+    order: FdAccuracyOrder,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
     T: Float + Clone + Send + Sync,

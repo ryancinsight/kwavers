@@ -57,7 +57,7 @@ use std::fmt;
 
 /// Conservation law types being monitored
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ConservationLaw {
+pub enum NonlinearConservationLaw {
     /// Energy conservation (kinetic + potential)
     Energy,
     /// Momentum conservation (x, y, z components)
@@ -66,7 +66,7 @@ pub enum ConservationLaw {
     Mass,
 }
 
-impl fmt::Display for ConservationLaw {
+impl fmt::Display for NonlinearConservationLaw {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Energy => write!(f, "Energy"),
@@ -104,7 +104,7 @@ impl fmt::Display for ViolationSeverity {
 #[derive(Debug, Clone)]
 pub struct ConservationDiagnostic {
     /// Conservation law being checked
-    pub law: ConservationLaw,
+    pub law: NonlinearConservationLaw,
     /// Initial value (reference)
     pub initial_value: f64,
     /// Current value
@@ -173,7 +173,7 @@ pub trait ConservationDiagnostics {
     ) -> ConservationDiagnostic {
         let current_energy = self.calculate_total_energy();
         ConservationDiagnostic::new(
-            ConservationLaw::Energy,
+            NonlinearConservationLaw::Energy,
             initial_energy,
             current_energy,
             step,
@@ -218,7 +218,7 @@ pub trait ConservationDiagnostics {
             )
             .sqrt();
         diagnostics.push(ConservationDiagnostic::new(
-            ConservationLaw::Momentum,
+            NonlinearConservationLaw::Momentum,
             initial_momentum_mag,
             current_momentum_mag,
             step,
@@ -228,7 +228,7 @@ pub trait ConservationDiagnostics {
 
         let current_mass = self.calculate_total_mass();
         diagnostics.push(ConservationDiagnostic::new(
-            ConservationLaw::Mass,
+            NonlinearConservationLaw::Mass,
             initial_mass,
             current_mass,
             step,

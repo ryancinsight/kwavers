@@ -30,7 +30,7 @@ fn test_beamforming_metrics_default() {
 fn test_algorithm_delay_and_sum() {
     let algorithm = BeamformingAlgorithm3D::DelayAndSum {
         dynamic_focusing: true,
-        apodization: ApodizationWindow::Hamming,
+        apodization: Beamforming3dApodizationWindow::Hamming,
         sub_volume_size: Some((64, 64, 64)),
     };
 
@@ -41,7 +41,10 @@ fn test_algorithm_delay_and_sum() {
             sub_volume_size,
         } => {
             assert!(dynamic_focusing);
-            assert!(matches!(apodization, ApodizationWindow::Hamming));
+            assert!(matches!(
+                apodization,
+                Beamforming3dApodizationWindow::Hamming
+            ));
             assert_eq!(sub_volume_size, Some((64, 64, 64)));
         }
         _ => panic!("Expected DelayAndSum algorithm"),
@@ -69,12 +72,12 @@ fn test_algorithm_mvdr_3d() {
 
 #[test]
 fn test_apodization_window_types() {
-    let _rect = ApodizationWindow::Rectangular;
-    let _hamming = ApodizationWindow::Hamming;
-    let _hann = ApodizationWindow::Hann;
-    let _blackman = ApodizationWindow::Blackman;
-    let _gaussian = ApodizationWindow::Gaussian { sigma: 0.5 };
-    let _custom = ApodizationWindow::Custom(vec![1.0, 0.8, 0.6]);
+    let _rect = Beamforming3dApodizationWindow::Rectangular;
+    let _hamming = Beamforming3dApodizationWindow::Hamming;
+    let _hann = Beamforming3dApodizationWindow::Hann;
+    let _blackman = Beamforming3dApodizationWindow::Blackman;
+    let _gaussian = Beamforming3dApodizationWindow::Gaussian { sigma: 0.5 };
+    let _custom = Beamforming3dApodizationWindow::Custom(vec![1.0, 0.8, 0.6]);
 }
 
 #[cfg(feature = "gpu")]

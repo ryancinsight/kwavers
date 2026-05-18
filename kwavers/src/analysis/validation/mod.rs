@@ -5,12 +5,12 @@ pub mod theorem_validation;
 
 /// Validation result struct (legacy compatibility)
 #[derive(Debug, Clone)]
-pub struct ValidationResult {
+pub struct AnalysisValidationResult {
     pub is_valid: bool,
     pub errors: Vec<String>,
 }
 
-impl ValidationResult {
+impl AnalysisValidationResult {
     #[must_use]
     pub fn success() -> Self {
         Self {
@@ -43,7 +43,7 @@ impl ValidationResult {
 
 /// Trait for validatable components
 pub trait Validatable {
-    fn validate(&self) -> ValidationResult;
+    fn validate(&self) -> AnalysisValidationResult;
 }
 
 // Rigorous validation against literature benchmarks

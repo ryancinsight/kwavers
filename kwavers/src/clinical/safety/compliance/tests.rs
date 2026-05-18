@@ -1,5 +1,5 @@
-use crate::clinical::safety::mechanical_index::TissueType;
-use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 
 use super::*;
 
@@ -39,9 +39,10 @@ fn test_compliance_check_non_compliant() {
 
 #[test]
 fn test_audit_parameters_hifu() {
-    let config = ComplianceConfig::default().with_tissue_type(TissueType::SoftTissue);
+    let config =
+        ComplianceConfig::default().with_tissue_type(MechanicalIndexTissueType::SoftTissue);
     let mut validator = EnhancedComplianceValidator::new(config).unwrap();
-    let params = TherapyParameters::hifu();
+    let params = ClinicalTherapyParameters::hifu();
 
     let audit = validator.audit_parameters(&params).unwrap();
     assert!(!audit.checks.is_empty());
@@ -72,7 +73,7 @@ fn test_config_builder() {
     let config = ComplianceConfig::default()
         .with_power_limit(100.0)
         .with_intensity_limit(5.0)
-        .with_tissue_type(TissueType::Brain);
+        .with_tissue_type(MechanicalIndexTissueType::Brain);
 
     config.validate().unwrap();
     assert!((config.max_power - 100.0).abs() < 0.1);

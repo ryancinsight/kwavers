@@ -1,6 +1,6 @@
 //! `PlaneWave` — plane wave processor and delay calculator.
 
-use super::config::PlaneWaveConfig;
+use super::config::UltrafastPlaneWaveConfig;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
@@ -24,7 +24,7 @@ use std::f64::consts::PI;
 #[derive(Debug, Clone)]
 pub struct PlaneWave {
     /// Imaging configuration.
-    pub config: PlaneWaveConfig,
+    pub config: UltrafastPlaneWaveConfig,
 }
 
 impl PlaneWave {
@@ -33,7 +33,7 @@ impl PlaneWave {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(config: PlaneWaveConfig) -> Self {
+    pub fn new(config: UltrafastPlaneWaveConfig) -> Self {
         Self { config }
     }
 
@@ -43,9 +43,9 @@ impl PlaneWave {
     ///
     #[must_use]
     pub fn functional_ultrasound(element_positions: Vec<f64>) -> Self {
-        Self::new(PlaneWaveConfig {
+        Self::new(UltrafastPlaneWaveConfig {
             element_positions,
-            ..PlaneWaveConfig::default()
+            ..UltrafastPlaneWaveConfig::default()
         })
     }
 

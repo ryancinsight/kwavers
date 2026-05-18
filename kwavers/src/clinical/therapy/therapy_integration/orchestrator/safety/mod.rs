@@ -24,8 +24,8 @@
 
 use crate::core::error::KwaversResult;
 
-use super::super::config::{AcousticTherapyParams, SafetyLimits};
-use super::super::state::{AcousticField, SafetyMetrics, SafetyStatus};
+use super::super::config::{AcousticTherapyParams, TherapyIntegrationSafetyLimits};
+use super::super::state::{AcousticField, SafetyMetrics, TherapyIntegrationSafetyStatus};
 
 #[cfg(test)]
 mod tests;
@@ -135,29 +135,29 @@ pub fn update_safety_metrics(
 /// - **TimeLimitExceeded**: Terminate therapy session
 pub fn check_safety_limits(
     safety_metrics: &SafetyMetrics,
-    safety_limits: &SafetyLimits,
+    safety_limits: &TherapyIntegrationSafetyLimits,
     current_time: f64,
-) -> SafetyStatus {
+) -> TherapyIntegrationSafetyStatus {
     // Check time limit first (most straightforward constraint)
     if current_time > safety_limits.max_treatment_time {
-        return SafetyStatus::TimeLimitExceeded;
+        return TherapyIntegrationSafetyStatus::TimeLimitExceeded;
     }
 
     // Check thermal index (tissue heating concern)
     if safety_metrics.thermal_index > safety_limits.thermal_index_max {
-        return SafetyStatus::ThermalLimitExceeded;
+        return TherapyIntegrationSafetyStatus::ThermalLimitExceeded;
     }
 
     // Check mechanical index (mechanical bioeffects concern)
     if safety_metrics.mechanical_index > safety_limits.mechanical_index_max {
-        return SafetyStatus::MechanicalLimitExceeded;
+        return TherapyIntegrationSafetyStatus::MechanicalLimitExceeded;
     }
 
     // Check cavitation dose (cumulative damage concern)
     if safety_metrics.cavitation_dose > safety_limits.cavitation_dose_max {
-        return SafetyStatus::CavitationLimitExceeded;
+        return TherapyIntegrationSafetyStatus::CavitationLimitExceeded;
     }
 
     // All checks passed
-    SafetyStatus::Safe
+    TherapyIntegrationSafetyStatus::Safe
 }

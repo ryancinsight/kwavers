@@ -9,7 +9,7 @@ pub mod types;
 pub mod validator;
 
 pub use types::{
-    ArchitectureLayer, LayerViolation, ModuleDependency, ValidationResult, ValidationStats,
+    ArchitectureLayer, LayerValidationResult, LayerViolation, ModuleDependency, ValidationStats,
     ViolationType,
 };
 pub use validator::ArchitectureValidator;

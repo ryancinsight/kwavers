@@ -1,5 +1,5 @@
 use super::*;
-use crate::domain::mesh::tetrahedral::BoundaryType;
+use crate::domain::mesh::tetrahedral::MeshBoundaryType;
 
 #[test]
 fn test_bem_fem_interface_creation() {
@@ -7,10 +7,10 @@ fn test_bem_fem_interface_creation() {
     let mut fem_mesh = TetrahedralMesh::new();
 
     // Add some nodes
-    fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    fem_mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    fem_mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    fem_mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+    fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    fem_mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    fem_mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    fem_mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
 
     // Define BEM boundary elements (placeholder)
     let bem_boundary = vec![0, 1, 2];
@@ -28,9 +28,9 @@ fn test_bem_fem_interface_creation() {
 fn test_bem_fem_interface_geometric_match() {
     let mut fem_mesh = TetrahedralMesh::new();
     // Node 0: on boundary
-    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
     // Node 1: duplicate of n0, but different index. Should be detected via geometric check.
-    let n1 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+    let n1 = fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
 
     // BEM boundary uses only n0
     let bem_boundary = vec![n0];
@@ -48,16 +48,16 @@ fn test_find_corresponding_bem_element() {
     let mut fem_mesh = TetrahedralMesh::new();
 
     // Node 0: Origin (Query node)
-    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
 
     // Node 1: (1, 0, 0)
-    let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
+    let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
 
     // Node 2: (2, 0, 0)
-    let n2 = fem_mesh.add_node([2.0, 0.0, 0.0], BoundaryType::Interior);
+    let n2 = fem_mesh.add_node([2.0, 0.0, 0.0], MeshBoundaryType::Interior);
 
     // Node 3: (0.5, 0, 0) - Closest
-    let n3 = fem_mesh.add_node([0.5, 0.0, 0.0], BoundaryType::Interior);
+    let n3 = fem_mesh.add_node([0.5, 0.0, 0.0], MeshBoundaryType::Interior);
 
     // BEM boundary candidates: n1, n2, n3
     let bem_boundary = vec![n1, n2, n3];
@@ -83,10 +83,10 @@ fn test_compute_interface_normals_calculation() {
     // Create a single tetrahedron
     // n0=(0,0,0), n1=(1,0,0), n2=(0,1,0), n3=(0,0,1)
     // Orientation: right-hand rule
-    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    let n2 = fem_mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    let n3 = fem_mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n2 = fem_mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    let n3 = fem_mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
 
     // Add element. This will compute adjacency and boundary faces.
     fem_mesh.add_element([n0, n1, n2, n3], 0).unwrap();

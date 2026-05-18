@@ -17,14 +17,14 @@
 //! 3. Accept if: A > 2·bg AND σ ∈ [0.3λ, 2λ]
 //! ```
 
-use super::types::{BubbleDetection, LocalizationConfig};
+use super::types::{BubbleDetection, GaussianLocalizationConfig};
 use crate::core::error::KwaversResult;
 use ndarray::{s, Array2};
 
 /// Sub-pixel microbubble localizer using Gauss-Newton least squares.
 #[derive(Debug)]
 pub struct GaussianLocalizer {
-    config: LocalizationConfig,
+    config: GaussianLocalizationConfig,
 }
 
 impl GaussianLocalizer {
@@ -33,7 +33,7 @@ impl GaussianLocalizer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(config: LocalizationConfig) -> Self {
+    pub fn new(config: GaussianLocalizationConfig) -> Self {
         Self { config }
     }
 

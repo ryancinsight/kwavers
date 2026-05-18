@@ -11,7 +11,7 @@ use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::SineWave;
 use kwavers::domain::source::{
-    InjectionMode, PlaneWaveConfig, PlaneWaveSource, PointSource, SourceField,
+    InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, PointSource, SourceField,
 };
 use kwavers::solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers::solver::forward::pstd::config::KSpaceMethod;
@@ -51,7 +51,7 @@ fn test_plane_wave_boundary_injection_fdtd() -> KwaversResult<()> {
 
     // Create plane wave source propagating in +z direction with boundary-only injection
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency, // 1.5 mm
         phase: 0.0,
@@ -142,7 +142,7 @@ fn test_plane_wave_boundary_injection_pstd() -> KwaversResult<()> {
 
     // Create plane wave source propagating in +z direction with boundary-only injection
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency, // 1.5 mm
         phase: 0.0,
@@ -335,7 +335,7 @@ fn test_boundary_vs_fullgrid_injection() -> KwaversResult<()> {
 
     // Test BoundaryOnly mode
     let signal_boundary = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config_boundary = PlaneWaveConfig {
+    let config_boundary = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency,
         phase: 0.0,
@@ -365,7 +365,7 @@ fn test_boundary_vs_fullgrid_injection() -> KwaversResult<()> {
 
     // Test FullGrid mode
     let signal_full = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config_full = PlaneWaveConfig {
+    let config_full = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency,
         phase: 0.0,
@@ -443,7 +443,7 @@ fn test_no_amplitude_accumulation() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
 
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency,
         phase: 0.0,

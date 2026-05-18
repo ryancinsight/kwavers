@@ -4,19 +4,42 @@ use super::array::TransducerArray2D;
 use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
 use crate::domain::source::Source;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 
 impl Source for TransducerArray2D {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
+        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        self.create_mask_into(grid, &mut mask);
+        mask
+    }
+
+    fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
         let grid_ptr: *const Grid = grid;
         let grid_id = grid_ptr as u64;
-        if let Some(ref mask) = self.cached_mask {
+        if let Some(ref cached_mask) = self.cached_mask {
             if self.cached_grid_id == Some(grid_id) {
-                return mask.clone();
+                mask.assign(cached_mask);
+                return;
             }
         }
 
-        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        mask.fill(0.0);
+        self.add_mask_into(grid, mask);
+    }
+
+    fn add_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        let grid_ptr: *const Grid = grid;
+        let grid_id = grid_ptr as u64;
+        if let Some(ref cached_mask) = self.cached_mask {
+            if self.cached_grid_id == Some(grid_id) {
+                Zip::from(mask)
+                    .and(cached_mask)
+                    .for_each(|dst, &src| *dst += src);
+                return;
+            }
+        }
 
         for (i, element) in self.elements.iter().enumerate() {
             if !element.is_active || !self.active_elements[i] {
@@ -49,8 +72,6 @@ impl Source for TransducerArray2D {
                 }
             }
         }
-
-        mask
     }
 
     fn amplitude(&self, t: f64) -> f64 {

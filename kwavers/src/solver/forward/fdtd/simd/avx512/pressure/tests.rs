@@ -1,13 +1,13 @@
 //! Tests for AVX-512 pressure field update.
 
-use super::super::Avx512Config;
-use super::super::Avx512StencilProcessor;
+use super::super::SimdAvx512Config;
+use super::super::SimdAvx512StencilProcessor;
 use ndarray::Array3;
 
 #[test]
 fn test_pressure_update_dimensions() {
-    let config = Avx512Config::default();
-    if let Ok(processor) = Avx512StencilProcessor::new(16, 16, 16, config) {
+    let config = SimdAvx512Config::default();
+    if let Ok(processor) = SimdAvx512StencilProcessor::new(16, 16, 16, config) {
         let p_curr = Array3::zeros((16, 16, 16));
         let p_prev = Array3::zeros((16, 16, 16));
         let u_div = Array3::zeros((16, 16, 16));
@@ -19,8 +19,8 @@ fn test_pressure_update_dimensions() {
 
 #[test]
 fn test_pressure_update_mismatch() {
-    let config = Avx512Config::default();
-    if let Ok(processor) = Avx512StencilProcessor::new(16, 16, 16, config) {
+    let config = SimdAvx512Config::default();
+    if let Ok(processor) = SimdAvx512StencilProcessor::new(16, 16, 16, config) {
         let p_curr = Array3::zeros((16, 16, 16));
         let p_prev = Array3::zeros((12, 12, 12)); // Mismatch
         let u_div = Array3::zeros((16, 16, 16));

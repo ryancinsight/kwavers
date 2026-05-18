@@ -4,7 +4,7 @@ use super::backend::FemHelmholtzBackend;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::simulation::backends::acoustic::FrequencyDomainAcousticBackend;
-use crate::solver::forward::helmholtz::fem::{FemHelmholtzConfig, PreconditionerType};
+use crate::solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemPreconditionerType};
 use ndarray::arr2;
 use num_complex::Complex64;
 
@@ -19,7 +19,7 @@ fn fem_helmholtz_backend_solves_frequency_domain_pressure() {
     let config = FemHelmholtzConfig {
         wavenumber: 1.0,
         radiation_boundary: false,
-        preconditioner: PreconditionerType::None,
+        preconditioner: FemPreconditionerType::None,
         tolerance: 1.0e-10,
         ..Default::default()
     };
@@ -41,7 +41,7 @@ fn fem_helmholtz_backend_interpolates_solved_pressure() {
     let config = FemHelmholtzConfig {
         wavenumber: 1.0,
         radiation_boundary: false,
-        preconditioner: PreconditionerType::None,
+        preconditioner: FemPreconditionerType::None,
         tolerance: 1.0e-10,
         ..Default::default()
     };

@@ -23,7 +23,7 @@ pub struct CudaStream {
 
 /// CUDA memory pool types
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum MemoryPoolType {
+pub enum PinnGpuMemoryPoolType {
     Temporary,
     Persistent,
     Gradients,
@@ -33,16 +33,16 @@ pub enum MemoryPoolType {
 /// GPU memory manager with pool allocation
 #[derive(Debug)]
 pub struct GpuMemoryManager {
-    pub(super) pools: HashMap<MemoryPoolType, MemoryPool>,
+    pub(super) pools: HashMap<PinnGpuMemoryPoolType, MemoryPool>,
     pinned_buffers: Vec<PinnedBuffer<f32>>,
     transfer_streams: Vec<CudaStream>,
-    stats: MemoryStats,
+    stats: PinnGpuMemoryStats,
 }
 
 /// Memory pool for efficient allocation
 #[derive(Debug)]
 pub(crate) struct MemoryPool {
-    pub(crate) pool_type: MemoryPoolType,
+    pub(crate) pool_type: PinnGpuMemoryPoolType,
     pub(crate) total_allocated: usize,
     pub(crate) used_memory: usize,
     pub(crate) free_blocks: Vec<MemoryBlock>,
@@ -66,7 +66,7 @@ pub struct PinnedBuffer<T> {
 
 /// Memory usage statistics
 #[derive(Debug, Clone, Default)]
-pub struct MemoryStats {
+pub struct PinnGpuMemoryStats {
     pub peak_gpu_memory: usize,
     pub current_gpu_memory: usize,
     pub peak_pinned_memory: usize,
@@ -83,20 +83,20 @@ impl GpuMemoryManager {
         let mut pools = HashMap::new();
 
         pools.insert(
-            MemoryPoolType::Temporary,
-            MemoryPool::new(MemoryPoolType::Temporary, 256 * 1024 * 1024, 256),
+            PinnGpuMemoryPoolType::Temporary,
+            MemoryPool::new(PinnGpuMemoryPoolType::Temporary, 256 * 1024 * 1024, 256),
         );
         pools.insert(
-            MemoryPoolType::Persistent,
-            MemoryPool::new(MemoryPoolType::Persistent, 512 * 1024 * 1024, 256),
+            PinnGpuMemoryPoolType::Persistent,
+            MemoryPool::new(PinnGpuMemoryPoolType::Persistent, 512 * 1024 * 1024, 256),
         );
         pools.insert(
-            MemoryPoolType::Gradients,
-            MemoryPool::new(MemoryPoolType::Gradients, 256 * 1024 * 1024, 256),
+            PinnGpuMemoryPoolType::Gradients,
+            MemoryPool::new(PinnGpuMemoryPoolType::Gradients, 256 * 1024 * 1024, 256),
         );
         pools.insert(
-            MemoryPoolType::Collocation,
-            MemoryPool::new(MemoryPoolType::Collocation, 128 * 1024 * 1024, 256),
+            PinnGpuMemoryPoolType::Collocation,
+            MemoryPool::new(PinnGpuMemoryPoolType::Collocation, 128 * 1024 * 1024, 256),
         );
 
         let transfer_streams = (0..4)
@@ -110,7 +110,7 @@ impl GpuMemoryManager {
             pools,
             pinned_buffers: Vec::new(),
             transfer_streams,
-            stats: MemoryStats::default(),
+            stats: PinnGpuMemoryStats::default(),
         })
     }
     /// Allocate device.
@@ -119,7 +119,7 @@ impl GpuMemoryManager {
     ///
     pub fn allocate_device(
         &mut self,
-        pool_type: MemoryPoolType,
+        pool_type: PinnGpuMemoryPoolType,
         size: usize,
     ) -> KwaversResult<CudaBuffer<f32>> {
         let pool = self.pools.get_mut(&pool_type).ok_or_else(|| {
@@ -157,10 +157,10 @@ impl GpuMemoryManager {
     ///
     pub fn deallocate_device(&mut self, buffer: CudaBuffer<f32>) -> KwaversResult<()> {
         let pool_type = match buffer.pool_id {
-            0 => MemoryPoolType::Temporary,
-            1 => MemoryPoolType::Persistent,
-            2 => MemoryPoolType::Gradients,
-            3 => MemoryPoolType::Collocation,
+            0 => PinnGpuMemoryPoolType::Temporary,
+            1 => PinnGpuMemoryPoolType::Persistent,
+            2 => PinnGpuMemoryPoolType::Gradients,
+            3 => PinnGpuMemoryPoolType::Collocation,
             _ => {
                 return Err(KwaversError::System(
                     crate::core::error::SystemError::InvalidConfiguration {
@@ -262,7 +262,7 @@ impl GpuMemoryManager {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn memory_stats(&self) -> &MemoryStats {
+    pub fn memory_stats(&self) -> &PinnGpuMemoryStats {
         &self.stats
     }
     /// Defragment.

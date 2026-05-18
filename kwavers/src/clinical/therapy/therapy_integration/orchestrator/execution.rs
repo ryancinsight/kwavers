@@ -25,6 +25,7 @@
 //! - Pennes (1948): "Analysis of tissue and arterial blood temperatures"
 //! - Nyborg (1981): "Heat generation by ultrasound in a relaxing medium"
 
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Zip};
@@ -152,8 +153,8 @@ pub fn calculate_acoustic_heating(
 
     // Tissue constants for soft tissue (Nyborg 1981).
     const ALPHA_NP_M: f64 = 0.5; // absorption coefficient (Np/m)
-    const RHO: f64 = 1000.0; // kg/m³
-    const C0: f64 = 1540.0; // m/s
+    const RHO: f64 = DENSITY_WATER_NOMINAL;
+    const C0: f64 = SOUND_SPEED_TISSUE;
     const C_P: f64 = 3600.0; // specific heat capacity J/(kg·K) (ICRP 2002)
     const L_FOCAL: f64 = 0.01; // focal characteristic length (10 mm)
 

@@ -4,7 +4,7 @@
 //! fields against each other and, where possible, against the analytical
 //! d'Alembert solution. Generates PNG figures for each test scenario.
 
-use kwavers::boundary::{PMLBoundary, PMLConfig};
+use kwavers::boundary::{DomainPmlConfig, PMLBoundary};
 use kwavers::core::error::KwaversResult;
 use kwavers::domain::source::NullSource;
 use kwavers::medium::HomogeneousMedium;
@@ -435,7 +435,7 @@ fn run_fdtd_simulation_with_time(
     plugin_manager.initialize(grid, medium)?;
 
     let sources = Vec::new();
-    let mut boundary = PMLBoundary::new(PMLConfig::default().with_thickness(8))?;
+    let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
 
     for step in 0..n_steps {
         let t = step as f64 * dt;
@@ -482,7 +482,7 @@ fn run_pstd_simulation_with_time(
     plugin_manager.initialize(grid, medium)?;
 
     let sources = Vec::new();
-    let mut boundary = PMLBoundary::new(PMLConfig::default().with_thickness(8))?;
+    let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
 
     for step in 0..n_steps {
         let t = step as f64 * dt;

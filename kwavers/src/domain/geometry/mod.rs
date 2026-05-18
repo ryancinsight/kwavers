@@ -99,13 +99,13 @@ use ndarray::{Array1, Array2};
 
 /// Spatial dimension specification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Dimension {
+pub enum GeometryDimension {
     One,
     Two,
     Three,
 }
 
-impl Dimension {
+impl GeometryDimension {
     #[must_use]
     pub fn as_usize(&self) -> usize {
         match self {
@@ -116,9 +116,9 @@ impl Dimension {
     }
 }
 
-/// Boundary type classification
+/// Identifies which face of the grid domain a boundary element belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BoundaryType {
+pub enum DomainFace {
     XMin,
     XMax,
     YMin,
@@ -137,7 +137,7 @@ pub enum PointLocation {
 
 /// Abstract geometric domain trait
 pub trait GeometricDomain: Send + Sync {
-    fn dimension(&self) -> Dimension;
+    fn dimension(&self) -> GeometryDimension;
     fn contains(&self, point: &[f64]) -> bool;
     fn classify_point(&self, point: &[f64], tolerance: f64) -> PointLocation;
     fn bounding_box(&self) -> Vec<f64>;

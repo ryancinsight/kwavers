@@ -13,4 +13,4 @@ mod types;
 mod tests;
 
 pub use simulator::BBBOpening;
-pub use types::{BBBParameters, PermeabilityEnhancement, SafetyValidation, TreatmentProtocol};
+pub use types::{BBBParameters, BbbTreatmentProtocol, PermeabilityEnhancement, SafetyValidation};

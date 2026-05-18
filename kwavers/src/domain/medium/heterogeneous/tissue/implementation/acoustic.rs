@@ -3,7 +3,7 @@
 use super::HeterogeneousTissueMedium;
 use crate::core::constants::DB_TO_NP;
 use crate::domain::grid::Grid;
-use crate::domain::medium::absorption::TissueType;
+use crate::domain::medium::absorption::AbsorptionTissueType;
 use crate::domain::medium::acoustic::AcousticProperties;
 
 impl AcousticProperties for HeterogeneousTissueMedium {
@@ -36,7 +36,7 @@ impl AcousticProperties for HeterogeneousTissueMedium {
         0.0 // Default/Placeholder
     }
 
-    fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<TissueType> {
+    fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<AbsorptionTissueType> {
         let (i, j, k) = crate::domain::medium::continuous_to_discrete(x, y, z, grid);
         Some(self.tissue_map[[i, j, k]])
     }

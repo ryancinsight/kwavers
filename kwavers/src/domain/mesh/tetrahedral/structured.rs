@@ -20,7 +20,7 @@
 //! `(nx-1)(ny-1)(nz-1) dx dy dz`.
 
 use super::mesh::TetrahedralMesh;
-use super::types::BoundaryType;
+use super::types::MeshBoundaryType;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 
@@ -68,7 +68,7 @@ impl TetrahedralMesh {
                         (j as f64).mul_add(grid.dy, grid.origin[1]),
                         (k as f64).mul_add(grid.dz, grid.origin[2]),
                     ];
-                    mesh.add_node(coordinates, BoundaryType::Interior);
+                    mesh.add_node(coordinates, MeshBoundaryType::Interior);
                 }
             }
         }

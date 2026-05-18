@@ -16,7 +16,7 @@ use crate::solver::forward::pstd::config::{
 };
 use crate::solver::forward::pstd::implementation::k_space::{PSTDKSGrid, PSTDKSOperators};
 use crate::solver::forward::pstd::numerics::operators::initialize_spectral_operators;
-use crate::solver::forward::pstd::numerics::spectral_correction::CorrectionMethod;
+use crate::solver::forward::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
 use crate::solver::forward::pstd::physics::absorption::initialize_absorption_operators;
 use crate::solver::forward::pstd::propagator::axisymmetric::AsContext;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
@@ -40,7 +40,7 @@ impl PSTDSolver {
         let grid = Arc::new(grid);
         let nz_c = grid.nz / 2 + 1; // half-spectrum length for r2c z-axis
         if config.compatibility_mode == CompatibilityMode::Reference {
-            config.spectral_correction.method = CorrectionMethod::Treeby2010;
+            config.spectral_correction.method = SpectralCorrectionMethod::Treeby2010;
         }
 
         let (mut k_ops, kappa, k_max, c_ref) =
@@ -60,6 +60,9 @@ impl PSTDSolver {
             )?)),
             BoundaryConfig::None => None,
         };
+        // Precompute split-field PML exp factors from the boundary's sigma profiles.
+        // Populated once here; zero per-step allocation; `None` for non-CPML boundaries.
+        let pml_exp = boundary.as_ref().and_then(|b| b.pml_exp_factors_owned());
 
         let mut absorption =
             initialize_absorption_operators(&config, &grid, medium, &k_mag, k_max, c_ref)?;
@@ -71,8 +74,18 @@ impl PSTDSolver {
             abs.nabla2 = abs.nabla2.slice(s![.., .., ..nz_c]).to_owned();
         }
         k_mag.par_mapv_inplace(|k| (0.5 * c_ref * config.dt * k).cos());
+        // source_kappa still has shape (nx, ny, nz) here — set_velocity_source_kappa
+        // needs the full array to perform ifftshift indexing (kk = (k+nz/2)%nz).
         let source_kappa = k_mag;
-        // Truncate the anti-aliasing filter to the r2c half-spectrum.
+
+        // Truncate kappa and source_kappa to the r2c half-spectrum AFTER source_handler
+        // has extracted per-source-point values from the full array.
+        // kappa = sinc(c_ref·|k|·dt) is symmetric; source_kappa = cos(c_ref·|k|·dt/2) is
+        // symmetric. Both are evaluated only for kz in [0, nz_c) during every solver step.
+        // Truncating saves nx·ny·(nz/2-1)·8 bytes per array at construction time.
+        // NOTE: must happen AFTER set_velocity_source_kappa() call below.
+        //
+        // Also truncate the anti-aliasing filter to the r2c half-spectrum.
         // The filter is real-valued and symmetric (depends on |k|), so values at
         // kz ∈ [0, nz/2] (indices [0, nz_c)) are the complete independent set.
         if let Some(ref mut f) = k_ops.filter {
@@ -94,16 +107,21 @@ impl PSTDSolver {
         let ddz_k_shift_neg = ddz_full_neg.slice(s![..nz_c]).to_owned();
 
         let shape = (grid.nx, grid.ny, grid.nz);
+        // `bon` is populated only when nonlinearity is active; `None` otherwise.
+        // Saves N×8 bytes for the common linear case.
         let (rho0, c0, bon) = if medium.is_homogeneous() {
+            let bon = config
+                .nonlinearity
+                .then(|| Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)));
             (
                 Array3::from_elem(shape, medium.density(0, 0, 0)),
                 Array3::from_elem(shape, medium.sound_speed(0, 0, 0)),
-                Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)),
+                bon,
             )
         } else {
             let mut rho0 = Array3::zeros(shape);
             let mut c0 = Array3::zeros(shape);
-            let mut bon = Array3::zeros(shape);
+            let mut bon = config.nonlinearity.then(|| Array3::<f64>::zeros(shape));
 
             for k in 0..grid.nz {
                 for j in 0..grid.ny {
@@ -112,8 +130,10 @@ impl PSTDSolver {
                         rho0[[i, j, k]] = crate::domain::medium::density_at(medium, x, y, z, &grid);
                         c0[[i, j, k]] =
                             crate::domain::medium::sound_speed_at(medium, x, y, z, &grid);
-                        bon[[i, j, k]] =
-                            crate::domain::medium::nonlinearity_at(medium, x, y, z, &grid);
+                        if let Some(ref mut b) = bon {
+                            b[[i, j, k]] =
+                                crate::domain::medium::nonlinearity_at(medium, x, y, z, &grid);
+                        }
                     }
                 }
             }
@@ -125,8 +145,18 @@ impl PSTDSolver {
             SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
         let mut source_handler = SourceHandler::new(source, &grid)?;
         if source_handler.has_velocity_source() {
+            // set_velocity_source_kappa uses ifftshift indexing (kk = (k+nz/2)%nz),
+            // requiring the full (nx,ny,nz) source_kappa. Must be called BEFORE truncation.
             source_handler.set_velocity_source_kappa(&source_kappa, grid.nx, grid.ny, grid.nz);
         }
+
+        // Truncate kappa and source_kappa to the r2c half-spectrum after source_handler
+        // has extracted its per-source-point values. Every subsequent solver use operates
+        // on the half-spectrum only: nz_c = nz/2+1 rather than nz.
+        // Saves: nx·ny·(nz/2-1)·8 bytes per array
+        //   (≈1 MB/array at 64³, 8 MB at 128³, 66 MB at 256³).
+        let kappa = kappa.slice(s![.., .., ..nz_c]).to_owned();
+        let source_kappa = source_kappa.slice(s![.., .., ..nz_c]).to_owned();
 
         let config_dt = config.dt;
 
@@ -157,6 +187,7 @@ impl PSTDSolver {
             source_time_shift_samples: pstd_source_time_shift_samples(),
             source_gain: pstd_source_gain(),
             boundary,
+            pml_exp,
             fields: WaveFields {
                 p: field_arrays.p,
                 ux: field_arrays.ux,
@@ -168,9 +199,9 @@ impl PSTDSolver {
             rhoz: Array3::zeros(shape),
             p_k: field_arrays.p_k,
             // Half-spectrum k-space buffers: r2c z-axis reduces nz → nz_c = nz/2+1.
+            // ux_k is the shared velocity k-space scratch; uy_k and uz_k are eliminated
+            // (Opt-8) — all three axes are processed sequentially, one buffer suffices.
             ux_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
-            uy_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
-            uz_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
             grad_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
             materials: MaterialFields { rho0, c0 },
             bon,
@@ -184,13 +215,14 @@ impl PSTDSolver {
             ddz_k_shift_neg,
             dpx: Array3::zeros(shape),
             dpy: Array3::zeros(shape),
-            dpz: Array3::zeros(shape),
+            // dpz eliminated (Opt-12): dpx is reused for all three velocity gradient axes
+            // and for the absorption L1 accumulator — axes are sequential, no overlap.
             div_u: Array3::zeros(shape),
             div_ux: Array3::zeros(shape),
             div_uy: Array3::zeros(shape),
             div_uz: Array3::zeros(shape),
             as_ctx: None,
-            alpha_np_m: Array3::zeros(shape),
+            alpha_np_m: None, // allocated on demand by populate_alpha_np_m_at_frequency / set_alpha_np_m
             dirichlet_pml_bypass_x: Vec::new(),
             pml_bypass_plane_scratch: Array3::zeros((0, grid.ny, grid.nz)),
         };

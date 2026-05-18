@@ -3,7 +3,9 @@
 //! This module provides a unified interface to the modular control components
 //! in the control/ subdirectory.
 
-use super::control::{AdaptiveController, SafetyLimits, SafetyMonitor, StateEstimator};
+use super::control::{
+    AdaptiveController, CavitationSafetyLimits, CavitationSafetyMonitor, StateEstimator,
+};
 // Import types that will be re-exported
 pub use super::control::{ControlOutput, ControlStrategy, FeedbackConfig};
 pub use super::detection::CavitationMetrics;
@@ -17,7 +19,7 @@ pub struct FeedbackController {
     detector: Box<dyn CavitationDetector>,
     pid_controller: PIDController,
     state_estimator: StateEstimator,
-    safety_monitor: SafetyMonitor,
+    safety_monitor: CavitationSafetyMonitor,
     adaptive_controller: AdaptiveController,
 }
 
@@ -56,7 +58,7 @@ impl FeedbackController {
             detector: Box::new(SpectralDetector::new(fundamental_freq, sample_rate)),
             pid_controller,
             state_estimator: StateEstimator::new(),
-            safety_monitor: SafetyMonitor::new(SafetyLimits::default()),
+            safety_monitor: CavitationSafetyMonitor::new(CavitationSafetyLimits::default()),
             adaptive_controller: AdaptiveController::new(0.01),
         }
     }

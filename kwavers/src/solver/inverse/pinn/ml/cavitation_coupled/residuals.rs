@@ -2,7 +2,7 @@
 
 use super::domain::CavitationCoupledDomain;
 use super::mie_scattering::mie_backscatter_form_function;
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use burn::prelude::ElementConversion;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
@@ -33,7 +33,7 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         &self,
         acoustic_pressure: &Tensor<B, 2>,
         _bubble_positions: &Tensor<B, 2>,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2> {
         let ambient_pressure = physics_params
             .domain_params

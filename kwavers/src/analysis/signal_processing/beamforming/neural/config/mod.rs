@@ -14,4 +14,4 @@ pub use feature::FeatureConfig;
 pub use geometry::SensorGeometry;
 pub use mode::NeuralBeamformingMode;
 pub use neural::NeuralBeamformingConfig;
-pub use physics::PhysicsParameters;
+pub use physics::NeuralBeamformingPhysicsParams;

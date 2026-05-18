@@ -15,8 +15,10 @@ from ch29_controlled_placement import (
     ct_frame_key,
     placement_fields,
     plot_placement_context,
+    resample_to_extent,
 )
 from ch29_pressure_diagnostics import pressure_field_diagnostics
+from ch29_pressure_localization import aperture_geometry_metrics, pressure_hotspot_physical_metrics
 
 COMPARISON_FIGURE_NAME = "fig06_controlled_linear_nonlinear_comparison.png"
 COMPARISON_METRICS_NAME = "controlled_comparison_metrics.json"
@@ -25,10 +27,16 @@ CONTROLLED_COMPARISON_COLUMNS = (
     ("placement_ct_hu", "gray", "CT + target + tx/rx"),
     ("common_target", "gray", "matched target"),
     ("linear_exposure", "magma", "linear exposure"),
-    ("nonlinear_pressure", "magma", "nonlinear peak pressure"),
+    ("nonlinear_pressure", "magma", "nonlinear target pressure"),
     ("linear_fusion", "viridis", "linear fusion"),
+    ("elastic_shear", "viridis", "iterative elastic FWI"),
     ("nonlinear_fusion", "viridis", "nonlinear fusion"),
     ("fusion_difference", "coolwarm", "nonlinear - linear"),
+)
+CONTROLLED_COMPARISON_THEOREM = (
+    "Theorem: CT-frame registration makes every displayed field comparable on one physical grid; "
+    "linear fusion is a confidence-gated composite, iterative elastic FWI is a nonlinear ElasticPSTD "
+    "baseline/lesion residual inversion, and nonlinear fusion combines Westervelt FWI with cavitation evidence."
 )
 
 def build_controlled_comparison(
@@ -57,6 +65,7 @@ def render_controlled_comparison(
         constrained_layout=True,
     )
     axes_2d = np.asarray(axes, dtype=object).reshape(len(comparisons), len(columns))
+    fig.suptitle(CONTROLLED_COMPARISON_THEOREM, fontsize=9.5)
     for row, comparison in enumerate(comparisons):
         fields = comparison["fields"]
         extent = [float(v) for v in np.asarray(fields["placement_extent_m"], dtype=float)]
@@ -93,9 +102,18 @@ def render_controlled_comparison(
                 metrics = comparison["comparison_metrics"]
                 ax.set_xlabel(
                     f"linear Dice={metrics['linear_fusion']['dice_equal_area']:.2f}; "
+                    f"elastic={metrics['elastic_shear']['dice_equal_area']:.2f}; "
                     f"nonlinear Dice={metrics['nonlinear_fusion']['dice_equal_area']:.2f}"
                 )
             plt.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
+    fig.text(
+        0.5,
+        0.01,
+        "Caption: lesioning evidence is shown after common-grid CT-frame resampling; target contours are white and therapy aperture samples are yellow.",
+        ha="center",
+        va="bottom",
+        fontsize=8.2,
+    )
     path = out_dir / COMPARISON_FIGURE_NAME
     save_figure(fig, path)
     plt.close(fig)
@@ -129,9 +147,8 @@ def controlled_comparison_payload(
 ) -> dict[str, object]:
     return {
         "comparison_contract": (
-            "linear and nonlinear outputs evaluated on the nonlinear 3-D crop projection; "
-            "linear fields are physically resampled to that grid for metrics, then every "
-            "display field is embedded in the full-resolution controlled CT placement grid"
+            "linear and nonlinear outputs are physically resampled to the full-resolution "
+            "controlled CT placement grid before metrics, archived fields, and display"
         ),
         "figure": None if figure is None else str(figure),
         "field_archive": None if fields is None else str(fields),
@@ -146,6 +163,9 @@ def comparison_summary(comparisons: list[dict[str, object]]) -> dict[str, object
     nonlinear_dice = [
         case["comparison_metrics"]["nonlinear_fusion"]["dice_equal_area"] for case in comparisons
     ]
+    elastic_dice = [
+        case["comparison_metrics"]["elastic_shear"]["dice_equal_area"] for case in comparisons
+    ]
     pressure_outside = [
         case["comparison_metrics"]["nonlinear_pressure"]["outside_energy_fraction"]
         for case in comparisons
@@ -157,10 +177,26 @@ def comparison_summary(comparisons: list[dict[str, object]]) -> dict[str, object
     return {
         "case_count": len(comparisons),
         "mean_linear_fusion_dice_equal_area": float(np.mean(linear_dice)),
+        "mean_elastic_shear_dice_equal_area": float(np.mean(elastic_dice)),
         "mean_nonlinear_fusion_dice_equal_area": float(np.mean(nonlinear_dice)),
         "mean_dice_gap_linear_minus_nonlinear": float(np.mean(linear_dice) - np.mean(nonlinear_dice)),
         "mean_nonlinear_pressure_outside_energy_fraction": float(np.mean(pressure_outside)),
+        "mean_nonlinear_pressure_hotspot_distance_m": float(np.mean([
+            case["comparison_metrics"]["nonlinear_pressure"]["ct_frame_pressure_hotspot_distance_m"]
+            for case in comparisons
+        ])),
+        "mean_nonlinear_pressure_hotspot_axis_offset_m": float(np.mean([
+            case["comparison_metrics"]["nonlinear_pressure"]["ct_frame_pressure_hotspot_axis_offset_m"]
+            for case in comparisons
+        ])),
+        "mean_nonlinear_pressure_hotspot_cross_axis_offset_m": float(np.mean([
+            case["comparison_metrics"]["nonlinear_pressure"]["ct_frame_pressure_hotspot_cross_axis_offset_m"]
+            for case in comparisons
+        ])),
         "mean_nonlinear_cavitation_source_outside_energy_fraction": float(np.mean(source_outside)),
+        "mean_planned_to_nonlinear_aperture_axis_angle_deg": float(np.mean([
+            case["geometry"]["planned_to_nonlinear_aperture_axis_angle_deg"] for case in comparisons
+        ])),
         "dominant_observation": dominant_observation(comparisons),
     }
 
@@ -211,66 +247,154 @@ def dominant_observation(comparisons: list[dict[str, object]]) -> str:
     return "the matched comparison does not isolate one dominant divergence source"
 def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) -> dict[str, object]:
     target_3d = np.asarray(nonlinear["target_mask"], dtype=bool)
+    inversion_3d = np.asarray(nonlinear.get("inversion_mask", target_3d), dtype=bool)
     slab = _target_slab_bounds(target_3d, _target_slice_index(target_3d))
-    common_target = _slab_projection(target_3d, slab, mode="max").astype(bool)
-    common_extent = _nonlinear_extent(nonlinear)
-    common_shape = common_target.shape
+    crop_target = _slab_projection(target_3d, slab, mode="max").astype(bool)
+    crop_inversion = _slab_projection(inversion_3d, slab, mode="max").astype(bool)
+    nonlinear_extent = _nonlinear_extent(nonlinear)
+    placement = placement_fields(linear)
+    common_extent = [float(v) for v in np.asarray(placement["placement_extent_m"], dtype=float)]
+    common_shape = tuple(int(v) for v in np.asarray(placement["placement_ct_hu"]).shape)
+    common_target = resample_to_extent(crop_target.astype(float), nonlinear_extent, common_shape, common_extent) >= 0.5
     linear_extent = _linear_extent(linear)
 
-    raw_pressure_projection = _slab_projection(
-        np.asarray(nonlinear["westervelt_peak_pressure_pa"], dtype=float), slab, mode="max"
+    raw_pressure_crop = _slab_projection(np.asarray(nonlinear["westervelt_peak_pressure_pa"], dtype=float), slab, mode="max")
+    crop_body = _slab_projection(np.asarray(nonlinear["body_mask"], dtype=bool), slab, mode="max") >= 0.5
+    body_pressure_crop = np.where(crop_body, raw_pressure_crop, 0.0)
+    target_pressure_crop = np.where(crop_body & crop_target, raw_pressure_crop, 0.0)
+    treatment_pressure_crop = np.where(crop_body & crop_inversion, raw_pressure_crop, 0.0)
+    raw_pressure_projection = resample_to_extent(body_pressure_crop, nonlinear_extent, common_shape, common_extent)
+    target_pressure_projection = resample_to_extent(
+        target_pressure_crop,
+        nonlinear_extent,
+        common_shape,
+        common_extent,
+    )
+    target_pressure_projection = np.where(common_target, target_pressure_projection, 0.0)
+    treatment_pressure_projection = resample_to_extent(
+        treatment_pressure_crop,
+        nonlinear_extent,
+        common_shape,
+        common_extent,
     )
     fields = {
-        **placement_fields(linear),
+        **placement,
         "common_target": common_target,
         "linear_exposure": _normalize01(
-            _resample_to_extent(np.asarray(linear["exposure"], dtype=float), linear_extent, common_shape, common_extent)
+            resample_to_extent(np.asarray(linear["exposure"], dtype=float), linear_extent, common_shape, common_extent)
         ),
-        "linear_active": _resample_to_extent(
+        "linear_active": resample_to_extent(
             np.asarray(linear["active_lesion_reconstruction"], dtype=float),
             linear_extent,
             common_shape,
             common_extent,
         ),
-        "linear_fusion": _resample_to_extent(
+        "linear_fusion": resample_to_extent(
             np.asarray(linear["fused_reconstruction"], dtype=float),
             linear_extent,
             common_shape,
             common_extent,
         ),
-        "nonlinear_pressure": _normalize01(raw_pressure_projection),
-        "nonlinear_fwi": _slab_projection(
-            np.asarray(nonlinear["multiparameter_fwi_score"], dtype=float), slab, mode="max"
+        "elastic_shear": resample_to_extent(
+            np.asarray(linear["elastic_shear_reconstruction"], dtype=float),
+            linear_extent,
+            common_shape,
+            common_extent,
         ),
-        "nonlinear_cavitation": _slab_projection(
-            np.asarray(nonlinear["reconstructed_cavitation_density"], dtype=float), slab, mode="max"
+        "nonlinear_pressure": _normalize01(target_pressure_projection),
+        "nonlinear_pressure_window": _normalize01(treatment_pressure_projection),
+        "nonlinear_pressure_raw": _normalize01(raw_pressure_projection),
+        "nonlinear_treatment_window": resample_to_extent(
+            crop_inversion.astype(float),
+            nonlinear_extent,
+            common_shape,
+            common_extent,
+        )
+        >= 0.5,
+        "nonlinear_fwi": resample_to_extent(
+            _slab_projection(np.asarray(nonlinear["multiparameter_fwi_score"], dtype=float), slab, mode="max"),
+            nonlinear_extent,
+            common_shape,
+            common_extent,
         ),
-        "nonlinear_cavitation_source": _slab_projection(
-            np.asarray(nonlinear["cavitation_source_density"], dtype=float), slab, mode="max"
+        "nonlinear_cavitation": resample_to_extent(
+            _slab_projection(np.asarray(nonlinear["reconstructed_cavitation_density"], dtype=float), slab, mode="max"),
+            nonlinear_extent,
+            common_shape,
+            common_extent,
         ),
-        "nonlinear_fusion": _slab_projection(
-            np.asarray(nonlinear["nonlinear_fusion_score"], dtype=float), slab, mode="max"
+        "nonlinear_cavitation_source": resample_to_extent(
+            _slab_projection(np.asarray(nonlinear["cavitation_source_density"], dtype=float), slab, mode="max"),
+            nonlinear_extent,
+            common_shape,
+            common_extent,
+        ),
+        "nonlinear_fusion": resample_to_extent(
+            _slab_projection(np.asarray(nonlinear["nonlinear_fusion_score"], dtype=float), slab, mode="max"),
+            nonlinear_extent,
+            common_shape,
+            common_extent,
         ),
         "therapy_points_xy_m": np.asarray(nonlinear["therapy_points_m"], dtype=float)[:, :2],
     }
     fields["fusion_difference"] = fields["nonlinear_fusion"] - fields["linear_fusion"]
     add_ct_frame_fields(fields, common_extent)
 
+    geometry = aperture_geometry_metrics(linear, nonlinear, common_target, common_extent)
     pressure_metrics = _field_metrics(fields["nonlinear_pressure"], common_target)
-    pressure_metrics.update(
-        pressure_field_diagnostics(
-            raw_pressure_projection,
+    window_pressure_metrics = _field_metrics(fields["nonlinear_pressure_window"], common_target)
+    raw_pressure_metrics = _field_metrics(fields["nonlinear_pressure_raw"], common_target)
+    pressure_metrics.update({
+        f"window_ct_field_{key}": value
+        for key, value in window_pressure_metrics.items()
+    })
+    pressure_metrics.update({
+        f"raw_ct_field_{key}": value
+        for key, value in raw_pressure_metrics.items()
+    })
+    pressure_metrics.update(pressure_field_diagnostics(
+        raw_pressure_crop,
+        crop_target,
+        body_mask=crop_body,
+        frequency_hz=float(nonlinear.get("frequency_hz", 1.0e6)),
+        source_pressure_pa=float(nonlinear.get("source_pressure_pa", 0.0)),
+        source_scale=float(nonlinear.get("source_scale", 1.0)),
+        inertial_mi_threshold=float(nonlinear.get("inertial_mi_threshold", 1.9)),
+    ))
+    pressure_metrics.update(pressure_hotspot_physical_metrics(
+        fields["nonlinear_pressure"],
+        common_target,
+        common_extent,
+        geometry,
+    ))
+    pressure_metrics.update({
+        f"raw_{key}": value
+        for key, value in pressure_hotspot_physical_metrics(
+            fields["nonlinear_pressure_raw"],
             common_target,
-            frequency_hz=float(nonlinear.get("frequency_hz", 1.0e6)),
-            source_pressure_pa=float(nonlinear.get("source_pressure_pa", 0.0)),
-            source_scale=float(nonlinear.get("source_scale", 1.0)),
-            inertial_mi_threshold=float(nonlinear.get("inertial_mi_threshold", 1.9)),
-        )
-    )
+            common_extent,
+            geometry,
+        ).items()
+    })
+    pressure_metrics.update({
+        f"window_{key}": value
+        for key, value in pressure_hotspot_physical_metrics(
+            fields["nonlinear_pressure_window"],
+            common_target,
+            common_extent,
+            geometry,
+        ).items()
+    })
+    if "electronic_steering_metrics" in nonlinear:
+        pressure_metrics.update({
+            f"electronic_steering_{key}": value
+            for key, value in dict(nonlinear["electronic_steering_metrics"]).items()
+        })
     metrics = {
         "linear_exposure": _field_metrics(fields["linear_exposure"], common_target),
         "linear_active": _field_metrics(fields["linear_active"], common_target),
         "linear_fusion": _field_metrics(fields["linear_fusion"], common_target),
+        "elastic_shear": _field_metrics(fields["elastic_shear"], common_target),
         "nonlinear_pressure": pressure_metrics,
         "nonlinear_fwi": _field_metrics(fields["nonlinear_fwi"], common_target),
         "nonlinear_cavitation_source": _field_metrics(fields["nonlinear_cavitation_source"], common_target),
@@ -278,7 +402,6 @@ def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) ->
         "nonlinear_fusion": _field_metrics(fields["nonlinear_fusion"], common_target),
     }
     cross = _cross_model_metrics(fields, common_target)
-    geometry = _geometry_metrics(linear, nonlinear, common_target, common_extent)
     objective_history = {
         "nonlinear_fwi": _float_list(nonlinear.get("fwi_objective_history", [])),
         "nonlinear_cavitation": _float_list(nonlinear.get("cavitation_objective_history", [])),
@@ -295,6 +418,18 @@ def _case_comparison(linear: dict[str, object], nonlinear: dict[str, object]) ->
         "technical_explanation": _technical_explanation(metrics, cross, geometry, objective_history),
     }
 def _linear_extent(result: dict[str, object]) -> list[float]:
+    if all(key in result for key in ("crop_bounds_index", "source_dimensions", "source_spacing_m")):
+        bounds = np.asarray(result["crop_bounds_index"], dtype=float)
+        dims = np.asarray(result["source_dimensions"], dtype=float)
+        spacing = np.asarray(result["source_spacing_m"], dtype=float)
+        center_x = 0.5 * (dims[0] - 1.0)
+        center_y = 0.5 * (dims[1] - 1.0)
+        return [
+            float((bounds[0] - center_x) * spacing[0]),
+            float((bounds[1] - center_x) * spacing[0]),
+            float((bounds[2] - center_y) * spacing[1]),
+            float((bounds[3] - center_y) * spacing[1]),
+        ]
     image = np.asarray(result["fused_reconstruction"], dtype=float)
     spacing = float(result["spacing_m"])
     nx, ny = image.shape
@@ -324,40 +459,6 @@ def _target_slab_bounds(mask: np.ndarray, z_index: int) -> tuple[int, int]:
 def _slab_projection(volume: np.ndarray, slab: tuple[int, int], *, mode: str) -> np.ndarray:
     data = np.asarray(volume[:, :, slab[0] : slab[1]], dtype=float)
     return np.mean(data, axis=2) if mode == "mean" else np.max(data, axis=2)
-def _resample_to_extent(
-    image: np.ndarray,
-    source_extent: list[float],
-    target_shape: tuple[int, int],
-    target_extent: list[float],
-) -> np.ndarray:
-    sx, sy = image.shape
-    tx, ty = target_shape
-    x = np.linspace(target_extent[0], target_extent[1], tx)
-    y = np.linspace(target_extent[2], target_extent[3], ty)
-    u = (x - source_extent[0]) * (sx - 1) / max(source_extent[1] - source_extent[0], 1.0e-12)
-    v = (y - source_extent[2]) * (sy - 1) / max(source_extent[3] - source_extent[2], 1.0e-12)
-    out = np.zeros((tx, ty), dtype=float)
-    valid_x = (u >= 0.0) & (u <= sx - 1)
-    valid_y = (v >= 0.0) & (v <= sy - 1)
-    for ix, ux in enumerate(u):
-        if not valid_x[ix]:
-            continue
-        x0 = int(np.floor(ux))
-        x1 = min(x0 + 1, sx - 1)
-        wx = ux - x0
-        for iy, vy in enumerate(v):
-            if not valid_y[iy]:
-                continue
-            y0 = int(np.floor(vy))
-            y1 = min(y0 + 1, sy - 1)
-            wy = vy - y0
-            out[ix, iy] = (
-                (1.0 - wx) * (1.0 - wy) * image[x0, y0]
-                + wx * (1.0 - wy) * image[x1, y0]
-                + (1.0 - wx) * wy * image[x0, y1]
-                + wx * wy * image[x1, y1]
-            )
-    return out
 def _field_metrics(field: np.ndarray, target: np.ndarray) -> dict[str, float]:
     values = _normalize01(field)
     active = np.asarray(target, dtype=bool)
@@ -379,6 +480,8 @@ def _field_metrics(field: np.ndarray, target: np.ndarray) -> dict[str, float]:
 def _cross_model_metrics(fields: dict[str, np.ndarray], target: np.ndarray) -> dict[str, float]:
     return {
         "linear_fusion_vs_nonlinear_fusion_pearson": _pearson(fields["linear_fusion"], fields["nonlinear_fusion"]),
+        "elastic_shear_vs_linear_fusion_pearson": _pearson(fields["elastic_shear"], fields["linear_fusion"]),
+        "elastic_shear_vs_nonlinear_fusion_pearson": _pearson(fields["elastic_shear"], fields["nonlinear_fusion"]),
         "linear_exposure_vs_nonlinear_pressure_pearson": _pearson(fields["linear_exposure"], fields["nonlinear_pressure"]),
         "linear_fusion_hotspot_distance_grid_cells": _hotspot_distance(fields["linear_fusion"], fields["nonlinear_fusion"], target),
         "nonlinear_pressure_to_fusion_pearson": _pearson(fields["nonlinear_pressure"], fields["nonlinear_fusion"]),
@@ -388,27 +491,6 @@ def _cross_model_metrics(fields: dict[str, np.ndarray], target: np.ndarray) -> d
             fields["nonlinear_cavitation_source"], fields["nonlinear_cavitation"], target
         ),
     }
-def _geometry_metrics(
-    linear: dict[str, object],
-    nonlinear: dict[str, object],
-    common_target: np.ndarray,
-    common_extent: list[float],
-) -> dict[str, float | list[float] | str]:
-    linear_focus = np.asarray(linear.get("focus_m", (0.0, 0.0)), dtype=float)[:2]
-    nonlinear_focus = _mask_centroid_m(common_target, common_extent)
-    linear_points = np.column_stack(
-        [np.asarray(linear["therapy_x_m"], dtype=float), np.asarray(linear["therapy_y_m"], dtype=float)]
-    )
-    nonlinear_points = np.asarray(nonlinear["therapy_points_m"], dtype=float)[:, :2]
-    return {
-        "comparison_frame": "nonlinear_crop_xy_projection",
-        "linear_focus_to_common_target_centroid_m": float(np.linalg.norm(linear_focus - nonlinear_focus)),
-        "linear_element_count": int(np.asarray(linear["therapy_x_m"]).size),
-        "nonlinear_element_count": int(nonlinear_points.shape[0]),
-        "median_nearest_projected_element_distance_m": _median_nearest_distance(linear_points, nonlinear_points),
-        "common_target_voxels": int(np.count_nonzero(common_target)),
-        "common_target_centroid_m": [float(v) for v in nonlinear_focus],
-    }
 def _technical_explanation(
     metrics: dict[str, dict[str, float]],
     cross: dict[str, float],
@@ -416,24 +498,48 @@ def _technical_explanation(
     objective_history: dict[str, list[float]],
 ) -> str:
     linear_dice = metrics["linear_fusion"]["dice_equal_area"]
+    elastic_dice = metrics["elastic_shear"]["dice_equal_area"]
     nonlinear_dice = metrics["nonlinear_fusion"]["dice_equal_area"]
-    outside = metrics["nonlinear_pressure"]["outside_energy_fraction"]
+    pressure = metrics["nonlinear_pressure"]
+    outside = pressure["outside_energy_fraction"]
     source_distance = metrics["nonlinear_cavitation_source"]["hotspot_distance_to_target_grid_cells"]
     reconstructed_distance = metrics["nonlinear_cavitation"]["hotspot_distance_to_target_grid_cells"]
     fwi_history = objective_history["nonlinear_fwi"]
     objective_drop = fwi_history[0] - fwi_history[-1] if len(fwi_history) >= 2 else 0.0
     return (
-        f"On the common crop grid, linear fusion Dice is {linear_dice:.3f} and nonlinear fusion "
-        f"Dice is {nonlinear_dice:.3f}. Nonlinear peak-pressure outside-target energy is "
+        f"On the full CT placement grid, linear fusion Dice is {linear_dice:.3f}, elastic shear "
+        f"Dice is {elastic_dice:.3f}, and nonlinear fusion Dice is {nonlinear_dice:.3f}. "
+        f"Nonlinear target MI is {pressure['target_peak_mechanical_index']:.2f} "
+        f"at {1.0e-6 * pressure['raw_target_peak_pressure_pa']:.2f} MPa; displayed target-pressure outside energy is "
         f"{outside:.3f}, linear/nonlinear fusion Pearson is "
         f"{cross['linear_fusion_vs_nonlinear_fusion_pearson']:.3f}, and nonlinear FWI objective "
         f"drop is {objective_drop:.3e}. The Rayleigh-Plesset source and passive reconstruction "
         f"hotspots are {source_distance:.2f} and {reconstructed_distance:.2f} grid cells from the "
         f"target centroid. The residual projected aperture mismatch from the original "
         f"runs is {1.0e3 * float(geometry['median_nearest_projected_element_distance_m']):.2f} mm; "
+        f"the nonlinear aperture axis differs from the planned beam axis by "
+        f"{float(geometry['planned_to_nonlinear_aperture_axis_angle_deg']):.2f} deg; "
+        f"the displayed target-pressure hotspot offset is "
+        f"{1.0e3 * pressure['ct_frame_pressure_hotspot_axis_offset_m']:.2f} mm "
+        f"along the planned beam axis and "
+        f"{1.0e3 * pressure['ct_frame_pressure_hotspot_cross_axis_offset_m']:.2f} mm cross-axis; "
+        f"the treatment-window pressure hotspot offset is "
+        f"{1.0e3 * pressure['window_ct_frame_pressure_hotspot_axis_offset_m']:.2f} mm along-axis and "
+        f"{1.0e3 * pressure['window_ct_frame_pressure_hotspot_cross_axis_offset_m']:.2f} mm cross-axis; "
+        f"the raw body-pressure hotspot offset is "
+        f"{1.0e3 * pressure['raw_ct_frame_pressure_hotspot_axis_offset_m']:.2f} mm along-axis and "
+        f"{1.0e3 * pressure['raw_ct_frame_pressure_hotspot_cross_axis_offset_m']:.2f} mm cross-axis; "
+        f"the raw pressure peak is {'in the coupling/source region' if pressure['raw_peak_is_in_coupling'] else 'inside the body'} "
+        f"with coupling/body peak ratio {pressure['coupling_to_body_peak_ratio']:.2f}, and the "
+        f"body pressure hotspot is {pressure['body_hotspot_distance_to_target_grid_cells']:.2f} "
+        "grid cells from target. "
+        f"the measured electronic-steering calibration hotspot is "
+        f"{pressure.get('electronic_steering_calibration_hotspot_distance_grid_cells', 0.0):.2f} "
+        f"grid cells from the nominal focus and selected correction "
+        f"{pressure.get('electronic_steering_correction_grid_cells', [0, 0, 0])}. "
         "therefore the matched artifact localizes the remaining channel difference to nonlinear "
-        "pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image "
-        "resolution alone."
+        "in-body pressure/cavitation spread, source-region dominance in raw peak-pressure display, "
+        "and residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
     )
 def _normalize01(image: np.ndarray) -> np.ndarray:
     values = np.where(np.isfinite(np.asarray(image, dtype=float)), np.asarray(image, dtype=float), 0.0)
@@ -479,21 +585,6 @@ def _hotspot_distance_to_target(field: np.ndarray, target: np.ndarray) -> float:
         return 0.0
     hotspot = np.array(np.unravel_index(int(np.argmax(field)), field.shape), dtype=float)
     return float(np.linalg.norm(hotspot - np.mean(coords, axis=0)))
-def _mask_centroid_m(mask: np.ndarray, extent: list[float]) -> np.ndarray:
-    coords = np.argwhere(mask)
-    if coords.size == 0:
-        return np.array([0.5 * (extent[0] + extent[1]), 0.5 * (extent[2] + extent[3])])
-    x = np.linspace(extent[0], extent[1], mask.shape[0])
-    y = np.linspace(extent[2], extent[3], mask.shape[1])
-    return np.array([float(np.mean(x[coords[:, 0]])), float(np.mean(y[coords[:, 1]]))])
-def _median_nearest_distance(a: np.ndarray, b: np.ndarray) -> float:
-    if a.size == 0 or b.size == 0:
-        return 0.0
-    distances = []
-    for point in a:
-        delta = b - point[np.newaxis, :]
-        distances.append(float(np.min(np.sum(delta * delta, axis=1)) ** 0.5))
-    return float(np.median(distances))
 def _contour_mask(ax: plt.Axes, mask: np.ndarray, extent: list[float], color: str, width: float) -> None:
     x = np.linspace(extent[0], extent[1], mask.shape[0])
     y = np.linspace(extent[2], extent[3], mask.shape[1])

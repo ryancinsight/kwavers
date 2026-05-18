@@ -2,7 +2,7 @@
 
 use super::api_types::{
     APIConfig, GeometrySpec, HealthStatus, PINNTrainingRequest, PaginationParams,
-    PhysicsParameters, ServiceStatus, TrainingConfig,
+    PinnApiPhysicsParameters, PinnApiTrainingConfig, ServiceStatus,
 };
 use std::collections::HashMap;
 
@@ -32,13 +32,13 @@ fn test_training_request_serialization() {
             obstacles: vec![],
             boundary_conditions: vec![],
         },
-        physics_params: PhysicsParameters {
+        physics_params: PinnApiPhysicsParameters {
             material_properties: HashMap::new(),
             boundary_values: HashMap::new(),
             initial_values: HashMap::new(),
             domain_params: HashMap::new(),
         },
-        training_config: TrainingConfig {
+        training_config: PinnApiTrainingConfig {
             collocation_points: 1000,
             batch_size: 32,
             epochs: 100,

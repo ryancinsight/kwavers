@@ -22,11 +22,16 @@ pub fn rtm_imaging_condition(
 ) -> Vec<f64> {
     let n = nx * nz;
     let mut img = vec![0.0_f64; n];
+    // Fused clip-and-max: single pass accumulates max while filling img,
+    // eliminating the separate fold call over the clipped array.
+    let mut max_val = 0.0_f64;
     for i in 0..n {
-        let val = p_fwd_real[i] * p_bwd_real[i] + p_fwd_imag[i] * p_bwd_imag[i];
-        img[i] = val.max(0.0);
+        let val = (p_fwd_real[i] * p_bwd_real[i] + p_fwd_imag[i] * p_bwd_imag[i]).max(0.0);
+        img[i] = val;
+        if val > max_val {
+            max_val = val;
+        }
     }
-    let max_val = img.iter().cloned().fold(0.0_f64, f64::max);
     if max_val > 0.0 {
         img.iter_mut().for_each(|v| *v /= max_val);
     }

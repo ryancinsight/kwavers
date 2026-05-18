@@ -8,7 +8,7 @@ use crate::physics::chemistry::ChemicalModel;
 use crate::physics::transcranial::TranscranialAberrationCorrection;
 use crate::simulation::imaging::ceus::ContrastEnhancedUltrasound;
 
-use super::super::super::config::{TherapyModality, TherapySessionConfig};
+use super::super::super::config::{TherapyIntegrationModality, TherapySessionConfig};
 
 /// Initialize CEUS system for microbubble therapy
 ///
@@ -82,7 +82,7 @@ pub fn init_cavitation_controller(
     config: &TherapySessionConfig,
 ) -> KwaversResult<FeedbackController> {
     let feedback_config = match config.primary_modality {
-        TherapyModality::Histotripsy => FeedbackConfig {
+        TherapyIntegrationModality::Histotripsy => FeedbackConfig {
             strategy: ControlStrategy::AmplitudeOnly,
             target_intensity: 0.8,
             max_amplitude: 1.0,
@@ -91,7 +91,7 @@ pub fn init_cavitation_controller(
             safety_factor: 0.5,
             enable_adaptive: true,
         },
-        TherapyModality::Oncotripsy => FeedbackConfig {
+        TherapyIntegrationModality::Oncotripsy => FeedbackConfig {
             strategy: ControlStrategy::AmplitudeOnly,
             target_intensity: 0.6,
             max_amplitude: 1.0,

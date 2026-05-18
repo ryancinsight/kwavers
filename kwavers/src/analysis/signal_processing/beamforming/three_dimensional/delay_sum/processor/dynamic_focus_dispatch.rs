@@ -22,7 +22,7 @@
 #[cfg(feature = "gpu")]
 use super::super::params::DynamicFocusParams;
 #[cfg(feature = "gpu")]
-use crate::analysis::signal_processing::beamforming::three_dimensional::config::ApodizationWindow;
+use crate::analysis::signal_processing::beamforming::three_dimensional::config::Beamforming3dApodizationWindow;
 #[cfg(feature = "gpu")]
 use crate::core::error::KwaversResult;
 #[cfg(feature = "gpu")]
@@ -64,7 +64,7 @@ impl<'a> DynamicFocusGPU<'a> {
     pub fn process(
         &self,
         rf_data: &Array4<f32>,
-        apodization_window: &ApodizationWindow,
+        apodization_window: &Beamforming3dApodizationWindow,
         apodization_weights: &Array3<f32>,
     ) -> KwaversResult<Array3<f32>> {
         let rf_dims = rf_data.dim();
@@ -174,10 +174,10 @@ impl<'a> DynamicFocusGPU<'a> {
                 });
 
         let apodization_window_u32 = match apodization_window {
-            ApodizationWindow::Rectangular => 0,
-            ApodizationWindow::Hamming => 1,
-            ApodizationWindow::Hann => 2,
-            ApodizationWindow::Blackman => 3,
+            Beamforming3dApodizationWindow::Rectangular => 0,
+            Beamforming3dApodizationWindow::Hamming => 1,
+            Beamforming3dApodizationWindow::Hann => 2,
+            Beamforming3dApodizationWindow::Blackman => 3,
             _ => 0,
         };
         let _ = apodization_window_u32; // used only for static DAS Params; DF shader uses weights directly

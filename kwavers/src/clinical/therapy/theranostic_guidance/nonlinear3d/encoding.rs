@@ -15,8 +15,6 @@
 //! of `W^T W` retain each element's sensitivity; additional off-diagonal terms
 //! are deterministic cross-talk rather than lost information.
 
-use super::types::GridIndex;
-
 #[derive(Clone, Copy, Debug)]
 pub(super) struct SourceEncoding {
     pub index: usize,
@@ -46,33 +44,4 @@ impl SourceEncoding {
             -1.0
         }
     }
-}
-
-pub(super) fn focused_delay_s(
-    source: GridIndex,
-    focus: GridIndex,
-    max_distance_m: f64,
-    spacing_m: f64,
-    reference_speed_m_s: f64,
-) -> f64 {
-    let distance = grid_distance_m(source, focus, spacing_m);
-    (max_distance_m - distance).max(0.0) / reference_speed_m_s.max(343.0)
-}
-
-pub(super) fn max_source_focus_distance_m(
-    sources: &[GridIndex],
-    focus: GridIndex,
-    spacing_m: f64,
-) -> f64 {
-    sources
-        .iter()
-        .map(|source| grid_distance_m(*source, focus, spacing_m))
-        .fold(0.0, f64::max)
-}
-
-fn grid_distance_m(a: GridIndex, b: GridIndex, spacing_m: f64) -> f64 {
-    let dx = (a.x as f64 - b.x as f64) * spacing_m;
-    let dy = (a.y as f64 - b.y as f64) * spacing_m;
-    let dz = (a.z as f64 - b.z as f64) * spacing_m;
-    dx.hypot(dy).hypot(dz)
 }

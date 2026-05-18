@@ -77,7 +77,7 @@
 ///
 /// ```ignore
 /// use kwavers::solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
-/// use kwavers::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolver as KZKTrait;
+/// use kwavers::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
 /// use ndarray::Array2;
 ///
 /// let config = KZKConfig::default();
@@ -96,7 +96,7 @@
 /// // Extract 2D RMS pressure at z = 100·dz
 /// let field_2d: Array2<f64> = solver.current_field();
 /// ```
-pub trait KZKSolver {
+pub trait KZKSolverTrait {
     /// Advance the acoustic pressure field by one axial step of length `dz` (m).
     ///
     /// Applies the full Strang-split sequence:

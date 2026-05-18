@@ -1,6 +1,6 @@
 use super::{
-    ConservationDiagnostic, ConservationDiagnostics, ConservationLaw, ConservationSummary,
-    ConservationTolerances, ConservationTracker, ViolationSeverity,
+    ConservationDiagnostic, ConservationDiagnostics, ConservationSummary, ConservationTolerances,
+    ConservationTracker, NonlinearConservationLaw, ViolationSeverity,
 };
 
 impl ConservationTracker {
@@ -55,7 +55,7 @@ impl ConservationTracker {
         let energy_violations: Vec<_> = self
             .history
             .iter()
-            .filter(|d| d.law == ConservationLaw::Energy)
+            .filter(|d| d.law == NonlinearConservationLaw::Energy)
             .collect();
 
         let max_energy_error = energy_violations

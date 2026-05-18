@@ -145,7 +145,7 @@ fn test_safety_limit_checking_all_safe() {
         temperature_rise: Array3::zeros((5, 5, 5)),
     };
 
-    let safety_limits = SafetyLimits {
+    let safety_limits = TherapyIntegrationSafetyLimits {
         thermal_index_max: 6.0,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
@@ -153,7 +153,7 @@ fn test_safety_limit_checking_all_safe() {
     };
 
     let status = check_safety_limits(&safety_metrics, &safety_limits, 60.0);
-    assert_eq!(status, SafetyStatus::Safe);
+    assert_eq!(status, TherapyIntegrationSafetyStatus::Safe);
 }
 
 #[test]
@@ -165,7 +165,7 @@ fn test_safety_limit_thermal_exceeded() {
         temperature_rise: Array3::zeros((5, 5, 5)),
     };
 
-    let safety_limits = SafetyLimits {
+    let safety_limits = TherapyIntegrationSafetyLimits {
         thermal_index_max: 6.0,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
@@ -173,7 +173,7 @@ fn test_safety_limit_thermal_exceeded() {
     };
 
     let status = check_safety_limits(&safety_metrics, &safety_limits, 60.0);
-    assert_eq!(status, SafetyStatus::ThermalLimitExceeded);
+    assert_eq!(status, TherapyIntegrationSafetyStatus::ThermalLimitExceeded);
 }
 
 #[test]
@@ -185,7 +185,7 @@ fn test_safety_limit_mechanical_exceeded() {
         temperature_rise: Array3::zeros((5, 5, 5)),
     };
 
-    let safety_limits = SafetyLimits {
+    let safety_limits = TherapyIntegrationSafetyLimits {
         thermal_index_max: 6.0,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
@@ -193,7 +193,10 @@ fn test_safety_limit_mechanical_exceeded() {
     };
 
     let status = check_safety_limits(&safety_metrics, &safety_limits, 60.0);
-    assert_eq!(status, SafetyStatus::MechanicalLimitExceeded);
+    assert_eq!(
+        status,
+        TherapyIntegrationSafetyStatus::MechanicalLimitExceeded
+    );
 }
 
 #[test]
@@ -205,7 +208,7 @@ fn test_safety_limit_time_exceeded() {
         temperature_rise: Array3::zeros((5, 5, 5)),
     };
 
-    let safety_limits = SafetyLimits {
+    let safety_limits = TherapyIntegrationSafetyLimits {
         thermal_index_max: 6.0,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
@@ -213,5 +216,5 @@ fn test_safety_limit_time_exceeded() {
     };
 
     let status = check_safety_limits(&safety_metrics, &safety_limits, 301.0); // Over time limit
-    assert_eq!(status, SafetyStatus::TimeLimitExceeded);
+    assert_eq!(status, TherapyIntegrationSafetyStatus::TimeLimitExceeded);
 }

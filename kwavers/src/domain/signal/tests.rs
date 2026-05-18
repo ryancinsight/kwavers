@@ -1,7 +1,7 @@
 use super::functions::{
     add_noise, create_cw_signals, next_pow2, pad_zeros, tone_burst_series, ToneBurstSpec,
 };
-use super::window::WindowType;
+use super::window::SignalWindowType;
 use proptest::prelude::*;
 use std::f64::consts::PI;
 
@@ -13,7 +13,7 @@ fn tone_burst_series_respects_offset_and_length() {
         num_cycles: 2.0,
         signal_offset: 10,
         signal_length: Some(40),
-        window: WindowType::Hann,
+        window: SignalWindowType::Hann,
         amplitude: 1.0,
         phase: 0.0,
     })
@@ -31,7 +31,7 @@ fn tone_burst_series_matches_kwave_gaussian_reference() {
         num_cycles: 3.0,
         signal_offset: 0,
         signal_length: None,
-        window: WindowType::Gaussian,
+        window: SignalWindowType::Gaussian,
         amplitude: 1.0,
         phase: 0.0,
     })
@@ -88,7 +88,7 @@ fn tone_burst_series_uses_floor_plus_one_sample_count() {
         num_cycles: 5.0,
         signal_offset: 0,
         signal_length: None,
-        window: WindowType::Rectangular,
+        window: SignalWindowType::Rectangular,
         amplitude: 1.0,
         phase: 0.0,
     })

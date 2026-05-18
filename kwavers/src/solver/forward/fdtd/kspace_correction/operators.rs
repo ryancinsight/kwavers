@@ -1,6 +1,6 @@
 use crate::core::error::KwaversResult;
 use crate::math::fft::shift_operators::{generate_kappa, generate_shift_1d, generate_source_kappa};
-use crate::math::fft::{get_fft_for_grid, Complex64, Fft3dInOutExt, ProcessorFft3d};
+use crate::math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
 use crate::solver::forward::acoustic_ivp::spectral_velocity_scale_from_source_kappa;
 use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;
@@ -20,7 +20,7 @@ pub struct KSpaceFdtdOperators {
     dz: f64,
     c_ref: f64,
     /// Shared FFT plan (cached; not duplicated if PSTD is also running).
-    fft: Arc<ProcessorFft3d>,
+    fft: Arc<Fft3d>,
     /// Temporal correction factor `κ[i,j,k] = sinc(0.5·c_ref·dt·|k|)`.
     /// Public so that tests can compare with PSTD's kappa.
     pub kappa: Array3<f64>,

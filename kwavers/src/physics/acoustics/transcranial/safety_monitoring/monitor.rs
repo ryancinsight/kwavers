@@ -1,18 +1,18 @@
-//! SafetyMonitor struct and field update orchestration
+//! TranscranialSafetyMonitor struct and field update orchestration
 
-use super::types::{MechanicalIndex, SafetyThresholds, ThermalDose};
+use super::types::{MechanicalIndex, SafetyThresholds, TranscranialSafetyDose};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
 /// Safety monitoring system for tFUS
 #[derive(Debug)]
-pub struct SafetyMonitor {
+pub struct TranscranialSafetyMonitor {
     /// Temperature field (°C)
     pub(crate) temperature: Array3<f64>,
     /// Acoustic pressure field (Pa)
     pub(crate) pressure: Array3<f64>,
     /// Thermal dose accumulation
-    pub(crate) thermal_dose: ThermalDose,
+    pub(crate) thermal_dose: TranscranialSafetyDose,
     /// Mechanical index
     pub(crate) mechanical_index: MechanicalIndex,
     /// Tissue perfusion rate (1/s)
@@ -23,13 +23,13 @@ pub struct SafetyMonitor {
     pub(crate) thresholds: SafetyThresholds,
 }
 
-impl SafetyMonitor {
+impl TranscranialSafetyMonitor {
     /// Create new safety monitor
     #[must_use]
     pub fn new(grid_dims: (usize, usize, usize), perfusion_rate: f64, frequency: f64) -> Self {
         let temperature = Array3::from_elem(grid_dims, 37.0); // Body temperature
         let pressure = Array3::zeros(grid_dims);
-        let thermal_dose = ThermalDose {
+        let thermal_dose = TranscranialSafetyDose {
             current_dose: Array3::zeros(grid_dims),
             dose_rate: Array3::zeros(grid_dims),
             time_to_target: Array3::from_elem(grid_dims, f64::INFINITY),

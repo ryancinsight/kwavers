@@ -1197,7 +1197,7 @@ fn skull_transfer_matrix_transmission(
     z_brain: f64,
     c_skull: f64,
     d_skull_m: f64,
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     let c: Complex64 = skull_mod::skull_transfer_matrix_transmission(
         f_hz, z_water, z_skull, z_brain, c_skull, d_skull_m,
     );

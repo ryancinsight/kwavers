@@ -6,4 +6,4 @@ mod tests;
 pub mod types;
 
 pub use calculator::MechanicalIndexCalculator;
-pub use types::{MechanicalIndexResult, SafetyStatus, TissueType};
+pub use types::{MechanicalIndexResult, MechanicalIndexSafetyStatus, MechanicalIndexTissueType};

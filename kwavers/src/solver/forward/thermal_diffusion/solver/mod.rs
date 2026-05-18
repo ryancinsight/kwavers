@@ -1,6 +1,23 @@
-//! Unified thermal diffusion solver
+//! Unified thermal diffusion solver.
+//!
+//! The parabolic thermal diffusion and Pennes bioheat branches share the same
+//! centered finite-difference Laplacian. The Cattaneo-Vernotte branch is
+//! hyperbolic, but still belongs to this thermal-wave solver family.
+//!
+//! ## Finite-difference theorem
+//!
+//! A centered second-derivative stencil with coefficients `c_m` satisfying
+//! `Σ c_m = 0` and `Σ m² c_m = 2` differentiates any quadratic coordinate field
+//! exactly. Therefore the discrete Laplacian of `x² + 2y² + 3z²` is `12` on all
+//! points with complete stencil support. The regression tests use this
+//! invariant because it is independent of timestep, material parameters, and
+//! boundary treatment.
 
-use crate::{core::error::KwaversResult, domain::grid::Grid, domain::medium::Medium};
+use crate::{
+    core::error::{KwaversError, KwaversResult, ValidationError},
+    domain::grid::Grid,
+    domain::medium::Medium,
+};
 use ndarray::{Array3, ArrayView3, Zip};
 
 use crate::physics::thermal::diffusion::{
@@ -66,13 +83,22 @@ impl ThermalDiffusionSolver {
         }
     }
 
+    /// Compute `∇²T` into the pre-allocated Laplacian workspace.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::Validation`] if `spatial_order` is not 2 or 4.
+    /// Invalid orders are rejected rather than downgraded because changing the
+    /// stencil order changes the truncation-error and stability contract.
     fn calculate_laplacian(&mut self, grid: &Grid) -> KwaversResult<()> {
         match self.config.spatial_order {
             2 => self.calculate_laplacian_order::<2>(grid),
             4 => self.calculate_laplacian_order::<4>(grid),
             _ => {
-                self.config.spatial_order = 2;
-                self.calculate_laplacian_order::<2>(grid);
+                return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                    parameter: "spatial_order".to_owned(),
+                    value: self.config.spatial_order as f64,
+                    reason: "thermal diffusion supports only 2 or 4".to_owned(),
+                }));
             }
         }
 

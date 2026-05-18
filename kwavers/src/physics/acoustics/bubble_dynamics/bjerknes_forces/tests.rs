@@ -38,7 +38,7 @@ fn test_secondary_bjerknes_attractive() {
         .secondary_bjerknes_force(r1, r2, v1, v2, phase, distance)
         .unwrap();
 
-    assert_eq!(force.interaction_type, InteractionType::Attractive);
+    assert_eq!(force.interaction_type, BjerknesInteractionType::Attractive);
     assert!(!force.coalescing); // Distance > coalescence distance
 }
 
@@ -58,7 +58,7 @@ fn test_secondary_bjerknes_repulsive() {
         .secondary_bjerknes_force(r1, r2, v1, v2, phase, distance)
         .unwrap();
 
-    assert_eq!(force.interaction_type, InteractionType::Repulsive);
+    assert_eq!(force.interaction_type, BjerknesInteractionType::Repulsive);
 }
 
 #[test]
@@ -135,7 +135,7 @@ fn test_interaction_range() {
         .unwrap();
 
     assert_eq!(force.secondary, 0.0); // No force at large distance
-    assert_eq!(force.interaction_type, InteractionType::Neutral);
+    assert_eq!(force.interaction_type, BjerknesInteractionType::Neutral);
 }
 
 #[test]

@@ -1,6 +1,6 @@
 use super::demographics::PatientId;
 use super::profile::current_timestamp;
-use super::treatment::TreatmentPlan;
+use super::treatment::PatientTreatmentPlan;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Encounter identifier for clinical visits
@@ -95,7 +95,7 @@ pub struct ClinicalEncounter {
     /// Assessments and diagnoses
     pub assessments: Vec<String>,
     /// Treatment plans
-    pub treatment_plans: Vec<TreatmentPlan>,
+    pub treatment_plans: Vec<PatientTreatmentPlan>,
     /// Status: active, completed, cancelled
     pub status: String,
 }

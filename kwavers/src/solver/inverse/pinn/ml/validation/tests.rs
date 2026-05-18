@@ -26,14 +26,14 @@ fn test_compute_correlation() {
 
 #[test]
 fn test_validation_report_passes() {
-    let metrics = ValidationMetrics {
+    let metrics = PinnValidationMetrics {
         mean_absolute_error: 0.01,
         rmse: 0.02,
         relative_l2_error: 0.03,
         max_error: 0.05,
     };
 
-    let report = ValidationReport {
+    let report = PinnValidationReport {
         metrics,
         correlation: 0.99,
         mean_relative_error_percent: 3.0,
@@ -49,14 +49,14 @@ fn test_validation_report_passes() {
 
 #[test]
 fn test_validation_report_summary() {
-    let metrics = ValidationMetrics {
+    let metrics = PinnValidationMetrics {
         mean_absolute_error: 0.01,
         rmse: 0.02,
         relative_l2_error: 0.03,
         max_error: 0.05,
     };
 
-    let report = ValidationReport {
+    let report = PinnValidationReport {
         metrics,
         correlation: 0.99,
         mean_relative_error_percent: 3.0,

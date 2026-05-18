@@ -34,8 +34,8 @@ pub use crate::domain::imaging::ultrasound::{
         ElasticityMap, InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,
     },
     hifu::{
-        FeedbackChannel, HIFUTransducer, HIFUTreatmentPlan, MonitoringConfig, SafetyConstraints,
-        TreatmentPhase, TreatmentProtocol, TreatmentTarget,
+        DomainHIFUTransducer, DomainHIFUTreatmentPlan, FeedbackChannel, HifuSafetyConstraints,
+        HifuTreatmentProtocol, MonitoringConfig, TreatmentPhase, TreatmentTarget,
     },
     UltrasoundConfig, UltrasoundMode,
 };

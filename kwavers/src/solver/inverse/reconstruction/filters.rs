@@ -4,7 +4,7 @@ use crate::core::error::KwaversResult;
 use ndarray::Array2;
 use std::f64::consts::PI;
 
-use super::config::FilterType;
+use super::config::ReconstructionFilterType;
 
 /// Apply reconstruction filter to sensor data
 /// # Errors
@@ -12,16 +12,16 @@ use super::config::FilterType;
 ///
 pub fn apply_reconstruction_filter(
     data: &Array2<f64>,
-    filter_type: &FilterType,
+    filter_type: &ReconstructionFilterType,
     sampling_freq: f64,
 ) -> KwaversResult<Array2<f64>> {
     match filter_type {
-        FilterType::None => Ok(data.clone()),
-        FilterType::RamLak => apply_ram_lak_filter(data, sampling_freq),
-        FilterType::SheppLogan => apply_shepp_logan_filter(data, sampling_freq),
-        FilterType::Cosine => apply_cosine_filter(data, sampling_freq),
-        FilterType::Hamming => apply_hamming_filter(data, sampling_freq),
-        FilterType::Hann => apply_hann_filter(data, sampling_freq),
+        ReconstructionFilterType::None => Ok(data.clone()),
+        ReconstructionFilterType::RamLak => apply_ram_lak_filter(data, sampling_freq),
+        ReconstructionFilterType::SheppLogan => apply_shepp_logan_filter(data, sampling_freq),
+        ReconstructionFilterType::Cosine => apply_cosine_filter(data, sampling_freq),
+        ReconstructionFilterType::Hamming => apply_hamming_filter(data, sampling_freq),
+        ReconstructionFilterType::Hann => apply_hann_filter(data, sampling_freq),
     }
 }
 

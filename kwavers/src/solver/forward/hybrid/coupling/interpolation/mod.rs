@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 /// Interpolation schemes for inter-domain coupling
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
-pub enum InterpolationScheme {
+pub enum HybridInterpolationScheme {
     /// Linear interpolation (2nd order)
     Linear,
     /// Cubic spline interpolation (4th order)
@@ -27,7 +27,7 @@ pub enum InterpolationScheme {
 /// Manager for interpolation operations
 #[derive(Debug)]
 pub struct InterpolationManager {
-    pub(super) scheme: InterpolationScheme,
+    pub(super) scheme: HybridInterpolationScheme,
 }
 
 impl InterpolationManager {
@@ -36,7 +36,7 @@ impl InterpolationManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(scheme: InterpolationScheme) -> Self {
+    pub fn new(scheme: HybridInterpolationScheme) -> Self {
         Self { scheme }
     }
 
@@ -51,19 +51,19 @@ impl InterpolationManager {
         target_coords: &[(f64, f64, f64)],
     ) -> KwaversResult<Array3<f64>> {
         match self.scheme {
-            InterpolationScheme::Linear => {
+            HybridInterpolationScheme::Linear => {
                 self.linear_interpolation(source_field, source_coords, target_coords)
             }
-            InterpolationScheme::CubicSpline => {
+            HybridInterpolationScheme::CubicSpline => {
                 self.cubic_spline_interpolation(source_field, source_coords, target_coords)
             }
-            InterpolationScheme::Spectral => {
+            HybridInterpolationScheme::Spectral => {
                 self.spectral_interpolation(source_field, source_coords, target_coords)
             }
-            InterpolationScheme::Conservative => {
+            HybridInterpolationScheme::Conservative => {
                 self.conservative_interpolation(source_field, source_coords, target_coords)
             }
-            InterpolationScheme::Adaptive => {
+            HybridInterpolationScheme::Adaptive => {
                 self.adaptive_interpolation(source_field, source_coords, target_coords)
             }
         }

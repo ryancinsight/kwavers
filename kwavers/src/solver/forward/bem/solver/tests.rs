@@ -1,15 +1,15 @@
 use super::*;
-use crate::domain::mesh::tetrahedral::{BoundaryType, TetrahedralMesh};
+use crate::domain::mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
 use crate::solver::forward::bem::field::BemSolution;
 use ndarray::Array1;
 use num_complex::Complex64;
 
 fn create_test_mesh() -> TetrahedralMesh {
     let mut mesh = TetrahedralMesh::new();
-    let n0 = mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    let n1 = mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    let n2 = mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    let n3 = mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+    let n0 = mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n1 = mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n2 = mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    let n3 = mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
     mesh.add_element([n0, n1, n2, n3], 0).unwrap();
     mesh
 }

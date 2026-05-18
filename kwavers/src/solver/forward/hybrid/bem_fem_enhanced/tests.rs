@@ -1,6 +1,6 @@
 use super::config::EnhancedBemFemConfig;
 use super::solver::EnhancedBemFemSolver;
-use super::types::{InterfaceQuality, ValidationResult};
+use super::types::{BemFemValidationResult, InterfaceQuality};
 
 #[test]
 fn test_enhanced_config_default() {
@@ -49,7 +49,7 @@ fn test_validation_result_passed() {
         spurious_resonance_detected: false,
     };
 
-    let result = ValidationResult {
+    let result = BemFemValidationResult {
         frequency: 1000.0,
         spurious_resonance_detected: false,
         burton_miller_used: true,
@@ -74,7 +74,7 @@ fn test_validation_result_summary() {
         spurious_resonance_detected: false,
     };
 
-    let result = ValidationResult {
+    let result = BemFemValidationResult {
         frequency: 1000.0,
         spurious_resonance_detected: false,
         burton_miller_used: true,

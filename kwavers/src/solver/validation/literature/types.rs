@@ -34,7 +34,7 @@ pub mod pinton_2009 {
 
 /// Validation case metadata
 #[derive(Debug, Clone)]
-pub struct ValidationCase {
+pub struct LiteratureValidationCase {
     pub name: &'static str,
     pub paper_citation: &'static str,
     pub scenario: &'static str,
@@ -54,7 +54,7 @@ pub enum ValidationMetric {
 
 /// Validation result with detailed error analysis
 #[derive(Debug, Clone)]
-pub struct ValidationResult {
+pub struct LiteratureValidationResult {
     pub case_name: String,
     pub passed: bool,
     pub relative_error: f64,
@@ -64,7 +64,7 @@ pub struct ValidationResult {
     pub notes: String,
 }
 
-impl ValidationResult {
+impl LiteratureValidationResult {
     pub fn new(name: &str) -> Self {
         Self {
             case_name: name.to_string(),

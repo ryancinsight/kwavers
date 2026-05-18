@@ -25,4 +25,4 @@ mod tests;
 pub mod types;
 
 pub use mesh::TetrahedralMesh;
-pub use types::{BoundaryType, BoundingBox, MeshNode, MeshStatistics, Tetrahedron};
+pub use types::{BoundingBox, MeshBoundaryType, MeshNode, MeshStatistics, Tetrahedron};

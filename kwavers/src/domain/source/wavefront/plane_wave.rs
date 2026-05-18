@@ -23,7 +23,7 @@ pub enum InjectionMode {
 
 /// Plane wave source configuration
 #[derive(Debug, Clone)]
-pub struct PlaneWaveConfig {
+pub struct PlaneWaveSourceConfig {
     /// Direction vector (unit vector)
     pub direction: (f64, f64, f64),
     /// Wavelength in meters
@@ -36,7 +36,7 @@ pub struct PlaneWaveConfig {
     pub injection_mode: InjectionMode,
 }
 
-impl Default for PlaneWaveConfig {
+impl Default for PlaneWaveSourceConfig {
     fn default() -> Self {
         Self {
             direction: (1.0, 0.0, 0.0), // Default: propagate along x-axis
@@ -51,14 +51,14 @@ impl Default for PlaneWaveConfig {
 /// Plane wave source implementation
 #[derive(Debug)]
 pub struct PlaneWaveSource {
-    config: PlaneWaveConfig,
+    config: PlaneWaveSourceConfig,
     signal: Arc<dyn Signal>,
     wave_number: f64,
 }
 
 impl PlaneWaveSource {
     /// Create a new plane wave source
-    pub fn new(config: PlaneWaveConfig, signal: Arc<dyn Signal>) -> Self {
+    pub fn new(config: PlaneWaveSourceConfig, signal: Arc<dyn Signal>) -> Self {
         let wave_number = 2.0 * PI / config.wavelength;
         Self {
             config,
@@ -69,7 +69,7 @@ impl PlaneWaveSource {
 
     /// Create a plane wave source with default configuration
     pub fn new_default(signal: Arc<dyn Signal>) -> Self {
-        Self::new(PlaneWaveConfig::default(), signal)
+        Self::new(PlaneWaveSourceConfig::default(), signal)
     }
 
     /// Get the wave number (k = 2π/λ)
@@ -87,12 +87,26 @@ impl PlaneWaveSource {
 
 impl Source for PlaneWaveSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
+        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        self.create_mask_into(grid, &mut mask);
+        mask
+    }
+
+    fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        mask.fill(0.0);
+
+        self.add_mask_into(grid, mask);
+    }
+
+    fn add_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        if grid.nx == 0 || grid.ny == 0 || grid.nz == 0 {
+            return;
+        }
+
         match self.config.injection_mode {
             InjectionMode::BoundaryOnly => {
-                // Inject only at the boundary plane perpendicular to propagation direction
-                // This gives correct arrival timing behavior
-                let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
-
                 // Determine which boundary based on dominant direction component
                 let (dx, dy, dz) = self.config.direction;
                 let abs_dx = dx.abs();
@@ -104,7 +118,7 @@ impl Source for PlaneWaveSource {
                     let plane_idx = if dx > 0.0 { 0 } else { grid.nx - 1 };
                     for j in 0..grid.ny {
                         for k in 0..grid.nz {
-                            mask[[plane_idx, j, k]] = 1.0;
+                            mask[[plane_idx, j, k]] += 1.0;
                         }
                     }
                 } else if abs_dy >= abs_dz {
@@ -112,7 +126,7 @@ impl Source for PlaneWaveSource {
                     let plane_idx = if dy > 0.0 { 0 } else { grid.ny - 1 };
                     for i in 0..grid.nx {
                         for k in 0..grid.nz {
-                            mask[[i, plane_idx, k]] = 1.0;
+                            mask[[i, plane_idx, k]] += 1.0;
                         }
                     }
                 } else {
@@ -120,18 +134,12 @@ impl Source for PlaneWaveSource {
                     let plane_idx = if dz > 0.0 { 0 } else { grid.nz - 1 };
                     for i in 0..grid.nx {
                         for j in 0..grid.ny {
-                            mask[[i, j, plane_idx]] = 1.0;
+                            mask[[i, j, plane_idx]] += 1.0;
                         }
                     }
                 }
-
-                mask
             }
             InjectionMode::FullGrid => {
-                // Legacy mode: pre-populate spatial pattern across entire grid
-                // This causes incorrect arrival timing but matches old behavior
-                let mut mask = Array3::ones((grid.nx, grid.ny, grid.nz));
-
                 // Apply spatial phase variation based on wave propagation
                 for ((i, j, k), val) in mask.indexed_iter_mut() {
                     let x = i as f64 * grid.dx;
@@ -148,10 +156,8 @@ impl Source for PlaneWaveSource {
                                 .mul_add(x, self.config.direction.1 * y),
                         ) + self.config.phase);
 
-                    *val = spatial_phase.cos(); // Spatial variation of the wave
+                    *val += spatial_phase.cos(); // Spatial variation of the wave
                 }
-
-                mask
             }
         }
     }
@@ -192,7 +198,7 @@ impl Source for PlaneWaveSource {
 /// Builder pattern for plane wave source
 #[derive(Debug, Default)]
 pub struct PlaneWaveBuilder {
-    config: PlaneWaveConfig,
+    config: PlaneWaveSourceConfig,
 }
 
 impl PlaneWaveBuilder {

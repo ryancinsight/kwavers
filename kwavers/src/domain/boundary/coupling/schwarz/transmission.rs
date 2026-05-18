@@ -4,7 +4,7 @@
 use ndarray::{Array3, ArrayViewMut3};
 
 use super::SchwarzBoundary;
-use crate::domain::boundary::coupling::types::TransmissionCondition;
+use crate::domain::boundary::coupling::types::BoundaryTransmissionCondition;
 
 impl SchwarzBoundary {
     /// Apply transmission condition.
@@ -28,13 +28,13 @@ impl SchwarzBoundary {
         neighbor_field: &Array3<f64>,
     ) {
         match self.transmission_condition {
-            TransmissionCondition::Dirichlet => {
+            BoundaryTransmissionCondition::Dirichlet => {
                 // Direct copying: u_interface = u_neighbor
                 interface_field.zip_mut_with(neighbor_field, |i, &n| {
                     *i = n;
                 });
             }
-            TransmissionCondition::Neumann => {
+            BoundaryTransmissionCondition::Neumann => {
                 // Neumann flux continuity: ∂u₁/∂n = ∂u₂/∂n
                 //
                 // Algorithm:
@@ -59,7 +59,7 @@ impl SchwarzBoundary {
                     }
                 }
             }
-            TransmissionCondition::Robin { alpha, beta } => {
+            BoundaryTransmissionCondition::Robin { alpha, beta } => {
                 // Robin transmission condition: ∂u/∂n + α·u = β
                 //
                 // Physical Interpretation:
@@ -98,7 +98,7 @@ impl SchwarzBoundary {
                     }
                 }
             }
-            TransmissionCondition::Optimized => {
+            BoundaryTransmissionCondition::Optimized => {
                 // Optimized Schwarz with relaxation.
                 // u_new = (1−θ)·u_old + θ·u_neighbor.
                 interface_field.zip_mut_with(neighbor_field, |i, &n| {

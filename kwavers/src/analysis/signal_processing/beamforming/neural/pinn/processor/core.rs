@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
 use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
-    PinnBeamformingProvider, UncertaintyConfig,
+    PinnBeamformingProvider, PinnBeamformingUncertaintyConfig,
 };
 
 use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVector;
@@ -254,7 +254,7 @@ impl NeuralBeamformingProcessor {
             if let Some(provider) = &self.pinn_provider {
                 let uncertainty_start = std::time::Instant::now();
 
-                let uncertainty_config = UncertaintyConfig {
+                let uncertainty_config = PinnBeamformingUncertaintyConfig {
                     bayesian_enabled: self.config.enable_uncertainty_quantification,
                     ..Default::default()
                 };

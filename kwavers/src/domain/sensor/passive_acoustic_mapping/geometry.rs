@@ -2,7 +2,7 @@
 
 /// Array geometry types for different sensor configurations
 #[derive(Debug, Clone)]
-pub enum ArrayGeometry {
+pub enum PamArrayGeometry {
     /// Linear array (1D)
     Linear {
         elements: usize,
@@ -39,7 +39,7 @@ pub enum ArrayGeometry {
 
 /// Single array element
 #[derive(Debug, Clone)]
-pub struct ArrayElement {
+pub struct PamArrayElement {
     pub position: [f64; 3],
     pub sensitivity: f64,
     pub directivity: Option<DirectivityPattern>,
@@ -52,7 +52,7 @@ pub struct DirectivityPattern {
     pub orientation: [f64; 3],
 }
 
-impl ArrayGeometry {
+impl PamArrayGeometry {
     /// Get element positions for the array geometry
     #[must_use]
     pub fn element_positions(&self) -> Vec<[f64; 3]> {

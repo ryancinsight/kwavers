@@ -65,19 +65,19 @@ pub mod realtime_loop;
 
 use super::traits::{Backend, BackendCapabilities, BackendType, ComputeDevice};
 use crate::core::error::{KwaversError, KwaversResult};
-use buffers::BufferManager;
+use buffers::GpuBackendBufferManager;
 use init::WGPUContext;
 use ndarray::Array3;
-use performance_monitor::PerformanceMonitor;
+use performance_monitor::GpuPerformanceMonitor;
 use physics_kernels::{PhysicsDomain, PhysicsKernelRegistry};
 use pipeline::PipelineManager;
 use realtime_loop::{RealtimeConfig, RealtimeSimulationOrchestrator};
 use std::collections::HashMap;
 
 // Re-export key Phase 4 types for public API
-pub use performance_monitor::{BudgetAnalysis, PerformanceMetrics};
+pub use performance_monitor::{BudgetAnalysis, GpuStepMetrics};
 pub use physics_kernels::{PhysicsKernel, WorkgroupConfig};
-pub use realtime_loop::{SimulationStatistics, StepResult};
+pub use realtime_loop::{GpuRealtimeSimulationStatistics, StepResult};
 
 /// GPU backend using WGPU
 ///
@@ -89,7 +89,7 @@ pub struct GPUBackend {
     context: WGPUContext,
 
     /// Buffer manager for memory allocation
-    buffer_manager: BufferManager,
+    buffer_manager: GpuBackendBufferManager,
 
     /// Pipeline manager for compute shader execution
     pipeline_manager: PipelineManager,
@@ -121,7 +121,7 @@ impl GPUBackend {
         let capabilities = Self::query_capabilities(&context);
 
         // Initialize buffer manager
-        let buffer_manager = BufferManager::new(context.device());
+        let buffer_manager = GpuBackendBufferManager::new(context.device());
 
         // Initialize pipeline manager (compiles shaders)
         let pipeline_manager = PipelineManager::new(context.device())?;

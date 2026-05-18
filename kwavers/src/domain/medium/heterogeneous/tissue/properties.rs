@@ -1,14 +1,14 @@
 //! Tissue property caching utilities
 
-use crate::domain::medium::absorption::{TissueType, TISSUE_PROPERTIES};
+use crate::domain::medium::absorption::{AbsorptionTissueType, TISSUE_PROPERTIES};
 use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Cache for tissue properties to avoid repeated lookups
 #[derive(Debug)]
 pub struct TissuePropertyCache {
-    density_cache: HashMap<TissueType, f64>,
-    sound_speed_cache: HashMap<TissueType, f64>,
+    density_cache: HashMap<AbsorptionTissueType, f64>,
+    sound_speed_cache: HashMap<AbsorptionTissueType, f64>,
 }
 
 impl Default for TissuePropertyCache {
@@ -28,7 +28,7 @@ impl TissuePropertyCache {
     }
 
     /// Get cached density for tissue type
-    pub fn get_density(&mut self, tissue_type: TissueType) -> f64 {
+    pub fn get_density(&mut self, tissue_type: AbsorptionTissueType) -> f64 {
         *self.density_cache.entry(tissue_type).or_insert_with(|| {
             TISSUE_PROPERTIES
                 .get(&tissue_type)
@@ -37,7 +37,7 @@ impl TissuePropertyCache {
     }
 
     /// Get cached sound speed for tissue type
-    pub fn get_sound_speed(&mut self, tissue_type: TissueType) -> f64 {
+    pub fn get_sound_speed(&mut self, tissue_type: AbsorptionTissueType) -> f64 {
         *self
             .sound_speed_cache
             .entry(tissue_type)
@@ -51,7 +51,7 @@ impl TissuePropertyCache {
     /// Populate array with cached values
     pub fn populate_density_array(
         &mut self,
-        tissue_map: &Array3<TissueType>,
+        tissue_map: &Array3<AbsorptionTissueType>,
         output: &mut Array3<f64>,
     ) {
         ndarray::Zip::from(tissue_map)
@@ -64,7 +64,7 @@ impl TissuePropertyCache {
     /// Populate array with cached sound speed values
     pub fn populate_sound_speed_array(
         &mut self,
-        tissue_map: &Array3<TissueType>,
+        tissue_map: &Array3<AbsorptionTissueType>,
         output: &mut Array3<f64>,
     ) {
         ndarray::Zip::from(tissue_map)

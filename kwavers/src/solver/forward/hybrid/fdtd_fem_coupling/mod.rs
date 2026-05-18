@@ -26,5 +26,5 @@ mod tests;
 
 pub use config::FdtdFemCouplingConfig;
 pub use coupler::FdtdFemCoupler;
-pub use interface::CouplingInterface;
+pub use interface::FdtdFemInterface;
 pub use solver::FdtdFemSolver;

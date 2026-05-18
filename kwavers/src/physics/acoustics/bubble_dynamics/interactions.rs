@@ -80,9 +80,9 @@ impl BubbleInteractions {
 
 /// Calculate Bjerknes force between two bubbles
 #[derive(Debug)]
-pub struct BjerknesForce;
+pub struct BjerknesForceComputer;
 
-impl BjerknesForce {
+impl BjerknesForceComputer {
     /// Primary Bjerknes force (bubble in pressure gradient)
     #[must_use]
     pub fn primary(bubble_volume: f64, pressure_gradient: f64) -> f64 {
@@ -112,21 +112,21 @@ impl BjerknesForce {
 
     /// Check if bubbles attract or repel
     #[must_use]
-    pub fn interaction_type(bubble1: &BubbleState, bubble2: &BubbleState) -> InteractionType {
+    pub fn interaction_type(bubble1: &BubbleState, bubble2: &BubbleState) -> BubbleInteractionType {
         // In phase: both expanding or both contracting -> attraction
         // Out of phase: one expanding, one contracting -> repulsion
 
         if bubble1.wall_velocity * bubble2.wall_velocity > 0.0 {
-            InteractionType::Attraction
+            BubbleInteractionType::Attraction
         } else {
-            InteractionType::Repulsion
+            BubbleInteractionType::Repulsion
         }
     }
 }
 
 /// Type of bubble-bubble interaction
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum InteractionType {
+pub enum BubbleInteractionType {
     Attraction,
     Repulsion,
     Neutral,
@@ -202,16 +202,16 @@ mod tests {
         bubble1.wall_velocity = 10.0;
         bubble2.wall_velocity = 5.0;
         assert_eq!(
-            BjerknesForce::interaction_type(&bubble1, &bubble2),
-            InteractionType::Attraction
+            BjerknesForceComputer::interaction_type(&bubble1, &bubble2),
+            BubbleInteractionType::Attraction
         );
 
         // Opposite phase
         bubble1.wall_velocity = 10.0;
         bubble2.wall_velocity = -5.0;
         assert_eq!(
-            BjerknesForce::interaction_type(&bubble1, &bubble2),
-            InteractionType::Repulsion
+            BjerknesForceComputer::interaction_type(&bubble1, &bubble2),
+            BubbleInteractionType::Repulsion
         );
     }
 

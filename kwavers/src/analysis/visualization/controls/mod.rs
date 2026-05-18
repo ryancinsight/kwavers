@@ -8,7 +8,7 @@ mod validation;
 pub use parameter::{ParameterDefinition, ParameterType, ParameterValue};
 pub use state::{ControlState, StateSnapshot};
 pub use ui::{ControlPanel, ControlPanelConfig};
-pub use validation::{ParameterValidator, ValidationResult};
+pub use validation::{ControlValidationResult, ParameterValidator};
 
 // Re-export main control system
 pub use state::InteractiveControls;

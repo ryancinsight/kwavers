@@ -86,7 +86,7 @@ impl Sensor {
 
 /// Array geometry types
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum ArrayGeometry {
+pub enum SensorArrayGeometry {
     /// Linear 1D array
     Linear,
     /// Planar 2D array
@@ -105,7 +105,7 @@ pub struct SensorArray {
     /// Array sensors
     pub sensors: Vec<Sensor>,
     /// Array geometry
-    pub geometry: ArrayGeometry,
+    pub geometry: SensorArrayGeometry,
     /// Reference sound speed (m/s)
     sound_speed: f64,
 }
@@ -121,7 +121,7 @@ impl SensorArray {
     /// # Panics
     /// If sensors is empty or sound_speed <= 0
     #[must_use]
-    pub fn new(sensors: Vec<Sensor>, sound_speed: f64, geometry: ArrayGeometry) -> Self {
+    pub fn new(sensors: Vec<Sensor>, sound_speed: f64, geometry: SensorArrayGeometry) -> Self {
         assert!(!sensors.is_empty(), "Array must have at least one sensor");
         assert!(sound_speed > 0.0, "Sound speed must be positive");
 
@@ -206,7 +206,7 @@ mod tests {
             Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
             Sensor::new(1, Position::new(2.0, 0.0, 0.0)),
         ];
-        let array = SensorArray::new(sensors, 1500.0, ArrayGeometry::Linear);
+        let array = SensorArray::new(sensors, 1500.0, SensorArrayGeometry::Linear);
         let centroid = array.centroid();
         assert!((centroid.x - 1.0).abs() < 1e-10);
         assert!((centroid.y - 0.0).abs() < 1e-10);

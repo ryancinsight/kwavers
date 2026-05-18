@@ -16,7 +16,7 @@ pub enum EMDimension {
 
 /// Electromagnetic polarization state
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Polarization {
+pub enum ElectromagneticPolarization {
     /// Linear polarization along x-axis
     LinearX,
     /// Linear polarization along y-axis
@@ -31,7 +31,7 @@ pub enum Polarization {
 
 /// Electromagnetic wave type
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum EMWaveType {
+pub enum ElectromagneticWaveType {
     /// Transverse electromagnetic (no longitudinal components)
     TEM,
     /// Transverse electric (E_z = 0)
@@ -71,14 +71,20 @@ mod tests {
 
     #[test]
     fn test_polarization_equality() {
-        assert_eq!(Polarization::LinearX, Polarization::LinearX);
-        assert_ne!(Polarization::LinearX, Polarization::LinearY);
+        assert_eq!(
+            ElectromagneticPolarization::LinearX,
+            ElectromagneticPolarization::LinearX
+        );
+        assert_ne!(
+            ElectromagneticPolarization::LinearX,
+            ElectromagneticPolarization::LinearY
+        );
     }
 
     #[test]
     fn test_em_wave_type() {
-        assert_eq!(EMWaveType::TEM, EMWaveType::TEM);
-        assert_ne!(EMWaveType::TE, EMWaveType::TM);
+        assert_eq!(ElectromagneticWaveType::TEM, ElectromagneticWaveType::TEM);
+        assert_ne!(ElectromagneticWaveType::TE, ElectromagneticWaveType::TM);
     }
 
     #[test]

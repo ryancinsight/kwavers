@@ -1,7 +1,7 @@
 //! Architecture validator implementation.
 
 use super::types::{
-    ArchitectureLayer, LayerViolation, ValidationResult, ValidationStats, ViolationType,
+    ArchitectureLayer, LayerValidationResult, LayerViolation, ValidationStats, ViolationType,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::{HashMap, HashSet};
@@ -55,7 +55,7 @@ impl ArchitectureValidator {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn validate(&self) -> KwaversResult<ValidationResult> {
+    pub fn validate(&self) -> KwaversResult<LayerValidationResult> {
         let mut violations = Vec::new();
         let mut total_deps = 0;
 
@@ -99,7 +99,7 @@ impl ArchitectureValidator {
             violation_count: violations.len(),
         };
 
-        Ok(ValidationResult {
+        Ok(LayerValidationResult {
             passed,
             violations,
             stats,
@@ -170,7 +170,7 @@ impl ArchitectureValidator {
 
     /// Generate a human-readable validation report.
     #[must_use]
-    pub fn report(&self, result: &ValidationResult) -> String {
+    pub fn report(&self, result: &LayerValidationResult) -> String {
         let mut report = String::new();
 
         report.push_str("=== ARCHITECTURE VALIDATION REPORT ===\n\n");

@@ -1,4 +1,5 @@
 use num_complex::Complex64;
+use rayon::prelude::*;
 use std::f64::consts::PI;
 
 /// 2-D focused Gaussian beam field in the presence of a skull layer and
@@ -12,6 +13,13 @@ use std::f64::consts::PI;
 /// z_R = π·w₀²·f/c_brain
 /// SW(z) = 1 + R_back·exp(2i·k_br·(z_back − z))
 /// ```
+///
+/// ## Parallelism
+///
+/// The outer loop over lateral positions x is embarrassingly parallel — each
+/// x-row writes to an independent `[nz]`-element slice.  Rayon
+/// `par_chunks_mut(nz)` distributes rows across threads.  `f64::sin_cos`
+/// computes both sin and cos in a single instruction.
 ///
 /// Output: two flattened row-major Vecs (real, imag) of size NX × NZ.
 ///
@@ -47,21 +55,28 @@ pub fn focused_gaussian_beam_2d(
     let mut real_out = vec![0.0_f64; nx * nz];
     let mut imag_out = vec![0.0_f64; nx * nz];
 
-    for (ix, &x) in x_arr.iter().enumerate() {
-        let dx = x - x_f;
-        for (iz, &z) in z_arr.iter().enumerate() {
-            let dz = z - z_f;
-            let w = w0_m * (1.0 + (dz / z_r).powi(2)).sqrt();
-            let gauss = (w0_m / w) * (-(dx * dx) / (w * w)).exp();
-            let phase_fwd = k_br * dz;
-            let p_fwd = Complex64::new(gauss * phase_fwd.cos(), gauss * phase_fwd.sin());
-            let sw_phase = 2.0 * k_br * (z_back - z);
-            let sw = Complex64::new(1.0 + r_back * sw_phase.cos(), r_back * sw_phase.sin());
-            let field = skull_transmission * p_fwd * sw;
-            let idx = ix * nz + iz;
-            real_out[idx] = field.re;
-            imag_out[idx] = field.im;
-        }
-    }
+    // Each ix row writes to an independent nz-element slice → race-free.
+    real_out
+        .par_chunks_mut(nz)
+        .zip(imag_out.par_chunks_mut(nz))
+        .zip(x_arr.par_iter())
+        .for_each(|((re_row, im_row), &x)| {
+            let dx = x - x_f;
+            let dx2 = dx * dx;
+            for (iz, (re, im)) in re_row.iter_mut().zip(im_row.iter_mut()).enumerate() {
+                let z = z_arr[iz];
+                let dz = z - z_f;
+                let w = w0_m * (1.0 + (dz / z_r).powi(2)).sqrt();
+                let gauss = (w0_m / w) * (-dx2 / (w * w)).exp();
+                let (sin_fwd, cos_fwd) = (k_br * dz).sin_cos();
+                let p_fwd = Complex64::new(gauss * cos_fwd, gauss * sin_fwd);
+                let sw_phase = 2.0 * k_br * (z_back - z);
+                let (sin_sw, cos_sw) = sw_phase.sin_cos();
+                let sw = Complex64::new(1.0 + r_back * cos_sw, r_back * sin_sw);
+                let field = skull_transmission * p_fwd * sw;
+                *re = field.re;
+                *im = field.im;
+            }
+        });
     (real_out, imag_out)
 }

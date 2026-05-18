@@ -1,4 +1,4 @@
-use super::super::{ApodizationWindow, KWaveArray};
+use super::super::{KWaveArray, KwaveApodizationWindow};
 
 impl KWaveArray {
     /// Calculate focus delays `(s)` for each element to a target point
@@ -68,14 +68,14 @@ impl KWaveArray {
     ///
     /// Reference: Harris, F.J. (1978). Proc. IEEE 66(1):51–83.
     #[must_use]
-    pub fn get_apodization(&self, window: ApodizationWindow) -> Vec<f64> {
+    pub fn get_apodization(&self, window: KwaveApodizationWindow) -> Vec<f64> {
         let n = self.elements.len();
         if n == 0 {
             return Vec::new();
         }
         match window {
-            ApodizationWindow::Rectangular => vec![1.0; n],
-            ApodizationWindow::Hann => {
+            KwaveApodizationWindow::Rectangular => vec![1.0; n],
+            KwaveApodizationWindow::Hann => {
                 if n == 1 {
                     return vec![1.0];
                 }
@@ -85,7 +85,7 @@ impl KWaveArray {
                     })
                     .collect()
             }
-            ApodizationWindow::Hamming => {
+            KwaveApodizationWindow::Hamming => {
                 if n == 1 {
                     return vec![1.0];
                 }

@@ -92,8 +92,8 @@ use kwavers::domain::source::{GridSource, SourceMode};
 use kwavers::solver::inverse::seismic::{
     fwi::{FwiGeometry, FwiProcessor},
     parameters::{
-        BoundaryType, FwiParameters, ImagingCondition, RegularizationParameters, RtmSettings,
-        StorageStrategy,
+        FwiParameters, ImagingCondition, RegularizationParameters, RtmSettings,
+        SeismicBoundaryType, StorageStrategy,
     },
     rtm::RtmProcessor,
 };
@@ -2579,7 +2579,7 @@ fn main() -> KwaversResult<()> {
     let rtm_settings = RtmSettings {
         imaging_condition: ImagingCondition::Normalized,
         storage_strategy: StorageStrategy::Full,
-        boundary_type: BoundaryType::Absorbing,
+        boundary_type: SeismicBoundaryType::Absorbing,
         apply_laplacian: true,
     };
     let rtm = RtmProcessor::new(rtm_settings);

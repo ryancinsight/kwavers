@@ -12,7 +12,7 @@ mod brain;
 
 pub use abdominal::prepare_abdominal_slice;
 pub(crate) use abdominal::{largest_connected_target_component, largest_target_slice};
-pub use brain::prepare_brain_slice;
+pub use brain::{prepare_brain_slice, BrainTargetSelection};
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::interpolation::bilinear_index_space;
@@ -35,6 +35,9 @@ pub struct PreparedTheranosticSlice {
     pub target_mask: Array2<bool>,
     pub spacing_m: f64,
     pub source_slice_index: usize,
+    pub source_dimensions: [usize; 2],
+    pub source_spacing_m: [f64; 2],
+    pub crop_bounds_index: [usize; 4],
 }
 
 // ── Shared analysis ───────────────────────────────────────────────────────────

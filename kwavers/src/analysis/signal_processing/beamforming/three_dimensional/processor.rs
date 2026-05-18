@@ -264,7 +264,7 @@ impl BeamformingProcessor3D {
     #[cfg(feature = "gpu")]
     pub(super) fn create_apodization_weights(
         &self,
-        window: &super::config::ApodizationWindow,
+        window: &super::config::Beamforming3dApodizationWindow,
     ) -> ndarray::Array3<f32> {
         super::apodization::create_apodization_weights(self.config.num_elements_3d, window)
     }
@@ -278,7 +278,7 @@ impl BeamformingProcessor3D {
         &self,
         rf_data: &ndarray::Array4<f32>,
         dynamic_focusing: bool,
-        apodization_window: &super::config::ApodizationWindow,
+        apodization_window: &super::config::Beamforming3dApodizationWindow,
         apodization_weights: &ndarray::Array3<f32>,
     ) -> KwaversResult<ndarray::Array3<f32>> {
         let delay_sum = super::delay_sum::DelaySumGPU::new(
@@ -308,7 +308,7 @@ impl BeamformingProcessor3D {
     pub(super) fn dynamic_focus_gpu(
         &self,
         rf_data: &ndarray::Array4<f32>,
-        apodization_window: &super::config::ApodizationWindow,
+        apodization_window: &super::config::Beamforming3dApodizationWindow,
         apodization_weights: &ndarray::Array3<f32>,
     ) -> KwaversResult<ndarray::Array3<f32>> {
         let df = super::delay_sum::DynamicFocusGPU {
@@ -330,7 +330,7 @@ impl BeamformingProcessor3D {
         &self,
         rf_data: &ndarray::Array4<f32>,
         dynamic_focusing: bool,
-        apodization_window: &super::config::ApodizationWindow,
+        apodization_window: &super::config::Beamforming3dApodizationWindow,
         apodization_weights: &ndarray::Array3<f32>,
         sub_volume_size: (usize, usize, usize),
     ) -> KwaversResult<ndarray::Array3<f32>> {

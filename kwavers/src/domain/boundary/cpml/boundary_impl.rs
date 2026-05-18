@@ -2,7 +2,7 @@
 
 use super::CPMLBoundary;
 use crate::core::error::KwaversResult;
-use crate::domain::boundary::Boundary;
+use crate::domain::boundary::{Boundary, PmlExpFactors};
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayViewMut3, Zip};
 
@@ -124,6 +124,21 @@ impl Boundary for CPMLBoundary {
             }
         });
         Ok(())
+    }
+
+    /// Return precomputed split-field PML factors for fused velocity and density updates.
+    ///
+    /// Each factor array is a clone of the profile data computed at construction.
+    /// The solver stores these on first call and never re-allocates per step.
+    fn pml_exp_factors_owned(&self) -> Option<PmlExpFactors> {
+        Some(PmlExpFactors {
+            vel_x: self.profiles.pml_vel_x.clone(),
+            vel_y: self.profiles.pml_vel_y.clone(),
+            vel_z: self.profiles.pml_vel_z.clone(),
+            den_x: self.profiles.pml_den_x.clone(),
+            den_y: self.profiles.pml_den_y.clone(),
+            den_z: self.profiles.pml_den_z.clone(),
+        })
     }
 
     fn apply_light(&mut self, _field: ArrayViewMut3<f64>, _grid: &Grid, _time_step: usize) {

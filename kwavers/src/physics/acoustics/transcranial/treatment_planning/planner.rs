@@ -1,6 +1,9 @@
 //! Treatment planner core orchestration
 
-use super::types::{SafetyConstraints, TargetVolume, TransducerSpecification, TreatmentPlan};
+use super::types::{
+    TargetVolume, TranscranialSafetyConstraints, TranscranialTransducerSpecification,
+    TranscranialTreatmentPlan,
+};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use log::info;
@@ -41,8 +44,8 @@ impl TreatmentPlanner {
         &self,
         patient_id: &str,
         targets: &[TargetVolume],
-        transducer_spec: &TransducerSpecification,
-    ) -> KwaversResult<TreatmentPlan> {
+        transducer_spec: &TranscranialTransducerSpecification,
+    ) -> KwaversResult<TranscranialTreatmentPlan> {
         info!("Generating tFUS treatment plan for patient: {}", patient_id);
         info!("Planning for {} target volumes", targets.len());
 
@@ -68,14 +71,14 @@ impl TreatmentPlanner {
         // Step 6: Estimate treatment time
         let treatment_time = self.estimate_treatment_time(targets, &acoustic_field);
 
-        Ok(TreatmentPlan {
+        Ok(TranscranialTreatmentPlan {
             patient_id: patient_id.to_owned(),
             targets: targets.to_vec(),
             skull_ct: self.skull_ct.clone(),
             transducer_setup,
             acoustic_field,
             temperature_field,
-            safety_constraints: SafetyConstraints::default(),
+            safety_constraints: TranscranialSafetyConstraints::default(),
             treatment_time,
         })
     }

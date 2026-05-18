@@ -14,7 +14,7 @@ use crate::math::fft::KSpaceCalculator;
 use ndarray::Array3;
 
 use crate::solver::forward::pstd::config::PSTDConfig;
-use crate::solver::forward::pstd::numerics::spectral_correction::CorrectionMethod;
+use crate::solver::forward::pstd::numerics::spectral_correction::SpectralCorrectionMethod;
 
 /// Spectral operator collection for k-space methods
 #[derive(Debug, Clone)]
@@ -54,10 +54,12 @@ pub fn initialize_spectral_operators(
 
     let kappa = if config.spectral_correction.enabled {
         let correction_type = match config.spectral_correction.method {
-            CorrectionMethod::ExactDispersion
-            | CorrectionMethod::Treeby2010
-            | CorrectionMethod::LowDispersionPSTD => CorrectionType::Treeby2010,
-            CorrectionMethod::LiuPSTD | CorrectionMethod::SincSpatial => CorrectionType::Liu1997,
+            SpectralCorrectionMethod::ExactDispersion
+            | SpectralCorrectionMethod::Treeby2010
+            | SpectralCorrectionMethod::LowDispersionPSTD => CorrectionType::Treeby2010,
+            SpectralCorrectionMethod::LiuPSTD | SpectralCorrectionMethod::SincSpatial => {
+                CorrectionType::Liu1997
+            }
         };
 
         compute_kspace_correction_factors(

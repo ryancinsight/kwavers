@@ -11,7 +11,7 @@ use crate::solver::feature::{FeatureManager, SolverFeature};
 use crate::solver::interface::{FieldsSummary, ProgressReporter, ProgressUpdate, Solver};
 use std::sync::Arc;
 
-use super::types::{SimulationResult, SimulationStatistics};
+use super::types::{CoreSimulationStatistics, SimulationResult};
 
 /// Core simulation controller
 pub struct CoreSimulation<'a, M: Medium> {
@@ -205,8 +205,8 @@ impl<'a, M: Medium> CoreSimulation<'a, M> {
     }
 
     /// Get simulation statistics
-    pub fn statistics(&self) -> SimulationStatistics {
-        SimulationStatistics {
+    pub fn statistics(&self) -> CoreSimulationStatistics {
+        CoreSimulationStatistics {
             num_sources: self.sources.len(),
             num_sensors: self.sensors.len(),
             grid_size: self.grid.nx * self.grid.ny * self.grid.nz,

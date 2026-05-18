@@ -4,6 +4,8 @@
 //! (TIB), CEM43 cumulative dose, Arrhenius damage integral, and FDA output
 //! limits.
 
+use crate::core::constants::fundamental::GAS_CONSTANT;
+
 /// Mechanical Index (MI).
 ///
 /// ```text
@@ -104,10 +106,10 @@ pub fn cem43_cumulative(t_celsius: &[f64], dt_s: f64) -> Vec<f64> {
 /// Henriques & Moritz (1947), *Am. J. Pathol.* 23, 531;
 /// Bhowmick et al. (2002) for muscle tissue parameters.
 pub fn arrhenius_damage_integral(t_celsius: &[f64], dt_s: f64, a_per_s: f64, ea_j_mol: f64) -> f64 {
-    const R_GAS: f64 = 8.314_462_618; // J/(mol·K)
+    let r_gas = GAS_CONSTANT;
     t_celsius.iter().fold(0.0_f64, |acc, &t| {
         let t_k = t + 273.15;
-        acc + a_per_s * (-ea_j_mol / (R_GAS * t_k)).exp() * dt_s
+        acc + a_per_s * (-ea_j_mol / (r_gas * t_k)).exp() * dt_s
     })
 }
 

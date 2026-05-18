@@ -129,7 +129,7 @@ impl GpuPstdSolver {
         let buf_bon_a = mk_ro(bon_a_flat, "bon_a");
 
         // FFT twiddle factors: precomputed cos/sin tables for n=256,128,64,32.
-        // Stored in buf_alpha_decay (repurposed; apply_absorption never dispatched).
+        // Stored in buf_alpha_decay (repurposed as twiddle table; absorption uses fractional-Laplacian).
         let mut twiddle_data: Vec<f32> = vec![0.0f32; total];
         for k in 0usize..128 {
             let a = -2.0 * PI * k as f64 / 256.0;
@@ -230,7 +230,6 @@ impl GpuPstdSolver {
         let pipeline_vel_update = mk_pl("velocity_update");
         let pipeline_dens_update = mk_pl("density_update");
         let pipeline_snapshot_rho0_plus_rho = mk_pl("snapshot_rho0_plus_rho");
-        let pipeline_absorption = mk_pl("apply_absorption");
         let pipeline_pres_density = mk_pl("pressure_from_density");
         let pipeline_record = mk_pl("record_sensors");
         let pipeline_inject_src = mk_pl("inject_pressure_source");
@@ -246,7 +245,7 @@ impl GpuPstdSolver {
         let pipeline_absorb_prep_l2_kspace = mk_pl_absorb("absorb_prep_l2_kspace");
         let pipeline_absorb_pressure_correction = mk_pl_absorb("absorb_pressure_correction");
         let pipeline_absorb_save_kspace = mk_pl_absorb("absorb_save_kspace");
-        let pipeline_absorb_restore_kspace = mk_pl_absorb("absorb_restore_kspace");
+        let pipeline_restore_and_shift = mk_pl_absorb("restore_and_shift_apply");
 
         // ── Build permanent bind groups ───────────────────────────────────────
         let bg_fields = build_bg_fields(
@@ -329,7 +328,6 @@ impl GpuPstdSolver {
             pipeline_vel_update,
             pipeline_dens_update,
             pipeline_snapshot_rho0_plus_rho,
-            pipeline_absorption,
             pipeline_pres_density,
             pipeline_record,
             pipeline_inject_src,
@@ -344,7 +342,7 @@ impl GpuPstdSolver {
             pipeline_absorb_prep_l2_kspace,
             pipeline_absorb_pressure_correction,
             pipeline_absorb_save_kspace,
-            pipeline_absorb_restore_kspace,
+            pipeline_restore_and_shift,
             buf_absorb_nabla1,
             buf_absorb_nabla2,
             buf_absorb_tau,

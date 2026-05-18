@@ -1,8 +1,8 @@
 //! Core data transfer pipeline implementation
 
 use super::{ProcessingOperation, ProcessingStage, TransferStatistics};
-use crate::analysis::visualization::FieldType;
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::field::UnifiedFieldType;
 use log::{debug, info};
 use ndarray::Array3;
 use std::collections::hash_map::Entry;
@@ -43,14 +43,14 @@ impl Default for TransferOptions {
 pub struct DataPipeline {
     device: Arc<Device>,
     queue: Arc<Queue>,
-    field_buffers: HashMap<FieldType, FieldBuffers>,
+    field_buffers: HashMap<UnifiedFieldType, FieldBuffers>,
     transfer_stats: Mutex<TransferStatistics>,
     processing_stage: ProcessingStage,
 
     // Field metadata cache
-    field_dimensions: HashMap<FieldType, (u32, u32, u32)>,
-    field_ranges: HashMap<FieldType, (f32, f32)>,
-    processing_operations: HashMap<FieldType, ProcessingOperation>,
+    field_dimensions: HashMap<UnifiedFieldType, (u32, u32, u32)>,
+    field_ranges: HashMap<UnifiedFieldType, (f32, f32)>,
+    processing_operations: HashMap<UnifiedFieldType, ProcessingOperation>,
     transfer_options: TransferOptions,
 }
 
@@ -166,7 +166,7 @@ impl DataPipeline {
     ///
     pub async fn transfer_field(
         &mut self,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
         data: &Array3<f64>,
     ) -> KwaversResult<()> {
         let start = Instant::now();
@@ -248,23 +248,23 @@ impl DataPipeline {
     pub async fn upload_field(
         &mut self,
         data: &Array3<f64>,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
     ) -> KwaversResult<()> {
         self.transfer_field(field_type, data).await
     }
 
     /// Set processing operation for a field type
-    pub fn set_processing(&mut self, field_type: FieldType, operation: ProcessingOperation) {
+    pub fn set_processing(&mut self, field_type: UnifiedFieldType, operation: ProcessingOperation) {
         self.processing_operations.insert(field_type, operation);
     }
 
     /// Get field dimensions
-    pub fn get_field_dimensions(&self, field_type: FieldType) -> Option<(u32, u32, u32)> {
+    pub fn get_field_dimensions(&self, field_type: UnifiedFieldType) -> Option<(u32, u32, u32)> {
         self.field_dimensions.get(&field_type).copied()
     }
 
     /// Get field value range
-    pub fn get_field_range(&self, field_type: FieldType) -> Option<(f32, f32)> {
+    pub fn get_field_range(&self, field_type: UnifiedFieldType) -> Option<(f32, f32)> {
         self.field_ranges.get(&field_type).copied()
     }
 

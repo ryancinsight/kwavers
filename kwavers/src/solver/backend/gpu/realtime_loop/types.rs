@@ -1,6 +1,6 @@
 //! Plain data types for the realtime simulation loop.
 
-use crate::solver::backend::gpu::performance_monitor::PerformanceMetrics;
+use crate::solver::backend::gpu::performance_monitor::GpuStepMetrics;
 
 /// Real-time simulation configuration.
 #[derive(Debug, Clone)]
@@ -58,7 +58,7 @@ pub struct StepResult {
 
 /// Simulation statistics.
 #[derive(Debug, Clone)]
-pub struct SimulationStatistics {
+pub struct GpuRealtimeSimulationStatistics {
     /// Total wall time (seconds).
     pub total_wall_time_seconds: f64,
 
@@ -72,5 +72,5 @@ pub struct SimulationStatistics {
     pub budget_violations: u64,
 
     /// Performance metrics.
-    pub metrics: PerformanceMetrics,
+    pub metrics: GpuStepMetrics,
 }

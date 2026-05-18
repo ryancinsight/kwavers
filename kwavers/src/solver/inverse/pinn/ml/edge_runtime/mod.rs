@@ -19,7 +19,7 @@ pub struct EdgeRuntime {
     pub(super) model: Option<crate::solver::inverse::pinn::ml::QuantizedModel>,
     pub(super) allocator: MemoryAllocator,
     pub(super) kernel_cache: HashMap<String, ExecutionKernel>,
-    pub(super) performance_monitor: PerformanceMonitor,
+    pub(super) performance_monitor: EdgeRuntimePerformanceMonitor,
     pub(super) hardware_caps: HardwareCapabilities,
 }
 
@@ -91,7 +91,7 @@ pub enum Architecture {
 
 /// Performance monitoring for edge devices
 #[derive(Debug, Clone)]
-pub struct PerformanceMonitor {
+pub struct EdgeRuntimePerformanceMonitor {
     pub inference_count: u64,
     pub total_inference_time_us: u64,
     pub peak_memory_usage: usize,

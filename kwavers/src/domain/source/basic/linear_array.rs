@@ -115,6 +115,13 @@ impl LinearArray {
 impl Source for LinearArray {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        self.create_mask_into(grid, &mut mask);
+        mask
+    }
+
+    fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        mask.fill(0.0);
         let spacing = self.element_spacing();
         let start_x = self.x_pos - self.length / 2.0;
 
@@ -124,7 +131,6 @@ impl Source for LinearArray {
                 mask[(ix, iy, iz)] = self.apodization_weights[i];
             }
         }
-        mask
     }
 
     fn amplitude(&self, t: f64) -> f64 {

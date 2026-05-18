@@ -9,4 +9,4 @@ mod tests;
 mod types;
 
 pub use orchestrator::RealtimeSimulationOrchestrator;
-pub use types::{RealtimeConfig, SimulationStatistics, StepResult};
+pub use types::{GpuRealtimeSimulationStatistics, RealtimeConfig, StepResult};

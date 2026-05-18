@@ -17,17 +17,35 @@
 //!
 //! **CFL condition for DG(p):** `dt ≤ h / [c · (2p+1)]`  (Cockburn & Shu 2001 §4).
 //!
+//! The nodal DG matrices are assembled so the differentiation matrix `D = M⁻¹S`
+//! and lift matrix `LIFT = M⁻¹E` already contain the inverse mass action.
+//! Time stepping must therefore not recompute `M⁻¹` per step; doing so is both
+//! redundant and an avoidable dense allocation.
+//!
+//! ## Troubled-cell limiting
+//!
+//! When shock capture is enabled, each SSP-RK stage is followed by a conservative
+//! TVD projection on troubled elements. The indicator is the maximum of
+//! left/right element-mean jumps and intra-element variation, normalised by
+//! local amplitude. Flagged elements keep their quadrature-weighted mean and
+//! receive the limited linear reconstruction
+//! `u(xi)=mean + 0.5*(xi - xi_bar)*limited_slope`, where `xi_bar` is the
+//! quadrature-weighted node mean. Thus the same mass functional represented by
+//! the diagonal DG mass matrix is preserved exactly.
+//!
 //! ## References
 //!
 //! - Shu & Osher (1988). J. Comput. Phys. 77(2):439–471.
 //! - Cockburn & Shu (2001). J. Sci. Comput. 16(3):173–261.
 
 use super::super::config::DgTimeIntegrator;
-use super::super::matrices::matrix_inverse;
 use super::core::DGSolver;
+use super::limiting::{apply_shock_capture_to_coeffs, apply_shock_capture_to_tensor_coeffs};
+use super::rhs::{compute_rhs_from_coeffs_into, RhsOperator};
+use super::topology::CoefficientLayout;
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, ValidationError};
-use ndarray::{Array2, Array3};
+use ndarray::{Array3, Zip};
 
 impl DGSolver {
     /// Advance the field by one time step `dt` using the configured integrator.
@@ -41,13 +59,20 @@ impl DGSolver {
         if self.modal_coefficients.is_none() {
             self.project_to_dg(field)?;
         }
-
-        let wave_speed = self.config.sound_speed;
-        let mass_inv = matrix_inverse(&self.mass_matrix)?;
+        let dim = self
+            .modal_coefficients
+            .as_ref()
+            .ok_or_else(|| {
+                KwaversError::Validation(ValidationError::MissingField {
+                    field: "modal_coefficients".to_owned(),
+                })
+            })?
+            .dim();
+        self.ensure_rk_workspace(dim);
 
         match self.config.time_integrator {
-            DgTimeIntegrator::SspRk3 => self.step_ssp_rk3(dt, wave_speed, &mass_inv),
-            DgTimeIntegrator::ForwardEuler => self.step_forward_euler(dt, wave_speed, &mass_inv),
+            DgTimeIntegrator::SspRk3 => self.step_ssp_rk3(dt, self.config.sound_speed),
+            DgTimeIntegrator::ForwardEuler => self.step_forward_euler(dt, self.config.sound_speed),
         }
     }
 
@@ -64,35 +89,118 @@ impl DGSolver {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    fn step_ssp_rk3(
-        &mut self,
-        dt: f64,
-        wave_speed: f64,
-        mass_inv: &Array2<f64>,
-    ) -> KwaversResult<()> {
-        let u_n = self
-            .modal_coefficients
-            .as_ref()
-            .ok_or_else(|| {
+    fn step_ssp_rk3(&mut self, dt: f64, wave_speed: f64) -> KwaversResult<()> {
+        let diff_matrix = self.diff_matrix.clone();
+        let lift_matrix = self.lift_matrix.clone();
+        let n_nodes = self.n_nodes;
+
+        self.rk_original
+            .assign(self.modal_coefficients.as_ref().ok_or_else(|| {
                 KwaversError::Validation(ValidationError::MissingField {
                     field: "modal_coefficients".to_owned(),
                 })
-            })?
-            .clone();
+            })?);
 
         // Stage 1
-        let rhs_n = self.compute_rhs_from_coeffs(&u_n, mass_inv, wave_speed)?;
-        let u1 = &u_n + &(dt * &rhs_n);
+        compute_rhs_from_coeffs_into(
+            RhsOperator {
+                n_nodes,
+                d_matrix: &diff_matrix,
+                lift: &lift_matrix,
+                layout: self.coefficient_layout,
+                wave_speed,
+                axis_scales: self.axis_scales(),
+            },
+            &self.rk_original,
+            &mut self.rk_rhs,
+        );
+        Zip::from(&mut self.rk_stage)
+            .and(&self.rk_original)
+            .and(&self.rk_rhs)
+            .for_each(|stage, &u_n, &rhs| {
+                *stage = u_n + dt * rhs;
+            });
+        if self.config.shock_capture.apply_per_stage {
+            apply_shock_capture_for_layout(
+                self.config,
+                self.coefficient_layout,
+                &self.xi_nodes,
+                &self.weights,
+                &mut self.rk_stage,
+                &mut self.rk_rhs,
+            )?;
+        }
 
         // Stage 2
-        let rhs_1 = self.compute_rhs_from_coeffs(&u1, mass_inv, wave_speed)?;
-        let u2 = 0.75 * &u_n + 0.25 * (&u1 + &(dt * &rhs_1));
+        compute_rhs_from_coeffs_into(
+            RhsOperator {
+                n_nodes,
+                d_matrix: &diff_matrix,
+                lift: &lift_matrix,
+                layout: self.coefficient_layout,
+                wave_speed,
+                axis_scales: self.axis_scales(),
+            },
+            &self.rk_stage,
+            &mut self.rk_rhs,
+        );
+        Zip::from(&mut self.rk_stage)
+            .and(&self.rk_original)
+            .and(&self.rk_rhs)
+            .for_each(|stage, &u_n, &rhs| {
+                let u1 = *stage;
+                *stage = 0.75 * u_n + 0.25 * (u1 + dt * rhs);
+            });
+        if self.config.shock_capture.apply_per_stage {
+            apply_shock_capture_for_layout(
+                self.config,
+                self.coefficient_layout,
+                &self.xi_nodes,
+                &self.weights,
+                &mut self.rk_stage,
+                &mut self.rk_rhs,
+            )?;
+        }
 
         // Stage 3
-        let rhs_2 = self.compute_rhs_from_coeffs(&u2, mass_inv, wave_speed)?;
-        let u_new = (1.0 / 3.0) * &u_n + (2.0 / 3.0) * (&u2 + &(dt * &rhs_2));
+        compute_rhs_from_coeffs_into(
+            RhsOperator {
+                n_nodes,
+                d_matrix: &diff_matrix,
+                lift: &lift_matrix,
+                layout: self.coefficient_layout,
+                wave_speed,
+                axis_scales: self.axis_scales(),
+            },
+            &self.rk_stage,
+            &mut self.rk_rhs,
+        );
+        let coeffs = self.modal_coefficients.as_mut().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::MissingField {
+                field: "modal_coefficients".to_owned(),
+            })
+        })?;
+        Zip::from(coeffs)
+            .and(&self.rk_original)
+            .and(&self.rk_stage)
+            .and(&self.rk_rhs)
+            .for_each(|u_new, &u_n, &u2, &rhs| {
+                *u_new = (1.0 / 3.0) * u_n + (2.0 / 3.0) * (u2 + dt * rhs);
+            });
+        let coeffs = self.modal_coefficients.as_mut().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::MissingField {
+                field: "modal_coefficients".to_owned(),
+            })
+        })?;
+        apply_shock_capture_for_layout(
+            self.config,
+            self.coefficient_layout,
+            &self.xi_nodes,
+            &self.weights,
+            coeffs,
+            &mut self.rk_rhs,
+        )?;
 
-        self.modal_coefficients = Some(u_new);
         Ok(())
     }
 
@@ -105,24 +213,47 @@ impl DGSolver {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    fn step_forward_euler(
-        &mut self,
-        dt: f64,
-        wave_speed: f64,
-        mass_inv: &Array2<f64>,
-    ) -> KwaversResult<()> {
-        let u_n = self
-            .modal_coefficients
-            .as_ref()
-            .ok_or_else(|| {
+    fn step_forward_euler(&mut self, dt: f64, wave_speed: f64) -> KwaversResult<()> {
+        let diff_matrix = self.diff_matrix.clone();
+        let lift_matrix = self.lift_matrix.clone();
+        let n_nodes = self.n_nodes;
+        compute_rhs_from_coeffs_into(
+            RhsOperator {
+                n_nodes,
+                d_matrix: &diff_matrix,
+                lift: &lift_matrix,
+                layout: self.coefficient_layout,
+                wave_speed,
+                axis_scales: self.axis_scales(),
+            },
+            self.modal_coefficients.as_ref().ok_or_else(|| {
                 KwaversError::Validation(ValidationError::MissingField {
                     field: "modal_coefficients".to_owned(),
                 })
-            })?
-            .clone();
-
-        let rhs = self.compute_rhs_from_coeffs(&u_n, mass_inv, wave_speed)?;
-        self.modal_coefficients = Some(&u_n + &(dt * &rhs));
+            })?,
+            &mut self.rk_rhs,
+        );
+        let coeffs = self.modal_coefficients.as_mut().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::MissingField {
+                field: "modal_coefficients".to_owned(),
+            })
+        })?;
+        Zip::from(coeffs).and(&self.rk_rhs).for_each(|u, &rhs| {
+            *u += dt * rhs;
+        });
+        let coeffs = self.modal_coefficients.as_mut().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::MissingField {
+                field: "modal_coefficients".to_owned(),
+            })
+        })?;
+        apply_shock_capture_for_layout(
+            self.config,
+            self.coefficient_layout,
+            &self.xi_nodes,
+            &self.weights,
+            coeffs,
+            &mut self.rk_rhs,
+        )?;
         Ok(())
     }
 
@@ -146,71 +277,61 @@ impl DGSolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    #[cfg(test)]
     fn compute_rhs_from_coeffs(
         &self,
         coeffs: &Array3<f64>,
-        _mass_inv: &Array2<f64>,
         wave_speed: f64,
     ) -> KwaversResult<Array3<f64>> {
-        let n_elements = coeffs.shape()[0];
-        let n_vars = coeffs.shape()[2];
         let mut rhs = Array3::zeros(coeffs.raw_dim());
-
-        let d_matrix = &self.diff_matrix;
-        let lift = &self.lift_matrix;
-        let n_face = lift.shape()[1];
-
-        // Volume integrals: strong form u_t = −c · D · u
-        for var in 0..n_vars {
-            for elem in 0..n_elements {
-                for i in 0..self.n_nodes {
-                    let mut du = 0.0;
-                    for j in 0..self.n_nodes {
-                        du += d_matrix[[i, j]] * coeffs[(elem, j, var)];
-                    }
-                    rhs[(elem, i, var)] -= wave_speed * du;
-                }
-            }
-        }
-
-        // Surface flux with periodic boundary conditions
-        for var in 0..n_vars {
-            for elem in 0..n_elements {
-                let left_elem = if elem == 0 { n_elements - 1 } else { elem - 1 };
-                let right_elem = (elem + 1) % n_elements;
-
-                let u_minus_left = coeffs[(left_elem, self.n_nodes - 1, var)];
-                let u_plus_left = coeffs[(elem, 0, var)];
-                let u_minus_right = coeffs[(elem, self.n_nodes - 1, var)];
-                let u_plus_right = coeffs[(right_elem, 0, var)];
-
-                // Lax–Friedrichs: f*(u⁻,u⁺) = 0.5 c(u⁻+u⁺) − 0.5 c(u⁺−u⁻)
-                let flux_left = (0.5 * wave_speed).mul_add(
-                    u_minus_left + u_plus_left,
-                    -(0.5 * wave_speed * (u_plus_left - u_minus_left)),
-                );
-                let flux_right = (0.5 * wave_speed).mul_add(
-                    u_minus_right + u_plus_right,
-                    -(0.5 * wave_speed * (u_plus_right - u_minus_right)),
-                );
-
-                let f_int_left = wave_speed * u_plus_left;
-                let f_int_right = wave_speed * u_minus_right;
-
-                let mut face_res = vec![0.0f64; n_face];
-                if n_face >= 2 {
-                    face_res[0] = -(flux_left - f_int_left);
-                    face_res[1] = flux_right - f_int_right;
-                }
-
-                for i in 0..self.n_nodes {
-                    for f in 0..n_face {
-                        rhs[(elem, i, var)] += lift[[i, f]] * face_res[f];
-                    }
-                }
-            }
-        }
-
+        compute_rhs_from_coeffs_into(
+            RhsOperator {
+                n_nodes: self.n_nodes,
+                d_matrix: &self.diff_matrix,
+                lift: &self.lift_matrix,
+                layout: self.coefficient_layout,
+                wave_speed,
+                axis_scales: self.axis_scales(),
+            },
+            coeffs,
+            &mut rhs,
+        );
         Ok(rhs)
+    }
+}
+
+#[cfg(test)]
+mod tests;
+
+impl DGSolver {
+    fn axis_scales(&self) -> [f64; 3] {
+        let element_spans = [
+            self.n_nodes as f64 * self.grid.dx,
+            self.n_nodes as f64 * self.grid.dy,
+            self.n_nodes as f64 * self.grid.dz,
+        ];
+        [
+            2.0 / element_spans[0],
+            2.0 / element_spans[1],
+            2.0 / element_spans[2],
+        ]
+    }
+}
+
+fn apply_shock_capture_for_layout(
+    config: super::super::config::DGConfig,
+    layout: CoefficientLayout,
+    xi_nodes: &ndarray::Array1<f64>,
+    weights: &ndarray::Array1<f64>,
+    coeffs: &mut Array3<f64>,
+    scratch: &mut Array3<f64>,
+) -> KwaversResult<()> {
+    match layout {
+        CoefficientLayout::TensorProduct(topology)
+            if coeffs.shape()[1] == topology.nodes_per_element =>
+        {
+            apply_shock_capture_to_tensor_coeffs(config, topology, weights, coeffs, scratch)
+        }
+        _ => apply_shock_capture_to_coeffs(config, xi_nodes, weights, coeffs, scratch),
     }
 }

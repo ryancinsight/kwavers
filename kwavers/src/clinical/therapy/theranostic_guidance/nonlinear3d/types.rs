@@ -213,6 +213,7 @@ pub(crate) struct Nonlinear3dVolume {
     pub source_spacing_m: [f64; 3],
     pub crop_bounds_index: [usize; 6],
     pub aperture_direction: Option<[f64; 3]>,
+    pub aperture_skin: Option<GridIndex>,
     pub focus: GridIndex,
 }
 
@@ -223,7 +224,14 @@ pub(crate) struct Nonlinear3dAperture {
     pub therapy_points_m: Vec<Point3>,
     pub receiver_points_m: Vec<Point3>,
     pub model_name: String,
+    pub source_domain: SourceDomain,
     pub focus: GridIndex,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum SourceDomain {
+    TissueBoundary,
+    ExteriorCoupling,
 }
 
 #[derive(Clone, Debug)]
@@ -231,6 +239,38 @@ pub struct VolumeReconstructionMetrics {
     pub dice_equal_area: f64,
     pub cnr: f64,
     pub nrmse: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct SourcePlanMetrics {
+    pub source_support_min: usize,
+    pub source_support_mean: f64,
+    pub source_support_max: usize,
+    pub focused_delay_min_s: f64,
+    pub focused_delay_max_s: f64,
+    pub focused_delay_span_s: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct ElectronicSteeringMetrics {
+    pub nominal_focus_index: [usize; 3],
+    pub calibration_hotspot_index: [usize; 3],
+    pub steering_focus_index: [usize; 3],
+    pub correction_grid_cells: [isize; 3],
+    pub calibration_hotspot_distance_grid_cells: f64,
+    pub steering_applied: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct FwiIterationDiagnostics {
+    pub objective_before: f64,
+    pub objective_after: f64,
+    pub gradient_speed_linf: f64,
+    pub gradient_beta_linf: f64,
+    pub gradient_speed_l2: f64,
+    pub gradient_beta_l2: f64,
+    pub accepted_scale: f64,
+    pub accepted_block: &'static str,
 }
 
 #[derive(Clone, Debug)]
@@ -254,6 +294,7 @@ pub struct Nonlinear3dResult {
     pub cavitation_source_density: Array3<f64>,
     pub reconstructed_cavitation_density: Array3<f64>,
     pub fwi_objective_history: Vec<f64>,
+    pub fwi_iteration_diagnostics: Vec<FwiIterationDiagnostics>,
     pub cavitation_objective_history: Vec<f64>,
     pub therapy_points_m: Vec<Point3>,
     pub receiver_points_m: Vec<Point3>,
@@ -268,6 +309,8 @@ pub struct Nonlinear3dResult {
     pub dt_s: f64,
     pub time_steps: usize,
     pub source_scale: f64,
+    pub source_plan_metrics: SourcePlanMetrics,
+    pub electronic_steering_metrics: ElectronicSteeringMetrics,
     pub active_voxels: usize,
     pub fwi_metrics: VolumeReconstructionMetrics,
     pub cavitation_metrics: VolumeReconstructionMetrics,

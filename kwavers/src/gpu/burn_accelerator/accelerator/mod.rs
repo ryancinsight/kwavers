@@ -4,7 +4,7 @@ mod acoustic;
 mod electromagnetic;
 mod pde_residuals;
 
-use super::super::types::{GpuConfig, PhysicsParameters};
+use super::super::types::{GpuConfig, GpuPhysicsParameters};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::forward::fdtd::FdtdGpuAccelerator;
 use burn::prelude::*;

@@ -3,6 +3,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::misfit::WaveformMisfit;
+use super::transmit_schedule::TransmitScheduleConfig;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AnatomyKind {
@@ -56,6 +57,9 @@ pub struct TheranosticInverseConfig {
     pub grid_size: usize,
     pub iterations: usize,
     pub frequencies_hz: Vec<f64>,
+    pub elastic_frequencies_hz: Vec<f64>,
+    pub elastic_shear_speed_m_s: f64,
+    pub elastic_fwi_iterations: usize,
     pub receiver_offsets: Vec<usize>,
     pub regularization: f64,
     pub smoothness_weight: f64,
@@ -66,6 +70,7 @@ pub struct TheranosticInverseConfig {
     pub lesion_delta_c_m_s: f64,
     pub noise_fraction: f64,
     pub inverse_encoding_rows_per_code: usize,
+    pub transmit_schedule: TransmitScheduleConfig,
     pub waveform_misfit: WaveformMisfit,
     pub waveform_misfit_scale_fraction: f64,
 }
@@ -79,6 +84,9 @@ impl TheranosticInverseConfig {
             grid_size: 64,
             iterations: 12,
             frequencies_hz: anatomy.default_frequencies(),
+            elastic_frequencies_hz: vec![250.0, 500.0, 750.0],
+            elastic_shear_speed_m_s: 2.5,
+            elastic_fwi_iterations: 3,
             receiver_offsets: vec![32, 64, 96, 128],
             regularization: 1.0e-3,
             smoothness_weight: 6.0e-2,
@@ -101,6 +109,7 @@ impl TheranosticInverseConfig {
             lesion_delta_c_m_s: -35.0,
             noise_fraction: 0.012,
             inverse_encoding_rows_per_code: 2,
+            transmit_schedule: TransmitScheduleConfig::full(),
             waveform_misfit: WaveformMisfit::Charbonnier,
             waveform_misfit_scale_fraction: 0.012,
         }
@@ -127,6 +136,16 @@ impl TheranosticInverseConfig {
                 "theranostic frequencies must be positive finite values".to_owned(),
             ));
         }
+        if self.elastic_frequencies_hz.is_empty()
+            || self
+                .elastic_frequencies_hz
+                .iter()
+                .any(|frequency| !frequency.is_finite() || *frequency <= 0.0)
+        {
+            return Err(KwaversError::InvalidInput(
+                "theranostic elastic frequencies must be positive finite values".to_owned(),
+            ));
+        }
         if self.receiver_offsets.is_empty()
             || self
                 .receiver_offsets
@@ -142,6 +161,7 @@ impl TheranosticInverseConfig {
                 "theranostic inverse_encoding_rows_per_code must be at least 1".to_owned(),
             ));
         }
+        self.transmit_schedule.validate(self.element_count)?;
         for (name, value) in [
             ("regularization", self.regularization),
             ("smoothness_weight", self.smoothness_weight),
@@ -158,6 +178,16 @@ impl TheranosticInverseConfig {
                     "{name} must be finite and non-negative"
                 )));
             }
+        }
+        if !self.elastic_shear_speed_m_s.is_finite() || self.elastic_shear_speed_m_s <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "theranostic elastic_shear_speed_m_s must be positive and finite".to_owned(),
+            ));
+        }
+        if self.elastic_fwi_iterations == 0 {
+            return Err(KwaversError::InvalidInput(
+                "theranostic elastic_fwi_iterations must be at least 1".to_owned(),
+            ));
         }
         if matches!(self.waveform_misfit, WaveformMisfit::Charbonnier)
             && self.waveform_misfit_scale_fraction <= 0.0

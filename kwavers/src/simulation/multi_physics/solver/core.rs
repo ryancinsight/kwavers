@@ -1,4 +1,4 @@
-//! `MultiPhysicsSolver` — multi-physics simulation orchestrator.
+//! `SimulationMultiPhysicsSolver` — multi-physics simulation orchestrator.
 
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
@@ -6,11 +6,12 @@ use std::collections::HashMap;
 
 use super::super::residual::max_abs_difference;
 use super::super::{
-    CoupledPhysicsSolver, CouplingStrategy, FieldCoupler, MultiPhysicsConfig, PhysicsDomain,
+    CoupledPhysicsSolver, FieldCoupler, MultiPhysicsConfig, PhysicsDomain,
+    SimulationCouplingStrategy,
 };
 
 /// Multi-physics simulation orchestrator
-pub struct MultiPhysicsSolver {
+pub struct SimulationMultiPhysicsSolver {
     config: MultiPhysicsConfig,
     pub(super) solvers: HashMap<PhysicsDomain, Box<dyn CoupledPhysicsSolver>>,
     coupler: FieldCoupler,
@@ -18,9 +19,9 @@ pub struct MultiPhysicsSolver {
     time_step: usize,
 }
 
-impl std::fmt::Debug for MultiPhysicsSolver {
+impl std::fmt::Debug for SimulationMultiPhysicsSolver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MultiPhysicsSolver")
+        f.debug_struct("SimulationMultiPhysicsSolver")
             .field("config", &self.config)
             .field("solvers", &format!("{} solvers", self.solvers.len()))
             .field("coupler", &self.coupler)
@@ -33,7 +34,7 @@ impl std::fmt::Debug for MultiPhysicsSolver {
     }
 }
 
-impl MultiPhysicsSolver {
+impl SimulationMultiPhysicsSolver {
     /// Create new multi-physics solver
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -102,10 +103,10 @@ impl MultiPhysicsSolver {
     pub fn step_coupled(&mut self, dt: f64) -> KwaversResult<f64> {
         self.convergence_history.clear();
         match self.config.coupling_strategy {
-            CouplingStrategy::Explicit => self.solve_explicit_coupling(dt),
-            CouplingStrategy::Implicit => self.solve_implicit_coupling(dt),
-            CouplingStrategy::Partitioned => self.solve_partitioned_coupling(dt),
-            CouplingStrategy::Monolithic => self.solve_monolithic_coupling(dt),
+            SimulationCouplingStrategy::Explicit => self.solve_explicit_coupling(dt),
+            SimulationCouplingStrategy::Implicit => self.solve_implicit_coupling(dt),
+            SimulationCouplingStrategy::Partitioned => self.solve_partitioned_coupling(dt),
+            SimulationCouplingStrategy::Monolithic => self.solve_monolithic_coupling(dt),
         }
     }
 

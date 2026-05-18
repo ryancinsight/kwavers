@@ -8,10 +8,10 @@
 //! Temperature: 37°C (body temperature)
 //! Pressure: 1 atm unless otherwise noted
 
-use super::material::MaterialProperties;
+use super::material::AcousticMaterialProperties;
 
 /// Tissue material properties type alias
-pub type TissueProperties = MaterialProperties;
+pub type TissueProperties = AcousticMaterialProperties;
 
 // ============================================================================
 // Reference Medium

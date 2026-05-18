@@ -1,5 +1,5 @@
 use super::pde_type::PdeType;
-use super::physics::PhysicsParameters;
+use super::physics::MetaLearningPhysicsParameters;
 use super::task::{TaskData, TaskDataStatistics};
 
 #[test]
@@ -27,7 +27,7 @@ fn test_pde_type_linearity() {
 
 #[test]
 fn test_physics_parameters_default() {
-    let params = PhysicsParameters::default();
+    let params = MetaLearningPhysicsParameters::default();
     assert_eq!(params.wave_speed, 343.0);
     assert_eq!(params.density, 1.2);
     assert!(params.viscosity.is_none());
@@ -35,20 +35,20 @@ fn test_physics_parameters_default() {
 
 #[test]
 fn test_physics_parameters_presets() {
-    let air = PhysicsParameters::acoustic_air();
+    let air = MetaLearningPhysicsParameters::acoustic_air();
     assert_eq!(air.wave_speed, 343.0);
 
-    let water = PhysicsParameters::acoustic_water();
+    let water = MetaLearningPhysicsParameters::acoustic_water();
     assert_eq!(water.wave_speed, 1500.0);
 
-    let tissue = PhysicsParameters::acoustic_tissue();
+    let tissue = MetaLearningPhysicsParameters::acoustic_tissue();
     assert_eq!(tissue.wave_speed, 1540.0);
     assert!(tissue.nonlinearity.unwrap() > 0.0);
 }
 
 #[test]
 fn test_physics_parameters_fluid() {
-    let fluid = PhysicsParameters::fluid(1000.0, 0.001);
+    let fluid = MetaLearningPhysicsParameters::fluid(1000.0, 0.001);
     assert_eq!(fluid.density, 1000.0);
     assert_eq!(fluid.viscosity, Some(0.001));
 }

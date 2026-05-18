@@ -58,8 +58,8 @@ pub enum JobStatus {
 pub struct PINNTrainingRequest {
     pub physics_domain: String,
     pub geometry: GeometrySpec,
-    pub physics_params: PhysicsParameters,
-    pub training_config: TrainingConfig,
+    pub physics_params: PinnApiPhysicsParameters,
+    pub training_config: PinnApiTrainingConfig,
     pub callback_url: Option<String>,
     pub metadata: Option<HashMap<String, serde_json::Value>>,
 }
@@ -69,7 +69,7 @@ pub struct PINNTrainingRequest {
 pub struct GeometrySpec {
     pub bounds: Vec<f64>,
     pub obstacles: Vec<ObstacleSpec>,
-    pub boundary_conditions: Vec<BoundaryConditionSpec>,
+    pub boundary_conditions: Vec<ApiBoundaryConditionSpec>,
 }
 
 impl Default for GeometrySpec {
@@ -92,7 +92,7 @@ pub struct ObstacleSpec {
 
 /// Boundary condition specification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BoundaryConditionSpec {
+pub struct ApiBoundaryConditionSpec {
     pub boundary: String,
     pub condition_type: String,
     pub value: f64,
@@ -100,7 +100,7 @@ pub struct BoundaryConditionSpec {
 
 /// Physics parameters.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct PhysicsParameters {
+pub struct PinnApiPhysicsParameters {
     pub material_properties: HashMap<String, f64>,
     pub boundary_values: HashMap<String, f64>,
     pub initial_values: HashMap<String, f64>,
@@ -109,7 +109,7 @@ pub struct PhysicsParameters {
 
 /// Training configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrainingConfig {
+pub struct PinnApiTrainingConfig {
     pub collocation_points: usize,
     pub batch_size: usize,
     pub epochs: usize,
@@ -119,7 +119,7 @@ pub struct TrainingConfig {
     pub use_gpu: bool,
 }
 
-impl Default for TrainingConfig {
+impl Default for PinnApiTrainingConfig {
     fn default() -> Self {
         Self {
             collocation_points: 1000,
@@ -171,7 +171,7 @@ pub struct JobInfoResponse {
 pub struct PINNInferenceRequest {
     pub model_id: String,
     pub coordinates: Vec<Vec<f64>>,
-    pub physics_params: Option<PhysicsParameters>,
+    pub physics_params: Option<PinnApiPhysicsParameters>,
 }
 
 /// Inference response.
@@ -188,14 +188,14 @@ pub struct ModelMetadata {
     pub model_id: String,
     pub physics_domain: String,
     pub created_at: DateTime<Utc>,
-    pub training_config: TrainingConfig,
-    pub performance_metrics: TrainingMetrics,
+    pub training_config: PinnApiTrainingConfig,
+    pub performance_metrics: PinnApiTrainingMetrics,
     pub geometry_spec: GeometrySpec,
 }
 
 /// Training metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrainingMetrics {
+pub struct PinnApiTrainingMetrics {
     pub final_loss: f64,
     pub best_loss: f64,
     pub total_epochs: usize,
@@ -204,7 +204,7 @@ pub struct TrainingMetrics {
     pub final_validation_error: Option<f64>,
 }
 
-impl Default for TrainingMetrics {
+impl Default for PinnApiTrainingMetrics {
     fn default() -> Self {
         Self {
             final_loss: 0.0,
@@ -218,10 +218,12 @@ impl Default for TrainingMetrics {
 }
 
 #[cfg(feature = "pinn")]
-impl From<crate::solver::inverse::pinn::ml::trainer::TrainingMetrics> for TrainingMetrics {
-    fn from(metrics: crate::solver::inverse::pinn::ml::trainer::TrainingMetrics) -> Self {
+impl From<crate::solver::inverse::pinn::ml::trainer::BurnPinnTrainingMetrics>
+    for PinnApiTrainingMetrics
+{
+    fn from(metrics: crate::solver::inverse::pinn::ml::trainer::BurnPinnTrainingMetrics) -> Self {
         match metrics {
-            crate::solver::inverse::pinn::ml::trainer::TrainingMetrics::OneD(m) => Self {
+            crate::solver::inverse::pinn::ml::trainer::BurnPinnTrainingMetrics::OneD(m) => Self {
                 final_loss: m.total_loss.last().copied().unwrap_or(0.0),
                 best_loss: m
                     .total_loss
@@ -233,7 +235,7 @@ impl From<crate::solver::inverse::pinn::ml::trainer::TrainingMetrics> for Traini
                 convergence_epoch: None,
                 final_validation_error: None,
             },
-            crate::solver::inverse::pinn::ml::trainer::TrainingMetrics::TwoD(m) => Self {
+            crate::solver::inverse::pinn::ml::trainer::BurnPinnTrainingMetrics::TwoD(m) => Self {
                 final_loss: m.total_loss.last().copied().unwrap_or(0.0),
                 best_loss: m
                     .total_loss

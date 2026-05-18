@@ -174,7 +174,7 @@ impl PhaseArray {
 
     /// Check system performance
     #[must_use]
-    pub fn check_performance(&self) -> PerformanceMetrics {
+    pub fn check_performance(&self) -> PhaseArrayMetrics {
         let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
 
         // Find minimum element spacing
@@ -216,7 +216,7 @@ impl PhaseArray {
             )
             .sqrt();
 
-        PerformanceMetrics {
+        PhaseArrayMetrics {
             element_spacing_ratio: min_spacing / wavelength,
             aperture_size,
             directivity: aperture_size / wavelength,
@@ -228,7 +228,7 @@ impl PhaseArray {
 
 /// Performance metrics for phased array
 #[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+pub struct PhaseArrayMetrics {
     /// Element spacing to wavelength ratio
     pub element_spacing_ratio: f64,
     /// Total aperture size

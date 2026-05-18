@@ -91,7 +91,7 @@ pub use properties::extract_tissue_properties;
 
 // Re-export domain types (moved to domain layer for clean architecture)
 pub use crate::domain::imaging::fusion::{
-    AffineTransform, FusedImageResult, FusionConfig, FusionMethod,
+    AffineTransform, FusedImageResult, FusionConfig, ImagingFusionMethod,
 };
 // pub use types::RegisteredModality; // Made crate-public only - use types module directly
 

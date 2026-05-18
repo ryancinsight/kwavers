@@ -15,11 +15,11 @@
 //! `|det(b-a,c-a,d-a)|/6`, conversion preserves per-cell and total volume.
 
 use super::mesh::TetrahedralMesh;
-use super::types::BoundaryType;
+use super::types::MeshBoundaryType;
 use crate::core::error::{KwaversError, KwaversResult};
-use ::gaia::domain::core::index::{FaceId, VertexId};
-use ::gaia::domain::topology::{Cell, ElementType};
-use ::gaia::IndexedMesh;
+use gaia::domain::core::index::{FaceId, VertexId};
+use gaia::domain::topology::{Cell, ElementType};
+use gaia::IndexedMesh;
 use std::collections::BTreeSet;
 
 impl TetrahedralMesh {
@@ -28,7 +28,7 @@ impl TetrahedralMesh {
     /// Boundary-condition labels are recognized by exact semantic names:
     /// `dirichlet`, `neumann`, `robin`, and `radiation`/`sommerfeld`.
     /// Geometric labels such as `inlet`, `outlet`, and `wall` remain
-    /// [`BoundaryType::Interior`] because they do not define a mathematical
+    /// [`MeshBoundaryType::Interior`] because they do not define a mathematical
     /// boundary condition by themselves.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
@@ -37,7 +37,7 @@ impl TetrahedralMesh {
     pub fn from_gaia_indexed_mesh(mesh: &IndexedMesh<f64>) -> KwaversResult<Self> {
         validate_gaia_mesh(mesh)?;
 
-        let mut boundary_types = vec![BoundaryType::Interior; mesh.vertex_count()];
+        let mut boundary_types = vec![MeshBoundaryType::Interior; mesh.vertex_count()];
         apply_gaia_boundary_labels(mesh, &mut boundary_types)?;
 
         let mut converted = Self::new();
@@ -79,7 +79,7 @@ fn validate_gaia_mesh(mesh: &IndexedMesh<f64>) -> KwaversResult<()> {
 
 fn apply_gaia_boundary_labels(
     mesh: &IndexedMesh<f64>,
-    boundary_types: &mut [BoundaryType],
+    boundary_types: &mut [MeshBoundaryType],
 ) -> KwaversResult<()> {
     for (&face_id, label) in &mesh.boundary_labels {
         let Some(boundary_type) = boundary_type_from_label(label) else {
@@ -95,20 +95,20 @@ fn apply_gaia_boundary_labels(
     Ok(())
 }
 
-fn boundary_type_from_label(label: &str) -> Option<BoundaryType> {
+fn boundary_type_from_label(label: &str) -> Option<MeshBoundaryType> {
     match label.trim().to_ascii_lowercase().as_str() {
-        "dirichlet" => Some(BoundaryType::Dirichlet),
-        "neumann" => Some(BoundaryType::Neumann),
-        "robin" => Some(BoundaryType::Robin),
-        "radiation" | "sommerfeld" => Some(BoundaryType::Radiation),
+        "dirichlet" => Some(MeshBoundaryType::Dirichlet),
+        "neumann" => Some(MeshBoundaryType::Neumann),
+        "robin" => Some(MeshBoundaryType::Robin),
+        "radiation" | "sommerfeld" => Some(MeshBoundaryType::Radiation),
         _ => None,
     }
 }
 
 fn merge_boundary_type(
-    boundary_types: &mut [BoundaryType],
+    boundary_types: &mut [MeshBoundaryType],
     node_idx: usize,
-    candidate: BoundaryType,
+    candidate: MeshBoundaryType,
 ) -> KwaversResult<()> {
     let Some(current) = boundary_types.get_mut(node_idx) else {
         return Err(KwaversError::InvalidInput(format!(
@@ -118,7 +118,7 @@ fn merge_boundary_type(
     };
 
     match (*current, candidate) {
-        (BoundaryType::Interior, next) => {
+        (MeshBoundaryType::Interior, next) => {
             *current = next;
             Ok(())
         }
@@ -194,9 +194,9 @@ fn validate_face_index(mesh: &IndexedMesh<f64>, face_idx: usize) -> KwaversResul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::gaia::domain::core::scalar::Point3r;
-    use ::gaia::domain::grid::StructuredGridBuilder;
-    use ::gaia::domain::topology::Cell;
+    use gaia::domain::core::scalar::Point3r;
+    use gaia::domain::grid::StructuredGridBuilder;
+    use gaia::domain::topology::Cell;
 
     #[test]
     fn converts_gaia_structured_volume_mesh_and_preserves_unit_cube_volume() {
@@ -232,10 +232,22 @@ mod tests {
 
         let kwavers_mesh = TetrahedralMesh::from_gaia_indexed_mesh(&gaia_mesh).unwrap();
 
-        assert_eq!(kwavers_mesh.nodes[0].boundary_type, BoundaryType::Dirichlet);
-        assert_eq!(kwavers_mesh.nodes[1].boundary_type, BoundaryType::Dirichlet);
-        assert_eq!(kwavers_mesh.nodes[2].boundary_type, BoundaryType::Dirichlet);
-        assert_eq!(kwavers_mesh.nodes[3].boundary_type, BoundaryType::Interior);
+        assert_eq!(
+            kwavers_mesh.nodes[0].boundary_type,
+            MeshBoundaryType::Dirichlet
+        );
+        assert_eq!(
+            kwavers_mesh.nodes[1].boundary_type,
+            MeshBoundaryType::Dirichlet
+        );
+        assert_eq!(
+            kwavers_mesh.nodes[2].boundary_type,
+            MeshBoundaryType::Dirichlet
+        );
+        assert_eq!(
+            kwavers_mesh.nodes[3].boundary_type,
+            MeshBoundaryType::Interior
+        );
         assert!((kwavers_mesh.statistics().total_volume - (1.0 / 6.0)).abs() < 1e-12);
     }
 

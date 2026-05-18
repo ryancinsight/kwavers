@@ -30,7 +30,7 @@ pub use latency::RecoveryLatencyStats;
 pub use reports::{ContentionReport, RecoveryReport, StabilityReport, ThreadContentionMetrics};
 pub use stats::RecoveryStats;
 
-use super::scenario::FaultScenario;
+use super::scenario::FaultInjectionScenario;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;

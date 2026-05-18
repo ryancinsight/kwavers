@@ -1,5 +1,6 @@
 //! `Microbubble` and `SizeDistribution` — individual microbubble physics.
 
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Size distribution parameters
@@ -123,18 +124,23 @@ impl Microbubble {
     #[must_use]
     pub fn scattering_cross_section(&self, frequency: f64) -> f64 {
         const C_L: f64 = 1480.0; // longitudinal speed in water at 20°C [m/s]
-        const RHO_L: f64 = 1000.0; // water density [kg/m³]
+        let rho_l = DENSITY_WATER_NOMINAL;
         const MU_L: f64 = 1.002e-3; // dynamic viscosity of water at 20°C [Pa·s]
 
         let r = self.radius_eq;
         let omega = 2.0 * std::f64::consts::PI * frequency;
-        let omega0 = 2.0 * std::f64::consts::PI * self.resonance_frequency(101325.0, RHO_L);
+        let omega0 = 2.0
+            * std::f64::consts::PI
+            * self.resonance_frequency(
+                crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE,
+                rho_l,
+            );
 
         // Dimensionless damping components (Church 1995, Eq. A3–A5)
         let delta_rad = omega0 * r / C_L;
-        let delta_vis = 4.0 * MU_L / (omega0 * RHO_L * r * r);
+        let delta_vis = 4.0 * MU_L / (omega0 * rho_l * r * r);
         let delta_sh =
-            4.0 * self.shell_thickness * self.shell_viscosity / (omega0 * RHO_L * r * r * r);
+            4.0 * self.shell_thickness * self.shell_viscosity / (omega0 * rho_l * r * r * r);
         let delta_tot = (delta_rad + delta_vis + delta_sh).max(1e-12);
 
         let big_omega = omega / omega0;

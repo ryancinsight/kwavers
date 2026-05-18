@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn test_memory_pool_allocation() {
-    let mut pool = MemoryPool::new(MemoryPoolType::Temporary);
+    let mut pool = MemoryPool::new(GpuMemoryPoolType::Temporary);
     let handle = pool.allocate(0, 1024).unwrap();
 
     assert_eq!(handle.block.size, 1024);
@@ -17,10 +17,10 @@ fn test_unified_memory_manager() {
     let mut manager = UnifiedMemoryManager::new();
 
     let handle1 = manager
-        .allocate(0, MemoryPoolType::Temporary, 2048)
+        .allocate(0, GpuMemoryPoolType::Temporary, 2048)
         .unwrap();
     let handle2 = manager
-        .allocate(0, MemoryPoolType::Collocation, 4096)
+        .allocate(0, GpuMemoryPoolType::Collocation, 4096)
         .unwrap();
 
     let stats = manager.statistics();
@@ -37,7 +37,7 @@ fn test_unified_memory_manager() {
 fn test_memory_compression() {
     let mut manager = UnifiedMemoryManager::new();
     let handle = manager
-        .allocate(0, MemoryPoolType::Persistent, 8192)
+        .allocate(0, GpuMemoryPoolType::Persistent, 8192)
         .unwrap();
 
     let ratio = manager.compress(&handle).unwrap();

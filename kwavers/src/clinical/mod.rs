@@ -11,13 +11,13 @@ pub mod therapy;
 
 pub use imaging::{
     ClinicalApplication, ClinicalExaminationResult, ClinicalProtocol, ClinicalWorkflowConfig,
-    ClinicalWorkflowOrchestrator, DiagnosticRecommendation, DiagnosticUrgency, PerformanceMetrics,
-    QualityPreference, WorkflowPriority, WorkflowState,
+    ClinicalWorkflowOrchestrator, DiagnosticRecommendation, DiagnosticUrgency, QualityPreference,
+    WorkflowPriority, WorkflowState, WorkflowTimingMetrics,
 };
 pub use patient_management::{
     ClinicalEncounter, ClinicalNote, ConsentRecord, ConsentType, EncounterId, EncounterType,
     MedicalHistoryEntry, MedicationRecord, PatientDemographics, PatientId, PatientManagementSystem,
-    PatientMedicalProfile, TreatmentPlan, TreatmentStatus, VitalSigns,
+    PatientMedicalProfile, PatientTreatmentPlan, TreatmentStatus, VitalSigns,
 };
 pub use regulatory::{
     ClinicalEvidence, DeviceClass, DeviceDescription, PerformanceTest, PredicateDevice, RiskRecord,
@@ -25,21 +25,25 @@ pub use regulatory::{
 };
 pub use safety::{
     mechanical_index::{
-        MechanicalIndexCalculator, MechanicalIndexResult, SafetyStatus as MISafetyStatus,
-        TissueType as MITissueType,
+        MechanicalIndexCalculator, MechanicalIndexResult, MechanicalIndexSafetyStatus,
+        MechanicalIndexTissueType,
     },
-    AuditEntry, ComplianceReport, ComplianceResult, ComplianceValidator, DoseController, Interlock,
-    InterlockSystem, SafetyAuditLogger, SafetyEventType, SafetyLevel, SafetyLimits, SafetyMonitor,
-    SafetyViolation, SystemConfiguration, TreatmentRecord,
+    AuditEntry, AuditSafetyEventType, ClinicalSafetyLevel, ClinicalSafetyLimits,
+    ClinicalSafetyMonitor, ComplianceReport, ComplianceResult, ComplianceValidator, DoseController,
+    Interlock, InterlockSystem, SafetyAuditLogger, SafetyViolation, SystemConfiguration,
+    TreatmentRecord,
 };
-pub use therapy::{TherapyMechanism, TherapyModality, TherapyParameters, TreatmentMetrics};
+pub use therapy::{
+    ClinicalTherapyMechanism, ClinicalTherapyModality, ClinicalTherapyParameters,
+    ClinicalTreatmentMetrics,
+};
 
 // NOTE: Therapy integration framework types are available but not re-exported here
 // due to ongoing architectural refactoring. Access them directly via:
 //
 //   use kwavers::clinical::therapy::therapy_integration::{
 //       TherapyIntegrationOrchestrator, TherapySessionConfig, AcousticTherapyParams,
-//       SafetyLimits, PatientParameters, TissuePropertyMap, TargetVolume, etc.
+//       ClinicalSafetyLimits, PatientParameters, TissuePropertyMap, TargetVolume, etc.
 //   };
 //
 // The therapy_integration module provides a comprehensive clinical therapy framework

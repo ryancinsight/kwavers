@@ -63,7 +63,7 @@ pub struct SafetyEvent {
     /// Event timestamp
     pub timestamp: SystemTime,
     /// Event type
-    pub event_type: SafetyEventType,
+    pub event_type: MonitoringSafetyEventType,
     /// Parameter value
     pub parameter_value: f64,
     /// Safety limit
@@ -76,7 +76,7 @@ pub struct SafetyEvent {
 
 /// Safety event types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SafetyEventType {
+pub enum MonitoringSafetyEventType {
     /// Temperature exceeds limit
     TemperatureExceeded,
     /// Mechanical index exceeds limit
@@ -89,7 +89,7 @@ pub enum SafetyEventType {
     QualityDegradation,
 }
 
-impl std::fmt::Display for SafetyEventType {
+impl std::fmt::Display for MonitoringSafetyEventType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::TemperatureExceeded => write!(f, "Temperature Exceeded"),
@@ -127,7 +127,7 @@ impl std::fmt::Display for SafetySeverity {
 
 /// System performance metrics
 #[derive(Debug, Clone, Default)]
-pub struct PerformanceMetrics {
+pub struct MonitoringFrameMetrics {
     /// Total frames processed
     pub total_frames: usize,
     /// Frames with errors

@@ -3,7 +3,7 @@
 //! This module defines electromagnetic sources for wave generation and excitation
 //! in simulation domains.
 
-use super::types::{EMWaveType, Polarization};
+use super::types::{SourceEMWaveType, SourcePolarization};
 use num_complex::Complex;
 
 /// Basic electromagnetic source trait
@@ -11,10 +11,10 @@ use num_complex::Complex;
 /// Defines the interface for electromagnetic wave sources in simulation domains.
 pub trait EMSource: Send + Sync {
     /// Get source polarization
-    fn polarization(&self) -> Polarization;
+    fn polarization(&self) -> SourcePolarization;
 
     /// Get source wave type
-    fn wave_type(&self) -> EMWaveType;
+    fn wave_type(&self) -> SourceEMWaveType;
 
     /// Get source frequency spectrum (Hz)
     fn frequency_spectrum(&self) -> Vec<f64>;
@@ -39,7 +39,7 @@ pub trait EMSource: Send + Sync {
 #[derive(Debug)]
 pub struct PointEMSource {
     pub position: [f64; 3],
-    pub polarization: Polarization,
+    pub polarization: SourcePolarization,
     pub frequency: f64,
     pub amplitude: f64,
     pub phase: f64,
@@ -50,7 +50,7 @@ impl PointEMSource {
     pub fn new(position: [f64; 3], frequency: f64, amplitude: f64) -> Self {
         Self {
             position,
-            polarization: Polarization::LinearX,
+            polarization: SourcePolarization::LinearX,
             frequency,
             amplitude,
             phase: 0.0,
@@ -59,12 +59,12 @@ impl PointEMSource {
 }
 
 impl EMSource for PointEMSource {
-    fn polarization(&self) -> Polarization {
+    fn polarization(&self) -> SourcePolarization {
         self.polarization
     }
 
-    fn wave_type(&self) -> EMWaveType {
-        EMWaveType::TEM
+    fn wave_type(&self) -> SourceEMWaveType {
+        SourceEMWaveType::TEM
     }
 
     fn frequency_spectrum(&self) -> Vec<f64> {
@@ -103,8 +103,8 @@ impl EMSource for PointEMSource {
         let field_magnitude = self.amplitude / distance * phase.sin();
 
         match self.polarization {
-            Polarization::LinearX => [field_magnitude, 0.0, 0.0],
-            Polarization::LinearY => [0.0, field_magnitude, 0.0],
+            SourcePolarization::LinearX => [field_magnitude, 0.0, 0.0],
+            SourcePolarization::LinearY => [0.0, field_magnitude, 0.0],
             _ => [field_magnitude, 0.0, 0.0], // Default to X-polarized
         }
     }
@@ -149,7 +149,7 @@ impl EMSource for PointEMSource {
 #[derive(Debug)]
 pub struct PlaneWaveEMSource {
     pub direction: [f64; 3], // Propagation direction (unit vector)
-    pub polarization: Polarization,
+    pub polarization: SourcePolarization,
     pub frequency: f64,
     pub amplitude: f64,
     pub phase: f64,
@@ -177,7 +177,7 @@ impl PlaneWaveEMSource {
 
         Self {
             direction: normalized_dir,
-            polarization: Polarization::LinearX,
+            polarization: SourcePolarization::LinearX,
             frequency,
             amplitude,
             phase: 0.0,
@@ -186,12 +186,12 @@ impl PlaneWaveEMSource {
 }
 
 impl EMSource for PlaneWaveEMSource {
-    fn polarization(&self) -> Polarization {
+    fn polarization(&self) -> SourcePolarization {
         self.polarization
     }
 
-    fn wave_type(&self) -> EMWaveType {
-        EMWaveType::TEM
+    fn wave_type(&self) -> SourceEMWaveType {
+        SourceEMWaveType::TEM
     }
 
     fn frequency_spectrum(&self) -> Vec<f64> {
@@ -217,9 +217,9 @@ impl EMSource for PlaneWaveEMSource {
         let field_magnitude = self.amplitude * phase.sin();
 
         match self.polarization {
-            Polarization::LinearX => [field_magnitude, 0.0, 0.0],
-            Polarization::LinearY => [0.0, field_magnitude, 0.0],
-            Polarization::LinearZ => [0.0, 0.0, field_magnitude],
+            SourcePolarization::LinearX => [field_magnitude, 0.0, 0.0],
+            SourcePolarization::LinearY => [0.0, field_magnitude, 0.0],
+            SourcePolarization::LinearZ => [0.0, 0.0, field_magnitude],
             _ => [field_magnitude, 0.0, 0.0], // Default to X-polarized
         }
     }

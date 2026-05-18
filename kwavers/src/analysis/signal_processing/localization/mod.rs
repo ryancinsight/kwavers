@@ -49,7 +49,7 @@ pub use beamforming_search::{
     BeamformSearch, BeamformingLocalizationInput, LocalizationBeamformSearchConfig,
     LocalizationBeamformingMethod, MvdrCovarianceDomain, SearchGrid,
 };
-pub use config::LocalizationConfig;
+pub use config::AcousticLocalizationConfig;
 pub use model_order::{
     ModelOrderConfig, ModelOrderCriterion, ModelOrderEstimator, ModelOrderResult,
 };

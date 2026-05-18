@@ -27,7 +27,7 @@
 //! ├── Optics (optics/)            # Visible light subset (400-700nm)
 //! │   ├── Diffusion               # Radiative transfer, Monte Carlo
 //! │   ├── Scattering              # Mie theory, Rayleigh scattering
-//! │   ├── Polarization            # Jones calculus
+//! │   ├── ElectromagneticPolarization            # Jones calculus
 //! │   └── Sonoluminescence        # Light from cavitation
 //! ├── Plasmonics (plasmonics/)    # Nanophotonic effects
 //! ├── Photoacoustic (photoacoustic/) # EM-acoustic coupling

@@ -10,7 +10,7 @@ mod streaming;
 mod tests;
 
 pub use compression::{CompressedBlock, MemoryCompression};
-pub use pool::{MemoryBlock, MemoryHandle, MemoryPool, MemoryStats};
+pub use pool::{GpuMemoryPoolStats, MemoryBlock, MemoryHandle, MemoryPool};
 pub use streaming::{StreamingTransferManager, TransferStream, UnifiedMemoryRegion};
 
 use crate::core::error::KwaversResult;
@@ -18,7 +18,7 @@ use std::collections::HashMap;
 
 /// Memory pool types for different usage patterns
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MemoryPoolType {
+pub enum GpuMemoryPoolType {
     /// Temporary buffers for intermediate computations
     Temporary,
     /// Persistent buffers for long-term storage
@@ -34,7 +34,7 @@ pub enum MemoryPoolType {
 /// Unified memory manager for multi-GPU systems
 #[derive(Debug)]
 pub struct UnifiedMemoryManager {
-    pools: HashMap<usize, HashMap<MemoryPoolType, MemoryPool>>,
+    pools: HashMap<usize, HashMap<GpuMemoryPoolType, MemoryPool>>,
     unified_regions: Vec<UnifiedMemoryRegion>,
     compression: MemoryCompression,
     streaming: StreamingTransferManager,
@@ -58,7 +58,7 @@ impl UnifiedMemoryManager {
     pub fn allocate(
         &mut self,
         gpu_id: usize,
-        pool_type: MemoryPoolType,
+        pool_type: GpuMemoryPoolType,
         size: usize,
     ) -> KwaversResult<MemoryHandle> {
         let pools = self.pools.entry(gpu_id).or_default();
@@ -118,8 +118,8 @@ impl UnifiedMemoryManager {
     }
 
     /// Get memory statistics across all GPUs
-    pub fn statistics(&self) -> MemoryStats {
-        let mut total_stats = MemoryStats::default();
+    pub fn statistics(&self) -> GpuMemoryPoolStats {
+        let mut total_stats = GpuMemoryPoolStats::default();
         for pools in self.pools.values() {
             for pool in pools.values() {
                 let pool_stats = pool.statistics();

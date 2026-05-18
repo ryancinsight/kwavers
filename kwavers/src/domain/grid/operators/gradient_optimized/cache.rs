@@ -1,6 +1,6 @@
 //! Gradient cache for performance optimization.
 
-use super::super::coefficients::{FDCoefficients, SpatialOrder};
+use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use crate::domain::grid::Grid;
 use num_traits::Float;
 use std::sync::{Arc, RwLock};
@@ -43,7 +43,7 @@ where
     }
 
     /// Get or create coefficients for a given spatial order
-    pub fn get_coefficients(&self, order: SpatialOrder) -> Vec<T> {
+    pub fn get_coefficients(&self, order: FdAccuracyOrder) -> Vec<T> {
         let mut cache = self
             .coefficients_cache
             .write()

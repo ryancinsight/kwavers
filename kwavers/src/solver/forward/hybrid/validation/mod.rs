@@ -9,8 +9,8 @@ pub mod suite;
 pub mod test_cases;
 
 // Re-export main types
-pub use config::ValidationConfig;
-pub use metrics::{ErrorBounds, ErrorMetrics, PerformanceMetrics};
-pub use report::{ValidationReport, ValidationSummary};
+pub use config::HybridValidationSuiteConfig;
+pub use metrics::{ErrorBounds, ErrorMetrics, HybridSolverMetrics};
+pub use report::{HybridValidationReport, ValidationSummary};
 pub use suite::HybridValidationSuite;
 pub use test_cases::{TestResult, ValidationTestCase};

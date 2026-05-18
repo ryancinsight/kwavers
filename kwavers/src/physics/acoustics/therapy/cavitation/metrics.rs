@@ -1,7 +1,6 @@
-use super::constants::{
-    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, CAVITATION_PROBABILITY_STEEPNESS, LIQUID_DENSITY,
-};
+use super::constants::{AIR_POLYTROPIC_INDEX, CAVITATION_PROBABILITY_STEEPNESS};
 use super::TherapyCavitationDetector;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use std::f64::consts::PI;
 
 impl TherapyCavitationDetector {
@@ -14,7 +13,8 @@ impl TherapyCavitationDetector {
     /// For R₀ = 1 µm, γ = 1.4, P₀ = 101 325 Pa, ρ_L = 1000 kg/m³: f₀ ≈ 3.26 MHz.
     #[must_use]
     pub fn minnaert_frequency(&self, r0: f64) -> f64 {
-        let pressure_term = 3.0 * AIR_POLYTROPIC_INDEX * ATMOSPHERIC_PRESSURE / LIQUID_DENSITY;
+        let pressure_term =
+            3.0 * AIR_POLYTROPIC_INDEX * ATMOSPHERIC_PRESSURE / DENSITY_WATER_NOMINAL;
         pressure_term.sqrt() / (2.0 * PI * r0)
     }
 

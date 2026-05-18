@@ -1,6 +1,6 @@
 use super::beamformer::SensorBeamformer;
-use super::types::{SensorProcessingParams, WindowType};
-use crate::domain::sensor::array::{ArrayGeometry, Position, Sensor, SensorArray};
+use super::types::{BeamformerWindowType, SensorProcessingParams};
+use crate::domain::sensor::array::{Position, Sensor, SensorArray, SensorArrayGeometry};
 use approx::assert_relative_eq;
 use ndarray::Array2;
 
@@ -15,7 +15,7 @@ fn create_test_array(n_sensors: usize) -> SensorArray {
             Sensor::new(i, position)
         })
         .collect();
-    SensorArray::new(sensors, 1540.0, ArrayGeometry::Linear)
+    SensorArray::new(sensors, 1540.0, SensorArrayGeometry::Linear)
 }
 
 #[test]
@@ -25,10 +25,10 @@ fn test_windowing_preserves_dimensions() {
     let delays = Array2::ones((8, 100));
 
     for window_type in [
-        WindowType::Hanning,
-        WindowType::Hamming,
-        WindowType::Blackman,
-        WindowType::Rectangular,
+        BeamformerWindowType::Hanning,
+        BeamformerWindowType::Hamming,
+        BeamformerWindowType::Blackman,
+        BeamformerWindowType::Rectangular,
     ] {
         let windowed = beamformer.apply_windowing(&delays, window_type).unwrap();
         assert_eq!(windowed.shape(), delays.shape());
@@ -42,7 +42,7 @@ fn test_rectangular_window_is_identity() {
     let delays = Array2::from_shape_fn((8, 100), |(i, j)| i as f64 + j as f64 * 0.1);
 
     let windowed = beamformer
-        .apply_windowing(&delays, WindowType::Rectangular)
+        .apply_windowing(&delays, BeamformerWindowType::Rectangular)
         .unwrap();
 
     for i in 0..8 {
@@ -59,9 +59,9 @@ fn test_window_reduces_edge_elements() {
     let delays = Array2::ones((16, 50));
 
     for window_type in [
-        WindowType::Hanning,
-        WindowType::Hamming,
-        WindowType::Blackman,
+        BeamformerWindowType::Hanning,
+        BeamformerWindowType::Hamming,
+        BeamformerWindowType::Blackman,
     ] {
         let windowed = beamformer.apply_windowing(&delays, window_type).unwrap();
 
@@ -83,7 +83,7 @@ fn test_hanning_window_has_zero_endpoints() {
     let beamformer = SensorBeamformer::new(array, 1e6);
     let delays = Array2::ones((8, 10));
     let windowed = beamformer
-        .apply_windowing(&delays, WindowType::Hanning)
+        .apply_windowing(&delays, BeamformerWindowType::Hanning)
         .unwrap();
 
     assert!(windowed[[0, 0]].abs() < 1e-10);
@@ -101,7 +101,7 @@ fn test_windowing_applied_per_column() {
     delays.column_mut(2).fill(3.0);
 
     let windowed = beamformer
-        .apply_windowing(&delays, WindowType::Hamming)
+        .apply_windowing(&delays, BeamformerWindowType::Hamming)
         .unwrap();
 
     // All columns are scaled by the same per-row window coefficient,
@@ -123,10 +123,10 @@ fn test_blackman_window_has_better_sidelobe_suppression() {
     let delays = Array2::ones((32, 1));
 
     let hanning = beamformer
-        .apply_windowing(&delays, WindowType::Hanning)
+        .apply_windowing(&delays, BeamformerWindowType::Hanning)
         .unwrap();
     let blackman = beamformer
-        .apply_windowing(&delays, WindowType::Blackman)
+        .apply_windowing(&delays, BeamformerWindowType::Blackman)
         .unwrap();
 
     // Blackman tapers more aggressively; near-edge coefficient is lower.
@@ -143,7 +143,7 @@ fn test_windowing_with_zero_delays() {
     let beamformer = SensorBeamformer::new(array, 1e6);
     let delays = Array2::zeros((8, 10));
     let windowed = beamformer
-        .apply_windowing(&delays, WindowType::Hanning)
+        .apply_windowing(&delays, BeamformerWindowType::Hanning)
         .unwrap();
 
     for i in 0..8 {
@@ -202,7 +202,7 @@ fn test_calculate_delays_logic() {
             },
         ),
     ];
-    let array = SensorArray::new(sensors, 1540.0, ArrayGeometry::Linear);
+    let array = SensorArray::new(sensors, 1540.0, SensorArrayGeometry::Linear);
     let beamformer = SensorBeamformer::new(array, 1e6);
 
     let grid = crate::domain::grid::Grid::new(2, 1, 1, 1.0, 1.0, 1.0).unwrap();

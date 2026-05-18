@@ -12,11 +12,11 @@
 #[test]
 fn test_charge_density_zero_for_source_free_medium() {
     type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
-    use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+    use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use burn::tensor::Tensor;
     use std::collections::HashMap;
 
-    let params = PhysicsParameters {
+    let params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         boundary_values: HashMap::new(),
         initial_values: HashMap::new(),
@@ -46,14 +46,14 @@ fn test_charge_density_zero_for_source_free_medium() {
 #[test]
 fn test_charge_density_uniform_matches_param() {
     type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
-    use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+    use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use burn::tensor::Tensor;
     use std::collections::HashMap;
 
     let rho_expected = 1.5e-3_f64;
     let mut domain = HashMap::new();
     domain.insert("charge_density".to_string(), rho_expected);
-    let params = PhysicsParameters {
+    let params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         boundary_values: HashMap::new(),
         initial_values: HashMap::new(),
@@ -85,7 +85,7 @@ fn test_charge_density_uniform_matches_param() {
 #[test]
 fn test_charge_density_gaussian_peak_at_centre() {
     type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
-    use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+    use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use burn::tensor::Tensor;
     use std::collections::HashMap;
 
@@ -95,7 +95,7 @@ fn test_charge_density_gaussian_peak_at_centre() {
     domain.insert("charge_x0".to_string(), 0.5_f64);
     domain.insert("charge_y0".to_string(), 0.5_f64);
     domain.insert("charge_sigma".to_string(), 0.1_f64);
-    let params = PhysicsParameters {
+    let params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         boundary_values: HashMap::new(),
         initial_values: HashMap::new(),
@@ -128,11 +128,11 @@ fn test_charge_density_gaussian_peak_at_centre() {
 #[test]
 fn test_current_density_zero_for_dielectric() {
     type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
-    use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+    use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use burn::tensor::Tensor;
     use std::collections::HashMap;
 
-    let params = PhysicsParameters {
+    let params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         boundary_values: HashMap::new(),
         initial_values: HashMap::new(),
@@ -158,7 +158,7 @@ fn test_current_density_zero_for_dielectric() {
 #[test]
 fn test_current_density_conduction_proportional_to_sigma_and_ez() {
     type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
-    use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+    use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use burn::tensor::Tensor;
     use std::collections::HashMap;
 
@@ -169,7 +169,7 @@ fn test_current_density_conduction_proportional_to_sigma_and_ez() {
     let mut domain = HashMap::new();
     domain.insert("conductivity".to_string(), sigma);
     domain.insert("e_z_background".to_string(), e_z_bg);
-    let params = PhysicsParameters {
+    let params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         boundary_values: HashMap::new(),
         initial_values: HashMap::new(),
@@ -194,14 +194,14 @@ fn test_current_density_conduction_proportional_to_sigma_and_ez() {
 #[test]
 fn test_current_density_uniform_impressed() {
     type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
-    use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+    use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use burn::tensor::Tensor;
     use std::collections::HashMap;
 
     let j0 = 5.0_f64;
     let mut domain = HashMap::new();
     domain.insert("current_density_z".to_string(), j0);
-    let params = PhysicsParameters {
+    let params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         boundary_values: HashMap::new(),
         initial_values: HashMap::new(),

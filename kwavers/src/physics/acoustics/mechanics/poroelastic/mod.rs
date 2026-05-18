@@ -45,7 +45,7 @@ mod tests;
 
 pub use biot::BiotTheory;
 pub use properties::PoroelasticProperties;
-pub use waves::{WaveMode, WaveSpeeds};
+pub use waves::{PoroelasticWaveMode, WaveSpeeds};
 
 pub use material::PoroelasticMaterial;
 pub use simulation::PoroelasticSimulation;

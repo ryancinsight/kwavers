@@ -84,7 +84,7 @@ impl DirectionalWaveTracker {
         &self,
         measured_speeds: &[f64],
         expected_speeds: &[f64],
-    ) -> ValidationResult {
+    ) -> TrackingValidationResult {
         let mut directional_consistency = 0.0;
         let mut amplitude_uniformity = 0.0;
 
@@ -118,7 +118,7 @@ impl DirectionalWaveTracker {
         directional_consistency /= measured_speeds.len() as f64;
         amplitude_uniformity /= measured_speeds.len() as f64;
 
-        ValidationResult {
+        TrackingValidationResult {
             directional_consistency,
             amplitude_uniformity,
             overall_quality: (directional_consistency + amplitude_uniformity) / 2.0,
@@ -128,7 +128,7 @@ impl DirectionalWaveTracker {
 
 /// Validation result for multi-directional wave physics
 #[derive(Debug, Clone)]
-pub struct ValidationResult {
+pub struct TrackingValidationResult {
     /// Consistency of wave speeds across different directions (0-1)
     pub directional_consistency: f64,
     /// Uniformity of wave amplitudes across directions (0-1)

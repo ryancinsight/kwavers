@@ -34,7 +34,7 @@ fn test_delay_computation() {
 fn test_apodization_weights() {
     let sensors = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.0, 0.01, 0.0]];
     let config = DelayAndSumConfig {
-        apodization: ApodizationType::None,
+        apodization: ApodizationType::Uniform,
         ..Default::default()
     };
     let pam = DelayAndSumPAM::new(sensors, config).unwrap();
@@ -88,7 +88,7 @@ fn beamform_view_localizes_analytic_impulse_source() {
         sound_speed,
         sampling_frequency,
         window_size: 64,
-        apodization: ApodizationType::None,
+        apodization: ApodizationType::Uniform,
         ..Default::default()
     };
     let pam = DelayAndSumPAM::new(sensors.clone(), config).unwrap();
@@ -137,7 +137,7 @@ fn beamform_view_uses_fractional_delay_interpolation() {
         sound_speed: 1.0,
         sampling_frequency: 1.0,
         window_size: 1,
-        apodization: ApodizationType::None,
+        apodization: ApodizationType::Uniform,
         ..Default::default()
     };
     let pam = DelayAndSumPAM::new(sensors, config).unwrap();

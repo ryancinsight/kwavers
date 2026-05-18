@@ -1,11 +1,11 @@
-use crate::clinical::safety::mechanical_index::TissueType;
-use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use std::f64::consts::PI;
 
 /// HIFU transducer configuration.
 #[derive(Debug, Clone)]
-pub struct HIFUTransducer {
+pub struct ClinicalHIFUTransducer {
     pub frequency: f64,
     pub focal_length_mm: f64,
     pub aperture_diameter_mm: f64,
@@ -15,7 +15,7 @@ pub struct HIFUTransducer {
     pub transducer_diameter_mm: f64,
 }
 
-impl Default for HIFUTransducer {
+impl Default for ClinicalHIFUTransducer {
     fn default() -> Self {
         Self {
             frequency: 1.5e6,
@@ -45,7 +45,7 @@ pub struct FocalSpot {
 
 impl FocalSpot {
     #[must_use]
-    pub fn estimate_from_transducer(transducer: &HIFUTransducer) -> Self {
+    pub fn estimate_from_transducer(transducer: &ClinicalHIFUTransducer) -> Self {
         let wavelength = SOUND_SPEED_WATER_SIM / transducer.frequency;
         let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm;
         let lateral_width_mm = 1.02 * wavelength * 1e3 * f_number;
@@ -75,7 +75,7 @@ impl FocalSpot {
     }
 
     #[must_use]
-    pub fn is_safe(&self, tissue_type: TissueType) -> bool {
+    pub fn is_safe(&self, tissue_type: MechanicalIndexTissueType) -> bool {
         self.mechanical_index < tissue_type.safety_limit()
     }
 
@@ -96,7 +96,7 @@ pub struct AblationTarget {
     pub location_mm: (f64, f64, f64),
     pub dimensions_mm: (f64, f64, f64),
     pub safety_margin_mm: f64,
-    pub tissue_type: TissueType,
+    pub tissue_type: MechanicalIndexTissueType,
 }
 
 impl AblationTarget {
@@ -105,7 +105,7 @@ impl AblationTarget {
         name: String,
         location_mm: (f64, f64, f64),
         dimensions_mm: (f64, f64, f64),
-        tissue_type: TissueType,
+        tissue_type: MechanicalIndexTissueType,
     ) -> Self {
         Self {
             name,
@@ -142,13 +142,13 @@ impl AblationTarget {
 
 /// Thermal dose in CEM43: CEM43 = R^(43−T)·t, R=0.5 for T>43°C else 0.25.
 #[derive(Debug, Clone)]
-pub struct ThermalDose {
+pub struct FocalSpotDoseEstimate {
     pub cem43: f64,
     pub peak_temperature_c: f64,
     pub time_to_dose_s: f64,
 }
 
-impl ThermalDose {
+impl FocalSpotDoseEstimate {
     #[must_use]
     pub fn estimate_from_focal_spot(
         focal_spot: &FocalSpot,
@@ -205,12 +205,12 @@ impl ThermalDose {
 
 /// HIFU treatment plan.
 #[derive(Debug, Clone)]
-pub struct HIFUTreatmentPlan {
-    pub transducer: HIFUTransducer,
+pub struct ClinicalHIFUTreatmentPlan {
+    pub transducer: ClinicalHIFUTransducer,
     pub focal_spot: FocalSpot,
     pub target: AblationTarget,
-    pub therapy_params: TherapyParameters,
-    pub thermal_dose: ThermalDose,
+    pub therapy_params: ClinicalTherapyParameters,
+    pub thermal_dose: FocalSpotDoseEstimate,
     pub feasibility: TreatmentFeasibility,
 }
 

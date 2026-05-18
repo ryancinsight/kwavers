@@ -3,7 +3,7 @@
 //! Implements the Fresnel equations for calculating reflection and transmission
 //! coefficients at dielectric interfaces.
 
-use super::Polarization;
+use super::AnalyticalPolarization;
 use crate::core::error::KwaversResult;
 use std::f64::consts::PI;
 
@@ -55,7 +55,7 @@ impl FresnelCalculator {
         &self,
         incident_angle: f64,
         transmitted_angle: f64,
-        polarization: Polarization,
+        polarization: AnalyticalPolarization,
     ) -> KwaversResult<FresnelCoefficients> {
         // Calculate S-polarization (TE) coefficients
         let (rs, ts) = self.calculate_s_polarization(incident_angle, transmitted_angle)?;
@@ -65,15 +65,15 @@ impl FresnelCalculator {
 
         // Combine based on polarization state
         let (r, t, r_phase, t_phase) = match polarization {
-            Polarization::TransverseElectric => (rs, ts, 0.0, 0.0),
-            Polarization::TransverseMagnetic => (rp, tp, 0.0, 0.0),
-            Polarization::Unpolarized => {
+            AnalyticalPolarization::TransverseElectric => (rs, ts, 0.0, 0.0),
+            AnalyticalPolarization::TransverseMagnetic => (rp, tp, 0.0, 0.0),
+            AnalyticalPolarization::Unpolarized => {
                 // Average of S and P polarizations for unpolarized light
                 let r_avg = (rs.mul_add(rs, rp * rp) / 2.0).sqrt();
                 let t_avg = (ts.mul_add(ts, tp * tp) / 2.0).sqrt();
                 (r_avg, t_avg, 0.0, 0.0)
             }
-            Polarization::Circular | Polarization::Elliptical => {
+            AnalyticalPolarization::Circular | AnalyticalPolarization::Elliptical => {
                 // For circular/elliptical, use equal weighting
                 let r_avg = (rs.mul_add(rs, rp * rp) / 2.0).sqrt();
                 let t_avg = (ts.mul_add(ts, tp * tp) / 2.0).sqrt();
@@ -150,7 +150,7 @@ impl FresnelCalculator {
     pub fn reflectance(
         &self,
         incident_angle: f64,
-        polarization: Polarization,
+        polarization: AnalyticalPolarization,
     ) -> KwaversResult<f64> {
         // Calculate transmitted angle
         let sin_t = (self.n1 / self.n2) * incident_angle.sin();
@@ -164,9 +164,9 @@ impl FresnelCalculator {
         let coeffs = self.calculate(incident_angle, transmitted_angle, polarization)?;
 
         match polarization {
-            Polarization::TransverseElectric => Ok(coeffs.rs * coeffs.rs),
-            Polarization::TransverseMagnetic => Ok(coeffs.rp * coeffs.rp),
-            Polarization::Unpolarized => {
+            AnalyticalPolarization::TransverseElectric => Ok(coeffs.rs * coeffs.rs),
+            AnalyticalPolarization::TransverseMagnetic => Ok(coeffs.rp * coeffs.rp),
+            AnalyticalPolarization::Unpolarized => {
                 Ok(coeffs.rs.mul_add(coeffs.rs, coeffs.rp * coeffs.rp) / 2.0)
             }
             _ => Ok(coeffs.reflection_amplitude * coeffs.reflection_amplitude),
@@ -180,7 +180,7 @@ impl FresnelCalculator {
     pub fn transmittance(
         &self,
         incident_angle: f64,
-        polarization: Polarization,
+        polarization: AnalyticalPolarization,
     ) -> KwaversResult<f64> {
         let reflectance = self.reflectance(incident_angle, polarization)?;
         Ok(1.0 - reflectance) // Energy conservation
@@ -213,14 +213,18 @@ mod tests {
         let calc = FresnelCalculator::new(1.0, 1.5);
 
         // At normal incidence
-        let coeffs = calc.calculate(0.0, 0.0, Polarization::Unpolarized).unwrap();
+        let coeffs = calc
+            .calculate(0.0, 0.0, AnalyticalPolarization::Unpolarized)
+            .unwrap();
 
         // Expected reflection coefficient: (n2-n1)/(n2+n1) = 0.5/2.5 = 0.2
         let expected_r = ((1.5_f64 - 1.0) / (1.5 + 1.0)).abs();
         assert!((coeffs.reflection_amplitude - expected_r).abs() < 1e-10);
 
         // Reflectance should be R = r² = 0.04
-        let reflectance = calc.reflectance(0.0, Polarization::Unpolarized).unwrap();
+        let reflectance = calc
+            .reflectance(0.0, AnalyticalPolarization::Unpolarized)
+            .unwrap();
         assert!((reflectance - 0.04).abs() < 1e-10);
     }
 
@@ -237,7 +241,11 @@ mod tests {
         let sin_t = (1.0 / 1.5) * brewster.sin();
         let transmitted = sin_t.asin();
         let coeffs = calc
-            .calculate(brewster, transmitted, Polarization::TransverseMagnetic)
+            .calculate(
+                brewster,
+                transmitted,
+                AnalyticalPolarization::TransverseMagnetic,
+            )
             .unwrap();
         assert!(coeffs.rp.abs() < 1e-10);
     }
@@ -254,7 +262,7 @@ mod tests {
 
         // Above critical angle, reflectance should be 1
         let reflectance = calc
-            .reflectance(critical + 0.1, Polarization::Unpolarized)
+            .reflectance(critical + 0.1, AnalyticalPolarization::Unpolarized)
             .unwrap();
         assert!((reflectance - 1.0).abs() < 1e-10);
     }
@@ -265,9 +273,9 @@ mod tests {
 
         for angle in [0.0, PI / 6.0, PI / 4.0, PI / 3.0] {
             for pol in [
-                Polarization::TransverseElectric,
-                Polarization::TransverseMagnetic,
-                Polarization::Unpolarized,
+                AnalyticalPolarization::TransverseElectric,
+                AnalyticalPolarization::TransverseMagnetic,
+                AnalyticalPolarization::Unpolarized,
             ] {
                 let r = calc.reflectance(angle, pol).unwrap();
                 let t = calc.transmittance(angle, pol).unwrap();

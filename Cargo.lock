@@ -5800,6 +5800,7 @@ dependencies = [
  "flume",
  "gaia",
  "hmac",
+ "image 0.24.9",
  "jsonwebtoken",
  "log",
  "loom",

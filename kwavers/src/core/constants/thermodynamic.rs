@@ -191,9 +191,6 @@ pub const SONOCHEMISTRY_BASE_RATE: f64 = 1e-2;
 /// Heat of vaporization of water at 100°C (J/kg)
 pub const H_VAP_WATER_100C: f64 = 2.257e6;
 
-/// Atmospheric pressure (Pa)
-pub const P_ATM: f64 = 101325.0;
-
 /// Critical pressure of water (Pa)
 pub const P_CRITICAL_WATER: f64 = 22.064e6;
 
@@ -238,9 +235,6 @@ pub fn kelvin_to_celsius(kelvin: f64) -> f64 {
 pub fn celsius_to_kelvin(celsius: f64) -> f64 {
     celsius - ABSOLUTE_ZERO_C
 }
-
-// Gas constant is available in fundamental.rs
-pub use super::fundamental::GAS_CONSTANT as R_GAS;
 
 #[cfg(test)]
 mod tests {

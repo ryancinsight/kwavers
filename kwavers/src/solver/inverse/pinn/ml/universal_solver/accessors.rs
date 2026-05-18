@@ -7,7 +7,7 @@ use super::types::{
     Geometry2D, MultiDomainTrainingResult, UniversalSolverStats, UniversalTrainingConfig,
 };
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::pinn::ml::physics::{PhysicsDomain, PhysicsParameters};
+use crate::solver::inverse::pinn::ml::physics::{PhysicsDomain, PinnDomainPhysicsParameters};
 use burn::tensor::backend::AutodiffBackend;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -69,7 +69,7 @@ impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
         &mut self,
         domain_name: &str,
         config: &UniversalTrainingConfig,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> KwaversResult<UniversalSolverStats> {
         let geometry = Geometry2D::rectangle(0.0, 1.0, 0.0, 1.0);
         let solution =
@@ -84,7 +84,7 @@ impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
     pub fn train_all_domains(
         &mut self,
         config: &UniversalTrainingConfig,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> KwaversResult<MultiDomainTrainingResult> {
         let start_time = Instant::now();
         let domains = self.list_registered_domains();

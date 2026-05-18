@@ -178,13 +178,13 @@
 //!
 //! ```ignore
 //! use kwavers::analysis::signal_processing::beamforming::neural::distributed::DistributedNeuralBeamformingProcessor;
-//! use kwavers::math::ml::pinn::multi_gpu_manager::{DecompositionStrategy, LoadBalancingAlgorithm};
+//! use kwavers::math::ml::pinn::multi_gpu_manager::{PinnBeamformingDecompositionStrategy, LoadBalancingAlgorithm};
 //!
 //! // Create distributed processor
 //! let processor = DistributedNeuralBeamformingProcessor::new(
 //!     config,
 //!     4, // 4 GPUs
-//!     DecompositionStrategy::Spatial,
+//!     PinnBeamformingDecompositionStrategy::Spatial,
 //!     LoadBalancingAlgorithm::Dynamic,
 //! ).await?;
 //!

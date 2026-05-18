@@ -5,7 +5,7 @@
 #[derive(Debug)]
 pub struct AberrationCorrector;
 #[derive(Debug)]
-pub enum CorrectionMethod {
+pub enum AberrationCorrectionMethod {
     TimeReversal,
     AdaptiveFocusing,
     PhaseConjugation,
@@ -28,12 +28,12 @@ mod tests {
         assert!(!s.is_empty(), "AberrationCorrector debug must not be empty");
     }
 
-    /// All CorrectionMethod variants are distinct Debug strings.
+    /// All AberrationCorrectionMethod variants are distinct Debug strings.
     #[test]
     fn correction_method_variants_debug_distinct() {
-        let tr = format!("{:?}", CorrectionMethod::TimeReversal);
-        let af = format!("{:?}", CorrectionMethod::AdaptiveFocusing);
-        let pc = format!("{:?}", CorrectionMethod::PhaseConjugation);
+        let tr = format!("{:?}", AberrationCorrectionMethod::TimeReversal);
+        let af = format!("{:?}", AberrationCorrectionMethod::AdaptiveFocusing);
+        let pc = format!("{:?}", AberrationCorrectionMethod::PhaseConjugation);
         assert_ne!(tr, af);
         assert_ne!(af, pc);
         assert_ne!(tr, pc);

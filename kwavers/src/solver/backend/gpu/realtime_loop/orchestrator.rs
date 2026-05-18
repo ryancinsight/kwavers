@@ -3,7 +3,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::solver::backend::gpu::performance_monitor::{
-    BudgetAnalysis, PerformanceMetrics, PerformanceMonitor,
+    BudgetAnalysis, GpuPerformanceMonitor, GpuStepMetrics,
 };
 use crate::solver::backend::gpu::physics_kernels::PhysicsKernelRegistry;
 use log::debug;
@@ -11,13 +11,13 @@ use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use super::types::{RealtimeConfig, SimulationStatistics, StepResult};
+use super::types::{GpuRealtimeSimulationStatistics, RealtimeConfig, StepResult};
 
 /// Real-time simulation orchestrator.
 #[derive(Debug)]
 pub struct RealtimeSimulationOrchestrator {
     config: RealtimeConfig,
-    monitor: PerformanceMonitor,
+    monitor: GpuPerformanceMonitor,
     kernel_registry: PhysicsKernelRegistry,
     step_count: u64,
     start_time: Option<Instant>,
@@ -33,7 +33,7 @@ impl RealtimeSimulationOrchestrator {
         kernel_registry: PhysicsKernelRegistry,
     ) -> KwaversResult<Self> {
         Ok(Self {
-            monitor: PerformanceMonitor::new(config.budget_ms, 100),
+            monitor: GpuPerformanceMonitor::new(config.budget_ms, 100),
             config,
             kernel_registry,
             step_count: 0,
@@ -122,7 +122,7 @@ impl RealtimeSimulationOrchestrator {
         t_end: f64,
         mut dt: f64,
         grid: &Grid,
-    ) -> KwaversResult<SimulationStatistics> {
+    ) -> KwaversResult<GpuRealtimeSimulationStatistics> {
         self.start_time = Some(Instant::now());
 
         let mut t = t_start;
@@ -148,7 +148,7 @@ impl RealtimeSimulationOrchestrator {
         let elapsed = self.start_time.take().unwrap().elapsed().as_secs_f64();
         let metrics = self.monitor.get_metrics();
 
-        Ok(SimulationStatistics {
+        Ok(GpuRealtimeSimulationStatistics {
             total_wall_time_seconds: elapsed,
             total_simulation_time_seconds: t - t_start,
             num_steps: step,
@@ -158,7 +158,7 @@ impl RealtimeSimulationOrchestrator {
     }
 
     /// Get current performance metrics.
-    pub fn get_metrics(&self) -> PerformanceMetrics {
+    pub fn get_metrics(&self) -> GpuStepMetrics {
         self.monitor.get_metrics()
     }
 

@@ -1,7 +1,7 @@
 //! Types for job management.
 
 use crate::infrastructure::api::{
-    APIError, JobStatus, PINNTrainingRequest, TrainingMetrics, TrainingProgress,
+    APIError, JobStatus, PINNTrainingRequest, PinnApiTrainingMetrics, TrainingProgress,
 };
 use std::future::Future;
 use std::pin::Pin;
@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 #[derive(Debug)]
 pub struct TrainingOutput {
     pub model: Vec<u8>,
-    pub metrics: TrainingMetrics,
+    pub metrics: PinnApiTrainingMetrics,
 }
 
 pub type TrainingFuture = Pin<Box<dyn Future<Output = Result<TrainingOutput, APIError>> + Send>>;
@@ -43,7 +43,7 @@ pub struct TrainingJob {
     /// Current training progress
     pub progress: Option<TrainingProgress>,
     /// Final training result
-    pub result: Option<TrainingResult>,
+    pub result: Option<JobManagerTrainingResult>,
     /// Error message if failed
     pub error_message: Option<String>,
 }
@@ -51,11 +51,11 @@ pub struct TrainingJob {
 /// Training result data
 #[cfg(feature = "pinn")]
 #[derive(Debug, Clone)]
-pub struct TrainingResult {
+pub struct JobManagerTrainingResult {
     /// Final trained model
     pub model: Vec<u8>, // Serialized model data
     /// Training metrics
-    pub metrics: TrainingMetrics,
+    pub metrics: PinnApiTrainingMetrics,
     /// Model metadata
     pub model_metadata: crate::api::ModelMetadata,
 }
@@ -66,4 +66,4 @@ pub struct TrainingResult {
 /// when the `pinn` feature is disabled.
 #[cfg(not(feature = "pinn"))]
 #[derive(Debug, Clone)]
-pub struct TrainingResult;
+pub struct JobManagerTrainingResult;

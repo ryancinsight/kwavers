@@ -13,7 +13,7 @@ pub use builder::{
     TumorDetectionPhantomBuilder, VascularPhantomBuilder,
 };
 pub use presets::ClinicalPhantoms;
-pub use types::{LayerSpec, PhantomType, TissueType, TumorSpec, VesselSpec};
+pub use types::{LayerSpec, PhantomTissueType, PhantomType, TumorSpec, VesselSpec};
 
 #[cfg(test)]
 mod tests {

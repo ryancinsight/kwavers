@@ -1,8 +1,9 @@
 use super::super::super::basis::BasisType;
 use super::super::super::config::DGConfig;
 use super::super::super::quadrature::fourier_periodic_nodes;
-use super::super::super::traits::DGOperations;
+use super::super::super::traits::{DGOperations, NumericalSolver};
 use super::super::core::DGSolver;
+use super::super::topology::CoefficientLayout;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::sync::Arc;
@@ -173,6 +174,90 @@ fn test_polynomial_reproduction() {
             err < 1e-11,
             "Polynomial reproduction error at node {i}: {err:.2e} (must be < 1e-11)"
         );
+    }
+}
+
+#[test]
+fn numerical_solver_solve_reconstructs_updated_modal_state_to_grid() {
+    let config = DGConfig {
+        polynomial_order: 1,
+        sound_speed: 1.0,
+        ..DGConfig::default()
+    };
+    let grid = Arc::new(Grid::new(4, 2, 2, 0.25, 0.25, 0.25).expect("Grid::new failed in test"));
+    let mut field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+    for i in 0..grid.nx {
+        for j in 0..grid.ny {
+            for k in 0..grid.nz {
+                field[[i, j, k]] = (i as f64 + 1.0).mul_add(0.5, j as f64 + 0.25 * k as f64);
+            }
+        }
+    }
+    let mask = Array3::from_elem((grid.nx, grid.ny, grid.nz), true);
+    let dt = 0.01;
+
+    let mut solver = DGSolver::new(config, Arc::clone(&grid)).expect("solver");
+    let result = NumericalSolver::solve(&mut solver, &field, dt, &mask).expect("solve");
+
+    let mut reference_solver = DGSolver::new(config, Arc::clone(&grid)).expect("solver");
+    let mut expected = field.clone();
+    reference_solver
+        .project_to_dg(&expected)
+        .expect("project_to_dg");
+    reference_solver
+        .solve_step(&mut expected, dt)
+        .expect("solve_step");
+    reference_solver
+        .project_to_grid(&mut expected)
+        .expect("project_to_grid");
+
+    let result_delta = (&result - &field).iter().map(|v| v * v).sum::<f64>().sqrt();
+    assert!(
+        result_delta > 1e-12,
+        "NumericalSolver::solve must return the reconstructed advanced field"
+    );
+    for (actual, expected) in result.iter().zip(expected.iter()) {
+        assert!((actual - expected).abs() < 1e-12);
+    }
+}
+
+#[test]
+fn project_to_dg_round_trips_tensor_product_layouts_for_1d_2d_3d() {
+    let cases = [
+        ((4, 1, 1), (2, 2, 1), 1),
+        ((4, 4, 1), (4, 4, 1), 2),
+        ((4, 4, 4), (8, 8, 1), 3),
+    ];
+
+    for (dims, expected_coeff_dim, expected_dimensionality) in cases {
+        let config = DGConfig {
+            polynomial_order: 1,
+            sound_speed: 1.0,
+            ..DGConfig::default()
+        };
+        let grid = Arc::new(Grid::new(dims.0, dims.1, dims.2, 1.0, 1.0, 1.0).unwrap());
+        let mut solver = DGSolver::new(config, Arc::clone(&grid)).unwrap();
+        let field = Array3::from_shape_fn(dims, |(i, j, k)| {
+            i as f64 + 10.0 * j as f64 + 100.0 * k as f64
+        });
+        let mut recovered = Array3::zeros(dims);
+
+        solver.project_to_dg(&field).unwrap();
+        solver.project_to_grid(&mut recovered).unwrap();
+
+        assert_eq!(
+            solver.modal_coefficients().unwrap().dim(),
+            expected_coeff_dim
+        );
+        match solver.coefficient_layout {
+            CoefficientLayout::TensorProduct(topology) => {
+                assert_eq!(topology.active_dim, expected_dimensionality);
+            }
+            CoefficientLayout::Line1D => panic!("project_to_dg must use tensor layout"),
+        }
+        for (actual, expected) in recovered.iter().zip(field.iter()) {
+            assert_eq!(actual, expected);
+        }
     }
 }
 

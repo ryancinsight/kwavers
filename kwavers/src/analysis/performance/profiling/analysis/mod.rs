@@ -176,3 +176,122 @@ impl PerformanceAnalyzer {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ─── RooflineAnalysis exact formula tests ────────────────────────────────
+
+    /// `ridge_point()` = peak_performance / peak_bandwidth.
+    ///
+    /// peak_performance=100.0 GFLOPS, peak_bandwidth=50.0 GB/s
+    /// → ridge_point = 100/50 = 2.0 FLOPS/byte.
+    #[test]
+    fn roofline_ridge_point_exact() {
+        let analysis = RooflineAnalysis::new(100.0, 50.0);
+        let rp = analysis.ridge_point();
+        assert!(
+            (rp - 2.0).abs() < 1e-14,
+            "ridge_point = {rp} (expected 2.0 = 100/50)"
+        );
+    }
+
+    /// `theoretical_performance()` is memory-bound when AI < ridge_point.
+    ///
+    /// peak=100 GFLOPS, bw=50 GB/s, AI=1.0 FLOPS/byte.
+    /// bw·AI = 50 < peak=100 → theoretical = 50.0 GFLOPS.
+    #[test]
+    fn roofline_theoretical_performance_memory_bound_exact() {
+        let mut analysis = RooflineAnalysis::new(100.0, 50.0);
+        analysis.arithmetic_intensity = 1.0;
+        let tp = analysis.theoretical_performance();
+        assert!(
+            (tp - 50.0).abs() < 1e-14,
+            "memory-bound theoretical = {tp} (expected 50.0)"
+        );
+        assert_eq!(
+            analysis.bound,
+            PerformanceBound::Balanced,
+            "bound before analyze() remains Balanced"
+        );
+    }
+
+    /// `theoretical_performance()` is compute-bound when AI > ridge_point.
+    ///
+    /// peak=100 GFLOPS, bw=50 GB/s, AI=3.0 FLOPS/byte.
+    /// bw·AI = 150 > peak=100 → theoretical = 100.0 GFLOPS (clamped by peak).
+    #[test]
+    fn roofline_theoretical_performance_compute_bound_exact() {
+        let mut analysis = RooflineAnalysis::new(100.0, 50.0);
+        analysis.arithmetic_intensity = 3.0;
+        let tp = analysis.theoretical_performance();
+        assert!(
+            (tp - 100.0).abs() < 1e-14,
+            "compute-bound theoretical = {tp} (expected 100.0)"
+        );
+    }
+
+    /// `efficiency()` = achieved_performance / theoretical_performance().
+    ///
+    /// achieved=50.0, AI=1.0, bw=50 → theoretical=50.0 → efficiency=1.0.
+    #[test]
+    fn roofline_efficiency_at_theoretical_limit_is_one() {
+        let mut analysis = RooflineAnalysis::new(100.0, 50.0);
+        analysis.arithmetic_intensity = 1.0;
+        analysis.achieved_performance = 50.0;
+        let eff = analysis.efficiency();
+        assert!(
+            (eff - 1.0).abs() < 1e-14,
+            "efficiency at theoretical limit = {eff} (expected 1.0)"
+        );
+    }
+
+    /// `efficiency()` returns 0.0 when theoretical_performance is 0.
+    ///
+    /// AI=0 → theoretical=min(100, 50·0)=0 → efficiency=0.0 (guard clause).
+    #[test]
+    fn roofline_efficiency_zero_theoretical_returns_zero() {
+        let analysis = RooflineAnalysis::new(100.0, 50.0);
+        // AI stays at 0.0 (default) → theoretical = 0.0
+        let eff = analysis.efficiency();
+        assert!(
+            eff.abs() < 1e-14,
+            "zero-theoretical efficiency = {eff} (expected 0.0)"
+        );
+    }
+
+    /// `analyze()` sets MemoryBound when bandwidth_limit < peak_performance.
+    ///
+    /// flops=1e9, bytes=1e9, time=1.0 → AI=1.0, achieved=1.0 GFLOPS.
+    /// bandwidth_limit = 50·1.0 = 50 < peak=100 → MemoryBound.
+    #[test]
+    fn roofline_analyze_sets_memory_bound_for_low_intensity() {
+        let mut analysis = RooflineAnalysis::new(100.0, 50.0);
+        analysis.analyze(1e9, 1e9, 1.0);
+        assert_eq!(
+            analysis.bound,
+            PerformanceBound::MemoryBound,
+            "AI=1 must yield MemoryBound (ridge=2.0)"
+        );
+        assert!(
+            (analysis.arithmetic_intensity - 1.0).abs() < 1e-12,
+            "AI = {} (expected 1.0)",
+            analysis.arithmetic_intensity
+        );
+    }
+
+    /// `analyze()` sets ComputeBound when bandwidth_limit ≥ peak_performance.
+    ///
+    /// AI = flops/bytes = 300e9/1e9 = 300 → bw·AI = 50·300 = 15000 > 100 → ComputeBound.
+    #[test]
+    fn roofline_analyze_sets_compute_bound_for_high_intensity() {
+        let mut analysis = RooflineAnalysis::new(100.0, 50.0);
+        analysis.analyze(300e9, 1e9, 1.0);
+        assert_eq!(
+            analysis.bound,
+            PerformanceBound::ComputeBound,
+            "AI=300 must yield ComputeBound"
+        );
+    }
+}

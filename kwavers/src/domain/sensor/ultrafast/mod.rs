@@ -136,16 +136,16 @@ pub mod plane_wave;
 pub mod sequencer;
 
 pub use diverging_wave::{DivergingWave, DivergingWaveConfig};
-pub use plane_wave::{PlaneWave, PlaneWaveConfig};
+pub use plane_wave::{PlaneWave, UltrafastPlaneWaveConfig};
 pub use sequencer::{TransmissionSchedule, TransmissionSequencer};
 
 #[cfg(test)]
 mod tests {
-    use super::PlaneWaveConfig;
+    use super::UltrafastPlaneWaveConfig;
 
     #[test]
     fn test_ultrafast_module() {
-        let config = PlaneWaveConfig::default();
+        let config = UltrafastPlaneWaveConfig::default();
         assert_eq!(config.tilt_angles.len(), 11);
         assert!(config.sound_speed > 0.0);
         assert_eq!(config.f_number.unwrap(), 1.5);

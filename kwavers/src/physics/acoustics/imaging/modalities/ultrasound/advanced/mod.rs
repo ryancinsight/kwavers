@@ -12,5 +12,5 @@ mod tests;
 
 pub use coded_excitation::{CodedExcitationConfig, CodedExcitationProcessor, ExcitationCode};
 pub use compounding::PlaneWaveCompounding;
-pub use plane_wave::{PlaneWaveConfig, PlaneWaveReconstruction};
+pub use plane_wave::{PlaneWaveReconstruction, UltrasoundPlaneWaveConfig};
 pub use synthetic_aperture::{SyntheticApertureConfig, SyntheticApertureReconstruction};

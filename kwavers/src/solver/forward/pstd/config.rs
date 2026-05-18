@@ -7,7 +7,7 @@ use super::numerics::spectral_correction::SpectralCorrectionConfig;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::boundary::{CPMLConfig, PMLConfig};
+use crate::domain::boundary::{CPMLConfig, DomainPmlConfig};
 
 /// Compatibility modes for the spectral solver
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -33,7 +33,7 @@ pub enum KSpaceMethod {
 #[serde(tag = "type")]
 pub enum BoundaryConfig {
     /// Perfectly Matched Layer
-    PML(PMLConfig),
+    PML(DomainPmlConfig),
     /// Convolutional Perfectly Matched Layer
     CPML(CPMLConfig),
     /// No absorbing boundary

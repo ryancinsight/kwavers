@@ -3,7 +3,7 @@
 //! Core module for verifying conservation of physical quantities during simulation.
 //!
 //! Partitioned by responsibility:
-//! - `types`   — `ConservationLaw`, `ConservedQuantity`, `ConservationResult`.
+//! - `types`   — `AnalysisConservationLaw`, `ConservedQuantity`, `ConservationResult`.
 //! - `checker` — `ConservationChecker` struct and full impl.
 
 mod checker;
@@ -12,4 +12,4 @@ mod tests;
 mod types;
 
 pub use checker::ConservationChecker;
-pub use types::{ConservationLaw, ConservationResult, ConservedQuantity};
+pub use types::{AnalysisConservationLaw, ConservationResult, ConservedQuantity};

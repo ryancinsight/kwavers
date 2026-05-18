@@ -98,11 +98,4 @@ impl FractionalLaplacianAbsorption {
     pub(crate) fn reset(&mut self) {
         self.prev_l_y = None;
     }
-
-    /// Power-law exponent used by the spectral filters (volume-area-weighted
-    /// median of the per-voxel `y` field).
-    #[allow(dead_code)]
-    pub(crate) fn y_exponent(&self) -> f64 {
-        self.y_exponent
-    }
 }

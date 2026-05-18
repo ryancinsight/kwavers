@@ -81,7 +81,7 @@ impl Default for ViscoelasticConfig {
 /// Full stiffness tensor for anisotropic materials
 /// Uses Voigt notation for 6x6 symmetric matrix
 #[derive(Debug, Clone)]
-pub struct StiffnessTensor {
+pub struct ElasticModeStiffnessTensor {
     /// 6x6 stiffness matrix in Voigt notation (Pa)
     pub c: Array2<f64>,
 
@@ -103,7 +103,7 @@ pub enum MaterialSymmetry {
     Triclinic,
 }
 
-impl StiffnessTensor {
+impl ElasticModeStiffnessTensor {
     /// Create isotropic stiffness tensor from Lamé parameters
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

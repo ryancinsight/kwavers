@@ -15,7 +15,7 @@
 //! half-step saves 3000 allocations (~786 MB total clones + FFT temporaries).
 
 use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
-use ndarray::{Array2, ArrayViewMut2};
+use ndarray::{Array2, ArrayViewMut2, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
 
@@ -131,8 +131,6 @@ impl ParabolicDiffractionOperator {
     ///
     /// References: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
     pub fn apply_complex(&mut self, field: &mut ArrayViewMut2<Complex64>, step_size: f64) {
-        let nx = self.config.nx;
-        let ny = self.config.ny;
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
 
         // Step 1: copy field slice into scratch (no heap allocation).
@@ -150,13 +148,25 @@ impl ParabolicDiffractionOperator {
         // the conjugate propagator and reversed the phase curvature of all modes.
         //
         // Refs: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
-        for i in 0..nx {
-            for j in 0..ny {
-                let kt2 = self.kx2[[i, j]] + self.ky2[[i, j]];
-                let phase = kt2 * step_size / (2.0 * k0);
-                // exp(−i·phase): negative sign is physically correct
-                self.scratch[[i, j]] *= Complex64::from_polar(1.0, -phase);
-            }
+        //
+        // ## Theorem (race-freedom, Step 3)
+        //
+        // The update is a pointwise `scratch[i,j] *= H(kx2[i,j], ky2[i,j])`.
+        // Each element depends only on the collocated kx2 and ky2 values
+        // (immutable read) and overwrites its own scratch cell (mutable write).
+        // No two Rayon tasks share memory → `par_for_each` is race-free.
+        {
+            let kx2_v = self.kx2.view();
+            let ky2_v = self.ky2.view();
+            Zip::from(self.scratch.view_mut())
+                .and(kx2_v)
+                .and(ky2_v)
+                .par_for_each(|s, &kx2, &ky2| {
+                    let kt2 = kx2 + ky2;
+                    let phase = kt2 * step_size / (2.0 * k0);
+                    // exp(−i·phase): negative sign is physically correct
+                    *s *= Complex64::from_polar(1.0, -phase);
+                });
         }
 
         // Step 4: inverse complex-to-complex in-place FFT (includes 1/N norm).

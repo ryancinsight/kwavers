@@ -2,6 +2,516 @@
 
 ## Unreleased
 
+### Fixed (2026-05-18) - DG Focused-Water-Tank Alignment
+
+- [patch] Add uniform-grid interpolation for tensor acoustic DG pressure and
+  velocity projection. Focused-water-tank metrics now evaluate DG GLL
+  polynomials at FDTD/PSTD grid coordinates instead of treating GLL nodes as
+  uniformly spaced samples.
+- [patch] Add RK-stage-consistent acoustic tensor source injection with weak
+  cell-source weights. The focused-water-tank DG source now enters each SSP-RK3
+  stage RHS at the stage time and distributes one uniform source cell through
+  the local GLL mass weights.
+- [patch] Route the simulation DG adapter through the same uniform-grid field
+  projection used by the comparison fixture.
+- [patch] Add value-semantic tests for DG uniform interpolation, weak
+  cell-source measure conservation, and SSP-RK3 source stage timing.
+- [patch] Repair stale compile-blocking public-name drift encountered during
+  verification: hybrid validation config naming, 3-D beamforming apodization
+  naming, signal window naming, domain/imaging re-exports, SIMD level naming,
+  transcranial safety monitor naming, photoacoustic reconstruction config
+  naming, and bubble-dynamics Bjerknes re-export paths.
+- [patch] Regenerate `target/focused_water_tank/focused_water_tank.png`,
+  `focused_water_tank_metrics.csv`, and `focused_water_tank_profiles.csv`.
+  Current focused-map metrics: FDTD vs PSTD normalized-L2 `1.142732e-1`,
+  FDTD vs DG-2D `4.091354e-1`, PSTD vs DG-2D `3.872639e-1`, DG-2D vs DG-3D
+  `1.037810e-9`, with DG-2D/DG-3D peak focus error `0.0 mm`.
+
+### Added (2026-05-18) - Segmented Tissue Transducer Optimization
+
+- [patch] Add Chapter 32 as a segmentation-driven transducer-placement and
+  focal-spot optimization example. The chapter uses the local LiTS17 liver CT
+  sample by default, maps native liver/tumor labels to normal/tumor planning
+  compartments, derives air/fat/bone/vascular-avoid masks from CT HU thresholds,
+  targets the largest connected lesion on the selected slice, forms a three
+  angle crossfire plan around the safest central aperture, screens candidate
+  apertures by segmented path fractions, solves complex per-element phase and
+  amplitude weights with a weighted ridge system, and exports figures, metrics,
+  plus value-semantic tests for both the real liver adapter and the deterministic
+  analytic phantom.
+
+### Fixed (2026-05-18) - Book Chapter Verification
+
+- [patch] Restore the Chapter 29 book-helper test contract by renaming the
+  elastic shear display label from FWI terminology to iterative elastic inverse
+  and accepting Python test stubs with empty `__text_signature__` while still
+  rejecting stale nonlinear extension signatures.
+
+### Changed (2026-05-18) - Chapter 29 Elastic Shear Reconstruction
+
+- [patch] Replace the Chapter 29 reduced-branch geometric exposure shortcut
+  with a heterogeneous scalar acoustic peak-pressure solve. The exposure path
+  now reuses the RTM finite-difference grid, CPML, attenuation, source encoding,
+  and electronic steering delays, stores only three rolling pressure fields,
+  two CPML fields, and one peak accumulator, and exports raw peak pressure plus
+  time-step/workspace diagnostics through PyO3.
+- [patch] Add a static theranostic exposure backend contract and pin the active
+  backend to `reference_fdtd_cpml_2d`. The PyO3 payload now reports
+  `exposure_backend` and `exposure_uses_hybrid_pstd_fdtd`, while tests keep the
+  hybrid PSTD/FDTD path unselectable until source/receiver/medium/peak-map
+  parity and memory-accounting checks exist. The reference peak-pressure loop
+  now fuses attenuation with peak accumulation and clears only the FD halo after
+  buffer rotation instead of zeroing the full destination field every step.
+- [patch] Replace the Chapter 29 elastic shear comparator with iterative
+  nonlinear ElasticPSTD FWI. The channel now runs baseline, observed-lesion,
+  and current-estimate shear simulations from the commanded target focus,
+  records same-aperture velocity traces, migrates residual trace energy for the
+  update direction, accepts only objective-decreasing nonlinear shear-map
+  updates, exports objective-history diagnostics through PyO3, and prints the
+  CT-frame comparison theorem plus caption on Figure 6.
+- [patch] Complete the mesh-boundary rename from `BoundaryType` to
+  `MeshBoundaryType` at FEM and hybrid call sites so the kwavers lib tests can
+  compile without compatibility aliases.
+
+### Fixed (2026-05-18) - Chapter 29 Figure 6 Liver Targeting
+
+- [patch] Correct the controlled Figure 6 brain linear target frame by
+  resolving the canonical 3-D CT target once, mapping that index through the
+  actual resampled head crop, and exporting the resampled brain crop bounds for
+  CT-frame linear-field projection. Regenerated metrics show the brain linear
+  exposure, linear fusion, and elastic shear hotspots inside the full-CT target
+  mask, with `linear_focus_to_common_target_centroid_m = 0.0004366`.
+- [patch] Preserve enclosed internal gas in the nonlinear 3-D material path.
+  The body mask now flood-fills exterior air before material mapping, keeps
+  enclosed HU `< -700` label-0 voxels inside the patient support, and maps them
+  to gas sound speed, gas density, gas nonlinearity, and high attenuation while
+  leaving boundary-connected CT background as coupling fluid.
+- [patch] Correct the controlled Figure 6 liver alignment by exporting the
+  linear inverse crop bounds, source dimensions, and source spacing from
+  `PreparedTheranosticSlice` through PyO3, then using that metadata for
+  full-CT-frame linear exposure/fusion resampling instead of assuming the
+  cropped solver grid is centered on the CT placement slice.
+- [patch] Make abdominal nonlinear target preparation select the same connected
+  single treatment component as the 2-D linear path and demote non-selected
+  label-2 lesions to organ before 3-D resampling, so liver linear and nonlinear
+  comparisons use one shared target.
+- [patch] Replace finite-area nonlinear source sum normalization with
+  pressure-boundary peak normalization. The previous point-source integral
+  model made target pressure fall as element support gained cells; the corrected
+  model preserves configured surface pressure under grid refinement.
+- [patch] Add a bounded measured electronic-steering calibration pass for
+  abdominal nonlinear solves. The pass evaluates nominal, same-direction, and
+  opposite-direction delay foci with real Westervelt calibration forwards and
+  selects the focus with the highest target/window pressure ratio; liver
+  calibration selected zero correction, localizing the residual pressure spread
+  to treatment-window/source-region physics rather than a reversed steering
+  sign.
+- [patch] Update Figure 6 to display simulated nonlinear target pressure inside
+  the matched lesion mask while archiving treatment-window pressure as
+  `nonlinear_pressure_window`, raw body/coupling pressure as
+  `nonlinear_pressure_raw`, and prefixed localization metrics. Regenerated
+  `docs/book/figures/ch29/fig06_controlled_linear_nonlinear_comparison.*`,
+  `controlled_comparison_metrics.json`, and
+  `controlled_comparison_fields.npz`.
+- [patch] Correct Figure 5 pressure targeting display by changing the visible
+  Westervelt pressure panel from raw body/coupling peak pressure to target-mask
+  pressure on the matched CT frame. The raw pressure evidence remains in
+  diagnostics; the visible panel no longer lets source/coupling peaks appear as
+  lesion-targeting failure.
+
+### Added (2026-05-18) - Native DG Acoustic RHS and Diagnostics
+
+- [patch] `solver::forward::pstd::dg::dg_solver::acoustic`: add a native
+  1-D first-order acoustic DG RHS and SSP-RK3 stepper over pressure and
+  particle velocity with caller-owned workspace reuse. The coupled RHS uses
+  Lax-Friedrichs/Rusanov flux with face-normal strong-form corrections
+  `F* - F_left` and `F_right - F*`, preserving quadrature-weighted pressure
+  and velocity component masses on periodic line elements.
+- [patch] `examples/dg_acoustic_1d_diagnostics`: add a native coupled
+  acoustic comparison against the analytical standing-wave solution and the
+  scalar characteristic reconstruction path. Verified metrics:
+  `pressure_relative_l2 = 1.651618e-4`,
+  `velocity_relative_l2 = 1.547224e-2`,
+  `pressure_characteristic_l2 = 4.571134e-16`,
+  `velocity_characteristic_l2 = 5.365939e-15`,
+  `pressure_mass_error = 8.046975e-16`,
+  `velocity_mass_error = 3.816392e-17`, and `energy_ratio = 1.0`.
+- [patch] `physics::mod`: remove the stale `foundations::BoundaryCondition`
+  re-export from the physics prelude; the canonical boundary trait remains
+  `domain::boundary::BoundaryCondition`.
+- [patch] `examples/dg_acoustic_1d_diagnostics`: extend the native diagnostic
+  with an embedded-line Gaussian pressure IVP that runs native DG, classical
+  FDTD, k-space FDTD, and PSTD against the same analytical d'Alembert pressure
+  reference. Verified matrix metrics: `DG vs exact = 4.305350e-4`,
+  `FDTD vs exact = 5.416002e-5`,
+  `FDTD+k-space vs exact = 8.204688e-6`,
+  `PSTD vs exact = 1.201431e-5`,
+  `FDTD vs PSTD = 5.348865e-5`,
+  `FDTD+k-space vs PSTD = 1.405561e-5`, and
+  `DG pressure mass error = 1.865175e-14`.
+- [patch] `examples/dg_acoustic_comparison_plot`: add plotted comparison
+  output for the same shared fixture. The executable writes
+  `target/dg_acoustic_comparison/gaussian_pressure.png` and
+  `target/dg_acoustic_comparison/gaussian_pressure.csv`, plotting final
+  pressure traces plus absolute error against the analytical reference for DG,
+  classical FDTD, k-space FDTD, and PSTD. The plot/CSV now include both native
+  solver-grid rows and common p4-quadrature rows so DG, FDTD, k-space FDTD, and
+  PSTD are also compared on one physical sampling grid. Verified common-grid
+  metrics: DG vs exact `1.992925e-3`, FDTD vs exact `7.912123e-3`,
+  FDTD+k-space vs exact `7.943160e-3`, PSTD vs exact `7.943194e-3`,
+  FDTD vs PSTD `5.197703e-5`, FDTD+k-space vs PSTD `1.097571e-5`,
+  DG vs FDTD `7.700342e-3`, and DG vs PSTD `7.729329e-3`.
+- [patch] `examples/dg_acoustic_comparison_plot`: add a uniform-grid DG
+  resampling view on the native FDTD/PSTD grid. The DG trace averages left/right
+  values at shared element interfaces, so the CSV now includes
+  `uniform_pressure` and `uniform_absolute_error` rows without interpolating the
+  FDTD/PSTD traces. Verified uniform-grid metrics: DG vs exact `4.661959e-5`,
+  FDTD vs exact `5.416002e-5`, FDTD+k-space vs exact `8.204688e-6`,
+  PSTD vs exact `1.201431e-5`, DG vs FDTD `7.735854e-5`, and DG vs PSTD
+  `4.567891e-5`.
+- [patch] `examples/dg_acoustic_convergence_plot`: add DG p-refinement
+  diagnostics for the Gaussian pressure fixture. The executable writes
+  `target/dg_acoustic_comparison/dg_order_convergence.png` and
+  `target/dg_acoustic_comparison/dg_order_convergence.csv`. The CSV now reports
+  both per-order nodal-quadrature error and common p4-quadrature error, proving
+  that the apparent p1→p2 regression came from comparing different quadrature
+  node sets. Verified common pressure relative-L2 by polynomial order: p1
+  `3.402122e-2`, p2 `1.992925e-3`, p3 `1.807932e-4`, p4 `1.398263e-5`;
+  mass errors remain bounded by `1.865175e-14`.
+- [patch] `examples/dg_acoustic_timestep_sweep`: add a fixed-final-time
+  timestep-refinement matrix and plot for DG, classical FDTD, k-space FDTD, and
+  PSTD on the same Gaussian pressure IVP. The executable writes
+  `target/dg_acoustic_comparison/timestep_sweep.png` and
+  `target/dg_acoustic_comparison/timestep_sweep.csv`, using the native uniform
+  grid with interface-averaged DG. Verified relative-L2 at steps 20/40/80:
+  DG `4.661914e-5`/`4.661959e-5`/`4.661964e-5`, FDTD
+  `5.478178e-5`/`5.416002e-5`/`5.384838e-5`, k-space FDTD
+  `8.204427e-6`/`8.204688e-6`/`8.204890e-6`, and PSTD
+  `1.206625e-5`/`1.201431e-5`/`1.198838e-5`.
+
+### Added (2026-05-18) - Focused Water-Tank Solver Comparison
+
+- [patch] `examples/focused_ultrasound_water_tank`: add a homogeneous-water
+  focused-ultrasound comparison with a phased Hamming-apodized line aperture,
+  FDTD+CPML and PSTD+CPML gated peak-pressure maps, analytical focused-array
+  envelope reference, pairwise normalized-L2/correlation metrics, and
+  axial/lateral profile exports. The example writes
+  `target/focused_water_tank/focused_water_tank.png`,
+  `target/focused_water_tank/focused_water_tank_metrics.csv`, and
+  `target/focused_water_tank/focused_water_tank_profiles.csv`.
+- [patch] `examples/focused_ultrasound_water_tank`: correct the source
+  dimensionality for the embedded 2-D water-tank fixture by extending the
+  phased aperture through every z-slice of the thin slab. The prior center-slice
+  source radiated a 3-D problem while the analytical reference models a
+  z-invariant line aperture. Verified metrics after correction: FDTD vs PSTD
+  normalized-L2 `1.142732e-1`, correlation `0.979759`; FDTD vs analytical
+  normalized-L2 `1.546687e-1`, correlation `0.962772`; PSTD vs analytical
+  normalized-L2 `5.851104e-2`, correlation `0.995336`.
+- [patch] `examples/focused_ultrasound_water_tank`: include native DG in the
+  focused water-tank comparison as a scoped 1-D axial acoustic line solve. The
+  DG path uses the coupled pressure/velocity DG RHS with SSP-RK3 substeps,
+  source projection on the axial line, and a longer periodic line domain to
+  avoid wraparound during the gated measurement. CSV output now records
+  `axial_solver` and `axial_pair` rows. Current axial metrics: FDTD vs
+  `DG-1D axial` normalized-L2 `2.218071e-1`, correlation `0.918299`; PSTD vs
+  `DG-1D axial` normalized-L2 `2.199460e-1`, correlation `0.862900`;
+  analytical vs `DG-1D axial` normalized-L2 `2.273648e-1`, correlation
+  `0.823690`.
+- [patch] `solver::forward::pstd::dg::dg_solver::acoustic`: add native
+  tensor-product 2-D/3-D acoustic DG state evolution over `[p, u_x, u_y, u_z]`
+  with Rusanov face fluxes, SSP-RK3 workspace reuse, direct grid projection,
+  and value-semantic constant-state plus 2-D/3-D quadrature-mass conservation
+  tests. `examples/focused_ultrasound_water_tank` now includes DG-2D and DG-3D
+  gated peak-pressure map solvers beside FDTD, PSTD, and the analytical
+  reference. Current focused-map metrics: FDTD vs DG-2D normalized-L2
+  `3.079168e-1`, correlation `0.862685`; PSTD vs DG-2D normalized-L2
+  `2.867320e-1`, correlation `0.880993`; DG-2D vs DG-3D normalized-L2
+  `3.511912e-16`, correlation `1.000000` for the z-invariant homogeneous slab.
+- [patch] `simulation::solver_adapters::dg`: route
+  `SolverType::DiscontinuousGalerkin` through the native acoustic tensor state
+  instead of the scalar DG advection operator. The simulation adapter now
+  advances pressure and particle velocity components in 1-D/2-D/3-D active
+  grids, projects `[p, u_x, u_y, u_z]` back to the simulation field layout, and
+  reports nonzero velocity statistics for input-sensitive acoustic evolution.
+
+### Added (2026-05-18) - OpenPros Speed-Shift Benchmark
+
+- [patch] `clinical::imaging::reconstruction::sound_speed_shift`: add an
+  OpenPros-style limited-view prostate SOS benchmark fixture and Criterion
+  harness. The fixture builds a decimated 2-D SOS-shift phantom, top/bottom
+  body-surface and rectal probe channels, finite-frequency 1 MHz sensitivity,
+  and one shared fixed-acquisition frame, then compares dense and sparse
+  reconstructions through the existing `SoundSpeedShiftPlan` API.
+
+### Added (2026-05-18) - TFUScapes One-Case Import
+
+- [patch] `pykwavers/examples/book/transcranial_planning/tfuscapes.py`: add a
+  reproducible TFUScapes train-row-0 import path that validates `ct`, `pmap`,
+  and `tr_coords`, derives the target from the paper pressure-map peak, fits
+  paper transducer coordinates to the shared scene radius, routes the case
+  through the existing skull-adaptive transcranial benchmark, and records
+  structural geometry/output comparison metadata.
+
+### Added (2026-05-18) - DG Bidirectional Acoustic Diagnostics
+
+- [patch] `examples/dg_advection_diagnostics`: add a bidirectional linear
+  acoustic characteristic fixture by evolving `w+` directly and evolving the
+  reflected `w-` field through the same positive-advection DG core. The
+  reconstructed standing-wave state verifies pressure, velocity, and acoustic
+  energy against the analytical solution without changing the scalar DG RHS
+  contract. Verified metrics: `pressure_relative_l2 = 1.651615e-4`,
+  `velocity_relative_l2 = 1.547223e-2`, and `energy_ratio = 1.0`.
+
+### Added (2026-05-18) - Chapter 29 Patient-Adaptive Transmit Scheduling
+
+- [patch] `clinical::therapy::theranostic_guidance`: add a focused transmit
+  schedule control surface with `full`, `uniform`, and `patient_adaptive`
+  strategies plus an explicit transmit budget. The patient-adaptive schedule
+  ranks CT-derived aperture elements by target sensitivity and greedy aperture
+  diversity, then feeds the selected transmit subset through the existing
+  matrix-free same-aperture inverse path.
+- [patch] `pykwavers/examples/book/ch29_adaptive_transmit.py`: add an
+  `adaptive_transmit` render scope that reuses the Chapter 29 brain, kidney,
+  and liver cases and writes active Dice/CNR versus transmit budget metrics.
+
+### Added (2026-05-18) - DG Acoustic Characteristic Diagnostics
+
+- [patch] `examples/dg_advection_diagnostics`: extend the DG scalar fixture
+  with the exact one-way linear-acoustic characteristic map
+  `w+ = p + rho*c*u`, `w- = p - rho*c*u = 0`. The diagnostic reconstructs
+  pressure and particle velocity from the evolved DG characteristic and checks
+  the exact shifted acoustic solution. Verified metrics:
+  `pressure_relative_l2 = 8.263806e-4`,
+  `velocity_relative_l2 = 8.263806e-4`, `left_invariant_error = 0`, and
+  `energy_ratio = 1.0`. This is the first acoustically valid DG comparison
+  slice without claiming full bidirectional acoustic-system parity.
+
+### Added (2026-05-18) - DG Scalar Discrepancy Diagnostics
+
+- [patch] `examples/dg_advection_diagnostics`: add a real DG scalar-advection
+  readiness diagnostic that advances the current nodal DG core against the
+  analytical periodic solution and reports relative L2, quadrature-weighted
+  mass error, phase error, and amplitude ratio. The bounded fixture records
+  `relative_l2 = 8.263806e-4`, `mass_error = 4.873462e-16`,
+  `phase_error_rad = 8.129815e-6`, and `amplitude_ratio = 9.999997e-1`.
+  The example documents why DG is compared to scalar advection while
+  `pstd_fdtd_comparison.rs` remains the acoustic FDTD/PSTD pressure-field
+  comparison.
+
+### Fixed (2026-05-18) - Spectral-DG Dimensional Completion
+
+- [patch] `solver::forward::pstd::dg`: complete embedded 1-D, 2-D, and 3-D
+  Spectral-DG execution by adding an explicit tensor-product DG topology,
+  reusable physical-grid projection/reconstruction, tensor-product volume and
+  periodic face RHS assembly, lower-dimensional discontinuity detection, and
+  executable hybrid `solve_step_into`/`solve_step` APIs with reused spectral,
+  DG, mask, and coupling buffers. The simulation DG adapter now accepts scalar
+  physical grids whose active dimensions are divisible by `p + 1` instead of
+  requiring the old line coefficient layout. Added dimensional projection,
+  discontinuity, hybrid workspace, DG convergence, and adapter regressions.
+
+### Fixed (2026-05-18) - DG Periodic RHS Conservation
+
+- [patch] `solver::forward::pstd::dg`: correct the left-face
+  Lax-Friedrichs residual sign in the scalar DG RHS, route DG time stepping
+  through one extracted line/tensor-product RHS module, and preserve periodic
+  quadrature-weighted global mass for both one-dimensional and tensor-product
+  coefficient layouts. Added co-located conservation documentation with
+  Hesthaven-Warburton, Cockburn-Shu, and Kopriva references, plus manufactured
+  p=2 line and tensor-product regressions.
+
+### Fixed (2026-05-17) - DG Shock-Capture Mass Conservation
+
+- [patch] `solver::forward::pstd::dg`: make the DG troubled-cell limiter
+  preserve the quadrature-weighted element mean represented by the diagonal
+  mass matrix instead of the arithmetic node mean. Limited reconstructions now
+  subtract the quadrature-weighted node centroid before applying the TVD slope,
+  so flagged elements preserve the DG cell integral for nonuniform GLL weights.
+  Updated DG limiter documentation and replaced the limiter regression with a
+  polynomial-order-2 case that would fail under arithmetic-mean preservation.
+
+### Fixed (2026-05-17) - Hybrid Coupling Quality and Compile-Blocker Cleanup
+
+- [patch] `solver::forward::hybrid::coupling`: restrict region-coupling
+  conservation and quality diagnostics to the active interface plane that is
+  actually written to the target region. This closes the discrepancy where the
+  affine conservation repair could place target integral into inactive
+  region-buffer planes that were later discarded by `apply_to_target`. Added a
+  manufactured two-region test that preserves the target pressure-plane
+  integral, isolates non-pressure components, and verifies zero conservation
+  error against the target interface trace.
+
+- [patch] `clinical::therapy::theranostic_guidance::nonlinear3d`: update
+  direct test fixtures for the explicit `SourceDomain` and `source_body_mask`
+  contracts introduced by exterior-coupling source support. Source-plan tests
+  now exercise both tissue-boundary and exterior-coupling source domains
+  through the current constructor surface.
+
+- [patch] `clinical::therapy::theranostic_guidance::nonlinear3d`: extend the
+  abdominal nonlinear crop to include the focused-bowl standoff outside the
+  planned skin contact and replace abdominal point injection with finite-area
+  non-body exterior-coupling source patches. Chapter pressure diagnostics now
+  record raw/body hotspot coordinates, hotspot-to-target distance,
+  points-per-wavelength status, and source-plan support/delay metrics; the
+  reduced KiTS19 histotripsy check reports target MI `2.55` with target/body
+  peak ratio `0.513` while flagging the `0.290` PPW grid as a diagnostic-only
+  under-resolved run.
+
+- [patch] `clinical::imaging::reconstruction::real_time_sirt`: remove the
+  duplicate acoustic row-norm helper left by overlapping edits while retaining
+  the cached, documented row-norm preconditioner used by the acoustic SIRT
+  update.
+
+- [patch] `pykwavers/examples/book/ch29_theranostic_fwi_platforms.py`: render
+  Figure 5 nonlinear pressure, FWI, cavitation, and fusion panels with the
+  actual nonlinear 3-D aperture projection and target centroid rather than the
+  Figure 2 planned 2-D beam overlay. The planned exposure panel still uses the
+  Figure 2 planned aperture, so visual overlays now distinguish setup intent
+  from the realized nonlinear source set.
+
+- [patch] `clinical::therapy::theranostic_guidance::nonlinear3d::forward`:
+  add source-delay regressions proving the focused delay law aligns arrivals
+  at the target and delays high-speed skull paths relative to slower
+  soft-tissue paths under the implemented scalar straight-ray slowness model.
+
+- [patch] Chapter 29 controlled comparison metrics now report CT-frame
+  nonlinear pressure-hotspot localization in meters, decomposed into planned
+  beam-axis and cross-axis offsets. The geometry block also records planned
+  versus realized nonlinear aperture axis angle and source-to-target distance
+  statistics, so liver pressure error can be classified as prefocal/postfocal
+  gain error or lateral aperture/phase error on the shared CT field of view.
+  The pressure diagnostic helper now accepts both native 3-D volumes and
+  projected 2-D target-slab fields with the same metric schema.
+
+- [patch] Chapter 29 book generation now registers Python, extension, and
+  MSYS UCRT DLL directories before loading `pykwavers.dll`, rejects stale PyO3
+  extensions whose nonlinear signature lacks the current
+  `treatment_window_radius_m` and `min_points_per_wavelength` controls, and
+  supports `KWAVERS_CH29_OUT_DIR` for scratch artifact generation. A bounded
+  comparison-scope smoke run completed brain, kidney, and liver nonlinear
+  cases into `target/ch29-smoke` without overwriting production figures.
+
+### Fixed (2026-05-17) - DG Shock-Capture Execution
+
+- [patch] `solver::forward::pstd::dg`: route enabled shock capture through
+  `SspRk3` and `ForwardEuler` time stepping. Each enabled SSP-RK stage now
+  applies a conservative troubled-cell projection using solver-owned scratch:
+  element means are preserved, intra-element oscillations are damped through a
+  TVD limited linear reconstruction, and disabled shock capture leaves modal
+  oscillations unchanged. Updated DG shock-capture documentation and added
+  value-semantic tests for enabled and disabled paths.
+
+### Fixed (2026-05-17) - Hybrid Conservation and DG Trait Solve
+
+- [patch] `solver::forward::hybrid::coupling`: replace unit-sum pressure
+  normalization with an affine interface projection that matches the target
+  pressure integral exactly and matches target quadratic energy when the
+  interpolated trace has nonzero variance. Shape mismatches now return a typed
+  validation error. Added conservation tests for integral/energy matching,
+  identical-interface idempotence, and mismatch rejection.
+
+- [patch] `solver::forward::pstd::dg`: complete the `NumericalSolver` adapter
+  by reconstructing updated modal coefficients back to the returned grid field
+  after `solve_step`. Added a regression test comparing the trait-level result
+  against explicit project/step/reconstruct execution and proving the returned
+  field advances.
+
+### Fixed (2026-05-17) - Hybrid Coupling and DG RK Workspace
+
+- [patch] `solver::forward::hybrid::coupling`: enforce the canonical
+  component-first field layout (`[field, x, y, z]`) for pressure-interface
+  extraction and target writes. Single-region hybrid runs now skip coupling
+  instead of fabricating a self-interface. Added value-semantic tests that
+  reject component-last pressure reads/writes and preserve non-pressure fields.
+
+- [patch] `solver::forward::pstd::dg`: add reusable SSP-RK workspaces for the
+  original state, active stage, and RHS register. `SspRk3` and `ForwardEuler`
+  now update modal coefficients in place after the initial projection, and the
+  DG RHS path no longer allocates a face-residual vector per element/variable.
+  Added a pointer-stability and constant-state invariant test.
+
+### Fixed (2026-05-17) — Hybrid FDTD/PSTD and DG Audit
+
+- [patch] `solver::forward::hybrid`: correct the hybrid transition weight from
+  a PSTD-heavy boundary blend to a raised-cosine partition that gives FDTD full
+  weight at the interface boundary and PSTD full weight in the smooth interior.
+  `DomainRegion` is now `Copy`, allowing hybrid stepping and update paths to
+  iterate by value instead of cloning the full region vector each step. Added a
+  value-semantic test for the FDTD-to-PSTD weight contract.
+
+- [patch] `solver::forward::pstd::dg`: remove redundant dense mass-matrix
+  inversion from every DG `solve_step`; the differentiation and lift matrices
+  already encode the inverse-mass action (`D = M^-1 S`, `LIFT = M^-1 E`).
+  `RegionPSTDSolver` now preallocates `prev_field` at construction and uses a
+  `has_prev_field` flag, eliminating the first-step `field.clone()` allocation.
+  Added a pointer-stability test for previous-field reuse.
+
+### Added (2026-05-17) — Solver Comparison Diagnostics
+
+- [patch] `examples/pstd_fdtd_comparison`: replace the placeholder
+  plugin-only demonstration with a real three-way pressure-field comparison
+  between classical FDTD, k-space corrected FDTD, and PSTD on the same
+  homogeneous Gaussian initial-value problem. The example documents the
+  shared linear acoustic Cauchy problem, the half-step velocity alignment
+  contract, and references CFL/FDTD/PSTD/k-space literature. It reports
+  runtime, final-field L2 energy, relative L2 error, normalized max error,
+  correlation, energy ratio, and centroid shift without writing
+  output files. On the bounded debug fixture, classical FDTD differs from
+  PSTD by `5.60099e-2` relative L2, while k-space FDTD matches PSTD at
+  `7.25746e-16` relative L2.
+
+### Fixed (2026-05-17) — Chapter 29 Histotripsy Pressure Path
+
+- [patch] `clinical::therapy::theranostic_guidance::nonlinear3d`: replace the
+  abdominal target-only nonlinear propagation crop with a target-to-skin path
+  crop, reuse the planned abdominal skin contact as the nonlinear focused-bowl
+  vertex, place abdominal sources in exterior coupling cells on the
+  HistoSonics-like bowl, and steer each source by straight-ray slowness through
+  the CT-derived sound-speed map. Chapter 29 pressure diagnostics now split raw
+  global peak pressure from body-masked pressure so source/coupling drive peaks
+  no longer masquerade as off-target focal pressure.
+
+- [patch] `clinical::therapy::theranostic_guidance::nonlinear3d`: replace the
+  explicit Westervelt `p*dtt(p)` feedback update with a finite-amplitude
+  numerator/denominator cell update, bound additive source injection per source
+  cell, preserve abdominal target-facing aperture order, and export raw
+  pressure/MI diagnostics through the Chapter 29 artifacts. Regenerated Figure 5,
+  Figure 6, `metrics.json`, `controlled_comparison_metrics.json`, and
+  `controlled_comparison_fields.npz`; all three nonlinear target masks now exceed
+  the inertial-cavitation MI threshold at finite pressure.
+
+- [patch] `clinical::therapy::theranostic_guidance::nonlinear3d::cavitation`:
+  normalize the Rayleigh-Plesset source density by the active treatment-window
+  peak pressure instead of the global pressure peak. Excluded source/boundary
+  lobes can no longer downscale valid in-window cavitation evidence.
+
+- [patch] `clinical::therapy::theranostic_guidance::nonlinear3d::optimization`:
+  record per-iteration FWI line-search diagnostics and allow a bounded
+  single-parameter fallback at the smallest accepted scale after the coupled
+  multiparameter update fails. The Chapter 29 metrics writer now serializes
+  objective-before/objective-after, gradient norms, accepted scale, and accepted
+  parameter block for nonlinear full runs.
+
+### Added (2026-05-17) — Chapter 29 Elastic Shear Comparison
+
+- [patch] `solver::inverse::same_aperture`: parameterize finite-frequency
+  pitch-catch rows by `phase_speed_m_s` instead of hard-wiring the acoustic
+  tissue speed. The same matrix-free operator now supports an explicit
+  low-frequency shear comparison without cloning the inverse implementation.
+
+- [patch] `clinical::therapy::theranostic_guidance`: add an exported
+  `same_aperture_low_frequency_shear_wave_inverse` reconstruction channel with
+  default frequencies `250/500/750 Hz` and shear speed `2.5 m/s`. PyO3 exports
+  the reconstruction, metrics, frequencies, shear speed, and comparison-model
+  metadata. Figure 2 and the controlled comparison scripts render the new
+  elastic shear panel on the same full CT placement grid as the acoustic
+  channels.
+
+- [patch] Chapter 29 artifacts: regenerated Figure 1, Figure 2, and Figure 4
+  with the rebuilt release PyO3 extension. Full Figure 6 regeneration remains
+  blocked by a nonlinear brain-case process exit during
+  `run_theranostic_nonlinear_3d_from_ritk`; no Python traceback was emitted.
+
 ### Added (2026-05-17) — Book Physics Structural Splits
 
 - [patch] `physics::book::wave` directory split: replace monolithic `wave.rs` (641 lines) with
@@ -102,6 +612,51 @@
   to typed validation error, and reused the nonlinear-term and next-pressure
   workspaces during updates. Added quadratic-field stencil exactness,
   unsupported-order rejection, and workspace-reuse tests.
+
+- [patch] `solver::forward::thermal_diffusion::solver`: reject unsupported
+  finite-difference `spatial_order` values with a typed validation error instead
+  of silently mutating the configuration to second order. Documented the
+  centered-stencil quadratic exactness theorem and added value tests for O4
+  quadratic exactness plus invalid-order state preservation.
+
+- [patch] `solver::forward::nonlinear::westervelt_spectral`: remove per-step
+  pressure-history clones from `update_wave`, remove the unused `B/A` field
+  allocation, and document the borrowed three-buffer leapfrog role invariant.
+  Added ring-buffer permutation and pointer-stability zero-state update tests.
+
+- [patch] `solver::forward::nonlinear::westervelt_spectral`: add solver-owned
+  nonlinear and damping workspaces, route nonlinear and viscoelastic terms
+  through caller-owned `_into` kernels, compute the damping stencil without a
+  full `dp_dt` temporary, fold source amplitude into the final update loop
+  instead of allocating `src_term`, and stop charging source-mask time to
+  k-space metrics.
+
+- [patch] `solver::forward::nonlinear::westervelt_spectral`: remove per-step
+  shear/bulk viscosity coefficient array allocation from the damping path by
+  reading `Medium::shear_viscosity` and `Medium::bulk_viscosity` pointwise in
+  the stencil. This also restores homogeneous-medium damping, which the
+  inherited zero-valued `ElasticArrayAccess` defaults had suppressed.
+
+- [patch] `solver::forward::nonlinear::westervelt_spectral` and
+  `domain::source`: add caller-owned source-mask sinks
+  `Source::create_mask_into` / `Source::add_mask_into`, route the spectral
+  Westervelt update through solver-owned `source_mask_scratch`, and implement
+  allocation-free direct mask writes for all in-crate source implementations.
+  Added owned-vs-reused mask equivalence and source-mask pointer-stability
+  tests.
+
+- [patch] `domain::source`: override `get_source_term` for point,
+  time-varying, composite, and null sources so per-cell wave-equation RHS
+  assembly no longer inherits the allocating full-mask fallback. Composite
+  source terms now sum child-local terms instead of multiplying the summed mask
+  by the summed amplitude. `SimpleCustomSource::get_source_term` now matches its
+  grid-cell mask semantics rather than selecting the nearest source position,
+  and `TimeVaryingSource` no longer stores its waveform vector twice.
+
+- [patch] `solver::forward::hybrid`: add solver-owned
+  `source_mask_scratch` and route update-time pressure source injection through
+  `Source::create_mask_into`, removing the per-step mask allocation from the
+  hybrid PSTD/FDTD update path. Added a full update-path pointer-stability test.
 
 - [patch] `docs/book/cavitation_and_bubbles.md` Theorem 7.6 proof: integrand
   was `R dR` but correct form from energy integral ṙ²=(2p∞/3ρL)(R₀³/R³−1) is

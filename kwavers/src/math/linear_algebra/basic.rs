@@ -9,9 +9,9 @@ use ndarray::{s, Array1, Array2};
 
 /// Basic linear algebra operations for real-valued matrices
 #[derive(Debug)]
-pub struct BasicLinearAlgebra;
+pub struct LinearAlgebra;
 
-impl BasicLinearAlgebra {
+impl LinearAlgebra {
     /// Solve a linear system Ax = b using LU decomposition
     ///
     /// # Arguments
@@ -272,7 +272,7 @@ mod tests {
         let a = Array2::from_shape_vec((2, 2), vec![2.0, 1.0, 1.0, 2.0]).unwrap();
         let b = Array1::from_vec(vec![3.0, 3.0]);
 
-        let x = BasicLinearAlgebra::solve_linear_system(&a, &b).unwrap();
+        let x = LinearAlgebra::solve_linear_system(&a, &b).unwrap();
         assert!((x[0] - 1.0).abs() < 1e-10);
         assert!((x[1] - 1.0).abs() < 1e-10);
     }
@@ -280,7 +280,7 @@ mod tests {
     #[test]
     fn test_matrix_inverse() {
         let a = Array2::from_shape_vec((2, 2), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
-        let a_inv = BasicLinearAlgebra::matrix_inverse(&a).unwrap();
+        let a_inv = LinearAlgebra::matrix_inverse(&a).unwrap();
 
         // Check A * A^(-1) = I
         let identity = a.dot(&a_inv);
@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn test_svd_reconstruction() {
         let a = Array2::from_shape_vec((2, 2), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
-        let (u, s, v) = BasicLinearAlgebra::svd(&a).unwrap();
+        let (u, s, v) = LinearAlgebra::svd(&a).unwrap();
 
         // Check A = U * S * V^T
         // Construct S as a diagonal matrix

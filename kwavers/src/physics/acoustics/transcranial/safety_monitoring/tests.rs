@@ -3,21 +3,33 @@ use ndarray::Array3;
 
 #[test]
 fn test_safety_monitor_creation() {
-    let monitor = SafetyMonitor::new((16, 16, 16), 0.01, 650e3);
+    let monitor = TranscranialSafetyMonitor::new((16, 16, 16), 0.01, 650e3);
     assert_eq!(monitor.temperature.dim(), (16, 16, 16));
 }
 
 #[test]
 fn test_safety_level_classification() {
-    assert_eq!(SafetyLevel::from_value(0.5, 1.0), SafetyLevel::Safe);
-    assert_eq!(SafetyLevel::from_value(0.85, 1.0), SafetyLevel::Monitor);
-    assert_eq!(SafetyLevel::from_value(0.95, 1.0), SafetyLevel::Warning);
-    assert_eq!(SafetyLevel::from_value(1.1, 1.0), SafetyLevel::Critical);
+    assert_eq!(
+        TranscranialSafetyLevel::from_value(0.5, 1.0),
+        TranscranialSafetyLevel::Safe
+    );
+    assert_eq!(
+        TranscranialSafetyLevel::from_value(0.85, 1.0),
+        TranscranialSafetyLevel::Monitor
+    );
+    assert_eq!(
+        TranscranialSafetyLevel::from_value(0.95, 1.0),
+        TranscranialSafetyLevel::Warning
+    );
+    assert_eq!(
+        TranscranialSafetyLevel::from_value(1.1, 1.0),
+        TranscranialSafetyLevel::Critical
+    );
 }
 
 #[test]
 fn test_mechanical_index_calculation() {
-    let mut monitor = SafetyMonitor::new((8, 8, 8), 0.01, 1e6);
+    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
     let temperature = Array3::from_elem((8, 8, 8), 37.0);
     let mut pressure = Array3::zeros((8, 8, 8));
     pressure[[4, 4, 4]] = 1e6; // 1 MPa
@@ -30,7 +42,7 @@ fn test_mechanical_index_calculation() {
 
 #[test]
 fn test_thermal_dose_accumulation() {
-    let mut monitor = SafetyMonitor::new((4, 4, 4), 0.01, 650e3);
+    let mut monitor = TranscranialSafetyMonitor::new((4, 4, 4), 0.01, 650e3);
     let mut temperature = Array3::from_elem((4, 4, 4), 37.0);
     temperature[[2, 2, 2]] = 42.0; // Hot spot below safety limit (43°C)
     let pressure = Array3::zeros((4, 4, 4));
@@ -47,7 +59,7 @@ fn test_thermal_dose_accumulation() {
 
 #[test]
 fn test_safety_limit_checking() {
-    let mut monitor = SafetyMonitor::new((4, 4, 4), 0.01, 650e3);
+    let mut monitor = TranscranialSafetyMonitor::new((4, 4, 4), 0.01, 650e3);
     let mut temperature = Array3::from_elem((4, 4, 4), 37.0);
     temperature[[2, 2, 2]] = 50.0; // Above limit
     let pressure = Array3::zeros((4, 4, 4));

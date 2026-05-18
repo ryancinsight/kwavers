@@ -107,7 +107,7 @@ fn test_mock_transducer_telemetry() {
 
 #[test]
 fn test_device_specification_creation() {
-    let spec = TransducerSpecification {
+    let spec = DeviceTransducerSpecification {
         model: "TEST-1.5".to_string(),
         manufacturer: "TestCorp".to_string(),
         serial_number: "SN-001".to_string(),

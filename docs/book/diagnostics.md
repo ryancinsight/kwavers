@@ -495,6 +495,28 @@ uniform sound-speed shift integrates to the geometric path length. This keeps th
 linearized shift equation in (5.24) dimensionally identical while broadening
 sensitivity to off-axis pixels.
 
+**OpenPros limited-view benchmark.** The clinical benchmark fixture follows the
+OpenPros prostate USCT structure: 2-D SOS maps, top and bottom probe rows, 20
+sources split across the body-surface and rectal probes, receiver lines spanning
+the lateral aperture, a 1 MHz Ricker excitation expectation, 1,000 recorded
+time steps, and a 120-point absorbing boundary contract. The default kwavers
+fixture decimates the paper lattice from 401 x 161 at 0.375 mm to 41 x 17 at
+3.75 mm so it can run in bounded tests while preserving the limited-view
+top/bottom source-receiver channel topology. The waveform metadata remains
+attached to the benchmark result for auditability; the current reconstruction
+uses the existing finite-frequency speed-shift operator rather than a separate
+full-waveform inversion API.
+
+Dense and sparse branches are selected only through existing configuration:
+`ShiftSampling::Dense` plus `ShiftPrior::Dense` for the dense branch, and
+`ShiftSampling::Sparse` plus `ShiftPrior::Sparse` for the sparse branch. Both
+branches run through `SoundSpeedShiftPlan` on the same samples and frame shift
+vector. The Criterion entry point is:
+
+```
+cargo bench -p kwavers --bench clinical_sound_speed_shift_openpros
+```
+
 Implemented in `kwavers::clinical::imaging::reconstruction::sound_speed_shift`.
 
 ---
@@ -556,6 +578,7 @@ reparameterization by the change-of-variables theorem. □
 | SWE velocity mapping | `functional_ultrasound::ulm::velocity_mapping` | `VelocityMapper` |
 | Vasculature analysis | `functional_ultrasound::vasculature` | `FrangiFilter` |
 | Speed-of-sound shift | `clinical::imaging::reconstruction::sound_speed_shift` | `reconstruct_sound_speed_shift()` |
+| OpenPros shift benchmark | `clinical::imaging::reconstruction::sound_speed_shift` | `run_openpros_shift_benchmark()` |
 
 ---
 

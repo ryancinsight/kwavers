@@ -4,7 +4,7 @@
 //! absorption, attenuation, and nonlinear effects.
 
 use crate::domain::grid::Grid;
-use crate::domain::medium::absorption::TissueType;
+use crate::domain::medium::absorption::AbsorptionTissueType;
 use crate::domain::medium::core::CoreMedium;
 
 /// Trait for acoustic wave propagation properties
@@ -48,7 +48,7 @@ pub trait AcousticProperties: CoreMedium {
     }
 
     /// Get the tissue type at a specific position (if medium supports tissue types)
-    fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<TissueType> {
+    fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<AbsorptionTissueType> {
         None
     }
 

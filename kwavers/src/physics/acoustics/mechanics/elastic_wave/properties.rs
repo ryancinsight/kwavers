@@ -1,8 +1,65 @@
-//! Elastic material properties following SSOT principle
+//! Anisotropic Elastic Material Properties
 //!
-//! This module provides anisotropic elastic properties for elastic wave physics.
-//! Isotropic properties are handled by the canonical `ElasticPropertyData` from
-//! `domain::medium::properties`.
+//! Provides the 6×6 Voigt stiffness tensor representation of anisotropic
+//! elastic solids and the isotropic special case derived from Lamé parameters.
+//!
+//! ## Mathematical Foundation: Voigt Notation
+//!
+//! The full fourth-order elasticity tensor C_{ijkl} has 81 components, but
+//! the major (C_{ijkl} = C_{klij}) and minor (C_{ijkl} = C_{jikl}) symmetries
+//! reduce the independent components to 21 for a triclinic solid.  Voigt
+//! notation maps symmetric index pairs to single indices via:
+//!
+//! ```text
+//! (xx→1, yy→2, zz→3, yz→4, xz→5, xy→6)
+//! ```
+//!
+//! giving a symmetric 6×6 matrix `C_IJ`.  All solver kernels use this
+//! representation for efficient storage and vectorised stress–strain products.
+//!
+//! ## Theorem (Isotropic Voigt Tensor)
+//!
+//! **Statement.** For an isotropic solid with Lamé parameters λ and μ:
+//!
+//! ```text
+//! C₁₁ = C₂₂ = C₃₃ = λ + 2μ
+//! C₁₂ = C₁₃ = C₂₃ = λ
+//! C₄₄ = C₅₅ = C₆₆ = μ
+//! C_{IJ} = 0    for all other I ≠ J pairs
+//! ```
+//!
+//! **Proof.** The isotropic stiffness tensor is `C_{ijkl} = λδ_{ij}δ_{kl} + μ(δ_{ik}δ_{jl} + δ_{il}δ_{jk})`.
+//! Mapping to Voigt indices:
+//! - I=J=1 (xx,xx): C₁₁ = λ·1·1 + μ(1+1) = λ + 2μ. ✓
+//! - I=1,J=2 (xx,yy): C₁₂ = λ·1·1 + μ(0+0) = λ. ✓
+//! - I=4 (yz), J=4 (yz): C₄₄ = λ·0 + μ(1+0) = μ. ✓
+//!
+//! (Ting 1996, *Anisotropic Elasticity*, §2.3.)
+//!
+//! ## Theorem (Sylvester's Criterion for Elastic Stability)
+//!
+//! **Statement.** A symmetric 6×6 stiffness matrix C corresponds to a
+//! physically stable elastic material if and only if all leading principal
+//! minors of C are positive (Sylvester's criterion):
+//!
+//! ```text
+//! C₁₁ > 0
+//! det(C_{2×2}) > 0   where C_{2×2} = [[C₁₁,C₁₂],[C₂₁,C₂₂]]
+//! det(C_{3×3}) > 0   (upper-left 3×3 block)
+//! C₄₄, C₅₅, C₆₆ > 0  (shear stability)
+//! ```
+//!
+//! The full 4×4, 5×5, 6×6 minor conditions are checked by verifying the
+//! physical shear moduli (C44, C55, C66 > 0), which are necessary conditions
+//! for the remaining minors under typical elastic symmetry classes (cubic,
+//! hexagonal, orthorhombic).  Exact verification of all 6 minors requires
+//! O(n³) Gaussian elimination and is deferred for the throughput path.
+//!
+//! ## References
+//!
+//! - Ting T.C.T. (1996). *Anisotropic Elasticity*. Oxford University Press, §2.3.
+//! - Auld B.A. (1990). *Acoustic Fields and Waves in Solids*. Krieger, §2.
+//! - Holzapfel G.A. (2000). *Nonlinear Solid Mechanics*. Wiley, §6.4.
 
 use crate::core::error::{KwaversResult, PhysicsError};
 use crate::domain::medium::properties::ElasticPropertyData;

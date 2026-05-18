@@ -15,7 +15,8 @@ use crate::domain::sensor::beamforming::BeamformingConfig;
 // Use solver-agnostic interface instead of direct solver imports
 #[cfg(feature = "pinn")]
 use super::pinn_interface::{
-    PinnBeamformingConfig as InterfacePinnConfig, UncertaintyConfig as InterfaceUncertaintyConfig,
+    PinnBeamformingConfig as InterfacePinnConfig,
+    PinnBeamformingUncertaintyConfig as InterfaceUncertaintyConfig,
 };
 
 /// Result from hybrid neural-traditional beamforming.

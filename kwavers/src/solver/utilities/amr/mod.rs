@@ -32,7 +32,7 @@ pub mod wavelet;
 pub mod tests;
 
 pub use criteria::{ErrorEstimator, RefinementCriterion};
-pub use interpolation::{ConservativeInterpolator, InterpolationScheme};
+pub use interpolation::{AmrInterpolationScheme, ConservativeInterpolator};
 pub use octree::{Octree, OctreeNode};
 pub use refinement::{RefinementLevel, RefinementManager};
 pub use wavelet::{WaveletBasis, WaveletTransform};
@@ -102,8 +102,8 @@ impl AMRSolver {
 
     /// Get memory usage statistics
     #[must_use]
-    pub fn memory_stats(&self) -> MemoryStats {
-        MemoryStats {
+    pub fn memory_stats(&self) -> AmrMemoryStats {
+        AmrMemoryStats {
             nodes: self.octree.node_count(),
             leaves: self.octree.leaf_count(),
             memory_bytes: self.octree.memory_usage(),
@@ -113,7 +113,7 @@ impl AMRSolver {
 
 /// Memory usage statistics
 #[derive(Debug, Clone)]
-pub struct MemoryStats {
+pub struct AmrMemoryStats {
     /// Number of octree nodes
     pub nodes: usize,
     /// Number of leaf nodes

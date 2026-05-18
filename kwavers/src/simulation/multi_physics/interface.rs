@@ -3,7 +3,7 @@ use crate::domain::grid::Grid;
 
 /// Simplified coupling interface definition
 #[derive(Debug, Clone)]
-pub struct CouplingInterface {
+pub struct MultiPhysicsInterface {
     /// Interface area
     pub area: f64,
     /// Interface normal direction
@@ -14,7 +14,7 @@ pub struct CouplingInterface {
     pub source_spacing: (f64, f64, f64),
 }
 
-impl CouplingInterface {
+impl MultiPhysicsInterface {
     /// Create coupling interface between grids
     ///
     /// Computes the interface area from the overlap of the two domain extents

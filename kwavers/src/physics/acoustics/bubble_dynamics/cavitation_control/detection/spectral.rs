@@ -2,7 +2,7 @@
 
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, SPECTRAL_WINDOW_SIZE};
 use super::traits::{CavitationDetector, DetectorParameters};
-use super::types::{CavitationMetrics, CavitationState, DetectionMethod, HistoryBuffer};
+use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
 use crate::math::fft::fft_1d_array;
 use ndarray::{s, Array1, ArrayView1};
 
@@ -195,15 +195,15 @@ impl SpectralDetector {
     }
 
     /// Classify cavitation state based on spectral features
-    fn classify_state(&self, metrics: &CavitationMetrics) -> CavitationState {
+    fn classify_state(&self, metrics: &CavitationMetrics) -> CavitationDetectionState {
         if metrics.confidence < 0.1 {
-            CavitationState::None
+            CavitationDetectionState::None
         } else if metrics.subharmonic_level > 0.3 || metrics.broadband_level > 0.5 {
-            CavitationState::Inertial
+            CavitationDetectionState::Inertial
         } else if metrics.harmonic_distortion > 0.2 {
-            CavitationState::Stable
+            CavitationDetectionState::Stable
         } else {
-            CavitationState::Transient
+            CavitationDetectionState::Transient
         }
     }
 
@@ -234,7 +234,7 @@ impl CavitationDetector for SpectralDetector {
 
         // Create metrics
         let mut metrics = CavitationMetrics {
-            state: CavitationState::None,
+            state: CavitationDetectionState::None,
             subharmonic_level,
             ultraharmonic_level,
             broadband_level,
@@ -253,7 +253,7 @@ impl CavitationDetector for SpectralDetector {
         self.history.push(metrics.clone());
 
         // Update cumulative dose if cavitation detected
-        if metrics.state != CavitationState::None {
+        if metrics.state != CavitationDetectionState::None {
             self.cumulative_dose += metrics.confidence;
         }
 

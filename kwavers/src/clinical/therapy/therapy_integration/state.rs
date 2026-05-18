@@ -148,7 +148,7 @@ pub struct AcousticField {
 /// Indicates whether therapy is within safe operating limits or has exceeded
 /// a specific safety threshold.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SafetyStatus {
+pub enum TherapyIntegrationSafetyStatus {
     /// All parameters within safe limits
     Safe,
 

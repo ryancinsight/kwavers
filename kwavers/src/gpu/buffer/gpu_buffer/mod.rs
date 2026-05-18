@@ -14,7 +14,7 @@ use crate::core::error::KwaversResult;
 /// staging buffers and async operations required for GPU-to-CPU data transfer.
 ///
 /// This is the canonical GPU buffer type for the kwavers codebase.
-/// [`BufferManager`](crate::gpu::BufferManager) uses this type for named-buffer pools.
+/// [`GpuBufferManager`](crate::gpu::GpuBufferManager) uses this type for named-buffer pools.
 ///
 /// # Buffer Usage Patterns
 ///
@@ -56,7 +56,7 @@ pub struct GpuBuffer {
 impl GpuBuffer {
     /// Create an empty, labeled GPU buffer (infallible).
     ///
-    /// Primary constructor used by [`BufferManager`](crate::gpu::BufferManager) and
+    /// Primary constructor used by [`GpuBufferManager`](crate::gpu::GpuBufferManager) and
     /// any call site that requires a diagnostic label. `wgpu::Device::create_buffer`
     /// panics on OOM rather than returning an error, so this constructor is infallible.
     ///

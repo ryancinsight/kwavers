@@ -23,11 +23,12 @@
 //! analysis; residual a-posteriori Helmholtz estimators by Ihlenburg/Babuška.
 
 use super::config::EnhancedBemFemConfig;
-use super::types::{InterfaceQuality, RefinementStep, ValidationResult};
+use super::types::{BemFemValidationResult, InterfaceQuality, RefinementStep};
 use crate::core::error::{KwaversError, KwaversResult};
 use std::f64::consts::PI;
 
-const DEFAULT_SOUND_SPEED_M_PER_S: f64 = 343.0;
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+const DEFAULT_SOUND_SPEED_M_PER_S: f64 = SOUND_SPEED_AIR;
 const RESONANCE_RELATIVE_BAND: f64 = 1e-6;
 
 /// Enhanced BEM-FEM solver with Burton-Miller and adaptive refinement.
@@ -67,7 +68,7 @@ impl EnhancedBemFemSolver {
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
-    pub fn validate(&mut self, frequency: f64) -> KwaversResult<ValidationResult> {
+    pub fn validate(&mut self, frequency: f64) -> KwaversResult<BemFemValidationResult> {
         let start_time = std::time::Instant::now();
         self.validate_frequency(frequency)?;
 
@@ -101,7 +102,7 @@ impl EnhancedBemFemSolver {
             spurious_resonance_detected: spurious_detected,
         });
 
-        Ok(ValidationResult {
+        Ok(BemFemValidationResult {
             frequency,
             spurious_resonance_detected: spurious_detected,
             burton_miller_used: self.config.burton_miller_config.is_some(),

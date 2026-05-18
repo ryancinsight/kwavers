@@ -18,5 +18,5 @@ pub mod damage;
 pub use core::CavitationModel;
 pub use damage::{cavitation_intensity, CavitationDamage, DamageParameters};
 
-// Re-export MaterialProperties from domain layer (SSOT location)
-pub use crate::domain::medium::properties::MaterialProperties;
+// Re-export AcousticMaterialProperties from domain layer (SSOT location)
+pub use crate::domain::medium::properties::AcousticMaterialProperties;

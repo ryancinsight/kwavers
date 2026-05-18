@@ -1,11 +1,11 @@
 use super::compound::PlaneWaveCompound;
-use super::config::PlaneWaveConfig;
+use super::config::PlaneWaveCompoundingConfig;
 use ndarray::Array2;
 use num_complex::Complex;
 
 #[test]
 fn test_plane_wave_config_default() {
-    let config = PlaneWaveConfig::default();
+    let config = PlaneWaveCompoundingConfig::default();
     assert_eq!(config.num_angles, 11);
     assert!(config.angle_range > 0.0);
     assert!(config.frequency > 0.0);
@@ -13,7 +13,7 @@ fn test_plane_wave_config_default() {
 
 #[test]
 fn test_plane_wave_creation() {
-    let config = PlaneWaveConfig::default();
+    let config = PlaneWaveCompoundingConfig::default();
     let result = PlaneWaveCompound::new(config);
     let compounding = result.expect("valid plane-wave config");
     assert_eq!(compounding.num_angles(), 11);
@@ -22,7 +22,7 @@ fn test_plane_wave_creation() {
 
 #[test]
 fn test_angle_generation() {
-    let config = PlaneWaveConfig::default();
+    let config = PlaneWaveCompoundingConfig::default();
     let num_angles = config.num_angles;
     let compounding = PlaneWaveCompound::new(config).unwrap();
     let angles = compounding.get_angles();
@@ -45,7 +45,7 @@ fn test_angle_generation() {
 #[test]
 fn test_apodization_windows() {
     for window in &["hann", "hamming", "blackman", "rect"] {
-        let cfg = PlaneWaveConfig {
+        let cfg = PlaneWaveCompoundingConfig {
             apodization: window.to_string(),
             ..Default::default()
         };
@@ -64,7 +64,7 @@ fn test_apodization_windows() {
 
 #[test]
 fn test_plane_wave_field_generation() {
-    let config = PlaneWaveConfig::default();
+    let config = PlaneWaveCompoundingConfig::default();
     let compounding = PlaneWaveCompound::new(config).unwrap();
     let field = compounding.generate_plane_wave(0).unwrap();
     assert_eq!(field.nrows(), compounding.num_axial);
@@ -73,7 +73,7 @@ fn test_plane_wave_field_generation() {
 
 #[test]
 fn test_beamforming() {
-    let config = PlaneWaveConfig::default();
+    let config = PlaneWaveCompoundingConfig::default();
     let compounding = PlaneWaveCompound::new(config).unwrap();
 
     let received = Array2::from_elem(
@@ -87,7 +87,7 @@ fn test_beamforming() {
 
 #[test]
 fn test_frame_rate_estimate() {
-    let config = PlaneWaveConfig::default();
+    let config = PlaneWaveCompoundingConfig::default();
     let num_angles = config.num_angles;
     let compounding = PlaneWaveCompound::new(config).unwrap();
     let (speedup, fps) = compounding.frame_rate_estimate();
@@ -98,7 +98,7 @@ fn test_frame_rate_estimate() {
 
 #[test]
 fn test_process_frame() {
-    let config = PlaneWaveConfig::default();
+    let config = PlaneWaveCompoundingConfig::default();
     let num_angles = config.num_angles;
     let mut compounding = PlaneWaveCompound::new(config).unwrap();
 
@@ -123,7 +123,7 @@ fn test_process_frame() {
 
 #[test]
 fn test_thermal_acoustic_config_uses_plane_wave_geometry() {
-    let plane_wave = PlaneWaveConfig {
+    let plane_wave = PlaneWaveCompoundingConfig {
         sound_speed: 1500.0,
         aperture_size: 0.012,
         lateral_step: 0.001,

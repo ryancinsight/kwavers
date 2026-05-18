@@ -29,7 +29,8 @@ pub use phase_encoding::{
 };
 
 pub use aberration_correction::{
-    AberrationCorrector, AdaptiveFocusing, CorrectionMethod, PhaseConjugation, TimeReversal,
+    AberrationCorrectionMethod, AberrationCorrector, AdaptiveFocusing, PhaseConjugation,
+    TimeReversal,
 };
 
 pub use phase_patterns::{AiryBeam, BesselBeam, PhasePattern, SpiralPhase, VortexBeam};

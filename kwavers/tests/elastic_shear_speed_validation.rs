@@ -30,8 +30,9 @@
 
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::elastic::{ElasticArrayAccess, ElasticProperties};
-use kwavers::domain::medium::heterogeneous::tissue::{HeterogeneousTissueMedium, TissueType};
+use kwavers::domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
+use kwavers::domain::medium::AbsorptionTissueType;
 use kwavers::domain::medium::ArrayAccess;
 
 /// Relative tolerance for floating-point comparisons
@@ -138,7 +139,7 @@ fn test_tissue_medium_shear_speed_computation() {
     let grid = Grid::new(20, 20, 20, 0.0005, 0.0005, 0.0005).expect("Failed to create grid");
 
     // Create tissue medium with liver as default
-    let medium = HeterogeneousTissueMedium::new(grid, TissueType::Liver);
+    let medium = HeterogeneousTissueMedium::new(grid, AbsorptionTissueType::Liver);
 
     let cs_array = medium.shear_sound_speed_array();
 
@@ -162,11 +163,11 @@ fn test_tissue_medium_different_tissue_types() {
     let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).expect("Failed to create grid");
 
     let tissue_types = vec![
-        TissueType::Water,
-        TissueType::Liver,
-        TissueType::Muscle,
-        TissueType::Fat,
-        TissueType::Blood,
+        AbsorptionTissueType::Water,
+        AbsorptionTissueType::Liver,
+        AbsorptionTissueType::Muscle,
+        AbsorptionTissueType::Fat,
+        AbsorptionTissueType::Blood,
     ];
 
     for tissue_type in tissue_types {
@@ -312,7 +313,7 @@ fn test_no_trait_default_fallback() {
     let _ = homog.shear_sound_speed_array();
 
     // Test HeterogeneousTissueMedium
-    let tissue = HeterogeneousTissueMedium::new(grid, TissueType::Liver);
+    let tissue = HeterogeneousTissueMedium::new(grid, AbsorptionTissueType::Liver);
     let _ = tissue.shear_sound_speed_array();
 
     // If this test compiles, all types have proper implementations
@@ -335,10 +336,10 @@ fn test_non_negative_shear_speeds() {
 
     // Test HeterogeneousTissueMedium with various tissue types
     for tissue_type in &[
-        TissueType::Water,
-        TissueType::Liver,
-        TissueType::Muscle,
-        TissueType::Fat,
+        AbsorptionTissueType::Water,
+        AbsorptionTissueType::Liver,
+        AbsorptionTissueType::Muscle,
+        AbsorptionTissueType::Fat,
     ] {
         let tissue = HeterogeneousTissueMedium::new(grid.clone(), *tissue_type);
         let cs_tissue = tissue.shear_sound_speed_array();

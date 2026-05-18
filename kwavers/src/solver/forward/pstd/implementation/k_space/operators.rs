@@ -2,14 +2,14 @@
 
 use super::grid::PSTDKSGrid;
 use crate::core::error::KwaversResult;
-use crate::math::fft::{Complex64, ProcessorFft3d, Shape3D};
+use crate::math::fft::{Complex64, Fft3d, Shape3D};
 use ndarray::{Array3, Zip};
 
 /// k-Space operators for PSTD spectral computations
 #[derive(Debug, Clone)]
 pub struct PSTDKSOperators {
     pub k_grid: PSTDKSGrid,
-    pub fft_processor: std::sync::Arc<ProcessorFft3d>,
+    pub fft_processor: std::sync::Arc<Fft3d>,
 }
 
 impl PSTDKSOperators {
@@ -22,7 +22,7 @@ impl PSTDKSOperators {
         let (nx, ny, nz) = k_grid.dimensions();
         Self {
             k_grid,
-            fft_processor: std::sync::Arc::new(ProcessorFft3d::new(Shape3D { nx, ny, nz })),
+            fft_processor: std::sync::Arc::new(Fft3d::new(Shape3D { nx, ny, nz })),
         }
     }
 

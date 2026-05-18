@@ -1,6 +1,6 @@
 // Simple config structs for clinical workflows
 #[derive(Debug, Clone)]
-pub struct PhotoacousticConfig {
+pub struct ClinicalPhotoacousticConfig {
     pub _wavelength: f64,
     pub _optical_energy: f64,
     pub _absorption_coefficient: f64,

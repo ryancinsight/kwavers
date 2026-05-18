@@ -9,8 +9,10 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::signal::window_value;
-use crate::domain::signal::WindowType;
-use crate::math::fft::{fft_1d_array, ifft_1d_array, Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE};
+use crate::domain::signal::SignalWindowType;
+use crate::math::fft::{
+    fft_1d_array, ifft_1d_array, Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE_3D,
+};
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use std::f64::consts::PI;
 
@@ -193,7 +195,7 @@ impl FourierReconstructor {
                     let k_norm = (kx * kx + ky * ky + kz * kz).sqrt();
 
                     let window = if k_norm < 0.5 {
-                        window_value(WindowType::Hann, k_norm / 0.5)
+                        window_value(SignalWindowType::Hann, k_norm / 0.5)
                     } else {
                         0.0
                     };
@@ -210,7 +212,7 @@ impl FourierReconstructor {
     ///
     fn inverse_fourier_transform(&self, k_space: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
-        let fft = FFT_CACHE.get_or_create(Shape3D { nx, ny, nz });
+        let fft = FFT_CACHE_3D.get_or_create(Shape3D { nx, ny, nz });
         let mut result = Array3::<f64>::zeros((nx, ny, nz));
         let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
         fft.inverse_into(k_space, &mut result, &mut scratch);

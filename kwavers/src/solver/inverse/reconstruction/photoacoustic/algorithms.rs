@@ -7,11 +7,11 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView2};
 
-use super::config::PhotoacousticConfig;
+use super::config::ReconstructionPhotoacousticConfig;
 use super::filters::Filters;
 use super::fourier::FourierReconstructor;
 use super::iterative::{IterativeAlgorithm, IterativeMethods};
-use super::linear_algebra::LinearSolver;
+use super::linear_algebra::PhotoacousticLinearSolver;
 use super::time_reversal::TimeReversal;
 use super::utils::Utils;
 
@@ -39,21 +39,21 @@ pub enum PhotoacousticAlgorithm {
 /// Main photoacoustic reconstructor
 #[derive(Debug)]
 pub struct PhotoacousticReconstructor {
-    pub(crate) config: PhotoacousticConfig,
+    pub(crate) config: ReconstructionPhotoacousticConfig,
     filters: Filters,
     iterative: IterativeMethods,
-    linear_solver: LinearSolver,
+    linear_solver: PhotoacousticLinearSolver,
     utils: Utils,
 }
 
 impl PhotoacousticReconstructor {
     /// Create a new photoacoustic reconstructor
     #[must_use]
-    pub fn new(config: PhotoacousticConfig) -> Self {
+    pub fn new(config: ReconstructionPhotoacousticConfig) -> Self {
         Self {
             filters: Filters::new(&config),
             iterative: IterativeMethods::new(&config),
-            linear_solver: LinearSolver::new(),
+            linear_solver: PhotoacousticLinearSolver::new(),
             utils: Utils::new(),
             config,
         }

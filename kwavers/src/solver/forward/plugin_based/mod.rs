@@ -12,8 +12,5 @@ mod solver;
 
 pub use field_provider::FieldProvider;
 pub use field_registry::FieldRegistry;
-pub use performance::PerformanceMonitor;
+pub use performance::PluginPerformanceMonitor;
 pub use solver::PluginBasedSolver;
-
-// Convenience alias
-pub use solver::PluginBasedSolver as Solver;

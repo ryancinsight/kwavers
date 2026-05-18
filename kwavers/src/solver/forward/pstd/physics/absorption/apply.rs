@@ -53,8 +53,8 @@ impl PSTDSolver {
     ///   - `self.fields.u{x,y,z}` ← latest velocity field
     ///
     /// On return `self.fields.p` includes the absorption correction
-    /// `c₀² · (τ·L1 − η·L2)`. Scratch buffers `dpx`, `dpy`, `dpz`, `grad_k`,
-    /// `ux_k`, `uy_k`, `uz_k` are clobbered.
+    /// `c₀² · (τ·L1 − η·L2)`. Scratch buffers `dpx`, `dpy`, `grad_k`, and
+    /// `ux_k` are clobbered (`dpz` removed in Opt-12; `uy_k`/`uz_k` in Opt-8).
     ///
     /// ## References
     /// - Treeby & Cox (2010) Eqs. 19–21.
@@ -83,30 +83,34 @@ impl PSTDSolver {
         // R2C output is half-spectrum along z: shape (nx, ny, nz_c=nz/2+1).
         let nz_c = self.grad_k.dim().2;
 
-        // ── Step 1: restore velocity divergences from the per-step cache.
+        // ── Step 1 (Opt-7 + Opt-12): build ρ₀·∇·u directly into dpx from div_u* cache.
         //
         // `update_density_cartesian` writes ∂u_α/∂α into `div_ux`/`div_uy`/`div_uz`
-        // immediately after each axis IFFT.  `apply_pressure_sources` then zeros
-        // `dpx` for source injection, but never touches `div_ux/div_uy/div_uz`.
-        // Copying the cached values into `dpx`/`dpy`/`dpz` here replaces 3 forward +
-        // 3 inverse FFT calls (≈ 6 FFT kernel invocations) with 3 memcpy-backed
-        // `assign` calls per step on the absorbing path.
-        self.dpx.assign(&self.div_ux);
-        self.dpy.assign(&self.div_uy);
-        self.dpz.assign(&self.div_uz);
-
-        // ── Step 2: build ρ₀·∇·u into dpz (overwriting it).
-        // *d on the LHS reads original dpz first, then assigns the sum.
-        Zip::from(&mut self.dpz)
-            .and(&self.dpx)
-            .and(&self.dpy)
+        // (the divergence cache).  `apply_pressure_sources` zeros `dpx` but never
+        // touches `div_ux`/`div_uy`/`div_uz`, so the cache is always current here.
+        //
+        // Opt-7: eliminated 3 N-element assigns (div_u* → dpx/dpy/dpz) with a
+        // single fused Zip writing the accumulator directly.
+        // Opt-12: `dpz` is eliminated; `dpx` replaces it as the accumulator.
+        //   - Safety: dpx was last written by the velocity z-axis gradient IFFT and
+        //     its content was fully consumed by the uz Zip before this step runs.
+        //   - dpx (Step 1 content) is consumed by the Step 3 FFT before the Step 3
+        //     IFFT overwrites dpx with L1 — no aliasing.
+        //
+        // Saves: 3 × N-element memcpy (≈ 6.3 MB bandwidth at N=64³) per step (Opt-7)
+        // + 1 × N×8 bytes of solver memory (Opt-12: dpz eliminated).
+        Zip::from(&mut self.dpx)
+            .and(&self.div_ux)
+            .and(&self.div_uy)
+            .and(&self.div_uz)
             .and(&self.materials.rho0)
-            .par_for_each(|d, &x, &y, &r0| {
-                *d = r0 * (x + y + *d);
+            .par_for_each(|d, &x, &y, &z, &r0| {
+                *d = r0 * (x + y + z);
             });
 
         // ── Step 3: L1 = IFFT( |k|^(y−2) · FFT(ρ₀·∇·u) ) → dpx (clobbered).
-        self.fft.forward_r2c_into(&self.dpz, &mut self.grad_k);
+        // FFT reads dpx (Step 1 content); IFFT then safely overwrites dpx with L1.
+        self.fft.forward_r2c_into(&self.dpx, &mut self.grad_k);
         {
             let n1 = abs.nabla1.slice(s![.., .., ..nz_c]);
             Zip::from(&mut self.grad_k).and(&n1).par_for_each(|gk, &n| {

@@ -12,7 +12,7 @@
 //!
 //! | Submodule | Contents                                                   |
 //! |-----------|------------------------------------------------------------|
-//! | `config`  | `FemHelmholtzConfig`, `PreconditionerType`                |
+//! | `config`  | `FemHelmholtzConfig`, `FemPreconditionerType`                |
 //! | `core`    | `FemHelmholtzSolver` struct + assembly, solve, interpolate |
 //!
 //! ## References
@@ -23,5 +23,5 @@ mod core;
 #[cfg(test)]
 mod tests;
 
-pub use config::{FemHelmholtzConfig, PreconditionerType};
+pub use config::{FemHelmholtzConfig, FemPreconditionerType};
 pub use core::FemHelmholtzSolver;

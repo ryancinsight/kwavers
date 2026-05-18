@@ -17,7 +17,7 @@ pub struct EMConfig {
     /// Courant stability factor
     pub courant_factor: f64,
     /// Boundary condition type
-    pub boundary_condition: BoundaryCondition,
+    pub boundary_condition: ElectromagneticBc,
 }
 
 impl Default for EMConfig {
@@ -31,14 +31,14 @@ impl Default for EMConfig {
             spatial_steps: [1e-3, 1e-3, 1e-3],         // 1mm resolution
             time_step: 1e-12,                          // 1ps time step
             courant_factor: 0.99,                      // Conservative stability
-            boundary_condition: BoundaryCondition::Absorbing,
+            boundary_condition: ElectromagneticBc::Absorbing,
         }
     }
 }
 
 /// Boundary condition types for electromagnetic simulations
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BoundaryCondition {
+pub enum ElectromagneticBc {
     /// Perfect Electric Conductor (E = 0)
     PerfectElectricConductor,
     /// Perfect Magnetic Conductor (H = 0)

@@ -15,12 +15,12 @@ pub mod sensitivity_analysis;
 mod tests;
 pub mod types;
 
-pub use bayesian_networks::{BayesianConfig, BayesianPINN, PredictionWithUncertainty};
+pub use bayesian_networks::{BayesianConfig, MlBayesianPINN, PredictionWithUncertainty};
 pub use conformal_prediction::{ConformalConfig, ConformalPredictor, ConformalResult};
 pub use ensemble_methods::{EnsembleConfig, EnsembleQuantifier, EnsembleResult};
 pub use quantifier::UncertaintyQuantifier;
 pub use sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};
 pub use types::{
-    BeamformingUncertainty, ReliabilityMetrics, UncertaintyConfig, UncertaintyMethod,
+    BeamformingUncertainty, MlUncertaintyConfig, MlUncertaintyMethod, ReliabilityMetrics,
     UncertaintyReport, UncertaintyResult, UncertaintySummary,
 };

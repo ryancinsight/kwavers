@@ -32,4 +32,6 @@ mod tests;
 
 pub use impulse::{AcousticRadiationForce, PushPulseParameters};
 pub use patterns::{DirectionalPush, MultiDirectionalPush};
-pub use tracking::{DirectionalQuality, DirectionalWaveTracker, TrackingRegion, ValidationResult};
+pub use tracking::{
+    DirectionalQuality, DirectionalWaveTracker, TrackingRegion, TrackingValidationResult,
+};

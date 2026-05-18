@@ -1,12 +1,12 @@
-use super::{SafetyLimits, SafetyViolation};
-use crate::clinical::therapy::parameters::TherapyParameters;
+use super::{ClinicalSafetyLimits, SafetyViolation};
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::time::Instant;
 
 /// Treatment dose controller with IEC compliance
 #[derive(Debug)]
 pub struct DoseController {
-    pub(super) safety_limits: SafetyLimits,
+    pub(super) safety_limits: ClinicalSafetyLimits,
     pub accumulated_dose: f64,
     session_start_time: Option<Instant>,
     treatment_history: Vec<TreatmentRecord>,
@@ -18,7 +18,7 @@ impl DoseController {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(safety_limits: SafetyLimits) -> Self {
+    pub fn new(safety_limits: ClinicalSafetyLimits) -> Self {
         Self {
             safety_limits,
             accumulated_dose: 0.0,
@@ -59,7 +59,7 @@ impl DoseController {
     pub fn update_dose(
         &mut self,
         incremental_dose: f64,
-        params: &TherapyParameters,
+        params: &ClinicalTherapyParameters,
     ) -> KwaversResult<()> {
         if let Some(start_time) = self.session_start_time {
             let session_duration = start_time.elapsed().as_secs_f64();

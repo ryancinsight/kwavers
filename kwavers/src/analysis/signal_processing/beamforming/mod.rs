@@ -259,7 +259,7 @@ pub use covariance::{
 
 // GPU beamforming re-exports (conditional on pinn feature)
 #[cfg(feature = "pinn")]
-pub use gpu::{beamform_cpu, BurnBeamformingConfig, BurnDasBeamformer, InterpolationMethod};
+pub use gpu::{beamform_cpu, BurnBeamformingConfig, BurnDasBeamformer, DasInterpolationMethod};
 
 #[cfg(test)]
 mod tests {

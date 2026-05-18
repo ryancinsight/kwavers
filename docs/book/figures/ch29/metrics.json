@@ -2,6 +2,39 @@
   "chapter": 29,
   "analysis": "same-device ultrasound treatment plus finite-frequency inverse and source-encoded linear RTM monitoring",
   "simulation_type": "RITK-loaded CT/NIfTI, kwavers PyO3 theranostic inverse",
+  "brain_scene": {
+    "name": "rire_ct_aligned_vim_like_scene",
+    "target": {
+      "name": "vim_like_atlas_coordinate_resolved_to_ct_brain_support",
+      "target_fraction_xyz": [
+        0.5925925925925926,
+        0.5,
+        0.4888888888888889
+      ],
+      "source_world_mm": [
+        14.0,
+        -18.0,
+        2.0
+      ],
+      "source_frame": "MNI152 2009c atlas coordinate mapped once into CT brain-support fractions"
+    },
+    "transducer": {
+      "element_count": 1024,
+      "frequency_hz": 650000.0,
+      "radius_m": 0.15,
+      "cap_min_polar_rad": 0.22,
+      "cap_max_polar_rad": 1.18,
+      "aperture_diameter_m": 0.12,
+      "brain_sound_speed_m_s": 1540.0,
+      "skull_sound_speed_m_s": 2800.0,
+      "target_peak_pressure_pa": 1000000.0,
+      "diagnostic_source_pressure_pa": 150000.0,
+      "samples_per_ray": 192,
+      "skull_hu_threshold": 300.0,
+      "body_hu_threshold": -350.0
+    },
+    "invariant": "target_fraction_xyz resolves against the CT-derived brain support on each simulation lattice; transducer coordinates are generated from this single pose block and expressed relative to that target."
+  },
   "figures": [
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig01_device_placement_on_ct.png",
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig02_exposure_and_reconstruction.png",
@@ -13,11 +46,17 @@
   "brain_helmet_3d": {
     "geometry_model": "ct_derived_calvarium_1024_element_helmet_with_skull_intersections",
     "element_count": 1024,
-    "helmet_radius_m": 0.15,
+    "helmet_radius_m": 0.16867803092091804,
     "beam_probe_count": 72,
     "skull_intersection_count": 72,
     "skull_intersection_fraction": 1.0,
-    "skull_hu_threshold": 300.0
+    "skull_hu_threshold": 300.0,
+    "target_fraction_xyz": [
+      0.5925925925925926,
+      0.5,
+      0.4888888888888889
+    ],
+    "scene_radius_m": 0.15
   },
   "cases": [
     {
@@ -28,120 +67,125 @@
       "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
       "operator_backend": "matrix_free_finite_frequency_same_aperture",
       "operator_storage_values": 307212,
-      "dense_operator_values": 16328704,
+      "dense_operator_values": 23998464,
       "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
       "is_full_wave_inversion": false,
       "uses_nonlinear_wave_propagation": false,
       "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
       "waveform_misfit": "charbonnier",
-      "waveform_misfit_scale": 167.67498779296875,
-      "waveform_objective": 0.0003692761461262784,
+      "waveform_misfit_scale": 110926.078125,
+      "waveform_objective": 126161083782580.36,
       "waveform_receiver_count": 1024,
-      "waveform_time_steps": 952,
-      "waveform_dt_s": 3.6807097042105114e-07,
-      "waveform_residual_energy": 0.0007398859194607059,
-      "waveform_observed_energy": 190331634405874.1,
+      "waveform_time_steps": 1114,
+      "waveform_dt_s": 3.1548940321804384e-07,
+      "waveform_residual_energy": 229419801277454.3,
+      "waveform_observed_energy": 9.74742699016738e+19,
       "element_count": 1024,
-      "source_pressure_pa": 150000.0,
+      "source_pressure_pa": 28000000.0,
+      "target_fraction_xyz": [
+        0.5925925925925926,
+        0.5,
+        0.4888888888888889
+      ],
       "measurements": 14336,
       "encoded_measurements": 14336,
       "unencoded_measurements": 28672,
       "inverse_encoding_rows_per_code": 2,
-      "active_voxels": 1139,
-      "spacing_m": 0.004312970797220866,
-      "placement_slice_index": 6,
+      "active_voxels": 1674,
+      "spacing_m": 0.0036968321119035994,
+      "placement_slice_index": 20,
       "placement_spacing_m": [
         0.0004043410122394562,
         0.0004043410122394562
       ],
-      "placement_context_skin_gap_m": 0.09909191102293771,
+      "placement_context_skin_gap_m": 0.12005004196938092,
       "placement_context_surface_points": 2959,
       "placement_metrics": {
-        "min_body_clearance_m": 0.015001188154651283,
-        "mean_body_clearance_m": 0.04059761663682307,
-        "max_body_clearance_m": 0.06034853903112363,
-        "skin_contact_to_nearest_aperture_m": 0.123594454915879
+        "min_body_clearance_m": 0.015004968693174931,
+        "mean_body_clearance_m": 0.043928560694799654,
+        "max_body_clearance_m": 0.0692524257799314,
+        "skin_contact_to_nearest_aperture_m": 0.0742763221724299
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.35526151154888874,
-          "nrmse": 0.3843750799439138,
-          "dice_equal_area": 0.5648535564853556,
-          "cnr": 1.0195809709881094
+          "pearson": 0.40459225121576653,
+          "nrmse": 0.3012430214145212,
+          "dice_equal_area": 0.5815217391304348,
+          "cnr": 1.362303500572035
         },
         "active_lesion": {
-          "pearson": 0.5459682394024337,
-          "nrmse": 0.0825869667178998,
-          "dice_equal_area": 0.5,
-          "cnr": 10.638144512162553
+          "pearson": 0.6533482379332987,
+          "nrmse": 0.043709439737306795,
+          "dice_equal_area": 1.0,
+          "cnr": 22.701246436987674
         },
         "waveform_rtm": {
-          "pearson": 0.12806427870570783,
-          "nrmse": 0.11088810046571636,
-          "dice_equal_area": 0.0,
-          "cnr": 2.0083729702069215
+          "pearson": 0.6140291253685991,
+          "nrmse": 0.04607855605262026,
+          "dice_equal_area": 1.0,
+          "cnr": 25.271220406465694
         },
         "subharmonic": {
-          "pearson": 0.7495032342347654,
-          "nrmse": 0.061780150250153335,
+          "pearson": 0.5428195340759203,
+          "nrmse": 0.04251353153821436,
           "dice_equal_area": 1.0,
-          "cnr": 15.723369933081404
+          "cnr": 26.160211012530556
         },
         "harmonic": {
-          "pearson": 0.5792186533016185,
-          "nrmse": 0.05832381721194351,
-          "dice_equal_area": 0.75,
-          "cnr": 11.160296928616296
+          "pearson": 0.5385114038777316,
+          "nrmse": 0.05081653888700681,
+          "dice_equal_area": 1.0,
+          "cnr": 19.77561819320756
         },
         "ultraharmonic": {
-          "pearson": 0.6421957296995213,
-          "nrmse": 0.07342366856471289,
-          "dice_equal_area": 0.75,
-          "cnr": 13.643246152874013
+          "pearson": 0.4906013554948832,
+          "nrmse": 0.07171046855551629,
+          "dice_equal_area": 1.0,
+          "cnr": 18.02961799458583
         },
         "fusion": {
-          "pearson": 0.9509901557148132,
-          "nrmse": 0.02253575580066026,
+          "pearson": 0.885780015403124,
+          "nrmse": 0.014960941525463232,
           "dice_equal_area": 1.0,
-          "cnr": 38.770596009345354
+          "cnr": 75.09566722258946
         }
       },
       "reconstruction_diagnostics": {
         "active_lesion_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 1.0,
-          "outside_peak_db": 0.0,
-          "outside_energy_fraction": 0.7215949413167567
+          "outside_peak_ratio": 0.4336790000472245,
+          "outside_peak_db": -7.256632141964536,
+          "outside_energy_fraction": 0.6005878121352584
         },
         "waveform_rtm_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 1.0,
-          "outside_peak_db": 0.0,
-          "outside_energy_fraction": 0.97377846787079
+          "outside_peak_ratio": 0.4217475987772779,
+          "outside_peak_db": -7.4989476278056335,
+          "outside_energy_fraction": 0.6887628695348291
         },
         "subharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.3348676448704071,
-          "outside_peak_db": -9.502536244966269,
-          "outside_energy_fraction": 0.4597902349546513
+          "outside_peak_ratio": 0.3146935620453933,
+          "outside_peak_db": -10.042242834570676,
+          "outside_energy_fraction": 0.7018880726705624
         },
         "harmonic_reconstruction": {
-          "peak": 0.6458278195842317,
-          "outside_peak_ratio": 1.0,
-          "outside_peak_db": 0.0,
-          "outside_energy_fraction": 0.6810407839334628
+          "peak": 1.0,
+          "outside_peak_ratio": 0.6999562113093495,
+          "outside_peak_db": -3.0985825649021987,
+          "outside_energy_fraction": 0.7250298064500343
         },
         "ultraharmonic_reconstruction": {
-          "peak": 0.7777526347865088,
-          "outside_peak_ratio": 0.9180743046067926,
-          "outside_peak_db": -0.74244335255945,
-          "outside_energy_fraction": 0.6185771586696187
+          "peak": 1.0,
+          "outside_peak_ratio": 0.592937591570277,
+          "outside_peak_db": -4.539820300099967,
+          "outside_energy_fraction": 0.7708066944488807
         },
         "fused_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.40363771860540465,
-          "outside_peak_db": -7.880165143212241,
-          "outside_energy_fraction": 0.12283895793911191
+          "outside_peak_ratio": 0.18429066662227048,
+          "outside_peak_db": -14.689933180272519,
+          "outside_energy_fraction": 0.19506151233684996
         }
       }
     },
@@ -153,27 +197,28 @@
       "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
       "operator_backend": "matrix_free_finite_frequency_same_aperture",
       "operator_storage_values": 118668,
-      "dense_operator_values": 7138176,
+      "dense_operator_values": 8819712,
       "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
       "is_full_wave_inversion": false,
       "uses_nonlinear_wave_propagation": false,
       "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
       "waveform_misfit": "charbonnier",
-      "waveform_misfit_scale": 9700.5302734375,
-      "waveform_objective": 3135592061668.26,
+      "waveform_misfit_scale": 10768.25390625,
+      "waveform_objective": 4981501159925.229,
       "waveform_receiver_count": 320,
-      "waveform_time_steps": 3283,
-      "waveform_dt_s": 7.917310412745082e-07,
-      "waveform_residual_energy": 3949175238565.009,
-      "waveform_observed_energy": 6.865139058886719e+17,
+      "waveform_time_steps": 3532,
+      "waveform_dt_s": 7.323821266369732e-07,
+      "waveform_residual_energy": 6069306299852.337,
+      "waveform_observed_energy": 9.101202022312188e+17,
       "element_count": 256,
       "source_pressure_pa": 28000000.0,
+      "target_fraction_xyz": [],
       "measurements": 5568,
       "encoded_measurements": 5568,
       "unencoded_measurements": 11136,
       "inverse_encoding_rows_per_code": 2,
-      "active_voxels": 1282,
-      "spacing_m": 0.009057692307692308,
+      "active_voxels": 1584,
+      "spacing_m": 0.008410714285714287,
       "placement_slice_index": 175,
       "placement_spacing_m": [
         0.0005,
@@ -182,91 +227,91 @@
       "placement_context_skin_gap_m": 0.003016750081322934,
       "placement_context_surface_points": 321,
       "placement_metrics": {
-        "min_body_clearance_m": 0.002080069709621782,
-        "mean_body_clearance_m": 0.034339825039783646,
-        "max_body_clearance_m": 0.06509036287420225,
-        "skin_contact_to_nearest_aperture_m": 0.003016750081322953
+        "min_body_clearance_m": 0.002202059624677025,
+        "mean_body_clearance_m": 0.010130462628828172,
+        "max_body_clearance_m": 0.02829677675010246,
+        "skin_contact_to_nearest_aperture_m": 0.003016750081322947
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.5425240254723847,
-          "nrmse": 0.1385428706282274,
-          "dice_equal_area": 0.5686274509803921,
-          "cnr": 3.653612004004755
+          "pearson": 0.4503275511843573,
+          "nrmse": 0.16305436556780564,
+          "dice_equal_area": 0.5,
+          "cnr": 2.9559880334592514
         },
         "active_lesion": {
-          "pearson": 0.9556857349140426,
-          "nrmse": 0.01707024156008626,
+          "pearson": 0.8965392991358059,
+          "nrmse": 0.02480620323049922,
           "dice_equal_area": 1.0,
-          "cnr": 26.967644805601342
+          "cnr": 23.68111137794822
         },
         "waveform_rtm": {
-          "pearson": 0.2785233277288584,
-          "nrmse": 0.2049749242860738,
-          "dice_equal_area": 0.25,
-          "cnr": 4.007223853035945
+          "pearson": 0.24985273705710698,
+          "nrmse": 0.17742975036440353,
+          "dice_equal_area": 0.5,
+          "cnr": 3.799286638593106
         },
         "subharmonic": {
-          "pearson": 0.8164982444776843,
-          "nrmse": 0.04151247672680525,
-          "dice_equal_area": 1.0,
-          "cnr": 17.824945437058293
+          "pearson": 0.7663863439633137,
+          "nrmse": 0.03524882652854183,
+          "dice_equal_area": 0.75,
+          "cnr": 16.872976473087565
         },
         "harmonic": {
-          "pearson": 0.9063121607163465,
-          "nrmse": 0.029392259555772255,
+          "pearson": 0.8487671446810564,
+          "nrmse": 0.035658925401132135,
           "dice_equal_area": 1.0,
-          "cnr": 23.13402435823674
+          "cnr": 21.658379285378462
         },
         "ultraharmonic": {
-          "pearson": 0.9492626078327235,
-          "nrmse": 0.035328393152413776,
+          "pearson": 0.9011209700255949,
+          "nrmse": 0.03828700801875381,
           "dice_equal_area": 1.0,
-          "cnr": 29.53064466221978
+          "cnr": 25.13647360945446
         },
         "fusion": {
-          "pearson": 0.976041985003224,
-          "nrmse": 0.011234108034793746,
+          "pearson": 0.9726218021036697,
+          "nrmse": 0.010871783676861101,
           "dice_equal_area": 1.0,
-          "cnr": 50.34638791798895
+          "cnr": 48.429652985282566
         }
       },
       "reconstruction_diagnostics": {
         "active_lesion_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.10723540930773456,
-          "outside_peak_db": -19.39323572425561,
-          "outside_energy_fraction": 0.09873659917620611
+          "outside_peak_ratio": 0.13450163430553355,
+          "outside_peak_db": -17.425448771883836,
+          "outside_energy_fraction": 0.2216018985191588
         },
         "waveform_rtm_reconstruction": {
           "peak": 1.0,
           "outside_peak_ratio": 1.0,
           "outside_peak_db": 0.0,
-          "outside_energy_fraction": 0.9043874359537896
+          "outside_energy_fraction": 0.9240253009012703
         },
         "subharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.21551442823890604,
-          "outside_peak_db": -13.330472988507264,
-          "outside_energy_fraction": 0.3175588006645236
+          "outside_peak_ratio": 0.226913010594761,
+          "outside_peak_db": -12.882812041973605,
+          "outside_energy_fraction": 0.4143469087524108
         },
         "harmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.3380113291045877,
-          "outside_peak_db": -9.421374865147973,
-          "outside_energy_fraction": 0.20058151546723094
+          "outside_peak_ratio": 0.29066569879931553,
+          "outside_peak_db": -10.732124318229266,
+          "outside_energy_fraction": 0.3095395824575214
         },
         "ultraharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.12239572358699728,
-          "outside_peak_db": -18.244675116850658,
-          "outside_energy_fraction": 0.11350646708871993
+          "outside_peak_ratio": 0.13655964349683758,
+          "outside_peak_db": -17.293552513255783,
+          "outside_energy_fraction": 0.22692146906663907
         },
         "fused_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.04061833682871815,
-          "outside_peak_db": -27.82555726653062,
-          "outside_energy_fraction": 0.015159509974128444
+          "outside_peak_ratio": 0.0323132160810842,
+          "outside_peak_db": -29.812396304358366,
+          "outside_energy_fraction": 0.02751624258963907
         }
       }
     },
@@ -278,27 +323,28 @@
       "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
       "operator_backend": "matrix_free_finite_frequency_same_aperture",
       "operator_storage_values": 118668,
-      "dense_operator_values": 8485632,
+      "dense_operator_values": 9938880,
       "inverse_model_family": "reduced_born_normal_equation_plus_linear_acoustic_rtm",
       "is_full_wave_inversion": false,
       "uses_nonlinear_wave_propagation": false,
       "waveform_model": "source_encoded_time_domain_acoustic_adjoint_rtm",
       "waveform_misfit": "charbonnier",
-      "waveform_misfit_scale": 12171.4462890625,
-      "waveform_objective": 464065.86692167335,
+      "waveform_misfit_scale": 23979.6171875,
+      "waveform_objective": 433482094726.7914,
       "waveform_receiver_count": 320,
-      "waveform_time_steps": 3797,
-      "waveform_dt_s": 5.524370598187209e-07,
-      "waveform_residual_energy": 928131.1657107015,
-      "waveform_observed_energy": 1.250006995028777e+18,
+      "waveform_time_steps": 4073,
+      "waveform_dt_s": 5.14436409283403e-07,
+      "waveform_residual_energy": 863609492927.0381,
+      "waveform_observed_energy": 5.204588778348482e+18,
       "element_count": 256,
       "source_pressure_pa": 28000000.0,
+      "target_fraction_xyz": [],
       "measurements": 5568,
       "encoded_measurements": 5568,
       "unencoded_measurements": 11136,
       "inverse_encoding_rows_per_code": 2,
-      "active_voxels": 1524,
-      "spacing_m": 0.006044170673076924,
+      "active_voxels": 1785,
+      "spacing_m": 0.005612444196428572,
       "placement_slice_index": 58,
       "placement_spacing_m": [
         0.000703125,
@@ -307,91 +353,91 @@
       "placement_context_skin_gap_m": 0.0030167500813229387,
       "placement_context_surface_points": 312,
       "placement_metrics": {
-        "min_body_clearance_m": 0.0028585799341716467,
-        "mean_body_clearance_m": 0.03116596818950987,
-        "max_body_clearance_m": 0.054856318184223325,
-        "skin_contact_to_nearest_aperture_m": 0.003016750081322947
+        "min_body_clearance_m": 0.0005429299446931707,
+        "mean_body_clearance_m": 0.029146853325284577,
+        "max_body_clearance_m": 0.04666082950097004,
+        "skin_contact_to_nearest_aperture_m": 0.003016750081322948
       },
       "metrics": {
         "anatomy": {
-          "pearson": 0.5322730137585605,
-          "nrmse": 0.13990678233891354,
-          "dice_equal_area": 0.46808510638297873,
-          "cnr": 2.58589960561585
+          "pearson": 0.3691078499630565,
+          "nrmse": 0.1433427398837442,
+          "dice_equal_area": 0.2962962962962963,
+          "cnr": 1.021927427476009
         },
         "active_lesion": {
-          "pearson": 0.8117486962039494,
-          "nrmse": 0.027007943138222024,
-          "dice_equal_area": 0.5,
-          "cnr": 24.129822494791878
+          "pearson": 0.7478931056131727,
+          "nrmse": 0.028474098126367715,
+          "dice_equal_area": 0.75,
+          "cnr": 19.17367844215924
         },
         "waveform_rtm": {
-          "pearson": 0.1999617505570538,
-          "nrmse": 0.14156188818264612,
-          "dice_equal_area": 0.0,
-          "cnr": 3.1553905831159605
+          "pearson": 0.32648519111271607,
+          "nrmse": 0.16568951839270465,
+          "dice_equal_area": 0.5,
+          "cnr": 5.817866068254724
         },
         "subharmonic": {
-          "pearson": 0.6972377532817519,
-          "nrmse": 0.04544258863428729,
-          "dice_equal_area": 0.5,
-          "cnr": 15.47225453056227
+          "pearson": 0.6205657442839435,
+          "nrmse": 0.05278904351888689,
+          "dice_equal_area": 0.75,
+          "cnr": 13.054358306009554
         },
         "harmonic": {
-          "pearson": 0.895454136363263,
-          "nrmse": 0.024094841605501786,
+          "pearson": 0.8635447466105625,
+          "nrmse": 0.026063319611502603,
           "dice_equal_area": 1.0,
-          "cnr": 29.698472544372144
+          "cnr": 27.158956860952806
         },
         "ultraharmonic": {
-          "pearson": 0.8993627758489295,
-          "nrmse": 0.031081182291993817,
+          "pearson": 0.8878018172533867,
+          "nrmse": 0.03421738934305827,
           "dice_equal_area": 1.0,
-          "cnr": 28.75749520207168
+          "cnr": 31.571668744161457
         },
         "fusion": {
-          "pearson": 0.9519869458964161,
-          "nrmse": 0.012051615534518669,
-          "dice_equal_area": 1.0,
-          "cnr": 47.86849471847454
+          "pearson": 0.9511506863771196,
+          "nrmse": 0.012058048346540881,
+          "dice_equal_area": 0.75,
+          "cnr": 44.70947448817026
         }
       },
       "reconstruction_diagnostics": {
         "active_lesion_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.35312955997895207,
-          "outside_peak_db": -9.041318534695879,
-          "outside_energy_fraction": 0.36237563204884765
+          "outside_peak_ratio": 0.22058706067713346,
+          "outside_peak_db": -13.128399324891408,
+          "outside_energy_fraction": 0.44517195774224916
         },
         "waveform_rtm_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 1.0,
-          "outside_peak_db": 0.0,
-          "outside_energy_fraction": 0.9447020525000533
+          "outside_peak_ratio": 0.8881381923375952,
+          "outside_peak_db": -1.0303890740625494,
+          "outside_energy_fraction": 0.8261676945058939
         },
         "subharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.3422023527807622,
-          "outside_peak_db": -9.314340176658773,
-          "outside_energy_fraction": 0.5370573245498801
+          "outside_peak_ratio": 0.3524559612849832,
+          "outside_peak_db": -9.057902791365798,
+          "outside_energy_fraction": 0.6285259419994825
         },
         "harmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.23100153901830822,
-          "outside_peak_db": -12.727702533331808,
-          "outside_energy_fraction": 0.22998234839229845
+          "outside_peak_ratio": 0.19206651610743228,
+          "outside_peak_db": -14.330966824294363,
+          "outside_energy_fraction": 0.2939456988671279
         },
         "ultraharmonic_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.12942658986981334,
-          "outside_peak_db": -17.759529829229102,
-          "outside_energy_fraction": 0.22886064507038612
+          "outside_peak_ratio": 0.23528167465777977,
+          "outside_peak_db": -12.568237946486548,
+          "outside_energy_fraction": 0.24236876012028238
         },
         "fused_reconstruction": {
           "peak": 1.0,
-          "outside_peak_ratio": 0.04334435647042687,
-          "outside_peak_db": -27.26134881187763,
-          "outside_energy_fraction": 0.04474035675199748
+          "outside_peak_ratio": 0.05587718474411663,
+          "outside_peak_db": -25.055309660639974,
+          "outside_energy_fraction": 0.06340751531361973
         }
       }
     }
@@ -406,70 +452,115 @@
       "is_full_wave_inversion": true,
       "uses_nonlinear_wave_propagation": true,
       "uses_rayleigh_plesset": true,
-      "grid_size": 48,
-      "time_steps": 5690,
-      "dt_s": 3.606344266650462e-07,
-      "active_voxels": 51031,
-      "element_count": 96,
-      "receiver_count": 48,
+      "grid_size": 56,
+      "time_steps": 1609,
+      "dt_s": 1.299038105676658e-07,
+      "active_voxels": 169429,
+      "source_dimensions": [
+        512,
+        512,
+        41
+      ],
+      "source_spacing_m": [
+        0.0004043410122394562,
+        0.0004043410122394562,
+        0.003
+      ],
+      "crop_bounds_index": [
+        204,
+        402,
+        157,
+        355,
+        6,
+        34
+      ],
+      "treatment_window_radius_m": 0.04,
+      "wavelength_min_m": 0.0022290332867132864,
+      "points_per_wavelength_min": 1.4347800466200464,
+      "min_points_per_wavelength": 6.0,
+      "resolution_meets_min_ppw": false,
+      "element_count": 1024,
+      "receiver_count": 1024,
       "source_encoding_count": 3,
       "checkpoint_interval_steps": 128,
       "frequency_hz": 650000.0,
-      "source_pressure_pa": 150000.0,
+      "source_pressure_pa": 28000000.0,
+      "source_scale": 1.0,
+      "pressure_diagnostics": {
+        "raw_peak_pressure_pa": 55638580.9246688,
+        "raw_target_peak_pressure_pa": 16861669.461591866,
+        "peak_mechanical_index": 69.0111661791149,
+        "target_peak_mechanical_index": 20.914326963995084,
+        "inertial_mi_threshold": 1.9,
+        "peak_exceeds_inertial_threshold": true,
+        "target_exceeds_inertial_threshold": true,
+        "finite_pressure_fraction": 1.0,
+        "source_pressure_pa": 28000000.0,
+        "source_scale": 1.0,
+        "effective_source_pressure_pa": 28000000.0,
+        "raw_peak_to_effective_source_ratio": 1.9870921758810285
+      },
+      "inertial_mi_threshold": 1.9,
+      "bubble_time_steps_per_period": 64,
+      "target_fraction_xyz": [
+        0.5925925925925926,
+        0.5,
+        0.4888888888888889
+      ],
       "lesion_delta_c_m_s": -35.0,
       "lesion_delta_beta": 0.85,
       "sound_speed_regularization": 0.002,
       "nonlinearity_regularization": 0.001,
       "gradient_smoothing_steps": 2,
-      "metrics": {
-        "fwi": {
-          "dice_equal_area": 0.07692307692307693,
-          "cnr": 13.272415966475277,
-          "nrmse": 0.015867286633839246
-        },
-        "rayleigh_plesset_cavitation": {
-          "dice_equal_area": 0.08695652173913043,
-          "cnr": 4.714061054573601,
-          "nrmse": 0.031048967835049013
-        },
-        "fusion": {
-          "dice_equal_area": 0.0,
-          "cnr": 11.070064396661634,
-          "nrmse": 0.01615008483727271
-        }
-      },
       "fwi_objective_history": [
-        0.5076518345458849,
-        0.41461900084137027,
-        0.36094489973021454,
-        0.33666558949229086
+        0.6599853794200186,
+        0.3163495345807576,
+        0.040636175587180814,
+        0.040636175587180814
       ],
       "cavitation_objective_history": [
-        0.0008130939843605342,
-        0.0008092633146244408,
-        0.0008054521837934409,
-        0.0008016604847484357,
-        0.0007978881109986746,
-        0.0007941349566777437,
-        0.0007904009165425315,
-        0.0007866858859698349,
-        0.0007829897609538114,
-        0.0007793124380951511,
-        0.0007756538146051123,
-        0.0007720137882965954,
-        0.0007683922575770649,
-        0.0007647891214504922,
-        0.0007612042795148128,
-        0.0007576376319457577,
-        0.0007540890795189375,
-        0.0007505585236054094,
-        0.0007470458661261668,
-        0.0007435510095990874,
-        0.0007400738570754356,
-        0.000736614312186797,
-        0.0007331722791313751,
-        0.0007297476626558999
-      ]
+        876256.3139136145,
+        849548.9224124876,
+        823795.4713030686,
+        798959.4491784052,
+        775005.8075752086,
+        751900.9018549739,
+        729612.4171061312,
+        708109.3181744167,
+        687361.8217350688,
+        667341.3069195974,
+        648020.3207362666,
+        629372.4739245665,
+        611372.4058377612,
+        593995.7801913585,
+        577219.1617494095,
+        561020.0983801201,
+        545376.9726939019,
+        530269.0329832612,
+        515676.29980254755,
+        501579.58769947244,
+        487960.4957247254,
+        474801.3271900865,
+        462085.0998852478,
+        449795.4277704187
+      ],
+      "metrics": {
+        "fwi": {
+          "dice_equal_area": 0.4024390243902439,
+          "cnr": 12.317701146793734,
+          "nrmse": 0.04115672432579925
+        },
+        "rayleigh_plesset_cavitation": {
+          "dice_equal_area": 0.21646341463414634,
+          "cnr": 6.472361440063056,
+          "nrmse": 0.043792323341504964
+        },
+        "fusion": {
+          "dice_equal_area": 0.4054878048780488,
+          "cnr": 12.253824798739139,
+          "nrmse": 0.04023182370174108
+        }
+      }
     },
     {
       "anatomy": "kidney",
@@ -480,70 +571,109 @@
       "is_full_wave_inversion": true,
       "uses_nonlinear_wave_propagation": true,
       "uses_rayleigh_plesset": true,
-      "grid_size": 52,
-      "time_steps": 6179,
-      "dt_s": 2.1744809255468865e-07,
-      "active_voxels": 139973,
-      "element_count": 96,
-      "receiver_count": 48,
+      "grid_size": 56,
+      "time_steps": 1566,
+      "dt_s": 1.262642399211475e-07,
+      "active_voxels": 175460,
+      "source_dimensions": [
+        611,
+        512,
+        512
+      ],
+      "source_spacing_m": [
+        0.0005,
+        0.0009199218750000001,
+        0.0009199218750000001
+      ],
+      "crop_bounds_index": [
+        235,
+        395,
+        280,
+        368,
+        132,
+        220
+      ],
+      "treatment_window_radius_m": 0.04,
+      "wavelength_min_m": 0.002906,
+      "points_per_wavelength_min": 1.9876626827930055,
+      "min_points_per_wavelength": 6.0,
+      "resolution_meets_min_ppw": false,
+      "element_count": 256,
+      "receiver_count": 256,
       "source_encoding_count": 3,
       "checkpoint_interval_steps": 128,
-      "frequency_hz": 750000.0,
-      "source_pressure_pa": 6000000.0,
+      "frequency_hz": 500000.0,
+      "source_pressure_pa": 28000000.0,
+      "source_scale": 1.0,
+      "pressure_diagnostics": {
+        "raw_peak_pressure_pa": 29655444.362677447,
+        "raw_target_peak_pressure_pa": 2144013.4798283945,
+        "peak_mechanical_index": 41.939131615899186,
+        "target_peak_mechanical_index": 3.0320929410840494,
+        "inertial_mi_threshold": 1.9,
+        "peak_exceeds_inertial_threshold": true,
+        "target_exceeds_inertial_threshold": true,
+        "finite_pressure_fraction": 1.0,
+        "source_pressure_pa": 28000000.0,
+        "source_scale": 1.0,
+        "effective_source_pressure_pa": 28000000.0,
+        "raw_peak_to_effective_source_ratio": 1.059123012952766
+      },
+      "inertial_mi_threshold": 1.9,
+      "bubble_time_steps_per_period": 64,
+      "target_fraction_xyz": [],
       "lesion_delta_c_m_s": -35.0,
       "lesion_delta_beta": 0.85,
       "sound_speed_regularization": 0.002,
       "nonlinearity_regularization": 0.001,
       "gradient_smoothing_steps": 2,
-      "metrics": {
-        "fwi": {
-          "dice_equal_area": 0.148,
-          "cnr": 5.747972069123222,
-          "nrmse": 0.07025219620239248
-        },
-        "rayleigh_plesset_cavitation": {
-          "dice_equal_area": 0.13333333333333333,
-          "cnr": 2.1716505145328258,
-          "nrmse": 0.06900560605553929
-        },
-        "fusion": {
-          "dice_equal_area": 0.08266666666666667,
-          "cnr": 3.488242554426778,
-          "nrmse": 0.07108413616039062
-        }
-      },
       "fwi_objective_history": [
-        1.4028757709261457,
-        1.1946951768266234,
-        1.0648897761468745,
-        1.0648897761468745
+        0.21772077540940996,
+        0.21772077540940996
       ],
       "cavitation_objective_history": [
-        38.04731336572738,
-        37.84046358248528,
-        37.63477275702885,
-        37.430234229114234,
-        37.22684137761624,
-        37.02458762030381,
-        36.8234664136155,
-        36.62347125246715,
-        36.424595669862285,
-        36.22683323676834,
-        36.03017756193518,
-        35.834622291636,
-        35.640161109535825,
-        35.446787736349386,
-        35.254495929572066,
-        35.06327948324739,
-        34.87313222769135,
-        34.684048029370715,
-        34.49602079070154,
-        34.30904445004266,
-        34.12311298132141,
-        33.93822039385916,
-        33.75436073186287,
-        33.5715280744859
-      ]
+        10164695198.659506,
+        10045554637.20546,
+        9928444497.040607,
+        9813321872.182957,
+        9700144893.014677,
+        9588872697.149548,
+        9479465415.509392,
+        9371884137.311428,
+        9266090935.330177,
+        9162048779.030115,
+        9059721459.881128,
+        8959073660.418669,
+        8860070979.54379,
+        8762679980.90713,
+        8666867685.961826,
+        8572602375.658257,
+        8479852547.621729,
+        8388587816.156698,
+        8298778180.069065,
+        8210394308.925009,
+        8123407589.652714,
+        8037790080.243374,
+        7953514520.84498,
+        7870554324.104237
+      ],
+      "metrics": {
+        "fwi": {
+          "dice_equal_area": 0.0,
+          "cnr": 0.0,
+          "nrmse": 0.13739030939681238
+        },
+        "rayleigh_plesset_cavitation": {
+          "dice_equal_area": 0.0370527823149039,
+          "cnr": 0.6351881496506173,
+          "nrmse": 0.13704974794136496
+        },
+        "fusion": {
+          "dice_equal_area": 0.0370527823149039,
+          "cnr": 0.6351881496495381,
+          "nrmse": 0.13720800289997676
+        }
+      }
     },
     {
       "anatomy": "liver",
@@ -554,299 +684,366 @@
       "is_full_wave_inversion": true,
       "uses_nonlinear_wave_propagation": true,
       "uses_rayleigh_plesset": true,
-      "grid_size": 52,
-      "time_steps": 6168,
-      "dt_s": 5.39309710898669e-07,
-      "active_voxels": 70376,
-      "element_count": 96,
-      "receiver_count": 48,
+      "grid_size": 56,
+      "time_steps": 1582,
+      "dt_s": 4.4409465412275836e-07,
+      "active_voxels": 100995,
+      "source_dimensions": [
+        512,
+        512,
+        75
+      ],
+      "source_spacing_m": [
+        0.000703125,
+        0.000703125,
+        0.005
+      ],
+      "crop_bounds_index": [
+        0,
+        406,
+        27,
+        449,
+        31,
+        74
+      ],
+      "treatment_window_radius_m": 0.04,
+      "wavelength_min_m": 0.002906,
+      "points_per_wavelength_min": 0.5471554504859469,
+      "min_points_per_wavelength": 6.0,
+      "resolution_meets_min_ppw": false,
+      "element_count": 256,
+      "receiver_count": 256,
       "source_encoding_count": 3,
       "checkpoint_interval_steps": 128,
-      "frequency_hz": 750000.0,
-      "source_pressure_pa": 6000000.0,
+      "frequency_hz": 500000.0,
+      "source_pressure_pa": 28000000.0,
+      "source_scale": 1.0,
+      "pressure_diagnostics": {
+        "raw_peak_pressure_pa": 3217808.7259269627,
+        "raw_target_peak_pressure_pa": 1649005.5659574585,
+        "peak_mechanical_index": 4.5506687413283995,
+        "target_peak_mechanical_index": 2.332046035805759,
+        "inertial_mi_threshold": 1.9,
+        "peak_exceeds_inertial_threshold": true,
+        "target_exceeds_inertial_threshold": true,
+        "finite_pressure_fraction": 1.0,
+        "source_pressure_pa": 28000000.0,
+        "source_scale": 1.0,
+        "effective_source_pressure_pa": 28000000.0,
+        "raw_peak_to_effective_source_ratio": 0.11492174021167724
+      },
+      "inertial_mi_threshold": 1.9,
+      "bubble_time_steps_per_period": 64,
+      "target_fraction_xyz": [],
       "lesion_delta_c_m_s": -35.0,
       "lesion_delta_beta": 0.85,
       "sound_speed_regularization": 0.002,
       "nonlinearity_regularization": 0.001,
       "gradient_smoothing_steps": 2,
-      "metrics": {
-        "fwi": {
-          "dice_equal_area": 0.5392670157068062,
-          "cnr": 15.837675607706466,
-          "nrmse": 0.04517501373239294
-        },
-        "rayleigh_plesset_cavitation": {
-          "dice_equal_area": 0.005847953216374269,
-          "cnr": 0.5710237650066843,
-          "nrmse": 0.07463268692597967
-        },
-        "fusion": {
-          "dice_equal_area": 0.5130890052356021,
-          "cnr": 11.708605160028153,
-          "nrmse": 0.04671087578792289
-        }
-      },
       "fwi_objective_history": [
-        2.589671248507965e-06,
-        2.474048399795121e-06,
-        2.425004710906858e-06,
-        2.3724663111632533e-06
+        6.931260591418064e-06,
+        5.034232974221595e-06,
+        4.079337109492721e-06,
+        3.942955134888203e-06
       ],
       "cavitation_objective_history": [
-        6.1592651133109735,
-        6.126800418413095,
-        6.094516718021589,
-        6.062412958418805,
-        6.030488092243997,
-        5.998741078432843,
-        5.9671708821876335,
-        5.93577647494742,
-        5.904556834354821,
-        5.873510944190261,
-        5.842637794355182,
-        5.811936380777992,
-        5.781405705503932,
-        5.75104477648742,
-        5.720852607701096,
-        5.690828219067575,
-        5.660970636345459,
-        5.631278891175453,
-        5.601752020999797,
-        5.572389068991,
-        5.54318908408919,
-        5.514151120933208,
-        5.4852742399531325,
-        5.456557507106123
-      ]
+        3039765936.680228,
+        2931201115.9313607,
+        2827523379.820145,
+        2728462978.3070273,
+        2633769320.9203615,
+        2543210030.449011,
+        2456566709.4051027,
+        2373635212.060373,
+        2294224320.550646,
+        2218154734.906231,
+        2145258158.2672703,
+        2075376467.0669947,
+        2008360957.1468995,
+        1944071657.8070223,
+        1882376706.7092733,
+        1823151779.3572588,
+        1766279363.3755143,
+        1711647829.181643,
+        1659151584.1512606,
+        1608690875.3659444,
+        1560171083.753823,
+        1513502532.3825288,
+        1468600434.776767,
+        1425384580.4605713
+      ],
+      "metrics": {
+        "fwi": {
+          "dice_equal_area": 0.376984126984127,
+          "cnr": 10.782335990884294,
+          "nrmse": 0.04645094196094623
+        },
+        "rayleigh_plesset_cavitation": {
+          "dice_equal_area": 0.004977925271859907,
+          "cnr": 0.12722730269912422,
+          "nrmse": 0.05005532005423187
+        },
+        "fusion": {
+          "dice_equal_area": 0.373015873015873,
+          "cnr": 10.687079022467312,
+          "nrmse": 0.04686837396410605
+        }
+      }
     }
   ],
   "controlled_linear_nonlinear_comparison": {
-    "comparison_contract": "linear and nonlinear outputs evaluated on the nonlinear 3-D crop projection; linear fields are physically resampled to that grid for metrics, then every display field is embedded in the full-resolution controlled CT placement grid",
+    "comparison_contract": "linear and nonlinear outputs are physically resampled to the full-resolution controlled CT placement grid before metrics, archived fields, and display",
     "figure": "D:\\kwavers\\docs\\book\\figures\\ch29\\fig06_controlled_linear_nonlinear_comparison.png",
     "field_archive": "D:\\kwavers\\docs\\book\\figures\\ch29\\controlled_comparison_fields.npz",
     "summary": {
       "case_count": 3,
-      "mean_linear_fusion_dice_equal_area": 0.3051839163360981,
-      "mean_nonlinear_fusion_dice_equal_area": 0.19663821773450338,
-      "mean_dice_gap_linear_minus_nonlinear": 0.10854569860159471,
-      "mean_nonlinear_pressure_outside_energy_fraction": 0.9911608804606876,
-      "mean_nonlinear_cavitation_source_outside_energy_fraction": 0.9697260335604782,
-      "dominant_observation": "the common-grid comparison rejects display resolution as the primary cause; after histotripsy-scale drive and corrected source weighting, nonlinear fusion improves, while the cavitation-specific divergence remains localized to the MI-gated Rayleigh-Plesset source support, passive cavitation reconstruction, and residual projected 2-D-vs-3-D aperture difference"
+      "mean_linear_fusion_dice_equal_area": 0.3023889918046464,
+      "mean_nonlinear_fusion_dice_equal_area": 0.5280264179984363,
+      "mean_dice_gap_linear_minus_nonlinear": -0.2256374261937899,
+      "mean_nonlinear_pressure_outside_energy_fraction": 0.8916799439271172,
+      "mean_nonlinear_cavitation_source_outside_energy_fraction": 0.6328783996154677,
+      "dominant_observation": "the matched comparison does not isolate one dominant divergence source"
     },
     "cases": [
       {
         "anatomy": "brain",
         "common_grid_shape": [
-          64,
-          64
+          512,
+          512
         ],
         "common_extent_m": [
-          -0.020823562130331996,
-          0.059235958293080336,
-          -0.03982758970558643,
-          0.040231930717825895
+          -0.10330912862718106,
+          0.10330912862718106,
+          -0.10330912862718106,
+          0.10330912862718106
         ],
         "geometry": {
-          "comparison_frame": "nonlinear_crop_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.011150578594987736,
+          "comparison_frame": "full_ct_placement_xy_projection",
+          "linear_focus_to_common_target_centroid_m": 0.013453758295732948,
           "linear_element_count": 1024,
           "nonlinear_element_count": 1024,
-          "median_nearest_projected_element_distance_m": 0.09998824751033539,
-          "common_target_voxels": 80,
+          "median_nearest_projected_element_distance_m": 0.09935282514665303,
+          "common_target_voxels": 811,
           "common_target_centroid_m": [
             0.019206198081374172,
-            0.0002021705061197322
+            0.00020217050611973095
           ]
         },
         "comparison_metrics": {
           "linear_exposure": {
-            "dice_equal_area": 0.1,
-            "cnr": 0.6395022477607039,
-            "nrmse": 1.081299152187462,
-            "pearson": 0.08602043617526546,
-            "target_peak": 0.18654976857543654,
+            "dice_equal_area": 0.0,
+            "cnr": 2.346267157090257,
+            "nrmse": 1.1611435985302245,
+            "pearson": 0.11510910239994138,
+            "target_peak": 0.14879516621334657,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9689051356705501,
-            "hotspot_distance_to_target_grid_cells": 9.192388155425117
+            "outside_energy_fraction": 0.9833270021934918,
+            "hotspot_distance_to_target_grid_cells": 33.301651610693426
           },
           "linear_active": {
-            "dice_equal_area": 0.025,
-            "cnr": 0.10483808961428179,
-            "nrmse": 1.0764176645318941,
-            "pearson": 0.013430215970795172,
-            "target_peak": 0.22858615711177205,
+            "dice_equal_area": 0.0,
+            "cnr": 0.6497385863832521,
+            "nrmse": 1.186668338758099,
+            "pearson": 0.03766971624118705,
+            "target_peak": 0.16113955917606282,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9823389065665036,
-            "hotspot_distance_to_target_grid_cells": 9.192388155425117
+            "outside_energy_fraction": 0.993730193901941,
+            "hotspot_distance_to_target_grid_cells": 33.301651610693426
           },
           "linear_fusion": {
-            "dice_equal_area": 0.025,
-            "cnr": 0.19144920101135762,
-            "nrmse": 1.0177799245585921,
-            "pearson": 0.020005969580458582,
-            "target_peak": 0.06430382939939268,
+            "dice_equal_area": 0.0,
+            "cnr": 0.311344293038488,
+            "nrmse": 1.0395734071069436,
+            "pearson": 0.013527860782923456,
+            "target_peak": 0.05659127779223008,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9931562938555499,
-            "hotspot_distance_to_target_grid_cells": 9.192388155425117
+            "outside_energy_fraction": 0.9986151921961903,
+            "hotspot_distance_to_target_grid_cells": 33.301651610693426
           },
           "nonlinear_pressure": {
-            "dice_equal_area": 0.0,
-            "cnr": -0.21783120606947068,
-            "nrmse": 1.0085982195600995,
-            "pearson": -0.02152135648550423,
-            "target_peak": 7.471044545688795e-05,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9999999046559372,
-            "hotspot_distance_to_target_grid_cells": 27.97320146139873
+            "dice_equal_area": 0.7139334155363748,
+            "cnr": 6.355096869104592,
+            "nrmse": 1.4893023454626935,
+            "pearson": 0.4514512110662165,
+            "target_peak": 1.0,
+            "outside_peak": 0.8496798589968073,
+            "outside_energy_fraction": 0.7928341543556985,
+            "hotspot_distance_to_target_grid_cells": 2.8284271247461903,
+            "raw_peak_pressure_pa": 16861669.461591866,
+            "raw_target_peak_pressure_pa": 16861669.461591866,
+            "peak_mechanical_index": 20.914326963995084,
+            "target_peak_mechanical_index": 20.914326963995084,
+            "inertial_mi_threshold": 1.9,
+            "peak_exceeds_inertial_threshold": true,
+            "target_exceeds_inertial_threshold": true,
+            "finite_pressure_fraction": 1.0,
+            "source_pressure_pa": 28000000.0,
+            "source_scale": 1.0,
+            "effective_source_pressure_pa": 28000000.0,
+            "raw_peak_to_effective_source_ratio": 0.602202480771138
           },
           "nonlinear_fwi": {
-            "dice_equal_area": 0.0,
-            "cnr": 0.0,
-            "nrmse": 1.0,
-            "pearson": 0.0,
-            "target_peak": 0.0,
-            "outside_peak": 0.0,
-            "outside_energy_fraction": 0.0,
-            "hotspot_distance_to_target_grid_cells": 44.54772721475249
+            "dice_equal_area": 0.7472256473489519,
+            "cnr": 7.449250792290097,
+            "nrmse": 0.876497456838634,
+            "pearson": 0.6758652563965093,
+            "target_peak": 1.0,
+            "outside_peak": 0.8638145431186119,
+            "outside_energy_fraction": 0.5273478815348249,
+            "hotspot_distance_to_target_grid_cells": 5.0990195135927845
           },
           "nonlinear_cavitation_source": {
-            "dice_equal_area": 0.0,
-            "cnr": -0.21783120606947068,
-            "nrmse": 1.0085982195600995,
-            "pearson": -0.02152135648550423,
-            "target_peak": 7.471044545688792e-05,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9999999046559372,
-            "hotspot_distance_to_target_grid_cells": 27.97320146139873
+            "dice_equal_area": 0.7139334155363748,
+            "cnr": 7.09961224445042,
+            "nrmse": 0.8925814719749369,
+            "pearson": 0.6512597473692219,
+            "target_peak": 1.0,
+            "outside_peak": 0.8496798589968071,
+            "outside_energy_fraction": 0.5596087656204063,
+            "hotspot_distance_to_target_grid_cells": 2.8284271247461903
           },
           "nonlinear_cavitation": {
-            "dice_equal_area": 0.0,
-            "cnr": 0.6598224885630766,
-            "nrmse": 2.043489174210895,
-            "pearson": 0.0688946122012134,
-            "target_peak": 0.4461123250524223,
+            "dice_equal_area": 0.5782983970406905,
+            "cnr": 2.957958630309709,
+            "nrmse": 0.8305376491647776,
+            "pearson": 0.5930807319541334,
+            "target_peak": 0.9848274892535495,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9762252457272632,
-            "hotspot_distance_to_target_grid_cells": 37.90118731649445
+            "outside_energy_fraction": 0.5684489415266454,
+            "hotspot_distance_to_target_grid_cells": 19.235384061671343
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.0,
-            "cnr": 0.6598224885630765,
-            "nrmse": 2.043489174210895,
-            "pearson": 0.06889461220121339,
-            "target_peak": 0.4461123250524224,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9762252457272632,
-            "hotspot_distance_to_target_grid_cells": 37.90118731649445
+            "dice_equal_area": 0.7398273736128237,
+            "cnr": 6.678677348876487,
+            "nrmse": 0.8532266849670797,
+            "pearson": 0.6758132470094447,
+            "target_peak": 1.0,
+            "outside_peak": 0.8021501744947308,
+            "outside_energy_fraction": 0.5234453375263232,
+            "hotspot_distance_to_target_grid_cells": 5.385164807134504
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.05339454420083441,
-          "linear_exposure_vs_nonlinear_pressure_pearson": -0.06346616656910742,
-          "linear_fusion_hotspot_distance_grid_cells": 37.64306044943742,
-          "nonlinear_pressure_to_fusion_pearson": -0.07794348535471698,
-          "nonlinear_pressure_to_cavitation_source_pearson": 0.9999999999999991,
-          "nonlinear_cavitation_source_to_reconstruction_pearson": -0.07794348535471696,
-          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 10.816653826391969
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.196357337370659,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.41263542614844645,
+          "linear_fusion_hotspot_distance_grid_cells": 36.05551275463989,
+          "nonlinear_pressure_to_fusion_pearson": 0.6790947593081635,
+          "nonlinear_pressure_to_cavitation_source_pearson": 0.6967590430159037,
+          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.9022169377536959,
+          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 21.95449840010015
         },
         "objective_history": {
           "nonlinear_fwi": [
-            NaN,
-            NaN
+            0.6599853794200186,
+            0.3163495345807576,
+            0.040636175587180814,
+            0.040636175587180814
           ],
           "nonlinear_cavitation": [
-            4966223.49535707,
-            4952608.552837846,
-            4939056.98301576,
-            4925568.387933851,
-            4912142.372682397,
-            4898778.545233005,
-            4885476.51646722,
-            4872235.900072036,
-            4859056.312443424,
-            4845937.372753263,
-            4832878.702911921,
-            4819879.927759501,
-            4806940.674592121,
-            4794060.573492499,
-            4781239.257185643,
-            4768476.361396476,
-            4755771.524759406,
-            4743124.387399122,
-            4730534.592799898,
-            4718001.7869267,
-            4705525.6182046635,
-            4693105.737676656,
-            4680741.798789378,
-            4668433.457840445
+            876256.3139136145,
+            849548.9224124876,
+            823795.4713030686,
+            798959.4491784052,
+            775005.8075752086,
+            751900.9018549739,
+            729612.4171061312,
+            708109.3181744167,
+            687361.8217350688,
+            667341.3069195974,
+            648020.3207362666,
+            629372.4739245665,
+            611372.4058377612,
+            593995.7801913585,
+            577219.1617494095,
+            561020.0983801201,
+            545376.9726939019,
+            530269.0329832612,
+            515676.29980254755,
+            501579.58769947244,
+            487960.4957247254,
+            474801.3271900865,
+            462085.0998852478,
+            449795.4277704187
           ]
         },
-        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.025 and nonlinear fusion Dice is 0.000. Nonlinear peak-pressure outside-target energy is 1.000, linear/nonlinear fusion Pearson is 0.053, and nonlinear FWI objective drop is nan. The Rayleigh-Plesset source and passive reconstruction hotspots are 27.97 and 37.90 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 99.99 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.000 and nonlinear fusion Dice is 0.740. Nonlinear target MI is 20.91 at 16.86 MPa; outside-target energy is 0.793, linear/nonlinear fusion Pearson is 0.196, and nonlinear FWI objective drop is 6.193e-01. The Rayleigh-Plesset source and passive reconstruction hotspots are 2.83 and 19.24 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 99.35 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       },
       {
         "anatomy": "kidney",
         "common_grid_shape": [
-          64,
-          64
+          611,
+          512
         ],
         "common_extent_m": [
-          -0.035,
-          0.045,
-          0.0225380859375,
-          0.10349121093750001
+          -0.1525,
+          0.1525,
+          -0.2350400390625,
+          0.2350400390625
         ],
         "geometry": {
-          "comparison_frame": "nonlinear_crop_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.0033004525185421113,
+          "comparison_frame": "full_ct_placement_xy_projection",
+          "linear_focus_to_common_target_centroid_m": 0.007077537699070735,
           "linear_element_count": 256,
           "nonlinear_element_count": 256,
-          "median_nearest_projected_element_distance_m": 0.1493708394479435,
-          "common_target_voxels": 354,
+          "median_nearest_projected_element_distance_m": 0.14800418346055452,
+          "common_target_voxels": 1292,
           "common_target_centroid_m": [
-            0.005129136400322838,
-            0.06272788954255785
+            0.005246130030959758,
+            0.06271061852989551
           ]
         },
         "comparison_metrics": {
           "linear_exposure": {
-            "dice_equal_area": 0.403954802259887,
-            "cnr": 1.0897307901855608,
-            "nrmse": 1.0052063284181563,
-            "pearson": 0.3521368676228891,
+            "dice_equal_area": 0.46671826625387,
+            "cnr": 1.751057885594058,
+            "nrmse": 1.1052363796207345,
+            "pearson": 0.3237572735035241,
             "target_peak": 1.0,
-            "outside_peak": 0.650371219824011,
-            "outside_energy_fraction": 0.7491605116599701,
-            "hotspot_distance_to_target_grid_cells": 5.754705998677975
+            "outside_peak": 0.44500247312791696,
+            "outside_energy_fraction": 0.8554747942376437,
+            "hotspot_distance_to_target_grid_cells": 14.51150389488758
           },
           "linear_active": {
-            "dice_equal_area": 0.7401129943502824,
-            "cnr": 2.700138264945675,
-            "nrmse": 0.6605088901950301,
-            "pearson": 0.7586066598293185,
+            "dice_equal_area": 0.6130030959752322,
+            "cnr": 2.40282937327124,
+            "nrmse": 0.8030307634176462,
+            "pearson": 0.6123111918855629,
             "target_peak": 1.0,
-            "outside_peak": 0.5731641994298935,
-            "outside_energy_fraction": 0.29639303556647134,
-            "hotspot_distance_to_target_grid_cells": 5.754705998677975
+            "outside_peak": 0.5312871595449913,
+            "outside_energy_fraction": 0.5314708163010278,
+            "hotspot_distance_to_target_grid_cells": 14.51150389488758
           },
           "linear_fusion": {
-            "dice_equal_area": 0.7203389830508474,
-            "cnr": 1.9536163742799644,
-            "nrmse": 0.7379831769743791,
-            "pearson": 0.7335929158251129,
+            "dice_equal_area": 0.6795665634674922,
+            "cnr": 1.8293106069770737,
+            "nrmse": 0.79365865224536,
+            "pearson": 0.6925671188939778,
             "target_peak": 1.0,
-            "outside_peak": 0.38359730098178935,
-            "outside_energy_fraction": 0.19249543450639195,
-            "hotspot_distance_to_target_grid_cells": 5.754705998677975
+            "outside_peak": 0.4419718606508897,
+            "outside_energy_fraction": 0.25407193836731934,
+            "hotspot_distance_to_target_grid_cells": 14.51150389488758
           },
           "nonlinear_pressure": {
-            "dice_equal_area": 0.0,
-            "cnr": -0.04029432832741568,
-            "nrmse": 1.0013734889956138,
-            "pearson": -0.00837597714124236,
-            "target_peak": 0.00011242247986585398,
+            "dice_equal_area": 0.16021671826625386,
+            "cnr": 3.8176670253384817,
+            "nrmse": 0.9670799122031128,
+            "pearson": 0.27270398277785995,
+            "target_peak": 0.19742444784055757,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9999986865245933,
-            "hotspot_distance_to_target_grid_cells": 37.96233975930984
+            "outside_energy_fraction": 0.9161840481540778,
+            "hotspot_distance_to_target_grid_cells": 84.87111061555615,
+            "raw_peak_pressure_pa": 11598395.194106469,
+            "raw_target_peak_pressure_pa": 2103344.8499546954,
+            "peak_mechanical_index": 16.40260778526829,
+            "target_peak_mechanical_index": 2.9745788131535327,
+            "inertial_mi_threshold": 1.9,
+            "peak_exceeds_inertial_threshold": true,
+            "target_exceeds_inertial_threshold": true,
+            "finite_pressure_fraction": 1.0,
+            "source_pressure_pa": 28000000.0,
+            "source_scale": 1.0,
+            "effective_source_pressure_pa": 28000000.0,
+            "raw_peak_to_effective_source_ratio": 0.41422839978951675
           },
           "nonlinear_fwi": {
             "dice_equal_area": 0.0,
@@ -856,232 +1053,244 @@
             "target_peak": 0.0,
             "outside_peak": 0.0,
             "outside_energy_fraction": 0.0,
-            "hotspot_distance_to_target_grid_cells": 44.462429101244545
+            "hotspot_distance_to_target_grid_cells": 451.9926043592375
           },
           "nonlinear_cavitation_source": {
-            "dice_equal_area": 0.0,
-            "cnr": -0.04029432832741569,
-            "nrmse": 1.0013734889956138,
-            "pearson": -0.00837597714124236,
-            "target_peak": 0.00011242247986585398,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9999986865245933,
-            "hotspot_distance_to_target_grid_cells": 37.96233975930984
+            "dice_equal_area": 0.32894736842105265,
+            "cnr": 0.2902631747989545,
+            "nrmse": 0.9884685499164915,
+            "pearson": 0.1583558552095551,
+            "target_peak": 1.0,
+            "outside_peak": 0.9476935988447605,
+            "outside_energy_fraction": 0.37869276597138946,
+            "hotspot_distance_to_target_grid_cells": 10.576281912817374
           },
           "nonlinear_cavitation": {
-            "dice_equal_area": 0.03672316384180791,
-            "cnr": 0.4787717126873989,
-            "nrmse": 1.1575272981863145,
-            "pearson": 0.10756337540852037,
-            "target_peak": 0.4704394556562318,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9008851007330706,
-            "hotspot_distance_to_target_grid_cells": 30.894905279101707
+            "dice_equal_area": 0.2592879256965944,
+            "cnr": 0.5581345569155954,
+            "nrmse": 0.9628932416699042,
+            "pearson": 0.2836447310135076,
+            "target_peak": 1.0,
+            "outside_peak": 0.9538014174584146,
+            "outside_energy_fraction": 0.40231315052318994,
+            "hotspot_distance_to_target_grid_cells": 5.225577050245881
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.03672316384180791,
-            "cnr": 0.4787717126873994,
-            "nrmse": 1.1575272981863147,
-            "pearson": 0.1075633754085204,
-            "target_peak": 0.47043945565623185,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9008851007330706,
-            "hotspot_distance_to_target_grid_cells": 30.894905279101707
+            "dice_equal_area": 0.2592879256965944,
+            "cnr": 0.5581345569155955,
+            "nrmse": 0.9628932416699042,
+            "pearson": 0.2836447310135076,
+            "target_peak": 1.0,
+            "outside_peak": 0.9538014174584145,
+            "outside_energy_fraction": 0.40231315052318994,
+            "hotspot_distance_to_target_grid_cells": 5.225577050245881
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.10121612905118121,
-          "linear_exposure_vs_nonlinear_pressure_pearson": 0.00015441889961877387,
-          "linear_fusion_hotspot_distance_grid_cells": 34.40930106817051,
-          "nonlinear_pressure_to_fusion_pearson": -0.006361886364794385,
-          "nonlinear_pressure_to_cavitation_source_pearson": 0.9999999999999997,
-          "nonlinear_cavitation_source_to_reconstruction_pearson": -0.0063618863647943846,
-          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 12.0
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.20727269889355854,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.29600022147971844,
+          "linear_fusion_hotspot_distance_grid_cells": 19.235384061671343,
+          "nonlinear_pressure_to_fusion_pearson": 0.17289846098341574,
+          "nonlinear_pressure_to_cavitation_source_pearson": 0.0892212846844521,
+          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.6006539143227624,
+          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 7.211102550927978
         },
         "objective_history": {
           "nonlinear_fwi": [
-            NaN,
-            NaN
+            0.21772077540940996,
+            0.21772077540940996
           ],
           "nonlinear_cavitation": [
-            4489285.788296125,
-            4469178.797312445,
-            4449164.631300153,
-            4429242.8525389945,
-            4409413.025404072,
-            4389674.716357231,
-            4370027.493935346,
-            4350470.928743113,
-            4331004.593440296,
-            4311628.062731408,
-            4292340.9133552825,
-            4273142.724081754,
-            4254033.075694588,
-            4235011.550982044,
-            4216077.734731711,
-            4197231.213716196,
-            4178471.5766952196,
-            4159798.4143948634,
-            4141211.319486214,
-            4122709.8865998876,
-            4104293.712304385,
-            4085962.3950836523,
-            4067715.5353509537,
-            4049552.7354423404
+            10164695198.659506,
+            10045554637.20546,
+            9928444497.040607,
+            9813321872.182957,
+            9700144893.014677,
+            9588872697.149548,
+            9479465415.509392,
+            9371884137.311428,
+            9266090935.330177,
+            9162048779.030115,
+            9059721459.881128,
+            8959073660.418669,
+            8860070979.54379,
+            8762679980.90713,
+            8666867685.961826,
+            8572602375.658257,
+            8479852547.621729,
+            8388587816.156698,
+            8298778180.069065,
+            8210394308.925009,
+            8123407589.652714,
+            8037790080.243374,
+            7953514520.84498,
+            7870554324.104237
           ]
         },
-        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.720 and nonlinear fusion Dice is 0.037. Nonlinear peak-pressure outside-target energy is 1.000, linear/nonlinear fusion Pearson is 0.101, and nonlinear FWI objective drop is nan. The Rayleigh-Plesset source and passive reconstruction hotspots are 37.96 and 30.89 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 149.37 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.680 and nonlinear fusion Dice is 0.259. Nonlinear target MI is 2.97 at 2.10 MPa; outside-target energy is 0.916, linear/nonlinear fusion Pearson is 0.207, and nonlinear FWI objective drop is 0.000e+00. The Rayleigh-Plesset source and passive reconstruction hotspots are 10.58 and 5.23 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 148.00 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       },
       {
         "anatomy": "liver",
         "common_grid_shape": [
-          64,
-          64
+          512,
+          512
         ],
         "common_extent_m": [
           -0.17964843749999998,
-          0.1058203125,
-          -0.16066406249999998,
-          0.1360546875
+          0.17964843749999998,
+          -0.17964843749999998,
+          0.17964843749999998
         ],
         "geometry": {
-          "comparison_frame": "nonlinear_crop_xy_projection",
-          "linear_focus_to_common_target_centroid_m": 0.02021762094073666,
+          "comparison_frame": "full_ct_placement_xy_projection",
+          "linear_focus_to_common_target_centroid_m": 0.01205741608881518,
           "linear_element_count": 256,
           "nonlinear_element_count": 256,
-          "median_nearest_projected_element_distance_m": 0.048928367734985496,
-          "common_target_voxels": 47,
+          "median_nearest_projected_element_distance_m": 0.049293494475989394,
+          "common_target_voxels": 1942,
           "common_target_centroid_m": [
-            -0.0443858045212766,
-            -0.015962314779635268
+            -0.04524366793254376,
+            -0.022557567906797103
           ]
         },
         "comparison_metrics": {
           "linear_exposure": {
-            "dice_equal_area": 0.2127659574468085,
-            "cnr": 1.440521466666281,
-            "nrmse": 1.54412873647923,
-            "pearson": 0.21439300006083437,
+            "dice_equal_area": 0.25231719876416064,
+            "cnr": 1.6009084040675094,
+            "nrmse": 1.224965048024343,
+            "pearson": 0.26557624120947665,
             "target_peak": 1.0,
-            "outside_peak": 0.9312265689717656,
-            "outside_energy_fraction": 0.9203489612662601,
-            "hotspot_distance_to_target_grid_cells": 5.78633441067637
+            "outside_peak": 0.9469503633608668,
+            "outside_energy_fraction": 0.8856253532296342,
+            "hotspot_distance_to_target_grid_cells": 19.672515109677118
           },
           "linear_active": {
-            "dice_equal_area": 0.19148936170212766,
-            "cnr": 0.7486320006639939,
-            "nrmse": 1.0520372215950622,
-            "pearson": 0.19191965030206154,
-            "target_peak": 1.0,
-            "outside_peak": 0.9426289630647013,
-            "outside_energy_fraction": 0.8527590797656218,
-            "hotspot_distance_to_target_grid_cells": 5.78633441067637
+            "dice_equal_area": 0.1462409886714727,
+            "cnr": 0.8703722715725625,
+            "nrmse": 1.1105662544937374,
+            "pearson": 0.17097288474207073,
+            "target_peak": 0.9536437981974744,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.9040017330392025,
+            "hotspot_distance_to_target_grid_cells": 22.3933707057327
           },
           "linear_fusion": {
-            "dice_equal_area": 0.1702127659574468,
-            "cnr": 0.5604987632783321,
-            "nrmse": 0.9727904883019545,
-            "pearson": 0.2291913941301442,
-            "target_peak": 0.8371350481328588,
-            "outside_peak": 1.0,
-            "outside_energy_fraction": 0.635160430248516,
-            "hotspot_distance_to_target_grid_cells": 3.8194304406417534
+            "dice_equal_area": 0.22760041194644695,
+            "cnr": 0.7571321636081576,
+            "nrmse": 0.963489559283714,
+            "pearson": 0.2679008107513926,
+            "target_peak": 1.0,
+            "outside_peak": 0.8425923267766191,
+            "outside_energy_fraction": 0.6901972806044381,
+            "hotspot_distance_to_target_grid_cells": 19.672515109677118
           },
           "nonlinear_pressure": {
             "dice_equal_area": 0.0,
-            "cnr": 1.301760541428571,
-            "nrmse": 1.818552297148795,
-            "pearson": 0.11581934011526049,
-            "target_peak": 0.42296990220822483,
+            "cnr": 2.1519814196193403,
+            "nrmse": 2.222394634841679,
+            "pearson": 0.15984149224589342,
+            "target_peak": 0.6067914106567355,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9734840502015323,
-            "hotspot_distance_to_target_grid_cells": 22.940551430920983
+            "outside_energy_fraction": 0.9660216292715752,
+            "hotspot_distance_to_target_grid_cells": 30.092282081187534,
+            "raw_peak_pressure_pa": 2939403.1579115144,
+            "raw_target_peak_pressure_pa": 1738372.8245378789,
+            "peak_mechanical_index": 4.156943811200767,
+            "target_peak_mechanical_index": 2.4584304249222924,
+            "inertial_mi_threshold": 1.9,
+            "peak_exceeds_inertial_threshold": true,
+            "target_exceeds_inertial_threshold": true,
+            "finite_pressure_fraction": 1.0,
+            "source_pressure_pa": 28000000.0,
+            "source_scale": 1.0,
+            "effective_source_pressure_pa": 28000000.0,
+            "raw_peak_to_effective_source_ratio": 0.10497868421112551
           },
           "nonlinear_fwi": {
-            "dice_equal_area": 0.5957446808510638,
-            "cnr": 2.045911072655285,
-            "nrmse": 0.8060843305500146,
-            "pearson": 0.6156039212073025,
+            "dice_equal_area": 0.601956745623069,
+            "cnr": 2.878999444657859,
+            "nrmse": 0.8379275973880472,
+            "pearson": 0.6241757828889949,
             "target_peak": 1.0,
-            "outside_peak": 0.7017231019105931,
-            "outside_energy_fraction": 0.44035728005844665,
-            "hotspot_distance_to_target_grid_cells": 12.33972852030103
+            "outside_peak": 0.8348924307000896,
+            "outside_energy_fraction": 0.5173846180568971,
+            "hotspot_distance_to_target_grid_cells": 35.41845805549469
           },
           "nonlinear_cavitation_source": {
-            "dice_equal_area": 0.10638297872340426,
-            "cnr": 0.4132223496845017,
-            "nrmse": 1.3452339826229402,
-            "pearson": 0.08837969852391796,
-            "target_peak": 0.9675995765259418,
+            "dice_equal_area": 0.34603501544799176,
+            "cnr": 0.13229392018696315,
+            "nrmse": 1.0046510555268975,
+            "pearson": 0.02006991000492954,
+            "target_peak": 0.43476281890345625,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9091795095009043,
-            "hotspot_distance_to_target_grid_cells": 4.66001163790059
+            "outside_energy_fraction": 0.9603336672546073,
+            "hotspot_distance_to_target_grid_cells": 65.05679704282774
           },
           "nonlinear_cavitation": {
-            "dice_equal_area": 0.0,
-            "cnr": 0.6137402220092895,
-            "nrmse": 1.177668041128754,
-            "pearson": 0.0712334908597505,
-            "target_peak": 0.33196343014138163,
+            "dice_equal_area": 0.3038105046343975,
+            "cnr": 0.4553772633013716,
+            "nrmse": 0.998398656083654,
+            "pearson": 0.08320860269987555,
+            "target_peak": 0.43444730077121047,
             "outside_peak": 1.0,
-            "outside_energy_fraction": 0.9760761590231706,
-            "hotspot_distance_to_target_grid_cells": 18.084105103696427
+            "outside_energy_fraction": 0.9323150512269323,
+            "hotspot_distance_to_target_grid_cells": 65.05679704282774
           },
           "nonlinear_fusion": {
-            "dice_equal_area": 0.5531914893617021,
-            "cnr": 1.9313701285339575,
-            "nrmse": 0.9578229363502347,
-            "pearson": 0.5171073932876349,
-            "target_peak": 1.0,
-            "outside_peak": 0.7177296737522383,
-            "outside_energy_fraction": 0.5949767929970189,
-            "hotspot_distance_to_target_grid_cells": 11.393949773633915
+            "dice_equal_area": 0.5849639546858908,
+            "cnr": 2.9178686188046354,
+            "nrmse": 0.8287640236132594,
+            "pearson": 0.6136766931769513,
+            "target_peak": 0.9134543548618786,
+            "outside_peak": 1.0,
+            "outside_energy_fraction": 0.5358433606841916,
+            "hotspot_distance_to_target_grid_cells": 65.05679704282774
           }
         },
         "cross_model_metrics": {
-          "linear_fusion_vs_nonlinear_fusion_pearson": 0.32506293687727617,
-          "linear_exposure_vs_nonlinear_pressure_pearson": 0.3833480293845686,
-          "linear_fusion_hotspot_distance_grid_cells": 7.615773105863909,
-          "nonlinear_pressure_to_fusion_pearson": 0.4140805261960484,
-          "nonlinear_pressure_to_cavitation_source_pearson": 0.17972683050893426,
-          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.31105801760003804,
-          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 20.248456731316587
+          "linear_fusion_vs_nonlinear_fusion_pearson": 0.43997703697519447,
+          "linear_exposure_vs_nonlinear_pressure_pearson": 0.5617654929668405,
+          "linear_fusion_hotspot_distance_grid_cells": 84.71717653463199,
+          "nonlinear_pressure_to_fusion_pearson": 0.31264794645819743,
+          "nonlinear_pressure_to_cavitation_source_pearson": 0.06601716271588179,
+          "nonlinear_cavitation_source_to_reconstruction_pearson": 0.9051778351079114,
+          "nonlinear_cavitation_source_to_reconstruction_hotspot_distance_grid_cells": 0.0
         },
         "objective_history": {
           "nonlinear_fwi": [
-            6.8224694247315344e-06,
-            4.943156814195387e-06,
-            4.3660906488065485e-06,
-            4.074462299229536e-06
+            6.931260591418064e-06,
+            5.034232974221595e-06,
+            4.079337109492721e-06,
+            3.942955134888203e-06
           ],
           "nonlinear_cavitation": [
-            87683460813.56212,
-            87229521522.01942,
-            86778574210.7557,
-            86330596249.89566,
-            85885565204.0584,
-            85443458822.96915,
-            85004255038.6285,
-            84567931967.4544,
-            84134467903.79112,
-            83703841322.9327,
-            83276030877.07942,
-            82851015389.24124,
-            82428773855.24467,
-            82009285440.44142,
-            81592529480.63255,
-            81178485485.50368,
-            80767133120.54329,
-            80358452214.92392,
-            79952422757.46748,
-            79549024904.50609,
-            79148238974.91565,
-            78750045449.09421,
-            78354425001.05896,
-            77961358456.4431
+            3039765936.680228,
+            2931201115.9313607,
+            2827523379.820145,
+            2728462978.3070273,
+            2633769320.9203615,
+            2543210030.449011,
+            2456566709.4051027,
+            2373635212.060373,
+            2294224320.550646,
+            2218154734.906231,
+            2145258158.2672703,
+            2075376467.0669947,
+            2008360957.1468995,
+            1944071657.8070223,
+            1882376706.7092733,
+            1823151779.3572588,
+            1766279363.3755143,
+            1711647829.181643,
+            1659151584.1512606,
+            1608690875.3659444,
+            1560171083.753823,
+            1513502532.3825288,
+            1468600434.776767,
+            1425384580.4605713
           ]
         },
-        "technical_explanation": "On the common crop grid, linear fusion Dice is 0.170 and nonlinear fusion Dice is 0.553. Nonlinear peak-pressure outside-target energy is 0.973, linear/nonlinear fusion Pearson is 0.325, and nonlinear FWI objective drop is 2.748e-06. The Rayleigh-Plesset source and passive reconstruction hotspots are 4.66 and 18.08 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 48.93 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
+        "technical_explanation": "On the full CT placement grid, linear fusion Dice is 0.228 and nonlinear fusion Dice is 0.585. Nonlinear target MI is 2.46 at 1.74 MPa; outside-target energy is 0.966, linear/nonlinear fusion Pearson is 0.440, and nonlinear FWI objective drop is 2.988e-06. The Rayleigh-Plesset source and passive reconstruction hotspots are 65.06 and 65.06 grid cells from the target centroid. The residual projected aperture mismatch from the original runs is 49.29 mm; therefore the matched artifact localizes the remaining channel difference to nonlinear pressure/cavitation spread plus residual 2-D-vs-3-D aperture mismatch, not to image resolution alone."
       }
     ]
   }

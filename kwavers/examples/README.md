@@ -53,6 +53,13 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 |---------|-------------|----------|
 | [`physics_validation.rs`](physics_validation.rs) | Physics validation suite | Literature validation, error analysis |
 | [`literature_validation_safe.rs`](literature_validation_safe.rs) | Analytical validation | Green's functions, diffraction |
+| [`pstd_fdtd_comparison.rs`](pstd_fdtd_comparison.rs) | Solver discrepancy diagnostics | FDTD, k-space FDTD, PSTD field metrics |
+| [`focused_ultrasound_water_tank.rs`](focused_ultrasound_water_tank.rs) | Focused ultrasound water-tank plots | Through-plane phased line aperture, FDTD+CPML, PSTD+CPML, DG-2D/DG-3D with uniform-grid GLL projection and RK-stage weak source forcing, DG-1D axial, and analytical focused-array gated peak-pressure maps/profiles with metrics |
+| [`dg_advection_diagnostics.rs`](dg_advection_diagnostics.rs) | DG scalar/acoustic readiness diagnostics | Periodic advection, one-way and bidirectional acoustic characteristics, mass, phase, amplitude metrics |
+| [`dg_acoustic_1d_diagnostics.rs`](dg_acoustic_1d_diagnostics.rs) | Native DG acoustic diagnostics | Coupled pressure/velocity DG, analytical standing wave, characteristic cross-check, embedded FDTD/PSTD/DG Gaussian matrix |
+| [`dg_acoustic_comparison_plot.rs`](dg_acoustic_comparison_plot.rs) | Acoustic solver comparison plots | PNG and CSV plots for native-grid, common-grid, and uniform-grid exact, DG, FDTD, k-space FDTD, and PSTD Gaussian pressure/error traces |
+| [`dg_acoustic_convergence_plot.rs`](dg_acoustic_convergence_plot.rs) | DG acoustic p-refinement plots | PNG and CSV convergence diagnostics with nodal and common-quadrature DG Gaussian pressure errors |
+| [`dg_acoustic_timestep_sweep.rs`](dg_acoustic_timestep_sweep.rs) | Acoustic timestep-refinement plots | PNG and CSV timestep sweep for DG, FDTD, k-space FDTD, and PSTD Gaussian pressure errors |
 | [`theorem_validation_demo.rs`](theorem_validation_demo.rs) | Mathematical theorems | Formal verification, proofs |
 | [`validate_2d_pinn.rs`](validate_2d_pinn.rs) | PINN validation | 2D wave equation, convergence |
 

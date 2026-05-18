@@ -1,4 +1,5 @@
 use super::MicrobubbleState;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 
 impl MicrobubbleState {
@@ -36,8 +37,8 @@ impl MicrobubbleState {
     /// Kinetic energy of oscillating bubble wall (J).
     #[must_use]
     pub fn kinetic_energy(&self) -> f64 {
-        const WATER_DENSITY: f64 = 1000.0;
-        let mass_effective = 4.0 * std::f64::consts::PI * WATER_DENSITY * self.radius.powi(3);
+        let mass_effective =
+            4.0 * std::f64::consts::PI * DENSITY_WATER_NOMINAL * self.radius.powi(3);
         0.5 * mass_effective * self.wall_velocity.powi(2)
     }
 
@@ -46,12 +47,11 @@ impl MicrobubbleState {
     /// Brennen (1995), §4.1, Eq. (4.7): E_pot = P₀V₀{(V/V₀)−1 + [(V₀/V)^{γ−1}−1]/(γ−1)}
     #[must_use]
     pub fn potential_energy(&self) -> f64 {
-        const AMBIENT_PRESSURE: f64 = 101325.0;
         const POLYTROPIC_INDEX: f64 = 1.4;
 
         let r0 = self.radius_equilibrium.max(f64::EPSILON);
         let r = self.radius.max(f64::EPSILON);
-        let p0 = AMBIENT_PRESSURE;
+        let p0 = ATMOSPHERIC_PRESSURE;
         let gamma = POLYTROPIC_INDEX;
 
         let v0 = (4.0 / 3.0) * std::f64::consts::PI * r0.powi(3);
@@ -72,11 +72,9 @@ impl MicrobubbleState {
     /// Minnaert resonance frequency: f₀ = (1/2πR₀)√(3γP₀/ρ) (Hz).
     #[must_use]
     pub fn resonance_frequency(&self) -> f64 {
-        const AMBIENT_PRESSURE: f64 = 101325.0;
-        const WATER_DENSITY: f64 = 1000.0;
         const POLYTROPIC_INDEX: f64 = 1.4;
 
-        let numerator = 3.0 * POLYTROPIC_INDEX * AMBIENT_PRESSURE / WATER_DENSITY;
+        let numerator = 3.0 * POLYTROPIC_INDEX * ATMOSPHERIC_PRESSURE / DENSITY_WATER_NOMINAL;
         numerator.sqrt() / (2.0 * std::f64::consts::PI * self.radius_equilibrium)
     }
 

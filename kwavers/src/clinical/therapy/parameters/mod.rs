@@ -42,4 +42,4 @@
 
 pub mod types;
 
-pub use types::TherapyParameters;
+pub use types::ClinicalTherapyParameters;

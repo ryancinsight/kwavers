@@ -1,24 +1,24 @@
-use super::{SimdStencilConfig, SimdStencilProcessor};
+use super::{FdtdSimdStencilConfig, FdtdSimdStencilProcessor};
 use ndarray::Array3;
 
 #[test]
 fn test_stencil_creation() {
-    let config = SimdStencilConfig::default();
-    let result = SimdStencilProcessor::new(64, 64, 64, config);
+    let config = FdtdSimdStencilConfig::default();
+    let result = FdtdSimdStencilProcessor::new(64, 64, 64, config);
     let _processor = result.unwrap();
 }
 
 #[test]
 fn test_dimension_validation() {
-    let config = SimdStencilConfig::default();
-    let result = SimdStencilProcessor::new(2, 64, 64, config);
+    let config = FdtdSimdStencilConfig::default();
+    let result = FdtdSimdStencilProcessor::new(2, 64, 64, config);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_pressure_update() {
-    let config = SimdStencilConfig::default();
-    let mut processor = SimdStencilProcessor::new(16, 16, 16, config).unwrap();
+    let config = FdtdSimdStencilConfig::default();
+    let mut processor = FdtdSimdStencilProcessor::new(16, 16, 16, config).unwrap();
 
     let pressure = Array3::ones((16, 16, 16));
     let pressure_prev = Array3::ones((16, 16, 16));
@@ -32,8 +32,8 @@ fn test_pressure_update() {
 
 #[test]
 fn test_velocity_update() {
-    let config = SimdStencilConfig::default();
-    let mut processor = SimdStencilProcessor::new(16, 16, 16, config).unwrap();
+    let config = FdtdSimdStencilConfig::default();
+    let mut processor = FdtdSimdStencilProcessor::new(16, 16, 16, config).unwrap();
 
     let mut velocity = Array3::zeros((16, 16, 16));
     let pressure = Array3::ones((16, 16, 16));
@@ -45,8 +45,8 @@ fn test_velocity_update() {
 
 #[test]
 fn test_fused_update() {
-    let config = SimdStencilConfig::default();
-    let mut processor = SimdStencilProcessor::new(16, 16, 16, config).unwrap();
+    let config = FdtdSimdStencilConfig::default();
+    let mut processor = FdtdSimdStencilProcessor::new(16, 16, 16, config).unwrap();
 
     let pressure = Array3::ones((16, 16, 16));
     let pressure_prev = Array3::ones((16, 16, 16));
@@ -69,13 +69,13 @@ fn test_fused_update() {
 #[test]
 fn test_tiling_matches_naive() {
     let n = 17usize;
-    let mut config_tiled = SimdStencilConfig::default();
+    let mut config_tiled = FdtdSimdStencilConfig::default();
     config_tiled.tile_size = 8;
-    let mut processor_tiled = SimdStencilProcessor::new(n, n, n, config_tiled).unwrap();
+    let mut processor_tiled = FdtdSimdStencilProcessor::new(n, n, n, config_tiled).unwrap();
 
-    let mut config_naive = SimdStencilConfig::default();
+    let mut config_naive = FdtdSimdStencilConfig::default();
     config_naive.tile_size = 256;
-    let mut processor_naive = SimdStencilProcessor::new(n, n, n, config_naive).unwrap();
+    let mut processor_naive = FdtdSimdStencilProcessor::new(n, n, n, config_naive).unwrap();
 
     let pressure = Array3::from_elem((n, n, n), 1000.0_f64);
     let pressure_prev = Array3::from_elem((n, n, n), 990.0_f64);
@@ -106,8 +106,8 @@ fn test_tiling_matches_naive() {
 #[test]
 fn test_velocity_inplace_no_regression() {
     let n = 16usize;
-    let config = SimdStencilConfig::default();
-    let mut processor = SimdStencilProcessor::new(n, n, n, config).unwrap();
+    let config = FdtdSimdStencilConfig::default();
+    let mut processor = FdtdSimdStencilProcessor::new(n, n, n, config).unwrap();
 
     let pressure = Array3::from_elem((n, n, n), 500.0_f64);
     let mut vel_inplace = Array3::from_elem((n, n, n), 0.1_f64);
@@ -132,8 +132,8 @@ fn test_velocity_inplace_no_regression() {
 
 #[test]
 fn test_tile_statistics() {
-    let config = SimdStencilConfig::default();
-    let processor = SimdStencilProcessor::new(64, 64, 64, config).unwrap();
+    let config = FdtdSimdStencilConfig::default();
+    let processor = FdtdSimdStencilProcessor::new(64, 64, 64, config).unwrap();
     let (tx, ty, tz) = processor.tile_stats();
     assert!(tx > 0 && ty > 0 && tz > 0);
     assert_eq!(processor.total_tiles(), tx * ty * tz);
@@ -141,7 +141,7 @@ fn test_tile_statistics() {
 
 #[test]
 fn test_stability_check() {
-    let config = SimdStencilConfig::default();
+    let config = FdtdSimdStencilConfig::default();
     let cfl = config.sound_speed * config.dt / config.dx;
     assert!(
         cfl <= config.cfl_number + f64::EPSILON * 10.0,

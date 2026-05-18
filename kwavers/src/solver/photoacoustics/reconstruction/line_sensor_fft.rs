@@ -1,7 +1,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::{PhotoacousticScenario, PhotoacousticSignalSet};
 use crate::solver::inverse::reconstruction::photoacoustic::{
-    PhotoacousticAlgorithm, PhotoacousticConfig, PhotoacousticReconstructor,
+    PhotoacousticAlgorithm, PhotoacousticReconstructor, ReconstructionPhotoacousticConfig,
 };
 use crate::solver::reconstruction::{ReconstructionConfig, Reconstructor};
 use ndarray::Array3;
@@ -20,7 +20,7 @@ impl LineSensorFftReconstruction {
         scenario: &PhotoacousticScenario,
         signals: &PhotoacousticSignalSet,
     ) -> KwaversResult<Array3<f64>> {
-        let config = PhotoacousticConfig {
+        let config = ReconstructionPhotoacousticConfig {
             algorithm: PhotoacousticAlgorithm::FourierDomain,
             sensor_positions: signals.sensor_positions.clone(),
             grid_size: [scenario.grid.nx, scenario.grid.ny, scenario.grid.nz],

@@ -1,35 +1,20 @@
-//! Types for 2D transducer array: `ApodizationType`, `TransducerArray2DConfig`, `ArrayElement`.
+//! Types for 2D transducer array: `ApodizationType`, `TransducerArray2DConfig`, `Array2dElement`.
 
 use crate::domain::source::{
     Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
     RectangularApodization,
 };
+pub use crate::math::signal::ApodizationType;
 
-/// Apodization window types for transmit/receive weighting
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ApodizationType {
-    /// Uniform weighting (all elements equal)
-    Rectangular,
-    /// Hanning window (raised cosine)
-    Hanning,
-    /// Hamming window (modified raised cosine)
-    Hamming,
-    /// Blackman window (reduced sidelobes)
-    Blackman,
-    /// Gaussian window (configurable width)
-    Gaussian { sigma: f64 },
-}
-
-impl ApodizationType {
-    /// Create an apodization implementation from the type
-    pub(super) fn create_apodization(&self) -> Box<dyn Apodization> {
-        match self {
-            Self::Rectangular => Box::new(RectangularApodization),
-            Self::Hanning => Box::new(HanningApodization),
-            Self::Hamming => Box::new(HammingApodization),
-            Self::Blackman => Box::new(BlackmanApodization),
-            Self::Gaussian { sigma } => Box::new(GaussianApodization::new(*sigma)),
-        }
+/// Create an apodization implementation from an `ApodizationType`.
+pub(super) fn create_apodization(apo: &ApodizationType) -> Box<dyn Apodization> {
+    match apo {
+        ApodizationType::Uniform => Box::new(RectangularApodization),
+        ApodizationType::Hanning => Box::new(HanningApodization),
+        ApodizationType::Hamming => Box::new(HammingApodization),
+        ApodizationType::Blackman => Box::new(BlackmanApodization),
+        ApodizationType::Gaussian { sigma } => Box::new(GaussianApodization::new(*sigma)),
+        ApodizationType::Kaiser { .. } => Box::new(HammingApodization),
     }
 }
 
@@ -103,7 +88,7 @@ impl TransducerArray2DConfig {
 
 /// Individual transducer element in 2D array
 #[derive(Debug, Clone)]
-pub struct ArrayElement {
+pub struct Array2dElement {
     /// Element position (x, y, z) (m)
     pub position: (f64, f64, f64),
     /// Element width (m)

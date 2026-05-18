@@ -1,18 +1,18 @@
-use super::properties::SkullProperties;
+use super::properties::AcousticSkullProperties;
 use super::simulation::TranscranialSimulation;
 use crate::domain::grid::Grid;
 
 #[test]
 fn test_skull_properties_default() {
-    let props = SkullProperties::default();
+    let props = AcousticSkullProperties::default();
     assert!(props.sound_speed > 2800.0 && props.sound_speed < 3500.0);
     assert!(props.density > 1800.0 && props.density < 2100.0);
 }
 
 #[test]
 fn test_bone_types() {
-    let cortical = SkullProperties::from_bone_type("cortical").unwrap();
-    let trabecular = SkullProperties::from_bone_type("trabecular").unwrap();
+    let cortical = AcousticSkullProperties::from_bone_type("cortical").unwrap();
+    let trabecular = AcousticSkullProperties::from_bone_type("trabecular").unwrap();
 
     assert!(cortical.sound_speed > trabecular.sound_speed);
     assert!(cortical.density > trabecular.density);
@@ -20,7 +20,7 @@ fn test_bone_types() {
 
 #[test]
 fn test_acoustic_impedance() {
-    let props = SkullProperties::default();
+    let props = AcousticSkullProperties::default();
     let z = props.acoustic_impedance();
 
     // Skull impedance should be much higher than water (1.5 MRayl)
@@ -30,7 +30,7 @@ fn test_acoustic_impedance() {
 
 #[test]
 fn test_transmission_coefficient() {
-    let props = SkullProperties::default();
+    let props = AcousticSkullProperties::default();
     let water_z = 1.5e6;
     let t = props.transmission_coefficient(water_z);
 
@@ -40,7 +40,7 @@ fn test_transmission_coefficient() {
 
 #[test]
 fn test_frequency_dependent_attenuation() {
-    let props = SkullProperties::default();
+    let props = AcousticSkullProperties::default();
 
     let atten_500k = props.attenuation_at_frequency(500e3);
     let atten_1m = props.attenuation_at_frequency(1e6);
@@ -52,7 +52,7 @@ fn test_frequency_dependent_attenuation() {
 #[test]
 fn test_transcranial_simulation_creation() {
     let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001).unwrap();
-    let props = SkullProperties::default();
+    let props = AcousticSkullProperties::default();
 
     let _sim = TranscranialSimulation::new(&grid, props).unwrap();
 }
@@ -60,7 +60,7 @@ fn test_transcranial_simulation_creation() {
 #[test]
 fn test_analytical_sphere_geometry() {
     let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
-    let props = SkullProperties::default();
+    let props = AcousticSkullProperties::default();
 
     let mut sim = TranscranialSimulation::new(&grid, props).unwrap();
     let result = sim.set_analytical_geometry("sphere", &[20.0]);
@@ -72,7 +72,7 @@ fn test_analytical_sphere_geometry() {
 #[test]
 fn test_insertion_loss_estimation() {
     let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001).unwrap();
-    let props = SkullProperties::default();
+    let props = AcousticSkullProperties::default();
 
     let sim = TranscranialSimulation::new(&grid, props).unwrap();
     let loss = sim.estimate_insertion_loss(650e3).unwrap();

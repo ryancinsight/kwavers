@@ -14,7 +14,7 @@ pub enum DomainType {
 }
 
 /// Domain region with associated solver type
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct DomainRegion {
     /// Starting indices (inclusive)
     pub start: (usize, usize, usize),

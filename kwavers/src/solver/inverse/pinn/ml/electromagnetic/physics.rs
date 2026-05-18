@@ -5,9 +5,9 @@ use super::residuals::{
 };
 use super::types::{EMProblemType, ElectromagneticBoundarySpec};
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface,
-    InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
-    PhysicsValidationMetric,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
+    PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
+    PinnDomainPhysicsParameters,
 };
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
@@ -24,7 +24,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2> {
         // Get material properties from parameters or defaults
         let eps = physics_params
@@ -57,95 +57,95 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
         }
     }
 
-    fn boundary_conditions(&self) -> Vec<BoundaryConditionSpec> {
+    fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec> {
         if self.boundary_specs.is_empty() {
             return match self.problem_type {
                 EMProblemType::Electrostatic => vec![
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Left,
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Right,
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Bottom,
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Top,
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
                 ],
                 EMProblemType::Magnetostatic => vec![
-                    BoundaryConditionSpec::Neumann {
+                    PinnBoundaryConditionSpec::Neumann {
                         boundary: BoundaryPosition::Left,
                         flux: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
-                    BoundaryConditionSpec::Neumann {
+                    PinnBoundaryConditionSpec::Neumann {
                         boundary: BoundaryPosition::Right,
                         flux: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
-                    BoundaryConditionSpec::Neumann {
+                    PinnBoundaryConditionSpec::Neumann {
                         boundary: BoundaryPosition::Bottom,
                         flux: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
-                    BoundaryConditionSpec::Neumann {
+                    PinnBoundaryConditionSpec::Neumann {
                         boundary: BoundaryPosition::Top,
                         flux: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
                 ],
                 EMProblemType::QuasiStatic => vec![
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Left,
                         value: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Right,
                         value: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Bottom,
                         value: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Top,
                         value: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
                 ],
                 EMProblemType::WavePropagation => vec![
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Left,
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Right,
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Bottom,
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: BoundaryPosition::Top,
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
                 ],
             };
@@ -155,37 +155,37 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
             .iter()
             .map(|spec| match spec {
                 ElectromagneticBoundarySpec::PerfectElectricConductor { position } => {
-                    BoundaryConditionSpec::Dirichlet {
+                    PinnBoundaryConditionSpec::Dirichlet {
                         boundary: position.clone(),
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     }
                 }
                 ElectromagneticBoundarySpec::PerfectMagneticConductor { position } => {
-                    BoundaryConditionSpec::Neumann {
+                    PinnBoundaryConditionSpec::Neumann {
                         boundary: position.clone(),
                         flux: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     }
                 }
                 ElectromagneticBoundarySpec::ImpedanceBoundary {
                     position,
                     impedance,
-                } => BoundaryConditionSpec::Robin {
+                } => PinnBoundaryConditionSpec::Robin {
                     boundary: position.clone(),
                     alpha: 1.0 / impedance,
                     beta: 0.0,
-                    component: BoundaryComponent::Scalar,
+                    component: PinnBoundaryComponent::Scalar,
                 },
                 ElectromagneticBoundarySpec::Port {
                     position,
                     port_impedance,
                     ..
-                } => BoundaryConditionSpec::Robin {
+                } => PinnBoundaryConditionSpec::Robin {
                     boundary: position.clone(),
                     alpha: 1.0 / port_impedance,
                     beta: 0.0,
-                    component: BoundaryComponent::Scalar,
+                    component: PinnBoundaryComponent::Scalar,
                 },
             })
             .collect()
@@ -196,24 +196,24 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
             EMProblemType::Electrostatic => {
                 vec![InitialConditionSpec::DirichletConstant {
                     value: vec![0.0],
-                    component: BoundaryComponent::Scalar,
+                    component: PinnBoundaryComponent::Scalar,
                 }]
             }
             EMProblemType::Magnetostatic => {
                 vec![InitialConditionSpec::DirichletConstant {
                     value: vec![0.0, 0.0],
-                    component: BoundaryComponent::Vector(vec![0, 1]),
+                    component: PinnBoundaryComponent::Vector(vec![0, 1]),
                 }]
             }
             EMProblemType::QuasiStatic => {
                 vec![
                     InitialConditionSpec::DirichletConstant {
                         value: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
                     InitialConditionSpec::DirichletConstant {
                         value: vec![0.0, 0.0],
-                        component: BoundaryComponent::Vector(vec![0, 1]),
+                        component: PinnBoundaryComponent::Vector(vec![0, 1]),
                     },
                 ]
             }
@@ -221,11 +221,11 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
                 vec![
                     InitialConditionSpec::DirichletConstant {
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
                     InitialConditionSpec::DirichletConstant {
                         value: vec![0.0],
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     },
                 ]
             }

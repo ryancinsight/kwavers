@@ -14,7 +14,7 @@ use crate::math::vector3::cross3;
 /// Uniform area sampling requires the CDF `F(θ) = (cos(θ_cutout) − cos(θ)) /
 /// (cos(θ_cutout) − cos(θ_max))` to be uniformly distributed, so
 /// `cos(θ) = cos(θ_cutout) − t·(cos(θ_cutout) − cos(θ_max))`.
-pub(super) fn bowl_elements(
+pub(crate) fn bowl_elements(
     count: usize,
     skin_contact_m: Point3,
     focus_m: Point3,

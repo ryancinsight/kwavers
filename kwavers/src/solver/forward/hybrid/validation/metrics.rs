@@ -15,7 +15,7 @@ pub struct ErrorMetrics {
 
 /// Performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceMetrics {
+pub struct HybridSolverMetrics {
     /// Computation time in seconds
     pub computation_time: f64,
     /// Memory usage in MB

@@ -12,7 +12,7 @@ use ndarray::Array3;
 
 /// Field coupling strategy
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CouplingStrategy {
+pub enum FieldCouplingStrategy {
     /// No coupling between fields (independent simulations)
     None,
     /// Weak coupling (sequential updates)
@@ -27,7 +27,7 @@ pub enum CouplingStrategy {
 #[derive(Debug)]
 pub struct FieldCoupler {
     /// Coupling strategy
-    strategy: CouplingStrategy,
+    strategy: FieldCouplingStrategy,
     /// Coupling strength parameters
     coupling_strength: f64,
     /// Maximum iterations for strong coupling
@@ -39,7 +39,7 @@ pub struct FieldCoupler {
 impl FieldCoupler {
     /// Create a new field coupler
     #[must_use]
-    pub fn new(strategy: CouplingStrategy) -> Self {
+    pub fn new(strategy: FieldCouplingStrategy) -> Self {
         Self {
             strategy,
             coupling_strength: 1.0,
@@ -54,10 +54,10 @@ impl FieldCoupler {
     ///
     pub fn couple_fields(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         match self.strategy {
-            CouplingStrategy::None => Ok(()),
-            CouplingStrategy::Weak => self.apply_weak_coupling(fields, dt),
-            CouplingStrategy::Strong => self.apply_strong_coupling(fields, dt),
-            CouplingStrategy::Adaptive => self.apply_adaptive_coupling(fields, dt),
+            FieldCouplingStrategy::None => Ok(()),
+            FieldCouplingStrategy::Weak => self.apply_weak_coupling(fields, dt),
+            FieldCouplingStrategy::Strong => self.apply_strong_coupling(fields, dt),
+            FieldCouplingStrategy::Adaptive => self.apply_adaptive_coupling(fields, dt),
         }
     }
 }

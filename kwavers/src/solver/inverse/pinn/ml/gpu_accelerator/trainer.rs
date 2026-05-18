@@ -1,7 +1,7 @@
 //! Batched PINN trainer with GPU acceleration.
 
 use super::kernel::CudaKernelManager;
-use super::memory::{CudaBuffer, GpuMemoryManager, MemoryPoolType, MemoryStats};
+use super::memory::{CudaBuffer, GpuMemoryManager, PinnGpuMemoryPoolType, PinnGpuMemoryStats};
 use crate::core::error::KwaversResult;
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
@@ -145,16 +145,17 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
         collocation_points: &Tensor<B, 2>,
     ) -> KwaversResult<Tensor<B, 2>> {
         let _pred_buffer = self.memory_manager.allocate_device(
-            MemoryPoolType::Temporary,
+            PinnGpuMemoryPoolType::Temporary,
             predictions.shape().dims[0] * predictions.shape().dims[1],
         )?;
         let _coll_buffer = self.memory_manager.allocate_device(
-            MemoryPoolType::Collocation,
+            PinnGpuMemoryPoolType::Collocation,
             collocation_points.shape().dims[0] * collocation_points.shape().dims[1],
         )?;
-        let _residual_buffer = self
-            .memory_manager
-            .allocate_device(MemoryPoolType::Temporary, predictions.shape().dims[0])?;
+        let _residual_buffer = self.memory_manager.allocate_device(
+            PinnGpuMemoryPoolType::Temporary,
+            predictions.shape().dims[0],
+        )?;
 
         let residuals = Tensor::zeros_like(
             &predictions
@@ -174,7 +175,7 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
             let size = 1024 * 1024;
             self.gradient_accumulator = Some(
                 self.memory_manager
-                    .allocate_device(MemoryPoolType::Gradients, size)?,
+                    .allocate_device(PinnGpuMemoryPoolType::Gradients, size)?,
             );
         }
 
@@ -197,7 +198,7 @@ impl<B: AutodiffBackend> BatchedPINNTrainer<B> {
         &self.stats
     }
 
-    pub fn memory_stats(&self) -> &MemoryStats {
+    pub fn memory_stats(&self) -> &PinnGpuMemoryStats {
         self.memory_manager.memory_stats()
     }
 }

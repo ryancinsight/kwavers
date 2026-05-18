@@ -1,15 +1,15 @@
 //! 3-D same-aperture source/receiver placement on CT-derived body support.
 
-use std::cmp::Ordering;
 use std::f64::consts::PI;
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::super::abdominal3d::helpers::{exterior_air_mask, nearest_exterior_skin_point};
+use super::super::abdominal3d::helpers::exterior_air_mask;
 use super::super::AnatomyKind;
 use super::super::Point3;
+use super::aperture_bowl::abdominal_bowl_candidates;
 use super::types::{
-    grid_point_m, GridIndex, Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume,
+    GridIndex, Nonlinear3dAperture, Nonlinear3dConfig, Nonlinear3dVolume, SourceDomain,
 };
 use super::volume::centroid_index;
 
@@ -19,28 +19,44 @@ pub(crate) fn build_aperture(
 ) -> KwaversResult<Nonlinear3dAperture> {
     let candidates = match volume.anatomy {
         AnatomyKind::Brain => brain_candidates(volume, config.element_count),
-        AnatomyKind::Liver | AnatomyKind::Kidney => abdominal_candidates(volume),
+        AnatomyKind::Liver | AnatomyKind::Kidney => {
+            abdominal_bowl_candidates(volume, config.element_count)?
+        }
     };
     if candidates.len() < 4 {
         return Err(KwaversError::InvalidInput(
             "nonlinear 3-D aperture found fewer than four skin boundary cells".to_owned(),
         ));
     }
-    let sources = select_evenly(candidates, config.element_count);
-    let receivers = select_evenly(sources.clone(), config.receiver_count);
+    let sources = match volume.anatomy {
+        AnatomyKind::Brain => select_evenly(candidates, config.element_count),
+        AnatomyKind::Liver | AnatomyKind::Kidney => {
+            select_evenly_preserving_order(candidates, config.element_count)
+        }
+    };
+    let receivers = match volume.anatomy {
+        AnatomyKind::Brain => select_evenly(sources.clone(), config.receiver_count),
+        AnatomyKind::Liver | AnatomyKind::Kidney => {
+            select_evenly_preserving_order(sources.clone(), config.receiver_count)
+        }
+    };
     let n = volume.body_mask.dim().0;
     let therapy_points_m = sources
         .iter()
-        .map(|idx| grid_point_m(*idx, n, volume.spacing_m))
+        .map(|idx| source_frame_grid_point_m(*idx, volume, n))
         .collect();
     let receiver_points_m = receivers
         .iter()
-        .map(|idx| grid_point_m(*idx, n, volume.spacing_m))
+        .map(|idx| source_frame_grid_point_m(*idx, volume, n))
         .collect();
     let model_name = match volume.anatomy {
         AnatomyKind::Brain => "insightec_like_calvarium_helmet_3d_westervelt_sources",
-        AnatomyKind::Liver => "liver_histosonics_like_skin_coupled_3d_westervelt_sources",
-        AnatomyKind::Kidney => "kidney_histosonics_like_skin_coupled_3d_westervelt_sources",
+        AnatomyKind::Liver => {
+            "liver_histosonics_like_focused_bowl_slowness_steered_3d_westervelt_sources"
+        }
+        AnatomyKind::Kidney => {
+            "kidney_histosonics_like_focused_bowl_slowness_steered_3d_westervelt_sources"
+        }
     }
     .to_owned();
     Ok(Nonlinear3dAperture {
@@ -49,8 +65,31 @@ pub(crate) fn build_aperture(
         therapy_points_m,
         receiver_points_m,
         model_name,
+        source_domain: match volume.anatomy {
+            AnatomyKind::Brain => SourceDomain::TissueBoundary,
+            AnatomyKind::Liver | AnatomyKind::Kidney => SourceDomain::ExteriorCoupling,
+        },
         focus: volume.focus,
     })
+}
+
+fn source_frame_grid_point_m(idx: GridIndex, volume: &Nonlinear3dVolume, n: usize) -> Point3 {
+    let bounds = volume.crop_bounds_index;
+    let x = source_axis_index(idx.x, bounds[0], bounds[1], n);
+    let y = source_axis_index(idx.y, bounds[2], bounds[3], n);
+    let z = source_axis_index(idx.z, bounds[4], bounds[5], n);
+    Point3 {
+        x_m: (x - 0.5 * (volume.source_dimensions[0] - 1) as f64) * volume.source_spacing_m[0],
+        y_m: (y - 0.5 * (volume.source_dimensions[1] - 1) as f64) * volume.source_spacing_m[1],
+        z_m: (z - 0.5 * (volume.source_dimensions[2] - 1) as f64) * volume.source_spacing_m[2],
+    }
+}
+
+fn source_axis_index(index: usize, min: usize, max: usize, n: usize) -> f64 {
+    if n <= 1 || max == min {
+        return min as f64;
+    }
+    min as f64 + index as f64 * (max - min) as f64 / (n - 1) as f64
 }
 
 fn brain_candidates(volume: &Nonlinear3dVolume, requested_count: usize) -> Vec<GridIndex> {
@@ -92,56 +131,6 @@ fn is_brain_cap_cell(
         idx.z >= peak_z && idx.z >= target.z
     } else {
         idx.z <= peak_z && idx.z <= target.z
-    }
-}
-
-fn abdominal_candidates(volume: &Nonlinear3dVolume) -> Vec<GridIndex> {
-    let focus = volume.focus;
-    let exterior = exterior_air_mask(&volume.body_mask);
-    let skin = exterior_skin_grid_index(volume, &exterior)
-        .or_else(|| nearest_boundary(&volume.body_mask, focus))
-        .unwrap_or(focus);
-    let direction = volume
-        .aperture_direction
-        .unwrap_or_else(|| unit_vector(focus, skin));
-    let mut candidates = exterior_boundary_cells(&volume.body_mask, &exterior)
-        .into_iter()
-        .filter(|idx| dot(unit_vector(focus, *idx), direction) > 0.25)
-        .collect::<Vec<_>>();
-    if candidates.len() < 8 {
-        candidates = boundary_cells(&volume.body_mask);
-    }
-    candidates.sort_by(|a, b| {
-        angle_about_direction(*a, focus, direction)
-            .total_cmp(&angle_about_direction(*b, focus, direction))
-    });
-    candidates
-}
-
-fn exterior_skin_grid_index(
-    volume: &Nonlinear3dVolume,
-    exterior: &ndarray::Array3<bool>,
-) -> Option<GridIndex> {
-    let n = volume.body_mask.dim().0;
-    let center = [0.5 * (n - 1) as f64; 3];
-    let spacing = [volume.spacing_m; 3];
-    let focus_m = grid_point_m(volume.focus, n, volume.spacing_m);
-    nearest_exterior_skin_point(&volume.body_mask, exterior, spacing, center, focus_m)
-        .ok()
-        .map(|point| point_to_grid_index(point, n, volume.spacing_m))
-}
-
-fn point_to_grid_index(point: Point3, n: usize, spacing_m: f64) -> GridIndex {
-    let center = 0.5 * (n - 1) as f64;
-    let to_index = |value_m: f64| -> usize {
-        (value_m / spacing_m + center)
-            .round()
-            .clamp(0.0, (n - 1) as f64) as usize
-    };
-    GridIndex {
-        x: to_index(point.x_m),
-        y: to_index(point.y_m),
-        z: to_index(point.z_m),
     }
 }
 
@@ -213,14 +202,6 @@ fn axial_peak(mask: &ndarray::Array3<bool>) -> usize {
             count
         })
         .unwrap_or(nz / 2)
-}
-
-fn nearest_boundary(mask: &ndarray::Array3<bool>, focus: GridIndex) -> Option<GridIndex> {
-    boundary_cells(mask).into_iter().min_by(|a, b| {
-        distance2(*a, focus)
-            .partial_cmp(&distance2(*b, focus))
-            .unwrap_or(Ordering::Equal)
-    })
 }
 
 /// Select at most `count` elements uniformly distributed over the hemispherical
@@ -318,48 +299,57 @@ fn select_evenly(mut candidates: Vec<GridIndex>, count: usize) -> Vec<GridIndex>
     selected
 }
 
-fn distance2(a: GridIndex, b: GridIndex) -> f64 {
-    let dx = a.x as f64 - b.x as f64;
-    let dy = a.y as f64 - b.y as f64;
-    let dz = a.z as f64 - b.z as f64;
-    dx * dx + dy * dy + dz * dz
+fn select_evenly_preserving_order(mut candidates: Vec<GridIndex>, count: usize) -> Vec<GridIndex> {
+    let mut seen = std::collections::HashSet::with_capacity(candidates.len());
+    candidates.retain(|idx| seen.insert((idx.x, idx.y, idx.z)));
+    if candidates.len() <= count {
+        return candidates;
+    }
+    (0..count)
+        .map(|k| candidates[k * candidates.len() / count])
+        .collect()
 }
 
-fn unit_vector(a: GridIndex, b: GridIndex) -> [f64; 3] {
-    let raw = [
-        b.x as f64 - a.x as f64,
-        b.y as f64 - a.y as f64,
-        b.z as f64 - a.z as f64,
-    ];
-    let norm = raw[0].hypot(raw[1]).hypot(raw[2]).max(1.0e-12);
-    [raw[0] / norm, raw[1] / norm, raw[2] / norm]
-}
+#[cfg(test)]
+mod tests {
+    use super::{select_evenly_preserving_order, GridIndex};
 
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0].mul_add(b[0], a[1].mul_add(b[1], a[2] * b[2]))
-}
+    #[test]
+    fn abdominal_selection_preserves_target_facing_angular_order() {
+        let candidates = vec![
+            GridIndex { x: 9, y: 0, z: 0 },
+            GridIndex { x: 0, y: 9, z: 0 },
+            GridIndex { x: 1, y: 0, z: 0 },
+            GridIndex { x: 0, y: 1, z: 0 },
+        ];
 
-fn angle_about_direction(idx: GridIndex, focus: GridIndex, direction: [f64; 3]) -> f64 {
-    let v = unit_vector(focus, idx);
-    let axis = if direction[2].abs() < 0.9 {
-        [0.0, 0.0, 1.0]
-    } else {
-        [1.0, 0.0, 0.0]
-    };
-    let u = normalize(cross(direction, axis));
-    let w = cross(direction, u);
-    dot(v, w).atan2(dot(v, u))
-}
+        let selected = select_evenly_preserving_order(candidates, 2);
 
-fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [
-        a[1].mul_add(b[2], -a[2] * b[1]),
-        a[2].mul_add(b[0], -a[0] * b[2]),
-        a[0].mul_add(b[1], -a[1] * b[0]),
-    ]
-}
+        assert_eq!(
+            selected,
+            vec![
+                GridIndex { x: 9, y: 0, z: 0 },
+                GridIndex { x: 1, y: 0, z: 0 },
+            ]
+        );
+    }
 
-fn normalize(v: [f64; 3]) -> [f64; 3] {
-    let norm = v[0].hypot(v[1]).hypot(v[2]).max(1.0e-12);
-    [v[0] / norm, v[1] / norm, v[2] / norm]
+    #[test]
+    fn abdominal_selection_removes_duplicates_without_reordering() {
+        let candidates = vec![
+            GridIndex { x: 2, y: 0, z: 0 },
+            GridIndex { x: 1, y: 0, z: 0 },
+            GridIndex { x: 2, y: 0, z: 0 },
+        ];
+
+        let selected = select_evenly_preserving_order(candidates, 4);
+
+        assert_eq!(
+            selected,
+            vec![
+                GridIndex { x: 2, y: 0, z: 0 },
+                GridIndex { x: 1, y: 0, z: 0 },
+            ]
+        );
+    }
 }

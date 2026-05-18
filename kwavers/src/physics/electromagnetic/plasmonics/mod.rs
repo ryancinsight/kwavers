@@ -18,4 +18,4 @@ mod tests;
 pub use enhancement::PlasmonicEnhancement;
 pub use mie_theory::MieTheory;
 pub use nanoparticle_array::NanoparticleArray;
-pub use types::{ArrayGeometry, CouplingModel};
+pub use types::{CouplingModel, PlasmonicArrayGeometry};

@@ -1,7 +1,7 @@
 //! Value-semantic regression tests for SIMD ops.
 
 use super::{
-    FdtdSimdOps, FftSimdOps, InterpolationSimdOps, SimdConfig, SimdLevel, SimdPerformance,
+    FdtdSimdOps, FftSimdOps, InterpolationSimdOps, MathSimdLevel, SimdConfig, SimdPerformance,
 };
 
 #[test]
@@ -9,12 +9,12 @@ fn test_simd_config_detection() {
     let config = SimdConfig::detect();
     assert!(matches!(
         config.level,
-        SimdLevel::Scalar
-            | SimdLevel::Sse2
-            | SimdLevel::Avx2
-            | SimdLevel::Avx512
-            | SimdLevel::Neon
-            | SimdLevel::Portable
+        MathSimdLevel::Scalar
+            | MathSimdLevel::Sse2
+            | MathSimdLevel::Avx2
+            | MathSimdLevel::Avx512
+            | MathSimdLevel::Neon
+            | MathSimdLevel::Portable
     ));
     assert!(config.vector_width >= 1);
     assert!(config.alignment >= std::mem::align_of::<f32>());

@@ -9,7 +9,7 @@ pub mod material;
 pub mod model;
 
 pub use erosion::{cavitation_intensity, ErosionPattern};
-pub use material::{DamageParameters, MaterialProperties};
+pub use material::{CavitationDamageMaterialProperties, DamageParameters};
 pub use model::CavitationDamage;
 
 #[cfg(test)]

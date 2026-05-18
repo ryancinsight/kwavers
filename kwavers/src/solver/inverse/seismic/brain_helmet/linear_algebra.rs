@@ -36,25 +36,40 @@ pub(super) fn normal_equation_diagonal_rows(
     ncols: usize,
     regularization: f64,
 ) -> Vec<f64> {
-    let mut diag = vec![regularization.max(1.0e-12); ncols];
-    let partials: Vec<Vec<f64>> = rows
+    // fold + reduce: each Rayon task accumulates squared column values into a
+    // task-local partial Vec; binary-tree reduce combines them without a serial
+    // collection barrier, lowering the critical-path from O(n_tasks × ncols) to
+    // O(ncols × log n_tasks).
+    let mut diagonal = rows
         .par_chunks(row_chunk_len(rows.len()))
-        .map(|chunk| {
-            let mut partial = vec![0.0; ncols];
-            for &row in chunk {
-                let base = row * ncols;
-                for col in 0..ncols {
-                    let a = matrix[base + col];
-                    partial[col] += a * a;
+        .fold(
+            || vec![0.0f64; ncols],
+            |mut partial, chunk| {
+                for &row in chunk {
+                    let base = row * ncols;
+                    for col in 0..ncols {
+                        let a = matrix[base + col];
+                        partial[col] += a * a;
+                    }
                 }
-            }
-            partial
-        })
-        .collect();
-    for partial in partials {
-        add_vector_in_place(&mut diag, &partial);
+                partial
+            },
+        )
+        .reduce(
+            || vec![0.0f64; ncols],
+            |mut a, b| {
+                for (ai, bi) in a.iter_mut().zip(&b) {
+                    *ai += bi;
+                }
+                a
+            },
+        );
+    // Add regularization once after reduction; avoids counting it n_tasks times.
+    let reg = regularization.max(1.0e-12);
+    for d in diagonal.iter_mut() {
+        *d += reg;
     }
-    diag
+    diagonal
 }
 
 pub(super) fn normalized_gradient_rows(
@@ -112,7 +127,9 @@ pub(super) fn objective_rows(
     ncols: usize,
     regularization: f64,
 ) -> f64 {
-    let partials: Vec<f64> = rows
+    // `.sum()` on a `ParallelIterator` avoids the intermediate Vec allocation
+    // that `collect() + into_iter().sum()` requires.
+    let misfit: f64 = rows
         .par_chunks(row_chunk_len(rows.len()))
         .map(|chunk| {
             let mut sum = 0.0;
@@ -128,27 +145,34 @@ pub(super) fn objective_rows(
             }
             sum
         })
-        .collect();
-    let sum = partials.into_iter().sum::<f64>();
-    sum + 0.5 * regularization * model.iter().map(|v| v * v).sum::<f64>()
+        .sum::<f64>();
+    misfit + 0.5 * regularization * model.iter().map(|v| v * v).sum::<f64>()
 }
 
 fn adjoint_rows(matrix: &[f64], data: &[f64], rows: &[usize], ncols: usize) -> Vec<f64> {
-    let partials: Vec<Vec<f64>> = rows
-        .par_chunks(row_chunk_len(rows.len()))
-        .map(|chunk| {
-            let mut partial = vec![0.0; ncols];
-            for &row in chunk {
-                let datum = data[row];
-                let base = row * ncols;
-                for col in 0..ncols {
-                    partial[col] += matrix[base + col] * datum;
+    rows.par_chunks(row_chunk_len(rows.len()))
+        .fold(
+            || vec![0.0f64; ncols],
+            |mut partial, chunk| {
+                for &row in chunk {
+                    let datum = data[row];
+                    let base = row * ncols;
+                    for col in 0..ncols {
+                        partial[col] += matrix[base + col] * datum;
+                    }
                 }
-            }
-            partial
-        })
-        .collect();
-    reduce_partials(ncols, partials)
+                partial
+            },
+        )
+        .reduce(
+            || vec![0.0f64; ncols],
+            |mut a, b| {
+                for (ai, bi) in a.iter_mut().zip(&b) {
+                    *ai += bi;
+                }
+                a
+            },
+        )
 }
 
 fn adjoint_residual_rows(
@@ -158,40 +182,34 @@ fn adjoint_residual_rows(
     rows: &[usize],
     ncols: usize,
 ) -> Vec<f64> {
-    let partials: Vec<Vec<f64>> = rows
-        .par_chunks(row_chunk_len(rows.len()))
-        .map(|chunk| {
-            let mut partial = vec![0.0; ncols];
-            for &row in chunk {
-                let datum = data[row];
-                let base = row * ncols;
-                let mut pred = 0.0;
-                for col in 0..ncols {
-                    pred += matrix[base + col] * model[col];
+    rows.par_chunks(row_chunk_len(rows.len()))
+        .fold(
+            || vec![0.0f64; ncols],
+            |mut partial, chunk| {
+                for &row in chunk {
+                    let datum = data[row];
+                    let base = row * ncols;
+                    let mut pred = 0.0;
+                    for col in 0..ncols {
+                        pred += matrix[base + col] * model[col];
+                    }
+                    let residual = datum - pred;
+                    for col in 0..ncols {
+                        partial[col] += matrix[base + col] * residual;
+                    }
                 }
-                let residual = datum - pred;
-                for col in 0..ncols {
-                    partial[col] += matrix[base + col] * residual;
+                partial
+            },
+        )
+        .reduce(
+            || vec![0.0f64; ncols],
+            |mut a, b| {
+                for (ai, bi) in a.iter_mut().zip(&b) {
+                    *ai += bi;
                 }
-            }
-            partial
-        })
-        .collect();
-    reduce_partials(ncols, partials)
-}
-
-fn reduce_partials(ncols: usize, partials: Vec<Vec<f64>>) -> Vec<f64> {
-    let mut out = vec![0.0; ncols];
-    for partial in partials {
-        add_vector_in_place(&mut out, &partial);
-    }
-    out
-}
-
-fn add_vector_in_place(out: &mut [f64], rhs: &[f64]) {
-    for (value, increment) in out.iter_mut().zip(rhs) {
-        *value += increment;
-    }
+                a
+            },
+        )
 }
 
 fn row_chunk_len(row_count: usize) -> usize {

@@ -1,6 +1,6 @@
 use super::constants::EPS_FD_F32;
 use super::sources::{compute_charge_density, compute_current_density_z};
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
@@ -11,7 +11,7 @@ pub fn electrostatic_residual<B: AutodiffBackend>(
     x: &Tensor<B, 2>,
     y: &Tensor<B, 2>,
     eps: f64,
-    physics_params: &PhysicsParameters,
+    physics_params: &PinnDomainPhysicsParameters,
 ) -> Tensor<B, 2> {
     // Create input tensor for neural network
     let _inputs = Tensor::cat(vec![x.clone(), y.clone(), Tensor::zeros_like(x)], 1);
@@ -114,7 +114,7 @@ pub fn magnetostatic_residual<B: AutodiffBackend>(
     x: &Tensor<B, 2>,
     y: &Tensor<B, 2>,
     mu: f64,
-    physics_params: &PhysicsParameters,
+    physics_params: &PinnDomainPhysicsParameters,
 ) -> Tensor<B, 2> {
     let eps_fd = EPS_FD_F32;
 
@@ -214,7 +214,7 @@ pub fn quasi_static_residual<B: AutodiffBackend>(
     eps: f64,
     mu: f64,
     sigma: f64,
-    physics_params: &PhysicsParameters,
+    physics_params: &PinnDomainPhysicsParameters,
 ) -> Tensor<B, 2> {
     // Implemented scalar wave/diffusion equation residual for quasi-static regime
     // Assumes model output u represents a scalar field component (e.g. Ez or Az)

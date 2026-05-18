@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use super::{SafetyLevel, SafetyViolation};
+use super::{ClinicalSafetyLevel, SafetyViolation};
 
 /// Comprehensive audit logger for safety events.
 #[derive(Debug)]
@@ -44,7 +44,7 @@ impl SafetyAuditLogger {
     /// Log a safety event with typed classification and metadata.
     pub fn log_event(
         &self,
-        event_type: SafetyEventType,
+        event_type: AuditSafetyEventType,
         message: String,
         metadata: HashMap<String, String>,
     ) {
@@ -76,14 +76,14 @@ impl SafetyAuditLogger {
         metadata.insert("severity".to_owned(), format!("{:?}", violation.severity));
 
         self.log_event(
-            SafetyEventType::Violation,
+            AuditSafetyEventType::Violation,
             violation.message.clone(),
             metadata,
         );
     }
 
     /// Log a system safety state transition.
-    pub fn log_system_state(&self, old_state: SafetyLevel, new_state: SafetyLevel) {
+    pub fn log_system_state(&self, old_state: ClinicalSafetyLevel, new_state: ClinicalSafetyLevel) {
         let mut metadata = HashMap::new();
         metadata.insert("old_state".to_owned(), format!("{:?}", old_state));
         metadata.insert("new_state".to_owned(), format!("{:?}", new_state));
@@ -92,7 +92,7 @@ impl SafetyAuditLogger {
             "System safety state changed from {:?} to {:?}",
             old_state, new_state
         );
-        self.log_event(SafetyEventType::StateChange, message, metadata);
+        self.log_event(AuditSafetyEventType::StateChange, message, metadata);
     }
 
     /// Get a clone of all audit log entries.
@@ -158,7 +158,7 @@ pub struct AuditEntry {
     /// Event timestamp
     pub timestamp: Instant,
     /// Type of safety event
-    pub event_type: SafetyEventType,
+    pub event_type: AuditSafetyEventType,
     /// Event message
     pub message: String,
     /// Additional metadata key-value pairs
@@ -167,7 +167,7 @@ pub struct AuditEntry {
 
 /// Types of safety events for audit classification.
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum SafetyEventType {
+pub enum AuditSafetyEventType {
     /// Safety violation detected
     Violation,
     /// System state change

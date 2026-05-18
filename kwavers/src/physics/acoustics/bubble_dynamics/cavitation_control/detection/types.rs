@@ -14,7 +14,7 @@ pub enum DetectionMethod {
 
 /// Cavitation state classification
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CavitationState {
+pub enum CavitationDetectionState {
     None,
     Stable,    // Stable cavitation (non-inertial)
     Inertial,  // Inertial cavitation (violent collapse)
@@ -24,7 +24,7 @@ pub enum CavitationState {
 /// Cavitation detection metrics
 #[derive(Debug, Clone)]
 pub struct CavitationMetrics {
-    pub state: CavitationState,
+    pub state: CavitationDetectionState,
     pub subharmonic_level: f64,
     pub ultraharmonic_level: f64,
     pub broadband_level: f64,
@@ -39,7 +39,7 @@ pub struct CavitationMetrics {
 impl Default for CavitationMetrics {
     fn default() -> Self {
         Self {
-            state: CavitationState::None,
+            state: CavitationDetectionState::None,
             subharmonic_level: 0.0,
             ultraharmonic_level: 0.0,
             broadband_level: 0.0,
@@ -94,11 +94,11 @@ impl<T: Clone> HistoryBuffer<T> {
 mod tests {
     use super::*;
 
-    /// CavitationMetrics::default has zero-valued numeric fields and CavitationState::None.
+    /// CavitationMetrics::default has zero-valued numeric fields and CavitationDetectionState::None.
     #[test]
     fn default_metrics_are_zero() {
         let m = CavitationMetrics::default();
-        assert_eq!(m.state, CavitationState::None);
+        assert_eq!(m.state, CavitationDetectionState::None);
         assert!((m.subharmonic_level).abs() < 1e-30);
         assert!((m.confidence).abs() < 1e-30);
     }
@@ -110,11 +110,17 @@ mod tests {
         assert_ne!(DetectionMethod::Harmonic, DetectionMethod::Combined);
     }
 
-    /// CavitationState variants are pairwise distinct.
+    /// CavitationDetectionState variants are pairwise distinct.
     #[test]
     fn cavitation_state_variants_distinct() {
-        assert_ne!(CavitationState::None, CavitationState::Stable);
-        assert_ne!(CavitationState::Inertial, CavitationState::Transient);
+        assert_ne!(
+            CavitationDetectionState::None,
+            CavitationDetectionState::Stable
+        );
+        assert_ne!(
+            CavitationDetectionState::Inertial,
+            CavitationDetectionState::Transient
+        );
     }
 
     /// HistoryBuffer respects capacity: oldest elements are evicted when full.

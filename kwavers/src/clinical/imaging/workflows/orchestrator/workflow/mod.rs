@@ -4,20 +4,18 @@ mod acquisition;
 
 use super::super::analysis::{calculate_confidence_score, generate_diagnostic_recommendations};
 use super::super::config::{
-    ClinicalApplication, ClinicalWorkflowConfig, ElastographyConfig, PhotoacousticConfig,
+    ClinicalApplication, ClinicalPhotoacousticConfig, ClinicalWorkflowConfig, ElastographyConfig,
 };
 use super::super::results::{
-    AcquisitionResult, AnalysisResult, ClinicalExaminationResult, PerformanceMetrics,
-    ProcessingResult,
+    AcquisitionResult, AnalysisResult, ClinicalExaminationResult, ProcessingResult,
+    WorkflowTimingMetrics,
 };
-#[allow(unused_imports)]
-use super::super::simulation::generate_realistic_rf_volume;
 use super::super::simulation::{
     compute_pa_snr, generate_realistic_elastography_data, generate_realistic_pa_data,
     reconstruct_pa_image,
 };
 use super::super::state::WorkflowState;
-use super::monitor::PerformanceMonitor;
+use super::monitor::WorkflowPerformanceMonitor;
 use crate::clinical::imaging::photoacoustic::PhotoacousticResult;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::imaging::fusion::{FusedImageResult, FusionConfig};
@@ -32,7 +30,7 @@ pub struct ClinicalWorkflowOrchestrator {
     pub(super) config: ClinicalWorkflowConfig,
     state: WorkflowState,
     fusion_processor: MultiModalFusion,
-    performance_monitor: PerformanceMonitor,
+    performance_monitor: WorkflowPerformanceMonitor,
 }
 
 impl ClinicalWorkflowOrchestrator {
@@ -49,7 +47,7 @@ impl ClinicalWorkflowOrchestrator {
                     ("elastography".to_owned(), 0.3),
                 ]
                 .into(),
-                fusion_method: crate::domain::imaging::fusion::FusionMethod::Probabilistic,
+                fusion_method: crate::domain::imaging::fusion::ImagingFusionMethod::Probabilistic,
                 uncertainty_quantification: true,
                 ..Default::default()
             },
@@ -68,7 +66,7 @@ impl ClinicalWorkflowOrchestrator {
             config,
             state: WorkflowState::Initializing,
             fusion_processor: MultiModalFusion::new(fusion_config),
-            performance_monitor: PerformanceMonitor::new(),
+            performance_monitor: WorkflowPerformanceMonitor::new(),
         })
     }
 
@@ -210,7 +208,7 @@ impl ClinicalWorkflowOrchestrator {
         analysis: AnalysisResult,
         total_time: Duration,
     ) -> KwaversResult<ClinicalExaminationResult> {
-        let performance_metrics = PerformanceMetrics {
+        let performance_metrics = WorkflowTimingMetrics {
             total_time,
             stage_times: self.performance_monitor.get_stage_times(),
             gpu_utilization: self.performance_monitor.get_gpu_utilization(),
@@ -231,7 +229,7 @@ impl ClinicalWorkflowOrchestrator {
     }
 
     fn acquire_photoacoustic_data(&self) -> KwaversResult<PhotoacousticResult> {
-        let pa_config = PhotoacousticConfig {
+        let pa_config = ClinicalPhotoacousticConfig {
             _wavelength: 800e-9,
             _optical_energy: 10e-3,
             _absorption_coefficient: 100.0,

@@ -135,3 +135,136 @@ fn test_covariance_with_non_finite_data() {
 
     assert!(estimate_sample_covariance(&data, 0.0).is_err());
 }
+
+// ─── Exact value-semantic tests ────────────────────────────────────────────────
+
+/// `estimate_sample_covariance` on rank-1 data with known cross terms.
+///
+/// 2 sensors, M=4 snapshots, each = [1+0j, 0+1j]^T.
+/// R = (1/M) Σ x x^H:
+///   R[0,0] = |1|² = 1.0,  R[0,1] = (1)·(0−1j) = 0−j,
+///   R[1,0] = (0+1j)·(1)^* = 0+j,  R[1,1] = |j|² = 1.0.
+#[test]
+fn covariance_sample_rank1_exact_cross_terms() {
+    let mut data = Array2::<Complex64>::zeros((2, 4));
+    for m in 0..4 {
+        data[[0, m]] = Complex64::new(1.0, 0.0);
+        data[[1, m]] = Complex64::new(0.0, 1.0);
+    }
+    let r = estimate_sample_covariance(&data, 0.0).expect("should succeed");
+    assert!(
+        (r[[0, 0]].re - 1.0).abs() < 1e-14 && r[[0, 0]].im.abs() < 1e-14,
+        "R[0,0] = {:?} (expected 1+0j)",
+        r[[0, 0]]
+    );
+    assert!(
+        (r[[1, 1]].re - 1.0).abs() < 1e-14 && r[[1, 1]].im.abs() < 1e-14,
+        "R[1,1] = {:?} (expected 1+0j)",
+        r[[1, 1]]
+    );
+    assert!(
+        r[[0, 1]].re.abs() < 1e-14 && (r[[0, 1]].im + 1.0).abs() < 1e-14,
+        "R[0,1] = {:?} (expected 0−j)",
+        r[[0, 1]]
+    );
+    assert!(
+        r[[1, 0]].re.abs() < 1e-14 && (r[[1, 0]].im - 1.0).abs() < 1e-14,
+        "R[1,0] = {:?} (expected 0+j)",
+        r[[1, 0]]
+    );
+}
+
+/// `estimate_sample_covariance` with diagonal loading shifts diagonal exactly.
+///
+/// All-zero data + loading=0.3 → R[i,i] = 0.3, off-diagonals = 0.
+#[test]
+fn covariance_sample_diagonal_loading_exact() {
+    let data = Array2::<Complex64>::zeros((3, 6));
+    let loading = 0.3_f64;
+    let r = estimate_sample_covariance(&data, loading).expect("should succeed");
+    for i in 0..3 {
+        assert!(
+            (r[[i, i]].re - loading).abs() < 1e-14,
+            "R[{i},{i}].re = {} (expected {loading})",
+            r[[i, i]].re
+        );
+        assert!(r[[i, i]].im.abs() < 1e-14, "R[{i},{i}].im must be 0");
+    }
+    assert!(
+        r[[0, 1]].norm() < 1e-14,
+        "off-diagonal must be 0 for zero data"
+    );
+}
+
+/// `trace` of a 2×2 diagonal matrix gives exact sum of diagonal.
+///
+/// R = diag(1+2j, 3−j) → tr = (1+2j)+(3−j) = 4+j.
+#[test]
+fn covariance_trace_diagonal_matrix_exact() {
+    let mut r = Array2::<Complex64>::zeros((2, 2));
+    r[[0, 0]] = Complex64::new(1.0, 2.0);
+    r[[1, 1]] = Complex64::new(3.0, -1.0);
+    let tr = trace(&r).expect("trace should succeed");
+    assert!(
+        (tr.re - 4.0).abs() < 1e-14,
+        "tr.re = {} (expected 4.0)",
+        tr.re
+    );
+    assert!(
+        (tr.im - 1.0).abs() < 1e-14,
+        "tr.im = {} (expected 1.0)",
+        tr.im
+    );
+}
+
+/// `trace` on non-square matrix returns Err.
+#[test]
+fn covariance_trace_non_square_returns_err() {
+    let r = Array2::<Complex64>::zeros((2, 3));
+    assert!(
+        trace(&r).is_err(),
+        "trace of non-square matrix must return Err"
+    );
+}
+
+/// `is_hermitian` detects exact conjugate symmetry.
+///
+/// R = [[2, 1+j], [1−j, 3]] is Hermitian; flipping one entry breaks it.
+#[test]
+fn covariance_is_hermitian_exact() {
+    let mut r = Array2::<Complex64>::zeros((2, 2));
+    r[[0, 0]] = Complex64::new(2.0, 0.0);
+    r[[1, 1]] = Complex64::new(3.0, 0.0);
+    r[[0, 1]] = Complex64::new(1.0, 1.0);
+    r[[1, 0]] = Complex64::new(1.0, -1.0); // conjugate
+
+    assert!(is_hermitian(&r, 1e-14), "R must be Hermitian");
+
+    r[[1, 0]] = Complex64::new(1.0, 1.0); // break conjugate symmetry
+    assert!(
+        !is_hermitian(&r, 1e-14),
+        "broken conjugate symmetry must fail is_hermitian"
+    );
+}
+
+/// `estimate_forward_backward_covariance` on a single-sensor case equals the input.
+///
+/// For N=1: J = [[1]], R_fb = (1/2)(R_f + R_f^*·J·J) = (1/2)(R_f + R_f^*).
+/// If data is real-valued (1 sensor, many snapshots), R_f is real scalar → R_fb = R_f.
+#[test]
+fn covariance_forward_backward_single_sensor_matches_sample() {
+    let mut data = Array2::<Complex64>::zeros((1, 4));
+    for m in 0..4 {
+        data[[0, m]] = Complex64::new((m + 1) as f64, 0.0);
+    }
+    // sample covariance with loading=1e-4 (avoids insufficient-snapshots error for N=1)
+    let r_sample = estimate_sample_covariance(&data, 1e-4).expect("should succeed");
+    let r_fb = estimate_forward_backward_covariance(&data, 1e-4).expect("should succeed");
+    // For 1 sensor: FB averaging must equal the sample covariance
+    assert!(
+        (r_fb[[0, 0]].re - r_sample[[0, 0]].re).abs() < 1e-12,
+        "FB[0,0].re={} sample[0,0].re={}",
+        r_fb[[0, 0]].re,
+        r_sample[[0, 0]].re
+    );
+}

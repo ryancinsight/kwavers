@@ -25,15 +25,15 @@ pub mod therapy; // Keep this as it's re-exported below
 pub use crate::domain::sensor::recorder;
 pub use builder::ConfigurationBuilder;
 pub use configuration::Configuration;
-pub use core::{CoreSimulation, SimulationBuilder, SimulationResult, SimulationStatistics};
+pub use core::{CoreSimulation, CoreSimulationStatistics, SimulationBuilder, SimulationResult};
 pub use manager::PhysicsManager;
 pub use modalities::{PhotoacousticParameters, PhotoacousticResult, PhotoacousticSimulator};
 pub use multi_physics::{
-    CoupledPhysicsSolver, CouplingStrategy, FieldCoupler, MultiPhysicsConfig, MultiPhysicsSolver,
-    PhysicsDomain,
+    CoupledPhysicsSolver, FieldCoupler, MultiPhysicsConfig, PhysicsDomain,
+    SimulationCouplingStrategy, SimulationMultiPhysicsSolver,
 };
 pub use parameters::{
-    FieldType, OutputFormat, OutputParameters, PerformanceParameters, SimulationParameters,
+    OutputFieldType, OutputFormat, OutputParameters, PerformanceParameters, SimulationParameters,
 };
 pub use photoacoustics::PhotoacousticRunner;
 pub use setup::{SimulationComponents, SimulationSetup};

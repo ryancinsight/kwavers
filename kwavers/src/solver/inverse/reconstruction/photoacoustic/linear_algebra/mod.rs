@@ -13,12 +13,12 @@ mod tv_l1;
 
 /// Linear algebra solver with various regularization methods.
 #[derive(Debug)]
-pub struct LinearSolver {
+pub struct PhotoacousticLinearSolver {
     pub(super) max_iterations: usize,
     pub(super) tolerance: f64,
 }
 
-impl LinearSolver {
+impl PhotoacousticLinearSolver {
     /// Create a new linear solver with default parameters
     /// (`max_iterations = 1000`, `tolerance = 1e-8`).
     pub fn new() -> Self {

@@ -18,11 +18,11 @@
 //! v_p_new = coeff_central×v_p + (coeff×laplacian − v_p_prev)
 //! ```
 
-use super::Avx512StencilProcessor;
+use super::FdtdAvx512StencilProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
-impl Avx512StencilProcessor {
+impl FdtdAvx512StencilProcessor {
     /// Update pressure field with AVX-512 acceleration.
     ///
     /// Processes interior data in 8×tile×tile spatial tiles to maximise L1 cache

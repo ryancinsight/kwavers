@@ -11,7 +11,7 @@
 //! $$ D(t) = \int_0^t I(\tau)\, d\tau $$
 //! where $I$ is the local cavitation intensity.
 
-use super::state::{CavitationDose, CavitationState};
+use super::state::{CavitationDose, CavitationMechanicsState};
 use super::thresholds::{
     blake_threshold, flynn_threshold, mechanical_index, neppiras_threshold, ThresholdModel,
 };
@@ -62,7 +62,7 @@ pub struct CavitationModel {
     /// Bubble parameters — SSOT for surface_tension, initial_radius, ambient_pressure, vapor_pressure
     pub params: BubbleParameters,
     /// Current cavitation states
-    pub states: Array3<CavitationState>,
+    pub states: Array3<CavitationMechanicsState>,
     /// Cavitation dose accumulator
     pub dose: CavitationDose,
 }

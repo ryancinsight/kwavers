@@ -1,4 +1,4 @@
-use super::types::{treeby_2010, pinton_2009, ValidationResult};
+use super::types::{treeby_2010, pinton_2009, LiteratureValidationResult};
 use super::validator::LiteratureValidator;
 
 #[test]
@@ -66,7 +66,7 @@ fn test_absorption_power_law() {
 
 #[test]
 fn validation_result_builder() {
-    let mut result = ValidationResult::new("Test");
+    let mut result = LiteratureValidationResult::new("Test");
     result.with_error(0.01, 0.001);
 
     assert_eq!(result.relative_error, 0.01);

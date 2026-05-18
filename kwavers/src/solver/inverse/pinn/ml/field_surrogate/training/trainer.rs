@@ -9,7 +9,9 @@ use burn::tensor::{backend::AutodiffBackend, ElementConversion};
 
 use super::super::network::ParamFieldPINNNetwork;
 use super::helmholtz::helmholtz_residual_tensor;
-use super::types::{StepMetrics, TrainingBatch, TrainingConfig, TrainingMetrics};
+use super::types::{
+    FieldSurrogateTrainingConfig, StepMetrics, SurrogateTrainingMetrics, TrainingBatch,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Training context bundling network + optimiser + config.
@@ -22,7 +24,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 pub struct ParamFieldPINNTrainer<B: AutodiffBackend> {
     pub network: ParamFieldPINNNetwork<B>,
     pub optimizer: OptimizerAdaptor<Adam, ParamFieldPINNNetwork<B>, B>,
-    pub config: TrainingConfig,
+    pub config: FieldSurrogateTrainingConfig,
     /// Optional cosine-annealing scheduler. `None` keeps the LR fixed.
     pub lr_scheduler: Option<CosineAnnealingLrScheduler>,
 }
@@ -38,8 +40,11 @@ impl<B: AutodiffBackend> std::fmt::Debug for ParamFieldPINNTrainer<B> {
 impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
     /// Construct a trainer from a fresh network + config.
     /// # Errors
-    /// Propagates [`TrainingConfig::validate`] errors.
-    pub fn new(network: ParamFieldPINNNetwork<B>, config: TrainingConfig) -> KwaversResult<Self> {
+    /// Propagates [`FieldSurrogateTrainingConfig::validate`] errors.
+    pub fn new(
+        network: ParamFieldPINNNetwork<B>,
+        config: FieldSurrogateTrainingConfig,
+    ) -> KwaversResult<Self> {
         config.validate()?;
         let optimizer = AdamConfig::new().init();
         let lr_scheduler = match config.cosine_schedule {
@@ -163,12 +168,12 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
     /// Run `n_steps` training iterations, calling `make_batch(step)`
     /// each iteration to produce the batch. Returns the running
     /// per-epoch metrics across the entire run.
-    pub fn run<F>(&mut self, n_steps: usize, mut make_batch: F) -> TrainingMetrics
+    pub fn run<F>(&mut self, n_steps: usize, mut make_batch: F) -> SurrogateTrainingMetrics
     where
         F: FnMut(usize) -> TrainingBatch<B>,
         ParamFieldPINNNetwork<B>: AutodiffModule<B>,
     {
-        let mut metrics = TrainingMetrics::default();
+        let mut metrics = SurrogateTrainingMetrics::default();
         for step in 0..n_steps {
             let batch = make_batch(step);
             let m = self.step(batch);

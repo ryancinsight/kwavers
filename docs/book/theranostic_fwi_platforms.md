@@ -150,6 +150,140 @@ deterministic same-aperture row encoding before the PCG solve. Metrics expose
 `inverse_encoding_rows_per_code`, `encoded_measurements`, and
 `unencoded_measurements`, with `measurements` equal to the encoded row count.
 
+The planned exposure map is now a heterogeneous wave measurement rather than a
+geometric phasor shortcut. The solver uses the scalar acoustic equation
+
+```text
+p_tt = c(x)^2 Delta_4 p + s(x,t)
+```
+
+with CPML, CT-derived attenuation, and the same electronically steered source
+delays as the RTM acquisition. The raw diagnostic field is
+`P_peak(x) = max_t |p(x,t)|`. The displayed exposure keeps the legacy pressure
+scale by reporting
+
+```text
+E(x) = P_source * P_peak(x) / max_{y in body} P_peak(y).
+```
+
+The PyO3 payload exports `exposure_raw_peak_pressure`, `exposure_model`,
+`exposure_backend`, `exposure_uses_hybrid_pstd_fdtd`,
+`exposure_source_count`, `exposure_time_steps`, `exposure_dt_s`, and
+`exposure_workspace_values`. The active backend is
+`reference_fdtd_cpml_2d`; `exposure_uses_hybrid_pstd_fdtd = false` is
+intentional until the hybrid solver has source, receiver, CT-medium, peak-map,
+and memory-accounting parity tests against this reference. The old phasor
+exposure enforced constant-speed constructive interference at the nominal focus
+and ignored skull, internal gas, attenuation, and finite-grid scattering. A
+wave-solved exposure can therefore look less target-centered than the old
+display while being the physically more faithful diagnostic; the raw field
+localizes whether the divergence originates in medium scattering, steering
+delays, or the downstream inverse channels.
+
+### Theorem: Exposure Backend Static-Dispatch Contract
+
+Let `B` be a theranostic exposure backend implementing the peak-pressure
+contract
+
+```text
+B(prepared, layout, config) -> (P_peak, E, diagnostics).
+```
+
+The Chapter 29 exposure entry point calls the backend through a generic type
+parameter, not through `dyn` dispatch. Therefore the compiler monomorphizes the
+reference backend call into a direct call with no vtable lookup and no
+heap-erased solver object in the time-stepping loop. A future hybrid PSTD/FDTD
+backend can be selected only by implementing the same contract and changing the
+static backend type after differential tests prove equivalence or documented
+improvement over `reference_fdtd_cpml_2d`.
+
+Proof: Rust monomorphization emits a concrete instance of
+`simulate_peak_pressure_with_backend::<B>` for each backend type `B`. The
+backend method is statically resolved at compile time. Since the time-step loop
+receives concrete slices and arrays from that implementation, backend
+abstraction contributes no runtime dispatch term to the propagation recurrence.
+
+### Theorem: Rolling Peak-Pressure Workspace Bound
+
+For a 2-D grid with `N = nx * ny` cells, the reference exposure backend retains
+only:
+
+```text
+p[n-1], p[n], p[n+1], psi_x, psi_y, P_peak.
+```
+
+Therefore retained solve workspace is exactly `6N` scalar values, excluding
+input medium maps and output arrays that are part of the clinical result.
+
+Proof: the second-order acoustic recurrence needs two prior pressure states and
+one destination state. CPML adds one memory field per coordinate direction in
+2-D. The diagnostic peak map is updated by
+`P_peak(x) <- max(P_peak(x), |p[n+1](x)|)` after attenuation. No receiver trace
+buffer or forward checkpoint buffer is allocated for exposure. The boundary
+halo clear touches only the finite-difference halo after buffer rotation, while
+the next interior stencil overwrites all interior destination cells; replacing a
+full-domain clear with a halo clear preserves the recurrence state and reduces
+per-step clearing work from `O(N)` to `O(nx + ny)`.
+
+The elastic shear channel is now an iterative nonlinear ElasticPSTD FWI
+reconstruction rather than a reduced acoustic-operator comparator. Chapter 29
+builds baseline, lesion-perturbed, and current-estimate shear media on the CT
+slice, drives the commanded treatment focus inside the segmented target with an
+out-of-plane velocity tone burst, records the same therapy/imaging aperture as
+receivers, and repeatedly migrates receiver residual trace energy with the
+shear travel-time condition
+
+```text
+t(x, r) = (min_s |s - x| + |x - r|) / c_s .
+```
+
+where `s` is the elastic push-source support. The exported
+`elastic_shear_reconstruction` therefore comes from full time-domain elastic
+propagation, nonlinear model resimulation, objective-decreasing line search,
+and residual migration. Metrics expose
+`elastic_shear_model`, `elastic_shear_receiver_count`,
+`elastic_shear_time_steps`, `elastic_shear_dt_s`,
+`elastic_shear_objective_history`, and baseline/lesion/final-residual trace
+energies. The finite-frequency Born, passive, harmonic, and ultraharmonic
+channels still use the matrix-free same-aperture PCG operators.
+
+### Definition: Patient-Adaptive Focused Transmit Schedule
+
+The patient-adaptive transmit experiment is inspired by van Nierop et al.
+`arXiv:2508.08782`, where sparse focused transmit selections are evaluated
+against equispaced baselines at matched transmit budgets. Chapter 29 implements
+the minimal local control surface:
+
+```text
+transmit_schedule_strategy in {full, uniform, patient_adaptive}
+transmit_budget = k
+```
+
+All CT preprocessing, organ scenarios, device placement, finite-frequency row
+operators, deterministic row encoding, graph-Laplacian PCG solve, fusion, and
+metrics remain unchanged. The scheduler selects an ordered subset `S_k` from
+the existing treatment aperture `E`; the inverse consumes `S_k` through the
+same matrix-free operator path rather than through a cloned imaging pipeline.
+The `patient_adaptive` schedule first chooses the element with maximal target
+sensitivity
+
+```text
+q(e) = |T|^-1 sum_{x in T} 1 / max(||e - x||_2^2, dx^2)
+```
+
+and then greedily chooses each next transmit by maximizing
+`q(e) min_{s in S} ||e - s||_2`, which preserves target sensitivity while
+forcing aperture diversity. The reproducible comparison runs with:
+
+```powershell
+$env:KWAVERS_CH29_RENDER_SCOPE="adaptive_transmit"
+python pykwavers/examples/book/ch29_theranostic_fwi_platforms.py
+```
+
+It writes `fig07_patient_adaptive_transmit_budget.png` and
+`adaptive_transmit_metrics.json`, reporting active inverse Dice/CNR and
+measurement counts for brain, kidney, and liver schedules at matched budgets.
+
 ### Theorem: Deterministic Encoded Normal Equations
 
 Let `A in R^(m x n)` be one same-aperture active, passive, harmonic, or
@@ -214,27 +348,36 @@ adjoint source `psi(r) = r`.
 
 ### Theorem: Discrete Westervelt FWI Adjoint
 
-The nonlinear 3-D branch advances pressure by the explicit heterogeneous
+The nonlinear 3-D branch advances pressure by the heterogeneous finite-amplitude
 Westervelt recurrence
 
 ```text
-p[n+1] = S(2p[n] - p[n-1] + c^2 dt^2 Lp[n]
-          + beta dt^2/(rho c^2) dtt(p^2)[n] + s[n]),
+(1 - 2 beta p[n] / (rho c^2)) dtt(p)[n]
+  = c^2 Lp[n] + 2 beta (dt p[n])^2 / (rho c^2),
+
+p[n+1] = S(2p[n] - p[n-1]
+          + (c^2 dt^2 Lp[n]
+             + 2 beta (p[n] - p[n-1])^2 / (rho c^2))
+            / (1 - 2 beta p[n] / (rho c^2))
+          + s[n]),
 ```
 
 where `S` is the fixed polynomial absorbing layer, `L` is the 7-point 3-D
-Laplacian, and `dtt(p^2)` is the product-rule second time derivative using
-`p[n]`, `p[n-1]`, and `p[n-2]`.
+Laplacian, and the pressure-dependent inertia term is solved in the denominator.
+This is the code path used for the Figure 5 and Figure 6 nonlinear pressure
+diagnostics.
 
 **Sign convention.** The continuous Westervelt equation in canonical form
 (Westervelt 1963 Eq. 24; Hamilton & Blackstock 1998 §3.5 Eq. 3.10) is
 `∇²p − (1/c²)·∂²p/∂t² + (β/(ρ₀c⁴))·∂²(p²)/∂t² = 0`. Solving for `p_tt` and
 discretizing by the second-order leapfrog gives the recurrence above with a
-**positive** nonlinear coefficient on `p[n+1]`. The positive sign is required
-for forward steepening — compressions travel faster than rarefactions and
-peaks at fixed `x` arrive earlier than the linear prediction. A sign-flipped
-nonlinear term produces non-physical reverse steepening; the sign-sensitive
-regression
+**positive** finite-amplitude correction. The correction is required for forward
+steepening: compressions travel faster than rarefactions and peaks at fixed `x`
+arrive earlier than the linear prediction. The previous explicit `p*dtt(p)`
+feedback path produced non-physical runaway peaks at histotripsy drive; the
+finite-amplitude denominator keeps the 2026-05-17 Chapter 29 run finite while
+reducing exactly to the linear update when `beta = 0`. A sign-flipped nonlinear
+term produces non-physical reverse steepening; the sign-sensitive regression
 `forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign`
 locks this convention by checking that the steady-state receiver trace
 satisfies `max(∂p/∂t) > |min(∂p/∂t)|`.
@@ -245,15 +388,16 @@ accumulates
 
 ```text
 d p[n+1] / d c =
-  2 c dt^2 Lp[n] - 2 beta dt^2 dtt(p^2)[n] / (rho c^3),
+  derivative of the finite-amplitude numerator/denominator update,
 
 d p[n+1] / d beta =
-  dt^2 dtt(p^2)[n] / (rho c^2).
+  derivative of the finite-amplitude numerator/denominator update.
 ```
 
-The negative sign on the `c`-sensitivity nonlinear branch comes from
-`∂q/∂c = −2·β·dt²/(ρ·c³)` for `q = β·dt²/(ρ·c²) > 0`; the positive sign on the
-`beta`-sensitivity comes from `∂q/∂β = dt²/(ρ·c²) > 0`. Because the
+The denominator derivative carries the pressure-to-bulk-modulus factor
+`beta/(rho c^2)` and the quotient rule; the adjoint reuses those cell terms so
+the reverse sweep is the transpose of the exact discrete forward update.
+Because the
 time-unrolled recurrence graph is acyclic, this reverse accumulation is the
 chain rule for the discrete least-squares objective. The implemented
 objective stacks deterministic encoded source transmissions and adds discrete
@@ -377,7 +521,9 @@ satisfies `m^T L m = sum_(i,j in E) (m_i - m_j)^2 >= 0`. Adding
    acoustic property maps.
 2. Build the treatment aperture in the patient coordinate frame: calvarial
    helmet for brain or external skin-normal arc for abdomen.
-3. Synthesize pressure-calibrated exposure from the therapy elements.
+3. Simulate the planned exposure with the same heterogeneous scalar acoustic
+   forward solver used by the RTM branch, retaining only rolling wavefields and
+   a raw peak-pressure accumulator.
 4. Instantiate active pitch-catch, passive subharmonic, second-harmonic, and
    ultraharmonic matrix-free operators from the same aperture and receiver set.
 5. Encode the reduced inverse rows by deterministic normalized signs and record
@@ -386,8 +532,12 @@ satisfies `m^T L m = sum_(i,j in E) (m_i - m_j)^2 >= 0`. Adding
    with pressure-amplitude source injection, record receiver traces on the same
    aperture through the CT-domain travel-time horizon, and backpropagate the
    robust residual traces for a linear RTM image.
-7. Solve each reduced inverse channel with the same graph-Laplacian PCG core.
-8. Fuse active lesion inverse output with passive and harmonic support maps for the
+7. Run iterative nonlinear ElasticPSTD shear FWI from the commanded target
+   focus: simulate baseline, observed lesion, and current-estimate shear media;
+   record velocity traces on the same aperture; migrate receiver residual trace
+   energy; and accept each shear-map update only when the trace objective drops.
+8. Solve each reduced inverse channel with the same graph-Laplacian PCG core.
+9. Fuse active lesion inverse output with passive and harmonic support maps for the
    monitoring image.
 
 ### Algorithm: Nonlinear 3-D Branch
@@ -467,11 +617,15 @@ it provides a reproducible equal-area treatment aperture, central imaging
 cutout, and CT-derived aberration-correction envelope for book figures and
 kwavers validation.
 
-The simulated pressure scale is explicit. The brain case uses a diagnostic
-receive/imaging pressure of `1.5e5 Pa`. The kidney and liver histotripsy cases
-use `28.0e6 Pa`, above the `26 MPa` liver-envelope threshold reported in the
-2025 Edison-like liver aberration-correction study. The exposure field is
-therefore a pressure-calibrated synthetic field, not a unitless display map.
+The simulated pressure scale is explicit. Figure 2's reduced brain
+receive/imaging branch uses `1.5e5 Pa`. The separated Figure 5/Figure 6
+nonlinear histotripsy branch uses `28.0e6 Pa` for brain, kidney, and liver, and
+the abdominal nonlinear branch defaults to the 500 kHz treatment frequency from
+the case frequency list. The 2026-05-17 run records finite target mechanical
+indices of `20.91`, `3.03`, and `2.33` for brain, kidney, and liver. The
+linear exposure image is a normalized display of a real heterogeneous
+peak-pressure solve, and the raw peak-pressure array remains available for
+absolute diagnostic inspection.
 
 Figure 2 begins each row with the same CT placement slice, segmented target
 overlay, body outline, and transducer coordinates used for that case, then
@@ -514,7 +668,7 @@ print("operator backend:", result["operator_backend"])    # "matrix_free_row"
 print("dense operator values:", result["dense_operator_values"])  # 0 (not stored)
 print("encoded measurements:", result["encoded_measurements"])
 print("unencoded measurements:", result["unencoded_measurements"])
-print("is_full_wave_inversion:", result["is_full_wave_inversion"])  # False
+print("is_full_wave_inversion:", result["is_full_wave_inversion"])  # True: elastic FWI channel present
 
 # Reconstruction channels (all from the same E aperture)
 active = np.asarray(result["active_lesion_reconstruction"])
@@ -569,12 +723,21 @@ metrics, nonlinear source-encoding/regularization controls, and model-fidelity
 flags, including the nonlinear forward-checkpoint interval. The nonlinear FWI
 loop reuses one residual trace workspace across source encodings and one
 candidate `c`/`beta` workspace across line-search scales; this changes allocator
-pressure only, not the objective or update equations. The reduced inverse cases report
-`is_full_wave_inversion = false`; the separate nonlinear 3-D cases report
-`is_full_wave_inversion = true`, `uses_nonlinear_wave_propagation = true`, and
-`uses_rayleigh_plesset = true`. Figure 5 uses the same per-case grid contract
-as Figure 2 by default: `48^3` for brain and `52^3` for kidney/liver nonlinear
-Westervelt/Rayleigh-Plesset volumes. Figure 5 also reuses the Figure 2 brain
+pressure only, not the objective or update equations. The same-device inverse
+cases now report `is_full_wave_inversion = true` because the elastic shear
+channel performs iterative nonlinear ElasticPSTD FWI; they still report
+`uses_nonlinear_wave_propagation = false` because the shear propagator is a
+linear elastic wave equation with nonlinear model updates. The separate
+nonlinear 3-D cases report `is_full_wave_inversion = true`,
+`uses_nonlinear_wave_propagation = true`, and `uses_rayleigh_plesset = true`.
+Figure 5 uses `56^3` nonlinear
+Westervelt/Rayleigh-Plesset volumes by default for brain, kidney, and liver.
+For development smoke runs, `KWAVERS_CH29_OUT_DIR` redirects generated figures,
+metrics, and field archives away from the production book directory. The
+loader rejects stale `pykwavers` extensions that do not expose the current
+nonlinear argument surface, preventing old PyO3 binaries from silently running
+with mismatched Chapter 29 controls.
+Figure 5 also reuses the Figure 2 brain
 scene target, therapy aperture, imaging receivers, and sampled source-to-focus
 beam paths in the CT column so the linear and nonlinear panels are visually
 audited against the same experimental setup. The Figure 5 `planned exposure`
@@ -586,43 +749,116 @@ FWI, but its exported crop bounds are rendered inside the uncropped Figure 2
 placement axes; the panels therefore share the same visual CT field of view
 without geometrically stretching the nonlinear crop. Abdominal nonlinear source
 selection inherits the Figure 2 target-slice skin-contact direction before the
-3-D crop is built, so kidney sources approach from the superior displayed arc
-and liver sources approach from the inferior-left displayed arc. Reduced inverse
+3-D crop is built, then preserves target-facing angular order when sampling
+the 3-D source and receiver sets. This keeps kidney and liver treatment elements
+distributed around the intended skin-coupled cap instead of lexicographically
+sampling the CT boundary. Reduced inverse
 metrics also report the encoded and unencoded measurement counts used by
 deterministic row encoding.
 
 Figure 6 adds the controlled Figure 2/Figure 5 comparison path. It runs a
 matched linear case with the nonlinear grid size, element count, drive
 frequency, and source pressure, then evaluates the linear fields and nonlinear
-3-D slab fields on the same nonlinear crop projection for metrics. For display,
-every Figure 6 panel is embedded in the full-resolution CT placement grid used
-by the far-left CT panel. That CT-frame view includes target/body contours,
+3-D slab fields after physical resampling onto the full-resolution CT placement
+grid used by the far-left CT panel. That CT-frame view includes target/body contours,
 therapy tx/rx elements, central imaging receivers, focus, and skin-contact
 marker, and the reconstruction panels use the same CT extent and pixel grid
 instead of a smaller nonlinear subsection. The metrics record the remaining
 projected 2-D-vs-3-D aperture residual from the source wrappers.
-The 2026-05-16 post-alignment run gives mean common-grid linear-fusion Dice
-`0.331`, nonlinear-fusion Dice `0.565`, nonlinear peak-pressure outside-target
-energy fraction `0.965`, and MI-gated Rayleigh-Plesset source outside-target
-energy fraction `0.949`. Per-case nonlinear outside-target peak-pressure energy
-fractions are `0.954` for brain, `0.965` for kidney, and `0.976` for liver;
-per-case outside-target source energy fractions are `1.000`, `0.878`, and
-`0.969`. The residual projected aperture distances from the original Figure 2
-linear layout to the Figure 5 3-D aperture are `45.66 mm`, `105.36 mm`, and
-`35.57 mm`. The nonlinear FWI objectives decrease for brain
-`0.5239 -> 0.0632`, kidney `0.8344 -> 0.3427`, and liver
-`8.1186e-6 -> 5.2076e-6`, so the nonlinear inverse is not stalled. The field
-archive now includes `nonlinear_cavitation_source` projections, hotspot
-distance-to-target metrics, and `ct_frame_*` full-resolution display fields.
-The common-grid comparison rejects display
-resolution as the primary failure mode. After correcting the source weighting,
-using histotripsy-scale drive, expanding the brain aperture to the requested
-element count, and constraining the passive inverse to the MI-gated source
-support, nonlinear fusion remains stronger than the reduced linear fusion on
-average. The remaining defect is upstream cavitation specificity: passive
-cavitation equal-area Dice is still zero in all three cases because the
-Westervelt peak-pressure field drives the Rayleigh-Plesset source support
-outside the lesion before passive inversion.
+The controlled grid now includes the iterative nonlinear ElasticPSTD FWI shear
+reconstruction and stores `ct_frame_elastic_shear` beside the linear and
+nonlinear fields so all reported comparison channels use the full CT placement
+pixel grid. Figure 6 also prints the CT-frame comparison theorem and caption
+directly above and below the panel grid.
+The controlled metrics also convert nonlinear pressure hotspots into CT-frame
+physical coordinates and decompose their target offset into planned beam-axis
+and cross-axis terms. The geometry block records the planned-to-realized
+nonlinear aperture axis angle and nonlinear source-to-target distance range.
+Those diagnostics distinguish prefocal/postfocal pressure-gain errors from
+lateral aperture or phase-realization errors without relying on cropped
+subpanels.
+The 2026-05-18 controlled run uses the full CT placement grid for all panels.
+The brain linear branch now resolves the canonical 3-D target fraction once in
+the full CT volume, maps that index through the actual resampled head crop, and
+exports the crop bounds used for CT-frame projection. This removes the previous
+2-D slice-fraction target drift: brain `linear_focus_to_common_target_centroid_m`
+is `0.0004366 m`, and the brain linear exposure, linear fusion, and elastic
+shear hotspots all lie inside the full-CT target mask with hotspot distances
+`14.32`, `13.60`, and `13.93` CT pixels. The visible nonlinear pressure panel is
+now the simulated target pressure inside the matched lesion mask; the
+treatment-window pressure and raw body/coupling pressure remain archived as
+`nonlinear_pressure_window` and `nonlinear_pressure_raw` with prefixed
+localization metrics. Mean common-grid linear-fusion Dice is `0.716`, elastic
+shear Dice is `0.802`, nonlinear-fusion Dice is `0.535`, displayed nonlinear
+target-pressure outside-target energy fraction is `0.000`, and MI-gated
+Rayleigh-Plesset source outside-target energy fraction is `0.599`. Liver linear
+exposure now peaks on the selected target (`target_peak=1.000`, hotspot distance
+`5.35` CT pixels). Liver target MI is `4.28` at `3.02 MPa`;
+the displayed target-pressure peak is inside the target and `8.87 mm` from
+the target centroid, the treatment-window pressure hotspot is `17.78 mm`
+from the target centroid, and the archived raw body-pressure hotspot remains
+`103.74 mm` prefocal. The measured electronic-steering calibration hotspot is
+`4.58` nonlinear-grid cells from the nominal liver focus; the bounded measured
+steering search selected zero correction because the candidate shifted foci
+reduced target/window pressure ratio. This separates true source-side pressure
+gain and treatment-window spread from the clinically relevant target-mask
+histotripsy forcing instead of deleting the raw diagnostic evidence.
+The metrics writer serializes per-iteration FWI diagnostics: objective before
+and after line search, sound-speed and nonlinearity gradient norms, accepted
+scale, and accepted block (`coupled`, `speed_only`, `beta_only`, or `none`).
+The field archive stores the native comparison fields and `ct_frame_*` fields
+at full CT placement resolution. The full-CT comparison rejects cropped display
+resolution as the primary failure mode. After correcting the finite-amplitude
+Westervelt update, bounding source injection, preserving abdominal aperture
+ordering, using the 500 kHz abdominal treatment frequency, and constraining
+Rayleigh-Plesset source support to the treatment inversion window, the nonlinear
+target masks exceed the inertial-cavitation threshold. The remaining defect is
+inverse sensitivity plus off-target pressure focusing: kidney target cavitation
+is present, but its FWI branch still does not accept a decreasing update on the
+full generated run, and liver remains dominated by off-target source energy
+before passive inversion.
+
+The 2026-05-17/2026-05-18 steering follow-up removes multiple causes of
+off-target pressure:
+the abdominal nonlinear crop now includes the target-to-skin acoustic path
+instead of only the target treatment window, the planned skin contact is reused
+as the nonlinear focused-bowl vertex, abdominal source cells are selected in
+the exterior coupling medium, and electronic steering delays are computed from
+straight-ray CT slowness rather than one homogeneous focus-cell sound speed.
+The follow-up targeting correction also keeps the outside focused-bowl standoff
+inside the nonlinear crop and replaces abdominal point injection with
+finite-area exterior-coupling source patches. The measured reduced kidney run
+uses `24` to `40` non-body coupling cells per active element, with mean support
+`29.81` cells and a CT-slowness focused-delay span of `9.679e-6 s`, so the
+simulated aperture no longer injects pressure directly into tissue voxels or
+collapses each bowl element to one skin-plane grid cell.
+The 2026-05-18 source correction changes finite-area source weights from
+point-source sum normalization to pressure-boundary peak normalization, so
+increasing the number of grid cells in one element no longer reduces the
+configured surface pressure. A `40^3`/64-element liver check changed target MI
+from `0.74` to `5.28` at the same 28 MPa drive, confirming that the previous
+normalization was a grid-dependent source-pressure defect.
+Figure 5 now separates overlay semantics: the planned exposure panel uses the
+Figure 2 planned aperture, while nonlinear pressure, FWI, cavitation, and
+fusion panels draw the actual nonlinear 3-D aperture projection and nonlinear
+target centroid in the full CT placement frame. The visible Westervelt pressure
+panel renders target-mask pressure on the matched CT frame; diagnostics
+separately report raw global, body, coupling/source, treatment-window, and
+target peaks. A
+reduced `24^3` KiTS19 verification run at histotripsy-scale drive now reports
+target MI `2.55`, FWI objective `2.4165e-5 -> 1.7785e-5`, `target/body`
+peak ratio `0.513`, coupling/body ratio `1.11`, and body-hotspot distance
+`14.93` grid cells. The same reduced run at `6 MPa` gives target MI `0.548`
+and `target/body` ratio `0.509`, confirming coherent scaling below the
+histotripsy threshold. These runs are only localization diagnostics because
+their minimum spatial sampling is
+`0.290` points per wavelength at 500 kHz, below the configured six-point
+contract. The remaining focusing gap is therefore a resolved-grid pressure-gain
+and dispersion problem, not the absence of a physical aperture, a known
+beam-overlay mismatch, direct tissue source injection, or a reversed
+electronic-steering delay law. For skull, the phase correction is the scalar
+straight-ray slowness integral through the CT-derived sound-speed map; it is not
+an elastic skull correction with shear mode conversion or refracted ray bending.
 
 ### Acoustic Scalar Model
 
@@ -636,9 +872,12 @@ effects remain outside this chapter's nonlinear implementation contract.
 The nonlinear 3-D material map treats cells outside the body mask as coupling
 fluid rather than CT air. This matches the Figure 2 placement abstraction,
 where therapy elements couple through water/gel before entering tissue. Air
-pockets inside the body retain the gas sound-speed and high-attenuation
-contract, but exterior CT background does not slow the simulation to a
-343 m/s gas domain or distort the source focusing delays.
+pockets inside the body retain the gas sound-speed, gas density, gas
+nonlinearity, and high-attenuation contract, but exterior CT background does
+not slow the simulation to a 343 m/s gas domain or distort the source focusing
+delays. The body mask distinguishes these cases by flood-filling
+boundary-connected exterior air first; enclosed HU `< -700` label-0 voxels are
+kept as internal gas, while boundary-connected CT air remains coupling fluid.
 
 ### FDTD/PSTD Choice
 
@@ -740,12 +979,13 @@ The resulting kwavers contract maps the tomotherapy analogy onto ultrasound:
 therapy elements transmit treatment packets, then the same aperture plus any
 coaxial imaging receivers collects active pitch-catch, passive subharmonic,
 second-harmonic, and ultraharmonic data for finite-frequency inverse and RTM
-updates. The reduced branch keeps `is_full_wave_inversion = false` and
-`uses_nonlinear_wave_propagation = false`. The new nonlinear branch owns the
-3-D source-encoded Westervelt forward/adjoint, multiparameter `c/beta`
-updates, and Rayleigh-Plesset cavitation inverse, but keeps them separated from
-the linear RTM and reduced harmonic channels so the figure metadata does not
-mix physics contracts. The next complete increment is thermoviscous/shock-
+updates plus iterative ElasticPSTD FWI for the shear channel. The same-device
+branch now reports `is_full_wave_inversion = true` and
+`uses_nonlinear_wave_propagation = false`. The nonlinear branch owns the 3-D
+source-encoded Westervelt forward/adjoint, multiparameter `c/beta` updates, and
+Rayleigh-Plesset cavitation inverse, but keeps them separated from the linear
+RTM and reduced harmonic channels so the figure metadata does not mix physics
+contracts. The next complete increment is thermoviscous/shock-
 capturing stabilization for higher histotripsy pressures plus a joint
 `c/alpha/rho/beta/bubble-density` inverse with a robust trace-space misfit;
 Python remains limited to plotting and animation.

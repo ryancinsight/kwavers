@@ -32,4 +32,4 @@ pub use broadband::BroadbandDetector;
 pub use spectral::SpectralDetector;
 pub use subharmonic::SubharmonicDetector;
 pub use traits::{CavitationDetector, DetectorParameters};
-pub use types::{CavitationMetrics, CavitationState, DetectionMethod, HistoryBuffer};
+pub use types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};

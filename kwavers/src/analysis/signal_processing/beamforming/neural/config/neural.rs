@@ -1,6 +1,8 @@
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::{AdaptationParameters, NeuralBeamformingMode, PhysicsParameters, SensorGeometry};
+use super::{
+    AdaptationParameters, NeuralBeamformingMode, NeuralBeamformingPhysicsParams, SensorGeometry,
+};
 
 /// Main configuration for neural beamforming.
 ///
@@ -20,7 +22,7 @@ pub struct NeuralBeamformingConfig {
     pub network_architecture: Vec<usize>,
 
     /// Physics constraint parameters.
-    pub physics_parameters: PhysicsParameters,
+    pub physics_parameters: NeuralBeamformingPhysicsParams,
 
     /// Adaptation and learning parameters.
     pub adaptation_parameters: AdaptationParameters,
@@ -97,7 +99,7 @@ impl Default for NeuralBeamformingConfig {
         Self {
             mode: NeuralBeamformingMode::default(),
             network_architecture: vec![7, 32, 16, 1],
-            physics_parameters: PhysicsParameters::default(),
+            physics_parameters: NeuralBeamformingPhysicsParams::default(),
             adaptation_parameters: AdaptationParameters::default(),
             sensor_geometry: SensorGeometry::default(),
             batch_size: 32,

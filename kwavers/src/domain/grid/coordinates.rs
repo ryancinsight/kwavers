@@ -2,7 +2,7 @@
 //!
 //! This module handles physical coordinate generation and position-to-index conversions.
 
-use crate::domain::grid::structure::{Dimension, Grid};
+use crate::domain::grid::structure::{Grid, GridDimension};
 use ndarray::{Array1, Array3};
 
 /// Coordinate system operations
@@ -11,11 +11,11 @@ pub struct CoordinateSystem;
 
 impl CoordinateSystem {
     /// Generate coordinate vector for a given dimension
-    pub fn generate_coordinate_vector(grid: &Grid, dim: Dimension) -> Array1<f64> {
+    pub fn generate_coordinate_vector(grid: &Grid, dim: GridDimension) -> Array1<f64> {
         match dim {
-            Dimension::X => Self::generate_x_vector(grid),
-            Dimension::Y => Self::generate_y_vector(grid),
-            Dimension::Z => Self::generate_z_vector(grid),
+            GridDimension::X => Self::generate_x_vector(grid),
+            GridDimension::Y => Self::generate_y_vector(grid),
+            GridDimension::Z => Self::generate_z_vector(grid),
         }
     }
 
@@ -127,11 +127,11 @@ impl CoordinateSystem {
     }
 
     /// Generate centered coordinate vector for a given dimension
-    pub fn generate_centered_coordinate_vector(grid: &Grid, dim: Dimension) -> Array1<f64> {
+    pub fn generate_centered_coordinate_vector(grid: &Grid, dim: GridDimension) -> Array1<f64> {
         let (n, d, o) = match dim {
-            Dimension::X => (grid.nx, grid.dx, grid.origin[0]),
-            Dimension::Y => (grid.ny, grid.dy, grid.origin[1]),
-            Dimension::Z => (grid.nz, grid.dz, grid.origin[2]),
+            GridDimension::X => (grid.nx, grid.dx, grid.origin[0]),
+            GridDimension::Y => (grid.ny, grid.dy, grid.origin[1]),
+            GridDimension::Z => (grid.nz, grid.dz, grid.origin[2]),
         };
         let length = n as f64 * d;
         Array1::from_shape_fn(n, |i| (i as f64).mul_add(d, o) - length / 2.0 + d / 2.0)

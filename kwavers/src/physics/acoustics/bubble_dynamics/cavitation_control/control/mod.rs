@@ -6,6 +6,6 @@ pub mod state_estimator;
 pub mod types;
 
 pub use adaptive::AdaptiveController;
-pub use safety_monitor::SafetyMonitor;
+pub use safety_monitor::CavitationSafetyMonitor;
 pub use state_estimator::StateEstimator;
-pub use types::{ControlOutput, ControlStrategy, FeedbackConfig, SafetyLimits};
+pub use types::{CavitationSafetyLimits, ControlOutput, ControlStrategy, FeedbackConfig};

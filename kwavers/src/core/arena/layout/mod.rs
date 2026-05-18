@@ -75,7 +75,7 @@ pub enum FieldLayout {
 
 /// Cache access pattern optimization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AccessPattern {
+pub enum ArenaAccessPattern {
     /// Sequential stream access (prefetch friendly)
     Sequential,
     /// Random access (cache-oblivious tiling)
@@ -92,7 +92,7 @@ pub enum AccessPattern {
 
 /// NUMA memory policy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NumaPolicy {
+pub enum ArenaLayoutNumaPolicy {
     /// No NUMA optimization
     None,
     /// First-touch: memory allocated on first accessing NUMA node

@@ -66,22 +66,22 @@ impl PinnEMSource {
 
     /// Compute current density vector from source polarization
     fn compute_current_density(source: &PointEMSource, amplitude: f64) -> [f64; 3] {
-        use crate::domain::source::Polarization;
+        use crate::domain::source::SourcePolarization;
 
         match source.polarization {
-            Polarization::LinearX => [amplitude, 0.0, 0.0],
-            Polarization::LinearY => [0.0, amplitude, 0.0],
-            Polarization::LinearZ => [0.0, 0.0, amplitude],
-            Polarization::RightCircular => {
+            SourcePolarization::LinearX => [amplitude, 0.0, 0.0],
+            SourcePolarization::LinearY => [0.0, amplitude, 0.0],
+            SourcePolarization::LinearZ => [0.0, 0.0, amplitude],
+            SourcePolarization::RightCircular => {
                 // Right circular: Jx = A, Jy = -iA (90° phase shift)
                 // For real representation at t=0: [A, 0, 0] with phase understanding
                 [amplitude, 0.0, 0.0]
             }
-            Polarization::LeftCircular => {
+            SourcePolarization::LeftCircular => {
                 // Left circular: Jx = A, Jy = iA (-90° phase shift)
                 [amplitude, 0.0, 0.0]
             }
-            Polarization::Elliptical { ratio, phase_diff } => {
+            SourcePolarization::Elliptical { ratio, phase_diff } => {
                 // Elliptical polarization with specified ratio and phase
                 let jy = amplitude * ratio * phase_diff.cos();
                 [amplitude, jy, 0.0]
@@ -149,14 +149,14 @@ pub fn adapt_em_sources(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::source::Polarization;
+    use crate::domain::source::SourcePolarization;
 
     #[test]
     fn test_point_em_source_adapter() {
         // Create domain EM point source
         let domain_source = PointEMSource {
             position: [0.01, 0.02, 0.03],
-            polarization: Polarization::LinearX,
+            polarization: SourcePolarization::LinearX,
             frequency: 1e9, // 1 GHz
             amplitude: 100.0,
             phase: 0.0,
@@ -205,7 +205,7 @@ mod tests {
     fn test_y_polarization() {
         let domain_source = PointEMSource {
             position: [0.0, 0.0, 0.0],
-            polarization: Polarization::LinearY,
+            polarization: SourcePolarization::LinearY,
             frequency: 1e9,
             amplitude: 50.0,
             phase: 0.0,
@@ -260,7 +260,7 @@ mod tests {
     fn test_adapt_multiple_sources() {
         let source1 = PointEMSource {
             position: [0.0, 0.0, 0.0],
-            polarization: Polarization::LinearX,
+            polarization: SourcePolarization::LinearX,
             frequency: 1e9,
             amplitude: 100.0,
             phase: 0.0,
@@ -268,7 +268,7 @@ mod tests {
 
         let source2 = PointEMSource {
             position: [0.01, 0.0, 0.0],
-            polarization: Polarization::LinearY,
+            polarization: SourcePolarization::LinearY,
             frequency: 2e9,
             amplitude: 50.0,
             phase: 0.0,

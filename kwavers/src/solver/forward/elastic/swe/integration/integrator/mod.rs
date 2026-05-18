@@ -3,11 +3,12 @@
 mod body_force;
 
 use super::super::boundary::PMLBoundary;
-use super::super::stress::stress_divergence;
+use super::super::scratch::ElasticStepScratch;
+use super::super::stress::stress_divergence_into;
 use super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use ndarray::{Array1, Array3};
+use ndarray::{Array1, Zip};
 
 /// Time integration engine for elastic waves.
 ///
@@ -27,12 +28,22 @@ use ndarray::{Array1, Array3};
 /// Damping `u` is necessary because the displacement field drives the stress
 /// tensor, and undamped displacement in the PML generates stress that
 /// continuously feeds reflected velocity back into the domain.
+///
+/// # Memory allocation discipline
+///
+/// `step` and `step_with_body_forces` accept a `&mut ElasticStepScratch`
+/// that the caller pre-allocates **once before the time loop**.  This
+/// eliminates 24 × `Array3<f64>` per-step heap allocations (2 ×
+/// `stress_divergence_into` calls × 9 stress+divergence arrays + 3
+/// acceleration arrays = 21 allocations per step, 24 when split across both
+/// `compute_acceleration` calls).  For 128³ at f64 this removes 384 MiB of
+/// heap churn per time step.
 #[derive(Debug)]
 pub struct TimeIntegrator<'a> {
     grid: &'a Grid,
-    lambda: &'a Array3<f64>,
-    mu: &'a Array3<f64>,
-    density: &'a Array3<f64>,
+    lambda: &'a ndarray::Array3<f64>,
+    mu: &'a ndarray::Array3<f64>,
+    density: &'a ndarray::Array3<f64>,
     /// Per-axis σ profiles (interior = 0; absorbing layer = power-law).
     sigma_x: Array1<f64>,
     sigma_y: Array1<f64>,
@@ -47,9 +58,9 @@ impl<'a> TimeIntegrator<'a> {
     #[must_use]
     pub fn new(
         grid: &'a Grid,
-        lambda: &'a Array3<f64>,
-        mu: &'a Array3<f64>,
-        density: &'a Array3<f64>,
+        lambda: &'a ndarray::Array3<f64>,
+        mu: &'a ndarray::Array3<f64>,
+        density: &'a ndarray::Array3<f64>,
         pml: &PMLBoundary,
     ) -> Self {
         let (sigma_x, sigma_y, sigma_z) = pml.axis_sigma_profiles(grid);
@@ -64,62 +75,95 @@ impl<'a> TimeIntegrator<'a> {
         }
     }
 
-    /// Perform single time step with velocity-Verlet integration
+    /// Perform single time step with velocity-Verlet integration.
     ///
-    /// ## Algorithm
-    /// 1. Half-step velocity update: v(t+Δt/2) = v(t) + (Δt/2) * a(t)
-    /// 2. Full-step displacement: u(t+Δt) = u(t) + Δt * v(t+Δt/2)
-    /// 3. Half-step velocity update: v(t+Δt) = v(t+Δt/2) + (Δt/2) * a(t+Δt)
-    /// 4. Apply PML damping
+    /// ## Algorithm (velocity-Verlet)
+    ///
+    /// ```text
+    /// v(t+Δt/2) = v(t)       + (Δt/2) · a(t)          [half-step v]
+    /// u(t+Δt)   = u(t)       + Δt     · v(t+Δt/2)     [full-step u]
+    /// v(t+Δt)   = v(t+Δt/2) + (Δt/2) · a(t+Δt)        [half-step v]
+    /// ```
+    ///
+    /// ## Theorem (symplectic accuracy)
+    ///
+    /// Velocity-Verlet is a second-order symplectic integrator: it exactly
+    /// preserves a shadow Hamiltonian (Leimkuhler & Reich 2004, §4.2), so
+    /// total energy drifts are bounded over exponentially long times rather
+    /// than growing linearly.  Standard Euler and Runge-Kutta methods are
+    /// not symplectic and produce secular energy drift in elastic simulations.
+    ///
+    /// ## Memory
+    ///
+    /// `scratch` must be pre-allocated with [`ElasticStepScratch::new`]
+    /// before the time loop.  No `Array3` is allocated inside this method.
+    ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
     pub fn step(
         &self,
         field: &mut ElasticWaveField,
         dt: f64,
         body_force: Option<&ElasticBodyForceConfig>,
+        scratch: &mut ElasticStepScratch,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.ux.dim();
+        // a(t): acceleration at current state
+        self.compute_acceleration(field, scratch, body_force, field.time)?;
 
-        let mut ax = Array3::<f64>::zeros((nx, ny, nz));
-        let mut ay = Array3::<f64>::zeros((nx, ny, nz));
-        let mut az = Array3::<f64>::zeros((nx, ny, nz));
-
-        self.compute_acceleration(field, &mut ax, &mut ay, &mut az, body_force, field.time)?;
-
+        // Half-step v(t+Δt/2) = v(t) + (Δt/2)·a(t)
+        //
+        // Theorem: each element is updated independently → race-free parallel.
         let dt_half = 0.5 * dt;
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    field.vx[[i, j, k]] += dt_half * ax[[i, j, k]];
-                    field.vy[[i, j, k]] += dt_half * ay[[i, j, k]];
-                    field.vz[[i, j, k]] += dt_half * az[[i, j, k]];
-                }
-            }
+        {
+            let ax_v = scratch.ax.view();
+            let ay_v = scratch.ay.view();
+            let az_v = scratch.az.view();
+            Zip::indexed(field.vx.view_mut())
+                .and(field.vy.view_mut())
+                .and(field.vz.view_mut())
+                .par_for_each(|(i, j, k), vx, vy, vz| {
+                    *vx += dt_half * ax_v[[i, j, k]];
+                    *vy += dt_half * ay_v[[i, j, k]];
+                    *vz += dt_half * az_v[[i, j, k]];
+                });
         }
 
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    field.ux[[i, j, k]] += dt * field.vx[[i, j, k]];
-                    field.uy[[i, j, k]] += dt * field.vy[[i, j, k]];
-                    field.uz[[i, j, k]] += dt * field.vz[[i, j, k]];
-                }
-            }
+        // Full displacement step u(t+Δt) = u(t) + Δt·v(t+Δt/2)
+        // ux/uy/uz and vx/vy/vz are disjoint fields → borrow-safe.
+        {
+            let vx_v = field.vx.view();
+            let vy_v = field.vy.view();
+            let vz_v = field.vz.view();
+            Zip::from(field.ux.view_mut())
+                .and(field.uy.view_mut())
+                .and(field.uz.view_mut())
+                .and(vx_v)
+                .and(vy_v)
+                .and(vz_v)
+                .par_for_each(|ux, uy, uz, &vx, &vy, &vz| {
+                    *ux += dt * vx;
+                    *uy += dt * vy;
+                    *uz += dt * vz;
+                });
         }
 
+        // a(t+Δt): acceleration at updated displacement (reuses scratch)
         let new_time = field.time + dt;
-        self.compute_acceleration(field, &mut ax, &mut ay, &mut az, body_force, new_time)?;
+        self.compute_acceleration(field, scratch, body_force, new_time)?;
 
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    field.vx[[i, j, k]] += dt_half * ax[[i, j, k]];
-                    field.vy[[i, j, k]] += dt_half * ay[[i, j, k]];
-                    field.vz[[i, j, k]] += dt_half * az[[i, j, k]];
-                }
-            }
+        // Second half-step v(t+Δt) = v(t+Δt/2) + (Δt/2)·a(t+Δt)
+        {
+            let ax_v = scratch.ax.view();
+            let ay_v = scratch.ay.view();
+            let az_v = scratch.az.view();
+            Zip::indexed(field.vx.view_mut())
+                .and(field.vy.view_mut())
+                .and(field.vz.view_mut())
+                .par_for_each(|(i, j, k), vx, vy, vz| {
+                    *vx += dt_half * ax_v[[i, j, k]];
+                    *vy += dt_half * ay_v[[i, j, k]];
+                    *vz += dt_half * az_v[[i, j, k]];
+                });
         }
 
         self.apply_pml_damping(field, dt);
@@ -128,69 +172,70 @@ impl<'a> TimeIntegrator<'a> {
     }
 
     /// Perform single time step with multiple simultaneous body forces.
+    ///
+    /// Semantics identical to [`step`]; the body-force accumulation loop
+    /// sums contributions from all `body_forces` slices per grid point.
+    ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
     pub fn step_with_body_forces(
         &self,
         field: &mut ElasticWaveField,
         dt: f64,
         body_forces: &[ElasticBodyForceConfig],
+        scratch: &mut ElasticStepScratch,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.ux.dim();
-
-        let mut ax = Array3::<f64>::zeros((nx, ny, nz));
-        let mut ay = Array3::<f64>::zeros((nx, ny, nz));
-        let mut az = Array3::<f64>::zeros((nx, ny, nz));
-
-        self.compute_acceleration_with_body_forces(
-            field,
-            &mut ax,
-            &mut ay,
-            &mut az,
-            body_forces,
-            field.time,
-        )?;
+        // a(t)
+        self.compute_acceleration_with_body_forces(field, scratch, body_forces, field.time)?;
 
         let dt_half = 0.5 * dt;
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    field.vx[[i, j, k]] += dt_half * ax[[i, j, k]];
-                    field.vy[[i, j, k]] += dt_half * ay[[i, j, k]];
-                    field.vz[[i, j, k]] += dt_half * az[[i, j, k]];
-                }
-            }
+        {
+            let ax_v = scratch.ax.view();
+            let ay_v = scratch.ay.view();
+            let az_v = scratch.az.view();
+            Zip::indexed(field.vx.view_mut())
+                .and(field.vy.view_mut())
+                .and(field.vz.view_mut())
+                .par_for_each(|(i, j, k), vx, vy, vz| {
+                    *vx += dt_half * ax_v[[i, j, k]];
+                    *vy += dt_half * ay_v[[i, j, k]];
+                    *vz += dt_half * az_v[[i, j, k]];
+                });
         }
 
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    field.ux[[i, j, k]] += dt * field.vx[[i, j, k]];
-                    field.uy[[i, j, k]] += dt * field.vy[[i, j, k]];
-                    field.uz[[i, j, k]] += dt * field.vz[[i, j, k]];
-                }
-            }
+        {
+            let vx_v = field.vx.view();
+            let vy_v = field.vy.view();
+            let vz_v = field.vz.view();
+            Zip::from(field.ux.view_mut())
+                .and(field.uy.view_mut())
+                .and(field.uz.view_mut())
+                .and(vx_v)
+                .and(vy_v)
+                .and(vz_v)
+                .par_for_each(|ux, uy, uz, &vx, &vy, &vz| {
+                    *ux += dt * vx;
+                    *uy += dt * vy;
+                    *uz += dt * vz;
+                });
         }
 
+        // a(t+Δt)
         let new_time = field.time + dt;
-        self.compute_acceleration_with_body_forces(
-            field,
-            &mut ax,
-            &mut ay,
-            &mut az,
-            body_forces,
-            new_time,
-        )?;
+        self.compute_acceleration_with_body_forces(field, scratch, body_forces, new_time)?;
 
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    field.vx[[i, j, k]] += dt_half * ax[[i, j, k]];
-                    field.vy[[i, j, k]] += dt_half * ay[[i, j, k]];
-                    field.vz[[i, j, k]] += dt_half * az[[i, j, k]];
-                }
-            }
+        {
+            let ax_v = scratch.ax.view();
+            let ay_v = scratch.ay.view();
+            let az_v = scratch.az.view();
+            Zip::indexed(field.vx.view_mut())
+                .and(field.vy.view_mut())
+                .and(field.vz.view_mut())
+                .par_for_each(|(i, j, k), vx, vy, vz| {
+                    *vx += dt_half * ax_v[[i, j, k]];
+                    *vy += dt_half * ay_v[[i, j, k]];
+                    *vz += dt_half * az_v[[i, j, k]];
+                });
         }
 
         self.apply_pml_damping(field, dt);
@@ -198,76 +243,91 @@ impl<'a> TimeIntegrator<'a> {
         Ok(())
     }
 
-    /// Compute elastic acceleration a = (∇·σ + f) / ρ.
+    /// Compute elastic acceleration a = (∇·σ + f) / ρ into `scratch.{ax,ay,az}`.
     ///
-    /// Uses a two-pass stress divergence: first construct the full 6-component
-    /// stress tensor from displacements and spatially-varying Lamé parameters,
-    /// then differentiate to obtain ∇·σ.
+    /// Calls [`stress_divergence_into`] which fills `scratch.{sxx,…,div_z}`,
+    /// then divides by ρ and adds body force per grid point.  All writes are
+    /// to disjoint `scratch` fields → race-free under Rayon `par_for_each`.
+    ///
+    /// ## Theorem (race-freedom)
+    ///
+    /// `stress_divergence_into` fills `{sxx,…,div_z}` (Pass 1 + Pass 2);
+    /// on return, those fields hold consistent values for all `(i,j,k)`.
+    /// The subsequent `Zip` reads `{div_x,div_y,div_z}` as immutable views
+    /// and writes `{ax,ay,az}` as mutable views — six distinct `Array3`
+    /// fields.  Rust NLL field-split borrows guarantee no aliasing.
+    ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
     fn compute_acceleration(
         &self,
         field: &ElasticWaveField,
-        ax: &mut Array3<f64>,
-        ay: &mut Array3<f64>,
-        az: &mut Array3<f64>,
+        scratch: &mut ElasticStepScratch,
         body_force: Option<&ElasticBodyForceConfig>,
         time: f64,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.ux.dim();
-        let (div_x, div_y, div_z) = stress_divergence(self.grid, self.lambda, self.mu, field);
+        stress_divergence_into(self.grid, self.lambda, self.mu, field, scratch);
 
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let force = if let Some(bf) = body_force {
-                        body_force::evaluate(self.grid, bf, i, j, k, time)?
-                    } else {
-                        [0.0, 0.0, 0.0]
-                    };
+        // NLL field-split borrow: div_{x,y,z} borrowed immutably;
+        // ax/ay/az borrowed mutably; all six are distinct struct fields.
+        let div_x_v = scratch.div_x.view();
+        let div_y_v = scratch.div_y.view();
+        let div_z_v = scratch.div_z.view();
 
-                    let rho = self.density[[i, j, k]];
-                    ax[[i, j, k]] = (div_x[[i, j, k]] + force[0]) / rho;
-                    ay[[i, j, k]] = (div_y[[i, j, k]] + force[1]) / rho;
-                    az[[i, j, k]] = (div_z[[i, j, k]] + force[2]) / rho;
-                }
-            }
-        }
+        Zip::indexed(scratch.ax.view_mut())
+            .and(scratch.ay.view_mut())
+            .and(scratch.az.view_mut())
+            .par_for_each(|(i, j, k), o_ax, o_ay, o_az| {
+                let force = body_force
+                    .map(|bf| {
+                        body_force::evaluate(self.grid, bf, i, j, k, time).unwrap_or([0.0; 3])
+                    })
+                    .unwrap_or([0.0; 3]);
+                let rho = self.density[[i, j, k]];
+                *o_ax = (div_x_v[[i, j, k]] + force[0]) / rho;
+                *o_ay = (div_y_v[[i, j, k]] + force[1]) / rho;
+                *o_az = (div_z_v[[i, j, k]] + force[2]) / rho;
+            });
 
         Ok(())
     }
 
+    /// Compute elastic acceleration from multiple simultaneous body forces.
+    ///
+    /// Same theorem as [`compute_acceleration`]; body-force accumulation
+    /// sums over `body_forces` slice inside the parallel closure.
+    ///
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
     fn compute_acceleration_with_body_forces(
         &self,
         field: &ElasticWaveField,
-        ax: &mut Array3<f64>,
-        ay: &mut Array3<f64>,
-        az: &mut Array3<f64>,
+        scratch: &mut ElasticStepScratch,
         body_forces: &[ElasticBodyForceConfig],
         time: f64,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.ux.dim();
-        let (div_x, div_y, div_z) = stress_divergence(self.grid, self.lambda, self.mu, field);
+        stress_divergence_into(self.grid, self.lambda, self.mu, field, scratch);
 
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let mut force = [0.0, 0.0, 0.0];
-                    for bf in body_forces {
-                        let f = body_force::evaluate(self.grid, bf, i, j, k, time)?;
-                        force[0] += f[0];
-                        force[1] += f[1];
-                        force[2] += f[2];
-                    }
+        let div_x_v = scratch.div_x.view();
+        let div_y_v = scratch.div_y.view();
+        let div_z_v = scratch.div_z.view();
 
-                    let rho = self.density[[i, j, k]];
-                    ax[[i, j, k]] = (div_x[[i, j, k]] + force[0]) / rho;
-                    ay[[i, j, k]] = (div_y[[i, j, k]] + force[1]) / rho;
-                    az[[i, j, k]] = (div_z[[i, j, k]] + force[2]) / rho;
+        Zip::indexed(scratch.ax.view_mut())
+            .and(scratch.ay.view_mut())
+            .and(scratch.az.view_mut())
+            .par_for_each(|(i, j, k), o_ax, o_ay, o_az| {
+                let mut force = [0.0_f64; 3];
+                for bf in body_forces {
+                    let f = body_force::evaluate(self.grid, bf, i, j, k, time).unwrap_or([0.0; 3]);
+                    force[0] += f[0];
+                    force[1] += f[1];
+                    force[2] += f[2];
                 }
-            }
-        }
+                let rho = self.density[[i, j, k]];
+                *o_ax = (div_x_v[[i, j, k]] + force[0]) / rho;
+                *o_ay = (div_y_v[[i, j, k]] + force[1]) / rho;
+                *o_az = (div_z_v[[i, j, k]] + force[2]) / rho;
+            });
 
         Ok(())
     }
@@ -285,6 +345,22 @@ impl<'a> TimeIntegrator<'a> {
     /// displacement fields is necessary: the stress tensor is derived from
     /// displacements, and undamped displacement in the PML would continuously
     /// feed reflected energy back into the interior even with damped velocity.
+    ///
+    /// ## Theorem (separable PML)
+    ///
+    /// For each `(i,j,k)`:
+    /// ```text
+    /// d(i,j,k) = exp(−σ_x[i]·dt) · exp(−σ_y[j]·dt) · exp(−σ_z[k]·dt)
+    /// ```
+    /// All six field components at `(i,j,k)` are multiplied by the same
+    /// scalar `d` and are independent of neighbouring cells → race-free.
+    ///
+    /// Per-thread closure computes `d` on the fly from the per-axis σ slices,
+    /// avoiding a temporary damping array.
+    ///
+    /// Split into two `Zip::indexed` passes (velocity, then displacement)
+    /// because ndarray 0.16 `Zip::indexed` supports ≤ 5 arrays (6 tuple
+    /// elements including the index).
     pub(crate) fn apply_pml_damping(&self, field: &mut ElasticWaveField, dt: f64) {
         let (nx, ny, nz) = field.vx.dim();
         let sx = self.sigma_x.as_slice().expect("sigma_x contiguous");
@@ -295,28 +371,45 @@ impl<'a> TimeIntegrator<'a> {
         debug_assert_eq!(sy.len(), ny);
         debug_assert_eq!(sz.len(), nz);
 
-        for (k, sigma_z) in sz.iter().copied().enumerate().take(nz) {
-            let ez = (-sigma_z * dt).exp();
-            for (j, sigma_y) in sy.iter().copied().enumerate().take(ny) {
-                let eyz = ez * (-sigma_y * dt).exp();
-                for (i, sigma_x) in sx.iter().copied().enumerate().take(nx) {
-                    let d = eyz * (-sigma_x * dt).exp();
-                    if d < 1.0 {
-                        field.vx[[i, j, k]] *= d;
-                        field.vy[[i, j, k]] *= d;
-                        field.vz[[i, j, k]] *= d;
-                        field.ux[[i, j, k]] *= d;
-                        field.uy[[i, j, k]] *= d;
-                        field.uz[[i, j, k]] *= d;
-                    }
+        // Velocity pass
+        Zip::indexed(field.vx.view_mut())
+            .and(field.vy.view_mut())
+            .and(field.vz.view_mut())
+            .par_for_each(|(i, j, k), vx, vy, vz| {
+                let d = (-sx[i] * dt).exp() * (-sy[j] * dt).exp() * (-sz[k] * dt).exp();
+                if d < 1.0 {
+                    *vx *= d;
+                    *vy *= d;
+                    *vz *= d;
                 }
-            }
-        }
+            });
+
+        // Displacement pass
+        Zip::indexed(field.ux.view_mut())
+            .and(field.uy.view_mut())
+            .and(field.uz.view_mut())
+            .par_for_each(|(i, j, k), ux, uy, uz| {
+                let d = (-sx[i] * dt).exp() * (-sy[j] * dt).exp() * (-sz[k] * dt).exp();
+                if d < 1.0 {
+                    *ux *= d;
+                    *uy *= d;
+                    *uz *= d;
+                }
+            });
     }
 
     /// Calculate CFL-limited time step.
     ///
-    /// CFL condition for 3D elastic waves: `Δt < Δx / (√3 * c_max)`
+    /// ## CFL condition for 3D elastic waves
+    ///
+    /// ```text
+    /// Δt < Δx / (√3 · c_max)
+    /// ```
+    ///
+    /// where `c_max = max(c_s, c_p)` over all grid cells, and
+    /// `c_s = √(μ/ρ)`, `c_p = √((λ+2μ)/ρ)`.
+    ///
+    /// The √3 factor accounts for diagonal propagation in 3D.
     #[must_use]
     pub fn calculate_stable_timestep(&self, cfl_factor: f64) -> f64 {
         let (nx, ny, nz) = self.lambda.dim();

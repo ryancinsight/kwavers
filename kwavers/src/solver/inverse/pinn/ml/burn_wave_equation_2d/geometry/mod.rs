@@ -3,5 +3,5 @@
 pub mod interface;
 pub mod shape;
 
-pub use interface::InterfaceCondition;
+pub use interface::BurnWave2dInterfaceCondition;
 pub use shape::Geometry2D;

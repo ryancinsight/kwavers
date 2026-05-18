@@ -224,4 +224,107 @@ mod tests {
         let dist = targeting.distance(&p1, &p2);
         assert!((dist - 5.0).abs() < 0.01); // 3-4-5 triangle
     }
+
+    // ─── Exact value-semantic tests ───────────────────────────────────────────
+
+    /// 3-4-5 right triangle distance is exactly 5.0.
+    ///
+    /// Δap=3, Δml=4, Δdv=0 → d = √(9+16) = √25 = 5.0 (exact in IEEE 754).
+    #[test]
+    fn targeting_distance_three_four_five_exact() {
+        let atlas = BrainAtlas::load_default().unwrap();
+        let targeting = TargetingSystem::new(&atlas).unwrap();
+        let p1 = StereotacticCoordinates::new(0.0, 0.0, 0.0);
+        let p2 = StereotacticCoordinates::new(3.0, 4.0, 0.0);
+        let dist = targeting.distance(&p1, &p2);
+        assert!(
+            (dist - 5.0).abs() < 1e-12,
+            "3-4-5 distance should be exactly 5.0, got {dist}"
+        );
+    }
+
+    /// Trajectory endpoints match start and target exactly.
+    ///
+    /// Linear interpolation at t=0 gives start and at t=1 gives target.
+    /// With `num_waypoints=5`: waypoint[0] = start, waypoint[4] = target.
+    #[test]
+    fn targeting_trajectory_endpoints_match_start_and_target() {
+        let atlas = BrainAtlas::load_default().unwrap();
+        let targeting = TargetingSystem::new(&atlas).unwrap();
+        let start = StereotacticCoordinates::new(-1.0, 0.5, 1.0);
+        let target = StereotacticCoordinates::new(1.0, -0.5, 4.0);
+        let traj = targeting.plan_trajectory(&start, &target, 5).unwrap();
+        assert_eq!(traj.len(), 5, "expected 5 waypoints");
+        // t=0 → start
+        assert!(
+            (traj[0].ap - start.ap).abs() < 1e-12,
+            "first waypoint ap mismatch: {} vs {}",
+            traj[0].ap,
+            start.ap
+        );
+        assert!(
+            (traj[0].ml - start.ml).abs() < 1e-12,
+            "first waypoint ml mismatch"
+        );
+        assert!(
+            (traj[0].dv - start.dv).abs() < 1e-12,
+            "first waypoint dv mismatch"
+        );
+        // t=1 → target
+        assert!(
+            (traj[4].ap - target.ap).abs() < 1e-12,
+            "last waypoint ap mismatch: {} vs {}",
+            traj[4].ap,
+            target.ap
+        );
+        assert!(
+            (traj[4].dv - target.dv).abs() < 1e-12,
+            "last waypoint dv mismatch"
+        );
+    }
+
+    /// Trajectory midpoint (waypoint[2] of 5) is the exact midpoint of start and target.
+    ///
+    /// t = 2/4 = 0.5 → ap_mid = (ap_start + ap_end) / 2.
+    #[test]
+    fn targeting_trajectory_midpoint_is_linear_interpolation() {
+        let atlas = BrainAtlas::load_default().unwrap();
+        let targeting = TargetingSystem::new(&atlas).unwrap();
+        let start = StereotacticCoordinates::new(-2.0, 1.0, 1.0);
+        let target = StereotacticCoordinates::new(0.0, -1.0, 3.0);
+        let traj = targeting.plan_trajectory(&start, &target, 5).unwrap();
+        let ap_mid = (start.ap + target.ap) * 0.5;
+        let ml_mid = (start.ml + target.ml) * 0.5;
+        let dv_mid = (start.dv + target.dv) * 0.5;
+        assert!(
+            (traj[2].ap - ap_mid).abs() < 1e-12,
+            "midpoint ap: expected {ap_mid}, got {}",
+            traj[2].ap
+        );
+        assert!(
+            (traj[2].ml - ml_mid).abs() < 1e-12,
+            "midpoint ml: expected {ml_mid}, got {}",
+            traj[2].ml
+        );
+        assert!(
+            (traj[2].dv - dv_mid).abs() < 1e-12,
+            "midpoint dv: expected {dv_mid}, got {}",
+            traj[2].dv
+        );
+    }
+
+    /// Boundary: stereotactic coordinate at exactly the boundary of `is_valid` returns true.
+    ///
+    /// Bounds: ap ∈ [−4, 3], ml ∈ [−4.5, 4.5], dv ∈ [0, 8].
+    /// Corner point (−4, −4.5, 0) is on the boundary → `is_valid() == true`.
+    #[test]
+    fn stereotactic_boundary_coordinates_are_valid() {
+        let corner = StereotacticCoordinates::new(-4.0, -4.5, 0.0);
+        assert!(
+            corner.is_valid(),
+            "boundary corner must be valid: {corner:?}"
+        );
+        let just_outside = StereotacticCoordinates::new(-4.0 - 1e-9, -4.5, 0.0);
+        assert!(!just_outside.is_valid(), "just outside must be invalid");
+    }
 }

@@ -3,8 +3,8 @@ use super::*;
 #[test]
 fn test_therapy_orchestrator_creation() {
     let config = TherapySessionConfig {
-        primary_modality: TherapyModality::Histotripsy,
-        secondary_modalities: vec![TherapyModality::Microbubble],
+        primary_modality: TherapyIntegrationModality::Histotripsy,
+        secondary_modalities: vec![TherapyIntegrationModality::Microbubble],
         duration: 60.0,
         acoustic_params: AcousticTherapyParams {
             frequency: 1e6,
@@ -14,7 +14,7 @@ fn test_therapy_orchestrator_creation() {
             focal_depth: 0.05,
             treatment_volume: 1.0,
         },
-        safety_limits: SafetyLimits {
+        safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 6.0,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
@@ -26,7 +26,7 @@ fn test_therapy_orchestrator_creation() {
             target_volume: TargetVolume {
                 center: (0.05, 0.0, 0.0),
                 dimensions: (0.02, 0.02, 0.02),
-                tissue_type: TissueType::Liver,
+                tissue_type: TherapyTissueType::Liver,
             },
             risk_organs: vec![],
         },
@@ -40,7 +40,7 @@ fn test_therapy_orchestrator_creation() {
         TherapyIntegrationOrchestrator::new(config, grid, Box::new(medium.clone())).unwrap();
     assert_eq!(
         orchestrator.config().primary_modality,
-        TherapyModality::Histotripsy
+        TherapyIntegrationModality::Histotripsy
     );
     assert!(orchestrator.session_state().current_time < 1e-6);
 }

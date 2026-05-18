@@ -9,7 +9,7 @@ use crate::domain::geometry::{GeometricDomain, PointLocation};
 /// Defines how the neural network solution should behave at internal boundaries
 /// between regions with different material properties.
 #[derive(Clone)]
-pub enum InterfaceCondition {
+pub enum PinnGeometryInterfaceCondition {
     /// Continuity of displacement and traction (standard elastic interface)
     ElasticContinuity,
 
@@ -33,7 +33,7 @@ pub enum InterfaceCondition {
     },
 }
 
-impl std::fmt::Debug for InterfaceCondition {
+impl std::fmt::Debug for PinnGeometryInterfaceCondition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ElasticContinuity => write!(f, "ElasticContinuity"),
@@ -56,7 +56,7 @@ pub struct MultiRegionDomain {
     pub regions: Vec<Box<dyn GeometricDomain>>,
     pub material_ids: Vec<usize>,
     /// `interfaces[i]` specifies condition between regions i and i+1
-    pub interfaces: Vec<InterfaceCondition>,
+    pub interfaces: Vec<PinnGeometryInterfaceCondition>,
 }
 
 impl std::fmt::Debug for MultiRegionDomain {
@@ -78,7 +78,7 @@ impl MultiRegionDomain {
     pub fn new(
         regions: Vec<Box<dyn GeometricDomain>>,
         material_ids: Vec<usize>,
-        interfaces: Vec<InterfaceCondition>,
+        interfaces: Vec<PinnGeometryInterfaceCondition>,
     ) -> Self {
         assert_eq!(
             regions.len(),

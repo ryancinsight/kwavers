@@ -60,8 +60,8 @@
 //!     MultiPhysicsInterface,
 //!     SchwarzBoundary,
 //!     PhysicsDomain,
-//!     CouplingType,
-//!     TransmissionCondition,
+//!     BoundaryCouplingType,
+//!     BoundaryTransmissionCondition,
 //! };
 //! use kwavers::domain::boundary::traits::BoundaryDirections;
 //! use kwavers::domain::medium::properties::AcousticPropertyData;
@@ -93,7 +93,7 @@
 //!
 //! // Schwarz domain decomposition example
 //! let schwarz = SchwarzBoundary::new(0.01, BoundaryDirections::all())
-//!     .with_transmission_condition(TransmissionCondition::Neumann);
+//!     .with_transmission_condition(BoundaryTransmissionCondition::Neumann);
 //! ```
 //!
 //! ## References
@@ -120,4 +120,6 @@ pub use multiphysics::MultiPhysicsInterface;
 pub use schwarz::SchwarzBoundary;
 
 // Re-export shared types from types module
-pub use types::{CouplingType, FrequencyProfile, PhysicsDomain, TransmissionCondition};
+pub use types::{
+    BoundaryCouplingType, BoundaryTransmissionCondition, FrequencyProfile, PhysicsDomain,
+};

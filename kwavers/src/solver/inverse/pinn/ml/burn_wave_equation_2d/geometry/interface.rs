@@ -1,7 +1,7 @@
 //! Interface conditions between regions in multi-region PINN domains.
 
 /// Interface conditions between regions in multi-region domains.
-pub enum InterfaceCondition {
+pub enum BurnWave2dInterfaceCondition {
     /// Continuity of solution and normal derivative (u and ∂u/∂n continuous).
     Continuity,
     /// Continuity of solution only (u continuous, ∂u/∂n discontinuous).
@@ -20,15 +20,17 @@ pub enum InterfaceCondition {
     },
 }
 
-impl std::fmt::Debug for InterfaceCondition {
+impl std::fmt::Debug for BurnWave2dInterfaceCondition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InterfaceCondition::Continuity => write!(f, "Continuity"),
-            InterfaceCondition::SolutionContinuity => write!(f, "SolutionContinuity"),
-            InterfaceCondition::AcousticInterface { c1, c2 } => {
+            BurnWave2dInterfaceCondition::Continuity => write!(f, "Continuity"),
+            BurnWave2dInterfaceCondition::SolutionContinuity => write!(f, "SolutionContinuity"),
+            BurnWave2dInterfaceCondition::AcousticInterface { c1, c2 } => {
                 write!(f, "AcousticInterface(c1={}, c2={})", c1, c2)
             }
-            InterfaceCondition::Custom { .. } => write!(f, "Custom{{condition: <function>}}"),
+            BurnWave2dInterfaceCondition::Custom { .. } => {
+                write!(f, "Custom{{condition: <function>}}")
+            }
         }
     }
 }

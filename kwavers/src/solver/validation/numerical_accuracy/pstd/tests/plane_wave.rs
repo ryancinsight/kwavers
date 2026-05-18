@@ -63,9 +63,9 @@ fn test_pstd_plane_wave_accuracy() {
     }
 
     // Propagate one wavelength
-    use crate::domain::boundary::pml::{PMLBoundary, PMLConfig};
+    use crate::domain::boundary::pml::{DomainPmlConfig, PMLBoundary};
 
-    let pml_config = PMLConfig::default();
+    let pml_config = DomainPmlConfig::default();
     let mut _boundary = PMLBoundary::new(pml_config).unwrap();
 
     let dt = solver.get_timestep();

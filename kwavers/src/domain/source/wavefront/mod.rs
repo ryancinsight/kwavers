@@ -10,5 +10,5 @@ pub mod spherical;
 
 pub use bessel::{BesselBuilder, BesselConfig, BesselSource};
 pub use gaussian::{GaussianBuilder, GaussianConfig, GaussianSource};
-pub use plane_wave::{PlaneWaveBuilder, PlaneWaveConfig, PlaneWaveSource};
+pub use plane_wave::{PlaneWaveBuilder, PlaneWaveSource, PlaneWaveSourceConfig};
 pub use spherical::{SphericalBuilder, SphericalConfig, SphericalSource, SphericalWaveType};

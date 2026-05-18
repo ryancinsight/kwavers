@@ -4,7 +4,7 @@ use super::super::backend::AcousticSolverBackend;
 use super::backend::FdtdBackend;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
-use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
+use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 
 fn create_test_grid() -> Grid {
     Grid::new(32, 32, 32, 0.0005, 0.0005, 0.0005).expect("Failed to create test grid")
@@ -19,7 +19,7 @@ fn test_fdtd_backend_creation() {
     let grid = create_test_grid();
     let medium = create_test_medium(&grid);
 
-    let backend = FdtdBackend::new(&grid, &medium, SpatialOrder::Second).unwrap();
+    let backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second).unwrap();
     assert_eq!(backend.get_grid_dimensions(), (32, 32, 32));
     assert!(backend.get_dt() > 0.0, "Time step must be positive");
     assert_eq!(backend.get_current_time(), 0.0);
@@ -30,7 +30,7 @@ fn test_fdtd_backend_cfl_condition() {
     let grid = create_test_grid();
     let medium = create_test_medium(&grid);
 
-    let backend = FdtdBackend::new(&grid, &medium, SpatialOrder::Second).unwrap();
+    let backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second).unwrap();
 
     let dt = backend.get_dt();
     let dx = grid.min_spacing();
@@ -52,7 +52,7 @@ fn test_fdtd_backend_time_stepping() {
     let grid = create_test_grid();
     let medium = create_test_medium(&grid);
 
-    let mut backend = FdtdBackend::new(&grid, &medium, SpatialOrder::Second).unwrap();
+    let mut backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second).unwrap();
 
     let dt = backend.get_dt();
     assert_eq!(backend.get_current_time(), 0.0);
@@ -68,7 +68,7 @@ fn test_fdtd_backend_time_stepping() {
 fn test_fdtd_backend_field_access() {
     let grid = create_test_grid();
     let medium = create_test_medium(&grid);
-    let backend = FdtdBackend::new(&grid, &medium, SpatialOrder::Second).unwrap();
+    let backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second).unwrap();
 
     let p = backend.get_pressure_field();
     assert_eq!(p.shape(), &[32, 32, 32]);
@@ -83,7 +83,7 @@ fn test_fdtd_backend_field_access() {
 fn test_fdtd_backend_intensity_computation() {
     let grid = create_test_grid();
     let medium = create_test_medium(&grid);
-    let backend = FdtdBackend::new(&grid, &medium, SpatialOrder::Second).unwrap();
+    let backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second).unwrap();
 
     let intensity = backend
         .get_intensity_field()
@@ -99,7 +99,7 @@ fn test_fdtd_backend_as_trait_object() {
     let grid = create_test_grid();
     let medium = create_test_medium(&grid);
 
-    let backend = FdtdBackend::new(&grid, &medium, SpatialOrder::Second).unwrap();
+    let backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second).unwrap();
     let mut solver: Box<dyn AcousticSolverBackend> = Box::new(backend);
 
     assert_eq!(solver.get_grid_dimensions(), (32, 32, 32));
@@ -135,9 +135,9 @@ fn test_spatial_order_variants() {
     let medium = create_test_medium(&grid);
 
     for order in &[
-        SpatialOrder::Second,
-        SpatialOrder::Fourth,
-        SpatialOrder::Sixth,
+        AcousticSpatialOrder::Second,
+        AcousticSpatialOrder::Fourth,
+        AcousticSpatialOrder::Sixth,
     ] {
         let backend = FdtdBackend::new(&grid, &medium, *order)
             .unwrap_or_else(|e| panic!("Failed to create backend with order {order:?}: {e:?}"));

@@ -6,7 +6,7 @@
 
 use crate::domain::grid::Grid;
 use crate::domain::signal::Signal;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 use std::fmt::Debug;
 
 // GridSource re-exported by parent mod
@@ -25,7 +25,7 @@ pub enum SourceField {
 
 /// Electromagnetic polarization state
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Polarization {
+pub enum SourcePolarization {
     /// Linear polarization along x-axis
     LinearX,
     /// Linear polarization along y-axis
@@ -42,7 +42,7 @@ pub enum Polarization {
 
 /// Electromagnetic wave type
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum EMWaveType {
+pub enum SourceEMWaveType {
     /// Transverse electromagnetic (no longitudinal components)
     TEM,
     /// Transverse electric (E_z = 0)
@@ -88,6 +88,34 @@ pub trait Source: Debug + Sync + Send {
     /// Create a source mask on the grid (1.0 at source locations, 0.0 elsewhere)
     /// This is called once during initialization for optimal performance
     fn create_mask(&self, grid: &Grid) -> Array3<f64>;
+
+    /// Add this source's spatial mask into a caller-owned mask buffer.
+    ///
+    /// # Contract
+    /// `mask.dim()` must equal `(grid.nx, grid.ny, grid.nz)`. The default
+    /// implementation derives the elementwise result from [`Source::create_mask`].
+    /// Implementations override this method when their mask algebra is exactly
+    /// additive without extra collision state.
+    fn add_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        let source_mask = self.create_mask(grid);
+        Zip::from(mask)
+            .and(&source_mask)
+            .for_each(|dst, &src| *dst += src);
+    }
+
+    /// Write this source's spatial mask into a caller-owned buffer.
+    ///
+    /// # Theorem
+    /// For every source mask `M_s`, `create_mask_into(grid, out)` computes
+    /// `out = 0 + M_s`, which is elementwise identical to assigning
+    /// `create_mask(grid)` into `out`. This lets solvers reuse one mask buffer
+    /// across timesteps without changing source superposition semantics.
+    fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        mask.fill(0.0);
+        self.add_mask_into(grid, mask);
+    }
 
     /// Get the signal amplitude at time t
     /// This is called once per time step, not per grid point

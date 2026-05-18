@@ -1,4 +1,4 @@
-use kwavers::domain::boundary::PMLConfig;
+use kwavers::domain::boundary::DomainPmlConfig;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::source::GridSource;
@@ -20,10 +20,10 @@ fn test_kspace_solver_init_and_step() {
     // 3. Setup Config
     let config = PSTDConfig {
         dt: 50e-9, // 50 ns
-        boundary: BoundaryConfig::PML(PMLConfig {
+        boundary: BoundaryConfig::PML(DomainPmlConfig {
             thickness: 4,
             sigma_max_acoustic: 2.0,
-            ..PMLConfig::default()
+            ..DomainPmlConfig::default()
         }),
         ..Default::default()
     };

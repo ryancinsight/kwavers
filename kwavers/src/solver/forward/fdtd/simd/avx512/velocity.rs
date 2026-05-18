@@ -1,8 +1,8 @@
-use super::Avx512StencilProcessor;
+use super::SimdAvx512StencilProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
-impl Avx512StencilProcessor {
+impl SimdAvx512StencilProcessor {
     /// Update velocity field with AVX-512 acceleration
     ///
     /// Implements 3D velocity update from pressure gradient.
@@ -34,7 +34,7 @@ impl Avx512StencilProcessor {
         {
             // SAFETY: All safety requirements documented in update_velocity_avx512_unsafe
             // - Arrays have been validated to have matching dimensions
-            // - Dimension parameter validated to be in range [0, 2]
+            // - GridDimension parameter validated to be in range [0, 2]
             #[allow(unsafe_code)]
             unsafe {
                 self.update_velocity_avx512_unsafe(u, p, dim)?;
@@ -64,7 +64,7 @@ impl Avx512StencilProcessor {
     /// - AVX-512F support verified at runtime
     /// - All pointer offsets validated by loop bounds
     /// - Memory alignment guaranteed by ndarray
-    /// - Dimension parameter validated to be 0, 1, or 2 (x, y, or z)
+    /// - GridDimension parameter validated to be 0, 1, or 2 (x, y, or z)
     ///
     /// Caller must ensure:
     /// - u and p have matching dimensions (self.nx, self.ny, self.nz)
@@ -94,7 +94,7 @@ impl Avx512StencilProcessor {
         // SAFETY: Extract raw pointers for velocity field update
         //   - p: immutable borrow → read-only pointer for pressure gradient computation
         //   - u: mutable exclusive borrow → writable pointer for velocity update
-        //   - Dimension validation: Public API ensures p.dim() == u.dim() == (nz, ny, nx)
+        //   - GridDimension validation: Public API ensures p.dim() == u.dim() == (nz, ny, nx)
         //   - Memory layout: Both arrays contiguous C-order (row-major)
         //
         // INVARIANTS:

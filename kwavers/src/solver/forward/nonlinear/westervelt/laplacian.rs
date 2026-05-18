@@ -1,108 +1,184 @@
 //! Finite-difference Laplacian for the Westervelt FDTD solver.
 //!
 //! Operates in-place on the solver's pre-allocated `laplacian` workspace.
-//! Supports 2nd- and 4th-order central-difference stencils; an unsupported
-//! order silently downgrades to second-order.
+//! Supports 2nd-, 4th-, and 6th-order central-difference stencils. Unsupported
+//! orders return a typed validation error.
+//!
+//! ## Stencil coefficients
+//!
+//! | Order | Coefficients | Truncation error |
+//! |-------|--------------|-----------------|
+//! | 2 | [1, −2, 1]/h² | O(h²) |
+//! | 4 | [−1, 16, −30, 16, −1]/(12h²) | O(h⁴) |
+//! | 6 | [2,−27,270,−490,270,−27,2]/(180h²) | O(h⁶) |
+//!
+//! **Theorem (exactness):** Any symmetric centered second-derivative stencil
+//! with Σcₘ = 0 and Σm²·cₘ = 2 reproduces `d²(x²)/dx² = 2` exactly for all
+//! interior points. Consequently `∇²(x²+y²+z²) = 6` exactly at all interior
+//! nodes regardless of stencil order — used as the regression invariant in
+//! `tests::westervelt_laplacian_stencils_are_exact_for_quadratic_fields`.
+//!
+//! ## Parallelism
+//!
+//! Outer `i` slices of `laplacian` are disjoint; rayon iterates them in
+//! parallel while all threads share read-only access to `pressure`.
 
-use crate::core::error::KwaversResult;
+use rayon::prelude::*;
+
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 
 use super::WesterveltFdtd;
 
 impl WesterveltFdtd {
-    /// Calculate the Laplacian using finite differences
-    /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// Compute `∇²p` into the pre-allocated `laplacian` workspace.
     ///
+    /// Interior points are updated using the configured stencil order.
+    /// Boundary ghost-layer entries (width = stencil radius) retain their
+    /// previous values (zero after construction).
+    ///
+    /// Parallelism: outer `i` slices of `laplacian` are disjoint and processed
+    /// concurrently by rayon; all threads share read-only access to `pressure`.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::Validation`] if `spatial_order` is not 2, 4, or 6.
     pub(super) fn calculate_laplacian(&mut self, grid: &Grid) -> KwaversResult<()> {
         let pressure = &self.pressure;
-        let laplacian = &mut self.laplacian;
-
-        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
-        let dx2_inv = 1.0 / (dx * dx);
-        let dy2_inv = 1.0 / (dy * dy);
-        let dz2_inv = 1.0 / (dz * dz);
+        let nx = grid.nx;
+        let ny = grid.ny;
+        let nz = grid.nz;
+        let dx2_inv = 1.0 / (grid.dx * grid.dx);
+        let dy2_inv = 1.0 / (grid.dy * grid.dy);
+        let dz2_inv = 1.0 / (grid.dz * grid.dz);
 
         match self.config.spatial_order {
             2 => {
-                // Second-order accurate using safe indexing
-                for i in 1..nx - 1 {
-                    for j in 1..ny - 1 {
-                        for k in 1..nz - 1 {
-                            let p = pressure[(i, j, k)];
-                            let px_m = pressure[(i - 1, j, k)];
-                            let px_p = pressure[(i + 1, j, k)];
-                            let py_m = pressure[(i, j - 1, k)];
-                            let py_p = pressure[(i, j + 1, k)];
-                            let pz_m = pressure[(i, j, k - 1)];
-                            let pz_p = pressure[(i, j, k + 1)];
-
-                            laplacian[(i, j, k)] = (2.0f64.mul_add(-p, pz_p) + pz_m).mul_add(
-                                dz2_inv,
-                                (2.0f64.mul_add(-p, px_p) + px_m)
-                                    .mul_add(dx2_inv, (2.0f64.mul_add(-p, py_p) + py_m) * dy2_inv),
-                            );
+                self.laplacian
+                    .axis_iter_mut(ndarray::Axis(0))
+                    .into_par_iter()
+                    .enumerate()
+                    .for_each(|(i, mut lap_i)| {
+                        if i == 0 || i == nx - 1 {
+                            return;
                         }
-                    }
-                }
+                        for j in 1..ny - 1 {
+                            for k in 1..nz - 1 {
+                                let p = pressure[(i, j, k)];
+                                lap_i[(j, k)] = (2.0f64.mul_add(-p, pressure[(i + 1, j, k)])
+                                    + pressure[(i - 1, j, k)])
+                                    * dx2_inv
+                                    + (2.0f64.mul_add(-p, pressure[(i, j + 1, k)])
+                                        + pressure[(i, j - 1, k)])
+                                        * dy2_inv
+                                    + (2.0f64.mul_add(-p, pressure[(i, j, k + 1)])
+                                        + pressure[(i, j, k - 1)])
+                                        * dz2_inv;
+                            }
+                        }
+                    });
             }
             4 => {
-                // Fourth-order accurate stencil coefficients from constants
-                const FD4_COEFF_0: f64 = -5.0 / 2.0;
-                const FD4_COEFF_1: f64 = 4.0 / 3.0;
-                const FD4_COEFF_2: f64 = -1.0 / 12.0;
-                const C0: f64 = FD4_COEFF_0;
-                const C1: f64 = FD4_COEFF_1;
-                const C2: f64 = FD4_COEFF_2;
+                // [−1, 16, −30, 16, −1] / (12h²) — CENTER=−5/2, NEAR=4/3, FAR=−1/12
+                const CENTER: f64 = -5.0 / 2.0;
+                const NEAR: f64 = 4.0 / 3.0;
+                const FAR: f64 = -1.0 / 12.0;
 
-                for i in 2..nx - 2 {
-                    for j in 2..ny - 2 {
-                        for k in 2..nz - 2 {
-                            let p_c = pressure[(i, j, k)];
-
-                            // X-direction stencil
-                            let p_xm2 = pressure[(i - 2, j, k)];
-                            let p_xm1 = pressure[(i - 1, j, k)];
-                            let p_xp1 = pressure[(i + 1, j, k)];
-                            let p_xp2 = pressure[(i + 2, j, k)];
-
-                            let d2_dx2 = C0.mul_add(
-                                p_xp2,
-                                C1.mul_add(p_xp1, C2.mul_add(p_c, C0.mul_add(p_xm2, C1 * p_xm1))),
-                            ) * dx2_inv;
-
-                            // Y-direction stencil
-                            let p_ym2 = pressure[(i, j - 2, k)];
-                            let p_ym1 = pressure[(i, j - 1, k)];
-                            let p_yp1 = pressure[(i, j + 1, k)];
-                            let p_yp2 = pressure[(i, j + 2, k)];
-
-                            let d2_dy2 = C0.mul_add(
-                                p_yp2,
-                                C1.mul_add(p_yp1, C2.mul_add(p_c, C0.mul_add(p_ym2, C1 * p_ym1))),
-                            ) * dy2_inv;
-
-                            // Z-direction stencil
-                            let p_zm2 = pressure[(i, j, k - 2)];
-                            let p_zm1 = pressure[(i, j, k - 1)];
-                            let p_zp1 = pressure[(i, j, k + 1)];
-                            let p_zp2 = pressure[(i, j, k + 2)];
-
-                            let d2_dz2 = C0.mul_add(
-                                p_zp2,
-                                C1.mul_add(p_zp1, C2.mul_add(p_c, C0.mul_add(p_zm2, C1 * p_zm1))),
-                            ) * dz2_inv;
-
-                            laplacian[(i, j, k)] = d2_dx2 + d2_dy2 + d2_dz2;
+                self.laplacian
+                    .axis_iter_mut(ndarray::Axis(0))
+                    .into_par_iter()
+                    .enumerate()
+                    .for_each(|(i, mut lap_i)| {
+                        if i < 2 || i >= nx - 2 {
+                            return;
                         }
-                    }
-                }
+                        for j in 2..ny - 2 {
+                            for k in 2..nz - 2 {
+                                let p_c = pressure[(i, j, k)];
+                                let d2x = FAR.mul_add(
+                                    pressure[(i - 2, j, k)] + pressure[(i + 2, j, k)],
+                                    NEAR.mul_add(
+                                        pressure[(i - 1, j, k)] + pressure[(i + 1, j, k)],
+                                        CENTER * p_c,
+                                    ),
+                                ) * dx2_inv;
+                                let d2y = FAR.mul_add(
+                                    pressure[(i, j - 2, k)] + pressure[(i, j + 2, k)],
+                                    NEAR.mul_add(
+                                        pressure[(i, j - 1, k)] + pressure[(i, j + 1, k)],
+                                        CENTER * p_c,
+                                    ),
+                                ) * dy2_inv;
+                                let d2z = FAR.mul_add(
+                                    pressure[(i, j, k - 2)] + pressure[(i, j, k + 2)],
+                                    NEAR.mul_add(
+                                        pressure[(i, j, k - 1)] + pressure[(i, j, k + 1)],
+                                        CENTER * p_c,
+                                    ),
+                                ) * dz2_inv;
+                                lap_i[(j, k)] = d2x + d2y + d2z;
+                            }
+                        }
+                    });
+            }
+            6 => {
+                // [2,−27,270,−490,270,−27,2] / (180h²)
+                const CENTER: f64 = -49.0 / 18.0;
+                const NEAR: f64 = 3.0 / 2.0;
+                const MID: f64 = -3.0 / 20.0;
+                const FAR: f64 = 1.0 / 90.0;
+
+                self.laplacian
+                    .axis_iter_mut(ndarray::Axis(0))
+                    .into_par_iter()
+                    .enumerate()
+                    .for_each(|(i, mut lap_i)| {
+                        if i < 3 || i >= nx - 3 {
+                            return;
+                        }
+                        for j in 3..ny - 3 {
+                            for k in 3..nz - 3 {
+                                let p_c = pressure[(i, j, k)];
+                                let d2x = FAR.mul_add(
+                                    pressure[(i - 3, j, k)] + pressure[(i + 3, j, k)],
+                                    MID.mul_add(
+                                        pressure[(i - 2, j, k)] + pressure[(i + 2, j, k)],
+                                        NEAR.mul_add(
+                                            pressure[(i - 1, j, k)] + pressure[(i + 1, j, k)],
+                                            CENTER * p_c,
+                                        ),
+                                    ),
+                                ) * dx2_inv;
+                                let d2y = FAR.mul_add(
+                                    pressure[(i, j - 3, k)] + pressure[(i, j + 3, k)],
+                                    MID.mul_add(
+                                        pressure[(i, j - 2, k)] + pressure[(i, j + 2, k)],
+                                        NEAR.mul_add(
+                                            pressure[(i, j - 1, k)] + pressure[(i, j + 1, k)],
+                                            CENTER * p_c,
+                                        ),
+                                    ),
+                                ) * dy2_inv;
+                                let d2z = FAR.mul_add(
+                                    pressure[(i, j, k - 3)] + pressure[(i, j, k + 3)],
+                                    MID.mul_add(
+                                        pressure[(i, j, k - 2)] + pressure[(i, j, k + 2)],
+                                        NEAR.mul_add(
+                                            pressure[(i, j, k - 1)] + pressure[(i, j, k + 1)],
+                                            CENTER * p_c,
+                                        ),
+                                    ),
+                                ) * dz2_inv;
+                                lap_i[(j, k)] = d2x + d2y + d2z;
+                            }
+                        }
+                    });
             }
             _ => {
-                // Default to second-order for unsupported orders
-                self.config.spatial_order = 2;
-                self.calculate_laplacian(grid)?;
+                return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                    parameter: "spatial_order".to_owned(),
+                    value: self.config.spatial_order as f64,
+                    reason: "Westervelt FDTD supports only 2, 4, or 6".to_owned(),
+                }));
             }
         }
 

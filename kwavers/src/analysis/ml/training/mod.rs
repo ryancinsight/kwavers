@@ -16,7 +16,7 @@ pub mod loss;
 #[cfg(test)]
 mod tests;
 
-pub use config::TrainingConfig;
-pub use dataset::{TrainingDataset, TrainingMetrics};
+pub use config::PhysicsNNTrainingConfig;
+pub use dataset::{EpochTrainingMetrics, TrainingDataset};
 pub use history::TrainingHistory;
 pub use loss::{Optimizer, PhysicsLoss};

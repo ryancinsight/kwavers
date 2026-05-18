@@ -1,14 +1,15 @@
 use super::schedule::SonicationSchedule;
 use super::types::{
-    AblationTarget, FocalSpot, HIFUTransducer, HIFUTreatmentPlan, ThermalDose, TreatmentFeasibility,
+    AblationTarget, ClinicalHIFUTransducer, ClinicalHIFUTreatmentPlan, FocalSpot,
+    FocalSpotDoseEstimate, TreatmentFeasibility,
 };
-use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::error::KwaversResult;
 
 /// HIFU Treatment Planner.
 #[derive(Debug)]
 pub struct HIFUPlanner {
-    transducer: HIFUTransducer,
+    transducer: ClinicalHIFUTransducer,
 }
 
 impl HIFUPlanner {
@@ -17,7 +18,7 @@ impl HIFUPlanner {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(transducer: HIFUTransducer) -> Self {
+    pub fn new(transducer: ClinicalHIFUTransducer) -> Self {
         Self { transducer }
     }
     /// Plan treatment.
@@ -27,15 +28,15 @@ impl HIFUPlanner {
     pub fn plan_treatment(
         &self,
         target: AblationTarget,
-        therapy_params: &TherapyParameters,
-    ) -> KwaversResult<HIFUTreatmentPlan> {
+        therapy_params: &ClinicalTherapyParameters,
+    ) -> KwaversResult<ClinicalHIFUTreatmentPlan> {
         let focal_spot = FocalSpot::estimate_from_transducer(&self.transducer);
         let frequency = if therapy_params.frequency > 0.0 {
             therapy_params.frequency
         } else {
             self.transducer.frequency
         };
-        let thermal_dose = ThermalDose::estimate_from_focal_spot(
+        let thermal_dose = FocalSpotDoseEstimate::estimate_from_focal_spot(
             &focal_spot,
             frequency,
             therapy_params.duty_cycle,
@@ -66,7 +67,7 @@ impl HIFUPlanner {
         }
         feasibility.access_path_clear = true;
         feasibility.update_feasibility();
-        Ok(HIFUTreatmentPlan {
+        Ok(ClinicalHIFUTreatmentPlan {
             transducer: self.transducer.clone(),
             focal_spot,
             target,
@@ -77,7 +78,7 @@ impl HIFUPlanner {
     }
 
     /// Plan a target-covering sonication schedule without changing the
-    /// `HIFUTreatmentPlan` struct layout.
+    /// `ClinicalHIFUTreatmentPlan` struct layout.
     ///
     /// # Errors
     /// Returns [`Err`] when the target dimensions, safety margin, focal widths,
@@ -85,7 +86,7 @@ impl HIFUPlanner {
     pub fn plan_sonication_schedule(
         &self,
         target: &AblationTarget,
-        therapy_params: &TherapyParameters,
+        therapy_params: &ClinicalTherapyParameters,
     ) -> KwaversResult<SonicationSchedule> {
         let focal_spot = FocalSpot::estimate_from_transducer(&self.transducer);
         let frequency = if therapy_params.frequency > 0.0 {
@@ -97,7 +98,7 @@ impl HIFUPlanner {
     }
 
     #[must_use]
-    pub fn transducer(&self) -> &HIFUTransducer {
+    pub fn transducer(&self) -> &ClinicalHIFUTransducer {
         &self.transducer
     }
 }

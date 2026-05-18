@@ -1,6 +1,6 @@
 use super::*;
 use crate::core::error::{ErrorContext, KwaversError, RecoveryStrategy};
-use crate::core::fault_injection::scenario::{FaultScenario, InjectionTiming};
+use crate::core::fault_injection::scenario::{FaultInjectionScenario, InjectionTiming};
 use std::any::Any;
 
 #[derive(Debug)]
@@ -37,7 +37,7 @@ impl RecoveryStrategy for MockRecoveryStrategy {
 #[test]
 fn injector_creates_oom_error() {
     let injector = FaultInjector::new(InjectionConfig::default());
-    let scenario = FaultScenario::GpuOomSudden {
+    let scenario = FaultInjectionScenario::GpuOomSudden {
         allocation_size_bytes: 1024usize.pow(3), // 1GB
         timing: InjectionTiming::Immediate,
     };
@@ -59,7 +59,7 @@ fn injector_disabled_returns_no_fault() {
         ..Default::default()
     };
     let injector = FaultInjector::new(config);
-    let scenario = FaultScenario::GpuOomSudden {
+    let scenario = FaultInjectionScenario::GpuOomSudden {
         allocation_size_bytes: 1024,
         timing: InjectionTiming::Immediate,
     };
@@ -73,7 +73,7 @@ fn injector_disabled_returns_no_fault() {
 #[test]
 fn injector_tracks_faults() {
     let injector = FaultInjector::new(InjectionConfig::default());
-    let scenario = FaultScenario::CflViolation {
+    let scenario = FaultInjectionScenario::CflViolation {
         overshoot_factor: 1.5,
         timing: InjectionTiming::Immediate,
     };

@@ -12,12 +12,13 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         &self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
     ) -> KwaversResult<Tensor<B, 1>> {
-        let physics_params = crate::solver::inverse::pinn::ml::physics::PhysicsParameters {
-            material_properties: HashMap::new(),
-            boundary_values: HashMap::new(),
-            initial_values: HashMap::new(),
-            domain_params: HashMap::new(),
-        };
+        let physics_params =
+            crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters {
+                material_properties: HashMap::new(),
+                boundary_values: HashMap::new(),
+                initial_values: HashMap::new(),
+                domain_params: HashMap::new(),
+            };
 
         let x: Tensor<B, 1> = self
             .active_points

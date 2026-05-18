@@ -19,6 +19,9 @@ pub struct CtResampledSlice {
     pub spacing_m: f64,
     pub slice_offset_m: f64,
     pub source_slice_index: usize,
+    pub source_dimensions: [usize; 2],
+    pub source_spacing_m: [f64; 2],
+    pub crop_bounds_index: [usize; 4],
 }
 
 /// Acoustic fields derived from one CT slice.
@@ -120,6 +123,9 @@ pub fn resample_head_slice(
         spacing_m: extent_x_m.max(extent_y_m) / grid_size as f64,
         slice_offset_m: (slice_index as f64 - (nz - 1) as f64 * 0.5) * spacing_mm[2] * 1.0e-3,
         source_slice_index: slice_index,
+        source_dimensions: [nx, ny],
+        source_spacing_m: [spacing_mm[0] * 1.0e-3, spacing_mm[1] * 1.0e-3],
+        crop_bounds_index: [x0, x1, y0, y1],
     })
 }
 
@@ -243,7 +249,14 @@ fn head_centroid(slice: &Array2<f64>) -> Option<(f64, f64)> {
     (n > 0.0).then_some((sx / n, sy / n))
 }
 
+/// Convert CT Hounsfield units to sound speed for soft tissue.
+///
+/// Mast (2000) Biophysical Journal 79:1580-1589: linear fit over the soft-
+/// tissue HU range gives `c(HU) ≈ 1524 + 0.68·HU` [m/s].  Clamped to the
+/// brain HU range [−20, 120] before interpolation; the extrapolated constant
+/// is acceptable for background non-brain tissue since those voxels are outside
+/// the active inversion set.  A safety floor/ceiling of [1480, 1620] m/s
+/// prevents physically implausible values if the clamp bounds are ever widened.
 pub(super) fn soft_tissue_speed(hu: f64) -> f64 {
-    let t = ((hu + 20.0) / 140.0).clamp(0.0, 1.0);
-    1505.0 + 60.0 * t
+    (1524.0 + 0.68 * hu.clamp(-20.0, 120.0)).clamp(1480.0, 1620.0)
 }

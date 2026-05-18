@@ -1,7 +1,7 @@
 //! Physics task and task data structures for meta-learning.
 
 use super::pde_type::PdeType;
-use super::physics::PhysicsParameters;
+use super::physics::MetaLearningPhysicsParameters;
 use std::sync::Arc;
 
 /// Physics task definition for meta-learning
@@ -26,7 +26,7 @@ pub struct PhysicsTask {
     pub pde_type: PdeType,
 
     /// Physics parameters (wave speed, density, etc.)
-    pub physics_params: PhysicsParameters,
+    pub physics_params: MetaLearningPhysicsParameters,
 
     /// Geometric domain specification
     ///
@@ -48,7 +48,7 @@ impl PhysicsTask {
     pub fn new(
         id: String,
         pde_type: PdeType,
-        physics_params: PhysicsParameters,
+        physics_params: MetaLearningPhysicsParameters,
         geometry: Arc<crate::solver::inverse::pinn::ml::Geometry2D>,
         boundary_conditions: Vec<crate::solver::inverse::pinn::ml::BoundaryCondition2D>,
         training_data: Option<TaskData>,

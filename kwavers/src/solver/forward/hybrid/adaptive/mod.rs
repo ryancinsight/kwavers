@@ -14,7 +14,7 @@ pub mod criteria;
 pub mod metrics;
 pub mod statistics;
 
-pub use criteria::SelectionCriteria;
-pub use metrics::{DetailedMetrics, QualityMetrics};
+pub use criteria::HybridAdaptiveSelectionCriteria;
+pub use metrics::{DetailedMetrics, HybridAdaptiveQualityMetrics};
 pub use crate::solver::hybrid::adaptive_selection::AdaptiveSelector;
 pub use statistics::{FrequencySpectrum, StatisticalMetrics};

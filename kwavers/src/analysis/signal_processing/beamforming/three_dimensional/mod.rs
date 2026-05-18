@@ -53,7 +53,7 @@ mod streaming;
 
 // Public API re-exports
 pub use config::{
-    ApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingMetrics,
+    Beamforming3dApodizationWindow, BeamformingAlgorithm3D, BeamformingConfig3D, BeamformingMetrics,
 };
 pub use processor::BeamformingProcessor3D;
 pub use saft::{SaftConfig, SaftProcessor};

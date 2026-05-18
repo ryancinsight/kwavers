@@ -1,11 +1,13 @@
 use std::fmt;
 
-use super::{ConservationDiagnostic, ConservationLaw, ConservationTolerances, ViolationSeverity};
+use super::{
+    ConservationDiagnostic, ConservationTolerances, NonlinearConservationLaw, ViolationSeverity,
+};
 
 impl ConservationDiagnostic {
     #[must_use]
     pub fn new(
-        law: ConservationLaw,
+        law: NonlinearConservationLaw,
         initial_value: f64,
         current_value: f64,
         step: usize,

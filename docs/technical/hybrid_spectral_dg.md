@@ -10,6 +10,9 @@ The Hybrid Spectral-Discontinuous Galerkin (Spectral-DG) methods module provides
 - **High-Order Accuracy**: Spectral accuracy in smooth regions, robust shock handling in discontinuous regions
 - **Conservation Guarantees**: Ensures conservation properties are maintained at method interfaces
 - **Flexible Configuration**: Customizable detection thresholds, polynomial orders, and transition widths
+- **Dimensional Coverage**: Embedded 1-D `(nx, 1, 1)`, 2-D `(nx, ny, 1)`, and
+  3-D `(nx, ny, nz)` scalar grids use the same tensor-product DG topology over
+  active Cartesian axes.
 
 ## Architecture
 
@@ -48,6 +51,10 @@ let config = HybridSpectralDGConfig {
 // Create the solver
 let _solver = HybridSpectralDGSolver::new(config, grid);
 ```
+
+The executable hot path is `solve_step_into(field, dt, c, output)`, which reuses
+the solver-owned discontinuity mask, smooth-region mask, spectral output, and
+DG output buffers across time steps.
 
 ## Components
 
@@ -149,9 +156,9 @@ The coupling module ensures smooth transitions:
 
 ## Limitations
 
-1. **Periodic Boundaries**: Current spectral implementation assumes periodic boundaries
-2. **Structured Grids**: Designed for regular Cartesian grids
-3. **Single Field**: Currently handles one field at a time (extend for systems)
+1. **Periodic Boundaries**: Current spectral and DG surface terms assume periodic boundaries
+2. **Structured Grids**: Designed for regular Cartesian grids whose active dimensions are divisible by `p + 1`
+3. **Single Field**: Currently handles one scalar pressure-like field at a time (extend for systems)
 
 ## Future Enhancements
 

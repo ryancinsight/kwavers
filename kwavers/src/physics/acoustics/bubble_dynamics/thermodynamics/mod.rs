@@ -18,7 +18,6 @@
 //!   tensions et les températures." Comptes Rendus, 107, 681-684.
 
 pub mod collapse;
-pub mod constants;
 pub mod mass_transfer;
 pub mod thermal_properties;
 pub mod vapor_pressure;

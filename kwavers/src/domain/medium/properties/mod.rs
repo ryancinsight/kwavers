@@ -58,7 +58,7 @@
 //! assert!((5000.0..7000.0).contains(&cp));
 //!
 //! // Compose multi-physics material
-//! let tissue = MaterialProperties::builder()
+//! let tissue = AcousticMaterialProperties::builder()
 //!     .acoustic(AcousticPropertyData::soft_tissue())
 //!     .thermal(ThermalPropertyData::soft_tissue())
 //!     .electromagnetic(ElectromagneticPropertyData::tissue())
@@ -72,7 +72,7 @@ mod elastic;
 mod electromagnetic;
 pub mod fluids; // Fluid property catalogs
 pub mod implants;
-pub mod material; // Unified MaterialProperties (consolidated from physics/materials)
+pub mod material; // Unified AcousticMaterialProperties (consolidated from physics/materials)
 mod optical;
 mod strength;
 pub mod temperature_dependent; // Temperature-dependent material properties
@@ -81,10 +81,10 @@ pub mod tissue; // Tissue property catalogs // Implant property catalogs
 
 // Re-export all public types to maintain API compatibility
 pub use acoustic::AcousticPropertyData;
-pub use composite::{MaterialProperties as CompositeProperties, MaterialPropertiesBuilder};
+pub use composite::MaterialPropertiesBuilder;
 pub use elastic::ElasticPropertyData;
 pub use electromagnetic::ElectromagneticPropertyData;
-pub use material::MaterialProperties; // SSOT for unified material properties
+pub use material::AcousticMaterialProperties; // SSOT for unified material properties
 pub use optical::OpticalPropertyData;
 pub use strength::StrengthPropertyData;
 pub use temperature_dependent::{

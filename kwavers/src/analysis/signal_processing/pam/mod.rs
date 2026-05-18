@@ -28,13 +28,12 @@ pub mod processor;
 mod tests;
 
 pub use config::{PAMConfig, PamBeamformingConfig};
-pub use delay_and_sum::{CavitationEvent, DelayAndSumConfig, DelayAndSumPAM};
+pub use delay_and_sum::{DelayAndSumConfig, DelayAndSumPAM, PamCavitationEvent};
 pub use mapper::PassiveAcousticMapper;
 pub use processor::PAMProcessor;
 
 pub use crate::domain::sensor::passive_acoustic_mapping::geometry::{
-    ArrayElement as PamArrayElement, ArrayGeometry as PamArrayGeometry,
-    DirectivityPattern as PamDirectivityPattern,
+    DirectivityPattern as PamDirectivityPattern, PamArrayElement, PamArrayGeometry,
 };
 
 pub use crate::domain::sensor::beamforming::BeamformingCoreConfig;
@@ -48,11 +47,4 @@ pub enum PamBeamformingMethod {
     TimeExposureAcoustics,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ApodizationType {
-    None,
-    Hamming,
-    Hanning,
-    Blackman,
-    Kaiser { beta: f64 },
-}
+pub use crate::math::signal::ApodizationType;

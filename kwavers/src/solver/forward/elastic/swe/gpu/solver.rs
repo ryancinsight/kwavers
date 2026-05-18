@@ -1,8 +1,8 @@
 //! `GPUElasticWaveSolver3D` struct and impl.
 
 use super::device::GPUDevice;
-use super::memory::{GPUMemoryPool, MemoryStats};
-use super::metrics::PerformanceMetrics;
+use super::memory::{GPUMemoryPool, SweGpuMemoryStats};
+use super::metrics::SweGpuStepMetrics;
 use super::types::{GPUInversionResult, GPUPropagationResult};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
@@ -18,7 +18,7 @@ pub struct GPUElasticWaveSolver3D {
     device: GPUDevice,
     memory_pool: GPUMemoryPool,
     pub(super) kernel_cache: HashMap<String, GPUKernel>,
-    performance_metrics: PerformanceMetrics,
+    performance_metrics: SweGpuStepMetrics,
 }
 
 #[derive(Debug, Clone)]
@@ -41,7 +41,7 @@ impl GPUElasticWaveSolver3D {
             device,
             memory_pool,
             kernel_cache: HashMap::new(),
-            performance_metrics: PerformanceMetrics::default(),
+            performance_metrics: SweGpuStepMetrics::default(),
         })
     }
 
@@ -281,13 +281,13 @@ impl GPUElasticWaveSolver3D {
 
     /// Get performance metrics
     #[must_use]
-    pub fn performance_metrics(&self) -> &PerformanceMetrics {
+    pub fn performance_metrics(&self) -> &SweGpuStepMetrics {
         &self.performance_metrics
     }
 
     /// Get memory statistics
     #[must_use]
-    pub fn memory_stats(&self) -> MemoryStats {
+    pub fn memory_stats(&self) -> SweGpuMemoryStats {
         self.memory_pool.memory_stats()
     }
 

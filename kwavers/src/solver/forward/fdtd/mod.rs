@@ -99,14 +99,14 @@ pub mod solver;
 pub mod velocity_updater; // SRP: velocity field update methods
 
 // Re-exports for convenience
-pub use avx512_stencil::{Avx512Config, Avx512Metrics, Avx512StencilProcessor};
+pub use avx512_stencil::{FdtdAvx512Config, FdtdAvx512Metrics, FdtdAvx512StencilProcessor};
 pub use config::{FdtdConfig, KSpaceCorrectionMode};
 pub use dispatch::{
     get_simd_config, init_simd, DispatchMetrics, FdtdStencilDispatcher, StencilStrategy,
 };
 pub use electromagnetic::ElectromagneticFdtdSolver;
 pub use plugin::FdtdPlugin;
-pub use simd_stencil::SimdStencilProcessor;
+pub use simd_stencil::FdtdSimdStencilProcessor;
 pub use solver::FdtdGpuAccelerator;
 pub use solver::FdtdSolver;
 pub use source_handler::SourceHandler;

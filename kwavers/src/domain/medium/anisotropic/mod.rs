@@ -21,5 +21,5 @@ pub mod types;
 pub use christoffel::ChristoffelEquation;
 pub use fiber::{FiberOrientation, MuscleFiberModel};
 pub use rotation::RotationMatrix;
-pub use stiffness::StiffnessTensor;
+pub use stiffness::AnisotropicStiffnessTensor;
 pub use types::AnisotropyType;

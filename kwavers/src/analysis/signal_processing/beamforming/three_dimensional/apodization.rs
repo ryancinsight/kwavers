@@ -25,7 +25,7 @@
 //! - Van Trees (2002): "Optimum Array Processing"
 //! - Thomenius (1996): "Evolution of ultrasound beamformers"
 
-use super::config::ApodizationWindow;
+use super::config::Beamforming3dApodizationWindow;
 use ndarray::Array3;
 
 /// Create 3D apodization weights for a transducer array
@@ -55,16 +55,16 @@ use ndarray::Array3;
 #[must_use]
 pub fn create_apodization_weights(
     num_elements: (usize, usize, usize),
-    window: &ApodizationWindow,
+    window: &Beamforming3dApodizationWindow,
 ) -> Array3<f32> {
     let (nx, ny, nz) = num_elements;
     let mut weights = Array3::<f32>::ones((nx, ny, nz));
 
     match window {
-        ApodizationWindow::Rectangular => {
+        Beamforming3dApodizationWindow::Rectangular => {
             // Uniform weights (already initialized to 1.0)
         }
-        ApodizationWindow::Hamming => {
+        Beamforming3dApodizationWindow::Hamming => {
             // Hamming window: w(r) = 0.54 - 0.46·cos(πr)
             // Provides -43 dB sidelobe suppression
             for i in 0..nx {
@@ -77,7 +77,7 @@ pub fn create_apodization_weights(
                 }
             }
         }
-        ApodizationWindow::Hann => {
+        Beamforming3dApodizationWindow::Hann => {
             // Hann (Hanning) window: w(r) = 0.5·(1 - cos(πr))
             // Provides -31 dB sidelobe suppression with smooth rolloff
             for i in 0..nx {
@@ -89,7 +89,7 @@ pub fn create_apodization_weights(
                 }
             }
         }
-        ApodizationWindow::Blackman => {
+        Beamforming3dApodizationWindow::Blackman => {
             // Blackman window: w(r) = 0.42 - 0.5·cos(πr) + 0.08·cos(2πr)
             // Three-term cosine provides excellent -58 dB sidelobe rejection
             for i in 0..nx {
@@ -104,7 +104,7 @@ pub fn create_apodization_weights(
                 }
             }
         }
-        ApodizationWindow::Gaussian { sigma } => {
+        Beamforming3dApodizationWindow::Gaussian { sigma } => {
             // Gaussian window: w(r) = exp(-r²/(2σ²))
             // Adjustable mainlobe width vs sidelobe trade-off via σ
             let sigma_f32 = *sigma as f32;
@@ -117,7 +117,7 @@ pub fn create_apodization_weights(
                 }
             }
         }
-        ApodizationWindow::Custom(custom_weights) => {
+        Beamforming3dApodizationWindow::Custom(custom_weights) => {
             // User-provided custom weights (flattened 3D array)
             // Layout: weights[i * ny * nz + j * nz + k]
             for i in 0..nx {
@@ -166,7 +166,8 @@ mod tests {
 
     #[test]
     fn test_rectangular_window() {
-        let weights = create_apodization_weights((8, 8, 4), &ApodizationWindow::Rectangular);
+        let weights =
+            create_apodization_weights((8, 8, 4), &Beamforming3dApodizationWindow::Rectangular);
         assert_eq!(weights.dim(), (8, 8, 4));
         // All weights should be 1.0 for rectangular window
         assert!(weights.iter().all(|&w| (w - 1.0).abs() < 1e-6));
@@ -174,7 +175,8 @@ mod tests {
 
     #[test]
     fn test_hamming_window() {
-        let weights = create_apodization_weights((16, 16, 8), &ApodizationWindow::Hamming);
+        let weights =
+            create_apodization_weights((16, 16, 8), &Beamforming3dApodizationWindow::Hamming);
         assert_eq!(weights.dim(), (16, 16, 8));
         // All weights should be in valid range
         assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
@@ -191,7 +193,8 @@ mod tests {
 
     #[test]
     fn test_hann_window() {
-        let weights = create_apodization_weights((12, 12, 6), &ApodizationWindow::Hann);
+        let weights =
+            create_apodization_weights((12, 12, 6), &Beamforming3dApodizationWindow::Hann);
         assert_eq!(weights.dim(), (12, 12, 6));
         assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
         // Corner elements should have reduced weight (but for small arrays, may be close to 1.0)
@@ -206,7 +209,8 @@ mod tests {
 
     #[test]
     fn test_blackman_window() {
-        let weights = create_apodization_weights((10, 10, 5), &ApodizationWindow::Blackman);
+        let weights =
+            create_apodization_weights((10, 10, 5), &Beamforming3dApodizationWindow::Blackman);
         assert_eq!(weights.dim(), (10, 10, 5));
         assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
     }
@@ -214,7 +218,10 @@ mod tests {
     #[test]
     fn test_gaussian_window() {
         let sigma = 0.5;
-        let weights = create_apodization_weights((8, 8, 4), &ApodizationWindow::Gaussian { sigma });
+        let weights = create_apodization_weights(
+            (8, 8, 4),
+            &Beamforming3dApodizationWindow::Gaussian { sigma },
+        );
         assert_eq!(weights.dim(), (8, 8, 4));
         assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
         // Center should have maximum weight (closest to array center)
@@ -226,8 +233,10 @@ mod tests {
     #[test]
     fn test_custom_window() {
         let custom_weights = vec![0.5_f64; 8 * 8 * 4];
-        let weights =
-            create_apodization_weights((8, 8, 4), &ApodizationWindow::Custom(custom_weights));
+        let weights = create_apodization_weights(
+            (8, 8, 4),
+            &Beamforming3dApodizationWindow::Custom(custom_weights),
+        );
         assert_eq!(weights.dim(), (8, 8, 4));
         // All weights should be 0.5
         assert!(weights.iter().all(|&w| (w - 0.5).abs() < 1e-6));

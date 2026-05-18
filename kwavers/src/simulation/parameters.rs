@@ -42,7 +42,7 @@ pub struct OutputParameters {
     pub directory: PathBuf,
     pub save_interval: usize,
     pub format: OutputFormat,
-    pub fields: Vec<FieldType>,
+    pub fields: Vec<OutputFieldType>,
     pub compress: bool,
     pub snapshots: bool,
 }
@@ -58,7 +58,7 @@ pub enum OutputFormat {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub enum FieldType {
+pub enum OutputFieldType {
     Pressure,
     Velocity,
     Intensity,
@@ -221,7 +221,7 @@ impl Default for OutputParameters {
             directory: PathBuf::from("output"),
             save_interval: 100,
             format: OutputFormat::HDF5,
-            fields: vec![FieldType::Pressure],
+            fields: vec![OutputFieldType::Pressure],
             compress: true,
             snapshots: false,
         }

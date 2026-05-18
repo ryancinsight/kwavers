@@ -20,7 +20,7 @@
 //! - `velocity`     — `update_velocity_avx512` + unsafe AVX-512 kernel
 
 use crate::core::constants::{CFL_FACTOR_3D_FDTD, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
-use crate::math::simd::{SimdConfig, SimdLevel};
+use crate::math::simd::{MathSimdLevel, SimdConfig};
 use std::marker::PhantomData;
 
 mod construction;
@@ -31,7 +31,7 @@ mod velocity;
 
 /// AVX-512 stencil processor configuration
 #[derive(Debug, Clone, Copy)]
-pub struct Avx512Config {
+pub struct FdtdAvx512Config {
     pub tile_size: usize,
     pub use_fma: bool,
     pub prefetch_boundaries: bool,
@@ -41,7 +41,7 @@ pub struct Avx512Config {
     pub dt: f64,
 }
 
-impl Default for Avx512Config {
+impl Default for FdtdAvx512Config {
     fn default() -> Self {
         Self {
             tile_size: 8,
@@ -60,8 +60,8 @@ impl Default for Avx512Config {
 /// Implements high-performance stencil operations using AVX-512 instructions.
 /// Operates on 3D grids with 8-wide vectorization for f64 elements.
 #[derive(Debug)]
-pub struct Avx512StencilProcessor {
-    pub(super) config: Avx512Config,
+pub struct FdtdAvx512StencilProcessor {
+    pub(super) config: FdtdAvx512Config,
     pub(super) nx: usize,
     pub(super) ny: usize,
     pub(super) nz: usize,
@@ -75,11 +75,11 @@ pub struct Avx512StencilProcessor {
     pub(super) _phantom: PhantomData<()>,
 }
 
-impl Avx512StencilProcessor {
+impl FdtdAvx512StencilProcessor {
     /// Get performance metrics from last update.
     #[must_use]
-    pub fn get_metrics(&self) -> Avx512Metrics {
-        Avx512Metrics {
+    pub fn get_metrics(&self) -> FdtdAvx512Metrics {
+        FdtdAvx512Metrics {
             grid_size: (self.nx, self.ny, self.nz),
             simd_level: self.simd_config.level,
             vector_width: 8,
@@ -90,9 +90,9 @@ impl Avx512StencilProcessor {
 
 /// Performance metrics for AVX-512 stencil processing.
 #[derive(Debug, Clone)]
-pub struct Avx512Metrics {
+pub struct FdtdAvx512Metrics {
     pub grid_size: (usize, usize, usize),
-    pub simd_level: SimdLevel,
+    pub simd_level: MathSimdLevel,
     pub vector_width: usize,
     pub alignment: usize,
 }

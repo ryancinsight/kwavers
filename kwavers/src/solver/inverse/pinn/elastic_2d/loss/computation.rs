@@ -10,7 +10,7 @@ use burn::tensor::{backend::AutodiffBackend, ElementConversion, Tensor};
 use crate::solver::inverse::pinn::elastic_2d::config::LossWeights;
 
 #[cfg(feature = "pinn")]
-use super::data::LossComponents;
+use super::data::ElasticPinnLossComponents;
 
 // ============================================================================
 // Loss Computer
@@ -149,14 +149,14 @@ impl LossComputer {
         initial: &Tensor<B, 1>,
         data: Option<&Tensor<B, 1>>,
         total: &Tensor<B, 1>,
-    ) -> LossComponents {
+    ) -> ElasticPinnLossComponents {
         let pde_val: f64 = pde.clone().into_scalar().elem();
         let boundary_val: f64 = boundary.clone().into_scalar().elem();
         let initial_val: f64 = initial.clone().into_scalar().elem();
         let data_val: f64 = data.map(|d| d.clone().into_scalar().elem()).unwrap_or(0.0);
         let total_val: f64 = total.clone().into_scalar().elem();
 
-        LossComponents {
+        ElasticPinnLossComponents {
             pde: pde_val,
             boundary: boundary_val,
             initial: initial_val,

@@ -1,7 +1,7 @@
 //! Dirichlet and optimized Schwarz transmission tests.
 
 use super::super::SchwarzBoundary;
-use crate::domain::boundary::coupling::types::{BoundaryDirections, TransmissionCondition};
+use crate::domain::boundary::coupling::types::{BoundaryDirections, BoundaryTransmissionCondition};
 use ndarray::Array3;
 
 #[test]
@@ -14,7 +14,7 @@ fn test_schwarz_dirichlet_transmission() {
     let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 200.0;
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Dirichlet);
+        .with_transmission_condition(BoundaryTransmissionCondition::Dirichlet);
 
     let mut interface_view = interface_field.view_mut();
     boundary.apply_transmission(&mut interface_view, &neighbor_field);
@@ -39,7 +39,7 @@ fn test_schwarz_optimized_relaxation() {
     let theta = 0.7;
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Optimized)
+        .with_transmission_condition(BoundaryTransmissionCondition::Optimized)
         .with_relaxation(theta);
 
     let mut interface_view = interface_field.view_mut();

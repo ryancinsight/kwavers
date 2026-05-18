@@ -17,7 +17,7 @@ pub(super) fn pitch_catch_rows(
         settings.frequencies_hz.len() * settings.receiver_offsets.len() * therapy_elements.len(),
     );
     for &frequency_hz in settings.frequencies_hz {
-        let k = std::f64::consts::TAU * frequency_hz * harmonic / C_REF_M_S;
+        let k = std::f64::consts::TAU * frequency_hz * harmonic / settings.phase_speed_m_s;
         let frequency_mhz = frequency_hz * 1.0e-6 * harmonic;
         for (source_idx, &source) in therapy_elements.iter().enumerate() {
             for &offset in settings.receiver_offsets {

@@ -38,7 +38,7 @@ mod transmission;
 #[cfg(test)]
 mod tests;
 
-use super::types::{BoundaryDirections, TransmissionCondition};
+use super::types::{BoundaryDirections, BoundaryTransmissionCondition};
 
 /// Schwarz domain decomposition boundary
 ///
@@ -50,7 +50,7 @@ pub struct SchwarzBoundary {
     /// Overlap region thickness in meters
     pub overlap_thickness: f64,
     /// Transmission condition type
-    pub transmission_condition: TransmissionCondition,
+    pub transmission_condition: BoundaryTransmissionCondition,
     /// Relaxation parameter θ for optimized Schwarz (0 < θ ≤ 1)
     pub relaxation_parameter: f64,
     /// Boundary directions
@@ -72,7 +72,7 @@ impl SchwarzBoundary {
     pub fn new(overlap_thickness: f64, directions: BoundaryDirections) -> Self {
         Self {
             overlap_thickness,
-            transmission_condition: TransmissionCondition::Dirichlet,
+            transmission_condition: BoundaryTransmissionCondition::Dirichlet,
             relaxation_parameter: 1.0,
             directions,
         }
@@ -84,7 +84,7 @@ impl SchwarzBoundary {
     ///
     /// * `condition` - Transmission condition type (Dirichlet, Neumann, Robin, Optimized)
     #[must_use]
-    pub fn with_transmission_condition(mut self, condition: TransmissionCondition) -> Self {
+    pub fn with_transmission_condition(mut self, condition: BoundaryTransmissionCondition) -> Self {
         self.transmission_condition = condition;
         self
     }

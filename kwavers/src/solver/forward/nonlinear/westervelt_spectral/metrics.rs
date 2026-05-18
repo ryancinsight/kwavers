@@ -4,7 +4,7 @@ use std::time::Duration;
 
 /// Performance metrics for tracking computational costs
 #[derive(Debug, Default, Clone)]
-pub struct PerformanceMetrics {
+pub struct WesterveltStepMetrics {
     pub call_count: u64,
     pub nonlinear_time: f64,
     pub fft_time: f64,
@@ -13,7 +13,7 @@ pub struct PerformanceMetrics {
     pub kspace_ops_time: f64,
 }
 
-impl PerformanceMetrics {
+impl WesterveltStepMetrics {
     /// Create new metrics instance
     #[must_use]
     pub fn new() -> Self {

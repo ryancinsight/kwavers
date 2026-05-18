@@ -8,7 +8,7 @@ pub mod statistics;
 
 // Re-export main types
 pub use analyzer::FieldAnalyzer;
-pub use criteria::SelectionCriteria;
+pub use criteria::HybridSelectionCriteria;
 pub use metrics::{ComputationalMetrics, MaterialMetrics, SpectralMetrics};
 pub use selector::{AdaptiveMethodSelector, AdaptiveSelector};
 pub use statistics::SelectionStatistics;

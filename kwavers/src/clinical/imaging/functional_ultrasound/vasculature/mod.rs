@@ -27,7 +27,7 @@ mod tests;
 
 /// Artery / vein classification label.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum VesselType {
+pub enum VascularVesselType {
     /// Arterial vessel (bright in fUS).
     Artery,
     /// Venous vessel (darker in fUS).
@@ -40,7 +40,7 @@ pub enum VesselType {
 #[derive(Debug, Clone)]
 pub struct VesselClassification {
     /// Vessel type label.
-    pub vessel_type: VesselType,
+    pub vessel_type: VascularVesselType,
     /// Classification confidence ∈ [0, 0.95].
     pub confidence: f64,
     /// Estimated vessel diameter \[μm\] (voxel units; caller applies spacing).

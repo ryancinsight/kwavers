@@ -224,7 +224,7 @@ impl Default for ModelRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::infrastructure::api::TrainingConfig;
+    use crate::infrastructure::api::PinnApiTrainingConfig;
 
     #[test]
     fn test_model_storage_and_retrieval() {
@@ -235,8 +235,8 @@ mod tests {
             model_id: "test_model".to_string(),
             physics_domain: "acoustic_wave".to_string(),
             created_at: chrono::Utc::now(),
-            training_config: TrainingConfig::default(),
-            performance_metrics: crate::api::TrainingMetrics {
+            training_config: PinnApiTrainingConfig::default(),
+            performance_metrics: crate::api::PinnApiTrainingMetrics {
                 final_loss: 0.001,
                 best_loss: 0.0008,
                 total_epochs: 100,
@@ -280,8 +280,8 @@ mod tests {
             model_id: "test_model".to_string(),
             physics_domain: "test".to_string(),
             created_at: chrono::Utc::now(),
-            training_config: TrainingConfig::default(),
-            performance_metrics: crate::api::TrainingMetrics::default(),
+            training_config: PinnApiTrainingConfig::default(),
+            performance_metrics: crate::api::PinnApiTrainingMetrics::default(),
             geometry_spec: crate::api::GeometrySpec::default(),
         };
 
@@ -304,8 +304,8 @@ mod tests {
             model_id: "test_model".to_string(),
             physics_domain: "test".to_string(),
             created_at: chrono::Utc::now(),
-            training_config: TrainingConfig::default(),
-            performance_metrics: crate::api::TrainingMetrics::default(),
+            training_config: PinnApiTrainingConfig::default(),
+            performance_metrics: crate::api::PinnApiTrainingMetrics::default(),
             geometry_spec: crate::api::GeometrySpec::default(),
         };
 
@@ -325,8 +325,8 @@ mod tests {
             model_id: "test_model".to_string(),
             physics_domain: "test".to_string(),
             created_at: chrono::Utc::now(),
-            training_config: TrainingConfig::default(),
-            performance_metrics: crate::api::TrainingMetrics::default(),
+            training_config: PinnApiTrainingConfig::default(),
+            performance_metrics: crate::api::PinnApiTrainingMetrics::default(),
             geometry_spec: crate::api::GeometrySpec::default(),
         };
 

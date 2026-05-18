@@ -20,7 +20,7 @@ pub(in crate::clinical::imaging::reconstruction::sound_speed_shift) fn compute_s
     let mut normal_diagonal = vec![0.0; operator.cols()];
     operator.normal_diag_into(&mut normal_diagonal);
     let sparse_lipschitz = match config.prior {
-        ShiftPrior::Dense => None,
+        ShiftPrior::Dense | ShiftPrior::Lsqr { .. } => None,
         ShiftPrior::Sparse => {
             let mut workspace = SoundSpeedShiftWorkspace::new();
             workspace.prepare(operator.rows(), operator.cols());

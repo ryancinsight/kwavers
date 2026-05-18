@@ -1,6 +1,6 @@
 use super::constants::EPS_FD_F32;
 use super::sources::compute_charge_density;
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
@@ -169,7 +169,7 @@ pub fn te_mode_gauss_residual<B: AutodiffBackend>(
     y: &Tensor<B, 2>,
     t: &Tensor<B, 2>,
     eps: f64,
-    physics_params: &PhysicsParameters,
+    physics_params: &PinnDomainPhysicsParameters,
 ) -> Tensor<B, 2> {
     let h = EPS_FD_F32;
 

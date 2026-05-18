@@ -1,14 +1,14 @@
 //! Configuration structures for hybrid PSTD/FDTD solver
 
 use crate::solver::forward::fdtd::FdtdConfig;
-use crate::solver::forward::hybrid::adaptive_selection::SelectionCriteria;
+use crate::solver::forward::hybrid::adaptive_selection::HybridSelectionCriteria;
 use crate::solver::forward::hybrid::domain_decomposition::DomainRegion;
 use crate::solver::forward::pstd::PSTDConfig;
 use serde::{Deserialize, Serialize};
 
 /// Domain decomposition strategy
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum DecompositionStrategy {
+pub enum HybridDecompositionStrategy {
     /// Static decomposition based on initial conditions
     Static,
     /// Dynamic decomposition that adapts during simulation
@@ -29,19 +29,19 @@ pub struct HybridConfig {
     pub fdtd_config: FdtdConfig,
 
     /// Domain decomposition strategy
-    pub decomposition_strategy: DecompositionStrategy,
+    pub decomposition_strategy: HybridDecompositionStrategy,
 
     /// Adaptive selection parameters
-    pub selection_criteria: SelectionCriteria,
+    pub selection_criteria: HybridSelectionCriteria,
 
     /// Coupling interface configuration
     pub coupling_interface: CouplingInterfaceConfig,
 
     /// Performance optimization settings
-    pub optimization: OptimizationConfig,
+    pub optimization: HybridSolverOptimizationConfig,
 
     /// Validation settings
-    pub validation: ValidationConfig,
+    pub validation: HybridValidationConfig,
 }
 
 impl Default for HybridConfig {
@@ -49,11 +49,11 @@ impl Default for HybridConfig {
         Self {
             pstd_config: PSTDConfig::default(),
             fdtd_config: FdtdConfig::default(),
-            decomposition_strategy: DecompositionStrategy::Dynamic,
-            selection_criteria: SelectionCriteria::default(),
+            decomposition_strategy: HybridDecompositionStrategy::Dynamic,
+            selection_criteria: HybridSelectionCriteria::default(),
             coupling_interface: CouplingInterfaceConfig::default(),
-            optimization: OptimizationConfig::default(),
-            validation: ValidationConfig::default(),
+            optimization: HybridSolverOptimizationConfig::default(),
+            validation: HybridValidationConfig::default(),
         }
     }
 }
@@ -62,7 +62,7 @@ impl Default for HybridConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CouplingInterfaceConfig {
     /// Interpolation scheme for data exchange
-    pub interpolation_scheme: InterpolationScheme,
+    pub interpolation_scheme: HybridConfigInterpolationScheme,
 
     /// Number of ghost cells for coupling
     pub ghost_cells: usize,
@@ -74,7 +74,7 @@ pub struct CouplingInterfaceConfig {
 impl Default for CouplingInterfaceConfig {
     fn default() -> Self {
         Self {
-            interpolation_scheme: InterpolationScheme::Cubic,
+            interpolation_scheme: HybridConfigInterpolationScheme::Cubic,
             ghost_cells: 4,
             enable_filtering: true,
         }
@@ -83,7 +83,7 @@ impl Default for CouplingInterfaceConfig {
 
 /// Interpolation scheme for coupling interfaces
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum InterpolationScheme {
+pub enum HybridConfigInterpolationScheme {
     /// Linear interpolation
     Linear,
     /// Cubic interpolation
@@ -94,7 +94,7 @@ pub enum InterpolationScheme {
 
 /// Performance optimization configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OptimizationConfig {
+pub struct HybridSolverOptimizationConfig {
     /// Enable cache optimization
     pub cache_optimization: bool,
 
@@ -105,7 +105,7 @@ pub struct OptimizationConfig {
     pub thread_pool_size: usize,
 }
 
-impl Default for OptimizationConfig {
+impl Default for HybridSolverOptimizationConfig {
     fn default() -> Self {
         Self {
             cache_optimization: true,
@@ -117,7 +117,7 @@ impl Default for OptimizationConfig {
 
 /// Validation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationConfig {
+pub struct HybridValidationConfig {
     /// Enable solution validation
     pub enable_validation: bool,
 
@@ -128,7 +128,7 @@ pub struct ValidationConfig {
     pub max_relative_error: f64,
 }
 
-impl Default for ValidationConfig {
+impl Default for HybridValidationConfig {
     fn default() -> Self {
         Self {
             enable_validation: true,

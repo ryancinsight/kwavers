@@ -4,7 +4,7 @@ use ndarray::Array3;
 
 /// Thermal dose accumulation (CEM43)
 #[derive(Debug, Clone)]
-pub struct ThermalDose {
+pub struct TranscranialSafetyDose {
     /// Current thermal dose (CEM43)
     pub current_dose: Array3<f64>,
     /// Dose rate (CEM43/s)
@@ -67,14 +67,14 @@ impl Default for SafetyThresholds {
 
 /// Safety level classification
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
-pub enum SafetyLevel {
+pub enum TranscranialSafetyLevel {
     Safe = 0,
     Monitor = 1,
     Warning = 2,
     Critical = 3,
 }
 
-impl SafetyLevel {
+impl TranscranialSafetyLevel {
     #[must_use]
     pub fn from_value(current: f64, limit: f64) -> Self {
         let ratio = current / limit;
@@ -92,11 +92,11 @@ impl SafetyLevel {
 
 /// Overall safety status
 #[derive(Debug, Clone)]
-pub struct SafetyStatus {
-    pub temperature_status: SafetyLevel,
-    pub thermal_dose_status: SafetyLevel,
-    pub mechanical_index_status: SafetyLevel,
-    pub overall_safety: SafetyLevel,
+pub struct TranscranialSafetyStatus {
+    pub temperature_status: TranscranialSafetyLevel,
+    pub thermal_dose_status: TranscranialSafetyLevel,
+    pub mechanical_index_status: TranscranialSafetyLevel,
+    pub overall_safety: TranscranialSafetyLevel,
 }
 
 /// Treatment progress information
@@ -111,9 +111,9 @@ pub struct TreatmentProgress {
 /// Comprehensive safety report
 #[derive(Debug)]
 pub struct SafetyReport {
-    pub status: SafetyStatus,
+    pub status: TranscranialSafetyStatus,
     pub progress: TreatmentProgress,
-    pub thermal_dose: ThermalDose,
+    pub thermal_dose: TranscranialSafetyDose,
     pub mechanical_index: MechanicalIndex,
     pub recommendations: Vec<String>,
 }

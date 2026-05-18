@@ -1,9 +1,9 @@
-use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use std::time::{Duration, Instant};
 
 /// Safety levels for clinical ultrasound systems
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum SafetyLevel {
+pub enum ClinicalSafetyLevel {
     /// Normal operation within all safety limits
     Normal,
     /// Warning - approaching safety limits
@@ -16,7 +16,7 @@ pub enum SafetyLevel {
 
 /// IEC 60601-2-37 safety limits for therapeutic ultrasound
 #[derive(Debug, Clone)]
-pub struct SafetyLimits {
+pub struct ClinicalSafetyLimits {
     /// Maximum acoustic power (W)
     pub max_power: f64,
     /// Maximum intensity (W/cm²)
@@ -33,7 +33,7 @@ pub struct SafetyLimits {
     pub max_bnur: f64,
 }
 
-impl Default for SafetyLimits {
+impl Default for ClinicalSafetyLimits {
     fn default() -> Self {
         Self {
             max_power: 100.0,
@@ -49,23 +49,23 @@ impl Default for SafetyLimits {
 
 /// Real-time safety monitor for therapeutic ultrasound
 #[derive(Debug)]
-pub struct SafetyMonitor {
-    limits: SafetyLimits,
-    current_state: SafetyLevel,
+pub struct ClinicalSafetyMonitor {
+    limits: ClinicalSafetyLimits,
+    current_state: ClinicalSafetyLevel,
     violations: Vec<SafetyViolation>,
     monitoring_enabled: bool,
     last_check: Instant,
     check_interval: Duration,
 }
 
-impl SafetyMonitor {
+impl ClinicalSafetyMonitor {
     /// Create new safety monitor with 10 Hz check interval.
     #[must_use]
-    pub fn new(limits: SafetyLimits) -> Self {
+    pub fn new(limits: ClinicalSafetyLimits) -> Self {
         let check_interval = Duration::from_millis(100);
         Self {
             limits,
-            current_state: SafetyLevel::Normal,
+            current_state: ClinicalSafetyLevel::Normal,
             violations: Vec::new(),
             monitoring_enabled: true,
             last_check: Instant::now() - check_interval,
@@ -74,9 +74,9 @@ impl SafetyMonitor {
     }
 
     /// Check current therapy parameters against safety limits.
-    pub fn check_safety(&mut self, params: &TherapyParameters) -> SafetyLevel {
+    pub fn check_safety(&mut self, params: &ClinicalTherapyParameters) -> ClinicalSafetyLevel {
         if !self.monitoring_enabled {
-            return SafetyLevel::Normal;
+            return ClinicalSafetyLevel::Normal;
         }
 
         let now = Instant::now();
@@ -85,7 +85,7 @@ impl SafetyMonitor {
         }
 
         self.violations.clear();
-        let mut new_state = SafetyLevel::Normal;
+        let mut new_state = ClinicalSafetyLevel::Normal;
 
         // FDA limit: ~3 MPa peak negative pressure for therapeutic ultrasound
         const MAX_PEAK_NEGATIVE_PRESSURE: f64 = 3.0e6;
@@ -94,11 +94,11 @@ impl SafetyMonitor {
                 parameter: "peak_negative_pressure".to_owned(),
                 measured_value: params.peak_negative_pressure,
                 limit_value: MAX_PEAK_NEGATIVE_PRESSURE,
-                severity: SafetyLevel::Critical,
+                severity: ClinicalSafetyLevel::Critical,
                 timestamp: Instant::now(),
                 message: "Peak negative pressure exceeds maximum safe limit".to_owned(),
             });
-            new_state = SafetyLevel::Critical;
+            new_state = ClinicalSafetyLevel::Critical;
         }
 
         if params.mechanical_index > 1.9 {
@@ -106,11 +106,11 @@ impl SafetyMonitor {
                 parameter: "mechanical_index".to_owned(),
                 measured_value: params.mechanical_index,
                 limit_value: 1.9,
-                severity: SafetyLevel::Critical,
+                severity: ClinicalSafetyLevel::Critical,
                 timestamp: Instant::now(),
                 message: "Mechanical index exceeds FDA safety limits".to_owned(),
             });
-            new_state = SafetyLevel::Critical;
+            new_state = ClinicalSafetyLevel::Critical;
         }
 
         if params.treatment_duration > self.limits.max_session_time {
@@ -118,11 +118,11 @@ impl SafetyMonitor {
                 parameter: "treatment_duration".to_owned(),
                 measured_value: params.treatment_duration,
                 limit_value: self.limits.max_session_time,
-                severity: SafetyLevel::Critical,
+                severity: ClinicalSafetyLevel::Critical,
                 timestamp: Instant::now(),
                 message: "Treatment duration exceeds maximum limit".to_owned(),
             });
-            new_state = SafetyLevel::Critical;
+            new_state = ClinicalSafetyLevel::Critical;
         }
 
         if params.frequency < 0.5e6 || params.frequency > 10e6 {
@@ -130,12 +130,12 @@ impl SafetyMonitor {
                 parameter: "frequency".to_owned(),
                 measured_value: params.frequency,
                 limit_value: 5e6,
-                severity: SafetyLevel::Warning,
+                severity: ClinicalSafetyLevel::Warning,
                 timestamp: Instant::now(),
                 message: "Frequency outside typical therapeutic ultrasound range".to_owned(),
             });
-            if new_state < SafetyLevel::Warning {
-                new_state = SafetyLevel::Warning;
+            if new_state < ClinicalSafetyLevel::Warning {
+                new_state = ClinicalSafetyLevel::Warning;
             }
         }
 
@@ -146,7 +146,7 @@ impl SafetyMonitor {
 
     /// Get current safety state.
     #[must_use]
-    pub fn safety_state(&self) -> SafetyLevel {
+    pub fn safety_state(&self) -> ClinicalSafetyLevel {
         self.current_state
     }
 
@@ -164,7 +164,7 @@ impl SafetyMonitor {
     /// Return `true` if emergency shutdown is required.
     #[must_use]
     pub fn requires_emergency_shutdown(&self) -> bool {
-        self.current_state >= SafetyLevel::Critical
+        self.current_state >= ClinicalSafetyLevel::Critical
     }
 }
 
@@ -174,7 +174,7 @@ pub struct SafetyViolation {
     pub parameter: String,
     pub measured_value: f64,
     pub limit_value: f64,
-    pub severity: SafetyLevel,
+    pub severity: ClinicalSafetyLevel,
     pub timestamp: Instant,
     pub message: String,
 }

@@ -12,8 +12,8 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
-pub use monitor::SafetyMonitor;
+pub use monitor::TranscranialSafetyMonitor;
 pub use types::{
-    MechanicalIndex, SafetyLevel, SafetyReport, SafetyStatus, SafetyThresholds, ThermalDose,
-    TreatmentProgress,
+    MechanicalIndex, SafetyReport, SafetyThresholds, TranscranialSafetyDose,
+    TranscranialSafetyLevel, TranscranialSafetyStatus, TreatmentProgress,
 };

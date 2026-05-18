@@ -16,7 +16,7 @@ mod validator;
 
 /// Validation results for numerical accuracy tests
 #[derive(Debug, Clone, Default)]
-pub struct ValidationResults {
+pub struct NumericalAccuracyResults {
     pub dispersion_tests: DispersionResults,
     pub stability_tests: StabilityResults,
     pub boundary_tests: BoundaryResults,
@@ -137,7 +137,7 @@ impl Default for NumericalValidator {
 }
 
 /// Report validation results
-pub fn report_validation_results(results: &ValidationResults) {
+pub fn report_validation_results(results: &NumericalAccuracyResults) {
     info!("=== Numerical Accuracy Validation Report ===");
 
     info!("Dispersion Analysis:");

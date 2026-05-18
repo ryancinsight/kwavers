@@ -1,13 +1,14 @@
 use ndarray::Array3;
 
-use super::super::types::Nonlinear3dVolume;
+use super::super::types::{FwiIterationDiagnostics, Nonlinear3dVolume};
 use super::calibration::{calibrated_source_scale, SourceCalibrationInput};
 use super::types::WesterveltFwiResult;
 use super::{
     add_h1_gradient, apply_line_search, forward_with_schedule, gradient, h1_penalty, index,
-    metrics_from_score, multiparameter_score, objective_for_model, smooth_gradient, time_schedule,
-    EncodedTrace, ForwardInput, GradientInput, LineSearchInput, LineSearchWorkspace,
-    Nonlinear3dAperture, Nonlinear3dConfig, ObjectiveInput, ParameterGradient, SourceEncoding,
+    metrics_from_score, multiparameter_score, objective_for_model, smooth_gradient,
+    source_plan_metrics, time_schedule, EncodedTrace, ForwardInput, GradientInput, LineSearchInput,
+    LineSearchWorkspace, Nonlinear3dAperture, Nonlinear3dConfig, ObjectiveInput, ParameterGradient,
+    SourceEncoding,
 };
 
 pub fn run_fwi(
@@ -28,11 +29,20 @@ pub fn run_fwi(
     let target = volume.target_mask.iter().copied().collect::<Vec<_>>();
     let schedule = time_schedule(&true_speed, n, volume.spacing_m, config);
     let encodings = SourceEncoding::all(config.source_encoding_count);
+    let source_plan_metrics = source_plan_metrics(
+        &true_speed,
+        n,
+        volume.spacing_m,
+        aperture,
+        encodings[0],
+        Some(&body),
+    );
     let source_scale = calibrated_source_scale(SourceCalibrationInput {
         background_speed: &background,
         density: &density,
         attenuation_alpha0: &attenuation_alpha0,
         attenuation_y: &attenuation_y,
+        body: &body,
         target: &target,
         n,
         spacing_m: volume.spacing_m,
@@ -51,6 +61,7 @@ pub fn run_fwi(
                 beta: &true_beta,
                 attenuation_np_per_m_mhz: Some(&attenuation_alpha0),
                 attenuation_power_law_y: Some(&attenuation_y),
+                source_body_mask: Some(&body),
                 n,
                 spacing_m: volume.spacing_m,
                 aperture,
@@ -78,6 +89,7 @@ pub fn run_fwi(
     let mut current = background.clone();
     let mut current_beta = background_beta.clone();
     let mut objective_history = Vec::with_capacity(config.iterations + 1);
+    let mut iteration_diagnostics = Vec::with_capacity(config.iterations);
     let cells = n * n * n;
     let mut residual = vec![0.0; schedule.time_steps * aperture.receivers.len()];
     let mut line_search_workspace = LineSearchWorkspace::new(cells);
@@ -94,6 +106,7 @@ pub fn run_fwi(
                 beta: &current_beta,
                 attenuation_np_per_m_mhz: Some(&attenuation_alpha0),
                 attenuation_power_law_y: Some(&attenuation_y),
+                source_body_mask: Some(&body),
                 n,
                 spacing_m: volume.spacing_m,
                 aperture,
@@ -124,6 +137,7 @@ pub fn run_fwi(
                 attenuation_np_per_m_mhz: Some(&attenuation_alpha0),
                 attenuation_power_law_y: Some(&attenuation_y),
                 body: &inversion,
+                source_body_mask: &body,
                 n,
                 spacing_m: volume.spacing_m,
                 aperture,
@@ -184,7 +198,11 @@ pub fn run_fwi(
             n,
             config.gradient_smoothing_steps,
         );
-        if !apply_line_search(LineSearchInput {
+        let gradient_speed_linf = masked_linf_norm(&grad.sound_speed, &inversion);
+        let gradient_beta_linf = masked_linf_norm(&grad.beta, &inversion);
+        let gradient_speed_l2 = masked_l2_norm(&grad.sound_speed, &inversion);
+        let gradient_beta_l2 = masked_l2_norm(&grad.beta, &inversion);
+        let outcome = apply_line_search(LineSearchInput {
             current_speed: &mut current,
             current_beta: &mut current_beta,
             workspace: &mut line_search_workspace,
@@ -199,15 +217,38 @@ pub fn run_fwi(
             density: &density,
             attenuation_np_per_m_mhz: &attenuation_alpha0,
             attenuation_power_law_y: &attenuation_y,
+            source_body_mask: &body,
             n,
             spacing_m: volume.spacing_m,
             aperture,
             config,
             schedule,
             source_scale,
-        }) {
+        });
+        if let Some(outcome) = outcome {
+            iteration_diagnostics.push(FwiIterationDiagnostics {
+                objective_before: objective,
+                objective_after: outcome.objective,
+                gradient_speed_linf,
+                gradient_beta_linf,
+                gradient_speed_l2,
+                gradient_beta_l2,
+                accepted_scale: outcome.scale,
+                accepted_block: outcome.accepted_block.label(),
+            });
+        } else {
+            iteration_diagnostics.push(FwiIterationDiagnostics {
+                objective_before: objective,
+                objective_after: objective,
+                gradient_speed_linf,
+                gradient_beta_linf,
+                gradient_speed_l2,
+                gradient_beta_l2,
+                accepted_scale: 0.0,
+                accepted_block: "none",
+            });
             break;
-        }
+        };
     }
     objective_history.push(objective_for_model(
         &current,
@@ -221,6 +262,7 @@ pub fn run_fwi(
             background_speed: &background,
             background_beta: &background_beta,
             body: &inversion,
+            source_body_mask: &body,
             n,
             spacing_m: volume.spacing_m,
             aperture,
@@ -249,8 +291,10 @@ pub fn run_fwi(
         multiparameter_fwi_score: score,
         peak_pressure_pa: unflatten(&therapy_peak, n),
         objective_history,
+        iteration_diagnostics,
         metrics: metrics_from_score(&score_vec, &target, &body),
         source_scale,
+        source_plan_metrics,
         dt_s: schedule.dt_s,
         time_steps: schedule.time_steps,
     }
@@ -263,6 +307,23 @@ fn accumulate_gradient(total: &mut ParameterGradient, shot: &ParameterGradient) 
     for (dst, src) in total.beta.iter_mut().zip(shot.beta.iter()) {
         *dst += src;
     }
+}
+
+fn masked_linf_norm(values: &[f64], mask: &[bool]) -> f64 {
+    values
+        .iter()
+        .zip(mask.iter())
+        .filter_map(|(value, active)| active.then_some(value.abs()))
+        .fold(0.0, f64::max)
+}
+
+fn masked_l2_norm(values: &[f64], mask: &[bool]) -> f64 {
+    values
+        .iter()
+        .zip(mask.iter())
+        .filter_map(|(value, active)| active.then_some(value * value))
+        .sum::<f64>()
+        .sqrt()
 }
 
 fn flatten(values: &Array3<f64>) -> Vec<f64> {

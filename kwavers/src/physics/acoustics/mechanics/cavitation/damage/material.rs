@@ -15,7 +15,7 @@ use crate::core::constants::cavitation::{
 
 /// Material properties for damage calculation
 #[derive(Debug, Clone)]
-pub struct MaterialProperties {
+pub struct CavitationDamageMaterialProperties {
     /// Yield strength (Pa)
     pub yield_strength: f64,
     /// Ultimate tensile strength (Pa)
@@ -30,7 +30,7 @@ pub struct MaterialProperties {
     pub erosion_resistance: f64,
 }
 
-impl Default for MaterialProperties {
+impl Default for CavitationDamageMaterialProperties {
     fn default() -> Self {
         Self {
             yield_strength: STAINLESS_STEEL_316_YIELD_STRENGTH,
@@ -75,10 +75,10 @@ mod tests {
         DEFAULT_THRESHOLD_PRESSURE,
     };
 
-    /// `MaterialProperties::default` matches the SS316 physical constants.
+    /// `CavitationDamageMaterialProperties::default` matches the SS316 physical constants.
     #[test]
     fn material_properties_default_matches_stainless_steel_316() {
-        let m = MaterialProperties::default();
+        let m = CavitationDamageMaterialProperties::default();
         assert_eq!(m.yield_strength, 290e6, "SS316 yield = 290 MPa");
         assert_eq!(m.ultimate_strength, 580e6, "SS316 UTS = 580 MPa");
         assert_eq!(m.hardness, 2.0e9, "SS316 hardness = 2 GPa");

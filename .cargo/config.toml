@@ -13,6 +13,15 @@ CC = { value = "clang", force = false }
 CXX = { value = "clang++", force = false }
 CMAKE_GENERATOR_x86_64_pc_windows_gnu = { value = "Ninja", force = false }
 
+[target.x86_64-pc-windows-gnu]
+linker = "clang"
+rustflags = [
+	"-C", "target-feature=+crt-static",
+	"-C", "link-arg=-fuse-ld=lld",
+	"-C", "link-arg=-static-libstdc++",
+	"-C", "link-arg=-static-libgcc",
+]
+
 [alias]
 test-fast = "nextest run --profile local --lib --release"
 test-timeout = "nextest run --profile ci --lib --release"

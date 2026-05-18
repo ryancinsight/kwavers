@@ -1,4 +1,4 @@
-use super::{SafetyLevel, SafetyLimits};
+use super::{ClinicalSafetyLevel, ClinicalSafetyLimits};
 use crate::core::error::KwaversResult;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -82,9 +82,9 @@ impl ComplianceValidator {
                             "Safety limits exceed IEC maximum values".to_owned()
                         },
                         severity: if passed {
-                            SafetyLevel::Normal
+                            ClinicalSafetyLevel::Normal
                         } else {
-                            SafetyLevel::Critical
+                            ClinicalSafetyLevel::Critical
                         },
                     })
                 }),
@@ -103,9 +103,9 @@ impl ComplianceValidator {
                             "Monitoring or interlocks not properly configured".to_owned()
                         },
                         severity: if passed {
-                            SafetyLevel::Normal
+                            ClinicalSafetyLevel::Normal
                         } else {
-                            SafetyLevel::Critical
+                            ClinicalSafetyLevel::Critical
                         },
                     })
                 }),
@@ -127,9 +127,9 @@ impl ComplianceValidator {
                             )
                         },
                         severity: if passed {
-                            SafetyLevel::Normal
+                            ClinicalSafetyLevel::Normal
                         } else {
-                            SafetyLevel::Critical
+                            ClinicalSafetyLevel::Critical
                         },
                     })
                 }),
@@ -167,7 +167,7 @@ impl std::fmt::Debug for ComplianceCheck {
 pub struct ComplianceResult {
     pub passed: bool,
     pub details: String,
-    pub severity: SafetyLevel,
+    pub severity: ClinicalSafetyLevel,
 }
 
 /// Full compliance validation report
@@ -182,7 +182,7 @@ pub struct ComplianceReport {
 /// System configuration for compliance validation
 #[derive(Debug)]
 pub struct SystemConfiguration {
-    pub safety_limits: SafetyLimits,
+    pub safety_limits: ClinicalSafetyLimits,
     pub monitoring_enabled: bool,
     pub interlocks_enabled: bool,
     pub emergency_stop_tested: bool,

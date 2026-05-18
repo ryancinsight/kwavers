@@ -7,7 +7,7 @@
 //! `crate::simulation::factory` import surface.
 
 pub use crate::physics::factory::{
-    AcousticSolver, BoundaryType, BubbleModel, NonlinearEquation, PhysicsCatalog, PhysicsConfig,
+    AcousticSolver, BubbleModel, NonlinearEquation, PhysicsCatalog, PhysicsConfig,
     PhysicsModelConfig, PhysicsModelType,
 };
 

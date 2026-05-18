@@ -1,7 +1,7 @@
 //! MUSIC (Multiple Signal Classification) algorithm.
 
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::EigenDecomposition;
 use ndarray::{s, Array1, Array2};
 use num_complex::Complex64;
 use num_traits::Zero;
@@ -84,7 +84,7 @@ impl MUSIC {
 
         let cov_for_eig = covariance.mapv(|z| num_complex::Complex::new(z.re, z.im));
         let (eigenvalues, eigenvectors) =
-            LinearAlgebra::hermitian_eigendecomposition_complex(&cov_for_eig)?;
+            EigenDecomposition::hermitian_eigendecomposition_complex(&cov_for_eig)?;
 
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| {

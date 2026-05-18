@@ -178,7 +178,7 @@ pub use crate::domain::signal::FrequencyFilter;
 
 // Future re-exports (will be populated as modules are implemented)
 // pub use beamforming::{Beamformer, BeamformingConfig, MinimumVariance, MUSIC};
-// pub use localization::{Localizer, LocalizationConfig, Trilateration};
+// pub use localization::{Localizer, AcousticLocalizationConfig, Trilateration};
 // pub use pam::{PassiveAcousticMapper, PAMConfig};
 
 #[cfg(test)]

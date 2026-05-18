@@ -172,9 +172,18 @@ mod tests {
         }
 
         let intensity = solver.get_intensity();
+        let center = intensity[[config.nx / 2, config.ny / 2]];
+        assert!(center > 0.0, "intensity must be positive at beam center");
+
+        // Gaussian beam property: peak at center, monotone decay radially.
+        // After only 3 propagation steps on a 32×32 grid the diffraction spreading
+        // is far less than the beam waist, so the on-axis maximum must exceed the
+        // intensity at the domain corner.
+        let corner = intensity[[0, 0]];
         assert!(
-            intensity[[config.nx / 2, config.ny / 2]] > 0.0,
-            "Should have non-zero intensity at center"
+            center > corner,
+            "beam center intensity ({center:.3e}) must exceed corner ({corner:.3e}): \
+             Gaussian beam must be peaked on-axis"
         );
     }
 }

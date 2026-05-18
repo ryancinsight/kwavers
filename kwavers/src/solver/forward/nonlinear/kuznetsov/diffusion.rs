@@ -1,26 +1,71 @@
 //! Acoustic diffusivity and absorption for Kuznetsov equation
 //!
-//! Implements the diffusive term: -(δ/c₀⁴)∂³p/∂t³
-//! where δ is the acoustic diffusivity
+//! ## Theorem (Stokes-Kirchhoff thermoviscous absorption term)
+//!
+//! **Statement** (Lighthill 1978, §3.4): The diffusive term in the Kuznetsov
+//! equation arises from viscous and thermal losses in the fluid:
+//!
+//! ```text
+//! −(δ/c₀⁴) ∂³p/∂t³
+//! ```
+//!
+//! where the acoustic diffusivity is:
+//! ```text
+//! δ = (4μ/3 + μ_B)/ρ₀ + κ(1/cᵥ − 1/cₚ)/ρ₀   [m²/s]
+//! ```
+//! with `μ` = shear viscosity, `μ_B` = bulk viscosity, `κ` = thermal
+//! conductivity, `cᵥ`, `cₚ` = specific heats at constant volume/pressure.
+//!
+//! **Frequency-domain interpretation**: In the frequency domain the diffusive
+//! term produces a power-law absorption coefficient:
+//! ```text
+//! α(ω) = δω²/(2c₀³)   [Np/m]
+//! ```
+//! consistent with the classical Stokes-Kirchhoff formula. At low megahertz
+//! frequencies in water, this gives α ∝ f² in agreement with measurements.
+//!
+//! **Third-order finite-difference approximation**: The term `∂³p/∂t³` is
+//! approximated by the four-point backward difference (LeVeque 2007, §2.14):
+//! ```text
+//! ∂³p/∂t³ ≈ (p[n] − 3p[n-1] + 3p[n-2] − p[n-3]) / Δt³   + O(Δt)
+//! ```
+//! This is the forward-most stable 4-point stencil; the truncation error is
+//! O(Δt), sufficient when Δt ≪ T_period (resolved time scale).
+//!
+//! ## References
+//!
+//! - Lighthill MJ (1978). Waves in Fluids. Cambridge UP. §3.4.
+//! - Kuznetsov VP (1971). Sov. Phys. Acoust. 16(4), 467–470.
+//! - LeVeque RJ (2007). Finite Difference Methods for ODEs and PDEs.
+//!   SIAM. §2.14.
 
 use crate::core::constants::acoustic_parameters::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
 use crate::core::constants::numerical::THIRD_ORDER_DIFF_COEFF;
 use ndarray::{Array3, Zip};
 
-/// Compute the diffusive term for the Kuznetsov equation using workspace
+/// Compute the diffusive term for the Kuznetsov equation using workspace.
+///
+/// ## Theorem — explicit-form diffusive contribution to ∂²p/∂t²
+///
+/// Kuznetsov operator form: `∇²p − (1/c₀²)∂²p/∂t² = … − (δ/c₀⁴)∂³p/∂t³`
+///
+/// Rearranging for the leapfrog explicit form:
+/// ```text
+/// ∂²p/∂t² = c₀²∇²p + … + (δ/c₀²)∂³p/∂t³
+/// ```
+///
+/// This function returns the diffusive contribution `+(δ/c₀²)∂³p/∂t³`
+/// (positive, c² not c⁴).
 ///
 /// # Arguments
-/// * `pressure` - Current pressure field
-/// * `pressure_prev` - Previous time step pressure field
-/// * `pressure_prev2` - Two time steps ago pressure field
-/// * `pressure_prev3` - Three time steps ago pressure field
-/// * `dt` - Time step size
+/// * `pressure` - Current pressure p[n]
+/// * `pressure_prev` - p[n−1]
+/// * `pressure_prev2` - p[n−2]
+/// * `pressure_prev3` - p[n−3]
+/// * `dt` - Time step Δt
 /// * `sound_speed` - Sound speed c₀
-/// * `acoustic_diffusivity` - Diffusivity parameter δ [m²/s]
-/// * `diffusive_term_out` - Pre-allocated output buffer for the result
-///
-/// # Returns
-/// The diffusive term: -(δ/c₀⁴)∂³p/∂t³ is written to `diffusive_term_out`
+/// * `acoustic_diffusivity` - Diffusivity δ [m²/s]
+/// * `diffusive_term_out` - Pre-allocated output for `+(δ/c₀²)∂³p/∂t³`
 #[allow(clippy::too_many_arguments)]
 pub fn compute_diffusive_term_workspace(
     pressure: &Array3<f64>,
@@ -32,8 +77,9 @@ pub fn compute_diffusive_term_workspace(
     acoustic_diffusivity: f64,
     diffusive_term_out: &mut Array3<f64>,
 ) {
-    // Compute coefficient: -δ/c₀⁴
-    let coeff = -acoustic_diffusivity / sound_speed.powi(4);
+    // Explicit-form coefficient: +(δ/c₀²)   [positive; c² not c⁴]
+    // Derived from: ∂²p/∂t² = c₀²∇²p + … + (δ/c₀²)∂³p/∂t³
+    let coeff = acoustic_diffusivity / sound_speed.powi(2);
 
     // Compute third time derivative using four-point backward finite difference
     // ∂³p/∂t³ ≈ (p[n] - 3*p[n-1] + 3*p[n-2] - p[n-3]) / dt³
@@ -45,10 +91,13 @@ pub fn compute_diffusive_term_workspace(
         .and(pressure_prev2)
         .and(pressure_prev3)
         .par_for_each(|diff, &p, &p_prev, &p_prev2, &p_prev3| {
+            // ∂³p/∂t³ ≈ (p[n] − 3p[n−1] + 3p[n−2] − p[n−3]) / Δt³  + O(Δt)
+            // (four-point backward, exact for cubic polynomials)
             let d3p_dt3 = (THIRD_ORDER_DIFF_COEFF
                 .mul_add(p_prev2, THIRD_ORDER_DIFF_COEFF.mul_add(-p_prev, p))
                 - p_prev3)
                 / dt_cubed;
+            // coeff = +(δ/c₀²); positive contribution to explicit ∂²p/∂t²
             *diff = coeff * d3p_dt3;
         });
 }

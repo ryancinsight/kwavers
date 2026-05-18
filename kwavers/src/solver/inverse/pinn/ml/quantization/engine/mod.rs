@@ -15,7 +15,7 @@ mod ops;
 
 /// Quantization validation result (internal)
 #[derive(Debug, Clone)]
-pub(super) struct ValidationResult {
+pub(super) struct QuantizationValidationResult {
     pub original_accuracy: f32,
     pub quantized_accuracy: f32,
     pub accuracy_loss: f32,

@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_maximum_intensity_projection_selects_voxelwise_maximum() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::MaximumIntensity,
+        fusion_method: ImagingFusionMethod::MaximumIntensity,
         uncertainty_quantification: true,
         ..Default::default()
     };
@@ -45,7 +45,7 @@ fn test_maximum_intensity_projection_selects_voxelwise_maximum() {
 #[test]
 fn test_minimum_intensity_projection_selects_voxelwise_minimum() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::MinimumIntensity,
+        fusion_method: ImagingFusionMethod::MinimumIntensity,
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
@@ -82,7 +82,7 @@ fn test_minimum_intensity_projection_selects_voxelwise_minimum() {
 #[test]
 fn test_intensity_projection_rejects_dimension_mismatch() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::MaximumIntensity,
+        fusion_method: ImagingFusionMethod::MaximumIntensity,
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);

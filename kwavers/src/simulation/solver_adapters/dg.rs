@@ -2,14 +2,14 @@
 //!
 //! # Contract
 //!
-//! The current DG core advances a one-dimensional scalar conservation law over a
-//! tensor with shape `(n_elements, n_nodes, n_variables)`. This adapter exposes
-//! that real computation through the simulation `Solver` trait for the scalar
-//! acoustic pressure case:
+//! The DG core advances the first-order acoustic pressure/velocity system over
+//! a tensor-product nodal basis on active Cartesian dimensions. This adapter
+//! exposes that computation through the simulation `Solver` trait:
 //!
-//! - `grid.nx` is the number of DG elements.
-//! - `grid.ny` is the nodal count per element and must equal `p + 1`.
-//! - `grid.nz` must be `1`, the pressure scalar variable.
+//! - each active grid axis must contain an integer number of `(p + 1)`-node DG
+//!   elements;
+//! - inactive lower-dimensional embedding axes have extent `1`;
+//! - the pressure field keeps the repository-standard `(nx, ny, nz)` layout.
 //!
 //! # Theorem
 //!
@@ -20,12 +20,13 @@
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
-use crate::domain::medium::{sound_speed_at, Medium};
+use crate::domain::medium::{density_at, sound_speed_at, Medium};
 use crate::domain::sensor::GridSensorSet;
 use crate::domain::source::Source;
 use crate::solver::config::SolverConfiguration;
 use crate::solver::feature::SolverFeature;
-use crate::solver::forward::pstd::dg::{DGConfig, DGOperations, DGSolver, NumericalSolver};
+use crate::solver::forward::pstd::dg::dg_solver::acoustic::AcousticDgTensorWorkspace;
+use crate::solver::forward::pstd::dg::{DGConfig, DGSolver, NumericalSolver};
 use crate::solver::interface::{Solver, SolverStatistics};
 use ndarray::Array3;
 use std::sync::Arc;
@@ -37,6 +38,9 @@ pub struct DgSimulationSolver {
     core: DGSolver,
     grid: Grid,
     dt: f64,
+    density: f64,
+    state: Array3<f64>,
+    workspace: AcousticDgTensorWorkspace,
     pressure: Array3<f64>,
     ux: Array3<f64>,
     uy: Array3<f64>,
@@ -60,17 +64,10 @@ impl DgSimulationSolver {
         let polynomial_order = config.spatial_order;
         let expected_nodes = polynomial_order + 1;
 
-        if grid.nz != 1 {
-            return Err(KwaversError::FeatureNotAvailable(format!(
-                "DiscontinuousGalerkin simulation adapter currently supports one scalar variable; expected grid.nz = 1, got {}",
-                grid.nz
-            )));
-        }
-
-        if grid.ny != expected_nodes {
+        if !active_dimensions_are_dg_aligned(grid, expected_nodes) {
             return Err(KwaversError::InvalidInput(format!(
-                "DiscontinuousGalerkin grid layout requires grid.ny = spatial_order + 1 = {expected_nodes}, got {}",
-                grid.ny
+                "DiscontinuousGalerkin active grid dimensions must be divisible by spatial_order + 1 = {expected_nodes}; got ({}, {}, {})",
+                grid.nx, grid.ny, grid.nz
             )));
         }
 
@@ -85,6 +82,12 @@ impl DgSimulationSolver {
         if !sound_speed.is_finite() || sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "DiscontinuousGalerkin sound speed must be finite and positive, got {sound_speed}"
+            )));
+        }
+        let density = density_at(medium, 0.0, 0.0, 0.0, grid);
+        if !density.is_finite() || density <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "DiscontinuousGalerkin density must be finite and positive, got {density}"
             )));
         }
 
@@ -103,10 +106,15 @@ impl DgSimulationSolver {
         }
 
         let shape = (grid.nx, grid.ny, grid.nz);
+        let state = Array3::zeros(core.acoustic_tensor_state_shape()?);
+        let workspace = AcousticDgTensorWorkspace::new(state.dim());
         Ok(Self {
             core,
             grid: grid.clone(),
             dt: config.dt,
+            density,
+            state,
+            workspace,
             pressure: Array3::zeros(shape),
             ux: Array3::zeros(shape),
             uy: Array3::zeros(shape),
@@ -158,26 +166,22 @@ impl Solver for DgSimulationSolver {
 
     fn run(&mut self, num_steps: usize) -> KwaversResult<()> {
         let start = Instant::now();
+        self.core
+            .assign_acoustic_tensor_pressure_from_grid(&self.pressure, &mut self.state)?;
         for _ in 0..num_steps {
-            if !self.core.has_modal_coefficients() {
-                let coefficients = self.core.project_to_basis(&self.pressure)?;
-                self.core.initialize_modal_coefficients(self.grid.nx, 1);
-                *self.core.modal_coefficients_mut().ok_or_else(|| {
-                    KwaversError::InternalError("DG modal coefficient allocation failed".to_owned())
-                })? = coefficients;
-            }
-
-            self.core.solve_step(&mut self.pressure, self.dt)?;
-            let coefficients = self
-                .core
-                .modal_coefficients()
-                .ok_or_else(|| {
-                    KwaversError::InternalError(
-                        "DG modal coefficients missing after time step".to_owned(),
-                    )
-                })?
-                .clone();
-            self.pressure = self.core.reconstruct_from_basis(&coefficients)?;
+            self.core.step_acoustic_tensor_ssp_rk3(
+                &mut self.state,
+                self.density,
+                self.dt,
+                &mut self.workspace,
+            )?;
+            self.core.project_acoustic_tensor_fields_to_uniform_grid(
+                &self.state,
+                &mut self.pressure,
+                &mut self.ux,
+                &mut self.uy,
+                &mut self.uz,
+            )?;
             self.current_step += 1;
         }
         self.computation_time += start.elapsed();
@@ -198,9 +202,15 @@ impl Solver for DgSimulationSolver {
             total_steps: self.current_step,
             current_step: self.current_step,
             computation_time: self.computation_time,
-            memory_usage: 4 * self.pressure.len() * std::mem::size_of::<f64>(),
+            memory_usage: (4 * self.pressure.len() + 4 * self.state.len())
+                * std::mem::size_of::<f64>(),
             max_pressure,
-            max_velocity: 0.0,
+            max_velocity: self
+                .ux
+                .iter()
+                .chain(self.uy.iter())
+                .chain(self.uz.iter())
+                .fold(0.0_f64, |m, &v| m.max(v.abs())),
         }
     }
 
@@ -216,6 +226,13 @@ impl Solver for DgSimulationSolver {
         }
         Ok(())
     }
+}
+
+fn active_dimensions_are_dg_aligned(grid: &Grid, nodes_per_element: usize) -> bool {
+    let dims = [grid.nx, grid.ny, grid.nz];
+    dims.into_iter()
+        .filter(|&n| n > 1)
+        .all(|n| n.is_multiple_of(nodes_per_element))
 }
 
 #[cfg(test)]
@@ -250,6 +267,7 @@ mod tests {
             .map(|(&after, &before)| (after - before).abs())
             .sum();
         assert!(l1_delta > 0.0);
+        assert!(stats.max_velocity > 0.0);
     }
 
     #[test]

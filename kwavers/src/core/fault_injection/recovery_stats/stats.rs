@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use super::{FaultScenario, RecoveryDistribution, RecoveryLatencyStats, TelemetryIntegrity};
+use super::{FaultInjectionScenario, RecoveryDistribution, RecoveryLatencyStats, TelemetryIntegrity};
 
 /// Recovery statistics with full telemetry
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RecoveryStats {
     /// The fault scenario these stats apply to
     #[serde(skip)]
-    pub scenario: Option<FaultScenario>,
+    pub scenario: Option<FaultInjectionScenario>,
     /// Distribution statistics
     pub distribution: RecoveryDistribution,
     /// Latency statistics
@@ -22,7 +22,7 @@ pub struct RecoveryStats {
 
 impl RecoveryStats {
     /// Create stats for a specific scenario
-    pub fn new(scenario: FaultScenario) -> Self {
+    pub fn new(scenario: FaultInjectionScenario) -> Self {
         Self {
             scenario: Some(scenario),
             distribution: RecoveryDistribution::default(),

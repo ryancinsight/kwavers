@@ -9,7 +9,7 @@
 /// - Harris, F.J. (1978): "On the use of windows for harmonic analysis with the DFT."
 ///   *Proc. IEEE*, 66(1), 51–83.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum WindowType {
+pub enum BeamformerWindowType {
     /// Hanning window — smooth taper, good side-lobe suppression.
     /// w(n) = 0.5 − 0.5 cos(2πn / (N−1))
     Hanning,

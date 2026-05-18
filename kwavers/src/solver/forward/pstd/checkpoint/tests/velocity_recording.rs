@@ -109,7 +109,7 @@ fn test_checkpoint_velocity_recording_survives_resume() {
         .extract_uy_data()
         .expect("resumed uy must be recorded — velocity must survive checkpoint resume");
 
-    // Dimension invariant.
+    // GridDimension invariant.
     assert_eq!(
         ref_ux.dim(),
         resumed_ux.dim(),

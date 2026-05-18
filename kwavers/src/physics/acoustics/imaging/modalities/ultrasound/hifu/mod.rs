@@ -15,7 +15,7 @@
 //! # Key Components
 //!
 //! - `compute_pressure_field`: Acoustic field computation
-//! - `ThermalDose`: Thermal modeling and bio-heat transfer
+//! - `HifuThermalDose`: Thermal modeling and bio-heat transfer
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -23,7 +23,7 @@ use crate::domain::medium::Medium;
 use ndarray::Array3;
 
 // Import domain types
-use crate::domain::imaging::ultrasound::hifu::HIFUTransducer;
+use crate::domain::imaging::ultrasound::hifu::DomainHIFUTransducer;
 
 /// Compute acoustic pressure field for a HIFU transducer
 ///
@@ -36,7 +36,7 @@ use crate::domain::imaging::ultrasound::hifu::HIFUTransducer;
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn compute_pressure_field(
-    transducer: &HIFUTransducer,
+    transducer: &DomainHIFUTransducer,
     grid: &Grid,
     medium: &dyn Medium,
 ) -> KwaversResult<Array3<f64>> {
@@ -100,7 +100,7 @@ pub fn compute_pressure_field(
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
 pub fn compute_intensity_field(
-    transducer: &HIFUTransducer,
+    transducer: &DomainHIFUTransducer,
     grid: &Grid,
     medium: &dyn Medium,
 ) -> KwaversResult<Array3<f64>> {
@@ -122,7 +122,7 @@ pub fn compute_intensity_field(
 
 /// Thermal dose calculation (CEM43 metric)
 #[derive(Debug, Clone)]
-pub struct ThermalDose {
+pub struct HifuThermalDose {
     /// Cumulative equivalent minutes at 43°C
     pub cem43: Array3<f64>,
     /// Temperature history for dose calculation
@@ -131,7 +131,7 @@ pub struct ThermalDose {
     time_points: Vec<f64>,
 }
 
-impl ThermalDose {
+impl HifuThermalDose {
     /// Create new thermal dose calculator
     pub fn new(grid: &Grid) -> Self {
         Self {
@@ -199,13 +199,14 @@ impl ThermalDose {
 mod tests {
     use super::*;
     use crate::domain::imaging::ultrasound::hifu::{
-        HIFUTreatmentPlan, TargetShape, TreatmentPhase, TreatmentProtocol, TreatmentTarget,
+        DomainHIFUTreatmentPlan, HifuTargetShape, HifuTreatmentProtocol, TreatmentPhase,
+        TreatmentTarget,
     };
     use crate::domain::medium::homogeneous::HomogeneousMedium;
 
     #[test]
     fn test_hifu_transducer_creation() {
-        let transducer = HIFUTransducer::new_single_element(1e6, 100.0, 0.1, 0.05);
+        let transducer = DomainHIFUTransducer::new_single_element(1e6, 100.0, 0.1, 0.05);
 
         assert_eq!(transducer.frequency, 1e6);
         assert_eq!(transducer.acoustic_power, 100.0);
@@ -217,7 +218,7 @@ mod tests {
     fn test_pressure_field_computation() -> KwaversResult<()> {
         let grid = Grid::new(32, 32, 32, 0.002, 0.002, 0.002)?;
         let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
-        let transducer = HIFUTransducer::new_single_element(1e6, 50.0, 0.08, 0.04);
+        let transducer = DomainHIFUTransducer::new_single_element(1e6, 50.0, 0.08, 0.04);
 
         let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
 
@@ -236,7 +237,7 @@ mod tests {
     #[test]
     fn test_thermal_dose_calculation() {
         let grid = Grid::new(16, 16, 16, 0.005, 0.005, 0.005).unwrap();
-        let mut thermal_dose = ThermalDose::new(&grid);
+        let mut thermal_dose = HifuThermalDose::new(&grid);
 
         // Add some temperature measurements
         let temp1 = Array3::from_elem(grid.dimensions(), 37.0); // Baseline
@@ -262,10 +263,10 @@ mod tests {
         let target = TreatmentTarget {
             center: [0.0, 0.0, 0.08],
             dimensions: [0.01, 0.01, 0.01],
-            shape: TargetShape::Sphere,
+            shape: HifuTargetShape::Sphere,
         };
 
-        let protocol = TreatmentProtocol {
+        let protocol = HifuTreatmentProtocol {
             total_duration: 30.0,
             pulse_duration: 5.0,
             prf: 1.0,
@@ -278,11 +279,11 @@ mod tests {
             }],
         };
 
-        let plan = HIFUTreatmentPlan::new(target, protocol);
+        let plan = DomainHIFUTreatmentPlan::new(target, protocol);
 
         let grid = Grid::new(32, 32, 32, 0.002, 0.002, 0.002)?;
         let _medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
-        let transducer = HIFUTransducer::new_single_element(1e6, 50.0, 0.08, 0.04);
+        let transducer = DomainHIFUTransducer::new_single_element(1e6, 50.0, 0.08, 0.04);
 
         // Note: validate is now a method on plan, taking transducer reference.
         // Original validate used to take _grid and _medium but ignored them.

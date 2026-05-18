@@ -8,7 +8,7 @@ use crate::core::error::{
 };
 
 use super::{
-    metrics::SlidingRateWindow, AlertThreshold, ConsoleExporter, ErrorMetrics, ErrorSeverity,
+    metrics::SlidingRateWindow, AlertThreshold, ConsoleExporter, TelemetryErrorCounts, ErrorSeverity,
     TelemetryContext, TelemetryExporter,
 };
 
@@ -23,7 +23,7 @@ fn telemetry_context_creation() {
 
 #[test]
 fn metrics_record_and_retrieve() {
-    let metrics = ErrorMetrics::new();
+    let metrics = TelemetryErrorCounts::new();
     let error = KwaversError::InternalError("test".to_string());
 
     metrics.record_error(&error);
@@ -35,7 +35,7 @@ fn metrics_record_and_retrieve() {
 
 #[test]
 fn recovery_rate_calculation() {
-    let metrics = ErrorMetrics::new();
+    let metrics = TelemetryErrorCounts::new();
 
     for _ in 0..9 {
         metrics.record_recovery_attempt();
@@ -49,7 +49,7 @@ fn recovery_rate_calculation() {
 
 #[test]
 fn prometheus_export_format() {
-    let metrics = ErrorMetrics::new();
+    let metrics = TelemetryErrorCounts::new();
     let export = metrics.export_prometheus();
 
     assert!(export.contains("kwavers_errors_total"));
@@ -61,7 +61,7 @@ fn prometheus_export_format() {
 
 #[test]
 fn prometheus_export_includes_error_type_counter() {
-    let metrics = ErrorMetrics::new();
+    let metrics = TelemetryErrorCounts::new();
     let error = KwaversError::InternalError("test".to_string());
 
     metrics.record_error(&error);
@@ -257,7 +257,7 @@ fn sliding_window_reuse_does_not_carry_stale_bucket_counts() {
 
 #[test]
 fn metrics_export_live_error_rate() {
-    let metrics = ErrorMetrics::new();
+    let metrics = TelemetryErrorCounts::new();
     let error = KwaversError::InternalError("test".to_string());
 
     metrics.record_error_with_time(&error, 139);

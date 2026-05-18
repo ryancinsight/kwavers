@@ -5,24 +5,33 @@ use std::f64::consts::PI;
 
 #[test]
 fn test_spatial_order_cfl_limits() {
-    assert!((SpatialOrder::Second.cfl_limit() - 0.577).abs() < 0.001); // 1/√3
-    assert!((SpatialOrder::Fourth.cfl_limit() - 0.258).abs() < 0.001); // 1/√15
-    assert!((SpatialOrder::Sixth.cfl_limit() - 0.192).abs() < 0.001); // 1/√27
+    assert!((AcousticSpatialOrder::Second.cfl_limit() - 0.577).abs() < 0.001); // 1/√3
+    assert!((AcousticSpatialOrder::Fourth.cfl_limit() - 0.258).abs() < 0.001); // 1/√15
+    assert!((AcousticSpatialOrder::Sixth.cfl_limit() - 0.192).abs() < 0.001); // 1/√27
 }
 
 #[test]
 fn test_spatial_order_minimum_points() {
-    assert_eq!(SpatialOrder::Second.minimum_grid_points(), 3);
-    assert_eq!(SpatialOrder::Fourth.minimum_grid_points(), 5);
-    assert_eq!(SpatialOrder::Sixth.minimum_grid_points(), 7);
+    assert_eq!(AcousticSpatialOrder::Second.minimum_grid_points(), 3);
+    assert_eq!(AcousticSpatialOrder::Fourth.minimum_grid_points(), 5);
+    assert_eq!(AcousticSpatialOrder::Sixth.minimum_grid_points(), 7);
 }
 
 #[test]
 fn test_spatial_order_from_usize() {
-    assert_eq!(SpatialOrder::from_usize(2).unwrap(), SpatialOrder::Second);
-    assert_eq!(SpatialOrder::from_usize(4).unwrap(), SpatialOrder::Fourth);
-    assert_eq!(SpatialOrder::from_usize(6).unwrap(), SpatialOrder::Sixth);
-    assert!(SpatialOrder::from_usize(99).is_err());
+    assert_eq!(
+        AcousticSpatialOrder::from_usize(2).unwrap(),
+        AcousticSpatialOrder::Second
+    );
+    assert_eq!(
+        AcousticSpatialOrder::from_usize(4).unwrap(),
+        AcousticSpatialOrder::Fourth
+    );
+    assert_eq!(
+        AcousticSpatialOrder::from_usize(6).unwrap(),
+        AcousticSpatialOrder::Sixth
+    );
+    assert!(AcousticSpatialOrder::from_usize(99).is_err());
 }
 
 #[test]
@@ -94,15 +103,15 @@ fn compute_max_stable_timestep_matches_analytical_cfl_formula() {
     let grid = Grid::new(10, 10, 10, dx, dx, dx).unwrap();
     let c_max = SOUND_SPEED_WATER_SIM;
 
-    let dt_second = compute_max_stable_timestep(&grid, c_max, SpatialOrder::Second);
-    let expected_second = SpatialOrder::Second.cfl_limit() * dx / c_max;
+    let dt_second = compute_max_stable_timestep(&grid, c_max, AcousticSpatialOrder::Second);
+    let expected_second = AcousticSpatialOrder::Second.cfl_limit() * dx / c_max;
     assert!(
         (dt_second - expected_second).abs() < 1e-15,
         "Second-order: got {dt_second:.6e} expected {expected_second:.6e}"
     );
 
-    let dt_fourth = compute_max_stable_timestep(&grid, c_max, SpatialOrder::Fourth);
-    let expected_fourth = SpatialOrder::Fourth.cfl_limit() * dx / c_max;
+    let dt_fourth = compute_max_stable_timestep(&grid, c_max, AcousticSpatialOrder::Fourth);
+    let expected_fourth = AcousticSpatialOrder::Fourth.cfl_limit() * dx / c_max;
     assert!(
         (dt_fourth - expected_fourth).abs() < 1e-15,
         "Fourth-order: got {dt_fourth:.6e} expected {expected_fourth:.6e}"
@@ -119,8 +128,8 @@ fn compute_max_stable_timestep_matches_analytical_cfl_formula() {
 fn compute_max_stable_timestep_uses_minimum_spacing_for_anisotropic_grid() {
     let grid = Grid::new(10, 10, 10, 0.001, 0.002, 0.003).unwrap();
     let c_max = SOUND_SPEED_WATER_SIM;
-    let dt = compute_max_stable_timestep(&grid, c_max, SpatialOrder::Second);
-    let expected = SpatialOrder::Second.cfl_limit() * 0.001 / c_max;
+    let dt = compute_max_stable_timestep(&grid, c_max, AcousticSpatialOrder::Second);
+    let expected = AcousticSpatialOrder::Second.cfl_limit() * 0.001 / c_max;
     assert!((dt - expected).abs() < 1e-15);
 }
 
@@ -151,14 +160,22 @@ fn compute_nonlinearity_coefficient_matches_ba_formula() {
 
 #[test]
 fn test_heterogeneous_medium_position_dependence() {
+    use crate::domain::medium::heterogeneous::tissue::DomainTissueRegion;
     use crate::domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
-    use crate::domain::medium::heterogeneous::tissue::TissueRegion;
-    use crate::domain::medium::TissueType;
+    use crate::domain::medium::AbsorptionTissueType;
 
     let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
-    let mut medium = HeterogeneousTissueMedium::new(grid.clone(), TissueType::Muscle);
+    let mut medium = HeterogeneousTissueMedium::new(grid.clone(), AbsorptionTissueType::Muscle);
 
-    let region = TissueRegion::new(TissueType::Fat, 0.005, 0.015, 0.005, 0.015, 0.005, 0.015);
+    let region = DomainTissueRegion::new(
+        AbsorptionTissueType::Fat,
+        0.005,
+        0.015,
+        0.005,
+        0.015,
+        0.005,
+        0.015,
+    );
     medium.set_tissue_region(&region).unwrap();
 
     let density1 = crate::domain::medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);

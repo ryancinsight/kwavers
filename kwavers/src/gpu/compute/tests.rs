@@ -106,7 +106,7 @@ fn test_fdtd_gpu_linear_ramp_zero_laplacian() {
     }
 }
 
-/// Dimension mismatch returns an error.
+/// GridDimension mismatch returns an error.
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///

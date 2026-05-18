@@ -21,7 +21,7 @@ pub struct PMLBoundary {
 
 /// Configuration for PML boundary layer
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PMLConfig {
+pub struct DomainPmlConfig {
     pub thickness: usize,
     pub sigma_max_acoustic: f64,
     pub sigma_max_light: f64,
@@ -32,7 +32,7 @@ pub struct PMLConfig {
     pub target_reflection: Option<f64>,
 }
 
-impl Default for PMLConfig {
+impl Default for DomainPmlConfig {
     fn default() -> Self {
         Self {
             thickness: 10,
@@ -47,7 +47,7 @@ impl Default for PMLConfig {
     }
 }
 
-impl PMLConfig {
+impl DomainPmlConfig {
     /// With thickness.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -101,7 +101,7 @@ impl PMLBoundary {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new(config: PMLConfig) -> KwaversResult<Self> {
+    pub fn new(config: DomainPmlConfig) -> KwaversResult<Self> {
         config.validate()?;
 
         let acoustic_profile =
@@ -124,7 +124,7 @@ impl PMLBoundary {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn with_defaults() -> KwaversResult<Self> {
-        Self::new(PMLConfig::default())
+        Self::new(DomainPmlConfig::default())
     }
 
     fn damping_profile(

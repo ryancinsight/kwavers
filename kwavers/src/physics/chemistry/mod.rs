@@ -45,4 +45,6 @@ pub use reactions::{
     ReactionType, Species, ThermalDependence,
 };
 pub use ros_plasma::{ROSConcentrations, ROSSpecies, SonochemicalYield, SonochemistryModel};
-pub use validation::{ArrheniusValidator, LiteratureValue, ValidatedKinetics, ValidationResult};
+pub use validation::{
+    ArrheniusValidator, KineticsValidationResult, LiteratureValue, ValidatedKinetics,
+};

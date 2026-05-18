@@ -59,7 +59,7 @@
 mod tests;
 
 use crate::core::error::KwaversResult;
-use crate::domain::mesh::BoundaryType;
+use crate::domain::mesh::MeshBoundaryType;
 use crate::domain::source::Source;
 use ndarray::Array3;
 use ndarray::{Array1, ArrayView2};
@@ -181,7 +181,7 @@ pub trait FrequencyDomainAcousticBackend: Debug {
     ///
     fn add_dirichlet_on_boundary_type(
         &mut self,
-        boundary_type: BoundaryType,
+        boundary_type: MeshBoundaryType,
         value: Complex64,
     ) -> KwaversResult<usize>;
 

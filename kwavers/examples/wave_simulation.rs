@@ -42,8 +42,8 @@ fn main() -> KwaversResult<()> {
     let time = Time::new(dt, num_steps);
 
     // Create boundary (using PML for absorption)
-    use kwavers::domain::boundary::pml::{PMLBoundary, PMLConfig};
-    let pml_config = PMLConfig::default();
+    use kwavers::domain::boundary::pml::{DomainPmlConfig, PMLBoundary};
+    let pml_config = DomainPmlConfig::default();
     let boundary: Box<dyn kwavers::domain::boundary::Boundary> =
         Box::new(PMLBoundary::new(pml_config)?);
 

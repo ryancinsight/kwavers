@@ -49,11 +49,11 @@ pub trait PhysicsDomain<B: AutodiffBackend>: std::fmt::Debug {
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2>;
 
     /// Get boundary condition specifications
-    fn boundary_conditions(&self) -> Vec<BoundaryConditionSpec>;
+    fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec>;
 
     /// Get initial condition specifications
     fn initial_conditions(&self) -> Vec<InitialConditionSpec>;
@@ -70,14 +70,14 @@ pub trait PhysicsDomain<B: AutodiffBackend>: std::fmt::Debug {
     }
 
     /// Get coupling interfaces if supported
-    fn coupling_interfaces(&self) -> Vec<CouplingInterface> {
+    fn coupling_interfaces(&self) -> Vec<PinnCouplingInterface> {
         Vec::new()
     }
 }
 
 /// Physics parameters container
 #[derive(Debug, Clone)]
-pub struct PhysicsParameters {
+pub struct PinnDomainPhysicsParameters {
     /// Material properties (density, viscosity, etc.)
     pub material_properties: HashMap<String, f64>,
     /// Boundary condition values
@@ -90,25 +90,25 @@ pub struct PhysicsParameters {
 
 /// Boundary condition specification
 #[derive(Debug, Clone)]
-pub enum BoundaryConditionSpec {
+pub enum PinnBoundaryConditionSpec {
     /// Dirichlet boundary condition: u = g
     Dirichlet {
         boundary: BoundaryPosition,
         value: Vec<f64>,
-        component: BoundaryComponent,
+        component: PinnBoundaryComponent,
     },
     /// Neumann boundary condition: ∂u/∂n = g
     Neumann {
         boundary: BoundaryPosition,
         flux: Vec<f64>,
-        component: BoundaryComponent,
+        component: PinnBoundaryComponent,
     },
     /// Robin boundary condition: ∂u/∂n + αu = g
     Robin {
         boundary: BoundaryPosition,
         alpha: f64,
         beta: f64,
-        component: BoundaryComponent,
+        component: PinnBoundaryComponent,
     },
 }
 
@@ -134,7 +134,7 @@ pub enum BoundaryPosition {
 
 /// Boundary component (for multi-component physics)
 #[derive(Debug, Clone, PartialEq)]
-pub enum BoundaryComponent {
+pub enum PinnBoundaryComponent {
     /// Scalar field
     Scalar,
     /// Vector field component
@@ -152,12 +152,12 @@ pub enum InitialConditionSpec {
     /// Initial condition: u(x,y,0) = constant value
     DirichletConstant {
         value: Vec<f64>,
-        component: BoundaryComponent,
+        component: PinnBoundaryComponent,
     },
     /// Initial derivative condition: ∂u/∂t(x,y,0) = constant flux
     NeumannConstant {
         flux: Vec<f64>,
-        component: BoundaryComponent,
+        component: PinnBoundaryComponent,
     },
 }
 
@@ -200,7 +200,7 @@ pub struct PhysicsValidationMetric {
 
 /// Multi-physics coupling interface
 #[derive(Debug, Clone)]
-pub struct CouplingInterface {
+pub struct PinnCouplingInterface {
     /// Interface name
     pub name: String,
     /// Interface position
@@ -208,14 +208,14 @@ pub struct CouplingInterface {
     /// Coupled physics domains
     pub coupled_domains: Vec<String>,
     /// Coupling type
-    pub coupling_type: CouplingType,
+    pub coupling_type: PinnPhysicsCouplingType,
     /// Coupling strength/parameters
     pub coupling_params: HashMap<String, f64>,
 }
 
 /// Type of physics coupling
 #[derive(Debug, Clone, PartialEq)]
-pub enum CouplingType {
+pub enum PinnPhysicsCouplingType {
     /// Continuity of solution and flux
     Conjugate,
     /// Continuity of solution only

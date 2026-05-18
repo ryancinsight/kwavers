@@ -1,4 +1,4 @@
-use super::types::TissueType;
+use super::types::PhantomTissueType;
 use crate::clinical::imaging::chromophores::HemoglobinDatabase;
 use crate::domain::medium::properties::OpticalPropertyData;
 
@@ -64,15 +64,15 @@ pub fn compute_tumor_properties(
 
 /// Get tissue optical properties by type
 #[must_use]
-pub fn get_tissue_properties(tissue_type: TissueType) -> OpticalPropertyData {
+pub fn get_tissue_properties(tissue_type: PhantomTissueType) -> OpticalPropertyData {
     match tissue_type {
-        TissueType::SkinEpidermis => OpticalPropertyData::skin_epidermis(),
-        TissueType::SkinDermis => OpticalPropertyData::skin_dermis(),
-        TissueType::Fat => OpticalPropertyData::fat(),
-        TissueType::Muscle => OpticalPropertyData::muscle(),
-        TissueType::Liver => OpticalPropertyData::liver(),
-        TissueType::Brain => OpticalPropertyData::brain_gray_matter(),
-        TissueType::Bone => OpticalPropertyData::bone_cortical(),
-        TissueType::Custom(_) => OpticalPropertyData::soft_tissue(),
+        PhantomTissueType::SkinEpidermis => OpticalPropertyData::skin_epidermis(),
+        PhantomTissueType::SkinDermis => OpticalPropertyData::skin_dermis(),
+        PhantomTissueType::Fat => OpticalPropertyData::fat(),
+        PhantomTissueType::Muscle => OpticalPropertyData::muscle(),
+        PhantomTissueType::Liver => OpticalPropertyData::liver(),
+        PhantomTissueType::Brain => OpticalPropertyData::brain_gray_matter(),
+        PhantomTissueType::Bone => OpticalPropertyData::bone_cortical(),
+        PhantomTissueType::Custom(_) => OpticalPropertyData::soft_tissue(),
     }
 }

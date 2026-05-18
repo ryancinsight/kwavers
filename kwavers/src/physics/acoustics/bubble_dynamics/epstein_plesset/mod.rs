@@ -17,5 +17,6 @@ mod tests;
 
 pub use solver::EpsteinPlessetStabilitySolver;
 pub use types::{
-    AmplitudeEvolution, OscillationType, StabilityAnalysis, StabilityBoundary, ValidationResults,
+    AmplitudeEvolution, EpsteinPlessetValidationResults, OscillationType, StabilityAnalysis,
+    StabilityBoundary,
 };

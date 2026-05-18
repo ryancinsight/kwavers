@@ -23,10 +23,11 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         base_config: BurnPINN2DConfig,
         _geometry: Geometry2D,
     ) -> KwaversResult<Self> {
-        let decomposition = crate::solver::inverse::pinn::ml::DecompositionStrategy::Spatial {
-            dimensions: 2,
-            overlap: 0.05,
-        };
+        let decomposition =
+            crate::solver::inverse::pinn::ml::MultiGpuDecompositionStrategy::Spatial {
+                dimensions: 2,
+                overlap: 0.05,
+            };
         let load_balancer = crate::solver::inverse::pinn::ml::LoadBalancingAlgorithm::Dynamic {
             imbalance_threshold: 0.1,
             migration_interval: 30.0,

@@ -1,24 +1,24 @@
 //! Tests for multi-physics coupling types
 
-use super::domain_decomposition::{DomainDecomposition, TransmissionCondition};
+use super::domain_decomposition::{DomainDecompTransmissionCondition, DomainDecomposition};
 use super::*;
 
 #[test]
 fn test_interface_conditions() {
-    let dirichlet = InterfaceCondition::Dirichlet {
+    let dirichlet = CouplingInterfaceCondition::Dirichlet {
         field_name: "pressure".to_string(),
     };
-    let neumann = InterfaceCondition::Neumann {
+    let neumann = CouplingInterfaceCondition::Neumann {
         flux_name: "stress".to_string(),
     };
 
     match dirichlet {
-        InterfaceCondition::Dirichlet { field_name } => assert_eq!(field_name, "pressure"),
+        CouplingInterfaceCondition::Dirichlet { field_name } => assert_eq!(field_name, "pressure"),
         _ => panic!("Wrong condition type"),
     }
 
     match neumann {
-        InterfaceCondition::Neumann { flux_name } => assert_eq!(flux_name, "stress"),
+        CouplingInterfaceCondition::Neumann { flux_name } => assert_eq!(flux_name, "stress"),
         _ => panic!("Wrong condition type"),
     }
 }
@@ -40,11 +40,11 @@ fn test_coupling_strength() {
 fn test_domain_decomposition() {
     let decomposition = DomainDecomposition {
         subdomain_bounds: vec![vec![0.0, 1.0], vec![1.0, 2.0]],
-        interface_conditions: vec![InterfaceCondition::Dirichlet {
+        interface_conditions: vec![CouplingInterfaceCondition::Dirichlet {
             field_name: "velocity".to_string(),
         }],
         overlap_thickness: 0.1,
-        transmission_conditions: vec![TransmissionCondition::Dirichlet {
+        transmission_conditions: vec![DomainDecompTransmissionCondition::Dirichlet {
             boundary_value: 0.0,
         }],
     };

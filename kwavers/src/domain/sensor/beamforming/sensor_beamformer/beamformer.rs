@@ -1,6 +1,6 @@
 //! `SensorBeamformer` — geometry-aware delay, apodization, and steering for sensor arrays.
 
-use super::types::{SensorProcessingParams, WindowType};
+use super::types::{BeamformerWindowType, SensorProcessingParams};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::sensor::array::SensorArray;
@@ -92,13 +92,13 @@ impl SensorBeamformer {
         let mut delays = Array2::zeros((self.sensor_positions.len(), image_grid.size()));
 
         let x_coords: Vec<f64> = image_grid
-            .coordinates(crate::domain::grid::Dimension::X)
+            .coordinates(crate::domain::grid::GridDimension::X)
             .collect();
         let y_coords: Vec<f64> = image_grid
-            .coordinates(crate::domain::grid::Dimension::Y)
+            .coordinates(crate::domain::grid::GridDimension::Y)
             .collect();
         let z_coords: Vec<f64> = image_grid
-            .coordinates(crate::domain::grid::Dimension::Z)
+            .coordinates(crate::domain::grid::GridDimension::Z)
             .collect();
 
         for (sensor_idx, sensor_pos) in self.sensor_positions.iter().enumerate() {
@@ -143,15 +143,15 @@ impl SensorBeamformer {
     pub fn apply_windowing(
         &self,
         delays: &Array2<f64>,
-        window_type: WindowType,
+        window_type: BeamformerWindowType,
     ) -> KwaversResult<Array2<f64>> {
         let n_sensors = delays.nrows();
 
         let signal_window_type = match window_type {
-            WindowType::Hanning => signal_window::WindowType::Hann,
-            WindowType::Hamming => signal_window::WindowType::Hamming,
-            WindowType::Blackman => signal_window::WindowType::Blackman,
-            WindowType::Rectangular => signal_window::WindowType::Rectangular,
+            BeamformerWindowType::Hanning => signal_window::SignalWindowType::Hann,
+            BeamformerWindowType::Hamming => signal_window::SignalWindowType::Hamming,
+            BeamformerWindowType::Blackman => signal_window::SignalWindowType::Blackman,
+            BeamformerWindowType::Rectangular => signal_window::SignalWindowType::Rectangular,
         };
 
         let window_coeffs = signal_window::get_win(signal_window_type, n_sensors, true);

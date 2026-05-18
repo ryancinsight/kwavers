@@ -5,7 +5,7 @@ use std::f64::consts::PI;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 
-use super::spatial_order::SpatialOrder;
+use super::spatial_order::AcousticSpatialOrder;
 
 // Coefficient relating power-law absorption to acoustic diffusivity for soft tissues.
 // Formula: δ ≈ 2αc³/(ω²). Reference: Szabo (1995) "Time domain wave equations for lossy media" Eq. 14.
@@ -48,7 +48,7 @@ pub fn compute_diffusivity_from_power_law_absorption<M: Medium + ?Sized>(
 pub fn compute_max_stable_timestep(
     grid: &Grid,
     max_sound_speed: f64,
-    spatial_order: SpatialOrder,
+    spatial_order: AcousticSpatialOrder,
 ) -> f64 {
     let min_dx = grid.dx.min(grid.dy).min(grid.dz);
     let cfl_limit = spatial_order.cfl_limit();

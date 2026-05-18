@@ -22,12 +22,10 @@ pub mod ultrafast;
 pub use grid_sampling::{GridPoint, GridSensorSet};
 
 // Sensor array types (domain layer: hardware geometry)
-pub use array::{ArrayGeometry, Position, Sensor, SensorArray};
+pub use array::{Position, Sensor, SensorArray, SensorArrayGeometry};
 
-// Re-export PAM components without colliding names; configs remain module-scoped.
-pub use passive_acoustic_mapping::{
-    ArrayElement, ArrayGeometry as PAMArrayGeometry, DirectivityPattern,
-};
+// Re-export PAM components; configs remain module-scoped.
+pub use passive_acoustic_mapping::{DirectivityPattern, PamArrayElement, PamArrayGeometry};
 // Expose unified beamforming config at the sensor module root.
 pub use beamforming::{BeamformingConfig, BeamformingCoreConfig};
 

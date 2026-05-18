@@ -69,7 +69,7 @@ pub enum Precision {
 
 /// Physics parameters for PDE computations
 #[derive(Debug, Clone)]
-pub struct PhysicsParameters {
+pub struct GpuPhysicsParameters {
     pub equation_type: EquationType,
     pub wave_speed: Option<f64>,
     pub diffusion_coefficient: Option<f64>,

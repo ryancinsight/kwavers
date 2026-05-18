@@ -1,6 +1,6 @@
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::EigenDecomposition;
 use ndarray::{Array1, Array2};
 
 /// Adaptive clutter filter using eigendecomposition.
@@ -127,7 +127,7 @@ impl AdaptiveFilter {
             }
         }
 
-        let (eigenvalues, eigenvectors) = LinearAlgebra::eigendecomposition(&covariance)?;
+        let (eigenvalues, eigenvectors) = EigenDecomposition::eigendecomposition(&covariance)?;
 
         // Sort descending
         let mut indices: Vec<usize> = (0..eigenvalues.len()).collect();

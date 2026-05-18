@@ -1,4 +1,4 @@
-//! `GPUMemoryPool` and `MemoryStats`.
+//! `GPUMemoryPool` and `SweGpuMemoryStats`.
 
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -66,11 +66,11 @@ impl GPUMemoryPool {
 
     /// Get memory usage statistics
     #[must_use]
-    pub fn memory_stats(&self) -> MemoryStats {
+    pub fn memory_stats(&self) -> SweGpuMemoryStats {
         let total_blocks = self.available_blocks.len();
         let average_block_size = self.total_allocated.checked_div(total_blocks).unwrap_or(0);
 
-        MemoryStats {
+        SweGpuMemoryStats {
             total_allocated: self.total_allocated,
             total_blocks,
             average_block_size,
@@ -81,7 +81,7 @@ impl GPUMemoryPool {
 
 /// Memory usage statistics
 #[derive(Debug, Clone)]
-pub struct MemoryStats {
+pub struct SweGpuMemoryStats {
     /// Total allocated memory (bytes)
     pub total_allocated: usize,
     /// Number of memory blocks

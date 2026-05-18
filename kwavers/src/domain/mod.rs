@@ -115,7 +115,8 @@ pub mod tensor;
 pub mod therapy;
 
 // Re-export key domain types for convenience
-pub use geometry::{Dimension, GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
+pub use geometry::{GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
+pub use grid::GridDimension;
 
 pub use tensor::{
     convert, Backend as TensorBackend, DType, NdArrayTensor, Shape as TensorShape, TensorMut,

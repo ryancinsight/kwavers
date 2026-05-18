@@ -41,7 +41,6 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{s, Array3, Zip};
 
-use super::super::super::constants::DEFAULT_TIME_STEP;
 use super::super::super::fd_coeffs::{FD_COEFF_0, FD_COEFF_1, FD_COEFF_2};
 use super::super::types::ReverseTimeMigration;
 
@@ -59,7 +58,7 @@ impl ReverseTimeMigration {
         pressure_previous: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        let dt = DEFAULT_TIME_STEP;
+        let dt = self.config.dt;
         let (nx, ny, nz) = pressure.dim();
         let dx2 = grid.dx * grid.dx;
         let dy2 = grid.dy * grid.dy;

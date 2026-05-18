@@ -8,11 +8,9 @@ mod nonlinear;
 mod solver;
 mod spectral;
 
-pub use metrics::PerformanceMetrics;
+pub use metrics::WesterveltStepMetrics;
 pub use solver::WesterveltWave;
 
 // Re-export key functions for compatibility
 pub use nonlinear::compute_nonlinear_term;
-pub use spectral::{
-    apply_kspace_correction, compute_laplacian_spectral, compute_laplacian_spectral_into,
-};
+pub use spectral::{compute_laplacian_spectral, compute_laplacian_spectral_into};

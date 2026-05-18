@@ -5,8 +5,9 @@
 
 #[cfg(test)]
 mod tests {
-    use ndarray::{s, Array3, Array4};
+    use ndarray::{s, Array2, Array3, Array4};
 
+    use crate::domain::grid::Grid;
     use crate::solver::inverse::reconstruction::seismic::config::{
         RtmImagingCondition, SeismicImagingConfig,
     };
@@ -104,5 +105,84 @@ mod tests {
             rtm.image[[1, 1, 1]]
         );
         assert_eq!(rtm.image[[0, 1, 1]], 0.0, "boundary must be zero");
+    }
+
+    /// Regression: at medical-ultrasound frequencies (f₀ = 150 kHz, dx = 3 mm,
+    /// dt ≈ 200 ns) the RTM forward-propagation `dt` and Ricker frequency must
+    /// be read from `SeismicImagingConfig`, not from the seismic-scale defaults
+    /// (5e-4 s, 15 Hz).  When this regression was introduced (May 2026) the
+    /// hardcoded defaults produced CFL ≈ 250 → silent NaN divergence →
+    /// identically-zero image and zero illumination.
+    ///
+    /// This test runs RTM end-to-end on a 32³ grid with one source / one
+    /// receiver at MHz-scale parameters and asserts (a) the image is not
+    /// identically zero, (b) every value is finite (no NaN/Inf from CFL
+    /// violation), and (c) the source illumination accumulated.
+    /// # Panics
+    /// - Panics if the propagator silently regresses to the seismic-scale defaults.
+    #[test]
+    fn rtm_propagates_at_medical_ultrasound_frequency() {
+        const NX: usize = 32;
+        const NY: usize = 32;
+        const NZ: usize = 32;
+        const DX: f64 = 3.0e-3; // 3 mm
+        const F0: f64 = 150_000.0; // 150 kHz
+        const C: f64 = 1500.0; // water
+
+        // CFL-stable dt for the 4th-order interior stencil:
+        //   dt ≤ dx · CFL / (c_max · √D),  CFL = 0.3, D = 3
+        let dt = 0.3 * DX / (C * (3.0_f64).sqrt());
+        let nt = 64usize; // one-way transit ≈ 64 µs / dt(346 ns) ≈ 185; 64 is enough to see the wave move
+
+        let config = SeismicImagingConfig {
+            nx: NX,
+            ny: NY,
+            nz: NZ,
+            dt,
+            source_frequency_hz: F0,
+            rtm_imaging_condition: RtmImagingCondition::ZeroLag,
+            ..SeismicImagingConfig::default()
+        };
+        let velocity = Array3::from_elem((NX, NY, NZ), C);
+        let mut rtm = ReverseTimeMigration::new(config, velocity);
+
+        // Single source / single receiver placed inside the interior so the
+        // 4th-order stencil (needs 2-cell halo) can read all neighbours.
+        let source_pos = (NX / 2, NY / 2, NZ / 2);
+        let receiver_pos = (NX / 2 + 6, NY / 2, NZ / 2);
+        let receiver_positions = vec![receiver_pos];
+
+        // Receiver data: same Ricker delayed by one path-length so backward
+        // injection has non-trivial energy.  Magnitude is arbitrary — the
+        // assertion is on non-zero output, not amplitude.
+        let mut shot_data = Array2::<f64>::zeros((1, nt));
+        for t in 0..nt {
+            let tau = std::f64::consts::PI * F0 * (t as f64 * dt - 1.5 / F0);
+            shot_data[[0, t]] = (1.0 - 2.0 * tau * tau) * (-tau * tau).exp();
+        }
+
+        let grid = Grid::new(NX, NY, NZ, DX, DX, DX).unwrap();
+        rtm.migrate_shot(&shot_data, source_pos, &receiver_positions, &grid)
+            .expect("migrate_shot must succeed at MHz-scale config.dt");
+
+        // (b) every voxel finite — CFL violation would have produced NaN.
+        assert!(
+            rtm.get_image().iter().all(|v| v.is_finite()),
+            "RTM image contains non-finite values — propagator likely violated CFL \
+             (regression to hardcoded seismic-scale dt)"
+        );
+
+        // (a) image is not identically zero — the imaging condition fired.
+        let img_peak = rtm
+            .get_image()
+            .iter()
+            .copied()
+            .fold(0.0_f64, |a, v| a.max(v.abs()));
+        assert!(
+            img_peak > 0.0,
+            "RTM image is identically zero — forward propagation produced no \
+             energy in the medium (regression to hardcoded 15 Hz wavelet at \
+             MHz-scale dt would do this)"
+        );
     }
 }

@@ -2,7 +2,7 @@
 //!
 //! Unified Laplacian operator implementation for discretized grids.
 
-use super::coefficients::{FDCoefficients, SpatialOrder};
+use super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
@@ -11,14 +11,14 @@ use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
 #[derive(Debug, Clone)]
 pub struct LaplacianConfig {
     /// Finite difference order
-    pub order: SpatialOrder,
+    pub order: FdAccuracyOrder,
     /// Boundary condition type
-    pub boundary: BoundaryCondition,
+    pub boundary: LaplacianBoundary,
 }
 
 /// Boundary condition for Laplacian operator
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BoundaryCondition {
+pub enum LaplacianBoundary {
     /// Zero at boundaries
     Dirichlet,
     /// Zero gradient at boundaries
@@ -30,8 +30,8 @@ pub enum BoundaryCondition {
 impl Default for LaplacianConfig {
     fn default() -> Self {
         Self {
-            order: SpatialOrder::Second,
-            boundary: BoundaryCondition::Dirichlet,
+            order: FdAccuracyOrder::Second,
+            boundary: LaplacianBoundary::Dirichlet,
         }
     }
 }
@@ -68,12 +68,12 @@ impl LaplacianOperator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn with_order(grid: &Grid, order: SpatialOrder) -> Self {
+    pub fn with_order(grid: &Grid, order: FdAccuracyOrder) -> Self {
         Self::new(
             grid,
             LaplacianConfig {
                 order,
-                boundary: BoundaryCondition::Dirichlet,
+                boundary: LaplacianBoundary::Dirichlet,
             },
         )
     }
@@ -113,7 +113,7 @@ impl LaplacianOperator {
         let radius = side_coeffs.len();
 
         // Handle interior points
-        if self.config.order == SpatialOrder::Second {
+        if self.config.order == FdAccuracyOrder::Second {
             self.apply_second_order_interior(input, output.view_mut());
         } else {
             self.apply_higher_order_interior(
@@ -191,11 +191,11 @@ impl LaplacianOperator {
         radius: usize,
     ) {
         match self.config.boundary {
-            BoundaryCondition::Dirichlet => {}
-            BoundaryCondition::Neumann => {
+            LaplacianBoundary::Dirichlet => {}
+            LaplacianBoundary::Neumann => {
                 self.apply_neumann_boundaries(input, output.view_mut(), radius);
             }
-            BoundaryCondition::Periodic => {
+            LaplacianBoundary::Periodic => {
                 self.apply_periodic_boundaries(input, output.view_mut(), radius);
             }
         }
@@ -272,7 +272,7 @@ impl LaplacianOperator {
 pub fn laplacian(
     field: ArrayView3<f64>,
     grid: &Grid,
-    order: SpatialOrder,
+    order: FdAccuracyOrder,
 ) -> KwaversResult<Array3<f64>> {
     let operator = LaplacianOperator::with_order(grid, order);
     operator.apply(field)
@@ -348,8 +348,8 @@ mod tests {
             }
         }
 
-        let op2 = LaplacianOperator::with_order(&grid, SpatialOrder::Second);
-        let op4 = LaplacianOperator::with_order(&grid, SpatialOrder::Fourth);
+        let op2 = LaplacianOperator::with_order(&grid, FdAccuracyOrder::Second);
+        let op4 = LaplacianOperator::with_order(&grid, FdAccuracyOrder::Fourth);
 
         let result2 = op2.apply(field.view()).unwrap();
         let result4 = op4.apply(field.view()).unwrap();

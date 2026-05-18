@@ -1,5 +1,6 @@
 use super::{
-    DataType, EdgeRuntime, ExecutionKernel, IOSpecification, MemoryAllocator, PerformanceMonitor,
+    DataType, EdgeRuntime, EdgeRuntimePerformanceMonitor, ExecutionKernel, IOSpecification,
+    MemoryAllocator,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::QuantizedModel;
@@ -15,7 +16,7 @@ impl EdgeRuntime {
             model: None,
             allocator: MemoryAllocator::new(total_memory),
             kernel_cache: HashMap::new(),
-            performance_monitor: PerformanceMonitor {
+            performance_monitor: EdgeRuntimePerformanceMonitor {
                 inference_count: 0,
                 total_inference_time_us: 0,
                 peak_memory_usage: 0,

@@ -2,9 +2,9 @@
 
 use super::domain::CavitationCoupledDomain;
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface,
-    InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
-    PhysicsValidationMetric,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
+    PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
+    PinnDomainPhysicsParameters,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
@@ -22,7 +22,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for CavitationCoupledDomain<B> {
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2> {
         let acoustic_field = model.forward(x.clone(), y.clone(), t.clone());
 
@@ -53,17 +53,17 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for CavitationCoupledDomain<B> {
         cav + scat
     }
 
-    fn boundary_conditions(&self) -> Vec<BoundaryConditionSpec> {
+    fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec> {
         vec![
-            BoundaryConditionSpec::Dirichlet {
+            PinnBoundaryConditionSpec::Dirichlet {
                 boundary: BoundaryPosition::Left,
                 value: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
-            BoundaryConditionSpec::Dirichlet {
+            PinnBoundaryConditionSpec::Dirichlet {
                 boundary: BoundaryPosition::Right,
                 value: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
         ]
     }
@@ -72,11 +72,11 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for CavitationCoupledDomain<B> {
         vec![
             InitialConditionSpec::DirichletConstant {
                 value: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
             InitialConditionSpec::DirichletConstant {
                 value: vec![self.config.bubble_params.r0],
-                component: BoundaryComponent::Custom("bubble_radius".to_string()),
+                component: PinnBoundaryComponent::Custom("bubble_radius".to_string()),
             },
         ]
     }

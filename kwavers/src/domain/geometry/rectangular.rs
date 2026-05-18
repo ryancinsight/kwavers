@@ -1,6 +1,6 @@
 use ndarray::{Array1, Array2};
 
-use super::{Dimension, GeometricDomain, PointLocation};
+use super::{GeometricDomain, GeometryDimension, PointLocation};
 
 /// Rectangular domain in 1D, 2D, or 3D
 ///
@@ -77,11 +77,11 @@ impl RectangularDomain {
 }
 
 impl GeometricDomain for RectangularDomain {
-    fn dimension(&self) -> Dimension {
+    fn dimension(&self) -> GeometryDimension {
         match self.min.len() {
-            1 => Dimension::One,
-            2 => Dimension::Two,
-            3 => Dimension::Three,
+            1 => GeometryDimension::One,
+            2 => GeometryDimension::Two,
+            3 => GeometryDimension::Three,
             _ => unreachable!("RectangularDomain only constructed with 1-3 dimensions"),
         }
     }

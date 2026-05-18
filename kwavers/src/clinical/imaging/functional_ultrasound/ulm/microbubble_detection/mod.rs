@@ -25,4 +25,4 @@ mod types;
 pub use clutter::SvdClutterFilter;
 pub use detector::UlmDetector;
 pub use localize::GaussianLocalizer;
-pub use types::{BubbleDetection, LocalizationConfig, SvdClutterConfig};
+pub use types::{BubbleDetection, GaussianLocalizationConfig, SvdClutterConfig};

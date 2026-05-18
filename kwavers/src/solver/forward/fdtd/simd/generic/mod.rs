@@ -66,7 +66,7 @@ pub mod velocity;
 
 /// Configuration for SIMD stencil optimization
 #[derive(Debug, Clone, Copy)]
-pub struct SimdStencilConfig {
+pub struct GenericSimdStencilConfig {
     /// Tile size for 3D processing (4, 8, or 16)
     pub tile_size: usize,
 
@@ -92,7 +92,7 @@ pub struct SimdStencilConfig {
     pub dt: f64,
 }
 
-impl Default for SimdStencilConfig {
+impl Default for GenericSimdStencilConfig {
     fn default() -> Self {
         Self {
             tile_size: 8,
@@ -114,9 +114,9 @@ impl Default for SimdStencilConfig {
 /// and reused every step via `std::mem::swap` — avoiding the ~128 MB per-step heap
 /// allocation that a naive `velocity.clone()` would incur on a 256³ grid.
 #[derive(Debug, Clone)]
-pub struct SimdStencilProcessor {
+pub struct GenericSimdStencilProcessor {
     /// Configuration
-    pub(super) config: SimdStencilConfig,
+    pub(super) config: GenericSimdStencilConfig,
 
     /// Precomputed coefficient for pressure update
     pub(super) pressure_coeff: f64,
@@ -141,12 +141,12 @@ pub struct SimdStencilProcessor {
     pub(super) pres_scratch: Array3<f64>,
 }
 
-impl SimdStencilProcessor {
+impl GenericSimdStencilProcessor {
     /// Create new SIMD stencil processor
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn new(nx: usize, ny: usize, nz: usize, config: SimdStencilConfig) -> KwaversResult<Self> {
+    pub fn new(nx: usize, ny: usize, nz: usize, config: GenericSimdStencilConfig) -> KwaversResult<Self> {
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
                 "Grid dimensions must be at least 3".to_string(),
@@ -197,7 +197,7 @@ impl SimdStencilProcessor {
     }
 
     /// Get configuration
-    pub fn config(&self) -> SimdStencilConfig {
+    pub fn config(&self) -> GenericSimdStencilConfig {
         self.config
     }
 }
@@ -208,22 +208,22 @@ mod tests {
 
     #[test]
     fn test_stencil_creation() {
-        let config = SimdStencilConfig::default();
-        let result = SimdStencilProcessor::new(64, 64, 64, config);
+        let config = GenericSimdStencilConfig::default();
+        let result = GenericSimdStencilProcessor::new(64, 64, 64, config);
         let _processor = result.unwrap();
     }
 
     #[test]
     fn test_dimension_validation() {
-        let config = SimdStencilConfig::default();
-        let result = SimdStencilProcessor::new(2, 64, 64, config);
+        let config = GenericSimdStencilConfig::default();
+        let result = GenericSimdStencilProcessor::new(2, 64, 64, config);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_tile_statistics() {
-        let config = SimdStencilConfig::default();
-        let processor = SimdStencilProcessor::new(64, 64, 64, config).unwrap();
+        let config = GenericSimdStencilConfig::default();
+        let processor = GenericSimdStencilProcessor::new(64, 64, 64, config).unwrap();
         let (tx, ty, tz) = processor.tile_stats();
         assert!(tx > 0 && ty > 0 && tz > 0);
         assert_eq!(processor.total_tiles(), tx * ty * tz);
@@ -231,7 +231,7 @@ mod tests {
 
     #[test]
     fn test_stability_check() {
-        let config = SimdStencilConfig::default();
+        let config = GenericSimdStencilConfig::default();
         // CFL constraint: c·dt/dx ≤ CFL_FACTOR_3D_FDTD (equality allowed — at stability limit)
         let cfl = config.sound_speed * config.dt / config.dx;
         assert!(

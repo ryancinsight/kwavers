@@ -157,7 +157,7 @@ mod tests {
         assert!((output[[0, 2]] - 31.0).abs() < 1e-6);
     }
 
-    // Dimension mismatch must produce a Validation error (not panic).
+    // GridDimension mismatch must produce a Validation error (not panic).
     #[test]
     fn test_forward_dimension_mismatch_returns_error() {
         let weights = Array2::<f32>::eye(4); // expects 4-column input
@@ -189,7 +189,7 @@ mod tests {
         assert!((output[[0, 2]]).abs() < 1e-5);
     }
 
-    // Dimension accessors must reflect the constructed shape.
+    // GridDimension accessors must reflect the constructed shape.
     #[test]
     fn test_dimension_accessors() {
         let weights = Array2::<f32>::zeros((128, 10));

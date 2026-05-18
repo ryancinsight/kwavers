@@ -1,9 +1,42 @@
 //! Full Westervelt time-step: linear + nonlinear + absorption + artificial
 //! viscosity, source injection, history rotation, and conservation-check
 //! pipeline.
+//!
+//! ## Absorption model
+//!
+//! Classical Stokes-Kirchhoff thermoviscous absorption in the frequency domain
+//! gives plane-wave spatial attenuation `α(ω) = δω²/(2c₀³)` [Np m⁻¹], which
+//! corresponds to temporal amplitude decay `exp(−α·c·t)` at a fixed spatial
+//! location as the wave passes.
+//!
+//! For an explicit leapfrog scheme, discretizing the third-derivative operator
+//! `∂³p/∂t³` with a backward-difference stencil is **unconditionally unstable**:
+//! the growth-mode factor `(r−1)³ > 0` for any `r > 1`, so explicit third-
+//! derivative terms feed energy into numerical instabilities.
+//!
+//! The stable replacement is the **multiplicative per-step decay**:
+//!
+//! ```text
+//! p^{n+1} ← p^{n+1} · exp(−α · c · Δt)
+//! ```
+//!
+//! This is the O(Δt) operator-splitting approximation to the exact exponential
+//! spatial decay `exp(−α·x) = exp(−α·c·t)`. It is unconditionally stable for
+//! all α ≥ 0 and Δt > 0, and converges to the exact Stokes attenuation law in
+//! the limit `αcΔt → 0` (Pinton et al. 2009, §IIB).
+//!
+//! For frequency-dependent power-law absorption `α ∝ fʸ`, use the PSTD
+//! fractional-Laplacian path (Treeby & Cox 2010) which applies the exact
+//! spectral filter per step.
+//!
+//! ## Artificial viscosity
+//!
+//! The term `ν_art · Δt · ∇²p^n` reuses the already-computed Laplacian
+//! workspace at the configured stencil order, incurring no additional FD
+//! stencil evaluation.
 
-use log::warn;
-use ndarray::{Array3, Zip};
+use ndarray::Zip;
+use tracing::warn;
 
 use super::WesterveltFdtd;
 use crate::core::error::KwaversResult;
@@ -13,10 +46,19 @@ use crate::domain::source::Source;
 use crate::solver::forward::nonlinear::conservation::{ConservationDiagnostics, ViolationSeverity};
 
 impl WesterveltFdtd {
-    /// Update the pressure field for one time step
-    /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// Advance the pressure field by one time step.
     ///
+    /// Implements the explicit leapfrog update:
+    ///
+    /// ```text
+    /// p^{n+1} = [2pⁿ − pⁿ⁻¹
+    ///           + ((c·Δt)² + ν_art·Δt)·∇²pⁿ        (linear + viscosity)
+    ///           + (β·Δt²)/(ρ·c²)·∂²(p²)/∂t²|ⁿ]    (nonlinear)
+    ///           · exp(−α·c·Δt)                       (multiplicative absorption)
+    /// ```
+    ///
+    /// # Errors
+    /// Propagates any [`KwaversError`] from the Laplacian stencil.
     pub fn update(
         &mut self,
         medium: &dyn Medium,
@@ -25,163 +67,85 @@ impl WesterveltFdtd {
         t: f64,
         dt: f64,
     ) -> KwaversResult<()> {
-        // Calculate Laplacian of current pressure
         self.calculate_laplacian(grid)?;
+        self.calculate_nonlinear_term_into(dt, grid);
 
-        // Calculate nonlinear term
-        let nonlinear_term = self.calculate_nonlinear_term(dt, grid);
+        let pressure = &self.pressure;
+        let pressure_prev = &self.pressure_prev;
+        let laplacian = &self.laplacian;
+        let nonlinear_term = &self.nonlinear_term;
+        let pressure_next = &mut self.pressure_next;
+        let enable_absorption = self.config.enable_absorption;
+        let artificial_viscosity = self.config.artificial_viscosity;
 
-        // Create new pressure array
-        let mut pressure_next = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        Zip::indexed(pressure_next)
+            .and(pressure)
+            .and(pressure_prev)
+            .and(laplacian)
+            .and(nonlinear_term)
+            .par_for_each(|(i, j, k), p_next, &p, &p_prev, &lap, &nl| {
+                let c = medium.sound_speed(i, j, k);
+                let rho = medium.density(i, j, k);
+                let beta = 1.0 + medium.nonlinearity(i, j, k) / 2.0;
 
-        // Update pressure using Westervelt equation
-        Zip::indexed(&mut pressure_next)
-            .and(&self.pressure)
-            .and(&self.pressure_prev)
-            .and(&self.laplacian)
-            .and(&nonlinear_term)
-            .for_each(|(i, j, k), p_next, &p, &p_prev, &lap, &nl| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                // Linear wave + artificial viscosity share the precomputed Laplacian.
+                // artificial_viscosity·Δt·∇²p uses the same stencil order as the
+                // main wave operator — no redundant stencil recomputation.
+                let linear_and_visc = (c * dt).mul_add(c * dt, artificial_viscosity * dt) * lap;
 
-                // Get medium properties
-                let c = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
-                let rho = crate::domain::medium::density_at(medium, x, y, z, grid);
-                let beta = crate::domain::medium::AcousticProperties::nonlinearity_coefficient(
-                    medium, x, y, z, grid,
-                );
+                // Nonlinear coefficient β·Δt²/(ρ·c²)
+                let nl_coeff = beta * dt * dt / (rho * c * c);
 
-                // Linear wave propagation term
-                let linear_term = (c * dt).powi(2) * lap;
+                // Leapfrog propagation step (Hamilton & Blackstock 1998 §3.5)
+                let p_propagated = 2.0f64.mul_add(p, -p_prev) + linear_and_visc + nl_coeff * nl;
 
-                // Nonlinear term coefficient
-                let nl_coeff = beta * dt.powi(2) / (rho * c.powi(2));
-
-                // Absorption term (if enabled)
-                let absorption_term = if self.config.enable_absorption {
-                    if let Some(ref p_prev2) = self.pressure_prev2 {
-                        let alpha =
-                            crate::domain::medium::AcousticProperties::absorption_coefficient(
-                                medium, x, y, z, grid, 1e6,
-                            ); // 1 MHz reference
-                               // Theorem (Diffusivity of Sound, Hamilton & Blackstock 1998, Ch. 3 Eq. 3.64):
-                               // δ = 2·α·c³ / ω²  where ω = 2π·f_ref (α evaluated at f_ref = 1 MHz).
-                               // Leapfrog absorption contribution to p^{n+1}:
-                               //   −dt²·(δ/c²)·∂³p/∂t³ ≈ −(δ/c²)·(p−2p''+p'')/ dt
-                               // Ref: Hamilton & Blackstock (1998), Nonlinear Acoustics, Academic Press.
-                        let f_ref = 1.0e6_f64; // 1 MHz reference frequency (matches alpha query above)
-                        let omega_ref = 2.0 * std::f64::consts::PI * f_ref; // ω = 2π·f_ref
-                        let delta = 2.0 * alpha * c.powi(3) / omega_ref.powi(2);
-                        delta * dt / c.powi(2) * (2.0f64.mul_add(-p_prev, p) + p_prev2[[i, j, k]])
-                            / (dt * dt)
-                    } else {
-                        0.0
-                    }
+                // Multiplicative absorption (Stokes-Kirchhoff, O(Δt) operator splitting):
+                //   p *= exp(−α·c·Δt)
+                // Stable for all α ≥ 0.  See module-level doc for derivation.
+                *p_next = if enable_absorption {
+                    let alpha = medium.absorption(i, j, k);
+                    p_propagated * (-alpha * c * dt).exp()
                 } else {
-                    0.0
+                    p_propagated
                 };
-
-                // Artificial viscosity term for numerical stability
-                // ∇·(ν ∇p) where ν is artificial viscosity coefficient
-                let visc_term = if i > 0
-                    && i < grid.nx - 1
-                    && j > 0
-                    && j < grid.ny - 1
-                    && k > 0
-                    && k < grid.nz - 1
-                {
-                    let dx2 = grid.dx * grid.dx;
-                    let dy2 = grid.dy * grid.dy;
-                    let dz2 = grid.dz * grid.dz;
-
-                    // Laplacian of pressure for viscosity
-                    let lap_p = (2.0f64.mul_add(-p, self.pressure[(i + 1, j, k)])
-                        + self.pressure[(i - 1, j, k)])
-                        / dx2
-                        + (2.0f64.mul_add(-p, self.pressure[(i, j + 1, k)])
-                            + self.pressure[(i, j - 1, k)])
-                            / dy2
-                        + (2.0f64.mul_add(-p, self.pressure[(i, j, k + 1)])
-                            + self.pressure[(i, j, k - 1)])
-                            / dz2;
-
-                    self.config.artificial_viscosity * dt * lap_p
-                } else {
-                    0.0
-                };
-
-                // Westervelt explicit leapfrog update (Hamilton & Blackstock 1998 §3.5):
-                //   p_tt = c^2 \nabla^2 p + (\beta / (\rho c^2)) \partial^2(p^2)/\partial t^2
-                //        + (\delta / c^2) \partial^3 p / \partial t^3.
-                // The nonlinear contribution to p^{n+1} must be POSITIVE for forward
-                // steepening (peaks at fixed x arrive earlier than linear). A negative
-                // sign produces non-physical reverse steepening.
-                //
-                // Absorption discretization (limitation): the strict Stokes-Kirchhoff
-                // term is `+(delta/c^2)·p_ttt`, whose 4-point backward discretization
-                // requires `p_{n-3}` — this solver only stores three pressure
-                // histories. The implemented form `delta·(p_n − 2 p_{n-1} + p_{n-2})
-                // / (c^2·dt)` is dimensionally `(delta·dt/c^2)·p_tt(n-1)` (a Kelvin-
-                // Voigt-like lagged-velocity proxy), applied here with a negative
-                // sign so the resulting plane-wave dispersion has Im(omega) > 0 and
-                // the wave decays. The damping rate matches Stokes-Kirchhoff to
-                // leading order in `delta/(c^2·dt)`, but the form is NOT a strict
-                // p_ttt discretization and is NOT a frequency-dependent power-law
-                // absorption. For physical power-law absorption use the PSTD
-                // fractional-Laplacian path (Treeby & Cox 2010).
-                *p_next = 2.0f64.mul_add(p, -p_prev) + linear_term + nl_coeff * nl
-                    - absorption_term
-                    + visc_term;
-
-                // No explicit pressure clamping - allows natural shock formation through nonlinearity
-                // Stability maintained through CFL conditions and artificial viscosity
             });
 
-        // Add source contributions
+        // Source injection: amplitude × Δt (Pa·s) applied as a pressure impulse.
         for source in sources {
             let amplitude = source.amplitude(t);
             if amplitude.abs() > 1e-12 {
-                // Source is active if amplitude is non-zero
-                let positions = source.positions();
-                for position in positions {
-                    // Find nearest grid point
+                for position in source.positions() {
                     let i = ((position.0 / grid.dx).round() as usize).min(grid.nx - 1);
                     let j = ((position.1 / grid.dy).round() as usize).min(grid.ny - 1);
                     let k = ((position.2 / grid.dz).round() as usize).min(grid.nz - 1);
-
-                    pressure_next[[i, j, k]] += amplitude * dt;
+                    self.pressure_next[[i, j, k]] += amplitude * dt;
                 }
             }
         }
 
-        // Update pressure history
-        if self.config.enable_absorption {
+        // History rotation: p2 ← p1 ← p ← p_next.
+        // pressure_prev2 is allocated lazily on step 1 (first time p_prev is known
+        // alongside the current p) and used by the nonlinear ∂²(p²)/∂t² kernel.
+        if let Some(ref mut pp2) = self.pressure_prev2 {
+            pp2.assign(&self.pressure_prev);
+        } else {
             self.pressure_prev2 = Some(self.pressure_prev.clone());
         }
-        self.pressure_prev = self.pressure.clone();
-        self.pressure = pressure_next;
+        std::mem::swap(&mut self.pressure_prev, &mut self.pressure);
+        std::mem::swap(&mut self.pressure, &mut self.pressure_next);
 
-        // Update step counters
         self.current_step += 1;
         self.current_time += dt;
-
-        // Conservation diagnostics (if enabled)
         self.check_conservation_laws();
 
         Ok(())
     }
 
-    /// Check conservation laws and log diagnostics
-    ///
-    /// Performs conservation checks at configured intervals and logs violations.
-    /// Critical violations trigger warnings via tracing infrastructure.
     fn check_conservation_laws(&mut self) {
         let should_check = self.conservation_tracker.as_ref().is_some_and(|tracker| {
             self.current_step
                 .is_multiple_of(tracker.tolerances.check_interval)
         });
-
         if !should_check {
             return;
         }

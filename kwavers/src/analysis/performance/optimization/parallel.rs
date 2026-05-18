@@ -103,3 +103,110 @@ impl ParallelOptimizer {
         chunk_size.max(8) // 8 f64s = 64 bytes = typical cache line
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ─── ParallelOptimizer exact value tests ──────────────────────────────────
+
+    /// `parallel_reduce` computes exact sum over integer slice.
+    ///
+    /// [1, 2, 3, 4, 5] with identity=0, op=add, combine=add → 15.
+    #[test]
+    fn parallel_optimizer_reduce_sum_exact() {
+        let optimizer = ParallelOptimizer::new();
+        let data = vec![1i32, 2, 3, 4, 5];
+        let sum = optimizer.parallel_reduce(&data, 0i32, |acc, &x| acc + x, |a, b| a + b);
+        assert_eq!(sum, 15, "parallel_reduce sum of [1..5] must be 15");
+    }
+
+    /// `parallel_reduce` with multiplication over [1,2,3,4] gives 24.
+    ///
+    /// identity=1, op=mul, combine=mul → 1×2×3×4 = 24.
+    #[test]
+    fn parallel_optimizer_reduce_product_exact() {
+        let optimizer = ParallelOptimizer::new();
+        let data = vec![1i32, 2, 3, 4];
+        let product = optimizer.parallel_reduce(&data, 1i32, |acc, &x| acc * x, |a, b| a * b);
+        assert_eq!(
+            product, 24,
+            "parallel_reduce product of [1,2,3,4] must be 24"
+        );
+    }
+
+    /// `parallel_map` doubles each element exactly.
+    ///
+    /// [1, 2, 3] → [2, 4, 6].
+    #[test]
+    fn parallel_optimizer_map_double_exact() {
+        let optimizer = ParallelOptimizer::new();
+        let data = vec![1i32, 2, 3];
+        let result = optimizer.parallel_map(&data, |&x| x * 2);
+        assert_eq!(
+            result,
+            vec![2i32, 4, 6],
+            "parallel_map double must yield [2,4,6]"
+        );
+    }
+
+    /// `parallel_map` on empty input returns empty output.
+    #[test]
+    fn parallel_optimizer_map_empty_input_returns_empty() {
+        let optimizer = ParallelOptimizer::new();
+        let data: Vec<i32> = vec![];
+        let result: Vec<i32> = optimizer.parallel_map(&data, |&x| x);
+        assert!(
+            result.is_empty(),
+            "map of empty slice must return empty Vec"
+        );
+    }
+
+    /// `parallel_3d` visits every (i,j,k) in [0,nx)×[0,ny)×[0,nz) exactly once.
+    ///
+    /// Uses an atomic counter array; every cell must be incremented exactly once.
+    #[test]
+    fn parallel_3d_visits_every_cell_exactly_once() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        use std::sync::Arc;
+
+        let nx = 3usize;
+        let ny = 4usize;
+        let nz = 5usize;
+        let optimizer = ParallelOptimizer::new();
+
+        let counts = Arc::new(
+            (0..nx * ny * nz)
+                .map(|_| AtomicU32::new(0))
+                .collect::<Vec<_>>(),
+        );
+        let counts_clone = Arc::clone(&counts);
+
+        optimizer.parallel_3d(nx, ny, nz, move |i, j, k| {
+            counts_clone[i * ny * nz + j * nz + k].fetch_add(1, Ordering::Relaxed);
+        });
+
+        for (idx, cell) in counts.iter().enumerate() {
+            assert_eq!(
+                cell.load(Ordering::Relaxed),
+                1,
+                "cell {idx} visited {} times (expected 1)",
+                cell.load(Ordering::Relaxed)
+            );
+        }
+    }
+
+    /// `optimal_chunk_size` returns value ≥ 8 (cache-line guard) for any input.
+    #[test]
+    fn parallel_optimizer_chunk_size_at_least_eight() {
+        let optimizer = ParallelOptimizer::new();
+        // Even tiny data sizes must return >= 8.
+        for size in [0, 1, 7, 8, 100, 10_000] {
+            let chunk = optimizer.optimal_chunk_size(size);
+            assert!(
+                chunk >= 8,
+                "optimal_chunk_size({size}) = {chunk} (expected >= 8)"
+            );
+        }
+    }
+}

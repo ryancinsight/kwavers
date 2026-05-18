@@ -1,10 +1,10 @@
-//! AVX-512 pressure field update implementation for `Avx512StencilProcessor`.
+//! AVX-512 pressure field update implementation for `SimdAvx512StencilProcessor`.
 
-use super::super::Avx512StencilProcessor;
+use super::super::SimdAvx512StencilProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
-impl Avx512StencilProcessor {
+impl SimdAvx512StencilProcessor {
     /// Update pressure field with AVX-512 acceleration.
     ///
     /// Implements 3D acoustic FDTD pressure update with 8-wide vectorization.
@@ -101,7 +101,7 @@ impl Avx512StencilProcessor {
         // SAFETY: Extract raw pointers for AVX-512 intrinsics.
         // - p_curr, p_prev, u_div: immutable borrows → read-only pointers valid for array lifetime
         // - p_new: mutable exclusive borrow → writable pointer, no aliasing
-        // - Dimension validation: Public API ensures all arrays have shape (nx, ny, nz)
+        // - GridDimension validation: Public API ensures all arrays have shape (nx, ny, nz)
         // - Memory layout: ndarray guarantees contiguous C-order (row-major) allocation
         let p_curr_ptr = p_curr.as_ptr();
         let p_prev_ptr = p_prev.as_ptr();

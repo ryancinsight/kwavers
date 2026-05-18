@@ -22,7 +22,7 @@ use std::fmt;
 
 /// Composite material properties for multi-physics simulations
 #[derive(Debug, Clone, PartialEq)]
-pub struct MaterialProperties {
+pub struct CompositeMaterialProperties {
     /// Acoustic properties (always present)
     pub acoustic: AcousticPropertyData,
 
@@ -42,7 +42,7 @@ pub struct MaterialProperties {
     pub thermal: Option<ThermalPropertyData>,
 }
 
-impl MaterialProperties {
+impl CompositeMaterialProperties {
     /// Create acoustic-only material (e.g., water, air)
     #[must_use]
     pub fn acoustic_only(acoustic: AcousticPropertyData) -> Self {
@@ -131,9 +131,9 @@ impl MaterialProperties {
     }
 }
 
-impl fmt::Display for MaterialProperties {
+impl fmt::Display for CompositeMaterialProperties {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "MaterialProperties {{")?;
+        writeln!(f, "CompositeMaterialProperties {{")?;
         writeln!(f, "  {}", self.acoustic)?;
         if let Some(ref elastic) = self.elastic {
             writeln!(f, "  {}", elastic)?;
@@ -154,7 +154,7 @@ impl fmt::Display for MaterialProperties {
     }
 }
 
-/// Builder for constructing `MaterialProperties` with optional components
+/// Builder for constructing `CompositeMaterialProperties` with optional components
 #[derive(Debug, Default)]
 pub struct MaterialPropertiesBuilder {
     acoustic: Option<AcousticPropertyData>,
@@ -214,8 +214,8 @@ impl MaterialPropertiesBuilder {
     ///
     /// Panics if acoustic properties are not set
     #[must_use]
-    pub fn build(self) -> MaterialProperties {
-        MaterialProperties {
+    pub fn build(self) -> CompositeMaterialProperties {
+        CompositeMaterialProperties {
             acoustic: self.acoustic.expect("Acoustic properties are required"),
             elastic: self.elastic,
             electromagnetic: self.electromagnetic,
@@ -232,14 +232,14 @@ mod tests {
 
     #[test]
     fn test_material_acoustic_only() {
-        let water = MaterialProperties::acoustic_only(AcousticPropertyData::water());
+        let water = CompositeMaterialProperties::acoustic_only(AcousticPropertyData::water());
         assert!(water.elastic.is_none());
         assert!(water.thermal.is_none());
     }
 
     #[test]
     fn test_material_builder() {
-        let props = MaterialProperties::builder()
+        let props = CompositeMaterialProperties::builder()
             .acoustic(AcousticPropertyData::water())
             .thermal(ThermalPropertyData::water())
             .build();
@@ -250,9 +250,9 @@ mod tests {
 
     #[test]
     fn test_material_presets() {
-        let water = MaterialProperties::water();
-        let tissue = MaterialProperties::soft_tissue();
-        let bone = MaterialProperties::bone();
+        let water = CompositeMaterialProperties::water();
+        let tissue = CompositeMaterialProperties::soft_tissue();
+        let bone = CompositeMaterialProperties::bone();
 
         assert!(water.thermal.as_ref().unwrap().conductivity > 0.0);
         assert!(tissue.electromagnetic.as_ref().unwrap().permittivity > 0.0);
@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn test_property_physical_bounds() {
-        let props = MaterialProperties::builder()
+        let props = CompositeMaterialProperties::builder()
             .acoustic(AcousticPropertyData {
                 density: 1000.0,
                 sound_speed: 1500.0,

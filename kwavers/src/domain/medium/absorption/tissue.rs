@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 /// Tissue type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum TissueType {
+pub enum AbsorptionTissueType {
     Water,
     Blood,
     Brain,
@@ -25,7 +25,7 @@ pub enum TissueType {
 
 /// Tissue absorption properties
 #[derive(Debug, Clone, Copy)]
-pub struct TissueProperties {
+pub struct AbsorptionTissueProperties {
     /// Absorption coefficient at 1 `MHz` [dB/(MHz^y cm)]
     pub alpha_0: f64,
     /// Alternative notation for `alpha_0`
@@ -64,7 +64,7 @@ pub struct TissueProperties {
     pub optical_scattering_coeff: f64,
 }
 
-impl TissueProperties {
+impl AbsorptionTissueProperties {
     /// Create tissue properties with consistent fields
     fn new(
         alpha: f64,
@@ -121,85 +121,93 @@ impl TissueProperties {
 
 /// Get tissue properties database
 #[must_use]
-pub fn tissue_properties() -> HashMap<TissueType, TissueProperties> {
+pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProperties> {
     let mut map = HashMap::new();
 
     // Values from literature (Szabo 2004, Duck 1990, HIFU physics literature)
     map.insert(
-        TissueType::Water,
-        TissueProperties::new(0.0022, 2.0, 1000.0, 1480.0, 5.2, 0.598, SPECIFIC_HEAT_WATER)
-            .with_optical(4.0, 1.0), // Water: μ_a≈0.04 cm⁻¹, μ_s≈0.01 cm⁻¹
+        AbsorptionTissueType::Water,
+        AbsorptionTissueProperties::new(
+            0.0022,
+            2.0,
+            1000.0,
+            1480.0,
+            5.2,
+            0.598,
+            SPECIFIC_HEAT_WATER,
+        )
+        .with_optical(4.0, 1.0), // Water: μ_a≈0.04 cm⁻¹, μ_s≈0.01 cm⁻¹
     );
 
     map.insert(
-        TissueType::Blood,
-        TissueProperties::new(0.18, 1.21, 1060.0, 1575.0, 6.1, 0.52, 3617.0)
+        AbsorptionTissueType::Blood,
+        AbsorptionTissueProperties::new(0.18, 1.21, 1060.0, 1575.0, 6.1, 0.52, 3617.0)
             .with_optical(230.0, 20000.0), // Blood: μ_a≈2.3 cm⁻¹, μ_s≈200 cm⁻¹
     );
 
     map.insert(
-        TissueType::Brain,
-        TissueProperties::new(0.85, 1.21, 1040.0, 1560.0, 6.6, 0.51, 3630.0)
+        AbsorptionTissueType::Brain,
+        AbsorptionTissueProperties::new(0.85, 1.21, 1040.0, 1560.0, 6.6, 0.51, 3630.0)
             .with_optical(20.0, 10000.0), // Brain: μ_a≈0.2 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
-        TissueType::Fat,
-        TissueProperties::new(0.63, 1.1, 950.0, 1450.0, 10.0, 0.21, 2348.0)
+        AbsorptionTissueType::Fat,
+        AbsorptionTissueProperties::new(0.63, 1.1, 950.0, 1450.0, 10.0, 0.21, 2348.0)
             .with_optical(40.0, 15000.0), // Fat: μ_a≈0.4 cm⁻¹, μ_s≈150 cm⁻¹
     );
 
     map.insert(
-        TissueType::Muscle,
-        TissueProperties::new(1.3, 1.1, 1090.0, 1580.0, 7.4, 0.49, 3421.0)
+        AbsorptionTissueType::Muscle,
+        AbsorptionTissueProperties::new(1.3, 1.1, 1090.0, 1580.0, 7.4, 0.49, 3421.0)
             .with_optical(30.0, 10000.0), // Muscle: μ_a≈0.3 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
-        TissueType::Liver,
-        TissueProperties::new(0.94, 1.11, 1060.0, 1570.0, 7.6, 0.52, 3540.0)
+        AbsorptionTissueType::Liver,
+        AbsorptionTissueProperties::new(0.94, 1.11, 1060.0, 1570.0, 7.6, 0.52, 3540.0)
             .with_optical(70.0, 10000.0), // Liver: μ_a≈0.7 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
-        TissueType::Kidney,
-        TissueProperties::new(1.0, 1.09, 1050.0, 1560.0, 7.4, 0.53, 3763.0)
+        AbsorptionTissueType::Kidney,
+        AbsorptionTissueProperties::new(1.0, 1.09, 1050.0, 1560.0, 7.4, 0.53, 3763.0)
             .with_optical(50.0, 12000.0), // Kidney: μ_a≈0.5 cm⁻¹, μ_s≈120 cm⁻¹
     );
 
     map.insert(
-        TissueType::Bone,
-        TissueProperties::new(20.0, 1.0, 1900.0, 3500.0, 8.0, 0.32, 1313.0)
+        AbsorptionTissueType::Bone,
+        AbsorptionTissueProperties::new(20.0, 1.0, 1900.0, 3500.0, 8.0, 0.32, 1313.0)
             .with_optical(40.0, 35000.0), // Bone: μ_a≈0.4 cm⁻¹, μ_s≈350 cm⁻¹
     );
 
     map.insert(
-        TissueType::Lung,
-        TissueProperties::new(41.0, 1.05, 400.0, 650.0, 8.0, 0.39, 3886.0)
+        AbsorptionTissueType::Lung,
+        AbsorptionTissueProperties::new(41.0, 1.05, 400.0, 650.0, 8.0, 0.39, 3886.0)
             .with_optical(100.0, 25000.0), // Lung: μ_a≈1.0 cm⁻¹, μ_s≈250 cm⁻¹
     );
 
     map.insert(
-        TissueType::Skin,
-        TissueProperties::new(2.1, 1.17, 1100.0, 1600.0, 7.5, 0.37, 3391.0)
+        AbsorptionTissueType::Skin,
+        AbsorptionTissueProperties::new(2.1, 1.17, 1100.0, 1600.0, 7.5, 0.37, 3391.0)
             .with_optical(50.0, 20000.0), // Skin: μ_a≈0.5 cm⁻¹, μ_s≈200 cm⁻¹
     );
 
     map.insert(
-        TissueType::BreastFat,
-        TissueProperties::new(0.75, 1.5, 911.0, 1479.0, 9.6, 0.21, 2348.0)
+        AbsorptionTissueType::BreastFat,
+        AbsorptionTissueProperties::new(0.75, 1.5, 911.0, 1479.0, 9.6, 0.21, 2348.0)
             .with_optical(40.0, 12000.0), // Breast fat: μ_a≈0.4 cm⁻¹, μ_s≈120 cm⁻¹
     );
 
     map.insert(
-        TissueType::BreastGland,
-        TissueProperties::new(0.75, 1.5, 1041.0, 1510.0, 7.0, 0.48, 3600.0)
+        AbsorptionTissueType::BreastGland,
+        AbsorptionTissueProperties::new(0.75, 1.5, 1041.0, 1510.0, 7.0, 0.48, 3600.0)
             .with_optical(60.0, 15000.0), // Breast gland: μ_a≈0.6 cm⁻¹, μ_s≈150 cm⁻¹
     );
 
     map.insert(
-        TissueType::SoftTissue,
-        TissueProperties::new(0.75, 1.1, 1050.0, 1540.0, 6.8, 0.50, 3500.0)
+        AbsorptionTissueType::SoftTissue,
+        AbsorptionTissueProperties::new(0.75, 1.1, 1050.0, 1540.0, 6.8, 0.50, 3500.0)
             .with_optical(10.0, 10000.0), // Generic soft tissue: μ_a≈0.1 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
@@ -207,23 +215,24 @@ pub fn tissue_properties() -> HashMap<TissueType, TissueProperties> {
 }
 
 /// Static tissue properties accessor
-pub static TISSUE_PROPERTIES: std::sync::LazyLock<HashMap<TissueType, TissueProperties>> =
-    std::sync::LazyLock::new(tissue_properties);
+pub static TISSUE_PROPERTIES: std::sync::LazyLock<
+    HashMap<AbsorptionTissueType, AbsorptionTissueProperties>,
+> = std::sync::LazyLock::new(tissue_properties);
 
 /// Tissue-specific absorption model
 #[derive(Debug, Clone)]
 pub struct TissueAbsorption {
-    tissue_type: TissueType,
-    properties: TissueProperties,
+    tissue_type: AbsorptionTissueType,
+    properties: AbsorptionTissueProperties,
 }
 
 impl TissueAbsorption {
     /// Create absorption model for specific tissue
-    pub fn new(tissue_type: TissueType) -> Self {
+    pub fn new(tissue_type: AbsorptionTissueType) -> Self {
         let properties = TISSUE_PROPERTIES
             .get(&tissue_type)
             .copied()
-            .unwrap_or_else(|| TISSUE_PROPERTIES[&TissueType::Water]);
+            .unwrap_or_else(|| TISSUE_PROPERTIES[&AbsorptionTissueType::Water]);
 
         Self {
             tissue_type,
@@ -233,13 +242,13 @@ impl TissueAbsorption {
 
     /// Get tissue properties
     #[must_use]
-    pub fn properties(&self) -> &TissueProperties {
+    pub fn properties(&self) -> &AbsorptionTissueProperties {
         &self.properties
     }
 
     /// Get tissue type
     #[must_use]
-    pub fn tissue_type(&self) -> TissueType {
+    pub fn tissue_type(&self) -> AbsorptionTissueType {
         self.tissue_type
     }
 

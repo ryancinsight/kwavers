@@ -1,4 +1,4 @@
-use super::{FusionMethod, FusionParameters, ImageData, RegistrationTransform};
+use super::{FusionParameters, ImageData, MultimodalityFusionMethod, RegistrationTransform};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -34,11 +34,21 @@ impl FusionEngine {
 
         // Perform fusion based on method
         let fused = match self.params.method {
-            FusionMethod::Overlay => self.fusion_overlay(&reference.data, &transformed),
-            FusionMethod::Checkerboard => self.fusion_checkerboard(&reference.data, &transformed),
-            FusionMethod::Difference => self.fusion_difference(&reference.data, &transformed),
-            FusionMethod::FalseColor => self.fusion_false_color(&reference.data, &transformed),
-            FusionMethod::MultiChannel => self.fusion_multi_channel(&reference.data, &transformed),
+            MultimodalityFusionMethod::Overlay => {
+                self.fusion_overlay(&reference.data, &transformed)
+            }
+            MultimodalityFusionMethod::Checkerboard => {
+                self.fusion_checkerboard(&reference.data, &transformed)
+            }
+            MultimodalityFusionMethod::Difference => {
+                self.fusion_difference(&reference.data, &transformed)
+            }
+            MultimodalityFusionMethod::FalseColor => {
+                self.fusion_false_color(&reference.data, &transformed)
+            }
+            MultimodalityFusionMethod::MultiChannel => {
+                self.fusion_multi_channel(&reference.data, &transformed)
+            }
         };
 
         Ok(fused)

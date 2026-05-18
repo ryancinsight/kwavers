@@ -2,13 +2,13 @@ use super::manager::MultiGpuManager;
 #[cfg(feature = "gpu")]
 use super::types::GpuCapabilities;
 use super::types::{
-    DecompositionStrategy, GpuDeviceInfo, LoadBalancingAlgorithm, PerformanceSummary,
+    GpuDeviceInfo, LoadBalancingAlgorithm, MultiGpuDecompositionStrategy, PerformanceSummary,
 };
 
 #[tokio::test]
 async fn test_multi_gpu_manager_creation() {
     let result = MultiGpuManager::new(
-        DecompositionStrategy::Spatial {
+        MultiGpuDecompositionStrategy::Spatial {
             dimensions: 2,
             overlap: 0.1,
         },

@@ -1,8 +1,8 @@
 //! `PMLBoundary` — pre-computed PML attenuation field and damping application.
 
-use super::config::PMLConfig;
+use super::config::SwePmlConfig;
 use crate::domain::grid::Grid;
-use ndarray::{Array1, Array3};
+use ndarray::{Array1, Array3, Zip};
 
 /// PML boundary condition calculator.
 ///
@@ -23,13 +23,13 @@ pub struct PMLBoundary {
     /// Attenuation coefficient field σ(x,y,z) (Np/m).
     sigma: Array3<f64>,
     /// Configuration parameters.
-    config: PMLConfig,
+    config: SwePmlConfig,
 }
 
 impl PMLBoundary {
     /// Create a new PML boundary with pre-computed attenuation field.
     #[must_use]
-    pub fn new(grid: &Grid, config: PMLConfig) -> Self {
+    pub fn new(grid: &Grid, config: SwePmlConfig) -> Self {
         let sigma = Self::compute_attenuation_field(grid, &config);
         Self { sigma, config }
     }
@@ -55,6 +55,20 @@ impl PMLBoundary {
     /// Apply exponential PML damping to velocity components (in-place).
     ///
     /// `v(t+Δt) = v(t) * exp(-σ * Δt)`
+    ///
+    /// ## Theorem (race-freedom)
+    ///
+    /// Each element `(i,j,k)` of `{vx,vy,vz}` is updated independently using
+    /// only the collocated value `self.sigma[[i,j,k]]`.  No element reads a
+    /// neighbour → parallel updates are race-free.
+    ///
+    /// ## Theorem (PML exponential stability)
+    ///
+    /// The multiplicative factor `exp(-σ·Δt) ≤ 1` for σ ≥ 0, so the update
+    /// is unconditionally stable: no time-step restriction beyond the elastic
+    /// CFL condition is imposed by the PML absorption.
+    ///
+    /// Reference: Collino & Tsogka (2001), Geophysics 66(1), 294–307.
     pub fn apply_damping(
         &self,
         vx: &mut Array3<f64>,
@@ -62,20 +76,19 @@ impl PMLBoundary {
         vz: &mut Array3<f64>,
         dt: f64,
     ) {
-        let (nx, ny, nz) = vx.dim();
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let sigma = self.sigma[[i, j, k]];
-                    if sigma > 0.0 {
-                        let damping_factor = (-sigma * dt).exp();
-                        vx[[i, j, k]] *= damping_factor;
-                        vy[[i, j, k]] *= damping_factor;
-                        vz[[i, j, k]] *= damping_factor;
-                    }
+        let sigma_v = self.sigma.view();
+        Zip::indexed(vx.view_mut())
+            .and(vy.view_mut())
+            .and(vz.view_mut())
+            .par_for_each(|(i, j, k), vx_e, vy_e, vz_e| {
+                let sigma = sigma_v[[i, j, k]];
+                if sigma > 0.0 {
+                    let d = (-sigma * dt).exp();
+                    *vx_e *= d;
+                    *vy_e *= d;
+                    *vz_e *= d;
                 }
-            }
-        }
+            });
     }
 
     /// Per-axis σ profiles matching the scalar `compute_attenuation_field` profile.
@@ -145,19 +158,20 @@ impl PMLBoundary {
     }
 
     /// Binary mask: 1.0 in PML region, 0.0 in interior.
+    ///
+    /// Parallelised elementwise: each cell independently maps σ > 0 → 1.0.
     #[must_use]
     pub fn get_mask(&self) -> Array3<f64> {
         let (nx, ny, nz) = self.sigma.dim();
-        let mut mask = Array3::zeros((nx, ny, nz));
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    if self.sigma[[i, j, k]] > 0.0 {
-                        mask[[i, j, k]] = 1.0;
-                    }
+        let mut mask = Array3::<f64>::zeros((nx, ny, nz));
+        let sigma_v = self.sigma.view();
+        Zip::from(mask.view_mut())
+            .and(sigma_v)
+            .par_for_each(|m, &s| {
+                if s > 0.0 {
+                    *m = 1.0;
                 }
-            }
-        }
+            });
         mask
     }
 
@@ -170,13 +184,26 @@ impl PMLBoundary {
     }
 
     /// Compute the spatially-varying attenuation field for all six domain faces.
-    fn compute_attenuation_field(grid: &Grid, config: &PMLConfig) -> Array3<f64> {
+    ///
+    /// ## Theorem (race-freedom)
+    ///
+    /// Each element `σ[i,j,k]` is computed from the cell indices and global
+    /// scalars `{thickness, sigma_max, order, nx, ny, nz, pml_x, pml_y, pml_z}`
+    /// without reading any other element → pointwise writes are race-free.
+    ///
+    /// ## PML power-law profile
+    ///
+    /// `σ(d) = σ_max · (d / L_pml)^n` where `d` is the distance from the
+    /// domain boundary into the PML layer and `L_pml = thickness · Δx`.
+    /// At each cell, the maximum σ contribution across all six faces is taken
+    /// (corner and edge cells absorb from multiple directions simultaneously).
+    fn compute_attenuation_field(grid: &Grid, config: &SwePmlConfig) -> Array3<f64> {
         let (nx, ny, nz) = grid.dimensions();
-        let mut sigma = Array3::zeros((nx, ny, nz));
+        let mut sigma = Array3::<f64>::zeros((nx, ny, nz));
 
         let thickness = config.thickness;
         let sigma_max = config.sigma_max;
-        let order = config.profile_order;
+        let order = config.profile_order as i32;
 
         // Degenerate axes (size == 1): no propagation → no PML needed.
         // Mirrors fd1_y / fd1_z guard (`if ny <= 1 { return 0.0 }`).
@@ -184,54 +211,44 @@ impl PMLBoundary {
         let pml_y = ny > 1;
         let pml_z = nz > 1;
 
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let mut max_sigma = 0.0_f64;
+        Zip::indexed(sigma.view_mut()).par_for_each(|(i, j, k), s| {
+            let mut max_sigma = 0.0_f64;
 
-                    // X-direction PML (left and right faces)
-                    if pml_x {
-                        if i < thickness {
-                            let dist = (thickness - i) as f64;
-                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                            max_sigma = max_sigma.max(val);
-                        } else if nx > thickness && i >= nx - thickness {
-                            let dist = (i - (nx - thickness) + 1) as f64;
-                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                            max_sigma = max_sigma.max(val);
-                        }
-                    }
-
-                    // Y-direction PML (front and back faces)
-                    if pml_y {
-                        if j < thickness {
-                            let dist = (thickness - j) as f64;
-                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                            max_sigma = max_sigma.max(val);
-                        } else if ny > thickness && j >= ny - thickness {
-                            let dist = (j - (ny - thickness) + 1) as f64;
-                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                            max_sigma = max_sigma.max(val);
-                        }
-                    }
-
-                    // Z-direction PML (top and bottom faces)
-                    if pml_z {
-                        if k < thickness {
-                            let dist = (thickness - k) as f64;
-                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                            max_sigma = max_sigma.max(val);
-                        } else if nz > thickness && k >= nz - thickness {
-                            let dist = (k - (nz - thickness) + 1) as f64;
-                            let val = sigma_max * (dist / thickness as f64).powi(order as i32);
-                            max_sigma = max_sigma.max(val);
-                        }
-                    }
-
-                    sigma[[i, j, k]] = max_sigma;
+            // X-direction PML (left and right faces)
+            if pml_x {
+                if i < thickness {
+                    let dist = (thickness - i) as f64;
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                } else if nx > thickness && i >= nx - thickness {
+                    let dist = (i - (nx - thickness) + 1) as f64;
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
                 }
             }
-        }
+
+            // Y-direction PML (front and back faces)
+            if pml_y {
+                if j < thickness {
+                    let dist = (thickness - j) as f64;
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                } else if ny > thickness && j >= ny - thickness {
+                    let dist = (j - (ny - thickness) + 1) as f64;
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                }
+            }
+
+            // Z-direction PML (top and bottom faces)
+            if pml_z {
+                if k < thickness {
+                    let dist = (thickness - k) as f64;
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                } else if nz > thickness && k >= nz - thickness {
+                    let dist = (k - (nz - thickness) + 1) as f64;
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                }
+            }
+
+            *s = max_sigma;
+        });
 
         sigma
     }

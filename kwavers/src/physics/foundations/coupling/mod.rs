@@ -29,7 +29,9 @@ mod tests;
 // Re-export all sub-module traits and types for backward compatibility
 pub use acoustic_elastic::AcousticElasticCoupling;
 pub use acoustic_thermal::AcousticThermalCoupling;
-pub use domain_decomposition::{DomainDecomposition, SchwarzMethod, TransmissionCondition};
+pub use domain_decomposition::{
+    DomainDecompTransmissionCondition, DomainDecomposition, SchwarzMethod,
+};
 pub use electromagnetic_acoustic::ElectromagneticAcousticCoupling;
 pub use electromagnetic_thermal::ElectromagneticThermalCoupling;
 
@@ -48,7 +50,7 @@ pub struct CouplingStrength {
 
 /// Interface condition type
 #[derive(Debug, Clone)]
-pub enum InterfaceCondition {
+pub enum CouplingInterfaceCondition {
     /// Dirichlet-type: field continuity u₁ = u₂
     Dirichlet { field_name: String },
     /// Neumann-type: flux continuity ∂u₁/∂n = ∂u₂/∂n
@@ -76,7 +78,7 @@ pub trait MultiPhysicsCoupling: Send + Sync {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn interface_conditions(&self) -> Vec<InterfaceCondition>;
+    fn interface_conditions(&self) -> Vec<CouplingInterfaceCondition>;
 
     /// Compute energy transfer rate between domains (W/m³)
     /// # Errors

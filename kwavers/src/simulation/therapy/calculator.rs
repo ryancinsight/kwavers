@@ -4,7 +4,9 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::properties::ThermalPropertyData;
 use crate::domain::medium::Medium;
-use crate::domain::therapy::types::{TherapyModality, TherapyParameters, TreatmentMetrics};
+use crate::domain::therapy::types::{
+    DomainTherapyModality, DomainTherapyParameters, DomainTreatmentMetrics,
+};
 use crate::solver::forward::thermal::PennesSolver;
 use ndarray::{Array3, Zip};
 use std::sync::Arc;
@@ -13,13 +15,13 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct TherapyCalculator {
     /// Treatment modality
-    pub modality: TherapyModality,
+    pub modality: DomainTherapyModality,
     /// Treatment parameters
-    pub parameters: TherapyParameters,
+    pub parameters: DomainTherapyParameters,
     /// Thermal calculator (optional)
     pub thermal: Option<PennesSolver>,
     /// Treatment metrics
-    pub metrics: TreatmentMetrics,
+    pub metrics: DomainTreatmentMetrics,
     /// Grid reference
     grid_shape: (usize, usize, usize),
 }
@@ -29,7 +31,11 @@ impl TherapyCalculator {
     /// # Panics
     /// - Panics if `Valid thermal properties`.
     ///
-    pub fn new(modality: TherapyModality, parameters: TherapyParameters, grid: &Grid) -> Self {
+    pub fn new(
+        modality: DomainTherapyModality,
+        parameters: DomainTherapyParameters,
+        grid: &Grid,
+    ) -> Self {
         // Initialize components based on modality
         let thermal = if modality.has_thermal_effects() {
             let properties = ThermalPropertyData::new(
@@ -63,7 +69,7 @@ impl TherapyCalculator {
             modality,
             parameters,
             thermal,
-            metrics: TreatmentMetrics::default(),
+            metrics: DomainTreatmentMetrics::default(),
             grid_shape: (grid.nx, grid.ny, grid.nz),
         }
     }
@@ -91,7 +97,8 @@ impl TherapyCalculator {
             }
 
             // Update thermal dose
-            self.metrics.thermal_dose += TreatmentMetrics::calculate_thermal_dose(temperature, dt);
+            self.metrics.thermal_dose +=
+                DomainTreatmentMetrics::calculate_thermal_dose(temperature, dt);
             self.metrics.update_peak_temperature(temperature);
         }
 
@@ -146,11 +153,11 @@ impl TherapyCalculator {
     /// Get target dose based on modality
     fn get_target_dose(&self) -> f64 {
         match self.modality {
-            TherapyModality::HIFU => 240.0,      // 240 CEM43 for ablation
-            TherapyModality::LIFU => 0.0,        // No thermal goal
-            TherapyModality::Histotripsy => 0.0, // Mechanical disruption
-            TherapyModality::BBBOpening => 0.0,  // Mechanical opening
-            _ => 10.0,                           // Default mild hyperthermia
+            DomainTherapyModality::HIFU => 240.0, // 240 CEM43 for ablation
+            DomainTherapyModality::LIFU => 0.0,   // No thermal goal
+            DomainTherapyModality::Histotripsy => 0.0, // Mechanical disruption
+            DomainTherapyModality::BBBOpening => 0.0, // Mechanical opening
+            _ => 10.0,                            // Default mild hyperthermia
         }
     }
 

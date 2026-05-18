@@ -1,6 +1,6 @@
 //! Domain Decomposition for Multi-Physics Problems
 
-use super::InterfaceCondition;
+use super::CouplingInterfaceCondition;
 
 /// Domain decomposition for multi-physics problems
 #[derive(Debug, Clone)]
@@ -8,16 +8,16 @@ pub struct DomainDecomposition {
     /// Subdomain boundaries
     pub subdomain_bounds: Vec<Vec<f64>>,
     /// Interface conditions between subdomains
-    pub interface_conditions: Vec<InterfaceCondition>,
+    pub interface_conditions: Vec<CouplingInterfaceCondition>,
     /// Overlap region thickness (for overlapping Schwarz methods)
     pub overlap_thickness: f64,
     /// Transmission conditions for domain coupling
-    pub transmission_conditions: Vec<TransmissionCondition>,
+    pub transmission_conditions: Vec<DomainDecompTransmissionCondition>,
 }
 
 /// Transmission condition for domain decomposition
 #[derive(Debug, Clone)]
-pub enum TransmissionCondition {
+pub enum DomainDecompTransmissionCondition {
     /// Dirichlet transmission: u = g
     Dirichlet { boundary_value: f64 },
     /// Neumann transmission: ∂u/∂n = g

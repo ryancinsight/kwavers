@@ -13,7 +13,7 @@ use std::fs::File;
 use std::io::Write;
 
 use super::super::config::RecorderConfig;
-use super::super::events::{CavitationEvent, ThermalEvent};
+use super::super::events::{RecorderCavitationEvent, ThermalEvent};
 use super::super::statistics::RecorderStatistics;
 
 /// Main recorder implementation
@@ -35,7 +35,7 @@ pub struct Recorder {
     pub time: Time,
 
     // Cavitation tracking
-    pub cavitation_events: Vec<CavitationEvent>,
+    pub cavitation_events: Vec<RecorderCavitationEvent>,
     pub cavitation_threshold: f64,
     pub cavitation_map: Array3<f64>,
 
@@ -211,7 +211,7 @@ impl Recorder {
         for ((i, j, k), &pressure) in pressure_field.indexed_iter() {
             if pressure < self.cavitation_threshold {
                 let radius = bubble_field[[i, j, k]];
-                self.cavitation_events.push(CavitationEvent {
+                self.cavitation_events.push(RecorderCavitationEvent {
                     time_step: step,
                     time,
                     position: [i, j, k],

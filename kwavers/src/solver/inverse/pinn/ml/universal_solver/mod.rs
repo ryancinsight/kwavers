@@ -18,6 +18,7 @@ mod types;
 pub use solver::UniversalPINNSolver;
 pub use types::{
     ConvergenceInfo, DomainInfo, EarlyStoppingConfig, GeometricFeature, Geometry2D,
-    LearningRateSchedule, LineSearchMethod, MemoryStats, MultiDomainTrainingResult, OptimizerType,
-    PhysicsSolution, UniversalSolverStats, UniversalTrainingConfig,
+    LineSearchMethod, MultiDomainTrainingResult, PhysicsSolution, UniversalSolverLrSchedule,
+    UniversalSolverMemoryStats, UniversalSolverOptimizerType, UniversalSolverStats,
+    UniversalTrainingConfig,
 };

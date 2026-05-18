@@ -1,6 +1,6 @@
 //! IntensityTracker implementation.
 
-use super::types::{InstantaneousIntensity, TemporalIntensityMetrics, ThermalDose};
+use super::types::{InstantaneousIntensity, IntensityTrackerDose, TemporalIntensityMetrics};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
@@ -20,7 +20,7 @@ pub struct IntensityTracker {
     current_metrics: TemporalIntensityMetrics,
 
     /// Thermal dose accumulation
-    thermal_dose: ThermalDose,
+    thermal_dose: IntensityTrackerDose,
 
     /// Peak intensity ever measured (W/m²)
     peak_intensity: f64,
@@ -58,7 +58,7 @@ impl IntensityTracker {
             max_window_duration,
             intensity_history: Vec::new(),
             current_metrics: TemporalIntensityMetrics::default(),
-            thermal_dose: ThermalDose::default(),
+            thermal_dose: IntensityTrackerDose::default(),
             peak_intensity: 0.0,
             current_time: 0.0,
         })
@@ -231,7 +231,7 @@ impl IntensityTracker {
     }
 
     /// Get current thermal dose
-    pub fn thermal_dose(&self) -> ThermalDose {
+    pub fn thermal_dose(&self) -> IntensityTrackerDose {
         self.thermal_dose
     }
 
@@ -260,7 +260,7 @@ impl IntensityTracker {
     pub fn reset(&mut self) {
         self.intensity_history.clear();
         self.current_metrics = TemporalIntensityMetrics::default();
-        self.thermal_dose = ThermalDose::default();
+        self.thermal_dose = IntensityTrackerDose::default();
         self.peak_intensity = 0.0;
         self.current_time = 0.0;
     }

@@ -1,6 +1,6 @@
 //! SIMD performance estimation and metrics record.
 
-use super::config::{SimdConfig, SimdLevel};
+use super::config::{MathSimdLevel, SimdConfig};
 
 /// SIMD performance utilities
 #[derive(Debug)]
@@ -21,14 +21,14 @@ impl SimdPerformance {
     }
 
     /// Estimate performance speedup for given SIMD level
-    fn estimate_speedup(level: SimdLevel) -> f64 {
+    fn estimate_speedup(level: MathSimdLevel) -> f64 {
         match level {
-            SimdLevel::Scalar => 1.0,
-            SimdLevel::Sse2 => 2.5,
-            SimdLevel::Avx2 => 4.0,
-            SimdLevel::Avx512 => 8.0,
-            SimdLevel::Neon => 3.0,
-            SimdLevel::Portable => 4.0,
+            MathSimdLevel::Scalar => 1.0,
+            MathSimdLevel::Sse2 => 2.5,
+            MathSimdLevel::Avx2 => 4.0,
+            MathSimdLevel::Avx512 => 8.0,
+            MathSimdLevel::Neon => 3.0,
+            MathSimdLevel::Portable => 4.0,
         }
     }
 }
@@ -36,7 +36,7 @@ impl SimdPerformance {
 /// SIMD performance metrics
 #[derive(Debug, Clone)]
 pub struct SimdMetrics {
-    pub detected_level: SimdLevel,
+    pub detected_level: MathSimdLevel,
     pub vector_width: usize,
     pub alignment_bytes: usize,
     pub estimated_speedup: f64,

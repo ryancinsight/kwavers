@@ -10,7 +10,7 @@ pub struct SimulationResult {
 
 /// Simulation statistics
 #[derive(Debug, Clone)]
-pub struct SimulationStatistics {
+pub struct CoreSimulationStatistics {
     pub num_sources: usize,
     pub num_sensors: usize,
     pub grid_size: usize,

@@ -30,7 +30,7 @@
 //! - Kingma & Ba (2015) "Adam: A Method for Stochastic Optimization"
 
 use crate::analysis::ml::training::{
-    PhysicsLoss, TrainingConfig, TrainingDataset, TrainingHistory, TrainingMetrics,
+    EpochTrainingMetrics, PhysicsLoss, PhysicsNNTrainingConfig, TrainingDataset, TrainingHistory,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use log::{debug, info};
@@ -44,7 +44,7 @@ mod tests;
 #[derive(Debug)]
 pub struct BeamformingTrainer {
     /// Training configuration
-    config: TrainingConfig,
+    config: PhysicsNNTrainingConfig,
     /// Physics loss weights
     physics_loss: PhysicsLoss,
     /// Training history (metrics, convergence)
@@ -58,7 +58,7 @@ impl BeamformingTrainer {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new(config: TrainingConfig, physics_loss: PhysicsLoss) -> KwaversResult<Self> {
+    pub fn new(config: PhysicsNNTrainingConfig, physics_loss: PhysicsLoss) -> KwaversResult<Self> {
         config.validate()?;
 
         Ok(Self {
@@ -137,7 +137,7 @@ impl BeamformingTrainer {
             // Without a concrete model, we report a stable RMSE-like proxy.
             let gradient_norm = train_loss.sqrt();
 
-            let metrics = TrainingMetrics {
+            let metrics = EpochTrainingMetrics {
                 epoch,
                 train_loss,
                 train_data_loss: train_loss * self.config.lambda_data,
@@ -192,7 +192,7 @@ impl BeamformingTrainer {
 
     /// Get current configuration
     #[must_use]
-    pub fn config(&self) -> &TrainingConfig {
+    pub fn config(&self) -> &PhysicsNNTrainingConfig {
         &self.config
     }
 

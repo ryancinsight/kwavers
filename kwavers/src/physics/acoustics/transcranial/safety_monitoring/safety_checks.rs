@@ -1,10 +1,12 @@
 //! Safety limit checking, status reporting, and recommendations
 
-use super::monitor::SafetyMonitor;
-use super::types::{SafetyLevel, SafetyReport, SafetyStatus, TreatmentProgress};
+use super::monitor::TranscranialSafetyMonitor;
+use super::types::{
+    SafetyReport, TranscranialSafetyLevel, TranscranialSafetyStatus, TreatmentProgress,
+};
 use crate::core::error::KwaversResult;
 
-impl SafetyMonitor {
+impl TranscranialSafetyMonitor {
     /// Check safety limits and return warnings
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -57,7 +59,7 @@ impl SafetyMonitor {
 
     /// Get current safety status
     #[must_use]
-    pub fn safety_status(&self) -> SafetyStatus {
+    pub fn safety_status(&self) -> TranscranialSafetyStatus {
         let max_temp = self.temperature.iter().fold(0.0_f64, |a, &b| a.max(b));
         let max_dose = self
             .thermal_dose
@@ -65,13 +67,16 @@ impl SafetyMonitor {
             .iter()
             .fold(0.0_f64, |a, &b| a.max(b));
 
-        SafetyStatus {
-            temperature_status: SafetyLevel::from_value(max_temp, self.thresholds.max_temperature),
-            thermal_dose_status: SafetyLevel::from_value(
+        TranscranialSafetyStatus {
+            temperature_status: TranscranialSafetyLevel::from_value(
+                max_temp,
+                self.thresholds.max_temperature,
+            ),
+            thermal_dose_status: TranscranialSafetyLevel::from_value(
                 max_dose,
                 self.thresholds.max_thermal_dose,
             ),
-            mechanical_index_status: SafetyLevel::from_value(
+            mechanical_index_status: TranscranialSafetyLevel::from_value(
                 self.mechanical_index.current_mi,
                 self.thresholds.max_mechanical_index,
             ),
@@ -80,14 +85,18 @@ impl SafetyMonitor {
     }
 
     /// Calculate overall safety level
-    fn overall_safety_level(&self) -> SafetyLevel {
+    fn overall_safety_level(&self) -> TranscranialSafetyLevel {
         let status = self.safety_status();
         let levels = [
             status.temperature_status,
             status.thermal_dose_status,
             status.mechanical_index_status,
         ];
-        levels.iter().copied().max().unwrap_or(SafetyLevel::Safe)
+        levels
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or(TranscranialSafetyLevel::Safe)
     }
 
     /// Get treatment progress towards target dose
@@ -140,13 +149,13 @@ impl SafetyMonitor {
         let status = self.safety_status();
 
         match status.temperature_status {
-            SafetyLevel::Critical => {
+            TranscranialSafetyLevel::Critical => {
                 recommendations.push(
                     "CRITICAL: Temperature exceeds safe limits. Stop treatment immediately."
                         .to_owned(),
                 );
             }
-            SafetyLevel::Warning => {
+            TranscranialSafetyLevel::Warning => {
                 recommendations
                     .push("WARNING: Temperature approaching limit. Reduce power.".to_owned());
             }
@@ -154,11 +163,11 @@ impl SafetyMonitor {
         }
 
         match status.thermal_dose_status {
-            SafetyLevel::Critical => {
+            TranscranialSafetyLevel::Critical => {
                 recommendations
                     .push("CRITICAL: Thermal dose exceeds safe limits. Stop treatment.".to_owned());
             }
-            SafetyLevel::Warning => {
+            TranscranialSafetyLevel::Warning => {
                 recommendations
                     .push("WARNING: Thermal dose approaching limit. Monitor closely.".to_owned());
             }
@@ -166,13 +175,13 @@ impl SafetyMonitor {
         }
 
         match status.mechanical_index_status {
-            SafetyLevel::Critical => {
+            TranscranialSafetyLevel::Critical => {
                 recommendations.push(
                     "CRITICAL: Mechanical index exceeds safety limit. Reduce acoustic power."
                         .to_owned(),
                 );
             }
-            SafetyLevel::Warning => {
+            TranscranialSafetyLevel::Warning => {
                 recommendations.push(
                     "WARNING: Mechanical index approaching limit. Reduce pressure amplitude."
                         .to_owned(),

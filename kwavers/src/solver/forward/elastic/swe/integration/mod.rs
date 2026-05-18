@@ -20,4 +20,5 @@ pub mod integrator;
 #[cfg(test)]
 mod tests;
 
+pub use super::scratch::ElasticStepScratch;
 pub use integrator::TimeIntegrator;

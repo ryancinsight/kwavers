@@ -1,7 +1,8 @@
 //! Hardware communication trait for ultrasound transducers.
 
 use super::types::{
-    DeviceTelemetry, HardwareCommand, HardwareResponse, TransducerSpecification, TransducerState,
+    DeviceTelemetry, DeviceTransducerSpecification, HardwareCommand, HardwareResponse,
+    TransducerState,
 };
 use crate::core::error::KwaversResult;
 
@@ -14,7 +15,7 @@ pub trait TransducerHardware: Send + Sync {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn specification(&self) -> &TransducerSpecification;
+    fn specification(&self) -> &DeviceTransducerSpecification;
 
     /// Get current transducer state.
     /// # Errors

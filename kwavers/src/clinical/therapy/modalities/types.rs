@@ -1,1 +1,1 @@
-pub use crate::domain::therapy::types::{TherapyMechanism, TherapyModality};
+pub use crate::domain::therapy::types::{DomainTherapyMechanism, DomainTherapyModality};

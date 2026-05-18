@@ -38,7 +38,7 @@ mod probabilistic;
 pub(crate) mod utils;
 pub(crate) mod weighted_average;
 
-use super::config::{FusionConfig, FusionMethod};
+use super::config::{FusionConfig, ImagingFusionMethod};
 use super::quality;
 use super::types::{FusedImageResult, RegisteredModality};
 use crate::core::error::{KwaversError, KwaversResult};
@@ -199,18 +199,20 @@ impl MultiModalFusion {
 
         // Apply fusion method
         let fused_result = match self.config.fusion_method {
-            FusionMethod::WeightedAverage => weighted_average::fuse_weighted_average(self),
-            FusionMethod::FeatureBased => feature_based::fuse_feature_based(self),
-            FusionMethod::Probabilistic => probabilistic::fuse_probabilistic(self),
-            FusionMethod::DeepFusion => deep_learning::fuse_deep_learning(self),
-            FusionMethod::MaximumLikelihood => maximum_likelihood::fuse_maximum_likelihood(self),
-            FusionMethod::MaximumIntensity => {
+            ImagingFusionMethod::WeightedAverage => weighted_average::fuse_weighted_average(self),
+            ImagingFusionMethod::FeatureBased => feature_based::fuse_feature_based(self),
+            ImagingFusionMethod::Probabilistic => probabilistic::fuse_probabilistic(self),
+            ImagingFusionMethod::DeepFusion => deep_learning::fuse_deep_learning(self),
+            ImagingFusionMethod::MaximumLikelihood => {
+                maximum_likelihood::fuse_maximum_likelihood(self)
+            }
+            ImagingFusionMethod::MaximumIntensity => {
                 intensity_projection::fuse_intensity_projection(self, ProjectionKind::Maximum)
             }
-            FusionMethod::MinimumIntensity => {
+            ImagingFusionMethod::MinimumIntensity => {
                 intensity_projection::fuse_intensity_projection(self, ProjectionKind::Minimum)
             }
-            FusionMethod::PCA => pca::fuse_pca(self),
+            ImagingFusionMethod::PCA => pca::fuse_pca(self),
         }?;
 
         Ok(fused_result)

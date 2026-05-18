@@ -23,12 +23,12 @@ pub trait ImplicitSolver: Debug + Send + Sync {
 
 /// Linear solver for implicit equations
 #[derive(Debug, Clone)]
-pub struct LinearSolver {
+pub struct ImexLinearSolver {
     tolerance: f64,
     max_iterations: usize,
 }
 
-impl Default for LinearSolver {
+impl Default for ImexLinearSolver {
     fn default() -> Self {
         Self {
             tolerance: 1e-10,
@@ -37,7 +37,7 @@ impl Default for LinearSolver {
     }
 }
 
-impl LinearSolver {
+impl ImexLinearSolver {
     /// Create a new linear solver
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -51,7 +51,7 @@ impl LinearSolver {
     }
 }
 
-impl ImplicitSolver for LinearSolver {
+impl ImplicitSolver for ImexLinearSolver {
     fn solve<F>(&self, initial_guess: &Array3<f64>, residual_fn: F) -> KwaversResult<Array3<f64>>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
@@ -79,7 +79,7 @@ impl ImplicitSolver for LinearSolver {
 
         Err(KwaversError::Physics(
             crate::core::error::PhysicsError::ConvergenceFailure {
-                solver: "LinearSolver".to_owned(),
+                solver: "ImexLinearSolver".to_owned(),
                 iterations: self.max_iterations,
                 residual: last_norm,
             },

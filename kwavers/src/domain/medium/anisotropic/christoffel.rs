@@ -3,7 +3,7 @@
 //! References:
 //! - Auld, B. A. (1973). "Acoustic Fields and Waves in Solids"
 
-use super::stiffness::StiffnessTensor;
+use super::stiffness::AnisotropicStiffnessTensor;
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
@@ -11,7 +11,7 @@ use ndarray::{Array1, Array2};
 #[derive(Debug)]
 pub struct ChristoffelEquation {
     /// Stiffness tensor
-    stiffness: StiffnessTensor,
+    stiffness: AnisotropicStiffnessTensor,
     /// Material density
     density: f64,
 }
@@ -19,7 +19,7 @@ pub struct ChristoffelEquation {
 impl ChristoffelEquation {
     /// Create Christoffel equation solver
     #[must_use]
-    pub fn create(stiffness: StiffnessTensor, density: f64) -> Self {
+    pub fn create(stiffness: AnisotropicStiffnessTensor, density: f64) -> Self {
         Self { stiffness, density }
     }
 

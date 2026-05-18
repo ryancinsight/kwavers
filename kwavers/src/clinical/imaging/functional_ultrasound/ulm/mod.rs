@@ -224,8 +224,8 @@ pub mod tracking;
 pub mod velocity_mapping;
 
 pub use microbubble_detection::{
-    BubbleDetection, GaussianLocalizer, LocalizationConfig, SvdClutterConfig, SvdClutterFilter,
-    UlmDetector,
+    BubbleDetection, GaussianLocalizationConfig, GaussianLocalizer, SvdClutterConfig,
+    SvdClutterFilter, UlmDetector,
 };
 pub use super_resolution::{RenderMode, SuperResConfig, SuperResReconstructor};
 pub use tracking::{BubbleTrack, HungarianTracker, TrackingConfig};
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn test_ulm_module() {
         let _ = super::SvdClutterConfig::default();
-        let _ = super::LocalizationConfig::default();
+        let _ = super::GaussianLocalizationConfig::default();
         let _ = super::TrackingConfig::default();
     }
 }

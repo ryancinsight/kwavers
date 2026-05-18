@@ -1,0 +1,272 @@
+{
+  "chapter": 32,
+  "analysis": "segmentation-driven transducer placement and focal spot shaping",
+  "dataset": {
+    "source": "LiTS17 sample liver CT",
+    "ct_path": "D:\\kwavers\\data\\lits17_sample\\volume-0.nii",
+    "segmentation_path": "D:\\kwavers\\data\\lits17_sample\\segmentation-0.nii",
+    "slice_index": 58,
+    "native_shape": [
+      512,
+      512,
+      75
+    ],
+    "native_spacing_mm": [
+      0.703125,
+      0.703125,
+      5.0
+    ],
+    "crop_bounds": {
+      "i0": 24,
+      "i1": 380,
+      "j0": 65,
+      "j1": 421,
+      "width_vox": 356
+    },
+    "output_size": 112,
+    "spacing_m": 0.002234933035714286,
+    "segmentation_labels": {
+      "normal": 1,
+      "tumor": 2
+    },
+    "target_rule": "largest connected label-2 component on selected slice",
+    "derived_labels": {
+      "air": "HU < -700 or outside body mask",
+      "fat": "-500 <= HU < -100 outside liver/tumor",
+      "bone": "HU >= 200 outside liver/tumor",
+      "avoid": "160 < HU < 400 inside liver label, excluding tumor"
+    }
+  },
+  "segmentation_voxels": {
+    "air": 3002,
+    "normal": 7937,
+    "fat": 1007,
+    "bone": 433,
+    "tumor": 37,
+    "avoid": 128
+  },
+  "config": {
+    "frequency_hz": 650000.0,
+    "element_count": 10,
+    "aperture_width_m": 0.032,
+    "standoff_m": 0.016,
+    "candidate_angles_deg": [
+      -170.0,
+      -130.0,
+      -90.0,
+      -50.0,
+      -10.0,
+      30.0,
+      70.0,
+      110.0,
+      150.0
+    ],
+    "crossfire_aperture_count": 3,
+    "crossfire_min_angle_separation_deg": 60.0,
+    "max_target_points": 36,
+    "max_avoid_points": 24,
+    "max_normal_points": 48,
+    "max_sidelobe_points": 256,
+    "max_hotspot_points": 64,
+    "ray_samples": 48,
+    "ridge": 0.01,
+    "target_weight": 1.0,
+    "avoid_weight": 6.0,
+    "normal_weight": 1.2,
+    "sidelobe_weight": 4.0,
+    "hotspot_weight": 14.0,
+    "air_path_penalty": 4.5,
+    "bone_path_penalty": 5.5,
+    "fat_path_penalty": 0.7,
+    "protected_peak_penalty": 4.0,
+    "off_target_penalty": 1.1,
+    "sidelobe_peak_penalty": 1.8,
+    "sidelobe_exclusion_radius_m": 0.01,
+    "target_dominance_ratio": 1.0,
+    "hotspot_min_spacing_m": 0.006,
+    "hotspot_refinement_rounds": 3,
+    "spot_major_axis_m": 0.01,
+    "spot_minor_axis_m": 0.0045,
+    "spot_angle_deg": -18.0
+  },
+  "selected_aperture": {
+    "angle_deg": -90.0,
+    "source_angles_deg": [
+      -90.0,
+      -170.0,
+      -10.0
+    ],
+    "center_m": [
+      0.005226873920723647,
+      -0.06379566513090555
+    ],
+    "element_count": 30
+  },
+  "summary": {
+    "candidate_count": 10,
+    "selected_angle_deg": -90.0,
+    "selected_source_angles_deg": [
+      -90.0,
+      -170.0,
+      -10.0
+    ],
+    "selected_score": -2.1116232696999306,
+    "tumor_mean_intensity": 0.5277660499454054,
+    "tumor_coverage_fraction": 0.7567567567567568,
+    "protected_peak_ratio": 0.37824215526422356,
+    "normal_mean_ratio": 0.04921103359896295,
+    "body_sidelobe_peak_ratio": 0.8688067316400782,
+    "body_sidelobe_p99_ratio": 0.40394773751083024,
+    "target_dominant": true,
+    "air_path_fraction": 0.0038399218766974456,
+    "bone_path_fraction": 0.034333245798774635,
+    "fat_path_fraction": 0.09432898817809454
+  },
+  "candidate_metrics": [
+    {
+      "angle_deg": -170.0,
+      "score": -6.90352049040152,
+      "target_mean": 0.6106586536375145,
+      "target_coverage_fraction": 0.8055555555555556,
+      "protected_peak_ratio": 1.0100910166402683,
+      "normal_mean_ratio": 0.3112382545516301,
+      "sidelobe_peak_ratio": 1.7852055817694388,
+      "sidelobe_mean_ratio": 0.09474718827928029,
+      "air_path_fraction": 0.0009332087983295978,
+      "bone_path_fraction": 0.020949514616048565,
+      "fat_path_fraction": 0.11515089249981725,
+      "drive_nonuniformity": 0.2609653552680224
+    },
+    {
+      "angle_deg": -130.0,
+      "score": -3.578409962416247,
+      "target_mean": 0.3091220724208006,
+      "target_coverage_fraction": 0.3333333333333333,
+      "protected_peak_ratio": 0.138613621179359,
+      "normal_mean_ratio": 0.16261918061242162,
+      "sidelobe_peak_ratio": 1.6055526764994874,
+      "sidelobe_mean_ratio": 0.0824682559213607,
+      "air_path_fraction": 0.03035806907665745,
+      "bone_path_fraction": 0.021293807280131666,
+      "fat_path_fraction": 0.18163007075407717,
+      "drive_nonuniformity": 0.2761603074066121
+    },
+    {
+      "angle_deg": -90.0,
+      "score": -2.533580242385039,
+      "target_mean": 0.6023368648430297,
+      "target_coverage_fraction": 0.8333333333333334,
+      "protected_peak_ratio": 0.23704906618741686,
+      "normal_mean_ratio": 0.17922707905518817,
+      "sidelobe_peak_ratio": 1.0997183738217355,
+      "sidelobe_mean_ratio": 0.045356018999758566,
+      "air_path_fraction": 0.009879126196282317,
+      "bone_path_fraction": 0.0355233591005172,
+      "fat_path_fraction": 0.08987158052731715,
+      "drive_nonuniformity": 0.22687068188543005
+    },
+    {
+      "angle_deg": -50.0,
+      "score": -19.17668291611093,
+      "target_mean": 0.38266135087156067,
+      "target_coverage_fraction": 0.4166666666666667,
+      "protected_peak_ratio": 0.9497210764647748,
+      "normal_mean_ratio": 0.40283995519366117,
+      "sidelobe_peak_ratio": 8.293166197376225,
+      "sidelobe_mean_ratio": 0.5004740099624454,
+      "air_path_fraction": 0.015287445076356956,
+      "bone_path_fraction": 0.0751093155445696,
+      "fat_path_fraction": 0.07653635732535821,
+      "drive_nonuniformity": 0.24154435741167282
+    },
+    {
+      "angle_deg": -10.0,
+      "score": -6.098377433997619,
+      "target_mean": 0.48133920406985886,
+      "target_coverage_fraction": 0.7777777777777778,
+      "protected_peak_ratio": 0.31975779175033275,
+      "normal_mean_ratio": 0.22663687954672987,
+      "sidelobe_peak_ratio": 2.796151994726767,
+      "sidelobe_mean_ratio": 0.16774733911044112,
+      "air_path_fraction": 0.0,
+      "bone_path_fraction": 0.05046987751628864,
+      "fat_path_fraction": 0.018498869913141286,
+      "drive_nonuniformity": 0.25775760791826674
+    },
+    {
+      "angle_deg": 30.0,
+      "score": -17.427538500568016,
+      "target_mean": 0.5472338532690274,
+      "target_coverage_fraction": 0.7222222222222222,
+      "protected_peak_ratio": 0.6482107370192204,
+      "normal_mean_ratio": 0.4108737865164767,
+      "sidelobe_peak_ratio": 8.090022740642095,
+      "sidelobe_mean_ratio": 0.48996479146566824,
+      "air_path_fraction": 0.0008809193642496067,
+      "bone_path_fraction": 0.1057712092763511,
+      "fat_path_fraction": 0.04999899579283948,
+      "drive_nonuniformity": 0.3440375201693174
+    },
+    {
+      "angle_deg": 70.0,
+      "score": -21.518696072719276,
+      "target_mean": 0.47758755159402877,
+      "target_coverage_fraction": 0.6111111111111112,
+      "protected_peak_ratio": 2.0018087284600705,
+      "normal_mean_ratio": 0.2491283007254694,
+      "sidelobe_peak_ratio": 7.597668744076614,
+      "sidelobe_mean_ratio": 0.3859563885757623,
+      "air_path_fraction": 0.0002799132642483026,
+      "bone_path_fraction": 0.030156826368335585,
+      "fat_path_fraction": 0.12281510644432095,
+      "drive_nonuniformity": 0.24100800217710566
+    },
+    {
+      "angle_deg": 110.0,
+      "score": -8.390445494584652,
+      "target_mean": 0.4330658994868416,
+      "target_coverage_fraction": 0.5555555555555556,
+      "protected_peak_ratio": 0.8419205396370053,
+      "normal_mean_ratio": 0.24592271294507304,
+      "sidelobe_peak_ratio": 2.89135805697801,
+      "sidelobe_mean_ratio": 0.16160091980001154,
+      "air_path_fraction": 0.0004410181429164746,
+      "bone_path_fraction": 0.013435192571907699,
+      "fat_path_fraction": 0.14205150339900027,
+      "drive_nonuniformity": 0.24201929632359315
+    },
+    {
+      "angle_deg": 150.0,
+      "score": -4.416306736990159,
+      "target_mean": 0.4274083098418678,
+      "target_coverage_fraction": 0.5833333333333334,
+      "protected_peak_ratio": 0.3194929404852191,
+      "normal_mean_ratio": 0.21944766084442346,
+      "sidelobe_peak_ratio": 1.8622130769259286,
+      "sidelobe_mean_ratio": 0.12749649734673138,
+      "air_path_fraction": 0.0006346627315100263,
+      "bone_path_fraction": 0.016171418051671053,
+      "fat_path_fraction": 0.12105029226613455,
+      "drive_nonuniformity": 0.24293620965920854
+    },
+    {
+      "angle_deg": -90.0,
+      "score": -2.1116232696999306,
+      "target_mean": 0.527460912471477,
+      "target_coverage_fraction": 0.75,
+      "protected_peak_ratio": 0.27123199004263476,
+      "normal_mean_ratio": 0.11765702039150927,
+      "sidelobe_peak_ratio": 0.7861615041706351,
+      "sidelobe_mean_ratio": 0.11574932926997503,
+      "air_path_fraction": 0.0038399218766974456,
+      "bone_path_fraction": 0.034333245798774635,
+      "fat_path_fraction": 0.09432898817809454,
+      "drive_nonuniformity": 0.22550419358602988
+    }
+  ],
+  "figures": [
+    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig01_segmentation_candidate_scores.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig02_optimized_spot_and_avoidance.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch32\\fig03_hybrid_solver_tradeoffs.png"
+  ]
+}

@@ -13,6 +13,7 @@ pub use manager::MultiGpuManager;
 #[cfg(feature = "gpu")]
 pub use types::GpuCapabilities;
 pub use types::{
-    CommunicationChannel, DataTransfer, DecompositionStrategy, FaultTolerance, GpuDeviceInfo,
-    LoadBalancingAlgorithm, PerformanceMonitor, PerformanceSummary, TransferStatus, WorkUnit,
+    CommunicationChannel, DataTransfer, FaultTolerance, GpuDeviceInfo, LoadBalancingAlgorithm,
+    MultiGpuDecompositionStrategy, MultiGpuPerformanceMonitor, PerformanceSummary,
+    PinnMultiGpuTransferStatus, WorkUnit,
 };

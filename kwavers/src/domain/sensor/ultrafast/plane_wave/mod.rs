@@ -8,5 +8,5 @@ pub mod processor;
 #[cfg(test)]
 mod tests;
 
-pub use config::PlaneWaveConfig;
+pub use config::UltrafastPlaneWaveConfig;
 pub use processor::PlaneWave;

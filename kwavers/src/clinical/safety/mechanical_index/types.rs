@@ -2,7 +2,7 @@
 
 /// Tissue types with different MI safety thresholds.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TissueType {
+pub enum MechanicalIndexTissueType {
     /// General soft tissue (MI < 1.9)
     SoftTissue,
     /// Ophthalmic tissue (MI < 0.23)
@@ -17,7 +17,7 @@ pub enum TissueType {
     Brain,
 }
 
-impl TissueType {
+impl MechanicalIndexTissueType {
     /// Get FDA/WFUMB recommended MI limit for this tissue type
     #[must_use]
     pub fn safety_limit(&self) -> f64 {
@@ -54,7 +54,7 @@ pub struct MechanicalIndexResult {
     /// Center frequency (MHz)
     pub center_frequency_mhz: f64,
     /// Safety assessment
-    pub safety_status: SafetyStatus,
+    pub safety_status: MechanicalIndexSafetyStatus,
     /// Distance from transducer where MI is calculated (cm)
     pub focal_distance_cm: f64,
     /// Tissue-specific safety limit
@@ -63,7 +63,7 @@ pub struct MechanicalIndexResult {
 
 /// Safety status based on MI value
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SafetyStatus {
+pub enum MechanicalIndexSafetyStatus {
     /// MI well below safety limits
     Safe,
     /// MI approaching safety limits (>80% of limit)
@@ -78,7 +78,7 @@ impl MechanicalIndexResult {
     /// Check if MI is within safety limits
     #[must_use]
     pub fn is_safe(&self) -> bool {
-        matches!(self.safety_status, SafetyStatus::Safe)
+        matches!(self.safety_status, MechanicalIndexSafetyStatus::Safe)
     }
 
     /// Get safety margin as percentage below limit

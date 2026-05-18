@@ -34,6 +34,7 @@ This directory is the source tree for the in-repository book on ultrasound physi
 - [Abdominal Histotripsy FWI Targeting and Lesion Monitoring](abdominal_histotripsy_fwi.md)
 - [Same-Device Therapeutic Ultrasound, Finite-Frequency Inverse, and RTM Monitoring](theranostic_fwi_platforms.md)
 - [Intravascular Ultrasound Imaging and Therapy](intravascular_ultrasound.md)
+- [Segmented Tissue Transducer Planning](segmented_tissue_transducer_planning.md)
 
 ## Figure Sources
 

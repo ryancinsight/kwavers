@@ -1,6 +1,6 @@
 //! Apodization window tests for [`KWaveArray`].
 
-use super::super::{ApodizationWindow, KWaveArray};
+use super::super::{KWaveArray, KwaveApodizationWindow};
 
 /// Rectangular apodization returns all-ones.
 /// # Panics
@@ -12,7 +12,7 @@ fn test_apodization_rectangular_all_ones() {
     for i in 0..8 {
         array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
     }
-    let weights = array.get_apodization(ApodizationWindow::Rectangular);
+    let weights = array.get_apodization(KwaveApodizationWindow::Rectangular);
     assert_eq!(weights.len(), 8);
     for w in &weights {
         assert!((w - 1.0).abs() < 1e-15, "rectangular weight must be 1.0");
@@ -29,7 +29,7 @@ fn test_apodization_hann_endpoints_near_zero() {
     for i in 0..9 {
         array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
     }
-    let weights = array.get_apodization(ApodizationWindow::Hann);
+    let weights = array.get_apodization(KwaveApodizationWindow::Hann);
     assert_eq!(weights.len(), 9);
     assert!(
         weights[0].abs() < 1e-12,
@@ -58,7 +58,7 @@ fn test_apodization_hamming_range_and_symmetry() {
     for i in 0..7 {
         array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
     }
-    let weights = array.get_apodization(ApodizationWindow::Hamming);
+    let weights = array.get_apodization(KwaveApodizationWindow::Hamming);
     assert_eq!(weights.len(), 7);
     for &w in &weights {
         assert!(
@@ -86,9 +86,9 @@ fn test_apodization_single_element() {
     let mut array = KWaveArray::new();
     array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
     for window in [
-        ApodizationWindow::Rectangular,
-        ApodizationWindow::Hann,
-        ApodizationWindow::Hamming,
+        KwaveApodizationWindow::Rectangular,
+        KwaveApodizationWindow::Hann,
+        KwaveApodizationWindow::Hamming,
     ] {
         let weights = array.get_apodization(window);
         assert_eq!(weights.len(), 1);

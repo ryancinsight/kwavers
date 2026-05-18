@@ -8,7 +8,7 @@
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use super::SonoluminescenceCoupledDomain;
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 
 impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
     /// Interpolate the sonoluminescence emission field at query coordinates
@@ -20,7 +20,7 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
-        _physics_params: &PhysicsParameters,
+        _physics_params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2> {
         let batch_size = x.shape().dims[0];
         let mut source_terms = Vec::with_capacity(batch_size);
@@ -70,7 +70,7 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2> {
         let x_grad = x.clone().require_grad();
         let y_grad = y.clone().require_grad();

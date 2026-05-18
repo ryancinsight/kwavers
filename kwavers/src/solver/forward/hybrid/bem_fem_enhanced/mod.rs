@@ -17,4 +17,4 @@ pub mod types;
 
 pub use config::EnhancedBemFemConfig;
 pub use solver::EnhancedBemFemSolver;
-pub use types::{InterfaceQuality, RefinementStep, ValidationResult};
+pub use types::{BemFemValidationResult, InterfaceQuality, RefinementStep};

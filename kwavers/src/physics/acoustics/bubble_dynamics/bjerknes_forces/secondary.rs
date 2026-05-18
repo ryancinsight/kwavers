@@ -1,7 +1,7 @@
 //! Secondary Bjerknes force calculations
 
 use super::calculator::BjerknesCalculator;
-use super::types::{BjerknesForce, InteractionType};
+use super::types::{BjerknesForceData, BjerknesInteractionType};
 use crate::core::error::{KwaversError, KwaversResult};
 
 impl BjerknesCalculator {
@@ -25,7 +25,7 @@ impl BjerknesCalculator {
         volume_amplitude2: f64,
         phase_difference: f64,
         distance: f64,
-    ) -> KwaversResult<BjerknesForce> {
+    ) -> KwaversResult<BjerknesForceData> {
         if bubble1_radius <= 0.0 || bubble2_radius <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "Bubble radii must be positive".to_owned(),
@@ -40,12 +40,12 @@ impl BjerknesCalculator {
 
         // Check if outside interaction range
         if distance > self.config.interaction_range {
-            return Ok(BjerknesForce {
+            return Ok(BjerknesForceData {
                 primary: 0.0,
                 secondary: 0.0,
                 total: 0.0,
                 phase_difference,
-                interaction_type: InteractionType::Neutral,
+                interaction_type: BjerknesInteractionType::Neutral,
                 distance,
                 coalescing: false,
             });
@@ -63,24 +63,24 @@ impl BjerknesCalculator {
         // Determine interaction type based on phase difference
         let cos_phase = phase_difference.cos();
         let interaction_type = if cos_phase > 0.1 {
-            InteractionType::Attractive
+            BjerknesInteractionType::Attractive
         } else if cos_phase < -0.1 {
-            InteractionType::Repulsive
+            BjerknesInteractionType::Repulsive
         } else {
-            InteractionType::Neutral
+            BjerknesInteractionType::Neutral
         };
 
         // Apply sign based on interaction type
         let secondary_force = match interaction_type {
-            InteractionType::Attractive => force_magnitude, // Positive (toward each other)
-            InteractionType::Repulsive => -force_magnitude, // Negative (away)
-            InteractionType::Neutral => 0.0,
+            BjerknesInteractionType::Attractive => force_magnitude, // Positive (toward each other)
+            BjerknesInteractionType::Repulsive => -force_magnitude, // Negative (away)
+            BjerknesInteractionType::Neutral => 0.0,
         };
 
         // Check coalescence condition
         let coalescing = distance < self.config.coalescence_distance;
 
-        let result = BjerknesForce {
+        let result = BjerknesForceData {
             primary: 0.0,
             secondary: secondary_force,
             total: secondary_force,
@@ -108,7 +108,7 @@ impl BjerknesCalculator {
         volume_amplitude2: f64,
         phase_difference: f64,
         distance: f64,
-    ) -> KwaversResult<BjerknesForce> {
+    ) -> KwaversResult<BjerknesForceData> {
         let mut result = self.secondary_bjerknes_force(
             bubble1_radius,
             bubble2_radius,
@@ -133,7 +133,7 @@ impl BjerknesCalculator {
 mod tests {
     use super::super::{
         calculator::BjerknesCalculator,
-        types::{BjerknesConfig, InteractionType},
+        types::{BjerknesConfig, BjerknesInteractionType},
     };
     use std::f64::consts::PI;
 
@@ -161,25 +161,25 @@ mod tests {
 
     /// Phase=0 (in-phase) → attractive interaction.
     ///
-    /// cos(0) = 1 > 0.1 → InteractionType::Attractive.
+    /// cos(0) = 1 > 0.1 → BjerknesInteractionType::Attractive.
     #[test]
     fn secondary_bjerknes_force_attractive_for_zero_phase_difference() {
         let result = calc()
             .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 10e-6)
             .unwrap();
-        assert_eq!(result.interaction_type, InteractionType::Attractive);
+        assert_eq!(result.interaction_type, BjerknesInteractionType::Attractive);
         assert!(result.secondary > 0.0, "attractive force must be positive");
     }
 
     /// Phase=π (anti-phase) → repulsive interaction.
     ///
-    /// cos(π) = −1 < −0.1 → InteractionType::Repulsive.
+    /// cos(π) = −1 < −0.1 → BjerknesInteractionType::Repulsive.
     #[test]
     fn secondary_bjerknes_force_repulsive_for_pi_phase_difference() {
         let result = calc()
             .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, PI, 10e-6)
             .unwrap();
-        assert_eq!(result.interaction_type, InteractionType::Repulsive);
+        assert_eq!(result.interaction_type, BjerknesInteractionType::Repulsive);
         assert!(result.secondary < 0.0, "repulsive force must be negative");
     }
 
@@ -198,7 +198,7 @@ mod tests {
             result.secondary, 0.0,
             "force must be 0 beyond interaction range"
         );
-        assert_eq!(result.interaction_type, InteractionType::Neutral);
+        assert_eq!(result.interaction_type, BjerknesInteractionType::Neutral);
     }
 
     /// Coalescence flag set when distance < coalescence_distance.

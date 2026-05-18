@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Criteria for adaptive method selection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SelectionCriteria {
+pub struct HybridSelectionCriteria {
     /// Weight for field smoothness in selection
     pub smoothness_weight: f64,
 
@@ -27,7 +27,7 @@ pub struct SelectionCriteria {
     pub min_region_size: usize,
 }
 
-impl Default for SelectionCriteria {
+impl Default for HybridSelectionCriteria {
     fn default() -> Self {
         Self {
             smoothness_weight: 0.3,
@@ -41,7 +41,7 @@ impl Default for SelectionCriteria {
     }
 }
 
-impl SelectionCriteria {
+impl HybridSelectionCriteria {
     /// Create criteria optimized for accuracy
     #[must_use]
     pub fn accuracy_focused() -> Self {

@@ -2,7 +2,7 @@ use super::config::FdtdFemCouplingConfig;
 use super::solver::FdtdFemSolver;
 use crate::domain::grid::Grid;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
-use crate::domain::mesh::BoundaryType;
+use crate::domain::mesh::MeshBoundaryType;
 
 #[test]
 fn test_fdtd_fem_coupling_creation() {
@@ -13,7 +13,7 @@ fn test_fdtd_fem_coupling_creation() {
         for j in 5..10 {
             for k in 5..10 {
                 let (x, y, z) = fdtd_grid.indices_to_coordinates(i, j, k);
-                fem_mesh.add_node([x, y, z], BoundaryType::Interior);
+                fem_mesh.add_node([x, y, z], MeshBoundaryType::Interior);
             }
         }
     }
@@ -41,10 +41,10 @@ fn test_schwarz_iteration_convergence() {
     let (x1, y1, z1) = fdtd_grid.indices_to_coordinates(5, 4, 4);
     let (x2, y2, z2) = fdtd_grid.indices_to_coordinates(4, 5, 4);
     let (x3, y3, z3) = fdtd_grid.indices_to_coordinates(4, 4, 5);
-    let n0 = fem_mesh.add_node([x0, y0, z0], BoundaryType::Interior);
-    let n1 = fem_mesh.add_node([x1, y1, z1], BoundaryType::Interior);
-    let n2 = fem_mesh.add_node([x2, y2, z2], BoundaryType::Interior);
-    let n3 = fem_mesh.add_node([x3, y3, z3], BoundaryType::Interior);
+    let n0 = fem_mesh.add_node([x0, y0, z0], MeshBoundaryType::Interior);
+    let n1 = fem_mesh.add_node([x1, y1, z1], MeshBoundaryType::Interior);
+    let n2 = fem_mesh.add_node([x2, y2, z2], MeshBoundaryType::Interior);
+    let n3 = fem_mesh.add_node([x3, y3, z3], MeshBoundaryType::Interior);
     fem_mesh.add_element([n0, n1, n2, n3], 0).unwrap();
 
     let config = FdtdFemCouplingConfig {

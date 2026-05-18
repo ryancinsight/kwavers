@@ -17,13 +17,83 @@
 use super::config::RealTimeSirtConfig;
 use super::types::{FrameQuality, ReconstructionFrame};
 use crate::clinical::imaging::reconstruction::acoustic_projection::{
-    backproject_acoustic, project_acoustic,
+    backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array3};
+use rayon::prelude::*;
 use std::time::Instant;
 
+/// Compute the per-sensor squared row norm `‖A_row_s‖²` for the acoustic projection matrix.
+///
+/// ## Theorem: Row-norm preconditioning in SIRT (Dines & Kak 1979 §III)
+///
+/// The SIRT update
+/// ```text
+/// x^(k+1) = x^(k) + λ · D_R · Aᵀ · (b − A·x^(k))
+/// ```
+/// requires the diagonal preconditioner `D_R[s] = 1/‖A_row_s‖²` so that each
+/// sensor is scaled by its own energy; sensors with large geometric coverage do
+/// not dominate the gradient update.
+///
+/// For the acoustic projection model `A[s,(i,j,k)] = exp(−2αf_c r) / r`:
+/// ```text
+/// ‖A_row_s‖² = Σ_{i,j,k} (exp(−2αf_c r_{s,v}) / r_{s,v})²
+/// ```
+///
+/// This is computed once per geometry/grid-shape pair and cached in
+/// `RealTimeSirtPipeline::row_norm_sq_cache`. Parallelised over sensors via Rayon.
+/// The lower clamp at `f64::EPSILON` prevents a zero-denominator singularity
+/// for far-field sensors whose stencil weight is below double-precision roundoff.
+///
+/// # References
+/// - Dines KA, Kak AC (1979). "Ultrasonic attenuation tomography of soft tissues."
+///   *Ultrasonic Imaging* 1(1):16–33, §III.
+fn compute_row_norm_sq(
+    geom: &AcousticProjectionGeometry,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+) -> Vec<f64> {
+    let (dx, dy, dz) = geom.voxel_spacing;
+    let alpha = geom.alpha_nepers_per_m_per_hz();
+    let f_c = geom.center_frequency_hz;
+    let zs = geom.element_z;
+
+    geom.element_x
+        .par_iter()
+        .map(|&xs| {
+            let mut norm_sq = 0.0_f64;
+            for i in 0..nx {
+                let xv = i as f64 * dx;
+                let dx2 = (xv - xs) * (xv - xs);
+                for j in 0..ny {
+                    let yv = j as f64 * dy;
+                    let dxy2 = yv.mul_add(yv, dx2);
+                    for k in 0..nz {
+                        let zv = k as f64 * dz;
+                        let r = (zv - zs).mul_add(zv - zs, dxy2).sqrt().max(1e-6);
+                        let weight = (-2.0 * alpha * f_c * r).exp() / r;
+                        norm_sq += weight * weight;
+                    }
+                }
+            }
+            // Clamp away from zero to prevent div-by-zero in D_R[s] = 1/‖A_row_s‖²
+            norm_sq.max(f64::EPSILON)
+        })
+        .collect()
+}
+
 /// Streaming SIRT reconstruction pipeline.
+///
+/// ## Row-norm cache
+///
+/// `row_norm_sq_cache` stores the per-sensor squared row norms of the acoustic
+/// projection operator together with the grid shape for which they were computed.
+/// Computing these norms requires O(n_sensors × NX×NY×NZ) work — equivalent to
+/// one full forward projection.  Recomputing them on every frame is wasteful
+/// because the geometry and grid shape are fixed for the pipeline lifetime.
+/// The cache is invalidated only when `expected_grid_size` changes (uncommon).
 #[derive(Debug)]
 pub struct RealTimeSirtPipeline {
     config: RealTimeSirtConfig,
@@ -31,6 +101,8 @@ pub struct RealTimeSirtPipeline {
     frame_count: usize,
     start_time: Instant,
     frame_history: Vec<ReconstructionFrame>,
+    /// Cached `(norms, grid_shape)`; recomputed only when `grid_shape` changes.
+    row_norm_sq_cache: Option<(Vec<f64>, (usize, usize, usize))>,
 }
 
 impl RealTimeSirtPipeline {
@@ -43,6 +115,7 @@ impl RealTimeSirtPipeline {
             frame_count: 0,
             start_time: Instant::now(),
             frame_history: Vec::new(),
+            row_norm_sq_cache: None,
         }
     }
 
@@ -84,34 +157,22 @@ impl RealTimeSirtPipeline {
         if let Some(ref geom) = self.config.transducer_geometry.clone() {
             // ── Acoustic physics-based SIRT ───────────────────────────────────
             // Row normalisation D_R[s] = 1/‖A_row_s‖² (Dines & Kak 1979 §III).
+            //
+            // Row norms depend only on the geometry and grid shape, not on the
+            // RF data.  Cache them: first call computes in parallel (Rayon over
+            // elements); subsequent calls reuse the cached vector.  Invalidate
+            // when grid shape changes (geometry is fixed for the pipeline lifetime).
+            let grid_shape = (nx, ny, nz);
+            if self
+                .row_norm_sq_cache
+                .as_ref()
+                .map_or(true, |(_, s)| *s != grid_shape)
+            {
+                let norms = compute_row_norm_sq(geom, nx, ny, nz);
+                self.row_norm_sq_cache = Some((norms, grid_shape));
+            }
+            let row_norm_sq = &self.row_norm_sq_cache.as_ref().unwrap().0;
             let n_sensors = geom.element_x.len();
-            let alpha = geom.alpha_nepers_per_m_per_hz();
-            let f_c = geom.center_frequency_hz;
-            let (dx, dy, dz) = geom.voxel_spacing;
-            let zs_elem = geom.element_z;
-
-            let row_norm_sq: Vec<f64> = geom
-                .element_x
-                .iter()
-                .map(|&xs| {
-                    let mut sq = 0.0_f64;
-                    for i in 0..nx {
-                        let xv = i as f64 * dx;
-                        let dx2 = (xv - xs) * (xv - xs);
-                        for j in 0..ny {
-                            let yv = j as f64 * dy;
-                            let dxy2 = yv.mul_add(yv, dx2);
-                            for k in 0..nz {
-                                let zv = k as f64 * dz;
-                                let r = (zv - zs_elem).mul_add(zv - zs_elem, dxy2).sqrt().max(1e-6);
-                                let w = (-2.0 * alpha * f_c * r).exp() / r;
-                                sq += w * w;
-                            }
-                        }
-                    }
-                    sq.max(1e-30)
-                })
-                .collect();
 
             for _ in 0..self.config.sirt_config.max_iterations {
                 let projection = project_acoustic(&image, geom);
@@ -220,9 +281,23 @@ impl RealTimeSirtPipeline {
     }
 
     /// Separable 3-point Gaussian-weighted smoothing (σ in grid points).
+    ///
+    /// ## Implementation
+    ///
+    /// Three sequential 1-D passes (X → Y → Z) using a 2-buffer ping-pong
+    /// pattern: two `Array3` allocations (down from four in the original), with
+    /// `Array3::assign` (memcpy, no allocation) used to propagate edge-plane
+    /// values between passes.  Each pass interior is computed in parallel via
+    /// `ndarray::Zip::par_for_each`.
+    ///
+    /// ## Correctness invariant
+    ///
+    /// Edge planes in each dimension (index 0 and dim−1) are not written by
+    /// their respective pass, preserving the same boundary semantics as the
+    /// original sequential implementation.
+    ///
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn apply_smoothing(image: &Array3<f64>, sigma: f64) -> KwaversResult<Array3<f64>> {
         if sigma <= 0.0 {
             return Ok(image.clone());
@@ -232,41 +307,51 @@ impl RealTimeSirtPipeline {
             return Ok(image.clone());
         }
         let wn = (-0.5 / (sigma * sigma)).exp();
-        let norm = 2.0f64.mul_add(wn, 1.0);
-        let w0 = 1.0 / norm;
-        let wn = wn / norm;
+        let norm_w = 2.0f64.mul_add(wn, 1.0);
+        let w0 = 1.0 / norm_w;
+        let wn = wn / norm_w;
 
-        let mut s = image.clone();
-        let mut tmp = s.clone();
-        for i in 1..nx - 1 {
-            for j in 0..ny {
-                for k in 0..nz {
-                    tmp[[i, j, k]] =
-                        wn * s[[i - 1, j, k]] + w0 * s[[i, j, k]] + wn * s[[i + 1, j, k]];
-                }
-            }
-        }
-        s = tmp;
-        let mut tmp = s.clone();
-        for i in 0..nx {
-            for j in 1..ny - 1 {
-                for k in 0..nz {
-                    tmp[[i, j, k]] =
-                        wn * s[[i, j - 1, k]] + w0 * s[[i, j, k]] + wn * s[[i, j + 1, k]];
-                }
-            }
-        }
-        s = tmp;
-        let mut tmp = s.clone();
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 1..nz - 1 {
-                    tmp[[i, j, k]] =
-                        wn * s[[i, j, k - 1]] + w0 * s[[i, j, k]] + wn * s[[i, j, k + 1]];
-                }
-            }
-        }
-        Ok(tmp)
+        use ndarray::s;
+
+        // Two allocations total (down from four).  After each pass we swap
+        // buffers and `assign` so that edge-plane values in the write buffer
+        // always reflect the most recent read buffer state before interior
+        // positions are overwritten.
+        let mut a = image.clone(); // read buffer
+        let mut b = a.clone(); // write buffer (edge planes pre-filled)
+
+        // --- X pass: interior i ∈ [1, nx−2] ---
+        ndarray::Zip::from(b.slice_mut(s![1..nx - 1, .., ..]))
+            .and(a.slice(s![..nx - 2, .., ..]))
+            .and(a.slice(s![1..nx - 1, .., ..]))
+            .and(a.slice(s![2..nx, .., ..]))
+            .par_for_each(|dst, &left, &center, &right| {
+                *dst = wn * left + w0 * center + wn * right;
+            });
+        std::mem::swap(&mut a, &mut b);
+        // Propagate current result (in a) into b so j/k edge planes are correct.
+        b.assign(&a);
+
+        // --- Y pass: interior j ∈ [1, ny−2] ---
+        ndarray::Zip::from(b.slice_mut(s![.., 1..ny - 1, ..]))
+            .and(a.slice(s![.., ..ny - 2, ..]))
+            .and(a.slice(s![.., 1..ny - 1, ..]))
+            .and(a.slice(s![.., 2..ny, ..]))
+            .par_for_each(|dst, &left, &center, &right| {
+                *dst = wn * left + w0 * center + wn * right;
+            });
+        std::mem::swap(&mut a, &mut b);
+        b.assign(&a);
+
+        // --- Z pass: interior k ∈ [1, nz−2] ---
+        ndarray::Zip::from(b.slice_mut(s![.., .., 1..nz - 1]))
+            .and(a.slice(s![.., .., ..nz - 2]))
+            .and(a.slice(s![.., .., 1..nz - 1]))
+            .and(a.slice(s![.., .., 2..nz]))
+            .par_for_each(|dst, &left, &center, &right| {
+                *dst = wn * left + w0 * center + wn * right;
+            });
+        Ok(b)
     }
 
     fn assess_quality(image: &Array3<f64>) -> FrameQuality {

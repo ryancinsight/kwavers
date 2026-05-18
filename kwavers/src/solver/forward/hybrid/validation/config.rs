@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Configuration for validation tests
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationConfig {
+pub struct HybridValidationSuiteConfig {
     /// Maximum allowed error tolerance
     pub error_tolerance: f64,
     /// Number of test iterations
@@ -15,7 +15,7 @@ pub struct ValidationConfig {
     pub benchmark_performance: bool,
 }
 
-impl Default for ValidationConfig {
+impl Default for HybridValidationSuiteConfig {
     fn default() -> Self {
         Self {
             error_tolerance: 1e-6,

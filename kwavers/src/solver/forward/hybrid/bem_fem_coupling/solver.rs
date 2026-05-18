@@ -80,12 +80,12 @@ impl BemFemSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::mesh::tetrahedral::BoundaryType;
+    use crate::domain::mesh::tetrahedral::MeshBoundaryType;
 
     #[test]
     fn test_bem_fem_solver_creation() {
         let mut fem_mesh = TetrahedralMesh::new();
-        fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+        fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
 
         let bem_boundary = vec![0];
         let config = BemFemCouplingConfig::default();

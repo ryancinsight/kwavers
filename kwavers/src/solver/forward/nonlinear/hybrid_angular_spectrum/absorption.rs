@@ -36,7 +36,7 @@ use ndarray::{Array2, Array3};
 
 /// Absorption operator implementing power-law frequency-dependent attenuation.
 #[derive(Debug)]
-pub struct AbsorptionOperator {
+pub struct HasAbsorptionOperator {
     /// Attenuation coefficient in dB/(cm·MHz^y) at the reference frequency.
     attenuation_coeff: f64,
     /// Power-law frequency exponent y (dimensionless; typically 1–2 for tissue).
@@ -45,8 +45,8 @@ pub struct AbsorptionOperator {
     reference_freq: f64,
 }
 
-impl AbsorptionOperator {
-    /// Construct an `AbsorptionOperator` from a `HASConfig`.
+impl HasAbsorptionOperator {
+    /// Construct an `HasAbsorptionOperator` from a `HASConfig`.
     #[must_use]
     pub fn new(config: &HASConfig) -> Self {
         Self {
@@ -149,7 +149,7 @@ mod tests {
     fn test_absorption_zero_attenuation_identity() {
         let mut config = default_config();
         config.attenuation_coeff = 0.0;
-        let op = AbsorptionOperator::new(&config);
+        let op = HasAbsorptionOperator::new(&config);
 
         let pressure = Array3::from_shape_fn((4, 4, 4), |(i, j, k)| (i + j + k) as f64 + 1.0);
         let result = op.apply(&pressure, 0.05).unwrap();
@@ -176,7 +176,7 @@ mod tests {
                                           // Set so that α_np_m = 10.0 Np/m
         config.attenuation_coeff = 10.0 * NP_TO_DB / 100.0; // dB/cm/MHz
 
-        let op = AbsorptionOperator::new(&config);
+        let op = HasAbsorptionOperator::new(&config);
         let dz = 0.01; // 1 cm
         let expected_factor = (-10.0_f64 * dz).exp(); // exp(-0.1)
 
@@ -197,7 +197,7 @@ mod tests {
     #[test]
     fn test_absorption_broadband_cw_agreement() {
         let config = default_config();
-        let op = AbsorptionOperator::new(&config);
+        let op = HasAbsorptionOperator::new(&config);
         let f0 = config.reference_frequency;
         let dz = 0.005;
 
@@ -225,7 +225,7 @@ mod tests {
         let mut config = default_config();
         config.power_law_exponent = 2.0;
         config.attenuation_coeff = 0.5;
-        let op = AbsorptionOperator::new(&config);
+        let op = HasAbsorptionOperator::new(&config);
         let dz = 0.01;
         let f0 = config.reference_frequency;
 

@@ -1,10 +1,14 @@
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::{MemoryBlock, MemoryPool, MemoryPoolType};
+use super::{MemoryBlock, MemoryPool, PinnGpuMemoryPoolType};
 
 impl MemoryPool {
     /// New.
-    pub(crate) fn new(pool_type: MemoryPoolType, total_size: usize, alignment: usize) -> Self {
+    pub(crate) fn new(
+        pool_type: PinnGpuMemoryPoolType,
+        total_size: usize,
+        alignment: usize,
+    ) -> Self {
         Self {
             pool_type,
             total_allocated: total_size,

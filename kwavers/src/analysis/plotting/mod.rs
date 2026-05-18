@@ -3,10 +3,10 @@
 //! This module provides visualization capabilities for Kwavers simulation results.
 //! It supports 2D/3D plotting of acoustic fields, pressure distributions, and temporal evolution.
 
-#[allow(unused_imports)]
-use ndarray::Array3;
-
 // Note: Field indices imported from physics::field_indices for SSOT
+
+#[cfg(not(feature = "plotting"))]
+use ndarray::Array3;
 
 #[cfg(feature = "plotting")]
 mod plotting_impl {

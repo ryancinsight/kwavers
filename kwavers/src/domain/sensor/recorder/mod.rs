@@ -12,11 +12,10 @@ pub mod traits;
 pub mod velocity_statistics;
 
 pub use complex::Recorder;
-pub use complex::Recorder as ComplexRecorder;
 pub use config::{RecorderConfig, RecordingMode};
 pub use fields::{SensorRecordField, SensorRecordSpec};
 pub use pressure_statistics::{PressureFieldStatistics, SampledStatistics};
-pub use simple::SensorRecorder as SimpleRecorder;
+pub use simple::SensorRecorder;
 pub use statistics::RecorderStatistics;
 pub use traits::RecorderTrait;
 pub use velocity_statistics::{

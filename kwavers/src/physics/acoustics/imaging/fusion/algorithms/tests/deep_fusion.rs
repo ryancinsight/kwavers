@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_deep_fusion_attention_is_input_sensitive_and_convex() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::DeepFusion,
+        fusion_method: ImagingFusionMethod::DeepFusion,
         uncertainty_quantification: true,
         ..Default::default()
     };
@@ -51,7 +51,7 @@ fn test_deep_fusion_attention_is_input_sensitive_and_convex() {
 #[test]
 fn test_deep_fusion_quality_prior_changes_attention_weights() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::DeepFusion,
+        fusion_method: ImagingFusionMethod::DeepFusion,
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
@@ -82,7 +82,7 @@ fn test_deep_fusion_quality_prior_changes_attention_weights() {
 #[test]
 fn test_deep_fusion_rejects_nonfinite_data() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::DeepFusion,
+        fusion_method: ImagingFusionMethod::DeepFusion,
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);

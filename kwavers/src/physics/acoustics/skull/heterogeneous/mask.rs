@@ -1,6 +1,6 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::physics::acoustics::skull::SkullProperties;
+use crate::physics::acoustics::skull::AcousticSkullProperties;
 use ndarray::{Array3, Zip};
 
 use super::constants::ALPHA_WATER;
@@ -17,7 +17,7 @@ impl HeterogeneousSkull {
     pub fn from_mask(
         _grid: &Grid,
         mask: &Array3<f64>,
-        props: &SkullProperties,
+        props: &AcousticSkullProperties,
     ) -> KwaversResult<Self> {
         use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_C;
         use crate::core::constants::water::WaterProperties;

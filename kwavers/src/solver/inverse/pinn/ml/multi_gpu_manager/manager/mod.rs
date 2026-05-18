@@ -5,8 +5,8 @@ pub mod decompose;
 pub mod monitor;
 
 use super::types::{
-    CommunicationChannel, DecompositionStrategy, FaultTolerance, GpuDeviceInfo,
-    LoadBalancingAlgorithm, PerformanceMonitor, WorkUnit,
+    CommunicationChannel, FaultTolerance, GpuDeviceInfo, LoadBalancingAlgorithm,
+    MultiGpuDecompositionStrategy, MultiGpuPerformanceMonitor, WorkUnit,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::{HashMap, VecDeque};
@@ -17,7 +17,7 @@ pub struct MultiGpuManager {
     /// Available GPU devices.
     pub(super) devices: Vec<GpuDeviceInfo>,
     /// Decomposition strategy.
-    pub(super) decomposition: DecompositionStrategy,
+    pub(super) decomposition: MultiGpuDecompositionStrategy,
     /// Load balancing algorithm.
     pub(super) load_balancer: LoadBalancingAlgorithm,
     /// Work queue for distribution.
@@ -27,7 +27,7 @@ pub struct MultiGpuManager {
     /// Communication channels between GPUs.
     pub(super) _communication_channels: HashMap<(usize, usize), CommunicationChannel>,
     /// Performance monitoring.
-    pub(super) performance_monitor: PerformanceMonitor,
+    pub(super) performance_monitor: MultiGpuPerformanceMonitor,
     /// Fault tolerance state.
     pub(super) fault_tolerance: FaultTolerance,
 }
@@ -39,7 +39,7 @@ impl MultiGpuManager {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub async fn new(
-        decomposition: DecompositionStrategy,
+        decomposition: MultiGpuDecompositionStrategy,
         load_balancer: LoadBalancingAlgorithm,
     ) -> KwaversResult<Self> {
         let devices = Self::discover_gpu_devices().await?;
@@ -62,7 +62,7 @@ impl MultiGpuManager {
             work_queue: VecDeque::new(),
             active_work: HashMap::new(),
             _communication_channels: communication_channels,
-            performance_monitor: PerformanceMonitor {
+            performance_monitor: MultiGpuPerformanceMonitor {
                 gpu_utilization: vec![vec![]; device_count],
                 memory_usage: vec![vec![]; device_count],
                 communication_overhead: 0.0,

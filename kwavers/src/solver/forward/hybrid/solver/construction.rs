@@ -9,7 +9,7 @@ use crate::solver::forward::hybrid::adaptive_selection::AdaptiveSelector;
 use crate::solver::forward::hybrid::config::HybridConfig;
 use crate::solver::forward::hybrid::coupling::CouplingInterface;
 use crate::solver::forward::hybrid::domain_decomposition::DomainDecomposer;
-use crate::solver::forward::hybrid::metrics::{HybridMetrics, ValidationResults};
+use crate::solver::forward::hybrid::metrics::{HybridMetrics, HybridValidationResults};
 use crate::solver::forward::pstd::PSTDSolver;
 use log::info;
 
@@ -39,7 +39,7 @@ impl HybridSolver {
         let coupling = CouplingInterface::new(
             grid,
             grid,
-            crate::solver::hybrid::coupling::InterpolationScheme::Linear,
+            crate::solver::hybrid::coupling::HybridInterpolationScheme::Linear,
         )?;
 
         let default_medium = crate::domain::medium::homogeneous::HomogeneousMedium::water(grid);
@@ -60,9 +60,10 @@ impl HybridSolver {
             coupling,
             regions,
             metrics: HybridMetrics::new(),
-            validation_results: ValidationResults::default(),
+            validation_results: HybridValidationResults::default(),
             time_step: 0,
             fields: WaveFields::new(shape),
+            source_mask_scratch: ndarray::Array3::zeros(shape),
         })
     }
 }

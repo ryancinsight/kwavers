@@ -16,7 +16,7 @@ pub use interfaces::{FresnelCalculator, Interface, InterfaceType, SnellLawCalcul
 
 /// Wave mode enumeration for different types of wave propagation
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum WaveMode {
+pub enum AnalyticalWaveMode {
     /// Acoustic wave mode
     Acoustic,
     /// Optical wave mode
@@ -35,9 +35,9 @@ pub enum WaveMode {
     Plate,
 }
 
-/// Polarization states for electromagnetic waves
+/// AnalyticalPolarization states for electromagnetic waves
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Polarization {
+pub enum AnalyticalPolarization {
     /// Transverse Electric (TE) polarization - electric field perpendicular to plane of incidence
     TransverseElectric,
     /// Transverse Magnetic (TM) polarization - magnetic field perpendicular to plane of incidence

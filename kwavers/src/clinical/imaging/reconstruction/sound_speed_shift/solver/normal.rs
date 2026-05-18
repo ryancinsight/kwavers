@@ -42,7 +42,7 @@ pub(super) fn objective(
         .map(|(value, lap)| *value * *lap)
         .sum::<f64>();
     let sparse = match config.prior {
-        ShiftPrior::Dense => 0.0,
+        ShiftPrior::Dense | ShiftPrior::Lsqr { .. } => 0.0,
         ShiftPrior::Sparse => x.iter().map(|value| value.abs()).sum::<f64>(),
     };
 

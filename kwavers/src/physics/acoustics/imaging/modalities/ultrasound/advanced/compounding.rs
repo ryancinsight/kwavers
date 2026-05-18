@@ -19,7 +19,10 @@ pub struct PlaneWaveCompounding {}
 impl PlaneWaveCompounding {
     /// Create new compounding processor
     #[must_use]
-    pub fn new(_angles: &[f64], _base_config: super::plane_wave::PlaneWaveConfig) -> Self {
+    pub fn new(
+        _angles: &[f64],
+        _base_config: super::plane_wave::UltrasoundPlaneWaveConfig,
+    ) -> Self {
         Self {}
     }
 

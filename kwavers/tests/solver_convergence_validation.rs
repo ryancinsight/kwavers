@@ -14,7 +14,7 @@
 //! - Validates wave propagation without instabilities
 //! - Validates solver doesn't produce NaN or Inf values
 
-use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
+use kwavers::domain::boundary::{DomainPmlConfig, PMLBoundary};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
@@ -58,7 +58,7 @@ fn test_cfl_stability_condition() {
     let c = 1500.0;
     let dt = 0.5 * dx / (c * (3.0_f64).sqrt());
 
-    let mut boundary = PMLBoundary::new(PMLConfig::default().with_thickness(2))
+    let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(2))
         .expect("Failed to create PML boundary");
     let sources = vec![];
 
@@ -160,7 +160,7 @@ fn test_energy_conservation() {
 
     let initial_energy = energy(&fields);
 
-    let mut boundary = PMLBoundary::new(PMLConfig::default().with_thickness(4))
+    let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(4))
         .expect("Failed to create PML boundary");
     let sources = vec![];
 

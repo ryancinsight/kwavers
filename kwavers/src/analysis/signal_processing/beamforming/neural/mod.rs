@@ -204,8 +204,8 @@ pub mod distributed;
 // High-level API
 pub use beamformer::NeuralBeamformer;
 pub use config::{
-    AdaptationParameters, NeuralBeamformingConfig, NeuralBeamformingMode, PhysicsParameters,
-    SensorGeometry,
+    AdaptationParameters, NeuralBeamformingConfig, NeuralBeamformingMode,
+    NeuralBeamformingPhysicsParams, SensorGeometry,
 };
 
 // Feature extraction

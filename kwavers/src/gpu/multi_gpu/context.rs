@@ -1,7 +1,8 @@
 //! Multi-GPU context management.
 
 use super::types::{
-    CommunicationChannel, GpuAffinity, MultiGpuPerformanceSummary, PendingTransfer, TransferStatus,
+    CommunicationChannel, GpuAffinity, GpuTransferStatus, MultiGpuPerformanceSummary,
+    PendingTransfer,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::gpu::{GpuCapabilities, GpuContext};
@@ -127,7 +128,7 @@ impl MultiGpuContext {
         };
 
         let compute = crate::gpu::GpuCompute::new(&device);
-        let buffer_manager = crate::gpu::BufferManager::new(&device);
+        let buffer_manager = crate::gpu::GpuBufferManager::new(&device);
 
         Ok(GpuContext {
             device,
@@ -231,7 +232,7 @@ impl MultiGpuContext {
         let transfer = PendingTransfer {
             size,
             priority,
-            status: TransferStatus::Pending,
+            status: GpuTransferStatus::Pending,
         };
 
         channel.transfer_queue.push(transfer);
@@ -261,15 +262,15 @@ impl MultiGpuContext {
 
         for channel in self.communication_channels.values_mut() {
             for transfer in channel.transfer_queue.iter_mut() {
-                if transfer.status == TransferStatus::Pending {
-                    transfer.status = TransferStatus::InProgress;
-                    transfer.status = TransferStatus::Completed;
+                if transfer.status == GpuTransferStatus::Pending {
+                    transfer.status = GpuTransferStatus::InProgress;
+                    transfer.status = GpuTransferStatus::Completed;
                     completed_transfers += 1;
                 }
             }
             channel
                 .transfer_queue
-                .retain(|t| t.status != TransferStatus::Completed);
+                .retain(|t| t.status != GpuTransferStatus::Completed);
         }
 
         completed_transfers

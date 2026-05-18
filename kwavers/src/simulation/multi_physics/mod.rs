@@ -16,24 +16,24 @@
 //!
 //! The multi-physics framework consists of:
 //! - **FieldCoupler**: Manages conservative field transfer between physics domains
-//! - **CouplingStrategy**: Defines coupling algorithms (explicit, implicit, partitioned)
-//! - **MultiPhysicsSolver**: Orchestrates coupled physics simulations
+//! - **SimulationCouplingStrategy**: Defines coupling algorithms (explicit, implicit, partitioned)
+//! - **SimulationMultiPhysicsSolver**: Orchestrates coupled physics simulations
 //! - **DomainManager**: Handles domain decomposition and load balancing
 //!
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use kwavers::simulation::multi_physics::{MultiPhysicsSolver, CouplingStrategy};
+//! use kwavers::simulation::multi_physics::{SimulationMultiPhysicsSolver, SimulationCouplingStrategy};
 //!
 //! // Create coupled acoustic-thermal simulation
 //! let config = MultiPhysicsConfig {
-//!     coupling_strategy: CouplingStrategy::Implicit,
+//!     coupling_strategy: SimulationCouplingStrategy::Implicit,
 //!     max_iterations: 50,
 //!     tolerance: 1e-6,
 //!     relaxation_factor: 0.8,
 //! };
 //!
-//! let solver = MultiPhysicsSolver::new(config, acoustic_solver, thermal_solver)?;
+//! let solver = SimulationMultiPhysicsSolver::new(config, acoustic_solver, thermal_solver)?;
 //! let result = solver.solve_coupled(&initial_conditions, time_span)?;
 //! ```
 
@@ -46,9 +46,9 @@ pub mod solver;
 
 pub use conservation::ConservationEnforcer;
 pub use coupler::FieldCoupler;
-pub use interface::CouplingInterface;
+pub use interface::MultiPhysicsInterface;
 pub use schwarz::SchwarzCoupling;
-pub use solver::MultiPhysicsSolver;
+pub use solver::SimulationMultiPhysicsSolver;
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -73,7 +73,7 @@ pub enum PhysicsDomain {
 
 /// Coupling strategy for multi-physics simulations
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CouplingStrategy {
+pub enum SimulationCouplingStrategy {
     /// Explicit coupling (no iteration, use previous timestep values)
     Explicit,
     /// Implicit coupling (iterative solution until convergence)
@@ -88,7 +88,7 @@ pub enum CouplingStrategy {
 #[derive(Debug, Clone)]
 pub struct MultiPhysicsConfig {
     /// Coupling strategy to use
-    pub coupling_strategy: CouplingStrategy,
+    pub coupling_strategy: SimulationCouplingStrategy,
     /// Maximum coupling iterations
     pub max_iterations: usize,
     /// Convergence tolerance
@@ -106,7 +106,7 @@ pub struct MultiPhysicsConfig {
 impl Default for MultiPhysicsConfig {
     fn default() -> Self {
         Self {
-            coupling_strategy: CouplingStrategy::Implicit,
+            coupling_strategy: SimulationCouplingStrategy::Implicit,
             max_iterations: 20,
             tolerance: 1e-6,
             relaxation_factor: 0.8,

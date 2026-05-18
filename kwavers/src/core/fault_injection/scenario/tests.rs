@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn scenario_recovery_expectations() {
-    let oom_gradual = FaultScenario::GpuOomGradual {
+    let oom_gradual = FaultInjectionScenario::GpuOomGradual {
         leak_rate_bytes: 1024,
         total_leak_bytes: 10240,
         timing: InjectionTiming::Immediate,
@@ -12,7 +12,7 @@ fn scenario_recovery_expectations() {
         RecoveryExpectation::Automatic
     );
 
-    let deadlock = FaultScenario::Deadlock {
+    let deadlock = FaultInjectionScenario::Deadlock {
         resource_count: 2,
         timing: InjectionTiming::AtStep(100),
     };
@@ -21,13 +21,13 @@ fn scenario_recovery_expectations() {
 
 #[test]
 fn scenario_requires_gpu() {
-    let gpu_oom = FaultScenario::GpuOomSudden {
+    let gpu_oom = FaultInjectionScenario::GpuOomSudden {
         allocation_size_bytes: 1024,
         timing: InjectionTiming::Immediate,
     };
     assert!(gpu_oom.requires_gpu());
 
-    let cpu_starve = FaultScenario::CpuStarvation {
+    let cpu_starve = FaultInjectionScenario::CpuStarvation {
         load_factor: 0.9,
         duration_ms: 1000,
         timing: InjectionTiming::Immediate,
@@ -39,21 +39,21 @@ fn scenario_requires_gpu() {
 fn scenario_categories() {
     let scenarios = vec![
         (
-            FaultScenario::GpuOomSudden {
+            FaultInjectionScenario::GpuOomSudden {
                 allocation_size_bytes: 1024,
                 timing: InjectionTiming::Immediate,
             },
             "memory",
         ),
         (
-            FaultScenario::CflViolation {
+            FaultInjectionScenario::CflViolation {
                 overshoot_factor: 1.5,
                 timing: InjectionTiming::Immediate,
             },
             "numerical",
         ),
         (
-            FaultScenario::GpuDeviceLost {
+            FaultInjectionScenario::GpuDeviceLost {
                 timing: InjectionTiming::Immediate,
                 recovery_time_ms: 100,
             },

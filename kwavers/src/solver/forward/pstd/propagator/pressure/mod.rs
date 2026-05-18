@@ -82,30 +82,49 @@ impl PSTDSolver {
     ///
     #[inline]
     pub(crate) fn update_pressure(&mut self, _dt: f64) -> KwaversResult<()> {
-        Zip::from(&mut self.div_u)
-            .and(&self.rhox)
-            .and(&self.rhoy)
-            .and(&self.rhoz)
-            .par_for_each(|rho_sum, &rx, &ry, &rz| {
-                *rho_sum = rx + ry + rz;
-            });
-
+        // ── EOS: populate div_u = ρ_total (needed by absorption L2,
+        // Treeby & Cox 2010 Eq. 21) and set pressure simultaneously.
+        //
+        // Linear path (most common): single fused Zip — 6 arrays, within ndarray arity.
+        //   OLD: Pass 1 writes div_u (3 reads+1 write), Pass 2 reads div_u→writes p (2+1)
+        //   NEW: 1 pass writes div_u AND p (4 reads+2 writes) — saves 1 div_u read/write pair.
+        //
+        // Nonlinear path: 2 passes (8 arrays total exceed ndarray Zip arity=6).
+        //   Pass 1: div_u = ρ_total  (4 arrays)
+        //   Pass 2: p = c²·(ρ_total + bon/(2·ρ₀)·ρ_total²)  (5 arrays)
+        //   Both passes use par_for_each (Rayon parallelism preserved).
         if self.config.nonlinearity {
+            // SAFETY: `bon.is_some() ↔ config.nonlinearity` — enforced at construction.
+            let bon = self.bon.as_ref().expect("bon populated iff nonlinearity");
+            // Pass 1: accumulate split densities → ρ_total.
+            Zip::from(&mut self.div_u)
+                .and(&self.rhox)
+                .and(&self.rhoy)
+                .and(&self.rhoz)
+                .par_for_each(|rho_sum, &rx, &ry, &rz| {
+                    *rho_sum = rx + ry + rz;
+                });
+            // Pass 2: nonlinear EOS — p = c²·(ρ_total + bon/(2·ρ₀)·ρ_total²).
             Zip::from(&mut self.fields.p)
                 .and(&self.div_u)
                 .and(&self.materials.c0)
-                .and(&self.bon)
+                .and(bon)
                 .and(&self.materials.rho0)
-                .par_for_each(|p, &rho_sum, &c, &bon, &rho0| {
-                    let linear = rho_sum;
-                    let nonlinear = (bon / (2.0 * rho0)) * rho_sum * rho_sum;
-                    *p = c * c * (linear + nonlinear);
+                .par_for_each(|p, &rho_sum, &c, &bon_val, &rho0| {
+                    let nonlinear = (bon_val / (2.0 * rho0)) * rho_sum * rho_sum;
+                    *p = c * c * (rho_sum + nonlinear);
                 });
         } else {
-            Zip::from(&mut self.fields.p)
-                .and(&self.div_u)
+            // Fused single pass: div_u = ρ_total AND p = c²·ρ_total.
+            Zip::from(&mut self.div_u)
+                .and(&mut self.fields.p)
+                .and(&self.rhox)
+                .and(&self.rhoy)
+                .and(&self.rhoz)
                 .and(&self.materials.c0)
-                .par_for_each(|p, &rho_sum, &c| {
+                .par_for_each(|div, p, &rx, &ry, &rz, &c| {
+                    let rho_sum = rx + ry + rz;
+                    *div = rho_sum;
                     *p = c * c * rho_sum;
                 });
         }

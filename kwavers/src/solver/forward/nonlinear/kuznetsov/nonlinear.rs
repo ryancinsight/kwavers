@@ -1,33 +1,82 @@
 //! Nonlinear term computation for Kuznetsov equation
 //!
-//! Implements the nonlinear term: -(β/ρ₀c₀⁴)∂²p²/∂t²
-//! where β = 1 + B/2A is the nonlinearity coefficient
+//! ## Theorem (Kuznetsov nonlinear term derivation)
+//!
+//! **Statement** (Kuznetsov 1971, eq. 1; Hamilton & Blackstock 1998, §2.3.2):
+//! Starting from the compressible Euler equations with a Taylor-expanded equation
+//! of state to second order in density perturbation ρ' = ρ − ρ₀:
+//!
+//! ```text
+//! p = c₀²ρ' + (B/A)c₀²(ρ')²/(2ρ₀) + O(ρ'³)
+//! ```
+//!
+//! the second-order wave equation for acoustic pressure includes the nonlinear
+//! source term:
+//!
+//! ```text
+//! −(β/ρ₀c₀⁴) ∂²(p²)/∂t²
+//! ```
+//!
+//! where the **coefficient of nonlinearity** is:
+//! ```text
+//! β = 1 + B/(2A)
+//! ```
+//!
+//! The `B/A` parameter is the ratio of the second- to first-order Taylor
+//! coefficients of the equation of state (Beyer 1960). Typical values:
+//! water ≈ 5.0, soft tissue ≈ 6.0–7.5.
+//!
+//! **Discrete approximation of ∂²(p²)/∂t²**: Using the three-point centred
+//! second-order finite difference (LeVeque 2007, §2.2):
+//!
+//! ```text
+//! ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n-1] + p²[n-2]) / Δt²   + O(Δt²)
+//! ```
+//!
+//! ## References
+//!
+//! - Kuznetsov VP (1971). Sov. Phys. Acoust. 16(4), 467–470.
+//! - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics. Academic Press.
+//!   §2.3.2, eq. (2.3.10).
+//! - Beyer RT (1960). J. Acoust. Soc. Am. 32(6), 719–721.
+//!   DOI: 10.1121/1.1908195
+//! - LeVeque RJ (2007). Finite Difference Methods for ODEs and PDEs.
+//!   SIAM. §2.2.
 
 use crate::core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
 use ndarray::{Array3, Zip};
 
-/// Compute the nonlinear term for the Kuznetsov equation using workspace
+/// Compute the nonlinear term for the Kuznetsov equation using workspace.
 ///
-/// **Implementation**: Full Kuznetsov nonlinear term -(β/ρ₀c₀⁴)∂²p²/∂t²
-/// The nonlinear term represents the complete second-order nonlinear effects in acoustics.
-/// Uses second-order finite difference in time for ∂²p²/∂t² computation.
+/// ## Theorem — explicit-form nonlinear contribution to ∂²p/∂t²
 ///
-/// **Physics**: The full Kuznetsov equation includes -(β/ρ₀c₀⁴)∂²p²/∂t² where
-/// β = 1 + B/2A and p² is the square of the acoustic pressure.
+/// Kuznetsov equation operator form (Kuznetsov 1971, eq. 1):
+/// ```text
+/// ∇²p − (1/c₀²)∂²p/∂t² = −(β/ρ₀c₀⁴)∂²(p²)/∂t² − (δ/c₀⁴)∂³p/∂t³
+/// ```
 ///
-/// **References**:
-/// - Kuznetsov (1971) "Equations of nonlinear acoustics" Soviet Physics - Acoustics 16:467-470
-/// - Hamilton & Blackstock (1998) "Nonlinear Acoustics" Chapter 3
+/// Rearranging for the leapfrog explicit form `∂²p/∂t²`:
+/// ```text
+/// ∂²p/∂t² = c₀²∇²p + (β/ρ₀c₀²)∂²(p²)/∂t² + (δ/c₀²)∂³p/∂t³ + S
+/// ```
+///
+/// This function returns the nonlinear contribution `+(β/ρ₀c₀²)∂²(p²)/∂t²`
+/// (positive, c² not c⁴).
+///
+/// Discrete ∂²(p²)/∂t² (LeVeque 2007, §2.2):
+/// ```text
+/// ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n−1] + p²[n−2]) / Δt²   + O(Δt²)
+/// ```
 ///
 /// # Arguments
-/// * `pressure` - Current pressure field
-/// * `pressure_prev` - Previous time step pressure field
-/// * `pressure_prev2` - Two time steps ago pressure field
-/// * `dt` - Time step size
+/// * `pressure` - Current pressure field p[n]
+/// * `pressure_prev` - Previous pressure field p[n−1]
+/// * `pressure_prev2` - Two steps back p[n−2]
+/// * `dt` - Time step size Δt
 /// * `density` - Ambient density ρ₀
 /// * `sound_speed` - Sound speed c₀
 /// * `nonlinearity_coefficient` - B/A parameter
-/// * `nonlinear_term_out` - Pre-allocated output buffer for the result
+/// * `nonlinear_term_out` - Pre-allocated output for `+(β/ρ₀c₀²)∂²(p²)/∂t²`
 #[allow(clippy::too_many_arguments)]
 pub fn compute_nonlinear_term_workspace(
     pressure: &Array3<f64>,
@@ -39,13 +88,13 @@ pub fn compute_nonlinear_term_workspace(
     nonlinearity_coefficient: f64,
     nonlinear_term_out: &mut Array3<f64>,
 ) {
-    // Compute β = 1 + B/2A using named constants
+    // β = 1 + B/(2A)
     let beta = NONLINEARITY_COEFFICIENT_OFFSET + nonlinearity_coefficient / B_OVER_A_DIVISOR;
 
-    // Full Kuznetsov nonlinear coefficient: -(β/ρ₀c₀⁴)
-    let coeff = beta / (density * sound_speed.powi(4));
+    // Explicit-form coefficient: +(β/ρ₀c₀²)   [positive; c² not c⁴]
+    // Derived from: ∂²p/∂t² = c₀²∇²p + (β/ρ₀c₀²)∂²(p²)/∂t² + …
+    let coeff = beta / (density * sound_speed.powi(2));
 
-    // Compute full nonlinear term: -(β/ρ₀c₀⁴) ∂²p²/∂t²
     Zip::from(nonlinear_term_out)
         .and(pressure)
         .and(pressure_prev)
@@ -55,7 +104,7 @@ pub fn compute_nonlinear_term_workspace(
             let p2_prev = p_prev * p_prev;
             let p2_prev2 = p_prev2 * p_prev2;
             let d2p2_dt2 = (2.0f64.mul_add(-p2_prev, p2) + p2_prev2) / (dt * dt);
-            *nl = (-coeff * d2p2_dt2).clamp(-1e4, 1e4);
+            *nl = coeff * d2p2_dt2; // positive; added to leapfrog RHS
         });
 }
 

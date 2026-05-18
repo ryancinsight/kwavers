@@ -1,13 +1,13 @@
-//! Constructor for `Avx512StencilProcessor`.
+//! Constructor for `FdtdAvx512StencilProcessor`.
 //!
 //! SRP: changes when precomputed coefficient layout or SIMD detection policy changes.
 
-use super::{Avx512Config, Avx512StencilProcessor};
+use super::{FdtdAvx512Config, FdtdAvx512StencilProcessor};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::simd::SimdConfig;
 use std::marker::PhantomData;
 
-impl Avx512StencilProcessor {
+impl FdtdAvx512StencilProcessor {
     /// Create a new AVX-512 stencil processor.
     ///
     /// # Arguments
@@ -20,7 +20,7 @@ impl Avx512StencilProcessor {
     /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn new(nx: usize, ny: usize, nz: usize, config: Avx512Config) -> KwaversResult<Self> {
+    pub fn new(nx: usize, ny: usize, nz: usize, config: FdtdAvx512Config) -> KwaversResult<Self> {
         if nx < 4 || ny < 4 || nz < 4 {
             return Err(KwaversError::InvalidInput(
                 "Grid dimensions must be >= 4 for AVX-512 stencil".to_owned(),
@@ -40,7 +40,7 @@ impl Avx512StencilProcessor {
         let simd_config = SimdConfig::detect();
 
         #[cfg(target_arch = "x86_64")]
-        if simd_config.level < crate::math::simd::SimdLevel::Avx512 {
+        if simd_config.level < crate::math::simd::MathSimdLevel::Avx512 {
             return Err(KwaversError::FeatureNotAvailable(
                 "AVX-512 not available on this CPU".to_owned(),
             ));

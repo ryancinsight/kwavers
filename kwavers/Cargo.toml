@@ -128,6 +128,8 @@ ritk-io = { path = "../ritk/crates/ritk-io" }
 [dev-dependencies]
 # Minimal dev dependencies for testing only
 criterion = "0.4"
+# GIF animation support for example outputs (e.g. liver_theranostic_reconstruction)
+image = { version = "0.24", default-features = false, features = ["gif"] }
 proptest = "1.2"
 # PNG encoding for example image output (seismic_imaging_demo, etc.)
 png = "0.17"
@@ -379,6 +381,10 @@ harness = false
 required-features = ["pinn"]
 
 [[bench]]
+name = "clinical_sound_speed_shift_openpros"
+harness = false
+
+[[bench]]
 name = "gpu_beamforming_benchmark"
 harness = false
 
@@ -398,3 +404,8 @@ path = "examples/seismic_imaging_3d_demo.rs"
 name = "field_surrogate_demo"
 path = "examples/field_surrogate_demo.rs"
 required-features = ["pinn"]
+
+[[example]]
+name = "liver_theranostic_reconstruction"
+path = "examples/liver_theranostic_reconstruction.rs"
+required-features = ["nifti"]

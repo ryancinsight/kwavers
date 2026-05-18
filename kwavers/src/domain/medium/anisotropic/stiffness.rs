@@ -9,14 +9,14 @@ use ndarray::Array2;
 
 /// Full elastic stiffness tensor (6x6 in Voigt notation)
 #[derive(Debug, Clone)]
-pub struct StiffnessTensor {
+pub struct AnisotropicStiffnessTensor {
     /// Stiffness matrix in Voigt notation
     pub c: Array2<f64>,
     /// Anisotropy type
     pub anisotropy_type: AnisotropyType,
 }
 
-impl StiffnessTensor {
+impl AnisotropicStiffnessTensor {
     /// Create isotropic stiffness tensor from Lamé parameters
     #[must_use]
     pub fn isotropic(lambda: f64, mu: f64) -> Self {

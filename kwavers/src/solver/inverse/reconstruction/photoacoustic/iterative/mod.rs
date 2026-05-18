@@ -10,7 +10,7 @@ use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array3, ArrayView2};
 
 use super::algorithms::PhotoacousticAlgorithm;
-use super::config::PhotoacousticConfig;
+use super::config::ReconstructionPhotoacousticConfig;
 
 /// Iterative reconstruction algorithm selector.
 #[derive(Debug, Clone)]
@@ -34,7 +34,7 @@ pub struct IterativeMethods {
 
 impl IterativeMethods {
     /// Create new iterative methods handler from photoacoustic config.
-    pub fn new(config: &PhotoacousticConfig) -> Self {
+    pub fn new(config: &ReconstructionPhotoacousticConfig) -> Self {
         let (algorithm, iterations, relaxation_factor) =
             if let PhotoacousticAlgorithm::Iterative {
                 algorithm,

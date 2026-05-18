@@ -99,4 +99,4 @@
 
 pub mod types;
 
-pub use types::TreatmentMetrics;
+pub use types::DomainTreatmentMetrics;

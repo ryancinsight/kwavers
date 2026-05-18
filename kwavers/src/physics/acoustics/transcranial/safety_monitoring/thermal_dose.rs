@@ -41,9 +41,9 @@
 //! - Dewhirst MW et al. (2003). "Basic principles of thermal dosimetry and thermal thresholds
 //!   for tissue damage from hyperthermia." *Int J Hyperthermia* 19(3):267–294.
 
-use super::monitor::SafetyMonitor;
+use super::monitor::TranscranialSafetyMonitor;
 
-impl SafetyMonitor {
+impl TranscranialSafetyMonitor {
     /// Update CEM43 thermal dose accumulation at each grid point.
     ///
     /// Implements Sapareto & Dewey (1984) exactly:
@@ -114,7 +114,7 @@ mod tests {
     ///
     #[test]
     fn test_cem43_dose_rate_at_body_temperature() {
-        let mut monitor = SafetyMonitor::new((1, 1, 1), 0.01, 650e3);
+        let mut monitor = TranscranialSafetyMonitor::new((1, 1, 1), 0.01, 650e3);
         let temperature = Array3::from_elem((1, 1, 1), 37.0_f64);
         let pressure = Array3::zeros((1, 1, 1));
 
@@ -137,7 +137,7 @@ mod tests {
     ///
     #[test]
     fn test_cem43_dose_rate_at_threshold() {
-        let mut monitor = SafetyMonitor::new((1, 1, 1), 0.01, 650e3);
+        let mut monitor = TranscranialSafetyMonitor::new((1, 1, 1), 0.01, 650e3);
         // Allow 43°C (default max_temperature = 43.0 so this is exactly at limit — use 44 limit)
         monitor.thresholds.max_temperature = 44.0;
         let temperature = Array3::from_elem((1, 1, 1), 43.0_f64);
@@ -161,7 +161,7 @@ mod tests {
     ///
     #[test]
     fn test_cem43_dose_rate_hifu_ablation() {
-        let mut monitor = SafetyMonitor::new((1, 1, 1), 0.01, 650e3);
+        let mut monitor = TranscranialSafetyMonitor::new((1, 1, 1), 0.01, 650e3);
         monitor.thresholds.max_temperature = 60.0;
         monitor.thresholds.max_thermal_dose = 1e9;
 
@@ -187,7 +187,7 @@ mod tests {
     ///
     #[test]
     fn test_cem43_accumulation_linear_at_threshold() {
-        let mut monitor = SafetyMonitor::new((1, 1, 1), 0.01, 650e3);
+        let mut monitor = TranscranialSafetyMonitor::new((1, 1, 1), 0.01, 650e3);
         monitor.thresholds.max_temperature = 44.0;
         monitor.thresholds.max_thermal_dose = 1e9;
 

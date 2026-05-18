@@ -120,7 +120,7 @@ pub struct FindingMeasurements {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TissueCharacterization {
     /// Dominant tissue types per region
-    pub tissue_map: HashMap<String, TissueRegion>,
+    pub tissue_map: HashMap<String, ApiTissueRegion>,
     /// Overall tissue composition percentages
     pub composition_percentages: HashMap<String, f32>,
     /// Tissue homogeneity score (0-1, higher = more homogeneous)
@@ -131,7 +131,7 @@ pub struct TissueCharacterization {
 
 /// Tissue region information
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TissueRegion {
+pub struct ApiTissueRegion {
     /// Tissue type
     pub tissue_type: String,
     /// Region boundaries [xmin, xmax, ymin, ymax, zmin, zmax] in mm
@@ -139,12 +139,12 @@ pub struct TissueRegion {
     /// Classification confidence (0-1)
     pub confidence: f32,
     /// Tissue properties
-    pub properties: TissueProperties,
+    pub properties: ApiTissueProperties,
 }
 
 /// Tissue physical properties
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TissueProperties {
+pub struct ApiTissueProperties {
     /// Attenuation coefficient (dB/cm/MHz)
     pub attenuation_db_per_cm_mhz: f64,
     /// Backscatter coefficient

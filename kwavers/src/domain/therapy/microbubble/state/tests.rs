@@ -3,11 +3,10 @@ use super::*;
 const AMBIENT_PRESSURE: f64 = 101_325.0;
 const BODY_TEMPERATURE: f64 = 310.0;
 const WATER_SURFACE_TENSION: f64 = 0.072;
-const R_GAS: f64 = 8.314;
 
 fn expected_gas_moles(radius: f64) -> f64 {
     let volume = (4.0 / 3.0) * std::f64::consts::PI * radius.powi(3);
-    (AMBIENT_PRESSURE * volume) / (R_GAS * BODY_TEMPERATURE)
+    (AMBIENT_PRESSURE * volume) / (GAS_CONSTANT * BODY_TEMPERATURE)
 }
 
 fn assert_invalid_value(result: KwaversResult<MicrobubbleState>, parameter: &str, reason: &str) {

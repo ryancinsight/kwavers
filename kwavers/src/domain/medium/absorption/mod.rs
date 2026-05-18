@@ -38,7 +38,7 @@ pub use fractional::{FractionalDerivative, FractionalLaplacian};
 pub use power_law::{PowerLawAbsorption, PowerLawModel};
 pub use spatially_varying::{AbsorptionStatistics, SpatiallyVaryingAbsorption};
 pub use stokes::{StokesAbsorption, StokesParameters};
-pub use tissue::{TissueAbsorption, TissueType, TISSUE_PROPERTIES};
+pub use tissue::{AbsorptionTissueType, TissueAbsorption, TISSUE_PROPERTIES};
 
 use crate::core::error::KwaversResult;
 use ndarray::Array3;

@@ -1,11 +1,11 @@
 //! `HeterogeneousTissueMedium` implementation
 
-use super::{TissueMap, TissueRegion};
+use super::{DomainTissueRegion, TissueMap};
 use crate::core::error::{KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
-use crate::domain::medium::absorption::TissueType;
+use crate::domain::medium::absorption::AbsorptionTissueType;
 use crate::domain::medium::{
-    absorption::{tissue::TissueProperties, TISSUE_PROPERTIES},
+    absorption::{tissue::AbsorptionTissueProperties, TISSUE_PROPERTIES},
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
@@ -61,7 +61,7 @@ impl HeterogeneousTissueMedium {
     /// # Panics
     /// - Panics if `Default tissue properties not found`.
     ///
-    pub fn new(grid: Grid, default_tissue: TissueType) -> Self {
+    pub fn new(grid: Grid, default_tissue: AbsorptionTissueType) -> Self {
         let shape = (grid.nx, grid.ny, grid.nz);
         let tissue_map = Array3::from_elem(shape, default_tissue);
 
@@ -96,7 +96,7 @@ impl HeterogeneousTissueMedium {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn set_tissue_region(&mut self, region: &TissueRegion) -> KwaversResult<()> {
+    pub fn set_tissue_region(&mut self, region: &DomainTissueRegion) -> KwaversResult<()> {
         region.validate()?;
 
         let mut changed = false;
@@ -139,7 +139,7 @@ impl HeterogeneousTissueMedium {
         i: usize,
         j: usize,
         k: usize,
-    ) -> &'static TissueProperties {
+    ) -> &'static AbsorptionTissueProperties {
         let tissue_type = &self.tissue_map[[i, j, k]];
         TISSUE_PROPERTIES
             .get(tissue_type)

@@ -13,4 +13,4 @@ mod tests;
 mod types;
 
 pub use processor::DelayAndSumPAM;
-pub use types::{ApodizationType, CavitationEvent, DelayAndSumConfig};
+pub use types::{ApodizationType, DelayAndSumConfig, PamCavitationEvent};

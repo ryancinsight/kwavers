@@ -40,7 +40,7 @@ use rayon::prelude::*;
 
 use crate::analysis::signal_processing::beamforming::three_dimensional::apodization::create_apodization_weights;
 use crate::analysis::signal_processing::beamforming::three_dimensional::config::{
-    ApodizationWindow, BeamformingConfig3D,
+    Beamforming3dApodizationWindow, BeamformingConfig3D,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -61,7 +61,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 pub fn delay_and_sum_cpu(
     rf_data: &Array4<f32>,
     config: &BeamformingConfig3D,
-    apodization: &ApodizationWindow,
+    apodization: &Beamforming3dApodizationWindow,
 ) -> KwaversResult<Array3<f32>> {
     let (frames, channels, samples, _) = rf_data.dim();
     let (vol_x, vol_y, vol_z) = config.volume_dims;
@@ -177,7 +177,7 @@ pub fn delay_and_sum_cpu(
 mod tests {
     use super::*;
     use crate::analysis::signal_processing::beamforming::three_dimensional::config::{
-        ApodizationWindow, BeamformingConfig3D,
+        Beamforming3dApodizationWindow, BeamformingConfig3D,
     };
     use ndarray::Array4;
 
@@ -225,7 +225,8 @@ mod tests {
         let mut rf = Array4::<f32>::zeros((1, 1, 4, 1));
         rf[[0, 0, 0, 0]] = 7.0;
 
-        let vol = delay_and_sum_cpu(&rf, &config, &ApodizationWindow::Rectangular).unwrap();
+        let vol =
+            delay_and_sum_cpu(&rf, &config, &Beamforming3dApodizationWindow::Rectangular).unwrap();
         assert!(
             (vol[[0, 0, 0]] - 7.0_f32).abs() < 1e-5_f32,
             "DAS zero-delay passthrough: expected 7.0, got {}",
@@ -255,7 +256,7 @@ mod tests {
         );
         // RF supplies 5 channels; config expects 1.
         let rf = Array4::<f32>::zeros((1, 5, 4, 1));
-        let result = delay_and_sum_cpu(&rf, &config, &ApodizationWindow::Rectangular);
+        let result = delay_and_sum_cpu(&rf, &config, &Beamforming3dApodizationWindow::Rectangular);
         assert!(result.is_err(), "DAS must reject channel count mismatch");
         match result.unwrap_err() {
             KwaversError::InvalidInput(msg) => {
@@ -296,7 +297,8 @@ mod tests {
         for ch in 0..M {
             rf[[0, ch, 0, 0]] = 1.0;
         }
-        let vol = delay_and_sum_cpu(&rf, &config, &ApodizationWindow::Rectangular).unwrap();
+        let vol =
+            delay_and_sum_cpu(&rf, &config, &Beamforming3dApodizationWindow::Rectangular).unwrap();
         let expected = M as f32;
         assert!(
             (vol[[0, 0, 0]] - expected).abs() < 1e-5_f32,
@@ -341,7 +343,8 @@ mod tests {
         rf[[0, 0, 1, 0]] = 5.0;
         rf[[0, 1, 1, 0]] = 5.0;
 
-        let vol = delay_and_sum_cpu(&rf, &config, &ApodizationWindow::Rectangular).unwrap();
+        let vol =
+            delay_and_sum_cpu(&rf, &config, &Beamforming3dApodizationWindow::Rectangular).unwrap();
         assert!(
             (vol[[0, 0, 0]] - 10.0_f32).abs() < 1e-4_f32,
             "DAS delay geometry: expected 10.0, got {}",

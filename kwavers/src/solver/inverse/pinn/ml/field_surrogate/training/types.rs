@@ -10,7 +10,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 /// backend; GPU or larger sweeps may want larger batches and
 /// smaller `learning_rate`.
 #[derive(Debug, Clone)]
-pub struct TrainingConfig {
+pub struct FieldSurrogateTrainingConfig {
     /// SGD learning rate. Default 1e-3.
     pub learning_rate: f32,
     /// Weight on the supervised data MSE term. Default 1.0.
@@ -49,7 +49,7 @@ pub struct TrainingConfig {
     pub peak_prominence_weight: f32,
 }
 
-impl Default for TrainingConfig {
+impl Default for FieldSurrogateTrainingConfig {
     fn default() -> Self {
         Self {
             learning_rate: 1.0e-3,
@@ -63,7 +63,7 @@ impl Default for TrainingConfig {
     }
 }
 
-impl TrainingConfig {
+impl FieldSurrogateTrainingConfig {
     /// # Errors
     /// Returns [`KwaversError::InvalidInput`] when any field is
     /// non-positive (or negative loss weights).
@@ -144,7 +144,7 @@ pub struct StepMetrics {
 
 /// Running per-epoch metrics.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct TrainingMetrics {
+pub struct SurrogateTrainingMetrics {
     pub steps: usize,
     pub data_sum: f32,
     pub helmholtz_sum: f32,
@@ -152,7 +152,7 @@ pub struct TrainingMetrics {
     pub total_sum: f32,
 }
 
-impl TrainingMetrics {
+impl SurrogateTrainingMetrics {
     pub fn accumulate(&mut self, step: StepMetrics) {
         self.steps += 1;
         self.data_sum += step.data;

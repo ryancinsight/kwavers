@@ -2,7 +2,7 @@ use ndarray::{Array2, Array3};
 
 use super::super::{
     placement_metrics, plan_brain_helmet_placement, prepare_brain_slice, run_theranostic_inverse,
-    AnatomyKind, TheranosticInverseConfig,
+    AnatomyKind, BrainTargetSelection, TheranosticInverseConfig,
 };
 
 #[test]
@@ -23,7 +23,7 @@ fn brain_helmet_layout_uses_requested_element_count() {
             }
         }
     }
-    let prepared = prepare_brain_slice(ct, 0.002, 0, None).unwrap();
+    let prepared = prepare_brain_slice(ct, 0.002, 0, BrainTargetSelection::OrganCentroid).unwrap();
     let mut config = TheranosticInverseConfig::new(AnatomyKind::Brain);
     config.element_count = 64;
     config.receiver_offsets = vec![16, 32];
@@ -67,6 +67,53 @@ fn brain_helmet_layout_uses_requested_element_count() {
         (exposure_peak - config.source_pressure_pa).abs() <= config.source_pressure_pa * 1.0e-12,
         "exposure peak={exposure_peak}, expected pressure={}",
         config.source_pressure_pa
+    );
+}
+
+#[test]
+fn brain_slice_resampled_index_target_controls_focus_mask() {
+    let mut ct = Array2::<f64>::from_elem((40, 40), -900.0);
+    for x in 0..40 {
+        for y in 0..40 {
+            let head =
+                ((x as f64 - 20.0) / 16.0).powi(2) + ((y as f64 - 20.0) / 15.0).powi(2) <= 1.0;
+            if head {
+                ct[[x, y]] = 40.0;
+            }
+        }
+    }
+    let requested = [25.0, 16.0];
+    let prepared = prepare_brain_slice(
+        ct,
+        0.001,
+        0,
+        BrainTargetSelection::ResampledIndex(requested),
+    )
+    .unwrap();
+    let mut sx = 0.0;
+    let mut sy = 0.0;
+    let mut count = 0.0;
+    for ((ix, iy), active) in prepared.target_mask.indexed_iter() {
+        if *active {
+            sx += ix as f64;
+            sy += iy as f64;
+            count += 1.0;
+        }
+    }
+    let centroid = [sx / count, sy / count];
+
+    assert!(count > 64.0);
+    assert!(
+        (centroid[0] - requested[0]).abs() <= 0.25,
+        "target centroid x={} must match requested x={}",
+        centroid[0],
+        requested[0]
+    );
+    assert!(
+        (centroid[1] - requested[1]).abs() <= 0.25,
+        "target centroid y={} must match requested y={}",
+        centroid[1],
+        requested[1]
     );
 }
 

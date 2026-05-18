@@ -28,7 +28,7 @@ pub struct SvdClutterConfig {
 
 /// Configuration for Gaussian localization.
 #[derive(Debug, Clone)]
-pub struct LocalizationConfig {
+pub struct GaussianLocalizationConfig {
     /// Detection threshold: candidate_amplitude > threshold_sigma_multiplier × noise_std
     pub threshold_sigma_multiplier: f64,
     /// Minimum PSF width accepted (pixels)
@@ -43,7 +43,7 @@ pub struct LocalizationConfig {
     pub max_gauss_newton_iter: usize,
 }
 
-impl Default for LocalizationConfig {
+impl Default for GaussianLocalizationConfig {
     fn default() -> Self {
         Self {
             threshold_sigma_multiplier: 3.0,

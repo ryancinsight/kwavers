@@ -121,7 +121,7 @@
 //! use std::sync::Arc;
 //!
 //! // Define physics parameters for acoustic wave
-//! let params = PhysicsParameters {
+//! let params = MetaLearningPhysicsParameters {
 //!     wave_speed: 343.0,  // Speed of sound in air
 //!     density: 1.2,       // Air density
 //!     viscosity: None,
@@ -204,9 +204,11 @@ pub use config::MetaLearningConfig;
 pub use gradient::{GradientApplicator, GradientExtractor};
 pub use learner::MetaLearner;
 pub use metrics::{MetaLearningStats, MetaLoss};
-pub use optimizer::{LearningRateSchedule, MetaOptimizer};
-pub use sampling::{SamplingStrategy, TaskSampler};
-pub use types::{PdeType, PhysicsParameters, PhysicsTask, TaskData, TaskDataStatistics};
+pub use optimizer::{MetaLrSchedule, MetaOptimizer};
+pub use sampling::{MetaLearningSamplingStrategy, TaskSampler};
+pub use types::{
+    MetaLearningPhysicsParameters, PdeType, PhysicsTask, TaskData, TaskDataStatistics,
+};
 
 #[cfg(test)]
 mod tests {
@@ -218,7 +220,7 @@ mod tests {
         let _config = MetaLearningConfig::default();
         let _sampling_strategy = SamplingStrategy::Random;
         let _pde_type = PdeType::Wave;
-        let _params = PhysicsParameters::default();
+        let _params = MetaLearningPhysicsParameters::default();
         let _data = TaskData::default();
         let _stats = MetaLearningStats::default();
         let _loss = MetaLoss::default();
@@ -248,13 +250,13 @@ mod tests {
 
     #[test]
     fn test_physics_parameters_presets() {
-        let air = PhysicsParameters::acoustic_air();
+        let air = MetaLearningPhysicsParameters::acoustic_air();
         assert_eq!(air.wave_speed, 343.0);
 
-        let water = PhysicsParameters::acoustic_water();
+        let water = MetaLearningPhysicsParameters::acoustic_water();
         assert_eq!(water.wave_speed, 1500.0);
 
-        let tissue = PhysicsParameters::acoustic_tissue();
+        let tissue = MetaLearningPhysicsParameters::acoustic_tissue();
         assert_eq!(tissue.wave_speed, 1540.0);
         assert!(tissue.nonlinearity.unwrap() > 0.0);
     }
@@ -274,18 +276,18 @@ mod tests {
 
     #[test]
     fn test_learning_rate_schedules() {
-        let constant = LearningRateSchedule::Constant;
+        let constant = MetaLrSchedule::Constant;
         assert_eq!(constant.get_lr(0, 0.001), 0.001);
         assert_eq!(constant.get_lr(1000, 0.001), 0.001);
 
-        let step_decay = LearningRateSchedule::StepDecay {
+        let step_decay = MetaLrSchedule::StepDecay {
             factor: 0.5,
             step_size: 100,
         };
         assert_eq!(step_decay.get_lr(0, 0.001), 0.001);
         assert_eq!(step_decay.get_lr(100, 0.001), 0.0005);
 
-        let exponential = LearningRateSchedule::Exponential { decay_rate: 0.01 };
+        let exponential = MetaLrSchedule::Exponential { decay_rate: 0.01 };
         let lr_start = exponential.get_lr(0, 0.001);
         let lr_later = exponential.get_lr(100, 0.001);
         assert!(lr_later < lr_start);

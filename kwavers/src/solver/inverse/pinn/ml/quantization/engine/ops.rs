@@ -9,7 +9,7 @@ use crate::solver::inverse::pinn::ml::quantization::{
     LayerInfo, QuantizationScheme, QuantizedData, QuantizedTensor, Quantizer,
 };
 
-use super::ValidationResult;
+use super::QuantizationValidationResult;
 
 impl Quantizer {
     /// Enumerate model layer shapes and activation types.
@@ -213,7 +213,7 @@ impl Quantizer {
         &self,
         model: &BurnPINN2DWave<B>,
         quantized_weights: &[QuantizedTensor],
-    ) -> KwaversResult<ValidationResult> {
+    ) -> KwaversResult<QuantizationValidationResult> {
         let original_params = model.parameters();
 
         if original_params.len() != quantized_weights.len() {
@@ -270,7 +270,7 @@ impl Quantizer {
             1.0
         };
 
-        Ok(ValidationResult {
+        Ok(QuantizationValidationResult {
             original_accuracy: 1.0,
             quantized_accuracy: (1.0 - rmse).max(0.0),
             accuracy_loss,

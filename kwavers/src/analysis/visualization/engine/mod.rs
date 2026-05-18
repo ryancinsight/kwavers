@@ -4,7 +4,7 @@
 
 use crate::{
     core::error::{KwaversError, KwaversResult},
-    domain::field::UnifiedFieldType as FieldType,
+    domain::field::UnifiedFieldType,
     domain::grid::Grid,
 };
 use log::{debug, info, warn};
@@ -105,7 +105,7 @@ impl VisualizationEngine {
     pub async fn render_field(
         &mut self,
         field: &Array3<f64>,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
         grid: &Grid,
     ) -> KwaversResult<()> {
         let _start_time = Instant::now();
@@ -156,7 +156,7 @@ impl VisualizationEngine {
     pub async fn render_multi_field(
         &mut self,
         fields: &Array4<f64>,
-        field_types: &[FieldType],
+        field_types: &[UnifiedFieldType],
         grid: &Grid,
     ) -> KwaversResult<()> {
         #[cfg(feature = "gpu-visualization")]
@@ -273,7 +273,7 @@ impl VisualizationEngine {
     pub async fn export(
         &self,
         field: &Array3<f64>,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
         filename: &str,
     ) -> KwaversResult<()> {
         info!("Exporting visualization to {}", filename);

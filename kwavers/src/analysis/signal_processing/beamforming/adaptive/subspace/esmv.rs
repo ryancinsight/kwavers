@@ -1,7 +1,7 @@
 //! Eigenspace Minimum Variance (ESMV) beamformer.
 
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::{ComplexLinearAlgebra, EigenDecomposition};
 use ndarray::{s, Array1, Array2};
 use num_complex::Complex64;
 use num_traits::Zero;
@@ -105,7 +105,7 @@ impl EigenspaceMV {
 
         let r_for_eig = r_loaded.mapv(|z| num_complex::Complex::new(z.re, z.im));
         let (eigenvalues, eigenvectors) =
-            LinearAlgebra::hermitian_eigendecomposition_complex(&r_for_eig)?;
+            EigenDecomposition::hermitian_eigendecomposition_complex(&r_for_eig)?;
 
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| {
@@ -131,7 +131,8 @@ impl EigenspaceMV {
 
         let r_for_solve = r_loaded.mapv(|z| num_complex::Complex::new(z.re, z.im));
         let a_for_solve = steering.mapv(|z| num_complex::Complex::new(z.re, z.im));
-        let r_inv_a_raw = LinearAlgebra::solve_linear_system_complex(&r_for_solve, &a_for_solve)?;
+        let r_inv_a_raw =
+            ComplexLinearAlgebra::solve_linear_system_complex(&r_for_solve, &a_for_solve)?;
         let r_inv_a = r_inv_a_raw.mapv(|z| Complex64::new(z.re, z.im));
 
         let mut ps_r_inv_a = Array1::<Complex64>::zeros(n);

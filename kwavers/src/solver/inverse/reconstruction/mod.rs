@@ -19,7 +19,8 @@ mod interpolation;
 
 pub use back_projection::{UniversalBackProjection, WeightFunction};
 pub use config::{
-    FilterType, InterpolationMethod, ReconstructionAlgorithm, ReconstructionConfig, Reconstructor,
+    ReconstructionAlgorithm, ReconstructionConfig, ReconstructionFilterType,
+    ReconstructionInterpolationMethod, Reconstructor,
 };
 pub use filters::apply_reconstruction_filter;
 pub use interpolation::interpolate_3d;

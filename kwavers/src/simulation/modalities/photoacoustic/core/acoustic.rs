@@ -3,7 +3,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::{InitialPressure, PhotoacousticResult};
 use crate::solver::inverse::reconstruction::photoacoustic::{
-    PhotoacousticAlgorithm, PhotoacousticConfig, PhotoacousticReconstructor,
+    PhotoacousticAlgorithm, PhotoacousticReconstructor, ReconstructionPhotoacousticConfig,
 };
 use crate::solver::reconstruction::Reconstructor;
 use ndarray::{Array2, Array3};
@@ -134,7 +134,7 @@ impl PhotoacousticSimulator {
             .map(|&(x, y, z)| [x * self.grid.dx, y * self.grid.dy, z * self.grid.dz])
             .collect();
 
-        let config = PhotoacousticConfig {
+        let config = ReconstructionPhotoacousticConfig {
             algorithm: PhotoacousticAlgorithm::UniversalBackProjection,
             sensor_positions: detector_positions.clone(),
             grid_size: [self.grid.nx, self.grid.ny, self.grid.nz],

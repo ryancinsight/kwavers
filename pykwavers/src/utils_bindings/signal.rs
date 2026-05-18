@@ -2,6 +2,8 @@ use numpy::{PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
+use kwavers::domain::signal::SignalWindowType;
+
 #[pyfunction]
 #[pyo3(signature = (sample_rate_hz, signal_freq_hz, num_cycles, signal_offset=0, signal_length=None, window="Gaussian", amplitude=1.0, phase=0.0))]
 #[allow(clippy::too_many_arguments)]
@@ -17,11 +19,11 @@ fn tone_burst(
     phase: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let window_type = match window.to_lowercase().as_str() {
-        "rectangular" => kwavers::domain::signal::WindowType::Rectangular,
-        "hann" | "hanning" => kwavers::domain::signal::WindowType::Hann,
-        "hamming" => kwavers::domain::signal::WindowType::Hamming,
-        "blackman" => kwavers::domain::signal::WindowType::Blackman,
-        "gaussian" => kwavers::domain::signal::WindowType::Gaussian,
+        "rectangular" => SignalWindowType::Rectangular,
+        "hann" | "hanning" => SignalWindowType::Hann,
+        "hamming" => SignalWindowType::Hamming,
+        "blackman" => SignalWindowType::Blackman,
+        "gaussian" => SignalWindowType::Gaussian,
         _ => {
             return Err(PyValueError::new_err(format!(
                 "Unknown window type: {}",
@@ -76,11 +78,11 @@ fn get_win(
     symmetric: bool,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let wtype = match window_type.to_lowercase().as_str() {
-        "rectangular" => kwavers::domain::signal::WindowType::Rectangular,
-        "hann" | "hanning" => kwavers::domain::signal::WindowType::Hann,
-        "hamming" => kwavers::domain::signal::WindowType::Hamming,
-        "blackman" => kwavers::domain::signal::WindowType::Blackman,
-        "gaussian" => kwavers::domain::signal::WindowType::Gaussian,
+        "rectangular" => SignalWindowType::Rectangular,
+        "hann" | "hanning" => SignalWindowType::Hann,
+        "hamming" => SignalWindowType::Hamming,
+        "blackman" => SignalWindowType::Blackman,
+        "gaussian" => SignalWindowType::Gaussian,
         _ => {
             return Err(PyValueError::new_err(format!(
                 "Unknown window type: {}",

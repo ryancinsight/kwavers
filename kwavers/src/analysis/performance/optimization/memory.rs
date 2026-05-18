@@ -263,3 +263,144 @@ impl MemoryPool {
         self.offset = 0;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ─── BandwidthOptimizer exact formula tests ───────────────────────────────
+
+    /// `estimate_utilization` at 100% bandwidth matches formula exactly.
+    ///
+    /// max_bandwidth = 50.0 GB/s.
+    /// bytes = 50×10⁹, time = 1.0 s → bandwidth_gbps = 50.0.
+    /// utilization = 50.0/50.0 × 100 = 100.0 %.
+    #[test]
+    fn bandwidth_optimizer_full_utilization_is_100_percent() {
+        let mut optimizer = BandwidthOptimizer::new();
+        let utilization = optimizer.estimate_utilization(50_000_000_000usize, 1.0);
+        assert!(
+            (utilization - 100.0).abs() < 1e-10,
+            "utilization = {utilization} (expected 100.0 at full bandwidth)"
+        );
+    }
+
+    /// `estimate_utilization` at half bandwidth gives 50.0%.
+    ///
+    /// bytes = 25×10⁹, time = 1.0 s → bandwidth_gbps = 25.0.
+    /// utilization = 25.0/50.0 × 100 = 50.0 %.
+    #[test]
+    fn bandwidth_optimizer_half_utilization_is_50_percent() {
+        let mut optimizer = BandwidthOptimizer::new();
+        let utilization = optimizer.estimate_utilization(25_000_000_000usize, 1.0);
+        assert!(
+            (utilization - 50.0).abs() < 1e-10,
+            "utilization = {utilization} (expected 50.0 at half bandwidth)"
+        );
+    }
+
+    /// `estimate_utilization` at double time gives half utilization.
+    ///
+    /// bytes = 50×10⁹, time = 2.0 s → bandwidth_gbps = 25.0 → 50%.
+    #[test]
+    fn bandwidth_optimizer_double_time_halves_utilization() {
+        let mut optimizer = BandwidthOptimizer::new();
+        let utilization = optimizer.estimate_utilization(50_000_000_000usize, 2.0);
+        assert!(
+            (utilization - 50.0).abs() < 1e-10,
+            "utilization = {utilization} (expected 50.0 at double time)"
+        );
+    }
+
+    // ─── MemoryOptimizer::transpose_for_column_major exact tests ─────────────
+
+    /// Transpose of 2×3 row-major [1,2,3,4,5,6] gives column-major [1,4,2,5,3,6].
+    ///
+    /// Row-major A[i,j] = data[i*3+j]:
+    ///   A = [[1,2,3],[4,5,6]].
+    /// Column-major result[j*2+i] = A[i,j]:
+    ///   [0]=A[0,0]=1, [1]=A[1,0]=4, [2]=A[0,1]=2, [3]=A[1,1]=5,
+    ///   [4]=A[0,2]=3, [5]=A[1,2]=6 → [1,4,2,5,3,6].
+    #[test]
+    fn memory_optimizer_transpose_2x3_exact() {
+        let optimizer = MemoryOptimizer::new(16);
+        let data = vec![1u32, 2, 3, 4, 5, 6];
+        let result = optimizer.transpose_for_column_major(&data, 2, 3);
+        assert_eq!(
+            result,
+            vec![1u32, 4, 2, 5, 3, 6],
+            "column-major transpose of 2×3 must be [1,4,2,5,3,6]"
+        );
+    }
+
+    /// Transpose of a 3×1 column vector is equivalent to itself in column-major form.
+    ///
+    /// rows=3, cols=1: result[0*3+i] = data[i*1+0] → result[i] = data[i].
+    #[test]
+    fn memory_optimizer_transpose_column_vector_is_identity() {
+        let optimizer = MemoryOptimizer::new(16);
+        let data = vec![7.0f64, 8.0, 9.0];
+        let result = optimizer.transpose_for_column_major(&data, 3, 1);
+        assert_eq!(result, data, "transpose of column vector must equal input");
+    }
+
+    /// Transpose of 1×N row vector produces N×1 column vector (same bytes).
+    ///
+    /// rows=1, cols=4: result[j*1+0] = data[0*4+j] = data[j] → identical.
+    #[test]
+    fn memory_optimizer_transpose_row_vector_is_identity() {
+        let optimizer = MemoryOptimizer::new(16);
+        let data = vec![10i32, 20, 30, 40];
+        let result = optimizer.transpose_for_column_major(&data, 1, 4);
+        assert_eq!(result, data, "transpose of row vector must equal input");
+    }
+
+    // ─── MemoryPool exact allocation tests ───────────────────────────────────
+
+    /// Sequential allocations advance the offset by the aligned size.
+    ///
+    /// Pool of 128 bytes, alignment=16:
+    ///   alloc(8) → offset=8; alloc(8) → aligned_offset=⌈8/16⌉×16=16, offset=24.
+    /// Both pointers must be non-null.
+    #[test]
+    fn memory_pool_sequential_alloc_returns_non_null() {
+        let mut pool = MemoryPool::new(128, 16);
+        let p1 = pool.allocate(8);
+        let p2 = pool.allocate(8);
+        assert!(p1.is_some(), "first allocation must succeed");
+        assert!(p2.is_some(), "second allocation must succeed");
+        assert_ne!(
+            p1.unwrap(),
+            p2.unwrap(),
+            "consecutive allocations must return distinct pointers"
+        );
+    }
+
+    /// Pool exhaustion returns `None`.
+    ///
+    /// Pool of 16 bytes, alignment=8: alloc(16) succeeds, alloc(1) fails.
+    #[test]
+    fn memory_pool_exhaustion_returns_none() {
+        let mut pool = MemoryPool::new(16, 8);
+        let p1 = pool.allocate(16);
+        assert!(p1.is_some(), "first allocation of 16 bytes must succeed");
+        let p2 = pool.allocate(1);
+        assert!(p2.is_none(), "allocation past capacity must return None");
+    }
+
+    /// `reset()` allows the same pool to be reused from the start.
+    ///
+    /// Allocate 16 bytes, reset, then allocate 16 bytes again — second pointer
+    /// equals the base pointer (same offset=0 after reset).
+    #[test]
+    fn memory_pool_reset_restores_start_offset() {
+        let mut pool = MemoryPool::new(64, 8);
+        let p1 = pool.allocate(16).expect("first alloc must succeed");
+        pool.reset();
+        let p2 = pool.allocate(16).expect("post-reset alloc must succeed");
+        assert_eq!(
+            p1, p2,
+            "post-reset allocation must return same base pointer as first allocation"
+        );
+    }
+}

@@ -39,7 +39,7 @@
 mod tests;
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::simd::{SimdConfig, SimdLevel};
+use crate::math::simd::{MathSimdLevel, SimdConfig};
 use ndarray::Array3;
 use std::sync::OnceLock;
 
@@ -80,8 +80,8 @@ impl StencilStrategy {
     pub fn select_best() -> Self {
         let config = get_simd_config();
         match config.level {
-            SimdLevel::Avx512 => Self::Avx512,
-            SimdLevel::Avx2 | SimdLevel::Sse2 | SimdLevel::Neon => Self::GenericSimd,
+            MathSimdLevel::Avx512 => Self::Avx512,
+            MathSimdLevel::Avx2 | MathSimdLevel::Sse2 | MathSimdLevel::Neon => Self::GenericSimd,
             _ => Self::Scalar,
         }
     }
@@ -93,11 +93,11 @@ impl StencilStrategy {
             Self::Scalar => true,
             Self::GenericSimd => {
                 let config = get_simd_config();
-                config.level >= SimdLevel::Sse2 || config.level == SimdLevel::Neon
+                config.level >= MathSimdLevel::Sse2 || config.level == MathSimdLevel::Neon
             }
             Self::Avx512 => {
                 let config = get_simd_config();
-                config.level >= SimdLevel::Avx512
+                config.level >= MathSimdLevel::Avx512
             }
             Self::Auto => true,
         }
@@ -234,11 +234,11 @@ impl FdtdStencilDispatcher {
             StencilStrategy::Avx512 => {
                 #[cfg(target_arch = "x86_64")]
                 {
-                    use crate::solver::forward::fdtd::Avx512Config;
+                    use crate::solver::forward::fdtd::FdtdAvx512Config;
 
-                    let config = Avx512Config::default();
+                    let config = FdtdAvx512Config::default();
 
-                    let processor = crate::solver::forward::fdtd::Avx512StencilProcessor::new(
+                    let processor = crate::solver::forward::fdtd::FdtdAvx512StencilProcessor::new(
                         self.nx, self.ny, self.nz, config,
                     )?;
                     processor.update_pressure_avx512(p_curr, p_prev, u_div)
@@ -252,8 +252,8 @@ impl FdtdStencilDispatcher {
                 }
             }
             StencilStrategy::GenericSimd => {
-                // Use default SimdStencilConfig
-                let mut processor = crate::solver::forward::fdtd::SimdStencilProcessor::new(
+                // Use default FdtdSimdStencilConfig
+                let mut processor = crate::solver::forward::fdtd::FdtdSimdStencilProcessor::new(
                     self.nx,
                     self.ny,
                     self.nz,
@@ -350,7 +350,7 @@ pub struct DispatchMetrics {
     pub selected_strategy: StencilStrategy,
 
     /// Hardware SIMD level
-    pub simd_level: SimdLevel,
+    pub simd_level: MathSimdLevel,
 
     /// SIMD vector width in elements
     pub vector_width: usize,

@@ -1,6 +1,6 @@
 //! Calibration manager for flexible transducer arrays.
 
-use super::types::{CalibrationData, GeometrySnapshot, KalmanState, QualityMetrics};
+use super::types::{CalibrationData, CalibrationQualityMetrics, GeometrySnapshot, KalmanState};
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2, Array3};
 
@@ -31,7 +31,7 @@ impl CalibrationManager {
         Self {
             data: CalibrationData {
                 geometry_history: Vec::new(),
-                quality_metrics: QualityMetrics {
+                quality_metrics: CalibrationQualityMetrics {
                     position_uncertainty: 1e-3,
                     orientation_uncertainty: 1e-2,
                     confidence: 0.0,

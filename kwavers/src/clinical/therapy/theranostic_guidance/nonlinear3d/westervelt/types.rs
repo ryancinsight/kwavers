@@ -1,6 +1,8 @@
 use ndarray::Array3;
 
-use super::super::types::VolumeReconstructionMetrics;
+use super::super::types::{
+    FwiIterationDiagnostics, SourcePlanMetrics, VolumeReconstructionMetrics,
+};
 
 #[derive(Clone, Debug)]
 pub(crate) struct WesterveltFwiResult {
@@ -11,8 +13,10 @@ pub(crate) struct WesterveltFwiResult {
     pub multiparameter_fwi_score: Array3<f64>,
     pub peak_pressure_pa: Array3<f64>,
     pub objective_history: Vec<f64>,
+    pub iteration_diagnostics: Vec<FwiIterationDiagnostics>,
     pub metrics: VolumeReconstructionMetrics,
     pub source_scale: f64,
+    pub source_plan_metrics: SourcePlanMetrics,
     pub dt_s: f64,
     pub time_steps: usize,
 }

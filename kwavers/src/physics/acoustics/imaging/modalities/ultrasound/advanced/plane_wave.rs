@@ -18,7 +18,7 @@ use std::f64::consts::PI;
 
 /// Plane wave imaging configuration
 #[derive(Debug, Clone)]
-pub struct PlaneWaveConfig {
+pub struct UltrasoundPlaneWaveConfig {
     /// Transmit angle (radians)
     pub tx_angle: f64,
     /// Number of elements
@@ -33,7 +33,7 @@ pub struct PlaneWaveConfig {
     pub sampling_frequency: f64,
 }
 
-impl Default for PlaneWaveConfig {
+impl Default for UltrasoundPlaneWaveConfig {
     fn default() -> Self {
         Self {
             tx_angle: 0.0,
@@ -49,13 +49,13 @@ impl Default for PlaneWaveConfig {
 /// Plane Wave Imaging reconstruction
 #[derive(Debug)]
 pub struct PlaneWaveReconstruction {
-    config: PlaneWaveConfig,
+    config: UltrasoundPlaneWaveConfig,
 }
 
 impl PlaneWaveReconstruction {
     /// Create new PWI reconstruction
     #[must_use]
-    pub fn new(config: PlaneWaveConfig) -> Self {
+    pub fn new(config: UltrasoundPlaneWaveConfig) -> Self {
         Self { config }
     }
 

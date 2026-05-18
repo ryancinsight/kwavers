@@ -4,8 +4,8 @@ use super::types::TherapyAction;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
-use super::super::config::SafetyLimits;
-use super::super::state::{SafetyMetrics, SafetyStatus};
+use super::super::config::TherapyIntegrationSafetyLimits;
+use super::super::state::{SafetyMetrics, TherapyIntegrationSafetyStatus};
 
 /// Real-time safety controller for therapeutic ultrasound.
 ///
@@ -13,7 +13,7 @@ use super::super::state::{SafetyMetrics, SafetyStatus};
 #[derive(Debug, Clone)]
 pub struct SafetyController {
     /// Configured safety limits
-    limits: SafetyLimits,
+    limits: TherapyIntegrationSafetyLimits,
     /// Warning margins (fraction of limit, typically 0.8)
     warning_margins: HashMap<String, f64>,
     /// Current safety metrics
@@ -36,7 +36,10 @@ pub struct SafetyController {
 
 impl SafetyController {
     /// Create new safety controller.
-    pub fn new(limits: SafetyLimits, organ_limits: Option<HashMap<String, f64>>) -> Self {
+    pub fn new(
+        limits: TherapyIntegrationSafetyLimits,
+        organ_limits: Option<HashMap<String, f64>>,
+    ) -> Self {
         let mut warning_margins = HashMap::new();
         warning_margins.insert("thermal_index".to_string(), 0.8);
         warning_margins.insert("mechanical_index".to_string(), 0.8);
@@ -118,17 +121,17 @@ impl SafetyController {
     }
 
     /// Get current safety status.
-    pub fn status(&self) -> SafetyStatus {
+    pub fn status(&self) -> TherapyIntegrationSafetyStatus {
         if self.violation_detected {
-            SafetyStatus::TimeLimitExceeded
+            TherapyIntegrationSafetyStatus::TimeLimitExceeded
         } else if self.current_metrics.thermal_index > self.limits.thermal_index_max {
-            SafetyStatus::ThermalLimitExceeded
+            TherapyIntegrationSafetyStatus::ThermalLimitExceeded
         } else if self.current_metrics.mechanical_index > self.limits.mechanical_index_max {
-            SafetyStatus::MechanicalLimitExceeded
+            TherapyIntegrationSafetyStatus::MechanicalLimitExceeded
         } else if self.current_metrics.cavitation_dose > self.limits.cavitation_dose_max {
-            SafetyStatus::CavitationLimitExceeded
+            TherapyIntegrationSafetyStatus::CavitationLimitExceeded
         } else {
-            SafetyStatus::Safe
+            TherapyIntegrationSafetyStatus::Safe
         }
     }
 

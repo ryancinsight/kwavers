@@ -3,6 +3,7 @@
 use uom::si::f64::Power;
 use uom::si::power::watt;
 
+use crate::core::constants::fundamental::AVOGADRO;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 
@@ -61,7 +62,7 @@ impl EnergyBalanceCalculator {
         const PLANCK: f64 = 6.626_070_15e-34; // J·s
         const M_ELECTRON: f64 = 9.109_383_701_5e-31; // kg
         const E_V_TO_JOULES: f64 = 1.602_176_634e-19; // J/eV
-        const AVOGADRO: f64 = 6.022_140_76e23; // mol⁻¹
+        let avogadro = AVOGADRO;
 
         // Ionization energy [J] for each species (NIST Atomic Spectra Database)
         let e_ion_j = match state.gas_species {
@@ -86,8 +87,8 @@ impl EnergyBalanceCalculator {
 
         // Number density [m⁻³]: n = N_A × n_moles / V
         let volume = (4.0 / 3.0) * std::f64::consts::PI * state.radius.powi(3);
-        let n_moles = (state.n_gas + state.n_vapor) / AVOGADRO;
-        let n_density = n_moles * AVOGADRO / volume.max(1e-30);
+        let n_moles = (state.n_gas + state.n_vapor) / avogadro;
+        let n_density = n_moles * avogadro / volume.max(1e-30);
 
         // Solve α² / (1−α) = Φ / n for α:
         // α² + (Φ/n) α − (Φ/n) = 0

@@ -22,7 +22,7 @@ use crate::math::fft::utils as fft_utils;
 // ============================================================================
 
 /// Core grid structure and dimensional types
-pub use structure::{Bounds, Dimension, Grid};
+pub use structure::{Bounds, Grid, GridDimension};
 
 /// Grid configuration types
 pub use config::{GridParameters, GridType};

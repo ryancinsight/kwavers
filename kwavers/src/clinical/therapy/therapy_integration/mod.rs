@@ -77,16 +77,16 @@
 //!
 //! ```
 //! use kwavers::clinical::therapy::therapy_integration::{
-//!     TherapyIntegrationOrchestrator, TherapySessionConfig, TherapyModality,
-//!     AcousticTherapyParams, SafetyLimits, PatientParameters, TissuePropertyMap,
-//!     TargetVolume, TissueType, SafetyStatus,
+//!     TherapyIntegrationOrchestrator, TherapySessionConfig, TherapyIntegrationModality,
+//!     AcousticTherapyParams, TherapyIntegrationSafetyLimits, PatientParameters, TissuePropertyMap,
+//!     TargetVolume, TissueType, TherapyIntegrationSafetyStatus,
 //! };
 //! use kwavers::domain::grid::Grid;
 //! use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 //!
 //! // Create therapy configuration
 //! let config = TherapySessionConfig {
-//!     primary_modality: TherapyModality::Histotripsy,
+//!     primary_modality: TherapyIntegrationModality::Histotripsy,
 //!     secondary_modalities: vec![],
 //!     duration: 60.0,
 //!     acoustic_params: AcousticTherapyParams {
@@ -97,7 +97,7 @@
 //!         focal_depth: 0.05,
 //!         treatment_volume: 1.0,
 //!     },
-//!     safety_limits: SafetyLimits {
+//!     safety_limits: TherapyIntegrationSafetyLimits {
 //!         thermal_index_max: 6.0,
 //!         mechanical_index_max: 1.9,
 //!         cavitation_dose_max: 1000.0,
@@ -133,7 +133,7 @@
 //!
 //!     // Check safety limits
 //!     let status = orchestrator.check_safety_limits();
-//!     if status != SafetyStatus::Safe {
+//!     if status != TherapyIntegrationSafetyStatus::Safe {
 //!         // Handle safety violation
 //!         break;
 //!     }
@@ -152,11 +152,13 @@ pub mod tissue;
 // Re-export public API for convenience
 pub use acoustic::AcousticWaveSolver;
 pub use config::{
-    AcousticTherapyParams, PatientParameters, RiskOrgan, SafetyLimits, TargetVolume,
-    TherapyModality, TherapySessionConfig, TissueType,
+    AcousticTherapyParams, PatientParameters, RiskOrgan, TargetVolume, TherapyIntegrationModality,
+    TherapyIntegrationSafetyLimits, TherapySessionConfig, TherapyTissueType,
 };
 pub use intensity_tracker::IntensityTracker;
 pub use orchestrator::TherapyIntegrationOrchestrator;
 pub use safety_controller::{SafetyController, TherapyAction};
-pub use state::{AcousticField, SafetyMetrics, SafetyStatus, TherapySessionState};
+pub use state::{
+    AcousticField, SafetyMetrics, TherapyIntegrationSafetyStatus, TherapySessionState,
+};
 pub use tissue::TissuePropertyMap;

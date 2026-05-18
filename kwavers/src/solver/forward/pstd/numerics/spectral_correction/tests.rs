@@ -10,7 +10,7 @@ fn test_exact_dispersion_correction() {
 
     let config = SpectralCorrectionConfig {
         enabled: true,
-        method: CorrectionMethod::ExactDispersion,
+        method: SpectralCorrectionMethod::ExactDispersion,
         cfl_number: 0.3,
         max_correction: 2.0,
     };
@@ -73,7 +73,7 @@ fn test_treeby2010_kappa_equals_sinc() {
 
     let config = SpectralCorrectionConfig {
         enabled: true,
-        method: CorrectionMethod::Treeby2010,
+        method: SpectralCorrectionMethod::Treeby2010,
         cfl_number: 0.3,
         max_correction: 10.0, // wide enough to not clip the sinc values
     };
@@ -143,10 +143,10 @@ fn test_correction_methods_consistency() {
     let c_ref = 1500.0;
 
     let methods = vec![
-        CorrectionMethod::ExactDispersion,
-        CorrectionMethod::Treeby2010,
-        CorrectionMethod::LiuPSTD,
-        CorrectionMethod::SincSpatial,
+        SpectralCorrectionMethod::ExactDispersion,
+        SpectralCorrectionMethod::Treeby2010,
+        SpectralCorrectionMethod::LiuPSTD,
+        SpectralCorrectionMethod::SincSpatial,
     ];
 
     for method in methods {

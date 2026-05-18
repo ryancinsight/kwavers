@@ -26,22 +26,6 @@ pub use apollo::{
     Fft3dCacheKey, FFT_CACHE_1D, FFT_CACHE_2D, FFT_CACHE_3D,
 };
 
-/// Compatibility alias for the legacy `apollo::FFT_CACHE` static (now `FFT_CACHE_3D`).
-///
-/// The apollo 0.11 refactor split the unified `FFT_CACHE` global into per-dimension
-/// caches `FFT_CACHE_1D`, `FFT_CACHE_2D`, and `FFT_CACHE_3D`. All historical
-/// kwavers call sites used the 3-D variant, so this alias preserves the prior
-/// import surface without weakening the contract.
-pub use apollo::FFT_CACHE_3D as FFT_CACHE;
-
-/// Compatibility alias for the legacy `apollo::ProcessorFft3d` type.
-///
-/// The apollo 0.11 refactor consolidated the `ProcessorFft3d` 3-D processor
-/// into the unified `FftPlan3D` plan type. Both share the same `forward` /
-/// `inverse` real/complex contract and the same `Shape3D` constructor input,
-/// so this alias preserves the prior kwavers import surface.
-pub use apollo::FftPlan3D as ProcessorFft3d;
-
 pub use gpu_fft::gpu_fft_available;
 pub use kspace::KSpaceCalculator;
 pub use utils::{analytic_signal_1d, apply_spectral_response_1d};

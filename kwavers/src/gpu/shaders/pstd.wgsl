@@ -363,6 +363,66 @@ fn kspace_shift_apply(@builtin(global_invocation_id) gid: vec3<u32>) {
     kspace_im[idx] = kap_re * s_im + kap_im * s_re;
 }
 
+// ─── Entry point: restore_and_shift_apply ────────────────────────────────────
+//
+// Fused restore-kspace + kspace-shift for velocity axes 1 and 2.
+//
+// ## Theorem (global-memory traffic reduction)
+//
+// For velocity axes 1 and 2, the naive sequence is:
+//   1. restore_kspace  : reads absorb_scratch_kre/kim (2N f32),
+//                        writes kspace_re/im            (2N f32) → 4N f32
+//   2. kspace_shift    : reads kspace_re/im + precomp   (2N+3N f32),
+//                        writes kspace_re/im in-place   (2N f32) → 7N f32
+//   Total: 11N f32 traffic (4N intermediate kspace is pure overhead).
+//
+// The fused kernel reads absorb_scratch_kre/kim directly, applies kappa × shift,
+// and writes the result into kspace_re/im without the intermediate kspace store:
+//   reads: absorb_scratch_kre/im (2N) + precomp_kappa/shift (3N) = 5N f32
+//   writes: kspace_re/im (2N f32)
+//   Total: 7N f32 — saves 4N f32 per axis and eliminates 1 dispatch per axis.
+//
+// Called for axes 1 and 2 in velocity_update (axis 0 keeps kspace from FFT(p)
+// and uses plain kspace_shift_apply since no restore is needed).
+//
+// params.axis: same encoding as kspace_shift_apply (0=x-pos, 1=y-pos, 2=z-pos)
+//
+// Requires bind group 3 (absorb) for absorb_scratch_kre/kim (bindings 4/5).
+@compute @workgroup_size(256, 1, 1)
+fn restore_and_shift_apply(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx   = gid.x;
+    let nx    = params.nx;
+    let ny    = params.ny;
+    let nz    = params.nz;
+    let total = nx * ny * nz;
+    if idx >= total { return; }
+
+    let ax = params.axis;
+
+    var shift_idx: u32;
+    if ax == 0u || ax == 3u {
+        shift_idx = idx / (ny * nz);
+    } else if ax == 1u || ax == 4u {
+        shift_idx = (idx % (ny * nz)) / nz;
+    } else {
+        shift_idx = idx % nz;
+    }
+
+    let s_re = shift_re(ax, shift_idx, nx, ny);
+    let s_im = shift_im(ax, shift_idx, nx, ny);
+    let kap  = precomp_kappa[idx];
+
+    // Read from absorb_scratch (saved FFT(p)) instead of the intermediate kspace.
+    let in_re = absorb_scratch_kre[idx];
+    let in_im = absorb_scratch_kim[idx];
+
+    let kap_re = kap * in_re;
+    let kap_im = kap * in_im;
+
+    kspace_re[idx] = kap_re * s_re - kap_im * s_im;
+    kspace_im[idx] = kap_re * s_im + kap_im * s_re;
+}
+
 // ─── Entry point: velocity_update ────────────────────────────────────────────
 //
 // Split-field PML velocity update:
@@ -509,27 +569,6 @@ fn record_sensors(@builtin(global_invocation_id) gid: vec3<u32>) {
     if s >= params.n_sensors { return; }
     let flat = sensor_flat_indices[s];
     sensor_data[s * params.nt + params.step] = field_p[flat];
-}
-
-// ─── Entry point: apply_absorption ───────────────────────────────────────────
-//
-// Multiplicative decay applied to all three split density components per step.
-// decay[i] = exp(-alpha_Np_m * c0[i] * dt) precomputed at the transmit centre
-// frequency f0 using the power-law: alpha_Np_m = alpha_dB_cm * f0_MHz^y / 868.6.
-//
-// Applied once per time step after all three density_update dispatches,
-// before pressure_from_density. First-order time-domain absorption approximation.
-//
-// Reference: Treeby & Cox (2010), Eq. (A.12); O'Brien et al. (2010) JASA.
-@compute @workgroup_size(256, 1, 1)
-fn apply_absorption(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let idx   = gid.x;
-    let total = params.nx * params.ny * params.nz;
-    if idx >= total { return; }
-    let decay = precomp_alpha_decay[idx];
-    field_rhox[idx] *= decay;
-    field_rhoy[idx] *= decay;
-    field_rhoz[idx] *= decay;
 }
 
 // ─── Entry point: zero_kspace ────────────────────────────────────────────────

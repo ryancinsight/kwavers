@@ -1,7 +1,7 @@
 //! Coherent nanoparticle arrays and collective plasmonic effects
 
 use super::mie_theory::MieTheory;
-use super::types::ArrayGeometry;
+use super::types::PlasmonicArrayGeometry;
 use std::f64::consts::PI;
 
 /// Array of nanoparticles for collective enhancement computations
@@ -10,7 +10,7 @@ pub struct NanoparticleArray {
     /// Individual nanoparticles with position coordinates
     pub particles: Vec<(MieTheory, [f64; 3])>, // (particle, position)
     /// Geometric layout of the array
-    pub geometry: ArrayGeometry,
+    pub geometry: PlasmonicArrayGeometry,
 }
 
 impl NanoparticleArray {
@@ -27,7 +27,7 @@ impl NanoparticleArray {
 
         Self {
             particles,
-            geometry: ArrayGeometry::Linear { spacing },
+            geometry: PlasmonicArrayGeometry::Linear { spacing },
         }
     }
 
@@ -76,7 +76,7 @@ impl NanoparticleArray {
         let mut hot_spots = Vec::new();
 
         match &self.geometry {
-            ArrayGeometry::Linear { spacing: _ } => {
+            PlasmonicArrayGeometry::Linear { spacing: _ } => {
                 // Inter-particle gap centers exhibit maximum field confinement
                 for i in 0..self.particles.len().saturating_sub(1) {
                     let pos1 = self.particles[i].1;

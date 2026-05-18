@@ -260,11 +260,11 @@ impl KWaveArray {
     ///
     /// Reference: Harris (1978) Proc. IEEE 66(1):51–83.
     fn get_apodization(&self, window: &str) -> PyResult<Vec<f64>> {
-        use kwavers::domain::source::kwave_array::ApodizationWindow;
+        use kwavers::domain::source::kwave_array::KwaveApodizationWindow;
         let w = match window {
-            "Rectangular" => ApodizationWindow::Rectangular,
-            "Hann" => ApodizationWindow::Hann,
-            "Hamming" => ApodizationWindow::Hamming,
+            "Rectangular" => KwaveApodizationWindow::Rectangular,
+            "Hann" => KwaveApodizationWindow::Hann,
+            "Hamming" => KwaveApodizationWindow::Hamming,
             other => {
                 return Err(pyo3::exceptions::PyValueError::new_err(format!(
                     "Unknown apodization window '{}'. Choose from: Rectangular, Hann, Hamming",

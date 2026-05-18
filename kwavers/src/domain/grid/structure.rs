@@ -35,9 +35,9 @@ impl Bounds {
     }
 }
 
-/// Dimension selector for coordinate generation
+/// GridDimension selector for coordinate generation
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Dimension {
+pub enum GridDimension {
     X,
     Y,
     Z,
@@ -228,11 +228,11 @@ impl Grid {
 
     /// Get an iterator over the coordinates for a specific dimension.
     /// This returns a statically-dispatched iterator with no heap allocation.
-    pub fn coordinates(&self, dim: Dimension) -> impl Iterator<Item = f64> + '_ {
+    pub fn coordinates(&self, dim: GridDimension) -> impl Iterator<Item = f64> + '_ {
         let (count, spacing) = match dim {
-            Dimension::X => (self.nx, self.dx),
-            Dimension::Y => (self.ny, self.dy),
-            Dimension::Z => (self.nz, self.dz),
+            GridDimension::X => (self.nx, self.dx),
+            GridDimension::Y => (self.ny, self.dy),
+            GridDimension::Z => (self.nz, self.dz),
         };
         (0..count).map(move |i| i as f64 * spacing)
     }

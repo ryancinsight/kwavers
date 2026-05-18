@@ -10,7 +10,7 @@
 //! ## Layers
 //!
 //! - [`models`]: capability enums (`PhysicsModelType`, `AcousticSolver`,
-//!   `BoundaryType`, `NonlinearEquation`, `BubbleModel`).
+//!   `PhysicsBoundaryCondition`, `NonlinearEquation`, `BubbleModel`).
 //! - [`config`]: top-level `PhysicsConfig` aggregating enabled capabilities
 //!   plus global parameters and external plugin-path hooks.
 //! - [`catalog`]: the [`PhysicsCatalog`] dispatcher mapping each
@@ -23,6 +23,6 @@ pub mod models;
 pub use catalog::PhysicsCatalog;
 pub use config::PhysicsConfig;
 pub use models::{
-    AcousticSolver, BoundaryType, BubbleModel, NonlinearEquation, PhysicsModelConfig,
+    AcousticSolver, BubbleModel, NonlinearEquation, PhysicsBoundaryCondition, PhysicsModelConfig,
     PhysicsModelType,
 };

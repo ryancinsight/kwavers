@@ -47,7 +47,7 @@ impl ValidatedKinetics {
         &self,
         reaction: &str,
         simulated_value: f64,
-    ) -> KwaversResult<ValidationResult> {
+    ) -> KwaversResult<KineticsValidationResult> {
         let literature = match reaction.to_lowercase().as_str() {
             "oh_recombination" | "oh self-recombination" | "2oh->h2o2" => self.oh_recombination,
             "superoxide_dismutation" | "superoxide dismutation" | "2o2- -> h2o2" => {
@@ -65,7 +65,7 @@ impl ValidatedKinetics {
             }
         };
 
-        Ok(ValidationResult {
+        Ok(KineticsValidationResult {
             reaction: reaction.to_owned(),
             simulated_value,
             literature_value: literature.nominal,
@@ -85,7 +85,7 @@ impl Default for ValidatedKinetics {
 
 /// Result of kinetics validation
 #[derive(Debug, Clone)]
-pub struct ValidationResult {
+pub struct KineticsValidationResult {
     /// Reaction name
     pub reaction: String,
     /// Simulated rate constant value
@@ -102,7 +102,7 @@ pub struct ValidationResult {
     pub percent_difference: f64,
 }
 
-impl ValidationResult {
+impl KineticsValidationResult {
     /// Print validation report
     #[must_use]
     pub fn report(&self) -> String {

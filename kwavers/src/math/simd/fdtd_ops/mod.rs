@@ -1,6 +1,6 @@
 //! SIMD-accelerated FDTD pressure / velocity update kernels.
 
-use super::config::{SimdConfig, SimdLevel};
+use super::config::{MathSimdLevel, SimdConfig};
 
 mod pressure;
 mod velocity;
@@ -37,7 +37,7 @@ impl FdtdSimdOps {
         match self.config.level {
             #[cfg(target_arch = "x86_64")]
             #[allow(unsafe_code)]
-            SimdLevel::Avx2 => unsafe {
+            MathSimdLevel::Avx2 => unsafe {
                 self.update_pressure_avx2(
                     pressure,
                     pressure_prev,
@@ -50,7 +50,7 @@ impl FdtdSimdOps {
             },
             #[cfg(target_arch = "x86_64")]
             #[allow(unsafe_code)]
-            SimdLevel::Avx512 => unsafe {
+            MathSimdLevel::Avx512 => unsafe {
                 self.update_pressure_avx512(
                     pressure,
                     pressure_prev,
@@ -87,7 +87,7 @@ impl FdtdSimdOps {
     ) {
         match self.config.level {
             #[cfg(target_arch = "x86_64")]
-            SimdLevel::Avx2 => {
+            MathSimdLevel::Avx2 => {
                 #[allow(unsafe_code)]
                 unsafe {
                     self.update_velocity_avx2(

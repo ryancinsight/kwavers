@@ -28,14 +28,14 @@ pub struct BurnDasBeamformer<B: Backend> {
 /// Configuration for Burn-based beamforming
 #[derive(Debug, Clone)]
 pub struct BurnBeamformingConfig {
-    pub interpolation: InterpolationMethod,
+    pub interpolation: DasInterpolationMethod,
     pub batch_size: usize,
     pub async_processing: bool,
 }
 
 /// Interpolation methods for delay application
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InterpolationMethod {
+pub enum DasInterpolationMethod {
     NearestNeighbor,
     Linear,
     Cubic,
@@ -44,7 +44,7 @@ pub enum InterpolationMethod {
 impl Default for BurnBeamformingConfig {
     fn default() -> Self {
         Self {
-            interpolation: InterpolationMethod::NearestNeighbor,
+            interpolation: DasInterpolationMethod::NearestNeighbor,
             batch_size: 8,
             async_processing: false,
         }

@@ -113,6 +113,9 @@
 //! * **2nd-order** — standard 7-point stencil (coefficients ±1, −2).
 //! * **4th-order** — 13-point stencil (coefficients −1/12, 4/3, −5/2, …),
 //!   halving the leading truncation error for a given spatial resolution.
+//! * **6th-order** — 19-point stencil (coefficients 1/90, −3/20, 3/2,
+//!   −49/18, …), preserving exact second derivatives for quadratic fields
+//!   while reducing the leading truncation error to `O(h^6)`.
 //!
 //! ### Stability (CFL Condition)
 //!
@@ -251,10 +254,14 @@ pub struct WesterveltFdtd {
     pub(super) pressure: Array3<f64>,
     /// Previous pressure field p^{n-1}
     pub(super) pressure_prev: Array3<f64>,
-    /// Two steps back p^{n-2} (for absorption term)
+    /// Two steps back p^{n-2} (for ∂²(p²)/∂t² product-rule nonlinear term)
     pub(super) pressure_prev2: Option<Array3<f64>>,
     /// Workspace for Laplacian calculation
     pub(super) laplacian: Array3<f64>,
+    /// Workspace for the product-rule nonlinear term
+    pub(super) nonlinear_term: Array3<f64>,
+    /// Workspace for the next pressure field before history rotation
+    pub(super) pressure_next: Array3<f64>,
     /// Conservation diagnostics tracker
     pub(super) conservation_tracker: Option<ConservationTracker>,
     /// Current time step counter
@@ -292,6 +299,8 @@ impl WesterveltFdtd {
             pressure_prev: Array3::zeros(shape),
             pressure_prev2: None,
             laplacian: Array3::zeros(shape),
+            nonlinear_term: Array3::zeros(shape),
+            pressure_next: Array3::zeros(shape),
             conservation_tracker: None,
             current_step: 0,
             current_time: 0.0,

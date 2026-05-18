@@ -1,6 +1,6 @@
 //! `TransducerArray2D` struct and impl.
 
-use super::types::{ApodizationType, ArrayElement, TransducerArray2DConfig};
+use super::types::{ApodizationType, Array2dElement, TransducerArray2DConfig};
 use crate::domain::signal::Signal;
 use ndarray::Array3;
 use std::fmt::Debug;
@@ -12,7 +12,7 @@ pub struct TransducerArray2D {
     pub(super) config: TransducerArray2DConfig,
     pub(super) sound_speed: f64,
     pub(super) frequency: f64,
-    pub(super) elements: Vec<ArrayElement>,
+    pub(super) elements: Vec<Array2dElement>,
     pub(super) focus_distance: f64,
     pub(super) elevation_focus_distance: f64,
     pub(super) steering_angle: f64,
@@ -75,8 +75,8 @@ impl TransducerArray2D {
             focus_distance: f64::INFINITY,
             elevation_focus_distance: f64::INFINITY,
             steering_angle: 0.0,
-            transmit_apodization: ApodizationType::Rectangular,
-            receive_apodization: ApodizationType::Rectangular,
+            transmit_apodization: ApodizationType::Uniform,
+            receive_apodization: ApodizationType::Uniform,
             signal: None,
             active_elements,
             cached_mask: None,
@@ -88,7 +88,9 @@ impl TransducerArray2D {
         Ok(array)
     }
 
-    pub(super) fn compute_element_positions(config: &TransducerArray2DConfig) -> Vec<ArrayElement> {
+    pub(super) fn compute_element_positions(
+        config: &TransducerArray2DConfig,
+    ) -> Vec<Array2dElement> {
         let num_elements = config.number_elements;
         let (cx, cy, cz) = config.center_position;
 
@@ -114,7 +116,7 @@ impl TransducerArray2D {
                     y = config.radius.mul_add(1.0 - angle.cos(), cy);
                 }
 
-                ArrayElement {
+                Array2dElement {
                     position: (x, y, z),
                     width: config.element_width,
                     length: config.element_length,
@@ -289,12 +291,12 @@ impl TransducerArray2D {
     pub(super) fn update_apodization_weights(&mut self) {
         let num_elements = self.config.number_elements;
 
-        let tx_apodization = self.transmit_apodization.create_apodization();
+        let tx_apodization = super::types::create_apodization(&self.transmit_apodization);
         for (i, element) in self.elements.iter_mut().enumerate() {
             element.transmit_weight = tx_apodization.weight(i, num_elements);
         }
 
-        let rx_apodization = self.receive_apodization.create_apodization();
+        let rx_apodization = super::types::create_apodization(&self.receive_apodization);
         for (i, element) in self.elements.iter_mut().enumerate() {
             element.receive_weight = rx_apodization.weight(i, num_elements);
         }

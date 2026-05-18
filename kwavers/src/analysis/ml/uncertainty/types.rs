@@ -4,7 +4,7 @@ use ndarray::Array3;
 
 /// Uncertainty quantification methods.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum UncertaintyMethod {
+pub enum MlUncertaintyMethod {
     /// Monte Carlo dropout sampling.
     MonteCarloDropout,
     /// Ensemble methods (bagging).
@@ -19,9 +19,9 @@ pub enum UncertaintyMethod {
 
 /// Configuration for uncertainty quantification.
 #[derive(Debug, Clone)]
-pub struct UncertaintyConfig {
+pub struct MlUncertaintyConfig {
     /// Primary uncertainty method.
-    pub method: UncertaintyMethod,
+    pub method: MlUncertaintyMethod,
     /// Number of uncertainty samples.
     pub num_samples: usize,
     /// Confidence level (0–1).
@@ -34,10 +34,10 @@ pub struct UncertaintyConfig {
     pub calibration_size: usize,
 }
 
-impl Default for UncertaintyConfig {
+impl Default for MlUncertaintyConfig {
     fn default() -> Self {
         Self {
-            method: UncertaintyMethod::Ensemble,
+            method: MlUncertaintyMethod::Ensemble,
             num_samples: 100,
             confidence_level: 0.95,
             dropout_rate: 0.1,

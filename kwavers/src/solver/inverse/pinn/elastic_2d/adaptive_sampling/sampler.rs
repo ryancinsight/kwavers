@@ -8,7 +8,7 @@ use rand::prelude::*;
 /// Adaptive sampling strategy: how collocation points are selected.
 #[cfg(feature = "pinn")]
 #[derive(Debug, Clone, PartialEq)]
-pub enum SamplingStrategy {
+pub enum ElasticAdaptiveSamplingStrategy {
     Uniform,
     /// `p_i ∝ r_i^α`, `keep_ratio` fraction of old points retained.
     ResidualWeighted {
@@ -26,9 +26,9 @@ pub enum SamplingStrategy {
 }
 
 #[cfg(feature = "pinn")]
-impl Default for SamplingStrategy {
+impl Default for ElasticAdaptiveSamplingStrategy {
     fn default() -> Self {
-        SamplingStrategy::ResidualWeighted {
+        ElasticAdaptiveSamplingStrategy::ResidualWeighted {
             alpha: 1.0,
             keep_ratio: 0.0,
         }
@@ -39,7 +39,7 @@ impl Default for SamplingStrategy {
 #[cfg(feature = "pinn")]
 #[derive(Debug)]
 pub struct AdaptiveSampler {
-    pub strategy: SamplingStrategy,
+    pub strategy: ElasticAdaptiveSamplingStrategy,
     pub n_points: usize,
     pub batch_size: usize,
     rng: StdRng,
@@ -48,12 +48,16 @@ pub struct AdaptiveSampler {
 
 #[cfg(feature = "pinn")]
 impl AdaptiveSampler {
-    pub fn new(strategy: SamplingStrategy, n_points: usize, batch_size: usize) -> Self {
+    pub fn new(
+        strategy: ElasticAdaptiveSamplingStrategy,
+        n_points: usize,
+        batch_size: usize,
+    ) -> Self {
         Self::with_seed(strategy, n_points, batch_size, 42)
     }
 
     pub fn with_seed(
-        strategy: SamplingStrategy,
+        strategy: ElasticAdaptiveSamplingStrategy,
         n_points: usize,
         batch_size: usize,
         seed: u64,
@@ -90,13 +94,13 @@ impl AdaptiveSampler {
         }
 
         match &self.strategy.clone() {
-            SamplingStrategy::Uniform => {
+            ElasticAdaptiveSamplingStrategy::Uniform => {
                 let mut indices: Vec<usize> = (0..n_candidates).collect();
                 indices.shuffle(&mut self.rng);
                 indices.truncate(self.n_points);
                 Ok(indices)
             }
-            SamplingStrategy::ResidualWeighted { alpha, keep_ratio } => {
+            ElasticAdaptiveSamplingStrategy::ResidualWeighted { alpha, keep_ratio } => {
                 let (alpha, keep_ratio) = (*alpha, *keep_ratio);
                 let weights: Vec<f64> = residuals.iter().map(|&r| r.abs().powf(alpha)).collect();
                 let total_weight: f64 = weights.iter().sum();
@@ -116,7 +120,7 @@ impl AdaptiveSampler {
                 self.current_indices = selected.clone();
                 Ok(selected)
             }
-            SamplingStrategy::ImportanceThreshold {
+            ElasticAdaptiveSamplingStrategy::ImportanceThreshold {
                 threshold,
                 top_k_ratio,
             } => {
@@ -141,7 +145,7 @@ impl AdaptiveSampler {
                 self.current_indices = indices.clone();
                 Ok(indices)
             }
-            SamplingStrategy::Hybrid {
+            ElasticAdaptiveSamplingStrategy::Hybrid {
                 uniform_ratio,
                 alpha,
             } => {

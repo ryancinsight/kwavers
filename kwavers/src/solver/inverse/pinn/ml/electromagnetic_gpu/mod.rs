@@ -24,6 +24,6 @@ mod stepping;
 #[cfg(test)]
 mod tests;
 
-pub use config::{BoundaryCondition, EMConfig};
+pub use config::{EMConfig, ElectromagneticBc};
 pub use fields::EMFieldData;
 pub use solver::GPUEMSolver;

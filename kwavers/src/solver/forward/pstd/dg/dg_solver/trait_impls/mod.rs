@@ -41,27 +41,14 @@ impl NumericalSolver for DGSolver {
         dt: f64,
         mask: &Array3<bool>,
     ) -> KwaversResult<Array3<f64>> {
-        let mut result = field.clone();
-
-        self.project_to_dg(&result)?;
-        self.solve_step(&mut result, dt)?;
-
-        for i in 0..result.shape()[0] {
-            for j in 0..result.shape()[1] {
-                for k in 0..result.shape()[2] {
-                    if !mask[(i, j, k)] {
-                        result[(i, j, k)] = field[(i, j, k)];
-                    }
-                }
-            }
-        }
-
+        let mut result = Array3::zeros(field.dim());
+        self.solve_into(field, dt, mask, &mut result)?;
         Ok(result)
     }
 
     fn max_stable_dt(&self, grid: &Grid) -> f64 {
         // CFL condition for DG(p): dt ≤ dx / (c · (2p+1))  (Cockburn & Shu 2001 §4)
-        let dx = grid.dx.min(grid.dy).min(grid.dz);
+        let dx = active_min_spacing(grid);
         let p = self.config.polynomial_order as f64;
         dx / (self.config.sound_speed * 2.0f64.mul_add(p, 1.0))
     }
@@ -180,6 +167,38 @@ impl DGOperations for DGSolver {
 }
 
 impl DGSolver {
+    /// Advance `field` into caller-owned `output`, applying DG values only where `mask` is true.
+    ///
+    /// The projection and RK workspaces are reused when their dimensions match the grid-derived
+    /// tensor-product layout.
+    pub fn solve_into(
+        &mut self,
+        field: &Array3<f64>,
+        dt: f64,
+        mask: &Array3<bool>,
+        output: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
+        if field.dim() != mask.dim() || field.dim() != output.dim() {
+            return Err(KwaversError::InvalidInput(format!(
+                "DG solve_into dimension mismatch: field={:?}, mask={:?}, output={:?}",
+                field.dim(),
+                mask.dim(),
+                output.dim()
+            )));
+        }
+
+        self.project_to_dg(field)?;
+        self.solve_step(output, dt)?;
+        self.project_to_grid(output)?;
+
+        for ((out, &keep_dg), &input) in output.iter_mut().zip(mask.iter()).zip(field.iter()) {
+            if !keep_dg {
+                *out = input;
+            }
+        }
+        Ok(())
+    }
+
     /// Get the polynomial order
     #[must_use]
     pub fn polynomial_order(&self) -> usize {
@@ -231,5 +250,23 @@ impl DGSolver {
                 "Modal coefficients not initialized".to_owned(),
             ))
         }
+    }
+}
+
+fn active_min_spacing(grid: &Grid) -> f64 {
+    let mut spacing = f64::MAX;
+    if grid.nx > 1 {
+        spacing = spacing.min(grid.dx);
+    }
+    if grid.ny > 1 {
+        spacing = spacing.min(grid.dy);
+    }
+    if grid.nz > 1 {
+        spacing = spacing.min(grid.dz);
+    }
+    if spacing == f64::MAX {
+        grid.dx
+    } else {
+        spacing
     }
 }

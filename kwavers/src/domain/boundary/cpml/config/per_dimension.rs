@@ -68,7 +68,7 @@ impl Default for PerDimensionPML {
 
 /// Per-dimension absorption (sigma_factor / pml_alpha) for asymmetric PML tuning.
 ///
-/// # Theorem (Per-Dimension Sigma)
+/// # Theorem (Per-GridDimension Sigma)
 /// K-Wave's `pml_alpha` can be specified as a scalar (uniform) or a 3-vector
 /// [alpha_x, alpha_y, alpha_z] to independently control how aggressively each
 /// axis is absorbed. Setting different alpha per axis is useful for:

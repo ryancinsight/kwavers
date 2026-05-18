@@ -61,14 +61,19 @@ impl SimpleCustomSource {
 impl Source for SimpleCustomSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        self.create_mask_into(grid, &mut mask);
+        mask
+    }
+
+    fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        mask.fill(0.0);
 
         for (pos_idx, (x, y, z)) in self.positions.iter().enumerate() {
             if let Some((i, j, k)) = grid.position_to_indices(*x, *y, *z) {
                 mask[(i, j, k)] = self.weights[pos_idx];
             }
         }
-
-        mask
     }
 
     fn amplitude(&self, t: f64) -> f64 {
@@ -87,22 +92,19 @@ impl Source for SimpleCustomSource {
         self.source_type
     }
 
-    fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
-        // Find the closest position and use its weight
-        let mut closest_weight = 0.0;
-        let mut min_distance = f64::INFINITY;
+    fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let Some(query_index) = grid.position_to_indices(x, y, z) else {
+            return 0.0;
+        };
 
+        let mut weight_at_cell = None;
         for (pos_idx, (px, py, pz)) in self.positions.iter().enumerate() {
-            let distance = (z - pz)
-                .mul_add(z - pz, (y - py).mul_add(y - py, (x - px).powi(2)))
-                .sqrt();
-            if distance < min_distance {
-                min_distance = distance;
-                closest_weight = self.weights[pos_idx];
+            if grid.position_to_indices(*px, *py, *pz) == Some(query_index) {
+                weight_at_cell = Some(self.weights[pos_idx]);
             }
         }
 
-        closest_weight * self.signal.amplitude(t)
+        weight_at_cell.map_or(0.0, |weight| weight * self.signal.amplitude(t))
     }
 }
 
@@ -185,6 +187,12 @@ impl FunctionSource {
 impl Source for FunctionSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        self.create_mask_into(grid, &mut mask);
+        mask
+    }
+
+    fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
 
         for ((i, j, k), val) in mask.indexed_iter_mut() {
             let x = i as f64 * grid.dx;
@@ -194,8 +202,18 @@ impl Source for FunctionSource {
             // Evaluate the function at time 0 to get the spatial distribution
             *val = (self.function)(x, y, z, 0.0);
         }
+    }
 
-        mask
+    fn add_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+
+        for ((i, j, k), val) in mask.indexed_iter_mut() {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+
+            *val += (self.function)(x, y, z, 0.0);
+        }
     }
 
     fn amplitude(&self, t: f64) -> f64 {
@@ -218,5 +236,55 @@ impl Source for FunctionSource {
 
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
         (self.function)(x, y, z, t) * self.signal.amplitude(t)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    struct ConstantSignal(f64);
+
+    impl Signal for ConstantSignal {
+        fn amplitude(&self, _t: f64) -> f64 {
+            self.0
+        }
+
+        fn frequency(&self, _t: f64) -> f64 {
+            0.0
+        }
+
+        fn phase(&self, _t: f64) -> f64 {
+            0.0
+        }
+
+        fn clone_box(&self) -> Box<dyn Signal> {
+            Box::new(self.clone())
+        }
+    }
+
+    #[test]
+    fn simple_custom_source_term_matches_mask_cells_not_nearest_position() {
+        let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap();
+        let source = SimpleCustomSource::new(
+            vec![(1.0, 1.0, 1.0), (1.0, 1.0, 1.0)],
+            vec![2.0, 7.0],
+            Arc::new(ConstantSignal(3.0)),
+            SourceField::Pressure,
+        );
+        let mask = source.create_mask(&grid);
+        let source_cell = grid.indices_to_coordinates(1, 1, 1);
+        let empty_cell = grid.indices_to_coordinates(2, 1, 1);
+
+        assert_eq!(mask[[1, 1, 1]], 7.0);
+        assert_eq!(
+            source.get_source_term(0.0, source_cell.0, source_cell.1, source_cell.2, &grid),
+            21.0
+        );
+        assert_eq!(
+            source.get_source_term(0.0, empty_cell.0, empty_cell.1, empty_cell.2, &grid),
+            0.0
+        );
     }
 }

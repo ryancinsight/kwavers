@@ -1,22 +1,22 @@
 //! Safety monitoring for control system
 
 use super::super::detection::CavitationMetrics;
-use super::types::{ControlOutput, SafetyLimits};
+use super::types::{CavitationSafetyLimits, ControlOutput};
 
 const SAFETY_SHUTDOWN_THRESHOLD: f64 = 0.95;
 const SAFETY_RECOVERY_THRESHOLD: f64 = 0.7;
 
 /// Safety monitor for control system
 #[derive(Debug)]
-pub struct SafetyMonitor {
-    limits: SafetyLimits,
+pub struct CavitationSafetyMonitor {
+    limits: CavitationSafetyLimits,
     emergency_stop: bool,
     violation_count: usize,
 }
 
-impl SafetyMonitor {
+impl CavitationSafetyMonitor {
     #[must_use]
-    pub fn new(limits: SafetyLimits) -> Self {
+    pub fn new(limits: CavitationSafetyLimits) -> Self {
         Self {
             limits,
             emergency_stop: false,

@@ -1,11 +1,11 @@
 //! Monte Carlo inference: quantify_uncertainty, apply_dropout_mask, compute_prediction_statistics.
 
-use super::{BayesianPINN, PredictionWithUncertainty};
+use super::{MlBayesianPINN, PredictionWithUncertainty};
 use crate::core::error::KwaversResult;
 use ndarray::Array2;
 use std::collections::HashMap;
 
-impl BayesianPINN {
+impl MlBayesianPINN {
     /// Quantify uncertainty for PINN predictions
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.

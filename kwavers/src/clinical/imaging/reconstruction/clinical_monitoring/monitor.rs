@@ -1,6 +1,6 @@
 use super::types::{
-    FrameQualityRecord, MonitoringConfig, MonitoringReport, PerformanceMetrics, SafetyEvent,
-    SafetyEventType, SafetySeverity,
+    FrameQualityRecord, MonitoringConfig, MonitoringFrameMetrics, MonitoringReport,
+    MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
 };
 use crate::core::error::KwaversResult;
 use std::collections::VecDeque;
@@ -16,7 +16,7 @@ pub struct ClinicalMonitor {
     /// Safety event log
     safety_log: VecDeque<SafetyEvent>,
     /// System performance metrics
-    pub(super) performance_metrics: PerformanceMetrics,
+    pub(super) performance_metrics: MonitoringFrameMetrics,
     /// Monitoring start time
     start_time: Instant,
 }
@@ -30,7 +30,7 @@ impl ClinicalMonitor {
             config,
             frame_history: VecDeque::with_capacity(history_cap),
             safety_log: VecDeque::with_capacity(1000),
-            performance_metrics: PerformanceMetrics::default(),
+            performance_metrics: MonitoringFrameMetrics::default(),
             start_time: Instant::now(),
         }
     }
@@ -83,7 +83,7 @@ impl ClinicalMonitor {
         if quality_score < self.config.quality_alert_threshold * 100.0 {
             self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
-                event_type: SafetyEventType::QualityDegradation,
+                event_type: MonitoringSafetyEventType::QualityDegradation,
                 parameter_value: quality_score,
                 safety_limit: self.config.quality_alert_threshold * 100.0,
                 severity: SafetySeverity::Warning,
@@ -120,7 +120,7 @@ impl ClinicalMonitor {
         if temp_rise > self.config.max_temperature_rise_c {
             let _ = self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
-                event_type: SafetyEventType::TemperatureExceeded,
+                event_type: MonitoringSafetyEventType::TemperatureExceeded,
                 parameter_value: temp_rise,
                 safety_limit: self.config.max_temperature_rise_c,
                 severity: SafetySeverity::Critical,
@@ -132,7 +132,7 @@ impl ClinicalMonitor {
         } else if temp_rise > self.config.max_temperature_rise_c * 0.8 {
             let _ = self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
-                event_type: SafetyEventType::TemperatureExceeded,
+                event_type: MonitoringSafetyEventType::TemperatureExceeded,
                 parameter_value: temp_rise,
                 safety_limit: self.config.max_temperature_rise_c,
                 severity: SafetySeverity::Urgent,
@@ -149,7 +149,7 @@ impl ClinicalMonitor {
         if mechanical_index > self.config.max_mechanical_index {
             let _ = self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
-                event_type: SafetyEventType::MechanicalIndexExceeded,
+                event_type: MonitoringSafetyEventType::MechanicalIndexExceeded,
                 parameter_value: mechanical_index,
                 safety_limit: self.config.max_mechanical_index,
                 severity: SafetySeverity::Critical,
@@ -161,7 +161,7 @@ impl ClinicalMonitor {
         } else if mechanical_index > self.config.max_mechanical_index * 0.8 {
             let _ = self.log_safety_event(SafetyEvent {
                 timestamp: SystemTime::now(),
-                event_type: SafetyEventType::MechanicalIndexExceeded,
+                event_type: MonitoringSafetyEventType::MechanicalIndexExceeded,
                 parameter_value: mechanical_index,
                 safety_limit: self.config.max_mechanical_index,
                 severity: SafetySeverity::Urgent,
@@ -204,7 +204,7 @@ impl ClinicalMonitor {
 
     /// Get performance metrics
     #[must_use]
-    pub fn performance_metrics(&self) -> &PerformanceMetrics {
+    pub fn performance_metrics(&self) -> &MonitoringFrameMetrics {
         &self.performance_metrics
     }
 

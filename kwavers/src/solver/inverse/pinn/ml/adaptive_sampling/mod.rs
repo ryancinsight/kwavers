@@ -34,7 +34,7 @@ struct HighResidualRegion {
 
 /// Sampling strategy configuration
 #[derive(Debug, Clone)]
-pub struct SamplingStrategy {
+pub struct AdaptiveRefinementConfig {
     /// Minimum priority threshold for refinement
     pub refinement_threshold: f64,
     /// Maximum priority threshold for coarsening
@@ -68,7 +68,7 @@ pub struct SamplingStats {
     pub max_priority: f64,
 }
 
-impl Default for SamplingStrategy {
+impl Default for AdaptiveRefinementConfig {
     fn default() -> Self {
         Self {
             refinement_threshold: 0.8,
@@ -102,6 +102,6 @@ pub struct AdaptiveCollocationSampler<B: AutodiffBackend> {
     active_points: Tensor<B, 2>,
     priorities: Tensor<B, 1>,
     domain: Box<dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<B>>,
-    strategy: SamplingStrategy,
+    strategy: AdaptiveRefinementConfig,
     stats: SamplingStats,
 }

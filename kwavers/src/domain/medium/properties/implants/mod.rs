@@ -16,13 +16,13 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
-use super::material::MaterialProperties;
+use super::material::AcousticMaterialProperties;
 
 #[cfg(test)]
 mod tests;
 
 /// Implant material properties type alias
-pub type ImplantProperties = MaterialProperties;
+pub type ImplantProperties = AcousticMaterialProperties;
 
 // ============================================================================
 // Metallic Implants

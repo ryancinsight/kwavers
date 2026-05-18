@@ -45,7 +45,7 @@ pub use engine::VisualizationEngine;
 pub use metrics::{MetricsTracker, VisualizationMetrics};
 
 // Re-export field types
-pub use crate::domain::field::mapping::UnifiedFieldType as FieldType;
+pub use crate::domain::field::mapping::UnifiedFieldType;
 
 // GPU-specific re-exports
 #[cfg(feature = "gpu-visualization")]
@@ -156,7 +156,7 @@ mod tests {
         let grid = create_test_grid();
         let field = create_test_field();
 
-        pollster::block_on(engine.render_field(&field, FieldType::Pressure, &grid)).unwrap();
+        pollster::block_on(engine.render_field(&field, UnifiedFieldType::Pressure, &grid)).unwrap();
     }
 
     #[test]
@@ -167,9 +167,9 @@ mod tests {
         let grid = create_test_grid();
         let fields = Array4::zeros((32, 32, 32, 3));
         let field_types = vec![
-            FieldType::Pressure,
-            FieldType::Temperature,
-            FieldType::LightFluence,
+            UnifiedFieldType::Pressure,
+            UnifiedFieldType::Temperature,
+            UnifiedFieldType::LightFluence,
         ];
 
         pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid)).unwrap();
@@ -180,7 +180,7 @@ mod tests {
         let grid = create_test_grid();
         let field = create_test_field();
 
-        fallback::render_field(&field, FieldType::Pressure, &grid).unwrap();
+        fallback::render_field(&field, UnifiedFieldType::Pressure, &grid).unwrap();
     }
 
     #[test]

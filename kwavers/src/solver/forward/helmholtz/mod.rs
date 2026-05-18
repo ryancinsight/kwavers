@@ -53,7 +53,7 @@ pub struct HelmholtzConfig {
     /// FFT-based matrix-free operations
     pub use_fft: bool,
     /// Preconditioner type for iterative methods
-    pub preconditioner: PreconditionerType,
+    pub preconditioner: HelmholtzPreconditionerType,
 }
 
 impl Default for HelmholtzConfig {
@@ -63,14 +63,14 @@ impl Default for HelmholtzConfig {
             tolerance: 1e-6,
             enable_renormalization: true,
             use_fft: true,
-            preconditioner: PreconditionerType::None,
+            preconditioner: HelmholtzPreconditionerType::None,
         }
     }
 }
 
 /// Preconditioner options for iterative Helmholtz solvers
 #[derive(Debug, Clone, Copy)]
-pub enum PreconditionerType {
+pub enum HelmholtzPreconditionerType {
     /// No preconditioning
     None,
     /// Diagonal preconditioning

@@ -127,4 +127,4 @@
 
 pub mod types;
 
-pub use types::{TherapyMechanism, TherapyModality};
+pub use types::{DomainTherapyMechanism, DomainTherapyModality};

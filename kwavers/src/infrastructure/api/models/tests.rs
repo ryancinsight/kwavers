@@ -4,7 +4,7 @@ use super::*;
 use chrono::Utc;
 use std::collections::HashMap;
 
-use crate::infrastructure::api::TrainingConfig;
+use crate::infrastructure::api::PinnApiTrainingConfig;
 
 #[test]
 fn test_job_queue_entry_defaults() {
@@ -16,7 +16,7 @@ fn test_job_queue_entry_defaults() {
 
 #[test]
 fn test_training_config_defaults() {
-    let config = TrainingConfig::default();
+    let config = PinnApiTrainingConfig::default();
     assert_eq!(config.collocation_points, 1000);
     assert_eq!(config.batch_size, 32);
     assert_eq!(config.epochs, 100);

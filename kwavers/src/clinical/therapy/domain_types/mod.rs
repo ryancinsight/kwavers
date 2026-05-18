@@ -4,7 +4,7 @@
 
 /// Treatment metrics for therapy monitoring
 #[derive(Debug, Clone, Default)]
-pub struct TreatmentMetrics {
+pub struct ClinicalTreatmentMetrics {
     /// Thermal dose in CEM43
     pub thermal_dose: f64,
     /// Cavitation dose
@@ -19,7 +19,7 @@ pub struct TreatmentMetrics {
 
 /// Therapy mechanism
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TherapyMechanism {
+pub enum ClinicalTherapyMechanism {
     /// Thermal mechanism
     Thermal,
     /// Mechanical mechanism
@@ -30,7 +30,7 @@ pub enum TherapyMechanism {
 
 /// Therapy modality
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TherapyModality {
+pub enum ClinicalTherapyModality {
     /// High-intensity focused ultrasound
     HIFU,
     /// Low-intensity focused ultrasound
@@ -41,7 +41,7 @@ pub enum TherapyModality {
 
 /// Therapy parameters
 #[derive(Debug, Clone, Copy, Default)]
-pub struct TherapyParameters {
+pub struct ClinicalTherapyParameters {
     /// Frequency (Hz)
     pub frequency: f64,
     /// Pressure (Pa)
@@ -60,7 +60,7 @@ pub struct TherapyParameters {
     pub prf: f64,
 }
 
-impl TherapyParameters {
+impl ClinicalTherapyParameters {
     /// Create new therapy parameters
     #[must_use]
     pub fn new(frequency: f64, pressure: f64, duration: f64) -> Self {

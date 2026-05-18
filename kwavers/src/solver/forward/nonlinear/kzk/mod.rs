@@ -53,12 +53,7 @@ pub use harmonic_tracking::{HarmonicAnalysis, HarmonicConfig, HarmonicTracker, P
 pub use shock_capturing::{ShockCapture, ShockCapturingConfig, ShockDetectionResult};
 pub use solver::KZKSolver;
 
-/// Re-export the physics-layer trait under an ergonomic alias.
-///
-/// Consumers can use either:
-/// - `use kwavers::solver::forward::nonlinear::kzk::KZKSolverTrait;`
-/// - `use kwavers::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolver;`
-pub use crate::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolver as KZKSolverTrait;
+pub use crate::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
 
 /// KZK configuration parameters
 #[derive(Debug, Clone)]
@@ -92,7 +87,7 @@ pub struct KZKConfig {
     ///   β = 1 + B/(2A)
     ///
     /// `b_over_a` stores the raw ratio B/A; β is computed internally by
-    /// `NonlinearOperator::new` as `1.0 + b_over_a / 2.0`.
+    /// `KzkNonlinearOperator::new` as `1.0 + b_over_a / 2.0`.
     ///
     /// Typical values: water ≈ 5.0, soft tissue ≈ 6.0–7.5.
     ///

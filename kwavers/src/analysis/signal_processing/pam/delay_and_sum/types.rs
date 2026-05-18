@@ -1,18 +1,7 @@
 use crate::core::constants::SOUND_SPEED_TISSUE;
 use serde::{Deserialize, Serialize};
 
-/// Apodization window types for sidelobe suppression.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum ApodizationType {
-    /// No apodization (uniform weighting).
-    None,
-    /// Hamming window.
-    Hamming,
-    /// Hanning window.
-    Hanning,
-    /// Blackman window.
-    Blackman,
-}
+pub use crate::math::signal::ApodizationType;
 
 /// Configuration for delay-and-sum PAM.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,7 +35,7 @@ impl Default for DelayAndSumConfig {
 
 /// Detected cavitation event.
 #[derive(Debug, Clone)]
-pub struct CavitationEvent {
+pub struct PamCavitationEvent {
     /// 3D position (m).
     pub position: [f64; 3],
     /// Intensity (arbitrary units).

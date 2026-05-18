@@ -21,10 +21,10 @@
 //! This is the most physically relevant single-slice summary for HIFU
 //! intensity calculations, where I ∝ p_rms².
 
-use ndarray::Array2;
+use ndarray::{Array2, Zip};
 
 use super::KZKSolver;
-use crate::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolver as KZKSolverTrait;
+use crate::physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
 
 impl KZKSolverTrait for KZKSolver {
     /// Advance the pressure field by axial increment `dz` (m).
@@ -40,23 +40,28 @@ impl KZKSolverTrait for KZKSolver {
     ///
     /// Shape: `(nx, ny)` — transverse grid.
     ///
-    /// # Theorem (RMS as L² norm)
+    /// ## Theorem (RMS as L² norm)
     ///
     /// `p_rms(i,j) = ‖Re[p[i,j,·]]‖_{L²} / √nt`.
     ///
     /// This is proportional to the time-averaged acoustic intensity:
     /// `I(i,j) = p_rms(i,j)² / (ρ₀c₀)` [W/m²].
+    ///
+    /// ## Theorem (race-freedom)
+    ///
+    /// Each output element `rms[i,j]` is computed as a sequential reduction
+    /// over `self.pressure[[i,j,0..nt]]`, a disjoint slice from every other
+    /// transverse cell.  No two Rayon tasks read or write the same memory
+    /// location → `par_for_each` is race-free.
     fn current_field(&self) -> Array2<f64> {
-        let nt = self.config.nt as f64;
+        let nt_f64 = self.config.nt as f64;
+        let nt = self.config.nt;
+        let pressure = &self.pressure;
         let mut rms = Array2::zeros((self.config.nx, self.config.ny));
-        for i in 0..self.config.nx {
-            for j in 0..self.config.ny {
-                let sum_sq: f64 = (0..self.config.nt)
-                    .map(|t| self.pressure[[i, j, t]].re.powi(2))
-                    .sum();
-                rms[[i, j]] = (sum_sq / nt).sqrt();
-            }
-        }
+        Zip::indexed(rms.view_mut()).par_for_each(|(i, j), r| {
+            let sum_sq: f64 = (0..nt).map(|t| pressure[[i, j, t]].re.powi(2)).sum();
+            *r = (sum_sq / nt_f64).sqrt();
+        });
         rms
     }
 

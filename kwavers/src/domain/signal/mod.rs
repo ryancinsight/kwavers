@@ -32,11 +32,11 @@ pub use functions::{
 pub use special::{NullSignal, TimeVaryingSignal};
 pub use traits::Signal;
 pub use waveform::{SineWave, SquareWave, TriangleWave};
-pub use window::{window_value, WindowType};
+pub use window::{window_value, SignalWindowType};
 
 // Re-export pulse signals
 pub use pulse::{
-    GaussianPulse, PulseShape, PulseTrain, RectangularPulse, RickerWavelet, ToneBurst,
+    DomainRickerWavelet, GaussianPulse, PulseShape, PulseTrain, RectangularPulse, ToneBurst,
 };
 
 // Re-export frequency sweeps

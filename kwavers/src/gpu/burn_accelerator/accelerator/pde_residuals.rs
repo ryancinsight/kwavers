@@ -1,6 +1,6 @@
 //! PDE residual computation for physics-informed learning (wave, heat, diffusion, Navier-Stokes).
 
-use super::super::super::types::{EquationType, PhysicsParameters};
+use super::super::super::types::{EquationType, GpuPhysicsParameters};
 use super::BurnGpuAccelerator;
 use burn::prelude::*;
 use burn::tensor::backend::Backend;
@@ -10,7 +10,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     pub fn compute_pde_residual(
         &self,
         u: &Tensor<B, 4>,
-        physics_params: &PhysicsParameters,
+        physics_params: &GpuPhysicsParameters,
     ) -> Tensor<B, 3> {
         match physics_params.equation_type {
             EquationType::Wave => self.compute_wave_equation_residual(u, physics_params),
@@ -23,7 +23,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     fn compute_wave_equation_residual(
         &self,
         u: &Tensor<B, 4>,
-        params: &PhysicsParameters,
+        params: &GpuPhysicsParameters,
     ) -> Tensor<B, 3> {
         let c = params.wave_speed.unwrap_or(1480.0) as f32;
         let shape = u.shape();
@@ -79,7 +79,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     fn compute_heat_equation_residual(
         &self,
         _u: &Tensor<B, 4>,
-        _params: &PhysicsParameters,
+        _params: &GpuPhysicsParameters,
     ) -> Tensor<B, 3> {
         Tensor::zeros([1, 1, 1], &self.device)
     }
@@ -87,7 +87,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     fn compute_diffusion_residual(
         &self,
         _u: &Tensor<B, 4>,
-        _params: &PhysicsParameters,
+        _params: &GpuPhysicsParameters,
     ) -> Tensor<B, 3> {
         Tensor::zeros([1, 1, 1], &self.device)
     }
@@ -95,7 +95,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
     fn compute_navier_stokes_residual(
         &self,
         _u: &Tensor<B, 4>,
-        _params: &PhysicsParameters,
+        _params: &GpuPhysicsParameters,
     ) -> Tensor<B, 3> {
         Tensor::zeros([1, 1, 1], &self.device)
     }

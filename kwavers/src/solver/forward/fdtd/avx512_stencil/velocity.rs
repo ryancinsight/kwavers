@@ -14,11 +14,11 @@
 //! u_new = u + coeff × (p_plus − p_minus)
 //! ```
 
-use super::Avx512StencilProcessor;
+use super::FdtdAvx512StencilProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
-impl Avx512StencilProcessor {
+impl FdtdAvx512StencilProcessor {
     /// Update velocity field with AVX-512 acceleration.
     ///
     /// # Arguments

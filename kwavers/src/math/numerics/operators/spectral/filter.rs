@@ -28,7 +28,7 @@ use std::f64::consts::PI;
 
 /// Types of spectral filters
 #[derive(Debug, Clone, Copy)]
-pub enum FilterType {
+pub enum SpectralFilterType {
     /// Sharp cutoff at k_cutoff
     SharpCutoff,
     /// Smooth transition (Hamming window)
@@ -46,7 +46,7 @@ pub struct SpectralFilter {
     /// Cutoff wavenumber (fraction of Nyquist)
     cutoff: f64,
     /// Filter type
-    filter_type: FilterType,
+    filter_type: SpectralFilterType,
 }
 
 impl SpectralFilter {
@@ -60,7 +60,7 @@ impl SpectralFilter {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(cutoff: f64, filter_type: FilterType) -> Self {
+    pub fn new(cutoff: f64, filter_type: SpectralFilterType) -> Self {
         Self {
             cutoff,
             filter_type,
@@ -144,12 +144,12 @@ impl SpectralFilter {
 
         if k_normalized > self.cutoff {
             match self.filter_type {
-                FilterType::SharpCutoff => 0.0,
-                FilterType::Smooth => {
+                SpectralFilterType::SharpCutoff => 0.0,
+                SpectralFilterType::Smooth => {
                     let transition = (k_normalized - self.cutoff) / (1.0 - self.cutoff);
                     0.5 * (1.0 + (PI * transition).cos())
                 }
-                FilterType::Exponential => {
+                SpectralFilterType::Exponential => {
                     let decay_rate = 10.0;
                     (-decay_rate * (k_normalized - self.cutoff).powi(2)).exp()
                 }

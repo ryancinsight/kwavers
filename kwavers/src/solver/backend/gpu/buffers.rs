@@ -12,7 +12,7 @@ use wgpu;
 /// Manages allocation, reuse, and transfer of GPU buffers.
 /// Implements buffer pooling to reduce allocation overhead.
 #[derive(Debug)]
-pub struct BufferManager {
+pub struct GpuBackendBufferManager {
     /// Device reference (non-owning)
     _device_ptr: *const wgpu::Device,
 
@@ -32,7 +32,7 @@ struct BufferKey {
     usage: u32,
 }
 
-impl BufferManager {
+impl GpuBackendBufferManager {
     /// Create a new buffer manager
     pub fn new(device: &wgpu::Device) -> Self {
         Self {
@@ -239,8 +239,8 @@ impl BufferManager {
     }
 }
 
-// Safety: BufferManager is Send (device pointer is just for tracking, not dereferencing)
-unsafe impl Send for BufferManager {}
+// Safety: GpuBackendBufferManager is Send (device pointer is just for tracking, not dereferencing)
+unsafe impl Send for GpuBackendBufferManager {}
 
 #[cfg(test)]
 mod tests {
@@ -291,7 +291,7 @@ mod tests {
                 },
                 None,
             )) {
-                let manager = BufferManager::new(&device);
+                let manager = GpuBackendBufferManager::new(&device);
                 assert_eq!(manager.total_allocated(), 0);
             }
         }

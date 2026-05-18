@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use kwavers::domain::source::custom::FunctionSource;
 use kwavers::domain::source::wavefront::plane_wave::{
-    InjectionMode, PlaneWaveConfig, PlaneWaveSource,
+    InjectionMode, PlaneWaveSourceConfig, PlaneWaveSource,
 };
 use kwavers::domain::source::{GridSource, Source as KwaversSource, SourceField};
 use pyo3::exceptions::PyValueError;
@@ -191,7 +191,7 @@ impl Simulation {
             let function_source: Box<dyn KwaversSource> = if src.source_type == "plane_wave" {
                 let dir = src.direction.unwrap_or((0.0, 0.0, 1.0));
                 let wavelength = c_max / freq;
-                let config = PlaneWaveConfig {
+                let config = PlaneWaveSourceConfig {
                     direction: dir,
                     wavelength,
                     phase: 0.0,

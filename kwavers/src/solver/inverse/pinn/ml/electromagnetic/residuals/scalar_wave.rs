@@ -1,5 +1,5 @@
 use super::constants::EPS_FD_F32;
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
@@ -12,7 +12,7 @@ pub fn wave_propagation_residual<B: AutodiffBackend>(
     eps: f64,
     mu: f64,
     sigma: f64,
-    physics_params: &PhysicsParameters,
+    physics_params: &PinnDomainPhysicsParameters,
 ) -> Tensor<B, 2> {
     // -------------------------------------------------------------------------
     // Theorem — Scalar Wave Equation for Ez (TM-mode Maxwell)

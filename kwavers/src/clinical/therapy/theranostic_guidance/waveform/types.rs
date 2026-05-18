@@ -17,6 +17,20 @@ pub struct WaveformSimulationResult {
     pub objective_value: f64,
 }
 
+/// Output of the memory-bounded forward exposure simulation.
+#[derive(Clone, Debug)]
+pub struct PeakPressureExposureResult {
+    pub exposure: Array2<f64>,
+    pub raw_peak_pressure: Array2<f64>,
+    pub source_count: usize,
+    pub time_steps: usize,
+    pub dt_s: f64,
+    pub workspace_values: usize,
+    pub model_name: &'static str,
+    pub backend_name: &'static str,
+    pub uses_hybrid_pstd_fdtd: bool,
+}
+
 /// Forward-run output: receiver traces and optional checkpoint snapshots.
 #[derive(Clone, Debug)]
 pub(super) struct WavefieldRun {

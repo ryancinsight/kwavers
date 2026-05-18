@@ -8,7 +8,7 @@ use ndarray::{Array3, Zip};
 
 /// Thermal dose calculator using cumulative equivalent minutes at 43°C (CEM43)
 #[derive(Debug)]
-pub struct ThermalDose {
+pub struct ThermalCEM43Grid {
     /// Cumulative thermal dose (CEM43 minutes)
     dose: Array3<f64>,
     /// Grid dimensions
@@ -19,7 +19,7 @@ pub struct ThermalDose {
     reference_temp: f64,
 }
 
-impl ThermalDose {
+impl ThermalCEM43Grid {
     /// Create new thermal dose calculator
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_thermal_dose_accumulation() {
-        let mut dose_calc = ThermalDose::new(10, 10, 10);
+        let mut dose_calc = ThermalCEM43Grid::new(10, 10, 10);
 
         // Create temperature field at 45°C
         let temperature = Array3::from_elem((10, 10, 10), 45.0);
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_dose_threshold() {
-        let mut dose_calc = ThermalDose::new(10, 10, 10);
+        let mut dose_calc = ThermalCEM43Grid::new(10, 10, 10);
 
         // Set half the volume to accumulate dose
         let mut temperature = Array3::from_elem((10, 10, 10), 37.0);

@@ -60,6 +60,17 @@ use ndarray::Array1;
 ///
 /// The staggered profiles follow k-Wave's `get_pml(..., staggered=True)`
 /// half-cell offset so velocity and density updates use their native grids.
+///
+/// ## Precomputed PML factors
+///
+/// `pml_vel_*[i] = exp(-sigma_*_sg*[i] · Δt/2)` and
+/// `pml_den_*[i] = exp(-sigma_*[i] · Δt/2)` are computed once at construction
+/// from the final sigma arrays (after radial-inner-z transparency is applied).
+/// They replace per-step per-element `exp()` evaluation in the split-field PML
+/// update, reducing the per-step cost from O(N) transcendental ops to O(N)
+/// multiplications.  The fused velocity/density update uses these directly:
+/// `u = pml² · u_old − pml · (dt/ρ) · grad_p` becomes
+/// `u = p · (p · u_old − (dt/ρ) · grad_p)` with `p = pml_vel_*`.
 #[derive(Debug, Clone)]
 pub struct CPMLProfiles {
     pub sigma_x: Array1<f64>,
@@ -80,6 +91,18 @@ pub struct CPMLProfiles {
     pub b_x: Array1<f64>,
     pub b_y: Array1<f64>,
     pub b_z: Array1<f64>,
+    /// `exp(-sigma_x_sgx[i] · dt/2)` — staggered PML factor for `ux`.
+    pub pml_vel_x: Array1<f64>,
+    /// `exp(-sigma_y_sgy[j] · dt/2)` — staggered PML factor for `uy`.
+    pub pml_vel_y: Array1<f64>,
+    /// `exp(-sigma_z_sgz[k] · dt/2)` — staggered PML factor for `uz`.
+    pub pml_vel_z: Array1<f64>,
+    /// `exp(-sigma_x[i] · dt/2)` — collocated PML factor for `rhox`.
+    pub pml_den_x: Array1<f64>,
+    /// `exp(-sigma_y[j] · dt/2)` — collocated PML factor for `rhoy`.
+    pub pml_den_y: Array1<f64>,
+    /// `exp(-sigma_z[k] · dt/2)` — collocated PML factor for `rhoz`.
+    pub pml_den_z: Array1<f64>,
 }
 
 impl CPMLProfiles {
@@ -91,6 +114,9 @@ impl CPMLProfiles {
         let mut profiles = Self::neutral(grid.nx, grid.ny, grid.nz);
         profiles.compute_profiles(config, grid, sound_speed, dt)?;
         profiles.apply_radial_inner_z_transparency(config, grid.nz);
+        // Precompute exp factors AFTER transparency zeroing so the factors
+        // reflect the final sigma values (not an intermediate state).
+        profiles.compute_exp_factors(dt);
         Ok(profiles)
     }
 
@@ -114,7 +140,32 @@ impl CPMLProfiles {
             b_x: Array1::ones(nx),
             b_y: Array1::ones(ny),
             b_z: Array1::ones(nz),
+            // Neutral PML: exp(-0 * dt/2) = 1.0 — no attenuation.
+            pml_vel_x: Array1::ones(nx),
+            pml_vel_y: Array1::ones(ny),
+            pml_vel_z: Array1::ones(nz),
+            pml_den_x: Array1::ones(nx),
+            pml_den_y: Array1::ones(ny),
+            pml_den_z: Array1::ones(nz),
         }
+    }
+
+    /// Compute `pml_vel_*` and `pml_den_*` from the current sigma arrays.
+    ///
+    /// Must be called AFTER `apply_radial_inner_z_transparency` so that the
+    /// transparency-zeroed sigma values are reflected in the precomputed factors.
+    ///
+    /// # Theorem (PML factor derivation)
+    /// Treeby & Cox (2010) Eq. 17 applies `pml = exp(-σ·Δt/2)` twice per step.
+    /// Pre-computing `pml = exp(-σ·Δt/2)` per grid index eliminates O(N)
+    /// transcendental evaluations per step, replacing them with O(N) multiplications.
+    fn compute_exp_factors(&mut self, dt: f64) {
+        self.pml_vel_x = self.sigma_x_sgx.mapv(|s| (-s * dt * 0.5).exp());
+        self.pml_vel_y = self.sigma_y_sgy.mapv(|s| (-s * dt * 0.5).exp());
+        self.pml_vel_z = self.sigma_z_sgz.mapv(|s| (-s * dt * 0.5).exp());
+        self.pml_den_x = self.sigma_x.mapv(|s| (-s * dt * 0.5).exp());
+        self.pml_den_y = self.sigma_y.mapv(|s| (-s * dt * 0.5).exp());
+        self.pml_den_z = self.sigma_z.mapv(|s| (-s * dt * 0.5).exp());
     }
 
     fn compute_profiles(

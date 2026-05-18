@@ -121,9 +121,9 @@ fn wilson_interval_properties() {
 
 #[test]
 fn stats_merge() {
-    use crate::core::fault_injection::scenario::{FaultScenario, InjectionTiming};
+    use crate::core::fault_injection::scenario::{FaultInjectionScenario, InjectionTiming};
 
-    let mut stats1 = RecoveryStats::new(FaultScenario::GpuOomSudden {
+    let mut stats1 = RecoveryStats::new(FaultInjectionScenario::GpuOomSudden {
         allocation_size_bytes: 1024,
         timing: InjectionTiming::Immediate,
     });

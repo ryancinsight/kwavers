@@ -12,7 +12,7 @@ pub struct TestResult {
     /// Error metrics
     pub error_metrics: Option<super::ErrorMetrics>,
     /// Performance metrics
-    pub performance_metrics: Option<super::PerformanceMetrics>,
+    pub performance_metrics: Option<super::HybridSolverMetrics>,
 }
 
 /// Trait for validation test cases

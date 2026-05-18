@@ -56,14 +56,14 @@ impl SpectralMetrics {
     }
 
     fn compute_spectral_features(field: ArrayView3<f64>, grid: &Grid) -> (f64, f64) {
-        use crate::math::fft::{ProcessorFft3d, Shape3D};
+        use crate::math::fft::{Fft3d, Shape3D};
         use std::f64::consts::PI;
 
         let (nx, ny, nz) = field.dim();
 
         // 1. Perform FFT
         // Create a new processor (acceptable cost for adaptive selection)
-        let fft = ProcessorFft3d::new(Shape3D { nx, ny, nz });
+        let fft = Fft3d::new(Shape3D { nx, ny, nz });
 
         // We need an owned array for the FFT processor
         let field_owned = field.to_owned();

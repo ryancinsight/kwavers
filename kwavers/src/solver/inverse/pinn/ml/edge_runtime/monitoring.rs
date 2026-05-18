@@ -1,4 +1,4 @@
-use super::{EdgeRuntime, PerformanceMonitor};
+use super::{EdgeRuntime, EdgeRuntimePerformanceMonitor};
 
 impl EdgeRuntime {
     pub(super) fn update_performance_stats(&mut self, inference_time_us: u64) {
@@ -18,7 +18,7 @@ impl EdgeRuntime {
             current_memory as f32 / self.allocator.total_memory as f32;
     }
 
-    pub fn get_performance_stats(&self) -> &PerformanceMonitor {
+    pub fn get_performance_stats(&self) -> &EdgeRuntimePerformanceMonitor {
         &self.performance_monitor
     }
 }

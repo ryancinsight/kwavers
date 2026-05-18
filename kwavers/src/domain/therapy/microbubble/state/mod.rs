@@ -27,6 +27,7 @@
 //! - Marmottant et al. (2005): "A model for large amplitude oscillations of coated bubbles"
 //! - De Jong et al. (2002): "Ultrasound scattering properties of microbubbles"
 
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use std::fmt;
 
@@ -164,15 +165,13 @@ impl MicrobubbleState {
             }));
         }
 
-        const AMBIENT_PRESSURE: f64 = 101325.0;
         const BODY_TEMPERATURE: f64 = 310.0;
         const WATER_SURFACE_TENSION: f64 = 0.072;
-        const R_GAS: f64 = 8.314;
 
         let shell_radius_buckling = radius_equilibrium * 0.9;
         let shell_radius_rupture = radius_equilibrium * 1.5;
         let volume = (4.0 / 3.0) * std::f64::consts::PI * radius_equilibrium.powi(3);
-        let gas_moles = (AMBIENT_PRESSURE * volume) / (R_GAS * BODY_TEMPERATURE);
+        let gas_moles = (ATMOSPHERIC_PRESSURE * volume) / (GAS_CONSTANT * BODY_TEMPERATURE);
 
         Ok(Self {
             radius: radius_equilibrium,
@@ -182,8 +181,8 @@ impl MicrobubbleState {
             position,
             velocity: Velocity3D::zero(),
             temperature: BODY_TEMPERATURE,
-            pressure_internal: AMBIENT_PRESSURE,
-            pressure_liquid: AMBIENT_PRESSURE,
+            pressure_internal: ATMOSPHERIC_PRESSURE,
+            pressure_liquid: ATMOSPHERIC_PRESSURE,
             gas_moles,
             vapor_moles: 0.0,
             shell_elasticity,

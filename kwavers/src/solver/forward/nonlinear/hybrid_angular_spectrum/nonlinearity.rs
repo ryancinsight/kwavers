@@ -8,13 +8,13 @@ use ndarray::Array3;
 
 /// Nonlinear operator for Burgers equation
 #[derive(Debug)]
-pub struct NonlinearOperator {
+pub struct HybridAsNonlinearOperator {
     beta: f64,
     c0: f64,
     rho0: f64,
 }
 
-impl NonlinearOperator {
+impl HybridAsNonlinearOperator {
     /// Create new nonlinear operator
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

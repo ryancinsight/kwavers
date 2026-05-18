@@ -34,21 +34,21 @@ impl PSTDSolver {
                 .and(filter)
                 .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
-                .inverse_c2r_into(&self.p_k, &mut self.rhox, &mut self.uy_k);
+                .inverse_c2r_into(&self.p_k, &mut self.rhox, &mut self.ux_k);
 
             self.fft.forward_r2c_into(&self.rhoy, &mut self.p_k);
             Zip::from(&mut self.p_k)
                 .and(filter)
                 .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
-                .inverse_c2r_into(&self.p_k, &mut self.rhoy, &mut self.uy_k);
+                .inverse_c2r_into(&self.p_k, &mut self.rhoy, &mut self.ux_k);
 
             self.fft.forward_r2c_into(&self.rhoz, &mut self.p_k);
             Zip::from(&mut self.p_k)
                 .and(filter)
                 .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
-                .inverse_c2r_into(&self.p_k, &mut self.rhoz, &mut self.uy_k);
+                .inverse_c2r_into(&self.p_k, &mut self.rhoz, &mut self.ux_k);
 
             // Apply filter to Ux using ux_k as transform buffer, p_k as scratch.
             self.fft.forward_r2c_into(&self.fields.ux, &mut self.ux_k);
@@ -58,21 +58,21 @@ impl PSTDSolver {
             self.fft
                 .inverse_c2r_into(&self.ux_k, &mut self.fields.ux, &mut self.p_k);
 
-            // Apply filter to Uy using uy_k as transform buffer, p_k as scratch.
-            self.fft.forward_r2c_into(&self.fields.uy, &mut self.uy_k);
-            Zip::from(&mut self.uy_k)
+            // Apply filter to Uy using ux_k as transform buffer, p_k as scratch.
+            self.fft.forward_r2c_into(&self.fields.uy, &mut self.ux_k);
+            Zip::from(&mut self.ux_k)
                 .and(filter)
                 .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
-                .inverse_c2r_into(&self.uy_k, &mut self.fields.uy, &mut self.p_k);
+                .inverse_c2r_into(&self.ux_k, &mut self.fields.uy, &mut self.p_k);
 
-            // Apply filter to Uz using uz_k as transform buffer, p_k as scratch.
-            self.fft.forward_r2c_into(&self.fields.uz, &mut self.uz_k);
-            Zip::from(&mut self.uz_k)
+            // Apply filter to Uz using ux_k as transform buffer, p_k as scratch.
+            self.fft.forward_r2c_into(&self.fields.uz, &mut self.ux_k);
+            Zip::from(&mut self.ux_k)
                 .and(filter)
                 .par_for_each(|val, &f| *val *= Complex64::new(f, 0.0));
             self.fft
-                .inverse_c2r_into(&self.uz_k, &mut self.fields.uz, &mut self.p_k);
+                .inverse_c2r_into(&self.ux_k, &mut self.fields.uz, &mut self.p_k);
         }
         Ok(())
     }

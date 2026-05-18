@@ -49,6 +49,7 @@ pub use optimizer::ParamFieldOptimizer;
 pub use sampler::KernelCubeSampler;
 pub use target_transform::{OutputTransforms, TargetTransform};
 pub use training::{
-    ParamFieldPINNTrainer, StepMetrics, TrainingBatch, TrainingConfig, TrainingMetrics,
+    FieldSurrogateTrainingConfig, ParamFieldPINNTrainer, StepMetrics, SurrogateTrainingMetrics,
+    TrainingBatch,
 };
 pub use types::{CoordHalves, OutputScales, ParamRanges, SamplingMode};

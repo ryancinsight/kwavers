@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::time::Instant;
 
-use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::{
@@ -31,7 +31,7 @@ impl EnhancedComplianceValidator {
     ///
     pub fn audit_parameters(
         &mut self,
-        params: &TherapyParameters,
+        params: &ClinicalTherapyParameters,
     ) -> KwaversResult<ComplianceAudit> {
         let mut checks = Vec::new();
         let mut alerts = Vec::new();
@@ -147,7 +147,7 @@ impl EnhancedComplianceValidator {
     /// Derived from Pennes bioheat equation (worst-case, no perfusion):
     /// `ΔT = Q · t_eff / (ρ · c_p)` where `Q = 2α · I_SPTA` [W/m³].
     /// Reference: Nyborg WL (1988), *Phys. Med. Biol.* 33(7):785–792.
-    fn estimate_temperature_rise(&self, params: &TherapyParameters) -> f64 {
+    fn estimate_temperature_rise(&self, params: &ClinicalTherapyParameters) -> f64 {
         use crate::core::constants::fundamental::{
             DENSITY_WATER_NOMINAL as RHO_W, SOUND_SPEED_WATER,
         };

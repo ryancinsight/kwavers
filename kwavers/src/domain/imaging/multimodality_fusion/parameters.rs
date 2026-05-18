@@ -2,7 +2,7 @@
 #[derive(Debug, Clone)]
 pub struct FusionParameters {
     /// Fusion method
-    pub method: FusionMethod,
+    pub method: MultimodalityFusionMethod,
     /// Blend weight for floating image (0-1)
     pub blend_weight: f64,
     /// Enable automatic contrast adjustment
@@ -14,7 +14,7 @@ pub struct FusionParameters {
 impl Default for FusionParameters {
     fn default() -> Self {
         Self {
-            method: FusionMethod::Overlay,
+            method: MultimodalityFusionMethod::Overlay,
             blend_weight: 0.5,
             auto_contrast: true,
             output_range: (0.0, 255.0),
@@ -24,7 +24,7 @@ impl Default for FusionParameters {
 
 /// Image fusion method
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FusionMethod {
+pub enum MultimodalityFusionMethod {
     /// Simple overlay with transparency
     Overlay,
     /// Checkerboard pattern (alternating tiles)
@@ -37,7 +37,7 @@ pub enum FusionMethod {
     MultiChannel,
 }
 
-impl std::fmt::Display for FusionMethod {
+impl std::fmt::Display for MultimodalityFusionMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Overlay => write!(f, "Overlay"),
@@ -62,7 +62,10 @@ mod tests {
 
     #[test]
     fn test_fusion_method_display() {
-        assert_eq!(FusionMethod::Overlay.to_string(), "Overlay");
-        assert_eq!(FusionMethod::Checkerboard.to_string(), "Checkerboard");
+        assert_eq!(MultimodalityFusionMethod::Overlay.to_string(), "Overlay");
+        assert_eq!(
+            MultimodalityFusionMethod::Checkerboard.to_string(),
+            "Checkerboard"
+        );
     }
 }

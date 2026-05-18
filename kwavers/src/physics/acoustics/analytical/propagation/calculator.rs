@@ -6,8 +6,8 @@
 use crate::core::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::physics::acoustics::analytical::propagation::{
     coefficients::PropagationCoefficients, interfaces::fresnel::FresnelCalculator,
-    interfaces::interface::Interface, interfaces::snell::SnellLawCalculator, Polarization,
-    WaveMode,
+    interfaces::interface::Interface, interfaces::snell::SnellLawCalculator,
+    AnalyticalPolarization, AnalyticalWaveMode,
 };
 use std::f64::consts::PI;
 
@@ -15,7 +15,7 @@ use std::f64::consts::PI;
 #[derive(Debug)]
 pub struct WavePropagationCalculator {
     /// Wave mode
-    mode: WaveMode,
+    mode: AnalyticalWaveMode,
     /// Interface configuration
     interface: Interface,
     /// Frequency \[Hz\]
@@ -27,7 +27,7 @@ pub struct WavePropagationCalculator {
 impl WavePropagationCalculator {
     /// Create a new calculator
     #[must_use]
-    pub fn new(mode: WaveMode, interface: Interface, frequency: f64) -> Self {
+    pub fn new(mode: AnalyticalWaveMode, interface: Interface, frequency: f64) -> Self {
         let wavelength = interface.medium1.wave_speed / frequency;
         Self {
             mode,
@@ -72,7 +72,7 @@ impl WavePropagationCalculator {
     pub fn calculate_coefficients(
         &self,
         incident_angle: f64,
-        polarization: Option<Polarization>,
+        polarization: Option<AnalyticalPolarization>,
     ) -> KwaversResult<PropagationCoefficients> {
         // Validate incident angle
         if !(0.0..=PI / 2.0).contains(&incident_angle) {
@@ -94,28 +94,28 @@ impl WavePropagationCalculator {
 
         // Calculate coefficients based on wave mode
         let coefficients = match self.mode {
-            WaveMode::Acoustic => {
+            AnalyticalWaveMode::Acoustic => {
                 self.calculate_acoustic_coefficients(incident_angle, transmitted_angle)?
             }
-            WaveMode::Optical => {
-                let pol = polarization.unwrap_or(Polarization::Unpolarized);
+            AnalyticalWaveMode::Optical => {
+                let pol = polarization.unwrap_or(AnalyticalPolarization::Unpolarized);
                 self.calculate_optical_coefficients(incident_angle, transmitted_angle, pol)?
             }
-            WaveMode::ElasticShear | WaveMode::ElasticCompressional => {
+            AnalyticalWaveMode::ElasticShear | AnalyticalWaveMode::ElasticCompressional => {
                 self.calculate_elastic_coefficients(incident_angle, transmitted_angle)?
             }
             // Longitudinal (P-waves) and Transverse (S-waves) use elastic approximation
-            WaveMode::Longitudinal | WaveMode::Transverse => {
+            AnalyticalWaveMode::Longitudinal | AnalyticalWaveMode::Transverse => {
                 self.calculate_elastic_coefficients(incident_angle, transmitted_angle)?
             }
             // Surface and Plate waves use acoustic approximation as baseline
-            WaveMode::Surface | WaveMode::Plate => {
+            AnalyticalWaveMode::Surface | AnalyticalWaveMode::Plate => {
                 self.calculate_acoustic_coefficients(incident_angle, transmitted_angle)?
             }
         };
 
         // Get impedances for acoustic mode (for energy conservation validation)
-        let (impedance1, impedance2) = if matches!(self.mode, WaveMode::Acoustic) {
+        let (impedance1, impedance2) = if matches!(self.mode, AnalyticalWaveMode::Acoustic) {
             (
                 Some(self.interface.medium1.acoustic_impedance()),
                 Some(self.interface.medium2.acoustic_impedance()),
@@ -177,7 +177,7 @@ impl WavePropagationCalculator {
         &self,
         incident_angle: f64,
         transmitted_angle: f64,
-        polarization: Polarization,
+        polarization: AnalyticalPolarization,
     ) -> KwaversResult<(f64, f64, f64, f64)> {
         let n1 = self.interface.medium1.refractive_index;
         let n2 = self.interface.medium2.refractive_index;
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn test_calculator_creation() {
         let interface = create_test_interface();
-        let calc = WavePropagationCalculator::new(WaveMode::Acoustic, interface, 1000.0);
+        let calc = WavePropagationCalculator::new(AnalyticalWaveMode::Acoustic, interface, 1000.0);
 
         assert!(calc.validate_frequency_wavelength_consistency());
         assert!(calc.wave_number() > 0.0);
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn test_normal_incidence() {
         let interface = create_test_interface();
-        let calc = WavePropagationCalculator::new(WaveMode::Acoustic, interface, 1000.0);
+        let calc = WavePropagationCalculator::new(AnalyticalWaveMode::Acoustic, interface, 1000.0);
 
         let coeffs = calc.calculate_coefficients(0.0, None).unwrap();
 

@@ -1,4 +1,4 @@
-use super::super::types::{LayerSpec, TissueType};
+use super::super::types::{LayerSpec, PhantomTissueType};
 use super::super::utils::get_tissue_properties;
 use crate::domain::grid::GridDimensions;
 use crate::domain::medium::optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder};
@@ -35,7 +35,7 @@ impl LayeredTissuePhantomBuilder {
         self.layers.push(LayerSpec {
             z_min,
             z_max,
-            tissue_type: TissueType::SkinEpidermis,
+            tissue_type: PhantomTissueType::SkinEpidermis,
         });
         self
     }
@@ -46,7 +46,7 @@ impl LayeredTissuePhantomBuilder {
         self.layers.push(LayerSpec {
             z_min,
             z_max,
-            tissue_type: TissueType::SkinDermis,
+            tissue_type: PhantomTissueType::SkinDermis,
         });
         self
     }
@@ -57,7 +57,7 @@ impl LayeredTissuePhantomBuilder {
         self.layers.push(LayerSpec {
             z_min,
             z_max,
-            tissue_type: TissueType::Fat,
+            tissue_type: PhantomTissueType::Fat,
         });
         self
     }
@@ -68,7 +68,7 @@ impl LayeredTissuePhantomBuilder {
         self.layers.push(LayerSpec {
             z_min,
             z_max,
-            tissue_type: TissueType::Muscle,
+            tissue_type: PhantomTissueType::Muscle,
         });
         self
     }
@@ -79,7 +79,7 @@ impl LayeredTissuePhantomBuilder {
         self.layers.push(LayerSpec {
             z_min,
             z_max,
-            tissue_type: TissueType::Liver,
+            tissue_type: PhantomTissueType::Liver,
         });
         self
     }

@@ -3,29 +3,29 @@
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
-use super::config::InterpolationMethod;
+use super::config::ReconstructionInterpolationMethod;
 
 /// Interpolate value at arbitrary position
 pub fn interpolate_3d(
     field: &Array3<f64>,
     position: [f64; 3],
     grid: &Grid,
-    method: &InterpolationMethod,
+    method: &ReconstructionInterpolationMethod,
 ) -> f64 {
     let i = (position[0] / grid.dx).clamp(0.0, (grid.nx - 1) as f64);
     let j = (position[1] / grid.dy).clamp(0.0, (grid.ny - 1) as f64);
     let k = (position[2] / grid.dz).clamp(0.0, (grid.nz - 1) as f64);
 
     match method {
-        InterpolationMethod::NearestNeighbor => {
+        ReconstructionInterpolationMethod::NearestNeighbor => {
             let i = i.round() as usize;
             let j = j.round() as usize;
             let k = k.round() as usize;
             field[[i.min(grid.nx - 1), j.min(grid.ny - 1), k.min(grid.nz - 1)]]
         }
-        InterpolationMethod::Linear => trilinear_interpolation(field, i, j, k, grid),
-        InterpolationMethod::Cubic => tricubic_interpolation(field, i, j, k, grid),
-        InterpolationMethod::Sinc => sinc_interpolation(field, i, j, k, grid),
+        ReconstructionInterpolationMethod::Linear => trilinear_interpolation(field, i, j, k, grid),
+        ReconstructionInterpolationMethod::Cubic => tricubic_interpolation(field, i, j, k, grid),
+        ReconstructionInterpolationMethod::Sinc => sinc_interpolation(field, i, j, k, grid),
     }
 }
 

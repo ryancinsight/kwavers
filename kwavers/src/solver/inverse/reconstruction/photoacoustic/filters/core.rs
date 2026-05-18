@@ -5,26 +5,26 @@
 
 use super::spatial;
 use crate::core::error::KwaversResult;
-use crate::domain::signal::{analytic, window_value, WindowType};
+use crate::domain::signal::{analytic, window_value, SignalWindowType};
 use crate::math::fft::{fft_1d_array, ifft_1d_array};
-use crate::solver::reconstruction::FilterType;
+use crate::solver::reconstruction::ReconstructionFilterType;
 use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
 
-use crate::solver::reconstruction::photoacoustic::config::PhotoacousticConfig;
+use crate::solver::reconstruction::photoacoustic::config::ReconstructionPhotoacousticConfig;
 
 /// Filter operations for photoacoustic reconstruction
 #[derive(Debug)]
 pub struct Filters {
-    filter_type: FilterType,
+    filter_type: ReconstructionFilterType,
 }
 
 impl Filters {
     /// Create new filter operations
     #[must_use]
-    pub fn new(_config: &PhotoacousticConfig) -> Self {
+    pub fn new(_config: &ReconstructionPhotoacousticConfig) -> Self {
         Self {
-            filter_type: FilterType::RamLak, // Default filter type
+            filter_type: ReconstructionFilterType::RamLak, // Default filter type
         }
     }
 
@@ -36,7 +36,7 @@ impl Filters {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[doc(hidden)]
-    pub fn set_filter_type(&mut self, filter_type: FilterType) {
+    pub fn set_filter_type(&mut self, filter_type: ReconstructionFilterType) {
         self.filter_type = filter_type;
     }
 
@@ -130,12 +130,12 @@ impl Filters {
         let mut filtered = data.clone();
 
         match self.filter_type {
-            FilterType::RamLak => self.apply_ram_lak_filter(&mut filtered)?,
-            FilterType::SheppLogan => self.apply_shepp_logan_filter(&mut filtered)?,
-            FilterType::Cosine => self.apply_cosine_filter(&mut filtered)?,
-            FilterType::Hamming => self.apply_hamming_filter(&mut filtered)?,
-            FilterType::Hann => self.apply_hann_filter(&mut filtered)?,
-            FilterType::None => {} // No filtering applied
+            ReconstructionFilterType::RamLak => self.apply_ram_lak_filter(&mut filtered)?,
+            ReconstructionFilterType::SheppLogan => self.apply_shepp_logan_filter(&mut filtered)?,
+            ReconstructionFilterType::Cosine => self.apply_cosine_filter(&mut filtered)?,
+            ReconstructionFilterType::Hamming => self.apply_hamming_filter(&mut filtered)?,
+            ReconstructionFilterType::Hann => self.apply_hann_filter(&mut filtered)?,
+            ReconstructionFilterType::None => {} // No filtering applied
         }
 
         Ok(filtered)
@@ -277,7 +277,7 @@ impl Filters {
             let freq = i as f64 / n as f64;
             let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
             let hamming_window = if n > 1 {
-                window_value(WindowType::Hamming, i as f64 / (n - 1) as f64)
+                window_value(SignalWindowType::Hamming, i as f64 / (n - 1) as f64)
             } else {
                 1.0
             };
@@ -301,7 +301,7 @@ impl Filters {
             let freq = i as f64 / n as f64;
             let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
             let hann_window = if n > 1 {
-                window_value(WindowType::Hann, i as f64 / (n - 1) as f64)
+                window_value(SignalWindowType::Hann, i as f64 / (n - 1) as f64)
             } else {
                 1.0
             };

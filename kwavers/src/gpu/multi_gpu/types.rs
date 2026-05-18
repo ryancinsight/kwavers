@@ -38,12 +38,12 @@ pub struct PendingTransfer {
     /// Priority (0 = lowest, 255 = highest).
     pub priority: u8,
     /// Transfer status.
-    pub status: TransferStatus,
+    pub status: GpuTransferStatus,
 }
 
 /// Transfer status.
 #[derive(Debug, Clone, PartialEq)]
-pub enum TransferStatus {
+pub enum GpuTransferStatus {
     Pending,
     InProgress,
     Completed,

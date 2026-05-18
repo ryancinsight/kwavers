@@ -2,6 +2,7 @@ use super::esmv::EigenspaceMV;
 use super::music::MUSIC;
 use crate::analysis::signal_processing::beamforming::test_utilities;
 use approx::assert_relative_eq;
+use ndarray::Array2;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
@@ -211,6 +212,76 @@ fn test_music_peak_detection_concept() {
 
     assert!(max_spectrum > 0.0);
     assert!(max_angle.abs() <= PI);
+}
+
+// ─── MUSIC: exact analytical verification ─────────────────────────────────────
+
+/// MUSIC pseudospectrum at signal direction is ≥ 1e20 (near-infinite) for
+/// a rank-1 diagonal covariance.
+///
+/// Covariance: R = diag([10, 1, 1, 1]).
+/// Eigenvalues in descending order: 10, 1, 1, 1.
+/// Signal eigenvector (eigenvalue 10): e₀ = [1, 0, 0, 0].
+/// Noise subspace (3 vectors): e₁=[0,1,0,0], e₂=[0,0,1,0], e₃=[0,0,0,1].
+///
+/// For steering a = [1, 0, 0, 0]:
+///   E_n^H · a = [0, 0, 0]  →  ‖E_n^H · a‖² = 0  →  P = 1e30.
+#[test]
+fn music_pseudospectrum_at_signal_direction_is_near_infinite() {
+    let mut r = Array2::<Complex64>::zeros((4, 4));
+    r[(0, 0)] = Complex64::new(10.0, 0.0);
+    r[(1, 1)] = Complex64::new(1.0, 0.0);
+    r[(2, 2)] = Complex64::new(1.0, 0.0);
+    r[(3, 3)] = Complex64::new(1.0, 0.0);
+
+    let a_signal = ndarray::array![
+        Complex64::new(1.0, 0.0),
+        Complex64::new(0.0, 0.0),
+        Complex64::new(0.0, 0.0),
+        Complex64::new(0.0, 0.0),
+    ];
+
+    let music = MUSIC::new(1);
+    let p = music
+        .pseudospectrum(&r, &a_signal)
+        .expect("pseudospectrum must succeed");
+
+    assert!(
+        p >= 1e20,
+        "MUSIC pseudospectrum at signal direction must be ≥ 1e20; got {p:.3e}"
+    );
+}
+
+/// MUSIC pseudospectrum at orthogonal direction equals 1.0 for the same
+/// rank-1 diagonal covariance.
+///
+/// For steering a = [0, 1, 0, 0] (unit vector in noise subspace):
+///   e₁^H · a = 1, e₂^H · a = 0, e₃^H · a = 0.
+///   ‖E_n^H · a‖² = 1  →  P = 1/1 = 1.0.
+#[test]
+fn music_pseudospectrum_at_orthogonal_direction_is_one() {
+    let mut r = Array2::<Complex64>::zeros((4, 4));
+    r[(0, 0)] = Complex64::new(10.0, 0.0);
+    r[(1, 1)] = Complex64::new(1.0, 0.0);
+    r[(2, 2)] = Complex64::new(1.0, 0.0);
+    r[(3, 3)] = Complex64::new(1.0, 0.0);
+
+    let a_noise = ndarray::array![
+        Complex64::new(0.0, 0.0),
+        Complex64::new(1.0, 0.0),
+        Complex64::new(0.0, 0.0),
+        Complex64::new(0.0, 0.0),
+    ];
+
+    let music = MUSIC::new(1);
+    let p = music
+        .pseudospectrum(&r, &a_noise)
+        .expect("pseudospectrum must succeed");
+
+    assert!(
+        (p - 1.0).abs() < 1e-10,
+        "MUSIC pseudospectrum at orthogonal noise direction must be 1.0; got {p:.6}"
+    );
 }
 
 #[test]

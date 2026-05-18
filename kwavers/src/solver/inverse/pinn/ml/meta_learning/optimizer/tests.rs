@@ -1,4 +1,4 @@
-use super::lr_schedule::LearningRateSchedule;
+use super::lr_schedule::MetaLrSchedule;
 use super::meta_optimizer::MetaOptimizer;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
@@ -63,14 +63,14 @@ fn test_reset_optimizer() {
 
 #[test]
 fn test_lr_schedule_constant() {
-    let schedule = LearningRateSchedule::Constant;
+    let schedule = MetaLrSchedule::Constant;
     assert_eq!(schedule.get_lr(0, 0.001), 0.001);
     assert_eq!(schedule.get_lr(100, 0.001), 0.001);
 }
 
 #[test]
 fn test_lr_schedule_step_decay() {
-    let schedule = LearningRateSchedule::StepDecay {
+    let schedule = MetaLrSchedule::StepDecay {
         factor: 0.5,
         step_size: 10,
     };
@@ -81,7 +81,7 @@ fn test_lr_schedule_step_decay() {
 
 #[test]
 fn test_lr_schedule_exponential() {
-    let schedule = LearningRateSchedule::Exponential { decay_rate: 0.01 };
+    let schedule = MetaLrSchedule::Exponential { decay_rate: 0.01 };
     let lr0 = schedule.get_lr(0, 0.001);
     let lr100 = schedule.get_lr(100, 0.001);
     assert!((lr0 - 0.001).abs() < 1e-10);
@@ -90,7 +90,7 @@ fn test_lr_schedule_exponential() {
 
 #[test]
 fn test_lr_schedule_cosine_annealing() {
-    let schedule = LearningRateSchedule::CosineAnnealing {
+    let schedule = MetaLrSchedule::CosineAnnealing {
         lr_min: 0.0001,
         total_epochs: 1000,
     };

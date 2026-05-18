@@ -22,8 +22,8 @@ impl HybridSolver {
         self.pstd_solver.step_forward()?;
         self.fdtd_solver.step_forward()?;
 
-        let regions = self.regions.clone();
-        for region in &regions {
+        for region_index in 0..self.regions.len() {
+            let region = self.regions[region_index];
             match region.domain_type {
                 DomainType::PSTD => {
                     let slice = s![
@@ -72,7 +72,7 @@ impl HybridSolver {
                         .assign(&self.fdtd_solver.fields.uz.slice(slice));
                 }
                 DomainType::Hybrid => {
-                    self.apply_hybrid_region_blended_internal(region)?;
+                    self.apply_hybrid_region_blended_internal(&region)?;
                 }
             }
         }
@@ -91,8 +91,6 @@ impl HybridSolver {
         let nx = region.end.0 - region.start.0;
         let ny = region.end.1 - region.start.1;
         let nz = region.end.2 - region.start.2;
-        const BLEND_WIDTH: usize = 5;
-
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -100,13 +98,8 @@ impl HybridSolver {
                         .min(j.min(ny - j - 1))
                         .min(k.min(nz - k - 1)))
                         as f64;
-                    let weight = if dist_from_boundary < BLEND_WIDTH as f64 {
-                        0.5 * (1.0
-                            + (std::f64::consts::PI * dist_from_boundary / BLEND_WIDTH as f64)
-                                .cos())
-                    } else {
-                        1.0
-                    };
+                    let weight =
+                        super::hybrid_pstd_weight(dist_from_boundary, super::HYBRID_BLEND_WIDTH);
                     let gi = region.start.0 + i;
                     let gj = region.start.1 + j;
                     let gk = region.start.2 + k;

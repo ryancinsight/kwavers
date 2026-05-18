@@ -1,13 +1,13 @@
 //! PSTD Solver Orchestrator
 
 use crate::core::error::KwaversResult;
-use crate::domain::boundary::Boundary;
+use crate::domain::boundary::{Boundary, PmlExpFactors};
 use crate::domain::field::wave::WaveFields;
 use crate::domain::grid::Grid;
 use crate::domain::medium::MaterialFields;
 use crate::domain::sensor::recorder::simple::SensorRecorder;
 use crate::domain::source::{Source, SourceInjectionMode};
-use crate::math::fft::{Complex64, ProcessorFft3d};
+use crate::math::fft::{Complex64, Fft3d};
 use crate::solver::fdtd::SourceHandler;
 use crate::solver::forward::pstd::implementation::k_space::PSTDKSOperators;
 use crate::solver::forward::pstd::physics::absorption::AbsorptionKernel;
@@ -38,8 +38,19 @@ pub struct PSTDSolver {
     /// Used in `step_forward_kspace` to inject the pressure-equivalent `−c²·amp·∂mask/∂α`.
     pub(crate) velocity_source_grad_masks: Vec<Option<Array3<f64>>>,
     pub(crate) time_step_index: usize,
-    pub(crate) fft: Arc<ProcessorFft3d>,
+    pub(crate) fft: Arc<Fft3d>,
+    /// k-space correction sinc(c_ref·|k|·dt) in r2c half-spectrum order.
+    ///
+    /// Shape: `(nx, ny, nz_c)` where `nz_c = nz/2 + 1` — pre-truncated at
+    /// construction to save `nx·ny·(nz/2-1)·8` bytes vs. the full (nx,ny,nz)
+    /// layout. All usage sites (velocity.rs, density_cartesian.rs) operate
+    /// on the r2c half-spectrum, so the upper half was always unused.
     pub(crate) kappa: Array3<f64>,
+    /// Source k-space correction cos(c_ref·|k|·dt/2) in r2c half-spectrum order.
+    ///
+    /// Shape: `(nx, ny, nz_c)` — pre-truncated after `set_velocity_source_kappa()`
+    /// extracts per-source-point values from the full array. Saves
+    /// `nx·ny·(nz/2-1)·8` bytes vs. the full layout.
     pub(crate) source_kappa: Array3<f64>,
     pub(crate) filter: Option<Array3<f64>>,
     pub(crate) c_ref: f64,
@@ -51,18 +62,35 @@ pub struct PSTDSolver {
     pub(crate) source_gain: f64,
     pub(crate) k_max: f64,
     pub(crate) boundary: Option<Box<dyn Boundary>>,
+    /// Precomputed split-field PML factors for fused velocity and density updates.
+    ///
+    /// `Some` when the boundary is `CPMLBoundary`; `None` otherwise (the slow
+    /// `apply_pml_to_velocity` / `apply_pml_to_density` paths remain active).
+    /// Contains `exp(-σ·Δt/2)` for each grid index per axis, populated once at
+    /// construction so per-step cost is O(N) multiplications (no `exp` calls).
+    pub(crate) pml_exp: Option<PmlExpFactors>,
     pub fields: WaveFields,
     pub rhox: Array3<f64>,
     pub rhoy: Array3<f64>,
     pub rhoz: Array3<f64>,
     pub(crate) p_k: Array3<Complex64>,
+    /// Shared velocity k-space scratch — reused for all three spatial axes sequentially.
+    ///
+    /// Used as: (a) FFT output for u_x / u_y / u_z in the density update; (b) IFFT
+    /// workspace (3rd arg of `inverse_c2r_into`) in the velocity update, absorption, and
+    /// filter passes.  Because all axes are processed sequentially (never concurrently),
+    /// a single buffer is sufficient — eliminating the former `uy_k` and `uz_k` fields
+    /// (Opt-8: saves 2 × N_complex × 16 B of solver memory).
     pub(crate) ux_k: Array3<Complex64>,
-    pub(crate) uy_k: Array3<Complex64>,
-    pub(crate) uz_k: Array3<Complex64>,
     /// Single k-space gradient scratch, reused for all three spatial axes sequentially.
     pub(crate) grad_k: Array3<Complex64>,
     pub(crate) materials: MaterialFields,
-    pub(crate) bon: Array3<f64>,
+    /// Nonlinearity parameter B/(2A) per voxel.
+    ///
+    /// `Some` iff `config.nonlinearity == true`; `None` for linear simulations,
+    /// saving N×8 bytes per solver instance (2 MB at 64³, 16 MB at 128³).
+    /// Invariant: `self.bon.is_some() ↔ self.config.nonlinearity`.
+    pub(crate) bon: Option<Array3<f64>>,
     /// Precomputed absorption kernel — `None` for lossless simulations.
     pub(crate) absorption: Option<AbsorptionKernel>,
     pub(crate) kspace_operators: Option<PSTDKSOperators>,
@@ -72,9 +100,26 @@ pub struct PSTDSolver {
     pub(crate) ddx_k_shift_neg: Array1<Complex64>,
     pub(crate) ddy_k_shift_neg: Array1<Complex64>,
     pub(crate) ddz_k_shift_neg: Array1<Complex64>,
+    /// Shared real-valued gradient IFFT scratch — reused for all three velocity axes
+    /// sequentially and for the absorption L1 accumulator.
+    ///
+    /// **Usage pattern (per step):**
+    /// 1. Velocity update: each axis writes its pressure gradient (IFFT output) into `dpx`
+    ///    and the Zip immediately reads it — sequential axes never overlap (Opt-12).
+    /// 2. Absorption Step 1: writes ρ₀·(div_ux + div_uy + div_uz) into `dpx`.
+    /// 3. Absorption Step 3: FFT(dpx) → grad_k; scale by nabla1; IFFT → dpx (L1).
+    ///    Safe: Step 1 content is consumed by the FFT before the IFFT overwrites it.
+    /// 4. Absorption Step 5: reads `dpx` (L1) and `dpy` (L2) simultaneously.
+    ///
+    /// `dpz` was eliminated (Opt-12) because its role (velocity z-gradient scratch and
+    /// absorption Step 1 accumulator) is covered by `dpx` without temporal overlap.
     pub(crate) dpx: Array3<f64>,
+    /// L2 scratch: holds `IFFT(|k|^(y−1)·FFT(ρ_total))` during absorption Step 4.
+    ///
+    /// Also used as velocity y-axis gradient IFFT buffer (fallback and fused paths).
+    /// Must be a separate allocation from `dpx` because absorption Step 5 reads
+    /// `dpx` (L1) and `dpy` (L2) simultaneously.
     pub(crate) dpy: Array3<f64>,
-    pub(crate) dpz: Array3<f64>,
     pub(crate) div_u: Array3<f64>,
     /// Cached kappa-corrected velocity divergences written by `update_density_cartesian`
     /// and read by `apply_absorption_to_pressure`.  `apply_pressure_sources` zeroes `dpx`
@@ -89,9 +134,12 @@ pub struct PSTDSolver {
     pub(crate) as_ctx: Option<AsContext>,
     /// Per-cell acoustic absorption coefficient α(ω_c) [Np/m] at the simulation center frequency.
     ///
-    /// Populated by `populate_alpha_np_m_at_frequency(omega_c)` using the stored `AbsorptionKernel`.
-    /// Zero for lossless simulations (no thermal heating). Used by `compute_acoustic_heat_source()`.
-    pub(crate) alpha_np_m: Array3<f64>,
+    /// `Some` after `populate_alpha_np_m_at_frequency()` or `set_alpha_np_m()` is called.
+    /// `None` at construction and for lossless simulations (no thermal heating).
+    /// `compute_acoustic_heat_source()` returns zeros when `None`.
+    /// Invariant: `None` ⟺ thermal coupling has not been requested.
+    /// Memory savings: N×8 bytes avoided for non-thermal simulations (2 MB at 64³, 16 MB at 128³).
+    pub(crate) alpha_np_m: Option<Array3<f64>>,
     /// X-row indices at which split-field PML is bypassed during TR Dirichlet reconstruction.
     ///
     /// When `enforce_pressure_dirichlet` forces p[sensor] = data[t], the sensor cell must

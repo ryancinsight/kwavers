@@ -4,7 +4,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
-use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
+use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use crate::solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 
 /// FDTD solver backend adapter.
@@ -36,16 +36,16 @@ impl FdtdBackend {
     pub fn new(
         grid: &Grid,
         medium: &dyn Medium,
-        spatial_order: SpatialOrder,
+        spatial_order: AcousticSpatialOrder,
     ) -> KwaversResult<Self> {
         let c_max = Self::estimate_max_sound_speed(medium, grid)?;
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let dt = Self::compute_stable_timestep(dx_min, c_max);
 
         let spatial_order_value = match spatial_order {
-            SpatialOrder::Second => 2,
-            SpatialOrder::Fourth => 4,
-            SpatialOrder::Sixth => 6,
+            AcousticSpatialOrder::Second => 2,
+            AcousticSpatialOrder::Fourth => 4,
+            AcousticSpatialOrder::Sixth => 6,
         };
 
         let config = FdtdConfig {

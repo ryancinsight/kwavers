@@ -1,5 +1,5 @@
 use super::config::FdtdFemCouplingConfig;
-use super::interface::CouplingInterface;
+use super::interface::FdtdFemInterface;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -12,7 +12,7 @@ use num_complex::Complex64;
 #[derive(Debug)]
 pub struct FdtdFemCoupler {
     pub(super) config: FdtdFemCouplingConfig,
-    pub(super) interface: CouplingInterface,
+    pub(super) interface: FdtdFemInterface,
     fem_solver: FemHelmholtzSolver,
     convergence_history: Vec<f64>,
 }
@@ -27,7 +27,7 @@ impl FdtdFemCoupler {
         fdtd_grid: &Grid,
         fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<Self> {
-        let interface = CouplingInterface::new(fdtd_grid, fem_mesh)?;
+        let interface = FdtdFemInterface::new(fdtd_grid, fem_mesh)?;
 
         let fem_solver = FemHelmholtzSolver::new(FemHelmholtzConfig::default(), fem_mesh.clone());
 

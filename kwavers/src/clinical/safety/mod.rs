@@ -26,7 +26,7 @@
 //! ## Architecture
 //!
 //! The safety framework consists of:
-//! - **SafetyMonitor**: Real-time parameter monitoring and validation
+//! - **ClinicalSafetyMonitor**: Real-time parameter monitoring and validation
 //! - **InterlockSystem**: Hardware/software interlocks for emergency stops
 //! - **DoseController**: Treatment dose calculation and control
 //! - **ComplianceValidator**: IEC standard compliance checking
@@ -44,7 +44,7 @@ mod monitor;
 #[cfg(test)]
 mod tests;
 
-pub use audit::{AuditEntry, SafetyAuditLogger, SafetyEventType};
+pub use audit::{AuditEntry, AuditSafetyEventType, SafetyAuditLogger};
 pub use compliance::{
     ComplianceAudit, ComplianceCheck as EnhancedComplianceCheck, ComplianceConfig,
     ComplianceStatus, EnhancedComplianceValidator, SessionMetrics,
@@ -54,7 +54,9 @@ pub use compliance_validator::{
 };
 pub use dose::{DoseController, TreatmentRecord};
 pub use interlocks::{Interlock, InterlockSystem};
-pub use monitor::{SafetyLevel, SafetyLimits, SafetyMonitor, SafetyViolation};
+pub use monitor::{
+    ClinicalSafetyLevel, ClinicalSafetyLimits, ClinicalSafetyMonitor, SafetyViolation,
+};
 pub use thermal_index::{
     ThermalIndexCalculator, ThermalIndexModel, ThermalIndexResult, ThermalIndexStatus,
 };

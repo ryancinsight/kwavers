@@ -1,4 +1,4 @@
-use super::super::config::ApodizationWindow;
+use super::super::config::Beamforming3dApodizationWindow;
 use super::super::processor::BeamformingProcessor3D;
 use crate::core::error::KwaversResult;
 use ndarray::{Array3, Array4};
@@ -23,7 +23,7 @@ impl BeamformingProcessor3D {
         &self,
         rf_data: &Array4<f32>,
         dynamic_focusing: bool,
-        apodization: &ApodizationWindow,
+        apodization: &Beamforming3dApodizationWindow,
         sub_volume_size: Option<(usize, usize, usize)>,
     ) -> KwaversResult<Array3<f32>> {
         let apodization_weights = self.create_apodization_weights(apodization);
@@ -59,7 +59,7 @@ impl BeamformingProcessor3D {
         &self,
         rf_data: &Array4<f32>,
         _dynamic_focusing: bool,
-        apodization: &ApodizationWindow,
+        apodization: &Beamforming3dApodizationWindow,
         _sub_volume_size: Option<(usize, usize, usize)>,
     ) -> KwaversResult<Array3<f32>> {
         super::super::cpu::delay_and_sum_cpu(rf_data, &self.config, apodization)

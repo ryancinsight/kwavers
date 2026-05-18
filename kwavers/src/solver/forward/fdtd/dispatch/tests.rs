@@ -6,7 +6,7 @@ fn test_simd_config_detection() {
     init_simd();
     let config = get_simd_config();
     println!("Detected SIMD level: {:?}", config.level);
-    assert!(config.enabled || config.level == SimdLevel::Scalar);
+    assert!(config.enabled || config.level == MathSimdLevel::Scalar);
 }
 
 #[test]

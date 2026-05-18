@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_intensity_tracker_integration() {
     let config = TherapySessionConfig {
-        primary_modality: TherapyModality::HIFU,
+        primary_modality: TherapyIntegrationModality::HIFU,
         secondary_modalities: vec![],
         imaging_data_path: None,
         duration: 10.0,
@@ -15,7 +15,7 @@ fn test_intensity_tracker_integration() {
             focal_depth: 0.03,
             treatment_volume: 0.5,
         },
-        safety_limits: SafetyLimits {
+        safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 6.0,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
@@ -27,7 +27,7 @@ fn test_intensity_tracker_integration() {
             target_volume: TargetVolume {
                 center: (0.03, 0.0, 0.0),
                 dimensions: (0.012, 0.012, 0.012),
-                tissue_type: TissueType::Liver,
+                tissue_type: TherapyTissueType::Liver,
             },
             risk_organs: vec![],
         },
@@ -46,8 +46,8 @@ fn test_intensity_tracker_integration() {
     const BEAM_W_SQ: f64 = 0.005 * 0.005; // (5 mm)²
     const L_FOCAL: f64 = 0.01;
     const ALPHA: f64 = 0.5;
-    const RHO: f64 = 1000.0;
-    const C0: f64 = 1540.0;
+    const RHO: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+    const C0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
     const CP: f64 = 3600.0;
     let r_sq = (11.0 * 0.0025 - 0.03_f64).powi(2);
     let p_peak = PNP * (-r_sq / BEAM_W_SQ).exp();

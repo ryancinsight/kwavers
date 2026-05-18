@@ -1,16 +1,21 @@
-//! GPU compute shaders for physics simulations
+//! GPU compute shaders for physics simulations.
 //!
-//! Modular WGSL shaders following SLAP principle
+//! # Shader layout
+//!
+//! Each physical kernel has a canonical `.wgsl` source file (loaded via
+//! `include_str!` at compile time by the respective dispatch modules):
+//!
+//! | File                       | Used by                             |
+//! |----------------------------|-------------------------------------|
+//! | `absorption.wgsl`          | `gpu::kernels` (acoustic decay)     |
+//! | `fdtd.wgsl`                | `gpu::fdtd` (two-pass leapfrog)     |
+//! | `fdtd_pressure.wgsl`       | `gpu::compute::fdtd_gpu`            |
+//! | `kspace_propagate.wgsl`    | `gpu::kernels`, `gpu::kspace`       |
+//! | `nonlinear.wgsl`           | `gpu::kernels` (Westervelt)         |
+//! | `pstd.wgsl`                | `gpu::kspace` (PSTD propagation)    |
+//!
+//! The `neural_network` sub-module is the only exception: it uses an inline
+//! WGSL string constant so that the shader remains co-located with the Rust
+//! binding types it must match.
 
-pub mod absorption;
-pub mod fdtd;
-pub mod kspace;
 pub mod neural_network;
-pub mod nonlinear;
-
-// Re-export shader sources
-pub use absorption::ABSORPTION_SHADER;
-pub use fdtd::FDTD_PRESSURE_SHADER;
-pub use kspace::KSPACE_PROPAGATE_SHADER;
-pub use neural_network::NEURAL_NETWORK_SHADER;
-pub use nonlinear::NONLINEAR_PROPAGATION_SHADER;

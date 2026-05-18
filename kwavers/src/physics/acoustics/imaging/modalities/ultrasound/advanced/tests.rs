@@ -13,7 +13,7 @@ fn test_synthetic_aperture_config() {
 
 #[test]
 fn test_plane_wave_config() {
-    let config = PlaneWaveConfig::default();
+    let config = UltrasoundPlaneWaveConfig::default();
     assert_eq!(config.tx_angle, 0.0);
     assert_eq!(config.num_elements, 64);
     assert!((config.frequency - 5e6).abs() < 1e-6);
@@ -76,7 +76,7 @@ fn test_snr_improvement_calculation() {
 
 #[test]
 fn test_plane_wave_compounding() {
-    let base_config = PlaneWaveConfig::default();
+    let base_config = UltrasoundPlaneWaveConfig::default();
     let angles = vec![-10.0f64.to_radians(), 0.0, 10.0f64.to_radians()];
     let compounding = PlaneWaveCompounding::new(&angles, base_config);
 

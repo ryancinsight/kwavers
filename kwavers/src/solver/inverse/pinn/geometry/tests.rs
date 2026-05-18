@@ -8,7 +8,11 @@ use super::*;
 #[test]
 fn test_collocation_sampler() {
     let domain = RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0);
-    let sampler = CollocationSampler::new(Box::new(domain), SamplingStrategy::Uniform, Some(42));
+    let sampler = CollocationSampler::new(
+        Box::new(domain),
+        CollocationSamplingStrategy::Uniform,
+        Some(42),
+    );
 
     let interior = sampler.sample_interior(100);
     let boundary = sampler.sample_boundary(50);
@@ -19,10 +23,10 @@ fn test_collocation_sampler() {
 
 #[test]
 fn test_interface_condition_debug() {
-    let ic = InterfaceCondition::ElasticContinuity;
+    let ic = PinnGeometryInterfaceCondition::ElasticContinuity;
     assert_eq!(format!("{:?}", ic), "ElasticContinuity");
 
-    let ic2 = InterfaceCondition::AcousticElastic {
+    let ic2 = PinnGeometryInterfaceCondition::AcousticElastic {
         fluid_density: 1000.0,
     };
     assert!(format!("{:?}", ic2).contains("1000"));
@@ -38,7 +42,7 @@ fn test_multi_region_locate() {
     let multi = MultiRegionDomain::new(
         vec![region1, region2],
         vec![0, 1],
-        vec![InterfaceCondition::ElasticContinuity],
+        vec![PinnGeometryInterfaceCondition::ElasticContinuity],
     );
 
     let loc = multi.locate_point(&[0.5, 0.5], 1e-6);
@@ -48,7 +52,11 @@ fn test_multi_region_locate() {
 #[test]
 fn test_adaptive_refinement() {
     let domain = RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0);
-    let sampler = CollocationSampler::new(Box::new(domain), SamplingStrategy::Uniform, Some(42));
+    let sampler = CollocationSampler::new(
+        Box::new(domain),
+        CollocationSamplingStrategy::Uniform,
+        Some(42),
+    );
 
     let initial = sampler.sample_interior(10);
     let mut adaptive = AdaptiveRefinement::new(sampler, initial.clone(), 0.1);

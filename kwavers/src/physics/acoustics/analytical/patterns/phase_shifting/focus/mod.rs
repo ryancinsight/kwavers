@@ -138,32 +138,9 @@ impl DynamicFocusing {
 
     /// Apply apodization for sidelobe reduction
     pub fn apply_apodization(&mut self, window_type: ApodizationType) {
-        let n = self.amplitude_weights.len();
-
-        match window_type {
-            ApodizationType::Uniform => {
-                self.amplitude_weights.fill(1.0);
-            }
-            ApodizationType::Hamming => {
-                for i in 0..n {
-                    let x = i as f64 / (n - 1) as f64;
-                    self.amplitude_weights[i] = 0.46f64.mul_add(-(2.0 * PI * x).cos(), 0.54);
-                }
-            }
-            ApodizationType::Hanning => {
-                for i in 0..n {
-                    let x = i as f64 / (n - 1) as f64;
-                    self.amplitude_weights[i] = 0.5 * (1.0 - (2.0 * PI * x).cos());
-                }
-            }
-            ApodizationType::Gaussian => {
-                let sigma = n as f64 / 6.0;
-                let center = (n - 1) as f64 / 2.0;
-                for i in 0..n {
-                    let x = (i as f64 - center) / sigma;
-                    self.amplitude_weights[i] = (-0.5 * x * x).exp();
-                }
-            }
+        let weights = window_type.weights(self.amplitude_weights.len());
+        for (w, v) in self.amplitude_weights.iter_mut().zip(weights.iter()) {
+            *w = *v;
         }
     }
 
@@ -241,15 +218,4 @@ mod tests {
     }
 }
 
-/// Apodization window types
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ApodizationType {
-    /// Uniform weighting
-    Uniform,
-    /// Hamming window
-    Hamming,
-    /// Hanning window
-    Hanning,
-    /// Gaussian window
-    Gaussian,
-}
+pub use crate::math::signal::ApodizationType;

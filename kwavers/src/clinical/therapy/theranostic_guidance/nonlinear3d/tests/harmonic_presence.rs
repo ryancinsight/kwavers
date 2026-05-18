@@ -35,7 +35,7 @@
 
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
-use super::super::types::{GridIndex, Nonlinear3dAperture};
+use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
@@ -85,6 +85,7 @@ fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
             z_m: 0.0,
         }],
         model_name: "test_point_source_fubini".to_owned(),
+        source_domain: SourceDomain::TissueBoundary,
         focus: receiver_idx,
     };
 
@@ -113,6 +114,7 @@ fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
         beta: &beta_field,
         attenuation_np_per_m_mhz: None,
         attenuation_power_law_y: None,
+        source_body_mask: None,
         n,
         spacing_m,
         aperture: &aperture,

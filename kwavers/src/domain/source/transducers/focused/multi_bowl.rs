@@ -84,44 +84,8 @@ impl MultiBowlArray {
 
     /// Apply apodization (amplitude shading)
     pub fn apply_apodization(&mut self, apodization_type: ApodizationType) {
-        let n = self.bowls.len();
-
-        match apodization_type {
-            ApodizationType::Uniform => {
-                self.amplitudes = vec![1.0; n];
-            }
-            ApodizationType::Hamming => {
-                for i in 0..n {
-                    let x = i as f64 / (n - 1) as f64;
-                    self.amplitudes[i] = 0.46f64.mul_add(-(2.0 * PI * x).cos(), 0.54);
-                }
-            }
-            ApodizationType::Hanning => {
-                for i in 0..n {
-                    let x = i as f64 / (n - 1) as f64;
-                    self.amplitudes[i] = 0.5 * (1.0 - (2.0 * PI * x).cos());
-                }
-            }
-            ApodizationType::Gaussian(sigma) => {
-                let center = (n - 1) as f64 / 2.0;
-                for i in 0..n {
-                    let x = (i as f64 - center) / center;
-                    self.amplitudes[i] = (-x * x / (2.0 * sigma * sigma)).exp();
-                }
-            }
-        }
+        self.amplitudes = apodization_type.weights(self.bowls.len());
     }
 }
 
-/// Apodization types for multi-element arrays
-#[derive(Debug, Clone, Copy)]
-pub enum ApodizationType {
-    /// Uniform weighting (no apodization)
-    Uniform,
-    /// Hamming window
-    Hamming,
-    /// Hanning (Hann) window
-    Hanning,
-    /// Gaussian window with specified sigma
-    Gaussian(f64),
-}
+pub use crate::math::signal::ApodizationType;

@@ -1,4 +1,4 @@
-use super::super::config::PreconditionerType;
+use super::super::config::FemPreconditionerType;
 use super::FemHelmholtzSolver;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::linear_algebra::sparse::solver::{IterativeSolver, Preconditioner, SolverConfig};
@@ -11,14 +11,14 @@ impl FemHelmholtzSolver {
     ///
     pub fn solve_system(&mut self) -> KwaversResult<()> {
         let preconditioner = match self.config.preconditioner {
-            PreconditionerType::None => Preconditioner::None,
-            PreconditionerType::Diagonal => Preconditioner::Jacobi,
-            PreconditionerType::ILU => {
+            FemPreconditionerType::None => Preconditioner::None,
+            FemPreconditionerType::Diagonal => Preconditioner::Jacobi,
+            FemPreconditionerType::ILU => {
                 return Err(KwaversError::FeatureNotAvailable(
                     "FEM Helmholtz ILU preconditioner requires a real sparse incomplete factorization backend".to_owned(),
                 ))
             }
-            PreconditionerType::AMG => {
+            FemPreconditionerType::AMG => {
                 return Err(KwaversError::FeatureNotAvailable(
                     "FEM Helmholtz AMG preconditioner requires a real multigrid hierarchy backend".to_owned(),
                 ))

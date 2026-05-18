@@ -25,8 +25,8 @@ pub use power_modulation::{
 };
 
 pub use cavitation_detector::{
-    BroadbandDetector, CavitationDetector, CavitationState, DetectionMethod, SpectralDetector,
-    SubharmonicDetector,
+    BroadbandDetector, CavitationDetectionState, CavitationDetector, DetectionMethod,
+    SpectralDetector, SubharmonicDetector,
 };
 
 pub use pid_controller::{ControllerOutput, ErrorIntegral, PIDConfig, PIDController, PIDGains};

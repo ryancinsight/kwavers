@@ -20,7 +20,7 @@ mod velocity;
 
 /// Configuration for SIMD stencil optimization
 #[derive(Debug, Clone, Copy)]
-pub struct SimdStencilConfig {
+pub struct FdtdSimdStencilConfig {
     pub tile_size: usize,
     pub fuse_stencils: bool,
     pub prefetch_boundaries: bool,
@@ -31,7 +31,7 @@ pub struct SimdStencilConfig {
     pub dt: f64,
 }
 
-impl Default for SimdStencilConfig {
+impl Default for FdtdSimdStencilConfig {
     fn default() -> Self {
         Self {
             tile_size: 8,
@@ -52,8 +52,8 @@ impl Default for SimdStencilConfig {
 /// and reused every step via `std::mem::swap` — avoiding the ~128 MB per-step heap
 /// allocation that a naive `velocity.clone()` would incur on a 256³ grid.
 #[derive(Debug, Clone)]
-pub struct SimdStencilProcessor {
-    pub(super) config: SimdStencilConfig,
+pub struct FdtdSimdStencilProcessor {
+    pub(super) config: FdtdSimdStencilConfig,
     pub(super) pressure_coeff: f64,
     pub(super) velocity_coeff: f64,
     pub(super) nx: usize,
@@ -66,12 +66,17 @@ pub struct SimdStencilProcessor {
     pub(super) pres_scratch: Array3<f64>,
 }
 
-impl SimdStencilProcessor {
+impl FdtdSimdStencilProcessor {
     /// New.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn new(nx: usize, ny: usize, nz: usize, config: SimdStencilConfig) -> KwaversResult<Self> {
+    pub fn new(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        config: FdtdSimdStencilConfig,
+    ) -> KwaversResult<Self> {
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
                 "Grid dimensions must be at least 3".to_owned(),
@@ -175,7 +180,7 @@ impl SimdStencilProcessor {
     }
 
     #[must_use]
-    pub fn config(&self) -> SimdStencilConfig {
+    pub fn config(&self) -> FdtdSimdStencilConfig {
         self.config
     }
 }

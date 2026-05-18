@@ -18,6 +18,7 @@ pub struct SameApertureMedium<'a> {
 pub struct SameApertureSettings<'a> {
     pub frequencies_hz: &'a [f64],
     pub receiver_offsets: &'a [usize],
+    pub phase_speed_m_s: f64,
 }
 
 #[must_use]

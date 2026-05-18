@@ -9,8 +9,9 @@
 //!
 //! ## Shock capturing
 //!
-//! When `ShockCaptureConfig::enabled` is `true`, a WENO limiter (Jiang & Shu 1996) is applied
-//! after each RK sub-stage that passes the shock detector.
+//! When `ShockCaptureConfig::enabled` is `true`, the DG core applies a
+//! conservative troubled-cell projection after the configured RK stages. The
+//! standalone WENO limiter module remains available for field-level limiting.
 //!
 //! ## References
 //!
@@ -66,11 +67,14 @@ pub enum WenoDegree {
     Weno7,
 }
 
-/// Shock-capture configuration applied after each SSP-RK sub-stage.
+/// Shock-capture configuration applied after SSP-RK stages.
 ///
-/// When `enabled = true` and the shock detector identifies a discontinuous element,
-/// the WENO limiter is applied to that element's modal coefficients before the next
-/// sub-stage begins.  This preserves the TVD property of the full SSP-RK3 scheme.
+/// When `enabled = true`, the DG time stepper detects troubled elements from
+/// quadrature-weighted element-mean jumps and intra-element variation. Flagged
+/// elements are replaced by a DG-mass-preserving TVD linear reconstruction
+/// before the next sub-stage when `apply_per_stage = true`, and after the final
+/// stage in all enabled cases. This damps Gibbs oscillations without changing
+/// the element integral represented by the diagonal mass matrix.
 ///
 /// ## Mathematical basis
 ///
@@ -108,6 +112,23 @@ impl Default for ShockCaptureConfig {
     }
 }
 
+/// Boundary condition used by DG face fluxes.
+///
+/// `Periodic` preserves the historical wraparound topology and is the default
+/// for conservation proofs. `AbsorbingCharacteristic` replaces exterior
+/// boundary states by the one-way acoustic characteristic state with zero
+/// incoming wave and is the first open-boundary policy needed before adding
+/// DG-native CPML memory variables.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DgBoundaryCondition {
+    /// Couple each exterior face to the opposite-side element.
+    #[default]
+    Periodic,
+    /// Preserve outgoing acoustic characteristics and set incoming
+    /// characteristics to zero at physical exterior faces.
+    AbsorbingCharacteristic,
+}
+
 /// Complete configuration for the Discontinuous Galerkin solver.
 #[derive(Debug, Clone, Copy)]
 pub struct DGConfig {
@@ -131,6 +152,8 @@ pub struct DGConfig {
     ///
     /// Defaults to 1500.0 m/s (water/soft tissue). Override for other media.
     pub sound_speed: f64,
+    /// Boundary condition for DG face fluxes.
+    pub boundary_condition: DgBoundaryCondition,
 }
 
 impl Default for DGConfig {
@@ -145,6 +168,7 @@ impl Default for DGConfig {
             shock_threshold: 0.1,
             shock_capture: ShockCaptureConfig::default(),
             sound_speed: 1500.0,
+            boundary_condition: DgBoundaryCondition::Periodic,
         }
     }
 }

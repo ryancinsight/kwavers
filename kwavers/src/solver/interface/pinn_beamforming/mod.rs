@@ -26,7 +26,7 @@ pub struct PinnBeamformingConfig {
     /// Inference configuration
     pub inference: InferenceConfig,
     /// Uncertainty quantification settings
-    pub uncertainty: UncertaintyConfig,
+    pub uncertainty: PinnBeamformingUncertaintyConfig,
 }
 
 /// PINN model configuration.
@@ -39,7 +39,7 @@ pub struct PinnModelConfig {
     /// Neurons per hidden layer
     pub neurons_per_layer: usize,
     /// Activation function
-    pub activation: ActivationFunction,
+    pub activation: PinnBeamformingActivationFunction,
     /// Model version
     pub version: String,
     /// Number of parameters
@@ -56,7 +56,7 @@ impl Default for PinnModelConfig {
             architecture: ModelArchitecture::Mlp,
             hidden_layers: 4,
             neurons_per_layer: 128,
-            activation: ActivationFunction::Tanh,
+            activation: PinnBeamformingActivationFunction::Tanh,
             version: "1.0.0".to_owned(),
             num_parameters: 0,
             dimensions: vec![1, 2, 3],
@@ -80,7 +80,7 @@ pub enum ModelArchitecture {
 
 /// Activation functions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ActivationFunction {
+pub enum PinnBeamformingActivationFunction {
     /// Tanh activation
     Tanh,
     /// ReLU activation
@@ -128,7 +128,7 @@ pub enum DeviceConfig {
 
 /// Uncertainty quantification configuration.
 #[derive(Debug, Clone)]
-pub struct UncertaintyConfig {
+pub struct PinnBeamformingUncertaintyConfig {
     /// Enable Bayesian inference
     pub bayesian_enabled: bool,
     /// Number of Monte Carlo samples
@@ -137,7 +137,7 @@ pub struct UncertaintyConfig {
     pub confidence_level: f64,
 }
 
-impl Default for UncertaintyConfig {
+impl Default for PinnBeamformingUncertaintyConfig {
     fn default() -> Self {
         Self {
             bayesian_enabled: false,
@@ -159,7 +159,7 @@ pub struct PinnBeamformingResult {
     /// Inference time in seconds
     pub inference_time: f64,
     /// Training metrics (if available)
-    pub metrics: TrainingMetrics,
+    pub metrics: BeamformingTrainingMetrics,
 }
 
 /// Processing metadata.
@@ -175,7 +175,7 @@ pub struct ProcessingMetadata {
 
 /// Training metrics from PINN optimization.
 #[derive(Debug, Clone)]
-pub struct TrainingMetrics {
+pub struct BeamformingTrainingMetrics {
     /// Total loss value
     pub total_loss: f64,
     /// Physics-based loss component
@@ -225,7 +225,7 @@ pub trait PinnBeamformingProvider: Send + Sync {
         &mut self,
         training_data: &[(Array3<f32>, Array3<f32>)],
         config: &PinnBeamformingConfig,
-    ) -> KwaversResult<TrainingMetrics>;
+    ) -> KwaversResult<BeamformingTrainingMetrics>;
 
     /// Estimate uncertainty in predictions.
     /// # Errors
@@ -234,7 +234,7 @@ pub trait PinnBeamformingProvider: Send + Sync {
     fn estimate_uncertainty(
         &self,
         rf_data: &Array3<f32>,
-        config: &UncertaintyConfig,
+        config: &PinnBeamformingUncertaintyConfig,
     ) -> KwaversResult<Array3<f32>>;
 
     /// Get model information.
@@ -246,7 +246,7 @@ pub trait PinnBeamformingProvider: Send + Sync {
 
 /// Domain decomposition strategy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DecompositionStrategy {
+pub enum PinnBeamformingDecompositionStrategy {
     /// Spatial decomposition (partition volume)
     Spatial,
     /// Temporal decomposition (partition frames)
@@ -276,7 +276,7 @@ pub struct DistributedConfig {
     /// Batch size per GPU
     pub batch_size_per_gpu: usize,
     /// Decomposition strategy
-    pub decomposition: DecompositionStrategy,
+    pub decomposition: PinnBeamformingDecompositionStrategy,
     /// Load balancing strategy
     pub load_balancing: LoadBalancingStrategy,
 }

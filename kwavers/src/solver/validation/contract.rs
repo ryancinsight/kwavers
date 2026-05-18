@@ -47,7 +47,7 @@ pub struct ScientificMetadata {
 
 /// Validation case describing the expected authority and success criterion.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ValidationCase {
+pub struct ContractValidationCase {
     pub name: &'static str,
     pub target: ValidationTarget,
     pub metric: &'static str,
@@ -167,7 +167,7 @@ impl MemoryBudget {
 /// Common scientific contract exposed by production-facing numerical methods.
 pub trait ScientificMethod {
     fn metadata(&self) -> ScientificMetadata;
-    fn validation_cases(&self) -> Vec<ValidationCase>;
+    fn validation_cases(&self) -> Vec<ContractValidationCase>;
     fn benchmark_cases(&self) -> Vec<BenchmarkCase>;
 }
 
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn validation_case_carries_gate_and_target() {
-        let case = ValidationCase {
+        let case = ContractValidationCase {
             name: "plane-wave-dispersion",
             target: ValidationTarget::Analytical,
             metric: "relative_l2",

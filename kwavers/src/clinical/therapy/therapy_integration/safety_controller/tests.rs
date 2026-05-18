@@ -1,11 +1,11 @@
 use super::controller::SafetyController;
 use super::types::TherapyAction;
-use crate::clinical::therapy::therapy_integration::config::SafetyLimits;
+use crate::clinical::therapy::therapy_integration::config::TherapyIntegrationSafetyLimits;
 use crate::clinical::therapy::therapy_integration::state::SafetyMetrics;
 use std::collections::HashMap;
 
 fn create_test_controller() -> SafetyController {
-    let limits = SafetyLimits {
+    let limits = TherapyIntegrationSafetyLimits {
         thermal_index_max: 6.0,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1.0,
@@ -101,7 +101,7 @@ fn test_power_reduction_factor() {
 
 #[test]
 fn test_organ_dose_tracking() {
-    let limits = SafetyLimits {
+    let limits = TherapyIntegrationSafetyLimits {
         thermal_index_max: 6.0,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1.0,

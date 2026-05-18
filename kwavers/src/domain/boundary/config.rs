@@ -6,16 +6,16 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoundaryParameters {
     /// Boundary type for each face [`x_min`, `x_max`, `y_min`, `y_max`, `z_min`, `z_max`]
-    pub boundary_types: [BoundaryType; 6],
+    pub boundary_types: [SolverBoundaryKind; 6],
     /// PML layer thickness in grid points
     pub pml_thickness: usize,
     /// PML absorption coefficient
     pub pml_alpha: f64,
 }
 
-/// Types of boundary conditions
+/// Solver-level boundary kind, selecting which numerical BC is applied per face.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub enum BoundaryType {
+pub enum SolverBoundaryKind {
     /// Perfectly matched layer
     PML,
     /// Periodic boundary
@@ -38,7 +38,7 @@ impl BoundaryParameters {
     pub fn validate(&self) -> crate::core::error::KwaversResult<()> {
         if self.pml_thickness == 0 {
             for boundary in &self.boundary_types {
-                if *boundary == BoundaryType::PML {
+                if *boundary == SolverBoundaryKind::PML {
                     return Err(crate::core::error::ConfigError::InvalidValue {
                         parameter: "pml_thickness".to_owned(),
                         value: "0".to_owned(),
@@ -65,7 +65,7 @@ impl BoundaryParameters {
 impl Default for BoundaryParameters {
     fn default() -> Self {
         Self {
-            boundary_types: [BoundaryType::PML; 6],
+            boundary_types: [SolverBoundaryKind::PML; 6],
             pml_thickness: 10,
             pml_alpha: 2.0,
         }

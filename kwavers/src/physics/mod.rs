@@ -119,7 +119,7 @@ pub mod mechanics {
 
     /// Acoustic wave propagation
     // Note: acoustic_wave module exists but types may be in submodules
-    pub use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
+    pub use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 
     /// Elastic wave propagation
     pub use crate::physics::acoustics::mechanics::elastic_wave::ElasticWave;
@@ -140,15 +140,14 @@ pub mod mechanics {
 
 // Re-export core physics specifications from foundations
 pub use foundations::{
-    AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, BoundaryCondition,
-    Domain, ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration, WaveEquation,
+    AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain,
+    ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration, WaveEquation,
 };
 
 // Re-export coupling traits
 pub use foundations::{
-    AcousticElasticCoupling, AcousticThermalCoupling, CouplingStrength,
-    ElectromagneticAcousticCoupling, ElectromagneticThermalCoupling, InterfaceCondition,
-    MultiPhysicsCoupling,
+    AcousticElasticCoupling, AcousticThermalCoupling, CouplingInterfaceCondition, CouplingStrength,
+    ElectromagneticAcousticCoupling, ElectromagneticThermalCoupling, MultiPhysicsCoupling,
 };
 
 // Backward-compatible re-exports for moved modules
@@ -178,7 +177,7 @@ pub use crate::domain::sensor::sonoluminescence as sonoluminescence_detector;
 /// Re-export material properties from domain layer (SSOT for material specifications)
 /// This was previously in physics::materials but has been moved to domain::medium::properties
 /// as material property definitions belong in the domain layer, not physics.
-pub use crate::domain::medium::properties::{fluids, implants, tissue, MaterialProperties};
+pub use crate::domain::medium::properties::{fluids, implants, tissue, AcousticMaterialProperties};
 
 /// Optics compatibility layer for backward compatibility
 ///

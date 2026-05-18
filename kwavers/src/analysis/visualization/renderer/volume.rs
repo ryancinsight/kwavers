@@ -1,7 +1,8 @@
 //! Volume rendering implementation
 
-use crate::analysis::visualization::{ColorScheme, FieldType, VisualizationConfig};
+use crate::analysis::visualization::{ColorScheme, VisualizationConfig};
 use crate::core::error::KwaversResult;
+use crate::domain::field::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -31,7 +32,7 @@ impl VolumeRenderer {
     pub fn render_draft(
         &self,
         field: &Array3<f64>,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
         self.render_internal(field, field_type, grid, 32)
@@ -44,7 +45,7 @@ impl VolumeRenderer {
     pub fn render_production(
         &self,
         field: &Array3<f64>,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
         self.render_internal(field, field_type, grid, 128)
@@ -57,7 +58,7 @@ impl VolumeRenderer {
     pub fn render_publication(
         &self,
         field: &Array3<f64>,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
         self.render_internal(field, field_type, grid, 256)
@@ -70,7 +71,7 @@ impl VolumeRenderer {
     fn render_internal(
         &self,
         field: &Array3<f64>,
-        _field_type: FieldType,
+        _field_type: UnifiedFieldType,
         _grid: &Grid,
         samples: usize,
     ) -> KwaversResult<Vec<u8>> {

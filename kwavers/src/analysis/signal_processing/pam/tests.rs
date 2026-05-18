@@ -36,7 +36,7 @@ fn pam_policy_to_core_non_capon_preserves_core_loading_and_sets_reference_freque
         method: PamBeamformingMethod::DelayAndSum,
         frequency_range: (2.0e6, 2.0e6),
         spatial_resolution: 1e-3,
-        apodization: ApodizationType::None,
+        apodization: ApodizationType::Uniform,
         focal_point: [0.0, 0.0, 0.0],
     };
 

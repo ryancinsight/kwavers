@@ -6,7 +6,7 @@
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
-use crate::math::fft::{Fft3dInOutExt, ProcessorFft3d, Shape3D};
+use crate::math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
 use crate::solver::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
@@ -19,8 +19,9 @@ pub struct RegionPSTDSolver {
     k2: Array3<f64>,
     filter: Array3<f64>,
     wave_speed: f64,
-    prev_field: Option<Array3<f64>>,
-    fft: ProcessorFft3d,
+    prev_field: Array3<f64>,
+    has_prev_field: bool,
+    fft: Fft3d,
     field_hat: Array3<Complex64>,
     lap_hat: Array3<Complex64>,
     scratch_hat: Array3<Complex64>,
@@ -33,7 +34,7 @@ impl std::fmt::Debug for RegionPSTDSolver {
             .field("order", &self.order)
             .field("grid_dim", &(self.grid.nx, self.grid.ny, self.grid.nz))
             .field("wave_speed", &self.wave_speed)
-            .field("has_prev_field", &self.prev_field.is_some())
+            .field("has_prev_field", &self.has_prev_field)
             .finish()
     }
 }
@@ -65,6 +66,7 @@ impl RegionPSTDSolver {
         let lap_hat = Array3::from_elem((nx, ny, nz), complex_zeros);
         let scratch_hat = Array3::from_elem((nx, ny, nz), complex_zeros);
         let laplacian = Array3::zeros((nx, ny, nz));
+        let prev_field = Array3::zeros((nx, ny, nz));
 
         Self {
             order,
@@ -72,8 +74,9 @@ impl RegionPSTDSolver {
             k2,
             filter,
             wave_speed,
-            prev_field: None,
-            fft: ProcessorFft3d::new(Shape3D { nx, ny, nz }),
+            prev_field,
+            has_prev_field: false,
+            fft: Fft3d::new(Shape3D { nx, ny, nz }),
             field_hat,
             lap_hat,
             scratch_hat,
@@ -93,8 +96,9 @@ impl RegionPSTDSolver {
     ///
     /// ## Performance
     /// Zero allocations per call when `output` is a pre-allocated caller buffer.
-    /// The `prev_field` storage uses `.assign()` after the first call to avoid
-    /// per-step heap allocation (one-time allocation on the first call only).
+    /// `prev_field` is allocated at construction and updated via `.assign()`;
+    /// `has_prev_field` selects the first-step Taylor update without storing
+    /// history in an `Option<Array3<_>>`.
     ///
     /// ## Precondition
     /// `output` must have the same shape as `field`.
@@ -128,7 +132,14 @@ impl RegionPSTDSolver {
                 },
             ));
         }
-        debug_assert_eq!(field.dim(), output.dim(), "output shape must match field");
+        if field.dim() != output.dim() {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: format!("{:?}", field.dim()),
+                    actual: format!("{:?}", output.dim()),
+                },
+            ));
+        }
 
         self.wave_speed = c;
 
@@ -145,13 +156,13 @@ impl RegionPSTDSolver {
 
         let coeff = (c * dt) * (c * dt);
 
-        if let Some(prev) = self.prev_field.as_ref() {
+        if self.has_prev_field {
             for ((((out, &use_spectral), &u), &lap), &u_prev) in output
                 .iter_mut()
                 .zip(mask.iter())
                 .zip(field.iter())
                 .zip(self.laplacian.iter())
-                .zip(prev.iter())
+                .zip(self.prev_field.iter())
             {
                 *out = if use_spectral {
                     coeff.mul_add(lap, 2.0f64.mul_add(u, -u_prev))
@@ -174,13 +185,8 @@ impl RegionPSTDSolver {
             }
         }
 
-        // Store current field as prev for next step.
-        // Use .assign() to avoid a per-step heap allocation: the Option<Array3>
-        // is allocated once (first call) and reused thereafter via memcopy.
-        match self.prev_field.as_mut() {
-            Some(prev) => prev.assign(field),
-            None => self.prev_field = Some(field.clone()), // one-time allocation
-        }
+        self.prev_field.assign(field);
+        self.has_prev_field = true;
 
         Ok(())
     }
@@ -200,5 +206,40 @@ impl RegionPSTDSolver {
         let mut next = Array3::zeros(field.dim());
         self.spectral_wave_step_into(field, dt, c, mask, &mut next)?;
         Ok(next)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RegionPSTDSolver;
+    use crate::domain::grid::Grid;
+    use ndarray::Array3;
+    use std::sync::Arc;
+
+    #[test]
+    fn spectral_step_reuses_preallocated_previous_field_storage() {
+        let grid = Arc::new(Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap());
+        let mut solver = RegionPSTDSolver::new(4, grid);
+        let prev_ptr = solver.prev_field.as_ptr();
+        let field = Array3::from_shape_fn((4, 4, 4), |(i, j, k)| {
+            (i as f64 + 0.25 * j as f64 - 0.5 * k as f64).sin()
+        });
+        let mask = Array3::from_elem((4, 4, 4), true);
+        let mut output = Array3::zeros((4, 4, 4));
+
+        solver
+            .spectral_wave_step_into(&field, 1.0e-5, 1500.0, &mask, &mut output)
+            .unwrap();
+
+        assert_eq!(solver.prev_field.as_ptr(), prev_ptr);
+        assert!(solver.has_prev_field);
+        assert_eq!(solver.prev_field, field);
+
+        let second_input = output.clone();
+        solver
+            .spectral_wave_step_into(&second_input, 1.0e-5, 1500.0, &mask, &mut output)
+            .unwrap();
+
+        assert_eq!(solver.prev_field.as_ptr(), prev_ptr);
     }
 }

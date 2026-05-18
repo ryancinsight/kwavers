@@ -23,5 +23,5 @@ mod tests;
 mod trait_def;
 
 pub use derivative::PseudospectralDerivative;
-pub use filter::{FilterType, SpectralFilter};
+pub use filter::{SpectralFilter, SpectralFilterType};
 pub use trait_def::SpectralOperator;

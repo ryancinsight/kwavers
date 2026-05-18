@@ -23,8 +23,12 @@ impl DomainAnalyzer {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn analyze(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<QualityMetrics> {
-        let metrics = QualityMetrics {
+    pub fn analyze(
+        &self,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<DomainDecompQualityMetrics> {
+        let metrics = DomainDecompQualityMetrics {
             homogeneity: self.compute_homogeneity(grid, medium)?,
             smoothness: self.compute_smoothness(grid, medium)?,
             spectral_content: self.estimate_spectral_content(grid)?,
@@ -89,7 +93,7 @@ impl Default for DomainAnalyzer {
 
 /// Quality metrics for domain characterization
 #[derive(Debug)]
-pub struct QualityMetrics {
+pub struct DomainDecompQualityMetrics {
     /// Homogeneity map (0=heterogeneous, 1=homogeneous)
     pub homogeneity: Array3<f64>,
     /// Smoothness map (0=discontinuous, 1=smooth)

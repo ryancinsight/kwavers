@@ -1,6 +1,25 @@
-//! Right-hand side computation for the Kuznetsov equation.
+//! Right-hand Side Computation for the Kuznetsov Equation
+//!
+//! ## Theorem (heterogeneous RHS parallelisation strategy)
+//!
+//! The `Medium` and `Source` trait objects are `?Sync`; they cannot be shared
+//! across Rayon threads without an explicit `Sync` bound.  The heterogeneous
+//! path therefore separates computation into two phases:
+//!
+//! **Phase 1 — serial property sampling** (O(N) trait-object calls):
+//! Evaluate ρ(x,y,z), c₀(x,y,z), B/A(x,y,z), and S(t,x,y,z) at every grid
+//! point and store into the pre-allocated cache arrays in `KuznetsovWorkspace`.
+//!
+//! **Phase 2 — parallel RHS combination** (embarrassingly parallel):
+//! Combine laplacian, pressure history, and the cached property arrays using
+//! `Zip::indexed(...).par_for_each()`.  All inputs are `Array3<f64>` borrows
+//! (`Sync` by construction), so Rayon parallelism is race-free.
+//!
+//! This pattern achieves full multi-core utilisation for the arithmetic-heavy
+//! RHS while keeping trait dispatch in a single serial sweep.
 
 use super::wave::KuznetsovWave;
+use crate::core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
 use crate::domain::medium::Medium;
 use crate::domain::source::Source;
 use crate::solver::forward::nonlinear::kuznetsov::config::AcousticEquationMode;
@@ -93,65 +112,113 @@ impl KuznetsovWave {
         }
 
         if is_heterogeneous {
-            // Heterogeneous: compute properties per grid point
-            for k in 0..self.grid.nz {
-                for j in 0..self.grid.ny {
-                    for i in 0..self.grid.nx {
+            // ------------------------------------------------------------------
+            // Phase 1: sample medium/source properties serially.
+            //
+            // Medium and Source trait objects are ?Sync; they cannot be shared
+            // across Rayon threads.  Fill the pre-allocated cache arrays with a
+            // single serial sweep so Phase 2 only touches plain Array3<f64>.
+            // ------------------------------------------------------------------
+            let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
+            for k in 0..nz {
+                for j in 0..ny {
+                    for i in 0..nx {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                        let local_density =
+                        self.workspace.cache_density[[i, j, k]] =
                             crate::domain::medium::density_at(medium, x, y, z, &self.grid);
-                        let local_sound_speed =
+                        self.workspace.cache_sound_speed[[i, j, k]] =
                             crate::domain::medium::sound_speed_at(medium, x, y, z, &self.grid);
-                        let local_nonlinearity =
-                            crate::domain::medium::nonlinearity_at(medium, x, y, z, &self.grid);
-                        let c0_squared = local_sound_speed * local_sound_speed;
-
-                        rhs[[i, j, k]] = c0_squared * self.workspace.laplacian[[i, j, k]];
-
                         if include_nonlinearity {
-                            let beta = crate::physics::constants::NONLINEARITY_COEFFICIENT_OFFSET
-                                + local_nonlinearity / crate::physics::constants::B_OVER_A_DIVISOR;
-                            let coeff = beta / (local_density * local_sound_speed.powi(4));
-                            let p2 = pressure[[i, j, k]] * pressure[[i, j, k]];
-                            let p2_prev = self.workspace.pressure_prev[[i, j, k]]
-                                * self.workspace.pressure_prev[[i, j, k]];
-                            let p2_prev2 = self.workspace.pressure_prev2[[i, j, k]]
-                                * self.workspace.pressure_prev2[[i, j, k]];
-                            let d2p2_dt2 = (2.0f64.mul_add(-p2_prev, p2) + p2_prev2) / (dt * dt);
-                            rhs[[i, j, k]] += -coeff * d2p2_dt2;
+                            self.workspace.cache_nonlinearity[[i, j, k]] =
+                                crate::domain::medium::nonlinearity_at(medium, x, y, z, &self.grid);
                         }
-
-                        if include_diffusion {
-                            let d3p_dt3 = (3.0f64.mul_add(
-                                self.workspace.pressure_prev2[[i, j, k]],
-                                3.0f64.mul_add(
-                                    -self.workspace.pressure_prev[[i, j, k]],
-                                    pressure[[i, j, k]],
-                                ),
-                            ) - self.workspace.pressure_prev3[[i, j, k]])
-                                / dt.powi(3);
-                            rhs[[i, j, k]] += self.config.acoustic_diffusivity * d3p_dt3;
-                        }
-
-                        rhs[[i, j, k]] += source.get_source_term(t, x, y, z, &self.grid);
+                        self.workspace.cache_source[[i, j, k]] =
+                            source.get_source_term(t, x, y, z, &self.grid);
                     }
                 }
             }
+
+            // ------------------------------------------------------------------
+            // Phase 2: compute RHS in parallel.
+            //
+            // All captured arrays are Array3<f64> (&-borrows → Sync).  The
+            // only mutable write is to rhs via the Zip element reference `r`.
+            // Each task writes to a distinct (i,j,k) element; all reads are
+            // shared → race-free.
+            //
+            // We use Zip::indexed(rhs_mut).par_for_each and access the
+            // remaining arrays directly by (i,j,k) inside the closure.  This
+            // avoids the ndarray Zip 6-producer limit that would apply if we
+            // chained every array with `.and()`.
+            // ------------------------------------------------------------------
+            let cache_density = &self.workspace.cache_density;
+            let cache_c0 = &self.workspace.cache_sound_speed;
+            let cache_nl = &self.workspace.cache_nonlinearity;
+            let cache_src = &self.workspace.cache_source;
+            let laplacian = &self.workspace.laplacian;
+            let pressure_prev = &self.workspace.pressure_prev;
+            let pressure_prev2 = &self.workspace.pressure_prev2;
+            let pressure_prev3 = &self.workspace.pressure_prev3;
+            let diffusivity = self.config.acoustic_diffusivity;
+
+            Zip::indexed(rhs.view_mut()).par_for_each(|(i, j, k), r| {
+                let rho = cache_density[[i, j, k]];
+                let c0 = cache_c0[[i, j, k]];
+                let p = pressure[[i, j, k]];
+                let lap = laplacian[[i, j, k]];
+                let p_prev = pressure_prev[[i, j, k]];
+
+                *r = c0 * c0 * lap;
+
+                if include_nonlinearity {
+                    let b_over_a = cache_nl[[i, j, k]];
+                    let beta = NONLINEARITY_COEFFICIENT_OFFSET + b_over_a / B_OVER_A_DIVISOR;
+                    // Explicit-form: +(β/ρc₀²)∂²(p²)/∂t²  [positive; c² not c⁴]
+                    let coeff = beta / (rho * c0.powi(2));
+                    let p2 = p * p;
+                    let p2_prev = p_prev * p_prev;
+                    let p_prev2_v = pressure_prev2[[i, j, k]];
+                    let p2_prev2 = p_prev2_v * p_prev2_v;
+                    let d2p2_dt2 = (2.0f64.mul_add(-p2_prev, p2) + p2_prev2) / (dt * dt);
+                    *r += coeff * d2p2_dt2; // positive: derived from rearranging operator form
+                }
+
+                if include_diffusion {
+                    let p_prev2_v = pressure_prev2[[i, j, k]];
+                    let p_prev3_v = pressure_prev3[[i, j, k]];
+                    // ∂³p/∂t³ ≈ (p[n] − 3p[n−1] + 3p[n−2] − p[n−3]) / Δt³
+                    let d3p_dt3 = (3.0f64.mul_add(p_prev2_v, 3.0f64.mul_add(-p_prev, p))
+                        - p_prev3_v)
+                        / dt.powi(3);
+                    // Explicit-form: +(δ/c₀²)∂³p/∂t³  [positive; c² not c⁴]
+                    *r += (diffusivity / c0.powi(2)) * d3p_dt3;
+                }
+
+                *r += cache_src[[i, j, k]];
+            });
         } else {
-            // Homogeneous: use pre-computed uniform properties
+            // Homogeneous: uniform properties — fully parallel from the start.
             let c0_squared = uniform_sound_speed * uniform_sound_speed;
             Zip::from(&mut *rhs)
                 .and(&self.workspace.laplacian)
                 .par_for_each(|r, &lap| *r = c0_squared * lap);
 
-            for k in 0..self.grid.nz {
-                for j in 0..self.grid.ny {
-                    for i in 0..self.grid.nx {
-                        let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                        rhs[[i, j, k]] += source.get_source_term(t, x, y, z, &self.grid);
+            // Source term: sample serially (Source is ?Sync), accumulate into cache.
+            {
+                let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
+                for k in 0..nz {
+                    for j in 0..ny {
+                        for i in 0..nx {
+                            let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
+                            self.workspace.cache_source[[i, j, k]] =
+                                source.get_source_term(t, x, y, z, &self.grid);
+                        }
                     }
                 }
             }
+            Zip::from(&mut *rhs)
+                .and(&self.workspace.cache_source)
+                .par_for_each(|r, &s| *r += s);
 
             if include_nonlinearity {
                 Zip::from(&mut *rhs)

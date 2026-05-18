@@ -1,6 +1,6 @@
 //! Tests for plane wave delay calculation.
 
-use super::config::PlaneWaveConfig;
+use super::config::UltrafastPlaneWaveConfig;
 use super::processor::PlaneWave;
 use approx::assert_relative_eq;
 use ndarray::Array1;
@@ -9,7 +9,7 @@ use std::f64::consts::PI;
 #[test]
 fn test_plane_wave_transmission_delays() {
     let positions = vec![-0.002, -0.001, 0.0, 0.001, 0.002];
-    let config = PlaneWaveConfig {
+    let config = UltrafastPlaneWaveConfig {
         element_positions: positions,
         sound_speed: 1540.0,
         ..Default::default()
@@ -37,7 +37,7 @@ fn test_plane_wave_transmission_delays() {
 #[test]
 fn test_beamforming_delays() {
     let positions = vec![-0.001, 0.0, 0.001];
-    let config = PlaneWaveConfig {
+    let config = UltrafastPlaneWaveConfig {
         element_positions: positions,
         sound_speed: 1540.0,
         ..Default::default()
@@ -56,7 +56,7 @@ fn test_beamforming_delays() {
 #[test]
 fn test_apodization_weights() {
     let positions: Vec<f64> = (0..128).map(|i| (i as f64 - 63.5) * 0.00011).collect();
-    let config = PlaneWaveConfig {
+    let config = UltrafastPlaneWaveConfig {
         element_positions: positions,
         f_number: Some(1.5),
         ..Default::default()
@@ -91,7 +91,7 @@ fn test_functional_ultrasound_config() {
 #[test]
 fn test_delay_surface() {
     let positions = vec![-0.001, 0.0, 0.001];
-    let config = PlaneWaveConfig {
+    let config = UltrafastPlaneWaveConfig {
         element_positions: positions,
         sound_speed: 1540.0,
         ..Default::default()

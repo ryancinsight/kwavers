@@ -5,14 +5,14 @@ use std::f64::consts::PI;
 
 /// Ricker wavelet generator for seismic sources
 #[derive(Debug)]
-pub struct RickerWavelet {
+pub struct SeismicRickerWavelet {
     /// Dominant frequency in Hz
     pub frequency: f64,
     /// Time shift for causality
     pub time_shift: f64,
 }
 
-impl RickerWavelet {
+impl SeismicRickerWavelet {
     /// Create a new Ricker wavelet with specified frequency
     #[must_use]
     pub fn new(frequency: f64) -> Self {

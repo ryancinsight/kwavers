@@ -40,7 +40,7 @@ mod tests;
 /// Reference: Harris, F.J. (1978). "On the use of windows for harmonic analysis
 /// with the discrete Fourier transform." Proc. IEEE 66(1):51–83.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ApodizationWindow {
+pub enum KwaveApodizationWindow {
     /// All weights = 1.0 (no apodization)
     Rectangular,
     /// Hann window — −31 dB sidelobes

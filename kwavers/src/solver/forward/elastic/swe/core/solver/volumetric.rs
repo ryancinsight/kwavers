@@ -1,6 +1,7 @@
 //! Volumetric propagation and wavefront tracking for `ElasticWaveSolver`.
 
 use super::super::super::integration::TimeIntegrator;
+use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticWaveField, VolumetricQualityMetrics,
     VolumetricSource, WaveFrontTracker,
@@ -62,10 +63,16 @@ impl ElasticWaveSolver {
             stride = (steps / (min_snapshots - 1)).max(1);
         }
         let snapshot_cap = steps / stride + 2;
+        let mut scratch = ElasticStepScratch::new(nx, ny, nz);
         let mut history = Vec::with_capacity(snapshot_cap);
         history.push(current_field.clone());
         for step_idx in 0..steps {
-            integrator.step_with_body_forces(&mut current_field, dt, &shifted_forces)?;
+            integrator.step_with_body_forces(
+                &mut current_field,
+                dt,
+                &shifted_forces,
+                &mut scratch,
+            )?;
             current_field.time += dt;
             if (step_idx + 1) % stride == 0 {
                 history.push(current_field.clone());
@@ -129,11 +136,12 @@ impl ElasticWaveSolver {
             stride = (steps / (min_snapshots - 1)).max(1);
         }
         let snapshot_cap = steps / stride + 2;
+        let mut scratch = ElasticStepScratch::new(nx, ny, nz);
         let mut current_field = initial_field;
         let mut history = Vec::with_capacity(snapshot_cap);
         history.push(current_field.clone());
         for step_idx in 0..steps {
-            integrator.step(&mut current_field, dt, None)?;
+            integrator.step(&mut current_field, dt, None, &mut scratch)?;
             current_field.time += dt;
             if (step_idx + 1) % stride == 0 {
                 history.push(current_field.clone());

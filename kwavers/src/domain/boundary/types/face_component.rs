@@ -1,4 +1,4 @@
-//! `BoundaryFace` and `BoundaryComponent` enums.
+//! `BoundaryFace` and `FaceBoundaryComponent` enums.
 
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +28,7 @@ pub enum BoundaryFace {
 /// applies to. Essential for elastic waves (displacement vector) and
 /// electromagnetics (E and H field vectors).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum BoundaryComponent {
+pub enum FaceBoundaryComponent {
     /// All vector components
     All,
     /// X-component only

@@ -42,7 +42,7 @@ use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::SineWave;
 use kwavers::domain::source::{
-    GridSource, InjectionMode, PlaneWaveConfig, PlaneWaveSource, SourceField,
+    GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
 };
 use kwavers::solver::forward::pstd::config::{KSpaceMethod, PSTDConfig};
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
@@ -660,7 +660,7 @@ fn test_pstd_energy_conservation_homogeneous() -> KwaversResult<()> {
         amplitude,
         0.0,
     ));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (1.0, 0.0, 0.0),
         wavelength: dx,
         phase: 0.0,

@@ -16,5 +16,5 @@ pub use memory::{
     allocate_interleaved_memory, bind_memory_to_node, first_touch_memory,
     first_touch_memory_parallel,
 };
-pub use policy::{NumaPolicy, CACHE_LINE_SIZE, MAX_NUMA_NODES, PAGE_SIZE};
+pub use policy::{NumaAllocPolicy, CACHE_LINE_SIZE, MAX_NUMA_NODES, PAGE_SIZE};
 pub use topology::NumaTopology;

@@ -4,7 +4,7 @@ use crate::domain::sensor::sonoluminescence::SonoluminescenceEvent;
 
 /// Event representing cavitation activity
 #[derive(Debug, Clone)]
-pub struct CavitationEvent {
+pub struct RecorderCavitationEvent {
     pub time_step: usize,
     pub time: f64,
     pub position: [usize; 3],
@@ -24,7 +24,7 @@ pub struct ThermalEvent {
 /// Collection of all event types
 #[derive(Debug, Clone, Default)]
 pub struct EventCollection {
-    pub cavitation_events: Vec<CavitationEvent>,
+    pub cavitation_events: Vec<RecorderCavitationEvent>,
     pub thermal_events: Vec<ThermalEvent>,
     pub sonoluminescence_events: Vec<SonoluminescenceEvent>,
 }

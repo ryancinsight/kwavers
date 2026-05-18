@@ -5,7 +5,7 @@
 
 /// Learning rate scheduler configurations
 #[derive(Debug, Clone)]
-pub enum LearningRateScheduler {
+pub enum ElasticPinnLrScheduler {
     /// Constant learning rate
     Constant,
     /// Exponential decay: lr = initial_lr * decay_rate^epoch
@@ -32,7 +32,7 @@ pub struct LRScheduler {
     /// Current learning rate
     pub current_lr: f64,
     /// Scheduler configuration
-    pub scheduler: LearningRateScheduler,
+    pub scheduler: ElasticPinnLrScheduler,
     /// Current epoch
     pub epoch: usize,
     /// Best loss (for ReduceOnPlateau)
@@ -44,7 +44,7 @@ pub struct LRScheduler {
 impl LRScheduler {
     /// Create new scheduler
     #[must_use]
-    pub fn new(initial_lr: f64, scheduler: LearningRateScheduler) -> Self {
+    pub fn new(initial_lr: f64, scheduler: ElasticPinnLrScheduler) -> Self {
         Self {
             initial_lr,
             current_lr: initial_lr,
@@ -58,25 +58,25 @@ impl LRScheduler {
     /// Create constant learning rate scheduler
     #[must_use]
     pub fn constant(lr: f64) -> Self {
-        Self::new(lr, LearningRateScheduler::Constant)
+        Self::new(lr, ElasticPinnLrScheduler::Constant)
     }
 
     /// Create exponential decay scheduler
     #[must_use]
     pub fn exponential(lr: f64, decay_rate: f64) -> Self {
-        Self::new(lr, LearningRateScheduler::Exponential { decay_rate })
+        Self::new(lr, ElasticPinnLrScheduler::Exponential { decay_rate })
     }
 
     /// Create step decay scheduler
     #[must_use]
     pub fn step_decay(lr: f64, factor: f64, step_size: usize) -> Self {
-        Self::new(lr, LearningRateScheduler::Step { factor, step_size })
+        Self::new(lr, ElasticPinnLrScheduler::Step { factor, step_size })
     }
 
     /// Create cosine annealing scheduler
     #[must_use]
     pub fn cosine_annealing(lr: f64, lr_min: f64) -> Self {
-        Self::new(lr, LearningRateScheduler::CosineAnnealing { lr_min })
+        Self::new(lr, ElasticPinnLrScheduler::CosineAnnealing { lr_min })
     }
 
     /// Create reduce-on-plateau scheduler
@@ -84,7 +84,7 @@ impl LRScheduler {
     pub fn reduce_on_plateau(lr: f64, factor: f64, patience: usize, threshold: f64) -> Self {
         Self::new(
             lr,
-            LearningRateScheduler::ReduceOnPlateau {
+            ElasticPinnLrScheduler::ReduceOnPlateau {
                 factor,
                 patience,
                 threshold,
@@ -109,25 +109,25 @@ impl LRScheduler {
         self.epoch += 1;
 
         match &self.scheduler {
-            LearningRateScheduler::Constant => {
+            ElasticPinnLrScheduler::Constant => {
                 // No change
             }
-            LearningRateScheduler::Exponential { decay_rate } => {
+            ElasticPinnLrScheduler::Exponential { decay_rate } => {
                 self.current_lr = self.initial_lr * decay_rate.powf(self.epoch as f64);
             }
-            LearningRateScheduler::Step { factor, step_size } => {
+            ElasticPinnLrScheduler::Step { factor, step_size } => {
                 if self.epoch.is_multiple_of(*step_size) {
                     self.current_lr *= factor;
                 }
             }
-            LearningRateScheduler::CosineAnnealing { lr_min } => {
+            ElasticPinnLrScheduler::CosineAnnealing { lr_min } => {
                 let progress = self.epoch as f64 / 1000.0; // Assume max 1000 epochs
                 self.current_lr = lr_min
                     + (self.initial_lr - lr_min)
                         * 0.5
                         * (1.0 + (std::f64::consts::PI * progress).cos());
             }
-            LearningRateScheduler::ReduceOnPlateau {
+            ElasticPinnLrScheduler::ReduceOnPlateau {
                 factor,
                 patience,
                 threshold,

@@ -5,7 +5,7 @@
 //!
 //! | Submodule  | Contents                                                   |
 //! |------------|------------------------------------------------------------|
-//! | `config`   | `PlaneWaveConfig` — imaging parameters and defaults       |
+//! | `config`   | `PlaneWaveCompoundingConfig` — imaging parameters and defaults       |
 //! | `compound` | `PlaneWaveCompound` — field generation, beamforming, DAS  |
 //!
 //! ## References
@@ -19,4 +19,4 @@ mod config;
 mod tests;
 
 pub use compound::PlaneWaveCompound;
-pub use config::PlaneWaveConfig;
+pub use config::PlaneWaveCompoundingConfig;

@@ -1,6 +1,6 @@
 //! SIMD-accelerated trilinear interpolation kernels.
 
-use super::config::{SimdConfig, SimdLevel};
+use super::config::{MathSimdLevel, SimdConfig};
 
 /// SIMD-accelerated interpolation operations
 #[derive(Debug)]
@@ -29,7 +29,7 @@ impl InterpolationSimdOps {
     ) {
         match self.config.level {
             #[cfg(target_arch = "x86_64")]
-            SimdLevel::Avx2 => {
+            MathSimdLevel::Avx2 => {
                 // SAFETY: AVX2 intrinsics are safe here because:
                 // 1. CPU feature detection ensures AVX2 availability
                 // 2. Grid bounds checking prevents out-of-bounds access

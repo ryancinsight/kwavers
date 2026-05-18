@@ -12,7 +12,9 @@ use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::{BurnPINN2DConfig, 
 use crate::solver::inverse::pinn::ml::meta_learning::config::MetaLearningConfig;
 use crate::solver::inverse::pinn::ml::meta_learning::metrics::MetaLearningStats;
 use crate::solver::inverse::pinn::ml::meta_learning::optimizer::MetaOptimizer;
-use crate::solver::inverse::pinn::ml::meta_learning::sampling::{SamplingStrategy, TaskSampler};
+use crate::solver::inverse::pinn::ml::meta_learning::sampling::{
+    MetaLearningSamplingStrategy, TaskSampler,
+};
 use burn::tensor::backend::AutodiffBackend;
 
 #[derive(Debug)]
@@ -44,7 +46,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         let total_params = base_model.parameters().len();
         let meta_optimizer = MetaOptimizer::new(config.outer_lr, total_params);
 
-        let task_sampler = TaskSampler::new(SamplingStrategy::Balanced, config.clone());
+        let task_sampler = TaskSampler::new(MetaLearningSamplingStrategy::Balanced, config.clone());
 
         Ok(Self {
             base_model,

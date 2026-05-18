@@ -21,7 +21,7 @@ mod types;
 
 pub use adaptive::AdaptiveResolution;
 pub use device::GPUDevice;
-pub use memory::{GPUMemoryPool, MemoryStats};
-pub use metrics::{PerformanceMetrics, PerformanceStatistics};
+pub use memory::{GPUMemoryPool, SweGpuMemoryStats};
+pub use metrics::{PerformanceStatistics, SweGpuStepMetrics};
 pub use solver::GPUElasticWaveSolver3D;
 pub use types::{AdaptiveSolution, AdaptiveSolutionStep, GPUInversionResult, GPUPropagationResult};

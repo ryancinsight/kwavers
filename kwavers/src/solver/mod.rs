@@ -31,11 +31,11 @@ pub use crate::domain::field::indices::{
 // Re-export commonly used types from hierarchical modules
 pub use config::{SolverConfiguration, SolverType};
 pub use forward::{FdtdSolver, HybridSolver, IMEXIntegrator, PSTDSolver, PluginBasedSolver};
-pub use interface::{Solver, SolverConfig};
+pub use interface::Solver;
 pub use inverse::{
     ReconstructionConfig, Reconstructor, TimeReversalConfig, TimeReversalReconstructor,
 };
-pub use multiphysics::{CouplingStrategy, FieldCoupler, MultiPhysicsSolver};
+pub use multiphysics::{CoupledMultiPhysicsSolver, FieldCoupler, FieldCouplingStrategy};
 
 // Constants module remains at root level for easy access
 pub mod constants;

@@ -202,12 +202,17 @@ fn invert(
     let mut model = vec![0.0; ncols];
     let stages = continuation_rows(config, nrows);
 
-    let mut history = Vec::with_capacity(config.iterations + 1);
-    let mut current_objective =
-        objective(matrix, data, &model, nrows, ncols, config.regularization);
-    history.push(current_objective);
+    // Pre-allocate: initial + per-step stage-row values + one full-row value per stage boundary.
+    let mut history = Vec::with_capacity(config.iterations + stages.len() + 1);
+    history.push(objective(
+        matrix,
+        data,
+        &model,
+        nrows,
+        ncols,
+        config.regularization,
+    ));
 
-    let mut completed = 0;
     for (stage_idx, rows) in stages.iter().enumerate() {
         let stage_iterations = stage_iteration_count(config.iterations, stages.len(), stage_idx);
         if stage_iterations == 0 {
@@ -243,15 +248,23 @@ fn invert(
 
             model = accepted;
             stage_objective = accepted_stage_objective;
-            current_objective =
-                objective(matrix, data, &model, nrows, ncols, config.regularization);
-            history.push(current_objective);
-            completed += 1;
+            // Push the accepted stage objective directly; re-evaluating over all
+            // rows costs O(nrows × ncols) and is unnecessary for within-stage
+            // convergence tracking.  A full-row boundary value is appended once
+            // per stage below, preserving a comparable `initial`/`final` pair.
+            history.push(accepted_stage_objective);
         }
-    }
-
-    if completed == 0 {
-        history.push(current_objective);
+        // One full-row evaluation per stage boundary: provides a cross-stage
+        // comparable value so `history.first()` and `history.last()` are on the
+        // same scale for the objective_reduction_fraction metric.
+        history.push(objective(
+            matrix,
+            data,
+            &model,
+            nrows,
+            ncols,
+            config.regularization,
+        ));
     }
 
     InversionState {

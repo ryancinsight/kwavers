@@ -15,17 +15,24 @@
 //! Soft tissue: `c ≈ 1510 + 55·HU_norm` (empirical, HU in [−20, 120]).
 //! Attenuation: 0.5 dB/cm/MHz → `α_soft = 0.5 × 100 × ln10/20 Np/m/MHz`.
 
-use crate::core::error::KwaversResult;
+use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 
 use super::super::scene::target_index_from_mask_fraction_2d;
 use super::{validate_masks, AnatomyKind, PreparedTheranosticSlice};
 
+#[derive(Clone, Copy, Debug)]
+pub enum BrainTargetSelection {
+    OrganCentroid,
+    SliceFraction([f64; 2]),
+    ResampledIndex([f64; 2]),
+}
+
 pub fn prepare_brain_slice(
     ct_hu: Array2<f64>,
     spacing_m: f64,
     source_slice_index: usize,
-    target_fraction_xy: Option<[f64; 2]>,
+    target_selection: BrainTargetSelection,
 ) -> KwaversResult<PreparedTheranosticSlice> {
     let (nx, ny) = ct_hu.dim();
     let mut label = Array2::<i16>::zeros((nx, ny));
@@ -55,7 +62,7 @@ pub fn prepare_brain_slice(
             organ[[ix, iy]] = central && (-40.0..=140.0).contains(&hu);
         }
     }
-    let target = synthetic_deep_target(&organ, spacing_m, target_fraction_xy)?;
+    let target = synthetic_deep_target(&organ, spacing_m, target_selection)?;
     validate_masks(&body, &target)?;
     Ok(PreparedTheranosticSlice {
         anatomy: AnatomyKind::Brain,
@@ -68,6 +75,9 @@ pub fn prepare_brain_slice(
         target_mask: target,
         spacing_m,
         source_slice_index,
+        source_dimensions: [nx, ny],
+        source_spacing_m: [spacing_m, spacing_m],
+        crop_bounds_index: [0, nx - 1, 0, ny - 1],
     })
 }
 
@@ -120,14 +130,19 @@ fn head_centroid_bool(mask: &Array2<bool>) -> (f64, f64) {
 fn synthetic_deep_target(
     organ: &Array2<bool>,
     spacing_m: f64,
-    target_fraction_xy: Option<[f64; 2]>,
+    target_selection: BrainTargetSelection,
 ) -> KwaversResult<Array2<bool>> {
     let (nx, ny) = organ.dim();
-    let center = if let Some(fraction) = target_fraction_xy {
-        let (ix, iy) = target_index_from_mask_fraction_2d(organ, fraction)?;
-        (ix as f64, iy as f64)
-    } else {
-        head_centroid_bool(organ)
+    let center = match target_selection {
+        BrainTargetSelection::OrganCentroid => head_centroid_bool(organ),
+        BrainTargetSelection::SliceFraction(fraction) => {
+            let (ix, iy) = target_index_from_mask_fraction_2d(organ, fraction)?;
+            (ix as f64, iy as f64)
+        }
+        BrainTargetSelection::ResampledIndex(index) => {
+            validate_target_center(index, nx, ny)?;
+            (index[0], index[1])
+        }
     };
     let rx = 6.0e-3 / spacing_m;
     let ry = 8.0e-3 / spacing_m;
@@ -135,6 +150,21 @@ fn synthetic_deep_target(
         organ[[ix, iy]]
             && ((ix as f64 - center.0) / rx).powi(2) + ((iy as f64 - center.1) / ry).powi(2) <= 1.0
     }))
+}
+
+fn validate_target_center(center: [f64; 2], nx: usize, ny: usize) -> KwaversResult<()> {
+    if center
+        .iter()
+        .any(|coordinate| !coordinate.is_finite() || *coordinate < 0.0)
+        || center[0] > (nx - 1) as f64
+        || center[1] > (ny - 1) as f64
+    {
+        return Err(KwaversError::InvalidInput(format!(
+            "brain target center {:?} lies outside resampled slice dimensions {nx}x{ny}",
+            center
+        )));
+    }
+    Ok(())
 }
 
 /// Linear HU-to-sound-speed for brain soft tissue.

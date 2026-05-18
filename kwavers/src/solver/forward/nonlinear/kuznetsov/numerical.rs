@@ -1,4 +1,36 @@
 //! Numerical methods for Kuznetsov equation solver
+//!
+//! ## Theorem (Fourier spectral Laplacian and gradient)
+//!
+//! **Statement**: For an N-periodic real grid function `u[i,j,k]` on a uniform
+//! grid of spacing `(Δx, Δy, Δz)`, the spectral Laplacian and gradient are:
+//!
+//! ```text
+//! ∇²u = F⁻¹[ −(kₓ² + kᵧ² + k_z²) · Û[m,n,p] ]
+//! ∂u/∂x = F⁻¹[ i·kₓ · Û[m,n,p] ]
+//! ```
+//!
+//! where the wavenumber components follow the standard DFT convention:
+//! ```text
+//! kₓ[m] = 2πm/(Nₓ·Δx)   for m = 0, …, Nₓ/2
+//! kₓ[m] = 2π(m−Nₓ)/(Nₓ·Δx) for m = Nₓ/2+1, …, Nₓ−1
+//! ```
+//! (same for y and z dimensions).
+//!
+//! **Proof**: Differentiation of `exp(ikₓ·x)` once gives `iₓ·exp(iₓ·x)`;
+//! twice gives `−kₓ²·exp(ikₓ·x)`. The DFT decomposes `u` into complex
+//! exponentials, differentiation multiplies each Fourier coefficient by the
+//! appropriate power of `i·kₓ`, and the IDFT reassembles the result. This is
+//! exact (to floating-point rounding) for band-limited signals satisfying the
+//! sampling theorem.
+//!
+//! (Trefethen 2000, §3; Canuto et al. 2006, §2.)
+//!
+//! ## Reference
+//!
+//! - Trefethen LN (2000). Spectral Methods in MATLAB. SIAM.
+//! - Canuto C et al. (2006). Spectral Methods: Fundamentals in Single Domains.
+//!   Springer.
 
 use crate::domain::grid::Grid;
 use crate::math::fft::{get_fft_for_grid, Fft3dInOutExt};

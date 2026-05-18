@@ -38,7 +38,7 @@ pub struct BoundaryData<B: AutodiffBackend> {
     /// Time coordinates [N, 1]
     pub t: Tensor<B, 2>,
     /// Boundary type for each point
-    pub boundary_type: Vec<BoundaryType>,
+    pub boundary_type: Vec<ElasticBoundaryCondition>,
     /// Target values (displacement or traction) [N, 2]
     pub values: Tensor<B, 2>,
 }
@@ -73,7 +73,7 @@ pub struct ObservationData<B: AutodiffBackend> {
 
 /// Boundary condition type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BoundaryType {
+pub enum ElasticBoundaryCondition {
     /// Dirichlet: prescribed displacement
     Dirichlet,
     /// Neumann: prescribed traction (stress)
@@ -85,7 +85,7 @@ pub enum BoundaryType {
 /// Individual loss components
 #[cfg(feature = "pinn")]
 #[derive(Debug, Clone)]
-pub struct LossComponents {
+pub struct ElasticPinnLossComponents {
     /// PDE residual loss
     pub pde: f64,
     /// Boundary condition loss
@@ -104,13 +104,19 @@ mod tests {
 
     #[test]
     fn test_boundary_type() {
-        assert_eq!(BoundaryType::Dirichlet, BoundaryType::Dirichlet);
-        assert_ne!(BoundaryType::Dirichlet, BoundaryType::Neumann);
+        assert_eq!(
+            ElasticBoundaryCondition::Dirichlet,
+            ElasticBoundaryCondition::Dirichlet
+        );
+        assert_ne!(
+            ElasticBoundaryCondition::Dirichlet,
+            ElasticBoundaryCondition::Neumann
+        );
     }
 
     #[test]
     fn test_loss_components() {
-        let components = LossComponents {
+        let components = ElasticPinnLossComponents {
             pde: 1.0,
             boundary: 0.5,
             initial: 0.3,

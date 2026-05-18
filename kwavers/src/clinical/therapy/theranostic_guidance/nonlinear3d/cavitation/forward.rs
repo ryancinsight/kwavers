@@ -1,10 +1,11 @@
 //! Rayleigh-Plesset cavitation forward map.
 //!
-//! Each active voxel receives the local Westervelt peak pressure as the
-//! acoustic forcing amplitude in the Rayleigh-Plesset ODE. The source density
-//! is the maximum period-doubled radius response normalised by the peak pressure.
-//! Voxels below the configured inertial-cavitation mechanical-index threshold
-//! emit no passive cavitation source.
+//! Each voxel inside the planned treatment inversion window receives the local
+//! Westervelt peak pressure as the acoustic forcing amplitude in the
+//! Rayleigh-Plesset ODE. The source density is the maximum period-doubled radius
+//! response normalised by the peak pressure inside that source support. Voxels
+//! outside that treatment window, including skin/source boundary cells, emit no
+//! passive cavitation source even if their source-injection pressure is high.
 
 use ndarray::Array3;
 use rayon::prelude::*;
@@ -13,6 +14,8 @@ use crate::physics::acoustics::bubble_dynamics::{
     BubbleParameters, BubbleState, RayleighPlessetSolver,
 };
 
+#[cfg(test)]
+use super::super::types::GridIndex;
 use super::super::types::{Nonlinear3dConfig, Nonlinear3dVolume};
 
 pub(super) fn cavitation_source(
@@ -21,28 +24,34 @@ pub(super) fn cavitation_source(
     config: &Nonlinear3dConfig,
 ) -> Array3<f64> {
     let dim = peak_pressure.dim();
-    if let (Some(pressures), Some(body_mask)) = (
+    if let (Some(pressures), Some(source_mask)) = (
         peak_pressure.as_slice_memory_order(),
-        volume.body_mask.as_slice_memory_order(),
+        volume.inversion_mask.as_slice_memory_order(),
     ) {
         let max_pressure = pressures
             .par_iter()
-            .copied()
+            .zip(source_mask.par_iter())
+            .filter_map(|(&pressure, &active)| active.then_some(pressure))
             .reduce(|| 0.0, f64::max)
             .max(1.0);
         let values = pressures
             .par_iter()
-            .zip(body_mask.par_iter())
+            .zip(source_mask.par_iter())
             .map(|(&pressure, &active)| cavitation_value(active, pressure, max_pressure, config))
             .collect::<Vec<_>>();
         return Array3::from_shape_vec(dim, values)
             .expect("contiguous cavitation source length must match grid shape");
     }
 
-    let max_pressure = peak_pressure.iter().copied().fold(0.0, f64::max).max(1.0);
+    let max_pressure = peak_pressure
+        .iter()
+        .zip(volume.inversion_mask.iter())
+        .filter_map(|(&pressure, &active)| active.then_some(pressure))
+        .fold(0.0, f64::max)
+        .max(1.0);
     Array3::from_shape_fn(dim, |idx| {
         cavitation_value(
-            volume.body_mask[idx],
+            volume.inversion_mask[idx],
             peak_pressure[idx],
             max_pressure,
             config,
@@ -51,12 +60,12 @@ pub(super) fn cavitation_source(
 }
 
 fn cavitation_value(
-    active_body_voxel: bool,
+    active_source_voxel: bool,
     pressure_pa: f64,
     max_pressure_pa: f64,
     config: &Nonlinear3dConfig,
 ) -> f64 {
-    if !active_body_voxel {
+    if !active_source_voxel {
         return 0.0;
     }
     if mechanical_index(pressure_pa, config.frequency_hz) < config.inertial_mi_threshold {
@@ -267,6 +276,68 @@ mod tests {
 
         assert!(mechanical_index(pressure, config.frequency_hz) >= 1.9);
         assert!(value > 0.0);
+    }
+
+    #[test]
+    fn cavitation_source_rejects_suprathreshold_pressure_outside_treatment_window() {
+        let mut config = Nonlinear3dConfig::new(AnatomyKind::Kidney);
+        config.frequency_hz = 500_000.0;
+        config.inertial_mi_threshold = 1.9;
+        config.bubble_time_steps_per_period = 24;
+        config.cycles = 2.0;
+        let n = 5;
+        let center = (2, 2, 2);
+        let boundary = (1, 1, 1);
+        let volume = treatment_window_fixture(n, center);
+        let mut pressure = Array3::<f64>::zeros((n, n, n));
+        pressure[boundary] = 8.0e6;
+        pressure[center] = 2.0e6;
+
+        let source = cavitation_source(&volume, &pressure, &config);
+        let expected = cavitation_value(true, pressure[center], pressure[center], &config);
+
+        assert_eq!(source[boundary], 0.0);
+        assert!(
+            (source[center] - expected).abs() <= 1.0e-12 * expected.max(1.0),
+            "target-window source {} must be normalized by active pressure {}, not outside pressure {}",
+            source[center],
+            pressure[center],
+            pressure[boundary]
+        );
+    }
+
+    fn treatment_window_fixture(n: usize, target: (usize, usize, usize)) -> Nonlinear3dVolume {
+        let shape = (n, n, n);
+        let body_mask = Array3::<bool>::from_elem(shape, true);
+        let mut target_mask = Array3::<bool>::from_elem(shape, false);
+        target_mask[target] = true;
+        let inversion_mask = target_mask.clone();
+        Nonlinear3dVolume {
+            anatomy: AnatomyKind::Kidney,
+            ct_hu: Array3::<f64>::zeros(shape),
+            label: Array3::<i16>::zeros(shape),
+            body_mask,
+            target_mask,
+            inversion_mask,
+            density_kg_m3: Array3::<f64>::from_elem(shape, 1000.0),
+            background_beta: Array3::<f64>::from_elem(shape, 4.0),
+            true_beta: Array3::<f64>::from_elem(shape, 4.0),
+            background_sound_speed_m_s: Array3::<f64>::from_elem(shape, 1500.0),
+            true_sound_speed_m_s: Array3::<f64>::from_elem(shape, 1500.0),
+            attenuation_np_per_m_mhz: Array3::<f64>::zeros(shape),
+            attenuation_power_law_y: Array3::<f64>::from_elem(shape, 1.05),
+            spacing_m: 1.0e-3,
+            source_dimensions: [n, n, n],
+            source_spacing_m: [1.0e-3; 3],
+            crop_bounds_index: [0, n, 0, n, 0, n],
+            aperture_direction: None,
+            aperture_skin: None,
+            focus: GridIndex {
+                x: target.0,
+                y: target.1,
+                z: target.2,
+            },
+        }
     }
 
     fn reference_response_with_full_history(pressure_pa: f64, config: &Nonlinear3dConfig) -> f64 {

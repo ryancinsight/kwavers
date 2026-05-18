@@ -5,7 +5,7 @@ fn test_conservation_diagnostic_severity() {
     let tolerances = ConservationTolerances::default();
 
     let diag = ConservationDiagnostic::new(
-        ConservationLaw::Energy,
+        NonlinearConservationLaw::Energy,
         1000.0,
         1000.0 + 1e-9,
         100,
@@ -17,7 +17,7 @@ fn test_conservation_diagnostic_severity() {
     assert!(!diag.requires_action());
 
     let diag_critical = ConservationDiagnostic::new(
-        ConservationLaw::Energy,
+        NonlinearConservationLaw::Energy,
         1000.0,
         2000.0,
         100,
@@ -59,7 +59,7 @@ fn test_conservation_tracker() {
     let diagnostics = tracker.update(&solver, 1, 0.001);
 
     assert_eq!(diagnostics.len(), 3);
-    assert_eq!(diagnostics[0].law, ConservationLaw::Energy);
+    assert_eq!(diagnostics[0].law, NonlinearConservationLaw::Energy);
     assert!(diagnostics[0].is_acceptable());
 
     let solver_warning = MockSolver { energy: 1001.0 };

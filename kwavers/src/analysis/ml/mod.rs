@@ -23,9 +23,9 @@
 //!
 //! ## Key Components
 //!
-//! - `TrainingConfig` - Configuration management with validation
+//! - `PhysicsNNTrainingConfig` - Configuration management with validation
 //! - `TrainingDataset` - Dataset loading and batching
-//! - `TrainingMetrics` - Per-epoch monitoring
+//! - `EpochTrainingMetrics` - Per-epoch monitoring
 //! - `PhysicsLoss` - Physics constraint enforcement
 //! - `Optimizer` - Gradient-based optimization algorithms
 //! - `TrainingHistory` - Training logs and convergence analysis
@@ -40,12 +40,14 @@ pub mod uncertainty;
 
 pub use beamforming_trainer::BeamformingTrainer;
 pub use physics_informed_loss::{
-    GradientMethod, LossComponents, PhysicsInformedLoss, PhysicsLossConfig, WeightSchedule,
+    GradientMethod, PhysicsInformedLoss, PhysicsInformedLossComponents, PhysicsLossConfig,
+    WeightSchedule,
 };
 pub use training::{
-    Optimizer, PhysicsLoss, TrainingConfig, TrainingDataset, TrainingHistory, TrainingMetrics,
+    EpochTrainingMetrics, Optimizer, PhysicsLoss, PhysicsNNTrainingConfig, TrainingDataset,
+    TrainingHistory,
 };
 pub use uncertainty::{
-    BeamformingUncertainty, ReliabilityMetrics, UncertaintyConfig, UncertaintyMethod,
+    BeamformingUncertainty, MlUncertaintyConfig, MlUncertaintyMethod, ReliabilityMetrics,
     UncertaintyQuantifier, UncertaintyReport, UncertaintyResult, UncertaintySummary,
 };

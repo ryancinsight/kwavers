@@ -23,7 +23,7 @@ pub mod shifter;
 mod tests;
 
 // Re-export main types
-pub use array::{PerformanceMetrics, PhaseArray};
+pub use array::{PhaseArray, PhaseArrayMetrics};
 pub use beam::BeamSteering;
 pub use core::{
     calculate_wavelength, normalize_phase, quantize_phase, wrap_phase, ShiftingStrategy,

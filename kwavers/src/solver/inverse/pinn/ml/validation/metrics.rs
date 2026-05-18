@@ -1,6 +1,6 @@
 //! Quantitative validation metrics: MAE, RMSE, relative L2, Pearson correlation.
 
-use super::ValidationMetrics;
+use super::PinnValidationMetrics;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 
@@ -11,7 +11,7 @@ use ndarray::Array2;
 pub fn compute_validation_metrics(
     reference: &Array2<f64>,
     prediction: &Array2<f64>,
-) -> KwaversResult<ValidationMetrics> {
+) -> KwaversResult<PinnValidationMetrics> {
     if reference.dim() != prediction.dim() {
         return Err(KwaversError::InvalidInput(
             "Reference and prediction must have same dimensions".to_owned(),
@@ -45,7 +45,7 @@ pub fn compute_validation_metrics(
         0.0
     };
 
-    Ok(ValidationMetrics {
+    Ok(PinnValidationMetrics {
         mean_absolute_error,
         rmse,
         relative_l2_error,

@@ -2,7 +2,7 @@ use ndarray::{s, Array3, ArrayViewMut3};
 
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::traits::{
-    BoundaryCondition, BoundaryDirections, FieldType, PeriodicBoundary,
+    BoundaryCondition, BoundaryDirections, BoundaryFieldType, PeriodicBoundary,
 };
 use crate::domain::grid::topology::GridTopology;
 
@@ -148,15 +148,15 @@ impl BoundaryCondition for PeriodicBoundaryCondition {
         Ok(())
     }
 
-    fn supports_field_type(&self, field_type: FieldType) -> bool {
+    fn supports_field_type(&self, field_type: BoundaryFieldType) -> bool {
         matches!(
             field_type,
-            FieldType::Pressure
-                | FieldType::Velocity
-                | FieldType::Displacement
-                | FieldType::Temperature
-                | FieldType::Electric
-                | FieldType::Magnetic
+            BoundaryFieldType::Pressure
+                | BoundaryFieldType::Velocity
+                | BoundaryFieldType::Displacement
+                | BoundaryFieldType::Temperature
+                | BoundaryFieldType::Electric
+                | BoundaryFieldType::Magnetic
         )
     }
 

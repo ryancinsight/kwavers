@@ -6,8 +6,8 @@
 
 // Re-export all detection components
 pub use super::detection::{
-    BroadbandDetector, CavitationDetector, CavitationMetrics, CavitationState, DetectionMethod,
-    DetectorParameters, SpectralDetector, SubharmonicDetector,
+    BroadbandDetector, CavitationDetectionState, CavitationDetector, CavitationMetrics,
+    DetectionMethod, DetectorParameters, SpectralDetector, SubharmonicDetector,
 };
 
 #[cfg(test)]
@@ -20,7 +20,7 @@ mod tests {
         let mut detector = SpectralDetector::new(1e6, 10e6);
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
-        assert_eq!(metrics.state, CavitationState::None);
+        assert_eq!(metrics.state, CavitationDetectionState::None);
     }
 
     #[test]
@@ -28,7 +28,7 @@ mod tests {
         let mut detector = BroadbandDetector::new(10e6);
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
-        assert_eq!(metrics.state, CavitationState::None);
+        assert_eq!(metrics.state, CavitationDetectionState::None);
     }
 
     #[test]
@@ -36,6 +36,6 @@ mod tests {
         let mut detector = SubharmonicDetector::new(1e6, 10e6);
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
-        assert_eq!(metrics.state, CavitationState::None);
+        assert_eq!(metrics.state, CavitationDetectionState::None);
     }
 }

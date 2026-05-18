@@ -1,4 +1,4 @@
-use kwavers::math::fft::{Complex64, Fft3dInOutExt, ProcessorFft3d, Shape3D};
+use kwavers::math::fft::{Complex64, Fft3d, Fft3dInOutExt, Shape3D};
 use ndarray::Array3;
 
 #[test]
@@ -7,7 +7,7 @@ fn test_fft_peak_scaling() {
     let ny = 64;
     let nz = 64;
     let shape = Shape3D::new(nx, ny, nz).expect("valid shape");
-    let processor = ProcessorFft3d::new(shape);
+    let processor = Fft3d::new(shape);
     let mut real_in = Array3::<f64>::zeros((nx, ny, nz));
     real_in[[nx / 2, ny / 2, nz / 2]] = 1.0;
 

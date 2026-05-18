@@ -4,4 +4,4 @@ pub mod core;
 #[cfg(test)]
 mod tests;
 
-pub use core::MultiPhysicsSolver;
+pub use core::SimulationMultiPhysicsSolver;

@@ -2,7 +2,7 @@
 
 use super::constants::{MIN_SPECTRAL_POWER, SUBHARMONIC_THRESHOLD};
 use super::traits::{CavitationDetector, DetectorParameters};
-use super::types::{CavitationMetrics, CavitationState, DetectionMethod};
+use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod};
 use crate::math::fft::fft_1d_array;
 use ndarray::{Array1, ArrayView1};
 
@@ -95,11 +95,11 @@ impl CavitationDetector for SubharmonicDetector {
 
         // Determine cavitation state based on subharmonic levels
         let state = if scaled_level > SUBHARMONIC_THRESHOLD * 3.0 {
-            CavitationState::Inertial
+            CavitationDetectionState::Inertial
         } else if scaled_level > SUBHARMONIC_THRESHOLD {
-            CavitationState::Stable
+            CavitationDetectionState::Stable
         } else {
-            CavitationState::None
+            CavitationDetectionState::None
         };
 
         CavitationMetrics {

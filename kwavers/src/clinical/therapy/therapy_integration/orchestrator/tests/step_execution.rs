@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_therapy_step_execution() {
     let config = TherapySessionConfig {
-        primary_modality: TherapyModality::Microbubble,
+        primary_modality: TherapyIntegrationModality::Microbubble,
         secondary_modalities: vec![],
         duration: 10.0,
         acoustic_params: AcousticTherapyParams {
@@ -14,7 +14,7 @@ fn test_therapy_step_execution() {
             focal_depth: 0.03,
             treatment_volume: 0.5,
         },
-        safety_limits: SafetyLimits {
+        safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 6.0,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
@@ -26,7 +26,7 @@ fn test_therapy_step_execution() {
             target_volume: TargetVolume {
                 center: (0.03, 0.0, 0.0),
                 dimensions: (0.01, 0.01, 0.01),
-                tissue_type: TissueType::Liver,
+                tissue_type: TherapyTissueType::Liver,
             },
             risk_organs: vec![],
         },
@@ -49,8 +49,8 @@ fn test_therapy_step_execution() {
     const FOCAL: f64 = 0.03;
     const F_HZ: f64 = 2e6;
     const ALPHA: f64 = 0.5;
-    const RHO: f64 = 1000.0;
-    const C0: f64 = 1540.0;
+    const RHO: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+    const C0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
     const CP: f64 = 3600.0;
     let heating_scale = ALPHA * DT / (RHO * RHO * C0 * CP);
     let _ = DX;
@@ -64,7 +64,7 @@ fn test_therapy_step_execution() {
         let safety_status = orchestrator.check_safety_limits();
         assert_eq!(
             safety_status,
-            SafetyStatus::Safe,
+            TherapyIntegrationSafetyStatus::Safe,
             "step {step}: expected Safe"
         );
 

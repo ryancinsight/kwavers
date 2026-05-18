@@ -18,7 +18,7 @@ use ndarray::Array3;
 use std::sync::Arc;
 
 use super::field_registry::FieldRegistry;
-use super::performance::PerformanceMonitor;
+use super::performance::PluginPerformanceMonitor;
 
 /// Plugin-based solver for acoustic simulations
 pub struct PluginBasedSolver {
@@ -38,7 +38,7 @@ pub struct PluginBasedSolver {
     /// Plugin manager for physics modules
     plugin_manager: PluginManager,
     /// Performance monitor
-    performance: PerformanceMonitor,
+    performance: PluginPerformanceMonitor,
     /// Optional recorder
     recorder: Option<Box<dyn RecorderTrait>>,
     /// Current time step
@@ -83,7 +83,7 @@ impl PluginBasedSolver {
             source_masks,
             field_registry,
             plugin_manager: PluginManager::new(),
-            performance: PerformanceMonitor::new(),
+            performance: PluginPerformanceMonitor::new(),
             recorder: None,
             current_step: 0,
         }

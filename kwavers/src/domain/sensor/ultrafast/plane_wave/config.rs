@@ -1,8 +1,8 @@
-//! `PlaneWaveConfig` — plane wave imaging configuration.
+//! `UltrafastPlaneWaveConfig` — plane wave imaging configuration.
 
 /// Plane wave imaging configuration.
 #[derive(Debug, Clone)]
-pub struct PlaneWaveConfig {
+pub struct UltrafastPlaneWaveConfig {
     /// Tilt angles for coherent compounding (radians).
     pub tilt_angles: Vec<f64>,
     /// Speed of sound (m/s).
@@ -15,7 +15,7 @@ pub struct PlaneWaveConfig {
     pub sampling_frequency: f64,
 }
 
-impl Default for PlaneWaveConfig {
+impl Default for UltrafastPlaneWaveConfig {
     /// Default: 11 tilted plane waves from −10° to +10° (2° steps),
     /// as in Nouhoum et al. (2021) functional ultrasound protocol.
     fn default() -> Self {

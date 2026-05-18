@@ -4,7 +4,7 @@ use std::ptr::NonNull;
 
 #[cfg(test)]
 use super::CACHE_LINE_SIZE;
-use super::{NumaPolicy, NUMA_ALIGNMENT};
+use super::{ArenaLayoutNumaPolicy, NUMA_ALIGNMENT};
 use crate::core::error::{KwaversError, KwaversResult, SystemError};
 
 // NUMA-AWARE MEMORY ALLOCATION
@@ -17,13 +17,13 @@ use crate::core::error::{KwaversError, KwaversResult, SystemError};
 #[derive(Debug)]
 pub struct NumaAwareAllocator {
     /// Target NUMA node(s) for allocation
-    policy: NumaPolicy,
+    policy: ArenaLayoutNumaPolicy,
 }
 
 impl NumaAwareAllocator {
     /// Create allocator with specified NUMA policy
     #[must_use]
-    pub fn with_policy(policy: NumaPolicy) -> Self {
+    pub fn with_policy(policy: ArenaLayoutNumaPolicy) -> Self {
         Self { policy }
     }
 
@@ -74,7 +74,7 @@ impl NumaAwareAllocator {
         num_elements: usize,
     ) {
         // Only perform if policy is FirstTouch
-        if !matches!(self.policy, NumaPolicy::FirstTouch) {
+        if !matches!(self.policy, ArenaLayoutNumaPolicy::FirstTouch) {
             return;
         }
 
@@ -94,7 +94,7 @@ impl NumaAwareAllocator {
     /// Get current NUMA policy
     #[inline]
     #[must_use]
-    pub fn policy(&self) -> NumaPolicy {
+    pub fn policy(&self) -> ArenaLayoutNumaPolicy {
         self.policy
     }
 }
@@ -102,7 +102,7 @@ impl NumaAwareAllocator {
 impl Default for NumaAwareAllocator {
     fn default() -> Self {
         Self {
-            policy: NumaPolicy::FirstTouch,
+            policy: ArenaLayoutNumaPolicy::FirstTouch,
         }
     }
 }
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_numa_allocator() {
-        let alloc = NumaAwareAllocator::with_policy(NumaPolicy::FirstTouch);
+        let alloc = NumaAwareAllocator::with_policy(ArenaLayoutNumaPolicy::FirstTouch);
 
         let ptr = alloc
             .allocate(1024, CACHE_LINE_SIZE)

@@ -25,7 +25,7 @@ use ndarray::Array1;
 
 /// Standard validation metrics.
 #[derive(Debug, Clone)]
-pub struct ValidationMetrics {
+pub struct PinnValidationMetrics {
     pub mean_absolute_error: f64,
     pub rmse: f64,
     pub relative_l2_error: f64,
@@ -34,9 +34,9 @@ pub struct ValidationMetrics {
 
 /// Comprehensive validation results comparing PINN vs FDTD.
 #[derive(Debug, Clone)]
-pub struct ValidationReport {
+pub struct PinnValidationReport {
     /// Standard validation metrics
-    pub metrics: ValidationMetrics,
+    pub metrics: PinnValidationMetrics,
     /// Pearson correlation coefficient
     pub correlation: f64,
     /// Mean relative error (%)
@@ -51,7 +51,7 @@ pub struct ValidationReport {
     pub speedup_factor: f64,
 }
 
-impl ValidationReport {
+impl PinnValidationReport {
     /// Check if validation passes target thresholds.
     ///
     /// * `max_relative_error` — Maximum acceptable relative L2 error (e.g., 0.05 for 5%).
@@ -104,7 +104,7 @@ pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
     pinn: &BurnPINN1DWave<B>,
     device: &B::Device,
     fdtd_config: FDTDConfig,
-) -> KwaversResult<ValidationReport> {
+) -> KwaversResult<PinnValidationReport> {
     use std::time::Instant;
 
     let fdtd_start = Instant::now();
@@ -151,7 +151,7 @@ pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
         f64::INFINITY
     };
 
-    Ok(ValidationReport {
+    Ok(PinnValidationReport {
         metrics,
         correlation,
         mean_relative_error_percent: mean_relative_error * 100.0,

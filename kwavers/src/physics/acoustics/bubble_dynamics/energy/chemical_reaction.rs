@@ -3,7 +3,7 @@
 use uom::si::f64::Power;
 use uom::si::power::watt;
 
-use crate::core::constants::R_GAS;
+use crate::core::constants::fundamental::GAS_CONSTANT as R_GAS;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 

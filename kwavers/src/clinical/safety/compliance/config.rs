@@ -1,6 +1,6 @@
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::super::mechanical_index::TissueType;
+use super::super::mechanical_index::MechanicalIndexTissueType;
 use super::ComplianceConfig;
 
 impl Default for ComplianceConfig {
@@ -11,7 +11,7 @@ impl Default for ComplianceConfig {
             max_temp_rise: 5.0,
             max_session_time: 3600.0,
             max_total_dose: 100_000.0,
-            tissue_type: TissueType::SoftTissue,
+            tissue_type: MechanicalIndexTissueType::SoftTissue,
             frequency_range: (0.5e6, 10.0e6),
             max_bnur: 8.0,
             enable_monitoring: true,
@@ -66,7 +66,7 @@ impl ComplianceConfig {
     }
 
     #[must_use]
-    pub fn with_tissue_type(mut self, tissue: TissueType) -> Self {
+    pub fn with_tissue_type(mut self, tissue: MechanicalIndexTissueType) -> Self {
         self.tissue_type = tissue;
         self
     }

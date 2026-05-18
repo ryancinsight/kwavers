@@ -169,7 +169,7 @@ fn hybrid_config_from(config: &SolverConfiguration) -> HybridConfig {
     HybridConfig {
         pstd_config: pstd_config_from(config, KSpaceMethod::StandardPSTD),
         fdtd_config: fdtd_config_from(config),
-        validation: crate::solver::forward::hybrid::config::ValidationConfig {
+        validation: crate::solver::forward::hybrid::config::HybridValidationConfig {
             enable_validation: config.validation_mode,
             ..Default::default()
         },

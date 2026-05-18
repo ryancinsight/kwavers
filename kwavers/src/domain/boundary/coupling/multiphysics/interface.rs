@@ -5,7 +5,7 @@ use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopology;
 use ndarray::ArrayViewMut3;
 
-use super::super::types::{BoundaryDirections, CouplingType, PhysicsDomain};
+use super::super::types::{BoundaryCouplingType, BoundaryDirections, PhysicsDomain};
 
 /// Multi-physics interface boundary
 ///
@@ -33,7 +33,7 @@ pub struct MultiPhysicsInterface {
     /// Physics domain 2 (right side of interface)
     pub physics_2: PhysicsDomain,
     /// Coupling type with parameters
-    pub coupling_type: CouplingType,
+    pub coupling_type: BoundaryCouplingType,
 }
 
 impl MultiPhysicsInterface {
@@ -44,7 +44,7 @@ impl MultiPhysicsInterface {
         normal: [f64; 3],
         physics_1: PhysicsDomain,
         physics_2: PhysicsDomain,
-        coupling_type: CouplingType,
+        coupling_type: BoundaryCouplingType,
     ) -> Self {
         Self {
             position,
@@ -80,7 +80,7 @@ impl MultiPhysicsInterface {
     #[must_use]
     pub fn transmission_coefficient(&self, _frequency: f64) -> f64 {
         match &self.coupling_type {
-            CouplingType::AcousticElastic { z1_rayl, z2_rayl } => {
+            BoundaryCouplingType::AcousticElastic { z1_rayl, z2_rayl } => {
                 let z1 = *z1_rayl;
                 let z2 = *z2_rayl;
                 let sum = z1 + z2;
@@ -89,11 +89,11 @@ impl MultiPhysicsInterface {
                 }
                 (4.0 * z1 * z2) / (sum * sum)
             }
-            CouplingType::ElectromagneticAcoustic {
+            BoundaryCouplingType::ElectromagneticAcoustic {
                 optical_absorption,
                 gruneisen,
             } => (gruneisen * optical_absorption).clamp(0.0, 1.0),
-            CouplingType::AcousticThermal {
+            BoundaryCouplingType::AcousticThermal {
                 alpha_np_per_m,
                 rho_kg_per_m3,
                 c_p_j_per_kg_k,
@@ -104,8 +104,8 @@ impl MultiPhysicsInterface {
                 }
                 (2.0 * alpha_np_per_m / denom).clamp(0.0, 1.0)
             }
-            CouplingType::ElectromagneticThermal => 0.97,
-            CouplingType::Custom(_) => 1.0,
+            BoundaryCouplingType::ElectromagneticThermal => 0.97,
+            BoundaryCouplingType::Custom(_) => 1.0,
         }
     }
 }

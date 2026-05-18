@@ -37,7 +37,7 @@ impl Default for BjerknesConfig {
 
 /// Results from Bjerknes force calculation
 #[derive(Debug, Clone, Copy)]
-pub struct BjerknesForce {
+pub struct BjerknesForceData {
     /// Primary Bjerknes force (N) - radiation pressure force
     pub primary: f64,
     /// Secondary Bjerknes force (N) - bubble-bubble interaction
@@ -47,7 +47,7 @@ pub struct BjerknesForce {
     /// Phase difference between bubbles (radians)
     pub phase_difference: f64,
     /// Interaction type (attractive/repulsive)
-    pub interaction_type: InteractionType,
+    pub interaction_type: BjerknesInteractionType,
     /// Distance between bubbles (m)
     pub distance: f64,
     /// Whether bubbles will coalesce
@@ -56,7 +56,7 @@ pub struct BjerknesForce {
 
 /// Type of interaction between bubbles
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InteractionType {
+pub enum BjerknesInteractionType {
     /// Attractive interaction (bubbles approach)
     Attractive,
     /// Repulsive interaction (bubbles separate)
@@ -90,28 +90,34 @@ mod tests {
         );
     }
 
-    /// InteractionType variants are distinct.
+    /// BjerknesInteractionType variants are distinct.
     #[test]
     fn interaction_type_variants_distinct() {
-        assert_ne!(InteractionType::Attractive, InteractionType::Repulsive);
-        assert_ne!(InteractionType::Repulsive, InteractionType::Neutral);
+        assert_ne!(
+            BjerknesInteractionType::Attractive,
+            BjerknesInteractionType::Repulsive
+        );
+        assert_ne!(
+            BjerknesInteractionType::Repulsive,
+            BjerknesInteractionType::Neutral
+        );
     }
 
-    /// BjerknesForce stores all fields and Clone works.
+    /// BjerknesForceData stores all fields and Clone works.
     #[test]
     fn bjerknes_force_stores_fields() {
-        let f = BjerknesForce {
+        let f = BjerknesForceData {
             primary: 1e-9,
             secondary: -5e-10,
             total: 5e-10,
             phase_difference: 0.3,
-            interaction_type: InteractionType::Attractive,
+            interaction_type: BjerknesInteractionType::Attractive,
             distance: 50e-6,
             coalescing: false,
         };
         let c = f;
         assert!((c.primary - 1e-9).abs() < 1e-24);
-        assert_eq!(c.interaction_type, InteractionType::Attractive);
+        assert_eq!(c.interaction_type, BjerknesInteractionType::Attractive);
         assert!(!c.coalescing);
     }
 }

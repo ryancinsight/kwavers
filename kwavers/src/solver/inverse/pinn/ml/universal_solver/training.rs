@@ -9,7 +9,7 @@ use super::types::{
     UniversalSolverStats, UniversalTrainingConfig,
 };
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::pinn::ml::physics::{PhysicsDomain, PhysicsParameters};
+use crate::solver::inverse::pinn::ml::physics::{PhysicsDomain, PinnDomainPhysicsParameters};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use log::info;
@@ -30,7 +30,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         &mut self,
         domain_name: &str,
         geometry: &Geometry2D,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
         training_config: Option<&UniversalTrainingConfig>,
     ) -> KwaversResult<PhysicsSolution<B>> {
         let domain = self
@@ -201,7 +201,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
         model: &mut crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
         domain: &dyn PhysicsDomain<B>,
         collocation_points: &[(f64, f64, f64)],
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
         config: &UniversalTrainingConfig,
     ) -> KwaversResult<(HashMap<String, f64>, Vec<HashMap<String, f64>>)> {
         let start_time = Instant::now();

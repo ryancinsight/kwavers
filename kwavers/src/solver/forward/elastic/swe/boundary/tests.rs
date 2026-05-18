@@ -7,7 +7,7 @@ use ndarray::Array3;
 #[test]
 fn test_pml_creation() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let config = PMLConfig::default();
+    let config = SwePmlConfig::default();
     let pml = PMLBoundary::new(&grid, config);
 
     assert_eq!(pml.attenuation(16, 16, 16), 0.0);
@@ -20,7 +20,7 @@ fn test_pml_creation() {
 #[test]
 fn test_pml_profile() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let config = PMLConfig {
+    let config = SwePmlConfig {
         thickness: 5,
         sigma_max: 100.0,
         profile_order: 2,
@@ -40,7 +40,7 @@ fn test_pml_profile() {
 #[test]
 fn test_pml_damping() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let config = PMLConfig::default();
+    let config = SwePmlConfig::default();
     let pml = PMLBoundary::new(&grid, config);
 
     let mut vx = Array3::<f64>::ones((32, 32, 32));
@@ -67,7 +67,7 @@ fn test_theoretical_reflection() {
     let sigma_optimized =
         PMLBoundary::optimize_sigma_max(target_reflection, c_max, &grid, thickness);
 
-    let config = PMLConfig {
+    let config = SwePmlConfig {
         thickness,
         sigma_max: sigma_optimized,
         profile_order: 2,
@@ -104,7 +104,7 @@ fn test_sigma_max_optimization() {
     let sigma_opt = PMLBoundary::optimize_sigma_max(target_reflection, c_max, &grid, thickness);
     assert!(sigma_opt > 0.0);
 
-    let config = PMLConfig {
+    let config = SwePmlConfig {
         thickness,
         sigma_max: sigma_opt,
         profile_order: 2,
@@ -122,7 +122,7 @@ fn test_pml_volume_fraction() {
     // Interior: (50-10)^3 = 64000 points; total: 125000.
     // PML fraction: 1 - 64000/125000 = 0.488.
     let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3).unwrap();
-    let config = PMLConfig {
+    let config = SwePmlConfig {
         thickness: 5,
         ..Default::default()
     };
@@ -142,7 +142,7 @@ fn test_pml_volume_fraction() {
 #[test]
 fn test_pml_mask() {
     let grid = Grid::new(20, 20, 20, 1e-3, 1e-3, 1e-3).unwrap();
-    let config = PMLConfig {
+    let config = SwePmlConfig {
         thickness: 3,
         ..Default::default()
     };

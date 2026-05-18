@@ -47,7 +47,7 @@
 //! use kwavers::domain::physics::{Domain, ElasticWaveEquation};
 //!
 //! // Define physics domain
-//! let domain = Domain::new_2d(0.0, 1.0, 0.0, 1.0, 101, 101, BoundaryCondition::Absorbing { damping: 0.1 });
+//! let domain = Domain::new_2d(0.0, 1.0, 0.0, 1.0, 101, 101, WaveEquationBoundary::Absorbing { damping: 0.1 });
 //!
 //! // Material properties
 //! let lambda = 1e9;  // Pa

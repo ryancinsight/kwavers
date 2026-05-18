@@ -8,4 +8,4 @@ pub mod types;
 
 pub use core::{AbsorbingBoundary, BoundaryCondition, PeriodicBoundary, ReflectiveBoundary};
 pub use layer::{BoundaryLayer, BoundaryLayerManager};
-pub use types::{BoundaryDirections, BoundaryDomain, FieldType};
+pub use types::{BoundaryDirections, BoundaryDomain, BoundaryFieldType};

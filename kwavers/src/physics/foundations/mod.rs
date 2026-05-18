@@ -52,7 +52,7 @@
 //!
 //! ```rust,ignore
 //! use kwavers::physics::foundations::{
-//!     WaveEquation, AcousticWaveEquation, BoundaryCondition, Domain
+//!     WaveEquation, AcousticWaveEquation, WaveEquationBoundary, Domain
 //! };
 //!
 //! // Define physics-based validation that works for ANY solver
@@ -83,15 +83,16 @@ pub mod wave_equation;
 
 // Re-export commonly used wave equation types for convenience
 pub use wave_equation::{
-    AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, BoundaryCondition,
-    Domain, ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration, WaveEquation,
+    AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain,
+    ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration, WaveEquation,
+    WaveEquationBoundary,
 };
 
 // Re-export coupling traits and types
 pub use coupling::{
-    AcousticElasticCoupling, AcousticThermalCoupling, CouplingStrength,
-    ElectromagneticAcousticCoupling, ElectromagneticThermalCoupling, InterfaceCondition,
-    MultiPhysicsCoupling, SchwarzMethod, TransmissionCondition,
+    AcousticElasticCoupling, AcousticThermalCoupling, CouplingInterfaceCondition, CouplingStrength,
+    DomainDecompTransmissionCondition, ElectromagneticAcousticCoupling,
+    ElectromagneticThermalCoupling, MultiPhysicsCoupling, SchwarzMethod,
 };
 
 /// Prelude module for convenient imports
@@ -102,16 +103,17 @@ pub use coupling::{
 /// use kwavers::physics::foundations::prelude::*;
 ///
 /// // Now have access to all core physics traits and types
-/// let domain = Domain::new_1d(0.0, 1.0, 101, BoundaryCondition::Periodic);
+/// let domain = Domain::new_1d(0.0, 1.0, 101, WaveEquationBoundary::Periodic);
 /// ```
 pub mod prelude {
     pub use super::coupling::{
-        AcousticElasticCoupling, AcousticThermalCoupling, CouplingStrength,
-        ElectromagneticAcousticCoupling, ElectromagneticThermalCoupling, InterfaceCondition,
+        AcousticElasticCoupling, AcousticThermalCoupling, CouplingInterfaceCondition,
+        CouplingStrength, ElectromagneticAcousticCoupling, ElectromagneticThermalCoupling,
         MultiPhysicsCoupling,
     };
     pub use super::wave_equation::{
-        AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, BoundaryCondition,
-        Domain, ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration, WaveEquation,
+        AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain,
+        ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration, WaveEquation,
+        WaveEquationBoundary,
     };
 }

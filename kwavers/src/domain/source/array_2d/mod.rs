@@ -19,4 +19,4 @@ mod types;
 
 pub use array::TransducerArray2D;
 pub use builder::TransducerArray2DBuilder;
-pub use types::{ApodizationType, ArrayElement, TransducerArray2DConfig};
+pub use types::{ApodizationType, Array2dElement, TransducerArray2DConfig};

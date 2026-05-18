@@ -70,11 +70,11 @@ fn test_boundary_spec() {
     let spec = BoundarySpec::new(
         BoundaryFace::XMin,
         BoundaryType::Dirichlet,
-        BoundaryComponent::All,
+        FaceBoundaryComponent::All,
     );
     assert_eq!(spec.face, BoundaryFace::XMin);
     assert_eq!(spec.boundary_type, BoundaryType::Dirichlet);
-    assert_eq!(spec.component, BoundaryComponent::All);
+    assert_eq!(spec.component, FaceBoundaryComponent::All);
     assert!(!spec.time_dependent);
 }
 
@@ -83,7 +83,7 @@ fn test_time_dependent_spec() {
     let spec = BoundarySpec::time_dependent(
         BoundaryFace::YMax,
         BoundaryType::Neumann,
-        BoundaryComponent::Normal,
+        FaceBoundaryComponent::Normal,
     );
     assert!(spec.time_dependent);
 }

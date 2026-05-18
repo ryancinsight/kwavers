@@ -1,12 +1,12 @@
 //! Training history and convergence tracking.
 
-use super::dataset::TrainingMetrics;
+use super::dataset::EpochTrainingMetrics;
 
 /// Training history (logs)
 #[derive(Debug, Clone)]
 pub struct TrainingHistory {
     /// Per-epoch metrics
-    pub epochs: Vec<TrainingMetrics>,
+    pub epochs: Vec<EpochTrainingMetrics>,
     /// Best validation loss achieved
     pub best_val_loss: f64,
     /// Epoch of best validation loss
@@ -28,7 +28,7 @@ impl TrainingHistory {
     }
 
     /// Add metrics for an epoch
-    pub fn add_epoch(&mut self, metrics: TrainingMetrics) {
+    pub fn add_epoch(&mut self, metrics: EpochTrainingMetrics) {
         if metrics.val_loss < self.best_val_loss {
             self.best_val_loss = metrics.val_loss;
             self.best_epoch = metrics.epoch;

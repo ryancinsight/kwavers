@@ -8,6 +8,10 @@ use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law
 const COUPLING_SOUND_SPEED_M_S: f64 = 1480.0;
 const COUPLING_DENSITY_KG_M3: f64 = 1000.0;
 const COUPLING_BETA: f64 = 3.5;
+const AIR_SOUND_SPEED_M_S: f64 = 343.0;
+const AIR_DENSITY_KG_M3: f64 = 1.225;
+const AIR_BETA: f64 = 1.2;
+const INTERNAL_GAS_HU_THRESHOLD: f64 = -700.0;
 
 pub(super) fn material_maps(
     anatomy: AnatomyKind,
@@ -29,15 +33,19 @@ pub(super) fn material_maps(
         }
     });
     let density = Array3::from_shape_fn(ct.dim(), |idx| {
-        if body[idx] {
-            (1000.0 + 0.45 * ct[idx].clamp(-100.0, 1800.0)).clamp(930.0, 1900.0)
-        } else {
+        if !body[idx] {
             COUPLING_DENSITY_KG_M3
+        } else if is_internal_gas(ct[idx], label[idx]) {
+            AIR_DENSITY_KG_M3
+        } else {
+            (1000.0 + 0.45 * ct[idx].clamp(-100.0, 1800.0)).clamp(930.0, 1900.0)
         }
     });
     let beta = Array3::from_shape_fn(ct.dim(), |idx| {
         if !body[idx] {
             COUPLING_BETA
+        } else if is_internal_gas(ct[idx], label[idx]) {
+            AIR_BETA
         } else if ct[idx] >= 300.0 {
             6.0
         } else {
@@ -54,8 +62,8 @@ pub(super) fn material_maps(
 }
 
 fn speed_from_hu(anatomy: AnatomyKind, hu: f64, label: i16) -> f64 {
-    if hu < -700.0 && label == 0 {
-        return 343.0;
+    if is_internal_gas(hu, label) {
+        return AIR_SOUND_SPEED_M_S;
     }
     if hu >= 300.0 {
         let phi = (hu / 1000.0).clamp(0.0, 1.0);
@@ -71,6 +79,10 @@ fn speed_from_hu(anatomy: AnatomyKind, hu: f64, label: i16) -> f64 {
     } else {
         1480.0 + 0.18 * hu.clamp(-150.0, 250.0)
     }
+}
+
+fn is_internal_gas(hu: f64, label: i16) -> bool {
+    hu < INTERNAL_GAS_HU_THRESHOLD && label == 0
 }
 
 #[cfg(test)]
@@ -99,7 +111,16 @@ mod tests {
     }
 
     #[test]
-    fn internal_gas_pocket_preserves_air_sound_speed() {
-        assert_close(speed_from_hu(AnatomyKind::Liver, -900.0, 0), 343.0);
+    fn internal_gas_pocket_preserves_gas_material_properties() {
+        let ct = Array3::from_elem((1, 1, 1), -900.0);
+        let label = Array3::from_elem((1, 1, 1), 0);
+        let body = Array3::from_elem((1, 1, 1), true);
+        let (speed, density, beta, attenuation, power_law_y) =
+            material_maps(AnatomyKind::Liver, &ct, &label, &body);
+        assert_close(speed[[0, 0, 0]], AIR_SOUND_SPEED_M_S);
+        assert_close(density[[0, 0, 0]], AIR_DENSITY_KG_M3);
+        assert_close(beta[[0, 0, 0]], AIR_BETA);
+        assert_close(attenuation[[0, 0, 0]], 1000.0);
+        assert_close(power_law_y[[0, 0, 0]], 1.0);
     }
 }

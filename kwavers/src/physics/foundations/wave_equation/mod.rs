@@ -30,6 +30,6 @@ mod tests;
 
 pub use self::core::{AutodiffWaveEquation, WaveEquation};
 pub use acoustic::AcousticWaveEquation;
-pub use domain::{BoundaryCondition, Domain, SpatialDimension, TimeIntegration};
+pub use domain::{Domain, SpatialDimension, TimeIntegration, WaveEquationBoundary};
 pub use elastic::{AutodiffElasticWaveEquation, ElasticWaveEquation};
 pub use source::SourceTerm;

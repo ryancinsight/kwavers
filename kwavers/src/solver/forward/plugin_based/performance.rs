@@ -22,7 +22,7 @@ pub struct PluginMetrics {
 
 /// Performance monitor for the solver
 #[derive(Debug)]
-pub struct PerformanceMonitor {
+pub struct PluginPerformanceMonitor {
     /// Per-plugin metrics
     plugin_metrics: HashMap<String, PluginMetrics>,
     /// Total solver execution time
@@ -33,7 +33,7 @@ pub struct PerformanceMonitor {
     current_start: Option<Instant>,
 }
 
-impl PerformanceMonitor {
+impl PluginPerformanceMonitor {
     /// Create a new performance monitor
     #[must_use]
     pub fn new() -> Self {
@@ -146,7 +146,7 @@ impl PerformanceMonitor {
     }
 }
 
-impl Default for PerformanceMonitor {
+impl Default for PluginPerformanceMonitor {
     fn default() -> Self {
         Self::new()
     }
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_performance_monitoring() {
-        let mut monitor = PerformanceMonitor::new();
+        let mut monitor = PluginPerformanceMonitor::new();
 
         // Simulate plugin execution
         monitor.start_plugin("acoustic");

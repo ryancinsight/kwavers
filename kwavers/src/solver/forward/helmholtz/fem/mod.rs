@@ -49,4 +49,4 @@ pub mod solver;
 
 pub use assembly::FemAssembly;
 pub use basis::{BasisFunction, GaussPoint, GaussQuadrature};
-pub use solver::{FemHelmholtzConfig, FemHelmholtzSolver, PreconditionerType};
+pub use solver::{FemHelmholtzConfig, FemHelmholtzSolver, FemPreconditionerType};

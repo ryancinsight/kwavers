@@ -8,7 +8,7 @@
 /// - **Navier-Stokes**: `density`, `viscosity`
 /// - **Elastic**: `density`, `wave_speed` (as shear/longitudinal wave speeds)
 #[derive(Debug, Clone)]
-pub struct PhysicsParameters {
+pub struct MetaLearningPhysicsParameters {
     /// Wave propagation speed (m/s)
     ///
     /// - Acoustic waves in air: ~343 m/s
@@ -50,7 +50,7 @@ pub struct PhysicsParameters {
     pub nonlinearity: Option<f64>,
 }
 
-impl Default for PhysicsParameters {
+impl Default for MetaLearningPhysicsParameters {
     fn default() -> Self {
         Self {
             wave_speed: 343.0, // Speed of sound in air at 20°C
@@ -62,7 +62,7 @@ impl Default for PhysicsParameters {
     }
 }
 
-impl PhysicsParameters {
+impl MetaLearningPhysicsParameters {
     /// Create parameters for acoustic wave propagation in air
     pub fn acoustic_air() -> Self {
         Self {

@@ -1,11 +1,14 @@
 //! Configuration structures for seismic imaging algorithms
 
-use crate::solver::reconstruction::{InterpolationMethod, ReconstructionConfig};
+use crate::solver::reconstruction::{
+    ReconstructionConfig, ReconstructionFilterType, ReconstructionInterpolationMethod,
+};
 use serde::{Deserialize, Serialize};
 
 // Import constants from the constants module
 use super::constants::{
-    DEFAULT_FWI_ITERATIONS, DEFAULT_FWI_TOLERANCE, DEFAULT_REGULARIZATION_LAMBDA, DEFAULT_TIME_STEP,
+    DEFAULT_FWI_ITERATIONS, DEFAULT_FWI_TOLERANCE, DEFAULT_REGULARIZATION_LAMBDA,
+    DEFAULT_RICKER_FREQUENCY, DEFAULT_TIME_STEP,
 };
 
 /// Seismic imaging configuration
@@ -17,8 +20,15 @@ pub struct SeismicImagingConfig {
     pub nx: usize,
     pub ny: usize,
     pub nz: usize,
-    /// Time step
+    /// Time step (seconds) — used by RTM forward/backward propagation and
+    /// by the imaging-condition temporal derivatives.  The wavefield-update
+    /// CFL condition is `dt ≤ dx · CFL / (c_max · √D)` for D spatial
+    /// dimensions; callers are responsible for satisfying CFL.
     pub dt: f64,
+    /// Dominant source frequency (Hz) for the RTM forward-propagation
+    /// Ricker wavelet.  Must be band-limited below the grid Nyquist
+    /// `c_min / (2·dx)` and resolved by at least 2–3 voxels per wavelength.
+    pub source_frequency_hz: f64,
     /// Number of FWI iterations
     pub fwi_iterations: usize,
     /// Convergence tolerance for FWI
@@ -84,13 +94,14 @@ impl Default for SeismicImagingConfig {
                 sampling_frequency: 1.0 / DEFAULT_TIME_STEP, // 2000 Hz
                 algorithm:
                     crate::solver::reconstruction::ReconstructionAlgorithm::FullWaveformInversion,
-                filter: crate::solver::reconstruction::FilterType::None,
-                interpolation: InterpolationMethod::Linear,
+                filter: ReconstructionFilterType::None,
+                interpolation: ReconstructionInterpolationMethod::Linear,
             },
             nx: 100,
             ny: 100,
             nz: 100,
             dt: DEFAULT_TIME_STEP,
+            source_frequency_hz: DEFAULT_RICKER_FREQUENCY,
             fwi_iterations: DEFAULT_FWI_ITERATIONS,
             fwi_tolerance: DEFAULT_FWI_TOLERANCE,
             regularization_lambda: DEFAULT_REGULARIZATION_LAMBDA,

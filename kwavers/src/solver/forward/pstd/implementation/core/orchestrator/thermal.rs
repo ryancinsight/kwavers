@@ -113,22 +113,29 @@ impl PSTDSolver {
         };
 
         match mode {
-            Mode::Lossless => self.alpha_np_m.fill(0.0),
+            Mode::Lossless => {
+                // Lossless ⟹ no thermal heating; release memory if previously allocated.
+                self.alpha_np_m = None;
+            }
             Mode::Stokes => {
                 // y = 2: α(ω_c) = α_SI · ω_c²
-                let omega_sq = omega_c * omega_c;
                 if let Some(ref kernel) = self.absorption {
+                    let omega_sq = omega_c * omega_c;
                     let alpha_si = &kernel.alpha_si;
-                    Zip::from(&mut self.alpha_np_m)
+                    let shape = alpha_si.dim();
+                    let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
+                    Zip::from(buf)
                         .and(alpha_si)
                         .par_for_each(|a, &si| *a = si * omega_sq);
                 }
             }
             Mode::PowerLaw(y) => {
-                let omega_y = omega_c.powf(y);
                 if let Some(ref kernel) = self.absorption {
+                    let omega_y = omega_c.powf(y);
                     let alpha_si = &kernel.alpha_si;
-                    Zip::from(&mut self.alpha_np_m)
+                    let shape = alpha_si.dim();
+                    let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
+                    Zip::from(buf)
                         .and(alpha_si)
                         .par_for_each(|a, &si| *a = si * omega_y);
                 }
@@ -141,32 +148,39 @@ impl PSTDSolver {
     /// Use when the center-frequency absorption is known a priori (e.g., derived from
     /// CT/MRI tissue segmentation) rather than from the simulation absorption mode.
     pub fn set_alpha_np_m(&mut self, alpha: Array3<f64>) {
-        self.alpha_np_m = alpha;
+        self.alpha_np_m = Some(alpha);
     }
 
     /// Read-only view of the stored per-cell absorption coefficient [Np/m].
+    ///
+    /// Returns `None` when thermal coupling has not been requested (lossless path or
+    /// before `populate_alpha_np_m_at_frequency` / `set_alpha_np_m` is called).
     #[must_use]
-    pub fn alpha_np_m(&self) -> ndarray::ArrayView3<'_, f64> {
-        self.alpha_np_m.view()
+    pub fn alpha_np_m(&self) -> Option<ndarray::ArrayView3<'_, f64>> {
+        self.alpha_np_m.as_ref().map(|a| a.view())
     }
 
     /// Compute the volumetric acoustic heat source Q [W/m³] from current field state.
     ///
     /// Uses `alpha_np_m` populated by `populate_alpha_np_m_at_frequency()` or
-    /// `set_alpha_np_m()`. Returns an all-zero array for lossless simulations.
+    /// `set_alpha_np_m()`. Returns an all-zero array when `alpha_np_m` is `None`
+    /// (lossless simulation or before thermal coupling is initialised).
     ///
     /// Pass the returned array to `ThermalDiffusionSolver::update()` as `external_source`.
     #[must_use]
     pub fn compute_acoustic_heat_source(&self) -> Array3<f64> {
-        acoustic_heat_source(
-            &self.fields.p,
-            &self.fields.ux,
-            &self.fields.uy,
-            &self.fields.uz,
-            &self.materials.rho0,
-            &self.materials.c0,
-            &self.alpha_np_m,
-        )
+        match self.alpha_np_m.as_ref() {
+            None => Array3::zeros(self.fields.p.dim()),
+            Some(alpha) => acoustic_heat_source(
+                &self.fields.p,
+                &self.fields.ux,
+                &self.fields.uy,
+                &self.fields.uz,
+                &self.materials.rho0,
+                &self.materials.c0,
+                alpha,
+            ),
+        }
     }
 
     /// Run a coupled acoustic + thermal time loop.

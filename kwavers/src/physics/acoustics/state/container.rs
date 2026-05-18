@@ -8,7 +8,6 @@ use crate::core::error::{KwaversResult, PhysicsError};
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
-// Use the global field_indices module for consistency
 pub use crate::domain::field::indices as field_indices;
 
 /// Physics state container - Single Source of Truth for all field data

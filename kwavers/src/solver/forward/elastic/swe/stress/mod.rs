@@ -38,5 +38,5 @@ mod fd_stencils;
 #[cfg(test)]
 mod tests;
 
-pub use divergence::stress_divergence;
+pub use divergence::{stress_divergence, stress_divergence_into};
 pub use fd_stencils::{fd1_x, fd1_y, fd1_z};

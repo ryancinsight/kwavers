@@ -1,5 +1,5 @@
-use super::config::TrainingConfig;
-use super::dataset::{TrainingDataset, TrainingMetrics};
+use super::config::PhysicsNNTrainingConfig;
+use super::dataset::{EpochTrainingMetrics, TrainingDataset};
 use super::history::TrainingHistory;
 use super::loss::{Optimizer, PhysicsLoss};
 use ndarray::Array2;
@@ -7,7 +7,7 @@ use ndarray::Array2;
 #[test]
 fn test_training_config_default() {
     // default: num_epochs=100, batch_size=32, learning_rate=0.001, lambda_data+lambda_physics=1.0
-    let config = TrainingConfig::default();
+    let config = PhysicsNNTrainingConfig::default();
     config.validate().unwrap();
     assert_eq!(config.num_epochs, 100, "default num_epochs must be 100");
     assert_eq!(config.batch_size, 32, "default batch_size must be 32");
@@ -20,7 +20,7 @@ fn test_training_config_default() {
 
 #[test]
 fn test_training_config_validation() {
-    let mut config = TrainingConfig::default();
+    let mut config = PhysicsNNTrainingConfig::default();
     config.num_epochs = 0;
     let err = config.validate().unwrap_err();
     assert!(
@@ -48,7 +48,7 @@ fn test_training_config_validation() {
 
 #[test]
 fn test_training_config_builder() {
-    let config = TrainingConfig::default()
+    let config = PhysicsNNTrainingConfig::default()
         .with_epochs(200)
         .with_batch_size(64)
         .with_learning_rate(0.0001);
@@ -130,7 +130,7 @@ fn test_training_history() {
     assert_eq!(history.epochs.len(), 0);
     assert!(history.best_val_loss.is_infinite());
 
-    let metrics = TrainingMetrics {
+    let metrics = EpochTrainingMetrics {
         epoch: 0,
         train_loss: 1.0,
         train_data_loss: 0.8,
@@ -148,8 +148,94 @@ fn test_training_history() {
 
 #[test]
 fn test_loss_weights_normalization() {
-    let config = TrainingConfig::default().with_loss_weights(2.0, 1.0);
+    let config = PhysicsNNTrainingConfig::default().with_loss_weights(2.0, 1.0);
 
     assert!((config.lambda_data - 2.0 / 3.0).abs() < 1e-10);
     assert!((config.lambda_physics - 1.0 / 3.0).abs() < 1e-10);
+}
+
+// ─── PhysicsLoss exact value-semantic tests ───────────────────────────────────
+
+/// `reciprocity_violation` with a known non-zero difference is MSE = ||Δ||² / N.
+///
+/// forward = [[2, 0], [0, 0]], reverse = [[0, 0], [0, 0]]
+/// diff = [[2, 0], [0, 0]] → sum_sq = 4.0, N = 4 → result = 1.0
+#[test]
+fn physics_loss_reciprocity_violation_exact_mse() {
+    let forward = Array2::<f64>::from_shape_vec((2, 2), vec![2.0, 0.0, 0.0, 0.0]).unwrap();
+    let reverse = Array2::<f64>::zeros((2, 2));
+    let loss = PhysicsLoss::reciprocity_violation(&forward, &reverse);
+    assert!(
+        (loss - 1.0).abs() < 1e-14,
+        "reciprocity_violation = {loss} (expected 1.0 = 4/4)"
+    );
+}
+
+/// `reciprocity_violation` with mismatched dims returns infinity.
+///
+/// forward: (2,2), reverse: (2,3) → dims differ → f64::INFINITY.
+#[test]
+fn physics_loss_reciprocity_violation_mismatched_dims_is_infinity() {
+    let forward = Array2::<f64>::zeros((2, 2));
+    let reverse = Array2::<f64>::zeros((2, 3));
+    let loss = PhysicsLoss::reciprocity_violation(&forward, &reverse);
+    assert!(
+        loss.is_infinite(),
+        "mismatched-dim reciprocity_violation must be ∞, got {loss}"
+    );
+}
+
+/// `coherence_violation` with a uniform row-jump of 1.0 radian on 2×2 grid.
+///
+/// phases = [[0, 0], [1, 1]]: two row-pairs each with phase_diff = 1.0.
+/// violation = 2 × 1.0 = 2.0; N = phases.len() = 4 → result = 0.5.
+#[test]
+fn physics_loss_coherence_violation_row_jump_exact() {
+    let phases = Array2::<f64>::from_shape_vec((2, 2), vec![0.0, 0.0, 1.0, 1.0]).unwrap();
+    let loss = PhysicsLoss::coherence_violation(&phases);
+    assert!(
+        (loss - 0.5).abs() < 1e-14,
+        "coherence_violation = {loss} (expected 0.5)"
+    );
+}
+
+/// `coherence_violation` wraps phase_diff > π via 2π − phase_diff.
+///
+/// phases = [[0.0], [4.0]]: diff = 4.0 > π → normalized = 2π − 4.0 ≈ 2.2832.
+/// violation = 2π − 4.0; N = 2 → result = (2π − 4.0) / 2.
+#[test]
+fn physics_loss_coherence_violation_wrap_above_pi_exact() {
+    let phases = Array2::<f64>::from_shape_vec((2, 1), vec![0.0, 4.0]).unwrap();
+    let loss = PhysicsLoss::coherence_violation(&phases);
+    let expected = (2.0 * std::f64::consts::PI - 4.0) / 2.0;
+    assert!(
+        (loss - expected).abs() < 1e-14,
+        "wrap coherence_violation = {loss} (expected {expected})"
+    );
+}
+
+/// `sparsity_violation` is mean absolute value = L1-norm / N.
+///
+/// weights = [[1, -2], [3, -4]]: L1 = 1+2+3+4 = 10; N = 4 → result = 2.5.
+#[test]
+fn physics_loss_sparsity_violation_exact_l1_mean() {
+    let weights = Array2::<f64>::from_shape_vec((2, 2), vec![1.0, -2.0, 3.0, -4.0]).unwrap();
+    let loss = PhysicsLoss::sparsity_violation(&weights);
+    assert!(
+        (loss - 2.5).abs() < 1e-14,
+        "sparsity_violation = {loss} (expected 2.5 = 10/4)"
+    );
+}
+
+/// `sparsity_violation` of an all-zero matrix is zero.
+///
+/// L1 = 0 → result = 0.
+#[test]
+fn physics_loss_sparsity_violation_zero_weights_is_zero() {
+    let weights = Array2::<f64>::zeros((4, 4));
+    let loss = PhysicsLoss::sparsity_violation(&weights);
+    assert!(
+        loss.abs() < 1e-14,
+        "zero-weight sparsity_violation must be 0.0, got {loss}"
+    );
 }

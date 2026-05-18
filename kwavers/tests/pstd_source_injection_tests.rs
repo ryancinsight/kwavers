@@ -30,7 +30,7 @@ use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::SineWave;
 use kwavers::domain::source::{
-    GridSource, InjectionMode, PlaneWaveConfig, PlaneWaveSource, SourceField,
+    GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
 };
 use kwavers::solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
@@ -67,7 +67,7 @@ fn run_pstd_and_measure_peak(
 
     // Plane wave source along +x direction, additive injection
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (1.0, 0.0, 0.0),
         wavelength: c0 / frequency,
         phase: 0.0,

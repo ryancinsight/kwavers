@@ -28,7 +28,7 @@
 //! - Duck, F. A. (1990). Physical Properties of Tissue. Academic Press.
 //! - Apfel, R. E., & Holland, C. K. (1991). Gauging the likelihood of cavitation from short-pulse, low-duty cycle diagnostic ultrasound.
 
-use crate::domain::medium::properties::MaterialProperties;
+use crate::domain::medium::properties::AcousticMaterialProperties;
 
 /// Trait defining the contract for calculating cavitation-induced biological damage.
 pub trait BioDamageModel {
@@ -46,7 +46,7 @@ pub trait BioDamageModel {
     fn calculate_lysis_probability(
         &self,
         collapse_energy: Self::Scalar,
-        material_properties: &MaterialProperties,
+        material_properties: &AcousticMaterialProperties,
     ) -> Self::Scalar;
 
     /// Tracks the accumulation of necrosis over a time interval $\Delta t$.
@@ -86,7 +86,7 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> BioDamageModel for Empirica
     fn calculate_lysis_probability(
         &self,
         collapse_energy: Self::Scalar,
-        _material: &MaterialProperties,
+        _material: &AcousticMaterialProperties,
     ) -> Self::Scalar {
         if collapse_energy <= self.lysis_threshold {
             T::zero()
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn test_lysis_probability_bounds() {
         let model = test_model();
-        let props = MaterialProperties::new(1500.0, 1000.0, 0.0, 4184.0, 0.6);
+        let props = AcousticMaterialProperties::new(1500.0, 1000.0, 0.0, 4184.0, 0.6);
 
         // Below threshold is zero
         assert_eq!(model.calculate_lysis_probability(50.0, &props), 0.0);

@@ -1,5 +1,7 @@
 use crate::analysis::signal_processing::localization::model_order::ModelOrderCriterion;
-use crate::analysis::signal_processing::localization::{LocalizationConfig, LocalizationProcessor};
+use crate::analysis::signal_processing::localization::{
+    AcousticLocalizationConfig, LocalizationProcessor,
+};
 use ndarray::Array2;
 use num_complex::Complex;
 
@@ -137,7 +139,7 @@ fn music_trait_localize_uses_time_delay_physics() {
         })
         .collect();
 
-    let localization_config = LocalizationConfig::new(sensor_positions.clone(), 40.0e6, c);
+    let localization_config = AcousticLocalizationConfig::new(sensor_positions.clone(), 40.0e6, c);
     let music_config = MUSICConfig::new(localization_config, Some(1));
     let processor = MUSICProcessor::new(&music_config).unwrap();
 

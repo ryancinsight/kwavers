@@ -18,7 +18,7 @@ use crate::domain::medium::{MaterialFields, Medium};
 use crate::domain::sensor::recorder::simple::SensorRecorder;
 use crate::domain::source::grid_source::GridSource;
 use crate::math::numerics::operators::StaggeredGridOperator;
-use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
+use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 
 use super::super::config::{FdtdConfig, KSpaceCorrectionMode};
 use super::super::kspace_correction::KSpaceFdtdOperators;
@@ -39,7 +39,7 @@ impl GenericFdtdSolver<Array3<f64>> {
         info!("Initializing FDTD solver with config: {:?}", config);
 
         // Validate spatial order by converting to enum
-        let spatial_order = SpatialOrder::from_usize(config.spatial_order)?;
+        let spatial_order = AcousticSpatialOrder::from_usize(config.spatial_order)?;
 
         let central_operator =
             CentralDifferenceOperator::new(config.spatial_order, grid.dx, grid.dy, grid.dz)?;

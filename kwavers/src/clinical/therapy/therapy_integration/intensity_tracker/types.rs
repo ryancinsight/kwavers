@@ -42,7 +42,7 @@ impl Default for TemporalIntensityMetrics {
 
 /// Thermal dose tracking (CEM43 model)
 #[derive(Debug, Clone, Copy)]
-pub struct ThermalDose {
+pub struct IntensityTrackerDose {
     /// Cumulative equivalent minutes at 43°C
     pub cem43: f64,
     /// Current temperature (°C)
@@ -53,7 +53,7 @@ pub struct ThermalDose {
     pub temperature_rise: f64,
 }
 
-impl Default for ThermalDose {
+impl Default for IntensityTrackerDose {
     fn default() -> Self {
         Self {
             cem43: 0.0,

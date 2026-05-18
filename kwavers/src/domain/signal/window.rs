@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use crate::core::error::{KwaversError, KwaversResult};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum WindowType {
+pub enum SignalWindowType {
     Rectangular,
     Hann,
     Hamming,
@@ -13,25 +13,25 @@ pub enum WindowType {
 }
 
 #[must_use]
-pub fn window_value(window: WindowType, normalized_time: f64) -> f64 {
+pub fn window_value(window: SignalWindowType, normalized_time: f64) -> f64 {
     if !(0.0..=1.0).contains(&normalized_time) {
         return 0.0;
     }
 
     match window {
-        WindowType::Rectangular => 1.0,
-        WindowType::Hann => 0.5 * (1.0 - (2.0 * PI * normalized_time).cos()),
-        WindowType::Hamming => 0.46f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.54),
-        WindowType::Blackman => 0.08f64.mul_add(
+        SignalWindowType::Rectangular => 1.0,
+        SignalWindowType::Hann => 0.5 * (1.0 - (2.0 * PI * normalized_time).cos()),
+        SignalWindowType::Hamming => 0.46f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.54),
+        SignalWindowType::Blackman => 0.08f64.mul_add(
             (4.0 * PI * normalized_time).cos(),
             0.5f64.mul_add(-(2.0 * PI * normalized_time).cos(), 0.42),
         ),
-        WindowType::Gaussian => {
+        SignalWindowType::Gaussian => {
             let sigma = 0.4;
             let arg = (normalized_time - 0.5) / sigma;
             (-0.5 * arg * arg).exp()
         }
-        WindowType::Tukey { alpha } => {
+        SignalWindowType::Tukey { alpha } => {
             if alpha <= 0.0 {
                 1.0
             } else if alpha >= 1.0 {
@@ -52,7 +52,7 @@ pub fn window_value(window: WindowType, normalized_time: f64) -> f64 {
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 #[must_use]
-pub fn get_win(window: WindowType, n: usize, symmetric: bool) -> Vec<f64> {
+pub fn get_win(window: SignalWindowType, n: usize, symmetric: bool) -> Vec<f64> {
     if n <= 1 {
         return vec![1.0; n];
     }
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn hann_symmetric_has_zero_endpoints() {
-        let w = get_win(WindowType::Hann, 8, true);
+        let w = get_win(SignalWindowType::Hann, 8, true);
         assert_eq!(w.len(), 8);
         assert!((w[0] - 0.0).abs() < 1e-12);
         assert!((w[7] - 0.0).abs() < 1e-12);
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn hann_periodic_does_not_repeat_endpoint() {
-        let w = get_win(WindowType::Hann, 8, false);
+        let w = get_win(SignalWindowType::Hann, 8, false);
         assert_eq!(w.len(), 8);
         assert!((w[0] - 0.0).abs() < 1e-12);
         assert!(w[7] > 0.0);
@@ -112,7 +112,7 @@ mod tests {
     proptest! {
         #[test]
         fn get_win_returns_expected_length(n in 0usize..256) {
-            let w = get_win(WindowType::Hann, n, true);
+            let w = get_win(SignalWindowType::Hann, n, true);
             prop_assert_eq!(w.len(), n);
         }
 
@@ -120,7 +120,7 @@ mod tests {
         fn window_value_is_zero_outside_unit_interval(x in any::<f64>()) {
             prop_assume!(x.is_finite());
             prop_assume!(!(0.0..=1.0).contains(&x));
-            let y = window_value(WindowType::Hann, x);
+            let y = window_value(SignalWindowType::Hann, x);
             prop_assert_eq!(y, 0.0);
         }
     }

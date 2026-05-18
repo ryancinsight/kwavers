@@ -19,10 +19,10 @@ pub mod tone_burst;
 pub mod train;
 
 // Re-export main types
-pub use super::window::WindowType;
+pub use super::window::SignalWindowType;
 pub use gaussian::GaussianPulse;
 pub use rectangular::RectangularPulse;
-pub use ricker::RickerWavelet;
+pub use ricker::DomainRickerWavelet;
 pub use tone_burst::ToneBurst;
 pub use train::{PulseShape, PulseTrain};
 

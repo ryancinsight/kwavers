@@ -169,7 +169,7 @@ mod tests {
     use super::*;
     use crate::domain::medium::HomogeneousMedium;
     use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-    use crate::physics::factory::models::{BoundaryType, PhysicsModelConfig};
+    use crate::physics::factory::models::{PhysicsBoundaryCondition, PhysicsModelConfig};
 
     fn small_grid() -> Grid {
         Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).expect("grid")
@@ -198,7 +198,7 @@ mod tests {
                 solver_type: AcousticSolver::PSTD {
                     spectral_accuracy: true,
                 },
-                boundary_conditions: BoundaryType::Absorbing { pml_layers: 10 },
+                boundary_conditions: PhysicsBoundaryCondition::Absorbing { pml_layers: 10 },
             },
             enabled: true,
             parameters: std::collections::HashMap::new(),
@@ -222,7 +222,7 @@ mod tests {
         config.models.push(PhysicsModelConfig {
             model_type: PhysicsModelType::LinearAcoustics {
                 solver_type: AcousticSolver::FDTD { order: 2 },
-                boundary_conditions: BoundaryType::Absorbing { pml_layers: 8 },
+                boundary_conditions: PhysicsBoundaryCondition::Absorbing { pml_layers: 8 },
             },
             enabled: false,
             parameters: std::collections::HashMap::new(),
@@ -343,7 +343,7 @@ mod tests {
                 solver_type: AcousticSolver::PSTD {
                     spectral_accuracy: true,
                 },
-                boundary_conditions: BoundaryType::Absorbing { pml_layers: 10 },
+                boundary_conditions: PhysicsBoundaryCondition::Absorbing { pml_layers: 10 },
             },
             enabled: true,
             parameters: std::collections::HashMap::new(),

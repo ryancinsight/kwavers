@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface,
-    InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
-    PhysicsValidationMetric,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
+    PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
+    PinnDomainPhysicsParameters,
 };
 
 use super::super::config::SonoluminescenceCouplingType;
@@ -24,32 +24,32 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for SonoluminescenceCoupledDomain<B> {
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2> {
         self.electromagnetic_residual_with_sources(model, x, y, t, physics_params)
     }
 
-    fn boundary_conditions(&self) -> Vec<BoundaryConditionSpec> {
+    fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec> {
         vec![
-            BoundaryConditionSpec::Dirichlet {
+            PinnBoundaryConditionSpec::Dirichlet {
                 boundary: BoundaryPosition::Left,
                 value: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
-            BoundaryConditionSpec::Dirichlet {
+            PinnBoundaryConditionSpec::Dirichlet {
                 boundary: BoundaryPosition::Right,
                 value: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
-            BoundaryConditionSpec::Dirichlet {
+            PinnBoundaryConditionSpec::Dirichlet {
                 boundary: BoundaryPosition::Top,
                 value: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
-            BoundaryConditionSpec::Dirichlet {
+            PinnBoundaryConditionSpec::Dirichlet {
                 boundary: BoundaryPosition::Bottom,
                 value: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
         ]
     }
@@ -58,11 +58,11 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for SonoluminescenceCoupledDomain<B> {
         vec![
             InitialConditionSpec::DirichletConstant {
                 value: vec![0.0, 0.0],
-                component: BoundaryComponent::Vector(vec![0, 1]),
+                component: PinnBoundaryComponent::Vector(vec![0, 1]),
             },
             InitialConditionSpec::DirichletConstant {
                 value: vec![0.0, 0.0],
-                component: BoundaryComponent::Vector(vec![0, 1]),
+                component: PinnBoundaryComponent::Vector(vec![0, 1]),
             },
         ]
     }

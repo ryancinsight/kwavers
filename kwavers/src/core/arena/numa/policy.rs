@@ -9,7 +9,7 @@ pub const PAGE_SIZE: usize = 4096;
 
 /// NUMA allocation policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum NumaPolicy {
+pub enum NumaAllocPolicy {
     /// No NUMA optimization (OS default).
     Default,
     /// First-touch: memory allocated on accessing node.

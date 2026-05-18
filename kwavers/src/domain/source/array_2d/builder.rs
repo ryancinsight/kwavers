@@ -42,8 +42,8 @@ impl Default for TransducerArray2DBuilder {
             focus_distance: None,
             elevation_focus: None,
             steering_angle: 0.0,
-            transmit_apodization: ApodizationType::Rectangular,
-            receive_apodization: ApodizationType::Rectangular,
+            transmit_apodization: ApodizationType::Uniform,
+            receive_apodization: ApodizationType::Uniform,
         }
     }
 }

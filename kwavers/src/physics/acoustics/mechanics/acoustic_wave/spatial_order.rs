@@ -1,6 +1,6 @@
 /// Spatial discretization order for numerical schemes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SpatialOrder {
+pub enum AcousticSpatialOrder {
     /// Second-order accurate spatial discretization
     Second,
     /// Fourth-order accurate spatial discretization
@@ -9,7 +9,7 @@ pub enum SpatialOrder {
     Sixth,
 }
 
-impl SpatialOrder {
+impl AcousticSpatialOrder {
     /// Get the CFL stability limit for this spatial order
     ///
     /// For 3D finite difference schemes with central differences:

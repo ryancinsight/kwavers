@@ -10,6 +10,7 @@ CT_FRAME_KEYS = (
     "linear_exposure",
     "linear_active",
     "linear_fusion",
+    "elastic_shear",
     "nonlinear_pressure",
     "nonlinear_fwi",
     "nonlinear_cavitation_source",
@@ -44,7 +45,7 @@ def add_ct_frame_fields(fields: dict[str, np.ndarray], source_extent: list[float
     target_shape = np.asarray(fields["placement_ct_hu"]).shape
     target_extent = [float(v) for v in np.asarray(fields["placement_extent_m"], dtype=float)]
     for key in CT_FRAME_KEYS:
-        image = _resample_to_extent(np.asarray(fields[key], dtype=float), source_extent, target_shape, target_extent)
+        image = resample_to_extent(np.asarray(fields[key], dtype=float), source_extent, target_shape, target_extent)
         fields[ct_frame_key(key)] = image >= 0.5 if key == "common_target" else image
 
 def plot_placement_context(ax: plt.Axes, comparison: dict[str, object]) -> plt.AxesImage:
@@ -87,14 +88,15 @@ def _ensure_axis_fields(fields: dict[str, np.ndarray]) -> None:
         _axis_limits(extent[2:], therapy[:, 1] if therapy.size else [], imaging[:, 1] if imaging.size else [])
     )
 
-def _resample_to_extent(
+def resample_to_extent(
     image: np.ndarray,
     source_extent: list[float],
     target_shape: tuple[int, int],
     target_extent: list[float],
 ) -> np.ndarray:
-    sx, sy = image.shape
-    tx, ty = target_shape
+    source = np.asarray(image, dtype=float)
+    sx, sy = source.shape
+    tx, ty = int(target_shape[0]), int(target_shape[1])
     x = np.linspace(target_extent[0], target_extent[1], tx)
     y = np.linspace(target_extent[2], target_extent[3], ty)
     u = (x - source_extent[0]) * (sx - 1) / max(source_extent[1] - source_extent[0], 1.0e-12)
@@ -102,24 +104,22 @@ def _resample_to_extent(
     out = np.zeros((tx, ty), dtype=float)
     valid_x = (u >= 0.0) & (u <= sx - 1)
     valid_y = (v >= 0.0) & (v <= sy - 1)
-    for ix, ux in enumerate(u):
-        if not valid_x[ix]:
-            continue
-        x0 = int(np.floor(ux))
-        x1 = min(x0 + 1, sx - 1)
-        wx = ux - x0
-        for iy, vy in enumerate(v):
-            if not valid_y[iy]:
-                continue
-            y0 = int(np.floor(vy))
-            y1 = min(y0 + 1, sy - 1)
-            wy = vy - y0
-            out[ix, iy] = (
-                (1.0 - wx) * (1.0 - wy) * image[x0, y0]
-                + wx * (1.0 - wy) * image[x1, y0]
-                + (1.0 - wx) * wy * image[x0, y1]
-                + wx * wy * image[x1, y1]
-            )
+    if not np.any(valid_x) or not np.any(valid_y):
+        return out
+    ux = u[valid_x]
+    vy = v[valid_y]
+    x0 = np.floor(ux).astype(int)
+    y0 = np.floor(vy).astype(int)
+    x1 = np.minimum(x0 + 1, sx - 1)
+    y1 = np.minimum(y0 + 1, sy - 1)
+    wx = ux - x0
+    wy = vy - y0
+    out[np.ix_(valid_x, valid_y)] = (
+        (1.0 - wx)[:, np.newaxis] * (1.0 - wy)[np.newaxis, :] * source[np.ix_(x0, y0)]
+        + wx[:, np.newaxis] * (1.0 - wy)[np.newaxis, :] * source[np.ix_(x1, y0)]
+        + (1.0 - wx)[:, np.newaxis] * wy[np.newaxis, :] * source[np.ix_(x0, y1)]
+        + wx[:, np.newaxis] * wy[np.newaxis, :] * source[np.ix_(x1, y1)]
+    )
     return out
 
 def _image_extent_xy(image: np.ndarray, spacing_m: np.ndarray) -> list[float]:

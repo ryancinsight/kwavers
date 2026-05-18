@@ -22,5 +22,5 @@ pub mod pml;
 #[cfg(test)]
 mod tests;
 
-pub use config::PMLConfig;
+pub use config::SwePmlConfig;
 pub use pml::PMLBoundary;

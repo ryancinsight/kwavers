@@ -1,5 +1,5 @@
 use super::*;
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use burn::backend::{Autodiff, NdArray};
 use burn::tensor::Tensor;
 
@@ -18,13 +18,13 @@ impl<B: AutodiffBackend> crate::solver::inverse::pinn::ml::physics::PhysicsDomai
         x: &Tensor<B, 2>,
         _y: &Tensor<B, 2>,
         _t: &Tensor<B, 2>,
-        _params: &PhysicsParameters,
+        _params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2> {
         x.clone() * 0.1
     }
     fn boundary_conditions(
         &self,
-    ) -> Vec<crate::solver::inverse::pinn::ml::physics::BoundaryConditionSpec> {
+    ) -> Vec<crate::solver::inverse::pinn::ml::physics::PinnBoundaryConditionSpec> {
         vec![]
     }
     fn initial_conditions(
@@ -48,7 +48,7 @@ fn test_adaptive_sampler_creation() {
 
     let domain: Box<dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<TestBackend>> =
         Box::new(MockPhysicsDomain);
-    let strategy = SamplingStrategy::default();
+    let strategy = AdaptiveRefinementConfig::default();
 
     let sampler = AdaptiveCollocationSampler::<TestBackend>::new(100, domain, strategy);
 
@@ -60,7 +60,7 @@ fn test_adaptive_sampler_creation() {
 
 #[test]
 fn test_sampling_strategy_defaults() {
-    let strategy = SamplingStrategy::default();
+    let strategy = AdaptiveRefinementConfig::default();
 
     assert_eq!(strategy.refinement_threshold, 0.8);
     assert_eq!(strategy.coarsening_threshold, 0.2);

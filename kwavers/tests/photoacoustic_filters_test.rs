@@ -5,7 +5,7 @@
 use kwavers::solver::reconstruction::photoacoustic::{
     Filters, PhotoacousticAlgorithm, PhotoacousticConfig,
 };
-use kwavers::solver::reconstruction::FilterType;
+use kwavers::solver::reconstruction::ReconstructionFilterType;
 use ndarray::Array2;
 use std::f64::consts::PI;
 
@@ -85,7 +85,7 @@ fn test_hann_filter_creation() {
 fn test_apply_hamming_filter() {
     let config = create_test_config();
     let mut filters = Filters::new(&config);
-    filters.set_filter_type(FilterType::Hamming);
+    filters.set_filter_type(ReconstructionFilterType::Hamming);
 
     // Create test data with known frequency content
     let n_samples = 64;
@@ -116,7 +116,7 @@ fn test_apply_hamming_filter() {
 fn test_apply_hann_filter() {
     let config = create_test_config();
     let mut filters = Filters::new(&config);
-    filters.set_filter_type(FilterType::Hann);
+    filters.set_filter_type(ReconstructionFilterType::Hann);
 
     // Create test data
     let n_samples = 64;
@@ -147,7 +147,7 @@ fn test_apply_hann_filter() {
 fn test_none_filter_no_change() {
     let config = create_test_config();
     let mut filters = Filters::new(&config);
-    filters.set_filter_type(FilterType::None);
+    filters.set_filter_type(ReconstructionFilterType::None);
 
     // Create test data
     let n_samples = 32;
@@ -189,12 +189,12 @@ fn test_filter_type_exhaustive() {
 
     // Test each filter type
     let filter_types = [
-        FilterType::RamLak,
-        FilterType::SheppLogan,
-        FilterType::Cosine,
-        FilterType::Hamming,
-        FilterType::Hann,
-        FilterType::None,
+        ReconstructionFilterType::RamLak,
+        ReconstructionFilterType::SheppLogan,
+        ReconstructionFilterType::Cosine,
+        ReconstructionFilterType::Hamming,
+        ReconstructionFilterType::Hann,
+        ReconstructionFilterType::None,
     ];
 
     for filter_type in &filter_types {

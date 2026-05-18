@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_maximum_likelihood_fusion_monotonicity() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::MaximumLikelihood,
+        fusion_method: ImagingFusionMethod::MaximumLikelihood,
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);

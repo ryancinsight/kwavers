@@ -60,11 +60,11 @@ pub struct UncertaintyDecomposition {
 /// MC dropout masks are generated on-the-fly during forward passes rather than
 /// stored as a field.  The `BayesianConfig` drives the sampling parameters.
 #[derive(Debug)]
-pub struct BayesianPINN {
+pub struct MlBayesianPINN {
     pub(self) _config: BayesianConfig,
 }
 
-impl BayesianPINN {
+impl MlBayesianPINN {
     /// Create new Bayesian PINN.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

@@ -2,7 +2,7 @@
 
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, TEMPORAL_SMOOTHING};
 use super::traits::{CavitationDetector, DetectorParameters};
-use super::types::{CavitationMetrics, CavitationState, DetectionMethod, HistoryBuffer};
+use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
 use ndarray::ArrayView1;
 
 /// Broadband detector for inertial cavitation
@@ -94,11 +94,11 @@ impl CavitationDetector for BroadbandDetector {
 
         // Determine cavitation state
         let state = if smoothed_level > 0.5 {
-            CavitationState::Inertial
+            CavitationDetectionState::Inertial
         } else if smoothed_level > 0.2 {
-            CavitationState::Transient
+            CavitationDetectionState::Transient
         } else {
-            CavitationState::None
+            CavitationDetectionState::None
         };
 
         CavitationMetrics {

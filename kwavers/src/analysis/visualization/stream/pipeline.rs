@@ -41,7 +41,7 @@ use super::super::stream::{FrameId, VizFrame};
 ///
 /// Controls frame rate targeting, channel depth, and adaptive behavior.
 #[derive(Debug, Clone, PartialEq)]
-pub struct PipelineConfig {
+pub struct StreamStreamPipelineConfig {
     /// Target frames per second.
     pub target_fps: f64,
     /// Bounded channel capacity for the input frame queue.
@@ -54,7 +54,7 @@ pub struct PipelineConfig {
     pub latency_threshold_ms: f64,
 }
 
-impl Default for PipelineConfig {
+impl Default for StreamPipelineConfig {
     fn default() -> Self {
         Self {
             target_fps: 30.0,
@@ -66,7 +66,7 @@ impl Default for PipelineConfig {
     }
 }
 
-impl PipelineConfig {
+impl StreamPipelineConfig {
     /// Frame budget in milliseconds: 1000 / target_fps.
     ///
     /// **Theorem**: For F fps, each frame must complete within T = 1000/F ms.
@@ -132,7 +132,7 @@ impl Default for PipelineState {
 /// ```
 pub struct StagePipeline {
     /// Pipeline configuration.
-    config: PipelineConfig,
+    config: StreamPipelineConfig,
     /// Shared metrics updated by the background task.
     metrics: Arc<Mutex<PipelineRunMetrics>>,
 }
@@ -151,7 +151,7 @@ impl StagePipeline {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub async fn new(config: PipelineConfig) -> Result<(Self, mpsc::Sender<VizFrame>), String> {
+    pub async fn new(config: StreamPipelineConfig) -> Result<(Self, mpsc::Sender<VizFrame>), String> {
         let capacity = config.channel_capacity.max(1);
         let (tx, mut rx) = mpsc::channel::<VizFrame>(capacity);
 
@@ -254,7 +254,7 @@ impl StagePipeline {
     }
 
     /// Get the pipeline configuration.
-    pub fn config(&self) -> &PipelineConfig {
+    pub fn config(&self) -> &StreamPipelineConfig {
         &self.config
     }
 }
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_pipeline_config_frame_budget() {
-        let config = PipelineConfig {
+        let config = StreamPipelineConfig {
             target_fps: 60.0,
             channel_capacity: 16,
             parallel_execution: true,
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_pipeline_config_stage_budget() {
-        let config = PipelineConfig {
+        let config = StreamPipelineConfig {
             target_fps: 60.0,
             ..Default::default()
         };
@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_pipeline_config_default() {
-        let config = PipelineConfig::default();
+        let config = StreamPipelineConfig::default();
         assert_eq!(config.target_fps, 30.0);
         assert_eq!(config.channel_capacity, 8);
         assert!(!config.parallel_execution);
@@ -299,7 +299,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pipeline_new_returns_valid_sender() {
-        let config = PipelineConfig::default();
+        let config = StreamPipelineConfig::default();
         let (_pipeline, tx) = StagePipeline::new(config).await.unwrap();
         // Sender should be valid (channel open)
         assert!(!tx.is_closed());
@@ -307,7 +307,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pipeline_metrics_initially_empty_stages() {
-        let config = PipelineConfig::default();
+        let config = StreamPipelineConfig::default();
         let (pipeline, _tx) = StagePipeline::new(config).await.unwrap();
         let m = pipeline.metrics();
         assert!(

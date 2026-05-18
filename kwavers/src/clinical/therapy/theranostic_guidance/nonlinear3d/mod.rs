@@ -9,6 +9,7 @@
 mod absorption;
 mod adjoint;
 mod aperture;
+mod aperture_bowl;
 mod cavitation;
 mod checkpoint;
 mod encoding;
@@ -17,6 +18,7 @@ mod grid;
 mod metrics;
 mod optimization;
 mod regularization;
+mod steering;
 mod stencil;
 mod types;
 pub(crate) mod volume;
@@ -36,6 +38,7 @@ use super::AnatomyKind;
 use aperture::build_aperture;
 use cavitation::run_cavitation_inverse;
 use metrics::{fused_score, metrics_from_score};
+use steering::calibrate_electronic_steering;
 use volume::prepare_volume;
 use westervelt::run_fwi;
 
@@ -57,8 +60,10 @@ pub fn run_theranostic_nonlinear_3d(
         target_fraction_xyz,
     )?;
     let aperture = build_aperture(&volume, config)?;
-    let fwi = run_fwi(&volume, &aperture, config);
-    let cavitation = run_cavitation_inverse(&volume, &aperture, &fwi.peak_pressure_pa, config);
+    let steering = calibrate_electronic_steering(&volume, &aperture, config);
+    let fwi = run_fwi(&volume, &steering.aperture, config);
+    let cavitation =
+        run_cavitation_inverse(&volume, &steering.aperture, &fwi.peak_pressure_pa, config);
     let wavelength_min_m = minimum_wavelength_m(&volume.true_sound_speed_m_s, config.frequency_hz);
     let points_per_wavelength_min = wavelength_min_m / volume.spacing_m;
     let resolution_meets_min_ppw = points_per_wavelength_min >= config.min_points_per_wavelength;
@@ -92,9 +97,10 @@ pub fn run_theranostic_nonlinear_3d(
         cavitation_source_density: cavitation.source_density,
         reconstructed_cavitation_density: cavitation.reconstructed_density,
         fwi_objective_history: fwi.objective_history,
+        fwi_iteration_diagnostics: fwi.iteration_diagnostics,
         cavitation_objective_history: cavitation.objective_history,
-        therapy_points_m: aperture.therapy_points_m,
-        receiver_points_m: aperture.receiver_points_m,
+        therapy_points_m: steering.aperture.therapy_points_m,
+        receiver_points_m: steering.aperture.receiver_points_m,
         spacing_m: volume.spacing_m,
         source_dimensions: volume.source_dimensions,
         source_spacing_m: volume.source_spacing_m,
@@ -106,11 +112,13 @@ pub fn run_theranostic_nonlinear_3d(
         dt_s: fwi.dt_s,
         time_steps: fwi.time_steps,
         source_scale: fwi.source_scale,
+        source_plan_metrics: fwi.source_plan_metrics,
+        electronic_steering_metrics: steering.metrics,
         active_voxels,
         fwi_metrics: fwi.metrics,
         cavitation_metrics: cavitation.metrics,
         fusion_metrics,
-        aperture_model: aperture.model_name,
+        aperture_model: steering.aperture.model_name,
         model_family: THERANOSTIC_NONLINEAR_3D_MODEL,
         propagator_model: THERANOSTIC_NONLINEAR_3D_PROPAGATOR,
         cavitation_inverse_model: THERANOSTIC_CAVITATION_INVERSE_MODEL,

@@ -34,7 +34,7 @@ pub struct GpuDeviceInfo {
 
 /// Domain decomposition strategy
 #[derive(Debug, Clone)]
-pub enum DecompositionStrategy {
+pub enum MultiGpuDecompositionStrategy {
     /// Spatial decomposition across GPUs
     Spatial {
         /// Number of spatial dimensions to split
@@ -129,12 +129,12 @@ pub struct DataTransfer {
     /// Priority
     pub priority: u32,
     /// Transfer status
-    pub status: TransferStatus,
+    pub status: PinnMultiGpuTransferStatus,
 }
 
 /// Transfer status
 #[derive(Debug, Clone, PartialEq)]
-pub enum TransferStatus {
+pub enum PinnMultiGpuTransferStatus {
     Pending,
     InProgress,
     Completed,
@@ -143,7 +143,7 @@ pub enum TransferStatus {
 
 /// Performance monitoring data
 #[derive(Debug, Clone)]
-pub struct PerformanceMonitor {
+pub struct MultiGpuPerformanceMonitor {
     /// GPU utilization history
     pub gpu_utilization: Vec<Vec<f32>>,
     /// Memory usage history

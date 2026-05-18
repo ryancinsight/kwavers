@@ -13,12 +13,12 @@ use std::collections::HashMap;
 
 /// Per-plugin and total execution timings.
 #[derive(Debug, Clone, Default)]
-pub struct PerformanceMetrics {
+pub struct PluginExecutionMetrics {
     plugin_times: HashMap<String, std::time::Duration>,
     total_time: std::time::Duration,
 }
 
-impl PerformanceMetrics {
+impl PluginExecutionMetrics {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -54,7 +54,7 @@ pub struct PluginManager {
     pub(self) execution_order: Vec<usize>,
     pub(self) execution_strategy: Box<dyn ExecutionStrategy>,
     pub(self) extra_fields: PluginFields,
-    pub(self) performance_metrics: PerformanceMetrics,
+    pub(self) performance_metrics: PluginExecutionMetrics,
 }
 
 impl std::fmt::Debug for PluginManager {
@@ -78,7 +78,7 @@ impl PluginManager {
             execution_order: Vec::new(),
             execution_strategy: Box::new(SequentialStrategy),
             extra_fields: PluginFields::new(Array3::zeros((1, 1, 1))),
-            performance_metrics: PerformanceMetrics::new(),
+            performance_metrics: PluginExecutionMetrics::new(),
         }
     }
 
@@ -158,7 +158,7 @@ impl PluginManager {
 
     /// Accumulated performance metrics.
     #[must_use]
-    pub fn performance_metrics(&self) -> &PerformanceMetrics {
+    pub fn performance_metrics(&self) -> &PluginExecutionMetrics {
         &self.performance_metrics
     }
 

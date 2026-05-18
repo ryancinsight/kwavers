@@ -41,11 +41,17 @@ use crate::solver::inverse::same_aperture::{
 use ndarray::Array2;
 
 use super::config::TheranosticInverseConfig;
-use super::exposure::{exposure_map, normalize_positive};
+use super::elastic_shear::{
+    reconstruct_elastic_shear, ElasticShearReconstructionResult, THERANOSTIC_ELASTIC_SHEAR_MODEL,
+};
+use super::exposure::normalize_positive;
 use super::geometry::{angle_span, build_device_layout, DeviceLayout};
 use super::medium::{target_contrast, PreparedTheranosticSlice};
 use super::metrics::{metrics_for, ReconstructionMetrics};
-use super::waveform::{simulate_waveform_adjoint_rtm, WaveformSimulationResult};
+use super::transmit_schedule::{select_transmit_schedule, TransmitScheduleResult};
+use super::waveform::{
+    simulate_peak_pressure_exposure, simulate_waveform_adjoint_rtm, WaveformSimulationResult,
+};
 
 /// Canonical model identifier exported through PyO3 and figure metadata.
 ///
@@ -58,8 +64,8 @@ use super::waveform::{simulate_waveform_adjoint_rtm, WaveformSimulationResult};
 pub const THERANOSTIC_OPERATOR_MODEL: &str = SAME_APERTURE_OPERATOR_MODEL;
 pub const THERANOSTIC_OPERATOR_BACKEND: &str = "matrix_free_finite_frequency_same_aperture";
 pub const THERANOSTIC_INVERSE_MODEL_FAMILY: &str =
-    "reduced_born_normal_equation_plus_linear_acoustic_rtm";
-pub const THERANOSTIC_FULL_WAVE_INVERSION: bool = false;
+    "reduced_born_normal_equation_plus_linear_acoustic_rtm_plus_iterative_nonlinear_elastic_fwi";
+pub const THERANOSTIC_FULL_WAVE_INVERSION: bool = true;
 pub const THERANOSTIC_NONLINEAR_WAVE_PROPAGATION: bool = false;
 
 #[derive(Clone, Debug)]
@@ -67,10 +73,19 @@ pub struct TheranosticInverseResult {
     pub prepared: PreparedTheranosticSlice,
     pub layout: DeviceLayout,
     pub exposure: Array2<f64>,
+    pub exposure_raw_peak_pressure: Array2<f64>,
+    pub exposure_model: String,
+    pub exposure_backend: String,
+    pub exposure_uses_hybrid_pstd_fdtd: bool,
+    pub exposure_source_count: usize,
+    pub exposure_time_steps: usize,
+    pub exposure_dt_s: f64,
+    pub exposure_workspace_values: usize,
     pub lesion_target: Array2<f64>,
     pub anatomy_reconstruction: Array2<f64>,
     pub active_lesion_reconstruction: Array2<f64>,
     pub waveform_rtm_reconstruction: Array2<f64>,
+    pub elastic_shear_reconstruction: Array2<f64>,
     pub subharmonic_reconstruction: Array2<f64>,
     pub harmonic_reconstruction: Array2<f64>,
     pub ultraharmonic_reconstruction: Array2<f64>,
@@ -78,11 +93,13 @@ pub struct TheranosticInverseResult {
     pub anatomy_metrics: ReconstructionMetrics,
     pub active_metrics: ReconstructionMetrics,
     pub waveform_metrics: ReconstructionMetrics,
+    pub elastic_shear_metrics: ReconstructionMetrics,
     pub subharmonic_metrics: ReconstructionMetrics,
     pub harmonic_metrics: ReconstructionMetrics,
     pub ultraharmonic_metrics: ReconstructionMetrics,
     pub fused_metrics: ReconstructionMetrics,
     pub objective_history: Vec<f64>,
+    pub transmit_schedule: TransmitScheduleResult,
     pub measurements: usize,
     pub encoded_measurements: usize,
     pub unencoded_measurements: usize,
@@ -92,6 +109,8 @@ pub struct TheranosticInverseResult {
     pub operator_storage_values: usize,
     pub dense_operator_values: usize,
     pub inverse_model_family: String,
+    pub elastic_shear_model: String,
+    pub elastic_shear: ElasticShearReconstructionResult,
     pub is_full_wave_inversion: bool,
     pub uses_nonlinear_wave_propagation: bool,
     pub waveform: WaveformSimulationResult,
@@ -108,6 +127,8 @@ pub fn run_theranostic_inverse(
         &prepared.target_mask,
         prepared.spacing_m,
     )?;
+    let transmit_schedule = select_transmit_schedule(&layout, &prepared, config.transmit_schedule)?;
+    let acquisition_layout = acquisition_layout_for_schedule(&layout, &transmit_schedule);
     let active_mask = &prepared.body_mask;
     let active = active_grid(active_mask, prepared.spacing_m);
     if active.len() < 16 {
@@ -122,17 +143,33 @@ pub fn run_theranostic_inverse(
     let settings = SameApertureSettings {
         frequencies_hz: &config.frequencies_hz,
         receiver_offsets: &config.receiver_offsets,
+        phase_speed_m_s: C_REF_M_S,
     };
     let fundamental = EncodedOperator::deterministic_signs(
-        fundamental_operator(medium, &layout.therapy_elements, &active, settings),
+        fundamental_operator(
+            medium,
+            &transmit_schedule.source_elements,
+            &active,
+            settings,
+        ),
         config.inverse_encoding_rows_per_code,
     );
     let harmonic = EncodedOperator::deterministic_signs(
-        harmonic_operator(medium, &layout.therapy_elements, &active, settings),
+        harmonic_operator(
+            medium,
+            &transmit_schedule.source_elements,
+            &active,
+            settings,
+        ),
         config.inverse_encoding_rows_per_code,
     );
     let ultraharmonic = EncodedOperator::deterministic_signs(
-        ultraharmonic_operator(medium, &layout.therapy_elements, &active, settings),
+        ultraharmonic_operator(
+            medium,
+            &transmit_schedule.source_elements,
+            &active,
+            settings,
+        ),
         config.inverse_encoding_rows_per_code,
     );
     let passive = EncodedOperator::deterministic_signs(
@@ -159,9 +196,11 @@ pub fn run_theranostic_inverse(
         + harmonic.dense_values()
         + ultraharmonic.dense_values();
     let inverse_settings = inverse_settings(config);
-    let exposure = exposure_map(&prepared, &layout, config);
+    let exposure_result = simulate_peak_pressure_exposure(&prepared, &layout, config);
+    let exposure = exposure_result.exposure.clone();
     let lesion_target = lesion_source(&prepared, &exposure);
-    let waveform = simulate_waveform_adjoint_rtm(&prepared, &layout, config, &lesion_target);
+    let waveform =
+        simulate_waveform_adjoint_rtm(&prepared, &acquisition_layout, config, &lesion_target);
 
     let anatomy_target = target_contrast(&prepared);
     let anatomy_vec = vector_from_image(&anatomy_target, &active);
@@ -181,6 +220,8 @@ pub fn run_theranostic_inverse(
         active_mask,
     );
     let waveform_rtm_reconstruction = waveform.reconstruction.clone();
+    let elastic_shear = reconstruct_elastic_shear(&prepared, &layout, config, &lesion_target)?;
+    let elastic_shear_reconstruction = elastic_shear.reconstruction.clone();
 
     let sub_target_vec = vector_from_image(&lesion_target, &active);
     let sub_result = solve_tikhonov_h1(&passive, &sub_target_vec, &active, inverse_settings);
@@ -223,6 +264,8 @@ pub fn run_theranostic_inverse(
     let anatomy_metrics = metrics_for(&anatomy_target, &anatomy_reconstruction, active_mask);
     let active_metrics = metrics_for(&lesion_target, &active_lesion_reconstruction, active_mask);
     let waveform_metrics = metrics_for(&lesion_target, &waveform_rtm_reconstruction, active_mask);
+    let elastic_shear_metrics =
+        metrics_for(&lesion_target, &elastic_shear_reconstruction, active_mask);
     let subharmonic_metrics = metrics_for(&lesion_target, &subharmonic_reconstruction, active_mask);
     let harmonic_metrics = metrics_for(&harmonic_target, &harmonic_reconstruction, active_mask);
     let ultraharmonic_metrics = metrics_for(
@@ -237,10 +280,19 @@ pub fn run_theranostic_inverse(
         prepared,
         layout,
         exposure,
+        exposure_raw_peak_pressure: exposure_result.raw_peak_pressure,
+        exposure_model: exposure_result.model_name.to_owned(),
+        exposure_backend: exposure_result.backend_name.to_owned(),
+        exposure_uses_hybrid_pstd_fdtd: exposure_result.uses_hybrid_pstd_fdtd,
+        exposure_source_count: exposure_result.source_count,
+        exposure_time_steps: exposure_result.time_steps,
+        exposure_dt_s: exposure_result.dt_s,
+        exposure_workspace_values: exposure_result.workspace_values,
         lesion_target,
         anatomy_reconstruction,
         active_lesion_reconstruction,
         waveform_rtm_reconstruction,
+        elastic_shear_reconstruction,
         subharmonic_reconstruction,
         harmonic_reconstruction,
         ultraharmonic_reconstruction,
@@ -248,11 +300,13 @@ pub fn run_theranostic_inverse(
         anatomy_metrics,
         active_metrics,
         waveform_metrics,
+        elastic_shear_metrics,
         subharmonic_metrics,
         harmonic_metrics,
         ultraharmonic_metrics,
         fused_metrics,
         objective_history: history,
+        transmit_schedule,
         measurements,
         encoded_measurements: measurements,
         unencoded_measurements,
@@ -262,10 +316,38 @@ pub fn run_theranostic_inverse(
         operator_storage_values,
         dense_operator_values,
         inverse_model_family: THERANOSTIC_INVERSE_MODEL_FAMILY.to_owned(),
+        elastic_shear_model: THERANOSTIC_ELASTIC_SHEAR_MODEL.to_owned(),
+        elastic_shear,
         is_full_wave_inversion: THERANOSTIC_FULL_WAVE_INVERSION,
         uses_nonlinear_wave_propagation: THERANOSTIC_NONLINEAR_WAVE_PROPAGATION,
         waveform,
     })
+}
+
+fn acquisition_layout_for_schedule(
+    layout: &DeviceLayout,
+    schedule: &TransmitScheduleResult,
+) -> DeviceLayout {
+    let mut scheduled = vec![false; schedule.total_element_count];
+    for &idx in &schedule.active_indices {
+        if idx < scheduled.len() {
+            scheduled[idx] = true;
+        }
+    }
+    let mut imaging_receivers = layout
+        .therapy_elements
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, &point)| (!scheduled[idx]).then_some(point))
+        .collect::<Vec<_>>();
+    imaging_receivers.extend(layout.imaging_receivers.iter().copied());
+    DeviceLayout {
+        therapy_elements: schedule.source_elements.clone(),
+        imaging_receivers,
+        focus_m: layout.focus_m,
+        skin_contact_m: layout.skin_contact_m,
+        model_name: layout.model_name.clone(),
+    }
 }
 
 fn lesion_source(prepared: &PreparedTheranosticSlice, exposure: &Array2<f64>) -> Array2<f64> {

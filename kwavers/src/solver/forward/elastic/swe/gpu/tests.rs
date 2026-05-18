@@ -1,7 +1,7 @@
 use super::adaptive::AdaptiveResolution;
 use super::device::GPUDevice;
 use super::memory::GPUMemoryPool;
-use super::metrics::PerformanceMetrics;
+use super::metrics::SweGpuStepMetrics;
 use super::solver::GPUElasticWaveSolver3D;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -78,11 +78,11 @@ fn test_adaptive_resolution() {
 
 #[test]
 fn test_performance_metrics() {
-    let metrics = PerformanceMetrics {
+    let metrics = SweGpuStepMetrics {
         total_kernel_time: 1.0,
         total_execution_time: 1.5,
         kernels_executed: 10,
-        ..PerformanceMetrics::default()
+        ..SweGpuStepMetrics::default()
     };
 
     let stats = metrics.statistics();

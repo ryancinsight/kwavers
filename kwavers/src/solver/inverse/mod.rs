@@ -27,11 +27,11 @@ pub mod seismic;
 pub mod time_reversal;
 
 pub use pinn::{
-    elastic_2d, AdaptiveRefinement, CollocationSampler, InterfaceCondition, MultiRegionDomain,
-    SamplingStrategy,
+    elastic_2d, AdaptiveRefinement, CollocationSampler, CollocationSamplingStrategy,
+    MultiRegionDomain, PinnGeometryInterfaceCondition,
 };
 pub use reconstruction::{
-    FilterType, InterpolationMethod, ReconstructionAlgorithm, ReconstructionConfig, Reconstructor,
-    UniversalBackProjection, WeightFunction,
+    ReconstructionAlgorithm, ReconstructionConfig, ReconstructionFilterType,
+    ReconstructionInterpolationMethod, Reconstructor, UniversalBackProjection, WeightFunction,
 };
 pub use time_reversal::{TimeReversalConfig, TimeReversalReconstructor};

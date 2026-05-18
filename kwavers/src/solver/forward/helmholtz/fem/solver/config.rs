@@ -8,7 +8,7 @@
 /// - `ILU` and `AMG` return `FeatureNotAvailable` until real factorizations
 ///   are provided.
 #[derive(Debug, Clone, Copy)]
-pub enum PreconditionerType {
+pub enum FemPreconditionerType {
     /// No preconditioning.
     None,
     /// Diagonal (Jacobi) preconditioning.
@@ -31,7 +31,7 @@ pub struct FemHelmholtzConfig {
     /// Maximum BiCGSTAB iterations.
     pub max_iterations: usize,
     /// Preconditioner applied to the linear system.
-    pub preconditioner: PreconditionerType,
+    pub preconditioner: FemPreconditionerType,
     /// Enable radiation (absorbing) boundary conditions.
     pub radiation_boundary: bool,
 }
@@ -43,7 +43,7 @@ impl Default for FemHelmholtzConfig {
             wavenumber: 1.0,
             tolerance: 1e-8,
             max_iterations: 1000,
-            preconditioner: PreconditionerType::Diagonal,
+            preconditioner: FemPreconditionerType::Diagonal,
             radiation_boundary: true,
         }
     }

@@ -40,7 +40,7 @@
 //
 // group(0) binding(0): `data_re`  — real parts of complex samples  (f32, read_write)
 // group(0) binding(1): `data_im`  — imaginary parts of samples      (f32, read_write)
-// group(1) binding(0): `params`   — FftParams uniform
+// push_constant:       `params`   — FftParams (n, stage, inverse, _pad)
 //
 // ## References
 //
@@ -50,13 +50,23 @@
 //   and a state of the art." Signal Process. 19(4), 259–299.
 //   DOI: 10.1016/0165-1684(90)90158-U
 
-// ─── Uniform parameters ───────────────────────────────────────────────────────
+// ─── Parameters (push_constant) ──────────────────────────────────────────────
+//
+// Delivered per-dispatch via push_constants so the host can update `stage`
+// and `inverse` between butterfly passes without round-tripping a uniform
+// buffer write.  Total size: 4 × 4 = 16 bytes.
+//
+// Binding layout
+// ──────────────
+// group(0) binding(0): `data_re`  — real parts of complex samples  (f32, read_write)
+// group(0) binding(1): `data_im`  — imaginary parts of samples      (f32, read_write)
+// push_constant:       `params`   — FftParams (n, stage, inverse, _pad)
 
 struct FftParams {
     n:       u32,   // FFT length (must be a power of 2)
     stage:   u32,   // Current butterfly stage (0 … log₂(n)−1)
     inverse: u32,   // 0 = forward; 1 = inverse (negates twiddle angle)
-    _pad:    u32,   // Padding to 16-byte alignment (std140)
+    _pad:    u32,   // Padding to 16-byte alignment
 }
 
 // ─── Buffers ──────────────────────────────────────────────────────────────────
@@ -67,8 +77,7 @@ var<storage, read_write> data_re: array<f32>;
 @group(0) @binding(1)
 var<storage, read_write> data_im: array<f32>;
 
-@group(1) @binding(0)
-var<uniform> params: FftParams;
+var<push_constant> params: FftParams;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,9 @@
 //! Defaults for coupled bubble-field integration.
 
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+
 /// Default liquid density used when no medium is supplied [kg m⁻³].
-pub(super) const DEFAULT_RHO_LIQUID: f64 = 1000.0;
+pub(super) const DEFAULT_RHO_LIQUID: f64 = DENSITY_WATER_NOMINAL;
 
 /// Default physical grid spacing (m) (1 mm isotropic).
 pub(super) const DEFAULT_GRID_SPACING: (f64, f64, f64) = (1e-3, 1e-3, 1e-3);

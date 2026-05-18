@@ -8,10 +8,10 @@ pub mod physics_benchmarks;
 // EXPLICIT RE-EXPORTS (Validation API)
 // ============================================================================
 
-/// Scientific contract primitives (MemoryBudget, ValidationCase, etc.)
+/// Scientific contract primitives (MemoryBudget, ContractValidationCase, etc.)
 pub use contract::{
-    BenchmarkCase, CompletionGate, MemoryBudget, ScientificMetadata, ScientificMethod,
-    ScientificReference, ValidationCase, ValidationTarget,
+    BenchmarkCase, CompletionGate, ContractValidationCase, MemoryBudget, ScientificMetadata,
+    ScientificMethod, ScientificReference, ValidationTarget,
 };
 
 /// Validation configuration

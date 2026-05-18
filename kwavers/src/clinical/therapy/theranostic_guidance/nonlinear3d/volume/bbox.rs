@@ -9,6 +9,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::super::skin::nearest_external_skin_point;
 use super::super::super::AnatomyKind;
+use super::super::aperture_bowl::abdominal_bowl_radius_m;
 use super::centroid::centroid_float;
 
 const TARGET_TO_WINDOW_MARGIN_M: f64 = 0.012;
@@ -98,16 +99,6 @@ fn path_cube_bbox(
         KwaversError::InvalidInput("abdominal nonlinear target mask is empty".to_owned())
     })?;
     let target_bounds = mask_bounds(target)?;
-    if treatment_window_radius_m > 0.0 {
-        let target_radius_m = max_distance_to_bbox(focus, target_bounds, spacing_mm);
-        let radius_m = treatment_window_radius_m.max(target_radius_m + TARGET_TO_WINDOW_MARGIN_M);
-        return Ok(cube_from_center_radius(
-            body.dim(),
-            focus,
-            radius_m,
-            spacing_mm,
-        ));
-    }
     let skin = aperture_skin_index.ok_or_else(|| {
         KwaversError::InvalidInput("abdominal aperture skin index is required".to_owned())
     })?;
@@ -116,9 +107,18 @@ fn path_cube_bbox(
         0.5 * (focus[1] + skin[1]),
         0.5 * (focus[2] + skin[2]),
     ];
-    let target_radius_m = max_distance_to_bbox(center, target_bounds, spacing_mm);
+    let target_radius_from_focus_m = max_distance_to_bbox(focus, target_bounds, spacing_mm);
+    let target_radius_from_center_m = max_distance_to_bbox(center, target_bounds, spacing_mm);
     let skin_distance_m = physical_distance(focus, skin, spacing_mm);
-    let radius_m = target_radius_m.max(0.55 * skin_distance_m) + 0.025;
+    let bowl_radius_m = abdominal_bowl_radius_m(skin_distance_m);
+    let bowl_radius_from_center_m =
+        (bowl_radius_m - 0.5 * skin_distance_m).max(0.0) + TARGET_TO_WINDOW_MARGIN_M;
+    let focus_margin_m = treatment_window_radius_m
+        .max(target_radius_from_focus_m + TARGET_TO_WINDOW_MARGIN_M)
+        .max(0.025);
+    let radius_m = (0.5 * skin_distance_m + focus_margin_m)
+        .max(target_radius_from_center_m + TARGET_TO_WINDOW_MARGIN_M)
+        .max(bowl_radius_from_center_m);
     Ok(cube_from_center_radius(
         body.dim(),
         center,
@@ -294,4 +294,44 @@ pub(super) fn physical_distance(a: [f64; 3], b: [f64; 3], spacing_mm: [f64; 3]) 
     let dy = (a[1] - b[1]) * spacing_mm[1] * 1.0e-3;
     let dz = (a[2] - b[2]) * spacing_mm[2] * 1.0e-3;
     dx.hypot(dy).hypot(dz)
+}
+
+#[cfg(test)]
+mod tests {
+    use ndarray::Array3;
+
+    use super::*;
+
+    #[test]
+    fn abdominal_path_crop_contains_focused_bowl_standoff() {
+        let n = 240;
+        let spacing_mm = [1.0, 1.0, 1.0];
+        let focus = [120_usize, 40_usize, 120_usize];
+        let skin = [120.0, 140.0, 120.0];
+        let mut body = Array3::from_elem((n, n, n), false);
+        for x in 40..200 {
+            for y in 20..=140 {
+                for z in 40..200 {
+                    body[[x, y, z]] = true;
+                }
+            }
+        }
+        let mut target = Array3::from_elem((n, n, n), false);
+        target[[focus[0], focus[1], focus[2]]] = true;
+
+        let bbox = path_cube_bbox(&body, &target, Some(skin), spacing_mm, 0.04).unwrap();
+        let depth_m = physical_distance(
+            [focus[0] as f64, focus[1] as f64, focus[2] as f64],
+            skin,
+            spacing_mm,
+        );
+        let source_y = 0.5 * (focus[1] as f64 + skin[1])
+            + (abdominal_bowl_radius_m(depth_m) - 0.5 * depth_m) / (spacing_mm[1] * 1.0e-3);
+
+        assert!(
+            bbox.y1 as f64 >= source_y,
+            "crop y1={} must include focused bowl source vertex at y={source_y:.3}",
+            bbox.y1
+        );
+    }
 }

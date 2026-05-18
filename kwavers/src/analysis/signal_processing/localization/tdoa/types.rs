@@ -1,12 +1,12 @@
 //! TDOA configuration types.
 
-use super::super::config::LocalizationConfig;
+use super::super::config::AcousticLocalizationConfig;
 
 /// TDOA configuration
 #[derive(Debug, Clone)]
 pub struct TDOAConfig {
     /// Base localization config
-    pub config: LocalizationConfig,
+    pub config: AcousticLocalizationConfig,
 
     /// Method for time-delay estimation
     pub method: TimeDelayMethod,
@@ -34,7 +34,7 @@ pub enum TimeDelayMethod {
 impl TDOAConfig {
     /// Create new TDOA configuration
     #[must_use]
-    pub fn new(config: LocalizationConfig, method: TimeDelayMethod) -> Self {
+    pub fn new(config: AcousticLocalizationConfig, method: TimeDelayMethod) -> Self {
         Self {
             config,
             method,
@@ -61,7 +61,7 @@ impl TDOAConfig {
 impl Default for TDOAConfig {
     fn default() -> Self {
         Self::new(
-            LocalizationConfig::default(),
+            AcousticLocalizationConfig::default(),
             TimeDelayMethod::CrossCorrelation,
         )
     }

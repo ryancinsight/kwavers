@@ -5,14 +5,14 @@ use std::time::{Duration, Instant};
 
 /// Performance monitoring for clinical workflows.
 #[derive(Debug)]
-pub struct PerformanceMonitor {
+pub struct WorkflowPerformanceMonitor {
     pub(super) start_time: Instant,
     pub(super) stage_times: HashMap<String, Duration>,
     pub(super) gpu_samples: Vec<f64>,
     pub(super) memory_samples: Vec<f64>,
 }
 
-impl PerformanceMonitor {
+impl WorkflowPerformanceMonitor {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -68,7 +68,7 @@ impl PerformanceMonitor {
     }
 }
 
-impl Default for PerformanceMonitor {
+impl Default for WorkflowPerformanceMonitor {
     fn default() -> Self {
         Self::new()
     }

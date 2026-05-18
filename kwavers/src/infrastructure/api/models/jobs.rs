@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::infrastructure::api::TrainingConfig;
+use crate::infrastructure::api::PinnApiTrainingConfig;
 
 /// Job queue entry for PINN training tasks
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,11 +37,11 @@ pub struct PINNJobConfig {
     /// Physics domain
     pub physics_domain: String,
     /// Training configuration
-    pub training_config: TrainingConfig,
+    pub training_config: PinnApiTrainingConfig,
     /// Geometry specification
     pub geometry: crate::api::GeometrySpec,
     /// Physics parameters
-    pub physics_params: crate::api::PhysicsParameters,
+    pub physics_params: crate::api::PinnApiPhysicsParameters,
     /// Callback URL for notifications
     pub callback_url: Option<String>,
     /// User metadata
@@ -71,7 +71,7 @@ pub struct JobProgress {
 
 /// Training result storage
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrainingResult {
+pub struct JobModelTrainingResult {
     /// Job ID this result belongs to
     pub job_id: String,
     /// Model identifier
@@ -79,18 +79,18 @@ pub struct TrainingResult {
     /// Training completion timestamp
     pub completed_at: DateTime<Utc>,
     /// Final training metrics
-    pub metrics: crate::api::TrainingMetrics,
+    pub metrics: crate::api::PinnApiTrainingMetrics,
     /// Model artifact location
     pub model_location: String,
     /// Validation results
-    pub validation_results: Option<ValidationResults>,
+    pub validation_results: Option<JobValidationResults>,
     /// Performance benchmarks
     pub benchmarks: Option<PerformanceBenchmarks>,
 }
 
 /// Validation results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationResults {
+pub struct JobValidationResults {
     /// Mean absolute error
     pub mae: f64,
     /// Root mean square error
@@ -240,13 +240,13 @@ impl Default for JobQueueEntry {
             completed_at: None,
             config: PINNJobConfig {
                 physics_domain: String::new(),
-                training_config: crate::api::TrainingConfig::default(),
+                training_config: crate::api::PinnApiTrainingConfig::default(),
                 geometry: crate::api::GeometrySpec {
                     bounds: vec![],
                     obstacles: vec![],
                     boundary_conditions: vec![],
                 },
-                physics_params: crate::api::PhysicsParameters {
+                physics_params: crate::api::PinnApiPhysicsParameters {
                     material_properties: HashMap::new(),
                     boundary_values: HashMap::new(),
                     initial_values: HashMap::new(),

@@ -10,8 +10,8 @@
 
 use kwavers::physics::acoustics::imaging::modalities::ultrasound::advanced::{
     CodedExcitationConfig, CodedExcitationProcessor, ExcitationCode, PlaneWaveCompounding,
-    PlaneWaveConfig, PlaneWaveReconstruction, SyntheticApertureConfig,
-    SyntheticApertureReconstruction,
+    PlaneWaveReconstruction, SyntheticApertureConfig, SyntheticApertureReconstruction,
+    UltrasoundPlaneWaveConfig,
 };
 use ndarray::{Array1, Array2, Array3};
 
@@ -105,7 +105,7 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
     println!("-------------------------------------------");
 
     // Configure plane wave imaging
-    let base_config = PlaneWaveConfig {
+    let base_config = UltrasoundPlaneWaveConfig {
         tx_angle: 0.0,
         num_elements: 64,
         element_spacing: 0.3e-3,
@@ -134,7 +134,7 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
     for (i, &angle) in angles.iter().enumerate() {
         println!("  Processing angle {}: {:.0}°", i + 1, angle.to_degrees());
 
-        let pw_config = PlaneWaveConfig {
+        let pw_config = UltrasoundPlaneWaveConfig {
             tx_angle: angle,
             ..base_config.clone()
         };

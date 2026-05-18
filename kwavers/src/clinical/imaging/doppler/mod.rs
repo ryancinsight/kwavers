@@ -78,7 +78,7 @@ pub use color_flow::{ColorFlowConfig, ColorFlowImaging, VelocityMap};
 pub use pulsed_wave::{PWDConfig, PulsedWaveDoppler, SpectralWaveform};
 pub use spectral::{SpectralAnalysis, SpectralConfig};
 pub use types::{DopplerResult, FlowDirection, VelocityEstimate};
-pub use wall_filter::{FilterType, WallFilter, WallFilterConfig};
+pub use wall_filter::{WallFilter, WallFilterConfig, WallFilterType};
 
 /// Default Doppler imaging parameters for clinical ultrasound
 ///

@@ -1,6 +1,6 @@
 #[cfg(feature = "pinn")]
 use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
-    DecompositionStrategy, DistributedConfig, LoadBalancingStrategy,
+    DistributedConfig, LoadBalancingStrategy, PinnBeamformingDecompositionStrategy,
 };
 #[cfg(feature = "pinn")]
 use crate::analysis::signal_processing::beamforming::neural::types::PINNBeamformingConfig;
@@ -16,7 +16,7 @@ fn test_processor_creation() {
         num_gpus: 1,
         gpu_devices: vec![0],
         batch_size_per_gpu: 32,
-        decomposition: DecompositionStrategy::Spatial,
+        decomposition: PinnBeamformingDecompositionStrategy::Spatial,
         load_balancing: LoadBalancingStrategy::Static,
     };
     let result = DistributedNeuralBeamformingProcessor::new(beamforming_config, distributed_config);
@@ -70,7 +70,7 @@ fn test_distributed_processing_matches_sequential_result() {
         num_gpus: 2,
         gpu_devices: vec![0, 1],
         batch_size_per_gpu: 1,
-        decomposition: DecompositionStrategy::Spatial,
+        decomposition: PinnBeamformingDecompositionStrategy::Spatial,
         load_balancing: LoadBalancingStrategy::Static,
     };
     let mut distributed =

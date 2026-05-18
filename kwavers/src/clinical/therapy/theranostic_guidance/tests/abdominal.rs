@@ -3,7 +3,7 @@ use ndarray::Array3;
 use super::super::{
     build_abdominal_placement_context, placement_metrics, prepare_abdominal_slice,
     run_theranostic_inverse, AnatomyKind, TheranosticInverseConfig, WaveformMisfit,
-    THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_WAVEFORM_MODEL,
+    THERANOSTIC_ELASTIC_SHEAR_MODEL, THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_WAVEFORM_MODEL,
 };
 use super::helpers::{
     connected_mask_components, distance_2d, nearest_mask_distance_m, skin_normal_projection_2d,
@@ -103,7 +103,48 @@ fn abdominal_theranostic_inverse_recovers_lesion_support() {
         result.inverse_model_family,
         THERANOSTIC_INVERSE_MODEL_FAMILY
     );
-    assert!(!result.is_full_wave_inversion);
+    assert_eq!(result.elastic_shear_model, THERANOSTIC_ELASTIC_SHEAR_MODEL);
+    assert_eq!(
+        result.elastic_shear_reconstruction.dim(),
+        result.lesion_target.dim()
+    );
+    let elastic_peak = peak_index(
+        &result.elastic_shear_reconstruction,
+        &result.prepared.body_mask,
+    );
+    let lesion_peak = peak_index(&result.lesion_target, &result.prepared.body_mask);
+    assert!(
+        result.elastic_shear_metrics.dice_equal_area > 0.10,
+        "elastic shear dice={}, elastic_peak={:?}, lesion_peak={:?}",
+        result.elastic_shear_metrics.dice_equal_area,
+        elastic_peak,
+        lesion_peak
+    );
+    assert!(
+        result.elastic_shear_metrics.cnr > 0.0,
+        "elastic shear cnr={}",
+        result.elastic_shear_metrics.cnr
+    );
+    assert_eq!(
+        result.elastic_shear.model_name,
+        THERANOSTIC_ELASTIC_SHEAR_MODEL
+    );
+    assert!(result.elastic_shear.receiver_count > 0);
+    assert!(result.elastic_shear.time_steps >= 32);
+    assert!(result.elastic_shear.dt_s > 0.0);
+    assert!(result.elastic_shear.iteration_count > 0);
+    assert!(result.elastic_shear.accepted_step_count > 0);
+    assert!(result.elastic_shear.objective_history.len() >= 2);
+    assert!(
+        result.elastic_shear.objective_history.last().unwrap()
+            < result.elastic_shear.objective_history.first().unwrap(),
+        "elastic FWI objective history={:?}",
+        result.elastic_shear.objective_history
+    );
+    assert!(result.elastic_shear.baseline_trace_energy > 0.0);
+    assert!(result.elastic_shear.lesion_trace_energy > 0.0);
+    assert!(result.elastic_shear.residual_trace_energy > 0.0);
+    assert!(result.is_full_wave_inversion);
     assert!(!result.uses_nonlinear_wave_propagation);
     assert_eq!(
         result.waveform.receiver_count,
@@ -118,6 +159,17 @@ fn abdominal_theranostic_inverse_recovers_lesion_support() {
         "waveform cnr={}",
         result.waveform_metrics.cnr
     );
+}
+
+fn peak_index(
+    image: &ndarray::Array2<f64>,
+    mask: &ndarray::Array2<bool>,
+) -> Option<(usize, usize)> {
+    image
+        .indexed_iter()
+        .filter(|(idx, _)| mask[*idx])
+        .max_by(|(_, a), (_, b)| a.total_cmp(b))
+        .map(|(idx, _)| idx)
 }
 
 #[test]

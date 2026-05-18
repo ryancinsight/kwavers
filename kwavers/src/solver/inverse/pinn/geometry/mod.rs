@@ -16,5 +16,5 @@ mod sampling;
 mod tests;
 
 pub use adaptive::AdaptiveRefinement;
-pub use interface::{InterfaceCondition, MultiRegionDomain};
-pub use sampling::{CollocationSampler, SamplingStrategy};
+pub use interface::{MultiRegionDomain, PinnGeometryInterfaceCondition};
+pub use sampling::{CollocationSampler, CollocationSamplingStrategy};

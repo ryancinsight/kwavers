@@ -1,7 +1,7 @@
 //! Tests for uncertainty quantification types and configuration.
 
 use super::types::{
-    PinnUncertaintyConfig, PredictionWithUncertainty, UncertaintyMethod, UncertaintyStats,
+    PinnUncertaintyConfig, PinnUncertaintyMethod, PredictionWithUncertainty, UncertaintyStats,
 };
 
 #[test]
@@ -21,10 +21,10 @@ fn test_uncertainty_config() {
 #[test]
 fn test_uncertainty_methods() {
     let methods = vec![
-        UncertaintyMethod::MCDropout,
-        UncertaintyMethod::DeepEnsemble,
-        UncertaintyMethod::Conformal,
-        UncertaintyMethod::Hybrid,
+        PinnUncertaintyMethod::MCDropout,
+        PinnUncertaintyMethod::DeepEnsemble,
+        PinnUncertaintyMethod::Conformal,
+        PinnUncertaintyMethod::Hybrid,
     ];
 
     for method in methods {
@@ -41,7 +41,7 @@ fn test_prediction_with_uncertainty() {
         confidence_interval: (vec![0.8, 0.4], vec![1.2, 0.6]),
         entropy: 0.5,
         reliability: 0.9,
-        method: UncertaintyMethod::DeepEnsemble,
+        method: PinnUncertaintyMethod::DeepEnsemble,
     };
 
     assert_eq!(prediction.mean.len(), 2);

@@ -4,7 +4,7 @@
 #[derive(Debug, Clone)]
 pub struct SimdConfig {
     /// SIMD instruction set level
-    pub level: SimdLevel,
+    pub level: MathSimdLevel,
     /// Vector width in elements
     pub vector_width: usize,
     /// Alignment requirement in bytes
@@ -15,7 +15,7 @@ pub struct SimdConfig {
 
 /// SIMD instruction set levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum SimdLevel {
+pub enum MathSimdLevel {
     /// No SIMD (scalar operations)
     Scalar,
     /// SSE/SSE2 (128-bit vectors)
@@ -45,7 +45,7 @@ impl SimdConfig {
         {
             if is_x86_feature_detected!("avx512f") {
                 return Self {
-                    level: SimdLevel::Avx512,
+                    level: MathSimdLevel::Avx512,
                     vector_width: 16, // 512 bits / 32 bits per f32
                     alignment: 64,
                     enabled: true,
@@ -54,7 +54,7 @@ impl SimdConfig {
 
             if is_x86_feature_detected!("avx2") {
                 return Self {
-                    level: SimdLevel::Avx2,
+                    level: MathSimdLevel::Avx2,
                     vector_width: 8, // 256 bits / 32 bits per f32
                     alignment: 32,
                     enabled: true,
@@ -63,7 +63,7 @@ impl SimdConfig {
 
             if is_x86_feature_detected!("sse2") {
                 return Self {
-                    level: SimdLevel::Sse2,
+                    level: MathSimdLevel::Sse2,
                     vector_width: 4, // 128 bits / 32 bits per f32
                     alignment: 16,
                     enabled: true,
@@ -75,7 +75,7 @@ impl SimdConfig {
         #[cfg(target_arch = "aarch64")]
         {
             return Self {
-                level: SimdLevel::Neon,
+                level: MathSimdLevel::Neon,
                 vector_width: 4, // NEON 128-bit
                 alignment: 16,
                 enabled: true,
@@ -84,7 +84,7 @@ impl SimdConfig {
 
         // Fallback to scalar operations
         Self {
-            level: SimdLevel::Scalar,
+            level: MathSimdLevel::Scalar,
             vector_width: 1,
             alignment: std::mem::align_of::<f32>(),
             enabled: false,

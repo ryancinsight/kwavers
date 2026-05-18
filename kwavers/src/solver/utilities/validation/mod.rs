@@ -7,5 +7,5 @@ pub mod numerical_accuracy;
 
 pub use numerical_accuracy::{
     BoundaryResults, ConservationResults, ConvergenceResults, DispersionResults,
-    NumericalValidator, StabilityResults, ValidationResults,
+    NumericalAccuracyResults, NumericalValidator, StabilityResults,
 };

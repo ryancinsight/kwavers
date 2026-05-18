@@ -1,10 +1,10 @@
-use super::material::{DamageParameters, MaterialProperties};
+use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use super::model::CavitationDamage;
 use crate::physics::bubble_dynamics::bubble_field::BubbleStateFields;
 
 #[test]
 fn test_damage_calculation() {
-    let material = MaterialProperties::default();
+    let material = CavitationDamageMaterialProperties::default();
     let params = DamageParameters::default();
     let mut damage = CavitationDamage::new((10, 10, 10), material, params);
 
@@ -22,7 +22,7 @@ fn test_damage_calculation() {
 
 #[test]
 fn test_erosion_threshold() {
-    let material = MaterialProperties::default();
+    let material = CavitationDamageMaterialProperties::default();
     let params = DamageParameters::default();
     let damage = CavitationDamage::new((5, 5, 5), material.clone(), params);
 

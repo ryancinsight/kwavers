@@ -10,7 +10,7 @@
 // - Isolated fault scope (doesn't affect other processes)
 // - Automatic cleanup on drop
 
-use super::scenario::{FaultScenario, RecoveryExpectation};
+use super::scenario::{FaultInjectionScenario, RecoveryExpectation};
 use crate::core::error::{ErrorContext, KwaversError, RecoveryStrategy};
 
 use std::any::Any;
@@ -52,7 +52,7 @@ impl Default for InjectionConfig {
 #[derive(Debug, Clone)]
 pub struct FaultInjectionResult {
     /// The scenario that was injected
-    pub scenario: FaultScenario,
+    pub scenario: FaultInjectionScenario,
     /// Whether the error was successfully injected
     pub injected: bool,
     /// Whether causal chain was preserved
@@ -111,7 +111,7 @@ impl FaultInjector {
     /// 2. Generate appropriate error for scenario
     /// 3. Track causal chain if enabled
     /// 4. Return full result with telemetry
-    pub fn inject_fault(&self, scenario: &FaultScenario) -> FaultInjectionResult {
+    pub fn inject_fault(&self, scenario: &FaultInjectionScenario) -> FaultInjectionResult {
         let start = Instant::now();
 
         if !self.config.enabled {
@@ -162,32 +162,32 @@ impl FaultInjector {
     }
 
     /// Generate actual error for scenario (no mocks)
-    fn generate_fault(&self, scenario: &FaultScenario, start: Instant) -> FaultInjectionResult {
+    fn generate_fault(&self, scenario: &FaultInjectionScenario, start: Instant) -> FaultInjectionResult {
         let error = match scenario {
-            FaultScenario::GpuOomGradual { .. } | FaultScenario::GpuOomSudden { .. } => {
+            FaultInjectionScenario::GpuOomGradual { .. } | FaultInjectionScenario::GpuOomSudden { .. } => {
                 KwaversError::ResourceLimitExceeded {
                     message: format!("GPU OOM: {}", scenario),
                 }
             }
-            FaultScenario::MemoryFragmentation { .. } => {
+            FaultInjectionScenario::MemoryFragmentation { .. } => {
                 KwaversError::System(crate::core::error::SystemError::ResourceExhausted {
                     resource: "memory".to_string(),
                     reason: "fragmentation".to_string(),
                 })
             }
-            FaultScenario::CflViolation {
+            FaultInjectionScenario::CflViolation {
                 overshoot_factor, ..
             } => KwaversError::Physics(crate::core::error::PhysicsError::NumericalInstability {
                 timestep: 1.0,
                 cfl_limit: 1.0 / *overshoot_factor,
             }),
-            FaultScenario::NumericalDivergence { .. } => {
+            FaultInjectionScenario::NumericalDivergence { .. } => {
                 KwaversError::Physics(crate::core::error::PhysicsError::SolverDivergence {
                     iterations: 100,
                     residual: 1e10,
                 })
             }
-            FaultScenario::ConservationViolation {
+            FaultInjectionScenario::ConservationViolation {
                 quantity,
                 violation_amount,
                 ..
@@ -197,7 +197,7 @@ impl FaultInjector {
                 current: 100.0 + violation_amount,
                 tolerance: 0.01,
             }),
-            FaultScenario::ConvergenceFailure {
+            FaultInjectionScenario::ConvergenceFailure {
                 solver_name,
                 target_residual,
                 ..
@@ -206,65 +206,65 @@ impl FaultInjector {
                 iterations: 1000,
                 residual: *target_residual * 10.0,
             }),
-            FaultScenario::IllConditioned {
+            FaultInjectionScenario::IllConditioned {
                 condition_number, ..
             } => KwaversError::Numerical(crate::core::error::NumericalError::IllConditioned {
                 condition_number: *condition_number,
                 operation: "solve".to_string(),
             }),
-            FaultScenario::StiffProblem { .. } => KwaversError::Physics(
+            FaultInjectionScenario::StiffProblem { .. } => KwaversError::Physics(
                 crate::core::error::PhysicsError::NumericalInstabilityGeneral {
                     message: "Stiff system detected".to_string(),
                 },
             ),
-            FaultScenario::GpuDeviceLost { .. } => {
+            FaultInjectionScenario::GpuDeviceLost { .. } => {
                 KwaversError::GpuError("GPU device lost".to_string())
             }
-            FaultScenario::GpuTimeout { timeout_ms, .. } => KwaversError::GpuError(format!(
+            FaultInjectionScenario::GpuTimeout { timeout_ms, .. } => KwaversError::GpuError(format!(
                 "GPU kernel execution timeout after {}ms",
                 timeout_ms
             )),
-            FaultScenario::PcieError { .. } => {
+            FaultInjectionScenario::PcieError { .. } => {
                 KwaversError::System(crate::core::error::SystemError::ExternalServiceError {
                     service: "PCIe".to_string(),
                     error: "Bus error".to_string(),
                 })
             }
-            FaultScenario::ThreadExhaustion { thread_count, .. } => {
+            FaultInjectionScenario::ThreadExhaustion { thread_count, .. } => {
                 KwaversError::System(crate::core::error::SystemError::ThreadPoolCreation {
                     reason: format!("Cannot create {} threads", thread_count),
                 })
             }
-            FaultScenario::FdExhaustion { fd_count, .. } => {
+            FaultInjectionScenario::FdExhaustion { fd_count, .. } => {
                 KwaversError::System(crate::core::error::SystemError::ResourceExhausted {
                     resource: "file_descriptors".to_string(),
                     reason: format!("{} descriptors requested", fd_count),
                 })
             }
-            FaultScenario::CpuStarvation { load_factor, .. } => {
+            FaultInjectionScenario::CpuStarvation { load_factor, .. } => {
                 KwaversError::PerformanceError(format!("CPU load factor {:.2}", load_factor))
             }
-            FaultScenario::RaceCondition { .. } => KwaversError::ConcurrencyError {
+            FaultInjectionScenario::RaceCondition { .. } => KwaversError::ConcurrencyError {
                 message: "Race condition detected".to_string(),
             },
-            FaultScenario::Deadlock { .. } => KwaversError::ConcurrencyError {
+            FaultInjectionScenario::Deadlock { .. } => KwaversError::ConcurrencyError {
                 message: "Deadlock detected".to_string(),
             },
-            FaultScenario::PriorityInversion { .. } => KwaversError::ConcurrencyError {
+            FaultInjectionScenario::PriorityInversion { .. } => KwaversError::ConcurrencyError {
                 message: "Priority inversion detected".to_string(),
             },
-            FaultScenario::CascadingSequence { sequence, .. } => {
+            FaultInjectionScenario::CascadingSequence { sequence, .. } => {
                 // Generate first fault in sequence
                 if let Some(first) = sequence.first() {
                     return self.generate_fault(first, start);
                 }
                 KwaversError::InternalError("Empty cascading sequence".to_string())
             }
-            FaultScenario::RecoveryFault { primary, .. } => {
+            FaultInjectionScenario::RecoveryFault { primary, .. } => {
                 // Generate primary fault
                 return self.generate_fault(primary, start);
             }
-            FaultScenario::Custom { name, .. } => {
+            FaultInjectionScenario::Custom { name, .. } => {
                 KwaversError::InternalError(format!("Custom fault: {}", name))
             }
         };

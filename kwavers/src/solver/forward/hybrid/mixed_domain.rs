@@ -5,7 +5,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use crate::domain::plugin::{PluginMetadata, PluginState};
-use crate::math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE};
+use crate::math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
 
@@ -116,7 +116,7 @@ impl MixedDomainPropagationPlugin {
     ///
     pub fn to_frequency_domain(&mut self, field: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
         let (nx, ny, nz) = field.dim();
-        let fft = FFT_CACHE.get_or_create(Shape3D { nx, ny, nz });
+        let fft = FFT_CACHE_3D.get_or_create(Shape3D { nx, ny, nz });
 
         let mut out = Array3::<Complex64>::zeros((nx, ny, nz));
         fft.forward_into(field, &mut out);
@@ -129,7 +129,7 @@ impl MixedDomainPropagationPlugin {
     ///
     pub fn to_time_domain(&mut self, field: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
-        let fft = FFT_CACHE.get_or_create(Shape3D { nx, ny, nz });
+        let fft = FFT_CACHE_3D.get_or_create(Shape3D { nx, ny, nz });
         let mut out = Array3::<f64>::zeros((nx, ny, nz));
         let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
         fft.inverse_into(field, &mut out, &mut scratch);

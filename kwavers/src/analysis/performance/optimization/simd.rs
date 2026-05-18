@@ -1,12 +1,12 @@
 //! SIMD optimization implementations
 
-use super::config::SimdLevel;
+use super::config::PerfOptSimdLevel;
 use crate::core::error::KwaversResult;
 
 /// SIMD optimizer for vectorized operations
 #[derive(Debug)]
 pub struct SimdOptimizer {
-    level: SimdLevel,
+    level: PerfOptSimdLevel,
     vector_width: usize,
 }
 
@@ -16,7 +16,7 @@ impl SimdOptimizer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(level: SimdLevel) -> Self {
+    pub fn new(level: PerfOptSimdLevel) -> Self {
         Self {
             level,
             vector_width: level.vector_width(),
@@ -46,7 +46,7 @@ impl SimdOptimizer {
     pub fn dot_product(&self, a: &[f64], b: &[f64]) -> f64 {
         assert_eq!(a.len(), b.len());
 
-        if self.level == SimdLevel::None {
+        if self.level == PerfOptSimdLevel::None {
             // Scalar fallback
             a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
         } else {
@@ -92,7 +92,7 @@ impl SimdOptimizer {
     pub fn add_arrays(&self, a: &mut [f64], b: &[f64]) {
         assert_eq!(a.len(), b.len());
 
-        if self.level == SimdLevel::None {
+        if self.level == PerfOptSimdLevel::None {
             // Scalar fallback
             for (x, y) in a.iter_mut().zip(b.iter()) {
                 *x += y;

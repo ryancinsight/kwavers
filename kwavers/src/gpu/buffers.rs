@@ -1,23 +1,23 @@
-//! GPU buffer registry: name-keyed `BufferManager`.
+//! GPU buffer registry: name-keyed `GpuBufferManager`.
 //!
-//! This module provides [`BufferManager`], a **named registry** of [`GpuBuffer`]
+//! This module provides [`GpuBufferManager`], a **named registry** of [`GpuBuffer`]
 //! instances allocated and looked up by string key. The buffer primitive itself
 //! lives in [`crate::gpu::buffer`]; this module only manages the registry layer.
 //!
-//! ## Relationship to `solver::backend::gpu::buffers::BufferManager`
+//! ## Relationship to `solver::backend::gpu::buffers::GpuBufferManager`
 //!
-//! The codebase intentionally contains **two `BufferManager` types** with
+//! The codebase intentionally contains **two `GpuBufferManager` types** with
 //! distinct responsibilities — this is **not** a DRY violation:
 //!
 //! | Type                                            | Layer       | Key                            | Purpose                                                                  |
 //! |-------------------------------------------------|-------------|--------------------------------|--------------------------------------------------------------------------|
-//! | `crate::gpu::buffers::BufferManager` (here)     | gpu module  | `String` (stable name)         | Named registry: persistent, per-context buffers (`GpuContext`, `MultiGpuContext`) |
-//! | `solver::backend::gpu::buffers::BufferManager`  | solver layer| `(size, usage)` (allocation key) | Allocation pool: ephemeral compute scratch buffers reused across kernel dispatches |
+//! | `crate::gpu::buffers::GpuBufferManager` (here)     | gpu module  | `String` (stable name)         | Named registry: persistent, per-context buffers (`GpuContext`, `MultiGpuContext`) |
+//! | `solver::backend::gpu::buffers::GpuBufferManager`  | solver layer| `(size, usage)` (allocation key) | Allocation pool: ephemeral compute scratch buffers reused across kernel dispatches |
 //!
 //! The registry tracks named state (one `pressure_field` buffer per context).
 //! The pool recycles size-matched buffers between dispatches. Merging would
 //! conflate persistence semantics with reuse semantics. The split follows SRP:
-//! each `BufferManager` changes for one reason only.
+//! each `GpuBufferManager` changes for one reason only.
 //!
 //! SRP: changes here when the registry naming or memory-budget strategy
 //! changes. Changes to individual buffer lifecycle or readback belong in
@@ -39,13 +39,13 @@ use std::collections::HashMap;
 /// - `total_memory` equals the sum of `buf.size()` for every live buffer.
 /// - No two entries share the same name; `allocate` returns `Err` on collision.
 #[derive(Debug)]
-pub struct BufferManager {
+pub struct GpuBufferManager {
     buffers: HashMap<String, GpuBuffer>,
     total_memory: u64,
     _max_memory: u64,
 }
 
-impl BufferManager {
+impl GpuBufferManager {
     /// Create a new buffer manager.
     ///
     /// `max_memory` is initialised from the device's `max_buffer_size` limit
@@ -62,7 +62,7 @@ impl BufferManager {
     /// Allocate a new buffer with the given `name`, `size`, and `usage`.
     ///
     /// Returns `Err` if a buffer named `name` already exists.
-    /// The new buffer is accessible via [`BufferManager::get`].
+    /// The new buffer is accessible via [`GpuBufferManager::get`].
     /// # Errors
     /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///

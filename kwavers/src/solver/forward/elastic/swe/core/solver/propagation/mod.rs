@@ -1,6 +1,7 @@
 //! Basic propagation methods for `ElasticWaveSolver`.
 
 use super::super::super::integration::TimeIntegrator;
+use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::definition::ElasticWaveSolver;
 use crate::core::error::{KwaversResult, NumericalError};
@@ -38,6 +39,7 @@ impl ElasticWaveSolver {
         let save_every = self.config.save_every.max(1);
         let recorded_steps = steps.div_ceil(save_every);
         let (nx, ny, nz) = self.grid.dimensions();
+        let mut scratch = ElasticStepScratch::new(nx, ny, nz);
 
         // Multi-component recording (Phase A.2.5 of ADR 007):
         // allocate ux_data, uy_data, uz_data buffers in addition to the
@@ -145,7 +147,7 @@ impl ElasticWaveSolver {
                 }
             }
 
-            integrator.step(&mut current_field, dt, body_force)?;
+            integrator.step(&mut current_field, dt, body_force, &mut scratch)?;
             current_field.time += dt;
 
             if step % save_every == 0 {
@@ -237,10 +239,12 @@ impl ElasticWaveSolver {
         }
         let save_every = self.config.save_every.max(1);
         let steps = (duration_s / dt).ceil() as usize;
+        let (nx, ny, nz) = self.grid.dimensions();
+        let mut scratch = ElasticStepScratch::new(nx, ny, nz);
         let mut history = Vec::new();
         history.push(current_field.clone());
         for step_idx in 0..steps {
-            integrator.step(&mut current_field, dt, body_force)?;
+            integrator.step(&mut current_field, dt, body_force, &mut scratch)?;
             current_field.time += dt;
             if (step_idx + 1) % save_every == 0 {
                 history.push(current_field.clone());

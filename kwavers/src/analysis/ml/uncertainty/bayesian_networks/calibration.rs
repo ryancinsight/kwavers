@@ -1,11 +1,11 @@
 //! Uncertainty decomposition and calibration.
 
-use super::{BayesianPINN, UncertaintyDecomposition};
+use super::{MlBayesianPINN, UncertaintyDecomposition};
 use crate::core::error::KwaversResult;
 use log::info;
 use ndarray::Array2;
 
-impl BayesianPINN {
+impl MlBayesianPINN {
     /// Estimate epistemic vs aleatoric uncertainty.
     ///
     /// Decomposes total MC-dropout uncertainty into equal epistemic (model) and

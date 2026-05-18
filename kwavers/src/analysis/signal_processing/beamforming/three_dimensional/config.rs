@@ -14,7 +14,7 @@ pub enum BeamformingAlgorithm3D {
         /// Dynamic focusing enabled
         dynamic_focusing: bool,
         /// Apodization window type
-        apodization: ApodizationWindow,
+        apodization: Beamforming3dApodizationWindow,
         /// Sub-volume processing for memory efficiency
         sub_volume_size: Option<(usize, usize, usize)>,
     },
@@ -34,7 +34,7 @@ pub enum BeamformingAlgorithm3D {
 
 /// Apodization windows for sidelobe reduction in 3D beamforming
 #[derive(Debug, Clone)]
-pub enum ApodizationWindow {
+pub enum Beamforming3dApodizationWindow {
     /// Rectangular window (no apodization)
     Rectangular,
     /// Hamming window
@@ -49,7 +49,7 @@ pub enum ApodizationWindow {
     Custom(Vec<f64>),
 }
 
-impl ApodizationWindow {
+impl Beamforming3dApodizationWindow {
     /// Convert window type to u32 identifier for GPU shaders
     #[must_use]
     pub fn to_shader_id(&self) -> u32 {
@@ -150,7 +150,7 @@ mod tests {
     fn test_algorithm_variants() {
         let _das = BeamformingAlgorithm3D::DelayAndSum {
             dynamic_focusing: true,
-            apodization: ApodizationWindow::Hamming,
+            apodization: Beamforming3dApodizationWindow::Hamming,
             sub_volume_size: Some((64, 64, 64)),
         };
 
@@ -166,21 +166,30 @@ mod tests {
 
     #[test]
     fn test_apodization_window_variants() {
-        let _rect = ApodizationWindow::Rectangular;
-        let _hamming = ApodizationWindow::Hamming;
-        let _hann = ApodizationWindow::Hann;
-        let _blackman = ApodizationWindow::Blackman;
-        let _gaussian = ApodizationWindow::Gaussian { sigma: 0.5 };
-        let _custom = ApodizationWindow::Custom(vec![1.0, 0.8, 0.6]);
+        let _rect = Beamforming3dApodizationWindow::Rectangular;
+        let _hamming = Beamforming3dApodizationWindow::Hamming;
+        let _hann = Beamforming3dApodizationWindow::Hann;
+        let _blackman = Beamforming3dApodizationWindow::Blackman;
+        let _gaussian = Beamforming3dApodizationWindow::Gaussian { sigma: 0.5 };
+        let _custom = Beamforming3dApodizationWindow::Custom(vec![1.0, 0.8, 0.6]);
     }
 
     #[test]
     fn test_apodization_window_shader_id() {
-        assert_eq!(ApodizationWindow::Rectangular.to_shader_id(), 0);
-        assert_eq!(ApodizationWindow::Hamming.to_shader_id(), 1);
-        assert_eq!(ApodizationWindow::Hann.to_shader_id(), 2);
-        assert_eq!(ApodizationWindow::Blackman.to_shader_id(), 3);
-        assert_eq!(ApodizationWindow::Gaussian { sigma: 0.5 }.to_shader_id(), 4);
-        assert_eq!(ApodizationWindow::Custom(vec![]).to_shader_id(), 5);
+        assert_eq!(
+            Beamforming3dApodizationWindow::Rectangular.to_shader_id(),
+            0
+        );
+        assert_eq!(Beamforming3dApodizationWindow::Hamming.to_shader_id(), 1);
+        assert_eq!(Beamforming3dApodizationWindow::Hann.to_shader_id(), 2);
+        assert_eq!(Beamforming3dApodizationWindow::Blackman.to_shader_id(), 3);
+        assert_eq!(
+            Beamforming3dApodizationWindow::Gaussian { sigma: 0.5 }.to_shader_id(),
+            4
+        );
+        assert_eq!(
+            Beamforming3dApodizationWindow::Custom(vec![]).to_shader_id(),
+            5
+        );
     }
 }

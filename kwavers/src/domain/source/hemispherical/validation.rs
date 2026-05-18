@@ -32,7 +32,7 @@ impl ArrayValidator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn validate(&self, metrics: &PerformanceMetrics) -> KwaversResult<()> {
+    pub fn validate(&self, metrics: &HemisphericalArrayMetrics) -> KwaversResult<()> {
         // Check safety limits
         if metrics.peak_pressure > self.max_pressure {
             log::warn!(
@@ -54,7 +54,7 @@ impl ArrayValidator {
 
 /// Performance metrics for array evaluation
 #[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+pub struct HemisphericalArrayMetrics {
     /// Peak pressure at focus (Pa)
     pub peak_pressure: f64,
     /// Focal volume (-6dB) (mm³)
@@ -67,7 +67,7 @@ pub struct PerformanceMetrics {
     pub steering_range: f64,
 }
 
-impl Default for PerformanceMetrics {
+impl Default for HemisphericalArrayMetrics {
     fn default() -> Self {
         Self {
             peak_pressure: 0.0,

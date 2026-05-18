@@ -21,7 +21,7 @@ pub struct ClinicalExaminationResult {
     /// Quality metrics for each modality
     pub quality_metrics: HashMap<String, f64>,
     /// Processing performance metrics
-    pub performance_metrics: PerformanceMetrics,
+    pub performance_metrics: WorkflowTimingMetrics,
     /// Clinical confidence score (0-100)
     pub confidence_score: f64,
 }
@@ -56,7 +56,7 @@ pub enum DiagnosticUrgency {
 
 /// Performance metrics for clinical workflows
 #[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+pub struct WorkflowTimingMetrics {
     /// Total examination time
     pub total_time: Duration,
     /// Time per processing stage

@@ -34,7 +34,7 @@ impl Default for LossWeights {
 
 /// Activation function for hidden layers.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ActivationFunction {
+pub enum ElasticPinnActivationFunction {
     Tanh,
     Sin,
     Swish,
@@ -43,7 +43,7 @@ pub enum ActivationFunction {
 
 /// Learning rate scheduling strategy.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum LearningRateScheduler {
+pub enum ElasticPinnLrScheduler {
     Constant,
     Exponential {
         decay_rate: f64,
@@ -64,7 +64,7 @@ pub enum LearningRateScheduler {
 
 /// Optimizer type for training.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum OptimizerType {
+pub enum ElasticPinnOptimizerType {
     SGD {
         momentum: f64,
     },
@@ -86,7 +86,7 @@ pub enum OptimizerType {
 
 /// Sampling strategy for collocation points.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum SamplingStrategy {
+pub enum ElasticCollocationSamplingStrategy {
     Uniform,
     LatinHypercube,
     Sobol,

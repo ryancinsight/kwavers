@@ -13,7 +13,7 @@ fn test_pstd_sem_coupling_creation() {
                 let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
                 sem_mesh.add_node(
                     [x, y, z],
-                    crate::domain::mesh::tetrahedral::BoundaryType::Interior,
+                    crate::domain::mesh::tetrahedral::MeshBoundaryType::Interior,
                 );
             }
         }
@@ -44,7 +44,7 @@ fn test_spectral_coupling_convergence() {
                 let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
                 sem_mesh.add_node(
                     [x, y, z],
-                    crate::domain::mesh::tetrahedral::BoundaryType::Interior,
+                    crate::domain::mesh::tetrahedral::MeshBoundaryType::Interior,
                 );
             }
         }
@@ -76,7 +76,7 @@ fn test_interface_detection() {
                 let (x, y, z) = pstd_grid.indices_to_coordinates(i, j, k);
                 sem_mesh.add_node(
                     [x, y, z],
-                    crate::domain::mesh::tetrahedral::BoundaryType::Interior,
+                    crate::domain::mesh::tetrahedral::MeshBoundaryType::Interior,
                 );
             }
         }

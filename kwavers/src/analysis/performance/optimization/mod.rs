@@ -8,7 +8,7 @@ pub mod parallel;
 pub mod simd;
 
 pub use cache::{AccessPattern, CacheOptimizer};
-pub use config::{OptimizationConfig, SimdLevel};
+pub use config::{HardwareOptimizationConfig, PerfOptSimdLevel};
 pub use gpu::GpuOptimizer;
 pub use memory::{BandwidthOptimizer, MemoryOptimizer, PrefetchStrategy};
 pub use parallel::ParallelOptimizer;
@@ -23,7 +23,7 @@ pub struct StencilKernel {
     pub coefficients: Vec<f64>,
     /// Stencil radius
     pub radius: usize,
-    /// Dimension (1D, 2D, or 3D)
+    /// GridDimension (1D, 2D, or 3D)
     pub dimension: usize,
 }
 
@@ -61,7 +61,7 @@ impl StencilKernel {
 /// dispatch strategy is wired into `apply_optimizations`.
 #[derive(Debug)]
 pub struct PerformanceOptimizer {
-    config: OptimizationConfig,
+    config: HardwareOptimizationConfig,
     simd: SimdOptimizer,
     cache: CacheOptimizer,
     memory: MemoryOptimizer,
@@ -73,7 +73,7 @@ impl PerformanceOptimizer {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new(config: OptimizationConfig) -> KwaversResult<Self> {
+    pub fn new(config: HardwareOptimizationConfig) -> KwaversResult<Self> {
         let simd = SimdOptimizer::new(config.simd_level);
         let cache = CacheOptimizer::new(config.cache_block_size);
         let memory = MemoryOptimizer::new(config.prefetch_distance);

@@ -6,5 +6,5 @@
 pub mod monitor;
 pub mod workflow;
 
-pub use monitor::PerformanceMonitor;
+pub use monitor::WorkflowPerformanceMonitor;
 pub use workflow::ClinicalWorkflowOrchestrator;

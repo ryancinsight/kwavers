@@ -126,7 +126,7 @@ impl<const N: usize> SlidingRateWindow<N> {
 
 /// Error metrics registry.
 #[derive(Debug)]
-pub struct ErrorMetrics {
+pub struct TelemetryErrorCounts {
     errors_total: HashMap<String, AtomicU64>,
     errors_by_type: HashMap<&'static str, AtomicU64>,
     error_rates: HashMap<ErrorSeverity, SlidingRateWindow<60>>,
@@ -137,7 +137,7 @@ pub struct ErrorMetrics {
     threshold_breaches: HashMap<ErrorSeverity, AtomicU64>,
 }
 
-impl Default for ErrorMetrics {
+impl Default for TelemetryErrorCounts {
     fn default() -> Self {
         let errors_total = ErrorSeverity::all()
             .into_iter()
@@ -173,7 +173,7 @@ impl Default for ErrorMetrics {
     }
 }
 
-impl ErrorMetrics {
+impl TelemetryErrorCounts {
     #[must_use]
     pub fn new() -> Self {
         Self::default()

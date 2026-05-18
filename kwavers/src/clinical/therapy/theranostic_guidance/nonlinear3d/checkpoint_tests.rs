@@ -6,7 +6,7 @@ use super::forward::{
     ReplayInput, TimeSchedule,
 };
 use super::stencil::sponge;
-use super::types::{GridIndex, Nonlinear3dAperture, Nonlinear3dConfig};
+use super::types::{GridIndex, Nonlinear3dAperture, Nonlinear3dConfig, SourceDomain};
 
 #[test]
 fn checkpoint_replay_matches_dense_forward_history_bitwise() {
@@ -119,6 +119,7 @@ impl Fixture {
             beta: &self.beta,
             attenuation_np_per_m_mhz: Some(&self.attenuation_alpha0),
             attenuation_power_law_y: Some(&self.attenuation_y),
+            source_body_mask: Some(&self.body),
             n: self.n,
             spacing_m: self.spacing_m,
             aperture: &self.aperture,
@@ -142,6 +143,7 @@ impl Fixture {
             beta: &self.beta,
             attenuation_np_per_m_mhz: Some(&self.attenuation_alpha0),
             attenuation_power_law_y: Some(&self.attenuation_y),
+            source_body_mask: Some(&self.body),
             n: self.n,
             spacing_m: self.spacing_m,
             aperture: &self.aperture,
@@ -170,6 +172,7 @@ impl Fixture {
             attenuation_np_per_m_mhz: Some(&self.attenuation_alpha0),
             attenuation_power_law_y: Some(&self.attenuation_y),
             body: &self.body,
+            source_body_mask: &self.body,
             n: self.n,
             spacing_m: self.spacing_m,
             aperture: &self.aperture,
@@ -251,6 +254,7 @@ fn aperture() -> Nonlinear3dAperture {
         therapy_points_m: vec![point(GridIndex { x: 1, y: 2, z: 2 })],
         receiver_points_m: vec![point(GridIndex { x: 4, y: 2, z: 2 })],
         model_name: "checkpoint_test_same_aperture".to_owned(),
+        source_domain: SourceDomain::TissueBoundary,
         focus: GridIndex { x: 3, y: 3, z: 3 },
     }
 }

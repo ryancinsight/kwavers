@@ -1,6 +1,6 @@
 //! Simple tests to verify FDTD and PSTD solvers are working correctly
 
-use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
+use kwavers::domain::boundary::{DomainPmlConfig, PMLBoundary};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::source::Source;
@@ -79,7 +79,7 @@ fn test_fdtd_solver() {
         .expect("Failed to initialize plugins");
 
     let sources: Vec<Box<dyn Source>> = Vec::new();
-    let mut boundary = PMLBoundary::new(PMLConfig {
+    let mut boundary = PMLBoundary::new(DomainPmlConfig {
         thickness: DEFAULT_PML_STENCIL_SIZE,
         ..Default::default()
     })
@@ -156,7 +156,7 @@ fn test_pstd_solver() {
     let config = PSTDConfig {
         nt: TEST_STEPS_SHORT + 1,
         dt,
-        boundary: BoundaryConfig::PML(PMLConfig {
+        boundary: BoundaryConfig::PML(DomainPmlConfig {
             thickness: DEFAULT_PML_STENCIL_SIZE,
             ..Default::default()
         }),
@@ -174,7 +174,7 @@ fn test_pstd_solver() {
         .expect("Failed to initialize plugins");
 
     let sources: Vec<Box<dyn Source>> = Vec::new();
-    let mut boundary = PMLBoundary::new(PMLConfig {
+    let mut boundary = PMLBoundary::new(DomainPmlConfig {
         thickness: DEFAULT_PML_STENCIL_SIZE,
         ..Default::default()
     })
@@ -288,7 +288,7 @@ fn test_wave_propagation() {
             .expect("Failed to initialize plugins");
 
         let sources: Vec<Box<dyn Source>> = Vec::new();
-        let mut boundary = PMLBoundary::new(PMLConfig {
+        let mut boundary = PMLBoundary::new(DomainPmlConfig {
             thickness: DEFAULT_PML_STENCIL_SIZE,
             ..Default::default()
         })
@@ -330,7 +330,7 @@ fn test_wave_propagation() {
         let config = PSTDConfig {
             nt: TEST_STEPS_MEDIUM + 1,
             dt,
-            boundary: BoundaryConfig::PML(PMLConfig {
+            boundary: BoundaryConfig::PML(DomainPmlConfig {
                 thickness: DEFAULT_PML_STENCIL_SIZE,
                 ..Default::default()
             }),
@@ -347,7 +347,7 @@ fn test_wave_propagation() {
             .expect("Failed to initialize plugins");
 
         let sources: Vec<Box<dyn Source>> = Vec::new();
-        let mut boundary = PMLBoundary::new(PMLConfig {
+        let mut boundary = PMLBoundary::new(DomainPmlConfig {
             thickness: DEFAULT_PML_STENCIL_SIZE,
             ..Default::default()
         })

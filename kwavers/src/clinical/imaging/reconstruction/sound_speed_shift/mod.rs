@@ -17,6 +17,7 @@
 
 mod curved_array;
 mod fixed_acquisition;
+mod openpros_benchmark;
 mod operator;
 mod propagation;
 mod ray;
@@ -33,6 +34,11 @@ pub use curved_array::{CurvedArray2d, CurvedArrayShiftScan};
 pub use fixed_acquisition::{
     SoundSpeedShiftBatch, SoundSpeedShiftBatchConfig, SoundSpeedShiftBatchFrame,
     SoundSpeedShiftFrameSummary, SoundSpeedShiftObjectiveHistoryPolicy, SoundSpeedShiftPlan,
+};
+pub use openpros_benchmark::{
+    openpros_shift_benchmark_case, run_openpros_shift_benchmark, OpenProsShiftBenchmarkCase,
+    OpenProsShiftBenchmarkConfig, OpenProsShiftBenchmarkResult, OpenProsShiftReconstructionMetrics,
+    OpenProsWaveformExpectation, OPENPROS_PAPER_ID,
 };
 use operator::SoundSpeedShiftOperator;
 use solver::{solve_shift, solve_shift_with_metrics, SoundSpeedShiftSolverMetrics};

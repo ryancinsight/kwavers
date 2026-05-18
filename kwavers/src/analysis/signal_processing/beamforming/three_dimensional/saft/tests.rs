@@ -1,6 +1,6 @@
 use ndarray::Array4;
 
-use super::super::{ApodizationWindow, BeamformingAlgorithm3D};
+use super::super::{Beamforming3dApodizationWindow, BeamformingAlgorithm3D};
 use super::config::SaftConfig;
 use super::processor::{distance3, SaftProcessor};
 
@@ -18,7 +18,10 @@ fn make_processor(nx: usize, ny: usize, nz: usize, ntx: usize, nrx: usize) -> Sa
 fn test_saft_config_default() {
     let config = SaftConfig::default();
     assert_eq!(config.virtual_sources, 100);
-    assert!(matches!(config.apodization, ApodizationWindow::Hamming));
+    assert!(matches!(
+        config.apodization,
+        Beamforming3dApodizationWindow::Hamming
+    ));
     assert!(config.coherence_factor_enabled);
     assert_eq!(config.f_number, 1.5);
 }

@@ -9,7 +9,7 @@ use crate::solver::inverse::pinn::ml::meta_learning::types::{PdeType, PhysicsTas
 use crate::solver::inverse::pinn::ml::Geometry2D;
 
 #[derive(Debug)]
-pub enum SamplingStrategy {
+pub enum MetaLearningSamplingStrategy {
     /// Random sampling
     Random,
     /// Curriculum learning (easy to hard)
@@ -25,7 +25,7 @@ pub struct TaskSampler {
     /// Available physics tasks
     task_pool: Vec<PhysicsTask>,
     /// Task sampling strategy
-    sampling_strategy: SamplingStrategy,
+    sampling_strategy: MetaLearningSamplingStrategy,
     /// Current sampling index
     current_index: usize,
     /// History of sampled task indices
@@ -36,7 +36,7 @@ pub struct TaskSampler {
 
 impl TaskSampler {
     /// Create a new task sampler
-    pub fn new(strategy: SamplingStrategy, config: MetaLearningConfig) -> Self {
+    pub fn new(strategy: MetaLearningSamplingStrategy, config: MetaLearningConfig) -> Self {
         Self {
             task_pool: Vec::new(),
             sampling_strategy: strategy,
@@ -71,11 +71,11 @@ impl TaskSampler {
 
         for _ in 0..batch_size {
             let task = match self.sampling_strategy {
-                SamplingStrategy::Random => {
+                MetaLearningSamplingStrategy::Random => {
                     let idx = rand::random::<usize>() % self.task_pool.len();
                     self.task_pool[idx].clone()
                 }
-                SamplingStrategy::Curriculum => {
+                MetaLearningSamplingStrategy::Curriculum => {
                     // Progressive difficulty curriculum learning
                     // Literature: Bengio et al. (2009) Curriculum Learning, Graves et al. (2017) Automated Curriculum Learning
 
@@ -131,12 +131,12 @@ impl TaskSampler {
                         self.task_pool[selected_idx].clone()
                     }
                 }
-                SamplingStrategy::Balanced => {
+                MetaLearningSamplingStrategy::Balanced => {
                     // Sample from different physics families
                     let idx = rand::random::<usize>() % self.task_pool.len();
                     self.task_pool[idx].clone()
                 }
-                SamplingStrategy::Diversity => {
+                MetaLearningSamplingStrategy::Diversity => {
                     // Maximize task diversity using determinantal point processes
                     // Literature: Kulesza & Taskar (2012) Determinantal Point Processes for Machine Learning
 
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn test_task_sampler_creation() {
         let config = MetaLearningConfig::default();
-        let sampler = TaskSampler::new(SamplingStrategy::Random, config);
+        let sampler = TaskSampler::new(MetaLearningSamplingStrategy::Random, config);
         assert_eq!(sampler.task_pool.len(), 0);
     }
 }

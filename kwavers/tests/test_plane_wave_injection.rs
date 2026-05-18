@@ -16,9 +16,9 @@ use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::SineWave;
 use kwavers::domain::source::{
-    InjectionMode, PlaneWaveConfig, PlaneWaveSource, Source, SourceField,
+    InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, Source, SourceField,
 };
-use kwavers::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
+use kwavers::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers::simulation::backends::acoustic::backend::AcousticSolverBackend;
 use kwavers::simulation::backends::acoustic::fdtd::FdtdBackend;
 use std::sync::Arc;
@@ -39,8 +39,8 @@ fn test_plane_wave_boundary_injection_timing() {
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
 
     // Create FDTD backend
-    let mut backend =
-        FdtdBackend::new(&grid, &medium, SpatialOrder::Second).expect("Failed to create backend");
+    let mut backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second)
+        .expect("Failed to create backend");
 
     // Create plane wave source with BoundaryOnly injection mode
     let signal = Arc::new(SineWave::new(
@@ -49,7 +49,7 @@ fn test_plane_wave_boundary_injection_timing() {
         0.0, // phase
     ));
 
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0), // +z direction
         wavelength: 1500.0 / 1e6,   // c/f = 1.5 mm
         phase: 0.0,
@@ -247,14 +247,14 @@ fn test_plane_wave_amplitude_scaling() {
     let grid = Grid::new(nx, ny, nz, dx, dy, dz).expect("Failed to create grid");
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
 
-    let mut backend =
-        FdtdBackend::new(&grid, &medium, SpatialOrder::Second).expect("Failed to create backend");
+    let mut backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second)
+        .expect("Failed to create backend");
 
     // Create plane wave with known amplitude
     let source_amplitude = 1e5; // 100 kPa
     let signal = Arc::new(SineWave::new(1e6, source_amplitude, 0.0));
 
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: 1500.0 / 1e6,
         phase: 0.0,

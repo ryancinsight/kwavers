@@ -36,5 +36,5 @@ mod tests;
 pub use aberration::AberrationCorrection;
 pub use attenuation::SkullAttenuation;
 pub use heterogeneous::HeterogeneousSkull;
-pub use properties::SkullProperties;
+pub use properties::AcousticSkullProperties;
 pub use simulation::TranscranialSimulation;

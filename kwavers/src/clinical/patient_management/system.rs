@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use super::demographics::{PatientDemographics, PatientId};
 use super::encounter::{ClinicalEncounter, EncounterId};
 use super::profile::PatientMedicalProfile;
-use super::treatment::TreatmentPlan;
+use super::treatment::PatientTreatmentPlan;
 
 /// Patient Management System
 /// Handles tracking of all patients, encounters, and treatment plans
@@ -12,7 +12,7 @@ use super::treatment::TreatmentPlan;
 pub struct PatientManagementSystem {
     patients: HashMap<PatientId, PatientMedicalProfile>,
     encounters: HashMap<EncounterId, ClinicalEncounter>,
-    treatment_plans: HashMap<String, TreatmentPlan>,
+    treatment_plans: HashMap<String, PatientTreatmentPlan>,
 }
 
 impl PatientManagementSystem {

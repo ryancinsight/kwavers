@@ -4,7 +4,7 @@
 
 use crate::core::error::{ConfigError, KwaversResult};
 use crate::domain::grid::Grid;
-use crate::domain::signal::{Signal, SineWave, ToneBurst, WindowType};
+use crate::domain::signal::{Signal, SignalWindowType, SineWave, ToneBurst};
 use crate::domain::source::{
     basic::{LinearArray, MatrixArray, PistonApodization, PistonConfig},
     transducers::{
@@ -12,7 +12,7 @@ use crate::domain::source::{
         focused::{BowlConfig, FocusedSource},
     },
     wavefront::{
-        BesselConfig, GaussianConfig, PlaneWaveConfig, SphericalConfig, SphericalWaveType,
+        BesselConfig, GaussianConfig, PlaneWaveSourceConfig, SphericalConfig, SphericalWaveType,
     },
     BesselSource, EnvelopeType, GaussianSource, PistonSource, PlaneWaveSource, PointSource,
     PulseType, Source, SourceModel, SourceParameters, SphericalSource,
@@ -54,7 +54,7 @@ impl SourceFactory {
         match config.model {
             SourceModel::Point => Ok(Box::new(PointSource::new(position, signal))),
             SourceModel::PlaneWave => {
-                let wave_config = PlaneWaveConfig {
+                let wave_config = PlaneWaveSourceConfig {
                     direction,
                     wavelength,
                     phase: config.phase,
@@ -224,12 +224,12 @@ impl SourceFactory {
             }
             PulseType::ToneBurst => {
                 let window = match pulse.envelope {
-                    EnvelopeType::Hann | EnvelopeType::Hanning => WindowType::Hann,
-                    EnvelopeType::Rectangular => WindowType::Rectangular,
-                    EnvelopeType::Gaussian => WindowType::Gaussian,
-                    EnvelopeType::Tukey => WindowType::Tukey { alpha: 0.5 },
-                    EnvelopeType::Blackman => WindowType::Blackman,
-                    EnvelopeType::Hamming => WindowType::Hamming,
+                    EnvelopeType::Hann | EnvelopeType::Hanning => SignalWindowType::Hann,
+                    EnvelopeType::Rectangular => SignalWindowType::Rectangular,
+                    EnvelopeType::Gaussian => SignalWindowType::Gaussian,
+                    EnvelopeType::Tukey => SignalWindowType::Tukey { alpha: 0.5 },
+                    EnvelopeType::Blackman => SignalWindowType::Blackman,
+                    EnvelopeType::Hamming => SignalWindowType::Hamming,
                 };
 
                 // ToneBurst creation

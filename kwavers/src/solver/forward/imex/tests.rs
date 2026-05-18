@@ -158,7 +158,7 @@ fn test_operator_splitting_strang() {
 #[test]
 fn test_implicit_solver_linear() {
     // Use linear solver for simple linear problem
-    let solver = LinearSolver::default();
+    let solver = ImexLinearSolver::default();
     let initial = Array3::from_elem((4, 4, 4), 1.0);
 
     // Solve: y - 0.5 = 0, which means y = 0.5

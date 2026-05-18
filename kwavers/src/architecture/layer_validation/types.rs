@@ -85,7 +85,7 @@ pub struct ModuleDependency {
 
 /// Architecture validation result.
 #[derive(Debug, Clone)]
-pub struct ValidationResult {
+pub struct LayerValidationResult {
     /// Whether validation passed.
     pub passed: bool,
 

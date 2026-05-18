@@ -1,5 +1,5 @@
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::linear_algebra::LinearAlgebra;
+use crate::math::linear_algebra::ComplexLinearAlgebra;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -25,7 +25,7 @@ impl MinimumVariance {
     ) -> KwaversResult<Array1<Complex64>> {
         let r_loaded = self.loaded_covariance(covariance, steering.len())?;
 
-        let y = LinearAlgebra::solve_linear_system_complex(&r_loaded, steering)?;
+        let y = ComplexLinearAlgebra::solve_linear_system_complex(&r_loaded, steering)?;
 
         let denom: Complex64 = steering
             .iter()

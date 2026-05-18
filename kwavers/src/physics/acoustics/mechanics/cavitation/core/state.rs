@@ -2,7 +2,7 @@
 
 /// Cavitation state at a point
 #[derive(Debug, Clone, Copy)]
-pub struct CavitationState {
+pub struct CavitationMechanicsState {
     /// Whether cavitation is occurring
     pub is_cavitating: bool,
     /// Cavitation intensity (0-1)
@@ -15,7 +15,7 @@ pub struct CavitationState {
     pub mechanical_index: f64,
 }
 
-impl Default for CavitationState {
+impl Default for CavitationMechanicsState {
     fn default() -> Self {
         Self {
             is_cavitating: false,
@@ -159,10 +159,10 @@ mod tests {
         );
     }
 
-    /// `CavitationState::default` produces a non-cavitating zero-intensity state.
+    /// `CavitationMechanicsState::default` produces a non-cavitating zero-intensity state.
     #[test]
     fn cavitation_state_default_not_cavitating_and_zero_fields() {
-        let s = CavitationState::default();
+        let s = CavitationMechanicsState::default();
         assert!(!s.is_cavitating);
         assert_eq!(s.intensity, 0.0);
         assert_eq!(s.duration, 0.0);

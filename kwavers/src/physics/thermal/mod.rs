@@ -18,7 +18,7 @@ pub mod thermal_dose;
 pub use ablation::{AblationField, AblationKinetics, AblationState};
 pub use coupling::{AcousticHeatingSource, TemperatureCoefficients, ThermalAcousticCoupling};
 pub use diffusion::ThermalDiffusionConfig;
-pub use thermal_dose::ThermalDose;
+pub use thermal_dose::ThermalCEM43Grid;
 
 // Re-export canonical domain type
 pub use crate::domain::medium::properties::ThermalPropertyData;

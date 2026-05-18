@@ -1,4 +1,4 @@
-//! `PMLConfig` — PML absorbing boundary configuration.
+//! `SwePmlConfig` — PML absorbing boundary configuration.
 
 /// PML configuration parameters.
 ///
@@ -10,7 +10,7 @@
 ///
 /// where d is distance into the PML, L_pml is its thickness, and n is the profile order.
 #[derive(Debug, Clone)]
-pub struct PMLConfig {
+pub struct SwePmlConfig {
     /// Thickness of PML region in grid points.
     pub thickness: usize,
 
@@ -30,7 +30,7 @@ pub struct PMLConfig {
     pub reflection_target: f64,
 }
 
-impl Default for PMLConfig {
+impl Default for SwePmlConfig {
     /// Default PML configuration providing <−80 dB reflection for ultrasound.
     fn default() -> Self {
         Self {

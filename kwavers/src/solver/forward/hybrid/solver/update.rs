@@ -3,9 +3,9 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::Boundary;
 use crate::domain::medium::Medium;
 use crate::domain::source::{Source, SourceField};
-use crate::solver::forward::hybrid::config::DecompositionStrategy;
+use crate::solver::forward::hybrid::config::HybridDecompositionStrategy;
 use crate::solver::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
-use crate::solver::forward::hybrid::metrics::{HybridMetrics, ValidationResults};
+use crate::solver::forward::hybrid::metrics::{HybridMetrics, HybridValidationResults};
 use log::debug;
 use ndarray::{s, Array4, Zip};
 use std::time::Instant;
@@ -26,7 +26,7 @@ impl HybridSolver {
     ) -> KwaversResult<()> {
         let update_start = Instant::now();
 
-        if self.config.decomposition_strategy == DecompositionStrategy::Dynamic {
+        if self.config.decomposition_strategy == HybridDecompositionStrategy::Dynamic {
             self.update_decomposition(fields, medium)?;
         }
 
@@ -72,17 +72,17 @@ impl HybridSolver {
 
         let amp = source.amplitude(t);
         if amp.abs() > 1e-12 && source.source_type() == SourceField::Pressure {
-            let mask = source.create_mask(&self.grid);
+            source.create_mask_into(&self.grid, &mut self.source_mask_scratch);
             Zip::from(&mut self.fdtd_solver.fields.p)
-                .and(&mask)
+                .and(&self.source_mask_scratch)
                 .for_each(|p, &m| *p += m * amp);
         }
 
         self.pstd_solver.step_forward()?;
         self.fdtd_solver.step_forward()?;
 
-        let regions = self.regions.clone();
-        for region in &regions {
+        for region_index in 0..self.regions.len() {
+            let region = self.regions[region_index];
             match region.domain_type {
                 DomainType::PSTD => {
                     let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
@@ -137,7 +137,7 @@ impl HybridSolver {
                         .assign(&self.fdtd_solver.fields.uz.slice(slice));
                 }
                 DomainType::Hybrid => {
-                    self.apply_hybrid_region_blended(fields, region)?;
+                    self.apply_hybrid_region_blended(fields, &region)?;
                 }
             }
         }
@@ -175,8 +175,6 @@ impl HybridSolver {
         let uy_idx = UnifiedFieldType::VelocityY.index();
         let uz_idx = UnifiedFieldType::VelocityZ.index();
 
-        const BLEND_WIDTH: usize = 5;
-
         let nx = region.end.0 - region.start.0;
         let ny = region.end.1 - region.start.1;
         let nz = region.end.2 - region.start.2;
@@ -189,13 +187,8 @@ impl HybridSolver {
                         .min(k.min(nz - k - 1)))
                         as f64;
 
-                    let weight = if dist_from_boundary < BLEND_WIDTH as f64 {
-                        0.5 * (1.0
-                            + (std::f64::consts::PI * dist_from_boundary / BLEND_WIDTH as f64)
-                                .cos())
-                    } else {
-                        1.0
-                    };
+                    let weight =
+                        super::hybrid_pstd_weight(dist_from_boundary, super::HYBRID_BLEND_WIDTH);
 
                     let gi = region.start.0 + i;
                     let gj = region.start.1 + j;
@@ -299,7 +292,7 @@ impl HybridSolver {
     }
 
     /// Get validation results
-    pub fn validation_results(&self) -> &ValidationResults {
+    pub fn validation_results(&self) -> &HybridValidationResults {
         &self.validation_results
     }
 
@@ -307,5 +300,66 @@ impl HybridSolver {
     /// Returns None if no sensors are configured or no data has been recorded.
     pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
         self.fdtd_solver.extract_recorded_sensor_data()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::boundary::{DomainPmlConfig, PMLBoundary};
+    use crate::domain::field::mapping::UnifiedFieldType;
+    use crate::domain::grid::Grid;
+    use crate::domain::medium::HomogeneousMedium;
+    use crate::domain::signal::Signal;
+    use crate::domain::source::PointSource;
+    use crate::solver::forward::hybrid::config::{HybridConfig, HybridDecompositionStrategy};
+    use ndarray::Array4;
+    use std::sync::Arc;
+
+    #[derive(Debug, Clone)]
+    struct ConstantSignal(f64);
+
+    impl Signal for ConstantSignal {
+        fn amplitude(&self, _t: f64) -> f64 {
+            self.0
+        }
+
+        fn frequency(&self, _t: f64) -> f64 {
+            0.0
+        }
+
+        fn phase(&self, _t: f64) -> f64 {
+            0.0
+        }
+
+        fn clone_box(&self) -> Box<dyn Signal> {
+            Box::new(self.clone())
+        }
+    }
+
+    #[test]
+    fn update_reuses_source_mask_scratch_for_pressure_source() {
+        let grid = Grid::new(6, 6, 6, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let mut config = HybridConfig::default();
+        config.decomposition_strategy = HybridDecompositionStrategy::Static;
+        config.validation.enable_validation = false;
+        let mut solver = HybridSolver::new(config, &grid, &medium).unwrap();
+        let before = solver.source_mask_scratch.as_ptr();
+        let source = PointSource::new((1.0e-3, 2.0e-3, 3.0e-3), Arc::new(ConstantSignal(1.0)));
+        let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(1)).unwrap();
+        let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, grid.nx, grid.ny, grid.nz));
+
+        solver
+            .update(&mut fields, &medium, &source, &mut boundary, 1.0e-8, 0.0)
+            .unwrap();
+
+        assert_eq!(solver.source_mask_scratch.as_ptr(), before);
+        assert_eq!(solver.source_mask_scratch[[1, 2, 3]], 1.0);
+        assert_eq!(
+            solver.source_mask_scratch.sum(),
+            1.0,
+            "point-source mask must contain exactly one active cell"
+        );
     }
 }

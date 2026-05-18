@@ -96,7 +96,6 @@ impl FractionalLaplacianAbsorption {
 
         Self {
             n,
-            y_exponent,
             dt_tau,
             k_pow_y,
             prev_l_y: None,

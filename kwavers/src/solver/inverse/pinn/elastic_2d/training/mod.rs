@@ -36,8 +36,8 @@ pub mod scheduler;
 pub use optimizer::OptimizerAlgorithm;
 
 /// Learning rate scheduling
-pub use scheduler::{LRScheduler, LearningRateScheduler};
+pub use scheduler::{ElasticPinnLrScheduler, LRScheduler};
 
 /// Re-export data structures from data module
 #[cfg(feature = "pinn")]
-pub use data::{TrainingData, TrainingMetrics};
+pub use data::{ElasticPinnTrainingMetrics, TrainingData};

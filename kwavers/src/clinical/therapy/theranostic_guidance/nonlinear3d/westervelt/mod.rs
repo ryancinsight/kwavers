@@ -56,7 +56,9 @@ pub(super) mod types;
 // of its grandparent; the parent-level re-export bridges the gap).
 pub(super) use super::adjoint::{gradient, GradientInput, ParameterGradient};
 pub(super) use super::encoding::{EncodedTrace, SourceEncoding};
-pub(super) use super::forward::{forward_with_schedule, time_schedule, ForwardInput, TimeSchedule};
+pub(super) use super::forward::{
+    forward_with_schedule, source_plan_metrics, time_schedule, ForwardInput, TimeSchedule,
+};
 pub(super) use super::metrics::metrics_from_score;
 pub(super) use super::optimization::{
     apply_line_search, objective_for_model, LineSearchInput, LineSearchWorkspace, ObjectiveInput,

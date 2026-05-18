@@ -2,7 +2,7 @@
 
 use super::backend::FemHelmholtzBackend;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::mesh::BoundaryType;
+use crate::domain::mesh::MeshBoundaryType;
 use crate::simulation::backends::acoustic::backend::FrequencyDomainAcousticBackend;
 use ndarray::{Array1, ArrayView2};
 use num_complex::Complex64;
@@ -27,7 +27,7 @@ impl FrequencyDomainAcousticBackend for FemHelmholtzBackend<'_> {
 
     fn add_dirichlet_on_boundary_type(
         &mut self,
-        boundary_type: BoundaryType,
+        boundary_type: MeshBoundaryType,
         value: Complex64,
     ) -> KwaversResult<usize> {
         self.solver

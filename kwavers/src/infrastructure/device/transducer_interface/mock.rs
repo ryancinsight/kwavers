@@ -2,8 +2,8 @@
 
 use super::hardware::TransducerHardware;
 use super::types::{
-    DeviceStatus, DeviceTelemetry, HardwareCommand, HardwareResponse, TransducerSpecification,
-    TransducerState,
+    DeviceStatus, DeviceTelemetry, DeviceTransducerSpecification, HardwareCommand,
+    HardwareResponse, TransducerState,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use std::time::Instant;
@@ -12,7 +12,7 @@ use std::time::Instant;
 #[derive(Debug)]
 pub struct MockTransducer {
     /// Device specification.
-    pub(super) spec: TransducerSpecification,
+    pub(super) spec: DeviceTransducerSpecification,
     /// Current state.
     pub(super) state: TransducerState,
     /// Current frequency.
@@ -30,7 +30,7 @@ impl MockTransducer {
     #[must_use]
     pub fn new(model: String, manufacturer: String) -> Self {
         Self {
-            spec: TransducerSpecification {
+            spec: DeviceTransducerSpecification {
                 model,
                 manufacturer,
                 serial_number: "MOCK-001".to_owned(),
@@ -52,7 +52,7 @@ impl MockTransducer {
 }
 
 impl TransducerHardware for MockTransducer {
-    fn specification(&self) -> &TransducerSpecification {
+    fn specification(&self) -> &DeviceTransducerSpecification {
         &self.spec
     }
 

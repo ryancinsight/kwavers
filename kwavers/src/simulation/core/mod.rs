@@ -18,4 +18,4 @@ mod tests;
 
 pub use builder::SimulationBuilder;
 pub use controller::CoreSimulation;
-pub use types::{SimulationResult, SimulationStatistics};
+pub use types::{CoreSimulationStatistics, SimulationResult};

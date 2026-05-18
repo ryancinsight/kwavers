@@ -110,7 +110,8 @@
 //!     &mut drug,
 //!     acoustic_pressure,
 //!     pressure_gradient,
-//!     0.0, // time
+//!     0.0, // dP_ac/dt [Pa/s] — pass 0.0 when waveform is slowly varying
+//!     0.0, // time [s]
 //!     dt,
 //! ).unwrap();
 //!

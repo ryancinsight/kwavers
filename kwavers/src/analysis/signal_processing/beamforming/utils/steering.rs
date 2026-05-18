@@ -208,3 +208,170 @@ impl SteeringVector {
         .expect("endfire steering computation must succeed")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ─── SteeringVector exact value tests ─────────────────────────────────────
+
+    /// Broadside plane wave (direction=[0,0,1]) along sensors aligned on x-axis.
+    ///
+    /// Sensors at [0,0,0] and [d,0,0]; direction = [0,0,1] (z-axis).
+    /// Phase delay at each sensor: k·(pos·dir) = k·0 = 0 for both.
+    /// Steering: [exp(j·0), exp(j·0)] = [1+0j, 1+0j].
+    #[test]
+    fn steering_plane_wave_broadside_all_ones() {
+        let f = 1000.0_f64;
+        let c = 1500.0_f64;
+        let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0], [0.5, 0.0, 0.0]];
+        let a = SteeringVector::compute(
+            &SteeringVectorMethod::PlaneWave,
+            [0.0, 0.0, 1.0],
+            f,
+            sensors,
+            c,
+        )
+        .expect("broadside steering should succeed");
+
+        assert_eq!(a.len(), 2, "steering vector length must equal n_sensors");
+        for (i, &val) in a.iter().enumerate() {
+            assert!(
+                (val.re - 1.0).abs() < 1e-14 && val.im.abs() < 1e-14,
+                "steering[{i}] = {val:?} (expected 1+0j for broadside)"
+            );
+        }
+    }
+
+    /// Endfire plane wave (direction=[1,0,0]) gives quarter-wave negative phase at d=λ/4.
+    ///
+    /// Phase convention: delays[i] = −k·(pos·dir) (standard receive beamforming sign).
+    /// Sensors at [0,0,0] and [λ/4, 0, 0]; direction = [1,0,0].
+    /// k = 2πf/c; phase[0]=0, phase[1] = −k·λ/4 = −π/2.
+    /// a = [exp(j·0), exp(−j·π/2)] = [1+0j, 0−j].
+    #[test]
+    fn steering_plane_wave_endfire_quarter_wave_gives_negative_imaginary_unit() {
+        let f = 1000.0_f64;
+        let c = 1500.0_f64;
+        let lambda = c / f; // 1.5 m
+        let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0], [lambda / 4.0, 0.0, 0.0]];
+        let a = SteeringVector::compute(
+            &SteeringVectorMethod::PlaneWave,
+            [1.0, 0.0, 0.0],
+            f,
+            sensors,
+            c,
+        )
+        .expect("endfire steering should succeed");
+
+        assert_eq!(a.len(), 2);
+        // sensor 0: exp(j·0) = 1+0j
+        assert!(
+            (a[0].re - 1.0).abs() < 1e-13,
+            "a[0].re={}, expected 1.0",
+            a[0].re
+        );
+        assert!(a[0].im.abs() < 1e-13, "a[0].im={}, expected 0.0", a[0].im);
+        // sensor 1: exp(−j·π/2) = 0−j (receive convention: phase = −k·dot)
+        assert!(a[1].re.abs() < 1e-13, "a[1].re={}, expected 0.0", a[1].re);
+        assert!(
+            (a[1].im + 1.0).abs() < 1e-13,
+            "a[1].im={}, expected −1.0",
+            a[1].im
+        );
+    }
+
+    /// Endfire plane wave at full wavelength spacing gives no phase shift (2π cycle).
+    ///
+    /// d = λ = c/f; phase[1] = k·λ = 2π → exp(j·2π) = 1+0j.
+    #[test]
+    fn steering_plane_wave_full_wavelength_spacing_is_in_phase() {
+        let f = 1000.0_f64;
+        let c = 1500.0_f64;
+        let lambda = c / f;
+        let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0], [lambda, 0.0, 0.0]];
+        let a = SteeringVector::compute(
+            &SteeringVectorMethod::PlaneWave,
+            [1.0, 0.0, 0.0],
+            f,
+            sensors,
+            c,
+        )
+        .expect("full-wavelength steering should succeed");
+
+        // exp(j·2π) = 1+0j
+        assert!(
+            (a[1].re - 1.0).abs() < 1e-12,
+            "a[1].re={} (expected 1.0 at full wavelength)",
+            a[1].re
+        );
+        assert!(
+            a[1].im.abs() < 1e-12,
+            "a[1].im={} (expected 0.0 at full wavelength)",
+            a[1].im
+        );
+    }
+
+    /// SphericalWave at distance = λ gives amplitude 1/λ at phase 2π.
+    ///
+    /// sensor at origin, source at [λ, 0, 0]; distance=λ.
+    /// phase = k·λ = 2π → exp(j·2π) = 1 → a[0] = 1/λ + 0j.
+    #[test]
+    fn steering_spherical_wave_one_wavelength_exact_amplitude() {
+        let f = 1000.0_f64;
+        let c = 1500.0_f64;
+        let lambda = c / f; // 1.5 m
+        let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0]];
+        let source = [lambda, 0.0, 0.0];
+        let a = SteeringVector::compute(
+            &SteeringVectorMethod::SphericalWave {
+                source_position: source,
+            },
+            [0.0, 0.0, 1.0],
+            f,
+            sensors,
+            c,
+        )
+        .expect("spherical wave steering should succeed");
+
+        // a[0] = exp(j·2π) / λ = 1/λ + 0j
+        let expected_re = 1.0 / lambda;
+        assert!(
+            (a[0].re - expected_re).abs() < 1e-12,
+            "a[0].re={} (expected 1/λ={expected_re})",
+            a[0].re
+        );
+        assert!(a[0].im.abs() < 1e-12, "a[0].im={} (expected 0.0)", a[0].im);
+    }
+
+    /// `SteeringVector::broadside` returns all-ones real vector for x-axis sensors.
+    ///
+    /// direction=[0,0,1]: all sensors have zero projection onto z → phase=0 → Re[exp(0)]=1.
+    #[test]
+    fn steering_broadside_returns_all_ones_for_x_aligned_sensors() {
+        let f = 1000.0_f64;
+        let c = 1500.0_f64;
+        let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [1.0, 0.0, 0.0]];
+        let a = SteeringVector::broadside(sensors, f, c);
+        for (i, &val) in a.iter().enumerate() {
+            assert!(
+                (val - 1.0).abs() < 1e-13,
+                "broadside[{i}] = {val} (expected 1.0)"
+            );
+        }
+    }
+
+    /// `SteeringVector::compute` rejects non-unit direction vectors.
+    #[test]
+    fn steering_rejects_non_unit_direction() {
+        let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0]];
+        let result = SteeringVector::compute(
+            &SteeringVectorMethod::PlaneWave,
+            [1.0, 1.0, 0.0], // norm = √2, not unit
+            1000.0,
+            sensors,
+            1500.0,
+        );
+        assert!(result.is_err(), "non-unit direction must be rejected");
+    }
+}

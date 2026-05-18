@@ -14,7 +14,7 @@
 //! - Montaldo et al. (2009): "Coherent plane-wave compounding for very high frame rate."
 //!   *IEEE UFFC*, 56(3), 489–506.
 
-use super::config::PlaneWaveConfig;
+use super::config::PlaneWaveCompoundingConfig;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use num_complex::Complex;
@@ -23,7 +23,7 @@ use std::f64::consts::PI;
 /// Plane wave compounding processor.
 #[derive(Debug, Clone)]
 pub struct PlaneWaveCompound {
-    pub(super) config: PlaneWaveConfig,
+    pub(super) config: PlaneWaveCompoundingConfig,
     /// Plane wave angles (radians).
     pub(super) angles: Vec<f64>,
     /// Beamformed complex images per angle.
@@ -46,7 +46,7 @@ impl PlaneWaveCompound {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn new(config: PlaneWaveConfig) -> KwaversResult<Self> {
+    pub fn new(config: PlaneWaveCompoundingConfig) -> KwaversResult<Self> {
         if config.num_angles == 0 {
             return Err(KwaversError::InvalidInput(
                 "num_angles must be > 0".to_owned(),

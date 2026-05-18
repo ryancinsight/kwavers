@@ -230,6 +230,55 @@ This chapter models:
 - Skull surface extracted from the CT at `skull_hu_threshold = 300 HU`.
 - Beam–skull intersection fraction reported as a geometry quality metric.
 
+### TFUScapes Case Import Contract
+
+TFUScapes is imported through
+`pykwavers/examples/book/transcranial_planning/tfuscapes.py`, which reuses the
+existing `run_skull_adaptive_benchmark` wrapper instead of defining another
+demo path.  The default reproducible case is:
+
+```text
+dataset: vinkle-srivastav/TFUScapes
+revision: 1c410548e40c491cedd779648257a1c9eaee3587
+split: train
+manifest row: 0
+manifest text: A00028185/exp_0.npz
+repository path: data/A00028185/exp_0.npz
+sha256: 3be28a4454251583ea161b0f1fcbc3df960a45cc481141eed61346df42d6e20e
+```
+
+The imported payload uses only the paper fields declared in the Hugging Face
+Croissant metadata:
+
+| Field | Required shape | kwavers use |
+|-------|----------------|-------------|
+| `ct` | `(256, 256, 256)` | pseudo-CT volume; written to a temporary NIfTI for the existing RITK CT benchmark wrapper |
+| `pmap` | `(256, 256, 256)` | paper pressure field; its peak voxel defines the benchmark target index |
+| `tr_coords` | `(N, 3)` | paper transducer-source coordinates in index space; fitted to the shared scene radius for structural geometry comparison |
+
+TFUScapes does not publish a physical voxel spacing field in the `.npz`.  The
+adapter therefore derives an isotropic spacing by fitting the median distance
+from `tr_coords` to the `pmap` peak onto
+`CANONICAL_BRAIN_SCENE.transducer.radius_m`.  This preserves the paper geometry
+in index space while letting the existing skull-adaptive benchmark run with the
+shared transducer specification.  The structural comparison records CT shape,
+pressure-map shape, target index, target fraction, transducer coordinate count,
+derived spacing, fitted radius statistics, cap axis, cap angle span, and the
+benchmark pressure-field shapes and peaks.
+
+Minimal execution:
+
+```python
+from pathlib import Path
+from transcranial_planning.tfuscapes import run_tfuscapes_skull_adaptive_benchmark
+
+summary = run_tfuscapes_skull_adaptive_benchmark(
+    cache_dir=Path(".cache/tfuscapes"),
+    work_dir=Path(".cache/tfuscapes"),
+    grid_size=32,
+)
+```
+
 ## Implementation: Rust Core Functions
 
 The Rust implementation lives in two modules:

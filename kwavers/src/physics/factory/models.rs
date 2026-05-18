@@ -18,7 +18,7 @@ pub enum PhysicsModelType {
     /// Linear acoustics with wave propagation
     LinearAcoustics {
         solver_type: AcousticSolver,
-        boundary_conditions: BoundaryType,
+        boundary_conditions: PhysicsBoundaryCondition,
     },
     /// Nonlinear acoustics with harmonic generation
     NonlinearAcoustics {
@@ -44,9 +44,9 @@ pub enum AcousticSolver {
     DG { polynomial_order: u8 },
 }
 
-/// Boundary condition types
+/// Wave propagation boundary treatment options for physics factory configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum BoundaryType {
+pub enum PhysicsBoundaryCondition {
     Absorbing { pml_layers: u8 },
     Reflecting { impedance: Option<f64> },
     Periodic,
@@ -76,7 +76,7 @@ impl PhysicsModelConfig {
         Self {
             model_type: PhysicsModelType::LinearAcoustics {
                 solver_type: solver,
-                boundary_conditions: BoundaryType::Absorbing { pml_layers: 10 },
+                boundary_conditions: PhysicsBoundaryCondition::Absorbing { pml_layers: 10 },
             },
             enabled: true,
             parameters: std::collections::HashMap::new(),

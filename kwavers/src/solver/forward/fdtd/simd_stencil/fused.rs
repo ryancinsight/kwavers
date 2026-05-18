@@ -1,8 +1,8 @@
-use super::SimdStencilProcessor;
+use super::FdtdSimdStencilProcessor;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
-impl SimdStencilProcessor {
+impl FdtdSimdStencilProcessor {
     /// Fused pressure-and-velocity update (single pass, cache-tiled).
     ///
     /// Combines both field updates in one loop pass for improved arithmetic intensity.

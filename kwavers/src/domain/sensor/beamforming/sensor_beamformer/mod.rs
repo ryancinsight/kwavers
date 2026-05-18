@@ -6,7 +6,7 @@
 //!
 //! | Submodule    | Contents                                              |
 //! |--------------|-------------------------------------------------------|
-//! | `types`      | `WindowType` enum, `SensorProcessingParams` struct   |
+//! | `types`      | `BeamformerWindowType` enum, `SensorProcessingParams` struct   |
 //! | `beamformer` | `SensorBeamformer` — delay, windowing, steering       |
 
 mod beamformer;
@@ -15,4 +15,4 @@ mod tests;
 mod types;
 
 pub use beamformer::SensorBeamformer;
-pub use types::{SensorProcessingParams, WindowType};
+pub use types::{BeamformerWindowType, SensorProcessingParams};

@@ -66,12 +66,12 @@ pub mod velocity;
 
 use crate::core::constants::{CFL_FACTOR_3D_FDTD, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::simd::{SimdConfig, SimdLevel};
+use crate::math::simd::{SimdConfig, MathSimdLevel};
 use std::marker::PhantomData;
 
 /// AVX-512 stencil processor configuration
 #[derive(Debug, Clone, Copy)]
-pub struct Avx512Config {
+pub struct SimdAvx512Config {
     /// Tile size in each dimension (power of 2)
     pub tile_size: usize,
 
@@ -94,7 +94,7 @@ pub struct Avx512Config {
     pub dt: f64,
 }
 
-impl Default for Avx512Config {
+impl Default for SimdAvx512Config {
     fn default() -> Self {
         Self {
             tile_size: 8,
@@ -113,8 +113,8 @@ impl Default for Avx512Config {
 /// Implements high-performance stencil operations using AVX-512 instructions.
 /// Operates on 3D grids with 8-wide vectorization for f64 elements.
 #[derive(Debug)]
-pub struct Avx512StencilProcessor {
-    config: Avx512Config,
+pub struct SimdAvx512StencilProcessor {
+    config: SimdAvx512Config,
 
     /// Grid dimensions
     pub(super) nx: usize,
@@ -137,7 +137,7 @@ pub struct Avx512StencilProcessor {
     _phantom: PhantomData<()>,
 }
 
-impl Avx512StencilProcessor {
+impl SimdAvx512StencilProcessor {
     /// Create new AVX-512 stencil processor
     ///
     /// # Arguments
@@ -151,7 +151,7 @@ impl Avx512StencilProcessor {
     /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn new(nx: usize, ny: usize, nz: usize, config: Avx512Config) -> KwaversResult<Self> {
+    pub fn new(nx: usize, ny: usize, nz: usize, config: SimdAvx512Config) -> KwaversResult<Self> {
         // Validate dimensions
         if nx < 4 || ny < 4 || nz < 4 {
             return Err(KwaversError::InvalidInput(
@@ -180,7 +180,7 @@ impl Avx512StencilProcessor {
 
         // Verify AVX-512 capability
         #[cfg(target_arch = "x86_64")]
-        if simd_config.level < SimdLevel::Avx512 {
+        if simd_config.level < MathSimdLevel::Avx512 {
             return Err(KwaversError::FeatureNotAvailable(
                 "AVX-512 not available on this CPU".to_string(),
             ));
@@ -200,8 +200,8 @@ impl Avx512StencilProcessor {
     }
 
     /// Get performance metrics from last update
-    pub fn get_metrics(&self) -> Avx512Metrics {
-        Avx512Metrics {
+    pub fn get_metrics(&self) -> SimdAvx512Metrics {
+        SimdAvx512Metrics {
             grid_size: (self.nx, self.ny, self.nz),
             simd_level: self.simd_config.level,
             vector_width: 8, // AVX-512 = 8 × f64
@@ -212,12 +212,12 @@ impl Avx512StencilProcessor {
 
 /// Performance metrics for AVX-512 stencil processing
 #[derive(Debug, Clone)]
-pub struct Avx512Metrics {
+pub struct SimdAvx512Metrics {
     /// Grid dimensions
     pub grid_size: (usize, usize, usize),
 
     /// SIMD level detected
-    pub simd_level: SimdLevel,
+    pub simd_level: MathSimdLevel,
 
     /// Vector width in elements
     pub vector_width: usize,
@@ -232,8 +232,8 @@ mod tests {
 
     #[test]
     fn test_avx512_processor_creation() {
-        let config = Avx512Config::default();
-        let result = Avx512StencilProcessor::new(32, 32, 32, config);
+        let config = SimdAvx512Config::default();
+        let result = SimdAvx512StencilProcessor::new(32, 32, 32, config);
 
         // AVX-512 availability depends on hardware
         match result {
@@ -250,16 +250,16 @@ mod tests {
 
     #[test]
     fn test_avx512_invalid_dimensions() {
-        let config = Avx512Config::default();
-        let result = Avx512StencilProcessor::new(2, 32, 32, config);
+        let config = SimdAvx512Config::default();
+        let result = SimdAvx512StencilProcessor::new(2, 32, 32, config);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_avx512_invalid_tile_size() {
-        let mut config = Avx512Config::default();
+        let mut config = SimdAvx512Config::default();
         config.tile_size = 7; // Not power of 2
-        let result = Avx512StencilProcessor::new(32, 32, 32, config);
+        let result = SimdAvx512StencilProcessor::new(32, 32, 32, config);
         assert!(result.is_err());
     }
 }

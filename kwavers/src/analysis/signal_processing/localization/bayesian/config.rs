@@ -1,9 +1,9 @@
-use super::super::config::LocalizationConfig;
+use super::super::config::AcousticLocalizationConfig;
 
 /// Kalman filter configuration
 #[derive(Debug, Clone)]
 pub struct KalmanFilterConfig {
-    pub config: LocalizationConfig,
+    pub config: AcousticLocalizationConfig,
     /// Process noise spectral density q (m²/s³) (Singer 1970 model)
     pub process_noise: f64,
     /// Measurement noise variance σ_m² (m²)
@@ -26,7 +26,7 @@ pub enum KalmanFilterType {
 
 impl KalmanFilterConfig {
     #[must_use]
-    pub fn new(config: LocalizationConfig, filter_type: KalmanFilterType) -> Self {
+    pub fn new(config: AcousticLocalizationConfig, filter_type: KalmanFilterType) -> Self {
         Self {
             config,
             process_noise: 0.01,
@@ -57,6 +57,9 @@ impl KalmanFilterConfig {
 
 impl Default for KalmanFilterConfig {
     fn default() -> Self {
-        Self::new(LocalizationConfig::default(), KalmanFilterType::Extended)
+        Self::new(
+            AcousticLocalizationConfig::default(),
+            KalmanFilterType::Extended,
+        )
     }
 }

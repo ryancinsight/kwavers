@@ -17,7 +17,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 /// Training configuration
 #[cfg(feature = "pinn")]
 #[derive(Debug, Clone)]
-pub struct TrainingConfig {
+pub struct ElasticPinnLoopConfig {
     /// Maximum number of training epochs
     pub max_epochs: usize,
     /// Convergence tolerance for early stopping
@@ -57,8 +57,8 @@ pub fn train_pinn<B: AutodiffBackend>(
     training_data: &TrainingData<B>,
     optimizer: &mut PINNOptimizer<B>,
     scheduler: &mut LRScheduler,
-    config: &TrainingConfig,
-) -> KwaversResult<TrainingMetrics> {
+    config: &ElasticPinnLoopConfig,
+) -> KwaversResult<ElasticPinnTrainingMetrics> {
     use burn::tensor::Tensor;
     use std::time::Instant;
 
@@ -74,7 +74,7 @@ pub fn train_pinn<B: AutodiffBackend>(
     let mu = 0.0_f64;
 
     let loss_computer = LossComputer::new(LossWeights::default());
-    let mut metrics = TrainingMetrics::new();
+    let mut metrics = ElasticPinnTrainingMetrics::new();
     let training_start = Instant::now();
 
     for epoch in 0..config.max_epochs {
@@ -215,8 +215,8 @@ pub fn train_simple<B: AutodiffBackend>(
     model: &mut ElasticPINN2D<B>,
     max_epochs: usize,
     learning_rate: f64,
-) -> KwaversResult<TrainingMetrics> {
-    let config = TrainingConfig {
+) -> KwaversResult<ElasticPinnTrainingMetrics> {
+    let config = ElasticPinnLoopConfig {
         max_epochs,
         convergence_tolerance: 1e-6,
         convergence_window: 10,
@@ -270,14 +270,14 @@ pub fn train_simple<B: AutodiffBackend>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::data::TrainingMetrics;
+    use super::super::data::ElasticPinnTrainingMetrics;
     #[cfg(feature = "pinn")]
-    use super::TrainingConfig;
+    use super::ElasticPinnLoopConfig;
 
     #[cfg(feature = "pinn")]
     #[test]
     fn test_training_config() {
-        let config = TrainingConfig {
+        let config = ElasticPinnLoopConfig {
             max_epochs: 1000,
             convergence_tolerance: 1e-6,
             convergence_window: 10,
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_convergence_logic() {
-        let mut metrics = TrainingMetrics::new();
+        let mut metrics = ElasticPinnTrainingMetrics::new();
 
         // Add rapidly decreasing loss values that converge to a plateau
         // First 10 epochs: rapid decrease

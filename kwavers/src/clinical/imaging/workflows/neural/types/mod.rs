@@ -9,7 +9,7 @@ use ndarray::Array3;
 use std::collections::HashMap;
 
 pub use ai_beamforming::{
-    AIBeamformingConfig, AIBeamformingResult, ClinicalThresholds, FeatureMap, PerformanceMetrics,
+    AIBeamformingConfig, AIBeamformingResult, AiBeamformingMetrics, ClinicalThresholds, FeatureMap,
 };
 // Re-export ClinicalThresholds at this level so callers using `types::ClinicalThresholds`
 // continue to resolve correctly after the split.

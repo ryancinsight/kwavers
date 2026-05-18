@@ -29,9 +29,9 @@ pub use config::{
     WorkflowPriority,
 };
 pub use orchestrator::ClinicalWorkflowOrchestrator;
-pub use plane_wave_compounding::{PlaneWaveCompound, PlaneWaveConfig};
+pub use plane_wave_compounding::{PlaneWaveCompound, PlaneWaveCompoundingConfig};
 pub use results::{
-    ClinicalExaminationResult, DiagnosticRecommendation, DiagnosticUrgency, PerformanceMetrics,
+    ClinicalExaminationResult, DiagnosticRecommendation, DiagnosticUrgency, WorkflowTimingMetrics,
 };
 pub use state::WorkflowState;
 

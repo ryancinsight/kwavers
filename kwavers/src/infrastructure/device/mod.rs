@@ -52,6 +52,7 @@
 pub mod transducer_interface;
 
 pub use transducer_interface::{
-    CommunicationProtocol, DeviceId, DeviceManager, DeviceStatus, DeviceTelemetry, HardwareCommand,
-    HardwareResponse, MockTransducer, TransducerHardware, TransducerSpecification, TransducerState,
+    CommunicationProtocol, DeviceId, DeviceManager, DeviceStatus, DeviceTelemetry,
+    DeviceTransducerSpecification, HardwareCommand, HardwareResponse, MockTransducer,
+    TransducerHardware, TransducerState,
 };

@@ -22,7 +22,7 @@ pub mod trainer;
 
 // Re-export main types for convenience
 pub use config::{BoundaryCondition2D, BurnLossWeights2D, BurnPINN2DConfig, BurnTrainingMetrics2D};
-pub use geometry::{Geometry2D, InterfaceCondition};
+pub use geometry::{BurnWave2dInterfaceCondition, Geometry2D};
 pub use inference::{ActivationType, QuantizedNetwork, RealTimePINNInference};
 pub use model::{BurnPINN2DWave, WaveSpeedFn};
 pub use optimizer::SimpleOptimizer2D;

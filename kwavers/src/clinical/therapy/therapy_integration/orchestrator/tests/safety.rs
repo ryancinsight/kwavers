@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_safety_limit_checking() {
     let config = TherapySessionConfig {
-        primary_modality: TherapyModality::Transcranial,
+        primary_modality: TherapyIntegrationModality::Transcranial,
         secondary_modalities: vec![],
         imaging_data_path: None,
         duration: 10.0,
@@ -15,7 +15,7 @@ fn test_safety_limit_checking() {
             focal_depth: 0.05,
             treatment_volume: 1.0,
         },
-        safety_limits: SafetyLimits {
+        safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 0.5,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
@@ -27,7 +27,7 @@ fn test_safety_limit_checking() {
             target_volume: TargetVolume {
                 center: (0.05, 0.0, 0.0),
                 dimensions: (0.01, 0.01, 0.01),
-                tissue_type: TissueType::Brain,
+                tissue_type: TherapyTissueType::Brain,
             },
             risk_organs: vec![],
         },
@@ -42,13 +42,13 @@ fn test_safety_limit_checking() {
     orchestrator.execute_therapy_step(1.0).unwrap();
 
     let safety_status = orchestrator.check_safety_limits();
-    assert_eq!(safety_status, SafetyStatus::Safe);
+    assert_eq!(safety_status, TherapyIntegrationSafetyStatus::Safe);
 }
 
 #[test]
 fn test_safety_controller_integration() {
     let config = TherapySessionConfig {
-        primary_modality: TherapyModality::HIFU,
+        primary_modality: TherapyIntegrationModality::HIFU,
         secondary_modalities: vec![],
         imaging_data_path: None,
         duration: 30.0,
@@ -60,7 +60,7 @@ fn test_safety_controller_integration() {
             focal_depth: 0.04,
             treatment_volume: 0.8,
         },
-        safety_limits: SafetyLimits {
+        safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 2.0,
             mechanical_index_max: 1.5,
             cavitation_dose_max: 100.0,
@@ -72,7 +72,7 @@ fn test_safety_controller_integration() {
             target_volume: TargetVolume {
                 center: (0.04, 0.0, 0.0),
                 dimensions: (0.015, 0.015, 0.015),
-                tissue_type: TissueType::Liver,
+                tissue_type: TherapyTissueType::Liver,
             },
             risk_organs: vec![],
         },

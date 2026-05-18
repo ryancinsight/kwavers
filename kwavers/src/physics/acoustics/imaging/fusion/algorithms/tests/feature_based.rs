@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_fuse_feature_based_tissue_classification_invariants() {
     let mut config = FusionConfig::default();
-    config.fusion_method = FusionMethod::FeatureBased;
+    config.fusion_method = ImagingFusionMethod::FeatureBased;
     config.uncertainty_quantification = false;
 
     let mut fusion = MultiModalFusion::new(config);

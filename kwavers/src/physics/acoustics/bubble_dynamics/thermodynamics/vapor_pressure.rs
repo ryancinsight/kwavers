@@ -1,8 +1,9 @@
 //! Vapor pressure models for phase equilibrium
 
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT as R_GAS};
 use crate::core::constants::{
-    H_VAP_WATER_100C, P_ATM, P_CRITICAL_WATER, P_TRIPLE_WATER, R_GAS, T_BOILING_WATER,
-    T_CRITICAL_WATER, T_TRIPLE_WATER,
+    H_VAP_WATER_100C, P_CRITICAL_WATER, P_TRIPLE_WATER, T_BOILING_WATER, T_CRITICAL_WATER,
+    T_TRIPLE_WATER,
 };
 
 /// Vapor pressure model selection
@@ -38,7 +39,7 @@ impl Default for ThermodynamicsCalculator {
             model: VaporPressureModel::Wagner, // Reference model for water
             h_vap: H_VAP_WATER_100C,           // Water at 100°C [J/mol]
             t_ref: T_BOILING_WATER,            // 100°C
-            p_ref: P_ATM,                      // 1 atm
+            p_ref: ATMOSPHERIC_PRESSURE,       // 1 atm
         }
     }
 }
@@ -231,7 +232,7 @@ mod tests {
         let calc = ThermodynamicsCalculator::default(); // Wagner model
         let p = calc.vapor_pressure(T_BOILING_WATER);
         assert!(
-            (p - P_ATM).abs() / P_ATM < 0.001,
+            (p - ATMOSPHERIC_PRESSURE).abs() / ATMOSPHERIC_PRESSURE < 0.001,
             "Wagner model at 373.15 K must give ≈101325 Pa (got {p:.1})"
         );
     }
@@ -253,7 +254,7 @@ mod tests {
         let calc = ThermodynamicsCalculator::new(VaporPressureModel::Antoine);
         let p = calc.vapor_pressure(T_BOILING_WATER);
         assert!(
-            (p - P_ATM).abs() / P_ATM < 0.005,
+            (p - ATMOSPHERIC_PRESSURE).abs() / ATMOSPHERIC_PRESSURE < 0.005,
             "Antoine model at 373.15 K must be ≈101325 Pa (got {p:.1})"
         );
     }

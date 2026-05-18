@@ -1,4 +1,4 @@
-use super::{AdaptiveCollocationSampler, SamplingStats, SamplingStrategy};
+use super::{AdaptiveCollocationSampler, AdaptiveRefinementConfig, SamplingStats};
 use crate::core::error::KwaversResult;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
@@ -10,7 +10,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     pub fn new(
         total_points: usize,
         domain: Box<dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<B>>,
-        strategy: SamplingStrategy,
+        strategy: AdaptiveRefinementConfig,
     ) -> KwaversResult<Self> {
         let active_points = Self::initialize_uniform_points(total_points)?;
         let priorities = Tensor::ones([total_points], &Default::default());
@@ -67,8 +67,8 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     }
 
     /// Create default sampling strategy
-    pub fn default_strategy() -> SamplingStrategy {
-        SamplingStrategy {
+    pub fn default_strategy() -> AdaptiveRefinementConfig {
+        AdaptiveRefinementConfig {
             refinement_threshold: 0.8,
             coarsening_threshold: 0.2,
             refinement_fraction: 0.1,

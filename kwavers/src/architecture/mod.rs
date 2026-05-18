@@ -18,8 +18,8 @@
 pub mod layer_validation;
 
 pub use layer_validation::{
-    ArchitectureLayer, ArchitectureValidator, LayerViolation, ValidationResult, ValidationStats,
-    ViolationType,
+    ArchitectureLayer, ArchitectureValidator, LayerValidationResult, LayerViolation,
+    ValidationStats, ViolationType,
 };
 
 #[cfg(test)]

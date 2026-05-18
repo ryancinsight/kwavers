@@ -14,13 +14,11 @@
 //! `T::clear()` sets all elements to zero without reallocation, so
 //! `memory_bytes()` before and after `clear()` are equal.
 
-pub mod inplace_ops_impl;
+pub mod inplace_ops;
 mod pool;
 mod solver_workspace;
 #[cfg(test)]
 mod tests;
-
-pub use inplace_ops_impl as inplace_ops;
 pub use pool::{WorkspaceGuard, WorkspacePool};
 pub use solver_workspace::SolverWorkspace;
 

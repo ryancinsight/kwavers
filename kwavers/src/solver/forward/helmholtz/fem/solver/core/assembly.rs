@@ -1,7 +1,7 @@
 use super::FemHelmholtzSolver;
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use crate::domain::medium::Medium;
-use crate::domain::mesh::BoundaryType;
+use crate::domain::mesh::MeshBoundaryType;
 use crate::math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use crate::solver::forward::helmholtz::fem::assembly::FemAssembly;
 use ndarray::Array1;
@@ -106,7 +106,7 @@ impl FemHelmholtzSolver {
     ///
     pub fn add_dirichlet_on_boundary_type(
         &mut self,
-        boundary_type: BoundaryType,
+        boundary_type: MeshBoundaryType,
         value: Complex64,
     ) -> KwaversResult<usize> {
         if !value.re.is_finite() || !value.im.is_finite() {

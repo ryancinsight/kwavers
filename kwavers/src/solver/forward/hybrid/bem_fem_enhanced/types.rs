@@ -40,7 +40,7 @@ pub struct RefinementStep {
 
 /// Validation result for enhanced BEM-FEM coupling.
 #[derive(Debug, Clone)]
-pub struct ValidationResult {
+pub struct BemFemValidationResult {
     /// Test frequency (Hz).
     pub frequency: f64,
 
@@ -63,7 +63,7 @@ pub struct ValidationResult {
     pub interface_quality: InterfaceQuality,
 }
 
-impl ValidationResult {
+impl BemFemValidationResult {
     /// Check if validation passed (no spurious resonances, error below threshold).
     #[must_use]
     pub fn passed(&self, error_threshold: f64) -> bool {

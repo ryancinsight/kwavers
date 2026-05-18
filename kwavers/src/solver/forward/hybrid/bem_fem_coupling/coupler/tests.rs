@@ -1,7 +1,7 @@
 use num_complex::Complex64;
 
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
-use crate::domain::mesh::BoundaryType;
+use crate::domain::mesh::MeshBoundaryType;
 
 use super::super::BemFemCouplingConfig;
 use super::struct_impl::BemFemCoupler;
@@ -9,7 +9,7 @@ use super::struct_impl::BemFemCoupler;
 #[test]
 fn test_bem_fem_coupler_creation() {
     let mut fem_mesh = TetrahedralMesh::new();
-    fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
+    fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
 
     let bem_boundary = vec![0];
     let config = BemFemCouplingConfig::default();
@@ -21,13 +21,13 @@ fn test_bem_fem_coupler_creation() {
 
 #[test]
 fn test_solve_fem_system_single_element() {
-    use crate::domain::mesh::tetrahedral::BoundaryType;
+    use crate::domain::mesh::tetrahedral::MeshBoundaryType;
 
     let mut fem_mesh = TetrahedralMesh::new();
-    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    let n2 = fem_mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    let n3 = fem_mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n2 = fem_mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    let n3 = fem_mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
 
     fem_mesh.add_element([n0, n1, n2, n3], 0).unwrap();
 
@@ -66,13 +66,13 @@ fn test_solve_fem_system_single_element() {
 
 #[test]
 fn test_solve_coupled_run() {
-    use crate::domain::mesh::tetrahedral::BoundaryType;
+    use crate::domain::mesh::tetrahedral::MeshBoundaryType;
 
     let mut fem_mesh = TetrahedralMesh::new();
-    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], BoundaryType::Interior);
-    let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], BoundaryType::Interior);
-    let n2 = fem_mesh.add_node([0.0, 1.0, 0.0], BoundaryType::Interior);
-    let n3 = fem_mesh.add_node([0.0, 0.0, 1.0], BoundaryType::Interior);
+    let n0 = fem_mesh.add_node([0.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n1 = fem_mesh.add_node([1.0, 0.0, 0.0], MeshBoundaryType::Interior);
+    let n2 = fem_mesh.add_node([0.0, 1.0, 0.0], MeshBoundaryType::Interior);
+    let n3 = fem_mesh.add_node([0.0, 0.0, 1.0], MeshBoundaryType::Interior);
     fem_mesh.add_element([n0, n1, n2, n3], 0).unwrap();
 
     let bem_boundary = vec![n0, n1, n2];

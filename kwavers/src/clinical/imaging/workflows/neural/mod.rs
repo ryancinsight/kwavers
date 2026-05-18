@@ -40,6 +40,6 @@ pub use workflow::RealTimeWorkflow;
 // Type re-exports
 pub mod types;
 pub use types::{
-    AIBeamformingConfig, AIBeamformingResult, ClinicalAnalysis, ClinicalThresholds, FeatureMap,
-    LesionDetection, PerformanceMetrics, TissueClassification,
+    AIBeamformingConfig, AIBeamformingResult, AiBeamformingMetrics, ClinicalAnalysis,
+    ClinicalThresholds, FeatureMap, LesionDetection, TissueClassification,
 };

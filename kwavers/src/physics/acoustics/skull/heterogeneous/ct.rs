@@ -1,5 +1,5 @@
 use crate::core::error::KwaversResult;
-use crate::physics::acoustics::skull::SkullProperties;
+use crate::physics::acoustics::skull::AcousticSkullProperties;
 use ndarray::Array3;
 
 use super::constants::{ALPHA_WATER, C_WATER, RHO_WATER};
@@ -12,7 +12,7 @@ impl HeterogeneousSkull {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn from_ct(ct_data: &Array3<f64>, props: &SkullProperties) -> KwaversResult<Self> {
+    pub fn from_ct(ct_data: &Array3<f64>, props: &AcousticSkullProperties) -> KwaversResult<Self> {
         use crate::domain::imaging::medical::CTImageLoader;
 
         let sound_speed = ct_data.mapv(CTImageLoader::hu_to_sound_speed);

@@ -2,7 +2,7 @@
 
 /// HIFU transducer configuration
 #[derive(Debug, Clone)]
-pub struct HIFUTransducer {
+pub struct DomainHIFUTransducer {
     /// Transducer geometry
     pub geometry: TransducerGeometry,
     /// Operating frequency (Hz)
@@ -17,7 +17,7 @@ pub struct HIFUTransducer {
     pub duty_cycle: f64,
 }
 
-impl HIFUTransducer {
+impl DomainHIFUTransducer {
     /// Create a new single-element focused transducer
     #[must_use]
     pub fn new_single_element(
@@ -60,28 +60,28 @@ pub enum TransducerGeometry {
 
 /// Treatment planning and execution
 #[derive(Debug, Clone)]
-pub struct HIFUTreatmentPlan {
+pub struct DomainHIFUTreatmentPlan {
     /// Target region definition
     pub target: TreatmentTarget,
     /// Treatment protocol
-    pub protocol: TreatmentProtocol,
+    pub protocol: HifuTreatmentProtocol,
     /// Safety margins and constraints
-    pub safety: SafetyConstraints,
+    pub safety: HifuSafetyConstraints,
     /// Monitoring configuration
     pub monitoring: MonitoringConfig,
 }
 
-impl HIFUTreatmentPlan {
+impl DomainHIFUTreatmentPlan {
     /// Create a new treatment plan
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(target: TreatmentTarget, protocol: TreatmentProtocol) -> Self {
+    pub fn new(target: TreatmentTarget, protocol: HifuTreatmentProtocol) -> Self {
         Self {
             target,
             protocol,
-            safety: SafetyConstraints::default(),
+            safety: HifuSafetyConstraints::default(),
             monitoring: MonitoringConfig::default(),
         }
     }
@@ -92,7 +92,7 @@ impl HIFUTreatmentPlan {
     ///
     pub fn validate(
         &self,
-        transducer: &HIFUTransducer,
+        transducer: &DomainHIFUTransducer,
     ) -> Result<(), crate::core::error::KwaversError> {
         use crate::core::error::{KwaversError, ValidationError};
 
@@ -136,12 +136,12 @@ pub struct TreatmentTarget {
     /// Target dimensions (m)
     pub dimensions: [f64; 3],
     /// Target shape
-    pub shape: TargetShape,
+    pub shape: HifuTargetShape,
 }
 
 /// Target shape types
 #[derive(Debug, Clone, PartialEq)]
-pub enum TargetShape {
+pub enum HifuTargetShape {
     /// Spherical target
     Sphere,
     /// Cylindrical target
@@ -152,7 +152,7 @@ pub enum TargetShape {
 
 /// Treatment protocol parameters
 #[derive(Debug, Clone)]
-pub struct TreatmentProtocol {
+pub struct HifuTreatmentProtocol {
     /// Total treatment time (s)
     pub total_duration: f64,
     /// Pulse duration (s)
@@ -180,7 +180,7 @@ pub struct TreatmentPhase {
 
 /// Safety constraints
 #[derive(Debug, Clone)]
-pub struct SafetyConstraints {
+pub struct HifuSafetyConstraints {
     /// Maximum temperature (°C)
     pub max_temperature: f64,
     /// Maximum thermal dose (CEM43)
@@ -191,7 +191,7 @@ pub struct SafetyConstraints {
     pub avoidance_zones: Vec<AvoidanceZone>,
 }
 
-impl Default for SafetyConstraints {
+impl Default for HifuSafetyConstraints {
     fn default() -> Self {
         Self {
             max_temperature: 85.0,   // °C

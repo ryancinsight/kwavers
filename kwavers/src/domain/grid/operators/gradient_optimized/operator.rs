@@ -1,6 +1,6 @@
 //! Gradient operator builder and operator types.
 
-use super::super::coefficients::SpatialOrder;
+use super::super::coefficients::FdAccuracyOrder;
 use super::cache::GradientCache;
 use super::functions::{gradient_optimized, gradient_with_strategy};
 use crate::core::error::KwaversResult;
@@ -114,7 +114,7 @@ impl GradientOperator {
         &self,
         field: &ArrayView3<T>,
         grid: &Grid,
-        order: SpatialOrder,
+        order: FdAccuracyOrder,
         cache: Option<&GradientCache<T>>,
     ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
     where

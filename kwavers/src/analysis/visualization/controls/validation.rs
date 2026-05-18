@@ -5,13 +5,13 @@ use crate::core::error::KwaversResult;
 
 /// Result of parameter validation
 #[derive(Debug, Clone)]
-pub struct ValidationResult {
+pub struct ControlValidationResult {
     pub is_valid: bool,
     pub message: Option<String>,
     pub corrected_value: Option<ParameterValue>,
 }
 
-impl ValidationResult {
+impl ControlValidationResult {
     /// Create a valid result
     pub fn valid() -> Self {
         Self {
@@ -46,44 +46,46 @@ pub struct ParameterValidator;
 
 impl ParameterValidator {
     /// Validate a parameter value against its type definition
-    pub fn validate(value: &ParameterValue, param_type: &ParameterType) -> ValidationResult {
+    pub fn validate(value: &ParameterValue, param_type: &ParameterType) -> ControlValidationResult {
         match (value, param_type) {
             (ParameterValue::Float(v), ParameterType::Float { min, max, .. }) => {
                 if *v < *min {
-                    ValidationResult::corrected(
+                    ControlValidationResult::corrected(
                         ParameterValue::Float(*min),
                         format!("Value clamped to minimum: {}", min),
                     )
                 } else if *v > *max {
-                    ValidationResult::corrected(
+                    ControlValidationResult::corrected(
                         ParameterValue::Float(*max),
                         format!("Value clamped to maximum: {}", max),
                     )
                 } else {
-                    ValidationResult::valid()
+                    ControlValidationResult::valid()
                 }
             }
             (ParameterValue::Integer(v), ParameterType::Integer { min, max, .. }) => {
                 if *v < *min {
-                    ValidationResult::corrected(
+                    ControlValidationResult::corrected(
                         ParameterValue::Integer(*min),
                         format!("Value clamped to minimum: {}", min),
                     )
                 } else if *v > *max {
-                    ValidationResult::corrected(
+                    ControlValidationResult::corrected(
                         ParameterValue::Integer(*max),
                         format!("Value clamped to maximum: {}", max),
                     )
                 } else {
-                    ValidationResult::valid()
+                    ControlValidationResult::valid()
                 }
             }
-            (ParameterValue::Boolean(_), ParameterType::Boolean) => ValidationResult::valid(),
+            (ParameterValue::Boolean(_), ParameterType::Boolean) => {
+                ControlValidationResult::valid()
+            }
             (ParameterValue::Enum(v), ParameterType::Enum { options }) => {
                 if options.contains(v) {
-                    ValidationResult::valid()
+                    ControlValidationResult::valid()
                 } else {
-                    ValidationResult::invalid(format!("Invalid enum value: {}", v))
+                    ControlValidationResult::invalid(format!("Invalid enum value: {}", v))
                 }
             }
             (ParameterValue::Vector3(v), ParameterType::Vector3 { min, max, .. }) => {
@@ -101,12 +103,12 @@ impl ParameterValidator {
                 }
 
                 if was_validated {
-                    ValidationResult::corrected(
+                    ControlValidationResult::corrected(
                         ParameterValue::Vector3(validated),
                         "Vector components clamped to range",
                     )
                 } else {
-                    ValidationResult::valid()
+                    ControlValidationResult::valid()
                 }
             }
             (ParameterValue::Color(v), ParameterType::Color) => {
@@ -124,15 +126,15 @@ impl ParameterValidator {
                 }
 
                 if was_validated {
-                    ValidationResult::corrected(
+                    ControlValidationResult::corrected(
                         ParameterValue::Color(validated),
                         "Color components clamped to [0, 1]",
                     )
                 } else {
-                    ValidationResult::valid()
+                    ControlValidationResult::valid()
                 }
             }
-            _ => ValidationResult::invalid("Type mismatch"),
+            _ => ControlValidationResult::invalid("Type mismatch"),
         }
     }
 

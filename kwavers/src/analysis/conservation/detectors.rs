@@ -2,7 +2,7 @@
 //!
 //! Real-time detection and reporting of conservation law violations during simulation.
 
-use super::checkers::{ConservationLaw, ConservationResult};
+use super::checkers::{AnalysisConservationLaw, ConservationResult};
 use crate::core::error::KwaversResult;
 use std::collections::HashMap;
 
@@ -19,7 +19,7 @@ pub struct ConservationViolation {
     pub quantity: String,
 
     /// Conservation law type
-    pub law: ConservationLaw,
+    pub law: AnalysisConservationLaw,
 
     /// Relative error observed
     pub relative_error: f64,
@@ -41,7 +41,7 @@ pub struct ConservationViolationDetector {
     error_threshold: f64,
 
     /// Violations per conservation law
-    law_violations: HashMap<ConservationLaw, usize>,
+    law_violations: HashMap<AnalysisConservationLaw, usize>,
 
     /// Current timestep
     timestep: u64,
@@ -114,7 +114,7 @@ impl ConservationViolationDetector {
 
     /// Get violations for a specific conservation law
     #[must_use]
-    pub fn violations_for_law(&self, law: ConservationLaw) -> Vec<&ConservationViolation> {
+    pub fn violations_for_law(&self, law: AnalysisConservationLaw) -> Vec<&ConservationViolation> {
         self.violations.iter().filter(|v| v.law == law).collect()
     }
 
@@ -202,7 +202,7 @@ pub struct ViolationStatistics {
     pub average_relative_error: f64,
 
     /// Violation count per conservation law
-    pub violations_per_law: HashMap<ConservationLaw, usize>,
+    pub violations_per_law: HashMap<AnalysisConservationLaw, usize>,
 }
 
 #[cfg(test)]
@@ -223,7 +223,7 @@ mod tests {
         results.insert(
             "pressure".to_string(),
             ConservationResult {
-                law: ConservationLaw::Mass,
+                law: AnalysisConservationLaw::Mass,
                 initial_value: 1.0,
                 current_value: 1.01,
                 absolute_change: 0.01,
@@ -249,7 +249,7 @@ mod tests {
         results.insert(
             "energy".to_string(),
             ConservationResult {
-                law: ConservationLaw::Energy,
+                law: AnalysisConservationLaw::Energy,
                 initial_value: 100.0,
                 current_value: 101.0,
                 absolute_change: 1.0,
@@ -276,7 +276,7 @@ mod tests {
         results.insert(
             "mass".to_string(),
             ConservationResult {
-                law: ConservationLaw::Mass,
+                law: AnalysisConservationLaw::Mass,
                 initial_value: 1.0,
                 current_value: 1.005,
                 absolute_change: 0.005,
@@ -306,7 +306,7 @@ mod tests {
             results.insert(
                 "pressure".to_string(),
                 ConservationResult {
-                    law: ConservationLaw::Mass,
+                    law: AnalysisConservationLaw::Mass,
                     initial_value: 1.0,
                     current_value: 1.0 + 0.005 * (i as f64 + 1.0),
                     absolute_change: 0.005 * (i as f64 + 1.0),
@@ -319,7 +319,7 @@ mod tests {
             detector.detect(&results, i as f64 * 0.1)?;
         }
 
-        let mass_violations = detector.violations_for_law(ConservationLaw::Mass);
+        let mass_violations = detector.violations_for_law(AnalysisConservationLaw::Mass);
         assert_eq!(mass_violations.len(), 3);
 
         let recent = detector.recent_violations(2);

@@ -7,7 +7,7 @@ use crate::math::linear_algebra::sparse::{
 use crate::solver::forward::bem::integrals::{
     compute_nonsingular_integrals, compute_singular_integrals,
 };
-use ndarray::{Array1, ArrayView1};
+use ndarray::Array1;
 use num_complex::Complex64;
 
 impl BemSolver {
@@ -109,7 +109,3 @@ impl BemSolver {
         solver.bicgstab_complex(a_matrix, b_vector.view(), None)
     }
 }
-
-// Bring ArrayView1 into scope for use in solve_bem_system signature compatibility
-#[allow(unused_imports)]
-use self::ArrayView1 as _;

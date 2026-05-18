@@ -9,7 +9,7 @@ pub struct CalibrationData {
     /// Time-dependent geometry snapshots
     pub geometry_history: Vec<GeometrySnapshot>,
     /// Calibration quality metrics
-    pub quality_metrics: QualityMetrics,
+    pub quality_metrics: CalibrationQualityMetrics,
     /// Reference configuration
     pub reference_geometry: Option<Array2<f64>>,
 }
@@ -27,7 +27,7 @@ pub struct GeometrySnapshot {
 
 /// Calibration quality metrics
 #[derive(Debug, Clone)]
-pub struct QualityMetrics {
+pub struct CalibrationQualityMetrics {
     /// Position uncertainty (meters)
     pub position_uncertainty: f64,
     /// Orientation uncertainty (radians)

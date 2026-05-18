@@ -3,9 +3,9 @@
 use super::types::{AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType};
 use crate::solver::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryComponent, BoundaryConditionSpec, BoundaryPosition, CouplingInterface, CouplingType,
-    InitialConditionSpec, PhysicsDomain, PhysicsLossWeights, PhysicsParameters,
-    PhysicsValidationMetric,
+    BoundaryPosition, CouplingType, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
+    PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
+    PinnCouplingInterface, PinnDomainPhysicsParameters,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
@@ -82,7 +82,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         x: &Tensor<B, 2>,
         y: &Tensor<B, 2>,
         t: &Tensor<B, 2>,
-        physics_params: &PhysicsParameters,
+        physics_params: &PinnDomainPhysicsParameters,
     ) -> Tensor<B, 2> {
         let _p = model.forward(x.clone(), y.clone(), t.clone());
 
@@ -167,33 +167,33 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         residual
     }
 
-    fn boundary_conditions(&self) -> Vec<BoundaryConditionSpec> {
+    fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec> {
         self.boundary_conditions
             .iter()
             .map(|bc| match bc.condition_type {
-                AcousticBoundaryType::SoundSoft => BoundaryConditionSpec::Dirichlet {
+                AcousticBoundaryType::SoundSoft => PinnBoundaryConditionSpec::Dirichlet {
                     boundary: bc.position.clone(),
                     value: vec![0.0],
-                    component: BoundaryComponent::Scalar,
+                    component: PinnBoundaryComponent::Scalar,
                 },
-                AcousticBoundaryType::SoundHard => BoundaryConditionSpec::Neumann {
+                AcousticBoundaryType::SoundHard => PinnBoundaryConditionSpec::Neumann {
                     boundary: bc.position.clone(),
                     flux: vec![0.0],
-                    component: BoundaryComponent::Scalar,
+                    component: PinnBoundaryComponent::Scalar,
                 },
-                AcousticBoundaryType::Absorbing => BoundaryConditionSpec::Robin {
+                AcousticBoundaryType::Absorbing => PinnBoundaryConditionSpec::Robin {
                     boundary: bc.position.clone(),
                     alpha: 1.0,
                     beta: 0.0,
-                    component: BoundaryComponent::Scalar,
+                    component: PinnBoundaryComponent::Scalar,
                 },
                 AcousticBoundaryType::Impedance => {
                     let z = bc.parameters.get("impedance").copied().unwrap_or(1.0);
-                    BoundaryConditionSpec::Robin {
+                    PinnBoundaryConditionSpec::Robin {
                         boundary: bc.position.clone(),
                         alpha: z,
                         beta: 1.0,
-                        component: BoundaryComponent::Scalar,
+                        component: PinnBoundaryComponent::Scalar,
                     }
                 }
             })
@@ -204,11 +204,11 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         vec![
             InitialConditionSpec::DirichletConstant {
                 value: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
             InitialConditionSpec::NeumannConstant {
                 flux: vec![0.0],
-                component: BoundaryComponent::Scalar,
+                component: PinnBoundaryComponent::Scalar,
             },
         ]
     }
@@ -249,9 +249,9 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         true
     }
 
-    fn coupling_interfaces(&self) -> Vec<CouplingInterface> {
+    fn coupling_interfaces(&self) -> Vec<PinnCouplingInterface> {
         vec![
-            CouplingInterface {
+            PinnCouplingInterface {
                 name: "acoustic_solid".to_string(),
                 position: BoundaryPosition::CustomRectangular {
                     x_min: 0.0,
@@ -268,7 +268,7 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
                     params
                 },
             },
-            CouplingInterface {
+            PinnCouplingInterface {
                 name: "acoustic_thermal".to_string(),
                 position: BoundaryPosition::CustomRectangular {
                     x_min: 0.0,

@@ -1,12 +1,12 @@
-use super::super::types::{EMWaveType, Polarization};
+use super::super::types::{ElectromagneticPolarization, ElectromagneticWaveType};
 
 /// Electromagnetic source trait
 pub trait EMSource: Send + Sync {
     /// Get source polarization
-    fn polarization(&self) -> Polarization;
+    fn polarization(&self) -> ElectromagneticPolarization;
 
     /// Get source wave type
-    fn wave_type(&self) -> EMWaveType;
+    fn wave_type(&self) -> ElectromagneticWaveType;
 
     /// Get source frequency spectrum
     fn frequency_spectrum(&self) -> Vec<f64>;

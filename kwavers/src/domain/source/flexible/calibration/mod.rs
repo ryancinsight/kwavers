@@ -7,4 +7,4 @@ pub mod manager;
 pub mod types;
 
 pub use manager::CalibrationManager;
-pub use types::{CalibrationData, GeometrySnapshot, QualityMetrics};
+pub use types::{CalibrationData, CalibrationQualityMetrics, GeometrySnapshot};

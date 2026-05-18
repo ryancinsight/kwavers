@@ -5,19 +5,19 @@ use ndarray::Array3;
 use super::aberration::AberrationCorrection;
 use super::analytical::{generate_ellipsoidal_skull, generate_spherical_skull};
 use super::heterogeneous::HeterogeneousSkull;
-use super::properties::SkullProperties;
+use super::properties::AcousticSkullProperties;
 
 /// Transcranial focused ultrasound simulation workflow
 ///
 /// # Example
 ///
 /// ```no_run
-/// use kwavers::physics::acoustics::skull::{TranscranialSimulation, SkullProperties};
+/// use kwavers::physics::acoustics::skull::{TranscranialSimulation, AcousticSkullProperties};
 /// use kwavers::domain::grid::Grid;
 ///
 /// # fn example() -> kwavers::core::error::KwaversResult<()> {
 /// let grid = Grid::new(200, 200, 200, 0.5e-3, 0.5e-3, 0.5e-3)?;
-/// let skull_props = SkullProperties::default();
+/// let skull_props = AcousticSkullProperties::default();
 ///
 /// let mut tfus = TranscranialSimulation::new(&grid, skull_props)?;
 ///
@@ -34,7 +34,7 @@ pub struct TranscranialSimulation {
     /// Computational grid
     grid: Grid,
     /// Skull material properties
-    pub skull_props: SkullProperties,
+    pub skull_props: AcousticSkullProperties,
     /// Skull geometry mask (1 = skull, 0 = soft tissue)
     pub skull_mask: Option<Array3<f64>>,
     /// Heterogeneous skull model
@@ -46,7 +46,7 @@ impl TranscranialSimulation {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn new(grid: &Grid, skull_props: SkullProperties) -> KwaversResult<Self> {
+    pub fn new(grid: &Grid, skull_props: AcousticSkullProperties) -> KwaversResult<Self> {
         Ok(Self {
             grid: grid.clone(),
             skull_props,

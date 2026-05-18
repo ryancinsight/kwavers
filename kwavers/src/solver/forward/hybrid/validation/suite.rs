@@ -26,7 +26,7 @@ const ACOUSTIC_MODE_SPEED: f64 = 1.0;
 #[derive(Debug)]
 pub struct HybridValidationSuite {
     /// Test configuration
-    config: super::ValidationConfig,
+    config: super::HybridValidationSuiteConfig,
 }
 
 impl HybridValidationSuite {
@@ -35,7 +35,7 @@ impl HybridValidationSuite {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(config: super::ValidationConfig) -> Self {
+    pub fn new(config: super::HybridValidationSuiteConfig) -> Self {
         Self { config }
     }
 
@@ -241,7 +241,7 @@ mod tests {
     use super::*;
 
     fn suite_with(points: usize) -> HybridValidationSuite {
-        HybridValidationSuite::new(super::super::ValidationConfig {
+        HybridValidationSuite::new(super::super::HybridValidationSuiteConfig {
             error_tolerance: 1e-6,
             num_iterations: points,
             test_convergence: true,

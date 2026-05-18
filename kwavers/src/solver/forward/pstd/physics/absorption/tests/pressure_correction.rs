@@ -18,11 +18,11 @@ fn test_lossless_mode_no_pressure_correction() {
 
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, GridSource::default()).unwrap();
 
-    // Populate dpx/dpy/dpz, div_u (rho_total surrogate), and p with arbitrary
+    // Populate dpx/dpy, div_u (rho_total surrogate), and p with arbitrary
     // non-zero state. Lossless absorption must leave p untouched.
+    // (dpz eliminated in Opt-12: dpx is reused for all three gradient axes)
     solver.dpx.fill(2.0);
     solver.dpy.fill(3.0);
-    solver.dpz.fill(5.0);
     solver.div_u.fill(7.0);
     solver.fields.p.fill(11.0);
     let p_before = solver.fields.p.clone();
@@ -75,10 +75,12 @@ fn test_pressure_correction_formula_dc_bin_nullification() {
 
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, GridSource::default()).unwrap();
 
-    // Uniform fields → FFT concentrates at DC where nabla1=nabla2=0.
-    solver.dpx.fill(1.0);
-    solver.dpy.fill(0.0);
-    solver.dpz.fill(0.0);
+    // Uniform divergence → FFT concentrates at DC where nabla1=nabla2=0.
+    // apply_absorption_to_pressure reads div_ux/div_uy/div_uz (the divergence cache),
+    // not dpx/dpy/dpz (which are overwritten by Step 3 and 4 before being read).
+    solver.div_ux.fill(1.0);
+    solver.div_uy.fill(0.0);
+    solver.div_uz.fill(0.0);
     solver.div_u.fill(1.0);
     solver.fields.p.fill(0.0);
 
@@ -123,7 +125,7 @@ fn test_pressure_correction_dispersion_term_matches_analytical() {
     const NZ: usize = 1;
     const DX: f64 = 1e-4;
     const C0: f64 = 1500.0;
-    const RHO0: f64 = 1000.0;
+    const RHO0: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     const ALPHA: f64 = 0.75;
     const Y: f64 = 1.5;
 
@@ -216,9 +218,10 @@ fn test_fft_absorption_energy_dissipation() {
                 solver.rhox[[i, j, k]] = val / 3.0;
                 solver.rhoy[[i, j, k]] = val / 3.0;
                 solver.rhoz[[i, j, k]] = val / 3.0;
-                solver.dpx[[i, j, k]] = val;
-                solver.dpy[[i, j, k]] = val;
-                solver.dpz[[i, j, k]] = val;
+                // apply_absorption_to_pressure reads div_u* (not dpx/dpy/dpz).
+                solver.div_ux[[i, j, k]] = val;
+                solver.div_uy[[i, j, k]] = val;
+                solver.div_uz[[i, j, k]] = val;
             }
         }
     }
@@ -249,4 +252,73 @@ fn test_fft_absorption_energy_dissipation() {
          off-by-orders regressions while remaining insensitive to FFT noise.",
         max_correction
     );
+}
+
+/// Verify that `update_pressure` (linear, lossless) correctly populates both:
+///   - `self.div_u = rhox + rhoy + rhoz` (ρ_total, needed by the L2 absorption term)
+///   - `self.fields.p = c₀² · (rhox + rhoy + rhoz)` (linear EOS)
+///
+/// Mathematical invariants:
+///   - `∀ i: div_u[i] = rhox[i] + rhoy[i] + rhoz[i]`
+///   - `∀ i: p[i] = c0[i]² · div_u[i]`
+///
+/// These invariants cover the fused single-pass EOS path (Opt-4) — both outputs
+/// are written simultaneously by the same Zip pass.  Regression against the
+/// pre-fusion 2-pass implementation: both implementations must produce bit-for-bit
+/// identical results (same arithmetic operations on f64).
+/// # Panics
+/// - Panics if `PSTDSolver::new` fails.
+///
+#[test]
+fn test_update_pressure_linear_eos_populates_div_u_and_p() {
+    let nx = 16_usize;
+    let grid = Grid::new(nx, nx, nx, 1e-4, 1e-4, 1e-4).unwrap();
+    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
+    let config = PSTDConfig {
+        absorption_mode: AbsorptionMode::Lossless,
+        dt: 1e-7,
+        ..PSTDConfig::default()
+    };
+    let mut solver = PSTDSolver::new(config, grid.clone(), &medium, GridSource::default()).unwrap();
+
+    // Plant non-trivial analytically derived density state.
+    // rhox[i,j,k] = (i+1)*0.001, rhoy = (j+1)*0.002, rhoz = (k+1)*0.003
+    // Expected: div_u[i,j,k] = (i+1)*0.001 + (j+1)*0.002 + (k+1)*0.003
+    //           p[i,j,k]     = c0[i,j,k]² · div_u[i,j,k]
+    for i in 0..nx {
+        for j in 0..nx {
+            for k in 0..nx {
+                solver.rhox[[i, j, k]] = (i + 1) as f64 * 0.001;
+                solver.rhoy[[i, j, k]] = (j + 1) as f64 * 0.002;
+                solver.rhoz[[i, j, k]] = (k + 1) as f64 * 0.003;
+            }
+        }
+    }
+
+    solver.update_pressure(1e-7).unwrap();
+
+    for i in 0..nx {
+        for j in 0..nx {
+            for k in 0..nx {
+                let rx = solver.rhox[[i, j, k]];
+                let ry = solver.rhoy[[i, j, k]];
+                let rz = solver.rhoz[[i, j, k]];
+                let expected_div = rx + ry + rz;
+                let c = solver.materials.c0[[i, j, k]];
+                let expected_p = c * c * expected_div;
+
+                let actual_div = solver.div_u[[i, j, k]];
+                let actual_p = solver.fields.p[[i, j, k]];
+
+                assert!(
+                    (actual_div - expected_div).abs() < 1e-15,
+                    "div_u mismatch at [{i},{j},{k}]: expected {expected_div:.15e}, got {actual_div:.15e}"
+                );
+                assert!(
+                    (actual_p - expected_p).abs() < 1e-8 * expected_p.abs().max(1e-20),
+                    "p mismatch at [{i},{j},{k}]: expected {expected_p:.15e}, got {actual_p:.15e}"
+                );
+            }
+        }
+    }
 }

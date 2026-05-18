@@ -13,7 +13,7 @@ pub enum CouplingModel {
 
 /// Geometries for coherent nanoparticle arrays
 #[derive(Debug, Clone, PartialEq)]
-pub enum ArrayGeometry {
+pub enum PlasmonicArrayGeometry {
     /// Linear chain
     Linear { spacing: f64 },
     /// 2D square lattice

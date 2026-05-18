@@ -19,5 +19,5 @@ pub mod task;
 mod tests;
 
 pub use pde_type::PdeType;
-pub use physics::PhysicsParameters;
+pub use physics::MetaLearningPhysicsParameters;
 pub use task::{PhysicsTask, TaskData, TaskDataStatistics};

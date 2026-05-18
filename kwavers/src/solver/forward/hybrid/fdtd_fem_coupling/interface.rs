@@ -4,7 +4,7 @@ use crate::domain::mesh::tetrahedral::TetrahedralMesh;
 
 /// Interface definition between FDTD and FEM domains
 #[derive(Debug, Clone)]
-pub struct CouplingInterface {
+pub struct FdtdFemInterface {
     /// FDTD grid indices at interface
     pub fdtd_indices: Vec<(usize, usize, usize)>,
     /// FEM node indices at interface
@@ -17,7 +17,7 @@ pub struct CouplingInterface {
     pub areas: Vec<f64>,
 }
 
-impl CouplingInterface {
+impl FdtdFemInterface {
     /// Create coupling interface from FDTD grid and FEM mesh
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.

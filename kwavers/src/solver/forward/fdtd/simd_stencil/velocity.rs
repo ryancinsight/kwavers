@@ -1,8 +1,8 @@
-use super::SimdStencilProcessor;
+use super::FdtdSimdStencilProcessor;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
-impl SimdStencilProcessor {
+impl FdtdSimdStencilProcessor {
     /// Update velocity field using in-place scratch buffer (no per-step allocation).
     ///
     /// ```text

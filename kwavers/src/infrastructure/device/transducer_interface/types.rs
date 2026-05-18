@@ -29,7 +29,7 @@ impl std::fmt::Display for CommunicationProtocol {
 
 /// Transducer physical characteristics.
 #[derive(Debug, Clone)]
-pub struct TransducerSpecification {
+pub struct DeviceTransducerSpecification {
     /// Transducer model name.
     pub model: String,
     /// Manufacturer identifier.

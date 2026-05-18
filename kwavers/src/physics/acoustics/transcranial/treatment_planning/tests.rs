@@ -19,13 +19,13 @@ fn test_treatment_plan_generation() {
     let target = TargetVolume {
         center: [0.016, 0.016, 0.016],
         dimensions: [0.004, 0.004, 0.004],
-        shape: TargetShape::Ellipsoidal,
+        shape: TranscranialTargetShape::Ellipsoidal,
         priority: 8,
         max_temperature: 45.0,
         required_intensity: 100.0,
     };
 
-    let spec = TransducerSpecification::default();
+    let spec = TranscranialTransducerSpecification::default();
     let plan = planner
         .generate_plan("test_patient", &[target], &spec)
         .unwrap();

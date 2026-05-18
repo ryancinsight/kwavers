@@ -46,10 +46,10 @@ use crate::solver::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
 };
 use log::warn;
-use ndarray::Array3;
+use ndarray::{Array3, ArrayView3};
 use std::sync::{Arc, Mutex};
 
-use super::metrics::PerformanceMetrics;
+use super::metrics::WesterveltStepMetrics;
 use super::spectral::initialize_kspace_grids;
 
 mod conservation;
@@ -74,7 +74,13 @@ pub struct WesterveltWave {
     pub(super) fft_scratch: Option<Array3<Complex64>>,
     /// Pre-allocated real scratch for spectral Laplacian IFFT.
     pub(super) laplacian_scratch: Option<Array3<f64>>,
-    pub(super) metrics: Arc<Mutex<PerformanceMetrics>>,
+    /// Pre-allocated nonlinear-term workspace.
+    pub(super) nonlinear_scratch: Array3<f64>,
+    /// Pre-allocated viscoelastic damping workspace.
+    pub(super) damping_scratch: Array3<f64>,
+    /// Pre-allocated source-mask workspace.
+    pub(super) source_mask_scratch: Array3<f64>,
+    pub(super) metrics: Arc<Mutex<WesterveltStepMetrics>>,
     pub(super) conservation_tracker: Option<ConservationTracker>,
     pub(super) current_step: usize,
     pub(super) current_time: f64,
@@ -102,7 +108,10 @@ impl WesterveltWave {
             buffer_indices: [0, 1, 2],
             fft_scratch,
             laplacian_scratch,
-            metrics: Arc::new(Mutex::new(PerformanceMetrics::new())),
+            nonlinear_scratch: Array3::zeros(shape),
+            damping_scratch: Array3::zeros(shape),
+            source_mask_scratch: Array3::zeros(shape),
+            metrics: Arc::new(Mutex::new(WesterveltStepMetrics::new())),
             conservation_tracker: None,
             current_step: 0,
             current_time: 0.0,
@@ -159,13 +168,7 @@ impl WesterveltWave {
             .is_none_or(|tracker| tracker.is_solution_valid())
     }
 
-    pub(super) fn check_stability(
-        &self,
-        dt: f64,
-        grid: &Grid,
-        medium: &dyn Medium,
-        _pressure: &Array3<f64>,
-    ) -> bool {
+    pub(super) fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium) -> bool {
         let max_c = medium
             .sound_speed_array()
             .iter()
@@ -175,9 +178,51 @@ impl WesterveltWave {
         cfl < 0.5
     }
 
-    pub(super) fn initialize_buffers(&mut self, initial_pressure: &Array3<f64>) {
-        self.pressure_buffers[self.buffer_indices[1]].assign(initial_pressure);
-        self.pressure_buffers[self.buffer_indices[2]].assign(initial_pressure);
+    pub(super) fn initialize_buffers(&mut self, initial_pressure: ArrayView3<'_, f64>) {
+        self.pressure_buffers[self.buffer_indices[1]].assign(&initial_pressure);
+        self.pressure_buffers[self.buffer_indices[2]].assign(&initial_pressure);
+    }
+
+    /// Return disjoint pressure-history buffers for one leapfrog update.
+    ///
+    /// # Invariant
+    /// `buffer_indices` is always a permutation of `[0, 1, 2]`, where entries
+    /// mean `[next, current, previous]`. The returned references therefore
+    /// satisfy the XOR ownership rule: exactly one mutable next buffer and two
+    /// immutable history buffers. This keeps pressure history rotation
+    /// allocation-free while preserving the three-level recurrence
+    /// `p[n+1] = 2p[n] - p[n-1] + dt^2 rhs(p[n], p[n-1])`.
+    pub(super) fn pressure_buffers_for_step(
+        pressure_buffers: &mut [Array3<f64>; 3],
+        buffer_indices: [usize; 3],
+    ) -> (&mut Array3<f64>, &Array3<f64>, &Array3<f64>) {
+        match buffer_indices {
+            [0, 1, 2] => {
+                let [next, current, previous] = pressure_buffers;
+                (next, current, previous)
+            }
+            [0, 2, 1] => {
+                let [next, previous, current] = pressure_buffers;
+                (next, current, previous)
+            }
+            [1, 0, 2] => {
+                let [current, next, previous] = pressure_buffers;
+                (next, current, previous)
+            }
+            [1, 2, 0] => {
+                let [previous, next, current] = pressure_buffers;
+                (next, current, previous)
+            }
+            [2, 0, 1] => {
+                let [current, previous, next] = pressure_buffers;
+                (next, current, previous)
+            }
+            [2, 1, 0] => {
+                let [previous, current, next] = pressure_buffers;
+                (next, current, previous)
+            }
+            _ => unreachable!("buffer_indices must remain a permutation of [0, 1, 2]"),
+        }
     }
 
     /// Get performance summary.
@@ -283,3 +328,6 @@ pub(super) fn compute_laplacian_fd(field: &Array3<f64>, grid: &Grid) -> Array3<f
 
     laplacian
 }
+
+#[cfg(test)]
+mod tests;

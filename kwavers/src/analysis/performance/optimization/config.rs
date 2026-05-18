@@ -2,11 +2,11 @@
 
 /// Performance optimization configuration
 #[derive(Debug, Clone)]
-pub struct OptimizationConfig {
+pub struct HardwareOptimizationConfig {
     /// Enable SIMD vectorization
     pub enable_simd: bool,
     /// SIMD instruction set to use
-    pub simd_level: SimdLevel,
+    pub simd_level: PerfOptSimdLevel,
     /// Enable cache blocking
     pub cache_blocking: bool,
     /// Cache block size (in elements)
@@ -25,11 +25,11 @@ pub struct OptimizationConfig {
     pub multi_gpu: bool,
 }
 
-impl Default for OptimizationConfig {
+impl Default for HardwareOptimizationConfig {
     fn default() -> Self {
         Self {
             enable_simd: true,
-            simd_level: SimdLevel::detect_best(),
+            simd_level: PerfOptSimdLevel::detect_best(),
             cache_blocking: true,
             cache_block_size: 64, // Typical L1 cache line
             prefetching: true,
@@ -44,7 +44,7 @@ impl Default for OptimizationConfig {
 
 /// SIMD instruction set level
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SimdLevel {
+pub enum PerfOptSimdLevel {
     /// No SIMD
     None,
     /// SSE2 (128-bit)
@@ -59,7 +59,7 @@ pub enum SimdLevel {
     Neon,
 }
 
-impl SimdLevel {
+impl PerfOptSimdLevel {
     /// Detect the best available SIMD level for the current CPU
     #[must_use]
     pub fn detect_best() -> Self {

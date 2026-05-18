@@ -6,7 +6,7 @@ use kwavers::clinical::therapy::theranostic_guidance::{
 use numpy::IntoPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyList};
 use std::path::Path;
 
 use super::helpers::{kwavers_to_py, labels_from_volume, metric3d_dict, points3_to_array};
@@ -189,6 +189,20 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
         "fwi_objective_history",
         Array1::from(result.fwi_objective_history).into_pyarray(py),
     )?;
+    let fwi_iteration_diagnostics = PyList::empty(py);
+    for diagnostic in &result.fwi_iteration_diagnostics {
+        let item = PyDict::new(py);
+        item.set_item("objective_before", diagnostic.objective_before)?;
+        item.set_item("objective_after", diagnostic.objective_after)?;
+        item.set_item("gradient_speed_linf", diagnostic.gradient_speed_linf)?;
+        item.set_item("gradient_beta_linf", diagnostic.gradient_beta_linf)?;
+        item.set_item("gradient_speed_l2", diagnostic.gradient_speed_l2)?;
+        item.set_item("gradient_beta_l2", diagnostic.gradient_beta_l2)?;
+        item.set_item("accepted_scale", diagnostic.accepted_scale)?;
+        item.set_item("accepted_block", diagnostic.accepted_block)?;
+        fwi_iteration_diagnostics.append(item)?;
+    }
+    out.set_item("fwi_iteration_diagnostics", fwi_iteration_diagnostics)?;
     out.set_item(
         "cavitation_objective_history",
         Array1::from(result.cavitation_objective_history).into_pyarray(py),
@@ -205,6 +219,72 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("dt_s", result.dt_s)?;
     out.set_item("time_steps", result.time_steps)?;
     out.set_item("source_scale", result.source_scale)?;
+    let source_plan_metrics = PyDict::new(py);
+    source_plan_metrics.set_item(
+        "source_support_min",
+        result.source_plan_metrics.source_support_min,
+    )?;
+    source_plan_metrics.set_item(
+        "source_support_mean",
+        result.source_plan_metrics.source_support_mean,
+    )?;
+    source_plan_metrics.set_item(
+        "source_support_max",
+        result.source_plan_metrics.source_support_max,
+    )?;
+    source_plan_metrics.set_item(
+        "focused_delay_min_s",
+        result.source_plan_metrics.focused_delay_min_s,
+    )?;
+    source_plan_metrics.set_item(
+        "focused_delay_max_s",
+        result.source_plan_metrics.focused_delay_max_s,
+    )?;
+    source_plan_metrics.set_item(
+        "focused_delay_span_s",
+        result.source_plan_metrics.focused_delay_span_s,
+    )?;
+    out.set_item("source_plan_metrics", source_plan_metrics)?;
+    let steering_metrics = PyDict::new(py);
+    steering_metrics.set_item(
+        "nominal_focus_index",
+        result
+            .electronic_steering_metrics
+            .nominal_focus_index
+            .to_vec(),
+    )?;
+    steering_metrics.set_item(
+        "calibration_hotspot_index",
+        result
+            .electronic_steering_metrics
+            .calibration_hotspot_index
+            .to_vec(),
+    )?;
+    steering_metrics.set_item(
+        "steering_focus_index",
+        result
+            .electronic_steering_metrics
+            .steering_focus_index
+            .to_vec(),
+    )?;
+    steering_metrics.set_item(
+        "correction_grid_cells",
+        result
+            .electronic_steering_metrics
+            .correction_grid_cells
+            .to_vec(),
+    )?;
+    steering_metrics.set_item(
+        "calibration_hotspot_distance_grid_cells",
+        result
+            .electronic_steering_metrics
+            .calibration_hotspot_distance_grid_cells,
+    )?;
+    steering_metrics.set_item(
+        "steering_applied",
+        result.electronic_steering_metrics.steering_applied,
+    )?;
+    out.set_item("electronic_steering_metrics", steering_metrics)?;
     out.set_item("active_voxels", result.active_voxels)?;
     out.set_item("grid_size", config.grid_size)?;
     out.set_item("requested_element_count", config.element_count)?;

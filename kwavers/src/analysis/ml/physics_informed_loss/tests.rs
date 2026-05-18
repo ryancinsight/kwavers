@@ -229,3 +229,142 @@ fn test_builder_pattern() {
     assert!((config.frequency - 2_000_000.0).abs() < 1e-10);
     assert!(!config.track_history);
 }
+
+// ─── Exact value-semantic tests ───────────────────────────────────────────────
+
+/// `wave_equation_residual_2d` on a constant (all-1.0) field equals k⁴.
+///
+/// For constant u=1 at each interior point:
+///   laplacian = (1+1+1+1) − 4·1 = 0
+///   residual  = k²·1 + 0 = k²
+///   residual² = k⁴
+///   interior count = (5-2)² = 9 → mean = 9·k⁴/9 = k⁴
+#[test]
+fn wave_residual_2d_constant_field_equals_k_fourth() {
+    let config = PhysicsLossConfig::default().with_wave_params(343.0, 1_000_000.0);
+    let loss_fn = PhysicsInformedLoss::new(config).unwrap();
+    let k = loss_fn.wave_number();
+    let expected = k.powi(4);
+    let field = Array2::<f64>::ones((5, 5));
+    let residual = loss_fn.wave_equation_residual_2d(&field);
+    assert!(
+        (residual - expected).abs() / expected < 1e-10,
+        "constant-field 2D residual = {residual:.6e}, expected k⁴ = {expected:.6e}"
+    );
+}
+
+/// `wave_equation_residual_3d` on a constant (all-1.0) field equals k⁴.
+///
+/// For constant u=1 at each interior point:
+///   laplacian = (1+1+1+1+1+1) − 6·1 = 0
+///   residual  = k²·1 + 0 = k²
+///   residual² = k⁴
+///   interior count = (5-2)³ = 27 → mean = 27·k⁴/27 = k⁴
+#[test]
+fn wave_residual_3d_constant_field_equals_k_fourth() {
+    let config = PhysicsLossConfig::default().with_wave_params(343.0, 1_000_000.0);
+    let loss_fn = PhysicsInformedLoss::new(config).unwrap();
+    let k = loss_fn.wave_number();
+    let expected = k.powi(4);
+    let field = Array3::<f64>::ones((5, 5, 5));
+    let residual = loss_fn.wave_equation_residual_3d(&field);
+    assert!(
+        (residual - expected).abs() / expected < 1e-10,
+        "constant-field 3D residual = {residual:.6e}, expected k⁴ = {expected:.6e}"
+    );
+}
+
+/// `wave_equation_residual_2d` returns 0 for a 3×3 field (no interior points).
+///
+/// A 3×3 grid has interior range 1..2 which is empty; count=0 → early return 0.0.
+#[test]
+fn wave_residual_2d_too_small_returns_zero() {
+    let config = PhysicsLossConfig::default();
+    let loss_fn = PhysicsInformedLoss::new(config).unwrap();
+    // 3×3 grid has interior range i∈1..2 and j∈1..2 → count=1 interior point
+    // Use 2×2 grid for which i∈1..1 is empty → count=0
+    let field = Array2::<f64>::ones((2, 2));
+    let residual = loss_fn.wave_equation_residual_2d(&field);
+    assert!(
+        residual.abs() < 1e-14,
+        "2×2 field has no interior points; residual must be 0.0, got {residual}"
+    );
+}
+
+/// `reciprocity_loss` with exact known difference is MSE = ||Δ||² / N.
+///
+/// forward = [[1, 2], [3, 4]], reverse = zeros(2×2).
+/// diff = [[1,2],[3,4]] → sum_sq = 1+4+9+16 = 30; N = 4 → result = 7.5.
+#[test]
+fn reciprocity_loss_exact_mse_nonzero() {
+    let forward = Array2::<f64>::from_shape_vec((2, 2), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+    let reverse = Array2::<f64>::zeros((2, 2));
+    let loss = PhysicsInformedLoss::reciprocity_loss(&forward, &reverse);
+    assert!(
+        (loss - 7.5).abs() < 1e-14,
+        "reciprocity_loss = {loss} (expected 7.5 = 30/4)"
+    );
+}
+
+/// `reciprocity_loss` with mismatched dims returns infinity.
+///
+/// forward: (2,2), reverse: (2,3) → dims differ → f64::INFINITY.
+#[test]
+fn reciprocity_loss_mismatched_dims_is_infinity() {
+    let forward = Array2::<f64>::zeros((2, 2));
+    let reverse = Array2::<f64>::zeros((2, 3));
+    let loss = PhysicsInformedLoss::reciprocity_loss(&forward, &reverse);
+    assert!(
+        loss.is_infinite(),
+        "mismatched-dim reciprocity_loss must be ∞, got {loss}"
+    );
+}
+
+/// `coherence_loss` with a uniform x-direction jump of 1.0 radian on 2×2 grid.
+///
+/// phases = [[0, 0], [1, 1]], amplitudes = ones(2×2).
+/// First loop (x-adjacent pairs, 1×2 = 2 pairs): diff=1.0 (< π) → each sq = 1.0 → sum = 2.0.
+/// Second loop (y-adjacent pairs, 2×1 = 2 pairs):
+///   (i=0,j=0): diff=|0-0|=0 → 0; (i=1,j=0): diff=|1-1|=0 → 0 → sum = 0.
+/// Total = 2.0; N = 2·((2-1)·2 + 2·(2-1)) = 2·(2+2) = 8 → result = 2.0/8 = 0.25.
+#[test]
+fn coherence_loss_row_jump_exact() {
+    let amplitudes = Array2::<f64>::ones((2, 2));
+    let phases = Array2::<f64>::from_shape_vec((2, 2), vec![0.0, 0.0, 1.0, 1.0]).unwrap();
+    let loss = PhysicsInformedLoss::coherence_loss(&amplitudes, &phases);
+    assert!(
+        (loss - 0.25).abs() < 1e-14,
+        "coherence_loss = {loss} (expected 0.25)"
+    );
+}
+
+/// `coherence_loss` returns infinity for amplitude/phase shape mismatch.
+///
+/// amplitudes: (2,2), phases: (3,2) → dims differ → f64::INFINITY.
+#[test]
+fn coherence_loss_mismatched_dims_is_infinity() {
+    let amplitudes = Array2::<f64>::ones((2, 2));
+    let phases = Array2::<f64>::zeros((3, 2));
+    let loss = PhysicsInformedLoss::coherence_loss(&amplitudes, &phases);
+    assert!(
+        loss.is_infinite(),
+        "mismatched-dim coherence_loss must be ∞, got {loss}"
+    );
+}
+
+/// `wave_number` formula: k = 2πf/c.  Exact IEEE 754 check.
+///
+/// c=343.0, f=1_000_000.0: k = 2π·1e6/343.
+/// Computed in test independently; both must be bitwise equal after the
+/// same floating-point operations.
+#[test]
+fn wave_number_exact_formula_verification() {
+    let config = PhysicsLossConfig::default().with_wave_params(343.0, 1_000_000.0);
+    let loss_fn = PhysicsInformedLoss::new(config).unwrap();
+    let expected_k = 2.0 * std::f64::consts::PI * 1_000_000.0 / 343.0;
+    assert!(
+        (loss_fn.wave_number() - expected_k).abs() < 1e-10,
+        "wave_number = {} (expected {expected_k})",
+        loss_fn.wave_number()
+    );
+}

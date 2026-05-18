@@ -15,9 +15,9 @@ pub struct ReconstructionConfig {
     /// Reconstruction algorithm
     pub algorithm: ReconstructionAlgorithm,
     /// Filter type for reconstruction
-    pub filter: FilterType,
+    pub filter: ReconstructionFilterType,
     /// Interpolation method
-    pub interpolation: InterpolationMethod,
+    pub interpolation: ReconstructionInterpolationMethod,
 }
 
 impl Default for ReconstructionConfig {
@@ -26,8 +26,8 @@ impl Default for ReconstructionConfig {
             sound_speed: 1540.0,      // Typical speed of sound in water/soft tissue
             sampling_frequency: 40e6, // 40 MHz typical for ultrasound imaging
             algorithm: ReconstructionAlgorithm::BackProjection,
-            filter: FilterType::Hamming,
-            interpolation: InterpolationMethod::Linear,
+            filter: ReconstructionFilterType::Hamming,
+            interpolation: ReconstructionInterpolationMethod::Linear,
         }
     }
 }
@@ -55,7 +55,7 @@ pub enum ReconstructionAlgorithm {
 
 /// Filter types for reconstruction
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum FilterType {
+pub enum ReconstructionFilterType {
     /// No filtering
     None,
     /// Ram-Lak filter
@@ -72,7 +72,7 @@ pub enum FilterType {
 
 /// Interpolation methods
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum InterpolationMethod {
+pub enum ReconstructionInterpolationMethod {
     /// Nearest neighbor
     NearestNeighbor,
     /// Linear interpolation

@@ -2,12 +2,12 @@
 
 #[cfg(feature = "pinn")]
 use super::bayesian_networks::PredictionWithUncertainty;
-use super::bayesian_networks::{BayesianConfig, BayesianPINN};
+use super::bayesian_networks::{BayesianConfig, MlBayesianPINN};
 use super::conformal_prediction::{ConformalConfig, ConformalPredictor};
 use super::ensemble_methods::{EnsembleConfig, EnsembleQuantifier};
 use super::sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};
 use super::types::{
-    BeamformingUncertainty, ReliabilityMetrics, UncertaintyConfig, UncertaintyMethod,
+    BeamformingUncertainty, MlUncertaintyConfig, MlUncertaintyMethod, ReliabilityMetrics,
     UncertaintyReport, UncertaintyResult, UncertaintySummary,
 };
 use crate::core::error::{KwaversError, KwaversResult};
@@ -23,8 +23,8 @@ use std::collections::HashMap;
 /// Main uncertainty quantification interface.
 #[derive(Debug)]
 pub struct UncertaintyQuantifier {
-    pub(super) _config: UncertaintyConfig,
-    pub(super) _bayesian: Option<BayesianPINN>,
+    pub(super) _config: MlUncertaintyConfig,
+    pub(super) _bayesian: Option<MlBayesianPINN>,
     pub(super) _conformal: Option<ConformalPredictor>,
     pub(super) _ensemble: Option<EnsembleQuantifier>,
     pub(super) _sensitivity: Option<SensitivityAnalyzer>,
@@ -35,12 +35,12 @@ impl UncertaintyQuantifier {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new(config: UncertaintyConfig) -> KwaversResult<Self> {
+    pub fn new(config: MlUncertaintyConfig) -> KwaversResult<Self> {
         let bayesian = if matches!(
             config.method,
-            UncertaintyMethod::MonteCarloDropout | UncertaintyMethod::Hybrid
+            MlUncertaintyMethod::MonteCarloDropout | MlUncertaintyMethod::Hybrid
         ) {
-            Some(BayesianPINN::new(BayesianConfig {
+            Some(MlBayesianPINN::new(BayesianConfig {
                 dropout_rate: config.dropout_rate,
                 num_samples: config.num_samples,
             })?)
@@ -50,7 +50,7 @@ impl UncertaintyQuantifier {
 
         let conformal = if matches!(
             config.method,
-            UncertaintyMethod::Conformal | UncertaintyMethod::Hybrid
+            MlUncertaintyMethod::Conformal | MlUncertaintyMethod::Hybrid
         ) {
             Some(ConformalPredictor::new(ConformalConfig {
                 confidence_level: config.confidence_level,
@@ -62,7 +62,7 @@ impl UncertaintyQuantifier {
 
         let ensemble = if matches!(
             config.method,
-            UncertaintyMethod::Ensemble | UncertaintyMethod::Hybrid
+            MlUncertaintyMethod::Ensemble | MlUncertaintyMethod::Hybrid
         ) {
             Some(EnsembleQuantifier::new(EnsembleConfig {
                 ensemble_size: config.ensemble_size,
@@ -74,7 +74,7 @@ impl UncertaintyQuantifier {
 
         let sensitivity = if matches!(
             config.method,
-            UncertaintyMethod::Sensitivity | UncertaintyMethod::Hybrid
+            MlUncertaintyMethod::Sensitivity | MlUncertaintyMethod::Hybrid
         ) {
             Some(SensitivityAnalyzer::new(SensitivityConfig {
                 num_samples: config.num_samples,
@@ -106,7 +106,7 @@ impl UncertaintyQuantifier {
         ground_truth: Option<&Array2<f32>>,
     ) -> KwaversResult<PredictionWithUncertainty> {
         match self._config.method {
-            UncertaintyMethod::MonteCarloDropout => {
+            MlUncertaintyMethod::MonteCarloDropout => {
                 if let Some(bayesian) = &self._bayesian {
                     bayesian.quantify_uncertainty(pinn, inputs)
                 } else {
@@ -115,7 +115,7 @@ impl UncertaintyQuantifier {
                     ))
                 }
             }
-            UncertaintyMethod::Ensemble => {
+            MlUncertaintyMethod::Ensemble => {
                 if let Some(ensemble) = &self._ensemble {
                     ensemble.quantify_uncertainty(pinn, inputs)
                 } else {
@@ -124,7 +124,7 @@ impl UncertaintyQuantifier {
                     ))
                 }
             }
-            UncertaintyMethod::Conformal => {
+            MlUncertaintyMethod::Conformal => {
                 if let Some(conformal) = &self._conformal {
                     conformal.quantify_uncertainty(pinn, inputs, ground_truth)
                 } else {
@@ -133,7 +133,7 @@ impl UncertaintyQuantifier {
                     ))
                 }
             }
-            UncertaintyMethod::Hybrid => {
+            MlUncertaintyMethod::Hybrid => {
                 let mut results = Vec::new();
 
                 if let Some(bayesian) = &self._bayesian {
@@ -154,7 +154,7 @@ impl UncertaintyQuantifier {
                         reliability_score: 0.5,
                     }))
             }
-            UncertaintyMethod::Sensitivity => Err(KwaversError::InvalidInput(
+            MlUncertaintyMethod::Sensitivity => Err(KwaversError::InvalidInput(
                 "Sensitivity analysis not applicable for PINN uncertainty".to_string(),
             )),
         }

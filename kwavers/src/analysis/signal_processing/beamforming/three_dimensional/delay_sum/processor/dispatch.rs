@@ -11,7 +11,7 @@ use super::super::params::Params;
 #[cfg(feature = "gpu")]
 use super::DelaySumGPU;
 #[cfg(feature = "gpu")]
-use crate::analysis::signal_processing::beamforming::three_dimensional::config::ApodizationWindow;
+use crate::analysis::signal_processing::beamforming::three_dimensional::config::Beamforming3dApodizationWindow;
 #[cfg(feature = "gpu")]
 use crate::core::error::KwaversResult;
 #[cfg(feature = "gpu")]
@@ -38,7 +38,7 @@ impl<'a> DelaySumGPU<'a> {
         &self,
         rf_data: &Array4<f32>,
         dynamic_focusing: bool,
-        apodization_window: &ApodizationWindow,
+        apodization_window: &Beamforming3dApodizationWindow,
         apodization_weights: &Array3<f32>,
     ) -> KwaversResult<Array3<f32>> {
         debug_assert!(
@@ -95,12 +95,12 @@ impl<'a> DelaySumGPU<'a> {
                 });
 
         let apodization_window_u32 = match apodization_window {
-            ApodizationWindow::Rectangular => 0,
-            ApodizationWindow::Hamming => 1,
-            ApodizationWindow::Hann => 2,
-            ApodizationWindow::Blackman => 3,
-            ApodizationWindow::Gaussian { .. } => 0,
-            ApodizationWindow::Custom(_) => 0,
+            Beamforming3dApodizationWindow::Rectangular => 0,
+            Beamforming3dApodizationWindow::Hamming => 1,
+            Beamforming3dApodizationWindow::Hann => 2,
+            Beamforming3dApodizationWindow::Blackman => 3,
+            Beamforming3dApodizationWindow::Gaussian { .. } => 0,
+            Beamforming3dApodizationWindow::Custom(_) => 0,
         };
 
         let params = Params {
@@ -257,7 +257,7 @@ impl<'a> DelaySumGPU<'a> {
         &self,
         rf_data: &Array4<f32>,
         dynamic_focusing: bool,
-        apodization_window: &ApodizationWindow,
+        apodization_window: &Beamforming3dApodizationWindow,
         apodization_weights: &Array3<f32>,
         _sub_volume_size: (usize, usize, usize),
     ) -> KwaversResult<Array3<f32>> {

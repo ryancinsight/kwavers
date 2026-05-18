@@ -9,7 +9,7 @@
 use kwavers::domain::grid::Grid;
 use kwavers::domain::signal::SineWave;
 use kwavers::domain::source::{
-    InjectionMode, PlaneWaveConfig, PlaneWaveSource, PointSource, Source, SourceField,
+    InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, PointSource, Source, SourceField,
 };
 use std::sync::Arc;
 
@@ -27,7 +27,7 @@ fn test_plane_wave_mask_boundary_only() {
 
     // Create plane wave source with BoundaryOnly mode
     let signal = Arc::new(SineWave::new(1e6, 1e5, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0), // +z direction
         wavelength: 1.5e-3,
         phase: 0.0,
@@ -114,7 +114,7 @@ fn test_plane_wave_mask_full_grid() {
 
     // Create plane wave source with FullGrid mode
     let signal = Arc::new(SineWave::new(1e6, 1e5, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0), // +z direction
         wavelength: 1.5e-3,
         phase: 0.0,

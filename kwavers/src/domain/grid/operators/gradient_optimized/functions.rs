@@ -1,6 +1,6 @@
 //! Gradient computation functions.
 
-use super::super::coefficients::{FDCoefficients, SpatialOrder};
+use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use super::cache::GradientCache;
 use super::operator::BoundaryStrategy;
 use crate::core::error::KwaversResult;
@@ -18,7 +18,7 @@ use num_traits::Float;
 pub fn gradient_optimized<T>(
     field: &ArrayView3<T>,
     grid: &Grid,
-    order: SpatialOrder,
+    order: FdAccuracyOrder,
     cache: Option<&GradientCache<T>>,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
@@ -113,7 +113,7 @@ where
 pub fn gradient_with_boundaries<T>(
     field: &ArrayView3<T>,
     grid: &Grid,
-    order: SpatialOrder,
+    order: FdAccuracyOrder,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
     T: Float + Clone + Send + Sync,
@@ -130,7 +130,7 @@ where
 pub(super) fn gradient_with_strategy<T>(
     field: &ArrayView3<T>,
     grid: &Grid,
-    order: SpatialOrder,
+    order: FdAccuracyOrder,
     boundary_strategy: BoundaryStrategy,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where

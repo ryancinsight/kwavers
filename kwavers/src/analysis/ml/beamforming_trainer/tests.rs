@@ -4,7 +4,7 @@ use ndarray::Array2;
 #[test]
 fn test_trainer_creation() {
     // default: num_epochs=100, batch_size=32, learning_rate=0.001
-    let config = TrainingConfig::default();
+    let config = PhysicsNNTrainingConfig::default();
     let physics_loss = PhysicsLoss::default();
     let trainer = BeamformingTrainer::new(config, physics_loss).unwrap();
     assert_eq!(
@@ -25,7 +25,7 @@ fn test_trainer_creation() {
 
 #[test]
 fn test_trainer_empty_dataset() {
-    let config = TrainingConfig::default();
+    let config = PhysicsNNTrainingConfig::default();
     let physics_loss = PhysicsLoss::default();
     let mut trainer = BeamformingTrainer::new(config, physics_loss).unwrap();
 
@@ -43,7 +43,7 @@ fn test_trainer_empty_dataset() {
 
 #[test]
 fn test_trainer_simple_training() {
-    let mut config = TrainingConfig::default();
+    let mut config = PhysicsNNTrainingConfig::default();
     config.num_epochs = 5;
     config.batch_size = 10;
     config.verbose = false;
@@ -65,7 +65,7 @@ fn test_trainer_simple_training() {
 
 #[test]
 fn test_trainer_with_validation_dataset() {
-    let mut config = TrainingConfig::default();
+    let mut config = PhysicsNNTrainingConfig::default();
     config.num_epochs = 3;
     config.verbose = false;
 
@@ -86,7 +86,7 @@ fn test_trainer_with_validation_dataset() {
 
 #[test]
 fn test_trainer_config_access() {
-    let config = TrainingConfig::default().with_epochs(50);
+    let config = PhysicsNNTrainingConfig::default().with_epochs(50);
     let physics_loss = PhysicsLoss::default();
     let trainer = BeamformingTrainer::new(config, physics_loss).unwrap();
 

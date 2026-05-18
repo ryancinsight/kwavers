@@ -10,7 +10,7 @@
 
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
-use super::super::types::{GridIndex, Nonlinear3dAperture};
+use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
@@ -64,6 +64,7 @@ fn linear_westervelt_with_beta_zero_produces_symmetric_pressure_trace_within_fdt
             z_m: 0.0,
         }],
         model_name: "test_homogeneous_axial_linear_baseline".to_owned(),
+        source_domain: SourceDomain::TissueBoundary,
         focus: receiver_idx,
     };
 
@@ -85,6 +86,7 @@ fn linear_westervelt_with_beta_zero_produces_symmetric_pressure_trace_within_fdt
         beta: &beta_field,
         attenuation_np_per_m_mhz: None,
         attenuation_power_law_y: None,
+        source_body_mask: None,
         n,
         spacing_m,
         aperture: &aperture,
@@ -170,6 +172,7 @@ fn westervelt_steepening_signature_scales_linearly_with_beta_per_weak_nonlinear_
             z_m: 0.0,
         }],
         model_name: "test_homogeneous_axial_beta_scaling".to_owned(),
+        source_domain: SourceDomain::TissueBoundary,
         focus: receiver_idx,
     };
 
@@ -195,6 +198,7 @@ fn westervelt_steepening_signature_scales_linearly_with_beta_per_weak_nonlinear_
             beta: &beta_field,
             attenuation_np_per_m_mhz: None,
             attenuation_power_law_y: None,
+            source_body_mask: None,
             n,
             spacing_m,
             aperture: &aperture,

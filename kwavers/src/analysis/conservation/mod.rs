@@ -23,6 +23,6 @@ pub mod checkers;
 pub mod detectors;
 pub mod reports;
 
-pub use checkers::{ConservationChecker, ConservationLaw};
+pub use checkers::{AnalysisConservationLaw, ConservationChecker};
 pub use detectors::{ConservationViolation, ConservationViolationDetector};
 pub use reports::{ConservationReport, ConservationViolationAnalysis};

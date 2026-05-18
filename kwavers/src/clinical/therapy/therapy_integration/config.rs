@@ -36,14 +36,14 @@ pub struct TherapySessionConfig {
     ///
     /// The main therapeutic approach to be used in the session.
     /// Should be selected based on clinical indication and patient assessment.
-    pub primary_modality: TherapyModality,
+    pub primary_modality: TherapyIntegrationModality,
 
     /// Secondary modalities for combination therapy
     ///
     /// Additional therapeutic approaches to enhance efficacy or provide
     /// synergistic effects. Should be carefully evaluated for potential
     /// interactions and safety considerations.
-    pub secondary_modalities: Vec<TherapyModality>,
+    pub secondary_modalities: Vec<TherapyIntegrationModality>,
 
     /// Treatment duration (s)
     ///
@@ -64,7 +64,7 @@ pub struct TherapySessionConfig {
     /// Patient-specific safety limits based on pre-treatment assessment.
     /// Must comply with IEC 62359:2010 and FDA guidance.
     /// Should be monitored continuously during treatment.
-    pub safety_limits: SafetyLimits,
+    pub safety_limits: TherapyIntegrationSafetyLimits,
 
     /// Patient-specific parameters
     ///
@@ -91,7 +91,7 @@ pub struct TherapySessionConfig {
 /// Defines the different ultrasound therapy approaches supported by the framework.
 /// Each modality has specific clinical applications and safety considerations.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TherapyModality {
+pub enum TherapyIntegrationModality {
     /// High-intensity focused ultrasound (thermal ablation)
     ///
     /// Thermally ablates tissue via tightly focused acoustic energy.
@@ -200,7 +200,7 @@ pub struct AcousticTherapyParams {
 /// - IEC 62359:2010: Safety indices and exposure limits
 /// - FDA 510(k) Guidance: Ultrasound device safety requirements
 #[derive(Debug, Clone)]
-pub struct SafetyLimits {
+pub struct TherapyIntegrationSafetyLimits {
     /// Maximum thermal index
     ///
     /// TI < 6.0 is generally safe for most applications.
@@ -277,7 +277,7 @@ pub struct TargetVolume {
     /// Target tissue type
     ///
     /// Classification of the target tissue for parameter selection.
-    pub tissue_type: TissueType,
+    pub tissue_type: TherapyTissueType,
 }
 
 /// Tissue type enumeration
@@ -285,7 +285,7 @@ pub struct TargetVolume {
 /// Classification of tissue types for treatment planning parameter selection
 /// and safety monitoring.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TissueType {
+pub enum TherapyTissueType {
     /// Brain tissue
     Brain,
     /// Liver tissue

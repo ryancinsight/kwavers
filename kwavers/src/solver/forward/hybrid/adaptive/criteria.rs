@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Selection criteria for adaptive method choice
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SelectionCriteria {
+pub struct HybridAdaptiveSelectionCriteria {
     /// Weight for smoothness in decision making (0-1)
     pub smoothness_weight: f64,
     /// Weight for frequency content in decision making (0-1)
@@ -19,7 +19,7 @@ pub struct SelectionCriteria {
     pub hysteresis_factor: f64,
 }
 
-impl Default for SelectionCriteria {
+impl Default for HybridAdaptiveSelectionCriteria {
     fn default() -> Self {
         Self {
             smoothness_weight: 0.3,
@@ -32,7 +32,7 @@ impl Default for SelectionCriteria {
     }
 }
 
-impl SelectionCriteria {
+impl HybridAdaptiveSelectionCriteria {
     /// Validate weights sum to 1.0
     pub fn validate(&self) -> bool {
         let sum = self.smoothness_weight

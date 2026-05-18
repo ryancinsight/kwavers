@@ -24,7 +24,7 @@ pub enum TimeIntegration {
 
 /// Boundary condition type
 #[derive(Debug, Clone, PartialEq)]
-pub enum BoundaryCondition {
+pub enum WaveEquationBoundary {
     /// Dirichlet: prescribed field value u = g
     Dirichlet { value: f64 },
     /// Neumann: prescribed normal derivative ∂u/∂n = g
@@ -49,13 +49,13 @@ pub struct Domain {
     /// Grid resolution [nx, ny, nz]
     pub resolution: Vec<usize>,
     /// Boundary conditions for each face [x_min, x_max, y_min, y_max, z_min, z_max]
-    pub boundaries: Vec<BoundaryCondition>,
+    pub boundaries: Vec<WaveEquationBoundary>,
 }
 
 impl Domain {
     /// Create 1D domain
     #[must_use]
-    pub fn new_1d(xmin: f64, xmax: f64, nx: usize, bc: BoundaryCondition) -> Self {
+    pub fn new_1d(xmin: f64, xmax: f64, nx: usize, bc: WaveEquationBoundary) -> Self {
         Self {
             dimension: SpatialDimension::One,
             bounds: vec![xmin, xmax],
@@ -73,7 +73,7 @@ impl Domain {
         ymax: f64,
         nx: usize,
         ny: usize,
-        bc: BoundaryCondition,
+        bc: WaveEquationBoundary,
     ) -> Self {
         Self {
             dimension: SpatialDimension::Two,
@@ -96,7 +96,7 @@ impl Domain {
         nx: usize,
         ny: usize,
         nz: usize,
-        bc: BoundaryCondition,
+        bc: WaveEquationBoundary,
     ) -> Self {
         Self {
             dimension: SpatialDimension::Three,

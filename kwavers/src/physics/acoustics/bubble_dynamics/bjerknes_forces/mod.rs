@@ -41,4 +41,4 @@ pub mod types;
 mod tests;
 
 pub use calculator::BjerknesCalculator;
-pub use types::{BjerknesConfig, BjerknesForce, InteractionType};
+pub use types::{BjerknesConfig, BjerknesForceData, BjerknesInteractionType};

@@ -171,7 +171,9 @@ pub mod shaders {}
 
 // Re-exports
 #[cfg(feature = "pinn")]
-pub use das_burn::{beamform_cpu, BurnBeamformingConfig, BurnDasBeamformer, InterpolationMethod};
+pub use das_burn::{
+    beamform_cpu, BurnBeamformingConfig, BurnDasBeamformer, DasInterpolationMethod,
+};
 
 #[cfg(test)]
 mod tests {

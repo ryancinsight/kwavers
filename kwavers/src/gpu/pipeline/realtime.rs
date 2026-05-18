@@ -1,5 +1,5 @@
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::gpu::memory::MemoryPoolType;
+use crate::gpu::memory::GpuMemoryPoolType;
 use crate::math::fft::{Complex64, FFT_CACHE_1D};
 use apollo::types::Shape1D;
 use log::{debug, info, warn};
@@ -52,8 +52,8 @@ impl RealtimeImagingPipeline {
         self.state = PipelineState::Starting;
 
         if let Some(ref mut gpu_mem) = self.gpu_memory {
-            gpu_mem.allocate(0, MemoryPoolType::Temporary, 1024 * 1024)?;
-            gpu_mem.allocate(0, MemoryPoolType::Persistent, 512 * 1024)?;
+            gpu_mem.allocate(0, GpuMemoryPoolType::Temporary, 1024 * 1024)?;
+            gpu_mem.allocate(0, GpuMemoryPoolType::Persistent, 512 * 1024)?;
         }
 
         self.state = PipelineState::Running;

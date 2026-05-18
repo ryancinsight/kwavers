@@ -28,7 +28,7 @@
 
 use kwavers::domain::grid::Grid;
 use kwavers::solver::forward::pstd::dg::config::{
-    DGConfig, DgTimeIntegrator, ShockCaptureConfig, WenoDegree,
+    DGConfig, DgBoundaryCondition, DgTimeIntegrator, ShockCaptureConfig, WenoDegree,
 };
 use kwavers::solver::forward::pstd::dg::dg_solver::core::DGSolver;
 use kwavers::solver::forward::pstd::dg::{BasisType, FluxType, LimiterType};
@@ -96,6 +96,7 @@ fn config_p1(integrator: DgTimeIntegrator) -> DGConfig {
             apply_per_stage: false,
         },
         sound_speed: 1500.0,
+        boundary_condition: DgBoundaryCondition::Periodic,
     }
 }
 
@@ -240,6 +241,7 @@ fn test_shock_capture_config_roundtrip() {
             apply_per_stage: true,
         },
         sound_speed: 1500.0,
+        boundary_condition: DgBoundaryCondition::Periodic,
     };
 
     let mut solver = DGSolver::new(config, Arc::clone(&grid)).expect("solver");

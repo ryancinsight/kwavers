@@ -129,7 +129,7 @@ pub use config::{BeamformingConfig, BeamformingCoreConfig};
 #[cfg(feature = "gpu")]
 pub mod shaders;
 
-pub use sensor_beamformer::{SensorBeamformer, SensorProcessingParams, WindowType};
+pub use sensor_beamformer::{BeamformerWindowType, SensorBeamformer, SensorProcessingParams};
 
 // NOTE: All beamforming algorithms have been migrated to:
 // - Analysis layer: crate::analysis::signal_processing::beamforming

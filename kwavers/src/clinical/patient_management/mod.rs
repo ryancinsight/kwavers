@@ -10,4 +10,4 @@ pub use demographics::{PatientDemographics, PatientId};
 pub use encounter::{ClinicalEncounter, ClinicalNote, EncounterId, EncounterType, VitalSigns};
 pub use profile::{MedicalHistoryEntry, MedicationRecord, PatientMedicalProfile};
 pub use system::PatientManagementSystem;
-pub use treatment::{TreatmentPlan, TreatmentStatus};
+pub use treatment::{PatientTreatmentPlan, TreatmentStatus};

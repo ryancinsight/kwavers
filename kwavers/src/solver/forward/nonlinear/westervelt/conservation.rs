@@ -1,88 +1,116 @@
 //! `ConservationDiagnostics` trait impl for the Westervelt FDTD solver.
 //!
-//! Total acoustic energy `E = ∫ p²/(2ρ₀c₀²) dV`, momentum from pressure
-//! gradients in the linear-acoustic limit (`ρ₀ u ≈ p/c₀` magnitude with
-//! direction set by ∇p), and mass from the linear pressure-density relation
-//! `ρ = ρ₀(1 + p/(ρ₀c₀²))`. All integrals use the cached `medium_properties`
-//! center-point ρ₀, c₀ — heterogeneous extension is a future increment.
+//! ## Acoustic energy
+//!
+//! Total acoustic potential energy density (Hamilton & Blackstock 1998 §1.3):
+//!
+//! ```text
+//! e(x) = p²(x) / (2·ρ₀·c₀²)    [J m⁻³]
+//! E = ∫∫∫ e(x) dV              [J]
+//! ```
+//!
+//! Kinetic energy is not tracked here because the Westervelt FDTD stores only
+//! the scalar pressure field. The potential-energy proxy is sufficient for
+//! detecting non-physical growth (instability) or excessive decay (over-damping).
+//!
+//! ## Acoustic momentum
+//!
+//! Linear-acoustic momentum density `g = ρ₀·u` where `u ≈ ∇Ψ` and `Ψ` is the
+//! velocity potential. From the linearized momentum equation `ρ₀·∂u/∂t = −∇p`,
+//! the time-integrated gradient gives `ρ₀·u ≈ −∫∇p dt`. For a single time step,
+//! the central-difference estimate of `u` at the current instant is
+//! `u ≈ ∇Ψ ≈ (1/ρ₀)·∇p / (iω)` (frequency domain). Here we track the
+//! instantaneous pressure-gradient components as a proxy for detecting asymmetric
+//! wave distortion.
+//!
+//! ## Acoustic mass perturbation
+//!
+//! From the linear equation of state `p = c₀²·ρ′` where `ρ′ = ρ − ρ₀`:
+//! ```text
+//! ρ′(x) = p(x) / c₀²
+//! M′ = ∫∫∫ ρ′(x) dV = (1/c₀²) ∫∫∫ p(x) dV
+//! ```
+//!
+//! For a closed domain `M′` should vanish at all times (mass conservation).
+//!
+//! ## Parallelism
+//!
+//! All three integrals use rayon parallel iterators over ndarray elements to
+//! amortize summation cost on large 3D grids.
+
+use rayon::prelude::*;
 
 use super::WesterveltFdtd;
 use crate::solver::forward::nonlinear::conservation::ConservationDiagnostics;
 
 impl ConservationDiagnostics for WesterveltFdtd {
+    /// Total acoustic potential energy `E = ∫ p²/(2ρ₀c₀²) dV`.
     fn calculate_total_energy(&self) -> f64 {
-        // Acoustic energy density: E = p²/(2ρ₀c₀²)
-        // Total energy: ∫∫∫ E dV
-        let mut total_energy = 0.0;
         let rho0 = self.medium_properties.rho0;
         let c0 = self.medium_properties.c0;
         let factor = 1.0 / (2.0 * rho0 * c0 * c0);
-        let dv = self.grid.dx * self.grid.dy * self.grid.dz; // Volume element
-
-        for i in 0..self.grid.nx {
-            for j in 0..self.grid.ny {
-                for k in 0..self.grid.nz {
-                    let p = self.pressure[[i, j, k]];
-                    total_energy += p * p * factor * dv;
-                }
-            }
-        }
-
-        total_energy
-    }
-
-    fn calculate_total_momentum(&self) -> (f64, f64, f64) {
-        // Full 3D momentum calculation
-        // Momentum density: ρ₀ u where u = ∫ ∇p/(ρ₀) dt (acoustic approximation)
-        // For simplicity, use p/c₀ approximation for magnitude
-        let mut px = 0.0;
-        let mut py = 0.0;
-        let mut pz = 0.0;
-        let rho0 = self.medium_properties.rho0;
-        let c0 = self.medium_properties.c0;
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
 
-        // Compute momentum from pressure gradients
-        for i in 1..self.grid.nx - 1 {
-            for j in 1..self.grid.ny - 1 {
-                for k in 1..self.grid.nz - 1 {
-                    // Pressure gradients (central difference)
-                    let dp_dx = (self.pressure[[i + 1, j, k]] - self.pressure[[i - 1, j, k]])
-                        / (2.0 * self.grid.dx);
-                    let dp_dy = (self.pressure[[i, j + 1, k]] - self.pressure[[i, j - 1, k]])
-                        / (2.0 * self.grid.dy);
-                    let dp_dz = (self.pressure[[i, j, k + 1]] - self.pressure[[i, j, k - 1]])
-                        / (2.0 * self.grid.dz);
+        self.pressure.par_iter().map(|&p| p * p * factor * dv).sum()
+    }
 
-                    // Momentum from pressure (acoustic approximation)
-                    px += (rho0 * dp_dx / c0) * dv;
-                    py += (rho0 * dp_dy / c0) * dv;
-                    pz += (rho0 * dp_dz / c0) * dv;
+    /// Pressure-gradient momentum proxy `(∫ ρ₀·∂p/∂x dV, ∫ ρ₀·∂p/∂y dV, ∫ ρ₀·∂p/∂z dV)`.
+    ///
+    /// Uses central differences on the interior. Boundary contributions are zero.
+    fn calculate_total_momentum(&self) -> (f64, f64, f64) {
+        let rho0 = self.medium_properties.rho0;
+        let dv = self.grid.dx * self.grid.dy * self.grid.dz;
+        let inv2dx = 1.0 / (2.0 * self.grid.dx);
+        let inv2dy = 1.0 / (2.0 * self.grid.dy);
+        let inv2dz = 1.0 / (2.0 * self.grid.dz);
+        let nx = self.grid.nx;
+        let ny = self.grid.ny;
+        let nz = self.grid.nz;
+
+        // Collect partial sums over interior i-slices in parallel.
+        let (px, py, pz) = (1..nx - 1)
+            .into_par_iter()
+            .map(|i| {
+                let mut sx = 0.0f64;
+                let mut sy = 0.0f64;
+                let mut sz = 0.0f64;
+                for j in 1..ny - 1 {
+                    for k in 1..nz - 1 {
+                        let dp_dx =
+                            (self.pressure[[i + 1, j, k]] - self.pressure[[i - 1, j, k]]) * inv2dx;
+                        let dp_dy =
+                            (self.pressure[[i, j + 1, k]] - self.pressure[[i, j - 1, k]]) * inv2dy;
+                        let dp_dz =
+                            (self.pressure[[i, j, k + 1]] - self.pressure[[i, j, k - 1]]) * inv2dz;
+                        let scale = rho0 * dv;
+                        sx += dp_dx * scale;
+                        sy += dp_dy * scale;
+                        sz += dp_dz * scale;
+                    }
                 }
-            }
-        }
+                (sx, sy, sz)
+            })
+            .reduce(
+                || (0.0, 0.0, 0.0),
+                |(ax, ay, az), (bx, by, bz)| (ax + bx, ay + by, az + bz),
+            );
 
         (px, py, pz)
     }
 
+    /// Acoustic mass perturbation `M′ = (1/c₀²) ∫ p dV`.
+    ///
+    /// Theorem (mass conservation): in a lossless closed domain `M′(t) = const`.
+    /// Non-zero drift indicates either boundary leakage or numerical dissipation.
     fn calculate_total_mass(&self) -> f64 {
-        // For acoustic waves: ρ = ρ₀(1 + p/(ρ₀c₀²))
-        // Total mass: ∫∫∫ ρ dV
-        let mut total_mass = 0.0;
-        let rho0 = self.medium_properties.rho0;
         let c0 = self.medium_properties.c0;
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
+        let rho0 = self.medium_properties.rho0;
+        let c0_sq = c0 * c0;
 
-        for i in 0..self.grid.nx {
-            for j in 0..self.grid.ny {
-                for k in 0..self.grid.nz {
-                    let p = self.pressure[[i, j, k]];
-                    let rho = rho0 * (1.0 + p / (rho0 * c0 * c0));
-                    total_mass += rho * dv;
-                }
-            }
-        }
-
-        total_mass
+        self.pressure
+            .par_iter()
+            .map(|&p| rho0 * (1.0 + p / (rho0 * c0_sq)) * dv)
+            .sum()
     }
 }

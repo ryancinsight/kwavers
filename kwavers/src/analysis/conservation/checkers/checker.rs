@@ -8,7 +8,7 @@ use ndarray::Array3;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 
-use super::types::{ConservationLaw, ConservationResult, ConservedQuantity};
+use super::types::{AnalysisConservationLaw, ConservationResult, ConservedQuantity};
 
 /// Conservation law checker for multiphysics simulations.
 #[derive(Debug)]
@@ -164,17 +164,17 @@ impl ConservationChecker {
         field.iter().sum::<f64>() * dv
     }
 
-    /// Infer `ConservationLaw` from a field name by keyword matching.
-    pub(super) fn infer_law_from_name(&self, name: &str) -> ConservationLaw {
+    /// Infer `AnalysisConservationLaw` from a field name by keyword matching.
+    pub(super) fn infer_law_from_name(&self, name: &str) -> AnalysisConservationLaw {
         let lower = name.to_lowercase();
         if lower.contains("mass") || lower.contains("rho") || lower.contains("density") {
-            ConservationLaw::Mass
+            AnalysisConservationLaw::Mass
         } else if lower.contains("momentum") || lower.contains("velocity") {
-            ConservationLaw::Momentum
+            AnalysisConservationLaw::Momentum
         } else if lower.contains("energy") || lower.contains("thermal") {
-            ConservationLaw::Energy
+            AnalysisConservationLaw::Energy
         } else {
-            ConservationLaw::Charge
+            AnalysisConservationLaw::Charge
         }
     }
 }

@@ -1,7 +1,7 @@
 //! `BoundarySpec` — complete boundary condition specification.
 
 use super::boundary_type::BoundaryType;
-use super::face_component::{BoundaryComponent, BoundaryFace};
+use super::face_component::{BoundaryFace, FaceBoundaryComponent};
 use serde::{Deserialize, Serialize};
 
 /// Boundary specification combining type, face, and component.
@@ -18,7 +18,7 @@ pub struct BoundarySpec {
     /// Boundary condition type
     pub boundary_type: BoundaryType,
     /// Component specification (for vector fields)
-    pub component: BoundaryComponent,
+    pub component: FaceBoundaryComponent,
     /// Time-dependent flag
     pub time_dependent: bool,
 }
@@ -29,7 +29,7 @@ impl BoundarySpec {
     pub fn new(
         face: BoundaryFace,
         boundary_type: BoundaryType,
-        component: BoundaryComponent,
+        component: FaceBoundaryComponent,
     ) -> Self {
         Self {
             face,
@@ -44,7 +44,7 @@ impl BoundarySpec {
     pub fn time_dependent(
         face: BoundaryFace,
         boundary_type: BoundaryType,
-        component: BoundaryComponent,
+        component: FaceBoundaryComponent,
     ) -> Self {
         Self {
             face,

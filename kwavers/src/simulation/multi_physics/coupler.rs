@@ -5,7 +5,7 @@ use ndarray::ArrayView3;
 use std::collections::HashMap;
 
 use super::residual::max_abs_difference;
-use super::{ConservationEnforcer, CoupledPhysicsSolver, CouplingInterface, PhysicsDomain};
+use super::{ConservationEnforcer, CoupledPhysicsSolver, MultiPhysicsInterface, PhysicsDomain};
 
 /// Field coupling manager for conservative interpolation between domains
 #[derive(Debug)]
@@ -13,7 +13,7 @@ pub struct FieldCoupler {
     /// Interpolation operators for each domain pair
     interpolators: HashMap<(PhysicsDomain, PhysicsDomain), TrilinearInterpolator>,
     /// Coupling interface definitions
-    interfaces: HashMap<(PhysicsDomain, PhysicsDomain), CouplingInterface>,
+    interfaces: HashMap<(PhysicsDomain, PhysicsDomain), MultiPhysicsInterface>,
     /// Conservation enforcement
     conservation: ConservationEnforcer,
 }
@@ -51,7 +51,7 @@ impl FieldCoupler {
 
         // Conservative interpolation via AABB overlap quadrature (Farhat et al. 1998)
         // and Schwarz alternating coupling are implemented in ConservationEnforcer below.
-        let interface = CouplingInterface::new(source_grid, target_grid)?;
+        let interface = MultiPhysicsInterface::new(source_grid, target_grid)?;
 
         self.interpolators.insert(key, interpolator);
         self.interfaces.insert(key, interface);

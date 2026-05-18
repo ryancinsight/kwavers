@@ -1,10 +1,10 @@
-use super::policy::NumaPolicy;
+use super::policy::NumaAllocPolicy;
 use super::topology::NumaTopology;
 
 /// NUMA-aware memory allocator wrapper.
 #[derive(Debug, Clone)]
 pub struct NumaAllocator {
-    policy: NumaPolicy,
+    policy: NumaAllocPolicy,
     topology: NumaTopology,
 }
 
@@ -13,19 +13,19 @@ impl NumaAllocator {
     pub fn new() -> Self {
         let topology = NumaTopology::detect();
         Self {
-            policy: NumaPolicy::FirstTouch,
+            policy: NumaAllocPolicy::FirstTouch,
             topology,
         }
     }
 
     #[must_use]
-    pub fn with_policy(policy: NumaPolicy) -> Self {
+    pub fn with_policy(policy: NumaAllocPolicy) -> Self {
         let topology = NumaTopology::detect();
         Self { policy, topology }
     }
 
     #[must_use]
-    pub fn policy(&self) -> NumaPolicy {
+    pub fn policy(&self) -> NumaAllocPolicy {
         self.policy
     }
 

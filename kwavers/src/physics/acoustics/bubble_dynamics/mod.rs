@@ -41,13 +41,12 @@ pub mod interactions;
 pub mod keller_miksis; // NEW: Extracted Keller-Miksis solver for modularity
 pub mod rayleigh_plesset;
 pub mod thermodynamics;
-pub mod units; // NEW: Unit-safe types using uom crate
 
 pub use adaptive_integration::{
     integrate_bubble_dynamics_adaptive, AdaptiveBubbleConfig, AdaptiveBubbleIntegrator,
     IntegrationStatistics,
 };
-pub use bjerknes_forces::{BjerknesCalculator, BjerknesConfig, BjerknesForce, InteractionType}; // NEW: Bubble-bubble interaction forces
+pub use bjerknes_forces::{BjerknesCalculator, BjerknesConfig, BjerknesInteractionType}; // NEW: Bubble-bubble interaction forces
 pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
 pub use bubble_state::{BubbleParameters, BubbleState, GasSpecies};
 pub use cavitation_control::{
@@ -62,8 +61,6 @@ pub use imex_integration::{
     integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator,
 };
 pub use integration::integrate_bubble_dynamics_stable; // NEW: Extracted integration utilities
-pub use interactions::{
-    BjerknesForce as InteractionBjerknesForce, BubbleInteractions, CollectiveEffects,
-};
+pub use interactions::{BjerknesForceComputer, BubbleInteractions, CollectiveEffects};
 pub use keller_miksis::KellerMiksisModel; // NEW: Modular Keller-Miksis solver
 pub use rayleigh_plesset::RayleighPlessetSolver;

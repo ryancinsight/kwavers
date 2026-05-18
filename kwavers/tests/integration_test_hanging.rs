@@ -20,7 +20,7 @@ fn test_point_source_propagation() {
     let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
     // Create boundary
-    let pml_config = kwavers::domain::boundary::PMLConfig {
+    let pml_config = kwavers::domain::boundary::DomainPmlConfig {
         thickness: 10,
         ..Default::default()
     };

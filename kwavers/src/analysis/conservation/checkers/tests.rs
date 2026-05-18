@@ -8,7 +8,7 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 
 use super::checker::ConservationChecker;
-use super::types::ConservationLaw;
+use super::types::AnalysisConservationLaw;
 
 #[test]
 fn test_conservation_checker_creation() -> KwaversResult<()> {
@@ -22,10 +22,10 @@ fn test_conservation_checker_creation() -> KwaversResult<()> {
 
 #[test]
 fn test_conservation_law_display() {
-    assert_eq!(ConservationLaw::Mass.to_string(), "Mass");
-    assert_eq!(ConservationLaw::Momentum.to_string(), "Momentum");
-    assert_eq!(ConservationLaw::Energy.to_string(), "Energy");
-    assert_eq!(ConservationLaw::Charge.to_string(), "Charge");
+    assert_eq!(AnalysisConservationLaw::Mass.to_string(), "Mass");
+    assert_eq!(AnalysisConservationLaw::Momentum.to_string(), "Momentum");
+    assert_eq!(AnalysisConservationLaw::Energy.to_string(), "Energy");
+    assert_eq!(AnalysisConservationLaw::Charge.to_string(), "Charge");
 }
 
 #[test]
@@ -101,19 +101,19 @@ fn test_infer_law_from_name() -> KwaversResult<()> {
 
     assert_eq!(
         checker.infer_law_from_name("pressure"),
-        ConservationLaw::Charge
+        AnalysisConservationLaw::Charge
     );
     assert_eq!(
         checker.infer_law_from_name("density"),
-        ConservationLaw::Mass
+        AnalysisConservationLaw::Mass
     );
     assert_eq!(
         checker.infer_law_from_name("velocity_x"),
-        ConservationLaw::Momentum
+        AnalysisConservationLaw::Momentum
     );
     assert_eq!(
         checker.infer_law_from_name("thermal_energy"),
-        ConservationLaw::Energy
+        AnalysisConservationLaw::Energy
     );
 
     Ok(())

@@ -228,11 +228,11 @@ pub(crate) fn clinical_analysis_from_beamforming_result(
     let tissue_characterization = crate::api::TissueCharacterization {
         tissue_map: HashMap::from([(
             "liver".to_string(),
-            crate::api::TissueRegion {
+            crate::api::ApiTissueRegion {
                 tissue_type: "Liver".to_string(),
                 boundaries: [0.0, 100.0, 0.0, 100.0, 0.0, 50.0],
                 confidence: 0.85,
-                properties: crate::api::TissueProperties {
+                properties: crate::api::ApiTissueProperties {
                     attenuation_db_per_cm_mhz: 0.5,
                     backscatter_coefficient: 1.2,
                     speed_of_sound: 1540.0,

@@ -33,18 +33,18 @@ mod mobile;
 mod tests;
 
 pub use clinical::{
-    AbnormalRegion, AnalysisPriority, ClinicalAnalysisRequest, ClinicalAnalysisResponse,
-    ClinicalContext, ClinicalFinding, ClinicalRecommendation, FindingMeasurements, FindingType,
-    OperatorLevel, ProcessingMetrics, QualityIndicators, RecommendationType,
-    TissueCharacterization, TissueProperties, TissueRegion, UrgencyLevel,
+    AbnormalRegion, AnalysisPriority, ApiTissueProperties, ApiTissueRegion,
+    ClinicalAnalysisRequest, ClinicalAnalysisResponse, ClinicalContext, ClinicalFinding,
+    ClinicalRecommendation, FindingMeasurements, FindingType, OperatorLevel, ProcessingMetrics,
+    QualityIndicators, RecommendationType, TissueCharacterization, UrgencyLevel,
 };
 pub use devices::{DeviceCapability, DeviceInfo, DeviceStatus, DeviceType, UltrasoundDevice};
 pub use dicom::{DICOMIntegrationRequest, DICOMIntegrationResponse, DICOMStudyInfo, DICOMValue};
 pub use imaging::{ImagingParameters, UltrasoundFrame};
 pub use jobs::{
-    APIUsageStats, AuditLogEntry, DeliveryMethod, JobProgress, JobQueueEntry, NotificationConfig,
-    NotificationType, PINNJobConfig, PerformanceBenchmarks, SystemHealthMetrics, TrainingResult,
-    ValidationResults,
+    APIUsageStats, AuditLogEntry, DeliveryMethod, JobModelTrainingResult, JobProgress,
+    JobQueueEntry, JobValidationResults, NotificationConfig, NotificationType, PINNJobConfig,
+    PerformanceBenchmarks, SystemHealthMetrics,
 };
 pub use mobile::{
     ConnectionType, DeviceCapabilities, MobileOptimizationRequest, MobileOptimizationResponse,

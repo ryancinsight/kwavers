@@ -120,46 +120,211 @@ pub fn compute_laplacian_spectral_into(
     ifft_3d_array_into(fft_scratch, out);
 }
 
-/// Apply k-space correction for heterogeneous media
-///
-/// This implements the k-space correction term from Tabei et al. (2002)
-/// to improve accuracy in heterogeneous media.
-pub fn apply_kspace_correction(
-    pressure_k: &mut Array3<Complex<f64>>,
-    kx: &Array3<f64>,
-    ky: &Array3<f64>,
-    kz: &Array3<f64>,
-    rho_grad_x: &Array3<f64>,
-    rho_grad_y: &Array3<f64>,
-    rho_grad_z: &Array3<f64>,
-) {
-    let (nx, ny, nz) = pressure_k.dim();
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::grid::Grid;
 
-    // Transform density gradients to k-space
-    let rho_grad_x_k = fft_3d_array(rho_grad_x);
-    let rho_grad_y_k = fft_3d_array(rho_grad_y);
-    let rho_grad_z_k = fft_3d_array(rho_grad_z);
+    /// Helper: uniform spacing grid.
+    fn make_grid(n: usize, dx: f64) -> Grid {
+        Grid::new(n, n, n, dx, dx, dx).unwrap()
+    }
 
-    // Apply correction term
-    for k in 0..nz {
-        for j in 0..ny {
-            for i in 0..nx {
-                let kx_val = kx[[i, j, k]];
-                let ky_val = ky[[i, j, k]];
-                let kz_val = kz[[i, j, k]];
+    // ── k-space grid structure ─────────────────────────────────────────────
 
-                let k_squared = kz_val.mul_add(kz_val, kx_val.mul_add(kx_val, ky_val * ky_val));
+    /// **Theorem (DC bin is zero wavenumber)**:
+    ///
+    /// The k-space grid element `k_squared[0, 0, 0]` must be exactly zero because
+    /// the DC Fourier mode has zero wavenumber in every direction:
+    ///
+    /// ```text
+    /// k_x(0) = 2π·0/(N·Δx) = 0,   k_y(0) = k_z(0) = 0   ⟹   |k|²(0,0,0) = 0
+    /// ```
+    #[test]
+    fn k_squared_dc_bin_is_exactly_zero() {
+        let grid = make_grid(16, 1e-3);
+        let (k_sq, _kx, _ky, _kz) = initialize_kspace_grids(&grid);
+        assert_eq!(k_sq[[0, 0, 0]], 0.0, "DC bin k_squared must be exactly 0");
+    }
 
-                if k_squared > 1e-10 {
-                    // Compute k · ∇ρ
-                    let k_dot_grad_rho = Complex::new(kx_val, 0.0) * rho_grad_x_k[[i, j, k]]
-                        + Complex::new(ky_val, 0.0) * rho_grad_y_k[[i, j, k]]
-                        + Complex::new(kz_val, 0.0) * rho_grad_z_k[[i, j, k]];
+    /// **Theorem (fundamental mode wavenumber)**:
+    ///
+    /// The fundamental Fourier mode (bin 1 along x, all others 0) has:
+    ///
+    /// ```text
+    /// kx(1) = 2π / (N·Δx) = 2π / L_x
+    /// ```
+    ///
+    /// All other components are zero, so `k_squared[1, 0, 0] = kx(1)²`.
+    #[test]
+    fn k_squared_fundamental_mode_matches_2pi_over_lx() {
+        let n = 32usize;
+        let dx = 1.0e-3_f64;
+        let grid = make_grid(n, dx);
+        let (k_sq, kx, _ky, _kz) = initialize_kspace_grids(&grid);
 
-                    // Apply correction: p_k = p_k * (1 - i * k·∇ρ / k²)
-                    let correction = Complex::new(1.0, 0.0)
-                        - Complex::new(0.0, 1.0) * k_dot_grad_rho / k_squared;
-                    pressure_k[[i, j, k]] *= correction;
+        let lx = n as f64 * dx;
+        let k1_analytic = 2.0 * PI / lx;
+
+        // kx at bin 1 must equal 2π/Lx
+        let kx1 = kx[[1, 0, 0]];
+        assert!(
+            (kx1 - k1_analytic).abs() < 1e-12,
+            "kx[1] = {kx1:.6e} must equal 2π/Lx = {k1_analytic:.6e}"
+        );
+
+        // k_squared at (1, 0, 0) must equal k1_analytic²
+        let k_sq_1 = k_sq[[1, 0, 0]];
+        let expected = k1_analytic * k1_analytic;
+        let rel_err = (k_sq_1 - expected).abs() / expected;
+        assert!(
+            rel_err < 1e-12,
+            "k_squared[1,0,0] = {k_sq_1:.6e}, expected {expected:.6e}, rel_err={rel_err:.2e}"
+        );
+    }
+
+    /// **Theorem (k-space Nyquist symmetry)**:
+    ///
+    /// For even N, the Nyquist bin N/2 must satisfy:
+    ///
+    /// ```text
+    /// kx(N/2) = 2π · (N/2) / (N·Δx) = π / Δx
+    /// ```
+    ///
+    /// This is the maximum representable wavenumber on the grid.
+    #[test]
+    fn k_squared_nyquist_bin_equals_pi_over_dx() {
+        let n = 16usize;
+        let dx = 1.0e-3_f64;
+        let grid = make_grid(n, dx);
+        let (_k_sq, kx, _ky, _kz) = initialize_kspace_grids(&grid);
+
+        let nyquist = PI / dx; // = π/Δx
+        let kx_nyquist = kx[[n / 2, 0, 0]];
+        assert!(
+            (kx_nyquist - nyquist).abs() < 1e-10,
+            "kx[N/2] = {kx_nyquist:.6e} must equal π/Δx = {nyquist:.6e}"
+        );
+    }
+
+    // ── Spectral Laplacian correctness ─────────────────────────────────────
+
+    /// **Theorem (∇²[constant] = 0)**:
+    ///
+    /// For any constant function f = C, ∇²f = 0 everywhere.
+    /// Spectrally: −|k|²·FFT(C) = 0 for all k ≠ 0 (DC bin has k²=0), so
+    /// IFFT(result) = 0.
+    #[test]
+    fn spectral_laplacian_of_constant_is_zero() {
+        let n = 16usize;
+        let dx = 1.0e-3_f64;
+        let grid = make_grid(n, dx);
+        let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
+
+        let field = ndarray::Array3::from_elem((n, n, n), 7.5_f64);
+        let lap = compute_laplacian_spectral(&field, &k_sq);
+
+        let max_abs = lap.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
+        // Budget: N³·log₂(N)·ε_machine ≈ 16³·4·2.2e-16 ≈ 3.6e-11
+        assert!(
+            max_abs < 1e-8,
+            "∇²(constant) must be zero; max_abs={max_abs:.3e}"
+        );
+    }
+
+    /// **Theorem (spectral Laplacian of sin(kx·x))**:
+    ///
+    /// For f(x,y,z) = sin(k₁·x), the exact Laplacian is:
+    ///
+    /// ```text
+    /// ∇²f = ∂²f/∂x² = −k₁² sin(k₁·x)
+    /// ```
+    ///
+    /// The spectral method reproduces this to machine precision for any
+    /// DFT-representable mode.  We verify the interior L∞ relative error < 1e-8.
+    #[test]
+    fn spectral_laplacian_of_sine_matches_analytical() {
+        let n = 32usize;
+        let dx = 1.0e-3_f64;
+        let grid = make_grid(n, dx);
+        let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
+
+        let k1 = 2.0 * PI / (n as f64 * dx); // fundamental wavenumber
+        let mut field = ndarray::Array3::<f64>::zeros((n, n, n));
+        for i in 0..n {
+            let x = i as f64 * dx;
+            let val = (k1 * x).sin();
+            for j in 0..n {
+                for k in 0..n {
+                    field[[i, j, k]] = val;
+                }
+            }
+        }
+
+        let lap = compute_laplacian_spectral(&field, &k_sq);
+
+        // Check interior points only (boundaries may pick up Gibbs from non-periodic extension)
+        let center = n / 2;
+        let mut max_rel_err = 0.0_f64;
+        for i in 1..n - 1 {
+            let x = i as f64 * dx;
+            let expected = -k1 * k1 * (k1 * x).sin();
+            let computed = lap[[i, center, center]];
+            let denom = k1 * k1; // normalise by |k|² to get relative error
+            let rel_err = (computed - expected).abs() / denom;
+            max_rel_err = max_rel_err.max(rel_err);
+        }
+
+        assert!(
+            max_rel_err < 1e-8,
+            "∇²(sin(k₁x)) spectral relative error = {max_rel_err:.3e} (must be < 1e-8)"
+        );
+    }
+
+    /// **Theorem (zero-allocation path bit-identical to allocating path)**:
+    ///
+    /// `compute_laplacian_spectral_into` must produce results bitwise identical to
+    /// `compute_laplacian_spectral` on the same input, confirming the in-place
+    /// scratch buffer path does not alter the computation.
+    #[test]
+    fn spectral_laplacian_into_is_bitwise_identical_to_allocating() {
+        let n = 16usize;
+        let dx = 1.0e-3_f64;
+        let grid = make_grid(n, dx);
+        let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
+
+        let k1 = 2.0 * PI / (n as f64 * dx);
+        let mut field = ndarray::Array3::<f64>::zeros((n, n, n));
+        for i in 0..n {
+            let x = i as f64 * dx;
+            for j in 0..n {
+                for k in 0..n {
+                    field[[i, j, k]] = (k1 * x).cos() * (k1 * j as f64 * dx).sin();
+                }
+            }
+        }
+
+        // Allocating path
+        let lap_alloc = compute_laplacian_spectral(&field, &k_sq);
+
+        // Zero-allocation path
+        let shape = (n, n, n);
+        let mut fft_scratch = ndarray::Array3::<Complex64>::zeros(shape);
+        let mut lap_into = ndarray::Array3::<f64>::zeros(shape);
+        compute_laplacian_spectral_into(&field, &k_sq, &mut fft_scratch, &mut lap_into);
+
+        // Results must be bitwise identical
+        for i in 0..n {
+            for j in 0..n {
+                for k in 0..n {
+                    assert_eq!(
+                        lap_alloc[[i, j, k]].to_bits(),
+                        lap_into[[i, j, k]].to_bits(),
+                        "spectral_laplacian_into result differs at [{i},{j},{k}]: \
+                         alloc={:.6e} into={:.6e}",
+                        lap_alloc[[i, j, k]],
+                        lap_into[[i, j, k]]
+                    );
                 }
             }
         }

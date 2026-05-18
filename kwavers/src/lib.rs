@@ -119,12 +119,12 @@ pub mod sensor {
     pub use crate::domain::sensor::GridSensorSet;
     pub mod beamforming {
         pub use crate::domain::sensor::beamforming::{
-            SensorBeamformer, SensorProcessingParams, WindowType,
+            BeamformerWindowType, SensorBeamformer, SensorProcessingParams,
         };
     }
 }
 pub mod boundary {
-    pub use crate::domain::boundary::{PMLBoundary, PMLConfig};
+    pub use crate::domain::boundary::{DomainPmlConfig, PMLBoundary};
 }
 pub mod error {
     pub use crate::core::error::{GridError, KwaversError, KwaversResult};
@@ -171,7 +171,7 @@ pub use solver::plugin::PluginManager;
 /// config.models.push(PhysicsModelConfig {
 ///     model_type: PhysicsModelType::LinearAcoustics {
 ///         solver_type: AcousticSolver::PSTD { spectral_accuracy: true },
-///         boundary_conditions: BoundaryType::Absorbing { pml_layers: 10 },
+///         boundary_conditions: crate::physics::factory::PhysicsBoundaryCondition::Absorbing { pml_layers: 10 },
 ///     },
 ///     enabled: true,
 ///     parameters: Default::default(),
@@ -185,7 +185,7 @@ pub mod plugin {
     };
     pub use crate::physics::acoustics::state::{PluginFieldAccess, PluginFieldAccessMut};
     pub use crate::physics::factory::{
-        AcousticSolver, BoundaryType, BubbleModel, NonlinearEquation, PhysicsCatalog,
+        AcousticSolver, BubbleModel, NonlinearEquation, PhysicsBoundaryCondition, PhysicsCatalog,
         PhysicsConfig, PhysicsModelConfig, PhysicsModelType,
     };
     pub use crate::solver::plugin::{
@@ -201,11 +201,10 @@ pub use solver::pstd::dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
 pub use solver::pstd::{PSTDConfig, PSTDPlugin, PSTDSolver};
 
 // --- Physics model re-exports ---
+pub use domain::medium::AnisotropicStiffnessTensor;
 pub use physics::acoustics::mechanics::acoustic_wave::nonlinear::NonlinearWave;
 pub use physics::acoustics::mechanics::elastic_wave::{
-    mode_conversion::{
-        MaterialSymmetry, ModeConversionConfig, StiffnessTensor, ViscoelasticConfig,
-    },
+    mode_conversion::{MaterialSymmetry, ModeConversionConfig, ViscoelasticConfig},
     ElasticWave,
 };
 pub use physics::chemistry::ChemicalModel;
@@ -228,8 +227,8 @@ pub use domain::sensor::recorder::RecorderConfig;
 
 // --- Performance optimization ---
 pub use analysis::performance::{
-    CacheProfile, MemoryProfile, OptimizationConfig, PerformanceOptimizer, PerformanceProfiler,
-    ProfileReport, RooflineAnalysis, SimdLevel, TimingScope,
+    CacheProfile, HardwareOptimizationConfig, MemoryProfile, PerfOptSimdLevel,
+    PerformanceOptimizer, PerformanceProfiler, ProfileReport, RooflineAnalysis, TimingScope,
 };
 
 // --- Feature-gated API ---

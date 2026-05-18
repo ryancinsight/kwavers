@@ -8,7 +8,7 @@
 /// - **Coherence**: Spatial smoothness ∇²I
 /// - **Sparsity**: Focused point-spread function via L1 penalty
 #[derive(Debug, Clone)]
-pub struct PhysicsParameters {
+pub struct NeuralBeamformingPhysicsParams {
     /// Weight for reciprocity constraint (time-reversal symmetry). Range: [0.0, 10.0]
     pub reciprocity_weight: f64,
 
@@ -25,7 +25,7 @@ pub struct PhysicsParameters {
     pub soft_threshold: f64,
 }
 
-impl Default for PhysicsParameters {
+impl Default for NeuralBeamformingPhysicsParams {
     fn default() -> Self {
         Self {
             reciprocity_weight: 1.0,

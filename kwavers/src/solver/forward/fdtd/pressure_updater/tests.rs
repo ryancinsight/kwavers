@@ -49,9 +49,21 @@ fn test_westervelt_correction_nonzero_after_history() {
     );
 }
 
-/// Scratch-buffer pressure update must be bitwise-identical to explicit-allocation path.
+/// Scratch-buffer divergence matches analytical reference for a linear velocity field.
 ///
-/// Both paths use the same 2nd-order central difference stencil over 10 steps on a 16³ grid.
+/// ## Theorem (2nd-order central-difference exactness for linear functions)
+///
+/// For `ux[i,j,k] = i·Δx`, `uy[i,j,k] = j·Δx`, `uz[i,j,k] = k·Δx`, the 2nd-order
+/// centered stencil applied at any interior node satisfies:
+/// ```text
+///   ∂ux/∂x = (ux[i+1] − ux[i−1]) / (2Δx) = (Δx) / (Δx) = 1.0   (exact for degree-1)
+/// ```
+/// and identically for `∂uy/∂y` and `∂uz/∂z`. Hence `div(u)|interior = 3.0` exactly.
+///
+/// Justification: the 2nd-order central-difference stencil has a Taylor truncation
+/// error proportional to the 3rd derivative; linear fields have zero 3rd derivative,
+/// so the stencil is exact regardless of grid spacing.
+///
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
@@ -81,32 +93,14 @@ fn test_fdtd_pressure_numerical_identity() {
     for i in 0..n {
         for j in 0..n {
             for k in 0..n {
-                solver.fields.ux[[i, j, k]] = (i as f64) * 1e-3;
-                solver.fields.uy[[i, j, k]] = (j as f64) * 1e-3;
-                solver.fields.uz[[i, j, k]] = (k as f64) * 1e-3;
+                solver.fields.ux[[i, j, k]] = (i as f64) * dx;
+                solver.fields.uy[[i, j, k]] = (j as f64) * dx;
+                solver.fields.uz[[i, j, k]] = (k as f64) * dx;
             }
         }
     }
 
-    for _ in 0..10 {
-        solver.update_pressure_cpu(dt).unwrap();
-    }
-    let p_scratch = solver.fields.p.clone();
-
-    let dvx = solver
-        .central_operator
-        .apply_x(solver.fields.ux.view())
-        .unwrap();
-    let dvy = solver
-        .central_operator
-        .apply_y(solver.fields.uy.view())
-        .unwrap();
-    let dvz = solver
-        .central_operator
-        .apply_z(solver.fields.uz.view())
-        .unwrap();
-    let divergence_alloc = &dvx + &dvy + &dvz;
-
+    // Compute divergence via pre-allocated scratch buffers.
     let mut dvx_s = Array3::<f64>::zeros((n, n, n));
     let mut dvy_s = Array3::<f64>::zeros((n, n, n));
     let mut dvz_s = Array3::<f64>::zeros((n, n, n));
@@ -122,27 +116,27 @@ fn test_fdtd_pressure_numerical_identity() {
         .central_operator
         .apply_z_into(solver.fields.uz.view(), &mut dvz_s)
         .unwrap();
-    let mut divergence_scratch = dvz_s;
-    Zip::from(&mut divergence_scratch)
-        .and(&dvx_s)
-        .and(&dvy_s)
-        .for_each(|d, &dx_v, &dy_v| *d += dx_v + dy_v);
 
-    for i in 0..n {
-        for j in 0..n {
-            for k in 0..n {
-                assert_eq!(
-                    divergence_alloc[[i, j, k]],
-                    divergence_scratch[[i, j, k]],
-                    "Divergence mismatch at [{i},{j},{k}]: alloc={} scratch={}",
-                    divergence_alloc[[i, j, k]],
-                    divergence_scratch[[i, j, k]]
+    // Verify analytical reference: interior divergence = 3.0 exactly (linear field, O2 stencil).
+    for i in 1..n - 1 {
+        for j in 1..n - 1 {
+            for k in 1..n - 1 {
+                let div = dvx_s[[i, j, k]] + dvy_s[[i, j, k]] + dvz_s[[i, j, k]];
+                assert!(
+                    (div - 3.0).abs() < 1e-10,
+                    "Interior divergence must equal 3.0 at [{i},{j},{k}]: got {div}"
                 );
             }
         }
     }
 
-    let p_max = p_scratch
+    // Pressure update must produce non-zero output after 10 steps.
+    for _ in 0..10 {
+        solver.update_pressure_cpu(dt).unwrap();
+    }
+    let p_max = solver
+        .fields
+        .p
         .iter()
         .cloned()
         .fold(f64::NEG_INFINITY, f64::max)

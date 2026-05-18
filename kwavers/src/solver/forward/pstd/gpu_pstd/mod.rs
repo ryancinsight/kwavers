@@ -159,7 +159,6 @@ pub struct GpuPstdSolver {
     pub(super) pipeline_vel_update: wgpu::ComputePipeline,
     pub(super) pipeline_dens_update: wgpu::ComputePipeline,
     pub(super) pipeline_snapshot_rho0_plus_rho: wgpu::ComputePipeline,
-    pub(super) pipeline_absorption: wgpu::ComputePipeline,
     pub(super) pipeline_pres_density: wgpu::ComputePipeline,
     pub(super) pipeline_record: wgpu::ComputePipeline,
     pub(super) pipeline_inject_src: wgpu::ComputePipeline,
@@ -184,7 +183,11 @@ pub struct GpuPstdSolver {
     /// saving 2 full 3D FFTs per time step.
     pub(super) pipeline_absorb_save_kspace: wgpu::ComputePipeline,
     /// Restore kspace_re/im â† absorb_scratch_kre/kim.
-    pub(super) pipeline_absorb_restore_kspace: wgpu::ComputePipeline,
+    /// Fused restore-from-scratch + kspace-shift for velocity axes 1 and 2.
+    /// Reads FFT(p) from absorb_scratch_kre/kim, applies kappa x shift,
+    /// writes result directly into kspace_re/im, saving one full-N memory
+    /// round-trip (4N f32) and one GPU dispatch per axis vs. the two-shader path.
+    pub(super) pipeline_restore_and_shift: wgpu::ComputePipeline,
 
     // Bind groups (sensor group rebuilt per run)
     pub(super) bg_fields: wgpu::BindGroup,

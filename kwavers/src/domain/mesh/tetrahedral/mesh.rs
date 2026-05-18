@@ -14,7 +14,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use nalgebra::{Matrix3, Vector3};
 use std::collections::HashMap;
 
-use super::types::{BoundaryType, BoundingBox, MeshNode, MeshStatistics, Tetrahedron};
+use super::types::{BoundingBox, MeshBoundaryType, MeshNode, MeshStatistics, Tetrahedron};
 
 /// Tetrahedral mesh for 3D FEM
 #[derive(Debug, Clone)]
@@ -54,7 +54,7 @@ impl TetrahedralMesh {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn add_node(&mut self, coordinates: [f64; 3], boundary_type: BoundaryType) -> usize {
+    pub fn add_node(&mut self, coordinates: [f64; 3], boundary_type: MeshBoundaryType) -> usize {
         let index = self.nodes.len();
         self.nodes.push(MeshNode {
             coordinates,

@@ -78,6 +78,8 @@ mod gpu_accelerator;
 mod interface;
 mod sources;
 mod stepping;
+#[cfg(test)]
+mod tests;
 
 pub(crate) use central_diff::CentralDifferenceOperator;
 pub use gpu_accelerator::FdtdGpuAccelerator;
@@ -86,7 +88,7 @@ use crate::domain::boundary::cpml::CPMLBoundary;
 use crate::domain::grid::Grid;
 use crate::domain::source::{Source, SourceInjectionMode};
 use crate::math::numerics::operators::StaggeredGridOperator;
-use crate::physics::acoustics::mechanics::acoustic_wave::SpatialOrder;
+use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use ndarray::Array3;
 use std::sync::Arc;
 
@@ -120,7 +122,7 @@ pub struct GenericFdtdSolver<T> {
     /// C-PML boundary (if enabled)
     pub(crate) cpml_boundary: Option<CPMLBoundary>,
     /// Spatial order enum (validated at construction)
-    pub(crate) spatial_order: SpatialOrder,
+    pub(crate) spatial_order: AcousticSpatialOrder,
     pub(crate) gpu_accelerator: Option<Arc<dyn FdtdGpuAccelerator>>,
 
     // Shared components for source handling and sensor recording

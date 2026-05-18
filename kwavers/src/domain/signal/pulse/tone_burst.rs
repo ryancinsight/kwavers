@@ -1,7 +1,7 @@
 //! Tone burst signal implementation
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::signal::window::{window_value, WindowType};
+use crate::domain::signal::window::{window_value, SignalWindowType};
 use crate::domain::signal::Signal;
 use std::f64::consts::PI;
 
@@ -17,7 +17,7 @@ pub struct ToneBurst {
     start_time: f64,
     amplitude: f64,
     phase: f64,
-    window_type: WindowType,
+    window_type: SignalWindowType,
 }
 
 impl ToneBurst {
@@ -38,7 +38,7 @@ impl ToneBurst {
             start_time,
             amplitude,
             phase: 0.0,
-            window_type: WindowType::Hann,
+            window_type: SignalWindowType::Hann,
         }
     }
     /// Try new.
@@ -80,12 +80,12 @@ impl ToneBurst {
             start_time,
             amplitude,
             phase: 0.0,
-            window_type: WindowType::Hann,
+            window_type: SignalWindowType::Hann,
         })
     }
 
     #[must_use]
-    pub fn with_window(mut self, window_type: WindowType) -> Self {
+    pub fn with_window(mut self, window_type: SignalWindowType) -> Self {
         self.window_type = window_type;
         self
     }

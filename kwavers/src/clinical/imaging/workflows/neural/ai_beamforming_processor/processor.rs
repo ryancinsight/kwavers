@@ -8,7 +8,7 @@ use crate::domain::sensor::beamforming::processor::BeamformingProcessor;
 
 use super::super::feature_extraction::FeatureExtractor;
 use super::super::{
-    types::{AIBeamformingConfig, AIBeamformingResult, FeatureMap, PerformanceMetrics},
+    types::{AIBeamformingConfig, AIBeamformingResult, AiBeamformingMetrics, FeatureMap},
     ClinicalDecisionSupport,
 };
 use super::trait_engine::PinnInferenceEngine;
@@ -129,7 +129,7 @@ impl AIEnhancedBeamformingProcessor {
             confidence,
             features,
             clinical_analysis,
-            performance: PerformanceMetrics {
+            performance: AiBeamformingMetrics {
                 total_time_ms: total_time,
                 beamforming_time_ms: beamforming_time,
                 feature_extraction_time_ms: feature_time,

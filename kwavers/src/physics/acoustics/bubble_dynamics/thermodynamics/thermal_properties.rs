@@ -3,7 +3,8 @@
 use std::f64::consts::PI;
 
 use super::vapor_pressure::ThermodynamicsCalculator;
-use crate::core::constants::{M_WATER, P_CRITICAL_WATER, R_GAS, T_CRITICAL_WATER};
+use crate::core::constants::fundamental::GAS_CONSTANT as R_GAS;
+use crate::core::constants::{M_WATER, P_CRITICAL_WATER, T_CRITICAL_WATER};
 
 impl ThermodynamicsCalculator {
     /// Calculate enthalpy of vaporization at given temperature

@@ -2,7 +2,7 @@
 
 use super::clutter::SvdClutterFilter;
 use super::localize::GaussianLocalizer;
-use super::types::{BubbleDetection, LocalizationConfig, SvdClutterConfig};
+use super::types::{BubbleDetection, GaussianLocalizationConfig, SvdClutterConfig};
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::Array2;
 
@@ -15,7 +15,7 @@ pub struct UlmDetector {
 
 impl UlmDetector {
     #[must_use]
-    pub fn new(clutter_cfg: SvdClutterConfig, loc_cfg: LocalizationConfig) -> Self {
+    pub fn new(clutter_cfg: SvdClutterConfig, loc_cfg: GaussianLocalizationConfig) -> Self {
         Self {
             clutter_filter: SvdClutterFilter::new(clutter_cfg),
             localizer: GaussianLocalizer::new(loc_cfg),

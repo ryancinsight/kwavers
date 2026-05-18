@@ -11,6 +11,7 @@ use super::super::matrices::{
     matrix_inverse,
 };
 use super::super::quadrature::{fourier_periodic_nodes, gauss_lobatto_quadrature};
+use super::topology::CoefficientLayout;
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, NumericalError};
 use crate::domain::grid::Grid;
@@ -47,6 +48,14 @@ pub struct DGSolver {
     pub(super) lift_matrix: Arc<Array2<f64>>,
     /// Modal coefficients for each element (`n_elements` x `n_nodes` x `n_vars`)
     pub(super) modal_coefficients: Option<Array3<f64>>,
+    /// Layout contract for the current coefficient tensor.
+    pub(super) coefficient_layout: CoefficientLayout,
+    /// SSP-RK original-state register, allocated to the modal coefficient shape.
+    pub(super) rk_original: Array3<f64>,
+    /// SSP-RK stage register, allocated to the modal coefficient shape.
+    pub(super) rk_stage: Array3<f64>,
+    /// Spatial RHS register, allocated to the modal coefficient shape.
+    pub(super) rk_rhs: Array3<f64>,
 }
 
 impl DGSolver {
@@ -102,6 +111,10 @@ impl DGSolver {
             diff_matrix: Arc::new(diff_matrix),
             lift_matrix: Arc::new(lift_matrix),
             modal_coefficients: None,
+            coefficient_layout: CoefficientLayout::Line1D,
+            rk_original: Array3::zeros((0, n_nodes, 0)),
+            rk_stage: Array3::zeros((0, n_nodes, 0)),
+            rk_rhs: Array3::zeros((0, n_nodes, 0)),
         })
     }
 
@@ -166,6 +179,10 @@ impl DGSolver {
             diff_matrix: Arc::new(diff_matrix),
             lift_matrix: Arc::new(lift_matrix),
             modal_coefficients: None,
+            coefficient_layout: CoefficientLayout::Line1D,
+            rk_original: Array3::zeros((0, n_nodes, 0)),
+            rk_stage: Array3::zeros((0, n_nodes, 0)),
+            rk_rhs: Array3::zeros((0, n_nodes, 0)),
         })
     }
 
@@ -173,6 +190,12 @@ impl DGSolver {
     #[must_use]
     pub fn has_modal_coefficients(&self) -> bool {
         self.modal_coefficients.is_some()
+    }
+
+    /// Solver configuration.
+    #[must_use]
+    pub fn config(&self) -> DGConfig {
+        self.config
     }
 }
 
@@ -191,6 +214,10 @@ impl Clone for DGSolver {
             diff_matrix: Arc::clone(&self.diff_matrix),
             lift_matrix: Arc::clone(&self.lift_matrix),
             modal_coefficients: self.modal_coefficients.clone(),
+            coefficient_layout: self.coefficient_layout,
+            rk_original: self.rk_original.clone(),
+            rk_stage: self.rk_stage.clone(),
+            rk_rhs: self.rk_rhs.clone(),
         }
     }
 }

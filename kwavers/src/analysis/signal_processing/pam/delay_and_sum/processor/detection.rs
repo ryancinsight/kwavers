@@ -4,7 +4,7 @@ use ndarray::{Array1, Array2};
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::super::types::CavitationEvent;
+use super::super::types::PamCavitationEvent;
 use super::DelayAndSumPAM;
 
 impl DelayAndSumPAM {
@@ -19,7 +19,7 @@ impl DelayAndSumPAM {
         intensity_map: &Array1<f64>,
         grid_points: &Array2<f64>,
         time: f64,
-    ) -> KwaversResult<Vec<CavitationEvent>> {
+    ) -> KwaversResult<Vec<PamCavitationEvent>> {
         if intensity_map.len() != grid_points.nrows() {
             return Err(KwaversError::InvalidInput(
                 "Intensity map and grid points size mismatch".to_owned(),
@@ -34,7 +34,7 @@ impl DelayAndSumPAM {
                 let grid_point = grid_points.row(idx);
                 let position = [grid_point[0], grid_point[1], grid_point[2]];
                 let coherence = self.coherence_factor(intensity, threshold);
-                events.push(CavitationEvent {
+                events.push(PamCavitationEvent {
                     position,
                     intensity,
                     time,
@@ -68,7 +68,7 @@ impl DelayAndSumPAM {
         intensity_map: &Array1<f64>,
         grid_points: &Array2<f64>,
         time: f64,
-    ) -> KwaversResult<Vec<CavitationEvent>> {
+    ) -> KwaversResult<Vec<PamCavitationEvent>> {
         let (num_sensors_data, _) = passive_data.dim();
         if num_sensors_data != self.num_sensors {
             return Err(KwaversError::InvalidInput(format!(
@@ -97,7 +97,7 @@ impl DelayAndSumPAM {
                     .ok()
                     .and_then(|signal| self.estimate_peak_frequency(&signal));
 
-                events.push(CavitationEvent {
+                events.push(PamCavitationEvent {
                     position,
                     intensity,
                     time,

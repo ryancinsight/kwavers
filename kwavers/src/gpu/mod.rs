@@ -32,9 +32,9 @@ pub mod thermal_acoustic;
 
 pub use backend::GpuBackend;
 // Single canonical GpuBuffer — `gpu/buffer.rs` is the SSOT.
-// `gpu/buffers.rs` exposes only BufferManager (the named-pool layer).
+// `gpu/buffers.rs` exposes only GpuBufferManager (the named-pool layer).
 pub use buffer::{BufferUsage, GpuBuffer};
-pub use buffers::BufferManager;
+pub use buffers::GpuBufferManager;
 #[cfg(feature = "pinn")]
 pub use burn_accelerator::BurnGpuAccelerator;
 pub use compute::{FdtdGpuDispatcher, GpuCompute};
@@ -42,7 +42,7 @@ pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 pub use device::{DeviceInfo, GpuDevice};
 pub use fdtd::FdtdGpu;
 pub use kspace::{KSpaceGpu, KspaceShiftGpu};
-pub use memory::{MemoryPoolType, UnifiedMemoryManager};
+pub use memory::{GpuMemoryPoolType, UnifiedMemoryManager};
 pub use multi_gpu::{GpuAffinity, MultiGpuContext};
 pub use shaders::neural_network::NeuralNetworkShader;
 pub use thermal_acoustic::{

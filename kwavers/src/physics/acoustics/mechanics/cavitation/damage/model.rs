@@ -1,6 +1,6 @@
 //! Cavitation damage model with Miner's rule fatigue and erosion
 
-use super::material::{DamageParameters, MaterialProperties};
+use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use crate::core::constants::cavitation::{IMPACT_ENERGY_COEFFICIENT, MATERIAL_REMOVAL_EFFICIENCY};
 use crate::physics::bubble_dynamics::bubble_field::BubbleStateFields;
 use ndarray::{Array3, Zip};
@@ -18,7 +18,7 @@ pub struct CavitationDamage {
     /// Number of impacts field
     pub impact_count: Array3<u32>,
     /// Material properties
-    pub material: MaterialProperties,
+    pub material: CavitationDamageMaterialProperties,
     /// Damage parameters
     pub params: DamageParameters,
 }
@@ -28,7 +28,7 @@ impl CavitationDamage {
     #[must_use]
     pub fn new(
         grid_shape: (usize, usize, usize),
-        material: MaterialProperties,
+        material: CavitationDamageMaterialProperties,
         params: DamageParameters,
     ) -> Self {
         Self {
@@ -181,7 +181,7 @@ mod tests {
     fn make_damage() -> CavitationDamage {
         CavitationDamage::new(
             (4, 4, 4),
-            MaterialProperties::default(),
+            CavitationDamageMaterialProperties::default(),
             DamageParameters::default(),
         )
     }

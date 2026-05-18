@@ -151,12 +151,12 @@ pub struct PhysicsInformedLoss {
     pub(super) config: PhysicsLossConfig,
     pub(super) wave_number: f64,
     pub(super) current_epoch: usize,
-    pub(super) loss_history: VecDeque<LossComponents>,
+    pub(super) loss_history: VecDeque<PhysicsInformedLossComponents>,
 }
 
 /// Loss components breakdown
 #[derive(Debug, Clone, Copy)]
-pub struct LossComponents {
+pub struct PhysicsInformedLossComponents {
     pub epoch: usize,
     pub data_loss: f64,
     pub physics_loss: f64,

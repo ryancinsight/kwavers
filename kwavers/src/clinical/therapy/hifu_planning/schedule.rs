@@ -1,5 +1,5 @@
-use super::types::{AblationTarget, FocalSpot, ThermalDose};
-use crate::clinical::therapy::parameters::TherapyParameters;
+use super::types::{AblationTarget, FocalSpot, FocalSpotDoseEstimate};
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// One planned HIFU focal dwell location.
@@ -39,7 +39,7 @@ impl SonicationSchedule {
     pub fn plan(
         target: &AblationTarget,
         focal_spot: &FocalSpot,
-        therapy_params: &TherapyParameters,
+        therapy_params: &ClinicalTherapyParameters,
         frequency_hz: f64,
     ) -> KwaversResult<Self> {
         validate_positive_finite("target.dimensions_mm.0", target.dimensions_mm.0)?;
@@ -70,7 +70,7 @@ impl SonicationSchedule {
         let z = axis_centers(target.location_mm.2, expanded.2, pitch.2);
         let n = x.len() * y.len() * z.len();
         let per_spot_dwell = therapy_params.treatment_duration / n as f64;
-        let dose = ThermalDose::estimate_from_focal_spot(
+        let dose = FocalSpotDoseEstimate::estimate_from_focal_spot(
             focal_spot,
             frequency_hz,
             therapy_params.duty_cycle,

@@ -35,7 +35,7 @@
 //!
 //! ## Module layout
 //!
-//! - `config`: `SimdConfig`, `SimdLevel` enum, runtime CPU-feature detection.
+//! - `config`: `SimdConfig`, `MathSimdLevel` enum, runtime CPU-feature detection.
 //! - `fdtd_ops`: `FdtdSimdOps` — SIMD pressure/velocity update kernels.
 //! - `fft_ops`: `FftSimdOps` — SIMD complex multiplication for spectral kernels.
 //! - `interpolation_ops`: `InterpolationSimdOps` — SIMD trilinear interpolation.
@@ -50,7 +50,7 @@ mod metrics;
 #[cfg(test)]
 mod tests;
 
-pub use config::{SimdConfig, SimdLevel};
+pub use config::{MathSimdLevel, SimdConfig};
 pub use fdtd_ops::FdtdSimdOps;
 pub use fft_ops::FftSimdOps;
 pub use interpolation_ops::InterpolationSimdOps;

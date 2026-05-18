@@ -1,7 +1,7 @@
 use ndarray::Array3;
 
 #[derive(Debug, Clone, Default)]
-pub struct TreatmentMetrics {
+pub struct DomainTreatmentMetrics {
     pub thermal_dose: f64,
     pub cavitation_dose: f64,
     pub peak_temperature: f64,
@@ -9,7 +9,7 @@ pub struct TreatmentMetrics {
     pub efficiency: f64,
 }
 
-impl TreatmentMetrics {
+impl DomainTreatmentMetrics {
     #[must_use]
     pub fn calculate_thermal_dose(temperature: &Array3<f64>, dt: f64) -> f64 {
         let max_dose_rate = temperature.iter().fold(0.0f64, |acc, &t| {
@@ -66,14 +66,14 @@ impl TreatmentMetrics {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TherapyMechanism {
+pub enum DomainTherapyMechanism {
     Thermal,
     Mechanical,
     Combined,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TherapyModality {
+pub enum DomainTherapyModality {
     HIFU,
     LIFU,
     Histotripsy,
@@ -82,7 +82,7 @@ pub enum TherapyModality {
     Sonoporation,
 }
 
-impl TherapyModality {
+impl DomainTherapyModality {
     #[must_use]
     pub fn has_thermal_effects(&self) -> bool {
         matches!(self, Self::HIFU | Self::Sonodynamic)
@@ -97,19 +97,19 @@ impl TherapyModality {
     }
 
     #[must_use]
-    pub fn primary_mechanism(&self) -> TherapyMechanism {
+    pub fn primary_mechanism(&self) -> DomainTherapyMechanism {
         match self {
-            Self::HIFU => TherapyMechanism::Thermal,
+            Self::HIFU => DomainTherapyMechanism::Thermal,
             Self::Histotripsy | Self::BBBOpening | Self::Sonoporation => {
-                TherapyMechanism::Mechanical
+                DomainTherapyMechanism::Mechanical
             }
-            Self::LIFU | Self::Sonodynamic => TherapyMechanism::Combined,
+            Self::LIFU | Self::Sonodynamic => DomainTherapyMechanism::Combined,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct TherapyParameters {
+pub struct DomainTherapyParameters {
     pub frequency: f64,
     pub peak_negative_pressure: f64,
     pub treatment_duration: f64,
@@ -118,7 +118,7 @@ pub struct TherapyParameters {
     pub prf: f64,
 }
 
-impl TherapyParameters {
+impl DomainTherapyParameters {
     #[must_use]
     pub fn new(frequency: f64, pressure: f64, duration: f64) -> Self {
         let mut params = Self {

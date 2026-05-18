@@ -11,7 +11,7 @@ pub mod sound_speed_shift;
 
 pub use acoustic_projection::AcousticProjectionGeometry;
 pub use clinical_monitoring::{
-    ClinicalMonitor, MonitoringConfig, MonitoringReport, SafetyEvent, SafetyEventType,
+    ClinicalMonitor, MonitoringConfig, MonitoringReport, MonitoringSafetyEventType, SafetyEvent,
     SafetySeverity,
 };
 pub use real_time_sirt::{

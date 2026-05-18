@@ -31,12 +31,12 @@ pub(crate) fn pressure_signal_to_matrix(signal: &Bound<'_, PyAny>) -> PyResult<A
 /// Convert Python apodization string to kwavers type
 pub(crate) fn parse_apodization_type(apodization: &str) -> PyResult<KwaversApodizationType> {
     match apodization {
-        "Rectangular" => Ok(KwaversApodizationType::Rectangular),
+        "Uniform" | "Rectangular" => Ok(KwaversApodizationType::Uniform),
         "Hanning" => Ok(KwaversApodizationType::Hanning),
         "Hamming" => Ok(KwaversApodizationType::Hamming),
         "Blackman" => Ok(KwaversApodizationType::Blackman),
         _ => Err(PyValueError::new_err(
-            "Apodization must be one of: Rectangular, Hanning, Hamming, Blackman",
+            "Apodization must be one of: Uniform, Hanning, Hamming, Blackman",
         )),
     }
 }
@@ -44,10 +44,11 @@ pub(crate) fn parse_apodization_type(apodization: &str) -> PyResult<KwaversApodi
 /// Convert kwavers apodization type to Python string
 pub(crate) fn apodization_to_string(apodization: &KwaversApodizationType) -> String {
     match apodization {
-        KwaversApodizationType::Rectangular => "Rectangular".to_string(),
+        KwaversApodizationType::Uniform => "Uniform".to_string(),
         KwaversApodizationType::Hanning => "Hanning".to_string(),
         KwaversApodizationType::Hamming => "Hamming".to_string(),
         KwaversApodizationType::Blackman => "Blackman".to_string(),
         KwaversApodizationType::Gaussian { sigma } => format!("Gaussian(sigma={})", sigma),
+        KwaversApodizationType::Kaiser { beta } => format!("Kaiser(beta={})", beta),
     }
 }

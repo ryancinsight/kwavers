@@ -6,7 +6,7 @@ use rayon::prelude::*;
 
 #[cfg(feature = "pinn")]
 use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
-    DecompositionStrategy, DistributedConfig, LoadBalancingStrategy,
+    DistributedConfig, LoadBalancingStrategy, PinnBeamformingDecompositionStrategy,
 };
 
 use super::super::frame_partitioning::{
@@ -115,7 +115,7 @@ impl DistributedNeuralBeamformingProcessor {
     }
 
     /// Get the decomposition strategy.
-    pub fn decomposition_strategy(&self) -> &DecompositionStrategy {
+    pub fn decomposition_strategy(&self) -> &PinnBeamformingDecompositionStrategy {
         &self.config.decomposition
     }
 

@@ -26,7 +26,7 @@ mod time_reversal;
 mod utils;
 
 pub use algorithms::{PhotoacousticAlgorithm, PhotoacousticReconstructor};
-pub use config::PhotoacousticConfig;
+pub use config::ReconstructionPhotoacousticConfig;
 pub use filters::Filters;
 pub use iterative::IterativeAlgorithm;
 pub use line_reconstruction::{kspace_line_recon, LineReconDataOrder, LineReconInterpolation};
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_photoacoustic_reconstructor_creation() {
-        let config = PhotoacousticConfig {
+        let config = ReconstructionPhotoacousticConfig {
             algorithm: PhotoacousticAlgorithm::UniversalBackProjection,
             sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
             grid_size: [100, 100, 100],
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_universal_back_projection() {
-        let config = PhotoacousticConfig {
+        let config = ReconstructionPhotoacousticConfig {
             algorithm: PhotoacousticAlgorithm::UniversalBackProjection,
             sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
             grid_size: [10, 10, 10],
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_art_reconstruction() {
-        let config = PhotoacousticConfig {
+        let config = ReconstructionPhotoacousticConfig {
             algorithm: PhotoacousticAlgorithm::Iterative {
                 algorithm: IterativeAlgorithm::ART,
                 iterations: 2,

@@ -196,7 +196,7 @@ pub struct FusionConfig {
     pub modality_weights: HashMap<String, f64>,
 
     /// Fusion method to use
-    pub fusion_method: FusionMethod,
+    pub fusion_method: ImagingFusionMethod,
 
     /// Enable uncertainty quantification
     pub uncertainty_quantification: bool,
@@ -237,7 +237,7 @@ impl Default for FusionConfig {
     fn default() -> Self {
         Self {
             modality_weights: HashMap::new(),
-            fusion_method: FusionMethod::WeightedAverage,
+            fusion_method: ImagingFusionMethod::WeightedAverage,
             uncertainty_quantification: false,
             min_quality_threshold: 0.3,
             adaptive_weighting: false,
@@ -249,7 +249,7 @@ impl Default for FusionConfig {
 
 /// Fusion method for combining modalities
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FusionMethod {
+pub enum ImagingFusionMethod {
     /// Simple weighted average
     WeightedAverage,
     /// Feature-based fusion using tissue properties
@@ -312,7 +312,7 @@ mod tests {
     #[test]
     fn test_fusion_config_default() {
         let config = FusionConfig::default();
-        assert_eq!(config.fusion_method, FusionMethod::WeightedAverage);
+        assert_eq!(config.fusion_method, ImagingFusionMethod::WeightedAverage);
         assert!(!config.uncertainty_quantification);
         assert!(!config.adaptive_weighting);
         assert!((config.min_quality_threshold - 0.3).abs() < 1e-10);

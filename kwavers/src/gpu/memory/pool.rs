@@ -1,11 +1,11 @@
-use super::MemoryPoolType;
+use super::GpuMemoryPoolType;
 use crate::core::error::KwaversResult;
 
 /// Memory handle for allocated blocks
 #[derive(Debug, Clone)]
 pub struct MemoryHandle {
     pub gpu_id: usize,
-    pub pool_type: MemoryPoolType,
+    pub pool_type: GpuMemoryPoolType,
     pub block: MemoryBlock,
 }
 
@@ -19,7 +19,7 @@ pub struct MemoryBlock {
 
 /// Memory statistics
 #[derive(Debug, Default, Clone)]
-pub struct MemoryStats {
+pub struct GpuMemoryPoolStats {
     pub allocated_bytes: usize,
     pub peak_bytes: usize,
     pub transfer_count: usize,
@@ -30,7 +30,7 @@ pub struct MemoryStats {
 /// Memory pool for efficient allocation
 #[derive(Debug)]
 pub struct MemoryPool {
-    pub(super) pool_type: MemoryPoolType,
+    pub(super) pool_type: GpuMemoryPoolType,
     pub(super) allocations: Vec<MemoryBlock>,
     pub(super) total_allocated: usize,
     pub(super) peak_allocated: usize,
@@ -38,7 +38,7 @@ pub struct MemoryPool {
 
 impl MemoryPool {
     /// Create a new memory pool.
-    pub fn new(pool_type: MemoryPoolType) -> Self {
+    pub fn new(pool_type: GpuMemoryPoolType) -> Self {
         Self {
             pool_type,
             allocations: Vec::new(),
@@ -90,8 +90,8 @@ impl MemoryPool {
     }
 
     /// Return per-pool allocation statistics.
-    pub fn statistics(&self) -> MemoryStats {
-        MemoryStats {
+    pub fn statistics(&self) -> GpuMemoryPoolStats {
+        GpuMemoryPoolStats {
             allocated_bytes: self.total_allocated,
             peak_bytes: self.peak_allocated,
             transfer_count: 0,

@@ -67,7 +67,7 @@ pub enum RecoveryExpectation {
 /// | System | Thread Panic, Resource Exhaustion | ✓ | ✓ | ≥95% |
 /// | Cascade | Multi-fault sequences | ✓ | ✓ | ≥85% |
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum FaultScenario {
+pub enum FaultInjectionScenario {
     // Memory exhaustion scenarios
     /// Gradual memory exhaustion (slow leak)
     GpuOomGradual {
@@ -178,13 +178,13 @@ pub enum FaultScenario {
     // Cascading failure scenarios
     /// Sequenced fault chain
     CascadingSequence {
-        sequence: Vec<Box<FaultScenario>>,
+        sequence: Vec<Box<FaultInjectionScenario>>,
         delay_ms: u64,
     },
     /// Fault during recovery from previous fault
     RecoveryFault {
-        primary: Box<FaultScenario>,
-        secondary: Box<FaultScenario>,
+        primary: Box<FaultInjectionScenario>,
+        secondary: Box<FaultInjectionScenario>,
         delay_ms: u64,
     },
 
@@ -196,7 +196,7 @@ pub enum FaultScenario {
     },
 }
 
-impl FaultScenario {
+impl FaultInjectionScenario {
     /// Get the expected recovery outcome for this scenario
     pub fn recovery_expectation(&self) -> RecoveryExpectation {
         match self {
@@ -310,7 +310,7 @@ impl FaultScenario {
     }
 }
 
-impl fmt::Display for FaultScenario {
+impl fmt::Display for FaultInjectionScenario {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Self::GpuOomGradual { .. } => "GPU OOM (Gradual)",

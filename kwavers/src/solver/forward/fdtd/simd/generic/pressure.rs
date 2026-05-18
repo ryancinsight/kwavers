@@ -1,8 +1,8 @@
-use super::SimdStencilProcessor;
+use super::GenericSimdStencilProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
-impl SimdStencilProcessor {
+impl GenericSimdStencilProcessor {
     /// Update pressure field using cache-tiled stencil.
     ///
     /// # Algorithm: Cache-Tiled 3D Stencil (Kamil et al. 2010, §2.2)
@@ -160,13 +160,13 @@ impl SimdStencilProcessor {
 
 #[cfg(test)]
 mod tests {
-    use super::super::SimdStencilConfig;
+    use super::super::GenericSimdStencilConfig;
     use super::*;
 
     #[test]
     fn test_pressure_update() {
-        let config = SimdStencilConfig::default();
-        let mut processor = SimdStencilProcessor::new(16, 16, 16, config).unwrap();
+        let config = GenericSimdStencilConfig::default();
+        let mut processor = GenericSimdStencilProcessor::new(16, 16, 16, config).unwrap();
 
         let pressure = Array3::ones((16, 16, 16));
         let pressure_prev = Array3::ones((16, 16, 16));
@@ -179,8 +179,8 @@ mod tests {
     }
     #[test]
     fn test_fused_update() {
-        let config = SimdStencilConfig::default();
-        let mut processor = SimdStencilProcessor::new(16, 16, 16, config).unwrap();
+        let config = GenericSimdStencilConfig::default();
+        let mut processor = GenericSimdStencilProcessor::new(16, 16, 16, config).unwrap();
 
         let pressure = Array3::ones((16, 16, 16));
         let pressure_prev = Array3::ones((16, 16, 16));
@@ -205,13 +205,13 @@ mod tests {
     #[test]
     fn test_tiling_matches_naive() {
         let n = 17usize;
-        let mut config_tiled = SimdStencilConfig::default();
+        let mut config_tiled = GenericSimdStencilConfig::default();
         config_tiled.tile_size = 8;
-        let mut processor_tiled = SimdStencilProcessor::new(n, n, n, config_tiled).unwrap();
+        let mut processor_tiled = GenericSimdStencilProcessor::new(n, n, n, config_tiled).unwrap();
 
-        let mut config_naive = SimdStencilConfig::default();
+        let mut config_naive = GenericSimdStencilConfig::default();
         config_naive.tile_size = 256; // effectively no tiling
-        let mut processor_naive = SimdStencilProcessor::new(n, n, n, config_naive).unwrap();
+        let mut processor_naive = GenericSimdStencilProcessor::new(n, n, n, config_naive).unwrap();
 
         let pressure = Array3::from_elem((n, n, n), 1000.0_f64);
         let pressure_prev = Array3::from_elem((n, n, n), 990.0_f64);

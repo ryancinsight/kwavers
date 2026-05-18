@@ -1,20 +1,20 @@
 use super::*;
-use crate::clinical::safety::mechanical_index::TissueType;
-use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversError;
 use std::f64::consts::PI;
 
 #[test]
 fn test_hifu_transducer_default() {
-    let transducer = HIFUTransducer::default();
+    let transducer = ClinicalHIFUTransducer::default();
     assert_eq!(transducer.frequency, 1.5e6);
     assert_eq!(transducer.focal_length_mm, 80.0);
 }
 
 #[test]
 fn test_focal_spot_estimation() {
-    let transducer = HIFUTransducer::default();
+    let transducer = ClinicalHIFUTransducer::default();
     let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
     assert!(focal_spot.lateral_width_mm > 0.0);
     assert!(focal_spot.axial_width_mm > 0.0);
@@ -24,9 +24,9 @@ fn test_focal_spot_estimation() {
 
 #[test]
 fn test_focal_spot_safety() {
-    let transducer = HIFUTransducer::default();
+    let transducer = ClinicalHIFUTransducer::default();
     let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
-    let is_safe = focal_spot.is_safe(TissueType::SoftTissue);
+    let is_safe = focal_spot.is_safe(MechanicalIndexTissueType::SoftTissue);
     assert!(is_safe || focal_spot.mechanical_index > 1.9);
 }
 
@@ -36,7 +36,7 @@ fn test_ablation_target_creation() {
         "tumor".to_string(),
         (50.0, 50.0, 50.0),
         (20.0, 20.0, 20.0),
-        TissueType::SoftTissue,
+        MechanicalIndexTissueType::SoftTissue,
     );
     assert_eq!(target.name, "tumor");
     assert!(target.volume_mm3() > 0.0);
@@ -44,32 +44,36 @@ fn test_ablation_target_creation() {
 
 #[test]
 fn test_thermal_dose_calculation() {
-    let transducer = HIFUTransducer::default();
+    let transducer = ClinicalHIFUTransducer::default();
     let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
-    let thermal_dose =
-        ThermalDose::estimate_from_focal_spot(&focal_spot, transducer.frequency, 1.0, 10.0);
+    let thermal_dose = FocalSpotDoseEstimate::estimate_from_focal_spot(
+        &focal_spot,
+        transducer.frequency,
+        1.0,
+        10.0,
+    );
     assert!(thermal_dose.peak_temperature_c > 37.0);
     assert!(thermal_dose.time_to_dose_s.is_finite() || thermal_dose.time_to_dose_s.is_infinite());
 }
 
 #[test]
 fn test_hifu_planner_creation() {
-    let transducer = HIFUTransducer::default();
+    let transducer = ClinicalHIFUTransducer::default();
     let planner = HIFUPlanner::new(transducer);
     assert_eq!(planner.transducer().frequency, 1.5e6);
 }
 
 #[test]
 fn test_treatment_plan_creation() {
-    let transducer = HIFUTransducer::default();
+    let transducer = ClinicalHIFUTransducer::default();
     let planner = HIFUPlanner::new(transducer);
     let target = AblationTarget::new(
         "tumor".to_string(),
         (50.0, 50.0, 130.0),
         (20.0, 20.0, 20.0),
-        TissueType::SoftTissue,
+        MechanicalIndexTissueType::SoftTissue,
     );
-    let params = TherapyParameters::hifu();
+    let params = ClinicalTherapyParameters::hifu();
     let schedule = planner.plan_sonication_schedule(&target, &params).unwrap();
     let plan = planner.plan_treatment(target, &params).unwrap();
     assert!(!plan.feasibility.is_feasible || plan.feasibility.issues.is_empty());
@@ -91,7 +95,7 @@ fn test_treatment_feasibility_assessment() {
 
 #[test]
 fn test_focal_spot_dimensions_match_oneil_formula() {
-    let transducer = HIFUTransducer {
+    let transducer = ClinicalHIFUTransducer {
         frequency: 1.5e6,
         focal_length_mm: 80.0,
         aperture_diameter_mm: 40.0,
@@ -145,14 +149,14 @@ fn test_sonication_schedule_pitch_proves_target_coverage() {
         "box".to_owned(),
         (10.0, 20.0, 30.0),
         (10.0, 10.0, 10.0),
-        TissueType::SoftTissue,
+        MechanicalIndexTissueType::SoftTissue,
     )
     .with_safety_margin(1.0);
-    let params = TherapyParameters {
+    let params = ClinicalTherapyParameters {
         treatment_duration: 75.0,
         duty_cycle: 1.0,
         frequency: 1.5e6,
-        ..TherapyParameters::hifu()
+        ..ClinicalTherapyParameters::hifu()
     };
 
     let schedule = SonicationSchedule::plan(&target, &focal_spot, &params, params.frequency)
@@ -174,7 +178,7 @@ fn test_sonication_schedule_pitch_proves_target_coverage() {
 
 #[test]
 fn test_hifu_plan_uses_subspot_dose_for_feasibility() {
-    let transducer = HIFUTransducer {
+    let transducer = ClinicalHIFUTransducer {
         frequency: 1.5e6,
         focal_length_mm: 80.0,
         aperture_diameter_mm: 40.0,
@@ -188,14 +192,14 @@ fn test_hifu_plan_uses_subspot_dose_for_feasibility() {
         "large_target".to_owned(),
         (0.0, 0.0, 80.0),
         (30.0, 30.0, 30.0),
-        TissueType::SoftTissue,
+        MechanicalIndexTissueType::SoftTissue,
     )
     .with_safety_margin(2.0);
-    let params = TherapyParameters {
+    let params = ClinicalTherapyParameters {
         treatment_duration: 5.0,
         duty_cycle: 0.5,
         frequency: 1.5e6,
-        ..TherapyParameters::hifu()
+        ..ClinicalTherapyParameters::hifu()
     };
 
     let schedule = planner.plan_sonication_schedule(&target, &params).unwrap();
@@ -218,14 +222,14 @@ fn test_hifu_plan_uses_subspot_dose_for_feasibility() {
 
 #[test]
 fn test_sonication_schedule_rejects_nonpositive_target_dimension() {
-    let focal_spot = FocalSpot::estimate_from_transducer(&HIFUTransducer::default());
+    let focal_spot = FocalSpot::estimate_from_transducer(&ClinicalHIFUTransducer::default());
     let target = AblationTarget::new(
         "invalid".to_owned(),
         (0.0, 0.0, 80.0),
         (0.0, 10.0, 10.0),
-        TissueType::SoftTissue,
+        MechanicalIndexTissueType::SoftTissue,
     );
-    let params = TherapyParameters::hifu();
+    let params = ClinicalTherapyParameters::hifu();
 
     let err = SonicationSchedule::plan(&target, &focal_spot, &params, params.frequency)
         .expect_err("zero target dimension must be rejected");

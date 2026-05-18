@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
-use super::types::{TrainingExecutor, TrainingJob, TrainingResult};
+use super::types::{JobManagerTrainingResult, TrainingExecutor, TrainingJob};
 use crate::infrastructure::api::JobStatus;
 
 /// Job manager for coordinating PINN training tasks
@@ -225,7 +225,7 @@ impl JobManager {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     #[cfg(feature = "pinn")]
-    async fn execute_training(&self, job_id: &str) -> Result<TrainingResult, APIError> {
+    async fn execute_training(&self, job_id: &str) -> Result<JobManagerTrainingResult, APIError> {
         let job = {
             let jobs = self.jobs.read();
             jobs.get(job_id).cloned().ok_or_else(|| APIError {
@@ -271,7 +271,7 @@ impl JobManager {
             geometry_spec: job.request.geometry.clone(),
         };
 
-        Ok(TrainingResult {
+        Ok(JobManagerTrainingResult {
             model: training_output.model,
             metrics: training_output.metrics,
             model_metadata,
@@ -283,7 +283,7 @@ impl JobManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[cfg(not(feature = "pinn"))]
-    async fn execute_training(&self, _job_id: &str) -> Result<TrainingResult, APIError> {
+    async fn execute_training(&self, _job_id: &str) -> Result<JobManagerTrainingResult, APIError> {
         Err(APIError {
             error: APIErrorType::InternalError,
             message: "PINN training not available - feature not enabled".to_string(),

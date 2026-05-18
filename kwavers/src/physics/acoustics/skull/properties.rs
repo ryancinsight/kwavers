@@ -5,7 +5,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 /// Reference: Pinton et al. (2012) "Attenuation, scattering, and absorption
 /// of ultrasound in the skull bone"
 #[derive(Debug, Clone)]
-pub struct SkullProperties {
+pub struct AcousticSkullProperties {
     /// Sound speed in skull (m/s) - typically 2800-3500 m/s
     pub sound_speed: f64,
     /// Density (kg/m³) - typically 1850-2000 kg/m³
@@ -18,7 +18,7 @@ pub struct SkullProperties {
     pub shear_speed: Option<f64>,
 }
 
-impl Default for SkullProperties {
+impl Default for AcousticSkullProperties {
     fn default() -> Self {
         // Typical adult skull properties
         Self {
@@ -31,7 +31,7 @@ impl Default for SkullProperties {
     }
 }
 
-impl SkullProperties {
+impl AcousticSkullProperties {
     /// Create skull properties for specific bone types
     ///
     /// # Arguments

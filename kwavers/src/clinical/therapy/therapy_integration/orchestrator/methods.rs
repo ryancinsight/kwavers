@@ -1,11 +1,11 @@
 use crate::clinical::therapy::therapy_integration::acoustic::AcousticWaveSolver;
-use crate::clinical::therapy::therapy_integration::config::TherapyModality;
+use crate::clinical::therapy::therapy_integration::config::TherapyIntegrationModality;
 use crate::clinical::therapy::therapy_integration::intensity_tracker::IntensityTracker;
 use crate::clinical::therapy::therapy_integration::safety_controller::{
     SafetyController, TherapyAction,
 };
 use crate::clinical::therapy::therapy_integration::state::{
-    SafetyMetrics, SafetyStatus, TherapySessionState,
+    SafetyMetrics, TherapyIntegrationSafetyStatus, TherapySessionState,
 };
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -34,54 +34,57 @@ impl TherapyIntegrationOrchestrator {
     ) -> KwaversResult<Self> {
         let acoustic_solver = AcousticWaveSolver::new(&grid, &*medium)?;
 
-        let ceus_system = if config.primary_modality == TherapyModality::Microbubble
+        let ceus_system = if config.primary_modality == TherapyIntegrationModality::Microbubble
             || config
                 .secondary_modalities
-                .contains(&TherapyModality::Microbubble)
+                .contains(&TherapyIntegrationModality::Microbubble)
         {
             Some(initialization::init_ceus_system(&grid, &*medium)?)
         } else {
             None
         };
 
-        let transcranial_system = if config.primary_modality == TherapyModality::Transcranial
+        let transcranial_system = if config.primary_modality
+            == TherapyIntegrationModality::Transcranial
             || config
                 .secondary_modalities
-                .contains(&TherapyModality::Transcranial)
+                .contains(&TherapyIntegrationModality::Transcranial)
         {
             Some(initialization::init_transcranial_system(&config, &grid)?)
         } else {
             None
         };
 
-        let chemical_model = if config.primary_modality == TherapyModality::Sonodynamic
+        let chemical_model = if config.primary_modality == TherapyIntegrationModality::Sonodynamic
             || config
                 .secondary_modalities
-                .contains(&TherapyModality::Sonodynamic)
+                .contains(&TherapyIntegrationModality::Sonodynamic)
         {
             Some(initialization::init_chemical_model(&grid)?)
         } else {
             None
         };
 
-        let cavitation_controller = if config.primary_modality == TherapyModality::Histotripsy
-            || config.primary_modality == TherapyModality::Oncotripsy
+        let cavitation_controller = if config.primary_modality
+            == TherapyIntegrationModality::Histotripsy
+            || config.primary_modality == TherapyIntegrationModality::Oncotripsy
             || config
                 .secondary_modalities
-                .contains(&TherapyModality::Histotripsy)
+                .contains(&TherapyIntegrationModality::Histotripsy)
             || config
                 .secondary_modalities
-                .contains(&TherapyModality::Oncotripsy)
+                .contains(&TherapyIntegrationModality::Oncotripsy)
         {
             Some(initialization::init_cavitation_controller(&config)?)
         } else {
             None
         };
 
-        let lithotripsy_simulator = if config.primary_modality == TherapyModality::Lithotripsy
+        let lithotripsy_simulator = if config.primary_modality
+            == TherapyIntegrationModality::Lithotripsy
             || config
                 .secondary_modalities
-                .contains(&TherapyModality::Lithotripsy)
+                .contains(&TherapyIntegrationModality::Lithotripsy)
         {
             Some(initialization::init_lithotripsy_simulator(&config, &grid)?)
         } else {
@@ -266,7 +269,7 @@ impl TherapyIntegrationOrchestrator {
     }
 
     /// Evaluates current safety metrics against configured limits.
-    pub fn check_safety_limits(&self) -> SafetyStatus {
+    pub fn check_safety_limits(&self) -> TherapyIntegrationSafetyStatus {
         safety::check_safety_limits(
             &self.session_state.safety_metrics,
             &self.config.safety_limits,

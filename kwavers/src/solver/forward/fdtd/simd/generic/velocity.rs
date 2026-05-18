@@ -1,8 +1,8 @@
-use super::SimdStencilProcessor;
+use super::GenericSimdStencilProcessor;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
-impl SimdStencilProcessor {
+impl GenericSimdStencilProcessor {
     /// Update velocity field using in-place scratch buffer (no per-step allocation).
     ///
     /// # Algorithm
@@ -129,13 +129,13 @@ impl SimdStencilProcessor {
 
 #[cfg(test)]
 mod tests {
-    use super::super::SimdStencilConfig;
+    use super::super::GenericSimdStencilConfig;
     use super::*;
 
     #[test]
     fn test_velocity_update() {
-        let config = SimdStencilConfig::default();
-        let mut processor = SimdStencilProcessor::new(16, 16, 16, config).unwrap();
+        let config = GenericSimdStencilConfig::default();
+        let mut processor = GenericSimdStencilProcessor::new(16, 16, 16, config).unwrap();
 
         let mut velocity = Array3::zeros((16, 16, 16));
         let pressure = Array3::ones((16, 16, 16));
@@ -151,8 +151,8 @@ mod tests {
     #[test]
     fn test_velocity_inplace_no_regression() {
         let n = 16usize;
-        let config = SimdStencilConfig::default();
-        let mut processor = SimdStencilProcessor::new(n, n, n, config).unwrap();
+        let config = GenericSimdStencilConfig::default();
+        let mut processor = GenericSimdStencilProcessor::new(n, n, n, config).unwrap();
 
         let pressure = Array3::from_elem((n, n, n), 500.0_f64);
         let mut vel_inplace = Array3::from_elem((n, n, n), 0.1_f64);

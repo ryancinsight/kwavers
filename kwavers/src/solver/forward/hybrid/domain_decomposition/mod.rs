@@ -31,14 +31,14 @@ pub mod region;
 
 pub use analyzer::DomainAnalyzer;
 pub use buffer::{BufferZones, OverlapRegion};
-pub use metrics::QualityMetrics;
+pub use metrics::DomainDecompQualityMetrics;
 pub use partitioner::DomainPartitioner;
 pub use region::{DomainRegion, DomainType};
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::solver::hybrid::config::DecompositionStrategy;
+use crate::solver::hybrid::config::HybridDecompositionStrategy;
 
 /// Main domain decomposer that coordinates analysis and partitioning
 #[derive(Debug)]
@@ -68,7 +68,7 @@ impl DomainDecomposer {
         &self,
         grid: &Grid,
         medium: &dyn Medium,
-        strategy: DecompositionStrategy,
+        strategy: HybridDecompositionStrategy,
     ) -> KwaversResult<Vec<DomainRegion>> {
         // Analyze the domain
         let metrics = self.analyzer.analyze(grid, medium)?;

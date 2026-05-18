@@ -1,7 +1,7 @@
 //! Tests for multi-GPU context management.
 
 use super::context::MultiGpuContext;
-use super::types::{CommunicationChannel, GpuAffinity, PendingTransfer, TransferStatus};
+use super::types::{CommunicationChannel, GpuAffinity, GpuTransferStatus, PendingTransfer};
 
 #[tokio::test]
 async fn test_multi_gpu_context_creation() {
@@ -47,13 +47,13 @@ fn test_communication_channel() {
     channel.transfer_queue.push(PendingTransfer {
         size: 1024,
         priority: 1,
-        status: TransferStatus::Pending,
+        status: GpuTransferStatus::Pending,
     });
 
     channel.transfer_queue.push(PendingTransfer {
         size: 2048,
         priority: 5,
-        status: TransferStatus::Pending,
+        status: GpuTransferStatus::Pending,
     });
 
     assert_eq!(channel.transfer_queue[0].priority, 5);

@@ -13,7 +13,7 @@ pub struct WaveSpeeds {
 
 /// Wave mode type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WaveMode {
+pub enum PoroelasticWaveMode {
     /// Fast compressional wave (in-phase)
     FastP,
     /// Slow compressional wave (out-of-phase)
@@ -70,22 +70,22 @@ mod tests {
         );
     }
 
-    /// `WaveMode` derives `PartialEq` and `Eq`: variants compare equal to
+    /// `PoroelasticWaveMode` derives `PartialEq` and `Eq`: variants compare equal to
     /// themselves and unequal to each other.
     #[test]
     fn wave_mode_equality_is_variant_identity() {
-        assert_eq!(WaveMode::FastP, WaveMode::FastP);
-        assert_eq!(WaveMode::SlowP, WaveMode::SlowP);
-        assert_eq!(WaveMode::Shear, WaveMode::Shear);
-        assert_ne!(WaveMode::FastP, WaveMode::SlowP);
-        assert_ne!(WaveMode::FastP, WaveMode::Shear);
-        assert_ne!(WaveMode::SlowP, WaveMode::Shear);
+        assert_eq!(PoroelasticWaveMode::FastP, PoroelasticWaveMode::FastP);
+        assert_eq!(PoroelasticWaveMode::SlowP, PoroelasticWaveMode::SlowP);
+        assert_eq!(PoroelasticWaveMode::Shear, PoroelasticWaveMode::Shear);
+        assert_ne!(PoroelasticWaveMode::FastP, PoroelasticWaveMode::SlowP);
+        assert_ne!(PoroelasticWaveMode::FastP, PoroelasticWaveMode::Shear);
+        assert_ne!(PoroelasticWaveMode::SlowP, PoroelasticWaveMode::Shear);
     }
 
-    /// `WaveMode` derives `Clone` and `Copy`: a copied variant equals the original.
+    /// `PoroelasticWaveMode` derives `Clone` and `Copy`: a copied variant equals the original.
     #[test]
     fn wave_mode_copy_clone_preserves_variant() {
-        let m = WaveMode::SlowP;
+        let m = PoroelasticWaveMode::SlowP;
         let copied = m;
         let cloned = m.clone();
         assert_eq!(copied, m);

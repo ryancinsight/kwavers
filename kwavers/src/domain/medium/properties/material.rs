@@ -1,6 +1,6 @@
 //! Unified Material Properties (Consolidated from physics/materials)
 //!
-//! This module provides a unified `MaterialProperties` struct that combines all acoustic, thermal,
+//! This module provides a unified `AcousticMaterialProperties` struct that combines all acoustic, thermal,
 //! optical, and perfusion properties needed for multi-physics simulations.
 //!
 //! This replaces the `physics/materials/mod.rs` implementation, moving material property
@@ -25,7 +25,7 @@
 //! # Examples
 //!
 //! ```rust,ignore
-//! use kwavers::domain::medium::properties::{MaterialProperties, tissue, fluids, implants};
+//! use kwavers::domain::medium::properties::{AcousticMaterialProperties, tissue, fluids, implants};
 //!
 //! // Tissue properties
 //! let brain = tissue::BRAIN_WHITE_MATTER;
@@ -49,7 +49,7 @@ use serde::{Deserialize, Serialize};
 /// This struct serves as the SSOT (Single Source of Truth) for material properties throughout
 /// the kwavers library.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct MaterialProperties {
+pub struct AcousticMaterialProperties {
     // ========================================================================
     // Acoustic Properties
     // ========================================================================
@@ -123,7 +123,7 @@ pub struct MaterialProperties {
     pub reference_pressure: f64,
 }
 
-impl MaterialProperties {
+impl AcousticMaterialProperties {
     /// Create material properties with core parameters
     #[must_use]
     pub fn new(
@@ -284,34 +284,34 @@ mod tests {
 
     #[test]
     fn test_material_creation() {
-        let mat = MaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
         assert_eq!(mat.sound_speed, 1500.0);
         assert_eq!(mat.impedance, 1500000.0);
     }
 
     #[test]
     fn test_validation_valid() {
-        let mat = MaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
         mat.validate().unwrap();
     }
 
     #[test]
     fn test_validation_invalid_speed() {
-        let mut mat = MaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let mut mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
         mat.sound_speed = -1500.0;
         assert!(mat.validate().is_err());
     }
 
     #[test]
     fn test_impedance_match() {
-        let mat = MaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
-        let same = MaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let same = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
         assert!((mat.reflection_coefficient(&same)).abs() < 1e-6);
     }
 
     #[test]
     fn test_attenuation_frequency_dependence() {
-        let mat = MaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
         let att_1mhz = mat.absorption_at_frequency(1e6);
         let att_2mhz = mat.absorption_at_frequency(2e6);
         // With exponent 1.0, doubling frequency doubles absorption

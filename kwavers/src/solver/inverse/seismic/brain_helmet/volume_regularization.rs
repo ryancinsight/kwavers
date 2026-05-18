@@ -1,23 +1,58 @@
 //! Edge-preserving proximal regularization for 3-D helmet FWI.
+//!
+//! ## Active-index cache
+//!
+//! `build_active_index` constructs an `Array3<isize>` that maps each grid
+//! position to the column index of the corresponding active voxel (−1 if
+//! inactive).  Callers — specifically `pcg::invert` — build this once per
+//! inversion and pass it through every `composite_objective` call, avoiding
+//! a fresh O(NX·NY·NZ) allocation on every line-search trial.
+//!
+//! ## Edge-preserving diffusion ping-pong
+//!
+//! `edge_preserving_projection` now alternates between two pre-allocated
+//! buffers with `std::mem::swap`, eliminating the `Vec::clone` that previously
+//! occurred on every diffusion iteration.
 
 use ndarray::Array3;
 
 use super::{config::BrainHelmetFwiConfig, volume_operator::VolumeVoxel};
 
+/// Build the dense active-voxel lookup table once per inversion.
+///
+/// Returns an `Array3<isize>` of shape `shape` where entry `[ix, iy, iz]`
+/// equals the column index of the active voxel at that position, or −1 if the
+/// voxel is not in the active set.  Callers must reuse the returned value for
+/// the lifetime of the inversion to avoid repeated O(NX·NY·NZ) allocations.
+pub(super) fn build_active_index(
+    active: &[VolumeVoxel],
+    shape: (usize, usize, usize),
+) -> Array3<isize> {
+    let mut index = Array3::<isize>::from_elem(shape, -1);
+    for (col, voxel) in active.iter().enumerate() {
+        index[[voxel.ix, voxel.iy, voxel.iz]] = col as isize;
+    }
+    index
+}
+
+/// Charbonnier penalty Σ_{i~j} (sqrt((m_i−m_j)²+ε²) − ε).
+///
+/// Caller must pass a pre-built `active_index` from `build_active_index` to
+/// avoid rebuilding it on every objective evaluation.
 pub(super) fn edge_preserving_penalty(
     model: &[f64],
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
+    active_index: &Array3<isize>,
     config: &BrainHelmetFwiConfig,
 ) -> f64 {
     if config.edge_preserving_weight == 0.0 {
         return 0.0;
     }
-    let index = active_index(active, shape);
     let epsilon = config.edge_preserving_epsilon;
     let mut penalty = 0.0;
     for (col, voxel) in active.iter().enumerate() {
-        for_positive_neighbors(voxel, shape, &index, |neighbor| {
+        for_positive_neighbors(voxel, shape, active_index, |neighbor| {
             let diff = model[col] - model[neighbor];
             penalty += (diff * diff + epsilon * epsilon).sqrt() - epsilon;
         });
@@ -25,25 +60,33 @@ pub(super) fn edge_preserving_penalty(
     config.edge_preserving_weight * penalty
 }
 
+/// Anisotropic diffusion proximal projection (Charbonnier diffusivity).
+///
+/// Iterates `config.edge_preserving_iterations` Gauss-Seidel steps using a
+/// ping-pong between two pre-allocated buffers; no `Vec::clone` is performed
+/// inside the loop.
+///
+/// Caller must pass a pre-built `active_index` from `build_active_index`.
 pub(super) fn edge_preserving_projection(
     model: &[f64],
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
+    active_index: &Array3<isize>,
     config: &BrainHelmetFwiConfig,
 ) -> Option<Vec<f64>> {
     if config.edge_preserving_iterations == 0 || config.edge_preserving_step == 0.0 {
         return None;
     }
-    let index = active_index(active, shape);
-    let mut current = model.to_vec();
+    let n = model.len();
+    let mut buf_a = model.to_vec();
+    let mut buf_b = vec![0.0f64; n];
     for _ in 0..config.edge_preserving_iterations {
-        let mut next = current.clone();
         for (col, voxel) in active.iter().enumerate() {
-            let center = current[col];
+            let center = buf_a[col];
             let mut weighted_sum = 0.0;
             let mut weight_total = 0.0;
-            for_all_neighbors(voxel, shape, &index, |neighbor| {
-                let neighbor_value = current[neighbor];
+            for_all_neighbors(voxel, shape, active_index, |neighbor| {
+                let neighbor_value = buf_a[neighbor];
                 let diffusivity = charbonnier_diffusivity(
                     neighbor_value - center,
                     config.edge_preserving_epsilon,
@@ -51,16 +94,18 @@ pub(super) fn edge_preserving_projection(
                 weighted_sum += diffusivity * neighbor_value;
                 weight_total += diffusivity;
             });
-            if weight_total > 0.0 {
+            buf_b[col] = if weight_total > 0.0 {
                 let local_mean = weighted_sum / weight_total;
-                next[col] = ((1.0 - config.edge_preserving_step) * center
+                ((1.0 - config.edge_preserving_step) * center
                     + config.edge_preserving_step * local_mean)
-                    .clamp(config.contrast_min, config.contrast_max);
-            }
+                    .clamp(config.contrast_min, config.contrast_max)
+            } else {
+                center
+            };
         }
-        current = next;
+        std::mem::swap(&mut buf_a, &mut buf_b);
     }
-    Some(current)
+    Some(buf_a)
 }
 
 pub(super) fn enhance_reconstruction_volume(
@@ -106,14 +151,6 @@ pub(super) fn enhance_reconstruction_volume(
 
 fn charbonnier_diffusivity(diff: f64, epsilon: f64) -> f64 {
     1.0 / (1.0 + (diff / epsilon).powi(2)).sqrt()
-}
-
-fn active_index(active: &[VolumeVoxel], shape: (usize, usize, usize)) -> Array3<isize> {
-    let mut index = Array3::<isize>::from_elem(shape, -1);
-    for (col, voxel) in active.iter().enumerate() {
-        index[[voxel.ix, voxel.iy, voxel.iz]] = col as isize;
-    }
-    index
 }
 
 fn for_positive_neighbors<F>(

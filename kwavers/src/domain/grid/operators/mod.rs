@@ -13,7 +13,7 @@ pub mod gradient_optimized;
 pub mod laplacian;
 
 // Re-export main types
-pub use coefficients::{FDCoefficients, SpatialOrder};
+pub use coefficients::{FDCoefficients, FdAccuracyOrder};
 pub use curl::curl;
 pub use divergence::divergence;
 pub use gradient::gradient;

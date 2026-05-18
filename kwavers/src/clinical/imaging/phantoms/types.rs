@@ -14,11 +14,11 @@ pub struct VesselSpec {
     pub center: [f64; 3],
     pub radius: f64,
     pub so2: f64,
-    pub vessel_type: VesselType,
+    pub vessel_type: PhantomVesselType,
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
-pub enum VesselType {
+pub enum PhantomVesselType {
     Artery,
     Vein,
     Capillary,
@@ -35,11 +35,11 @@ pub struct TumorSpec {
 pub struct LayerSpec {
     pub z_min: f64,
     pub z_max: f64,
-    pub tissue_type: TissueType,
+    pub tissue_type: PhantomTissueType,
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
-pub enum TissueType {
+pub enum PhantomTissueType {
     SkinEpidermis,
     SkinDermis,
     Fat,

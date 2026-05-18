@@ -12,8 +12,8 @@ pub mod photoacoustic;
 pub mod thermal_optical;
 
 pub use acoustic_optical::AcousticOpticalSolver;
-pub use coupled_solver::MultiPhysicsSolver;
-pub use field_coupling::{CouplingStrategy, FieldCoupler};
+pub use coupled_solver::CoupledMultiPhysicsSolver;
+pub use field_coupling::{FieldCoupler, FieldCouplingStrategy};
 pub use monolithic::{
     CouplingConvergenceInfo, MonolithicCoupler, NewtonKrylovConfig, PhysicsCoefficients,
 };

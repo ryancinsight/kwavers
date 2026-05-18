@@ -14,10 +14,10 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
-use super::material::MaterialProperties;
+use super::material::AcousticMaterialProperties;
 
 /// Fluid material properties type alias
-pub type FluidProperties = MaterialProperties;
+pub type FluidProperties = AcousticMaterialProperties;
 
 // ============================================================================
 // Biological Fluids

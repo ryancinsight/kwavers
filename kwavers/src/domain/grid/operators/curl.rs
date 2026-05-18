@@ -1,6 +1,6 @@
 //! Curl operations module
 
-use super::coefficients::{FDCoefficients, SpatialOrder};
+use super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3};
@@ -18,7 +18,7 @@ pub fn curl<T>(
     vy: &ArrayView3<T>,
     vz: &ArrayView3<T>,
     grid: &Grid,
-    order: SpatialOrder,
+    order: FdAccuracyOrder,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
     T: Float + Clone + Send + Sync,
@@ -116,7 +116,7 @@ mod tests {
             &vy.view(),
             &vz.view(),
             &grid,
-            SpatialOrder::Second,
+            FdAccuracyOrder::Second,
         )?;
 
         // Curl of constant field should be zero
@@ -150,7 +150,7 @@ mod tests {
             &vy.view(),
             &vz.view(),
             &grid,
-            SpatialOrder::Second,
+            FdAccuracyOrder::Second,
         )?;
 
         // Check interior point - should have curl_z = 2

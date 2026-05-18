@@ -1,7 +1,8 @@
 //! Non-equilibrium mass transfer routines
 
 use super::vapor_pressure::ThermodynamicsCalculator;
-use crate::core::constants::{M_WATER, R_GAS};
+use crate::core::constants::fundamental::GAS_CONSTANT as R_GAS;
+use crate::core::constants::M_WATER;
 
 /// Mass transfer model for bubble dynamics
 #[derive(Debug, Clone)]

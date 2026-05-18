@@ -1,6 +1,6 @@
 // adaptive_selection/selector.rs - Main adaptive method selector
 
-use super::criteria::SelectionCriteria;
+use super::criteria::HybridSelectionCriteria;
 use super::metrics::{ComputationalMetrics, MaterialMetrics, SpectralMetrics};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -17,7 +17,7 @@ pub enum SelectedMethod {
 /// Adaptive method selector
 #[derive(Debug)]
 pub struct AdaptiveMethodSelector {
-    criteria: SelectionCriteria,
+    criteria: HybridSelectionCriteria,
     previous_selection: Option<Array3<SelectedMethod>>,
 }
 
@@ -27,7 +27,7 @@ impl AdaptiveMethodSelector {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(criteria: SelectionCriteria) -> Self {
+    pub fn new(criteria: HybridSelectionCriteria) -> Self {
         Self {
             criteria,
             previous_selection: None,

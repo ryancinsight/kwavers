@@ -6,7 +6,7 @@ use crate::domain::grid::GridTopology;
 use ndarray::{Array3, ArrayViewMut3};
 use std::fmt::Debug;
 
-use super::types::{BoundaryDirections, FieldType};
+use super::types::{BoundaryDirections, BoundaryFieldType};
 
 /// Core boundary condition trait.
 ///
@@ -83,10 +83,12 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     /// Return `true` if the boundary supports the given field type.
     ///
     /// Default: supports `Pressure`, `Velocity`, and `Displacement`.
-    fn supports_field_type(&self, field_type: FieldType) -> bool {
+    fn supports_field_type(&self, field_type: BoundaryFieldType) -> bool {
         matches!(
             field_type,
-            FieldType::Pressure | FieldType::Velocity | FieldType::Displacement
+            BoundaryFieldType::Pressure
+                | BoundaryFieldType::Velocity
+                | BoundaryFieldType::Displacement
         )
     }
 

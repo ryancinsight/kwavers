@@ -6,7 +6,7 @@ fn test_stiffness_tensor_isotropic() {
     let mu = 5e9;
     let density = 2700.0;
 
-    let tensor = StiffnessTensor::isotropic(lambda, mu, density).unwrap();
+    let tensor = ElasticModeStiffnessTensor::isotropic(lambda, mu, density).unwrap();
     assert_eq!(tensor.symmetry, MaterialSymmetry::Isotropic);
     assert_eq!(tensor.c[[0, 0]], lambda + 2.0 * mu);
     assert_eq!(tensor.c[[3, 3]], mu);
@@ -29,7 +29,7 @@ fn test_viscoelastic_config() {
     assert!(config.frequency_dependent);
 }
 
-/// `StiffnessTensor::hexagonal` encodes the transversely-isotropic stiffness
+/// `ElasticModeStiffnessTensor::hexagonal` encodes the transversely-isotropic stiffness
 /// matrix in Voigt notation. Analytical values for a representative
 /// geological medium (VTI shale, after Thomsen 1986):
 ///   c11=38.0, c33=22.0, c12=10.0, c13=8.0, c44=6.0 GPa, ρ=2200 kg/m³.
@@ -39,7 +39,7 @@ fn test_viscoelastic_config() {
 fn stiffness_tensor_hexagonal_encodes_vti_values_correctly() {
     let (c11, c33, c12, c13, c44) = (38.0e9, 22.0e9, 10.0e9, 8.0e9, 6.0e9);
     let density = 2200.0_f64;
-    let t = StiffnessTensor::hexagonal(c11, c33, c12, c13, c44, density).unwrap();
+    let t = ElasticModeStiffnessTensor::hexagonal(c11, c33, c12, c13, c44, density).unwrap();
 
     assert_eq!(t.symmetry, MaterialSymmetry::Hexagonal);
     assert!((t.c[[0, 0]] - c11).abs() < 1.0, "c11");
@@ -62,20 +62,20 @@ fn stiffness_tensor_hexagonal_encodes_vti_values_correctly() {
     }
 }
 
-/// `StiffnessTensor::validate` accepts a physically valid isotropic tensor.
+/// `ElasticModeStiffnessTensor::validate` accepts a physically valid isotropic tensor.
 #[test]
 fn stiffness_tensor_validate_accepts_valid_isotropic_tensor() {
-    let t = StiffnessTensor::isotropic(1e10, 5e9, 2700.0).unwrap();
+    let t = ElasticModeStiffnessTensor::isotropic(1e10, 5e9, 2700.0).unwrap();
     assert!(
         t.validate().is_ok(),
         "valid isotropic tensor must pass validate"
     );
 }
 
-/// `StiffnessTensor::validate` rejects an asymmetric matrix.
+/// `ElasticModeStiffnessTensor::validate` rejects an asymmetric matrix.
 #[test]
 fn stiffness_tensor_validate_rejects_asymmetric_matrix() {
-    let mut t = StiffnessTensor::isotropic(1e10, 5e9, 2700.0).unwrap();
+    let mut t = ElasticModeStiffnessTensor::isotropic(1e10, 5e9, 2700.0).unwrap();
     t.c[[0, 1]] += 1.0;
     assert!(
         t.validate().is_err(),
@@ -83,23 +83,23 @@ fn stiffness_tensor_validate_rejects_asymmetric_matrix() {
     );
 }
 
-/// `StiffnessTensor::isotropic` rejects non-positive density or shear modulus μ.
+/// `ElasticModeStiffnessTensor::isotropic` rejects non-positive density or shear modulus μ.
 #[test]
 fn stiffness_tensor_isotropic_rejects_invalid_parameters() {
     assert!(
-        StiffnessTensor::isotropic(1e10, 5e9, 0.0).is_err(),
+        ElasticModeStiffnessTensor::isotropic(1e10, 5e9, 0.0).is_err(),
         "zero density"
     );
     assert!(
-        StiffnessTensor::isotropic(1e10, 5e9, -1.0).is_err(),
+        ElasticModeStiffnessTensor::isotropic(1e10, 5e9, -1.0).is_err(),
         "negative density"
     );
     assert!(
-        StiffnessTensor::isotropic(1e10, 0.0, 2700.0).is_err(),
+        ElasticModeStiffnessTensor::isotropic(1e10, 0.0, 2700.0).is_err(),
         "zero mu"
     );
     assert!(
-        StiffnessTensor::isotropic(1e10, -1.0, 2700.0).is_err(),
+        ElasticModeStiffnessTensor::isotropic(1e10, -1.0, 2700.0).is_err(),
         "negative mu"
     );
 }

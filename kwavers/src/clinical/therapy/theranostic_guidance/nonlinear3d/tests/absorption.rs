@@ -23,7 +23,7 @@
 
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
-use super::super::types::{GridIndex, Nonlinear3dAperture};
+use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
@@ -89,6 +89,7 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
             z_m: 0.0,
         }],
         model_name: "test_absorption_decay".to_owned(),
+        source_domain: SourceDomain::TissueBoundary,
         focus: *receiver_indices.last().unwrap(),
     };
 
@@ -126,6 +127,7 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
             beta: &beta,
             attenuation_np_per_m_mhz: Some(alpha_field),
             attenuation_power_law_y: Some(&attenuation_y),
+            source_body_mask: None,
             n,
             spacing_m,
             aperture: &aperture,

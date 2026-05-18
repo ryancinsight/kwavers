@@ -78,7 +78,7 @@ pub struct RtmSettings {
     /// Source wavefield storage strategy
     pub storage_strategy: StorageStrategy,
     /// Boundary handling method
-    pub boundary_type: BoundaryType,
+    pub boundary_type: SeismicBoundaryType,
     /// Apply Laplacian filtering
     pub apply_laplacian: bool,
 }
@@ -103,7 +103,7 @@ pub enum StorageStrategy {
 
 /// Boundary condition types for imaging
 #[derive(Debug, Clone)]
-pub enum BoundaryType {
+pub enum SeismicBoundaryType {
     /// Absorbing boundary layers
     Absorbing,
     /// Free surface boundary
@@ -166,7 +166,7 @@ impl Default for RtmSettings {
         Self {
             imaging_condition: ImagingCondition::ZeroLag,
             storage_strategy: StorageStrategy::Checkpoints(10),
-            boundary_type: BoundaryType::Absorbing,
+            boundary_type: SeismicBoundaryType::Absorbing,
             apply_laplacian: true,
         }
     }

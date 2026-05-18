@@ -34,14 +34,15 @@ pub mod validation;
 // Re-export main types
 pub use bem_fem_coupling::{BemFemCoupler, BemFemCouplingConfig, BemFemInterface, BemFemSolver};
 pub use bem_fem_enhanced::{
-    EnhancedBemFemConfig, EnhancedBemFemSolver, InterfaceQuality, RefinementStep, ValidationResult,
+    BemFemValidationResult, EnhancedBemFemConfig, EnhancedBemFemSolver, InterfaceQuality,
+    RefinementStep,
 };
 pub use config::{
-    CouplingInterfaceConfig, DecompositionStrategy, HybridConfig, OptimizationConfig,
-    ValidationConfig,
+    CouplingInterfaceConfig, HybridConfig, HybridDecompositionStrategy,
+    HybridSolverOptimizationConfig, HybridValidationConfig,
 };
 pub use fdtd_fem_coupling::{FdtdFemCoupler, FdtdFemCouplingConfig, FdtdFemSolver};
-pub use metrics::{EfficiencyMetrics, HybridMetrics, ValidationResults};
+pub use metrics::{EfficiencyMetrics, HybridMetrics, HybridValidationResults};
 pub use plugin::HybridPlugin;
 pub use pstd_sem_coupling::{PstdSemCoupler, PstdSemCouplingConfig, PstdSemSolver};
 pub use solver::HybridSolver;

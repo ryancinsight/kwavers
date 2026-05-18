@@ -7,7 +7,7 @@ use super::algorithms::PhotoacousticAlgorithm;
 
 /// Configuration for photoacoustic reconstruction
 #[derive(Debug, Clone)]
-pub struct PhotoacousticConfig {
+pub struct ReconstructionPhotoacousticConfig {
     /// Reconstruction algorithm to use
     pub algorithm: PhotoacousticAlgorithm,
     /// Sensor positions [x, y, z] in meters

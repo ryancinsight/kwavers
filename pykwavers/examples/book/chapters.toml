@@ -160,3 +160,8 @@ title  = "Same-Device Therapeutic Ultrasound, Finite-Frequency Inverse, and RTM 
 number = 30
 script = "ch30_intravascular_ultrasound.py"
 title  = "Intravascular Ultrasound Imaging and Therapy"
+
+[[chapter]]
+number = 32
+script = "ch32_segmented_tissue_transducer_optimization.py"
+title  = "Segmented Tissue Transducer Optimization"

@@ -1,6 +1,6 @@
 //! SIMD-accelerated FFT complex multiplication kernels.
 
-use super::config::{SimdConfig, SimdLevel};
+use super::config::{MathSimdLevel, SimdConfig};
 
 /// SIMD-accelerated FFT operations
 #[derive(Debug)]
@@ -27,7 +27,7 @@ impl FftSimdOps {
     ) {
         match self.config.level {
             #[cfg(target_arch = "x86_64")]
-            SimdLevel::Avx2 => {
+            MathSimdLevel::Avx2 => {
                 // SAFETY: AVX2 intrinsics are safe here because:
                 // 1. CPU feature detection ensures AVX2 availability
                 // 2. Input slices are checked for compatible lengths

@@ -1,7 +1,7 @@
 //! Safety constraints validation
 
 use super::planner::TreatmentPlanner;
-use super::types::SafetyConstraints;
+use super::types::TranscranialSafetyConstraints;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -16,7 +16,7 @@ impl TreatmentPlanner {
         acoustic_field: &Array3<f64>,
         frequency_hz: f64,
     ) -> KwaversResult<()> {
-        let constraints = SafetyConstraints::default();
+        let constraints = TranscranialSafetyConstraints::default();
 
         // Check temperature limits
         for &temp in temperature {

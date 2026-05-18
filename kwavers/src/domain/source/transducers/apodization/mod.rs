@@ -1,6 +1,6 @@
 // source/apodization/mod.rs
 
-use crate::domain::signal::{window_value, WindowType};
+use crate::domain::signal::{window_value, SignalWindowType};
 use std::fmt::Debug;
 
 pub trait Apodization: Debug + Sync + Send {
@@ -17,7 +17,7 @@ impl Apodization for HanningApodization {
             return 1.0;
         }
         window_value(
-            WindowType::Hann,
+            SignalWindowType::Hann,
             position_idx as f64 / (total_elements - 1) as f64,
         )
     }
@@ -32,7 +32,7 @@ impl Apodization for HammingApodization {
             return 1.0;
         }
         window_value(
-            WindowType::Hamming,
+            SignalWindowType::Hamming,
             position_idx as f64 / (total_elements - 1) as f64,
         )
     }
@@ -47,7 +47,7 @@ impl Apodization for BlackmanApodization {
             return 1.0;
         }
         window_value(
-            WindowType::Blackman,
+            SignalWindowType::Blackman,
             position_idx as f64 / (total_elements - 1) as f64,
         )
     }

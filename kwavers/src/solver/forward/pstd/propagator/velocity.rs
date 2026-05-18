@@ -71,6 +71,23 @@ impl PSTDSolver {
     ///
     /// Uses staggered grid shift operators matching the C++ k-wave binary:
     ///   grad_x(p) = IFFT( ddx_k_shift_pos[x] * kappa[i,j,k] * FFT(p)[i,j,k] )
+    ///
+    /// ## Split-field PML — fused vs. fallback paths
+    ///
+    /// When `self.pml_exp` is populated (CPML boundary, no Dirichlet bypass), the
+    /// update is **fused** into a single Zip pass per axis:
+    /// ```text
+    ///   u_x^{n+1}[i,j,k] = p[i] · (p[i] · u_x^n[i,j,k] − (Δt/ρ₀) · ∂p/∂x)
+    /// ```
+    /// where `p[i] = pml_vel_x[i] = exp(-σ_x_sg[i]·Δt/2)` is precomputed at
+    /// construction (Treeby & Cox 2010, Eq. 17).  This replaces the previous
+    /// three-pass sequence (pre-PML → gradient update → post-PML) with one pass,
+    /// saving 2 × N element reads/writes per velocity axis per step and eliminating
+    /// O(N) transcendental evaluations in favour of O(N) multiplications.
+    ///
+    /// The fallback path (Dirichlet bypass or non-CPML boundary) preserves the
+    /// original `apply_pml_to_velocity()` call structure for correctness.
+    ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
@@ -79,95 +96,178 @@ impl PSTDSolver {
         let has_y = self.grid.ny > 1;
         let has_z = self.grid.nz > 1;
 
-        // k-Wave split-field PML for velocity (Treeby & Cox 2010, Eq. 17):
-        //   u_new = pml * (pml * u_old - dt/rho * grad_p)
-        //
-        // The PML multiplier `pml = exp(-sigma * dt/2)` is applied TWICE per step:
-        //   1. Pre-update: attenuate stored velocity by pml  → pml * u_old
-        //   2. Post-update: attenuate the complete result    → pml * (pml*u_old - dt/rho*grad_p)
-        //
-        // This double application means u_old decays by pml^2 = exp(-sigma*dt) per step,
-        // while the injected gradient term decays by only pml = exp(-sigma*dt/2).
-        // Using only one application (pre or post) produces incorrect amplitude.
-        self.apply_pml_to_velocity()?; // pre: pml * u_old
-
-        // nz_c: half-spectrum z-length (nz/2+1); p_k/grad_k have shape (nx, ny, nz_c).
-        let nz_c = self.p_k.dim().2;
-
         // R2C forward: real pressure (nx,ny,nz) → half-spectrum (nx,ny,nz_c).
+        // kappa is pre-truncated to (nx,ny,nz_c) — no slice needed at each use (Opt-10).
+        // Shared across all three gradient axes — p_k is read-only during kspace multiply.
         self.fft.forward_r2c_into(&self.fields.p, &mut self.p_k);
 
-        // Compute pressure gradients in k-space with staggered grid shifts.
-        // k-wave uses ddx_k_shift_pos for pressure→velocity (positive shift).
-        // grad_k is reused sequentially for each axis; p_k is read-only throughout.
-        // kappa is sliced to (nx, ny, nz_c) — only non-negative kz values appear in
-        // the r2c half-spectrum; kappa is symmetric under kz sign flip (|k|² invariant).
+        // Extract precomputed PML factors (or fall back if unavailable / Dirichlet bypass).
+        // Taking the slice references here avoids borrow-checker conflicts with the
+        // mutable field borrows in the Zip loops below (disjoint struct fields).
+        let use_fused = self.pml_exp.is_some() && self.dirichlet_pml_bypass_x.is_empty();
 
-        // X-direction
-        {
-            let ddx = self.ddx_k_shift_pos.view();
-            Zip::indexed(self.grad_k.view_mut())
-                .and(self.p_k.view())
-                .and(self.kappa.slice(s![.., .., ..nz_c]))
-                .par_for_each(|(i, _j, _k), gk, &p_val, &kap| {
-                    *gk = (ddx[i] * p_val) * kap;
-                });
-        }
-        self.fft
-            .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-        Zip::from(&mut self.fields.ux)
-            .and(&self.dpx)
-            .and(&self.materials.rho0)
-            .par_for_each(|u, &dp, &rho| {
-                *u -= (dt / rho) * dp;
-            });
-
-        // Y-direction. For singleton embedding axes, all admissible modes have
-        // k_y = 0, so the derivative is exactly zero and the FFT pass is redundant.
-        if has_y {
-            let ddy = self.ddy_k_shift_pos.view();
-            Zip::indexed(self.grad_k.view_mut())
-                .and(self.p_k.view())
-                .and(self.kappa.slice(s![.., .., ..nz_c]))
-                .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
-                    *gk = (ddy[j] * p_val) * kap;
-                });
+        if use_fused {
+            // ── Fused path: no separate pre/post PML passes ───────────────────────
+            // SAFETY of disjoint borrows: `pml_exp` is a separate field from
+            // `fields`, `dpx`, `materials` — Rust's field-granular borrow rules allow
+            // simultaneous `&self.pml_exp` and `&mut self.fields.ux` / `&self.dpx`.
+            //
+            // X-direction — PML factor indexed by i (row-major outer index).
+            {
+                let ddx = self.ddx_k_shift_pos.view();
+                Zip::indexed(self.grad_k.view_mut())
+                    .and(self.p_k.view())
+                    .and(self.kappa.view())
+                    .par_for_each(|(i, _j, _k), gk, &p_val, &kap| {
+                        *gk = (ddx[i] * p_val) * kap;
+                    });
+            }
             self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.uy_k);
-            Zip::from(&mut self.fields.uy)
-                .and(&self.dpy)
+                .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+            // Fused: u = pml * (pml * u - (dt/rho) * dp)
+            // pml_vel_x[i] = exp(-sigma_x_sgx[i] * dt/2)
+            let pml_vx = self
+                .pml_exp
+                .as_ref()
+                .unwrap()
+                .vel_x
+                .as_slice()
+                .expect("pml_vel_x must be contiguous");
+            Zip::indexed(self.fields.ux.view_mut())
+                .and(&self.dpx)
+                .and(&self.materials.rho0)
+                .par_for_each(|(i, _j, _k), u, &dp, &rho| {
+                    let p = pml_vx[i];
+                    *u = p * (p * *u - (dt / rho) * dp);
+                });
+
+            // Y-direction — PML factor indexed by j (middle index).
+            if has_y {
+                let ddy = self.ddy_k_shift_pos.view();
+                Zip::indexed(self.grad_k.view_mut())
+                    .and(self.p_k.view())
+                    .and(self.kappa.view())
+                    .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
+                        *gk = (ddy[j] * p_val) * kap;
+                    });
+                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis Zip has completed;
+                // dpx is free to overwrite before y-axis Zip reads it.
+                self.fft
+                    .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+                let pml_vy = self
+                    .pml_exp
+                    .as_ref()
+                    .unwrap()
+                    .vel_y
+                    .as_slice()
+                    .expect("pml_vel_y must be contiguous");
+                Zip::indexed(self.fields.uy.view_mut())
+                    .and(&self.dpx)
+                    .and(&self.materials.rho0)
+                    .par_for_each(|(_i, j, _k), u, &dp, &rho| {
+                        let p = pml_vy[j];
+                        *u = p * (p * *u - (dt / rho) * dp);
+                    });
+            }
+
+            // Z-direction — PML factor indexed by k (innermost index).
+            // ddz has length nz_c (truncated in construction).
+            if has_z {
+                let ddz = self.ddz_k_shift_pos.view();
+                Zip::indexed(self.grad_k.view_mut())
+                    .and(self.p_k.view())
+                    .and(self.kappa.view())
+                    .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
+                        *gk = (ddz[k] * p_val) * kap;
+                    });
+                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis Zip has completed.
+                self.fft
+                    .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+                let pml_vz = self
+                    .pml_exp
+                    .as_ref()
+                    .unwrap()
+                    .vel_z
+                    .as_slice()
+                    .expect("pml_vel_z must be contiguous");
+                Zip::indexed(self.fields.uz.view_mut())
+                    .and(&self.dpx)
+                    .and(&self.materials.rho0)
+                    .par_for_each(|(_i, _j, k), u, &dp, &rho| {
+                        let p = pml_vz[k];
+                        *u = p * (p * *u - (dt / rho) * dp);
+                    });
+            }
+        } else {
+            // ── Fallback path: explicit pre/post PML passes (Dirichlet bypass or
+            //   non-CPML boundary). Semantics identical to the pre-optimisation code.
+            self.apply_pml_to_velocity()?; // pre: pml * u_old
+
+            // X-direction
+            {
+                let ddx = self.ddx_k_shift_pos.view();
+                Zip::indexed(self.grad_k.view_mut())
+                    .and(self.p_k.view())
+                    .and(self.kappa.view())
+                    .par_for_each(|(i, _j, _k), gk, &p_val, &kap| {
+                        *gk = (ddx[i] * p_val) * kap;
+                    });
+            }
+            self.fft
+                .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+            Zip::from(&mut self.fields.ux)
+                .and(&self.dpx)
                 .and(&self.materials.rho0)
                 .par_for_each(|u, &dp, &rho| {
                     *u -= (dt / rho) * dp;
                 });
-        }
 
-        // Z-direction. A singleton z-axis has only the zero wavenumber, hence
-        // dp/dz is identically zero under the periodic spectral derivative.
-        // ddz has length nz_c (truncated in construction); k ∈ [0, nz_c) from grad_k.
-        if has_z {
-            let ddz = self.ddz_k_shift_pos.view();
-            Zip::indexed(self.grad_k.view_mut())
-                .and(self.p_k.view())
-                .and(self.kappa.slice(s![.., .., ..nz_c]))
-                .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
-                    *gk = (ddz[k] * p_val) * kap;
-                });
-            self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.dpz, &mut self.uz_k);
-            Zip::from(&mut self.fields.uz)
-                .and(&self.dpz)
-                .and(&self.materials.rho0)
-                .par_for_each(|u, &dp, &rho| {
-                    *u -= (dt / rho) * dp;
-                });
+            // Y-direction
+            if has_y {
+                let ddy = self.ddy_k_shift_pos.view();
+                Zip::indexed(self.grad_k.view_mut())
+                    .and(self.p_k.view())
+                    .and(self.kappa.view())
+                    .par_for_each(|(_i, j, _k), gk, &p_val, &kap| {
+                        *gk = (ddy[j] * p_val) * kap;
+                    });
+                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis Zip has completed.
+                self.fft
+                    .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+                Zip::from(&mut self.fields.uy)
+                    .and(&self.dpx)
+                    .and(&self.materials.rho0)
+                    .par_for_each(|u, &dp, &rho| {
+                        *u -= (dt / rho) * dp;
+                    });
+            }
+
+            // Z-direction
+            if has_z {
+                let ddz = self.ddz_k_shift_pos.view();
+                Zip::indexed(self.grad_k.view_mut())
+                    .and(self.p_k.view())
+                    .and(self.kappa.view())
+                    .par_for_each(|(_i, _j, k), gk, &p_val, &kap| {
+                        *gk = (ddz[k] * p_val) * kap;
+                    });
+                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis Zip has completed.
+                self.fft
+                    .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+                Zip::from(&mut self.fields.uz)
+                    .and(&self.dpx)
+                    .and(&self.materials.rho0)
+                    .par_for_each(|u, &dp, &rho| {
+                        *u -= (dt / rho) * dp;
+                    });
+            }
+
+            self.apply_pml_to_velocity()?; // post: pml * (pml*u_old - dt/rho*grad_p)
         }
 
         // NOTE: Velocity source injection is NOT performed here.
         // It happens in step_forward() after update_velocity() returns,
         // matching the C++ k-wave binary time loop order (Step 2: addVelocitySource).
-
-        self.apply_pml_to_velocity()?; // post: pml * (pml*u_old - dt/rho*grad_p)
 
         Ok(())
     }
@@ -177,11 +277,20 @@ impl PSTDSolver {
     /// Updates axial velocity `ux` and radial velocity `uz` (= `u_r` in cylindrical coordinates).
     /// `uy` is not updated (ny = 1 in axisymmetric mode).
     ///
-    /// # Equations
+    /// # Equations (split-field PML, Treeby & Cox 2010 Eq. 17)
     /// ```text
-    /// ux -= dt / rho0 * dp/dx          (axial momentum)
-    /// uz -= dt / rho0 * dp/dr          (radial momentum, staggered at r_{m+1/2})
+    /// ux^{n+1}[i,k] = pml_x[i] · (pml_x[i] · ux^n − (dt/ρ₀) · ∂p/∂x)
+    /// uz^{n+1}[i,k] = pml_z[k] · (pml_z[k] · uz^n − (dt/ρ₀) · ∂p/∂r)
     /// ```
+    /// where `pml_x[i] = exp(-σ_x_sgx[i]·Δt/2)` (staggered-grid sigma, x-axis)
+    /// and `pml_z[k] = exp(-σ_z_sgz[k]·Δt/2)` (staggered-grid sigma, r-axis mapped to z).
+    ///
+    /// **Fused path** (CPML, no Dirichlet bypass): pre-computed `pml_vel_x/z` arrays from
+    /// `self.pml_exp` are applied inline — eliminates 2 `apply_pml_to_velocity()` calls
+    /// (each scanning all AS cells with per-element `exp()` evaluations).
+    ///
+    /// **Fallback path**: original pre-PML → update → post-PML call structure preserved.
+    ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
@@ -189,7 +298,11 @@ impl PSTDSolver {
     /// - Panics if `AsContext must be Some for CylindricalAS`.
     ///
     pub(crate) fn update_velocity_as(&mut self, dt: f64) -> KwaversResult<()> {
-        self.apply_pml_to_velocity()?; // pre-step PML
+        let use_fused = self.pml_exp.is_some() && self.dirichlet_pml_bypass_x.is_empty();
+
+        if !use_fused {
+            self.apply_pml_to_velocity()?; // pre-step PML (fallback only)
+        }
 
         // Take AsContext out of the Option so we hold an owned value while
         // also mutably borrowing self.fields / self.materials (disjoint fields).
@@ -201,23 +314,58 @@ impl PSTDSolver {
 
         ctx.compute_vel_grads(self.fields.p.slice(s![.., 0, ..]));
 
-        Zip::from(self.fields.ux.slice_mut(s![.., 0, ..]))
-            .and(self.materials.rho0.slice(s![.., 0, ..]))
-            .and(&ctx.dpdx)
-            .par_for_each(|u, &rho, &dp| {
-                *u -= (dt / rho) * dp;
-            });
+        if use_fused {
+            // Fused: ux = pml_x[i] · (pml_x[i] · ux − (dt/ρ₀) · ∂p/∂x)
+            // In the 2-D slice (nx, nr), indexed returns (i, k).
+            let pml_vx = self
+                .pml_exp
+                .as_ref()
+                .unwrap()
+                .vel_x
+                .as_slice()
+                .expect("pml_vel_x contiguous");
+            let pml_vz = self
+                .pml_exp
+                .as_ref()
+                .unwrap()
+                .vel_z
+                .as_slice()
+                .expect("pml_vel_z contiguous");
 
-        Zip::from(self.fields.uz.slice_mut(s![.., 0, ..]))
-            .and(self.materials.rho0.slice(s![.., 0, ..]))
-            .and(&ctx.dpdr)
-            .par_for_each(|u, &rho, &dp| {
-                *u -= (dt / rho) * dp;
-            });
+            Zip::indexed(self.fields.ux.slice_mut(s![.., 0, ..]))
+                .and(self.materials.rho0.slice(s![.., 0, ..]))
+                .and(&ctx.dpdx)
+                .par_for_each(|(i, _k), u, &rho, &dp| {
+                    let p = pml_vx[i];
+                    *u = p * (p * *u - (dt / rho) * dp);
+                });
+
+            Zip::indexed(self.fields.uz.slice_mut(s![.., 0, ..]))
+                .and(self.materials.rho0.slice(s![.., 0, ..]))
+                .and(&ctx.dpdr)
+                .par_for_each(|(_i, k), u, &rho, &dp| {
+                    let p = pml_vz[k];
+                    *u = p * (p * *u - (dt / rho) * dp);
+                });
+        } else {
+            Zip::from(self.fields.ux.slice_mut(s![.., 0, ..]))
+                .and(self.materials.rho0.slice(s![.., 0, ..]))
+                .and(&ctx.dpdx)
+                .par_for_each(|u, &rho, &dp| {
+                    *u -= (dt / rho) * dp;
+                });
+
+            Zip::from(self.fields.uz.slice_mut(s![.., 0, ..]))
+                .and(self.materials.rho0.slice(s![.., 0, ..]))
+                .and(&ctx.dpdr)
+                .par_for_each(|u, &rho, &dp| {
+                    *u -= (dt / rho) * dp;
+                });
+
+            self.apply_pml_to_velocity()?; // post-step PML (fallback only)
+        }
 
         self.as_ctx = Some(ctx);
-
-        self.apply_pml_to_velocity()?; // post-step PML
         Ok(())
     }
 

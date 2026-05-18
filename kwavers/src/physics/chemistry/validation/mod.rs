@@ -8,7 +8,7 @@ pub mod kinetics_database;
 pub mod literature;
 
 pub use arrhenius::ArrheniusValidator;
-pub use kinetics_database::{ValidatedKinetics, ValidationResult};
+pub use kinetics_database::{KineticsValidationResult, ValidatedKinetics};
 pub use literature::LiteratureValue;
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
-use kwavers::domain::medium::heterogeneous::tissue::{HeterogeneousTissueMedium, TissueType};
+use kwavers::domain::medium::heterogeneous::tissue::HeterogeneousTissueMedium;
+use kwavers::domain::medium::AbsorptionTissueType;
 use kwavers::{grid::Grid, init_logging};
 use log::info;
 use ndarray::Array3;
@@ -22,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Create tissue medium with inclusions of different stiffness
-    let _medium = HeterogeneousTissueMedium::new(grid.clone(), TissueType::Muscle);
+    let _medium = HeterogeneousTissueMedium::new(grid.clone(), AbsorptionTissueType::Muscle);
 
     // Create shear modulus distribution with stiff inclusion
     let mut mu = Array3::<f64>::ones((n, n, n)) * 3.0e3; // 3 kPa background (soft tissue)

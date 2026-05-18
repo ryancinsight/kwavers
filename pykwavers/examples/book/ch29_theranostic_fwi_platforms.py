@@ -14,6 +14,9 @@ import os
 import sys
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.image import AxesImage
 import numpy as np
@@ -26,13 +29,16 @@ from ch29_controlled_comparison import (
     write_controlled_comparison_fields,
     write_controlled_comparison_metrics,
 )
+from ch29_adaptive_transmit import run_adaptive_transmit_comparison
+from ch29_controlled_placement import resample_to_extent
 from ch29_pressure_diagnostics import pressure_diagnostics
 
 
 BOOK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BOOK_DIR.parents[2]
-OUT_DIR = REPO_ROOT / "docs" / "book" / "figures" / "ch29"
+OUT_DIR = Path(os.environ.get("KWAVERS_CH29_OUT_DIR", REPO_ROOT / "docs" / "book" / "figures" / "ch29"))
 PY_PACKAGE = REPO_ROOT / "pykwavers" / "python"
+DLL_DIRECTORY_HANDLES = []
 
 if "PYKWAVERS_EXTENSION_PATH" not in os.environ:
     for candidate in (
@@ -54,20 +60,75 @@ from transcranial_planning.scene import CANONICAL_BRAIN_SCENE, BrainSceneDefinit
 def load_pykwavers_extension():
     for module_name in ("_pykwavers", "pykwavers._pykwavers", "pykwavers"):
         module = sys.modules.get(module_name)
-        if module is not None and hasattr(module, "run_theranostic_inverse_from_ritk"):
+        if module is not None and pykwavers_extension_is_current(module):
             return module
+    candidates = []
     extension_path = os.environ.get("PYKWAVERS_EXTENSION_PATH")
-    if extension_path and Path(extension_path).exists():
-        loader = importlib.machinery.ExtensionFileLoader("_pykwavers", extension_path)
-        spec = importlib.util.spec_from_file_location("_pykwavers", extension_path, loader=loader)
-        if spec is None:
-            raise ImportError(f"cannot load pykwavers extension from {extension_path}")
-        module = importlib.util.module_from_spec(spec)
-        loader.exec_module(module)
-        return module
+    if extension_path:
+        candidates.append(Path(extension_path))
+    candidates.extend(
+        [
+            REPO_ROOT / "target" / "release" / "pykwavers.dll",
+            REPO_ROOT / "target" / "maturin" / "pykwavers.dll",
+            REPO_ROOT / "target" / "debug" / "pykwavers.dll",
+        ]
+    )
+    errors: list[str] = []
+    for candidate in candidates:
+        if candidate.exists():
+            try:
+                register_dll_directories(candidate)
+                module = load_pykwavers_candidate(candidate)
+                if pykwavers_extension_is_current(module):
+                    return module
+                signature = getattr(module.run_theranostic_nonlinear_3d_from_ritk, "__text_signature__", "")
+                errors.append(f"{candidate}: stale nonlinear signature {signature}")
+                sys.modules.pop("_pykwavers", None)
+            except Exception as exc:  # noqa: BLE001 - preserve candidate-specific import context.
+                errors.append(f"{candidate}: {type(exc).__name__}: {exc}")
     import pykwavers as module  # noqa: PLC0415
 
+    if pykwavers_extension_is_current(module):
+        return module
+    details = "\n".join(errors)
+    raise ImportError(f"no current pykwavers extension was loadable\n{details}")
+
+
+def load_pykwavers_candidate(extension_path: Path):
+    loader = importlib.machinery.ExtensionFileLoader("_pykwavers", str(extension_path))
+    spec = importlib.util.spec_from_file_location("_pykwavers", str(extension_path), loader=loader)
+    if spec is None:
+        raise ImportError(f"cannot load pykwavers extension from {extension_path}")
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
     return module
+
+
+def register_dll_directories(extension_path: Path) -> None:
+    if not hasattr(os, "add_dll_directory"):
+        return
+    for directory in (
+        extension_path.parent,
+        Path(sys.executable).resolve().parent,
+        Path(sys.executable).resolve().parent / "Library" / "bin",
+        Path("D:/msys64/ucrt64/bin"),
+    ):
+        if directory.exists():
+            handle = os.add_dll_directory(str(directory))
+            DLL_DIRECTORY_HANDLES.append(handle)
+
+
+def pykwavers_extension_is_current(module) -> bool:
+    if not hasattr(module, "run_theranostic_inverse_from_ritk"):
+        return False
+    inverse_signature = str(getattr(module.run_theranostic_inverse_from_ritk, "__text_signature__", ""))
+    if inverse_signature and "elastic_fwi_iterations" not in inverse_signature:
+        return False
+    nonlinear = getattr(module, "run_theranostic_nonlinear_3d_from_ritk", None)
+    if nonlinear is None:
+        return False
+    signature = str(getattr(nonlinear, "__text_signature__", ""))
+    return "treatment_window_radius_m" in signature and "min_points_per_wavelength" in signature
 
 
 kw = load_pykwavers_extension()  # noqa: E402
@@ -133,6 +194,7 @@ NONLINEAR_CROP_EXTENT_CACHE: dict[str, list[float]] = {}
 RECONSTRUCTION_CHANNELS = (
     ("active_lesion_reconstruction", "active Born inverse"),
     ("waveform_rtm_reconstruction", "linear acoustic RTM"),
+    ("elastic_shear_reconstruction", "iterative elastic inverse"),
     ("subharmonic_reconstruction", "subharmonic inverse"),
     ("harmonic_reconstruction", "harmonic inverse"),
     ("ultraharmonic_reconstruction", "ultraharmonic inverse"),
@@ -145,6 +207,7 @@ RECONSTRUCTION_FIGURE_COLUMNS = (
     ("lesion_target", "magma", "lesion target"),
     ("active_lesion_reconstruction", "viridis", "active Born inverse"),
     ("waveform_rtm_reconstruction", "viridis", "linear acoustic RTM"),
+    ("elastic_shear_reconstruction", "viridis", "iterative elastic inverse"),
     ("subharmonic_reconstruction", "viridis", "subharmonic inverse"),
     ("harmonic_reconstruction", "viridis", "harmonic inverse"),
     ("ultraharmonic_reconstruction", "viridis", "ultraharmonic inverse"),
@@ -438,6 +501,7 @@ def run_case(case: dict[str, object]) -> dict[str, object]:
         source_pressure_pa=float(case["pressure"]),
         noise_fraction=float(os.environ.get("KWAVERS_CH29_NOISE_FRACTION", "0.012")),
         inverse_encoding_rows_per_code=int(os.environ.get("KWAVERS_CH29_INVERSE_ENCODING_ROWS_PER_CODE", "2")),
+        elastic_fwi_iterations=int(os.environ.get("KWAVERS_CH29_ELASTIC_FWI_ITERATIONS", "3")),
         **scene_kwargs,
     )
 
@@ -467,6 +531,7 @@ def run_controlled_linear_case(case: dict[str, object]) -> dict[str, object]:
         source_pressure_pa=nonlinear_source_pressure_pa(case),
         noise_fraction=float(os.environ.get("KWAVERS_CH29_NOISE_FRACTION", "0.012")),
         inverse_encoding_rows_per_code=int(os.environ.get("KWAVERS_CH29_INVERSE_ENCODING_ROWS_PER_CODE", "2")),
+        elastic_fwi_iterations=int(os.environ.get("KWAVERS_CH29_ELASTIC_FWI_ITERATIONS", "3")),
         **scene_kwargs,
     )
 
@@ -509,11 +574,20 @@ def run_nonlinear_case(case: dict[str, object]) -> dict[str, object]:
 
 
 def nonlinear_frequency_hz(case: dict[str, object]) -> float:
-    return float(os.environ.get("KWAVERS_CH29_NONLINEAR_FREQUENCY_HZ", str(case["freq"][-1])))
+    if "KWAVERS_CH29_NONLINEAR_FREQUENCY_HZ" in os.environ:
+        return float(os.environ["KWAVERS_CH29_NONLINEAR_FREQUENCY_HZ"])
+    frequencies = [float(value) for value in case["freq"]]
+    if str(case["name"]) in {"kidney", "liver"}:
+        return min(frequencies, key=lambda value: abs(value - 500_000.0))
+    return frequencies[-1]
 
 
 def nonlinear_source_pressure_pa(case: dict[str, object]) -> float:
-    return float(os.environ.get("KWAVERS_CH29_NONLINEAR_SOURCE_PRESSURE_PA", str(case["pressure"])))
+    if "KWAVERS_CH29_NONLINEAR_SOURCE_PRESSURE_PA" in os.environ:
+        return float(os.environ["KWAVERS_CH29_NONLINEAR_SOURCE_PRESSURE_PA"])
+    frequency_mhz = nonlinear_frequency_hz(case) * 1.0e-6
+    inertial_threshold_pa = INERTIAL_MI_THRESHOLD * np.sqrt(frequency_mhz) * 1.0e6
+    return max(float(case["pressure"]), float(inertial_threshold_pa))
 
 
 def nonlinear_treatment_window_radius_m(case: dict[str, object]) -> float:
@@ -603,7 +677,7 @@ def render_nonlinear_3d(results: list[dict[str, object]], placement_results: lis
     columns = (
         ("ct_hu", "gray", "CT + target + tx/rx + beams"),
         ("planned_exposure", "magma", "planned exposure"),
-        ("westervelt_peak_pressure_pa", "magma", "Westervelt FDTD peak"),
+        ("westervelt_peak_pressure_pa", "magma", "Westervelt target pressure"),
         ("target_mask", "magma", "planned lesion target"),
         ("multiparameter_fwi_score", "viridis", "source-encoded Westervelt FWI"),
         ("reconstructed_delta_beta", "viridis", "nonlinear beta inverse"),
@@ -614,24 +688,43 @@ def render_nonlinear_3d(results: list[dict[str, object]], placement_results: lis
     if len(results) != len(placement_results):
         raise ValueError("nonlinear and placement result counts differ")
     fig, axes = plt.subplots(len(results), len(columns), figsize=(28.0, 9.2), constrained_layout=True)
+    axes = np.atleast_2d(axes)
     for row, (result, placement) in enumerate(zip(results, placement_results)):
         if str(result["anatomy"]) != str(placement["anatomy"]):
             raise ValueError(f"case order mismatch: {result['anatomy']} != {placement['anatomy']}")
         z = target_slice_index(np.asarray(result["target_mask"], dtype=bool))
         nonlinear_extent = nonlinear_crop_extent(result)
-        _, placement_extent, _, _ = placement_arrays(placement)
+        placement_ct, placement_extent, planned_therapy_points, _ = placement_arrays(placement)
+        planned_therapy_points = np.asarray(planned_therapy_points, dtype=float)[:, :2]
+        nonlinear_therapy_points = np.asarray(result["therapy_points_m"], dtype=float)[:, :2]
+        placement_shape = tuple(int(v) for v in placement_ct.shape)
+        planned_focus = np.asarray(placement["placement_focus_m"], dtype=float)
         xlim, ylim = placement_axis_limits(placement)
         slab = target_slab_bounds(np.asarray(result["target_mask"], dtype=bool), z)
-        target = np.max(np.asarray(result["target_mask"], dtype=bool)[:, :, slab[0] : slab[1]], axis=2)
+        target_crop = np.max(np.asarray(result["target_mask"], dtype=bool)[:, :, slab[0] : slab[1]], axis=2)
+        target = project_to_ct_frame(target_crop.astype(float), nonlinear_extent, placement_shape, placement_extent, binary=True)
+        nonlinear_focus = mask_centroid_xy_m(target, placement_extent)
         expected_lesion = np.asarray(placement["lesion_target"], dtype=float)
+        if expected_lesion.shape != placement_shape:
+            expected_lesion = project_to_ct_frame(expected_lesion, placement_extent, placement_shape, placement_extent)
         expected_lesion_mask = lesion_mask(expected_lesion)
-        placement_target_outline = np.asarray(placement["target_mask"], dtype=bool)
+        placement_target_outline = np.asarray(placement["placement_target_mask"], dtype=bool)
+        if placement_target_outline.shape != placement_shape:
+            placement_target_outline = project_to_ct_frame(
+                placement_target_outline.astype(float),
+                placement_extent,
+                placement_shape,
+                placement_extent,
+                binary=True,
+            )
         for col, (key, cmap, title) in enumerate(columns):
             ax = axes[row, col]
             if key == "ct_hu":
                 im = plot_placement_ct(ax, placement, show_legend=False, target_color="white", show_beams=True)
             elif key == "planned_exposure":
                 image = np.asarray(placement["exposure"], dtype=float)
+                if image.shape != placement_shape:
+                    image = project_to_ct_frame(image, placement_extent, placement_shape, placement_extent)
                 im = ax.imshow(
                     image.T,
                     cmap=cmap,
@@ -641,13 +734,6 @@ def render_nonlinear_3d(results: list[dict[str, object]], placement_results: lis
                     vmax=positive_display_vmax(image, 99.8),
                     interpolation="lanczos",
                 )
-                plot_beam_paths_2d(
-                    ax,
-                    np.asarray(placement["placement_therapy_points_m"], dtype=float),
-                    np.asarray(placement["placement_focus_m"], dtype=float),
-                )
-                contour_mask(ax, resize_mask(placement_target_outline, image.shape), placement_extent, "white", 0.8)
-                contour_mask(ax, expected_lesion_mask, placement_extent, "yellow", 0.9)
             elif key == "target_mask":
                 image = expected_lesion
                 im = ax.imshow(
@@ -659,45 +745,70 @@ def render_nonlinear_3d(results: list[dict[str, object]], placement_results: lis
                     vmax=1.0,
                     interpolation="nearest",
                 )
-                contour_mask(ax, resize_mask(placement_target_outline, image.shape), placement_extent, "white", 0.8)
-                contour_mask(ax, expected_lesion_mask, placement_extent, "yellow", 1.1)
             elif key in {"multiparameter_fwi_score", "nonlinear_fusion_score"}:
-                image = slab_projection(np.asarray(result[key], dtype=float), slab, mode="max")
+                image = project_to_ct_frame(
+                    slab_projection(np.asarray(result[key], dtype=float), slab, mode="max"),
+                    nonlinear_extent,
+                    placement_shape,
+                    placement_extent,
+                )
                 im = ax.imshow(
                     image.T,
                     cmap=cmap,
                     origin="lower",
-                    extent=nonlinear_extent,
+                    extent=placement_extent,
                     vmin=0.0,
                     vmax=1.0,
                     interpolation=nonlinear_panel_interpolation(key),
                 )
             elif key == "reconstructed_delta_beta":
-                image = slab_projection(np.maximum(np.asarray(result[key], dtype=float), 0.0), slab, mode="max")
+                image = project_to_ct_frame(
+                    slab_projection(np.maximum(np.asarray(result[key], dtype=float), 0.0), slab, mode="max"),
+                    nonlinear_extent,
+                    placement_shape,
+                    placement_extent,
+                )
                 im = ax.imshow(
                     image.T,
                     cmap=cmap,
                     origin="lower",
-                    extent=nonlinear_extent,
+                    extent=placement_extent,
                     vmin=0.0,
                     vmax=positive_display_vmax(image),
                     interpolation=nonlinear_panel_interpolation(key),
                 )
             else:
-                volume = np.asarray(result[key], dtype=float)
-                image = slab_projection(volume, slab, mode="max")
+                volume = nonlinear_display_volume(result, key)
+                if key == "westervelt_peak_pressure_pa":
+                    volume = nonlinear_target_pressure_volume(result)
+                image = project_to_ct_frame(
+                    slab_projection(volume, slab, mode="max"),
+                    nonlinear_extent,
+                    placement_shape,
+                    placement_extent,
+                )
                 im = ax.imshow(
                     image.T,
                     cmap=cmap,
                     origin="lower",
-                    extent=nonlinear_extent,
+                    extent=placement_extent,
                     vmin=0.0,
                     vmax=positive_display_vmax(image),
                     interpolation=nonlinear_panel_interpolation(key),
                 )
-            if key not in {"ct_hu", "planned_exposure"}:
-                contour_mask(ax, target, nonlinear_extent, "white", 0.8)
-            if key not in {"ct_hu", "target_mask", "planned_exposure"}:
+            if key != "ct_hu":
+                if key == "planned_exposure":
+                    plot_beam_paths_2d(ax, planned_therapy_points, planned_focus)
+                else:
+                    plot_beam_paths_2d(ax, nonlinear_therapy_points, nonlinear_focus)
+            if key == "planned_exposure":
+                contour_mask(ax, placement_target_outline, placement_extent, "white", 0.8)
+                contour_mask(ax, expected_lesion_mask, placement_extent, "yellow", 0.9)
+            elif key == "target_mask":
+                contour_mask(ax, target, placement_extent, "white", 0.8)
+                contour_mask(ax, expected_lesion_mask, placement_extent, "yellow", 1.1)
+            elif key != "ct_hu":
+                contour_mask(ax, target, placement_extent, "white", 0.8)
                 contour_mask(ax, expected_lesion_mask, placement_extent, "yellow", 0.9)
             if key != "ct_hu":
                 ax.set_xlim(*xlim)
@@ -873,6 +984,38 @@ def slab_projection(volume: np.ndarray, slab: tuple[int, int], *, mode: str) -> 
     return np.max(data, axis=2)
 
 
+def nonlinear_display_volume(result: dict[str, object], key: str) -> np.ndarray:
+    return np.asarray(result[key], dtype=float)
+
+
+def nonlinear_target_pressure_volume(result: dict[str, object]) -> np.ndarray:
+    pressure = np.asarray(result["westervelt_peak_pressure_pa"], dtype=float)
+    target = np.asarray(result["target_mask"], dtype=bool)
+    body = np.asarray(result.get("body_mask", np.ones_like(target, dtype=bool)), dtype=bool)
+    return np.where(body & target, pressure, 0.0)
+
+
+def project_to_ct_frame(
+    image: np.ndarray,
+    source_extent: list[float],
+    target_shape: tuple[int, int],
+    target_extent: list[float],
+    *,
+    binary: bool = False,
+) -> np.ndarray:
+    projected = resample_to_extent(np.asarray(image, dtype=float), source_extent, target_shape, target_extent)
+    return projected >= 0.5 if binary else projected
+
+
+def mask_centroid_xy_m(mask: np.ndarray, extent: list[float]) -> np.ndarray:
+    coords = np.argwhere(np.asarray(mask, dtype=bool))
+    if coords.size == 0:
+        return np.array([0.5 * (extent[0] + extent[1]), 0.5 * (extent[2] + extent[3])])
+    x = np.linspace(extent[0], extent[1], mask.shape[0])
+    y = np.linspace(extent[2], extent[3], mask.shape[1])
+    return np.array([float(np.mean(x[coords[:, 0]])), float(np.mean(y[coords[:, 1]]))])
+
+
 def positive_display_vmax(image: np.ndarray, percentile: float = 99.5) -> float:
     values = np.asarray(image, dtype=float)
     positive = values[np.isfinite(values) & (values > 0.0)]
@@ -891,7 +1034,10 @@ def nonlinear_resolution_label(result: dict[str, object]) -> str:
     spacing_mm = 1.0e3 * float(result.get("spacing_m", 0.0))
     ppw = float(result.get("points_per_wavelength_min", np.nan))
     window_mm = 1.0e3 * float(result.get("treatment_window_radius_m", 0.0))
-    return f"dx={spacing_mm:.2f} mm; PPW={ppw:.1f}; window={window_mm:.0f} mm"
+    pressure = pressure_diagnostics(result)
+    peak_mpa = float(pressure["raw_peak_pressure_pa"]) * 1.0e-6
+    peak_mi = float(pressure["peak_mechanical_index"])
+    return f"Pmax={peak_mpa:.1f} MPa; MI={peak_mi:.1f}; dx={spacing_mm:.2f} mm; PPW={ppw:.1f}; window={window_mm:.0f} mm"
 
 
 def lesion_mask(image: np.ndarray) -> np.ndarray:
@@ -960,9 +1106,12 @@ def axis_limits(
 
 
 def contour_mask(ax: plt.Axes, mask: np.ndarray, extent: list[float], color: str, width: float) -> None:
-    x = np.linspace(extent[0], extent[1], mask.shape[0])
-    y = np.linspace(extent[2], extent[3], mask.shape[1])
-    ax.contour(x, y, mask.T.astype(float), levels=[0.5], colors=color, linewidths=width)
+    values = np.asarray(mask, dtype=bool)
+    if not np.any(values) or np.all(values):
+        return
+    x = np.linspace(extent[0], extent[1], values.shape[0])
+    y = np.linspace(extent[2], extent[3], values.shape[1])
+    ax.contour(x, y, values.T.astype(float), levels=[0.5], colors=color, linewidths=width)
 
 
 def set_equal_3d_limits(ax: plt.Axes, clouds: list[np.ndarray]) -> None:
@@ -1014,6 +1163,20 @@ def ratio_to_db(ratio: float, floor_db: float = -120.0) -> float:
     return max(20.0 * float(np.log10(ratio)), floor_db)
 
 
+def source_plan_metrics_payload(result: dict[str, object]) -> dict[str, float | int]:
+    metrics = result.get("source_plan_metrics", {})
+    if not hasattr(metrics, "items"):
+        return {}
+    return {
+        "source_support_min": int(metrics.get("source_support_min", 0)),
+        "source_support_mean": float(metrics.get("source_support_mean", 0.0)),
+        "source_support_max": int(metrics.get("source_support_max", 0)),
+        "focused_delay_min_s": float(metrics.get("focused_delay_min_s", 0.0)),
+        "focused_delay_max_s": float(metrics.get("focused_delay_max_s", 0.0)),
+        "focused_delay_span_s": float(metrics.get("focused_delay_span_s", 0.0)),
+    }
+
+
 def write_metrics(
     results: list[dict[str, object]],
     nonlinear_results: list[dict[str, object]],
@@ -1051,6 +1214,21 @@ def write_metrics(
                 "operator_storage_values": int(result["operator_storage_values"]),
                 "dense_operator_values": int(result["dense_operator_values"]),
                 "inverse_model_family": result["inverse_model_family"],
+                "elastic_shear_model": result["elastic_shear_model"],
+                "elastic_shear_speed_m_s": float(result["elastic_shear_speed_m_s"]),
+                "elastic_frequencies_hz": [float(v) for v in result["elastic_frequencies_hz"]],
+                "elastic_shear_receiver_count": int(result["elastic_shear_receiver_count"]),
+                "elastic_shear_time_steps": int(result["elastic_shear_time_steps"]),
+                "elastic_shear_dt_s": float(result["elastic_shear_dt_s"]),
+                "elastic_fwi_iterations": int(result["elastic_fwi_iterations"]),
+                "elastic_shear_iteration_count": int(result["elastic_shear_iteration_count"]),
+                "elastic_shear_accepted_step_count": int(result["elastic_shear_accepted_step_count"]),
+                "elastic_shear_objective_history": [
+                    float(value) for value in result["elastic_shear_objective_history"]
+                ],
+                "elastic_shear_baseline_trace_energy": float(result["elastic_shear_baseline_trace_energy"]),
+                "elastic_shear_lesion_trace_energy": float(result["elastic_shear_lesion_trace_energy"]),
+                "elastic_shear_residual_trace_energy": float(result["elastic_shear_residual_trace_energy"]),
                 "is_full_wave_inversion": bool(result["is_full_wave_inversion"]),
                 "uses_nonlinear_wave_propagation": bool(result["uses_nonlinear_wave_propagation"]),
                 "waveform_model": result["waveform_model"],
@@ -1110,6 +1288,7 @@ def write_metrics(
                 "frequency_hz": float(result["frequency_hz"]),
                 "source_pressure_pa": float(result["source_pressure_pa"]),
                 "source_scale": float(result.get("source_scale", 1.0)),
+                "source_plan_metrics": source_plan_metrics_payload(result),
                 "pressure_diagnostics": pressure_diagnostics(result),
                 "inertial_mi_threshold": float(result.get("inertial_mi_threshold", INERTIAL_MI_THRESHOLD)),
                 "bubble_time_steps_per_period": int(
@@ -1125,6 +1304,19 @@ def write_metrics(
                 "nonlinearity_regularization": float(result["nonlinearity_regularization"]),
                 "gradient_smoothing_steps": int(result["gradient_smoothing_steps"]),
                 "fwi_objective_history": [float(v) for v in np.asarray(result["fwi_objective_history"], dtype=float)],
+                "fwi_iteration_diagnostics": [
+                    {
+                        "objective_before": float(diagnostic["objective_before"]),
+                        "objective_after": float(diagnostic["objective_after"]),
+                        "gradient_speed_linf": float(diagnostic["gradient_speed_linf"]),
+                        "gradient_beta_linf": float(diagnostic["gradient_beta_linf"]),
+                        "gradient_speed_l2": float(diagnostic["gradient_speed_l2"]),
+                        "gradient_beta_l2": float(diagnostic["gradient_beta_l2"]),
+                        "accepted_scale": float(diagnostic["accepted_scale"]),
+                        "accepted_block": str(diagnostic["accepted_block"]),
+                    }
+                    for diagnostic in result.get("fwi_iteration_diagnostics", [])
+                ],
                 "cavitation_objective_history": [
                     float(v) for v in np.asarray(result["cavitation_objective_history"], dtype=float)
                 ],
@@ -1223,11 +1415,30 @@ def run_comparison_only() -> dict[str, object]:
     return {"figures": [str(figure)], "metrics": str(metrics), "fields": str(fields)}
 
 
+def run_adaptive_transmit_only() -> dict[str, object]:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    def scene_kwargs(case: dict[str, object]) -> dict[str, object]:
+        return scene_target_kwargs(case_scene(case))
+
+    figure, metrics, _ = run_adaptive_transmit_comparison(
+        CASES,
+        OUT_DIR,
+        kw.run_theranostic_inverse_from_ritk,
+        scene_kwargs,
+        save_figure,
+    )
+    print(f"adaptive transmit comparison rendered {figure}", flush=True)
+    return {"figures": [str(figure)], "metrics": str(metrics)}
+
+
 if __name__ == "__main__" or __name__ == "ch29":
     scope = os.environ.get("KWAVERS_CH29_RENDER_SCOPE", "all").lower()
     if scope == "fig05":
         run_fig05_only()
     elif scope == "comparison":
         run_comparison_only()
+    elif scope == "adaptive_transmit":
+        run_adaptive_transmit_only()
     else:
         run()

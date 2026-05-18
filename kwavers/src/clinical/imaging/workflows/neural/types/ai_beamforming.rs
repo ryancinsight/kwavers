@@ -201,12 +201,12 @@ pub struct AIBeamformingResult {
     pub clinical_analysis: ClinicalAnalysis,
 
     /// Performance metrics.
-    pub performance: PerformanceMetrics,
+    pub performance: AiBeamformingMetrics,
 }
 
 /// Execution time and resource usage for each AI beamforming stage.
 #[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+pub struct AiBeamformingMetrics {
     /// Total processing time in milliseconds.
     pub total_time_ms: f64,
 

@@ -10,13 +10,13 @@ use std::f64::consts::PI;
 ///
 /// Reference: Ricker, N. (1953). "The form and laws of propagation of seismic wavelets"
 #[derive(Debug, Clone)]
-pub struct RickerWavelet {
+pub struct DomainRickerWavelet {
     peak_frequency: f64,
     peak_time: f64,
     amplitude: f64,
 }
 
-impl RickerWavelet {
+impl DomainRickerWavelet {
     /// New.
     /// # Panics
     /// - Panics if assertion fails: `Peak frequency must be positive`.
@@ -47,7 +47,7 @@ impl RickerWavelet {
     }
 }
 
-impl Signal for RickerWavelet {
+impl Signal for DomainRickerWavelet {
     fn amplitude(&self, t: f64) -> f64 {
         self.amplitude * self.ricker_value(t)
     }

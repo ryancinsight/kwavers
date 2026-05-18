@@ -30,4 +30,4 @@ pub mod tracker;
 pub mod types;
 
 pub use tracker::IntensityTracker;
-pub use types::{InstantaneousIntensity, TemporalIntensityMetrics, ThermalDose};
+pub use types::{InstantaneousIntensity, IntensityTrackerDose, TemporalIntensityMetrics};

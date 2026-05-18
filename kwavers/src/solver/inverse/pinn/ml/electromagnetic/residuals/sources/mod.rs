@@ -1,4 +1,4 @@
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
 
@@ -41,7 +41,7 @@ mod tests;
 pub fn compute_charge_density<B: AutodiffBackend>(
     x: &Tensor<B, 2>,
     y: &Tensor<B, 2>,
-    physics_params: &PhysicsParameters,
+    physics_params: &PinnDomainPhysicsParameters,
 ) -> Tensor<B, 2> {
     let rho_0 = physics_params
         .domain_params
@@ -114,7 +114,7 @@ pub fn compute_charge_density<B: AutodiffBackend>(
 pub fn compute_current_density_z<B: AutodiffBackend>(
     x: &Tensor<B, 2>,
     y: &Tensor<B, 2>,
-    physics_params: &PhysicsParameters,
+    physics_params: &PinnDomainPhysicsParameters,
 ) -> Tensor<B, 2> {
     // Conduction background: J_cond = σ·E_z,background (if both are specified)
     let sigma = physics_params

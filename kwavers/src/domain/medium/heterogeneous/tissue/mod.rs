@@ -8,7 +8,7 @@ mod region;
 
 pub use implementation::HeterogeneousTissueMedium;
 pub use properties::TissuePropertyCache;
-pub use region::{TissueMap, TissueRegion};
+pub use region::{DomainTissueRegion, TissueMap};
 
 // Re-export tissue types from absorption module
-pub use crate::domain::medium::absorption::TissueType;
+pub use crate::domain::medium::absorption::AbsorptionTissueType;

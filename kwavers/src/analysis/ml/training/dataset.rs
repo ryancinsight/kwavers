@@ -5,7 +5,7 @@ use ndarray::{s, Array2};
 
 /// Training metrics for monitoring convergence
 #[derive(Debug, Clone)]
-pub struct TrainingMetrics {
+pub struct EpochTrainingMetrics {
     /// Epoch number
     pub epoch: usize,
     /// Training loss (data + physics weighted)

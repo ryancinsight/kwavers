@@ -27,14 +27,12 @@ pub mod ultrasound;
 pub mod unified_loader;
 
 pub use ceus_orchestrator::{CEUSOrchestrator, CEUSOrchestrators};
-pub use fusion::{
-    AffineTransform, FusedImageResult, FusionConfig, FusionMethod as FusionMethodType,
-};
+pub use fusion::{AffineTransform, FusedImageResult, FusionConfig, ImagingFusionMethod};
 pub use medical::{
     create_loader, CTImageLoader, DicomImageLoader, MedicalImageLoader, MedicalImageMetadata,
 };
 pub use multimodality_fusion::{
-    FusionEngine, FusionMethod, FusionParameters, ImageData, ImageModality,
-    MultimodalityFusionManager, RegistrationTransform, TransformationType,
+    FusionEngine, FusionParameters, ImageData, ImageModality, MultimodalityFusionManager,
+    MultimodalityFusionMethod, RegistrationTransform, TransformationType,
 };
 pub use unified_loader::{MedicalImageBatchLoader, UnifiedMedicalImageLoader};

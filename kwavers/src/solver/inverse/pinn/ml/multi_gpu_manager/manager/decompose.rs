@@ -1,6 +1,6 @@
 //! Decomposition strategies for multi-GPU task distribution.
 
-use super::super::types::{DecompositionStrategy, WorkUnit};
+use super::super::types::{MultiGpuDecompositionStrategy, WorkUnit};
 use super::MultiGpuManager;
 use crate::core::error::KwaversResult;
 
@@ -15,7 +15,7 @@ impl MultiGpuManager {
         geometry_bounds: (f64, f64, f64, f64),
     ) -> KwaversResult<Vec<WorkUnit>> {
         match &self.decomposition {
-            DecompositionStrategy::Spatial {
+            MultiGpuDecompositionStrategy::Spatial {
                 dimensions,
                 overlap,
             } => self.decompose_spatially(
@@ -24,10 +24,10 @@ impl MultiGpuManager {
                 *dimensions,
                 *overlap,
             ),
-            DecompositionStrategy::Temporal { steps_per_gpu } => {
+            MultiGpuDecompositionStrategy::Temporal { steps_per_gpu } => {
                 self.decompose_temporally(total_collocation_points, *steps_per_gpu)
             }
-            DecompositionStrategy::Hybrid {
+            MultiGpuDecompositionStrategy::Hybrid {
                 spatial_dims,
                 temporal_steps,
                 overlap,

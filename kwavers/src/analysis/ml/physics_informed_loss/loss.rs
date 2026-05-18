@@ -1,6 +1,8 @@
 //! PhysicsInformedLoss implementation.
 
-use super::{LossComponents, PhysicsInformedLoss, PhysicsLossConfig, WeightSchedule};
+use super::{
+    PhysicsInformedLoss, PhysicsInformedLossComponents, PhysicsLossConfig, WeightSchedule,
+};
 use crate::core::error::KwaversResult;
 use ndarray::{Array2, Array3};
 use std::collections::VecDeque;
@@ -155,7 +157,7 @@ impl PhysicsInformedLoss {
         let total = lambda_data.mul_add(data_loss, lambda_physics * physics_loss);
 
         if self.config.track_history {
-            let components = LossComponents {
+            let components = PhysicsInformedLossComponents {
                 epoch: self.current_epoch,
                 data_loss,
                 physics_loss,
@@ -239,7 +241,7 @@ impl PhysicsInformedLoss {
     }
 
     #[must_use]
-    pub fn loss_history(&self) -> Vec<LossComponents> {
+    pub fn loss_history(&self) -> Vec<PhysicsInformedLossComponents> {
         self.loss_history.iter().copied().collect()
     }
 

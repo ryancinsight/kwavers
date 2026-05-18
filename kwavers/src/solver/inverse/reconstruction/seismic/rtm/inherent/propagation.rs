@@ -19,10 +19,8 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{s, Array3, Array4, Zip};
 
-use super::super::super::constants::{
-    DEFAULT_RICKER_FREQUENCY, DEFAULT_TIME_STEP, RTM_STORAGE_DECIMATION,
-};
-use super::super::super::wavelet::RickerWavelet;
+use super::super::super::constants::RTM_STORAGE_DECIMATION;
+use super::super::super::wavelet::SeismicRickerWavelet;
 use super::super::types::ReverseTimeMigration;
 
 impl ReverseTimeMigration {
@@ -44,8 +42,8 @@ impl ReverseTimeMigration {
         let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut pressure_prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
-        let wavelet = RickerWavelet::new(DEFAULT_RICKER_FREQUENCY);
-        let src_signal = wavelet.generate_time_series(DEFAULT_TIME_STEP, n_time_steps);
+        let wavelet = SeismicRickerWavelet::new(self.config.source_frequency_hz);
+        let src_signal = wavelet.generate_time_series(self.config.dt, n_time_steps);
 
         for (t, &src_val) in src_signal.iter().enumerate() {
             pressure[source_position] += src_val;

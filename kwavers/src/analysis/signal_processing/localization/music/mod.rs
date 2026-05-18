@@ -33,7 +33,7 @@
 //! - Wax, M., & Kailath, T. (1985). "Detection of signals by information theoretic criteria"
 //!   IEEE Trans. Acoust., Speech, Signal Process., 33(2), 387-392.
 
-use super::config::LocalizationConfig;
+use super::config::AcousticLocalizationConfig;
 use super::model_order::ModelOrderCriterion;
 use crate::analysis::signal_processing::localization::SourceLocation;
 
@@ -49,7 +49,7 @@ pub use processor::MUSICProcessor;
 #[derive(Debug, Clone)]
 pub struct MUSICConfig {
     /// Base localization config
-    pub config: LocalizationConfig,
+    pub config: AcousticLocalizationConfig,
 
     /// Number of sources to detect (None = automatic via AIC/MDL)
     pub num_sources: Option<usize>,
@@ -82,7 +82,7 @@ pub struct MUSICConfig {
 impl MUSICConfig {
     /// Create new MUSIC configuration
     #[must_use]
-    pub fn new(config: LocalizationConfig, num_sources: Option<usize>) -> Self {
+    pub fn new(config: AcousticLocalizationConfig, num_sources: Option<usize>) -> Self {
         let center_frequency = config.sampling_frequency / 4.0;
         Self {
             config,
@@ -149,7 +149,7 @@ impl MUSICConfig {
 
 impl Default for MUSICConfig {
     fn default() -> Self {
-        Self::new(LocalizationConfig::default(), Some(1))
+        Self::new(AcousticLocalizationConfig::default(), Some(1))
     }
 }
 

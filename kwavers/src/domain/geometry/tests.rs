@@ -5,7 +5,7 @@ use super::*;
 #[test]
 fn test_rectangular_1d() {
     let domain = RectangularDomain::new_1d(0.0, 10.0);
-    assert_eq!(domain.dimension(), Dimension::One);
+    assert_eq!(domain.dimension(), GeometryDimension::One);
     assert!(domain.contains(&[5.0]));
     assert!(!domain.contains(&[15.0]));
     assert_eq!(domain.measure(), 10.0);
@@ -14,7 +14,7 @@ fn test_rectangular_1d() {
 #[test]
 fn test_rectangular_2d() {
     let domain = RectangularDomain::new_2d(0.0, 1.0, 0.0, 2.0);
-    assert_eq!(domain.dimension(), Dimension::Two);
+    assert_eq!(domain.dimension(), GeometryDimension::Two);
     assert!(domain.contains(&[0.5, 1.0]));
     assert!(!domain.contains(&[1.5, 1.0]));
     assert_eq!(domain.measure(), 2.0);
@@ -55,7 +55,7 @@ fn test_normal_computation() {
 #[test]
 fn test_spherical_2d() {
     let domain = SphericalDomain::new_2d(0.0, 0.0, 1.0);
-    assert_eq!(domain.dimension(), Dimension::Two);
+    assert_eq!(domain.dimension(), GeometryDimension::Two);
     assert!(domain.contains(&[0.5, 0.0]));
     assert!(!domain.contains(&[1.5, 0.0]));
     assert!((domain.measure() - PI).abs() < 1e-10);

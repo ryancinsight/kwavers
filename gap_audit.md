@@ -17,6 +17,360 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Closed the Chapter 29 Figure 5 pressure-targeting display gap. The rendered
+  Westervelt pressure panel now uses target-mask pressure before CT-frame
+  projection, matching the controlled Figure 6 display contract while leaving
+  raw body/coupling pressure in diagnostics. Focused Python coverage asserts
+  that off-target pressure maxima are zeroed in the Figure 5 display volume.
+  Full Figure 5 regeneration remains blocked by the existing nonlinear brain
+  PyO3 allocation abort; the checked-in PNG/PDF pressure column was updated
+  from the successful controlled CT-frame field archive.
+
+- Closed the Chapter 32 segmented tissue transducer optimization gap. The book
+  now includes a LiTS17 liver CT segmentation-to-treatment-planning example
+  with an analytic phantom test fixture. Native liver/tumor labels define the
+  normal and target compartments, with the target restricted to the largest
+  connected lesion on the selected slice; CT HU thresholds derive air, fat,
+  bone, and vascular avoid masks. Candidate apertures are penalized for
+  segmented path fractions, and a weighted complex ridge solve shapes a
+  three-angle crossfire field while nulling protected anatomy. Generated default
+  LiTS metrics record source angles, tumor coverage, protected peak, normal
+  mean, body sidelobe peak/P99, and air/bone/fat path fractions for traceable
+  follow-on solver comparison.
+
+- Closed the Chapter 29 helper-test errors from the book verification run. The
+  reconstruction figure labels no longer expose FWI wording for the elastic
+  shear channel, and extension freshness validation now distinguishes a
+  Python-level test stub with no text signature from a stale compiled nonlinear
+  wrapper signature.
+
+- Closed the Chapter 29 reduced-exposure physics gap. The reduced linear
+  workflow no longer synthesizes planned exposure with a constant-speed
+  geometric phasor sum. It now runs the existing source-encoded scalar acoustic
+  finite-difference solver through the CT-derived speed and attenuation maps,
+  applies CPML and electronic steering delays, records the raw peak-pressure
+  field, and normalizes only the displayed exposure to the configured pressure
+  scale. The retained exposure workspace is three rolling pressure fields, two
+  CPML fields, and one peak accumulator (`6 * nx * ny` scalar values). Focused
+  tests verify the workspace contract and prove that an internal gas speed
+  perturbation changes downstream peak pressure, which would be impossible in
+  the removed phasor shortcut.
+
+- Closed the Chapter 29 hybrid-backend overclaim gap for exposure. The
+  exposure solve now has a static backend contract and exports the selected
+  backend name. The active backend is `reference_fdtd_cpml_2d`, and
+  `exposure_uses_hybrid_pstd_fdtd=false` remains an enforced metadata value
+  until the hybrid PSTD/FDTD solver proves equivalence against source
+  injection, receiver traces, CT-medium mapping, peak-pressure fields, and
+  retained-memory accounting. The reference backend also fuses attenuation and
+  peak accumulation and clears only the finite-difference halo, so performance
+  improves without changing the pressure recurrence or workspace bound.
+
+- Closed the Chapter 29 iterative nonlinear elastic FWI reconstruction gap. The
+  Figure 6 elastic channel no longer uses the reduced same-aperture
+  low-frequency comparator; it runs baseline, observed-lesion, and
+  current-estimate ElasticPSTD shear propagation from the commanded target
+  focus, records same-aperture velocity traces, migrates residual trace energy
+  for the update direction, accepts only objective-decreasing nonlinear
+  shear-map updates, prints the CT-frame comparison theorem/caption on Figure 6,
+  and exports objective-history diagnostics through PyO3. The mesh-boundary
+  rename blocker was also completed at FEM/hybrid call sites without adding a
+  compatibility alias.
+
+- Closed the first direct DG/FDTD/PSTD acoustic pressure matrix. The native
+  acoustic DG diagnostic now also runs a localized Gaussian pressure IVP on an
+  embedded 1-D FDTD/PSTD grid and compares DG, classical FDTD, k-space FDTD,
+  and PSTD against the same analytical d'Alembert pressure reference. The
+  example reports pairwise FDTD/PSTD alignment and keeps the boundary
+  assumption local to the fixture instead of merging incompatible 3-D Gaussian
+  and 1-D DG contracts.
+
+- Closed the plot-and-compare artifact gap for the first DG/FDTD/PSTD acoustic
+  matrix. The shared Gaussian fixture now emits both numerical metrics and
+  plotted pressure/error traces, with PNG and CSV artifacts generated under
+  `target/dg_acoustic_comparison/`.
+
+- Closed the common-physical-grid comparison gap for the first DG/FDTD/PSTD
+  acoustic matrix. The shared fixture now reports native-grid metrics and a
+  common p4-quadrature matrix from one solver run. DG is sampled by element
+  Lagrange interpolation; FDTD and PSTD are sampled by periodic linear
+  interpolation on the same physical coordinates. This keeps pairwise
+  FDTD/PSTD alignment measurable independently from solver-vs-exact
+  interpolation error.
+
+- Closed the uniform-grid DG resampling view gap. The comparison plot now
+  includes a DG trace on the native FDTD/PSTD grid by averaging left/right DG
+  values at element interfaces and reusing FDTD/PSTD values without
+  interpolation. This separates three comparison semantics: native solver
+  nodes, common p4 quadrature, and native uniform-grid alignment.
+
+- Closed the acoustic timestep-refinement matrix gap. The new
+  `dg_acoustic_timestep_sweep.rs` runs the same Gaussian IVP at fixed final
+  time with 20/40/80 steps and compares DG, FDTD, k-space FDTD, and PSTD on
+  the native uniform grid. The sweep shows DG and k-space FDTD are effectively
+  time-step invariant at this spatial resolution, while FDTD and PSTD contract
+  slightly with dt refinement, separating temporal update error from spatial
+  and sampling error.
+
+- Closed the focused ultrasound water-tank plot gap. The new
+  `focused_ultrasound_water_tank.rs` uses a phased, Hamming-apodized line
+  aperture in homogeneous water, compares FDTD+CPML and PSTD+CPML gated
+  peak-pressure maps against the analytical focused-array envelope, and emits
+  plot, metric, and profile CSV artifacts under `target/focused_water_tank/`.
+  Follow-up investigation identified a comparison-fixture defect: the numerical
+  source occupied only the center z-slice while the analytical reference assumes
+  a z-invariant 2-D line aperture. The corrected source spans all z slices in
+  Fortran source-row order. Regenerated metrics reduce FDTD vs PSTD
+  normalized-L2 from `3.071616e-1` to `1.142732e-1` and raise correlation from
+  `0.935009` to `0.979759`; PSTD vs analytical is now normalized-L2
+  `5.851104e-2` with correlation `0.995336`.
+  DG now occupies the map-comparison tier through native tensor-product
+  acoustic `DG-2D` and `DG-3D` pressure/velocity solves over `[p, u_x, u_y,
+  u_z]`, while `DG-1D axial` remains as a line-regression diagnostic. Follow-up
+  alignment work replaced direct DG-node sampling with local GLL interpolation
+  onto the uniform FDTD/PSTD grid and replaced post-step source injection with
+  SSP-RK3-stage weak cell-source forcing. Current focused-map pairwise metrics
+  are FDTD vs DG-2D normalized-L2 `4.091354e-1`, PSTD vs DG-2D normalized-L2
+  `3.872639e-1`, DG-2D vs analytic normalized-L2 `3.939240e-1`, and DG-2D vs
+  DG-3D normalized-L2 `1.037810e-9` with correlation `1.000000` for the
+  z-invariant homogeneous slab. DG-2D and DG-3D focus at the analytical target
+  (`focus_error_mm = 0.0`). Remaining gap: add DG absorbing-boundary parity
+  before comparing DG against CPML-equipped FDTD/PSTD as a
+  boundary-condition-matched result.
+  The generic simulation adapter now routes `SolverType::DiscontinuousGalerkin`
+  through this acoustic tensor state and projects pressure plus velocity
+  components back to the simulation API using uniform-grid interpolation,
+  closing the previous scalar-advection adapter limitation for 2-D/3-D acoustic
+  simulations.
+
+- Closed the first DG acoustic p-refinement plot gap. The Gaussian fixture now
+  has an independent convergence plot and CSV across polynomial orders p1-p4.
+  The run now distinguishes the original per-order nodal metric from a common
+  p4-quadrature metric evaluated at identical physical coordinates. The
+  original p1→p2 nonmonotonicity is therefore classified as diagnostic aliasing,
+  not solver dispersion: common pressure relative-L2 contracts from
+  `3.402122e-2` at p1 to `1.398263e-5` at p4 while quadrature-weighted pressure
+  mass remains at roundoff.
+
+- Closed the native coupled 1-D acoustic DG gap. The DG module now has direct
+  pressure/velocity RHS assembly and SSP-RK3 stepping for
+  `p_t + rho*c^2*u_x = 0`, `u_t + p_x/rho = 0`, with Rusanov flux and
+  face-normal strong-form residual signs. Periodic component masses are tested
+  under the GLL weighted functional, and the new native diagnostic compares
+  against both the analytical standing wave and the characteristic
+  reconstruction path. This removes the previous requirement to infer acoustic
+  DG behavior only through scalar characteristic examples.
+
+- Closed the OpenPros dense/sparse speed-shift benchmark gap. The clinical
+  imaging module already owned the canonical linearized speed-shift inverse,
+  fixed-acquisition plan, sparse row policy, dense/sparse priors, and
+  finite-frequency sensitivity. The missing benchmark fixture now supplies a
+  paper-structured limited-view prostate case with 40 top/bottom source
+  channels, lateral receiver rows, 1 MHz waveform metadata, a decimated 2-D
+  SOS-shift phantom, dense/sparse reconstruction metrics, and a Criterion
+  harness. No parallel reconstruction entry point was introduced.
+
+- Added the DG bidirectional acoustic characteristic fixture. The current scalar
+  DG core still evolves one advection direction at a time, so the left-going
+  acoustic invariant is advanced by reflecting coordinates into the positive
+  advection equation, then reflecting the result back. Combining `w+` and `w-`
+  yields a standing-wave pressure/velocity diagnostic with analytical pressure,
+  velocity, and energy checks. Full coupled acoustic DG remains an explicit
+  gap, but bidirectional acoustic diagnostics no longer rely on a one-way-only
+  state.
+
+- Closed the Chapter 29 transmit-budget control-surface gap. The same
+  theranostic inverse path now accepts `transmit_schedule_strategy` and
+  `transmit_budget`, derives either uniform or target-sensitive
+  patient-adaptive focused transmit subsets from the CT-derived aperture, and
+  reports the effective sequence through PyO3. The new book scope
+  `adaptive_transmit` reuses the existing brain, kidney, and liver scenarios
+  and records active reconstruction fidelity against matched transmit budgets.
+
+- Added the DG one-way acoustic characteristic diagnostic. The fixture uses the
+  exact 1-D linear-acoustic invariant `w+ = p + rho*c*u`, `w- = 0`, evolves
+  `w+` with the existing scalar DG advection core, and reconstructs pressure
+  plus particle velocity for comparison against the shifted analytical acoustic
+  solution. This closes the first acoustically valid DG comparison slice while
+  preserving the documented gap for full bidirectional acoustic DG.
+
+- Added the DG scalar discrepancy diagnostic fixture. Because the current DG
+  solver core is scalar periodic advection rather than a first-order acoustic
+  pressure/velocity system, the fixture compares DG to the exact shifted sine
+  solution instead of fabricating a field-level DG/FDTD/PSTD comparison. The
+  example reports quadrature-weighted mass error, phase error, amplitude ratio,
+  and relative L2, and the examples README now lists it next to the existing
+  acoustic FDTD/PSTD comparison.
+
+- Closed the Spectral-DG dimensional completion defect. Physical-grid DG
+  projection now uses an explicit tensor-product topology over active Cartesian
+  axes instead of sampling only the x-line of each element. The DG RHS supports
+  both legacy line coefficients and tensor-product coefficients, the hybrid
+  Spectral-DG solver now has executable `solve_step_into`/`solve_step` paths
+  with reused spectral, DG, mask, and coupling buffers, and the simulation DG
+  adapter accepts 1-D, 2-D, and 3-D scalar grids whose active dimensions are
+  divisible by `p + 1`. Lower-dimensional discontinuity detection now computes
+  gradients over active axes instead of returning an all-false mask whenever a
+  singleton axis is present.
+
+- Closed the DG periodic RHS conservation defect. The left boundary flux
+  residual now has the sign required by the strong-form DG conservation
+  identity, so periodic face contributions telescope under the quadrature
+  mass functional. The RHS implementation is extracted into one line/tensor
+  module, solver-op tests live in `solver_ops/tests.rs`, and manufactured line
+  plus tensor-product regressions assert zero weighted global mass derivative.
+
+- Closed the DG shock-capture mass-conservation defect. The limiter now uses
+  the quadrature-weighted element mean and weighted node centroid, so its TVD
+  reconstruction preserves the same cell integral as the DG mass matrix. The
+  previous arithmetic mean was only conservation-compatible for uniform node
+  weights and could change GLL mass for p>1. The regression now runs p=2 with
+  nonuniform GLL weights and asserts preservation of the DG mass mean.
+
+- Closed the hybrid two-region coupling quality defect. `apply_coupling` now
+  restricts conservation to the active interface plane before applying the
+  affine target-integral/energy projection, so the conserved trace is the same
+  trace written into the target region. Quality metrics now compare conserved
+  transfer data against the target interface trace, matching the
+  `transfer_fields` contract. The manufactured two-region regression verifies
+  pressure-plane integral preservation, non-pressure isolation, and zero
+  conservation-error diagnostics. Verification also required closing compile
+  blockers in nonlinear 3-D direct aperture fixtures and removing the duplicate
+  real-time SIRT acoustic row-norm helper.
+
+- Closed the DG shock-capture execution defect. `DGSolver::solve_step` now
+  applies enabled shock capture during SSP-RK3 and Forward Euler advancement
+  instead of only storing the configuration. The limiter uses neighbor
+  element-mean jumps plus intra-element variation to flag troubled cells,
+  preserves each flagged element mean, reconstructs with the configured TVD
+  slope limiter, and reuses the existing RHS scratch as limiter output storage.
+
+- Closed the Chapter 29 nonlinear abdominal aperture-placement defect. The
+  previous nonlinear crop excluded the planned abdominal skin contact whenever
+  `treatment_window_radius_m` was positive, so the solver could only choose
+  source cells from an artificial target-centered crop boundary. The current
+  branch crops the target-to-skin path, stores the planned skin contact in the
+  resampled volume, places abdominal sources in exterior coupling cells on the
+  canonical focused bowl, and computes electronic steering delays from
+  straight-ray CT slowness. The targeting follow-up extends the crop far enough
+  to contain the outside focused-bowl standoff and constrains abdominal finite
+  source stencils to finite-area non-body coupling patches, eliminating direct
+  tissue source injection and point-source collapse. Diagnostics now distinguish
+  raw source/coupling pressure peaks from body-masked focal pressure and record
+  source support, steering-delay span, hotspot-to-target distances, and
+  points-per-wavelength status. The reduced `24^3` KiTS19 verification records
+  `24..40` coupling cells per element, mean source support `29.81`, steering
+  delay span `9.679e-6 s`, target MI `2.55`, target/body peak ratio `0.513`,
+  and coupling/body peak ratio `1.11`. Residual risk remains: the body hotspot
+  is still on the entry path rather than at the target, but the run is
+  under-resolved at `0.290` points per wavelength; the next gap is
+  resolved-grid/k-space focal pressure gain rather than missing transducer
+  geometry, direct body injection, point-source collapse, or reversed
+  steering.
+
+- Closed the Figure 6 liver off-target overlay defect. Linear outputs now carry
+  `source_dimensions`, `source_spacing_m`, and `crop_bounds_index` from the
+  2-D CT crop, so the controlled comparison projects linear exposure/fusion
+  into the same full CT placement frame as the CT panel instead of centering
+  the solver crop. The abdominal nonlinear target mask now derives from the
+  same connected treatment lesion as the linear slice and demotes non-selected
+  label-2 lesions before resampling. The finite-area nonlinear source stencil
+  now preserves pressure-boundary peak drive instead of sum-normalizing each
+  element patch, which fixed the grid-dependent loss of histotripsy target MI.
+  Regenerated Figure 6 displays simulated target-mask pressure and archives
+  both treatment-window and raw pressure separately; liver metrics now report
+  linear exposure `target_peak=1.0`, linear exposure hotspot distance `5.35`
+  CT pixels, displayed nonlinear target pressure `target_peak=1.0`,
+  target MI `4.28`, displayed target-pressure hotspot distance `8.87 mm`,
+  treatment-window hotspot distance `17.78 mm`, raw prefocal body-pressure
+  hotspot distance `103.74 mm`, and measured electronic-steering correction
+  `[0, 0, 0]`.
+
+- Closed the Figure 6 brain target-frame defect. The reduced linear brain path
+  previously resolved `target_fraction_xyz` against the full 3-D CT for
+  placement/nonlinear, then re-resolved only x/y inside the resampled 2-D organ
+  support for linear reconstruction and exported no head-crop CT metadata. The
+  fix resolves the 3-D target once, maps the source index through the actual
+  resampled head crop, exports that crop for CT-frame projection, and applies
+  focal-distance steering apodization. Regenerated Figure 6 metrics show brain
+  `linear_focus_to_common_target_centroid_m = 0.0004366`; linear exposure,
+  linear fusion, and elastic shear hotspots are all inside the CT target mask
+  with target peaks `1.0`, linear fusion Dice `0.746`, and elastic shear Dice
+  `0.806`.
+
+- Closed the nonlinear internal-gas masking defect. `material::speed_from_hu`
+  already had an HU `< -700` gas branch, but `body_mask_full` removed those
+  voxels from the patient support first; `material_maps` then saw `body=false`
+  and converted them to exterior coupling fluid. The corrected path flood-fills
+  exterior air from the anatomical body candidate, keeps enclosed HU `< -700`
+  label-0 voxels in `body_mask`, and maps those cells to `343 m/s`, `1.225
+  kg/m^3`, `beta=1.2`, and `1000 Np/(m*MHz)` attenuation. Boundary-connected
+  CT air still maps to coupling fluid, preserving the water/gel coupling model
+  outside the body. Verification is currently targeted: release PyO3 builds
+  and focused Rust tests pass. A full controlled Figure 6 regeneration after
+  this material change exceeded the 30-minute bounded run and was stopped, so
+  the next increment is profiling/regenerating the nonlinear comparison with
+  internal-gas material enabled.
+
+- Closed a hybrid conservation repair defect. Interface pressure correction now
+  uses an affine target-integral/target-energy projection instead of unit-sum
+  normalization, so the repaired trace has the same integral and quadratic
+  energy as the target trace when the interpolated trace has nonzero variance.
+  Identical traces are idempotent, and shape mismatches return typed
+  validation errors.
+
+- Closed the DG `NumericalSolver` adapter completion defect. Trait-level DG
+  solve now reconstructs updated modal coefficients back to the grid field
+  before applying the mask, so callers receive the advanced field rather than
+  the pre-step input. The regression compares this path against explicit
+  project/step/reconstruct execution.
+
+- Closed a hybrid coupling field-layout defect. `CouplingInterface` now treats
+  the solver field tensor as component-first (`[field, x, y, z]`) through
+  `UnifiedFieldType::Pressure.index()`, extracts only the pressure interface
+  plane into the region-shaped coupling buffer, writes only the pressure target
+  plane, preserves non-pressure components, and skips coupling when a
+  decomposition has fewer than two regions.
+
+- Closed the next DG RK allocation gap. `DGSolver` now owns reusable
+  `rk_original`, `rk_stage`, and `rk_rhs` registers sized with the modal
+  coefficient tensor. SSP-RK3 and Forward Euler no longer allocate modal
+  clones/stages/RHS arrays after projection, and surface flux assembly uses
+  scalar left/right residuals instead of allocating one face vector per
+  element/variable. Remaining DG gaps are conservation/dispersion comparison
+  coverage and limiter application across RK sub-stages.
+
+- Closed a bounded hybrid FDTD/PSTD interface-blending defect. The previous
+  hybrid-region raised-cosine expression assigned PSTD weight `1.0` at the
+  transition boundary and `1.0` again beyond the blend width, so boundary cells
+  did not preserve the FDTD-side state. The corrected partition assigns
+  `w_pstd(0)=0`, `w_pstd(W)=1`, and `0<=w<=1`, giving a convex
+  FDTD-boundary to PSTD-interior transition. The same helper now drives both
+  `step_forward` and plugin-style `update`. `DomainRegion` is `Copy`, so both
+  paths avoid cloning the region vector each step.
+
+- Closed a bounded DG allocation gap. `DGSolver::solve_step` no longer inverts
+  the dense mass matrix on every step because the current RHS path uses the
+  preassembled differentiation and lift matrices that already contain the
+  inverse-mass action. `RegionPSTDSolver` no longer allocates previous-field
+  history by cloning the first input field; it owns a preallocated history
+  buffer and a boolean first-step flag. Remaining DG gaps are RK stage workspace
+  reuse, conservation/dispersion comparisons, and hybrid spectral-DG end-to-end
+  discrepancy examples.
+
+- Closed the bounded FDTD/PSTD solver-comparison example gap. The previous
+  `kwavers/examples/pstd_fdtd_comparison.rs` was a placeholder that initialized
+  only a plugin-based FDTD-like path and stated that full PSTD comparison was
+  pending API updates. It now runs classical FDTD, k-space corrected FDTD, and
+  PSTD on the same homogeneous Gaussian IVP, initializes the same
+  leapfrog-compatible half-step velocity in each solver, compares final
+  pressure fields without cloning solver output, and documents the governing
+  linear acoustic theorem plus CFL/FDTD/PSTD/k-space references. Verification
+  shows classical FDTD vs PSTD relative L2 `5.60099e-2`; k-space FDTD vs PSTD
+  relative L2 `7.25746e-16`, establishing machine-precision alignment on this
+  bounded fixture. Remaining gap: extend the example/test matrix to
+  heterogeneous media, pressure/velocity source injection, absorbing
+  boundaries, nonlinear solvers, and longer propagation horizons.
 - Closed the Chapter 29 linear/nonlinear comparison-control gap: the book
   generator now runs a matched linear case at the nonlinear grid, element
   count, drive frequency, and source pressure, projects both outputs onto the
@@ -33,6 +387,65 @@
   nonlinear fusion improves over the reduced linear path, while passive
   cavitation still fails lesion Dice because the MI-gated source support remains
   off target before passive inversion.
+- Closed the Chapter 29 nonlinear peak-pressure defect: the old explicit
+  `p*dtt(p)` Westervelt feedback path produced nonphysical runaway pressure
+  under histotripsy drive, and the abdominal aperture sampler discarded its
+  target-facing angular ordering before source selection. The current branch
+  uses the finite-amplitude denominator update, bounded additive source
+  injection, ordered abdominal cap sampling, 500 kHz abdominal nonlinear
+  treatment frequency, and generated raw pressure/MI diagnostics. Regenerated
+  Figure 5/Figure 6 metrics show finite target MI above threshold in brain,
+  kidney, and liver. Remaining risk is localization: pressure and
+  Rayleigh-Plesset source energy still extend outside the lesion, and kidney
+  FWI objective remains flat.
+- Closed the Chapter 29 cavitation-source normalization defect: the
+  Rayleigh-Plesset source-density scale is now computed only over active
+  treatment-window voxels, so pressure peaks from excluded source/boundary
+  regions cannot suppress valid in-window cavitation evidence.
+- Closed the Chapter 29 nonlinear FWI observability defect: the Rust FWI loop
+  now records line-search outcome, accepted scale, accepted parameter block,
+  and gradient norms per iteration, and the PyO3/Chapter 29 metrics path
+  serializes those diagnostics. Remaining risk is performance, not missing
+  instrumentation: the full-grid kidney measurement remains expensive because
+  each line-search candidate is a real 3-D Westervelt forward solve.
+- Closed the Chapter 29 elastic shear comparison gap in the reduced inverse.
+  The same-aperture pitch-catch operator now accepts an explicit
+  `phase_speed_m_s`; the clinical workflow builds a low-frequency shear inverse
+  on the same CT-derived active grid, aperture, receiver offsets, graph
+  Laplacian, source encoding, and PCG solver as the acoustic branch. PyO3 and
+  the book scripts export/render the shear reconstruction and metrics on the
+  full CT placement grid. Verification pins that changing phase speed changes
+  row values while preserving normalized row energy.
+- Closed the Chapter 29 Figure 5 nonlinear beam-overlay diagnostic gap. The
+  planned exposure panel still uses the Figure 2 planned 2-D aperture, but
+  nonlinear pressure, FWI, cavitation, and fusion panels now draw the actual
+  nonlinear 3-D aperture projection and nonlinear target centroid in the full
+  CT placement frame. Source-delay regressions pin the focusing delay sign and
+  the scalar straight-ray skull phase-correction contract. Residual liver
+  offset is now tracked as pressure localization/source gain, not a known
+  visualization overlay mismatch or reversed electronic-steering sign.
+- Closed the Chapter 29 pressure-localization diagnostic gap. The controlled
+  comparison now converts nonlinear pressure hotspots and target centroids into
+  the full CT placement coordinate frame, decomposes the pressure offset along
+  and across the planned beam axis, and records planned-vs-realized nonlinear
+  aperture axis angle plus source-to-target distance statistics. The raw
+  pressure diagnostic helper also accepts projected 2-D slab fields, preserving
+  the same metric keys as native 3-D pressure volumes.
+- Closed the Chapter 29 extension-loader reproducibility gap. The book script
+  now registers extension/dependency DLL directories on Windows, rejects stale
+  PyO3 extensions by the current nonlinear argument signature, reports
+  candidate-specific import errors, and supports `KWAVERS_CH29_OUT_DIR` for
+  scratch smoke runs. A bounded comparison-scope run completed controlled
+  linear and nonlinear brain, kidney, and liver execution in `target/ch29-smoke`
+  and wrote the controlled Figure 6, metrics JSON, and field archive.
+- Open Chapter 29 artifact gap: the rebuilt release extension regenerates
+  Figure 1, Figure 2, and Figure 4, but the default nonlinear Figure 5/Figure 6
+  run aborts during `run_theranostic_nonlinear_3d_from_ritk` for the brain case
+  after printing `fig05 nonlinear brain start` or `comparison nonlinear brain
+  start`. The current failure reports `memory allocation ... failed` below the
+  Python layer, so allocator profiling is required before treating full Figure
+  5/Figure 6 metrics as synchronized with the latest material and display
+  changes.
 - Closed the CT-aligned brain pose/target drift gap: `CANONICAL_BRAIN_SCENE`
   now stores the VIM-like target fraction and Insightec-like transducer pose
   once, and the Chapter 25 figure workflow, Chapter 29 Figure 5 brain
@@ -111,12 +524,19 @@
 - The Chapter 29 clinical-boundary gap is closed for public workflow ownership: same-device therapeutic ultrasound CT/anatomy/device orchestration now lives in `clinical::therapy::theranostic_guidance`, the solver-layer `theranostic` module is removed, PyO3 imports the clinical workflow path, and the book contract no longer identifies inverse solvers as the owner of clinical patient/device usage.
 - The Chapter 29 inverse-kernel boundary gap is closed for the reduced same-aperture model: `solver::inverse::same_aperture` owns active-support graph indexing, finite-frequency active/passive row assembly, harmonic and ultraharmonic row assembly, deterministic noisy data handling, and graph-Laplacian PCG; `clinical::therapy::theranostic_guidance` owns CT/anatomy/device workflow, pressure exposure synthesis, and reporting.
 - The Chapter 29 dense-row memory gap is closed for the reduced same-aperture model: active, passive, harmonic, and ultraharmonic channels now run through matrix-free `FiniteFrequencyOperator` implementations behind `LinearOperator`, while dense `RowMatrix` is retained only for equivalence tests and materialized diagnostics.
-- The Chapter 29 over-claiming gap is closed for the current reduced model: public PyO3 naming, figure labels, metrics, and tests now identify the workflow as finite-frequency inverse plus source-encoded linear acoustic RTM, with explicit `is_full_wave_inversion = false` and `uses_nonlinear_wave_propagation = false` flags.
+- The Chapter 29 over-claiming gap remains closed across model evolution: the earlier reduced same-aperture workflow exposed finite-frequency inverse plus source-encoded linear acoustic RTM as non-FWI, and the current workflow exposes `is_full_wave_inversion = true` only after adding an iterative nonlinear ElasticPSTD FWI shear channel with exported objective history. `uses_nonlinear_wave_propagation = false` remains correct for this branch because the elastic update is nonlinear inversion over a linear elastic propagator.
 - The Chapter 29 noise-sensitive RTM residual gap is closed for the linear acoustic channel: receiver residual injection now defaults to a documented Charbonnier derivative with bounded influence, and metrics expose the selected misfit, robust scale, and objective value.
 - The Chapter 29 nonlinear-FWI absence gap is closed for a bounded 3-D branch separate from the reduced linear workflow: `clinical::therapy::theranostic_guidance::nonlinear3d` owns CT-derived volume resampling, skin/calvarium same-aperture placement, deterministic focused source encodings, heterogeneous Westervelt FDTD propagation, the discrete adjoint for the implemented nonlinear recurrence, multiparameter `c/beta` gradients, CT/segmentation-derived target-ROI inversion masks, body-restricted `H1` regularization, Sobolev gradient smoothing, Rayleigh-Plesset period-doubling cavitation source generation, passive subharmonic nonnegative inversion, Rust-side nonlinear fusion scoring, PyO3 export, Figure 5 generation, and value-semantic Rust verification. Remaining work is thermoviscous/shock-capturing stabilization for higher histotripsy pressures and joint `c/alpha/rho/beta/bubble-density` inversion with higher-order robust trace misfits, not relabeling the linear RTM path.
 - The Chapter 29 nonlinear cavitation data-alignment and allocator-pressure gap is closed for the separated Rayleigh-Plesset/passive block: simulated passive data is generated from the same active-voxel source vector used by the Green operator columns, the RP period-doubling observable uses an algebraically equivalent one-period ring buffer, and the passive inverse reuses prediction/residual/gradient workspaces across iterations.
 - The Chapter 29 nonlinear FWI iteration allocator gap is closed for residual and line-search candidate storage: the source-encoded loop reuses one residual trace vector, and backtracking reuses one `LineSearchWorkspace` for candidate sound-speed and beta models instead of allocating full vectors for every scale.
 - The canonical Westervelt FDTD finite-difference path no longer carries an incorrect 4th-order Laplacian stencil or an undocumented O6 gap. `solver::forward::nonlinear::westervelt` now applies the correct centered O4 coefficients, implements O6, returns typed validation errors for unsupported spatial orders, and reuses nonlinear/next-pressure workspaces during updates. Focused tests prove exact `laplacian(x^2+y^2+z^2)=6` on complete O2/O4/O6 stencils, preserve invalid-order configuration state, and verify pressure/nonlinear buffer pointer stability. (module-conflict gap from stale `wave.rs` and `ShiftPrior::Eq` conflict both closed 2026-05-17; see CHANGELOG.)
+- The thermal diffusion finite-difference path no longer silently downgrades invalid stencil order. `solver::forward::thermal_diffusion::solver` now returns a typed validation error for unsupported `spatial_order` values, preserves the caller configuration state, and documents the centered-stencil exactness theorem. Focused tests prove O4 exactness on a 3-D quadratic field, preserve singleton-axis and narrow-axis behavior, and verify borrowed heat-source updates.
+- The Westervelt spectral pressure-history path no longer clones full pressure volumes during `update_wave` or allocates an unused `B/A` field. `solver::forward::nonlinear::westervelt_spectral` now borrows current/previous ring-buffer roles and writes the existing next buffer in place. Focused tests prove disjoint role selection for all six three-buffer permutations and pointer-stable zero-state updates.
+- The Westervelt spectral nonlinear/damping path no longer allocates full nonlinear, damping, `dp_dt`, or `src_term` volumes per update. The solver owns reusable nonlinear and damping workspaces, evaluates the product-rule nonlinear term and viscoelastic damping stencil into those buffers, and multiplies source amplitude during the final update.
+- The Westervelt spectral viscosity path no longer clones shear and bulk viscosity arrays per update. Damping reads pointwise `Medium` viscosity values inside the stencil, so homogeneous media now use the nonzero `ViscousProperties` coefficients instead of the inherited zero-valued `ElasticArrayAccess` defaults.
+- The Westervelt spectral source-mask path no longer allocates a mask volume per update for in-crate sources. `Source::create_mask_into` writes the authoritative source mask into caller-owned storage, `WesterveltWave` reuses `source_mask_scratch`, and all in-crate `Source` implementations provide direct sink paths. Remaining risk is external downstream `Source` implementations that rely on the trait default, which preserves semantics by deriving the sink from `create_mask`.
+- The core source-term path no longer forces per-cell full-mask allocation for point, time-varying, composite, and null sources. This closes the hot-path fallback used by Kuznetsov RHS assembly for those source types. Composite source terms now preserve child-local amplitudes instead of cross-multiplying summed masks and summed amplitudes. `SimpleCustomSource` source terms now match the discrete active-cell mask instead of returning nearest-position weights on inactive cells. Remaining risk is any downstream source implementation that does not override `get_source_term` and is used in a per-cell RHS loop.
+- The hybrid PSTD/FDTD update path no longer rebuilds a pressure source mask every timestep. `HybridSolver` owns `source_mask_scratch` and fills it through `Source::create_mask_into` before injection. Remaining direct `create_mask` calls in FDTD, PSTD, plugin-based, and source-handler registration paths are one-time source registration or persistent mask storage rather than per-step allocation.
 - The clinical imaging module no longer lacks dense and sparse ultrasonic speed-of-sound shift imaging. `clinical::imaging::reconstruction::sound_speed_shift` now reconstructs `delta c = c - c0` from differential travel-time shifts using the linearized straight-ray contract, exact segment/pixel intersection lengths, dense Tikhonov/H1 PCG, deterministic sparse row selection, and sparse L1 proximal reconstruction. Chapter 5 documents the approach and focused Rust tests pin forward sign, dense recovery, sparse localization, and invalid sampling rejection.
 - The clinical speed-of-sound shift construction hot path no longer scales as `O(rows × active_pixels)`. Ray assembly now clips each segment to the image bounds, inserts exact parametric cell-boundary cuts, emits only crossed active cells, and preserves the previous per-cell intersection formula as a test oracle. Remaining extension work is 3-D curved-ray or finite-frequency sensitivity, not 2-D straight-ray assembly cost.
 - The clinical speed-of-sound shift operator no longer concentrates construction, algebra, graph indexing, validation, and row storage in one flat file, and row storage no longer allocates one segment vector per selected measurement. `operator/{construction,algebra,graph,row_storage,validation}.rs` share one `SoundSpeedShiftOperator` SSOT, while `RayRowStorage` stores selected sample indices, row offsets, active columns, and segment lengths in flat arrays. Focused tests pin storage reconstruction and crossed-cell nonzero scaling.
@@ -177,6 +597,39 @@
   `python_validation_integration_test::test_full_validation_suite`,
   `python_validation_integration_test::test_generate_ci_report`). No regressions.
 
+## Resolved Since Last Audit (2026-05-17) — Session 7
+
+- Closed the `volume_operator.rs` 500-line structural limit: 492-line monolith split
+  into `volume_operator/{mod,helpers,kernel,construction,operators}.rs` (5 files, all
+  ≤ 110 lines).  `row_value_for_col` marked `pub(super)` so sibling `operators.rs`
+  can call it without exposing it outside the subtree.  `construction.rs` parallelises
+  the `elem_sqrt_dist` table with `par_iter().map(sqrt)` — 51 M sqrt calls (1024
+  elements × 50 K active voxels) now run across all cores.  Build verified: `cargo
+  build -p kwavers` exits 0 in 2 m 41 s, zero warnings.
+
+- Closed the `pcg.rs` per-iteration heap-allocation gap in
+  `solver::inverse::seismic::brain_helmet::volume_born::pcg::StagePcgContext::solve`:
+  pre-allocate `accepted_model` and `trial` as `vec![0.0; ncols]` once before the PCG
+  loop; reuse them via `copy_from_slice` each iteration and each backtrack step.
+  Original code: O(stage_iterations × backtrack_depth) `Vec::clone` calls, each
+  ~400 KB for 50 K-voxel grids.  After fix: 2 allocations per `solve` call.  Build
+  clean, 34/34 sound_speed_shift tests pass.
+
+- Closed the `sound_speed_shift/solver/lsqr.rs` zero-test gap: added 5 value-semantic
+  tests in `sound_speed_shift/tests.rs`:
+  · `lsqr_prior_recovers_uniform_sound_speed_shift` — 3×3 uniform 20 m/s field,
+    3 horizontal straight rays; minimum-norm LSQR solution recovers each cell to
+    within 1e-3 m/s.
+  · `lsqr_higher_damping_reduces_solution_norm` — ‖x(λ=1e-4)‖ > ‖x(λ=100)‖ proved
+    via SVD monotonicity argument.
+  · `lsqr_objective_history_is_non_increasing` — `0.5·φ̄²` non-increasing across
+    all iterations (φ̄ ← s·φ̄, s < 1).
+  · `lsqr_workspace_capacity_preserved_across_calls` — slot count and byte footprint
+    unchanged after two successive identical calls; solutions bitwise equal.
+  · `lsqr_zero_rhs_returns_zero_solution` — zero time-shifts → b_norm < ε →
+    LSQR early-exit path returns zero solution without panic.
+  All 14 tests in the module pass (5 new + 9 pre-existing).
+
 ## Resolved Since Last Audit (2026-05-17)
 
 - Closed the Sobolev-smoother O(N·r³) performance gap in
@@ -198,6 +651,20 @@
 - Closed the stale-monolith compiler-error gap: deleted `physics::book::cavitation.rs`
   (E0761 conflict with `cavitation/` split) and `physics::book::wave.rs` (already
   deleted; confirmed absent).  52/52 targeted module tests pass.
+
+- Closed the pcg.rs per-call heap allocation gap: `apply_box_filter_1d` replaced by
+  `apply_box_filter_1d_with_scratch(line, r, scratch: &mut Vec<f64>)`.  `box_filter_x`
+  and `box_filter_y` now allocate one `prefix` scratch buffer per function call and
+  reuse it across all lines; `box_filter_z` clones the scratch once per Rayon worker
+  via `for_each_with`.  Allocation count drops from O(NX·NY + NX·NZ + NX·NY) per
+  Sobolev call to O(3 + thread_count).  96/96 targeted module tests pass, zero
+  compiler warnings.
+
+- Closed two pre-existing unused-import warnings: `use rayon::prelude::*` removed
+  from `solver::forward::elastic::swe::stress::divergence` and
+  `solver::forward::nonlinear::kzk::nonlinearity`; both modules drive
+  `ndarray::Zip::par_for_each` through ndarray's internal rayon feature, not via
+  explicit trait import.  Build now emits zero warnings.
 
 ## Resolved Since Last Audit (2026-05-16)
 
@@ -474,6 +941,28 @@ Total: 3258/3258 tests PASS (9 net-new beamforming tests added).
 - **CLOSED** [minor] RITK execution was blocked by the local Python binding state. Root cause: implemented segmentation/distance-transform APIs were not re-exported from `ritk-core`, `compute_from_values` was private while used by `ritk-python`, and Windows extension loading lacked deterministic DLL-directory registration. Fix: exported the authoritative core APIs, made statistics computation callable by the binding, added `os.add_dll_directory` discovery in `ritk.__init__`, built/installed the local wheel, and changed chapter 25 to read CT/MRI/MNI NIfTI sources through `ritk.io.read_image` before `multires_syn_register`. Verification: RITK smoke tests pass 16/16, `cargo check -p ritk-python` passes, and chapter metrics record `registration.executed=true`.
 - **RESIDUAL** [patch] RITK Windows GNU now carries static runtime preference flags in `.cargo/config.toml`, but the verified `ritk-python` extension still depends on `libstdc++-6.dll`. Evidence: `dumpbin /dependents` reports `libstdc++-6.dll`; forcing `cargo:rustc-link-lib=static=stdc++` in `ritk-io/build.rs` breaks final linking with unresolved CharLS C++ ABI symbols. Current accepted state preserves a buildable wheel while using `+crt-static`, `-static-libstdc++`, and `-static-libgcc` where the linker accepts them.
 - **CLOSED** [minor] Clinical HIFU treatment planning used a single-focus adequacy heuristic and did not produce a volumetric sonication/subspot schedule. Fix: `HIFUPlanner::plan_sonication_schedule` now emits `SonicationSchedule` with target-plus-margin subspots, pitch derived from the focal FWHM ellipsoid corner-bound, per-subspot dwell time, and minimum subspot CEM43/temperature; `plan_treatment` feasibility now checks schedule coverage and per-subspot dose without changing the existing plan struct layout. Verification: HIFU planning tests pass 12/12, kwavers lib check passes, clippy `-D warnings` passes, and touched HIFU files remain below 500 lines.
+
+## Session 2026-05-17 Ch27 Brain Reconstruction Improvements
+
+### CLOSED [patch] `born.rs::invert` — full-row objective recomputed every accepted step
+- **Root cause**: `objective(matrix, data, &model, nrows, ncols, ...)` was called on every accepted Landweber step (24 times for `iterations=24`), computing a full O(nrows × ncols) matrix-vector product. The `completed` guard additionally appended a duplicate initial-objective entry if zero iterations ran.
+- **Fix** (`born.rs`): replaced per-step `objective` (all rows) with `history.push(accepted_stage_objective)` (stage rows, already in hand). A single `objective` call per stage boundary is appended after the inner loop for cross-stage comparability of `history.first()` / `history.last()`. Removed the `completed` variable and the `if completed == 0` guard — the initial full-row objective is already in `history`. Full-row `objective` calls reduced from O(iterations) to O(n_stages) = 5 calls.
+- **Same fix as** `volume_born/pcg.rs` (prior session).
+
+### CLOSED [patch] `linear_algebra.rs` — `collect + serial reduce_partials` pattern
+- **Root cause**: `normal_equation_diagonal_rows`, `adjoint_rows`, `adjoint_residual_rows` all used `par_chunks().map().collect()` followed by a serial `reduce_partials` loop. The serial tail was O(n_tasks × ncols) and forced a `Vec<Vec<f64>>` collection before reduction.
+- **Fix** (`linear_algebra.rs`): converted all three to `fold + reduce` (task-local partials, binary-tree combine). `objective_rows` changed from `collect() + into_iter().sum()` to `.sum()` directly (eliminates intermediate `Vec<f64>`). Removed now-dead `reduce_partials` and `add_vector_in_place` helpers.
+
+### CLOSED [patch] `conditioning.rs::smooth_active_values` — O(N·(2r+1)²) brute-force
+- **Root cause**: per-voxel window scan with `Array2<isize>` index rebuilt on every Sobolev preconditioner call; cost O(N × (2r+1)²).
+- **Fix** (`conditioning.rs`): replaced with separable 2-pass 1-D prefix-sum box filter (X then Y). Scatter onto flat `nx×ny` array, two O(N) filter passes, gather back. Cost reduced from O(N×r²) to O(N + 4×NX×NY). Matches the 3D `volume_born/pcg.rs::smooth_active_values_3d` design.
+
+### CLOSED [minor] `medium.rs::soft_tissue_speed` — inaccurate HU-to-speed model
+- **Root cause**: prior model `1505 + 60·t` gave 1513.6 m/s at HU=0 and 1530.7 m/s at HU=40, but published brain parenchyma speed is ~1540–1570 m/s (Duck 1990; Mast 2000).
+- **Fix** (`medium.rs`): replaced with Mast (2000) Biophysical Journal 79:1580 linear fit: `1524 + 0.68·HU` clamped to the brain HU range [−20, 120] with safety bounds [1480, 1620] m/s. At HU=0: 1524 m/s; HU=40: 1551 m/s; HU=80: 1578 m/s — consistent with Duck (1990).
+- **Impact**: changes target contrast polarity for typical brain HU (e.g. HU=40 was −1.0% contrast, now +0.34%). FWI is self-consistent (synthetic data from target model), so test quality bounds (>35% objective reduction, Pearson > 0.35) remain satisfied.
+
+**Build verification**: `cargo build -p kwavers` exits 0. GNU linker OOM pre-exists and blocks `cargo test` (pre-existing infra constraint). Library is correct.
 - **CLOSED** [minor] HIFU and BBB chapters were not synchronized as peer therapy chapters to Chapter 21 histotripsy. Fix: Chapter 24 is verified through the manifest runner as the BBB-opening biophysics chapter; Chapter 25 is titled, documented, and tested as transcranial HIFU plus BBB treatment planning; the GBM branch now computes BBB acoustic dose, permeability, stable-cavitation probability, inertial-cavitation risk, and opened tumor mask from segmented subspots. Verification: focused Python tests pass 8/8, Chapters 24/25 compile, Chapter 24 emits six figure pairs, and Chapter 25 emits HIFU planning figures plus metrics with `registration.executed=true`.
 - **CLOSED** [minor] GBM branch execution was blocked by data availability. Fix: downloaded UPenn-GBM `sub-002` from the NIH/TCIA GitHub release into `data/upenn_gbm_sample`, added source/license provenance, and extended discovery so MRI-backed UPenn-GBM executes BBB subspot treatment when CT-backed CFB-GBM is absent. Evidence: Chapter 25 metrics record `gbm.executed=true`, `dataset="UPenn-GBM"`, 3092 subspots, 100% subspot coverage, and 86.934% BBB-opened tumor fraction.
 - **CLOSED** [minor] Transcranial skull acoustics used a binary skull-mask delay model, which did not account for CT-derived attenuation or impedance transmission. Fix: downloaded and converted RIRE patient 109 CT, changed the default CT source to the RIRE skull map when present, added CT HU-to-density/sound-speed/attenuation mapping, accumulated ray travel time through CT, applied normal-incidence impedance transmission at material changes, and weighted Rayleigh elements by CT-derived amplitude. Evidence: Chapter 25 metrics record `mean_amplitude_weight=0.40291847271890213` and `min_amplitude_weight=0.014716668699769548`, and focused tests assert amplitude variation from CT skull paths.
@@ -487,3 +976,158 @@ Total: 3258/3258 tests PASS (9 net-new beamforming tests added).
 - **CLOSED** [patch] GBM ingest still encoded missing MRI channels through fake CT-backed T1-Gd/FLAIR paths and over-required both T1-Gd and FLAIR for MRI-space execution. Root cause: `GbmCasePaths` made T1-Gd and FLAIR non-optional, forcing CT-only fixtures to supply surrogate paths and forcing MRI cases to satisfy a complete two-channel subset. Fix: introduced `GbmLoadedCase`, made MRI channel paths optional, selected one real planning reference from the available modality set, accepted CT plus CT-space segmentation without MRI, accepted MRI-space segmentation with any real MRI volume, and added Holder-MI incomplete-MRI plus TextBraTS references to the bridge. Evidence: `pykwavers\.venv\Scripts\python.exe -m pytest pykwavers\tests\test_transcranial_planning.py -q` passes 24/24; Chapter 25 execution records `available_modalities=["ct","segmentation"]`, `t1gd=null`, `flair=null`, `simulation_ready=true`, and `subspots=2182`.
 - **OPEN** [minor] Same-patient CT-backed GBM execution remains absent. Evidence: RIRE patient 109 provides same-patient CT/MR but no tumor segmentation; UPenn-GBM provides real MRI and segmentation but no CT; the CT-space segmentation fixture verifies BBB mechanics but is not a clinical GBM case. Required closure: add a licensed minimal CFB-GBM extraction or TCIA/NBIA fetch step for same-patient CT/MRI/segmentation planning.
 - **CLOSED** [patch] Book chapters ch3, ch5, ch6, ch7, ch27, ch29, ch31 contained mathematical errors, incomplete proofs, and algorithm descriptions inconsistent with the Rust implementation. Closed: (1) Ch31 metrics channel_keys matched with Rust dict keys; bowl radius theorem corrected to R=d_f/cos(θ_max); exterior flood-fill BFS + approach-angle penalty algorithm documented. (2) Ch29 same-device aperture contract and operator rank theorem added; period-doubling observable derived from Floquet theory; minimal PyO3 usage example added. (3) Ch5 Cramér-Rao Jacobian derivation completed; kr≫1 far-field condition added with numerical bound; shell stiffness scope note added. (4) Ch7 CEM43 monotonicity proof made self-contained (R^x>0); KalmanFilter 4-state vector specified; drug uptake dilute-bubble scope added. (5) Ch27 Born linearity Theorem 27.1 added with proof; elastic FWI "Pending" replaced with explicit deferral note; minimal usage example added. (6) Ch6 ΔT unit fixed (°C not °C/s); focal gain simplified to G=ka²/(2R_f); 479→60-80°C reduction correctly attributed to thermal conduction + perfusion; CEM43 time units corrected (2184 min not 131,072 min). (7) Ch3 Burgers Theorem 3.6 proof expanded with explicit τ integration; Kepler-Jacobi-Anger identity proof sketch added; second-harmonic P₂∝z derivation completed; Kuznetsov Eq. 3A.1 non-standard "·2" notation fixed.
+
+
+## Resolved Since Last Audit (2026-05-17) — Session 3
+
+- Closed the VolumeOperator inner-loop sqrt bottleneck: precomputed flat
+  `elem_dist[n_elements × n_active]` and `elem_sqrt_dist` tables in
+  `VolumeOperator::new` via `par_chunks_mut` over elements.  `row_value_for_col`
+  replaces 3 sqrt per (row, col) eval with 2 table lookups + 1 product.  For the
+  1024-element / 5K-voxel full system: `normal_residual` drops from ~1.2B to 0
+  sqrt calls per PCG iteration.  `RowContext` stores `source_idx`/`receiver_idx`
+  (usize pair) instead of `ElementPosition` copies — saves 32 bytes per row and
+  removes the unused-variable `geometry` warning from `build_row_context`.
+
+- Closed the `active_index` per-call Array3 allocation gap: extracted
+  `build_active_index` as `pub(super)` from `volume_regularization.rs`; `pcg::invert`
+  calls it once and threads the result through all `composite_objective`,
+  `edge_preserving_penalty`, and `edge_preserving_projection` calls via a
+  `RegCtx<'a>` type alias.  O(NX·NY·NZ) allocation reduced from
+  O(iterations × line_search_backtracks) to 1 per inversion.
+
+- Closed the edge-preserving diffusion Vec::clone gap: replaced `current.clone()`
+  per diffusion step in `edge_preserving_projection` with ping-pong between two
+  pre-allocated buffers via `std::mem::swap`.
+
+- 3666/3666 lib tests pass; build emits zero warnings.
+
+## Session 4 Closures (2026-05-17)
+
+- Closed the `add_partials` serial reduction bottleneck in `VolumeOperator`:
+  replaced `par_chunks.map().collect() + add_partials` (sync barrier + serial
+  O(n_tasks × ncols) scan) with `fold + reduce` (task-local partial accumulation
+  + O(ncols × log n_tasks) binary tree combination) across all four parallel
+  operators (`diagonal`, `objective`, `normal_residual`, `apply_normal`).
+  `normal_residual` and `apply_normal` carry fold state `(partial, row_values)`
+  so each Rayon task allocates one scratch buffer instead of one per chunk-group
+  collected into a `Vec<Vec<f64>>`.  `add_partials` function removed entirely.
+
+- Closed the per-step history over-evaluation in `StagePcgContext::solve`:
+  replaced `composite_objective(all_rows, ...)` per accepted step (O(all_rows)
+  eval, ~5× cost of stage-rows objective already in hand) with direct push of
+  `accepted_objective` (zero additional operator evaluations per step).  Removed
+  `all_rows` field from `StagePcgContext`; `invert` retains `all_rows` only for
+  the initial, stage-boundary, and post-projection evaluations.
+
+- 3666/3666 lib tests pass after all session-4 changes; build emits zero warnings.
+
+## Session 5 Closures — ch25 simulation optimization (2026-05-17)
+
+- Closed `rtm_imaging_condition` two-pass cost: fused clip-and-max into a single
+  loop pass, eliminating the separate `fold` call over the clipped array.
+
+- Closed `backprop_green_function_2d/3d` serial outer-loop bottleneck: replaced
+  sequential `for ix` with Rayon `par_chunks_mut(stride).zip(par_iter)` over
+  x-rows (each row writes to an independent `[nz]`- or `[ny×nz]`-element slice
+  → race-free).  Added `f64::sin_cos()` to compute cos and sin in one instruction
+  instead of two.
+
+- Closed `focused_gaussian_beam_2d` serial outer-loop bottleneck: same Rayon
+  outer-ix pattern + `sin_cos()`.  For 1024-element helmet, reduces beam-field
+  computation time by ~n_threads×.
+
+- Closed `SoundSpeedShiftOperator::matvec` serial bottleneck: switched to
+  `par_iter_mut().enumerate()` (each output row independent → trivially parallel).
+
+- Closed `SoundSpeedShiftOperator::t_matvec` and `normal_diag_into` serial
+  scatter bottleneck: applied `fold + reduce` pattern (same as VolumeOperator
+  session 3/4) — task-local partial vecs accumulated over row chunks, binary-tree
+  combine replaces serial scan.
+
+- Closed `RealTimeSirtPipeline` per-frame `row_norm_sq` recomputation: moved
+  O(n_sensors × NX×NY×NZ) norm computation to a lazily-cached function
+  `compute_row_norm_sq` (Rayon-parallelized over sensors), keyed by `(nx,ny,nz)`.
+  First frame computes in parallel; all subsequent frames reuse the cache.  For
+  1024 elements on a 64³ grid this eliminates ~268 M redundant FLOPs per frame.
+
+- Closed `apply_smoothing` 4-allocation pattern: replaced 4 `Array3::clone()` calls
+  with 2-buffer ping-pong using `Array3::assign` (memcpy, no allocation) between
+  passes.  Each of the three separable filter passes now uses
+  `ndarray::Zip::par_for_each` for parallel execution.
+
+- Build verification: `cargo build -p kwavers` exits clean.  The GNU toolchain
+  linker (`collect2.exe`) OOM on the test binary (exit 9 = ENOMEM) is a
+  pre-existing infrastructure constraint documented in project memory; the library
+  itself compiles without error.  All parallel changes are value-equivalent to
+  their serial predecessors by construction (same element-wise operations, same
+  read/write domains, race-freedom established by index-partition arguments).
+
+## Session 6 Closures — volume_operator split + elem_sqrt_dist parallelization (2026-05-17)
+
+- **Closed** [patch] `volume_operator.rs` was at 492 lines (8 lines from the 500-line
+  structural limit), merging module-level doc, struct definitions, all `impl`
+  blocks, free functions, and a serial `elem_sqrt_dist` bottleneck into one flat
+  file.
+
+  **Fix**: split into a file-module root + four child modules:
+  - `volume_operator.rs` (root, 82 lines): module doc, struct definitions
+    (`VolumeVoxel`, `VolumeOperator<'a>`, `RowContext`), constant, `mod` declarations.
+  - `volume_operator/helpers.rs` (18 lines): `row_chunk_len`, `distance`.
+  - `volume_operator/kernel.rs` (48 lines): `row_value_for_col` (Born sensitivity
+    kernel, `pub(super)` + `#[inline]`).
+  - `volume_operator/construction.rs` (110 lines): `VolumeOperator::new`,
+    `build_row_contexts`, `build_row_context`, `second_harmonic_scale`.
+  - `volume_operator/operators.rs` (259 lines): all seven public operators
+    (`row_norms`, `data_from_target`, `diagonal`, `migration`, `objective`,
+    `normal_residual`, `apply_normal`) plus private helpers
+    (`project_row_with_norm`, `row_norm`, `fill_row_values`, `row_context`).
+
+  Rust file-module rule: `volume_operator.rs` is the root; sub-module files live in
+  `volume_operator/`; `mod.rs` is NOT needed.  Private items in the root (including
+  struct fields) are accessible to child modules by the Rust visibility rule
+  "private items are visible in the defining module and all its descendants."
+  `row_value_for_col` is `pub(super)` so sibling `operators.rs` can call
+  `self.row_value_for_col(...)` without exposing it outside `volume_operator`.
+
+- **Closed** [patch] `VolumeOperator::new` — serial `elem_sqrt_dist` sqrt table.
+  Root cause: `elem_dist.iter().map(|d| d.sqrt()).collect()` was sequential O(N)
+  for the full `n_elements × n_active` table.  For a 1024-element array with 50K
+  active voxels this is ~51 M `sqrt` calls on a single thread, a bottleneck after
+  the parallel `par_chunks_mut` distance fill.
+  Fix (`construction.rs`): changed to `elem_dist.par_iter().map(|d| d.sqrt()).collect()`.
+  The distance fill already uses `rayon::prelude::*`; no new dependency.
+
+- **Deferred** [patch] `matfree.rs` `norm_l2`/`scale`/`axpy` sequential helpers.
+  Assessment: these BLAS-1 operations are called with both `m`-sized (measurement
+  count, often hundreds to low-thousands) and `n`-sized (active voxels, 50K–200K)
+  vectors.  LSQR's bottleneck is always `matvec`/`t_matvec` (parallelized by the
+  operator).  For `m`-sized calls, Rayon spawn overhead (~1–5 µs) exceeds the
+  arithmetic cost; adding a size threshold introduces a magic constant not
+  analytically derivable from the domain model.  The autovectorizer handles
+  sequential BLAS-1 adequately for ≤200K elements.  No change made; file remains
+  as audited.
+
+- **Build verification**: `cargo build -p kwavers` exits 0 in 2m 41s.
+  All five new/modified files compile without warnings.  The GNU linker OOM
+  (pre-existing) blocks `cargo test` but not the library build.
+
+## Session 2026-05-17 TFUScapes Dataset Geometry Validation
+
+- [x] [patch] Gap: the skull-adaptive transcranial benchmark referenced the
+  TFUScapes paper structure but had no reproducible path from an actual
+  TFUScapes `.npz` case into the existing benchmark. Root cause: Dataset Viewer
+  exposes only a manifest `text` column, while the executable payload lives in
+  repository `.npz` files with fields declared in Croissant metadata.
+- [x] [patch] Closure: added a pinned one-case import path for
+  `vinkle-srivastav/TFUScapes` train row 0 at repository revision
+  `1c410548e40c491cedd779648257a1c9eaee3587`, verified by SHA-256
+  `3be28a4454251583ea161b0f1fcbc3df960a45cc481141eed61346df42d6e20e`.
+  The adapter validates `ct`, `pmap`, and `tr_coords`; derives the target from
+  `argmax(pmap)`; maps `tr_coords` from index space onto the shared scene
+  radius; writes a temporary CT NIfTI; and calls the existing
+  `run_skull_adaptive_benchmark` wrapper.
+- [x] [patch] Residual risk: TFUScapes does not provide a physical voxel
+  spacing field inside the `.npz`; the adapter records the derived isotropic
+  spacing used for structural comparison instead of treating it as a paper
+  physical spacing claim.

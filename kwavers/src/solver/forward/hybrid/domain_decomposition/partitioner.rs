@@ -1,10 +1,10 @@
 //! Domain partitioning algorithms
 
-use super::analyzer::QualityMetrics;
+use super::analyzer::DomainDecompQualityMetrics;
 use super::region::{DomainRegion, DomainType};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::solver::hybrid::config::DecompositionStrategy;
+use crate::solver::hybrid::config::HybridDecompositionStrategy;
 
 /// Partitions domain into regions for different solvers
 #[derive(Debug)]
@@ -38,10 +38,10 @@ impl DomainPartitioner {
     pub fn partition(
         &self,
         grid: &Grid,
-        metrics: &QualityMetrics,
-        strategy: DecompositionStrategy,
+        metrics: &DomainDecompQualityMetrics,
+        strategy: HybridDecompositionStrategy,
     ) -> KwaversResult<Vec<DomainRegion>> {
-        if let DecompositionStrategy::UserDefined(regions) = strategy {
+        if let HybridDecompositionStrategy::UserDefined(regions) = strategy {
             return Ok(regions);
         }
 
@@ -77,7 +77,7 @@ impl DomainPartitioner {
         &self,
         start: (usize, usize, usize),
         end: (usize, usize, usize),
-        metrics: &QualityMetrics,
+        metrics: &DomainDecompQualityMetrics,
     ) -> f64 {
         let mut sum = 0.0;
         let mut count = 0;

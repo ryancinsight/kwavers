@@ -83,12 +83,24 @@ fn test_loss_weights_default() {
 
 #[test]
 fn test_sampling_strategy_equality() {
-    assert_eq!(SamplingStrategy::Uniform, SamplingStrategy::Uniform);
-    assert_ne!(SamplingStrategy::Uniform, SamplingStrategy::Sobol);
+    assert_eq!(
+        ElasticCollocationSamplingStrategy::Uniform,
+        ElasticCollocationSamplingStrategy::Uniform
+    );
+    assert_ne!(
+        ElasticCollocationSamplingStrategy::Uniform,
+        ElasticCollocationSamplingStrategy::Sobol
+    );
 }
 
 #[test]
 fn test_activation_function_equality() {
-    assert_eq!(ActivationFunction::Tanh, ActivationFunction::Tanh);
-    assert_ne!(ActivationFunction::Tanh, ActivationFunction::Sin);
+    assert_eq!(
+        ElasticPinnActivationFunction::Tanh,
+        ElasticPinnActivationFunction::Tanh
+    );
+    assert_ne!(
+        ElasticPinnActivationFunction::Tanh,
+        ElasticPinnActivationFunction::Sin
+    );
 }

@@ -48,7 +48,7 @@ impl TreatmentStatus {
 
 /// Treatment plan
 #[derive(Debug, Clone)]
-pub struct TreatmentPlan {
+pub struct PatientTreatmentPlan {
     /// Unique plan identifier
     pub plan_id: String,
     /// Associated encounter
@@ -75,7 +75,7 @@ pub struct TreatmentPlan {
     pub success_criteria: Vec<String>,
 }
 
-impl TreatmentPlan {
+impl PatientTreatmentPlan {
     /// Create a new treatment plan
     pub fn new(
         encounter_id: EncounterId,

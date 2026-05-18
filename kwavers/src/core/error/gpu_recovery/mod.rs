@@ -16,7 +16,7 @@ pub mod timeout;
 
 pub use context::{GpuRecoveryStrategy, RecoveryContext, RecoveryResult};
 pub use device_lost::{DeviceLostRecovery, DeviceRecoveryResult};
-pub use fault_injection::{FaultInjectionConfig, FaultInjector, FaultScenario};
+pub use fault_injection::{FaultInjectionConfig, FaultInjector, GpuFaultScenario};
 pub use manager::GpuRecoveryManager;
 pub use oom::{OomRecovery, OomRecoveryConfig, OomRecoveryResult};
 pub use telemetry::{

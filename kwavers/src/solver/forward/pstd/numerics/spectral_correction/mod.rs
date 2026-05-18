@@ -45,7 +45,7 @@ pub struct SpectralCorrectionConfig {
     /// Enable spectral correction
     pub enabled: bool,
     /// Correction method
-    pub method: CorrectionMethod,
+    pub method: SpectralCorrectionMethod,
     /// CFL number for stability
     pub cfl_number: f64,
     /// Maximum correction factor (for stability)
@@ -54,7 +54,7 @@ pub struct SpectralCorrectionConfig {
 
 /// Correction method selection
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum CorrectionMethod {
+pub enum SpectralCorrectionMethod {
     /// Exact dispersion correction (most accurate)
     ExactDispersion,
     /// Treeby & Cox (2010) methodology
@@ -73,7 +73,7 @@ impl Default for SpectralCorrectionConfig {
             enabled: true,
             // Treeby & Cox 2010 canonical kappa = sinc(c_ref·dt·|k|/2),
             // matching k-wave-python's `kspace_solver.py` default.
-            method: CorrectionMethod::Treeby2010,
+            method: SpectralCorrectionMethod::Treeby2010,
             cfl_number: 0.3,
             max_correction: 2.0,
         }

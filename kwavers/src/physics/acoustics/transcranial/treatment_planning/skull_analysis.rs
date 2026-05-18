@@ -1,7 +1,7 @@
 //! Skull property characterization from CT density
 
 use super::planner::TreatmentPlanner;
-use super::types::SkullProperties;
+use super::types::TranscranialSkullProperties;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -10,7 +10,7 @@ impl TreatmentPlanner {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(crate) fn analyze_skull_properties(&self) -> KwaversResult<SkullProperties> {
+    pub(crate) fn analyze_skull_properties(&self) -> KwaversResult<TranscranialSkullProperties> {
         let (nx, ny, nz) = self.skull_ct.dim();
 
         // Convert Hounsfield units to acoustic properties
@@ -46,7 +46,7 @@ impl TreatmentPlanner {
             }
         }
 
-        Ok(SkullProperties {
+        Ok(TranscranialSkullProperties {
             sound_speed: speed_map,
             density: density_map,
             attenuation: attenuation_map,

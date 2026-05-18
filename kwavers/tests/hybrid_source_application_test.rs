@@ -1,4 +1,4 @@
-use kwavers::domain::boundary::PMLConfig;
+use kwavers::domain::boundary::DomainPmlConfig;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::homogeneous::HomogeneousMedium;
 use kwavers::domain::plugin::{Plugin, PluginContext, PluginFields};
@@ -25,7 +25,7 @@ fn test_hybrid_source_application() {
     );
 
     let pstd_config = PSTDConfig {
-        boundary: PSTDBoundaryConfig::PML(PMLConfig {
+        boundary: PSTDBoundaryConfig::PML(DomainPmlConfig {
             thickness: 4,
             ..Default::default()
         }),
@@ -63,7 +63,7 @@ fn test_hybrid_source_application() {
     let t = 0.25e-6; // Quarter period of 1MHz sine wave, amplitude should be 1.0
 
     // Create dummy boundary and sources list for context
-    let pml_config = PMLConfig {
+    let pml_config = DomainPmlConfig {
         thickness: 4,
         ..Default::default()
     };

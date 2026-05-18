@@ -6,7 +6,7 @@ use ndarray::Array3;
 
 /// Interpolation scheme for refinement/coarsening
 #[derive(Debug, Clone, Copy)]
-pub enum InterpolationScheme {
+pub enum AmrInterpolationScheme {
     /// Linear interpolation
     Linear,
     /// Cubic interpolation
@@ -18,7 +18,7 @@ pub enum InterpolationScheme {
 /// Conservative interpolator for AMR
 #[derive(Debug)]
 pub struct ConservativeInterpolator {
-    scheme: InterpolationScheme,
+    scheme: AmrInterpolationScheme,
 }
 
 impl Default for ConservativeInterpolator {
@@ -32,7 +32,7 @@ impl ConservativeInterpolator {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            scheme: InterpolationScheme::Conservative,
+            scheme: AmrInterpolationScheme::Conservative,
         }
     }
 
@@ -121,9 +121,11 @@ impl ConservativeInterpolator {
 
                     // Interpolate to refined mesh
                     let refined_region = match self.scheme {
-                        InterpolationScheme::Linear => self.prolongate(&coarse_region.to_owned()),
-                        InterpolationScheme::Cubic => self.prolongate(&coarse_region.to_owned()),
-                        InterpolationScheme::Conservative => {
+                        AmrInterpolationScheme::Linear => {
+                            self.prolongate(&coarse_region.to_owned())
+                        }
+                        AmrInterpolationScheme::Cubic => self.prolongate(&coarse_region.to_owned()),
+                        AmrInterpolationScheme::Conservative => {
                             self.prolongate(&coarse_region.to_owned())
                         }
                     };
@@ -163,9 +165,11 @@ impl ConservativeInterpolator {
         let mut fine = Array3::zeros((nx * 2, ny * 2, nz * 2));
 
         match self.scheme {
-            InterpolationScheme::Linear => self.linear_prolongation(coarse, &mut fine),
-            InterpolationScheme::Cubic => self.cubic_prolongation(coarse, &mut fine),
-            InterpolationScheme::Conservative => self.conservative_prolongation(coarse, &mut fine),
+            AmrInterpolationScheme::Linear => self.linear_prolongation(coarse, &mut fine),
+            AmrInterpolationScheme::Cubic => self.cubic_prolongation(coarse, &mut fine),
+            AmrInterpolationScheme::Conservative => {
+                self.conservative_prolongation(coarse, &mut fine)
+            }
         }
 
         fine
@@ -178,9 +182,11 @@ impl ConservativeInterpolator {
         let mut coarse = Array3::zeros((nx / 2, ny / 2, nz / 2));
 
         match self.scheme {
-            InterpolationScheme::Linear => self.linear_restriction(fine, &mut coarse),
-            InterpolationScheme::Cubic => self.cubic_restriction(fine, &mut coarse),
-            InterpolationScheme::Conservative => self.conservative_restriction(fine, &mut coarse),
+            AmrInterpolationScheme::Linear => self.linear_restriction(fine, &mut coarse),
+            AmrInterpolationScheme::Cubic => self.cubic_restriction(fine, &mut coarse),
+            AmrInterpolationScheme::Conservative => {
+                self.conservative_restriction(fine, &mut coarse)
+            }
         }
 
         coarse

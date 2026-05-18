@@ -77,7 +77,15 @@ pub(crate) fn prepare_volume(
     let crop_bounds_index = [bbox.x0, bbox.x1, bbox.y0, bbox.y1, bbox.z0, bbox.z1];
     let n = config.grid_size;
     let ct = resample::resample_scalar(ct_hu, bbox, n);
-    let label = if let Some(labels) = label_volume {
+    let single_target_labels = match (anatomy, label_volume, target.as_ref()) {
+        (AnatomyKind::Liver | AnatomyKind::Kidney, Some(labels), Some(target)) => {
+            Some(mask::single_target_label_volume(labels, target))
+        }
+        _ => None,
+    };
+    let label = if let Some(labels) = single_target_labels.as_ref() {
+        resample::resample_labels(labels, bbox, n)
+    } else if let Some(labels) = label_volume {
         resample::resample_labels(labels, bbox, n)
     } else {
         Array3::<i16>::zeros((n, n, n))
@@ -87,6 +95,7 @@ pub(crate) fn prepare_volume(
         (AnatomyKind::Brain, Some(center)) => Some(map_index_to_resampled_grid(center, bbox, n)),
         _ => None,
     };
+    let aperture_skin = aperture_skin_index.map(|skin| map_index_to_grid_index(skin, bbox, n));
     let (body_mask, target_mask) = mask::masks(
         anatomy,
         &ct,
@@ -134,6 +143,7 @@ pub(crate) fn prepare_volume(
         source_spacing_m,
         crop_bounds_index,
         aperture_direction,
+        aperture_skin,
         focus,
     })
 }
@@ -176,6 +186,20 @@ fn map_axis_to_resampled_grid(index: f64, min: usize, max: usize, n: usize) -> f
         return 0.0;
     }
     ((index - min as f64) * (n - 1) as f64 / (max - min) as f64).clamp(0.0, (n - 1) as f64)
+}
+
+fn map_index_to_grid_index(
+    index: [f64; 3],
+    bbox: crate::clinical::therapy::theranostic_guidance::geometry::IndexBounds3,
+    n: usize,
+) -> super::types::GridIndex {
+    let mapped = map_index_to_resampled_grid(index, bbox, n);
+    let to_index = |value: f64| value.round().clamp(0.0, (n - 1) as f64) as usize;
+    super::types::GridIndex {
+        x: to_index(mapped[0]),
+        y: to_index(mapped[1]),
+        z: to_index(mapped[2]),
+    }
 }
 
 fn focus_to_skin_direction(

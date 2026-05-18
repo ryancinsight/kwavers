@@ -209,12 +209,12 @@ fn sinc_normalized(x: f64) -> f64 {
 pub fn apply_antialiasing_filter(
     k_squared: &Array3<f64>,
     k_max_squared: f64,
-    filter_type: FilterType,
+    filter_type: PstdFilterType,
 ) -> Array3<f64> {
     let mut filter = Array3::from_elem(k_squared.dim(), 1.0);
 
     match filter_type {
-        FilterType::Smooth => {
+        PstdFilterType::Smooth => {
             // Smooth roll-off filter
             let transition_width = 0.1 * k_max_squared;
             let cutoff = 0.8 * k_max_squared;
@@ -228,7 +228,7 @@ pub fn apply_antialiasing_filter(
                     }
                 });
         }
-        FilterType::Sharp => {
+        PstdFilterType::Sharp => {
             // Sharp cutoff at Nyquist
             Zip::from(&mut filter)
                 .and(k_squared)
@@ -238,7 +238,7 @@ pub fn apply_antialiasing_filter(
                     }
                 });
         }
-        FilterType::None => {
+        PstdFilterType::None => {
             // No filtering
         }
     }
@@ -248,7 +248,7 @@ pub fn apply_antialiasing_filter(
 
 /// Type of anti-aliasing filter
 #[derive(Debug, Clone, Copy)]
-pub enum FilterType {
+pub enum PstdFilterType {
     /// No filtering
     None,
     /// Smooth roll-off filter

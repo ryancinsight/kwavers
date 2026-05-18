@@ -1,3 +1,53 @@
+//! Poroelastic Material Properties
+//!
+//! ## Physical Model
+//!
+//! A poroelastic material is a biphasic mixture of a solid elastic frame and
+//! a saturating viscous fluid.  The material is fully characterised by nine
+//! independent scalar parameters that appear in Biot's theory:
+//!
+//! | Symbol | Name | Unit | Constraint |
+//! |--------|------|------|------------|
+//! | φ | porosity | — | 0 < φ < 1 |
+//! | ρ_s | solid density | kg/m³ | > 0 |
+//! | ρ_f | fluid density | kg/m³ | > 0 |
+//! | K_s | solid bulk modulus | Pa | > 0 |
+//! | K_f | fluid bulk modulus | Pa | > 0 |
+//! | G | shear modulus of drained frame | Pa | > 0 |
+//! | κ | permeability | m² | > 0 |
+//! | η | fluid dynamic viscosity | Pa·s | > 0 |
+//! | α | tortuosity | — | ≥ 1 |
+//!
+//! ## Key Derived Quantities
+//!
+//! **Bulk density** (linear mixture rule):
+//! ```text
+//! ρ = (1 − φ) ρ_s + φ ρ_f
+//! ```
+//!
+//! **Effective bulk modulus** (Gassmann's equation, Gassmann 1951):
+//! ```text
+//! K_eff = 1 / ((1 − φ)/K_s + φ/K_f)
+//! ```
+//! This is the harmonic mean weighted by phase volume fractions.  It reduces
+//! to the Reuss lower bound for the undrained bulk modulus when frame stiffness
+//! effects dominate, and matches the Wood (1955) acoustic formula for
+//! soft-tissue limits.
+//!
+//! **Biot critical frequency** (Biot 1956 §6):
+//! ```text
+//! ω_c = φ η / (κ ρ_f α)
+//! ```
+//! Below ω_c the slow Biot wave is over-damped (diffusion regime).  Above ω_c
+//! both fast and slow P-waves propagate with the high-frequency phase velocities
+//! derived in `BiotTheory::compute_wave_speeds`.
+//!
+//! ## References
+//!
+//! - Biot M.A. (1956). J. Acoust. Soc. Am. 28(2), 168–191.
+//! - Gassmann F. (1951). Vierteljahrschrift Naturf. Ges. Zürich 96, 1–23.
+//! - Wood A.B. (1955). *A Textbook of Sound*. Bell & Hyman, London.
+
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Poroelastic material properties
@@ -145,13 +195,47 @@ impl PoroelasticMaterial {
         }
     }
 
-    /// Calculate bulk density ρ = (1-φ)ρ_s + φρ_f
+    /// Bulk density of the saturated mixture [kg/m³].
+    ///
+    /// ## Formula (linear volume-fraction mixture rule)
+    ///
+    /// ```text
+    /// ρ = (1 − φ) ρ_s + φ ρ_f
+    /// ```
+    ///
+    /// This is the exact result for a statistically homogeneous mixture where
+    /// phase volumes are non-overlapping.  It is used as ρ₁₁ + ρ₁₂ in Biot's
+    /// effective-density matrix when the coupling density ρ₁₂ = 0 (no tortuosity
+    /// correction).  Here, `bulk_density` is the full ρ for momentum balance.
     #[must_use]
     pub fn bulk_density(&self) -> f64 {
         (1.0 - self.porosity).mul_add(self.solid_density, self.porosity * self.fluid_density)
     }
 
-    /// Calculate effective bulk modulus (Gassmann's equation)
+    /// Effective bulk modulus of the saturated porous medium [Pa].
+    ///
+    /// ## Theorem (Gassmann 1951 / Reuss–Wood lower bound)
+    ///
+    /// **Statement.** For a statically iso-stress mixture (stress is uniform
+    /// across phases), the effective bulk modulus satisfies the harmonic mean:
+    ///
+    /// ```text
+    /// 1/K_eff = (1 − φ)/K_s + φ/K_f
+    /// ```
+    ///
+    /// **Proof sketch.** The total volumetric strain is the phase-averaged strain:
+    /// ε = (1−φ)ε_s + φε_f.  Under uniform stress σ, ε_s = σ/K_s and ε_f = σ/K_f.
+    /// Therefore K_eff = σ/ε = 1/[(1−φ)/K_s + φ/K_f].  (Wood 1955, §5.)
+    ///
+    /// **Bounds.** K_eff is the Reuss (lower) bound; the Voigt (upper) bound is
+    /// K_Voigt = (1−φ)K_s + φK_f.  For poroelastic media K_f < K_eff < K_s.
+    ///
+    /// ## References
+    ///
+    /// - Gassmann F. (1951). Vierteljahrschrift Naturf. Ges. Zürich 96, 1–23.
+    /// - Wood A.B. (1955). *A Textbook of Sound*. Bell & Hyman.
+    /// - Mavko G., Mukerji T., Dvorkin J. (2009). *The Rock Physics Handbook*
+    ///   §4.4. Cambridge University Press.
     #[must_use]
     pub fn effective_bulk_modulus(&self) -> f64 {
         let k_s = self.solid_bulk_modulus;
@@ -163,18 +247,31 @@ impl PoroelasticMaterial {
         1.0 / (term1 + term2)
     }
 
-    /// Calculate characteristic frequency (Biot critical frequency)
+    /// Biot critical angular frequency [rad/s].
     ///
-    /// ω_c = (φ η) / (κ ρ_f α)
+    /// ## Formula (Biot 1956 §6)
+    ///
+    /// ```text
+    /// ω_c = φ η / (κ ρ_f α)
+    /// ```
+    ///
+    /// ## Physical interpretation
+    ///
+    /// Below ω_c the slow Biot P-wave is in the viscosity-dominated (diffusion)
+    /// regime and attenuates within a fraction of a wavelength.  Above ω_c both
+    /// P-wave modes propagate with the phase velocities predicted by
+    /// `BiotTheory::compute_wave_speeds` (high-frequency limit).
+    ///
+    /// The transition from diffusive to propagative is analogous to the skin
+    /// depth in electromagnetism: δ = √(2η/(ω ρ_f φ κ)) where δ → 0 as ω → ∞.
+    ///
+    /// ## Reference
+    ///
+    /// Biot M.A. (1956). J. Acoust. Soc. Am. 28(2), 168–191, §6.
     #[must_use]
     pub fn characteristic_frequency(&self) -> f64 {
-        let phi = self.porosity;
-        let eta = self.fluid_viscosity;
-        let kappa = self.permeability;
-        let rho_f = self.fluid_density;
-        let alpha = self.tortuosity;
-
-        (phi * eta) / (kappa * rho_f * alpha)
+        (self.porosity * self.fluid_viscosity)
+            / (self.permeability * self.fluid_density * self.tortuosity)
     }
 }
 

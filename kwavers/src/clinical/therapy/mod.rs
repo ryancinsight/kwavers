@@ -20,10 +20,14 @@ pub mod therapy_integration;
 pub use clinical_scenarios::{
     intrinsic_threshold_pa, BenefitDetriment, HistotripsyRegime, HistotripsyScenario, PulsePattern,
 };
-pub use domain_types::{TherapyMechanism, TherapyModality, TherapyParameters, TreatmentMetrics};
+pub use domain_types::{
+    ClinicalTherapyMechanism, ClinicalTherapyModality, ClinicalTherapyParameters,
+    ClinicalTreatmentMetrics,
+};
 pub use hifu_planning::{
-    AblationTarget, FocalSpot, HIFUPlanner, HIFUTransducer, HIFUTreatmentPlan, SonicationSchedule,
-    SonicationSubspot, ThermalDose, TreatmentFeasibility,
+    AblationTarget, ClinicalHIFUTransducer, ClinicalHIFUTreatmentPlan, FocalSpot,
+    FocalSpotDoseEstimate, HIFUPlanner, SonicationSchedule, SonicationSubspot,
+    TreatmentFeasibility,
 };
 // 3D shear wave elastography workflows
 pub use swe_3d_workflows::{

@@ -14,8 +14,9 @@ pub use pipeline::{ComputePipeline, RenderPipeline};
 pub use uniforms::VolumeUniforms;
 pub use volume::VolumeRenderer;
 
-use crate::analysis::visualization::{FieldType, RenderQuality, VisualizationConfig};
+use crate::analysis::visualization::{RenderQuality, VisualizationConfig};
 use crate::core::error::KwaversResult;
+use crate::domain::field::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -58,7 +59,7 @@ impl Renderer3D {
     pub fn render_field(
         &mut self,
         field: &Array3<f64>,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
         match self.config.render_quality {
@@ -107,7 +108,7 @@ impl Renderer3D {
     pub async fn render_volume(
         &mut self,
         field: &Array3<f64>,
-        field_type: FieldType,
+        field_type: UnifiedFieldType,
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
         self.render_field(field, field_type, grid)
@@ -118,7 +119,7 @@ impl Renderer3D {
     ///
     pub async fn render_multi_volume(
         &mut self,
-        fields: Vec<(FieldType, &Array3<f64>)>,
+        fields: Vec<(UnifiedFieldType, &Array3<f64>)>,
         grid: &Grid,
     ) -> KwaversResult<Vec<u8>> {
         let mut iter = fields.into_iter();

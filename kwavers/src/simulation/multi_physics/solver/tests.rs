@@ -1,7 +1,9 @@
 //! Tests for multi-physics solver.
 
-use super::super::{CoupledPhysicsSolver, CouplingStrategy, MultiPhysicsConfig, PhysicsDomain};
-use super::core::MultiPhysicsSolver;
+use super::super::{
+    CoupledPhysicsSolver, MultiPhysicsConfig, PhysicsDomain, SimulationCouplingStrategy,
+};
+use super::core::SimulationMultiPhysicsSolver;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3};
@@ -66,7 +68,7 @@ impl CoupledPhysicsSolver for MockSolver {
 #[test]
 fn test_multi_physics_solver_creation() {
     let config = MultiPhysicsConfig::default();
-    let solver = MultiPhysicsSolver::new(config);
+    let solver = SimulationMultiPhysicsSolver::new(config);
 
     assert_eq!(solver.solvers.len(), 0);
     assert_eq!(solver.convergence_history.len(), 0);
@@ -74,7 +76,7 @@ fn test_multi_physics_solver_creation() {
 
 #[test]
 fn test_add_solver() {
-    let mut solver = MultiPhysicsSolver::new(MultiPhysicsConfig::default());
+    let mut solver = SimulationMultiPhysicsSolver::new(MultiPhysicsConfig::default());
     let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let mock_solver = Box::new(MockSolver::new(PhysicsDomain::Acoustic, grid));
 
@@ -84,8 +86,8 @@ fn test_add_solver() {
 
 #[test]
 fn test_explicit_coupling() {
-    let mut solver = MultiPhysicsSolver::new(MultiPhysicsConfig {
-        coupling_strategy: CouplingStrategy::Explicit,
+    let mut solver = SimulationMultiPhysicsSolver::new(MultiPhysicsConfig {
+        coupling_strategy: SimulationCouplingStrategy::Explicit,
         ..Default::default()
     });
 
@@ -106,8 +108,8 @@ fn test_explicit_coupling() {
 ///
 #[test]
 fn test_monolithic_coupling_single_domain() {
-    let mut solver = MultiPhysicsSolver::new(MultiPhysicsConfig {
-        coupling_strategy: CouplingStrategy::Monolithic,
+    let mut solver = SimulationMultiPhysicsSolver::new(MultiPhysicsConfig {
+        coupling_strategy: SimulationCouplingStrategy::Monolithic,
         max_iterations: 10,
         tolerance: 1e-8,
         ..Default::default()
@@ -129,8 +131,8 @@ fn test_monolithic_coupling_single_domain() {
 ///
 #[test]
 fn test_monolithic_coupling_two_domains_reaches_fixed_point() {
-    let mut solver = MultiPhysicsSolver::new(MultiPhysicsConfig {
-        coupling_strategy: CouplingStrategy::Monolithic,
+    let mut solver = SimulationMultiPhysicsSolver::new(MultiPhysicsConfig {
+        coupling_strategy: SimulationCouplingStrategy::Monolithic,
         max_iterations: 5,
         tolerance: 1e-8,
         relaxation_factor: 0.5,

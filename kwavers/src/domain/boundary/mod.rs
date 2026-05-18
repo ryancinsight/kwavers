@@ -21,9 +21,9 @@
 //!
 //! ### Time-Domain Solver
 //! ```rust,ignore
-//! use kwavers::domain::boundary::{PMLBoundary, PMLConfig};
+//! use kwavers::domain::boundary::{PMLBoundary, DomainPmlConfig};
 //!
-//! let pml_config = PMLConfig { thickness: 20, alpha: 2.0 };
+//! let pml_config = DomainPmlConfig { thickness: 20, alpha: 2.0 };
 //! let mut boundary = PMLBoundary::new(pml_config)?;
 //!
 //! // Apply during time stepping
@@ -60,7 +60,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use ndarray::{Array3, ArrayViewMut3};
+use ndarray::{Array1, Array3, ArrayViewMut3};
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -77,7 +77,7 @@ pub mod traits;
 pub mod types;
 
 pub use bem::{BemBoundaryCondition, BemBoundaryManager};
-pub use config::{BoundaryParameters, BoundaryType};
+pub use config::{BoundaryParameters, SolverBoundaryKind};
 pub use coupling::{
     AdaptiveBoundary, ImpedanceBoundary, MaterialInterface, MultiPhysicsInterface, SchwarzBoundary,
 };
@@ -85,16 +85,37 @@ pub use fem::{FemBoundaryCondition, FemBoundaryManager};
 pub use field_updater::{FieldUpdater, GradientFieldUpdater};
 pub use periodic::{PeriodicBoundaryCondition, PeriodicConfig};
 pub use traits::{
-    AbsorbingBoundary, BoundaryCondition, BoundaryDirections, BoundaryDomain, BoundaryLayer,
-    BoundaryLayerManager, FieldType, PeriodicBoundary, ReflectiveBoundary,
+    AbsorbingBoundary, BoundaryCondition, BoundaryDirections, BoundaryDomain, BoundaryFieldType,
+    BoundaryLayer, BoundaryLayerManager, PeriodicBoundary, ReflectiveBoundary,
 };
+pub use types::BoundaryType;
 pub use types::{
-    AcousticBoundaryType, BoundaryComponent, BoundaryFace, BoundarySpec, ElasticBoundaryType,
-    ElectromagneticBoundaryType,
+    AcousticBoundaryType, BoundaryFace, BoundarySpec, ElasticBoundaryType,
+    ElectromagneticBoundaryType, FaceBoundaryComponent,
 };
-// Note: BoundaryType from types module is canonical SSOT
-// BoundaryType from config module is legacy - will be deprecated
-pub use types::BoundaryType as CanonicalBoundaryType;
+
+/// Precomputed per-index PML damping factors for the CPML split-field formulation.
+///
+/// Both velocity (staggered-sigma) and density (collocated-sigma) sets are provided.
+/// Each `vel_*[i]` = `exp(-σ_sg[i] · Δt/2)` and `den_*[i]` = `exp(-σ[i] · Δt/2)`.
+///
+/// The fused update `u = pml · (pml · u_old − (Δt/ρ) · grad_p)` requires only
+/// O(N) multiplications per step instead of O(N) transcendental evaluations.
+#[derive(Debug, Clone)]
+pub struct PmlExpFactors {
+    /// `exp(-σ_x_sgx[i] · Δt/2)` — staggered-grid PML factor for `ux`.
+    pub vel_x: Array1<f64>,
+    /// `exp(-σ_y_sgy[j] · Δt/2)` — staggered-grid PML factor for `uy`.
+    pub vel_y: Array1<f64>,
+    /// `exp(-σ_z_sgz[k] · Δt/2)` — staggered-grid PML factor for `uz`.
+    pub vel_z: Array1<f64>,
+    /// `exp(-σ_x[i] · Δt/2)` — collocated PML factor for `rhox`.
+    pub den_x: Array1<f64>,
+    /// `exp(-σ_y[j] · Δt/2)` — collocated PML factor for `rhoy`.
+    pub den_y: Array1<f64>,
+    /// `exp(-σ_z[k] · Δt/2)` — collocated PML factor for `rhoz`.
+    pub den_z: Array1<f64>,
+}
 
 /// Trait for runtime boundary condition implementations.
 ///
@@ -198,11 +219,24 @@ pub trait Boundary: Debug + Send + Sync {
         self.apply_acoustic_directional(field, grid, time_step, axis)
     }
 
+    /// Return precomputed per-index PML damping factors for use in fused updates.
+    ///
+    /// Returns `Some(PmlExpFactors)` for CPML boundaries that precompute
+    /// `exp(-σ·Δt/2)` arrays at construction.  Returns `None` for all other
+    /// boundary kinds; callers must fall back to `apply_acoustic_directional` /
+    /// `apply_velocity_pml_directional` in that case.
+    ///
+    /// The returned arrays are owned clones (one allocation at solver construction
+    /// time); no allocation occurs per step when the fused path is active.
+    fn pml_exp_factors_owned(&self) -> Option<PmlExpFactors> {
+        None
+    }
+
     /// Applies boundary conditions to the light fluence rate field (spatial domain).
     fn apply_light(&mut self, field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize);
 }
 
 // Time-domain boundary conditions (FDTD, PSTD)
 pub use cpml::{CPMLBoundary, CPMLConfig, PerDimensionAlpha, PerDimensionPML};
-pub use pml::{PMLBoundary, PMLConfig};
+pub use pml::{DomainPmlConfig, PMLBoundary};
 pub use smoothing::{BoundarySmoothing, BoundarySmoothingConfig, SmoothingMethod};

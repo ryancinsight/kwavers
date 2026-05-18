@@ -1,14 +1,14 @@
 //! Tests for uncertainty quantification framework.
 
 use super::quantifier::UncertaintyQuantifier;
-use super::types::{UncertaintyConfig, UncertaintyMethod};
+use super::types::{MlUncertaintyConfig, MlUncertaintyMethod};
 use ndarray::Array3;
 
 #[test]
 fn test_uncertainty_quantifier_creation() {
     // MonteCarloDropout: bayesian=Some, conformal=None, ensemble=None, sensitivity=None
-    let config = UncertaintyConfig {
-        method: UncertaintyMethod::MonteCarloDropout,
+    let config = MlUncertaintyConfig {
+        method: MlUncertaintyMethod::MonteCarloDropout,
         num_samples: 10,
         confidence_level: 0.95,
         dropout_rate: 0.1,
@@ -32,7 +32,7 @@ fn test_uncertainty_quantifier_creation() {
 fn test_beamforming_uncertainty() {
     // confidence_score = signal_quality.clamp(0,1) = 0.8
     // uniform image (all 1.0): all neighbors == center → variance=0 → uncertainty_map=0.0
-    let config = UncertaintyConfig::default();
+    let config = MlUncertaintyConfig::default();
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
 
     let image = Array3::from_elem((32, 32, 16), 1.0_f32);
@@ -60,7 +60,7 @@ fn test_beamforming_uncertainty() {
 
 #[test]
 fn test_confidence_check() {
-    let config = UncertaintyConfig::default();
+    let config = MlUncertaintyConfig::default();
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
 
     let image = Array3::from_elem((16, 16, 8), 1.0);

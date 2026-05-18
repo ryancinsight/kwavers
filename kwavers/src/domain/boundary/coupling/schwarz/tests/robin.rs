@@ -1,7 +1,7 @@
 //! Robin transmission condition tests for SchwarzBoundary.
 
 use super::super::SchwarzBoundary;
-use crate::domain::boundary::coupling::types::{BoundaryDirections, TransmissionCondition};
+use crate::domain::boundary::coupling::types::{BoundaryDirections, BoundaryTransmissionCondition};
 use ndarray::Array3;
 
 #[test]
@@ -17,7 +17,7 @@ fn test_schwarz_robin_condition() {
     let beta = 0.0;
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Robin { alpha, beta });
+        .with_transmission_condition(BoundaryTransmissionCondition::Robin { alpha, beta });
 
     let original_value = interface_field[[5, 5, 5]];
 
@@ -50,7 +50,7 @@ fn test_schwarz_robin_with_nonzero_beta() {
     let beta = 2.0;
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Robin { alpha, beta });
+        .with_transmission_condition(BoundaryTransmissionCondition::Robin { alpha, beta });
 
     let mut interface_view = interface_field.view_mut();
     boundary.apply_transmission(&mut interface_view, &neighbor_field);
@@ -73,7 +73,7 @@ fn test_schwarz_robin_zero_alpha() {
     let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 25.0;
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Robin {
+        .with_transmission_condition(BoundaryTransmissionCondition::Robin {
             alpha: 0.0,
             beta: 0.0,
         });
@@ -103,7 +103,7 @@ fn test_schwarz_robin_analytical_validation() {
     let beta = 0.0;
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Robin { alpha, beta });
+        .with_transmission_condition(BoundaryTransmissionCondition::Robin { alpha, beta });
 
     let original_center = interface_field[[nx / 2, ny / 2, nz / 2]];
 
@@ -136,7 +136,7 @@ fn test_schwarz_robin_energy_stability() {
     let alpha = 1.0;
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Robin { alpha, beta: 0.0 });
+        .with_transmission_condition(BoundaryTransmissionCondition::Robin { alpha, beta: 0.0 });
 
     let mut interface_view = interface_field.view_mut();
     boundary.apply_transmission(&mut interface_view, &neighbor_field);

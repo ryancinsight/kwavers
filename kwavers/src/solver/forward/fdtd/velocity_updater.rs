@@ -111,34 +111,55 @@ impl FdtdSolver {
             return self.update_velocity_staggered(dt);
         }
 
-        // Collocated (non-staggered) update
-        let (mut grad_x, mut grad_y, mut grad_z) =
-            self.central_operator.gradient(self.fields.p.view())?;
+        // Collocated (non-staggered) update.
+        //
+        // ## Zero-allocation optimization
+        //
+        // `dvx_scratch`, `dvy_scratch`, and `divergence_scratch` are pre-allocated at
+        // construction (shape `(nx, ny, nz)` — same as pressure) and are unused at
+        // velocity-update time: they are next written by `update_pressure_cpu` in the
+        // same step, so reusing them here eliminates three `Array3<f64>` heap allocations
+        // per time step with no data-hazard risk.
+        //
+        // For a 128³ grid this saves 3 × 128³ × 8 = 48 MiB of allocations per step.
+        self.central_operator
+            .apply_x_into(self.fields.p.view(), &mut self.dvx_scratch)?;
+        self.central_operator
+            .apply_y_into(self.fields.p.view(), &mut self.dvy_scratch)?;
+        self.central_operator
+            .apply_z_into(self.fields.p.view(), &mut self.divergence_scratch)?;
 
         if let Some(ref mut cpml) = self.cpml_boundary {
-            cpml.update_and_apply_p_gradient_correction(&mut grad_x, 0);
-            cpml.update_and_apply_p_gradient_correction(&mut grad_y, 1);
-            cpml.update_and_apply_p_gradient_correction(&mut grad_z, 2);
+            cpml.update_and_apply_p_gradient_correction(&mut self.dvx_scratch, 0);
+            cpml.update_and_apply_p_gradient_correction(&mut self.dvy_scratch, 1);
+            cpml.update_and_apply_p_gradient_correction(&mut self.divergence_scratch, 2);
         }
 
-        // v^{n+1/2} = v^{n-1/2} - dt/ρ * grad(p)
-        let velocity_components = [
-            &mut self.fields.ux,
-            &mut self.fields.uy,
-            &mut self.fields.uz,
-        ];
-        let gradients = [&grad_x, &grad_y, &grad_z];
-
-        for (vel_component, grad_component) in velocity_components.into_iter().zip(gradients) {
-            Zip::from(vel_component)
-                .and(grad_component)
-                .and(&self.materials.rho0)
-                .par_for_each(|v, &grad, &rho| {
-                    if rho > 1e-9 {
-                        *v -= dt / rho * grad;
-                    }
-                });
-        }
+        // v^{n+1/2} = v^{n-1/2} − dt/ρ₀ · grad(p^n)
+        Zip::from(&mut self.fields.ux)
+            .and(&self.dvx_scratch)
+            .and(&self.materials.rho0)
+            .par_for_each(|v, &grad, &rho| {
+                if rho > 1e-9 {
+                    *v -= dt / rho * grad;
+                }
+            });
+        Zip::from(&mut self.fields.uy)
+            .and(&self.dvy_scratch)
+            .and(&self.materials.rho0)
+            .par_for_each(|v, &grad, &rho| {
+                if rho > 1e-9 {
+                    *v -= dt / rho * grad;
+                }
+            });
+        Zip::from(&mut self.fields.uz)
+            .and(&self.divergence_scratch)
+            .and(&self.materials.rho0)
+            .par_for_each(|v, &grad, &rho| {
+                if rho > 1e-9 {
+                    *v -= dt / rho * grad;
+                }
+            });
 
         Ok(())
     }

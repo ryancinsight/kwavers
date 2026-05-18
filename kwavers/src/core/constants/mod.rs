@@ -48,7 +48,7 @@ pub use acoustic_parameters::{
 // Thermodynamic constants
 pub use thermodynamic::{
     BODY_TEMPERATURE_C, BODY_TEMPERATURE_K, DC_DT_SOFT_TISSUE, DRHO_DT_SOFT_TISSUE,
-    GRUNEISEN_WATER_37C, H_VAP_WATER_100C, M_WATER, P_ATM, P_CRITICAL_WATER, P_TRIPLE_WATER,
+    GRUNEISEN_WATER_37C, H_VAP_WATER_100C, M_WATER, P_CRITICAL_WATER, P_TRIPLE_WATER,
     RHO_C_SOFT_TISSUE, ROOM_TEMPERATURE_C, ROOM_TEMPERATURE_K, SPECIFIC_HEAT_WATER,
     THERMAL_CONDUCTIVITY_WATER, THERMAL_DIFFUSIVITY_TISSUE, T_BOILING_WATER, T_CRITICAL_WATER,
     T_TRIPLE_WATER,
@@ -62,9 +62,6 @@ pub use numerical::{
     ABSORPTION_SINGULARITY_THRESHOLD, CFL_DEFAULT, CFL_FACTOR_3D_FDTD, CFL_SAFETY_FACTOR, EPSILON,
     SMALL_VALUE, SOLVER_TOLERANCE,
 };
-
-// Backward compatibility aliases
-pub use fundamental::GAS_CONSTANT as R_GAS;
 
 // State-dependent constants (temperature/pressure-dependent physical properties)
 pub use state_dependent::StateDependentConstants;

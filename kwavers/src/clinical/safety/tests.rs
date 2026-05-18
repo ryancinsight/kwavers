@@ -1,12 +1,12 @@
 use super::{
-    ComplianceValidator, DoseController, Interlock, InterlockSystem, SafetyLevel, SafetyLimits,
-    SafetyMonitor, SystemConfiguration,
+    ClinicalSafetyLevel, ClinicalSafetyLimits, ClinicalSafetyMonitor, ComplianceValidator,
+    DoseController, Interlock, InterlockSystem, SystemConfiguration,
 };
-use crate::clinical::therapy::parameters::TherapyParameters;
+use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 
 #[test]
 fn test_safety_limits_creation() {
-    let limits = SafetyLimits::default();
+    let limits = ClinicalSafetyLimits::default();
     assert!(limits.max_intensity <= 3.0);
     assert!(limits.max_power <= 100.0);
     assert!(limits.max_temperature_rise <= 5.0);
@@ -14,10 +14,10 @@ fn test_safety_limits_creation() {
 
 #[test]
 fn test_safety_monitor_normal_operation() {
-    let limits = SafetyLimits::default();
-    let mut monitor = SafetyMonitor::new(limits);
+    let limits = ClinicalSafetyLimits::default();
+    let mut monitor = ClinicalSafetyMonitor::new(limits);
 
-    let params = TherapyParameters {
+    let params = ClinicalTherapyParameters {
         frequency: 1.5e6,
         pressure: 1.0e6,
         duration: 600.0,
@@ -29,16 +29,16 @@ fn test_safety_monitor_normal_operation() {
     };
 
     let state = monitor.check_safety(&params);
-    assert_eq!(state, SafetyLevel::Normal);
+    assert_eq!(state, ClinicalSafetyLevel::Normal);
     assert!(monitor.violations().is_empty());
 }
 
 #[test]
 fn test_safety_monitor_critical_violation() {
-    let limits = SafetyLimits::default();
-    let mut monitor = SafetyMonitor::new(limits);
+    let limits = ClinicalSafetyLimits::default();
+    let mut monitor = ClinicalSafetyMonitor::new(limits);
 
-    let params = TherapyParameters {
+    let params = ClinicalTherapyParameters {
         frequency: 1.5e6,
         pressure: 3.0e6,
         duration: 600.0,
@@ -50,7 +50,7 @@ fn test_safety_monitor_critical_violation() {
     };
 
     let state = monitor.check_safety(&params);
-    assert_eq!(state, SafetyLevel::Critical);
+    assert_eq!(state, ClinicalSafetyLevel::Critical);
     assert!(!monitor.violations().is_empty());
     assert!(monitor.requires_emergency_shutdown());
 }
@@ -71,14 +71,14 @@ fn test_interlock_system() {
 
 #[test]
 fn test_dose_controller() {
-    let limits = SafetyLimits::default();
+    let limits = ClinicalSafetyLimits::default();
     let mut controller = DoseController::new(limits);
 
     assert!(controller
         .start_session("patient_001".to_string(), "hifu_ablation".to_string())
         .is_ok());
 
-    let params = TherapyParameters::hifu();
+    let params = ClinicalTherapyParameters::hifu();
     controller.update_dose(100.0, &params).unwrap();
 
     assert_eq!(controller.accumulated_dose, 100.0);
@@ -90,7 +90,7 @@ fn test_compliance_validator() {
     let mut validator = ComplianceValidator::new();
 
     let config = SystemConfiguration {
-        safety_limits: SafetyLimits::default(),
+        safety_limits: ClinicalSafetyLimits::default(),
         monitoring_enabled: true,
         interlocks_enabled: true,
         emergency_stop_tested: true,

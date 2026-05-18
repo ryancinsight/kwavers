@@ -18,23 +18,23 @@ pub mod router;
 mod tests;
 
 pub use api_types::{
-    APIConfig, APIError, APIErrorType, APIVersion, BoundaryConditionSpec, GeometrySpec,
+    APIConfig, APIError, APIErrorType, APIVersion, ApiBoundaryConditionSpec, GeometrySpec,
     HealthCheck, HealthStatus, JobInfoResponse, JobStatus, ListModelsResponse, ModelMetadata,
     ObstacleSpec, PINNInferenceRequest, PINNInferenceResponse, PINNTrainingRequest,
-    PINNTrainingResponse, PaginationParams, PhysicsParameters, RateLimitConfig, RateLimitInfo,
-    ServiceStatus, TrainingConfig, TrainingMetrics, TrainingProgress,
+    PINNTrainingResponse, PaginationParams, PinnApiPhysicsParameters, PinnApiTrainingConfig,
+    PinnApiTrainingMetrics, RateLimitConfig, RateLimitInfo, ServiceStatus, TrainingProgress,
 };
 
 // Clinical ultrasound API type re-exports.
 #[cfg(feature = "pinn")]
 pub use models::{
-    AbnormalRegion, AnalysisPriority, ClinicalAnalysisRequest, ClinicalAnalysisResponse,
-    ClinicalContext, ClinicalFinding, ClinicalRecommendation, ConnectionType,
-    DICOMIntegrationRequest, DICOMIntegrationResponse, DICOMStudyInfo, DICOMValue,
-    DeviceCapabilities, DeviceCapability, DeviceInfo, DeviceStatus, DeviceType,
-    FindingMeasurements, FindingType, ImagingParameters, MobileOptimizationRequest,
+    AbnormalRegion, AnalysisPriority, ApiTissueProperties, ApiTissueRegion,
+    ClinicalAnalysisRequest, ClinicalAnalysisResponse, ClinicalContext, ClinicalFinding,
+    ClinicalRecommendation, ConnectionType, DICOMIntegrationRequest, DICOMIntegrationResponse,
+    DICOMStudyInfo, DICOMValue, DeviceCapabilities, DeviceCapability, DeviceInfo, DeviceStatus,
+    DeviceType, FindingMeasurements, FindingType, ImagingParameters, MobileOptimizationRequest,
     MobileOptimizationResponse, NetworkConditions, OperatorLevel, PerformancePredictions,
     PerformanceTargets, PowerEstimates, PowerSettings, ProcessingConfig, ProcessingMetrics,
-    QualityIndicators, RecommendationType, TissueCharacterization, TissueProperties, TissueRegion,
-    UltrasoundDevice, UltrasoundFrame, UrgencyLevel,
+    QualityIndicators, RecommendationType, TissueCharacterization, UltrasoundDevice,
+    UltrasoundFrame, UrgencyLevel,
 };

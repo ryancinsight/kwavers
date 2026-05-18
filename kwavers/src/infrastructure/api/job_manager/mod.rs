@@ -8,4 +8,6 @@ mod tests;
 pub mod types;
 
 pub use manager::JobManager;
-pub use types::{TrainingExecutor, TrainingFuture, TrainingJob, TrainingOutput, TrainingResult};
+pub use types::{
+    JobManagerTrainingResult, TrainingExecutor, TrainingFuture, TrainingJob, TrainingOutput,
+};

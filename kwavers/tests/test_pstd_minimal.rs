@@ -9,7 +9,7 @@ use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::{Signal, SineWave};
-use kwavers::domain::source::{InjectionMode, PlaneWaveConfig, PlaneWaveSource, SourceField};
+use kwavers::domain::source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
 use kwavers::solver::forward::pstd::config::{KSpaceMethod, PSTDConfig};
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers::solver::interface::Solver;
@@ -34,7 +34,7 @@ fn test_pstd_sine_wave_polarity() -> KwaversResult<()> {
 
     // Create plane wave source with positive amplitude sine wave
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency,
         phase: 0.0,
@@ -150,7 +150,7 @@ fn test_pstd_pressure_equation_of_state() -> KwaversResult<()> {
     let frequency = 1e6;
     let amplitude = 1e5;
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency,
         phase: 0.0,
@@ -232,7 +232,7 @@ fn test_pstd_fft_normalization() -> KwaversResult<()> {
     let frequency = 1e6;
     let amplitude = 1e5;
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency,
         phase: 0.0,
@@ -336,7 +336,7 @@ fn test_pstd_source_amplitude_scaling() -> KwaversResult<()> {
 
     for &amplitude in &amplitudes {
         let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-        let config = PlaneWaveConfig {
+        let config = PlaneWaveSourceConfig {
             direction: (0.0, 0.0, 1.0),
             wavelength: c0 / frequency,
             phase: 0.0,
@@ -420,7 +420,7 @@ fn test_pstd_time_reversal_symmetry() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
 
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (0.0, 0.0, 1.0),
         wavelength: c0 / frequency,
         phase: 0.0,
@@ -511,7 +511,7 @@ fn test_pstd_source_timing_phase_alignment() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
 
     let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
-    let config = PlaneWaveConfig {
+    let config = PlaneWaveSourceConfig {
         direction: (1.0, 0.0, 0.0),
         wavelength: c0 / frequency,
         phase: 0.0,

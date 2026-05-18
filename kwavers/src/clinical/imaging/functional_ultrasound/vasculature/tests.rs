@@ -1,4 +1,5 @@
-use super::classify::classify_vessels;
+use super::analysis::count_connected_components;
+use super::classify::{classify_vessels, principal_axis, vessel_neighbor_count};
 use super::frangi::{compute_frangi_response, symmetric_3x3_eigenvalues};
 use super::*;
 
@@ -27,7 +28,7 @@ fn test_vessel_classification_uses_static_contrast_and_geometry() {
     }
 
     let classification = classify_vessels(&image, &mask).unwrap();
-    assert_eq!(classification.vessel_type, VesselType::Artery);
+    assert_eq!(classification.vessel_type, VascularVesselType::Artery);
     assert!(
         classification.confidence > 0.9,
         "confidence = {}",
@@ -72,7 +73,7 @@ fn test_centerline_extracts_thin_vessel_axis() {
         mask,
         response: Array3::zeros((10, 10, 10)),
         classification: VesselClassification {
-            vessel_type: VesselType::Artery,
+            vessel_type: VascularVesselType::Artery,
             confidence: 1.0,
             diameter: 1.0,
             orientation: [1.0, 0.0, 0.0],
@@ -128,7 +129,7 @@ fn test_static_flow_velocity_is_error() {
         mask: Array3::zeros((3, 3, 3)),
         response: Array3::zeros((3, 3, 3)),
         classification: VesselClassification {
-            vessel_type: VesselType::Unknown,
+            vessel_type: VascularVesselType::Unknown,
             confidence: 0.0,
             diameter: 0.0,
             orientation: [0.0, 0.0, 0.0],
@@ -150,4 +151,171 @@ fn test_cardano_eigenvalues_diagonal_matrix() {
     assert!((eigs[0] - 1.0).abs() < 1e-10);
     assert!((eigs[1] - 2.0).abs() < 1e-10);
     assert!((eigs[2] - 3.0).abs() < 1e-10);
+}
+
+// ─── count_connected_components: exact flood-fill semantics ──────────────────
+
+/// All-zero mask has no vessel voxels → 0 components, 0 voxels.
+///
+/// No seed passes the `mask > 0.0` predicate; the outer loop
+/// increments neither counter.
+#[test]
+fn count_connected_components_empty_mask_returns_zero_zero() {
+    let mask = Array3::<f64>::zeros((4, 4, 4));
+    let (n_comp, n_vox) = count_connected_components(&mask);
+    assert_eq!(n_comp, 0, "empty mask: expected 0 components, got {n_comp}");
+    assert_eq!(n_vox, 0, "empty mask: expected 0 voxels, got {n_vox}");
+}
+
+/// A single non-zero voxel is exactly one 6-connected component with 1 voxel.
+///
+/// Flood-fill seed: `[1,1,1]`; all 6 face-neighbours are zero → no expansion;
+/// result: `(1, 1)`.
+#[test]
+fn count_connected_components_single_voxel_returns_one_one() {
+    let mut mask = Array3::<f64>::zeros((3, 3, 3));
+    mask[[1, 1, 1]] = 1.0;
+    let (n_comp, n_vox) = count_connected_components(&mask);
+    assert_eq!(
+        n_comp, 1,
+        "single voxel: expected 1 component, got {n_comp}"
+    );
+    assert_eq!(n_vox, 1, "single voxel: expected 1 voxel, got {n_vox}");
+}
+
+/// Two voxels separated by a zero gap are 2 components (not 6-adjacent).
+///
+/// `[0,1,1]` and `[2,1,1]` in a 3×3×3 grid: the only candidate
+/// face-neighbour in +x from `[0,1,1]` is `[1,1,1]` which is 0,
+/// so the flood-fill terminates after 1 voxel each.
+/// Result: `(2, 2)`.
+#[test]
+fn count_connected_components_two_disconnected_voxels_returns_two_two() {
+    let mut mask = Array3::<f64>::zeros((3, 3, 3));
+    mask[[0, 1, 1]] = 1.0;
+    mask[[2, 1, 1]] = 1.0; // gap at [1,1,1] = 0
+    let (n_comp, n_vox) = count_connected_components(&mask);
+    assert_eq!(
+        n_comp, 2,
+        "two disconnected: expected 2 components, got {n_comp}"
+    );
+    assert_eq!(
+        n_vox, 2,
+        "two disconnected: expected 2 total voxels, got {n_vox}"
+    );
+}
+
+/// Two face-adjacent voxels form one 6-connected component with 2 voxels.
+///
+/// `[1,1,1]` and `[1,1,2]` share a z-face: the flood-fill from the first
+/// seed enqueues and visits the second before the outer loop can seed it.
+/// Result: `(1, 2)`.
+#[test]
+fn count_connected_components_two_adjacent_voxels_returns_one_two() {
+    let mut mask = Array3::<f64>::zeros((3, 3, 3));
+    mask[[1, 1, 1]] = 1.0;
+    mask[[1, 1, 2]] = 1.0; // z-face adjacent
+    let (n_comp, n_vox) = count_connected_components(&mask);
+    assert_eq!(
+        n_comp, 1,
+        "face-adjacent pair: expected 1 component, got {n_comp}"
+    );
+    assert_eq!(
+        n_vox, 2,
+        "face-adjacent pair: expected 2 voxels, got {n_vox}"
+    );
+}
+
+// ─── vessel_neighbor_count: 6-adjacency counting ─────────────────────────────
+
+/// An isolated vessel voxel has no positive 6-face neighbours → count = 0.
+///
+/// Voxel `[1,1,1]` in a 3×3×3 grid where every other entry is 0:
+/// all six face checks (`mask[[0,1,1]]`, `mask[[2,1,1]]`, …) return 0.0.
+#[test]
+fn vessel_neighbor_count_isolated_voxel_is_zero() {
+    let mut mask = Array3::<f64>::zeros((3, 3, 3));
+    mask[[1, 1, 1]] = 1.0;
+    let count = vessel_neighbor_count(&mask, &[1, 1, 1]);
+    assert_eq!(
+        count, 0,
+        "isolated voxel: expected 0 neighbours, got {count}"
+    );
+}
+
+/// The center voxel of a full 3×3×3 solid has exactly 6 vessel neighbours.
+///
+/// Every entry is 1.0; `[1,1,1]` has six face-adjacent voxels all positive.
+/// The six Boolean terms all evaluate to `true` → sum = 6.
+#[test]
+fn vessel_neighbor_count_center_of_solid_cube_is_six() {
+    let mask = Array3::<f64>::ones((3, 3, 3));
+    let count = vessel_neighbor_count(&mask, &[1, 1, 1]);
+    assert_eq!(
+        count, 6,
+        "solid-cube center: expected 6 neighbours, got {count}"
+    );
+}
+
+/// The endpoint of a 3-voxel x-chain has exactly 1 vessel neighbour.
+///
+/// Chain: `[0,1,1]`, `[1,1,1]`, `[2,1,1]`.
+/// For endpoint `[0,1,1]`: `i>0` is false (−x blocked by boundary),
+/// `i+1=1` → `mask[[1,1,1]] = 1.0` (the only positive face-neighbour).
+/// All y/z face-neighbours are 0.  Count = 1.
+#[test]
+fn vessel_neighbor_count_chain_endpoint_is_one() {
+    let mut mask = Array3::<f64>::zeros((3, 3, 3));
+    mask[[0, 1, 1]] = 1.0;
+    mask[[1, 1, 1]] = 1.0;
+    mask[[2, 1, 1]] = 1.0;
+    let count = vessel_neighbor_count(&mask, &[0, 1, 1]);
+    assert_eq!(
+        count, 1,
+        "chain endpoint: expected 1 neighbour, got {count}"
+    );
+}
+
+/// The middle voxel of a 3-voxel x-chain has exactly 2 vessel neighbours.
+///
+/// Chain: `[0,1,1]`, `[1,1,1]`, `[2,1,1]`.
+/// For middle `[1,1,1]`: `mask[[0,1,1]] = 1.0` and `mask[[2,1,1]] = 1.0`;
+/// all y/z face-neighbours are 0.  Count = 2.
+#[test]
+fn vessel_neighbor_count_chain_middle_is_two() {
+    let mut mask = Array3::<f64>::zeros((3, 3, 3));
+    mask[[0, 1, 1]] = 1.0;
+    mask[[1, 1, 1]] = 1.0;
+    mask[[2, 1, 1]] = 1.0;
+    let count = vessel_neighbor_count(&mask, &[1, 1, 1]);
+    assert_eq!(count, 2, "chain middle: expected 2 neighbours, got {count}");
+}
+
+// ─── principal_axis: power-iteration convergence ─────────────────────────────
+
+/// An x-aligned collinear point set converges to the x unit vector.
+///
+/// Points: `[k, 1, 1]` for k ∈ 0..5.  Centred coordinates have non-zero
+/// variance only along x.  With initial axis `[1, 0, 0]`:
+///   proj = d[0]·1 + d[1]·0 + d[2]·0 = d[0]
+///   next = [Σd[0]², 0, 0] = [10, 0, 0],  norm = 10
+///   → axis = [1, 0, 0]  (converges on first step and stays).
+/// Remaining 11 iterations preserve the fixed point.
+/// Assert: |axis[0]| > 0.999, |axis[1]| < 1e-10, |axis[2]| < 1e-10.
+#[test]
+fn principal_axis_x_aligned_points_returns_x_unit_vector() {
+    let points: Vec<[usize; 3]> = (0..5).map(|k| [k, 1, 1]).collect();
+    let axis = principal_axis(&points);
+    assert!(
+        axis[0].abs() > 0.999,
+        "x-aligned chain: expected |axis[0]| ≈ 1, got {axis:?}"
+    );
+    assert!(
+        axis[1].abs() < 1e-10,
+        "x-aligned chain: expected axis[1] ≈ 0, got {axis:?}"
+    );
+    assert!(
+        axis[2].abs() < 1e-10,
+        "x-aligned chain: expected axis[2] ≈ 0, got {axis:?}"
+    );
 }

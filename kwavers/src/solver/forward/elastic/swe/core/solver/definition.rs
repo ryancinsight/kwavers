@@ -1,6 +1,6 @@
 //! `ElasticWaveSolver` struct definition and construction.
 
-use super::super::super::boundary::{PMLBoundary, PMLConfig};
+use super::super::super::boundary::{PMLBoundary, SwePmlConfig};
 use super::super::super::types::{ElasticWaveConfig, VolumetricWaveConfig};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -57,7 +57,7 @@ impl ElasticWaveSolver {
         } else {
             1e6 // fallback for degenerate media
         };
-        let pml_config = PMLConfig {
+        let pml_config = SwePmlConfig {
             thickness: config.pml_thickness,
             sigma_max,
             profile_order: 2,

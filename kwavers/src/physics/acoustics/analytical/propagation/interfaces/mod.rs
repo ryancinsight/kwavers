@@ -10,5 +10,5 @@ pub use fresnel::FresnelCalculator;
 pub use interface::{Interface, InterfaceType};
 pub use snell::SnellLawCalculator;
 
-// Re-export Polarization from parent module for use by child modules
-pub use super::Polarization;
+// Re-export AnalyticalPolarization from parent module for use by child modules
+pub use super::AnalyticalPolarization;

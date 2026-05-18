@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Validation report
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationReport {
+pub struct HybridValidationReport {
     /// Test name
     pub test_name: String,
     /// Test passed

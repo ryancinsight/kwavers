@@ -1,1 +1,1 @@
-pub use crate::domain::therapy::types::TreatmentMetrics;
+pub use crate::domain::therapy::types::DomainTreatmentMetrics;

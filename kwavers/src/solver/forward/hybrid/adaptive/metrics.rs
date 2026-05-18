@@ -12,7 +12,7 @@ pub struct DetailedMetrics {
 
 /// Quality metrics for method selection
 #[derive(Debug, Clone)]
-pub struct QualityMetrics {
+pub struct HybridAdaptiveQualityMetrics {
     pub accuracy_score: f64,
     pub efficiency_score: f64,
     pub stability_score: f64,
@@ -28,7 +28,7 @@ impl DetailedMetrics {
     }
 }
 
-impl QualityMetrics {
+impl HybridAdaptiveQualityMetrics {
     pub fn default() -> Self {
         Self {
             accuracy_score: 0.8,

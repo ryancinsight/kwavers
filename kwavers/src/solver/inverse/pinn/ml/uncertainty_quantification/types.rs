@@ -29,12 +29,12 @@ pub struct PredictionWithUncertainty {
     /// Reliability score (0-1, higher is more reliable).
     pub reliability: f32,
     /// Uncertainty quantification method used.
-    pub method: UncertaintyMethod,
+    pub method: PinnUncertaintyMethod,
 }
 
 /// Uncertainty estimation methods.
 #[derive(Debug, Clone)]
-pub enum UncertaintyMethod {
+pub enum PinnUncertaintyMethod {
     /// Monte Carlo Dropout.
     MCDropout,
     /// Deep Ensemble.

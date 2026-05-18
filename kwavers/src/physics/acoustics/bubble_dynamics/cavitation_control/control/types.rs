@@ -51,14 +51,14 @@ pub struct ControlOutput {
 
 /// Safety limits for control system
 #[derive(Debug, Clone)]
-pub struct SafetyLimits {
+pub struct CavitationSafetyLimits {
     pub max_intensity: f64,
     pub max_temperature: f64,
     pub max_pressure: f64,
     pub emergency_stop_threshold: f64,
 }
 
-impl Default for SafetyLimits {
+impl Default for CavitationSafetyLimits {
     fn default() -> Self {
         Self {
             max_intensity: 0.9,
@@ -85,10 +85,10 @@ mod tests {
         );
     }
 
-    /// SafetyLimits::default satisfies intensity ordering: max_intensity < emergency threshold.
+    /// CavitationSafetyLimits::default satisfies intensity ordering: max_intensity < emergency threshold.
     #[test]
     fn default_safety_limits_intensity_ordering() {
-        let lim = SafetyLimits::default();
+        let lim = CavitationSafetyLimits::default();
         assert!(
             lim.max_intensity < lim.emergency_stop_threshold,
             "max_intensity ({}) must be < emergency_stop_threshold ({})",

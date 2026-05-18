@@ -1,4 +1,4 @@
-use super::{ConvergenceResults, NumericalValidator, ValidationResults};
+use super::{ConvergenceResults, NumericalAccuracyResults, NumericalValidator};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 
@@ -29,7 +29,7 @@ impl NumericalValidator {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn validate_all(&self) -> Result<ValidationResults, Box<dyn std::error::Error>> {
+    pub fn validate_all(&self) -> Result<NumericalAccuracyResults, Box<dyn std::error::Error>> {
         let dispersion_tests = self.validate_dispersion()?;
         let stability_tests = self.validate_stability()?;
         let boundary_tests = self.validate_boundaries()?;
@@ -41,7 +41,7 @@ impl NumericalValidator {
             error_norm: 1e-6,
         };
 
-        Ok(ValidationResults {
+        Ok(NumericalAccuracyResults {
             dispersion_tests,
             stability_tests,
             boundary_tests,

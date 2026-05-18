@@ -4,7 +4,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 
 /// Training configuration
 #[derive(Debug, Clone)]
-pub struct TrainingConfig {
+pub struct PhysicsNNTrainingConfig {
     /// Number of training epochs
     pub num_epochs: usize,
     /// Batch size for mini-batch SGD
@@ -31,7 +31,7 @@ pub struct TrainingConfig {
     pub verbose: bool,
 }
 
-impl Default for TrainingConfig {
+impl Default for PhysicsNNTrainingConfig {
     fn default() -> Self {
         Self {
             num_epochs: 100,
@@ -50,7 +50,7 @@ impl Default for TrainingConfig {
     }
 }
 
-impl TrainingConfig {
+impl PhysicsNNTrainingConfig {
     /// Validate configuration constraints
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.

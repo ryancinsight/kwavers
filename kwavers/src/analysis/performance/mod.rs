@@ -39,8 +39,8 @@ pub mod profiling;
 pub mod safe_vectorization;
 
 pub use optimization::{
-    AccessPattern, BandwidthOptimizer, CacheOptimizer, OptimizationConfig, PerformanceOptimizer,
-    PrefetchStrategy, SimdLevel, StencilKernel,
+    AccessPattern, BandwidthOptimizer, CacheOptimizer, HardwareOptimizationConfig,
+    PerfOptSimdLevel, PerformanceOptimizer, PrefetchStrategy, StencilKernel,
 };
 
 pub use arena::{

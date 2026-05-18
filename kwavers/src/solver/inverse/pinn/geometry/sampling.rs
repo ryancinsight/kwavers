@@ -4,7 +4,7 @@ use crate::domain::geometry::{GeometricDomain, PointLocation};
 
 /// Sampling strategy for PINN collocation points
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SamplingStrategy {
+pub enum CollocationSamplingStrategy {
     /// Uniform random sampling (baseline)
     Uniform,
     /// Latin hypercube sampling (better space-filling)
@@ -21,7 +21,7 @@ pub enum SamplingStrategy {
 /// specified sampling strategy.
 pub struct CollocationSampler {
     pub domain: Box<dyn GeometricDomain>,
-    pub strategy: SamplingStrategy,
+    pub strategy: CollocationSamplingStrategy,
     pub seed: Option<u64>,
 }
 
@@ -39,7 +39,7 @@ impl CollocationSampler {
     #[must_use]
     pub fn new(
         domain: Box<dyn GeometricDomain>,
-        strategy: SamplingStrategy,
+        strategy: CollocationSamplingStrategy,
         seed: Option<u64>,
     ) -> Self {
         Self {
@@ -52,10 +52,14 @@ impl CollocationSampler {
     #[must_use]
     pub fn sample_interior(&self, n_points: usize) -> Array2<f64> {
         match self.strategy {
-            SamplingStrategy::Uniform => self.domain.sample_interior(n_points, self.seed),
-            SamplingStrategy::LatinHypercube => self.latin_hypercube_sample(n_points, false),
-            SamplingStrategy::Sobol => self.sobol_sample(n_points, false),
-            SamplingStrategy::AdaptiveRefinement => {
+            CollocationSamplingStrategy::Uniform => {
+                self.domain.sample_interior(n_points, self.seed)
+            }
+            CollocationSamplingStrategy::LatinHypercube => {
+                self.latin_hypercube_sample(n_points, false)
+            }
+            CollocationSamplingStrategy::Sobol => self.sobol_sample(n_points, false),
+            CollocationSamplingStrategy::AdaptiveRefinement => {
                 self.domain.sample_interior(n_points, self.seed)
             }
         }
@@ -64,10 +68,14 @@ impl CollocationSampler {
     #[must_use]
     pub fn sample_boundary(&self, n_points: usize) -> Array2<f64> {
         match self.strategy {
-            SamplingStrategy::Uniform => self.domain.sample_boundary(n_points, self.seed),
-            SamplingStrategy::LatinHypercube => self.latin_hypercube_sample(n_points, true),
-            SamplingStrategy::Sobol => self.sobol_sample(n_points, true),
-            SamplingStrategy::AdaptiveRefinement => {
+            CollocationSamplingStrategy::Uniform => {
+                self.domain.sample_boundary(n_points, self.seed)
+            }
+            CollocationSamplingStrategy::LatinHypercube => {
+                self.latin_hypercube_sample(n_points, true)
+            }
+            CollocationSamplingStrategy::Sobol => self.sobol_sample(n_points, true),
+            CollocationSamplingStrategy::AdaptiveRefinement => {
                 self.domain.sample_boundary(n_points, self.seed)
             }
         }

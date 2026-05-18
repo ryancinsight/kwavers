@@ -74,7 +74,7 @@ use std::sync::Arc;
 // Re-export main types
 pub use imex_bdf::{IMEXBDFConfig, IMEXBDF};
 pub use imex_rk::{IMEXRKConfig, IMEXRKType, IMEXRK};
-pub use implicit_solver::{ImplicitSolver, LinearSolver, NonlinearSolver};
+pub use implicit_solver::{ImexLinearSolver, ImplicitSolver, NonlinearSolver};
 pub use operator_splitting::{LieTrotterSplitting, StrangSplitting};
 pub use stability::{IMEXStabilityAnalyzer, StabilityRegion};
 pub use stiffness_detection::{StiffnessDetector, StiffnessMetric};
@@ -145,7 +145,7 @@ impl IMEXSchemeType {
 /// Enum wrapper for implicit solvers
 #[derive(Debug)]
 pub enum ImplicitSolverType {
-    Linear(LinearSolver),
+    Linear(ImexLinearSolver),
     Nonlinear(NonlinearSolver),
 }
 

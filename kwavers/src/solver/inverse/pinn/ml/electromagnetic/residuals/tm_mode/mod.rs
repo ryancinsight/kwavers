@@ -1,6 +1,6 @@
 use super::constants::EPS_FD_F32;
 use super::sources::compute_current_density_z;
-use crate::solver::inverse::pinn::ml::physics::PhysicsParameters;
+use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
@@ -114,7 +114,7 @@ pub fn tm_mode_ampere_z_residual<B: AutodiffBackend>(
     t: &Tensor<B, 2>,
     eps: f64,
     sigma: f64,
-    physics_params: &PhysicsParameters,
+    physics_params: &PinnDomainPhysicsParameters,
 ) -> Tensor<B, 2> {
     let h = EPS_FD_F32;
 

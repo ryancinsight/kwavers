@@ -4,7 +4,7 @@
 //! active-processor selection, bounded partition sizing, and chunk metadata.
 
 use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
-    DecompositionStrategy, DistributedConfig, LoadBalancingStrategy,
+    DistributedConfig, LoadBalancingStrategy, PinnBeamformingDecompositionStrategy,
 };
 use ndarray::Array3;
 use std::cmp::Ordering;
@@ -147,7 +147,7 @@ pub(crate) fn partition_round_sizes(
 ) -> Vec<usize> {
     match (config.decomposition, config.load_balancing) {
         (
-            DecompositionStrategy::Hybrid,
+            PinnBeamformingDecompositionStrategy::Hybrid,
             LoadBalancingStrategy::Dynamic | LoadBalancingStrategy::Adaptive,
         ) => weighted_partition_sizes(frame_count, active_indices, batch_size, gpu_load),
         _ => equal_partition_sizes(frame_count, active_indices.len()),

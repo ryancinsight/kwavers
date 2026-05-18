@@ -10,7 +10,7 @@ pub struct TargetVolume {
     /// Target dimensions (width, height, depth) in mm
     pub dimensions: [f64; 3],
     /// Target shape (ellipsoidal, rectangular, etc.)
-    pub shape: TargetShape,
+    pub shape: TranscranialTargetShape,
     /// Clinical priority (1-10, higher = more critical)
     pub priority: u8,
     /// Maximum allowable temperature (°C)
@@ -21,7 +21,7 @@ pub struct TargetVolume {
 
 /// Permissible shapes for treatment targets
 #[derive(Debug, Clone)]
-pub enum TargetShape {
+pub enum TranscranialTargetShape {
     /// Ellipsoidal target
     Ellipsoidal,
     /// Rectangular target
@@ -32,7 +32,7 @@ pub enum TargetShape {
 
 /// Complete treatment plan for tFUS session
 #[derive(Debug)]
-pub struct TreatmentPlan {
+pub struct TranscranialTreatmentPlan {
     /// Patient identifier
     pub patient_id: String,
     /// Treatment targets
@@ -46,7 +46,7 @@ pub struct TreatmentPlan {
     /// Predicted temperature field
     pub temperature_field: Array3<f64>,
     /// Safety margins and constraints
-    pub safety_constraints: SafetyConstraints,
+    pub safety_constraints: TranscranialSafetyConstraints,
     /// Estimated treatment time (seconds)
     pub treatment_time: f64,
 }
@@ -70,7 +70,7 @@ pub struct TransducerSetup {
 
 /// Safety constraints for treatment
 #[derive(Debug, Clone)]
-pub struct SafetyConstraints {
+pub struct TranscranialSafetyConstraints {
     /// Maximum skull surface temperature (°C)
     pub max_skull_temp: f64,
     /// Maximum brain temperature (°C)
@@ -83,7 +83,7 @@ pub struct SafetyConstraints {
     pub min_skull_distance: f64,
 }
 
-impl Default for SafetyConstraints {
+impl Default for TranscranialSafetyConstraints {
     fn default() -> Self {
         Self {
             max_skull_temp: 42.0,    // °C
@@ -97,7 +97,7 @@ impl Default for SafetyConstraints {
 
 /// Transducer array specifications
 #[derive(Debug, Clone)]
-pub struct TransducerSpecification {
+pub struct TranscranialTransducerSpecification {
     pub num_elements: usize,
     pub frequency: f64,
     pub focal_distance: f64,
@@ -105,7 +105,7 @@ pub struct TransducerSpecification {
     pub sound_speed: f64,
 }
 
-impl Default for TransducerSpecification {
+impl Default for TranscranialTransducerSpecification {
     fn default() -> Self {
         Self {
             num_elements: 1024,
@@ -119,7 +119,7 @@ impl Default for TransducerSpecification {
 
 /// Skull acoustic properties derived from CT
 #[derive(Debug)]
-pub struct SkullProperties {
+pub struct TranscranialSkullProperties {
     pub sound_speed: Array3<f64>,
     pub density: Array3<f64>,
     pub attenuation: Array3<f64>,

@@ -8,7 +8,7 @@
 
 /// Learning rate schedule for meta-optimization.
 #[derive(Debug, Clone)]
-pub enum LearningRateSchedule {
+pub enum MetaLrSchedule {
     /// Constant learning rate — no decay.
     Constant,
 
@@ -22,22 +22,22 @@ pub enum LearningRateSchedule {
     CosineAnnealing { lr_min: f64, total_epochs: usize },
 }
 
-impl LearningRateSchedule {
+impl MetaLrSchedule {
     /// Compute the learning rate for the given `epoch` starting from `lr_initial`.
     pub fn get_lr(&self, epoch: usize, lr_initial: f64) -> f64 {
         match self {
-            LearningRateSchedule::Constant => lr_initial,
+            MetaLrSchedule::Constant => lr_initial,
 
-            LearningRateSchedule::StepDecay { factor, step_size } => {
+            MetaLrSchedule::StepDecay { factor, step_size } => {
                 let num_decays = epoch / step_size;
                 lr_initial * factor.powi(num_decays as i32)
             }
 
-            LearningRateSchedule::Exponential { decay_rate } => {
+            MetaLrSchedule::Exponential { decay_rate } => {
                 lr_initial * (-decay_rate * epoch as f64).exp()
             }
 
-            LearningRateSchedule::CosineAnnealing {
+            MetaLrSchedule::CosineAnnealing {
                 lr_min,
                 total_epochs,
             } => {

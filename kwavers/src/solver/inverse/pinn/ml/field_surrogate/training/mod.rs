@@ -16,17 +16,19 @@
 //!
 //! ## API surface
 //!
-//! * [`TrainingConfig`] — hyperparameters (learning rate, loss
+//! * [`FieldSurrogateTrainingConfig`] — hyperparameters (learning rate, loss
 //!   weights, FD epsilon, sound speed).
 //! * [`TrainingBatch`] — one mini-batch's worth of network inputs +
 //!   data targets + per-sample physical `f0` for the Helmholtz term.
 //! * [`ParamFieldPINNTrainer::step`] — one forward/backward/update step,
 //!   returns the per-step loss components.
-//! * [`TrainingMetrics`] — running per-epoch loss aggregates.
+//! * [`SurrogateTrainingMetrics`] — running per-epoch loss aggregates.
 
 mod helmholtz;
 mod trainer;
 pub mod types;
 
 pub use trainer::ParamFieldPINNTrainer;
-pub use types::{StepMetrics, TrainingBatch, TrainingConfig, TrainingMetrics};
+pub use types::{
+    FieldSurrogateTrainingConfig, StepMetrics, SurrogateTrainingMetrics, TrainingBatch,
+};

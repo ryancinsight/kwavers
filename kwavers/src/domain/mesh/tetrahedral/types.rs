@@ -6,7 +6,7 @@ pub struct MeshNode {
     /// Node coordinates (x, y, z)
     pub coordinates: [f64; 3],
     /// Boundary condition type
-    pub boundary_type: BoundaryType,
+    pub boundary_type: MeshBoundaryType,
     /// Node index in global mesh
     pub index: usize,
 }
@@ -24,9 +24,9 @@ pub struct Tetrahedron {
     pub quality: f64,
 }
 
-/// Boundary condition types for mesh nodes/faces
+/// Mesh node/face classification for FEM boundary handling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BoundaryType {
+pub enum MeshBoundaryType {
     /// Interior node/face
     Interior,
     /// Dirichlet boundary (prescribed field)

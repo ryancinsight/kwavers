@@ -23,5 +23,5 @@ mod tests;
 
 pub use boundary_type::BoundaryType;
 pub use domain_specific::{AcousticBoundaryType, ElasticBoundaryType, ElectromagneticBoundaryType};
-pub use face_component::{BoundaryComponent, BoundaryFace};
+pub use face_component::{BoundaryFace, FaceBoundaryComponent};
 pub use spec::BoundarySpec;

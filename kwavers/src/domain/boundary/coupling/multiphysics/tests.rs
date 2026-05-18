@@ -1,6 +1,6 @@
 //! Tests for multi-physics interface boundary conditions.
 
-use super::super::types::{CouplingType, PhysicsDomain};
+use super::super::types::{BoundaryCouplingType, PhysicsDomain};
 use super::interface::MultiPhysicsInterface;
 
 const Z_WATER: f64 = 1_479_036.0;
@@ -14,7 +14,7 @@ fn test_multiphysics_interface_photoacoustic() {
         [1.0, 0.0, 0.0],
         PhysicsDomain::Electromagnetic,
         PhysicsDomain::Acoustic,
-        CouplingType::ElectromagneticAcoustic {
+        BoundaryCouplingType::ElectromagneticAcoustic {
             optical_absorption: 100.0,
             gruneisen: 0.15,
         },
@@ -35,7 +35,7 @@ fn test_acoustic_elastic_water_soft_tissue_transmission() {
         [0.0, 0.0, 1.0],
         PhysicsDomain::Acoustic,
         PhysicsDomain::Elastic,
-        CouplingType::AcousticElastic {
+        BoundaryCouplingType::AcousticElastic {
             z1_rayl: Z_WATER,
             z2_rayl: Z_SOFT_TISSUE,
         },
@@ -69,7 +69,7 @@ fn test_acoustic_elastic_water_bone_transmission() {
         [0.0, 0.0, 1.0],
         PhysicsDomain::Acoustic,
         PhysicsDomain::Elastic,
-        CouplingType::AcousticElastic {
+        BoundaryCouplingType::AcousticElastic {
             z1_rayl: Z_WATER,
             z2_rayl: Z_BONE,
         },
@@ -109,7 +109,7 @@ fn test_multiphysics_photoacoustic_monotone() {
             [1.0, 0.0, 0.0],
             PhysicsDomain::Electromagnetic,
             PhysicsDomain::Acoustic,
-            CouplingType::ElectromagneticAcoustic {
+            BoundaryCouplingType::ElectromagneticAcoustic {
                 optical_absorption: mu_a,
                 gruneisen,
             },
@@ -141,7 +141,7 @@ fn test_acoustic_thermal_coupling_bounds() {
         [1.0, 0.0, 0.0],
         PhysicsDomain::Acoustic,
         PhysicsDomain::Thermal,
-        CouplingType::AcousticThermal {
+        BoundaryCouplingType::AcousticThermal {
             alpha_np_per_m: 2.0,
             rho_kg_per_m3: 1060.0,
             c_p_j_per_kg_k: 3500.0,
@@ -160,7 +160,7 @@ fn test_multiphysics_electromagnetic_thermal() {
         [1.0, 0.0, 0.0],
         PhysicsDomain::Electromagnetic,
         PhysicsDomain::Thermal,
-        CouplingType::ElectromagneticThermal,
+        BoundaryCouplingType::ElectromagneticThermal,
     );
     let tau = interface.transmission_coefficient(1e6);
     assert!(tau > 0.9, "photothermal coupling should exceed 90%");
@@ -174,7 +174,7 @@ fn test_multiphysics_custom_coupling() {
         [1.0, 0.0, 0.0],
         PhysicsDomain::Custom(1),
         PhysicsDomain::Custom(2),
-        CouplingType::Custom("user_defined".to_string()),
+        BoundaryCouplingType::Custom("user_defined".to_string()),
     );
     assert_eq!(interface.transmission_coefficient(1e6), 1.0);
 }
@@ -190,7 +190,7 @@ fn test_acoustic_elastic_self_matched() {
         [0.0, 0.0, 1.0],
         PhysicsDomain::Acoustic,
         PhysicsDomain::Elastic,
-        CouplingType::AcousticElastic {
+        BoundaryCouplingType::AcousticElastic {
             z1_rayl: Z_WATER,
             z2_rayl: Z_WATER,
         },

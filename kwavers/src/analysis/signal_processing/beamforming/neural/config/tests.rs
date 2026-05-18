@@ -10,7 +10,7 @@ fn test_mode_default() {
 
 #[test]
 fn test_physics_parameters_default() {
-    let params = PhysicsParameters::default();
+    let params = NeuralBeamformingPhysicsParams::default();
     assert_eq!(params.reciprocity_weight, 1.0);
     assert_eq!(params.coherence_weight, 0.5);
     assert_eq!(params.sparsity_weight, 0.1);

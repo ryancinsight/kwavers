@@ -34,7 +34,7 @@ pub struct TrainingData<B: AutodiffBackend> {
 
 /// Training metrics tracked during optimization
 #[derive(Debug, Clone)]
-pub struct TrainingMetrics {
+pub struct ElasticPinnTrainingMetrics {
     /// Total loss history (one value per epoch)
     pub total_loss: Vec<f64>,
     /// PDE residual loss history
@@ -55,7 +55,7 @@ pub struct TrainingMetrics {
     pub learning_rates: Vec<f64>,
 }
 
-impl TrainingMetrics {
+impl ElasticPinnTrainingMetrics {
     /// Create new empty metrics
     #[must_use]
     pub fn new() -> Self {
@@ -128,7 +128,7 @@ impl TrainingMetrics {
     }
 }
 
-impl Default for TrainingMetrics {
+impl Default for ElasticPinnTrainingMetrics {
     fn default() -> Self {
         Self::new()
     }
@@ -140,14 +140,14 @@ mod tests {
 
     #[test]
     fn test_training_metrics_creation() {
-        let metrics = TrainingMetrics::new();
+        let metrics = ElasticPinnTrainingMetrics::new();
         assert_eq!(metrics.epochs_completed, 0);
         assert!(metrics.total_loss.is_empty());
     }
 
     #[test]
     fn test_training_metrics_recording() {
-        let mut metrics = TrainingMetrics::new();
+        let mut metrics = ElasticPinnTrainingMetrics::new();
         metrics.record_epoch(1.0, 0.5, 0.2, 0.1, 0.2, 0.001, 0.5);
 
         assert_eq!(metrics.epochs_completed, 1);
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_convergence_check() {
-        let mut metrics = TrainingMetrics::new();
+        let mut metrics = ElasticPinnTrainingMetrics::new();
 
         // Add some loss values that are converging
         metrics.record_epoch(1.0, 0.5, 0.2, 0.1, 0.2, 0.001, 0.5);

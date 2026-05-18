@@ -3,7 +3,7 @@
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 
-use super::types::{treeby_2010, ValidationResult};
+use super::types::{treeby_2010, LiteratureValidationResult};
 
 /// Literature validation coordinator
 #[derive(Debug)]
@@ -27,8 +27,8 @@ impl LiteratureValidator {
         pressure_field: &Array3<f64>,
         time_points: &[f64],
         _dt: f64,
-    ) -> KwaversResult<ValidationResult> {
-        let mut result = ValidationResult::new("Treeby_2010_PlaneWave");
+    ) -> KwaversResult<LiteratureValidationResult> {
+        let mut result = LiteratureValidationResult::new("Treeby_2010_PlaneWave");
 
         let nx = pressure_field.shape()[0];
         let ny = pressure_field.shape()[1];
@@ -78,8 +78,8 @@ impl LiteratureValidator {
         attenuation_db: &[f64],
         frequencies: &[f64],
         expected_y: f64,
-    ) -> ValidationResult {
-        let mut result = ValidationResult::new("Treeby_2010_Absorption");
+    ) -> LiteratureValidationResult {
+        let mut result = LiteratureValidationResult::new("Treeby_2010_Absorption");
 
         let log_f: Vec<f64> = frequencies.iter().map(|&f| f.ln()).collect();
         let log_alpha: Vec<f64> = attenuation_db.iter().map(|&a| a.ln()).collect();
@@ -115,8 +115,8 @@ impl LiteratureValidator {
         displacement_field: &Array3<f64>,
         time: f64,
         expected_shear_speed: f64,
-    ) -> ValidationResult {
-        let mut result = ValidationResult::new("Pinton_2009_ShearWave");
+    ) -> LiteratureValidationResult {
+        let mut result = LiteratureValidationResult::new("Pinton_2009_ShearWave");
 
         let expected_radius = expected_shear_speed * time;
 
@@ -166,8 +166,8 @@ impl LiteratureValidator {
         dx_values: &[f64],
         errors: &[f64],
         expected_order: f64,
-    ) -> ValidationResult {
-        let mut result = ValidationResult::new("ConvergenceAnalysis");
+    ) -> LiteratureValidationResult {
+        let mut result = LiteratureValidationResult::new("ConvergenceAnalysis");
 
         if dx_values.len() < 2 || errors.len() < 2 {
             result.notes = "Need at least 2 points for convergence analysis".to_string();
@@ -247,7 +247,7 @@ impl LiteratureValidator {
     }
 
     /// Generate validation report.
-    pub fn report(&self, results: &[ValidationResult]) -> String {
+    pub fn report(&self, results: &[LiteratureValidationResult]) -> String {
         let mut report = String::new();
         report.push_str("## Literature Validation Report\n\n");
         report.push_str("| Case | Status | Rel. Error | Notes |\n");

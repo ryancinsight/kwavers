@@ -167,6 +167,13 @@ impl MatrixArray {
 impl Source for MatrixArray {
     fn create_mask(&self, grid: &Grid) -> ndarray::Array3<f64> {
         let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
+        self.create_mask_into(grid, &mut mask);
+        mask
+    }
+
+    fn create_mask_into(&self, grid: &Grid, mask: &mut ndarray::Array3<f64>) {
+        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        mask.fill(0.0);
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
         let start_x = self.x_pos - self.width / 2.0;
@@ -183,8 +190,6 @@ impl Source for MatrixArray {
                 }
             }
         }
-
-        mask
     }
 
     fn amplitude(&self, t: f64) -> f64 {

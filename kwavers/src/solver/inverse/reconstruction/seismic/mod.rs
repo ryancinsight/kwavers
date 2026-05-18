@@ -38,4 +38,4 @@ pub use config::{AnisotropyParameters, RtmImagingCondition, SeismicImagingConfig
 pub use fwi::FullWaveformInversion;
 pub use misfit::{MisfitFunction, MisfitType};
 pub use rtm::ReverseTimeMigration;
-pub use wavelet::RickerWavelet;
+pub use wavelet::SeismicRickerWavelet;

@@ -54,4 +54,6 @@ pub use microbubble::{
     calculate_primary_bjerknes_force, DrugLoadingMode, DrugPayload, MarmottantShellProperties,
     MicrobubbleState, Position3D, RadiationForce, ShellState, Velocity3D,
 };
-pub use types::{TherapyMechanism, TherapyModality, TherapyParameters, TreatmentMetrics};
+pub use types::{
+    DomainTherapyMechanism, DomainTherapyModality, DomainTherapyParameters, DomainTreatmentMetrics,
+};

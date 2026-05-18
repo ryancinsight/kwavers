@@ -5,5 +5,5 @@ pub mod meta_optimizer;
 #[cfg(test)]
 mod tests;
 
-pub use lr_schedule::LearningRateSchedule;
+pub use lr_schedule::MetaLrSchedule;
 pub use meta_optimizer::{MetaOptimizer, MetaOptimizerMode};

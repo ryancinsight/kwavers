@@ -55,6 +55,7 @@
 use super::KZKConfig;
 use crate::math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use ndarray::{s, Array1, Array3};
+use rayon::prelude::*;
 
 /// Power-law absorption operator for the KZK equation.
 ///
@@ -64,10 +65,10 @@ use ndarray::{s, Array1, Array3};
 /// `h_mask_half` and `h_mask_full` are pre-computed in `new()` for the two
 /// step-size variants used by Strang splitting (dz/2 and dz respectively),
 /// eliminating per-call `powf` recomputation and `Vec` allocation.
-/// `waveform` is a single pre-allocated 1-D scratch buffer reused across
-/// all spatial-point iterations.
+/// The parallel `apply()` allocates one per-Rayon-thread scratch buffer of
+/// `nt × 16` bytes; no shared mutable scratch is needed.
 #[derive(Debug)]
-pub struct AbsorptionOperator {
+pub struct KzkAbsorptionOperator {
     /// Attenuation coefficient at 1 Hz in Np/(m·Hz^y).
     ///
     /// Converted from the clinical unit dB/(cm·MHz^y) during construction.
@@ -90,14 +91,9 @@ pub struct AbsorptionOperator {
     ///
     /// Length nt.  Applied when `step_size ≈ config.dz`.
     h_mask_full: Vec<f64>,
-    /// Pre-allocated complex waveform scratch buffer, length nt.
-    ///
-    /// Reused across all (i,j) iterations; replaces one `Array1::zeros(nt)`
-    /// allocation per spatial point.
-    waveform: Array1<Complex64>,
 }
 
-impl AbsorptionOperator {
+impl KzkAbsorptionOperator {
     /// Construct the absorption operator, converting α₀ from clinical to SI units
     /// and pre-computing both attenuation mask variants.
     ///
@@ -140,14 +136,11 @@ impl AbsorptionOperator {
             config.dz,
         );
 
-        let waveform = Array1::<Complex64>::zeros(config.nt);
-
         Self {
             alpha0_np_per_m_per_hz_y: alpha0_np,
             power: config.alpha_power,
             h_mask_half,
             h_mask_full,
-            waveform,
             config: config.clone(),
         }
     }
@@ -235,26 +228,36 @@ impl AbsorptionOperator {
                 &self.h_mask_full
             };
 
-        for i in 0..self.config.nx {
-            for j in 0..self.config.ny {
-                // 1. Copy complex waveform into pre-allocated scratch buffer.
-                self.waveform.assign(&pressure.slice(s![i, j, ..]));
+        // Parallelise over i-rows: each row slice [i, :, :] is disjoint,
+        // so `axis_iter_mut(Axis(0)).into_par_iter()` is race-free.
+        // A per-thread `waveform` scratch replaces the shared `self.waveform`
+        // (one allocation of `nt × 16` bytes per Rayon thread, not per call).
+        let nt = self.config.nt;
+        pressure
+            .axis_iter_mut(ndarray::Axis(0))
+            .into_par_iter()
+            .for_each(|mut row_i| {
+                // Thread-local scratch: avoids the shared `self.waveform` hazard.
+                let mut waveform = Array1::<Complex64>::zeros(nt);
+                for j in 0..row_i.shape()[0] {
+                    // 1. Copy complex waveform into thread-local scratch.
+                    waveform.assign(&row_i.slice(s![j, ..]));
 
-                // 2. Forward DFT in-place (no normalisation).
-                fft_1d_complex_inplace(&mut self.waveform);
+                    // 2. Forward DFT in-place (no normalisation).
+                    fft_1d_complex_inplace(&mut waveform);
 
-                // 3. Apply per-frequency attenuation mask.
-                for (w, &h) in self.waveform.iter_mut().zip(h_mask.iter()) {
-                    *w *= h;
+                    // 3. Apply per-frequency attenuation mask.
+                    for (w, &h) in waveform.iter_mut().zip(h_mask.iter()) {
+                        *w *= h;
+                    }
+
+                    // 4. Inverse DFT in-place (includes 1/nt normalisation).
+                    ifft_1d_complex_inplace(&mut waveform);
+
+                    // 5. Write complex waveform back.
+                    row_i.slice_mut(s![j, ..]).assign(&waveform);
                 }
-
-                // 4. Inverse DFT in-place (includes 1/nt normalisation).
-                ifft_1d_complex_inplace(&mut self.waveform);
-
-                // 5. Write complex waveform back.
-                pressure.slice_mut(s![i, j, ..]).assign(&self.waveform);
-            }
-        }
+            });
     }
 
     /// Return the plane-wave attenuation coefficient α(f) in Np/m.

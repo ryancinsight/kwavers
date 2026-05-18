@@ -1,5 +1,5 @@
 use super::kernel::CudaKernelManager;
-use super::memory::{GpuMemoryManager, MemoryPool, MemoryPoolType, MemoryStats};
+use super::memory::{GpuMemoryManager, MemoryPool, PinnGpuMemoryPoolType, PinnGpuMemoryStats};
 
 #[test]
 fn test_gpu_memory_manager_creation() {
@@ -9,7 +9,7 @@ fn test_gpu_memory_manager_creation() {
 
 #[test]
 fn test_memory_pool_allocation() {
-    let mut pool = MemoryPool::new(MemoryPoolType::Temporary, 1024 * 1024, 256);
+    let mut pool = MemoryPool::new(PinnGpuMemoryPoolType::Temporary, 1024 * 1024, 256);
 
     let block = pool.allocate(1024);
 
@@ -32,7 +32,7 @@ fn test_cuda_kernel_manager() {
 
 #[test]
 fn test_memory_stats() {
-    let stats = MemoryStats::default();
+    let stats = PinnGpuMemoryStats::default();
 
     assert_eq!(stats.peak_gpu_memory, 0);
     assert_eq!(stats.allocation_count, 0);

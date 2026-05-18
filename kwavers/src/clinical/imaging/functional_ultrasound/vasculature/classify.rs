@@ -32,7 +32,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
-use super::{VesselClassification, VesselType};
+use super::{VascularVesselType, VesselClassification};
 
 /// Classify vessels from a static fUS image and its binary mask.
 ///
@@ -53,7 +53,7 @@ pub(super) fn classify_vessels(
     let points = masked_points(mask);
     if points.is_empty() {
         return Ok(VesselClassification {
-            vessel_type: VesselType::Unknown,
+            vessel_type: VascularVesselType::Unknown,
             confidence: 0.0,
             diameter: 0.0,
             orientation: [0.0, 0.0, 0.0],
@@ -89,11 +89,11 @@ pub(super) fn classify_vessels(
 
     let confidence = contrast.clamp(0.0, 0.95);
     let vessel_type = if confidence < 0.1 {
-        VesselType::Unknown
+        VascularVesselType::Unknown
     } else if vessel_mean >= background_mean {
-        VesselType::Artery
+        VascularVesselType::Artery
     } else {
-        VesselType::Vein
+        VascularVesselType::Vein
     };
 
     Ok(VesselClassification {
@@ -101,7 +101,7 @@ pub(super) fn classify_vessels(
         confidence,
         diameter,
         orientation,
-        flow_direction: (vessel_type == VesselType::Artery).then_some(orientation),
+        flow_direction: (vessel_type == VascularVesselType::Artery).then_some(orientation),
     })
 }
 

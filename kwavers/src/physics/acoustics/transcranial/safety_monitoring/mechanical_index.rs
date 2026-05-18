@@ -1,8 +1,8 @@
 //! Mechanical index calculation per AIUM/NEMA UD 3-2004
 
-use super::monitor::SafetyMonitor;
+use super::monitor::TranscranialSafetyMonitor;
 
-impl SafetyMonitor {
+impl TranscranialSafetyMonitor {
     /// Update mechanical index
     ///
     /// MI = p_peak(MPa) / √f(MHz)

@@ -6,7 +6,7 @@
 /// - Montaldo et al. (2009): "Coherent plane-wave compounding for very high frame rate."
 ///   *IEEE UFFC*, 56(3), 489–506.
 #[derive(Debug, Clone)]
-pub struct PlaneWaveConfig {
+pub struct PlaneWaveCompoundingConfig {
     /// Number of plane wave insonification angles.
     pub num_angles: usize,
     /// Half-angle sweep: angles run from −angle_range to +angle_range (degrees).
@@ -35,7 +35,7 @@ pub struct PlaneWaveConfig {
     pub dynamic_range: f64,
 }
 
-impl Default for PlaneWaveConfig {
+impl Default for PlaneWaveCompoundingConfig {
     fn default() -> Self {
         Self {
             num_angles: 11,

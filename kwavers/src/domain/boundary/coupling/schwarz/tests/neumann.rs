@@ -1,7 +1,7 @@
 //! Neumann transmission condition tests for SchwarzBoundary.
 
 use super::super::SchwarzBoundary;
-use crate::domain::boundary::coupling::types::{BoundaryDirections, TransmissionCondition};
+use crate::domain::boundary::coupling::types::{BoundaryDirections, BoundaryTransmissionCondition};
 use ndarray::Array3;
 
 #[test]
@@ -24,7 +24,7 @@ fn test_schwarz_neumann_flux_continuity() {
     }
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Neumann);
+        .with_transmission_condition(BoundaryTransmissionCondition::Neumann);
 
     let mut interface_view = interface_field.view_mut();
     boundary.apply_transmission(&mut interface_view, &neighbor_field);
@@ -60,7 +60,7 @@ fn test_schwarz_neumann_gradient_matching() {
     }
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Neumann);
+        .with_transmission_condition(BoundaryTransmissionCondition::Neumann);
 
     let original_mid = interface_field[[4, 4, 4]];
 
@@ -95,7 +95,7 @@ fn test_schwarz_neumann_analytical_validation() {
     }
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Neumann);
+        .with_transmission_condition(BoundaryTransmissionCondition::Neumann);
 
     let original_center = interface_field[[nx / 2, ny / 2, nz / 2]];
 
@@ -130,7 +130,7 @@ fn test_schwarz_neumann_conservation() {
     }
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
-        .with_transmission_condition(TransmissionCondition::Neumann);
+        .with_transmission_condition(BoundaryTransmissionCondition::Neumann);
 
     let mut interface_view = interface_field.view_mut();
     boundary.apply_transmission(&mut interface_view, &neighbor_field);

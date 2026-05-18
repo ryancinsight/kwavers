@@ -11,8 +11,6 @@ mod nonlinear;
 #[cfg(test)]
 mod tests;
 
-#[allow(unused_imports)]
-pub(crate) use bessel::jn;
 pub use dispersion::{
     fdtd_cfl_limit, fdtd_phase_error_1d, kspace_correction_error, pstd_phase_error,
 };

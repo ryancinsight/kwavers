@@ -4,7 +4,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
-use crate::domain::signal::window::{window_value, WindowType};
+use crate::domain::signal::window::{window_value, SignalWindowType};
 use ndarray::Array3;
 
 /// Tukey window function (tapered cosine window)
@@ -18,7 +18,7 @@ pub fn tukey_window(i: usize, n: usize, alpha: f64) -> f64 {
     }
 
     let x = i as f64 / (n - 1) as f64;
-    window_value(WindowType::Tukey { alpha }, x)
+    window_value(SignalWindowType::Tukey { alpha }, x)
 }
 
 /// Apply spatial windowing function to a 3D field
@@ -54,7 +54,7 @@ pub fn hann_window(i: usize, n: usize) -> f64 {
     if n <= 1 {
         return 1.0;
     }
-    window_value(WindowType::Hann, i as f64 / (n - 1) as f64)
+    window_value(SignalWindowType::Hann, i as f64 / (n - 1) as f64)
 }
 
 /// Apply Hamming window
@@ -63,7 +63,7 @@ pub fn hamming_window(i: usize, n: usize) -> f64 {
     if n <= 1 {
         return 1.0;
     }
-    window_value(WindowType::Hamming, i as f64 / (n - 1) as f64)
+    window_value(SignalWindowType::Hamming, i as f64 / (n - 1) as f64)
 }
 
 /// Apply Blackman window
@@ -72,5 +72,5 @@ pub fn blackman_window(i: usize, n: usize) -> f64 {
     if n <= 1 {
         return 1.0;
     }
-    window_value(WindowType::Blackman, i as f64 / (n - 1) as f64)
+    window_value(SignalWindowType::Blackman, i as f64 / (n - 1) as f64)
 }

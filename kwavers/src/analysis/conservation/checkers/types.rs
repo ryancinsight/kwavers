@@ -1,8 +1,8 @@
-//! `ConservationLaw`, `ConservedQuantity`, and `ConservationResult` types.
+//! `AnalysisConservationLaw`, `ConservedQuantity`, and `ConservationResult` types.
 
 /// Type of conservation law to verify.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ConservationLaw {
+pub enum AnalysisConservationLaw {
     /// Mass conservation: ∫ρ dV = constant.
     Mass,
     /// Momentum conservation: ∫ρu dV = constant (x, y, z components).
@@ -13,7 +13,7 @@ pub enum ConservationLaw {
     Charge,
 }
 
-impl std::fmt::Display for ConservationLaw {
+impl std::fmt::Display for AnalysisConservationLaw {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Mass => write!(f, "Mass"),
@@ -41,7 +41,7 @@ pub struct ConservedQuantity {
 #[derive(Debug, Clone)]
 pub struct ConservationResult {
     /// Conservation law verified.
-    pub law: ConservationLaw,
+    pub law: AnalysisConservationLaw,
     /// Initial quantity value.
     pub initial_value: f64,
     /// Current quantity value.

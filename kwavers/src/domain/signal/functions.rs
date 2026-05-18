@@ -1,7 +1,7 @@
 //! Free-standing signal utility and generation functions.
 
 use super::traits::Signal;
-use super::window::{get_win, WindowType};
+use super::window::{get_win, SignalWindowType};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 use rand::SeedableRng;
@@ -75,7 +75,7 @@ pub(super) fn k_wave_tukey_window(n: usize, alpha: f64) -> Vec<f64> {
         return vec![1.0; n];
     }
     if alpha >= 1.0 {
-        return get_win(WindowType::Hann, n, true);
+        return get_win(SignalWindowType::Hann, n, true);
     }
 
     let mut window = vec![1.0; n];
@@ -129,7 +129,7 @@ pub struct ToneBurstSpec {
     /// Total output length; defaults to `signal_offset + burst_samples` when `None`.
     pub signal_length: Option<usize>,
     /// Envelope window applied to the burst region.
-    pub window: WindowType,
+    pub window: SignalWindowType,
     /// Peak amplitude. Must be finite and ≥ 0.
     pub amplitude: f64,
     /// Initial carrier phase in radians. Must be finite.
@@ -146,7 +146,7 @@ impl ToneBurstSpec {
             num_cycles,
             signal_offset: 0,
             signal_length: None,
-            window: WindowType::Hann,
+            window: SignalWindowType::Hann,
             amplitude: 1.0,
             phase: 0.0,
         }
@@ -227,7 +227,7 @@ pub fn tone_burst_series(spec: &ToneBurstSpec) -> KwaversResult<Vec<f64>> {
 
     let dt = 1.0 / sample_rate_hz;
     let win = match window {
-        WindowType::Gaussian => k_wave_gaussian_burst_window(burst_samples),
+        SignalWindowType::Gaussian => k_wave_gaussian_burst_window(burst_samples),
         _ => get_win(*window, burst_samples, true),
     };
 

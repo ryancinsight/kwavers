@@ -1,6 +1,6 @@
 use super::clutter::{svht_threshold, SvdClutterFilter};
 use super::localize::{gauss_newton_fit_2d, GaussianLocalizer};
-use super::types::{LocalizationConfig, SvdClutterConfig};
+use super::types::{GaussianLocalizationConfig, SvdClutterConfig};
 use crate::math::linear_algebra::LinearAlgebra;
 use ndarray::Array2;
 
@@ -121,7 +121,7 @@ fn test_localizer_detects_isolated_peak() {
         }
     }
 
-    let cfg = LocalizationConfig {
+    let cfg = GaussianLocalizationConfig {
         min_sigma_px: 0.5,
         max_sigma_px: 3.0,
         ..Default::default()

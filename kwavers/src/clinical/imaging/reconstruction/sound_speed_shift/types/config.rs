@@ -113,12 +113,20 @@ impl ShiftSampling {
 }
 
 /// Image prior used by the inverse solve.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ShiftPrior {
-    /// Dense H1/Tikhonov speed-shift field.
+    /// Dense H1/Tikhonov speed-shift field solved with PCG.
     Dense,
-    /// Sparse perturbation field solved with an L1 proximal step.
+    /// Sparse perturbation field solved with an L1 proximal step (ISTA).
     Sparse,
+    /// Tikhonov-regularised least-squares solved with matrix-free LSQR
+    /// (Paige & Saunders 1982).  Better conditioned than PCG for overdetermined
+    /// systems and does not require a precomputed normal-equation diagonal.
+    ///
+    /// `damping` is the LSQR λ parameter: minimise ‖Ax − b‖² + λ²‖x‖².
+    /// Set `damping = tikhonov_weight.sqrt()` for equivalence with the Dense
+    /// Tikhonov regularisation.
+    Lsqr { damping: f64 },
 }
 
 /// Configuration for speed-of-sound shift reconstruction.

@@ -1,4 +1,4 @@
-use super::config::{ElastographyConfig, PhotoacousticConfig};
+use super::config::{ClinicalPhotoacousticConfig, ElastographyConfig};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -64,7 +64,9 @@ pub fn generate_realistic_rf_data(config: &BeamformingConfig3D) -> Array3<f64> {
 
 /// Generate realistic photoacoustic data
 #[must_use]
-pub fn generate_realistic_pa_data(_config: &PhotoacousticConfig) -> (Vec<Array3<f64>>, Vec<f64>) {
+pub fn generate_realistic_pa_data(
+    _config: &ClinicalPhotoacousticConfig,
+) -> (Vec<Array3<f64>>, Vec<f64>) {
     // Generate time-resolved pressure fields
     let time_points = vec![0.0, 2e-6, 4e-6, 6e-6, 8e-6]; // 5 time points
     let mut pressure_fields = Vec::new();
@@ -108,7 +110,7 @@ pub fn generate_realistic_pa_data(_config: &PhotoacousticConfig) -> (Vec<Array3<
 ///
 pub fn reconstruct_pa_image(
     pressure_fields: &[Array3<f64>],
-    _config: &PhotoacousticConfig,
+    _config: &ClinicalPhotoacousticConfig,
 ) -> KwaversResult<Array3<f64>> {
     // Simple back-projection reconstruction
     // In practice, this would use proper time-reversal algorithms

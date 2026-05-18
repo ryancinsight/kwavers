@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_pca_fusion_uses_first_principal_component_for_correlated_modalities() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::PCA,
+        fusion_method: ImagingFusionMethod::PCA,
         uncertainty_quantification: true,
         ..Default::default()
     };
@@ -42,7 +42,7 @@ fn test_pca_fusion_uses_first_principal_component_for_correlated_modalities() {
 #[test]
 fn test_pca_fusion_selects_dominant_variance_modality() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::PCA,
+        fusion_method: ImagingFusionMethod::PCA,
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
@@ -77,7 +77,7 @@ fn test_pca_fusion_selects_dominant_variance_modality() {
 #[test]
 fn test_pca_fusion_rejects_nonfinite_data() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::PCA,
+        fusion_method: ImagingFusionMethod::PCA,
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);

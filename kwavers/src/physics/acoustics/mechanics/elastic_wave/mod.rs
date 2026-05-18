@@ -20,9 +20,6 @@ use metrics::ElasticWaveMetrics;
 use ndarray::{Array3, Array4};
 use properties::AnisotropicElasticProperties;
 
-// Re-export key types for convenience
-pub use fields::{StressFields as ElasticStressFields, VelocityFields as ElasticVelocityFields};
-
 #[derive(Debug, Clone)]
 pub enum ElasticBodyForceConfig {
     GaussianImpulse {

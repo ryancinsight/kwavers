@@ -8,7 +8,7 @@ fn test_fusion_config_creation_and_defaults() {
     let config = FusionConfig::default();
 
     assert_eq!(config.output_resolution, [1e-4, 1e-4, 1e-4]);
-    assert_eq!(config.fusion_method, FusionMethod::WeightedAverage);
+    assert_eq!(config.fusion_method, ImagingFusionMethod::WeightedAverage);
     assert_eq!(config.registration_method, RegistrationMethod::RigidBody);
     assert!(!config.uncertainty_quantification); // Default is false
     assert_eq!(config.min_quality_threshold, 0.3);

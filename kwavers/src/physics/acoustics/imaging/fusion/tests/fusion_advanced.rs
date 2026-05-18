@@ -41,7 +41,7 @@ fn test_fusion_with_custom_weights() {
 #[test]
 fn test_probabilistic_fusion_uncertainty() {
     let config = FusionConfig {
-        fusion_method: FusionMethod::Probabilistic,
+        fusion_method: ImagingFusionMethod::Probabilistic,
         ..Default::default()
     };
 

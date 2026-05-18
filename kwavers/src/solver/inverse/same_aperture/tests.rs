@@ -69,6 +69,7 @@ fn finite_frequency_rows_are_normalized_and_input_sensitive() {
     let settings = SameApertureSettings {
         frequencies_hz: &[500_000.0],
         receiver_offsets: &[1],
+        phase_speed_m_s: super::C_REF_M_S,
     };
     let matrix = build_fundamental_matrix(medium, &therapy, &active, settings);
 
@@ -84,6 +85,63 @@ fn finite_frequency_rows_are_normalized_and_input_sensitive() {
         assert!((norm - 1.0).abs() <= 1.0e-5, "row {row} norm={norm}");
     }
     assert_ne!(matrix.row(0), matrix.row(1));
+}
+
+#[test]
+fn phase_speed_changes_pitch_catch_phase_without_changing_row_normalization() {
+    let mask = Array2::from_elem((4, 4), true);
+    let active = active_grid(&mask, 0.001);
+    let attenuation = Array2::from_elem((4, 4), 0.06);
+    let medium = SameApertureMedium {
+        attenuation_np_per_m_mhz: &attenuation,
+        spacing_m: 0.001,
+    };
+    let therapy = [
+        PlanarPoint {
+            x_m: -0.004,
+            y_m: -0.002,
+        },
+        PlanarPoint {
+            x_m: 0.004,
+            y_m: -0.002,
+        },
+    ];
+    let acoustic_settings = SameApertureSettings {
+        frequencies_hz: &[1_000.0],
+        receiver_offsets: &[1],
+        phase_speed_m_s: super::C_REF_M_S,
+    };
+    let shear_settings = SameApertureSettings {
+        frequencies_hz: &[1_000.0],
+        receiver_offsets: &[1],
+        phase_speed_m_s: 2.5,
+    };
+    let acoustic = build_fundamental_matrix(medium, &therapy, &active, acoustic_settings);
+    let shear = build_fundamental_matrix(medium, &therapy, &active, shear_settings);
+    let max_difference = acoustic
+        .row(0)
+        .iter()
+        .zip(shear.row(0).iter())
+        .map(|(a, s)| (a - s).abs())
+        .fold(0.0_f32, f32::max);
+
+    assert_eq!(acoustic.rows(), shear.rows());
+    assert_eq!(acoustic.cols(), shear.cols());
+    assert!(
+        max_difference > 1.0e-4,
+        "phase-speed change must alter pitch-catch row values, max_difference={max_difference}"
+    );
+    for matrix in [&acoustic, &shear] {
+        for row in 0..matrix.rows() {
+            let norm = matrix
+                .row(row)
+                .iter()
+                .map(|value| value * value)
+                .sum::<f32>()
+                .sqrt();
+            assert!((norm - 1.0).abs() <= 1.0e-5, "row {row} norm={norm}");
+        }
+    }
 }
 
 #[test]
@@ -112,6 +170,7 @@ fn matrix_free_operator_matches_materialized_rows() {
     let settings = SameApertureSettings {
         frequencies_hz: &[250_000.0, 500_000.0],
         receiver_offsets: &[1, 2],
+        phase_speed_m_s: super::C_REF_M_S,
     };
     let matrix = build_fundamental_matrix(medium, &therapy, &active, settings);
     let operator = fundamental_operator(medium, &therapy, &active, settings);
@@ -168,6 +227,7 @@ fn encoded_operator_matches_materialized_source_encoding() {
     let settings = SameApertureSettings {
         frequencies_hz: &[250_000.0, 500_000.0],
         receiver_offsets: &[1, 2],
+        phase_speed_m_s: super::C_REF_M_S,
     };
     let matrix = build_fundamental_matrix(medium, &therapy, &active, settings);
     let operator = fundamental_operator(medium, &therapy, &active, settings);

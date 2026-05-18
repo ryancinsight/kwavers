@@ -23,7 +23,7 @@ pub enum PhysicsDomain {
 
 /// Type of coupling between physics domains
 #[derive(Debug, Clone, PartialEq)]
-pub enum CouplingType {
+pub enum BoundaryCouplingType {
     /// Acoustic-elastic coupling (fluid-structure interaction).
     ///
     /// Carries the specific acoustic impedances Z = ρc [Pa·s/m = Rayl] of the
@@ -91,7 +91,7 @@ pub enum FrequencyProfile {
 
 /// Transmission condition for domain decomposition
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub enum TransmissionCondition {
+pub enum BoundaryTransmissionCondition {
     /// Dirichlet transmission: u_interface = u_neighbor
     #[default]
     Dirichlet,
@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_transmission_condition_default() {
-        let cond = TransmissionCondition::default();
-        assert_eq!(cond, TransmissionCondition::Dirichlet);
+        let cond = BoundaryTransmissionCondition::default();
+        assert_eq!(cond, BoundaryTransmissionCondition::Dirichlet);
     }
 }

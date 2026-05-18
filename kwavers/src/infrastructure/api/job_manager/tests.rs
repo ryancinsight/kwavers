@@ -1,8 +1,8 @@
 use super::manager::JobManager;
 use super::types::{TrainingExecutor, TrainingFuture, TrainingOutput};
 use crate::infrastructure::api::{
-    APIError, APIErrorType, GeometrySpec, JobStatus, PINNTrainingRequest, PhysicsParameters,
-    TrainingConfig, TrainingProgress,
+    APIError, APIErrorType, GeometrySpec, JobStatus, PINNTrainingRequest, PinnApiPhysicsParameters,
+    PinnApiTrainingConfig, TrainingProgress,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -38,13 +38,13 @@ async fn test_job_submission() {
             obstacles: vec![],
             boundary_conditions: vec![],
         },
-        physics_params: PhysicsParameters {
+        physics_params: PinnApiPhysicsParameters {
             material_properties: HashMap::new(),
             boundary_values: HashMap::new(),
             initial_values: HashMap::new(),
             domain_params: HashMap::new(),
         },
-        training_config: TrainingConfig::default(),
+        training_config: PinnApiTrainingConfig::default(),
         callback_url: None,
         metadata: None,
     };
@@ -68,13 +68,13 @@ async fn test_job_cancellation() {
             obstacles: vec![],
             boundary_conditions: vec![],
         },
-        physics_params: PhysicsParameters {
+        physics_params: PinnApiPhysicsParameters {
             material_properties: HashMap::new(),
             boundary_values: HashMap::new(),
             initial_values: HashMap::new(),
             domain_params: HashMap::new(),
         },
-        training_config: TrainingConfig::default(),
+        training_config: PinnApiTrainingConfig::default(),
         callback_url: None,
         metadata: None,
     };
@@ -101,8 +101,8 @@ fn test_user_jobs_filtering() {
         request: PINNTrainingRequest {
             physics_domain: "test".to_string(),
             geometry: GeometrySpec::default(),
-            physics_params: PhysicsParameters::default(),
-            training_config: TrainingConfig::default(),
+            physics_params: PinnApiPhysicsParameters::default(),
+            training_config: PinnApiTrainingConfig::default(),
             callback_url: None,
             metadata: None,
         },

@@ -210,16 +210,15 @@ mod tests;
 
 // Re-export key types
 #[cfg(feature = "pinn")]
-pub use adaptive_sampling::{
-    AdaptiveSampler, BatchIterator, SamplingStrategy as AdaptiveSamplingStrategy,
-};
+pub use adaptive_sampling::{AdaptiveSampler, BatchIterator, ElasticAdaptiveSamplingStrategy};
 
 pub use super::geometry::{
-    AdaptiveRefinement, CollocationSampler, InterfaceCondition, MultiRegionDomain, SamplingStrategy,
+    AdaptiveRefinement, CollocationSampler, CollocationSamplingStrategy, MultiRegionDomain,
+    PinnGeometryInterfaceCondition,
 };
 pub use config::{
-    ActivationFunction, Config, LearningRateScheduler, LossWeights, OptimizerType,
-    SamplingStrategy as ConfigSamplingStrategy,
+    Config, ElasticCollocationSamplingStrategy, ElasticPinnActivationFunction,
+    ElasticPinnLrScheduler, ElasticPinnOptimizerType, LossWeights,
 };
 
 #[cfg(feature = "pinn")]
@@ -227,14 +226,14 @@ pub use inference::Predictor;
 
 #[cfg(feature = "pinn")]
 pub use loss::{
-    BoundaryData, BoundaryType, CollocationData, InitialData, LossComponents, LossComputer,
-    ObservationData,
+    BoundaryData, BoundaryType, CollocationData, ElasticPinnLossComponents, InitialData,
+    LossComputer, ObservationData,
 };
 
 pub use model::ElasticPINN2D;
 
 #[cfg(feature = "pinn")]
-pub use training::{TrainingData, TrainingMetrics};
+pub use training::{ElasticPinnTrainingMetrics, TrainingData};
 
 #[cfg(feature = "pinn")]
 pub use physics_impl::ElasticPINN2DSolver;

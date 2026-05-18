@@ -5,7 +5,7 @@ use crate::core::error::KwaversResult;
 
 /// Localization configuration
 #[derive(Debug, Clone)]
-pub struct LocalizationConfig {
+pub struct AcousticLocalizationConfig {
     /// Sensor positions [x, y, z] in meters
     pub sensor_positions: Vec<[f64; 3]>,
 
@@ -28,7 +28,7 @@ pub struct LocalizationConfig {
     pub confidence_threshold: f64,
 }
 
-impl LocalizationConfig {
+impl AcousticLocalizationConfig {
     /// Create new localization configuration
     #[must_use]
     pub fn new(sensor_positions: Vec<[f64; 3]>, sampling_frequency: f64, sound_speed: f64) -> Self {
@@ -142,7 +142,7 @@ impl LocalizationConfig {
     }
 }
 
-impl Default for LocalizationConfig {
+impl Default for AcousticLocalizationConfig {
     fn default() -> Self {
         Self::new(
             vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]],
@@ -158,21 +158,21 @@ mod tests {
 
     #[test]
     fn test_config_creation() {
-        let config = LocalizationConfig::default();
+        let config = AcousticLocalizationConfig::default();
         config.validate().unwrap();
         assert!(!config.sensor_positions.is_empty());
     }
 
     #[test]
     fn test_config_validation() {
-        let mut config = LocalizationConfig::default();
+        let mut config = AcousticLocalizationConfig::default();
         config.sensor_positions.clear();
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn test_config_builder() {
-        let config = LocalizationConfig::default()
+        let config = AcousticLocalizationConfig::default()
             .with_time_window(2.0)
             .with_grid_resolution(128)
             .with_confidence_threshold(0.7);
@@ -184,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_wavelength_calculation() {
-        let config = LocalizationConfig::default();
+        let config = AcousticLocalizationConfig::default();
         let wavelength = config.wavelength(1.0e6);
         assert!((wavelength - 1.54e-3).abs() < 1e-6);
     }

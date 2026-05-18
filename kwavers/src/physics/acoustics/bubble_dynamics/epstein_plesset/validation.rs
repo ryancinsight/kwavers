@@ -1,7 +1,7 @@
 //! Implementation validation against literature values
 
 use super::solver::EpsteinPlessetStabilitySolver;
-use super::types::ValidationResults;
+use super::types::EpsteinPlessetValidationResults;
 use crate::core::error::KwaversResult;
 
 impl EpsteinPlessetStabilitySolver {
@@ -9,7 +9,7 @@ impl EpsteinPlessetStabilitySolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn validate_implementation(&self) -> KwaversResult<ValidationResults> {
+    pub fn validate_implementation(&self) -> KwaversResult<EpsteinPlessetValidationResults> {
         let analysis = self.analyze_stability();
 
         let expected_freq = self.compute_resonance_frequency();
@@ -19,7 +19,7 @@ impl EpsteinPlessetStabilitySolver {
         let stability_reasonable =
             analysis.stability_parameter > -1e6 && analysis.stability_parameter < 1e12;
 
-        Ok(ValidationResults {
+        Ok(EpsteinPlessetValidationResults {
             resonance_frequency_error: freq_error,
             quality_factor_valid: q_factor_reasonable,
             stability_parameter_valid: stability_reasonable,

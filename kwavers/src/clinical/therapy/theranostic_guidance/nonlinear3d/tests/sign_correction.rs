@@ -16,7 +16,7 @@
 
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
-use super::super::types::{GridIndex, Nonlinear3dAperture};
+use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
 use super::super::Nonlinear3dConfig;
 use super::Point3;
 use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
@@ -57,6 +57,7 @@ fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign()
             z_m: 0.0,
         }],
         model_name: "test_homogeneous_axial".to_owned(),
+        source_domain: SourceDomain::TissueBoundary,
         focus: receiver_idx,
     };
 
@@ -78,6 +79,7 @@ fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign()
         beta: &beta_field,
         attenuation_np_per_m_mhz: None,
         attenuation_power_law_y: None,
+        source_body_mask: None,
         n,
         spacing_m,
         aperture: &aperture,

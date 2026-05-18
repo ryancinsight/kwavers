@@ -12,6 +12,7 @@ mod abdominal3d;
 mod aperture;
 mod config;
 mod context;
+mod elastic_shear;
 mod exposure;
 mod geometry;
 mod helmet3d;
@@ -25,6 +26,7 @@ mod solver;
 pub mod standing_wave_opt;
 pub mod synthetic;
 mod transcranial_fus;
+mod transmit_schedule;
 mod waveform;
 
 pub use abdominal3d::{plan_abdominal_array_placement, AbdominalArrayPlacement3D};
@@ -32,9 +34,12 @@ pub use config::{AnatomyKind, TheranosticInverseConfig};
 pub use context::{
     build_abdominal_placement_context, build_brain_placement_context, PlacementContext,
 };
+pub use elastic_shear::{ElasticShearReconstructionResult, THERANOSTIC_ELASTIC_SHEAR_MODEL};
 pub use geometry::{placement_metrics, DeviceLayout, DevicePlacementMetrics, Point2, Point3};
 pub use helmet3d::{plan_brain_helmet_placement, BrainHelmetPlacement3D};
-pub use medium::{prepare_abdominal_slice, prepare_brain_slice, PreparedTheranosticSlice};
+pub use medium::{
+    prepare_abdominal_slice, prepare_brain_slice, BrainTargetSelection, PreparedTheranosticSlice,
+};
 pub use metrics::ReconstructionMetrics;
 pub use misfit::WaveformMisfit;
 pub use nonlinear3d::{
@@ -57,8 +62,14 @@ pub use transcranial_fus::{
     SkullAdaptiveBenchmarkResult, SkullAwareTransducerPlacement, TranscranialFusPlan,
     TranscranialFusPlanConfig,
 };
+pub use transmit_schedule::{
+    select_transmit_schedule, TransmitScheduleConfig, TransmitScheduleResult,
+    TransmitScheduleStrategy, TRANSMIT_SCHEDULE_MODEL,
+};
 pub use waveform::{
-    simulate_waveform_adjoint_rtm, WaveformSimulationResult, THERANOSTIC_WAVEFORM_MODEL,
+    simulate_peak_pressure_exposure, simulate_waveform_adjoint_rtm, PeakPressureExposureResult,
+    WaveformSimulationResult, THERANOSTIC_HYBRID_PSTD_FDTD_EXPOSURE_READY,
+    THERANOSTIC_WAVEFORM_MODEL, THERANOSTIC_WAVE_EXPOSURE_BACKEND, THERANOSTIC_WAVE_EXPOSURE_MODEL,
 };
 
 #[cfg(test)]

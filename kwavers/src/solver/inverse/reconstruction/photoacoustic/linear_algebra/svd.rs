@@ -4,9 +4,9 @@ use ndarray::{Array1, Array2, ArrayView1};
 
 use crate::core::error::KwaversResult;
 
-use super::LinearSolver;
+use super::PhotoacousticLinearSolver;
 
-impl LinearSolver {
+impl PhotoacousticLinearSolver {
     /// Solve using truncated SVD for ill-conditioned problems.
     ///
     /// Computes the pseudo-inverse solution discarding singular values below

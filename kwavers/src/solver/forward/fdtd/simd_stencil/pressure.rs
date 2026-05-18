@@ -1,8 +1,8 @@
-use super::SimdStencilProcessor;
+use super::FdtdSimdStencilProcessor;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
-impl SimdStencilProcessor {
+impl FdtdSimdStencilProcessor {
     /// Update pressure field using cache-tiled stencil.
     ///
     /// ## Algorithm: Cache-Tiled 3D Stencil (Kamil et al. 2010, §2.2)

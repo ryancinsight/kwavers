@@ -2,7 +2,7 @@
 //! pressure field: full pressure volume, on-axis time signal, time-averaged
 //! intensity, and peak positive pressure.
 
-use ndarray::{Array2, Array3};
+use ndarray::{Array2, Array3, Zip};
 
 use super::KZKSolver;
 
@@ -31,40 +31,47 @@ impl KZKSolver {
     /// Calculate time-averaged acoustic intensity I = p²_rms / (ρ₀c₀) (W/m²).
     ///
     /// Uses the physical (real) pressure: `I(i,j) = ⟨Re[p]²⟩_τ / (ρ₀c₀)`.
+    ///
+    /// ## Theorem (race-freedom)
+    ///
+    /// Output element `intensity[i,j]` is a sequential reduction over the
+    /// disjoint slice `self.pressure[[i,j,0..nt]]`.  No two Rayon tasks
+    /// share memory → `par_for_each` is race-free.
     #[must_use]
     pub fn get_intensity(&self) -> Array2<f64> {
-        let mut intensity = Array2::zeros((self.config.nx, self.config.ny));
         let factor = 1.0 / (self.config.rho0 * self.config.c0 * self.config.nt as f64);
-
-        for j in 0..self.config.ny {
-            for i in 0..self.config.nx {
-                let mut sum = 0.0;
-                for t in 0..self.config.nt {
-                    let p = self.pressure[[i, j, t]].re;
-                    sum += p * p;
-                }
-                intensity[[i, j]] = sum * factor;
-            }
-        }
-
+        let nt = self.config.nt;
+        let pressure = &self.pressure;
+        let mut intensity = Array2::zeros((self.config.nx, self.config.ny));
+        Zip::indexed(intensity.view_mut()).par_for_each(|(i, j), out| {
+            let sum: f64 = (0..nt)
+                .map(|t| {
+                    let p = pressure[[i, j, t]].re;
+                    p * p
+                })
+                .sum();
+            *out = sum * factor;
+        });
         intensity
     }
 
     /// Calculate peak positive pressure field max_τ |Re[p(x,y,τ)]| (Pa).
+    ///
+    /// ## Theorem (race-freedom)
+    ///
+    /// Output element `peak[i,j]` is computed from the disjoint slice
+    /// `self.pressure[[i,j,0..nt]]`.  No two Rayon tasks share memory
+    /// → `par_for_each` is race-free.
     #[must_use]
     pub fn get_peak_pressure(&self) -> Array2<f64> {
+        let nt = self.config.nt;
+        let pressure = &self.pressure;
         let mut peak = Array2::zeros((self.config.nx, self.config.ny));
-
-        for j in 0..self.config.ny {
-            for i in 0..self.config.nx {
-                let mut max_p: f64 = 0.0;
-                for t in 0..self.config.nt {
-                    max_p = max_p.max(self.pressure[[i, j, t]].re.abs());
-                }
-                peak[[i, j]] = max_p;
-            }
-        }
-
+        Zip::indexed(peak.view_mut()).par_for_each(|(i, j), out| {
+            *out = (0..nt)
+                .map(|t| pressure[[i, j, t]].re.abs())
+                .fold(0.0_f64, f64::max);
+        });
         peak
     }
 }

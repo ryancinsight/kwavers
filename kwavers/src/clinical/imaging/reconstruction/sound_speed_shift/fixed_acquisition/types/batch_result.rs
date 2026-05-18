@@ -30,7 +30,7 @@ pub struct SoundSpeedShiftBatchFrame {
 }
 
 /// Aggregate result for a streamed fixed-acquisition batch reconstruction.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SoundSpeedShiftBatchStreamSummary {
     /// Number of frames reconstructed and passed to the callback.
     pub frames_processed: usize,

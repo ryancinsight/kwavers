@@ -7,12 +7,12 @@ fn test_bayesian_pinn_creation() {
         num_samples: 10,
     };
     // Verify construction succeeds; MC dropout masks are generated on-the-fly.
-    BayesianPINN::new(config).unwrap();
+    MlBayesianPINN::new(config).unwrap();
 }
 
 #[test]
 fn test_bayesian_pinn_creation_rejects_invalid() {
-    let result = BayesianPINN::new(BayesianConfig {
+    let result = MlBayesianPINN::new(BayesianConfig {
         dropout_rate: 0.1,
         num_samples: 0,
     });
@@ -31,7 +31,7 @@ fn test_prediction_statistics() {
         dropout_rate: 0.1,
         num_samples: 5,
     };
-    let bayesian = BayesianPINN::new(config).unwrap();
+    let bayesian = MlBayesianPINN::new(config).unwrap();
     let predictions: Vec<Array2<f32>> = (0..5)
         .map(|i| Array2::from_elem((10, 20), i as f32))
         .collect();
@@ -84,7 +84,7 @@ fn test_prediction_statistics() {
 
 #[test]
 fn test_prediction_statistics_empty_rejects() {
-    let bayesian = BayesianPINN::new(BayesianConfig::default()).unwrap();
+    let bayesian = MlBayesianPINN::new(BayesianConfig::default()).unwrap();
     let err = bayesian.compute_prediction_statistics(&[]).unwrap_err();
     let msg = format!("{err:?}");
     assert!(
@@ -99,7 +99,7 @@ fn test_uncertainty_decomposition() {
     // Mean = 1.0; std dev ≈ 0.1; epistemic = aleatoric = 0.5 * total; ratio = 1.0
     use ndarray::Array2;
     let config = BayesianConfig::default();
-    let bayesian = BayesianPINN::new(config).unwrap();
+    let bayesian = MlBayesianPINN::new(config).unwrap();
     let predictions = vec![
         Array2::from_elem((5, 5), 1.0_f32),
         Array2::from_elem((5, 5), 1.1_f32),
@@ -134,7 +134,7 @@ fn test_uncertainty_decomposition() {
 #[test]
 fn test_uncertainty_decomposition_rejects_single_prediction() {
     use ndarray::Array2;
-    let bayesian = BayesianPINN::new(BayesianConfig::default()).unwrap();
+    let bayesian = MlBayesianPINN::new(BayesianConfig::default()).unwrap();
     let err = bayesian
         .decompose_uncertainty(&[Array2::from_elem((3, 3), 1.0_f32)])
         .unwrap_err();

@@ -24,13 +24,13 @@ pub use alerting::AlertThreshold;
 use alerting::BreachTracker;
 pub use correlation::TelemetryContext;
 pub use exporter::{ConsoleExporter, TelemetryExporter};
-pub use metrics::{ErrorMetrics, MetricType};
+pub use metrics::{TelemetryErrorCounts, MetricType};
 pub use severity::ErrorSeverity;
 
 /// Central telemetry hub for error observability.
 #[derive(Debug)]
 pub struct ErrorTelemetry {
-    metrics: Arc<ErrorMetrics>,
+    metrics: Arc<TelemetryErrorCounts>,
     exporters: Vec<Box<dyn TelemetryExporter>>,
     alert_thresholds: HashMap<ErrorSeverity, AlertThreshold>,
     breach_tracker: BreachTracker,
@@ -41,7 +41,7 @@ impl ErrorTelemetry {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            metrics: Arc::new(ErrorMetrics::new()),
+            metrics: Arc::new(TelemetryErrorCounts::new()),
             exporters: Vec::new(),
             alert_thresholds: Self::default_thresholds(),
             breach_tracker: BreachTracker::default(),
@@ -167,7 +167,7 @@ impl ErrorTelemetry {
     }
 
     #[must_use]
-    pub fn metrics(&self) -> &ErrorMetrics {
+    pub fn metrics(&self) -> &TelemetryErrorCounts {
         &self.metrics
     }
 

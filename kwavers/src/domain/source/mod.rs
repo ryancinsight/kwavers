@@ -24,7 +24,7 @@ pub use factory::SourceFactory;
 pub use grid_source::{GridSource, SourceMode};
 pub use injection::SourceInjectionMode;
 pub use structs::{CompositeSource, NullSource, PointSource, TimeVaryingSource};
-pub use types::{EMWaveType, Polarization, Source, SourceField, SourceType};
+pub use types::{Source, SourceEMWaveType, SourceField, SourcePolarization, SourceType};
 
 // Re-export submodules
 pub use array_2d::{
@@ -68,6 +68,6 @@ pub use transducers::{
 pub use wavefront::{
     bessel::{BesselBuilder, BesselConfig, BesselSource},
     gaussian::{GaussianBuilder, GaussianConfig, GaussianSource},
-    plane_wave::{InjectionMode, PlaneWaveBuilder, PlaneWaveConfig, PlaneWaveSource},
+    plane_wave::{InjectionMode, PlaneWaveBuilder, PlaneWaveSource, PlaneWaveSourceConfig},
     spherical::{SphericalBuilder, SphericalConfig, SphericalSource, SphericalWaveType},
 };

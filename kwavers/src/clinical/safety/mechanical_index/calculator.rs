@@ -3,7 +3,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
-use super::types::{MechanicalIndexResult, SafetyStatus, TissueType};
+use super::types::{MechanicalIndexResult, MechanicalIndexSafetyStatus, MechanicalIndexTissueType};
 
 /// Mechanical Index calculator for ultrasound safety assessment.
 #[derive(Debug, Clone)]
@@ -13,7 +13,7 @@ pub struct MechanicalIndexCalculator {
     /// Attenuation coefficient in dB/cm/MHz
     attenuation_coeff: f64,
     /// Tissue type for safety limit selection
-    tissue_type: TissueType,
+    tissue_type: MechanicalIndexTissueType,
 }
 
 impl MechanicalIndexCalculator {
@@ -64,12 +64,16 @@ impl MechanicalIndexCalculator {
     /// # Example
     ///
     /// ```
-    /// use kwavers::clinical::safety::mechanical_index::{MechanicalIndexCalculator, TissueType};
+    /// use kwavers::clinical::safety::mechanical_index::{MechanicalIndexCalculator, MechanicalIndexTissueType};
     ///
-    /// let mi_calc = MechanicalIndexCalculator::new(5.0, 0.5, TissueType::SoftTissue);
+    /// let mi_calc = MechanicalIndexCalculator::new(5.0, 0.5, MechanicalIndexTissueType::SoftTissue);
     /// ```
     #[must_use]
-    pub fn new(center_frequency_mhz: f64, attenuation_coeff: f64, tissue_type: TissueType) -> Self {
+    pub fn new(
+        center_frequency_mhz: f64,
+        attenuation_coeff: f64,
+        tissue_type: MechanicalIndexTissueType,
+    ) -> Self {
         Self {
             center_frequency_mhz,
             attenuation_coeff,
@@ -91,10 +95,10 @@ impl MechanicalIndexCalculator {
     /// # Example
     ///
     /// ```
-    /// use kwavers::clinical::safety::mechanical_index::{MechanicalIndexCalculator, TissueType};
+    /// use kwavers::clinical::safety::mechanical_index::{MechanicalIndexCalculator, MechanicalIndexTissueType};
     /// use ndarray::Array3;
     ///
-    /// let mi_calc = MechanicalIndexCalculator::new(5.0, 0.5, TissueType::SoftTissue);
+    /// let mi_calc = MechanicalIndexCalculator::new(5.0, 0.5, MechanicalIndexTissueType::SoftTissue);
     /// let pressure = Array3::from_elem((10, 10, 10), -1e5);
     /// let result = mi_calc.calculate(&pressure, 5.0).unwrap();
     /// assert!(result.mi > 0.0);
@@ -144,13 +148,13 @@ impl MechanicalIndexCalculator {
         let cavitation_threshold = self.tissue_type.cavitation_threshold();
 
         let safety_status = if mi > safety_limit {
-            SafetyStatus::Unsafe
+            MechanicalIndexSafetyStatus::Unsafe
         } else if mi >= cavitation_threshold {
-            SafetyStatus::CavitationRisk
+            MechanicalIndexSafetyStatus::CavitationRisk
         } else if mi > safety_limit * 0.8 {
-            SafetyStatus::Caution
+            MechanicalIndexSafetyStatus::Caution
         } else {
-            SafetyStatus::Safe
+            MechanicalIndexSafetyStatus::Safe
         };
 
         Ok(MechanicalIndexResult {

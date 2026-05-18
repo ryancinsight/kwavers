@@ -5,7 +5,6 @@ use ndarray::{Array1, Array2, ArrayView2};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::fft_1d_array;
 
-use super::super::types::ApodizationType;
 use super::DelayAndSumPAM;
 
 impl DelayAndSumPAM {
@@ -193,33 +192,7 @@ impl DelayAndSumPAM {
 
     /// Compute apodization weights for sidelobe suppression.
     pub(crate) fn compute_apodization_weights(&self) -> Vec<f64> {
-        let n = self.num_sensors;
-        match self.config.apodization {
-            ApodizationType::None => vec![1.0; n],
-            ApodizationType::Hamming => (0..n)
-                .map(|i| {
-                    0.46f64.mul_add(
-                        -(2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos(),
-                        0.54,
-                    )
-                })
-                .collect(),
-            ApodizationType::Hanning => (0..n)
-                .map(|i| {
-                    0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos())
-                })
-                .collect(),
-            ApodizationType::Blackman => (0..n)
-                .map(|i| {
-                    let alpha = 0.16;
-                    let a0 = (1.0 - alpha) / 2.0;
-                    let a1 = 0.5;
-                    let a2 = alpha / 2.0;
-                    let n_term = 2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64;
-                    a0 - a1 * n_term.cos() + a2 * (2.0 * n_term).cos()
-                })
-                .collect(),
-        }
+        self.config.apodization.weights(self.num_sensors)
     }
 
     pub(super) fn noise_threshold(&self, intensity_map: &Array1<f64>) -> f64 {

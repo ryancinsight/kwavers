@@ -1,7 +1,7 @@
 //! Transducer array trajectory and phase optimization
 
 use super::planner::TreatmentPlanner;
-use super::types::{TargetVolume, TransducerSetup, TransducerSpecification};
+use super::types::{TargetVolume, TranscranialTransducerSpecification, TransducerSetup};
 use crate::core::error::KwaversResult;
 
 impl TreatmentPlanner {
@@ -49,7 +49,7 @@ impl TreatmentPlanner {
     pub(crate) fn optimize_transducer_setup(
         &self,
         targets: &[TargetVolume],
-        spec: &TransducerSpecification,
+        spec: &TranscranialTransducerSpecification,
     ) -> KwaversResult<TransducerSetup> {
         let num_elements = spec.num_elements;
         let mut element_positions = Vec::with_capacity(num_elements);

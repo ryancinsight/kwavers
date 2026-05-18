@@ -22,7 +22,7 @@ pub struct PINNConfig {
     /// Physics parameters
     pub physics_params: PhysicsParams,
     /// Training configuration
-    pub training_config: TrainingConfig,
+    pub training_config: BurnPinnTrainingConfig,
     /// Whether to use GPU acceleration
     pub use_gpu: bool,
 }
@@ -32,7 +32,7 @@ pub struct PINNConfig {
 pub struct Geometry {
     pub bounds: Vec<f64>,
     pub obstacles: Vec<Obstacle>,
-    pub boundary_conditions: Vec<BoundaryCondition>,
+    pub boundary_conditions: Vec<PinnBoundarySpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,7 +43,7 @@ pub struct Obstacle {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BoundaryCondition {
+pub struct PinnBoundarySpec {
     pub boundary: String,
     pub condition_type: String,
     pub value: f64,
@@ -60,7 +60,7 @@ pub struct PhysicsParams {
 
 /// Training configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrainingConfig {
+pub struct BurnPinnTrainingConfig {
     pub collocation_points: usize,
     pub batch_size: usize,
     pub epochs: usize,
@@ -72,13 +72,13 @@ pub struct TrainingConfig {
 
 /// Result of PINN training
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrainingResult {
-    pub metrics: TrainingMetrics,
+pub struct PinnTrainingResult {
+    pub metrics: BurnPinnTrainingMetrics,
     // Add other fields as needed, e.g., model weights
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TrainingMetrics {
+pub enum BurnPinnTrainingMetrics {
     OneD(BurnTrainingMetrics),
     TwoD(BurnTrainingMetrics2D),
 }
@@ -106,7 +106,7 @@ impl PINNTrainer {
     pub async fn train_with_progress(
         &mut self,
         progress_sender: mpsc::Sender<crate::api::TrainingProgress>,
-    ) -> KwaversResult<TrainingResult> {
+    ) -> KwaversResult<PinnTrainingResult> {
         // Validation
         if self.config.physics_domain != "acoustic_wave" {
             return Err(KwaversError::InvalidInput(format!(
@@ -137,7 +137,7 @@ impl PINNTrainer {
 fn train_1d(
     config: PINNConfig,
     sender: mpsc::Sender<crate::api::TrainingProgress>,
-) -> KwaversResult<TrainingResult> {
+) -> KwaversResult<PinnTrainingResult> {
     type Backend = Autodiff<NdArray<f32>>;
     let device = Default::default();
 
@@ -185,15 +185,15 @@ fn train_1d(
         },
     )?;
 
-    Ok(TrainingResult {
-        metrics: TrainingMetrics::OneD(metrics),
+    Ok(PinnTrainingResult {
+        metrics: BurnPinnTrainingMetrics::OneD(metrics),
     })
 }
 
 fn train_2d(
     config: PINNConfig,
     sender: mpsc::Sender<crate::api::TrainingProgress>,
-) -> KwaversResult<TrainingResult> {
+) -> KwaversResult<PinnTrainingResult> {
     type Backend = Autodiff<NdArray<f32>>;
     let device = Default::default();
 
@@ -251,7 +251,7 @@ fn train_2d(
         },
     )?;
 
-    Ok(TrainingResult {
-        metrics: TrainingMetrics::TwoD(metrics),
+    Ok(PinnTrainingResult {
+        metrics: BurnPinnTrainingMetrics::TwoD(metrics),
     })
 }

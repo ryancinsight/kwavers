@@ -3,7 +3,7 @@
 mod fmt;
 mod query;
 
-use super::interface::InterfaceCondition;
+use super::interface::BurnWave2dInterfaceCondition;
 
 /// 2D geometry definitions for PINN domains.
 pub enum Geometry2D {
@@ -54,7 +54,7 @@ pub enum Geometry2D {
     /// Multi-region composite domain.
     MultiRegion {
         regions: Vec<(Geometry2D, usize)>,
-        interfaces: Vec<InterfaceCondition>,
+        interfaces: Vec<BurnWave2dInterfaceCondition>,
     },
 }
 
@@ -135,7 +135,7 @@ impl Geometry2D {
     /// Create a multi-region geometry.
     pub fn multi_region(
         regions: Vec<(Geometry2D, usize)>,
-        interfaces: Vec<InterfaceCondition>,
+        interfaces: Vec<BurnWave2dInterfaceCondition>,
     ) -> Self {
         Self::MultiRegion {
             regions,

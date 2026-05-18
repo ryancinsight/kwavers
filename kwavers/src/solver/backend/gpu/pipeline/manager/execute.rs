@@ -1,6 +1,6 @@
 //! Pipeline execution methods for PipelineManager.
 
-use super::super::super::buffers::BufferManager;
+use super::super::super::buffers::GpuBackendBufferManager;
 use super::super::super::init::WGPUContext;
 use super::super::types::PipelineType;
 use crate::core::error::{KwaversError, KwaversResult};
@@ -19,7 +19,7 @@ impl super::PipelineManager {
         &self,
         data: &mut Array3<f64>,
         context: &WGPUContext,
-        buffer_manager: &BufferManager,
+        buffer_manager: &GpuBackendBufferManager,
     ) -> KwaversResult<()> {
         let pipeline = self.pipelines.get(&PipelineType::FFT3D).ok_or_else(|| {
             KwaversError::ConfigError(crate::core::error::ConfigError::MissingFeature {
@@ -94,7 +94,7 @@ impl super::PipelineManager {
         &self,
         data: &mut Array3<f64>,
         context: &WGPUContext,
-        buffer_manager: &BufferManager,
+        buffer_manager: &GpuBackendBufferManager,
     ) -> KwaversResult<()> {
         let n = data.len() as f64;
         self.execute_fft_3d(data, context, buffer_manager)?;
@@ -117,7 +117,7 @@ impl super::PipelineManager {
         b: &Array3<f64>,
         out: &mut Array3<f64>,
         context: &WGPUContext,
-        buffer_manager: &BufferManager,
+        buffer_manager: &GpuBackendBufferManager,
     ) -> KwaversResult<()> {
         let pipeline = self
             .pipelines
@@ -225,7 +225,7 @@ impl super::PipelineManager {
         direction: usize,
         out: &mut Array3<f64>,
         _context: &WGPUContext,
-        _buffer_manager: &BufferManager,
+        _buffer_manager: &GpuBackendBufferManager,
     ) -> KwaversResult<()> {
         let _pipeline = self
             .pipelines

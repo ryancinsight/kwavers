@@ -74,6 +74,34 @@ import shutil
 import sys
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if os.name == "nt" and hasattr(os, "add_dll_directory"):
+    os.add_dll_directory(str(_REPO_ROOT))
+    for _runtime_dir in (
+        Path(sys.base_prefix) / "bin",
+        Path(sys.exec_prefix) / "bin",
+        Path(sys.executable).parent,
+    ):
+        if _runtime_dir.exists():
+            os.add_dll_directory(str(_runtime_dir))
+    _pkg_stable_abi = Path(__file__).with_name("libpython3.dll")
+    for _python3_dll in (
+        Path(sys.base_prefix) / "libpython3.dll",
+        Path(sys.base_prefix) / "bin" / "libpython3.dll",
+        Path(sys.exec_prefix) / "libpython3.dll",
+        Path(sys.exec_prefix) / "bin" / "libpython3.dll",
+    ):
+        if _python3_dll.exists():
+            if (
+                not _pkg_stable_abi.exists()
+                or _pkg_stable_abi.stat().st_size != _python3_dll.stat().st_size
+            ):
+                try:
+                    shutil.copy2(_python3_dll, _pkg_stable_abi)
+                except PermissionError:
+                    pass
+            break
+
 # Import Rust extension module
 def _newer_local_extension() -> Path | None:
     """Return a newer workspace-built extension when the package copy is stale.
@@ -89,7 +117,7 @@ def _newer_local_extension() -> Path | None:
     if os.name != "nt":
         return None
     package_extension = Path(__file__).with_name("_pykwavers.pyd")
-    repo_root = Path(__file__).resolve().parents[3]
+    repo_root = _REPO_ROOT
     candidates = (
         repo_root / "target" / "release" / "pykwavers.dll",
         repo_root / "target" / "maturin" / "pykwavers.dll",

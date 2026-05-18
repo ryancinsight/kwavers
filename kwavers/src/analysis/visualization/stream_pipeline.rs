@@ -50,13 +50,13 @@ pub type EncodeStage = EncodedRenderData;
 
 /// Lightweight pipeline configuration for tests and orchestration.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PipelineConfig {
+pub struct StageStagePipelineConfig {
     pub width: usize,
     pub height: usize,
     pub codec: String,
 }
 
-impl Default for PipelineConfig {
+impl Default for StagePipelineConfig {
     fn default() -> Self {
         Self {
             width: 512,
@@ -69,13 +69,13 @@ impl Default for PipelineConfig {
 /// Sequential visualization stage pipeline.
 #[derive(Debug, Clone)]
 pub struct StagePipeline {
-    pub config: PipelineConfig,
+    pub config: StagePipelineConfig,
     pub metrics: PipelineMetrics,
 }
 
 impl StagePipeline {
     #[must_use]
-    pub fn new(config: PipelineConfig) -> Self {
+    pub fn new(config: StagePipelineConfig) -> Self {
         Self {
             config,
             metrics: PipelineMetrics::default(),

@@ -31,7 +31,7 @@
 use kwavers::domain::grid::Grid;
 use kwavers::domain::medium::HomogeneousMedium;
 use kwavers::domain::signal::SineWave;
-use kwavers::domain::source::{InjectionMode, PlaneWaveConfig, PlaneWaveSource, SourceField};
+use kwavers::domain::source::{InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField};
 use kwavers::solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers::solver::forward::pstd::gpu_pstd::GpuPstdSolver;
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
@@ -95,7 +95,7 @@ fn run_cpu_pstd(nx: usize, dx: f64, c0: f64, rho0: f64, nt: usize) -> Vec<f64> {
     // Single point source at grid centre
     let freq = c0 / (4.0 * dx * nx as f64); // wavelength = 4 × grid size
     let signal = Arc::new(SineWave::new(freq, 1.0, 0.0));
-    let pw_config = PlaneWaveConfig {
+    let pw_config = PlaneWaveSourceConfig {
         direction: (1.0, 0.0, 0.0),
         wavelength: c0 / freq,
         phase: 0.0,

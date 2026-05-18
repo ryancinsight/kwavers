@@ -23,7 +23,7 @@ mod tests;
 pub use gradient::GradientFieldUpdater;
 
 use crate::core::error::KwaversResult;
-use crate::domain::boundary::traits::{BoundaryCondition, FieldType};
+use crate::domain::boundary::traits::{BoundaryCondition, BoundaryFieldType};
 use crate::domain::grid::GridTopology;
 use ndarray::Array3;
 
@@ -48,7 +48,7 @@ pub struct FieldUpdater<B: BoundaryCondition> {
     /// The boundary condition to apply.
     boundary: B,
     /// Field type for validation.
-    field_type: FieldType,
+    field_type: BoundaryFieldType,
 }
 
 impl<B: BoundaryCondition> FieldUpdater<B> {
@@ -56,12 +56,12 @@ impl<B: BoundaryCondition> FieldUpdater<B> {
     pub fn new(boundary: B) -> Self {
         Self {
             boundary,
-            field_type: FieldType::Pressure,
+            field_type: BoundaryFieldType::Pressure,
         }
     }
 
     /// Create with explicit field type.
-    pub fn with_field_type(boundary: B, field_type: FieldType) -> Self {
+    pub fn with_field_type(boundary: B, field_type: BoundaryFieldType) -> Self {
         Self {
             boundary,
             field_type,
@@ -69,7 +69,7 @@ impl<B: BoundaryCondition> FieldUpdater<B> {
     }
 
     /// Set the field type.
-    pub fn set_field_type(&mut self, field_type: FieldType) {
+    pub fn set_field_type(&mut self, field_type: BoundaryFieldType) {
         self.field_type = field_type;
     }
 

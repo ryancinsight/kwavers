@@ -1,12 +1,12 @@
 use super::models::PermeabilityModels;
 use super::simulator::BBBOpening;
-use super::types::{SafetyValidation, TreatmentProtocol};
+use super::types::{BbbTreatmentProtocol, SafetyValidation};
 
 /// Safety and protocol generation for BBB Opening
 impl BBBOpening {
     /// Generate treatment protocol
     #[must_use]
-    pub fn generate_protocol(&self) -> TreatmentProtocol {
+    pub fn generate_protocol(&self) -> BbbTreatmentProtocol {
         let target_mi = self.parameters.target_mi;
         let duration = self.parameters.duration;
         let frequency = self.parameters.frequency;
@@ -14,7 +14,7 @@ impl BBBOpening {
         // Calculate safe exposure time
         let max_safe_time = self.calculate_max_safe_time();
 
-        TreatmentProtocol {
+        BbbTreatmentProtocol {
             frequency,
             target_mi,
             duration: duration.min(max_safe_time),

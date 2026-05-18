@@ -14,14 +14,14 @@ pub use self::factory::{
     MediumParameters, MeshProvider, RegistrationEngine, SourceParameters,
 };
 pub use self::pinn_beamforming::{
-    ActivationFunction, DecompositionStrategy, DeviceConfig, DistributedConfig,
-    DistributedPinnProvider, GpuMetrics, InferenceConfig, LoadBalancingStrategy, ModelArchitecture,
-    ModelInfo, PinnBeamformingConfig, PinnBeamformingProvider, PinnBeamformingResult,
-    PinnModelConfig, PinnProviderRegistry, ProcessingMetadata, TrainingMetrics, UncertaintyConfig,
+    BeamformingTrainingMetrics, DeviceConfig, DistributedConfig, DistributedPinnProvider,
+    GpuMetrics, InferenceConfig, LoadBalancingStrategy, ModelArchitecture, ModelInfo,
+    PinnBeamformingActivationFunction, PinnBeamformingConfig, PinnBeamformingDecompositionStrategy,
+    PinnBeamformingProvider, PinnBeamformingResult, PinnBeamformingUncertaintyConfig,
+    PinnModelConfig, PinnProviderRegistry, ProcessingMetadata,
 };
 pub use self::progress::{
     ConsoleProgressReporter, FieldsSummary, ProgressData, ProgressReporter, ProgressUpdate,
 };
 pub use self::solver::{Solver, SolverStatistics};
-pub use crate::solver::config::SolverConfiguration as SolverConfig;
 pub use crate::solver::feature::{FeatureManager, SolverFeature};

@@ -1,20 +1,55 @@
 //! Spectral Derivative Operators for Pseudospectral Methods
 //!
-//! Implements high-order accurate spatial derivative operators using spectral
-//! methods (Fourier-based). Achieves spectral accuracy (exponential convergence)
-//! for smooth fields.
+//! ## Theorem (Spectral Derivative via DFT)
 //!
-//! ## Mathematical Foundation
+//! **Statement** (Trefethen 2000, Thm. 3.1): Let `u[n]` be a real N-periodic
+//! grid function sampled at `xₙ = n·Δx`, `n = 0, …, N−1`. Define the DFT and
+//! IDFT pair in the usual convention. The **spectral derivative** is:
 //!
 //! ```text
-//! ∂u/∂x = F⁻¹[i·kₓ·F[u]]
+//! ∂u/∂x ≈ F⁻¹[ i·ω[k] · F[u] ]
 //! ```
+//!
+//! where the wavenumber array is (for N even):
+//! ```text
+//! ω[k] = 2πk/(N·Δx)   for k = 0, 1, …, N/2−1
+//! ω[k] = 2π(k−N)/(N·Δx) for k = N/2, …, N−1   (negative frequencies)
+//! ω[N/2] = 0           (Nyquist mode zeroed — no alias-free derivative exists)
+//! ```
+//!
+//! **Exactness:** For a DFT-representable mode `u[n] = A·sin(2πm·n/N)`,
+//! `m ∈ {1, …, N/2−1}`, the spectral derivative recovers `A·ω[m]·cos(2πm·n/N)`
+//! to within floating-point rounding (~O(N·log₂(N)·ε_mach) ≈ 10⁻¹³ for N=32).
+//! No aliasing occurs because m < N/2.
+//!
+//! **Spectral accuracy:** For analytic periodic functions the truncation error
+//! decays faster than any polynomial in Δx (exponential convergence).
+//! For functions with `p` continuous derivatives, the error is O(Δx^p).
+//!
+//! ## Theorem (2/3-Rule Dealiasing)
+//!
+//! **Statement** (Orszag 1971): When nonlinear products `p(x)·q(x)` generate
+//! modes up to `2kₘₐₓ` (where `kₘₐₓ = π/Δx` is the Nyquist limit), aliases
+//! fold back at `k = 2kₘₐₓ − k'`. To prevent aliasing from corrupting the
+//! resolved modes `k ≤ kₘₐₓ/2`, zero all modes with:
+//! ```text
+//! |ω[k]| > 2π/(3Δx)   (2/3 of the Nyquist wavenumber)
+//! ```
+//! This ensures that when two dealiased fields of bandwidth `2π/(3Δx)` are
+//! multiplied, their product has bandwidth `4π/(3Δx) < 2π/Δx = kₙᵧq`, so
+//! no aliases enter the retained band.
+//!
+//! For N=32 and mode m=1: ω[1] = 2π/(32·Δx) ≪ 2π/(3Δx), so the fundamental
+//! mode passes trivially.
 //!
 //! ## References
 //!
-//! - Boyd, J. P. (2001). Chebyshev and Fourier Spectral Methods
-//! - Trefethen, L. N. (2000). Spectral Methods in MATLAB
-//! - Canuto et al. (2006). Spectral Methods: Fundamentals in Single Domains
+//! - Trefethen LN (2000). Spectral Methods in MATLAB. SIAM. Thm. 3.1.
+//! - Orszag SA (1971). "On the elimination of aliasing in FD schemes by
+//!   filtering high-wavenumber components." J. Atmos. Sci. 28(6), 1074.
+//! - Boyd JP (2001). Chebyshev and Fourier Spectral Methods. Dover. §3.
+//! - Canuto C et al. (2006). Spectral Methods: Fundamentals in Single Domains.
+//!   Springer. §2.3.
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};

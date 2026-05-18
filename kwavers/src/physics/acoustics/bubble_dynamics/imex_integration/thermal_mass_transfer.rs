@@ -12,8 +12,9 @@
 //! Sherwood correlation for mass transfer coefficient
 
 use super::integrator::BubbleIMEXIntegrator;
+use crate::core::constants::fundamental::GAS_CONSTANT as R_GAS;
 use crate::core::constants::thermodynamic::{
-    NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, R_GAS, SHERWOOD_PECLET_EXPONENT, T_AMBIENT,
+    NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, SHERWOOD_PECLET_EXPONENT, T_AMBIENT,
     VAPOR_DIFFUSION_COEFFICIENT,
 };
 use crate::core::error::KwaversResult;

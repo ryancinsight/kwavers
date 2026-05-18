@@ -135,7 +135,7 @@ fn parse_imaging_apodization(value: &str) -> PyResult<ImagingDasApodization> {
 
 fn parse_apodization(value: &str) -> PyResult<ApodizationType> {
     match value.to_ascii_lowercase().as_str() {
-        "none" | "rectangular" | "boxcar" => Ok(ApodizationType::None),
+        "none" | "rectangular" | "boxcar" => Ok(ApodizationType::Uniform),
         "hamming" => Ok(ApodizationType::Hamming),
         "hann" | "hanning" => Ok(ApodizationType::Hanning),
         "blackman" => Ok(ApodizationType::Blackman),

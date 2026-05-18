@@ -177,7 +177,7 @@ mod tests {
                 (ratio2 - expected_p2_p1[idx]).abs() / expected_p2_p1[idx] < tol,
                 "Γ={:.2}: |P₂|/|P₁| — expected {:.5}, got {:.5} \
                  (error = {:.1}% > 5%)\n\
-                 Check: NonlinearOperator β, buffered-update correctness.",
+                 Check: KzkNonlinearOperator β, buffered-update correctness.",
                 gamma,
                 expected_p2_p1[idx],
                 ratio2,

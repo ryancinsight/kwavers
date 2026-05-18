@@ -68,7 +68,7 @@ pub struct EfficiencyMetrics {
 
 /// Validation results for solution quality
 #[derive(Debug, Clone, Default)]
-pub struct ValidationResults {
+pub struct HybridValidationResults {
     /// Solution quality score (0-1)
     pub quality_score: f64,
 

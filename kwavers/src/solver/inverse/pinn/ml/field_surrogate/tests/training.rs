@@ -4,7 +4,7 @@ use burn::tensor::{Tensor, TensorData};
 
 use super::super::config::ParamFieldPINNConfig;
 use super::super::network::ParamFieldPINNNetwork;
-use super::super::training::{ParamFieldPINNTrainer, TrainingBatch, TrainingConfig};
+use super::super::training::{FieldSurrogateTrainingConfig, ParamFieldPINNTrainer, TrainingBatch};
 use super::AB;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -78,9 +78,9 @@ fn test_trainer_step_returns_finite_metrics() {
     };
     let device = Default::default();
     let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).unwrap();
-    let train_cfg = TrainingConfig {
+    let train_cfg = FieldSurrogateTrainingConfig {
         helmholtz_weight: 0.0, // pure-data step for this smoke test
-        ..TrainingConfig::default()
+        ..FieldSurrogateTrainingConfig::default()
     };
     let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
     let batch = make_synthetic_batch(&device, 0, 64);
@@ -102,10 +102,10 @@ fn test_trainer_data_loss_decreases_over_50_steps() {
     };
     let device = Default::default();
     let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).unwrap();
-    let train_cfg = TrainingConfig {
+    let train_cfg = FieldSurrogateTrainingConfig {
         learning_rate: 5.0e-2, // larger LR for the small synthetic problem
         helmholtz_weight: 0.0,
-        ..TrainingConfig::default()
+        ..FieldSurrogateTrainingConfig::default()
     };
     let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
 
@@ -143,11 +143,11 @@ fn test_trainer_with_peak_prominence_weight_runs_finite_and_propagates_gradient(
     };
     let device = Default::default();
     let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).unwrap();
-    let train_cfg = TrainingConfig {
+    let train_cfg = FieldSurrogateTrainingConfig {
         learning_rate: 5.0e-2,
         helmholtz_weight: 0.0,
         peak_prominence_weight: 1.0,
-        ..TrainingConfig::default()
+        ..FieldSurrogateTrainingConfig::default()
     };
     let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
     let mut first_prom = 0.0_f32;
@@ -189,10 +189,10 @@ fn test_trainer_with_helmholtz_weight_runs_finite() {
     // The Helmholtz residual is dimensionless O(1); weight 1.0
     // makes it co-dominant with the data loss. Smaller weights
     // (0.01–0.1) are typical when both must coexist.
-    let train_cfg = TrainingConfig {
+    let train_cfg = FieldSurrogateTrainingConfig {
         learning_rate: 1.0e-3,
         helmholtz_weight: 0.1,
-        ..TrainingConfig::default()
+        ..FieldSurrogateTrainingConfig::default()
     };
     let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
     for step in 0..5 {

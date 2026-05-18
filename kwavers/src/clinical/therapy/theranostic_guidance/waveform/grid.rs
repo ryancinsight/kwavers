@@ -14,7 +14,7 @@ pub(super) fn acoustic_grid(
     true_speed: &ndarray::Array2<f64>,
 ) -> AcousticGrid {
     let (nx, ny) = prepared.sound_speed_m_s.dim();
-    let (cmin, cmax) = speed_bounds(baseline_speed, true_speed);
+    let (_, cmax) = speed_bounds(baseline_speed, true_speed);
     // CFL stability: λ_CFL = c·dt/dx ≤ 1/√2 (von Neumann, Fornberg 1988, §4).
     let dt_s = 0.35 * prepared.spacing_m / (std::f64::consts::SQRT_2 * cmax);
     let frequency_hz = config.frequencies_hz[0];
@@ -25,10 +25,10 @@ pub(super) fn acoustic_grid(
         .map(|point| point.x_m.hypot(point.y_m))
         .fold(0.0, f64::max);
     let domain_extent = 0.5 * prepared.spacing_m * nx.max(ny) as f64;
-    let travel_time_s = 2.0 * (aperture_extent + domain_extent) / cmin;
+    let delay_speed_m_s = reference_speed(prepared, baseline_speed);
+    let travel_time_s = 2.0 * (aperture_extent + domain_extent) / delay_speed_m_s;
     let pulse_time_s = 5.0 / frequency_hz;
     let time_steps = (((travel_time_s + pulse_time_s) / dt_s).ceil() as usize).max(96);
-    let delay_speed_m_s = reference_speed(prepared, baseline_speed);
     let focus = layout.focus_m;
     let source_distances = layout
         .therapy_elements

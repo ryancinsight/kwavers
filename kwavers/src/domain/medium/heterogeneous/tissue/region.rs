@@ -1,12 +1,12 @@
 //! Tissue region configuration and mapping
 
 use crate::core::error::{ConfigError, KwaversResult};
-use crate::domain::medium::absorption::TissueType;
+use crate::domain::medium::absorption::AbsorptionTissueType;
 
 /// Configuration for setting tissue in a specific region
 #[derive(Debug, Clone)]
-pub struct TissueRegion {
-    pub tissue_type: TissueType,
+pub struct DomainTissueRegion {
+    pub tissue_type: AbsorptionTissueType,
     pub x_min: f64,
     pub x_max: f64,
     pub y_min: f64,
@@ -15,11 +15,11 @@ pub struct TissueRegion {
     pub z_max: f64,
 }
 
-impl TissueRegion {
+impl DomainTissueRegion {
     /// Create a new tissue region configuration
     #[must_use]
     pub fn new(
-        tissue_type: TissueType,
+        tissue_type: AbsorptionTissueType,
         x_min: f64,
         x_max: f64,
         y_min: f64,
@@ -83,4 +83,4 @@ impl TissueRegion {
 }
 
 /// 3D tissue type map
-pub type TissueMap = ndarray::Array3<TissueType>;
+pub type TissueMap = ndarray::Array3<AbsorptionTissueType>;

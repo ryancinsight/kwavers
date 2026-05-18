@@ -11,5 +11,6 @@ mod types;
 pub use planner::HIFUPlanner;
 pub use schedule::{SonicationSchedule, SonicationSubspot};
 pub use types::{
-    AblationTarget, FocalSpot, HIFUTransducer, HIFUTreatmentPlan, ThermalDose, TreatmentFeasibility,
+    AblationTarget, ClinicalHIFUTransducer, ClinicalHIFUTreatmentPlan, FocalSpot,
+    FocalSpotDoseEstimate, TreatmentFeasibility,
 };

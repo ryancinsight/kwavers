@@ -1,5 +1,6 @@
 use super::{
-    ActivationFunction, LearningRateScheduler, LossWeights, OptimizerType, SamplingStrategy,
+    ElasticCollocationSamplingStrategy, ElasticPinnActivationFunction, ElasticPinnLrScheduler,
+    ElasticPinnOptimizerType, LossWeights,
 };
 use serde::{Deserialize, Serialize};
 
@@ -8,18 +9,18 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     // Architecture
     pub hidden_layers: Vec<usize>,
-    pub activation: ActivationFunction,
+    pub activation: ElasticPinnActivationFunction,
     // Training
     pub learning_rate: f64,
     pub n_epochs: usize,
     pub batch_size: Option<usize>,
-    pub scheduler: LearningRateScheduler,
-    pub optimizer: OptimizerType,
+    pub scheduler: ElasticPinnLrScheduler,
+    pub optimizer: ElasticPinnOptimizerType,
     // Collocation
     pub n_collocation_interior: usize,
     pub n_collocation_boundary: usize,
     pub n_collocation_initial: usize,
-    pub sampling_strategy: SamplingStrategy,
+    pub sampling_strategy: ElasticCollocationSamplingStrategy,
     pub adaptive_sampling: bool,
     pub adaptive_threshold: f64,
     // Loss
@@ -46,12 +47,12 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             hidden_layers: vec![100, 100, 100, 100],
-            activation: ActivationFunction::Tanh,
+            activation: ElasticPinnActivationFunction::Tanh,
             learning_rate: 1e-3,
             n_epochs: 10000,
             batch_size: None,
-            scheduler: LearningRateScheduler::Exponential { decay_rate: 0.95 },
-            optimizer: OptimizerType::Adam {
+            scheduler: ElasticPinnLrScheduler::Exponential { decay_rate: 0.95 },
+            optimizer: ElasticPinnOptimizerType::Adam {
                 beta1: 0.9,
                 beta2: 0.999,
                 epsilon: 1e-8,
@@ -59,7 +60,7 @@ impl Default for Config {
             n_collocation_interior: 10000,
             n_collocation_boundary: 1000,
             n_collocation_initial: 1000,
-            sampling_strategy: SamplingStrategy::LatinHypercube,
+            sampling_strategy: ElasticCollocationSamplingStrategy::LatinHypercube,
             adaptive_sampling: false,
             adaptive_threshold: 2.0,
             loss_weights: LossWeights::default(),

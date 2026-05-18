@@ -12,7 +12,7 @@
 //! ## References
 //! - IEC 60601-1, IEC 60601-2-37, FDA (2008), ISO 14971
 
-use super::mechanical_index::TissueType;
+use super::mechanical_index::MechanicalIndexTissueType;
 use std::collections::VecDeque;
 use std::time::Instant;
 
@@ -65,7 +65,7 @@ pub struct ComplianceConfig {
     pub max_temp_rise: f64,
     pub max_session_time: f64,
     pub max_total_dose: f64,
-    pub tissue_type: TissueType,
+    pub tissue_type: MechanicalIndexTissueType,
     pub frequency_range: (f64, f64),
     pub max_bnur: f64,
     pub enable_monitoring: bool,

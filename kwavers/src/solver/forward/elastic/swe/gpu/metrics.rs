@@ -1,8 +1,8 @@
-//! `PerformanceMetrics` and `PerformanceStatistics`.
+//! `SweGpuStepMetrics` and `PerformanceStatistics`.
 
 /// Performance metrics for GPU operations
 #[derive(Debug, Clone, Default)]
-pub struct PerformanceMetrics {
+pub struct SweGpuStepMetrics {
     /// Total kernel execution time (seconds)
     pub total_kernel_time: f64,
     /// Total execution time including overhead (seconds)
@@ -17,7 +17,7 @@ pub struct PerformanceMetrics {
     pub average_gpu_utilization: f64,
 }
 
-impl PerformanceMetrics {
+impl SweGpuStepMetrics {
     /// Calculate performance statistics
     #[must_use]
     pub fn statistics(&self) -> PerformanceStatistics {

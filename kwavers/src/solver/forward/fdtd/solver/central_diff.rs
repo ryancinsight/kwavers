@@ -1,14 +1,14 @@
 //! Dispatch enum unifying 2nd / 4th / 6th-order central-difference operators.
 //!
 //! Each variant wraps a concrete `CentralDifferenceN` operator and forwards
-//! single-axis derivative calls (`apply_x/y/z` and zero-allocation
-//! `apply_x/y/z_into`) plus a packed `gradient` helper.
+//! zero-allocation single-axis derivative calls (`apply_x/y/z_into`) into
+//! pre-allocated destination buffers.
 
 use ndarray::{Array3, ArrayView3};
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::numerics::operators::{
-    CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
+    CentralDifference2, CentralDifference4, CentralDifference6,
 };
 
 #[derive(Debug, Clone)]
@@ -34,40 +34,6 @@ impl CentralDifferenceOperator {
             ))),
         }
     }
-    /// Apply x.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(crate) fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        match self {
-            Self::Order2(op) => op.apply_x(field),
-            Self::Order4(op) => op.apply_x(field),
-            Self::Order6(op) => op.apply_x(field),
-        }
-    }
-    /// Apply y.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(crate) fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        match self {
-            Self::Order2(op) => op.apply_y(field),
-            Self::Order4(op) => op.apply_y(field),
-            Self::Order6(op) => op.apply_y(field),
-        }
-    }
-    /// Apply z.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub(crate) fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        match self {
-            Self::Order2(op) => op.apply_z(field),
-            Self::Order4(op) => op.apply_z(field),
-            Self::Order6(op) => op.apply_z(field),
-        }
-    }
-
     /// Apply X-derivative in-place into a pre-allocated destination buffer.
     ///
     /// Zero heap allocation for all orders: O2 via `CentralDifference2::apply_x_into`,
@@ -121,19 +87,5 @@ impl CentralDifferenceOperator {
             Self::Order4(op) => op.apply_z_into(field, dst),
             Self::Order6(op) => op.apply_z_into(field, dst),
         }
-    }
-    /// Gradient.
-    /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    pub(crate) fn gradient(
-        &self,
-        field: ArrayView3<f64>,
-    ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
-        Ok((
-            self.apply_x(field)?,
-            self.apply_y(field)?,
-            self.apply_z(field)?,
-        ))
     }
 }

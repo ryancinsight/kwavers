@@ -30,8 +30,10 @@ pub mod builder;
 pub mod validation_simulation;
 
 // Re-export types from submodules
-pub use absorption::{PowerLawAbsorption, TissueType};
-pub use anisotropic::{AnisotropyType, ChristoffelEquation, MuscleFiberModel, StiffnessTensor};
+pub use absorption::{AbsorptionTissueType, PowerLawAbsorption};
+pub use anisotropic::{
+    AnisotropicStiffnessTensor, AnisotropyType, ChristoffelEquation, MuscleFiberModel,
+};
 pub use config::{InterfaceTypeParameters, LayerParameters, MediumParameters, MediumType};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use homogeneous::HomogeneousMedium;
@@ -52,8 +54,9 @@ pub use thermal::{ThermalField, ThermalProperties};
 
 // Re-export canonical property data structures (SSOT)
 pub use properties::{
-    AcousticPropertyData, ElasticPropertyData, ElectromagneticPropertyData, MaterialProperties,
-    MaterialPropertiesBuilder, OpticalPropertyData, StrengthPropertyData, ThermalPropertyData,
+    AcousticMaterialProperties, AcousticPropertyData, ElasticPropertyData,
+    ElectromagneticPropertyData, MaterialPropertiesBuilder, OpticalPropertyData,
+    StrengthPropertyData, ThermalPropertyData,
 };
 pub use traits::Medium;
 pub use viscous::ViscousProperties;

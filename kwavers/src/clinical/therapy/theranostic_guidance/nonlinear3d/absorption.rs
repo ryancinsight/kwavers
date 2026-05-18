@@ -94,7 +94,6 @@ mod tests;
 #[derive(Debug)]
 pub(super) struct FractionalLaplacianAbsorption {
     n: usize,
-    y_exponent: f64,
     /// Per-voxel `dt · τ` factor in flat row-major layout (`n³` entries).
     dt_tau: Vec<f64>,
     /// Half-spectrum `|k|^y` weights for `L_y` (`n × n × (n/2+1)`).
