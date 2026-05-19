@@ -147,14 +147,18 @@ impl PhotoacousticConversion {
         }
     }
 
-    /// Photoacoustic efficiency
+    /// Photoacoustic efficiency (dimensionless)
     ///
-    /// η_PA = Γ·α·c / (ρ·C·ν)
-    /// where α is optical absorption, ν is frequency
+    /// η_PA = Γ·α·λ = Γ·α·c / ν
+    ///
+    /// Dimensionless ratio of acoustic wavelength λ = c/ν to optical penetration
+    /// depth 1/α, weighted by the Grüneisen parameter Γ. Efficient stress-confined
+    /// PA generation requires λ ≫ 1/α.
+    ///
+    /// References: Xu & Wang (2006), Wang (2009).
     #[must_use]
     pub fn efficiency(&self, optical_absorption: f64, frequency: f64) -> f64 {
-        self.gruneisen * optical_absorption * self.sound_speed
-            / (self.volumetric_heat_capacity * frequency)
+        self.gruneisen * optical_absorption * self.sound_speed / frequency
     }
 
     /// Thermal diffusion length (m)
