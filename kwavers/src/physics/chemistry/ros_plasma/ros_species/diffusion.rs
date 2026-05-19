@@ -12,10 +12,10 @@ impl ROSConcentrations {
         let min_spacing = dx.min(dy).min(dz);
         let stability_factor = max_d * dt / min_spacing.powi(2);
 
-        // Check stability condition
-        if stability_factor > 0.5 {
+        // Check 3D stability condition: D·dt/dx² ≤ 1/(2·3) = 1/6 for cubic explicit scheme
+        if stability_factor > 1.0 / 6.0 {
             log::warn!(
-                "Diffusion stability condition violated: D*dt/dx² = {:.3} > 0.5. \
+                "3D diffusion stability condition violated: D*dt/dx² = {:.3} > 1/6 ≈ 0.167. \
                 Consider reducing timestep or using implicit scheme.",
                 stability_factor
             );
@@ -27,8 +27,8 @@ impl ROSConcentrations {
         for (species, conc) in &self.fields {
             let d = species.diffusion_coefficient();
 
-            // For high stability factors, use implicit scheme (ADI method)
-            if d * dt / dx.min(dy).min(dz).powi(2) > 0.25 {
+            // 3D explicit stability: D·dt/h² ≤ 1/6; switch to semi-implicit beyond that
+            if d * dt / dx.min(dy).min(dz).powi(2) > 1.0 / 6.0 {
                 // Use semi-implicit scheme for numerical stability
                 let mut updated_conc = conc.clone();
                 Self::apply_semi_implicit_diffusion_static(
