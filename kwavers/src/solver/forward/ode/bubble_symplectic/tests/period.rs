@@ -30,11 +30,15 @@ fn test_minnaert_period() {
     let rho_l = params.rho_liquid;
     let p0 = params.p0;
     let sigma = params.sigma;
+    let pv = params.pv;
     let gamma = crate::physics::acoustics::bubble_dynamics::bubble_state::GasSpecies::Air.gamma();
-    let p_eq = p0 + 2.0 * sigma / r0;
 
-    // Minnaert angular frequency (linearised RP with surface tension)
-    let omega0 = ((3.0 * gamma * p_eq - 2.0 * sigma / r0) / (rho_l * r0 * r0)).sqrt();
+    // Minnaert angular frequency with corrected gas pressure closure:
+    //   p_gas = (p0 + 2σ/R0 − pv)·(R0/R)^{3γ} + pv
+    // Linearising around R = R0 gives spring constant 3γ(p0 + 2σ/R0 − pv),
+    // so ω₀² = [3γ(p0 + 2σ/R0 − pv) − 2σ/R0] / (ρ_L R0²)
+    let p_eq_gas = p0 + 2.0 * sigma / r0 - pv;
+    let omega0 = ((3.0 * gamma * p_eq_gas - 2.0 * sigma / r0) / (rho_l * r0 * r0)).sqrt();
     let t_period = 2.0 * PI / omega0;
     let dt = t_period / 200.0; // 200 steps per period → (hω₀)²/24 ≈ 0.04% error
 

@@ -42,13 +42,20 @@ pub(crate) fn calculate_acceleration(
     let p_acoustic_inst = p_acoustic * (omega * t).sin();
     let p_inf = model.params.p0 + p_acoustic_inst;
 
-    // Internal gas pressure using polytropic relation
-    // For more accurate modeling with thermal effects, use Van der Waals EOS
+    // Internal gas pressure using polytropic relation or Van der Waals EOS.
+    //
+    // Non-thermal branch uses the correct vapor-pressure-aware polytropic closure
+    // (Brennen 1995, §2.4; Prosperetti & Lezzi 1986):
+    //   p_gas = (p0 + 2σ/r0 − pv)·(r0/r)^{3γ} + pv
+    // Subtracting pv before scaling ensures only the non-condensable gas is
+    // compressed polytropically; pv is then added back as the isothermal
+    // vapor partial pressure, giving the correct equilibrium at r = r0 and
+    // the correct pv floor as r → ∞.
     let gamma = state.gas_species.gamma();
     let p_gas = if !model.params.use_thermal_effects {
-        // Polytropic: p_gas = p_eq * (R₀/R)^(3γ)
-        let p_eq = model.params.p0 + 2.0 * model.params.sigma / model.params.r0;
-        p_eq * (model.params.r0 / r).powf(3.0 * gamma)
+        let p_eq =
+            model.params.p0 + 2.0 * model.params.sigma / model.params.r0 - model.params.pv;
+        p_eq * (model.params.r0 / r).powf(3.0 * gamma) + model.params.pv
     } else {
         // Use Van der Waals equation with thermal effects
         model.calculate_vdw_pressure(state)?

@@ -89,11 +89,17 @@ impl GilmoreSolver {
         let p_acoustic_inst = p_acoustic * (omega * t).sin();
         let p_inf = self.params.p0 + p_acoustic_inst;
 
-        // Internal bubble pressure (polytropic gas law per Gilmore 1952)
-        // Neglects thermal damping (adiabatic approximation valid for acoustic frequencies)
-        // Full thermal effects require heat diffusion equation (Prosperetti 1977)
+        // Internal bubble pressure: polytropic gas EOS with Young-Laplace equilibrium
+        // and vapor pressure separation (Brennen 1995 §2.4):
+        //   p_gas = (p0 + 2σ/r0 − pv)·(r0/r)^{3γ} + pv
+        // Using p0 alone (as in the original Gilmore 1952 large-bubble derivation)
+        // neglects the 2σ/r0 term that is significant for µm-scale bubbles.
+        // Thermal damping is still neglected (adiabatic approximation).
+        // Full thermal effects require heat diffusion (Prosperetti 1977).
         let gamma = state.gas_species.gamma();
-        let p_gas = self.params.p0 * (self.params.r0 / r).powf(3.0 * gamma);
+        let p_eq =
+            self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
+        let p_gas = p_eq * (self.params.r0 / r).powf(3.0 * gamma) + self.params.pv;
 
         // Pressure at bubble wall (liquid side)
         let p_wall = p_gas - 2.0 * self.params.sigma / r - 4.0 * self.params.mu_liquid * u / r;
@@ -193,8 +199,12 @@ impl GilmoreSolver {
         let r_ddot = state.wall_acceleration; // lagged R̈ from previous step
         let gamma = state.gas_species.gamma();
 
-        // ── dp_gas/dt via polytropic law: p_gas = p₀(R₀/R)^(3γ) ────────────
-        let p_gas = self.params.p0 * (self.params.r0 / r).powf(3.0 * gamma);
+        // ── dp_gas/dt via polytropic law: p_gas = p_eq·(r0/r)^{3γ} + pv ────────
+        // Only the non-condensable gas partial pressure undergoes polytropic compression;
+        // pv is isothermal. Therefore: dp_gas/dt = −3γ·(p_gas − pv)·U/R
+        let p_eq =
+            self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
+        let p_gas = p_eq * (self.params.r0 / r).powf(3.0 * gamma);
         let dp_gas_dt = -3.0 * gamma * p_gas * u / r;
 
         // ── d(−2σ/R)/dt and d(−4μU/R)/dt (surface tension + viscous) ────────

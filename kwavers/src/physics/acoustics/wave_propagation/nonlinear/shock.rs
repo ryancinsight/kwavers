@@ -33,17 +33,42 @@ pub fn shock_formation_distance(
 /// Calculate the shock front thickness
 ///
 /// Thermoviscous dissipation counteracts nonlinear steepening, resulting in a
-/// finite shock thickness.
+/// finite shock thickness. From weak-shock theory (Hamilton & Blackstock 1998,
+/// §4.3):
+///
+/// ```text
+/// l_s = ρ₀ c₀³ δ / (β P_shock)
+/// ```
+///
+/// where the diffusivity of sound `δ` (m²/s) relates to the thermoviscous
+/// attenuation coefficient `α(ω)` (Np/m) at angular frequency `ω = 2πf` via
+///
+/// ```text
+/// δ = 2 α(ω) c₀³ / ω²
+/// ```
+///
+/// Combining: `l_s = 2 ρ₀ α(ω) c₀⁶ / (β ω² P_shock)`
+///
+/// # Arguments
+/// * `shock_pressure` - Shock pressure amplitude (Pa)
+/// * `frequency` - Driving frequency (Hz)
+/// * `params` - Nonlinear propagation parameters
 ///
 /// Returns thickness (m)
 #[must_use]
-pub fn shock_thickness(shock_pressure: f64, params: &NonlinearParameters) -> f64 {
-    // Basic theoretical shock thickness (weak shock theory)
-    // l_shock = (ρ₀ c₀³ δ) / (β P_shock)
-    // Here we use attenuation coefficient at 1 MHz as a proxy for diffusivity (δ)
-    let diffusivity = params.attenuation_coeff * 2.0 * params.sound_speed.powi(3);
-
-    let thickness = diffusivity / (params.beta * shock_pressure);
+pub fn shock_thickness(
+    shock_pressure: f64,
+    frequency: f64,
+    params: &NonlinearParameters,
+) -> f64 {
+    let omega = 2.0 * PI * frequency;
+    // Thermoviscous attenuation at the driving frequency [Np/m]
+    let alpha = params.attenuation_at_frequency(frequency);
+    // Diffusivity of sound: δ = 2α c₀³ / ω²
+    let delta = 2.0 * alpha * params.sound_speed.powi(3) / (omega * omega);
+    // Shock thickness: l_s = ρ₀ c₀³ δ / (β P_shock)
+    let thickness = params.density * params.sound_speed.powi(3) * delta
+        / (params.beta * shock_pressure);
 
     // Bounded below by mean free path for liquids (~1e-10 m)
     thickness.max(1e-10)

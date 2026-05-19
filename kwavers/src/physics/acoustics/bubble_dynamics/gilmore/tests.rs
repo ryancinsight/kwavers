@@ -32,34 +32,26 @@ fn test_sound_speed_calculation() {
     assert!(c_high > c);
 }
 
-/// Theorem: `BubbleState::new(&params)` initialises R = R₀ with
-/// `p_gas = p₀`.  This is **not** the Gilmore equilibrium, which requires
-/// `p_gas_eq = p₀ + 2σ/R₀` (Young-Laplace condition).  Because
-/// `p_gas = p₀ < p₀ + 2σ/R₀`, the surface-tension term creates net inward
-/// liquid enthalpy difference (H_wall < H_inf), driving Ṙ < 0 (collapse).
+/// Theorem: a bubble initialized at the correct mechanical equilibrium
+/// (Young-Laplace: p_gas = p0 + 2σ/R0, no acoustic driving) must remain
+/// stable under one RK4 step.
 ///
-/// Invariants verified:
-/// 1. `R₁ > 0`   — radius stays positive.
-/// 2. `Ṙ₁ ≤ 0`  — inward wall velocity under net surface-tension force.
-/// 3. `R₁ < R₀`  — radius has contracted from underpressured initial state.
-///
-/// Magnitude estimate (surface-tension dominated):
-/// `a ≈ (2σ/R₀) / (ρ R₀) ≈ 2·0.0725/(1000·(5e-6)²) ≈ 5.8×10⁹ m/s²`
-/// `ΔR ≈ ½ a dt² ≈ 29 nm` for dt = 1e-7 s (observed: ~61 nm; factor-of-2
-/// agreement expected due to nonlinear Gilmore terms and RK4 error estimates).
+/// With the corrected Gilmore gas pressure closure
+///   p_gas = (p0 + 2σ/R0 − pv)·(R0/R)^{3γ} + pv
+/// the bubble-wall pressure at R = R0 satisfies:
+///   p_wall = p_gas − 2σ/R0 = p0
+/// which matches the far-field p_inf = p0, giving H = 0 and R̈ ≈ 0.
+/// The radius after one step must therefore remain within 0.1% of R0.
 /// # Panics
-/// - Panics if post-step radius is not positive, wall velocity is not non-positive,
-///   or radius did not contract from the underpressured initial state.
-///
+/// - Panics if post-step radius deviates by more than 0.1% from R0.
 #[test]
-fn step_rk4_surface_tension_drives_contraction_from_underpressured_state() {
+fn step_rk4_bubble_stable_at_equilibrium() {
     let params = BubbleParameters::default();
     let solver = GilmoreSolver::new(params.clone());
-    // BubbleState::new sets p_gas = p₀ at R = R₀ — underpressured by 2σ/R₀.
-    let state = BubbleState::new(&params);
+    let state = BubbleState::at_equilibrium(&params);
     let r0 = state.radius;
 
-    let dt = 1e-7;
+    let dt = 1e-8; // 10 ns step
     let out = solver.step_rk4(&state, 0.0, 0.0, dt);
 
     assert!(
@@ -67,17 +59,13 @@ fn step_rk4_surface_tension_drives_contraction_from_underpressured_state() {
         "radius must stay positive after RK4 step; got {:.3e} m",
         out.radius
     );
+    // Radius must not drift more than 0.1% from equilibrium
+    let deviation = (out.radius - r0).abs() / r0;
     assert!(
-        out.wall_velocity <= 0.0,
-        "wall velocity must be non-positive (surface tension drives contraction); \
-         got Ṙ = {:.4e} m/s",
-        out.wall_velocity
-    );
-    assert!(
-        out.radius < r0,
-        "bubble must contract from underpressured initial state; \
-         R₀ = {r0:.3e} m, R₁ = {:.3e} m",
-        out.radius
+        deviation < 1e-3,
+        "bubble must remain near equilibrium; R0 = {r0:.3e} m, R1 = {:.3e} m (deviation {:.2e})",
+        out.radius,
+        deviation
     );
 }
 
@@ -173,6 +161,7 @@ fn enthalpy_derivative_uses_state_wall_acceleration() {
     );
 
     // ── Analytical check at U=0, t=0 (cos(ω·0) = 1) ───────────────────
+    // Corrected gas pressure closure: p_gas = (p0 + 2σ/R0 − pv)·(R0/R)^{3γ} + pv
     // dp_gas/dt    = 0  (U = 0)
     // dp_surface/dt = 0  (U = 0)
     // dp_viscous/dt = −4μ·R̈_a / R  = 0   (R̈_a = 0)
@@ -185,7 +174,8 @@ fn enthalpy_derivative_uses_state_wall_acceleration() {
     let n = solver.tait_n;
     let gamma = state_a.gas_species.gamma();
     let r = state_a.radius;
-    let p_gas = params.p0 * (params.r0 / r).powf(3.0 * gamma);
+    let p_eq = params.p0 + 2.0 * params.sigma / params.r0 - params.pv;
+    let p_gas = p_eq * (params.r0 / r).powf(3.0 * gamma) + params.pv;
     let p_wall_a = p_gas - 2.0 * params.sigma / r; // U=0 → viscous term zero
     let rho_wall_a = rho_inf * ((p_wall_a + b) / (p_inf + b)).powf(1.0 / n);
     let _ = rho_wall_a; // used to verify no panic on non-trivial density

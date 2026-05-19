@@ -28,27 +28,16 @@ impl RayleighPlessetSolver {
         let p_acoustic_instantaneous = p_acoustic * acoustic_phase.sin();
         let p_liquid_far = self.params.p0 + p_acoustic_instantaneous;
 
-        // Direct physics-based pressure calculation (eliminate approximations)
+        // Direct physics-based pressure calculation.
         // Reference: Rayleigh-Plesset equation, Brennen (1995), "Cavitation and Bubble Dynamics"
-        let p_gas = if !self.params.use_thermal_effects {
-            // For isothermal bubble dynamics, use polytropic relation: p * V^γ = constant
-            // At equilibrium: p_eq * (4/3 * π * r0³)^γ = p * (4/3 * π * r³)^γ
-            // Therefore: p = p_eq * (r0/r)^(3γ)
-
-            let gamma = state.gas_species.gamma();
-
-            // The equilibrium pressure is determined by force balance:
-            // p_internal = p_external + 2σ/r0 (Young-Laplace equation)
-            let p_internal_equilibrium = self.params.p0 + 2.0 * self.params.sigma / self.params.r0;
-
-            // Apply polytropic scaling for current radius
-            let radius_ratio = self.params.r0 / r;
-            p_internal_equilibrium * radius_ratio.powf(3.0 * gamma)
-        } else {
-            // Van der Waals equation for thermal effects (literature-validated)
-            // Reference: Qin et al. (2023) "Numerical investigation on acoustic cavitation characteristics"
-            self.calculate_internal_pressure(state)
-        };
+        //
+        // `calculate_internal_pressure` handles both the non-thermal (polytropic) and thermal
+        // (Van der Waals) cases, and correctly separates vapor pressure from non-condensable
+        // gas pressure before applying the polytropic scaling:
+        //   p_gas = (p0 + 2σ/r0 − pv)·(r0/r)^{3γ} + pv
+        // This preserves the equilibrium force balance at r = r0 and gives the physically
+        // correct pv floor as r → ∞.
+        let p_gas = self.calculate_internal_pressure(state);
 
         // Debug output for equilibrium testing
         #[cfg(test)]

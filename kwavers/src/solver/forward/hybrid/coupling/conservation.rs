@@ -6,12 +6,12 @@ use ndarray::Array3;
 
 /// Conservation enforcer for interface coupling
 #[derive(Debug)]
-pub struct ConservationEnforcer {
+pub struct HybridCouplingConservationEnforcer {
     /// Conservation tolerance
     tolerance: f64,
 }
 
-impl ConservationEnforcer {
+impl HybridCouplingConservationEnforcer {
     /// Create a new conservation enforcer
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -95,8 +95,8 @@ impl ConservationEnforcer {
 
     /// Get conservation metrics
     #[must_use]
-    pub fn get_metrics(&self) -> ConservationMetrics {
-        ConservationMetrics {
+    pub fn get_metrics(&self) -> HybridConservationMetrics {
+        HybridConservationMetrics {
             mass_error: 0.0,
             momentum_error: (0.0, 0.0, 0.0),
             energy_error: 0.0,
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn enforcement_matches_target_integral_and_energy() {
-        let enforcer = ConservationEnforcer::new(&geometry());
+        let enforcer = HybridCouplingConservationEnforcer::new(&geometry());
         let interpolated = Array3::from_shape_vec((2, 2, 1), vec![1.0, 2.0, 4.0, 8.0]).unwrap();
         let target = Array3::from_shape_vec((2, 2, 1), vec![3.0, 5.0, 6.0, 10.0]).unwrap();
 
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn enforcement_preserves_identical_interface() {
-        let enforcer = ConservationEnforcer::new(&geometry());
+        let enforcer = HybridCouplingConservationEnforcer::new(&geometry());
         let interpolated = Array3::from_shape_vec((2, 2, 1), vec![1.0, -2.0, 4.0, 8.0]).unwrap();
 
         let conserved = enforcer.enforce(&interpolated, &interpolated).unwrap();
@@ -150,19 +150,19 @@ mod tests {
 
     #[test]
     fn enforcement_rejects_shape_mismatch() {
-        let enforcer = ConservationEnforcer::new(&geometry());
+        let enforcer = HybridCouplingConservationEnforcer::new(&geometry());
         let interpolated = Array3::zeros((2, 2, 1));
         let target = Array3::zeros((2, 1, 1));
 
         let error = enforcer.enforce(&interpolated, &target).unwrap_err();
 
-        assert!(format!("{error}").contains("GridDimension mismatch"));
+        assert!(format!("{error}").contains("Dimension mismatch"));
     }
 }
 
 /// Conservation metrics
 #[derive(Debug, Clone)]
-pub struct ConservationMetrics {
+pub struct HybridConservationMetrics {
     /// Mass conservation error
     pub mass_error: f64,
     /// Momentum conservation error (x, y, z)
