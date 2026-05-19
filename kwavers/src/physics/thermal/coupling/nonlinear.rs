@@ -8,34 +8,49 @@
 pub struct NonlinearHeating {
     /// Nonlinearity parameter (B/A)
     pub nonlinearity_parameter: f64,
-    /// Acoustic pressure (Pa)
+    /// Acoustic pressure amplitude (Pa)
     pub pressure: f64,
     /// Sound speed (m/s)
     pub sound_speed: f64,
     /// Density [kg/m³]
     pub density: f64,
+    /// Driving frequency (Hz)
+    pub frequency: f64,
 }
 
 impl NonlinearHeating {
     /// Create nonlinear heating source
     #[must_use]
-    pub fn new(nonlinearity_parameter: f64, pressure: f64, sound_speed: f64, density: f64) -> Self {
+    pub fn new(
+        nonlinearity_parameter: f64,
+        pressure: f64,
+        sound_speed: f64,
+        density: f64,
+        frequency: f64,
+    ) -> Self {
         Self {
             nonlinearity_parameter,
             pressure,
             sound_speed,
             density,
+            frequency,
         }
     }
 
     /// Additional heating from nonlinearity [W/m³]
     ///
-    /// P_nl ~ (B/A)·P²·f² / (ρ·c³)
-    /// where f is frequency (implicitly in pressure amplitude)
+    /// Q_nl = (B/A)·P²·ω² / (ρ·c³)
+    ///
+    /// Derived from the second-order Westervelt source term: the generated
+    /// harmonics are absorbed proportional to ω² (Hamilton & Blackstock 1998,
+    /// §4.3; Sehgal & Greenleaf 1984).
     #[must_use]
     pub fn power(&self) -> f64 {
+        use std::f64::consts::PI;
+        let omega = 2.0 * PI * self.frequency;
         let c3 = self.sound_speed.powi(3);
-        self.nonlinearity_parameter * self.pressure.powi(2) / (self.density * c3)
+        self.nonlinearity_parameter * self.pressure.powi(2) * omega.powi(2)
+            / (self.density * c3)
     }
 
     /// Shock formation parameter (Mach number for acoustic waves)
