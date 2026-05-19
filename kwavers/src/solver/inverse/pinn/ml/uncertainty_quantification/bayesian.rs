@@ -1,13 +1,13 @@
 //! Bayesian PINN with uncertainty quantification via deep ensembles.
 
 use super::types::{
-    PinnUncertaintyConfig, PinnUncertaintyMethod, PredictionWithUncertainty, UncertaintyStats,
+    PinnUncertaintyConfig, PinnUncertaintyMethod, PinnPredictionWithUncertainty, UncertaintyStats,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::AutodiffBackend;
 use ndarray::Array1;
 
-use super::conformal::ConformalPredictor;
+use super::conformal::PinnConformalPredictor;
 
 /// Bayesian PINN with uncertainty quantification.
 #[derive(Debug)]
@@ -19,7 +19,7 @@ pub struct PinnBayesianPINN<B: AutodiffBackend> {
     /// Calibration data for conformal prediction.
     pub calibration_data: Option<Vec<(Vec<f32>, f32)>>,
     /// Conformal predictor for prediction intervals.
-    pub conformal_predictor: Option<ConformalPredictor<B>>,
+    pub conformal_predictor: Option<PinnConformalPredictor<B>>,
     /// Performance statistics.
     pub stats: UncertaintyStats,
 }
@@ -69,7 +69,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
 
         if self.config.conformal_alpha > 0.0 {
             let mut cp =
-                ConformalPredictor::new(self.ensemble[0].clone(), self.config.conformal_alpha);
+                PinnConformalPredictor::new(self.ensemble[0].clone(), self.config.conformal_alpha);
             cp.calibrate(calibration_inputs, calibration_targets)?;
             self.conformal_predictor = Some(cp);
         }
@@ -84,7 +84,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
     pub fn predict_with_uncertainty(
         &mut self,
         input: &[f32],
-    ) -> KwaversResult<PredictionWithUncertainty> {
+    ) -> KwaversResult<PinnPredictionWithUncertainty> {
         if self.config.mc_samples > 0 {
             return Err(KwaversError::InvalidInput(
                 "MC dropout is not supported by the current Burn PINN architectures".into(),
@@ -100,7 +100,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
     pub(super) fn ensemble_prediction(
         &mut self,
         input: &[f32],
-    ) -> KwaversResult<PredictionWithUncertainty> {
+    ) -> KwaversResult<PinnPredictionWithUncertainty> {
         let mut predictions = Vec::new();
 
         for model in &self.ensemble {
@@ -128,7 +128,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
         &mut self,
         predictions: &[Vec<f32>],
         method: PinnUncertaintyMethod,
-    ) -> KwaversResult<PredictionWithUncertainty> {
+    ) -> KwaversResult<PinnPredictionWithUncertainty> {
         if predictions.is_empty() {
             return Err(KwaversError::System(
                 crate::core::error::SystemError::InvalidOperation {
@@ -183,7 +183,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
         self.stats.total_predictions += 1;
         self.stats.average_uncertainty = (self.stats.average_uncertainty + avg_uncertainty) / 2.0;
 
-        Ok(PredictionWithUncertainty {
+        Ok(PinnPredictionWithUncertainty {
             mean: means,
             std: stds,
             confidence_interval: (lower_bounds, upper_bounds),

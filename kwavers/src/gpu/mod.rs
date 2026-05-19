@@ -31,15 +31,15 @@ pub mod shaders;
 pub mod thermal_acoustic;
 
 pub use backend::GpuBackend;
-// Single canonical GpuBuffer — `gpu/buffer.rs` is the SSOT.
+// Single canonical GpuBufferData — `gpu/buffer.rs` is the SSOT.
 // `gpu/buffers.rs` exposes only GpuBufferManager (the named-pool layer).
-pub use buffer::{BufferUsage, GpuBuffer};
+pub use buffer::{BufferUsage, GpuBufferData};
 pub use buffers::GpuBufferManager;
 #[cfg(feature = "pinn")]
 pub use burn_accelerator::BurnGpuAccelerator;
 pub use compute::{FdtdGpuDispatcher, GpuCompute};
 pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
-pub use device::{DeviceInfo, GpuDevice};
+pub use device::{GpuDevice, GpuDeviceInfo};
 pub use fdtd::FdtdGpu;
 pub use kspace::{KSpaceGpu, KspaceShiftGpu};
 pub use memory::{GpuMemoryPoolType, UnifiedMemoryManager};
@@ -53,7 +53,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 
 /// GPU device capabilities
 #[derive(Debug, Clone)]
-pub struct GpuCapabilities {
+pub struct CoreGpuCapabilities {
     /// Maximum buffer size in bytes
     pub max_buffer_size: u64,
     /// Maximum workgroup size
@@ -68,13 +68,13 @@ pub struct GpuCapabilities {
 
 /// Main GPU context for acoustic simulations
 #[derive(Debug)]
-pub struct GpuContext {
+pub struct CoreGpuContext {
     device: wgpu::Device,
     queue: wgpu::Queue,
-    capabilities: GpuCapabilities,
+    capabilities: CoreGpuCapabilities,
 }
 
-impl GpuContext {
+impl CoreGpuContext {
     /// Create a new GPU context
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -138,7 +138,7 @@ impl GpuContext {
                 })
             })?;
 
-        let capabilities = GpuCapabilities {
+        let capabilities = CoreGpuCapabilities {
             max_buffer_size: limits.max_buffer_size,
             max_workgroup_size: [
                 limits.max_compute_workgroup_size_x,
@@ -168,7 +168,7 @@ impl GpuContext {
     }
 
     /// Get capabilities
-    pub fn capabilities(&self) -> &GpuCapabilities {
+    pub fn capabilities(&self) -> &CoreGpuCapabilities {
         &self.capabilities
     }
 

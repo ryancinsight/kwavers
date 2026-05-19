@@ -9,7 +9,7 @@ use ndarray::Array3;
 
 /// Temperature-dependent perfusion model
 #[derive(Debug)]
-pub struct PerfusionModel {
+pub struct ThermalPerfusionModel {
     /// Baseline perfusion rate (kg/m³/s)
     w_b0: f64,
     /// Temperature threshold for perfusion shutdown (°C)
@@ -20,7 +20,7 @@ pub struct PerfusionModel {
     max_multiplier: f64,
 }
 
-impl PerfusionModel {
+impl ThermalPerfusionModel {
     /// Create new perfusion model
     #[must_use]
     pub fn new(baseline_perfusion: f64) -> Self {
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_perfusion_temperature_dependence() {
-        let model = PerfusionModel::new(1.0);
+        let model = ThermalPerfusionModel::new(1.0);
 
         // Normal temperature
         assert_eq!(model.perfusion_rate(37.0), 1.0);

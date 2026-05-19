@@ -8,7 +8,7 @@ use crate::core::error::{ErrorContext, KwaversError};
 
 use super::action::RecoveryAction;
 use super::attempt::RecoveryAttempt;
-use super::strategies::{CflViolationRecovery, ConvergenceFailureRecovery, GpuOomRecovery};
+use super::strategies::{CflViolationRecovery, ConvergenceFailureRecovery, ErrorRecoveryGpuOom};
 use super::strategy::{RecoveryResult, RecoveryStrategy};
 
 /// Maximum number of recovery attempts before giving up.
@@ -207,7 +207,7 @@ impl RecoveryBuilder {
     #[must_use]
     pub fn new() -> Self {
         let mut manager = RecoveryManager::new();
-        manager.register(GpuOomRecovery::new());
+        manager.register(ErrorRecoveryGpuOom::new());
         manager.register(CflViolationRecovery::new());
         manager.register(ConvergenceFailureRecovery::new());
         Self { manager }

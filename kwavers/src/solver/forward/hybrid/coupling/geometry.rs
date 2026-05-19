@@ -125,7 +125,7 @@ impl InterfaceGeometry {
 
 /// Domain information for coupling
 #[derive(Debug, Clone)]
-pub struct DomainInfo {
+pub struct HybridDomainInfo {
     /// Domain region indices
     pub region: DomainRegion,
     /// Local grid properties

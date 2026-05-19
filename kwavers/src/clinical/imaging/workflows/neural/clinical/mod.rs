@@ -15,11 +15,11 @@ mod tests;
 /// Provides automated lesion detection, tissue classification, and diagnostic
 /// recommendations based on neural network-enhanced ultrasound analysis.
 #[derive(Debug, Clone)]
-pub struct ClinicalDecisionSupport {
+pub struct NeuralClinicalDecisionSupport {
     pub(super) config: ClinicalThresholds,
 }
 
-impl ClinicalDecisionSupport {
+impl NeuralClinicalDecisionSupport {
     /// Create new clinical decision support system
     #[must_use]
     pub fn new(thresholds: ClinicalThresholds) -> Self {

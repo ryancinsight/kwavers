@@ -9,4 +9,4 @@ pub mod processor;
 mod tests;
 
 pub use config::UltrafastPlaneWaveConfig;
-pub use processor::PlaneWave;
+pub use processor::UltrafastPlaneWave;

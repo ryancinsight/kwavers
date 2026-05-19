@@ -1,17 +1,17 @@
 use super::super::types::{ClinicalThresholds, FeatureMap, LesionDetection, TissueClassification};
-use super::ClinicalDecisionSupport;
+use super::NeuralClinicalDecisionSupport;
 use ndarray::Array3;
 
 #[test]
 fn test_clinical_decision_support_creation() {
     let thresholds = ClinicalThresholds::default();
-    let support = ClinicalDecisionSupport::new(thresholds);
+    let support = NeuralClinicalDecisionSupport::new(thresholds);
     assert!(support.config.lesion_confidence_threshold > 0.0);
 }
 
 #[test]
 fn test_lesion_type_classification() {
-    let support = ClinicalDecisionSupport::new(ClinicalThresholds::default());
+    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let features = FeatureMap::new();
 
     let hyperechoic = support.classify_lesion_type(3.5, &features, 5, 5, 5);
@@ -26,7 +26,7 @@ fn test_lesion_type_classification() {
 
 #[test]
 fn test_clinical_significance_assessment() {
-    let support = ClinicalDecisionSupport::new(ClinicalThresholds::default());
+    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
 
     let high_sig = support.assess_clinical_significance(0.9, 0.8);
     assert!(high_sig > 0.8);
@@ -37,7 +37,7 @@ fn test_clinical_significance_assessment() {
 
 #[test]
 fn test_recommendations_no_lesions() {
-    let support = ClinicalDecisionSupport::new(ClinicalThresholds::default());
+    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = Vec::new();
     let classification = TissueClassification::empty();
 
@@ -48,7 +48,7 @@ fn test_recommendations_no_lesions() {
 
 #[test]
 fn test_recommendations_with_lesions() {
-    let support = ClinicalDecisionSupport::new(ClinicalThresholds::default());
+    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = vec![
         LesionDetection {
             center: (10, 10, 10),
@@ -74,7 +74,7 @@ fn test_recommendations_with_lesions() {
 
 #[test]
 fn test_diagnostic_confidence_no_lesions() {
-    let support = ClinicalDecisionSupport::new(ClinicalThresholds::default());
+    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = Vec::new();
     let confidence = Array3::from_elem((10, 10, 10), 0.8);
 
@@ -84,7 +84,7 @@ fn test_diagnostic_confidence_no_lesions() {
 
 #[test]
 fn test_diagnostic_confidence_with_lesions() {
-    let support = ClinicalDecisionSupport::new(ClinicalThresholds::default());
+    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let lesions = vec![LesionDetection {
         center: (5, 5, 5),
         size_mm: 4.0,
@@ -100,7 +100,7 @@ fn test_diagnostic_confidence_with_lesions() {
 
 #[test]
 fn test_local_statistics_computation() {
-    let support = ClinicalDecisionSupport::new(ClinicalThresholds::default());
+    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let volume = Array3::from_elem((20, 20, 20), 1.0);
 
     let stats = support.compute_local_statistics(&volume.view(), 10, 10, 10);
@@ -109,7 +109,7 @@ fn test_local_statistics_computation() {
 
 #[test]
 fn test_lesion_size_estimation() {
-    let support = ClinicalDecisionSupport::new(ClinicalThresholds::default());
+    let support = NeuralClinicalDecisionSupport::new(ClinicalThresholds::default());
     let mut volume = Array3::from_elem((30, 30, 30), 0.5);
 
     for z in 10..20 {

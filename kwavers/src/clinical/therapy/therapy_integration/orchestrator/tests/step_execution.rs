@@ -23,7 +23,7 @@ fn test_therapy_step_execution() {
         patient_params: PatientParameters {
             skull_thickness: None,
             tissue_properties: TissuePropertyMap::liver((16, 16, 16)),
-            target_volume: TargetVolume {
+            target_volume: TherapyTargetVolume {
                 center: (0.03, 0.0, 0.0),
                 dimensions: (0.01, 0.01, 0.01),
                 tissue_type: TherapyTissueType::Liver,

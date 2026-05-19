@@ -1,6 +1,6 @@
 use crate::math::fft::Complex64;
 use crate::math::numerics::operators::spectral::derivative::PseudospectralDerivative;
-use crate::math::numerics::operators::spectral::trait_def::SpectralOperator;
+use crate::math::numerics::operators::spectral::trait_def::SpectralOperatorTrait;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 use std::f64::consts::PI;

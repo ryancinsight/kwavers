@@ -20,13 +20,13 @@ use ndarray::{Array1, Array3, ArrayView1, ArrayView3};
 
 /// Trilinear interpolator (C⁰, order 1, monotonicity-preserving).
 #[derive(Debug, Clone)]
-pub struct TrilinearInterpolator {
+pub struct NumericsTrilinearInterpolator {
     dx: f64,
     dy: f64,
     dz: f64,
 }
 
-impl TrilinearInterpolator {
+impl NumericsTrilinearInterpolator {
     /// Create a new trilinear interpolator with grid spacings `dx`, `dy`, `dz` (meters).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -106,7 +106,7 @@ impl TrilinearInterpolator {
 /// Used as the single authoritative implementation for all index-space trilinear
 /// interpolation in the codebase (resampling kernels, ray-integral attenuation,
 /// CT preprocessing). Physical-coordinate callers that own a [`Grid`] should use
-/// [`domain::medium::heterogeneous::interpolation::TrilinearInterpolator`] instead.
+/// [`domain::medium::heterogeneous::interpolation::NumericsTrilinearInterpolator`] instead.
 #[must_use]
 pub fn trilinear_index_space(input: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
     let (nx, ny, nz) = input.dim();
@@ -128,7 +128,7 @@ pub fn trilinear_index_space(input: &Array3<f64>, x: f64, y: f64, z: f64) -> f64
     c0 * (1.0 - tz) + c1 * tz
 }
 
-impl Interpolator for TrilinearInterpolator {
+impl Interpolator for NumericsTrilinearInterpolator {
     fn interpolate_1d(
         &self,
         data: ArrayView1<f64>,

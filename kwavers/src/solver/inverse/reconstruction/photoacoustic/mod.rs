@@ -55,7 +55,7 @@ impl Reconstructor for PhotoacousticReconstructor {
             PhotoacousticAlgorithm::FilteredBackProjection => {
                 self.filtered_back_projection(sensor_data.view(), sensor_positions)
             }
-            PhotoacousticAlgorithm::TimeReversal => {
+            PhotoacousticAlgorithm::PhotoacousticTimeReversal => {
                 self.time_reversal_reconstruction(sensor_data.view(), sensor_positions, _grid)
             }
             PhotoacousticAlgorithm::FourierDomain => {

@@ -37,7 +37,7 @@ pub fn shock_formation_distance(
 /// §4.3):
 ///
 /// ```text
-/// l_s = ρ₀ c₀³ δ / (β P_shock)
+/// l_s = ρ₀ c₀ δ / (β P_shock)
 /// ```
 ///
 /// where the diffusivity of sound `δ` (m²/s) relates to the thermoviscous
@@ -47,7 +47,7 @@ pub fn shock_formation_distance(
 /// δ = 2 α(ω) c₀³ / ω²
 /// ```
 ///
-/// Combining: `l_s = 2 ρ₀ α(ω) c₀⁶ / (β ω² P_shock)`
+/// Combining: `l_s = 2 ρ₀ α(ω) c₀⁴ / (β ω² P_shock)`
 ///
 /// # Arguments
 /// * `shock_pressure` - Shock pressure amplitude (Pa)
@@ -66,8 +66,8 @@ pub fn shock_thickness(
     let alpha = params.attenuation_at_frequency(frequency);
     // Diffusivity of sound: δ = 2α c₀³ / ω²
     let delta = 2.0 * alpha * params.sound_speed.powi(3) / (omega * omega);
-    // Shock thickness: l_s = ρ₀ c₀³ δ / (β P_shock)
-    let thickness = params.density * params.sound_speed.powi(3) * delta
+    // Shock thickness: l_s = ρ₀ c₀ δ / (β P_shock)
+    let thickness = params.density * params.sound_speed * delta
         / (params.beta * shock_pressure);
 
     // Bounded below by mean free path for liquids (~1e-10 m)

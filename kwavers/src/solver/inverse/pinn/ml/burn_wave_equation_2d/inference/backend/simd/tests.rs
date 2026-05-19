@@ -1,6 +1,6 @@
 use super::SimdExecutor;
 use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::inference::types::{
-    ActivationType, MemoryPool, QuantizedNetwork,
+    ActivationType, BurnWave2dInferenceMemoryPool, QuantizedNetwork,
 };
 
 /// Reference scalar implementation for validation
@@ -301,7 +301,7 @@ fn test_forward_simd_multilayer() {
         activations,
     };
 
-    let mut memory_pool = MemoryPool {
+    let mut memory_pool = BurnWave2dInferenceMemoryPool {
         buffers: vec![vec![0.0; 256]; num_layers],
         _buffer_sizes: layer_sizes[1..].to_vec(),
     };

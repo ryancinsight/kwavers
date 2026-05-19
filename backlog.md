@@ -37,13 +37,21 @@
   solves per-element complex drive weights for tumor spot shaping and
   protected-structure nulling, exports figures and metrics under
   `docs/book/figures/ch32`, and verifies the real liver adapter plus the
-  analytic phantom contract.
+  analytic phantom contract. Follow-up correction closed the dense-field focus
+  issue by increasing hotspot refinement and sidelobe nulling in the same solver
+  path; regenerated LiTS metrics now record `target_dominant=true`, body
+  sidelobe peak ratio `0.7395404024847666`, body sidelobe P99 ratio
+  `0.3297347520675772`, tumor coverage `0.7837837837837838`, protected peak
+  ratio `0.2958651403757349`, air path fraction `0.003477700061599821`, and
+  bone path fraction `0.032944540572524016`.
 
 - 2026-05-18: [patch] Closed the book verification errors introduced by the
   updated Chapter 29 contracts. The elastic shear display title now avoids FWI
   terminology in figure labels, and the extension freshness helper accepts
   Python stubs with empty signatures while preserving stale nonlinear signature
-  rejection.
+  rejection. The same verification pass repaired PyO3 release-build API drift
+  by updating stale array apodization, signal window, and FDTD/PSTD geometry
+  imports; `cargo build -p pykwavers --release -j 1` now passes.
 
 - 2026-05-18: [patch] Closed the Chapter 29 reduced-exposure shortcut gap.
   The planned exposure now comes from the source-encoded heterogeneous acoustic
@@ -147,19 +155,23 @@
   plus `DG-1D axial` as the line-regression diagnostic. Follow-up correction
   replaced nodal DG sampling with GLL-polynomial interpolation onto the uniform
   FDTD/PSTD grid and moved the focused source into the SSP-RK3 stage RHS with
-  weak GLL cell-source weights. Current focused-map metrics are FDTD vs DG-2D
-  normalized-L2 `4.091354e-1`, correlation `0.768556`; PSTD vs DG-2D
-  normalized-L2 `3.872639e-1`, correlation `0.797901`; DG-2D vs analytic
-  normalized-L2 `3.939240e-1`, correlation `0.793120`; DG-2D vs DG-3D
-  normalized-L2 `1.037810e-9`, correlation `1.000000` for the z-invariant
-  homogeneous slab. DG-2D and DG-3D now peak at the analytical target
-  (`focus_error_mm = 0.0`), while FDTD/PSTD/analytic peak at y=9 mm in the
-  finite CPML fixture. Axial line metrics remain FDTD vs DG-1D normalized-L2
-  `2.218071e-1`, correlation `0.918299`; PSTD vs DG-1D normalized-L2
-  `2.199460e-1`, correlation `0.862900`; analytical vs DG-1D normalized-L2
-  `2.273648e-1`, correlation `0.823690`. Remaining follow-up is DG
-  absorbing-boundary parity with the CPML-equipped FDTD/PSTD solvers, not
-  absence of native 2-D/3-D acoustic DG propagation.
+  weak GLL cell-source weights. The next correction added an explicit tensor
+  DG boundary policy and routed the water-tank tensor DG maps through per-axis
+  boundary conditions: one-way acoustic characteristic exterior states on x/y
+  physical tank faces and periodic z for the embedded 2-D invariant slab.
+  Current focused-map metrics are FDTD vs DG-2D normalized-L2 `1.616039e-1`,
+  correlation `0.985529`; FDTD vs DG-3D normalized-L2 `1.616039e-1`,
+  correlation `0.985529`; PSTD vs DG-2D/DG-3D normalized-L2 `1.635862e-1`,
+  correlation `0.986426`; DG-2D vs analytic normalized-L2 `1.933581e-1`,
+  correlation `0.975261`; and DG-2D vs DG-3D normalized-L2 `1.756510e-8`
+  with correlation `1.000000`. All 2-D/reference maps and the z-invariant 3-D
+  DG midplane peak at `(8 mm, 9 mm)` with `focus_error_mm = 3.0` under the
+  finite-grid convention. Axial line metrics remain FDTD vs DG-1D
+  normalized-L2 `2.218071e-1`, correlation `0.918299`; PSTD vs DG-1D
+  normalized-L2 `2.199460e-1`, correlation `0.862900`; analytical vs DG-1D
+  normalized-L2 `2.273648e-1`, correlation `0.823690`. Remaining follow-up is
+  DG CPML or an equivalent DG-native absorbing layer for fully finite 3-D
+  domains rather than this embedded slab comparison.
   The high-level simulation adapter now uses the same tensor acoustic state and
   uniform-grid field projection for `SolverType::DiscontinuousGalerkin`, so
   2-D/3-D DG is available through both the focused comparison fixture and the

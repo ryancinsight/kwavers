@@ -1,4 +1,4 @@
-//! `ConservativeInterpolator` — sparse volume-overlap transfer operator.
+//! `UtilConservativeInterpolator` — sparse volume-overlap transfer operator.
 //!
 //! # Theory
 //!
@@ -23,7 +23,7 @@ use ndarray::Array3;
 /// The sparse transfer matrix T is stored in CSR-like form:
 /// `transfer_matrix[i]` = list of `(source_index, weight)` pairs for target cell `i`.
 #[derive(Debug, Clone)]
-pub struct ConservativeInterpolator {
+pub struct UtilConservativeInterpolator {
     source_grid: Grid,
     target_grid: Grid,
     /// Sparse transfer matrix: row i = [(src_idx, weight), …]
@@ -33,7 +33,7 @@ pub struct ConservativeInterpolator {
     target_volumes: Vec<f64>,
 }
 
-impl ConservativeInterpolator {
+impl UtilConservativeInterpolator {
     /// Build conservative transfer operator satisfying the Sprague-Grundy theorem.
     ///
     /// # Errors

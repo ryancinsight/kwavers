@@ -13,7 +13,7 @@ const GOLD_DRUDE_DAMPING_RAD_S: f64 = 1.079e14;
 /// Plasmonic enhancement trait for surface plasmon effects
 ///
 /// Models enhanced electromagnetic fields near metallic nanostructures
-pub trait PlasmonicEnhancement: ElectromagneticWaveEquation {
+pub trait PlasmonicEnhancementEquation: ElectromagneticWaveEquation {
     /// Surface plasmon resonance frequency ω_res (rad/s)
     ///
     /// # Theorem: Fröhlich resonance for a Drude nanosphere

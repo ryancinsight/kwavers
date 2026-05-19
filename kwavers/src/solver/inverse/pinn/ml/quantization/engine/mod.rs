@@ -8,7 +8,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 
 use crate::solver::inverse::pinn::ml::quantization::{
-    LayerInfo, QuantizationParams, QuantizationScheme, QuantizedModel, QuantizedTensor, Quantizer,
+    LayerInfo, QuantizationParams, QuantizationScheme, QuantizedModel, QuantizedTensor, MlQuantizer,
 };
 
 mod ops;
@@ -22,7 +22,7 @@ pub(super) struct QuantizationValidationResult {
     pub compression_ratio: f32,
 }
 
-impl Quantizer {
+impl MlQuantizer {
     /// Create a new quantizer with the given scheme.
     pub fn new(scheme: QuantizationScheme) -> Self {
         Self {
@@ -70,7 +70,7 @@ impl Quantizer {
             scheme: self.scheme.clone(),
         };
 
-        let metadata = crate::solver::inverse::pinn::ml::quantization::ModelMetadata {
+        let metadata = crate::solver::inverse::pinn::ml::quantization::QuantizationModelMetadata {
             original_accuracy: validation_result.original_accuracy,
             quantized_accuracy: validation_result.quantized_accuracy,
             compression_ratio: validation_result.compression_ratio,

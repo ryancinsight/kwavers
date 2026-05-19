@@ -10,13 +10,13 @@ use crate::domain::medium::{density_at, sound_speed_at, AcousticProperties, Core
 use crate::domain::source::GridSource;
 use crate::simulation::solver_adapters::DgSimulationSolver;
 use crate::solver::config::{SolverConfiguration, SolverType};
-use crate::solver::factory::SolverFactory;
+use crate::solver::factory::SolverFactoryRegistry;
 use crate::solver::forward::fdtd::FdtdConfig;
 use crate::solver::forward::hybrid::config::HybridConfig;
 use crate::solver::forward::pstd::config::KSpaceMethod;
 use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use crate::solver::forward::{FdtdSolver, HybridSolver};
-use crate::solver::interface::factory::{FactoryConfiguration, GridParameters, MediumParameters};
+use crate::solver::interface::factory::{FactoryConfiguration, FactoryGridParameters, FactoryMediumParameters};
 use crate::solver::interface::Solver;
 
 /// Concrete assembly boundary for simulation-driven solver creation.
@@ -26,7 +26,7 @@ pub struct SimulationSolverFactory;
 #[derive(Debug)]
 struct GridDescriptor<'a>(&'a Grid);
 
-impl GridParameters for GridDescriptor<'_> {
+impl FactoryGridParameters for GridDescriptor<'_> {
     fn nx(&self) -> usize {
         self.0.nx
     }
@@ -58,7 +58,7 @@ struct MediumDescriptor<'a, M: Medium> {
     grid: &'a Grid,
 }
 
-impl<M: Medium> MediumParameters for MediumDescriptor<'_, M> {
+impl<M: Medium> FactoryMediumParameters for MediumDescriptor<'_, M> {
     fn sound_speed(&self, x: f64, y: f64, z: f64) -> f64 {
         sound_speed_at(self.medium, x, y, z, self.grid)
     }
@@ -97,10 +97,10 @@ impl SimulationSolverFactory {
     ) -> KwaversResult<Box<dyn Solver>> {
         let grid_descriptor = GridDescriptor(grid);
         let medium_descriptor = MediumDescriptor { medium, grid };
-        SolverFactory::validate_memory_budget(&grid_descriptor, &FactoryConfiguration::default())?;
+        SolverFactoryRegistry::validate_memory_budget(&grid_descriptor, &FactoryConfiguration::default())?;
 
         let selected_type =
-            SolverFactory::resolve_solver_type(solver_type, &grid_descriptor, &medium_descriptor);
+            SolverFactoryRegistry::resolve_solver_type(solver_type, &grid_descriptor, &medium_descriptor);
 
         match selected_type {
             SolverType::FDTD => {

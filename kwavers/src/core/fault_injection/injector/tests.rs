@@ -36,7 +36,7 @@ impl RecoveryStrategy for MockRecoveryStrategy {
 
 #[test]
 fn injector_creates_oom_error() {
-    let injector = FaultInjector::new(InjectionConfig::default());
+    let injector = CoreFaultInjector::new(InjectionConfig::default());
     let scenario = FaultInjectionScenario::GpuOomSudden {
         allocation_size_bytes: 1024usize.pow(3), // 1GB
         timing: InjectionTiming::Immediate,
@@ -58,7 +58,7 @@ fn injector_disabled_returns_no_fault() {
         enabled: false,
         ..Default::default()
     };
-    let injector = FaultInjector::new(config);
+    let injector = CoreFaultInjector::new(config);
     let scenario = FaultInjectionScenario::GpuOomSudden {
         allocation_size_bytes: 1024,
         timing: InjectionTiming::Immediate,
@@ -72,7 +72,7 @@ fn injector_disabled_returns_no_fault() {
 
 #[test]
 fn injector_tracks_faults() {
-    let injector = FaultInjector::new(InjectionConfig::default());
+    let injector = CoreFaultInjector::new(InjectionConfig::default());
     let scenario = FaultInjectionScenario::CflViolation {
         overshoot_factor: 1.5,
         timing: InjectionTiming::Immediate,

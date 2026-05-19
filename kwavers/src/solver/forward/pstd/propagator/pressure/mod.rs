@@ -64,7 +64,7 @@ mod density_cartesian;
 
 use crate::core::error::KwaversResult;
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use crate::solver::geometry::Geometry;
+use crate::solver::geometry::SolverGeometry;
 use ndarray::Zip;
 
 impl PSTDSolver {
@@ -142,7 +142,7 @@ impl PSTDSolver {
     ///
     #[inline]
     pub(crate) fn update_density(&mut self, dt: f64) -> KwaversResult<()> {
-        if self.config.geometry == Geometry::CylindricalAS {
+        if self.config.geometry == SolverGeometry::CylindricalAS {
             return self.update_density_as(dt);
         }
         self.update_density_cartesian(dt)

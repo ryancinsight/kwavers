@@ -22,7 +22,7 @@
 //! │   └── JFNK (Jacobian-free)
 //! └── LinearSolver (inner iteration)
 //!     ├── GMRES (restarted Krylov)
-//!     └── Preconditioner (optional)
+//!     └── SparsePreconditioner (optional)
 //!         ├── BlockJacobi
 //!         ├── ILU(k)
 //!         └── PhysicsBased
@@ -30,4 +30,4 @@
 
 pub mod gmres;
 
-pub use gmres::{ConvergenceInfo, GMRESConfig, GMRESSolver};
+pub use gmres::{GMRESConfig, GMRESSolver, GmresConvergenceInfo};

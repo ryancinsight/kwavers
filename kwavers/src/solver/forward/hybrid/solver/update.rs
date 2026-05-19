@@ -306,7 +306,7 @@ impl HybridSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::boundary::{DomainPmlConfig, PMLBoundary};
+    use crate::domain::boundary::{DomainPmlConfig, DomainPMLBoundary};
     use crate::domain::field::mapping::UnifiedFieldType;
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
@@ -347,7 +347,7 @@ mod tests {
         let mut solver = HybridSolver::new(config, &grid, &medium).unwrap();
         let before = solver.source_mask_scratch.as_ptr();
         let source = PointSource::new((1.0e-3, 2.0e-3, 3.0e-3), Arc::new(ConstantSignal(1.0)));
-        let mut boundary = PMLBoundary::new(DomainPmlConfig::default().with_thickness(1)).unwrap();
+        let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(1)).unwrap();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, grid.nx, grid.ny, grid.nz));
 
         solver

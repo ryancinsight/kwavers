@@ -17,7 +17,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult, SystemError};
 use crate::solver::interface::pinn_beamforming::{
-    ModelInfo, PinnBeamformingConfig, PinnBeamformingProvider, PinnBeamformingResult,
+    ModelInfo, PinnBeamformingConfig, PinnBeamformingProvider, NeuralPinnBeamformingResult,
     PinnBeamformingUncertaintyConfig, TrainingMetrics,
 };
 use burn::tensor::backend::AutodiffBackend;
@@ -133,7 +133,7 @@ where
         &self,
         rf_data: &Array3<f32>,
         _config: &PinnBeamformingConfig,
-    ) -> KwaversResult<PinnBeamformingResult> {
+    ) -> KwaversResult<NeuralPinnBeamformingResult> {
         use std::time::Instant;
         let t_start = Instant::now();
 
@@ -185,7 +185,7 @@ where
             }
         }
 
-        Ok(PinnBeamformingResult {
+        Ok(NeuralPinnBeamformingResult {
             image,
             uncertainty: None,
             confidence: None,

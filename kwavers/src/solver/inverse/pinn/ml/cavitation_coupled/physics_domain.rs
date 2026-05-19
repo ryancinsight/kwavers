@@ -1,8 +1,8 @@
-//! `PhysicsDomain` implementation for [`CavitationCoupledDomain`].
+//! `SimulationPhysicsDomain` implementation for [`CavitationCoupledDomain`].
 
 use super::domain::CavitationCoupledDomain;
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, SimulationPhysicsDomain, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
     PinnDomainPhysicsParameters,
 };
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use super::config::CavitationCouplingType;
 
-impl<B: AutodiffBackend> PhysicsDomain<B> for CavitationCoupledDomain<B> {
+impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for CavitationCoupledDomain<B> {
     fn domain_name(&self) -> &'static str {
         "cavitation_coupled"
     }

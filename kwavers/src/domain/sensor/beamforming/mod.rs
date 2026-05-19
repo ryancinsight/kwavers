@@ -80,10 +80,10 @@
 //! **For Clinical Decision Support:** Use `crate::clinical::imaging::workflows::neural`
 //! ```rust,ignore
 //! // OLD (deprecated):
-//! use kwavers::domain::sensor::beamforming::neural::{ClinicalDecisionSupport, DiagnosisAlgorithm};
+//! use kwavers::domain::sensor::beamforming::neural::{NeuralClinicalDecisionSupport, DiagnosisAlgorithm};
 //!
 //! // NEW (recommended):
-//! use kwavers::clinical::imaging::workflows::neural::{ClinicalDecisionSupport, DiagnosisAlgorithm};
+//! use kwavers::clinical::imaging::workflows::neural::{NeuralClinicalDecisionSupport, DiagnosisAlgorithm};
 //! ```
 //!
 //! **For Sensor Interface (unchanged):** Keep using domain layer

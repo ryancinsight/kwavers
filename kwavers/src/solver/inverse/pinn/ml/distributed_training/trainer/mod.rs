@@ -8,7 +8,7 @@ use super::{
 };
 use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::{
-    BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, Geometry2D,
+    BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BurnWave2dGeometry,
 };
 use burn::tensor::backend::AutodiffBackend;
 use log::info;
@@ -21,7 +21,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     pub async fn new(
         config: DistributedTrainingConfig,
         base_config: BurnPINN2DConfig,
-        _geometry: Geometry2D,
+        _geometry: BurnWave2dGeometry,
     ) -> KwaversResult<Self> {
         let decomposition =
             crate::solver::inverse::pinn::ml::MultiGpuDecompositionStrategy::Spatial {

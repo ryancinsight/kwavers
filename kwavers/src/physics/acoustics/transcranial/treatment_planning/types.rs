@@ -4,7 +4,7 @@ use ndarray::Array3;
 
 /// Treatment target volume in brain coordinates
 #[derive(Debug, Clone)]
-pub struct TargetVolume {
+pub struct TranscranialTargetVolume {
     /// Target center (x, y, z) in mm relative to brain origin
     pub center: [f64; 3],
     /// Target dimensions (width, height, depth) in mm
@@ -36,7 +36,7 @@ pub struct TranscranialTreatmentPlan {
     /// Patient identifier
     pub patient_id: String,
     /// Treatment targets
-    pub targets: Vec<TargetVolume>,
+    pub targets: Vec<TranscranialTargetVolume>,
     /// Skull CT data (Hounsfield units)
     pub skull_ct: Array3<f64>,
     /// Optimal transducer positions and phases

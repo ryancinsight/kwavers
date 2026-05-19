@@ -14,8 +14,8 @@ pub use hardware::TransducerHardware;
 pub use manager::DeviceManager;
 pub use mock::MockTransducer;
 pub use types::{
-    CommunicationProtocol, DeviceId, DeviceStatus, DeviceTelemetry, DeviceTransducerSpecification,
-    HardwareCommand, HardwareResponse, TransducerState,
+    CommunicationProtocol, DeviceId, DeviceTelemetry, DeviceTransducerSpecification,
+    HardwareCommand, HardwareResponse, TransducerDeviceStatus, TransducerState,
 };
 
 #[cfg(test)]

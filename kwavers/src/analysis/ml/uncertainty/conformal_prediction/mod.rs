@@ -8,7 +8,7 @@ pub mod predictor;
 pub mod types;
 
 pub use config::ConformalConfig;
-pub use predictor::ConformalPredictor;
+pub use predictor::MlConformalPredictor;
 pub use types::{
     CalibrationSummary, ConformalResult, ConformalValidationMetrics, ScoreDistribution,
 };

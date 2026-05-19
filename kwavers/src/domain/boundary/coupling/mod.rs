@@ -7,7 +7,7 @@
 //!
 //! ### Interface Boundaries
 //! - **MaterialInterface**: Handles discontinuities between different materials
-//! - **MultiPhysicsInterface**: Couples different physics (EM-acoustic, acoustic-elastic)
+//! - **BoundaryMultiPhysicsInterface**: Couples different physics (EM-acoustic, acoustic-elastic)
 //!
 //! ### Advanced Absorbing Boundaries
 //! - **ImpedanceBoundary**: Frequency-dependent absorption
@@ -57,9 +57,9 @@
 //!     MaterialInterface,
 //!     ImpedanceBoundary,
 //!     AdaptiveBoundary,
-//!     MultiPhysicsInterface,
+//!     BoundaryMultiPhysicsInterface,
 //!     SchwarzBoundary,
-//!     PhysicsDomain,
+//!     BoundaryCouplingPhysicsDomain,
 //!     BoundaryCouplingType,
 //!     BoundaryTransmissionCondition,
 //! };
@@ -116,10 +116,10 @@ pub mod types;
 pub use adaptive::AdaptiveBoundary;
 pub use impedance::ImpedanceBoundary;
 pub use material::MaterialInterface;
-pub use multiphysics::MultiPhysicsInterface;
+pub use multiphysics::BoundaryMultiPhysicsInterface;
 pub use schwarz::SchwarzBoundary;
 
 // Re-export shared types from types module
 pub use types::{
-    BoundaryCouplingType, BoundaryTransmissionCondition, FrequencyProfile, PhysicsDomain,
+    BoundaryCouplingType, BoundaryTransmissionCondition, FrequencyProfile, BoundaryCouplingPhysicsDomain,
 };

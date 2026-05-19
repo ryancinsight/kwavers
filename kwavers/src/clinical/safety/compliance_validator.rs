@@ -33,7 +33,7 @@ impl ComplianceValidator {
     pub fn validate_compliance(
         &mut self,
         system_config: &SystemConfiguration,
-    ) -> KwaversResult<ComplianceReport> {
+    ) -> KwaversResult<ValidatorComplianceReport> {
         self.validation_results.clear();
 
         for check in &self.compliance_checks {
@@ -41,7 +41,7 @@ impl ComplianceValidator {
             self.validation_results.insert(check.id.clone(), result);
         }
 
-        let report = ComplianceReport {
+        let report = ValidatorComplianceReport {
             standard_version: self.standard_version.clone(),
             timestamp: Instant::now(),
             results: self.validation_results.clone(),
@@ -172,7 +172,7 @@ pub struct ComplianceResult {
 
 /// Full compliance validation report
 #[derive(Debug)]
-pub struct ComplianceReport {
+pub struct ValidatorComplianceReport {
     pub standard_version: String,
     pub timestamp: Instant,
     pub results: HashMap<String, ComplianceResult>,

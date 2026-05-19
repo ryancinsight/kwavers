@@ -1,4 +1,4 @@
-//! `SpectralOperator` trait definition.
+//! `SpectralOperatorTrait` trait definition.
 
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array3, ArrayView3};
@@ -11,7 +11,7 @@ use ndarray::{Array1, Array3, ArrayView3};
 /// # Thread Safety
 ///
 /// All implementations must be `Send + Sync` to enable parallel computation.
-pub trait SpectralOperator: Send + Sync {
+pub trait SpectralOperatorTrait: Send + Sync {
     /// Apply operator in k-space
     ///
     /// Computes the spectral derivative:

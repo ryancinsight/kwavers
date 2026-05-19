@@ -10,7 +10,7 @@ pub enum SolverFeature {
     /// Enable reconstruction capabilities
     Reconstruction,
     /// Enable time reversal methods
-    TimeReversal,
+    PhotoacousticTimeReversal,
     /// Enable adaptive mesh refinement
     AdaptiveMeshRefinement,
     /// Enable GPU acceleration
@@ -88,7 +88,7 @@ impl SolverFeatureSet {
     pub fn enable(&mut self, feature: SolverFeature) {
         match feature {
             SolverFeature::Reconstruction => self.insert(Self::RECONSTRUCTION),
-            SolverFeature::TimeReversal => self.insert(Self::TIME_REVERSAL),
+            SolverFeature::PhotoacousticTimeReversal => self.insert(Self::TIME_REVERSAL),
             SolverFeature::AdaptiveMeshRefinement => self.insert(Self::ADAPTIVE_MESH_REFINEMENT),
             SolverFeature::GpuAcceleration => self.insert(Self::GPU_ACCELERATION),
             SolverFeature::DetailedLogging => self.insert(Self::DETAILED_LOGGING),
@@ -104,7 +104,7 @@ impl SolverFeatureSet {
     pub fn disable(&mut self, feature: SolverFeature) {
         match feature {
             SolverFeature::Reconstruction => self.remove(Self::RECONSTRUCTION),
-            SolverFeature::TimeReversal => self.remove(Self::TIME_REVERSAL),
+            SolverFeature::PhotoacousticTimeReversal => self.remove(Self::TIME_REVERSAL),
             SolverFeature::AdaptiveMeshRefinement => self.remove(Self::ADAPTIVE_MESH_REFINEMENT),
             SolverFeature::GpuAcceleration => self.remove(Self::GPU_ACCELERATION),
             SolverFeature::DetailedLogging => self.remove(Self::DETAILED_LOGGING),
@@ -121,7 +121,7 @@ impl SolverFeatureSet {
     pub fn is_enabled(&self, feature: SolverFeature) -> bool {
         match feature {
             SolverFeature::Reconstruction => self.contains(Self::RECONSTRUCTION),
-            SolverFeature::TimeReversal => self.contains(Self::TIME_REVERSAL),
+            SolverFeature::PhotoacousticTimeReversal => self.contains(Self::TIME_REVERSAL),
             SolverFeature::AdaptiveMeshRefinement => self.contains(Self::ADAPTIVE_MESH_REFINEMENT),
             SolverFeature::GpuAcceleration => self.contains(Self::GPU_ACCELERATION),
             SolverFeature::DetailedLogging => self.contains(Self::DETAILED_LOGGING),

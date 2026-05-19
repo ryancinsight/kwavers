@@ -74,7 +74,7 @@ pub struct PSTDConfig {
     /// Advanced k-space pseudospectral method (eliminates numerical dispersion)
     pub kspace_method: KSpaceMethod,
     /// Spatial coordinate geometry (Cartesian 3-D or axisymmetric cylindrical).
-    pub geometry: Geometry,
+    pub geometry: SolverGeometry,
 }
 
 impl Default for PSTDConfig {
@@ -95,7 +95,7 @@ impl Default for PSTDConfig {
             smooth_sources: true,
             anti_aliasing: AntiAliasingConfig::default(),
             kspace_method: KSpaceMethod::StandardPSTD,
-            geometry: Geometry::Cartesian3D,
+            geometry: SolverGeometry::Cartesian3D,
         }
     }
 }
@@ -125,4 +125,4 @@ impl Default for AntiAliasingConfig {
 }
 
 use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
-use crate::solver::geometry::Geometry;
+use crate::solver::geometry::SolverGeometry;

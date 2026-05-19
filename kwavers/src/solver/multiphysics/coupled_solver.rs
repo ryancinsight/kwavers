@@ -6,7 +6,9 @@ use crate::core::error::KwaversResult;
 use crate::domain::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX, TOTAL_FIELDS};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::solver::multiphysics::field_coupling::{FieldCoupler, FieldCouplingStrategy};
+use crate::solver::multiphysics::field_coupling::{
+    FieldCouplingStrategy, MultiphysicsFieldCoupler,
+};
 use ndarray::Array3;
 use std::sync::Arc;
 
@@ -14,7 +16,7 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct CoupledMultiPhysicsSolver {
     /// Field coupler for multi-physics interactions
-    field_coupler: FieldCoupler,
+    field_coupler: MultiphysicsFieldCoupler,
     /// Computational grid
     _grid: Grid,
     /// Medium properties
@@ -34,7 +36,7 @@ impl CoupledMultiPhysicsSolver {
         coupling_strategy: FieldCouplingStrategy,
     ) -> KwaversResult<Self> {
         // Initialize field coupler
-        let field_coupler = FieldCoupler::new(coupling_strategy);
+        let field_coupler = MultiphysicsFieldCoupler::new(coupling_strategy);
 
         // Initialize multi-physics fields
         let mut fields = Vec::with_capacity(TOTAL_FIELDS);

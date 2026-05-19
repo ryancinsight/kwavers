@@ -1,6 +1,6 @@
 //! TransducerFieldCalculatorPlugin struct and Plugin trait impl
 
-use super::geometry::TransducerGeometry;
+use super::geometry::FieldCalculatorTransducerGeometry;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -14,7 +14,7 @@ pub struct TransducerFieldCalculatorPlugin {
     pub(crate) metadata: PluginMetadata,
     pub(crate) state: PluginState,
     /// Transducer geometry definitions
-    pub(crate) transducer_geometries: Vec<TransducerGeometry>,
+    pub(crate) transducer_geometries: Vec<FieldCalculatorTransducerGeometry>,
     /// Spatial impulse response cache
     pub(crate) sir_cache: HashMap<String, Array3<f64>>,
 }
@@ -22,7 +22,7 @@ pub struct TransducerFieldCalculatorPlugin {
 impl TransducerFieldCalculatorPlugin {
     /// Create new FOCUS-compatible transducer field calculator
     #[must_use]
-    pub fn new(transducer_geometries: Vec<TransducerGeometry>) -> Self {
+    pub fn new(transducer_geometries: Vec<FieldCalculatorTransducerGeometry>) -> Self {
         Self {
             metadata: PluginMetadata {
                 id: "focus_transducer_calculator".to_string(),

@@ -42,7 +42,7 @@ pub enum ReconstructionAlgorithm {
     /// Filtered back-projection
     FilteredBackProjection,
     /// Time reversal
-    TimeReversal,
+    PhotoacousticTimeReversal,
     /// Fourier-domain reconstruction
     FourierDomain,
     /// Iterative reconstruction

@@ -2,8 +2,8 @@
 
 use super::{
     entropy_production_rate, validate_energy_conservation, validate_mass_conservation,
-    validate_momentum_conservation, AcousticStateRefs, ConservationMetrics, ConservationParams,
-    PreviousFields,
+    validate_momentum_conservation, AcousticConservationMetrics, AcousticStateRefs,
+    ConservationParams, PreviousFields,
 };
 use crate::domain::grid::Grid;
 
@@ -14,7 +14,7 @@ pub fn validate_conservation(
     prev: PreviousFields<'_>,
     params: ConservationParams,
     grid: &Grid,
-) -> ConservationMetrics {
+) -> AcousticConservationMetrics {
     let energy_error = validate_energy_conservation(
         state.pressure,
         state.velocity_x,
@@ -72,7 +72,7 @@ pub fn validate_conservation(
         && momentum_error.2 < params.tolerance
         && ds_dt >= 0.0;
 
-    ConservationMetrics {
+    AcousticConservationMetrics {
         energy_error,
         mass_error,
         momentum_error,

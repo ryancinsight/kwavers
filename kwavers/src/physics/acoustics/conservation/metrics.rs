@@ -2,7 +2,7 @@
 
 /// Conservation validation metrics for a single timestep.
 #[derive(Debug, Clone)]
-pub struct ConservationMetrics {
+pub struct AcousticConservationMetrics {
     /// Relative energy error: `|E(t) - E(0)| / E(0)`.
     pub energy_error: f64,
     /// Maximum pointwise mass continuity residual [kg m^-3 s^-1].
@@ -19,10 +19,10 @@ pub struct ConservationMetrics {
 mod tests {
     use super::*;
 
-    /// ConservationMetrics stores all field values verbatim and Clone is consistent.
+    /// AcousticConservationMetrics stores all field values verbatim and Clone is consistent.
     #[test]
     fn conservation_metrics_stores_and_clones_fields() {
-        let m = ConservationMetrics {
+        let m = AcousticConservationMetrics {
             energy_error: 1.23,
             mass_error: 4.56,
             momentum_error: (7.0, 8.0, 9.0),
@@ -47,7 +47,7 @@ mod tests {
     /// is_conserved = false is stored correctly alongside violated field values.
     #[test]
     fn conservation_metrics_not_conserved_stores_false() {
-        let m = ConservationMetrics {
+        let m = AcousticConservationMetrics {
             energy_error: 999.0,
             mass_error: 0.0,
             momentum_error: (0.0, 0.0, 0.0),
@@ -64,7 +64,7 @@ mod tests {
     /// Debug output is non-empty (no panic; structural completeness check).
     #[test]
     fn conservation_metrics_debug_non_empty() {
-        let m = ConservationMetrics {
+        let m = AcousticConservationMetrics {
             energy_error: 0.0,
             mass_error: 0.0,
             momentum_error: (0.0, 0.0, 0.0),

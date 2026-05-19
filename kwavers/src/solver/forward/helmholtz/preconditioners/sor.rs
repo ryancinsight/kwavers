@@ -7,7 +7,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::solver::forward::helmholtz::Preconditioner;
+use crate::solver::forward::helmholtz::HelmholtzPreconditioner;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
 
@@ -39,7 +39,7 @@ impl SorPreconditioner {
     }
 }
 
-impl Preconditioner for SorPreconditioner {
+impl HelmholtzPreconditioner for SorPreconditioner {
     /// Apply SOR preconditioner
     ///
     /// Uses the precomputed diagonal inverse from `setup()`.

@@ -6,15 +6,15 @@ use std::collections::HashMap;
 
 use super::super::residual::max_abs_difference;
 use super::super::{
-    CoupledPhysicsSolver, FieldCoupler, MultiPhysicsConfig, PhysicsDomain,
+    CoupledPhysicsSolver, MultiPhysicsConfig, MultiPhysicsFieldCoupler, SimulationPhysicsDomain,
     SimulationCouplingStrategy,
 };
 
 /// Multi-physics simulation orchestrator
 pub struct SimulationMultiPhysicsSolver {
     config: MultiPhysicsConfig,
-    pub(super) solvers: HashMap<PhysicsDomain, Box<dyn CoupledPhysicsSolver>>,
-    coupler: FieldCoupler,
+    pub(super) solvers: HashMap<SimulationPhysicsDomain, Box<dyn CoupledPhysicsSolver>>,
+    coupler: MultiPhysicsFieldCoupler,
     pub(super) convergence_history: Vec<f64>,
     time_step: usize,
 }
@@ -44,7 +44,7 @@ impl SimulationMultiPhysicsSolver {
         Self {
             config,
             solvers: HashMap::new(),
-            coupler: FieldCoupler::new(),
+            coupler: MultiPhysicsFieldCoupler::new(),
             convergence_history: Vec::new(),
             time_step: 0,
         }
@@ -73,8 +73,8 @@ impl SimulationMultiPhysicsSolver {
     ///
     pub fn add_coupling(
         &mut self,
-        source_domain: PhysicsDomain,
-        target_domain: PhysicsDomain,
+        source_domain: SimulationPhysicsDomain,
+        target_domain: SimulationPhysicsDomain,
     ) -> KwaversResult<()> {
         let source_solver = self.solvers.get(&source_domain).ok_or_else(|| {
             KwaversError::InvalidInput(format!(
@@ -111,7 +111,7 @@ impl SimulationMultiPhysicsSolver {
     }
 
     fn solve_explicit_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
-        let mut snapshots: HashMap<PhysicsDomain, Array3<f64>> = HashMap::new();
+        let mut snapshots: HashMap<SimulationPhysicsDomain, Array3<f64>> = HashMap::new();
         for (domain, solver) in &self.solvers {
             if let Ok(field) = solver.get_field("pressure") {
                 snapshots.insert(*domain, field.to_owned());
@@ -136,7 +136,7 @@ impl SimulationMultiPhysicsSolver {
     fn solve_implicit_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
         let mut residual = f64::MAX;
         for _iteration in 0..self.config.max_iterations {
-            let mut snapshots: HashMap<PhysicsDomain, Array3<f64>> = HashMap::new();
+            let mut snapshots: HashMap<SimulationPhysicsDomain, Array3<f64>> = HashMap::new();
             for (domain, solver) in &self.solvers {
                 if let Ok(field) = solver.get_field("pressure") {
                     snapshots.insert(*domain, field.to_owned());
@@ -163,7 +163,7 @@ impl SimulationMultiPhysicsSolver {
     }
 
     fn solve_partitioned_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
-        let domains: Vec<PhysicsDomain> = self.solvers.keys().copied().collect();
+        let domains: Vec<SimulationPhysicsDomain> = self.solvers.keys().copied().collect();
         let mut max_residual = 0.0_f64;
         for &domain in &domains {
             let Some(mut source_solver) = self.solvers.remove(&domain) else {
@@ -207,10 +207,10 @@ impl SimulationMultiPhysicsSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn solve_monolithic_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
-        let domains: Vec<PhysicsDomain> = self.solvers.keys().copied().collect();
+        let domains: Vec<SimulationPhysicsDomain> = self.solvers.keys().copied().collect();
         let mut residual = f64::MAX;
         for _iteration in 0..self.config.max_iterations {
-            let mut snapshots: HashMap<PhysicsDomain, Array3<f64>> = HashMap::new();
+            let mut snapshots: HashMap<SimulationPhysicsDomain, Array3<f64>> = HashMap::new();
             for (&domain, solver) in &self.solvers {
                 if let Ok(field) = solver.get_field("pressure") {
                     snapshots.insert(domain, field.to_owned());

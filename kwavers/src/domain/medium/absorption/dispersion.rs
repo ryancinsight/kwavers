@@ -60,11 +60,11 @@ impl DispersionModel {
 
 /// Dispersion correction in k-space
 #[derive(Debug)]
-pub struct DispersionCorrection {
+pub struct AbsorptionDispersionCorrection {
     model: DispersionModel,
 }
 
-impl DispersionCorrection {
+impl AbsorptionDispersionCorrection {
     /// Create a new dispersion correction
     #[must_use]
     pub fn new(model: DispersionModel) -> Self {

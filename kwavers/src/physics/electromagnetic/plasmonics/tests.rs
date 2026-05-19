@@ -41,7 +41,7 @@ fn test_mie_theory_gold() {
 #[test]
 fn test_plasmonic_enhancement() {
     let mie = MieTheory::gold_in_water(15e-9);
-    let enhancement = PlasmonicEnhancement::new(mie, 1e20);
+    let enhancement = PlasmonicEnhancementCalculator::new(mie, 1e20);
 
     // Verify near-field enhancement at particle boundary
     let surface_point = [15e-9, 0.0, 0.0];

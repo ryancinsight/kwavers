@@ -1,6 +1,6 @@
 //! Anomaly detection model
 
-use super::{MLModel, ModelMetadata};
+use super::{MLModel, MlModelMetadata};
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
@@ -8,7 +8,7 @@ use ndarray::{Array1, Array2};
 #[derive(Debug)]
 pub struct AnomalyDetectorModel {
     threshold: f32,
-    metadata: ModelMetadata,
+    metadata: MlModelMetadata,
 }
 
 impl AnomalyDetectorModel {
@@ -42,7 +42,7 @@ impl AnomalyDetectorModel {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn metadata(&self) -> &ModelMetadata {
+    pub fn metadata(&self) -> &MlModelMetadata {
         &self.metadata
     }
 
@@ -65,7 +65,7 @@ impl AnomalyDetectorModel {
     pub fn new(threshold: f32) -> Self {
         Self {
             threshold,
-            metadata: ModelMetadata {
+            metadata: MlModelMetadata {
                 name: "AnomalyDetector".to_owned(),
                 version: "1.0.0".to_owned(),
                 input_shape: vec![1],

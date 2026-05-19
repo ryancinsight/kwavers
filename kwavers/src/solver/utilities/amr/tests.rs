@@ -23,7 +23,7 @@ fn test_refinement_manager() {
 
 #[test]
 fn test_interpolation() {
-    let interpolator = ConservativeInterpolator::new();
+    let interpolator = AmrConservativeInterpolator::new();
     let coarse = Array3::ones((4, 4, 4));
 
     let fine = interpolator.prolongate(&coarse);

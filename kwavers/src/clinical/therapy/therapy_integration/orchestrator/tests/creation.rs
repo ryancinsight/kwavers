@@ -23,7 +23,7 @@ fn test_therapy_orchestrator_creation() {
         patient_params: PatientParameters {
             skull_thickness: None,
             tissue_properties: TissuePropertyMap::liver((10, 10, 10)),
-            target_volume: TargetVolume {
+            target_volume: TherapyTargetVolume {
                 center: (0.05, 0.0, 0.0),
                 dimensions: (0.02, 0.02, 0.02),
                 tissue_type: TherapyTissueType::Liver,

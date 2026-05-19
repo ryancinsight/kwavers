@@ -1,11 +1,11 @@
-//! `Microbubble` and `SizeDistribution` — individual microbubble physics.
+//! `Microbubble` and `CeusSizeDistribution` — individual microbubble physics.
 
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Size distribution parameters
 #[derive(Debug, Clone)]
-pub struct SizeDistribution {
+pub struct CeusSizeDistribution {
     /// Mean radius (m)
     pub mean_radius: f64,
     /// Standard deviation (m)

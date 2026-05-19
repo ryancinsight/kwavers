@@ -23,13 +23,13 @@ pub struct DeviceRecoveryResult {
 ///
 /// **Target**: ≥99% success rate, <500ms latency
 #[derive(Debug)]
-pub struct DeviceLostRecovery {
+pub struct ErrorGpuDeviceLostRecovery {
     success_count: AtomicUsize,
     total_count: AtomicUsize,
     total_latency_us: AtomicU64,
 }
 
-impl DeviceLostRecovery {
+impl ErrorGpuDeviceLostRecovery {
     pub fn new() -> Self {
         Self {
             success_count: AtomicUsize::new(0),
@@ -49,13 +49,13 @@ impl DeviceLostRecovery {
     }
 }
 
-impl Default for DeviceLostRecovery {
+impl Default for ErrorGpuDeviceLostRecovery {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GpuRecoveryStrategy for DeviceLostRecovery {
+impl GpuRecoveryStrategy for ErrorGpuDeviceLostRecovery {
     fn can_handle(&self, error: &GpuError) -> bool {
         Self::is_device_lost(error)
     }
@@ -111,7 +111,7 @@ impl GpuRecoveryStrategy for DeviceLostRecovery {
     }
 
     fn strategy_name(&self) -> &'static str {
-        "DeviceLostRecovery"
+        "ErrorGpuDeviceLostRecovery"
     }
 
     fn success_rate(&self) -> f64 {

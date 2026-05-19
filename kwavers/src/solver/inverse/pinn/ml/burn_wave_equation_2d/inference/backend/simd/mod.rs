@@ -2,7 +2,7 @@
 use crate::core::error::KwaversResult;
 #[cfg(all(feature = "simd", feature = "nightly"))]
 use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::inference::types::{
-    ActivationType, MemoryPool, QuantizedNetwork,
+    ActivationType, BurnWave2dInferenceMemoryPool, QuantizedNetwork,
 };
 
 #[cfg(all(test, feature = "simd", feature = "nightly"))]
@@ -30,7 +30,7 @@ impl SimdExecutor {
     pub fn predict(
         &mut self,
         network: &QuantizedNetwork,
-        memory_pool: &mut MemoryPool,
+        memory_pool: &mut BurnWave2dInferenceMemoryPool,
         x: &[f32],
         y: &[f32],
         t: &[f32],
@@ -62,7 +62,7 @@ impl SimdExecutor {
     fn forward_simd_quantized(
         &mut self,
         network: &QuantizedNetwork,
-        memory_pool: &mut MemoryPool,
+        memory_pool: &mut BurnWave2dInferenceMemoryPool,
         x: &[f32],
         y: &[f32],
         t: &[f32],

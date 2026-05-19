@@ -1,4 +1,4 @@
-//! ConformalPredictor — calibration and interval generation
+//! MlConformalPredictor — calibration and interval generation
 
 use super::config::ConformalConfig;
 use super::types::{
@@ -13,13 +13,13 @@ use std::collections::HashMap;
 
 /// Conformal predictor for uncertainty quantification
 #[derive(Debug)]
-pub struct ConformalPredictor {
+pub struct MlConformalPredictor {
     pub(super) config: ConformalConfig,
     calibration_scores: Vec<f64>,
     is_calibrated: bool,
 }
 
-impl ConformalPredictor {
+impl MlConformalPredictor {
     /// Create new conformal predictor
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -85,7 +85,7 @@ impl ConformalPredictor {
         pinn: &crate::solver::inverse::pinn::ml::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
         _ground_truth: Option<&Array2<f32>>,
-    ) -> KwaversResult<crate::analysis::ml::uncertainty::PredictionWithUncertainty> {
+    ) -> KwaversResult<crate::analysis::ml::uncertainty::MlPredictionWithUncertainty> {
         if !self.is_calibrated {
             return Err(crate::core::error::KwaversError::InvalidInput(
                 "Conformal predictor must be calibrated before use".to_string(),
@@ -114,7 +114,7 @@ impl ConformalPredictor {
         let reliability_score = coverage_probability.min(1.0);
 
         Ok(
-            crate::analysis::ml::uncertainty::PredictionWithUncertainty {
+            crate::analysis::ml::uncertainty::MlPredictionWithUncertainty {
                 mean_prediction: prediction,
                 uncertainty,
                 confidence_intervals,
@@ -312,7 +312,7 @@ mod tests {
             confidence_level: 0.9,
             calibration_size: 100,
         };
-        let predictor = ConformalPredictor::new(config).unwrap();
+        let predictor = MlConformalPredictor::new(config).unwrap();
         assert!(
             !predictor.is_calibrated(),
             "fresh predictor must not be calibrated"
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_conformal_predictor_rejects_invalid_confidence() {
-        let err = ConformalPredictor::new(ConformalConfig {
+        let err = MlConformalPredictor::new(ConformalConfig {
             confidence_level: 0.0,
             calibration_size: 100,
         })
@@ -336,7 +336,7 @@ mod tests {
             "zero confidence_level error must mention 'Confidence level'; got: {msg}"
         );
 
-        let err2 = ConformalPredictor::new(ConformalConfig {
+        let err2 = MlConformalPredictor::new(ConformalConfig {
             confidence_level: 1.0,
             calibration_size: 100,
         })
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn test_conformal_calibration() {
-        let mut predictor = ConformalPredictor::new(ConformalConfig {
+        let mut predictor = MlConformalPredictor::new(ConformalConfig {
             confidence_level: 0.9,
             calibration_size: 10,
         })
@@ -386,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_conformity_score_computation() {
-        let predictor = ConformalPredictor::new(ConformalConfig::default()).unwrap();
+        let predictor = MlConformalPredictor::new(ConformalConfig::default()).unwrap();
         let prediction = Array2::from_elem((3, 3), 1.0_f32);
         let target = Array2::from_elem((3, 3), 1.2_f32);
 
@@ -404,7 +404,7 @@ mod tests {
 
     #[test]
     fn test_quantile_computation() {
-        let mut predictor = ConformalPredictor::new(ConformalConfig::default()).unwrap();
+        let mut predictor = MlConformalPredictor::new(ConformalConfig::default()).unwrap();
         predictor.calibration_scores = vec![0.1, 0.2, 0.3, 0.4, 0.5];
         predictor.is_calibrated = true;
 

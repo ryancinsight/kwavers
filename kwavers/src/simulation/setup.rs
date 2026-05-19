@@ -43,7 +43,7 @@ impl SimulationSetup {
     ///
     pub fn setup(config: &Configuration) -> KwaversResult<SimulationComponents> {
         // 1. Create Grid
-        // GridParameters has spacing, dimensions.
+        // DomainGridParameters has spacing, dimensions.
         // Grid::new(nx, ny, nz, dx, dy, dz)
         let grid = Grid::new(
             config.grid.dimensions[0],
@@ -58,7 +58,7 @@ impl SimulationSetup {
         let medium = MediumBuilder::build(&config.medium, &grid)?;
 
         // 3. Create Sources
-        // Configuration likely has ONE source config? "pub source: SourceParameters".
+        // Configuration likely has ONE source config? "pub source: DomainSourceParameters".
         // What if multiple sources? Support multiple sources in config later.
         // For now, crate creates one source from params.
         // We wrap it in Arc.

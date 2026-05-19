@@ -121,7 +121,7 @@ impl<'a, M: Medium> SimulationBuilder<'a, M> {
     fn parse_feature_name_static(name: &str) -> Result<SolverFeature, String> {
         match name {
             "Reconstruction" => Ok(SolverFeature::Reconstruction),
-            "Time Reversal" => Ok(SolverFeature::TimeReversal),
+            "Time Reversal" => Ok(SolverFeature::PhotoacousticTimeReversal),
             "Adaptive Mesh Refinement" => Ok(SolverFeature::AdaptiveMeshRefinement),
             "GPU Acceleration" => Ok(SolverFeature::GpuAcceleration),
             "Detailed Logging" => Ok(SolverFeature::DetailedLogging),

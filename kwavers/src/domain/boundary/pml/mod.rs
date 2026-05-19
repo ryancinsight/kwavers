@@ -9,7 +9,7 @@ const PML_EXPONENTIAL_SCALING_FACTOR: f64 = 0.1;
 
 /// Perfectly Matched Layer (PML) boundary condition for absorbing outgoing waves.
 #[derive(Debug, Clone)]
-pub struct PMLBoundary {
+pub struct DomainPMLBoundary {
     pub(super) acoustic_damping_x: Vec<f64>,
     pub(super) acoustic_damping_y: Vec<f64>,
     pub(super) acoustic_damping_z: Vec<f64>,
@@ -96,7 +96,7 @@ impl DomainPmlConfig {
     }
 }
 
-impl PMLBoundary {
+impl DomainPMLBoundary {
     /// New.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.

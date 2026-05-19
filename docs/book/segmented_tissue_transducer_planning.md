@@ -56,6 +56,15 @@ The optimizer is hybrid:
 5.  Candidate selection maximizes tumor coverage while penalizing protected
     peak pressure, normal-tissue mean pressure, body sidelobes, and segmented
     path hazards.
+6.  Dense-field hotspot refinement rejects plans whose strongest body-masked
+    off-target lobe exceeds the tumor peak and re-solves with added null
+    constraints at the measured body hotspots.
+
+The default LiTS17 run selects a three-source crossfire plan at `-90`, `-170`,
+and `-10` degrees.  The regenerated Chapter 32 metrics report
+`target_dominant = true`, tumor coverage `0.7838`, body sidelobe peak ratio
+`0.7395`, body sidelobe P99 ratio `0.3297`, protected peak ratio `0.2959`,
+air path fraction `0.0035`, and bone path fraction `0.0329`.
 
 This is a planning example, not a clinical approval model.  It establishes the
 software interface needed to route patient segmentations into transducer
@@ -81,4 +90,6 @@ The executable tests assert that:
   objective value;
 - the selected plan has lower protected-structure peak intensity than tumor
   peak intensity;
+- dense rendered-field acceptance marks the target as dominant over body
+  sidelobes for the default LiTS17 figure generation;
 - the selected path penalties remain finite and are exported to `metrics.json`.

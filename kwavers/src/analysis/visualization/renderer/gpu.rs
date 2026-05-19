@@ -6,7 +6,7 @@ use wgpu::util::DeviceExt;
 
 /// GPU context for accelerated rendering
 #[derive(Debug)]
-pub struct GpuContext {
+pub struct RendererGpuContext {
     #[cfg(feature = "gpu-visualization")]
     device: std::sync::Arc<wgpu::Device>,
     #[cfg(feature = "gpu-visualization")]
@@ -14,7 +14,7 @@ pub struct GpuContext {
     memory_usage: usize,
 }
 
-impl GpuContext {
+impl RendererGpuContext {
     /// Create a new GPU context
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.

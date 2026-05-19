@@ -47,11 +47,9 @@ mod tests;
 pub use audit::{AuditEntry, AuditSafetyEventType, SafetyAuditLogger};
 pub use compliance::{
     ComplianceAudit, ComplianceCheck as EnhancedComplianceCheck, ComplianceConfig,
-    ComplianceStatus, EnhancedComplianceValidator, SessionMetrics,
+    ComplianceStatus, EnhancedComplianceValidator, SafetyComplianceReport, SessionMetrics,
 };
-pub use compliance_validator::{
-    ComplianceReport, ComplianceResult, ComplianceValidator, SystemConfiguration,
-};
+pub use compliance_validator::{ComplianceResult, ComplianceValidator, SystemConfiguration};
 pub use dose::{DoseController, TreatmentRecord};
 pub use interlocks::{Interlock, InterlockSystem};
 pub use monitor::{

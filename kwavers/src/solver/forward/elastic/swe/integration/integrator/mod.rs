@@ -2,7 +2,7 @@
 
 mod body_force;
 
-use super::super::boundary::PMLBoundary;
+use super::super::boundary::ElasticSwePMLBoundary;
 use super::super::scratch::ElasticStepScratch;
 use super::super::stress::stress_divergence_into;
 use super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
@@ -61,7 +61,7 @@ impl<'a> TimeIntegrator<'a> {
         lambda: &'a ndarray::Array3<f64>,
         mu: &'a ndarray::Array3<f64>,
         density: &'a ndarray::Array3<f64>,
-        pml: &PMLBoundary,
+        pml: &ElasticSwePMLBoundary,
     ) -> Self {
         let (sigma_x, sigma_y, sigma_z) = pml.axis_sigma_profiles(grid);
         Self {

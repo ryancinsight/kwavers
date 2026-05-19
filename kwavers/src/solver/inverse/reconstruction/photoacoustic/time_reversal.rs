@@ -16,13 +16,13 @@ use std::f64::consts::PI;
 
 /// Time reversal reconstruction algorithm
 #[derive(Debug)]
-pub struct TimeReversal {
+pub struct PhotoacousticTimeReversal {
     grid_size: [usize; 3],
     sound_speed: f64,
     sampling_frequency: f64,
 }
 
-impl TimeReversal {
+impl PhotoacousticTimeReversal {
     /// Create new time reversal reconstructor
     pub fn new(
         grid_size: [usize; 3],

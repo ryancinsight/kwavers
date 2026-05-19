@@ -1,7 +1,7 @@
 use super::super::config::FemPreconditionerType;
 use super::FemHelmholtzSolver;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::linear_algebra::sparse::solver::{IterativeSolver, Preconditioner, SolverConfig};
+use crate::math::linear_algebra::sparse::solver::{IterativeSolver, SparsePreconditioner, SolverConfig};
 
 impl FemHelmholtzSolver {
     /// Solve the assembled system via BiCGSTAB with the configured preconditioner.
@@ -11,8 +11,8 @@ impl FemHelmholtzSolver {
     ///
     pub fn solve_system(&mut self) -> KwaversResult<()> {
         let preconditioner = match self.config.preconditioner {
-            FemPreconditionerType::None => Preconditioner::None,
-            FemPreconditionerType::Diagonal => Preconditioner::Jacobi,
+            FemPreconditionerType::None => SparsePreconditioner::None,
+            FemPreconditionerType::Diagonal => SparsePreconditioner::Jacobi,
             FemPreconditionerType::ILU => {
                 return Err(KwaversError::FeatureNotAvailable(
                     "FEM Helmholtz ILU preconditioner requires a real sparse incomplete factorization backend".to_owned(),

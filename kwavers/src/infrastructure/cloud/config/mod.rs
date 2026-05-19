@@ -7,4 +7,4 @@
 mod tests;
 pub mod types;
 
-pub use types::{AlertThresholds, AutoScalingConfig, DeploymentConfig, MonitoringConfig};
+pub use types::{AlertThresholds, AutoScalingConfig, DeploymentConfig, CloudMonitoringConfig};

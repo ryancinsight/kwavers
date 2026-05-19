@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Grid discretization parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GridParameters {
+pub struct DomainGridParameters {
     /// Grid dimensions [nx, ny, nz]
     pub dimensions: [usize; 3],
     /// Grid spacing [dx, dy, dz] in meters
@@ -30,7 +30,7 @@ pub enum GridType {
     Adaptive,
 }
 
-impl GridParameters {
+impl DomainGridParameters {
     /// Validate grid parameters
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -89,7 +89,7 @@ impl GridParameters {
     }
 }
 
-impl Default for GridParameters {
+impl Default for DomainGridParameters {
     fn default() -> Self {
         Self {
             dimensions: [128, 128, 128],

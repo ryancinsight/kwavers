@@ -16,7 +16,7 @@ fn test_treatment_plan_generation() {
     let ct_data = Array3::from_elem((32, 32, 32), 400.0); // Bone-like HU
     let planner = TreatmentPlanner::new(&grid, &ct_data).unwrap();
 
-    let target = TargetVolume {
+    let target = TranscranialTargetVolume {
         center: [0.016, 0.016, 0.016],
         dimensions: [0.004, 0.004, 0.004],
         shape: TranscranialTargetShape::Ellipsoidal,

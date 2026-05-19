@@ -1,6 +1,6 @@
 //! Monte Carlo inference: quantify_uncertainty, apply_dropout_mask, compute_prediction_statistics.
 
-use super::{MlBayesianPINN, PredictionWithUncertainty};
+use super::{MlBayesianPINN, MlPredictionWithUncertainty};
 use crate::core::error::KwaversResult;
 use ndarray::Array2;
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ impl MlBayesianPINN {
         &self,
         pinn: &crate::solver::inverse::pinn::ml::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
-    ) -> KwaversResult<PredictionWithUncertainty> {
+    ) -> KwaversResult<MlPredictionWithUncertainty> {
         use ndarray::Array1;
         let mut predictions = Vec::new();
 
@@ -56,7 +56,7 @@ impl MlBayesianPINN {
     pub(super) fn compute_prediction_statistics(
         &self,
         predictions: &[Array2<f32>],
-    ) -> KwaversResult<PredictionWithUncertainty> {
+    ) -> KwaversResult<MlPredictionWithUncertainty> {
         if predictions.is_empty() {
             return Err(crate::core::error::KwaversError::InvalidInput(
                 "No predictions available for statistics".to_owned(),
@@ -106,7 +106,7 @@ impl MlBayesianPINN {
             0.5
         };
 
-        Ok(PredictionWithUncertainty {
+        Ok(MlPredictionWithUncertainty {
             mean_prediction,
             uncertainty,
             confidence_intervals,

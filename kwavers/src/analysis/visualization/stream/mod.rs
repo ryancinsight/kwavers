@@ -36,7 +36,7 @@ pub use flume::{
 pub mod pipeline;
 
 #[cfg(feature = "async-runtime")]
-pub use pipeline::StagePipeline;
+pub use pipeline::StreamStagePipeline;
 
 #[cfg(feature = "async-runtime")]
 pub use crate::analysis::visualization::stream_sync::{

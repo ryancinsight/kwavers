@@ -18,4 +18,4 @@ pub mod trilinear;
 pub use bilinear::bilinear_index_space;
 pub use linear::LinearInterpolator;
 pub use traits::Interpolator;
-pub use trilinear::{trilinear_index_space, TrilinearInterpolator};
+pub use trilinear::{trilinear_index_space, NumericsTrilinearInterpolator};

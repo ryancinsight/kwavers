@@ -130,14 +130,14 @@ impl Default for PipelineState {
 /// Reference: Welford, B.P. (1962). "Note on a method for calculating
 ///   corrected sums of squares and products." Technometrics 4(3):419–420.
 /// ```
-pub struct StagePipeline {
+pub struct StreamStagePipeline {
     /// Pipeline configuration.
     config: StreamPipelineConfig,
     /// Shared metrics updated by the background task.
     metrics: Arc<Mutex<PipelineRunMetrics>>,
 }
 
-impl StagePipeline {
+impl StreamStagePipeline {
     /// Create a new async stage pipeline.
     ///
     /// Returns `(pipeline_handle, input_sender)`.
@@ -300,7 +300,7 @@ mod tests {
     #[tokio::test]
     async fn test_pipeline_new_returns_valid_sender() {
         let config = StreamPipelineConfig::default();
-        let (_pipeline, tx) = StagePipeline::new(config).await.unwrap();
+        let (_pipeline, tx) = StreamStagePipeline::new(config).await.unwrap();
         // Sender should be valid (channel open)
         assert!(!tx.is_closed());
     }
@@ -308,7 +308,7 @@ mod tests {
     #[tokio::test]
     async fn test_pipeline_metrics_initially_empty_stages() {
         let config = StreamPipelineConfig::default();
-        let (pipeline, _tx) = StagePipeline::new(config).await.unwrap();
+        let (pipeline, _tx) = StreamStagePipeline::new(config).await.unwrap();
         let m = pipeline.metrics();
         assert!(
             !m.stages.is_empty(),

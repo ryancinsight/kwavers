@@ -1,7 +1,7 @@
 //! Tests for multi-physics interface boundary conditions.
 
-use super::super::types::{BoundaryCouplingType, PhysicsDomain};
-use super::interface::MultiPhysicsInterface;
+use super::super::types::{BoundaryCouplingType, BoundaryCouplingPhysicsDomain};
+use super::interface::BoundaryMultiPhysicsInterface;
 
 const Z_WATER: f64 = 1_479_036.0;
 const Z_SOFT_TISSUE: f64 = 1_632_400.0;
@@ -9,11 +9,11 @@ const Z_BONE: f64 = 6_258_600.0;
 
 #[test]
 fn test_multiphysics_interface_photoacoustic() {
-    let interface = MultiPhysicsInterface::new(
+    let interface = BoundaryMultiPhysicsInterface::new(
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
-        PhysicsDomain::Electromagnetic,
-        PhysicsDomain::Acoustic,
+        BoundaryCouplingPhysicsDomain::Electromagnetic,
+        BoundaryCouplingPhysicsDomain::Acoustic,
         BoundaryCouplingType::ElectromagneticAcoustic {
             optical_absorption: 100.0,
             gruneisen: 0.15,
@@ -30,11 +30,11 @@ fn test_multiphysics_interface_photoacoustic() {
 ///
 #[test]
 fn test_acoustic_elastic_water_soft_tissue_transmission() {
-    let interface = MultiPhysicsInterface::new(
+    let interface = BoundaryMultiPhysicsInterface::new(
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 1.0],
-        PhysicsDomain::Acoustic,
-        PhysicsDomain::Elastic,
+        BoundaryCouplingPhysicsDomain::Acoustic,
+        BoundaryCouplingPhysicsDomain::Elastic,
         BoundaryCouplingType::AcousticElastic {
             z1_rayl: Z_WATER,
             z2_rayl: Z_SOFT_TISSUE,
@@ -64,11 +64,11 @@ fn test_acoustic_elastic_water_soft_tissue_transmission() {
 ///
 #[test]
 fn test_acoustic_elastic_water_bone_transmission() {
-    let interface = MultiPhysicsInterface::new(
+    let interface = BoundaryMultiPhysicsInterface::new(
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 1.0],
-        PhysicsDomain::Acoustic,
-        PhysicsDomain::Elastic,
+        BoundaryCouplingPhysicsDomain::Acoustic,
+        BoundaryCouplingPhysicsDomain::Elastic,
         BoundaryCouplingType::AcousticElastic {
             z1_rayl: Z_WATER,
             z2_rayl: Z_BONE,
@@ -104,11 +104,11 @@ fn test_acoustic_elastic_water_bone_transmission() {
 fn test_multiphysics_photoacoustic_monotone() {
     let gruneisen = 0.12;
     let make = |mu_a: f64| {
-        MultiPhysicsInterface::new(
+        BoundaryMultiPhysicsInterface::new(
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
-            PhysicsDomain::Electromagnetic,
-            PhysicsDomain::Acoustic,
+            BoundaryCouplingPhysicsDomain::Electromagnetic,
+            BoundaryCouplingPhysicsDomain::Acoustic,
             BoundaryCouplingType::ElectromagneticAcoustic {
                 optical_absorption: mu_a,
                 gruneisen,
@@ -136,11 +136,11 @@ fn test_multiphysics_photoacoustic_monotone() {
 ///
 #[test]
 fn test_acoustic_thermal_coupling_bounds() {
-    let interface = MultiPhysicsInterface::new(
+    let interface = BoundaryMultiPhysicsInterface::new(
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
-        PhysicsDomain::Acoustic,
-        PhysicsDomain::Thermal,
+        BoundaryCouplingPhysicsDomain::Acoustic,
+        BoundaryCouplingPhysicsDomain::Thermal,
         BoundaryCouplingType::AcousticThermal {
             alpha_np_per_m: 2.0,
             rho_kg_per_m3: 1060.0,
@@ -155,11 +155,11 @@ fn test_acoustic_thermal_coupling_bounds() {
 
 #[test]
 fn test_multiphysics_electromagnetic_thermal() {
-    let interface = MultiPhysicsInterface::new(
+    let interface = BoundaryMultiPhysicsInterface::new(
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
-        PhysicsDomain::Electromagnetic,
-        PhysicsDomain::Thermal,
+        BoundaryCouplingPhysicsDomain::Electromagnetic,
+        BoundaryCouplingPhysicsDomain::Thermal,
         BoundaryCouplingType::ElectromagneticThermal,
     );
     let tau = interface.transmission_coefficient(1e6);
@@ -169,11 +169,11 @@ fn test_multiphysics_electromagnetic_thermal() {
 
 #[test]
 fn test_multiphysics_custom_coupling() {
-    let interface = MultiPhysicsInterface::new(
+    let interface = BoundaryMultiPhysicsInterface::new(
         [0.0, 0.0, 0.0],
         [1.0, 0.0, 0.0],
-        PhysicsDomain::Custom(1),
-        PhysicsDomain::Custom(2),
+        BoundaryCouplingPhysicsDomain::Custom(1),
+        BoundaryCouplingPhysicsDomain::Custom(2),
         BoundaryCouplingType::Custom("user_defined".to_string()),
     );
     assert_eq!(interface.transmission_coefficient(1e6), 1.0);
@@ -185,11 +185,11 @@ fn test_multiphysics_custom_coupling() {
 ///
 #[test]
 fn test_acoustic_elastic_self_matched() {
-    let interface = MultiPhysicsInterface::new(
+    let interface = BoundaryMultiPhysicsInterface::new(
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 1.0],
-        PhysicsDomain::Acoustic,
-        PhysicsDomain::Elastic,
+        BoundaryCouplingPhysicsDomain::Acoustic,
+        BoundaryCouplingPhysicsDomain::Elastic,
         BoundaryCouplingType::AcousticElastic {
             z1_rayl: Z_WATER,
             z2_rayl: Z_WATER,

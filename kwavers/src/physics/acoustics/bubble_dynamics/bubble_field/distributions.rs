@@ -1,6 +1,6 @@
 /// Size distribution types
 #[derive(Debug, Clone)]
-pub enum SizeDistribution {
+pub enum BubbleFieldSizeDistribution {
     Uniform { min: f64, max: f64 },
     LogNormal { mean: f64, std_dev: f64 },
     PowerLaw { min: f64, max: f64, exponent: f64 },

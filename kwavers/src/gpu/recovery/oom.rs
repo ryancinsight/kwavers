@@ -20,7 +20,7 @@ use super::{update_avg_latency_us, GpuCheckpoint, GpuRecoveryAction, GLOBAL_STAT
 /// last checkpoint and returns `GpuRecoveryAction::FallbackToCpu { checkpoint }`
 /// so the time loop can construct a CPU solver and resume.
 #[derive(Debug)]
-pub struct GpuOomRecovery {
+pub struct GpuRecoveryOom {
     /// Success counter
     success_count: AtomicUsize,
     /// Total attempts counter
@@ -31,7 +31,7 @@ pub struct GpuOomRecovery {
     checkpoint: Arc<Mutex<Option<GpuCheckpoint>>>,
 }
 
-impl GpuOomRecovery {
+impl GpuRecoveryOom {
     /// Create a new GPU OOM recovery strategy with no checkpoint.
     pub fn new() -> Self {
         Self {
@@ -44,7 +44,7 @@ impl GpuOomRecovery {
 
     /// Create an OOM recovery strategy sharing an existing checkpoint arc.
     ///
-    /// Used by [`GpuRecoveryManager`] so all strategies share the same checkpoint
+    /// Used by [`GpuRecoveryManagerImpl`] so all strategies share the same checkpoint
     /// written by the GPU time loop.
     pub fn with_checkpoint(checkpoint: Arc<Mutex<Option<GpuCheckpoint>>>) -> Self {
         Self {
@@ -70,7 +70,7 @@ impl GpuOomRecovery {
     ///
     pub fn set_checkpoint(&self, checkpoint: GpuCheckpoint) -> KwaversResult<()> {
         let mut guard = self.checkpoint.lock().map_err(|_| {
-            KwaversError::InternalError("GpuOomRecovery: checkpoint mutex poisoned".to_string())
+            KwaversError::InternalError("GpuRecoveryOom: checkpoint mutex poisoned".to_string())
         })?;
         *guard = Some(checkpoint);
         Ok(())
@@ -98,13 +98,13 @@ impl GpuOomRecovery {
     }
 }
 
-impl Default for GpuOomRecovery {
+impl Default for GpuRecoveryOom {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RecoveryStrategy for GpuOomRecovery {
+impl RecoveryStrategy for GpuRecoveryOom {
     fn recover(&self, error: &KwaversError, _context: &ErrorContext) -> RecoveryResult {
         let start = Instant::now();
         self.total_count.fetch_add(1, Ordering::Relaxed);
@@ -112,7 +112,7 @@ impl RecoveryStrategy for GpuOomRecovery {
         // Verify this is an OOM error
         if !Self::is_oom(error) {
             return Err(KwaversError::InternalError(
-                "GpuOomRecovery cannot handle non-OOM errors".to_string(),
+                "GpuRecoveryOom cannot handle non-OOM errors".to_string(),
             ));
         }
 
@@ -128,7 +128,7 @@ impl RecoveryStrategy for GpuOomRecovery {
                         stats.oom_attempts += 1;
                     }
                     return Err(KwaversError::InternalError(
-                        "GpuOomRecovery: no checkpoint available for CPU fallback".to_string(),
+                        "GpuRecoveryOom: no checkpoint available for CPU fallback".to_string(),
                     ));
                 }
             },
@@ -137,7 +137,7 @@ impl RecoveryStrategy for GpuOomRecovery {
                     stats.oom_attempts += 1;
                 }
                 return Err(KwaversError::InternalError(
-                    "GpuOomRecovery: checkpoint mutex poisoned".to_string(),
+                    "GpuRecoveryOom: checkpoint mutex poisoned".to_string(),
                 ));
             }
         };
@@ -168,7 +168,7 @@ impl RecoveryStrategy for GpuOomRecovery {
     }
 
     fn strategy_name(&self) -> &'static str {
-        "GpuOomRecovery"
+        "GpuRecoveryOom"
     }
 
     fn success_rate(&self) -> f64 {
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn oom_recovery_rate() {
-        let recovery = GpuOomRecovery::new();
+        let recovery = GpuRecoveryOom::new();
         // When no attempts have been made, success_rate returns 1.0
         assert_eq!(recovery.success_rate(), 1.0);
 
@@ -199,14 +199,14 @@ mod tests {
             reason: "OOM".to_string(),
         });
 
-        assert!(GpuOomRecovery::is_oom(&error));
+        assert!(GpuRecoveryOom::is_oom(&error));
     }
 
     #[test]
     fn oom_recovery_with_checkpoint() {
         let checkpoint_arc: Arc<Mutex<Option<GpuCheckpoint>>> =
             Arc::new(Mutex::new(Some(GpuCheckpoint::zeroed(8))));
-        let recovery = GpuOomRecovery::with_checkpoint(Arc::clone(&checkpoint_arc));
+        let recovery = GpuRecoveryOom::with_checkpoint(Arc::clone(&checkpoint_arc));
 
         let error = KwaversError::System(SystemError::ResourceExhausted {
             resource: "GPU memory".to_string(),
@@ -218,7 +218,7 @@ mod tests {
         let result = recovery.recover(&error, &context);
         assert!(
             result.is_ok(),
-            "GpuOomRecovery with checkpoint must succeed"
+            "GpuRecoveryOom with checkpoint must succeed"
         );
     }
 }

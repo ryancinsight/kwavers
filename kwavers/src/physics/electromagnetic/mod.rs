@@ -50,10 +50,10 @@ pub mod plasmonics;
 // Optics exports moved to physics::optics
 #[allow(deprecated)]
 pub use photoacoustic::{GrueneisenModel, GruneisenParameter, OpticalAbsorption};
-pub use plasmonics::{MieTheory, NanoparticleArray, PlasmonicEnhancement};
+pub use plasmonics::{MieTheory, NanoparticleArray, PlasmonicEnhancementCalculator};
 
 // Re-export electromagnetic equation specifications for convenience
-// Note: EMSource and related types are now in domain::source::electromagnetic
+// Note: PhysicsEMSource and related types are now in domain::source::electromagnetic
 pub use equations::{
     EMFieldUtils, EMMaterialUtils, ElectromagneticWaveEquation, PhotoacousticCoupling,
 };

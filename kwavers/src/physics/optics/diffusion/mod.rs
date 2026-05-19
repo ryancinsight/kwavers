@@ -9,5 +9,5 @@ pub mod solver;
 #[cfg(test)]
 mod tests;
 
-pub use properties::OpticalProperties;
+pub use properties::DiffusionOpticalProperties;
 pub use solver::LightDiffusion;

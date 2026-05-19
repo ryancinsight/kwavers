@@ -1,6 +1,6 @@
 //! Tissue classification model
 
-use super::{MLModel, ModelMetadata};
+use super::{MLModel, MlModelMetadata};
 use crate::analysis::ml::inference::InferenceEngine;
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
@@ -9,7 +9,7 @@ use ndarray::{Array1, Array2};
 #[derive(Debug)]
 pub struct TissueClassifierModel {
     pub(crate) engine: InferenceEngine,
-    metadata: ModelMetadata,
+    metadata: MlModelMetadata,
 }
 
 impl TissueClassifierModel {
@@ -34,7 +34,7 @@ impl TissueClassifierModel {
         let (features, classes) = weights.dim();
         let engine = InferenceEngine::from_weights(weights, bias, 32, false);
 
-        let metadata = ModelMetadata {
+        let metadata = MlModelMetadata {
             name: "TissueClassifier".to_owned(),
             version: "1.0.0".to_owned(),
             input_shape: vec![features],
@@ -51,7 +51,7 @@ impl TissueClassifierModel {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn metadata(&self) -> &ModelMetadata {
+    pub fn metadata(&self) -> &MlModelMetadata {
         &self.metadata
     }
 
@@ -71,7 +71,7 @@ impl TissueClassifierModel {
         let weights = Array2::from_shape_fn((features, classes), |_| rng.gen_range(-0.05..0.05));
         let engine = InferenceEngine::from_weights(weights, None, 32, false);
 
-        let metadata = ModelMetadata {
+        let metadata = MlModelMetadata {
             name: "TissueClassifier".to_owned(),
             version: "1.0.0".to_owned(),
             input_shape: vec![features],

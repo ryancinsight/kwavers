@@ -56,7 +56,7 @@ use std::f64::consts::PI;
 
 /// Plasmonic enhancement calculator for homogeneous nanoparticle dispersions
 #[derive(Debug)]
-pub struct PlasmonicEnhancement {
+pub struct PlasmonicEnhancementCalculator {
     /// Mie theory calculator describing the individual nanoparticles
     pub mie_theory: MieTheory,
     /// Nanoparticle concentration (particles/m³)
@@ -65,7 +65,7 @@ pub struct PlasmonicEnhancement {
     pub coupling_model: CouplingModel,
 }
 
-impl PlasmonicEnhancement {
+impl PlasmonicEnhancementCalculator {
     /// Create new plasmonic enhancement calculator
     #[must_use]
     pub fn new(mie_theory: MieTheory, concentration: f64) -> Self {

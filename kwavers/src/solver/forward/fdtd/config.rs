@@ -2,7 +2,7 @@
 
 use crate::core::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::core::error::{KwaversResult, MultiError, ValidationError};
-use crate::solver::geometry::Geometry;
+use crate::solver::geometry::SolverGeometry;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 
@@ -79,7 +79,7 @@ pub struct FdtdConfig {
     /// Data recording options
     pub sensor_mask: Option<Array3<bool>>,
     /// Spatial coordinate geometry (Cartesian 3-D or axisymmetric cylindrical).
-    pub geometry: Geometry,
+    pub geometry: SolverGeometry,
 }
 
 impl Default for FdtdConfig {
@@ -96,7 +96,7 @@ impl Default for FdtdConfig {
             nt: 1000,
             dt: 1e-7,
             sensor_mask: None,
-            geometry: Geometry::Cartesian3D,
+            geometry: SolverGeometry::Cartesian3D,
         }
     }
 }

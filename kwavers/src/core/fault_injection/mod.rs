@@ -8,5 +8,5 @@ pub mod recovery_stats;
 pub mod scenario;
 
 pub use injector::InjectionConfig;
-pub use recovery_stats::RecoveryStats;
+pub use recovery_stats::CoreRecoveryStats;
 pub use scenario::{FaultInjectionScenario, InjectionTiming, RecoveryExpectation};

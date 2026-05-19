@@ -5,8 +5,8 @@ use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::{
-    ComplianceAudit, ComplianceCheck, ComplianceConfig, ComplianceReport, ComplianceStatus,
-    EnhancedComplianceValidator, SessionMetrics,
+    ComplianceAudit, ComplianceCheck, ComplianceConfig, ComplianceStatus,
+    EnhancedComplianceValidator, SafetyComplianceReport, SessionMetrics,
 };
 
 impl EnhancedComplianceValidator {
@@ -211,7 +211,7 @@ impl EnhancedComplianceValidator {
     }
 
     #[must_use]
-    pub fn generate_report(&self) -> ComplianceReport {
+    pub fn generate_report(&self) -> SafetyComplianceReport {
         let total_audits = self.audit_trail.len();
         let compliant_audits = self
             .audit_trail
@@ -233,7 +233,7 @@ impl EnhancedComplianceValidator {
             100.0
         };
 
-        ComplianceReport {
+        SafetyComplianceReport {
             total_audits,
             compliant_audits,
             warning_audits,

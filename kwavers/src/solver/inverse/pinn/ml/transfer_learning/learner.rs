@@ -26,7 +26,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     ///
     pub fn transfer_to_geometry(
         &mut self,
-        target_geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        target_geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
         target_conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<(
         crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
@@ -120,7 +120,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     ///
     pub(super) fn setup_domain_adapter(
         &mut self,
-        _target_geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        _target_geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
     ) -> KwaversResult<()> {
         self.domain_adapter = Some(DomainAdapter {
             _layers: Vec::new(),
@@ -136,7 +136,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     pub(super) fn apply_domain_adaptation(
         &self,
         model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
-        _target_geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        _target_geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
     ) -> KwaversResult<crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>> {
         Ok(model)
     }
@@ -148,7 +148,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     pub(super) fn fine_tune_model(
         &mut self,
         mut model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
-        target_geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        target_geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
         target_conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<(crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>, usize)> {
         let mut best_accuracy = 0.0;
@@ -186,7 +186,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     ///
     pub(super) fn generate_training_data(
         &self,
-        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
         _conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<TrainingData> {
         let collocation_points = self.generate_collocation_points(geometry);
@@ -202,7 +202,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     /// Generate collocation points within geometry
     pub(super) fn generate_collocation_points(
         &self,
-        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();
         let num_points = 500;

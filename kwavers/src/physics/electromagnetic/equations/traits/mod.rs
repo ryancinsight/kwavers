@@ -11,8 +11,8 @@ pub mod source;
 
 pub use maxwell::ElectromagneticWaveEquation;
 pub use photoacoustic::PhotoacousticCoupling;
-pub use plasmonic::PlasmonicEnhancement;
-pub use source::EMSource;
+pub use plasmonic::PlasmonicEnhancementEquation;
+pub use source::PhysicsEMSource;
 
 #[cfg(test)]
 mod tests;

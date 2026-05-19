@@ -96,7 +96,7 @@ fn config_p1(integrator: DgTimeIntegrator) -> DGConfig {
             apply_per_stage: false,
         },
         sound_speed: 1500.0,
-        boundary_condition: DgBoundaryCondition::Periodic,
+        boundary_conditions: [DgBoundaryCondition::Periodic; 3],
     }
 }
 
@@ -241,7 +241,7 @@ fn test_shock_capture_config_roundtrip() {
             apply_per_stage: true,
         },
         sound_speed: 1500.0,
-        boundary_condition: DgBoundaryCondition::Periodic,
+        boundary_conditions: [DgBoundaryCondition::Periodic; 3],
     };
 
     let mut solver = DGSolver::new(config, Arc::clone(&grid)).expect("solver");

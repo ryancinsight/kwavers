@@ -6,7 +6,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::meta_learning::config::MetaLearningConfig;
 use crate::solver::inverse::pinn::ml::meta_learning::types::{PdeType, PhysicsTask};
-use crate::solver::inverse::pinn::ml::Geometry2D;
+use crate::solver::inverse::pinn::ml::BurnWave2dGeometry;
 
 #[derive(Debug)]
 pub enum MetaLearningSamplingStrategy {
@@ -95,9 +95,9 @@ impl TaskSampler {
                             };
 
                             let geometry_complexity = match task.geometry.as_ref() {
-                                Geometry2D::Rectangular { .. } => 1.0,
-                                Geometry2D::Circular { .. } => 2.0,
-                                Geometry2D::MultiRegion { .. } => 4.0,
+                                BurnWave2dGeometry::Rectangular { .. } => 1.0,
+                                BurnWave2dGeometry::Circular { .. } => 2.0,
+                                BurnWave2dGeometry::MultiRegion { .. } => 4.0,
                                 _ => 3.0, // Default for other geometries
                             };
 
@@ -160,9 +160,9 @@ impl TaskSampler {
                                 1.0
                             };
                             let geometry_diversity = match task.geometry.as_ref() {
-                                Geometry2D::Rectangular { .. } => 0.5,
-                                Geometry2D::Circular { .. } => 0.7,
-                                Geometry2D::MultiRegion { .. } => 1.0,
+                                BurnWave2dGeometry::Rectangular { .. } => 0.5,
+                                BurnWave2dGeometry::Circular { .. } => 0.7,
+                                BurnWave2dGeometry::MultiRegion { .. } => 1.0,
                                 _ => 0.8,
                             };
                             let score = type_diversity * geometry_diversity;

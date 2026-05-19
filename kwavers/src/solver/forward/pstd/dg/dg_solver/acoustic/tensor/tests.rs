@@ -8,21 +8,27 @@ fn make_solver(nx: usize, ny: usize, nz: usize) -> DGSolver {
 }
 
 fn make_solver_with_order(nx: usize, ny: usize, nz: usize, polynomial_order: usize) -> DGSolver {
-    make_solver_with_boundary(nx, ny, nz, polynomial_order, DgBoundaryCondition::Periodic)
+    make_solver_with_boundaries(
+        nx,
+        ny,
+        nz,
+        polynomial_order,
+        [DgBoundaryCondition::Periodic; 3],
+    )
 }
 
-fn make_solver_with_boundary(
+fn make_solver_with_boundaries(
     nx: usize,
     ny: usize,
     nz: usize,
     polynomial_order: usize,
-    boundary_condition: DgBoundaryCondition,
+    boundary_conditions: [DgBoundaryCondition; 3],
 ) -> DGSolver {
     let grid = Arc::new(Grid::new(nx, ny, nz, 0.5, 0.75, 1.25).unwrap());
     let config = DGConfig {
         polynomial_order,
         sound_speed: 2.0,
-        boundary_condition,
+        boundary_conditions,
         ..DGConfig::default()
     };
     DGSolver::new(config, grid).unwrap()
@@ -146,9 +152,14 @@ fn tensor_absorbing_characteristic_boundary_preserves_outgoing_characteristic() 
 
 #[test]
 fn tensor_absorbing_boundary_replaces_periodic_exterior_face_state() {
-    let periodic = make_solver_with_boundary(2, 1, 1, 1, DgBoundaryCondition::Periodic);
-    let absorbing =
-        make_solver_with_boundary(2, 1, 1, 1, DgBoundaryCondition::AbsorbingCharacteristic);
+    let periodic = make_solver_with_boundaries(2, 1, 1, 1, [DgBoundaryCondition::Periodic; 3]);
+    let absorbing = make_solver_with_boundaries(
+        2,
+        1,
+        1,
+        1,
+        [DgBoundaryCondition::AbsorbingCharacteristic; 3],
+    );
     let state = Array3::from_shape_fn(
         periodic.acoustic_tensor_state_shape().unwrap(),
         |(_, _, var)| {
@@ -179,6 +190,63 @@ fn tensor_absorbing_boundary_replaces_periodic_exterior_face_state() {
     assert!(
         absorbing_norm > 1.0e-6,
         "absorbing boundary must replace periodic wraparound exterior states; norm={absorbing_norm:e}"
+    );
+}
+
+#[test]
+fn tensor_axis_boundary_policy_preserves_periodic_invariant_axis() {
+    let periodic_z = make_solver_with_boundaries(
+        1,
+        1,
+        2,
+        1,
+        [
+            DgBoundaryCondition::AbsorbingCharacteristic,
+            DgBoundaryCondition::AbsorbingCharacteristic,
+            DgBoundaryCondition::Periodic,
+        ],
+    );
+    let absorbing_z = make_solver_with_boundaries(
+        1,
+        1,
+        2,
+        1,
+        [
+            DgBoundaryCondition::Periodic,
+            DgBoundaryCondition::Periodic,
+            DgBoundaryCondition::AbsorbingCharacteristic,
+        ],
+    );
+    let state = Array3::from_shape_fn(
+        periodic_z.acoustic_tensor_state_shape().unwrap(),
+        |(_, _, var)| {
+            if var == ACOUSTIC_PRESSURE_VAR {
+                1.0
+            } else {
+                0.0
+            }
+        },
+    );
+    let mut rhs_periodic_z = Array3::zeros(state.dim());
+    let mut rhs_absorbing_z = Array3::zeros(state.dim());
+
+    periodic_z
+        .compute_acoustic_tensor_rhs_into(&state, 1.25, &mut rhs_periodic_z)
+        .unwrap();
+    absorbing_z
+        .compute_acoustic_tensor_rhs_into(&state, 1.25, &mut rhs_absorbing_z)
+        .unwrap();
+
+    let periodic_z_norm = rhs_periodic_z.iter().map(|value| value.abs()).sum::<f64>();
+    assert!(
+        periodic_z_norm < 1.0e-12,
+        "periodic z axis must preserve a z-invariant constant state; norm={periodic_z_norm:e}"
+    );
+
+    let absorbing_z_norm = rhs_absorbing_z.iter().map(|value| value.abs()).sum::<f64>();
+    assert!(
+        absorbing_z_norm > 1.0e-6,
+        "absorbing z axis must not be silently ignored on an active z-only grid; norm={absorbing_z_norm:e}"
     );
 }
 

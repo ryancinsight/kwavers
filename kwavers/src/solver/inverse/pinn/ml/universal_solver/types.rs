@@ -104,7 +104,7 @@ pub struct UniversalSolverStats {
     pub final_loss: f64,
     pub loss_history: Vec<HashMap<String, f64>>,
     pub physics_metrics: Vec<PhysicsValidationMetric>,
-    pub convergence_info: ConvergenceInfo,
+    pub convergence_info: UniversalSolverConvergenceInfo,
     pub memory_stats: Option<UniversalSolverMemoryStats>,
 }
 
@@ -116,7 +116,7 @@ impl Default for UniversalSolverStats {
             final_loss: 0.0,
             loss_history: Vec::new(),
             physics_metrics: Vec::new(),
-            convergence_info: ConvergenceInfo {
+            convergence_info: UniversalSolverConvergenceInfo {
                 converged: false,
                 final_epoch: 0,
                 best_loss: f64::INFINITY,
@@ -138,7 +138,7 @@ pub struct MultiDomainTrainingResult {
 
 /// Convergence information
 #[derive(Debug, Clone)]
-pub struct ConvergenceInfo {
+pub struct UniversalSolverConvergenceInfo {
     pub converged: bool,
     pub final_epoch: usize,
     pub best_loss: f64,
@@ -160,12 +160,12 @@ pub struct PhysicsSolution<B: burn::tensor::backend::AutodiffBackend> {
     pub model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
     pub config: UniversalTrainingConfig,
     pub stats: UniversalSolverStats,
-    pub domain_info: DomainInfo,
+    pub domain_info: UniversalSolverDomainInfo,
 }
 
 /// Domain information for solution metadata
 #[derive(Debug, Clone)]
-pub struct DomainInfo {
+pub struct UniversalSolverDomainInfo {
     pub domain_name: String,
     pub physics_params: PinnDomainPhysicsParameters,
     pub boundary_conditions: Vec<PinnBoundaryConditionSpec>,
@@ -174,12 +174,12 @@ pub struct DomainInfo {
 
 /// Geometry specification for 2D domains
 #[derive(Debug, Clone)]
-pub struct Geometry2D {
+pub struct UniversalSolverGeometry2D {
     pub bounds: [f64; 4],
     pub features: Vec<GeometricFeature>,
 }
 
-impl Geometry2D {
+impl UniversalSolverGeometry2D {
     pub fn rectangle(x_min: f64, x_max: f64, y_min: f64, y_max: f64) -> Self {
         Self {
             bounds: [x_min, x_max, y_min, y_max],

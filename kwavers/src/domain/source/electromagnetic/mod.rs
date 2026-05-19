@@ -9,7 +9,7 @@ use num_complex::Complex;
 /// Basic electromagnetic source trait
 ///
 /// Defines the interface for electromagnetic wave sources in simulation domains.
-pub trait EMSource: Send + Sync {
+pub trait DomainEMSource: Send + Sync {
     /// Get source polarization
     fn polarization(&self) -> SourcePolarization;
 
@@ -58,7 +58,7 @@ impl PointEMSource {
     }
 }
 
-impl EMSource for PointEMSource {
+impl DomainEMSource for PointEMSource {
     fn polarization(&self) -> SourcePolarization {
         self.polarization
     }
@@ -185,7 +185,7 @@ impl PlaneWaveEMSource {
     }
 }
 
-impl EMSource for PlaneWaveEMSource {
+impl DomainEMSource for PlaneWaveEMSource {
     fn polarization(&self) -> SourcePolarization {
         self.polarization
     }

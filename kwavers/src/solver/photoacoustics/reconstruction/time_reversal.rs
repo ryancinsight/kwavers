@@ -21,7 +21,7 @@ impl TimeReversalReconstruction {
         signals: &PhotoacousticSignalSet,
     ) -> KwaversResult<Array3<f64>> {
         let config = ReconstructionPhotoacousticConfig {
-            algorithm: PhotoacousticAlgorithm::TimeReversal,
+            algorithm: PhotoacousticAlgorithm::PhotoacousticTimeReversal,
             sensor_positions: signals.sensor_positions.clone(),
             grid_size: [scenario.grid.nx, scenario.grid.ny, scenario.grid.nz],
             sound_speed: scenario.config.acoustic.speed_of_sound_m_s,

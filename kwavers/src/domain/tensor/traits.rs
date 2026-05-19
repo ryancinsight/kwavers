@@ -2,7 +2,7 @@
 
 use ndarray::ArrayD;
 
-use super::types::{Backend, DType, Shape};
+use super::types::{TensorBackend, DType, Shape};
 
 /// Read-only tensor view abstraction.
 ///
@@ -16,7 +16,7 @@ pub trait TensorView: Send + Sync {
     fn dtype(&self) -> DType;
 
     /// Get backend.
-    fn backend(&self) -> Backend;
+    fn backend(&self) -> TensorBackend;
 
     /// Convert to ndarray (may involve copy if on GPU).
     fn to_ndarray(&self) -> ArrayD<f64>;

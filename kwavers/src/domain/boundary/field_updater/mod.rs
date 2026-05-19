@@ -12,7 +12,7 @@
 //!   ↓
 //! BoundaryCondition (trait)
 //!   ↓
-//! CPMLBoundary / PMLBoundary / etc.
+//! CPMLBoundary / DomainPMLBoundary / etc.
 //! ```
 
 mod gradient;

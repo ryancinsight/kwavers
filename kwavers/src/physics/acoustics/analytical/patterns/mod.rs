@@ -30,7 +30,7 @@ pub use phase_encoding::{
 
 pub use aberration_correction::{
     AberrationCorrectionMethod, AberrationCorrector, AdaptiveFocusing, PhaseConjugation,
-    TimeReversal,
+    AberrationTimeReversal,
 };
 
 pub use phase_patterns::{AiryBeam, BesselBeam, PhasePattern, SpiralPhase, VortexBeam};

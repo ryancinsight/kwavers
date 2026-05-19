@@ -26,7 +26,7 @@ pub enum SteeringMode {
     /// Geometric focusing
     Geometric,
     /// Time reversal focusing
-    TimeReversal,
+    PhotoacousticTimeReversal,
     /// Adaptive focusing
     Adaptive,
 }

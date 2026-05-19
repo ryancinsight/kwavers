@@ -9,7 +9,7 @@ mod statistics;
 mod transfer;
 
 pub use operations::ProcessingOperation;
-pub use processing::{ProcessingConfig, ProcessingStage};
+pub use processing::{VisualizationProcessingConfig, ProcessingStage};
 pub use statistics::TransferStatistics;
 pub use transfer::DataPipeline;
 

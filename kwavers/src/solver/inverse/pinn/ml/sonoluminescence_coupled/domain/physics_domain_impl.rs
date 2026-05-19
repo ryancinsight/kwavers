@@ -1,11 +1,11 @@
-//! `PhysicsDomain<B>` trait implementation for `SonoluminescenceCoupledDomain`.
+//! `SimulationPhysicsDomain<B>` trait implementation for `SonoluminescenceCoupledDomain`.
 
 use std::collections::HashMap;
 
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, SimulationPhysicsDomain, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
     PinnDomainPhysicsParameters,
 };
@@ -13,7 +13,7 @@ use crate::solver::inverse::pinn::ml::physics::{
 use super::super::config::SonoluminescenceCouplingType;
 use super::SonoluminescenceCoupledDomain;
 
-impl<B: AutodiffBackend> PhysicsDomain<B> for SonoluminescenceCoupledDomain<B> {
+impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for SonoluminescenceCoupledDomain<B> {
     fn domain_name(&self) -> &'static str {
         "sonoluminescence_coupled"
     }

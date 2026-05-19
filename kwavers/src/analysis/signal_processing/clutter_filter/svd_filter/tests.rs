@@ -16,7 +16,7 @@ fn test_config_validation() {
 #[test]
 fn test_svd_filter_creation() {
     let config = SvdClutterFilterConfig::with_fixed_rank(2);
-    let _filter = SvdClutterFilter::new(config).unwrap();
+    let _filter = SignalSvdClutterFilter::new(config).unwrap();
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn test_filter_with_synthetic_data() {
 
     // Apply filter
     let config = SvdClutterFilterConfig::with_fixed_rank(2);
-    let filter = SvdClutterFilter::new(config).unwrap();
+    let filter = SignalSvdClutterFilter::new(config).unwrap();
     let filtered = filter.filter(&data).unwrap();
 
     // Check that filtering reduced high-amplitude components
@@ -63,7 +63,7 @@ fn test_auto_rank_selection() {
     }
 
     let config = SvdClutterFilterConfig::with_auto_rank(0.95);
-    let filter = SvdClutterFilter::new(config).unwrap();
+    let filter = SignalSvdClutterFilter::new(config).unwrap();
     let filtered = filter.filter(&data).unwrap();
 
     assert_eq!(filtered.dim(), data.dim());
@@ -72,7 +72,7 @@ fn test_auto_rank_selection() {
 #[test]
 fn test_power_doppler_computation() {
     let config = SvdClutterFilterConfig::default();
-    let filter = SvdClutterFilter::new(config).unwrap();
+    let filter = SignalSvdClutterFilter::new(config).unwrap();
 
     // Create simple filtered data
     let n_pixels = 10;
@@ -90,7 +90,7 @@ fn test_power_doppler_computation() {
 #[test]
 fn test_scr_improvement() {
     let config = SvdClutterFilterConfig::with_fixed_rank(1);
-    let filter = SvdClutterFilter::new(config).unwrap();
+    let filter = SignalSvdClutterFilter::new(config).unwrap();
 
     let original = Array2::<f64>::from_elem((10, 50), 1.0);
     let filtered = Array2::<f64>::from_elem((10, 50), 0.1);
@@ -110,7 +110,7 @@ fn test_ensemble_length_validation() {
         min_ensemble_length: 100,
         ..Default::default()
     };
-    let filter = SvdClutterFilter::new(config).unwrap();
+    let filter = SignalSvdClutterFilter::new(config).unwrap();
 
     // Too short ensemble
     let short_data = Array2::<f64>::zeros((10, 50));

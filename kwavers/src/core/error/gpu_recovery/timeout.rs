@@ -21,7 +21,7 @@ pub struct TimeoutRecoveryResult {
 ///
 /// Handles GPU operation timeouts by retrying with exponential backoff.
 #[derive(Debug)]
-pub struct TimeoutRecovery {
+pub struct ErrorTimeoutRecovery {
     success_count: AtomicUsize,
     total_count: AtomicUsize,
     total_latency_us: AtomicU64,
@@ -31,7 +31,7 @@ pub struct TimeoutRecovery {
     max_backoff_ms: u64,
 }
 
-impl TimeoutRecovery {
+impl ErrorTimeoutRecovery {
     pub fn new() -> Self {
         Self {
             success_count: AtomicUsize::new(0),
@@ -88,13 +88,13 @@ impl TimeoutRecovery {
     }
 }
 
-impl Default for TimeoutRecovery {
+impl Default for ErrorTimeoutRecovery {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GpuRecoveryStrategy for TimeoutRecovery {
+impl GpuRecoveryStrategy for ErrorTimeoutRecovery {
     fn can_handle(&self, error: &GpuError) -> bool {
         Self::is_timeout(error)
     }
@@ -160,7 +160,7 @@ impl GpuRecoveryStrategy for TimeoutRecovery {
     }
 
     fn strategy_name(&self) -> &'static str {
-        "TimeoutRecovery"
+        "ErrorTimeoutRecovery"
     }
 
     fn success_rate(&self) -> f64 {

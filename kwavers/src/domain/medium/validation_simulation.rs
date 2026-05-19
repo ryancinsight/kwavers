@@ -2,7 +2,7 @@
 //!
 //! Implements comprehensive validation following literature standards
 
-use super::config::{LayerParameters, MediumParameters, MediumType};
+use super::config::{LayerParameters, DomainMediumParameters, MediumType};
 use crate::core::error::{ConfigError, KwaversResult};
 
 /// Specialized medium validator following Single Responsibility Principle  
@@ -14,7 +14,7 @@ impl MediumValidator {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn validate(config: &MediumParameters) -> KwaversResult<()> {
+    pub fn validate(config: &DomainMediumParameters) -> KwaversResult<()> {
         match config.medium_type {
             MediumType::Homogeneous => {
                 let mu_a = config.properties.get("mu_a").copied().unwrap_or(0.0);
@@ -35,7 +35,7 @@ impl MediumValidator {
             }
             MediumType::Anisotropic => {
                 // Tensor file is Option in parameters, but valid Anisotropic requires it?
-                // MediumParameters has tensor_file: Option<String>.
+                // DomainMediumParameters has tensor_file: Option<String>.
                 // Check if we need to unwrap or assume valid if used.
                 // Anisotropic builder used config.tensor_file.
                 // We should validate it here.

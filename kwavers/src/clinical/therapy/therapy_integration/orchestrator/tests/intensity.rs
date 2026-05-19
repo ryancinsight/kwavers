@@ -24,7 +24,7 @@ fn test_intensity_tracker_integration() {
         patient_params: PatientParameters {
             skull_thickness: None,
             tissue_properties: TissuePropertyMap::liver((12, 12, 12)),
-            target_volume: TargetVolume {
+            target_volume: TherapyTargetVolume {
                 center: (0.03, 0.0, 0.0),
                 dimensions: (0.012, 0.012, 0.012),
                 tissue_type: TherapyTissueType::Liver,

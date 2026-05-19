@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// - **Impedance**: `Z·(∂p/∂n) + p = 0` where Z = ρc
 /// - **Absorbing**: PML or ABC for non-reflecting boundaries
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum AcousticBoundaryType {
+pub enum DomainAcousticBoundaryType {
     /// Sound-soft boundary: `p = 0` (pressure release)
     SoundSoft,
     /// Sound-hard boundary: `∂p/∂n = 0` (rigid wall)

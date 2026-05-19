@@ -1,11 +1,11 @@
-use super::FieldCoupler;
+use super::MultiphysicsFieldCoupler;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use ndarray::Array3;
 
-impl FieldCoupler {
+impl MultiphysicsFieldCoupler {
     /// Apply weak coupling (single pass)
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -233,7 +233,7 @@ fn read_write_fields<const READ: usize, const WRITE: usize>(
     validate_field_index::<WRITE>(fields.len())?;
     if READ == WRITE {
         return Err(KwaversError::InvalidInput(format!(
-            "FieldCoupler requires distinct read/write indices, got {READ}"
+            "MultiphysicsFieldCoupler requires distinct read/write indices, got {READ}"
         )));
     }
 
@@ -252,7 +252,7 @@ fn read_write_fields<const READ: usize, const WRITE: usize>(
 fn validate_field_index<const INDEX: usize>(len: usize) -> KwaversResult<()> {
     if INDEX >= len {
         return Err(KwaversError::InvalidInput(format!(
-            "FieldCoupler requires field index {INDEX}, but only {len} fields were provided"
+            "MultiphysicsFieldCoupler requires field index {INDEX}, but only {len} fields were provided"
         )));
     }
     Ok(())
@@ -264,7 +264,7 @@ fn validate_coupled_shapes<const READ: usize, const WRITE: usize>(
 ) -> KwaversResult<()> {
     if read.dim() != write.dim() {
         return Err(KwaversError::DimensionMismatch(format!(
-            "FieldCoupler edge {READ}->{WRITE} requires matching shapes, got read {:?} and write {:?}",
+            "MultiphysicsFieldCoupler edge {READ}->{WRITE} requires matching shapes, got read {:?} and write {:?}",
             read.dim(),
             write.dim()
         )));

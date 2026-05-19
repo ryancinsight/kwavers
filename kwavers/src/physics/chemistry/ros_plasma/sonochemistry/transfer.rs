@@ -12,7 +12,7 @@
 //! **Reference**: Suslick, K. S. (1999). "Sonochemistry." In *Kirk-Othmer
 //! Encyclopedia of Chemical Technology*. Wiley.
 
-use super::model::BubbleState;
+use super::model::SonochemBubbleState;
 use crate::core::constants::fundamental::BOLTZMANN;
 
 /// Fraction of collapse thermal energy converted to radical chemistry.
@@ -26,7 +26,7 @@ const COLLAPSE_ENERGY_CONVERSION_EFFICIENCY: f64 = 0.01;
 ///
 /// where η = `COLLAPSE_ENERGY_CONVERSION_EFFICIENCY` ≈ 1%.
 #[must_use]
-pub fn estimate_collapse_energy(state: &BubbleState) -> f64 {
+pub fn estimate_collapse_energy(state: &SonochemBubbleState) -> f64 {
     let n_total = state.n_gas + state.n_vapor;
 
     // Average thermal energy per molecule (3/2 kT for monatomic)

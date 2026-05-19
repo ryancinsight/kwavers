@@ -8,7 +8,7 @@ pub use crate::domain::boundary::traits::BoundaryDirections;
 
 /// Physics domain identifier for multi-physics coupling
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PhysicsDomain {
+pub enum BoundaryCouplingPhysicsDomain {
     /// Acoustic wave propagation
     Acoustic,
     /// Elastic wave propagation (solid mechanics)

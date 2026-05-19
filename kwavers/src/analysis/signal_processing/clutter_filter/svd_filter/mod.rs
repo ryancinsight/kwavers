@@ -118,11 +118,11 @@ impl SvdClutterFilterConfig {
 /// Separates tissue clutter from blood flow signals using singular value
 /// decomposition of the slow-time data matrix.
 #[derive(Debug)]
-pub struct SvdClutterFilter {
+pub struct SignalSvdClutterFilter {
     config: SvdClutterFilterConfig,
 }
 
-impl SvdClutterFilter {
+impl SignalSvdClutterFilter {
     /// Create new SVD clutter filter with configuration
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.

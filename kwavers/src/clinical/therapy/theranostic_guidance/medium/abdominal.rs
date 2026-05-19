@@ -17,7 +17,7 @@
 //! Reference organ sound speeds: liver 1595 m/s, kidney 1567 m/s (Duck 1990).
 
 use crate::core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2, Array3};
+use ndarray::{s, Array2, Array3, Axis, Zip};
 use std::collections::VecDeque;
 
 use super::{resample, resample_labels_max, validate_masks, AnatomyKind, PreparedTheranosticSlice};
@@ -29,6 +29,11 @@ pub fn prepare_abdominal_slice(
     spacing_mm: [f64; 3],
     grid_size: usize,
 ) -> KwaversResult<PreparedTheranosticSlice> {
+    if grid_size < 2 {
+        return Err(KwaversError::InvalidInput(format!(
+            "grid_size must be at least 2, got {grid_size}"
+        )));
+    }
     if ct_volume_hu.dim() != label_volume.dim() {
         return Err(KwaversError::InvalidInput(format!(
             "CT shape {:?} does not match segmentation shape {:?}",
@@ -82,21 +87,18 @@ pub fn prepare_abdominal_slice(
     })
 }
 
-/// Index of the axial slice that contains the most label-2 (tumour) voxels.
+/// Index of the axial (z) slice that contains the most label-2 (tumour) voxels.
+///
+/// Iterates z-slices via [`ndarray::Axis`] view and returns the index of the
+/// slice with the maximum label-2 count.  Returns [`KwaversError::InvalidInput`]
+/// when no label-2 cell exists in the volume.
 pub(crate) fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> {
-    let (_, _, nz) = label.dim();
-    let mut best = None;
-    for z in 0..nz {
-        let count = label
-            .slice(s![.., .., z])
-            .iter()
-            .filter(|v| **v == 2)
-            .count();
-        if count > best.map_or(0, |(_, c)| c) {
-            best = Some((z, count));
-        }
-    }
-    best.filter(|(_, count)| *count > 0)
+    label
+        .axis_iter(Axis(2))
+        .enumerate()
+        .map(|(z, slice)| (z, slice.iter().filter(|&&v| v == 2).count()))
+        .filter(|&(_, count)| count > 0)
+        .max_by_key(|&(_, count)| count)
         .map(|(z, _)| z)
         .ok_or_else(|| {
             KwaversError::InvalidInput("segmentation contains no label-2 target".to_owned())
@@ -135,6 +137,36 @@ pub(crate) fn largest_connected_target_component(
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
+/// Reference sound speed [m/s] for the dominant organ per anatomy.
+///
+/// Sources: Duck FA, *Physical Properties of Tissue*, Academic Press, 1990.
+/// - Liver: 1595 m/s
+/// - Kidney: 1567 m/s
+/// - Brain (soft-tissue fallback used when anatomy is [`AnatomyKind::Brain`]): 1540 m/s
+#[inline]
+fn organ_reference_speed(anatomy: AnatomyKind) -> f64 {
+    match anatomy {
+        AnatomyKind::Liver => 1595.0,
+        AnatomyKind::Kidney => 1567.0,
+        AnatomyKind::Brain => 1540.0,
+    }
+}
+
+/// Derive voxel-wise acoustic property maps from HU values and segmentation labels.
+///
+/// All output arrays share the shape of `ct`.  The computation uses two
+/// [`ndarray::Zip`] passes over the output and input arrays simultaneously,
+/// eliminating per-element random indexing and enabling LLVM auto-vectorisation.
+///
+/// # Tissue classification hierarchy (evaluated top-to-bottom; later rules override)
+///
+/// | Priority | Condition            | c [m/s]                              | α [Np/m/MHz] |
+/// |----------|----------------------|--------------------------------------|--------------|
+/// | 1 (base) | air / background     | 343.0                                | 0.05         |
+/// | 2        | body (HU > −450 or label > 0) | 1480 + 0.18·clamp(HU, −150, 250)  | 0.55  |
+/// | 3        | organ (label 1 or 2) | c_organ + 0.10·clamp(HU, −100, 200) | 0.80         |
+/// | 4        | tumour (label 2)     | c_organ − 22 + 0.12·clamp(HU, −50, 220) | 1.05     |
+/// | 5 (top)  | bone (HU > 250)      | 2450 + 0.42·clamp(HU − 250, 0, 1400) | 18.0        |
 fn abdominal_properties(
     anatomy: AnatomyKind,
     ct: &Array2<f64>,
@@ -147,44 +179,58 @@ fn abdominal_properties(
     Array2<bool>,
 ) {
     let (nx, ny) = ct.dim();
+    let c_organ = organ_reference_speed(anatomy);
     let mut speed = Array2::<f64>::from_elem((nx, ny), 343.0);
     let mut attenuation = Array2::<f64>::from_elem((nx, ny), 0.05);
     let mut body = Array2::<bool>::from_elem((nx, ny), false);
     let mut organ = Array2::<bool>::from_elem((nx, ny), false);
     let mut target = Array2::<bool>::from_elem((nx, ny), false);
-    let organ_speed = match anatomy {
-        AnatomyKind::Liver => 1595.0,
-        AnatomyKind::Kidney => 1567.0,
-        AnatomyKind::Brain => 1540.0,
-    };
-    for ix in 0..nx {
-        for iy in 0..ny {
-            let hu = ct[[ix, iy]];
-            let lab = label[[ix, iy]];
-            body[[ix, iy]] = hu > -450.0 || lab > 0;
-            organ[[ix, iy]] = lab == 1 || lab == 2;
-            target[[ix, iy]] = lab == 2;
-            if body[[ix, iy]] {
-                speed[[ix, iy]] = 1480.0 + 0.18 * hu.clamp(-150.0, 250.0);
-                attenuation[[ix, iy]] = 0.55;
+    // Pass 1: classify each voxel into anatomical masks.
+    Zip::from(&mut body)
+        .and(&mut organ)
+        .and(&mut target)
+        .and(ct)
+        .and(label)
+        .for_each(|bod, org, tgt, &hu, &lab| {
+            *bod = hu > -450.0 || lab > 0;
+            *org = lab == 1 || lab == 2;
+            *tgt = lab == 2;
+        });
+    // Pass 2: map masks + HU to acoustic properties.
+    Zip::from(&mut speed)
+        .and(&mut attenuation)
+        .and(&body)
+        .and(&organ)
+        .and(&target)
+        .and(ct)
+        .for_each(|spd, att, &bod, &org, &tgt, &hu| {
+            if bod {
+                *spd = 1480.0 + 0.18 * hu.clamp(-150.0, 250.0);
+                *att = 0.55;
             }
-            if organ[[ix, iy]] {
-                speed[[ix, iy]] = organ_speed + 0.10 * hu.clamp(-100.0, 200.0);
-                attenuation[[ix, iy]] = 0.8;
+            if org {
+                *spd = c_organ + 0.10 * hu.clamp(-100.0, 200.0);
+                *att = 0.8;
             }
-            if target[[ix, iy]] {
-                speed[[ix, iy]] = organ_speed - 22.0 + 0.12 * hu.clamp(-50.0, 220.0);
-                attenuation[[ix, iy]] = 1.05;
+            if tgt {
+                *spd = c_organ - 22.0 + 0.12 * hu.clamp(-50.0, 220.0);
+                *att = 1.05;
             }
             if hu > 250.0 {
-                speed[[ix, iy]] = 2450.0 + 0.42 * (hu - 250.0).clamp(0.0, 1400.0);
-                attenuation[[ix, iy]] = 18.0;
+                *spd = 2450.0 + 0.42 * (hu - 250.0).clamp(0.0, 1400.0);
+                *att = 18.0;
             }
-        }
-    }
+        });
     (speed, attenuation, body, organ, target)
 }
 
+/// BFS flood from `(seed_x, seed_y)` collecting all 4-connected label-2 cells.
+///
+/// Only label-2 cells are ever enqueued: the outer
+/// [`largest_connected_target_component`] loop guarantees the seed has
+/// `label == 2`, and the push predicate `label[[next]] == 2` ensures only
+/// label-2 neighbours enter the queue.  `visited` is shared across all
+/// component seeds to avoid re-entering already-processed cells.
 fn target_component(
     label: &Array2<i16>,
     visited: &mut Array2<bool>,
@@ -196,9 +242,6 @@ fn target_component(
     let mut queue = VecDeque::from([(seed_x, seed_y)]);
     visited[[seed_x, seed_y]] = true;
     while let Some((ix, iy)) = queue.pop_front() {
-        if label[[ix, iy]] != 2 {
-            continue;
-        }
         component.push((ix, iy));
         for (next_x, next_y) in body_neighbors(ix, iy, nx, ny) {
             if !visited[[next_x, next_y]] && label[[next_x, next_y]] == 2 {
@@ -289,22 +332,31 @@ fn body_neighbors(
 
 /// Tightest square bounding box around `mask` with a `margin`-cell border,
 /// expanded symmetrically and clamped to the grid.
+///
+/// # Algorithm
+///
+/// 1. Compute the tight axis-aligned bounding rectangle from all active cells
+///    in a single `indexed_iter` pass.
+/// 2. Apply the margin, clamped to the grid extent.
+/// 3. Set `side = max(width, height)` to guarantee a square output.
+/// 4. Re-centre the square window on the original bounding-rectangle centre
+///    and clamp the origin so the window stays within the grid.
+///
+/// Returns `(x0, x1, y0, y1)` inclusive row/column indices.
 fn square_bbox_from_mask(
     mask: &Array2<bool>,
     margin: usize,
 ) -> KwaversResult<(usize, usize, usize, usize)> {
     let (nx, ny) = mask.dim();
-    let mut bbox: Option<(usize, usize, usize, usize)> = None;
-    for ix in 0..nx {
-        for iy in 0..ny {
-            if mask[[ix, iy]] {
-                bbox = Some(match bbox {
-                    None => (ix, ix, iy, iy),
-                    Some((x0, x1, y0, y1)) => (x0.min(ix), x1.max(ix), y0.min(iy), y1.max(iy)),
-                });
-            }
-        }
-    }
+    let bbox = mask
+        .indexed_iter()
+        .filter_map(|((ix, iy), &active)| active.then_some((ix, iy)))
+        .fold(None::<(usize, usize, usize, usize)>, |acc, (ix, iy)| {
+            Some(match acc {
+                None => (ix, ix, iy, iy),
+                Some((x0, x1, y0, y1)) => (x0.min(ix), x1.max(ix), y0.min(iy), y1.max(iy)),
+            })
+        });
     let (x0, x1, y0, y1) =
         bbox.ok_or_else(|| KwaversError::InvalidInput("body bbox is empty".to_owned()))?;
     let x0 = x0.saturating_sub(margin);
@@ -319,4 +371,237 @@ fn square_bbox_from_mask(
     sx = sx.min(nx - side);
     sy = sy.min(ny - side);
     Ok((sx, sx + side - 1, sy, sy + side - 1))
+}
+
+// ── Unit tests ────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::{Array2, Array3};
+
+    // ── body_neighbors ────────────────────────────────────────────────────────
+
+    #[test]
+    fn body_neighbors_corner_yields_two() {
+        let ns: Vec<_> = body_neighbors(0, 0, 5, 5).collect();
+        assert_eq!(ns.len(), 2);
+        assert!(ns.contains(&(1, 0)));
+        assert!(ns.contains(&(0, 1)));
+    }
+
+    #[test]
+    fn body_neighbors_interior_yields_four() {
+        let ns: Vec<_> = body_neighbors(2, 3, 5, 5).collect();
+        assert_eq!(ns.len(), 4);
+    }
+
+    #[test]
+    fn body_neighbors_edge_row_zero_yields_three() {
+        // ix=0, iy interior: no (ix-1) neighbour
+        let ns: Vec<_> = body_neighbors(0, 2, 5, 5).collect();
+        assert_eq!(ns.len(), 3);
+        assert!(!ns.iter().any(|&(ix, _)| ix == usize::MAX));
+    }
+
+    // ── largest_target_slice ──────────────────────────────────────────────────
+
+    #[test]
+    fn largest_target_slice_selects_max_label2_z() {
+        // 3×3×4 volume: z=2 has three label-2 voxels, z=0 and z=3 have one each.
+        let mut label = Array3::<i16>::zeros((3, 3, 4));
+        label[[1, 1, 0]] = 2;
+        label[[0, 0, 2]] = 2;
+        label[[1, 1, 2]] = 2;
+        label[[2, 2, 2]] = 2;
+        label[[0, 1, 3]] = 2;
+        assert_eq!(largest_target_slice(&label).unwrap(), 2);
+    }
+
+    #[test]
+    fn largest_target_slice_errors_when_no_target() {
+        let label = Array3::<i16>::zeros((3, 3, 3));
+        assert!(largest_target_slice(&label).is_err());
+    }
+
+    // ── largest_connected_target_component ───────────────────────────────────
+
+    #[test]
+    fn largest_connected_selects_bigger_blob() {
+        // 10×10 grid: 2×2 blob at (1,1) (4 cells) and isolated cell at (8,8).
+        let mut label = Array2::<i16>::zeros((10, 10));
+        for x in 1..=2 {
+            for y in 1..=2 {
+                label[[x, y]] = 2;
+            }
+        }
+        label[[8, 8]] = 2;
+        let target = largest_connected_target_component(&label).unwrap();
+        assert_eq!(target.iter().filter(|&&v| v).count(), 4);
+        assert!(target[[1, 1]]);
+        assert!(!target[[8, 8]]);
+    }
+
+    #[test]
+    fn largest_connected_errors_when_no_target() {
+        let label = Array2::<i16>::zeros((5, 5));
+        assert!(largest_connected_target_component(&label).is_err());
+    }
+
+    // ── square_bbox_from_mask ─────────────────────────────────────────────────
+
+    #[test]
+    fn square_bbox_single_active_cell_no_margin() {
+        let mut mask = Array2::<bool>::from_elem((10, 10), false);
+        mask[[5, 5]] = true;
+        let (x0, x1, y0, y1) = square_bbox_from_mask(&mask, 0).unwrap();
+        assert_eq!(x1 - x0, 0); // side == 1
+        assert_eq!(y1 - y0, 0);
+        assert_eq!(x0, 5);
+        assert_eq!(y0, 5);
+    }
+
+    #[test]
+    fn square_bbox_margin_expands_symmetrically() {
+        let mut mask = Array2::<bool>::from_elem((20, 20), false);
+        mask[[10, 10]] = true;
+        let (x0, x1, y0, y1) = square_bbox_from_mask(&mask, 3).unwrap();
+        assert_eq!(x0, 7);
+        assert_eq!(x1, 13);
+        assert_eq!(y0, 7);
+        assert_eq!(y1, 13);
+    }
+
+    #[test]
+    fn square_bbox_output_is_always_square() {
+        // Asymmetric mask: 16-cell horizontal line in x, single cell in y.
+        let mut mask = Array2::<bool>::from_elem((30, 30), false);
+        for x in 5..=20 {
+            mask[[x, 10]] = true;
+        }
+        let (x0, x1, y0, y1) = square_bbox_from_mask(&mask, 2).unwrap();
+        assert_eq!(x1 - x0, y1 - y0, "bounding box must be square");
+    }
+
+    #[test]
+    fn square_bbox_empty_mask_errors() {
+        let mask = Array2::<bool>::from_elem((10, 10), false);
+        assert!(square_bbox_from_mask(&mask, 0).is_err());
+    }
+
+    // ── abdominal_properties ─────────────────────────────────────────────────
+
+    #[test]
+    fn properties_air_cell_has_default_values() {
+        let ct = Array2::<f64>::from_elem((1, 1), -1000.0);
+        let label = Array2::<i16>::zeros((1, 1));
+        let (speed, att, body, organ, target) =
+            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        assert!(!body[[0, 0]]);
+        assert!(!organ[[0, 0]]);
+        assert!(!target[[0, 0]]);
+        assert_eq!(speed[[0, 0]], 343.0);
+        assert_eq!(att[[0, 0]], 0.05);
+    }
+
+    #[test]
+    fn properties_soft_tissue_speed_matches_formula() {
+        // HU = 0, no label → body tissue.
+        let ct = Array2::<f64>::from_elem((1, 1), 0.0);
+        let label = Array2::<i16>::zeros((1, 1));
+        let (speed, att, body, _, _) =
+            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        assert!(body[[0, 0]]);
+        // c = 1480 + 0.18 × clamp(0, −150, 250) = 1480
+        assert!((speed[[0, 0]] - 1480.0).abs() < 1.0e-10);
+        assert_eq!(att[[0, 0]], 0.55);
+    }
+
+    #[test]
+    fn properties_liver_organ_speed_at_hu_100() {
+        let ct = Array2::<f64>::from_elem((1, 1), 100.0);
+        let mut label = Array2::<i16>::zeros((1, 1));
+        label[[0, 0]] = 1;
+        let (speed, att, _, organ, target) =
+            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        assert!(organ[[0, 0]]);
+        assert!(!target[[0, 0]]);
+        // c = 1595 + 0.10 × clamp(100, −100, 200) = 1595 + 10 = 1605
+        assert!((speed[[0, 0]] - 1605.0).abs() < 1.0e-10);
+        assert_eq!(att[[0, 0]], 0.8);
+    }
+
+    #[test]
+    fn properties_tumour_speed_offset_below_organ() {
+        // label=2, HU=50, liver anatomy.
+        let ct = Array2::<f64>::from_elem((1, 1), 50.0);
+        let mut label = Array2::<i16>::zeros((1, 1));
+        label[[0, 0]] = 2;
+        let (speed, att, _, _, target) =
+            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        assert!(target[[0, 0]]);
+        // c = (1595 − 22) + 0.12 × clamp(50, −50, 220) = 1573 + 6 = 1579
+        assert!((speed[[0, 0]] - 1579.0).abs() < 1.0e-10);
+        assert_eq!(att[[0, 0]], 1.05);
+    }
+
+    #[test]
+    fn properties_bone_overrides_organ_label() {
+        // HU=700, label=1: bone rule (HU > 250) takes final precedence.
+        let ct = Array2::<f64>::from_elem((1, 1), 700.0);
+        let mut label = Array2::<i16>::zeros((1, 1));
+        label[[0, 0]] = 1;
+        let (speed, att, _, _, _) =
+            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        // c = 2450 + 0.42 × clamp(700 − 250, 0, 1400) = 2450 + 0.42 × 450 = 2639
+        assert!((speed[[0, 0]] - 2639.0).abs() < 1.0e-10);
+        assert_eq!(att[[0, 0]], 18.0);
+    }
+
+    #[test]
+    fn properties_kidney_organ_speed_differs_from_liver() {
+        let ct = Array2::<f64>::from_elem((1, 1), 0.0);
+        let mut label = Array2::<i16>::zeros((1, 1));
+        label[[0, 0]] = 1;
+        let (speed_liver, _, _, _, _) =
+            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        let (speed_kidney, _, _, _, _) =
+            abdominal_properties(AnatomyKind::Kidney, &ct, &label);
+        // Liver organ baseline: 1595; kidney: 1567 (both at HU=0 so offset=0).
+        assert!((speed_liver[[0, 0]] - 1595.0).abs() < 1.0e-10);
+        assert!((speed_kidney[[0, 0]] - 1567.0).abs() < 1.0e-10);
+    }
+
+    // ── connected_body_component ──────────────────────────────────────────────
+
+    #[test]
+    fn connected_body_fails_for_air_seed() {
+        let ct = Array2::<f64>::from_elem((5, 5), -1000.0);
+        let label = Array2::<i16>::zeros((5, 5));
+        assert!(connected_body_component(&ct, &label, (2, 2)).is_err());
+    }
+
+    #[test]
+    fn connected_body_floods_contiguous_tissue_block() {
+        let mut ct = Array2::<f64>::from_elem((10, 10), -1000.0);
+        for x in 2..7 {
+            for y in 2..7 {
+                ct[[x, y]] = 50.0; // 5×5 = 25 tissue cells
+            }
+        }
+        let label = Array2::<i16>::zeros((10, 10));
+        let comp = connected_body_component(&ct, &label, (3, 3)).unwrap();
+        let active: usize = comp.iter().filter(|&&v| v).count();
+        assert_eq!(active, 25);
+    }
+
+    // ── prepare_abdominal_slice guard ─────────────────────────────────────────
+
+    #[test]
+    fn prepare_abdominal_slice_rejects_grid_size_one() {
+        let ct = Array3::<f64>::from_elem((5, 5, 1), 0.0);
+        let label = Array3::<i16>::zeros((5, 5, 1));
+        assert!(prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.0, 1.0, 1.0], 1)
+            .is_err());
+    }
 }

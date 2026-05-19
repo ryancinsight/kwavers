@@ -24,7 +24,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
 
     fn generate_collocation_points(
         &self,
-        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();
         let num_points = 1000;
@@ -44,7 +44,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
 
     fn generate_boundary_data(
         &self,
-        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
         conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
     ) -> Vec<(f64, f64, f64, f64)> {
         let condition_count = conditions.len().max(1);
@@ -69,7 +69,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         };
 
         match geometry {
-            crate::solver::inverse::pinn::ml::Geometry2D::Rectangular {
+            crate::solver::inverse::pinn::ml::BurnWave2dGeometry::Rectangular {
                 x_min,
                 x_max,
                 y_min,
@@ -92,7 +92,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, x_max, y, t);
                 }
             }
-            crate::solver::inverse::pinn::ml::Geometry2D::Circular {
+            crate::solver::inverse::pinn::ml::BurnWave2dGeometry::Circular {
                 x_center,
                 y_center,
                 radius,
@@ -107,7 +107,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, x, y, s);
                 }
             }
-            crate::solver::inverse::pinn::ml::Geometry2D::LShaped {
+            crate::solver::inverse::pinn::ml::BurnWave2dGeometry::LShaped {
                 x_min,
                 x_max,
                 y_min,
@@ -147,7 +147,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, notch_x, y, t);
                 }
             }
-            crate::solver::inverse::pinn::ml::Geometry2D::Polygonal { vertices, holes } => {
+            crate::solver::inverse::pinn::ml::BurnWave2dGeometry::Polygonal { vertices, holes } => {
                 let sample_edges = |poly: &[(f64, f64)], points: &mut Vec<(f64, f64, f64, f64)>| {
                     if poly.len() < 2 {
                         return;
@@ -171,7 +171,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     sample_edges(hole, &mut data);
                 }
             }
-            crate::solver::inverse::pinn::ml::Geometry2D::ParametricCurve {
+            crate::solver::inverse::pinn::ml::BurnWave2dGeometry::ParametricCurve {
                 x_func,
                 y_func,
                 t_min,
@@ -188,12 +188,15 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, x, y, s);
                 }
             }
-            crate::solver::inverse::pinn::ml::Geometry2D::AdaptiveMesh {
-                base_geometry, ..
+            crate::solver::inverse::pinn::ml::BurnWave2dGeometry::AdaptiveMesh {
+                base_geometry,
+                ..
             } => {
                 data.extend(self.generate_boundary_data(base_geometry.as_ref(), conditions));
             }
-            crate::solver::inverse::pinn::ml::Geometry2D::MultiRegion { regions, .. } => {
+            crate::solver::inverse::pinn::ml::BurnWave2dGeometry::MultiRegion {
+                regions, ..
+            } => {
                 for (region, _) in regions {
                     data.extend(self.generate_boundary_data(region, conditions));
                 }

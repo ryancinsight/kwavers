@@ -1,20 +1,20 @@
-//! `Geometry2D` spatial queries: `contains`, `bounding_box`, `sample_points`.
+//! `BurnWave2dGeometry` spatial queries: `contains`, `bounding_box`, `sample_points`.
 
 use ndarray::Array1;
 
-use super::Geometry2D;
+use super::BurnWave2dGeometry;
 
-impl Geometry2D {
+impl BurnWave2dGeometry {
     /// Check if a point (x, y) is inside the geometry.
     pub fn contains(&self, x: f64, y: f64) -> bool {
         match self {
-            Geometry2D::Rectangular {
+            BurnWave2dGeometry::Rectangular {
                 x_min,
                 x_max,
                 y_min,
                 y_max,
             } => x >= *x_min && x <= *x_max && y >= *y_min && y <= *y_max,
-            Geometry2D::Circular {
+            BurnWave2dGeometry::Circular {
                 x_center,
                 y_center,
                 radius,
@@ -23,7 +23,7 @@ impl Geometry2D {
                 let dy = y - y_center;
                 (dx * dx + dy * dy).sqrt() <= *radius
             }
-            Geometry2D::LShaped {
+            BurnWave2dGeometry::LShaped {
                 x_min,
                 x_max,
                 y_min,
@@ -35,7 +35,7 @@ impl Geometry2D {
                 let in_notch = x >= *notch_x && y >= *notch_y;
                 in_full_rect && !in_notch
             }
-            Geometry2D::Polygonal { vertices, holes } => {
+            BurnWave2dGeometry::Polygonal { vertices, holes } => {
                 let mut inside = false;
                 let n = vertices.len();
                 let mut j = n - 1;
@@ -71,7 +71,7 @@ impl Geometry2D {
                 }
                 inside
             }
-            Geometry2D::ParametricCurve {
+            BurnWave2dGeometry::ParametricCurve {
                 x_func,
                 y_func,
                 t_min,
@@ -96,8 +96,8 @@ impl Geometry2D {
                 }
                 false
             }
-            Geometry2D::AdaptiveMesh { base_geometry, .. } => base_geometry.contains(x, y),
-            Geometry2D::MultiRegion { regions, .. } => {
+            BurnWave2dGeometry::AdaptiveMesh { base_geometry, .. } => base_geometry.contains(x, y),
+            BurnWave2dGeometry::MultiRegion { regions, .. } => {
                 regions.iter().any(|(geom, _)| geom.contains(x, y))
             }
         }
@@ -106,13 +106,13 @@ impl Geometry2D {
     /// Get the bounding box of the geometry as (x_min, x_max, y_min, y_max).
     pub fn bounding_box(&self) -> (f64, f64, f64, f64) {
         match self {
-            Geometry2D::Rectangular {
+            BurnWave2dGeometry::Rectangular {
                 x_min,
                 x_max,
                 y_min,
                 y_max,
             } => (*x_min, *x_max, *y_min, *y_max),
-            Geometry2D::Circular {
+            BurnWave2dGeometry::Circular {
                 x_center,
                 y_center,
                 radius,
@@ -122,14 +122,14 @@ impl Geometry2D {
                 y_center - radius,
                 y_center + radius,
             ),
-            Geometry2D::LShaped {
+            BurnWave2dGeometry::LShaped {
                 x_min,
                 x_max,
                 y_min,
                 y_max,
                 ..
             } => (*x_min, *x_max, *y_min, *y_max),
-            Geometry2D::Polygonal { vertices, .. } => {
+            BurnWave2dGeometry::Polygonal { vertices, .. } => {
                 let mut x_min = f64::INFINITY;
                 let mut x_max = f64::NEG_INFINITY;
                 let mut y_min = f64::INFINITY;
@@ -142,9 +142,9 @@ impl Geometry2D {
                 }
                 (x_min, x_max, y_min, y_max)
             }
-            Geometry2D::ParametricCurve { bounds, .. } => *bounds,
-            Geometry2D::AdaptiveMesh { base_geometry, .. } => base_geometry.bounding_box(),
-            Geometry2D::MultiRegion { regions, .. } => {
+            BurnWave2dGeometry::ParametricCurve { bounds, .. } => *bounds,
+            BurnWave2dGeometry::AdaptiveMesh { base_geometry, .. } => base_geometry.bounding_box(),
+            BurnWave2dGeometry::MultiRegion { regions, .. } => {
                 let mut x_min = f64::INFINITY;
                 let mut x_max = f64::NEG_INFINITY;
                 let mut y_min = f64::INFINITY;

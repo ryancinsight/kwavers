@@ -1,7 +1,7 @@
 //! Treatment planner core orchestration
 
 use super::types::{
-    TargetVolume, TranscranialSafetyConstraints, TranscranialTransducerSpecification,
+    TranscranialTargetVolume, TranscranialSafetyConstraints, TranscranialTransducerSpecification,
     TranscranialTreatmentPlan,
 };
 use crate::core::error::KwaversResult;
@@ -43,7 +43,7 @@ impl TreatmentPlanner {
     pub fn generate_plan(
         &self,
         patient_id: &str,
-        targets: &[TargetVolume],
+        targets: &[TranscranialTargetVolume],
         transducer_spec: &TranscranialTransducerSpecification,
     ) -> KwaversResult<TranscranialTreatmentPlan> {
         info!("Generating tFUS treatment plan for patient: {}", patient_id);

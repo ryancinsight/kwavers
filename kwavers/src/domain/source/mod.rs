@@ -19,7 +19,7 @@ pub mod structs;
 pub mod types;
 
 // Export traits and types
-pub use config::{EnvelopeType, PulseParameters, PulseType, SourceModel, SourceParameters};
+pub use config::{EnvelopeType, PulseParameters, PulseType, SourceModel, DomainSourceParameters};
 pub use factory::SourceFactory;
 pub use grid_source::{GridSource, SourceMode};
 pub use injection::SourceInjectionMode;
@@ -39,7 +39,7 @@ pub use basic::{
 pub use custom::{
     CustomSourceBuilder, FunctionSource, SimpleCustomSource, SimpleCustomSourceBuilder,
 };
-pub use electromagnetic::{EMSource, PlaneWaveEMSource, PointEMSource};
+pub use electromagnetic::{DomainEMSource, PlaneWaveEMSource, PointEMSource};
 pub use flexible::{
     CalibrationData, CalibrationManager, FlexibleTransducerArray, FlexibleTransducerConfig,
     GeometrySnapshot,

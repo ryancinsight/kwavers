@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use super::stats::RecoveryStats;
+use super::stats::CoreRecoveryStats;
 
 /// Comprehensive recovery validation report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecoveryReport {
     /// Overall statistics across all scenarios
-    pub overall_stats: RecoveryStats,
+    pub overall_stats: CoreRecoveryStats,
     /// Per-scenario results
     pub scenario_results: Vec<super::super::ScenarioResult>,
     /// Total test duration
@@ -24,7 +24,7 @@ impl RecoveryReport {
     /// Create a new empty recovery report
     pub fn new() -> Self {
         Self {
-            overall_stats: RecoveryStats::default(),
+            overall_stats: CoreRecoveryStats::default(),
             scenario_results: Vec::new(),
             total_duration: Duration::ZERO,
             overall_meets_threshold: false,

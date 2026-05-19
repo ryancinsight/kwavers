@@ -10,14 +10,14 @@ pub mod progress;
 pub mod solver;
 
 pub use self::factory::{
-    ApolloFourierBackend, FactoryConfiguration, FactoryError, FourierBackend, GridParameters,
-    MediumParameters, MeshProvider, RegistrationEngine, SourceParameters,
+    ApolloFourierBackend, FactoryConfiguration, FactoryError, FourierBackend, FactoryGridParameters,
+    FactoryMediumParameters, MeshProvider, RegistrationEngine, FactorySourceParameters,
 };
 pub use self::pinn_beamforming::{
     BeamformingTrainingMetrics, DeviceConfig, DistributedConfig, DistributedPinnProvider,
     GpuMetrics, InferenceConfig, LoadBalancingStrategy, ModelArchitecture, ModelInfo,
     PinnBeamformingActivationFunction, PinnBeamformingConfig, PinnBeamformingDecompositionStrategy,
-    PinnBeamformingProvider, PinnBeamformingResult, PinnBeamformingUncertaintyConfig,
+    PinnBeamformingProvider, InterfacePinnBeamformingResult, PinnBeamformingUncertaintyConfig,
     PinnModelConfig, PinnProviderRegistry, ProcessingMetadata,
 };
 pub use self::progress::{

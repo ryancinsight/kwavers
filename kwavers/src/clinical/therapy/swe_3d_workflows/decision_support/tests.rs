@@ -1,12 +1,12 @@
-//! Tests for `ClinicalDecisionSupport`.
+//! Tests for `Swe3dClinicalDecisionSupport`.
 
 use super::super::statistics::VolumetricStatistics;
-use super::classifier::ClinicalDecisionSupport;
+use super::classifier::Swe3dClinicalDecisionSupport;
 use super::types::FibrosisStage;
 
 #[test]
 fn test_liver_fibrosis_classification() {
-    let cds = ClinicalDecisionSupport::default();
+    let cds = Swe3dClinicalDecisionSupport::default();
 
     let normal_stats = VolumetricStatistics {
         valid_voxels: 1000,
@@ -49,7 +49,7 @@ fn test_liver_fibrosis_classification() {
 
 #[test]
 fn test_breast_lesion_classification() {
-    let cds = ClinicalDecisionSupport::default();
+    let cds = Swe3dClinicalDecisionSupport::default();
 
     let benign_stats = VolumetricStatistics {
         valid_voxels: 500,
@@ -86,7 +86,7 @@ fn test_breast_lesion_classification() {
 
 #[test]
 fn test_clinical_report_generation() {
-    let cds = ClinicalDecisionSupport::default();
+    let cds = Swe3dClinicalDecisionSupport::default();
 
     let stats = VolumetricStatistics {
         valid_voxels: 1500,

@@ -4,10 +4,11 @@
 
 use super::solver::UniversalPINNSolver;
 use super::types::{
-    Geometry2D, MultiDomainTrainingResult, UniversalSolverStats, UniversalTrainingConfig,
+    MultiDomainTrainingResult, UniversalSolverGeometry2D, UniversalSolverStats,
+    UniversalTrainingConfig,
 };
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::pinn::ml::physics::{PhysicsDomain, PinnDomainPhysicsParameters};
+use crate::solver::inverse::pinn::ml::physics::{SimulationPhysicsDomain, PinnDomainPhysicsParameters};
 use burn::tensor::backend::AutodiffBackend;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -19,7 +20,7 @@ impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
     ///
     pub fn register_physics_domain<D>(&mut self, domain: D) -> KwaversResult<()>
     where
-        D: PhysicsDomain<B> + Send + Sync + 'static,
+        D: SimulationPhysicsDomain<B> + Send + Sync + 'static,
     {
         self.physics_registry.register_domain(domain)
     }
@@ -71,7 +72,7 @@ impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
         config: &UniversalTrainingConfig,
         physics_params: &PinnDomainPhysicsParameters,
     ) -> KwaversResult<UniversalSolverStats> {
-        let geometry = Geometry2D::rectangle(0.0, 1.0, 0.0, 1.0);
+        let geometry = UniversalSolverGeometry2D::rectangle(0.0, 1.0, 0.0, 1.0);
         let solution =
             self.solve_physics_domain(domain_name, &geometry, physics_params, Some(config))?;
         Ok(solution.stats)
@@ -118,7 +119,7 @@ impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
     pub fn get_domain_info(
         &self,
         domain_name: &str,
-    ) -> Option<&(dyn PhysicsDomain<B> + Send + Sync)> {
+    ) -> Option<&(dyn SimulationPhysicsDomain<B> + Send + Sync)> {
         self.physics_registry.get_domain(domain_name)
     }
 }

@@ -4,7 +4,7 @@ use super::{FaultInjectionScenario, RecoveryDistribution, RecoveryLatencyStats, 
 
 /// Recovery statistics with full telemetry
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct RecoveryStats {
+pub struct CoreRecoveryStats {
     /// The fault scenario these stats apply to
     #[serde(skip)]
     pub scenario: Option<FaultInjectionScenario>,
@@ -20,7 +20,7 @@ pub struct RecoveryStats {
     sum_squared_errors: f64,
 }
 
-impl RecoveryStats {
+impl CoreRecoveryStats {
     /// Create stats for a specific scenario
     pub fn new(scenario: FaultInjectionScenario) -> Self {
         Self {

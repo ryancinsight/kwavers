@@ -1,6 +1,6 @@
 //! Full ULM detection pipeline: SVD filtering + Gaussian localization.
 
-use super::clutter::SvdClutterFilter;
+use super::clutter::UlmSvdClutterFilter;
 use super::localize::GaussianLocalizer;
 use super::types::{BubbleDetection, GaussianLocalizationConfig, SvdClutterConfig};
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
@@ -9,7 +9,7 @@ use ndarray::Array2;
 /// Full ULM detection pipeline: SVD filtering + Gaussian localization.
 #[derive(Debug)]
 pub struct UlmDetector {
-    clutter_filter: SvdClutterFilter,
+    clutter_filter: UlmSvdClutterFilter,
     localizer: GaussianLocalizer,
 }
 
@@ -17,7 +17,7 @@ impl UlmDetector {
     #[must_use]
     pub fn new(clutter_cfg: SvdClutterConfig, loc_cfg: GaussianLocalizationConfig) -> Self {
         Self {
-            clutter_filter: SvdClutterFilter::new(clutter_cfg),
+            clutter_filter: UlmSvdClutterFilter::new(clutter_cfg),
             localizer: GaussianLocalizer::new(loc_cfg),
         }
     }

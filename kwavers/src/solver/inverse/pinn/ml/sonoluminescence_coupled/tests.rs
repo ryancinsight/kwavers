@@ -1,6 +1,6 @@
 use super::config::{SonoluminescenceCouplingConfig, SonoluminescenceCouplingType};
 use super::domain::SonoluminescenceCoupledDomain;
-use crate::solver::inverse::pinn::ml::physics::PhysicsDomain;
+use crate::solver::inverse::pinn::ml::physics::SimulationPhysicsDomain;
 
 #[test]
 fn test_sonoluminescence_coupled_domain_creation() {

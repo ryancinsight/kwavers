@@ -3,7 +3,7 @@
 //! Partitioned by responsibility:
 //! - `construction` — struct construction, coupling interface factory, state update, `Clone`.
 //! - `residuals` — light-source computation and Maxwell residual with sonoluminescence sources.
-//! - `physics_domain_impl` — `PhysicsDomain<B>` trait implementation.
+//! - `physics_domain_impl` — `SimulationPhysicsDomain<B>` trait implementation.
 
 mod construction;
 mod physics_domain_impl;

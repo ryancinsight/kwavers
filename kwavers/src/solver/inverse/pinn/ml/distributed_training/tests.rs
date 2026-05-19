@@ -7,7 +7,8 @@ type TestBackend = burn::backend::Autodiff<NdArray<f32>>;
 async fn test_distributed_trainer_creation() {
     let config = DistributedTrainingConfig::default();
     let base_config = crate::solver::inverse::pinn::ml::BurnPINN2DConfig::default();
-    let geometry = crate::solver::inverse::pinn::ml::Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+    let geometry =
+        crate::solver::inverse::pinn::ml::BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
 
     let result = DistributedPinnTrainer::<TestBackend>::new(config, base_config, geometry).await;
 

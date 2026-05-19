@@ -1,4 +1,4 @@
-use super::interpolator::ConservativeInterpolator;
+use super::interpolator::UtilConservativeInterpolator;
 use super::mode::ConservationMode;
 use crate::domain::grid::Grid;
 use approx::assert_relative_eq;
@@ -13,7 +13,7 @@ use ndarray::Array3;
 fn test_conservative_interpolator_same_grid() {
     let grid = Grid::new(16, 16, 16, 0.1, 0.1, 0.1).unwrap();
     let interpolator =
-        ConservativeInterpolator::new(&grid, &grid, ConservationMode::Energy).unwrap();
+        UtilConservativeInterpolator::new(&grid, &grid, ConservationMode::Energy).unwrap();
 
     let mut source = Array3::zeros((16, 16, 16));
     source[[8, 8, 8]] = 1.0;
@@ -39,7 +39,8 @@ fn test_conservative_interpolator_coarsening() {
     let target_grid = Grid::new(16, 16, 16, 0.2, 0.2, 0.2).unwrap();
 
     let interpolator =
-        ConservativeInterpolator::new(&source_grid, &target_grid, ConservationMode::Mass).unwrap();
+        UtilConservativeInterpolator::new(&source_grid, &target_grid, ConservationMode::Mass)
+            .unwrap();
 
     let source = Array3::from_elem((32, 32, 32), 1.0);
     let mut target = Array3::zeros((16, 16, 16));
@@ -67,7 +68,7 @@ fn test_conservative_interpolator_refinement() {
     let target_grid = Grid::new(16, 16, 16, 0.1, 0.1, 0.1).unwrap();
 
     let interpolator =
-        ConservativeInterpolator::new(&source_grid, &target_grid, ConservationMode::Energy)
+        UtilConservativeInterpolator::new(&source_grid, &target_grid, ConservationMode::Energy)
             .unwrap();
 
     let mut source = Array3::zeros((8, 8, 8));
@@ -94,7 +95,8 @@ fn test_conservation_polynomial_field() {
     let target_grid = Grid::new(10, 10, 10, 0.10, 0.10, 0.10).unwrap();
 
     let interpolator =
-        ConservativeInterpolator::new(&source_grid, &target_grid, ConservationMode::All).unwrap();
+        UtilConservativeInterpolator::new(&source_grid, &target_grid, ConservationMode::All)
+            .unwrap();
 
     let mut source = Array3::zeros((20, 20, 20));
     for iz in 0..20 {

@@ -23,4 +23,4 @@ pub mod pml;
 mod tests;
 
 pub use config::SwePmlConfig;
-pub use pml::PMLBoundary;
+pub use pml::ElasticSwePMLBoundary;

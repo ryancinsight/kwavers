@@ -242,7 +242,7 @@ pub mod three_dimensional; // 3D beamforming algorithms
 pub mod test_utilities;
 
 // Re-exports for convenience
-pub use adaptive::{AdaptiveBeamformer, EigenspaceMV, MinimumVariance, MUSIC};
+pub use adaptive::{AdaptiveTimeDomainBeamformer, EigenspaceMV, MinimumVariance, MUSIC};
 pub use imaging_das::{beamform_image_das, ImagingDasApodization, ImagingDasConfig};
 pub use time_domain::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,

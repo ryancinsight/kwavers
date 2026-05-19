@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 /// Physics domain for GPU kernel dispatch
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PhysicsDomain {
+pub enum GpuKernelPhysicsDomain {
     /// Acoustic FDTD time-domain propagation
     AcousticFDTD,
 
@@ -25,7 +25,7 @@ pub enum PhysicsDomain {
     FieldInterpolation,
 }
 
-impl PhysicsDomain {
+impl GpuKernelPhysicsDomain {
     /// Get domain name for identification
     pub fn name(&self) -> &'static str {
         match self {
@@ -90,7 +90,7 @@ impl WorkgroupConfig {
 #[derive(Debug, Clone)]
 pub struct PhysicsKernel {
     /// Domain this kernel handles
-    pub domain: PhysicsDomain,
+    pub domain: GpuKernelPhysicsDomain,
 
     /// WGSL shader source code
     pub shader_source: String,
@@ -108,7 +108,7 @@ pub struct PhysicsKernel {
 impl PhysicsKernel {
     /// Create new physics kernel
     pub fn new(
-        domain: PhysicsDomain,
+        domain: GpuKernelPhysicsDomain,
         shader_source: String,
         entry_point: String,
         flops_per_element: u64,
@@ -138,7 +138,7 @@ impl PhysicsKernel {
 #[derive(Debug)]
 pub struct PhysicsKernelRegistry {
     /// Registered kernels by domain
-    kernels: HashMap<PhysicsDomain, PhysicsKernel>,
+    kernels: HashMap<GpuKernelPhysicsDomain, PhysicsKernel>,
 
     /// Workgroup configurations cache
     workgroup_cache: HashMap<String, WorkgroupConfig>,
@@ -166,14 +166,14 @@ impl PhysicsKernelRegistry {
     }
 
     /// Get registered kernel for domain
-    pub fn get_kernel(&self, domain: PhysicsDomain) -> Option<&PhysicsKernel> {
+    pub fn get_kernel(&self, domain: GpuKernelPhysicsDomain) -> Option<&PhysicsKernel> {
         self.kernels.get(&domain)
     }
 
     /// Get optimal workgroup config for grid size
     pub fn get_workgroup_config(
         &mut self,
-        domain: PhysicsDomain,
+        domain: GpuKernelPhysicsDomain,
         nx: u32,
         ny: u32,
         nz: u32,
@@ -199,12 +199,12 @@ impl PhysicsKernelRegistry {
     }
 
     /// List all registered kernels
-    pub fn list_kernels(&self) -> Vec<PhysicsDomain> {
+    pub fn list_kernels(&self) -> Vec<GpuKernelPhysicsDomain> {
         self.kernels.keys().copied().collect()
     }
 
     /// Check if all required domains are registered
-    pub fn is_complete(&self, required_domains: &[PhysicsDomain]) -> bool {
+    pub fn is_complete(&self, required_domains: &[GpuKernelPhysicsDomain]) -> bool {
         required_domains
             .iter()
             .all(|d| self.kernels.contains_key(d))
@@ -223,8 +223,8 @@ mod tests {
 
     #[test]
     fn test_physics_domain_names() {
-        assert_eq!(PhysicsDomain::AcousticFDTD.name(), "acoustic_fdtd");
-        assert_eq!(PhysicsDomain::Absorption.name(), "absorption");
+        assert_eq!(GpuKernelPhysicsDomain::AcousticFDTD.name(), "acoustic_fdtd");
+        assert_eq!(GpuKernelPhysicsDomain::Absorption.name(), "absorption");
     }
 
     #[test]
@@ -251,21 +251,21 @@ mod tests {
     #[test]
     fn test_kernel_creation() {
         let kernel = PhysicsKernel::new(
-            PhysicsDomain::AcousticFDTD,
+            GpuKernelPhysicsDomain::AcousticFDTD,
             "fn main() {}".to_string(),
             "compute_main".to_string(),
             25,
             WorkgroupConfig::new(64, 64, 64),
         );
 
-        assert_eq!(kernel.domain, PhysicsDomain::AcousticFDTD);
+        assert_eq!(kernel.domain, GpuKernelPhysicsDomain::AcousticFDTD);
         assert_eq!(kernel.flops_per_element, 25);
     }
 
     #[test]
     fn test_kernel_time_estimation() {
         let kernel = PhysicsKernel::new(
-            PhysicsDomain::AcousticFDTD,
+            GpuKernelPhysicsDomain::AcousticFDTD,
             "fn main() {}".to_string(),
             "compute_main".to_string(),
             25,
@@ -282,7 +282,7 @@ mod tests {
         let mut registry = PhysicsKernelRegistry::new();
 
         let kernel = PhysicsKernel::new(
-            PhysicsDomain::AcousticFDTD,
+            GpuKernelPhysicsDomain::AcousticFDTD,
             "fn main() {}".to_string(),
             "compute_main".to_string(),
             25,
@@ -293,20 +293,20 @@ mod tests {
 
         assert_eq!(
             registry
-                .get_kernel(PhysicsDomain::AcousticFDTD)
+                .get_kernel(GpuKernelPhysicsDomain::AcousticFDTD)
                 .unwrap()
                 .domain,
-            PhysicsDomain::AcousticFDTD
+            GpuKernelPhysicsDomain::AcousticFDTD
         );
-        assert!(registry.get_kernel(PhysicsDomain::Absorption).is_none());
+        assert!(registry.get_kernel(GpuKernelPhysicsDomain::Absorption).is_none());
     }
 
     #[test]
     fn test_workgroup_caching() {
         let mut registry = PhysicsKernelRegistry::new();
 
-        let config1 = registry.get_workgroup_config(PhysicsDomain::AcousticFDTD, 128, 128, 128);
-        let config2 = registry.get_workgroup_config(PhysicsDomain::AcousticFDTD, 128, 128, 128);
+        let config1 = registry.get_workgroup_config(GpuKernelPhysicsDomain::AcousticFDTD, 128, 128, 128);
+        let config2 = registry.get_workgroup_config(GpuKernelPhysicsDomain::AcousticFDTD, 128, 128, 128);
 
         assert_eq!(config1.workgroup_x, config2.workgroup_x);
         assert_eq!(registry.workgroup_cache.len(), 1);
@@ -317,7 +317,7 @@ mod tests {
         let mut registry = PhysicsKernelRegistry::new();
 
         let kernel = PhysicsKernel::new(
-            PhysicsDomain::AcousticFDTD,
+            GpuKernelPhysicsDomain::AcousticFDTD,
             "fn main() {}".to_string(),
             "compute_main".to_string(),
             25,
@@ -326,10 +326,10 @@ mod tests {
 
         registry.register(kernel).unwrap();
 
-        let required = vec![PhysicsDomain::AcousticFDTD];
+        let required = vec![GpuKernelPhysicsDomain::AcousticFDTD];
         assert!(registry.is_complete(&required));
 
-        let required_more = vec![PhysicsDomain::AcousticFDTD, PhysicsDomain::Absorption];
+        let required_more = vec![GpuKernelPhysicsDomain::AcousticFDTD, GpuKernelPhysicsDomain::Absorption];
         assert!(!registry.is_complete(&required_more));
     }
 }

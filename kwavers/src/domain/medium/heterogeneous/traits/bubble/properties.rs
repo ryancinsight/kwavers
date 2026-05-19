@@ -3,14 +3,14 @@
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
     bubble::{BubbleProperties, BubbleState},
-    heterogeneous::{core::HeterogeneousMedium, interpolation::TrilinearInterpolator},
+    heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},
 };
 use ndarray::Array3;
 
 impl BubbleProperties for HeterogeneousMedium {
     #[inline]
     fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.surface_tension,
             x,
             y,
@@ -27,7 +27,7 @@ impl BubbleProperties for HeterogeneousMedium {
 
     #[inline]
     fn vapor_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.vapor_pressure,
             x,
             y,
@@ -39,7 +39,7 @@ impl BubbleProperties for HeterogeneousMedium {
 
     #[inline]
     fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.polytropic_index,
             x,
             y,
@@ -51,7 +51,7 @@ impl BubbleProperties for HeterogeneousMedium {
 
     #[inline]
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.gas_diffusion_coeff,
             x,
             y,

@@ -69,7 +69,7 @@ use buffers::GpuBackendBufferManager;
 use init::WGPUContext;
 use ndarray::Array3;
 use performance_monitor::GpuPerformanceMonitor;
-use physics_kernels::{PhysicsDomain, PhysicsKernelRegistry};
+use physics_kernels::{GpuKernelPhysicsDomain, PhysicsKernelRegistry};
 use pipeline::PipelineManager;
 use realtime_loop::{RealtimeConfig, RealtimeSimulationOrchestrator};
 use std::collections::HashMap;
@@ -163,7 +163,7 @@ impl GPUBackend {
     }
 }
 
-impl Backend for GPUBackend {
+impl ComputeBackend for GPUBackend {
     fn backend_type(&self) -> BackendType {
         BackendType::GPU
     }

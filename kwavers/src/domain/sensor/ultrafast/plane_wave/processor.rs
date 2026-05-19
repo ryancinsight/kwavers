@@ -1,4 +1,4 @@
-//! `PlaneWave` — plane wave processor and delay calculator.
+//! `UltrafastPlaneWave` — plane wave processor and delay calculator.
 
 use super::config::UltrafastPlaneWaveConfig;
 use crate::core::error::{KwaversError, KwaversResult};
@@ -22,12 +22,12 @@ use std::f64::consts::PI;
 /// - Montaldo, G., et al. (2009). IEEE TUFFC, 56(3), 489–506.
 /// - Tanter, M., & Fink, M. (2014). IEEE TUFFC, 61(1), 102–119.
 #[derive(Debug, Clone)]
-pub struct PlaneWave {
+pub struct UltrafastPlaneWave {
     /// Imaging configuration.
     pub config: UltrafastPlaneWaveConfig,
 }
 
-impl PlaneWave {
+impl UltrafastPlaneWave {
     /// Create a new plane wave processor.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

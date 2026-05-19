@@ -9,11 +9,11 @@
 //! # Examples
 //!
 //! ```no_run
-//! # use kwavers::gpu::buffer::{GpuBuffer, BufferUsage};
+//! # use kwavers::gpu::buffer::{GpuBufferData, BufferUsage};
 //! # async fn example(device: &wgpu::Device, queue: &wgpu::Queue) -> Result<(), Box<dyn std::error::Error>> {
 //! // Create a buffer with initial data
 //! let data = vec![1.0f32, 2.0, 3.0, 4.0];
-//! let buffer = GpuBuffer::create_with_data(
+//! let buffer = GpuBufferData::create_with_data(
 //!     device,
 //!     &data,
 //!     BufferUsage::STORAGE | BufferUsage::COPY_SRC
@@ -29,5 +29,5 @@
 mod gpu_buffer;
 mod usage;
 
-pub use gpu_buffer::GpuBuffer;
+pub use gpu_buffer::GpuBufferData;
 pub use usage::BufferUsage;

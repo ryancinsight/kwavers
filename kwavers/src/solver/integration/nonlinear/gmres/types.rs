@@ -2,7 +2,7 @@
 
 /// Convergence information returned by a GMRES solve.
 #[derive(Debug, Clone)]
-pub struct ConvergenceInfo {
+pub struct GmresConvergenceInfo {
     /// Whether solver converged within tolerance.
     pub converged: bool,
     /// Number of iterations performed.

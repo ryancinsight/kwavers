@@ -33,7 +33,7 @@ pub mod spatially_varying;
 pub mod stokes;
 pub mod tissue;
 
-pub use dispersion::{DispersionCorrection, DispersionModel};
+pub use dispersion::{AbsorptionDispersionCorrection, DispersionModel};
 pub use fractional::{FractionalDerivative, FractionalLaplacian};
 pub use power_law::{PowerLawAbsorption, PowerLawModel};
 pub use spatially_varying::{AbsorptionStatistics, SpatiallyVaryingAbsorption};

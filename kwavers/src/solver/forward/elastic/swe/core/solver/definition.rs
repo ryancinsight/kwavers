@@ -1,6 +1,6 @@
 //! `ElasticWaveSolver` struct definition and construction.
 
-use super::super::super::boundary::{PMLBoundary, SwePmlConfig};
+use super::super::super::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use super::super::super::types::{ElasticWaveConfig, VolumetricWaveConfig};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -15,7 +15,7 @@ pub struct ElasticWaveSolver {
     pub(super) density: Array3<f64>,
     pub(super) lambda: Array3<f64>,
     pub(super) mu: Array3<f64>,
-    pub(super) pml: PMLBoundary,
+    pub(super) pml: ElasticSwePMLBoundary,
     pub(super) config: ElasticWaveConfig,
     pub(super) volumetric_config: VolumetricWaveConfig,
     pub(crate) sensor_recorder: SensorRecorder,
@@ -53,7 +53,7 @@ impl ElasticWaveSolver {
             })
             .fold(0.0_f64, f64::max);
         let sigma_max = if c_max_p > 0.0 {
-            PMLBoundary::optimize_sigma_max(1e-4, c_max_p, grid, config.pml_thickness)
+            ElasticSwePMLBoundary::optimize_sigma_max(1e-4, c_max_p, grid, config.pml_thickness)
         } else {
             1e6 // fallback for degenerate media
         };
@@ -63,7 +63,7 @@ impl ElasticWaveSolver {
             profile_order: 2,
             reflection_target: 1e-4,
         };
-        let pml = PMLBoundary::new(grid, pml_config);
+        let pml = ElasticSwePMLBoundary::new(grid, pml_config);
         let shape = (nx, ny, nz);
         let sensor_recorder = SensorRecorder::new(config.sensor_mask.as_ref(), shape, 0)?;
         Ok(Self {

@@ -35,7 +35,7 @@ pub enum DeviceCapability {
 
 /// Comprehensive ultrasound device information for point-of-care integration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceInfo {
+pub struct ApiDeviceInfo {
     /// Unique device identifier
     pub id: String,
     /// Type of ultrasound device
@@ -47,7 +47,7 @@ pub struct DeviceInfo {
     /// List of supported clinical capabilities
     pub capabilities: Vec<DeviceCapability>,
     /// Current operational status
-    pub status: DeviceStatus,
+    pub status: ApiDeviceStatus,
     /// Timestamp of last calibration
     pub last_calibration: DateTime<Utc>,
     /// Firmware version string
@@ -70,7 +70,7 @@ pub struct UltrasoundDevice {
     /// Battery level (0-100)
     pub battery_level: Option<u8>,
     /// Device status
-    pub status: DeviceStatus,
+    pub status: ApiDeviceStatus,
     /// Last seen timestamp
     pub last_seen: DateTime<Utc>,
 }
@@ -78,7 +78,7 @@ pub struct UltrasoundDevice {
 /// Device connection status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum DeviceStatus {
+pub enum ApiDeviceStatus {
     Connected,
     Disconnected,
     Error,

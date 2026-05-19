@@ -262,7 +262,7 @@ impl JobManager {
             .await?;
 
         // Create model metadata
-        let model_metadata = crate::api::ModelMetadata {
+        let model_metadata = crate::api::ApiModelMetadata {
             model_id: format!("model_{}", uuid::Uuid::new_v4().simple()),
             physics_domain: job.request.physics_domain.clone(),
             created_at: chrono::Utc::now(),

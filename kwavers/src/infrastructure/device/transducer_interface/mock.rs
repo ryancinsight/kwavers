@@ -2,8 +2,8 @@
 
 use super::hardware::TransducerHardware;
 use super::types::{
-    DeviceStatus, DeviceTelemetry, DeviceTransducerSpecification, HardwareCommand,
-    HardwareResponse, TransducerState,
+    DeviceTelemetry, DeviceTransducerSpecification, HardwareCommand, HardwareResponse,
+    TransducerDeviceStatus, TransducerState,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use std::time::Instant;
@@ -97,7 +97,7 @@ impl TransducerHardware for MockTransducer {
                 self.calibrate()?;
                 Ok(HardwareResponse::Acknowledged)
             }
-            HardwareCommand::GetStatus => Ok(HardwareResponse::Status(DeviceStatus {
+            HardwareCommand::GetStatus => Ok(HardwareResponse::Status(TransducerDeviceStatus {
                 state: self.state,
                 current_frequency: self.current_frequency,
                 current_power_percent: self.current_power_percent,

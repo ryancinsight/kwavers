@@ -15,4 +15,4 @@ pub mod types;
 
 pub use config::GMRESConfig;
 pub use solver::GMRESSolver;
-pub use types::ConvergenceInfo;
+pub use types::GmresConvergenceInfo;

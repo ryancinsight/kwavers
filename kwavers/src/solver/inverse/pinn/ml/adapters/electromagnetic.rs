@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 /// Electromagnetic source specification for PINN training
 ///
-/// Lightweight adapter over `domain::source::electromagnetic::EMSource` that extracts
+/// Lightweight adapter over `domain::source::electromagnetic::PhysicsEMSource` that extracts
 /// information needed for PINN Maxwell's equations boundary conditions.
 #[derive(Debug, Clone)]
 pub struct PinnEMSource {

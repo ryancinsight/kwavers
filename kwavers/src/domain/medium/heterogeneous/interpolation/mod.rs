@@ -6,4 +6,4 @@
 pub mod trilinear;
 
 // Re-export primary interpolator
-pub use trilinear::TrilinearInterpolator;
+pub use trilinear::HetTrilinearInterpolator;

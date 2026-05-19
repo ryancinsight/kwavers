@@ -29,14 +29,14 @@ pub struct GpuMemoryPoolStats {
 
 /// Memory pool for efficient allocation
 #[derive(Debug)]
-pub struct MemoryPool {
+pub struct GpuMemoryPool {
     pub(super) pool_type: GpuMemoryPoolType,
     pub(super) allocations: Vec<MemoryBlock>,
     pub(super) total_allocated: usize,
     pub(super) peak_allocated: usize,
 }
 
-impl MemoryPool {
+impl GpuMemoryPool {
     /// Create a new memory pool.
     pub fn new(pool_type: GpuMemoryPoolType) -> Self {
         Self {

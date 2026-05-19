@@ -5,7 +5,7 @@ use kwavers::domain::sensor::recorder::simple::SensorRecorder;
 use kwavers::domain::source::{GridSource, Source as KwaversSource};
 use kwavers::solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use kwavers::solver::forward::fdtd::solver::FdtdSolver;
-use kwavers::solver::geometry::Geometry;
+use kwavers::solver::geometry::SolverGeometry;
 use kwavers::solver::interface::solver::Solver as SolverTrait;
 
 use crate::medium_py::MediumInner;
@@ -42,9 +42,9 @@ impl Simulation {
             .map(|trans| Self::create_transducer_ordered_indices(grid, &trans.inner));
 
         let geometry = if axisymmetric {
-            Geometry::CylindricalAS
+            SolverGeometry::CylindricalAS
         } else {
-            Geometry::Cartesian3D
+            SolverGeometry::Cartesian3D
         };
 
         let config = FdtdConfig {

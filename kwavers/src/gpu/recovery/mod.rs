@@ -21,9 +21,9 @@
 //
 // | Strategy | Target Rate | Latency Budget | Implementation |
 // |----------|-------------|----------------|----------------|
-// | DeviceLostRecovery | ≥99% | <500ms | Context re-init |
-// | GpuOomRecovery | ≥95% | <100ms | CPU fallback |
-// | TimeoutRecovery | ≥90% | <200ms | Retry w/ backoff |
+// | GpuDeviceLostRecovery | ≥99% | <500ms | Context re-init |
+// | GpuRecoveryOom | ≥95% | <100ms | CPU fallback |
+// | GpuTimeoutRecovery | ≥90% | <200ms | Retry w/ backoff |
 // | ValidationRecovery | ≥95% | <50ms | Scope recovery |
 //
 // ## References
@@ -53,7 +53,7 @@ pub use timeout::*;
 
 /// Discriminant for fault-injection targets.
 ///
-/// Used by [`FaultInjector`] to produce the correct [`KwaversError`] variant
+/// Used by [`GpuInjectorFaultInjector`] to produce the correct [`KwaversError`] variant
 /// for each simulated GPU failure mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GpuErrorType {

@@ -33,7 +33,7 @@ pub enum PinnGpuMemoryPoolType {
 /// GPU memory manager with pool allocation
 #[derive(Debug)]
 pub struct GpuMemoryManager {
-    pub(super) pools: HashMap<PinnGpuMemoryPoolType, MemoryPool>,
+    pub(super) pools: HashMap<PinnGpuMemoryPoolType, PinnGpuAcceleratorMemoryPool>,
     pinned_buffers: Vec<PinnedBuffer<f32>>,
     transfer_streams: Vec<CudaStream>,
     stats: PinnGpuMemoryStats,
@@ -41,7 +41,7 @@ pub struct GpuMemoryManager {
 
 /// Memory pool for efficient allocation
 #[derive(Debug)]
-pub(crate) struct MemoryPool {
+pub(crate) struct PinnGpuAcceleratorMemoryPool {
     pub(crate) pool_type: PinnGpuMemoryPoolType,
     pub(crate) total_allocated: usize,
     pub(crate) used_memory: usize,
@@ -84,19 +84,19 @@ impl GpuMemoryManager {
 
         pools.insert(
             PinnGpuMemoryPoolType::Temporary,
-            MemoryPool::new(PinnGpuMemoryPoolType::Temporary, 256 * 1024 * 1024, 256),
+            PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Temporary, 256 * 1024 * 1024, 256),
         );
         pools.insert(
             PinnGpuMemoryPoolType::Persistent,
-            MemoryPool::new(PinnGpuMemoryPoolType::Persistent, 512 * 1024 * 1024, 256),
+            PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Persistent, 512 * 1024 * 1024, 256),
         );
         pools.insert(
             PinnGpuMemoryPoolType::Gradients,
-            MemoryPool::new(PinnGpuMemoryPoolType::Gradients, 256 * 1024 * 1024, 256),
+            PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Gradients, 256 * 1024 * 1024, 256),
         );
         pools.insert(
             PinnGpuMemoryPoolType::Collocation,
-            MemoryPool::new(PinnGpuMemoryPoolType::Collocation, 128 * 1024 * 1024, 256),
+            PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Collocation, 128 * 1024 * 1024, 256),
         );
 
         let transfer_streams = (0..4)

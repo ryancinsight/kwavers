@@ -1,7 +1,7 @@
 use super::super::types::{ElectromagneticPolarization, ElectromagneticWaveType};
 
 /// Electromagnetic source trait
-pub trait EMSource: Send + Sync {
+pub trait PhysicsEMSource: Send + Sync {
     /// Get source polarization
     fn polarization(&self) -> ElectromagneticPolarization;
 

@@ -4,7 +4,7 @@ use super::*;
 
 #[test]
 fn test_quantizer_creation() {
-    let quantizer = Quantizer::new(QuantizationScheme::Dynamic8Bit);
+    let quantizer = MlQuantizer::new(QuantizationScheme::Dynamic8Bit);
     assert_eq!(quantizer.accuracy_tolerance, 0.05);
 }
 
@@ -27,7 +27,7 @@ fn test_quantization_schemes() {
     ];
 
     for scheme in schemes {
-        let quantizer = Quantizer::new(scheme);
+        let quantizer = MlQuantizer::new(scheme);
         assert!(quantizer.accuracy_tolerance >= 0.0);
     }
 }
@@ -37,7 +37,7 @@ fn test_quantized_tensor_creation() {
     let data = vec![1.0, -1.0, 0.5, -0.5];
     let shape = vec![1, 4];
 
-    let quantizer = Quantizer::new(QuantizationScheme::Dynamic8Bit);
+    let quantizer = MlQuantizer::new(QuantizationScheme::Dynamic8Bit);
     let result = quantizer.quantize_tensor(&data, &shape);
 
     let quantized = result.unwrap();
@@ -65,7 +65,7 @@ fn test_compression_ratio_calculation() {
             layer_scales: HashMap::new(),
             scheme: QuantizationScheme::Dynamic8Bit,
         },
-        metadata: ModelMetadata {
+        metadata: QuantizationModelMetadata {
             original_accuracy: 0.95,
             quantized_accuracy: 0.92,
             compression_ratio: 4.0,

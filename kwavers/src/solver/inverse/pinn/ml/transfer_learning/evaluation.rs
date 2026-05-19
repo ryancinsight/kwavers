@@ -10,7 +10,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     pub(super) fn evaluate_accuracy(
         &self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
-        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
         conditions: &[crate::solver::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<f32> {
         let test_points = self.generate_test_points(geometry, 1000)?;
@@ -46,7 +46,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     ///
     pub(super) fn generate_test_points(
         &self,
-        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
         num_points: usize,
     ) -> KwaversResult<Vec<TestPoint>> {
         let mut points = Vec::with_capacity(num_points);
@@ -117,7 +117,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         &self,
         model: &crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
         condition: &crate::solver::inverse::pinn::ml::BoundaryCondition2D,
-        geometry: &crate::solver::inverse::pinn::ml::Geometry2D,
+        geometry: &crate::solver::inverse::pinn::ml::BurnWave2dGeometry,
     ) -> KwaversResult<f64> {
         use crate::solver::inverse::pinn::ml::BoundaryCondition2D;
 

@@ -1,4 +1,4 @@
-//! Primitive tensor types: `Shape`, `DType`, `Backend`.
+//! Primitive tensor types: `Shape`, `DType`, `TensorBackend`.
 
 /// Tensor shape specification.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,7 +62,7 @@ pub enum DType {
 
 /// Tensor backend specification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Backend {
+pub enum TensorBackend {
     /// CPU-only ndarray backend (no autodiff).
     NdArray,
     /// Burn with NdArray backend (autodiff on CPU).

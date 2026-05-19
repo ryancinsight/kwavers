@@ -6,12 +6,12 @@
 pub struct AberrationCorrector;
 #[derive(Debug)]
 pub enum AberrationCorrectionMethod {
-    TimeReversal,
+    AberrationTimeReversal,
     AdaptiveFocusing,
     PhaseConjugation,
 }
 #[derive(Debug)]
-pub struct TimeReversal;
+pub struct AberrationTimeReversal;
 #[derive(Debug)]
 pub struct AdaptiveFocusing;
 #[derive(Debug)]
@@ -31,7 +31,7 @@ mod tests {
     /// All AberrationCorrectionMethod variants are distinct Debug strings.
     #[test]
     fn correction_method_variants_debug_distinct() {
-        let tr = format!("{:?}", AberrationCorrectionMethod::TimeReversal);
+        let tr = format!("{:?}", AberrationCorrectionMethod::AberrationTimeReversal);
         let af = format!("{:?}", AberrationCorrectionMethod::AdaptiveFocusing);
         let pc = format!("{:?}", AberrationCorrectionMethod::PhaseConjugation);
         assert_ne!(tr, af);
@@ -42,7 +42,7 @@ mod tests {
     /// Marker structs are constructible.
     #[test]
     fn marker_structs_constructible() {
-        let _tr = TimeReversal;
+        let _tr = AberrationTimeReversal;
         let _af = AdaptiveFocusing;
         let _pc = PhaseConjugation;
     }

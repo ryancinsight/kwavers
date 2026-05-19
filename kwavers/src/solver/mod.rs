@@ -35,7 +35,9 @@ pub use interface::Solver;
 pub use inverse::{
     ReconstructionConfig, Reconstructor, TimeReversalConfig, TimeReversalReconstructor,
 };
-pub use multiphysics::{CoupledMultiPhysicsSolver, FieldCoupler, FieldCouplingStrategy};
+pub use multiphysics::{
+    CoupledMultiPhysicsSolver, FieldCouplingStrategy, MultiphysicsFieldCoupler,
+};
 
 // Constants module remains at root level for easy access
 pub mod constants;
@@ -46,7 +48,7 @@ pub use interface::{
 };
 
 pub mod geometry;
-pub use geometry::Geometry;
+pub use geometry::SolverGeometry;
 
 // Backward-compatible re-exports for commonly used submodules
 pub use forward::fdtd;

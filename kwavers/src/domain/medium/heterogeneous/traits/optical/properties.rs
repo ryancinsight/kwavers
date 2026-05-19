@@ -2,15 +2,15 @@
 
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::{
-    core::HeterogeneousMedium, interpolation::TrilinearInterpolator,
+    core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator,
 };
-use crate::domain::medium::optical::OpticalProperties;
+use crate::domain::medium::optical::MediumOpticalProperties;
 
-impl OpticalProperties for HeterogeneousMedium {
+impl MediumOpticalProperties for HeterogeneousMedium {
     /// Optical absorption coefficient μ_a at continuous coordinates (1/m)
     #[inline]
     fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.mu_a,
             x,
             y,
@@ -23,7 +23,7 @@ impl OpticalProperties for HeterogeneousMedium {
     /// Optical scattering coefficient μ_s at continuous coordinates (1/m)
     #[inline]
     fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.mu_s_prime,
             x,
             y,

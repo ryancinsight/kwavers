@@ -9,7 +9,7 @@
 //! The operators module defines three core trait families:
 //!
 //! - **`DifferentialOperator`**: Finite difference and spectral differentiation
-//! - **`SpectralOperator`**: FFT-based operations in k-space
+//! - **`SpectralOperatorTrait`**: FFT-based operations in k-space
 //! - **`Interpolator`**: Spatial interpolation for heterogeneous media
 //!
 //! ## Design Principles
@@ -53,13 +53,13 @@ pub mod spectral;
 // Re-export main traits for convenience
 pub use differential::DifferentialOperator;
 pub use interpolation::Interpolator;
-pub use spectral::SpectralOperator;
+pub use spectral::SpectralOperatorTrait;
 
 // Re-export common implementations
 pub use differential::{
     CentralDifference2, CentralDifference4, CentralDifference6, StaggeredGridOperator,
 };
-pub use interpolation::{LinearInterpolator, TrilinearInterpolator};
+pub use interpolation::{LinearInterpolator, NumericsTrilinearInterpolator};
 pub use spectral::PseudospectralDerivative;
 
 #[cfg(test)]
@@ -71,7 +71,7 @@ mod tests {
         // Verify traits can be used as trait objects if needed
         // Note: This is a compile-time check
         fn _assert_differential_object_safe(_: &dyn DifferentialOperator) {}
-        fn _assert_spectral_object_safe(_: &dyn SpectralOperator) {}
+        fn _assert_spectral_object_safe(_: &dyn SpectralOperatorTrait) {}
         fn _assert_interpolator_object_safe(_: &dyn Interpolator) {}
     }
 }

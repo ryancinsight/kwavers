@@ -4,7 +4,7 @@ use ndarray::Array2;
 
 /// Transducer geometry definition
 #[derive(Debug, Clone)]
-pub struct TransducerGeometry {
+pub struct FieldCalculatorTransducerGeometry {
     /// Element positions [x, y, z] in meters
     pub element_positions: Array2<f64>,
     /// Element sizes [width, height] in meters

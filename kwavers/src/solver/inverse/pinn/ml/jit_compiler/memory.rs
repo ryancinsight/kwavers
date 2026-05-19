@@ -1,14 +1,14 @@
 use crate::core::error::KwaversResult;
 
-use super::MemoryPool;
+use super::JitMemoryPool;
 
-impl Default for MemoryPool {
+impl Default for JitMemoryPool {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl MemoryPool {
+impl JitMemoryPool {
     /// New.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

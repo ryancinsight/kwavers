@@ -1,4 +1,4 @@
-use super::traits::GridParameters;
+use super::traits::FactoryGridParameters;
 use super::types::{FactoryConfiguration, FactoryError};
 use crate::solver::config::SolverType;
 
@@ -11,7 +11,7 @@ struct MockGridParams {
     dz: f64,
 }
 
-impl GridParameters for MockGridParams {
+impl FactoryGridParameters for MockGridParams {
     fn nx(&self) -> usize {
         self.nx
     }

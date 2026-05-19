@@ -48,7 +48,7 @@ mod types;
 
 pub use ndarray_tensor::NdArrayTensor;
 pub use traits::{TensorMut, TensorView};
-pub use types::{Backend, DType, Shape};
+pub use types::{TensorBackend, DType, Shape};
 
 #[cfg(test)]
 mod tests {
@@ -70,7 +70,7 @@ mod tests {
         let tensor = NdArrayTensor::zeros(Shape::new(vec![3, 4]));
         assert_eq!(tensor.shape().as_slice(), &[3, 4]);
         assert_eq!(tensor.dtype(), DType::F64);
-        assert_eq!(tensor.backend(), Backend::NdArray);
+        assert_eq!(tensor.backend(), TensorBackend::NdArray);
     }
 
     #[test]

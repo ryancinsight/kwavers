@@ -32,7 +32,7 @@ pub mod wavelet;
 pub mod tests;
 
 pub use criteria::{ErrorEstimator, RefinementCriterion};
-pub use interpolation::{AmrInterpolationScheme, ConservativeInterpolator};
+pub use interpolation::{AmrConservativeInterpolator, AmrInterpolationScheme};
 pub use octree::{Octree, OctreeNode};
 pub use refinement::{RefinementLevel, RefinementManager};
 pub use wavelet::{WaveletBasis, WaveletTransform};
@@ -49,7 +49,7 @@ pub struct AMRSolver {
     /// Refinement manager
     refinement: RefinementManager,
     /// Interpolation scheme
-    interpolator: ConservativeInterpolator,
+    interpolator: AmrConservativeInterpolator,
     /// Error estimator
     estimator: ErrorEstimator,
 }
@@ -62,7 +62,7 @@ impl AMRSolver {
     pub fn new(grid: &Grid, max_level: usize) -> KwaversResult<Self> {
         let octree = Octree::new(grid.bounds(), max_level)?;
         let refinement = RefinementManager::new(max_level);
-        let interpolator = ConservativeInterpolator::new();
+        let interpolator = AmrConservativeInterpolator::new();
         let estimator = ErrorEstimator::new();
 
         Ok(Self {

@@ -29,7 +29,7 @@ pub struct QuantizedModel {
     pub original_layers: Vec<LayerInfo>,
     pub quantized_weights: Vec<QuantizedTensor>,
     pub quantization_params: QuantizationParams,
-    pub metadata: ModelMetadata,
+    pub metadata: QuantizationModelMetadata,
 }
 
 /// Layer information for quantization
@@ -90,7 +90,7 @@ pub struct QuantizationParams {
 
 /// Model metadata
 #[derive(Debug, Clone)]
-pub struct ModelMetadata {
+pub struct QuantizationModelMetadata {
     pub original_accuracy: f32,
     pub quantized_accuracy: f32,
     pub compression_ratio: f32,
@@ -99,7 +99,7 @@ pub struct ModelMetadata {
 
 /// Quantization engine
 #[derive(Debug)]
-pub struct Quantizer {
+pub struct MlQuantizer {
     pub(super) scheme: QuantizationScheme,
     pub(super) calibration_samples: usize,
     pub(super) accuracy_tolerance: f32,

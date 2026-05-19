@@ -2,20 +2,20 @@
 
 use super::boundary_type::BoundaryType;
 use super::domain_specific::{
-    AcousticBoundaryType, ElasticBoundaryType, ElectromagneticBoundaryType,
+    DomainAcousticBoundaryType, ElasticBoundaryType, ElectromagneticBoundaryType,
 };
 
-impl From<AcousticBoundaryType> for BoundaryType {
-    fn from(acoustic: AcousticBoundaryType) -> Self {
+impl From<DomainAcousticBoundaryType> for BoundaryType {
+    fn from(acoustic: DomainAcousticBoundaryType) -> Self {
         match acoustic {
-            AcousticBoundaryType::SoundSoft => Self::Dirichlet,
-            AcousticBoundaryType::SoundHard => Self::Neumann,
-            AcousticBoundaryType::Impedance { impedance } => Self::Robin {
+            DomainAcousticBoundaryType::SoundSoft => Self::Dirichlet,
+            DomainAcousticBoundaryType::SoundHard => Self::Neumann,
+            DomainAcousticBoundaryType::Impedance { impedance } => Self::Robin {
                 alpha: 1.0,
                 beta: impedance,
             },
-            AcousticBoundaryType::Absorbing => Self::Absorbing,
-            AcousticBoundaryType::Radiation => Self::Radiation,
+            DomainAcousticBoundaryType::Absorbing => Self::Absorbing,
+            DomainAcousticBoundaryType::Radiation => Self::Radiation,
         }
     }
 }

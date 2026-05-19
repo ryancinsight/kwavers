@@ -20,7 +20,7 @@ mod tests;
 
 pub use absorption::HasAbsorptionOperator;
 pub use config::HASConfig;
-pub use diffraction::DiffractionOperator;
+pub use diffraction::HybridAsDiffractionOperator;
 pub use facade::HybridAngularSpectrum;
 pub use nonlinearity::HybridAsNonlinearOperator;
 pub use solver::HybridAngularSpectrumSolver;

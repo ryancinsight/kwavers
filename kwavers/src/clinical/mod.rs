@@ -29,9 +29,9 @@ pub use safety::{
         MechanicalIndexTissueType,
     },
     AuditEntry, AuditSafetyEventType, ClinicalSafetyLevel, ClinicalSafetyLimits,
-    ClinicalSafetyMonitor, ComplianceReport, ComplianceResult, ComplianceValidator, DoseController,
-    Interlock, InterlockSystem, SafetyAuditLogger, SafetyViolation, SystemConfiguration,
-    TreatmentRecord,
+    ClinicalSafetyMonitor, ComplianceResult, ComplianceValidator, DoseController, Interlock,
+    InterlockSystem, SafetyAuditLogger, SafetyComplianceReport, SafetyViolation,
+    SystemConfiguration, TreatmentRecord,
 };
 pub use therapy::{
     ClinicalTherapyMechanism, ClinicalTherapyModality, ClinicalTherapyParameters,
@@ -43,7 +43,7 @@ pub use therapy::{
 //
 //   use kwavers::clinical::therapy::therapy_integration::{
 //       TherapyIntegrationOrchestrator, TherapySessionConfig, AcousticTherapyParams,
-//       ClinicalSafetyLimits, PatientParameters, TissuePropertyMap, TargetVolume, etc.
+//       ClinicalSafetyLimits, PatientParameters, TissuePropertyMap, TherapyTargetVolume, etc.
 //   };
 //
 // The therapy_integration module provides a comprehensive clinical therapy framework

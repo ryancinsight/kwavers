@@ -19,22 +19,22 @@ mod tests;
 
 pub use api_types::{
     APIConfig, APIError, APIErrorType, APIVersion, ApiBoundaryConditionSpec, GeometrySpec,
-    HealthCheck, HealthStatus, JobInfoResponse, JobStatus, ListModelsResponse, ModelMetadata,
+    HealthCheck, HealthStatus, JobInfoResponse, JobStatus, ListModelsResponse, ApiModelMetadata,
     ObstacleSpec, PINNInferenceRequest, PINNInferenceResponse, PINNTrainingRequest,
     PINNTrainingResponse, PaginationParams, PinnApiPhysicsParameters, PinnApiTrainingConfig,
-    PinnApiTrainingMetrics, RateLimitConfig, RateLimitInfo, ServiceStatus, TrainingProgress,
+    PinnApiTrainingMetrics, ApiRateLimitConfig, RateLimitInfo, ServiceStatus, TrainingProgress,
 };
 
 // Clinical ultrasound API type re-exports.
 #[cfg(feature = "pinn")]
 pub use models::{
-    AbnormalRegion, AnalysisPriority, ApiTissueProperties, ApiTissueRegion,
-    ClinicalAnalysisRequest, ClinicalAnalysisResponse, ClinicalContext, ClinicalFinding,
-    ClinicalRecommendation, ConnectionType, DICOMIntegrationRequest, DICOMIntegrationResponse,
-    DICOMStudyInfo, DICOMValue, DeviceCapabilities, DeviceCapability, DeviceInfo, DeviceStatus,
+    AbnormalRegion, AnalysisPriority, ApiDeviceInfo, ApiDeviceStatus, ApiTissueProperties,
+    ApiTissueRegion, ClinicalAnalysisRequest, ClinicalAnalysisResponse, ClinicalContext,
+    ClinicalFinding, ClinicalRecommendation, ConnectionType, DICOMIntegrationRequest,
+    DICOMIntegrationResponse, DICOMStudyInfo, DICOMValue, DeviceCapabilities, DeviceCapability,
     DeviceType, FindingMeasurements, FindingType, ImagingParameters, MobileOptimizationRequest,
     MobileOptimizationResponse, NetworkConditions, OperatorLevel, PerformancePredictions,
-    PerformanceTargets, PowerEstimates, PowerSettings, ProcessingConfig, ProcessingMetrics,
+    PerformanceTargets, PowerEstimates, PowerSettings, MobileProcessingConfig, ProcessingMetrics,
     QualityIndicators, RecommendationType, TissueCharacterization, UltrasoundDevice,
     UltrasoundFrame, UrgencyLevel,
 };

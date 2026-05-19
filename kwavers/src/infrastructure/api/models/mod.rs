@@ -38,7 +38,7 @@ pub use clinical::{
     ClinicalRecommendation, FindingMeasurements, FindingType, OperatorLevel, ProcessingMetrics,
     QualityIndicators, RecommendationType, TissueCharacterization, UrgencyLevel,
 };
-pub use devices::{DeviceCapability, DeviceInfo, DeviceStatus, DeviceType, UltrasoundDevice};
+pub use devices::{ApiDeviceInfo, ApiDeviceStatus, DeviceCapability, DeviceType, UltrasoundDevice};
 pub use dicom::{DICOMIntegrationRequest, DICOMIntegrationResponse, DICOMStudyInfo, DICOMValue};
 pub use imaging::{ImagingParameters, UltrasoundFrame};
 pub use jobs::{
@@ -49,5 +49,5 @@ pub use jobs::{
 pub use mobile::{
     ConnectionType, DeviceCapabilities, MobileOptimizationRequest, MobileOptimizationResponse,
     NetworkConditions, PerformancePredictions, PerformanceTargets, PowerEstimates, PowerSettings,
-    ProcessingConfig,
+    MobileProcessingConfig,
 };

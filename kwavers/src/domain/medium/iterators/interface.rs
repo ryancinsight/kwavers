@@ -125,7 +125,7 @@ impl<'a> InterfaceIterator<'a> {
 }
 
 impl<'a> Iterator for InterfaceIterator<'a> {
-    type Item = InterfacePoint;
+    type Item = IteratorInterfacePoint;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.current < self.grid.size() {
@@ -137,7 +137,7 @@ impl<'a> Iterator for InterfaceIterator<'a> {
 
             if self.is_interface(i, j, k) {
                 let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                return Some(InterfacePoint {
+                return Some(IteratorInterfacePoint {
                     indices: (i, j, k),
                     position: (x, y, z),
                     density_jump: self.calculate_density_jump(i, j, k),
@@ -151,7 +151,7 @@ impl<'a> Iterator for InterfaceIterator<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct InterfacePoint {
+pub struct IteratorInterfacePoint {
     pub indices: (usize, usize, usize),
     pub position: (f64, f64, f64),
     pub density_jump: f64,

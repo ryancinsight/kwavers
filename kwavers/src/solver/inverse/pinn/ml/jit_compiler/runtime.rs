@@ -1,7 +1,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::pinn::ml::Geometry2D;
+use crate::solver::inverse::pinn::ml::BurnWave2dGeometry;
 
-use super::{InferenceStats, JitCompiler, KernelData, MemoryPool, OptimizedRuntime, RuntimeConfig};
+use super::{InferenceStats, JitCompiler, KernelData, JitMemoryPool, OptimizedRuntime, RuntimeConfig};
 
 impl OptimizedRuntime {
     pub fn new(compiler: JitCompiler) -> Self {
@@ -29,7 +29,7 @@ impl OptimizedRuntime {
         Self {
             compiler,
             active_kernels: std::collections::HashMap::new(),
-            memory_pool: MemoryPool::new(),
+            memory_pool: JitMemoryPool::new(),
             config: RuntimeConfig::default(),
             weights,
             biases,
@@ -42,7 +42,7 @@ impl OptimizedRuntime {
     pub fn load_model(
         &mut self,
         model: &dyn std::any::Any,
-        geometry: &Geometry2D,
+        geometry: &BurnWave2dGeometry,
         name: &str,
     ) -> KwaversResult<String> {
         let kernel = self.compiler.compile_pinn_model(model, geometry, name)?;

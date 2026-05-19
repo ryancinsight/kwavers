@@ -1,24 +1,26 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
-use crate::math::numerics::operators::TrilinearInterpolator;
+use crate::math::numerics::operators::NumericsTrilinearInterpolator;
 use ndarray::ArrayView3;
 use std::collections::HashMap;
 
 use super::residual::max_abs_difference;
-use super::{ConservationEnforcer, CoupledPhysicsSolver, MultiPhysicsInterface, PhysicsDomain};
+use super::{
+    CoupledPhysicsSolver, MultiPhysicsConservationEnforcer, SimulationMultiPhysicsInterface, SimulationPhysicsDomain,
+};
 
 /// Field coupling manager for conservative interpolation between domains
 #[derive(Debug)]
-pub struct FieldCoupler {
+pub struct MultiPhysicsFieldCoupler {
     /// Interpolation operators for each domain pair
-    interpolators: HashMap<(PhysicsDomain, PhysicsDomain), TrilinearInterpolator>,
+    interpolators: HashMap<(SimulationPhysicsDomain, SimulationPhysicsDomain), NumericsTrilinearInterpolator>,
     /// Coupling interface definitions
-    interfaces: HashMap<(PhysicsDomain, PhysicsDomain), MultiPhysicsInterface>,
+    interfaces: HashMap<(SimulationPhysicsDomain, SimulationPhysicsDomain), SimulationMultiPhysicsInterface>,
     /// Conservation enforcement
-    conservation: ConservationEnforcer,
+    conservation: MultiPhysicsConservationEnforcer,
 }
 
-impl FieldCoupler {
+impl MultiPhysicsFieldCoupler {
     /// Create a new field coupler
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -28,7 +30,7 @@ impl FieldCoupler {
         Self {
             interpolators: HashMap::new(),
             interfaces: HashMap::new(),
-            conservation: ConservationEnforcer::new(),
+            conservation: MultiPhysicsConservationEnforcer::new(),
         }
     }
 
@@ -38,8 +40,8 @@ impl FieldCoupler {
     ///
     pub fn add_coupling(
         &mut self,
-        source_domain: PhysicsDomain,
-        target_domain: PhysicsDomain,
+        source_domain: SimulationPhysicsDomain,
+        target_domain: SimulationPhysicsDomain,
         source_grid: &Grid,
         target_grid: &Grid,
     ) -> KwaversResult<()> {
@@ -47,11 +49,11 @@ impl FieldCoupler {
 
         // Create interpolator for this domain pair
         let interpolator =
-            TrilinearInterpolator::new(target_grid.dx, target_grid.dy, target_grid.dz);
+            NumericsTrilinearInterpolator::new(target_grid.dx, target_grid.dy, target_grid.dz);
 
         // Conservative interpolation via AABB overlap quadrature (Farhat et al. 1998)
-        // and Schwarz alternating coupling are implemented in ConservationEnforcer below.
-        let interface = MultiPhysicsInterface::new(source_grid, target_grid)?;
+        // and Schwarz alternating coupling are implemented in MultiPhysicsConservationEnforcer below.
+        let interface = SimulationMultiPhysicsInterface::new(source_grid, target_grid)?;
 
         self.interpolators.insert(key, interpolator);
         self.interfaces.insert(key, interface);
@@ -65,8 +67,8 @@ impl FieldCoupler {
     ///
     pub fn transfer_field(
         &mut self,
-        source_domain: PhysicsDomain,
-        target_domain: PhysicsDomain,
+        source_domain: SimulationPhysicsDomain,
+        target_domain: SimulationPhysicsDomain,
         field_name: &str,
         source_solver: &dyn CoupledPhysicsSolver,
         target_solver: &mut dyn CoupledPhysicsSolver,
@@ -106,8 +108,8 @@ impl FieldCoupler {
     ///
     pub fn transfer_field_array(
         &mut self,
-        source_domain: PhysicsDomain,
-        target_domain: PhysicsDomain,
+        source_domain: SimulationPhysicsDomain,
+        target_domain: SimulationPhysicsDomain,
         field_name: &str,
         source_snapshot: ArrayView3<f64>,
         target_solver: &mut dyn CoupledPhysicsSolver,
@@ -144,7 +146,7 @@ impl FieldCoupler {
     }
 }
 
-impl Default for FieldCoupler {
+impl Default for MultiPhysicsFieldCoupler {
     fn default() -> Self {
         Self::new()
     }

@@ -6,7 +6,7 @@
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
-use crate::solver::forward::helmholtz::Preconditioner;
+use crate::solver::forward::helmholtz::HelmholtzPreconditioner;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use num_complex::Complex64;
 use rayon::prelude::*;
@@ -35,7 +35,7 @@ impl DiagonalPreconditioner {
     }
 }
 
-impl Preconditioner for DiagonalPreconditioner {
+impl HelmholtzPreconditioner for DiagonalPreconditioner {
     /// Apply diagonal preconditioner: M⁻¹x where M is diagonal
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

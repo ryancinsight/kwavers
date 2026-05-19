@@ -21,7 +21,7 @@ pub use config::ValidationParameters;
 pub use physics_benchmarks::{measure_beam_radius, GaussianBeamParameters};
 
 /// k-Wave comparison and analytical solutions
-pub use kwave_comparison::{ErrorMetrics, GaussianBeam, PlaneWave, SphericalWave};
+pub use kwave_comparison::{GaussianBeam, KwaveErrorMetrics, KwaveAnalyticalPlaneWave, SphericalWave};
 
 // Module planned but not yet implemented:
 // - StandingWaveSolution: Analytical solution for standing wave patterns

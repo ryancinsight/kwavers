@@ -12,7 +12,7 @@ use super::filters::Filters;
 use super::fourier::FourierReconstructor;
 use super::iterative::{IterativeAlgorithm, IterativeMethods};
 use super::linear_algebra::PhotoacousticLinearSolver;
-use super::time_reversal::TimeReversal;
+use super::time_reversal::PhotoacousticTimeReversal;
 use super::utils::Utils;
 
 /// Photoacoustic reconstruction algorithms
@@ -23,7 +23,7 @@ pub enum PhotoacousticAlgorithm {
     /// Filtered back-projection with Hilbert transform
     FilteredBackProjection,
     /// Time reversal reconstruction
-    TimeReversal,
+    PhotoacousticTimeReversal,
     /// Fourier domain reconstruction
     FourierDomain,
     /// Iterative reconstruction (SIRT/ART)
@@ -179,7 +179,7 @@ impl PhotoacousticReconstructor {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         // Use proper k-space time reversal implementation
-        let time_reversal = TimeReversal::new(
+        let time_reversal = PhotoacousticTimeReversal::new(
             self.config.grid_size,
             self.config.sound_speed,
             self.config.sampling_frequency,

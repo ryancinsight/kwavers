@@ -6,7 +6,7 @@ use num_complex::Complex64;
 
 use crate::core::error::KwaversResult;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
-use crate::math::linear_algebra::sparse::solver::Preconditioner;
+use crate::math::linear_algebra::sparse::solver::SparsePreconditioner;
 use crate::math::linear_algebra::sparse::{
     CompressedSparseRowMatrix, CoordinateMatrix, IterativeSolver, SolverConfig,
 };
@@ -161,7 +161,7 @@ impl BemFemCoupler {
         let config = SolverConfig {
             max_iterations: 1000,
             tolerance: 1e-6,
-            preconditioner: Preconditioner::None,
+            preconditioner: SparsePreconditioner::None,
             verbose: false,
         };
         let solver = IterativeSolver::create(config);

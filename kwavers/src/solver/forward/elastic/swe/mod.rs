@@ -133,7 +133,7 @@ pub use types::{
     VolumetricWaveConfig, WaveFrontTracker,
 };
 
-pub use boundary::{PMLBoundary, SwePmlConfig};
+pub use boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 pub use core::ElasticWaveSolver;
 pub use gpu::{AdaptiveResolution, GPUDevice, GPUElasticWaveSolver3D};
 pub use integration::TimeIntegrator;

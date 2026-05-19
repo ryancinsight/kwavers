@@ -9,7 +9,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     ///
     pub fn new(
         total_points: usize,
-        domain: Box<dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<B>>,
+        domain: Box<dyn crate::solver::inverse::pinn::ml::physics::SimulationPhysicsDomain<B>>,
         strategy: AdaptiveRefinementConfig,
     ) -> KwaversResult<Self> {
         let active_points = Self::initialize_uniform_points(total_points)?;

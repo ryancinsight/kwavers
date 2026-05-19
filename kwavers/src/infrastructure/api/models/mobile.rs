@@ -84,7 +84,7 @@ pub struct PerformanceTargets {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MobileOptimizationResponse {
     /// Recommended processing configuration
-    pub recommended_config: ProcessingConfig,
+    pub recommended_config: MobileProcessingConfig,
     /// Performance predictions
     pub performance_predictions: PerformancePredictions,
     /// Power consumption estimates
@@ -95,7 +95,7 @@ pub struct MobileOptimizationResponse {
 
 /// Processing configuration for mobile devices
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcessingConfig {
+pub struct MobileProcessingConfig {
     /// Frame rate to use (Hz)
     pub frame_rate_hz: f64,
     /// Image resolution scaling factor

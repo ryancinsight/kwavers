@@ -4,7 +4,7 @@ pub mod quantization;
 pub mod types;
 
 pub use engine::RealTimePINNInference;
-pub use quantization::Quantizer;
+pub use quantization::BurnWave2dQuantizer;
 #[cfg(feature = "simd")]
 pub use types::SIMDProcessor;
 pub use types::{ActivationType, QuantizedNetwork};

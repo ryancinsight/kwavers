@@ -109,7 +109,7 @@ pub enum HardwareResponse {
     /// Acknowledgment of command.
     Acknowledged,
     /// Status information.
-    Status(DeviceStatus),
+    Status(TransducerDeviceStatus),
     /// Telemetry data from device.
     Telemetry(DeviceTelemetry),
     /// Device error.
@@ -118,7 +118,7 @@ pub enum HardwareResponse {
 
 /// Real-time device status.
 #[derive(Debug, Clone)]
-pub struct DeviceStatus {
+pub struct TransducerDeviceStatus {
     /// Transducer state.
     pub state: TransducerState,
     /// Current operating frequency (Hz).

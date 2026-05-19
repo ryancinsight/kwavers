@@ -1,4 +1,4 @@
-//! Per-layer and per-tensor quantization operations for [`Quantizer`].
+//! Per-layer and per-tensor quantization operations for [`MlQuantizer`].
 
 use burn::tensor::{backend::Backend, Tensor};
 
@@ -6,12 +6,12 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 
 use crate::solver::inverse::pinn::ml::quantization::{
-    LayerInfo, QuantizationScheme, QuantizedData, QuantizedTensor, Quantizer,
+    LayerInfo, QuantizationScheme, QuantizedData, QuantizedTensor, MlQuantizer,
 };
 
 use super::QuantizationValidationResult;
 
-impl Quantizer {
+impl MlQuantizer {
     /// Enumerate model layer shapes and activation types.
     pub(super) fn analyze_model_layers<B: Backend>(
         &self,

@@ -1,5 +1,5 @@
 use super::kernel::CudaKernelManager;
-use super::memory::{GpuMemoryManager, MemoryPool, PinnGpuMemoryPoolType, PinnGpuMemoryStats};
+use super::memory::{GpuMemoryManager, PinnGpuAcceleratorMemoryPool, PinnGpuMemoryPoolType, PinnGpuMemoryStats};
 
 #[test]
 fn test_gpu_memory_manager_creation() {
@@ -9,7 +9,7 @@ fn test_gpu_memory_manager_creation() {
 
 #[test]
 fn test_memory_pool_allocation() {
-    let mut pool = MemoryPool::new(PinnGpuMemoryPoolType::Temporary, 1024 * 1024, 256);
+    let mut pool = PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Temporary, 1024 * 1024, 256);
 
     let block = pool.allocate(1024);
 

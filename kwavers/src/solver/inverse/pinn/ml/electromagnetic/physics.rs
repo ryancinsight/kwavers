@@ -5,7 +5,7 @@ use super::residuals::{
 };
 use super::types::{EMProblemType, ElectromagneticBoundarySpec};
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, SimulationPhysicsDomain, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
     PinnDomainPhysicsParameters,
 };
@@ -13,7 +13,7 @@ use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;
 use std::collections::HashMap;
 
-impl<B: AutodiffBackend> PhysicsDomain<B> for ElectromagneticDomain<B> {
+impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for ElectromagneticDomain<B> {
     fn domain_name(&self) -> &'static str {
         "electromagnetic"
     }

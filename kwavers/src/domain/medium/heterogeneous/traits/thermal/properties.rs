@@ -5,7 +5,7 @@
 
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
-    heterogeneous::{core::HeterogeneousMedium, interpolation::TrilinearInterpolator},
+    heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},
     thermal::{ThermalField, ThermalProperties},
 };
 use ndarray::Array3;
@@ -14,7 +14,7 @@ impl ThermalProperties for HeterogeneousMedium {
     /// Thermal conductivity at continuous coordinates (W/(m·K))
     #[inline]
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.thermal_conductivity,
             x,
             y,
@@ -27,7 +27,7 @@ impl ThermalProperties for HeterogeneousMedium {
     /// Specific heat at constant volume (J/(kg·K)) at continuous coordinates
     #[inline]
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.specific_heat,
             x,
             y,
@@ -40,7 +40,7 @@ impl ThermalProperties for HeterogeneousMedium {
     /// Thermal diffusivity at continuous coordinates (m²/s)
     #[inline]
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.thermal_diffusivity,
             x,
             y,

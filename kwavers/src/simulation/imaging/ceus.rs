@@ -11,7 +11,7 @@ use crate::domain::imaging::ultrasound::ceus::MicrobubblePopulation;
 
 // Physics imports
 use crate::physics::acoustics::imaging::modalities::ceus::{
-    CEUSReconstruction, ContrastImage, FlowKinetics, NonlinearScattering, PerfusionModel,
+    CEUSReconstruction, ContrastImage, FlowKinetics, NonlinearScattering, CeusPerfusionModel,
 };
 
 // Orchestrator
@@ -22,7 +22,7 @@ pub struct ContrastEnhancedUltrasound {
     /// Nonlinear scattering model
     scattering: NonlinearScattering,
     /// Perfusion kinetics model
-    perfusion: PerfusionModel,
+    perfusion: CeusPerfusionModel,
     /// Image reconstruction
     reconstruction: CEUSReconstruction,
     /// Computational grid
@@ -42,7 +42,7 @@ impl ContrastEnhancedUltrasound {
     ) -> KwaversResult<Self> {
         let microbubbles = MicrobubblePopulation::new(bubble_concentration, bubble_size)?;
         let scattering = NonlinearScattering::new()?;
-        let perfusion = PerfusionModel::new(grid, medium)?;
+        let perfusion = CeusPerfusionModel::new(grid, medium)?;
         let reconstruction = CEUSReconstruction::new(grid)?;
 
         Ok(Self {

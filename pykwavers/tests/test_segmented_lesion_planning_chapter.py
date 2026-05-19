@@ -9,6 +9,7 @@ import pytest
 
 
 BOOK_DIR = Path(__file__).resolve().parents[1] / "examples" / "book"
+DOCS_DIR = BOOK_DIR.parents[2] / "docs" / "book"
 sys.path.insert(0, str(BOOK_DIR))
 
 from segmented_lesion_planning.figures import write_metrics  # noqa: E402
@@ -142,3 +143,14 @@ def test_metrics_writer_exports_selected_plan_contract(tmp_path: Path, compact_p
     assert payload["segmentation_voxels"]["tumor"] > 100
     assert payload["summary"]["protected_peak_ratio"] < 0.15
     assert len(payload["candidate_metrics"]) == 9
+
+
+def test_generated_liver_metrics_record_target_dominant_focus():
+    payload = json.loads((DOCS_DIR / "figures" / "ch32" / "metrics.json").read_text(encoding="utf-8"))
+    summary = payload["summary"]
+
+    assert summary["target_dominant"] is True
+    assert summary["body_sidelobe_peak_ratio"] == 0.7395404024847666
+    assert summary["body_sidelobe_p99_ratio"] == 0.3297347520675772
+    assert summary["tumor_coverage_fraction"] == 0.7837837837837838
+    assert summary["protected_peak_ratio"] == 0.2958651403757349

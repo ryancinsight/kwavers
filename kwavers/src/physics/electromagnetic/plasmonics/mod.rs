@@ -15,7 +15,7 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
-pub use enhancement::PlasmonicEnhancement;
+pub use enhancement::PlasmonicEnhancementCalculator;
 pub use mie_theory::MieTheory;
 pub use nanoparticle_array::NanoparticleArray;
 pub use types::{CouplingModel, PlasmonicArrayGeometry};

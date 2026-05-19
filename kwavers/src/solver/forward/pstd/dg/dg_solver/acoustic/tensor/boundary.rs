@@ -122,7 +122,7 @@ fn exterior_normal_state(
     inv_density: f64,
     interior: NormalState,
 ) -> NormalState {
-    match solver.config().boundary_condition {
+    match solver.config().boundary_conditions[axis] {
         DgBoundaryCondition::Periodic => periodic_exterior_state(
             topology,
             state,

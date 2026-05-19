@@ -22,7 +22,7 @@ pub mod trainer;
 
 // Re-export main types for convenience
 pub use config::{BoundaryCondition2D, BurnLossWeights2D, BurnPINN2DConfig, BurnTrainingMetrics2D};
-pub use geometry::{BurnWave2dInterfaceCondition, Geometry2D};
+pub use geometry::{BurnWave2dGeometry, BurnWave2dInterfaceCondition};
 pub use inference::{ActivationType, QuantizedNetwork, RealTimePINNInference};
 pub use model::{BurnPINN2DWave, WaveSpeedFn};
 pub use optimizer::SimpleOptimizer2D;
@@ -38,7 +38,7 @@ mod tests {
 
     #[test]
     fn test_geometry_rectangular() {
-        let geom = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+        let geom = BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
         assert!(geom.contains(0.5, 0.5));
         assert!(!geom.contains(1.5, 0.5));
         assert!(!geom.contains(0.5, 1.5));
@@ -46,7 +46,7 @@ mod tests {
 
     #[test]
     fn test_geometry_circular() {
-        let geom = Geometry2D::circular(0.0, 0.0, 1.0);
+        let geom = BurnWave2dGeometry::circular(0.0, 0.0, 1.0);
         assert!(geom.contains(0.5, 0.5));
         assert!(!geom.contains(1.5, 0.0));
         assert!(geom.contains(0.0, 0.0));
@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn test_geometry_polygonal() {
         let vertices = vec![(0.0, 0.0), (1.0, 0.0), (0.5, 1.0)];
-        let geom = Geometry2D::polygonal(vertices, vec![]);
+        let geom = BurnWave2dGeometry::polygonal(vertices, vec![]);
 
         assert!(geom.contains(0.5, 0.3));
         assert!(!geom.contains(0.0, 0.8));
@@ -67,8 +67,13 @@ mod tests {
         let x_func: Box<dyn Fn(f64) -> f64 + Send + Sync> = Box::new(|t: f64| t.cos());
         let y_func: Box<dyn Fn(f64) -> f64 + Send + Sync> = Box::new(|t: f64| t.sin());
 
-        let geom =
-            Geometry2D::parametric_curve(x_func, y_func, 0.0, 2.0 * PI, (-1.1, 1.1, -1.1, 1.1));
+        let geom = BurnWave2dGeometry::parametric_curve(
+            x_func,
+            y_func,
+            0.0,
+            2.0 * PI,
+            (-1.1, 1.1, -1.1, 1.1),
+        );
 
         assert!(geom.contains(1.0, 0.0));
         assert!(!geom.contains(2.0, 2.0));
@@ -76,11 +81,11 @@ mod tests {
 
     #[test]
     fn test_geometry_multi_region() {
-        let rect1 = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
-        let rect2 = Geometry2D::rectangular(1.0, 2.0, 0.0, 1.0);
+        let rect1 = BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
+        let rect2 = BurnWave2dGeometry::rectangular(1.0, 2.0, 0.0, 1.0);
 
         let regions = vec![(rect1, 0), (rect2, 1)];
-        let geom = Geometry2D::multi_region(regions, vec![]);
+        let geom = BurnWave2dGeometry::multi_region(regions, vec![]);
 
         assert!(geom.contains(0.5, 0.5));
         assert!(geom.contains(1.5, 0.5));

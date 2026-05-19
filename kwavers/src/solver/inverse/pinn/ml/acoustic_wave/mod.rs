@@ -10,4 +10,4 @@ mod tests;
 pub mod types;
 
 pub use domain::AcousticWaveDomain;
-pub use types::{AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType};
+pub use types::{AcousticBoundarySpec, PinnAcousticBoundaryType, AcousticProblemType};

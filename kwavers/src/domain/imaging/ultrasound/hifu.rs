@@ -4,7 +4,7 @@
 #[derive(Debug, Clone)]
 pub struct DomainHIFUTransducer {
     /// Transducer geometry
-    pub geometry: TransducerGeometry,
+    pub geometry: HifuTransducerGeometry,
     /// Operating frequency (Hz)
     pub frequency: f64,
     /// Acoustic power (W)
@@ -27,7 +27,7 @@ impl DomainHIFUTransducer {
         aperture_radius: f64,
     ) -> Self {
         Self {
-            geometry: TransducerGeometry::SingleElement,
+            geometry: HifuTransducerGeometry::SingleElement,
             frequency,
             acoustic_power,
             focal_length,
@@ -39,7 +39,7 @@ impl DomainHIFUTransducer {
 
 /// Transducer geometry types
 #[derive(Debug, Clone, PartialEq)]
-pub enum TransducerGeometry {
+pub enum HifuTransducerGeometry {
     /// Single-element focused transducer
     SingleElement,
     /// Phased array transducer
@@ -68,7 +68,7 @@ pub struct DomainHIFUTreatmentPlan {
     /// Safety margins and constraints
     pub safety: HifuSafetyConstraints,
     /// Monitoring configuration
-    pub monitoring: MonitoringConfig,
+    pub monitoring: HifuMonitoringConfig,
 }
 
 impl DomainHIFUTreatmentPlan {
@@ -82,7 +82,7 @@ impl DomainHIFUTreatmentPlan {
             target,
             protocol,
             safety: HifuSafetyConstraints::default(),
-            monitoring: MonitoringConfig::default(),
+            monitoring: HifuMonitoringConfig::default(),
         }
     }
 
@@ -215,7 +215,7 @@ pub struct AvoidanceZone {
 
 /// Monitoring configuration
 #[derive(Debug, Clone)]
-pub struct MonitoringConfig {
+pub struct HifuMonitoringConfig {
     /// Temperature monitoring points
     pub temperature_points: Vec<[f64; 3]>,
     /// Acoustic feedback channels
@@ -224,7 +224,7 @@ pub struct MonitoringConfig {
     pub real_time_adjustment: bool,
 }
 
-impl Default for MonitoringConfig {
+impl Default for HifuMonitoringConfig {
     fn default() -> Self {
         Self {
             temperature_points: Vec::new(),

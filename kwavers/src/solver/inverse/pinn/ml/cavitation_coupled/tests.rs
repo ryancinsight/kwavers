@@ -4,7 +4,7 @@
 mod tests {
     use super::super::config::{CavitationCouplingConfig, CavitationCouplingType};
     use super::super::domain::CavitationCoupledDomain;
-    use crate::solver::inverse::pinn::ml::physics::PhysicsDomain;
+    use crate::solver::inverse::pinn::ml::physics::SimulationPhysicsDomain;
 
     type B = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
 

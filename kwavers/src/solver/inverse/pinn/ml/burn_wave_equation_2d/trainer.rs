@@ -1,5 +1,5 @@
 use super::config::{BurnPINN2DConfig, BurnTrainingMetrics2D};
-use super::geometry::Geometry2D;
+use super::geometry::BurnWave2dGeometry;
 use super::model::BurnPINN2DWave;
 use super::optimizer::SimpleOptimizer2D;
 use crate::core::error::{KwaversError, KwaversResult};
@@ -14,7 +14,7 @@ pub struct BurnPINN2DTrainer<B: AutodiffBackend> {
     /// The neural network
     pub pinn: BurnPINN2DWave<B>,
     /// The geometry definition
-    pub geometry: Geometry2D,
+    pub geometry: BurnWave2dGeometry,
     /// Simple optimizer for parameter updates
     pub optimizer: SimpleOptimizer2D,
 }
@@ -26,7 +26,7 @@ impl<B: AutodiffBackend> BurnPINN2DTrainer<B> {
     ///
     pub fn new_trainer(
         config: BurnPINN2DConfig,
-        geometry: Geometry2D,
+        geometry: BurnWave2dGeometry,
         device: &B::Device,
     ) -> KwaversResult<Self> {
         let pinn = BurnPINN2DWave::new(config.clone(), device)?;

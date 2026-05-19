@@ -12,7 +12,7 @@
 //!
 //! - Liu, Q. H. (1997). Microwave Opt. Technol. Lett., 15(3), 158-165.
 
-use super::trait_def::SpectralOperator;
+use super::trait_def::SpectralOperatorTrait;
 use super::{SpectralFilter, SpectralFilterType};
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use crate::math::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
@@ -302,7 +302,7 @@ fn validate_output_shape(
     Ok(())
 }
 
-impl SpectralOperator for PseudospectralDerivative {
+impl SpectralOperatorTrait for PseudospectralDerivative {
     fn apply_kspace(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         self.derivative_x(field)
     }

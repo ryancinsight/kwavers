@@ -8,7 +8,7 @@ use crate::domain::source::types::SourceField;
 
 /// Source configuration parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SourceParameters {
+pub struct DomainSourceParameters {
     /// Source model (geometry/distribution)
     pub model: SourceModel,
     /// Field type to inject (Pressure, Velocity, etc.)
@@ -107,7 +107,7 @@ pub enum EnvelopeType {
     Hamming,
 }
 
-impl SourceParameters {
+impl DomainSourceParameters {
     /// Validate source parameters
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -144,7 +144,7 @@ impl SourceParameters {
     }
 }
 
-impl Default for SourceParameters {
+impl Default for DomainSourceParameters {
     fn default() -> Self {
         Self {
             model: SourceModel::Point,

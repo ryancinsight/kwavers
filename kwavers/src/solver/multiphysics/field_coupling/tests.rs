@@ -1,4 +1,4 @@
-use super::{FieldCoupler, FieldCouplingStrategy};
+use super::{FieldCouplingStrategy, MultiphysicsFieldCoupler};
 use crate::core::constants::{
     fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE},
     thermodynamic::SPECIFIC_HEAT_WATER,
@@ -16,7 +16,7 @@ use ndarray::Array3;
 ///
 #[test]
 fn test_convergence_relative_not_absolute() {
-    let coupler = FieldCoupler {
+    let coupler = MultiphysicsFieldCoupler {
         strategy: FieldCouplingStrategy::Strong,
         coupling_strength: 1.0,
         max_iterations: 10,
@@ -39,7 +39,7 @@ fn test_convergence_relative_not_absolute() {
 ///
 #[test]
 fn test_convergence_identical_fields() {
-    let coupler = FieldCoupler::new(FieldCouplingStrategy::Strong);
+    let coupler = MultiphysicsFieldCoupler::new(FieldCouplingStrategy::Strong);
     let field = vec![Array3::from_elem((4, 4, 4), 42.0_f64)];
     assert!(coupler.check_convergence(&field, &field));
 }
@@ -50,7 +50,7 @@ fn test_convergence_identical_fields() {
 ///
 #[test]
 fn test_convergence_large_relative_change_not_converged() {
-    let coupler = FieldCoupler {
+    let coupler = MultiphysicsFieldCoupler {
         strategy: FieldCouplingStrategy::Strong,
         coupling_strength: 1.0,
         max_iterations: 10,
@@ -104,7 +104,7 @@ fn test_specific_heat_water_within_literature_range() {
 ///
 #[test]
 fn weak_coupling_updates_targets_from_source_fields() {
-    let coupler = FieldCoupler::new(FieldCouplingStrategy::Weak);
+    let coupler = MultiphysicsFieldCoupler::new(FieldCouplingStrategy::Weak);
     let pressure = 2.0e6_f64;
     let temperature = 37.0_f64;
     let light = 4.0_f64;
@@ -148,7 +148,7 @@ fn weak_coupling_updates_targets_from_source_fields() {
 ///
 #[test]
 fn weak_coupling_rejects_mismatched_shapes_before_mutation() {
-    let coupler = FieldCoupler::new(FieldCouplingStrategy::Weak);
+    let coupler = MultiphysicsFieldCoupler::new(FieldCouplingStrategy::Weak);
     let mut fields = vec![
         Array3::from_elem((2, 2, 2), 1.0),
         Array3::from_elem((2, 2, 2), 2.0),
@@ -161,7 +161,7 @@ fn weak_coupling_rejects_mismatched_shapes_before_mutation() {
 
     match err {
         KwaversError::DimensionMismatch(message) => {
-            assert!(message.contains("FieldCoupler edge"));
+            assert!(message.contains("MultiphysicsFieldCoupler edge"));
             assert!(message.contains("matching shapes"));
         }
         other => panic!("expected dimension mismatch, got {other:?}"),

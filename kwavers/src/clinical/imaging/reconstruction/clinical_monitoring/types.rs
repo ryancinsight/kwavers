@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 /// Monitoring configuration
 #[derive(Debug, Clone)]
-pub struct MonitoringConfig {
+pub struct ClinicalMonitoringConfig {
     /// Enable real-time quality monitoring
     pub enable_quality_monitoring: bool,
     /// Enable safety event logging
@@ -21,7 +21,7 @@ pub struct MonitoringConfig {
     pub max_mechanical_index: f64,
 }
 
-impl Default for MonitoringConfig {
+impl Default for ClinicalMonitoringConfig {
     fn default() -> Self {
         Self {
             enable_quality_monitoring: true,

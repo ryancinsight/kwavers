@@ -2,7 +2,7 @@
 //!
 //! Follows Builder pattern for complex medium instantiation
 
-use super::{LayerParameters, MediumParameters, MediumType};
+use super::{LayerParameters, DomainMediumParameters, MediumType};
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
@@ -18,12 +18,12 @@ impl MediumBuilder {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn build(config: &MediumParameters, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
+    pub fn build(config: &DomainMediumParameters, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         match config.medium_type {
             MediumType::Homogeneous => Self::build_homogeneous(
                 config.density,
                 config.sound_speed.unwrap_or(SOUND_SPEED_WATER_SIM),
-                // MediumParameters doesn't have mu_a top-level?
+                // DomainMediumParameters doesn't have mu_a top-level?
                 // Let's check config.rs (Step 130).
                 // It has: density, sound_speed, absorption, absorption_power, nonlinearity...
                 // mu_a and mu_s_prime are in properties map in builder usually?
@@ -54,7 +54,7 @@ impl MediumBuilder {
     fn build_homogeneous(
         density: f64,
         sound_speed: f64,
-        config: &MediumParameters,
+        config: &DomainMediumParameters,
         grid: &Grid,
     ) -> KwaversResult<Box<dyn Medium>> {
         // HomogeneousMedium::new(density, sound_speed, mu_a, mu_s_prime, grid)
@@ -87,7 +87,7 @@ impl MediumBuilder {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn build_heterogeneous(
-        config: &MediumParameters,
+        config: &DomainMediumParameters,
         grid: &Grid,
     ) -> KwaversResult<Box<dyn Medium>> {
         let (nx, ny, nz) = grid.dimensions();
@@ -185,7 +185,7 @@ impl MediumBuilder {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    fn build_anisotropic(config: &MediumParameters, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
+    fn build_anisotropic(config: &DomainMediumParameters, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         // Extract anisotropic configuration
         // Log configuration for future enhancement
         if let Some(directions) = config.principal_directions {
@@ -225,13 +225,13 @@ mod tests {
     #[test]
     fn heterogeneous_scalar_config_builds_input_sensitive_uniform_medium() {
         let grid = test_grid();
-        let config = MediumParameters {
+        let config = DomainMediumParameters {
             medium_type: MediumType::Heterogeneous,
             density: 1040.0,
             sound_speed: Some(1540.0),
             absorption: 0.45,
             nonlinearity: 6.0,
-            ..MediumParameters::default()
+            ..DomainMediumParameters::default()
         };
 
         let medium = MediumBuilder::build(&config, &grid).unwrap();
@@ -246,10 +246,10 @@ mod tests {
     #[test]
     fn heterogeneous_tissue_file_rejects_scalar_fallback() {
         let grid = test_grid();
-        let config = MediumParameters {
+        let config = DomainMediumParameters {
             medium_type: MediumType::Heterogeneous,
             tissue_file: Some("phantom.nii.gz".to_string()),
-            ..MediumParameters::default()
+            ..DomainMediumParameters::default()
         };
 
         let error = MediumBuilder::build(&config, &grid).unwrap_err();
@@ -261,13 +261,13 @@ mod tests {
     #[test]
     fn heterogeneous_property_maps_reject_scalar_fallback() {
         let grid = test_grid();
-        let config = MediumParameters {
+        let config = DomainMediumParameters {
             medium_type: MediumType::Heterogeneous,
             property_maps: HashMap::from([
                 ("density".to_string(), "rho.h5".to_string()),
                 ("sound_speed".to_string(), "c.h5".to_string()),
             ]),
-            ..MediumParameters::default()
+            ..DomainMediumParameters::default()
         };
 
         let error = MediumBuilder::build(&config, &grid).unwrap_err();

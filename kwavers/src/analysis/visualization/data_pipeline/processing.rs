@@ -5,14 +5,14 @@ use ndarray::Array3;
 
 /// Processing configuration
 #[derive(Debug, Clone)]
-pub struct ProcessingConfig {
+pub struct VisualizationProcessingConfig {
     pub normalize_range: (f32, f32),
     pub log_epsilon: f32,
     pub gaussian_sigma: f32,
     pub gradient_threshold: f32,
 }
 
-impl Default for ProcessingConfig {
+impl Default for VisualizationProcessingConfig {
     fn default() -> Self {
         Self {
             normalize_range: (0.0, 1.0),
@@ -26,12 +26,12 @@ impl Default for ProcessingConfig {
 /// Processing stage for data transformation
 #[derive(Debug)]
 pub struct ProcessingStage {
-    config: ProcessingConfig,
+    config: VisualizationProcessingConfig,
 }
 
 impl ProcessingStage {
     /// Create new processing stage
-    pub fn new(config: ProcessingConfig) -> Self {
+    pub fn new(config: VisualizationProcessingConfig) -> Self {
         Self { config }
     }
 

@@ -2,7 +2,7 @@
 
 /// Metadata describing an ML model's identity, I/O contract, and performance profile.
 #[derive(Debug, Clone)]
-pub struct ModelMetadata {
+pub struct MlModelMetadata {
     /// Human-readable model identifier (e.g. `"TissueClassifier"`).
     pub name: String,
     /// Semantic version string (e.g. `"1.0.0"`).

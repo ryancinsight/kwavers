@@ -52,7 +52,7 @@ pub struct HelmholtzConfig {
     pub enable_renormalization: bool,
     /// FFT-based matrix-free operations
     pub use_fft: bool,
-    /// Preconditioner type for iterative methods
+    /// HelmholtzPreconditioner type for iterative methods
     pub preconditioner: HelmholtzPreconditionerType,
 }
 
@@ -68,7 +68,7 @@ impl Default for HelmholtzConfig {
     }
 }
 
-/// Preconditioner options for iterative Helmholtz solvers
+/// HelmholtzPreconditioner options for iterative Helmholtz solvers
 #[derive(Debug, Clone, Copy)]
 pub enum HelmholtzPreconditionerType {
     /// No preconditioning
@@ -81,8 +81,8 @@ pub enum HelmholtzPreconditionerType {
     Multigrid,
 }
 
-/// Preconditioner trait for Helmholtz solvers
-pub trait Preconditioner {
+/// HelmholtzPreconditioner trait for Helmholtz solvers
+pub trait HelmholtzPreconditioner {
     /// Apply preconditioner to a field
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

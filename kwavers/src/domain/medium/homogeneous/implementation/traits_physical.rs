@@ -5,7 +5,7 @@ use crate::domain::medium::{
     acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},
     elastic::{ElasticArrayAccess, ElasticProperties},
-    optical::OpticalProperties,
+    optical::MediumOpticalProperties,
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
@@ -99,7 +99,7 @@ impl ThermalField for HomogeneousMedium {
     }
 }
 
-impl OpticalProperties for HomogeneousMedium {
+impl MediumOpticalProperties for HomogeneousMedium {
     fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.optical_absorption
     }

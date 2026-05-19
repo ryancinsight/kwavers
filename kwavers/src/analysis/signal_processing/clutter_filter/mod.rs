@@ -200,4 +200,4 @@ pub use adaptive_filter::{
 };
 pub use iir_filter::{IirFilter, IirFilterConfig};
 pub use polynomial_filter::{PolynomialFilter, PolynomialFilterConfig};
-pub use svd_filter::{SvdClutterFilter, SvdClutterFilterConfig};
+pub use svd_filter::{SignalSvdClutterFilter, SvdClutterFilterConfig};

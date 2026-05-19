@@ -4,4 +4,4 @@ mod gpu_oom;
 
 pub use cfl::CflViolationRecovery;
 pub use convergence::ConvergenceFailureRecovery;
-pub use gpu_oom::GpuOomRecovery;
+pub use gpu_oom::ErrorRecoveryGpuOom;

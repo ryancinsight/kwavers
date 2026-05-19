@@ -16,7 +16,7 @@ fn latency_stats_calculation() {
 
 #[test]
 fn recovery_stats_success_rate() {
-    let mut stats = RecoveryStats::default();
+    let mut stats = CoreRecoveryStats::default();
     stats.record_trial(true, Duration::from_millis(10), true);
     stats.record_trial(true, Duration::from_millis(15), true);
     stats.record_trial(false, Duration::from_millis(20), true);
@@ -82,7 +82,7 @@ fn fairness_index_calculation() {
 
 #[test]
 fn confidence_interval_calculation() {
-    let mut stats = RecoveryStats::default();
+    let mut stats = CoreRecoveryStats::default();
 
     for _ in 0..950 {
         stats.record_trial(true, Duration::from_millis(10), true);
@@ -103,14 +103,14 @@ fn confidence_interval_calculation() {
 
 #[test]
 fn wilson_interval_properties() {
-    let mut all_success = RecoveryStats::default();
+    let mut all_success = CoreRecoveryStats::default();
     for _ in 0..100 {
         all_success.record_trial(true, Duration::from_millis(10), true);
     }
     let (lo, _hi) = all_success.confidence_interval();
     assert!(lo > 0.95);
 
-    let mut all_failure = RecoveryStats::default();
+    let mut all_failure = CoreRecoveryStats::default();
     for _ in 0..100 {
         all_failure.record_trial(false, Duration::from_millis(10), true);
     }
@@ -123,13 +123,13 @@ fn wilson_interval_properties() {
 fn stats_merge() {
     use crate::core::fault_injection::scenario::{FaultInjectionScenario, InjectionTiming};
 
-    let mut stats1 = RecoveryStats::new(FaultInjectionScenario::GpuOomSudden {
+    let mut stats1 = CoreRecoveryStats::new(FaultInjectionScenario::GpuOomSudden {
         allocation_size_bytes: 1024,
         timing: InjectionTiming::Immediate,
     });
     stats1.record_trial(true, Duration::from_millis(10), true);
 
-    let mut stats2 = RecoveryStats::default();
+    let mut stats2 = CoreRecoveryStats::default();
     stats2.record_trial(false, Duration::from_millis(20), true);
 
     stats1.merge(&stats2);

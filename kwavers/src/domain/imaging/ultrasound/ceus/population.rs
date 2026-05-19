@@ -1,6 +1,6 @@
 //! `MicrobubblePopulation` — bubble population with size distribution and scattering.
 
-use super::microbubble::{Microbubble, SizeDistribution};
+use super::microbubble::{Microbubble, CeusSizeDistribution};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Population of microbubbles with size distribution
@@ -9,7 +9,7 @@ pub struct MicrobubblePopulation {
     /// Reference microbubble (mean properties)
     pub reference_bubble: Microbubble,
     /// Size distribution parameters (log-normal)
-    pub size_distribution: SizeDistribution,
+    pub size_distribution: CeusSizeDistribution,
     /// Initial concentration (bubbles/m³)
     pub concentration: f64,
 }
@@ -23,7 +23,7 @@ impl MicrobubblePopulation {
         let reference_bubble = Microbubble::new(mean_diameter / 2.0, 1.5, 0.8);
 
         // Typical log-normal distribution for contrast agents
-        let size_distribution = SizeDistribution {
+        let size_distribution = CeusSizeDistribution {
             mean_radius: reference_bubble.radius_eq,
             std_dev: reference_bubble.radius_eq * 0.3, // 30% coefficient of variation
         };

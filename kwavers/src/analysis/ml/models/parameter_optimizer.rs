@@ -1,6 +1,6 @@
 //! Parameter optimization model
 
-use super::{MLModel, ModelMetadata};
+use super::{MLModel, MlModelMetadata};
 use crate::analysis::ml::inference::InferenceEngine;
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
@@ -9,7 +9,7 @@ use ndarray::{Array1, Array2};
 #[derive(Debug)]
 pub struct ParameterOptimizerModel {
     engine: InferenceEngine,
-    metadata: ModelMetadata,
+    metadata: MlModelMetadata,
 }
 
 impl ParameterOptimizerModel {
@@ -28,7 +28,7 @@ impl ParameterOptimizerModel {
         let (input_dim, output_dim) = weights.dim();
         Self {
             engine: InferenceEngine::from_weights(weights, bias, 32, false),
-            metadata: ModelMetadata {
+            metadata: MlModelMetadata {
                 name: "ParameterOptimizer".to_owned(),
                 version: "1.0.0".to_owned(),
                 input_shape: vec![input_dim],
@@ -44,7 +44,7 @@ impl ParameterOptimizerModel {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn metadata(&self) -> &ModelMetadata {
+    pub fn metadata(&self) -> &MlModelMetadata {
         &self.metadata
     }
 
@@ -69,7 +69,7 @@ impl ParameterOptimizerModel {
 
         Self {
             engine: InferenceEngine::from_weights(weights, None, 32, false),
-            metadata: ModelMetadata {
+            metadata: MlModelMetadata {
                 name: "ParameterOptimizer".to_owned(),
                 version: "1.0.0".to_owned(),
                 input_shape: vec![input_dim],

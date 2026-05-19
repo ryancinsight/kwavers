@@ -1,8 +1,8 @@
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::{MemoryBlock, MemoryPool, PinnGpuMemoryPoolType};
+use super::{MemoryBlock, PinnGpuAcceleratorMemoryPool, PinnGpuMemoryPoolType};
 
-impl MemoryPool {
+impl PinnGpuAcceleratorMemoryPool {
     /// New.
     pub(crate) fn new(
         pool_type: PinnGpuMemoryPoolType,

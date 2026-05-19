@@ -5,8 +5,8 @@ pub mod decompose;
 pub mod monitor;
 
 use super::types::{
-    CommunicationChannel, FaultTolerance, GpuDeviceInfo, LoadBalancingAlgorithm,
-    MultiGpuDecompositionStrategy, MultiGpuPerformanceMonitor, WorkUnit,
+    FaultTolerance, PinnMultiGpuDeviceInfo, LoadBalancingAlgorithm, MultiGpuDecompositionStrategy,
+    MultiGpuPerformanceMonitor, PinnMultiGpuCommunicationChannel, WorkUnit,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::{HashMap, VecDeque};
@@ -15,7 +15,7 @@ use std::collections::{HashMap, VecDeque};
 #[derive(Debug)]
 pub struct MultiGpuManager {
     /// Available GPU devices.
-    pub(super) devices: Vec<GpuDeviceInfo>,
+    pub(super) devices: Vec<PinnMultiGpuDeviceInfo>,
     /// Decomposition strategy.
     pub(super) decomposition: MultiGpuDecompositionStrategy,
     /// Load balancing algorithm.
@@ -25,7 +25,7 @@ pub struct MultiGpuManager {
     /// Active work assignments.
     pub(super) active_work: HashMap<usize, WorkUnit>,
     /// Communication channels between GPUs.
-    pub(super) _communication_channels: HashMap<(usize, usize), CommunicationChannel>,
+    pub(super) _communication_channels: HashMap<(usize, usize), PinnMultiGpuCommunicationChannel>,
     /// Performance monitoring.
     pub(super) performance_monitor: MultiGpuPerformanceMonitor,
     /// Fault tolerance state.
@@ -79,8 +79,8 @@ impl MultiGpuManager {
     }
 
     #[cfg(feature = "gpu")]
-    async fn discover_gpu_devices() -> KwaversResult<Vec<GpuDeviceInfo>> {
-        use super::types::GpuCapabilities;
+    async fn discover_gpu_devices() -> KwaversResult<Vec<PinnMultiGpuDeviceInfo>> {
+        use super::types::PinnGpuCapabilities;
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -104,7 +104,7 @@ impl MultiGpuManager {
                 continue;
             }
 
-            let capabilities = GpuCapabilities {
+            let capabilities = PinnGpuCapabilities {
                 max_buffer_size: limits.max_buffer_size,
                 max_workgroup_size: [
                     limits.max_compute_workgroup_size_x,
@@ -116,7 +116,7 @@ impl MultiGpuManager {
                 supports_atomics: true,
             };
 
-            devices.push(GpuDeviceInfo {
+            devices.push(PinnMultiGpuDeviceInfo {
                 id: device_id,
                 name: info.name.clone(),
                 backend: format!("{:?}", info.backend),
@@ -133,8 +133,8 @@ impl MultiGpuManager {
     }
 
     #[cfg(not(feature = "gpu"))]
-    async fn discover_gpu_devices() -> KwaversResult<Vec<GpuDeviceInfo>> {
-        let devices = vec![GpuDeviceInfo {
+    async fn discover_gpu_devices() -> KwaversResult<Vec<PinnMultiGpuDeviceInfo>> {
+        let devices = vec![PinnMultiGpuDeviceInfo {
             id: 0,
             name: "CPU Backend".to_string(),
             backend: "CPU".to_string(),
@@ -146,13 +146,13 @@ impl MultiGpuManager {
     }
 
     pub(super) fn initialize_communication_channels(
-        devices: &[GpuDeviceInfo],
-    ) -> HashMap<(usize, usize), CommunicationChannel> {
+        devices: &[PinnMultiGpuDeviceInfo],
+    ) -> HashMap<(usize, usize), PinnMultiGpuCommunicationChannel> {
         let mut channels = HashMap::new();
 
         for i in 0..devices.len() {
             for j in (i + 1)..devices.len() {
-                let channel = CommunicationChannel {
+                let channel = PinnMultiGpuCommunicationChannel {
                     bandwidth: 50.0,
                     latency: 5.0,
                     active_transfers: 0,
@@ -167,7 +167,7 @@ impl MultiGpuManager {
     }
 
     /// Get device information.
-    pub fn get_devices(&self) -> &[GpuDeviceInfo] {
+    pub fn get_devices(&self) -> &[PinnMultiGpuDeviceInfo] {
         &self.devices
     }
 

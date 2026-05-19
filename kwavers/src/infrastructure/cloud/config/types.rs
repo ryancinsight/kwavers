@@ -22,7 +22,7 @@ pub struct DeploymentConfig {
     /// Auto-scaling configuration
     pub auto_scaling: AutoScalingConfig,
     /// Monitoring configuration
-    pub monitoring: MonitoringConfig,
+    pub monitoring: CloudMonitoringConfig,
 }
 
 impl DeploymentConfig {
@@ -174,7 +174,7 @@ impl Default for AutoScalingConfig {
 
 /// Monitoring configuration for cloud deployments
 #[derive(Debug, Clone)]
-pub struct MonitoringConfig {
+pub struct CloudMonitoringConfig {
     /// Enable detailed metrics collection
     pub enable_detailed_metrics: bool,
     /// Metrics collection interval in seconds
@@ -183,7 +183,7 @@ pub struct MonitoringConfig {
     pub alert_thresholds: AlertThresholds,
 }
 
-impl MonitoringConfig {
+impl CloudMonitoringConfig {
     /// Validate monitoring configuration
     /// # Errors
     /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
@@ -205,7 +205,7 @@ impl MonitoringConfig {
     }
 }
 
-impl Default for MonitoringConfig {
+impl Default for CloudMonitoringConfig {
     fn default() -> Self {
         Self {
             enable_detailed_metrics: true,

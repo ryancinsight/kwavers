@@ -1,7 +1,7 @@
 use crate::core::error::context::{ErrorContext, ErrorLocation};
 
 use super::{
-    CflViolationRecovery, ConvergenceFailureRecovery, GpuOomRecovery, RecoveryAction,
+    CflViolationRecovery, ConvergenceFailureRecovery, ErrorRecoveryGpuOom, RecoveryAction,
     RecoveryAttempt, RecoveryBuilder, RecoveryStatistics, RecoveryStrategy,
 };
 use crate::core::error::{KwaversError, NumericalError};
@@ -12,7 +12,7 @@ fn create_test_context() -> ErrorContext {
 
 #[test]
 fn gpu_oom_strategy_detects_oom_errors() {
-    let strategy = GpuOomRecovery::new();
+    let strategy = ErrorRecoveryGpuOom::new();
 
     let oom_error = KwaversError::ResourceLimitExceeded {
         message: "GPU out of memory".to_string(),
@@ -72,13 +72,13 @@ fn recovery_statistics_calculates_rates() {
         total_attempts: 10,
         successful_attempts: 9,
         overall_success_rate: 0.9,
-        by_strategy: [("GpuOomRecovery".to_string(), (5, 5))]
+        by_strategy: [("ErrorRecoveryGpuOom".to_string(), (5, 5))]
             .into_iter()
             .collect(),
     };
 
     assert!(stats.meets_threshold());
-    assert_eq!(stats.strategy_success_rate("GpuOomRecovery"), Some(1.0));
+    assert_eq!(stats.strategy_success_rate("ErrorRecoveryGpuOom"), Some(1.0));
     assert_eq!(stats.strategy_success_rate("NonExistent"), None);
 }
 

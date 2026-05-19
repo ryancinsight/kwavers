@@ -105,7 +105,7 @@ pub mod traits {
 
 /// Conservation validation
 pub use acoustics::{
-    validate_conservation, AcousticStateRefs, ConservationMetrics, ConservationParams,
+    validate_conservation, AcousticConservationMetrics, AcousticStateRefs, ConservationParams,
     PreviousFields, VelocityFieldRefs,
 };
 
@@ -184,7 +184,7 @@ pub use crate::domain::medium::properties::{fluids, implants, tissue, AcousticMa
 /// Optics is now a top-level physics module. This provides re-exports for legacy code.
 pub mod optics_compat {
     /// Core optical properties
-    pub use crate::physics::optics::OpticalProperties;
+    pub use crate::physics::optics::DiffusionOpticalProperties;
 
     /// Sonoluminescence detection
     pub mod sonoluminescence {
@@ -196,6 +196,6 @@ pub mod optics_compat {
     /// Optical diffusion
     #[cfg(feature = "advanced-visualization")]
     pub mod diffusion {
-        pub use crate::physics::optics::diffusion::OpticalProperties;
+        pub use crate::physics::optics::diffusion::DiffusionOpticalProperties;
     }
 }

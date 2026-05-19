@@ -1,6 +1,6 @@
 use super::linear::LinearInterpolator;
 use super::traits::Interpolator;
-use super::trilinear::TrilinearInterpolator;
+use super::trilinear::NumericsTrilinearInterpolator;
 use approx::assert_abs_diff_eq;
 use ndarray::{Array1, Array3};
 
@@ -31,7 +31,7 @@ fn test_linear_interpolator_exact_at_grid_points() {
 #[test]
 fn test_trilinear_constant_field() {
     let dx = 0.1;
-    let interp = TrilinearInterpolator::new(dx, dx, dx);
+    let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
     let data = Array3::from_elem((5, 5, 5), 10.0);
     let result = interp
@@ -44,7 +44,7 @@ fn test_trilinear_constant_field() {
 #[test]
 fn test_trilinear_linear_function() {
     let dx = 1.0;
-    let interp = TrilinearInterpolator::new(dx, dx, dx);
+    let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
     let mut data = Array3::zeros((4, 4, 4));
     for i in 0..4 {
@@ -67,7 +67,7 @@ fn test_trilinear_linear_function() {
 #[test]
 fn test_trilinear_at_corner() {
     let dx = 0.1;
-    let interp = TrilinearInterpolator::new(dx, dx, dx);
+    let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
     let mut data = Array3::zeros((3, 3, 3));
     data[[1, 1, 1]] = 5.0;
@@ -82,7 +82,7 @@ fn test_trilinear_at_corner() {
 #[test]
 fn test_interpolation_out_of_bounds() {
     let dx = 0.1;
-    let interp = TrilinearInterpolator::new(dx, dx, dx);
+    let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
     let data = Array3::zeros((5, 5, 5));
     let result = interp.interpolate_point(data.view(), 1.0, 0.0, 0.0);
@@ -93,7 +93,7 @@ fn test_interpolation_out_of_bounds() {
 #[test]
 fn test_trilinear_3d_batch() {
     let dx = 1.0;
-    let interp = TrilinearInterpolator::new(dx, dx, dx);
+    let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
     let data =
         Array3::from_shape_vec((2, 2, 2), vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]).unwrap();

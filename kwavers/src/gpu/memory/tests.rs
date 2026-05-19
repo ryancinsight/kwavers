@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn test_memory_pool_allocation() {
-    let mut pool = MemoryPool::new(GpuMemoryPoolType::Temporary);
+    let mut pool = GpuMemoryPool::new(GpuMemoryPoolType::Temporary);
     let handle = pool.allocate(0, 1024).unwrap();
 
     assert_eq!(handle.block.size, 1024);

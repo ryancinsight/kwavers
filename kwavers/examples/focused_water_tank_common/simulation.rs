@@ -155,7 +155,11 @@ fn run_dg_tensor_field(name: &'static str, nz: usize) -> Result<SolverField> {
     let config = DGConfig {
         polynomial_order: DG_TENSOR_POLYNOMIAL_ORDER,
         sound_speed: physics::C0,
-        boundary_condition: DgBoundaryCondition::AbsorbingCharacteristic,
+        boundary_conditions: [
+            DgBoundaryCondition::AbsorbingCharacteristic,
+            DgBoundaryCondition::AbsorbingCharacteristic,
+            DgBoundaryCondition::Periodic,
+        ],
         ..DGConfig::default()
     };
     let solver = DGSolver::new(config, Arc::clone(&grid))?;

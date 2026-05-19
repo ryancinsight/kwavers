@@ -1,4 +1,4 @@
-//! `PerfusionModel` — advection-diffusion-reaction transport for CEUS agents.
+//! `CeusPerfusionModel` — advection-diffusion-reaction transport for CEUS agents.
 
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -9,7 +9,7 @@ use super::kinetics::FlowKinetics;
 
 /// Perfusion model for contrast agent kinetics
 #[derive(Debug)]
-pub struct PerfusionModel {
+pub struct CeusPerfusionModel {
     /// Concentration field (bubbles/m³)
     concentration: Array3<f64>,
     /// Blood flow velocity field (m/s)
@@ -22,7 +22,7 @@ pub struct PerfusionModel {
     dz: f64,
 }
 
-impl PerfusionModel {
+impl CeusPerfusionModel {
     /// Create new perfusion model
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

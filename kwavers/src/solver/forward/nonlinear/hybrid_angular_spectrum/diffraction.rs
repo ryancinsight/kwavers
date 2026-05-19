@@ -10,7 +10,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Diffraction operator using FFT-based angular spectrum
-pub struct DiffractionOperator {
+pub struct HybridAsDiffractionOperator {
     nx: usize,
     ny: usize,
     dx: f64,
@@ -18,9 +18,9 @@ pub struct DiffractionOperator {
     k: f64,
 }
 
-impl std::fmt::Debug for DiffractionOperator {
+impl std::fmt::Debug for HybridAsDiffractionOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DiffractionOperator")
+        f.debug_struct("HybridAsDiffractionOperator")
             .field("nx", &self.nx)
             .field("ny", &self.ny)
             .field("dx", &self.dx)
@@ -30,7 +30,7 @@ impl std::fmt::Debug for DiffractionOperator {
     }
 }
 
-impl DiffractionOperator {
+impl HybridAsDiffractionOperator {
     /// Create new diffraction operator
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

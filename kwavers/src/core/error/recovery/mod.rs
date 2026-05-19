@@ -12,5 +12,5 @@ mod tests;
 pub use action::RecoveryAction;
 pub use attempt::RecoveryAttempt;
 pub use manager::{RecoveryBuilder, RecoveryManager, RecoveryStatistics};
-pub use strategies::{CflViolationRecovery, ConvergenceFailureRecovery, GpuOomRecovery};
+pub use strategies::{CflViolationRecovery, ConvergenceFailureRecovery, ErrorRecoveryGpuOom};
 pub use strategy::{RecoveryResult, RecoveryStrategy};

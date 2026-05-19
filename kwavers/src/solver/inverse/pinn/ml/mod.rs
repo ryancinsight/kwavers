@@ -117,12 +117,14 @@ pub use burn_wave_equation_1d::{
 pub mod trainer;
 
 #[cfg(all(feature = "pinn", feature = "api"))]
-pub use trainer::{BurnPinnTrainingConfig, Geometry, PINNConfig, PINNTrainer, PhysicsParams};
+pub use trainer::{
+    BurnPinnTrainingConfig, PINNConfig, PINNTrainer, PhysicsParams, PinnTrainerGeometry,
+};
 
 #[cfg(feature = "pinn")]
 pub use burn_wave_equation_2d::{
     BoundaryCondition2D, BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave,
-    BurnTrainingMetrics2D, BurnWave2dInterfaceCondition, Geometry2D,
+    BurnTrainingMetrics2D, BurnWave2dGeometry, BurnWave2dInterfaceCondition,
 };
 
 #[cfg(feature = "pinn")]
@@ -191,9 +193,9 @@ pub mod adaptive_sampling;
 
 #[cfg(feature = "pinn")]
 pub use multi_gpu_manager::{
-    CommunicationChannel, DataTransfer, FaultTolerance, GpuDeviceInfo, LoadBalancingAlgorithm,
+    DataTransfer, FaultTolerance, GpuDeviceInfo, LoadBalancingAlgorithm,
     MultiGpuDecompositionStrategy, MultiGpuManager, MultiGpuPerformanceMonitor, PerformanceSummary,
-    PinnMultiGpuTransferStatus, WorkUnit,
+    PinnMultiGpuCommunicationChannel, PinnMultiGpuTransferStatus, WorkUnit,
 };
 
 #[cfg(all(feature = "pinn", feature = "api"))]
@@ -209,8 +211,8 @@ pub use jit_compiler::{
 
 #[cfg(feature = "pinn")]
 pub use quantization::{
-    ModelMetadata, QuantizationParams, QuantizationScheme, QuantizedModel, QuantizedTensor,
-    Quantizer,
+    QuantizationModelMetadata, QuantizationParams, QuantizationScheme, QuantizedModel, QuantizedTensor,
+    MlQuantizer,
 };
 
 #[cfg(feature = "pinn")]
@@ -236,7 +238,7 @@ pub use transfer_learning::{
 // Sprint 156: Advanced Physics Domains
 #[cfg(feature = "pinn")]
 pub use adapters::source::{
-    adapt_sources, AdapterError, FocalProperties, PinnAcousticSource, PinnSourceClass,
+    adapt_sources, AdapterError, PinnAcousticSource, PinnSourceClass, PinnSourceFocalProperties,
 };
 
 #[cfg(feature = "pinn")]
@@ -244,7 +246,7 @@ pub use adapters::electromagnetic::{adapt_em_sources, EMAdapterError, PinnEMSour
 
 #[cfg(feature = "pinn")]
 pub use acoustic_wave::{
-    AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType, AcousticWaveDomain,
+    AcousticBoundarySpec, PinnAcousticBoundaryType, AcousticProblemType, AcousticWaveDomain,
 };
 
 #[cfg(feature = "pinn")]
@@ -261,9 +263,9 @@ pub use electromagnetic_gpu::{EMConfig, EMFieldData, ElectromagneticBc, GPUEMSol
 
 #[cfg(feature = "pinn")]
 pub use universal_solver::{
-    ConvergenceInfo, DomainInfo, EarlyStoppingConfig, GeometricFeature, PhysicsSolution,
-    UniversalPINNSolver, UniversalSolverLrSchedule, UniversalSolverMemoryStats,
-    UniversalSolverStats, UniversalTrainingConfig,
+    EarlyStoppingConfig, GeometricFeature, PhysicsSolution, UniversalPINNSolver,
+    UniversalSolverConvergenceInfo, UniversalSolverDomainInfo, UniversalSolverLrSchedule,
+    UniversalSolverMemoryStats, UniversalSolverStats, UniversalTrainingConfig,
 };
 
 #[cfg(feature = "pinn")]
@@ -280,8 +282,8 @@ pub mod uncertainty_quantification;
 
 #[cfg(feature = "pinn")]
 pub use uncertainty_quantification::{
-    ConformalPredictor, PinnBayesianPINN, PinnUncertaintyConfig, PinnUncertaintyMethod,
-    PredictionWithUncertainty, UncertaintyStats,
+    PinnBayesianPINN, PinnConformalPredictor, PinnUncertaintyConfig, PinnUncertaintyMethod,
+    PinnPredictionWithUncertainty, UncertaintyStats,
 };
 
 // #[cfg(feature = "pinn")]

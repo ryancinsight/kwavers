@@ -12,9 +12,9 @@
 //! ## Basic Prediction
 //!
 //! ```rust,ignore
-//! use kwavers::solver::inverse::pinn::elastic_2d::{ElasticPINN2D, Predictor};
+//! use kwavers::solver::inverse::pinn::elastic_2d::{ElasticPINN2D, ElasticPinnPredictor};
 //!
-//! let predictor = Predictor::new(trained_model);
+//! let predictor = ElasticPinnPredictor::new(trained_model);
 //!
 //! // Single point prediction
 //! let displacement = predictor.predict_point(0.5, 0.5, 0.1)?;
@@ -60,12 +60,12 @@ use super::model::ElasticPINN2D;
 #[cfg(all(test, feature = "pinn"))]
 mod tests;
 
-/// Predictor for trained PINN model
+/// ElasticPinnPredictor for trained PINN model
 ///
 /// Provides high-level interface for model inference and evaluation.
 #[cfg(feature = "pinn")]
 #[derive(Debug)]
-pub struct Predictor<B: Backend> {
+pub struct ElasticPinnPredictor<B: Backend> {
     /// Trained PINN model
     model: ElasticPINN2D<B>,
     /// Device for computation
@@ -73,7 +73,7 @@ pub struct Predictor<B: Backend> {
 }
 
 #[cfg(feature = "pinn")]
-impl<B: Backend> Predictor<B> {
+impl<B: Backend> ElasticPinnPredictor<B> {
     /// Create a new predictor from a trained model
     ///
     /// # Arguments
@@ -286,12 +286,12 @@ impl<B: Backend> Predictor<B> {
 /// Non-Burn fallback
 #[cfg(not(feature = "pinn"))]
 #[derive(Debug)]
-pub struct Predictor {
+pub struct ElasticPinnPredictor {
     _phantom: std::marker::PhantomData<()>,
 }
 
 #[cfg(not(feature = "pinn"))]
-impl Predictor {
+impl ElasticPinnPredictor {
     /// New.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -308,7 +308,7 @@ impl Predictor {
     ///
     pub fn predict_point(&self, _x: f64, _y: f64, _t: f64) -> KwaversResult<[f64; 2]> {
         Err(KwaversError::InvalidInput(
-            "Predictor requires 'burn' feature to be enabled".to_owned(),
+            "ElasticPinnPredictor requires 'burn' feature to be enabled".to_owned(),
         ))
     }
     /// Predict batch.
@@ -317,7 +317,7 @@ impl Predictor {
     ///
     pub fn predict_batch(&self, _points: &[(f64, f64, f64)]) -> KwaversResult<Array2<f64>> {
         Err(KwaversError::InvalidInput(
-            "Predictor requires 'burn' feature to be enabled".to_owned(),
+            "ElasticPinnPredictor requires 'burn' feature to be enabled".to_owned(),
         ))
     }
     /// Evaluate field.
@@ -331,7 +331,7 @@ impl Predictor {
         _t: f64,
     ) -> KwaversResult<Array3<f64>> {
         Err(KwaversError::InvalidInput(
-            "Predictor requires 'burn' feature to be enabled".to_owned(),
+            "ElasticPinnPredictor requires 'burn' feature to be enabled".to_owned(),
         ))
     }
 }

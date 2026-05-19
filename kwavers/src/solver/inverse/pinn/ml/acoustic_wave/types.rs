@@ -18,14 +18,14 @@ pub struct AcousticBoundarySpec {
     /// Boundary position
     pub position: BoundaryPosition,
     /// Boundary condition type
-    pub condition_type: AcousticBoundaryType,
+    pub condition_type: PinnAcousticBoundaryType,
     /// Boundary parameters
     pub parameters: HashMap<String, f64>,
 }
 
 /// Acoustic boundary condition types
 #[derive(Debug, Clone)]
-pub enum AcousticBoundaryType {
+pub enum PinnAcousticBoundaryType {
     /// Sound-soft (pressure = 0)
     SoundSoft,
     /// Sound-hard (normal velocity = 0)

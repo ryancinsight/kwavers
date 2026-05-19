@@ -94,7 +94,7 @@
 //!
 //! ```rust,ignore
 //! use kwavers::analysis::signal_processing::beamforming::adaptive::{
-//!     MinimumVariance, AdaptiveBeamformer
+//!     MinimumVariance, AdaptiveTimeDomainBeamformer
 //! };
 //! use ndarray::{Array1, Array2};
 //! use num_complex::Complex64;
@@ -213,13 +213,13 @@ pub use subspace::EigenspaceMV;
 ///
 /// ```rust,ignore
 /// use kwavers::analysis::signal_processing::beamforming::adaptive::{
-///     AdaptiveBeamformer, MinimumVariance
+///     AdaptiveTimeDomainBeamformer, MinimumVariance
 /// };
 ///
 /// let mvdr = MinimumVariance::default();
 /// let weights = mvdr.compute_weights(&covariance, &steering)?;
 /// ```
-pub trait AdaptiveBeamformer {
+pub trait AdaptiveTimeDomainBeamformer {
     /// Compute beamforming weights for given covariance matrix and steering vector.
     ///
     /// # Parameters
@@ -258,7 +258,7 @@ pub trait AdaptiveBeamformer {
 }
 
 // Implement trait for MinimumVariance
-impl AdaptiveBeamformer for MinimumVariance {
+impl AdaptiveTimeDomainBeamformer for MinimumVariance {
     fn compute_weights(
         &self,
         covariance: &Array2<Complex64>,
@@ -270,7 +270,7 @@ impl AdaptiveBeamformer for MinimumVariance {
 }
 
 // Implement trait for EigenspaceMV
-impl AdaptiveBeamformer for EigenspaceMV {
+impl AdaptiveTimeDomainBeamformer for EigenspaceMV {
     fn compute_weights(
         &self,
         covariance: &Array2<Complex64>,
@@ -293,7 +293,7 @@ mod tests {
         let cov = test_utilities::create_diagonal_dominant_covariance(n, 0.05);
         let steering = test_utilities::create_steering_vector(n, 0.0);
 
-        let beamformer: Box<dyn AdaptiveBeamformer> = Box::new(MinimumVariance::default());
+        let beamformer: Box<dyn AdaptiveTimeDomainBeamformer> = Box::new(MinimumVariance::default());
         let weights = beamformer
             .compute_weights(&cov, &steering)
             .expect("trait method should work");
@@ -346,7 +346,7 @@ mod tests {
         let steering = test_utilities::create_steering_vector(n, 0.0);
 
         // Test ESMV via trait
-        let beamformer: Box<dyn AdaptiveBeamformer> =
+        let beamformer: Box<dyn AdaptiveTimeDomainBeamformer> =
             Box::new(EigenspaceMV::with_diagonal_loading(2, 1e-4));
         let weights = beamformer
             .compute_weights(&cov, &steering)

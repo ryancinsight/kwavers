@@ -1,7 +1,7 @@
 //! Tests for multi-GPU context management.
 
 use super::context::MultiGpuContext;
-use super::types::{CommunicationChannel, GpuAffinity, GpuTransferStatus, PendingTransfer};
+use super::types::{GpuAffinity, GpuCommunicationChannel, GpuTransferStatus, PendingTransfer};
 
 #[tokio::test]
 async fn test_multi_gpu_context_creation() {
@@ -37,7 +37,7 @@ fn test_gpu_affinity() {
 
 #[test]
 fn test_communication_channel() {
-    let mut channel = CommunicationChannel {
+    let mut channel = GpuCommunicationChannel {
         bandwidth: 50.0,
         latency: 5.0,
         supports_p2p: true,

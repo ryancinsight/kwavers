@@ -7,7 +7,7 @@ use apollo::{self, Complex64, Normalization};
 use ndarray::{Array2, Array3};
 
 /// Abstract factory for creating solver instances
-pub trait SolverFactory {
+pub trait SolverFactoryTrait {
     /// Error type for factory operations
     type Error;
 
@@ -19,9 +19,9 @@ pub trait SolverFactory {
         &self,
         solver_type: SolverType,
         config: &SolverConfiguration,
-        grid_params: &dyn GridParameters,
-        medium_params: &dyn MediumParameters,
-        source_params: &dyn SourceParameters,
+        grid_params: &dyn FactoryGridParameters,
+        medium_params: &dyn FactoryMediumParameters,
+        source_params: &dyn FactorySourceParameters,
     ) -> Result<Box<dyn Solver>, Self::Error>;
 
     /// Select best solver type based on problem characteristics
@@ -31,13 +31,13 @@ pub trait SolverFactory {
     /// select(G, M) = argmin_{T} [Cost(T, G, M) | Accuracy(T) ≥ A_min]
     fn select_best_solver(
         &self,
-        grid_params: &dyn GridParameters,
-        medium_params: &dyn MediumParameters,
+        grid_params: &dyn FactoryGridParameters,
+        medium_params: &dyn FactoryMediumParameters,
     ) -> SolverType;
 }
 
 /// Abstract parameters for grid creation
-pub trait GridParameters {
+pub trait FactoryGridParameters {
     fn nx(&self) -> usize;
     fn ny(&self) -> usize;
     fn nz(&self) -> usize;
@@ -57,7 +57,7 @@ pub trait GridParameters {
 }
 
 /// Abstract parameters for medium specification
-pub trait MediumParameters {
+pub trait FactoryMediumParameters {
     fn sound_speed(&self, x: f64, y: f64, z: f64) -> f64;
     fn density(&self, x: f64, y: f64, z: f64) -> f64;
     fn heterogeneity(&self) -> f64;
@@ -70,7 +70,7 @@ pub trait MediumParameters {
 }
 
 /// Abstract parameters for source specification
-pub trait SourceParameters {
+pub trait FactorySourceParameters {
     fn source_type(&self) -> &str;
     fn frequency(&self) -> f64;
     fn amplitude(&self) -> f64;

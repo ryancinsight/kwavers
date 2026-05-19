@@ -9,4 +9,4 @@
 
 pub mod conservative;
 
-pub use conservative::{ConservationMode, ConservativeInterpolator};
+pub use conservative::{ConservationMode, UtilConservativeInterpolator};

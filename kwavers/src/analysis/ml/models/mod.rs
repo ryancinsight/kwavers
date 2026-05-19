@@ -34,8 +34,8 @@ pub trait MLModel {
     fn name(&self) -> &str;
 }
 
-// Re-export ModelMetadata from types
-pub use crate::analysis::ml::types::ModelMetadata;
+// Re-export MlModelMetadata from types
+pub use crate::analysis::ml::types::MlModelMetadata;
 
 /// Discriminator for the available ML model types.
 #[derive(Debug, Clone, Copy)]

@@ -8,7 +8,7 @@
 //! ### Time-Domain Boundaries (FDTD, PSTD)
 //! Applied during time stepping to prevent reflections:
 //!
-//! - **[`PMLBoundary`]**: Perfectly Matched Layer absorbing boundaries
+//! - **[`DomainPMLBoundary`]**: Perfectly Matched Layer absorbing boundaries
 //! - **[`CPMLBoundary`]**: Convolutional Perfectly Matched Layer (advanced)
 //!
 //! ### Variational Method Boundaries (FEM, BEM)
@@ -21,10 +21,10 @@
 //!
 //! ### Time-Domain Solver
 //! ```rust,ignore
-//! use kwavers::domain::boundary::{PMLBoundary, DomainPmlConfig};
+//! use kwavers::domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
 //!
 //! let pml_config = DomainPmlConfig { thickness: 20, alpha: 2.0 };
-//! let mut boundary = PMLBoundary::new(pml_config)?;
+//! let mut boundary = DomainPMLBoundary::new(pml_config)?;
 //!
 //! // Apply during time stepping
 //! boundary.apply_acoustic(field.view_mut(), &grid, time_step)?;
@@ -79,7 +79,7 @@ pub mod types;
 pub use bem::{BemBoundaryCondition, BemBoundaryManager};
 pub use config::{BoundaryParameters, SolverBoundaryKind};
 pub use coupling::{
-    AdaptiveBoundary, ImpedanceBoundary, MaterialInterface, MultiPhysicsInterface, SchwarzBoundary,
+    AdaptiveBoundary, ImpedanceBoundary, MaterialInterface, BoundaryMultiPhysicsInterface, SchwarzBoundary,
 };
 pub use fem::{FemBoundaryCondition, FemBoundaryManager};
 pub use field_updater::{FieldUpdater, GradientFieldUpdater};
@@ -90,7 +90,7 @@ pub use traits::{
 };
 pub use types::BoundaryType;
 pub use types::{
-    AcousticBoundaryType, BoundaryFace, BoundarySpec, ElasticBoundaryType,
+    DomainAcousticBoundaryType, BoundaryFace, BoundarySpec, ElasticBoundaryType,
     ElectromagneticBoundaryType, FaceBoundaryComponent,
 };
 
@@ -238,5 +238,5 @@ pub trait Boundary: Debug + Send + Sync {
 
 // Time-domain boundary conditions (FDTD, PSTD)
 pub use cpml::{CPMLBoundary, CPMLConfig, PerDimensionAlpha, PerDimensionPML};
-pub use pml::{DomainPmlConfig, PMLBoundary};
+pub use pml::{DomainPmlConfig, DomainPMLBoundary};
 pub use smoothing::{BoundarySmoothing, BoundarySmoothingConfig, SmoothingMethod};

@@ -8,7 +8,7 @@ use ndarray::Array3;
 fn test_pml_creation() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
     let config = SwePmlConfig::default();
-    let pml = PMLBoundary::new(&grid, config);
+    let pml = ElasticSwePMLBoundary::new(&grid, config);
 
     assert_eq!(pml.attenuation(16, 16, 16), 0.0);
     assert!(!pml.is_in_pml(16, 16, 16));
@@ -26,7 +26,7 @@ fn test_pml_profile() {
         profile_order: 2,
         reflection_target: 1e-5,
     };
-    let pml = PMLBoundary::new(&grid, config);
+    let pml = ElasticSwePMLBoundary::new(&grid, config);
 
     let sigma_1 = pml.attenuation(4, 16, 16);
     let sigma_2 = pml.attenuation(3, 16, 16);
@@ -41,7 +41,7 @@ fn test_pml_profile() {
 fn test_pml_damping() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
     let config = SwePmlConfig::default();
-    let pml = PMLBoundary::new(&grid, config);
+    let pml = ElasticSwePMLBoundary::new(&grid, config);
 
     let mut vx = Array3::<f64>::ones((32, 32, 32));
     let mut vy = Array3::<f64>::ones((32, 32, 32));
@@ -65,7 +65,7 @@ fn test_theoretical_reflection() {
     let target_reflection = 0.005;
 
     let sigma_optimized =
-        PMLBoundary::optimize_sigma_max(target_reflection, c_max, &grid, thickness);
+        ElasticSwePMLBoundary::optimize_sigma_max(target_reflection, c_max, &grid, thickness);
 
     let config = SwePmlConfig {
         thickness,
@@ -73,7 +73,7 @@ fn test_theoretical_reflection() {
         profile_order: 2,
         reflection_target: target_reflection,
     };
-    let pml = PMLBoundary::new(&grid, config);
+    let pml = ElasticSwePMLBoundary::new(&grid, config);
     let reflection = pml.theoretical_reflection(c_max, &grid);
 
     assert!(
@@ -101,7 +101,7 @@ fn test_sigma_max_optimization() {
     let c_max = 1500.0;
     let thickness = 10;
 
-    let sigma_opt = PMLBoundary::optimize_sigma_max(target_reflection, c_max, &grid, thickness);
+    let sigma_opt = ElasticSwePMLBoundary::optimize_sigma_max(target_reflection, c_max, &grid, thickness);
     assert!(sigma_opt > 0.0);
 
     let config = SwePmlConfig {
@@ -110,7 +110,7 @@ fn test_sigma_max_optimization() {
         profile_order: 2,
         reflection_target: target_reflection,
     };
-    let pml = PMLBoundary::new(&grid, config);
+    let pml = ElasticSwePMLBoundary::new(&grid, config);
     let achieved_reflection = pml.theoretical_reflection(c_max, &grid);
 
     assert!((achieved_reflection.log10() - target_reflection.log10()).abs() < 1.0);
@@ -126,7 +126,7 @@ fn test_pml_volume_fraction() {
         thickness: 5,
         ..Default::default()
     };
-    let pml = PMLBoundary::new(&grid, config);
+    let pml = ElasticSwePMLBoundary::new(&grid, config);
     let vol_frac = pml.volume_fraction();
 
     assert!(vol_frac > 0.0);
@@ -146,7 +146,7 @@ fn test_pml_mask() {
         thickness: 3,
         ..Default::default()
     };
-    let pml = PMLBoundary::new(&grid, config);
+    let pml = ElasticSwePMLBoundary::new(&grid, config);
     let mask = pml.get_mask();
 
     assert_eq!(mask[[10, 10, 10]], 0.0);

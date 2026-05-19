@@ -1,6 +1,6 @@
 use super::domain::AcousticWaveDomain;
-use super::types::{AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType};
-use crate::solver::inverse::pinn::ml::physics::{BoundaryPosition, PhysicsDomain};
+use super::types::{AcousticBoundarySpec, PinnAcousticBoundaryType, AcousticProblemType};
+use crate::solver::inverse::pinn::ml::physics::{BoundaryPosition, SimulationPhysicsDomain};
 use burn::backend::NdArray;
 use std::collections::HashMap;
 
@@ -16,13 +16,13 @@ fn test_acoustic_wave_domain_creation() {
     );
 
     assert_eq!(
-        <AcousticWaveDomain as PhysicsDomain<B>>::domain_name(&domain),
+        <AcousticWaveDomain as SimulationPhysicsDomain<B>>::domain_name(&domain),
         "acoustic_wave"
     );
     assert_eq!(domain.wave_speed(), 1500.0);
     assert_eq!(domain.density(), 1000.0);
     assert!(domain.nonlinearity_coefficient().is_none());
-    assert!(<AcousticWaveDomain as PhysicsDomain<B>>::supports_coupling(
+    assert!(<AcousticWaveDomain as SimulationPhysicsDomain<B>>::supports_coupling(
         &domain
     ));
 }
@@ -46,11 +46,11 @@ fn test_boundary_conditions() {
 
     domain.add_boundary_condition(AcousticBoundarySpec {
         position: BoundaryPosition::Top,
-        condition_type: AcousticBoundaryType::SoundSoft,
+        condition_type: PinnAcousticBoundaryType::SoundSoft,
         parameters: HashMap::new(),
     });
 
-    let bcs = <AcousticWaveDomain as PhysicsDomain<B>>::boundary_conditions(&domain);
+    let bcs = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::boundary_conditions(&domain);
     assert_eq!(bcs.len(), 1);
     assert!(!bcs.is_empty());
 }
@@ -59,7 +59,7 @@ fn test_boundary_conditions() {
 fn test_validation_metrics() {
     let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
 
-    let metrics = <AcousticWaveDomain as PhysicsDomain<B>>::validation_metrics(&domain);
+    let metrics = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::validation_metrics(&domain);
     assert_eq!(metrics.len(), 3);
     assert_eq!(metrics[0].name, "wave_speed_accuracy");
     assert_eq!(metrics[1].name, "energy_conservation");
@@ -70,7 +70,7 @@ fn test_validation_metrics() {
 fn test_coupling_interfaces() {
     let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
 
-    let interfaces = <AcousticWaveDomain as PhysicsDomain<B>>::coupling_interfaces(&domain);
+    let interfaces = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::coupling_interfaces(&domain);
     assert_eq!(interfaces.len(), 2);
     assert_eq!(interfaces[0].name, "acoustic_solid");
     assert_eq!(interfaces[1].name, "acoustic_thermal");

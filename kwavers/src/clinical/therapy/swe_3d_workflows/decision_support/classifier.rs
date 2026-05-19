@@ -1,4 +1,4 @@
-//! `ClinicalDecisionSupport`: liver fibrosis and breast lesion classification.
+//! `Swe3dClinicalDecisionSupport`: liver fibrosis and breast lesion classification.
 
 use std::collections::HashMap;
 
@@ -10,12 +10,12 @@ use super::types::{
 
 /// Clinical decision support for 3D SWE classification.
 #[derive(Debug)]
-pub struct ClinicalDecisionSupport {
+pub struct Swe3dClinicalDecisionSupport {
     _reference_ranges: HashMap<String, TissueReference>,
     classification_thresholds: HashMap<String, Vec<f64>>,
 }
 
-impl Default for ClinicalDecisionSupport {
+impl Default for Swe3dClinicalDecisionSupport {
     fn default() -> Self {
         let mut reference_ranges = HashMap::new();
         let mut classification_thresholds = HashMap::new();
@@ -70,7 +70,7 @@ impl Default for ClinicalDecisionSupport {
     }
 }
 
-impl ClinicalDecisionSupport {
+impl Swe3dClinicalDecisionSupport {
     /// Classify liver fibrosis stage using METAVIR scoring.
     ///
     /// # Panics

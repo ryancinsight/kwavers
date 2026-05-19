@@ -60,7 +60,7 @@ pub type SourceType = SourceField;
 /// These properties characterize the focusing behavior of sources like
 /// focused transducers, Gaussian beams, and phased arrays.
 #[derive(Debug, Clone, Copy)]
-pub struct FocalProperties {
+pub struct SourceFocalProperties {
     /// Focal point position (m)
     pub focal_point: (f64, f64, f64),
 
@@ -221,13 +221,13 @@ pub trait Source: Debug + Sync + Send {
     ///
     /// Convenience method that collects all focal properties into a single struct.
     /// Returns `None` if the source is not focused.
-    fn get_focal_properties(&self) -> Option<FocalProperties> {
+    fn get_focal_properties(&self) -> Option<SourceFocalProperties> {
         // Only return properties if source has a focal point
         let focal_point = self.focal_point()?;
         let focal_depth = self.focal_depth()?;
         let spot_size = self.spot_size()?;
 
-        Some(FocalProperties {
+        Some(SourceFocalProperties {
             focal_point,
             focal_depth,
             spot_size,

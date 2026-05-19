@@ -222,7 +222,7 @@ pub use config::{
 };
 
 #[cfg(feature = "pinn")]
-pub use inference::Predictor;
+pub use inference::ElasticPinnPredictor;
 
 #[cfg(feature = "pinn")]
 pub use loss::{

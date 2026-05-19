@@ -28,7 +28,7 @@ pub struct QuantizedNetwork {
 
 /// Memory Pool for Zero-Allocation Inference
 #[derive(Debug)]
-pub struct MemoryPool {
+pub struct BurnWave2dInferenceMemoryPool {
     /// Pre-allocated buffers for intermediate activations
     pub buffers: Vec<Vec<f32>>,
     /// Buffer sizes for each layer

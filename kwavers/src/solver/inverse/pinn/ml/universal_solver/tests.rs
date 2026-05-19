@@ -1,5 +1,7 @@
 use super::solver::UniversalPINNSolver;
-use super::types::{GeometricFeature, Geometry2D, UniversalSolverStats, UniversalTrainingConfig};
+use super::types::{
+    GeometricFeature, UniversalSolverGeometry2D, UniversalSolverStats, UniversalTrainingConfig,
+};
 use std::time::Duration;
 
 #[test]
@@ -11,14 +13,15 @@ fn test_universal_solver_creation() {
 
 #[test]
 fn test_geometry_creation() {
-    let geometry = Geometry2D::rectangle(0.0, 1.0, 0.0, 1.0);
+    let geometry = UniversalSolverGeometry2D::rectangle(0.0, 1.0, 0.0, 1.0);
     assert_eq!(geometry.bounds, [0.0, 1.0, 0.0, 1.0]);
     assert!(geometry.features.is_empty());
 }
 
 #[test]
 fn test_geometry_with_obstacle() {
-    let geometry = Geometry2D::rectangle(0.0, 2.0, 0.0, 1.0).with_circle_obstacle((0.5, 0.5), 0.1);
+    let geometry = UniversalSolverGeometry2D::rectangle(0.0, 2.0, 0.0, 1.0)
+        .with_circle_obstacle((0.5, 0.5), 0.1);
     assert_eq!(geometry.features.len(), 1);
     match &geometry.features[0] {
         GeometricFeature::Circle { center, radius } => {
@@ -33,7 +36,8 @@ fn test_geometry_with_obstacle() {
 fn test_point_in_geometry() {
     let solver =
         UniversalPINNSolver::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new().unwrap();
-    let geometry = Geometry2D::rectangle(0.0, 1.0, 0.0, 1.0).with_circle_obstacle((0.5, 0.5), 0.2);
+    let geometry = UniversalSolverGeometry2D::rectangle(0.0, 1.0, 0.0, 1.0)
+        .with_circle_obstacle((0.5, 0.5), 0.2);
 
     assert!(solver.is_point_in_geometry(0.8, 0.8, &geometry));
     assert!(!solver.is_point_in_geometry(1.5, 0.5, &geometry));

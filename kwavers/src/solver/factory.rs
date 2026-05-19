@@ -6,22 +6,22 @@
 
 use crate::solver::config::SolverType;
 use crate::solver::interface::factory::{
-    FactoryConfiguration, FactoryError, GridParameters, MediumParameters,
+    FactoryConfiguration, FactoryError, FactoryGridParameters, FactoryMediumParameters,
 };
 
 /// Solver selection policy evaluated over abstract problem descriptors.
 #[derive(Debug)]
-pub struct SolverFactory;
+pub struct SolverFactoryRegistry;
 
-impl SolverFactory {
+impl SolverFactoryRegistry {
     /// Resolve `Auto` to a concrete solver type using the canonical policy.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn resolve_solver_type(
         solver_type: SolverType,
-        grid: &dyn GridParameters,
-        medium: &dyn MediumParameters,
+        grid: &dyn FactoryGridParameters,
+        medium: &dyn FactoryMediumParameters,
     ) -> SolverType {
         if solver_type == SolverType::Auto {
             Self::select_best_solver(grid, medium)
@@ -35,7 +35,7 @@ impl SolverFactory {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn validate_memory_budget(
-        grid: &dyn GridParameters,
+        grid: &dyn FactoryGridParameters,
         config: &FactoryConfiguration,
     ) -> Result<usize, FactoryError> {
         let estimated_bytes = grid.total_points() * 8 * 4;
@@ -51,8 +51,8 @@ impl SolverFactory {
 
     /// Analyze the problem to select the best solver.
     pub fn select_best_solver(
-        grid: &dyn GridParameters,
-        medium: &dyn MediumParameters,
+        grid: &dyn FactoryGridParameters,
+        medium: &dyn FactoryMediumParameters,
     ) -> SolverType {
         let is_heterogeneous = !medium.is_homogeneous();
         let large_grid = grid.total_points() > 1_000_000;
@@ -70,7 +70,7 @@ impl SolverFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::solver::interface::factory::{GridParameters, MediumParameters};
+    use crate::solver::interface::factory::{FactoryGridParameters, FactoryMediumParameters};
 
     struct TestGrid {
         nx: usize,
@@ -78,7 +78,7 @@ mod tests {
         nz: usize,
     }
 
-    impl GridParameters for TestGrid {
+    impl FactoryGridParameters for TestGrid {
         fn nx(&self) -> usize {
             self.nx
         }
@@ -108,7 +108,7 @@ mod tests {
         heterogeneity: f64,
     }
 
-    impl MediumParameters for TestMedium {
+    impl FactoryMediumParameters for TestMedium {
         fn sound_speed(&self, _x: f64, _y: f64, _z: f64) -> f64 {
             1500.0
         }
@@ -135,7 +135,7 @@ mod tests {
         };
         let medium = TestMedium { heterogeneity: 0.0 };
 
-        let selected = SolverFactory::select_best_solver(&grid, &medium);
+        let selected = SolverFactoryRegistry::select_best_solver(&grid, &medium);
 
         assert_eq!(selected, SolverType::FDTD);
     }
@@ -149,7 +149,7 @@ mod tests {
         };
         let medium = TestMedium { heterogeneity: 0.0 };
 
-        let selected = SolverFactory::select_best_solver(&grid, &medium);
+        let selected = SolverFactoryRegistry::select_best_solver(&grid, &medium);
 
         assert_eq!(selected, SolverType::PSTD);
     }
@@ -165,7 +165,7 @@ mod tests {
             heterogeneity: 0.01,
         };
 
-        let selected = SolverFactory::select_best_solver(&grid, &medium);
+        let selected = SolverFactoryRegistry::select_best_solver(&grid, &medium);
 
         assert_eq!(selected, SolverType::Hybrid);
     }
@@ -182,7 +182,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = SolverFactory::validate_memory_budget(&grid, &config);
+        let result = SolverFactoryRegistry::validate_memory_budget(&grid, &config);
 
         assert!(matches!(
             result,

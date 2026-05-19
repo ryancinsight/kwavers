@@ -28,14 +28,14 @@
 pub use crate::domain::imaging::ultrasound::{
     ceus::{
         CEUSImagingParameters, Microbubble, MicrobubblePopulation, PerfusionMap,
-        PerfusionStatistics, SizeDistribution,
+        PerfusionStatistics, CeusSizeDistribution,
     },
     elastography::{
         ElasticityMap, InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,
     },
     hifu::{
         DomainHIFUTransducer, DomainHIFUTreatmentPlan, FeedbackChannel, HifuSafetyConstraints,
-        HifuTreatmentProtocol, MonitoringConfig, TreatmentPhase, TreatmentTarget,
+        HifuTreatmentProtocol, HifuMonitoringConfig, TreatmentPhase, TreatmentTarget,
     },
     UltrasoundConfig, UltrasoundMode,
 };

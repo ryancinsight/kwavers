@@ -1,7 +1,7 @@
-use super::quantization::Quantizer;
+use super::quantization::BurnWave2dQuantizer;
 #[cfg(feature = "gpu")]
 use super::types::BurnNeuralNetwork;
-use super::types::{ActivationType, MemoryPool, QuantizedNetwork};
+use super::types::{ActivationType, BurnWave2dInferenceMemoryPool, QuantizedNetwork};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::model::BurnPINN2DWave;
 use burn::tensor::backend::Backend;
@@ -19,7 +19,7 @@ pub struct RealTimePINNInference<B: Backend> {
     #[cfg(feature = "gpu")]
     gpu_engine: Option<BurnNeuralNetwork<B>>,
     /// Memory pool for tensor reuse
-    memory_pool: MemoryPool,
+    memory_pool: BurnWave2dInferenceMemoryPool,
     /// SIMD-enabled CPU inference
     #[cfg(feature = "simd")]
     simd_executor: SimdExecutor,
@@ -34,11 +34,11 @@ impl<B: Backend> RealTimePINNInference<B> {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn new(burn_pinn: BurnPINN2DWave<B>, _device: &B::Device) -> KwaversResult<Self> {
-        let layer_sizes = Quantizer::extract_layer_sizes(&burn_pinn);
-        let activations = Quantizer::extract_activations(&burn_pinn);
+        let layer_sizes = BurnWave2dQuantizer::extract_layer_sizes(&burn_pinn);
+        let activations = BurnWave2dQuantizer::extract_activations(&burn_pinn);
 
         let quantized_network =
-            Quantizer::quantize_network(&burn_pinn, &layer_sizes, &activations)?;
+            BurnWave2dQuantizer::quantize_network(&burn_pinn, &layer_sizes, &activations)?;
         let memory_pool = Self::create_memory_pool(&layer_sizes);
 
         #[cfg(feature = "simd")]
@@ -60,7 +60,7 @@ impl<B: Backend> RealTimePINNInference<B> {
         })
     }
 
-    fn create_memory_pool(layer_sizes: &[usize]) -> MemoryPool {
+    fn create_memory_pool(layer_sizes: &[usize]) -> BurnWave2dInferenceMemoryPool {
         let mut buffers = Vec::new();
         let mut buffer_sizes = Vec::new();
 
@@ -69,7 +69,7 @@ impl<B: Backend> RealTimePINNInference<B> {
             buffer_sizes.push(size);
         }
 
-        MemoryPool {
+        BurnWave2dInferenceMemoryPool {
             buffers,
             _buffer_sizes: buffer_sizes,
         }

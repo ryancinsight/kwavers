@@ -15,11 +15,11 @@ pub mod telemetry;
 pub mod timeout;
 
 pub use context::{GpuRecoveryStrategy, RecoveryContext, RecoveryResult};
-pub use device_lost::{DeviceLostRecovery, DeviceRecoveryResult};
-pub use fault_injection::{FaultInjectionConfig, FaultInjector, GpuFaultScenario};
-pub use manager::GpuRecoveryManager;
+pub use device_lost::{ErrorGpuDeviceLostRecovery, DeviceRecoveryResult};
+pub use fault_injection::{FaultInjectionConfig, GpuRecoveryFaultInjector, GpuFaultScenario};
+pub use manager::ErrorGpuRecoveryManager;
 pub use oom::{OomRecovery, OomRecoveryConfig, OomRecoveryResult};
 pub use telemetry::{
     GlobalTelemetry, GpuRecoveryTelemetry, GpuStrategyLatencies, GpuStrategyRates,
 };
-pub use timeout::{TimeoutRecovery, TimeoutRecoveryResult};
+pub use timeout::{ErrorTimeoutRecovery, TimeoutRecoveryResult};

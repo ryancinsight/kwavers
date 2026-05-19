@@ -112,14 +112,14 @@ where
 
 /// Iterator for computing gradients with central differences
 #[derive(Debug)]
-pub struct GradientComputer<'a> {
+pub struct IteratorGradientComputer<'a> {
     array: ArrayView3<'a, f64>,
     nx: usize,
     ny: usize,
     nz: usize,
 }
 
-impl<'a> GradientComputer<'a> {
+impl<'a> IteratorGradientComputer<'a> {
     #[must_use]
     pub fn new(array: ArrayView3<'a, f64>) -> Self {
         let (nx, ny, nz) = array.dim();
@@ -228,7 +228,7 @@ mod tests {
             }
         }
 
-        let computer = GradientComputer::new(array.view());
+        let computer = IteratorGradientComputer::new(array.view());
         let gradient_count = std::sync::atomic::AtomicUsize::new(0);
 
         computer.compute_interior_gradients(1.0, 1.0, 1.0, |grad_x, grad_y, grad_z, _i, _j, _k| {

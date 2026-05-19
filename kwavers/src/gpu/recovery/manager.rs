@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use tracing::warn;
 
 use super::{
-    DeviceLostRecovery, GpuCheckpoint, GpuOomRecovery, GpuRecoveryStats, TimeoutRecovery,
+    GpuDeviceLostRecovery, GpuCheckpoint, GpuRecoveryOom, GpuRecoveryStats, GpuTimeoutRecovery,
     GLOBAL_STATS, RECOVERY_SUCCESS_THRESHOLD,
 };
 
@@ -15,35 +15,35 @@ use super::{
 ///
 /// # Checkpoint sharing
 /// All three strategies share the same `Arc<Mutex<Option<GpuCheckpoint>>>`.
-/// The GPU time loop calls [`GpuRecoveryManager::update_checkpoint`] every
+/// The GPU time loop calls [`GpuRecoveryManagerImpl::update_checkpoint`] every
 /// `checkpoint_interval` steps so that all strategies always have access to
 /// the most recent consistent simulation state.
 #[derive(Debug)]
-pub struct GpuRecoveryManager {
+pub struct GpuRecoveryManagerImpl {
     /// Device lost recovery
-    device_lost: DeviceLostRecovery,
+    device_lost: GpuDeviceLostRecovery,
     /// OOM recovery
-    oom: GpuOomRecovery,
+    oom: GpuRecoveryOom,
     /// Timeout recovery
-    timeout: TimeoutRecovery,
+    timeout: GpuTimeoutRecovery,
     /// Shared checkpoint updated by the GPU time loop.
     shared_checkpoint: Arc<Mutex<Option<GpuCheckpoint>>>,
 }
 
-impl Default for GpuRecoveryManager {
+impl Default for GpuRecoveryManagerImpl {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GpuRecoveryManager {
+impl GpuRecoveryManagerImpl {
     /// Create new GPU recovery manager with a shared checkpoint.
     pub fn new() -> Self {
         let shared_checkpoint: Arc<Mutex<Option<GpuCheckpoint>>> = Arc::new(Mutex::new(None));
         Self {
-            device_lost: DeviceLostRecovery::with_checkpoint(Arc::clone(&shared_checkpoint)),
-            oom: GpuOomRecovery::with_checkpoint(Arc::clone(&shared_checkpoint)),
-            timeout: TimeoutRecovery::new(),
+            device_lost: GpuDeviceLostRecovery::with_checkpoint(Arc::clone(&shared_checkpoint)),
+            oom: GpuRecoveryOom::with_checkpoint(Arc::clone(&shared_checkpoint)),
+            timeout: GpuTimeoutRecovery::new(),
             shared_checkpoint,
         }
     }
@@ -56,7 +56,7 @@ impl GpuRecoveryManager {
         if let Ok(mut guard) = self.shared_checkpoint.lock() {
             *guard = Some(checkpoint);
         } else {
-            warn!("GpuRecoveryManager: checkpoint mutex poisoned; checkpoint not updated");
+            warn!("GpuRecoveryManagerImpl: checkpoint mutex poisoned; checkpoint not updated");
         }
     }
 
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn gpu_recovery_manager_creation() {
-        let manager = GpuRecoveryManager::new();
+        let manager = GpuRecoveryManagerImpl::new();
         // No attempts yet — each strategy returns 1.0, so meets_threshold() is true
         assert!(manager.meets_threshold());
 
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn gpu_recovery_manager_update_checkpoint() {
-        let manager = GpuRecoveryManager::new();
+        let manager = GpuRecoveryManagerImpl::new();
         let cp = GpuCheckpoint::zeroed(16);
         manager.update_checkpoint(cp);
 
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn can_handle_detection() {
-        let manager = GpuRecoveryManager::new();
+        let manager = GpuRecoveryManagerImpl::new();
 
         let device_lost = KwaversError::System(SystemError::ResourceUnavailable {
             resource: "GPU device_lost".to_string(),

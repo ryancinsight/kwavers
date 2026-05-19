@@ -11,7 +11,7 @@ mod solvers;
 
 use crate::core::error::KwaversResult;
 use crate::domain::mesh::tetrahedral::TetrahedralMesh;
-use crate::math::numerics::operators::TrilinearInterpolator;
+use crate::math::numerics::operators::NumericsTrilinearInterpolator;
 use crate::solver::forward::bem::solver::{BemConfig, BemSolver};
 
 use super::super::{BemFemCouplingConfig, BemFemInterface};
@@ -22,7 +22,7 @@ pub struct BemFemCoupler {
     pub(super) config: BemFemCouplingConfig,
     /// Interface accessible from `solver.rs` in the parent `bem_fem_coupling` module.
     pub(crate) interface: BemFemInterface,
-    pub(super) _fem_interpolator: TrilinearInterpolator,
+    pub(super) _fem_interpolator: NumericsTrilinearInterpolator,
     pub(super) convergence_history: Vec<f64>,
     pub(super) iteration_count: usize,
     pub(super) bem_solver: BemSolver,
@@ -50,7 +50,7 @@ impl BemFemCoupler {
         let dx = lx / (n1d * lx / l_max).max(1.0);
         let dy = ly / (n1d * ly / l_max).max(1.0);
         let dz = lz / (n1d * lz / l_max).max(1.0);
-        let fem_interpolator = TrilinearInterpolator::new(dx, dy, dz);
+        let fem_interpolator = NumericsTrilinearInterpolator::new(dx, dy, dz);
 
         let bem_config = BemConfig::default();
         let boundary_verts: Vec<[f64; 3]> = fem_mesh.nodes.iter().map(|n| n.coordinates).collect();

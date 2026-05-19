@@ -328,7 +328,7 @@ impl PluginBasedSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::boundary::PMLBoundary;
+    use crate::domain::boundary::DomainPMLBoundary;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
     use crate::domain::signal::SineWave;
     use crate::domain::source::PointSource;
@@ -338,7 +338,7 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0).unwrap();
         let time = Time::new(0.001, 100);
         let medium = Arc::new(HomogeneousMedium::from_minimal(1500.0, 1000.0, &grid));
-        let boundary = Box::new(PMLBoundary::new(Default::default()).unwrap());
+        let boundary = Box::new(DomainPMLBoundary::new(Default::default()).unwrap());
         let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
         let source = Box::new(PointSource::new((5.0, 5.0, 5.0), signal));
 

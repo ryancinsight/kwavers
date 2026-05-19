@@ -17,17 +17,17 @@ pub enum AmrInterpolationScheme {
 
 /// Conservative interpolator for AMR
 #[derive(Debug)]
-pub struct ConservativeInterpolator {
+pub struct AmrConservativeInterpolator {
     scheme: AmrInterpolationScheme,
 }
 
-impl Default for ConservativeInterpolator {
+impl Default for AmrConservativeInterpolator {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ConservativeInterpolator {
+impl AmrConservativeInterpolator {
     /// Create a new conservative interpolator
     #[must_use]
     pub fn new() -> Self {

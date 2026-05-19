@@ -24,7 +24,7 @@ fn test_safety_limit_checking() {
         patient_params: PatientParameters {
             skull_thickness: None,
             tissue_properties: TissuePropertyMap::liver((8, 8, 8)),
-            target_volume: TargetVolume {
+            target_volume: TherapyTargetVolume {
                 center: (0.05, 0.0, 0.0),
                 dimensions: (0.01, 0.01, 0.01),
                 tissue_type: TherapyTissueType::Brain,
@@ -69,7 +69,7 @@ fn test_safety_controller_integration() {
         patient_params: PatientParameters {
             skull_thickness: None,
             tissue_properties: TissuePropertyMap::liver((16, 16, 16)),
-            target_volume: TargetVolume {
+            target_volume: TherapyTargetVolume {
                 center: (0.04, 0.0, 0.0),
                 dimensions: (0.015, 0.015, 0.015),
                 tissue_type: TherapyTissueType::Liver,

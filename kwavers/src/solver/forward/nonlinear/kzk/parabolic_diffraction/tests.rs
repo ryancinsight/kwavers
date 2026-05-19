@@ -1,4 +1,4 @@
-use super::KzkDiffractionOperator;
+use super::KzkParabolicDiffractionOperator;
 use crate::core::constants::SOUND_SPEED_WATER;
 use crate::math::fft::Complex64;
 use crate::solver::forward::nonlinear::kzk::constants::{
@@ -22,7 +22,7 @@ fn test_kzk_gaussian_beam() {
         ..Default::default()
     };
 
-    let mut op = KzkDiffractionOperator::new(&config);
+    let mut op = KzkParabolicDiffractionOperator::new(&config);
 
     // Create Gaussian beam
     let beam_waist = DEFAULT_BEAM_WAIST;
@@ -89,13 +89,13 @@ fn test_kzk_gaussian_beam() {
 
     // Tolerance for the real-field KZK diffraction operator.
     //
-    // `KzkDiffractionOperator` applies H = exp(−ik_T²Δz/(2k₀)) in k-space,
+    // `KzkParabolicDiffractionOperator` applies H = exp(−ik_T²Δz/(2k₀)) in k-space,
     // then discards the imaginary part of the IFFT result.  The error from
     // this real-part truncation accumulates over 50 steps to ~28%, causing
     // the measured Rayleigh-distance beam radius to appear ~22% smaller than
     // the theoretical √2·w₀.
     //
-    // Note: `KzkDiffractionOperator` is retained for testing the real-field
+    // Note: `KzkParabolicDiffractionOperator` is retained for testing the real-field
     // code path.  `KZKSolver` uses `ParabolicDiffractionOperator::apply_complex`
     // (complex-field path) which achieves <0.1% error — validated by
     // `test_complex_gaussian_beam_propagation` in complex_parabolic_diffraction.rs.
@@ -116,7 +116,7 @@ fn test_kzk_gaussian_beam_high_resolution() {
         ..Default::default()
     };
 
-    let mut op = KzkDiffractionOperator::new(&config);
+    let mut op = KzkParabolicDiffractionOperator::new(&config);
 
     // Create Gaussian beam
     let beam_waist = DEFAULT_BEAM_WAIST;
@@ -189,7 +189,7 @@ fn test_fft_round_trip() {
         ..Default::default()
     };
 
-    let mut op = KzkDiffractionOperator::new(&config);
+    let mut op = KzkParabolicDiffractionOperator::new(&config);
 
     // Create test data
     let mut original = Array2::zeros((64, 64));

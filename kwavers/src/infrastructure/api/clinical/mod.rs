@@ -54,7 +54,7 @@ mod tests {
             imaging_modes: vec!["B-Mode".to_string()],
             max_frame_rate: 30,
             battery_level: None,
-            status: crate::api::DeviceStatus::Available,
+            status: crate::api::ApiDeviceStatus::Available,
             last_seen: Utc::now(),
         };
 
@@ -72,7 +72,7 @@ mod tests {
             assert_eq!(registered_device.capabilities.len(), 3);
             assert_eq!(
                 registered_device.status,
-                crate::api::DeviceStatus::Available
+                crate::api::ApiDeviceStatus::Available
             );
         }
 
@@ -80,7 +80,7 @@ mod tests {
         {
             let mut registry = app_state.device_registry.write().await;
             if let Some(device) = registry.get_mut(&device_info.device_id) {
-                device.status = crate::api::DeviceStatus::InUse;
+                device.status = crate::api::ApiDeviceStatus::InUse;
             }
         }
 
@@ -88,7 +88,7 @@ mod tests {
         {
             let registry = app_state.device_registry.read().await;
             let updated_device = registry.get(&device_info.device_id).unwrap();
-            assert_eq!(updated_device.status, crate::api::DeviceStatus::InUse);
+            assert_eq!(updated_device.status, crate::api::ApiDeviceStatus::InUse);
         }
     }
 

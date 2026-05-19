@@ -112,7 +112,7 @@ impl Default for ShockCaptureConfig {
     }
 }
 
-/// Boundary condition used by DG face fluxes.
+/// Boundary condition used by DG face fluxes on one Cartesian axis.
 ///
 /// `Periodic` preserves the historical wraparound topology and is the default
 /// for conservation proofs. `AbsorbingCharacteristic` replaces exterior
@@ -152,8 +152,12 @@ pub struct DGConfig {
     ///
     /// Defaults to 1500.0 m/s (water/soft tissue). Override for other media.
     pub sound_speed: f64,
-    /// Boundary condition for DG face fluxes.
-    pub boundary_condition: DgBoundaryCondition,
+    /// Per-axis boundary conditions for DG face fluxes in `[x, y, z]` order.
+    ///
+    /// Lower-dimensional simulations ignore inactive axes. Embedded 2-D slab
+    /// comparisons can therefore use absorbing in-plane boundaries while
+    /// preserving a periodic out-of-plane invariant direction.
+    pub boundary_conditions: [DgBoundaryCondition; 3],
 }
 
 impl Default for DGConfig {
@@ -168,7 +172,7 @@ impl Default for DGConfig {
             shock_threshold: 0.1,
             shock_capture: ShockCaptureConfig::default(),
             sound_speed: 1500.0,
-            boundary_condition: DgBoundaryCondition::Periodic,
+            boundary_conditions: [DgBoundaryCondition::Periodic; 3],
         }
     }
 }

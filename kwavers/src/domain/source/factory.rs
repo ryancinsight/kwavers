@@ -15,7 +15,7 @@ use crate::domain::source::{
         BesselConfig, GaussianConfig, PlaneWaveSourceConfig, SphericalConfig, SphericalWaveType,
     },
     BesselSource, EnvelopeType, GaussianSource, PistonSource, PlaneWaveSource, PointSource,
-    PulseType, Source, SourceModel, SourceParameters, SphericalSource,
+    PulseType, Source, SourceModel, DomainSourceParameters, SphericalSource,
 };
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -31,7 +31,7 @@ impl SourceFactory {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn create_source(config: &SourceParameters, grid: &Grid) -> KwaversResult<Box<dyn Source>> {
+    pub fn create_source(config: &DomainSourceParameters, grid: &Grid) -> KwaversResult<Box<dyn Source>> {
         config.validate()?;
 
         // Create signal
@@ -76,7 +76,7 @@ impl SourceFactory {
             }
             SourceModel::Bessel => {
                 // Legacy: radial_wavenumber was passed as radius?
-                // SourceParameters has 'radius'. For Bessel, legacy used radius as radial_wavenumber if provided, default 1000.
+                // DomainSourceParameters has 'radius'. For Bessel, legacy used radius as radial_wavenumber if provided, default 1000.
                 let radial_wavenumber = if config.radius > 0.0 {
                     config.radius
                 } else {
@@ -102,9 +102,9 @@ impl SourceFactory {
             }
             SourceModel::Spherical => {
                 // Determine wave type from delay? Legacy: delay < 0 => Converging.
-                // Standard SourceParameters has explicit fields usually, but legacy used delay sign.
+                // Standard DomainSourceParameters has explicit fields usually, but legacy used delay sign.
                 // Here we use delay for Signal delay.
-                // But SourceParameters doesn't have WaveType field for Spherical.
+                // But DomainSourceParameters doesn't have WaveType field for Spherical.
                 // We default to Diverging unless we add a field.
                 // Legacy check:
                 // let wave_type = if config.delay < 0.0 { Converging } else { Diverging };

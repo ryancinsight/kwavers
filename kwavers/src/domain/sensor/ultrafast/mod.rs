@@ -136,7 +136,7 @@ pub mod plane_wave;
 pub mod sequencer;
 
 pub use diverging_wave::{DivergingWave, DivergingWaveConfig};
-pub use plane_wave::{PlaneWave, UltrafastPlaneWaveConfig};
+pub use plane_wave::{UltrafastPlaneWave, UltrafastPlaneWaveConfig};
 pub use sequencer::{TransmissionSchedule, TransmissionSequencer};
 
 #[cfg(test)]

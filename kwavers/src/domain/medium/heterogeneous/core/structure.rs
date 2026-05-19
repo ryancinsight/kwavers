@@ -10,7 +10,7 @@ use crate::domain::medium::{
     bubble::{BubbleProperties, BubbleState},
     core::{ArrayAccess, CoreMedium},
     elastic::ElasticArrayAccess,
-    optical::OpticalProperties,
+    optical::MediumOpticalProperties,
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };

@@ -1,6 +1,6 @@
 //! GPU buffer registry: name-keyed `GpuBufferManager`.
 //!
-//! This module provides [`GpuBufferManager`], a **named registry** of [`GpuBuffer`]
+//! This module provides [`GpuBufferManager`], a **named registry** of [`GpuBufferData`]
 //! instances allocated and looked up by string key. The buffer primitive itself
 //! lives in [`crate::gpu::buffer`]; this module only manages the registry layer.
 //!
@@ -11,7 +11,7 @@
 //!
 //! | Type                                            | Layer       | Key                            | Purpose                                                                  |
 //! |-------------------------------------------------|-------------|--------------------------------|--------------------------------------------------------------------------|
-//! | `crate::gpu::buffers::GpuBufferManager` (here)     | gpu module  | `String` (stable name)         | Named registry: persistent, per-context buffers (`GpuContext`, `MultiGpuContext`) |
+//! | `crate::gpu::buffers::GpuBufferManager` (here)     | gpu module  | `String` (stable name)         | Named registry: persistent, per-context buffers (`CoreGpuContext`, `MultiGpuContext`) |
 //! | `solver::backend::gpu::buffers::GpuBufferManager`  | solver layer| `(size, usage)` (allocation key) | Allocation pool: ephemeral compute scratch buffers reused across kernel dispatches |
 //!
 //! The registry tracks named state (one `pressure_field` buffer per context).
@@ -25,13 +25,13 @@
 //! `solver::backend::gpu::buffers`.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::gpu::buffer::GpuBuffer;
+use crate::gpu::buffer::GpuBufferData;
 use std::collections::HashMap;
 
 /// Named GPU buffer pool with aggregate memory tracking.
 ///
-/// Allocates [`GpuBuffer`] instances keyed by string name and tracks total
-/// device-side memory. All allocations use the canonical [`GpuBuffer`] type
+/// Allocates [`GpuBufferData`] instances keyed by string name and tracks total
+/// device-side memory. All allocations use the canonical [`GpuBufferData`] type
 /// from [`crate::gpu::buffer`].
 ///
 /// # Invariants
@@ -40,7 +40,7 @@ use std::collections::HashMap;
 /// - No two entries share the same name; `allocate` returns `Err` on collision.
 #[derive(Debug)]
 pub struct GpuBufferManager {
-    buffers: HashMap<String, GpuBuffer>,
+    buffers: HashMap<String, GpuBufferData>,
     total_memory: u64,
     _max_memory: u64,
 }
@@ -72,7 +72,7 @@ impl GpuBufferManager {
         name: &str,
         size: u64,
         usage: wgpu::BufferUsages,
-    ) -> KwaversResult<&GpuBuffer> {
+    ) -> KwaversResult<&GpuBufferData> {
         if self.buffers.contains_key(name) {
             return Err(KwaversError::System(
                 crate::core::error::SystemError::InvalidOperation {
@@ -82,8 +82,8 @@ impl GpuBufferManager {
             ));
         }
 
-        // `GpuBuffer::new` is infallible; wgpu panics on OOM rather than returning Err.
-        let buffer = GpuBuffer::new(device, name, size as usize, usage);
+        // `GpuBufferData::new` is infallible; wgpu panics on OOM rather than returning Err.
+        let buffer = GpuBufferData::new(device, name, size as usize, usage);
         self.total_memory += size;
         self.buffers.insert(name.to_string(), buffer);
 
@@ -96,12 +96,12 @@ impl GpuBufferManager {
     }
 
     /// Get a buffer by name.
-    pub fn get(&self, name: &str) -> Option<&GpuBuffer> {
+    pub fn get(&self, name: &str) -> Option<&GpuBufferData> {
         self.buffers.get(name)
     }
 
     /// Get a mutable buffer by name.
-    pub fn get_mut(&mut self, name: &str) -> Option<&mut GpuBuffer> {
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut GpuBufferData> {
         self.buffers.get_mut(name)
     }
 

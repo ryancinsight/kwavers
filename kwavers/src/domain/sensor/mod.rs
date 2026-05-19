@@ -25,7 +25,7 @@ pub use grid_sampling::{GridPoint, GridSensorSet};
 pub use array::{Position, Sensor, SensorArray, SensorArrayGeometry};
 
 // Re-export PAM components; configs remain module-scoped.
-pub use passive_acoustic_mapping::{DirectivityPattern, PamArrayElement, PamArrayGeometry};
+pub use passive_acoustic_mapping::{PamArrayElement, PamArrayGeometry, PamDirectivityPattern};
 // Expose unified beamforming config at the sensor module root.
 pub use beamforming::{BeamformingConfig, BeamformingCoreConfig};
 

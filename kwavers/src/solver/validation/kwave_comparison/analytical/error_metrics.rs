@@ -16,14 +16,14 @@ use ndarray::ArrayView3;
 /// - L∞ error < 0.05 (5%)
 /// - Phase error < 0.1 rad (5.7°)
 #[derive(Debug, Clone)]
-pub struct ErrorMetrics {
+pub struct KwaveErrorMetrics {
     pub l2_error: f64,
     pub linf_error: f64,
     pub phase_error: f64,
     pub correlation: f64,
 }
 
-impl ErrorMetrics {
+impl KwaveErrorMetrics {
     /// Compute error metrics between numerical and analytical solutions.
     /// # Panics
     /// - Panics if an internal precondition is violated.

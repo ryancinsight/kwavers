@@ -149,7 +149,7 @@ impl Default for PinnBeamformingUncertaintyConfig {
 
 /// Result of PINN-based beamforming.
 #[derive(Debug, Clone)]
-pub struct PinnBeamformingResult {
+pub struct InterfacePinnBeamformingResult {
     /// Beamformed image
     pub image: Array3<f32>,
     /// Uncertainty map (if enabled)
@@ -215,7 +215,7 @@ pub trait PinnBeamformingProvider: Send + Sync {
         &self,
         rf_data: &Array3<f32>,
         config: &PinnBeamformingConfig,
-    ) -> KwaversResult<PinnBeamformingResult>;
+    ) -> KwaversResult<InterfacePinnBeamformingResult>;
 
     /// Train the PINN model with training data.
     /// # Errors
@@ -293,7 +293,7 @@ pub trait DistributedPinnProvider: PinnBeamformingProvider {
         &self,
         rf_data: &Array4<f32>,
         config: &DistributedConfig,
-    ) -> KwaversResult<Vec<PinnBeamformingResult>>;
+    ) -> KwaversResult<Vec<InterfacePinnBeamformingResult>>;
 
     /// Get GPU utilization metrics.
     fn gpu_metrics(&self) -> Vec<GpuMetrics>;

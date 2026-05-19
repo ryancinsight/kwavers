@@ -1,20 +1,20 @@
 //! Multi-GPU context management.
 
 use super::types::{
-    CommunicationChannel, GpuAffinity, GpuTransferStatus, MultiGpuPerformanceSummary,
+    GpuAffinity, GpuCommunicationChannel, GpuTransferStatus, MultiGpuPerformanceSummary,
     PendingTransfer,
 };
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::gpu::{GpuCapabilities, GpuContext};
+use crate::gpu::{CoreGpuCapabilities, CoreGpuContext};
 use std::collections::HashMap;
 
 /// Multi-GPU context for distributed computing.
 #[derive(Debug)]
 pub struct MultiGpuContext {
-    contexts: Vec<GpuContext>,
+    contexts: Vec<CoreGpuContext>,
     affinity: GpuAffinity,
     peer_accessibility: Vec<Vec<bool>>,
-    communication_channels: HashMap<(usize, usize), CommunicationChannel>,
+    communication_channels: HashMap<(usize, usize), GpuCommunicationChannel>,
 }
 
 impl MultiGpuContext {
@@ -78,7 +78,7 @@ impl MultiGpuContext {
         })
     }
 
-    async fn create_context_for_adapter(adapter: wgpu::Adapter) -> KwaversResult<GpuContext> {
+    async fn create_context_for_adapter(adapter: wgpu::Adapter) -> KwaversResult<CoreGpuContext> {
         let info = adapter.get_info();
         let limits = adapter.limits();
 
@@ -115,7 +115,7 @@ impl MultiGpuContext {
                 })
             })?;
 
-        let capabilities = GpuCapabilities {
+        let capabilities = CoreGpuCapabilities {
             max_buffer_size: limits.max_buffer_size,
             max_workgroup_size: [
                 limits.max_compute_workgroup_size_x,
@@ -130,7 +130,7 @@ impl MultiGpuContext {
         let compute = crate::gpu::GpuCompute::new(&device);
         let buffer_manager = crate::gpu::GpuBufferManager::new(&device);
 
-        Ok(GpuContext {
+        Ok(CoreGpuContext {
             device,
             queue,
             capabilities,
@@ -140,13 +140,13 @@ impl MultiGpuContext {
     }
 
     fn initialize_communication_channels(
-        contexts: &[GpuContext],
-    ) -> HashMap<(usize, usize), CommunicationChannel> {
+        contexts: &[CoreGpuContext],
+    ) -> HashMap<(usize, usize), GpuCommunicationChannel> {
         let mut channels = HashMap::new();
 
         for i in 0..contexts.len() {
             for j in (i + 1)..contexts.len() {
-                let channel = CommunicationChannel {
+                let channel = GpuCommunicationChannel {
                     bandwidth: 50.0,
                     latency: 5.0,
                     supports_p2p: true,
@@ -160,7 +160,7 @@ impl MultiGpuContext {
         channels
     }
 
-    fn determine_affinity(contexts: &[GpuContext]) -> GpuAffinity {
+    fn determine_affinity(contexts: &[CoreGpuContext]) -> GpuAffinity {
         if contexts.len() <= 2 {
             GpuAffinity::None
         } else {
@@ -175,12 +175,12 @@ impl MultiGpuContext {
     }
 
     /// Get GPU context by index.
-    pub fn get_context(&self, index: usize) -> Option<&GpuContext> {
+    pub fn get_context(&self, index: usize) -> Option<&CoreGpuContext> {
         self.contexts.get(index)
     }
 
     /// Get all GPU contexts.
-    pub fn get_all_contexts(&self) -> &[GpuContext] {
+    pub fn get_all_contexts(&self) -> &[CoreGpuContext] {
         &self.contexts
     }
 
@@ -198,7 +198,7 @@ impl MultiGpuContext {
         &self,
         gpu_a: usize,
         gpu_b: usize,
-    ) -> Option<&CommunicationChannel> {
+    ) -> Option<&GpuCommunicationChannel> {
         let key = if gpu_a < gpu_b {
             (gpu_a, gpu_b)
         } else {
@@ -247,7 +247,7 @@ impl MultiGpuContext {
         &mut self,
         gpu_a: usize,
         gpu_b: usize,
-    ) -> Option<&mut CommunicationChannel> {
+    ) -> Option<&mut GpuCommunicationChannel> {
         let key = if gpu_a < gpu_b {
             (gpu_a, gpu_b)
         } else {

@@ -7,7 +7,7 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::core::CoreMedium;
 
 /// Trait for optical medium properties
-pub trait OpticalProperties: CoreMedium {
+pub trait MediumOpticalProperties: CoreMedium {
     /// Get optical absorption coefficient (1/m)
     fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
 

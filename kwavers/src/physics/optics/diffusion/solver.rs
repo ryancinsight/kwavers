@@ -1,6 +1,6 @@
 //! Light diffusion solver implementation
 
-use super::properties::OpticalProperties;
+use super::properties::DiffusionOpticalProperties;
 use crate::core::constants::optical::{DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF};
 use crate::domain::field::indices::LIGHT_IDX;
 use crate::domain::grid::Grid;
@@ -21,7 +21,7 @@ pub struct LightDiffusion {
     /// Emission spectrum field [photons/(m³·s·Hz)]
     pub emission_spectrum: Array3<f64>,
     /// Physical optical properties of the medium
-    optical_properties: OpticalProperties,
+    optical_properties: DiffusionOpticalProperties,
     /// Polarization model (optional)
     _polarization: Option<Box<dyn PolarizationModelTrait>>,
     /// Scattering calculator (optional)
@@ -62,7 +62,7 @@ impl LightDiffusion {
     /// The diffusion approximation is valid when μₛ' ≫ μₐ (scattering dominates).
     pub fn new(
         grid: &Grid,
-        optical_properties: OpticalProperties,
+        optical_properties: DiffusionOpticalProperties,
         enable_polarization: bool,
         enable_scattering: bool,
     ) -> Self {

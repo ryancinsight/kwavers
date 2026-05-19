@@ -22,7 +22,7 @@ mod localize;
 mod tests;
 mod types;
 
-pub use clutter::SvdClutterFilter;
+pub use clutter::UlmSvdClutterFilter;
 pub use detector::UlmDetector;
 pub use localize::GaussianLocalizer;
 pub use types::{BubbleDetection, GaussianLocalizationConfig, SvdClutterConfig};

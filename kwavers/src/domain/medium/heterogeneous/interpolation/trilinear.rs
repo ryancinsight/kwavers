@@ -11,9 +11,9 @@ use ndarray::Array3;
 /// **Mathematical Foundation**: Hamilton & Blackstock (1998) Eq. 3.42
 /// Provides C¹ continuity for field interpolation in heterogeneous media.
 #[derive(Debug)]
-pub struct TrilinearInterpolator;
+pub struct HetTrilinearInterpolator;
 
-impl TrilinearInterpolator {
+impl HetTrilinearInterpolator {
     /// Get grid indices for spatial coordinates with bounds checking
     ///
     /// **Safety**: All array accesses are bounds-checked per ICSE 2020 standards
@@ -149,7 +149,7 @@ mod tests {
         // Sample at every integer x with y = z = 0; expected value = ix.
         for ix in 0..grid.nx {
             let v =
-                TrilinearInterpolator::interpolate(&field, ix as f64 * grid.dx, 0.0, 0.0, &grid);
+                HetTrilinearInterpolator::interpolate(&field, ix as f64 * grid.dx, 0.0, 0.0, &grid);
             assert!(
                 (v - ix as f64).abs() < 1e-12,
                 "interpolate at ix={} returned {} (expected {})",
@@ -160,7 +160,7 @@ mod tests {
         }
 
         // Mid-cell sample: linear interpolation between samples 0 and 1.
-        let v = TrilinearInterpolator::interpolate(&field, 0.5 * grid.dx, 0.0, 0.0, &grid);
+        let v = HetTrilinearInterpolator::interpolate(&field, 0.5 * grid.dx, 0.0, 0.0, &grid);
         assert!(
             (v - 0.5).abs() < 1e-12,
             "mid-cell interpolation returned {} (expected 0.5)",
@@ -186,7 +186,7 @@ mod tests {
         }
 
         let v =
-            TrilinearInterpolator::interpolate(&field, 1.5 * grid.dx, 1.5 * grid.dy, 0.0, &grid);
+            HetTrilinearInterpolator::interpolate(&field, 1.5 * grid.dx, 1.5 * grid.dy, 0.0, &grid);
         // Expected: (1 + 2·1) + 0.5·[(2 + 2·1 − 1 − 2·1)] + 0.5·[(1 + 2·2 − 1 − 2·1)]
         //          + 0.25·[(2 + 2·2 − …)] = 1.5 + 0.5·1 + 0.5·2 + 0.25·0 = 4.5
         // (Equivalent to evaluating x + 2y at x = 1.5, y = 1.5 ⇒ 4.5.)

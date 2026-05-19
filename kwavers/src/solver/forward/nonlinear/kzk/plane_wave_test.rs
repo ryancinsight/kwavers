@@ -4,7 +4,7 @@
 mod tests {
     use crate::core::constants::SOUND_SPEED_WATER;
     use crate::solver::forward::nonlinear::kzk::{
-        constants::*, parabolic_diffraction::KzkDiffractionOperator, KZKConfig,
+        constants::*, parabolic_diffraction::KzkParabolicDiffractionOperator, KZKConfig,
     };
     use ndarray::Array2;
 
@@ -20,7 +20,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut op = KzkDiffractionOperator::new(&config);
+        let mut op = KzkParabolicDiffractionOperator::new(&config);
 
         // Create plane wave (constant amplitude)
         let mut field = Array2::ones((config.nx, config.ny));
@@ -59,7 +59,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut op = KzkDiffractionOperator::new(&config);
+        let mut op = KzkParabolicDiffractionOperator::new(&config);
 
         // Create a localized source
         let mut field = Array2::zeros((config.nx, config.ny));

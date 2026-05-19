@@ -6,7 +6,7 @@ use burn::tensor::Tensor;
 #[derive(Debug)]
 struct MockPhysicsDomain;
 
-impl<B: AutodiffBackend> crate::solver::inverse::pinn::ml::physics::PhysicsDomain<B>
+impl<B: AutodiffBackend> crate::solver::inverse::pinn::ml::physics::SimulationPhysicsDomain<B>
     for MockPhysicsDomain
 {
     fn domain_name(&self) -> &'static str {
@@ -46,7 +46,7 @@ impl<B: AutodiffBackend> crate::solver::inverse::pinn::ml::physics::PhysicsDomai
 fn test_adaptive_sampler_creation() {
     type TestBackend = Autodiff<NdArray<f32>>;
 
-    let domain: Box<dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<TestBackend>> =
+    let domain: Box<dyn crate::solver::inverse::pinn::ml::physics::SimulationPhysicsDomain<TestBackend>> =
         Box::new(MockPhysicsDomain);
     let strategy = AdaptiveRefinementConfig::default();
 

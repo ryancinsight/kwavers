@@ -6,7 +6,7 @@
 use crate::domain::grid::Grid;
 use crate::domain::medium::elastic::{ElasticArrayAccess, ElasticProperties};
 use crate::domain::medium::heterogeneous::{
-    core::HeterogeneousMedium, interpolation::TrilinearInterpolator,
+    core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator,
 };
 use ndarray::Array3;
 
@@ -14,7 +14,7 @@ impl ElasticProperties for HeterogeneousMedium {
     /// Lamé's first parameter λ at continuous coordinates (Pa)
     #[inline]
     fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.lame_lambda,
             x,
             y,
@@ -27,7 +27,7 @@ impl ElasticProperties for HeterogeneousMedium {
     /// Lamé's second parameter μ (shear modulus) at continuous coordinates (Pa)
     #[inline]
     fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.lame_mu,
             x,
             y,

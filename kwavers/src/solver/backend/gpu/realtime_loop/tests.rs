@@ -7,7 +7,7 @@ use ndarray::Array3;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::solver::backend::gpu::physics_kernels::{
-    PhysicsDomain, PhysicsKernel, PhysicsKernelRegistry, WorkgroupConfig,
+    GpuKernelPhysicsDomain, PhysicsKernel, PhysicsKernelRegistry, WorkgroupConfig,
 };
 
 use super::orchestrator::RealtimeSimulationOrchestrator;
@@ -87,7 +87,7 @@ fn test_registered_kernel_step_records_execution_metadata() -> KwaversResult<()>
     let config = RealtimeConfig::default();
     let mut registry = PhysicsKernelRegistry::new();
     registry.register(PhysicsKernel::new(
-        PhysicsDomain::AcousticFDTD,
+        GpuKernelPhysicsDomain::AcousticFDTD,
         "@compute @workgroup_size(1) fn compute_main() {}".to_string(),
         "compute_main".to_string(),
         25,

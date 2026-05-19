@@ -75,9 +75,9 @@ impl ErrorEstimator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub(super) fn richardson_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        use crate::solver::utilities::amr::interpolation::ConservativeInterpolator;
+        use crate::solver::utilities::amr::interpolation::AmrConservativeInterpolator;
 
-        let interpolator = ConservativeInterpolator::new();
+        let interpolator = AmrConservativeInterpolator::new();
         let coarse = interpolator.restrict(field);
         let prolonged = interpolator.prolongate(&coarse);
 

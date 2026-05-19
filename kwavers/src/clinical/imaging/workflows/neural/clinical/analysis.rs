@@ -1,10 +1,10 @@
 use super::super::types::{ClinicalAnalysis, FeatureMap, LesionDetection, TissueClassification};
-use super::ClinicalDecisionSupport;
+use super::NeuralClinicalDecisionSupport;
 use crate::core::error::KwaversResult;
 use ndarray::{Array3, ArrayView3};
 use std::collections::HashMap;
 
-impl ClinicalDecisionSupport {
+impl NeuralClinicalDecisionSupport {
     /// Perform comprehensive clinical analysis: lesion detection, tissue classification,
     /// recommendations, and overall diagnostic confidence.
     /// # Errors

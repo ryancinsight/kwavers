@@ -1,7 +1,7 @@
 //! Tests for plane wave delay calculation.
 
 use super::config::UltrafastPlaneWaveConfig;
-use super::processor::PlaneWave;
+use super::processor::UltrafastPlaneWave;
 use approx::assert_relative_eq;
 use ndarray::Array1;
 use std::f64::consts::PI;
@@ -14,7 +14,7 @@ fn test_plane_wave_transmission_delays() {
         sound_speed: 1540.0,
         ..Default::default()
     };
-    let pw = PlaneWave::new(config);
+    let pw = UltrafastPlaneWave::new(config);
 
     let delays_0deg = pw.transmission_delays(0.0).unwrap();
     assert_eq!(delays_0deg.len(), 5);
@@ -42,7 +42,7 @@ fn test_beamforming_delays() {
         sound_speed: 1540.0,
         ..Default::default()
     };
-    let pw = PlaneWave::new(config);
+    let pw = UltrafastPlaneWave::new(config);
 
     let delays = pw.beamforming_delays(0.0, 0.02, 0.0).unwrap();
     assert_eq!(delays.len(), 3);
@@ -61,7 +61,7 @@ fn test_apodization_weights() {
         f_number: Some(1.5),
         ..Default::default()
     };
-    let pw = PlaneWave::new(config);
+    let pw = UltrafastPlaneWave::new(config);
 
     let weights = pw.apodization_weights(0.0, 0.02).unwrap();
     assert_eq!(weights.len(), 128);
@@ -76,7 +76,7 @@ fn test_apodization_weights() {
 #[test]
 fn test_functional_ultrasound_config() {
     let positions: Vec<f64> = (0..128).map(|i| (i as f64 - 63.5) * 0.00011).collect();
-    let pw = PlaneWave::functional_ultrasound(positions);
+    let pw = UltrafastPlaneWave::functional_ultrasound(positions);
 
     assert_eq!(pw.num_angles(), 11);
 
@@ -96,7 +96,7 @@ fn test_delay_surface() {
         sound_speed: 1540.0,
         ..Default::default()
     };
-    let pw = PlaneWave::new(config);
+    let pw = UltrafastPlaneWave::new(config);
 
     let x_pixels = Array1::from_vec(vec![-0.005, 0.0, 0.005]);
     let y_pixels = Array1::from_vec(vec![0.01, 0.02]);

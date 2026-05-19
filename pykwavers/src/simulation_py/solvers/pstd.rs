@@ -6,7 +6,7 @@ use kwavers::domain::source::{GridSource, Source as KwaversSource};
 use kwavers::physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers::solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
 use kwavers::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use kwavers::solver::geometry::Geometry;
+use kwavers::solver::geometry::SolverGeometry;
 use kwavers::solver::interface::solver::Solver as SolverTrait;
 
 use crate::medium_py::MediumInner;
@@ -157,9 +157,9 @@ impl Simulation {
         };
 
         let geometry = if axisymmetric {
-            Geometry::CylindricalAS
+            SolverGeometry::CylindricalAS
         } else {
-            Geometry::Cartesian3D
+            SolverGeometry::Cartesian3D
         };
 
         let config = PSTDConfig {

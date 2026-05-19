@@ -105,18 +105,18 @@ mod tests {
     use super::*;
     use crate::core::error::recovery::RecoveryStrategy;
     use crate::core::error::{ErrorContext, KwaversError, SystemError};
-    use crate::gpu::recovery::{DeviceLostRecovery, GpuCheckpoint, GpuRecoveryManager};
+    use crate::gpu::recovery::{GpuDeviceLostRecovery, GpuCheckpoint, GpuRecoveryManagerImpl};
     use std::sync::{Arc, Mutex};
 
     #[test]
     fn global_stats_update() {
         // Test that global stats are updated
-        let before = GpuRecoveryManager::global_stats();
+        let before = GpuRecoveryManagerImpl::global_stats();
 
         // Use a recovery with a checkpoint so the attempt is counted as a success
         let checkpoint_arc: Arc<Mutex<Option<GpuCheckpoint>>> =
             Arc::new(Mutex::new(Some(GpuCheckpoint::zeroed(4))));
-        let recovery = DeviceLostRecovery::with_checkpoint(Arc::clone(&checkpoint_arc));
+        let recovery = GpuDeviceLostRecovery::with_checkpoint(Arc::clone(&checkpoint_arc));
 
         let error = KwaversError::System(SystemError::ResourceUnavailable {
             resource: "GPU device_lost".to_string(),
@@ -126,7 +126,7 @@ mod tests {
 
         let _ = recovery.recover(&error, &context);
 
-        let after = GpuRecoveryManager::global_stats();
+        let after = GpuRecoveryManagerImpl::global_stats();
         assert!(after.device_lost_attempts >= before.device_lost_attempts);
     }
 }

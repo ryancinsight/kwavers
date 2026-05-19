@@ -19,7 +19,7 @@ pub use cloud_dynamics::{
     CloudBubble, CloudConfig, CloudDynamics, CloudResponse, IncidentField, ScatteredField,
 };
 pub use microbubble::{BubbleDynamics, Microbubble, MicrobubblePopulation};
-pub use perfusion::{FlowKinetics, PerfusionModel, TissueUptake};
+pub use perfusion::{FlowKinetics, CeusPerfusionModel, TissueUptake};
 pub use reconstruction::{CEUSReconstruction, ContrastImage};
 pub use scattering::{HarmonicImaging, NonlinearScattering};
 

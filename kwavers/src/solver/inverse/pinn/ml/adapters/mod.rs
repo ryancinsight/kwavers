@@ -104,7 +104,7 @@ pub mod source;
 // pub mod boundary;
 
 pub use source::{
-    adapt_sources, AdapterError, FocalProperties, PinnAcousticSource, PinnSourceClass,
+    adapt_sources, AdapterError, PinnAcousticSource, PinnSourceClass, PinnSourceFocalProperties,
 };
 
 pub use electromagnetic::{adapt_em_sources, EMAdapterError, PinnEMSource};

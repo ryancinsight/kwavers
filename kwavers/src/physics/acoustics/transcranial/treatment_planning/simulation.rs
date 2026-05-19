@@ -1,7 +1,7 @@
 //! Fast acoustic intensity and bioheat calculations
 
 use super::planner::TreatmentPlanner;
-use super::types::{TargetVolume, TransducerSetup};
+use super::types::{TranscranialTargetVolume, TransducerSetup};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use num_complex::Complex;
@@ -153,7 +153,7 @@ impl TreatmentPlanner {
     /// Estimate treatment time
     pub(crate) fn estimate_treatment_time(
         &self,
-        _targets: &[TargetVolume],
+        _targets: &[TranscranialTargetVolume],
         acoustic_field: &Array3<f64>,
     ) -> f64 {
         // Estimate based on required thermal dose

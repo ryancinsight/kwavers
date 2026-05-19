@@ -1,9 +1,9 @@
 //! Main uncertainty quantification interface.
 
 #[cfg(feature = "pinn")]
-use super::bayesian_networks::PredictionWithUncertainty;
+use super::bayesian_networks::MlPredictionWithUncertainty;
 use super::bayesian_networks::{BayesianConfig, MlBayesianPINN};
-use super::conformal_prediction::{ConformalConfig, ConformalPredictor};
+use super::conformal_prediction::{ConformalConfig, MlConformalPredictor};
 use super::ensemble_methods::{EnsembleConfig, EnsembleQuantifier};
 use super::sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};
 use super::types::{
@@ -25,7 +25,7 @@ use std::collections::HashMap;
 pub struct UncertaintyQuantifier {
     pub(super) _config: MlUncertaintyConfig,
     pub(super) _bayesian: Option<MlBayesianPINN>,
-    pub(super) _conformal: Option<ConformalPredictor>,
+    pub(super) _conformal: Option<MlConformalPredictor>,
     pub(super) _ensemble: Option<EnsembleQuantifier>,
     pub(super) _sensitivity: Option<SensitivityAnalyzer>,
 }
@@ -52,7 +52,7 @@ impl UncertaintyQuantifier {
             config.method,
             MlUncertaintyMethod::Conformal | MlUncertaintyMethod::Hybrid
         ) {
-            Some(ConformalPredictor::new(ConformalConfig {
+            Some(MlConformalPredictor::new(ConformalConfig {
                 confidence_level: config.confidence_level,
                 calibration_size: config.calibration_size,
             })?)
@@ -104,7 +104,7 @@ impl UncertaintyQuantifier {
         pinn: &crate::solver::inverse::pinn::ml::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
         ground_truth: Option<&Array2<f32>>,
-    ) -> KwaversResult<PredictionWithUncertainty> {
+    ) -> KwaversResult<MlPredictionWithUncertainty> {
         match self._config.method {
             MlUncertaintyMethod::MonteCarloDropout => {
                 if let Some(bayesian) = &self._bayesian {
@@ -147,7 +147,7 @@ impl UncertaintyQuantifier {
                 Ok(results
                     .into_iter()
                     .next()
-                    .unwrap_or_else(|| PredictionWithUncertainty {
+                    .unwrap_or_else(|| MlPredictionWithUncertainty {
                         mean_prediction: Array2::zeros(inputs.dim()),
                         uncertainty: Array2::zeros(inputs.dim()),
                         confidence_intervals: HashMap::new(),

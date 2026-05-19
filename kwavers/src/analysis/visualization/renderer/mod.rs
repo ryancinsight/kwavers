@@ -8,7 +8,7 @@ pub mod pipeline;
 pub mod uniforms;
 pub mod volume;
 
-pub use gpu::GpuContext;
+pub use gpu::RendererGpuContext;
 pub use isosurface::IsosurfaceExtractor;
 pub use pipeline::{ComputePipeline, RenderPipeline};
 pub use uniforms::VolumeUniforms;
@@ -26,7 +26,7 @@ pub struct Renderer3D {
     config: VisualizationConfig,
     volume: VolumeRenderer,
     isosurface: IsosurfaceExtractor,
-    gpu: Option<GpuContext>,
+    gpu: Option<RendererGpuContext>,
 }
 
 impl Renderer3D {
@@ -39,7 +39,7 @@ impl Renderer3D {
         let isosurface = IsosurfaceExtractor::new(&config)?;
 
         let gpu = if config.gpu_enabled {
-            Some(GpuContext::new(&config)?)
+            Some(RendererGpuContext::new(&config)?)
         } else {
             None
         };

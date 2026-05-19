@@ -33,11 +33,11 @@ use ndarray::{s, Array1, Array2};
 /// Separates microbubble signal from tissue clutter by projecting out the
 /// low-rank tissue subspace in the IQ data matrix.
 #[derive(Debug)]
-pub struct SvdClutterFilter {
+pub struct UlmSvdClutterFilter {
     config: SvdClutterConfig,
 }
 
-impl SvdClutterFilter {
+impl UlmSvdClutterFilter {
     #[must_use]
     pub fn new(config: SvdClutterConfig) -> Self {
         Self { config }

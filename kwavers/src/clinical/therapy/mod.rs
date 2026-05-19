@@ -31,8 +31,8 @@ pub use hifu_planning::{
 };
 // 3D shear wave elastography workflows
 pub use swe_3d_workflows::{
-    ClinicalDecisionSupport, ElasticityMap2D, ElasticityMap3D, FibrosisStage,
-    MultiPlanarReconstruction, VolumetricROI, VolumetricStatistics,
+    ElasticityMap2D, ElasticityMap3D, FibrosisStage, MultiPlanarReconstruction,
+    Swe3dClinicalDecisionSupport, VolumetricROI, VolumetricStatistics,
 };
 
 // TherapyCalculator moved to crate::simulation::therapy::calculator

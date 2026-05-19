@@ -7,6 +7,6 @@ pub mod types;
 
 pub use context::MultiGpuContext;
 pub use types::{
-    CommunicationChannel, GpuAffinity, GpuTransferStatus, MultiGpuPerformanceSummary,
+    GpuAffinity, GpuCommunicationChannel, GpuTransferStatus, MultiGpuPerformanceSummary,
     PendingTransfer,
 };

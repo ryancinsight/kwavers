@@ -1,11 +1,11 @@
-use super::PMLBoundary;
+use super::DomainPMLBoundary;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::boundary::Boundary;
 use crate::domain::grid::Grid;
 use log::trace;
 use ndarray::{Array3, ArrayViewMut3};
 
-impl Boundary for PMLBoundary {
+impl Boundary for DomainPMLBoundary {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }

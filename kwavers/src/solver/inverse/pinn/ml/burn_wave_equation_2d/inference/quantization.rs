@@ -5,9 +5,9 @@ use burn::tensor::backend::Backend;
 use burn::tensor::Tensor;
 
 #[derive(Debug)]
-pub struct Quantizer;
+pub struct BurnWave2dQuantizer;
 
-impl Quantizer {
+impl BurnWave2dQuantizer {
     /// Extract layer sizes from Burn PINN model
     pub fn extract_layer_sizes<B: Backend>(pinn: &BurnPINN2DWave<B>) -> Vec<usize> {
         let mut sizes = Vec::new();

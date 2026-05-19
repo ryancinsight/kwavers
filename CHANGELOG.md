@@ -2,6 +2,113 @@
 
 ## Unreleased
 
+### Changed (2026-05-18) - Type Collision Disambiguation Session 5
+
+- [patch] Close residual trait-struct and same-name pairs deferred from
+  session 4. `cargo check --lib` exit 0. Renames:
+  `SpectralOperator` → `SpectralOperatorTrait` (math) /
+  `KuznetsovSpectralOperator` (kuznetsov solver);
+  `SourceParameters` → `DomainSourceParameters` (struct) /
+  `FactorySourceParameters` (trait); `MediumParameters` →
+  `DomainMediumParameters` (struct) / `FactoryMediumParameters` (trait);
+  `GridParameters` → `DomainGridParameters` (struct) /
+  `FactoryGridParameters` (trait); `Preconditioner` →
+  `SparsePreconditioner` (math enum) / `HelmholtzPreconditioner` (trait);
+  `PlasmonicEnhancement` → `PlasmonicEnhancementEquation` (trait) /
+  `PlasmonicEnhancementCalculator` (struct); `OpticalProperties` →
+  `MediumOpticalProperties` (trait) / `DiffusionOpticalProperties` (struct);
+  `Backend` (domain tensor enum) → `TensorBackend` (canonical; removed the
+  `pub use Backend as TensorBackend` alias since the type itself is now the
+  canonical name); `Backend` (solver trait) → `ComputeBackend`;
+  `AdaptiveBeamformer` → `AdaptiveTimeDomainBeamformer` /
+  `AdaptiveFrequencyBeamformer`; `EMSource` → `DomainEMSource` (domain trait) /
+  `PhysicsEMSource` (physics trait); `AcousticBoundaryType` →
+  `DomainAcousticBoundaryType` (domain enum) / `PinnAcousticBoundaryType`
+  (pinn enum); `TransducerGeometry` → `HifuTransducerGeometry` (hifu enum) /
+  `FieldCalculatorTransducerGeometry` (struct); `SolverFactory` →
+  `SolverFactoryRegistry` (struct) / `SolverFactoryTrait` (trait).
+
+### Changed (2026-05-18) - Type Collision Disambiguation Session 4
+
+- [patch] Disambiguate ~50 type collision clusters across kwavers via
+  domain-specific renames. Every collision resolved by giving each definition
+  a globally unique, module-path-prefixed name; no backward-compat aliases,
+  no `pub use X as Y` shims; every caller updated in the same change.
+  Verified by `cargo check --lib` exit 0.
+- [patch] Representative renames (definition-side prefix per module scope):
+  `LossComponents` → `PhysicsInformedLossComponents` / `ElasticPinnLossComponents`;
+  `ActivationFunction` → `PinnBeamforming*` / `ElasticPinn*`;
+  `Avx512{Config,StencilProcessor,Metrics}` → `Fdtd*` / `Simd*`;
+  `BayesianPINN` → `Ml*` / `Pinn*`; `BjerknesForce` → `BjerknesForceData` /
+  `BjerknesForceComputer`; `BoundaryComponent` → `Face*` / `Pinn*`;
+  `BoundaryConditionSpec` → `Api*` / `Pinn*`; `BufferManager` →
+  `GpuBufferManager` / `GpuBackendBufferManager`; `CavitationEvent` → `Pam*` /
+  `Recorder*`; `CavitationState` → `CavitationDetectionState` /
+  `CavitationMechanicsState`; `ClinicalDecisionSupport` → `Neural*` / `Swe3d*`;
+  `CommunicationChannel` → `Gpu*` / `PinnMultiGpu*`; `ComplianceReport` →
+  `Safety*` / `Validator*`; `ConformalPredictor` → `Ml*` / `Pinn*`;
+  `ConservationEnforcer` → `MultiPhysics*` / `HybridCoupling*`;
+  `ConservationMetrics` → `Acoustic*` / `Hybrid*`; `ConservativeInterpolator`
+  → `Amr*` / `Util*`; `ConvergenceInfo` → `Gmres*` / `UniversalSolver*`;
+  `DeviceInfo` → `Gpu*` / `Api*`; `DeviceLostRecovery` → `ErrorGpu*` / `Gpu*`;
+  `DeviceStatus` → `Api*` / `Transducer*`; `DiffractionOperator` → `HybridAs*`
+  / `KzkParabolic*`; `DirectivityPattern` → `Pam*` / `Transducer*`;
+  `DispersionCorrection` → `Absorption*` / `Freq*`; `DomainInfo` → `Hybrid*` /
+  `UniversalSolver*`; `ErrorMetrics` → `HybridValidation*` / `Kwave*`;
+  `FaultInjector` → `GpuRecovery*` / `Core*` / `GpuInjector*`; `FieldCoupler`
+  → `MultiPhysics*` / `Multiphysics*`; `FocalProperties` → `Source*` /
+  `PinnSource*`; `Geometry` → `SolverGeometry` / `PinnTrainerGeometry`;
+  `Geometry2D` → `BurnWave2dGeometry` / `UniversalSolver*`; `GpuBuffer` →
+  `Perf*` / `GpuBufferData`; `GpuCapabilities` → `Core*` / `Pinn*`;
+  `GpuContext` → `Renderer*` / `Core*`; `GpuOomRecovery` → `ErrorRecovery*` /
+  `GpuRecoveryOom`; `GpuRecoveryManager` → `ErrorGpu*` /
+  `GpuRecoveryManagerImpl`; `GradientComputer` → `Iterator*` / `Seismic*`;
+  `InterfacePoint` → `Medium*` / `Iterator*`; `ModelMetadata` → `Ml*` / `Api*`
+  / `Quantization*`; `MonitoringConfig` → `Clinical*` / `Hifu*` / `Cloud*`;
+  `MultiPhysicsInterface` → `Boundary*` / `Simulation*`; `PMLBoundary` →
+  `DomainPMLBoundary` / `ElasticSwe*`; `PerfusionModel` → `Ceus*` /
+  `Thermal*`; `PhysicsDomain` → `BoundaryCoupling*` / `Simulation*` /
+  `GpuKernel*`; `PinnBeamformingResult` → `Neural*` / `Interface*`;
+  `PlaneWave` → `Ultrafast*` / `KwaveAnalytical*`; `PredictionWithUncertainty`
+  → `Ml*` / `Pinn*`; `Predictor` (elastic_2d inference) → `ElasticPinnPredictor`;
+  `ProcessingConfig` → `Visualization*` / `Mobile*`; `Quantizer` →
+  `BurnWave2d*` / `Ml*`; `RateLimitConfig` → `Api*` / `RateLimiter*`;
+  `RecoveryStats` → `GpuRecoveryFaultStats` / `CoreRecoveryStats`;
+  `SizeDistribution` → `Ceus*` / `BubbleField*`; `StagePipeline` → `Stream*` /
+  `Flat*`; `SvdClutterFilter` → `Signal*` / `Ulm*`; `TargetVolume` →
+  `Therapy*` / `Transcranial*`; `TimeReversal` → `Aberration*` /
+  `Photoacoustic*`; `TimeoutRecovery` → `Error*` / `Gpu*`;
+  `TrilinearInterpolator` → `Het*` / `Numerics*`; `MemoryPool` (4-way) →
+  `PerfMemoryPool` / `GpuMemoryPool` / `BurnWave2dInferenceMemoryPool` /
+  `JitMemoryPool` (+ `PinnGpuAcceleratorMemoryPool` for the pub(crate) struct);
+  sonochemistry `BubbleState` → `SonochemBubbleState`; pinn-side
+  `GpuDeviceInfo` → `PinnMultiGpuDeviceInfo`; `KzkDiffractionOperator`
+  parabolic → `KzkParabolicDiffractionOperator`.
+
+### Fixed (2026-05-18) - DG Open-Boundary Policy
+
+- [patch] Add `DgBoundaryCondition::{Periodic, AbsorbingCharacteristic}`
+  for tensor acoustic DG face fluxes in per-axis `[x, y, z]` form. `Periodic`
+  remains the default conservation baseline; focused water-tank DG tensor runs
+  now use one-way acoustic characteristic exterior states on in-plane physical
+  tank boundaries while preserving the periodic out-of-plane invariant axis of
+  the embedded 2-D slab.
+- [patch] Split tensor DG face-state selection into
+  `acoustic/tensor/boundary.rs`, document the characteristic invariant
+  `w+ = p + Z u_n`, `w- = p - Z u_n`, and validate outgoing-preservation /
+  incoming-rejection plus periodic weighted-mass conservation in 2-D and 3-D.
+- [patch] Repair normal-target verification blockers encountered in the
+  requested test path: restore the local `apollo-fft` Stockham scalar fallback
+  imports and correct the clinical safety `SafetyComplianceReport` re-export.
+- [patch] Regenerate the focused water-tank artifacts under
+  `target/focused_water_tank/`. Current focused-map metrics: FDTD vs PSTD
+  normalized-L2 `1.142732e-1`, FDTD vs DG-2D `1.616039e-1`, PSTD vs DG-2D
+  `1.635862e-1`, DG-2D vs analytic `1.933581e-1`, and DG-2D peak focus at
+  `(8 mm, 9 mm)`, matching FDTD/PSTD/analytic. Axis-aware boundaries close the
+  thin-slab 3-D DG discrepancy: FDTD vs DG-3D normalized-L2 is now
+  `1.616039e-1`, and DG-2D vs DG-3D normalized-L2 is `1.756510e-8` with
+  correlation `1.000000`.
+
 ### Fixed (2026-05-18) - DG Focused-Water-Tank Alignment
 
 - [patch] Add uniform-grid interpolation for tensor acoustic DG pressure and
@@ -25,7 +132,8 @@
   `focused_water_tank_metrics.csv`, and `focused_water_tank_profiles.csv`.
   Current focused-map metrics: FDTD vs PSTD normalized-L2 `1.142732e-1`,
   FDTD vs DG-2D `4.091354e-1`, PSTD vs DG-2D `3.872639e-1`, DG-2D vs DG-3D
-  `1.037810e-9`, with DG-2D/DG-3D peak focus error `0.0 mm`.
+  `1.037810e-9`, with DG-2D/DG-3D peak focus error `0.0 mm`. Superseded by
+  the DG open-boundary policy metrics above.
 
 ### Added (2026-05-18) - Segmented Tissue Transducer Optimization
 
@@ -38,7 +146,11 @@
   apertures by segmented path fractions, solves complex per-element phase and
   amplitude weights with a weighted ridge system, and exports figures, metrics,
   plus value-semantic tests for both the real liver adapter and the deterministic
-  analytic phantom.
+  analytic phantom. The default LiTS17 plan now includes dense hotspot
+  refinement and regenerates Figure 2 with `target_dominant=true`, body
+  sidelobe peak ratio `0.7395404024847666`, body sidelobe P99 ratio
+  `0.3297347520675772`, tumor coverage `0.7837837837837838`, and protected
+  peak ratio `0.2958651403757349`.
 
 ### Fixed (2026-05-18) - Book Chapter Verification
 
@@ -46,6 +158,12 @@
   elastic shear display label from FWI terminology to iterative elastic inverse
   and accepting Python test stubs with empty `__text_signature__` while still
   rejecting stale nonlinear extension signatures.
+- [patch] Repair PyO3 binding drift found during Chapter 32 verification by
+  updating the Python array apodization binding to `KwaveApodizationWindow` and
+  the signal binding to `SignalWindowType`, then updating release-only FDTD and
+  PSTD Python solver wrappers to `SolverGeometry`; `cargo check -p pykwavers`,
+  the development `pykwavers` cdylib build, and `cargo build -p pykwavers
+  --release -j 1` now pass.
 
 ### Changed (2026-05-18) - Chapter 29 Elastic Shear Reconstruction
 

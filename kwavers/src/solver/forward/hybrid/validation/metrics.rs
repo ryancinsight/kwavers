@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Error metrics for validation
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ErrorMetrics {
+pub struct HybridValidationErrorMetrics {
     /// L2 norm error
     pub l2_error: f64,
     /// L∞ norm error

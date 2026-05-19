@@ -130,7 +130,7 @@ pub struct SlicePositions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::clinical::therapy::swe_3d_workflows::decision_support::ClinicalDecisionSupport;
+    use crate::clinical::therapy::swe_3d_workflows::decision_support::Swe3dClinicalDecisionSupport;
     use crate::clinical::therapy::swe_3d_workflows::statistics::VolumetricStatistics;
     use crate::domain::grid::Grid;
 
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_clinical_report_generation() {
-        let cds = ClinicalDecisionSupport::default();
+        let cds = Swe3dClinicalDecisionSupport::default();
 
         let stats = VolumetricStatistics {
             valid_voxels: 1500,

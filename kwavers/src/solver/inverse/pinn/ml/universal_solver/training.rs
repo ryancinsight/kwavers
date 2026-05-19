@@ -5,11 +5,11 @@
 
 use super::solver::UniversalPINNSolver;
 use super::types::{
-    ConvergenceInfo, DomainInfo, GeometricFeature, Geometry2D, PhysicsSolution,
-    UniversalSolverStats, UniversalTrainingConfig,
+    GeometricFeature, PhysicsSolution, UniversalSolverConvergenceInfo, UniversalSolverDomainInfo,
+    UniversalSolverGeometry2D, UniversalSolverStats, UniversalTrainingConfig,
 };
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::pinn::ml::physics::{PhysicsDomain, PinnDomainPhysicsParameters};
+use crate::solver::inverse::pinn::ml::physics::{SimulationPhysicsDomain, PinnDomainPhysicsParameters};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use log::info;
@@ -29,7 +29,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     pub fn solve_physics_domain(
         &mut self,
         domain_name: &str,
-        geometry: &Geometry2D,
+        geometry: &UniversalSolverGeometry2D,
         physics_params: &PinnDomainPhysicsParameters,
         training_config: Option<&UniversalTrainingConfig>,
     ) -> KwaversResult<PhysicsSolution<B>> {
@@ -70,7 +70,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
         let (best_epoch, best_loss, first_loss, final_loss) =
             Self::summarize_loss_history(&loss_history);
-        let convergence_info = ConvergenceInfo {
+        let convergence_info = UniversalSolverConvergenceInfo {
             converged: best_loss < 1e-4,
             final_epoch: config.epochs,
             best_loss,
@@ -92,7 +92,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
             memory_stats: None,
         };
 
-        let domain_info = DomainInfo {
+        let domain_info = UniversalSolverDomainInfo {
             domain_name: domain_name.to_string(),
             physics_params: physics_params.clone(),
             boundary_conditions: domain.boundary_conditions(),
@@ -117,8 +117,8 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     ///
     fn generate_collocation_points(
         &self,
-        geometry: &Geometry2D,
-        _domain: &dyn PhysicsDomain<B>,
+        geometry: &UniversalSolverGeometry2D,
+        _domain: &dyn SimulationPhysicsDomain<B>,
         num_points: usize,
         seed: u64,
     ) -> KwaversResult<Vec<(f64, f64, f64)>> {
@@ -139,7 +139,12 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     }
 
     /// Check if a point is within the geometric domain
-    pub(super) fn is_point_in_geometry(&self, x: f64, y: f64, geometry: &Geometry2D) -> bool {
+    pub(super) fn is_point_in_geometry(
+        &self,
+        x: f64,
+        y: f64,
+        geometry: &UniversalSolverGeometry2D,
+    ) -> bool {
         let [x_min, x_max, y_min, y_max] = geometry.bounds;
         if x < x_min || x > x_max || y < y_min || y > y_max {
             return false;
@@ -177,7 +182,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     ///
     pub fn initialize_model(
         &self,
-        _domain: &dyn PhysicsDomain<B>,
+        _domain: &dyn SimulationPhysicsDomain<B>,
     ) -> KwaversResult<crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>> {
         let config = crate::solver::inverse::pinn::ml::BurnPINN2DConfig {
             hidden_layers: vec![64, 64, 64],
@@ -199,7 +204,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     ///
     fn train_model(
         model: &mut crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
-        domain: &dyn PhysicsDomain<B>,
+        domain: &dyn SimulationPhysicsDomain<B>,
         collocation_points: &[(f64, f64, f64)],
         physics_params: &PinnDomainPhysicsParameters,
         config: &UniversalTrainingConfig,

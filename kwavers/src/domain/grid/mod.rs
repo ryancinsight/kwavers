@@ -25,7 +25,7 @@ use crate::math::fft::utils as fft_utils;
 pub use structure::{Bounds, Grid, GridDimension};
 
 /// Grid configuration types
-pub use config::{GridParameters, GridType};
+pub use config::{DomainGridParameters, GridType};
 pub use simple_config::GridConfig;
 
 /// Coordinate systems

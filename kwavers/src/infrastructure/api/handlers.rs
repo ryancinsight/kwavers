@@ -5,7 +5,7 @@
 
 use crate::infrastructure::api::auth::AuthenticatedUser;
 use crate::infrastructure::api::{
-    APIError, HealthCheck, JobInfoResponse, ListModelsResponse, ModelMetadata,
+    APIError, HealthCheck, JobInfoResponse, ListModelsResponse, ApiModelMetadata,
     PINNInferenceRequest, PINNInferenceResponse, PINNTrainingRequest, PINNTrainingResponse,
     PaginationParams,
 };
@@ -271,7 +271,7 @@ pub async fn get_model_info(
     State(state): State<AppState>,
     Path(model_id): Path<String>,
     auth: AuthenticatedUser,
-) -> Result<JsonResponse<ModelMetadata>, (StatusCode, JsonResponse<APIError>)> {
+) -> Result<JsonResponse<ApiModelMetadata>, (StatusCode, JsonResponse<APIError>)> {
     // Check if user owns this model
     let user_models = state.model_registry.get_user_models(&auth.user_id);
     if let Some(model_metadata) = user_models.iter().find(|m| m.model_id == model_id) {

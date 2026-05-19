@@ -3,7 +3,7 @@
 use super::super::orchestrator::PSTDSolver;
 use crate::core::error::KwaversResult;
 use crate::domain::source::{SourceField, SourceInjectionMode};
-use crate::solver::geometry::Geometry;
+use crate::solver::geometry::SolverGeometry;
 use ndarray::Zip;
 
 impl PSTDSolver {
@@ -88,7 +88,7 @@ impl PSTDSolver {
         //
         // Special case — CylindricalAS: only ρₓ (axial) and ρ_z (radial) are updated by the
         // propagator; ρᵧ must NOT receive injection.
-        let is_axisymmetric = self.config.geometry == Geometry::CylindricalAS;
+        let is_axisymmetric = self.config.geometry == SolverGeometry::CylindricalAS;
         // density_scale = 1.0 for all geometries; dimension-awareness is expressed by which
         // arrays receive injection, not by a fractional multiplier across all three arrays.
         let density_scale = 1.0_f64;

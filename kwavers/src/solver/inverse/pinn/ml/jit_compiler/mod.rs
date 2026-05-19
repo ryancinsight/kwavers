@@ -78,7 +78,7 @@ pub struct CompilerStats {
 pub struct OptimizedRuntime {
     compiler: JitCompiler,
     active_kernels: HashMap<String, CompiledKernel>,
-    memory_pool: MemoryPool,
+    memory_pool: JitMemoryPool,
     config: RuntimeConfig,
     weights: Vec<Vec<Vec<f32>>>,
     biases: Vec<Vec<f32>>,
@@ -102,7 +102,7 @@ impl Default for RuntimeConfig {
 
 /// Memory pool for efficient inference allocation
 #[derive(Debug)]
-pub struct MemoryPool {
+pub struct JitMemoryPool {
     buffers: Vec<Vec<f32>>,
     buffer_sizes: Vec<usize>,
     _current_index: usize,

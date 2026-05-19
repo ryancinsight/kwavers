@@ -12,7 +12,7 @@ use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
 use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVector;
 
 use super::super::super::types::{
-    NeuralBeamformingMetrics, PINNBeamformingConfig, PinnBeamformingResult,
+    NeuralBeamformingMetrics, PINNBeamformingConfig, NeuralPinnBeamformingResult,
 };
 use super::super::inference;
 
@@ -83,7 +83,7 @@ impl NeuralBeamformingProcessor {
     pub fn process_volume(
         &mut self,
         rf_data: &Array4<f32>,
-    ) -> KwaversResult<PinnBeamformingResult> {
+    ) -> KwaversResult<NeuralPinnBeamformingResult> {
         self.process_volume_view(rf_data.view())
     }
 
@@ -94,7 +94,7 @@ impl NeuralBeamformingProcessor {
     pub(crate) fn process_volume_view(
         &mut self,
         rf_data: ArrayView4<'_, f32>,
-    ) -> KwaversResult<PinnBeamformingResult> {
+    ) -> KwaversResult<NeuralPinnBeamformingResult> {
         let start_time = std::time::Instant::now();
 
         let (frames, channels, samples, _) = rf_data.dim();
@@ -115,7 +115,7 @@ impl NeuralBeamformingProcessor {
         let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
         self.metrics.total_processing_time = processing_time;
 
-        Ok(PinnBeamformingResult {
+        Ok(NeuralPinnBeamformingResult {
             volume,
             uncertainty,
             confidence,

@@ -8,11 +8,11 @@ use std::path::Path;
 
 // Import domain configurations
 use crate::domain::boundary::config::BoundaryParameters;
-use crate::domain::grid::config::GridParameters;
-use crate::domain::medium::config::MediumParameters;
+use crate::domain::grid::config::DomainGridParameters;
+use crate::domain::medium::config::DomainMediumParameters;
 
 // Import relocated parameters
-use crate::domain::source::SourceParameters;
+use crate::domain::source::DomainSourceParameters;
 use crate::simulation::parameters::{
     OutputParameters, PerformanceParameters, SimulationParameters,
 };
@@ -25,11 +25,11 @@ pub struct Configuration {
     /// Simulation parameters
     pub simulation: SimulationParameters,
     /// Grid discretization
-    pub grid: GridParameters,
+    pub grid: DomainGridParameters,
     /// Medium properties
-    pub medium: MediumParameters,
+    pub medium: DomainMediumParameters,
     /// Source configuration
-    pub source: SourceParameters,
+    pub source: DomainSourceParameters,
     /// Boundary conditions
     pub boundary: BoundaryParameters,
     /// Solver settings
@@ -206,9 +206,9 @@ impl Configuration {
 mod tests {
     use super::*;
     use crate::domain::boundary::config::BoundaryParameters;
-    use crate::domain::grid::config::GridParameters;
-    use crate::domain::medium::config::MediumParameters;
-    use crate::domain::source::config::SourceParameters;
+    use crate::domain::grid::config::DomainGridParameters;
+    use crate::domain::medium::config::DomainMediumParameters;
+    use crate::domain::source::config::DomainSourceParameters;
     use crate::simulation::parameters::SimulationParameters;
     use crate::solver::config::SolverConfiguration;
 
@@ -217,9 +217,9 @@ mod tests {
         // Create minimal configuration manually to avoid hanging Default implementation
         let config = Configuration {
             simulation: SimulationParameters::default(),
-            grid: GridParameters::default(),
-            medium: MediumParameters::default(),
-            source: SourceParameters::default(),
+            grid: DomainGridParameters::default(),
+            medium: DomainMediumParameters::default(),
+            source: DomainSourceParameters::default(),
             boundary: BoundaryParameters::default(),
             solver: SolverConfiguration::default(),
             output: OutputParameters::default(),

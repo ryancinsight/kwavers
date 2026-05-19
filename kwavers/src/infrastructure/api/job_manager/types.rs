@@ -57,7 +57,7 @@ pub struct JobManagerTrainingResult {
     /// Training metrics
     pub metrics: PinnApiTrainingMetrics,
     /// Model metadata
-    pub model_metadata: crate::api::ModelMetadata,
+    pub model_metadata: crate::api::ApiModelMetadata,
 }
 
 /// Stub training result for when PINN is not available.

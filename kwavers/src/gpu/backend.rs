@@ -1,10 +1,10 @@
 //! GPU backend abstraction
 //!
-//! Re-exports GpuContext as the primary GPU backend type.
+//! Re-exports CoreGpuContext as the primary GPU backend type.
 
-use super::GpuContext;
+use super::CoreGpuContext;
 
 /// GPU backend for acoustic simulations
 ///
-/// Type alias for GpuContext for convenience.
-pub type GpuBackend = GpuContext;
+/// Type alias for CoreGpuContext for convenience.
+pub type GpuBackend = CoreGpuContext;

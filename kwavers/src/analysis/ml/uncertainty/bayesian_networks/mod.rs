@@ -31,7 +31,7 @@ impl Default for BayesianConfig {
 
 /// Prediction with uncertainty bounds
 #[derive(Debug, Clone)]
-pub struct PredictionWithUncertainty {
+pub struct MlPredictionWithUncertainty {
     /// Mean prediction across samples
     pub mean_prediction: Array2<f32>,
     /// Uncertainty (standard deviation)

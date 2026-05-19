@@ -79,7 +79,7 @@ pub struct FaultInjectionResult {
 /// - Resource limits enforced (prevents system damage)
 /// - Isolated fault scope (doesn't affect other processes)
 /// - Automatic cleanup on drop
-pub struct FaultInjector {
+pub struct CoreFaultInjector {
     config: InjectionConfig,
     active_faults: AtomicUsize,
     injection_count: AtomicUsize,
@@ -87,7 +87,7 @@ pub struct FaultInjector {
     fault_history: Mutex<Vec<FaultInjectionResult>>,
 }
 
-impl FaultInjector {
+impl CoreFaultInjector {
     /// Create new fault injector with configuration
     pub fn new(config: InjectionConfig) -> Self {
         Self {

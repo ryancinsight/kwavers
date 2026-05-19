@@ -1,5 +1,5 @@
 use crate::core::error::KwaversResult;
-use crate::solver::inverse::pinn::ml::Geometry2D;
+use crate::solver::inverse::pinn::ml::BurnWave2dGeometry;
 use std::sync::Arc;
 
 use super::{
@@ -29,7 +29,7 @@ impl JitCompiler {
     pub fn compile_pinn_model(
         &mut self,
         model: &dyn std::any::Any,
-        geometry: &Geometry2D,
+        geometry: &BurnWave2dGeometry,
         kernel_name: &str,
     ) -> KwaversResult<CompiledKernel> {
         if let Some(cached_kernel) = self.kernel_cache.get(kernel_name) {
@@ -83,7 +83,7 @@ impl JitCompiler {
     fn generate_execution_plan(
         &self,
         model_info: &ModelInfo,
-        geometry: &Geometry2D,
+        geometry: &BurnWave2dGeometry,
     ) -> KwaversResult<ExecutionPlan> {
         let mut operations = Vec::new();
 

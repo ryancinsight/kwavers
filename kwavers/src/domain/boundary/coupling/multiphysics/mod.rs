@@ -7,4 +7,4 @@ pub mod interface;
 #[cfg(test)]
 mod tests;
 
-pub use interface::MultiPhysicsInterface;
+pub use interface::BoundaryMultiPhysicsInterface;

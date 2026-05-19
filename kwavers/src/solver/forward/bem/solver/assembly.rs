@@ -1,7 +1,7 @@
 use super::BemSolver;
 use crate::core::error::KwaversResult;
 use crate::math::linear_algebra::sparse::{
-    solver::{IterativeSolver, Preconditioner, SolverConfig},
+    solver::{IterativeSolver, SparsePreconditioner, SolverConfig},
     CompressedSparseRowMatrix,
 };
 use crate::solver::forward::bem::integrals::{
@@ -102,7 +102,7 @@ impl BemSolver {
         let solver_config = SolverConfig {
             max_iterations: self.config.max_iterations,
             tolerance: self.config.tolerance,
-            preconditioner: Preconditioner::None,
+            preconditioner: SparsePreconditioner::None,
             verbose: false,
         };
         let solver = IterativeSolver::create(solver_config);

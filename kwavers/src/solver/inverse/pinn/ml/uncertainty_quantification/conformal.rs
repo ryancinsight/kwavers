@@ -6,7 +6,7 @@ use ndarray::Array1;
 
 /// Conformal prediction for uncertainty quantification.
 #[derive(Debug)]
-pub struct ConformalPredictor<B: Backend> {
+pub struct PinnConformalPredictor<B: Backend> {
     /// Base PINN model.
     pub(super) model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>,
     /// Conformal scores from calibration.
@@ -17,7 +17,7 @@ pub struct ConformalPredictor<B: Backend> {
     pub quantile: Option<f32>,
 }
 
-impl<B: Backend> ConformalPredictor<B> {
+impl<B: Backend> PinnConformalPredictor<B> {
     /// Create a new conformal predictor.
     pub fn new(model: crate::solver::inverse::pinn::ml::BurnPINN2DWave<B>, alpha: f64) -> Self {
         let alpha = alpha.clamp(f64::EPSILON, 1.0 - f64::EPSILON);
@@ -80,7 +80,7 @@ impl<B: Backend> ConformalPredictor<B> {
     pub fn predict_conformal(&self, input: &[f32]) -> KwaversResult<(f32, f32)> {
         let q_hat = self.quantile.ok_or_else(|| {
             KwaversError::InvalidInput(
-                "ConformalPredictor must be calibrated before prediction".into(),
+                "PinnConformalPredictor must be calibrated before prediction".into(),
             )
         })?;
 

@@ -8,6 +8,6 @@ mod tests;
 
 pub use monitor::ClinicalMonitor;
 pub use types::{
-    FrameQualityRecord, MonitoringConfig, MonitoringFrameMetrics, MonitoringReport,
+    FrameQualityRecord, ClinicalMonitoringConfig, MonitoringFrameMetrics, MonitoringReport,
     MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
 };

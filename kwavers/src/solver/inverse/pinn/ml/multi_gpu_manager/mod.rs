@@ -11,9 +11,9 @@ mod types;
 
 pub use manager::MultiGpuManager;
 #[cfg(feature = "gpu")]
-pub use types::GpuCapabilities;
+pub use types::PinnGpuCapabilities;
 pub use types::{
-    CommunicationChannel, DataTransfer, FaultTolerance, GpuDeviceInfo, LoadBalancingAlgorithm,
+    DataTransfer, FaultTolerance, PinnMultiGpuDeviceInfo, LoadBalancingAlgorithm,
     MultiGpuDecompositionStrategy, MultiGpuPerformanceMonitor, PerformanceSummary,
-    PinnMultiGpuTransferStatus, WorkUnit,
+    PinnMultiGpuCommunicationChannel, PinnMultiGpuTransferStatus, WorkUnit,
 };

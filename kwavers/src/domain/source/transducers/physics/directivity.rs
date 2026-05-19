@@ -10,7 +10,7 @@ use std::f64::consts::PI;
 /// Based on Rayleigh-Sommerfeld diffraction theory
 /// Reference: Kino (1987) Chapter 4 - Radiation and Reception
 #[derive(Debug, Clone)]
-pub struct DirectivityPattern {
+pub struct TransducerDirectivityPattern {
     /// Angle vector (degrees)
     pub angles: Array1<f64>,
     /// Normalized pressure amplitude
@@ -23,7 +23,7 @@ pub struct DirectivityPattern {
     pub sidelobe_level: f64,
 }
 
-impl DirectivityPattern {
+impl TransducerDirectivityPattern {
     /// Calculate directivity for rectangular element
     ///
     /// Uses sinc function model for rectangular aperture

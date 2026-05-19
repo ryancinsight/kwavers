@@ -34,7 +34,7 @@
 //!   │     ├── MinimumVariance (MVDR/Capon)
 //!   │     ├── MUSIC
 //!   │     └── RobustCapon
-//!   └── AdaptiveBeamformer
+//!   └── AdaptiveFrequencyBeamformer
 //!         ├── SampleMatrixInversion (SMI)
 //!         └── EigenspaceMinimumVariance (ESMV)
 //! ```
@@ -46,7 +46,7 @@
 //!   computation and apodization.
 //! - `frequency_domain`: [`FrequencyDomainBeamformer`] — FFT-bin steering
 //!   vectors and sample covariance.
-//! - `adaptive`: [`AdaptiveBeamformer`] — data-driven weight optimization
+//! - `adaptive`: [`AdaptiveFrequencyBeamformer`] — data-driven weight optimization
 //!   with diagonal loading and pseudospectrum.
 //! - `config`: [`BeamformerConfig`] — sensor-array initialization seam.
 //!
@@ -115,7 +115,7 @@ mod time_domain;
 #[cfg(test)]
 mod tests;
 
-pub use adaptive::AdaptiveBeamformer;
+pub use adaptive::AdaptiveFrequencyBeamformer;
 pub use config::BeamformerConfig;
 pub use core::Beamformer;
 pub use frequency_domain::FrequencyDomainBeamformer;

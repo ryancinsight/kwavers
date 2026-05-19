@@ -73,12 +73,14 @@ use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
-use super::{DiffractionOperator, HASConfig, HasAbsorptionOperator, HybridAsNonlinearOperator};
+use super::{
+    HASConfig, HasAbsorptionOperator, HybridAsDiffractionOperator, HybridAsNonlinearOperator,
+};
 
 /// Hybrid Angular Spectrum solver with Strang operator splitting.
 #[derive(Debug)]
 pub struct HybridAngularSpectrumSolver {
-    diffraction: DiffractionOperator,
+    diffraction: HybridAsDiffractionOperator,
     nonlinearity: HybridAsNonlinearOperator,
     absorption: HasAbsorptionOperator,
 }
@@ -89,7 +91,7 @@ impl HybridAngularSpectrumSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn new(grid: &Grid, config: &HASConfig) -> KwaversResult<Self> {
-        let diffraction = DiffractionOperator::new(grid, config)?;
+        let diffraction = HybridAsDiffractionOperator::new(grid, config)?;
         let nonlinearity = HybridAsNonlinearOperator::new(config);
         let absorption = HasAbsorptionOperator::new(config);
 

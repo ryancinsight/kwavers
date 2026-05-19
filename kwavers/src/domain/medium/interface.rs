@@ -9,7 +9,7 @@ use ndarray::ArrayView3;
 
 /// Interface point information
 #[derive(Debug, Clone)]
-pub struct InterfacePoint {
+pub struct MediumInterfacePoint {
     /// Position in world coordinates (x, y, z)
     pub position: (f64, f64, f64),
     /// Grid indices (i, j, k)
@@ -33,7 +33,7 @@ pub fn find_interfaces<M: CoreMedium + ArrayAccess + ?Sized>(
     medium: &M,
     grid: &Grid,
     threshold: f64,
-) -> Vec<InterfacePoint> {
+) -> Vec<MediumInterfacePoint> {
     find_interfaces_from_array(medium.density_array(), grid, threshold)
 }
 
@@ -42,7 +42,7 @@ pub fn find_interfaces_pointwise<M: CoreMedium + ?Sized>(
     medium: &M,
     grid: &Grid,
     threshold: f64,
-) -> Vec<InterfacePoint> {
+) -> Vec<MediumInterfacePoint> {
     let mut interfaces = Vec::new();
 
     for i in 1..(grid.nx - 1) {
@@ -87,7 +87,7 @@ pub fn find_interfaces_pointwise<M: CoreMedium + ?Sized>(
                         [1.0, 0.0, 0.0] // Fallback to x-direction if gradient is zero
                     };
 
-                    interfaces.push(InterfacePoint {
+                    interfaces.push(MediumInterfacePoint {
                         position: (x, y, z),
                         indices: (i, j, k),
                         density_jump: neighbor_density - center_density,
@@ -106,7 +106,7 @@ fn find_interfaces_from_array(
     density_array: ArrayView3<f64>,
     grid: &Grid,
     threshold: f64,
-) -> Vec<InterfacePoint> {
+) -> Vec<MediumInterfacePoint> {
     let mut interfaces = Vec::new();
 
     // Check interior points only (avoid boundaries)
@@ -145,7 +145,7 @@ fn find_interfaces_from_array(
                             [0.0, 0.0, 0.0]
                         };
 
-                        interfaces.push(InterfacePoint {
+                        interfaces.push(MediumInterfacePoint {
                             position: grid.indices_to_coordinates(i, j, k),
                             indices: (i, j, k),
                             density_jump: neighbor_density - center_density,

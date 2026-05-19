@@ -26,7 +26,7 @@ pub mod traits;
 
 // Re-export main trait + capability/device types so callers consume them via the
 // stable `solver::backend::*` path rather than reaching into `traits::*`.
-pub use traits::{Backend, BackendCapabilities, BackendType, ComputeDevice};
+pub use traits::{ComputeBackend, BackendCapabilities, BackendType, ComputeDevice};
 
 #[cfg(test)]
 mod backend_surface_tests {
@@ -42,7 +42,7 @@ mod backend_surface_tests {
     fn backend_trait_reachable_via_canonical_path() {
         // dyn-trait reference forms only if the trait is in scope; bound check
         // forms only if the trait is object-safe — both invariants verified.
-        fn _assert_object_safe(_: &dyn crate::solver::backend::Backend) {}
+        fn _assert_object_safe(_: &dyn crate::solver::backend::ComputeBackend) {}
     }
 
     /// `BackendType` enum variants compile-time pattern-checked.

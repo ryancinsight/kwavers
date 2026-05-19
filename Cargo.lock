@@ -2330,6 +2330,7 @@ source = "git+https://github.com/ryancinsight/consus#1e5cb6802a17a7256cc7ed19f46
 dependencies = [
  "byteorder",
  "consus-core",
+ "flate2",
 ]
 
 [[package]]
@@ -6767,6 +6768,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "openjpeg-sys"
+version = "1.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92682cb92e7b01e2c020cf8ec12f3374558924bb24621df1112d8a7c93d419ef"
+dependencies = [
+ "cc",
+ "libc",
+]
+
+[[package]]
 name = "openssl"
 version = "0.10.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8054,10 +8065,12 @@ dependencies = [
  "system-configuration",
  "tokio",
  "tokio-native-tls",
+ "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "winreg",
 ]
@@ -8143,9 +8156,12 @@ name = "ritk-codecs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "charls",
  "image 0.24.9",
+ "jpeg-decoder",
  "jpeg2k",
  "openjp2",
+ "openjpeg-sys",
  "proptest",
 ]
 
@@ -8160,7 +8176,9 @@ dependencies = [
  "gaia",
  "nalgebra 0.33.3",
  "proptest",
+ "rand 0.8.5",
  "rayon",
+ "rustfft",
  "serde",
  "serde_json",
  "tempfile",
@@ -8189,6 +8207,10 @@ dependencies = [
  "burn",
  "burn-ndarray",
  "charls",
+ "consus-compression",
+ "consus-core",
+ "consus-hdf5",
+ "consus-io",
  "dicom",
  "dicom-core",
  "dicom-pixeldata",
@@ -8199,7 +8221,9 @@ dependencies = [
  "nalgebra 0.33.3",
  "ndarray",
  "openjp2",
+ "openjpeg-sys",
  "rayon",
+ "reqwest 0.11.27",
  "ritk-analyze",
  "ritk-codecs",
  "ritk-core",
@@ -8213,8 +8237,10 @@ dependencies = [
  "ritk-png",
  "ritk-tiff",
  "ritk-vtk",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.17",
+ "tiff 0.9.1",
  "tracing",
  "zune-core",
  "zune-jpegxl",
@@ -8368,7 +8394,10 @@ dependencies = [
  "anyhow",
  "burn",
  "burn-ndarray",
+ "gaia",
+ "nalgebra 0.33.3",
  "ritk-core",
+ "serde_json",
  "tempfile",
  "tracing",
 ]
@@ -10548,6 +10577,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76f218a38c84bcb33c25ec7059b07847d465ce0e0a76b995e134a45adcb6af76"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wasm-streams"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

@@ -92,7 +92,7 @@ pub struct SessionMetrics {
 
 /// Compliance report
 #[derive(Debug, Clone)]
-pub struct ComplianceReport {
+pub struct SafetyComplianceReport {
     pub total_audits: usize,
     pub compliant_audits: usize,
     pub warning_audits: usize,

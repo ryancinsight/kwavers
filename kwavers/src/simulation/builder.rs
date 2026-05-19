@@ -6,8 +6,8 @@
 use super::{Configuration, SimulationParameters};
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::config::BoundaryParameters;
-use crate::domain::medium::config::MediumParameters;
-use crate::domain::source::config::SourceParameters;
+use crate::domain::medium::config::DomainMediumParameters;
+use crate::domain::source::config::DomainSourceParameters;
 use crate::simulation::parameters::{OutputParameters, PerformanceParameters};
 use crate::solver::config::SolverConfiguration;
 use crate::solver::validation::ValidationParameters;
@@ -50,7 +50,7 @@ impl ConfigurationBuilder {
 
     /// Set medium properties
     #[must_use]
-    pub fn medium(mut self, params: MediumParameters) -> Self {
+    pub fn medium(mut self, params: DomainMediumParameters) -> Self {
         self.config.medium = params;
         self
     }
@@ -65,7 +65,7 @@ impl ConfigurationBuilder {
 
     /// Set source configuration
     #[must_use]
-    pub fn source(mut self, params: SourceParameters) -> Self {
+    pub fn source(mut self, params: DomainSourceParameters) -> Self {
         self.config.source = params;
         self
     }

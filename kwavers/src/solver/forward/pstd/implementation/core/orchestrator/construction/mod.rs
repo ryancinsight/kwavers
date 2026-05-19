@@ -2,7 +2,7 @@ mod ivp_velocity;
 
 use super::{pstd_source_gain, pstd_source_time_shift_samples, PSTDSolver};
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::boundary::{CPMLBoundary, PMLBoundary};
+use crate::domain::boundary::{CPMLBoundary, DomainPMLBoundary};
 use crate::domain::field::wave::WaveFields;
 use crate::domain::grid::Grid;
 use crate::domain::medium::MaterialFields;
@@ -20,7 +20,7 @@ use crate::solver::forward::pstd::numerics::spectral_correction::SpectralCorrect
 use crate::solver::forward::pstd::physics::absorption::initialize_absorption_operators;
 use crate::solver::forward::pstd::propagator::axisymmetric::AsContext;
 use crate::solver::forward::pstd::utils::compute_k_magnitude;
-use crate::solver::geometry::Geometry;
+use crate::solver::geometry::SolverGeometry;
 use ndarray::{s, Array3, Zip};
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -50,7 +50,7 @@ impl PSTDSolver {
         let _x_max: f64 = 0.0;
         let boundary: Option<Box<dyn crate::domain::boundary::Boundary>> = match &config.boundary {
             BoundaryConfig::PML(pml_config) => {
-                Some(Box::new(PMLBoundary::new(pml_config.clone())?))
+                Some(Box::new(DomainPMLBoundary::new(pml_config.clone())?))
             }
             BoundaryConfig::CPML(cpml_config) => Some(Box::new(CPMLBoundary::new_with_time_step(
                 cpml_config.clone(),
@@ -232,7 +232,7 @@ impl PSTDSolver {
             solver.kspace_operators = Some(PSTDKSOperators::new(k_grid));
         }
 
-        if solver.config.geometry == Geometry::CylindricalAS {
+        if solver.config.geometry == SolverGeometry::CylindricalAS {
             if grid.ny != 1 {
                 return Err(KwaversError::InvalidInput(
                     "CylindricalAS requires ny = 1".into(),

@@ -249,7 +249,7 @@ pub struct PatientParameters {
     ///
     /// Geometric definition of treatment target.
     /// Should be validated against imaging data.
-    pub target_volume: TargetVolume,
+    pub target_volume: TherapyTargetVolume,
 
     /// Risk organs to avoid
     ///
@@ -263,7 +263,7 @@ pub struct PatientParameters {
 /// Geometric definition of the treatment target based on medical imaging
 /// and clinical assessment.
 #[derive(Debug, Clone)]
-pub struct TargetVolume {
+pub struct TherapyTargetVolume {
     /// Center coordinates (x, y, z) in meters
     ///
     /// Anatomical center of the treatment target in patient coordinates.

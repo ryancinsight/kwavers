@@ -1,13 +1,13 @@
 //! Treatment outcome prediction model
 
-use super::{MLModel, ModelMetadata};
+use super::{MLModel, MlModelMetadata};
 use crate::core::error::KwaversResult;
 use ndarray::Array2;
 
 /// Outcome prediction model
 #[derive(Debug)]
 pub struct OutcomePredictorModel {
-    metadata: ModelMetadata,
+    metadata: MlModelMetadata,
 }
 
 impl Default for OutcomePredictorModel {
@@ -27,7 +27,7 @@ impl OutcomePredictorModel {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            metadata: ModelMetadata {
+            metadata: MlModelMetadata {
                 name: "OutcomePredictor".to_owned(),
                 version: "1.0.0".to_owned(),
                 input_shape: vec![20],

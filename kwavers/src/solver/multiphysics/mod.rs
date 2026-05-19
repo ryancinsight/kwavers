@@ -13,7 +13,7 @@ pub mod thermal_optical;
 
 pub use acoustic_optical::AcousticOpticalSolver;
 pub use coupled_solver::CoupledMultiPhysicsSolver;
-pub use field_coupling::{FieldCoupler, FieldCouplingStrategy};
+pub use field_coupling::{FieldCouplingStrategy, MultiphysicsFieldCoupler};
 pub use monolithic::{
     CouplingConvergenceInfo, MonolithicCoupler, NewtonKrylovConfig, PhysicsCoefficients,
 };

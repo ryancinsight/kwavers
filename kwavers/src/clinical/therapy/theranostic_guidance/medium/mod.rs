@@ -95,12 +95,22 @@ pub(super) fn median_in_mask(values: &Array2<f64>, mask: &Array2<bool>) -> Optio
 
 /// Resample a continuous 2-D field to a square `size × size` grid via bilinear
 /// interpolation.
+///
+/// When `size == 1` the single output cell is the bilinear sample at the centre
+/// of the input grid, avoiding division-by-zero in the index mapping.  Callers
+/// should enforce `size >= 2` at their API boundary (e.g. `grid_size` in
+/// [`prepare_abdominal_slice`]) to produce a meaningful solver grid.
 pub(super) fn resample(input: &Array2<f64>, size: usize) -> Array2<f64> {
     let (nx, ny) = input.dim();
+    if size == 1 {
+        let cx = (nx - 1) as f64 * 0.5;
+        let cy = (ny - 1) as f64 * 0.5;
+        return Array2::from_elem((1, 1), bilinear_index_space(input, cx, cy));
+    }
+    let scale_x = (nx - 1) as f64 / (size - 1) as f64;
+    let scale_y = (ny - 1) as f64 / (size - 1) as f64;
     Array2::from_shape_fn((size, size), |(ix, iy)| {
-        let x = ix as f64 * (nx - 1) as f64 / (size - 1) as f64;
-        let y = iy as f64 * (ny - 1) as f64 / (size - 1) as f64;
-        bilinear_index_space(input, x, y)
+        bilinear_index_space(input, ix as f64 * scale_x, iy as f64 * scale_y)
     })
 }
 

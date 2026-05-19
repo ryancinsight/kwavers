@@ -48,7 +48,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use crate::solver::geometry::Geometry;
+use crate::solver::geometry::SolverGeometry;
 use ndarray::{s, Zip};
 
 impl PSTDSolver {
@@ -61,7 +61,7 @@ impl PSTDSolver {
     ///
     #[inline]
     pub(crate) fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {
-        if self.config.geometry == Geometry::CylindricalAS {
+        if self.config.geometry == SolverGeometry::CylindricalAS {
             return self.update_velocity_as(dt);
         }
         self.update_velocity_cartesian(dt)

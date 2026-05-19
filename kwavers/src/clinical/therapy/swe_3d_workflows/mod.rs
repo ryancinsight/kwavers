@@ -26,8 +26,8 @@ pub mod roi;
 pub mod statistics;
 
 pub use decision_support::{
-    BreastLesionClassification, ClassificationConfidence, ClinicalDecisionSupport, FibrosisStage,
-    LiverFibrosisStage, TissueReference,
+    BreastLesionClassification, ClassificationConfidence, FibrosisStage, LiverFibrosisStage,
+    Swe3dClinicalDecisionSupport, TissueReference,
 };
 pub use elasticity_map::{ElasticityMap2D, ElasticityMap3D};
 pub use reconstruction::{MultiPlanarReconstruction, SliceOrientation, SlicePositions};

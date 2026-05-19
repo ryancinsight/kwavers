@@ -47,7 +47,7 @@ use super::FrequencyDomainBeamformer;
 /// - `MinimumVariance`: MVDR/Capon with diagonal loading
 /// - `EigenspaceMV`: Subspace-based MVDR
 /// - `MUSIC`: Pseudospectrum via noise subspace projection
-pub trait AdaptiveBeamformer: FrequencyDomainBeamformer {
+pub trait AdaptiveFrequencyBeamformer: FrequencyDomainBeamformer {
     /// Compute optimal beamforming weights from covariance and steering vector.
     ///
     /// This is the core operation for adaptive beamformers. Different algorithms

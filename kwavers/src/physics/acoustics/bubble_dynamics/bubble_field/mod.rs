@@ -9,7 +9,7 @@ pub mod distributions;
 pub use crate::domain::field::BubbleStateFields;
 pub use cloud::BubbleCloud;
 pub use core::{BubbleField, BubbleFieldStats};
-pub use distributions::{SizeDistribution, SpatialDistribution};
+pub use distributions::{BubbleFieldSizeDistribution, SpatialDistribution};
 
 #[cfg(test)]
 mod tests;

@@ -25,7 +25,7 @@ pub struct SonochemicalYield {
 
 /// Bubble state for sonochemistry calculations
 #[derive(Debug, Clone)]
-pub struct BubbleState {
+pub struct SonochemBubbleState {
     pub radius: f64,
     pub temperature: f64,
     pub pressure_internal: f64,
@@ -70,7 +70,7 @@ impl SonochemistryModel {
     /// Update ROS generation from bubble collapse
     pub fn update_ros_generation(
         &mut self,
-        bubble_states: &Array3<BubbleState>,
+        bubble_states: &Array3<SonochemBubbleState>,
         dt: f64,
         grid_spacing: (f64, f64, f64),
     ) {

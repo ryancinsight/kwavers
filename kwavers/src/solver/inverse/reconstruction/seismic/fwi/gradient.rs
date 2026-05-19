@@ -6,18 +6,18 @@ use ndarray::{Array3, Zip};
 
 /// Gradient computation methods for FWI
 #[derive(Debug)]
-pub struct GradientComputer {
+pub struct SeismicGradientComputer {
     /// Preconditioning matrix (optional)
     preconditioner: Option<Array3<f64>>,
 }
 
-impl Default for GradientComputer {
+impl Default for SeismicGradientComputer {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GradientComputer {
+impl SeismicGradientComputer {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn test_encoded_gradient_weighted_sum() {
-        let computer = GradientComputer::new();
+        let computer = SeismicGradientComputer::new();
         let g1 = Array3::from_elem((2, 2, 2), 1.0);
         let g2 = Array3::from_elem((2, 2, 2), 3.0);
 
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_encoded_gradient_rejects_shape_mismatch() {
-        let computer = GradientComputer::new();
+        let computer = SeismicGradientComputer::new();
         let g1 = Array3::from_elem((2, 2, 2), 1.0);
         let g2 = Array3::from_elem((3, 2, 2), 3.0);
 

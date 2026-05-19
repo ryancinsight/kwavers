@@ -1,4 +1,4 @@
-use super::clutter::{svht_threshold, SvdClutterFilter};
+use super::clutter::{svht_threshold, UlmSvdClutterFilter};
 use super::localize::{gauss_newton_fit_2d, GaussianLocalizer};
 use super::types::{GaussianLocalizationConfig, SvdClutterConfig};
 use crate::math::linear_algebra::LinearAlgebra;
@@ -53,7 +53,7 @@ fn test_svd_clutter_filter_rank1_tissue() {
         fixed_clutter_rank: 1,
         ..Default::default()
     };
-    let filter = SvdClutterFilter::new(cfg);
+    let filter = UlmSvdClutterFilter::new(cfg);
     let (bubble, k) = filter.filter(&iq).unwrap();
 
     assert_eq!(k, 1, "Tissue rank should be 1");

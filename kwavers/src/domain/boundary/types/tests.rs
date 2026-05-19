@@ -28,11 +28,11 @@ fn test_boundary_face() {
 
 #[test]
 fn test_acoustic_to_general_conversion() {
-    let sound_soft = AcousticBoundaryType::SoundSoft;
+    let sound_soft = DomainAcousticBoundaryType::SoundSoft;
     let general: BoundaryType = sound_soft.into();
     assert_eq!(general, BoundaryType::Dirichlet);
 
-    let impedance = AcousticBoundaryType::Impedance { impedance: 1500.0 };
+    let impedance = DomainAcousticBoundaryType::Impedance { impedance: 1500.0 };
     let general: BoundaryType = impedance.into();
     match general {
         BoundaryType::Robin { alpha, beta } => {

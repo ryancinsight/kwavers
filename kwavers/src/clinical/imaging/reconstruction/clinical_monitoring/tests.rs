@@ -1,24 +1,24 @@
 use super::monitor::ClinicalMonitor;
-use super::types::{MonitoringConfig, MonitoringSafetyEventType, SafetyEvent, SafetySeverity};
+use super::types::{ClinicalMonitoringConfig, MonitoringSafetyEventType, SafetyEvent, SafetySeverity};
 use std::time::SystemTime;
 
 #[test]
 fn test_monitoring_config_default() {
-    let config = MonitoringConfig::default();
+    let config = ClinicalMonitoringConfig::default();
     assert!(config.enable_quality_monitoring);
     assert!(config.enable_safety_logging);
 }
 
 #[test]
 fn test_clinical_monitor_creation() {
-    let config = MonitoringConfig::default();
+    let config = ClinicalMonitoringConfig::default();
     let monitor = ClinicalMonitor::new(config);
     assert_eq!(monitor.performance_metrics.total_frames, 0);
 }
 
 #[test]
 fn test_frame_quality_recording() {
-    let config = MonitoringConfig::default();
+    let config = ClinicalMonitoringConfig::default();
     let mut monitor = ClinicalMonitor::new(config);
 
     monitor
@@ -29,7 +29,7 @@ fn test_frame_quality_recording() {
 
 #[test]
 fn test_safety_event_logging() {
-    let config = MonitoringConfig::default();
+    let config = ClinicalMonitoringConfig::default();
     let mut monitor = ClinicalMonitor::new(config);
 
     let event = SafetyEvent {
@@ -47,7 +47,7 @@ fn test_safety_event_logging() {
 
 #[test]
 fn test_temperature_check() {
-    let config = MonitoringConfig::default();
+    let config = ClinicalMonitoringConfig::default();
     let mut monitor = ClinicalMonitor::new(config);
 
     monitor.check_temperature(42.5, 37.0);
@@ -59,7 +59,7 @@ fn test_temperature_check() {
 
 #[test]
 fn test_mechanical_index_check() {
-    let config = MonitoringConfig::default();
+    let config = ClinicalMonitoringConfig::default();
     let mut monitor = ClinicalMonitor::new(config);
 
     monitor.check_mechanical_index(2.0);
@@ -68,7 +68,7 @@ fn test_mechanical_index_check() {
 
 #[test]
 fn test_monitoring_report() {
-    let config = MonitoringConfig::default();
+    let config = ClinicalMonitoringConfig::default();
     let monitor = ClinicalMonitor::new(config);
 
     let report = monitor.generate_report();
@@ -78,7 +78,7 @@ fn test_monitoring_report() {
 
 #[test]
 fn test_quality_score_computation() {
-    let config = MonitoringConfig::default();
+    let config = ClinicalMonitoringConfig::default();
     let monitor = ClinicalMonitor::new(config);
 
     let score = monitor.compute_quality_score(30.0, 1.0, 0.0);
@@ -104,7 +104,7 @@ fn test_safety_event_severity() {
 /// total = (100×0.4 + 100×0.4 + 100×0.2).round() = 100.0
 #[test]
 fn quality_score_perfect_inputs_is_one_hundred() {
-    let monitor = ClinicalMonitor::new(MonitoringConfig::default());
+    let monitor = ClinicalMonitor::new(ClinicalMonitoringConfig::default());
     let score = monitor.compute_quality_score(30.0, 1.0, 0.0);
     assert!((score - 100.0).abs() < 1e-10, "expected 100.0, got {score}");
 }
@@ -117,7 +117,7 @@ fn quality_score_perfect_inputs_is_one_hundred() {
 /// total = 0.round() = 0.0
 #[test]
 fn quality_score_zero_inputs_is_zero() {
-    let monitor = ClinicalMonitor::new(MonitoringConfig::default());
+    let monitor = ClinicalMonitor::new(ClinicalMonitoringConfig::default());
     let score = monitor.compute_quality_score(0.0, 0.0, 1.0);
     assert!(score.abs() < 1e-10, "expected 0.0, got {score}");
 }
@@ -130,7 +130,7 @@ fn quality_score_zero_inputs_is_zero() {
 /// total = (50×0.4 + 50×0.4 + 100×0.2).round() = (20 + 20 + 20).round() = 60.0
 #[test]
 fn quality_score_mid_range_exact() {
-    let monitor = ClinicalMonitor::new(MonitoringConfig::default());
+    let monitor = ClinicalMonitor::new(ClinicalMonitoringConfig::default());
     let score = monitor.compute_quality_score(15.0, 0.5, 0.0);
     assert!((score - 60.0).abs() < 1e-10, "expected 60.0, got {score}");
 }
@@ -142,7 +142,7 @@ fn quality_score_mid_range_exact() {
 ///   avg after frame 2 = (40 × 1 + 60) / 2 = 50.0
 #[test]
 fn quality_recording_running_average_is_exact() {
-    let mut monitor = ClinicalMonitor::new(MonitoringConfig::default());
+    let mut monitor = ClinicalMonitor::new(ClinicalMonitoringConfig::default());
     monitor
         .record_frame_quality(1, 40.0, 30.0, 1.0, 1.0, 0.0)
         .unwrap();

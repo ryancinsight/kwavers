@@ -52,7 +52,7 @@
 //! ```ignore
 //! use kwavers::infra::cloud::{
 //!     CloudPINNService, CloudProvider, DeploymentConfig,
-//!     AutoScalingConfig, MonitoringConfig
+//!     AutoScalingConfig, CloudMonitoringConfig
 //! };
 //! use kwavers::ml::pinn::BurnPINN2DWave;
 //!
@@ -69,7 +69,7 @@
 //!     gpu_count: 1,
 //!     memory_gb: 16,
 //!     auto_scaling: AutoScalingConfig::default(),
-//!     monitoring: MonitoringConfig::default(),
+//!     monitoring: CloudMonitoringConfig::default(),
 //! };
 //!
 //! // Deploy model
@@ -91,7 +91,7 @@
 //! ## Custom Configuration
 //!
 //! ```
-//! use kwavers::infra::cloud::{AutoScalingConfig, MonitoringConfig, AlertThresholds};
+//! use kwavers::infra::cloud::{AutoScalingConfig, CloudMonitoringConfig, AlertThresholds};
 //!
 //! let auto_scaling = AutoScalingConfig {
 //!     min_instances: 2,
@@ -102,7 +102,7 @@
 //!     cooldown_seconds: 600,
 //! };
 //!
-//! let monitoring = MonitoringConfig {
+//! let monitoring = CloudMonitoringConfig {
 //!     enable_detailed_metrics: true,
 //!     metrics_interval_seconds: 30,
 //!     alert_thresholds: AlertThresholds {
@@ -179,7 +179,7 @@ pub mod types;
 pub mod utilities;
 
 // Re-export primary types for convenience
-pub use config::{AlertThresholds, AutoScalingConfig, DeploymentConfig, MonitoringConfig};
+pub use config::{AlertThresholds, AutoScalingConfig, DeploymentConfig, CloudMonitoringConfig};
 pub use service::CloudPINNService;
 pub use types::{
     CloudProvider, DeploymentHandle, DeploymentMetrics, DeploymentStatus, ModelDeploymentData,
@@ -204,7 +204,7 @@ mod tests {
             gpu_count: 1,
             memory_gb: 16,
             auto_scaling: AutoScalingConfig::default(),
-            monitoring: MonitoringConfig::default(),
+            monitoring: CloudMonitoringConfig::default(),
         };
 
         valid_config.validate().unwrap();
@@ -216,7 +216,7 @@ mod tests {
             gpu_count: 0, // Invalid
             memory_gb: 16,
             auto_scaling: AutoScalingConfig::default(),
-            monitoring: MonitoringConfig::default(),
+            monitoring: CloudMonitoringConfig::default(),
         };
 
         assert!(invalid_config.validate().is_err());
@@ -230,7 +230,7 @@ mod tests {
         assert_eq!(auto_scaling.target_gpu_utilization, 0.7);
         auto_scaling.validate().unwrap();
 
-        let monitoring = MonitoringConfig::default();
+        let monitoring = CloudMonitoringConfig::default();
         assert!(monitoring.enable_detailed_metrics);
         assert_eq!(monitoring.metrics_interval_seconds, 60);
         monitoring.validate().unwrap();

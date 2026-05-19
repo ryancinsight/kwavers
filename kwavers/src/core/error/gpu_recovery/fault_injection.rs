@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use super::context::RecoveryContext;
-use super::manager::GpuRecoveryManager;
+use super::manager::ErrorGpuRecoveryManager;
 use super::telemetry::{
     DEVICE_LOST_LATENCY_BUDGET_MS, DEVICE_LOST_TARGET_RATE, OOM_LATENCY_BUDGET_MS, OOM_TARGET_RATE,
     TIMEOUT_LATENCY_BUDGET_MS, TIMEOUT_TARGET_RATE, VALIDATION_LATENCY_BUDGET_MS,
@@ -193,20 +193,20 @@ impl FaultInjectionReport {
 
 /// Fault injector for controlled testing
 #[derive(Debug)]
-pub struct FaultInjector {
+pub struct GpuRecoveryFaultInjector {
     pub config: FaultInjectionConfig,
-    recovery_manager: GpuRecoveryManager,
+    recovery_manager: ErrorGpuRecoveryManager,
 }
 
-impl FaultInjector {
+impl GpuRecoveryFaultInjector {
     pub fn new(config: FaultInjectionConfig) -> Self {
         Self {
             config,
-            recovery_manager: GpuRecoveryManager::new(),
+            recovery_manager: ErrorGpuRecoveryManager::new(),
         }
     }
 
-    pub fn with_manager(config: FaultInjectionConfig, manager: GpuRecoveryManager) -> Self {
+    pub fn with_manager(config: FaultInjectionConfig, manager: ErrorGpuRecoveryManager) -> Self {
         Self {
             config,
             recovery_manager: manager,
@@ -257,7 +257,7 @@ impl FaultInjector {
         (0..n).map(|_| self.inject_fault(scenario)).collect()
     }
 
-    pub fn calculate_stats(&self, results: &[TrialResult]) -> RecoveryStats {
+    pub fn calculate_stats(&self, results: &[TrialResult]) -> GpuRecoveryFaultStats {
         let n = results.len();
         let successes = results.iter().filter(|r| r.recovered).count();
         let rate = if n == 0 {
@@ -276,7 +276,7 @@ impl FaultInjector {
             (p + z * z / (2.0 * n_f) + z * ((p * (1.0 - p) + z * z / (4.0 * n_f)) / n_f).sqrt())
                 / (1.0 + z * z / n_f);
 
-        RecoveryStats {
+        GpuRecoveryFaultStats {
             trials: n,
             successes,
             rate,
@@ -288,7 +288,7 @@ impl FaultInjector {
 
 /// Recovery statistics with confidence intervals
 #[derive(Debug, Clone, Copy)]
-pub struct RecoveryStats {
+pub struct GpuRecoveryFaultStats {
     pub trials: usize,
     pub successes: usize,
     pub rate: f64,
@@ -296,7 +296,7 @@ pub struct RecoveryStats {
     pub ci_high: f64,
 }
 
-impl RecoveryStats {
+impl GpuRecoveryFaultStats {
     pub fn meets_target(&self, target: f64) -> bool {
         self.ci_low >= target
     }

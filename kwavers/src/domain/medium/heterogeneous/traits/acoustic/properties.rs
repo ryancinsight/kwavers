@@ -6,7 +6,7 @@
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::{
-    core::HeterogeneousMedium, interpolation::TrilinearInterpolator,
+    core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator,
 };
 use crate::domain::medium::{
     acoustic::AcousticProperties,
@@ -120,7 +120,7 @@ impl AcousticProperties for HeterogeneousMedium {
     /// and y are trilinearly interpolated when `use_trilinear_interpolation`
     /// is set.
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        let base_absorption = TrilinearInterpolator::get_field_value(
+        let base_absorption = HetTrilinearInterpolator::get_field_value(
             &self.absorption,
             x,
             y,
@@ -128,7 +128,7 @@ impl AcousticProperties for HeterogeneousMedium {
             grid,
             self.use_trilinear_interpolation,
         );
-        let exponent = TrilinearInterpolator::get_field_value(
+        let exponent = HetTrilinearInterpolator::get_field_value(
             &self.alpha_power,
             x,
             y,
@@ -147,7 +147,7 @@ impl AcousticProperties for HeterogeneousMedium {
     /// The default trait implementation returns 0.0 (lossless), so this override is
     /// required for `effective_alpha_db` in the solver to pick up the medium's field.
     fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.absorption,
             x,
             y,
@@ -162,7 +162,7 @@ impl AcousticProperties for HeterogeneousMedium {
     /// Used by solvers that need the exponent separately from the absorption
     /// coefficient (e.g. fractional-Laplacian PSTD absorber).
     fn alpha_power(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        TrilinearInterpolator::get_field_value(
+        HetTrilinearInterpolator::get_field_value(
             &self.alpha_power,
             x,
             y,
@@ -174,7 +174,7 @@ impl AcousticProperties for HeterogeneousMedium {
 
     /// Get acoustic diffusivity at continuous coordinates
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let sound_speed = TrilinearInterpolator::get_field_value(
+        let sound_speed = HetTrilinearInterpolator::get_field_value(
             &self.sound_speed,
             x,
             y,
@@ -182,7 +182,7 @@ impl AcousticProperties for HeterogeneousMedium {
             grid,
             self.use_trilinear_interpolation,
         );
-        let density = TrilinearInterpolator::get_field_value(
+        let density = HetTrilinearInterpolator::get_field_value(
             &self.density,
             x,
             y,

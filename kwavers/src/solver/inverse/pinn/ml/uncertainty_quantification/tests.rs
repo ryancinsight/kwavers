@@ -1,7 +1,7 @@
 //! Tests for uncertainty quantification types and configuration.
 
 use super::types::{
-    PinnUncertaintyConfig, PinnUncertaintyMethod, PredictionWithUncertainty, UncertaintyStats,
+    PinnUncertaintyConfig, PinnUncertaintyMethod, PinnPredictionWithUncertainty, UncertaintyStats,
 };
 
 #[test]
@@ -35,7 +35,7 @@ fn test_uncertainty_methods() {
 
 #[test]
 fn test_prediction_with_uncertainty() {
-    let prediction = PredictionWithUncertainty {
+    let prediction = PinnPredictionWithUncertainty {
         mean: vec![1.0, 0.5],
         std: vec![0.1, 0.05],
         confidence_interval: (vec![0.8, 0.4], vec![1.2, 0.6]),

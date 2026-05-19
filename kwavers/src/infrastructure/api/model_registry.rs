@@ -3,7 +3,7 @@
 //! Provides thread-safe storage and retrieval of trained PINN models
 //! with proper serialization, versioning, and metadata management.
 
-use crate::infrastructure::api::{APIError, APIErrorType, ModelMetadata};
+use crate::infrastructure::api::{APIError, APIErrorType, ApiModelMetadata};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -12,7 +12,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct StoredModel {
     /// Model metadata
-    pub metadata: ModelMetadata,
+    pub metadata: ApiModelMetadata,
     /// Serialized model data
     pub model_data: Vec<u8>,
     /// Storage timestamp
@@ -52,7 +52,7 @@ impl ModelRegistry {
         user_id: &str,
         model_id: &str,
         model_data: Vec<u8>,
-        metadata: ModelMetadata,
+        metadata: ApiModelMetadata,
     ) -> Result<(), APIError> {
         let stored_model = StoredModel {
             metadata,
@@ -89,7 +89,7 @@ impl ModelRegistry {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn get_user_models(&self, user_id: &str) -> Vec<ModelMetadata> {
+    pub fn get_user_models(&self, user_id: &str) -> Vec<ApiModelMetadata> {
         let user_models = self.user_models.read();
         let models = self.models.read();
 
@@ -174,7 +174,7 @@ impl ModelRegistry {
     pub fn update_metadata(
         &self,
         model_id: &str,
-        new_metadata: ModelMetadata,
+        new_metadata: ApiModelMetadata,
     ) -> Result<(), APIError> {
         let mut models = self.models.write();
         if let Some(model) = models.get_mut(model_id) {
@@ -231,7 +231,7 @@ mod tests {
         let registry = ModelRegistry::new();
 
         let model_data = vec![1, 2, 3, 4, 5];
-        let metadata = ModelMetadata {
+        let metadata = ApiModelMetadata {
             model_id: "test_model".to_string(),
             physics_domain: "acoustic_wave".to_string(),
             created_at: chrono::Utc::now(),
@@ -276,7 +276,7 @@ mod tests {
     fn test_model_deletion() {
         let registry = ModelRegistry::new();
 
-        let metadata = ModelMetadata {
+        let metadata = ApiModelMetadata {
             model_id: "test_model".to_string(),
             physics_domain: "test".to_string(),
             created_at: chrono::Utc::now(),
@@ -300,7 +300,7 @@ mod tests {
     fn test_unauthorized_access() {
         let registry = ModelRegistry::new();
 
-        let metadata = ModelMetadata {
+        let metadata = ApiModelMetadata {
             model_id: "test_model".to_string(),
             physics_domain: "test".to_string(),
             created_at: chrono::Utc::now(),
@@ -321,7 +321,7 @@ mod tests {
     fn test_registry_stats() {
         let registry = ModelRegistry::new();
 
-        let metadata = ModelMetadata {
+        let metadata = ApiModelMetadata {
             model_id: "test_model".to_string(),
             physics_domain: "test".to_string(),
             created_at: chrono::Utc::now(),

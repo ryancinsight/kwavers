@@ -12,7 +12,7 @@
 //! - Press et al. (2007). *Numerical Recipes*. Chapter 3.
 
 use super::traits::Interpolator;
-use super::trilinear::TrilinearInterpolator;
+use super::trilinear::NumericsTrilinearInterpolator;
 use crate::core::error::{KwaversResult, NumericalError};
 use ndarray::{Array1, Array3, ArrayView1, ArrayView3};
 
@@ -69,7 +69,7 @@ impl Interpolator for LinearInterpolator {
         target_y: ArrayView1<f64>,
         target_z: ArrayView1<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        TrilinearInterpolator::new(self.dx, self.dx, self.dx)
+        NumericsTrilinearInterpolator::new(self.dx, self.dx, self.dx)
             .interpolate_3d(data, target_x, target_y, target_z)
     }
 

@@ -4,8 +4,8 @@ use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
 use crate::solver::forward::hybrid::coupling::{
-    ConservationEnforcer, HybridInterpolationScheme, InterfaceGeometry, InterfaceQualityMetrics,
-    InterpolationManager, QualityMonitor, TransferOperators,
+    HybridCouplingConservationEnforcer, HybridInterpolationScheme, InterfaceGeometry,
+    InterfaceQualityMetrics, InterpolationManager, QualityMonitor, TransferOperators,
 };
 use crate::solver::forward::hybrid::domain_decomposition::DomainRegion;
 use ndarray::{s, Array3, Array4};
@@ -15,7 +15,7 @@ use ndarray::{s, Array3, Array4};
 pub struct CouplingInterface {
     geometry: InterfaceGeometry,
     interpolation: InterpolationManager,
-    conservation: ConservationEnforcer,
+    conservation: HybridCouplingConservationEnforcer,
     quality: QualityMonitor,
     transfer: TransferOperators,
 }
@@ -32,7 +32,7 @@ impl CouplingInterface {
     ) -> KwaversResult<Self> {
         let geometry = InterfaceGeometry::from_grids(source_grid, target_grid)?;
         let interpolation = InterpolationManager::new(scheme);
-        let conservation = ConservationEnforcer::new(&geometry);
+        let conservation = HybridCouplingConservationEnforcer::new(&geometry);
         let quality = QualityMonitor::new();
         let transfer = TransferOperators::new(&geometry)?;
 

@@ -1,10 +1,10 @@
-//! `GpuBuffer::read_to_vec`: async GPU-to-CPU readback with lazy staging buffer.
+//! `GpuBufferData::read_to_vec`: async GPU-to-CPU readback with lazy staging buffer.
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::GpuBuffer;
+use super::GpuBufferData;
 
-impl GpuBuffer {
+impl GpuBufferData {
     /// Read buffer data from GPU to CPU.
     ///
     /// Asynchronously reads buffer contents.

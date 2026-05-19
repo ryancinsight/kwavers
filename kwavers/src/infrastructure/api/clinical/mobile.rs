@@ -44,7 +44,7 @@ pub struct OptimizationRule {
     /// Network conditions
     pub network_conditions: crate::api::NetworkConditions,
     /// Recommended configuration
-    pub recommended_config: crate::api::ProcessingConfig,
+    pub recommended_config: crate::api::MobileProcessingConfig,
 }
 
 /// Mobile optimization endpoint
@@ -59,7 +59,7 @@ pub async fn optimize_mobile(
     let _optimizer = state.mobile_optimizer.read().await;
 
     // Analyze device capabilities and conditions
-    let recommended_config = crate::api::ProcessingConfig {
+    let recommended_config = crate::api::MobileProcessingConfig {
         frame_rate_hz: if request.device_capabilities.cpu_cores >= 4 {
             30.0
         } else {

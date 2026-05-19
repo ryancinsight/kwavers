@@ -9,7 +9,7 @@ fn test_jit_compiler_creation() {
 
 #[test]
 fn test_memory_pool_allocation() {
-    let pool = MemoryPool::new();
+    let pool = JitMemoryPool::new();
     let buffer = pool.allocate_output_buffer(100).unwrap();
     assert_eq!(buffer.len(), 128);
 }

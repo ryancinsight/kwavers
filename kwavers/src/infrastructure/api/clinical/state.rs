@@ -10,7 +10,7 @@ use crate::clinical::imaging::workflows::neural::{
 };
 
 #[cfg(not(feature = "pinn"))]
-use crate::api::{DeviceCapability, DeviceInfo, DeviceStatus, DeviceType};
+use crate::api::{ApiDeviceInfo, ApiDeviceStatus, DeviceCapability, DeviceType};
 #[cfg(not(feature = "pinn"))]
 use crate::clinical::{
     ClinicalWorkflow, StepStatus, StepType, WorkflowStatus, WorkflowStep, WorkflowType,
@@ -126,7 +126,7 @@ impl ClinicalAppState {
         // Register basic ultrasound devices
         registry.insert(
             "default-ultrasound".to_string(),
-            DeviceInfo {
+            ApiDeviceInfo {
                 id: "default-ultrasound".to_string(),
                 device_type: DeviceType::Ultrasound,
                 model: "Basic Ultrasound System".to_string(),
@@ -136,7 +136,7 @@ impl ClinicalAppState {
                     DeviceCapability::Doppler,
                     DeviceCapability::BMode,
                 ],
-                status: DeviceStatus::Available,
+                status: ApiDeviceStatus::Available,
                 last_calibration: std::time::SystemTime::now(),
                 firmware_version: "1.0.0".to_string(),
             },
@@ -145,13 +145,13 @@ impl ClinicalAppState {
         // Register basic therapy device
         registry.insert(
             "default-therapy".to_string(),
-            DeviceInfo {
+            ApiDeviceInfo {
                 id: "default-therapy".to_string(),
                 device_type: DeviceType::Therapy,
                 model: "Basic Therapy System".to_string(),
                 manufacturer: "KwaverS".to_string(),
                 capabilities: vec![DeviceCapability::HIFU, DeviceCapability::Lithotripsy],
-                status: DeviceStatus::Available,
+                status: ApiDeviceStatus::Available,
                 last_calibration: std::time::SystemTime::now(),
                 firmware_version: "1.0.0".to_string(),
             },

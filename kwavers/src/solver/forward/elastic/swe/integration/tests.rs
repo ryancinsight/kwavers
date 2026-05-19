@@ -2,7 +2,7 @@
 
 use super::integrator::TimeIntegrator;
 use crate::domain::grid::Grid;
-use crate::solver::forward::elastic::swe::boundary::{PMLBoundary, SwePmlConfig};
+use crate::solver::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::solver::forward::elastic::swe::scratch::ElasticStepScratch;
 use crate::solver::forward::elastic::swe::types::ElasticWaveField;
 use ndarray::Array3;
@@ -11,12 +11,12 @@ fn make_integrator(
     grid: &Grid,
     lambda_val: f64,
     mu_val: f64,
-) -> (Array3<f64>, Array3<f64>, Array3<f64>, PMLBoundary) {
+) -> (Array3<f64>, Array3<f64>, Array3<f64>, ElasticSwePMLBoundary) {
     let (nx, ny, nz) = grid.dimensions();
     let lambda = Array3::<f64>::from_elem((nx, ny, nz), lambda_val);
     let mu = Array3::<f64>::from_elem((nx, ny, nz), mu_val);
     let density = Array3::<f64>::from_elem((nx, ny, nz), 1000.0);
-    let pml = PMLBoundary::new(grid, SwePmlConfig::default());
+    let pml = ElasticSwePMLBoundary::new(grid, SwePmlConfig::default());
     (lambda, mu, density, pml)
 }
 

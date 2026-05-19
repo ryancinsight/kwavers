@@ -138,7 +138,7 @@ impl Default for PINNBeamformingConfig {
 ///
 /// Uses solver-agnostic interface types to maintain layer separation.
 #[derive(Debug)]
-pub struct PinnBeamformingResult {
+pub struct NeuralPinnBeamformingResult {
     /// Reconstructed volume
     pub volume: Array3<f32>,
     /// Uncertainty map (variance)
@@ -150,7 +150,7 @@ pub struct PinnBeamformingResult {
 }
 
 /// Alias for backward compatibility.
-pub type NeuralBeamformingResult = PinnBeamformingResult;
+pub type NeuralBeamformingResult = NeuralPinnBeamformingResult;
 
 /// Processing parameters for neural beamforming.
 #[derive(Debug, Clone)]

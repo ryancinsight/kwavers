@@ -15,8 +15,8 @@ pub mod sensitivity_analysis;
 mod tests;
 pub mod types;
 
-pub use bayesian_networks::{BayesianConfig, MlBayesianPINN, PredictionWithUncertainty};
-pub use conformal_prediction::{ConformalConfig, ConformalPredictor, ConformalResult};
+pub use bayesian_networks::{BayesianConfig, MlBayesianPINN, MlPredictionWithUncertainty};
+pub use conformal_prediction::{ConformalConfig, ConformalResult, MlConformalPredictor};
 pub use ensemble_methods::{EnsembleConfig, EnsembleQuantifier, EnsembleResult};
 pub use quantifier::UncertaintyQuantifier;
 pub use sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};

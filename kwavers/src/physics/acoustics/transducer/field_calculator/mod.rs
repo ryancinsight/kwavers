@@ -13,5 +13,5 @@ pub mod heating;
 pub mod plugin;
 pub mod spatial_impulse_response;
 
-pub use geometry::TransducerGeometry;
+pub use geometry::FieldCalculatorTransducerGeometry;
 pub use plugin::TransducerFieldCalculatorPlugin;

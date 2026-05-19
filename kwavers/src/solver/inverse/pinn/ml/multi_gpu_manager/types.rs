@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 
 #[cfg(feature = "gpu")]
 #[derive(Debug, Clone)]
-pub struct GpuCapabilities {
+pub struct PinnGpuCapabilities {
     pub max_buffer_size: u64,
     pub max_workgroup_size: [u32; 3],
     pub max_compute_invocations: u32,
@@ -14,7 +14,7 @@ pub struct GpuCapabilities {
 
 /// Information about a GPU device
 #[derive(Debug, Clone)]
-pub struct GpuDeviceInfo {
+pub struct PinnMultiGpuDeviceInfo {
     /// Unique device identifier
     pub id: usize,
     /// Device name
@@ -23,7 +23,7 @@ pub struct GpuDeviceInfo {
     pub backend: String,
     /// GPU capabilities (available when GPU feature is enabled)
     #[cfg(feature = "gpu")]
-    pub capabilities: GpuCapabilities,
+    pub capabilities: PinnGpuCapabilities,
     /// Current memory usage (bytes)
     pub memory_used: usize,
     /// Current computational load (0.0 to 1.0)
@@ -104,7 +104,7 @@ pub struct WorkUnit {
 
 /// Communication channel between two GPUs
 #[derive(Debug, Clone)]
-pub struct CommunicationChannel {
+pub struct PinnMultiGpuCommunicationChannel {
     /// Bandwidth estimate (GB/s)
     pub bandwidth: f64,
     /// Latency estimate (microseconds)

@@ -2,7 +2,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::collections::HashMap;
 
-use super::{CoupledPhysicsSolver, FieldCoupler, PhysicsDomain};
+use super::{CoupledPhysicsSolver, MultiPhysicsFieldCoupler, SimulationPhysicsDomain};
 
 /// Schwarz alternating coupling between physics domains.
 ///
@@ -51,15 +51,15 @@ impl SchwarzCoupling {
         }
     }
 
-    /// Encode a `PhysicsDomain` as a u8 key for `BTreeMap`.
-    fn domain_key(d: PhysicsDomain) -> u8 {
+    /// Encode a `SimulationPhysicsDomain` as a u8 key for `BTreeMap`.
+    fn domain_key(d: SimulationPhysicsDomain) -> u8 {
         match d {
-            PhysicsDomain::Acoustic => 0,
-            PhysicsDomain::Thermal => 1,
-            PhysicsDomain::Optical => 2,
-            PhysicsDomain::Chemical => 3,
-            PhysicsDomain::Elastic => 4,
-            PhysicsDomain::Electromagnetic => 5,
+            SimulationPhysicsDomain::Acoustic => 0,
+            SimulationPhysicsDomain::Thermal => 1,
+            SimulationPhysicsDomain::Optical => 2,
+            SimulationPhysicsDomain::Chemical => 3,
+            SimulationPhysicsDomain::Elastic => 4,
+            SimulationPhysicsDomain::Electromagnetic => 5,
         }
     }
 
@@ -78,12 +78,12 @@ impl SchwarzCoupling {
     ///
     pub fn schwarz_step(
         &mut self,
-        coupler: &mut FieldCoupler,
-        solvers: &mut HashMap<PhysicsDomain, Box<dyn CoupledPhysicsSolver>>,
+        coupler: &mut MultiPhysicsFieldCoupler,
+        solvers: &mut HashMap<SimulationPhysicsDomain, Box<dyn CoupledPhysicsSolver>>,
         dt: f64,
     ) -> KwaversResult<f64> {
-        let domains: Vec<PhysicsDomain> = {
-            let mut v: Vec<PhysicsDomain> = solvers.keys().copied().collect();
+        let domains: Vec<SimulationPhysicsDomain> = {
+            let mut v: Vec<SimulationPhysicsDomain> = solvers.keys().copied().collect();
             v.sort_by_key(|d| Self::domain_key(*d));
             v
         };
@@ -160,13 +160,13 @@ mod tests {
 
     // Mock physics solver for testing
     struct MockSolver {
-        domain: PhysicsDomain,
+        domain: SimulationPhysicsDomain,
         grid: Grid,
         field: Array3<f64>,
     }
 
     impl MockSolver {
-        fn new(domain: PhysicsDomain, grid: Grid) -> Self {
+        fn new(domain: SimulationPhysicsDomain, grid: Grid) -> Self {
             let field = Array3::zeros((grid.nx, grid.ny, grid.nz));
             Self {
                 domain,
@@ -177,7 +177,7 @@ mod tests {
     }
 
     impl CoupledPhysicsSolver for MockSolver {
-        fn domain_type(&self) -> PhysicsDomain {
+        fn domain_type(&self) -> SimulationPhysicsDomain {
             self.domain
         }
 
@@ -202,14 +202,14 @@ mod tests {
 
         fn get_coupling_source(
             &self,
-            _target_domain: PhysicsDomain,
+            _target_domain: SimulationPhysicsDomain,
         ) -> KwaversResult<Option<Array3<f64>>> {
             Ok(Some(self.field.clone()))
         }
 
         fn apply_coupling_source(
             &mut self,
-            _source_domain: PhysicsDomain,
+            _source_domain: SimulationPhysicsDomain,
             source: ArrayView3<f64>,
         ) -> KwaversResult<()> {
             self.field += &source;
@@ -231,26 +231,26 @@ mod tests {
     fn test_schwarz_convergence() {
         let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
 
-        let acoustic = Box::new(MockSolver::new(PhysicsDomain::Acoustic, grid.clone()));
-        let thermal = Box::new(MockSolver::new(PhysicsDomain::Thermal, grid.clone()));
+        let acoustic = Box::new(MockSolver::new(SimulationPhysicsDomain::Acoustic, grid.clone()));
+        let thermal = Box::new(MockSolver::new(SimulationPhysicsDomain::Thermal, grid.clone()));
 
-        let mut solvers: HashMap<PhysicsDomain, Box<dyn CoupledPhysicsSolver>> = HashMap::new();
-        solvers.insert(PhysicsDomain::Acoustic, acoustic);
-        solvers.insert(PhysicsDomain::Thermal, thermal);
+        let mut solvers: HashMap<SimulationPhysicsDomain, Box<dyn CoupledPhysicsSolver>> = HashMap::new();
+        solvers.insert(SimulationPhysicsDomain::Acoustic, acoustic);
+        solvers.insert(SimulationPhysicsDomain::Thermal, thermal);
 
-        let mut coupler = FieldCoupler::new();
+        let mut coupler = MultiPhysicsFieldCoupler::new();
         coupler
             .add_coupling(
-                PhysicsDomain::Acoustic,
-                PhysicsDomain::Thermal,
+                SimulationPhysicsDomain::Acoustic,
+                SimulationPhysicsDomain::Thermal,
                 &grid,
                 &grid,
             )
             .unwrap();
         coupler
             .add_coupling(
-                PhysicsDomain::Thermal,
-                PhysicsDomain::Acoustic,
+                SimulationPhysicsDomain::Thermal,
+                SimulationPhysicsDomain::Acoustic,
                 &grid,
                 &grid,
             )

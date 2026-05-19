@@ -21,9 +21,9 @@ use std::sync::Mutex;
 ///
 /// # Example (stress test)
 /// ```
-/// use kwavers::gpu::recovery::{FaultInjector, GpuErrorType};
+/// use kwavers::gpu::recovery::{GpuInjectorFaultInjector, GpuErrorType};
 ///
-/// let injector = FaultInjector::new(0.001, GpuErrorType::OutOfMemory, 42);
+/// let injector = GpuInjectorFaultInjector::new(0.001, GpuErrorType::OutOfMemory, 42);
 /// for step in 0..10_000 {
 ///     if injector.should_inject() {
 ///         // handle simulated OOM
@@ -31,7 +31,7 @@ use std::sync::Mutex;
 /// }
 /// ```
 #[derive(Debug)]
-pub struct FaultInjector {
+pub struct GpuInjectorFaultInjector {
     /// Probability of injecting a fault on each call to `should_inject()`.
     /// Must be in `[0.0, 1.0]`.
     pub failure_probability: f64,
@@ -44,7 +44,7 @@ pub struct FaultInjector {
     rng: Mutex<rand::rngs::StdRng>,
 }
 
-impl FaultInjector {
+impl GpuInjectorFaultInjector {
     /// Create a new fault injector with a deterministic seed.
     ///
     /// # Parameters
@@ -66,11 +66,11 @@ impl FaultInjector {
     /// Thread-safe: acquires the PRNG mutex for each call. Throughput is
     /// adequate for per-step fault injection at simulation step rates (< 10 MHz).
     /// # Panics
-    /// - Panics if `FaultInjector RNG mutex poisoned`.
+    /// - Panics if `GpuInjectorFaultInjector RNG mutex poisoned`.
     ///
     pub fn should_inject(&self) -> bool {
         use rand::Rng;
-        let mut rng = self.rng.lock().expect("FaultInjector RNG mutex poisoned");
+        let mut rng = self.rng.lock().expect("GpuInjectorFaultInjector RNG mutex poisoned");
         rng.gen::<f64>() < self.failure_probability
     }
 

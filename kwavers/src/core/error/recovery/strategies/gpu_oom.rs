@@ -8,11 +8,11 @@ use super::super::{RecoveryAction, RecoveryResult, RecoveryStrategy};
 
 /// GPU OOM recovery: clear caches and fall back to CPU.
 #[derive(Debug)]
-pub struct GpuOomRecovery {
+pub struct ErrorRecoveryGpuOom {
     success_rate: AtomicU64,
 }
 
-impl Default for GpuOomRecovery {
+impl Default for ErrorRecoveryGpuOom {
     fn default() -> Self {
         Self {
             success_rate: AtomicU64::new(0.9_f64.to_bits()),
@@ -20,14 +20,14 @@ impl Default for GpuOomRecovery {
     }
 }
 
-impl GpuOomRecovery {
+impl ErrorRecoveryGpuOom {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl RecoveryStrategy for GpuOomRecovery {
+impl RecoveryStrategy for ErrorRecoveryGpuOom {
     fn recover(&self, _error: &KwaversError, _context: &ErrorContext) -> RecoveryResult {
         info!("Attempting GPU OOM recovery: clearing caches and falling back to CPU");
         Ok(Box::new(RecoveryAction::CpuFallback))
@@ -39,7 +39,7 @@ impl RecoveryStrategy for GpuOomRecovery {
     }
 
     fn strategy_name(&self) -> &'static str {
-        "GpuOomRecovery"
+        "ErrorRecoveryGpuOom"
     }
 
     fn success_rate(&self) -> f64 {

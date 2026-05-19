@@ -19,7 +19,7 @@ use crate::domain::grid::Grid;
 /// - Pierce (1989), Ch. 1: Plane wave solutions
 /// - Treeby & Cox (2010): k-Wave validation cases
 #[derive(Debug, Clone)]
-pub struct PlaneWave {
+pub struct KwaveAnalyticalPlaneWave {
     pub amplitude: f64,
     pub frequency: f64,
     pub sound_speed: f64,
@@ -27,7 +27,7 @@ pub struct PlaneWave {
     pub phase: f64,
 }
 
-impl PlaneWave {
+impl KwaveAnalyticalPlaneWave {
     /// Create new plane wave. Validates f > 0, c₀ > 0, normalizes direction.
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.

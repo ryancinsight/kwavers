@@ -4,7 +4,7 @@ use ndarray::{ArrayD, IxDyn};
 use std::fmt;
 
 use super::traits::{TensorMut, TensorView};
-use super::types::{Backend, DType, Shape};
+use super::types::{TensorBackend, DType, Shape};
 
 /// Simple ndarray-backed tensor (default, no autodiff).
 #[derive(Clone)]
@@ -67,8 +67,8 @@ impl TensorView for NdArrayTensor {
         DType::F64
     }
 
-    fn backend(&self) -> Backend {
-        Backend::NdArray
+    fn backend(&self) -> TensorBackend {
+        TensorBackend::NdArray
     }
 
     fn to_ndarray(&self) -> ArrayD<f64> {

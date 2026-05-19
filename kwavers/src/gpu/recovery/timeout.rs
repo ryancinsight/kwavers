@@ -21,7 +21,7 @@ use super::{update_avg_latency_us, GpuRecoveryAction, GLOBAL_STATS};
 /// and returns `Retry` after the first attempt. `MAX_TIMEOUT_RETRIES > 1` is
 /// reserved for future multi-attempt callers.
 #[derive(Debug)]
-pub struct TimeoutRecovery {
+pub struct GpuTimeoutRecovery {
     /// Success counter
     success_count: AtomicUsize,
     /// Total attempts counter
@@ -32,7 +32,7 @@ pub struct TimeoutRecovery {
     retry_count: AtomicUsize,
 }
 
-impl TimeoutRecovery {
+impl GpuTimeoutRecovery {
     /// Create new timeout recovery strategy
     pub const fn new() -> Self {
         Self {
@@ -71,13 +71,13 @@ impl TimeoutRecovery {
     }
 }
 
-impl Default for TimeoutRecovery {
+impl Default for GpuTimeoutRecovery {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RecoveryStrategy for TimeoutRecovery {
+impl RecoveryStrategy for GpuTimeoutRecovery {
     fn recover(&self, error: &KwaversError, _context: &ErrorContext) -> RecoveryResult {
         let start = Instant::now();
         self.total_count.fetch_add(1, Ordering::Relaxed);
@@ -85,7 +85,7 @@ impl RecoveryStrategy for TimeoutRecovery {
         // Verify this is a timeout error
         if !Self::is_timeout(error) {
             return Err(KwaversError::InternalError(
-                "TimeoutRecovery cannot handle non-timeout errors".to_string(),
+                "GpuTimeoutRecovery cannot handle non-timeout errors".to_string(),
             ));
         }
 
@@ -148,7 +148,7 @@ impl RecoveryStrategy for TimeoutRecovery {
     }
 
     fn strategy_name(&self) -> &'static str {
-        "TimeoutRecovery"
+        "GpuTimeoutRecovery"
     }
 
     fn success_rate(&self) -> f64 {
@@ -170,11 +170,11 @@ mod tests {
     #[test]
     fn timeout_backoff_calculation() {
         // Test exponential backoff
-        assert_eq!(TimeoutRecovery::backoff_delay(0), Duration::from_millis(10));
-        assert_eq!(TimeoutRecovery::backoff_delay(1), Duration::from_millis(20));
-        assert_eq!(TimeoutRecovery::backoff_delay(2), Duration::from_millis(40));
+        assert_eq!(GpuTimeoutRecovery::backoff_delay(0), Duration::from_millis(10));
+        assert_eq!(GpuTimeoutRecovery::backoff_delay(1), Duration::from_millis(20));
+        assert_eq!(GpuTimeoutRecovery::backoff_delay(2), Duration::from_millis(40));
         assert_eq!(
-            TimeoutRecovery::backoff_delay(10),
+            GpuTimeoutRecovery::backoff_delay(10),
             Duration::from_millis(100)
         ); // Capped at max
     }

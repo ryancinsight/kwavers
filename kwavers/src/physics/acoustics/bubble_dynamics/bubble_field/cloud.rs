@@ -3,7 +3,7 @@ use rand_distr::{LogNormal, Normal, Uniform};
 
 use super::super::bubble_state::{BubbleParameters, BubbleState};
 use super::core::BubbleField;
-use super::distributions::{SizeDistribution, SpatialDistribution};
+use super::distributions::{BubbleFieldSizeDistribution, SpatialDistribution};
 
 /// Bubble cloud with size distribution
 #[derive(Debug)]
@@ -11,7 +11,7 @@ pub struct BubbleCloud {
     /// Base bubble field
     pub field: BubbleField,
     /// Size distribution parameters
-    pub size_distribution: SizeDistribution,
+    pub size_distribution: BubbleFieldSizeDistribution,
     /// Spatial distribution
     pub spatial_distribution: SpatialDistribution,
 }
@@ -22,7 +22,7 @@ impl BubbleCloud {
     pub fn new(
         grid_shape: (usize, usize, usize),
         params: BubbleParameters,
-        size_dist: SizeDistribution,
+        size_dist: BubbleFieldSizeDistribution,
         spatial_dist: SpatialDistribution,
     ) -> Self {
         Self {
@@ -109,12 +109,12 @@ impl BubbleCloud {
 
     fn generate_radius(&self, rng: &mut impl Rng) -> f64 {
         match &self.size_distribution {
-            SizeDistribution::Uniform { min, max } => rng.gen_range(*min..*max),
-            SizeDistribution::LogNormal { mean, std_dev } => {
+            BubbleFieldSizeDistribution::Uniform { min, max } => rng.gen_range(*min..*max),
+            BubbleFieldSizeDistribution::LogNormal { mean, std_dev } => {
                 let normal = LogNormal::new(mean.ln(), *std_dev / *mean).unwrap();
                 rng.sample(normal)
             }
-            SizeDistribution::PowerLaw { min, max, exponent } => {
+            BubbleFieldSizeDistribution::PowerLaw { min, max, exponent } => {
                 let u: f64 = rng.r#gen();
                 let alpha = exponent + 1.0;
 

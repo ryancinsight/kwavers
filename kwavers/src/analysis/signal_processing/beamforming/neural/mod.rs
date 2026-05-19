@@ -222,7 +222,7 @@ pub use types::{
     BeamformingFeedback, DistributedNeuralBeamformingMetrics, DistributedNeuralBeamformingResult,
     HybridBeamformingMetrics, HybridBeamformingResult, NeuralBeamformingMetrics,
     NeuralBeamformingProcessingParams, NeuralBeamformingQualityMetrics, NeuralBeamformingResult,
-    PINNBeamformingConfig, PinnBeamformingResult,
+    PINNBeamformingConfig, NeuralPinnBeamformingResult,
 };
 pub use uncertainty::UncertaintyEstimator;
 

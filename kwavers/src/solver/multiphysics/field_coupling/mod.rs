@@ -25,7 +25,7 @@ pub enum FieldCouplingStrategy {
 
 /// Field coupler for multi-physics interactions
 #[derive(Debug)]
-pub struct FieldCoupler {
+pub struct MultiphysicsFieldCoupler {
     /// Coupling strategy
     strategy: FieldCouplingStrategy,
     /// Coupling strength parameters
@@ -36,7 +36,7 @@ pub struct FieldCoupler {
     tolerance: f64,
 }
 
-impl FieldCoupler {
+impl MultiphysicsFieldCoupler {
     /// Create a new field coupler
     #[must_use]
     pub fn new(strategy: FieldCouplingStrategy) -> Self {

@@ -1,4 +1,4 @@
-//! `GpuBuffer`: GPU buffer allocation, write, and accessor methods.
+//! `GpuBufferData`: GPU buffer allocation, write, and accessor methods.
 
 mod readback;
 
@@ -9,7 +9,7 @@ use crate::core::error::KwaversResult;
 
 /// GPU buffer wrapper providing safe, high-level buffer operations
 ///
-/// `GpuBuffer` manages GPU memory allocation and provides type-safe operations
+/// `GpuBufferData` manages GPU memory allocation and provides type-safe operations
 /// for transferring data between CPU and GPU. It handles the complexity of
 /// staging buffers and async operations required for GPU-to-CPU data transfer.
 ///
@@ -27,10 +27,10 @@ use crate::core::error::KwaversResult;
 /// # Examples
 ///
 /// ```no_run
-/// # use kwavers::gpu::buffer::{GpuBuffer, BufferUsage};
+/// # use kwavers::gpu::buffer::{GpuBufferData, BufferUsage};
 /// # async fn example(device: &wgpu::Device, queue: &wgpu::Queue) -> Result<(), Box<dyn std::error::Error>> {
 /// // Create empty buffer for compute output
-/// let buffer = GpuBuffer::create(
+/// let buffer = GpuBufferData::create(
 ///     device,
 ///     1024,  // size in bytes
 ///     BufferUsage::STORAGE | BufferUsage::COPY_SRC
@@ -43,7 +43,7 @@ use crate::core::error::KwaversResult;
 /// # }
 /// ```
 #[derive(Debug)]
-pub struct GpuBuffer {
+pub struct GpuBufferData {
     pub(super) buffer: wgpu::Buffer,
     pub(super) size: usize,
     /// Usage flags queried by `read_to_vec` to select MAP_READ vs COPY_SRC readback path.
@@ -53,7 +53,7 @@ pub struct GpuBuffer {
     pub(super) readback_staging: OnceCell<wgpu::Buffer>,
 }
 
-impl GpuBuffer {
+impl GpuBufferData {
     /// Create an empty, labeled GPU buffer (infallible).
     ///
     /// Primary constructor used by [`GpuBufferManager`](crate::gpu::GpuBufferManager) and
@@ -119,7 +119,7 @@ impl GpuBuffer {
     /// Create an empty GPU buffer (unlabeled convenience form).
     ///
     /// Allocates GPU memory of the specified size with given usage flags.
-    /// The buffer contents are uninitialized. Prefer [`GpuBuffer::new`] when
+    /// The buffer contents are uninitialized. Prefer [`GpuBufferData::new`] when
     /// a diagnostic label is available.
     ///
     /// # Arguments
@@ -130,7 +130,7 @@ impl GpuBuffer {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(GpuBuffer)` on success, or an error if allocation fails.
+    /// Returns `Ok(GpuBufferData)` on success, or an error if allocation fails.
     ///
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -147,7 +147,7 @@ impl GpuBuffer {
     ///
     /// Allocates GPU memory and immediately copies the provided data.
     /// The data type must implement `bytemuck::Pod` for safe byte-level copying.
-    /// Prefer [`GpuBuffer::new_with_data`] when a diagnostic label is available.
+    /// Prefer [`GpuBufferData::new_with_data`] when a diagnostic label is available.
     ///
     /// # Type Parameters
     ///
@@ -161,7 +161,7 @@ impl GpuBuffer {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(GpuBuffer)` with data copied, or an error if allocation fails.
+    /// Returns `Ok(GpuBufferData)` with data copied, or an error if allocation fails.
     ///
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

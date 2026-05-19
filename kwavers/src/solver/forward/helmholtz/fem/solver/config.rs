@@ -1,6 +1,6 @@
 //! FEM Helmholtz solver configuration types.
 
-/// Preconditioner selection for the BiCGSTAB iterative solve.
+/// HelmholtzPreconditioner selection for the BiCGSTAB iterative solve.
 ///
 /// # Status
 /// - `None` - no preconditioning.
@@ -30,7 +30,7 @@ pub struct FemHelmholtzConfig {
     pub tolerance: f64,
     /// Maximum BiCGSTAB iterations.
     pub max_iterations: usize,
-    /// Preconditioner applied to the linear system.
+    /// HelmholtzPreconditioner applied to the linear system.
     pub preconditioner: FemPreconditionerType,
     /// Enable radiation (absorbing) boundary conditions.
     pub radiation_boundary: bool,

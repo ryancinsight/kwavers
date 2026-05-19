@@ -1,5 +1,33 @@
 # Gap Audit
 
+## Type Collision Disambiguation (2026-05-18, Session 5) — CLOSED
+- Resolved residual trait-struct and same-name pairs deferred from session 4:
+  `SpectralOperator`, `SourceParameters`, `MediumParameters`,
+  `GridParameters`, `Preconditioner`, `PlasmonicEnhancement`,
+  `OpticalProperties`, `Backend` (tensor + solver), `AdaptiveBeamformer`,
+  `EMSource`, `AcousticBoundaryType`, `TransducerGeometry`, `SolverFactory`.
+  Single source of truth restored for every identifier; the legacy
+  `pub use Backend as TensorBackend` alias in `domain/mod.rs` is removed.
+- Verification gate: `cargo check --lib` clean (exit 0).
+- Residual collisions (deferred; cfg-mutually-exclusive arms, not real
+  collisions): `ElasticPINN2D`, `ElasticPinnPredictor`,
+  `ElasticPinnLrScheduler`, `JobManagerTrainingResult`.
+
+## Type Collision Disambiguation (2026-05-18, Session 4) — CLOSED
+- Resolved ~50 type-name collision clusters across the kwavers crate via
+  domain-specific renames. Single source of truth restored for every
+  identifier; no `pub use X as Y` shims; every caller updated in the same
+  change. See CHANGELOG.md "Type Collision Disambiguation Session 4" for the
+  full rename table.
+- Verification gate: `cargo check --lib` clean (exit 0).
+- Residual collisions (deferred; pre-existing trait-struct pairs in
+  non-conflicting scopes): `SpectralOperator`, `SourceParameters`,
+  `MediumParameters`, `GridParameters`, `Preconditioner`,
+  `PlasmonicEnhancement`, `OpticalProperties`, `Backend`,
+  `AdaptiveBeamformer`; same-name two-trait pair `EMSource` (domain vs
+  physics); enum pair `AcousticBoundaryType` (domain boundary vs pinn ml
+  acoustic_wave). Tracked for next session.
+
 ## Initial Findings (Sprint Start)
 - Current structure is now tracked with architecture guards and cross-contamination is closed at the verified boundary level required by the canonical plan.
 - Required to validate `pykwavers` against `k-wave-python`. Needs formal suite for 1-to-1 parity mapping.
@@ -36,13 +64,21 @@
   three-angle crossfire field while nulling protected anatomy. Generated default
   LiTS metrics record source angles, tumor coverage, protected peak, normal
   mean, body sidelobe peak/P99, and air/bone/fat path fractions for traceable
-  follow-on solver comparison.
+  follow-on solver comparison. The Figure 2 focus defect is closed by dense
+  hotspot refinement over the rendered body field: the regenerated plan reports
+  `target_dominant=true`, body sidelobe peak ratio `0.7395404024847666`, body
+  sidelobe P99 ratio `0.3297347520675772`, tumor coverage
+  `0.7837837837837838`, protected peak ratio `0.2958651403757349`, air path
+  fraction `0.003477700061599821`, and bone path fraction
+  `0.032944540572524016`.
 
 - Closed the Chapter 29 helper-test errors from the book verification run. The
   reconstruction figure labels no longer expose FWI wording for the elastic
   shear channel, and extension freshness validation now distinguishes a
   Python-level test stub with no text signature from a stale compiled nonlinear
-  wrapper signature.
+  wrapper signature. Release-build PyO3 binding drift is also closed: array
+  apodization, signal window, and FDTD/PSTD geometry imports now match the
+  current `kwavers` API, and the release `pykwavers` cdylib build passes.
 
 - Closed the Chapter 29 reduced-exposure physics gap. The reduced linear
   workflow no longer synthesizes planned exposure with a constant-speed
@@ -129,14 +165,21 @@
   u_z]`, while `DG-1D axial` remains as a line-regression diagnostic. Follow-up
   alignment work replaced direct DG-node sampling with local GLL interpolation
   onto the uniform FDTD/PSTD grid and replaced post-step source injection with
-  SSP-RK3-stage weak cell-source forcing. Current focused-map pairwise metrics
-  are FDTD vs DG-2D normalized-L2 `4.091354e-1`, PSTD vs DG-2D normalized-L2
-  `3.872639e-1`, DG-2D vs analytic normalized-L2 `3.939240e-1`, and DG-2D vs
-  DG-3D normalized-L2 `1.037810e-9` with correlation `1.000000` for the
-  z-invariant homogeneous slab. DG-2D and DG-3D focus at the analytical target
-  (`focus_error_mm = 0.0`). Remaining gap: add DG absorbing-boundary parity
-  before comparing DG against CPML-equipped FDTD/PSTD as a
-  boundary-condition-matched result.
+  SSP-RK3-stage weak cell-source forcing. The next increment added an explicit
+  `DgBoundaryCondition` policy and uses a one-way acoustic characteristic
+  exterior state for focused tensor DG maps, leaving periodic fluxes as the
+  conservation baseline. The follow-up axis-aware policy preserves periodic z
+  for the embedded 2-D slab while applying absorbing characteristic x/y tank
+  faces. Current focused-map pairwise metrics are FDTD vs DG-2D normalized-L2
+  `1.616039e-1`, correlation `0.985529`; FDTD vs DG-3D normalized-L2
+  `1.616039e-1`, correlation `0.985529`; PSTD vs DG-2D/DG-3D normalized-L2
+  `1.635862e-1`, correlation `0.986426`; DG-2D vs analytic normalized-L2
+  `1.933581e-1`, correlation `0.975261`; and DG-2D vs DG-3D normalized-L2
+  `1.756510e-8`, correlation `1.000000`. FDTD, PSTD, DG-2D, DG-3D, and
+  analytic maps now share the same peak at `(8 mm, 9 mm)` in the finite
+  water-tank grid. Remaining gap: add DG-native CPML or an equivalent
+  split-field absorbing layer for fully finite 3-D domains; the embedded slab
+  comparison no longer has a separate DG-3D boundary discrepancy.
   The generic simulation adapter now routes `SolverType::DiscontinuousGalerkin`
   through this acoustic tensor state and projects pressure plus velocity
   components back to the simulation API using uniform-grid interpolation,

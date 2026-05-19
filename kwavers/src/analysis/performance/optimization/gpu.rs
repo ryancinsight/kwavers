@@ -66,7 +66,7 @@ impl GpuOptimizer {
     /// # Errors
     /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
     ///
-    pub fn upload_to_gpu<T>(&self, _data: &[T]) -> KwaversResult<GpuBuffer> {
+    pub fn upload_to_gpu<T>(&self, _data: &[T]) -> KwaversResult<PerfGpuBuffer> {
         Err(KwaversError::Config(
             crate::core::error::ConfigError::InvalidValue {
                 parameter: "gpu_upload".to_owned(),
@@ -80,7 +80,7 @@ impl GpuOptimizer {
     /// # Errors
     /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
     ///
-    pub fn download_from_gpu<T>(&self, _buffer: &GpuBuffer) -> KwaversResult<Vec<T>> {
+    pub fn download_from_gpu<T>(&self, _buffer: &PerfGpuBuffer) -> KwaversResult<Vec<T>> {
         Err(KwaversError::Config(
             crate::core::error::ConfigError::InvalidValue {
                 parameter: "gpu_download".to_owned(),
@@ -93,12 +93,12 @@ impl GpuOptimizer {
 
 /// GPU buffer handle
 #[derive(Debug)]
-pub struct GpuBuffer {
+pub struct PerfGpuBuffer {
     _id: usize,
     _size: usize,
 }
 
-impl GpuBuffer {
+impl PerfGpuBuffer {
     /// Get buffer size
     #[must_use]
     pub fn size(&self) -> usize {

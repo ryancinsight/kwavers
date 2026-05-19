@@ -34,7 +34,7 @@ pub use absorption::{AbsorptionTissueType, PowerLawAbsorption};
 pub use anisotropic::{
     AnisotropicStiffnessTensor, AnisotropyType, ChristoffelEquation, MuscleFiberModel,
 };
-pub use config::{InterfaceTypeParameters, LayerParameters, MediumParameters, MediumType};
+pub use config::{InterfaceTypeParameters, LayerParameters, DomainMediumParameters, MediumType};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use homogeneous::HomogeneousMedium;
 pub use material_fields::MaterialFields;
@@ -49,7 +49,7 @@ pub use analytical_properties::AnalyticalMediumProperties;
 pub use bubble::{BubbleProperties, BubbleState};
 pub use core::{ArrayAccess, CoreMedium};
 pub use elastic::{ElasticArrayAccess, ElasticProperties};
-pub use optical::OpticalProperties;
+pub use optical::MediumOpticalProperties;
 pub use thermal::{ThermalField, ThermalProperties};
 
 // Re-export canonical property data structures (SSOT)
@@ -63,7 +63,7 @@ pub use viscous::ViscousProperties;
 
 // Re-export utility functions and types
 pub use core::{continuous_to_discrete, max_sound_speed, max_sound_speed_pointwise};
-pub use interface::{find_interfaces, InterfacePoint};
+pub use interface::{find_interfaces, MediumInterfacePoint};
 pub use wrapper::{
     absorption_at, absorption_at_core, density_at, density_at_core, nonlinearity_at,
     nonlinearity_at_core, sound_speed_at, sound_speed_at_core,

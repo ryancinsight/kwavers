@@ -1,8 +1,8 @@
 use super::manager::MultiGpuManager;
 #[cfg(feature = "gpu")]
-use super::types::GpuCapabilities;
+use super::types::PinnGpuCapabilities;
 use super::types::{
-    GpuDeviceInfo, LoadBalancingAlgorithm, MultiGpuDecompositionStrategy, PerformanceSummary,
+    PinnMultiGpuDeviceInfo, LoadBalancingAlgorithm, MultiGpuDecompositionStrategy, PerformanceSummary,
 };
 
 #[tokio::test]
@@ -29,12 +29,12 @@ async fn test_multi_gpu_manager_creation() {
 #[test]
 fn test_spatial_decomposition() {
     let devices = [
-        GpuDeviceInfo {
+        PinnMultiGpuDeviceInfo {
             id: 0,
             name: "GPU 0".to_string(),
             backend: "Vulkan".to_string(),
             #[cfg(feature = "gpu")]
-            capabilities: GpuCapabilities {
+            capabilities: PinnGpuCapabilities {
                 max_buffer_size: 0,
                 max_workgroup_size: [0, 0, 0],
                 max_compute_invocations: 0,
@@ -45,12 +45,12 @@ fn test_spatial_decomposition() {
             compute_load: 0.0,
             healthy: true,
         },
-        GpuDeviceInfo {
+        PinnMultiGpuDeviceInfo {
             id: 1,
             name: "GPU 1".to_string(),
             backend: "Vulkan".to_string(),
             #[cfg(feature = "gpu")]
-            capabilities: GpuCapabilities {
+            capabilities: PinnGpuCapabilities {
                 max_buffer_size: 0,
                 max_workgroup_size: [0, 0, 0],
                 max_compute_invocations: 0,

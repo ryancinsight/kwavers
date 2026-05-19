@@ -1,13 +1,13 @@
 //! Convergence prediction model
 
-use super::{MLModel, ModelMetadata};
+use super::{MLModel, MlModelMetadata};
 use crate::core::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
 /// Convergence prediction model
 #[derive(Debug)]
 pub struct ConvergencePredictorModel {
-    metadata: ModelMetadata,
+    metadata: MlModelMetadata,
 }
 
 impl Default for ConvergencePredictorModel {
@@ -47,7 +47,7 @@ impl ConvergencePredictorModel {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn metadata(&self) -> &ModelMetadata {
+    pub fn metadata(&self) -> &MlModelMetadata {
         &self.metadata
     }
 
@@ -69,7 +69,7 @@ impl ConvergencePredictorModel {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            metadata: ModelMetadata {
+            metadata: MlModelMetadata {
                 name: "ConvergencePredictor".to_owned(),
                 version: "1.0.0".to_owned(),
                 input_shape: vec![10],

@@ -3,7 +3,8 @@ use crate::solver::inverse::pinn::ml::burn_wave_equation_1d::{
     BurnPINNConfig, BurnPINNTrainer, BurnTrainingMetrics,
 };
 use crate::solver::inverse::pinn::ml::burn_wave_equation_2d::{
-    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnTrainingMetrics2D, Geometry2D,
+    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnTrainingMetrics2D,
+    BurnWave2dGeometry,
 };
 use burn::backend::{Autodiff, NdArray};
 use ndarray::{Array1, Array2};
@@ -17,8 +18,8 @@ use serde::{Deserialize, Serialize};
 pub struct PINNConfig {
     /// Physics domain (e.g., "acoustic_wave")
     pub physics_domain: String,
-    /// Geometry specification
-    pub geometry: Geometry,
+    /// PinnTrainerGeometry specification
+    pub geometry: PinnTrainerGeometry,
     /// Physics parameters
     pub physics_params: PhysicsParams,
     /// Training configuration
@@ -27,9 +28,9 @@ pub struct PINNConfig {
     pub use_gpu: bool,
 }
 
-/// Geometry specification for PINN
+/// PinnTrainerGeometry specification for PINN
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Geometry {
+pub struct PinnTrainerGeometry {
     pub bounds: Vec<f64>,
     pub obstacles: Vec<Obstacle>,
     pub boundary_conditions: Vec<PinnBoundarySpec>,
@@ -210,7 +211,7 @@ fn train_2d(
     let y_min = config.geometry.bounds.get(2).copied().unwrap_or(-1.0);
     let y_max = config.geometry.bounds.get(3).copied().unwrap_or(1.0);
 
-    let geometry = Geometry2D::rectangular(x_min, x_max, y_min, y_max);
+    let geometry = BurnWave2dGeometry::rectangular(x_min, x_max, y_min, y_max);
 
     let mut trainer =
         BurnPINN2DTrainer::<Backend>::new_trainer(burn_config.clone(), geometry, &device)?;

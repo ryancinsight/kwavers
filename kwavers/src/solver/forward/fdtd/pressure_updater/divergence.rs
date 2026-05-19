@@ -1,7 +1,7 @@
 //! Staggered-grid velocity divergence computation.
 
 use crate::core::error::KwaversResult;
-use crate::solver::geometry::Geometry;
+use crate::solver::geometry::SolverGeometry;
 use ndarray::{s, Zip};
 
 use super::super::solver::FdtdSolver;
@@ -24,7 +24,7 @@ impl FdtdSolver {
         self.staggered_operator
             .apply_backward_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
 
-        if self.config.geometry == Geometry::CylindricalAS {
+        if self.config.geometry == SolverGeometry::CylindricalAS {
             let dz = self.grid.dz;
             let (nx, _ny, nz) = self.divergence_scratch.dim();
             for i in 0..nx {

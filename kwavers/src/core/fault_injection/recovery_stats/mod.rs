@@ -28,7 +28,7 @@ mod tests;
 
 pub use latency::RecoveryLatencyStats;
 pub use reports::{ContentionReport, RecoveryReport, StabilityReport, ThreadContentionMetrics};
-pub use stats::RecoveryStats;
+pub use stats::CoreRecoveryStats;
 
 use super::scenario::FaultInjectionScenario;
 use serde::{Deserialize, Serialize};

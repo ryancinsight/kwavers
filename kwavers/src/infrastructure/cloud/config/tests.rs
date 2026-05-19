@@ -1,4 +1,4 @@
-use super::types::{AlertThresholds, AutoScalingConfig, DeploymentConfig, MonitoringConfig};
+use super::types::{AlertThresholds, AutoScalingConfig, DeploymentConfig, CloudMonitoringConfig};
 use crate::infrastructure::cloud::types::CloudProvider;
 
 #[test]
@@ -10,7 +10,7 @@ fn test_deployment_config_validation_success() {
         gpu_count: 1,
         memory_gb: 16,
         auto_scaling: AutoScalingConfig::default(),
-        monitoring: MonitoringConfig::default(),
+        monitoring: CloudMonitoringConfig::default(),
     };
 
     config.validate().unwrap();
@@ -25,7 +25,7 @@ fn test_deployment_config_validation_zero_gpu() {
         gpu_count: 0,
         memory_gb: 16,
         auto_scaling: AutoScalingConfig::default(),
-        monitoring: MonitoringConfig::default(),
+        monitoring: CloudMonitoringConfig::default(),
     };
 
     assert!(config.validate().is_err());
@@ -40,7 +40,7 @@ fn test_deployment_config_validation_zero_memory() {
         gpu_count: 1,
         memory_gb: 0,
         auto_scaling: AutoScalingConfig::default(),
-        monitoring: MonitoringConfig::default(),
+        monitoring: CloudMonitoringConfig::default(),
     };
 
     assert!(config.validate().is_err());
@@ -55,7 +55,7 @@ fn test_deployment_config_validation_empty_region() {
         gpu_count: 1,
         memory_gb: 16,
         auto_scaling: AutoScalingConfig::default(),
-        monitoring: MonitoringConfig::default(),
+        monitoring: CloudMonitoringConfig::default(),
     };
 
     assert!(config.validate().is_err());
@@ -103,7 +103,7 @@ fn test_auto_scaling_validation_threshold_order() {
 
 #[test]
 fn test_monitoring_config_default() {
-    let config = MonitoringConfig::default();
+    let config = CloudMonitoringConfig::default();
     assert!(config.enable_detailed_metrics);
     assert_eq!(config.metrics_interval_seconds, 60);
     config.validate().unwrap();

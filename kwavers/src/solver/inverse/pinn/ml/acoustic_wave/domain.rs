@@ -1,9 +1,9 @@
 //! Acoustic wave physics domain implementation.
 
-use super::types::{AcousticBoundarySpec, AcousticBoundaryType, AcousticProblemType};
+use super::types::{AcousticBoundarySpec, PinnAcousticBoundaryType, AcousticProblemType};
 use crate::solver::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingType, InitialConditionSpec, PhysicsDomain, PhysicsLossWeights,
+    BoundaryPosition, CouplingType, InitialConditionSpec, SimulationPhysicsDomain, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
     PinnCouplingInterface, PinnDomainPhysicsParameters,
 };
@@ -71,7 +71,7 @@ impl AcousticWaveDomain {
     }
 }
 
-impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
+impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for AcousticWaveDomain {
     fn domain_name(&self) -> &'static str {
         "acoustic_wave"
     }
@@ -171,23 +171,23 @@ impl<B: AutodiffBackend> PhysicsDomain<B> for AcousticWaveDomain {
         self.boundary_conditions
             .iter()
             .map(|bc| match bc.condition_type {
-                AcousticBoundaryType::SoundSoft => PinnBoundaryConditionSpec::Dirichlet {
+                PinnAcousticBoundaryType::SoundSoft => PinnBoundaryConditionSpec::Dirichlet {
                     boundary: bc.position.clone(),
                     value: vec![0.0],
                     component: PinnBoundaryComponent::Scalar,
                 },
-                AcousticBoundaryType::SoundHard => PinnBoundaryConditionSpec::Neumann {
+                PinnAcousticBoundaryType::SoundHard => PinnBoundaryConditionSpec::Neumann {
                     boundary: bc.position.clone(),
                     flux: vec![0.0],
                     component: PinnBoundaryComponent::Scalar,
                 },
-                AcousticBoundaryType::Absorbing => PinnBoundaryConditionSpec::Robin {
+                PinnAcousticBoundaryType::Absorbing => PinnBoundaryConditionSpec::Robin {
                     boundary: bc.position.clone(),
                     alpha: 1.0,
                     beta: 0.0,
                     component: PinnBoundaryComponent::Scalar,
                 },
-                AcousticBoundaryType::Impedance => {
+                PinnAcousticBoundaryType::Impedance => {
                     let z = bc.parameters.get("impedance").copied().unwrap_or(1.0);
                     PinnBoundaryConditionSpec::Robin {
                         boundary: bc.position.clone(),

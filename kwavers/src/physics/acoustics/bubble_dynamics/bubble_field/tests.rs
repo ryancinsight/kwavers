@@ -1,6 +1,6 @@
 use super::cloud::BubbleCloud;
 use super::core::BubbleField;
-use super::distributions::{SizeDistribution, SpatialDistribution};
+use super::distributions::{BubbleFieldSizeDistribution, SpatialDistribution};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 
 #[test]
@@ -16,7 +16,7 @@ fn test_bubble_field_creation() {
 #[test]
 fn test_bubble_cloud_generation() {
     let params = BubbleParameters::default();
-    let size_dist = SizeDistribution::Uniform {
+    let size_dist = BubbleFieldSizeDistribution::Uniform {
         min: 1e-6,
         max: 10e-6,
     };

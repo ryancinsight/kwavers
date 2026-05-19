@@ -6,7 +6,7 @@ mod query;
 use super::interface::BurnWave2dInterfaceCondition;
 
 /// 2D geometry definitions for PINN domains.
-pub enum Geometry2D {
+pub enum BurnWave2dGeometry {
     /// Rectangular domain: [x_min, x_max] × [y_min, y_max].
     Rectangular {
         x_min: f64,
@@ -47,18 +47,18 @@ pub enum Geometry2D {
     },
     /// Adaptive mesh refinement domain.
     AdaptiveMesh {
-        base_geometry: Box<Geometry2D>,
+        base_geometry: Box<BurnWave2dGeometry>,
         refinement_threshold: f64,
         max_level: usize,
     },
     /// Multi-region composite domain.
     MultiRegion {
-        regions: Vec<(Geometry2D, usize)>,
+        regions: Vec<(BurnWave2dGeometry, usize)>,
         interfaces: Vec<BurnWave2dInterfaceCondition>,
     },
 }
 
-impl Geometry2D {
+impl BurnWave2dGeometry {
     /// Create a rectangular geometry.
     pub fn rectangular(x_min: f64, x_max: f64, y_min: f64, y_max: f64) -> Self {
         Self::Rectangular {
@@ -121,7 +121,7 @@ impl Geometry2D {
 
     /// Create an adaptive mesh geometry.
     pub fn adaptive_mesh(
-        base_geometry: Geometry2D,
+        base_geometry: BurnWave2dGeometry,
         refinement_threshold: f64,
         max_level: usize,
     ) -> Self {
@@ -134,7 +134,7 @@ impl Geometry2D {
 
     /// Create a multi-region geometry.
     pub fn multi_region(
-        regions: Vec<(Geometry2D, usize)>,
+        regions: Vec<(BurnWave2dGeometry, usize)>,
         interfaces: Vec<BurnWave2dInterfaceCondition>,
     ) -> Self {
         Self::MultiRegion {

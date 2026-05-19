@@ -68,12 +68,12 @@ impl Default for StagePipelineConfig {
 
 /// Sequential visualization stage pipeline.
 #[derive(Debug, Clone)]
-pub struct StagePipeline {
+pub struct FlatStagePipeline {
     pub config: StagePipelineConfig,
     pub metrics: PipelineMetrics,
 }
 
-impl StagePipeline {
+impl FlatStagePipeline {
     #[must_use]
     pub fn new(config: StagePipelineConfig) -> Self {
         Self {

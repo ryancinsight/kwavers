@@ -57,7 +57,7 @@ pub mod operators;
 // pub mod transforms;
 
 // Re-export commonly used traits for convenience
-pub use operators::{DifferentialOperator, Interpolator, SpectralOperator};
+pub use operators::{DifferentialOperator, Interpolator, SpectralOperatorTrait};
 
 #[cfg(test)]
 mod tests {
@@ -68,7 +68,7 @@ mod tests {
         let _ = (
             std::any::TypeId::of::<dyn DifferentialOperator>(),
             std::any::TypeId::of::<dyn Interpolator>(),
-            std::any::TypeId::of::<dyn SpectralOperator>(),
+            std::any::TypeId::of::<dyn SpectralOperatorTrait>(),
         );
     }
 }

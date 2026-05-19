@@ -87,7 +87,7 @@ mod tests;
 /// # References
 ///
 /// See module-level documentation.
-pub struct KzkDiffractionOperator {
+pub struct KzkParabolicDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
@@ -101,9 +101,9 @@ pub struct KzkDiffractionOperator {
     scratch: Array2<Complex64>,
 }
 
-impl std::fmt::Debug for KzkDiffractionOperator {
+impl std::fmt::Debug for KzkParabolicDiffractionOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("KzkDiffractionOperator")
+        f.debug_struct("KzkParabolicDiffractionOperator")
             .field("config", &self.config)
             .field(
                 "kx2",
@@ -117,7 +117,7 @@ impl std::fmt::Debug for KzkDiffractionOperator {
     }
 }
 
-impl KzkDiffractionOperator {
+impl KzkParabolicDiffractionOperator {
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;

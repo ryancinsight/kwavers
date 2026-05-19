@@ -42,12 +42,12 @@ pub enum PamArrayGeometry {
 pub struct PamArrayElement {
     pub position: [f64; 3],
     pub sensitivity: f64,
-    pub directivity: Option<DirectivityPattern>,
+    pub directivity: Option<PamDirectivityPattern>,
 }
 
 /// Directivity pattern for array elements
 #[derive(Debug, Clone)]
-pub struct DirectivityPattern {
+pub struct PamDirectivityPattern {
     pub beam_width: f64,
     pub orientation: [f64; 3],
 }

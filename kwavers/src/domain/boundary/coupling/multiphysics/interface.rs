@@ -1,11 +1,11 @@
-//! `MultiPhysicsInterface` — multi-physics interface boundary condition.
+//! `BoundaryMultiPhysicsInterface` — multi-physics interface boundary condition.
 
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopology;
 use ndarray::ArrayViewMut3;
 
-use super::super::types::{BoundaryCouplingType, BoundaryDirections, PhysicsDomain};
+use super::super::types::{BoundaryCouplingType, BoundaryDirections, BoundaryCouplingPhysicsDomain};
 
 /// Multi-physics interface boundary
 ///
@@ -23,27 +23,27 @@ use super::super::types::{BoundaryCouplingType, BoundaryDirections, PhysicsDomai
 /// - Beard, "Biomedical Photoacoustic Imaging", Interface Focus (2011)
 /// - Duck, "Physical Properties of Tissue" (1990)
 #[derive(Debug, Clone)]
-pub struct MultiPhysicsInterface {
+pub struct BoundaryMultiPhysicsInterface {
     /// Interface position [x, y, z] in meters
     pub position: [f64; 3],
     /// Interface normal vector
     pub normal: [f64; 3],
     /// Physics domain 1 (left side of interface)
-    pub physics_1: PhysicsDomain,
+    pub physics_1: BoundaryCouplingPhysicsDomain,
     /// Physics domain 2 (right side of interface)
-    pub physics_2: PhysicsDomain,
+    pub physics_2: BoundaryCouplingPhysicsDomain,
     /// Coupling type with parameters
     pub coupling_type: BoundaryCouplingType,
 }
 
-impl MultiPhysicsInterface {
+impl BoundaryMultiPhysicsInterface {
     /// Create a new multi-physics interface
     #[must_use]
     pub fn new(
         position: [f64; 3],
         normal: [f64; 3],
-        physics_1: PhysicsDomain,
-        physics_2: PhysicsDomain,
+        physics_1: BoundaryCouplingPhysicsDomain,
+        physics_2: BoundaryCouplingPhysicsDomain,
         coupling_type: BoundaryCouplingType,
     ) -> Self {
         Self {
@@ -110,9 +110,9 @@ impl MultiPhysicsInterface {
     }
 }
 
-impl BoundaryCondition for MultiPhysicsInterface {
+impl BoundaryCondition for BoundaryMultiPhysicsInterface {
     fn name(&self) -> &str {
-        "MultiPhysicsInterface"
+        "BoundaryMultiPhysicsInterface"
     }
 
     fn active_directions(&self) -> BoundaryDirections {

@@ -1,11 +1,11 @@
-//! `Debug` implementation for `Geometry2D`.
+//! `Debug` implementation for `BurnWave2dGeometry`.
 
-use super::Geometry2D;
+use super::BurnWave2dGeometry;
 
-impl std::fmt::Debug for Geometry2D {
+impl std::fmt::Debug for BurnWave2dGeometry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Geometry2D::Rectangular {
+            BurnWave2dGeometry::Rectangular {
                 x_min,
                 x_max,
                 y_min,
@@ -15,7 +15,7 @@ impl std::fmt::Debug for Geometry2D {
                 "Rectangular {{ x_min: {}, x_max: {}, y_min: {}, y_max: {} }}",
                 x_min, x_max, y_min, y_max
             ),
-            Geometry2D::Circular {
+            BurnWave2dGeometry::Circular {
                 x_center,
                 y_center,
                 radius,
@@ -24,7 +24,7 @@ impl std::fmt::Debug for Geometry2D {
                 "Circular {{ center: ({}, {}), radius: {} }}",
                 x_center, y_center, radius
             ),
-            Geometry2D::LShaped {
+            BurnWave2dGeometry::LShaped {
                 x_min,
                 x_max,
                 y_min,
@@ -36,13 +36,13 @@ impl std::fmt::Debug for Geometry2D {
                 "LShaped {{ bounds: [{}, {}]×[{}, {}], notch: ({}, {}) }}",
                 x_min, x_max, y_min, y_max, notch_x, notch_y
             ),
-            Geometry2D::Polygonal { vertices, holes } => write!(
+            BurnWave2dGeometry::Polygonal { vertices, holes } => write!(
                 f,
                 "Polygonal {{ vertices: {}, holes: {} }}",
                 vertices.len(),
                 holes.len()
             ),
-            Geometry2D::ParametricCurve {
+            BurnWave2dGeometry::ParametricCurve {
                 t_min,
                 t_max,
                 bounds,
@@ -52,7 +52,7 @@ impl std::fmt::Debug for Geometry2D {
                 "ParametricCurve {{ t: [{}, {}], bounds: {:?} }}",
                 t_min, t_max, bounds
             ),
-            Geometry2D::AdaptiveMesh {
+            BurnWave2dGeometry::AdaptiveMesh {
                 base_geometry,
                 refinement_threshold,
                 max_level,
@@ -61,7 +61,7 @@ impl std::fmt::Debug for Geometry2D {
                 "AdaptiveMesh {{ threshold: {}, max_level: {}, base: {:?} }}",
                 refinement_threshold, max_level, base_geometry
             ),
-            Geometry2D::MultiRegion {
+            BurnWave2dGeometry::MultiRegion {
                 regions,
                 interfaces,
             } => write!(

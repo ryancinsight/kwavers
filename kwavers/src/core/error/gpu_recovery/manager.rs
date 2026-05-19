@@ -2,39 +2,39 @@ use crate::core::error::{KwaversError, SystemError};
 use crate::core::error::gpu::GpuError;
 
 use super::context::{GpuRecoveryStrategy, RecoveryContext, RecoveryResult};
-use super::device_lost::DeviceLostRecovery;
+use super::device_lost::ErrorGpuDeviceLostRecovery;
 use super::oom::{OomRecovery, OomRecoveryConfig};
 use super::telemetry::{
     global_telemetry_snapshot, GpuRecoveryTelemetry, GpuStrategyLatencies, GpuStrategyRates,
 };
-use super::timeout::TimeoutRecovery;
+use super::timeout::ErrorTimeoutRecovery;
 
 /// Composite GPU Recovery Manager
 ///
 /// Provides unified interface for GPU-specific recovery strategies.
 #[derive(Debug)]
-pub struct GpuRecoveryManager {
-    device_lost: DeviceLostRecovery,
+pub struct ErrorGpuRecoveryManager {
+    device_lost: ErrorGpuDeviceLostRecovery,
     oom: OomRecovery,
-    timeout: TimeoutRecovery,
+    timeout: ErrorTimeoutRecovery,
     custom_strategies: Vec<Box<dyn GpuRecoveryStrategy>>,
 }
 
-impl GpuRecoveryManager {
+impl ErrorGpuRecoveryManager {
     pub fn new() -> Self {
         Self {
-            device_lost: DeviceLostRecovery::new(),
+            device_lost: ErrorGpuDeviceLostRecovery::new(),
             oom: OomRecovery::new(),
-            timeout: TimeoutRecovery::new(),
+            timeout: ErrorTimeoutRecovery::new(),
             custom_strategies: Vec::new(),
         }
     }
 
     pub fn with_config(oom_config: OomRecoveryConfig, max_retries: u32) -> Self {
         Self {
-            device_lost: DeviceLostRecovery::new(),
+            device_lost: ErrorGpuDeviceLostRecovery::new(),
             oom: OomRecovery::with_config(oom_config),
-            timeout: TimeoutRecovery::with_retries(max_retries),
+            timeout: ErrorTimeoutRecovery::with_retries(max_retries),
             custom_strategies: Vec::new(),
         }
     }
@@ -104,7 +104,7 @@ impl GpuRecoveryManager {
     }
 }
 
-impl Default for GpuRecoveryManager {
+impl Default for ErrorGpuRecoveryManager {
     fn default() -> Self {
         Self::new()
     }

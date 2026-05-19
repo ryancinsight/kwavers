@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 
 /// Spatial geometry of the computational domain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub enum Geometry {
+pub enum SolverGeometry {
     /// Standard 3-D Cartesian coordinates (default).
     #[default]
     Cartesian3D,

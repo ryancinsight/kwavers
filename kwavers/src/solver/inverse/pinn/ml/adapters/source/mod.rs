@@ -16,7 +16,9 @@
 #[cfg(test)]
 mod tests;
 
-use crate::domain::source::{types::FocalProperties as DomainFocalProperties, Source, SourceField};
+use crate::domain::source::{
+    types::SourceFocalProperties as DomainFocalProperties, Source, SourceField,
+};
 use std::sync::Arc;
 
 /// Acoustic source specification for PINN training.
@@ -36,7 +38,7 @@ pub struct PinnAcousticSource {
     /// Phase offset (radians).
     pub phase: f64,
     /// Optional focal properties.
-    pub focal_properties: Option<FocalProperties>,
+    pub focal_properties: Option<PinnSourceFocalProperties>,
 }
 
 /// PINN-specific source classification.
@@ -57,9 +59,9 @@ pub enum PinnSourceClass {
 /// Focal properties for focused sources (PINN adapter type).
 ///
 /// Simplified version for PINN boundary conditions.
-/// Complete focal properties are in `domain::source::FocalProperties`.
+/// Complete focal properties are in `domain::source::SourceFocalProperties`.
 #[derive(Debug, Clone, Copy)]
-pub struct FocalProperties {
+pub struct PinnSourceFocalProperties {
     /// Focal length (m).
     pub focal_length: f64,
     /// Spot size at focus (m) — beam waist or FWHM.
@@ -70,7 +72,7 @@ pub struct FocalProperties {
     pub focal_gain: Option<f64>,
 }
 
-impl From<DomainFocalProperties> for FocalProperties {
+impl From<DomainFocalProperties> for PinnSourceFocalProperties {
     fn from(props: DomainFocalProperties) -> Self {
         Self {
             focal_length: props.focal_depth,
@@ -134,7 +136,7 @@ impl PinnAcousticSource {
     }
 
     /// Extract focal properties from domain source via `Source::get_focal_properties`.
-    fn extract_focal_properties(source: &dyn Source) -> Option<FocalProperties> {
+    fn extract_focal_properties(source: &dyn Source) -> Option<PinnSourceFocalProperties> {
         source.get_focal_properties().map(|props| props.into())
     }
 

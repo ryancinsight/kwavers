@@ -1,4 +1,4 @@
-//! `PMLBoundary` — pre-computed PML attenuation field and damping application.
+//! `ElasticSwePMLBoundary` — pre-computed PML attenuation field and damping application.
 
 use super::config::SwePmlConfig;
 use crate::domain::grid::Grid;
@@ -19,14 +19,14 @@ use ndarray::{Array1, Array3, Zip};
 /// - Komatitsch, D., & Martin, R. (2007). Geophysics, 72(5), SM155–SM167.
 /// - Collino, F., & Tsogka, C. (2001). Geophysics, 66(1), 294–307.
 #[derive(Debug)]
-pub struct PMLBoundary {
+pub struct ElasticSwePMLBoundary {
     /// Attenuation coefficient field σ(x,y,z) (Np/m).
     sigma: Array3<f64>,
     /// Configuration parameters.
     config: SwePmlConfig,
 }
 
-impl PMLBoundary {
+impl ElasticSwePMLBoundary {
     /// Create a new PML boundary with pre-computed attenuation field.
     #[must_use]
     pub fn new(grid: &Grid, config: SwePmlConfig) -> Self {
@@ -98,7 +98,7 @@ impl PMLBoundary {
     /// `σ(d) = σ_max · (d / L_pml)^order` with `d` the boundary distance.
     ///
     /// Callers that need per-step damping compute `exp(−σ · dt)` themselves,
-    /// because `dt` is not known at `PMLBoundary` construction time.
+    /// because `dt` is not known at `ElasticSwePMLBoundary` construction time.
     #[must_use]
     pub fn axis_sigma_profiles(&self, grid: &Grid) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
         let (nx, ny, nz) = grid.dimensions();

@@ -1,9 +1,9 @@
 use super::super::types::{FeatureMap, LesionDetection};
-use super::ClinicalDecisionSupport;
+use super::NeuralClinicalDecisionSupport;
 use crate::core::error::KwaversResult;
 use ndarray::{Array3, ArrayView3};
 
-impl ClinicalDecisionSupport {
+impl NeuralClinicalDecisionSupport {
     /// Detect lesions.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

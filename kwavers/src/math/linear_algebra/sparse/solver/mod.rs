@@ -21,7 +21,7 @@ pub struct SolverConfig {
     /// Convergence tolerance.
     pub tolerance: f64,
     /// Preconditioning type.
-    pub preconditioner: Preconditioner,
+    pub preconditioner: SparsePreconditioner,
     /// Enable verbose logging.
     pub verbose: bool,
 }
@@ -31,15 +31,15 @@ impl Default for SolverConfig {
         Self {
             max_iterations: 1000,
             tolerance: 1e-8,
-            preconditioner: Preconditioner::None,
+            preconditioner: SparsePreconditioner::None,
             verbose: false,
         }
     }
 }
 
-/// Preconditioner types.
+/// SparsePreconditioner types.
 #[derive(Debug, Clone)]
-pub enum Preconditioner {
+pub enum SparsePreconditioner {
     None,
     Jacobi,
     IncompleteCholesky,

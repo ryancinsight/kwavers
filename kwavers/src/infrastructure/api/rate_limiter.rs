@@ -15,7 +15,7 @@ use std::time::Instant;
 
 /// Configuration for rate limiting
 #[derive(Debug, Clone)]
-pub struct RateLimitConfig {
+pub struct RateLimiterConfig {
     /// Maximum requests per window
     pub requests_per_window: u32,
     /// Window duration in seconds
@@ -24,7 +24,7 @@ pub struct RateLimitConfig {
     pub burst_capacity: u32,
 }
 
-impl Default for RateLimitConfig {
+impl Default for RateLimiterConfig {
     fn default() -> Self {
         Self {
             requests_per_window: 100,
@@ -49,11 +49,11 @@ struct UserRateLimit {
 #[derive(Clone, Debug)]
 pub struct RateLimiter {
     /// Rate limit configurations per endpoint
-    configs: HashMap<String, RateLimitConfig>,
+    configs: HashMap<String, RateLimiterConfig>,
     /// Per-user rate limit states
     states: Arc<RwLock<HashMap<String, UserRateLimit>>>,
     /// Default configuration for unspecified endpoints
-    default_config: RateLimitConfig,
+    default_config: RateLimiterConfig,
 }
 
 impl RateLimiter {
@@ -63,13 +63,13 @@ impl RateLimiter {
         Self {
             configs: HashMap::new(),
             states: Arc::new(RwLock::new(HashMap::new())),
-            default_config: RateLimitConfig::default(),
+            default_config: RateLimiterConfig::default(),
         }
     }
 
     /// Create rate limiter with custom configuration
     #[must_use]
-    pub fn with_config(default_config: RateLimitConfig) -> Self {
+    pub fn with_config(default_config: RateLimiterConfig) -> Self {
         Self {
             configs: HashMap::new(),
             states: Arc::new(RwLock::new(HashMap::new())),
@@ -81,7 +81,7 @@ impl RateLimiter {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn add_endpoint_config(&mut self, endpoint: &str, config: RateLimitConfig) {
+    pub fn add_endpoint_config(&mut self, endpoint: &str, config: RateLimiterConfig) {
         self.configs.insert(endpoint.to_string(), config);
     }
 
@@ -224,7 +224,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rate_limiter_exhaustion() {
-        let config = RateLimitConfig {
+        let config = RateLimiterConfig {
             requests_per_window: 2,
             window_seconds: 1,
             burst_capacity: 0,
@@ -241,7 +241,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rate_limiter_recovery() {
-        let config = RateLimitConfig {
+        let config = RateLimiterConfig {
             requests_per_window: 1,
             window_seconds: 1,
             burst_capacity: 0,
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn test_endpoint_specific_config() {
         let mut limiter = RateLimiter::new();
-        let strict_config = RateLimitConfig {
+        let strict_config = RateLimiterConfig {
             requests_per_window: 5,
             window_seconds: 60,
             burst_capacity: 0,

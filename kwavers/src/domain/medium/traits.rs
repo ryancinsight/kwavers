@@ -8,7 +8,7 @@ use super::{
     bubble::{BubbleProperties, BubbleState},
     core::{ArrayAccess, CoreMedium},
     elastic::{ElasticArrayAccess, ElasticProperties},
-    optical::OpticalProperties,
+    optical::MediumOpticalProperties,
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
@@ -29,7 +29,7 @@ pub trait Medium:
     + ElasticArrayAccess
     + ThermalProperties
     + ThermalField
-    + OpticalProperties
+    + MediumOpticalProperties
     + ViscousProperties
     + Debug
     + Send
@@ -48,7 +48,7 @@ impl<T> Medium for T where
         + ElasticArrayAccess
         + ThermalProperties
         + ThermalField
-        + OpticalProperties
+        + MediumOpticalProperties
         + ViscousProperties
         + Debug
         + Send

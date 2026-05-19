@@ -21,7 +21,7 @@ use super::{update_avg_latency_us, GpuCheckpoint, GpuRecoveryAction, GLOBAL_STAT
 /// `GpuRecoveryAction::ReinitializeDevice { checkpoint }` so the time loop can
 /// perform the actual re-init asynchronously.
 #[derive(Debug)]
-pub struct DeviceLostRecovery {
+pub struct GpuDeviceLostRecovery {
     /// Success counter
     success_count: AtomicUsize,
     /// Total attempts counter
@@ -32,7 +32,7 @@ pub struct DeviceLostRecovery {
     checkpoint: Arc<Mutex<Option<GpuCheckpoint>>>,
 }
 
-impl DeviceLostRecovery {
+impl GpuDeviceLostRecovery {
     /// Create a new device-lost recovery strategy with no checkpoint.
     pub fn new() -> Self {
         Self {
@@ -45,7 +45,7 @@ impl DeviceLostRecovery {
 
     /// Create a device-lost recovery strategy sharing an existing checkpoint arc.
     ///
-    /// Used by [`GpuRecoveryManager`] so all strategies share the same checkpoint
+    /// Used by [`GpuRecoveryManagerImpl`] so all strategies share the same checkpoint
     /// written by the GPU time loop.
     pub fn with_checkpoint(checkpoint: Arc<Mutex<Option<GpuCheckpoint>>>) -> Self {
         Self {
@@ -71,7 +71,7 @@ impl DeviceLostRecovery {
     ///
     pub fn set_checkpoint(&self, checkpoint: GpuCheckpoint) -> KwaversResult<()> {
         let mut guard = self.checkpoint.lock().map_err(|_| {
-            KwaversError::InternalError("DeviceLostRecovery: checkpoint mutex poisoned".to_string())
+            KwaversError::InternalError("GpuDeviceLostRecovery: checkpoint mutex poisoned".to_string())
         })?;
         *guard = Some(checkpoint);
         Ok(())
@@ -99,13 +99,13 @@ impl DeviceLostRecovery {
     }
 }
 
-impl Default for DeviceLostRecovery {
+impl Default for GpuDeviceLostRecovery {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RecoveryStrategy for DeviceLostRecovery {
+impl RecoveryStrategy for GpuDeviceLostRecovery {
     fn recover(&self, error: &KwaversError, _context: &ErrorContext) -> RecoveryResult {
         let start = Instant::now();
         self.total_count.fetch_add(1, Ordering::Relaxed);
@@ -113,7 +113,7 @@ impl RecoveryStrategy for DeviceLostRecovery {
         // Verify this is a device lost error
         if !Self::is_device_lost(error) {
             return Err(KwaversError::InternalError(
-                "DeviceLostRecovery cannot handle non-device-lost errors".to_string(),
+                "GpuDeviceLostRecovery cannot handle non-device-lost errors".to_string(),
             ));
         }
 
@@ -130,7 +130,7 @@ impl RecoveryStrategy for DeviceLostRecovery {
                         stats.device_lost_attempts += 1;
                     }
                     return Err(KwaversError::InternalError(
-                        "DeviceLostRecovery: no checkpoint available for device-lost recovery"
+                        "GpuDeviceLostRecovery: no checkpoint available for device-lost recovery"
                             .to_string(),
                     ));
                 }
@@ -140,7 +140,7 @@ impl RecoveryStrategy for DeviceLostRecovery {
                     stats.device_lost_attempts += 1;
                 }
                 return Err(KwaversError::InternalError(
-                    "DeviceLostRecovery: checkpoint mutex poisoned".to_string(),
+                    "GpuDeviceLostRecovery: checkpoint mutex poisoned".to_string(),
                 ));
             }
         };
@@ -173,7 +173,7 @@ impl RecoveryStrategy for DeviceLostRecovery {
     }
 
     fn strategy_name(&self) -> &'static str {
-        "DeviceLostRecovery"
+        "GpuDeviceLostRecovery"
     }
 
     fn success_rate(&self) -> f64 {
@@ -191,11 +191,11 @@ impl RecoveryStrategy for DeviceLostRecovery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gpu::recovery::GpuRecoveryManager;
+    use crate::gpu::recovery::GpuRecoveryManagerImpl;
 
     #[test]
     fn device_lost_success_rate() {
-        let recovery = DeviceLostRecovery::new();
+        let recovery = GpuDeviceLostRecovery::new();
 
         // Initial rate should be 1.0 (no attempts)
         assert_eq!(recovery.success_rate(), 1.0);
@@ -211,11 +211,11 @@ mod tests {
         let result = recovery.recover(&error, &context);
         assert!(
             result.is_err(),
-            "DeviceLostRecovery with no checkpoint must return Err"
+            "GpuDeviceLostRecovery with no checkpoint must return Err"
         );
 
         // Stats should be updated (attempt counted even on failure)
-        let stats = GpuRecoveryManager::global_stats();
+        let stats = GpuRecoveryManagerImpl::global_stats();
         assert!(stats.device_lost_attempts >= 1);
     }
 
@@ -223,7 +223,7 @@ mod tests {
     fn device_lost_recovery_with_checkpoint() {
         let checkpoint_arc: Arc<Mutex<Option<GpuCheckpoint>>> =
             Arc::new(Mutex::new(Some(GpuCheckpoint::zeroed(8))));
-        let recovery = DeviceLostRecovery::with_checkpoint(Arc::clone(&checkpoint_arc));
+        let recovery = GpuDeviceLostRecovery::with_checkpoint(Arc::clone(&checkpoint_arc));
 
         let error = KwaversError::System(SystemError::ResourceUnavailable {
             resource: "GPU device_lost".to_string(),
@@ -234,7 +234,7 @@ mod tests {
         let result = recovery.recover(&error, &context);
         assert!(
             result.is_ok(),
-            "DeviceLostRecovery with checkpoint must succeed"
+            "GpuDeviceLostRecovery with checkpoint must succeed"
         );
     }
 }

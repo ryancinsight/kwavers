@@ -33,7 +33,7 @@ impl Default for PDECharacteristics {
 }
 
 /// Physics domain trait defining the interface for any physics domain
-pub trait PhysicsDomain<B: AutodiffBackend>: std::fmt::Debug {
+pub trait SimulationPhysicsDomain<B: AutodiffBackend>: std::fmt::Debug {
     /// Get the physics domain name
     fn domain_name(&self) -> &'static str;
 
@@ -229,7 +229,7 @@ pub enum PinnPhysicsCouplingType {
 /// Physics domain registry for managing available physics domains
 #[derive(Debug)]
 pub struct PhysicsDomainRegistry<B: AutodiffBackend> {
-    domains: HashMap<String, Box<dyn PhysicsDomain<B> + Send + Sync>>,
+    domains: HashMap<String, Box<dyn SimulationPhysicsDomain<B> + Send + Sync>>,
 }
 
 impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
@@ -249,16 +249,16 @@ impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
     ///
     pub fn register_domain<D>(&mut self, domain: D) -> KwaversResult<()>
     where
-        D: PhysicsDomain<B> + Send + Sync + 'static,
+        D: SimulationPhysicsDomain<B> + Send + Sync + 'static,
     {
         let name = domain.domain_name().to_string();
-        let boxed: Box<dyn PhysicsDomain<B> + Send + Sync> = Box::new(domain);
+        let boxed: Box<dyn SimulationPhysicsDomain<B> + Send + Sync> = Box::new(domain);
         self.domains.insert(name, boxed);
         Ok(())
     }
 
     /// Get a physics domain by name
-    pub fn get_domain(&self, name: &str) -> Option<&(dyn PhysicsDomain<B> + Send + Sync)> {
+    pub fn get_domain(&self, name: &str) -> Option<&(dyn SimulationPhysicsDomain<B> + Send + Sync)> {
         self.domains.get(name).map(|d| d.as_ref())
     }
 

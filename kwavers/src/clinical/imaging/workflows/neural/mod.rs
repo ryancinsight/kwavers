@@ -32,7 +32,7 @@ pub mod workflow;
 
 // Public re-exports for convenient access
 pub use ai_beamforming_processor::{AIEnhancedBeamformingProcessor, PinnInferenceEngine};
-pub use clinical::ClinicalDecisionSupport;
+pub use clinical::NeuralClinicalDecisionSupport;
 pub use diagnosis::DiagnosisAlgorithm;
 pub use feature_extraction::FeatureExtractor;
 pub use workflow::RealTimeWorkflow;

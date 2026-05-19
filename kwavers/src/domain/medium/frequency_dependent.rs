@@ -186,14 +186,14 @@ impl TissueFrequencyModels {
 
 /// Dispersion correction for frequency-dependent media
 #[derive(Debug)]
-pub struct DispersionCorrection {
+pub struct FreqDispersionCorrection {
     /// Reference frequency for dispersion calculation
     _reference_frequency: f64,
     /// Frequency-dependent properties
     properties: FrequencyDependentProperties,
 }
 
-impl DispersionCorrection {
+impl FreqDispersionCorrection {
     /// Create new dispersion correction
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

@@ -21,7 +21,7 @@ pub mod sensitivity;
 // Re-export main types for convenience
 pub use coupling::ElementCoupling;
 pub use design::TransducerDesign;
-pub use directivity::DirectivityPattern;
+pub use directivity::TransducerDirectivityPattern;
 pub use frequency::FrequencyResponse;
 pub use geometry::ElementGeometry;
 pub use materials::{

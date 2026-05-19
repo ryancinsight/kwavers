@@ -53,7 +53,7 @@ pub use entropy::entropy_production_rate;
 pub use heat::acoustic_heat_source;
 pub use intensity::{acoustic_intensity, acoustic_power_through_z_plane};
 pub use mass::validate_mass_conservation;
-pub use metrics::ConservationMetrics;
+pub use metrics::AcousticConservationMetrics;
 pub use momentum::validate_momentum_conservation;
 pub use state_refs::{AcousticStateRefs, ConservationParams, PreviousFields, VelocityFieldRefs};
 pub use validation::validate_conservation;

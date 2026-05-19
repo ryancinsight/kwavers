@@ -3,8 +3,8 @@
 //! Complete transducer design combining all components.
 
 use super::{
-    BackingLayer, DirectivityPattern, ElementGeometry, FrequencyResponse, MatchingLayer,
-    PiezoMaterial, TransducerSensitivity,
+    BackingLayer, ElementGeometry, FrequencyResponse, MatchingLayer, PiezoMaterial,
+    TransducerDirectivityPattern, TransducerSensitivity,
 };
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 
@@ -22,7 +22,7 @@ pub struct TransducerDesign {
     /// Frequency response
     pub frequency_response: FrequencyResponse,
     /// Directivity pattern
-    pub directivity: DirectivityPattern,
+    pub directivity: TransducerDirectivityPattern,
     /// Sensitivity characteristics
     pub sensitivity: TransducerSensitivity,
 }
@@ -82,7 +82,8 @@ impl TransducerDesign {
         )?;
 
         // Calculate directivity pattern
-        let directivity = DirectivityPattern::rectangular_element(width, height, frequency, 180);
+        let directivity =
+            TransducerDirectivityPattern::rectangular_element(width, height, frequency, 180);
 
         // Calculate sensitivity
         let sensitivity = TransducerSensitivity::from_parameters(

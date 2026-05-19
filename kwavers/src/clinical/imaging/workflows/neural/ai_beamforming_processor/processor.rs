@@ -9,7 +9,7 @@ use crate::domain::sensor::beamforming::processor::BeamformingProcessor;
 use super::super::feature_extraction::FeatureExtractor;
 use super::super::{
     types::{AIBeamformingConfig, AIBeamformingResult, AiBeamformingMetrics, FeatureMap},
-    ClinicalDecisionSupport,
+    NeuralClinicalDecisionSupport,
 };
 use super::trait_engine::PinnInferenceEngine;
 
@@ -28,7 +28,7 @@ pub struct AIEnhancedBeamformingProcessor {
     feature_extractor: FeatureExtractor,
 
     /// Clinical decision support system
-    clinical_support: ClinicalDecisionSupport,
+    clinical_support: NeuralClinicalDecisionSupport,
 
     /// Configuration
     config: AIBeamformingConfig,
@@ -70,7 +70,8 @@ impl AIEnhancedBeamformingProcessor {
         let beamforming_processor =
             BeamformingProcessor::new(config.beamforming_config.clone(), sensor_positions);
         let feature_extractor = FeatureExtractor::new(config.feature_config.clone());
-        let clinical_support = ClinicalDecisionSupport::new(config.clinical_thresholds.clone());
+        let clinical_support =
+            NeuralClinicalDecisionSupport::new(config.clinical_thresholds.clone());
 
         Ok(Self {
             _beamforming_processor: beamforming_processor,
@@ -275,7 +276,8 @@ impl AIEnhancedBeamformingProcessor {
         })?;
 
         self.feature_extractor = FeatureExtractor::new(config.feature_config.clone());
-        self.clinical_support = ClinicalDecisionSupport::new(config.clinical_thresholds.clone());
+        self.clinical_support =
+            NeuralClinicalDecisionSupport::new(config.clinical_thresholds.clone());
         self.config = config;
 
         Ok(())

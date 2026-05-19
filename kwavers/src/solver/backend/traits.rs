@@ -62,7 +62,7 @@ pub struct BackendCapabilities {
 }
 
 /// Backend abstraction trait
-pub trait Backend {
+pub trait ComputeBackend {
     /// Get backend type
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

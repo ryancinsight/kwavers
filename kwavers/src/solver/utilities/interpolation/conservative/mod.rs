@@ -9,7 +9,7 @@
 //! | Submodule      | Contents                                              |
 //! |----------------|-------------------------------------------------------|
 //! | `mode`         | `ConservationMode` — mass / energy / momentum / all  |
-//! | `interpolator` | `ConservativeInterpolator` — build, transfer, verify  |
+//! | `interpolator` | `UtilConservativeInterpolator` — build, transfer, verify  |
 //!
 //! # References
 //! - Grandy, J. (1999). "Conservative Remapping." *J. Comput. Phys.*, 148(2), 433–466.
@@ -19,5 +19,5 @@ mod mode;
 #[cfg(test)]
 mod tests;
 
-pub use interpolator::ConservativeInterpolator;
+pub use interpolator::UtilConservativeInterpolator;
 pub use mode::ConservationMode;

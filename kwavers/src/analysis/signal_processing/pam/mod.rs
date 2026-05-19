@@ -33,7 +33,7 @@ pub use mapper::PassiveAcousticMapper;
 pub use processor::PAMProcessor;
 
 pub use crate::domain::sensor::passive_acoustic_mapping::geometry::{
-    DirectivityPattern as PamDirectivityPattern, PamArrayElement, PamArrayGeometry,
+    PamArrayElement, PamArrayGeometry, PamDirectivityPattern,
 };
 
 pub use crate::domain::sensor::beamforming::BeamformingCoreConfig;

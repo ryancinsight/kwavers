@@ -184,7 +184,7 @@ pub struct PINNInferenceResponse {
 
 /// Model metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelMetadata {
+pub struct ApiModelMetadata {
     pub model_id: String,
     pub physics_domain: String,
     pub created_at: DateTime<Utc>,
@@ -254,7 +254,7 @@ impl From<crate::solver::inverse::pinn::ml::trainer::BurnPinnTrainingMetrics>
 /// List models response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListModelsResponse {
-    pub models: Vec<ModelMetadata>,
+    pub models: Vec<ApiModelMetadata>,
     pub total_count: usize,
     pub page: usize,
     pub page_size: usize,
@@ -317,14 +317,14 @@ pub struct APIConfig {
     pub port: u16,
     pub jwt_secret: String,
     pub jwt_expiration: u64,
-    pub rate_limits: RateLimitConfig,
+    pub rate_limits: ApiRateLimitConfig,
     pub request_timeout: u64,
     pub max_body_size: usize,
 }
 
 /// Rate limiting configuration.
 #[derive(Debug, Clone)]
-pub struct RateLimitConfig {
+pub struct ApiRateLimitConfig {
     pub anonymous_rpm: usize,
     pub authenticated_rpm: usize,
     pub burst_allowance: usize,
@@ -337,7 +337,7 @@ impl Default for APIConfig {
             port: 8080,
             jwt_secret: "change-me-in-production".to_string(),
             jwt_expiration: 3600,
-            rate_limits: RateLimitConfig {
+            rate_limits: ApiRateLimitConfig {
                 anonymous_rpm: 60,
                 authenticated_rpm: 600,
                 burst_allowance: 10,

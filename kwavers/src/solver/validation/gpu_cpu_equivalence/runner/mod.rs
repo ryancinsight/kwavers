@@ -90,7 +90,7 @@ fn run_simulation_gpu(
         use crate::domain::signal::ToneBurst;
         use crate::domain::source::grid_source::GridSource;
         use crate::solver::backend::gpu::GPUBackend;
-        use crate::solver::backend::traits::Backend;
+        use crate::solver::backend::traits::ComputeBackend;
 
         if let Ok(backend) = GPUBackend::new() {
             let nx = grid.nx;

@@ -17,7 +17,7 @@ pub struct PinnUncertaintyConfig {
 
 /// Prediction with uncertainty bounds.
 #[derive(Debug, Clone)]
-pub struct PredictionWithUncertainty {
+pub struct PinnPredictionWithUncertainty {
     /// Mean prediction.
     pub mean: Vec<f32>,
     /// Standard deviation.

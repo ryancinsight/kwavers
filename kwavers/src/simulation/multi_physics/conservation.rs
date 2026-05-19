@@ -4,12 +4,12 @@ use ndarray::{Array3, ArrayView3};
 
 /// Conservation enforcement for multi-physics coupling
 #[derive(Debug)]
-pub struct ConservationEnforcer {
+pub struct MultiPhysicsConservationEnforcer {
     /// Conservation tolerance
     tolerance: f64,
 }
 
-impl ConservationEnforcer {
+impl MultiPhysicsConservationEnforcer {
     /// Create new conservation enforcer
     #[must_use]
     pub fn new() -> Self {
@@ -228,7 +228,7 @@ impl ConservationEnforcer {
     }
 }
 
-impl Default for ConservationEnforcer {
+impl Default for MultiPhysicsConservationEnforcer {
     fn default() -> Self {
         Self::new()
     }
@@ -254,7 +254,7 @@ mod tests {
     #[test]
     fn test_conservative_same_grid() {
         let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
-        let enforcer = ConservationEnforcer::new();
+        let enforcer = MultiPhysicsConservationEnforcer::new();
 
         // Fill with non-trivial values (linear profile)
         let mut field = Array3::<f64>::zeros((8, 8, 8));
@@ -270,7 +270,7 @@ mod tests {
             .conservative_interpolate(&field.view(), &grid, &grid)
             .unwrap();
 
-        let err = ConservationEnforcer::audit_energy_conservation(
+        let err = MultiPhysicsConservationEnforcer::audit_energy_conservation(
             &field.view(),
             &grid,
             &result.view(),
@@ -308,7 +308,7 @@ mod tests {
             n_coarse, n_coarse, n_coarse, dx_coarse, dx_coarse, dx_coarse,
         )
         .unwrap();
-        let enforcer = ConservationEnforcer::new();
+        let enforcer = MultiPhysicsConservationEnforcer::new();
 
         // Constant field = 1.0 → E_src = n_fine³ * dx_fine³
         let field = Array3::<f64>::ones((n_fine, n_fine, n_fine));
@@ -316,7 +316,7 @@ mod tests {
             .conservative_interpolate(&field.view(), &src_grid, &tgt_grid)
             .unwrap();
 
-        let err = ConservationEnforcer::audit_energy_conservation(
+        let err = MultiPhysicsConservationEnforcer::audit_energy_conservation(
             &field.view(),
             &src_grid,
             &result.view(),

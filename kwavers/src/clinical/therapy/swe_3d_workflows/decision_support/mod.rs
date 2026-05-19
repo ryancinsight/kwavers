@@ -5,7 +5,7 @@ mod classifier;
 mod tests;
 mod types;
 
-pub use classifier::ClinicalDecisionSupport;
+pub use classifier::Swe3dClinicalDecisionSupport;
 pub use types::{
     BreastLesionClassification, ClassificationConfidence, FibrosisStage, LiverFibrosisStage,
     TissueReference,

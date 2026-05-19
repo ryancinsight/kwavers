@@ -17,7 +17,7 @@ mod spherical_wave;
 #[cfg(test)]
 mod tests;
 
-pub use error_metrics::ErrorMetrics;
+pub use error_metrics::KwaveErrorMetrics;
 pub use gaussian_beam::GaussianBeam;
-pub use plane_wave::PlaneWave;
+pub use plane_wave::KwaveAnalyticalPlaneWave;
 pub use spherical_wave::SphericalWave;

@@ -38,7 +38,7 @@ use std::sync::Arc;
 /// * `device_type` - Device type as string (e.g., "DiscreteGpu", "IntegratedGpu")
 /// * `backend` - Graphics backend being used (e.g., "Vulkan", "Metal", "Dx12")
 #[derive(Debug, Clone)]
-pub struct DeviceInfo {
+pub struct GpuDeviceInfo {
     /// Device name
     pub name: String,
     /// PCI vendor ID
@@ -80,7 +80,7 @@ pub struct DeviceInfo {
 pub struct GpuDevice {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
-    info: DeviceInfo,
+    info: GpuDeviceInfo,
     limits: wgpu::Limits,
 }
 
@@ -160,7 +160,7 @@ impl GpuDevice {
         Ok(Self {
             device: Arc::new(device),
             queue: Arc::new(queue),
-            info: DeviceInfo {
+            info: GpuDeviceInfo {
                 name: adapter_info.name,
                 vendor: adapter_info.vendor,
                 device_type: format!("{:?}", adapter_info.device_type),
@@ -204,7 +204,7 @@ impl GpuDevice {
     ///
     /// # Returns
     ///
-    /// Reference to `DeviceInfo` containing device metadata.
+    /// Reference to `GpuDeviceInfo` containing device metadata.
     ///
     /// # Examples
     ///
@@ -221,7 +221,7 @@ impl GpuDevice {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn info(&self) -> &DeviceInfo {
+    pub fn info(&self) -> &GpuDeviceInfo {
         &self.info
     }
 

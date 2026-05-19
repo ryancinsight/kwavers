@@ -101,7 +101,7 @@ pub struct AdaptiveCollocationSampler<B: AutodiffBackend> {
     total_points: usize,
     active_points: Tensor<B, 2>,
     priorities: Tensor<B, 1>,
-    domain: Box<dyn crate::solver::inverse::pinn::ml::physics::PhysicsDomain<B>>,
+    domain: Box<dyn crate::solver::inverse::pinn::ml::physics::SimulationPhysicsDomain<B>>,
     strategy: AdaptiveRefinementConfig,
     stats: SamplingStats,
 }

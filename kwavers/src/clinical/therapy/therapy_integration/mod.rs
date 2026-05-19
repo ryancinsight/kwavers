@@ -79,7 +79,7 @@
 //! use kwavers::clinical::therapy::therapy_integration::{
 //!     TherapyIntegrationOrchestrator, TherapySessionConfig, TherapyIntegrationModality,
 //!     AcousticTherapyParams, TherapyIntegrationSafetyLimits, PatientParameters, TissuePropertyMap,
-//!     TargetVolume, TissueType, TherapyIntegrationSafetyStatus,
+//!     TherapyTargetVolume, TissueType, TherapyIntegrationSafetyStatus,
 //! };
 //! use kwavers::domain::grid::Grid;
 //! use kwavers::domain::medium::homogeneous::HomogeneousMedium;
@@ -106,7 +106,7 @@
 //!     patient_params: PatientParameters {
 //!         skull_thickness: None,
 //!         tissue_properties: TissuePropertyMap::liver((32, 32, 32)),
-//!         target_volume: TargetVolume {
+//!         target_volume: TherapyTargetVolume {
 //!             center: (0.05, 0.0, 0.0),
 //!             dimensions: (0.02, 0.02, 0.02),
 //!             tissue_type: TissueType::Liver,
@@ -152,7 +152,7 @@ pub mod tissue;
 // Re-export public API for convenience
 pub use acoustic::AcousticWaveSolver;
 pub use config::{
-    AcousticTherapyParams, PatientParameters, RiskOrgan, TargetVolume, TherapyIntegrationModality,
+    AcousticTherapyParams, PatientParameters, RiskOrgan, TherapyTargetVolume, TherapyIntegrationModality,
     TherapyIntegrationSafetyLimits, TherapySessionConfig, TherapyTissueType,
 };
 pub use intensity_tracker::IntensityTracker;

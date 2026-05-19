@@ -1,7 +1,7 @@
 //! Tests for multi-physics solver.
 
 use super::super::{
-    CoupledPhysicsSolver, MultiPhysicsConfig, PhysicsDomain, SimulationCouplingStrategy,
+    CoupledPhysicsSolver, MultiPhysicsConfig, SimulationPhysicsDomain, SimulationCouplingStrategy,
 };
 use super::core::SimulationMultiPhysicsSolver;
 use crate::core::error::KwaversResult;
@@ -9,13 +9,13 @@ use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 
 struct MockSolver {
-    domain: PhysicsDomain,
+    domain: SimulationPhysicsDomain,
     grid: Grid,
     field: Array3<f64>,
 }
 
 impl MockSolver {
-    fn new(domain: PhysicsDomain, grid: Grid) -> Self {
+    fn new(domain: SimulationPhysicsDomain, grid: Grid) -> Self {
         let field = Array3::zeros((grid.nx, grid.ny, grid.nz));
         Self {
             domain,
@@ -26,7 +26,7 @@ impl MockSolver {
 }
 
 impl CoupledPhysicsSolver for MockSolver {
-    fn domain_type(&self) -> PhysicsDomain {
+    fn domain_type(&self) -> SimulationPhysicsDomain {
         self.domain
     }
 
@@ -50,14 +50,14 @@ impl CoupledPhysicsSolver for MockSolver {
 
     fn get_coupling_source(
         &self,
-        _target_domain: PhysicsDomain,
+        _target_domain: SimulationPhysicsDomain,
     ) -> KwaversResult<Option<Array3<f64>>> {
         Ok(Some(self.field.clone()))
     }
 
     fn apply_coupling_source(
         &mut self,
-        _source_domain: PhysicsDomain,
+        _source_domain: SimulationPhysicsDomain,
         source: ArrayView3<f64>,
     ) -> KwaversResult<()> {
         self.field += &source;
@@ -78,7 +78,7 @@ fn test_multi_physics_solver_creation() {
 fn test_add_solver() {
     let mut solver = SimulationMultiPhysicsSolver::new(MultiPhysicsConfig::default());
     let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
-    let mock_solver = Box::new(MockSolver::new(PhysicsDomain::Acoustic, grid));
+    let mock_solver = Box::new(MockSolver::new(SimulationPhysicsDomain::Acoustic, grid));
 
     solver.add_solver(mock_solver).unwrap();
     assert_eq!(solver.solvers.len(), 1);
@@ -92,7 +92,7 @@ fn test_explicit_coupling() {
     });
 
     let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
-    let acoustic_solver = Box::new(MockSolver::new(PhysicsDomain::Acoustic, grid.clone()));
+    let acoustic_solver = Box::new(MockSolver::new(SimulationPhysicsDomain::Acoustic, grid.clone()));
 
     solver.add_solver(acoustic_solver).unwrap();
 
@@ -116,7 +116,7 @@ fn test_monolithic_coupling_single_domain() {
     });
 
     let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
-    let acoustic_solver = Box::new(MockSolver::new(PhysicsDomain::Acoustic, grid));
+    let acoustic_solver = Box::new(MockSolver::new(SimulationPhysicsDomain::Acoustic, grid));
     solver.add_solver(acoustic_solver).unwrap();
 
     let residual = solver.step_coupled(1e-6).unwrap();
@@ -142,15 +142,15 @@ fn test_monolithic_coupling_two_domains_reaches_fixed_point() {
     });
 
     let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
-    let acoustic = Box::new(MockSolver::new(PhysicsDomain::Acoustic, grid.clone()));
-    let thermal = Box::new(MockSolver::new(PhysicsDomain::Thermal, grid.clone()));
+    let acoustic = Box::new(MockSolver::new(SimulationPhysicsDomain::Acoustic, grid.clone()));
+    let thermal = Box::new(MockSolver::new(SimulationPhysicsDomain::Thermal, grid.clone()));
     solver.add_solver(acoustic).unwrap();
     solver.add_solver(thermal).unwrap();
     solver
-        .add_coupling(PhysicsDomain::Acoustic, PhysicsDomain::Thermal)
+        .add_coupling(SimulationPhysicsDomain::Acoustic, SimulationPhysicsDomain::Thermal)
         .unwrap();
     solver
-        .add_coupling(PhysicsDomain::Thermal, PhysicsDomain::Acoustic)
+        .add_coupling(SimulationPhysicsDomain::Thermal, SimulationPhysicsDomain::Acoustic)
         .unwrap();
 
     let residual = solver.step_coupled(1e-6).unwrap();

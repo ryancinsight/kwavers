@@ -10,7 +10,7 @@ mod streaming;
 mod tests;
 
 pub use compression::{CompressedBlock, MemoryCompression};
-pub use pool::{GpuMemoryPoolStats, MemoryBlock, MemoryHandle, MemoryPool};
+pub use pool::{GpuMemoryPoolStats, MemoryBlock, MemoryHandle, GpuMemoryPool};
 pub use streaming::{StreamingTransferManager, TransferStream, UnifiedMemoryRegion};
 
 use crate::core::error::KwaversResult;
@@ -34,7 +34,7 @@ pub enum GpuMemoryPoolType {
 /// Unified memory manager for multi-GPU systems
 #[derive(Debug)]
 pub struct UnifiedMemoryManager {
-    pools: HashMap<usize, HashMap<GpuMemoryPoolType, MemoryPool>>,
+    pools: HashMap<usize, HashMap<GpuMemoryPoolType, GpuMemoryPool>>,
     unified_regions: Vec<UnifiedMemoryRegion>,
     compression: MemoryCompression,
     streaming: StreamingTransferManager,
@@ -64,7 +64,7 @@ impl UnifiedMemoryManager {
         let pools = self.pools.entry(gpu_id).or_default();
         let pool = pools
             .entry(pool_type)
-            .or_insert_with(|| MemoryPool::new(pool_type));
+            .or_insert_with(|| GpuMemoryPool::new(pool_type));
         pool.allocate(gpu_id, size)
     }
 

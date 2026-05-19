@@ -19,7 +19,7 @@ pub enum GpuAffinity {
 
 /// Communication channel between GPUs.
 #[derive(Debug, Clone)]
-pub struct CommunicationChannel {
+pub struct GpuCommunicationChannel {
     /// Channel bandwidth (GB/s).
     pub bandwidth: f64,
     /// Channel latency (microseconds).

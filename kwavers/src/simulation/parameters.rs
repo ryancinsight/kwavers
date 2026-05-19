@@ -28,7 +28,7 @@ pub enum SimulationType {
     /// Forward wave propagation
     Forward,
     /// Time reversal reconstruction
-    TimeReversal,
+    PhotoacousticTimeReversal,
     /// Photoacoustic imaging
     Photoacoustic,
     /// Full waveform inversion

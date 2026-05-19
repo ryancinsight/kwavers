@@ -27,4 +27,4 @@ mod kinetics;
 mod model;
 
 pub use kinetics::{FlowKinetics, PerfusionParameters, TissueUptake};
-pub use model::PerfusionModel;
+pub use model::CeusPerfusionModel;

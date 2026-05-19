@@ -8,7 +8,7 @@ use crate::domain::medium::properties::OpticalPropertyData;
 /// diffusion-specific accessor methods. The stored `reduced_scattering_coefficient`
 /// is μₛ' = μₛ(1-g), pre-computed from the domain data.
 #[derive(Debug, Clone, Copy)]
-pub struct OpticalProperties {
+pub struct DiffusionOpticalProperties {
     /// Absorption coefficient μₐ [m⁻¹] (from domain SSOT)
     pub absorption_coefficient: f64,
     /// Reduced scattering coefficient μₛ' [m⁻¹]
@@ -18,7 +18,7 @@ pub struct OpticalProperties {
     pub refractive_index: f64,
 }
 
-impl OpticalProperties {
+impl DiffusionOpticalProperties {
     /// Create from canonical domain SSOT property data
     ///
     /// Automatically computes reduced scattering coefficient μₛ' = μₛ(1-g)

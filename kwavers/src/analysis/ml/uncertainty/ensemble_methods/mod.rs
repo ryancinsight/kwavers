@@ -78,7 +78,7 @@ impl EnsembleQuantifier {
         &self,
         pinn: &crate::solver::inverse::pinn::ml::BurnPINN1DWave<B>,
         inputs: &Array2<f32>,
-    ) -> KwaversResult<super::PredictionWithUncertainty> {
+    ) -> KwaversResult<super::MlPredictionWithUncertainty> {
         let mut predictions = Vec::new();
         let mut weights = Vec::new();
 
@@ -141,7 +141,7 @@ impl EnsembleQuantifier {
         &self,
         predictions: &[Array2<f32>],
         weights: &[f64],
-    ) -> KwaversResult<super::PredictionWithUncertainty> {
+    ) -> KwaversResult<super::MlPredictionWithUncertainty> {
         if predictions.is_empty() {
             return Err(crate::core::error::KwaversError::InvalidInput(
                 "No predictions available".to_owned(),
@@ -185,7 +185,7 @@ impl EnsembleQuantifier {
         let diversity = self.compute_ensemble_diversity(predictions);
         let reliability_score = 1.0 / (1.0 + diversity);
 
-        Ok(super::PredictionWithUncertainty {
+        Ok(super::MlPredictionWithUncertainty {
             mean_prediction,
             uncertainty,
             confidence_intervals,

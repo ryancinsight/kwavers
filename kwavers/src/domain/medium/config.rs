@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 /// Medium properties parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MediumParameters {
+pub struct DomainMediumParameters {
     /// Medium type
     pub medium_type: MediumType,
     /// Density in kg/m³
@@ -78,7 +78,7 @@ pub enum InterfaceTypeParameters {
     Gradient(f64),
 }
 
-impl MediumParameters {
+impl DomainMediumParameters {
     /// Validate medium parameters
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -252,7 +252,7 @@ impl MediumParameters {
     }
 }
 
-impl Default for MediumParameters {
+impl Default for DomainMediumParameters {
     fn default() -> Self {
         Self {
             medium_type: MediumType::Homogeneous,

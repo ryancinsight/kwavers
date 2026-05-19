@@ -1,5 +1,5 @@
 use super::types::{
-    FrameQualityRecord, MonitoringConfig, MonitoringFrameMetrics, MonitoringReport,
+    FrameQualityRecord, ClinicalMonitoringConfig, MonitoringFrameMetrics, MonitoringReport,
     MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
 };
 use crate::core::error::KwaversResult;
@@ -10,7 +10,7 @@ use std::time::{Instant, SystemTime};
 #[derive(Debug)]
 pub struct ClinicalMonitor {
     /// Configuration for monitoring
-    pub(super) config: MonitoringConfig,
+    pub(super) config: ClinicalMonitoringConfig,
     /// Frame quality history
     frame_history: VecDeque<FrameQualityRecord>,
     /// Safety event log
@@ -24,7 +24,7 @@ pub struct ClinicalMonitor {
 impl ClinicalMonitor {
     /// Create new clinical monitor
     #[must_use]
-    pub fn new(config: MonitoringConfig) -> Self {
+    pub fn new(config: ClinicalMonitoringConfig) -> Self {
         let history_cap = config.history_window;
         Self {
             config,

@@ -1,16 +1,16 @@
 //! InterfaceCoupling data carrier
 
 use crate::solver::forward::hybrid::coupling::{
-    DomainInfo, InterfaceGeometry, InterfaceQualityMetrics, TransferOperators,
+    HybridDomainInfo, InterfaceGeometry, InterfaceQualityMetrics, TransferOperators,
 };
 
 /// Interface coupling data for a single boundary
 #[derive(Debug, Clone)]
 pub struct InterfaceCoupling {
     /// Source domain information
-    pub source_domain: DomainInfo,
+    pub source_domain: HybridDomainInfo,
     /// Target domain information
-    pub target_domain: DomainInfo,
+    pub target_domain: HybridDomainInfo,
     /// Interface geometry
     pub interface_geometry: InterfaceGeometry,
     /// Transfer operators

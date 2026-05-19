@@ -1,6 +1,6 @@
 //! Spectral operator for efficient FFT-based derivative computations
 //!
-//! This module provides a stateful `SpectralOperator` that pre-allocates
+//! This module provides a stateful `KuznetsovSpectralOperator` that pre-allocates
 //! workspaces and pre-computes wavenumber vectors for efficient spectral
 //! derivative calculations.
 
@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 /// Spectral operator for computing derivatives in Fourier space
 #[derive(Debug)]
-pub struct SpectralOperator {
+pub struct KuznetsovSpectralOperator {
     /// Pre-computed wavenumber vectors
     kx_vec: Array1<f64>,
     ky_vec: Array1<f64>,
@@ -32,7 +32,7 @@ pub struct SpectralOperator {
     grad_z_hat: Array3<Complex64>,
 }
 
-impl SpectralOperator {
+impl KuznetsovSpectralOperator {
     /// Create a new spectral operator for the given grid
     pub fn new(grid: &Grid) -> Self {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);

@@ -10,7 +10,7 @@ pub struct TestResult {
     /// Test passed
     pub passed: bool,
     /// Error metrics
-    pub error_metrics: Option<super::ErrorMetrics>,
+    pub error_metrics: Option<super::HybridValidationErrorMetrics>,
     /// Performance metrics
     pub performance_metrics: Option<super::HybridSolverMetrics>,
 }

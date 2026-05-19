@@ -15,7 +15,7 @@
 //! ## Architecture
 //!
 //! The multi-physics framework consists of:
-//! - **FieldCoupler**: Manages conservative field transfer between physics domains
+//! - **MultiPhysicsFieldCoupler**: Manages conservative field transfer between physics domains
 //! - **SimulationCouplingStrategy**: Defines coupling algorithms (explicit, implicit, partitioned)
 //! - **SimulationMultiPhysicsSolver**: Orchestrates coupled physics simulations
 //! - **DomainManager**: Handles domain decomposition and load balancing
@@ -44,9 +44,9 @@ mod residual;
 pub mod schwarz;
 pub mod solver;
 
-pub use conservation::ConservationEnforcer;
-pub use coupler::FieldCoupler;
-pub use interface::MultiPhysicsInterface;
+pub use conservation::MultiPhysicsConservationEnforcer;
+pub use coupler::MultiPhysicsFieldCoupler;
+pub use interface::SimulationMultiPhysicsInterface;
 pub use schwarz::SchwarzCoupling;
 pub use solver::SimulationMultiPhysicsSolver;
 
@@ -56,7 +56,7 @@ use ndarray::{Array3, ArrayView3};
 
 /// Physics domain types for coupling
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PhysicsDomain {
+pub enum SimulationPhysicsDomain {
     /// Acoustic wave propagation
     Acoustic,
     /// Thermal diffusion/convection
@@ -123,7 +123,7 @@ pub trait CoupledPhysicsSolver: Send + Sync {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn domain_type(&self) -> PhysicsDomain;
+    fn domain_type(&self) -> SimulationPhysicsDomain;
 
     /// Get the computational grid
     /// # Errors
@@ -155,7 +155,7 @@ pub trait CoupledPhysicsSolver: Send + Sync {
     ///
     fn get_coupling_source(
         &self,
-        target_domain: PhysicsDomain,
+        target_domain: SimulationPhysicsDomain,
     ) -> KwaversResult<Option<Array3<f64>>>;
 
     /// Apply coupling source terms to this physics domain
@@ -164,7 +164,7 @@ pub trait CoupledPhysicsSolver: Send + Sync {
     ///
     fn apply_coupling_source(
         &mut self,
-        source_domain: PhysicsDomain,
+        source_domain: SimulationPhysicsDomain,
         source: ArrayView3<f64>,
     ) -> KwaversResult<()>;
 }

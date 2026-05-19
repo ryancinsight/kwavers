@@ -17,7 +17,7 @@
 //! - Saad & Schultz (1986): SIAM JSC 7(3), 856–869. DOI: 10.1137/0907058
 
 use super::config::GMRESConfig;
-use super::types::ConvergenceInfo;
+use super::types::GmresConvergenceInfo;
 use crate::core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::Array3;
 
@@ -56,7 +56,7 @@ impl GMRESSolver {
         mut matvec: F,
         b: &Array3<f64>,
         x0: &mut Array3<f64>,
-    ) -> KwaversResult<ConvergenceInfo>
+    ) -> KwaversResult<GmresConvergenceInfo>
     where
         F: FnMut(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
@@ -71,7 +71,7 @@ impl GMRESSolver {
         let b_norm = Self::norm(b);
 
         if self.check_convergence(rho, b_norm) {
-            return Ok(ConvergenceInfo {
+            return Ok(GmresConvergenceInfo {
                 converged: true,
                 iterations: 0,
                 final_residual: rho,
@@ -138,7 +138,7 @@ impl GMRESSolver {
                     for i in 0..=j {
                         *x0 = &*x0 + &(&V[i] * y[i]);
                     }
-                    return Ok(ConvergenceInfo {
+                    return Ok(GmresConvergenceInfo {
                         converged: true,
                         iterations: self.iteration_count,
                         final_residual: residual,
@@ -161,7 +161,7 @@ impl GMRESSolver {
             rho = Self::norm(&r);
 
             if self.check_convergence(rho, b_norm) {
-                return Ok(ConvergenceInfo {
+                return Ok(GmresConvergenceInfo {
                     converged: true,
                     iterations: self.iteration_count,
                     final_residual: rho,

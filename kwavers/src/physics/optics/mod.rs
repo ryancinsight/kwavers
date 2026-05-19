@@ -17,7 +17,7 @@ pub mod scattering;
 pub mod sonoluminescence;
 
 // Re-export commonly used types
-pub use diffusion::{LightDiffusion, OpticalProperties};
+pub use diffusion::{LightDiffusion, DiffusionOpticalProperties};
 
 // Re-export domain types for backwards compatibility
 pub use crate::domain::medium::optical_map::{

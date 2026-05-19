@@ -64,11 +64,11 @@
 //! # Usage Example
 //!
 //! ```rust,no_run
-//! use kwavers::solver::validation::kwave_comparison::analytical::{PlaneWave, ErrorMetrics};
+//! use kwavers::solver::validation::kwave_comparison::analytical::{KwaveAnalyticalPlaneWave, KwaveErrorMetrics};
 //! use kwavers::domain::grid::Grid;
 //!
 //! // Create analytical solution
-//! let wave = PlaneWave::new(1e5, 1e6, 1500.0, [1.0, 0.0, 0.0], 0.0).unwrap();
+//! let wave = KwaveAnalyticalPlaneWave::new(1e5, 1e6, 1500.0, [1.0, 0.0, 0.0], 0.0).unwrap();
 //!
 //! // Evaluate on grid
 //! let grid = Grid::new(128, 128, 128, 0.5e-3, 0.5e-3, 0.5e-3).unwrap();
@@ -78,7 +78,7 @@
 //! // let numerical = run_pstd_solver(...);
 //!
 //! // Compare results
-//! // let metrics = ErrorMetrics::compute(numerical.view(), analytical.view());
+//! // let metrics = KwaveErrorMetrics::compute(numerical.view(), analytical.view());
 //! // println!("{}", metrics.report());
 //! ```
 //!
@@ -100,4 +100,4 @@
 pub mod analytical;
 
 // Re-export key types for convenience
-pub use analytical::{ErrorMetrics, GaussianBeam, PlaneWave, SphericalWave};
+pub use analytical::{GaussianBeam, KwaveErrorMetrics, KwaveAnalyticalPlaneWave, SphericalWave};
