@@ -9,8 +9,10 @@ pub struct RayleighScattering {
     pub wavelength: f64,
     /// Particle radius \[m\]
     pub radius: f64,
-    /// Particle polarizability \[m³\]
+    /// |α|² — squared magnitude of polarizability \[m⁶\]
     pub polarizability: f64,
+    /// Im(α) — imaginary part of polarizability, drives absorption \[m³\]
+    polarizability_imag: f64,
 }
 
 impl RayleighScattering {
@@ -26,19 +28,28 @@ impl RayleighScattering {
             wavelength,
             radius,
             polarizability: alpha_complex.norm_sqr(),
+            polarizability_imag: alpha_complex.im,
         }
     }
 
     /// Calculate Rayleigh scattering cross-section
+    ///
+    /// σ_scat = (8π/3) k⁴ |α|²  where k = 2π/λ
     #[must_use]
     pub fn scattering_cross_section(&self) -> f64 {
-        (8.0 / 3.0) * PI.powi(4) * self.polarizability / self.wavelength.powi(4)
+        let k = 2.0 * PI / self.wavelength;
+        (8.0 * PI / 3.0) * k.powi(4) * self.polarizability
     }
 
     /// Calculate Rayleigh extinction cross-section
+    ///
+    /// σ_ext = σ_scat + σ_abs = (8π/3) k⁴ |α|² + 4π k Im(α)
     #[must_use]
     pub fn extinction_cross_section(&self) -> f64 {
-        (8.0 * PI.powi(2) / 3.0) * self.polarizability / self.wavelength.powi(2)
+        let k = 2.0 * PI / self.wavelength;
+        let sigma_scat = (8.0 * PI / 3.0) * k.powi(4) * self.polarizability;
+        let sigma_abs = 4.0 * PI * k * self.polarizability_imag;
+        sigma_scat + sigma_abs
     }
 
     /// Calculate depolarization factor
