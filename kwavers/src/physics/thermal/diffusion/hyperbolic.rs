@@ -155,7 +155,8 @@ impl CattaneoVernotte {
             let grad_t = Self::centered_gradient::<AXIS>(temperature, i, j, k, grid);
             let q_previous = *q;
 
-            *q = relax.mul_add(-k_thermal.mul_add(grad_t, q_previous), q_previous) / denominator;
+            // Backward Euler: τ·∂q/∂t + q = −k·∇T  ⟹  q^{n+1} = (q^n − relax·k·∇T) / (1 + relax)
+            *q = (q_previous - relax * k_thermal * grad_t) / denominator;
         });
     }
 
