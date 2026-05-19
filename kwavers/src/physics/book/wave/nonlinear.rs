@@ -101,7 +101,9 @@ pub fn westervelt_harmonic_evolution(
             (1..=n_max)
                 .map(|n| {
                     let b_n = fubini_harmonic_amplitude(n as u32, sigma);
-                    let absorption = (-(n as f64) * alpha_np_m * z).exp();
+                    // n-th harmonic is at n·f₀; for power-law α∝f², α_n = n²·α₁
+                    // (Hamilton & Blackstock 1998 §4.3 eq. 4.3.9; Aanonsen et al. 1984 eq. 6)
+                    let absorption = (-(n as f64).powi(2) * alpha_np_m * z).exp();
                     p0 * b_n * absorption
                 })
                 .collect()

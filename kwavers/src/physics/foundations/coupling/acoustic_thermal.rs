@@ -47,8 +47,9 @@ pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
         let k = 0.6; // W/m·K
         let rho = DENSITY_WATER_NOMINAL;
         let cp = 4186.0; // J/kg·K
-        let alpha = k / (rho * cp);
+        let alpha = k / (rho * cp); // thermal diffusivity [m²/s]
         let omega = 2.0 * std::f64::consts::PI * frequency;
-        (2.0 * alpha / (omega * rho * cp)).sqrt()
+        // δ = √(2·α_th / ω) [m] — classical thermal penetration depth
+        (2.0 * alpha / omega).sqrt()
     }
 }
