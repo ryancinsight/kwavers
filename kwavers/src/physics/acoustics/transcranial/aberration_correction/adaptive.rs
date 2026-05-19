@@ -22,10 +22,10 @@ impl TranscranialAberrationCorrection {
         }
 
         PhaseCorrection {
-            phases: new_phases,
+            phases: new_phases.clone(),
             amplitudes: new_amplitudes,
-            focal_gain_db: initial_correction.focal_gain_db * 1.1,
-            quality_metric: (initial_correction.quality_metric + 0.1).min(1.0),
+            focal_gain_db: Self::focal_gain_improvement_db(&new_phases),
+            quality_metric: Self::circular_coherence(&new_phases),
         }
     }
 }
