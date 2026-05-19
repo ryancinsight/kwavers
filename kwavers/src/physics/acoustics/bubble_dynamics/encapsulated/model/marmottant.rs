@@ -42,8 +42,8 @@ impl MarmottantModel {
             // Buckled state: no surface tension
             0.0
         } else if radius <= r_r {
-            // Elastic regime: variable surface tension
-            self.chi * r_b.mul_add(-r_b, radius.powi(2)) / radius.powi(2)
+            // Elastic regime: σ(R) = χ(R²/R_b² − 1)  [Marmottant 2005, Eq. 1]
+            self.chi * r_b.mul_add(-r_b, radius.powi(2)) / r_b.powi(2)
         } else {
             // Ruptured state: water surface tension
             0.0728 // Water surface tension at 20°C [N/m]
@@ -59,8 +59,8 @@ impl MarmottantModel {
         if radius <= r_b || radius > r_r {
             0.0
         } else {
-            // Elastic regime
-            2.0 * self.chi * r_b.powi(2) / radius.powi(3)
+            // Elastic regime: dσ/dR = 2χR/R_b²  [derivative of σ = χ(R²/R_b² − 1)]
+            2.0 * self.chi * radius / r_b.powi(2)
         }
     }
 
