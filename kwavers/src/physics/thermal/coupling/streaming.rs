@@ -29,17 +29,19 @@ impl AcousticStreaming {
 
     /// Streaming velocity [m/s]
     ///
-    /// v_stream ~ I / (ρ·c)²
-    /// Derived from radiation stress tensor
+    /// v_stream ~ I / (ρ·c²)
+    /// Derived from radiation body force I/c divided by acoustic impedance ρ·c
     #[must_use]
     pub fn velocity(&self) -> f64 {
-        self.intensity / ((self.density * self.sound_speed).powi(2))
+        self.intensity / (self.density * self.sound_speed.powi(2))
     }
 
-    /// Streaming power (energy flux) [W/m³]
+    /// Streaming power flux [W/m²]
+    ///
+    /// P_stream = v_stream · (I/c) = I² / (ρ·c³)
     #[must_use]
     pub fn power(&self) -> f64 {
-        self.intensity.powi(2) / (self.density * self.sound_speed)
+        self.intensity.powi(2) / (self.density * self.sound_speed.powi(3))
     }
 
     /// Enhance thermal mixing (effective diffusivity increase)
