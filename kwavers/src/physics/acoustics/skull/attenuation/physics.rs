@@ -44,8 +44,10 @@ impl SkullAttenuation {
         if freq_mhz < 2.0 {
             self.scattering_coeff * freq_mhz.powi(4)
         } else {
-            // Transition/geometric regime: ~f^2 dependence
-            self.scattering_coeff * 16.0 * freq_mhz.powi(2)
+            // Geometric regime: ~f^2 dependence, with coefficient 4.0 to
+            // ensure continuity with the Rayleigh branch at 2 MHz:
+            //   c·2^4 = c·4·2^2  →  16 = 16  ✓
+            self.scattering_coeff * 4.0 * freq_mhz.powi(2)
         }
     }
 
