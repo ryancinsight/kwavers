@@ -47,7 +47,7 @@ impl NonlinearWave {
                     } else {
                         1.0
                     };
-                    *r = p * Complex::new(sinc_factor * (-c * c * k2 * dt * dt), 0.0).exp();
+                    *r = p * Complex::new(sinc_factor * (c * k * dt).cos(), 0.0);
                 });
         } else {
             let kx_s = kx.as_slice().expect("kx contiguous");
@@ -65,7 +65,7 @@ impl NonlinearWave {
                         1.0
                     };
                     *val =
-                        pk * Complex::new(sinc_factor * (-c * c * k_mag_sq * dt * dt), 0.0).exp();
+                        pk * Complex::new(sinc_factor * (c * k_mag * dt).cos(), 0.0);
                 });
         }
 
