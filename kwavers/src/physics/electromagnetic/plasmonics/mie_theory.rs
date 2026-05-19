@@ -135,7 +135,7 @@ impl MieTheory {
         let denominator = eps_ratio + num_complex::Complex::new(2.0, 0.0);
 
         let alpha_dimensionless =
-            3.0 * self.radius * self.radius * self.radius * numerator / denominator;
+            self.radius * self.radius * self.radius * numerator / denominator;
 
         // Convert to SI units (include 4π ε₀ ε_m factor)
         let epsilon0 = 8.854e-12;
@@ -145,21 +145,29 @@ impl MieTheory {
     /// Compute scattering cross-section (σ_scat)
     #[must_use]
     pub fn scattering_cross_section(&self, wavelength: f64) -> f64 {
-        let alpha = self.polarizability(wavelength);
-        let k = 2.0 * PI / wavelength; // Wave number in medium
+        let alpha_si = self.polarizability(wavelength);
+        let epsilon0 = 8.854e-12_f64;
+        // Convert SI polarizability to polarizability volume α_vol = R³·K [m³]
+        let alpha_vol = alpha_si / (4.0 * PI * epsilon0 * self.medium_dielectric);
+        let n_medium = self.medium_dielectric.sqrt();
+        let k = 2.0 * PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
 
-        // σ_scat = (8π/3) k⁴ |α|² for Rayleigh scattering
-        (8.0 * PI / 3.0) * k.powi(4) * alpha.norm_sqr()
+        // σ_scat = (8π/3) k_m⁴ |α_vol|² (quasistatic Mie; Bohren & Huffman 4.61)
+        (8.0 * PI / 3.0) * k.powi(4) * alpha_vol.norm_sqr()
     }
 
     /// Compute absorption cross-section (σ_abs)
     #[must_use]
     pub fn absorption_cross_section(&self, wavelength: f64) -> f64 {
-        let alpha = self.polarizability(wavelength);
-        let k = 2.0 * PI / wavelength;
+        let alpha_si = self.polarizability(wavelength);
+        let epsilon0 = 8.854e-12_f64;
+        // Convert SI polarizability to polarizability volume α_vol = R³·K [m³]
+        let alpha_vol = alpha_si / (4.0 * PI * epsilon0 * self.medium_dielectric);
+        let n_medium = self.medium_dielectric.sqrt();
+        let k = 2.0 * PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
 
-        // σ_abs = k Im(α) for small particles
-        k * alpha.im
+        // σ_abs = 4π k_m Im(α_vol) (quasistatic Mie; van de Hulst / Bohren & Huffman)
+        4.0 * PI * k * alpha_vol.im
     }
 
     /// Compute extinction cross-section (σ_ext = σ_scat + σ_abs)
