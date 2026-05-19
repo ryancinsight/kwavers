@@ -35,4 +35,4 @@ pub const TISSUE_DIFFUSION_COEFFICIENT: f64 = 0.03;
 pub const DEFAULT_POLARIZATION_FACTOR: f64 = 1.0;
 
 /// Laplacian center coefficient for optical calculations
-pub const LAPLACIAN_CENTER_COEFF: f64 = -4.0;
+pub const LAPLACIAN_CENTER_COEFF: f64 = -2.0;
