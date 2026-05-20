@@ -1,11 +1,11 @@
 //! Acoustic wave physics domain implementation.
 
-use super::types::{AcousticBoundarySpec, PinnAcousticBoundaryType, AcousticProblemType};
+use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
 use crate::solver::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingType, InitialConditionSpec, SimulationPhysicsDomain, PhysicsLossWeights,
+    BoundaryPosition, CouplingType, InitialConditionSpec, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
-    PinnCouplingInterface, PinnDomainPhysicsParameters,
+    PinnCouplingInterface, PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;
@@ -148,7 +148,12 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for AcousticWaveDomain {
                     .get("density")
                     .copied()
                     .unwrap_or(self.density);
-                let coeff = beta / (rho_0 * c_squared * c_squared);
+                // Westervelt equation (Hamilton & Blackstock 1998 Eq. 3.27):
+                //   p_tt - c²∇²p = β/(ρ₀c²) * ∂²(p²)/∂t²
+                // Residual = 0 form:
+                //   R = p_tt - c²∇²p - β/(ρ₀c²) * ∂²(p²)/∂t²
+                // coeff = β/(ρ₀c²), not β/(ρ₀c⁴).
+                let coeff = beta / (rho_0 * c_squared);
 
                 let t_grad_for_pt = t.clone().require_grad();
                 let p_for_pt = model.forward(x.clone(), y.clone(), t_grad_for_pt.clone());
@@ -158,9 +163,10 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for AcousticWaveDomain {
                     .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
                     .unwrap_or_else(|| t.zeros_like());
 
+                // ∂²(p²)/∂t² = 2*(p_t² + p * p_tt)
                 let p2_tt = (p_t.clone() * p_t.clone() + p.clone() * p_tt.clone()).mul_scalar(2.0);
 
-                residual = residual + coeff * p2_tt;
+                residual = residual - coeff * p2_tt;
             }
         }
 
