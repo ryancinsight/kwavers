@@ -57,12 +57,13 @@ impl NonlinearWave {
                     let density = crate::domain::medium::density_at(medium, x, y, z, grid);
                     let sound_speed = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
 
-                    // Get nonlinearity parameter B/A (default to water if not available)
-                    // Future: Add B/A to Medium trait for full heterogeneous support
-                    let nonlinearity = 3.5; // B/A for water
+                    // Get nonlinearity parameter B/A from medium (spatially-varying)
+                    let b_over_a = crate::domain::medium::AcousticProperties::nonlinearity_parameter(
+                        medium, x, y, z, grid,
+                    );
 
-                    // Nonlinearity parameter: β = 1 + B/(2A)
-                    let beta = 1.0 + nonlinearity / 2.0;
+                    // Nonlinearity parameter: β = 1 + B/(2A) (Hamilton & Blackstock 1998)
+                    let beta = 1.0 + b_over_a / 2.0;
 
                     // Prefactor for Westervelt equation
                     let prefactor = beta / (density * sound_speed.powi(4));

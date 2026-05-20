@@ -135,7 +135,7 @@ fn compute_max_stable_timestep_uses_minimum_spacing_for_anisotropic_grid() {
 
 /// `compute_nonlinearity_coefficient` computes β = 1 + B/(2A).
 ///
-/// For water: B/A ≈ 5.2 → β ≈ 3.6.
+/// For water: B/A = 5.0 (default) → β = 1 + 5/2 = 3.5.
 #[test]
 fn compute_nonlinearity_coefficient_matches_ba_formula() {
     use crate::domain::medium::HomogeneousMedium;
@@ -144,13 +144,19 @@ fn compute_nonlinearity_coefficient_matches_ba_formula() {
 
     let beta = compute_nonlinearity_coefficient(&medium, 0.0, 0.0, 0.0, &grid);
 
-    let b_over_a = crate::domain::medium::AcousticProperties::nonlinearity_coefficient(
+    // nonlinearity_parameter returns B/A directly; β = 1 + B/(2A)
+    let b_over_a = crate::domain::medium::AcousticProperties::nonlinearity_parameter(
         &medium, 0.0, 0.0, 0.0, &grid,
     );
     let expected = 1.0 + b_over_a / 2.0;
     assert!(
         (beta - expected).abs() < 1e-15,
-        "β = {beta} must equal 1 + B/2A = {expected}"
+        "β = {beta} must equal 1 + B/(2A) = {expected}"
+    );
+    // For water B/A = 5.0 → β = 3.5
+    assert!(
+        (beta - 3.5).abs() < 0.1,
+        "β for water must be ~3.5 (got {beta})"
     );
     assert!(
         beta > 1.0,
