@@ -36,16 +36,20 @@ impl BroadbandDetector {
     }
 
     /// Calculate signal energy
-    fn calculate_energy(&self, signal: &ArrayView1<f64>) -> f64 {
-        signal.iter().map(|&x| x * x).sum::<f64>() / signal.len() as f64
+    fn calculate_energy(&self, signal: &ArrayView1<f64>) -> Option<f64> {
+        if signal.is_empty() || !signal.iter().all(|value| value.is_finite()) {
+            return None;
+        }
+
+        let energy = signal.iter().map(|&x| x * x).sum::<f64>() / signal.len() as f64;
+        energy.is_finite().then_some(energy)
     }
 
     /// Detect broadband emissions
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
-    ///
     fn detect_broadband_emissions(&mut self, signal: &ArrayView1<f64>) -> f64 {
-        let current_energy = self.calculate_energy(signal);
+        let Some(current_energy) = self.calculate_energy(signal) else {
+            return 0.0;
+        };
 
         // Update baseline if not set
         if self.baseline_energy.is_none() {
@@ -53,7 +57,10 @@ impl BroadbandDetector {
             return 0.0;
         }
 
-        let baseline = self.baseline_energy.unwrap();
+        let Some(baseline) = self.baseline_energy.filter(|value| value.is_finite()) else {
+            self.baseline_energy = Some(current_energy);
+            return 0.0;
+        };
 
         // Calculate energy increase in dB
         if baseline > MIN_SPECTRAL_POWER {
@@ -73,7 +80,7 @@ impl BroadbandDetector {
 
     /// Update baseline for adaptive detection
     pub fn update_baseline(&mut self, signal: &ArrayView1<f64>) {
-        self.baseline_energy = Some(self.calculate_energy(signal));
+        self.baseline_energy = self.calculate_energy(signal);
     }
 
     /// Apply temporal smoothing
@@ -84,6 +91,54 @@ impl BroadbandDetector {
 
         let history_avg = self.history.iter().sum::<f64>() / self.history.len() as f64;
         TEMPORAL_SMOOTHING.mul_add(current_value, (1.0 - TEMPORAL_SMOOTHING) * history_avg)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BroadbandDetector;
+    use crate::physics::acoustics::bubble_dynamics::cavitation_control::detection::traits::CavitationDetector;
+    use crate::physics::acoustics::bubble_dynamics::cavitation_control::detection::types::CavitationDetectionState;
+    use ndarray::arr1;
+
+    #[test]
+    fn broadband_detector_rejects_empty_and_nonfinite_signals() {
+        let mut detector = BroadbandDetector::new(1.0e6);
+
+        let empty = arr1(&[]);
+        let empty_metrics = detector.detect(&empty.view());
+        assert_eq!(empty_metrics.state, CavitationDetectionState::None);
+        assert_eq!(empty_metrics.broadband_level, 0.0);
+        assert_eq!(empty_metrics.confidence, 0.0);
+        assert!(detector.baseline_energy.is_none());
+
+        let nonfinite = arr1(&[0.0, f64::NAN, 1.0]);
+        detector.update_baseline(&nonfinite.view());
+        assert!(detector.baseline_energy.is_none());
+
+        let nonfinite_metrics = detector.detect(&nonfinite.view());
+        assert_eq!(nonfinite_metrics.state, CavitationDetectionState::None);
+        assert_eq!(nonfinite_metrics.broadband_level, 0.0);
+        assert_eq!(nonfinite_metrics.confidence, 0.0);
+        assert!(detector.baseline_energy.is_none());
+    }
+
+    #[test]
+    fn broadband_detector_recovers_after_invalid_signal() {
+        let mut detector = BroadbandDetector::new(1.0e6);
+        let invalid = arr1(&[f64::INFINITY]);
+        assert_eq!(detector.detect(&invalid.view()).confidence, 0.0);
+        assert!(detector.baseline_energy.is_none());
+
+        let baseline = arr1(&[1.0, -1.0, 1.0, -1.0]);
+        let first_valid = detector.detect(&baseline.view());
+        assert_eq!(first_valid.confidence, 0.0);
+        assert_eq!(detector.baseline_energy, Some(1.0));
+
+        let elevated = arr1(&[10.0, -10.0, 10.0, -10.0]);
+        let elevated_metrics = detector.detect(&elevated.view());
+        assert!(elevated_metrics.broadband_level > 0.0);
+        assert!(elevated_metrics.confidence > 0.0);
     }
 }
 

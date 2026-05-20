@@ -25,6 +25,11 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the broadband cavitation detection domain guard
+  gap. Empty or nonfinite signal windows now return finite zero metrics without
+  seeding invalid adaptive baseline energy, and the detector recovers on the
+  next finite signal window.
+
 - 2026-05-20: [patch] Closed the CEUS microbubble harmonic-domain guard gap.
   Harmonic-content analysis now rejects zero harmonic index, invalid sample
   rate, mismatched time and scattered-pressure vectors, and nonfinite samples

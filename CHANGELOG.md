@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Broadband Cavitation Detection Domain Guards
+
+- [patch] Guard broadband cavitation detection against empty or nonfinite
+  signals so invalid inputs return finite zero metrics and cannot poison the
+  adaptive baseline energy used for inertial-cavitation classification.
+
 ### Fixed (2026-05-20) - CEUS Microbubble Harmonic Domain Guards
 
 - [patch] Guard microbubble harmonic-content analysis against invalid physical
