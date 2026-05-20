@@ -183,25 +183,81 @@ impl FwiProcessor {
 
     /// Compute total variation gradient for regularization.
     ///
-    /// # Loop ordering
+    /// Returns `∂TV/∂m` using the Huber-smoothed isotropic TV functional:
+    ///   TV(m) = Σ_ijk √(fx² + fy² + fz² + ε²)
+    /// where fx[i,j,k] = m[i+1,j,k]−m[i,j,k] are forward differences.
     ///
-    /// `i`-outer, `k`-inner: inner loop reads `model[[i,j,k±1]]` at stride 1
-    /// (C-order last-index varies fastest), minimising cache misses.
+    /// The functional derivative at (i,j,k) is (via discrete chain rule):
+    ///   ∂TV/∂m[i,j,k] = −(fx + fy + fz)/W[i,j,k]
+    ///                   + fx[i−1,j,k]/W[i−1,j,k]  (if i > 0)
+    ///                   + fy[i,j−1,k]/W[i,j−1,k]  (if j > 0)
+    ///                   + fz[i,j,k−1]/W[i,j,k−1]  (if k > 0)
+    /// where W[i,j,k] = √(fx² + fy² + fz² + ε²) is the Huber weight.
+    ///
+    /// ## Reference
+    ///
+    /// Rudin, Osher & Fatemi (1992). Physica D 60, 259–268, Eq. (11).
     #[must_use]
     pub(super) fn compute_total_variation_gradient(&self, model: &Array3<f64>) -> Array3<f64> {
         let (nx, ny, nz) = model.dim();
-        let mut tv_gradient = Array3::zeros((nx, ny, nz));
+        let eps2 = 1e-16_f64; // Huber ε² prevents division by zero
 
-        for i in 1..nx - 1 {
-            for j in 1..ny - 1 {
-                for k in 1..nz - 1 {
-                    let dx = model[[i + 1, j, k]] - model[[i - 1, j, k]];
-                    let dy = model[[i, j + 1, k]] - model[[i, j - 1, k]];
-                    let dz = model[[i, j, k + 1]] - model[[i, j, k - 1]];
-                    let grad_mag = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
-                    if grad_mag > f64::EPSILON {
-                        tv_gradient[[i, j, k]] = grad_mag;
+        // Pre-compute forward differences.
+        let mut fx = Array3::<f64>::zeros((nx, ny, nz)); // fx[i] = m[i+1] − m[i]
+        let mut fy = Array3::<f64>::zeros((nx, ny, nz));
+        let mut fz = Array3::<f64>::zeros((nx, ny, nz));
+
+        for i in 0..nx - 1 {
+            for j in 0..ny {
+                for k in 0..nz {
+                    fx[[i, j, k]] = model[[i + 1, j, k]] - model[[i, j, k]];
+                }
+            }
+        }
+        for i in 0..nx {
+            for j in 0..ny - 1 {
+                for k in 0..nz {
+                    fy[[i, j, k]] = model[[i, j + 1, k]] - model[[i, j, k]];
+                }
+            }
+        }
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz - 1 {
+                    fz[[i, j, k]] = model[[i, j, k + 1]] - model[[i, j, k]];
+                }
+            }
+        }
+
+        // Huber weights W[i,j,k] = √(fx² + fy² + fz² + ε²).
+        let mut w = Array3::<f64>::zeros((nx, ny, nz));
+        Zip::from(&mut w)
+            .and(&fx)
+            .and(&fy)
+            .and(&fz)
+            .par_for_each(|w_val, &dX, &dY, &dZ| {
+                *w_val = dZ.mul_add(dZ, dX.mul_add(dX, dY * dY) + eps2).sqrt();
+            });
+
+        // Functional derivative: divergence of the normalised gradient field.
+        let mut tv_gradient = Array3::<f64>::zeros((nx, ny, nz));
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let w_c = w[[i, j, k]];
+                    // Negative self-contribution from the forward differences leaving (i,j,k).
+                    let mut g = -(fx[[i, j, k]] + fy[[i, j, k]] + fz[[i, j, k]]) / w_c;
+                    // Positive back-contributions from forward differences ending at (i,j,k).
+                    if i > 0 {
+                        g += fx[[i - 1, j, k]] / w[[i - 1, j, k]];
                     }
+                    if j > 0 {
+                        g += fy[[i, j - 1, k]] / w[[i, j - 1, k]];
+                    }
+                    if k > 0 {
+                        g += fz[[i, j, k - 1]] / w[[i, j, k - 1]];
+                    }
+                    tv_gradient[[i, j, k]] = g;
                 }
             }
         }

@@ -44,7 +44,15 @@ impl ConvergentBornSolver {
         Ok(stats)
     }
 
-    /// Perform one CBS iteration: `ψ_{n+1} = ψ_n + G * (-k² V ψ_n)`.
+    /// Perform one CBS iteration: `ψ_{n+1} = ψ_inc + G * (-k² V ψ_n)`.
+    ///
+    /// This is the standard fixed-point (Lippmann-Schwinger) iteration:
+    ///   ψ_{n+1} = ψ_inc + G₀ · k² · V · ψ_n
+    /// where G₀ is the free-space Green's operator and V = 1 − ρc²/(ρ₀c₀²)
+    /// is the heterogeneity contrast.  Starting from ψ_inc each step (not
+    /// from the previous iterate ψ_n) is required for convergence to the
+    /// Lippmann-Schwinger solution; see Osnabrugge et al. (2016).
+    ///
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
@@ -90,9 +98,10 @@ impl ConvergentBornSolver {
             .par_mapv_inplace(|x| x * scale);
 
         Zip::from(&mut self.current_field)
+            .and(&self.incident_field)
             .and(&self.workspace.green_workspace)
-            .par_for_each(|current, &update| {
-                *current += update;
+            .par_for_each(|current, &incident, &update| {
+                *current = incident + update;
             });
 
         Ok(self.compute_residual())
