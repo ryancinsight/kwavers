@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed (2026-05-20) - Analytical Physics Boundary Rename
+
+- [arch] Rename the artifact-owned analytical physics boundary to
+  `kwavers::physics::analytical`. The former artifact-named domain module is
+  removed rather than re-exported. PyO3 bindings now import the corrected
+  analytical boundary, and Rust-side source references in the changelog use
+  `physics::analytical`.
+
 ### Fixed (2026-05-20) - Cavitation Closed-Form Domain Guards
 
 - [patch] Add physical-domain guards for book cavitation closed-form
@@ -23,7 +31,7 @@
 ### Fixed (2026-05-20) - Clinical Safety Thermal Indices
 
 - [patch] Clamp invalid thermal-index input domains in
-  `physics::book::safety`: soft-tissue TI now rejects nonfinite/negative
+  `physics::analytical::safety`: soft-tissue TI now rejects nonfinite/negative
   acoustic power and nonpositive/nonfinite MHz frequency, and bone TI rejects
   nonfinite/negative acoustic power or MHz frequency. Added value tests for
   unit-ratio examples and invalid-domain rejection. Corrected the stale FDA
@@ -31,7 +39,7 @@
 
 ### Fixed (2026-05-20) - Clinical Safety Mechanical Index
 
-- [patch] Correct `physics::book::safety::mechanical_index` to use the
+- [patch] Correct `physics::analytical::safety::mechanical_index` to use the
   magnitude of rarefactional pressure and to reject nonpositive or nonfinite
   MHz frequency with `0.0`, matching the clinical safety contract
   `MI = |p_r,min|_MPa / sqrt(f_MHz)`. Added value tests for signed pressure
@@ -667,7 +675,7 @@
 
 ### Added (2026-05-17) — Book Physics Structural Splits
 
-- [patch] `physics::book::wave` directory split: replace monolithic `wave.rs` (641 lines) with
+- [patch] `physics::analytical::wave` directory split: replace monolithic `wave.rs` (641 lines) with
   `wave/{mod,bessel,dispersion,linear,nonlinear,tests}`. `bessel.rs` (120 lines) — `bessel_j0`,
   `bessel_j1_clean`, `bessel_jn` (Miller downward recurrence, two-buffer normalisation),
   `pub(crate) jn`; `dispersion.rs` (84 lines) — CFL, phase-error, k-space correction functions;
@@ -679,7 +687,7 @@
   `fubini_harmonic_amplitude` now routes exclusively through the clean `jn` Miller-recurrence
   driver, activating the correct two-buffer normalisation path.
 
-- [patch] `physics::book::cavitation` directory split: replace monolithic `cavitation.rs`
+- [patch] `physics::analytical::cavitation` directory split: replace monolithic `cavitation.rs`
   (586 lines) with `cavitation/{mod,dynamics,histotripsy,power_spectrum,tests}`.
   `dynamics.rs` (218 lines) — Minnaert resonance, Blake threshold, Rayleigh collapse time,
   Rayleigh-Plesset and Keller-Miksis RK4 integrators; `histotripsy.rs` (85 lines) —
@@ -687,7 +695,7 @@
   `power_spectrum.rs` (88 lines) — `bubble_power_spectrum` (O(N²) DFT), `period_doubling_ratio`;
   `mod.rs` (18 lines) — re-exports; `tests.rs` (142 lines) — all 12 cavitation tests.
 
-- [patch] `physics::book::rtm` directory split: replace monolithic `rtm.rs` (526 lines) with
+- [patch] `physics::analytical::rtm` directory split: replace monolithic `rtm.rs` (526 lines) with
   `rtm/{mod,backprop,beam,condition,temporal,tests}`. `backprop.rs` (91 lines) — 2-D and 3-D
   Green's function back-propagators; `beam.rs` (67 lines) — Gaussian beam with skull transmission
   and standing-wave factor; `condition.rs` (142 lines) — Claerbout cross-correlation, multi-frequency
@@ -697,7 +705,7 @@
 
 ### Fixed (2026-05-17) — Book Physics and Test Correctness
 
-- [patch] `physics::book::wave::nonlinear::fubini_harmonic_amplitude`: eliminate dead
+- [patch] `physics::analytical::wave::nonlinear::fubini_harmonic_amplitude`: eliminate dead
   `bessel_j1_n` call (known-buggy normalisation); route through `jn` (Miller two-buffer
   recurrence). Fixes silent incorrect Bessel output for harmonic orders n ≥ 2.
 
@@ -705,7 +713,7 @@
   replace inaccessible direct field assignment `medium.absorption = 5.0` with public setter
   `medium.set_acoustic_properties(5.0, 1.0, medium.nonlinearity).unwrap()`.
 
-- [patch] `physics::book::imaging::compounding_narrower_than_single`: fix assertion from
+- [patch] `physics::analytical::imaging::compounding_narrower_than_single`: fix assertion from
   `psf4[0] > psf1[0]` (wrong direction) to `psf4[0] < psf1[0]`. Plane-wave compounding
   narrows the PSF: eff_width_4 = 0.886·F#·λ/√4 = 0.665 mm; sinc²(u₄) ≈ 0.088 < sinc²(u₁) ≈ 0.613
   at x = 0.5 mm.
@@ -735,7 +743,7 @@
   calls `solve_lsqr_matfree`.  All match arms on `ShiftPrior` updated; `Eq`
   derive removed from `SoundSpeedShiftBatchStreamSummary` (f64 field).
 
-- [patch] removed stale monolithic `physics::book::cavitation.rs` (superseded
+- [patch] removed stale monolithic `physics::analytical::cavitation.rs` (superseded
   by `cavitation/` split in a prior session) which was causing an E0761
   module-conflict error.
 
@@ -829,13 +837,13 @@
   source sign error — vapor pressure was `+p_v` (unphysical, promotes collapse
   acceleration) → `−p_v` (correct: vapor pressure opposes bubble contraction).
 
-- [patch] `kwavers/src/physics/book/cavitation.rs` `rayleigh_collapse_time_s`:
+- [patch] `kwavers/src/physics/analytical/cavitation.rs` `rayleigh_collapse_time_s`:
   add derivation comment `B(5/6,1/2)·√(3/2)/3 = Γ(5/6)Γ(1/2)/Γ(4/3) ≈ 2.241
   → 0.9147`.
 
 ### Added
 
-- [patch] `physics::book::rtm`: add `backprop_green_function_3d` (3-D spherical
+- [patch] `physics::analytical::rtm`: add `backprop_green_function_3d` (3-D spherical
   1/(4πr) amplitude law), `rtm_source_normalized_condition` (Guitton 2007
   source-amplitude-free imaging condition for skull shadow zones), and
   `rtm_aperture_weighted_fusion` (per-element solid-angle/transmission-weighted
@@ -843,7 +851,7 @@
   ratios, shadow-zone bias removal, equal-weight equivalence, and zero-weight
   fallback. Applies to 1024-element transcranial RTM brain imaging.
 
-- [patch] `physics::book::cavitation`: add `mechanical_index` (FDA MI = |P−| [MPa]
+- [patch] `physics::analytical::cavitation`: add `mechanical_index` (FDA MI = |P−| [MPa]
   / √f [MHz]; Apfel & Holland 1991), `inertial_cavitation_dose` (collapse-event
   weighted sum (R_max/R₀)³; Duryea et al. 2015), `histotripsy_lesion_radius_m`
   (energy-balance Rayleigh-collapse model R_L = R₀·(P₀·ICD/σ_y)^(1/3); Maxwell

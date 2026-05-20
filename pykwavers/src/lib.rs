@@ -53,7 +53,7 @@
 
 use pyo3::prelude::*;
 
-mod book_bindings;
+mod analytical_bindings;
 mod pam_bindings;
 
 // ============================================================================
@@ -208,7 +208,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     seismic_bindings::register(m)?;
     theranostic_bindings::register(m)?;
     fft_bindings::register(m)?;
-    book_bindings::register_book(m)?;
+    analytical_bindings::register_book(m)?;
     bubble_bindings::register_bubble(m)?;
 
     // Module metadata

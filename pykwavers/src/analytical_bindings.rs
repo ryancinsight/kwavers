@@ -1,13 +1,13 @@
-// book_bindings.rs — PyO3 bindings for kwavers::physics::book::*
+// analytical_bindings.rs — PyO3 bindings for kwavers::physics::analytical::*
 //
-// Wraps all analytical / textbook-formula functions from the book physics
-// sub-modules so they are callable from Python without additional glue code.
+// Wraps analytical physics kernels so they are callable from Python without
+// additional glue code.
 //
 // Organisation mirrors the sub-module layout:
 //   wave, transducer, cavitation, tissue, safety, skull, photoacoustics,
 //   elastography, imaging, thermal, inverse, sonogenetics, rtm
 
-use kwavers::physics::book::{
+use kwavers::physics::analytical::{
     cavitation, elastography, imaging, inverse as inverse_mod, photoacoustics, rtm as rtm_mod,
     safety, skull as skull_mod, sonogenetics, thermal, tissue, transducer, wave,
 };

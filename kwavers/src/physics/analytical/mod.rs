@@ -1,8 +1,9 @@
-//! Analytical physics functions for book chapter figure generation.
+//! Cross-domain analytical physics kernels.
 //!
-//! Each submodule covers a physics domain used by one or more chapters of the
-//! pykwavers companion book. All computation is in Rust; Python examples
-//! call these via PyO3 bindings and are responsible only for plotting.
+//! Each submodule covers an analytical model family used by validation,
+//! documentation, and PyO3 figure-generation bindings. All computation is in
+//! Rust; Python examples call these via PyO3 bindings and are responsible only
+//! for plotting.
 //!
 //! # Submodule index
 //!

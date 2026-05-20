@@ -1,6 +1,13 @@
 # Backlog / Strategy
 
 ## Architectural Enhancements
+- **[done] [arch] Rename the artifact-owned analytical physics boundary —
+  CLOSED 2026-05-20.** The previous module name encoded a documentation
+  artifact, not a physics bounded context. The module directory now lives at
+  `kwavers/src/physics/analytical`, the public Rust path is
+  `kwavers::physics::analytical`, and the PyO3 binding module imports that
+  corrected boundary. No compatibility alias or forwarding module remains.
+
 - **[done] `SolverType.ElasticPSTD` parity with KWave.jl `pstd_elastic_2d` — CLOSED 2026-05-10.** End-to-end PASS in `pykwavers/examples/ewp_elastic_2d_jl_compare.py --pstd` with `peak_ratio = 1.0000` across all 4 downstream sensors (`+3`, `+6`, `+9`, `+12`) and `pearson_mean = 0.974`. Three sequential fixes converged the parity:
     1. **Stress accumulation contract** — `StressUpdateParams.txx_fft … tyz_fft` added so the spectral stress kernel ADDs the per-step increment (`σ̃(t+dt) = σ̃(t) + dt · C : ε̃`) rather than overwriting (which was acoustic-fluid-only). [`pstd::extensions::PstdElasticPlugin::apply_stress_update_in_place`].
     2. **Staggered-grid k-shift** — `StressUpdateParams.dkx_op/dky_op/dkz_op` (and the velocity equivalent) refactored from real `Array3<f64>` wavenumbers to complex spectral derivative operators carrying the half-cell shift `i·k·exp(±i·k·Δ/2)`. Orchestrator precomputes both shift sets at construction (`StaggeredDerivativeOps::build`) and dispatches the negative shift to the stress update (KWave.jl `ddx_k_shift_neg`) and the positive shift to the velocity update (`ddx_k_shift_pos`). Without this the orchestrator was running collocated PSTD, off by ~3× in peak amplitude.
@@ -41,7 +48,7 @@
   unrelated MR-device document.
 
 - 2026-05-20: [patch] Closed the clinical-safety mechanical-index sign and
-  frequency-domain gap. `physics::book::safety::mechanical_index` now computes
+  frequency-domain gap. `physics::analytical::safety::mechanical_index` now computes
   the dimensionless MI from rarefactional-pressure magnitude and returns `0.0`
   for nonpositive or nonfinite frequency, preventing negative MI and infinite
   or NaN output from invalid input. Focused tests cover signed pressure input

@@ -45,6 +45,12 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Closed the artifact-named analytical physics boundary. The analytical module
+  directory is now `kwavers/src/physics/analytical`; the public Rust
+  module is now `kwavers::physics::analytical`. PyO3 bindings import the new
+  path, and no compatibility alias remains. This restores a physics-domain
+  module name instead of naming the boundary after documentation output.
+
 - Closed the book cavitation closed-form invalid-domain gap. Minnaert
   resonance, Blake threshold, Rayleigh collapse time, and histotripsy lesion
   radius now reject nonfinite or nonpositive physical domains with `0.0`.
@@ -636,7 +642,7 @@
 
 ## Resolved Since Last Audit (2026-05-17) — Session 2
 
-- Closed the `physics::book::wave` 500-line structural limit violation: `wave.rs` (641 lines)
+- Closed the `physics::analytical::wave` 500-line structural limit violation: `wave.rs` (641 lines)
   split into `wave/{mod,bessel,dispersion,linear,nonlinear,tests}`. Dead code eliminated:
   `bessel_j1` (double-sign bug in negative-x return path) and `bessel_j1_n` (normalisation
   bookkeeping error, annotated "not quite right" in original) both removed. Root cause was that
@@ -644,12 +650,12 @@
   Miller-recurrence `jn` driver. Fix routes `fubini_harmonic_amplitude` through `jn`, which uses
   Miller downward recurrence with two-buffer normalisation. All 6 resulting files ≤120 lines.
 
-- Closed the `physics::book::cavitation` 500-line structural limit violation: `cavitation.rs`
+- Closed the `physics::analytical::cavitation` 500-line structural limit violation: `cavitation.rs`
   (586 lines) split into `cavitation/{mod,dynamics,histotripsy,power_spectrum,tests}`.
   All 12 cavitation tests preserved and pass in the new layout. Largest file: `dynamics.rs`
   (218 lines).
 
-- Closed the `physics::book::rtm` 500-line structural limit violation: `rtm.rs` (526 lines)
+- Closed the `physics::analytical::rtm` 500-line structural limit violation: `rtm.rs` (526 lines)
   split into `rtm/{mod,backprop,beam,condition,temporal,tests}`. All 13 RTM tests preserved
   and pass. Largest file: `condition.rs` (142 lines).
 
@@ -719,8 +725,8 @@
   `SoundSpeedShiftOperator` via `ShiftOperatorAdapter`.  For overdetermined
   systems LSQR converges without a normal-equation diagonal precomputation step.
 
-- Closed the stale-monolith compiler-error gap: deleted `physics::book::cavitation.rs`
-  (E0761 conflict with `cavitation/` split) and `physics::book::wave.rs` (already
+- Closed the stale-monolith compiler-error gap: deleted `physics::analytical::cavitation.rs`
+  (E0761 conflict with `cavitation/` split) and `physics::analytical::wave.rs` (already
   deleted; confirmed absent).  52/52 targeted module tests pass.
 
 - Closed the pcg.rs per-call heap allocation gap: `apply_box_filter_1d` replaced by
@@ -739,7 +745,7 @@
 
 ## Resolved Since Last Audit (2026-05-16)
 
-- Closed the RTM 2-D-only physics gap in `physics::book::rtm`: added 3-D spherical
+- Closed the RTM 2-D-only physics gap in `physics::analytical::rtm`: added 3-D spherical
   Green's function `backprop_green_function_3d` (1/(4πr) amplitude, critical for
   correct migration weighting in 3-D transcranial RTM), source-normalised imaging
   condition `rtm_source_normalized_condition` (Guitton 2007: divides by forward
@@ -748,7 +754,7 @@
   All 8 new value-semantic tests pass.
 
 - Closed the histotripsy lesion reconstruction analytics gap in
-  `physics::book::cavitation`: added `mechanical_index` (FDA gating for cavitation
+  `physics::analytical::cavitation`: added `mechanical_index` (FDA gating for cavitation
   nucleation), `inertial_cavitation_dose` (collapse-event Σ(R_max/R₀)³ dose
   metric), `histotripsy_lesion_radius_m` (energy-balance model R_L = R₀·(P₀·ICD/σ_y)^(1/3)
   from Rayleigh collapse PdV work), and `period_doubling_ratio` (subharmonic
