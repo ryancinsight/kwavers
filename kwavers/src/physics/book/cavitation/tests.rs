@@ -9,6 +9,18 @@ fn minnaert_water_air_bubble() {
 }
 
 #[test]
+fn closed_form_cavitation_estimators_reject_invalid_domains() {
+    assert_eq!(minnaert_resonance_hz(0.0, 1.4, 101_325.0, 998.0), 0.0);
+    assert_eq!(minnaert_resonance_hz(10e-6, -1.0, 101_325.0, 998.0), 0.0);
+    assert_eq!(blake_threshold_pa(10e-6, 101_325.0, f64::NAN), 0.0);
+    assert_eq!(rayleigh_collapse_time_s(100e-6, -101_325.0, 998.0), 0.0);
+    assert_eq!(
+        histotripsy_lesion_radius_m(-1.0, 5e-6, 101_325.0, 2000.0),
+        0.0
+    );
+}
+
+#[test]
 fn rayleigh_collapse_positive() {
     let tc = rayleigh_collapse_time_s(100e-6, 101_325.0, 998.0);
     assert!(tc > 0.0 && tc < 1e-4);

@@ -16,6 +16,17 @@ use std::f64::consts::PI;
 /// Minnaert (1933), *Philos. Mag.* 16, 235.
 #[inline]
 pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64 {
+    if !(r0_m.is_finite()
+        && gamma.is_finite()
+        && p0_pa.is_finite()
+        && rho.is_finite()
+        && r0_m > 0.0
+        && gamma > 0.0
+        && p0_pa > 0.0
+        && rho > 0.0)
+    {
+        return 0.0;
+    }
     1.0 / (2.0 * PI * r0_m) * (3.0 * gamma * p0_pa / rho).sqrt()
 }
 
@@ -36,6 +47,15 @@ pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64
 /// Blake (1949) *Appendix to: Cavitation*, HMSO Report.
 #[inline]
 pub fn blake_threshold_pa(r0_m: f64, p0_pa: f64, sigma_n_m: f64) -> f64 {
+    if !(r0_m.is_finite()
+        && p0_pa.is_finite()
+        && sigma_n_m.is_finite()
+        && r0_m > 0.0
+        && p0_pa > 0.0
+        && sigma_n_m >= 0.0)
+    {
+        return 0.0;
+    }
     let ratio = sigma_n_m / (r0_m * p0_pa);
     let inner = (1.0 + 2.0 * ratio / 3.0) * (1.0 + 1.0 / (1.5 * ratio + 1.0)).sqrt();
     p0_pa * inner
@@ -59,6 +79,15 @@ pub fn blake_threshold_pa(r0_m: f64, p0_pa: f64, sigma_n_m: f64) -> f64 {
 /// Rayleigh (1917), *Philos. Mag.* 34, 94.
 #[inline]
 pub fn rayleigh_collapse_time_s(rmax_m: f64, p_inf_pa: f64, rho: f64) -> f64 {
+    if !(rmax_m.is_finite()
+        && p_inf_pa.is_finite()
+        && rho.is_finite()
+        && rmax_m > 0.0
+        && p_inf_pa > 0.0
+        && rho > 0.0)
+    {
+        return 0.0;
+    }
     0.9147 * rmax_m * (rho / p_inf_pa).sqrt()
 }
 

@@ -18,6 +18,13 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the book cavitation closed-form invalid-domain
+  gap. Minnaert resonance, Blake threshold, Rayleigh collapse time, and
+  histotripsy lesion radius now reject nonfinite or nonpositive physical
+  domains with `0.0` instead of emitting negative frequencies/radii, NaN, or
+  infinite estimates. Focused cavitation tests pin these rejection paths while
+  preserving the existing valid-domain checks.
+
 - 2026-05-20: [patch] Closed the duplicate mechanical-index contract drift in
   book histotripsy and transcranial BBB-opening physics. Both helpers now use
   rarefactional-pressure magnitude and require positive finite MHz frequency,

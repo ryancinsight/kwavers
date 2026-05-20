@@ -83,6 +83,17 @@ pub fn histotripsy_lesion_radius_m(
     p0_pa: f64,
     tissue_yield_stress_pa: f64,
 ) -> f64 {
+    if !(icd.is_finite()
+        && r0_m.is_finite()
+        && p0_pa.is_finite()
+        && tissue_yield_stress_pa.is_finite()
+        && icd >= 0.0
+        && r0_m > 0.0
+        && p0_pa > 0.0
+        && tissue_yield_stress_pa > 0.0)
+    {
+        return 0.0;
+    }
     let sigma_y = tissue_yield_stress_pa.max(1.0);
     r0_m * (p0_pa * icd / sigma_y).cbrt()
 }

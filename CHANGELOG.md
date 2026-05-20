@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Cavitation Closed-Form Domain Guards
+
+- [patch] Add physical-domain guards for book cavitation closed-form
+  estimators. Minnaert resonance, Blake threshold, Rayleigh collapse time, and
+  histotripsy lesion radius now return `0.0` for nonfinite or nonpositive
+  domains where the formulas are undefined, preventing negative radii,
+  negative frequencies, NaN, or infinite scalar estimates from propagating.
+  Added value-semantic tests for invalid-domain rejection.
+
 ### Fixed (2026-05-20) - Mechanical Index Contract Unification
 
 - [patch] Align the book histotripsy and transcranial BBB-opening mechanical
