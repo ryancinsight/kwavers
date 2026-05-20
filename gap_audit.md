@@ -45,6 +45,15 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Closed the transcranial treatment-planning safety validation gap. The MI
+  safety gate now reconstructs peak pressure from harmonic average intensity
+  via `p_peak = sqrt(2 rho c I)` before delegating to the canonical
+  pressure-analysis MI helper. It also rejects nonfinite temperature,
+  nonpositive/nonfinite frequency, and negative/nonfinite intensity fields,
+  preventing NaN, infinity, or invalid acoustic-energy data from bypassing
+  treatment-plan constraints. Tests cover theorem-level pressure recovery,
+  safe finite fields, and invalid-domain rejection.
+
 - Closed the duplicate mechanical-index safety path gap in cavitation power
   modulation and transcranial safety monitoring. Both physics paths now use the
   canonical pressure-analysis MI helper for valid inputs. The power-modulation

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Transcranial Treatment-Planning Safety Validation
+
+- [patch] Correct transcranial treatment-planning MI validation to derive peak
+  pressure from harmonic average intensity with `p_peak = sqrt(2 rho c I)` and
+  route MI through the canonical acoustic pressure-analysis helper. Safety
+  validation now rejects nonfinite brain temperature, invalid Hz frequency,
+  negative/nonfinite intensity fields, and nonfinite MI instead of allowing
+  invalid inputs to bypass constraints. Added focused value tests for the
+  pressure-intensity theorem, valid safe fields, and invalid-domain rejection.
+
 ### Fixed (2026-05-20) - Mechanical Index Safety Path Consolidation
 
 - [patch] Route cavitation power-modulation and transcranial safety-monitoring

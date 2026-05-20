@@ -25,6 +25,16 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the transcranial treatment-planning safety
+  validation gap. The planner now converts harmonic average intensity to peak
+  pressure with `p_peak = sqrt(2 rho c I)` using the brain-medium constants
+  used by the acoustic-field simulation, then delegates MI calculation to
+  `physics::acoustics::analysis::calculate_mechanical_index`. The safety gate
+  rejects nonfinite brain temperature, invalid Hz frequency,
+  negative/nonfinite intensity fields, and nonfinite MI rather than treating
+  invalid input as safe. Focused tests pin the pressure-intensity theorem,
+  low-intensity valid fields, and invalid-domain rejection.
+
 - 2026-05-20: [patch] Closed the duplicate mechanical-index safety path gap in
   cavitation power modulation and transcranial safety monitoring. Both paths
   now delegate valid-domain MI calculation to
