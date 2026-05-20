@@ -37,7 +37,50 @@ fn test_mechanical_index_calculation() {
     monitor.update_fields(&temperature, &pressure, 0.1).unwrap();
 
     // MI should be approximately 1.0 for 1 MPa at 1 MHz
-    assert!(monitor.mechanical_index.current_mi > 0.0);
+    assert!((monitor.mechanical_index.current_mi - 1.0).abs() < 1e-12);
+    assert!((monitor.mechanical_index.safety_margin - 1.9).abs() < 1e-12);
+}
+
+#[test]
+fn test_mechanical_index_uses_pressure_magnitude() {
+    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
+    let temperature = Array3::from_elem((8, 8, 8), 37.0);
+    let mut pressure = Array3::zeros((8, 8, 8));
+    pressure[[4, 4, 4]] = -1e6;
+
+    monitor.update_fields(&temperature, &pressure, 0.1).unwrap();
+
+    assert!((monitor.mechanical_index.current_mi - 1.0).abs() < 1e-12);
+    assert!((monitor.mechanical_index.peak_pressure - 1.0).abs() < 1e-12);
+}
+
+#[test]
+fn test_mechanical_index_invalid_frequency_fails_closed() {
+    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 0.0);
+    let temperature = Array3::from_elem((8, 8, 8), 37.0);
+    let mut pressure = Array3::zeros((8, 8, 8));
+    pressure[[4, 4, 4]] = 1e6;
+
+    let result = monitor.update_fields(&temperature, &pressure, 0.1);
+
+    assert!(result.is_err());
+    assert!(monitor.mechanical_index.current_mi.is_infinite());
+    assert_eq!(monitor.mechanical_index.safety_margin, 0.0);
+}
+
+#[test]
+fn test_mechanical_index_nonfinite_pressure_fails_closed() {
+    let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
+    let temperature = Array3::from_elem((8, 8, 8), 37.0);
+    let mut pressure = Array3::zeros((8, 8, 8));
+    pressure[[4, 4, 4]] = f64::NAN;
+
+    let result = monitor.update_fields(&temperature, &pressure, 0.1);
+
+    assert!(result.is_err());
+    assert!(monitor.mechanical_index.current_mi.is_infinite());
+    assert!(monitor.mechanical_index.peak_pressure.is_infinite());
+    assert_eq!(monitor.mechanical_index.safety_margin, 0.0);
 }
 
 #[test]

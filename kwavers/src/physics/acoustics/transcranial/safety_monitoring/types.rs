@@ -24,7 +24,7 @@ pub struct MechanicalIndex {
     pub peak_pressure: f64,
     /// MI limit for tissue type
     pub limit: f64,
-    /// Safety margin (1.0 = at limit, <1.0 = safe)
+    /// Safety margin (`limit / current_mi`; 1.0 = at limit, >1.0 = safe)
     pub safety_margin: f64,
 }
 

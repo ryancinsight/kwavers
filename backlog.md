@@ -25,6 +25,16 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the duplicate mechanical-index safety path gap in
+  cavitation power modulation and transcranial safety monitoring. Both paths
+  now delegate valid-domain MI calculation to
+  `physics::acoustics::analysis::calculate_mechanical_index`, preserving the
+  canonical `|p_r|_MPa / sqrt(f_MHz)` contract. The cavitation power limiter
+  now fails closed for invalid MPa/MHz inputs, and the transcranial monitor now
+  fails closed for invalid frequency or nonfinite pressure fields instead of
+  reporting a zero-risk MI. Focused tests pin signed-pressure handling,
+  invalid-domain rejection, exact 1 MPa / 1 MHz MI, and safety-margin behavior.
+
 - 2026-05-20: [patch] Closed the acoustic pressure analysis invalid-domain
   gap. `physics::acoustics::analysis::pressure` now routes harmonic
   peak-pressure intensity through a shared impedance/intensity helper, rejects

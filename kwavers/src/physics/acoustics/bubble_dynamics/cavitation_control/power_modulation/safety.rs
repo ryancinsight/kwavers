@@ -1,6 +1,10 @@
 //! Safety limiting for power modulation
 
 use super::constants::{MAX_AMPLITUDE_RATE, MECHANICAL_INDEX_LIMIT};
+use crate::physics::acoustics::analysis::calculate_mechanical_index;
+
+const PASCALS_PER_MEGAPASCAL: f64 = 1.0e6;
+const HERTZ_PER_MEGAHERTZ: f64 = 1.0e6;
 
 /// Safety limiter for preventing excessive power output
 #[derive(Debug, Clone)]
@@ -51,10 +55,22 @@ impl SafetyLimiter {
         limited
     }
 
-    /// Check mechanical index safety
+    /// Check mechanical index safety.
+    ///
+    /// The calculation delegates to the canonical acoustic pressure-analysis
+    /// contract `MI = |p_r|_MPa / sqrt(f_MHz)`. Invalid frequency or pressure
+    /// domains fail closed because this limiter is a safety boundary.
     #[must_use]
     pub fn check_mechanical_index(&self, pressure_mpa: f64, frequency_mhz: f64) -> bool {
-        let mi = pressure_mpa / frequency_mhz.sqrt();
+        if !pressure_mpa.is_finite() || !frequency_mhz.is_finite() || frequency_mhz <= 0.0 {
+            return false;
+        }
+
+        let mi = calculate_mechanical_index(
+            pressure_mpa * PASCALS_PER_MEGAPASCAL,
+            frequency_mhz * HERTZ_PER_MEGAHERTZ,
+        );
+
         mi <= self.mechanical_index_limit
     }
 
@@ -109,6 +125,28 @@ mod tests {
             !lim.check_mechanical_index(2.0, 0.5),
             "MI={mi:.3} must exceed limit={MECHANICAL_INDEX_LIMIT}"
         );
+    }
+
+    /// Rarefactional pressure sign is not a safety bypass; MI uses magnitude.
+    #[test]
+    fn mechanical_index_uses_pressure_magnitude() {
+        let lim = SafetyLimiter::new();
+
+        assert!(lim.check_mechanical_index(-1.0, 1.0));
+        assert!(!lim.check_mechanical_index(-2.0, 0.5));
+    }
+
+    /// Invalid pressure/frequency domains fail closed at the limiter boundary.
+    #[test]
+    fn mechanical_index_rejects_invalid_domains() {
+        let lim = SafetyLimiter::new();
+
+        assert!(!lim.check_mechanical_index(f64::NAN, 1.0));
+        assert!(!lim.check_mechanical_index(f64::INFINITY, 1.0));
+        assert!(!lim.check_mechanical_index(1.0, 0.0));
+        assert!(!lim.check_mechanical_index(1.0, -1.0));
+        assert!(!lim.check_mechanical_index(1.0, f64::NAN));
+        assert!(!lim.check_mechanical_index(1.0, f64::INFINITY));
     }
 
     /// reset zeroes last_output; subsequent initial limit call is not rate-limited.

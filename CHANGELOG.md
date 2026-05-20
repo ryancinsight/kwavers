@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Mechanical Index Safety Path Consolidation
+
+- [patch] Route cavitation power-modulation and transcranial safety-monitoring
+  MI calculations through the canonical acoustic pressure-analysis helper
+  `MI = |p_r|_MPa / sqrt(f_MHz)`. The power-modulation limiter now fails
+  closed for nonfinite pressure, nonpositive/nonfinite MHz frequency, and
+  signed rarefactional pressure. Transcranial monitoring now fails closed for
+  invalid Hz frequency or nonfinite pressure fields, records finite-ratio
+  safety margins only when MI is finite, and pins signed-pressure and
+  invalid-domain tests.
+
 ### Fixed (2026-05-20) - Acoustic Pressure Analysis Domains
 
 - [patch] Guard `physics::acoustics::analysis::pressure` against invalid

@@ -45,6 +45,15 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Closed the duplicate mechanical-index safety path gap in cavitation power
+  modulation and transcranial safety monitoring. Both physics paths now use the
+  canonical pressure-analysis MI helper for valid inputs. The power-modulation
+  limiter rejects nonfinite pressure and invalid MHz frequency with a fail-closed
+  `false`, while the transcranial monitor marks invalid frequency or nonfinite
+  pressure fields as safety-limit violations instead of silently reporting
+  `MI = 0.0`. Tests now cover signed pressure, exact 1 MPa / 1 MHz MI,
+  invalid-domain rejection, and safety-margin behavior.
+
 - Closed the acoustic pressure analysis invalid-domain gap. The pressure
   analysis helpers now require positive finite acoustic impedance for intensity
   calculations, reject nonfinite pressure samples from scalar peak searches,
