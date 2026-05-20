@@ -1,3 +1,5 @@
+use crate::core::constants::cavitation::VISCOSITY_WATER;
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -58,9 +60,10 @@ impl ModifiedBornSolver {
         k: usize,
     ) -> f64 {
         let rho = medium.density(i, j, k);
-        let viscosity = 0.001;
-        let thermal_conductivity = 0.6;
-        let heat_capacity = 4186.0;
+        // Water-coupling baseline (sourced from SSOT — see core::constants).
+        let viscosity = VISCOSITY_WATER;
+        let thermal_conductivity = THERMAL_CONDUCTIVITY_WATER;
+        let heat_capacity = SPECIFIC_HEAT_WATER;
 
         let viscous_diffusivity = (4.0 / 3.0) * viscosity / rho;
         let thermal_diffusivity = thermal_conductivity / (rho * heat_capacity);

@@ -64,15 +64,20 @@ pub const MIN_ACOUSTIC_TIME_STEP: f64 = 1e-10;
 /// Reference: Rayleigh (1917). "On the pressure developed in a liquid"
 pub const RAYLEIGH_COLLAPSE_COEFFICIENT: f64 = 0.915;
 
-/// Water specific heat capacity (J/(kg·K))
-/// Value: 4182
-/// Reference: NIST
-pub const WATER_SPECIFIC_HEAT: f64 = 4182.0;
+/// Water specific heat capacity (J/(kg·K)).
+///
+/// Re-exports the canonical
+/// [`crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER`] so the
+/// two long-standing names (`WATER_SPECIFIC_HEAT` and `SPECIFIC_HEAT_WATER`)
+/// stay in lock-step.
+pub use super::thermodynamic::SPECIFIC_HEAT_WATER as WATER_SPECIFIC_HEAT;
 
-/// Water thermal conductivity at 20°C (W/(m·K))
-/// Value: 0.598
-/// Reference: NIST
-pub const WATER_THERMAL_CONDUCTIVITY: f64 = 0.598;
+/// Water thermal conductivity at 20°C (W/(m·K)).
+///
+/// Re-exports the canonical
+/// [`crate::core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER`] so
+/// the two long-standing names stay in lock-step.
+pub use super::thermodynamic::THERMAL_CONDUCTIVITY_WATER as WATER_THERMAL_CONDUCTIVITY;
 
 /// Air specific heat at constant pressure (J/(kg·K))
 /// Value: 1005
