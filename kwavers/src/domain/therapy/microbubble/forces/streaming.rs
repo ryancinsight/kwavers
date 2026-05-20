@@ -57,8 +57,12 @@ pub fn calculate_acoustic_streaming_velocity(
     distance: f64,
     direction: (f64, f64, f64),
 ) -> KwaversResult<StreamingVelocity> {
-    const KINEMATIC_VISCOSITY: f64 = 1e-6; // Water at 37°C [m²/s]
-    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+    use crate::core::constants::cavitation::VISCOSITY_WATER;
+    use crate::core::constants::fundamental::{DENSITY_WATER, SOUND_SPEED_TISSUE};
+    // Kinematic viscosity ν = η/ρ for water at 20 °C (SSOT), ≈ 1.004 × 10⁻⁶ m²/s.
+    // The previous hardcoded 1e-6 was correctly the 20 °C value but the comment
+    // mislabelled it as 37 °C (where ν ≈ 7 × 10⁻⁷ m²/s).
+    let kinematic_viscosity = VISCOSITY_WATER / DENSITY_WATER;
 
     if distance <= radius_equilibrium {
         return Ok(StreamingVelocity::zero());
@@ -66,7 +70,7 @@ pub fn calculate_acoustic_streaming_velocity(
 
     let omega = 2.0 * std::f64::consts::PI * frequency;
     let mach_sq = (wall_velocity_amplitude / SOUND_SPEED_TISSUE).powi(2);
-    let re = (radius_equilibrium.powi(2) * omega) / KINEMATIC_VISCOSITY;
+    let re = (radius_equilibrium.powi(2) * omega) / kinematic_viscosity;
     let r_ratio = distance / radius_equilibrium;
     let decay = 1.0 / r_ratio.powi(2);
     let v_magnitude = re * mach_sq * radius_equilibrium * omega * decay;
