@@ -1,10 +1,8 @@
 //! Safety limiting for power modulation
 
 use super::constants::{MAX_AMPLITUDE_RATE, MECHANICAL_INDEX_LIMIT};
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
-
-const PASCALS_PER_MEGAPASCAL: f64 = 1.0e6;
-const HERTZ_PER_MEGAHERTZ: f64 = 1.0e6;
 
 /// Safety limiter for preventing excessive power output
 #[derive(Debug, Clone)]
@@ -66,10 +64,7 @@ impl SafetyLimiter {
             return false;
         }
 
-        let mi = calculate_mechanical_index(
-            pressure_mpa * PASCALS_PER_MEGAPASCAL,
-            frequency_mhz * HERTZ_PER_MEGAHERTZ,
-        );
+        let mi = calculate_mechanical_index(pressure_mpa * MPA_TO_PA, frequency_mhz * MHZ_TO_HZ);
 
         mi <= self.mechanical_index_limit
     }

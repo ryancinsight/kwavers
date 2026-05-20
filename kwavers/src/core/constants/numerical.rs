@@ -233,6 +233,9 @@ pub const NONLINEARITY_COEFFICIENT_OFFSET: f64 = 1.0;
 /// Conversion from MHz to Hz
 pub const MHZ_TO_HZ: f64 = 1e6;
 
+/// Conversion from MPa to Pa
+pub const MPA_TO_PA: f64 = 1e6;
+
 /// Conversion from cm to m
 pub const CM_TO_M: f64 = 0.01;
 
