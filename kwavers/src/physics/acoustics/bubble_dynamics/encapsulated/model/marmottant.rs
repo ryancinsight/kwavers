@@ -1,4 +1,5 @@
 use super::super::shell::ShellProperties;
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::error::KwaversResult;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 
@@ -45,8 +46,8 @@ impl MarmottantModel {
             // Elastic regime: σ(R) = χ(R²/R_b² − 1)  [Marmottant 2005, Eq. 1]
             self.chi * r_b.mul_add(-r_b, radius.powi(2)) / r_b.powi(2)
         } else {
-            // Ruptured state: water surface tension
-            0.0728 // Water surface tension at 20°C [N/m]
+            // Ruptured state: bare water-vapour interface (no shell contribution)
+            SURFACE_TENSION_WATER
         }
     }
 
@@ -88,23 +89,22 @@ impl MarmottantModel {
         let p_eq = self.params.p0 + 2.0 * self.shell.sigma_initial / r0;
         let p_gas = p_eq * (r0 / r).powf(3.0 * gamma);
 
-        // Variable surface tension (Marmottant model)
+        // Variable surface tension (Marmottant 2005, eq. 1 — σ(R) is R-dependent
+        // but enters the pressure balance as just 2σ(R)/R; no separate dσ/dR rate term).
         let sigma = self.surface_tension(r);
-        let dsigma_dr = self.surface_tension_derivative(r);
 
-        // Surface tension terms
+        // Surface tension term: 2σ(R)/R
         let surface_term = 2.0 * sigma / r;
-        let surface_rate_term = r * dsigma_dr * v; // Time derivative contribution
 
-        // Viscous damping (liquid + shell)
+        // Viscous damping (liquid + shell). Shell term: 4·κ_s·Ṙ/R² with
+        // κ_s = 3·μ_s·d for a thin shell, giving 12·μ_s·d·Ṙ/R².
         let viscous_liquid = 4.0 * self.params.mu_liquid * v / r;
         let d = self.shell.thickness;
         let mu_s = self.shell.shear_viscosity;
         let viscous_shell = 12.0 * mu_s * (d / r) * v / r;
 
-        // Net pressure difference
-        let net_pressure =
-            p_gas - p_inf - surface_term - surface_rate_term - viscous_liquid - viscous_shell;
+        // Net pressure difference (Marmottant et al. 2005, JASA 118(6), eq. 3)
+        let net_pressure = p_gas - p_inf - surface_term - viscous_liquid - viscous_shell;
 
         // Solve for R̈ from modified Rayleigh-Plesset equation
         let accel = (net_pressure / (self.params.rho_liquid * r)) - (1.5 * v * v / r);
