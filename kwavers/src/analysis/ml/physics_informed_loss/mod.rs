@@ -63,6 +63,10 @@ pub struct PhysicsLossConfig {
     pub lambda_physics_init: f64,
     pub sound_speed: f64,
     pub frequency: f64,
+    /// Physical grid spacing [m] (dx = dy = dz). Used to normalize the
+    /// finite-difference Laplacian to [field / m²] so that the residual
+    /// ∇²u + k²u is dimensionally consistent.
+    pub grid_spacing: f64,
     pub gradient_method: GradientMethod,
     pub weight_schedule: WeightSchedule,
     pub track_history: bool,
@@ -76,6 +80,7 @@ impl Default for PhysicsLossConfig {
             lambda_physics_init: 0.2,
             sound_speed: 343.0,
             frequency: 1_000_000.0,
+            grid_spacing: 1e-4, // 0.1 mm default
             gradient_method: GradientMethod::FiniteDifference { delta: 0.001 },
             weight_schedule: WeightSchedule::Exponential { decay_rate: 0.01 },
             track_history: true,
@@ -115,6 +120,11 @@ impl PhysicsLossConfig {
                 "history_window must be positive".to_owned(),
             ));
         }
+        if self.grid_spacing <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "grid_spacing must be positive".to_owned(),
+            ));
+        }
         Ok(())
     }
 
@@ -129,6 +139,12 @@ impl PhysicsLossConfig {
     pub fn with_wave_params(mut self, sound_speed: f64, frequency: f64) -> Self {
         self.sound_speed = sound_speed;
         self.frequency = frequency;
+        self
+    }
+
+    #[must_use]
+    pub fn with_grid_spacing(mut self, dx: f64) -> Self {
+        self.grid_spacing = dx;
         self
     }
 

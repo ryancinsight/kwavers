@@ -30,9 +30,12 @@ impl PhysicsInformedLoss {
     /// Compute wave equation MSE residual for 3D field using 7-point Laplacian stencil.
     ///
     /// `R(r) = ∇²u + k²u`, interior points only.
+    /// The Laplacian is divided by dx² so both terms have units [field / m²].
     #[must_use]
     pub fn wave_equation_residual_3d(&self, field: &Array3<f64>) -> f64 {
         let (nx, ny, nz) = field.dim();
+        let dx = self.config.grid_spacing;
+        let inv_dx2 = 1.0 / (dx * dx);
 
         let mut residual_sum = 0.0;
         let mut count = 0usize;
@@ -42,7 +45,7 @@ impl PhysicsInformedLoss {
                 for k in 1..nz - 1 {
                     let u_center = field[[i, j, k]];
 
-                    let laplacian = 6.0f64.mul_add(
+                    let laplacian = inv_dx2 * 6.0f64.mul_add(
                         -u_center,
                         field[[i - 1, j, k]]
                             + field[[i + 1, j, k]]
@@ -68,9 +71,12 @@ impl PhysicsInformedLoss {
     }
 
     /// Compute wave equation MSE residual for 2D field using 5-point Laplacian stencil.
+    /// The Laplacian is divided by dx² so both terms have units [field / m²].
     #[must_use]
     pub fn wave_equation_residual_2d(&self, field: &Array2<f64>) -> f64 {
         let (nx, ny) = field.dim();
+        let dx = self.config.grid_spacing;
+        let inv_dx2 = 1.0 / (dx * dx);
 
         let mut residual_sum = 0.0;
         let mut count = 0usize;
@@ -79,7 +85,7 @@ impl PhysicsInformedLoss {
             for j in 1..ny - 1 {
                 let u_center = field[[i, j]];
 
-                let laplacian = 4.0f64.mul_add(
+                let laplacian = inv_dx2 * 4.0f64.mul_add(
                     -u_center,
                     field[[i - 1, j]] + field[[i + 1, j]] + field[[i, j - 1]] + field[[i, j + 1]],
                 );
