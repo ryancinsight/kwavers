@@ -71,7 +71,19 @@ impl MisfitFunction {
         Ok(misfit)
     }
 
-    /// Correlation adjoint source (Fréchet derivative of normalized cross-correlation).
+    /// Correlation adjoint source — Fréchet derivative of J = 1 − C w.r.t. d_syn.
+    ///
+    /// J = 1 − C where C = (d_obs · d_syn) / (‖d_obs‖ ‖d_syn‖).
+    ///
+    /// ∂J/∂d_syn[j] = −∂C/∂d_syn[j]
+    ///               = −obs[j]/(‖obs‖ ‖syn‖) + C · syn[j]/‖syn‖²
+    ///
+    /// This is the positive gradient of the misfit J; the optimizer then applies
+    /// a negative step (compute_direction returns −gradient) to minimize J and
+    /// therefore maximise the normalised cross-correlation.
+    ///
+    /// Previous code returned +∂C/∂d_syn (wrong sign), which drove the adjoint
+    /// wavefield in the direction that *maximises* J (minimises correlation).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -93,8 +105,9 @@ impl MisfitFunction {
                 let correlation = obs_trace.dot(&syn_trace) / (obs_norm * syn_norm);
 
                 for j in 0..adjoint.shape()[1] {
-                    adjoint[[i, j]] = obs_trace[j] / (obs_norm * syn_norm)
-                        - correlation * syn_trace[j] / (syn_norm * syn_norm);
+                    // ∂J/∂d_syn = −∂C/∂d_syn  (J = 1 − C)
+                    adjoint[[i, j]] = -obs_trace[j] / (obs_norm * syn_norm)
+                        + correlation * syn_trace[j] / (syn_norm * syn_norm);
                 }
             }
         }
