@@ -184,6 +184,16 @@ pub const SECONDARY_REACTION_RATE: f64 = 1e-3;
 /// Sonochemistry base reaction rate (1/s)
 pub const SONOCHEMISTRY_BASE_RATE: f64 = 1e-2;
 
+/// Activation temperature for sonochemical OH-radical generation (K).
+///
+/// Defined as `Ea / R` where `Ea ≈ 166 kJ/mol` is a representative activation
+/// energy for water-molecule dissociation in acoustic-cavitation plasma
+/// (Suslick 1990; Hart & Henglein 1985).  At cavitation bubble temperatures
+/// (~5000 K) this gives `exp(-T_ACT / 5000) ≈ 0.033`, while at body
+/// temperature (310 K) it gives `exp(-T_ACT / 310) ≈ 10⁻²⁸`, correctly
+/// suppressing thermal dissociation outside bubble collapse events.
+pub const SONOCHEMISTRY_ACTIVATION_TEMPERATURE: f64 = 20_000.0;
+
 // ============================================================================
 // Water Properties at Specific Conditions
 // ============================================================================

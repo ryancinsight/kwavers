@@ -40,9 +40,14 @@ impl ReactionKinetics {
 
                 use crate::core::constants::thermodynamic::{
                     REACTION_REFERENCE_TEMPERATURE, SECONDARY_REACTION_RATE,
-                    SONOCHEMISTRY_BASE_RATE,
+                    SONOCHEMISTRY_ACTIVATION_TEMPERATURE, SONOCHEMISTRY_BASE_RATE,
                 };
-                let k1 = SONOCHEMISTRY_BASE_RATE * (t / REACTION_REFERENCE_TEMPERATURE).exp();
+                // Arrhenius rate: k(T) = A * exp(-T_act / T)
+                // T_act = Ea/R ≈ 20 000 K for OH-radical generation in
+                // cavitation plasma (Suslick 1990).  Guard against T = 0.
+                let t_safe = t.max(1.0);
+                let k1 = SONOCHEMISTRY_BASE_RATE
+                    * (-SONOCHEMISTRY_ACTIVATION_TEMPERATURE / t_safe).exp();
                 let k2 = SECONDARY_REACTION_RATE * (t / REACTION_REFERENCE_TEMPERATURE);
 
                 *oh += k1 * r_init * dt;
