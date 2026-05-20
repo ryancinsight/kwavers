@@ -92,8 +92,8 @@ fn test_drag_force() {
     assert_eq!(force.fy, 0.0);
     assert_eq!(force.fz, 0.0);
 
-    const MU: f64 = 0.001;
-    let expected = -6.0 * std::f64::consts::PI * MU * radius;
+    let mu = crate::core::constants::cavitation::VISCOSITY_WATER;
+    let expected = -6.0 * std::f64::consts::PI * mu * radius;
     assert!((force.fx - expected).abs() < 1e-15);
 }
 

@@ -5,6 +5,7 @@
 //! - Leighton (1994): "The Acoustic Bubble"
 //! - Blake (1986): "Bjerknes forces in stationary sound fields"
 
+use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::error::KwaversResult;
 
 /// Time-averaged radiation force on an oscillating bubble (N).
@@ -120,8 +121,10 @@ pub fn calculate_drag_force(
     radius: f64,
     relative_velocity: (f64, f64, f64),
 ) -> KwaversResult<RadiationForce> {
-    const DYNAMIC_VISCOSITY: f64 = 0.001; // Water at 37°C [Pa·s]
-    let drag_coeff = 6.0 * std::f64::consts::PI * DYNAMIC_VISCOSITY * radius;
+    // Dynamic viscosity of water at 20 °C from SSOT (≈ 1.002 mPa·s).
+    // The previous hardcoded 0.001 was correctly the 20 °C value but the
+    // comment mislabelled it as 37 °C (where η ≈ 6.9 × 10⁻⁴ Pa·s).
+    let drag_coeff = 6.0 * std::f64::consts::PI * VISCOSITY_WATER * radius;
     Ok(RadiationForce::new(
         -drag_coeff * relative_velocity.0,
         -drag_coeff * relative_velocity.1,
