@@ -20,6 +20,20 @@ impl PlaneWaveSolution {
         direction: (f64, f64, f64),
     ) -> Array3<f64> {
         let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        if !positive_finite(frequency)
+            || !amplitude.is_finite()
+            || !positive_finite(sound_speed)
+            || !time.is_finite()
+            || !positive_finite(grid.dx)
+            || !positive_finite(grid.dy)
+            || !positive_finite(grid.dz)
+            || !direction.0.is_finite()
+            || !direction.1.is_finite()
+            || !direction.2.is_finite()
+        {
+            return field;
+        }
+
         let wavelength = sound_speed / frequency;
         let k = 2.0 * PI / wavelength;
         let omega = 2.0 * PI * frequency;
@@ -32,6 +46,10 @@ impl PlaneWaveSolution {
                 direction.1.mul_add(direction.1, direction.0.powi(2)),
             )
             .sqrt();
+        if !positive_finite(norm) {
+            return field;
+        }
+
         let dir = (direction.0 / norm, direction.1 / norm, direction.2 / norm);
 
         // Apply dispersion correction for k-space methods
@@ -77,6 +95,11 @@ impl PlaneWaveSolution {
         let speed_error = (actual_speed - expected_speed).abs() / expected_speed;
         speed_error < tolerance && correlation > 0.9
     }
+}
+
+#[inline]
+fn positive_finite(value: f64) -> bool {
+    value.is_finite() && value > 0.0
 }
 
 #[cfg(test)]
@@ -131,6 +154,33 @@ mod tests {
         let grid = water_grid_one_wavelength();
         let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, 0.0, (1.0, 0.0, 0.0));
         assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
+    }
+
+    #[test]
+    fn plane_wave_rejects_zero_direction_with_zero_field() {
+        let grid = water_grid_one_wavelength();
+        let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, 0.0, (0.0, 0.0, 0.0));
+
+        assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
+        assert!(field.iter().all(|value| *value == 0.0));
+    }
+
+    #[test]
+    fn plane_wave_rejects_invalid_domains_with_zero_field() {
+        let grid = water_grid_one_wavelength();
+
+        let invalid_cases = [
+            PlaneWaveSolution::generate(&grid, 0.0, 1.0, 1500.0, 0.0, (1.0, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 1e6, f64::NAN, 1500.0, 0.0, (1.0, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 1e6, 1.0, -1500.0, 0.0, (1.0, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, f64::NAN, (1.0, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, 0.0, (f64::INFINITY, 0.0, 0.0)),
+        ];
+
+        for field in invalid_cases {
+            assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
+            assert!(field.iter().all(|value| value.is_finite() && *value == 0.0));
+        }
     }
 
     /// At i = N/4 (quarter wavelength) along x with t=0, the field is near peak.

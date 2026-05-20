@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the analytical plane-wave domain guard gap.
+  Plane-wave field generation now rejects nonpositive frequency or sound
+  speed, nonfinite amplitude or time, invalid grid spacing, and zero or
+  nonfinite propagation direction before normalization or phase evaluation,
+  preserving finite zero fields for invalid domains.
+
 - 2026-05-20: [patch] Closed the sonogenetics analytical-domain guard gap.
   Hill activation now requires positive finite threshold and Hill exponent and
   ignores nonfinite pressure samples. Acoustic radiation force and streaming

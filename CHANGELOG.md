@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Analytical Plane-Wave Domain Guards
+
+- [patch] Guard the analytical plane-wave generator against invalid physical
+  domains: nonpositive frequency or sound speed, nonfinite amplitude or time,
+  invalid grid spacing, and zero or nonfinite propagation direction now return
+  a finite zero field instead of emitting NaN values through normalization or
+  phase evaluation.
+
 ### Fixed (2026-05-20) - Sonogenetics Analytical Domain Guards
 
 - [patch] Guard sonogenetics analytical helpers against invalid physical
