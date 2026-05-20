@@ -200,17 +200,28 @@ impl Filters {
     }
 
     /// Create Shepp-Logan filter
+    ///
+    /// H_SL = ram_lak × sinc(ram_lak/2) = (2/π) × sin(π × ram_lak / 2)
+    /// where ram_lak = |f|/f_Nyquist ∈ [0,1] is the absolute normalised frequency.
+    /// Uses `ram_lak` (not raw `freq`) so negative-frequency DFT bins (i > n/2)
+    /// receive the same gain as the symmetric positive-frequency bins.
     fn create_shepp_logan_filter(&self, n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {
             let freq = i as f64 / n as f64;
             let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
-            filter[i] = ram_lak * (PI * freq).sin() / (PI * freq).max(1e-10);
+            // (2/π) sin(π ram_lak / 2) is the simplified form of ram_lak × sinc(ram_lak/2)
+            filter[i] = (2.0 / PI) * (PI * ram_lak / 2.0).sin();
         }
         filter
     }
 
     /// Create Cosine filter
+    ///
+    /// H_C = ram_lak × cos(π × ram_lak / 2)
+    /// where ram_lak = |f|/f_Nyquist ∈ [0,1] is the absolute normalised frequency.
+    /// Uses `ram_lak` (not raw `freq`) so negative-frequency DFT bins (i > n/2)
+    /// receive the same gain as the symmetric positive-frequency bins.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -219,7 +230,7 @@ impl Filters {
         for i in 0..n {
             let freq = i as f64 / n as f64;
             let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
-            filter[i] = ram_lak * (PI * freq / 2.0).cos();
+            filter[i] = ram_lak * (PI * ram_lak / 2.0).cos();
         }
         filter
     }

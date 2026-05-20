@@ -55,18 +55,20 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
 /// Shepp-Logan filter
 ///
 /// Implements the Shepp-Logan filter with frequency response:
-/// H(f) = |f| * (2/π) * sin(πf/2f_max)
+/// H(f) = (2/π) * sin(π|f|/2f_max)
 ///
-/// The Shepp-Logan filter provides better suppression of high frequencies
-/// compared to Ram-Lak while maintaining good resolution.
+/// Derived from H_SL = H_RL * sinc(|f|/2W) = |f|/W * sin(π|f|/2W)/(π|f|/2W) = (2/π)*sin(π|f|/2W)
+/// where W = f_Nyquist. The filter is symmetric: positive and negative DFT
+/// bins at the same absolute frequency must receive identical gain.
 ///
 /// # References
-/// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
+/// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3, Table 3.1
 /// - Shepp & Logan (1974): "The Fourier reconstruction of a head section"
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
+    let n = data.dim().1;
     let mut filtered = Array2::zeros(data.dim());
 
     for sensor_idx in 0..data.dim().0 {
@@ -74,9 +76,15 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
         let filtered_trace = crate::math::fft::apply_spectral_response_1d(
             &trace,
             sampling_freq,
-            move |_, freq, nyquist| {
-                let f_max = nyquist;
-                freq.abs() * (2.0 / PI) * (PI * freq / (2.0 * f_max)).sin()
+            move |i, freq, nyquist| {
+                // Absolute frequency magnitude for both positive and negative DFT bins
+                let abs_freq = if i <= n / 2 {
+                    freq
+                } else {
+                    (n - i) as f64 * (sampling_freq / n as f64)
+                };
+                // H_SL(f) = (2/π) * sin(π |f| / 2 W)   [Kak & Slaney Table 3.1]
+                (2.0 / PI) * (PI * abs_freq / (2.0 * nyquist)).sin()
             },
         );
         filtered.row_mut(sensor_idx).assign(&filtered_trace);
@@ -88,10 +96,10 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
 /// Cosine filter
 ///
 /// Implements the cosine filter with frequency response:
-/// H(f) = |f| * cos(πf/2f_max)
+/// H(f) = (|f|/f_max) * cos(π|f|/2f_max)
 ///
-/// The cosine filter provides smooth frequency response with gradual
-/// high-frequency attenuation, reducing ringing artifacts.
+/// The filter is symmetric: positive and negative DFT bins at the same
+/// absolute frequency receive identical gain.
 ///
 /// # References
 /// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
@@ -99,6 +107,7 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
+    let n = data.dim().1;
     let mut filtered = Array2::zeros(data.dim());
 
     for sensor_idx in 0..data.dim().0 {
@@ -106,9 +115,15 @@ fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<
         let filtered_trace = crate::math::fft::apply_spectral_response_1d(
             &trace,
             sampling_freq,
-            move |_, freq, nyquist| {
-                let f_max = nyquist;
-                freq.abs() * (PI * freq / (2.0 * f_max)).cos()
+            move |i, freq, nyquist| {
+                // Absolute frequency magnitude for both positive and negative DFT bins
+                let abs_freq = if i <= n / 2 {
+                    freq
+                } else {
+                    (n - i) as f64 * (sampling_freq / n as f64)
+                };
+                let ram_lak = abs_freq / nyquist;
+                ram_lak * (PI * ram_lak / 2.0).cos()
             },
         );
         filtered.row_mut(sensor_idx).assign(&filtered_trace);
