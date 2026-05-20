@@ -145,13 +145,17 @@ pub fn skull_surface_temperature_rise(
 
 // ─── Transfer matrix ──────────────────────────────────────────────────────────
 
-/// Scalar skull transmission coefficient via the transfer-matrix method.
+/// Scalar **pressure** transmission coefficient through the skull via the
+/// transfer-matrix method.
 ///
 /// Models the skull as a homogeneous layer of impedance Z₂ and sound speed
 /// c₂ between water (Z₁) and brain (Z₃):
 /// ```text
-/// T = 2 / [(1 + Z₃/Z₁)·cos(k₂·d) + i·(Z₃/Z₂ + Z₂/Z₁)·sin(k₂·d)]
+/// T_p = 2·Z₃ / [(Z₁+Z₃)·cos(k₂·d) + i·(Z₂ + Z₁·Z₃/Z₂)·sin(k₂·d)]
+///     = 2·(Z₃/Z₁) / [(1 + Z₃/Z₁)·cos(k₂·d) + i·(Z₃/Z₂ + Z₂/Z₁)·sin(k₂·d)]
 /// ```
+/// Reduces to the standard single-interface pressure transmission
+/// `T_p = 2Z₃/(Z₁+Z₃)` as `d → 0`.
 ///
 /// # Arguments
 /// * `f_hz` – frequency [Hz]
@@ -162,7 +166,8 @@ pub fn skull_surface_temperature_rise(
 /// * `d_skull_m` – skull thickness [m]
 ///
 /// # Reference
-/// Brekhovskikh (1980) *Waves in Layered Media*, §1.5.
+/// Brekhovskikh (1980) *Waves in Layered Media*, §1.5;
+/// Kinsler, Frey, Coppens, Sanders, *Fundamentals of Acoustics*, eq. 6.3.4.
 pub fn skull_transfer_matrix_transmission(
     f_hz: f64,
     z_water: f64,
@@ -175,10 +180,11 @@ pub fn skull_transfer_matrix_transmission(
     let phase = k2 * d_skull_m;
     let cos_ph = phase.cos();
     let sin_ph = phase.sin();
-    let a = (1.0 + z_brain / z_water) * cos_ph;
+    let z_ratio = z_brain / z_water;
+    let a = (1.0 + z_ratio) * cos_ph;
     let b = z_brain / z_skull + z_skull / z_water;
     let denom = Complex64::new(a, b * sin_ph);
-    Complex64::new(2.0, 0.0) / denom
+    Complex64::new(2.0 * z_ratio, 0.0) / denom
 }
 
 /// Compute |T| and ∠T for an array of frequencies via the transfer matrix.
@@ -247,6 +253,28 @@ mod tests {
         let s1 = strehl_ratio(0.5);
         let s2 = strehl_ratio(1.0);
         assert!(s0 > s1 && s1 > s2 && s2 > 0.0);
+    }
+
+    /// At d → 0 the transfer-matrix transmission must reduce to the
+    /// single-interface pressure transmission `T_p = 2·Z₃/(Z₁+Z₃)`.
+    /// This pins the pressure vs velocity convention — the formula with
+    /// numerator 2 (without Z₃/Z₁) would give the velocity ratio
+    /// `2·Z₁/(Z₁+Z₃)` instead, off by Z₃/Z₁ ≈ 1.07 for water/brain backing.
+    #[test]
+    fn transfer_matrix_zero_thickness_matches_single_interface_pressure() {
+        let z_water = 1.5e6_f64; // Pa·s/m
+        let z_skull = 7.5e6_f64;
+        let z_brain = 1.6e6_f64;
+        // Use a very thin layer (d → 0 limit); cos≈1, sin≈0
+        let t = skull_transfer_matrix_transmission(1e6, z_water, z_skull, z_brain, 2900.0, 0.0);
+        let expected_pressure = 2.0 * z_brain / (z_water + z_brain);
+        assert!(
+            (t.re - expected_pressure).abs() < 1e-9 && t.im.abs() < 1e-9,
+            "T(d=0)=({:.6}, {:.6e}) expected ({:.6}, 0)",
+            t.re,
+            t.im,
+            expected_pressure
+        );
     }
 
     #[test]
