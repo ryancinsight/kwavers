@@ -19,11 +19,11 @@ impl RayleighScattering {
     /// Create Rayleigh scattering calculator
     #[must_use]
     pub fn new(wavelength: f64, radius: f64, refractive_index: num_complex::Complex64) -> Self {
-        // Calculate polarizability using Lorentz-Lorenz relation
-        // α = 4πϵ₀ r³ (m²-1)/(m²+2) where m = n + ik
+        // Polarizability volume α = r³ (m²−1)/(m²+2)  [m³]
+        // (Bohren & Huffman 1983, eq. 4.53 / van de Hulst convention — no 4πε₀ factor)
         let m = refractive_index;
         let m2 = m * m;
-        let alpha_complex = 4.0 * PI * radius.powi(3) * (m2 - 1.0) / (m2 + 2.0);
+        let alpha_complex = radius.powi(3) * (m2 - 1.0) / (m2 + 2.0);
         Self {
             wavelength,
             radius,
