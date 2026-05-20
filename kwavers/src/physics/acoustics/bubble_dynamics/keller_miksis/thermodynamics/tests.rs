@@ -75,6 +75,13 @@ fn test_latent_heat_temperature_dependence() {
 
 #[test]
 fn test_bubble_collapse_temperature_reduced_by_latent_heat() {
+    use crate::core::constants::cavitation::{
+        SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
+    };
+    use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, C_WATER, DENSITY_WATER};
+    use crate::core::constants::thermodynamic::{
+        ROOM_TEMPERATURE_K, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+    };
     use crate::physics::acoustics::bubble_dynamics::bubble_state::{
         BubbleParameters, BubbleState, GasSpecies, GasType,
     };
@@ -82,17 +89,17 @@ fn test_bubble_collapse_temperature_reduced_by_latent_heat() {
 
     let params = BubbleParameters {
         r0: 10e-6,
-        p0: 101_325.0,
-        rho_liquid: 998.0,
-        c_liquid: 1482.0,
-        mu_liquid: 1.002e-3,
-        sigma: 0.0728,
-        pv: 2330.0,
-        thermal_conductivity: 0.6,
-        specific_heat_liquid: 4182.0,
+        p0: ATMOSPHERIC_PRESSURE,
+        rho_liquid: DENSITY_WATER,
+        c_liquid: C_WATER,
+        mu_liquid: VISCOSITY_WATER,
+        sigma: SURFACE_TENSION_WATER,
+        pv: VAPOR_PRESSURE_WATER,
+        thermal_conductivity: THERMAL_CONDUCTIVITY_WATER,
+        specific_heat_liquid: SPECIFIC_HEAT_WATER,
         accommodation_coeff: 0.35,
         gas_species: GasSpecies::Air,
-        initial_gas_pressure: 101_325.0,
+        initial_gas_pressure: ATMOSPHERIC_PRESSURE,
         gas_composition: {
             let mut composition = std::collections::HashMap::new();
             composition.insert(GasType::N2, 0.79);
@@ -100,7 +107,7 @@ fn test_bubble_collapse_temperature_reduced_by_latent_heat() {
             composition
         },
         gamma: 1.4,
-        t0: 293.15,
+        t0: ROOM_TEMPERATURE_K,
         driving_frequency: 26_500.0,
         driving_amplitude: 1.5e5,
         use_compressibility: true,

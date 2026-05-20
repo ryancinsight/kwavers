@@ -154,9 +154,10 @@ mod tests {
     use super::*;
 
     fn test_model() -> ClassicalHeterogeneousNucleation<f64> {
+        use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
         ClassicalHeterogeneousNucleation {
-            surface_tension: 0.072, // Water
-            vapor_pressure: 2330.0, // Water at 20C
+            surface_tension: SURFACE_TENSION_WATER,
+            vapor_pressure: VAPOR_PRESSURE_WATER,
             pre_exponential_factor: 1.0e33,
             reference_stiffness: 1e5, // Nominal
         }

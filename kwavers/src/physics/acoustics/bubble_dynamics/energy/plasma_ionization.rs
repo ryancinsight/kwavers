@@ -112,6 +112,15 @@ impl EnergyBalanceCalculator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::cavitation::{
+        SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
+    };
+    use crate::core::constants::fundamental::{
+        ATMOSPHERIC_PRESSURE, C_WATER, DENSITY_WATER,
+    };
+    use crate::core::constants::thermodynamic::{
+        SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+    };
     use crate::physics::acoustics::bubble_dynamics::bubble_state::{
         BubbleParameters, BubbleState, GasSpecies, GasType,
     };
@@ -119,14 +128,14 @@ mod tests {
     fn make_params() -> BubbleParameters {
         BubbleParameters {
             r0: 5e-6,
-            p0: 101_325.0,
-            rho_liquid: 998.0,
-            c_liquid: 1482.0,
-            mu_liquid: 1e-3,
-            sigma: 0.0728,
-            pv: 2330.0,
-            thermal_conductivity: 0.6,
-            specific_heat_liquid: 4182.0,
+            p0: ATMOSPHERIC_PRESSURE,
+            rho_liquid: DENSITY_WATER,
+            c_liquid: C_WATER,
+            mu_liquid: VISCOSITY_WATER,
+            sigma: SURFACE_TENSION_WATER,
+            pv: VAPOR_PRESSURE_WATER,
+            thermal_conductivity: THERMAL_CONDUCTIVITY_WATER,
+            specific_heat_liquid: SPECIFIC_HEAT_WATER,
             accommodation_coeff: 0.35,
             gas_species: GasSpecies::Argon,
             initial_gas_pressure: 101_325.0,
@@ -136,7 +145,7 @@ mod tests {
                 m
             },
             gamma: 5.0 / 3.0,
-            t0: 293.15,
+            t0: crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K,
             driving_frequency: 26_500.0,
             driving_amplitude: 1.5e5,
             use_compressibility: true,
