@@ -93,7 +93,14 @@ pub const AVOGADRO: f64 = 6.02214076e23;
 pub const BOLTZMANN: f64 = 1.380649e-23;
 
 /// Planck constant (J·s)
+///
+/// Exact defined value since the 2019 SI redefinition.
 pub const PLANCK: f64 = 6.62607015e-34;
+
+/// Reduced Planck constant ℏ = h / (2π) (J·s).
+///
+/// Reference: 2018 CODATA derived value `1.054_571_817e-34 J·s`.
+pub const REDUCED_PLANCK: f64 = 1.054_571_817e-34;
 
 /// Speed of light in vacuum (m/s)
 pub const SPEED_OF_LIGHT: f64 = 299792458.0;

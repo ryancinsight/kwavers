@@ -1,4 +1,5 @@
 use super::super::{materials::EMMaterialDistribution, types::EMDimension};
+use crate::core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use crate::domain::field::EMFields;
 
 /// Core electromagnetic wave equation trait
@@ -18,12 +19,9 @@ pub trait ElectromagneticWaveEquation: Send + Sync {
     /// Compute wave impedance η = √(μ/ε) (Ω)
     fn wave_impedance(&self) -> ndarray::ArrayD<f64> {
         let props = self.material_properties();
-        let eps0 = 8.854e-12; // Vacuum permittivity
-        let mu0 = 4.0 * std::f64::consts::PI * 1e-7; // Vacuum permeability
-
-        // η = √(μ/ε) where μ = μ_r * μ₀, ε = ε_r * ε₀
-        let mu = &props.permeability * mu0;
-        let eps = &props.permittivity * eps0;
+        // η = √(μ/ε) where μ = μ_r * μ₀, ε = ε_r * ε₀ (μ₀ and ε₀ from SSOT).
+        let mu = &props.permeability * VACUUM_PERMEABILITY;
+        let eps = &props.permittivity * VACUUM_PERMITTIVITY;
 
         ndarray::Zip::from(&mu)
             .and(&eps)
@@ -33,10 +31,9 @@ pub trait ElectromagneticWaveEquation: Send + Sync {
     /// Compute skin depth δ = √(2/(ωμσ)) (m)
     fn skin_depth(&self, frequency: f64) -> ndarray::ArrayD<f64> {
         let props = self.material_properties();
-        let mu0 = 4.0 * std::f64::consts::PI * 1e-7;
         let omega = 2.0 * std::f64::consts::PI * frequency;
 
-        let mu = &props.permeability * mu0;
+        let mu = &props.permeability * VACUUM_PERMEABILITY;
         let sigma = &props.conductivity;
 
         // δ = √(2/(ωμσ))
