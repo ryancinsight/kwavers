@@ -79,8 +79,9 @@ fn apply_tgc_with_sampling(
 ) -> ndarray::Array1<f64> {
     let n = signal.len();
     let mut compensated = signal.clone();
+    // α[Np/m] = α[dB/(cm·MHz)] × f[MHz] × (100 cm/m) / (8.686 dB/Np)
     let alpha_np =
-        TISSUE_ATTENUATION_COEFFICIENT * frequency / MHZ_TO_HZ * (10.0 * CM_TO_M) / DB_TO_NEPER;
+        TISSUE_ATTENUATION_COEFFICIENT * frequency / MHZ_TO_HZ / CM_TO_M / DB_TO_NEPER;
     for i in 0..n {
         let depth = i as f64 * SOUND_SPEED_TISSUE / (2.0 * sampling_frequency);
         let gain = (2.0 * alpha_np * depth).exp();
