@@ -17,8 +17,10 @@
 //! ## GDOP
 //!
 //! ```text
-//! GDOP = √(trace((A^T A)^{-1})) / c
+//! GDOP = √(trace((A^T A)^{-1}))
 //! ```
+//! The Jacobian A contains direction cosines (dimensionless), so GDOP is
+//! dimensionless. No division by sound speed is applied.
 
 mod geometry;
 mod linalg;
@@ -210,7 +212,7 @@ impl Multilateration {
         let jtj = self.compute_jtj(&jacobian);
         let jtj_inv = self.invert_3x3(&jtj)?;
         let trace = jtj_inv[0][0] + jtj_inv[1][1] + jtj_inv[2][2];
-        Ok(trace.sqrt() / self.config.sound_speed)
+        Ok(trace.sqrt())
     }
 
     fn compute_initial_guess(&self) -> [f64; 3] {
