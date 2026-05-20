@@ -101,9 +101,11 @@ impl CherenkovModel {
         (1.0 - 1.0 / (self.refractive_index.powi(2) * beta.powi(2))).max(0.0)
     }
 
-    /// Spectral intensity with inverse frequency dependence
+    /// Spectral intensity per unit frequency.
     ///
-    /// Frank-Tamm spectral intensity: $I(f) \propto q \cdot (1 - 1/(n^2\beta^2)) / f$
+    /// Frank-Tamm formula (Jackson 1999, §13.5):
+    ///   dW/(dx·dω) ∝ ω·(1 − 1/(n²β²))
+    /// so the spectral intensity scales as **∝ f** (UV-dominant).
     ///
     /// Returns 0 below threshold.
     #[must_use]
@@ -112,7 +114,7 @@ impl CherenkovModel {
             return 0.0;
         }
         let ft = self.frank_tamm_factor(velocity);
-        self.coherence_factor * charge.abs() * ft / frequency_hz
+        self.coherence_factor * charge.abs() * ft * frequency_hz
     }
 
     /// Total power density (phenomenological): scales with charge density and temperature
@@ -123,11 +125,13 @@ impl CherenkovModel {
         self.coherence_factor * charge_density.max(0.0) * ft * temp_scale
     }
 
-    /// Emission spectrum over wavelengths
+    /// Emission spectrum per unit wavelength.
     ///
-    /// For Cherenkov radiation, $I(\lambda) \propto 1/\lambda$ (peaks at UV/blue).
+    /// From the Frank-Tamm formula `dW/(dx·dω) ∝ ω`, converting to
+    /// wavelength via `dω/dλ = −2πc/λ²` gives
+    ///   dW/(dx·dλ) ∝ ω × (c/λ²) ∝ 1/λ³  (strong UV dominance).
     ///
-    /// Reference: Frank & Tamm (1937)
+    /// Reference: Frank & Tamm (1937); Jackson (1999) §13.5.
     #[must_use]
     pub fn emission_spectrum(
         &self,
@@ -140,6 +144,6 @@ impl CherenkovModel {
             return Array1::zeros(wavelengths.len());
         }
         let scale = self.coherence_factor * charge.abs() * ft;
-        wavelengths.mapv(|lambda| if lambda > 0.0 { scale / lambda } else { 0.0 })
+        wavelengths.mapv(|lambda| if lambda > 0.0 { scale / lambda.powi(3) } else { 0.0 })
     }
 }

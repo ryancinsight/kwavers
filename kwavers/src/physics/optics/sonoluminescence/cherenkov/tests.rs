@@ -19,15 +19,15 @@ fn test_cherenkov_frank_tamm_spectral_distribution() {
 
     approx::assert_relative_eq!(calculated_angle, expected_angle, epsilon = 1e-6);
 
-    // Test spectral intensity scales as 1/ω
+    // Test spectral intensity scales as ∝ ω (Frank-Tamm: dW/dω ∝ ω)
     let freq1 = 1e15; // Hz
-    let freq2 = 2e15; // Hz
+    let freq2 = 2e15; // Hz (higher frequency → higher intensity, UV dominant)
 
     let intensity1 = model.spectral_intensity(freq1, v_relativistic, charge);
     let intensity2 = model.spectral_intensity(freq2, v_relativistic, charge);
 
-    // Should follow 1/ω dependence
-    approx::assert_relative_eq!(intensity1 / intensity2, 2.0, epsilon = 1e-3);
+    // Should follow ∝ ω dependence: I(2f)/I(f) = 2
+    approx::assert_relative_eq!(intensity2 / intensity1, 2.0, epsilon = 1e-3);
 }
 
 #[test]
