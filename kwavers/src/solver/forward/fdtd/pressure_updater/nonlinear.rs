@@ -15,8 +15,10 @@ impl FdtdSolver {
     ///
     /// Discretization (Hamilton & Blackstock 1998, Eq. 3.43a):
     /// ```text
-    /// S_nl^n = (β/(ρ₀c₀⁴)) · [2pⁿ(pⁿ−2pⁿ⁻¹+pⁿ⁻²)/Δt² + 2((pⁿ−pⁿ⁻¹)/Δt)²]
+    /// S_nl^n = (β/(ρ₀c₀²)) · [2pⁿ(pⁿ−2pⁿ⁻¹+pⁿ⁻²)/Δt² + 2((pⁿ−pⁿ⁻¹)/Δt)²]  [Pa/s²]
+    /// Δpⁿ    = Δt² · S_nl^n                                                        [Pa]
     /// ```
+    /// Note: nl_coeff = β/(ρ₀c₀²), so Δp = Δt² · nl_coeff · d²(p²)/dt².
     pub(crate) fn apply_westervelt_nonlinear_correction(&mut self, dt: f64) {
         let (Some(nl_coeff), Some(ref mut nl_scratch)) =
             (self.nl_coeff.as_ref(), self.nl_scratch.as_mut())
@@ -40,7 +42,7 @@ impl FdtdSolver {
                     let d2p_dt2 = (2.0f64.mul_add(-pp, p) + pp2) * dt2_inv;
                     let dp_dt = (p - pp) * dt_inv;
                     let d2p2_dt2 = (2.0 * p).mul_add(d2p_dt2, 2.0 * dp_dt * dp_dt);
-                    *nl = dt * nlc * d2p2_dt2;
+                    *nl = dt * dt * nlc * d2p2_dt2;
                 }
             }
             (Some(p_prev), None) => {
@@ -53,7 +55,7 @@ impl FdtdSolver {
                 {
                     let dp_dt = (p - pp) * dt_inv;
                     let d2p2_dt2 = 2.0 * dp_dt * dp_dt;
-                    *nl = dt * nlc * d2p2_dt2;
+                    *nl = dt * dt * nlc * d2p2_dt2;
                 }
             }
             _ => return,

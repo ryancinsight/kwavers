@@ -135,7 +135,7 @@ impl GenericFdtdSolver<Array3<f64>> {
         // Precompute nonlinear medium property arrays (only when nonlinear mode is on)
         let (p_prev, p_prev2, nl_scratch, nl_coeff) = if config.enable_nonlinear {
             let mut beta = Array3::<f64>::zeros(shape);
-            let mut c4 = Array3::<f64>::zeros(shape);
+            let mut c2 = Array3::<f64>::zeros(shape);
             for k in 0..grid.nz {
                 for j in 0..grid.ny {
                     for i in 0..grid.nx {
@@ -144,16 +144,17 @@ impl GenericFdtdSolver<Array3<f64>> {
                         let c = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
                         // β = 1 + B/(2A) where B/A is returned by nonlinearity_at
                         beta[[i, j, k]] = bn.mul_add(0.5, 1.0);
-                        c4[[i, j, k]] = c.powi(4);
+                        c2[[i, j, k]] = c.powi(2);
                     }
                 }
             }
-            // Precompute β/(ρ₀·c₀⁴) once; used every step in the hot nonlinear kernel.
+            // Precompute β/(ρ₀·c₀²) once; used every step in the hot nonlinear kernel.
             // Reduces per-element inner-loop reads from 5 to 3, cutting memory traffic ~40%.
-            // beta and c4 are intermediate; only nl_coeff is retained in the struct.
+            // beta and c2 are intermediate; only nl_coeff is retained in the struct.
+            // Correct leapfrog Westervelt: Δp = Δt² · (β/ρ₀c₀²) · ∂²(p²)/∂t²
             let nl = ndarray::Zip::from(&beta)
                 .and(&materials.rho0)
-                .and(&c4)
+                .and(&c2)
                 .map_collect(|&b, &rho, &c| b / (rho * c));
             (
                 Some(Array3::<f64>::zeros(shape)),
