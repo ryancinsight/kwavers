@@ -170,7 +170,8 @@ impl ElectromagneticFdtdSolver {
             .unwrap_or(1.0)
     }
 
-    /// Update electric fields using Faraday's law: ∂E/∂t = (1/ε) ∇ × H - (σ/ε) E
+    /// Update electric fields using Ampère's law (Maxwell-Ampère):
+    /// `∂E/∂t = (1/ε)·∇×H − (σ/ε)·E`.
     pub(super) fn update_electric_fields(&mut self) {
         let dx = self.grid.dx;
         let dy = self.grid.dy;
@@ -240,7 +241,8 @@ impl ElectromagneticFdtdSolver {
         }
     }
 
-    /// Update magnetic fields using Ampere's law: ∂H/∂t = -(1/μ) ∇ × E
+    /// Update magnetic fields using Faraday's law:
+    /// `∂H/∂t = −(1/μ)·∇×E`.
     pub(super) fn update_magnetic_fields(&mut self) {
         let dx = self.grid.dx;
         let dy = self.grid.dy;
