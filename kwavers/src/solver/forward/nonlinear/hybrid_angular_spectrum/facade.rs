@@ -44,8 +44,10 @@ impl HybridAngularSpectrum {
     }
 
     /// Shock formation distance z_shock = ρ₀c₀³ / (β·ω·p₀) (Hamilton & Blackstock 1998 §4.3).
+    ///
+    /// `config.nonlinearity` stores B/A; β = 1 + B/(2A) is derived here.
     pub fn shock_formation_distance(&self, p0: f64) -> f64 {
-        let beta = self.config.nonlinearity;
+        let beta = 1.0 + self.config.nonlinearity / 2.0; // β = 1 + B/(2A)
         let c0 = self.config.sound_speed;
         let rho0 = self.config.density;
         let omega = 2.0 * PI * self.config.reference_frequency;

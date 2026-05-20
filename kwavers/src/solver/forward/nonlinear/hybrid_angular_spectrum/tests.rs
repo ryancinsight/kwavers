@@ -60,11 +60,13 @@ fn test_hybrid_angular_spectrum_creation() {
 #[test]
 fn test_shock_formation_distance_matches_analytical_formula() {
     let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
-    let (rho0, c0, beta, f_ref) = (1000.0_f64, 1500.0_f64, 6.0_f64, 1.0e6_f64);
+    // nonlinearity stores B/A; β = 1 + B/(2A) is used inside shock_formation_distance
+    let (rho0, c0, b_over_a, f_ref) = (1000.0_f64, 1500.0_f64, 6.0_f64, 1.0e6_f64);
+    let beta = 1.0 + b_over_a / 2.0; // = 4.0 for B/A = 6 (tissue)
     let config = HASConfig {
         sound_speed: c0,
         density: rho0,
-        nonlinearity: beta,
+        nonlinearity: b_over_a,
         reference_frequency: f_ref,
         ..HASConfig::default()
     };
@@ -80,7 +82,7 @@ fn test_shock_formation_distance_matches_analytical_formula() {
     );
     assert!(
         (0.5..2.0).contains(&d_shock),
-        "z_shock = {d_shock:.4} m should be in [0.5, 2.0] m for water at 1 MHz, 100 kPa"
+        "z_shock = {d_shock:.4} m should be in [0.5, 2.0] m for tissue B/A=6 at 1 MHz, 100 kPa"
     );
 }
 

@@ -21,8 +21,9 @@ impl HybridAsNonlinearOperator {
     ///
     #[must_use]
     pub fn new(config: &HASConfig) -> Self {
+        // Convert B/A to β = 1 + B/(2A) (Hamilton & Blackstock 1998 §2.3.2 eq. 2.3.10)
         Self {
-            beta: config.nonlinearity,
+            beta: 1.0 + config.nonlinearity / 2.0,
             c0: config.sound_speed,
             rho0: config.density,
         }
