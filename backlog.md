@@ -18,6 +18,13 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the clinical-safety mechanical-index sign and
+  frequency-domain gap. `physics::book::safety::mechanical_index` now computes
+  the dimensionless MI from rarefactional-pressure magnitude and returns `0.0`
+  for nonpositive or nonfinite frequency, preventing negative MI and infinite
+  or NaN output from invalid input. Focused tests cover signed pressure input
+  and invalid frequency.
+
 - 2026-05-18: [patch] Closed the Chapter 29 Figure 5 pressure-display
   targeting gap. The visible Westervelt pressure panel now masks the pressure
   volume to the nonlinear target support before CT-frame projection, preventing

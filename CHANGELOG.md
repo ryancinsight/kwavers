@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Clinical Safety Mechanical Index
+
+- [patch] Correct `physics::book::safety::mechanical_index` to use the
+  magnitude of rarefactional pressure and to reject nonpositive or nonfinite
+  MHz frequency with `0.0`, matching the clinical safety contract
+  `MI = |p_r,min|_MPa / sqrt(f_MHz)`. Added value tests for signed pressure
+  input and invalid frequency.
+
 ### Changed (2026-05-18) - Type Collision Disambiguation Session 5
 
 - [patch] Close residual trait-struct and same-name pairs deferred from
