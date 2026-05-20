@@ -18,6 +18,14 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the clinical-safety thermal-index invalid-domain
+  gap. The soft-tissue and bone thermal-index helpers now preserve the
+  nonnegative exposure-ratio invariant by returning `0.0` for nonfinite or
+  negative acoustic power and for invalid frequency domains. Focused tests pin
+  unit-ratio examples and invalid-domain rejection, and the FDA output-limit
+  Rustdoc now points to the diagnostic-ultrasound guidance table instead of an
+  unrelated MR-device document.
+
 - 2026-05-20: [patch] Closed the clinical-safety mechanical-index sign and
   frequency-domain gap. `physics::book::safety::mechanical_index` now computes
   the dimensionless MI from rarefactional-pressure magnitude and returns `0.0`

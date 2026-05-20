@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Clinical Safety Thermal Indices
+
+- [patch] Clamp invalid thermal-index input domains in
+  `physics::book::safety`: soft-tissue TI now rejects nonfinite/negative
+  acoustic power and nonpositive/nonfinite MHz frequency, and bone TI rejects
+  nonfinite/negative acoustic power or MHz frequency. Added value tests for
+  unit-ratio examples and invalid-domain rejection. Corrected the stale FDA
+  output-limit reference text to the diagnostic-ultrasound guidance table.
+
 ### Fixed (2026-05-20) - Clinical Safety Mechanical Index
 
 - [patch] Correct `physics::book::safety::mechanical_index` to use the

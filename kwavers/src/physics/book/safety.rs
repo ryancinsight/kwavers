@@ -9,14 +9,16 @@ use crate::core::constants::fundamental::GAS_CONSTANT;
 /// Mechanical Index (MI).
 ///
 /// ```text
-/// MI = p_neg / (1e6 · √(f_MHz))   [dimensionless]
+/// MI = |p_r| / (1e6 · √(f_MHz))   [dimensionless]
 /// ```
-/// where `p_neg` is in Pa and `f_MHz = f_hz / 1e6`.
+/// where `p_r` is the peak rarefactional pressure in Pa and
+/// `f_MHz = f_hz / 1e6`.
 ///
 /// FDA limit: MI ≤ 1.9 (general) or 0.23 (ophthalmic).
 ///
 /// # Reference
-/// IEC 62359 (2017) §7.2; NCRP Report 140.
+/// FDA, *Marketing Clearance of Diagnostic Ultrasound Systems and
+/// Transducers*, Appendix A; IEC 62359 (2017) §7.2.
 #[inline]
 pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> f64 {
     let f_mhz = f_hz / 1.0e6;
@@ -41,6 +43,9 @@ pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> f64 {
 /// IEC 62359 (2017) §8.3.2.
 #[inline]
 pub fn thermal_index_soft_tissue(wstp_mw: f64, f_mhz: f64) -> f64 {
+    if !(wstp_mw.is_finite() && f_mhz.is_finite() && wstp_mw >= 0.0 && f_mhz > 0.0) {
+        return 0.0;
+    }
     wstp_mw / (210.0 * f_mhz)
 }
 
@@ -55,6 +60,9 @@ pub fn thermal_index_soft_tissue(wstp_mw: f64, f_mhz: f64) -> f64 {
 /// IEC 62359 (2017) §8.4.
 #[inline]
 pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> f64 {
+    if !(w_mw.is_finite() && f_mhz.is_finite() && w_mw >= 0.0 && f_mhz >= 0.0) {
+        return 0.0;
+    }
     w_mw * f_mhz / 40.0
 }
 
@@ -123,8 +131,8 @@ pub fn arrhenius_damage_integral(t_celsius: &[f64], dt_s: f64, a_per_s: f64, ea_
 /// ```
 ///
 /// # Reference
-/// FDA (2019) *Guidance for Industry and FDA Staff: Criteria for Significant
-/// Risk Investigations of Magnetic Resonance Diagnostic Devices*, Table 1.
+/// FDA, *Marketing Clearance of Diagnostic Ultrasound Systems and
+/// Transducers*, Table 3.
 #[inline]
 pub fn fda_ispta_limit_mw_cm2() -> f64 {
     720.0
@@ -137,7 +145,8 @@ pub fn fda_ispta_limit_mw_cm2() -> f64 {
 /// ```
 ///
 /// # Reference
-/// FDA (2019) ibid., Table 1.
+/// FDA, *Marketing Clearance of Diagnostic Ultrasound Systems and
+/// Transducers*, Table 3.
 #[inline]
 pub fn fda_isppa_limit_w_cm2() -> f64 {
     190.0
@@ -160,6 +169,22 @@ mod tests {
     fn mi_rejects_nonpositive_frequency() {
         assert_eq!(mechanical_index(-1.0e6, 0.0), 0.0);
         assert_eq!(mechanical_index(-1.0e6, -1.0e6), 0.0);
+    }
+
+    #[test]
+    fn thermal_indices_are_nonnegative_ratios() {
+        assert!((thermal_index_soft_tissue(210.0, 1.0) - 1.0).abs() < 1e-12);
+        assert!((thermal_index_bone(40.0, 1.0) - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn thermal_indices_reject_invalid_domains() {
+        assert_eq!(thermal_index_soft_tissue(1.0, 0.0), 0.0);
+        assert_eq!(thermal_index_soft_tissue(-1.0, 1.0), 0.0);
+        assert_eq!(thermal_index_soft_tissue(f64::NAN, 1.0), 0.0);
+        assert_eq!(thermal_index_bone(-1.0, 1.0), 0.0);
+        assert_eq!(thermal_index_bone(1.0, -1.0), 0.0);
+        assert_eq!(thermal_index_bone(1.0, f64::INFINITY), 0.0);
     }
 
     #[test]
