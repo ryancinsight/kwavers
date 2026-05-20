@@ -134,7 +134,7 @@ impl TransducerFieldCalculatorPlugin {
         let c = crate::domain::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
 
         let beta =
-            1.0 + AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid) / 2.0;
+            1.0 + AcousticProperties::nonlinearity_parameter(medium, 0.0, 0.0, 0.0, grid) / 2.0;
 
         for i in 0..grid.nx {
             for j in 0..grid.ny {
