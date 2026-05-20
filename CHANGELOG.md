@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (2026-05-20) - Transcranial FUS Cap Geometry SSOT
+
+- [minor] Route tracked transcranial FUS cap placement through
+  `domain::source::transducers::focused::cap`, remove the local Fibonacci
+  geometry implementation, preserve the established negative-z aperture
+  orientation, and reject invalid polar spans through source-domain validation.
+
 ### Changed (2026-05-20) - Focused Bowl Geometry SSOT
 
 - [minor] Route abdominal 3-D and nonlinear 3-D focused-bowl placement through

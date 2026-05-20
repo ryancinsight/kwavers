@@ -3,7 +3,7 @@ use ndarray::{Array1, Array2, Array3};
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::bbb::bbb_opening_dose;
-use super::geometry::fibonacci_hemisphere_positions;
+use super::geometry::focused_cap_positions;
 use super::observables::acoustic_fus_observables;
 use super::pressure::rayleigh_pressure_field;
 use super::skull_ray::{skull_path_phase_correction, SkullPathPhaseCorrectionInput};
@@ -40,12 +40,12 @@ pub fn run_transcranial_fus_planning(
         ));
     }
 
-    let element_positions = fibonacci_hemisphere_positions(
+    let element_positions = focused_cap_positions(
         config.element_count,
         config.radius_m,
         config.cap_min_polar_rad,
         config.cap_max_polar_rad,
-    );
+    )?;
 
     let (phases_rad, delays_s, skull_lengths_m, amplitude_weights) =
         skull_path_phase_correction(SkullPathPhaseCorrectionInput {

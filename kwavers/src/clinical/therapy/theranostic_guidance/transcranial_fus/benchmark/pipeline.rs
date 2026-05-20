@@ -2,7 +2,7 @@ use ndarray::{Array1, Array3};
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::super::geometry::fibonacci_hemisphere_positions;
+use super::super::geometry::focused_cap_positions;
 use super::super::pressure::{
     pressure_peak_and_scale, rayleigh_pressure_field_unscaled, scale_pressure_field,
 };
@@ -28,12 +28,12 @@ pub fn run_skull_adaptive_transcranial_benchmark(
         config,
     )?;
 
-    let element_positions_m = fibonacci_hemisphere_positions(
+    let element_positions_m = focused_cap_positions(
         config.fus.element_count,
         config.fus.radius_m,
         config.fus.cap_min_polar_rad,
         config.fus.cap_max_polar_rad,
-    );
+    )?;
     let (phases_rad, delays_s, skull_lengths_m, amplitude_weights) =
         skull_path_phase_correction(SkullPathPhaseCorrectionInput {
             ct_hu,

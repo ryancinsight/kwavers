@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [minor] Closed the tracked transcranial FUS cap geometry SSOT
+  gap. The clinical adapter now converts `SphericalCapLayout` into the ndarray
+  shape required by skull-ray and Rayleigh integration, preserving the existing
+  negative-z aperture orientation while source-domain validation rejects invalid
+  polar spans.
+
 - 2026-05-20: [minor] Closed the focused bowl geometry SSOT gap. Abdominal
   and nonlinear 3-D focused-bowl placement now consume
   `domain::source::transducers::focused::cap`, share one angular aperture

@@ -3,7 +3,7 @@ use super::benchmark::{
     evaluate_pressure_field, run_skull_adaptive_transcranial_benchmark,
     SkullAdaptiveBenchmarkConfig,
 };
-use super::geometry::fibonacci_hemisphere_positions;
+use super::geometry::focused_cap_positions;
 use super::observables::acoustic_fus_observables;
 use super::skull_ray::acoustic_properties_from_hu;
 use super::subspot::gbm_subspot_raster;
@@ -11,13 +11,20 @@ use super::types::TranscranialFusPlanConfig;
 use ndarray::{Array2, Array3};
 
 #[test]
-fn fibonacci_hemisphere_count_and_radius() {
-    let positions = fibonacci_hemisphere_positions(64, 0.15, 0.22, 1.18);
+fn focused_cap_count_and_radius() {
+    let positions = focused_cap_positions(64, 0.15, 0.22, 1.18).unwrap();
     assert_eq!(positions.dim(), (64, 3));
     for row in positions.rows() {
         let r = (row[0] * row[0] + row[1] * row[1] + row[2] * row[2]).sqrt();
         assert!((r - 0.15).abs() < 1.0e-12, "element not on sphere: r={r}");
+        assert!(row[2] < 0.0, "transcranial cap source must stay on -z side");
     }
+}
+
+#[test]
+fn focused_cap_rejects_invalid_polar_span() {
+    let result = focused_cap_positions(64, 0.15, 1.18, 0.22);
+    assert!(result.is_err(), "theta_min >= theta_max must be rejected");
 }
 
 #[test]

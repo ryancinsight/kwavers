@@ -45,6 +45,11 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Closed the tracked transcranial FUS cap geometry SSOT gap. The local
+  Fibonacci hemispherical placement helper is replaced by a `SphericalCapLayout`
+  adapter, benchmark and planning call sites propagate source-domain errors,
+  and tests pin the established negative-z aperture orientation.
+
 - Closed the focused bowl geometry SSOT gap. Abdominal 3-D planning and the
   nonlinear 3-D exterior-coupling aperture now derive element positions from
   `domain::source::transducers::focused::cap`, share the same bowl angular-span
