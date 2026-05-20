@@ -12,13 +12,13 @@ pub use growth::rectified_diffusion_rate;
 pub use model::{CavitationCore, CavitationModel};
 pub use state::{CavitationDose, CavitationMechanicsState};
 pub use thresholds::{
-    blake_threshold, flynn_criterion, flynn_threshold, mechanical_index, neppiras_threshold,
-    ThresholdModel,
+    blake_threshold, flynn_criterion, flynn_threshold, neppiras_threshold, ThresholdModel,
 };
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::physics::acoustics::analysis::calculate_mechanical_index;
     use approx::assert_relative_eq;
     use ndarray::Array3;
 
@@ -33,13 +33,16 @@ mod tests {
         // Surface tension always adds to the threshold: blake > P0 − Pv.
         // For small R0 (1 µm) the threshold can substantially exceed P0 + Pv,
         // so the old bound `blake < p0 + pv` was wrong for stiff nuclei.
-        assert!(blake > p0 - pv, "Blake threshold must exceed P0 − Pv (got {blake:.1})");
+        assert!(
+            blake > p0 - pv,
+            "Blake threshold must exceed P0 − Pv (got {blake:.1})"
+        );
         assert!(blake > 0.0, "Blake threshold must be positive");
 
         let neppiras = neppiras_threshold(p0, pv, sigma, r0);
         assert!(neppiras > 0.0);
 
-        let mi = mechanical_index(-1.0e6, 1.0e6);
+        let mi = calculate_mechanical_index(-1.0e6, 1.0e6);
         assert_relative_eq!(mi, 1.0);
     }
 

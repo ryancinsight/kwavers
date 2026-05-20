@@ -122,16 +122,6 @@ pub fn flynn_threshold(
     )
 }
 
-/// Calculate mechanical index (MI)
-/// MI = P_neg / sqrt(f_c) where P_neg in MPa and f_c in MHz
-#[must_use]
-pub fn mechanical_index(peak_negative_pressure: f64, center_frequency: f64) -> f64 {
-    let p_mpa = peak_negative_pressure.abs() / 1e6; // Convert Pa to MPa
-    let f_mhz = center_frequency / 1e6; // Convert Hz to MHz
-
-    p_mpa / f_mhz.sqrt()
-}
-
 /// Flynn's criterion for violent collapse
 /// Based on Flynn (1964): "Physics of acoustic cavitation in liquids"
 #[must_use]
@@ -166,9 +156,7 @@ mod tests {
     #[test]
     fn blake_threshold_matches_analytical_formula() {
         let p_g0 = P0 - PV + 2.0 * SIGMA / R0;
-        let p_blake = PV
-            - (4.0 * SIGMA / (3.0 * R0))
-                * (2.0 * SIGMA / (3.0 * p_g0 * R0)).sqrt();
+        let p_blake = PV - (4.0 * SIGMA / (3.0 * R0)) * (2.0 * SIGMA / (3.0 * p_g0 * R0)).sqrt();
         let expected = P0 - p_blake;
         let got = blake_threshold(SIGMA, R0, P0, PV);
         assert!(
@@ -192,7 +180,7 @@ mod tests {
 
     /// Neppiras threshold: P_N = 0.5 · ((P₀ − Pᵥ) + 2σ/R₀).
     ///
-    /// Analytical: 0.5 · (99995 + 29120) = 64557.5 Pa.
+    /// Analytical: 0.5 · (98995 + 29120) = 64057.5 Pa.
     #[test]
     fn neppiras_threshold_matches_analytical_formula() {
         let expected = 0.5 * ((P0 - PV) + 2.0 * SIGMA / R0);
@@ -218,34 +206,6 @@ mod tests {
         assert!(
             (got - expected).abs() < 1.0,
             "Flynn threshold: got {got:.1} expected {expected:.1}"
-        );
-    }
-
-    /// Mechanical index: MI = |P_neg,MPa| / sqrt(f_MHz).
-    ///
-    /// At P_neg = 0.5 MPa, f = 1 MHz: MI = 0.5 / sqrt(1) = 0.5.
-    #[test]
-    fn mechanical_index_matches_formula_at_half_mpa_one_mhz() {
-        let p_neg = 0.5e6_f64;
-        let f = 1e6_f64;
-        let mi = mechanical_index(p_neg, f);
-        assert!(
-            (mi - 0.5).abs() < 1e-12,
-            "MI at 0.5MPa/1MHz must be 0.5 (got {mi:.6})"
-        );
-    }
-
-    /// MI scales as 1/sqrt(f): doubling frequency reduces MI by factor 1/√2.
-    #[test]
-    fn mechanical_index_scales_inversely_with_sqrt_frequency() {
-        let p_neg = 1e6_f64;
-        let mi1 = mechanical_index(p_neg, 1e6);
-        let mi2 = mechanical_index(p_neg, 4e6);
-        // MI(4MHz) = MI(1MHz)/sqrt(4) = MI(1MHz)/2
-        assert!(
-            (mi2 - mi1 / 2.0).abs() < 1e-12,
-            "MI(4MHz)={mi2:.6} must equal MI(1MHz)/2={:.6}",
-            mi1 / 2.0
         );
     }
 

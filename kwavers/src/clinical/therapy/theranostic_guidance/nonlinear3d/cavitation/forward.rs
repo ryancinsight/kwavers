@@ -10,6 +10,7 @@
 use ndarray::Array3;
 use rayon::prelude::*;
 
+use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use crate::physics::acoustics::bubble_dynamics::{
     BubbleParameters, BubbleState, RayleighPlessetSolver,
 };
@@ -68,19 +69,11 @@ fn cavitation_value(
     if !active_source_voxel {
         return 0.0;
     }
-    if mechanical_index(pressure_pa, config.frequency_hz) < config.inertial_mi_threshold {
+    if calculate_mechanical_index(pressure_pa, config.frequency_hz) < config.inertial_mi_threshold {
         return 0.0;
     }
     let response = rayleigh_plesset_subharmonic_response(pressure_pa, config);
     response * (pressure_pa / max_pressure_pa).clamp(0.0, 1.0)
-}
-
-fn mechanical_index(pressure_pa: f64, frequency_hz: f64) -> f64 {
-    let frequency_mhz = frequency_hz * 1.0e-6;
-    if pressure_pa <= 0.0 || frequency_mhz <= 0.0 {
-        return 0.0;
-    }
-    pressure_pa * 1.0e-6 / frequency_mhz.sqrt()
 }
 
 fn rayleigh_plesset_subharmonic_response(pressure_pa: f64, config: &Nonlinear3dConfig) -> f64 {
@@ -213,6 +206,7 @@ fn shifted_state(state: &BubbleState, derivative: (f64, f64), dt: f64, r0: f64) 
 mod tests {
     use super::*;
     use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
+    use crate::physics::acoustics::analysis::calculate_mechanical_index;
 
     #[test]
     fn period_lag_buffer_matches_full_history_indices() {
@@ -260,7 +254,7 @@ mod tests {
         let value = cavitation_value(true, subthreshold_pressure, subthreshold_pressure, &config);
 
         assert_eq!(value, 0.0);
-        assert!(mechanical_index(subthreshold_pressure, config.frequency_hz) < 1.9);
+        assert!(calculate_mechanical_index(subthreshold_pressure, config.frequency_hz) < 1.9);
     }
 
     #[test]
@@ -274,7 +268,7 @@ mod tests {
 
         let value = cavitation_value(true, pressure, pressure, &config);
 
-        assert!(mechanical_index(pressure, config.frequency_hz) >= 1.9);
+        assert!(calculate_mechanical_index(pressure, config.frequency_hz) >= 1.9);
         assert!(value > 0.0);
     }
 
