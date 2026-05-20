@@ -72,10 +72,10 @@ impl KerrEffect {
 
     /// Critical power for self-focusing (approximate)
     ///
-    /// P_crit ≈ λ² / (8π·n₂)
+    /// P_crit ≈ λ² / (8π·n₀·n₂)
     #[must_use]
     pub fn critical_power(&self, wavelength: f64) -> f64 {
-        wavelength.powi(2) / (8.0 * std::f64::consts::PI * self.n2)
+        wavelength.powi(2) / (8.0 * std::f64::consts::PI * self.n0 * self.n2)
     }
 }
 
