@@ -1,5 +1,11 @@
 use super::gas_dynamics::{GasSpecies, GasType};
-use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, T_AMBIENT};
+use crate::core::constants::cavitation::{
+    SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
+};
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, C_WATER, DENSITY_WATER};
+use crate::core::constants::thermodynamic::{
+    SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER, T_AMBIENT,
+};
 use std::collections::HashMap;
 
 /// Physical parameters for bubble dynamics
@@ -48,21 +54,21 @@ impl Default for BubbleParameters {
         gas_composition.insert(GasType::O2, 0.21);
 
         Self {
-            // Water at 20°C with 5 μm air bubble
+            // Water at 20°C with 5 μm air bubble — all water properties from SSOT.
             r0: 5e-6,
-            p0: 101325.0,
-            rho_liquid: 998.0,
-            c_liquid: 1482.0,
+            p0: ATMOSPHERIC_PRESSURE,
+            rho_liquid: DENSITY_WATER,
+            c_liquid: C_WATER,
             gamma: 1.4,    // Air adiabatic index
             t0: T_AMBIENT, // 20°C in Kelvin (293.15 K)
-            mu_liquid: 1.002e-3,
-            sigma: 0.0728,
-            pv: 2.33e3,
-            thermal_conductivity: 0.6,
+            mu_liquid: VISCOSITY_WATER,
+            sigma: SURFACE_TENSION_WATER,
+            pv: VAPOR_PRESSURE_WATER,
+            thermal_conductivity: THERMAL_CONDUCTIVITY_WATER,
             specific_heat_liquid: SPECIFIC_HEAT_WATER,
             accommodation_coeff: 0.04,
             gas_species: GasSpecies::Air,
-            initial_gas_pressure: 101325.0,
+            initial_gas_pressure: ATMOSPHERIC_PRESSURE,
             gas_composition,
             driving_frequency: 26.5e3, // 26.5 kHz (typical medical ultrasound)
             driving_amplitude: 1e5,    // 100 kPa acoustic pressure
@@ -113,11 +119,17 @@ mod tests {
     fn default_parameters_match_documented_water_air_bubble() {
         let p = BubbleParameters::default();
         assert_eq!(p.r0, 5e-6, "equilibrium radius = 5 µm");
-        assert_eq!(p.p0, 101_325.0, "ambient pressure = 1 atm");
-        assert_eq!(p.rho_liquid, 998.0, "water density ≈ 998 kg/m³ at 20°C");
-        assert!(
-            (p.sigma - 0.0728).abs() < 1e-10,
-            "surface tension ≈ 72.8 mN/m"
+        assert_eq!(
+            p.p0, ATMOSPHERIC_PRESSURE,
+            "ambient pressure from SSOT (= 1 atm)"
+        );
+        assert_eq!(
+            p.rho_liquid, DENSITY_WATER,
+            "water density from SSOT (= 998.2 kg/m³ at 20 °C)"
+        );
+        assert_eq!(
+            p.sigma, SURFACE_TENSION_WATER,
+            "surface tension from SSOT (= 72.8 mN/m at 20 °C)"
         );
         assert!((p.gamma - 1.4).abs() < 1e-10, "air γ = 1.4 (diatomic)");
     }
