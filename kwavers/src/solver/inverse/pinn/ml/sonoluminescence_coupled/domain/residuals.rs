@@ -8,6 +8,7 @@
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use super::SonoluminescenceCoupledDomain;
+use crate::core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 
 impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
@@ -112,11 +113,9 @@ impl<B: AutodiffBackend> SonoluminescenceCoupledDomain<B> {
             .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
             .unwrap_or_else(|| t.zeros_like());
 
-        // Physical constants (SI).
-        let mu_0 = 4.0 * std::f64::consts::PI * 1e-7_f64;
-        let epsilon_0 = 8.854e-12_f64;
-        let mu_0_f32 = mu_0 as f32;
-        let epsilon_0_f32 = epsilon_0 as f32;
+        // Physical constants (SI) from SSOT (cast to f32 for tensor arithmetic).
+        let mu_0_f32 = VACUUM_PERMEABILITY as f32;
+        let epsilon_0_f32 = VACUUM_PERMITTIVITY as f32;
 
         let current_density = self.compute_light_sources(x, y, t, physics_params);
 

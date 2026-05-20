@@ -1,4 +1,5 @@
 use super::types::{EMProblemType, ElectromagneticBoundarySpec};
+use crate::core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::adapters::electromagnetic::PinnEMSource;
 use crate::solver::inverse::pinn::ml::physics::BoundaryPosition;
@@ -36,8 +37,8 @@ pub struct ElectromagneticDomain<B: AutodiffBackend> {
 
 impl<B: AutodiffBackend> Default for ElectromagneticDomain<B> {
     fn default() -> Self {
-        let permittivity = 8.854e-12; // Vacuum permittivity
-        let permeability = 4e-7 * std::f64::consts::PI; // Vacuum permeability
+        let permittivity = VACUUM_PERMITTIVITY;
+        let permeability = VACUUM_PERMEABILITY;
         let c = 1.0 / (permittivity * permeability).sqrt();
 
         Self {
