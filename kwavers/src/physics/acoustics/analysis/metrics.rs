@@ -17,7 +17,12 @@ pub struct FieldMetrics {
     pub beam_width: f64,
     /// Beam divergence angle (radians)
     pub divergence_angle: f64,
-    /// Total acoustic power (W)
+    /// Total acoustic energy stored in the pressure field (J)
+    ///
+    /// Computed as `∑ p²/(2ρc²) · ΔV`, the acoustic potential-energy
+    /// density integrated over the simulation volume.  Units are joules.
+    /// Note: this is NOT radiated power in watts; for radiated power use a
+    /// surface integral of intensity over a closed boundary.
     pub total_power: f64,
     /// Spatial peak intensity (W/m²)
     pub spatial_peak_intensity: f64,
@@ -68,8 +73,13 @@ pub fn calculate_field_metrics(
         for iy in 0..grid.ny {
             for iz in 0..grid.nz {
                 let p = pressure_field[[ix, iy, iz]];
+                // Acoustic intensity: I = p²/(2ρc)  [W/m²]
                 let intensity = p.powi(2) / (2.0 * impedance);
-                total_power += intensity * grid.dx * grid.dy * grid.dz;
+                // Acoustic potential energy density: e = p²/(2ρc²)  [J/m³]
+                // Integrating e·dV over the volume gives total stored
+                // acoustic energy in joules (not power in watts).
+                let energy_density = intensity / sound_speed;
+                total_power += energy_density * grid.dx * grid.dy * grid.dz;
                 max_intensity = f64::max(max_intensity, intensity);
             }
         }
