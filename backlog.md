@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [minor] Closed the focused spherical-cap source-layout gap.
+  `domain::source::transducers::focused::cap` now owns reusable equal-area
+  focused-bowl geometry for hemispherical and partial caps parameterized by
+  focus, axis, radius, and angular span, so clinical placement policy can
+  consume source-domain geometry without solver-specific transducer names.
+
 - 2026-05-20: [patch] Closed the broadband cavitation detection domain guard
   gap. Empty or nonfinite signal windows now return finite zero metrics without
   seeding invalid adaptive baseline energy, and the detector recovers on the

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added (2026-05-20) - Focused Spherical-Cap Source Layout
+
+- [minor] Add `domain::source::transducers::focused::cap` as the reusable
+  equal-area spherical-cap layout generator for focused bowl sources. The new
+  `SphericalCapConfig`/`SphericalCapLayout` API covers hemispherical and partial
+  bowl apertures through focus, axis, radius, and angular span parameters,
+  keeping transcranial or abdominal placement policy out of solver-specific
+  geometry names.
+
 ### Fixed (2026-05-20) - Broadband Cavitation Detection Domain Guards
 
 - [patch] Guard broadband cavitation detection against empty or nonfinite

@@ -14,7 +14,7 @@ pub use apodization::{
 };
 pub use focused::{
     make_annular_array, make_bowl, ApodizationType, ArcConfig, ArcSource, BowlConfig,
-    BowlTransducer, MultiBowlArray,
+    BowlTransducer, MultiBowlArray, SphericalCapConfig, SphericalCapElement, SphericalCapLayout,
 };
 pub use phased_array::{
     BeamformingMode, ElementSensitivity, PhasedArrayConfig, PhasedArrayTransducer,
