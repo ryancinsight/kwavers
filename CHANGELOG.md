@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Acoustic Pressure Analysis Domains
+
+- [patch] Guard `physics::acoustics::analysis::pressure` against invalid
+  acoustic impedance, nonfinite pressure samples, invalid MI frequency,
+  negative/nonfinite thermal deposition inputs, negative derating distance or
+  frequency, and out-of-range ISPTA duty cycle. Shared intensity helpers now
+  preserve the harmonic peak-pressure contract `I = p^2 / (2 rho c)` while
+  preventing NaN, infinity, negative exposure ratios, and attenuation-as-gain
+  from safety-index calculations. Added value-semantic tests for valid formulas
+  and invalid-domain rejection.
+
 ### Fixed (2026-05-20) - HIFU Field and Thermal-Dose Physics
 
 - [patch] Split `physics::acoustics::imaging::modalities::ultrasound::hifu`

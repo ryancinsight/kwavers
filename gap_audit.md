@@ -45,6 +45,15 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Closed the acoustic pressure analysis invalid-domain gap. The pressure
+  analysis helpers now require positive finite acoustic impedance for intensity
+  calculations, reject nonfinite pressure samples from scalar peak searches,
+  enforce positive finite MI frequency, preserve nonnegative TI exposure
+  ratios, reject negative derating distance/frequency, and enforce ISPTA duty
+  cycle within `[0, 1]`. Focused tests cover the valid formulas and the
+  rejection paths that previously allowed NaN, infinity, negative exposure
+  ratios, or attenuation-as-gain.
+
 - Closed the HIFU field and CEM43 thermal-dose physics gap. The HIFU module is
   now partitioned into field synthesis, thermal-dose accumulation, and tests.
   The field path evaluates a centered Rayleigh-Sommerfeld focused-aperture

@@ -25,6 +25,16 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the acoustic pressure analysis invalid-domain
+  gap. `physics::acoustics::analysis::pressure` now routes harmonic
+  peak-pressure intensity through a shared impedance/intensity helper, rejects
+  undefined impedance domains, ignores nonfinite pressure samples in scalar
+  peak searches, requires finite positive MI frequency, preserves nonnegative
+  TI exposure ratios, rejects derating inputs that would convert attenuation
+  into gain, and enforces ISPTA duty cycle as a bounded temporal fraction.
+  Focused tests pin the valid intensity, MI, TI, derating, ISPTA, and ISPPA
+  formulas plus invalid-domain rejection.
+
 - 2026-05-20: [patch] Closed the HIFU field and thermal-dose physics gap.
   `physics::acoustics::imaging::modalities::ultrasound::hifu` now has a
   facade plus focused `field`, `thermal_dose`, and `tests` submodules. The
