@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (2026-05-20) - Bowl Transducer Cap Geometry SSOT
+
+- [minor] Route `BowlTransducer` surface discretization through
+  `domain::source::transducers::focused::cap`, derive element count from
+  spherical-cap area and requested element size, preserve equal-area weights,
+  and reject nonfinite or degenerate bowl domains.
+
 ### Changed (2026-05-20) - Hemispherical Array Geometry SSOT
 
 - [minor] Route `domain::source::hemispherical::ElementPlacement` through

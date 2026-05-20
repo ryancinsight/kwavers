@@ -3,7 +3,9 @@
 use uom::si::f64::Power;
 use uom::si::power::watt;
 
-use crate::core::constants::fundamental::AVOGADRO;
+use crate::core::constants::fundamental::{
+    AVOGADRO, BOLTZMANN, ELECTRON_MASS, ELEMENTARY_CHARGE, PLANCK,
+};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 
@@ -57,38 +59,33 @@ impl EnergyBalanceCalculator {
             return Power::new::<watt>(0.0);
         }
 
-        // Fundamental constants
-        const K_BOLTZMANN: f64 = 1.380_649e-23; // J/K
-        const PLANCK: f64 = 6.626_070_15e-34; // J·s
-        const M_ELECTRON: f64 = 9.109_383_701_5e-31; // kg
-        const E_V_TO_JOULES: f64 = 1.602_176_634e-19; // J/eV
-        let avogadro = AVOGADRO;
-
-        // Ionization energy [J] for each species (NIST Atomic Spectra Database)
+        // Ionization energy [eV → J] for each species (NIST Atomic Spectra Database).
+        // `ELEMENTARY_CHARGE` is numerically equal to the eV-to-Joule conversion.
+        let ev_to_joules = ELEMENTARY_CHARGE;
         let e_ion_j = match state.gas_species {
-            GasSpecies::Argon => 15.759_610 * E_V_TO_JOULES,
-            GasSpecies::Xenon => 12.129_843 * E_V_TO_JOULES,
-            GasSpecies::Nitrogen => 14.534_135 * E_V_TO_JOULES,
-            GasSpecies::Oxygen => 13.618_055 * E_V_TO_JOULES,
-            GasSpecies::Air => 14.53 * E_V_TO_JOULES, // N₂-weighted average
-            GasSpecies::Custom { .. } => 15.0 * E_V_TO_JOULES,
+            GasSpecies::Argon => 15.759_610 * ev_to_joules,
+            GasSpecies::Xenon => 12.129_843 * ev_to_joules,
+            GasSpecies::Nitrogen => 14.534_135 * ev_to_joules,
+            GasSpecies::Oxygen => 13.618_055 * ev_to_joules,
+            GasSpecies::Air => 14.53 * ev_to_joules, // N₂-weighted average
+            GasSpecies::Custom { .. } => 15.0 * ev_to_joules,
         };
 
         let t = state.temperature;
-        let kt = K_BOLTZMANN * t;
+        let kt = BOLTZMANN * t;
 
         // Saha factor Φ(T) = 2 · (2π m_e k_B T / h²)^(3/2) · exp(−E_ion/kT)
         // Factor 2 accounts for the g_i/g_0 = 1 degeneracy ratio times the
         // electron spin degeneracy (2 spin states).
         let saha_prefactor =
-            2.0 * (2.0 * std::f64::consts::PI * M_ELECTRON * kt / (PLANCK * PLANCK)).powf(1.5);
+            2.0 * (2.0 * std::f64::consts::PI * ELECTRON_MASS * kt / (PLANCK * PLANCK)).powf(1.5);
         let boltzmann_factor = (-e_ion_j / kt).exp();
         let phi = saha_prefactor * boltzmann_factor;
 
         // Number density [m⁻³]: n = N_A × n_moles / V
         let volume = (4.0 / 3.0) * std::f64::consts::PI * state.radius.powi(3);
-        let n_moles = (state.n_gas + state.n_vapor) / avogadro;
-        let n_density = n_moles * avogadro / volume.max(1e-30);
+        let n_moles = (state.n_gas + state.n_vapor) / AVOGADRO;
+        let n_density = n_moles * AVOGADRO / volume.max(1e-30);
 
         // Solve α² / (1−α) = Φ / n for α:
         // α² + (Φ/n) α − (Φ/n) = 0
@@ -115,12 +112,8 @@ mod tests {
     use crate::core::constants::cavitation::{
         SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
     };
-    use crate::core::constants::fundamental::{
-        ATMOSPHERIC_PRESSURE, C_WATER, DENSITY_WATER,
-    };
-    use crate::core::constants::thermodynamic::{
-        SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
-    };
+    use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, C_WATER, DENSITY_WATER};
+    use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
     use crate::physics::acoustics::bubble_dynamics::bubble_state::{
         BubbleParameters, BubbleState, GasSpecies, GasType,
     };

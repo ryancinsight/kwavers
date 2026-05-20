@@ -25,6 +25,11 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [minor] Closed the bowl transducer cap geometry SSOT gap.
+  `BowlTransducer` now consumes the canonical focused spherical-cap layout,
+  derives element count from cap area and requested element size, preserves
+  equal-area weights, and rejects nonfinite or degenerate bowl domains.
+
 - 2026-05-20: [minor] Closed the hemispherical source-array geometry SSOT gap.
   `domain::source::hemispherical::ElementPlacement` now delegates spherical-cap
   placement to `domain::source::transducers::focused::cap`, rejects

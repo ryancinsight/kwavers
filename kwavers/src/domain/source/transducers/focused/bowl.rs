@@ -13,6 +13,11 @@ use ndarray::Array3;
 use rayon::prelude::*;
 use std::f64::consts::PI;
 
+use super::cap::{SphericalCapConfig, SphericalCapLayout};
+
+#[cfg(test)]
+mod tests;
+
 /// Configuration for a focused bowl transducer
 #[derive(Debug, Clone)]
 pub struct BowlConfig {
@@ -79,7 +84,8 @@ impl BowlTransducer {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn new(config: BowlConfig) -> KwaversResult<Self> {
-        // Validate configuration
+        Self::validate_config(&config)?;
+
         if config.diameter > 2.0 * config.radius_of_curvature {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "diameter".to_owned(),
@@ -107,6 +113,31 @@ impl BowlTransducer {
         })
     }
 
+    fn validate_config(config: &BowlConfig) -> KwaversResult<()> {
+        validate_positive_finite_field("radius_of_curvature", config.radius_of_curvature)?;
+        validate_positive_finite_field("diameter", config.diameter)?;
+        validate_positive_finite_field("frequency", config.frequency)?;
+        validate_finite_field("amplitude", config.amplitude)?;
+        validate_finite_field("phase", config.phase)?;
+        validate_finite_vector("center", config.center)?;
+        validate_finite_vector("focus", config.focus)?;
+
+        if let Some(element_size) = config.element_size {
+            validate_positive_finite_field("element_size", element_size)?;
+        }
+
+        let axis = sub3(config.focus, config.center);
+        if !positive_finite(norm3(axis)) {
+            return Err(field_validation_error(
+                "focus",
+                format!("{:?}", config.focus),
+                "must differ from center to define the bowl acoustic axis",
+            ));
+        }
+
+        Ok(())
+    }
+
     /// Discretize the bowl surface into elements
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -115,73 +146,37 @@ impl BowlTransducer {
         config: &BowlConfig,
         element_size: f64,
     ) -> KwaversResult<(Vec<[f64; 3]>, Vec<[f64; 3]>, Vec<f64>)> {
-        let mut positions = Vec::new();
-        let mut normals = Vec::new();
-        let mut areas = Vec::new();
-
-        // Calculate bowl parameters
         let r = config.radius_of_curvature;
         let a = config.diameter / 2.0;
-        let _h = r - r.mul_add(r, -(a * a)).sqrt(); // Height of spherical cap
-
-        // Angular extent of the bowl
         let theta_max = (a / r).asin();
+        let cap_area = spherical_cap_area(r, theta_max);
+        let target_count = element_count_from_area(cap_area, element_size)?;
+        let axis = sub3(config.focus, config.center);
+        let axis_unit = normalize3(axis).ok_or_else(|| {
+            field_validation_error(
+                "focus",
+                format!("{:?}", config.focus),
+                "must differ from center to define the bowl acoustic axis",
+            )
+        })?;
+        let curvature_center = add3(config.center, scale3(axis_unit, r));
+        let layout = SphericalCapLayout::new(SphericalCapConfig::focused_cap(
+            target_count,
+            r,
+            curvature_center,
+            axis,
+            0.0,
+            theta_max,
+        ))?;
 
-        // Number of angular divisions
-        let n_theta = ((2.0 * PI * r * theta_max) / element_size).ceil() as usize;
-        let _n_phi = ((2.0 * PI * a) / element_size).ceil() as usize;
+        let mut positions = Vec::with_capacity(layout.elements().len());
+        let mut normals = Vec::with_capacity(layout.elements().len());
+        let mut areas = Vec::with_capacity(layout.elements().len());
 
-        // Generate elements using spherical coordinates
-        for i in 0..n_theta {
-            let theta = (i as f64 + 0.5) * theta_max / n_theta as f64;
-            let r_ring = r * theta.sin();
-            let z_ring = r * (1.0 - theta.cos());
-
-            // Number of elements in this ring
-            let n_ring = ((2.0 * PI * r_ring) / element_size).ceil() as usize;
-
-            for j in 0..n_ring {
-                let phi = 2.0 * PI * j as f64 / n_ring as f64;
-
-                // Element position relative to bowl center
-                let x = r_ring * phi.cos();
-                let y = r_ring * phi.sin();
-                let z = z_ring;
-
-                // Transform to global coordinates
-                let pos = [
-                    config.center[0] + x,
-                    config.center[1] + y,
-                    config.center[2] + z,
-                ];
-
-                // Calculate normal (points inward toward focus)
-                let norm_vec = [
-                    config.focus[0] - pos[0],
-                    config.focus[1] - pos[1],
-                    config.focus[2] - pos[2],
-                ];
-                let norm_mag = norm_vec[2]
-                    .mul_add(
-                        norm_vec[2],
-                        norm_vec[1].mul_add(norm_vec[1], norm_vec[0].powi(2)),
-                    )
-                    .sqrt();
-                let normal = [
-                    norm_vec[0] / norm_mag,
-                    norm_vec[1] / norm_mag,
-                    norm_vec[2] / norm_mag,
-                ];
-
-                // Calculate element area (approximate)
-                let dtheta = theta_max / n_theta as f64;
-                let dphi = 2.0 * PI / n_ring as f64;
-                let area = r * r * theta.sin() * dtheta * dphi;
-
-                positions.push(pos);
-                normals.push(normal);
-                areas.push(area);
-            }
+        for element in layout.elements() {
+            positions.push(element.position_m);
+            normals.push(element.normal_to_focus);
+            areas.push(element.area_weight_m2);
         }
 
         Ok((positions, normals, areas))
@@ -390,4 +385,101 @@ impl BowlTransducer {
 
         p_amplitude * (omega * time - k * d1 + self.config.phase).sin()
     }
+}
+
+fn validate_positive_finite_field(field: &'static str, value: f64) -> KwaversResult<()> {
+    if positive_finite(value) {
+        Ok(())
+    } else {
+        Err(field_validation_error(
+            field,
+            value.to_string(),
+            "must be positive and finite",
+        ))
+    }
+}
+
+fn validate_finite_field(field: &'static str, value: f64) -> KwaversResult<()> {
+    if value.is_finite() {
+        Ok(())
+    } else {
+        Err(field_validation_error(
+            field,
+            value.to_string(),
+            "must be finite",
+        ))
+    }
+}
+
+fn validate_finite_vector(field: &'static str, value: [f64; 3]) -> KwaversResult<()> {
+    if value.iter().all(|component| component.is_finite()) {
+        Ok(())
+    } else {
+        Err(field_validation_error(
+            field,
+            format!("{value:?}"),
+            "must contain only finite coordinates",
+        ))
+    }
+}
+
+fn field_validation_error(
+    field: &'static str,
+    value: String,
+    constraint: &'static str,
+) -> KwaversError {
+    KwaversError::Validation(ValidationError::FieldValidation {
+        field: field.to_owned(),
+        value,
+        constraint: constraint.to_owned(),
+    })
+}
+
+fn element_count_from_area(area_m2: f64, element_size_m: f64) -> KwaversResult<usize> {
+    let count = (area_m2 / element_size_m.powi(2)).ceil();
+    if !count.is_finite() || count < 1.0 || count > usize::MAX as f64 {
+        return Err(field_validation_error(
+            "element_size",
+            element_size_m.to_string(),
+            "must produce a finite representable spherical-cap element count",
+        ));
+    }
+    Ok(count as usize)
+}
+
+fn spherical_cap_area(radius_m: f64, theta_max_rad: f64) -> f64 {
+    2.0 * PI * radius_m * radius_m * (1.0 - theta_max_rad.cos())
+}
+
+fn positive_finite(value: f64) -> bool {
+    value.is_finite() && value > 0.0
+}
+
+fn add3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+
+fn sub3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+fn scale3(vector: [f64; 3], scale: f64) -> [f64; 3] {
+    [vector[0] * scale, vector[1] * scale, vector[2] * scale]
+}
+
+fn norm3(vector: [f64; 3]) -> f64 {
+    vector[0]
+        .mul_add(
+            vector[0],
+            vector[1].mul_add(vector[1], vector[2] * vector[2]),
+        )
+        .sqrt()
+}
+
+fn normalize3(vector: [f64; 3]) -> Option<[f64; 3]> {
+    if !vector.iter().all(|component| component.is_finite()) {
+        return None;
+    }
+    let norm = norm3(vector);
+    positive_finite(norm).then(|| scale3(vector, norm.recip()))
 }
