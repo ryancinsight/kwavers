@@ -65,7 +65,12 @@ impl BlackbodyModel {
         self.emissivity * planck * (1.0 - (-self.optical_depth).exp())
     }
 
-    /// Calculate total radiated power using Stefan-Boltzmann law
+    /// Calculate total radiated power using Stefan-Boltzmann law.
+    ///
+    /// Applies the same effective emissivity `ε·(1 - exp(-τ))` as
+    /// [`Self::spectral_radiance`] so that
+    /// `total_power = ∫∫ spectral_radiance · π · dλ` is dimensionally and
+    /// physically consistent across the spectral and integrated APIs.
     ///
     /// # Arguments
     /// * `temperature` - Temperature in Kelvin
@@ -75,7 +80,8 @@ impl BlackbodyModel {
     /// Total radiated power in Watts
     #[must_use]
     pub fn total_power(&self, temperature: f64, surface_area: f64) -> f64 {
-        self.emissivity * STEFAN_BOLTZMANN * surface_area * temperature.powi(4)
+        let depth_factor = 1.0 - (-self.optical_depth).exp();
+        self.emissivity * depth_factor * STEFAN_BOLTZMANN * surface_area * temperature.powi(4)
     }
 
     /// Calculate emission spectrum over wavelength range
@@ -205,9 +211,11 @@ mod tests {
 
     #[test]
     fn test_stefan_boltzmann() {
+        // Optically thick limit: τ → ∞ so (1 - exp(-τ)) → 1 and the result
+        // reduces to the ideal Stefan-Boltzmann law ε·σ·A·T⁴.
         let model = BlackbodyModel {
             emissivity: 1.0,
-            optical_depth: 1.0,
+            optical_depth: 100.0,
         };
 
         let temp = 1000.0;
@@ -215,5 +223,20 @@ mod tests {
         let power = model.total_power(temp, area);
 
         assert_relative_eq!(power, STEFAN_BOLTZMANN * 1e12, epsilon = 1.0);
+    }
+
+    /// total_power must reproduce the optical-depth factor so it is consistent
+    /// with `spectral_radiance` (which applies `(1 - exp(-τ))`).
+    #[test]
+    fn total_power_matches_optical_depth_factor() {
+        let tau = 0.1_f64;
+        let model = BlackbodyModel {
+            emissivity: 1.0,
+            optical_depth: tau,
+        };
+        let temp = 1000.0;
+        let power = model.total_power(temp, 1.0);
+        let expected = (1.0 - (-tau).exp()) * STEFAN_BOLTZMANN * temp.powi(4);
+        assert_relative_eq!(power, expected, epsilon = 1e-9);
     }
 }
