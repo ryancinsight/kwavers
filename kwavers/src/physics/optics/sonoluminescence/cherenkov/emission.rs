@@ -11,10 +11,12 @@ use ndarray::{Array3, Zip};
 /// Reference: Balakin et al., J. Opt. Soc. Am. B, 2016.
 pub(crate) const COMPRESSION_REFRACTIVE_COEFFICIENT: f64 = 0.02;
 
-/// Thermo-optic coefficient dn/dT for water [K⁻¹].
+/// Magnitude of the thermo-optic coefficient |dn/dT| for water [K⁻¹].
 ///
-/// Negative sign: heating reduces density and refractive index.
-/// Measured value: approximately −1 × 10⁻⁵ K⁻¹ near room temperature.
+/// The sign (dn/dT < 0 — heating reduces density and refractive index) is
+/// applied explicitly at the call site:
+/// `n_local = n_base − THERMAL_REFRACTIVE_COEFFICIENT · (T − T_ref)`.
+/// Measured magnitude is approximately 1 × 10⁻⁵ K⁻¹ near room temperature.
 ///
 /// Reference: Kim, J. Opt. Soc. Korea, 2012.
 pub(crate) const THERMAL_REFRACTIVE_COEFFICIENT: f64 = 1e-5;

@@ -1,6 +1,7 @@
 //! Incident acoustic field types and cloud state snapshots
 
 use super::config::{CloudBubble, CloudConfig};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 /// Incident acoustic field
 #[derive(Debug, Clone)]
@@ -24,7 +25,7 @@ impl IncidentField {
         Self {
             pressure_amplitude: pressure,
             frequency,
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             direction,
             phase_offset: 0.0,
         }

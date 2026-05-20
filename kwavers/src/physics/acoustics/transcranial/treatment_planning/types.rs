@@ -1,5 +1,6 @@
 //! Core data structures for transcranial treatment planning
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array3;
 
 /// Treatment target volume in brain coordinates
@@ -112,7 +113,7 @@ impl Default for TranscranialTransducerSpecification {
             frequency: 650e3,      // 650 kHz for brain therapy
             focal_distance: 120.0, // mm
             radius: 80.0,          // mm
-            sound_speed: 1500.0,   // m/s
+            sound_speed: SOUND_SPEED_WATER_SIM,  // coupling-medium baseline (m/s)
         }
     }
 }

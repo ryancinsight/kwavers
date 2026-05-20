@@ -2,6 +2,9 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::TranscranialSkullProperties;
+use crate::core::constants::fundamental::{
+    SOUND_SPEED_WATER_SIM, DENSITY_AIR, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR,
+};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -32,14 +35,14 @@ impl TreatmentPlanner {
                         attenuation_map[[i, j, k]] = (hu - 300.0).mul_add(0.01, 5.0);
                     // dB/MHz/cm
                     } else if hu > -200.0 {
-                        // Tissue
-                        speed_map[[i, j, k]] = 1500.0;
-                        density_map[[i, j, k]] = 1000.0;
+                        // Soft-tissue / water-like baseline (sourced from SSOT)
+                        speed_map[[i, j, k]] = SOUND_SPEED_WATER_SIM;
+                        density_map[[i, j, k]] = DENSITY_WATER_NOMINAL;
                         attenuation_map[[i, j, k]] = 0.5;
                     } else {
-                        // Air
-                        speed_map[[i, j, k]] = 340.0;
-                        density_map[[i, j, k]] = 1.2;
+                        // Air (sourced from SSOT)
+                        speed_map[[i, j, k]] = SOUND_SPEED_AIR;
+                        density_map[[i, j, k]] = DENSITY_AIR;
                         attenuation_map[[i, j, k]] = 0.0;
                     }
                 }

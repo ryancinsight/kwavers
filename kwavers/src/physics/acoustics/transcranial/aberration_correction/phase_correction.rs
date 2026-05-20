@@ -42,6 +42,7 @@
 //! - Fink M (1992). "Time reversal of ultrasonic fields."
 //!   IEEE Trans. UFFC 39(5):555–566.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use log::info;
@@ -93,7 +94,7 @@ impl TranscranialAberrationCorrection {
         Ok(Self {
             grid: grid.clone(),
             frequency: 650e3,
-            reference_speed: 1500.0, // matches CTImageLoader::hu_to_sound_speed soft-tissue baseline
+            reference_speed: SOUND_SPEED_WATER_SIM, // matches CTImageLoader::hu_to_sound_speed soft-tissue baseline
             _num_elements: 1024,
         })
     }

@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::{C_WATER, DENSITY_WATER_NOMINAL};
+use crate::core::constants::fundamental::{SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -165,7 +165,7 @@ impl TranscranialSimulation {
 
         // Pressure TC through water→skull→water slab equals T_I (see docstring).
         // Z_water = ρ_water · c_water (sourced from SSOT constants)
-        let water_z = DENSITY_WATER_NOMINAL * C_WATER;
+        let water_z = DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM;
         let t_i = self.skull_props.transmission_coefficient(water_z);
 
         Ok(amplitude_ratio * t_i)
