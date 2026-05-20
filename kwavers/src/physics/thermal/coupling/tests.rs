@@ -87,8 +87,8 @@ fn test_thermal_acoustic_coupling() {
         .update(&temperature, &intensity, 37.0, 0.1)
         .unwrap();
 
-    let energy = coupling.total_energy();
-    assert!(energy > 0.0);
+    let energy_density = coupling.total_energy_density();
+    assert!(energy_density > 0.0);
 }
 
 #[test]

@@ -81,15 +81,23 @@ impl ThermalAcousticCoupling {
         Ok(())
     }
 
-    /// Retrieve spatial definition of derived heat distributions [W/m³]
+    /// Retrieve the cumulative deposited acoustic heat density field [J/m³].
+    ///
+    /// Each cell is the time-integral of `Q = 2·α·I` over all `update` calls.
+    /// To recover power density [W/m³] divide by the cumulative `dt`; to
+    /// recover total deposited energy [J] multiply by the cell volume — this
+    /// type is grid-agnostic and therefore exposes only the density.
     #[must_use]
     pub fn acoustic_heat(&self) -> &Array3<f64> {
         &self.acoustic_heat
     }
 
-    /// Analytical integration across spatial matrix ensuring energy balance (J)
+    /// Sum of the heat-density field across all cells [J/m³].
+    ///
+    /// This is a grid-agnostic L¹ norm — multiply by the per-cell volume to
+    /// obtain energy in joules.
     #[must_use]
-    pub fn total_energy(&self) -> f64 {
+    pub fn total_energy_density(&self) -> f64 {
         self.acoustic_heat.iter().sum()
     }
 
