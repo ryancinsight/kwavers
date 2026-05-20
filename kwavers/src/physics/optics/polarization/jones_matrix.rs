@@ -70,19 +70,19 @@ impl JonesMatrix {
     /// Quarter-wave plate with fast axis at 45°
     ///
     /// Converts linear polarization to circular polarization.
-    /// Matrix (with 1/√2 normalization):
+    /// Unitary retarder matrix (Born & Wolf 1999, §1.4):
     /// ```text
-    /// [1/√2 + i/√2,  1/√2 - i/√2]
-    /// [1/√2 - i/√2,  1/√2 + i/√2]
+    /// M = ½ [[1+i, 1−i], [1−i, 1+i]]
     /// ```
+    /// Each element has magnitude 1/√2; total intensity is conserved.
     #[must_use]
     pub fn quarter_wave_plate() -> Self {
-        let sqrt_half = std::f64::consts::FRAC_1_SQRT_2;
+        // Elements: real = ±0.5, imag = ±0.5  →  magnitude = 1/√2  →  unitary
         Self::new(
-            Complex64::new(sqrt_half, sqrt_half),
-            Complex64::new(sqrt_half, -sqrt_half),
-            Complex64::new(sqrt_half, -sqrt_half),
-            Complex64::new(sqrt_half, sqrt_half),
+            Complex64::new(0.5, 0.5),
+            Complex64::new(0.5, -0.5),
+            Complex64::new(0.5, -0.5),
+            Complex64::new(0.5, 0.5),
         )
     }
 

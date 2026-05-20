@@ -63,11 +63,13 @@ fn test_waveplate_operations() {
     let input = JonesVector::horizontal(1.0);
     let output = qwp.apply(&input);
 
-    let sqrt_half = std::f64::consts::FRAC_1_SQRT_2;
-    assert_relative_eq!(output.ex.re, sqrt_half, epsilon = 1e-10);
-    assert_relative_eq!(output.ex.im, sqrt_half, epsilon = 1e-10);
-    assert_relative_eq!(output.ey.re, sqrt_half, epsilon = 1e-10);
-    assert_relative_eq!(output.ey.im, -sqrt_half, epsilon = 1e-10);
+    // QWP(45°) on H-input → circular: Ex=(1+i)/2, Ey=(1-i)/2
+    // Intensity conserved: (|Ex|²+|Ey|²)/2 = (0.5+0.5)/2 = 0.5 = input.intensity() ✓
+    assert_relative_eq!(output.ex.re, 0.5, epsilon = 1e-10);
+    assert_relative_eq!(output.ex.im, 0.5, epsilon = 1e-10);
+    assert_relative_eq!(output.ey.re, 0.5, epsilon = 1e-10);
+    assert_relative_eq!(output.ey.im, -0.5, epsilon = 1e-10);
+    assert_relative_eq!(output.intensity(), input.intensity(), epsilon = 1e-10);
 
     let hwp = JonesMatrix::half_wave_plate();
     let input = JonesVector::horizontal(1.0);
