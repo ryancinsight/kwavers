@@ -121,10 +121,10 @@ pub const ELECTRON_MASS: f64 = 9.1093837015e-31;
 // ============================================================================
 
 /// Bond transformation factor for anisotropic media
-pub const BOND_TRANSFORM_FACTOR: f64 = 1.0;
+pub const BOND_TRANSFORM_FACTOR: f64 = 2.0;
 
 /// Lamé to stiffness conversion factor
-pub const LAME_TO_STIFFNESS_FACTOR: f64 = 1.0;
+pub const LAME_TO_STIFFNESS_FACTOR: f64 = 2.0;
 
 /// Symmetry tolerance for elastic tensors
 pub const SYMMETRY_TOLERANCE: f64 = 1e-6;
