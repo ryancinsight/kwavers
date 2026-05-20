@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Sonogenetics Analytical Domain Guards
+
+- [patch] Guard sonogenetics analytical helpers against invalid physical
+  domains: Hill activation now rejects invalid thresholds/exponents and
+  nonfinite pressure samples, acoustic radiation force and streaming reject
+  negative/nonfinite intensity or material domains, and ISPTA rejects empty or
+  invalid waveform/material inputs while ignoring nonfinite pressure samples.
+
 ### Fixed (2026-05-20) - Acoustic Analysis Field Validation and Directivity
 
 - [patch] Add a shared acoustic analysis pressure-field validation module and

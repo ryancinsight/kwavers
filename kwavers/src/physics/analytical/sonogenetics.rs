@@ -25,12 +25,29 @@ pub fn hill_activation_probability(
     p_threshold_pa: f64,
     hill_n: f64,
 ) -> Vec<f64> {
+    if !positive_finite(p_threshold_pa) || !positive_finite(hill_n) {
+        return vec![0.0; pressure_arr.len()];
+    }
+
+    let pt_n = p_threshold_pa.powf(hill_n);
+    if !positive_finite(pt_n) {
+        return vec![0.0; pressure_arr.len()];
+    }
+
     pressure_arr
         .iter()
         .map(|&p| {
+            if !p.is_finite() {
+                return 0.0;
+            }
+
             let pn = p.abs().powf(hill_n);
-            let pt_n = p_threshold_pa.powf(hill_n);
-            pn / (pn + pt_n)
+            let denominator = pn + pt_n;
+            if pn.is_finite() && positive_finite(denominator) {
+                pn / denominator
+            } else {
+                0.0
+            }
         })
         .collect()
 }
@@ -54,8 +71,21 @@ pub fn hill_activation_probability(
 /// Nyborg (1965), *Physical Acoustics* Vol. 2, ch. 11.
 #[inline]
 pub fn radiation_force_1d(intensity_w_m2: &[f64], alpha_np_m: f64, c: f64) -> Vec<f64> {
+    if !nonnegative_finite(alpha_np_m) || !positive_finite(c) {
+        return vec![0.0; intensity_w_m2.len()];
+    }
+
     let scale = 2.0 * alpha_np_m / c;
-    intensity_w_m2.iter().map(|&i| scale * i).collect()
+    intensity_w_m2
+        .iter()
+        .map(|&i| {
+            if nonnegative_finite(i) {
+                scale * i
+            } else {
+                0.0
+            }
+        })
+        .collect()
 }
 
 // ─── Acoustic streaming ───────────────────────────────────────────────────────
@@ -85,6 +115,15 @@ pub fn acoustic_streaming_velocity(
     c: f64,
     l_m: f64,
 ) -> f64 {
+    if !nonnegative_finite(i_w_m2)
+        || !positive_finite(mu_pa_s)
+        || !nonnegative_finite(alpha_np_m)
+        || !positive_finite(c)
+        || !nonnegative_finite(l_m)
+    {
+        return 0.0;
+    }
+
     alpha_np_m * i_w_m2 * l_m * l_m / (2.0 * mu_pa_s * c)
 }
 
@@ -108,11 +147,32 @@ pub fn acoustic_streaming_velocity(
 /// # Reference
 /// NCRP Report 74 (1983), §4.
 pub fn ispta_w_cm2(p_pa: &[f64], dt_s: f64, rho: f64, c: f64) -> f64 {
+    if p_pa.is_empty() || !positive_finite(dt_s) || !positive_finite(rho) || !positive_finite(c) {
+        return 0.0;
+    }
+
     let n = p_pa.len() as f64;
     let total_time = n * dt_s;
-    let integral: f64 = p_pa.iter().map(|&p| p * p * dt_s).sum();
+    let integral: f64 = p_pa
+        .iter()
+        .map(|&p| if p.is_finite() { p * p * dt_s } else { 0.0 })
+        .sum();
     let ispta_w_m2 = integral / (rho * c * total_time);
-    ispta_w_m2 * 1e-4 // convert W/m² → W/cm²
+    if ispta_w_m2.is_finite() {
+        ispta_w_m2 * 1e-4 // convert W/m² → W/cm²
+    } else {
+        0.0
+    }
+}
+
+#[inline]
+fn positive_finite(value: f64) -> bool {
+    value.is_finite() && value > 0.0
+}
+
+#[inline]
+fn nonnegative_finite(value: f64) -> bool {
+    value.is_finite() && value >= 0.0
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -140,6 +200,19 @@ mod tests {
     }
 
     #[test]
+    fn hill_rejects_invalid_domains_and_samples() {
+        let invalid_threshold = hill_activation_probability(&[100.0], 0.0, 2.0);
+        assert_eq!(invalid_threshold, vec![0.0]);
+
+        let invalid_hill = hill_activation_probability(&[100.0], 100.0, 0.0);
+        assert_eq!(invalid_hill, vec![0.0]);
+
+        let nonfinite_pressure = hill_activation_probability(&[f64::NAN, 100.0], 100.0, 2.0);
+        assert_eq!(nonfinite_pressure[0], 0.0);
+        assert!((nonfinite_pressure[1] - 0.5).abs() < 1e-10);
+    }
+
+    #[test]
     fn radiation_force_proportional_to_intensity() {
         let f = radiation_force_1d(&[1.0, 2.0, 4.0], 1.0, 1500.0);
         assert!((f[1] / f[0] - 2.0).abs() < 1e-10);
@@ -147,9 +220,44 @@ mod tests {
     }
 
     #[test]
+    fn radiation_force_rejects_negative_or_nonfinite_domains() {
+        assert_eq!(
+            radiation_force_1d(&[1.0, 2.0], -1.0, 1500.0),
+            vec![0.0, 0.0]
+        );
+        assert_eq!(radiation_force_1d(&[1.0], 1.0, 0.0), vec![0.0]);
+
+        let f = radiation_force_1d(&[1.0, -2.0, f64::INFINITY], 1.0, 1500.0);
+        assert!((f[0] - 2.0 / 1500.0).abs() < 1e-15);
+        assert_eq!(f[1], 0.0);
+        assert_eq!(f[2], 0.0);
+    }
+
+    #[test]
     fn streaming_velocity_positive() {
         let v = acoustic_streaming_velocity(1000.0, 1e-3, 0.5, 1500.0, 0.05);
         assert!(v > 0.0);
+    }
+
+    #[test]
+    fn streaming_velocity_rejects_invalid_domains() {
+        assert_eq!(
+            acoustic_streaming_velocity(-1.0, 1e-3, 0.5, 1500.0, 0.05),
+            0.0
+        );
+        assert_eq!(
+            acoustic_streaming_velocity(1.0, 0.0, 0.5, 1500.0, 0.05),
+            0.0
+        );
+        assert_eq!(
+            acoustic_streaming_velocity(1.0, 1e-3, -0.5, 1500.0, 0.05),
+            0.0
+        );
+        assert_eq!(acoustic_streaming_velocity(1.0, 1e-3, 0.5, 0.0, 0.05), 0.0);
+        assert_eq!(
+            acoustic_streaming_velocity(1.0, 1e-3, 0.5, 1500.0, f64::NAN),
+            0.0
+        );
     }
 
     #[test]
@@ -169,5 +277,16 @@ mod tests {
             ispta,
             expected
         );
+    }
+
+    #[test]
+    fn ispta_rejects_empty_invalid_and_nonfinite_domains() {
+        assert_eq!(ispta_w_cm2(&[], 1e-7, 1000.0, 1500.0), 0.0);
+        assert_eq!(ispta_w_cm2(&[1.0], 0.0, 1000.0, 1500.0), 0.0);
+        assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 0.0, 1500.0), 0.0);
+        assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 1000.0, -1500.0), 0.0);
+
+        let ispta = ispta_w_cm2(&[1.0, f64::NAN, 1.0], 1.0, 1.0, 1.0);
+        assert!((ispta - (2.0 / 3.0) * 1e-4).abs() < 1e-16);
     }
 }

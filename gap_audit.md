@@ -45,6 +45,14 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Closed the sonogenetics analytical-domain guard gap. The Hill activation,
+  acoustic radiation force, acoustic streaming, and ISPTA helpers now preserve
+  finite nonnegative outputs for invalid domains instead of emitting NaN,
+  infinity, negative force/velocity, or divide-by-zero values. The tests cover
+  invalid threshold/exponent, nonfinite pressure samples, negative intensity,
+  invalid material parameters, empty waveforms, and invalid time/material
+  domains.
+
 - Closed the acoustic analysis validation/directivity gap. Beam-pattern,
   focus, focal-plane, beam-width, and field-metric analysis now share a single
   private pressure-field domain validator for field/grid shape equality and

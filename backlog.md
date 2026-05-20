@@ -25,6 +25,13 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the sonogenetics analytical-domain guard gap.
+  Hill activation now requires positive finite threshold and Hill exponent and
+  ignores nonfinite pressure samples. Acoustic radiation force and streaming
+  reject negative or nonfinite intensity/material domains. ISPTA rejects empty
+  waveforms and invalid `dt`, density, or sound speed while excluding
+  nonfinite pressure samples from the pressure-squared integral.
+
 - 2026-05-20: [patch] Closed the acoustic analysis validation/directivity
   gap. Field metrics, focus, focal-plane, beam-width, and beam-pattern
   calculations now share one internal pressure-field validator for grid-shape
