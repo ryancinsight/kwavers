@@ -182,9 +182,15 @@ impl SemSolver {
             return Ok(());
         }
 
-        let acceleration = self.compute_acceleration()?;
-        self.integrator.step(&acceleration);
+        // Predictor: u_{n+1} = u_n + dt*v_n + 0.5*dt²*a_n
+        let a_n = self.compute_acceleration()?; // a_n = -K·u_n / M
+        self.integrator.step(&a_n);
         self.solution.assign(&self.integrator.displacement);
+
+        // Corrector: v_{n+1} = v_n + 0.5*dt*(a_n + a_{n+1})  [Newmark γ = 0.5]
+        let a_n1 = self.compute_acceleration()?; // a_{n+1} = -K·u_{n+1} / M
+        self.integrator.correct_velocity(&a_n1);
+
         self.time_step += 1;
 
         Ok(())

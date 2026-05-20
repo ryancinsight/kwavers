@@ -106,6 +106,40 @@ impl NewmarkIntegrator {
         self.acceleration_prev.assign(&self.acceleration);
     }
 
+    /// Apply the velocity corrector for the explicit Newmark-β (central-difference) scheme.
+    ///
+    /// Must be called **after** [`step`] once the updated acceleration `a_{n+1}` has
+    /// been evaluated from the new displacement `u_{n+1}`.  Implements the trapezoidal
+    /// velocity update
+    ///
+    /// ```text
+    /// v_{n+1} = v_n + ½ Δt (a_n + a_{n+1})
+    /// ```
+    ///
+    /// At the time of this call the internal state holds:
+    ///   - `velocity_prev`    = v_n + Δt·a_n   (predictor written by `step`)
+    ///   - `acceleration_prev` = a_n            (stored at the end of `step`)
+    ///
+    /// so `v_n` is recovered as `velocity_prev − Δt·acceleration_prev`, and the
+    /// corrected value is written back to both `velocity` and `velocity_prev` so
+    /// that the **next** call to `step` uses the correct v_{n+1} in its
+    /// displacement predictor.
+    pub fn correct_velocity(&mut self, a_new: &Array1<f64>) {
+        let dt = self.dt;
+        for i in 0..self.velocity.len() {
+            // velocity_prev currently holds v_n + dt*a_n; acceleration_prev holds a_n.
+            // v_n = velocity_prev - dt * acceleration_prev
+            // v_{n+1} = v_n + 0.5*dt*(a_n + a_{n+1})
+            //         = velocity_prev - dt*acceleration_prev + 0.5*dt*(acceleration_prev + a_new)
+            //         = velocity_prev - 0.5*dt*acceleration_prev + 0.5*dt*a_new
+            self.velocity[i] = self.velocity_prev[i]
+                - 0.5 * dt * self.acceleration_prev[i]
+                + 0.5 * dt * a_new[i];
+        }
+        // Refresh velocity_prev so the next step's displacement predictor uses v_{n+1}.
+        self.velocity_prev.assign(&self.velocity);
+    }
+
     /// Set initial displacement and sync the internal `_prev` state.
     ///
     /// Must be called before the first `step()` whenever a non-zero initial
