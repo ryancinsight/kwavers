@@ -41,7 +41,7 @@ impl Regularizer {
         }
 
         if self.smoothness_weight > 0.0 {
-            self.apply_smoothness(gradient);
+            self.apply_smoothness(gradient, model);
         }
     }
 
@@ -54,59 +54,112 @@ impl Regularizer {
         });
     }
 
-    /// Total Variation regularization
-    /// Preserves edges while smoothing
+    /// Total Variation regularization — Rudin, Osher & Fatemi (1992) Eq. (11).
+    ///
+    /// Computes the full discrete divergence of the normalised gradient field:
+    ///   ∂TV/∂m[i,j,k] = −(fx[i] + fy[i] + fz[i])/W[i]
+    ///                   + fx[i−1,j,k]/W[i−1,j,k]   (if i > 0)
+    ///                   + fy[i,j−1,k]/W[i,j−1,k]   (if j > 0)
+    ///                   + fz[i,j,k−1]/W[i,j,k−1]   (if k > 0)
+    ///
+    /// Previous code omitted the backward-neighbor contributions, producing
+    /// only −(fx+fy+fz)/W — the truncated half of the true functional derivative.
+    /// That is the same error fixed in `solver::inverse::seismic::fwi::gradient`
+    /// as Bug 57 (Rudin-Osher-Fatemi 1992).
     fn apply_total_variation(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
         let (nx, ny, nz) = model.dim();
-        let epsilon = 1e-8; // Small value to avoid division by zero
+        let eps2 = 1e-16_f64; // Huber ε² (squared) prevents division by zero
 
-        for i in 1..nx - 1 {
-            for j in 1..ny - 1 {
-                for k in 1..nz - 1 {
-                    // Compute TV gradient
-                    let dx = model[[i + 1, j, k]] - model[[i, j, k]];
-                    let dy = model[[i, j + 1, k]] - model[[i, j, k]];
-                    let dz = model[[i, j, k + 1]] - model[[i, j, k]];
+        // Pre-compute forward differences.
+        let mut fx = Array3::<f64>::zeros((nx, ny, nz)); // fx[i,j,k] = m[i+1,j,k] − m[i,j,k]
+        let mut fy = Array3::<f64>::zeros((nx, ny, nz));
+        let mut fz = Array3::<f64>::zeros((nx, ny, nz));
 
-                    let tv_norm = (dz.mul_add(dz, dx.mul_add(dx, dy * dy)) + epsilon).sqrt();
+        for i in 0..nx - 1 {
+            for j in 0..ny {
+                for k in 0..nz {
+                    fx[[i, j, k]] = model[[i + 1, j, k]] - model[[i, j, k]];
+                }
+            }
+        }
+        for i in 0..nx {
+            for j in 0..ny - 1 {
+                for k in 0..nz {
+                    fy[[i, j, k]] = model[[i, j + 1, k]] - model[[i, j, k]];
+                }
+            }
+        }
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz - 1 {
+                    fz[[i, j, k]] = model[[i, j, k + 1]] - model[[i, j, k]];
+                }
+            }
+        }
 
-                    gradient[[i, j, k]] += self.tv_weight
-                        * (3.0f64.mul_add(model[[i, j, k]], -model[[i + 1, j, k]])
-                            - model[[i, j + 1, k]]
-                            - model[[i, j, k + 1]])
-                        / tv_norm;
+        // Huber weight W[i,j,k] = √(fx² + fy² + fz² + ε²).
+        let mut w = Array3::<f64>::zeros((nx, ny, nz));
+        Zip::from(&mut w)
+            .and(&fx)
+            .and(&fy)
+            .and(&fz)
+            .par_for_each(|w_val, &dx, &dy, &dz| {
+                *w_val = dz.mul_add(dz, dx.mul_add(dx, dy * dy) + eps2).sqrt();
+            });
+
+        // Functional derivative: divergence of the normalised gradient field.
+        let tv_w = self.tv_weight;
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let w_c = w[[i, j, k]];
+                    // Negative self-contribution from forward differences leaving (i,j,k).
+                    let mut g = -(fx[[i, j, k]] + fy[[i, j, k]] + fz[[i, j, k]]) / w_c;
+                    // Positive back-contributions from forward differences ending at (i,j,k).
+                    if i > 0 {
+                        g += fx[[i - 1, j, k]] / w[[i - 1, j, k]];
+                    }
+                    if j > 0 {
+                        g += fy[[i, j - 1, k]] / w[[i, j - 1, k]];
+                    }
+                    if k > 0 {
+                        g += fz[[i, j, k - 1]] / w[[i, j, k - 1]];
+                    }
+                    gradient[[i, j, k]] += tv_w * g;
                 }
             }
         }
     }
 
-    /// Smoothness regularization using Laplacian
-    fn apply_smoothness(&self, gradient: &mut Array3<f64>) {
-        let (nx, ny, nz) = gradient.dim();
-        let mut laplacian = Array3::zeros(gradient.dim());
+    /// Smoothness (Tikhonov L2 gradient) regularisation — adds ∂J_s/∂m = −w·∇²m.
+    ///
+    /// J_s = ½w·‖∇m‖²  →  ∂J_s/∂m = −w·∇²m  (integration by parts, zero BCs).
+    ///
+    /// Previous code computed `∇²(gradient)` and subtracted it from `gradient`.
+    /// That is not the functional derivative of any standard regularisation term;
+    /// `I − w∇²` is a high-pass filter that *amplifies* high-frequency gradient
+    /// components rather than penalising model roughness (Bug 63).
+    ///
+    /// Fix: compute `∇²m` on the velocity model and add −w·∇²m to the gradient.
+    fn apply_smoothness(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
+        let (nx, ny, nz) = model.dim();
+        let w = self.smoothness_weight;
 
-        // Compute Laplacian
+        // ∂J_s/∂m[i,j,k] = −w · ∇²m[i,j,k]
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    laplacian[[i, j, k]] = 6.0f64.mul_add(
-                        -gradient[[i, j, k]],
-                        gradient[[i + 1, j, k]]
-                            + gradient[[i - 1, j, k]]
-                            + gradient[[i, j + 1, k]]
-                            + gradient[[i, j - 1, k]]
-                            + gradient[[i, j, k + 1]]
-                            + gradient[[i, j, k - 1]],
-                    );
+                    let laplacian_m = model[[i + 1, j, k]]
+                        + model[[i - 1, j, k]]
+                        + model[[i, j + 1, k]]
+                        + model[[i, j - 1, k]]
+                        + model[[i, j, k + 1]]
+                        + model[[i, j, k - 1]]
+                        - 6.0 * model[[i, j, k]];
+                    gradient[[i, j, k]] -= w * laplacian_m;
                 }
             }
         }
-
-        // Apply smoothness penalty
-        let w = self.smoothness_weight;
-        Zip::from(gradient).and(&laplacian).par_for_each(|g, &l| {
-            *g -= w * l;
-        });
     }
 
     /// Set regularization weights
