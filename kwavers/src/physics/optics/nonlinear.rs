@@ -180,21 +180,16 @@ impl PhotoacousticConversion {
         self.gruneisen * absorbed_energy / volume
     }
 
-    /// Stress confinement regime?
-    /// (True if thermal diffusion length > optical penetration depth)
-    #[must_use]
-    pub fn is_stress_confined(&self, frequency: f64, optical_penetration_depth: f64) -> bool {
-        self.thermal_diffusion_length(frequency) > optical_penetration_depth
-    }
-
-    /// Thermal confinement regime?
-    /// (True if pulse duration << thermal relaxation time)
-    #[must_use]
-    pub fn is_thermal_confined(&self, pulse_duration: f64) -> bool {
-        let thermal_relaxation = self.volumetric_heat_capacity
-            / (self.thermal_conductivity.powi(2) / self.volumetric_heat_capacity);
-        pulse_duration < thermal_relaxation / 10.0
-    }
+    // Stress- and thermal-confinement assessment lives in the canonical
+    // `physics::photoacoustics::confinement::ConfinementAssessment`, which
+    // applies the standard Xu & Wang (2006) conditions
+    //   τ_stress  = δ_p / c_s
+    //   τ_thermal = δ_p² / (4 D)
+    // with the proper pulse-duration and optical-penetration-depth inputs.
+    // The previously-defined `is_stress_confined`/`is_thermal_confined`
+    // helpers on this struct compared incompatible quantities and produced
+    // a dimensionally inconsistent thermal-relaxation time
+    // ((ρc_p)² / k² has units s²/m⁴, not seconds), so they were removed.
 }
 
 /// Common photoacoustic materials
@@ -307,15 +302,6 @@ mod tests {
         // Gold has highest Grüneisen parameter
         assert!(gold.gruneisen > tissue.gruneisen);
         assert!(tissue.gruneisen > water.gruneisen);
-    }
-
-    #[test]
-    fn test_stress_confinement() {
-        let pa = PhotoacousticConversion::tissue();
-        let l_th = pa.thermal_diffusion_length(1e6);
-
-        // Should be stress-confined if l_th > optical penetration depth
-        assert!(pa.is_stress_confined(1e6, l_th / 2.0));
     }
 
     #[test]
