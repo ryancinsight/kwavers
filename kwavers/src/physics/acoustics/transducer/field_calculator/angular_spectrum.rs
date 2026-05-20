@@ -83,10 +83,23 @@ impl TransducerFieldCalculatorPlugin {
 
             for i in 0..grid.nx {
                 for j in 0..grid.ny {
-                    let kx = 2.0 * std::f64::consts::PI * (i as f64 - grid.nx as f64 / 2.0)
-                        / (grid.nx as f64 * grid.dx);
-                    let ky = 2.0 * std::f64::consts::PI * (j as f64 - grid.ny as f64 / 2.0)
-                        / (grid.ny as f64 * grid.dy);
+                    // Standard DFT wavenumbers (fftfreq convention): positive
+                    // frequencies for indices 0..N/2, negative for N/2..N.
+                    // Using (i - N/2) would apply fftshift indexing to a
+                    // non-shifted spectrum and produce a checkerboard phase
+                    // error in the propagated field.
+                    let ni = if i < grid.nx / 2 {
+                        i as f64
+                    } else {
+                        i as f64 - grid.nx as f64
+                    };
+                    let nj = if j < grid.ny / 2 {
+                        j as f64
+                    } else {
+                        j as f64 - grid.ny as f64
+                    };
+                    let kx = 2.0 * std::f64::consts::PI * ni / (grid.nx as f64 * grid.dx);
+                    let ky = 2.0 * std::f64::consts::PI * nj / (grid.ny as f64 * grid.dy);
 
                     let kz_sq = k * k - kx * kx - ky * ky;
                     if kz_sq > 0.0 {
