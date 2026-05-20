@@ -1,5 +1,6 @@
 //! Power-law absorption model
 
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use crate::core::constants::DB_TO_NP;
 use serde::{Deserialize, Serialize};
 
@@ -53,14 +54,12 @@ impl PowerLawAbsorption {
     /// Calculate absorption coefficient at given frequency
     #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
-        // Convert to Np/m from dB/(MHz^y cm):  α [Np/m] = α [dB/cm] × DB_TO_NP × 100
-        const CM_TO_M: f64 = 100.0;
-        const MHZ_TO_HZ: f64 = 1e6;
-
+        // Convert dB/(MHz^y cm) → Np/m:
+        //   α [Np/m] = α [dB/cm] · (1/CM_TO_M) [cm/m] · DB_TO_NP [Np/dB]
         let f_mhz = frequency / MHZ_TO_HZ;
         let alpha_db = self.alpha_0 * f_mhz.powf(self.y);
 
-        alpha_db * DB_TO_NP * CM_TO_M
+        alpha_db * DB_TO_NP / CM_TO_M
     }
 
     /// Calculate phase velocity from absorption (Kramers-Kronig relations)

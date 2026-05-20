@@ -2,7 +2,9 @@
 //!
 //! Implements B-mode, Doppler, elastography, synthetic aperture, plane wave, and coded excitation imaging
 
+use crate::core::constants::acoustic_parameters::NP_TO_DB;
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use ndarray::Array2;
 use num_complex::Complex;
 
@@ -62,9 +64,6 @@ fn compute_envelope(signal: &ndarray::Array1<f64>) -> ndarray::Array1<f64> {
 
 const TISSUE_ATTENUATION_COEFFICIENT: f64 = 0.5; // dB/cm/MHz
                                                  // SOUND_SPEED_TISSUE = 1540.0 m/s imported from crate::core::constants::fundamental
-const DB_TO_NEPER: f64 = 8.686; // Conversion factor
-const CM_TO_M: f64 = 0.01;
-const MHZ_TO_HZ: f64 = 1e6;
 const MAX_TGC_GAIN: f64 = 100.0;
 
 fn apply_tgc(signal: &ndarray::Array1<f64>, frequency: f64) -> ndarray::Array1<f64> {
@@ -79,9 +78,9 @@ fn apply_tgc_with_sampling(
 ) -> ndarray::Array1<f64> {
     let n = signal.len();
     let mut compensated = signal.clone();
-    // α[Np/m] = α[dB/(cm·MHz)] × f[MHz] × (100 cm/m) / (8.686 dB/Np)
+    // α[Np/m] = α[dB/(cm·MHz)] × f[MHz] × (1/CM_TO_M) [cm/m] × (1/NP_TO_DB) [Np/dB]
     let alpha_np =
-        TISSUE_ATTENUATION_COEFFICIENT * frequency / MHZ_TO_HZ / CM_TO_M / DB_TO_NEPER;
+        TISSUE_ATTENUATION_COEFFICIENT * (frequency / MHZ_TO_HZ) / CM_TO_M / NP_TO_DB;
     for i in 0..n {
         let depth = i as f64 * SOUND_SPEED_TISSUE / (2.0 * sampling_frequency);
         let gain = (2.0 * alpha_np * depth).exp();
