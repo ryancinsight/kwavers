@@ -109,8 +109,8 @@
 //! * Secondary Bjerknes coupling between neighbouring bubbles in a cloud
 //!   is implemented in
 //!   [`crate::physics::acoustics::bubble_dynamics::bubble_field::BubbleField`]:
-//!   each bubble receives an additional pressure `p_ij = −ρ_L[R²R̈ + 2RṘ²]/d`
-//!   from its neighbours (monopole radiation, Crum 1975). Coupling is skipped
+//!   each bubble receives an additional pressure `p_ij = +ρ_L[R²R̈ + 2RṘ²]/d`
+//!   from its neighbours (monopole radiation, Brennen 1995 Eq. 3.78). Coupling is skipped
 //!   for pairs with R/d < threshold (default 0.01) for performance.
 //!
 //! ---

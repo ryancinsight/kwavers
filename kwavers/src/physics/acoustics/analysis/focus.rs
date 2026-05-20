@@ -1,5 +1,6 @@
 //! Focus finding and beam width calculations
 
+use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::{Array1, ArrayView3};
@@ -9,6 +10,8 @@ use ndarray::{Array1, ArrayView3};
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<[f64; 3]> {
+    validate_pressure_field_domain(pressure_field, grid)?;
+
     let mut max_pressure = 0.0;
     let mut focus_indices = [0, 0, 0];
 
@@ -40,16 +43,8 @@ pub fn find_focal_plane(
     grid: &Grid,
     axis: usize,
 ) -> KwaversResult<usize> {
-    let n_slices = match axis {
-        0 => grid.nx,
-        1 => grid.ny,
-        2 => grid.nz,
-        _ => {
-            return Err(crate::core::error::KwaversError::InvalidInput(
-                "Invalid axis: must be 0, 1, or 2".to_owned(),
-            ))
-        }
-    };
+    let n_slices = axis_slice_count(grid, axis)?;
+    validate_pressure_field_domain(pressure_field, grid)?;
 
     let mut max_energy = 0.0;
     let mut focal_slice = 0;
@@ -106,16 +101,15 @@ pub fn calculate_beam_width(
     axis: usize,
     threshold_db: f64,
 ) -> KwaversResult<Array1<f64>> {
-    let n_slices = match axis {
-        0 => grid.nx,
-        1 => grid.ny,
-        2 => grid.nz,
-        _ => {
-            return Err(crate::core::error::KwaversError::InvalidInput(
-                "Invalid axis: must be 0, 1, or 2".to_owned(),
-            ))
-        }
-    };
+    let n_slices = axis_slice_count(grid, axis)?;
+    validate_pressure_field_domain(pressure_field, grid)?;
+    if !threshold_db.is_finite() {
+        return Err(invalid_parameter(
+            "threshold_db",
+            threshold_db,
+            "must be finite",
+        ));
+    }
 
     let mut widths = Array1::zeros(n_slices);
     let threshold_ratio = 10.0_f64.powf(threshold_db / 20.0);
@@ -165,6 +159,17 @@ pub fn calculate_beam_width(
     Ok(widths)
 }
 
+fn axis_slice_count(grid: &Grid, axis: usize) -> KwaversResult<usize> {
+    match axis {
+        0 => Ok(grid.nx),
+        1 => Ok(grid.ny),
+        2 => Ok(grid.nz),
+        _ => Err(KwaversError::InvalidInput(
+            "Invalid axis: must be 0, 1, or 2".to_owned(),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,6 +205,38 @@ mod tests {
         assert_eq!(loc, [0.0, 0.0, 0.0]);
     }
 
+    #[test]
+    fn find_focus_rejects_shape_mismatch() {
+        let grid = small_grid();
+        let field = Array3::<f64>::zeros((7, 8, 8));
+
+        let err = find_focus(field.view(), &grid).unwrap_err();
+        let message = err.to_string();
+
+        assert!(
+            message.contains("Dimension mismatch"),
+            "unexpected error: {message}"
+        );
+        assert!(message.contains("(8, 8, 8)"), "expected shape: {message}");
+        assert!(message.contains("(7, 8, 8)"), "actual shape: {message}");
+    }
+
+    #[test]
+    fn find_focus_rejects_nonfinite_pressure() {
+        let grid = small_grid();
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        field[[6, 5, 4]] = f64::NAN;
+
+        let err = find_focus(field.view(), &grid).unwrap_err();
+        let message = err.to_string();
+
+        assert!(message.contains("nonfinite"), "unexpected error: {message}");
+        assert!(
+            message.contains("[6, 5, 4]"),
+            "sample index must be reported: {message}"
+        );
+    }
+
     // ── find_focal_plane ──────────────────────────────────────────────────────
 
     /// All energy concentrated in z-slice 5 → find_focal_plane(axis=2) = 5.
@@ -222,9 +259,13 @@ mod tests {
     fn find_focal_plane_errors_for_invalid_axis() {
         let grid = small_grid();
         let field = Array3::<f64>::zeros((8, 8, 8));
+
+        let err = find_focal_plane(field.view(), &grid, 3).unwrap_err();
+        let message = err.to_string();
+
         assert!(
-            find_focal_plane(field.view(), &grid, 3).is_err(),
-            "axis=3 must return Err"
+            message.contains("Invalid axis"),
+            "unexpected error: {message}"
         );
     }
 
@@ -235,9 +276,13 @@ mod tests {
     fn calculate_beam_width_errors_for_invalid_axis() {
         let grid = small_grid();
         let field = Array3::<f64>::zeros((8, 8, 8));
+
+        let err = calculate_beam_width(field.view(), &grid, 5, -6.0).unwrap_err();
+        let message = err.to_string();
+
         assert!(
-            calculate_beam_width(field.view(), &grid, 5, -6.0).is_err(),
-            "axis=5 must return Err"
+            message.contains("Invalid axis"),
+            "unexpected error: {message}"
         );
     }
 
@@ -252,5 +297,20 @@ mod tests {
             widths.iter().all(|&w| w == 0.0),
             "zero field must yield zero beam widths"
         );
+    }
+
+    #[test]
+    fn calculate_beam_width_rejects_nonfinite_threshold() {
+        let grid = small_grid();
+        let field = Array3::<f64>::zeros((8, 8, 8));
+
+        let err = calculate_beam_width(field.view(), &grid, 2, f64::NAN).unwrap_err();
+        let message = err.to_string();
+
+        assert!(
+            message.contains("threshold_db"),
+            "unexpected error: {message}"
+        );
+        assert!(message.contains("finite"), "domain reason: {message}");
     }
 }

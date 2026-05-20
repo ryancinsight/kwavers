@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Acoustic Analysis Field Validation and Directivity
+
+- [patch] Add a shared acoustic analysis pressure-field validation module and
+  route beam-pattern, focus, and field-metric routines through the same
+  field/grid shape plus finite-pressure contract. Beam-pattern configuration
+  now rejects invalid frequency, sound speed, and angular resolution before
+  angular allocation, and directivity now averages squared pressure magnitude
+  proportional to intensity instead of signed samples to prevent phase
+  cancellation from inflating DI.
+
 ### Fixed (2026-05-20) - Acoustic Field Metrics Domain Validation
 
 - [patch] Route acoustic field metrics through the canonical impedance and

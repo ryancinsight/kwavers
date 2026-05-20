@@ -1,7 +1,8 @@
 //! Field metrics calculation
 
 use super::pressure::{acoustic_impedance, harmonic_peak_intensity};
-use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use super::validation::{validate_pressure_field_domain, validation_error};
+use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::ArrayView3;
 
@@ -39,7 +40,7 @@ pub fn calculate_field_metrics(
     density: f64,
     sound_speed: f64,
 ) -> KwaversResult<FieldMetrics> {
-    validate_metric_domain(pressure_field, grid)?;
+    validate_pressure_field_domain(pressure_field, grid)?;
     let Some(impedance) = acoustic_impedance(density, sound_speed) else {
         return Err(validation_error(format!(
             "Acoustic impedance requires positive finite density and sound_speed, got density={density}, sound_speed={sound_speed}"
@@ -111,7 +112,7 @@ pub fn find_peak_pressure(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
 ) -> KwaversResult<([f64; 3], f64)> {
-    validate_metric_domain(pressure_field, grid)?;
+    validate_pressure_field_domain(pressure_field, grid)?;
     Ok(find_peak_pressure_unchecked(pressure_field, grid))
 }
 
@@ -138,35 +139,6 @@ fn find_peak_pressure_unchecked(pressure_field: ArrayView3<f64>, grid: &Grid) ->
     ];
 
     (location, max_pressure)
-}
-
-fn validate_metric_domain(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<()> {
-    let expected = (grid.nx, grid.ny, grid.nz);
-    let actual = pressure_field.dim();
-    if actual != expected {
-        return Err(KwaversError::Validation(
-            ValidationError::DimensionMismatch {
-                expected: format!("{expected:?}"),
-                actual: format!("{actual:?}"),
-            },
-        ));
-    }
-
-    for ((ix, iy, iz), &pressure) in pressure_field.indexed_iter() {
-        if !pressure.is_finite() {
-            return Err(validation_error(format!(
-                "Pressure field contains nonfinite value {pressure} at [{ix}, {iy}, {iz}]"
-            )));
-        }
-    }
-
-    Ok(())
-}
-
-fn validation_error(message: impl Into<String>) -> KwaversError {
-    KwaversError::Validation(ValidationError::ConstraintViolation {
-        message: message.into(),
-    })
 }
 
 /// Calculate beam width at a specific location

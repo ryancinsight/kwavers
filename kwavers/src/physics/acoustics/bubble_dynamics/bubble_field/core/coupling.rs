@@ -6,9 +6,15 @@ impl BubbleField {
     /// Compute the secondary Bjerknes pressure contribution at every bubble
     /// position due to the instantaneous radiation of all other bubbles.
     ///
+    /// In an incompressible liquid the velocity potential from bubble i is
+    /// φ_i = −R_i²Ṙ_i / r.  The unsteady-Bernoulli pressure perturbation at
+    /// distance d is therefore
+    ///
     /// ```text
-    /// p_secondary_j = Σ_{i≠j}  − ρ_L [R_i² R̈_i + 2 R_i Ṙ_i²] / d_ij
+    /// p_secondary_j = Σ_{i≠j}  ρ_L [R_i² R̈_i + 2 R_i Ṙ_i²] / d_ij
     /// ```
+    ///
+    /// (Brennen 1995, Eq. 3.78; Crum 1975)
     ///
     /// Pairs with `d_ij = 0` and pairs where `R_i / d_ij < coupling_threshold`
     /// are skipped.
@@ -43,7 +49,7 @@ impl BubbleField {
                 let r = state_i.radius;
                 let rdot = state_i.wall_velocity;
                 let rddot = state_i.wall_acceleration;
-                let p_ij = -self.rho_liquid * (r * r).mul_add(rddot, 2.0 * r * rdot * rdot) / d_ij;
+                let p_ij = self.rho_liquid * (r * r).mul_add(rddot, 2.0 * r * rdot * rdot) / d_ij;
 
                 *corrections.get_mut(&pos_j).unwrap() += p_ij;
             }

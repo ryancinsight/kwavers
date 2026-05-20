@@ -20,6 +20,7 @@ pub mod beam_patterns;
 pub mod focus;
 pub mod metrics;
 pub mod pressure;
+mod validation;
 
 pub use beam_pattern::{
     calculate_beam_pattern, calculate_directivity, BeamPatternConfig, FarFieldMethod,

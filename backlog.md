@@ -25,6 +25,14 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the acoustic analysis validation/directivity
+  gap. Field metrics, focus, focal-plane, beam-width, and beam-pattern
+  calculations now share one internal pressure-field validator for grid-shape
+  equality and finite samples. Beam-pattern analysis rejects invalid frequency,
+  sound-speed, and angular-resolution domains before deriving angular sample
+  counts. Directivity now evaluates `10 log10(max |B|^2 / mean |B|^2)` for the
+  pressure-amplitude pattern instead of averaging signed samples.
+
 - 2026-05-20: [patch] Closed the acoustic field metrics domain-validation
   gap. `physics::acoustics::analysis::metrics` now rejects pressure
   field/grid shape mismatches, nonfinite pressure samples, and invalid
