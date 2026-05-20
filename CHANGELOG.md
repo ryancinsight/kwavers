@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed (2026-05-20) - Focused Bowl Geometry SSOT
+
+- [minor] Route abdominal 3-D and nonlinear 3-D focused-bowl placement through
+  `domain::source::transducers::focused::cap`. `SphericalCapConfig` now exposes
+  explicit angular-span and vertex/focus constructors, while clinical bowl
+  adapters reuse the source-domain equal-area layout and reject degenerate axes
+  instead of fabricating repeated skin-contact elements.
+
 ### Added (2026-05-20) - Focused Spherical-Cap Source Layout
 
 - [minor] Add `domain::source::transducers::focused::cap` as the reusable

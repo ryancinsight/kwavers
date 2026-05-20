@@ -79,7 +79,7 @@ fn bowl_vertex_matches_skin_contact() {
         z_m: 0.0,
     };
     let radius = 0.115;
-    let elements = bowl_elements(256, skin, focus, radius);
+    let elements = bowl_elements(256, skin, focus, radius).unwrap();
     // The bowl vertex is at t→0, which is close to element[0].
     // With theta_cutout ≈ 10°, element[0] is near the vertex.
     let d_first_to_skin = distance_3d(elements[0], skin);
@@ -103,7 +103,7 @@ fn all_elements_on_sphere_of_correct_radius() {
     };
     let dist = distance_3d(skin, focus);
     let radius = dist * 1.15;
-    let elements = bowl_elements(512, skin, focus, radius);
+    let elements = bowl_elements(512, skin, focus, radius).unwrap();
     for (i, el) in elements.iter().enumerate() {
         let r_from_focus = distance_3d(*el, focus);
         let err = (r_from_focus - radius).abs();
@@ -112,6 +112,17 @@ fn all_elements_on_sphere_of_correct_radius() {
             "element {i}: distance from focus = {r_from_focus:.8} m, expected {radius:.8} m, err={err:.2e}"
         );
     }
+}
+
+#[test]
+fn degenerate_bowl_axis_is_rejected() {
+    let point = Point3 {
+        x_m: 0.0,
+        y_m: 0.0,
+        z_m: 0.0,
+    };
+    let result = bowl_elements(32, point, point, 0.1);
+    assert!(result.is_err(), "degenerate focus axis must be rejected");
 }
 
 #[test]

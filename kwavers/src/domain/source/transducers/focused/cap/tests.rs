@@ -33,14 +33,14 @@ fn cap_layout_preserves_equal_area_weights() {
     let radius = 0.075;
     let theta_min = 0.175;
     let theta_max = 0.960;
-    let layout = SphericalCapLayout::new(SphericalCapConfig {
-        element_count: 128,
-        radius_m: radius,
-        focus_m: [0.01, -0.02, 0.03],
-        axis_vertex_to_focus: [1.0, 2.0, 3.0],
-        theta_min_rad: theta_min,
-        theta_max_rad: theta_max,
-    })
+    let layout = SphericalCapLayout::new(SphericalCapConfig::focused_cap(
+        128,
+        radius,
+        [0.01, -0.02, 0.03],
+        [1.0, 2.0, 3.0],
+        theta_min,
+        theta_max,
+    ))
     .unwrap();
 
     let expected_area = 2.0 * PI * radius * radius * (theta_min.cos() - theta_max.cos());
@@ -50,6 +50,26 @@ fn cap_layout_preserves_equal_area_weights() {
         .map(|element| element.area_weight_m2)
         .sum();
     assert!((summed_area - expected_area).abs() < 1.0e-14);
+}
+
+#[test]
+fn vertex_focus_constructor_derives_axis() {
+    let radius = 0.115;
+    let vertex = [0.05, 0.0, 0.0];
+    let focus = [-0.05, 0.0, 0.0];
+    let layout = SphericalCapLayout::new(SphericalCapConfig::from_vertex_focus(
+        32, radius, vertex, focus, 0.175, 0.960,
+    ))
+    .unwrap();
+
+    for element in layout.elements() {
+        let p = element.position_m;
+        let distance =
+            ((p[0] - focus[0]).powi(2) + (p[1] - focus[1]).powi(2) + (p[2] - focus[2]).powi(2))
+                .sqrt();
+        assert!((distance - radius).abs() < 1.0e-12);
+        assert!(p[0] > focus[0], "cap must be on the vertex side of focus");
+    }
 }
 
 #[test]

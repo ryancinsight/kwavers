@@ -60,7 +60,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::geometry::{active_bounds_3d, Point3};
 use super::super::nonlinear3d::volume::centroid_float;
-use super::bowl::bowl_elements;
+use super::bowl::{bowl_elements, BOWL_THETA_MAX_RAD};
 use super::helpers::{
     distance_3d, exterior_air_mask, exterior_body_surface_points, index_to_point,
     nearest_exterior_skin_point, surface_points_3d,
@@ -174,8 +174,7 @@ pub fn plan_abdominal_array_placement(
     // (well outside the body). A minimum clinical bowl radius of 60 mm is
     // enforced for mechanical feasibility.
     let focal_depth_m = distance_3d(skin_contact_m, focus_m);
-    const THETA_MAX: f64 = 0.960_f64; // ≈ 55°, matches bowl.rs
-    let transducer_radius_m = (focal_depth_m / THETA_MAX.cos()).max(0.060);
+    let transducer_radius_m = (focal_depth_m / BOWL_THETA_MAX_RAD.cos()).max(0.060);
 
     let stride = surface_stride.max(1);
 
@@ -194,7 +193,7 @@ pub fn plan_abdominal_array_placement(
 
     // Bowl element positions (outside the body, on the skin surface cap).
     let therapy_elements_m =
-        bowl_elements(element_count, skin_contact_m, focus_m, transducer_radius_m);
+        bowl_elements(element_count, skin_contact_m, focus_m, transducer_radius_m)?;
 
     // Beam visualisation: up to 64 beams from elements to focus.
     let beam_count = 64_usize.min(element_count).max(1);

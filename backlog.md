@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [minor] Closed the focused bowl geometry SSOT gap. Abdominal
+  and nonlinear 3-D focused-bowl placement now consume
+  `domain::source::transducers::focused::cap`, share one angular aperture
+  contract, and propagate invalid spherical-cap domains as placement errors
+  instead of generating repeated placeholder elements.
+
 - 2026-05-20: [minor] Closed the focused spherical-cap source-layout gap.
   `domain::source::transducers::focused::cap` now owns reusable equal-area
   focused-bowl geometry for hemispherical and partial caps parameterized by

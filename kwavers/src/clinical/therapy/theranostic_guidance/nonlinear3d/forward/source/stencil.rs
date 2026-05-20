@@ -2,9 +2,9 @@
 
 use std::f64::consts::PI;
 
-use crate::clinical::therapy::theranostic_guidance::nonlinear3d::{
-    aperture_bowl::BOWL_THETA_MAX_RAD,
-    types::{flat_index, GridIndex, Nonlinear3dAperture, SourceDomain},
+use crate::clinical::therapy::theranostic_guidance::{
+    abdominal3d::bowl::BOWL_THETA_MAX_RAD,
+    nonlinear3d::types::{flat_index, GridIndex, Nonlinear3dAperture, SourceDomain},
 };
 
 pub(super) fn finite_source_stencil(

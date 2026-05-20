@@ -30,6 +30,46 @@ pub struct SphericalCapConfig {
 }
 
 impl SphericalCapConfig {
+    /// Focused spherical cap with an explicit angular span.
+    #[must_use]
+    pub fn focused_cap(
+        element_count: usize,
+        radius_m: f64,
+        focus_m: [f64; 3],
+        axis_vertex_to_focus: [f64; 3],
+        theta_min_rad: f64,
+        theta_max_rad: f64,
+    ) -> Self {
+        Self {
+            element_count,
+            radius_m,
+            focus_m,
+            axis_vertex_to_focus,
+            theta_min_rad,
+            theta_max_rad,
+        }
+    }
+
+    /// Focused spherical cap defined by its vertex and acoustic focus.
+    #[must_use]
+    pub fn from_vertex_focus(
+        element_count: usize,
+        radius_m: f64,
+        vertex_m: [f64; 3],
+        focus_m: [f64; 3],
+        theta_min_rad: f64,
+        theta_max_rad: f64,
+    ) -> Self {
+        Self::focused_cap(
+            element_count,
+            radius_m,
+            focus_m,
+            sub3(focus_m, vertex_m),
+            theta_min_rad,
+            theta_max_rad,
+        )
+    }
+
     /// Full hemispherical focused cap.
     #[must_use]
     pub fn hemisphere(
@@ -38,14 +78,14 @@ impl SphericalCapConfig {
         focus_m: [f64; 3],
         axis_vertex_to_focus: [f64; 3],
     ) -> Self {
-        Self {
+        Self::focused_cap(
             element_count,
             radius_m,
             focus_m,
             axis_vertex_to_focus,
-            theta_min_rad: 0.0,
-            theta_max_rad: FRAC_PI_2,
-        }
+            0.0,
+            FRAC_PI_2,
+        )
     }
 }
 

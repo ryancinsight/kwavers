@@ -6,12 +6,11 @@ use ndarray::Array3;
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-use super::super::abdominal3d::bowl::bowl_elements;
+use super::super::abdominal3d::bowl::{bowl_elements, BOWL_THETA_MAX_RAD};
 use super::super::abdominal3d::helpers::{exterior_air_mask, nearest_exterior_skin_point};
 use super::super::Point3;
 use super::types::{grid_point_m, GridIndex, Nonlinear3dVolume};
 
-pub(crate) const BOWL_THETA_MAX_RAD: f64 = 0.960;
 const MIN_BOWL_RADIUS_M: f64 = 0.060;
 const BOWL_OVERSAMPLE: usize = 8;
 
@@ -73,7 +72,7 @@ pub(super) fn abdominal_bowl_candidates(
     }
 
     let ideal_count = requested_count.max(1) * BOWL_OVERSAMPLE;
-    let ideal_points = bowl_elements(ideal_count, skin_m, focus_m, radius_m);
+    let ideal_points = bowl_elements(ideal_count, skin_m, focus_m, radius_m)?;
     let mut seen = HashSet::with_capacity(requested_count);
     let mut selected = Vec::with_capacity(requested_count);
     for point in ideal_points {
