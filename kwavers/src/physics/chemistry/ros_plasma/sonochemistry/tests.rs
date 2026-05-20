@@ -1,5 +1,6 @@
 use super::super::ros_species::ROSSpecies;
 use super::model::SonochemistryModel;
+use crate::core::constants::fundamental::GAS_CONSTANT;
 
 #[test]
 fn test_zeldovich_ros_generation_rates() {
@@ -16,7 +17,8 @@ fn test_zeldovich_ros_generation_rates() {
     let k_dissoc = 1e13 * f64::exp(-5.2e4 / temperature);
 
     // OH generation rate = k_dissoc * [H2O] * P / (R * T)
-    let expected_oh_rate = k_dissoc * water_vapor_fraction * pressure / (8.314 * temperature);
+    let expected_oh_rate =
+        k_dissoc * water_vapor_fraction * pressure / (GAS_CONSTANT * temperature);
 
     // H2O2 recombination rate = 1e-10 * [OH]^2
     let expected_h2o2_rate = 1e-10 * expected_oh_rate * expected_oh_rate;

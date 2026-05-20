@@ -31,6 +31,8 @@
 //! - Henriques, F. C. (1947). "Studies of thermal injury". Archives of Pathology, 43(5), 489-502.
 //! - Lepock, J. R., et al. (1993). "Thermal denaturation of proteins". Int. J. Hyperthermia, 9(2), 263-270.
 
+use crate::core::constants::fundamental::GAS_CONSTANT;
+
 /// Ablation kinetics parameters (Arrhenius model)
 ///
 /// The Arrhenius equation for thermal damage: Ω(t) = ∫A·exp(-E_a/RT)dt
@@ -118,8 +120,8 @@ impl AblationKinetics {
     /// Damage accumulation rate [1/s]
     #[must_use]
     pub fn damage_rate(&self, temperature: f64) -> f64 {
-        let r = 8.314; // Universal gas constant [J/mol/K]
-        self.frequency_factor * (-self.activation_energy / (r * temperature)).exp()
+        self.frequency_factor
+            * (-self.activation_energy / (GAS_CONSTANT * temperature)).exp()
     }
 
     /// Accumulated thermal damage (Ω)

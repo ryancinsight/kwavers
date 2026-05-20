@@ -1,6 +1,7 @@
 //! ROS generation models based on physical conditions
 
 use super::types::ROSSpecies;
+use crate::core::constants::fundamental::GAS_CONSTANT;
 use std::collections::HashMap;
 
 /// Calculate ROS generation rates based on bubble conditions
@@ -16,7 +17,7 @@ pub fn calculate_ros_generation(
     if temperature > 2000.0 {
         // H₂O → H• + •OH
         let k_dissociation = 1e13 * (-5.2e4 / temperature).exp(); // Arrhenius
-        let oh_rate = k_dissociation * water_vapor_fraction * pressure / (8.314 * temperature);
+        let oh_rate = k_dissociation * water_vapor_fraction * pressure / (GAS_CONSTANT * temperature);
         generation_rates.insert(ROSSpecies::HydroxylRadical, oh_rate);
         generation_rates.insert(ROSSpecies::AtomicHydrogen, oh_rate);
 
@@ -25,7 +26,7 @@ pub fn calculate_ros_generation(
             // O2 dissociation temperature threshold
             let o2_fraction = 0.21 * (1.0 - water_vapor_fraction); // Air composition
             let k_o2 = 1e14 * (-6.0e4 / temperature).exp();
-            let o_rate = 2.0 * k_o2 * o2_fraction * pressure / (8.314 * temperature);
+            let o_rate = 2.0 * k_o2 * o2_fraction * pressure / (GAS_CONSTANT * temperature);
             generation_rates.insert(ROSSpecies::AtomicOxygen, o_rate);
         }
     }
@@ -42,7 +43,7 @@ pub fn calculate_ros_generation(
         // Superoxide formation: O₂ + e⁻ → O₂•⁻
         if temperature > 1500.0 {
             let ionization_fraction = (temperature / 20000.0).min(0.1);
-            let o2_rate = 1e-12 * ionization_fraction * pressure / (8.314 * temperature);
+            let o2_rate = 1e-12 * ionization_fraction * pressure / (GAS_CONSTANT * temperature);
             generation_rates.insert(ROSSpecies::Superoxide, o2_rate);
         }
     }

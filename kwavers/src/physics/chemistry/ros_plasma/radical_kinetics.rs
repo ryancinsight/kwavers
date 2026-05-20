@@ -3,7 +3,7 @@
 //! Reactions of ROS in the liquid surrounding the bubble
 
 use super::ros_species::ROSSpecies;
-use crate::core::constants::fundamental::AVOGADRO;
+use crate::core::constants::fundamental::{AVOGADRO, GAS_CONSTANT};
 use std::collections::HashMap;
 
 /// Radical reaction in aqueous phase
@@ -110,11 +110,11 @@ impl RadicalKinetics {
     /// Calculate rate constant at current conditions
     #[must_use]
     pub fn rate_constant(&self, reaction: &RadicalReaction) -> f64 {
-        let r_gas = 8.314;
-
         // Arrhenius temperature dependence
         let k_t = reaction.rate_constant
-            * (-reaction.activation_energy * (1.0 / self.temperature - 1.0 / 298.15) / r_gas).exp();
+            * (-reaction.activation_energy * (1.0 / self.temperature - 1.0 / 298.15)
+                / GAS_CONSTANT)
+                .exp();
 
         // pH dependence
         let ph_correction = if reaction.ph_factor != 0.0 {

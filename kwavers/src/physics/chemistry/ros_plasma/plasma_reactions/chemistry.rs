@@ -4,6 +4,7 @@
 
 use super::super::ros_species::ROSSpecies;
 use super::reaction::PlasmaReaction;
+use crate::core::constants::fundamental::GAS_CONSTANT;
 use std::collections::HashMap;
 
 /// Plasma chemistry model
@@ -128,13 +129,12 @@ impl PlasmaChemistry {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn initialize_concentrations(&mut self) -> crate::core::error::KwaversResult<()> {
-        let r_gas = 8.314;
         if self.temperature <= 0.0 {
             return Err(crate::core::error::KwaversError::InvalidInput(
                 "Temperature must be greater than 0 K to initialize concentrations".to_owned(),
             ));
         }
-        let total_conc = self.pressure / (r_gas * self.temperature);
+        let total_conc = self.pressure / (GAS_CONSTANT * self.temperature);
 
         // Assume initial composition: 50% water vapor, 50% air
         self.concentrations
