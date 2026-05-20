@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [minor] Closed the hemispherical source-array geometry SSOT gap.
+  `domain::source::hemispherical::ElementPlacement` now delegates spherical-cap
+  placement to `domain::source::transducers::focused::cap`, rejects
+  zero-element layouts and nonfinite radii, and pins focus-directed unit normals
+  on the positive-y aperture.
+
 - 2026-05-20: [minor] Closed the tracked transcranial FUS cap geometry SSOT
   gap. The clinical adapter now converts `SphericalCapLayout` into the ndarray
   shape required by skull-ray and Rayleigh integration, preserving the existing

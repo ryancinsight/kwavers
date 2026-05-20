@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (2026-05-20) - Hemispherical Array Geometry SSOT
+
+- [minor] Route `domain::source::hemispherical::ElementPlacement` through
+  `domain::source::transducers::focused::cap`, reject zero-element layouts and
+  nonfinite radii, preserve the established positive-y aperture orientation, and
+  document element normals as focus-directed.
+
 ### Changed (2026-05-20) - Transcranial FUS Cap Geometry SSOT
 
 - [minor] Route tracked transcranial FUS cap placement through

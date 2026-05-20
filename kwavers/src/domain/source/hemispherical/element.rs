@@ -5,7 +5,7 @@
 pub struct ElementConfiguration {
     /// Position in 3D space (m)
     pub position: [f64; 3],
-    /// Normal vector (outward from hemisphere)
+    /// Unit normal vector pointing from the element toward the geometric focus.
     pub normal: [f64; 3],
     /// Element radius (m)
     pub radius: f64,
