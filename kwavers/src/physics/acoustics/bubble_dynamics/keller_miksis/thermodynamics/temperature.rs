@@ -24,10 +24,15 @@ pub(crate) fn update_temperature(
     let t_bubble = state.temperature;
     let t_liquid = ROOM_TEMPERATURE_K;
     let gamma = state.gas_species.gamma();
-    let adiabatic_term = -(gamma - 1.0) * t_bubble * v / r;
+    // Adiabatic compression: T·V^{γ-1} = const, V = (4/3)πR³ ⟹ dT/dt = -3(γ-1)·T·Ṙ/R
+    // Factor of 3 comes from dV/V = 3·dR/R for a sphere (Brennen 1995 §2.22).
+    let adiabatic_term = -3.0 * (gamma - 1.0) * t_bubble * v / r;
 
     let surface_area = 4.0 * PI * r * r;
-    let heat_flux = surface_area * THERMAL_CONDUCTIVITY_AIR * (t_bubble - t_liquid);
+    // Total heat flow [W] via Fourier's law with boundary layer thickness ≈ R:
+    //   Q = k · A · ΔT / R      [W·m²·K / (m·K·m)] = [W] ✓
+    // Using surface_area alone (without /r) gives [W·m], not [W].
+    let heat_flux_w = surface_area * THERMAL_CONDUCTIVITY_AIR * (t_bubble - t_liquid) / r;
     let n_total = state.n_gas + state.n_vapor;
     let n_moles = if n_total > 0.0 {
         n_total / crate::physics::constants::AVOGADRO
@@ -37,7 +42,7 @@ pub(crate) fn update_temperature(
 
     let c_v = model.molar_heat_capacity_cv(state);
     let heat_transfer_term = if n_moles > 0.0 && c_v > 0.0 {
-        -3.0 * heat_flux / (surface_area * n_moles * c_v)
+        -heat_flux_w / (n_moles * c_v)
     } else {
         0.0
     };
@@ -87,7 +92,8 @@ fn latent_temperature_rate(
     let sqrt_term = (2.0 * PI * M_WATER * R_GAS * t_liquid_k).sqrt();
     // Hertz-Knudsen mass flux [kg/s]: J_mass = α·A·ΔP·M / √(2πMRT)
     let mass_flux_kg_s =
-        model.params.accommodation_coeff * surface_area * (p_sat_liq - p_vapor) * M_WATER / sqrt_term;
+        model.params.accommodation_coeff * surface_area * (p_sat_liq - p_vapor) * M_WATER
+            / sqrt_term;
     let l_v = latent_heat_water_j_per_kg(t_bubble - 273.15);
 
     if n_moles > 0.0 && c_v > 0.0 {
