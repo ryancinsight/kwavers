@@ -18,15 +18,17 @@ pub use thresholds::{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
+    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use crate::physics::acoustics::analysis::calculate_mechanical_index;
     use approx::assert_relative_eq;
     use ndarray::Array3;
 
     #[test]
     fn test_threshold_calculations() {
-        let p0 = 101325.0;
-        let pv = 2339.0;
-        let sigma = 0.0728;
+        let p0 = ATMOSPHERIC_PRESSURE;
+        let pv = VAPOR_PRESSURE_WATER;
+        let sigma = SURFACE_TENSION_WATER;
         let r0 = 1e-6;
 
         let blake = blake_threshold(sigma, r0, p0, pv);

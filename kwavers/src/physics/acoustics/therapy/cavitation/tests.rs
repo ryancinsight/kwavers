@@ -1,5 +1,5 @@
-use super::constants::{WATER_SURFACE_TENSION, WATER_VAPOR_PRESSURE};
 use super::*;
+use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use ndarray::Array3;
 
@@ -11,7 +11,7 @@ fn detector() -> TherapyCavitationDetector {
 fn test_blake_threshold_1um_value() {
     let det = detector();
     let expected =
-        (ATMOSPHERIC_PRESSURE + WATER_VAPOR_PRESSURE - 2.0 * WATER_SURFACE_TENSION / 1e-6).abs();
+        (ATMOSPHERIC_PRESSURE + VAPOR_PRESSURE_WATER - 2.0 * SURFACE_TENSION_WATER / 1e-6).abs();
     assert!(
         (det.blake_threshold - expected).abs() < 1.0,
         "Blake threshold {:.1} Pa ≠ expected {expected:.1} Pa",
