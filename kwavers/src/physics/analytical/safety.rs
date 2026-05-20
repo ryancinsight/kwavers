@@ -16,16 +16,16 @@ use crate::core::constants::fundamental::GAS_CONSTANT;
 ///
 /// FDA limit: MI ≤ 1.9 (general) or 0.23 (ophthalmic).
 ///
+/// Delegates to the canonical
+/// [`crate::physics::acoustics::analysis::calculate_mechanical_index`] so the
+/// book-chapter API and the production safety paths share a single contract.
+///
 /// # Reference
 /// FDA, *Marketing Clearance of Diagnostic Ultrasound Systems and
 /// Transducers*, Appendix A; IEC 62359 (2017) §7.2.
 #[inline]
 pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> f64 {
-    let f_mhz = f_hz / 1.0e6;
-    if !f_mhz.is_finite() || f_mhz <= 0.0 {
-        return 0.0;
-    }
-    p_neg_pa.abs() / (1.0e6 * f_mhz.sqrt())
+    crate::physics::acoustics::analysis::calculate_mechanical_index(p_neg_pa, f_hz)
 }
 
 /// Thermal Index for soft tissue (TIS).

@@ -6,16 +6,15 @@
 /// FDA safety guideline for diagnostic imaging: MI < 1.9.
 /// Histotripsy (intrinsic threshold) requires MI > 3 for microsecond pulses.
 ///
+/// Delegates to the canonical
+/// [`crate::physics::acoustics::analysis::calculate_mechanical_index`] so the
+/// book-chapter API and the production safety paths share a single contract.
+///
 /// # Reference
 /// Apfel & Holland (1991), *Ultrasound Med. Biol.* 17, 179.
 #[inline]
 pub fn mechanical_index(p_neg_pa: f64, freq_hz: f64) -> f64 {
-    let f_mhz = freq_hz * 1e-6;
-    if !(p_neg_pa.is_finite() && f_mhz.is_finite() && f_mhz > 0.0) {
-        return 0.0;
-    }
-    let p_neg_mpa = p_neg_pa.abs() * 1e-6;
-    p_neg_mpa / f_mhz.sqrt()
+    crate::physics::acoustics::analysis::calculate_mechanical_index(p_neg_pa, freq_hz)
 }
 
 /// Inertial cavitation dose (ICD) from a bubble radius time series.
