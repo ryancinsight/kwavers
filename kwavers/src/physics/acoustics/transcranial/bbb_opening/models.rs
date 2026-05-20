@@ -1,4 +1,5 @@
 use super::types::BBBParameters;
+use crate::physics::acoustics::analysis::calculate_mechanical_index;
 
 /// Permeability models for BBB opening
 #[derive(Debug, Clone)]
@@ -109,14 +110,8 @@ impl<'a> PermeabilityModels<'a> {
         conc_factor * mi_factor
     }
 
-    /// Calculate mechanical index
+    /// Delegate Mechanical Index to the canonical analysis routine.
     pub fn calculate_mechanical_index(&self, pressure: f64) -> f64 {
-        let f_mhz = self.parameters.frequency / 1e6; // Convert to MHz
-        if !(pressure.is_finite() && f_mhz.is_finite() && f_mhz > 0.0) {
-            return 0.0;
-        }
-
-        // MI = |p_peak,MPa| / sqrt(f_MHz)
-        pressure.abs() / 1e6 / f_mhz.sqrt()
+        calculate_mechanical_index(pressure, self.parameters.frequency)
     }
 }
