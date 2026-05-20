@@ -10,8 +10,11 @@
 /// Apfel & Holland (1991), *Ultrasound Med. Biol.* 17, 179.
 #[inline]
 pub fn mechanical_index(p_neg_pa: f64, freq_hz: f64) -> f64 {
-    let p_neg_mpa = p_neg_pa.abs() * 1e-6;
     let f_mhz = freq_hz * 1e-6;
+    if !(p_neg_pa.is_finite() && f_mhz.is_finite() && f_mhz > 0.0) {
+        return 0.0;
+    }
+    let p_neg_mpa = p_neg_pa.abs() * 1e-6;
     p_neg_mpa / f_mhz.sqrt()
 }
 

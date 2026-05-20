@@ -18,6 +18,13 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the duplicate mechanical-index contract drift in
+  book histotripsy and transcranial BBB-opening physics. Both helpers now use
+  rarefactional-pressure magnitude and require positive finite MHz frequency,
+  returning `0.0` for invalid domains instead of producing negative, NaN, or
+  infinite MI values. Focused tests cover signed pressure and invalid frequency
+  cases in both modules.
+
 - 2026-05-20: [patch] Closed the clinical-safety thermal-index invalid-domain
   gap. The soft-tissue and bone thermal-index helpers now preserve the
   nonnegative exposure-ratio invariant by returning `0.0` for nonfinite or

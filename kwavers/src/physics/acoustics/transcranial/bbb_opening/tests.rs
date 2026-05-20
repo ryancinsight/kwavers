@@ -37,6 +37,18 @@ fn test_mechanical_index_calculation() {
     let models = PermeabilityModels::new(&params);
     let mi = models.calculate_mechanical_index(1e5);
     assert!(mi > 0.05 && mi < 0.2);
+    assert!((mi - models.calculate_mechanical_index(-1e5)).abs() < 1e-12);
+}
+
+#[test]
+fn test_mechanical_index_rejects_invalid_frequency() {
+    use super::models::PermeabilityModels;
+    let mut params = BBBParameters::default();
+    params.frequency = 0.0;
+
+    let models = PermeabilityModels::new(&params);
+    assert_eq!(models.calculate_mechanical_index(1e5), 0.0);
+    assert_eq!(models.calculate_mechanical_index(f64::NAN), 0.0);
 }
 
 #[test]

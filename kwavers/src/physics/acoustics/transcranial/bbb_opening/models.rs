@@ -111,10 +111,12 @@ impl<'a> PermeabilityModels<'a> {
 
     /// Calculate mechanical index
     pub fn calculate_mechanical_index(&self, pressure: f64) -> f64 {
-        // MI = p_peak / sqrt(f) in MPa and MHz
-        let p_mpa = pressure / 1e6; // Convert to MPa
         let f_mhz = self.parameters.frequency / 1e6; // Convert to MHz
+        if !(pressure.is_finite() && f_mhz.is_finite() && f_mhz > 0.0) {
+            return 0.0;
+        }
 
-        p_mpa / f_mhz.sqrt()
+        // MI = |p_peak,MPa| / sqrt(f_MHz)
+        pressure.abs() / 1e6 / f_mhz.sqrt()
     }
 }

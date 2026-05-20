@@ -36,7 +36,7 @@ fn km_rk4_length_matches() {
 
 #[test]
 fn mechanical_index_known_value() {
-    let mi = mechanical_index(1e6, 1e6);
+    let mi = mechanical_index(-1e6, 1e6);
     assert!((mi - 1.0).abs() < 1e-9, "mi={}", mi);
 }
 
@@ -45,6 +45,13 @@ fn mechanical_index_scales_inversely_with_sqrt_freq() {
     let mi_1 = mechanical_index(1e6, 1e6);
     let mi_4 = mechanical_index(1e6, 4e6);
     assert!((mi_1 / mi_4 - 2.0).abs() < 1e-9, "ratio={}", mi_1 / mi_4);
+}
+
+#[test]
+fn mechanical_index_rejects_invalid_domain() {
+    assert_eq!(mechanical_index(1e6, 0.0), 0.0);
+    assert_eq!(mechanical_index(1e6, -1e6), 0.0);
+    assert_eq!(mechanical_index(f64::NAN, 1e6), 0.0);
 }
 
 #[test]

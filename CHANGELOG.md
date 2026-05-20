@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Mechanical Index Contract Unification
+
+- [patch] Align the book histotripsy and transcranial BBB-opening mechanical
+  index helpers with the canonical `MI = |p_r|_MPa / sqrt(f_MHz)` contract.
+  Both paths now reject nonfinite pressure and nonpositive/nonfinite frequency
+  with `0.0`, preventing negative MI, NaN, or infinite output from safety and
+  therapeutic-window calculations. Added value tests for signed pressure and
+  invalid frequency domains.
+
 ### Fixed (2026-05-20) - Clinical Safety Thermal Indices
 
 - [patch] Clamp invalid thermal-index input domains in
