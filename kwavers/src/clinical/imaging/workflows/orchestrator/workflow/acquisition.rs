@@ -1,6 +1,7 @@
 //! Ultrasound data acquisition for the clinical workflow orchestrator.
 
 use super::ClinicalWorkflowOrchestrator;
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -42,7 +43,7 @@ impl ClinicalWorkflowOrchestrator {
 
             let beamforming_config = BeamformingConfig3D {
                 base_config: crate::domain::sensor::beamforming::BeamformingConfig {
-                    sound_speed: 1540.0,
+                    sound_speed: SOUND_SPEED_TISSUE,
                     sampling_frequency: config.sampling_frequency,
                     reference_frequency: config.frequency,
                     diagonal_loading: 0.01,
@@ -55,7 +56,7 @@ impl ClinicalWorkflowOrchestrator {
                 element_spacing_3d: (0.0003, 0.0003, 0.0),
                 center_frequency: config.frequency,
                 sampling_frequency: config.sampling_frequency,
-                sound_speed: 1540.0,
+                sound_speed: SOUND_SPEED_TISSUE,
                 gpu_device: None,
                 enable_streaming: false,
                 streaming_buffer_size: 1024,
