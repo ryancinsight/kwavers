@@ -67,7 +67,7 @@ fn test_parallel_green_consistency() {
                         let kr_real = wavenumber * r;
                         let kr_imag = absorption.im * r;
                         let exp_factor = Complex64::from_polar(1.0, kr_real)
-                            * Complex64::exp(Complex64::new(0.0, -kr_imag));
+                            * Complex64::exp(Complex64::new(-kr_imag, 0.0));
                         let green_val = exp_factor / (4.0 * PI * r);
                         expected_green[[ni, nj, nk]] += green_val * source_val;
                     }

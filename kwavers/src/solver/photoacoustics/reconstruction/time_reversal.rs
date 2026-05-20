@@ -24,6 +24,7 @@ impl TimeReversalReconstruction {
             algorithm: PhotoacousticAlgorithm::PhotoacousticTimeReversal,
             sensor_positions: signals.sensor_positions.clone(),
             grid_size: [scenario.grid.nx, scenario.grid.ny, scenario.grid.nz],
+            grid_spacing: [scenario.grid.dx, scenario.grid.dy, scenario.grid.dz],
             sound_speed: scenario.config.acoustic.speed_of_sound_m_s,
             sampling_frequency: signals.sampling_frequency_hz.max(f64::MIN_POSITIVE),
             envelope_detection: false,

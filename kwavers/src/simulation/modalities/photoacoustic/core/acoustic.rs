@@ -138,6 +138,7 @@ impl PhotoacousticSimulator {
             algorithm: PhotoacousticAlgorithm::UniversalBackProjection,
             sensor_positions: detector_positions.clone(),
             grid_size: [self.grid.nx, self.grid.ny, self.grid.nz],
+            grid_spacing: [self.grid.dx, self.grid.dy, self.grid.dz],
             sound_speed: self.parameters.speed_of_sound,
             sampling_frequency: 1.0 / (time_points[1] - time_points[0]),
             envelope_detection: false,

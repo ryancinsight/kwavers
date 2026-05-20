@@ -78,7 +78,7 @@ impl ConvergentBornSolver {
             .and(&contrasts_arr)
             .and(current_field)
             .par_for_each(|heterogeneity, &contrast, &current_val| {
-                let v = k_squared * (1.0 - contrast);
+                let v = 1.0 - contrast;
                 *heterogeneity = Complex64::new(v, 0.0) * current_val;
             });
 

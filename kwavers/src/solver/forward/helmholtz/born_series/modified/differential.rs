@@ -31,12 +31,14 @@ impl ModifiedBornSolver {
             let f0 = field[[0, j, k]];
             let f1 = field[[1, j, k]];
             let f2 = field[[2, j, k]];
-            (2.0 * f0 - 5.0 * f1 + 4.0 * f2 - f2) / dx2
+            let f3 = field[[3, j, k]];
+            (2.0 * f0 - 5.0 * f1 + 4.0 * f2 - f3) / dx2
         } else if i == self.grid.nx - 1 {
             let f0 = field[[i, j, k]];
             let fm1 = field[[i - 1, j, k]];
             let fm2 = field[[i - 2, j, k]];
-            (2.0 * f0 - 5.0 * fm1 + 4.0 * fm2 - fm2) / dx2
+            let fm3 = field[[i - 3, j, k]];
+            (2.0 * f0 - 5.0 * fm1 + 4.0 * fm2 - fm3) / dx2
         } else {
             let fm1 = field[[i - 1, j, k]];
             let f0 = field[[i, j, k]];
@@ -58,12 +60,14 @@ impl ModifiedBornSolver {
             let f0 = field[[i, 0, k]];
             let f1 = field[[i, 1, k]];
             let f2 = field[[i, 2, k]];
-            (2.0 * f0 - 5.0 * f1 + 4.0 * f2 - f2) / dy2
+            let f3 = field[[i, 3, k]];
+            (2.0 * f0 - 5.0 * f1 + 4.0 * f2 - f3) / dy2
         } else if j == self.grid.ny - 1 {
             let f0 = field[[i, j, k]];
             let fm1 = field[[i, j - 1, k]];
             let fm2 = field[[i, j - 2, k]];
-            (2.0 * f0 - 5.0 * fm1 + 4.0 * fm2 - fm2) / dy2
+            let fm3 = field[[i, j - 3, k]];
+            (2.0 * f0 - 5.0 * fm1 + 4.0 * fm2 - fm3) / dy2
         } else {
             let fm1 = field[[i, j - 1, k]];
             let f0 = field[[i, j, k]];
@@ -85,12 +89,14 @@ impl ModifiedBornSolver {
             let f0 = field[[i, j, 0]];
             let f1 = field[[i, j, 1]];
             let f2 = field[[i, j, 2]];
-            (2.0 * f0 - 5.0 * f1 + 4.0 * f2 - f2) / dz2
+            let f3 = field[[i, j, 3]];
+            (2.0 * f0 - 5.0 * f1 + 4.0 * f2 - f3) / dz2
         } else if k == self.grid.nz - 1 {
             let f0 = field[[i, j, k]];
             let fm1 = field[[i, j, k - 1]];
             let fm2 = field[[i, j, k - 2]];
-            (2.0 * f0 - 5.0 * fm1 + 4.0 * fm2 - fm2) / dz2
+            let fm3 = field[[i, j, k - 3]];
+            (2.0 * f0 - 5.0 * fm1 + 4.0 * fm2 - fm3) / dz2
         } else {
             let fm1 = field[[i, j, k - 1]];
             let f0 = field[[i, j, k]];

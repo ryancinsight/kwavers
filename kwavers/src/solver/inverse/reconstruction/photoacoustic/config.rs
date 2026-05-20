@@ -14,6 +14,8 @@ pub struct ReconstructionPhotoacousticConfig {
     pub sensor_positions: Vec<[f64; 3]>,
     /// Grid size for reconstruction [nx, ny, nz]
     pub grid_size: [usize; 3],
+    /// Physical grid spacing [dx, dy, dz] in meters
+    pub grid_spacing: [f64; 3],
     /// Sound speed in medium (m/s)
     pub sound_speed: f64,
     /// Sampling frequency (Hz)

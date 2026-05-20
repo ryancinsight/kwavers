@@ -97,10 +97,8 @@ impl PhotoacousticReconstructor {
             processed_data
         };
 
-        // Grid spacing (assume uniform)
-        let dx = 1.0 / grid_size[0] as f64;
-        let dy = 1.0 / grid_size[1] as f64;
-        let dz = 1.0 / grid_size[2] as f64;
+        // Grid spacing from config (physical units, metres)
+        let [dx, dy, dz] = self.config.grid_spacing;
 
         // Perform back-projection
         for i in 0..grid_size[0] {

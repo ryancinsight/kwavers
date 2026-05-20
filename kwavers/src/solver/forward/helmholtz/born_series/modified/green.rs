@@ -65,7 +65,7 @@ impl ModifiedBornSolver {
                     let kr_real = wavenumber * r;
                     let kr_imag = absorption.im * r;
                     let exp_factor = Complex64::from_polar(1.0, kr_real)
-                        * Complex64::exp(Complex64::new(0.0, -kr_imag));
+                        * Complex64::exp(Complex64::new(-kr_imag, 0.0));
                     let g_val = exp_factor / (4.0 * PI * r);
 
                     sum += g_val * source_val;
