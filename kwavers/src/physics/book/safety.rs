@@ -20,7 +20,10 @@ use crate::core::constants::fundamental::GAS_CONSTANT;
 #[inline]
 pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> f64 {
     let f_mhz = f_hz / 1.0e6;
-    p_neg_pa / (1.0e6 * f_mhz.sqrt())
+    if !f_mhz.is_finite() || f_mhz <= 0.0 {
+        return 0.0;
+    }
+    p_neg_pa.abs() / (1.0e6 * f_mhz.sqrt())
 }
 
 /// Thermal Index for soft tissue (TIS).
@@ -149,8 +152,14 @@ mod tests {
     #[test]
     fn mi_dimensional_check() {
         // At 1 MPa negative, 1 MHz: MI = 1.0
-        let mi = mechanical_index(1.0e6, 1.0e6);
+        let mi = mechanical_index(-1.0e6, 1.0e6);
         assert!((mi - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn mi_rejects_nonpositive_frequency() {
+        assert_eq!(mechanical_index(-1.0e6, 0.0), 0.0);
+        assert_eq!(mechanical_index(-1.0e6, -1.0e6), 0.0);
     }
 
     #[test]
