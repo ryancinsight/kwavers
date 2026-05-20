@@ -136,21 +136,38 @@ impl TranscranialSimulation {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// Estimate one-way pressure insertion loss through the skull.
+    ///
+    /// Models a single acoustic path from water through the skull and back into
+    /// water (water→skull→water interfaces).
+    ///
+    /// # Pressure attenuation
+    /// - Bulk absorption: `exp(−α f_MHz × d)` where `d` = skull thickness.
+    /// - Interface reflection losses: through two interfaces the pressure
+    ///   transmission coefficient of a water–skull–water slab is
+    ///   `T_p = T_p(w→s) × T_p(s→w) = 2Z_skull/(Z_w+Z_s) × 2Z_w/(Z_w+Z_s)
+    ///         = 4 Z_w Z_s/(Z_w+Z_s)² = T_I`
+    ///   i.e. exactly the intensity transmission coefficient (always ≤ 1).
+    ///
+    /// Previous code used `2 × thickness` (round-trip) for attenuation but
+    /// only a single `√T_I` for interfaces; both were wrong for a one-way path.
+    ///
+    /// # Returns
+    /// Pressure amplitude ratio in [0, 1].
     pub fn estimate_insertion_loss(&self, frequency: f64) -> KwaversResult<f64> {
         let attenuation_np_per_m = self.skull_props.attenuation_at_frequency(frequency);
 
-        // Two-way path through skull
-        let total_path = 2.0 * self.skull_props.thickness;
-        let attenuation_np = attenuation_np_per_m * total_path;
+        // One-way path through skull (not round-trip)
+        let attenuation_np = attenuation_np_per_m * self.skull_props.thickness;
 
-        // Convert to amplitude ratio
+        // Pressure amplitude after bulk absorption
         let amplitude_ratio = (-attenuation_np).exp();
 
-        // Include reflection losses against the nominal water coupling layer
-        // Z_water = ρ_water · c_water (sourced from SSOT)
+        // Pressure TC through water→skull→water slab equals T_I (see docstring).
+        // Z_water = ρ_water · c_water (sourced from SSOT constants)
         let water_z = DENSITY_WATER_NOMINAL * C_WATER;
-        let transmission = self.skull_props.transmission_coefficient(water_z);
+        let t_i = self.skull_props.transmission_coefficient(water_z);
 
-        Ok(amplitude_ratio * transmission.sqrt())
+        Ok(amplitude_ratio * t_i)
     }
 }

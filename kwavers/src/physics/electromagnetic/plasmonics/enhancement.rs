@@ -118,19 +118,23 @@ impl PlasmonicEnhancementCalculator {
                 maxwell_garnett_effective_dielectric(eps_particle, host, volume_fraction)
             }
             CouplingModel::DipoleDipole => {
-                // Dipole-dipole coupling.
+                // First-order Lorentz-Lorenz (Clausius-Mossotti) correction for
+                // dipole-dipole coupling in a dilute dispersion:
                 //
-                // Not yet implemented: quantum and non-local plasmonic corrections. Absent:
-                // electron spill-out and image-charge quantum corrections; non-local
-                // hydrodynamic Drude model at high frequencies; surface plasmon polariton
-                // retardation effects (Maier 2007, Plasmonics; Novotny & Hecht 2006);
-                // plasmon-exciton coupling in hybrid nanostructures; and FEM for geometries
-                // beyond Mie theory.
+                //   eps_eff ≈ eps_h * (1 + 3 f * (eps_p − eps_h)/(eps_p + 2 eps_h))
+                //
+                // This follows from polarizability α = 4π ε₀ ε_h R³ (eps_p−eps_h)/(eps_p+2eps_h)
+                // and eps_eff = eps_h + N α/ε₀.
+                //
+                // Previous code used 3 ε_h / (eps_p + 2 ε_h) as the Lorentz factor,
+                // which is the wrong numerator (should be eps_p − eps_h, not ε_h).
                 let eps_particle = (self.mie_theory.particle_dielectric)(wavelength);
+                let contrast = eps_particle - Complex::new(host_dielectric, 0.0);
                 let lorentz_factor =
-                    (3.0 * host_dielectric) / (eps_particle + 2.0 * host_dielectric);
+                    3.0 * contrast / (eps_particle + 2.0 * host_dielectric);
 
-                host_dielectric * (1.0 + volume_fraction * lorentz_factor)
+                Complex::new(host_dielectric, 0.0)
+                    * (1.0 + volume_fraction * lorentz_factor)
             }
             CouplingModel::QuasiStatic => {
                 // Bruggeman symmetric effective-medium solution for dense mixtures.
