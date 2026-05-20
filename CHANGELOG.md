@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - HIFU Field and Thermal-Dose Physics
+
+- [patch] Split `physics::acoustics::imaging::modalities::ultrasound::hifu`
+  into a facade plus `field`, `thermal_dose`, and `tests` submodules. Replaced
+  the corner-focused Gaussian/spherical shortcut with a centered
+  Rayleigh-Sommerfeld aperture integral using O'Neil focused-aperture phase
+  delays, and corrected HIFU intensity to `p_peak^2 / (2 rho c)`.
+- [patch] Correct CEM43 accumulation to the Sapareto-Dewey contract using
+  seconds-to-minutes conversion and `R = 0.5` at/above 43 deg C, `R = 0.25`
+  below 43 deg C. Added value-semantic tests for lateral focus centering,
+  symmetry, intensity, CEM43 reference temperatures, and ablation threshold.
+
 ### Changed (2026-05-20) - Analytical Physics Boundary Rename
 
 - [arch] Rename the artifact-owned analytical physics boundary to

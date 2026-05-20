@@ -45,6 +45,15 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Closed the HIFU field and CEM43 thermal-dose physics gap. The HIFU module is
+  now partitioned into field synthesis, thermal-dose accumulation, and tests.
+  The field path evaluates a centered Rayleigh-Sommerfeld focused-aperture
+  integral instead of a corner-focused Gaussian/spherical shortcut, intensity
+  uses `p_peak^2/(2 rho c)`, and CEM43 uses Sapareto-Dewey equivalent minutes
+  with seconds-to-minutes conversion. Focused value tests cover centering,
+  lateral symmetry, intensity, CEM43 reference temperatures, and ablation
+  threshold behavior.
+
 - Closed the artifact-named analytical physics boundary. The analytical module
   directory is now `kwavers/src/physics/analytical`; the public Rust
   module is now `kwavers::physics::analytical`. PyO3 bindings import the new

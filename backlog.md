@@ -25,6 +25,18 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the HIFU field and thermal-dose physics gap.
+  `physics::acoustics::imaging::modalities::ultrasound::hifu` now has a
+  facade plus focused `field`, `thermal_dose`, and `tests` submodules. The
+  pressure field no longer pins the focus to the grid corner or uses the
+  previous Gaussian/spherical shortcut; it evaluates a centered
+  Rayleigh-Sommerfeld aperture integral with O'Neil phase delays. HIFU
+  intensity now uses the harmonic peak-pressure contract `p_peak^2/(2 rho c)`.
+  CEM43 now uses seconds-to-minutes conversion and the Sapareto-Dewey
+  `R = 0.5` / `R = 0.25` temperature regimes. Focused tests pin focus
+  centering, lateral symmetry, intensity, CEM43 reference values, and ablation
+  threshold behavior.
+
 - 2026-05-20: [patch] Closed the book cavitation closed-form invalid-domain
   gap. Minnaert resonance, Blake threshold, Rayleigh collapse time, and
   histotripsy lesion radius now reject nonfinite or nonpositive physical
