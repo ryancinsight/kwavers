@@ -31,6 +31,8 @@
 //! ## Literature
 //! - Church, C. C. (2002). Spontaneous homogeneous nucleation, inertial cavitation and the tensile strength of water.
 
+use crate::core::constants::fundamental::BOLTZMANN;
+
 /// Trait defining the contract for calculating heterogeneous nucleation.
 pub trait HeterogeneousNucleationModel {
     /// Mathematical floating-point type parameter.
@@ -64,7 +66,11 @@ pub trait HeterogeneousNucleationModel {
 
 /// Stiffness-coupled classical heterogeneous nucleation model.
 ///
-/// Provides generic implementation for variant-agnostic operation.
+/// Provides generic implementation for variant-agnostic operation. The
+/// Boltzmann constant `k_B` is sourced from the SSOT
+/// [`crate::core::constants::fundamental::BOLTZMANN`] and is not a
+/// configurable parameter — physical universal constants are not callable
+/// inputs in this codebase.
 #[derive(Debug, Clone)]
 pub struct ClassicalHeterogeneousNucleation<T: std::fmt::Debug + Clone> {
     /// Surface tension $\gamma$ ($N/m$).
@@ -73,8 +79,6 @@ pub struct ClassicalHeterogeneousNucleation<T: std::fmt::Debug + Clone> {
     pub vapor_pressure: T,
     /// Pre-exponential factor $J_0$ ($m^{-3} s^{-1}$).
     pub pre_exponential_factor: T,
-    /// Boltzmann constant $k_B$ ($J \cdot K^{-1}$).
-    pub k_b: T,
     /// Reference stiffness $E_{ref}$ where factor reaches 1.0.
     pub reference_stiffness: T,
 }
@@ -133,7 +137,8 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
 
         let delta_g_c = (sixteen_pi_over_three * surface_tension_cubed) / p_diff_squared;
 
-        let k_t = self.k_b * temperature;
+        let k_b = T::from(BOLTZMANN).expect("BOLTZMANN constant representable in Scalar T");
+        let k_t = k_b * temperature;
         if k_t <= zero {
             return zero;
         }
@@ -153,7 +158,6 @@ mod tests {
             surface_tension: 0.072, // Water
             vapor_pressure: 2330.0, // Water at 20C
             pre_exponential_factor: 1.0e33,
-            k_b: 1.38e-23,
             reference_stiffness: 1e5, // Nominal
         }
     }
