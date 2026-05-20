@@ -8,7 +8,7 @@
 //! - Diels & Rudolph (2006) "Ultrashort Laser Pulse Phenomena"
 //! - Agrawal (2007) "Nonlinear Fiber Optics"
 
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SPEED_OF_LIGHT};
 
 /// Kerr effect parameters
 ///
@@ -30,7 +30,7 @@ impl KerrEffect {
     #[must_use]
     pub fn new(n0: f64, n2: f64) -> Self {
         // χ³ related to n₂: n₂ ~ (3/8) * χ³ / (c·n₀²)
-        let chi3 = n2 * c::SPEED_OF_LIGHT * n0 * n0 * (8.0 / 3.0);
+        let chi3 = n2 * SPEED_OF_LIGHT * n0 * n0 * (8.0 / 3.0);
         Self { n0, n2, chi3 }
     }
 
@@ -327,7 +327,3 @@ mod tests {
     }
 }
 
-// Module for speed of light constant
-mod c {
-    pub const SPEED_OF_LIGHT: f64 = 2.998e8;
-}
