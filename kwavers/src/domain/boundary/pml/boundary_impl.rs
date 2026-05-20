@@ -17,7 +17,6 @@ impl Boundary for DomainPMLBoundary {
         time_step: usize,
     ) -> KwaversResult<()> {
         trace!("Applying spatial acoustic PML at step {}", time_step);
-        let dx = grid.dx;
         let (nx, ny, nz) = grid.dimensions();
         let t = self.thickness;
 
@@ -51,10 +50,10 @@ impl Boundary for DomainPMLBoundary {
         let apply_y = ny > 1;
         let apply_z = nz > 1;
 
-        let exp_x = Self::precompute_exp_factors(&self.acoustic_damping_x, dx);
+        let exp_x = Self::precompute_exp_factors(&self.acoustic_damping_x);
         let exp_y_full = if apply_y {
             Self::precompute_full_exp_factors(
-                &Self::precompute_exp_factors(&self.acoustic_damping_y, dx),
+                &Self::precompute_exp_factors(&self.acoustic_damping_y),
                 ny,
                 t,
             )
@@ -63,7 +62,7 @@ impl Boundary for DomainPMLBoundary {
         };
         let exp_z_full = if apply_z {
             Self::precompute_full_exp_factors(
-                &Self::precompute_exp_factors(&self.acoustic_damping_z, dx),
+                &Self::precompute_exp_factors(&self.acoustic_damping_z),
                 nz,
                 t,
             )
@@ -94,7 +93,7 @@ impl Boundary for DomainPMLBoundary {
         let x_end = nx - t;
 
         if apply_y && x_end > x_start {
-            let exp_y = Self::precompute_exp_factors(&self.acoustic_damping_y, dx);
+            let exp_y = Self::precompute_exp_factors(&self.acoustic_damping_y);
             for j in 0..t {
                 let fy = exp_y[j];
                 for i in x_start..x_end {
@@ -116,7 +115,7 @@ impl Boundary for DomainPMLBoundary {
             let y_end = ny - t;
 
             if apply_z && y_end > y_start {
-                let exp_z = Self::precompute_exp_factors(&self.acoustic_damping_z, dx);
+                let exp_z = Self::precompute_exp_factors(&self.acoustic_damping_z);
                 for k in 0..t {
                     let fz = exp_z[k];
                     for i in x_start..x_end {
@@ -147,7 +146,6 @@ impl Boundary for DomainPMLBoundary {
             "Applying frequency domain acoustic PML at step {}",
             time_step
         );
-        let dx = grid.dx;
         let (nx, ny, nz) = grid.dimensions();
         let t = self.thickness;
 
@@ -181,10 +179,10 @@ impl Boundary for DomainPMLBoundary {
         let apply_y = ny > 1;
         let apply_z = nz > 1;
 
-        let exp_x = Self::precompute_exp_factors(&self.acoustic_damping_x, dx);
+        let exp_x = Self::precompute_exp_factors(&self.acoustic_damping_x);
         let exp_y_full = if apply_y {
             Self::precompute_full_exp_factors(
-                &Self::precompute_exp_factors(&self.acoustic_damping_y, dx),
+                &Self::precompute_exp_factors(&self.acoustic_damping_y),
                 ny,
                 t,
             )
@@ -193,7 +191,7 @@ impl Boundary for DomainPMLBoundary {
         };
         let exp_z_full = if apply_z {
             Self::precompute_full_exp_factors(
-                &Self::precompute_exp_factors(&self.acoustic_damping_z, dx),
+                &Self::precompute_exp_factors(&self.acoustic_damping_z),
                 nz,
                 t,
             )
@@ -228,7 +226,7 @@ impl Boundary for DomainPMLBoundary {
         let x_end = nx - t;
 
         if apply_y && x_end > x_start {
-            let exp_y = Self::precompute_exp_factors(&self.acoustic_damping_y, dx);
+            let exp_y = Self::precompute_exp_factors(&self.acoustic_damping_y);
             for j in 0..t {
                 let fy = exp_y[j];
                 for i in x_start..x_end {
@@ -254,7 +252,7 @@ impl Boundary for DomainPMLBoundary {
             let y_end = ny - t;
 
             if apply_z && y_end > y_start {
-                let exp_z = Self::precompute_exp_factors(&self.acoustic_damping_z, dx);
+                let exp_z = Self::precompute_exp_factors(&self.acoustic_damping_z);
                 for k in 0..t {
                     let fz = exp_z[k];
                     for i in x_start..x_end {
@@ -278,7 +276,6 @@ impl Boundary for DomainPMLBoundary {
 
     fn apply_light(&mut self, mut field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize) {
         trace!("Applying light PML at step {}", time_step);
-        let dx = grid.dx;
         let (nx, ny, nz) = grid.dimensions();
         let t = self.thickness;
         let apply_y = ny > 1 && 2 * t < ny;
@@ -298,7 +295,7 @@ impl Boundary for DomainPMLBoundary {
                     } else {
                         0.0
                     };
-                    Self::apply_damping(&mut field[[i, j, k]], d_x + d_y + d_z, dx);
+                    Self::apply_damping(&mut field[[i, j, k]], d_x + d_y + d_z);
                 }
             }
             let ri = nx - 1 - i;
@@ -315,7 +312,7 @@ impl Boundary for DomainPMLBoundary {
                     } else {
                         0.0
                     };
-                    Self::apply_damping(&mut field[[ri, j, k]], d_x_r + d_y + d_z, dx);
+                    Self::apply_damping(&mut field[[ri, j, k]], d_x_r + d_y + d_z);
                 }
             }
         }
@@ -328,7 +325,7 @@ impl Boundary for DomainPMLBoundary {
                 for i in x_start..x_end {
                     for k in 0..nz {
                         let d_z = self.get_damping(k, &self.light_damping_z, nz);
-                        Self::apply_damping(&mut field[[i, j, k]], d_y + d_z, dx);
+                        Self::apply_damping(&mut field[[i, j, k]], d_y + d_z);
                     }
                 }
                 let rj = ny - 1 - j;
@@ -336,7 +333,7 @@ impl Boundary for DomainPMLBoundary {
                 for i in x_start..x_end {
                     for k in 0..nz {
                         let d_z = self.get_damping(k, &self.light_damping_z, nz);
-                        Self::apply_damping(&mut field[[i, rj, k]], d_y_r + d_z, dx);
+                        Self::apply_damping(&mut field[[i, rj, k]], d_y_r + d_z);
                     }
                 }
             }
@@ -348,14 +345,14 @@ impl Boundary for DomainPMLBoundary {
                     let d_z = self.light_damping_z[k];
                     for i in x_start..x_end {
                         for j in y_start..y_end {
-                            Self::apply_damping(&mut field[[i, j, k]], d_z, dx);
+                            Self::apply_damping(&mut field[[i, j, k]], d_z);
                         }
                     }
                     let rk = nz - 1 - k;
                     let d_z_r = self.light_damping_z[k];
                     for i in x_start..x_end {
                         for j in y_start..y_end {
-                            Self::apply_damping(&mut field[[i, j, rk]], d_z_r, dx);
+                            Self::apply_damping(&mut field[[i, j, rk]], d_z_r);
                         }
                     }
                 }

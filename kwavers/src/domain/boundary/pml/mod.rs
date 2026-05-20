@@ -157,9 +157,10 @@ impl DomainPMLBoundary {
     }
 
     #[inline]
-    pub(super) fn apply_damping(val: &mut f64, damping: f64, dx: f64) {
+    pub(super) fn apply_damping(val: &mut f64, damping: f64) {
+        // Profile values are dimensionless per-cell attenuation exponents; apply directly.
         if damping > 0.0 {
-            *val *= (-damping * dx).exp();
+            *val *= (-damping).exp();
         }
     }
 
@@ -181,10 +182,12 @@ impl DomainPMLBoundary {
     }
 
     #[inline]
-    pub(super) fn precompute_exp_factors(profile: &[f64], dx: f64) -> Vec<f64> {
+    pub(super) fn precompute_exp_factors(profile: &[f64]) -> Vec<f64> {
+        // Profile values are dimensionless per-cell attenuation exponents (computed with dx=1.0
+        // in damping_profile); apply directly as exp(-sigma) without grid-spacing scaling.
         profile
             .iter()
-            .map(|&d| if d > 0.0 { (-d * dx).exp() } else { 1.0 })
+            .map(|&d| if d > 0.0 { (-d).exp() } else { 1.0 })
             .collect()
     }
 
@@ -215,7 +218,6 @@ impl DomainPMLBoundary {
             damping_factor,
             time_step
         );
-        let dx = grid.dx;
         let (nx, ny, nz) = grid.dimensions();
         let t = self.thickness;
 
@@ -228,7 +230,6 @@ impl DomainPMLBoundary {
                     Self::apply_damping(
                         &mut field[[i, j, k]],
                         Self::combine_damping(d_x, d_y, d_z) * damping_factor,
-                        dx,
                     );
                 }
             }
@@ -241,7 +242,6 @@ impl DomainPMLBoundary {
                     Self::apply_damping(
                         &mut field[[ri, j, k]],
                         Self::combine_damping(d_x_r, d_y, d_z) * damping_factor,
-                        dx,
                     );
                 }
             }
@@ -258,7 +258,6 @@ impl DomainPMLBoundary {
                         Self::apply_damping(
                             &mut field[[i, j, k]],
                             Self::combine_damping(0.0, d_y, d_z) * damping_factor,
-                            dx,
                         );
                     }
                 }
@@ -270,7 +269,6 @@ impl DomainPMLBoundary {
                         Self::apply_damping(
                             &mut field[[i, rj, k]],
                             Self::combine_damping(0.0, d_y_r, d_z) * damping_factor,
-                            dx,
                         );
                     }
                 }
@@ -283,14 +281,14 @@ impl DomainPMLBoundary {
                     let d_z = self.acoustic_damping_z[k];
                     for i in x_start..x_end {
                         for j in y_start..y_end {
-                            Self::apply_damping(&mut field[[i, j, k]], d_z * damping_factor, dx);
+                            Self::apply_damping(&mut field[[i, j, k]], d_z * damping_factor);
                         }
                     }
                     let rk = nz - 1 - k;
                     let d_z_r = self.acoustic_damping_z[k];
                     for i in x_start..x_end {
                         for j in y_start..y_end {
-                            Self::apply_damping(&mut field[[i, j, rk]], d_z_r * damping_factor, dx);
+                            Self::apply_damping(&mut field[[i, j, rk]], d_z_r * damping_factor);
                         }
                     }
                 }
