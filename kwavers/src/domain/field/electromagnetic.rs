@@ -3,6 +3,7 @@
 //! This module defines the field components and energy-related calculations
 //! for electromagnetic wave propagation.
 
+use crate::core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use ndarray::ArrayD;
 
 /// Electromagnetic field components
@@ -268,11 +269,10 @@ impl PoyntingVector {
                 hz.mul_add(hz, hx.mul_add(hx, hy * hy))
             };
 
-            let epsilon0 = 8.854e-12;
-            let mu0 = 4.0 * std::f64::consts::PI * 1e-7;
-
-            energy_density[spatial] =
-                0.5 * (epsilon0 * permittivity).mul_add(e_squared, mu0 * permeability * h_squared);
+            // u_em = ½(ε E² + μ H²) with ε = ε₀·ε_r and μ = μ₀·μ_r (SI).
+            energy_density[spatial] = 0.5
+                * (VACUUM_PERMITTIVITY * permittivity)
+                    .mul_add(e_squared, VACUUM_PERMEABILITY * permeability * h_squared);
         }
 
         Ok(Self {

@@ -109,6 +109,18 @@ pub const ELEMENTARY_CHARGE: f64 = 1.602176634e-19;
 /// Reference: 2018 CODATA recommended values
 pub const VACUUM_PERMITTIVITY: f64 = 8.8541878128e-12;
 
+/// Vacuum permeability (H/m)
+///
+/// Value: 1.25663706212×10⁻⁶ H/m (2018 CODATA recommended value).
+/// Numerically equal to `4π × 10⁻⁷` to nine significant figures — the pre-2019
+/// defined value. Both `4π·1e-7` and `1.25663706212e-6` are accepted as μ₀
+/// in the SI literature, but downstream code must use this single canonical
+/// value to avoid drift in dimensional checks against ε₀ and c via
+/// `c² · ε₀ · μ₀ = 1`.
+///
+/// Reference: 2018 CODATA recommended values.
+pub const VACUUM_PERMEABILITY: f64 = 1.25663706212e-6;
+
 /// Electron invariant mass (kg)
 /// Value: 9.1093837015e-31 kg
 /// Reference: 2018 CODATA recommended values

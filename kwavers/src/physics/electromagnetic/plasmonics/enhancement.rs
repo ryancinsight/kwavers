@@ -51,6 +51,7 @@
 
 use super::mie_theory::MieTheory;
 use super::types::CouplingModel;
+use crate::core::constants::fundamental::VACUUM_PERMITTIVITY;
 use num_complex::Complex;
 use std::f64::consts::PI;
 
@@ -93,10 +94,10 @@ impl PlasmonicEnhancementCalculator {
         let effective_distance = distance_from_center.max(min_distance);
 
         let alpha = self.mie_theory.polarizability(wavelength);
-        let epsilon0 = 8.854e-12;
 
         // Dipole field enhancement computation
-        let enhancement = 1.0 + alpha / (4.0 * PI * epsilon0 * effective_distance.powi(3));
+        let enhancement =
+            1.0 + alpha / (4.0 * PI * VACUUM_PERMITTIVITY * effective_distance.powi(3));
         enhancement.norm() // Magnitude of complex enhancement vector
     }
 

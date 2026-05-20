@@ -33,6 +33,7 @@
 //! - Polyanskiy, M.N. (2024). Refractiveindex.info database of optical
 //!   constants. *Scientific Data*, 11, 94.
 
+use crate::core::constants::fundamental::VACUUM_PERMITTIVITY;
 use num_complex::Complex;
 use std::f64::consts::PI;
 
@@ -134,21 +135,18 @@ impl MieTheory {
         let numerator = eps_ratio - num_complex::Complex::new(1.0, 0.0);
         let denominator = eps_ratio + num_complex::Complex::new(2.0, 0.0);
 
-        let alpha_dimensionless =
-            self.radius * self.radius * self.radius * numerator / denominator;
+        let alpha_dimensionless = self.radius * self.radius * self.radius * numerator / denominator;
 
         // Convert to SI units (include 4π ε₀ ε_m factor)
-        let epsilon0 = 8.854e-12;
-        alpha_dimensionless * 4.0 * PI * epsilon0 * eps_medium
+        alpha_dimensionless * 4.0 * PI * VACUUM_PERMITTIVITY * eps_medium
     }
 
     /// Compute scattering cross-section (σ_scat)
     #[must_use]
     pub fn scattering_cross_section(&self, wavelength: f64) -> f64 {
         let alpha_si = self.polarizability(wavelength);
-        let epsilon0 = 8.854e-12_f64;
         // Convert SI polarizability to polarizability volume α_vol = R³·K [m³]
-        let alpha_vol = alpha_si / (4.0 * PI * epsilon0 * self.medium_dielectric);
+        let alpha_vol = alpha_si / (4.0 * PI * VACUUM_PERMITTIVITY * self.medium_dielectric);
         let n_medium = self.medium_dielectric.sqrt();
         let k = 2.0 * PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
 
@@ -160,9 +158,8 @@ impl MieTheory {
     #[must_use]
     pub fn absorption_cross_section(&self, wavelength: f64) -> f64 {
         let alpha_si = self.polarizability(wavelength);
-        let epsilon0 = 8.854e-12_f64;
         // Convert SI polarizability to polarizability volume α_vol = R³·K [m³]
-        let alpha_vol = alpha_si / (4.0 * PI * epsilon0 * self.medium_dielectric);
+        let alpha_vol = alpha_si / (4.0 * PI * VACUUM_PERMITTIVITY * self.medium_dielectric);
         let n_medium = self.medium_dielectric.sqrt();
         let k = 2.0 * PI * n_medium / wavelength; // medium wavenumber k_m = n_m·ω/c
 
