@@ -20,20 +20,21 @@
 //! Experimentally calibrated from cell survival curves (Sapareto & Dewey 1984, Table 1;
 //! confirmed in Dewhirst et al. 2003, Eq. 1).  The threshold is **43 °C**, not 37 °C.
 //!
-//! **Discrete accumulation** (Euler forward, timestep Δt in seconds):
+//! **Discrete accumulation** (Euler forward, timestep Δt in seconds, converted
+//! internally to minutes to keep CEM43 in canonical equivalent-minute units):
 //!
 //! ```text
-//! CEM43_{k+1}(x) = CEM43_k(x) + R(T)^(43 − T(x,t_k)) · Δt
+//! CEM43_{k+1}(x) = CEM43_k(x) + R(T)^(43 − T(x,t_k)) · (Δt / 60)
 //! ```
 //!
 //! Validation points (Sapareto & Dewey 1984, Table 1):
 //!
-//! | T (°C) | R     | dose_rate (CEM43/s) |
-//! |--------|-------|----------------------|
-//! | 37     | 0.25  | 0.25^6 ≈ 2.441×10⁻⁴ |
-//! | 42     | 0.25  | 0.25^1 = 0.25        |
-//! | 43     | 0.5   | 0.5^0  = 1.0         |
-//! | 50     | 0.5   | 0.5^(−7) = 128       |
+//! | T (°C) | R     | dose_rate (CEM43/min) |
+//! |--------|-------|------------------------|
+//! | 37     | 0.25  | 0.25^6 ≈ 2.441×10⁻⁴   |
+//! | 42     | 0.25  | 0.25^1 = 0.25          |
+//! | 43     | 0.5   | 0.5^0  = 1.0           |
+//! | 50     | 0.5   | 0.5^(−7) = 128         |
 //!
 //! ## References
 //! - Sapareto SA, Dewey WC (1984). "Thermal dose determination in cancer therapy."
@@ -55,8 +56,12 @@ impl TranscranialSafetyMonitor {
     /// where `T` is in °C, `R = 0.5` for `T ≥ 43°C`, `R = 0.25` for `T < 43°C`.
     ///
     /// # Arguments
-    /// * `dt` – Timestep in seconds. Dose accumulates as `CEM43 += dose_rate × dt`.
+    /// * `dt` – Timestep in seconds. Internally converted to minutes so the
+    ///   accumulated `CEM43` is in canonical equivalent-minutes (matching the
+    ///   default `max_thermal_dose = 240` threshold from Sapareto & Dewey).
     pub(crate) fn update_thermal_dose(&mut self, dt: f64) {
+        const SECONDS_PER_MINUTE: f64 = 60.0;
+        let dt_min = dt / SECONDS_PER_MINUTE;
         let (nx, ny, nz) = self.temperature.dim();
 
         for k in 0..nz {
@@ -72,27 +77,30 @@ impl TranscranialSafetyMonitor {
                         0.25 // sub-threshold regime: slower damage accumulation
                     };
 
-                    // Instantaneous CEM43 dose rate [CEM43 s⁻¹] — no additional multipliers
+                    // Instantaneous CEM43 dose rate [CEM43 min⁻¹] — Sapareto & Dewey convention
                     let dose_rate = r.powf(43.0 - temp);
 
-                    // Accumulate CEM43 dose
+                    // Accumulate CEM43 dose in equivalent minutes
                     self.thermal_dose.dose_rate[[i, j, k]] = dose_rate;
-                    self.thermal_dose.current_dose[[i, j, k]] += dose_rate * dt;
+                    self.thermal_dose.current_dose[[i, j, k]] += dose_rate * dt_min;
 
                     let target_dose = self.thresholds.max_thermal_dose;
                     let current_dose = self.thermal_dose.current_dose[[i, j, k]];
 
                     // Remaining time to reach target dose at current instantaneous rate
+                    // dose_rate is CEM43/min so dividing yields minutes; convert to seconds
+                    // for the user-facing field.
                     if current_dose < target_dose && dose_rate > 0.0 {
                         self.thermal_dose.time_to_target[[i, j, k]] =
-                            (target_dose - current_dose) / dose_rate;
+                            (target_dose - current_dose) / dose_rate * SECONDS_PER_MINUTE;
                     } else {
                         self.thermal_dose.time_to_target[[i, j, k]] = 0.0;
                     }
 
                     if dose_rate > 0.0 {
                         self.thermal_dose.max_safe_time[[i, j, k]] =
-                            (target_dose - current_dose).max(0.0) / dose_rate;
+                            (target_dose - current_dose).max(0.0) / dose_rate
+                                * SECONDS_PER_MINUTE;
                     }
                 }
             }
@@ -181,7 +189,7 @@ mod tests {
 
     /// **Test: CEM43 linear accumulation at threshold temperature**
     ///
-    /// At T = 43°C, dose_rate = 1.0 CEM43/s → after N seconds: CEM43 = N.
+    /// At T = 43°C, dose_rate = 1.0 CEM43/min → after N seconds: CEM43 = N/60.
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
@@ -194,14 +202,15 @@ mod tests {
         let temperature = Array3::from_elem((1, 1, 1), 43.0_f64);
         let pressure = Array3::zeros((1, 1, 1));
 
-        let n_steps = 100usize;
+        let n_steps = 600usize;
         let dt = 1.0_f64;
         for _ in 0..n_steps {
             monitor.update_fields(&temperature, &pressure, dt).unwrap();
         }
 
         let accumulated = monitor.thermal_dose.current_dose[[0, 0, 0]];
-        let expected = n_steps as f64; // 100 CEM43 (1.0 CEM43/s × 100 s)
+        // 600 s at 43 °C = 10 min at 43 °C = 10 CEM43 (canonical Sapareto-Dewey)
+        let expected = (n_steps as f64) / 60.0;
         let rel_err = (accumulated - expected).abs() / expected;
         assert!(
             rel_err < 1e-12,
