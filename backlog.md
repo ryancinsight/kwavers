@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the CEUS microbubble harmonic-domain guard gap.
+  Harmonic-content analysis now rejects zero harmonic index, invalid sample
+  rate, mismatched time and scattered-pressure vectors, and nonfinite samples
+  before spectral projection, preserving finite zero content for invalid
+  domains.
+
 - 2026-05-20: [patch] Closed the analytical plane-wave domain guard gap.
   Plane-wave field generation now rejects nonpositive frequency or sound
   speed, nonfinite amplitude or time, invalid grid spacing, and zero or

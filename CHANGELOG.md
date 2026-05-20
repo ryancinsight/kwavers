@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - CEUS Microbubble Harmonic Domain Guards
+
+- [patch] Guard microbubble harmonic-content analysis against invalid physical
+  domains: zero harmonic index, invalid sample rate, mismatched time/pressure
+  vectors, and nonfinite samples now return finite zero content instead of
+  panicking or propagating NaN through the harmonic projection.
+
 ### Fixed (2026-05-20) - Analytical Plane-Wave Domain Guards
 
 - [patch] Guard the analytical plane-wave generator against invalid physical
