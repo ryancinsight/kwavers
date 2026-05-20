@@ -72,12 +72,16 @@ pub fn bioheat_focal_temperature_rise(
 
 /// HIFU focal pressure gain for a focused transducer.
 ///
-/// Simplified directivity-theory result:
+/// Simplified directivity-theory result (O'Neil 1949; Hynynen 1991):
 /// ```text
-/// G_p = π·D·f / (c·2·F#)   [dimensionless]
+/// G_p = π·D·f / (4·c·F#)   [dimensionless]
 /// ```
 /// where D is the aperture diameter, F# = focal_length/aperture, and
-/// the focal gain is the ratio of focal to source pressure amplitude.
+/// G_p is the ratio of focal to source pressure amplitude.
+///
+/// Derivation: for a spherical-cap of radius a = D/2 and focal length F,
+/// the paraxial peak pressure gain is G = k·a²/(2F) = π·f·D²/(4·c·F).
+/// Using F# = F/D gives G = π·f·D/(4·c·F#).
 ///
 /// # Arguments
 /// * `aperture_m` – transducer aperture diameter D [m]
@@ -86,10 +90,11 @@ pub fn bioheat_focal_temperature_rise(
 /// * `c` – sound speed [m/s]
 ///
 /// # Reference
-/// Hynynen & Jolesz (1998), *Ultrasound Med. Biol.* 24, 275.
+/// O'Neil HT (1949), *J. Acoust. Soc. Am.* 21, 516–526.
+/// Hynynen K (1991), *Ultrasound Med. Biol.* 17, 157–169.
 #[inline]
 pub fn hifu_focal_pressure_gain(aperture_m: f64, f_number: f64, freq_hz: f64, c: f64) -> f64 {
-    PI * aperture_m * freq_hz / (c * 2.0 * f_number)
+    PI * aperture_m * freq_hz / (c * 4.0 * f_number)
 }
 
 // ─── Gaussian power deposition ────────────────────────────────────────────────
