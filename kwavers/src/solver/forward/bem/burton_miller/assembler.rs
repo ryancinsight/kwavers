@@ -104,17 +104,24 @@ impl BurtonMillerAssembler {
         let n = num_collocation_points;
         let mut g_matrix = Array2::zeros((n, n));
         let alpha = self.config.coupling_alpha;
+        let vertex_normals = self.compute_vertex_normals(boundary_nodes, elements);
 
         for i in 0..n {
             let collocation_point = boundary_nodes[i];
+            let collocation_normal = vertex_normals.get(i).copied().unwrap_or([0.0, 0.0, 1.0]);
 
             for (elem_idx, &elem) in elements.iter().enumerate() {
                 let node1 = boundary_nodes[elem[0]];
                 let node2 = boundary_nodes[elem[1]];
                 let node3 = boundary_nodes[elem[2]];
 
-                let (g_cbie, g_hbie) =
-                    self.element_contribution_g(&collocation_point, node1, node2, node3)?;
+                let (g_cbie, g_hbie) = self.element_contribution_g(
+                    &collocation_point,
+                    &collocation_normal,
+                    node1,
+                    node2,
+                    node3,
+                )?;
 
                 for &global_node_idx in &elements[elem_idx] {
                     g_matrix[[i, global_node_idx]] += g_cbie + alpha * g_hbie;
@@ -186,9 +193,20 @@ impl BurtonMillerAssembler {
         Ok((h_cbie, h_hbie))
     }
 
+    /// Compute element contribution to G matrix (CBIE + HBIE).
+    ///
+    /// CBIE G-kernel: `G(x,y)` — the Helmholtz free-space Green's function.
+    /// HBIE G-kernel: `∂G/∂n_x(x,y) = G·(ik−1/R)·(x−y)·n_x/R` — the normal
+    /// derivative of G with respect to the collocation point x.
+    ///
+    /// To reuse `greens_function_normal_derivative_full` (which computes
+    /// `∂G/∂n_y = G·(ik−1/R)·(y−x)·n_y/R`), the source and observer arguments
+    /// are **swapped**: passing `r_src = point_on_element` and `r_obs = collocation`
+    /// yields `rhat = (collocation−point)/R`, giving `∂G/∂n_x` correctly.
     fn element_contribution_g(
         &self,
         collocation: &[f64; 3],
+        collocation_normal: &[f64; 3],
         node1: [f64; 3],
         node2: [f64; 3],
         node3: [f64; 3],
@@ -216,9 +234,15 @@ impl BurtonMillerAssembler {
             let g = self.greens_function_helmholtz(k, r);
             g_cbie += gauss_weights[gp_idx] * g;
 
-            let dg_dn =
-                self.greens_function_normal_derivative(k, r, collocation, &point_on_element);
-            g_hbie += gauss_weights[gp_idx] * dg_dn;
+            // ∂G/∂n_x: swap src/obs so rhat = (collocation − point)/R
+            let dg_dnx = self.greens_function_normal_derivative_full(
+                k,
+                r,
+                &point_on_element,
+                collocation,
+                collocation_normal,
+            );
+            g_hbie += gauss_weights[gp_idx] * dg_dnx;
         }
 
         let element_area = self.triangle_area(node1, node2, node3);
