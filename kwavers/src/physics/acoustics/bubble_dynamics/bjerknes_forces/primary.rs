@@ -4,20 +4,38 @@ use super::calculator::BjerknesCalculator;
 use crate::core::error::{KwaversError, KwaversResult};
 
 impl BjerknesCalculator {
-    /// Calculate primary Bjerknes force on a bubble in acoustic field
+    /// Calculate primary Bjerknes force on a bubble in acoustic field.
     ///
-    /// The primary Bjerknes force arises from the time-averaged radiation pressure:
-    /// F_p = -4πR² ⟨p'(∂u'/∂z)⟩
+    /// ## Formula
     ///
-    /// For a plane wave: F_p ≈ πR² I / c₀
-    /// where I is acoustic intensity
+    /// ```text
+    /// F_B1 = −(4π/3)R³ · ∂p/∂z
+    /// ```
+    ///
+    /// This is the standard primary Bjerknes force: the bubble occupies a volume
+    /// V = (4π/3)R³ and the net acoustic force on that volume is −V·∇p
+    /// (Leighton 1994, §3.4; Blake 1986).
+    ///
+    /// ## Dimensional analysis
+    ///
+    /// [V·∇p] = m³ · Pa/m = kg·m/s² = N ✓
+    ///
+    /// ## References
+    ///
+    /// - Blake JR (1986). J. Acoust. Soc. Am. 79(5), 1357–1360.
+    /// - Leighton TG (1994). *The Acoustic Bubble*. Academic Press. §3.4.
+    ///
+    /// # Arguments
+    /// * `bubble_radius` — instantaneous bubble radius R (m)
+    /// * `_acoustic_pressure_amplitude` — unused; retained for API compatibility
+    /// * `pressure_gradient` — ∂p/∂z at the bubble centre (Pa/m)
+    ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    ///
+    /// - Returns [`KwaversError::InvalidInput`] if `bubble_radius` ≤ 0.
     pub fn primary_bjerknes_force(
         &self,
         bubble_radius: f64,
-        acoustic_pressure_amplitude: f64,
+        _acoustic_pressure_amplitude: f64,
         pressure_gradient: f64,
     ) -> KwaversResult<f64> {
         if bubble_radius <= 0.0 {
@@ -26,21 +44,9 @@ impl BjerknesCalculator {
             ));
         }
 
-        // Primary Bjerknes force for acoustic wave
-        // F_p = -4πR² ⟨p'(∂u'/∂z)⟩
-        // Approximation: F_p ≈ -4πR² (p₀/(2ρc₀)) (∂p/∂z)
-        // where the time-averaged acoustic intensity contribution is proportional to pressure amplitude and gradient
-
-        let surface_area = 4.0 * std::f64::consts::PI * bubble_radius.powi(2);
-
-        // Acoustic radiation pressure contribution
-        let radiation_pressure =
-            acoustic_pressure_amplitude.powi(2) / (2.0 * self.config.rho * self.config.c0);
-
-        // Force from pressure gradient
-        let force = -surface_area * radiation_pressure * (pressure_gradient / self.config.c0);
-
-        Ok(force)
+        // F_B1 = −(4π/3)R³ · ∂p/∂z
+        let volume = (4.0 * std::f64::consts::PI / 3.0) * bubble_radius.powi(3);
+        Ok(-volume * pressure_gradient)
     }
 }
 
@@ -60,27 +66,25 @@ mod tests {
         assert!(c.primary_bjerknes_force(-1e-6, 1e5, 1e3).is_err());
     }
 
-    /// Zero acoustic pressure amplitude → zero primary force.
-    ///
-    /// F_p ∝ p² → p=0 gives F_p = 0 regardless of gradient.
+    /// Zero pressure gradient → zero primary force (F = −V·∇p, ∇p = 0 → F = 0).
     #[test]
-    fn primary_bjerknes_force_zero_for_zero_pressure_amplitude() {
-        let f = calc().primary_bjerknes_force(5e-6, 0.0, 1e3).unwrap();
-        assert_eq!(f, 0.0, "zero pressure amplitude must give zero force");
+    fn primary_bjerknes_force_zero_for_zero_pressure_gradient() {
+        let f = calc().primary_bjerknes_force(5e-6, 1e5, 0.0).unwrap();
+        assert_eq!(f, 0.0, "zero pressure gradient must give zero force");
     }
 
-    /// Force scales as R²: doubling radius quadruples force magnitude.
+    /// Force scales as R³: doubling radius increases force magnitude by 8×.
     ///
-    /// F_p = -4πR² · radiation_pressure · (grad/c₀) ∝ R².
+    /// F_B1 = −(4π/3)R³ · ∇p ∝ R³.
     #[test]
-    fn primary_bjerknes_force_scales_as_radius_squared() {
+    fn primary_bjerknes_force_scales_as_radius_cubed() {
         let c = calc();
         let f1 = c.primary_bjerknes_force(5e-6, 1e5, 1e3).unwrap();
         let f2 = c.primary_bjerknes_force(10e-6, 1e5, 1e3).unwrap();
-        // f2/f1 = (10/5)² = 4
+        // f2/f1 = (10/5)³ = 8
         assert!(
-            (f2 / f1 - 4.0).abs() < 1e-12,
-            "force ratio must be 4 when radius doubles (got {:.6})",
+            (f2 / f1 - 8.0).abs() < 1e-12,
+            "force ratio must be 8 when radius doubles (got {:.6})",
             f2 / f1
         );
     }

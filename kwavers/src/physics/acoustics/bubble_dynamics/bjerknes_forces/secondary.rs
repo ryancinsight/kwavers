@@ -5,15 +5,33 @@ use super::types::{BjerknesForceData, BjerknesInteractionType};
 use crate::core::error::{KwaversError, KwaversResult};
 
 impl BjerknesCalculator {
-    /// Calculate secondary Bjerknes force between two bubbles
+    /// Calculate secondary Bjerknes force between two bubbles.
     ///
-    /// Interaction force between bubble pair due to mutual acoustic scattering:
-    /// F_s ≈ (6πρc₀/f) * V₁ * V₂ * cos(φ) / d⁴
+    /// ## Formula
+    ///
+    /// ```text
+    /// F_B2 = (ρ₀ω²/(8π)) · V₁ · V₂ · cos(φ) / d²
+    /// ```
+    ///
+    /// Derived from the time-averaged acoustic radiation interaction
+    /// (Bjerknes 1906; Leighton 1994 §3.4):
+    ///   F = −(ρ₀/(4πd²)) ⟨V̇₁V̇₂⟩
+    /// For harmonic volume oscillations V_i(t) = V_i cos(ωt + φ_i):
+    ///   ⟨V̇₁V̇₂⟩ = ω²V₁V₂cos(φ)/2  → coefficient = ρ₀ω²/(8π)
+    ///
+    /// Sign convention (scalar interaction strength):
+    ///   cos φ > 0  → attractive (positive)
+    ///   cos φ < 0  → repulsive  (negative)
     ///
     /// where:
-    /// - V₁, V₂ are volume oscillation amplitudes
-    /// - φ is phase difference between oscillations
-    /// - d is center-to-center distance
+    /// - V₁, V₂ are peak volume oscillation amplitudes (m³)
+    /// - φ is phase difference between oscillations (rad)
+    /// - d is centre-to-centre distance (m)
+    ///
+    /// ## References
+    ///
+    /// - Bjerknes V (1906). *Fields of Force*. Columbia UP.
+    /// - Leighton TG (1994). *The Acoustic Bubble*. Academic Press. §3.4.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
@@ -51,14 +69,16 @@ impl BjerknesCalculator {
             });
         }
 
-        // Secondary Bjerknes force magnitude
-        // F_s = (6πρc₀/f) * V₁ * V₂ * |cos(φ)| / d⁴
-        let coefficient =
-            (6.0 * std::f64::consts::PI * self.config.rho * self.config.c0) / self.config.frequency;
+        // Secondary Bjerknes force magnitude (Leighton 1994, §3.4; Bjerknes 1906):
+        //   F_B2 = (ρ₀ω²/(8π)) · V₁ · V₂ · |cos φ| / d²
+        // where ω = 2πf.  Derived from F = −(ρ₀/(4πd²))⟨V̇₁V̇₂⟩ with V̇ = V₀ω.
+        // Dimensional check: [kg/m³ · s⁻² · m³ · m³ / m²] = [kg·m/s²] = N ✓
+        let omega = 2.0 * std::f64::consts::PI * self.config.frequency;
+        let coefficient = (self.config.rho * omega * omega) / (8.0 * std::f64::consts::PI);
 
         let force_magnitude =
             coefficient * volume_amplitude1 * volume_amplitude2 * phase_difference.cos().abs()
-                / distance.powi(4);
+                / distance.powi(2);
 
         // Determine interaction type based on phase difference
         let cos_phase = phase_difference.cos();
