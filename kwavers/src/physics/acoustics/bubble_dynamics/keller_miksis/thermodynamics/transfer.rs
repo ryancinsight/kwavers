@@ -24,9 +24,11 @@ pub(crate) fn update_mass_transfer(
     };
 
     let area = 4.0 * std::f64::consts::PI * state.radius * state.radius;
+    // Hertz-Knudsen molar flux [mol/s]: J_mol = α·A·ΔP / √(2πMRT)
     let sqrt_term = (2.0 * std::f64::consts::PI * M_WATER * R_GAS * state.temperature).sqrt();
-    let mass_flux = model.params.accommodation_coeff * area * (p_sat - p_vapor) / sqrt_term;
-    let dn_vapor = mass_flux * dt * AVOGADRO / M_WATER;
+    let molar_flux = model.params.accommodation_coeff * area * (p_sat - p_vapor) / sqrt_term;
+    // Convert mol/s → molecules: ΔN = J_mol · dt · N_A
+    let dn_vapor = molar_flux * dt * AVOGADRO;
 
     state.n_vapor = (state.n_vapor + dn_vapor).max(0.0);
 

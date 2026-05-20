@@ -85,8 +85,9 @@ fn latent_temperature_rate(
     };
 
     let sqrt_term = (2.0 * PI * M_WATER * R_GAS * t_liquid_k).sqrt();
+    // Hertz-Knudsen mass flux [kg/s]: J_mass = α·A·ΔP·M / √(2πMRT)
     let mass_flux_kg_s =
-        model.params.accommodation_coeff * surface_area * (p_sat_liq - p_vapor) / sqrt_term;
+        model.params.accommodation_coeff * surface_area * (p_sat_liq - p_vapor) * M_WATER / sqrt_term;
     let l_v = latent_heat_water_j_per_kg(t_bubble - 273.15);
 
     if n_moles > 0.0 && c_v > 0.0 {
