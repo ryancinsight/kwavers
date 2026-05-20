@@ -104,9 +104,10 @@ pub fn generate_acoustic_field(
 
     // Plane-wave approximation for the axial velocity component:
     // v_x = p / (ρ₀·c₀).  Transverse components are zero.
-    // ρ₀·c₀ = 1.54 × 10⁶ Pa·s/m (water reference impedance).
-    const Z_WATER: f64 = 1.54e6;
-    let velocity_x = pressure.mapv(|p| p / Z_WATER);
+    // Reference impedance uses the nominal soft-tissue value
+    // ρ_water · c_tissue ≈ 1.54 MRayl (Hill & ter Haar 2004, §2.3) sourced from SSOT.
+    let z_soft_tissue = DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE;
+    let velocity_x = pressure.mapv(|p| p / z_soft_tissue);
 
     Ok(AcousticField {
         pressure,

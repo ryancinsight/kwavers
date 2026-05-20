@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::{C_WATER, DENSITY_WATER_NOMINAL};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -145,8 +146,9 @@ impl TranscranialSimulation {
         // Convert to amplitude ratio
         let amplitude_ratio = (-attenuation_np).exp();
 
-        // Include reflection losses
-        let water_z = 1.5e6; // Water impedance (kg/m²/s)
+        // Include reflection losses against the nominal water coupling layer
+        // Z_water = ρ_water · c_water (sourced from SSOT)
+        let water_z = DENSITY_WATER_NOMINAL * C_WATER;
         let transmission = self.skull_props.transmission_coefficient(water_z);
 
         Ok(amplitude_ratio * transmission.sqrt())
