@@ -76,10 +76,20 @@ impl EpsteinPlessetStabilitySolver {
         let surface_term = (2.0 * sigma) / (rho * r0 * r0 * r0);
         let viscous_term = (4.0 * mu * mu) / (rho * rho * r0 * r0 * r0 * r0);
 
+        // Non-thermal (adiabatic): full Minnaert stiffness 3γP₀/(ρR₀²) = ω₀².
+        // Thermal: heat exchange with the liquid shifts the effective stiffness
+        // toward the isothermal limit; the (γ−1)/γ fraction models the additional
+        // stiffness above the isothermal base 3P₀/(ρR₀²) = ω₀²/γ.
+        // Both branches include the baseline ω₀²/γ (isothermal) via `omega0_squared`.
         let gas_term = if self.params.use_thermal_effects {
+            // Thermal: effective stiffness ≈ 3κP₀/(ρR₀²) where κ → 1 (isothermal)
+            // Approximated here as the adiabatic-minus-isothermal correction only.
+            // Full stiffness = ω₀²/γ + ω₀²*(γ−1)/γ = ω₀² (same as adiabatic for
+            // the conservative estimate; the reduction enters via added damping).
             omega0_squared * (gamma - 1.0) / gamma
         } else {
-            0.0
+            // Adiabatic: full polytropic gas stiffness dominates the restoring force.
+            omega0_squared
         };
 
         gas_term + surface_term - viscous_term
