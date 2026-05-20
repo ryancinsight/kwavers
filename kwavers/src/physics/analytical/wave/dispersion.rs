@@ -16,7 +16,7 @@ pub fn fdtd_phase_error_1d(kh_arr: &[f64], cfl: f64) -> Vec<f64> {
             if kh == 0.0 {
                 return 0.0;
             }
-            let arg = cfl * (kh / (2.0 * cfl)).sin();
+            let arg = cfl * (kh / 2.0).sin();
             let arg_clamped = arg.clamp(-1.0, 1.0);
             let kp_h = 2.0 * arg_clamped.asin() / cfl;
             (kp_h - kh) / kh

@@ -55,3 +55,27 @@ fn westervelt_length_consistency() {
     assert_eq!(w.len(), 3);
     assert_eq!(w[0].len(), 3);
 }
+
+#[test]
+fn fdtd_phase_error_small_kh_near_zero() {
+    // For k·Δx → 0, the FDTD dispersion error must vanish (long wavelengths are exact).
+    // With CFL = 0.5, the pre-fix formula gave ~100% error even at kh → 0.
+    let small_kh = vec![1e-6_f64];
+    let err = fdtd_phase_error_1d(&small_kh, 0.5);
+    assert!(
+        err[0].abs() < 1e-6,
+        "Expected near-zero FDTD dispersion error at small kh, got {}",
+        err[0]
+    );
+}
+
+#[test]
+fn fdtd_phase_error_cfl_unity_is_zero() {
+    // At CFL = 1 the 1-D FDTD scheme is non-dispersive: error = 0 for all kh.
+    use std::f64::consts::PI;
+    let kh_arr: Vec<f64> = (1..10).map(|i| i as f64 * PI / 10.0).collect();
+    let err = fdtd_phase_error_1d(&kh_arr, 1.0);
+    for &e in &err {
+        assert!(e.abs() < 1e-10, "Expected zero dispersion at CFL=1, got {}", e);
+    }
+}
