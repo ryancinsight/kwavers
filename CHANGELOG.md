@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Cavitation Core Mechanical-Index Consolidation
+
+- [patch] Complete the cavitation core MI consolidation by routing
+  `CavitationModel` and core tests to
+  `physics::acoustics::analysis::calculate_mechanical_index` after the local
+  duplicate MI helper was removed. This restores compilation without
+  reintroducing a compatibility alias and keeps cavitation MI on the canonical
+  `|p_r|_MPa / sqrt(f_MHz)` contract.
+- [patch] Complete the same no-alias MI consolidation in the nonlinear 3-D
+  theranostic cavitation tests by importing the canonical helper directly after
+  the local helper was removed from the forward map.
+
+### Fixed (2026-05-20) - Transcranial Planning Acoustic Simulation Domains
+
+- [patch] Correct transcranial treatment-planning acoustic simulation to apply
+  per-element amplitudes in coherent pressure summation, evaluate documented
+  millimeter transducer positions in SI meters, validate transducer frequency
+  and vector domains, and reject negative/nonfinite acoustic intensity in the
+  Pennes thermal response. Zero or invalid acoustic heating now yields an
+  infinite treatment-time estimate instead of a false zero-duration plan. Added
+  value-semantic tests for amplitude-squared intensity scaling, millimeter
+  position conversion, Pennes source balance, and invalid-domain rejection.
+
 ### Fixed (2026-05-20) - Transcranial Treatment-Planning Safety Validation
 
 - [patch] Correct transcranial treatment-planning MI validation to derive peak

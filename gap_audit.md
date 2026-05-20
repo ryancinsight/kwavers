@@ -45,6 +45,23 @@
 - DICOM SSOT violation (CLOSED 2026-05-01): all three SSOT violations are resolved. `infrastructure::io::dicom_ritk` is now the single adapter wrapping `ritk_io::scan_dicom_directory` + `ritk_io::load_dicom_series::<NdArray>` and converting ritk-io's `Image<B, 3>` → kwavers `Array3<f64>` + `MedicalImageMetadata`; `DicomImageLoader::load_series_internal` delegates to it; the parallel `infrastructure/io/dicom.rs` (684-line `dicom`-crate-direct reader, zero callers) and orphaned `src/bin_test.rs` smoke stub are deleted; the direct `dicom = "0.7"` dep in `kwavers/Cargo.toml` is dropped (now pulled transitively through ritk-io). Plus the earlier 2026-04-30 work that made ritk-core/ritk-io/burn mandatory and reduced the `ritk`/`pinn`/`dicom` features to no-op aliases. Full lib suite passes 2640/2640 with 12 ignored.
 
 ## Resolved Since Audit Start
+- Completed the cavitation mechanical-index consolidation. A partial local
+  refactor had removed duplicate MI helpers while leaving stale imports in the
+  cavitation core and nonlinear 3-D theranostic cavitation tests, which blocked
+  verification. The remaining call sites now use the canonical acoustic
+  pressure-analysis MI helper directly, preserving the no-alias consolidation
+  contract.
+
+- Closed the transcranial treatment-planning acoustic simulation domain gap.
+  The Rayleigh-Sommerfeld-style field synthesis now uses
+  `TransducerSetup::element_amplitudes`, converts documented millimeter element
+  coordinates into meters before SI wave propagation, and rejects invalid
+  transducer vectors or frequency. The steady-state Pennes response rejects
+  negative/nonfinite acoustic intensity instead of emitting nonphysical
+  temperature values, and treatment-time estimation returns infinity when no
+  valid heating is available. Tests cover amplitude scaling, coordinate-unit
+  conversion, Pennes source balance, invalid domains, and peak-intensity timing.
+
 - Closed the transcranial treatment-planning safety validation gap. The MI
   safety gate now reconstructs peak pressure from harmonic average intensity
   via `p_peak = sqrt(2 rho c I)` before delegating to the canonical

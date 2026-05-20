@@ -2,9 +2,24 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::{TranscranialTargetVolume, TransducerSetup};
-use crate::core::error::KwaversResult;
+use crate::core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 use num_complex::Complex;
+
+const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
+const BRAIN_SOUND_SPEED_M_PER_S: f64 = 1546.0;
+const BRAIN_DENSITY_KG_PER_M3: f64 = 1040.0;
+const REFERENCE_FREQUENCY_MHZ: f64 = 1.0;
+const BRAIN_ABSORPTION_DB_PER_MHZ_CM: f64 = 0.5;
+const CENTIMETERS_PER_METER: f64 = 100.0;
+const BRAIN_ABSORPTION_NP_PER_M: f64 =
+    BRAIN_ABSORPTION_DB_PER_MHZ_CM * REFERENCE_FREQUENCY_MHZ * CENTIMETERS_PER_METER / NP_TO_DB;
+const BLOOD_PERFUSION_RATE_PER_S: f64 = 0.0064;
+const BLOOD_DENSITY_KG_PER_M3: f64 = 1060.0;
+const BLOOD_SPECIFIC_HEAT_J_PER_KG_K: f64 = 3617.0;
+const THERMAL_DOSE_TARGET_CEM43: f64 = 240.0;
+const ABSORPTION_RATE_PER_INTENSITY: f64 = 0.5;
 
 impl TreatmentPlanner {
     /// Simulate acoustic intensity field from a phased-array transducer using coherent
@@ -45,13 +60,13 @@ impl TreatmentPlanner {
         &self,
         setup: &TransducerSetup,
     ) -> KwaversResult<Array3<f64>> {
+        validate_transducer_setup(setup)?;
+
         let (nx, ny, nz) = self.brain_grid.dimensions();
         let mut acoustic_field = Array3::zeros((nx, ny, nz));
 
         // Wavenumber [rad/m]: k = 2π f / c_brain
-        const C_BRAIN: f64 = 1546.0; // m/s — average brain speed of sound (Fry 1978)
-        const RHO_BRAIN: f64 = 1040.0; // kg/m³ — brain tissue density
-        let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / C_BRAIN;
+        let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / BRAIN_SOUND_SPEED_M_PER_S;
 
         for k in 0..nz {
             for j in 0..ny {
@@ -60,25 +75,8 @@ impl TreatmentPlanner {
                     let yv = j as f64 * self.brain_grid.dy;
                     let zv = k as f64 * self.brain_grid.dz;
 
-                    // Coherent superposition: p(r) = Σ_n exp(i k r_n) / r_n
-                    let mut p_total = Complex::new(0.0_f64, 0.0_f64);
-                    for (idx, element) in setup.element_positions.iter().enumerate() {
-                        let dx = xv - element[0];
-                        let dy = yv - element[1];
-                        let dz = zv - element[2];
-                        let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
-                        if r < 1e-9 {
-                            continue;
-                        }
-                        // Phase delay applied to element `idx` (aberration correction)
-                        let steer_phase = setup.element_phases.get(idx).copied().unwrap_or(0.0);
-                        // Spherical wave: exp(i(k r + steer_phase)) / r
-                        let phase = k_wave * r + steer_phase;
-                        p_total += Complex::new(phase.cos(), phase.sin()) / r;
-                    }
-
-                    // I(r) = |p(r)|² / (2 ρ c)  [W/m²]
-                    acoustic_field[[i, j, k]] = p_total.norm_sqr() / (2.0 * RHO_BRAIN * C_BRAIN);
+                    acoustic_field[[i, j, k]] =
+                        harmonic_intensity_at_point([xv, yv, zv], setup, k_wave);
                 }
             }
         }
@@ -120,29 +118,17 @@ impl TreatmentPlanner {
         let (nx, ny, nz) = acoustic_field.dim();
         let mut temperature_field = Array3::zeros((nx, ny, nz));
 
-        // Brain tissue parameters (Fry & Barger 1978; Duck 1990, §4)
-        const F_MHZ: f64 = 1.0; // reference frequency [MHz] — adjust per setup
-        const ALPHA_NP_PER_M: f64 = 0.5 * F_MHZ * 100.0 / 8.686; // 0.5 dB/MHz/cm → Np/m
-        const W_B: f64 = 0.0064; // blood perfusion: 6.4 mL/(100g·s) = 6.4e-4 m³/(kg·s)
-        const RHO_B: f64 = 1060.0; // blood density [kg/m³]
-        const C_B: f64 = 3617.0; // blood specific heat [J/(kg·K)] (ICRU 1992)
-        const T_BODY: f64 = 37.0; // arterial blood temperature [°C]
-
-        // Product W_b · ρ_b · c_b [W/(m³·K)]
-        let perfusion_sink = W_B * RHO_B * C_B;
-
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
                     let intensity = acoustic_field[[i, j, k]]; // [W/m²]
-
-                    // Volumetric heat source: Q = 2α · I [W/m³]
-                    let q = 2.0 * ALPHA_NP_PER_M * intensity;
-
-                    // Steady-state Pennes bioheat: ΔT = Q / (W_b ρ_b c_b) [K]
-                    let delta_t = q / perfusion_sink;
-
-                    temperature_field[[i, j, k]] = T_BODY + delta_t;
+                    let Some(temperature) = steady_state_temperature_from_intensity(intensity)
+                    else {
+                        return Err(validation_error(format!(
+                            "Acoustic intensity {intensity} W/m^2 is outside the finite nonnegative domain"
+                        )));
+                    };
+                    temperature_field[[i, j, k]] = temperature;
                 }
             }
         }
@@ -156,15 +142,231 @@ impl TreatmentPlanner {
         _targets: &[TranscranialTargetVolume],
         acoustic_field: &Array3<f64>,
     ) -> f64 {
-        // Estimate based on required thermal dose
-        let thermal_dose_target = 240.0; // CEM43
-        let max_intensity = acoustic_field.iter().fold(0.0_f64, |a, &b| a.max(b));
+        estimate_treatment_time_from_intensity_field(acoustic_field)
+    }
+}
 
-        if max_intensity > 0.0 {
-            // Simplified: t = thermal_dose / (absorption_rate * intensity)
-            thermal_dose_target / (0.5 * max_intensity)
-        } else {
-            0.0
+fn validation_error(message: impl Into<String>) -> KwaversError {
+    KwaversError::Validation(ValidationError::ConstraintViolation {
+        message: message.into(),
+    })
+}
+
+fn validate_transducer_setup(setup: &TransducerSetup) -> KwaversResult<()> {
+    if setup.num_elements == 0 {
+        return Err(validation_error(
+            "Transducer setup requires at least one element",
+        ));
+    }
+    if !setup.frequency.is_finite() || setup.frequency <= 0.0 {
+        return Err(validation_error(format!(
+            "Transducer frequency {} Hz is outside the positive finite domain",
+            setup.frequency
+        )));
+    }
+    if setup.element_positions.len() != setup.num_elements
+        || setup.element_phases.len() != setup.num_elements
+        || setup.element_amplitudes.len() != setup.num_elements
+    {
+        return Err(validation_error(format!(
+            "Transducer vectors must match num_elements {}; got positions {}, phases {}, amplitudes {}",
+            setup.num_elements,
+            setup.element_positions.len(),
+            setup.element_phases.len(),
+            setup.element_amplitudes.len()
+        )));
+    }
+
+    for (idx, element) in setup.element_positions.iter().enumerate() {
+        if !element.iter().all(|coordinate| coordinate.is_finite()) {
+            return Err(validation_error(format!(
+                "Transducer element {idx} has a nonfinite position"
+            )));
         }
+    }
+    for (idx, &phase) in setup.element_phases.iter().enumerate() {
+        if !phase.is_finite() {
+            return Err(validation_error(format!(
+                "Transducer element {idx} has a nonfinite phase"
+            )));
+        }
+    }
+    for (idx, &amplitude) in setup.element_amplitudes.iter().enumerate() {
+        if !amplitude.is_finite() || amplitude < 0.0 {
+            return Err(validation_error(format!(
+                "Transducer element {idx} amplitude {amplitude} is outside the finite nonnegative domain"
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+fn harmonic_intensity_at_point(point_m: [f64; 3], setup: &TransducerSetup, k_wave: f64) -> f64 {
+    let mut p_total = Complex::new(0.0_f64, 0.0_f64);
+
+    for idx in 0..setup.num_elements {
+        let element = setup.element_positions[idx];
+        let element_m = [
+            element[0] * MILLIMETERS_TO_METERS,
+            element[1] * MILLIMETERS_TO_METERS,
+            element[2] * MILLIMETERS_TO_METERS,
+        ];
+        let dx = point_m[0] - element_m[0];
+        let dy = point_m[1] - element_m[1];
+        let dz = point_m[2] - element_m[2];
+        let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
+        if r < 1e-9 {
+            continue;
+        }
+
+        let phase = k_wave * r + setup.element_phases[idx];
+        let amplitude = setup.element_amplitudes[idx];
+        p_total += amplitude * Complex::new(phase.cos(), phase.sin()) / r;
+    }
+
+    p_total.norm_sqr() / (2.0 * BRAIN_DENSITY_KG_PER_M3 * BRAIN_SOUND_SPEED_M_PER_S)
+}
+
+fn steady_state_temperature_from_intensity(intensity: f64) -> Option<f64> {
+    if !intensity.is_finite() || intensity < 0.0 {
+        return None;
+    }
+
+    let perfusion_sink =
+        BLOOD_PERFUSION_RATE_PER_S * BLOOD_DENSITY_KG_PER_M3 * BLOOD_SPECIFIC_HEAT_J_PER_KG_K;
+    let heat_source = 2.0 * BRAIN_ABSORPTION_NP_PER_M * intensity;
+    Some(BODY_TEMPERATURE_C + heat_source / perfusion_sink)
+}
+
+fn max_nonnegative_finite_intensity(acoustic_field: &Array3<f64>) -> Option<f64> {
+    let mut max_intensity = 0.0_f64;
+
+    for &intensity in acoustic_field {
+        if !intensity.is_finite() || intensity < 0.0 {
+            return None;
+        }
+        max_intensity = max_intensity.max(intensity);
+    }
+
+    Some(max_intensity)
+}
+
+fn estimate_treatment_time_from_intensity_field(acoustic_field: &Array3<f64>) -> f64 {
+    let Some(max_intensity) = max_nonnegative_finite_intensity(acoustic_field) else {
+        return f64::INFINITY;
+    };
+
+    if max_intensity > 0.0 {
+        THERMAL_DOSE_TARGET_CEM43 / (ABSORPTION_RATE_PER_INTENSITY * max_intensity)
+    } else {
+        f64::INFINITY
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn one_element_setup(amplitude: f64) -> TransducerSetup {
+        TransducerSetup {
+            num_elements: 1,
+            element_positions: vec![[0.0, 0.0, 0.0]],
+            element_phases: vec![0.0],
+            element_amplitudes: vec![amplitude],
+            frequency: 1.0e6,
+            focal_distance: 1.0,
+        }
+    }
+
+    #[test]
+    fn validate_transducer_setup_rejects_invalid_domains() {
+        let mut setup = one_element_setup(1.0);
+        setup.frequency = 0.0;
+        let frequency_error = validate_transducer_setup(&setup).unwrap_err();
+        assert!(frequency_error.to_string().contains("frequency"));
+
+        let mut setup = one_element_setup(1.0);
+        setup.element_amplitudes[0] = f64::NAN;
+        let amplitude_error = validate_transducer_setup(&setup).unwrap_err();
+        assert!(amplitude_error.to_string().contains("amplitude"));
+
+        let mut setup = one_element_setup(1.0);
+        setup.element_phases.clear();
+        let length_error = validate_transducer_setup(&setup).unwrap_err();
+        assert!(length_error.to_string().contains("vectors"));
+    }
+
+    #[test]
+    fn harmonic_intensity_uses_millimeter_element_positions() {
+        let setup = TransducerSetup {
+            num_elements: 1,
+            element_positions: vec![[1.0, 0.0, 0.0]],
+            element_phases: vec![0.0],
+            element_amplitudes: vec![1.0],
+            frequency: 1.0e6,
+            focal_distance: 1.0,
+        };
+        let point_m = [0.002, 0.0, 0.0];
+        let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / BRAIN_SOUND_SPEED_M_PER_S;
+
+        let intensity = harmonic_intensity_at_point(point_m, &setup, k_wave);
+        let expected =
+            1.0 / (0.001_f64.powi(2) * 2.0 * BRAIN_DENSITY_KG_PER_M3 * BRAIN_SOUND_SPEED_M_PER_S);
+
+        assert!((intensity - expected).abs() < expected * 1.0e-12);
+    }
+
+    #[test]
+    fn harmonic_intensity_scales_with_amplitude_squared() {
+        let point_m = [0.001, 0.0, 0.0];
+        let low = one_element_setup(1.0);
+        let high = one_element_setup(2.0);
+        let k_wave = 2.0 * std::f64::consts::PI * low.frequency / BRAIN_SOUND_SPEED_M_PER_S;
+
+        let low_intensity = harmonic_intensity_at_point(point_m, &low, k_wave);
+        let high_intensity = harmonic_intensity_at_point(point_m, &high, k_wave);
+
+        assert!((high_intensity / low_intensity - 4.0).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn steady_state_temperature_matches_pennes_source_balance() {
+        let intensity = 2.0;
+        let temperature = steady_state_temperature_from_intensity(intensity)
+            .expect("finite nonnegative intensity must map to temperature");
+        let perfusion_sink =
+            BLOOD_PERFUSION_RATE_PER_S * BLOOD_DENSITY_KG_PER_M3 * BLOOD_SPECIFIC_HEAT_J_PER_KG_K;
+        let expected =
+            BODY_TEMPERATURE_C + (2.0 * BRAIN_ABSORPTION_NP_PER_M * intensity) / perfusion_sink;
+
+        assert!((temperature - expected).abs() < 1.0e-14);
+    }
+
+    #[test]
+    fn steady_state_temperature_rejects_invalid_intensity() {
+        assert!(steady_state_temperature_from_intensity(-1.0).is_none());
+        assert!(steady_state_temperature_from_intensity(f64::NAN).is_none());
+        assert!(steady_state_temperature_from_intensity(f64::INFINITY).is_none());
+    }
+
+    #[test]
+    fn treatment_time_matches_peak_intensity_contract() {
+        let field = Array3::from_shape_vec((2, 1, 1), vec![5.0, 10.0]).expect("shape matches");
+        let time = estimate_treatment_time_from_intensity_field(&field);
+        let expected = THERMAL_DOSE_TARGET_CEM43 / (ABSORPTION_RATE_PER_INTENSITY * 10.0);
+
+        assert!((time - expected).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn treatment_time_is_infinite_without_valid_heating() {
+        let zero = Array3::zeros((1, 1, 1));
+        let invalid = Array3::from_elem((1, 1, 1), f64::NAN);
+        let negative = Array3::from_elem((1, 1, 1), -1.0);
+
+        assert!(estimate_treatment_time_from_intensity_field(&zero).is_infinite());
+        assert!(estimate_treatment_time_from_intensity_field(&invalid).is_infinite());
+        assert!(estimate_treatment_time_from_intensity_field(&negative).is_infinite());
     }
 }

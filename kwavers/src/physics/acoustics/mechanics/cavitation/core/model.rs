@@ -12,10 +12,9 @@
 //! where $I$ is the local cavitation intensity.
 
 use super::state::{CavitationDose, CavitationMechanicsState};
-use super::thresholds::{
-    blake_threshold, flynn_threshold, mechanical_index, neppiras_threshold, ThresholdModel,
-};
+use super::thresholds::{blake_threshold, flynn_threshold, neppiras_threshold, ThresholdModel};
 use crate::core::error::KwaversResult;
+use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use ndarray::{Array3, Zip};
 
@@ -156,7 +155,7 @@ impl CavitationModel {
                 if state.is_cavitating {
                     state.duration += dt;
                     state.peak_negative_pressure = state.peak_negative_pressure.min(p);
-                    state.mechanical_index = mechanical_index(p, frequency);
+                    state.mechanical_index = calculate_mechanical_index(p, frequency);
                     state.intensity =
                         Self::compute_intensity(state.peak_negative_pressure, ambient_pressure);
 

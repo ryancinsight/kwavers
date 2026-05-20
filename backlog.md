@@ -25,6 +25,27 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Completed the cavitation mechanical-index consolidation.
+  The cavitation core no longer imports or re-exports the removed local
+  `thresholds::mechanical_index` helper; model state updates and core tests now
+  call `physics::acoustics::analysis::calculate_mechanical_index` directly.
+  The nonlinear 3-D theranostic cavitation tests also import the canonical
+  helper directly after their local helper removal. This fixes the compile
+  breaks introduced by the partial consolidation without adding compatibility
+  aliases.
+
+- 2026-05-20: [patch] Closed the transcranial treatment-planning acoustic
+  simulation domain gap. Field synthesis now validates transducer setup
+  cardinality, positive finite frequency, finite element positions/phases, and
+  finite nonnegative amplitudes; applies per-element amplitude in the coherent
+  pressure sum; and converts documented millimeter element coordinates to SI
+  meters before evaluating spherical propagation. The Pennes thermal response
+  now rejects negative/nonfinite intensity values, and treatment-time
+  estimation returns infinity for zero or invalid heating instead of zero.
+  Focused tests pin amplitude-squared intensity scaling, millimeter conversion,
+  Pennes source balance, invalid transducer/intensity domains, and treatment
+  time from peak intensity.
+
 - 2026-05-20: [patch] Closed the transcranial treatment-planning safety
   validation gap. The planner now converts harmonic average intensity to peak
   pressure with `p_peak = sqrt(2 rho c I)` using the brain-medium constants
