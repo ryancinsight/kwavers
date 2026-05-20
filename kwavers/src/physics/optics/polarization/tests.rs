@@ -71,10 +71,21 @@ fn test_waveplate_operations() {
     assert_relative_eq!(output.ey.im, -0.5, epsilon = 1e-10);
     assert_relative_eq!(output.intensity(), input.intensity(), epsilon = 1e-10);
 
+    // HWP (fast axis 0°) on H-polarised input: [[1,0],[0,-1]]×[1,0] = [1,0]  (unchanged)
     let hwp = JonesMatrix::half_wave_plate();
-    let input = JonesVector::horizontal(1.0);
-    let output = hwp.apply(&input);
-    assert!(output.intensity() > 0.0);
+    let h_in = JonesVector::horizontal(1.0);
+    let h_out = hwp.apply(&h_in);
+    assert_relative_eq!(h_out.ex.re, 1.0, epsilon = 1e-10);
+    assert_relative_eq!(h_out.ex.im, 0.0, epsilon = 1e-10);
+    assert_relative_eq!(h_out.ey.re, 0.0, epsilon = 1e-10);
+    assert_relative_eq!(h_out.ey.im, 0.0, epsilon = 1e-10);
+    assert_relative_eq!(h_out.intensity(), h_in.intensity(), epsilon = 1e-10);
+    // HWP (fast axis 0°) on V-polarised input: [[1,0],[0,-1]]×[0,1] = [0,-1]  (sign flip, same intensity)
+    let v_in = JonesVector::vertical(1.0);
+    let v_out = hwp.apply(&v_in);
+    assert_relative_eq!(v_out.ex.re, 0.0, epsilon = 1e-10);
+    assert_relative_eq!(v_out.ey.re, -1.0, epsilon = 1e-10);
+    assert_relative_eq!(v_out.intensity(), v_in.intensity(), epsilon = 1e-10);
 }
 
 #[test]

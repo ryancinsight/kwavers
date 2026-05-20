@@ -87,12 +87,22 @@ impl JonesMatrix {
     }
 
     /// Half-wave plate with fast axis at 0°
+    ///
+    /// A half-wave plate (δ = π) with fast axis along x transmits the
+    /// x-component unchanged and applies a π phase shift to the y-component:
+    /// ```text
+    /// M = [[1, 0], [0, −1]]
+    /// ```
+    /// This is the standard real-valued Jones matrix (Born & Wolf §1.4).
+    /// H-polarised input is unchanged; V-polarised input gains a sign flip.
     #[must_use]
     pub fn half_wave_plate() -> Self {
-        let phase = std::f64::consts::PI / 2.0;
-        let cos = Complex64::new(phase.cos(), 0.0);
-        let sin = Complex64::new(0.0, phase.sin());
-        Self::new(cos, sin, sin, -cos)
+        Self::new(
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(-1.0, 0.0),
+        )
     }
 
     /// Rotation matrix for angle θ
