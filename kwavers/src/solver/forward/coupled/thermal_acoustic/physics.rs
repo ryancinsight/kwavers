@@ -31,7 +31,13 @@ impl ThermalAcousticCoupler {
 
     /// Compute acoustic heating source from pressure field.
     ///
-    /// `Q = α·p²/(ρ·c)` (|p|² = p² for real pressure field)
+    /// For a plane wave, the volumetric power deposition is:
+    ///   Q = 2α · I = 2α · p² / (ρ·c)
+    ///
+    /// The factor of 2 arises because α is the **amplitude** attenuation
+    /// coefficient (pressure ∝ exp(−αz)), so intensity ∝ exp(−2αz) and
+    /// the absorbed power per unit volume is −dI/dz = 2α·I.
+    /// (Pierce 1989 §10.2; Szabo 2014 §1.6)
     pub(super) fn compute_acoustic_heating(&mut self) {
         let alpha_ac = self.config.alpha_ac;
         let pressure_prev = &self.pressure_prev;
@@ -44,7 +50,7 @@ impl ThermalAcousticCoupler {
             .and(sound_speed.view())
             .par_for_each(|q, &p, &rho, &c| {
                 if rho > 0.0 && c > 0.0 {
-                    *q = alpha_ac * (p * p) / (rho * c);
+                    *q = 2.0 * alpha_ac * (p * p) / (rho * c);
                 } else {
                     *q = 0.0;
                 }
