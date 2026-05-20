@@ -30,7 +30,11 @@ mod tests {
         let r0 = 1e-6;
 
         let blake = blake_threshold(sigma, r0, p0, pv);
-        assert!(blake < p0 + pv);
+        // Surface tension always adds to the threshold: blake > P0 − Pv.
+        // For small R0 (1 µm) the threshold can substantially exceed P0 + Pv,
+        // so the old bound `blake < p0 + pv` was wrong for stiff nuclei.
+        assert!(blake > p0 - pv, "Blake threshold must exceed P0 − Pv (got {blake:.1})");
+        assert!(blake > 0.0, "Blake threshold must be positive");
 
         let neppiras = neppiras_threshold(p0, pv, sigma, r0);
         assert!(neppiras > 0.0);

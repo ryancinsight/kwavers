@@ -5,14 +5,17 @@
 //! ## Theorem 1: Blake Threshold (Static Stability)
 //! A gas bubble of undeformed radius $R_0$ in a liquid subjected to decreasing
 //! ambient pressure becomes mechanically unstable and grows explosively when
-//! the local static pressure drops below the Blake threshold $P_B$.
+//! the local static pressure drops below the Blake critical pressure $P_B$.
 //!
-//! **Proof / Equation:**
-//! The internal pressure balances surface tension and ambient pressure:
-//! $P_g = P_0 - P_v + \frac{2\sigma}{R_0}$
-//! Instability occurs when the derivative of pressure with respect to radius is zero,
-//! establishing the Blake threshold:
-//! $$ P_{Blake} = P_0 + P_v - \frac{2\sigma}{R_0} $$
+//! **Derivation:**
+//! The initial gas pressure satisfies the Young-Laplace condition:
+//! $P_{g0} = P_0 - P_v + 2\sigma/R_0$
+//! Instability occurs at the saddle point of the pressure-radius curve, giving
+//! the critical radius $R_c = R_0\sqrt{3P_{g0}R_0/(2\sigma)}$ and
+//! $$ P_B = P_v - \frac{4\sigma}{3R_0}\sqrt{\frac{2\sigma}{3P_{g0}R_0}} $$
+//!
+//! The **acoustic amplitude threshold** returned by [`blake_threshold`] is:
+//! $$ P_\text{Blake} = P_0 - P_B $$
 //!
 //! ## Theorem 2: Transient Cavitation (Flynn/Neppiras)
 //! For acoustic fields, transient (inertial) cavitation occurs when the mechanical
@@ -39,8 +42,33 @@ pub enum ThresholdModel {
     Flynn,
 }
 
-/// Calculate Blake threshold pressure
-/// Based on Blake (1949): "The onset of cavitation in liquids"
+/// Calculate the Blake threshold: the acoustic rarefaction amplitude [Pa] at
+/// which a gas nucleus of radius `initial_radius` undergoes unbounded growth.
+///
+/// # Derivation (Blake 1949; Apfel 1984)
+///
+/// For a spherical nucleus in mechanical equilibrium with the surrounding liquid,
+/// the total pressure that must be overcome to cause unbounded growth is found by
+/// locating the saddle-point of the Rayleigh-Plesset pressure curve:
+///
+/// ```text
+/// P_g0 = P_0 − P_v + 2σ/R_0                 [Young-Laplace equilibrium]
+/// R_c  = R_0 · √(3 P_g0 R_0 / (2σ))          [critical radius]
+/// P_B  = P_v − (4σ/(3R_0)) · √(2σ/(3 P_g0 R_0))   [Blake static pressure]
+/// ```
+///
+/// The function returns the **acoustic amplitude threshold** (positive, Pa):
+///
+/// ```text
+/// P_Blake = P_0 − P_B = (P_0 − P_v) + (4σ/(3R_0)) · √(2σ/(3 P_g0 R_0))
+/// ```
+///
+/// Cavitation is initiated when the local acoustic pressure `p` satisfies
+/// `p < −P_Blake` (rarefaction exceeds the threshold).
+///
+/// # Physical limits
+/// - R_0 → ∞: P_Blake → P_0 − P_v  (surface tension negligible)
+/// - R_0 → 0: P_Blake → ∞  (tiny nuclei are very stable)
 #[must_use]
 pub fn blake_threshold(
     surface_tension: f64,  // [N/m]
@@ -48,8 +76,17 @@ pub fn blake_threshold(
     ambient_pressure: f64, // [Pa]
     vapor_pressure: f64,   // [Pa]
 ) -> f64 {
-    // P_Blake = P_0 + P_v - 2σ/R_0
-    ambient_pressure + vapor_pressure - 2.0 * surface_tension / initial_radius
+    // Equilibrium gas pressure (Young-Laplace)
+    let p_g0 = (ambient_pressure - vapor_pressure + 2.0 * surface_tension / initial_radius)
+        .max(f64::EPSILON);
+
+    // Blake critical static pressure:  P_B = P_v − (4σ/(3R_0)) · √(2σ/(3 P_g0 R_0))
+    let p_blake = vapor_pressure
+        - (4.0 * surface_tension / (3.0 * initial_radius))
+            * (2.0 * surface_tension / (3.0 * p_g0 * initial_radius)).sqrt();
+
+    // Return acoustic amplitude threshold (always non-negative)
+    (ambient_pressure - p_blake).max(0.0)
 }
 
 /// Calculate Neppiras threshold
@@ -117,18 +154,40 @@ mod tests {
     const P0: f64 = 101_325.0; // Pa (1 atm)
     const PV: f64 = 2_330.0; // Pa (vapor pressure at 20°C)
 
-    /// Blake threshold: P_B = P₀ + Pᵥ − 2σ/R₀.
+    /// Blake threshold: acoustic amplitude = P_0 − P_B where
+    /// P_B = P_v − (4σ/(3R_0)) · √(2σ/(3 P_g0 R_0))
+    /// and P_g0 = P_0 − P_v + 2σ/R_0.
     ///
-    /// Analytical: 101325 + 2330 − 0.1456/5e-6 = 103655 − 29120 = 74535 Pa.
+    /// For 5 µm bubble in water at 20 °C:
+    /// P_g0 = 98995 + 29120 = 128115 Pa
+    /// α = √(2σ/(3·P_g0·R_0)) = √(0.0756) = 0.2753
+    /// (4σ/(3R_0))·α = 19413 · 0.2753 = 5343 Pa
+    /// threshold = (P_0 − P_v) + 5343 = 98995 + 5343 ≈ 104339 Pa
     #[test]
     fn blake_threshold_matches_analytical_formula() {
-        let expected = P0 + PV - 2.0 * SIGMA / R0;
+        let p_g0 = P0 - PV + 2.0 * SIGMA / R0;
+        let p_blake = PV
+            - (4.0 * SIGMA / (3.0 * R0))
+                * (2.0 * SIGMA / (3.0 * p_g0 * R0)).sqrt();
+        let expected = P0 - p_blake;
         let got = blake_threshold(SIGMA, R0, P0, PV);
         assert!(
             (got - expected).abs() < 1.0,
             "Blake threshold: got {got:.1} expected {expected:.1}"
         );
-        assert!((got - 74_535.0).abs() < 1.0, "Blake: must be ~74535 Pa");
+        // Numerical sanity: threshold must be positive (stable nuclei need rarefaction to cavitate)
+        assert!(got > 0.0, "Blake threshold must be positive (got {got:.1})");
+        // Threshold for a 5 µm air bubble in water at 20 °C ≈ 104339 Pa
+        // Derivation: P_g0 = 128115 Pa, α = √(2σ/(3P_g0R0)) = 0.2753
+        //   threshold = (P0-Pv) + (4σ/(3R0))·α = 98995 + 5343 = 104338.6 Pa
+        assert!(
+            (got - 104_339.0).abs() < 2.0,
+            "Blake: expected ~104339 Pa, got {got:.1}"
+        );
+        // For larger bubbles the threshold approaches P_0 − P_v from above
+        assert!(got > P0 - PV - 1.0, "Blake > P_0 − P_v for finite R_0");
+        // Surface tension can push threshold above P0 + Pv (e.g. 5 µm → 104339 > 103655)
+        assert!(got > 0.0);
     }
 
     /// Neppiras threshold: P_N = 0.5 · ((P₀ − Pᵥ) + 2σ/R₀).
