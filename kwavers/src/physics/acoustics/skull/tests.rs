@@ -31,11 +31,14 @@ fn test_acoustic_impedance() {
 #[test]
 fn test_transmission_coefficient() {
     let props = AcousticSkullProperties::default();
-    let water_z = 1.5e6;
+    let water_z = 1.5e6; // ~1.5 MRayl
     let t = props.transmission_coefficient(water_z);
 
-    // Should have significant loss (<50% transmission)
-    assert!(t > 0.0 && t < 0.5);
+    // T_I = 4 Z1 Z2 / (Z1+Z2)^2 for skull (Z2 ≈ 5.9 MRayl) vs water (Z1 ≈ 1.5 MRayl):
+    // T_I ≈ 0.64.  Always 0 < T_I ≤ 1 for lossless interface.
+    assert!(t > 0.0 && t <= 1.0);
+    // For skull the impedance mismatch limits T_I to ~ 50–70 %
+    assert!(t < 0.75);
 }
 
 #[test]

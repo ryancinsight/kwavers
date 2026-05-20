@@ -76,14 +76,25 @@ impl AcousticSkullProperties {
         self.density * self.sound_speed
     }
 
-    /// Calculate transmission coefficient for normal incidence
+    /// Calculate intensity transmission coefficient for normal incidence (water → skull)
     ///
-    /// Reference: Kinsler et al. (2000) "Fundamentals of Acoustics"
+    /// For a plane wave at normal incidence from medium 1 (water, Z₁) to medium 2
+    /// (skull, Z₂) the intensity transmission coefficient is (Kinsler et al. 2000 §6.2):
+    ///
+    /// ```text
+    /// T_I = 4 Z₁ Z₂ / (Z₁ + Z₂)²
+    /// ```
+    ///
+    /// This is the fraction of incident acoustic intensity transmitted into the skull.
+    /// Note: the pressure amplitude TC is T_p = 2Z₂/(Z₁+Z₂), which can exceed 1 when
+    /// Z₂ > Z₁ (pressure doubling at hard boundary); T_I is always ≤ 1.
+    ///
+    /// Reference: Kinsler et al. (2000) "Fundamentals of Acoustics" §6.2
     #[must_use]
     pub fn transmission_coefficient(&self, water_impedance: f64) -> f64 {
         let z_skull = self.acoustic_impedance();
-        let t = 2.0 * water_impedance / (water_impedance + z_skull);
-        t.powi(2) // Intensity transmission coefficient
+        // T_I = 4 Z1 Z2 / (Z1 + Z2)^2
+        4.0 * water_impedance * z_skull / (water_impedance + z_skull).powi(2)
     }
 
     /// Calculate attenuation for given frequency (Hz)
