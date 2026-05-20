@@ -30,20 +30,35 @@ impl HybridAsNonlinearOperator {
 
     /// Apply nonlinear step
     ///
-    /// Solves ∂p/∂z = -β/(2ρ₀c₀³) × p × ∂p/∂t in time domain
+    /// Solves the lossless Burgers equation in the spatial domain:
+    ///
+    /// ```text
+    /// ∂p/∂z = (β / (ρ₀c₀³)) · p · ∂p/∂τ
+    /// ```
+    ///
+    /// For a forward-propagating plane wave ∂p/∂τ ≈ ∂p/∂t ≈ −c₀ · ∂p/∂z,
+    /// giving the spatial update rule:
+    ///
+    /// ```text
+    /// Δp = −(β · Δz / (ρ₀c₀²)) · p · ∂p/∂z
+    /// ```
+    ///
+    /// Reference: Hamilton & Blackstock (1998) §4.2.1, eq. (4.2.3).
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply(&self, pressure: &Array3<f64>, dz: f64) -> KwaversResult<Array3<f64>> {
         let mut result = pressure.clone();
 
-        // Coefficient for nonlinear term
-        let coeff = -self.beta * dz / (2.0 * self.rho0 * self.c0 * self.c0 * self.c0);
+        // Coefficient for nonlinear term: −β·Δz / (ρ₀c₀³)
+        // (the c₀ factor below converts ∂p/∂z → ∂p/∂τ via the plane-wave
+        // approximation ∂p/∂τ ≈ −c₀·∂p/∂z, giving net factor −β·Δz/(ρ₀c₀²))
+        let coeff = -self.beta * dz / (self.rho0 * self.c0 * self.c0 * self.c0);
 
         // Apply nonlinear correction using characteristic method
         for ((i, j, k), val) in pressure.indexed_iter() {
-            // Nonlinear steepening: Δp ≈ -β/(2ρc³) × p × ∂p/∂t × Δz
-            // Approximate ∂p/∂t ≈ c₀ × ∂p/∂z (plane wave assumption)
+            // Nonlinear steepening: Δp ≈ −β/(ρc³) × p × ∂p/∂τ × Δz
+            // ∂p/∂τ ≈ −c₀ × ∂p/∂z for a forward-propagating plane wave
             let dp_dz = if k < pressure.shape()[2] - 1 {
                 (pressure[[i, j, k + 1]] - val) / dz
             } else if k > 0 {
