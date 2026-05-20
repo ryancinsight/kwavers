@@ -56,10 +56,12 @@ impl ThermalAcousticCoupler {
             )));
         }
 
+        // 3D explicit diffusion stability: α·dt·(1/dx² + 1/dy² + 1/dz²) ≤ 1/2
+        // Worst case with max_spacing = min(dx,dy,dz): 3·α·dt/max_spacing² ≤ 1/2 → cfl ≤ 1/6
         let cfl_thermal = config.alpha_thermal * config.dt / (max_spacing * max_spacing);
-        if cfl_thermal > 0.25 {
+        if cfl_thermal > 1.0 / 6.0 {
             return Err(KwaversError::InvalidInput(format!(
-                "CFL violation (thermal): {:.3} > 0.25. Reduce dt or increase dx/dy/dz",
+                "CFL violation (thermal): {:.4} > 1/6 ≈ 0.1667 (3D explicit diffusion limit). Reduce dt or increase dx/dy/dz",
                 cfl_thermal
             )));
         }
