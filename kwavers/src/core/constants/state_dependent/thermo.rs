@@ -1,4 +1,5 @@
 use super::StateDependentConstants;
+use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 
 impl StateDependentConstants {
     /// Calculate surface tension of water with temperature dependence
@@ -24,7 +25,7 @@ impl StateDependentConstants {
         const MU: f64 = 1.256; // Exponent
         const BETA: f64 = -0.625; // Correction coefficient
 
-        let t_kelvin = temperature + 273.15;
+        let t_kelvin = temperature + KELVIN_OFFSET_C;
 
         if t_kelvin >= T_CRITICAL {
             return 0.0;

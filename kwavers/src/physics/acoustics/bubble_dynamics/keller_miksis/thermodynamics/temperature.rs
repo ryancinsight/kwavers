@@ -4,7 +4,7 @@ use super::super::KellerMiksisModel;
 use super::phase::{latent_heat_water_j_per_kg, p_sat_water_pa};
 use crate::core::constants::fundamental::{GAS_CONSTANT as R_GAS, STEFAN_BOLTZMANN};
 use crate::core::constants::thermodynamic::{
-    EMISSIVITY_VAPOR, M_WATER, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
+    EMISSIVITY_VAPOR, KELVIN_OFFSET_C, M_WATER, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
 };
 use crate::core::error::{KwaversResult, PhysicsError};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
@@ -81,7 +81,7 @@ fn latent_temperature_rate(
     t_bubble: f64,
 ) -> f64 {
     let t_liquid_k = ROOM_TEMPERATURE_K;
-    let p_sat_liq = p_sat_water_pa(t_liquid_k - 273.15);
+    let p_sat_liq = p_sat_water_pa(t_liquid_k - KELVIN_OFFSET_C);
     let n_total = state.n_gas + state.n_vapor;
     let p_vapor = if n_total > 0.0 {
         state.pressure_internal * (state.n_vapor / n_total)
@@ -94,7 +94,7 @@ fn latent_temperature_rate(
     let mass_flux_kg_s =
         model.params.accommodation_coeff * surface_area * (p_sat_liq - p_vapor) * M_WATER
             / sqrt_term;
-    let l_v = latent_heat_water_j_per_kg(t_bubble - 273.15);
+    let l_v = latent_heat_water_j_per_kg(t_bubble - KELVIN_OFFSET_C);
 
     if n_moles > 0.0 && c_v > 0.0 {
         -l_v * mass_flux_kg_s / (n_moles * c_v)

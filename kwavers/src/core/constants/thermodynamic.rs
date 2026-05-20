@@ -15,6 +15,12 @@ pub const BODY_TEMPERATURE_C: f64 = 37.0;
 /// Absolute zero in Celsius
 pub const ABSOLUTE_ZERO_C: f64 = -273.15;
 
+/// Celsius → Kelvin offset (`T[K] = T[°C] + KELVIN_OFFSET_C`).
+///
+/// Numerically equal to `-ABSOLUTE_ZERO_C`; defined separately so callers do
+/// not need to negate a hardcoded literal when converting.
+pub const KELVIN_OFFSET_C: f64 = 273.15;
+
 /// Triple point of water temperature (K)
 pub const WATER_TRIPLE_POINT_K: f64 = 273.16;
 

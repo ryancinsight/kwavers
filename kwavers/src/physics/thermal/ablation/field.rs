@@ -1,3 +1,4 @@
+use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -49,7 +50,7 @@ impl AblationField {
                     let t = temperature[[i, j, k]];
 
                     // Convert to absolute temperature
-                    let t_abs = t + 273.15;
+                    let t_abs = t + KELVIN_OFFSET_C;
 
                     // Skip if below ablation threshold
                     if t < self.kinetics.ablation_threshold {

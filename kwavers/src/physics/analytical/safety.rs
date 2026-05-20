@@ -5,6 +5,7 @@
 //! limits.
 
 use crate::core::constants::fundamental::GAS_CONSTANT;
+use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 
 /// Mechanical Index (MI).
 ///
@@ -119,7 +120,7 @@ pub fn cem43_cumulative(t_celsius: &[f64], dt_s: f64) -> Vec<f64> {
 pub fn arrhenius_damage_integral(t_celsius: &[f64], dt_s: f64, a_per_s: f64, ea_j_mol: f64) -> f64 {
     let r_gas = GAS_CONSTANT;
     t_celsius.iter().fold(0.0_f64, |acc, &t| {
-        let t_k = t + 273.15;
+        let t_k = t + KELVIN_OFFSET_C;
         acc + a_per_s * (-ea_j_mol / (r_gas * t_k)).exp() * dt_s
     })
 }

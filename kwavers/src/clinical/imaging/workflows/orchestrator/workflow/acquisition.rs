@@ -1,6 +1,7 @@
 //! Ultrasound data acquisition for the clinical workflow orchestrator.
 
 use super::ClinicalWorkflowOrchestrator;
+#[cfg(feature = "gpu")]
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;

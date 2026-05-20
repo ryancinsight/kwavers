@@ -4,6 +4,7 @@
 //! cancer therapy." International Journal of Radiation Oncology Biology Physics,
 //! 10(6), 787-800.
 
+use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 use crate::core::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
@@ -55,7 +56,7 @@ impl ThermalDoseCalculator {
         Zip::from(&mut self.cumulative_dose)
             .and(temperature)
             .for_each(|dose, &temp_kelvin| {
-                let temp_celsius = temp_kelvin - 273.15;
+                let temp_celsius = temp_kelvin - KELVIN_OFFSET_C;
 
                 if temp_celsius > MIN_DOSE_TEMPERATURE_C {
                     let r = if temp_celsius >= BREAKPOINT_TEMPERATURE_C {

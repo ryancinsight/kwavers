@@ -1,4 +1,5 @@
 use super::kinetics::AblationKinetics;
+use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 
 /// Tissue ablation state at a point
 #[derive(Debug, Clone, Copy)]
@@ -30,7 +31,7 @@ impl AblationState {
         self.temperature = temperature;
 
         // Convert to absolute temperature
-        let t_abs = temperature + 273.15;
+        let t_abs = temperature + KELVIN_OFFSET_C;
 
         // Skip if below ablation threshold
         if temperature < kinetics.ablation_threshold {
