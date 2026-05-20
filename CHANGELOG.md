@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed (2026-05-20) - Acoustic Field Metrics Domain Validation
+
+- [patch] Route acoustic field metrics through the canonical impedance and
+  harmonic peak-intensity helpers, reject field/grid shape mismatches,
+  nonfinite pressure samples, and invalid impedance domains before metric
+  accumulation, and add value-semantic tests for signed peak magnitude,
+  stored-energy/intensity formulas, shape mismatch, and invalid-domain
+  rejection.
+
 ### Fixed (2026-05-20) - Cavitation Core Mechanical-Index Consolidation
 
 - [patch] Complete the cavitation core MI consolidation by routing

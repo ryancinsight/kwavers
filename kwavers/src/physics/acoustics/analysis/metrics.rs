@@ -1,6 +1,7 @@
 //! Field metrics calculation
 
-use crate::core::error::KwaversResult;
+use super::pressure::{acoustic_impedance, harmonic_peak_intensity};
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use ndarray::ArrayView3;
 
@@ -38,8 +39,15 @@ pub fn calculate_field_metrics(
     density: f64,
     sound_speed: f64,
 ) -> KwaversResult<FieldMetrics> {
+    validate_metric_domain(pressure_field, grid)?;
+    let Some(impedance) = acoustic_impedance(density, sound_speed) else {
+        return Err(validation_error(format!(
+            "Acoustic impedance requires positive finite density and sound_speed, got density={density}, sound_speed={sound_speed}"
+        )));
+    };
+
     // Find peak pressure
-    let (peak_location, peak_pressure) = find_peak_pressure(pressure_field, grid)?;
+    let (peak_location, peak_pressure) = find_peak_pressure_unchecked(pressure_field, grid);
 
     // Calculate focal distance
     let focal_distance = peak_location[2]
@@ -64,8 +72,7 @@ pub fn calculate_field_metrics(
         0.0
     };
 
-    // Calculate total power and intensity
-    let impedance = density * sound_speed;
+    // Calculate total stored acoustic energy and intensity
     let mut total_power = 0.0;
     let mut max_intensity = 0.0;
 
@@ -74,7 +81,7 @@ pub fn calculate_field_metrics(
             for iz in 0..grid.nz {
                 let p = pressure_field[[ix, iy, iz]];
                 // Acoustic intensity: I = p²/(2ρc)  [W/m²]
-                let intensity = p.powi(2) / (2.0 * impedance);
+                let intensity = harmonic_peak_intensity(p, impedance);
                 // Acoustic potential energy density: e = p²/(2ρc²)  [J/m³]
                 // Integrating e·dV over the volume gives total stored
                 // acoustic energy in joules (not power in watts).
@@ -104,6 +111,11 @@ pub fn find_peak_pressure(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
 ) -> KwaversResult<([f64; 3], f64)> {
+    validate_metric_domain(pressure_field, grid)?;
+    Ok(find_peak_pressure_unchecked(pressure_field, grid))
+}
+
+fn find_peak_pressure_unchecked(pressure_field: ArrayView3<f64>, grid: &Grid) -> ([f64; 3], f64) {
     let mut max_pressure = 0.0;
     let mut max_location = [0, 0, 0];
 
@@ -125,7 +137,36 @@ pub fn find_peak_pressure(
         max_location[2] as f64 * grid.dz,
     ];
 
-    Ok((location, max_pressure))
+    (location, max_pressure)
+}
+
+fn validate_metric_domain(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<()> {
+    let expected = (grid.nx, grid.ny, grid.nz);
+    let actual = pressure_field.dim();
+    if actual != expected {
+        return Err(KwaversError::Validation(
+            ValidationError::DimensionMismatch {
+                expected: format!("{expected:?}"),
+                actual: format!("{actual:?}"),
+            },
+        ));
+    }
+
+    for ((ix, iy, iz), &pressure) in pressure_field.indexed_iter() {
+        if !pressure.is_finite() {
+            return Err(validation_error(format!(
+                "Pressure field contains nonfinite value {pressure} at [{ix}, {iy}, {iz}]"
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+fn validation_error(message: impl Into<String>) -> KwaversError {
+    KwaversError::Validation(ValidationError::ConstraintViolation {
+        message: message.into(),
+    })
 }
 
 /// Calculate beam width at a specific location
@@ -184,6 +225,13 @@ mod tests {
         Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap()
     }
 
+    fn assert_close(actual: f64, expected: f64, tolerance: f64, context: &str) {
+        assert!(
+            (actual - expected).abs() <= tolerance,
+            "{context}: expected {expected:.12e}, got {actual:.12e}"
+        );
+    }
+
     /// `find_peak_pressure` returns position of the maximum |pressure| cell.
     ///
     /// Spike at [4,4,4]: location = 4·dx × (4·dy) × (4·dz) = (4e-3, 4e-3, 4e-3).
@@ -199,6 +247,23 @@ mod tests {
         assert!((loc[0] - 4.0 * grid.dx).abs() < 1e-14, "x location");
         assert!((loc[1] - 4.0 * grid.dy).abs() < 1e-14, "y location");
         assert!((loc[2] - 4.0 * grid.dz).abs() < 1e-14, "z location");
+    }
+
+    /// Peak search uses pressure magnitude, so rarefactional extrema are not
+    /// hidden by smaller positive compressional samples.
+    #[test]
+    fn find_peak_pressure_uses_signed_pressure_magnitude() {
+        let grid = small_grid();
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        field[[2, 3, 4]] = 500.0;
+        field[[5, 6, 7]] = -700.0;
+
+        let (loc, peak) = find_peak_pressure(field.view(), &grid).unwrap();
+
+        assert_close(peak, 700.0, 1e-12, "rarefactional peak magnitude");
+        assert_close(loc[0], 5.0 * grid.dx, 1e-14, "x location");
+        assert_close(loc[1], 6.0 * grid.dy, 1e-14, "y location");
+        assert_close(loc[2], 7.0 * grid.dz, 1e-14, "z location");
     }
 
     /// Uniform zero field: peak = 0 and location = origin (all-zero search result).
@@ -218,18 +283,73 @@ mod tests {
         field[[4, 4, 4]] = 1e5;
 
         let metrics = calculate_field_metrics(field.view(), &grid, 1000.0, 1500.0).unwrap();
+        let expected_intensity = 1e5_f64.powi(2) / (2.0 * 1000.0 * 1500.0);
+        let expected_energy = expected_intensity / 1500.0 * grid.dx * grid.dy * grid.dz;
+
+        assert_close(metrics.peak_pressure, 1e5, 1e-9, "peak pressure");
+        assert_close(metrics.peak_location[0], 4.0 * grid.dx, 1e-14, "peak x");
+        assert_close(
+            metrics.spatial_peak_intensity,
+            expected_intensity,
+            1e-9,
+            "spatial peak intensity",
+        );
+        assert_close(
+            metrics.total_power,
+            expected_energy,
+            1e-18,
+            "stored acoustic energy",
+        );
+    }
+
+    #[test]
+    fn calculate_field_metrics_rejects_invalid_impedance_domain() {
+        let grid = small_grid();
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        field[[4, 4, 4]] = 1e5;
+
+        let err = calculate_field_metrics(field.view(), &grid, 0.0, 1500.0).unwrap_err();
+        let message = err.to_string();
 
         assert!(
-            metrics.peak_pressure > 0.0,
-            "peak_pressure must be positive"
+            message.contains("Acoustic impedance"),
+            "unexpected error: {message}"
         );
         assert!(
-            metrics.total_power >= 0.0,
-            "total_power must be non-negative"
+            message.contains("density=0"),
+            "density must be reported: {message}"
         );
+    }
+
+    #[test]
+    fn calculate_field_metrics_rejects_nonfinite_pressure_samples() {
+        let grid = small_grid();
+        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        field[[1, 2, 3]] = f64::NAN;
+
+        let err = calculate_field_metrics(field.view(), &grid, 1000.0, 1500.0).unwrap_err();
+        let message = err.to_string();
+
+        assert!(message.contains("nonfinite"), "unexpected error: {message}");
         assert!(
-            metrics.spatial_peak_intensity > 0.0,
-            "spatial_peak_intensity positive"
+            message.contains("[1, 2, 3]"),
+            "sample index must be reported: {message}"
         );
+    }
+
+    #[test]
+    fn find_peak_pressure_rejects_shape_mismatch() {
+        let grid = small_grid();
+        let field = Array3::<f64>::zeros((7, 8, 8));
+
+        let err = find_peak_pressure(field.view(), &grid).unwrap_err();
+        let message = err.to_string();
+
+        assert!(
+            message.contains("Dimension mismatch"),
+            "unexpected error: {message}"
+        );
+        assert!(message.contains("(8, 8, 8)"), "expected shape: {message}");
+        assert!(message.contains("(7, 8, 8)"), "actual shape: {message}");
     }
 }

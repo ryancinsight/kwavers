@@ -25,6 +25,16 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [patch] Closed the acoustic field metrics domain-validation
+  gap. `physics::acoustics::analysis::metrics` now rejects pressure
+  field/grid shape mismatches, nonfinite pressure samples, and invalid
+  density/sound-speed impedance domains before computing peak pressure,
+  stored acoustic energy, or spatial peak intensity. The metric path shares
+  the canonical `Z = rho c` and `I = p^2 / (2Z)` helpers with pressure
+  analysis, preserving a single acoustic intensity implementation. Focused
+  tests pin signed pressure magnitude, exact single-cell intensity and energy,
+  dimension mismatch, nonfinite samples, and invalid impedance rejection.
+
 - 2026-05-20: [patch] Completed the cavitation mechanical-index consolidation.
   The cavitation core no longer imports or re-exports the removed local
   `thresholds::mechanical_index` helper; model state updates and core tests now
