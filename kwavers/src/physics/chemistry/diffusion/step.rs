@@ -4,6 +4,43 @@ use super::{DiffusionError, DiffusionStepResult, RadicalDiffusionSolver};
 impl RadicalDiffusionSolver {
     /// Advance all radical species by one diffusion step `dt` (s).
     ///
+    /// # Theory — Spherical Diffusion on a Logarithmic Grid
+    ///
+    /// The Smoluchowski equation in spherical coordinates (Storey & Szeri 2000):
+    ///
+    /// ```text
+    /// ∂c/∂t = D · (1/r²) · ∂/∂r(r² · ∂c/∂r)
+    /// ```
+    ///
+    /// Under the change of variable ξ = ln(r/R_bubble) this becomes:
+    ///
+    /// ```text
+    /// ∂c/∂t = (D / r²) · (∂²c/∂ξ² + ∂c/∂ξ)
+    ///       = α(r) · (∂²c/∂ξ² + ∂c/∂ξ)
+    /// ```
+    ///
+    /// where `α(r) = D/r²` is the **spatially varying** diffusion coefficient.
+    /// On the j-th log-grid node `r_j = R · exp(j · Δξ)`:
+    ///
+    /// ```text
+    /// α_j = D / r_j²
+    /// ```
+    ///
+    /// **Crank-Nicolson half-step coefficients (per node j):**
+    ///
+    /// ```text
+    /// λ_j = α_j · dt / 2
+    ///
+    /// RHS[j] = c[j] + λ_j · (∂²c/∂ξ² + ∂c/∂ξ)   [explicit half, old c]
+    ///
+    /// LHS: (1 + 2λ_j/Δξ²) · c_new[j]
+    ///      − λ_j · (1/Δξ² − 1/(2Δξ)) · c_new[j−1]
+    ///      − λ_j · (1/Δξ² + 1/(2Δξ)) · c_new[j+1] = RHS[j]
+    /// ```
+    ///
+    /// where the `1/(2Δξ)` factor comes from the central-difference approximation
+    /// of `∂c/∂ξ` (compare with the previous incorrect `1/Δξ` = twice too large).
+    ///
     /// # Arguments
     ///
     /// * `concentrations` - `[n_species][n_points]` concentrations in mol/m^3.
@@ -35,6 +72,11 @@ impl RadicalDiffusionSolver {
         let inv_dxi = 1.0 / dxi;
         let inv_dxi2 = inv_dxi * inv_dxi;
 
+        // Pre-compute per-node radii: r_j = R_bubble * exp(j * dxi)
+        let r_nodes: Vec<f64> = (0..n)
+            .map(|j| self.r_bubble_m * (j as f64 * dxi).exp())
+            .collect();
+
         let mut max_delta = 0.0_f64;
 
         for (species_index, concentration) in concentrations.iter_mut().enumerate() {
@@ -46,10 +88,16 @@ impl RadicalDiffusionSolver {
             }
 
             let wall_concentration = bubble_concs.get(species_index).copied().unwrap_or(0.0);
-            let alpha = diffusion_coefficient * dt / (2.0 * dxi * dxi);
 
-            let rhs = build_rhs(concentration, wall_concentration, alpha, dxi, n);
-            let (lower, diagonal, upper) = build_lhs(alpha, inv_dxi, inv_dxi2, n);
+            // λ_j = D * dt / (2 * r_j²)  — spatially varying CN half-step coefficient
+            let lambda: Vec<f64> = r_nodes
+                .iter()
+                .map(|&r| diffusion_coefficient * dt / (2.0 * r * r))
+                .collect();
+
+            let rhs = build_rhs(concentration, wall_concentration, &lambda, inv_dxi, inv_dxi2, n);
+            let (lower, diagonal, upper) =
+                build_lhs(&lambda, inv_dxi, inv_dxi2, n);
 
             let solved = thomas_solve(&lower, &diagonal, &upper, &rhs)
                 .ok_or(DiffusionError::SingularSystem)?;
@@ -71,41 +119,58 @@ impl RadicalDiffusionSolver {
 fn build_rhs(
     concentration: &[f64],
     wall_concentration: f64,
-    alpha: f64,
-    dxi: f64,
+    lambda: &[f64],
+    inv_dxi: f64,
+    inv_dxi2: f64,
     n: usize,
 ) -> Vec<f64> {
     let mut rhs = vec![0.0_f64; n];
     rhs[0] = wall_concentration;
 
-    let inv_dxi2 = 1.0 / (dxi * dxi);
     for j in 1..n - 1 {
-        let laplacian = (2.0f64.mul_add(-concentration[j], concentration[j + 1])
-            + concentration[j - 1])
+        // ∂²c/∂ξ² via central difference
+        let laplacian = (concentration[j + 1] - 2.0 * concentration[j] + concentration[j - 1])
             * inv_dxi2;
-        let first_derivative = (concentration[j + 1] - concentration[j - 1]) / (2.0 * dxi);
-        rhs[j] = alpha.mul_add(laplacian + first_derivative, concentration[j]);
+        // ∂c/∂ξ via central difference (coefficient 1/(2Δξ) = 0.5 * inv_dxi)
+        let first_derivative = (concentration[j + 1] - concentration[j - 1]) * 0.5 * inv_dxi;
+        // Explicit half: c[j] + λ_j * (∂²c/∂ξ² + ∂c/∂ξ)
+        rhs[j] = lambda[j].mul_add(laplacian + first_derivative, concentration[j]);
     }
 
     rhs[n - 1] = 0.0;
     rhs
 }
 
-fn build_lhs(alpha: f64, inv_dxi: f64, inv_dxi2: f64, n: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
-    let lower_coefficient = alpha * (inv_dxi2 - inv_dxi);
-    let diagonal_coefficient = alpha * (-2.0 * inv_dxi2);
-    let upper_coefficient = alpha * (inv_dxi2 + inv_dxi);
+/// Build the tridiagonal CN-implicit matrix for the log-grid spherical diffusion.
+///
+/// The LHS operator is `(I − λ_j · L_ξ)` where:
+///
+/// ```text
+/// L_ξ c[j] = c[j-1]·(1/Δξ² − 1/(2Δξ))
+///            − c[j]·(2/Δξ²)
+///            + c[j+1]·(1/Δξ² + 1/(2Δξ))
+/// ```
+///
+/// Rows 0 and n−1 are set to identity (Dirichlet boundary conditions).
+fn build_lhs(lambda: &[f64], inv_dxi: f64, inv_dxi2: f64, n: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+    let mut lower = vec![0.0_f64; n];
+    let mut diagonal = vec![1.0_f64; n];
+    let mut upper = vec![0.0_f64; n];
 
-    let mut lower = vec![-lower_coefficient; n];
-    let mut diagonal = vec![1.0 - diagonal_coefficient; n];
-    let mut upper = vec![-upper_coefficient; n];
+    // Interior nodes: per-point λ_j coefficient
+    for j in 1..n - 1 {
+        let lam = lambda[j];
+        // c_new[j-1] coefficient: −λ_j · (1/Δξ² − 1/(2Δξ))
+        lower[j] = -lam * (inv_dxi2 - 0.5 * inv_dxi);
+        // c_new[j] coefficient: 1 + λ_j · (2/Δξ²)
+        diagonal[j] = 1.0 + lam * (2.0 * inv_dxi2);
+        // c_new[j+1] coefficient: −λ_j · (1/Δξ² + 1/(2Δξ))
+        upper[j] = -lam * (inv_dxi2 + 0.5 * inv_dxi);
+    }
 
-    diagonal[0] = 1.0;
-    upper[0] = 0.0;
-    lower[0] = 0.0;
-    diagonal[n - 1] = 1.0;
-    lower[n - 1] = 0.0;
-    upper[n - 1] = 0.0;
+    // Dirichlet boundaries: rows 0 and n-1 are identity
+    // (already set by initialization above)
 
     (lower, diagonal, upper)
 }
+
