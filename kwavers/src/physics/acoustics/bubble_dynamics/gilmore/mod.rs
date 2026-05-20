@@ -37,16 +37,23 @@ impl GilmoreSolver {
     }
 
     /// Calculate enthalpy from Tait equation of state
-    /// h = ∫(dp/ρ) = (n/(n-1)) * (p+B)/ρ₀ * [(p+B)/(p₀+B)]^((n-1)/n)
+    /// h = ∫(dp/ρ) = (n/(n-1)) * (p₀+B)/ρ₀ * [(p+B)/(p₀+B)]^((n-1)/n)
+    ///
+    /// Derived from the Tait EOS ρ(p) = ρ₀·[(p+B)/(p₀+B)]^(1/n):
+    ///   h = ∫_{p₀}^{p} dp'/ρ(p') = (p₀+B)/ρ₀ · n/(n-1) · {[(p+B)/(p₀+B)]^((n-1)/n) − 1}
+    /// The constant −1 drops out when taking the difference H = h(p_wall) − h(p_inf).
     pub(super) fn calculate_enthalpy(pressure: f64, rho_0: f64, b: f64, n: f64) -> f64 {
         let p0 = ATMOSPHERIC_PRESSURE;
-        (n / (n - 1.0)) * (pressure + b) / rho_0 * ((pressure + b) / (p0 + b)).powf((n - 1.0) / n)
+        (n / (n - 1.0)) * (p0 + b) / rho_0 * ((pressure + b) / (p0 + b)).powf((n - 1.0) / n)
     }
 
     /// Calculate sound speed from Tait equation
-    /// c² = (∂p/∂ρ)_s = n(p+B)/ρ
+    /// c² = (∂p/∂ρ)_s = n(p+B)/ρ(p)
+    ///
+    /// Uses local Tait density ρ(p) = ρ₀·[(p+B)/(p₀+B)]^(1/n) via `calculate_density`.
     pub(super) fn calculate_sound_speed(&self, pressure: f64) -> f64 {
-        ((self.tait_n * (pressure + self.tait_b)) / self.params.rho_liquid).sqrt()
+        let rho_local = self.calculate_density(pressure);
+        ((self.tait_n * (pressure + self.tait_b)) / rho_local).sqrt()
     }
 
     /// Liquid density from the Tait equation of state.
