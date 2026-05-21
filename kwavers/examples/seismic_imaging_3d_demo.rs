@@ -106,10 +106,10 @@ const N_RECEIVERS_3D: usize = N_SPHERE_ELEMENTS - 1;
 const R_ARRAY_3D: f64 = 21.0; // voxels from grid centre
 
 // ─────────────────────────────────────────────────────────────────────────────
-// InSightec / INSIGHTEC reference constant (same as 2D demo)
+// Transcranial focused-bowl reference constant (same as 2D demo)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INSIGHTEC_ELEMENT_COUNT: usize = 1024;
+const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Visualisation layout constants
@@ -1398,7 +1398,9 @@ fn main() -> KwaversResult<()> {
     // ── [ 5 / 7 ]  Fibonacci-sphere acquisition geometry ─────────────────
     println!("\n[ 5 / 7 ]  Building Fibonacci-sphere acquisition geometry …");
     println!("  Array aperture   : {N_SPHERE_ELEMENTS} elements at R={R_ARRAY_3D} voxels");
-    println!("  InSightec ref    : {INSIGHTEC_ELEMENT_COUNT} elements (full hemispherical array)");
+    println!(
+        "  Bowl reference   : {TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT} elements (full hemispherical array)"
+    );
     println!("  Transmits        : {N_SHOTS_3D} shots; receivers/shot = {N_RECEIVERS_3D}");
 
     let cx_grid = (NX / 2) as f64;

@@ -1,4 +1,4 @@
-//! Skull CT DICOM phase-correction example for an Insightec-style array.
+//! Skull CT DICOM phase-correction example for a transcranial focused bowl.
 //!
 //! Usage:
 //!
@@ -17,7 +17,7 @@
 //! - `<output>_element_maps.ppm` and `.svg`: 2D transducer element maps.
 
 use std::env;
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -25,6 +25,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
 use burn::backend::NdArray;
 use kwavers::domain::grid::Grid;
+use kwavers::domain::source::transducers::focused::{BowlConfig, BowlTransducer};
 use kwavers::physics::acoustics::skull::{AberrationCorrection, HeterogeneousSkull};
 use kwavers::physics::skull::heterogeneous::SkullLayer;
 use ndarray::{Array1, Array2, Array3};
@@ -36,8 +37,10 @@ mod diagnostics_3d;
 type Backend = NdArray<f32>;
 
 const FREQUENCY_HZ: f64 = 650_000.0;
-const ELEMENT_COUNT: usize = 1024;
-const EXABLATE_HEMISPHERE_RADIUS_M: f64 = 0.150;
+const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
+const TRANSCRANIAL_FOCUSED_BOWL_RADIUS_M: f64 = 0.150;
+const UNIT_FREQUENCY_HZ: f64 = 1.0;
+const UNIT_AMPLITUDE_PA: f64 = 1.0;
 const C_WATER_M_PER_S: f64 = 1482.0;
 const C_CORTICAL_BONE_M_PER_S: f64 = 2800.0;
 const RHO_WATER_KG_PER_M3: f64 = 1000.0;
@@ -115,7 +118,7 @@ fn main() -> Result<()> {
         .aperture_phase_map(FREQUENCY_HZ)
         .context("failed to compute aperture phase map")?;
 
-    let (element_x, element_y, element_z) = hemispherical_projected_elements(&grid);
+    let (element_x, element_y, element_z) = hemispherical_projected_elements(&grid)?;
     let focus = phase_target_point(&grid);
     let element_corrections = compute_focused_element_corrections(
         FREQUENCY_HZ,
@@ -296,34 +299,32 @@ fn skull_from_hu(ct: &CtVolume) -> HeterogeneousSkull {
     .expect("Hill BVF skull model should accept finite RITK CT HU data")
 }
 
-fn hemispherical_projected_elements(grid: &Grid) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+fn hemispherical_projected_elements(grid: &Grid) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
     let center_x = 0.5 * (grid.nx.saturating_sub(1) as f64) * grid.dx;
     let center_y = 0.5 * (grid.ny.saturating_sub(1) as f64) * grid.dy;
     let grid_radius = 0.48 * (grid.nx as f64 * grid.dx).min(grid.ny as f64 * grid.dy);
-    let projection_scale = (grid_radius / EXABLATE_HEMISPHERE_RADIUS_M).min(1.0);
+    let projection_scale = (grid_radius / TRANSCRANIAL_FOCUSED_BOWL_RADIUS_M).min(1.0);
 
-    let golden_angle = PI * (3.0 - 5.0_f64.sqrt());
-    let mut x = Vec::with_capacity(ELEMENT_COUNT);
-    let mut y = Vec::with_capacity(ELEMENT_COUNT);
-    let mut z = Vec::with_capacity(ELEMENT_COUNT);
+    let config = BowlConfig::hemispherical(
+        [0.0, 0.0, TRANSCRANIAL_FOCUSED_BOWL_RADIUS_M],
+        [0.0, 0.0, 0.0],
+        UNIT_FREQUENCY_HZ,
+        UNIT_AMPLITUDE_PA,
+    );
+    let bowl =
+        BowlTransducer::with_polar_span(config, FRAC_PI_2, TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT)
+            .context("failed to construct transcranial focused-bowl element layout")?;
 
-    for n in 0..ELEMENT_COUNT {
-        let u = (n as f64 + 0.5) / ELEMENT_COUNT as f64;
-        let polar = u.acos();
-        let azimuth = n as f64 * golden_angle;
-        let r_xy = EXABLATE_HEMISPHERE_RADIUS_M * polar.sin();
-        let bowl_x = r_xy * azimuth.cos();
-        let bowl_y = r_xy * azimuth.sin();
-        // Local +z is superior in the diagnostic coordinate frame: the
-        // hemispherical cap sits above the skull with its concavity directed
-        // inferiorly toward the neck.
-        let bowl_z = EXABLATE_HEMISPHERE_RADIUS_M * polar.cos();
-        x.push(center_x + projection_scale * bowl_x);
-        y.push(center_y + projection_scale * bowl_y);
-        z.push(bowl_z);
+    let mut x = Vec::with_capacity(bowl.element_count());
+    let mut y = Vec::with_capacity(bowl.element_count());
+    let mut z = Vec::with_capacity(bowl.element_count());
+    for position in bowl.element_positions() {
+        x.push(center_x + projection_scale * position[0]);
+        y.push(center_y + projection_scale * position[1]);
+        z.push(position[2]);
     }
 
-    (x, y, z)
+    Ok((x, y, z))
 }
 
 fn phase_target_point(grid: &Grid) -> Point3Meters {
@@ -757,7 +758,7 @@ fn projected_transducer_pixels(
 ) -> Vec<(isize, isize)> {
     let center_y = 0.5 * (grid.ny.saturating_sub(1) as f64) * grid.dy;
     let grid_radius = 0.48 * (grid.nx as f64 * grid.dx).min(grid.ny as f64 * grid.dy);
-    let projection_scale = (grid_radius / EXABLATE_HEMISPHERE_RADIUS_M).min(1.0);
+    let projection_scale = (grid_radius / TRANSCRANIAL_FOCUSED_BOWL_RADIUS_M).min(1.0);
     let pitch = TRANSDUCER_POSTERIOR_TILT_DEG.to_radians();
     let mut points = Vec::with_capacity(elements.len());
     let mut min_y = f64::INFINITY;

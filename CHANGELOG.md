@@ -12,6 +12,13 @@
 - [patch] Replace residual Insightec-like transcranial therapy labels with
   source-owned transcranial focused-bowl model identifiers.
 
+### Changed (2026-05-21) - Transcranial Bowl Example Geometry SSOT
+
+- [patch] Route the skull CT phase-correction example through
+  `BowlTransducer::with_polar_span` instead of a local golden-angle
+  hemispherical sampler, and rename tracked imaging-demo aperture constants to
+  transcranial focused-bowl terminology.
+
 ### Changed (2026-05-21) - Transcranial Focused-Bowl Naming Completion
 
 - [patch] Replace the public 3-D brain placement API and PyO3 export with

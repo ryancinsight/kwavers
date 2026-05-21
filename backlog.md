@@ -53,6 +53,11 @@
   Residual Insightec-like transcranial clinical/source comments, model IDs, and
   Python test names now use source-owned transcranial focused-bowl terminology.
 
+- 2026-05-21: [patch] Closed the transcranial bowl example geometry SSOT gap.
+  The skull CT phase-correction example now obtains its 1024-element
+  hemispherical layout from `BowlTransducer::with_polar_span`; tracked imaging
+  demos use transcranial focused-bowl constants instead of vendor labels.
+
 
 - 2026-05-20: [minor] Closed the bowl vertex/focus preset gap.
   `BowlConfig` now owns vertex/focus and hemispherical constructors plus an

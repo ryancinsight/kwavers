@@ -185,7 +185,7 @@ const DEFAULT_MEDIMODEL_SERIES_UID: &str =
     "1.3.6.1.4.1.5962.99.1.1761388472.1291962045.1616669124536.2634.0";
 
 /// Full hemispherical aperture size used by the companion phase-correction demo.
-const INSIGHTEC_ELEMENT_COUNT: usize = 1024;
+const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
 /// Colormap bounds [m/s] for skull image panels.
 const C_LO: f64 = C_WATER; // 1500 m/s → blue
@@ -2209,7 +2209,9 @@ fn main() -> KwaversResult<()> {
 
     // ── 4. Hemispherical acquisition geometry ─────────────────────────────
     println!("\n[ 4 / 6 ]  Building hemispherical acquisition geometry …");
-    println!("  Full aperture    : {INSIGHTEC_ELEMENT_COUNT} elements, 650 kHz design authority");
+    println!(
+        "  Full aperture    : {TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT} elements, 650 kHz design authority"
+    );
     println!("  FWI section      : {FWI_ACTIVE_ELEMENTS} active full-ring samples");
     println!("  Transmits        : {N_SHOTS} shots; receivers/shot = {N_RECEIVERS} on same arc");
     for (s, &element_index) in TRANSMIT_ELEMENT_INDICES.iter().enumerate() {
