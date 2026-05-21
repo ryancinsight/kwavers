@@ -29,7 +29,7 @@ pub use crate::domain::medium::properties::ThermalPropertyData;
 /// For Pennes solver simulations, also specify arterial temperature and metabolic heat
 /// as separate simulation parameters.
 pub mod tissues {
-    use crate::core::constants::fundamental::DENSITY_BLOOD;
+    use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
     use crate::domain::medium::properties::ThermalPropertyData;
 
@@ -116,10 +116,10 @@ pub mod tissues {
     #[must_use]
     pub fn tumor() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.55,      // conductivity (W/m/K)
-            3600.0,    // specific_heat (J/kg/K)
-            1050.0,    // density (kg/m³)
-            Some(0.2), // blood_perfusion (kg/m³/s) - poor perfusion
+            0.55,           // conductivity (W/m/K)
+            3600.0,         // specific_heat (J/kg/K)
+            DENSITY_TISSUE, // density (kg/m³) — SSOT: fundamental::DENSITY_TISSUE
+            Some(0.2),      // blood_perfusion (kg/m³/s) - poor perfusion
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Tumor tissue properties are valid")
@@ -142,6 +142,7 @@ pub mod tissues {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_TISSUE;
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 
     #[test]
@@ -163,12 +164,12 @@ mod tests {
 
         let tumor = tissues::tumor();
         assert_eq!(tumor.conductivity, 0.55);
-        assert_eq!(tumor.density, 1050.0);
+        assert_eq!(tumor.density, DENSITY_TISSUE);
         assert!(tumor.has_bioheat_parameters());
 
         let soft = tissues::soft_tissue();
         assert_eq!(soft.conductivity, 0.5);
-        assert_eq!(soft.density, 1050.0);
+        assert_eq!(soft.density, DENSITY_TISSUE);
         assert!(soft.has_bioheat_parameters());
     }
 

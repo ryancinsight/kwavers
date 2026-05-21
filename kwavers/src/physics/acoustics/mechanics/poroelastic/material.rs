@@ -48,6 +48,7 @@
 //! - Gassmann F. (1951). Vierteljahrschrift Naturf. Ges. Zürich 96, 1–23.
 //! - Wood A.B. (1955). *A Textbook of Sound*. Bell & Hyman, London.
 
+use crate::core::constants::fundamental::DENSITY_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Poroelastic material properties
@@ -168,7 +169,7 @@ impl PoroelasticMaterial {
             }),
             "liver" => Ok(Self {
                 porosity: 0.15, // 15% vascular space
-                solid_density: 1050.0,
+                solid_density: DENSITY_TISSUE, // SSOT: fundamental::DENSITY_TISSUE
                 fluid_density: 1000.0,
                 solid_bulk_modulus: 2.5e9, // 2.5 GPa
                 fluid_bulk_modulus: 2.25e9,

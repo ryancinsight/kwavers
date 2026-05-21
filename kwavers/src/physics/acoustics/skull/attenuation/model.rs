@@ -1,6 +1,7 @@
 //! Core skull attenuation model implementation
 
 use super::types::BoneType;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Enhanced skull attenuation calculator with frequency-dependent effects
@@ -55,7 +56,7 @@ impl SkullAttenuation {
             bone_type: BoneType::Cortical,
             scattering_coeff: 0.01, // Low scattering
             include_scattering: true,
-            reference_temperature: 37.0, // Body temperature
+            reference_temperature: BODY_TEMPERATURE_C, // SSOT: thermodynamic::BODY_TEMPERATURE_C
         }
     }
 
@@ -73,7 +74,7 @@ impl SkullAttenuation {
             bone_type: BoneType::Cancellous,
             scattering_coeff: 0.1, // High scattering
             include_scattering: true,
-            reference_temperature: 37.0,
+            reference_temperature: BODY_TEMPERATURE_C,
         }
     }
 
@@ -116,7 +117,7 @@ impl SkullAttenuation {
             bone_type,
             scattering_coeff,
             include_scattering,
-            reference_temperature: 37.0,
+            reference_temperature: BODY_TEMPERATURE_C,
         })
     }
 
