@@ -1,7 +1,9 @@
 use super::BemSolver;
 use crate::core::error::KwaversResult;
 use crate::domain::boundary::BemBoundaryManager;
-use crate::math::linear_algebra::sparse::{solver::SparsePreconditioner, CompressedSparseRowMatrix};
+use crate::math::linear_algebra::sparse::{
+    solver::SparsePreconditioner, CompressedSparseRowMatrix,
+};
 use crate::solver::forward::bem::{
     field::BemSolution,
     geometry::{point_to_triangle_distance, triangle_characteristic_length},

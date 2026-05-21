@@ -6,16 +6,21 @@ use std::collections::HashMap;
 
 use super::residual::max_abs_difference;
 use super::{
-    CoupledPhysicsSolver, MultiPhysicsConservationEnforcer, SimulationMultiPhysicsInterface, SimulationPhysicsDomain,
+    CoupledPhysicsSolver, MultiPhysicsConservationEnforcer, SimulationMultiPhysicsInterface,
+    SimulationPhysicsDomain,
 };
 
 /// Field coupling manager for conservative interpolation between domains
 #[derive(Debug)]
 pub struct MultiPhysicsFieldCoupler {
     /// Interpolation operators for each domain pair
-    interpolators: HashMap<(SimulationPhysicsDomain, SimulationPhysicsDomain), NumericsTrilinearInterpolator>,
+    interpolators:
+        HashMap<(SimulationPhysicsDomain, SimulationPhysicsDomain), NumericsTrilinearInterpolator>,
     /// Coupling interface definitions
-    interfaces: HashMap<(SimulationPhysicsDomain, SimulationPhysicsDomain), SimulationMultiPhysicsInterface>,
+    interfaces: HashMap<
+        (SimulationPhysicsDomain, SimulationPhysicsDomain),
+        SimulationMultiPhysicsInterface,
+    >,
     /// Conservation enforcement
     conservation: MultiPhysicsConservationEnforcer,
 }

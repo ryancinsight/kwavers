@@ -1,7 +1,9 @@
 //! Transducer array trajectory and phase optimization
 
 use super::planner::TreatmentPlanner;
-use super::types::{TranscranialTargetVolume, TranscranialTransducerSpecification, TransducerSetup};
+use super::types::{
+    TranscranialTargetVolume, TranscranialTransducerSpecification, TransducerSetup,
+};
 use crate::core::error::KwaversResult;
 
 impl TreatmentPlanner {

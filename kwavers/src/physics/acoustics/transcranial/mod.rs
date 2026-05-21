@@ -34,4 +34,6 @@ pub mod treatment_planning;
 pub use aberration_correction::{PhaseCorrection, TranscranialAberrationCorrection};
 pub use bbb_opening::{BBBOpening, PermeabilityEnhancement};
 pub use safety_monitoring::{MechanicalIndex, TranscranialSafetyDose, TranscranialSafetyMonitor};
-pub use treatment_planning::{TranscranialTargetVolume, TranscranialTreatmentPlan, TreatmentPlanner};
+pub use treatment_planning::{
+    TranscranialTargetVolume, TranscranialTreatmentPlan, TreatmentPlanner,
+};

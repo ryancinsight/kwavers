@@ -6,7 +6,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::BurnPINN2DWave;
 
 use crate::solver::inverse::pinn::ml::quantization::{
-    LayerInfo, QuantizationScheme, QuantizedData, QuantizedTensor, MlQuantizer,
+    LayerInfo, MlQuantizer, QuantizationScheme, QuantizedData, QuantizedTensor,
 };
 
 use super::QuantizationValidationResult;

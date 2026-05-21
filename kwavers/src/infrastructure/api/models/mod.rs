@@ -48,6 +48,6 @@ pub use jobs::{
 };
 pub use mobile::{
     ConnectionType, DeviceCapabilities, MobileOptimizationRequest, MobileOptimizationResponse,
-    NetworkConditions, PerformancePredictions, PerformanceTargets, PowerEstimates, PowerSettings,
-    MobileProcessingConfig,
+    MobileProcessingConfig, NetworkConditions, PerformancePredictions, PerformanceTargets,
+    PowerEstimates, PowerSettings,
 };

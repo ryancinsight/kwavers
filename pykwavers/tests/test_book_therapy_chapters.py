@@ -27,7 +27,7 @@ def test_manifest_includes_bbb_and_hifu_chapters_with_scripts():
     assert "Neuromodulation" in chapters[26]["title"]
     assert (BOOK_DIR / chapters[26]["script"]).is_file()
 
-    assert chapters[27]["script"] == "ch27_seismic_fwi_brain_imaging.py"
+    assert chapters[27]["script"] == "ch27_transcranial_ust_brain_imaging.py"
     assert "Seismic" in chapters[27]["title"]
     assert (BOOK_DIR / chapters[27]["script"]).is_file()
 
@@ -54,7 +54,7 @@ def test_book_readme_links_bbb_and_hifu_markdown_chapters():
     assert "(bbb_lifu_opening.md)" in readme
     assert "(hifu_transcranial_ablation.md)" in readme
     assert "(neuromodulation.md)" in readme
-    assert "(seismic_fwi_brain_imaging.md)" in readme
+    assert "(transcranial_ust_brain_imaging.md)" in readme
     assert "(abdominal_histotripsy_fwi.md)" in readme
     assert "(theranostic_fwi_platforms.md)" in readme
     assert "(intravascular_ultrasound.md)" in readme
@@ -62,7 +62,7 @@ def test_book_readme_links_bbb_and_hifu_markdown_chapters():
     assert (DOCS_DIR / "bbb_lifu_opening.md").is_file()
     assert (DOCS_DIR / "hifu_transcranial_ablation.md").is_file()
     assert (DOCS_DIR / "neuromodulation.md").is_file()
-    assert (DOCS_DIR / "seismic_fwi_brain_imaging.md").is_file()
+    assert (DOCS_DIR / "transcranial_ust_brain_imaging.md").is_file()
     assert (DOCS_DIR / "abdominal_histotripsy_fwi.md").is_file()
     assert (DOCS_DIR / "theranostic_fwi_platforms.md").is_file()
     assert (DOCS_DIR / "intravascular_ultrasound.md").is_file()

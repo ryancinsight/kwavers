@@ -1,7 +1,7 @@
 //! Tests for multi-physics solver.
 
 use super::super::{
-    CoupledPhysicsSolver, MultiPhysicsConfig, SimulationPhysicsDomain, SimulationCouplingStrategy,
+    CoupledPhysicsSolver, MultiPhysicsConfig, SimulationCouplingStrategy, SimulationPhysicsDomain,
 };
 use super::core::SimulationMultiPhysicsSolver;
 use crate::core::error::KwaversResult;
@@ -92,7 +92,10 @@ fn test_explicit_coupling() {
     });
 
     let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
-    let acoustic_solver = Box::new(MockSolver::new(SimulationPhysicsDomain::Acoustic, grid.clone()));
+    let acoustic_solver = Box::new(MockSolver::new(
+        SimulationPhysicsDomain::Acoustic,
+        grid.clone(),
+    ));
 
     solver.add_solver(acoustic_solver).unwrap();
 
@@ -142,15 +145,27 @@ fn test_monolithic_coupling_two_domains_reaches_fixed_point() {
     });
 
     let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
-    let acoustic = Box::new(MockSolver::new(SimulationPhysicsDomain::Acoustic, grid.clone()));
-    let thermal = Box::new(MockSolver::new(SimulationPhysicsDomain::Thermal, grid.clone()));
+    let acoustic = Box::new(MockSolver::new(
+        SimulationPhysicsDomain::Acoustic,
+        grid.clone(),
+    ));
+    let thermal = Box::new(MockSolver::new(
+        SimulationPhysicsDomain::Thermal,
+        grid.clone(),
+    ));
     solver.add_solver(acoustic).unwrap();
     solver.add_solver(thermal).unwrap();
     solver
-        .add_coupling(SimulationPhysicsDomain::Acoustic, SimulationPhysicsDomain::Thermal)
+        .add_coupling(
+            SimulationPhysicsDomain::Acoustic,
+            SimulationPhysicsDomain::Thermal,
+        )
         .unwrap();
     solver
-        .add_coupling(SimulationPhysicsDomain::Thermal, SimulationPhysicsDomain::Acoustic)
+        .add_coupling(
+            SimulationPhysicsDomain::Thermal,
+            SimulationPhysicsDomain::Acoustic,
+        )
         .unwrap();
 
     let residual = solver.step_coupled(1e-6).unwrap();

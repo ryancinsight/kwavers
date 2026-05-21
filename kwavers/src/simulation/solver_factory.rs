@@ -16,7 +16,9 @@ use crate::solver::forward::hybrid::config::HybridConfig;
 use crate::solver::forward::pstd::config::KSpaceMethod;
 use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use crate::solver::forward::{FdtdSolver, HybridSolver};
-use crate::solver::interface::factory::{FactoryConfiguration, FactoryGridParameters, FactoryMediumParameters};
+use crate::solver::interface::factory::{
+    FactoryConfiguration, FactoryGridParameters, FactoryMediumParameters,
+};
 use crate::solver::interface::Solver;
 
 /// Concrete assembly boundary for simulation-driven solver creation.
@@ -97,10 +99,16 @@ impl SimulationSolverFactory {
     ) -> KwaversResult<Box<dyn Solver>> {
         let grid_descriptor = GridDescriptor(grid);
         let medium_descriptor = MediumDescriptor { medium, grid };
-        SolverFactoryRegistry::validate_memory_budget(&grid_descriptor, &FactoryConfiguration::default())?;
+        SolverFactoryRegistry::validate_memory_budget(
+            &grid_descriptor,
+            &FactoryConfiguration::default(),
+        )?;
 
-        let selected_type =
-            SolverFactoryRegistry::resolve_solver_type(solver_type, &grid_descriptor, &medium_descriptor);
+        let selected_type = SolverFactoryRegistry::resolve_solver_type(
+            solver_type,
+            &grid_descriptor,
+            &medium_descriptor,
+        );
 
         match selected_type {
             SolverType::FDTD => {

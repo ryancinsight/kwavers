@@ -312,4 +312,3 @@ mod tests {
         assert!(pressure.is_finite());
     }
 }
-

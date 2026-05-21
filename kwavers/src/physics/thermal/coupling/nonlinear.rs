@@ -49,8 +49,7 @@ impl NonlinearHeating {
         use std::f64::consts::PI;
         let omega = 2.0 * PI * self.frequency;
         let c3 = self.sound_speed.powi(3);
-        self.nonlinearity_parameter * self.pressure.powi(2) * omega.powi(2)
-            / (self.density * c3)
+        self.nonlinearity_parameter * self.pressure.powi(2) * omega.powi(2) / (self.density * c3)
     }
 
     /// Shock formation parameter (Mach number for acoustic waves)

@@ -102,9 +102,50 @@ impl MultiRowRingArray {
         })
     }
 
+    /// Construct a topology-preserving array from explicit ordered element
+    /// coordinates.
+    ///
+    /// This preserves the cylindrical transmit topology: element
+    /// `row * circumferential_elements + angular` belongs to the given row and
+    /// angular transmit index.
+    ///
+    /// # Errors
+    /// Returns an error when topology, metadata, or coordinates are invalid.
+    pub fn from_ordered_elements(
+        circumferential_elements: usize,
+        rows: usize,
+        diameter_m: f64,
+        row_spacing_m: f64,
+        elements: Vec<RingPoint>,
+    ) -> KwaversResult<Self> {
+        Self::new(circumferential_elements, rows, diameter_m, row_spacing_m)?;
+        let expected = circumferential_elements * rows;
+        if elements.len() != expected {
+            return Err(KwaversError::DimensionMismatch(format!(
+                "ordered ring elements length mismatch: got {}, expected {}",
+                elements.len(),
+                expected
+            )));
+        }
+        for point in &elements {
+            if !point.x_m.is_finite() || !point.y_m.is_finite() || !point.z_m.is_finite() {
+                return Err(KwaversError::InvalidInput(format!(
+                    "ring element coordinate must be finite, got {point:?}"
+                )));
+            }
+        }
+        Ok(Self {
+            circumferential_elements,
+            rows,
+            diameter_m,
+            row_spacing_m,
+            elements,
+        })
+    }
+
     /// Ali et al. (2025) proof-of-concept geometry: 256 x 32, 22 cm diameter,
     /// 2.4 mm row spacing.
-    pub fn ali_2025_breast() -> KwaversResult<Self> {
+    pub fn ali_2025() -> KwaversResult<Self> {
         Self::new(256, 32, 0.22, 0.0024)
     }
 
@@ -325,7 +366,7 @@ mod tests {
 
     #[test]
     fn ali_geometry_matches_paper_counts_and_spacing() {
-        let array = MultiRowRingArray::ali_2025_breast().expect("geometry");
+        let array = MultiRowRingArray::ali_2025().expect("geometry");
 
         assert_eq!(array.circumferential_elements(), 256);
         assert_eq!(array.rows(), 32);

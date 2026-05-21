@@ -92,7 +92,7 @@ impl DomainEMSource for PointEMSource {
         }
 
         // Simplified spherical wave: E ∝ (1/r) sin(kr - ωt + φ)
-        let k = 2.0 * std::f64::consts::PI * self.frequency / 3e8; // Wave number (c = 3e8 m/s approximation)
+        let k = 2.0 * std::f64::consts::PI * self.frequency / SPEED_OF_LIGHT; // Wave number
                                                                    //
                                                                    // Not yet implemented: full radiation pattern modeling. Absent: Hertzian dipole
                                                                    // near-field corrections; phased antenna array beamforming; dielectric material
@@ -211,8 +211,7 @@ impl DomainEMSource for PlaneWaveEMSource {
         );
 
         let omega = 2.0 * std::f64::consts::PI * self.frequency;
-        let c = 3e8; // Speed of light approximation
-        let k = omega / c;
+        let k = omega / SPEED_OF_LIGHT;
 
         let phase = k * k_dot_r - omega * time + self.phase;
         let field_magnitude = self.amplitude * phase.sin();

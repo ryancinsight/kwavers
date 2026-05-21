@@ -131,11 +131,9 @@ impl PlasmonicEnhancementCalculator {
                 // which is the wrong numerator (should be eps_p − eps_h, not ε_h).
                 let eps_particle = (self.mie_theory.particle_dielectric)(wavelength);
                 let contrast = eps_particle - Complex::new(host_dielectric, 0.0);
-                let lorentz_factor =
-                    3.0 * contrast / (eps_particle + 2.0 * host_dielectric);
+                let lorentz_factor = 3.0 * contrast / (eps_particle + 2.0 * host_dielectric);
 
-                Complex::new(host_dielectric, 0.0)
-                    * (1.0 + volume_fraction * lorentz_factor)
+                Complex::new(host_dielectric, 0.0) * (1.0 + volume_fraction * lorentz_factor)
             }
             CouplingModel::QuasiStatic => {
                 // Bruggeman symmetric effective-medium solution for dense mixtures.

@@ -3,7 +3,7 @@
 use super::planner::TreatmentPlanner;
 use super::types::TranscranialSkullProperties;
 use crate::core::constants::fundamental::{
-    SOUND_SPEED_WATER_SIM, DENSITY_AIR, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR,
+    DENSITY_AIR, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM,
 };
 use crate::core::error::KwaversResult;
 use ndarray::Array3;

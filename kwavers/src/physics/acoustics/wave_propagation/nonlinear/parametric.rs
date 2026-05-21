@@ -103,8 +103,8 @@ pub fn difference_frequency_amplitude(
 
     // Far-field DFC amplitude: Westervelt (1963) eq. 25
     // P_d(R) = (β ω_d² P₁ P₂) / (8π ρ₀ c₀⁴ α_T R)
-    let p_diff =
-        (p1 * p2 * beta * omega_diff.powi(2)) / (8.0 * PI * rho_0 * c_0.powi(4) * distance * alpha_t);
+    let p_diff = (p1 * p2 * beta * omega_diff.powi(2))
+        / (8.0 * PI * rho_0 * c_0.powi(4) * distance * alpha_t);
 
     // Self-demodulation limits actual performance
     let self_demod = self_demodulation(p1.max(p2), f_avg, distance, params);

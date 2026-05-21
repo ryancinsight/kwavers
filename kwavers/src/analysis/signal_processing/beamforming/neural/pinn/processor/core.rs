@@ -12,7 +12,7 @@ use crate::analysis::signal_processing::beamforming::neural::pinn_interface::{
 use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVector;
 
 use super::super::super::types::{
-    NeuralBeamformingMetrics, PINNBeamformingConfig, NeuralPinnBeamformingResult,
+    NeuralBeamformingMetrics, NeuralPinnBeamformingResult, PINNBeamformingConfig,
 };
 use super::super::inference;
 

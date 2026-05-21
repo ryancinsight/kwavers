@@ -1,7 +1,7 @@
 //! Treatment planner core orchestration
 
 use super::types::{
-    TranscranialTargetVolume, TranscranialSafetyConstraints, TranscranialTransducerSpecification,
+    TranscranialSafetyConstraints, TranscranialTargetVolume, TranscranialTransducerSpecification,
     TranscranialTreatmentPlan,
 };
 use crate::core::error::KwaversResult;

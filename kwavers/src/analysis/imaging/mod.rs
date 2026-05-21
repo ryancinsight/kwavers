@@ -27,15 +27,15 @@
 // Re-export all imaging types from domain as the single source of truth
 pub use crate::domain::imaging::ultrasound::{
     ceus::{
-        CEUSImagingParameters, Microbubble, MicrobubblePopulation, PerfusionMap,
-        PerfusionStatistics, CeusSizeDistribution,
+        CEUSImagingParameters, CeusSizeDistribution, Microbubble, MicrobubblePopulation,
+        PerfusionMap, PerfusionStatistics,
     },
     elastography::{
         ElasticityMap, InversionMethod, NonlinearInversionMethod, NonlinearParameterMap,
     },
     hifu::{
-        DomainHIFUTransducer, DomainHIFUTreatmentPlan, FeedbackChannel, HifuSafetyConstraints,
-        HifuTreatmentProtocol, HifuMonitoringConfig, TreatmentPhase, TreatmentTarget,
+        DomainHIFUTransducer, DomainHIFUTreatmentPlan, FeedbackChannel, HifuMonitoringConfig,
+        HifuSafetyConstraints, HifuTreatmentProtocol, TreatmentPhase, TreatmentTarget,
     },
     UltrasoundConfig, UltrasoundMode,
 };

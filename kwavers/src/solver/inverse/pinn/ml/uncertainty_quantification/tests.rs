@@ -1,7 +1,7 @@
 //! Tests for uncertainty quantification types and configuration.
 
 use super::types::{
-    PinnUncertaintyConfig, PinnUncertaintyMethod, PinnPredictionWithUncertainty, UncertaintyStats,
+    PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };
 
 #[test]

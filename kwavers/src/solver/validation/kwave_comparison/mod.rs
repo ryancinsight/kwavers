@@ -100,4 +100,4 @@
 pub mod analytical;
 
 // Re-export key types for convenience
-pub use analytical::{GaussianBeam, KwaveErrorMetrics, KwaveAnalyticalPlaneWave, SphericalWave};
+pub use analytical::{GaussianBeam, KwaveAnalyticalPlaneWave, KwaveErrorMetrics, SphericalWave};

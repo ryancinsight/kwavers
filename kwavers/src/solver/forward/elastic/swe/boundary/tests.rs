@@ -101,7 +101,8 @@ fn test_sigma_max_optimization() {
     let c_max = 1500.0;
     let thickness = 10;
 
-    let sigma_opt = ElasticSwePMLBoundary::optimize_sigma_max(target_reflection, c_max, &grid, thickness);
+    let sigma_opt =
+        ElasticSwePMLBoundary::optimize_sigma_max(target_reflection, c_max, &grid, thickness);
     assert!(sigma_opt > 0.0);
 
     let config = SwePmlConfig {

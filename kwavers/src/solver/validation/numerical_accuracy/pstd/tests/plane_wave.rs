@@ -63,7 +63,7 @@ fn test_pstd_plane_wave_accuracy() {
     }
 
     // Propagate one wavelength
-    use crate::domain::boundary::pml::{DomainPmlConfig, DomainPMLBoundary};
+    use crate::domain::boundary::pml::{DomainPMLBoundary, DomainPmlConfig};
 
     let pml_config = DomainPmlConfig::default();
     let mut _boundary = DomainPMLBoundary::new(pml_config).unwrap();

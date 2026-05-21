@@ -231,10 +231,17 @@ mod tests {
     fn test_schwarz_convergence() {
         let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
 
-        let acoustic = Box::new(MockSolver::new(SimulationPhysicsDomain::Acoustic, grid.clone()));
-        let thermal = Box::new(MockSolver::new(SimulationPhysicsDomain::Thermal, grid.clone()));
+        let acoustic = Box::new(MockSolver::new(
+            SimulationPhysicsDomain::Acoustic,
+            grid.clone(),
+        ));
+        let thermal = Box::new(MockSolver::new(
+            SimulationPhysicsDomain::Thermal,
+            grid.clone(),
+        ));
 
-        let mut solvers: HashMap<SimulationPhysicsDomain, Box<dyn CoupledPhysicsSolver>> = HashMap::new();
+        let mut solvers: HashMap<SimulationPhysicsDomain, Box<dyn CoupledPhysicsSolver>> =
+            HashMap::new();
         solvers.insert(SimulationPhysicsDomain::Acoustic, acoustic);
         solvers.insert(SimulationPhysicsDomain::Thermal, thermal);
 

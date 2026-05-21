@@ -55,20 +55,38 @@ impl NonlinearWave {
 
                     // Get local medium properties
                     let density = crate::domain::medium::density_at(medium, x, y, z, grid);
-                    let sound_speed = crate::domain::medium::sound_speed_at(medium, x, y, z, grid);
 
                     // Get nonlinearity parameter B/A from medium (spatially-varying)
-                    let b_over_a = crate::domain::medium::AcousticProperties::nonlinearity_parameter(
-                        medium, x, y, z, grid,
-                    );
+                    let b_over_a =
+                        crate::domain::medium::AcousticProperties::nonlinearity_parameter(
+                            medium, x, y, z, grid,
+                        );
 
                     // Nonlinearity parameter: β = 1 + B/(2A) (Hamilton & Blackstock 1998)
                     let beta = 1.0 + b_over_a / 2.0;
 
-                    // Prefactor for Westervelt equation
-                    let prefactor = beta / (density * sound_speed.powi(4));
+                    // Prefactor for Westervelt nonlinear source term.
+                    //
+                    // The Westervelt equation in the second-order pressure form is:
+                    //   ∂²p/∂t² = c₀²∇²p + (β/ρ₀c₀²) ∂²(p²)/∂t²
+                    //
+                    // Approximating the temporal second derivative of p² by its
+                    // spatial equivalent for a broadband propagating field:
+                    //   ∂²(p²)/∂t² ≈ c₀²∇²(p²) = 2c₀²[p∇²p + (∇p)²]
+                    //
+                    // Substituting: source = (β/ρ₀c₀²)·2c₀²·[p∇²p+(∇p)²]
+                    //                      = 2β/ρ₀·[p∇²p+(∇p)²]
+                    //
+                    // In the leapfrog update the source is scaled by dt²:
+                    //   Δp_nonlinear = dt²·2β/ρ₀·[p∇²p+(∇p)²]
+                    //
+                    // The previous c⁴ denominator was dimensionally wrong
+                    // (gave kg/m⁵ instead of Pa = kg/(m·s²)).
+                    //
+                    // Reference: Hamilton & Blackstock (1998) Nonlinear Acoustics, Ch. 3.
+                    let prefactor = 2.0 * beta * self.dt.powi(2) / density;
 
-                    // Compute nonlinear term: N = (β/ρ₀c₀⁴) * [p∇²p + (∇p)²]
+                    // Compute nonlinear increment: Δp = 2β·dt²/ρ₀·[p∇²p + (∇p)²]
                     let p_lap = pressure[[i, j, k]] * laplacian[[i, j, k]];
                     let grad_squared = grad_z[[i, j, k]].mul_add(
                         grad_z[[i, j, k]],

@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::{SOUND_SPEED_WATER_SIM, DENSITY_WATER_NOMINAL};
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use ndarray::Array3;

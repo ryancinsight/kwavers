@@ -1,4 +1,4 @@
-use super::types::{AlertThresholds, AutoScalingConfig, DeploymentConfig, CloudMonitoringConfig};
+use super::types::{AlertThresholds, AutoScalingConfig, CloudMonitoringConfig, DeploymentConfig};
 use crate::infrastructure::cloud::types::CloudProvider;
 
 #[test]

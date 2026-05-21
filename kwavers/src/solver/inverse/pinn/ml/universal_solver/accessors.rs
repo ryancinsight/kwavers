@@ -8,7 +8,9 @@ use super::types::{
     UniversalTrainingConfig,
 };
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::pinn::ml::physics::{SimulationPhysicsDomain, PinnDomainPhysicsParameters};
+use crate::solver::inverse::pinn::ml::physics::{
+    PinnDomainPhysicsParameters, SimulationPhysicsDomain,
+};
 use burn::tensor::backend::AutodiffBackend;
 use std::collections::HashMap;
 use std::time::Instant;

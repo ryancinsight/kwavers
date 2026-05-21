@@ -121,5 +121,6 @@ pub use schwarz::SchwarzBoundary;
 
 // Re-export shared types from types module
 pub use types::{
-    BoundaryCouplingType, BoundaryTransmissionCondition, FrequencyProfile, BoundaryCouplingPhysicsDomain,
+    BoundaryCouplingPhysicsDomain, BoundaryCouplingType, BoundaryTransmissionCondition,
+    FrequencyProfile,
 };

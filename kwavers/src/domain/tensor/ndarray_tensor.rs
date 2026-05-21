@@ -4,7 +4,7 @@ use ndarray::{ArrayD, IxDyn};
 use std::fmt;
 
 use super::traits::{TensorMut, TensorView};
-use super::types::{TensorBackend, DType, Shape};
+use super::types::{DType, Shape, TensorBackend};
 
 /// Simple ndarray-backed tensor (default, no autodiff).
 #[derive(Clone)]

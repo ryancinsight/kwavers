@@ -1,5 +1,296 @@
 # Backlog / Strategy
 
+## Architectural Cleanup — Session 2 closures (2026-05-20)
+- **[minor] closed** CBS forward + adjoint kernel at
+  `solver::inverse::fwi::frequency_domain::cbs` (Osnabrugge 2016).
+- **[minor] closed** `PropagationModel::{SingleScatter, Cbs}` selection wired
+  through `fwi::frequency_domain::{forward, gradient}`.
+- **[patch] closed** `fwi::frequency_domain::mod.rs` §Linearisation block.
+- **[patch] closed** `brain_helmet::*Fwi*` → `*BornInversion*` rename
+  (identifier level only).
+- **[patch] closed** Removed empty `seismic::abdominal_theranostic/`.
+
+## Open Architectural Items
+- **[done] [arch] T11b: brain_helmet layer relocation — CLOSED 2026-05-20.**
+  Full module moved out of solver layer to
+  `clinical::imaging::reconstruction::transcranial_ust`. Solver path no longer
+  references anatomy or transducer topology. 12 caller files updated; cargo
+  check exit 0.
+- **[done] [minor] T11e: bowl angular aperture source layout — CLOSED 2026-05-21.**
+  `BowlTransducer` now exposes fixed-count polar-span and polar-bounds
+  constructors backed by the focused spherical-cap SSOT. Full-volume brain
+  placement delegates major-cap element generation to the bowl source API
+  instead of owning a local aperture sampler.
+- **[done] [patch] T11f: 3-D clinical focused-bowl source routing — CLOSED 2026-05-21.**
+  The full-volume calvarium placement helper now obtains its major-cap element
+  positions from `BowlTransducer::with_polar_bounds` and no longer owns a local
+  Fibonacci aperture sampler.
+- **[done] [patch] T11g: transcranial focused-bowl naming completion — CLOSED 2026-05-21.**
+  Public Rust/PyO3/Python/book APIs now expose focused-bowl placement names
+  (`plan_transcranial_focused_bowl_placement*`) with no compatibility alias for
+  the old brain-helmet planner. The nonlinear 3-D aperture model string and
+  generated book metrics are synchronized to the same focused-bowl terminology.
+- **[done] [patch] T11h: transcranial UST reconstruction boundary — CLOSED 2026-05-21.**
+  The finite-frequency Born inversion moved from
+  `solver::inverse::seismic::brain_helmet` to
+  `clinical::imaging::reconstruction::transcranial_ust`. Exported config,
+  result, and geometry names now use `TranscranialUstBornInversion*` and
+  `TranscranialBowlGeometry`, and geometry generation delegates to
+  `BowlTransducer::with_polar_span`.
+- **[arch] T11c: extract generic linear-Born core from transcranial_ust
+  adapter.** Internal split: introduce `TransducerGeometry` trait, hoist
+  generic linear-PCG primitives (linear_algebra, sensitivity, volume_operator,
+  volume_born/pcg, conditioning, volume_regularization) to
+  `solver::inverse::linear_born_inversion/`, leave anatomy adapter in clinical
+  layer. Requires API redesign — current `VolumeOperator::new` consumes
+  `HelmetHemisphereGeometry` concretely.
+- **[done] [patch] T11d: pykwavers binding rename — CLOSED 2026-05-20.**
+  `seismic_bindings/` → `imaging_bindings/`; `slice_fwi.rs` →
+  `transcranial_slice_inversion.rs`; `volume_fwi.rs` →
+  `transcranial_volume_inversion.rs`; pyfunctions
+  `run_seismic_helmet_fwi_*` → `run_transcranial_ust_*_inversion_from_ritk_ct`;
+  book chapter file + helper dir + test file + doc filename + chapter title
+  all renamed consistently. 10 files updated; cargo check pykwavers exit 0.
+### Open — Unified-dispatcher migration (corrected framing of prior T10)
+
+The previous T10 ("consolidate dual FDTD stacks") mis-classified the defect.
+The actual defect: `simulation::solver_factory::SimulationSolverFactory::create_solver()`
+already returns `Box<dyn Solver>` and dispatches `SolverType::{FDTD, PSTD,
+Hybrid, KSpace, DG}` to concrete impls — but the FWI modules **bypass the
+factory** and hardcode their own forward stacks. Correction:
+
+- **[arch] T15: FWI A factory migration.** `solver/inverse/seismic/fwi/forward.rs:85`
+  + `adjoint.rs:188` hardcode `FdtdSolver::new()`. Refactor `FwiProcessor` to
+  take a `SolverType` field and use `SimulationSolverFactory::create_solver()`
+  so FWI works with FDTD or PSTD or Hybrid by config switch, matching the
+  unified-solver principle. Extend `Solver` trait with `step()` if `run(1)` is
+  too coarse for inversion control.
+- **[done] [arch] T16: FWI B parallel stack deleted — CLOSED 2026-05-20.**
+  Removed `solver/inverse/reconstruction/seismic/fwi/` entirely
+  (~1500 LOC across mod, gradient, optimization, regularization, wavefield/*).
+  Verified zero external struct consumers prior to deletion. Parent
+  `reconstruction/seismic/mod.rs` updated to point future maintainers at
+  the canonical `solver::inverse::seismic::fwi` engine (factory-dispatched
+  after T15 lands). cargo check --lib exit 0.
+- **[done] [arch] T17a: HelmholtzForwardOperator trait landed — CLOSED 2026-05-20.**
+  New module `solver/inverse/fwi/frequency_domain/operator.rs` with the
+  `HelmholtzForwardOperator` trait + three impls (`SingleScatterBornOperator`,
+  `DenseConvergentBornOperator`, `SpectralConvergentBornOperator`). Re-exported
+  from frequency_domain. 3 unit tests for model_id / cbs_descriptor /
+  adjoint-path classification. cargo check --lib exit 0.
+- **[arch] T17b: flip Config to Arc<dyn HelmholtzForwardOperator>.**
+  Per the standards LLM-budget exception, T17a left the
+  `Config.propagation_model: PropagationModel` field intact. T17b removes the
+  enum, replaces the field with `forward_operator: Arc<dyn HelmholtzForwardOperator>`,
+  converts the match blocks in forward.rs + gradient.rs to virtual dispatch,
+  and updates 8 test sites + 1 breast_ust_fwi caller. No compatibility aliases.
+
+## Active Sprint — Ali et al. 2025 Multi-Row Frequency-Domain FWI Replication
+
+Target version: 0.x.0 (additive; new module
+`solver::inverse::fwi::frequency_domain::cbs` + pykwavers
+binding). Confirms kwavers FWI theorems against an external published 3D
+breast-imaging reconstruction.
+
+- **[done] [minor] T1: 3D FWI foundation module split — CLOSED 2026-05-20.**
+  Added the Ali et al. paper identities under
+  `physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi`,
+  a solver-owned matrix-free 3-D single-scatter frequency-domain FWI foundation
+  under `solver::inverse::fwi::frequency_domain`, and a clinical breast UST adapter
+  under `clinical::imaging::reconstruction::breast_ust_fwi`. Verification pins
+  geometry, source scaling, Helmholtz derivative, objective metrics, forward
+  sensitivity, exact adjoint gradient for the implemented discrete model, and
+  objective-decreasing reconstruction. CBS remains T2.
+- **[done] [minor] T1.5: FWI method taxonomy and CBS identities — CLOSED
+  2026-05-20.** Moved the frequency-domain solver under
+  `solver::inverse::fwi::frequency_domain`, moved the existing time-domain
+  acoustic adjoint-state core under `solver::inverse::fwi::time_domain`, removed
+  the old top-level method module names from call sites, and added
+  `frequency_domain::cbs` as the SSOT for real scattering potential, convergence
+  epsilon, shifted potential, and pointwise preconditioner identities.
+- **[done] [minor] T2a: dense CBS volume-field kernel — CLOSED 2026-05-20.**
+  Split `frequency_domain::cbs` into `potential`, `grid`, `green`, and `solve`
+  leaves. Added centered grid indexing, BLI point weights using the canonical
+  `0.05` tolerance, shifted outgoing Green evaluation, and a dense CBS
+  fixed-point solve for cell-centered source densities. Tests pin homogeneous
+  unit-source Green output and residual reduction on a contrast fixture.
+- **[done] [minor] T2b: CBS prediction route — CLOSED 2026-05-20.**
+  Added `frequency_domain::PropagationModel::{SingleScatterBorn,
+  DenseConvergentBorn}`. Prediction now dispatches explicitly: Born uses the
+  existing single-scatter path; dense CBS injects cylindrical sources through
+  BLI, solves the CBS field, and samples receivers through BLI. Tests pin
+  homogeneous CBS/Born equivalence on an on-grid ring, CBS sensitivity to sound
+  speed, and BLI support-domain rejection.
+- **[done] [minor] T3/T4: dense CBS adjoint and Eq. 6 gradient — CLOSED
+  2026-05-20.** Moved BLI source/receiver projection into the CBS bounded
+  context, added the shifted-Green Euclidean adjoint, added the dense discrete
+  adjoint solve for `(I + G_epsilon diag(V - i epsilon))^H`, and wired
+  `DenseConvergentBorn` through the nonlinear objective/gradient path. Tests pin
+  `<Gx, y> = <x, G^H y>` and finite-difference agreement for the dense CBS
+  slowness gradient.
+- **[done] [minor] T5a: spectral periodic CBS operator — CLOSED
+  2026-05-20.** Added `GreenOperatorKind::{DenseFreeSpace, SpectralPeriodic}`
+  and `PropagationModel::SpectralConvergentBorn`. The spectral path applies the
+  periodic Helmholtz symbol `(k0^2 + i epsilon - |k|^2)^-1` through the existing
+  Apollo FFT facade and shares the same CBS fixed-point, adjoint solve, BLI
+  projection, and slowness-gradient accumulation as the dense path. Tests cover
+  the zero-mode theorem, spectral adjoint identity, prediction sensitivity, and
+  spectral finite-difference gradient agreement.
+- **[done] [minor] T5b: spectral CBS absorbing boundary — CLOSED
+  2026-05-20.** Added `AbsorbingBoundary::{Disabled, Polynomial}` and applies
+  the polynomial sponge as `W G W` around the spectral Green operator. Because
+  `W` is real diagonal, the adjoint remains `W G^H W`; tests pin unit interior
+  weight, edge/corner decay, edge-source damping, and the absorbed spectral
+  adjoint identity.
+- **[done] [minor] T2c: reduced-grid spectral CBS performance validation —
+  CLOSED 2026-05-20.** Added Criterion target
+  `kwavers/benches/fwi_spectral_cbs.rs` and Cargo bench registration. The
+  benchmark runs the public `simulate_frequency_observation` entrypoint through
+  `PropagationModel::SpectralConvergentBorn` with polynomial absorbing boundary
+  on a reduced 24x24x18 multi-row ring fixture, asserts finite pressure and
+  sound-speed perturbation sensitivity before timing, and records a post-format
+  median of 19.998 ms / 2.0738 Melem/s.
+- **[done] [minor] T2: convergent Born-series forward kernel — CLOSED
+  2026-05-20.** Implement Osnabrugge
+  2016 preconditioned CBS in `solver::inverse::fwi::frequency_domain::cbs`:
+  shifted potential `V_s = V − iε`, `V = k² − k₀²`, with `ε ≥ ‖V‖∞`,
+  pointwise preconditioner `γ = iε / V_s`, fixed-point iteration over the
+  shifted outgoing Green operator `G(k) = 1/(k₀² + iε − |k|²)`. Polynomial
+  wavenumber apodisation in PML region. On-grid BLI injection at ring-element
+  positions, BLI receiver sampling, and periodic FFT acceleration are
+  implemented. Reduced-grid performance validation is now covered by
+  `fwi_spectral_cbs`.
+- **[done] [minor] T6: PyO3 bindings — CLOSED 2026-05-20.** Added
+  `pykwavers::breast_fwi_bindings` and registered the flat Python API classes
+  `MultiRowRingArray`, `FrequencyDomainFwiConfig`, and `FrequencyObservation`.
+  Added `ali_2025_breast_fwi_frequency_sweep_hz`,
+  `simulate_breast_fwi_frequency_observation`, and `invert_breast_fwi`.
+  Forward prediction accepts `np.ndarray[float64]` sound-speed volumes and
+  returns `np.ndarray[complex128]`; inversion accepts a stacked
+  `(frequency, transmit, receiver)` `complex128` array and delegates to the
+  clinical breast UST adapter for metadata-preserving reconstruction output.
+- **[done] [minor] T7: data-generation pipeline — CLOSED 2026-05-20.**
+  Added `clinical::imaging::reconstruction::breast_ust_fwi::dataset` wrapping
+  the existing PSTD solver over centered multi-row ring geometry. The generator
+  runs one PSTD acquisition per frequency/transmit pair, preserves receiver
+  ordering with ordered sensor indices, extracts the complex bin
+  `2/N Σ p[n] exp(-i2πf n dt)`, and exposes
+  `generate_breast_fwi_pstd_dataset` plus `BreastFwiPstdDatasetConfig` through
+  pykwavers.
+- **[done] [minor] T8a: Rust HDF5 phantom ingest — CLOSED 2026-05-20.**
+  Added `clinical::imaging::reconstruction::breast_ust_fwi::phantom_hdf5` as
+  the Rust-owned `consus` HDF5/MAT-v7.3 ingest boundary for Ali phantom
+  volumes. The loader resolves known sound-speed dataset paths or an explicit
+  caller path, requires file metadata or caller-provided `spacing_m`, supports
+  contiguous and chunked datasets, supports C and MATLAB/Fortran storage order,
+  converts m/s or km/s storage units to m/s, and exposes
+  `load_ali_2025_breast_fwi_phantom` through pykwavers. Verification covers
+  real `consus` HDF5 fixture decoding, chunked payload decoding, unit
+  conversion, missing-spacing rejection, pykwavers build, and binding surface.
+- **[done] [minor] T8b: replication example — CLOSED 2026-05-20.**
+  Added `pykwavers/examples/replicate_ali2025_breast_fwi.py`. The script
+  downloads `BreastPhantomFromMRI.mat` from GitHub Release v1.0.0 if absent
+  (cached at `D:\3D-FWI-MultiRowRingArrayUST\phantoms\` per user-confirmed
+  location), loads sound speed through the Rust clinical phantom boundary, applies
+  deterministic center-crop plus decimation, runs T7 PSTD data generation and
+  T6 spectral-CBS frequency-domain FWI through pykwavers, and writes RMSE/PCC
+  metrics plus matplotlib orthographic comparison slices. Helper tests pin
+  domain reduction, reduced geometry, metrics, and slice selection without
+  Python HDF5 or physics stand-ins.
+- **[done] [minor] T8c: MATLAB-5 MRI phantom ingest — CLOSED 2026-05-20.**
+  The published release asset is MATLAB Level-5, not HDF5. Added
+  `clinical::imaging::reconstruction::breast_ust_fwi::phantom_mat5` to decode
+  compressed `breast_mri`, cubic-interpolate the MRI through the published
+  right/left breast rotation, fill thresholded per-slice tissue holes, map
+  tissue intensities into the Ali sound-speed interval, and return a uniform
+  sound-speed grid. PyO3 auto-detects HDF5 vs MAT5. The replication script now
+  requests a pre-reduced MAT5 output grid and includes Table 1 parity constants.
+- **[done] [patch] T8d: PSTD steady-state frequency bin — CLOSED 2026-05-20.**
+  `BreastUstPstdDatasetConfig` now separates total simulated cycles from
+  trailing cycles used for Fourier extraction. The clinical dataset returns
+  `frequency_bin_start_steps_per_frequency`, and pykwavers exposes the same
+  audit metadata. The analytic phasor test proves startup samples are excluded
+  from the bin when `frequency_bin_cycles < cycles_per_frequency`.
+- **[done] [patch] T8e: reduced-probe identifiability diagnostics — CLOSED 2026-05-20.**
+  The replication script is split below the 500-line limit into orchestration,
+  metric, volume, visualization, and identifiability modules. Reports now
+  include the acquisition rank upper bound after complex source-scale nuisance
+  parameters. The current 8x8x4 probe has 16 complex observations, 32 real
+  observation DoF, 8 source-scale nuisance DoF, and only 24 informative real
+  DoF for 256 unknown voxels.
+- **[done] [patch] T8f: determined-acquisition guard — CLOSED 2026-05-20.**
+  Added `--require-determined-acquisition` to reject rank-underdetermined probes
+  before PSTD generation and inversion. The 8x8x4 one-frequency probe rejects
+  with `24 informative real DoF for 256 unknown voxels`. A 4x4x3 two-frequency
+  probe satisfies the guard with 48 informative real DoF for 48 voxels.
+- **[done] [patch] T8g: PSTD/FWI grid-snapped geometry — CLOSED 2026-05-20.**
+  Added topology-preserving ordered ring elements and a clinical
+  `snap_multi_row_ring_array_to_grid` boundary so the inverse model consumes the
+  same effective source/receiver coordinates as PSTD's grid-index acquisition.
+  PyO3 exposes `snap_breast_fwi_array_to_grid`, and the replication report now
+  includes true-model PSTD-vs-CBS source-scaled residuals.
+- **[done] [patch] T8h: source-channel residual attribution — CLOSED 2026-05-21.**
+  Added active-source receiver masks for cylindrical multi-row firing and
+  passive-only residual metrics to the Ali 2025 replication report. The
+  determined 4x4x3/two-frequency probe shows active-source receiver channels
+  contribute 17.7068% of full-scale residual energy, while passive-only
+  row-scaled residual remains 0.543288 versus 0.523411 for all channels.
+- **[done] [patch] T8i: source-excitation scalar diagnostic — CLOSED 2026-05-21.**
+  Added analytic PSTD sine-bin coefficient diagnostics for the additive source
+  signal and normalized row-wise PSTD-vs-CBS source scales by that coefficient.
+  The determined probe has tone-bin magnitudes 1.000000 at 200 kHz and 0.980367
+  at 300 kHz, but normalized source-scale dispersion remains non-scalar:
+  magnitude coefficient of variation reaches 0.297005 and phase span reaches
+  0.919426 rad at 300 kHz.
+- **[done] [patch] T8j: forward-operator equivalence diagnostic — CLOSED 2026-05-21.**
+  Added the `operator_equivalence` report comparing `single_scatter_born`,
+  `dense_convergent_born`, and `spectral_convergent_born` against the same PSTD
+  data with row-wise complex source scaling and source-bin-normalized scale
+  diagnostics. On the determined 4x4x3/two-frequency probe, single-scatter Born
+  fits best (`0.456575` normalized residual), dense CBS follows (`0.476438`),
+  and absorbed spectral CBS is worst (`0.523411`).
+- **[done] [patch] T8k: homogeneous direct-field Green diagnostic — CLOSED 2026-05-21.**
+  Added the `homogeneous_direct_field` report comparing homogeneous snapped PSTD
+  observations against the outgoing Helmholtz direct Green field with the same
+  array coordinates, frequencies, row source scaling, and passive-channel
+  attribution. On the determined 4x4x3/two-frequency probe, the homogeneous
+  direct field residual is `0.454900`, passive-only residual is `0.757352`,
+  passive phase-error RMS is `1.458883` rad, and passive log-amplitude-error
+  RMS is `1.028543`.
+- **[patch] T9: parity gate.** At reduced grid (2D center slice or 3D
+  dxi=1.6 mm) run T7 → T6, assert RMSE within 2× the Ali et al. Table 1
+  3-D FWI RMSE and PCC at least 95% of the Table 1 3-D FWI PCC. Current
+  8x8x4 probe executes the real path but fails parity after steady-state
+  binning (RMSE 60.4246 m/s, PCC 0.218243) and is rank-underdetermined
+  by upper bound (24 informative real DoF / 256 voxels). Closure now requires
+  solver/model refinement because the determined 4x4x3 two-frequency probe also
+  fails parity after grid snapping (RMSE 54.6750 m/s, PCC 0.110968) with exactly
+  determined rank upper bound. True-model PSTD-vs-CBS normalized residual is
+  0.523411 after optimal row-wise complex source scaling, down from 0.741168
+  before snapping. Active-source receiver exclusion does not close the gap
+  because passive-only residual is 0.543288; remaining gap is the PSTD
+  source/propagation contract versus the Helmholtz/CBS forward model. Source
+  excitation is now partly isolated: the analytic sine-bin coefficient does not
+  explain the mismatch because normalized transmit source scales are not
+  constant within frequency. Operator comparison shows CBS is not the immediate
+  parity repair on this probe because single-scatter Born fits PSTD better than
+  dense or spectral CBS. Homogeneous direct-field comparison now shows a
+  passive Green-field phase/amplitude mismatch persists before scattering:
+  normalized residual `0.454900`, passive-only residual `0.757352`, phase-error
+  RMS `1.458883` rad, and log-amplitude-error RMS `1.028543`. Next work should
+  align the source normalization and discrete Green sampling contract between
+  PSTD grid sources and frequency-domain Helmholtz propagation before changing
+  inversion settings.
+
+### Deprecation (T2 prerequisite)
+- **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`
+  unsuitable for FWI** in module docstring. The implemented recursion is the
+  non-convergent classical Born series with a sign-flipped Green denominator, a
+  6-point-stencil mock fallback, hardcoded `c0`/`ρ0`, and no absorbing layer.
+  See gap_audit "Ali et al. 2025 Replication Foundation" item 2 for the
+  evidence. No call sites in pykwavers; preserve internal API for now to avoid
+  a parallel refactor.
+
 ## Architectural Enhancements
 - **[done] [arch] Rename the artifact-owned analytical physics boundary —
   CLOSED 2026-05-20.** The previous module name encoded a documentation
@@ -25,52 +316,6 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
-- 2026-05-21: [minor] Closed the bowl polar-span source-layout gap.
-  `BowlTransducer` now owns fixed-count polar-span and polar-bounds
-  constructors backed by the focused spherical-cap SSOT, and full-volume brain
-  placement delegates major-cap element generation to the bowl source API
-  instead of owning a local aperture sampler.
-
-- 2026-05-21: [patch] Closed the 3-D focused-bowl placement routing gap.
-  Full-volume calvarium placement now obtains major-cap element positions from
-  `BowlTransducer::with_polar_bounds`, removing the local Fibonacci sampler
-  while preserving normalized polar z-bound coverage.
-
-- 2026-05-21: [patch] Closed the transcranial focused-bowl naming gap.
-  Public Rust/PyO3/Python/book APIs now expose focused-bowl placement names
-  without a compatibility alias for the old brain-helmet planner, and nonlinear
-  aperture model strings plus generated metrics use the same source-owned bowl
-  terminology.
-
-- 2026-05-21: [patch] Closed the transcranial UST reconstruction boundary.
-  The finite-frequency Born inversion moved from
-  `solver::inverse::seismic::brain_helmet` to
-  `clinical::imaging::reconstruction::transcranial_ust`; exported config,
-  result, and geometry names now use `TranscranialUstBornInversion*` and
-  `TranscranialBowlGeometry`; acquisition points come from the bowl source API.
-
-- 2026-05-21: [patch] Closed the transcranial focused-bowl model-label cleanup.
-  Residual Insightec-like transcranial clinical/source comments, model IDs, and
-  Python test names now use source-owned transcranial focused-bowl terminology.
-
-- 2026-05-21: [patch] Closed the transcranial bowl example geometry SSOT gap.
-  The skull CT phase-correction example now obtains its 1024-element
-  hemispherical layout from `BowlTransducer::with_polar_span`; tracked imaging
-  demos use transcranial focused-bowl constants instead of vendor labels.
-
-
-- 2026-05-20: [minor] Closed the bowl vertex/focus preset gap.
-  `BowlConfig` now owns vertex/focus and hemispherical constructors plus an
-  element-size fluent setter, allowing clinical adapters to configure
-  fixed-count bowl layouts from source-domain geometry without anatomy-specific
-  source constructor names.
-
-- 2026-05-20: [minor] Closed the bowl count-selected source-layout gap.
-  `BowlTransducer::with_element_count` now generates fixed-count focused cap
-  layouts through the canonical bowl source, and public read-only accessors
-  expose positions, normals, areas, and count for clinical adapters without
-  source APIs named after anatomy or device topology.
-
 - 2026-05-20: [minor] Closed the bowl transducer cap geometry SSOT gap.
   `BowlTransducer` now consumes the canonical focused spherical-cap layout,
   derives element count from cap area and requested element size, preserves

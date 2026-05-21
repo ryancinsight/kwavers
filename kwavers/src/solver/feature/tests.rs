@@ -40,7 +40,9 @@ fn test_feature_manager() {
     assert!(manager.is_enabled(SolverFeature::Reconstruction));
 
     // Test enabling unavailable feature (should be available by default)
-    manager.enable_feature(SolverFeature::PhotoacousticTimeReversal).unwrap();
+    manager
+        .enable_feature(SolverFeature::PhotoacousticTimeReversal)
+        .unwrap();
 
     // Test with limited available features
     let limited_features = SolverFeatureSet::RECONSTRUCTION | SolverFeatureSet::GPU_ACCELERATION;

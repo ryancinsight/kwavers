@@ -12,5 +12,5 @@ pub mod types;
 pub use bayesian::PinnBayesianPINN;
 pub use conformal::PinnConformalPredictor;
 pub use types::{
-    PinnUncertaintyConfig, PinnUncertaintyMethod, PinnPredictionWithUncertainty, UncertaintyStats,
+    PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };

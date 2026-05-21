@@ -179,7 +179,7 @@ pub mod types;
 pub mod utilities;
 
 // Re-export primary types for convenience
-pub use config::{AlertThresholds, AutoScalingConfig, DeploymentConfig, CloudMonitoringConfig};
+pub use config::{AlertThresholds, AutoScalingConfig, CloudMonitoringConfig, DeploymentConfig};
 pub use service::CloudPINNService;
 pub use types::{
     CloudProvider, DeploymentHandle, DeploymentMetrics, DeploymentStatus, ModelDeploymentData,

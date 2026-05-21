@@ -1,7 +1,7 @@
 pub(super) use super::TherapyIntegrationOrchestrator;
 pub(super) use crate::clinical::therapy::therapy_integration::config::{
-    AcousticTherapyParams, PatientParameters, TherapyTargetVolume, TherapyIntegrationModality,
-    TherapyIntegrationSafetyLimits, TherapySessionConfig, TherapyTissueType,
+    AcousticTherapyParams, PatientParameters, TherapyIntegrationModality,
+    TherapyIntegrationSafetyLimits, TherapySessionConfig, TherapyTargetVolume, TherapyTissueType,
 };
 pub(super) use crate::clinical::therapy::therapy_integration::state::TherapyIntegrationSafetyStatus;
 pub(super) use crate::clinical::therapy::therapy_integration::tissue::TissuePropertyMap;

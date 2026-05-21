@@ -7,7 +7,7 @@ pub mod population;
 #[cfg(test)]
 mod tests;
 
-pub use microbubble::{Microbubble, CeusSizeDistribution};
+pub use microbubble::{CeusSizeDistribution, Microbubble};
 pub use params::CEUSImagingParameters;
 pub use perfusion::{PerfusionMap, PerfusionStatistics};
 pub use population::MicrobubblePopulation;

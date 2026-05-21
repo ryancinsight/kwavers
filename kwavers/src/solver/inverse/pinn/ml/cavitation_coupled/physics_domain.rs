@@ -2,9 +2,9 @@
 
 use super::domain::CavitationCoupledDomain;
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, SimulationPhysicsDomain, PhysicsLossWeights,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
-    PinnDomainPhysicsParameters,
+    PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use std::collections::HashMap;

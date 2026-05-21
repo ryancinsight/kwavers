@@ -26,7 +26,7 @@ pub mod traits;
 
 // Re-export main trait + capability/device types so callers consume them via the
 // stable `solver::backend::*` path rather than reaching into `traits::*`.
-pub use traits::{ComputeBackend, BackendCapabilities, BackendType, ComputeDevice};
+pub use traits::{BackendCapabilities, BackendType, ComputeBackend, ComputeDevice};
 
 #[cfg(test)]
 mod backend_surface_tests {

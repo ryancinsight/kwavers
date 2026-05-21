@@ -6,7 +6,7 @@ use crate::domain::boundary::cpml::{CPMLConfig, PerDimensionPML};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::source::{GridSource, SourceMode};
-use crate::solver::inverse::acoustic_fwi::{
+use crate::solver::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
 use ndarray::{Array2, Array3, Array4, Axis, Zip};

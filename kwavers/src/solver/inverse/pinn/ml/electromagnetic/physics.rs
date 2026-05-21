@@ -5,9 +5,9 @@ use super::residuals::{
 };
 use super::types::{EMProblemType, ElectromagneticBoundarySpec};
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, SimulationPhysicsDomain, PhysicsLossWeights,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
-    PinnDomainPhysicsParameters,
+    PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Tensor;

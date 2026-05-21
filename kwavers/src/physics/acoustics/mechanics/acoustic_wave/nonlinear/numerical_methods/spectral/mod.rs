@@ -64,8 +64,7 @@ impl NonlinearWave {
                     } else {
                         1.0
                     };
-                    *val =
-                        pk * Complex::new(sinc_factor * (c * k_mag * dt).cos(), 0.0);
+                    *val = pk * Complex::new(sinc_factor * (c * k_mag * dt).cos(), 0.0);
                 });
         }
 

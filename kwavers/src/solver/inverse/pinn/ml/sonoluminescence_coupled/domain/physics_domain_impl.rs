@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 
 use crate::solver::inverse::pinn::ml::physics::{
-    BoundaryPosition, CouplingInterface, InitialConditionSpec, SimulationPhysicsDomain, PhysicsLossWeights,
+    BoundaryPosition, CouplingInterface, InitialConditionSpec, PhysicsLossWeights,
     PhysicsValidationMetric, PinnBoundaryComponent, PinnBoundaryConditionSpec,
-    PinnDomainPhysicsParameters,
+    PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
 
 use super::super::config::SonoluminescenceCouplingType;

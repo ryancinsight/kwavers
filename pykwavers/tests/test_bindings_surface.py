@@ -18,6 +18,16 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "Source")
     assert hasattr(kw, "KWaveArray")
     assert hasattr(kw, "TransducerArray2D")
+    assert hasattr(kw, "MultiRowRingArray")
+    assert hasattr(kw, "FrequencyDomainFwiConfig")
+    assert hasattr(kw, "FrequencyObservation")
+    assert hasattr(kw, "BreastFwiPstdDatasetConfig")
+    assert hasattr(kw, "ali_2025_breast_fwi_frequency_sweep_hz")
+    assert hasattr(kw, "simulate_breast_fwi_frequency_observation")
+    assert hasattr(kw, "snap_breast_fwi_array_to_grid")
+    assert hasattr(kw, "load_ali_2025_breast_fwi_phantom")
+    assert hasattr(kw, "generate_breast_fwi_pstd_dataset")
+    assert hasattr(kw, "invert_breast_fwi")
     assert hasattr(kw, "Sensor")
     assert hasattr(kw, "Simulation")
     assert hasattr(kw, "SimulationResult")
@@ -30,6 +40,82 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "plan_transcranial_focused_bowl_placement_from_ritk_ct")
     assert hasattr(kw, "run_transcranial_fus_planning_from_ritk_ct")
     assert hasattr(kw, "run_transcranial_skull_adaptive_benchmark_from_ritk_ct")
+
+
+def test_breast_fwi_frequency_domain_binding_surface_runs_forward():
+    array = kw.MultiRowRingArray(4, 1, 0.01, 0.0)
+    config = kw.FrequencyDomainFwiConfig(
+        spacing_m=0.005,
+        estimate_source_scaling=False,
+        propagation_model="dense_convergent_born",
+        cbs_iterations=4,
+        cbs_relative_tolerance=1.0e-8,
+    )
+    model = np.full((3, 3, 1), 1500.0, dtype=np.float64)
+    shifted = model.copy()
+    shifted[1, 1, 0] = 1510.0
+
+    baseline = kw.simulate_breast_fwi_frequency_observation(model, array, 180_000.0, config)
+    perturbed = kw.simulate_breast_fwi_frequency_observation(shifted, array, 180_000.0, config)
+
+    assert baseline.shape == (4, array.element_count)
+    assert np.all(np.isfinite(baseline))
+    assert np.linalg.norm(perturbed - baseline) > 0.0
+    assert kw.FrequencyObservation(180_000.0, baseline).frequency_hz == 180_000.0
+    assert kw.ali_2025_breast_fwi_frequency_sweep_hz()[0] == 200_000.0
+
+
+def test_breast_fwi_array_snap_binding_matches_grid_centers():
+    array = kw.MultiRowRingArray(4, 1, 0.006, 0.0)
+
+    snapped = kw.snap_breast_fwi_array_to_grid(array, (8, 8, 3), 1.0e-3)
+    elements = snapped.elements()
+
+    assert elements.shape == (4, 3)
+    np.testing.assert_allclose(elements[0], [0.0035, 0.0005, 0.0])
+
+
+def test_breast_fwi_hdf5_phantom_loader_binding_reads_real_file(tmp_path):
+    h5py = pytest.importorskip("h5py")
+    path = tmp_path / "ali_phantom_fixture.h5"
+    sound_speed = np.arange(12, dtype=np.float64).reshape(2, 3, 2) + 1450.0
+    with h5py.File(path, "w") as handle:
+        dataset = handle.create_dataset("/phantom/sound_speed_m_s", data=sound_speed)
+        dataset.attrs["spacing_m"] = np.float64(8.0e-4)
+
+    loaded = kw.load_ali_2025_breast_fwi_phantom(
+        str(path),
+        storage_order="c_contiguous",
+    )
+
+    assert loaded["model_family"] == "clinical_breast_ust_ali_2025_hdf5_phantom"
+    assert loaded["dataset_path"] == "/phantom/sound_speed_m_s"
+    assert loaded["spacing_m"] == 8.0e-4
+    np.testing.assert_array_equal(loaded["sound_speed_m_s"], sound_speed)
+
+
+def test_breast_fwi_pstd_dataset_binding_surface_runs_forward():
+    array = kw.MultiRowRingArray(4, 1, 0.006, 0.0)
+    config = kw.BreastFwiPstdDatasetConfig(
+        spacing_m=1.0e-3,
+        time_step_s=1.0e-7,
+        cycles_per_frequency=1,
+        source_amplitude_pa=1.0e3,
+        cpml_thickness_cells=0,
+    )
+    model = np.full((12, 12, 3), 1500.0, dtype=np.float64)
+    shifted = model.copy()
+    shifted[6, 6, 1] = 1540.0
+
+    baseline = kw.generate_breast_fwi_pstd_dataset(model, array, [200_000.0], config)
+    perturbed = kw.generate_breast_fwi_pstd_dataset(shifted, array, [200_000.0], config)
+
+    assert baseline["observed_pressure"].shape == (1, 4, array.element_count)
+    assert baseline["time_steps_per_frequency"] == [50]
+    assert baseline["frequency_bin_start_steps_per_frequency"] == [0]
+    assert baseline["model_family"] == "clinical_breast_ust_multi_row_ring_pstd_frequency_dataset"
+    assert np.all(np.isfinite(baseline["observed_pressure"]))
+    assert np.linalg.norm(perturbed["observed_pressure"] - baseline["observed_pressure"]) > 0.0
 
 
 def test_heterogeneous_medium_and_mask_sensor_surface():

@@ -46,8 +46,9 @@ impl<B: AutodiffBackend> crate::solver::inverse::pinn::ml::physics::SimulationPh
 fn test_adaptive_sampler_creation() {
     type TestBackend = Autodiff<NdArray<f32>>;
 
-    let domain: Box<dyn crate::solver::inverse::pinn::ml::physics::SimulationPhysicsDomain<TestBackend>> =
-        Box::new(MockPhysicsDomain);
+    let domain: Box<
+        dyn crate::solver::inverse::pinn::ml::physics::SimulationPhysicsDomain<TestBackend>,
+    > = Box::new(MockPhysicsDomain);
     let strategy = AdaptiveRefinementConfig::default();
 
     let sampler = AdaptiveCollocationSampler::<TestBackend>::new(100, domain, strategy);

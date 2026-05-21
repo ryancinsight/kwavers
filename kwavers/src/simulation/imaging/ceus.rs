@@ -11,7 +11,7 @@ use crate::domain::imaging::ultrasound::ceus::MicrobubblePopulation;
 
 // Physics imports
 use crate::physics::acoustics::imaging::modalities::ceus::{
-    CEUSReconstruction, ContrastImage, FlowKinetics, NonlinearScattering, CeusPerfusionModel,
+    CEUSReconstruction, CeusPerfusionModel, ContrastImage, FlowKinetics, NonlinearScattering,
 };
 
 // Orchestrator

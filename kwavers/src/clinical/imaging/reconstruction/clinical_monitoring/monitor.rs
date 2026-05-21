@@ -1,5 +1,5 @@
 use super::types::{
-    FrameQualityRecord, ClinicalMonitoringConfig, MonitoringFrameMetrics, MonitoringReport,
+    ClinicalMonitoringConfig, FrameQualityRecord, MonitoringFrameMetrics, MonitoringReport,
     MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
 };
 use crate::core::error::KwaversResult;

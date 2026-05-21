@@ -2,7 +2,8 @@ use super::manager::MultiGpuManager;
 #[cfg(feature = "gpu")]
 use super::types::PinnGpuCapabilities;
 use super::types::{
-    PinnMultiGpuDeviceInfo, LoadBalancingAlgorithm, MultiGpuDecompositionStrategy, PerformanceSummary,
+    LoadBalancingAlgorithm, MultiGpuDecompositionStrategy, PerformanceSummary,
+    PinnMultiGpuDeviceInfo,
 };
 
 #[tokio::test]

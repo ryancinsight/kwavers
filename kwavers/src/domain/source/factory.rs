@@ -14,8 +14,8 @@ use crate::domain::source::{
     wavefront::{
         BesselConfig, GaussianConfig, PlaneWaveSourceConfig, SphericalConfig, SphericalWaveType,
     },
-    BesselSource, EnvelopeType, GaussianSource, PistonSource, PlaneWaveSource, PointSource,
-    PulseType, Source, SourceModel, DomainSourceParameters, SphericalSource,
+    BesselSource, DomainSourceParameters, EnvelopeType, GaussianSource, PistonSource,
+    PlaneWaveSource, PointSource, PulseType, Source, SourceModel, SphericalSource,
 };
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -31,7 +31,10 @@ impl SourceFactory {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn create_source(config: &DomainSourceParameters, grid: &Grid) -> KwaversResult<Box<dyn Source>> {
+    pub fn create_source(
+        config: &DomainSourceParameters,
+        grid: &Grid,
+    ) -> KwaversResult<Box<dyn Source>> {
         config.validate()?;
 
         // Create signal

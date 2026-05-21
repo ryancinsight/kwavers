@@ -84,19 +84,35 @@ impl GpuMemoryManager {
 
         pools.insert(
             PinnGpuMemoryPoolType::Temporary,
-            PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Temporary, 256 * 1024 * 1024, 256),
+            PinnGpuAcceleratorMemoryPool::new(
+                PinnGpuMemoryPoolType::Temporary,
+                256 * 1024 * 1024,
+                256,
+            ),
         );
         pools.insert(
             PinnGpuMemoryPoolType::Persistent,
-            PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Persistent, 512 * 1024 * 1024, 256),
+            PinnGpuAcceleratorMemoryPool::new(
+                PinnGpuMemoryPoolType::Persistent,
+                512 * 1024 * 1024,
+                256,
+            ),
         );
         pools.insert(
             PinnGpuMemoryPoolType::Gradients,
-            PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Gradients, 256 * 1024 * 1024, 256),
+            PinnGpuAcceleratorMemoryPool::new(
+                PinnGpuMemoryPoolType::Gradients,
+                256 * 1024 * 1024,
+                256,
+            ),
         );
         pools.insert(
             PinnGpuMemoryPoolType::Collocation,
-            PinnGpuAcceleratorMemoryPool::new(PinnGpuMemoryPoolType::Collocation, 128 * 1024 * 1024, 256),
+            PinnGpuAcceleratorMemoryPool::new(
+                PinnGpuMemoryPoolType::Collocation,
+                128 * 1024 * 1024,
+                256,
+            ),
         );
 
         let transfer_streams = (0..4)

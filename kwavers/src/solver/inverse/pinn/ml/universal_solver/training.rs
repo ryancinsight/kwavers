@@ -9,7 +9,9 @@ use super::types::{
     UniversalSolverGeometry2D, UniversalSolverStats, UniversalTrainingConfig,
 };
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::solver::inverse::pinn::ml::physics::{SimulationPhysicsDomain, PinnDomainPhysicsParameters};
+use crate::solver::inverse::pinn::ml::physics::{
+    PinnDomainPhysicsParameters, SimulationPhysicsDomain,
+};
 use burn::prelude::ToElement;
 use burn::tensor::{backend::AutodiffBackend, Tensor};
 use log::info;

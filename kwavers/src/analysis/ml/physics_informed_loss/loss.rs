@@ -45,15 +45,16 @@ impl PhysicsInformedLoss {
                 for k in 1..nz - 1 {
                     let u_center = field[[i, j, k]];
 
-                    let laplacian = inv_dx2 * 6.0f64.mul_add(
-                        -u_center,
-                        field[[i - 1, j, k]]
-                            + field[[i + 1, j, k]]
-                            + field[[i, j - 1, k]]
-                            + field[[i, j + 1, k]]
-                            + field[[i, j, k - 1]]
-                            + field[[i, j, k + 1]],
-                    );
+                    let laplacian = inv_dx2
+                        * 6.0f64.mul_add(
+                            -u_center,
+                            field[[i - 1, j, k]]
+                                + field[[i + 1, j, k]]
+                                + field[[i, j - 1, k]]
+                                + field[[i, j + 1, k]]
+                                + field[[i, j, k - 1]]
+                                + field[[i, j, k + 1]],
+                        );
 
                     let residual = self.wave_number.powi(2).mul_add(u_center, laplacian);
 
@@ -85,10 +86,14 @@ impl PhysicsInformedLoss {
             for j in 1..ny - 1 {
                 let u_center = field[[i, j]];
 
-                let laplacian = inv_dx2 * 4.0f64.mul_add(
-                    -u_center,
-                    field[[i - 1, j]] + field[[i + 1, j]] + field[[i, j - 1]] + field[[i, j + 1]],
-                );
+                let laplacian = inv_dx2
+                    * 4.0f64.mul_add(
+                        -u_center,
+                        field[[i - 1, j]]
+                            + field[[i + 1, j]]
+                            + field[[i, j - 1]]
+                            + field[[i, j + 1]],
+                    );
 
                 let residual = self.wave_number.powi(2).mul_add(u_center, laplacian);
 

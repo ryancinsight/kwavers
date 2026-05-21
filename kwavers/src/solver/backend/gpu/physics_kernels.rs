@@ -298,15 +298,19 @@ mod tests {
                 .domain,
             GpuKernelPhysicsDomain::AcousticFDTD
         );
-        assert!(registry.get_kernel(GpuKernelPhysicsDomain::Absorption).is_none());
+        assert!(registry
+            .get_kernel(GpuKernelPhysicsDomain::Absorption)
+            .is_none());
     }
 
     #[test]
     fn test_workgroup_caching() {
         let mut registry = PhysicsKernelRegistry::new();
 
-        let config1 = registry.get_workgroup_config(GpuKernelPhysicsDomain::AcousticFDTD, 128, 128, 128);
-        let config2 = registry.get_workgroup_config(GpuKernelPhysicsDomain::AcousticFDTD, 128, 128, 128);
+        let config1 =
+            registry.get_workgroup_config(GpuKernelPhysicsDomain::AcousticFDTD, 128, 128, 128);
+        let config2 =
+            registry.get_workgroup_config(GpuKernelPhysicsDomain::AcousticFDTD, 128, 128, 128);
 
         assert_eq!(config1.workgroup_x, config2.workgroup_x);
         assert_eq!(registry.workgroup_cache.len(), 1);
@@ -329,7 +333,10 @@ mod tests {
         let required = vec![GpuKernelPhysicsDomain::AcousticFDTD];
         assert!(registry.is_complete(&required));
 
-        let required_more = vec![GpuKernelPhysicsDomain::AcousticFDTD, GpuKernelPhysicsDomain::Absorption];
+        let required_more = vec![
+            GpuKernelPhysicsDomain::AcousticFDTD,
+            GpuKernelPhysicsDomain::Absorption,
+        ];
         assert!(!registry.is_complete(&required_more));
     }
 }

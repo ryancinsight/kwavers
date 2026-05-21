@@ -124,7 +124,7 @@ pub mod sensor {
     }
 }
 pub mod boundary {
-    pub use crate::domain::boundary::{DomainPmlConfig, DomainPMLBoundary};
+    pub use crate::domain::boundary::{DomainPMLBoundary, DomainPmlConfig};
 }
 pub mod error {
     pub use crate::core::error::{GridError, KwaversError, KwaversResult};

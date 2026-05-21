@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use kwavers::domain::source::custom::FunctionSource;
 use kwavers::domain::source::grid_source::SourceMode;
 use kwavers::domain::source::wavefront::plane_wave::{
-    InjectionMode, PlaneWaveSourceConfig, PlaneWaveSource,
+    InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig,
 };
 use kwavers::domain::source::{GridSource, Source as KwaversSource, SourceField};
 

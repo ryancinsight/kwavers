@@ -131,10 +131,10 @@ impl<'a> SnellLawCalculator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // Define optical constants locally
+    // Optical constants: refractive indices local; c sourced from SSOT.
     const WATER_REFRACTIVE_INDEX: f64 = 1.333;
     const GLASS_REFRACTIVE_INDEX: f64 = 1.5;
-    const SPEED_OF_LIGHT: f64 = 3e8;
+    use crate::core::constants::fundamental::SPEED_OF_LIGHT;
     use crate::physics::acoustics::analytical::propagation::{
         AnalyticalMediumProperties, InterfaceType,
     };
@@ -181,7 +181,7 @@ mod tests {
 
         let mut medium2 = AnalyticalMediumProperties::water();
         medium2.refractive_index = 1.0; // Air
-        medium2.wave_speed = 3e8;
+        medium2.wave_speed = SPEED_OF_LIGHT;
 
         let interface = Interface {
             medium1,

@@ -48,7 +48,7 @@ mod types;
 
 pub use ndarray_tensor::NdArrayTensor;
 pub use traits::{TensorMut, TensorView};
-pub use types::{TensorBackend, DType, Shape};
+pub use types::{DType, Shape, TensorBackend};
 
 #[cfg(test)]
 mod tests {

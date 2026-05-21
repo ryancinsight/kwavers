@@ -211,8 +211,8 @@ pub use jit_compiler::{
 
 #[cfg(feature = "pinn")]
 pub use quantization::{
-    QuantizationModelMetadata, QuantizationParams, QuantizationScheme, QuantizedModel, QuantizedTensor,
-    MlQuantizer,
+    MlQuantizer, QuantizationModelMetadata, QuantizationParams, QuantizationScheme, QuantizedModel,
+    QuantizedTensor,
 };
 
 #[cfg(feature = "pinn")]
@@ -246,7 +246,7 @@ pub use adapters::electromagnetic::{adapt_em_sources, EMAdapterError, PinnEMSour
 
 #[cfg(feature = "pinn")]
 pub use acoustic_wave::{
-    AcousticBoundarySpec, PinnAcousticBoundaryType, AcousticProblemType, AcousticWaveDomain,
+    AcousticBoundarySpec, AcousticProblemType, AcousticWaveDomain, PinnAcousticBoundaryType,
 };
 
 #[cfg(feature = "pinn")]
@@ -282,8 +282,8 @@ pub mod uncertainty_quantification;
 
 #[cfg(feature = "pinn")]
 pub use uncertainty_quantification::{
-    PinnBayesianPINN, PinnConformalPredictor, PinnUncertaintyConfig, PinnUncertaintyMethod,
-    PinnPredictionWithUncertainty, UncertaintyStats,
+    PinnBayesianPINN, PinnConformalPredictor, PinnPredictionWithUncertainty, PinnUncertaintyConfig,
+    PinnUncertaintyMethod, UncertaintyStats,
 };
 
 // #[cfg(feature = "pinn")]

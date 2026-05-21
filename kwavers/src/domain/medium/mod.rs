@@ -34,7 +34,7 @@ pub use absorption::{AbsorptionTissueType, PowerLawAbsorption};
 pub use anisotropic::{
     AnisotropicStiffnessTensor, AnisotropyType, ChristoffelEquation, MuscleFiberModel,
 };
-pub use config::{InterfaceTypeParameters, LayerParameters, DomainMediumParameters, MediumType};
+pub use config::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use homogeneous::HomogeneousMedium;
 pub use material_fields::MaterialFields;

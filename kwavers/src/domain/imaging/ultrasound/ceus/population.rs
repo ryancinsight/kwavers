@@ -138,13 +138,14 @@ impl MicrobubblePopulation {
             let omega0 = 2.0 * std::f64::consts::PI * f0_hz;
 
             let effective_viscosity = liquid_viscosity + shell_viscosity;
-            let delta_visc = 4.0 * effective_viscosity / (omega0 * liquid_density * radius_eq * radius_eq);
+            let delta_visc =
+                4.0 * effective_viscosity / (omega0 * liquid_density * radius_eq * radius_eq);
             let delta_rad = omega0 * radius_eq / sound_speed;
             let delta = delta_visc + delta_rad;
 
             let big_omega = omega / omega0;
-            let denom =
-                (delta * big_omega).mul_add(delta * big_omega, (1.0 - big_omega * big_omega).powi(2));
+            let denom = (delta * big_omega)
+                .mul_add(delta * big_omega, (1.0 - big_omega * big_omega).powi(2));
             if denom <= 0.0 || !denom.is_finite() {
                 return Err(KwaversError::Validation(ValidationError::InvalidValue {
                     parameter: "scattering_denom".to_owned(),

@@ -9,6 +9,7 @@ use ndarray::Array2;
 use num_complex::Complex;
 
 pub mod advanced;
+pub mod frequency_domain_fwi;
 pub mod hifu;
 
 // Re-export domain types for convenience
@@ -79,8 +80,7 @@ fn apply_tgc_with_sampling(
     let n = signal.len();
     let mut compensated = signal.clone();
     // α[Np/m] = α[dB/(cm·MHz)] × f[MHz] × (1/CM_TO_M) [cm/m] × (1/NP_TO_DB) [Np/dB]
-    let alpha_np =
-        TISSUE_ATTENUATION_COEFFICIENT * (frequency / MHZ_TO_HZ) / CM_TO_M / NP_TO_DB;
+    let alpha_np = TISSUE_ATTENUATION_COEFFICIENT * (frequency / MHZ_TO_HZ) / CM_TO_M / NP_TO_DB;
     for i in 0..n {
         let depth = i as f64 * SOUND_SPEED_TISSUE / (2.0 * sampling_frequency);
         let gain = (2.0 * alpha_np * depth).exp();

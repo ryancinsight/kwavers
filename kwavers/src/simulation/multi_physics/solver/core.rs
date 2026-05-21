@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use super::super::residual::max_abs_difference;
 use super::super::{
-    CoupledPhysicsSolver, MultiPhysicsConfig, MultiPhysicsFieldCoupler, SimulationPhysicsDomain,
-    SimulationCouplingStrategy,
+    CoupledPhysicsSolver, MultiPhysicsConfig, MultiPhysicsFieldCoupler, SimulationCouplingStrategy,
+    SimulationPhysicsDomain,
 };
 
 /// Multi-physics simulation orchestrator

@@ -99,8 +99,7 @@ impl TranscranialSafetyMonitor {
 
                     if dose_rate > 0.0 {
                         self.thermal_dose.max_safe_time[[i, j, k]] =
-                            (target_dose - current_dose).max(0.0) / dose_rate
-                                * SECONDS_PER_MINUTE;
+                            (target_dose - current_dose).max(0.0) / dose_rate * SECONDS_PER_MINUTE;
                     }
                 }
             }

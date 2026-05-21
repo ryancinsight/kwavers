@@ -152,8 +152,8 @@ pub mod tissue;
 // Re-export public API for convenience
 pub use acoustic::AcousticWaveSolver;
 pub use config::{
-    AcousticTherapyParams, PatientParameters, RiskOrgan, TherapyTargetVolume, TherapyIntegrationModality,
-    TherapyIntegrationSafetyLimits, TherapySessionConfig, TherapyTissueType,
+    AcousticTherapyParams, PatientParameters, RiskOrgan, TherapyIntegrationModality,
+    TherapyIntegrationSafetyLimits, TherapySessionConfig, TherapyTargetVolume, TherapyTissueType,
 };
 pub use intensity_tracker::IntensityTracker;
 pub use orchestrator::TherapyIntegrationOrchestrator;

@@ -5,7 +5,7 @@
 
 use crate::infrastructure::api::auth::AuthenticatedUser;
 use crate::infrastructure::api::{
-    APIError, HealthCheck, JobInfoResponse, ListModelsResponse, ApiModelMetadata,
+    APIError, ApiModelMetadata, HealthCheck, JobInfoResponse, ListModelsResponse,
     PINNInferenceRequest, PINNInferenceResponse, PINNTrainingRequest, PINNTrainingResponse,
     PaginationParams,
 };

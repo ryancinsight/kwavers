@@ -10,7 +10,7 @@ mod streaming;
 mod tests;
 
 pub use compression::{CompressedBlock, MemoryCompression};
-pub use pool::{GpuMemoryPoolStats, MemoryBlock, MemoryHandle, GpuMemoryPool};
+pub use pool::{GpuMemoryPool, GpuMemoryPoolStats, MemoryBlock, MemoryHandle};
 pub use streaming::{StreamingTransferManager, TransferStream, UnifiedMemoryRegion};
 
 use crate::core::error::KwaversResult;

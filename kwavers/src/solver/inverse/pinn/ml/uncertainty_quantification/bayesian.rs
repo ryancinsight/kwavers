@@ -1,7 +1,7 @@
 //! Bayesian PINN with uncertainty quantification via deep ensembles.
 
 use super::types::{
-    PinnUncertaintyConfig, PinnUncertaintyMethod, PinnPredictionWithUncertainty, UncertaintyStats,
+    PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use burn::tensor::backend::AutodiffBackend;

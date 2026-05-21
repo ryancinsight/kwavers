@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use crate::domain::grid::Grid;
 
-use super::{GaussianBeam, KwaveErrorMetrics, KwaveAnalyticalPlaneWave, SphericalWave};
+use super::{GaussianBeam, KwaveAnalyticalPlaneWave, KwaveErrorMetrics, SphericalWave};
 
 #[test]
 fn test_plane_wave_creation() {

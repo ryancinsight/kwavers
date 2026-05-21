@@ -1,7 +1,9 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::BurnWave2dGeometry;
 
-use super::{InferenceStats, JitCompiler, KernelData, JitMemoryPool, OptimizedRuntime, RuntimeConfig};
+use super::{
+    InferenceStats, JitCompiler, JitMemoryPool, KernelData, OptimizedRuntime, RuntimeConfig,
+};
 
 impl OptimizedRuntime {
     pub fn new(compiler: JitCompiler) -> Self {

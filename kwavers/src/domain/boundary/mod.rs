@@ -79,7 +79,8 @@ pub mod types;
 pub use bem::{BemBoundaryCondition, BemBoundaryManager};
 pub use config::{BoundaryParameters, SolverBoundaryKind};
 pub use coupling::{
-    AdaptiveBoundary, ImpedanceBoundary, MaterialInterface, BoundaryMultiPhysicsInterface, SchwarzBoundary,
+    AdaptiveBoundary, BoundaryMultiPhysicsInterface, ImpedanceBoundary, MaterialInterface,
+    SchwarzBoundary,
 };
 pub use fem::{FemBoundaryCondition, FemBoundaryManager};
 pub use field_updater::{FieldUpdater, GradientFieldUpdater};
@@ -90,7 +91,7 @@ pub use traits::{
 };
 pub use types::BoundaryType;
 pub use types::{
-    DomainAcousticBoundaryType, BoundaryFace, BoundarySpec, ElasticBoundaryType,
+    BoundaryFace, BoundarySpec, DomainAcousticBoundaryType, ElasticBoundaryType,
     ElectromagneticBoundaryType, FaceBoundaryComponent,
 };
 
@@ -238,5 +239,5 @@ pub trait Boundary: Debug + Send + Sync {
 
 // Time-domain boundary conditions (FDTD, PSTD)
 pub use cpml::{CPMLBoundary, CPMLConfig, PerDimensionAlpha, PerDimensionPML};
-pub use pml::{DomainPmlConfig, DomainPMLBoundary};
+pub use pml::{DomainPMLBoundary, DomainPmlConfig};
 pub use smoothing::{BoundarySmoothing, BoundarySmoothingConfig, SmoothingMethod};

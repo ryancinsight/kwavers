@@ -143,8 +143,8 @@ title  = "Low-Intensity Ultrasound Neuromodulation"
 
 [[chapter]]
 number = 27
-script = "ch27_seismic_fwi_brain_imaging.py"
-title  = "Seismic Full-Waveform Brain Imaging"
+script = "ch27_transcranial_ust_brain_imaging.py"
+title  = "Transcranial UST Brain Imaging"
 
 [[chapter]]
 number = 28

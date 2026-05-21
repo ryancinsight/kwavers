@@ -1,7 +1,9 @@
 use super::super::config::FemPreconditionerType;
 use super::FemHelmholtzSolver;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::math::linear_algebra::sparse::solver::{IterativeSolver, SparsePreconditioner, SolverConfig};
+use crate::math::linear_algebra::sparse::solver::{
+    IterativeSolver, SolverConfig, SparsePreconditioner,
+};
 
 impl FemHelmholtzSolver {
     /// Solve the assembled system via BiCGSTAB with the configured preconditioner.

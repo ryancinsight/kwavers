@@ -1,5 +1,5 @@
 use super::domain::AcousticWaveDomain;
-use super::types::{AcousticBoundarySpec, PinnAcousticBoundaryType, AcousticProblemType};
+use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
 use crate::solver::inverse::pinn::ml::physics::{BoundaryPosition, SimulationPhysicsDomain};
 use burn::backend::NdArray;
 use std::collections::HashMap;
@@ -22,9 +22,7 @@ fn test_acoustic_wave_domain_creation() {
     assert_eq!(domain.wave_speed(), 1500.0);
     assert_eq!(domain.density(), 1000.0);
     assert!(domain.nonlinearity_coefficient().is_none());
-    assert!(<AcousticWaveDomain as SimulationPhysicsDomain<B>>::supports_coupling(
-        &domain
-    ));
+    assert!(<AcousticWaveDomain as SimulationPhysicsDomain<B>>::supports_coupling(&domain));
 }
 
 #[test]
@@ -70,7 +68,8 @@ fn test_validation_metrics() {
 fn test_coupling_interfaces() {
     let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
 
-    let interfaces = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::coupling_interfaces(&domain);
+    let interfaces =
+        <AcousticWaveDomain as SimulationPhysicsDomain<B>>::coupling_interfaces(&domain);
     assert_eq!(interfaces.len(), 2);
     assert_eq!(interfaces[0].name, "acoustic_solid");
     assert_eq!(interfaces[1].name, "acoustic_thermal");

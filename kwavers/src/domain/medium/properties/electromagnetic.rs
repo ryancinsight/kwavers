@@ -31,9 +31,7 @@
 //! - `permeability ≥ 1.0` (most materials)
 //! - `conductivity ≥ 0.0`
 
-use crate::core::constants::fundamental::{
-    SPEED_OF_LIGHT, VACUUM_IMPEDANCE, VACUUM_PERMEABILITY,
-};
+use crate::core::constants::fundamental::{SPEED_OF_LIGHT, VACUUM_IMPEDANCE, VACUUM_PERMEABILITY};
 use std::fmt;
 
 /// Canonical electromagnetic material properties

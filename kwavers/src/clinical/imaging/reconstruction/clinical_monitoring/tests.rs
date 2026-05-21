@@ -1,5 +1,7 @@
 use super::monitor::ClinicalMonitor;
-use super::types::{ClinicalMonitoringConfig, MonitoringSafetyEventType, SafetyEvent, SafetySeverity};
+use super::types::{
+    ClinicalMonitoringConfig, MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
+};
 use std::time::SystemTime;
 
 #[test]

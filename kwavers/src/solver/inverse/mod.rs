@@ -18,8 +18,8 @@
 //! - Traditional methods: Optimization, adjoint methods, iterative reconstruction
 //! - PINN methods: Neural network approximation with physics-informed loss
 
-pub mod acoustic_fwi;
 pub mod elastography;
+pub mod fwi;
 pub mod pinn;
 pub mod reconstruction;
 pub mod same_aperture;

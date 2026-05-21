@@ -104,8 +104,7 @@ impl GilmoreSolver {
         // Thermal damping is still neglected (adiabatic approximation).
         // Full thermal effects require heat diffusion (Prosperetti 1977).
         let gamma = state.gas_species.gamma();
-        let p_eq =
-            self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
+        let p_eq = self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
         let p_gas = p_eq * (self.params.r0 / r).powf(3.0 * gamma) + self.params.pv;
 
         // Pressure at bubble wall (liquid side)
@@ -209,8 +208,7 @@ impl GilmoreSolver {
         // ── dp_gas/dt via polytropic law: p_gas = p_eq·(r0/r)^{3γ} + pv ────────
         // Only the non-condensable gas partial pressure undergoes polytropic compression;
         // pv is isothermal. Therefore: dp_gas/dt = −3γ·(p_gas − pv)·U/R
-        let p_eq =
-            self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
+        let p_eq = self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
         let p_gas = p_eq * (self.params.r0 / r).powf(3.0 * gamma);
         let dp_gas_dt = -3.0 * gamma * p_gas * u / r;
 

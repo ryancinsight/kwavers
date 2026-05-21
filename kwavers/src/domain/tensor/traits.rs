@@ -2,7 +2,7 @@
 
 use ndarray::ArrayD;
 
-use super::types::{TensorBackend, DType, Shape};
+use super::types::{DType, Shape, TensorBackend};
 
 /// Read-only tensor view abstraction.
 ///

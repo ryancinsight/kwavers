@@ -17,7 +17,8 @@ pub fn calculate_ros_generation(
     if temperature > 2000.0 {
         // H₂O → H• + •OH
         let k_dissociation = 1e13 * (-5.2e4 / temperature).exp(); // Arrhenius
-        let oh_rate = k_dissociation * water_vapor_fraction * pressure / (GAS_CONSTANT * temperature);
+        let oh_rate =
+            k_dissociation * water_vapor_fraction * pressure / (GAS_CONSTANT * temperature);
         generation_rates.insert(ROSSpecies::HydroxylRadical, oh_rate);
         generation_rates.insert(ROSSpecies::AtomicHydrogen, oh_rate);
 

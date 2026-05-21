@@ -132,9 +132,8 @@ impl NewmarkIntegrator {
             // v_{n+1} = v_n + 0.5*dt*(a_n + a_{n+1})
             //         = velocity_prev - dt*acceleration_prev + 0.5*dt*(acceleration_prev + a_new)
             //         = velocity_prev - 0.5*dt*acceleration_prev + 0.5*dt*a_new
-            self.velocity[i] = self.velocity_prev[i]
-                - 0.5 * dt * self.acceleration_prev[i]
-                + 0.5 * dt * a_new[i];
+            self.velocity[i] =
+                self.velocity_prev[i] - 0.5 * dt * self.acceleration_prev[i] + 0.5 * dt * a_new[i];
         }
         // Refresh velocity_prev so the next step's displacement predictor uses v_{n+1}.
         self.velocity_prev.assign(&self.velocity);

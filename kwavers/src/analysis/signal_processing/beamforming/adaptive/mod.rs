@@ -293,7 +293,8 @@ mod tests {
         let cov = test_utilities::create_diagonal_dominant_covariance(n, 0.05);
         let steering = test_utilities::create_steering_vector(n, 0.0);
 
-        let beamformer: Box<dyn AdaptiveTimeDomainBeamformer> = Box::new(MinimumVariance::default());
+        let beamformer: Box<dyn AdaptiveTimeDomainBeamformer> =
+            Box::new(MinimumVariance::default());
         let weights = beamformer
             .compute_weights(&cov, &steering)
             .expect("trait method should work");

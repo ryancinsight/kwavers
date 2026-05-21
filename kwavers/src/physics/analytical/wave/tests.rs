@@ -76,6 +76,10 @@ fn fdtd_phase_error_cfl_unity_is_zero() {
     let kh_arr: Vec<f64> = (1..10).map(|i| i as f64 * PI / 10.0).collect();
     let err = fdtd_phase_error_1d(&kh_arr, 1.0);
     for &e in &err {
-        assert!(e.abs() < 1e-10, "Expected zero dispersion at CFL=1, got {}", e);
+        assert!(
+            e.abs() < 1e-10,
+            "Expected zero dispersion at CFL=1, got {}",
+            e
+        );
     }
 }

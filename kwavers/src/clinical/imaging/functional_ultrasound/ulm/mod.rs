@@ -224,8 +224,8 @@ pub mod tracking;
 pub mod velocity_mapping;
 
 pub use microbubble_detection::{
-    BubbleDetection, GaussianLocalizationConfig, GaussianLocalizer, SvdClutterConfig,
-    UlmSvdClutterFilter, UlmDetector,
+    BubbleDetection, GaussianLocalizationConfig, GaussianLocalizer, SvdClutterConfig, UlmDetector,
+    UlmSvdClutterFilter,
 };
 pub use super_resolution::{RenderMode, SuperResConfig, SuperResReconstructor};
 pub use tracking::{BubbleTrack, HungarianTracker, TrackingConfig};

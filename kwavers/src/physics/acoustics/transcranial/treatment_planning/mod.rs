@@ -16,7 +16,7 @@ mod tests;
 // Re-export common public types
 pub use planner::TreatmentPlanner;
 pub use types::{
-    TranscranialTargetVolume, TranscranialSafetyConstraints, TranscranialSkullProperties,
-    TranscranialTargetShape, TranscranialTransducerSpecification, TranscranialTreatmentPlan,
+    TranscranialSafetyConstraints, TranscranialSkullProperties, TranscranialTargetShape,
+    TranscranialTargetVolume, TranscranialTransducerSpecification, TranscranialTreatmentPlan,
     TransducerSetup,
 };

@@ -9,7 +9,7 @@ pub mod traits;
 pub mod types;
 
 pub use traits::{
-    ApolloFourierBackend, FourierBackend, FactoryGridParameters, FactoryMediumParameters, MeshProvider,
-    RegistrationEngine, SolverFactoryTrait, FactorySourceParameters,
+    ApolloFourierBackend, FactoryGridParameters, FactoryMediumParameters, FactorySourceParameters,
+    FourierBackend, MeshProvider, RegistrationEngine, SolverFactoryTrait,
 };
 pub use types::{FactoryConfiguration, FactoryError};

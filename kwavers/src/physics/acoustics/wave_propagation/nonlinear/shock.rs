@@ -56,19 +56,14 @@ pub fn shock_formation_distance(
 ///
 /// Returns thickness (m)
 #[must_use]
-pub fn shock_thickness(
-    shock_pressure: f64,
-    frequency: f64,
-    params: &NonlinearParameters,
-) -> f64 {
+pub fn shock_thickness(shock_pressure: f64, frequency: f64, params: &NonlinearParameters) -> f64 {
     let omega = 2.0 * PI * frequency;
     // Thermoviscous attenuation at the driving frequency [Np/m]
     let alpha = params.attenuation_at_frequency(frequency);
     // Diffusivity of sound: δ = 2α c₀³ / ω²
     let delta = 2.0 * alpha * params.sound_speed.powi(3) / (omega * omega);
     // Shock thickness: l_s = ρ₀ c₀ δ / (β P_shock)
-    let thickness = params.density * params.sound_speed * delta
-        / (params.beta * shock_pressure);
+    let thickness = params.density * params.sound_speed * delta / (params.beta * shock_pressure);
 
     // Bounded below by mean free path for liquids (~1e-10 m)
     thickness.max(1e-10)

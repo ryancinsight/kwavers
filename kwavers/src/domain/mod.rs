@@ -119,6 +119,5 @@ pub use geometry::{GeometricDomain, PointLocation, RectangularDomain, SphericalD
 pub use grid::GridDimension;
 
 pub use tensor::{
-    convert, TensorBackend, DType, NdArrayTensor, Shape as TensorShape, TensorMut,
-    TensorView,
+    convert, DType, NdArrayTensor, Shape as TensorShape, TensorBackend, TensorMut, TensorView,
 };

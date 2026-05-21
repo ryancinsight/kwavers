@@ -258,7 +258,10 @@ impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
     }
 
     /// Get a physics domain by name
-    pub fn get_domain(&self, name: &str) -> Option<&(dyn SimulationPhysicsDomain<B> + Send + Sync)> {
+    pub fn get_domain(
+        &self,
+        name: &str,
+    ) -> Option<&(dyn SimulationPhysicsDomain<B> + Send + Sync)> {
         self.domains.get(name).map(|d| d.as_ref())
     }
 

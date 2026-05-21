@@ -17,7 +17,7 @@
 
 use crate::core::error::{KwaversError, KwaversResult, SystemError};
 use crate::solver::interface::pinn_beamforming::{
-    ModelInfo, PinnBeamformingConfig, PinnBeamformingProvider, NeuralPinnBeamformingResult,
+    ModelInfo, NeuralPinnBeamformingResult, PinnBeamformingConfig, PinnBeamformingProvider,
     PinnBeamformingUncertaintyConfig, TrainingMetrics,
 };
 use burn::tensor::backend::AutodiffBackend;

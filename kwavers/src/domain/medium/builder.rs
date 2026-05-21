@@ -2,7 +2,7 @@
 //!
 //! Follows Builder pattern for complex medium instantiation
 
-use super::{LayerParameters, DomainMediumParameters, MediumType};
+use super::{DomainMediumParameters, LayerParameters, MediumType};
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
@@ -185,7 +185,10 @@ impl MediumBuilder {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    fn build_anisotropic(config: &DomainMediumParameters, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
+    fn build_anisotropic(
+        config: &DomainMediumParameters,
+        grid: &Grid,
+    ) -> KwaversResult<Box<dyn Medium>> {
         // Extract anisotropic configuration
         // Log configuration for future enhancement
         if let Some(directions) = config.principal_directions {

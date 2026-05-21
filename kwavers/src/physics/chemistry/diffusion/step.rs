@@ -95,9 +95,15 @@ impl RadicalDiffusionSolver {
                 .map(|&r| diffusion_coefficient * dt / (2.0 * r * r))
                 .collect();
 
-            let rhs = build_rhs(concentration, wall_concentration, &lambda, inv_dxi, inv_dxi2, n);
-            let (lower, diagonal, upper) =
-                build_lhs(&lambda, inv_dxi, inv_dxi2, n);
+            let rhs = build_rhs(
+                concentration,
+                wall_concentration,
+                &lambda,
+                inv_dxi,
+                inv_dxi2,
+                n,
+            );
+            let (lower, diagonal, upper) = build_lhs(&lambda, inv_dxi, inv_dxi2, n);
 
             let solved = thomas_solve(&lower, &diagonal, &upper, &rhs)
                 .ok_or(DiffusionError::SingularSystem)?;
@@ -129,8 +135,8 @@ fn build_rhs(
 
     for j in 1..n - 1 {
         // ∂²c/∂ξ² via central difference
-        let laplacian = (concentration[j + 1] - 2.0 * concentration[j] + concentration[j - 1])
-            * inv_dxi2;
+        let laplacian =
+            (concentration[j + 1] - 2.0 * concentration[j] + concentration[j - 1]) * inv_dxi2;
         // ∂c/∂ξ via central difference (coefficient 1/(2Δξ) = 0.5 * inv_dxi)
         let first_derivative = (concentration[j + 1] - concentration[j - 1]) * 0.5 * inv_dxi;
         // Explicit half: c[j] + λ_j * (∂²c/∂ξ² + ∂c/∂ξ)
@@ -152,7 +158,12 @@ fn build_rhs(
 /// ```
 ///
 /// Rows 0 and n−1 are set to identity (Dirichlet boundary conditions).
-fn build_lhs(lambda: &[f64], inv_dxi: f64, inv_dxi2: f64, n: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+fn build_lhs(
+    lambda: &[f64],
+    inv_dxi: f64,
+    inv_dxi2: f64,
+    n: usize,
+) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     let mut lower = vec![0.0_f64; n];
     let mut diagonal = vec![1.0_f64; n];
     let mut upper = vec![0.0_f64; n];
@@ -173,4 +184,3 @@ fn build_lhs(lambda: &[f64], inv_dxi: f64, inv_dxi2: f64, n: usize) -> (Vec<f64>
 
     (lower, diagonal, upper)
 }
-

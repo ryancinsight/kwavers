@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use kwavers::domain::source::custom::FunctionSource;
 use kwavers::domain::source::wavefront::plane_wave::{
-    InjectionMode, PlaneWaveSourceConfig, PlaneWaveSource,
+    InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig,
 };
 use kwavers::domain::source::{GridSource, Source as KwaversSource, SourceField};
 use pyo3::exceptions::PyValueError;

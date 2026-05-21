@@ -144,6 +144,12 @@ impl CherenkovModel {
             return Array1::zeros(wavelengths.len());
         }
         let scale = self.coherence_factor * charge.abs() * ft;
-        wavelengths.mapv(|lambda| if lambda > 0.0 { scale / lambda.powi(3) } else { 0.0 })
+        wavelengths.mapv(|lambda| {
+            if lambda > 0.0 {
+                scale / lambda.powi(3)
+            } else {
+                0.0
+            }
+        })
     }
 }

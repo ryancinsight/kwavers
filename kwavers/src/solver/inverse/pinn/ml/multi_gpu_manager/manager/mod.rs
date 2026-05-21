@@ -5,8 +5,8 @@ pub mod decompose;
 pub mod monitor;
 
 use super::types::{
-    FaultTolerance, PinnMultiGpuDeviceInfo, LoadBalancingAlgorithm, MultiGpuDecompositionStrategy,
-    MultiGpuPerformanceMonitor, PinnMultiGpuCommunicationChannel, WorkUnit,
+    FaultTolerance, LoadBalancingAlgorithm, MultiGpuDecompositionStrategy,
+    MultiGpuPerformanceMonitor, PinnMultiGpuCommunicationChannel, PinnMultiGpuDeviceInfo, WorkUnit,
 };
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::{HashMap, VecDeque};

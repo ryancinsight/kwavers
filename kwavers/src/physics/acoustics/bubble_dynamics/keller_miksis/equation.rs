@@ -53,8 +53,7 @@ pub(crate) fn calculate_acceleration(
     // the correct pv floor as r → ∞.
     let gamma = state.gas_species.gamma();
     let p_gas = if !model.params.use_thermal_effects {
-        let p_eq =
-            model.params.p0 + 2.0 * model.params.sigma / model.params.r0 - model.params.pv;
+        let p_eq = model.params.p0 + 2.0 * model.params.sigma / model.params.r0 - model.params.pv;
         p_eq * (model.params.r0 / r).powf(3.0 * gamma) + model.params.pv
     } else {
         // Use Van der Waals equation with thermal effects

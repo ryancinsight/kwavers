@@ -124,6 +124,10 @@ aws-config = { version = "1.0", optional = true }
 ritk-registration = { path = "../ritk/crates/ritk-registration" }
 ritk-core = { path = "../ritk/crates/ritk-core" }
 ritk-io = { path = "../ritk/crates/ritk-io" }
+consus-core = { workspace = true }
+consus-hdf5 = { workspace = true }
+consus-io = { workspace = true }
+flate2 = { workspace = true }
 
 [dev-dependencies]
 # Minimal dev dependencies for testing only
@@ -145,6 +149,7 @@ plotters = { version = "0.3", default-features = false, features = [
 
 # Async testing support
 tokio = { version = "1.42", features = ["rt-multi-thread", "macros"] }
+tempfile = { workspace = true }
 
 # Concurrency testing (Sprint 138 - Persona Requirements)
 loom = "0.7"
@@ -382,6 +387,10 @@ required-features = ["pinn"]
 
 [[bench]]
 name = "clinical_sound_speed_shift_openpros"
+harness = false
+
+[[bench]]
+name = "fwi_spectral_cbs"
 harness = false
 
 [[bench]]

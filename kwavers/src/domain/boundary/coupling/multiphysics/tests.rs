@@ -1,6 +1,6 @@
 //! Tests for multi-physics interface boundary conditions.
 
-use super::super::types::{BoundaryCouplingType, BoundaryCouplingPhysicsDomain};
+use super::super::types::{BoundaryCouplingPhysicsDomain, BoundaryCouplingType};
 use super::interface::BoundaryMultiPhysicsInterface;
 
 const Z_WATER: f64 = 1_479_036.0;

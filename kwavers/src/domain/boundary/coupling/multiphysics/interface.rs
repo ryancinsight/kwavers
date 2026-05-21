@@ -5,7 +5,9 @@ use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopology;
 use ndarray::ArrayViewMut3;
 
-use super::super::types::{BoundaryCouplingType, BoundaryDirections, BoundaryCouplingPhysicsDomain};
+use super::super::types::{
+    BoundaryCouplingPhysicsDomain, BoundaryCouplingType, BoundaryDirections,
+};
 
 /// Multi-physics interface boundary
 ///

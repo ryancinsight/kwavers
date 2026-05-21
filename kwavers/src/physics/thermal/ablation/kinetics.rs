@@ -120,8 +120,7 @@ impl AblationKinetics {
     /// Damage accumulation rate [1/s]
     #[must_use]
     pub fn damage_rate(&self, temperature: f64) -> f64 {
-        self.frequency_factor
-            * (-self.activation_energy / (GAS_CONSTANT * temperature)).exp()
+        self.frequency_factor * (-self.activation_energy / (GAS_CONSTANT * temperature)).exp()
     }
 
     /// Accumulated thermal damage (Ω)

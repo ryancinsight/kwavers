@@ -509,8 +509,7 @@ mod tests {
         // HU = 0, no label → body tissue.
         let ct = Array2::<f64>::from_elem((1, 1), 0.0);
         let label = Array2::<i16>::zeros((1, 1));
-        let (speed, att, body, _, _) =
-            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        let (speed, att, body, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
         assert!(body[[0, 0]]);
         // c = 1480 + 0.18 × clamp(0, −150, 250) = 1480
         assert!((speed[[0, 0]] - 1480.0).abs() < 1.0e-10);
@@ -522,8 +521,7 @@ mod tests {
         let ct = Array2::<f64>::from_elem((1, 1), 100.0);
         let mut label = Array2::<i16>::zeros((1, 1));
         label[[0, 0]] = 1;
-        let (speed, att, _, organ, target) =
-            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        let (speed, att, _, organ, target) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
         assert!(organ[[0, 0]]);
         assert!(!target[[0, 0]]);
         // c = 1595 + 0.10 × clamp(100, −100, 200) = 1595 + 10 = 1605
@@ -537,8 +535,7 @@ mod tests {
         let ct = Array2::<f64>::from_elem((1, 1), 50.0);
         let mut label = Array2::<i16>::zeros((1, 1));
         label[[0, 0]] = 2;
-        let (speed, att, _, _, target) =
-            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        let (speed, att, _, _, target) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
         assert!(target[[0, 0]]);
         // c = (1595 − 22) + 0.12 × clamp(50, −50, 220) = 1573 + 6 = 1579
         assert!((speed[[0, 0]] - 1579.0).abs() < 1.0e-10);
@@ -551,8 +548,7 @@ mod tests {
         let ct = Array2::<f64>::from_elem((1, 1), 700.0);
         let mut label = Array2::<i16>::zeros((1, 1));
         label[[0, 0]] = 1;
-        let (speed, att, _, _, _) =
-            abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        let (speed, att, _, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
         // c = 2450 + 0.42 × clamp(700 − 250, 0, 1400) = 2450 + 0.42 × 450 = 2639
         assert!((speed[[0, 0]] - 2639.0).abs() < 1.0e-10);
         assert_eq!(att[[0, 0]], 18.0);
@@ -563,10 +559,8 @@ mod tests {
         let ct = Array2::<f64>::from_elem((1, 1), 0.0);
         let mut label = Array2::<i16>::zeros((1, 1));
         label[[0, 0]] = 1;
-        let (speed_liver, _, _, _, _) =
-            abdominal_properties(AnatomyKind::Liver, &ct, &label);
-        let (speed_kidney, _, _, _, _) =
-            abdominal_properties(AnatomyKind::Kidney, &ct, &label);
+        let (speed_liver, _, _, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
+        let (speed_kidney, _, _, _, _) = abdominal_properties(AnatomyKind::Kidney, &ct, &label);
         // Liver organ baseline: 1595; kidney: 1567 (both at HU=0 so offset=0).
         assert!((speed_liver[[0, 0]] - 1595.0).abs() < 1.0e-10);
         assert!((speed_kidney[[0, 0]] - 1567.0).abs() < 1.0e-10);
@@ -601,7 +595,8 @@ mod tests {
     fn prepare_abdominal_slice_rejects_grid_size_one() {
         let ct = Array3::<f64>::from_elem((5, 5, 1), 0.0);
         let label = Array3::<i16>::zeros((5, 5, 1));
-        assert!(prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.0, 1.0, 1.0], 1)
-            .is_err());
+        assert!(
+            prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.0, 1.0, 1.0], 1).is_err()
+        );
     }
 }

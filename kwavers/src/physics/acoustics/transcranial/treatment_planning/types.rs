@@ -110,10 +110,10 @@ impl Default for TranscranialTransducerSpecification {
     fn default() -> Self {
         Self {
             num_elements: 1024,
-            frequency: 650e3,      // 650 kHz for brain therapy
-            focal_distance: 120.0, // mm
-            radius: 80.0,          // mm
-            sound_speed: SOUND_SPEED_WATER_SIM,  // coupling-medium baseline (m/s)
+            frequency: 650e3,                   // 650 kHz for brain therapy
+            focal_distance: 120.0,              // mm
+            radius: 80.0,                       // mm
+            sound_speed: SOUND_SPEED_WATER_SIM, // coupling-medium baseline (m/s)
         }
     }
 }
