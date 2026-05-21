@@ -31,6 +31,7 @@
 
 use super::HASConfig;
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use crate::core::error::KwaversResult;
 use ndarray::{Array2, Array3};
 
@@ -79,10 +80,10 @@ impl HasAbsorptionOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply(&self, pressure: &Array3<f64>, dz: f64) -> KwaversResult<Array3<f64>> {
-        let freq_mhz = self.reference_freq / 1e6;
-        // dB/(cm·MHz^y) → Np/m: multiply by 100 cm/m, divide by NP_TO_DB = 20/ln(10)
+        let freq_mhz = self.reference_freq / MHZ_TO_HZ;
+        // dB/(cm·MHz^y) → Np/m: divide by NP_TO_DB and CM_TO_M (SSOT).
         let alpha_db_cm = self.attenuation_coeff * freq_mhz.powf(self.power_law_exp);
-        let alpha_np_m = alpha_db_cm * 100.0 / NP_TO_DB;
+        let alpha_np_m = alpha_db_cm / NP_TO_DB / CM_TO_M;
         let factor = (-alpha_np_m * dz).exp();
         Ok(pressure.mapv(|p| p * factor))
     }
@@ -115,10 +116,10 @@ impl HasAbsorptionOperator {
     /// ## References
     /// - Hamilton MF, Blackstock DT (2008). *Nonlinear Acoustics*. ASA Press, §2.3.
     pub fn apply_broadband(&self, harmonics: &mut [Array2<f64>], dz: f64, f0: f64) {
-        let freq_mhz = f0 / 1e6;
-        // α₀ at f₀ in Np/m
+        let freq_mhz = f0 / MHZ_TO_HZ;
+        // α₀ at f₀ in Np/m (SSOT unit conversions).
         let alpha_np_f0 =
-            self.attenuation_coeff * freq_mhz.powf(self.power_law_exp) * 100.0 / NP_TO_DB;
+            self.attenuation_coeff * freq_mhz.powf(self.power_law_exp) / NP_TO_DB / CM_TO_M;
         for (n, plane) in harmonics.iter_mut().enumerate() {
             let harmonic_order = (n + 1) as f64; // n=0 → 1st harmonic
                                                  // α_n = α₀ · n^y  (power-law frequency scaling)
