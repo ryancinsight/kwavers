@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added (2026-05-20) - Bowl Vertex-Focus Presets
+
+- [minor] Add `BowlConfig::from_vertex_focus`, `BowlConfig::hemispherical`,
+  and `BowlConfig::with_element_size` so fixed-count hemispherical or partial
+  focused-bowl sources can be configured from source-domain geometry without
+  anatomy-specific constructor names.
+
 ### Added (2026-05-20) - Bowl Count-Selected Source Layout
 
 - [minor] Add `BowlTransducer::with_element_count` and read-only element

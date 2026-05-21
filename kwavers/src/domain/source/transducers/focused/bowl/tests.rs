@@ -106,6 +106,24 @@ fn explicit_element_count_owns_discretization_option() {
 }
 
 #[test]
+fn hemispherical_preset_generates_source_domain_fixed_count_layout() {
+    let config = BowlConfig::hemispherical([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 650.0e3, 1.0e6);
+
+    assert!((config.radius_of_curvature - 0.16).abs() < 1.0e-12);
+    assert!((config.diameter - 0.32).abs() < 1.0e-12);
+
+    let bowl = BowlTransducer::with_element_count(config, 1024).unwrap();
+    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let expected_hemisphere_area = 2.0 * std::f64::consts::PI * 0.16_f64.powi(2);
+
+    assert_eq!(bowl.element_count(), 1024);
+    assert!((summed_area - expected_hemisphere_area).abs() < 1.0e-14);
+    for position in bowl.element_positions() {
+        assert!(position[2] >= -1.0e-12);
+    }
+}
+
+#[test]
 fn bowl_rejects_nonfinite_or_degenerate_domains() {
     let mut zero_radius = BowlConfig::default();
     zero_radius.radius_of_curvature = 0.0;

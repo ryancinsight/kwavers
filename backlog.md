@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [minor] Closed the bowl vertex/focus preset gap.
+  `BowlConfig` now owns vertex/focus and hemispherical constructors plus an
+  element-size fluent setter, allowing clinical adapters to configure
+  fixed-count bowl layouts from source-domain geometry without anatomy-specific
+  source constructor names.
+
 - 2026-05-20: [minor] Closed the bowl count-selected source-layout gap.
   `BowlTransducer::with_element_count` now generates fixed-count focused cap
   layouts through the canonical bowl source, and public read-only accessors

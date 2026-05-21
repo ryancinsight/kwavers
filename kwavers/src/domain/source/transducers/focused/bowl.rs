@@ -15,6 +15,8 @@ use std::f64::consts::PI;
 
 use super::cap::{SphericalCapConfig, SphericalCapLayout};
 
+mod presets;
+
 #[cfg(test)]
 mod tests;
 
