@@ -42,6 +42,11 @@
     300000.0
   ],
   "homogeneous_direct_field": {
+    "active_only_normalized_l2_residual": 1.255958648256525e-16,
+    "active_pair_count": 8,
+    "active_self_channel_log_amplitude_error_rms": 0.12638963795912433,
+    "active_self_channel_phase_error_max_abs_rad": 0.19386221725579836,
+    "active_self_channel_phase_error_rms_rad": 0.09290995948941447,
     "model_family": "clinical_breast_ust_homogeneous_direct_field_diagnostic",
     "normalized_l2_residual": 0.45490002818776015,
     "passive_log_amplitude_error_rms": 1.0285433938640014,
@@ -52,6 +57,11 @@
     "passive_range_max_m": 0.010119288512538814,
     "passive_range_min_m": 0.004525483399593905,
     "pstd_periodic": {
+      "active_only_normalized_l2_residual": 1.7744650980128226e-16,
+      "active_pair_count": 8,
+      "active_self_channel_log_amplitude_error_rms": 0.6647534766581278,
+      "active_self_channel_phase_error_max_abs_rad": 1.1346130259417624,
+      "active_self_channel_phase_error_rms_rad": 0.5756532059612377,
       "normalized_l2_residual": 0.7410053165756724,
       "passive_log_amplitude_error_rms": 0.42298397666776727,
       "passive_only_normalized_l2_residual": 0.4552271806973042,
@@ -67,6 +77,11 @@
     "pstd_periodic_residual_delta": 0.2861052883879122,
     "row_normalized_l2_residual_mean": 0.5561369395395142,
     "source_kappa_filtered": {
+      "active_only_normalized_l2_residual": 1.6596289803847925e-16,
+      "active_pair_count": 8,
+      "active_self_channel_log_amplitude_error_rms": 0.12636356389248984,
+      "active_self_channel_phase_error_max_abs_rad": 0.19369345441556485,
+      "active_self_channel_phase_error_rms_rad": 0.09275137567966699,
       "normalized_l2_residual": 0.45468947743979055,
       "passive_log_amplitude_error_rms": 1.0287699345331478,
       "passive_only_normalized_l2_residual": 0.7574579855431117,
@@ -143,9 +158,108 @@
         "source_scale_phase_span_rad": 0.9194258157013508
       }
     ],
+    "receiver_channel_policy": "all",
     "residual_spread": 0.06683665250745896,
     "worst_model": "spectral_convergent_born",
     "worst_normalized_l2_residual": 0.5234113936105185
+  },
+  "operator_equivalence_receiver_policies": {
+    "active_only": {
+      "best_model": "dense_convergent_born",
+      "best_normalized_l2_residual": 7.388752956817088e-17,
+      "model_count": 3,
+      "per_model": [
+        {
+          "model": "dense_convergent_born",
+          "normalized_l2_residual": 7.388752956817088e-17,
+          "row_normalized_l2_residual_mean": 7.75971717946918e-17,
+          "source_scale_magnitude_coefficient_of_variation": 0.23180044857707444,
+          "source_scale_phase_span_rad": 0.41267524110513987
+        },
+        {
+          "model": "spectral_convergent_born",
+          "normalized_l2_residual": 1.4597307231062321e-16,
+          "row_normalized_l2_residual_mean": 9.831123628876217e-17,
+          "source_scale_magnitude_coefficient_of_variation": 0.1450259353190782,
+          "source_scale_phase_span_rad": 0.49132965430418407
+        },
+        {
+          "model": "single_scatter_born",
+          "normalized_l2_residual": 1.5048930870435647e-16,
+          "row_normalized_l2_residual_mean": 1.0305850225139062e-16,
+          "source_scale_magnitude_coefficient_of_variation": 0.15101203860943455,
+          "source_scale_phase_span_rad": 0.7497631307798276
+        }
+      ],
+      "receiver_channel_policy": "active_only",
+      "residual_spread": 7.660177913618559e-17,
+      "worst_model": "single_scatter_born",
+      "worst_normalized_l2_residual": 1.5048930870435647e-16
+    },
+    "all": {
+      "best_model": "single_scatter_born",
+      "best_normalized_l2_residual": 0.4565747411030595,
+      "model_count": 3,
+      "per_model": [
+        {
+          "model": "single_scatter_born",
+          "normalized_l2_residual": 0.4565747411030595,
+          "row_normalized_l2_residual_mean": 0.5782190998199837,
+          "source_scale_magnitude_coefficient_of_variation": 0.23105313223538063,
+          "source_scale_phase_span_rad": 1.3676929677638976
+        },
+        {
+          "model": "dense_convergent_born",
+          "normalized_l2_residual": 0.4764379725276884,
+          "row_normalized_l2_residual_mean": 0.6040577096925538,
+          "source_scale_magnitude_coefficient_of_variation": 0.17571311873791864,
+          "source_scale_phase_span_rad": 0.6178719682057567
+        },
+        {
+          "model": "spectral_convergent_born",
+          "normalized_l2_residual": 0.5234113936105185,
+          "row_normalized_l2_residual_mean": 0.6424428504023861,
+          "source_scale_magnitude_coefficient_of_variation": 0.2970052697706972,
+          "source_scale_phase_span_rad": 0.9194258157013508
+        }
+      ],
+      "receiver_channel_policy": "all",
+      "residual_spread": 0.06683665250745896,
+      "worst_model": "spectral_convergent_born",
+      "worst_normalized_l2_residual": 0.5234113936105185
+    },
+    "passive_only": {
+      "best_model": "spectral_convergent_born",
+      "best_normalized_l2_residual": 0.5432880999009375,
+      "model_count": 3,
+      "per_model": [
+        {
+          "model": "spectral_convergent_born",
+          "normalized_l2_residual": 0.5432880999009375,
+          "row_normalized_l2_residual_mean": 0.6224891173097868,
+          "source_scale_magnitude_coefficient_of_variation": 0.27281243432619967,
+          "source_scale_phase_span_rad": 6.765586223522503
+        },
+        {
+          "model": "single_scatter_born",
+          "normalized_l2_residual": 0.7871325603490962,
+          "row_normalized_l2_residual_mean": 0.7912157479960507,
+          "source_scale_magnitude_coefficient_of_variation": 0.6128147552900832,
+          "source_scale_phase_span_rad": 6.686001206735453
+        },
+        {
+          "model": "dense_convergent_born",
+          "normalized_l2_residual": 0.7878851985357167,
+          "row_normalized_l2_residual_mean": 0.8020511649312637,
+          "source_scale_magnitude_coefficient_of_variation": 0.8168731292973048,
+          "source_scale_phase_span_rad": 4.9390715558464695
+        }
+      ],
+      "receiver_channel_policy": "passive_only",
+      "residual_spread": 0.2445970986347792,
+      "worst_model": "dense_convergent_born",
+      "worst_normalized_l2_residual": 0.7878851985357167
+    }
   },
   "original_shape": [
     32,

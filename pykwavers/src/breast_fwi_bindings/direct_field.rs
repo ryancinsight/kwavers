@@ -75,6 +75,10 @@ fn direct_field_metrics_to_dict<'py>(
         metrics.row_normalized_l2_residual_mean,
     )?;
     out.set_item(
+        "active_only_normalized_l2_residual",
+        metrics.active_only_normalized_l2_residual,
+    )?;
+    out.set_item(
         "passive_only_normalized_l2_residual",
         metrics.passive_only_normalized_l2_residual,
     )?;
@@ -85,6 +89,19 @@ fn direct_field_metrics_to_dict<'py>(
     out.set_item(
         "source_scale_phase_span_rad",
         metrics.source_scale_phase_span_rad,
+    )?;
+    out.set_item("active_pair_count", metrics.active_pair_count)?;
+    out.set_item(
+        "active_self_channel_phase_error_rms_rad",
+        metrics.active_self_channel_phase_error_rms_rad,
+    )?;
+    out.set_item(
+        "active_self_channel_phase_error_max_abs_rad",
+        metrics.active_self_channel_phase_error_max_abs_rad,
+    )?;
+    out.set_item(
+        "active_self_channel_log_amplitude_error_rms",
+        metrics.active_self_channel_log_amplitude_error_rms,
     )?;
     out.set_item("passive_pair_count", metrics.passive_pair_count)?;
     out.set_item("passive_range_min_m", metrics.passive_range_min_m)?;

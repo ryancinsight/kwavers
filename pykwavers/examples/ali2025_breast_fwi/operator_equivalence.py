@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from enum import Enum
 from typing import Any
 
 import numpy as np
@@ -12,6 +13,12 @@ PROPAGATION_MODELS = (
     "dense_convergent_born",
     "spectral_convergent_born",
 )
+
+
+class ReceiverChannelPolicy(str, Enum):
+    ALL = "all"
+    ACTIVE_ONLY = "active_only"
+    PASSIVE_ONLY = "passive_only"
 
 
 def make_frequency_domain_fwi_config(
@@ -92,6 +99,7 @@ def operator_equivalence_diagnostics(
     time_step_s: float,
     time_steps_per_frequency: Sequence[int],
     frequency_bin_start_steps_per_frequency: Sequence[int],
+    receiver_channel_policy: ReceiverChannelPolicy | str = ReceiverChannelPolicy.ALL,
 ) -> dict[str, Any]:
     predictions = {
         str(model): np.asarray(predicted, dtype=np.complex128)
@@ -106,6 +114,7 @@ def operator_equivalence_diagnostics(
             float(time_step_s),
             [int(value) for value in time_steps_per_frequency],
             [int(value) for value in frequency_bin_start_steps_per_frequency],
+            ReceiverChannelPolicy(receiver_channel_policy).value,
         )
     )
 

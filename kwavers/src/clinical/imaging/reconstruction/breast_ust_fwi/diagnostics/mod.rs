@@ -22,15 +22,17 @@ pub use identifiability::{
     acquisition_identifiability, BreastUstAcquisitionIdentifiability, BreastUstSourceScalingPolicy,
 };
 pub use operator::{
-    forward_operator_equivalence_diagnostics, BreastUstForwardOperatorEquivalenceDiagnostics,
-    BreastUstForwardOperatorModelDiagnostics, BreastUstForwardOperatorPrediction,
+    forward_operator_equivalence_diagnostics,
+    forward_operator_equivalence_diagnostics_with_receiver_policy,
+    BreastUstForwardOperatorEquivalenceDiagnostics, BreastUstForwardOperatorModelDiagnostics,
+    BreastUstForwardOperatorPrediction,
 };
 pub use reconstruction::{
     reconstruction_metrics, table1_parity, BreastUstReconstructionMetrics, BreastUstTable1Parity,
 };
 pub use residual::{
     passive_receiver_mask, scaled_observation_residual_metrics,
-    source_channel_residual_diagnostics, source_receiver_mask,
+    source_channel_residual_diagnostics, source_receiver_mask, BreastUstReceiverChannelPolicy,
     BreastUstScaledObservationResidualMetrics, BreastUstSourceChannelResidualDiagnostics,
 };
 pub(crate) use residual::{row_scale, scaled_observation_residual_metrics_by_receiver};

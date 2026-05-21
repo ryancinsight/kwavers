@@ -34,6 +34,11 @@ pub(super) fn diagnostics_for_prediction(
 
     let residual =
         scaled_observation_residual_metrics_by_receiver(predicted, observed, |_, _, _| true)?;
+    let active = scaled_observation_residual_metrics_by_receiver(
+        predicted,
+        observed,
+        |_, transmit, receiver| receiver % array.circumferential_elements() == transmit,
+    )?;
     let passive = scaled_observation_residual_metrics_by_receiver(
         predicted,
         observed,
@@ -48,15 +53,21 @@ pub(super) fn diagnostics_for_prediction(
         time_steps_per_frequency,
         frequency_bin_start_steps_per_frequency,
     )?;
-    let passive_pair = passive_pair_errors(predicted, observed, array)?;
+    let active_pair = topology_pair_errors(predicted, observed, array, ReceiverClass::Active)?;
+    let passive_pair = topology_pair_errors(predicted, observed, array, ReceiverClass::Passive)?;
 
     Ok(BreastUstDirectFieldDiagnostics {
         normalized_l2_residual: residual.normalized_l2_residual,
         row_normalized_l2_residual_mean: residual.row_normalized_l2_residual_mean,
+        active_only_normalized_l2_residual: active.normalized_l2_residual,
         passive_only_normalized_l2_residual: passive.normalized_l2_residual,
         source_scale_magnitude_coefficient_of_variation: source_scale
             .max_source_scale_magnitude_coefficient_of_variation,
         source_scale_phase_span_rad: source_scale.max_source_scale_phase_span_rad,
+        active_pair_count: active_pair.count,
+        active_self_channel_phase_error_rms_rad: active_pair.phase_error_rms_rad,
+        active_self_channel_phase_error_max_abs_rad: active_pair.phase_error_max_abs_rad,
+        active_self_channel_log_amplitude_error_rms: active_pair.log_amplitude_error_rms,
         passive_pair_count: passive_pair.count,
         passive_range_min_m: passive_pair.range_min_m,
         passive_range_max_m: passive_pair.range_max_m,
@@ -66,8 +77,14 @@ pub(super) fn diagnostics_for_prediction(
     })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ReceiverClass {
+    Active,
+    Passive,
+}
+
 #[derive(Clone, Copy, Debug)]
-struct PassivePairErrors {
+struct TopologyPairErrors {
     count: usize,
     range_min_m: f64,
     range_max_m: f64,
@@ -76,11 +93,12 @@ struct PassivePairErrors {
     log_amplitude_error_rms: f64,
 }
 
-fn passive_pair_errors(
+fn topology_pair_errors(
     predicted: &Array3<Complex64>,
     observed: &Array3<Complex64>,
     array: &MultiRowRingArray,
-) -> KwaversResult<PassivePairErrors> {
+    receiver_class: ReceiverClass,
+) -> KwaversResult<TopologyPairErrors> {
     let (frequency_count, transmission_count, receiver_count) = predicted.dim();
     let circumferential_elements = array.circumferential_elements();
     let mut phase_sq = 0.0;
@@ -96,14 +114,21 @@ fn passive_pair_errors(
             let observed_row = observed.slice(s![frequency_index, transmit_index, ..]);
             let scale = row_scale(predicted_row, observed_row)?;
             for receiver_index in 0..receiver_count {
-                if receiver_index % circumferential_elements == transmit_index {
+                let is_active = receiver_index % circumferential_elements == transmit_index;
+                if (receiver_class == ReceiverClass::Active) != is_active {
                     continue;
                 }
                 let modeled = scale * predicted[[frequency_index, transmit_index, receiver_index]];
                 let measured = observed[[frequency_index, transmit_index, receiver_index]];
                 if modeled.norm() <= f64::EPSILON || measured.norm() <= f64::EPSILON {
                     return Err(KwaversError::InvalidInput(
-                        "passive pair amplitude must be nonzero".into(),
+                        match receiver_class {
+                            ReceiverClass::Active => {
+                                "active self-channel amplitude must be nonzero"
+                            }
+                            ReceiverClass::Passive => "passive pair amplitude must be nonzero",
+                        }
+                        .into(),
                     ));
                 }
                 let phase_error = (modeled / measured).arg();
@@ -127,10 +152,18 @@ fn passive_pair_errors(
 
     if count == 0 {
         return Err(KwaversError::InvalidInput(
-            "passive diagnostics require at least one passive receiver".into(),
+            match receiver_class {
+                ReceiverClass::Active => {
+                    "active self-channel diagnostics require at least one active receiver"
+                }
+                ReceiverClass::Passive => {
+                    "passive diagnostics require at least one passive receiver"
+                }
+            }
+            .into(),
         ));
     }
-    Ok(PassivePairErrors {
+    Ok(TopologyPairErrors {
         count,
         range_min_m: range_min,
         range_max_m: range_max,

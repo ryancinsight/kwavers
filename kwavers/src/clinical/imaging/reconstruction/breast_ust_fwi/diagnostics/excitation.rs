@@ -1,4 +1,7 @@
-use super::residual::{row_scale, validate_observation_pair};
+use super::residual::{
+    row_scale_selected, validate_observation_pair, validate_ring_channel_policy_shape,
+    BreastUstReceiverChannelPolicy,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array3};
 use num_complex::Complex64;
@@ -35,6 +38,28 @@ pub fn source_excitation_diagnostics(
     time_steps_per_frequency: &[usize],
     frequency_bin_start_steps_per_frequency: &[usize],
 ) -> KwaversResult<BreastUstSourceExcitationDiagnostics> {
+    source_excitation_diagnostics_with_receiver_policy(
+        predicted,
+        observed,
+        frequencies_hz,
+        source_amplitude_pa,
+        time_step_s,
+        time_steps_per_frequency,
+        frequency_bin_start_steps_per_frequency,
+        BreastUstReceiverChannelPolicy::All,
+    )
+}
+
+pub(crate) fn source_excitation_diagnostics_with_receiver_policy(
+    predicted: &Array3<Complex64>,
+    observed: &Array3<Complex64>,
+    frequencies_hz: &[f64],
+    source_amplitude_pa: f64,
+    time_step_s: f64,
+    time_steps_per_frequency: &[usize],
+    frequency_bin_start_steps_per_frequency: &[usize],
+    receiver_channel_policy: BreastUstReceiverChannelPolicy,
+) -> KwaversResult<BreastUstSourceExcitationDiagnostics> {
     validate_observation_pair(predicted, observed)?;
     validate_frequency_metadata(
         predicted.dim().0,
@@ -54,6 +79,11 @@ pub fn source_excitation_diagnostics(
     }
 
     let transmission_count = predicted.dim().1;
+    validate_ring_channel_policy_shape(
+        transmission_count,
+        predicted.dim().2,
+        receiver_channel_policy,
+    )?;
     let mut per_frequency = Vec::with_capacity(frequencies_hz.len());
     for (frequency_index, &frequency_hz) in frequencies_hz.iter().enumerate() {
         let bin_coefficient = sine_frequency_bin_coefficient(
@@ -68,7 +98,9 @@ pub fn source_excitation_diagnostics(
         for transmit_index in 0..transmission_count {
             let predicted_row = predicted.slice(s![frequency_index, transmit_index, ..]);
             let observed_row = observed.slice(s![frequency_index, transmit_index, ..]);
-            let scale = row_scale(predicted_row, observed_row)? / normalization;
+            let scale = row_scale_selected(predicted_row, observed_row, |receiver_index| {
+                receiver_channel_policy.selects(transmit_index, receiver_index, transmission_count)
+            })? / normalization;
             magnitudes.push(scale.norm());
             phases.push(scale.arg());
         }

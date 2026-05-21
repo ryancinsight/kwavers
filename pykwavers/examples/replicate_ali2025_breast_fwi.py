@@ -27,6 +27,7 @@ from ali2025_breast_fwi.identifiability import (
 from ali2025_breast_fwi.direct_field import homogeneous_direct_field_probe
 from ali2025_breast_fwi.metrics import reconstruction_metrics, table1_parity
 from ali2025_breast_fwi.operator_equivalence import (
+    ReceiverChannelPolicy,
     make_configs_by_model,
     operator_equivalence_diagnostics,
     simulate_forward_predictions,
@@ -221,6 +222,19 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         dataset["time_steps_per_frequency"],
         dataset["frequency_bin_start_steps_per_frequency"],
     )
+    operator_equivalence_receiver_policies = {
+        policy.value: operator_equivalence_diagnostics(
+            forward_predictions,
+            observed_pressure,
+            args.frequencies_hz,
+            args.source_amplitude_pa,
+            args.time_step_s,
+            dataset["time_steps_per_frequency"],
+            dataset["frequency_bin_start_steps_per_frequency"],
+            policy,
+        )
+        for policy in ReceiverChannelPolicy
+    }
     observation_diagnostics = kw.diagnose_breast_fwi_observation_pair(
         truth_forward,
         observed_pressure,
@@ -312,6 +326,7 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         "source_channel_consistency": source_channel_consistency,
         "source_excitation": source_excitation,
         "operator_equivalence": operator_equivalence,
+        "operator_equivalence_receiver_policies": operator_equivalence_receiver_policies,
         "homogeneous_direct_field": homogeneous_direct_field,
         "metrics": metrics,
         "table1_parity": parity,
@@ -384,6 +399,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "source_channel_consistency": report["source_channel_consistency"],
                 "source_excitation": report["source_excitation"],
                 "operator_equivalence": report["operator_equivalence"],
+                "operator_equivalence_receiver_policies": report[
+                    "operator_equivalence_receiver_policies"
+                ],
                 "homogeneous_direct_field": report["homogeneous_direct_field"],
             },
             indent=2,

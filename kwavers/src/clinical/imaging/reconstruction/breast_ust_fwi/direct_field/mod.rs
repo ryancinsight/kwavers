@@ -29,19 +29,40 @@ use ndarray::Array3;
 pub const BREAST_UST_HOMOGENEOUS_DIRECT_FIELD_DIAGNOSTIC_MODEL: &str =
     "clinical_breast_ust_homogeneous_direct_field_diagnostic";
 
-/// Scaled residual and passive-channel diagnostics for one reference operator.
+/// Scaled residual and receiver-topology diagnostics for one reference operator.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BreastUstDirectFieldDiagnostics {
+    /// Row-wise complex-scaled normalized residual over every receiver channel.
     pub normalized_l2_residual: f64,
+    /// Arithmetic mean of per-frequency/per-transmit normalized residuals.
     pub row_normalized_l2_residual_mean: f64,
+    /// Complex-scaled normalized residual over co-located source receiver channels.
+    pub active_only_normalized_l2_residual: f64,
+    /// Complex-scaled normalized residual over non-source receiver channels.
     pub passive_only_normalized_l2_residual: f64,
+    /// Maximum coefficient of variation of source-scale magnitudes by frequency.
     pub source_scale_magnitude_coefficient_of_variation: f64,
+    /// Maximum wrapped phase span of source-scale estimates by frequency.
     pub source_scale_phase_span_rad: f64,
+    /// Number of frequency/transmit/receiver samples classified as active channels.
+    pub active_pair_count: usize,
+    /// RMS wrapped phase error on co-located source receiver channels.
+    pub active_self_channel_phase_error_rms_rad: f64,
+    /// Maximum absolute wrapped phase error on co-located source receiver channels.
+    pub active_self_channel_phase_error_max_abs_rad: f64,
+    /// RMS natural-log amplitude error on co-located source receiver channels.
+    pub active_self_channel_log_amplitude_error_rms: f64,
+    /// Number of frequency/transmit/receiver samples classified as passive channels.
     pub passive_pair_count: usize,
+    /// Minimum source-receiver distance among passive channels.
     pub passive_range_min_m: f64,
+    /// Maximum source-receiver distance among passive channels.
     pub passive_range_max_m: f64,
+    /// RMS wrapped phase error on passive receiver channels.
     pub passive_phase_error_rms_rad: f64,
+    /// Maximum absolute wrapped phase error on passive receiver channels.
     pub passive_phase_error_max_abs_rad: f64,
+    /// RMS natural-log amplitude error on passive receiver channels.
     pub passive_log_amplitude_error_rms: f64,
 }
 

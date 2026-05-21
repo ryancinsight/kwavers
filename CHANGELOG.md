@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Added (2026-05-21) - Breast FWI Receiver-Policy Operator Equivalence Diagnostics
+
+- [minor] Add Rust-owned receiver-channel policy support to Ali 2025
+  forward-operator equivalence diagnostics. The clinical diagnostic now ranks
+  operators under `all`, `active_only`, and `passive_only` receiver selections,
+  exposes the selected policy through PyO3, and records policy-specific rankings
+  in the reduced replication report without adding Python formulas.
+
+### Added (2026-05-21) - Breast FWI Active Self-Channel Direct-Field Diagnostics
+
+- [minor] Extend Rust-owned Ali 2025 homogeneous direct-field diagnostics with
+  active source/receiver self-channel residual, phase, amplitude, and pair-count
+  metrics. Expose the fields through PyO3 so the replication report can separate
+  co-located source-channel mismatch from passive propagation mismatch without
+  reintroducing Python diagnostic formulas. Add an analytic Rust test that
+  perturbs active channels while keeping passive channels exactly matched.
+
 ### Added (2026-05-21) - Breast FWI Rust-Owned Operator Equivalence Diagnostics
 
 - [minor] Move Ali 2025 forward-operator equivalence aggregation into

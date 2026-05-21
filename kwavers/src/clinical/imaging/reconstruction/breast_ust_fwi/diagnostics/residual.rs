@@ -2,6 +2,49 @@ use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array3, ArrayView1};
 use num_complex::Complex64;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BreastUstReceiverChannelPolicy {
+    All,
+    ActiveOnly,
+    PassiveOnly,
+}
+
+impl BreastUstReceiverChannelPolicy {
+    pub fn parse(value: &str) -> KwaversResult<Self> {
+        match value {
+            "all" => Ok(Self::All),
+            "active_only" => Ok(Self::ActiveOnly),
+            "passive_only" => Ok(Self::PassiveOnly),
+            other => Err(KwaversError::InvalidInput(format!(
+                "unsupported receiver channel policy: {other}"
+            ))),
+        }
+    }
+
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::ActiveOnly => "active_only",
+            Self::PassiveOnly => "passive_only",
+        }
+    }
+
+    pub(crate) fn selects(
+        self,
+        transmit: usize,
+        receiver: usize,
+        circumferential_elements: usize,
+    ) -> bool {
+        let active = receiver % circumferential_elements == transmit;
+        match self {
+            Self::All => true,
+            Self::ActiveOnly => active,
+            Self::PassiveOnly => !active,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BreastUstScaledObservationResidualMetrics {
     pub frequency_count: usize,
@@ -124,6 +167,23 @@ pub(crate) fn scaled_observation_residual_metrics_by_receiver(
     })
 }
 
+pub(crate) fn scaled_observation_residual_metrics_by_policy(
+    predicted: &Array3<Complex64>,
+    observed: &Array3<Complex64>,
+    receiver_channel_policy: BreastUstReceiverChannelPolicy,
+) -> KwaversResult<BreastUstScaledObservationResidualMetrics> {
+    validate_observation_pair(predicted, observed)?;
+    let (_, transmission_count, receiver_count) = predicted.dim();
+    validate_ring_channel_policy_shape(
+        transmission_count,
+        receiver_count,
+        receiver_channel_policy,
+    )?;
+    scaled_observation_residual_metrics_by_receiver(predicted, observed, |_, transmit, receiver| {
+        receiver_channel_policy.selects(transmit, receiver, transmission_count)
+    })
+}
+
 pub fn source_channel_residual_diagnostics(
     predicted: &Array3<Complex64>,
     observed: &Array3<Complex64>,
@@ -236,7 +296,7 @@ fn scaled_residual_cube(
     Ok(residual)
 }
 
-fn row_scale_selected(
+pub(crate) fn row_scale_selected(
     predicted: ArrayView1<'_, Complex64>,
     observed: ArrayView1<'_, Complex64>,
     selected: impl Fn(usize) -> bool,
@@ -309,6 +369,27 @@ fn validated_receiver_mask(
         }
     }
     Ok(receiver_mask.clone())
+}
+
+pub(crate) fn validate_ring_channel_policy_shape(
+    transmission_count: usize,
+    receiver_count: usize,
+    receiver_channel_policy: BreastUstReceiverChannelPolicy,
+) -> KwaversResult<()> {
+    if receiver_channel_policy == BreastUstReceiverChannelPolicy::All {
+        return Ok(());
+    }
+    if transmission_count == 0 || receiver_count == 0 {
+        return Err(KwaversError::InvalidInput(
+            "receiver channel policy requires positive observation axes".into(),
+        ));
+    }
+    if receiver_count % transmission_count != 0 {
+        return Err(KwaversError::DimensionMismatch(format!(
+            "receiver count {receiver_count} must be an integer multiple of transmission count {transmission_count}"
+        )));
+    }
+    Ok(())
 }
 
 pub(crate) fn validate_observation_pair(

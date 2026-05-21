@@ -73,9 +73,22 @@
   `cargo test -p kwavers transcranial_ust --lib -j 2`, and
   `cargo check -p pykwavers --lib --message-format=short -j 2` pass with only
   pre-existing unrelated warnings.
-- **[arch] T13b-Phase-3: physically relocate the generic kernels** to
-  `solver/inverse/linear_born_inversion/` once Phase-2 makes their
-  signatures take only solver-layer types. Pure file moves at that point.
+- **[done] [arch] T13b-Phase-3: physically relocate the generic kernels — CLOSED 2026-05-21.**
+  `VolumeOperator` generalised over `<G: TransducerGeometry + ?Sized>`; the
+  hardcoded `C_BRAIN_REF_M_S` / `C_TISSUE_DENSITY_KG_M3` constants in the
+  operator construction are replaced by `LinearBornInversionConfig::{reference_sound_speed_m_s,
+  reference_density_kg_m3}` (validated, brain-overridden in
+  `TranscranialUstBornInversionConfig::default`). Files moved:
+  `clinical/…/transcranial_ust/volume_operator{.rs,/}` →
+  `solver/inverse/linear_born_inversion/volume_operator{.rs,/}` and
+  `clinical/…/transcranial_ust/volume_born/pcg.rs` →
+  `solver/inverse/linear_born_inversion/pcg.rs`. Clinical `volume_born/mod.rs`
+  consumes them through the public solver path (`VolumeOperator`,
+  `VolumeVoxel`, `pcg_invert`); no compatibility alias remains in the clinical
+  layer. `cargo check -p kwavers --lib` exit 0 / 0 warnings;
+  `cargo check -p pykwavers --lib` exit 0; `cargo test -p kwavers transcranial_ust
+  --lib` 3/3 pass (including the coupled 3-D volume inversion); `cargo test -p
+  kwavers linear_born_inversion --lib` 8/8 pass.
 - **[done] [patch] T11d: pykwavers binding rename — CLOSED 2026-05-20.**
   `seismic_bindings/` → `imaging_bindings/`; `slice_fwi.rs` →
   `transcranial_slice_inversion.rs`; `volume_fwi.rs` →
@@ -359,6 +372,21 @@ breast-imaging reconstruction.
   aggregation across single-scatter Born, dense CBS, and absorbed spectral CBS
   to that binding. This keeps Python as orchestration/reporting while preserving
   the existing reduced-probe model ordering.
+- **[done] [minor] T8s: active self-channel direct-field diagnostics — CLOSED 2026-05-21.**
+  Extended `BreastUstDirectFieldDiagnostics` with active-only residual,
+  co-located self-channel phase/amplitude errors, and active pair counts. The
+  PyO3 direct-field report now exposes these fields for the point, source-kappa,
+  and finite-grid PSTD references. The focused Rust test suite now includes an
+  active-channel perturbation with analytic active residual `sqrt(1/2)` and
+  exact passive residual zero, keeping receiver-selection diagnostics in Rust
+  while preserving Python as the report layer.
+- **[done] [minor] T8t: receiver-policy operator equivalence — CLOSED 2026-05-21.**
+  Added `BreastUstReceiverChannelPolicy` and policy-aware forward-operator
+  equivalence diagnostics for `all`, `active_only`, and `passive_only` receiver
+  selections. PyO3 exposes the selected policy and the reduced probe now writes
+  policy-specific rankings. On the determined 4x4x3/two-frequency probe,
+  active-only residuals are scale-absorbed near zero, while passive-only ranking
+  selects `spectral_convergent_born` at normalized residual `0.5432880999009375`.
 - **[done] [patch] T8n: focused-bowl terminology cleanup — CLOSED 2026-05-21.**
   Removed residual transcranial vendor/helmet labels from book examples and
   documentation, renamed the Chapter 25 phase-correction artifact stem to
@@ -390,8 +418,10 @@ breast-imaging reconstruction.
   leaves passive-only residual at `0.757458`. The finite-grid PSTD modal Green
   now explains a material part of passive propagation (`0.455227` passive-only
   residual, `0.956928` rad phase RMS) but worsens all-channel residual to
-  `0.741005`, shifting the next repair to active source/receiver self-channel
-  semantics before inversion settings can be changed.
+  `0.741005`. Receiver-policy operator ranking now shows active-only channels
+  are scale-absorbed near zero, while passive-only ranking selects
+  `spectral_convergent_born` at `0.5432880999009375`; the next repair is the
+  passive PSTD/Helmholtz propagation contract, not active-channel exclusion.
 
 ### Deprecation (T2 prerequisite)
 - **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`

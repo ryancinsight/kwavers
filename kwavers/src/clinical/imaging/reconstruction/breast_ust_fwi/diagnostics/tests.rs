@@ -161,8 +161,79 @@ fn forward_operator_equivalence_selects_lowest_residual_model() {
     .expect("diagnostics");
 
     assert_eq!(diagnostics.model_count, 2);
+    assert_eq!(
+        diagnostics.receiver_channel_policy,
+        BreastUstReceiverChannelPolicy::All
+    );
     assert_eq!(diagnostics.best_model, "accurate");
     assert!(diagnostics.best_normalized_l2_residual <= 1.0e-14);
     assert_eq!(diagnostics.worst_model, "distorted");
     assert!(diagnostics.residual_spread > 0.0);
+}
+
+#[test]
+fn forward_operator_equivalence_respects_receiver_channel_policy() {
+    let observed = Array3::from_elem((1, 2, 4), Complex64::new(1.0, 0.0));
+    let mut active_distorted = observed.clone();
+    let mut passive_distorted = observed.clone();
+    for transmit in 0..2 {
+        for receiver in 0..4 {
+            let row_dependent_distortion = if receiver / 2 == 0 {
+                Complex64::new(0.0, 2.0)
+            } else {
+                Complex64::new(3.0, 0.0)
+            };
+            if receiver % 2 == transmit {
+                active_distorted[[0, transmit, receiver]] = row_dependent_distortion;
+            } else {
+                passive_distorted[[0, transmit, receiver]] = row_dependent_distortion;
+            }
+        }
+    }
+    let predictions = [
+        BreastUstForwardOperatorPrediction {
+            model: "active_distorted",
+            pressure: &active_distorted,
+        },
+        BreastUstForwardOperatorPrediction {
+            model: "passive_distorted",
+            pressure: &passive_distorted,
+        },
+    ];
+
+    let passive = forward_operator_equivalence_diagnostics_with_receiver_policy(
+        &predictions,
+        &observed,
+        &[100.0],
+        1.0,
+        0.001,
+        &[40],
+        &[20],
+        BreastUstReceiverChannelPolicy::PassiveOnly,
+    )
+    .expect("passive diagnostics");
+    let active = forward_operator_equivalence_diagnostics_with_receiver_policy(
+        &predictions,
+        &observed,
+        &[100.0],
+        1.0,
+        0.001,
+        &[40],
+        &[20],
+        BreastUstReceiverChannelPolicy::ActiveOnly,
+    )
+    .expect("active diagnostics");
+
+    assert_eq!(
+        passive.receiver_channel_policy,
+        BreastUstReceiverChannelPolicy::PassiveOnly
+    );
+    assert_eq!(passive.best_model, "active_distorted");
+    assert!(passive.best_normalized_l2_residual <= 1.0e-14);
+    assert_eq!(
+        active.receiver_channel_policy,
+        BreastUstReceiverChannelPolicy::ActiveOnly
+    );
+    assert_eq!(active.best_model, "passive_distorted");
+    assert!(active.best_normalized_l2_residual <= 1.0e-14);
 }

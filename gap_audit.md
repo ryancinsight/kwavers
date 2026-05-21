@@ -1,5 +1,32 @@
 # Gap Audit
 
+## T13b-Phase-3 closure (2026-05-21)
+
+`VolumeOperator` is now anatomy-neutral: generic over `<G: TransducerGeometry +
+?Sized>`, with the previously hardcoded brain reference quantities replaced by
+validated `LinearBornInversionConfig::{reference_sound_speed_m_s,
+reference_density_kg_m3}` fields. Physical relocations into
+`solver::inverse::linear_born_inversion::`:
+
+- `volume_operator{.rs,/}` (root + `construction`/`helpers`/`kernel`/`operators`
+  leaves) moved out of `clinical::imaging::reconstruction::transcranial_ust`.
+- `volume_born/pcg.rs` moved as `linear_born_inversion::pcg`; `invert`
+  promoted to `pub(crate)` and re-exported as `pcg_invert` at the module root.
+
+Clinical adapter (`transcranial_ust::volume_born::mod`) consumes `VolumeOperator`,
+`VolumeVoxel`, and `pcg_invert` through the public solver path; the duplicated
+`mod volume_operator;` declaration is gone. Brain reference values set in
+`TranscranialUstBornInversionConfig::default` so existing tests pin identical
+operator behavior. No compatibility shim was introduced; all call sites updated
+in the same change.
+
+Verification (2026-05-21):
+- `cargo check -p kwavers --lib --message-format=short -j 2`: exit 0, 0 warnings.
+- `cargo check -p pykwavers --lib --message-format=short -j 2`: exit 0.
+- `cargo test -p kwavers transcranial_ust --lib`: 3/3 pass (incl. coupled
+  3-D volume inversion).
+- `cargo test -p kwavers linear_born_inversion --lib`: 8/8 pass.
+
 ## FWI Architecture Cleanup (2026-05-20, Session 2) — IN PROGRESS
 
 Three architectural corrections landed this session; layer split + FDTD
@@ -196,6 +223,21 @@ theorems against an external published reconstruction.
   `breast_fwi_operator_equivalence_diagnostics`. The Python
   `operator_equivalence` support module now delegates aggregation to PyO3 and
   remains responsible only for configuring model runs and report orchestration.
+- Added active self-channel direct-field diagnostics: homogeneous direct-field
+  reports now include active-only residuals plus co-located source/receiver
+  phase and log-amplitude errors for each reference operator. This makes the
+  finite-grid PSTD Green mismatch attributable by receiver class from Rust,
+  rather than inferring active-channel behavior from all-channel and passive
+  residuals in Python. The direct-field unit tests verify exact scaled recovery
+  and an active-only perturbation whose active residual is analytically
+  `sqrt(1/2)` while passive residual remains zero.
+- Added receiver-policy operator-equivalence diagnostics: the clinical
+  diagnostic now ranks candidate operators under `all`, `active_only`, and
+  `passive_only` receiver-channel selections. The determined reduced probe
+  reports active-only residuals near zero after per-row source scaling and
+  passive-only best model `spectral_convergent_born` at normalized residual
+  `0.5432880999009375`, so active-channel exclusion is not the next parity
+  repair.
 - Completed the transcranial clinical/generic config boundary enough to restore
   compile gates: clinical entrypoints retain `TranscranialUstBornInversionConfig`
   for anatomy fields and pass `&config.linear` to generic linear-Born kernels.
@@ -286,8 +328,11 @@ theorems against an external published reconstruction.
    0.757458. The finite-grid PSTD modal Green improves passive-only residual to
    0.455227, passive phase-error RMS to 0.956928 rad, and passive
    log-amplitude-error RMS to 0.422984, but worsens all-channel residual to
-   0.741005, isolating the next dominant mismatch to active source/receiver
-   self-channel semantics. Source-channel attribution
+   0.741005. Receiver-policy operator equivalence now shows active-only
+   residuals are scale-absorbed near zero and passive-only ranking selects
+   spectral CBS at `0.5432880999009375`, isolating the next dominant mismatch to
+   passive PSTD/Helmholtz propagation semantics rather than active-channel
+   exclusion. Source-channel attribution
    rejects co-located receiver contamination as the dominant root cause:
    active-source receiver channels account for 17.7068% of full-scale residual
    energy, and passive-only row-scaled residual is 0.543288. Source-excitation

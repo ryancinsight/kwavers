@@ -78,10 +78,52 @@ fn direct_field_metrics_recover_exact_scaled_prediction() {
     .expect("diagnostics");
 
     assert!(diagnostics.normalized_l2_residual <= 1.0e-14);
+    assert!(diagnostics.active_only_normalized_l2_residual <= 1.0e-14);
     assert!(diagnostics.passive_only_normalized_l2_residual <= 1.0e-14);
+    assert!(diagnostics.active_self_channel_phase_error_rms_rad <= 1.0e-14);
+    assert!(diagnostics.active_self_channel_log_amplitude_error_rms <= 1.0e-14);
+    assert_eq!(diagnostics.active_pair_count, 4);
     assert!(diagnostics.passive_phase_error_rms_rad <= 1.0e-14);
     assert!(diagnostics.passive_log_amplitude_error_rms <= 1.0e-14);
     assert_eq!(diagnostics.passive_pair_count, 12);
+}
+
+#[test]
+fn direct_field_metrics_separate_active_and_passive_receiver_classes() {
+    let array = MultiRowRingArray::new(4, 2, 0.006, 0.001).expect("array");
+    let frequencies_hz = [100.0];
+    let predicted = Array3::from_elem((1, 4, 8), Complex64::new(1.0, 0.0));
+    let mut observed = predicted.clone();
+    for transmit in 0..4 {
+        observed[[0, transmit, transmit]] = Complex64::new(0.0, 2.0);
+    }
+    let config = BreastUstPstdDatasetConfig {
+        spacing_m: 1.0e-3,
+        time_step_s: 0.001,
+        cycles_per_frequency: 4,
+        frequency_bin_cycles: 2,
+        source_amplitude_pa: 4.0,
+        density_kg_m3: 1000.0,
+        cpml_thickness_cells: 0,
+    };
+
+    let diagnostics = diagnostics_for_prediction(
+        &predicted,
+        &observed,
+        &frequencies_hz,
+        config,
+        &[40],
+        &[20],
+        &array,
+    )
+    .expect("diagnostics");
+
+    assert!((diagnostics.active_only_normalized_l2_residual - 0.5_f64.sqrt()).abs() <= 1.0e-14);
+    assert!(diagnostics.passive_only_normalized_l2_residual <= 1.0e-14);
+    assert_eq!(diagnostics.active_pair_count, 8);
+    assert_eq!(diagnostics.passive_pair_count, 24);
+    assert!(diagnostics.active_self_channel_phase_error_rms_rad > 0.0);
+    assert!(diagnostics.active_self_channel_log_amplitude_error_rms > 0.0);
 }
 
 #[test]

@@ -1,9 +1,9 @@
 //! PyO3 wrapper for Ali 2025 forward-operator equivalence diagnostics.
 
 use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
-    forward_operator_equivalence_diagnostics as breast_ust_forward_operator_equivalence_diagnostics,
+    forward_operator_equivalence_diagnostics_with_receiver_policy as breast_ust_forward_operator_equivalence_diagnostics_with_receiver_policy,
     BreastUstForwardOperatorEquivalenceDiagnostics, BreastUstForwardOperatorModelDiagnostics,
-    BreastUstForwardOperatorPrediction,
+    BreastUstForwardOperatorPrediction, BreastUstReceiverChannelPolicy,
 };
 use ndarray::Array3;
 use num_complex::Complex64;
@@ -13,6 +13,16 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyModule};
 
 #[pyfunction]
+#[pyo3(signature = (
+    predictions_by_model,
+    observed_pressure,
+    frequencies_hz,
+    source_amplitude_pa,
+    time_step_s,
+    time_steps_per_frequency,
+    frequency_bin_start_steps_per_frequency,
+    receiver_channel_policy = "all"
+))]
 #[allow(clippy::too_many_arguments)]
 pub fn breast_fwi_operator_equivalence_diagnostics<'py>(
     py: Python<'py>,
@@ -23,8 +33,11 @@ pub fn breast_fwi_operator_equivalence_diagnostics<'py>(
     time_step_s: f64,
     time_steps_per_frequency: Vec<usize>,
     frequency_bin_start_steps_per_frequency: Vec<usize>,
+    receiver_channel_policy: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
     let observed = observed_pressure.as_array().to_owned();
+    let receiver_channel_policy = BreastUstReceiverChannelPolicy::parse(receiver_channel_policy)
+        .map_err(kwavers_to_value_py)?;
     let mut owned_predictions =
         Vec::<(String, Array3<Complex64>)>::with_capacity(predictions_by_model.len());
     for (model, pressure) in predictions_by_model.iter() {
@@ -42,7 +55,7 @@ pub fn breast_fwi_operator_equivalence_diagnostics<'py>(
                     pressure,
                 })
                 .collect::<Vec<_>>();
-            breast_ust_forward_operator_equivalence_diagnostics(
+            breast_ust_forward_operator_equivalence_diagnostics_with_receiver_policy(
                 &predictions,
                 &observed,
                 &frequencies_hz,
@@ -50,6 +63,7 @@ pub fn breast_fwi_operator_equivalence_diagnostics<'py>(
                 time_step_s,
                 &time_steps_per_frequency,
                 &frequency_bin_start_steps_per_frequency,
+                receiver_channel_policy,
             )
         })
         .map_err(kwavers_to_value_py)?;
@@ -70,6 +84,10 @@ fn operator_equivalence_to_dict<'py>(
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
     out.set_item("model_count", diagnostics.model_count)?;
+    out.set_item(
+        "receiver_channel_policy",
+        diagnostics.receiver_channel_policy.as_str(),
+    )?;
     out.set_item("best_model", diagnostics.best_model.as_str())?;
     out.set_item(
         "best_normalized_l2_residual",

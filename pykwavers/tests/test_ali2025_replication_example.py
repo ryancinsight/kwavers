@@ -373,12 +373,61 @@ def test_operator_equivalence_selects_lowest_residual_model():
     )
 
     assert diagnostics["model_count"] == 2
+    assert diagnostics["receiver_channel_policy"] == "all"
     assert diagnostics["best_model"] == "accurate"
     assert diagnostics["best_normalized_l2_residual"] <= 1.0e-14
     assert diagnostics["worst_model"] == "distorted"
     assert diagnostics["residual_spread"] > 0.0
     with pytest.raises(ValueError, match="must not be empty"):
         operators.operator_equivalence_diagnostics({}, observed, [100.0], 4.0, 0.001, [40], [20])
+
+
+def test_operator_equivalence_receiver_policy_changes_ranking():
+    operators = _load_support_module("operator_equivalence")
+    observed = np.ones((1, 2, 4), dtype=np.complex128)
+    active_distorted = observed.copy()
+    passive_distorted = observed.copy()
+    for transmit in range(2):
+        for receiver in range(4):
+            distortion = 2.0j if receiver // 2 == 0 else 3.0 + 0.0j
+            if receiver % 2 == transmit:
+                active_distorted[0, transmit, receiver] = distortion
+            else:
+                passive_distorted[0, transmit, receiver] = distortion
+
+    passive = operators.operator_equivalence_diagnostics(
+        {
+            "active_distorted": active_distorted,
+            "passive_distorted": passive_distorted,
+        },
+        observed,
+        [100.0],
+        1.0,
+        0.001,
+        [40],
+        [20],
+        operators.ReceiverChannelPolicy.PASSIVE_ONLY,
+    )
+    active = operators.operator_equivalence_diagnostics(
+        {
+            "active_distorted": active_distorted,
+            "passive_distorted": passive_distorted,
+        },
+        observed,
+        [100.0],
+        1.0,
+        0.001,
+        [40],
+        [20],
+        "active_only",
+    )
+
+    assert passive["receiver_channel_policy"] == "passive_only"
+    assert passive["best_model"] == "active_distorted"
+    assert passive["best_normalized_l2_residual"] <= 1.0e-14
+    assert active["receiver_channel_policy"] == "active_only"
+    assert active["best_model"] == "passive_distorted"
+    assert active["best_normalized_l2_residual"] <= 1.0e-14
 
 
 def test_operator_prediction_builder_uses_all_models_and_frequencies():

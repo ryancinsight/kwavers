@@ -19,16 +19,17 @@ pub use dataset::{
 };
 pub use diagnostics::{
     acquisition_identifiability, diagnose_breast_ust_observation_pair,
-    forward_operator_equivalence_diagnostics, passive_receiver_mask, reconstruction_metrics,
-    scaled_observation_residual_metrics, sine_frequency_bin_coefficient,
+    forward_operator_equivalence_diagnostics,
+    forward_operator_equivalence_diagnostics_with_receiver_policy, passive_receiver_mask,
+    reconstruction_metrics, scaled_observation_residual_metrics, sine_frequency_bin_coefficient,
     source_channel_residual_diagnostics, source_excitation_diagnostics, source_receiver_mask,
     table1_parity, BreastUstAcquisitionIdentifiability,
     BreastUstForwardOperatorEquivalenceDiagnostics, BreastUstForwardOperatorModelDiagnostics,
     BreastUstForwardOperatorPrediction, BreastUstObservationPairDiagnostics,
-    BreastUstReconstructionMetrics, BreastUstScaledObservationResidualMetrics,
-    BreastUstSourceChannelResidualDiagnostics, BreastUstSourceExcitationDiagnostics,
-    BreastUstSourceExcitationFrequencyDiagnostics, BreastUstSourceScalingPolicy,
-    BreastUstTable1Parity,
+    BreastUstReceiverChannelPolicy, BreastUstReconstructionMetrics,
+    BreastUstScaledObservationResidualMetrics, BreastUstSourceChannelResidualDiagnostics,
+    BreastUstSourceExcitationDiagnostics, BreastUstSourceExcitationFrequencyDiagnostics,
+    BreastUstSourceScalingPolicy, BreastUstTable1Parity,
 };
 pub use direct_field::{
     diagnose_breast_ust_homogeneous_direct_field, BreastUstDirectFieldDiagnostics,

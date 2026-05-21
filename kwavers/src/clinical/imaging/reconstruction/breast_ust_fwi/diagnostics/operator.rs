@@ -1,4 +1,7 @@
-use super::{scaled_observation_residual_metrics, source_excitation_diagnostics};
+use super::excitation::source_excitation_diagnostics_with_receiver_policy;
+use super::residual::{
+    scaled_observation_residual_metrics_by_policy, BreastUstReceiverChannelPolicy,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use num_complex::Complex64;
@@ -22,6 +25,7 @@ pub struct BreastUstForwardOperatorModelDiagnostics {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BreastUstForwardOperatorEquivalenceDiagnostics {
     pub model_count: usize,
+    pub receiver_channel_policy: BreastUstReceiverChannelPolicy,
     pub best_model: String,
     pub best_normalized_l2_residual: f64,
     pub worst_model: String,
@@ -39,6 +43,28 @@ pub fn forward_operator_equivalence_diagnostics(
     time_steps_per_frequency: &[usize],
     frequency_bin_start_steps_per_frequency: &[usize],
 ) -> KwaversResult<BreastUstForwardOperatorEquivalenceDiagnostics> {
+    forward_operator_equivalence_diagnostics_with_receiver_policy(
+        predictions_by_model,
+        observed,
+        frequencies_hz,
+        source_amplitude_pa,
+        time_step_s,
+        time_steps_per_frequency,
+        frequency_bin_start_steps_per_frequency,
+        BreastUstReceiverChannelPolicy::All,
+    )
+}
+
+pub fn forward_operator_equivalence_diagnostics_with_receiver_policy(
+    predictions_by_model: &[BreastUstForwardOperatorPrediction<'_>],
+    observed: &Array3<Complex64>,
+    frequencies_hz: &[f64],
+    source_amplitude_pa: f64,
+    time_step_s: f64,
+    time_steps_per_frequency: &[usize],
+    frequency_bin_start_steps_per_frequency: &[usize],
+    receiver_channel_policy: BreastUstReceiverChannelPolicy,
+) -> KwaversResult<BreastUstForwardOperatorEquivalenceDiagnostics> {
     if predictions_by_model.is_empty() {
         return Err(KwaversError::InvalidInput(
             "predictions_by_model must not be empty".into(),
@@ -49,9 +75,12 @@ pub fn forward_operator_equivalence_diagnostics(
     let mut per_model = predictions_by_model
         .iter()
         .map(|prediction| {
-            let residual =
-                scaled_observation_residual_metrics(prediction.pressure, observed, None)?;
-            let excitation = source_excitation_diagnostics(
+            let residual = scaled_observation_residual_metrics_by_policy(
+                prediction.pressure,
+                observed,
+                receiver_channel_policy,
+            )?;
+            let excitation = source_excitation_diagnostics_with_receiver_policy(
                 prediction.pressure,
                 observed,
                 frequencies_hz,
@@ -59,6 +88,7 @@ pub fn forward_operator_equivalence_diagnostics(
                 time_step_s,
                 time_steps_per_frequency,
                 frequency_bin_start_steps_per_frequency,
+                receiver_channel_policy,
             )?;
             Ok(BreastUstForwardOperatorModelDiagnostics {
                 model: prediction.model.to_owned(),
@@ -80,6 +110,7 @@ pub fn forward_operator_equivalence_diagnostics(
     let worst = per_model.last().expect("nonempty model diagnostics");
     Ok(BreastUstForwardOperatorEquivalenceDiagnostics {
         model_count: per_model.len(),
+        receiver_channel_policy,
         best_model: best.model.clone(),
         best_normalized_l2_residual: best.normalized_l2_residual,
         worst_model: worst.model.clone(),
