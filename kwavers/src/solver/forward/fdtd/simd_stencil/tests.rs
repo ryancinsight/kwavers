@@ -139,6 +139,43 @@ fn test_tile_statistics() {
     assert_eq!(processor.total_tiles(), tx * ty * tz);
 }
 
+/// Acoustic wave-equation stationarity: a spatially-uniform pressure field
+/// `p^n = p^(n-1) = C` with zero velocity divergence has `∇²p = 0`, so the
+/// leapfrog must return `p^(n+1) = C` at every interior cell.
+///
+/// This pins the sign and magnitude of `pressure_coeff` against the
+/// computed-Laplacian convention. Previously `pressure_coeff = −c²·Δt²/Δx²`
+/// (wrong sign) combined with a Laplacian that already includes 1/Δx² gave
+/// an effective Laplacian coefficient with the wrong sign and an extra
+/// 1/Δx² factor — for Δx = 1 mm the spurious factor was ~−10⁶ relative
+/// to the correct wave equation. With `pressure_coeff = +c²·Δt²` and zero
+/// Laplacian, the uniform field is exactly preserved.
+#[test]
+fn pressure_update_keeps_uniform_field_constant() {
+    let config = FdtdSimdStencilConfig::default();
+    let mut processor = FdtdSimdStencilProcessor::new(16, 16, 16, config).unwrap();
+    let constant = 12.5_f64;
+    let pressure = Array3::from_elem((16, 16, 16), constant);
+    let pressure_prev = Array3::from_elem((16, 16, 16), constant);
+    let velocity_div = Array3::zeros((16, 16, 16));
+
+    let p_new = processor
+        .update_pressure(&pressure, &pressure_prev, &velocity_div)
+        .unwrap();
+
+    for k in 1..15 {
+        for j in 1..15 {
+            for i in 1..15 {
+                let v = p_new[[i, j, k]];
+                assert!(
+                    (v - constant).abs() < 1e-9,
+                    "interior cell [{i},{j},{k}] = {v}, expected {constant}"
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn test_stability_check() {
     let config = FdtdSimdStencilConfig::default();
