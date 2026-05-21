@@ -30,10 +30,8 @@
 //! - Gachouch, O. et al. (2025). A novel ultrasound thermometry method based on
 //!   thermal strain and short and constant acoustic bursts. *Sensors*, 25(2), 385.
 
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::domain::medium::properties::ThermalPropertyData;
-
-/// Reference body temperature [°C].
-pub const REFERENCE_TEMPERATURE_C: f64 = 37.0;
 
 /// Soft-tissue thermal-conductivity coefficient [1/°C].
 ///
@@ -71,7 +69,7 @@ const SOFT_TISSUE_ABSORPTION_COEFF_PER_C: f64 = 0.015;
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn conductivity_vs_temperature(k0: f64, temperature: f64) -> f64 {
-    k0 * THERMAL_CONDUCTIVITY_COEFF_PER_C.mul_add(temperature - REFERENCE_TEMPERATURE_C, 1.0)
+    k0 * THERMAL_CONDUCTIVITY_COEFF_PER_C.mul_add(temperature - BODY_TEMPERATURE_C, 1.0)
 }
 
 /// Temperature-dependent specific heat
@@ -90,7 +88,7 @@ pub fn conductivity_vs_temperature(k0: f64, temperature: f64) -> f64 {
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn specific_heat_vs_temperature(c0: f64, temperature: f64) -> f64 {
-    c0 * SPECIFIC_HEAT_COEFF_PER_C.mul_add(temperature - REFERENCE_TEMPERATURE_C, 1.0)
+    c0 * SPECIFIC_HEAT_COEFF_PER_C.mul_add(temperature - BODY_TEMPERATURE_C, 1.0)
 }
 
 /// Temperature-dependent blood perfusion
@@ -107,12 +105,12 @@ pub fn specific_heat_vs_temperature(c0: f64, temperature: f64) -> f64 {
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn perfusion_vs_temperature(w_b0: f64, temperature: f64) -> f64 {
-    if temperature < REFERENCE_TEMPERATURE_C {
+    if temperature < BODY_TEMPERATURE_C {
         // Reduced perfusion when cold
-        w_b0 * (0.5 + 0.5 * temperature / REFERENCE_TEMPERATURE_C)
+        w_b0 * (0.5 + 0.5 * temperature / BODY_TEMPERATURE_C)
     } else if temperature < 42.0 {
         // Increased perfusion with mild heating (vasodilation)
-        w_b0 * (1.0 + 0.3 * (temperature - REFERENCE_TEMPERATURE_C) / 5.0)
+        w_b0 * (1.0 + 0.3 * (temperature - BODY_TEMPERATURE_C) / 5.0)
     } else if temperature < 50.0 {
         // Decreasing perfusion approaching shutdown
         w_b0 * (1.3 - 1.3 * (temperature - 42.0) / 8.0)
@@ -177,7 +175,7 @@ pub fn update_properties(
 #[must_use]
 pub fn absorption_vs_temperature(alpha0: f64, temperature: f64) -> f64 {
     alpha0
-        * (SOFT_TISSUE_ABSORPTION_COEFF_PER_C * (temperature - REFERENCE_TEMPERATURE_C).max(0.0))
+        * (SOFT_TISSUE_ABSORPTION_COEFF_PER_C * (temperature - BODY_TEMPERATURE_C).max(0.0))
             .exp()
 }
 
@@ -200,7 +198,7 @@ pub fn absorption_vs_temperature(alpha0: f64, temperature: f64) -> f64 {
 /// * `temperature` - Current temperature (°C)
 #[must_use]
 pub fn sound_speed_vs_temperature(c0: f64, temperature: f64) -> f64 {
-    c0 * SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C.mul_add(temperature - REFERENCE_TEMPERATURE_C, 1.0)
+    c0 * SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C.mul_add(temperature - BODY_TEMPERATURE_C, 1.0)
 }
 
 #[cfg(test)]
@@ -232,7 +230,7 @@ mod tests {
 
         // At body temperature
         assert_eq!(
-            absorption_vs_temperature(alpha0, REFERENCE_TEMPERATURE_C),
+            absorption_vs_temperature(alpha0, BODY_TEMPERATURE_C),
             alpha0
         );
 

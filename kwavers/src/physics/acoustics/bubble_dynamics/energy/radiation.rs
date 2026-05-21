@@ -4,6 +4,7 @@ use uom::si::f64::Power;
 use uom::si::power::watt;
 use uom::si::thermodynamic_temperature::kelvin;
 
+use crate::core::constants::fundamental::STEFAN_BOLTZMANN;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
 
@@ -31,9 +32,6 @@ impl EnergyBalanceCalculator {
         if !self.enable_radiation || state.temperature < 5000.0 {
             return Power::new::<watt>(0.0);
         }
-
-        // Stefan-Boltzmann constant
-        const STEFAN_BOLTZMANN: f64 = 5.670_374_419e-8; // W/(m²·K⁴)
 
         // Emissivity (assume blackbody for high-temperature plasma)
         const EMISSIVITY: f64 = 1.0;
