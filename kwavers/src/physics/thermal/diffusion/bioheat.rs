@@ -3,6 +3,8 @@
 //! Reference: Pennes, H. H. (1948). "Analysis of tissue and arterial blood temperatures
 //! in the resting human forearm." Journal of Applied Physiology, 1(2), 93-122.
 
+use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -26,8 +28,8 @@ impl Default for BioheatParameters {
     fn default() -> Self {
         Self {
             perfusion_rate: 0.5e-3,
-            blood_density: 1050.0,
-            blood_specific_heat: 3840.0,
+            blood_density: DENSITY_BLOOD,
+            blood_specific_heat: BLOOD_SPECIFIC_HEAT,
             arterial_temperature: BODY_TEMPERATURE_K,
         }
     }
