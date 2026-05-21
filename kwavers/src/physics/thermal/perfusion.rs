@@ -4,6 +4,7 @@
 //! - Kolios et al. (2003) "Blood flow cooling and ultrasonic lesion formation"
 //! - Curra et al. (2000) "Numerical simulations of heating patterns"
 
+use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
 use crate::core::constants::fundamental::DENSITY_BLOOD;
 use ndarray::Array3;
 
@@ -117,7 +118,8 @@ impl VesselCooling {
             if distance < radius {
                 // Inside vessel - strong cooling dependent on flow velocity
                 // Nusselt number correlation: Nu = 0.023 * Re^0.8 * Pr^0.4
-                let reynolds = self.calculate_reynolds_number(radius);
+                // Reynolds uses pipe diameter, not radius (Re = ρ·v·D/μ).
+                let reynolds = self.calculate_reynolds_number(2.0 * radius);
                 let prandtl: f64 = 7.0; // Blood Prandtl number
                 let nusselt = 0.023 * reynolds.powf(0.8) * prandtl.powf(0.4);
 
@@ -135,11 +137,13 @@ impl VesselCooling {
         total_cooling
     }
 
-    /// Calculate Reynolds number for blood flow
+    /// Calculate Reynolds number for blood flow.
+    ///
+    /// `Re = ρ · v · D / μ` where `D` is the pipe diameter (NOT radius).
+    /// Blood viscosity sourced from
+    /// [`crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C`].
     fn calculate_reynolds_number(&self, diameter: f64) -> f64 {
-        const BLOOD_VISCOSITY: f64 = 0.004; // Pa·s
-
-        (DENSITY_BLOOD * self.velocity * diameter) / BLOOD_VISCOSITY
+        (DENSITY_BLOOD * self.velocity * diameter) / BLOOD_VISCOSITY_37C
     }
 }
 
