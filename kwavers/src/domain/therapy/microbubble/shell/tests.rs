@@ -36,7 +36,12 @@ fn test_surface_tension_elastic() {
 fn test_surface_tension_ruptured() {
     let shell = MarmottantShellProperties::new(1.0e-6, 1.0, 1.0e-9, 0.85, 1.6).unwrap();
     let chi = shell.surface_tension(2.0e-6);
-    assert_eq!(chi, 0.072);
+    // Beyond the rupture radius the shell-bound regime collapses and
+    // χ saturates at the water-air surface tension at 20 °C, sourced
+    // from `core::constants::cavitation::SURFACE_TENSION_WATER` =
+    // 0.0728 N/m. The prior assertion of 0.072 N/m was a literal that
+    // did not match the SSOT-sourced default.
+    assert_eq!(chi, 0.0728);
 }
 
 #[test]
