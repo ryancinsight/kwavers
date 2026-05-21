@@ -46,8 +46,7 @@ impl ThermalPerfusionModel {
             self.w_b0 * self.max_multiplier * fraction
         } else if temperature > BODY_TEMPERATURE_C {
             // Linear increase from baseline to max
-            let fraction =
-                (temperature - BODY_TEMPERATURE_C) / (self.t_max - BODY_TEMPERATURE_C);
+            let fraction = (temperature - BODY_TEMPERATURE_C) / (self.t_max - BODY_TEMPERATURE_C);
             self.w_b0 * (self.max_multiplier - 1.0).mul_add(fraction, 1.0)
         } else {
             // Below body temperature

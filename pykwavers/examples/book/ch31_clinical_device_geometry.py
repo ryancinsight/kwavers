@@ -19,11 +19,14 @@ body centroid of each CT volume.  Positive x is patient right, positive y is
 anterior, positive z is superior (standard LPS orientation).
 
 Figures produced:
-  fig01_liver_array_3d_geometry.png  — HistoSonics-like bowl on liver CT
-  fig02_kidney_array_3d_geometry.png — HistoSonics-like bowl on kidney CT
+  fig01_liver_array_3d_geometry.png  — HistoSonics-like hemispherical phased array on liver CT
+  fig02_kidney_array_3d_geometry.png — HistoSonics-like hemispherical phased array on kidney CT
   fig03_brain_focused_bowl_3d_calvarium.png — InSightec-like focused bowl at calvarium level
   fig04_exposure_comparison.png      — simulated pressure for all three anatomies
   fig05_reconstruction_metrics.png   — reconstruction fidelity metrics
+  fig06_liver_image_then_treat.png   — liver image-then-treat sequence (recon + focused lesion)
+  fig07_kidney_image_then_treat.png  — kidney image-then-treat sequence
+  fig08_brain_image_then_treat.png   — brain image-then-treat sequence
 """
 
 from __future__ import annotations
@@ -152,66 +155,76 @@ def run_brain_case() -> dict[str, object]:
     )
 
 
-# ── Water coupling medium helper ───────────────────────────────────────────────
+# ── Hemispherical phased-array scaffold helper ─────────────────────────────────
 
-def _draw_water_coupling(
+def _draw_array_scaffold(
     ax: "plt.Axes",
     focus: np.ndarray,
     skin: np.ndarray,
-    bowl_radius_m: float,
-    n_theta: int = 30,
-    n_phi: int = 60,
+    aperture_radius_m: float,
+    n_lat: int = 6,
+    n_lon: int = 16,
+    n_arc: int = 80,
 ) -> None:
-    """Render the water coupling medium as a semi-transparent spherical cap.
+    """Render the mechanical scaffold that holds the HistoSonics-like phased-array
+    elements as a sparse wireframe of latitude / longitude arcs.
 
-    The water fills the interior of the bowl from the skin surface to the
-    transducer face.  The cap surface is parameterised by:
+    The real HistoSonics applicator is a **phased array of discrete piston
+    transducers mounted on a hemispherical scaffold**, not a continuous
+    radiating bowl surface. Drawing a solid translucent cap overstates the
+    radiating area and visually conflates the scaffold geometry with a
+    classical FUS bowl. The correct depiction is the scaffold support
+    structure — a few latitude rings and a few longitude arcs — with the
+    discrete element scatter (drawn elsewhere) showing where the actual
+    piezo elements sit.
 
-        P(θ,φ) = F − R·[cos(θ)·d̂ + sin(θ)·(cos(φ)·ê₁ + sin(φ)·ê₂)]
+    Geometry: each scaffold point lies on the sphere of radius R centred at
+    the focus F with axis d̂ = (F − S) / ‖F − S‖ pointing into the body:
 
-    where d̂ = (F − S)/‖F − S‖ is the inward bowl axis (skin → focus),
-    θ ∈ [0, θ_max] covers from vertex to rim, and (ê₁, ê₂) is a Gram–Schmidt
-    frame perpendicular to d̂.
+        P(θ, φ) = F − R · [cos(θ) · d̂ + sin(θ) · (cos(φ) · ê₁ + sin(φ) · ê₂)]
+
+    where θ ∈ [θ_cutout, θ_max] covers the active spherical cap (central
+    cutout θ_cutout ≈ 10° for a coaxial imaging probe; rim θ_max ≈ 55°
+    matching the Rust kwavers constant `BOWL_THETA_MAX_RAD`) and
+    (ê₁, ê₂) is a Gram–Schmidt frame perpendicular to d̂.
     """
-    THETA_MAX = 0.960  # ≈ 55°, matches Rust constant
+    # Match the Rust constants in `abdominal3d::bowl`.
+    THETA_CUTOUT = 0.175  # ≈ 10°
+    THETA_MAX = 0.960     # ≈ 55°
 
     focal_depth = float(np.linalg.norm(focus - skin))
     if focal_depth < 1e-6:
         return
 
-    # d̂: inward axis from skin toward focus
     d_hat = (focus - skin) / focal_depth
-
-    # Gram–Schmidt orthonormal frame (ê₁, ê₂) ⊥ d̂
     arb = np.array([0.0, 0.0, 1.0]) if abs(d_hat[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
     e1 = np.cross(d_hat, arb)
     e1 /= np.linalg.norm(e1)
     e2 = np.cross(d_hat, e1)
+    R = aperture_radius_m
 
-    # Meshgrid over (θ, φ)
-    theta = np.linspace(0.0, THETA_MAX, n_theta)
-    phi = np.linspace(0.0, 2.0 * np.pi, n_phi)
-    TH, PH = np.meshgrid(theta, phi)
+    scaffold_color = "#90a4ae"  # cool grey, suggestive of metal scaffold
+    scaffold_kwargs = dict(c=scaffold_color, lw=0.5, alpha=0.45, zorder=2)
 
-    cos_th = np.cos(TH)
-    sin_th = np.sin(TH)
-    cos_ph = np.cos(PH)
-    sin_ph = np.sin(PH)
+    # Latitude rings: theta = const, phi sweeps 0..2π.
+    phi_dense = np.linspace(0.0, 2.0 * np.pi, n_arc)
+    for theta in np.linspace(THETA_CUTOUT, THETA_MAX, n_lat):
+        cos_th = np.cos(theta)
+        sin_th = np.sin(theta)
+        X = focus[0] - R * (cos_th * d_hat[0] + sin_th * (np.cos(phi_dense) * e1[0] + np.sin(phi_dense) * e2[0]))
+        Y = focus[1] - R * (cos_th * d_hat[1] + sin_th * (np.cos(phi_dense) * e1[1] + np.sin(phi_dense) * e2[1]))
+        Z = focus[2] - R * (cos_th * d_hat[2] + sin_th * (np.cos(phi_dense) * e1[2] + np.sin(phi_dense) * e2[2]))
+        ax.plot(X, Y, Z, **scaffold_kwargs)
 
-    R = bowl_radius_m
-    X = focus[0] - R * (cos_th * d_hat[0] + sin_th * (cos_ph * e1[0] + sin_ph * e2[0]))
-    Y = focus[1] - R * (cos_th * d_hat[1] + sin_th * (cos_ph * e1[1] + sin_ph * e2[1]))
-    Z = focus[2] - R * (cos_th * d_hat[2] + sin_th * (cos_ph * e1[2] + sin_ph * e2[2]))
-
-    ax.plot_surface(
-        X, Y, Z,
-        color="#29b6f6",  # water blue
-        alpha=0.14,
-        linewidth=0,
-        antialiased=True,
-        shade=True,
-        zorder=1,
-    )
+    # Longitude arcs: phi = const, theta sweeps θ_cutout..θ_max.
+    theta_dense = np.linspace(THETA_CUTOUT, THETA_MAX, n_arc)
+    for phi in np.linspace(0.0, 2.0 * np.pi, n_lon, endpoint=False):
+        cos_th = np.cos(theta_dense)
+        sin_th = np.sin(theta_dense)
+        X = focus[0] - R * (cos_th * d_hat[0] + sin_th * (np.cos(phi) * e1[0] + np.sin(phi) * e2[0]))
+        Y = focus[1] - R * (cos_th * d_hat[1] + sin_th * (np.cos(phi) * e1[1] + np.sin(phi) * e2[1]))
+        Z = focus[2] - R * (cos_th * d_hat[2] + sin_th * (np.cos(phi) * e1[2] + np.sin(phi) * e2[2]))
+        ax.plot(X, Y, Z, **scaffold_kwargs)
 
 
 # ── 3-D abdominal bowl rendering ────────────────────────────────────────────────
@@ -221,12 +234,15 @@ def render_abdominal_3d(
     anatomy_label: str,
     fig_path: Path,
 ) -> Path:
-    """3-D scatter visualisation showing the bowl transducer on the skin surface.
+    """3-D scatter visualisation showing the HistoSonics-like hemispherical
+    phased-array transducer on the skin surface.
 
-    The body skin surface and organ surface are shown as point clouds.  The bowl
-    elements sit outside the body, visible on the skin.  Beam lines connect
-    elements to the organ centroid (focus).  The skin contact point (bowl vertex)
-    is marked with a circle.
+    The body skin surface (with CT-bed voxels excluded by the largest-connected-
+    component filter in Rust) and organ surface are shown as point clouds. The
+    discrete array elements sit outside the body, visible on the skin. A
+    sparse latitude/longitude wireframe depicts the mechanical scaffold the
+    elements are mounted on. Beam lines connect elements to the organ
+    centroid (focus). The skin contact point is marked with a circle.
     """
     body = np.asarray(geo["body_surface_points_m"], dtype=float)
     organ = np.asarray(geo["organ_surface_points_m"], dtype=float)
@@ -236,14 +252,15 @@ def render_abdominal_3d(
     focus = np.asarray(geo["focus_m"], dtype=float)
     skin = np.asarray(geo["skin_contact_m"], dtype=float)
 
-    # Focal depth = skin-to-focus distance [mm]; bowl radius = R = focal_depth/cos(θ_max).
+    # Focal depth = skin-to-focus distance [mm]; scaffold radius = focal_depth/cos(θ_max).
     focal_depth_mm = 1e3 * float(np.linalg.norm(focus - skin))
-    bowl_radius_mm = 1e3 * float(geo["transducer_radius_m"])
+    aperture_radius_mm = 1e3 * float(geo["transducer_radius_m"])
 
     fig = plt.figure(figsize=(14.0, 6.0), constrained_layout=True)
     fig.suptitle(
-        f"HistoSonics-like bowl on {anatomy_label} CT — {int(geo['element_count'])} elements, "
-        f"focal depth {focal_depth_mm:.0f} mm, bowl radius {bowl_radius_mm:.0f} mm",
+        f"HistoSonics-like hemispherical phased array on {anatomy_label} CT — "
+        f"{int(geo['element_count'])} discrete elements, "
+        f"focal depth {focal_depth_mm:.0f} mm, aperture radius {aperture_radius_mm:.0f} mm",
         fontsize=11,
     )
 
@@ -283,11 +300,14 @@ def render_abdominal_3d(
         azim_side = azim_primary + 90.0
 
     for ax in (ax_a, ax_b):
-        # Water coupling medium — semi-transparent spherical cap (bowl interior).
-        # Drawn first so it appears behind the body and elements.
-        _draw_water_coupling(ax, focus, skin, float(geo["transducer_radius_m"]))
+        # Mechanical scaffold — sparse lat/long wireframe showing the
+        # hemispherical support structure that holds the discrete array
+        # elements. Not a continuous radiating surface. Drawn first so it
+        # appears behind the body and elements.
+        _draw_array_scaffold(ax, focus, skin, float(geo["transducer_radius_m"]))
 
-        # Body skin surface — very transparent so bowl elements in front are visible.
+        # Body skin surface — very transparent so array elements in front are visible.
+        # CT-bed voxels were dropped by the largest-CC filter on the Rust side.
         if body.size:
             ax.scatter(
                 body[:, 0], body[:, 1], body[:, 2],
@@ -300,27 +320,26 @@ def render_abdominal_3d(
                 s=3.0, c="#f5a623", alpha=0.55, depthshade=False,
                 label=f"{anatomy_label} surface",
             )
-        # Bowl elements — red, outside the body (larger markers for visibility).
+        # Discrete array elements — red, outside the body (larger markers).
         if elements.size:
             ax.scatter(
                 elements[:, 0], elements[:, 1], elements[:, 2],
                 s=8.0, c="#d0021b", alpha=0.85, depthshade=False,
-                label=f"therapy elements ({int(geo['element_count'])})",
+                label=f"array elements ({int(geo['element_count'])})",
                 zorder=4,
             )
-        # Water coupling medium label — proxy Line2D (add_patch not supported on Axes3D).
+        # Scaffold legend entry — proxy Line2D (add_patch not supported on Axes3D).
         import matplotlib.lines as mlines  # noqa: PLC0415
-        ax._water_proxy = mlines.Line2D(  # stored so legend can reference it
-            [], [], marker="s", color="w", markerfacecolor="#29b6f6",
-            markeredgecolor="#1e88e5", markersize=8, alpha=0.8,
-            label="water coupling medium",
+        ax._scaffold_proxy = mlines.Line2D(  # stored so legend can reference it
+            [], [], color="#90a4ae", lw=1.0, alpha=0.8,
+            label="hemispherical scaffold (lat/long wireframe)",
         )
 
-        # Skin contact point — lime circle (bowl vertex on skin).
+        # Skin contact point — lime circle (aperture vertex on skin).
         ax.scatter(
             [skin[0]], [skin[1]], [skin[2]],
             marker="o", s=120, c="lime", edgecolors="black", linewidths=0.8,
-            zorder=6, label="skin contact (bowl rim centre)",
+            zorder=6, label="skin contact (aperture vertex)",
         )
         # Focus marker — cyan cross.
         ax.scatter(
@@ -339,23 +358,23 @@ def render_abdominal_3d(
         ax.set_ylabel("y [m]", fontsize=8)
         ax.set_zlabel("z [m]", fontsize=8)
 
-    # Oblique view: camera on the bowl side, elevated for depth.
+    # Oblique view: camera on the array side, elevated for depth.
     ax_a.view_init(elev=elev_primary, azim=azim_primary)
     ax_a.set_title(
-        "Oblique view — bowl on skin surface\n"
-        "(red elements outside body, lime = skin contact, cyan = organ focus)",
+        "Oblique view — hemispherical phased array on skin surface\n"
+        "(red discrete elements outside body, lime = skin contact, cyan = organ focus)",
         fontsize=9,
     )
     handles, labels = ax_a.get_legend_handles_labels()
-    handles.insert(0, ax_a._water_proxy)
-    labels.insert(0, ax_a._water_proxy.get_label())
+    handles.insert(0, ax_a._scaffold_proxy)
+    labels.insert(0, ax_a._scaffold_proxy.get_label())
     ax_a.legend(handles, labels, loc="lower left", fontsize=6, frameon=True)
 
-    # Side view: 90° from bowl axis to show profile (bowl visible on body edge).
+    # Side view: 90° from aperture axis to show profile.
     ax_b.view_init(elev=15, azim=azim_side)
     ax_b.set_title(
-        "Side view — transducer profile\n"
-        "bowl sits outside skin; beams converge at organ centroid",
+        "Side view — array profile\n"
+        "discrete elements on hemispherical scaffold sit outside skin; beams converge at organ centroid",
         fontsize=9,
     )
 
@@ -508,6 +527,144 @@ def render_exposure_comparison(
     return fig_path
 
 
+# ── Image-then-treat sequence (per-anatomy) ────────────────────────────────────
+
+
+def render_image_then_treat_sequence(
+    result: dict[str, object],
+    anatomy_label: str,
+    fig_path: Path,
+) -> Path:
+    """Reconstructed-image-then-lesion-generation sequence for one anatomy.
+
+    Three panels left → right:
+
+    1. **CT slice** — the planning anatomy as acquired, with the target
+       segmentation contoured in cyan.
+    2. **Reconstructed image (multi-angle imaging transmit)** —
+       `anatomy_reconstruction`, the coherently-summed multi-angle
+       finite-frequency reconstruction of the patient-specific
+       sound-speed contrast. This is the imaging product of the
+       transmit/receive imaging pulse sequence that immediately precedes
+       therapy; it is the same-aperture analogue of plane-wave
+       compounding (every imaging transmit is a broadband finite-frequency
+       row of the same Born operator that the therapy elements would
+       transmit through). White contour: planning target.
+    3. **Focused therapy peak-pressure → predicted lesion** —
+       `exposure` (heterogeneous peak-pressure field after focused
+       therapy transmit on the same applicator), with the histotripsy
+       intrinsic-threshold isoline (red, 26 MPa Vlaisavljevich 2015) and
+       the target contour (white). The intersection of the isoline with
+       the target mask is the predicted cavitation lesion.
+
+    The figure makes the image-then-treat contract concrete: the same
+    discrete-element aperture is used to acquire the imaging
+    reconstruction (panel 2) and to deliver the lesion-forming exposure
+    (panel 3); no separate diagnostic device is required.
+    """
+    # Histotripsy intrinsic threshold (Vlaisavljevich et al. 2015):
+    # peak-negative pressure required to nucleate dense cavitation in
+    # soft tissue, ≈ 26-28 MPa across liver/kidney/brain.
+    HISTOTRIPSY_INTRINSIC_THRESHOLD_PA = 26.0e6
+
+    ct = np.asarray(result["placement_ct_hu"], dtype=float)
+    anatomy_recon = np.asarray(result["anatomy_reconstruction"], dtype=float)
+    exposure = np.asarray(result["exposure"], dtype=float)
+    target = np.asarray(result.get("target_mask", np.zeros_like(ct)), dtype=bool)
+    spacing = tuple(float(v) for v in result["placement_spacing_m"])
+    extent = _image_extent_xy(ct, spacing)
+
+    fig, axes = plt.subplots(1, 3, figsize=(15.5, 5.0), constrained_layout=True)
+    fig.suptitle(
+        f"{anatomy_label} — image-then-treat sequence on the same HistoSonics-like "
+        f"hemispherical phased-array applicator",
+        fontsize=11,
+    )
+
+    # ── Panel 1: planning CT slice ────────────────────────────────────────────
+    ax0 = axes[0]
+    ax0.imshow(
+        ct.T, cmap="gray", origin="lower", extent=extent, vmin=-200, vmax=300,
+    )
+    if target.any():
+        target_t = target.T.astype(float)
+        x = np.linspace(extent[0], extent[1], target_t.shape[1])
+        y = np.linspace(extent[2], extent[3], target_t.shape[0])
+        ax0.contour(x, y, target_t, levels=[0.5], colors="cyan", linewidths=1.1)
+    ax0.set_title("Planning CT slice + target contour", fontsize=10)
+    ax0.set_xlabel("x [m]", fontsize=8)
+    ax0.set_ylabel("y [m]", fontsize=8)
+    ax0.set_aspect("equal")
+
+    # ── Panel 2: imaging reconstruction (image step) ──────────────────────────
+    ax1 = axes[1]
+    # Normalise the reconstruction for display only; do not modify the
+    # underlying field (used elsewhere for metrics).
+    recon_peak = float(np.max(np.abs(anatomy_recon))) or 1.0
+    recon_display = np.abs(anatomy_recon) / recon_peak
+    im1 = ax1.imshow(
+        recon_display.T, cmap="bone", origin="lower", extent=extent, vmin=0.0, vmax=1.0,
+    )
+    if target.any():
+        target_t = target.T.astype(float)
+        x = np.linspace(extent[0], extent[1], target_t.shape[1])
+        y = np.linspace(extent[2], extent[3], target_t.shape[0])
+        ax1.contour(x, y, target_t, levels=[0.5], colors="white", linewidths=0.9)
+    ax1.set_title(
+        "Reconstructed image\n(multi-angle imaging transmit, same aperture)",
+        fontsize=10,
+    )
+    ax1.set_xlabel("x [m]", fontsize=8)
+    ax1.set_aspect("equal")
+    plt.colorbar(
+        im1, ax=ax1, fraction=0.046, pad=0.02,
+        label="reconstructed contrast (norm.)",
+    )
+
+    # ── Panel 3: focused therapy peak-pressure + predicted lesion ─────────────
+    ax2 = axes[2]
+    ax2.imshow(
+        ct.T, cmap="gray", origin="lower", extent=extent, vmin=-200, vmax=300, alpha=0.50,
+    )
+    exposure_abs = np.abs(exposure)
+    exposure_peak = float(np.max(exposure_abs))
+    if exposure_peak > 0.0:
+        im2 = ax2.imshow(
+            exposure_abs.T, cmap="inferno", origin="lower", extent=extent,
+            vmin=0.0, vmax=exposure_peak, alpha=0.82,
+        )
+        plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.02, label="peak pressure [Pa]")
+        # Intrinsic-threshold isoline (predicted cavitation cloud boundary).
+        if exposure_peak >= HISTOTRIPSY_INTRINSIC_THRESHOLD_PA:
+            ax2.contour(
+                np.linspace(extent[0], extent[1], exposure_abs.shape[0]),
+                np.linspace(extent[2], extent[3], exposure_abs.shape[1]),
+                exposure_abs.T,
+                levels=[HISTOTRIPSY_INTRINSIC_THRESHOLD_PA],
+                colors="red", linewidths=1.4,
+            )
+    if target.any():
+        target_t = target.T.astype(float)
+        x = np.linspace(extent[0], extent[1], target_t.shape[1])
+        y = np.linspace(extent[2], extent[3], target_t.shape[0])
+        ax2.contour(x, y, target_t, levels=[0.5], colors="white", linewidths=0.9)
+    title_lines = ["Focused-US peak-pressure exposure"]
+    if exposure_peak >= HISTOTRIPSY_INTRINSIC_THRESHOLD_PA:
+        title_lines.append("red: intrinsic-threshold cavitation isoline (26 MPa)")
+    else:
+        title_lines.append(
+            f"(peak {exposure_peak / 1e6:.1f} MPa < 26 MPa intrinsic threshold;\n"
+            f"increase source_pressure_pa for lesion isoline)"
+        )
+    ax2.set_title("\n".join(title_lines), fontsize=10)
+    ax2.set_xlabel("x [m]", fontsize=8)
+    ax2.set_aspect("equal")
+
+    _save_figure(fig, fig_path)
+    plt.close(fig)
+    return fig_path
+
+
 # ── Reconstruction metrics ─────────────────────────────────────────────────────
 
 def render_reconstruction_metrics(
@@ -588,7 +745,7 @@ def write_metrics(
     payload: dict[str, object] = {
         "chapter": 31,
         "analysis": (
-            "3-D clinical device geometry: HistoSonics-like bowl on liver/kidney skin, "
+            "3-D clinical device geometry: HistoSonics-like hemispherical phased array on liver/kidney skin, "
             "InSightec-like focused bowl at calvarium; fully simulated exposures and reconstructions "
             "via kwavers PyO3 API with RITK NIfTI/DICOM ingestion"
         ),
@@ -710,6 +867,18 @@ def run() -> dict[str, object]:
         render_reconstruction_metrics(
             liver_result, kidney_result, brain_result,
             OUT_DIR / "fig05_reconstruction_metrics.png",
+        ),
+        render_image_then_treat_sequence(
+            liver_result, "liver",
+            OUT_DIR / "fig06_liver_image_then_treat.png",
+        ),
+        render_image_then_treat_sequence(
+            kidney_result, "kidney",
+            OUT_DIR / "fig07_kidney_image_then_treat.png",
+        ),
+        render_image_then_treat_sequence(
+            brain_result, "brain",
+            OUT_DIR / "fig08_brain_image_then_treat.png",
         ),
     ]
 
