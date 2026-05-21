@@ -235,8 +235,8 @@ impl FwiProcessor {
             .and(&fx)
             .and(&fy)
             .and(&fz)
-            .par_for_each(|w_val, &dX, &dY, &dZ| {
-                *w_val = dZ.mul_add(dZ, dX.mul_add(dX, dY * dY) + eps2).sqrt();
+            .par_for_each(|w_val, &dx, &dy, &dz| {
+                *w_val = dz.mul_add(dz, dx.mul_add(dx, dy * dy) + eps2).sqrt();
             });
 
         // Functional derivative: divergence of the normalised gradient field.
