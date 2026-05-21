@@ -31,6 +31,9 @@
 //! - `permeability ≥ 1.0` (most materials)
 //! - `conductivity ≥ 0.0`
 
+use crate::core::constants::fundamental::{
+    SPEED_OF_LIGHT, VACUUM_IMPEDANCE, VACUUM_PERMEABILITY,
+};
 use std::fmt;
 
 /// Canonical electromagnetic material properties
@@ -96,16 +99,14 @@ impl ElectromagneticPropertyData {
     #[inline]
     #[must_use]
     pub fn wave_speed(&self) -> f64 {
-        const C0: f64 = 299_792_458.0;
-        C0 / (self.permittivity * self.permeability).sqrt()
+        SPEED_OF_LIGHT / (self.permittivity * self.permeability).sqrt()
     }
 
-    /// Intrinsic impedance Z = Z₀√(μ_r/ε_r) (Ω)
+    /// Intrinsic impedance Z = Z₀·√(μ_r/ε_r) (Ω) where Z₀ = √(μ₀/ε₀).
     #[inline]
     #[must_use]
     pub fn impedance(&self) -> f64 {
-        const Z0: f64 = 376.730_313_668;
-        Z0 * (self.permeability / self.permittivity).sqrt()
+        VACUUM_IMPEDANCE * (self.permeability / self.permittivity).sqrt()
     }
 
     /// Refractive index n = √(ε_r μ_r)
@@ -121,9 +122,8 @@ impl ElectromagneticPropertyData {
         if self.conductivity == 0.0 {
             return f64::INFINITY;
         }
-        const MU0: f64 = 1.25663706212e-6;
         let omega = 2.0 * std::f64::consts::PI * frequency_hz;
-        let mu = MU0 * self.permeability;
+        let mu = VACUUM_PERMEABILITY * self.permeability;
         (2.0 / (omega * mu * self.conductivity)).sqrt()
     }
 
@@ -185,8 +185,7 @@ mod tests {
     #[test]
     fn test_em_wave_speed() {
         let water = ElectromagneticPropertyData::water();
-        const C0: f64 = 299_792_458.0;
-        let expected = C0 / (water.permittivity * water.permeability).sqrt();
+        let expected = SPEED_OF_LIGHT / (water.permittivity * water.permeability).sqrt();
         assert!((water.wave_speed() - expected).abs() < 1.0);
     }
 

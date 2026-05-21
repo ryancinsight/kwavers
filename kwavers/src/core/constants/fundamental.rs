@@ -128,6 +128,12 @@ pub const VACUUM_PERMITTIVITY: f64 = 8.8541878128e-12;
 /// Reference: 2018 CODATA recommended values.
 pub const VACUUM_PERMEABILITY: f64 = 1.25663706212e-6;
 
+/// Vacuum impedance Z₀ = √(μ₀ / ε₀) (Ω).
+///
+/// Value: 376.730_313_668 Ω (CODATA 2018).
+/// Numerically `μ₀ · c` to high precision.
+pub const VACUUM_IMPEDANCE: f64 = 376.730_313_668;
+
 /// Electron invariant mass (kg)
 /// Value: 9.1093837015e-31 kg
 /// Reference: 2018 CODATA recommended values
