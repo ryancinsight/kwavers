@@ -224,30 +224,64 @@ pub fn keller_miksis_rk4(
     // polytropically; the saturated vapor pressure p_v is isothermal.
     let p_eq = p0_pa + 2.0 * sigma / r0_m - p_v_pa;
 
+    // Keller-Miksis equation in its canonical form (Brennen 2014 Eq 4.5;
+    // Keller & Miksis 1980 Eq 2.3):
+    //
+    //   (1 - Rdot/c) R Rddot + (3/2)(1 - Rdot/(3c)) Rdot^2
+    //     = (1 + Rdot/c)/rho * (p_L(R) - p_inf(t + R/c))
+    //       + R/(rho c) * d/dt [p_L(R) - p_inf(t + R/c)]
+    //
+    // p_L(R) = p_gas(R) - 2 sigma / R - 4 mu Rdot / R is the liquid-side bubble
+    // wall pressure, so the (1 + Rdot/c) compressibility factor must multiply
+    // the *entire* p_L - p_inf — including the surface-tension and viscous
+    // contributions, not just the gas-pressure / acoustic-forcing parts.
+    // The d/dt term likewise differentiates the full p_L(R) - p_inf, not just
+    // the gas pressure.
+    //
+    // Prior to 2026-05-21 the surface-tension and viscous terms were added
+    // outside the (1 + Rdot/c) factor and the radiation-damping derivative
+    // included only dp_gas/dt.  At low wall-Mach number Rdot/c ~ 0.01 (typical
+    // tissue-bubble drive) the error was sub-percent; near collapse where
+    // Rdot/c → 0.1+, the error grew to multiple percent and biased the
+    // radiation-damping balance.
     let rhs = |r: f64, rdot: f64, t: f64| -> (f64, f64) {
         let r_c = r.max(1e-15);
         // Non-condensable partial pressure and full internal pressure.
         let p_nc = p_eq * (r0_m / r_c).powf(3.0 * kappa);
         let p_gas = p_nc + p_v_pa;
         let t_ret = t + r_c / c_liquid;
-        let p_ac_now = p_ac_pa * (omega * t).sin();
         let p_ac_ret = p_ac_pa * (omega * t_ret).sin();
-        // dp_gas/dt = dp_nc/dt = -3 kappa p_nc * Rdot / R  (p_v is constant).
-        // Prior to 2026-05-21 this used the total p_gas, double-counting the
-        // vapor contribution in the radiation-damping derivative.
-        let dp_gas_dt = -3.0 * kappa * p_nc * rdot / r_c;
+
+        // Liquid-side bubble wall pressure and far-field pressure.
+        let p_wall = p_gas - 2.0 * sigma / r_c - 4.0 * mu * rdot / r_c;
+        let p_inf = p0_pa + p_ac_ret;
+
+        // Time derivatives at the wall.  Polytropic non-condensable gas:
+        //   dp_nc/dt = -3 kappa p_nc * Rdot / R   (p_v is constant in time)
+        // Young-Laplace surface tension term:
+        //   d(-2 sigma/R)/dt = 2 sigma Rdot / R^2
+        // Viscous wall stress term (first-order, neglecting R-ddot back-reaction):
+        //   d(-4 mu Rdot/R)/dt ≈ 4 mu Rdot^2 / R^2
+        // Retarded far-field acoustic pressure derivative:
+        //   dp_inf/dt = p_ac' (t_ret) * (1 + Rdot/c)
+        //             = p_ac * omega * cos(omega t_ret) * (1 + Rdot/c)
+        let dp_nc_dt = -3.0 * kappa * p_nc * rdot / r_c;
+        let dp_surface_dt = 2.0 * sigma * rdot / (r_c * r_c);
+        let dp_viscous_dt = 4.0 * mu * rdot * rdot / (r_c * r_c);
+        let dp_wall_dt = dp_nc_dt + dp_surface_dt + dp_viscous_dt;
+        let dp_inf_dt = p_ac_pa * omega * (omega * t_ret).cos() * (1.0 + rdot / c_liquid);
 
         let rdot_cl = rdot / c_liquid;
         let lhs_coeff = (1.0 - rdot_cl) * r_c;
         if lhs_coeff.abs() < 1e-20 {
             return (rdot, 0.0);
         }
-        let rhs_val = (1.0 + rdot_cl) / rho * (p_gas - p0_pa - p_ac_ret)
-            + r_c / (rho * c_liquid) * dp_gas_dt
-            - 2.0 * sigma / (rho * r_c)
-            - 4.0 * mu * rdot / (rho * r_c)
-            - p_ac_now * rdot_cl / rho;
-        let rddot = (rhs_val - 1.5 * rdot * rdot * (1.0 - rdot_cl / 3.0)) / lhs_coeff;
+
+        let pressure_term = (1.0 + rdot_cl) * (p_wall - p_inf) / rho;
+        let radiation_term = r_c / (rho * c_liquid) * (dp_wall_dt - dp_inf_dt);
+        let nonlinear_term = 1.5 * (1.0 - rdot_cl / 3.0) * rdot * rdot;
+
+        let rddot = (pressure_term + radiation_term - nonlinear_term) / lhs_coeff;
         (rdot, rddot)
     };
 
