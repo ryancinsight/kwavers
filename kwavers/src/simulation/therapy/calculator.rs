@@ -1,5 +1,7 @@
 //! Therapy calculator orchestration
 
+use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::properties::ThermalPropertyData;
@@ -39,14 +41,14 @@ impl TherapyCalculator {
         // Initialize components based on modality
         let thermal = if modality.has_thermal_effects() {
             let properties = ThermalPropertyData::new(
-                0.5,          // conductivity (W/m/K)
-                3600.0,       // specific_heat (J/kg/K)
-                1050.0,       // density (kg/m³)
-                Some(0.5e-3), // blood_perfusion (kg/m³/s)
-                Some(3617.0), // blood_specific_heat (J/kg/K)
+                0.5,                          // conductivity (W/m/K)
+                3600.0,                       // specific_heat (J/kg/K)
+                1050.0,                       // density (kg/m³)
+                Some(TISSUE_PERFUSION_RATE),  // blood_perfusion (1/s)
+                Some(BLOOD_SPECIFIC_HEAT),    // blood_specific_heat (J/kg/K)
             )
             .expect("Valid thermal properties");
-            let arterial_temperature = 37.0; // °C
+            let arterial_temperature = BODY_TEMPERATURE_C;
             let metabolic_heat = 420.0; // W/m³
             PennesSolver::new(
                 grid.nx,
