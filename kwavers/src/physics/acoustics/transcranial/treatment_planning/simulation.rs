@@ -234,8 +234,7 @@ fn steady_state_temperature_from_intensity(intensity: f64) -> Option<f64> {
         return None;
     }
 
-    let perfusion_sink =
-        BLOOD_PERFUSION_RATE_PER_S * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
+    let perfusion_sink = BLOOD_PERFUSION_RATE_PER_S * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
     let heat_source = 2.0 * BRAIN_ABSORPTION_NP_PER_M * intensity;
     Some(BODY_TEMPERATURE_C + heat_source / perfusion_sink)
 }
@@ -336,8 +335,7 @@ mod tests {
         let intensity = 2.0;
         let temperature = steady_state_temperature_from_intensity(intensity)
             .expect("finite nonnegative intensity must map to temperature");
-        let perfusion_sink =
-            BLOOD_PERFUSION_RATE_PER_S * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
+        let perfusion_sink = BLOOD_PERFUSION_RATE_PER_S * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
         let expected =
             BODY_TEMPERATURE_C + (2.0 * BRAIN_ABSORPTION_NP_PER_M * intensity) / perfusion_sink;
 

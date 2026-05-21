@@ -15,9 +15,9 @@ use crate::domain::plugin::{PluginMetadata, PluginState};
 use crate::domain::grid::Grid;
 use ndarray::{Array2, Array3};
 
-use crate::solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use super::parameters::{FwiParameters, MigrationAperture, RtmSettings};
 use super::rtm::RtmProcessor;
+use crate::solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 
 /// Seismic Imaging Plugin
 /// Provides RTM and FWI capabilities for subsurface imaging

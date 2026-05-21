@@ -4,8 +4,8 @@
 //! extracorporeal shock wave lithotripsy (ESWL), including thermal and mechanical
 //! bioeffects evaluation.
 
-use crate::core::constants::numerical::CM_TO_M;
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::numerical::CM_TO_M;
 use crate::core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER;
 use ndarray::Array3;
 
@@ -194,8 +194,7 @@ impl BioeffectsModel {
         // 0.3 dB/(cm·MHz) → Np/m at f_mhz: divide by NP_TO_DB then by CM_TO_M.
         let alpha_np_per_m = 0.3 * f_mhz / NP_TO_DB / CM_TO_M;
         let depth_m = 0.01; // reference depth 1 cm
-        let delta_t =
-            2.0 * alpha_np_per_m * i_spta * depth_m / THERMAL_CONDUCTIVITY_WATER;
+        let delta_t = 2.0 * alpha_np_per_m * i_spta * depth_m / THERMAL_CONDUCTIVITY_WATER;
         let ti = delta_t; // TI ≈ ΔT / 1°C
 
         // ── Cavitation dose ────────────────────────────────────────────

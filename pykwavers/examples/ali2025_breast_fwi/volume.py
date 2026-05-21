@@ -1,4 +1,4 @@
-"""Volume validation and slicing helpers for Ali 2025 replication."""
+"""Plotting volume validation and slicing helpers for Ali 2025 replication."""
 
 from __future__ import annotations
 
@@ -16,14 +16,6 @@ def require_volume(volume: np.ndarray) -> np.ndarray:
     if np.any(array <= 0.0):
         raise ValueError("sound-speed volume must be strictly positive")
     return array
-
-
-def paired_arrays(reference: np.ndarray, estimate: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    ref = require_volume(np.asarray(reference, dtype=np.float64))
-    est = require_volume(np.asarray(estimate, dtype=np.float64))
-    if ref.shape != est.shape:
-        raise ValueError(f"shape mismatch: reference {ref.shape}, estimate {est.shape}")
-    return ref.ravel(), est.ravel()
 
 
 def orthographic_slices(volume: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

@@ -41,11 +41,11 @@ impl TherapyCalculator {
         // Initialize components based on modality
         let thermal = if modality.has_thermal_effects() {
             let properties = ThermalPropertyData::new(
-                0.5,                          // conductivity (W/m/K)
-                3600.0,                       // specific_heat (J/kg/K)
-                1050.0,                       // density (kg/m³)
-                Some(TISSUE_PERFUSION_RATE),  // blood_perfusion (1/s)
-                Some(BLOOD_SPECIFIC_HEAT),    // blood_specific_heat (J/kg/K)
+                0.5,                         // conductivity (W/m/K)
+                3600.0,                      // specific_heat (J/kg/K)
+                1050.0,                      // density (kg/m³)
+                Some(TISSUE_PERFUSION_RATE), // blood_perfusion (1/s)
+                Some(BLOOD_SPECIFIC_HEAT),   // blood_specific_heat (J/kg/K)
             )
             .expect("Valid thermal properties");
             let arterial_temperature = BODY_TEMPERATURE_C;

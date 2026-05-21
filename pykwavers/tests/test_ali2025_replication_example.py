@@ -29,35 +29,54 @@ def _load_support_module(name: str):
     return importlib.import_module(f"ali2025_breast_fwi.{name}")
 
 
+def _load_pykwavers():
+    return importlib.import_module("pykwavers")
+
+
 def test_center_crop_and_decimation_are_value_exact():
-    module = _load_example()
+    kw = _load_pykwavers()
     volume = np.arange(6 * 8 * 4, dtype=np.float64).reshape(6, 8, 4) + 1400.0
 
-    decimated = module.decimate_volume(volume, 2)
+    decimated = kw.prepare_breast_fwi_reduced_phantom(
+        volume,
+        5.0e-4,
+        (10, 10, 10),
+        2,
+        "/phantom/sound_speed_m_s",
+        "fixture.mat",
+    )["sound_speed_m_s"]
     np.testing.assert_array_equal(decimated, volume[::2, ::2, ::2])
 
-    cropped = module.center_crop_volume(volume, (4, 2, 2))
+    cropped = kw.prepare_breast_fwi_reduced_phantom(
+        volume,
+        5.0e-4,
+        (4, 2, 2),
+        1,
+        "/phantom/sound_speed_m_s",
+        "fixture.mat",
+    )["sound_speed_m_s"]
     np.testing.assert_array_equal(cropped, volume[1:5, 3:5, 1:3])
 
 
 def test_prepare_reduced_phantom_preserves_spacing_and_initial_model():
-    module = _load_example()
+    kw = _load_pykwavers()
     source = np.linspace(1450.0, 1550.0, 6 * 6 * 4, dtype=np.float64).reshape(6, 6, 4)
-    phantom = {
-        "sound_speed_m_s": source,
-        "spacing_m": 5.0e-4,
-        "dataset_path": "/phantom/sound_speed_m_s",
-        "source_path": "fixture.mat",
-    }
 
-    reduced = module.prepare_reduced_phantom(phantom, (2, 2, 2), 2)
+    reduced = kw.prepare_breast_fwi_reduced_phantom(
+        source,
+        5.0e-4,
+        (2, 2, 2),
+        2,
+        "/phantom/sound_speed_m_s",
+        "fixture.mat",
+    )
 
-    assert reduced.original_shape == (6, 6, 4)
-    assert reduced.reduced_shape == (2, 2, 2)
-    assert reduced.source_spacing_m == 5.0e-4
-    assert reduced.effective_spacing_m == 1.0e-3
-    assert reduced.dataset_path == "/phantom/sound_speed_m_s"
-    assert np.all(reduced.initial_sound_speed_m_s == np.median(reduced.sound_speed_m_s))
+    assert reduced["original_shape"] == (6, 6, 4)
+    assert reduced["reduced_shape"] == (2, 2, 2)
+    assert reduced["source_spacing_m"] == 5.0e-4
+    assert reduced["effective_spacing_m"] == 1.0e-3
+    assert reduced["dataset_path"] == "/phantom/sound_speed_m_s"
+    assert np.all(reduced["initial_sound_speed_m_s"] == np.median(reduced["sound_speed_m_s"]))
 
 
 def test_reconstruction_metrics_identity_and_affine_relation():
@@ -113,6 +132,7 @@ def test_metrics_reject_invalid_domains():
 
 def test_parse_contracts_and_reduced_geometry():
     module = _load_example()
+    kw = _load_pykwavers()
 
     assert module.parse_shape("4,5,6") == (4, 5, 6)
     assert module.parse_frequency_list("200000, 300000") == [200000.0, 300000.0]
@@ -121,17 +141,19 @@ def test_parse_contracts_and_reduced_geometry():
     with pytest.raises(argparse.ArgumentTypeError):
         module.parse_frequency_list("0")
 
-    diameter, row_spacing = module.derive_reduced_array_geometry(
+    geometry = kw.derive_breast_fwi_reduced_array_geometry(
         (10, 12, 4),
         1.0e-3,
-        rows=2,
-        diameter_m=None,
-        row_spacing_m=None,
+        2,
+        None,
+        None,
     )
+    diameter = geometry["diameter_m"]
+    row_spacing = geometry["row_spacing_m"]
     assert abs(diameter - 0.80 * 9.0e-3) < 1.0e-15
     assert row_spacing > 0.0
     with pytest.raises(ValueError, match="no larger than"):
-        module.derive_reduced_array_geometry((10, 10, 4), 1.0e-3, 1, 0.1, None)
+        kw.derive_breast_fwi_reduced_array_geometry((10, 10, 4), 1.0e-3, 1, 0.1, None)
 
 
 def test_orthographic_slices_use_center_planes():
@@ -380,114 +402,3 @@ def test_operator_prediction_builder_uses_all_models_and_frequencies():
     np.testing.assert_array_equal(predictions["b"][:, 0, 0], [40.0 + 0.0j, 60.0 + 0.0j])
     with pytest.raises(ValueError, match="must not be empty"):
         operators.simulate_forward_predictions(FakeKw, np.ones((1, 1, 1)), object(), [2.0], {})
-
-
-def test_direct_green_observation_cube_matches_outgoing_green_formula():
-    module = _load_support_module("direct_field")
-    elements = np.array(
-        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 2.0, 0.0]],
-        dtype=np.float64,
-    )
-    frequency = 1.0 / (2.0 * np.pi)
-
-    cube = module.direct_green_observation_cube(elements, 3, 1, [frequency], 1.0, 0.2)
-
-    expected_self = np.exp(0.1j) / (4.0 * np.pi * 0.1)
-    expected_remote = np.exp(1.0j) / (4.0 * np.pi)
-    assert cube.shape == (1, 3, 3)
-    assert abs(cube[0, 0, 0] - expected_self) <= 1.0e-14
-    assert abs(cube[0, 0, 1] - expected_remote) <= 1.0e-14
-
-
-def test_source_kappa_filtered_weights_match_two_cell_symbol():
-    module = _load_support_module("discrete_green")
-    spacing = 1.0e-3
-    sound_speed = 1500.0
-    time_step = 1.0e-7
-
-    weights = module.source_kappa_filtered_source_weights(
-        (2, 1, 1), spacing, sound_speed, time_step, [(0, 0, 0)]
-    )
-
-    q = np.cos(0.5 * sound_speed * time_step * np.pi / spacing)
-    expected = np.array([0.5 * (1.0 + q), 0.5 * (1.0 - q)]).reshape(2, 1, 1)
-    np.testing.assert_allclose(weights, expected, atol=1.0e-15)
-    assert abs(float(np.sum(weights)) - 1.0) <= 1.0e-15
-
-
-def test_source_kappa_filtered_observation_matches_weighted_green_sum():
-    module = _load_support_module("discrete_green")
-    elements = np.array([[-0.5, 0.0, 0.0], [0.5, 0.0, 0.0]], dtype=np.float64)
-
-    cube = module.source_kappa_filtered_observation_cube(
-        elements, 2, 1, [1.0 / (2.0 * np.pi)], 1.0, 1.0, (2, 1, 1), 0.1
-    )
-
-    q = np.cos(0.5 * 0.1 * np.pi)
-    w0 = 0.5 * (1.0 + q)
-    w1 = 0.5 * (1.0 - q)
-    expected = w0 * np.exp(1.0j) / (4.0 * np.pi)
-    expected += w1 * np.exp(0.5j) / (4.0 * np.pi * 0.5)
-    assert abs(cube[0, 0, 1] - expected) <= 1.0e-14
-
-
-def test_direct_field_diagnostics_are_exact_for_scaled_direct_green():
-    direct = _load_support_module("direct_field")
-    excitation = _load_support_module("source_excitation")
-    elements = np.array(
-        [[0.0, 0.0, 0.0], [1.0e-3, 0.0, 0.0], [0.0, 1.0e-3, 0.0]],
-        dtype=np.float64,
-    )
-    predicted = direct.direct_green_observation_cube(elements, 3, 1, [100.0], 1500.0, 1.0e-4)
-    coefficient = excitation.sine_frequency_bin_coefficient(100.0, 0.001, 40, 20)
-    observed = 4.0 * coefficient * predicted
-
-    diagnostics = direct.direct_field_diagnostics(
-        predicted,
-        observed,
-        [100.0],
-        4.0,
-        0.001,
-        [40],
-        [20],
-        3,
-        1,
-        elements,
-    )
-
-    assert diagnostics["normalized_l2_residual"] <= 1.0e-14
-    assert diagnostics["passive_only_normalized_l2_residual"] <= 1.0e-14
-    assert diagnostics["passive_phase_error_rms_rad"] <= 1.0e-14
-    assert diagnostics["passive_log_amplitude_error_rms"] <= 1.0e-14
-    assert diagnostics["passive_pair_count"] == 6
-
-
-def test_direct_field_diagnostics_detect_passive_phase_error():
-    direct = _load_support_module("direct_field")
-    excitation = _load_support_module("source_excitation")
-    elements = np.array(
-        [[0.0, 0.0, 0.0], [1.0e-3, 0.0, 0.0], [0.0, 1.0e-3, 0.0]],
-        dtype=np.float64,
-    )
-    predicted = direct.direct_green_observation_cube(elements, 3, 1, [100.0], 1500.0, 1.0e-4)
-    coefficient = excitation.sine_frequency_bin_coefficient(100.0, 0.001, 40, 20)
-    observed = 4.0 * coefficient * predicted
-    observed[0, 0, 1] *= 0.25 * np.exp(0.75j)
-
-    diagnostics = direct.direct_field_diagnostics(
-        predicted,
-        observed,
-        [100.0],
-        4.0,
-        0.001,
-        [40],
-        [20],
-        3,
-        1,
-        elements,
-    )
-
-    assert diagnostics["passive_phase_error_max_abs_rad"] > 0.1
-    assert diagnostics["passive_log_amplitude_error_rms"] > 0.1
-    with pytest.raises(ValueError, match="element count"):
-        direct.direct_green_observation_cube(elements[:2], 3, 1, [100.0], 1500.0, 1.0e-4)

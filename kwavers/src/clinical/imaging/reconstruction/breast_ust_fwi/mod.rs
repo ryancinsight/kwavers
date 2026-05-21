@@ -6,13 +6,34 @@
 //! optimization logic.
 
 mod dataset;
+mod diagnostics;
+mod direct_field;
 mod phantom_hdf5;
 mod phantom_mat5;
 mod phantom_types;
+mod reduction;
 
 pub use dataset::{
     generate_breast_ust_pstd_frequency_dataset, snap_multi_row_ring_array_to_grid,
     BreastUstPstdDataset, BreastUstPstdDatasetConfig, BREAST_UST_PSTD_DATASET_MODEL,
+};
+pub use diagnostics::{
+    acquisition_identifiability, diagnose_breast_ust_observation_pair, passive_receiver_mask,
+    forward_operator_equivalence_diagnostics, reconstruction_metrics,
+    scaled_observation_residual_metrics, sine_frequency_bin_coefficient,
+    source_channel_residual_diagnostics, source_excitation_diagnostics, source_receiver_mask,
+    table1_parity, BreastUstAcquisitionIdentifiability,
+    BreastUstForwardOperatorEquivalenceDiagnostics, BreastUstForwardOperatorModelDiagnostics,
+    BreastUstForwardOperatorPrediction, BreastUstObservationPairDiagnostics,
+    BreastUstReconstructionMetrics, BreastUstScaledObservationResidualMetrics,
+    BreastUstSourceChannelResidualDiagnostics, BreastUstSourceExcitationDiagnostics,
+    BreastUstSourceExcitationFrequencyDiagnostics, BreastUstSourceScalingPolicy,
+    BreastUstTable1Parity,
+};
+pub use direct_field::{
+    diagnose_breast_ust_homogeneous_direct_field, BreastUstDirectFieldDiagnostics,
+    BreastUstHomogeneousDirectFieldDiagnostics,
+    BREAST_UST_HOMOGENEOUS_DIRECT_FIELD_DIAGNOSTIC_MODEL,
 };
 pub use phantom_hdf5::{
     load_ali_2025_breast_phantom_from_hdf5, load_ali_2025_breast_phantom_from_hdf5_with_config,
@@ -24,6 +45,10 @@ pub use phantom_mat5::{
 };
 pub use phantom_types::{
     BreastUstAliPhantom, BreastUstPhantomStorageOrder, BreastUstSoundSpeedUnit,
+};
+pub use reduction::{
+    derive_reduced_breast_ust_array_geometry, prepare_reduced_breast_ust_phantom,
+    BreastUstReducedArrayGeometry, BreastUstReducedPhantom,
 };
 
 use crate::core::error::KwaversError;

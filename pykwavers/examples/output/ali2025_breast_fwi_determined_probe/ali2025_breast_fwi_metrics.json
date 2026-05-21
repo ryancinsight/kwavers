@@ -33,8 +33,8 @@
     "row_normalized_l2_residual_mean": 0.6424428504023861,
     "scaled_residual_l2_norm": 244159.99800407197,
     "selected_receiver_count": 32,
-    "source_scale_magnitude_max": 53702.208580841434,
-    "source_scale_magnitude_min": 2758.015820313937,
+    "source_scale_magnitude_max": 53702.20858084144,
+    "source_scale_magnitude_min": 2758.0158203139367,
     "transmission_count": 4
   },
   "frequencies_hz": [
@@ -42,45 +42,46 @@
     300000.0
   ],
   "homogeneous_direct_field": {
+    "model_family": "clinical_breast_ust_homogeneous_direct_field_diagnostic",
     "normalized_l2_residual": 0.45490002818776015,
     "passive_log_amplitude_error_rms": 1.0285433938640014,
     "passive_only_normalized_l2_residual": 0.7573521734417046,
     "passive_pair_count": 24,
-    "passive_phase_error_max_abs_rad": 3.0950662706710714,
-    "passive_phase_error_rms_rad": 1.4588831956505917,
+    "passive_phase_error_max_abs_rad": 3.095066270671071,
+    "passive_phase_error_rms_rad": 1.4588831956505919,
     "passive_range_max_m": 0.010119288512538814,
     "passive_range_min_m": 0.004525483399593905,
     "pstd_periodic": {
       "normalized_l2_residual": 0.7410053165756724,
       "passive_log_amplitude_error_rms": 0.42298397666776727,
-      "passive_only_normalized_l2_residual": 0.45522718069730433,
+      "passive_only_normalized_l2_residual": 0.4552271806973042,
       "passive_pair_count": 24,
       "passive_phase_error_max_abs_rad": 1.8625525548630928,
-      "passive_phase_error_rms_rad": 0.9569282146918339,
+      "passive_phase_error_rms_rad": 0.9569282146918338,
       "passive_range_max_m": 0.010119288512538814,
       "passive_range_min_m": 0.004525483399593905,
       "row_normalized_l2_residual_mean": 0.589497578753828,
-      "source_scale_magnitude_coefficient_of_variation": 0.4432844723141417,
-      "source_scale_phase_span_rad": 1.030511231696402
+      "source_scale_magnitude_coefficient_of_variation": 0.4432844723141419,
+      "source_scale_phase_span_rad": 1.0305112316964022
     },
     "pstd_periodic_residual_delta": 0.2861052883879122,
     "row_normalized_l2_residual_mean": 0.5561369395395142,
     "source_kappa_filtered": {
-      "normalized_l2_residual": 0.4546894774397905,
-      "passive_log_amplitude_error_rms": 1.028769934533148,
-      "passive_only_normalized_l2_residual": 0.7574579855431118,
+      "normalized_l2_residual": 0.45468947743979055,
+      "passive_log_amplitude_error_rms": 1.0287699345331478,
+      "passive_only_normalized_l2_residual": 0.7574579855431117,
       "passive_pair_count": 24,
       "passive_phase_error_max_abs_rad": 3.094131461246371,
-      "passive_phase_error_rms_rad": 1.4585125842840225,
+      "passive_phase_error_rms_rad": 1.4585125842840228,
       "passive_range_max_m": 0.010119288512538814,
       "passive_range_min_m": 0.004525483399593905,
-      "row_normalized_l2_residual_mean": 0.5560482579128638,
-      "source_scale_magnitude_coefficient_of_variation": 0.14648402188181736,
-      "source_scale_phase_span_rad": 0.3224573630220785
+      "row_normalized_l2_residual_mean": 0.5560482579128637,
+      "source_scale_magnitude_coefficient_of_variation": 0.1464840218818172,
+      "source_scale_phase_span_rad": 0.3224573630220784
     },
-    "source_kappa_filtered_residual_delta": -0.00021055074796966222,
-    "source_scale_magnitude_coefficient_of_variation": 0.14654354562122082,
-    "source_scale_phase_span_rad": 0.32265268887932497
+    "source_kappa_filtered_residual_delta": -0.0002105507479696067,
+    "source_scale_magnitude_coefficient_of_variation": 0.14654354562122074,
+    "source_scale_phase_span_rad": 0.32265268887932474
   },
   "identifiability": {
     "complex_observations": 32,
@@ -108,8 +109,8 @@
   "metrics": {
     "estimate_max_m_s": 1561.4165323019167,
     "estimate_min_m_s": 1550.6853675980249,
-    "normalized_rmse": 0.03514032397726639,
-    "pearson_correlation": 0.11096792448206816,
+    "normalized_rmse": 0.03514032397726638,
+    "pearson_correlation": 0.1109679244820682,
     "reference_max_m_s": 1651.2794914548547,
     "reference_min_m_s": 1442.0054909468518,
     "rmse_m_s": 54.675003945011255
@@ -123,8 +124,8 @@
       {
         "model": "single_scatter_born",
         "normalized_l2_residual": 0.4565747411030595,
-        "row_normalized_l2_residual_mean": 0.5782190998199835,
-        "source_scale_magnitude_coefficient_of_variation": 0.2310531322353807,
+        "row_normalized_l2_residual_mean": 0.5782190998199837,
+        "source_scale_magnitude_coefficient_of_variation": 0.23105313223538063,
         "source_scale_phase_span_rad": 1.3676929677638976
       },
       {
@@ -138,7 +139,7 @@
         "model": "spectral_convergent_born",
         "normalized_l2_residual": 0.5234113936105185,
         "row_normalized_l2_residual_mean": 0.6424428504023861,
-        "source_scale_magnitude_coefficient_of_variation": 0.297005269770697,
+        "source_scale_magnitude_coefficient_of_variation": 0.2970052697706972,
         "source_scale_phase_span_rad": 0.9194258157013508
       }
     ],
@@ -159,42 +160,42 @@
     3
   ],
   "source_channel_consistency": {
-    "active_full_scale_normalized_l2_residual": 0.25733989426114645,
-    "active_full_scale_observed_l2_norm": 399242.62022656767,
-    "active_full_scale_residual_energy_fraction": 0.1770675610463339,
-    "active_full_scale_residual_l2_norm": 102741.05367364798,
+    "active_full_scale_normalized_l2_residual": 0.2573398942611465,
+    "active_full_scale_observed_l2_norm": 399242.6202265676,
+    "active_full_scale_residual_energy_fraction": 0.1770675610463338,
+    "active_full_scale_residual_l2_norm": 102741.05367364797,
     "active_receiver_count_per_row": 1,
     "all_channel_normalized_l2_residual": 0.5234113936105185,
-    "passive_full_scale_normalized_l2_residual": 0.91805381652132,
+    "passive_full_scale_normalized_l2_residual": 0.9180538165213201,
     "passive_full_scale_observed_l2_norm": 241261.74426110706,
-    "passive_full_scale_residual_energy_fraction": 0.8229324389536661,
-    "passive_full_scale_residual_l2_norm": 221491.26509950001,
+    "passive_full_scale_residual_energy_fraction": 0.8229324389536662,
+    "passive_full_scale_residual_l2_norm": 221491.26509950004,
     "passive_only_normalized_l2_residual": 0.5432880999009375,
     "passive_only_scaled_residual_l2_norm": 131074.63461840278,
     "passive_receiver_count_per_row": 3
   },
   "source_excitation": {
     "frequency_count": 2,
-    "max_source_scale_magnitude_coefficient_of_variation": 0.297005269770697,
-    "max_source_scale_phase_circular_variance": 0.06848860608091445,
+    "max_source_scale_magnitude_coefficient_of_variation": 0.2970052697706972,
+    "max_source_scale_phase_circular_variance": 0.06848860608091434,
     "max_source_scale_phase_span_rad": 0.9194258157013508,
     "per_frequency": [
       {
         "frequency_hz": 200000.0,
-        "mean_source_scale_magnitude": 47.77541086196106,
-        "source_scale_magnitude_coefficient_of_variation": 0.1315120485475916,
+        "mean_source_scale_magnitude": 47.775410861961056,
+        "source_scale_magnitude_coefficient_of_variation": 0.1315120485475915,
         "source_scale_phase_circular_variance": 0.02246867570457811,
         "source_scale_phase_span_rad": 0.4957455205150345,
-        "tone_bin_magnitude": 1.0000000000000002,
+        "tone_bin_magnitude": 1.0000000000000004,
         "tone_bin_phase_rad": -1.5707963267948966
       },
       {
         "frequency_hz": 300000.0,
-        "mean_source_scale_magnitude": 5.352343160623673,
-        "source_scale_magnitude_coefficient_of_variation": 0.297005269770697,
-        "source_scale_phase_circular_variance": 0.06848860608091445,
+        "mean_source_scale_magnitude": 5.352343160623669,
+        "source_scale_magnitude_coefficient_of_variation": 0.2970052697706972,
+        "source_scale_phase_circular_variance": 0.06848860608091434,
         "source_scale_phase_span_rad": 0.9194258157013508,
-        "tone_bin_magnitude": 0.9803670299338934,
+        "tone_bin_magnitude": 0.9803670299338938,
         "tone_bin_phase_rad": -1.5720563151750495
       }
     ],

@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Added (2026-05-21) - Breast FWI Rust-Owned Reduced-Domain Preparation
+
+- [minor] Move Ali 2025 reduced phantom decimation, center cropping,
+  homogeneous median initial-model construction, and reduced ring-array geometry
+  derivation into
+  `kwavers::clinical::imaging::reconstruction::breast_ust_fwi::reduction`.
+  Expose `prepare_breast_fwi_reduced_phantom` and
+  `derive_breast_fwi_reduced_array_geometry` through PyO3 so the replication
+  script no longer owns clinical reduction formulas.
+
+### Added (2026-05-21) - Breast FWI Rust-Owned Replication Diagnostics
+
+- [minor] Move Ali 2025 observation residuals, source-channel residual
+  attribution, source-excitation dispersion, acquisition identifiability,
+  reconstruction RMSE/PCC, and Table 1 parity gates into
+  `kwavers::clinical::imaging::reconstruction::breast_ust_fwi::diagnostics`.
+  Expose the metrics through PyO3 and reduce the Python support modules to
+  binding callers for reporting and plotting workflows.
+
+### Added (2026-05-21) - Breast FWI Direct-Field Rust Ownership
+
+- [minor] Move Ali 2025 homogeneous direct-field diagnostics into
+  `kwavers::clinical::imaging::reconstruction::breast_ust_fwi::direct_field`,
+  covering point Green, PSTD source-kappa filtering, and the finite-grid PSTD
+  periodic modal recurrence. Expose
+  `diagnose_breast_fwi_homogeneous_direct_field` through PyO3 and reduce the
+  Python support module to a binding caller.
+
 ### Changed (2026-05-21) - Transcranial Linear Born Config Boundary
 
 - [arch] Complete the clinical wrapper to generic linear-Born config boundary:

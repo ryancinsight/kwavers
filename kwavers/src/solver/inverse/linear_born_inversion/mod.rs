@@ -21,7 +21,13 @@
 //! identifier (closed in T11).
 
 pub mod config;
+pub(crate) mod dense;
+pub mod enhancement;
 pub mod geometry;
+pub(crate) mod schedule;
+pub mod voxel;
 
 pub use config::LinearBornInversionConfig;
+pub use enhancement::high_pass_enhance_volume;
 pub use geometry::{ElementPosition, TransducerGeometry};
+pub use voxel::VolumeVoxel;

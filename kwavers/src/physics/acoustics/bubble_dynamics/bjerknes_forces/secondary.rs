@@ -243,8 +243,8 @@ mod tests {
             .secondary_bjerknes_force(r1, r2, v, v, phi_below, d)
             .unwrap();
         // Forces must differ by ≲ 2 % across the 0.1 / 0.099 step (linear in cos).
-        let rel_diff = (f_above.secondary - f_below.secondary).abs()
-            / f_above.secondary.abs().max(1e-300);
+        let rel_diff =
+            (f_above.secondary - f_below.secondary).abs() / f_above.secondary.abs().max(1e-300);
         assert!(
             rel_diff < 0.05,
             "secondary Bjerknes force must be continuous through cos(φ)=0.1 \

@@ -1,38 +1,9 @@
-//! Frequency-continuation and Sobolev-style conditioning for transcranial UST.
+//! Sobolev-style conditioning and display enhancement for transcranial UST.
 
 use ndarray::Array2;
 
 use super::born::ActiveVoxel;
 use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
-
-/// Build low-to-high frequency row schedules.
-pub(super) fn continuation_rows(
-    config: &LinearBornInversionConfig,
-    nrows: usize,
-) -> Vec<Vec<usize>> {
-    let nf = config.frequencies_hz.len();
-    let harmonic_count = config.harmonic_count();
-    let stage_count = if config.frequency_continuation { nf } else { 1 };
-    let mut stages = Vec::with_capacity(stage_count);
-    for stage in 0..stage_count {
-        let prefix = if config.frequency_continuation {
-            stage + 1
-        } else {
-            nf
-        };
-        let rows = (0..nrows)
-            .filter(|row| (row / harmonic_count) % nf < prefix)
-            .collect();
-        stages.push(rows);
-    }
-    stages
-}
-
-pub(super) fn stage_iteration_count(total: usize, stages: usize, stage_idx: usize) -> usize {
-    let base = total / stages;
-    let extra = usize::from(stage_idx < total % stages);
-    base + extra
-}
 
 /// Apply a mask-aware Sobolev gradient smoother over active brain voxels.
 pub(super) fn apply_sobolev_preconditioner(

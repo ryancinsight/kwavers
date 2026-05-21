@@ -109,47 +109,6 @@ pub(super) fn edge_preserving_projection(
     Some(buf_a)
 }
 
-pub(super) fn enhance_reconstruction_volume(
-    reconstruction: &Array3<f64>,
-    brain_mask: &Array3<bool>,
-    gain: f64,
-    c_ref_m_s: f64,
-) -> Array3<f64> {
-    if gain == 0.0 {
-        return reconstruction.clone();
-    }
-    let (nx, ny, nz) = reconstruction.dim();
-    let mut enhanced = reconstruction.clone();
-    for ix in 0..nx {
-        for iy in 0..ny {
-            for iz in 0..nz {
-                if !brain_mask[[ix, iy, iz]] {
-                    continue;
-                }
-                let mut sum = 0.0;
-                let mut count = 0.0;
-                for ax in ix.saturating_sub(1)..=(ix + 1).min(nx - 1) {
-                    for ay in iy.saturating_sub(1)..=(iy + 1).min(ny - 1) {
-                        for az in iz.saturating_sub(1)..=(iz + 1).min(nz - 1) {
-                            if brain_mask[[ax, ay, az]] {
-                                sum += reconstruction[[ax, ay, az]];
-                                count += 1.0;
-                            }
-                        }
-                    }
-                }
-                if count > 0.0 {
-                    let blur = sum / count;
-                    let high_pass = reconstruction[[ix, iy, iz]] - blur;
-                    enhanced[[ix, iy, iz]] = (reconstruction[[ix, iy, iz]] + gain * high_pass)
-                        .clamp(c_ref_m_s * 0.92, c_ref_m_s * 1.08);
-                }
-            }
-        }
-    }
-    enhanced
-}
-
 fn charbonnier_diffusivity(diff: f64, epsilon: f64) -> f64 {
     1.0 / (1.0 + (diff / epsilon).powi(2)).sqrt()
 }

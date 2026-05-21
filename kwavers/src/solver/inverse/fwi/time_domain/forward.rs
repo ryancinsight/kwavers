@@ -1,6 +1,6 @@
 //! Forward FDTD model construction and execution.
 
-use super::{geometry::FwiGeometry, FwiProcessor, RHO_SEISMIC_REF};
+use super::{geometry::FwiGeometry, FwiProcessor};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::boundary::cpml::{CPMLConfig, PerDimensionPML};
 use crate::domain::grid::Grid;
@@ -71,7 +71,7 @@ impl FwiProcessor {
         };
 
         let (nx, ny, nz) = grid.dimensions();
-        let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
+        let density = self.resolved_density(grid)?;
         let medium = HeterogeneousFactory::from_arrays(
             model.clone(),
             density,

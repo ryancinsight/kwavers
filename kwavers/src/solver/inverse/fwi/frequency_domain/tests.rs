@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use super::gradient::objective_and_gradient;
 use super::{
-    invert, simulate_frequency_observation, AbsorbingBoundary, Config,
-    DenseConvergentBornOperator, FrequencyObservation, SingleScatterBornOperator,
-    SpectralConvergentBornOperator,
+    invert, simulate_frequency_observation, AbsorbingBoundary, Config, DenseConvergentBornOperator,
+    FrequencyObservation, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     sound_speed_to_slowness, MultiRowRingArray,
@@ -40,7 +39,10 @@ fn dense_cbs_prediction_matches_born_for_homogeneous_on_grid_ring() {
     };
     let cbs = Config {
         spacing_m: 0.005,
-        forward_operator: Arc::new(DenseConvergentBornOperator { iterations: 6, relative_tolerance: 1.0e-12 }),
+        forward_operator: Arc::new(DenseConvergentBornOperator {
+            iterations: 6,
+            relative_tolerance: 1.0e-12,
+        }),
         ..Config::default()
     };
 
@@ -70,11 +72,15 @@ fn dense_cbs_prediction_is_sensitive_to_sound_speed_volume() {
     perturbed[[1, 1, 0]] = 1510.0;
     let config = Config {
         spacing_m: 0.005,
-        forward_operator: Arc::new(DenseConvergentBornOperator { iterations: 8, relative_tolerance: 1.0e-12 }),
+        forward_operator: Arc::new(DenseConvergentBornOperator {
+            iterations: 8,
+            relative_tolerance: 1.0e-12,
+        }),
         ..Config::default()
     };
 
-    let base_data = simulate_frequency_observation(&base, &array, 250_000.0, &config).expect("base");
+    let base_data =
+        simulate_frequency_observation(&base, &array, 250_000.0, &config).expect("base");
     let perturbed_data =
         simulate_frequency_observation(&perturbed, &array, 250_000.0, &config).expect("perturbed");
     let max_reference = base_data
@@ -101,11 +107,16 @@ fn spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
     perturbed[[1, 1, 0]] = 1510.0;
     let config = Config {
         spacing_m: 0.005,
-        forward_operator: Arc::new(SpectralConvergentBornOperator { iterations: 12, relative_tolerance: 1.0e-12, absorbing_boundary: AbsorbingBoundary::disabled() }),
+        forward_operator: Arc::new(SpectralConvergentBornOperator {
+            iterations: 12,
+            relative_tolerance: 1.0e-12,
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        }),
         ..Config::default()
     };
 
-    let base_data = simulate_frequency_observation(&base, &array, 180_000.0, &config).expect("base");
+    let base_data =
+        simulate_frequency_observation(&base, &array, 180_000.0, &config).expect("base");
     let perturbed_data =
         simulate_frequency_observation(&perturbed, &array, 180_000.0, &config).expect("perturbed");
     let max_difference = base_data
@@ -126,7 +137,10 @@ fn dense_cbs_prediction_rejects_ring_outside_inversion_grid() {
     let model = Array3::from_elem((3, 3, 1), 1500.0);
     let config = Config {
         spacing_m: 0.005,
-        forward_operator: Arc::new(DenseConvergentBornOperator { iterations: 2, relative_tolerance: 1.0e-8 }),
+        forward_operator: Arc::new(DenseConvergentBornOperator {
+            iterations: 2,
+            relative_tolerance: 1.0e-8,
+        }),
         ..Config::default()
     };
 
@@ -168,7 +182,10 @@ fn dense_cbs_adjoint_gradient_matches_finite_difference() {
     let config = Config {
         spacing_m: 0.005,
         estimate_source_scaling: false,
-        forward_operator: Arc::new(DenseConvergentBornOperator { iterations: 96, relative_tolerance: 1.0e-13 }),
+        forward_operator: Arc::new(DenseConvergentBornOperator {
+            iterations: 96,
+            relative_tolerance: 1.0e-13,
+        }),
         ..Config::default()
     };
     let mut truth = Array3::from_elem((3, 3, 1), 1500.0);
@@ -210,7 +227,11 @@ fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
     let config = Config {
         spacing_m: 0.005,
         estimate_source_scaling: false,
-        forward_operator: Arc::new(SpectralConvergentBornOperator { iterations: 128, relative_tolerance: 1.0e-13, absorbing_boundary: AbsorbingBoundary::disabled() }),
+        forward_operator: Arc::new(SpectralConvergentBornOperator {
+            iterations: 128,
+            relative_tolerance: 1.0e-13,
+            absorbing_boundary: AbsorbingBoundary::disabled(),
+        }),
         ..Config::default()
     };
     let mut truth = Array3::from_elem((3, 3, 1), 1500.0);

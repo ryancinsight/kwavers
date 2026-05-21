@@ -53,6 +53,4 @@ pub use operator::{
 pub use cbs::AbsorbingBoundary;
 pub use forward::simulate_frequency_observation;
 pub use inversion::invert;
-pub use types::{
-    Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
-};
+pub use types::{Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};

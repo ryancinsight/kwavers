@@ -93,11 +93,11 @@ impl DomainEMSource for PointEMSource {
 
         // Simplified spherical wave: E ∝ (1/r) sin(kr - ωt + φ)
         let k = 2.0 * std::f64::consts::PI * self.frequency / SPEED_OF_LIGHT; // Wave number
-                                                                   //
-                                                                   // Not yet implemented: full radiation pattern modeling. Absent: Hertzian dipole
-                                                                   // near-field corrections; phased antenna array beamforming; dielectric material
-                                                                   // dispersion effects; surface plasmon polariton coupling at metal-dielectric
-                                                                   // interfaces; and quantum optical effects for high-intensity sources.
+                                                                              //
+                                                                              // Not yet implemented: full radiation pattern modeling. Absent: Hertzian dipole
+                                                                              // near-field corrections; phased antenna array beamforming; dielectric material
+                                                                              // dispersion effects; surface plasmon polariton coupling at metal-dielectric
+                                                                              // interfaces; and quantum optical effects for high-intensity sources.
         let omega = 2.0 * std::f64::consts::PI * self.frequency;
         let phase = k * distance - omega * time + self.phase;
 

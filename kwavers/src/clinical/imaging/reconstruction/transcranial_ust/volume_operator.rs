@@ -37,17 +37,7 @@ mod operators;
 
 const C_TISSUE_DENSITY_KG_M3: f64 = 1000.0;
 
-#[derive(Clone, Copy, Debug)]
-pub(super) struct VolumeVoxel {
-    pub ix: usize,
-    pub iy: usize,
-    pub iz: usize,
-    pub x_m: f64,
-    pub y_m: f64,
-    pub z_m: f64,
-    pub target_contrast: f64,
-    pub attenuation_np_per_m_mhz: f64,
-}
+pub(super) use crate::solver::inverse::linear_born_inversion::VolumeVoxel;
 
 pub(super) struct VolumeOperator<'a> {
     active: &'a [VolumeVoxel],

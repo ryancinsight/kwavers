@@ -67,7 +67,10 @@ pub use geometry::FwiGeometry;
 #[cfg(test)]
 mod tests;
 
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use crate::domain::grid::Grid;
 use crate::solver::inverse::seismic::parameters::FwiParameters;
+use ndarray::Array3;
 
 /// Reference density for seismic-tradition acoustic FWI [kg/m³].
 ///
@@ -81,16 +84,86 @@ use crate::solver::inverse::seismic::parameters::FwiParameters;
 pub(super) const RHO_SEISMIC_REF: f64 = 2000.0; // kg/m³
 
 /// Full Waveform Inversion processor (time-domain, FDTD-driven).
+///
+/// ## Density handling
+///
+/// `density_model` is an optional spatially varying density field [kg/m³]
+/// matching the velocity-model grid. When supplied, it is used by both the
+/// forward FDTD medium and the adjoint medium, and the local value
+/// `ρ(x)` enters the gradient scaling per Plessix (2006) eq. (12):
+///
+/// ```text
+/// g_c(x) = -(2 / (ρ(x) · c(x)³)) · ∫₀ᵀ p̈_fwd(x, t) · λ(x, t) dt
+/// ```
+///
+/// When `density_model` is `None`, the processor falls back to the constant
+/// [`RHO_SEISMIC_REF`] for both media and the gradient scaling — a global
+/// scalar that is absorbed into the line-search step-size and therefore
+/// produces a descent direction identical to the heterogeneous formulation
+/// up to a uniform rescaling.
 #[derive(Debug)]
 pub struct FwiProcessor {
     pub(super) parameters: FwiParameters,
+    pub(super) density_model: Option<Array3<f64>>,
 }
 
 impl FwiProcessor {
-    /// Create new FWI processor with specified parameters.
+    /// Create new FWI processor with specified parameters and constant
+    /// reference density.
     #[must_use]
     pub fn new(parameters: FwiParameters) -> Self {
-        Self { parameters }
+        Self {
+            parameters,
+            density_model: None,
+        }
+    }
+
+    /// Supply a heterogeneous density field [kg/m³] used by both the forward
+    /// FDTD medium and the adjoint medium, and applied as a local `1/ρ(x)`
+    /// factor in the velocity-model gradient.
+    ///
+    /// ## Errors
+    /// Returns [`KwaversError::Validation`] if any density value is non-finite
+    /// or non-positive.
+    pub fn with_density(mut self, density: Array3<f64>) -> KwaversResult<Self> {
+        for &value in density.iter() {
+            if !value.is_finite() || value <= 0.0 {
+                return Err(KwaversError::Validation(
+                    ValidationError::ConstraintViolation {
+                        message: format!(
+                            "FWI density model must be finite and positive; got {value}"
+                        ),
+                    },
+                ));
+            }
+        }
+        self.density_model = Some(density);
+        Ok(self)
+    }
+
+    /// Resolve the density field used for forward / adjoint medium
+    /// construction. Returns the caller-supplied heterogeneous field when
+    /// present, validated against the grid; otherwise returns a constant
+    /// [`RHO_SEISMIC_REF`] field of the requested shape.
+    pub(super) fn resolved_density(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = grid.dimensions();
+        match self.density_model.as_ref() {
+            Some(density) => {
+                if density.dim() != (nx, ny, nz) {
+                    return Err(KwaversError::Validation(
+                        ValidationError::ConstraintViolation {
+                            message: format!(
+                                "FWI density model shape {:?} does not match grid {:?}",
+                                density.dim(),
+                                (nx, ny, nz)
+                            ),
+                        },
+                    ));
+                }
+                Ok(density.clone())
+            }
+            None => Ok(Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF)),
+        }
     }
 }
 

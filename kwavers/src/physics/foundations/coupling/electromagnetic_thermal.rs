@@ -45,7 +45,10 @@ pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
 
     /// Perfusion cooling rate (W/m³). Pennes (1948) Eq 1: q_p = w·ρ_b·c_b·(T − T_b).
     fn perfusion_cooling(&self, temperature: f64, _position: &[f64]) -> f64 {
-        TISSUE_PERFUSION_RATE * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT * (temperature - BODY_TEMPERATURE_C)
+        TISSUE_PERFUSION_RATE
+            * DENSITY_BLOOD
+            * BLOOD_SPECIFIC_HEAT
+            * (temperature - BODY_TEMPERATURE_C)
     }
 
     /// Bioheat equation source term (including perfusion)

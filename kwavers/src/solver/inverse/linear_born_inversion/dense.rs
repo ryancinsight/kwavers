@@ -1,10 +1,16 @@
-//! Dense finite-frequency inverse-problem kernels.
+//! Dense matrix kernels for linear Born inversion.
+//!
+//! These kernels operate on a row-major sensitivity matrix `A` with `nrows`
+//! measurements and `ncols` unknowns. They are anatomy-neutral: clinical
+//! adapters own geometry, media, and active-voxel extraction, then pass the
+//! assembled dense operator here.
 
 use rayon::prelude::*;
 
-use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
+use super::LinearBornInversionConfig;
 
-pub(super) fn migration_contrast(
+/// Diagonal-preconditioned migration image `diag(A^T A + λI)^-1 A^T b`.
+pub(crate) fn migration_contrast(
     matrix: &[f64],
     data: &[f64],
     nrows: usize,
@@ -20,7 +26,8 @@ pub(super) fn migration_contrast(
     adjoint
 }
 
-pub(super) fn normal_equation_diagonal(
+/// Compute `diag(A^T A) + λI` over all rows.
+pub(crate) fn normal_equation_diagonal(
     matrix: &[f64],
     nrows: usize,
     ncols: usize,
@@ -30,16 +37,13 @@ pub(super) fn normal_equation_diagonal(
     normal_equation_diagonal_rows(matrix, &rows, ncols, regularization)
 }
 
-pub(super) fn normal_equation_diagonal_rows(
+/// Compute `diag(A[rows]^T A[rows]) + λI`.
+pub(crate) fn normal_equation_diagonal_rows(
     matrix: &[f64],
     rows: &[usize],
     ncols: usize,
     regularization: f64,
 ) -> Vec<f64> {
-    // fold + reduce: each Rayon task accumulates squared column values into a
-    // task-local partial Vec; binary-tree reduce combines them without a serial
-    // collection barrier, lowering the critical-path from O(n_tasks × ncols) to
-    // O(ncols × log n_tasks).
     let mut diagonal = rows
         .par_chunks(row_chunk_len(rows.len()))
         .fold(
@@ -64,15 +68,15 @@ pub(super) fn normal_equation_diagonal_rows(
                 a
             },
         );
-    // Add regularization once after reduction; avoids counting it n_tasks times.
     let reg = regularization.max(1.0e-12);
-    for d in diagonal.iter_mut() {
+    for d in &mut diagonal {
         *d += reg;
     }
     diagonal
 }
 
-pub(super) fn normalized_gradient_rows(
+/// Compute diagonal-preconditioned `A^T(b - A model) - λ model` over selected rows.
+pub(crate) fn normalized_gradient_rows(
     matrix: &[f64],
     data: &[f64],
     model: &[f64],
@@ -88,7 +92,8 @@ pub(super) fn normalized_gradient_rows(
     gradient
 }
 
-pub(super) fn matrix_vector<F>(matrix: &[f64], nrows: usize, ncols: usize, x: F) -> Vec<f64>
+/// Compute `A x` with `x` supplied by index.
+pub(crate) fn matrix_vector<F>(matrix: &[f64], nrows: usize, ncols: usize, x: F) -> Vec<f64>
 where
     F: Fn(usize) -> f64 + Sync,
 {
@@ -107,7 +112,8 @@ where
     data
 }
 
-pub(super) fn objective(
+/// Half-squared L2 data misfit plus Tikhonov regularization over all rows.
+pub(crate) fn objective(
     matrix: &[f64],
     data: &[f64],
     model: &[f64],
@@ -119,7 +125,8 @@ pub(super) fn objective(
     objective_rows(matrix, data, model, &rows, ncols, regularization)
 }
 
-pub(super) fn objective_rows(
+/// Half-squared L2 data misfit plus Tikhonov regularization over selected rows.
+pub(crate) fn objective_rows(
     matrix: &[f64],
     data: &[f64],
     model: &[f64],
@@ -127,8 +134,6 @@ pub(super) fn objective_rows(
     ncols: usize,
     regularization: f64,
 ) -> f64 {
-    // `.sum()` on a `ParallelIterator` avoids the intermediate Vec allocation
-    // that `collect() + into_iter().sum()` requires.
     let misfit: f64 = rows
         .par_chunks(row_chunk_len(rows.len()))
         .map(|chunk| {
@@ -215,4 +220,34 @@ fn adjoint_residual_rows(
 fn row_chunk_len(row_count: usize) -> usize {
     let target_chunks = rayon::current_num_threads().max(1) * 4;
     row_count.div_ceil(target_chunks).max(1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dense_objective_and_gradient_match_hand_computation() {
+        let matrix = [1.0, 2.0, -1.0, 0.5, 0.0, 3.0];
+        let data = matrix_vector(&matrix, 3, 2, |col| [0.25, -0.5][col]);
+        assert_eq!(data, vec![-0.75, -0.5, -1.5]);
+
+        let objective_value = objective(&matrix, &data, &[0.0, 0.0], 3, 2, 0.2);
+        let expected = 0.5 * (0.75_f64.powi(2) + 0.5_f64.powi(2) + 1.5_f64.powi(2));
+        assert!((objective_value - expected).abs() < 1.0e-12);
+
+        let config = LinearBornInversionConfig {
+            regularization: 0.2,
+            ..LinearBornInversionConfig::default()
+        };
+        let rows = [0, 1, 2];
+        let diag = normal_equation_diagonal_rows(&matrix, &rows, 2, config.regularization);
+        assert!((diag[0] - 2.2).abs() < 1.0e-12);
+        assert!((diag[1] - 13.45).abs() < 1.0e-12);
+
+        let gradient =
+            normalized_gradient_rows(&matrix, &data, &[0.0, 0.0], &rows, 2, &diag, &config);
+        assert!((gradient[0] + 0.11363636363636363).abs() < 1.0e-12);
+        assert!((gradient[1] + 0.4646840148698885).abs() < 1.0e-12);
+    }
 }

@@ -29,10 +29,10 @@ impl Default for EMConfig {
             time_steps: 1000,
             permittivity: VACUUM_PERMITTIVITY,
             permeability: VACUUM_PERMEABILITY,
-            conductivity: 0.0,                         // Perfect dielectric
-            spatial_steps: [1e-3, 1e-3, 1e-3],         // 1mm resolution
-            time_step: 1e-12,                          // 1ps time step
-            courant_factor: 0.99,                      // Conservative stability
+            conductivity: 0.0,                 // Perfect dielectric
+            spatial_steps: [1e-3, 1e-3, 1e-3], // 1mm resolution
+            time_step: 1e-12,                  // 1ps time step
+            courant_factor: 0.99,              // Conservative stability
             boundary_condition: ElectromagneticBc::Absorbing,
         }
     }

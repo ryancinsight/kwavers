@@ -172,9 +172,27 @@ theorems against an external published reconstruction.
   the no-CPML homogeneous modal recurrence with propagation kappa, source kappa,
   exact source timing, and the same trailing frequency-bin projection as the
   Rust acquisition.
-- Completed the transcranial clinical/generic config boundary: clinical
-  entrypoints retain `TranscranialUstBornInversionConfig` for anatomy fields and
-  pass `&config.linear` to generic linear-Born kernels.
+- Corrected Ali 2025 diagnostic ownership: point-Green, source-kappa, and
+  finite-grid PSTD homogeneous direct-field computations now live in the Rust
+  clinical breast-FWI module and are exposed through PyO3. Python no longer
+  implements the diagnostic formulas; it calls
+  `diagnose_breast_fwi_homogeneous_direct_field` and remains a report/plot
+  layer for this path.
+- Corrected Ali 2025 replication diagnostic ownership: observation residuals,
+  source-channel attribution, source-excitation dispersion, rank
+  identifiability, reconstruction RMSE/PCC, and Table 1 parity gates now live
+  in `breast_ust_fwi::diagnostics` and are exposed through PyO3. The Python
+  Ali support modules now delegate to bindings, while the reduced replication
+  script uses `diagnose_breast_fwi_observation_pair` for forward consistency,
+  source-channel, and source-excitation reporting.
+- Corrected Ali 2025 reduced-domain preparation ownership: deterministic
+  decimation, center cropping, median homogeneous initial-model construction,
+  and reduced array geometry now live in `breast_ust_fwi::reduction` and are
+  exposed through PyO3. The replication script no longer owns those clinical
+  reduction formulas.
+- Completed the transcranial clinical/generic config boundary enough to restore
+  compile gates: clinical entrypoints retain `TranscranialUstBornInversionConfig`
+  for anatomy fields and pass `&config.linear` to generic linear-Born kernels.
 - Closed residual FWI import drift: remaining examples now depend on
   `solver::inverse::fwi::time_domain` directly, with no legacy seismic-owned
   compatibility path.

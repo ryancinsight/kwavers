@@ -44,24 +44,38 @@
   `TranscranialBowlGeometry` impls the trait with bowl-specific azimuthal-
   rotation override of `receiver_indices`. `cargo check -p kwavers --lib` and
   `cargo test -p kwavers linear_born_inversion --lib` pass.
-- **[done] [arch] T13b-Phase-1: LinearBornInversionConfig defined — CLOSED 2026-05-21.**
-  New `solver/inverse/linear_born_inversion/config.rs` holds anatomy-neutral
-  numerical fields (frequencies_hz, receiver_offsets, iterations, relaxation,
-  regularization, frequency_continuation, Sobolev, edge-preserving,
-  attenuation, harmonic, source-pressure, beta, and contrast bounds) with
-  validate/harmonic_count/measurement_count methods. `element_count` and
-  `radius_m` stay on the clinical transducer geometry wrapper.
-- **[done] [arch] T13b-Phase-2: transcranial kernels consume the generic config — CLOSED 2026-05-21.**
-  `TranscranialUstBornInversionConfig` now embeds `LinearBornInversionConfig`;
-  slice and volume entrypoints construct bowl geometry from clinical fields and
-  pass `&config.linear` to linear_algebra, sensitivity, conditioning,
-  volume_regularization, volume_operator/*, and volume_born/pcg. Verified with
+- **[done] [arch] T13c: MultiRowRingArray adopts TransducerGeometry — CLOSED 2026-05-20.**
+  `RingPoint` (in `physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi`)
+  renamed to `ElementPosition` across 38 references in 9 files; duplicate
+  type definition removed; the canonical type now lives only in the solver
+  layer. `MultiRowRingArray` impls `TransducerGeometry` (default cyclic-
+  offset semantics, appropriate for a ring). Second cross-module consumer
+  proves the abstraction generalises; the breast-UST ring array and the
+  transcranial bowl now share one trait surface. cargo check --lib clean.
+- **[done] [arch] T13b-Phase-1: LinearBornInversionConfig defined — CLOSED 2026-05-20.**
+  New `solver/inverse/linear_born_inversion/config.rs` holds 19 anatomy-
+  neutral numerical fields (frequencies_hz, receiver_offsets, iterations,
+  relaxation, regularization, frequency_continuation, sobolev_*,
+  enhancement_gain, edge_preserving_*, attenuation_model,
+  nonlinear_harmonic_model, source_pressure_mpa, nonlinear_beta,
+  contrast_min/max) with validate/harmonic_count/measurement_count methods.
+  element_count and radius_m intentionally excluded — they belong on the
+  transducer geometry constructor, not on the inversion config.
+- **[done] [arch] T13b-Phase-2: migrate transcranial_ust kernels to consume the
+  generic config — CLOSED 2026-05-21.** Embed `LinearBornInversionConfig` inside
+  `TranscranialUstBornInversionConfig` (clinical wrapper = generic + 2
+  anatomy fields). Migrate kernel signatures: 12 sites
+  (`&TranscranialUstBornInversionConfig` → `&LinearBornInversionConfig`)
+  across linear_algebra, sensitivity, conditioning, volume_regularization,
+  volume_operator/*, volume_born/pcg. born.rs entry points pass
+  `&config.linear`. The current compile gate is restored:
   `cargo check -p kwavers --lib --message-format=short -j 2`,
   `cargo test -p kwavers transcranial_ust --lib -j 2`, and
-  `cargo check -p pykwavers --lib --message-format=short -j 2`.
+  `cargo check -p pykwavers --lib --message-format=short -j 2` pass with only
+  pre-existing unrelated warnings.
 - **[arch] T13b-Phase-3: physically relocate the generic kernels** to
-  `solver/inverse/linear_born_inversion/` once Phase-2 makes their signatures
-  take only solver-layer types. Pure file moves at that point.
+  `solver/inverse/linear_born_inversion/` once Phase-2 makes their
+  signatures take only solver-layer types. Pure file moves at that point.
 - **[done] [patch] T11d: pykwavers binding rename — CLOSED 2026-05-20.**
   `seismic_bindings/` → `imaging_bindings/`; `slice_fwi.rs` →
   `transcranial_slice_inversion.rs`; `volume_fwi.rs` →
@@ -296,8 +310,8 @@ breast-imaging reconstruction.
   residual remains `0.757458`; this rejects source-kappa filtering as the
   primary parity repair.
 - **[done] [patch] T8m: finite-grid PSTD Green diagnostic — CLOSED 2026-05-21.**
-  Added `ali2025_breast_fwi.discrete_green`, a finite-grid homogeneous PSTD
-  direct-field diagnostic derived from the no-CPML modal recurrence with
+  Added a finite-grid homogeneous PSTD direct-field diagnostic derived from the
+  no-CPML modal recurrence with
   propagation kappa, pressure-source kappa, source timing, and the same trailing
   Fourier-bin projection used by the Rust acquisition. On the determined
   4x4x3/two-frequency probe, the periodic PSTD Green worsens all-channel
@@ -305,6 +319,38 @@ breast-imaging reconstruction.
   `0.455227`, passive phase-error RMS to `0.956928` rad, and passive
   log-amplitude-error RMS to `0.422984`; the remaining dominant discrepancy is
   active source/receiver self-channel semantics.
+- **[done] [minor] T8o: Rust-owned direct-field diagnostics — CLOSED 2026-05-21.**
+  Moved the T8k/T8l/T8m point-Green, source-kappa, and finite-grid PSTD
+  computations out of Python and into
+  `kwavers::clinical::imaging::reconstruction::breast_ust_fwi::direct_field`.
+  `pykwavers` now exposes
+  `diagnose_breast_fwi_homogeneous_direct_field`, while the Python
+  `ali2025_breast_fwi.direct_field` module only delegates to that binding.
+  The Python `discrete_green` implementation and tests were removed. The
+  determined 4x4x3/two-frequency probe reproduces the prior diagnostic values
+  through Rust-owned computation: point residual `0.454900`, source-kappa
+  residual `0.454689`, and periodic PSTD residual `0.741005`.
+- **[done] [minor] T8p: Rust-owned replication diagnostics — CLOSED 2026-05-21.**
+  Moved scaled observation residuals, source-channel attribution,
+  source-excitation dispersion, rank identifiability, reconstruction
+  RMSE/PCC, and Table 1 parity gates into
+  `kwavers::clinical::imaging::reconstruction::breast_ust_fwi::diagnostics`.
+  `pykwavers` now exposes the corresponding diagnostic functions plus the
+  combined `diagnose_breast_fwi_observation_pair`; Python support modules
+  delegate to bindings and the direct-field path reuses the same residual and
+  source-excitation implementations. The determined 4x4x3/two-frequency probe
+  preserves the prior report values through Rust-owned metrics: true-model
+  normalized residual `0.523411`, source-excitation phase span `0.919426`, RMSE
+  `54.6750` m/s, and PCC `0.110968`.
+- **[done] [minor] T8q: Rust-owned reduced-domain preparation — CLOSED 2026-05-21.**
+  Moved reduced phantom decimation, center cropping, median homogeneous initial
+  model construction, and reduced ring-array geometry derivation into
+  `kwavers::clinical::imaging::reconstruction::breast_ust_fwi::reduction`.
+  `pykwavers` now exposes `prepare_breast_fwi_reduced_phantom` and
+  `derive_breast_fwi_reduced_array_geometry`, and the replication script uses
+  those bindings instead of Python-owned domain formulas. The determined
+  4x4x3/two-frequency probe preserves the Rust-owned report values: true-model
+  normalized residual `0.523411`, RMSE `54.6750` m/s, and PCC `0.110968`.
 - **[done] [patch] T8n: focused-bowl terminology cleanup — CLOSED 2026-05-21.**
   Removed residual transcranial vendor/helmet labels from book examples and
   documentation, renamed the Chapter 25 phase-correction artifact stem to

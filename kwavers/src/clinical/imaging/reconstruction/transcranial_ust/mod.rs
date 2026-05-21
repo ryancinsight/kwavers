@@ -8,7 +8,6 @@
 mod born;
 mod conditioning;
 mod config;
-mod linear_algebra;
 mod medium;
 mod sensitivity;
 mod transducer;

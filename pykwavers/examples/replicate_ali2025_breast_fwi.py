@@ -3,8 +3,8 @@
 This script keeps the clinical replication path on the production bindings:
 Rust decodes the published MATLAB-5 MRI phantom or HDF5 sound-speed phantom,
 Rust generates PSTD frequency-domain data, and Rust runs the frequency-domain
-FWI solver. Python owns orchestration, deterministic domain reduction, metrics,
-and visualization.
+FWI solver. Python owns CLI orchestration, deterministic domain reduction,
+report serialization, and visualization.
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ import json
 import os
 import sys
 import urllib.request
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -25,10 +24,6 @@ from ali2025_breast_fwi.identifiability import (
     acquisition_identifiability,
     require_determined_acquisition,
 )
-from ali2025_breast_fwi.forward_consistency import (
-    scaled_observation_residual_metrics,
-    source_channel_residual_diagnostics,
-)
 from ali2025_breast_fwi.direct_field import homogeneous_direct_field_probe
 from ali2025_breast_fwi.metrics import reconstruction_metrics, table1_parity
 from ali2025_breast_fwi.operator_equivalence import (
@@ -36,9 +31,7 @@ from ali2025_breast_fwi.operator_equivalence import (
     operator_equivalence_diagnostics,
     simulate_forward_predictions,
 )
-from ali2025_breast_fwi.source_excitation import source_excitation_diagnostics
 from ali2025_breast_fwi.visualization import write_orthographic_plot
-from ali2025_breast_fwi.volume import require_volume
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -49,18 +42,6 @@ PHANTOM_URL = (
 )
 PHANTOM_FILE_NAME = "BreastPhantomFromMRI.mat"
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "output" / "ali2025_breast_fwi"
-
-
-@dataclass(frozen=True)
-class ReducedPhantom:
-    sound_speed_m_s: np.ndarray
-    initial_sound_speed_m_s: np.ndarray
-    original_shape: tuple[int, int, int]
-    reduced_shape: tuple[int, int, int]
-    source_spacing_m: float
-    effective_spacing_m: float
-    dataset_path: str
-    source_path: str
 
 
 def bootstrap_pykwavers() -> Any:
@@ -141,89 +122,6 @@ def parse_frequency_list(value: str) -> list[float]:
     return frequencies
 
 
-def center_crop_volume(volume: np.ndarray, max_shape: tuple[int, int, int]) -> np.ndarray:
-    volume = require_volume(volume)
-    slices = []
-    for axis, limit in enumerate(max_shape):
-        if limit <= 0:
-            raise ValueError(f"max_shape entries must be positive, got {max_shape}")
-        length = volume.shape[axis]
-        if limit >= length:
-            slices.append(slice(0, length))
-        else:
-            start = (length - limit) // 2
-            slices.append(slice(start, start + limit))
-    return np.ascontiguousarray(volume[tuple(slices)], dtype=np.float64)
-
-
-def decimate_volume(volume: np.ndarray, factor: int) -> np.ndarray:
-    volume = require_volume(volume)
-    if factor <= 0:
-        raise ValueError(f"decimation factor must be positive, got {factor}")
-    return np.ascontiguousarray(volume[::factor, ::factor, ::factor], dtype=np.float64)
-
-
-def homogeneous_initial_model(volume: np.ndarray) -> np.ndarray:
-    volume = require_volume(volume)
-    reference = float(np.median(volume))
-    if not np.isfinite(reference) or reference <= 0.0:
-        raise ValueError("median sound speed is outside the physical domain")
-    return np.full(volume.shape, reference, dtype=np.float64)
-
-
-def prepare_reduced_phantom(
-    phantom: dict[str, Any],
-    max_shape: tuple[int, int, int],
-    decimation: int,
-) -> ReducedPhantom:
-    spacing_m = float(phantom["spacing_m"])
-    if not np.isfinite(spacing_m) or spacing_m <= 0.0:
-        raise ValueError(f"spacing_m must be positive and finite, got {spacing_m}")
-
-    source = require_volume(np.asarray(phantom["sound_speed_m_s"], dtype=np.float64))
-    reduced = center_crop_volume(decimate_volume(source, decimation), max_shape)
-    initial = homogeneous_initial_model(reduced)
-    return ReducedPhantom(
-        sound_speed_m_s=reduced,
-        initial_sound_speed_m_s=initial,
-        original_shape=tuple(int(axis) for axis in source.shape),
-        reduced_shape=tuple(int(axis) for axis in reduced.shape),
-        source_spacing_m=spacing_m,
-        effective_spacing_m=spacing_m * decimation,
-        dataset_path=str(phantom["dataset_path"]),
-        source_path=str(phantom["source_path"]),
-    )
-
-
-def derive_reduced_array_geometry(
-    shape: tuple[int, int, int],
-    spacing_m: float,
-    rows: int,
-    diameter_m: float | None,
-    row_spacing_m: float | None,
-) -> tuple[float, float]:
-    if rows <= 0:
-        raise ValueError(f"rows must be positive, got {rows}")
-    if not np.isfinite(spacing_m) or spacing_m <= 0.0:
-        raise ValueError(f"spacing_m must be positive and finite, got {spacing_m}")
-    lateral_extent = (min(shape[0], shape[1]) - 1) * spacing_m
-    if lateral_extent <= 0.0:
-        raise ValueError(f"lateral grid extent is degenerate for shape {shape}")
-    diameter = 0.80 * lateral_extent if diameter_m is None else float(diameter_m)
-    if not np.isfinite(diameter) or diameter <= 0.0 or diameter > lateral_extent:
-        raise ValueError(
-            "diameter_m must be positive, finite, and no larger than the reduced lateral grid extent"
-        )
-    if row_spacing_m is None:
-        axial_extent = (shape[2] - 1) * spacing_m
-        row_spacing = 0.0 if rows == 1 else min(0.0024, 0.80 * axial_extent / (rows - 1))
-    else:
-        row_spacing = float(row_spacing_m)
-    if not np.isfinite(row_spacing) or row_spacing < 0.0:
-        raise ValueError(f"row_spacing_m must be finite and nonnegative, got {row_spacing}")
-    return diameter, row_spacing
-
-
 def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
     kw = bootstrap_pykwavers()
     phantom_path = resolve_phantom_path(args.phantom_path, args.phantom_dir, args.phantom_url)
@@ -240,14 +138,29 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         mat5_mri_variable_name=args.mat5_mri_variable_name,
         mat5_tissue_threshold=args.mat5_tissue_threshold,
     )
-    reduced = prepare_reduced_phantom(phantom, args.max_shape, args.decimation)
-    diameter_m, row_spacing_m = derive_reduced_array_geometry(
-        reduced.reduced_shape,
-        reduced.effective_spacing_m,
+    reduced = kw.prepare_breast_fwi_reduced_phantom(
+        phantom["sound_speed_m_s"],
+        float(phantom["spacing_m"]),
+        args.max_shape,
+        args.decimation,
+        str(phantom["dataset_path"]),
+        str(phantom["source_path"]),
+    )
+    reduced_sound_speed = np.asarray(reduced["sound_speed_m_s"], dtype=np.float64)
+    initial_sound_speed = np.asarray(reduced["initial_sound_speed_m_s"], dtype=np.float64)
+    reduced_shape = tuple(int(axis) for axis in reduced["reduced_shape"])
+    original_shape = tuple(int(axis) for axis in reduced["original_shape"])
+    effective_spacing_m = float(reduced["effective_spacing_m"])
+    source_spacing_m = float(reduced["source_spacing_m"])
+    geometry = kw.derive_breast_fwi_reduced_array_geometry(
+        reduced_shape,
+        effective_spacing_m,
         args.rows,
         args.diameter_m,
         args.row_spacing_m,
     )
+    diameter_m = float(geometry["diameter_m"])
+    row_spacing_m = float(geometry["row_spacing_m"])
 
     array = kw.MultiRowRingArray(
         args.circumferential_elements,
@@ -258,11 +171,11 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
     if args.snap_array_to_grid:
         array = kw.snap_breast_fwi_array_to_grid(
             array,
-            reduced.reduced_shape,
-            reduced.effective_spacing_m,
+            reduced_shape,
+            effective_spacing_m,
         )
     identifiability = acquisition_identifiability(
-        reduced.reduced_shape,
+        reduced_shape,
         args.frequencies_hz,
         args.circumferential_elements,
         int(array.element_count),
@@ -272,7 +185,7 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         require_determined_acquisition(identifiability)
 
     dataset_config = kw.BreastFwiPstdDatasetConfig(
-        spacing_m=reduced.effective_spacing_m,
+        spacing_m=effective_spacing_m,
         time_step_s=args.time_step_s,
         cycles_per_frequency=args.cycles_per_frequency,
         frequency_bin_cycles=args.frequency_bin_cycles,
@@ -280,12 +193,12 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         density_kg_m3=args.density_kg_m3,
         cpml_thickness_cells=args.cpml_thickness_cells,
     )
-    reference_speed = float(np.median(reduced.sound_speed_m_s))
-    configs_by_model = make_configs_by_model(kw, args, reference_speed, reduced.effective_spacing_m)
+    reference_speed = float(initial_sound_speed.ravel()[0])
+    configs_by_model = make_configs_by_model(kw, args, reference_speed, effective_spacing_m)
     fwi_config = configs_by_model["spectral_convergent_born"]
 
     dataset = kw.generate_breast_fwi_pstd_dataset(
-        reduced.sound_speed_m_s,
+        reduced_sound_speed,
         array,
         args.frequencies_hz,
         dataset_config,
@@ -293,7 +206,7 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
     observed_pressure = np.asarray(dataset["observed_pressure"], dtype=np.complex128)
     forward_predictions = simulate_forward_predictions(
         kw,
-        reduced.sound_speed_m_s,
+        reduced_sound_speed,
         array,
         args.frequencies_hz,
         configs_by_model,
@@ -308,25 +221,21 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         dataset["time_steps_per_frequency"],
         dataset["frequency_bin_start_steps_per_frequency"],
     )
-    forward_consistency = scaled_observation_residual_metrics(truth_forward, observed_pressure)
-    source_channel_consistency = source_channel_residual_diagnostics(
+    observation_diagnostics = kw.diagnose_breast_fwi_observation_pair(
         truth_forward,
         observed_pressure,
-        args.circumferential_elements,
-        args.rows,
-    )
-    source_excitation = source_excitation_diagnostics(
-        truth_forward,
-        observed_pressure,
+        array,
         args.frequencies_hz,
-        args.source_amplitude_pa,
-        args.time_step_s,
+        dataset_config,
         dataset["time_steps_per_frequency"],
         dataset["frequency_bin_start_steps_per_frequency"],
     )
+    forward_consistency = observation_diagnostics["forward_consistency"]
+    source_channel_consistency = observation_diagnostics["source_channel_consistency"]
+    source_excitation = observation_diagnostics["source_excitation"]
     homogeneous_direct_field = homogeneous_direct_field_probe(
         kw,
-        reduced.initial_sound_speed_m_s,
+        initial_sound_speed,
         array,
         args.frequencies_hz,
         dataset_config,
@@ -335,11 +244,11 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         args.frequencies_hz,
         observed_pressure,
         array,
-        reduced.initial_sound_speed_m_s,
+        initial_sound_speed,
         fwi_config,
     )
     reconstruction = np.asarray(inversion["sound_speed_m_s"], dtype=np.float64)
-    metrics = reconstruction_metrics(reduced.sound_speed_m_s, reconstruction)
+    metrics = reconstruction_metrics(reduced_sound_speed, reconstruction)
     parity = table1_parity(
         metrics,
         args.phantom_index,
@@ -356,7 +265,7 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     if args.plot:
         write_orthographic_plot(
-            reduced.sound_speed_m_s,
+            reduced_sound_speed,
             reconstruction,
             args.output_dir / "ali2025_breast_fwi_slices.png",
         )
@@ -365,11 +274,11 @@ def run_reduced_replication(args: argparse.Namespace) -> dict[str, Any]:
         "model_family": "ali_2025_reduced_grid_breast_ust_fwi_replication",
         "phantom_url": args.phantom_url,
         "phantom_path": str(phantom_path),
-        "dataset_path": reduced.dataset_path,
-        "original_shape": reduced.original_shape,
-        "reduced_shape": reduced.reduced_shape,
-        "source_spacing_m": reduced.source_spacing_m,
-        "effective_spacing_m": reduced.effective_spacing_m,
+        "dataset_path": str(reduced["dataset_path"]),
+        "original_shape": original_shape,
+        "reduced_shape": reduced_shape,
+        "source_spacing_m": source_spacing_m,
+        "effective_spacing_m": effective_spacing_m,
         "frequencies_hz": args.frequencies_hz,
         "array": {
             "circumferential_elements": args.circumferential_elements,

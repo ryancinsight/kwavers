@@ -1,10 +1,12 @@
 //! PCG inversion kernel for the 3-D Born transcranial focused-bowl solver.
 
-use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
+use crate::solver::inverse::linear_born_inversion::{
+    schedule::{continuation_rows, stage_iteration_count},
+    LinearBornInversionConfig,
+};
 use ndarray::Array3;
 
 use super::super::{
-    conditioning::{continuation_rows, stage_iteration_count},
     volume_operator::{VolumeOperator, VolumeVoxel},
     volume_regularization::{
         build_active_index, edge_preserving_penalty, edge_preserving_projection,

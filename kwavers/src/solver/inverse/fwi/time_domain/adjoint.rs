@@ -1,6 +1,6 @@
 //! Adjoint FDTD run, adjoint-source construction, L2 residual and objective.
 
-use super::{geometry::FwiGeometry, FwiProcessor, RHO_SEISMIC_REF};
+use super::{geometry::FwiGeometry, FwiProcessor};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::boundary::cpml::{CPMLConfig, PerDimensionPML};
 use crate::domain::grid::Grid;
@@ -123,12 +123,38 @@ impl FwiProcessor {
     /// Adjoint modeling using time-reversed FDTD.
     ///
     /// Computes the adjoint wavefield by running the FDTD solver in reverse time
-    /// with the adjoint source (data residual) as input, then accumulates
-    /// `∂J/∂m = −dt · p̈(x,t) · λ(x,t)` over all timesteps.
+    /// with the adjoint source (data residual) as input, then accumulates the
+    /// discrete velocity-model gradient
+    ///
+    /// ```text
+    /// g_c(x) = (-2 / c(x)^3) · Σ_t  (-dt) · p̈_fwd(x, T-t) · λ(x, t)
+    ///        ≈ (-2 / c(x)^3) · ∫₀ᵀ p̈_fwd · λ  dt
+    /// ```
+    ///
+    /// where the `−dt` factor inside [`accumulate_signed_correlation`] is the
+    /// time-integration measure (Riemann sum approximating the continuous
+    /// adjoint-state integral; the discrete L2 objective `J = (dt/2) Σ_t r²` is
+    /// the discretisation of `½∫r² dt`, so the residual itself carries no
+    /// extra `dt` weight in the adjoint source — see
+    /// [`build_adjoint_source`] / [`l2_residual`]).
+    ///
+    /// ## Density handling
+    ///
+    /// The full acoustic gradient (Plessix 2006, eq. 12) is
+    /// `g_c = -(2 / (ρ c³)) ∫ p̈ · λ dt` (after one integration by parts).
+    /// The local density is taken from
+    /// [`FwiProcessor::resolved_density`]: if the caller supplied a
+    /// heterogeneous field via [`FwiProcessor::with_density`], `ρ(x)` is
+    /// used both in the forward / adjoint medium and in the per-voxel
+    /// scaling below; otherwise the constant
+    /// [`RHO_SEISMIC_REF`](super::RHO_SEISMIC_REF) (2000 kg/m³) is used
+    /// uniformly. Because the forward and adjoint media share the same
+    /// resolved density, the discrete adjoint operator is exactly the
+    /// time-reverse of the forward operator in both cases.
     ///
     /// # References
     /// * Tromp et al. (2005): "Seismic tomography, adjoint methods"
-    /// * Plessix (2006), GFJI 167(2), eq. (5)–(6)
+    /// * Plessix (2006), GFJI 167(2), eq. (5)–(6) and (12)
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -174,10 +200,10 @@ impl FwiProcessor {
             geometry: Default::default(),
         };
 
-        let density_adj = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
+        let density_adj = self.resolved_density(grid)?;
         let medium_adj = HeterogeneousFactory::from_arrays(
             model.clone(),
-            density_adj,
+            density_adj.clone(),
             None,
             None, // alpha_power: default 1.0
             None,
@@ -223,9 +249,17 @@ impl FwiProcessor {
             )?;
         }
 
-        Zip::from(&mut gradient_m).and(model).par_for_each(|g, &c| {
-            *g *= -2.0 / c.powi(3);
-        });
+        // Apply the local ρ(x)⁻¹ · c(x)⁻³ scaling from Plessix (2006) eq. (12):
+        //   g_c(x) = -(2 / (ρ(x) · c(x)³)) · ∫ p̈_fwd · λ dt.
+        // When `density_model` is `None`, `density_adj` is a constant
+        // `RHO_SEISMIC_REF` field and this reduces to the legacy
+        // `-2 / c(x)³` scaling up to a uniform scalar absorbed by line search.
+        Zip::from(&mut gradient_m)
+            .and(model)
+            .and(&density_adj)
+            .par_for_each(|g, &c, &rho| {
+                *g *= -2.0 / (rho * c.powi(3));
+            });
 
         let (gmax, gmax_idx) = gradient_m.indexed_iter().fold(
             (0.0_f64, (0usize, 0usize, 0usize)),

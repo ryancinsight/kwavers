@@ -4,7 +4,7 @@ mod pcg;
 
 use crate::core::error::KwaversResult;
 use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
-use crate::solver::inverse::linear_born_inversion::TransducerGeometry;
+use crate::solver::inverse::linear_born_inversion::{high_pass_enhance_volume, TransducerGeometry};
 use ndarray::Array3;
 
 use super::{
@@ -12,7 +12,6 @@ use super::{
     transducer::TranscranialBowlGeometry,
     volume::AcousticVolume,
     volume_operator::{VolumeOperator, VolumeVoxel},
-    volume_regularization::enhance_reconstruction_volume,
 };
 use pcg::invert;
 
@@ -84,7 +83,7 @@ pub fn reconstruct_brain_volume(
 
     let migration = fill_sound_speed_volume(medium, &active, &migration_model);
     let reconstruction = fill_sound_speed_volume(medium, &active, &inversion.model);
-    let enhanced = enhance_reconstruction_volume(
+    let enhanced = high_pass_enhance_volume(
         &reconstruction,
         &medium.brain_mask,
         linear.enhancement_gain,

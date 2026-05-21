@@ -2,19 +2,19 @@
 
 use crate::core::error::KwaversResult;
 use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
-use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
-use ndarray::Array2;
-
-use super::{
-    conditioning::{
-        apply_sobolev_preconditioner, continuation_rows, enhance_reconstruction,
-        stage_iteration_count,
-    },
-    config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
-    linear_algebra::{
+use crate::solver::inverse::linear_born_inversion::{
+    dense::{
         matrix_vector, migration_contrast, normal_equation_diagonal_rows, normalized_gradient_rows,
         objective, objective_rows,
     },
+    schedule::{continuation_rows, stage_iteration_count},
+    LinearBornInversionConfig,
+};
+use ndarray::Array2;
+
+use super::{
+    conditioning::{apply_sobolev_preconditioner, enhance_reconstruction},
+    config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
     medium::AcousticSlice,
     sensitivity::build_sensitivity_matrix,
     transducer::TranscranialBowlGeometry,

@@ -5,7 +5,10 @@
 //! and clinical image metadata stays in `clinical::imaging::reconstruction`.
 
 mod dataset;
+mod diagnostics;
+mod direct_field;
 mod phantom;
+mod reduction;
 
 use kwavers::clinical::imaging::reconstruction::breast_ust_fwi::{
     reconstruct_breast_ust_sound_speed_volume, snap_multi_row_ring_array_to_grid,
@@ -18,13 +21,14 @@ use kwavers::solver::inverse::fwi::frequency_domain::{
     FrequencyObservation, HelmholtzForwardOperator, SingleScatterBornOperator,
     SpectralConvergentBornOperator,
 };
-use std::sync::Arc;
+use kwavers::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{s, Array1, Array2, Array3};
 use num_complex::Complex64;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyModule};
+use std::sync::Arc;
 
 pub use dataset::{generate_breast_fwi_pstd_dataset, PyBreastFwiPstdDatasetConfig};
 pub use phantom::load_ali_2025_breast_fwi_phantom;
@@ -358,6 +362,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(snap_breast_fwi_array_to_grid, m)?)?;
     m.add_function(wrap_pyfunction!(load_ali_2025_breast_fwi_phantom, m)?)?;
     m.add_function(wrap_pyfunction!(generate_breast_fwi_pstd_dataset, m)?)?;
+    direct_field::register(m)?;
+    diagnostics::register(m)?;
+    reduction::register(m)?;
     m.add_function(wrap_pyfunction!(invert_breast_fwi, m)?)?;
     Ok(())
 }
@@ -409,9 +416,7 @@ fn parse_absorbing_boundary(
     }
 }
 
-fn points_to_array(
-    points: &[kwavers::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition],
-) -> Array2<f64> {
+fn points_to_array(points: &[ElementPosition]) -> Array2<f64> {
     Array2::from_shape_fn((points.len(), 3), |(row, col)| match col {
         0 => points[row].x_m,
         1 => points[row].y_m,
