@@ -59,6 +59,7 @@ impl HeterogeneityModelTrait for HeterogeneityModel {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
 
     fn small_grid() -> Grid {
@@ -76,7 +77,7 @@ mod tests {
     /// All values are within base_speed ± variance * base_speed.
     #[test]
     fn values_within_variance_bounds() {
-        let base = 1500.0_f64;
+        let base = SOUND_SPEED_WATER_SIM;
         let var = 0.05_f64;
         let grid = small_grid();
         let model = HeterogeneityModel::new(&grid, base, var);

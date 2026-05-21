@@ -19,6 +19,7 @@ pub struct RefractionAngles {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use std::f64::consts::PI;
 
@@ -73,7 +74,7 @@ mod tests {
     /// Water (c1=1500) → fat (c2=1450): θ_i = 20° → θ_t = arcsin((1450/1500)·sin(20°)).
     #[test]
     fn snell_law_holds_for_water_fat_interface() {
-        let c1 = 1500.0_f64;
+        let c1 = SOUND_SPEED_WATER_SIM; // Water sound speed [m/s]
         let c2 = 1450.0_f64;
         let theta_i = 20.0_f64.to_radians();
         let theta_t = ((c2 / c1) * theta_i.sin()).asin();

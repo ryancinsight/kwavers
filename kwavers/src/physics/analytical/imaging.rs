@@ -147,6 +147,7 @@ fn sinc2(u: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
 
     #[test]
@@ -157,13 +158,13 @@ mod tests {
 
     #[test]
     fn axial_psf_peak_at_zero() {
-        let psf = axial_psf_rect(&[0.0], 1500.0, 5e6);
+        let psf = axial_psf_rect(&[0.0], SOUND_SPEED_WATER_SIM, 5e6);
         assert!((psf[0] - 1.0).abs() < 1e-12);
     }
 
     #[test]
     fn lateral_psf_decreases_away_from_axis() {
-        let lam = 1500.0 / 2e6;
+        let lam = SOUND_SPEED_WATER_SIM / 2e6;
         let psf = lateral_psf_sinc2(&[0.0, 0.5e-3, 1e-3], 2.0, lam);
         assert!(psf[0] > psf[1] && psf[1] > psf[2]);
     }
@@ -171,19 +172,19 @@ mod tests {
     #[test]
     fn doppler_towards_transducer() {
         // θ = 0 → maximum shift
-        let df = doppler_frequency_shift(1.0, 0.0, 1e6, 1500.0);
-        assert!((df - 2.0 * 1e6 / 1500.0).abs() < 1e-6);
+        let df = doppler_frequency_shift(1.0, 0.0, 1e6, SOUND_SPEED_WATER_SIM);
+        assert!((df - 2.0 * 1e6 / SOUND_SPEED_WATER_SIM).abs() < 1e-6);
     }
 
     #[test]
     fn doppler_perpendicular_is_zero() {
-        let df = doppler_frequency_shift(1.0, PI / 2.0, 1e6, 1500.0);
+        let df = doppler_frequency_shift(1.0, PI / 2.0, 1e6, SOUND_SPEED_WATER_SIM);
         assert!(df.abs() < 1e-10);
     }
 
     #[test]
     fn compounding_narrower_than_single() {
-        let lam = 1500.0 / 2e6;
+        let lam = SOUND_SPEED_WATER_SIM / 2e6;
         let psf1 = lateral_psf_sinc2(&[0.5e-3], 2.0, lam);
         let psf4 = pw_compounding_lateral_psf(&[0.5e-3], 4, 2.0, lam);
         // 4-angle compounding narrows the PSF (FWHM radius 1.33mm → 0.665mm).
@@ -195,7 +196,7 @@ mod tests {
 
     #[test]
     fn lateral_resolution_positive() {
-        let lam = 1500.0 / 3.5e6;
+        let lam = SOUND_SPEED_WATER_SIM / 3.5e6;
         let dx = lateral_resolution_m(2.0, lam);
         assert!(dx > 0.0 && dx < 1e-3);
     }
