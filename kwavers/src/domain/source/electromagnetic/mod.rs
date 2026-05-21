@@ -4,6 +4,7 @@
 //! in simulation domains.
 
 use super::types::{SourceEMWaveType, SourcePolarization};
+use crate::core::constants::fundamental::SPEED_OF_LIGHT;
 use num_complex::Complex;
 
 /// Basic electromagnetic source trait
@@ -128,7 +129,7 @@ impl DomainEMSource for PointEMSource {
             return Complex::new(0.0, 0.0);
         }
 
-        let k = 2.0 * std::f64::consts::PI * frequency / 3e8;
+        let k = 2.0 * std::f64::consts::PI * frequency / SPEED_OF_LIGHT;
         let phase = k * distance + self.phase;
 
         // E ∝ (1/r) exp(ikr + iφ)
@@ -235,8 +236,7 @@ impl DomainEMSource for PlaneWaveEMSource {
         );
 
         let omega = 2.0 * std::f64::consts::PI * frequency;
-        let c = 3e8;
-        let k = omega / c;
+        let k = omega / SPEED_OF_LIGHT;
 
         let phase = k * k_dot_r + self.phase;
         Complex::from_polar(self.amplitude, phase)

@@ -2,6 +2,8 @@
 
 use super::constants;
 use super::types::{DetectorConfig, SonoluminescenceEvent, SonoluminescenceStatistics};
+use crate::core::constants::fundamental::{PLANCK, SPEED_OF_LIGHT, STEFAN_BOLTZMANN};
+use crate::core::constants::optical::WIEN_CONSTANT;
 use crate::{
     physics::bubble_dynamics::BubbleStateFields,
     physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission},
@@ -156,9 +158,9 @@ impl SonoluminescenceDetector {
     ) -> (f64, f64, f64) {
         let emission_params = &self.emission_calculator.params;
 
-        let sigma = 5.67e-8;
+        // Stefan–Boltzmann total radiated power: P = σ·A·T⁴ (SSOT σ).
         let surface_area = 4.0 * std::f64::consts::PI * radius.powi(2);
-        let power = sigma * surface_area * temperature.powi(4);
+        let power = STEFAN_BOLTZMANN * surface_area * temperature.powi(4);
 
         let efficiency = if emission_params.use_blackbody {
             1.0
@@ -167,10 +169,10 @@ impl SonoluminescenceDetector {
         };
         let energy = power * dt * efficiency;
 
-        let peak_wavelength = 2.898e-3 / temperature;
-        let h = 6.626e-34;
-        let c = 3e8;
-        let photon_energy = h * c / peak_wavelength;
+        // Wien displacement: λ_peak = b/T (SSOT WIEN_CONSTANT, CODATA b ≈ 2.898 mm·K).
+        let peak_wavelength = WIEN_CONSTANT / temperature;
+        // Photon energy at the spectral peak: E_γ = h·c/λ (SSOT h, c).
+        let photon_energy = PLANCK * SPEED_OF_LIGHT / peak_wavelength;
         let photon_count = energy / photon_energy;
 
         (photon_count, peak_wavelength, energy)
