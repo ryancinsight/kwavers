@@ -2,6 +2,9 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::{TranscranialTargetVolume, TransducerSetup};
+use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_THRESHOLD};
+use crate::core::constants::numerical::CM_TO_M;
 use crate::core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
@@ -11,17 +14,12 @@ const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
 const BRAIN_SOUND_SPEED_M_PER_S: f64 = 1546.0;
 const BRAIN_DENSITY_KG_PER_M3: f64 = 1040.0;
 const BRAIN_ABSORPTION_DB_PER_MHZ_CM: f64 = 0.5;
-// 1/CM_TO_M = 100.0 cm/m (kept inline to avoid a private const that drifts
-// from the canonical core::constants::numerical::CM_TO_M = 0.01).
-// The previous local `REFERENCE_FREQUENCY_MHZ = 1.0` shadowed the same-named
-// SSOT constant `core::constants::acoustic_parameters::REFERENCE_FREQUENCY_MHZ = 1e6`
-// (a Hz value), which was actively confusing. The 1.0 factor at 1 MHz is now
-// implicit in the BRAIN_ABSORPTION_DB_PER_MHZ_CM coefficient itself.
-const BRAIN_ABSORPTION_NP_PER_M: f64 = BRAIN_ABSORPTION_DB_PER_MHZ_CM * 100.0 / NP_TO_DB;
+// dB/(cm·MHz) → Np/m at 1 MHz: divide by NP_TO_DB then by CM_TO_M (SSOT).
+const BRAIN_ABSORPTION_NP_PER_M: f64 = BRAIN_ABSORPTION_DB_PER_MHZ_CM / NP_TO_DB / CM_TO_M;
+// Brain-specific high-perfusion estimate (~0.0064 1/s ≈ 50 mL/min/100g),
+// distinct from the canonical TISSUE_PERFUSION_RATE (5e-4 1/s, generic
+// soft-tissue default). Reference: Yarnykh & Yuan, NeuroImage 51(3), 2010.
 const BLOOD_PERFUSION_RATE_PER_S: f64 = 0.0064;
-const BLOOD_DENSITY_KG_PER_M3: f64 = 1060.0;
-const BLOOD_SPECIFIC_HEAT_J_PER_KG_K: f64 = 3617.0;
-const THERMAL_DOSE_TARGET_CEM43: f64 = 240.0;
 const ABSORPTION_RATE_PER_INTENSITY: f64 = 0.5;
 
 impl TreatmentPlanner {
@@ -237,7 +235,7 @@ fn steady_state_temperature_from_intensity(intensity: f64) -> Option<f64> {
     }
 
     let perfusion_sink =
-        BLOOD_PERFUSION_RATE_PER_S * BLOOD_DENSITY_KG_PER_M3 * BLOOD_SPECIFIC_HEAT_J_PER_KG_K;
+        BLOOD_PERFUSION_RATE_PER_S * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
     let heat_source = 2.0 * BRAIN_ABSORPTION_NP_PER_M * intensity;
     Some(BODY_TEMPERATURE_C + heat_source / perfusion_sink)
 }
@@ -261,7 +259,7 @@ fn estimate_treatment_time_from_intensity_field(acoustic_field: &Array3<f64>) ->
     };
 
     if max_intensity > 0.0 {
-        THERMAL_DOSE_TARGET_CEM43 / (ABSORPTION_RATE_PER_INTENSITY * max_intensity)
+        THERMAL_DOSE_THRESHOLD / (ABSORPTION_RATE_PER_INTENSITY * max_intensity)
     } else {
         f64::INFINITY
     }
@@ -339,7 +337,7 @@ mod tests {
         let temperature = steady_state_temperature_from_intensity(intensity)
             .expect("finite nonnegative intensity must map to temperature");
         let perfusion_sink =
-            BLOOD_PERFUSION_RATE_PER_S * BLOOD_DENSITY_KG_PER_M3 * BLOOD_SPECIFIC_HEAT_J_PER_KG_K;
+            BLOOD_PERFUSION_RATE_PER_S * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT;
         let expected =
             BODY_TEMPERATURE_C + (2.0 * BRAIN_ABSORPTION_NP_PER_M * intensity) / perfusion_sink;
 
@@ -357,7 +355,7 @@ mod tests {
     fn treatment_time_matches_peak_intensity_contract() {
         let field = Array3::from_shape_vec((2, 1, 1), vec![5.0, 10.0]).expect("shape matches");
         let time = estimate_treatment_time_from_intensity_field(&field);
-        let expected = THERMAL_DOSE_TARGET_CEM43 / (ABSORPTION_RATE_PER_INTENSITY * 10.0);
+        let expected = THERMAL_DOSE_THRESHOLD / (ABSORPTION_RATE_PER_INTENSITY * 10.0);
 
         assert!((time - expected).abs() < 1.0e-12);
     }
