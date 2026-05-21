@@ -116,6 +116,7 @@ pub mod thresholds {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD;
 
     #[test]
     fn test_thermal_dose_accumulation() {
@@ -163,5 +164,11 @@ mod tests {
             "Expected ~50% above threshold, got {:.1}%",
             fraction * 100.0
         );
+    }
+
+    #[test]
+    fn test_thermal_dose_thresholds_use_canonical_constants() {
+        assert_eq!(CEM43_REFERENCE_TEMPERATURE_C, 43.0);
+        assert_eq!(thresholds::CELL_DEATH, THERMAL_DOSE_THRESHOLD);
     }
 }

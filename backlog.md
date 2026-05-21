@@ -37,13 +37,22 @@
   result, and geometry names now use `TranscranialUstBornInversion*` and
   `TranscranialBowlGeometry`, and geometry generation delegates to
   `BowlTransducer::with_polar_span`.
-- **[arch] T11c: extract generic linear-Born core from transcranial_ust
-  adapter.** Internal split: introduce `TransducerGeometry` trait, hoist
-  generic linear-PCG primitives (linear_algebra, sensitivity, volume_operator,
-  volume_born/pcg, conditioning, volume_regularization) to
-  `solver::inverse::linear_born_inversion/`, leave anatomy adapter in clinical
-  layer. Requires API redesign — current `VolumeOperator::new` consumes
-  `HelmetHemisphereGeometry` concretely.
+- **[done] [arch] T13a (was T11c): TransducerGeometry trait landed — CLOSED 2026-05-20.**
+  New module `solver/inverse/linear_born_inversion/{mod,geometry}.rs` owns
+  `ElementPosition` + the `TransducerGeometry` trait (elements / len /
+  is_empty / receiver_indices with cyclic-offset default).
+  `TranscranialBowlGeometry` impls the trait with bowl-specific azimuthal-
+  rotation override of `receiver_indices`. `cargo check -p kwavers --lib` and
+  `cargo test -p kwavers linear_born_inversion --lib` pass.
+- **[arch] T13b (was T11c continuation): hoist generic linear-Born + PCG
+  primitives to `solver/inverse/linear_born_inversion/`.** Migrate
+  linear_algebra, sensitivity, volume_operator/*, volume_born/pcg,
+  conditioning, volume_regularization (~1200 LOC) out of clinical adapter.
+  Parameterise signatures: `&TranscranialBowlGeometry` →
+  `<G: TransducerGeometry>`; `&TranscranialUstBornInversionConfig` →
+  `&LinearBornInversionConfig` (new generic config with only numerical knobs).
+  Clinical adapter keeps anatomy (config/medium/volume/born entries) and
+  embeds the generic config.
 - **[done] [patch] T11d: pykwavers binding rename — CLOSED 2026-05-20.**
   `seismic_bindings/` → `imaging_bindings/`; `slice_fwi.rs` →
   `transcranial_slice_inversion.rs`; `volume_fwi.rs` →
@@ -488,6 +497,12 @@ breast-imaging reconstruction.
   `R = 0.5` / `R = 0.25` temperature regimes. Focused tests pin focus
   centering, lateral symmetry, intensity, CEM43 reference values, and ablation
   threshold behavior.
+
+- 2026-05-21: [patch] Closed the thermal-dose SSOT drift.
+  `ThermalCEM43Grid` now uses `BODY_TEMPERATURE_C`, exposes
+  `CEM43_REFERENCE_TEMPERATURE_C`, and aliases irreversible cell-death dose to
+  `medical::THERMAL_DOSE_THRESHOLD`. Focused tests pin the alias and reference
+  value.
 
 - 2026-05-20: [patch] Closed the book cavitation closed-form invalid-domain
   gap. Minnaert resonance, Blake threshold, Rayleigh collapse time, and

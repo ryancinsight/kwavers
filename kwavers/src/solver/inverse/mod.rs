@@ -20,6 +20,7 @@
 
 pub mod elastography;
 pub mod fwi;
+pub mod linear_born_inversion;
 pub mod pinn;
 pub mod reconstruction;
 pub mod same_aperture;

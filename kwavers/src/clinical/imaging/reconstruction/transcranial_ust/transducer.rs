@@ -4,22 +4,36 @@ use std::f64::consts::{FRAC_PI_2, TAU};
 
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::source::transducers::focused::{BowlConfig, BowlTransducer};
+use crate::solver::inverse::linear_born_inversion::{ElementPosition, TransducerGeometry};
 
 const GEOMETRY_UNIT_FREQUENCY_HZ: f64 = 1.0;
 const GEOMETRY_UNIT_AMPLITUDE_PA: f64 = 1.0;
-
-/// Cartesian position of one array element on the water-coupled bowl surface.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ElementPosition {
-    pub x_m: f64,
-    pub y_m: f64,
-    pub z_m: f64,
-}
 
 /// Transcranial focused bowl used by the encoded slice model.
 #[derive(Clone, Debug)]
 pub struct TranscranialBowlGeometry {
     pub elements: Vec<ElementPosition>,
+}
+
+impl TransducerGeometry for TranscranialBowlGeometry {
+    fn elements(&self) -> &[ElementPosition] {
+        &self.elements
+    }
+
+    fn receiver_indices(&self, offsets: &[usize]) -> Vec<usize> {
+        // Override the default cyclic offset mapping: a transcranial bowl
+        // has continuous rotational symmetry about the cap axis, so the
+        // natural receiver for "source `s` at offset `q`" is the element
+        // closest to source `s` rotated by `2π · q / N` around the z-axis.
+        let mut indices = Vec::with_capacity(self.len() * offsets.len());
+        for source_idx in 0..self.len() {
+            for offset in offsets {
+                let azimuth = TAU * *offset as f64 / self.len() as f64;
+                indices.push(self.nearest_rotated_azimuth(source_idx, azimuth));
+            }
+        }
+        indices
+    }
 }
 
 impl TranscranialBowlGeometry {
@@ -55,27 +69,9 @@ impl TranscranialBowlGeometry {
         Ok(Self { elements })
     }
 
-    /// Map azimuthal receiver offsets to nearest physical elements.
-    pub(super) fn receiver_indices(&self, offsets: &[usize]) -> Vec<usize> {
-        let mut indices = Vec::with_capacity(self.len() * offsets.len());
-        for source_idx in 0..self.len() {
-            for offset in offsets {
-                let azimuth = TAU * *offset as f64 / self.len() as f64;
-                indices.push(self.nearest_rotated_azimuth(source_idx, azimuth));
-            }
-        }
-        indices
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.elements.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.elements.is_empty()
-    }
+    // `len()`, `is_empty()`, and `receiver_indices()` are now provided by the
+    // `TransducerGeometry` trait impl below (the bowl-specific azimuthal-
+    // rotation override of `receiver_indices` lives there).
 
     fn nearest_rotated_azimuth(&self, source_idx: usize, azimuth: f64) -> usize {
         let source = self.elements[source_idx];

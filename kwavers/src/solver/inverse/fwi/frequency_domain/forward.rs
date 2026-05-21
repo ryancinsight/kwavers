@@ -7,7 +7,7 @@ use super::cbs::{
 use super::types::{Config, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    sound_speed_to_slowness, MultiRowRingArray, RingPoint,
+    sound_speed_to_slowness, MultiRowRingArray, ElementPosition,
 };
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
@@ -123,8 +123,8 @@ pub(super) fn predict_cbs_rows(
 }
 
 pub(super) fn incident_field(
-    sources: &[RingPoint],
-    centers: &[(usize, RingPoint)],
+    sources: &[ElementPosition],
+    centers: &[(usize, ElementPosition)],
     wavenumber: f64,
     min_distance: f64,
 ) -> Vec<Complex64> {
@@ -140,8 +140,8 @@ pub(super) fn incident_field(
 }
 
 pub(super) fn outgoing_green(
-    source: RingPoint,
-    receiver: RingPoint,
+    source: ElementPosition,
+    receiver: ElementPosition,
     wavenumber: f64,
     min_distance: f64,
 ) -> Complex64 {
@@ -155,7 +155,7 @@ pub(super) fn outgoing_green(
 pub(super) fn voxel_centers(
     dimensions: (usize, usize, usize),
     spacing_m: f64,
-) -> Vec<(usize, RingPoint)> {
+) -> Vec<(usize, ElementPosition)> {
     let (nx, ny, nz) = dimensions;
     let cx = 0.5 * nx as f64;
     let cy = 0.5 * ny as f64;
@@ -166,7 +166,7 @@ pub(super) fn voxel_centers(
             for iz in 0..nz {
                 centers.push((
                     ix * ny * nz + iy * nz + iz,
-                    RingPoint {
+                    ElementPosition {
                         x_m: (ix as f64 + 0.5 - cx) * spacing_m,
                         y_m: (iy as f64 + 0.5 - cy) * spacing_m,
                         z_m: (iz as f64 + 0.5 - cz) * spacing_m,

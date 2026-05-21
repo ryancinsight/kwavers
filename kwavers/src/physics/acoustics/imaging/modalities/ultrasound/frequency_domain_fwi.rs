@@ -18,20 +18,13 @@
 //!    `gamma = <p, d> / <p, p>` for predicted pressure `p` and data `d`.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::solver::inverse::linear_born_inversion::{ElementPosition, TransducerGeometry};
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
 /// Paper model identifier for audit trails.
 pub const FREQUENCY_DOMAIN_FWI_MODEL: &str = "ali_2025_multi_row_ring_frequency_domain_ust_fwi";
-
-/// Point in physical space [m].
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct RingPoint {
-    pub x_m: f64,
-    pub y_m: f64,
-    pub z_m: f64,
-}
 
 /// Multi-row ring-array geometry.
 #[derive(Clone, Debug)]
@@ -40,7 +33,13 @@ pub struct MultiRowRingArray {
     rows: usize,
     diameter_m: f64,
     row_spacing_m: f64,
-    elements: Vec<RingPoint>,
+    elements: Vec<ElementPosition>,
+}
+
+impl TransducerGeometry for MultiRowRingArray {
+    fn elements(&self) -> &[ElementPosition] {
+        &self.elements
+    }
 }
 
 impl MultiRowRingArray {
@@ -85,7 +84,7 @@ impl MultiRowRingArray {
             let z_m = (row as f64 - row_center) * row_spacing_m;
             for element in 0..circumferential_elements {
                 let theta = 2.0 * PI * element as f64 / circumferential_elements as f64;
-                elements.push(RingPoint {
+                elements.push(ElementPosition {
                     x_m: radius * theta.cos(),
                     y_m: radius * theta.sin(),
                     z_m,
@@ -116,7 +115,7 @@ impl MultiRowRingArray {
         rows: usize,
         diameter_m: f64,
         row_spacing_m: f64,
-        elements: Vec<RingPoint>,
+        elements: Vec<ElementPosition>,
     ) -> KwaversResult<Self> {
         Self::new(circumferential_elements, rows, diameter_m, row_spacing_m)?;
         let expected = circumferential_elements * rows;
@@ -175,7 +174,7 @@ impl MultiRowRingArray {
     }
 
     #[must_use]
-    pub fn elements(&self) -> &[RingPoint] {
+    pub fn elements(&self) -> &[ElementPosition] {
         &self.elements
     }
 
@@ -184,7 +183,7 @@ impl MultiRowRingArray {
     /// In the cited acquisition, transmit `q` fires circumferential element
     /// `q` in every row simultaneously.
     #[must_use]
-    pub fn cylindrical_source(&self, transmit_index: usize) -> Vec<RingPoint> {
+    pub fn cylindrical_source(&self, transmit_index: usize) -> Vec<ElementPosition> {
         let angular = transmit_index % self.circumferential_elements;
         (0..self.rows)
             .map(|row| self.elements[row * self.circumferential_elements + angular])

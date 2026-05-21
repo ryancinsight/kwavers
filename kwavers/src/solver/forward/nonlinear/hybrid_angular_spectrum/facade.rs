@@ -38,6 +38,9 @@ impl HybridAngularSpectrum {
                 "Propagation distance must be non-negative".to_owned(),
             ));
         }
+        if distance == 0.0 {
+            return Ok(pressure.clone());
+        }
         let num_steps = (distance / self.config.dz).ceil() as usize;
         let actual_dz = distance / num_steps as f64;
         self.solver.propagate_steps(pressure, num_steps, actual_dz)

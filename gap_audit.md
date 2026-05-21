@@ -181,6 +181,13 @@ theorems against an external published reconstruction.
   matches that domain name.
 - Added a value-semantic bioheat SSOT regression: perfused thermal tissue tests
   now assert `BLOOD_SPECIFIC_HEAT` exactly.
+- Added the shared linear Born acquisition-geometry boundary:
+  `solver::inverse::linear_born_inversion` now owns `ElementPosition` and
+  `TransducerGeometry`, while `TranscranialBowlGeometry` keeps only
+  bowl-specific placement and receiver-mapping semantics.
+- Closed the thermal-dose constant drift: CEM43 reference/body-temperature and
+  cell-death thresholds now resolve through canonical constants with a
+  value-semantic test.
 - Added Rust-owned HDF5 phantom ingest:
   `clinical::imaging::reconstruction::breast_ust_fwi::phantom_hdf5` uses
   `consus-hdf5`/`consus-core`/`consus-io` to load 3-D sound-speed datasets from

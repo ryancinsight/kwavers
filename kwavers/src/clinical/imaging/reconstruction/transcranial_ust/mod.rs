@@ -17,6 +17,7 @@ mod volume_born;
 mod volume_operator;
 mod volume_regularization;
 
+pub use crate::solver::inverse::linear_born_inversion::ElementPosition;
 pub use born::{
     reconstruct_brain_slice, TranscranialUstBornInversionMetrics,
     TranscranialUstBornInversionResult,
@@ -26,7 +27,7 @@ pub use config::{
     TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
 };
 pub use medium::{resample_head_slice, select_head_slice, AcousticSlice, CtResampledSlice};
-pub use transducer::{ElementPosition, TranscranialBowlGeometry};
+pub use transducer::TranscranialBowlGeometry;
 pub use volume::{resample_head_volume, AcousticVolume, CtResampledVolume};
 pub use volume_born::{
     reconstruct_brain_volume, TranscranialUstBornInversionVolumeMetrics,

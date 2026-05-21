@@ -4,6 +4,7 @@ mod pcg;
 
 use crate::core::error::KwaversResult;
 use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
+use crate::solver::inverse::linear_born_inversion::TransducerGeometry;
 use ndarray::Array3;
 
 use super::{

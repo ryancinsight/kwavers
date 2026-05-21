@@ -9,6 +9,7 @@ use super::{
     medium::AcousticSlice,
     transducer::TranscranialBowlGeometry,
 };
+use crate::solver::inverse::linear_born_inversion::TransducerGeometry;
 
 const C_TISSUE_DENSITY_KG_M3: f64 = 1000.0;
 

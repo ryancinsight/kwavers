@@ -11,7 +11,7 @@ use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::sensor::recorder::simple::SensorRecorder;
 use crate::domain::source::{GridSource, SourceMode};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    MultiRowRingArray, RingPoint,
+    MultiRowRingArray, ElementPosition,
 };
 use crate::solver::forward::pstd::config::BoundaryConfig;
 use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
@@ -284,7 +284,7 @@ fn frequency_bin(
 fn map_ring_points_to_grid(
     dims: (usize, usize, usize),
     config: BreastUstPstdDatasetConfig,
-    points: &[RingPoint],
+    points: &[ElementPosition],
 ) -> KwaversResult<Vec<(usize, usize, usize)>> {
     points
         .iter()
@@ -295,7 +295,7 @@ fn map_ring_points_to_grid(
 fn map_ring_point_to_grid(
     (nx, ny, nz): (usize, usize, usize),
     spacing_m: f64,
-    point: RingPoint,
+    point: ElementPosition,
 ) -> KwaversResult<(usize, usize, usize)> {
     let center = [
         0.5 * (nx - 1) as f64 * spacing_m,
@@ -331,13 +331,13 @@ fn grid_index_to_ring_point(
     (nx, ny, nz): (usize, usize, usize),
     spacing_m: f64,
     (ix, iy, iz): (usize, usize, usize),
-) -> RingPoint {
+) -> ElementPosition {
     let center = [
         0.5 * (nx - 1) as f64,
         0.5 * (ny - 1) as f64,
         0.5 * (nz - 1) as f64,
     ];
-    RingPoint {
+    ElementPosition {
         x_m: (ix as f64 - center[0]) * spacing_m,
         y_m: (iy as f64 - center[1]) * spacing_m,
         z_m: (iz as f64 - center[2]) * spacing_m,

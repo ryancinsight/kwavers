@@ -1,5 +1,7 @@
 use ndarray::{Array2, Array3};
 
+use crate::solver::inverse::linear_born_inversion::TransducerGeometry;
+
 use super::{
     reconstruct_brain_slice, reconstruct_brain_volume, transducer::TranscranialBowlGeometry,
     AcousticSlice, AcousticVolume, CtResampledVolume, TranscranialUstBornInversionConfig,

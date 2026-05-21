@@ -410,7 +410,7 @@ fn parse_absorbing_boundary(
 }
 
 fn points_to_array(
-    points: &[kwavers::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::RingPoint],
+    points: &[kwavers::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition],
 ) -> Array2<f64> {
     Array2::from_shape_fn((points.len(), 3), |(row, col)| match col {
         0 => points[row].x_m,

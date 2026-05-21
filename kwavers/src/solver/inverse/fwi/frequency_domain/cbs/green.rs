@@ -2,7 +2,7 @@
 
 use super::absorbing::AbsorbingBoundary;
 use super::grid::GridSpec;
-use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::RingPoint;
+use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
@@ -11,8 +11,8 @@ pub(super) fn shifted_wavenumber(reference_wavenumber: f64, epsilon: f64) -> Com
 }
 
 pub(super) fn shifted_outgoing_green(
-    source: RingPoint,
-    receiver: RingPoint,
+    source: ElementPosition,
+    receiver: ElementPosition,
     shifted_wavenumber: Complex64,
     min_distance_m: f64,
 ) -> Complex64 {

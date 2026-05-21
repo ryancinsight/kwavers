@@ -1,7 +1,7 @@
 //! CBS grid and bandlimited point projection.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::RingPoint;
+use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition;
 use std::f64::consts::PI;
 
 /// Default BLI tolerance used by the canonical k-Wave-compatible source path.
@@ -55,12 +55,12 @@ impl GridSpec {
     }
 
     #[must_use]
-    pub fn center_at(self, ix: usize, iy: usize, iz: usize) -> RingPoint {
+    pub fn center_at(self, ix: usize, iy: usize, iz: usize) -> ElementPosition {
         let (nx, ny, nz) = self.dimensions;
         let cx = 0.5 * nx as f64;
         let cy = 0.5 * ny as f64;
         let cz = 0.5 * nz as f64;
-        RingPoint {
+        ElementPosition {
             x_m: (ix as f64 + 0.5 - cx) * self.spacing_m,
             y_m: (iy as f64 + 0.5 - cy) * self.spacing_m,
             z_m: (iz as f64 + 0.5 - cz) * self.spacing_m,
@@ -68,7 +68,7 @@ impl GridSpec {
     }
 
     #[must_use]
-    pub fn centers(self) -> Vec<(usize, RingPoint)> {
+    pub fn centers(self) -> Vec<(usize, ElementPosition)> {
         let (nx, ny, nz) = self.dimensions;
         let mut centers = Vec::with_capacity(self.len());
         for ix in 0..nx {
@@ -130,7 +130,7 @@ pub struct GridWeight {
 /// Returns an error if the grid/config are invalid.
 pub fn bli_weights(
     grid: GridSpec,
-    point: RingPoint,
+    point: ElementPosition,
     config: BliConfig,
 ) -> KwaversResult<Vec<GridWeight>> {
     let half_width = config.half_width()?;
@@ -185,7 +185,7 @@ pub fn bli_weights(
     Ok(weights)
 }
 
-fn nearest_indices(grid: GridSpec, point: RingPoint) -> [usize; 3] {
+fn nearest_indices(grid: GridSpec, point: ElementPosition) -> [usize; 3] {
     let (nx, ny, nz) = grid.dimensions;
     [
         nearest_axis(nx, grid.spacing_m, point.x_m),
@@ -194,7 +194,7 @@ fn nearest_indices(grid: GridSpec, point: RingPoint) -> [usize; 3] {
     ]
 }
 
-fn within_stencil_support(grid: GridSpec, point: RingPoint, half_width: isize) -> bool {
+fn within_stencil_support(grid: GridSpec, point: ElementPosition, half_width: isize) -> bool {
     let (nx, ny, nz) = grid.dimensions;
     axis_within_support(nx, grid.spacing_m, point.x_m, half_width)
         && axis_within_support(ny, grid.spacing_m, point.y_m, half_width)
@@ -214,7 +214,7 @@ fn nearest_axis(n: usize, spacing_m: f64, value_m: f64) -> usize {
     raw.round().clamp(0.0, (n - 1) as f64) as usize
 }
 
-fn on_grid_axes(grid: GridSpec, point: RingPoint, nearest: [usize; 3]) -> [bool; 3] {
+fn on_grid_axes(grid: GridSpec, point: ElementPosition, nearest: [usize; 3]) -> [bool; 3] {
     let center = grid.center_at(nearest[0], nearest[1], nearest[2]);
     let threshold = grid.spacing_m * 1.0e-3;
     [

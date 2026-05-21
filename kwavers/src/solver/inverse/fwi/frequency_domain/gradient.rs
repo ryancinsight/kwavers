@@ -237,10 +237,10 @@ fn accumulate_frequency_gradient(
 }
 
 fn predicted_row(
-    sources: &[crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::RingPoint],
+    sources: &[crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition],
     centers: &[(
         usize,
-        crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::RingPoint,
+        crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition,
     )],
     incident: &[Complex64],
     potential: &[f64],
@@ -275,7 +275,7 @@ fn accumulate_row_adjoint(
     gradient: &mut Array3<f64>,
     centers: &[(
         usize,
-        crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::RingPoint,
+        crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition,
     )],
     incident: &[Complex64],
     slowness: &[f64],

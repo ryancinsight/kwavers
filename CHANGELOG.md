@@ -218,6 +218,13 @@
   generic focused-bowl figure stem.
 - [patch] Pin perfused thermal tissue tests to the canonical
   `BLOOD_SPECIFIC_HEAT` SSOT instead of accepting any positive bioheat value.
+- [minor] Add `solver::inverse::linear_born_inversion` with the shared
+  `ElementPosition` and `TransducerGeometry` acquisition-geometry contract, and
+  route `TranscranialBowlGeometry` through that trait with its bowl-specific
+  azimuthal receiver mapping.
+- [patch] Route CEM43 body-temperature and cell-death thresholds through
+  canonical thermal/medical constants and pin the thermal-dose SSOT contract
+  with value-semantic tests.
 - [minor] Add Rust-owned Ali 2025 HDF5 phantom ingest through
   `clinical::imaging::reconstruction::breast_ust_fwi::phantom_hdf5`, backed by
   `consus-hdf5`/`consus-core`/`consus-io`. The loader decodes real 3-D

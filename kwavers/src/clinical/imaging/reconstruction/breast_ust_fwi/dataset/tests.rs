@@ -85,7 +85,7 @@ fn snap_multi_row_ring_array_matches_pstd_grid_centers() {
     assert_eq!(snapped.cylindrical_source(0)[0], snapped.elements()[0]);
     assert_eq!(
         snapped.elements()[0],
-        RingPoint {
+        ElementPosition {
             x_m: 0.0035,
             y_m: 0.0005,
             z_m: 0.0,

@@ -3,7 +3,7 @@
 use super::grid::{bli_weights, BliConfig, GridSpec, GridWeight};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    MultiRowRingArray, RingPoint,
+    MultiRowRingArray, ElementPosition,
 };
 use num_complex::Complex64;
 
@@ -16,7 +16,7 @@ use num_complex::Complex64;
 /// Returns an error when a source point has no BLI support on the grid.
 pub fn source_density_from_bli(
     grid: GridSpec,
-    sources: &[RingPoint],
+    sources: &[ElementPosition],
 ) -> KwaversResult<Vec<Complex64>> {
     let mut source_density = vec![Complex64::new(0.0, 0.0); grid.len()];
     for &source in sources {
@@ -36,7 +36,7 @@ pub fn source_density_from_bli(
 pub fn sample_field_with_bli(
     grid: GridSpec,
     field: &[Complex64],
-    receiver: RingPoint,
+    receiver: ElementPosition,
 ) -> KwaversResult<Complex64> {
     validate_field_len(grid, field)?;
     let weights = nonempty_bli_weights(grid, receiver, "receiver")?;
@@ -96,7 +96,7 @@ pub fn receiver_adjoint_from_bli(
 
 fn nonempty_bli_weights(
     grid: GridSpec,
-    point: RingPoint,
+    point: ElementPosition,
     role: &str,
 ) -> KwaversResult<Vec<GridWeight>> {
     let weights = bli_weights(grid, point, BliConfig::default())?;

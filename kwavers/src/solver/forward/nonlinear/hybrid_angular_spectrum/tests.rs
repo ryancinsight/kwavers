@@ -1,6 +1,7 @@
 //! Unit tests for the Hybrid Angular Spectrum module.
 
 use crate::domain::grid::Grid;
+use ndarray::Array3;
 
 use super::config::HASConfig;
 use super::facade::HybridAngularSpectrum;
@@ -54,6 +55,18 @@ fn test_attenuation_frequency_dependence() {
 fn test_hybrid_angular_spectrum_creation() {
     let grid = Grid::new(64, 64, 32, 0.001, 0.001, 0.001).unwrap();
     let _has = HybridAngularSpectrum::new(&grid, HASConfig::default()).unwrap();
+}
+
+#[test]
+fn test_propagate_zero_distance_returns_input_unchanged() {
+    let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
+    let has = HybridAngularSpectrum::new(&grid, HASConfig::default()).unwrap();
+    let pressure = Array3::from_shape_fn((8, 8, 4), |(i, j, k)| {
+        (i as f64 + 2.0 * j as f64 + 3.0 * k as f64) * 1.0e3
+    });
+
+    let propagated = has.propagate(&pressure, 0.0).unwrap();
+    assert_eq!(propagated, pressure);
 }
 
 /// z_shock = ρ₀c₀³ / (β·ω·p₀) (Hamilton & Blackstock 1998 §4.3 eq. 4.3.5).
