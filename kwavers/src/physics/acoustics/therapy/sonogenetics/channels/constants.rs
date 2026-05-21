@@ -1,7 +1,11 @@
 //! Physical constants for sonogenetic channel gating.
+//!
+//! All numeric constants are sourced from the SSOT in `crate::core::constants`
+//! to prevent independent duplicates from drifting apart.
 
-/// Boltzmann constant [J/K], exact SI value.
-pub(super) const K_B: f64 = 1.380_649e-23;
+/// Boltzmann constant [J/K] — re-exported from `crate::core::constants::fundamental`.
+pub(super) use crate::core::constants::fundamental::BOLTZMANN as K_B;
 
-/// Canonical body temperature (K) = 37 deg C.
-pub const BODY_TEMP_K: f64 = 310.15;
+/// Canonical body temperature (K) = 37 °C — re-exported from
+/// `crate::core::constants::thermodynamic`.
+pub use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K as BODY_TEMP_K;
