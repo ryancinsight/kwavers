@@ -122,8 +122,11 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
             return zero;
         }
 
-        // 16*pi/3 = 16.75516081914556
-        let sixteen_pi_over_three = T::from(16.75516081914556).unwrap();
+        // Classical Nucleation Theory geometric prefactor: 16π/3.
+        // Sourced from std::f64::consts::PI to avoid drifting from the
+        // canonical value via a hand-computed decimal literal.
+        let sixteen_pi_over_three =
+            T::from(16.0 * std::f64::consts::PI / 3.0).expect("16π/3 representable in Scalar T");
         let p_diff = self.vapor_pressure - pressure;
 
         let surface_tension_cubed =
