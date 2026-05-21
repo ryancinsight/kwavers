@@ -469,6 +469,14 @@ fn result_to_dict<'py>(
         "uses_nonlinear_wave_propagation",
         uses_nonlinear_wave_propagation,
     )?;
+    // The elastic-shear channel runs iterative nonlinear ElasticPSTD FWI with
+    // line search; this is exposed as its own flag so callers can distinguish
+    // "any FWI happens in this result" from "the acoustic inverse is FWI"
+    // (the latter is false — see [`THERANOSTIC_FULL_WAVE_INVERSION`]).
+    out.set_item(
+        "iterative_elastic_fwi",
+        kwavers::clinical::therapy::theranostic_guidance::THERANOSTIC_ITERATIVE_ELASTIC_FWI,
+    )?;
     out.set_item("waveform_model", result.waveform.model_name)?;
     out.set_item("waveform_misfit", result.waveform.misfit_name)?;
     out.set_item("waveform_misfit_scale", result.waveform.misfit_scale)?;

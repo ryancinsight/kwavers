@@ -96,8 +96,11 @@ pub fn rayleigh_collapse_time_s(rmax_m: f64, p_inf_pa: f64, rho: f64) -> f64 {
 /// The RP equation in state form, with state `y = [R, Ṙ]`:
 /// ```text
 /// R·R̈ + (3/2)·Ṙ² = [P_gas(R) − P₀ − P_ac(t) − 2σ/R − 4μ·Ṙ/R] / ρ
-/// P_gas(R) = (P₀ + 2σ/R₀)·(R₀/R)^(3κ) − P_v
+/// P_gas(R) = (P₀ + 2σ/R₀ − P_v)·(R₀/R)^(3κ) + P_v       [Brennen 1995 §2.4]
 /// ```
+/// where the non-condensable gas partial pressure (P₀ + 2σ/R₀ − P_v)
+/// undergoes polytropic compression and P_v is added back as the
+/// isothermal vapor-pressure floor.
 ///
 /// # Arguments
 /// * `r0_m` – equilibrium radius [m]
@@ -184,9 +187,15 @@ pub fn rayleigh_plesset_rk4(
 ///
 /// ```text
 /// (1 − Ṙ/c_L)·R·R̈ + (3/2)·Ṙ²·(1 − Ṙ/(3c_L))
-///   = (1 + Ṙ/c_L)/ρ · (P_gas − P₀ − P_ac(t+R/c_L)) + Ṙ·dP_gas/dt/(ρ·c_L)
-///   − 2σ/(ρ·R) − 4μ·Ṙ/(ρ·R)
+///   = (1 + Ṙ/c_L)/ρ · (P_L(R) − P_∞(t + R/c_L))
+///     + R/(ρ·c_L) · d/dt[P_L(R) − P_∞(t + R/c_L)]
 /// ```
+/// where `P_L(R) = P_gas(R) − 2σ/R − 4μṘ/R` is the *full* liquid-side
+/// wall pressure and `P_∞ = P₀ + P_ac(t + R/c_L)` is the far-field
+/// pressure at retarded time.  The (1 + Ṙ/c_L) compressibility prefactor
+/// applies to the entire `P_L − P_∞` — including the surface-tension
+/// and viscous contributions — not just the gas / acoustic parts.
+/// (Keller & Miksis 1980 Eq 2.3; Brennen 2014 Eq 4.5.)
 ///
 /// # Arguments
 /// Same as [`rayleigh_plesset_rk4`] with the addition of:

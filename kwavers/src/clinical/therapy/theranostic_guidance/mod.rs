@@ -49,8 +49,8 @@ pub use nonlinear3d::{
 pub use scene::{target_index_from_mask_fraction_3d, validate_target_fraction_xyz};
 pub use solver::{
     run_theranostic_inverse, TheranosticInverseResult, THERANOSTIC_FULL_WAVE_INVERSION,
-    THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_NONLINEAR_WAVE_PROPAGATION,
-    THERANOSTIC_OPERATOR_BACKEND, THERANOSTIC_OPERATOR_MODEL,
+    THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_ITERATIVE_ELASTIC_FWI,
+    THERANOSTIC_NONLINEAR_WAVE_PROPAGATION, THERANOSTIC_OPERATOR_BACKEND, THERANOSTIC_OPERATOR_MODEL,
 };
 pub use standing_wave_opt::{
     run_standing_wave_suppression, StandingWaveOptConfig, StandingWaveOptResult,

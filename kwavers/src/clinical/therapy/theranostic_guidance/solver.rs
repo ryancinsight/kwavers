@@ -65,8 +65,39 @@ pub const THERANOSTIC_OPERATOR_MODEL: &str = SAME_APERTURE_OPERATOR_MODEL;
 pub const THERANOSTIC_OPERATOR_BACKEND: &str = "matrix_free_finite_frequency_same_aperture";
 pub const THERANOSTIC_INVERSE_MODEL_FAMILY: &str =
     "reduced_born_normal_equation_plus_linear_acoustic_rtm_plus_iterative_nonlinear_elastic_fwi";
-pub const THERANOSTIC_FULL_WAVE_INVERSION: bool = true;
+
+/// Full-waveform-inversion flag for the **acoustic** reconstruction channels.
+///
+/// `false` because the acoustic anatomy / lesion / harmonic / ultraharmonic
+/// channels are reduced-Born / Tikhonov inversions of the same-aperture
+/// finite-frequency operator (linearised, one-shot Gauss–Newton-class
+/// normal-equation solve), not full-waveform inversion. The 2-D RTM channel
+/// is a single-pass adjoint imaging condition on time-domain traces, also
+/// not FWI. See `waveform/mod.rs:10` which states "It is not nonlinear wave
+/// propagation and it is not an iterative acoustic full-waveform inversion."
+///
+/// The elastic-shear channel ([`elastic_shear`]) IS an iterative
+/// gradient-descent FWI with line search; that fact is exposed via the
+/// dedicated [`THERANOSTIC_ELASTIC_SHEAR_MODEL`] identifier rather than
+/// being conflated with the acoustic inverse here.
+pub const THERANOSTIC_FULL_WAVE_INVERSION: bool = false;
+
+/// Nonlinear-wave-propagation flag.
+///
+/// `false`: the forward acoustic exposure and RTM forward both solve the
+/// linear scalar wave equation `p_tt = c² Δp + s` with linear power-law
+/// attenuation. Westervelt / KZK nonlinearity is **not** integrated here;
+/// for second-harmonic / shock-formation modelling use
+/// [`crate::physics::acoustics::nonlinear`] instead.
 pub const THERANOSTIC_NONLINEAR_WAVE_PROPAGATION: bool = false;
+
+/// Iterative-elastic-FWI flag.
+///
+/// `true`: the elastic-shear channel runs `config.elastic_fwi_iterations`
+/// iterations of `migrate-residual → line-search → accept/reject` against
+/// the elastic PSTD forward operator, with a backtracking step-size policy.
+/// See [`elastic_shear::inversion::run_iterative_elastic_fwi`].
+pub const THERANOSTIC_ITERATIVE_ELASTIC_FWI: bool = true;
 
 #[derive(Clone, Debug)]
 pub struct TheranosticInverseResult {

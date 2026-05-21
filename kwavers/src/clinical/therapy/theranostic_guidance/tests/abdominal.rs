@@ -144,7 +144,11 @@ fn abdominal_theranostic_inverse_recovers_lesion_support() {
     assert!(result.elastic_shear.baseline_trace_energy > 0.0);
     assert!(result.elastic_shear.lesion_trace_energy > 0.0);
     assert!(result.elastic_shear.residual_trace_energy > 0.0);
-    assert!(result.is_full_wave_inversion);
+    // The 2-D acoustic theranostic guidance pipeline is reduced-Born /
+    // Tikhonov + one-pass adjoint RTM, not FWI. The flag must report this
+    // honestly; full-waveform inversion is exercised by the nonlinear-3-D
+    // Westervelt pipeline tests.
+    assert!(!result.is_full_wave_inversion);
     assert!(!result.uses_nonlinear_wave_propagation);
     assert_eq!(
         result.waveform.receiver_count,

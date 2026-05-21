@@ -1,9 +1,9 @@
 use super::super::{
     AnatomyKind, TheranosticInverseConfig, THERANOSTIC_ELASTIC_SHEAR_MODEL,
     THERANOSTIC_FULL_WAVE_INVERSION, THERANOSTIC_HYBRID_PSTD_FDTD_EXPOSURE_READY,
-    THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_NONLINEAR_WAVE_PROPAGATION,
-    THERANOSTIC_OPERATOR_MODEL, THERANOSTIC_WAVEFORM_MODEL, THERANOSTIC_WAVE_EXPOSURE_BACKEND,
-    THERANOSTIC_WAVE_EXPOSURE_MODEL,
+    THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_ITERATIVE_ELASTIC_FWI,
+    THERANOSTIC_NONLINEAR_WAVE_PROPAGATION, THERANOSTIC_OPERATOR_MODEL, THERANOSTIC_WAVEFORM_MODEL,
+    THERANOSTIC_WAVE_EXPOSURE_BACKEND, THERANOSTIC_WAVE_EXPOSURE_MODEL,
 };
 
 #[test]
@@ -30,8 +30,15 @@ fn theranostic_operator_model_names_graph_laplacian_pcg_contract() {
         THERANOSTIC_ELASTIC_SHEAR_MODEL,
         "iterative_nonlinear_elastic_pstd_fwi_residual_migration"
     );
-    assert!(THERANOSTIC_FULL_WAVE_INVERSION);
+    // The 2-D acoustic theranostic guidance pipeline is a reduced-Born /
+    // Tikhonov inverse plus a one-pass adjoint RTM — neither is full-waveform
+    // inversion. The flag must therefore stay false; the dedicated
+    // nonlinear-3-D Westervelt pipeline (`nonlinear3d`) carries its own
+    // `is_full_wave_inversion=true` and is exercised by its own tests.
+    assert!(!THERANOSTIC_FULL_WAVE_INVERSION);
     assert!(!THERANOSTIC_NONLINEAR_WAVE_PROPAGATION);
+    // The elastic-shear channel IS iterative FWI with line search.
+    assert!(THERANOSTIC_ITERATIVE_ELASTIC_FWI);
     assert_eq!(
         TheranosticInverseConfig::new(AnatomyKind::Kidney).elastic_frequencies_hz,
         vec![250.0, 500.0, 750.0]

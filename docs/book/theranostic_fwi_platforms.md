@@ -668,7 +668,8 @@ print("operator backend:", result["operator_backend"])    # "matrix_free_row"
 print("dense operator values:", result["dense_operator_values"])  # 0 (not stored)
 print("encoded measurements:", result["encoded_measurements"])
 print("unencoded measurements:", result["unencoded_measurements"])
-print("is_full_wave_inversion:", result["is_full_wave_inversion"])  # True: elastic FWI channel present
+print("is_full_wave_inversion:", result["is_full_wave_inversion"])  # False: acoustic inverse is reduced-Born + Tikhonov, not FWI
+print("iterative_elastic_fwi:", result.get("iterative_elastic_fwi"))  # True: elastic-shear channel is iterative FWI
 
 # Reconstruction channels (all from the same E aperture)
 active = np.asarray(result["active_lesion_reconstruction"])
@@ -724,11 +725,17 @@ flags, including the nonlinear forward-checkpoint interval. The nonlinear FWI
 loop reuses one residual trace workspace across source encodings and one
 candidate `c`/`beta` workspace across line-search scales; this changes allocator
 pressure only, not the objective or update equations. The same-device inverse
-cases now report `is_full_wave_inversion = true` because the elastic shear
-channel performs iterative nonlinear ElasticPSTD FWI; they still report
-`uses_nonlinear_wave_propagation = false` because the shear propagator is a
-linear elastic wave equation with nonlinear model updates. The separate
-nonlinear 3-D cases report `is_full_wave_inversion = true`,
+cases now report `is_full_wave_inversion = false` because the acoustic
+anatomy / lesion / harmonic / ultraharmonic channels are reduced-Born /
+Tikhonov inversions (one-shot, linearised) and the 2-D RTM channel is a
+single-pass adjoint imaging condition — none of which is FWI. The
+elastic-shear channel separately reports `iterative_elastic_fwi = true`
+because it performs iterative nonlinear ElasticPSTD FWI with line search;
+this fact is exposed on its own flag rather than being conflated with the
+acoustic inverse above. The acoustic channels still report
+`uses_nonlinear_wave_propagation = false` because the forward solver
+integrates the linear scalar wave equation. The separate nonlinear 3-D
+cases report `is_full_wave_inversion = true`,
 `uses_nonlinear_wave_propagation = true`, and `uses_rayleigh_plesset = true`.
 Figure 5 uses `56^3` nonlinear
 Westervelt/Rayleigh-Plesset volumes by default for brain, kidney, and liver.
