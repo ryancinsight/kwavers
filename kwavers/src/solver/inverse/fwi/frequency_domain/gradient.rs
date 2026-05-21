@@ -79,12 +79,11 @@ fn accumulate_dense_cbs_frequency_gradient(
     objective: &mut f64,
     gradient: &mut Array3<f64>,
 ) -> KwaversResult<()> {
-    let (cbs_config, operator) =
-        config.forward_operator.cbs_descriptor().ok_or_else(|| {
-            KwaversError::InvalidInput(
-                "CBS gradient requires a convergent Born forward operator".to_owned(),
-            )
-        })?;
+    let (cbs_config, operator) = config.forward_operator.cbs_descriptor().ok_or_else(|| {
+        KwaversError::InvalidInput(
+            "CBS gradient requires a convergent Born forward operator".to_owned(),
+        )
+    })?;
 
     let rows = observation.observed_pressure.nrows();
     let omega = 2.0 * PI * observation.frequency_hz;

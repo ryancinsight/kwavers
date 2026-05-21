@@ -43,9 +43,13 @@ pub(super) fn predict_frequency_rows(
     transmissions: usize,
 ) -> KwaversResult<Array2<Complex64>> {
     validate_forward_inputs(slowness_s_per_m, array, frequency_hz, config, transmissions)?;
-    config
-        .forward_operator
-        .predict_receiver_rows(slowness_s_per_m, array, frequency_hz, config, transmissions)
+    config.forward_operator.predict_receiver_rows(
+        slowness_s_per_m,
+        array,
+        frequency_hz,
+        config,
+        transmissions,
+    )
 }
 
 pub(super) fn predict_born_rows(
