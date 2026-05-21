@@ -1,3 +1,5 @@
+use crate::core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
+
 #[derive(Debug, Clone)]
 pub struct EMConfig {
     /// Grid dimensions [nx, ny, nz]
@@ -25,8 +27,8 @@ impl Default for EMConfig {
         Self {
             grid_size: [64, 64, 64],
             time_steps: 1000,
-            permittivity: 8.854e-12,                   // Vacuum permittivity
-            permeability: 4e-7 * std::f64::consts::PI, // Vacuum permeability
+            permittivity: VACUUM_PERMITTIVITY,
+            permeability: VACUUM_PERMEABILITY,
             conductivity: 0.0,                         // Perfect dielectric
             spatial_steps: [1e-3, 1e-3, 1e-3],         // 1mm resolution
             time_step: 1e-12,                          // 1ps time step

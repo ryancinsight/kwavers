@@ -3,6 +3,9 @@
 //! SRP: changes when domain registration logic or device setup changes.
 
 use super::solver::UniversalPINNSolver;
+use crate::core::constants::fundamental::{
+    DENSITY_AIR, SOUND_SPEED_AIR, VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY,
+};
 use crate::core::error::KwaversResult;
 use crate::solver::inverse::pinn::ml::physics::PhysicsDomainRegistry;
 use burn::tensor::backend::AutodiffBackend;
@@ -34,16 +37,16 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
         let acoustic_linear = super::super::acoustic_wave::AcousticWaveDomain::new(
             super::super::acoustic_wave::AcousticProblemType::Linear,
-            343.0,
-            1.225,
+            SOUND_SPEED_AIR,
+            DENSITY_AIR,
             None,
         );
         solver.register_physics_domain(acoustic_linear)?;
 
         let em_electrostatic = super::super::electromagnetic::ElectromagneticDomain::new(
             super::super::electromagnetic::EMProblemType::Electrostatic,
-            8.854e-12,
-            4e-7 * std::f64::consts::PI,
+            VACUUM_PERMITTIVITY,
+            VACUUM_PERMEABILITY,
             0.0,
             vec![1.0, 1.0],
         );
@@ -51,8 +54,8 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
         let em_magnetostatic = super::super::electromagnetic::ElectromagneticDomain::new(
             super::super::electromagnetic::EMProblemType::Magnetostatic,
-            8.854e-12,
-            4e-7 * std::f64::consts::PI,
+            VACUUM_PERMITTIVITY,
+            VACUUM_PERMEABILITY,
             0.0,
             vec![1.0, 1.0],
         );
@@ -60,8 +63,8 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
         let em_quasi_static = super::super::electromagnetic::ElectromagneticDomain::new(
             super::super::electromagnetic::EMProblemType::QuasiStatic,
-            8.854e-12,
-            4e-7 * std::f64::consts::PI,
+            VACUUM_PERMITTIVITY,
+            VACUUM_PERMEABILITY,
             0.0,
             vec![1.0, 1.0],
         );
@@ -114,8 +117,8 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
         let em_wave_propagation = super::super::electromagnetic::ElectromagneticDomain::new(
             super::super::electromagnetic::EMProblemType::WavePropagation,
-            8.854e-12,
-            4e-7 * std::f64::consts::PI,
+            VACUUM_PERMITTIVITY,
+            VACUUM_PERMEABILITY,
             0.0,
             vec![1e-2, 1e-2],
         );

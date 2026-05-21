@@ -21,20 +21,21 @@ mod tests {
     type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
 
     // We need to bring variants into scope or use full path
+    use crate::core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
     use crate::solver::inverse::pinn::ml::physics::BoundaryPosition;
 
     #[test]
     fn test_electromagnetic_domain_creation() {
         let domain: ElectromagneticDomain<TestBackend> = ElectromagneticDomain::new(
             EMProblemType::Electrostatic,
-            8.854e-12,
-            4e-7 * std::f64::consts::PI,
+            VACUUM_PERMITTIVITY,
+            VACUUM_PERMEABILITY,
             0.0,
             vec![1.0, 1.0],
         );
 
         assert_eq!(domain.problem_type, EMProblemType::Electrostatic);
-        assert!((domain.permittivity - 8.854e-12).abs() < 1e-15);
+        assert!((domain.permittivity - VACUUM_PERMITTIVITY).abs() < 1e-15);
     }
 
     #[test]
@@ -46,7 +47,7 @@ mod tests {
         let invalid_domain: ElectromagneticDomain<TestBackend> = ElectromagneticDomain::new(
             EMProblemType::Electrostatic,
             -1.0, // Invalid permittivity
-            4e-7 * std::f64::consts::PI,
+            VACUUM_PERMEABILITY,
             0.0,
             vec![1.0, 1.0],
         );

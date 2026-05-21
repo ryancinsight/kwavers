@@ -151,7 +151,9 @@ mod tests {
         let h = EPS_FD_F32;
         let omega = 2.0_f32 * std::f32::consts::PI * 1e9_f32; // 1 GHz
         let t0 = 1e-10_f32; // arbitrary time sample
-        let eps_mu = 8.854e-12_f32 * 1.257e-6_f32; // free space ε₀μ₀
+        // free space ε₀μ₀ — sourced from SSOT to avoid drift in dimensional checks.
+        let eps_mu = (crate::core::constants::fundamental::VACUUM_PERMITTIVITY
+            * crate::core::constants::fundamental::VACUUM_PERMEABILITY) as f32;
         let mu_sigma = 0.0_f32; // lossless
 
         // FD approximation of ∂²cos/∂t² at t0
