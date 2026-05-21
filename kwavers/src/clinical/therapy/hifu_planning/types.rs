@@ -1,6 +1,8 @@
 use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::error::{KwaversError, KwaversResult};
+use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use std::f64::consts::PI;
 
 /// HIFU transducer configuration.
@@ -44,26 +46,46 @@ pub struct FocalSpot {
 }
 
 impl FocalSpot {
-    #[must_use]
-    pub fn estimate_from_transducer(transducer: &ClinicalHIFUTransducer) -> Self {
+    /// Estimate the FWHM ellipsoid and focal pressure from a focused aperture.
+    ///
+    /// Theorem: for a circular focused source with f-number `F# = F/D`,
+    /// O'Neil's harmonic piston approximation gives
+    /// `FWHM_lat = 1.02 lambda F#` and the Gaussian axial approximation gives
+    /// `FWHM_ax = (8/pi) lambda F#^2`. Acoustic output power is
+    /// `P_ac = P_drive eta`; the harmonic peak pressure follows
+    /// `p = sqrt(2 rho c P_ac / A_f)`. No empirical pressure ceiling is applied.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::InvalidInput`] when the transducer frequency,
+    /// focal length, aperture, power, or efficiency is outside its physical
+    /// domain.
+    pub fn estimate_from_transducer(transducer: &ClinicalHIFUTransducer) -> KwaversResult<Self> {
+        validate_positive_finite("transducer.frequency", transducer.frequency)?;
+        validate_positive_finite("transducer.focal_length_mm", transducer.focal_length_mm)?;
+        validate_positive_finite(
+            "transducer.aperture_diameter_mm",
+            transducer.aperture_diameter_mm,
+        )?;
+        validate_nonnegative_finite("transducer.power", transducer.power)?;
+        validate_unit_interval("transducer.efficiency", transducer.efficiency)?;
+
         let wavelength = SOUND_SPEED_WATER_SIM / transducer.frequency;
         let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm;
         let lateral_width_mm = 1.02 * wavelength * 1e3 * f_number;
         let axial_width_mm = (8.0 / PI) * f_number * f_number * wavelength * 1e3;
         let lateral_radius = lateral_width_mm / 2.0;
         let focal_area_mm2 = PI * lateral_radius * lateral_radius;
-        let intensity_w_mm2 = transducer.power / focal_area_mm2;
+        let acoustic_power_w = transducer.power * transducer.efficiency;
+        let intensity_w_mm2 = acoustic_power_w / focal_area_mm2;
         let intensity_w_m2 = intensity_w_mm2 * 1e6;
         let peak_pressure_pa =
-            ((2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * intensity_w_m2).sqrt())
-                .min(50.0e6);
-        let frequency_mhz = transducer.frequency / 1e6;
-        let mechanical_index = peak_pressure_pa / 1e6 / frequency_mhz.sqrt();
+            (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * intensity_w_m2).sqrt();
+        let mechanical_index = calculate_mechanical_index(peak_pressure_pa, transducer.frequency);
         let lateral_semi = lateral_width_mm / 2.0;
         let axial_semi = axial_width_mm / 2.0;
         let focal_volume_mm3 = (4.0 / 3.0) * PI * lateral_semi * lateral_semi * axial_semi;
         let volume_minus6db_mm3 = focal_volume_mm3 * 0.7;
-        Self {
+        Ok(Self {
             location_mm: (0.0, 0.0, transducer.focal_length_mm),
             lateral_width_mm,
             axial_width_mm,
@@ -71,7 +93,7 @@ impl FocalSpot {
             mechanical_index,
             focal_volume_mm3,
             volume_minus6db_mm3,
-        }
+        })
     }
 
     #[must_use]
@@ -149,48 +171,64 @@ pub struct FocalSpotDoseEstimate {
 }
 
 impl FocalSpotDoseEstimate {
-    #[must_use]
+    /// Estimate single-focus heating and cumulative equivalent minutes at 43 C.
+    ///
+    /// The temperature model uses a one-compartment Pennes response with
+    /// `DeltaT(t) = (q_dot / (rho c_p perfusion)) (1 - exp(-perfusion t))`.
+    /// The dose model follows Sapareto-Dewey:
+    /// `CEM43 = t_min R^(43 - T)`, with `R = 0.5` at or above 43 C and
+    /// `R = 0.25` below 43 C. The returned `cem43` is in equivalent minutes.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::InvalidInput`] when the pressure, frequency,
+    /// duty cycle, or duration is outside its physical domain.
     pub fn estimate_from_focal_spot(
         focal_spot: &FocalSpot,
         frequency_hz: f64,
         duty_cycle: f64,
         treatment_duration_s: f64,
-    ) -> Self {
+    ) -> KwaversResult<Self> {
         const SPECIFIC_HEAT: f64 = 3600.0;
         const PERFUSION_RATE: f64 = 0.01;
         const BASELINE_TEMP_C: f64 = 37.0;
-        let duty = duty_cycle.clamp(0.0, 1.0);
-        let frequency_mhz = (frequency_hz / 1e6).max(0.0);
+        const SECONDS_PER_MINUTE: f64 = 60.0;
+        const ABLATION_DOSE_CEM43_MIN: f64 = 240.0;
+
+        validate_nonnegative_finite("focal_spot.peak_pressure_pa", focal_spot.peak_pressure_pa)?;
+        validate_positive_finite("frequency_hz", frequency_hz)?;
+        validate_unit_interval("duty_cycle", duty_cycle)?;
+        validate_nonnegative_finite("treatment_duration_s", treatment_duration_s)?;
+
+        let frequency_mhz = frequency_hz / 1e6;
         let alpha_np_per_m = 0.5 * frequency_mhz * 100.0 * (std::f64::consts::LN_10 / 20.0);
         let intensity_w_m2 = focal_spot.peak_pressure_pa.powi(2)
             / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
-        let heating_w_m3 = 2.0 * alpha_np_per_m * intensity_w_m2 * duty;
+        let heating_w_m3 = 2.0 * alpha_np_per_m * intensity_w_m2 * duty_cycle;
         let heating_rate_c_per_s = heating_w_m3 / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT);
-        let perfusion = PERFUSION_RATE.max(1e-6);
-        let delta_t =
-            (heating_rate_c_per_s / perfusion) * (1.0 - (-perfusion * treatment_duration_s).exp());
+        let delta_t = (heating_rate_c_per_s / PERFUSION_RATE)
+            * (1.0 - (-PERFUSION_RATE * treatment_duration_s).exp());
         let peak_temperature_c = BASELINE_TEMP_C + delta_t;
         let r: f64 = if peak_temperature_c >= 43.0 {
             0.5
         } else {
             0.25
         };
-        let cem43 = treatment_duration_s * r.powf(43.0 - peak_temperature_c);
+        let dose_rate_cem43_per_min = r.powf(43.0 - peak_temperature_c);
+        let cem43 = (treatment_duration_s / SECONDS_PER_MINUTE) * dose_rate_cem43_per_min;
         let time_to_dose_s = if peak_temperature_c >= 43.0 {
-            let per_second = r.powf(43.0 - peak_temperature_c);
-            if per_second > 0.0 {
-                240.0 / per_second
+            if dose_rate_cem43_per_min > 0.0 {
+                ABLATION_DOSE_CEM43_MIN * SECONDS_PER_MINUTE / dose_rate_cem43_per_min
             } else {
                 f64::INFINITY
             }
         } else {
             f64::INFINITY
         };
-        Self {
+        Ok(Self {
             cem43,
             peak_temperature_c,
             time_to_dose_s,
-        }
+        })
     }
 
     #[must_use]
@@ -253,5 +291,35 @@ impl TreatmentFeasibility {
 impl Default for TreatmentFeasibility {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+fn validate_positive_finite(name: &str, value: f64) -> KwaversResult<()> {
+    if value.is_finite() && value > 0.0 {
+        Ok(())
+    } else {
+        Err(KwaversError::InvalidInput(format!(
+            "{name} must be finite and positive, got {value}"
+        )))
+    }
+}
+
+fn validate_nonnegative_finite(name: &str, value: f64) -> KwaversResult<()> {
+    if value.is_finite() && value >= 0.0 {
+        Ok(())
+    } else {
+        Err(KwaversError::InvalidInput(format!(
+            "{name} must be finite and nonnegative, got {value}"
+        )))
+    }
+}
+
+fn validate_unit_interval(name: &str, value: f64) -> KwaversResult<()> {
+    if value.is_finite() && (0.0..=1.0).contains(&value) {
+        Ok(())
+    } else {
+        Err(KwaversError::InvalidInput(format!(
+            "{name} must be finite and within [0, 1], got {value}"
+        )))
     }
 }

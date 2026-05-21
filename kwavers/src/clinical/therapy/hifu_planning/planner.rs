@@ -30,7 +30,7 @@ impl HIFUPlanner {
         target: AblationTarget,
         therapy_params: &ClinicalTherapyParameters,
     ) -> KwaversResult<ClinicalHIFUTreatmentPlan> {
-        let focal_spot = FocalSpot::estimate_from_transducer(&self.transducer);
+        let focal_spot = FocalSpot::estimate_from_transducer(&self.transducer)?;
         let frequency = if therapy_params.frequency > 0.0 {
             therapy_params.frequency
         } else {
@@ -41,7 +41,7 @@ impl HIFUPlanner {
             frequency,
             therapy_params.duty_cycle,
             therapy_params.treatment_duration,
-        );
+        )?;
         let sonication_schedule = self.plan_sonication_schedule(&target, therapy_params)?;
         let mut feasibility = TreatmentFeasibility::new();
         feasibility.focal_coverage_adequate = sonication_schedule.coverage_guaranteed;
@@ -88,7 +88,7 @@ impl HIFUPlanner {
         target: &AblationTarget,
         therapy_params: &ClinicalTherapyParameters,
     ) -> KwaversResult<SonicationSchedule> {
-        let focal_spot = FocalSpot::estimate_from_transducer(&self.transducer);
+        let focal_spot = FocalSpot::estimate_from_transducer(&self.transducer)?;
         let frequency = if therapy_params.frequency > 0.0 {
             therapy_params.frequency
         } else {

@@ -1,7 +1,7 @@
 use super::*;
 use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::error::KwaversError;
 use std::f64::consts::PI;
 
@@ -15,7 +15,7 @@ fn test_hifu_transducer_default() {
 #[test]
 fn test_focal_spot_estimation() {
     let transducer = ClinicalHIFUTransducer::default();
-    let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
+    let focal_spot = FocalSpot::estimate_from_transducer(&transducer).expect("valid transducer");
     assert!(focal_spot.lateral_width_mm > 0.0);
     assert!(focal_spot.axial_width_mm > 0.0);
     assert!(focal_spot.peak_pressure_pa > 0.0);
@@ -25,7 +25,7 @@ fn test_focal_spot_estimation() {
 #[test]
 fn test_focal_spot_safety() {
     let transducer = ClinicalHIFUTransducer::default();
-    let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
+    let focal_spot = FocalSpot::estimate_from_transducer(&transducer).expect("valid transducer");
     let is_safe = focal_spot.is_safe(MechanicalIndexTissueType::SoftTissue);
     assert!(is_safe || focal_spot.mechanical_index > 1.9);
 }
@@ -45,13 +45,14 @@ fn test_ablation_target_creation() {
 #[test]
 fn test_thermal_dose_calculation() {
     let transducer = ClinicalHIFUTransducer::default();
-    let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
+    let focal_spot = FocalSpot::estimate_from_transducer(&transducer).expect("valid transducer");
     let thermal_dose = FocalSpotDoseEstimate::estimate_from_focal_spot(
         &focal_spot,
         transducer.frequency,
         1.0,
         10.0,
-    );
+    )
+    .expect("valid focal dose");
     assert!(thermal_dose.peak_temperature_c > 37.0);
     assert!(thermal_dose.time_to_dose_s.is_finite() || thermal_dose.time_to_dose_s.is_infinite());
 }
@@ -104,7 +105,7 @@ fn test_focal_spot_dimensions_match_oneil_formula() {
         transducer_type: "focused".to_string(),
         transducer_diameter_mm: 40.0,
     };
-    let focal_spot = FocalSpot::estimate_from_transducer(&transducer);
+    let focal_spot = FocalSpot::estimate_from_transducer(&transducer).expect("valid transducer");
     let c = SOUND_SPEED_WATER_SIM;
     let lambda_mm = c / transducer.frequency * 1e3;
     let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm;
@@ -132,6 +133,88 @@ fn test_focal_spot_dimensions_match_oneil_formula() {
         aspect,
         expected_aspect
     );
+}
+
+#[test]
+fn focal_spot_pressure_uses_acoustic_power_without_empirical_ceiling() {
+    let transducer = ClinicalHIFUTransducer {
+        frequency: 1.0e6,
+        focal_length_mm: 80.0,
+        aperture_diameter_mm: 40.0,
+        power: 10_000.0,
+        efficiency: 0.5,
+        transducer_type: "focused".to_string(),
+        transducer_diameter_mm: 40.0,
+    };
+
+    let focal_spot = FocalSpot::estimate_from_transducer(&transducer).expect("valid transducer");
+    let wavelength_mm = SOUND_SPEED_WATER_SIM / transducer.frequency * 1.0e3;
+    let f_number = transducer.focal_length_mm / transducer.aperture_diameter_mm;
+    let lateral_radius_mm = 0.5 * 1.02 * wavelength_mm * f_number;
+    let focal_area_m2 = PI * lateral_radius_mm.powi(2) * 1.0e-6;
+    let intensity = transducer.power * transducer.efficiency / focal_area_m2;
+    let expected_pressure =
+        (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM * intensity).sqrt();
+
+    assert!(expected_pressure > 50.0e6);
+    assert!((focal_spot.peak_pressure_pa - expected_pressure).abs() / expected_pressure < 1.0e-12);
+}
+
+#[test]
+fn focal_spot_rejects_invalid_transducer_domain() {
+    let mut transducer = ClinicalHIFUTransducer::default();
+    transducer.frequency = 0.0;
+    let err = FocalSpot::estimate_from_transducer(&transducer)
+        .expect_err("zero frequency must be rejected");
+    assert!(err.to_string().contains("transducer.frequency"));
+
+    let mut transducer = ClinicalHIFUTransducer::default();
+    transducer.efficiency = 1.2;
+    let err = FocalSpot::estimate_from_transducer(&transducer)
+        .expect_err("efficiency above unity must be rejected");
+    assert!(err.to_string().contains("transducer.efficiency"));
+}
+
+#[test]
+fn focal_dose_uses_cem43_equivalent_minutes() {
+    let focal_spot = FocalSpot {
+        location_mm: (0.0, 0.0, 80.0),
+        lateral_width_mm: 6.0,
+        axial_width_mm: 12.0,
+        peak_pressure_pa: 0.0,
+        mechanical_index: 0.0,
+        focal_volume_mm3: 100.0,
+        volume_minus6db_mm3: 70.0,
+    };
+
+    let dose = FocalSpotDoseEstimate::estimate_from_focal_spot(&focal_spot, 1.0e6, 1.0, 60.0)
+        .expect("zero pressure remains a valid no-heating dose");
+
+    let expected = 0.25_f64.powf(43.0 - 37.0);
+    assert!((dose.cem43 - expected).abs() < 1.0e-15);
+    assert_eq!(dose.peak_temperature_c, 37.0);
+    assert!(dose.time_to_dose_s.is_infinite());
+}
+
+#[test]
+fn focal_dose_rejects_invalid_treatment_domain() {
+    let focal_spot = FocalSpot {
+        location_mm: (0.0, 0.0, 80.0),
+        lateral_width_mm: 6.0,
+        axial_width_mm: 12.0,
+        peak_pressure_pa: 1.0e6,
+        mechanical_index: 1.0,
+        focal_volume_mm3: 100.0,
+        volume_minus6db_mm3: 70.0,
+    };
+
+    let err = FocalSpotDoseEstimate::estimate_from_focal_spot(&focal_spot, 0.0, 1.0, 10.0)
+        .expect_err("zero frequency must be rejected");
+    assert!(err.to_string().contains("frequency_hz"));
+
+    let err = FocalSpotDoseEstimate::estimate_from_focal_spot(&focal_spot, 1.0e6, 1.1, 10.0)
+        .expect_err("duty cycle above unity must be rejected");
+    assert!(err.to_string().contains("duty_cycle"));
 }
 
 #[test]
@@ -222,7 +305,8 @@ fn test_hifu_plan_uses_subspot_dose_for_feasibility() {
 
 #[test]
 fn test_sonication_schedule_rejects_nonpositive_target_dimension() {
-    let focal_spot = FocalSpot::estimate_from_transducer(&ClinicalHIFUTransducer::default());
+    let focal_spot = FocalSpot::estimate_from_transducer(&ClinicalHIFUTransducer::default())
+        .expect("valid transducer");
     let target = AblationTarget::new(
         "invalid".to_owned(),
         (0.0, 0.0, 80.0),

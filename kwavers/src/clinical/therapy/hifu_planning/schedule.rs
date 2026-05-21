@@ -75,7 +75,7 @@ impl SonicationSchedule {
             frequency_hz,
             therapy_params.duty_cycle,
             per_spot_dwell,
-        );
+        )?;
 
         let mut subspots = Vec::with_capacity(n);
         for &x_mm in &x {
