@@ -4,13 +4,26 @@ use super::calculator::BjerknesCalculator;
 use crate::core::error::{KwaversError, KwaversResult};
 
 impl BjerknesCalculator {
-    /// Predict bubble trajectory under Bjerknes forces
+    /// Predict bubble trajectory under Bjerknes forces.
     ///
-    /// Simple model: acceleration = Force / mass
-    /// where mass ≈ 3 * ρ * (4/3)πR³ for bubble in fluid
+    /// ## Effective inertial mass
+    ///
+    /// For a gas bubble translating through an incompressible inviscid liquid,
+    /// the gas-phase mass is negligible (`ρ_gas ≪ ρ_liquid`) and the inertia
+    /// is dominated by the *added mass* of the displaced liquid.  For a sphere
+    /// the added-mass coefficient is `C_a = 1/2`, giving
+    ///
+    /// ```text
+    /// m_eff ≈ C_a · ρ_liquid · V = (1/2) · ρ · (4π/3) R³
+    /// ```
+    ///
+    /// Reference: Lamb H. (1932) *Hydrodynamics*, 6th ed., §92 (added mass of a
+    /// translating sphere); Crum LA (1975) JASA 57(6), 1363–1370 (Bjerknes-force
+    /// translational dynamics of microbubbles).  The previous implementation used
+    /// `3·ρ·V` instead of `½·ρ·V`, under-predicting bubble acceleration by 6×.
+    ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    ///
+    /// - Returns [`KwaversError::InvalidInput`] if `bubble_radius` ≤ 0 or `time_step` ≤ 0.
     pub fn predict_bubble_motion(
         &self,
         bubble_radius: f64,
@@ -24,11 +37,10 @@ impl BjerknesCalculator {
             ));
         }
 
-        // Effective mass (including added mass effect)
+        // Added-mass effective inertia of a translating sphere in inviscid fluid.
         let bubble_volume = (4.0 / 3.0) * std::f64::consts::PI * bubble_radius.powi(3);
-        let effective_mass = 3.0 * self.config.rho * bubble_volume; // With added mass factor
+        let effective_mass = 0.5 * self.config.rho * bubble_volume;
 
-        // Calculate acceleration
         let acceleration = bjerknes_force / effective_mass;
 
         // Update velocity and position (simple Euler integration)
@@ -68,12 +80,13 @@ mod tests {
         BjerknesCalculator::new(BjerknesConfig::default())
     }
 
-    /// predict_bubble_motion: zero initial velocity → displacement = 0.5·a·dt².
+    /// predict_bubble_motion: zero initial velocity → displacement = 0.5·a·dt²
+    /// with the *added-mass* effective inertia (Lamb 1932 §92).
     ///
     /// With F=1e-9 N, R=1e-6 m (1 µm), ρ=1000 kg/m³:
-    ///   V = (4/3)π·R³; m_eff = 3·ρ·V; a = F/m_eff; d = 0.5·a·dt²
+    ///   V = (4/3)π·R³; m_eff = (1/2)·ρ·V; a = F/m_eff; d = 0.5·a·dt²
     #[test]
-    fn predict_bubble_motion_zero_initial_velocity_matches_kinematics() {
+    fn predict_bubble_motion_zero_initial_velocity_matches_added_mass_kinematics() {
         let bjerknes_force = 1e-9_f64; // 1 nN
         let radius = 1e-6_f64; // 1 µm
         let dt = 1e-7_f64; // 0.1 µs
@@ -81,7 +94,7 @@ mod tests {
         use std::f64::consts::PI;
         let rho = calc().config.rho;
         let volume = (4.0 / 3.0) * PI * radius.powi(3);
-        let effective_mass = 3.0 * rho * volume;
+        let effective_mass = 0.5 * rho * volume; // added mass C_a = 1/2
         let acceleration = bjerknes_force / effective_mass;
         let expected_displacement = 0.5 * acceleration * dt.powi(2);
         let expected_velocity = acceleration * dt;
