@@ -30,6 +30,7 @@ pub use crate::domain::medium::properties::ThermalPropertyData;
 /// as separate simulation parameters.
 pub mod tissues {
     use crate::core::constants::fundamental::DENSITY_BLOOD;
+    use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
     use crate::domain::medium::properties::ThermalPropertyData;
 
     /// Liver tissue properties
@@ -50,7 +51,7 @@ pub mod tissues {
             3540.0,        // specific_heat (J/kg/K)
             DENSITY_BLOOD, // density (kg/m³)
             Some(16.7),    // blood_perfusion (kg/m³/s) - high perfusion
-            Some(3617.0),  // blood_specific_heat (J/kg/K)
+            Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Liver tissue properties are valid")
     }
@@ -73,7 +74,7 @@ pub mod tissues {
             3421.0,       // specific_heat (J/kg/K)
             1090.0,       // density (kg/m³)
             Some(0.54),   // blood_perfusion (kg/m³/s)
-            Some(3617.0), // blood_specific_heat (J/kg/K)
+            Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Muscle tissue properties are valid")
     }
@@ -96,7 +97,7 @@ pub mod tissues {
             2348.0,       // specific_heat (J/kg/K)
             911.0,        // density (kg/m³)
             Some(0.3),    // blood_perfusion (kg/m³/s) - low perfusion
-            Some(3617.0), // blood_specific_heat (J/kg/K)
+            Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Fat tissue properties are valid")
     }
@@ -119,7 +120,7 @@ pub mod tissues {
             3600.0,       // specific_heat (J/kg/K)
             1050.0,       // density (kg/m³)
             Some(0.2),    // blood_perfusion (kg/m³/s) - poor perfusion
-            Some(3617.0), // blood_specific_heat (J/kg/K)
+            Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Tumor tissue properties are valid")
     }
