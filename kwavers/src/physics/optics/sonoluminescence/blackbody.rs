@@ -164,9 +164,15 @@ pub fn calculate_blackbody_emission(
                 // Total power emitted
                 let power = model.total_power(temp, surface_area);
 
-                // Convert to power density (W/m³)
+                // Convert to power density (W/m³). Guard against f64 underflow
+                // (volume → 0 for radius below ~1e-103 m) by skipping the cell
+                // rather than silently clamping volume to 1e-20 — the prior
+                // clamp mis-reported emission density for any radius below
+                // ~1.34e-7 m by replacing the true volume with a fixed minimum.
                 let volume = 4.0 / 3.0 * PI * radius.powi(3);
-                *out = power / volume.max(1e-20);
+                if volume > 0.0 {
+                    *out = power / volume;
+                }
             }
         });
 
