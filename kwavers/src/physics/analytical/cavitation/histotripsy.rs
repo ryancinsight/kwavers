@@ -93,6 +93,10 @@ pub fn histotripsy_lesion_radius_m(
     {
         return 0.0;
     }
-    let sigma_y = tissue_yield_stress_pa.max(1.0);
-    r0_m * (p0_pa * icd / sigma_y).cbrt()
+    // tissue_yield_stress_pa is already validated > 0 above; no further clamp.
+    // Prior to 2026-05-21 a .max(1.0) silently floored any sub-1-Pa yield
+    // stress to 1 Pa, mis-reporting cavitation lesion radii for very soft
+    // materials (e.g. gel phantoms with σ_y ≪ 1 Pa) by replacing the true
+    // yield stress with an arbitrary minimum.
+    r0_m * (p0_pa * icd / tissue_yield_stress_pa).cbrt()
 }
