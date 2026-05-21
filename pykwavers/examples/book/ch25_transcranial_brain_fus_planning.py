@@ -7,7 +7,7 @@ Runnable planning example for:
 1. CT, T1 MRI, and MNI152 atlas ingestion.
 2. RITK-based CT/MRI/atlas registration when the compiled RITK Python
    extension is installed.
-3. Insightec-style 1024-element hemispherical array construction.
+3. 1024-element hemispherical focused-bowl array construction.
 4. Skull path phase correction, acoustic field synthesis, Pennes thermal dose,
    and cavitation-risk mapping for essential-tremor VIM ablation.
 5. CT-space segmentation or GBM segmentation hooks for BBB-opening subspots.

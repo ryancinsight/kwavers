@@ -145,7 +145,7 @@ def plot_transducer_phase(triplet: BrainTriplet, phase: PhaseCorrection) -> None
     )
     ax2.text(0.98, 0.98, text, ha="right", va="top", transform=ax2.transAxes, fontsize=8)
     fig.tight_layout()
-    savefig(FIG_DIR / "fig02_insightec_phase_correction")
+    savefig(FIG_DIR / "fig02_transcranial_bowl_phase_correction")
     plt.close(fig)
 
 

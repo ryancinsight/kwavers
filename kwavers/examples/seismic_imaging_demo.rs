@@ -89,8 +89,8 @@
 use kwavers::core::error::{KwaversError, KwaversResult};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::source::{GridSource, SourceMode};
+use kwavers::solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers::solver::inverse::seismic::{
-    fwi::{FwiGeometry, FwiProcessor},
     parameters::{
         FwiParameters, ImagingCondition, RegularizationParameters, RtmSettings,
         SeismicBoundaryType, StorageStrategy,

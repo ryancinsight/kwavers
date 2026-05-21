@@ -168,6 +168,19 @@ theorems against an external published reconstruction.
   applies the pressure-source `cos(c_ref |k| dt / 2)` spatial correction to the
   discrete source mask before direct Green evaluation and reports the filtered
   residual delta.
+- Added finite-grid PSTD Green diagnostics: the replication report now evaluates
+  the no-CPML homogeneous modal recurrence with propagation kappa, source kappa,
+  exact source timing, and the same trailing frequency-bin projection as the
+  Rust acquisition.
+- Closed residual FWI import drift: remaining examples now depend on
+  `solver::inverse::fwi::time_domain` directly, with no legacy seismic-owned
+  compatibility path.
+- Closed residual transcranial naming drift: book examples and docs now describe
+  the 1024-element geometry as a hemispherical focused bowl instead of a
+  vendor/helmet-specific shape, and the generated phase-correction figure stem
+  matches that domain name.
+- Added a value-semantic bioheat SSOT regression: perfused thermal tissue tests
+  now assert `BLOOD_SPECIFIC_HEAT` exactly.
 - Added Rust-owned HDF5 phantom ingest:
   `clinical::imaging::reconstruction::breast_ust_fwi::phantom_hdf5` uses
   `consus-hdf5`/`consus-core`/`consus-io` to load 3-D sound-speed datasets from
@@ -236,7 +249,11 @@ theorems against an external published reconstruction.
    1.028543 before any scattering model enters the path. Adding the PSTD
    pressure-source k-space correction to the direct field changes homogeneous
    residual only from 0.454900 to 0.454689 and leaves passive-only residual at
-   0.757458. Source-channel attribution
+   0.757458. The finite-grid PSTD modal Green improves passive-only residual to
+   0.455227, passive phase-error RMS to 0.956928 rad, and passive
+   log-amplitude-error RMS to 0.422984, but worsens all-channel residual to
+   0.741005, isolating the next dominant mismatch to active source/receiver
+   self-channel semantics. Source-channel attribution
    rejects co-located receiver contamination as the dominant root cause:
    active-source receiver channels account for 17.7068% of full-scale residual
    energy, and passive-only row-scaled residual is 0.543288. Source-excitation
@@ -249,8 +266,8 @@ theorems against an external published reconstruction.
    Born is currently closest to PSTD (`0.456575` normalized residual), followed
    by dense CBS (`0.476438`), with absorbed spectral CBS worst (`0.523411`).
    This rules out extra CBS complexity as the immediate parity path and shifts
-   the next repair to the discrete propagation Green function rather than
-   source-kappa filtering or inversion tuning.
+   the next repair to active self-channel treatment and receiver exclusion
+   policy rather than source-kappa filtering or inversion tuning.
 4. **MAT5/HDF5 ingest — CLOSED.** The published phantom file is MATLAB 5.0,
    while alternate user-provided sound-speed phantoms may be HDF5/MAT-v7.3.
    The selected boundary supports both under Rust-owned clinical ingest; Python
@@ -299,6 +316,11 @@ theorems against an external published reconstruction.
 - T7j: CLOSED. PSTD source-kappa direct-field diagnostics apply the same
   `cos(c_ref |k| dt / 2)` source spatial filter used by PSTD pressure-source
   injection and show it is not sufficient to explain the homogeneous mismatch.
+- T7k: CLOSED. Finite-grid PSTD Green diagnostics derive and test the no-CPML
+  modal recurrence, improving passive direct-field agreement while exposing
+  active source/receiver self-channel mismatch.
+- T7l: CLOSED. Residual transcranial documentation/example naming now routes
+  through generic focused-bowl terminology instead of vendor/helmet labels.
 - T8a: CLOSED. Rust `consus` HDF5/MAT-v7.3 phantom ingest plus PyO3 surface.
 - T8b: CLOSED. `pykwavers/examples/replicate_ali2025_breast_fwi.py` fetches the
   GitHub Release phantom, loads it through Rust clinical ingest, applies

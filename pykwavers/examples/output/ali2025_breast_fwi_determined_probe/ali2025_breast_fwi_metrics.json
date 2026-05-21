@@ -50,6 +50,20 @@
     "passive_phase_error_rms_rad": 1.4588831956505917,
     "passive_range_max_m": 0.010119288512538814,
     "passive_range_min_m": 0.004525483399593905,
+    "pstd_periodic": {
+      "normalized_l2_residual": 0.7410053165756724,
+      "passive_log_amplitude_error_rms": 0.42298397666776727,
+      "passive_only_normalized_l2_residual": 0.45522718069730433,
+      "passive_pair_count": 24,
+      "passive_phase_error_max_abs_rad": 1.8625525548630928,
+      "passive_phase_error_rms_rad": 0.9569282146918339,
+      "passive_range_max_m": 0.010119288512538814,
+      "passive_range_min_m": 0.004525483399593905,
+      "row_normalized_l2_residual_mean": 0.589497578753828,
+      "source_scale_magnitude_coefficient_of_variation": 0.4432844723141417,
+      "source_scale_phase_span_rad": 1.030511231696402
+    },
+    "pstd_periodic_residual_delta": 0.2861052883879122,
     "row_normalized_l2_residual_mean": 0.5561369395395142,
     "source_kappa_filtered": {
       "normalized_l2_residual": 0.4546894774397905,

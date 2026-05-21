@@ -20,10 +20,8 @@ use burn::backend::NdArray as NdArrayBackend;
 use kwavers::core::error::{KwaversError, KwaversResult};
 use kwavers::domain::grid::Grid;
 use kwavers::domain::source::{GridSource, SourceMode};
-use kwavers::solver::inverse::seismic::{
-    fwi::{FwiGeometry, FwiProcessor},
-    parameters::{FwiParameters, RegularizationParameters},
-};
+use kwavers::solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
+use kwavers::solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use ndarray::{Array2, Array3, Zip};
 use ritk_io::{
     load_dicom_series, read_nifti, read_png_series, scan_dicom_directory, DicomSeriesInfo,

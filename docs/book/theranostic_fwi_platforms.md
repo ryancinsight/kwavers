@@ -5,10 +5,10 @@ array is also the transmit/receive aperture for image formation and treatment
 monitoring. The current implementation covers three CT-derived finite-frequency
 inverse scenarios:
 
-- INSIGHTEC-like 1024-element transcranial focused bowl around the head CT.
-- HistoSonics-like 256-element concave abdominal array at the skin surface for
+- 1024-element transcranial focused bowl around the head CT.
+- 256-element concave abdominal array at the skin surface for
   KiTS19 kidney tumor CT.
-- HistoSonics-like 256-element concave abdominal array at the skin surface for
+- 256-element concave abdominal array at the skin surface for
   LiTS liver tumor CT.
 
 The figures are fully synthetic, model-consistent simulations. They are not

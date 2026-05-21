@@ -39,12 +39,13 @@ brain-FWI study reported by UCL and npj Digital Medicine:
 - 2026 sparse-aperture 3-D passive acoustic mapping:
   <https://www.nature.com/articles/s41598-026-42764-w>
 
-The published study used an ultrasound helmet acquisition with 1024 unfocused
-source/receiver positions and adapted seismic full-waveform inversion to recover
+The published study used a 1024-element hemispherical ultrasound acquisition
+with unfocused source/receiver positions and adapted seismic full-waveform
+inversion to recover
 brain acoustic properties through the skull.  The in-repository chapter
 implements a bounded reproduction of that acquisition contract with the same
-1024-element count used elsewhere in kwavers for INSIGHTEC-style transcranial
-arrays.
+1024-element count used elsewhere in kwavers for hemispherical focused-bowl
+transcranial arrays.
 
 The executable chapter script is:
 
@@ -67,7 +68,7 @@ Inputs:
 
 - Head CT volume readable by `ritk-io`.
 - CT voxel spacing from the RITK image metadata.
-- INSIGHTEC-style element count `N = 1024`.
+- Hemispherical focused-bowl element count `N = 1024`.
 - Encoded finite-frequency transmit/receive channels over the 1024-element
   hemispherical cap.
 - Iteration schedule for the reconstruction optimizer.
@@ -393,8 +394,8 @@ therapy = pykwavers.run_theranostic_nonlinear_3d_from_ritk(
 The `run_transcranial_ust_volume_inversion_from_ritk_ct` call performs all
 computation in Rust: CT ingest via RITK, acoustic model assembly, Born
 sensitivity matrix construction, adjoint migration, and the regularized
-PCG iteration.  The 1024-element hemispherical helmet geometry satisfies the
-same-device aperture contract (§29.2): every element index used as a
+PCG iteration.  The 1024-element hemispherical focused-bowl geometry satisfies
+the same-device aperture contract (§29.2): every element index used as a
 transmitter also appears as a receiver.
 
 ## 27.8 Reproducible figures
@@ -477,12 +478,12 @@ The published npj Digital Medicine study is a full 3-D time-domain FWI pipeline.
 This chapter is a bounded in-repository reproduction of the acquisition and
 inversion contract:
 
-- same documented 1024-element hemispherical helmet count;
+- same documented 1024-element hemispherical focused-bowl count;
 - CT-derived skull and brain acoustic model;
 - finite-frequency source/receiver phase sensitivity;
 - weak-Westervelt second-harmonic encoded channels;
 - adjoint migration from simulated encoded ultrasound data;
-- optimization of a 3-D brain sound-speed volume from simulated helmet data;
+- optimization of a 3-D brain sound-speed volume from simulated bowl-aperture data;
 - frequency continuation, Sobolev update conditioning, Charbonnier
   edge-preserving proximal regularization, and separate enhanced display output
   for visual inspection;

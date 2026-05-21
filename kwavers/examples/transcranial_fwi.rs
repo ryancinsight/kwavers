@@ -79,10 +79,8 @@
 use kwavers::core::error::KwaversResult;
 use kwavers::domain::grid::Grid;
 use kwavers::domain::source::{GridSource, SourceMode};
-use kwavers::solver::inverse::seismic::{
-    fwi::{FwiGeometry, FwiProcessor},
-    parameters::{FwiParameters, RegularizationParameters},
-};
+use kwavers::solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
+use kwavers::solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 use std::time::Instant;
@@ -660,7 +658,7 @@ fn main() -> KwaversResult<()> {
     println!("\n  ── Forward models (true skull, {} shots) ──", n_shots);
     let t0 = Instant::now();
     let mut shots: Vec<(
-        kwavers::solver::inverse::seismic::fwi::FwiGeometry,
+        kwavers::solver::inverse::fwi::time_domain::FwiGeometry,
         ndarray::Array2<f64>,
     )> = Vec::with_capacity(n_shots);
     for &(ix, iz) in &HEMI_SOURCE_POSITIONS {

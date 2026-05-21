@@ -25,7 +25,7 @@ The workflow covers:
   figures compare the same physical CT-space planes.  When NIfTI world
   coordinates are inconsistent across demonstration data, the chapter uses a
   foreground-extent affine initialization and records that method explicitly.
-- Insightec-style 1024-element hemispherical array construction.
+- 1024-element hemispherical focused-bowl array construction.
 - Per-element skull-path phase correction.
 - Essential-tremor VIM thermal ablation with pressure, MI, Pennes temperature,
   CEM43, and lesion maps.
@@ -39,7 +39,7 @@ The workflow covers:
 The CT-aligned brain target and transducer pose are stored once in
 `pykwavers/examples/book/transcranial_planning/scene.py` as
 `CANONICAL_BRAIN_SCENE`. Figure 2 phase-correction output, the Chapter 29
-brain Figure 5 nonlinear branch, the 3-D helmet placement view, and the
+brain Figure 5 nonlinear branch, the 3-D bowl-aperture placement view, and the
 skull-adaptive transcranial benchmark resolve their target index from this
 scene definition instead of carrying separate centroid or element-count
 defaults.
@@ -208,7 +208,7 @@ region satisfying `CEM43 >= 240 min`.
 Generated figures:
 
 - `fig01_registered_ct_mri_mni`
-- `fig02_insightec_phase_correction`
+- `fig02_transcranial_bowl_phase_correction`
 - `fig03_essential_tremor_ablation`
 
 ## 25.5 GBM BBB-opening subspots
@@ -261,7 +261,7 @@ without creating a parallel demonstration.  The reference paper is
 Already implemented before the benchmark:
 
 - RITK-backed CT NIfTI ingestion and CT/MRI/MNI registration/QC.
-- Insightec-like hemispherical transducer construction.
+- Hemispherical focused-bowl transducer construction.
 - CT HU to density, sound speed, impedance, attenuation, phase delay, and
   amplitude transmission.
 - Rayleigh pressure synthesis from skull-corrected per-element phases and
@@ -278,7 +278,7 @@ Python package.  The pipeline:
 3. Computes per-element skull rays, phase correction, amplitude transmission,
    and skull path length.
 4. Selects the active skull-aware aperture from the existing hemispherical
-   helmet by choosing the best-transmission skull-hit anchor and retaining
+   focused bowl by choosing the best-transmission skull-hit anchor and retaining
    elements inside a configured aperture diameter.
 5. Computes a skull-aware reference pressure field and an uncorrected baseline
    pressure field over the same active aperture.
@@ -311,8 +311,8 @@ Structural comparison to the paper:
 
 | Paper structure | kwavers benchmark structure | Current boundary |
 | --- | --- | --- |
-| TFUScapes stores pseudo-CT volumes, transducer coordinates, and k-Wave pressure maps. | The benchmark stores measured CT HU, active helmet coordinates, skull-aware Rayleigh pressure, and uncorrected baseline pressure. | The pressure backend is the existing deterministic Chapter 25 Rayleigh path, not the paper's full k-Wave simulation backend. |
-| Transducer placement adapts to subject skull geometry. | Aperture placement is CT-conditioned by skull-ray transmission, skull path length, and the existing helmet geometry. | The aperture is selected deterministically from the Insightec-like helmet rather than through a learned pose model. |
+| TFUScapes stores pseudo-CT volumes, transducer coordinates, and k-Wave pressure maps. | The benchmark stores measured CT HU, active bowl-aperture coordinates, skull-aware Rayleigh pressure, and uncorrected baseline pressure. | The pressure backend is the existing deterministic Chapter 25 Rayleigh path, not the paper's full k-Wave simulation backend. |
+| Transducer placement adapts to subject skull geometry. | Aperture placement is CT-conditioned by skull-ray transmission, skull path length, and the existing focused-bowl geometry. | The aperture is selected deterministically from the bowl-transducer source rather than through a learned pose model. |
 | DeepTFUS is trained and evaluated with relative L2, focal-position error, and max-pressure error. | The benchmark reports the same metric families for corrected reference versus uncorrected baseline. | Neural surrogate training, TFUScapes-scale dataset generation, and DeepTFUS inference are not implemented in this path. |
 
 ## 25.7 Verification

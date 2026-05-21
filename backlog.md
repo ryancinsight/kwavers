@@ -59,19 +59,30 @@ already returns `Box<dyn Solver>` and dispatches `SolverType::{FDTD, PSTD,
 Hybrid, KSpace, DG}` to concrete impls — but the FWI modules **bypass the
 factory** and hardcode their own forward stacks. Correction:
 
-- **[arch] T15: FWI A factory migration.** `solver/inverse/seismic/fwi/forward.rs:85`
-  + `adjoint.rs:188` hardcode `FdtdSolver::new()`. Refactor `FwiProcessor` to
-  take a `SolverType` field and use `SimulationSolverFactory::create_solver()`
-  so FWI works with FDTD or PSTD or Hybrid by config switch, matching the
-  unified-solver principle. Extend `Solver` trait with `step()` if `run(1)` is
-  too coarse for inversion control.
+- **[done] [arch] T15: FWI A namespace relocation — CLOSED 2026-05-20.**
+  Moved `solver/inverse/seismic/fwi/` → `solver/inverse/fwi/time_domain/`.
+  FWI taxonomy now consistent across both domains
+  (`fwi::frequency_domain`, `fwi::time_domain`). 4 example consumers +
+  seismic plugin updated. cargo check --lib + --examples clean.
+- **[arch] T15b: time-domain FWI factory migration.** Replace
+  `FdtdSolver::new()` hardcodes in `fwi/time_domain/{forward,adjoint}.rs` with
+  `SimulationSolverFactory::create_solver(SolverType, ...)` so PSTD/Hybrid
+  become config-driven FWI backends. Requires `Solver` trait extension with
+  `step_forward()`, CPML/k-space absorption handling, sensor decoupling,
+  and PSTD adjoint-reciprocity verification. Honest path for the unified
+  "FWI works with any forward solver" principle.
 - **[done] [arch] T16: FWI B parallel stack deleted — CLOSED 2026-05-20.**
   Removed `solver/inverse/reconstruction/seismic/fwi/` entirely
   (~1500 LOC across mod, gradient, optimization, regularization, wavefield/*).
   Verified zero external struct consumers prior to deletion. Parent
   `reconstruction/seismic/mod.rs` updated to point future maintainers at
-  the canonical `solver::inverse::seismic::fwi` engine (factory-dispatched
+  the canonical `solver::inverse::fwi::time_domain` engine (factory-dispatched
   after T15 lands). cargo check --lib exit 0.
+- **[done] [patch] T15c: FWI example import closure — CLOSED 2026-05-21.**
+  Updated remaining example consumers and reconstruction comments to import
+  `solver::inverse::fwi::time_domain` directly, preserving the FWI taxonomy
+  without a legacy seismic-owned compatibility path. Verified examples with
+  `cargo check -p kwavers --features nifti --example ...`.
 - **[done] [arch] T17a: HelmholtzForwardOperator trait landed — CLOSED 2026-05-20.**
   New module `solver/inverse/fwi/frequency_domain/operator.rs` with the
   `HelmholtzForwardOperator` trait + three impls (`SingleScatterBornOperator`,
@@ -266,6 +277,21 @@ breast-imaging reconstruction.
   residual from `0.454900` to `0.454689` (`-0.000211`) while passive-only
   residual remains `0.757458`; this rejects source-kappa filtering as the
   primary parity repair.
+- **[done] [patch] T8m: finite-grid PSTD Green diagnostic — CLOSED 2026-05-21.**
+  Added `ali2025_breast_fwi.discrete_green`, a finite-grid homogeneous PSTD
+  direct-field diagnostic derived from the no-CPML modal recurrence with
+  propagation kappa, pressure-source kappa, source timing, and the same trailing
+  Fourier-bin projection used by the Rust acquisition. On the determined
+  4x4x3/two-frequency probe, the periodic PSTD Green worsens all-channel
+  homogeneous residual to `0.741005` but improves passive-only residual to
+  `0.455227`, passive phase-error RMS to `0.956928` rad, and passive
+  log-amplitude-error RMS to `0.422984`; the remaining dominant discrepancy is
+  active source/receiver self-channel semantics.
+- **[done] [patch] T8n: focused-bowl terminology cleanup — CLOSED 2026-05-21.**
+  Removed residual transcranial vendor/helmet labels from book examples and
+  documentation, renamed the Chapter 25 phase-correction artifact stem to
+  `fig02_transcranial_bowl_phase_correction`, and retained the bowl transducer
+  source as the geometry-level abstraction.
 - **[patch] T9: parity gate.** At reduced grid (2D center slice or 3D
   dxi=1.6 mm) run T7 → T6, assert RMSE within 2× the Ali et al. Table 1
   3-D FWI RMSE and PCC at least 95% of the Table 1 3-D FWI PCC. Current
@@ -289,8 +315,11 @@ breast-imaging reconstruction.
   RMS `1.458883` rad, and log-amplitude-error RMS `1.028543`. Next work should
   align the discrete propagation Green function itself because the PSTD
   source-kappa correction changes homogeneous residual by only `-0.000211` and
-  leaves passive-only residual at `0.757458`; changing inversion settings remains
-  blocked until the direct propagation contract is matched.
+  leaves passive-only residual at `0.757458`. The finite-grid PSTD modal Green
+  now explains a material part of passive propagation (`0.455227` passive-only
+  residual, `0.956928` rad phase RMS) but worsens all-channel residual to
+  `0.741005`, shifting the next repair to active source/receiver self-channel
+  semantics before inversion settings can be changed.
 
 ### Deprecation (T2 prerequisite)
 - **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`

@@ -1253,9 +1253,8 @@ def predicted_lesion(p_field, props, sc, info, label_vol,
     actual_n = max(int(raster_grid.sum()), 1)
     effective_prf = sc.prf * max(sc.interleave_subspots, 1)
     # Mechanical re-anchoring penalty: ~2 s per repositioning is
-    # typical for clinical robotic stages (HistoSonics, Insightec
-    # ExAblate). Add it to the electronic-sonication time so the
-    # treatment_s is honest about wall-clock duration.
+    # typical for clinical robotic stages. Add it to the electronic-sonication
+    # time so the treatment_s is honest about wall-clock duration.
     mech_repo_s = 2.0 * n_mech_anchors
     actual_treatment_s = actual_n * pulses_per_pt / effective_prf + mech_repo_s
     if sc.treatment_s > 0:

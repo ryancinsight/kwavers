@@ -70,10 +70,10 @@ pub mod tissues {
     #[must_use]
     pub fn muscle() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.49,         // conductivity (W/m/K)
-            3421.0,       // specific_heat (J/kg/K)
-            1090.0,       // density (kg/m³)
-            Some(0.54),   // blood_perfusion (kg/m³/s)
+            0.49,       // conductivity (W/m/K)
+            3421.0,     // specific_heat (J/kg/K)
+            1090.0,     // density (kg/m³)
+            Some(0.54), // blood_perfusion (kg/m³/s)
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Muscle tissue properties are valid")
@@ -93,10 +93,10 @@ pub mod tissues {
     #[must_use]
     pub fn fat() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.21,         // conductivity (W/m/K)
-            2348.0,       // specific_heat (J/kg/K)
-            911.0,        // density (kg/m³)
-            Some(0.3),    // blood_perfusion (kg/m³/s) - low perfusion
+            0.21,      // conductivity (W/m/K)
+            2348.0,    // specific_heat (J/kg/K)
+            911.0,     // density (kg/m³)
+            Some(0.3), // blood_perfusion (kg/m³/s) - low perfusion
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Fat tissue properties are valid")
@@ -116,10 +116,10 @@ pub mod tissues {
     #[must_use]
     pub fn tumor() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.55,         // conductivity (W/m/K)
-            3600.0,       // specific_heat (J/kg/K)
-            1050.0,       // density (kg/m³)
-            Some(0.2),    // blood_perfusion (kg/m³/s) - poor perfusion
+            0.55,      // conductivity (W/m/K)
+            3600.0,    // specific_heat (J/kg/K)
+            1050.0,    // density (kg/m³)
+            Some(0.2), // blood_perfusion (kg/m³/s) - poor perfusion
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Tumor tissue properties are valid")
@@ -142,6 +142,7 @@ pub mod tissues {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 
     #[test]
     fn test_tissue_constructors() {
@@ -194,5 +195,6 @@ mod tests {
 
         assert!(w_b > 0.0);
         assert!(c_b > 0.0);
+        assert_eq!(c_b, BLOOD_SPECIFIC_HEAT);
     }
 }

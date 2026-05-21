@@ -33,9 +33,9 @@ pub mod rtm;
 pub mod wavelet;
 
 // Re-export main types. Time-domain FWI is consolidated under
-// `solver::inverse::seismic::fwi` (factory-dispatched); the parallel
-// reconstruction/seismic/fwi stack (custom inline FDTD stencil with zero
-// external consumers) was removed 2026-05-20 — see backlog T16.
+// `solver::inverse::fwi::time_domain` (factory-dispatched after T15 lands);
+// the parallel reconstruction/seismic/fwi stack (custom inline FDTD stencil
+// with zero external consumers) was removed 2026-05-20 — see backlog T16.
 pub use config::{AnisotropyParameters, RtmImagingCondition, SeismicImagingConfig};
 pub use misfit::{MisfitFunction, MisfitType};
 pub use rtm::ReverseTimeMigration;

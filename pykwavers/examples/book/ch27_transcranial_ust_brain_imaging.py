@@ -103,7 +103,7 @@ def run_fwi_schedule() -> tuple[dict, dict[str, float | int], bool, int]:
     best_metrics: dict[str, float | int] | None = None
     best_score = -np.inf
     for iterations in ITERATION_SCHEDULE:
-        print(f"[ch27] Running RITK CT -> 1024-element 3-D helmet FWI, iterations={iterations}")
+        print(f"[ch27] Running RITK CT -> 1024-element 3-D bowl-array FWI, iterations={iterations}")
         result = kw.run_transcranial_ust_volume_inversion_from_ritk_ct(
             str(CT_PATH),
             grid_size=GRID_SIZE,

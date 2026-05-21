@@ -1072,8 +1072,8 @@ def plot_projected_3d_points(ax: plt.Axes, result: dict[str, object], z_index: i
 def short_device_name(result: dict[str, object]) -> str:
     name = str(result["device_model"])
     if "focused_bowl" in name:
-        return "INSIGHTEC-like focused bowl"
-    return "HistoSonics-like skin arc"
+        return "hemispherical focused bowl"
+    return "skin-coupled histotripsy arc"
 
 
 def placement_label(result: dict[str, object]) -> str:

@@ -206,6 +206,18 @@
   2025 replication report. The diagnostic applies the pressure-source
   `cos(c_ref |k| dt / 2)` spatial correction to discrete source masks before
   outgoing Green evaluation and records the residual delta.
+- [patch] Add finite-grid PSTD Green diagnostics to the Ali 2025 replication
+  report. The diagnostic derives the homogeneous no-CPML modal recurrence with
+  propagation kappa, source kappa, source timing, and the same frequency-bin
+  projection as the Rust acquisition.
+- [patch] Close remaining time-domain FWI example imports onto
+  `solver::inverse::fwi::time_domain` and remove stale reconstruction comments
+  that referenced the deleted seismic-owned path.
+- [patch] Remove residual transcranial vendor/helmet labels from book examples
+  and documentation, routing the Chapter 25 phase-correction artifact through a
+  generic focused-bowl figure stem.
+- [patch] Pin perfused thermal tissue tests to the canonical
+  `BLOOD_SPECIFIC_HEAT` SSOT instead of accepting any positive bioheat value.
 - [minor] Add Rust-owned Ali 2025 HDF5 phantom ingest through
   `clinical::imaging::reconstruction::breast_ust_fwi::phantom_hdf5`, backed by
   `consus-hdf5`/`consus-core`/`consus-io`. The loader decodes real 3-D
