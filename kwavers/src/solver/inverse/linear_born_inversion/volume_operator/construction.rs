@@ -1,36 +1,42 @@
 //! Construction and distance-table precomputation for [`super::VolumeOperator`].
 
-use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use rayon::prelude::*;
 use std::f64::consts::TAU;
 
-use super::super::config::C_BRAIN_REF_M_S;
-use super::super::transducer::TranscranialBowlGeometry;
+use super::super::{LinearBornInversionConfig, TransducerGeometry};
 use super::helpers::distance;
-use super::{RowContext, VolumeOperator, VolumeVoxel, C_TISSUE_DENSITY_KG_M3};
+use super::{RowContext, VolumeOperator, VolumeVoxel};
 
 impl<'a> VolumeOperator<'a> {
-    pub fn new(
-        geometry: TranscranialBowlGeometry,
-        receiver_indices: Vec<usize>,
+    /// Construct the matrix-free operator over `active` voxels for the given
+    /// acquisition geometry.
+    ///
+    /// `geometry` provides element Cartesian positions; `receiver_indices` is
+    /// the geometry's per-`(source, offset)` receiver lookup
+    /// (`geometry.receiver_indices(&config.receiver_offsets)`).
+    /// Anatomy-specific reference quantities (`c₀`, `ρ₀`) are drawn from
+    /// `config.reference_sound_speed_m_s` and `config.reference_density_kg_m3`.
+    pub fn new<G: TransducerGeometry + ?Sized>(
+        geometry: &G,
+        receiver_indices: &[usize],
         active: &'a [VolumeVoxel],
         voxel_volume_m3: f64,
         config: &LinearBornInversionConfig,
     ) -> Self {
-        let element_count = geometry.elements.len();
-        let row_contexts = build_row_contexts(&receiver_indices, element_count, config);
+        let elements = geometry.elements();
+        let element_count = elements.len();
+        let row_contexts = build_row_contexts(receiver_indices, element_count, config);
         let n_active = active.len();
-        let n_elements = element_count;
 
         // Pre-fill distance tables in parallel over elements.
         // Each element's n_active distances form one contiguous chunk.
-        let mut elem_dist = vec![0.0f64; n_elements * n_active];
+        let mut elem_dist = vec![0.0f64; element_count * n_active];
         if n_active > 0 {
             elem_dist
                 .par_chunks_mut(n_active)
                 .enumerate()
                 .for_each(|(elem_idx, chunk)| {
-                    let elem = &geometry.elements[elem_idx];
+                    let elem = &elements[elem_idx];
                     for (col, voxel) in active.iter().enumerate() {
                         chunk[col] = distance(
                             elem.x_m, elem.y_m, elem.z_m, voxel.x_m, voxel.y_m, voxel.z_m,
@@ -86,13 +92,13 @@ fn build_row_context(
         frequency_mhz: channel_frequency_hz * 1.0e-6,
         harmonic_path_scale: second_harmonic_scale(config, frequency_hz, harmonic_order),
         attenuation_model: config.attenuation_model,
-        k: TAU * channel_frequency_hz / C_BRAIN_REF_M_S,
+        k: TAU * channel_frequency_hz / config.reference_sound_speed_m_s,
     }
 }
 
 /// Compute the linear path-growth coefficient for the second harmonic.
 ///
-/// From the weak shock distance `z_s = ρ c³ / (β ω p₀)` (Blackstock 1966),
+/// From the weak shock distance `z_s = ρ₀ c₀³ / (β ω p₀)` (Blackstock 1966),
 /// the second-harmonic amplitude grows as `p₂ ≈ (p₁² / 4) · path / z_s`,
 /// giving a path-scale coefficient of `1 / (4 z_s)`.  Fundamental rows
 /// (`harmonic_order == 1`) return 0, which disables the harmonic term in
@@ -107,7 +113,8 @@ fn second_harmonic_scale(
     }
     let source_pressure_pa = config.source_pressure_mpa * 1.0e6;
     let omega = TAU * frequency_hz;
-    let shock_distance_m = C_TISSUE_DENSITY_KG_M3 * C_BRAIN_REF_M_S.powi(3)
+    let shock_distance_m = config.reference_density_kg_m3
+        * config.reference_sound_speed_m_s.powi(3)
         / (config.nonlinear_beta * omega * source_pressure_pa);
     0.25 / shock_distance_m
 }

@@ -60,6 +60,14 @@ pub struct LinearBornInversionConfig {
     pub contrast_min: f64,
     /// Upper bound for reconstructed fractional speed contrast.
     pub contrast_max: f64,
+    /// Reference sound speed `c₀` used to convert frequency `f` to wavenumber
+    /// `k = 2π f / c₀` and to anchor fractional speed contrasts [m/s]. Set by
+    /// the clinical adapter to the anatomy-appropriate reference (e.g. brain,
+    /// breast, abdomen).
+    pub reference_sound_speed_m_s: f64,
+    /// Reference medium density `ρ₀` used in the weak-shock distance
+    /// `z_s = ρ₀ c₀³ / (β ω p₀)` for the second-harmonic scaling [kg/m³].
+    pub reference_density_kg_m3: f64,
 }
 
 impl Default for LinearBornInversionConfig {
@@ -84,6 +92,11 @@ impl Default for LinearBornInversionConfig {
             nonlinear_beta: 4.5,
             contrast_min: -0.08,
             contrast_max: 0.08,
+            // Soft-tissue reference (brain/breast): typical c₀ ≈ 1546 m/s,
+            // ρ₀ ≈ 1000 kg/m³. Adapters that target a different anatomy
+            // override these explicitly at construction.
+            reference_sound_speed_m_s: 1546.0,
+            reference_density_kg_m3: 1000.0,
         }
     }
 }
@@ -168,6 +181,18 @@ impl LinearBornInversionConfig {
         if !self.nonlinear_beta.is_finite() || self.nonlinear_beta <= 0.0 {
             return Err(KwaversError::InvalidInput(
                 "LinearBornInversionConfig.nonlinear_beta must be finite and positive".to_owned(),
+            ));
+        }
+        if !self.reference_sound_speed_m_s.is_finite() || self.reference_sound_speed_m_s <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "LinearBornInversionConfig.reference_sound_speed_m_s must be finite and positive"
+                    .to_owned(),
+            ));
+        }
+        if !self.reference_density_kg_m3.is_finite() || self.reference_density_kg_m3 <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "LinearBornInversionConfig.reference_density_kg_m3 must be finite and positive"
+                    .to_owned(),
             ));
         }
         if self.contrast_min >= self.contrast_max {

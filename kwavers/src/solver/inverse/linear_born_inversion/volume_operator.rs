@@ -1,4 +1,4 @@
-//! Matrix-free finite-frequency operator for 3-D transcranial bowl inversion.
+//! Matrix-free finite-frequency Born sensitivity operator (anatomy-neutral).
 //!
 //! ## Distance-table precomputation
 //!
@@ -35,11 +35,10 @@ mod helpers;
 mod kernel;
 mod operators;
 
-const C_TISSUE_DENSITY_KG_M3: f64 = 1000.0;
+pub(crate) use super::VolumeVoxel;
 
-pub(super) use crate::solver::inverse::linear_born_inversion::VolumeVoxel;
-
-pub(super) struct VolumeOperator<'a> {
+#[derive(Debug)]
+pub struct VolumeOperator<'a> {
     active: &'a [VolumeVoxel],
     voxel_volume_m3: f64,
     row_contexts: Vec<RowContext>,
@@ -61,7 +60,7 @@ pub(super) struct VolumeOperator<'a> {
 /// Stores element *indices* rather than full `ElementPosition` copies so the
 /// distance-table lookup `elem_dist[source_idx * n_active + col]` uses the
 /// cached value directly.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct RowContext {
     source_idx: usize,
     receiver_idx: usize,

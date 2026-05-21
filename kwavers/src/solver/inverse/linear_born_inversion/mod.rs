@@ -24,10 +24,16 @@ pub mod config;
 pub(crate) mod dense;
 pub mod enhancement;
 pub mod geometry;
+pub(crate) mod pcg;
+pub(crate) mod regularization;
 pub(crate) mod schedule;
+pub mod volume_operator;
 pub mod voxel;
 
 pub use config::LinearBornInversionConfig;
-pub use enhancement::high_pass_enhance_volume;
+pub use enhancement::{high_pass_enhance_slice, high_pass_enhance_volume};
 pub use geometry::{ElementPosition, TransducerGeometry};
+pub use volume_operator::VolumeOperator;
 pub use voxel::VolumeVoxel;
+
+pub(crate) use pcg::invert as pcg_invert;

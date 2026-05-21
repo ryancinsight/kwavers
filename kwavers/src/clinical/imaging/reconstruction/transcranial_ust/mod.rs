@@ -13,8 +13,6 @@ mod sensitivity;
 mod transducer;
 mod volume;
 mod volume_born;
-mod volume_operator;
-mod volume_regularization;
 
 pub use crate::solver::inverse::linear_born_inversion::ElementPosition;
 pub use born::{

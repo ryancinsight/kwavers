@@ -1,19 +1,21 @@
 //! Matrix-free 3-D Born inversion for CT-derived brain speed contrast.
-
-mod pcg;
+//!
+//! Clinical adapter: composes the brain anatomy/transducer-geometry with the
+//! generic solver-layer kernels in
+//! [`crate::solver::inverse::linear_born_inversion`].
 
 use crate::core::error::KwaversResult;
 use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
-use crate::solver::inverse::linear_born_inversion::{high_pass_enhance_volume, TransducerGeometry};
+use crate::solver::inverse::linear_born_inversion::{
+    high_pass_enhance_volume, pcg_invert, TransducerGeometry, VolumeOperator, VolumeVoxel,
+};
 use ndarray::Array3;
 
 use super::{
     config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
     transducer::TranscranialBowlGeometry,
     volume::AcousticVolume,
-    volume_operator::{VolumeOperator, VolumeVoxel},
 };
-use pcg::invert;
 
 /// Quality metrics for the reconstructed 3-D brain volume.
 #[derive(Clone, Debug)]
@@ -61,8 +63,8 @@ pub fn reconstruct_brain_volume(
     let receiver_indices = geometry.receiver_indices(&linear.receiver_offsets);
     let active = active_voxels(medium);
     let operator = VolumeOperator::new(
-        geometry,
-        receiver_indices,
+        &geometry,
+        &receiver_indices,
         &active,
         medium.spacing_m * medium.spacing_m * medium.spacing_m,
         linear,
@@ -72,7 +74,7 @@ pub fn reconstruct_brain_volume(
     let row_norms = operator.row_norms();
     let data = operator.data_from_target(&row_norms);
     let migration_model = operator.migration(&data, &all_rows, &row_norms, linear);
-    let inversion = invert(
+    let inversion = pcg_invert(
         &operator,
         &data,
         &row_norms,

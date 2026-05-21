@@ -12,8 +12,10 @@ use crate::solver::inverse::linear_born_inversion::{
 };
 use ndarray::Array2;
 
+use crate::solver::inverse::linear_born_inversion::high_pass_enhance_slice;
+
 use super::{
-    conditioning::{apply_sobolev_preconditioner, enhance_reconstruction},
+    conditioning::apply_sobolev_preconditioner,
     config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
     medium::AcousticSlice,
     sensitivity::build_sensitivity_matrix,
@@ -94,7 +96,7 @@ pub fn reconstruct_brain_slice(
         migration[[voxel.ix, voxel.iy]] = C_BRAIN_REF_M_S * (1.0 + migration_model[idx]);
         reconstruction[[voxel.ix, voxel.iy]] = C_BRAIN_REF_M_S * (1.0 + inversion.model[idx]);
     }
-    let enhanced = enhance_reconstruction(
+    let enhanced = high_pass_enhance_slice(
         &reconstruction,
         &medium.brain_mask,
         linear.enhancement_gain,

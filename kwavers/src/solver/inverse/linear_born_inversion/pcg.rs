@@ -1,17 +1,16 @@
-//! PCG inversion kernel for the 3-D Born transcranial focused-bowl solver.
+//! PCG inversion kernel for the generic 3-D linear Born sensitivity operator.
+//!
+//! Geometry-neutral: consumes any [`VolumeOperator`] over an active voxel set,
+//! with regularization parameters drawn from [`LinearBornInversionConfig`].
 
-use crate::solver::inverse::linear_born_inversion::{
-    schedule::{continuation_rows, stage_iteration_count},
-    LinearBornInversionConfig,
-};
 use ndarray::Array3;
 
-use super::super::{
-    volume_operator::{VolumeOperator, VolumeVoxel},
-    volume_regularization::{
-        build_active_index, edge_preserving_penalty, edge_preserving_projection,
-    },
+use super::regularization::{
+    build_active_index, edge_preserving_penalty, edge_preserving_projection,
 };
+use super::schedule::{continuation_rows, stage_iteration_count};
+use super::volume_operator::{VolumeOperator, VolumeVoxel};
+use super::LinearBornInversionConfig;
 
 /// Regularization context bundling all parameters needed by `composite_objective`.
 ///
@@ -26,13 +25,13 @@ type RegCtx<'a> = (
 );
 
 #[derive(Clone, Debug)]
-pub(super) struct InversionState {
-    pub(super) model: Vec<f64>,
-    pub(super) history: Vec<f64>,
-    pub(super) stages: usize,
+pub(crate) struct InversionState {
+    pub(crate) model: Vec<f64>,
+    pub(crate) history: Vec<f64>,
+    pub(crate) stages: usize,
 }
 
-pub(super) fn invert(
+pub(crate) fn invert(
     operator: &VolumeOperator<'_>,
     data: &[f64],
     row_norms: &[f64],

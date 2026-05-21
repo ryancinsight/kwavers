@@ -16,8 +16,8 @@
 
 use ndarray::Array3;
 
-use super::volume_operator::VolumeVoxel;
-use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
+use super::LinearBornInversionConfig;
+use super::VolumeVoxel;
 
 /// Build the dense active-voxel lookup table once per inversion.
 ///
@@ -25,7 +25,7 @@ use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 /// equals the column index of the active voxel at that position, or −1 if the
 /// voxel is not in the active set.  Callers must reuse the returned value for
 /// the lifetime of the inversion to avoid repeated O(NX·NY·NZ) allocations.
-pub(super) fn build_active_index(
+pub(crate) fn build_active_index(
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
 ) -> Array3<isize> {
@@ -40,7 +40,7 @@ pub(super) fn build_active_index(
 ///
 /// Caller must pass a pre-built `active_index` from `build_active_index` to
 /// avoid rebuilding it on every objective evaluation.
-pub(super) fn edge_preserving_penalty(
+pub(crate) fn edge_preserving_penalty(
     model: &[f64],
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
@@ -68,7 +68,7 @@ pub(super) fn edge_preserving_penalty(
 /// inside the loop.
 ///
 /// Caller must pass a pre-built `active_index` from `build_active_index`.
-pub(super) fn edge_preserving_projection(
+pub(crate) fn edge_preserving_projection(
     model: &[f64],
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),

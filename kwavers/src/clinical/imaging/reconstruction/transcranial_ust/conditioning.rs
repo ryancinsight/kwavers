@@ -1,7 +1,5 @@
 //! Sobolev-style conditioning and display enhancement for transcranial UST.
 
-use ndarray::Array2;
-
 use super::born::ActiveVoxel;
 use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
@@ -19,48 +17,6 @@ pub(super) fn apply_sobolev_preconditioner(
     for (value, smooth) in gradient.iter_mut().zip(smoothed) {
         *value = (1.0 - config.sobolev_weight) * *value + config.sobolev_weight * smooth;
     }
-}
-
-/// Return a structure-enhanced display image derived from the reconstruction.
-pub(super) fn enhance_reconstruction(
-    reconstruction: &Array2<f64>,
-    brain_mask: &Array2<bool>,
-    gain: f64,
-    c_ref_m_s: f64,
-) -> Array2<f64> {
-    if gain == 0.0 {
-        return reconstruction.clone();
-    }
-    let (nx, ny) = reconstruction.dim();
-    let mut enhanced = reconstruction.clone();
-    for ix in 0..nx {
-        for iy in 0..ny {
-            if !brain_mask[[ix, iy]] {
-                continue;
-            }
-            let x0 = ix.saturating_sub(1);
-            let x1 = (ix + 1).min(nx - 1);
-            let y0 = iy.saturating_sub(1);
-            let y1 = (iy + 1).min(ny - 1);
-            let mut sum = 0.0;
-            let mut count = 0.0;
-            for nx_idx in x0..=x1 {
-                for ny_idx in y0..=y1 {
-                    if brain_mask[[nx_idx, ny_idx]] {
-                        sum += reconstruction[[nx_idx, ny_idx]];
-                        count += 1.0;
-                    }
-                }
-            }
-            if count > 0.0 {
-                let blur = sum / count;
-                let high_pass = reconstruction[[ix, iy]] - blur;
-                enhanced[[ix, iy]] = (reconstruction[[ix, iy]] + gain * high_pass)
-                    .clamp(c_ref_m_s * 0.92, c_ref_m_s * 1.08);
-            }
-        }
-    }
-    enhanced
 }
 
 /// Separable 2-D box filter over the active-voxel sparse set.

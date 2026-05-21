@@ -6,7 +6,56 @@
 //! adapters supply the mask, the reference (e.g. brain reference speed,
 //! soft-tissue reference speed), and the gain.
 
-use ndarray::Array3;
+use ndarray::{Array2, Array3};
+
+/// 2-D high-pass image enhancement (slice analogue of [`high_pass_enhance_volume`]).
+///
+/// For every grid cell inside `support_mask`, computes a 3×3 local mean over
+/// neighbouring masked cells, subtracts it from the centre to obtain a high-pass
+/// component, and adds `gain × high_pass` back. Result clamped to
+/// `[reference_value · 0.92, reference_value · 1.08]`. Cells outside the mask
+/// pass through unchanged; `gain = 0.0` short-circuits to a cloned input.
+#[must_use]
+pub fn high_pass_enhance_slice(
+    reconstruction: &Array2<f64>,
+    support_mask: &Array2<bool>,
+    gain: f64,
+    reference_value: f64,
+) -> Array2<f64> {
+    if gain == 0.0 {
+        return reconstruction.clone();
+    }
+    let (nx, ny) = reconstruction.dim();
+    let mut enhanced = reconstruction.clone();
+    for ix in 0..nx {
+        for iy in 0..ny {
+            if !support_mask[[ix, iy]] {
+                continue;
+            }
+            let x0 = ix.saturating_sub(1);
+            let x1 = (ix + 1).min(nx - 1);
+            let y0 = iy.saturating_sub(1);
+            let y1 = (iy + 1).min(ny - 1);
+            let mut sum = 0.0;
+            let mut count = 0.0;
+            for ax in x0..=x1 {
+                for ay in y0..=y1 {
+                    if support_mask[[ax, ay]] {
+                        sum += reconstruction[[ax, ay]];
+                        count += 1.0;
+                    }
+                }
+            }
+            if count > 0.0 {
+                let blur = sum / count;
+                let high_pass = reconstruction[[ix, iy]] - blur;
+                enhanced[[ix, iy]] = (reconstruction[[ix, iy]] + gain * high_pass)
+                    .clamp(reference_value * 0.92, reference_value * 1.08);
+            }
+        }
+    }
+    enhanced
+}
 
 /// 3-D high-pass image enhancement.
 ///
