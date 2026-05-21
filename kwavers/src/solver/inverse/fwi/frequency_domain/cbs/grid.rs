@@ -1,7 +1,7 @@
 //! CBS grid and bandlimited point projection.
 
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition;
+use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use std::f64::consts::PI;
 
 /// Default BLI tolerance used by the canonical k-Wave-compatible source path.

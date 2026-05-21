@@ -2,9 +2,8 @@
 
 use super::grid::{bli_weights, BliConfig, GridSpec, GridWeight};
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    MultiRowRingArray, ElementPosition,
-};
+use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use num_complex::Complex64;
 
 /// Project point-source strengths onto cell-centered source density.

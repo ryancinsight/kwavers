@@ -2,7 +2,7 @@
 
 use super::absorbing::AbsorbingBoundary;
 use super::grid::GridSpec;
-use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition;
+use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 

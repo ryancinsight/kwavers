@@ -11,6 +11,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative, MultiRowRingArray,
 };
+use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -237,11 +238,8 @@ fn accumulate_frequency_gradient(
 }
 
 fn predicted_row(
-    sources: &[crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition],
-    centers: &[(
-        usize,
-        crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition,
-    )],
+    sources: &[ElementPosition],
+    centers: &[(usize, ElementPosition)],
     incident: &[Complex64],
     potential: &[f64],
     array: &MultiRowRingArray,
@@ -273,10 +271,7 @@ fn predicted_row(
 
 fn accumulate_row_adjoint(
     gradient: &mut Array3<f64>,
-    centers: &[(
-        usize,
-        crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::ElementPosition,
-    )],
+    centers: &[(usize, ElementPosition)],
     incident: &[Complex64],
     slowness: &[f64],
     array: &MultiRowRingArray,

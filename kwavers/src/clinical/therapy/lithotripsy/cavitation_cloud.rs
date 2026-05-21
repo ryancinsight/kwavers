@@ -4,6 +4,8 @@
 //! relevant to shock wave lithotripsy, where cavitation plays a key role in
 //! stone erosion and tissue bioeffects.
 
+use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VISCOSITY_WATER};
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::f64::consts::PI;
@@ -30,10 +32,10 @@ impl Default for CloudParameters {
         Self {
             initial_bubble_radius: 1e-6, // 1 micron
             bubble_density: 1e12,        // 10^12 bubbles/m³
-            ambient_pressure: 101325.0,  // 1 atm
-            surface_tension: 0.0728,     // Water at 20°C
-            viscosity: 1e-3,             // Water at 20°C
-            erosion_efficiency: 1e-12,   // kg/J (empirical)
+            ambient_pressure: ATMOSPHERIC_PRESSURE,
+            surface_tension: SURFACE_TENSION_WATER,
+            viscosity: VISCOSITY_WATER,
+            erosion_efficiency: 1e-12, // kg/J (empirical, Sapozhnikov et al. 2002)
         }
     }
 }
@@ -114,8 +116,8 @@ impl CavitationCloudDynamics {
         let r0 = self.parameters.initial_bubble_radius.max(1e-12);
         let max_density = self.parameters.bubble_density.max(0.0);
 
-        let water_density = 1000.0;
-        let t_char = r0 * (water_density / ambient).sqrt();
+        // Rayleigh collapse time scale: t_c = R0 * sqrt(rho / Delta_p).
+        let t_char = r0 * (DENSITY_WATER_NOMINAL / ambient).sqrt();
         let growth_rate = 1.0 / t_char;
         let collapse_rate = 2.0 / t_char;
 

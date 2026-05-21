@@ -10,12 +10,11 @@ use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::sensor::recorder::simple::SensorRecorder;
 use crate::domain::source::{GridSource, SourceMode};
-use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    MultiRowRingArray, ElementPosition,
-};
+use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use crate::solver::forward::pstd::config::BoundaryConfig;
 use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use crate::solver::inverse::fwi::frequency_domain::FrequencyObservation;
+use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{s, Array2, Array3, ArrayView1};
 use num_complex::Complex64;
 use std::f64::consts::PI;
