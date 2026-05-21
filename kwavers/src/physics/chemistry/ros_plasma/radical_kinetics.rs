@@ -3,6 +3,7 @@
 //! Reactions of ROS in the liquid surrounding the bubble
 
 use super::ros_species::ROSSpecies;
+use crate::core::constants::cavitation::L_TO_M3;
 use crate::core::constants::fundamental::{AVOGADRO, GAS_CONSTANT};
 use std::collections::HashMap;
 
@@ -230,8 +231,11 @@ pub fn radical_diffusion_length(species: ROSSpecies, concentration: f64) -> f64 
         _ => 1e8, // Default
     };
 
-    // Effective lifetime considering recombination
-    let conc_m = concentration / 1000.0; // Convert to M
+    // Effective lifetime considering recombination.  Aqueous-phase rate
+    // constants k_recomb are in M^-1 s^-1, so the second-order recombination
+    // requires concentration in M (mol/L), not mol/m^3.  L_TO_M3 = 1e-3, so
+    // 1/L_TO_M3 = 1000 L/m^3 converts mol/m^3 -> mol/L.
+    let conc_m = concentration * L_TO_M3; // (mol/m^3) * (m^3 / 1000 L) = mol/L
     let tau_eff = 1.0 / (1.0 / lifetime + k_recomb * conc_m);
 
     // Diffusion length
