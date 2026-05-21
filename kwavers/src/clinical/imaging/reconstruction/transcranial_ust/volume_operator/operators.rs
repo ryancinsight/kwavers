@@ -4,7 +4,7 @@
 
 use rayon::prelude::*;
 
-use super::super::config::BrainHelmetFwiConfig;
+use super::super::config::TranscranialUstBornInversionConfig;
 use super::helpers::row_chunk_len;
 use super::{RowContext, VolumeOperator};
 
@@ -38,7 +38,7 @@ impl<'a> VolumeOperator<'a> {
         &self,
         rows: &[usize],
         row_norms: &[f64],
-        config: &BrainHelmetFwiConfig,
+        config: &TranscranialUstBornInversionConfig,
     ) -> Vec<f64> {
         let ncols = self.n_active;
         let reg = config.regularization.max(1.0e-12);
@@ -83,7 +83,7 @@ impl<'a> VolumeOperator<'a> {
         data: &[f64],
         rows: &[usize],
         row_norms: &[f64],
-        config: &BrainHelmetFwiConfig,
+        config: &TranscranialUstBornInversionConfig,
     ) -> Vec<f64> {
         let ncols = self.n_active;
         let diagonal = self.diagonal(rows, row_norms, config);

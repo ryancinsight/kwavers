@@ -7,8 +7,8 @@ use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
 use ndarray::Array3;
 
 use super::{
-    config::{BrainHelmetFwiConfig, C_BRAIN_REF_M_S},
-    transducer::HelmetHemisphereGeometry,
+    config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
+    transducer::TranscranialBowlGeometry,
     volume::AcousticVolume,
     volume_operator::{VolumeOperator, VolumeVoxel},
     volume_regularization::enhance_reconstruction_volume,
@@ -17,7 +17,7 @@ use pcg::invert;
 
 /// Quality metrics for the reconstructed 3-D brain volume.
 #[derive(Clone, Debug)]
-pub struct BrainHelmetFwiVolumeMetrics {
+pub struct TranscranialUstBornInversionVolumeMetrics {
     pub initial_objective: f64,
     pub final_objective: f64,
     pub objective_reduction_fraction: f64,
@@ -34,9 +34,9 @@ pub struct BrainHelmetFwiVolumeMetrics {
     pub reconstruction_dynamic_range_m_s: f64,
 }
 
-/// Result arrays and diagnostics from a 3-D encoded helmet inversion.
+/// Result arrays and diagnostics from a 3-D encoded transcranial bowl inversion.
 #[derive(Clone, Debug)]
-pub struct BrainHelmetFwiVolumeResult {
+pub struct TranscranialUstBornInversionVolumeResult {
     pub ct_hu: Array3<f64>,
     pub target_sound_speed_m_s: Array3<f64>,
     pub initial_sound_speed_m_s: Array3<f64>,
@@ -47,16 +47,16 @@ pub struct BrainHelmetFwiVolumeResult {
     pub skull_mask: Array3<bool>,
     pub synthetic_data: Vec<f64>,
     pub residual_history: Vec<f64>,
-    pub metrics: BrainHelmetFwiVolumeMetrics,
+    pub metrics: TranscranialUstBornInversionVolumeMetrics,
 }
 
 /// Reconstruct brain sound-speed contrast as one coupled 3-D volume.
 pub fn reconstruct_brain_volume(
     medium: &AcousticVolume,
-    config: &BrainHelmetFwiConfig,
-) -> KwaversResult<BrainHelmetFwiVolumeResult> {
+    config: &TranscranialUstBornInversionConfig,
+) -> KwaversResult<TranscranialUstBornInversionVolumeResult> {
     config.validate()?;
-    let geometry = HelmetHemisphereGeometry::uniform(config.element_count, config.radius_m)?;
+    let geometry = TranscranialBowlGeometry::uniform(config.element_count, config.radius_m)?;
     let receiver_indices = geometry.receiver_indices(&config.receiver_offsets);
     let active = active_voxels(medium);
     let operator = VolumeOperator::new(
@@ -119,7 +119,7 @@ pub fn reconstruct_brain_volume(
         0.0
     };
 
-    Ok(BrainHelmetFwiVolumeResult {
+    Ok(TranscranialUstBornInversionVolumeResult {
         ct_hu: medium.ct_hu.clone(),
         target_sound_speed_m_s: medium.sound_speed_m_s.clone(),
         initial_sound_speed_m_s: medium.initial_sound_speed_m_s.clone(),
@@ -130,7 +130,7 @@ pub fn reconstruct_brain_volume(
         skull_mask: medium.skull_mask.clone(),
         synthetic_data: data,
         residual_history: inversion.history,
-        metrics: BrainHelmetFwiVolumeMetrics {
+        metrics: TranscranialUstBornInversionVolumeMetrics {
             initial_objective,
             final_objective,
             objective_reduction_fraction,

@@ -1,4 +1,3 @@
-pub mod brain_helmet;
 pub mod fwi;
 pub mod parameters;
 pub mod plugin;

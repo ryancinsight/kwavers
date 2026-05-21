@@ -1,9 +1,9 @@
-//! Configuration for 1024-element transcranial brain FWI.
+//! Configuration for 1024-element transcranial ultrasound tomography.
 
 use crate::core::error::{KwaversError, KwaversResult};
 
-/// Reference element count for an INSIGHTEC-style hemispherical array.
-pub const INSIGHTEC_ELEMENT_COUNT: usize = 1024;
+/// Reference element count for the transcranial focused-bowl acquisition.
+pub const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
 use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
@@ -14,10 +14,10 @@ pub const C_BONE_M_S: f64 = 2900.0;
 
 /// Numerical configuration for the finite-frequency encoded inversion.
 #[derive(Clone, Debug)]
-pub struct BrainHelmetFwiConfig {
-    /// Number of array elements placed on the hemispherical helmet.
+pub struct TranscranialUstBornInversionConfig {
+    /// Number of array elements placed on the transcranial focused bowl.
     pub element_count: usize,
-    /// Hemispherical helmet radius around the CT volume center [m].
+    /// Transcranial focused-bowl radius around the CT volume center [m].
     pub radius_m: f64,
     /// Frequencies used by the encoded finite-frequency sensitivity [Hz].
     pub frequencies_hz: Vec<f64>,
@@ -59,10 +59,10 @@ pub struct BrainHelmetFwiConfig {
     pub contrast_max: f64,
 }
 
-impl Default for BrainHelmetFwiConfig {
+impl Default for TranscranialUstBornInversionConfig {
     fn default() -> Self {
         Self {
-            element_count: INSIGHTEC_ELEMENT_COUNT,
+            element_count: TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
             radius_m: 0.11,
             frequencies_hz: vec![200_000.0, 350_000.0, 500_000.0, 650_000.0, 800_000.0],
             receiver_offsets: vec![512, 384, 640, 256, 768, 128, 448, 576],
@@ -87,17 +87,18 @@ impl Default for BrainHelmetFwiConfig {
     }
 }
 
-impl BrainHelmetFwiConfig {
+impl TranscranialUstBornInversionConfig {
     /// Validate configuration invariants before matrix construction.
     pub fn validate(&self) -> KwaversResult<()> {
         if self.element_count < 8 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.element_count must be at least 8".to_owned(),
+                "TranscranialUstBornInversionConfig.element_count must be at least 8".to_owned(),
             ));
         }
         if !self.radius_m.is_finite() || self.radius_m <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.radius_m must be finite and positive".to_owned(),
+                "TranscranialUstBornInversionConfig.radius_m must be finite and positive"
+                    .to_owned(),
             ));
         }
         if self.frequencies_hz.is_empty()
@@ -107,7 +108,8 @@ impl BrainHelmetFwiConfig {
                 .any(|f| !f.is_finite() || *f <= 0.0)
         {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.frequencies_hz must contain positive values".to_owned(),
+                "TranscranialUstBornInversionConfig.frequencies_hz must contain positive values"
+                    .to_owned(),
             ));
         }
         if self.receiver_offsets.is_empty()
@@ -122,38 +124,41 @@ impl BrainHelmetFwiConfig {
         }
         if self.iterations == 0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.iterations must be positive".to_owned(),
+                "TranscranialUstBornInversionConfig.iterations must be positive".to_owned(),
             ));
         }
         if !self.relaxation.is_finite() || self.relaxation <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.relaxation must be finite and positive".to_owned(),
+                "TranscranialUstBornInversionConfig.relaxation must be finite and positive"
+                    .to_owned(),
             ));
         }
         if !self.regularization.is_finite() || self.regularization < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.regularization must be finite and non-negative".to_owned(),
+                "TranscranialUstBornInversionConfig.regularization must be finite and non-negative"
+                    .to_owned(),
             ));
         }
         if !self.sobolev_weight.is_finite() || !(0.0..=1.0).contains(&self.sobolev_weight) {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.sobolev_weight must be in [0, 1]".to_owned(),
+                "TranscranialUstBornInversionConfig.sobolev_weight must be in [0, 1]".to_owned(),
             ));
         }
         if !self.enhancement_gain.is_finite() || self.enhancement_gain < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.enhancement_gain must be finite and non-negative".to_owned(),
+                "TranscranialUstBornInversionConfig.enhancement_gain must be finite and non-negative"
+                    .to_owned(),
             ));
         }
         if !self.edge_preserving_weight.is_finite() || self.edge_preserving_weight < 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.edge_preserving_weight must be finite and non-negative"
+                "TranscranialUstBornInversionConfig.edge_preserving_weight must be finite and non-negative"
                     .to_owned(),
             ));
         }
         if !self.edge_preserving_epsilon.is_finite() || self.edge_preserving_epsilon <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.edge_preserving_epsilon must be finite and positive"
+                "TranscranialUstBornInversionConfig.edge_preserving_epsilon must be finite and positive"
                     .to_owned(),
             ));
         }
@@ -161,17 +166,20 @@ impl BrainHelmetFwiConfig {
             || !(0.0..=1.0).contains(&self.edge_preserving_step)
         {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.edge_preserving_step must be in [0, 1]".to_owned(),
+                "TranscranialUstBornInversionConfig.edge_preserving_step must be in [0, 1]"
+                    .to_owned(),
             ));
         }
         if !self.source_pressure_mpa.is_finite() || self.source_pressure_mpa <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.source_pressure_mpa must be finite and positive".to_owned(),
+                "TranscranialUstBornInversionConfig.source_pressure_mpa must be finite and positive"
+                    .to_owned(),
             ));
         }
         if !self.nonlinear_beta.is_finite() || self.nonlinear_beta <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "BrainHelmetFwiConfig.nonlinear_beta must be finite and positive".to_owned(),
+                "TranscranialUstBornInversionConfig.nonlinear_beta must be finite and positive"
+                    .to_owned(),
             ));
         }
         if self.contrast_min >= self.contrast_max {

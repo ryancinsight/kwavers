@@ -1,10 +1,12 @@
 //! PyO3 binding for the skull-adaptive transcranial benchmark.
 
+use kwavers::clinical::imaging::reconstruction::transcranial_ust::{
+    resample_head_volume, select_head_slice,
+};
 use kwavers::clinical::therapy::theranostic_guidance::{
     run_skull_adaptive_transcranial_benchmark, target_index_from_mask_fraction_3d,
     SkullAdaptiveBenchmarkConfig, TranscranialFusPlanConfig,
 };
-use kwavers::solver::inverse::seismic::brain_helmet::{resample_head_volume, select_head_slice};
 use ndarray::Array3;
 use numpy::IntoPyArray;
 use pyo3::prelude::*;

@@ -2,7 +2,8 @@
 //!
 //! Implements hemispherical phased arrays with sparse element control for
 //! increased treatment envelope and improved steering efficiency.
-//! Based on Insightec `ExAblate` systems and modern `MRgFUS` technology.
+//! Based on transcranial MR-guided focused-ultrasound hemispherical-array
+//! literature.
 //!
 //! References:
 //! - Clement & Hynynen (2002): "A non-invasive method for focusing through the skull"

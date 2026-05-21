@@ -1,5 +1,8 @@
 //! `run_theranostic_inverse_from_ritk` pyfunction and result serialization.
 
+use kwavers::clinical::imaging::reconstruction::transcranial_ust::{
+    resample_head_slice, select_head_slice,
+};
 use kwavers::clinical::therapy::theranostic_guidance::{
     build_abdominal_placement_context, build_brain_placement_context, placement_metrics,
     prepare_abdominal_slice, prepare_brain_slice, run_theranostic_inverse,
@@ -11,7 +14,6 @@ use kwavers::clinical::therapy::theranostic_guidance::{
     TheranosticInverseConfig, TransmitScheduleConfig, TransmitScheduleStrategy, WaveformMisfit,
     THERANOSTIC_OPERATOR_MODEL, TRANSMIT_SCHEDULE_MODEL,
 };
-use kwavers::solver::inverse::seismic::brain_helmet::{resample_head_slice, select_head_slice};
 use ndarray::{Array1, Array3};
 use numpy::IntoPyArray;
 use pyo3::exceptions::PyValueError;

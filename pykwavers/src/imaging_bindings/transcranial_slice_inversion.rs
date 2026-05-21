@@ -1,6 +1,6 @@
-use kwavers::solver::inverse::seismic::brain_helmet::{
-    reconstruct_brain_volume, resample_head_volume, select_head_slice, AcousticVolume,
-    BrainHelmetFwiConfig,
+use kwavers::clinical::imaging::reconstruction::transcranial_ust::{
+    reconstruct_brain_slice, resample_head_slice, select_head_slice, AcousticSlice,
+    TranscranialUstBornInversionConfig,
 };
 use ndarray::Array1;
 use numpy::IntoPyArray;
@@ -12,14 +12,13 @@ use crate::ritk_image::load_ritk_nifti;
 
 use super::kwavers_to_py;
 
-/// Run one coupled 3-D encoded helmet inversion and return sliceable volumes.
+/// Run encoded 1024-element transcranial UST Born inversion from a RITK-loaded CT.
 #[pyfunction]
 #[pyo3(signature = (
     ct_nifti_path,
-    grid_size = 36,
+    grid_size = 72,
     slice_index = None,
-    element_count = 1024,
-    iterations = 8,
+    iterations = 24,
     radius_m = None,
     frequencies_hz = None,
     receiver_offsets = None,
@@ -37,12 +36,11 @@ use super::kwavers_to_py;
     nonlinear_beta = 4.5
 ))]
 #[allow(clippy::too_many_arguments)]
-pub fn run_seismic_helmet_fwi_volume_from_ritk_ct<'py>(
+pub fn run_transcranial_ust_slice_inversion_from_ritk_ct<'py>(
     py: Python<'py>,
     ct_nifti_path: &str,
     grid_size: usize,
     slice_index: Option<usize>,
-    element_count: usize,
     iterations: usize,
     radius_m: Option<f64>,
     frequencies_hz: Option<Vec<f64>>,
@@ -67,15 +65,18 @@ pub fn run_seismic_helmet_fwi_volume_from_ritk_ct<'py>(
         Some(idx) => idx,
         None => select_head_slice(&volume_hu).map_err(kwavers_to_py)?,
     };
-    let resampled = resample_head_volume(&volume_hu, spacing_mm, selected_slice, grid_size)
+    let resampled = resample_head_slice(&volume_hu, spacing_mm, selected_slice, grid_size)
         .map_err(kwavers_to_py)?;
-    let source_volume_index = resampled.source_volume_index;
-    let acoustic = AcousticVolume::from_ct_hu(resampled).map_err(kwavers_to_py)?;
+    let acoustic = AcousticSlice::from_ct_hu_at_offset(
+        resampled.hu.clone(),
+        resampled.spacing_m,
+        resampled.slice_offset_m,
+    )
+    .map_err(kwavers_to_py)?;
 
-    let mut config = BrainHelmetFwiConfig {
-        element_count,
+    let mut config = TranscranialUstBornInversionConfig {
         iterations,
-        ..BrainHelmetFwiConfig::default()
+        ..TranscranialUstBornInversionConfig::default()
     };
     if let Some(radius) = radius_m {
         config.radius_m = radius;
@@ -100,7 +101,7 @@ pub fn run_seismic_helmet_fwi_volume_from_ritk_ct<'py>(
     config.nonlinear_beta = nonlinear_beta;
 
     let result = py
-        .detach(|| reconstruct_brain_volume(&acoustic, &config))
+        .detach(|| reconstruct_brain_slice(&acoustic, &config))
         .map_err(kwavers_to_py)?;
     let harmonic_count = config.harmonic_count();
 
@@ -142,7 +143,6 @@ pub fn run_seismic_helmet_fwi_volume_from_ritk_ct<'py>(
         result.metrics.reconstruction_dynamic_range_m_s,
     )?;
 
-    let volume_shape = result.ct_hu.dim();
     out.set_item("ct_hu", result.ct_hu.into_pyarray(py))?;
     out.set_item(
         "target_sound_speed_m_s",
@@ -177,13 +177,10 @@ pub fn run_seismic_helmet_fwi_volume_from_ritk_ct<'py>(
         Array1::from(result.residual_history).into_pyarray(py),
     )?;
     out.set_item("metrics", metrics)?;
-    out.set_item("spacing_m", acoustic.spacing_m)?;
-    out.set_item("source_slice_index", acoustic.source_slice_index)?;
-    out.set_item("source_volume_index", source_volume_index)?;
-    out.set_item("volume_shape", volume_shape)?;
-    out.set_item("inversion_dimensionality", "3d_volume")?;
+    out.set_item("spacing_m", resampled.spacing_m)?;
+    out.set_item("slice_offset_m", resampled.slice_offset_m)?;
+    out.set_item("source_slice_index", resampled.source_slice_index)?;
     out.set_item("geometry_model", "hemispherical_cap")?;
-    out.set_item("operator_model", "matrix_free_born_3d_local_attenuation")?;
     out.set_item("element_count", config.element_count)?;
     out.set_item("radius_m", config.radius_m)?;
     out.set_item("frequencies_hz", config.frequencies_hz)?;

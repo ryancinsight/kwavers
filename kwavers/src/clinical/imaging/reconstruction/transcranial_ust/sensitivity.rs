@@ -5,9 +5,9 @@ use std::f64::consts::TAU;
 
 use super::{
     born::ActiveVoxel,
-    config::{BrainHelmetFwiConfig, C_BRAIN_REF_M_S},
+    config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
     medium::AcousticSlice,
-    transducer::HelmetHemisphereGeometry,
+    transducer::TranscranialBowlGeometry,
 };
 
 const C_TISSUE_DENSITY_KG_M3: f64 = 1000.0;
@@ -20,8 +20,8 @@ const C_TISSUE_DENSITY_KG_M3: f64 = 1000.0;
 /// assigning independent rows to Rayon workers.
 pub(super) fn build_sensitivity_matrix(
     medium: &AcousticSlice,
-    config: &BrainHelmetFwiConfig,
-    geometry: &HelmetHemisphereGeometry,
+    config: &TranscranialUstBornInversionConfig,
+    geometry: &TranscranialBowlGeometry,
     active: &[ActiveVoxel],
 ) -> Vec<f64> {
     let offset_count = config.receiver_offsets.len();
@@ -92,7 +92,11 @@ pub(super) fn build_sensitivity_matrix(
     matrix
 }
 
-fn second_harmonic_factor(config: &BrainHelmetFwiConfig, frequency_hz: f64, path_m: f64) -> f64 {
+fn second_harmonic_factor(
+    config: &TranscranialUstBornInversionConfig,
+    frequency_hz: f64,
+    path_m: f64,
+) -> f64 {
     let source_pressure_pa = config.source_pressure_mpa * 1.0e6;
     let omega = TAU * frequency_hz;
     let shock_distance_m = C_TISSUE_DENSITY_KG_M3 * C_BRAIN_REF_M_S.powi(3)
@@ -102,7 +106,7 @@ fn second_harmonic_factor(config: &BrainHelmetFwiConfig, frequency_hz: f64, path
 
 fn build_element_voxel_attenuation_integrals(
     medium: &AcousticSlice,
-    geometry: &HelmetHemisphereGeometry,
+    geometry: &TranscranialBowlGeometry,
     active: &[ActiveVoxel],
 ) -> Vec<f64> {
     let ncols = active.len();

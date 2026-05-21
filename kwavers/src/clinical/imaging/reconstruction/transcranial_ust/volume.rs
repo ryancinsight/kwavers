@@ -12,7 +12,7 @@ use super::{
     },
 };
 
-/// CT volume resampled to the isotropic cubic FWI domain.
+/// CT volume resampled to the isotropic cubic transcranial UST inversion domain.
 #[derive(Clone, Debug)]
 pub struct CtResampledVolume {
     pub hu: Array3<f64>,

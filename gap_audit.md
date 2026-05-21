@@ -60,6 +60,17 @@
   nonlinear 3-D aperture model string, Chapter 29/31 examples, generated figure
   filenames, and metrics are synchronized to the same source-owned bowl concept.
 
+- Closed the transcranial UST reconstruction boundary. The finite-frequency
+  Born inversion now lives under
+  `clinical::imaging::reconstruction::transcranial_ust`, exported
+  config/result/geometry names use `TranscranialUstBornInversion*` and
+  `TranscranialBowlGeometry`, and hemispherical acquisition points are generated
+  through `BowlTransducer::with_polar_span`.
+
+- Closed the transcranial focused-bowl model-label cleanup. Residual
+  Insightec-like transcranial clinical/source comments, model IDs, and Python
+  test names now use source-owned transcranial focused-bowl terminology.
+
 - Closed the bowl vertex/focus preset gap. `BowlConfig` now provides
   vertex/focus, hemispherical, and element-size constructors under the
   source-domain bowl module, so downstream adapters can request fixed-count

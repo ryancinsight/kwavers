@@ -103,7 +103,7 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
 }
 
 /// End-to-end integration test for the `AnatomyKind::Brain` path: synthetic
-/// CT with a cortical skull shell wrapping a brain interior, INSIGHTEC-like
+/// CT with a cortical skull shell wrapping a brain interior, transcranial
 /// calvarium focused-bowl aperture, lossless Westervelt forward, discrete adjoint
 /// FWI, heterogeneous CT-derived path-integrated cavitation Green's function
 /// (including `y = 2` Stokes-Kirchhoff skull attenuation), and Rayleigh-
@@ -130,7 +130,7 @@ fn nonlinear_3d_brain_focused_bowl_pipeline_is_input_sensitive_through_skull() {
     config.receiver_count = 8;
     config.source_encoding_count = 2;
     config.iterations = 1;
-    config.frequency_hz = 650_000.0; // INSIGHTEC-like
+    config.frequency_hz = 650_000.0;
     config.source_pressure_pa = 28.0e6;
     config.cycles = 2.0;
     config.bubble_time_steps_per_period = 24;
@@ -155,12 +155,12 @@ fn nonlinear_3d_brain_focused_bowl_pipeline_is_input_sensitive_through_skull() {
         result.target_mask.iter().filter(|active| **active).count() >= 2,
         "synthetic brain ellipsoidal target must be non-empty inside the body support",
     );
-    // The INSIGHTEC-like focused-bowl model placed on the calvarium cap.
+    // The transcranial focused-bowl model placed on the calvarium cap.
     assert!(
         result
             .aperture_model
-            .contains("insightec_like_calvarium_focused_bowl"),
-        "brain aperture model must be the INSIGHTEC-like calvarium focused bowl; got '{}'",
+            .contains("transcranial_calvarium_focused_bowl"),
+        "brain aperture model must be the transcranial calvarium focused bowl; got '{}'",
         result.aperture_model,
     );
     // Westervelt peak pressure must be positive somewhere inside the

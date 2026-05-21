@@ -63,8 +63,8 @@ mod pam_bindings;
 mod bubble_bindings;
 mod fft_bindings;
 mod field_surrogate_bindings;
+mod imaging_bindings;
 mod ritk_image;
-mod seismic_bindings;
 mod theranostic_bindings;
 mod thermal_bindings;
 mod utils_bindings;
@@ -205,7 +205,7 @@ fn _pykwavers(m: &Bound<'_, PyModule>) -> PyResult<()> {
     utils_bindings::register_utils(m)?;
     thermal_bindings::register_thermal(m)?;
     field_surrogate_bindings::register(m)?;
-    seismic_bindings::register(m)?;
+    imaging_bindings::register(m)?;
     theranostic_bindings::register(m)?;
     fft_bindings::register(m)?;
     analytical_bindings::register_book(m)?;

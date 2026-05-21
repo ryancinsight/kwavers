@@ -42,6 +42,17 @@
   aperture model strings plus generated metrics use the same source-owned bowl
   terminology.
 
+- 2026-05-21: [patch] Closed the transcranial UST reconstruction boundary.
+  The finite-frequency Born inversion moved from
+  `solver::inverse::seismic::brain_helmet` to
+  `clinical::imaging::reconstruction::transcranial_ust`; exported config,
+  result, and geometry names now use `TranscranialUstBornInversion*` and
+  `TranscranialBowlGeometry`; acquisition points come from the bowl source API.
+
+- 2026-05-21: [patch] Closed the transcranial focused-bowl model-label cleanup.
+  Residual Insightec-like transcranial clinical/source comments, model IDs, and
+  Python test names now use source-owned transcranial focused-bowl terminology.
+
 
 - 2026-05-20: [minor] Closed the bowl vertex/focus preset gap.
   `BowlConfig` now owns vertex/focus and hemispherical constructors plus an

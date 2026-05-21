@@ -1,4 +1,4 @@
-//! Matrix-free finite-frequency operator for 3-D helmet inversion.
+//! Matrix-free finite-frequency operator for 3-D transcranial bowl inversion.
 //!
 //! ## Distance-table precomputation
 //!

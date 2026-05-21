@@ -1,19 +1,27 @@
 use ndarray::{Array2, Array3};
 
 use super::{
-    reconstruct_brain_slice, reconstruct_brain_volume, transducer::HelmetHemisphereGeometry,
-    AcousticSlice, AcousticVolume, BrainHelmetFwiConfig, CtResampledVolume,
+    reconstruct_brain_slice, reconstruct_brain_volume, transducer::TranscranialBowlGeometry,
+    AcousticSlice, AcousticVolume, CtResampledVolume, TranscranialUstBornInversionConfig,
 };
 
 #[test]
-fn helmet_geometry_uses_distinct_hemispherical_element_positions() {
-    let geometry = HelmetHemisphereGeometry::uniform(64, 0.11).unwrap();
+fn transcranial_bowl_geometry_uses_distinct_element_positions() {
+    let geometry = TranscranialBowlGeometry::uniform(64, 0.11).unwrap();
     assert_eq!(geometry.len(), 64);
 
-    let first = geometry.elements[0];
-    let last = geometry.elements[63];
-    assert!(first.z_m > 0.0);
-    assert!(last.z_m > first.z_m);
+    let min_z = geometry
+        .elements
+        .iter()
+        .map(|element| element.z_m)
+        .fold(f64::INFINITY, f64::min);
+    let max_z = geometry
+        .elements
+        .iter()
+        .map(|element| element.z_m)
+        .fold(f64::NEG_INFINITY, f64::max);
+    assert!(min_z >= 0.0);
+    assert!(max_z > 0.9 * 0.11);
     for element in &geometry.elements {
         let radius = (element.x_m.powi(2) + element.y_m.powi(2) + element.z_m.powi(2)).sqrt();
         assert!((radius - 0.11).abs() < 1.0e-12);
@@ -32,7 +40,7 @@ fn helmet_geometry_uses_distinct_hemispherical_element_positions() {
 }
 
 #[test]
-fn brain_helmet_volume_fwi_reconstructs_coupled_three_dimensional_array() {
+fn transcranial_ust_volume_inversion_reconstructs_coupled_three_dimensional_array() {
     let mut hu = Array3::<f64>::from_elem((12, 12, 12), -1000.0);
     let center = 5.5;
     for ix in 0..12 {
@@ -60,7 +68,7 @@ fn brain_helmet_volume_fwi_reconstructs_coupled_three_dimensional_array() {
         source_volume_index: 6,
     })
     .unwrap();
-    let config = BrainHelmetFwiConfig {
+    let config = TranscranialUstBornInversionConfig {
         element_count: 24,
         radius_m: 0.07,
         frequencies_hz: vec![180_000.0, 320_000.0],
@@ -68,7 +76,7 @@ fn brain_helmet_volume_fwi_reconstructs_coupled_three_dimensional_array() {
         iterations: 6,
         relaxation: 0.8,
         regularization: 5.0e-5,
-        ..BrainHelmetFwiConfig::default()
+        ..TranscranialUstBornInversionConfig::default()
     };
 
     let result = reconstruct_brain_volume(&volume, &config).unwrap();
@@ -101,7 +109,7 @@ fn brain_helmet_volume_fwi_reconstructs_coupled_three_dimensional_array() {
 }
 
 #[test]
-fn brain_helmet_fwi_reduces_data_objective_and_recovers_contrast() {
+fn transcranial_ust_inversion_reduces_data_objective_and_recovers_contrast() {
     let mut hu = Array2::<f64>::from_elem((32, 32), -1000.0);
     let center = 15.5;
     for ix in 0..32 {
@@ -126,7 +134,7 @@ fn brain_helmet_fwi_reduces_data_objective_and_recovers_contrast() {
         medium.attenuation_np_per_m_mhz[[16, 28]] > medium.attenuation_np_per_m_mhz[[16, 16]],
         "skull attenuation must exceed soft-tissue attenuation"
     );
-    let config = BrainHelmetFwiConfig {
+    let config = TranscranialUstBornInversionConfig {
         element_count: 64,
         radius_m: 0.07,
         frequencies_hz: vec![180_000.0, 260_000.0, 340_000.0],
@@ -134,7 +142,7 @@ fn brain_helmet_fwi_reduces_data_objective_and_recovers_contrast() {
         iterations: 18,
         relaxation: 0.9,
         regularization: 1.0e-5,
-        ..BrainHelmetFwiConfig::default()
+        ..TranscranialUstBornInversionConfig::default()
     };
 
     let result = reconstruct_brain_slice(&medium, &config).unwrap();
@@ -171,7 +179,7 @@ fn brain_helmet_fwi_reduces_data_objective_and_recovers_contrast() {
     );
     assert!(
         result.metrics.normalized_rmse <= result.metrics.migration_normalized_rmse,
-        "FWI normalized RMSE {} did not improve over migration {}",
+        "Born inversion normalized RMSE {} did not improve over migration {}",
         result.metrics.normalized_rmse,
         result.metrics.migration_normalized_rmse
     );

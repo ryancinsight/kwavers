@@ -3,18 +3,18 @@
 use rayon::prelude::*;
 use std::f64::consts::TAU;
 
-use super::super::config::{BrainHelmetFwiConfig, C_BRAIN_REF_M_S};
-use super::super::transducer::HelmetHemisphereGeometry;
+use super::super::config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S};
+use super::super::transducer::TranscranialBowlGeometry;
 use super::helpers::distance;
 use super::{RowContext, VolumeOperator, VolumeVoxel, C_TISSUE_DENSITY_KG_M3};
 
 impl<'a> VolumeOperator<'a> {
     pub fn new(
-        geometry: HelmetHemisphereGeometry,
+        geometry: TranscranialBowlGeometry,
         receiver_indices: Vec<usize>,
         active: &'a [VolumeVoxel],
         voxel_volume_m3: f64,
-        config: &BrainHelmetFwiConfig,
+        config: &TranscranialUstBornInversionConfig,
     ) -> Self {
         let row_contexts = build_row_contexts(&receiver_indices, config);
         let n_active = active.len();
@@ -54,7 +54,7 @@ impl<'a> VolumeOperator<'a> {
 
 fn build_row_contexts(
     receiver_indices: &[usize],
-    config: &BrainHelmetFwiConfig,
+    config: &TranscranialUstBornInversionConfig,
 ) -> Vec<RowContext> {
     (0..config.measurement_count())
         .map(|row| build_row_context(row, receiver_indices, config))
@@ -64,7 +64,7 @@ fn build_row_contexts(
 fn build_row_context(
     row: usize,
     receiver_indices: &[usize],
-    config: &BrainHelmetFwiConfig,
+    config: &TranscranialUstBornInversionConfig,
 ) -> RowContext {
     let harmonic_count = config.harmonic_count();
     let offset_count = config.receiver_offsets.len();
@@ -95,7 +95,7 @@ fn build_row_context(
 /// (`harmonic_order == 1`) return 0, which disables the harmonic term in
 /// [`super::kernel::VolumeOperator::row_value_for_col`].
 fn second_harmonic_scale(
-    config: &BrainHelmetFwiConfig,
+    config: &TranscranialUstBornInversionConfig,
     frequency_hz: f64,
     harmonic_order: usize,
 ) -> f64 {

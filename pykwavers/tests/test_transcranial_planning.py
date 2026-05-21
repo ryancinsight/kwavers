@@ -40,7 +40,7 @@ from transcranial_planning.transducer import (  # noqa: E402
 )
 
 
-def test_insightec_geometry_has_1024_elements_on_hemisphere_radius():
+def test_transcranial_focused_bowl_geometry_has_1024_elements_on_hemisphere_radius():
     config = TransducerConfig()
     positions = fibonacci_hemisphere(config)
     radii = np.linalg.norm(positions, axis=1)

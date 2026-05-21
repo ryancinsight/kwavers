@@ -8,6 +8,7 @@ pub mod acoustic_projection;
 pub mod clinical_monitoring;
 pub mod real_time_sirt;
 pub mod sound_speed_shift;
+pub mod transcranial_ust;
 
 pub use acoustic_projection::AcousticProjectionGeometry;
 pub use clinical_monitoring::{

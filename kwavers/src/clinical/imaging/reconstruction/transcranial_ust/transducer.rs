@@ -1,10 +1,14 @@
-//! Deterministic 1024-element hemispherical acquisition geometry.
+//! Deterministic 1024-element transcranial focused-bowl acquisition geometry.
 
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::{FRAC_PI_2, TAU};
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::domain::source::transducers::focused::{BowlConfig, BowlTransducer};
 
-/// Cartesian position of one array element on the water-coupled helmet surface.
+const GEOMETRY_UNIT_FREQUENCY_HZ: f64 = 1.0;
+const GEOMETRY_UNIT_AMPLITUDE_PA: f64 = 1.0;
+
+/// Cartesian position of one array element on the water-coupled bowl surface.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ElementPosition {
     pub x_m: f64,
@@ -12,37 +16,40 @@ pub struct ElementPosition {
     pub z_m: f64,
 }
 
-/// INSIGHTEC-style hemispherical cap used by the encoded slice model.
+/// Transcranial focused bowl used by the encoded slice model.
 #[derive(Clone, Debug)]
-pub struct HelmetHemisphereGeometry {
+pub struct TranscranialBowlGeometry {
     pub elements: Vec<ElementPosition>,
 }
 
-impl HelmetHemisphereGeometry {
+impl TranscranialBowlGeometry {
     /// Place `element_count` elements on a deterministic equal-area hemisphere.
     pub fn uniform(element_count: usize, radius_m: f64) -> KwaversResult<Self> {
         if element_count < 8 {
             return Err(KwaversError::InvalidInput(
-                "HelmetHemisphereGeometry requires at least 8 elements".to_owned(),
+                "TranscranialBowlGeometry requires at least 8 elements".to_owned(),
             ));
         }
         if !radius_m.is_finite() || radius_m <= 0.0 {
             return Err(KwaversError::InvalidInput(
-                "HelmetHemisphereGeometry radius must be finite and positive".to_owned(),
+                "TranscranialBowlGeometry radius must be finite and positive".to_owned(),
             ));
         }
 
-        let golden_angle = PI * (3.0 - 5.0_f64.sqrt());
-        let elements = (0..element_count)
-            .map(|idx| {
-                let z_m = radius_m * (idx as f64 + 0.5) / element_count as f64;
-                let radial_m = (radius_m.mul_add(radius_m, -z_m * z_m)).max(0.0).sqrt();
-                let phi = golden_angle * idx as f64;
-                ElementPosition {
-                    x_m: radial_m * phi.cos(),
-                    y_m: radial_m * phi.sin(),
-                    z_m,
-                }
+        let config = BowlConfig::hemispherical(
+            [0.0, 0.0, radius_m],
+            [0.0, 0.0, 0.0],
+            GEOMETRY_UNIT_FREQUENCY_HZ,
+            GEOMETRY_UNIT_AMPLITUDE_PA,
+        );
+        let bowl = BowlTransducer::with_polar_span(config, FRAC_PI_2, element_count)?;
+        let elements = bowl
+            .element_positions()
+            .iter()
+            .map(|position| ElementPosition {
+                x_m: position[0],
+                y_m: position[1],
+                z_m: position[2],
             })
             .collect();
         Ok(Self { elements })

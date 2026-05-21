@@ -6,7 +6,7 @@
 #![allow(dead_code)] // Clinical configuration constants for library users
 
 /// Typical radius for clinical hemispherical arrays (m)
-pub const HEMISPHERE_RADIUS_DEFAULT: f64 = 0.15; // 150mm radius (Insightec ExAblate)
+pub const HEMISPHERE_RADIUS_DEFAULT: f64 = 0.15; // 150 mm clinical radius
 
 /// Half-wavelength element spacing for improved steering (m)
 pub const HALF_WAVELENGTH_SPACING: f64 = 1.15e-3; // λ/2 at 650 kHz

@@ -1,4 +1,4 @@
-//! Edge-preserving proximal regularization for 3-D helmet FWI.
+//! Edge-preserving proximal regularization for 3-D transcranial UST inversion.
 //!
 //! ## Active-index cache
 //!
@@ -16,7 +16,7 @@
 
 use ndarray::Array3;
 
-use super::{config::BrainHelmetFwiConfig, volume_operator::VolumeVoxel};
+use super::{config::TranscranialUstBornInversionConfig, volume_operator::VolumeVoxel};
 
 /// Build the dense active-voxel lookup table once per inversion.
 ///
@@ -44,7 +44,7 @@ pub(super) fn edge_preserving_penalty(
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
     active_index: &Array3<isize>,
-    config: &BrainHelmetFwiConfig,
+    config: &TranscranialUstBornInversionConfig,
 ) -> f64 {
     if config.edge_preserving_weight == 0.0 {
         return 0.0;
@@ -72,7 +72,7 @@ pub(super) fn edge_preserving_projection(
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
     active_index: &Array3<isize>,
-    config: &BrainHelmetFwiConfig,
+    config: &TranscranialUstBornInversionConfig,
 ) -> Option<Vec<f64>> {
     if config.edge_preserving_iterations == 0 || config.edge_preserving_step == 0.0 {
         return None;

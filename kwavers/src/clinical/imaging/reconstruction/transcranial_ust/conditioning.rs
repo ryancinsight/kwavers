@@ -1,11 +1,14 @@
-//! Frequency-continuation and Sobolev-style conditioning for brain FWI.
+//! Frequency-continuation and Sobolev-style conditioning for transcranial UST.
 
 use ndarray::Array2;
 
-use super::{born::ActiveVoxel, config::BrainHelmetFwiConfig};
+use super::{born::ActiveVoxel, config::TranscranialUstBornInversionConfig};
 
 /// Build low-to-high frequency row schedules.
-pub(super) fn continuation_rows(config: &BrainHelmetFwiConfig, nrows: usize) -> Vec<Vec<usize>> {
+pub(super) fn continuation_rows(
+    config: &TranscranialUstBornInversionConfig,
+    nrows: usize,
+) -> Vec<Vec<usize>> {
     let nf = config.frequencies_hz.len();
     let harmonic_count = config.harmonic_count();
     let stage_count = if config.frequency_continuation { nf } else { 1 };
@@ -35,7 +38,7 @@ pub(super) fn apply_sobolev_preconditioner(
     gradient: &mut [f64],
     active: &[ActiveVoxel],
     shape: (usize, usize),
-    config: &BrainHelmetFwiConfig,
+    config: &TranscranialUstBornInversionConfig,
 ) {
     if config.sobolev_radius_voxels == 0 || config.sobolev_weight == 0.0 {
         return;

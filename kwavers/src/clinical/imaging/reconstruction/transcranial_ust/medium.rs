@@ -12,7 +12,7 @@ pub(super) const SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ: f64 =
     0.5 * 100.0 * std::f64::consts::LN_10 / 20.0;
 pub(super) const SKULL_ATTENUATION_NP_PER_M_MHZ: f64 = 70.0;
 
-/// CT slice resampled to the square FWI domain.
+/// CT slice resampled to the square transcranial UST inversion domain.
 #[derive(Clone, Debug)]
 pub struct CtResampledSlice {
     pub hu: Array2<f64>,

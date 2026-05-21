@@ -50,7 +50,7 @@ pub(crate) fn build_aperture(
         .map(|idx| source_frame_grid_point_m(*idx, volume, n))
         .collect();
     let model_name = match volume.anatomy {
-        AnatomyKind::Brain => "insightec_like_calvarium_focused_bowl_3d_westervelt_sources",
+        AnatomyKind::Brain => "transcranial_calvarium_focused_bowl_3d_westervelt_sources",
         AnatomyKind::Liver => {
             "liver_histosonics_like_focused_bowl_slowness_steered_3d_westervelt_sources"
         }

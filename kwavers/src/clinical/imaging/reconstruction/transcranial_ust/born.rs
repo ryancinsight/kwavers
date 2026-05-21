@@ -9,19 +9,19 @@ use super::{
         apply_sobolev_preconditioner, continuation_rows, enhance_reconstruction,
         stage_iteration_count,
     },
-    config::{BrainHelmetFwiConfig, C_BRAIN_REF_M_S},
+    config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
     linear_algebra::{
         matrix_vector, migration_contrast, normal_equation_diagonal_rows, normalized_gradient_rows,
         objective, objective_rows,
     },
     medium::AcousticSlice,
     sensitivity::build_sensitivity_matrix,
-    transducer::HelmetHemisphereGeometry,
+    transducer::TranscranialBowlGeometry,
 };
 
 /// Quality metrics for the reconstructed brain image.
 #[derive(Clone, Debug)]
-pub struct BrainHelmetFwiMetrics {
+pub struct TranscranialUstBornInversionMetrics {
     pub initial_objective: f64,
     pub final_objective: f64,
     pub objective_reduction_fraction: f64,
@@ -38,9 +38,9 @@ pub struct BrainHelmetFwiMetrics {
     pub reconstruction_dynamic_range_m_s: f64,
 }
 
-/// Result arrays and diagnostics from the encoded brain FWI run.
+/// Result arrays and diagnostics from the encoded transcranial UST Born inversion.
 #[derive(Clone, Debug)]
-pub struct BrainHelmetFwiResult {
+pub struct TranscranialUstBornInversionResult {
     pub ct_hu: Array2<f64>,
     pub target_sound_speed_m_s: Array2<f64>,
     pub initial_sound_speed_m_s: Array2<f64>,
@@ -51,7 +51,7 @@ pub struct BrainHelmetFwiResult {
     pub skull_mask: Array2<bool>,
     pub synthetic_data: Vec<f64>,
     pub residual_history: Vec<f64>,
-    pub metrics: BrainHelmetFwiMetrics,
+    pub metrics: TranscranialUstBornInversionMetrics,
 }
 
 #[derive(Clone, Debug)]
@@ -67,10 +67,10 @@ pub(super) struct ActiveVoxel {
 /// Reconstruct brain sound-speed contrast from encoded 1024-element data.
 pub fn reconstruct_brain_slice(
     medium: &AcousticSlice,
-    config: &BrainHelmetFwiConfig,
-) -> KwaversResult<BrainHelmetFwiResult> {
+    config: &TranscranialUstBornInversionConfig,
+) -> KwaversResult<TranscranialUstBornInversionResult> {
     config.validate()?;
-    let geometry = HelmetHemisphereGeometry::uniform(config.element_count, config.radius_m)?;
+    let geometry = TranscranialBowlGeometry::uniform(config.element_count, config.radius_m)?;
     let active = active_voxels(medium);
     let matrix = build_sensitivity_matrix(medium, config, &geometry, &active);
     let nrows = config.measurement_count();
@@ -130,7 +130,7 @@ pub fn reconstruct_brain_slice(
         0.0
     };
 
-    Ok(BrainHelmetFwiResult {
+    Ok(TranscranialUstBornInversionResult {
         ct_hu: medium.ct_hu.clone(),
         target_sound_speed_m_s: medium.sound_speed_m_s.clone(),
         initial_sound_speed_m_s: medium.initial_sound_speed_m_s.clone(),
@@ -141,7 +141,7 @@ pub fn reconstruct_brain_slice(
         skull_mask: medium.skull_mask.clone(),
         synthetic_data: data,
         residual_history: inversion.history,
-        metrics: BrainHelmetFwiMetrics {
+        metrics: TranscranialUstBornInversionMetrics {
             initial_objective,
             final_objective,
             objective_reduction_fraction,
@@ -195,7 +195,7 @@ fn invert(
     data: &[f64],
     nrows: usize,
     ncols: usize,
-    config: &BrainHelmetFwiConfig,
+    config: &TranscranialUstBornInversionConfig,
     active: &[ActiveVoxel],
     shape: (usize, usize),
 ) -> InversionState {

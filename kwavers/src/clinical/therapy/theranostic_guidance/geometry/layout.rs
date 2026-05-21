@@ -70,7 +70,7 @@ fn transcranial_focused_bowl_projection_layout(
         imaging_receivers: Vec::new(),
         focus_m: focus,
         skin_contact_m: nearest_body_boundary_point(body_mask, spacing_m, focus),
-        model_name: "insightec_like_1024_element_focused_bowl_projection".to_owned(),
+        model_name: "transcranial_focused_bowl_projection".to_owned(),
     }
 }
 

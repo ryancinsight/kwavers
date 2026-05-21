@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Changed (2026-05-21) - Transcranial UST Reconstruction Boundary
+
+- [patch] Move the transcranial ultrasound tomography Born inversion out of
+  `solver::inverse::seismic::brain_helmet` and into the clinical imaging
+  reconstruction boundary, rename exported config/result/geometry types to
+  `TranscranialUstBornInversion*` and `TranscranialBowlGeometry`, and route the
+  bowl acquisition geometry through `BowlTransducer::with_polar_span`.
+- [patch] Replace residual Insightec-like transcranial therapy labels with
+  source-owned transcranial focused-bowl model identifiers.
+
 ### Changed (2026-05-21) - Transcranial Focused-Bowl Naming Completion
 
 - [patch] Replace the public 3-D brain placement API and PyO3 export with

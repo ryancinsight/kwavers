@@ -5,8 +5,8 @@
 //! and clinical reconstruction metrics for the book figures. It is not a
 //! proprietary device model. Generic seismic FWI and RTM kernels remain in
 //! `crate::solver::inverse::seismic`; this clinical workflow composes the
-//! same-device finite-frequency monitoring model used for INSIGHTEC-like
-//! transcranial and HistoSonics-like abdominal scenarios.
+//! same-device finite-frequency monitoring model used for transcranial and
+//! abdominal focused-bowl scenarios.
 
 mod abdominal3d;
 mod aperture;
