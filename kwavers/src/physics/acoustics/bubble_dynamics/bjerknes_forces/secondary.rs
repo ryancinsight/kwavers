@@ -69,32 +69,33 @@ impl BjerknesCalculator {
             });
         }
 
-        // Secondary Bjerknes force magnitude (Leighton 1994, §3.4; Bjerknes 1906):
-        //   F_B2 = (ρ₀ω²/(8π)) · V₁ · V₂ · |cos φ| / d²
-        // where ω = 2πf.  Derived from F = −(ρ₀/(4πd²))⟨V̇₁V̇₂⟩ with V̇ = V₀ω.
+        // Secondary Bjerknes force (Leighton 1994, §3.4; Bjerknes 1906):
+        //   F_B2 = (ρ₀ω²/(8π)) · V₁ · V₂ · cos(φ) / d²
+        // where ω = 2πf.  Derived from F = −(ρ₀/(4πd²))⟨V̇₁V̇₂⟩ with
+        // V̇_i(t) = V_i·ω·sin(ωt + φ_i) gives ⟨V̇₁V̇₂⟩ = ω²V₁V₂cos(φ)/2.
         // Dimensional check: [kg/m³ · s⁻² · m³ · m³ / m²] = [kg·m/s²] = N ✓
+        //
+        // The signed cos(φ) carries the attractive (cos>0) vs repulsive
+        // (cos<0) sense directly; the categorical `interaction_type` below
+        // is a downstream label, not a gate that zeroes the force.  Prior
+        // to 2026-05-21 this used |cos φ| and zeroed the force whenever
+        // |cos φ| < 0.1, producing a discontinuous step at φ = π/2 ± δ.
         let omega = 2.0 * std::f64::consts::PI * self.config.frequency;
         let coefficient = (self.config.rho * omega * omega) / (8.0 * std::f64::consts::PI);
-
-        let force_magnitude =
-            coefficient * volume_amplitude1 * volume_amplitude2 * phase_difference.cos().abs()
-                / distance.powi(2);
-
-        // Determine interaction type based on phase difference
         let cos_phase = phase_difference.cos();
+
+        let secondary_force =
+            coefficient * volume_amplitude1 * volume_amplitude2 * cos_phase / distance.powi(2);
+
+        // Categorical label tracking the *sign* of the interaction.  The
+        // ±0.1 dead-band is a labelling convenience; the force value above
+        // is continuous through it.
         let interaction_type = if cos_phase > 0.1 {
             BjerknesInteractionType::Attractive
         } else if cos_phase < -0.1 {
             BjerknesInteractionType::Repulsive
         } else {
             BjerknesInteractionType::Neutral
-        };
-
-        // Apply sign based on interaction type
-        let secondary_force = match interaction_type {
-            BjerknesInteractionType::Attractive => force_magnitude, // Positive (toward each other)
-            BjerknesInteractionType::Repulsive => -force_magnitude, // Negative (away)
-            BjerknesInteractionType::Neutral => 0.0,
         };
 
         // Check coalescence condition
@@ -219,6 +220,43 @@ mod tests {
             "force must be 0 beyond interaction range"
         );
         assert_eq!(result.interaction_type, BjerknesInteractionType::Neutral);
+    }
+
+    /// Force must be continuous through cos(φ) = ±0.1 (the categorical
+    /// "Neutral" boundary).  Regression test for the pre-2026-05-21 bug where
+    /// the implementation zeroed the force whenever |cos φ| < 0.1, producing
+    /// a discontinuous step.
+    #[test]
+    fn secondary_bjerknes_force_continuous_through_neutral_threshold() {
+        let c = calc();
+        // Sample cos(φ) just above and just below the 0.1 threshold.
+        let phi_above = (0.101_f64).acos();
+        let phi_below = (0.099_f64).acos();
+        let r1 = 5e-6;
+        let r2 = 5e-6;
+        let v = 1e-15;
+        let d = 10e-6;
+        let f_above = c
+            .secondary_bjerknes_force(r1, r2, v, v, phi_above, d)
+            .unwrap();
+        let f_below = c
+            .secondary_bjerknes_force(r1, r2, v, v, phi_below, d)
+            .unwrap();
+        // Forces must differ by ≲ 2 % across the 0.1 / 0.099 step (linear in cos).
+        let rel_diff = (f_above.secondary - f_below.secondary).abs()
+            / f_above.secondary.abs().max(1e-300);
+        assert!(
+            rel_diff < 0.05,
+            "secondary Bjerknes force must be continuous through cos(φ)=0.1 \
+             (got f_above={fa:.3e}, f_below={fb:.3e}, rel_diff={rel_diff:.3})",
+            fa = f_above.secondary,
+            fb = f_below.secondary,
+        );
+        assert!(
+            f_below.secondary != 0.0,
+            "f_below must be nonzero — was {fb}",
+            fb = f_below.secondary
+        );
     }
 
     /// Coalescence flag set when distance < coalescence_distance.

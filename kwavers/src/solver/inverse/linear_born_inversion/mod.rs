@@ -20,6 +20,8 @@
 //! the distinction lives in the module names, not in a misleading "Fwi"
 //! identifier (closed in T11).
 
+pub mod config;
 pub mod geometry;
 
+pub use config::LinearBornInversionConfig;
 pub use geometry::{ElementPosition, TransducerGeometry};

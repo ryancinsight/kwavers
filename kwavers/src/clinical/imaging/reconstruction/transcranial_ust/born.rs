@@ -2,6 +2,7 @@
 
 use crate::core::error::KwaversResult;
 use crate::math::statistics::{normalized_rmse, pearson, percentile_range};
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use ndarray::Array2;
 
 use super::{
@@ -70,18 +71,19 @@ pub fn reconstruct_brain_slice(
     config: &TranscranialUstBornInversionConfig,
 ) -> KwaversResult<TranscranialUstBornInversionResult> {
     config.validate()?;
+    let linear = &config.linear;
     let geometry = TranscranialBowlGeometry::uniform(config.element_count, config.radius_m)?;
     let active = active_voxels(medium);
-    let matrix = build_sensitivity_matrix(medium, config, &geometry, &active);
+    let matrix = build_sensitivity_matrix(medium, linear, &geometry, &active);
     let nrows = config.measurement_count();
     let data = matrix_vector(&matrix, nrows, active.len(), |j| active[j].target_contrast);
-    let migration_model = migration_contrast(&matrix, &data, nrows, active.len(), config);
+    let migration_model = migration_contrast(&matrix, &data, nrows, active.len(), linear);
     let inversion = invert(
         &matrix,
         &data,
         nrows,
         active.len(),
-        config,
+        linear,
         &active,
         medium.sound_speed_m_s.dim(),
     );
@@ -95,7 +97,7 @@ pub fn reconstruct_brain_slice(
     let enhanced = enhance_reconstruction(
         &reconstruction,
         &medium.brain_mask,
-        config.enhancement_gain,
+        linear.enhancement_gain,
         C_BRAIN_REF_M_S,
     );
 
@@ -195,7 +197,7 @@ fn invert(
     data: &[f64],
     nrows: usize,
     ncols: usize,
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
     active: &[ActiveVoxel],
     shape: (usize, usize),
 ) -> InversionState {

@@ -2,14 +2,14 @@
 
 use rayon::prelude::*;
 
-use super::config::TranscranialUstBornInversionConfig;
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 pub(super) fn migration_contrast(
     matrix: &[f64],
     data: &[f64],
     nrows: usize,
     ncols: usize,
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
 ) -> Vec<f64> {
     let diag = normal_equation_diagonal(matrix, nrows, ncols, config.regularization);
     let rows: Vec<usize> = (0..nrows).collect();
@@ -79,7 +79,7 @@ pub(super) fn normalized_gradient_rows(
     rows: &[usize],
     ncols: usize,
     diag: &[f64],
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
 ) -> Vec<f64> {
     let mut gradient = adjoint_residual_rows(matrix, data, model, rows, ncols);
     for col in 0..ncols {

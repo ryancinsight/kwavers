@@ -4,12 +4,12 @@ use rayon::prelude::*;
 use std::f64::consts::TAU;
 
 use super::{
-    born::ActiveVoxel,
-    config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S},
-    medium::AcousticSlice,
+    born::ActiveVoxel, config::C_BRAIN_REF_M_S, medium::AcousticSlice,
     transducer::TranscranialBowlGeometry,
 };
-use crate::solver::inverse::linear_born_inversion::TransducerGeometry;
+use crate::solver::inverse::linear_born_inversion::{
+    LinearBornInversionConfig, TransducerGeometry,
+};
 
 const C_TISSUE_DENSITY_KG_M3: f64 = 1000.0;
 
@@ -21,14 +21,14 @@ const C_TISSUE_DENSITY_KG_M3: f64 = 1000.0;
 /// assigning independent rows to Rayon workers.
 pub(super) fn build_sensitivity_matrix(
     medium: &AcousticSlice,
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
     geometry: &TranscranialBowlGeometry,
     active: &[ActiveVoxel],
 ) -> Vec<f64> {
     let offset_count = config.receiver_offsets.len();
     let frequency_count = config.frequencies_hz.len();
     let harmonic_count = config.harmonic_count();
-    let nrows = config.measurement_count();
+    let nrows = config.measurement_count(geometry.len());
     let ncols = active.len();
     let mut matrix = vec![0.0; nrows * ncols];
     let pixel_area = medium.spacing_m * medium.spacing_m;
@@ -94,7 +94,7 @@ pub(super) fn build_sensitivity_matrix(
 }
 
 fn second_harmonic_factor(
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
     frequency_hz: f64,
     path_m: f64,
 ) -> f64 {

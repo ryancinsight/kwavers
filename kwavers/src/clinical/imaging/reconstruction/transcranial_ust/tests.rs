@@ -1,6 +1,8 @@
 use ndarray::{Array2, Array3};
 
-use crate::solver::inverse::linear_born_inversion::TransducerGeometry;
+use crate::solver::inverse::linear_born_inversion::{
+    LinearBornInversionConfig, TransducerGeometry,
+};
 
 use super::{
     reconstruct_brain_slice, reconstruct_brain_volume, transducer::TranscranialBowlGeometry,
@@ -73,11 +75,14 @@ fn transcranial_ust_volume_inversion_reconstructs_coupled_three_dimensional_arra
     let config = TranscranialUstBornInversionConfig {
         element_count: 24,
         radius_m: 0.07,
-        frequencies_hz: vec![180_000.0, 320_000.0],
-        receiver_offsets: vec![12, 6, 18],
-        iterations: 6,
-        relaxation: 0.8,
-        regularization: 5.0e-5,
+        linear: LinearBornInversionConfig {
+            frequencies_hz: vec![180_000.0, 320_000.0],
+            receiver_offsets: vec![12, 6, 18],
+            iterations: 6,
+            relaxation: 0.8,
+            regularization: 5.0e-5,
+            ..LinearBornInversionConfig::default()
+        },
         ..TranscranialUstBornInversionConfig::default()
     };
 
@@ -88,7 +93,7 @@ fn transcranial_ust_volume_inversion_reconstructs_coupled_three_dimensional_arra
     assert!(result.metrics.active_voxels > 40);
     assert_eq!(
         result.metrics.continuation_stages,
-        config.frequencies_hz.len()
+        config.linear.frequencies_hz.len()
     );
     assert!(
         result.metrics.final_objective < result.metrics.initial_objective,
@@ -139,11 +144,14 @@ fn transcranial_ust_inversion_reduces_data_objective_and_recovers_contrast() {
     let config = TranscranialUstBornInversionConfig {
         element_count: 64,
         radius_m: 0.07,
-        frequencies_hz: vec![180_000.0, 260_000.0, 340_000.0],
-        receiver_offsets: vec![32, 24, 40, 16, 48],
-        iterations: 18,
-        relaxation: 0.9,
-        regularization: 1.0e-5,
+        linear: LinearBornInversionConfig {
+            frequencies_hz: vec![180_000.0, 260_000.0, 340_000.0],
+            receiver_offsets: vec![32, 24, 40, 16, 48],
+            iterations: 18,
+            relaxation: 0.9,
+            regularization: 1.0e-5,
+            ..LinearBornInversionConfig::default()
+        },
         ..TranscranialUstBornInversionConfig::default()
     };
 
@@ -153,9 +161,9 @@ fn transcranial_ust_inversion_reduces_data_objective_and_recovers_contrast() {
     assert_eq!(result.metrics.measurements, config.measurement_count());
     assert_eq!(
         result.metrics.continuation_stages,
-        config.frequencies_hz.len()
+        config.linear.frequencies_hz.len()
     );
-    assert!(config.attenuation_model);
+    assert!(config.linear.attenuation_model);
     assert_eq!(config.harmonic_count(), 2);
     assert!(
         result.metrics.final_objective < 0.35 * result.metrics.initial_objective,
@@ -207,7 +215,7 @@ fn transcranial_ust_inversion_reduces_data_objective_and_recovers_contrast() {
     assert_ne!(migration_center, initial_center);
 
     let mut no_attenuation = config.clone();
-    no_attenuation.attenuation_model = false;
+    no_attenuation.linear.attenuation_model = false;
     let no_attenuation_result = reconstruct_brain_slice(&medium, &no_attenuation).unwrap();
     let data_difference: f64 = result
         .synthetic_data
@@ -223,7 +231,7 @@ fn transcranial_ust_inversion_reduces_data_objective_and_recovers_contrast() {
     );
 
     let mut linear = config.clone();
-    linear.nonlinear_harmonic_model = false;
+    linear.linear.nonlinear_harmonic_model = false;
     let linear_result = reconstruct_brain_slice(&medium, &linear).unwrap();
     assert_eq!(linear.harmonic_count(), 1);
     assert_eq!(

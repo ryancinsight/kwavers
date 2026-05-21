@@ -1,6 +1,16 @@
-//! Configuration for 1024-element transcranial ultrasound tomography.
+//! Configuration for transcranial ultrasound tomography (clinical adapter).
+//!
+//! Wraps the solver-layer
+//! [`LinearBornInversionConfig`](crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig)
+//! with anatomy/transducer-specific parameters (element count, focused-bowl
+//! radius) and the brain-tissue acoustic constants used by the CT-to-speed
+//! model. The generic numerical knobs (Tikhonov, Sobolev, edge-preserving
+//! Charbonnier, harmonic encoding) live in the embedded `linear` field and
+//! are passed to the generic linear-Born kernels as
+//! `&config.linear`.
 
 use crate::core::error::{KwaversError, KwaversResult};
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 /// Reference element count for the transcranial focused-bowl acquisition.
 pub const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
@@ -12,83 +22,39 @@ pub const C_WATER_M_S: f64 = SOUND_SPEED_WATER_SIM;
 pub const C_BRAIN_REF_M_S: f64 = SOUND_SPEED_TISSUE;
 pub const C_BONE_M_S: f64 = 2900.0;
 
-/// Numerical configuration for the finite-frequency encoded inversion.
+/// Clinical configuration for the transcranial UST finite-frequency Born
+/// inversion.
+///
+/// = generic [`LinearBornInversionConfig`] + transducer-geometry parameters
+/// (`element_count`, `radius_m`). The clinical adapter constructs the
+/// focused-bowl geometry from `element_count + radius_m`, then passes
+/// `&self.linear` to every kernel call so the kernels remain anatomy-neutral.
 #[derive(Clone, Debug)]
 pub struct TranscranialUstBornInversionConfig {
+    /// Generic linear-Born + PCG inversion knobs.
+    pub linear: LinearBornInversionConfig,
     /// Number of array elements placed on the transcranial focused bowl.
     pub element_count: usize,
     /// Transcranial focused-bowl radius around the CT volume center [m].
     pub radius_m: f64,
-    /// Frequencies used by the encoded finite-frequency sensitivity [Hz].
-    pub frequencies_hz: Vec<f64>,
-    /// Receiver offsets from each emitting element, modulo `element_count`.
-    pub receiver_offsets: Vec<usize>,
-    /// Maximum Landweber/backtracking iterations.
-    pub iterations: usize,
-    /// Initial dimensionless relaxation for the normalized gradient step.
-    pub relaxation: f64,
-    /// Tikhonov weight on sound-speed contrast.
-    pub regularization: f64,
-    /// Use low-to-high frequency continuation before the full-band pass.
-    pub frequency_continuation: bool,
-    /// Radius of the Sobolev gradient smoother in active brain voxels.
-    pub sobolev_radius_voxels: usize,
-    /// Convex weight applied to the Sobolev-smoothed update direction.
-    pub sobolev_weight: f64,
-    /// High-boost gain for the returned structure-enhanced display image.
-    pub enhancement_gain: f64,
-    /// Edge-preserving first-difference regularization weight.
-    pub edge_preserving_weight: f64,
-    /// Charbonnier transition scale for edge-preserving regularization.
-    pub edge_preserving_epsilon: f64,
-    /// Stable convex-projection step for edge-preserving proximal smoothing.
-    pub edge_preserving_step: f64,
-    /// Number of accepted proximal smoothing passes per PCG iteration.
-    pub edge_preserving_iterations: usize,
-    /// Apply CT-derived frequency-dependent path attenuation in sensitivity rows.
-    pub attenuation_model: bool,
-    /// Include weak-Westervelt second-harmonic encoded rows.
-    pub nonlinear_harmonic_model: bool,
-    /// Source pressure used for weak-nonlinear harmonic scaling [MPa].
-    pub source_pressure_mpa: f64,
-    /// Acoustic nonlinearity coefficient beta = 1 + B/(2A).
-    pub nonlinear_beta: f64,
-    /// Lower bound for reconstructed fractional speed contrast.
-    pub contrast_min: f64,
-    /// Upper bound for reconstructed fractional speed contrast.
-    pub contrast_max: f64,
 }
 
 impl Default for TranscranialUstBornInversionConfig {
     fn default() -> Self {
         Self {
+            linear: LinearBornInversionConfig::default(),
             element_count: TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT,
             radius_m: 0.11,
-            frequencies_hz: vec![200_000.0, 350_000.0, 500_000.0, 650_000.0, 800_000.0],
-            receiver_offsets: vec![512, 384, 640, 256, 768, 128, 448, 576],
-            iterations: 24,
-            relaxation: 0.85,
-            regularization: 1.0e-4,
-            frequency_continuation: true,
-            sobolev_radius_voxels: 1,
-            sobolev_weight: 0.35,
-            enhancement_gain: 0.65,
-            edge_preserving_weight: 1.0e-4,
-            edge_preserving_epsilon: 0.004,
-            edge_preserving_step: 0.12,
-            edge_preserving_iterations: 1,
-            attenuation_model: true,
-            nonlinear_harmonic_model: true,
-            source_pressure_mpa: 0.15,
-            nonlinear_beta: 4.5,
-            contrast_min: -0.08,
-            contrast_max: 0.08,
         }
     }
 }
 
 impl TranscranialUstBornInversionConfig {
-    /// Validate configuration invariants before matrix construction.
+    /// Validate the clinical-adapter invariants and delegate the numerical
+    /// invariants to [`LinearBornInversionConfig::validate`].
+    ///
+    /// # Errors
+    /// Returns an error when any anatomy or numerical invariant is violated.
     pub fn validate(&self) -> KwaversResult<()> {
         if self.element_count < 8 {
             return Err(KwaversError::InvalidInput(
@@ -101,111 +67,29 @@ impl TranscranialUstBornInversionConfig {
                     .to_owned(),
             ));
         }
-        if self.frequencies_hz.is_empty()
-            || self
-                .frequencies_hz
-                .iter()
-                .any(|f| !f.is_finite() || *f <= 0.0)
-        {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.frequencies_hz must contain positive values"
-                    .to_owned(),
-            ));
-        }
-        if self.receiver_offsets.is_empty()
-            || self
-                .receiver_offsets
-                .iter()
-                .any(|offset| *offset == 0 || *offset >= self.element_count)
+        if self
+            .linear
+            .receiver_offsets
+            .iter()
+            .any(|offset| *offset >= self.element_count)
         {
             return Err(KwaversError::InvalidInput(
                 "receiver offsets must lie in 1..element_count".to_owned(),
             ));
         }
-        if self.iterations == 0 {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.iterations must be positive".to_owned(),
-            ));
-        }
-        if !self.relaxation.is_finite() || self.relaxation <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.relaxation must be finite and positive"
-                    .to_owned(),
-            ));
-        }
-        if !self.regularization.is_finite() || self.regularization < 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.regularization must be finite and non-negative"
-                    .to_owned(),
-            ));
-        }
-        if !self.sobolev_weight.is_finite() || !(0.0..=1.0).contains(&self.sobolev_weight) {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.sobolev_weight must be in [0, 1]".to_owned(),
-            ));
-        }
-        if !self.enhancement_gain.is_finite() || self.enhancement_gain < 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.enhancement_gain must be finite and non-negative"
-                    .to_owned(),
-            ));
-        }
-        if !self.edge_preserving_weight.is_finite() || self.edge_preserving_weight < 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.edge_preserving_weight must be finite and non-negative"
-                    .to_owned(),
-            ));
-        }
-        if !self.edge_preserving_epsilon.is_finite() || self.edge_preserving_epsilon <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.edge_preserving_epsilon must be finite and positive"
-                    .to_owned(),
-            ));
-        }
-        if !self.edge_preserving_step.is_finite()
-            || !(0.0..=1.0).contains(&self.edge_preserving_step)
-        {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.edge_preserving_step must be in [0, 1]"
-                    .to_owned(),
-            ));
-        }
-        if !self.source_pressure_mpa.is_finite() || self.source_pressure_mpa <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.source_pressure_mpa must be finite and positive"
-                    .to_owned(),
-            ));
-        }
-        if !self.nonlinear_beta.is_finite() || self.nonlinear_beta <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "TranscranialUstBornInversionConfig.nonlinear_beta must be finite and positive"
-                    .to_owned(),
-            ));
-        }
-        if self.contrast_min >= self.contrast_max {
-            return Err(KwaversError::InvalidInput(
-                "contrast_min must be lower than contrast_max".to_owned(),
-            ));
-        }
-        Ok(())
+        self.linear.validate()
     }
 
     /// Number of harmonic channels per source/offset/frequency acquisition.
     #[must_use]
     pub fn harmonic_count(&self) -> usize {
-        if self.nonlinear_harmonic_model {
-            2
-        } else {
-            1
-        }
+        self.linear.harmonic_count()
     }
 
-    /// Number of encoded finite-frequency measurements.
+    /// Number of encoded finite-frequency measurements for this clinical
+    /// acquisition (`element_count × receiver_offsets × frequencies × harmonics`).
     #[must_use]
     pub fn measurement_count(&self) -> usize {
-        self.element_count
-            * self.receiver_offsets.len()
-            * self.frequencies_hz.len()
-            * self.harmonic_count()
+        self.linear.measurement_count(self.element_count)
     }
 }

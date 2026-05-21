@@ -16,7 +16,8 @@
 
 use ndarray::Array3;
 
-use super::{config::TranscranialUstBornInversionConfig, volume_operator::VolumeVoxel};
+use super::volume_operator::VolumeVoxel;
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 /// Build the dense active-voxel lookup table once per inversion.
 ///
@@ -44,7 +45,7 @@ pub(super) fn edge_preserving_penalty(
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
     active_index: &Array3<isize>,
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
 ) -> f64 {
     if config.edge_preserving_weight == 0.0 {
         return 0.0;
@@ -72,7 +73,7 @@ pub(super) fn edge_preserving_projection(
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
     active_index: &Array3<isize>,
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
 ) -> Option<Vec<f64>> {
     if config.edge_preserving_iterations == 0 || config.edge_preserving_step == 0.0 {
         return None;

@@ -1,9 +1,10 @@
 //! Construction and distance-table precomputation for [`super::VolumeOperator`].
 
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use rayon::prelude::*;
 use std::f64::consts::TAU;
 
-use super::super::config::{TranscranialUstBornInversionConfig, C_BRAIN_REF_M_S};
+use super::super::config::C_BRAIN_REF_M_S;
 use super::super::transducer::TranscranialBowlGeometry;
 use super::helpers::distance;
 use super::{RowContext, VolumeOperator, VolumeVoxel, C_TISSUE_DENSITY_KG_M3};
@@ -14,11 +15,12 @@ impl<'a> VolumeOperator<'a> {
         receiver_indices: Vec<usize>,
         active: &'a [VolumeVoxel],
         voxel_volume_m3: f64,
-        config: &TranscranialUstBornInversionConfig,
+        config: &LinearBornInversionConfig,
     ) -> Self {
-        let row_contexts = build_row_contexts(&receiver_indices, config);
+        let element_count = geometry.elements.len();
+        let row_contexts = build_row_contexts(&receiver_indices, element_count, config);
         let n_active = active.len();
-        let n_elements = geometry.elements.len();
+        let n_elements = element_count;
 
         // Pre-fill distance tables in parallel over elements.
         // Each element's n_active distances form one contiguous chunk.
@@ -54,9 +56,10 @@ impl<'a> VolumeOperator<'a> {
 
 fn build_row_contexts(
     receiver_indices: &[usize],
-    config: &TranscranialUstBornInversionConfig,
+    element_count: usize,
+    config: &LinearBornInversionConfig,
 ) -> Vec<RowContext> {
-    (0..config.measurement_count())
+    (0..config.measurement_count(element_count))
         .map(|row| build_row_context(row, receiver_indices, config))
         .collect()
 }
@@ -64,7 +67,7 @@ fn build_row_contexts(
 fn build_row_context(
     row: usize,
     receiver_indices: &[usize],
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
 ) -> RowContext {
     let harmonic_count = config.harmonic_count();
     let offset_count = config.receiver_offsets.len();
@@ -95,7 +98,7 @@ fn build_row_context(
 /// (`harmonic_order == 1`) return 0, which disables the harmonic term in
 /// [`super::kernel::VolumeOperator::row_value_for_col`].
 fn second_harmonic_scale(
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
     frequency_hz: f64,
     harmonic_order: usize,
 ) -> f64 {

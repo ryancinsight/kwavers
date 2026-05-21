@@ -2,6 +2,7 @@ use kwavers::clinical::imaging::reconstruction::transcranial_ust::{
     reconstruct_brain_slice, resample_head_slice, select_head_slice, AcousticSlice,
     TranscranialUstBornInversionConfig,
 };
+use kwavers::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use ndarray::Array1;
 use numpy::IntoPyArray;
 use pyo3::prelude::*;
@@ -75,30 +76,33 @@ pub fn run_transcranial_ust_slice_inversion_from_ritk_ct<'py>(
     .map_err(kwavers_to_py)?;
 
     let mut config = TranscranialUstBornInversionConfig {
-        iterations,
+        linear: LinearBornInversionConfig {
+            iterations,
+            ..LinearBornInversionConfig::default()
+        },
         ..TranscranialUstBornInversionConfig::default()
     };
     if let Some(radius) = radius_m {
         config.radius_m = radius;
     }
     if let Some(freqs) = frequencies_hz {
-        config.frequencies_hz = freqs;
+        config.linear.frequencies_hz = freqs;
     }
     if let Some(offsets) = receiver_offsets {
-        config.receiver_offsets = offsets;
+        config.linear.receiver_offsets = offsets;
     }
-    config.frequency_continuation = frequency_continuation;
-    config.sobolev_radius_voxels = sobolev_radius_voxels;
-    config.sobolev_weight = sobolev_weight;
-    config.enhancement_gain = enhancement_gain;
-    config.edge_preserving_weight = edge_preserving_weight;
-    config.edge_preserving_epsilon = edge_preserving_epsilon;
-    config.edge_preserving_step = edge_preserving_step;
-    config.edge_preserving_iterations = edge_preserving_iterations;
-    config.attenuation_model = attenuation_model;
-    config.nonlinear_harmonic_model = nonlinear_harmonic_model;
-    config.source_pressure_mpa = source_pressure_mpa;
-    config.nonlinear_beta = nonlinear_beta;
+    config.linear.frequency_continuation = frequency_continuation;
+    config.linear.sobolev_radius_voxels = sobolev_radius_voxels;
+    config.linear.sobolev_weight = sobolev_weight;
+    config.linear.enhancement_gain = enhancement_gain;
+    config.linear.edge_preserving_weight = edge_preserving_weight;
+    config.linear.edge_preserving_epsilon = edge_preserving_epsilon;
+    config.linear.edge_preserving_step = edge_preserving_step;
+    config.linear.edge_preserving_iterations = edge_preserving_iterations;
+    config.linear.attenuation_model = attenuation_model;
+    config.linear.nonlinear_harmonic_model = nonlinear_harmonic_model;
+    config.linear.source_pressure_mpa = source_pressure_mpa;
+    config.linear.nonlinear_beta = nonlinear_beta;
 
     let result = py
         .detach(|| reconstruct_brain_slice(&acoustic, &config))
@@ -183,23 +187,35 @@ pub fn run_transcranial_ust_slice_inversion_from_ritk_ct<'py>(
     out.set_item("geometry_model", "hemispherical_cap")?;
     out.set_item("element_count", config.element_count)?;
     out.set_item("radius_m", config.radius_m)?;
-    out.set_item("frequencies_hz", config.frequencies_hz)?;
-    out.set_item("receiver_offsets", config.receiver_offsets)?;
-    out.set_item("frequency_continuation", config.frequency_continuation)?;
-    out.set_item("sobolev_radius_voxels", config.sobolev_radius_voxels)?;
-    out.set_item("sobolev_weight", config.sobolev_weight)?;
-    out.set_item("enhancement_gain", config.enhancement_gain)?;
-    out.set_item("edge_preserving_weight", config.edge_preserving_weight)?;
-    out.set_item("edge_preserving_epsilon", config.edge_preserving_epsilon)?;
-    out.set_item("edge_preserving_step", config.edge_preserving_step)?;
+    out.set_item("frequencies_hz", config.linear.frequencies_hz.clone())?;
+    out.set_item("receiver_offsets", config.linear.receiver_offsets.clone())?;
+    out.set_item(
+        "frequency_continuation",
+        config.linear.frequency_continuation,
+    )?;
+    out.set_item("sobolev_radius_voxels", config.linear.sobolev_radius_voxels)?;
+    out.set_item("sobolev_weight", config.linear.sobolev_weight)?;
+    out.set_item("enhancement_gain", config.linear.enhancement_gain)?;
+    out.set_item(
+        "edge_preserving_weight",
+        config.linear.edge_preserving_weight,
+    )?;
+    out.set_item(
+        "edge_preserving_epsilon",
+        config.linear.edge_preserving_epsilon,
+    )?;
+    out.set_item("edge_preserving_step", config.linear.edge_preserving_step)?;
     out.set_item(
         "edge_preserving_iterations",
-        config.edge_preserving_iterations,
+        config.linear.edge_preserving_iterations,
     )?;
-    out.set_item("attenuation_model", config.attenuation_model)?;
-    out.set_item("nonlinear_harmonic_model", config.nonlinear_harmonic_model)?;
-    out.set_item("source_pressure_mpa", config.source_pressure_mpa)?;
-    out.set_item("nonlinear_beta", config.nonlinear_beta)?;
+    out.set_item("attenuation_model", config.linear.attenuation_model)?;
+    out.set_item(
+        "nonlinear_harmonic_model",
+        config.linear.nonlinear_harmonic_model,
+    )?;
+    out.set_item("source_pressure_mpa", config.linear.source_pressure_mpa)?;
+    out.set_item("nonlinear_beta", config.linear.nonlinear_beta)?;
     out.set_item("harmonic_count", harmonic_count)?;
     Ok(out)
 }

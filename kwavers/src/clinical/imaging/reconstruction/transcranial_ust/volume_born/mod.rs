@@ -57,26 +57,27 @@ pub fn reconstruct_brain_volume(
     config: &TranscranialUstBornInversionConfig,
 ) -> KwaversResult<TranscranialUstBornInversionVolumeResult> {
     config.validate()?;
+    let linear = &config.linear;
     let geometry = TranscranialBowlGeometry::uniform(config.element_count, config.radius_m)?;
-    let receiver_indices = geometry.receiver_indices(&config.receiver_offsets);
+    let receiver_indices = geometry.receiver_indices(&linear.receiver_offsets);
     let active = active_voxels(medium);
     let operator = VolumeOperator::new(
         geometry,
         receiver_indices,
         &active,
         medium.spacing_m * medium.spacing_m * medium.spacing_m,
-        config,
+        linear,
     );
     let nrows = config.measurement_count();
     let all_rows: Vec<usize> = (0..nrows).collect();
     let row_norms = operator.row_norms();
     let data = operator.data_from_target(&row_norms);
-    let migration_model = operator.migration(&data, &all_rows, &row_norms, config);
+    let migration_model = operator.migration(&data, &all_rows, &row_norms, linear);
     let inversion = invert(
         &operator,
         &data,
         &row_norms,
-        config,
+        linear,
         &active,
         medium.sound_speed_m_s.dim(),
     );
@@ -86,7 +87,7 @@ pub fn reconstruct_brain_volume(
     let enhanced = enhance_reconstruction_volume(
         &reconstruction,
         &medium.brain_mask,
-        config.enhancement_gain,
+        linear.enhancement_gain,
         C_BRAIN_REF_M_S,
     );
 

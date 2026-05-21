@@ -1,10 +1,10 @@
 //! PCG inversion kernel for the 3-D Born transcranial focused-bowl solver.
 
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use ndarray::Array3;
 
 use super::super::{
     conditioning::{continuation_rows, stage_iteration_count},
-    config::TranscranialUstBornInversionConfig,
     volume_operator::{VolumeOperator, VolumeVoxel},
     volume_regularization::{
         build_active_index, edge_preserving_penalty, edge_preserving_projection,
@@ -17,7 +17,7 @@ use super::super::{
 /// inversion loop, avoiding an O(NX·NY·NZ) `Array3` allocation on every
 /// line-search trial.
 type RegCtx<'a> = (
-    &'a TranscranialUstBornInversionConfig,
+    &'a LinearBornInversionConfig,
     &'a [VolumeVoxel],
     (usize, usize, usize),
     &'a Array3<isize>,
@@ -34,7 +34,7 @@ pub(super) fn invert(
     operator: &VolumeOperator<'_>,
     data: &[f64],
     row_norms: &[f64],
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
 ) -> InversionState {
@@ -92,7 +92,7 @@ struct StagePcgContext<'a> {
     operator: &'a VolumeOperator<'a>,
     data: &'a [f64],
     row_norms: &'a [f64],
-    config: &'a TranscranialUstBornInversionConfig,
+    config: &'a LinearBornInversionConfig,
     active: &'a [VolumeVoxel],
     shape: (usize, usize, usize),
     rows: &'a [usize],
@@ -231,7 +231,7 @@ fn apply_sobolev_preconditioner_3d(
     gradient: &mut [f64],
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
 ) {
     if config.sobolev_radius_voxels == 0 || config.sobolev_weight == 0.0 {
         return;

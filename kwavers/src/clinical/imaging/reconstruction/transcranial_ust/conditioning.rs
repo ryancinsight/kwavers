@@ -2,11 +2,12 @@
 
 use ndarray::Array2;
 
-use super::{born::ActiveVoxel, config::TranscranialUstBornInversionConfig};
+use super::born::ActiveVoxel;
+use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 
 /// Build low-to-high frequency row schedules.
 pub(super) fn continuation_rows(
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
     nrows: usize,
 ) -> Vec<Vec<usize>> {
     let nf = config.frequencies_hz.len();
@@ -38,7 +39,7 @@ pub(super) fn apply_sobolev_preconditioner(
     gradient: &mut [f64],
     active: &[ActiveVoxel],
     shape: (usize, usize),
-    config: &TranscranialUstBornInversionConfig,
+    config: &LinearBornInversionConfig,
 ) {
     if config.sobolev_radius_voxels == 0 || config.sobolev_weight == 0.0 {
         return;
