@@ -89,7 +89,21 @@ impl BjerknesForceComputer {
         -bubble_volume * pressure_gradient
     }
 
-    /// Secondary Bjerknes force (bubble-bubble interaction)
+    /// Secondary Bjerknes force (bubble-bubble interaction).
+    ///
+    /// Canonical instantaneous form (Crum 1975; Leighton 1994 §4.5.2;
+    /// Brennen 1995 Eq. 4.49):
+    ///
+    /// ```text
+    /// F_B(t) = - ρ₀ V̇₁(t) V̇₂(t) / (4π d²)
+    /// ```
+    ///
+    /// where V̇_i = 4π R_i² Ṙ_i is the volumetric oscillation rate. The
+    /// inverse-square distance dependence is required by the integrability
+    /// of the radial Bernoulli pressure field around a pulsating monopole;
+    /// any other power produces an incorrect far-field decay.
+    ///
+    /// Dimensional check: \[kg/m³ · (m³/s)² / m²\] = \[kg·m/s²\] = N ✓.
     #[must_use]
     pub fn secondary(
         bubble1: &BubbleState,
@@ -101,13 +115,10 @@ impl BjerknesForceComputer {
             return 0.0;
         }
 
-        // Volume oscillation rates
         let v1_dot = 4.0 * std::f64::consts::PI * bubble1.radius.powi(2) * bubble1.wall_velocity;
         let v2_dot = 4.0 * std::f64::consts::PI * bubble2.radius.powi(2) * bubble2.wall_velocity;
 
-        // Force magnitude
-
-        -liquid_density * v1_dot * v2_dot / (4.0 * std::f64::consts::PI * distance)
+        -liquid_density * v1_dot * v2_dot / (4.0 * std::f64::consts::PI * distance.powi(2))
     }
 
     /// Check if bubbles attract or repel
@@ -212,6 +223,35 @@ mod tests {
         assert_eq!(
             BjerknesForceComputer::interaction_type(&bubble1, &bubble2),
             BubbleInteractionType::Repulsion
+        );
+    }
+
+    #[test]
+    fn secondary_bjerknes_scales_as_inverse_square_distance() {
+        // F_B ∝ 1/d² ⇒ F(d)·d² is independent of d when V̇₁,V̇₂,ρ are fixed.
+        let params = BubbleParameters::default();
+        let mut bubble1 = BubbleState::new(&params);
+        let mut bubble2 = BubbleState::new(&params);
+        bubble1.radius = 2.0e-6;
+        bubble2.radius = 3.0e-6;
+        bubble1.wall_velocity = 0.5;
+        bubble2.wall_velocity = -0.4;
+        let rho = 1000.0_f64;
+
+        let d_a = 1.0e-4_f64;
+        let d_b = 4.0e-4_f64;
+        let f_a = BjerknesForceComputer::secondary(&bubble1, &bubble2, d_a, rho);
+        let f_b = BjerknesForceComputer::secondary(&bubble1, &bubble2, d_b, rho);
+
+        // Both should be positive (out-of-phase, so -ρ·V̇₁·V̇₂·(...) flips sign positive).
+        assert!(f_a.abs() > 0.0);
+        // Ratio must equal (d_b/d_a)² = 16 — failing here detected the previous
+        // /distance (1/d) bug, which would have produced ratio 4.
+        let ratio = f_a / f_b;
+        let expected = (d_b / d_a).powi(2);
+        assert!(
+            (ratio - expected).abs() / expected < 1.0e-12,
+            "secondary Bjerknes ratio {ratio} should equal {expected} = (d_b/d_a)²"
         );
     }
 
