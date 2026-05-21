@@ -137,11 +137,23 @@ pub fn rayleigh_plesset_rk4(
     rdot_out[0] = rdot0;
 
     let omega = 2.0 * PI * freq_hz;
-    let p_gas0 = p0_pa + 2.0 * sigma / r0_m;
+    // Canonical polytropic non-condensable-gas closure with vapor-pressure
+    // separation (Brennen 1995 sec 2.4):
+    //   p_gas(r) = (p0 + 2 sigma / r0 - p_v) * (r0 / r)^(3 kappa) + p_v
+    // Only the non-condensable gas partial pressure (p0 + 2 sigma / r0 - p_v)
+    // undergoes polytropic compression; the saturated vapor pressure p_v is
+    // isothermal and re-added after scaling. Prior to 2026-05-21 this used
+    //   p_gas = (p0 + 2 sigma / r0) * (r0 / r)^(3 kappa) - p_v
+    // which gives p_gas -> -p_v (negative) as r -> infinity instead of the
+    // physically correct +p_v vapor-pressure floor, and double-counts the
+    // vapor term in the equilibrium balance at r = r0. The canonical form
+    // is already used in physics/.../keller_miksis/equation.rs; this aligns
+    // the analytical Rayleigh-Plesset integrator with it.
+    let p_eq = p0_pa + 2.0 * sigma / r0_m - p_v_pa;
 
     let rhs = |r: f64, rdot: f64, t: f64| -> (f64, f64) {
         let r_clamped = r.max(1e-15);
-        let p_gas = p_gas0 * (r0_m / r_clamped).powf(3.0 * kappa) - p_v_pa;
+        let p_gas = p_eq * (r0_m / r_clamped).powf(3.0 * kappa) + p_v_pa;
         let p_ac = p_ac_pa * (omega * t).sin();
         let rddot = (p_gas - p0_pa - p_ac - 2.0 * sigma / r_clamped - 4.0 * mu * rdot / r_clamped)
             / (rho * r_clamped)
@@ -204,15 +216,26 @@ pub fn keller_miksis_rk4(
     rdot_out[0] = rdot0;
 
     let omega = 2.0 * PI * freq_hz;
-    let p_gas0 = p0_pa + 2.0 * sigma / r0_m;
+    // Canonical polytropic gas closure with vapor-pressure separation
+    // (Brennen 1995 sec 2.4):
+    //   p_gas_total(r) = p_nc(r) + p_v,
+    //   p_nc(r)        = (p0 + 2 sigma / r0 - p_v) * (r0 / r)^(3 kappa)
+    // Only the non-condensable partial pressure p_nc compresses
+    // polytropically; the saturated vapor pressure p_v is isothermal.
+    let p_eq = p0_pa + 2.0 * sigma / r0_m - p_v_pa;
 
     let rhs = |r: f64, rdot: f64, t: f64| -> (f64, f64) {
         let r_c = r.max(1e-15);
-        let p_gas = p_gas0 * (r0_m / r_c).powf(3.0 * kappa) - p_v_pa;
+        // Non-condensable partial pressure and full internal pressure.
+        let p_nc = p_eq * (r0_m / r_c).powf(3.0 * kappa);
+        let p_gas = p_nc + p_v_pa;
         let t_ret = t + r_c / c_liquid;
         let p_ac_now = p_ac_pa * (omega * t).sin();
         let p_ac_ret = p_ac_pa * (omega * t_ret).sin();
-        let dp_gas_dt = -3.0 * kappa * p_gas * rdot / r_c;
+        // dp_gas/dt = dp_nc/dt = -3 kappa p_nc * Rdot / R  (p_v is constant).
+        // Prior to 2026-05-21 this used the total p_gas, double-counting the
+        // vapor contribution in the radiation-damping derivative.
+        let dp_gas_dt = -3.0 * kappa * p_nc * rdot / r_c;
 
         let rdot_cl = rdot / c_liquid;
         let lhs_coeff = (1.0 - rdot_cl) * r_c;
