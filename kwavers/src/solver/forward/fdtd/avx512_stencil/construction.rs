@@ -33,9 +33,20 @@ impl FdtdAvx512StencilProcessor {
         }
 
         let c_sq = config.sound_speed * config.sound_speed;
-        let pressure_coeff = -c_sq * config.dt * config.dt / (config.dx * config.dx);
+        // Leapfrog stencil for the acoustic wave equation `∂²p/∂t² = c²∇²p`:
+        //   p^(n+1) = (2 − 6 r)·p^n − p^(n-1) + r·Σ_neighbors
+        // with r = c²·Δt²/Δx². This matches the docstring in `pressure.rs`.
+        // The previous code had `pressure_coeff = −r` and assembled the update
+        // with double-negated signs, which evaluated to `p^(n+1) = 2p − p_prev
+        // − c²Δt²·∇²p` — the *wrong-sign* wave equation, producing anti-
+        // propagating / amplifying numerics. Fixed to the canonical leapfrog.
+        let pressure_coeff = c_sq * config.dt * config.dt / (config.dx * config.dx);
         let pressure_central_coeff = 6.0f64.mul_add(-pressure_coeff, 2.0);
-        let velocity_coeff = -config.dt / (config.density * config.dx);
+        // Centered-difference momentum equation
+        //   u^(n+1) = u^n − (Δt / (2 ρ Δx))·(p[+1] − p[−1])
+        // The factor 1/2 from the centered difference was previously omitted,
+        // making the velocity update twice as aggressive.
+        let velocity_coeff = -config.dt / (2.0 * config.density * config.dx);
 
         let simd_config = SimdConfig::detect();
 
