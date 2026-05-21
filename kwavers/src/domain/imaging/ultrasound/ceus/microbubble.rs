@@ -1,7 +1,9 @@
 //! `Microbubble` and `CeusSizeDistribution` — individual microbubble physics.
 
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
+use std::f64::consts::PI;
 
 /// Size distribution parameters
 #[derive(Debug, Clone)]
@@ -39,7 +41,7 @@ impl Microbubble {
             shell_elasticity: shell_elasticity * 1e3, // Convert kPa to Pa
             shell_viscosity,
             polytropic_index: 1.07, // Typical for encapsulated bubbles
-            surface_tension: 0.072, // N/m for water-air interface
+            surface_tension: SURFACE_TENSION_WATER,
         }
     }
 
@@ -58,16 +60,58 @@ impl Microbubble {
         Self::new(2.0, 2.5, 1.0) // 2.0 μm radius, 2.5 kPa elasticity, 1.0 Pa·s viscosity
     }
 
-    /// Compute natural resonance frequency (Hz)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// Natural radial-pulsation resonance frequency of an encapsulated
+    /// microbubble (Hz).
     ///
+    /// ## Theorem (Hoff & Sontum 2000; Marmottant et al. 2005)
+    ///
+    /// For a thin-shell encapsulated gas bubble in an incompressible liquid,
+    /// linearising the modified Rayleigh-Plesset equation about R = R₀ gives
+    ///
+    /// ```text
+    ///         1         √( 3·γ·p₀     12·G·d      4·σ    )
+    ///  f₀ = ───── ·     ( ─────── + ────────── − ─────── )
+    ///       2π·R₀       (   ρ        ρ·R₀         ρ·R₀   )
+    /// ```
+    ///
+    /// where:
+    /// - γ = `self.polytropic_index`
+    /// - p₀ = `ambient_pressure` (Pa)
+    /// - ρ  = `liquid_density` (kg/m³)
+    /// - G·d ≈ `self.shell_elasticity · self.shell_thickness` (N/m, areal shell
+    ///   stiffness)
+    /// - σ  = `self.surface_tension` (N/m)
+    ///
+    /// In the free-bubble limit (G·d → 0, σ → 0) this reduces to the classical
+    /// Minnaert (1933) formula `f₀ = (1/(2πR₀))·√(3γp₀/ρ)`.  Prior to the
+    /// 2026-05-21 fix this method ignored both `ambient_pressure` and
+    /// `liquid_density` and returned a hardcoded `f₀ = 6 / d_μm` MHz rule of
+    /// thumb (calibrated for air-in-water at STP), giving wrong values at any
+    /// non-STP condition or for any shell stiffness profile the rule was not
+    /// calibrated for.
+    ///
+    /// ## References
+    /// - Minnaert M (1933). *Philos. Mag.* 16, 235–248.
+    /// - Hoff L. & Sontum P. C. (2000). *Ultrasonics* 38(1–8), 113–117.
+    /// - Marmottant P. et al. (2005). *J. Acoust. Soc. Am.* 118(6), 3499–3505.
     #[must_use]
-    pub fn resonance_frequency(&self, _ambient_pressure: f64, _liquid_density: f64) -> f64 {
-        let diameter_um = self.radius_eq * 2.0 * 1e6; // Convert to μm
-        let base_freq_mhz = 6.0 / diameter_um; // MHz
-        let shell_factor = (self.shell_elasticity / 1000.0).mul_add(0.2, 1.0); // 20% increase per kPa
-        base_freq_mhz * shell_factor * 1e6 // Convert to Hz
+    pub fn resonance_frequency(&self, ambient_pressure: f64, liquid_density: f64) -> f64 {
+        if self.radius_eq <= 0.0 || liquid_density <= 0.0 {
+            return 0.0;
+        }
+        let r0 = self.radius_eq;
+        let rho = liquid_density;
+        // Areal shell stiffness G·d (N/m).
+        let chi = self.shell_elasticity * self.shell_thickness;
+        // Hoff-Sontum thin-shell linearisation (omega^2 form):
+        //   ω₀² = 3γp₀/(ρR₀²) + 12·χ/(ρR₀³) − 4σ/(ρR₀³)
+        let omega_sq = (3.0 * self.polytropic_index * ambient_pressure) / (rho * r0 * r0)
+            + (12.0 * chi) / (rho * r0.powi(3))
+            - (4.0 * self.surface_tension) / (rho * r0.powi(3));
+        if omega_sq <= 0.0 {
+            return 0.0;
+        }
+        omega_sq.sqrt() / (2.0 * PI)
     }
 
     /// Validate microbubble parameters
