@@ -92,6 +92,7 @@ impl ThermodynamicsCalculator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use crate::core::constants::{T_BOILING_WATER, T_CRITICAL_WATER};
 
     fn default_calc() -> ThermodynamicsCalculator {
@@ -148,7 +149,7 @@ mod tests {
     #[test]
     fn thermal_conductivity_vapor_positive_and_increases_with_temperature() {
         let calc = default_calc();
-        let p = 101325.0_f64;
+        let p = ATMOSPHERIC_PRESSURE;
         let k_low = calc.thermal_conductivity_vapor(400.0, p);
         let k_high = calc.thermal_conductivity_vapor(600.0, p);
         assert!(k_low > 0.0, "k_vapor must be positive");

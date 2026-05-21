@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::solver::EpsteinPlessetStabilitySolver;
 use super::types::{AmplitudeEvolution, OscillationType};
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
@@ -7,7 +8,7 @@ use approx::assert_relative_eq;
 fn test_epstein_plesset_stability_analysis() {
     let params = BubbleParameters {
         r0: 1e-3,
-        p0: 101325.0,
+        p0: ATMOSPHERIC_PRESSURE,
         rho_liquid: 1000.0,
         sigma: 0.072,
         mu_liquid: 0.001,
@@ -29,7 +30,7 @@ fn test_epstein_plesset_stability_analysis() {
 fn test_stability_boundary_analysis() {
     let params = BubbleParameters {
         r0: 1e-4,
-        p0: 101325.0,
+        p0: ATMOSPHERIC_PRESSURE,
         rho_liquid: 1000.0,
         sigma: 0.072,
         mu_liquid: 0.001,
@@ -72,7 +73,7 @@ fn test_amplitude_evolution_prediction() {
 fn test_validation_against_literature() {
     let params = BubbleParameters {
         r0: 1e-3,
-        p0: 101325.0,
+        p0: ATMOSPHERIC_PRESSURE,
         rho_liquid: 1000.0,
         sigma: 0.072,
         mu_liquid: 0.001,
@@ -92,7 +93,7 @@ fn test_validation_against_literature() {
 #[test]
 fn test_epstein_plesset_vs_minnaert_frequency() {
     let r0 = 1e-3;
-    let p0 = 101325.0;
+    let p0 = ATMOSPHERIC_PRESSURE;
     let rho = 1000.0;
     let gamma = 1.4;
 

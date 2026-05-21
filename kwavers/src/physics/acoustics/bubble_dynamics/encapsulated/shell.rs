@@ -92,6 +92,7 @@ impl ShellProperties {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use super::*;
 
     #[test]
@@ -119,7 +120,7 @@ mod tests {
     fn test_critical_radii_computation() {
         let mut shell = ShellProperties::default();
         let r0 = 2e-6; // 2 microns
-        let p0 = 101325.0; // 1 atm
+        let p0 = ATMOSPHERIC_PRESSURE; // 1 atm
 
         shell.compute_critical_radii(r0, p0);
 

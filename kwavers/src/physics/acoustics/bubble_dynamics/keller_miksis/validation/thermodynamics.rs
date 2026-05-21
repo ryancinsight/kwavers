@@ -4,6 +4,7 @@
 //! temperature evolution, Van der Waals bubble pressure, and physical-
 //! bound rejection on extreme states.
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 
@@ -28,7 +29,7 @@ fn test_mass_transfer_evaporation() {
     let mut state = BubbleState::new(&params);
 
     state.temperature = 350.0;
-    state.pressure_internal = 101325.0;
+    state.pressure_internal = ATMOSPHERIC_PRESSURE;
 
     let n_vapor_initial = state.n_vapor;
     model
