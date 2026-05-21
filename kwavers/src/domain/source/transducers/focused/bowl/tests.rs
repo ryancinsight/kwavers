@@ -72,6 +72,40 @@ fn bowl_element_size_controls_layout_count() {
 }
 
 #[test]
+fn bowl_explicit_element_count_controls_layout_count() {
+    let config = BowlConfig {
+        radius_of_curvature: 0.16,
+        diameter: 0.16,
+        center: [0.0, 0.0, -0.16],
+        focus: [0.0, 0.0, 0.0],
+        frequency: 650.0e3,
+        amplitude: 1.0e6,
+        ..Default::default()
+    };
+
+    let bowl = BowlTransducer::with_element_count(config.clone(), 1024).unwrap();
+    let theta_max = (config.diameter * 0.5 / config.radius_of_curvature).asin();
+    let expected_area = spherical_cap_area(config.radius_of_curvature, theta_max);
+    let summed_area: f64 = bowl.element_areas().iter().sum();
+
+    assert_eq!(bowl.element_count(), 1024);
+    assert_eq!(bowl.element_positions().len(), 1024);
+    assert_eq!(bowl.element_normals().len(), 1024);
+    assert_eq!(bowl.element_areas().len(), 1024);
+    assert!((summed_area - expected_area).abs() < 1.0e-14);
+}
+
+#[test]
+fn explicit_element_count_owns_discretization_option() {
+    let mut config = BowlConfig::default();
+    config.element_size = Some(0.0);
+
+    let bowl = BowlTransducer::with_element_count(config, 32).unwrap();
+
+    assert_eq!(bowl.element_count(), 32);
+}
+
+#[test]
 fn bowl_rejects_nonfinite_or_degenerate_domains() {
     let mut zero_radius = BowlConfig::default();
     zero_radius.radius_of_curvature = 0.0;
@@ -104,6 +138,12 @@ fn bowl_rejects_nonfinite_or_degenerate_domains() {
     let mut degenerate_axis = BowlConfig::default();
     degenerate_axis.focus = degenerate_axis.center;
     assert_validation_error(degenerate_axis);
+
+    let zero_count = BowlTransducer::with_element_count(BowlConfig::default(), 0);
+    assert!(matches!(
+        zero_count.unwrap_err(),
+        KwaversError::Validation(_)
+    ));
 }
 
 fn assert_validation_error(config: BowlConfig) {

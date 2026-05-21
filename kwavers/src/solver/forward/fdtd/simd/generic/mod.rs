@@ -161,8 +161,17 @@ impl GenericSimdStencilProcessor {
 
         // Precompute coefficients
         let c_sq = config.sound_speed * config.sound_speed;
-        let pressure_coeff = -c_sq * config.dt * config.dt / (config.dx * config.dx);
-        let velocity_coeff = -config.dt / (config.density * config.dx);
+        // The pressure kernel computes the proper `∇²p` (Laplacian already
+        // divided by `Δx²` in the central-difference stencil), so the
+        // coefficient applied here is just `+c²·Δt²` (no extra 1/Δx²) and the
+        // sign is positive. Previously `-c²·Δt²/Δx²` had both the wrong sign
+        // and an extra 1/Δx² factor — for Δx = 1 mm that multiplied the
+        // Laplacian term by ~−10⁶ relative to the correct wave equation.
+        let pressure_coeff = c_sq * config.dt * config.dt;
+        // The velocity kernel computes the proper `dp_dx` (centered difference
+        // already includes 1/(2·Δx)), so the coefficient is `-Δt/ρ`. The
+        // previous `-Δt/(ρ·Δx)` had an extra 1/Δx factor.
+        let velocity_coeff = -config.dt / config.density;
 
         let num_tiles_x = nx.div_ceil(config.tile_size);
         let num_tiles_y = ny.div_ceil(config.tile_size);

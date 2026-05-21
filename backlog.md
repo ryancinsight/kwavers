@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-20: [minor] Closed the bowl count-selected source-layout gap.
+  `BowlTransducer::with_element_count` now generates fixed-count focused cap
+  layouts through the canonical bowl source, and public read-only accessors
+  expose positions, normals, areas, and count for clinical adapters without
+  source APIs named after anatomy or device topology.
+
 - 2026-05-20: [minor] Closed the bowl transducer cap geometry SSOT gap.
   `BowlTransducer` now consumes the canonical focused spherical-cap layout,
   derives element count from cap area and requested element size, preserves

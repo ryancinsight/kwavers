@@ -166,14 +166,26 @@ impl SimdAvx512StencilProcessor {
             ));
         }
 
-        // Precompute coefficients
+        // Precompute coefficients.
+        //
+        // Pressure leapfrog `p^(n+1) = (2 − 6 r)·p^n − p^(n-1) + r·Σ_6` where
+        // `r = c²·Δt²/Δx²` and `Σ_6` is the bare 7-point Laplacian sum
+        // (computed without the 1/Δx² normalisation in this kernel).
+        // Previously `pressure_coeff = −r` was combined with
+        // `pressure_central_coeff = 2 − 6·pressure_coeff = 2 + 6 r`, which
+        // assembled to `2p − p_prev − c²·Δt²·∇²p` — the wrong-sign wave
+        // equation. Fixed to `pressure_coeff = +r` so the stencil delivers
+        // the canonical `+c²·Δt²·∇²p` update.
         let c_sq = config.sound_speed * config.sound_speed;
-        let pressure_coeff = -c_sq * config.dt * config.dt / (config.dx * config.dx);
-
-        // Central coefficient includes self-term from laplacian (6-point stencil)
+        let pressure_coeff = c_sq * config.dt * config.dt / (config.dx * config.dx);
         let pressure_central_coeff = 2.0 - 6.0 * pressure_coeff;
 
-        let velocity_coeff = -config.dt / (config.density * config.dx);
+        // Centered-difference Euler momentum
+        //   u^(n+1) = u^n − (Δt / (2 ρ Δx))·(p[+1] − p[−1])
+        // The kernel computes `grad = p[+1] − p[−1]` (no 1/(2Δx) factor),
+        // so the coefficient is `−Δt/(2·ρ·Δx)`. The previous `−Δt/(ρ·Δx)`
+        // was missing the 1/2 — momentum update twice as aggressive.
+        let velocity_coeff = -config.dt / (2.0 * config.density * config.dx);
 
         // Detect SIMD capabilities
         let simd_config = SimdConfig::detect();
