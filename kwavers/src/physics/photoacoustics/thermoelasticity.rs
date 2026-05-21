@@ -1,4 +1,5 @@
 use super::ConfinementAssessment;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
 
@@ -71,10 +72,11 @@ impl GrueneisenModel {
         Self::with_temperature_coefficient(0.12, 0.004, 20.0)
     }
 
-    /// Soft-tissue model: Γ₀ = 0.15, c_T = 0.003 K⁻¹, T_ref = 37 °C (Xu & Wang 2006).
+    /// Soft-tissue model: Γ₀ = 0.15, c_T = 0.003 K⁻¹, T_ref = BODY_TEMPERATURE_C
+    /// (37 °C, Xu & Wang 2006).
     #[must_use]
     pub fn soft_tissue() -> Self {
-        Self::with_temperature_coefficient(0.15, 0.003, 37.0)
+        Self::with_temperature_coefficient(0.15, 0.003, BODY_TEMPERATURE_C)
     }
 
     /// Evaluate Γ at the given temperature [°C].
