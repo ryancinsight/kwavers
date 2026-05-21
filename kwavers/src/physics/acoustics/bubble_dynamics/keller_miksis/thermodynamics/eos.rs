@@ -1,5 +1,6 @@
 //! Gas equation-of-state closures for Keller-Miksis thermodynamics.
 
+use crate::core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
 use crate::core::constants::thermodynamic::{
     VAN_DER_WAALS_AIR, VAN_DER_WAALS_ARGON, VAN_DER_WAALS_NITROGEN, VAN_DER_WAALS_OXYGEN,
     VAN_DER_WAALS_XENON,
@@ -24,8 +25,11 @@ pub(crate) fn calculate_vdw_pressure(state: &BubbleState) -> KwaversResult<f64> 
         GasSpecies::Custom { .. } => VAN_DER_WAALS_AIR,
     };
 
-    let a_si = a * 1e5 * 1e-6;
-    let b_si = b * 1e-3;
+    // Convert tabulated VdW constants to SI: a [bar·L²/mol²] → Pa·m⁶/mol²,
+    // b [L/mol] → m³/mol. Both factors are sourced from the SSOT so the
+    // RP and KM solvers cannot drift apart.
+    let a_si = a * BAR_L2_TO_PA_M6;
+    let b_si = b * L_TO_M3;
     let n_moles = n_total / AVOGADRO;
     let excluded_volume = n_moles * b_si;
 

@@ -83,8 +83,17 @@ pub const MAX_RADIUS: f64 = 1e-3;
 /// Minimum bubble radius (m)
 pub const MIN_RADIUS: f64 = 1e-9;
 
-/// Conversion factor from bar·L² to Pa·m⁶
-pub const BAR_L2_TO_PA_M6: f64 = 1e-7;
+/// Conversion factor from `bar·L²` to `Pa·m⁶`.
+///
+/// Derivation: `1 bar = 10⁵ Pa`, `1 L² = (10⁻³ m³)² = 10⁻⁶ m⁶`, so
+/// `1 bar·L² = 10⁵ × 10⁻⁶ Pa·m⁶ = 10⁻¹ Pa·m⁶`. Used to convert tabulated
+/// Van der Waals `a` constants (bar·L²/mol²) into SI (Pa·m⁶/mol²).
+///
+/// Was previously `1e-7` — six orders of magnitude too small, which made
+/// the VdW attraction term in `RayleighPlessetSolver::calculate_internal_pressure`
+/// effectively zero and silently reduced thermal-mode VdW to ideal-gas
+/// behaviour.
+pub const BAR_L2_TO_PA_M6: f64 = 1e-1;
 
 /// Conversion factor from liters to cubic meters
 pub const L_TO_M3: f64 = 1e-3;
