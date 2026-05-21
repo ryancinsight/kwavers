@@ -53,6 +53,8 @@
 //! - Aanonsen SI et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
 
 use super::KZKConfig;
+use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use crate::math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use ndarray::{s, Array1, Array3};
 use rayon::prelude::*;
@@ -109,12 +111,11 @@ impl KzkAbsorptionOperator {
     /// ```
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
-        // Convert dB/(cm·MHz^y) → Np/(m·Hz^y)
-        // Factor breakdown:
-        //   × 100       : cm⁻¹ → m⁻¹
-        //   / 8.686     : dB → Np (ln(10)/20 ≈ 1/8.686)
-        //   / (1e6)^y   : MHz^y → Hz^y  (absorb into Hz^y base)
-        let alpha0_np = config.alpha0 * 100.0 / 8.686 / (1.0e6_f64).powf(config.alpha_power);
+        // Convert dB/(cm·MHz^y) → Np/(m·Hz^y) using SSOT conversion constants:
+        //   / CM_TO_M     : cm⁻¹ → m⁻¹             (CM_TO_M = 0.01, divide)
+        //   / NP_TO_DB    : dB → Np                (NP_TO_DB = 20/ln10 ≈ 8.686)
+        //   / MHZ_TO_HZ^y : MHz^y → Hz^y           (MHZ_TO_HZ = 1e6)
+        let alpha0_np = config.alpha0 / CM_TO_M / NP_TO_DB / MHZ_TO_HZ.powf(config.alpha_power);
 
         // Pre-compute h_mask for both step-size variants used in Strang splitting.
         // Theorem (mask independence): H[k] = exp(-α(f_k) · Δz) depends only on
