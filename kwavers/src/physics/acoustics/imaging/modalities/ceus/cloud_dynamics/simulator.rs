@@ -4,6 +4,7 @@
 
 use super::config::{CloudBubble, CloudConfig};
 use super::incident_field::{CloudResponse, CloudState, IncidentField};
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::physics::acoustics::imaging::modalities::ceus::microbubble::{
@@ -174,12 +175,19 @@ impl CloudDynamics {
                     let radiation_force =
                         self.calculate_radiation_force(&self.bubbles[bubble_idx], &response);
 
-                    let mass = (4.0 / 3.0)
+                    // Translating bubble: inviscid added-mass inertia C_a = 1/2
+                    // (Lamb 1932 §92).  Gas-phase mass is negligible.  Liquid
+                    // density taken as DENSITY_WATER_NOMINAL.  The prior code
+                    // used the full liquid mass (rho*V) instead of (1/2)*rho*V,
+                    // under-predicting bubble acceleration by 2× under the
+                    // computed radiation force.
+                    let volume = (4.0 / 3.0)
                         * std::f64::consts::PI
-                        * self.bubbles[bubble_idx].current_radius.powi(3)
-                        * 1000.0;
+                        * self.bubbles[bubble_idx].current_radius.powi(3);
+                    let effective_mass = 0.5 * DENSITY_WATER_NOMINAL * volume;
                     for (i, force) in radiation_force.iter().enumerate() {
-                        self.bubbles[bubble_idx].velocity[i] += (force / mass) * self.config.dt;
+                        self.bubbles[bubble_idx].velocity[i] +=
+                            (force / effective_mass) * self.config.dt;
                     }
                 }
             }

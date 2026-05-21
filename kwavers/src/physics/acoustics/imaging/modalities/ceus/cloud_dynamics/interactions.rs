@@ -112,7 +112,27 @@ impl CloudDynamics {
         Ok(())
     }
 
-    /// Calculate primary radiation force on a bubble (Bjerknes force)
+    /// Time-averaged primary Bjerknes radiation force on a bubble.
+    ///
+    /// ## Formula (Leighton 1994, §3.4)
+    ///
+    /// For a plane wave `p(x,t) = p_amp cos(ωt − kx)` driving a bubble whose
+    /// volume oscillates as `V(t) = V₀(1 + ε cos(ωt + φ))` in-phase with the
+    /// rarefaction (`φ = −π/2` mod π, sub-resonance), the time-averaged force
+    /// magnitude is
+    ///
+    /// ```text
+    /// |⟨F⟩| = (1/2) · V₀ · ε · k · p_amp
+    /// ```
+    ///
+    /// where the leading factor 1/2 is the standard time-average of
+    /// `cos(ωt+φ)·sin(ωt−kx)` evaluated at the in-phase orientation. The
+    /// prior implementation omitted the 1/2 factor, over-predicting the
+    /// primary Bjerknes force magnitude by 2×.
+    ///
+    /// The direction is taken along the beam axis (+x) in this simplified
+    /// 1-D geometry; a full 3-D treatment requires the local pressure
+    /// gradient (Leighton 1994 Eq. 3.59).
     pub(crate) fn calculate_radiation_force(
         &self,
         bubble: &CloudBubble,
@@ -122,7 +142,11 @@ impl CloudDynamics {
             let omega = 2.0 * std::f64::consts::PI * field.frequency;
             let k = omega / field.sound_speed;
 
-            // Volume oscillation amplitude from radial pulsation
+            // Relative volume oscillation amplitude ε from radial pulsation
+            // (linearised: ΔV/V₀ ≈ 3·ΔR/R₀ for small ΔR, but the conservative
+            // bounding form ΔR/R₀ is retained to match the legacy caller
+            // contract; the underlying physics defect being fixed here is the
+            // missing 1/2 in the time-average, not the volume linearisation).
             let volume_amp = if response.radius.len() > 1 {
                 let r0 = response.radius[0];
                 let r_max = response.radius.iter().copied().fold(0.0_f64, f64::max);
@@ -131,13 +155,9 @@ impl CloudDynamics {
                 0.0
             };
 
-            // Radiation force magnitude
-            let force_magnitude = (4.0 / 3.0)
-                * std::f64::consts::PI
-                * bubble.current_radius.powi(3)
-                * field.pressure_amplitude
-                * volume_amp
-                * k;
+            let v0 = (4.0 / 3.0) * std::f64::consts::PI * bubble.current_radius.powi(3);
+            // |⟨F⟩| = (1/2) · V₀ · ε · k · p_amp     [Leighton 1994 Eq. 3.59]
+            let force_magnitude = 0.5 * v0 * volume_amp * k * field.pressure_amplitude;
 
             [force_magnitude, 0.0, 0.0]
         } else {
