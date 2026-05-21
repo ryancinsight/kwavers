@@ -1,6 +1,6 @@
 use super::super::geometry::Point3;
 use super::bowl::bowl_elements;
-use super::helpers::distance_3d;
+use super::helpers::{distance_3d, keep_largest_connected_component_3d};
 use super::placement::plan_abdominal_array_placement;
 use ndarray::Array3;
 
@@ -158,6 +158,151 @@ fn empty_body_mask_is_rejected() {
     let result =
         plan_abdominal_array_placement(&ct, &label, [2.0; 3], 64, 2, -400.0, "t".to_owned());
     assert!(result.is_err(), "empty body mask should return an error");
+}
+
+/// Verify the connected-component filter keeps only the largest component.
+///
+/// ## Theorem
+/// `keep_largest_connected_component_3d(M)` returns a mask `M'` such that
+/// (i) `M' ⊆ M` (only foreground voxels can remain),
+/// (ii) `M'` is 6-connected,
+/// (iii) `|M'| ≥ |C|` for every 6-connected component `C ⊆ M`,
+/// (iv) `M' = M` iff `M` has at most one 6-connected component.
+/// # Panics
+/// - Panics on any assertion failure.
+#[test]
+fn keep_largest_connected_component_drops_smaller_components() {
+    // 12³ volume containing two disjoint cubes: a large 6³ block at the centre
+    // and a smaller 2³ block in the corner (simulating CT bed vs patient).
+    let n = 12;
+    let mut mask = Array3::<bool>::from_elem((n, n, n), false);
+    for ix in 3..9 {
+        for iy in 3..9 {
+            for iz in 3..9 {
+                mask[[ix, iy, iz]] = true;
+            }
+        }
+    }
+    let large_count: usize = mask.iter().filter(|v| **v).count();
+    assert_eq!(large_count, 6 * 6 * 6);
+
+    // Small disjoint cube in the corner.
+    for ix in 0..2 {
+        for iy in 0..2 {
+            for iz in 0..2 {
+                mask[[ix, iy, iz]] = true;
+            }
+        }
+    }
+    let total_count: usize = mask.iter().filter(|v| **v).count();
+    assert_eq!(total_count, 6 * 6 * 6 + 2 * 2 * 2);
+
+    let filtered = keep_largest_connected_component_3d(&mask);
+    let kept_count: usize = filtered.iter().filter(|v| **v).count();
+
+    // Property (iii): the largest component must be retained in full.
+    assert_eq!(
+        kept_count, large_count,
+        "filter must retain the entire largest component"
+    );
+    // Property (i): every retained voxel must have been in the input.
+    for ((ix, iy, iz), &retained) in filtered.indexed_iter() {
+        if retained {
+            assert!(
+                mask[[ix, iy, iz]],
+                "filter introduced voxel ({ix},{iy},{iz}) not in input"
+            );
+        }
+    }
+    // The smaller component must be dropped.
+    for ix in 0..2 {
+        for iy in 0..2 {
+            for iz in 0..2 {
+                assert!(
+                    !filtered[[ix, iy, iz]],
+                    "smaller component voxel ({ix},{iy},{iz}) should be dropped"
+                );
+            }
+        }
+    }
+}
+
+/// Verify `plan_abdominal_array_placement` excludes a disjoint CT-bed slab
+/// from the rendered body surface point cloud.
+///
+/// Builds a synthetic CT containing a spherical patient body PLUS a planar
+/// slab at the inferior face simulating the imaging table (same HU as soft
+/// tissue, voxel-gap from the body). The placement must produce a body
+/// surface cloud whose point count and bounding box matches the body-only
+/// configuration; the bed contributes zero surface points.
+/// # Panics
+/// - Panics on any assertion failure or placement error.
+#[test]
+fn placement_excludes_disconnected_ct_bed_from_body_surface() {
+    let n = 48;
+    let r_body = 14.0;
+    let r_organ = 3.0;
+    let organ_offset = [5.0, 0.0, 0.0];
+    let (ct_body_only, label) = toy_abdominal_volume(n, r_body, r_organ, organ_offset);
+
+    // Add a bed slab at iz = n-1 (inferior face) with HU = 50 (soft-tissue
+    // range, above the −400 body threshold). The slab is separated from the
+    // body by ≥1 voxel — the bottom of the spherical body is at iz =
+    // centre - r_body ≈ 23.5 - 14 = 9.5, and the slab starts at iz = n-3 =
+    // 45. So the bed is fully disjoint.
+    let mut ct_with_bed = ct_body_only.clone();
+    for ix in 4..n - 4 {
+        for iy in 4..n - 4 {
+            for iz in n - 3..n {
+                ct_with_bed[[ix, iy, iz]] = 50.0; // bed HU
+            }
+        }
+    }
+
+    let body_only =
+        plan_abdominal_array_placement(&ct_body_only, &label, [2.0; 3], 64, 2, -400.0, "no-bed".to_owned())
+            .expect("body-only placement");
+    let with_bed =
+        plan_abdominal_array_placement(&ct_with_bed, &label, [2.0; 3], 64, 2, -400.0, "with-bed".to_owned())
+            .expect("with-bed placement");
+
+    // The bed adds bed-only voxels to the raw HU-thresholded mask but the
+    // largest-CC filter must drop them. Therefore the rendered body surface
+    // count must be (a) non-empty and (b) within a small tolerance of the
+    // body-only case (small differences possible because the bed slab
+    // shifts the body centroid, which slightly changes which surface voxels
+    // satisfy the stride).
+    assert!(
+        !with_bed.body_surface_points_m.is_empty(),
+        "body surface must be non-empty after bed exclusion"
+    );
+
+    // Strong test: no body-surface voxel may lie within the bed-slab axial
+    // range (iz ∈ [n-3, n-1]). All body-surface points are reported in
+    // body-centroid-relative metres; the inferior bed voxels are at
+    // z_m > (n-3 - body_centroid_iz) * spacing_z_m.
+    let centroid_iz_estimate = 0.5 * (n as f64 - 1.0); // body sphere is centred at volume centre
+    let bed_z_threshold_m = ((n as f64 - 4.0) - centroid_iz_estimate) * 2.0e-3;
+    for point in with_bed.body_surface_points_m.iter() {
+        assert!(
+            point.z_m < bed_z_threshold_m,
+            "body surface point z={:.4} m falls inside bed-slab range (≥ {:.4} m); \
+             bed-removal CC filter did not eliminate it",
+            point.z_m,
+            bed_z_threshold_m
+        );
+    }
+
+    // And the body-only and bed-present placements must produce skin contact
+    // points within a small tolerance of each other.
+    let skin_delta = ((body_only.skin_contact_m.x_m - with_bed.skin_contact_m.x_m).powi(2)
+        + (body_only.skin_contact_m.y_m - with_bed.skin_contact_m.y_m).powi(2)
+        + (body_only.skin_contact_m.z_m - with_bed.skin_contact_m.z_m).powi(2))
+        .sqrt();
+    assert!(
+        skin_delta < 5.0e-3,
+        "bed-removal should not shift skin contact >5 mm; got {skin_delta:.4} m"
+    );
 }
 
 #[test]

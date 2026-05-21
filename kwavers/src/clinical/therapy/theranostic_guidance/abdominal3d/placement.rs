@@ -63,7 +63,7 @@ use super::super::nonlinear3d::volume::centroid_float;
 use super::bowl::{bowl_elements, BOWL_THETA_MAX_RAD};
 use super::helpers::{
     distance_3d, exterior_air_mask, exterior_body_surface_points, index_to_point,
-    nearest_exterior_skin_point, surface_points_3d,
+    keep_largest_connected_component_3d, nearest_exterior_skin_point, surface_points_3d,
 };
 use super::types::AbdominalArrayPlacement3D;
 
@@ -110,7 +110,14 @@ pub fn plan_abdominal_array_placement(
         )));
     }
 
-    let body_mask = ct_hu.mapv(|hu| hu.is_finite() && hu >= body_hu_threshold);
+    // Raw HU-thresholded mask includes patient body, imaging table, IV bags,
+    // EKG leads, positioning cushions — anything above the soft-tissue floor.
+    let raw_body_mask = ct_hu.mapv(|hu| hu.is_finite() && hu >= body_hu_threshold);
+    // Keep only the largest 6-connected component: by definition the patient.
+    // This drops the CT table and any other disjoint object from the body
+    // surface cloud and from the nearest-skin search. See
+    // [`keep_largest_connected_component_3d`] for the rationale.
+    let body_mask = keep_largest_connected_component_3d(&raw_body_mask);
     let organ_mask: Array3<bool> = label.mapv(|l| l > 0);
 
     if !body_mask.iter().any(|&b| b) {

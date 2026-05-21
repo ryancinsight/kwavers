@@ -8,6 +8,119 @@ use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::geometry::{is_boundary_3d, Point3};
 
+/// Keep only the largest 6-connected component of `mask`, returning a new mask.
+///
+/// ## Why this exists — CT bed / table removal
+///
+/// A clinical CT volume thresholded by HU contains the patient *and* the
+/// imaging-table material (carbon-fibre / PVC pad, HU ≈ −100 to +200) and
+/// any non-anatomical structures inside the FOV (IV bags, EKG leads,
+/// positioning cushions). For the abdominal placement task only the patient
+/// matters: the table introduces a long inferior shelf that flips the
+/// nearest-skin computation to the bed surface and contaminates the
+/// rendered body cloud with a planar slab beneath the patient.
+///
+/// In all clinical CT acquisitions the patient is by definition the largest
+/// connected tissue volume in the scan; the bed and ancillary objects form
+/// strictly smaller 6-connected components in HU-thresholded space (the
+/// bed–patient contact is, at the imaging resolution, an air-gap of one
+/// to a few voxels because the body has a curved posterior and the bed is
+/// flat). This routine retains only that largest component.
+///
+/// ## Algorithm
+///
+/// Standard breadth-first labelling: iterate the volume; for each
+/// unvisited foreground voxel start a BFS, count its voxels, record its
+/// label. After labelling all components, rebuild the output mask
+/// containing only voxels carrying the maximum-count label. Time
+/// complexity O(N) for `N = nx · ny · nz`; memory O(N) for the visited
+/// + label scratch.
+///
+/// ## Returns
+///
+/// The same input mask if it has zero or one connected component;
+/// otherwise the input mask with all components except the largest
+/// cleared to `false`.
+pub(crate) fn keep_largest_connected_component_3d(mask: &Array3<bool>) -> Array3<bool> {
+    let (nx, ny, nz) = mask.dim();
+    if nx == 0 || ny == 0 || nz == 0 {
+        return mask.clone();
+    }
+
+    // 0 = unvisited / background; positive integers identify components.
+    let mut labels: Array3<u32> = Array3::zeros((nx, ny, nz));
+    let mut sizes: Vec<u64> = vec![0]; // sizes[0] is unused so labels start at 1.
+
+    for start_iz in 0..nz {
+        for start_iy in 0..ny {
+            for start_ix in 0..nx {
+                if !mask[[start_ix, start_iy, start_iz]] || labels[[start_ix, start_iy, start_iz]] != 0
+                {
+                    continue;
+                }
+                let label = sizes.len() as u32;
+                let mut count: u64 = 0;
+                let mut queue: VecDeque<(usize, usize, usize)> = VecDeque::new();
+                queue.push_back((start_ix, start_iy, start_iz));
+                labels[[start_ix, start_iy, start_iz]] = label;
+                while let Some((ix, iy, iz)) = queue.pop_front() {
+                    count += 1;
+                    macro_rules! visit_neighbour {
+                        ($nix:expr, $niy:expr, $niz:expr) => {{
+                            let (nix, niy, niz) = ($nix, $niy, $niz);
+                            if mask[[nix, niy, niz]] && labels[[nix, niy, niz]] == 0 {
+                                labels[[nix, niy, niz]] = label;
+                                queue.push_back((nix, niy, niz));
+                            }
+                        }};
+                    }
+                    if ix > 0 {
+                        visit_neighbour!(ix - 1, iy, iz);
+                    }
+                    if ix + 1 < nx {
+                        visit_neighbour!(ix + 1, iy, iz);
+                    }
+                    if iy > 0 {
+                        visit_neighbour!(ix, iy - 1, iz);
+                    }
+                    if iy + 1 < ny {
+                        visit_neighbour!(ix, iy + 1, iz);
+                    }
+                    if iz > 0 {
+                        visit_neighbour!(ix, iy, iz - 1);
+                    }
+                    if iz + 1 < nz {
+                        visit_neighbour!(ix, iy, iz + 1);
+                    }
+                }
+                sizes.push(count);
+            }
+        }
+    }
+
+    if sizes.len() <= 2 {
+        return mask.clone();
+    }
+
+    // sizes[0] is the unused sentinel; argmax over [1..].
+    let mut best_label: u32 = 1;
+    let mut best_size: u64 = sizes[1];
+    for (idx, &count) in sizes.iter().enumerate().skip(2) {
+        if count > best_size {
+            best_size = count;
+            best_label = idx as u32;
+        }
+    }
+
+    let mut output: Array3<bool> = Array3::from_elem((nx, ny, nz), false);
+    for ((ix, iy, iz), &label) in labels.indexed_iter() {
+        if label == best_label {
+            output[[ix, iy, iz]] = true;
+        }
+    }
+    output
+}
+
 /// Convert a voxel centroid (index-space float) to physical metres.
 pub(crate) fn index_to_point(
     index: [f64; 3],
