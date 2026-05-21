@@ -44,25 +44,6 @@ impl BurtonMillerAssembler {
         g * alpha * cos_ny
     }
 
-    /// Legacy 1-D approximation of ∂G/∂n (x-axis normal only).
-    pub(super) fn greens_function_normal_derivative(
-        &self,
-        k: f64,
-        r: f64,
-        collocation: &[f64; 3],
-        point: &[f64; 3],
-    ) -> Complex64 {
-        if r < 1e-12 {
-            return Complex64::new(0.0, 0.0);
-        }
-        let dr_dn = (collocation[0] - point[0]) / r;
-        let phase = Complex64::new(0.0, k * r);
-        let exp_ikr = phase.exp();
-        let dg_dr =
-            (Complex64::new(0.0, k) - Complex64::new(1.0 / r, 0.0)) * exp_ikr / (4.0 * PI * r * r);
-        dg_dr * dr_dn
-    }
-
     /// ∂²G/(∂n_x ∂n_y) — hypersingular kernel (Colton & Kress 2013, §3.3, Theorem 3.3).
     pub(super) fn greens_function_double_normal_derivative(
         &self,
