@@ -10,11 +10,14 @@ use num_complex::Complex;
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
 const BRAIN_SOUND_SPEED_M_PER_S: f64 = 1546.0;
 const BRAIN_DENSITY_KG_PER_M3: f64 = 1040.0;
-const REFERENCE_FREQUENCY_MHZ: f64 = 1.0;
 const BRAIN_ABSORPTION_DB_PER_MHZ_CM: f64 = 0.5;
-const CENTIMETERS_PER_METER: f64 = 100.0;
-const BRAIN_ABSORPTION_NP_PER_M: f64 =
-    BRAIN_ABSORPTION_DB_PER_MHZ_CM * REFERENCE_FREQUENCY_MHZ * CENTIMETERS_PER_METER / NP_TO_DB;
+// 1/CM_TO_M = 100.0 cm/m (kept inline to avoid a private const that drifts
+// from the canonical core::constants::numerical::CM_TO_M = 0.01).
+// The previous local `REFERENCE_FREQUENCY_MHZ = 1.0` shadowed the same-named
+// SSOT constant `core::constants::acoustic_parameters::REFERENCE_FREQUENCY_MHZ = 1e6`
+// (a Hz value), which was actively confusing. The 1.0 factor at 1 MHz is now
+// implicit in the BRAIN_ABSORPTION_DB_PER_MHZ_CM coefficient itself.
+const BRAIN_ABSORPTION_NP_PER_M: f64 = BRAIN_ABSORPTION_DB_PER_MHZ_CM * 100.0 / NP_TO_DB;
 const BLOOD_PERFUSION_RATE_PER_S: f64 = 0.0064;
 const BLOOD_DENSITY_KG_PER_M3: f64 = 1060.0;
 const BLOOD_SPECIFIC_HEAT_J_PER_KG_K: f64 = 3617.0;
