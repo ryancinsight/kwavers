@@ -62,19 +62,44 @@ impl PowerLawAbsorption {
         alpha_db * DB_TO_NP / CM_TO_M
     }
 
-    /// Calculate phase velocity from absorption (Kramers-Kronig relations)
+    /// Phase velocity from the Szabo / Treeby-Cox Kramers-Kronig relation
+    /// for power-law absorption.
+    ///
+    /// ## Formula (Szabo 1994 Eq 13; Treeby & Cox 2010 Eq 11)
+    ///
+    /// ```text
+    /// c_p(ω)⁻¹ − c_0⁻¹ = α(ω) · tan(πy/2) / ω
+    /// ```
+    ///
+    /// where `α(ω) = α(ω)` (Np/m) is obtained from
+    /// [`Self::absorption_at_frequency`] (which handles the dB/(cm·MHz^y) →
+    /// Np/m conversion).  Inverting:
+    ///
+    /// ```text
+    /// c_p(ω) = c_0 / (1 + c_0 · α(ω) · tan(πy/2) / ω)
+    /// ```
+    ///
+    /// Prior to 2026-05-21 this used `self.alpha_0` directly in the
+    /// formula — a value stored in dB/(cm·MHz^y), not the SI Np/m
+    /// required by Kramers-Kronig — *and* omitted the `c_0` factor that
+    /// scales the inverse-phase-velocity correction.  Combined, the prior
+    /// dispersion correction was off by ~10⁵× from the canonical result.
+    ///
+    /// ## References
+    /// - Szabo T. L. (1994). *J. Acoust. Soc. Am.* 96(1), 491–500. Eq 13.
+    /// - Treeby B. E. & Cox B. T. (2010). *J. Acoust. Soc. Am.* 127(5), 2741. Eq 11.
     #[must_use]
     pub fn phase_velocity(&self, frequency: f64, c0: f64) -> f64 {
-        if !self.dispersion_correction {
+        if !self.dispersion_correction || frequency == 0.0 {
             return c0;
         }
 
-        // Kramers-Kronig relation for power law absorption
-        // c(ω) = c₀ / (1 - α₀ * tan(πy/2) * ω^(y-1))
         let omega = 2.0 * std::f64::consts::PI * frequency;
         let tan_term = (std::f64::consts::PI * self.y / 2.0).tan();
+        let alpha = self.absorption_at_frequency(frequency); // Np/m
 
-        c0 / (self.alpha_0 * tan_term).mul_add(omega.powf(self.y - 1.0), 1.0)
+        let denom = 1.0 + c0 * alpha * tan_term / omega;
+        c0 / denom
     }
 }
 
