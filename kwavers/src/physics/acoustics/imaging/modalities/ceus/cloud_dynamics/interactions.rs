@@ -74,9 +74,13 @@ impl CloudDynamics {
 
         let new_radius = ((3.0 * total_vol) / (4.0 * std::f64::consts::PI)).cbrt();
 
-        // Conservation of momentum
-        let mass1 = vol1 * 1000.0;
-        let mass2 = vol2 * 1000.0;
+        // Conservation of momentum.  Use the added-mass inertia (1/2)*rho*V
+        // for each bubble (Lamb 1932 §92).  The 1/2 factor cancels in the
+        // mass-weighted velocity / position average below, but the formulation
+        // is kept explicit so the physical meaning is unambiguous.  Liquid
+        // density routed through the SSOT DENSITY_WATER_NOMINAL.
+        let mass1 = 0.5 * DENSITY_WATER_NOMINAL * vol1;
+        let mass2 = 0.5 * DENSITY_WATER_NOMINAL * vol2;
         let total_mass = mass1 + mass2;
 
         let mut new_velocity = [0.0; 3];

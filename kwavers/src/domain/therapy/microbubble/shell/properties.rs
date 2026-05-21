@@ -1,4 +1,5 @@
 use super::state::ShellState;
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use std::fmt;
 
@@ -91,7 +92,7 @@ impl MarmottantShellProperties {
             radius_rupture,
             elasticity,
             viscosity,
-            surface_tension_water: 0.072,
+            surface_tension_water: SURFACE_TENSION_WATER,
             state: ShellState::Elastic,
             has_ruptured: false,
         })
