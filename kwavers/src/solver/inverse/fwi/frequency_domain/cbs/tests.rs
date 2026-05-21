@@ -1,0 +1,262 @@
+use super::absorbing::absorbing_weights;
+use super::green::{apply_shifted_green, apply_shifted_green_adjoint, shifted_outgoing_green};
+use super::grid::{bli_weights, BliConfig, GridSpec};
+use super::spectral::{
+    apply_shifted_green_spectral, apply_shifted_green_spectral_adjoint,
+    apply_shifted_green_spectral_adjoint_with_boundary, apply_shifted_green_spectral_with_boundary,
+};
+use super::*;
+use ndarray::Array3;
+use num_complex::Complex64;
+
+#[test]
+fn scattering_potential_matches_slowness_square_contract() {
+    let slowness = Array3::from_shape_vec((2, 1, 1), vec![0.0005, 0.00025]).unwrap();
+    let potential = real_scattering_potential(4.0, &slowness, 0.00025).unwrap();
+
+    assert_eq!(potential.len(), 2);
+    assert_eq!(
+        potential[0],
+        16.0 * (0.0005_f64.powi(2) - 0.00025_f64.powi(2))
+    );
+    assert_eq!(potential[1], 0.0);
+}
+
+#[test]
+fn convergence_epsilon_bounds_potential_norm() {
+    let potential = [-3.0, 2.0, 0.25];
+    let epsilon = convergence_epsilon(&potential).unwrap();
+
+    assert_eq!(epsilon, 3.0);
+    assert!(potential.iter().all(|value| value.abs() <= epsilon));
+}
+
+#[test]
+fn shifted_potential_has_negative_imaginary_part() {
+    let shifted = shifted_potential(&[2.0, -1.0], 3.0).unwrap();
+
+    assert_eq!(shifted[0], Complex64::new(2.0, -3.0));
+    assert_eq!(shifted[1], Complex64::new(-1.0, -3.0));
+}
+
+#[test]
+fn pointwise_preconditioner_is_finite_for_valid_shift() {
+    let shifted = shifted_potential(&[0.0, 2.0], 2.0).unwrap();
+    let gamma = pointwise_preconditioner(&shifted, 2.0).unwrap();
+
+    assert_eq!(gamma[0], Complex64::new(-1.0, 0.0));
+    assert!(gamma[1].re.is_finite());
+    assert!(gamma[1].im.is_finite());
+}
+
+#[test]
+fn bli_weights_collapse_to_single_on_grid_voxel() {
+    let grid = GridSpec::new((3, 3, 3), 0.01).unwrap();
+    let point = grid.center_at(1, 1, 1);
+    let weights = bli_weights(grid, point, BliConfig::default()).unwrap();
+
+    assert_eq!(weights.len(), 1);
+    assert_eq!(weights[0].linear_index, grid.linear_index(1, 1, 1));
+    assert_eq!(weights[0].weight, 1.0);
+}
+
+#[test]
+fn dense_green_matches_shifted_outgoing_green_for_unit_point_source() {
+    let grid = GridSpec::new((2, 1, 1), 0.01).unwrap();
+    let source_index = grid.linear_index(0, 0, 0);
+    let receiver_index = grid.linear_index(1, 0, 0);
+    let source_density = [
+        Complex64::new(1.0 / grid.cell_volume_m3(), 0.0),
+        Complex64::new(0.0, 0.0),
+    ];
+    let potential = [0.0, 0.0];
+    let solution = solve_volume_field(
+        grid,
+        3.0,
+        &potential,
+        &source_density,
+        CbsConfig {
+            max_iterations: 4,
+            relative_tolerance: 1.0e-12,
+        },
+    )
+    .unwrap();
+    let shifted = super::green::shifted_wavenumber(3.0, solution.epsilon);
+    let expected = shifted_outgoing_green(
+        grid.center_at(0, 0, 0),
+        grid.center_at(1, 0, 0),
+        shifted,
+        grid.min_distance_m(),
+    );
+
+    assert_eq!(source_index, 0);
+    assert_eq!(receiver_index, 1);
+    assert!((solution.field[receiver_index] - expected).norm() <= 1.0e-10);
+}
+
+#[test]
+fn shifted_green_adjoint_satisfies_inner_product_identity() {
+    let grid = GridSpec::new((2, 2, 1), 0.01).unwrap();
+    let x = [
+        Complex64::new(0.5, -0.25),
+        Complex64::new(-1.0, 0.75),
+        Complex64::new(0.125, 0.5),
+        Complex64::new(0.25, -0.875),
+    ];
+    let y = [
+        Complex64::new(-0.5, 0.75),
+        Complex64::new(0.25, 0.125),
+        Complex64::new(1.0, -0.5),
+        Complex64::new(-0.75, -0.25),
+    ];
+    let gx = apply_shifted_green(grid, 3.0, 0.2, &x);
+    let ghy = apply_shifted_green_adjoint(grid, 3.0, 0.2, &y);
+    let lhs = inner_product(&gx, &y);
+    let rhs = inner_product(&x, &ghy);
+
+    assert!(
+        (lhs - rhs).norm() <= 1.0e-12 * lhs.norm().max(rhs.norm()).max(1.0),
+        "lhs={lhs}, rhs={rhs}"
+    );
+}
+
+#[test]
+fn spectral_green_constant_source_matches_zero_mode_symbol() {
+    let grid = GridSpec::new((4, 4, 2), 0.01).unwrap();
+    let source = vec![Complex64::new(2.0, -0.5); grid.len()];
+    let reference_wavenumber = 11.0;
+    let epsilon = 0.25;
+    let field = apply_shifted_green_spectral(grid, reference_wavenumber, epsilon, &source);
+    let expected = source[0] / Complex64::new(reference_wavenumber * reference_wavenumber, epsilon);
+
+    for value in field {
+        assert!(
+            (value - expected).norm() <= 1.0e-12 * expected.norm().max(1.0),
+            "value={value}, expected={expected}"
+        );
+    }
+}
+
+#[test]
+fn spectral_green_adjoint_satisfies_inner_product_identity() {
+    let grid = GridSpec::new((4, 3, 2), 0.01).unwrap();
+    let x = (0..grid.len())
+        .map(|index| Complex64::new(index as f64 * 0.25, -0.125 * index as f64))
+        .collect::<Vec<_>>();
+    let y = (0..grid.len())
+        .map(|index| Complex64::new(0.5 - index as f64 * 0.125, 0.25 * index as f64))
+        .collect::<Vec<_>>();
+    let gx = apply_shifted_green_spectral(grid, 11.0, 0.25, &x);
+    let ghy = apply_shifted_green_spectral_adjoint(grid, 11.0, 0.25, &y);
+    let lhs = inner_product(&gx, &y);
+    let rhs = inner_product(&x, &ghy);
+
+    assert!(
+        (lhs - rhs).norm() <= 1.0e-12 * lhs.norm().max(rhs.norm()).max(1.0),
+        "lhs={lhs}, rhs={rhs}"
+    );
+}
+
+#[test]
+fn polynomial_absorbing_boundary_has_unit_interior_and_edge_decay() {
+    let grid = GridSpec::new((5, 5, 5), 0.01).unwrap();
+    let boundary = AbsorbingBoundary::polynomial(1, 2.0, 2).unwrap();
+    let weights = absorbing_weights(grid, boundary).unwrap();
+
+    assert_eq!(weights[grid.linear_index(2, 2, 2)], 1.0);
+    assert!((weights[grid.linear_index(0, 2, 2)] - (-2.0_f64).exp()).abs() <= f64::EPSILON);
+    assert!((weights[grid.linear_index(0, 0, 0)] - (-6.0_f64).exp()).abs() <= f64::EPSILON);
+}
+
+#[test]
+fn spectral_absorbing_boundary_damps_edge_source_response() {
+    let grid = GridSpec::new((5, 5, 5), 0.01).unwrap();
+    let mut source = vec![Complex64::new(0.0, 0.0); grid.len()];
+    source[grid.linear_index(0, 2, 2)] = Complex64::new(1.0, 0.0);
+    let periodic = apply_shifted_green_spectral(grid, 11.0, 0.25, &source);
+    let absorbed = apply_shifted_green_spectral_with_boundary(
+        grid,
+        11.0,
+        0.25,
+        &source,
+        AbsorbingBoundary::polynomial(1, 2.0, 2).unwrap(),
+    );
+
+    assert!(
+        norm(&absorbed) < norm(&periodic),
+        "absorbed_norm={}, periodic_norm={}",
+        norm(&absorbed),
+        norm(&periodic)
+    );
+}
+
+#[test]
+fn spectral_absorbing_green_adjoint_satisfies_inner_product_identity() {
+    let grid = GridSpec::new((5, 5, 5), 0.01).unwrap();
+    let boundary = AbsorbingBoundary::polynomial(1, 1.5, 2).unwrap();
+    let x = (0..grid.len())
+        .map(|index| Complex64::new(index as f64 * 0.125, -0.03125 * index as f64))
+        .collect::<Vec<_>>();
+    let y = (0..grid.len())
+        .map(|index| Complex64::new(0.25 - index as f64 * 0.0625, 0.125 * index as f64))
+        .collect::<Vec<_>>();
+    let gx = apply_shifted_green_spectral_with_boundary(grid, 11.0, 0.25, &x, boundary);
+    let ghy = apply_shifted_green_spectral_adjoint_with_boundary(grid, 11.0, 0.25, &y, boundary);
+    let lhs = inner_product(&gx, &y);
+    let rhs = inner_product(&x, &ghy);
+
+    assert!(
+        (lhs - rhs).norm() <= 1.0e-12 * lhs.norm().max(rhs.norm()).max(1.0),
+        "lhs={lhs}, rhs={rhs}"
+    );
+}
+
+#[test]
+fn cbs_solver_reports_decreasing_fixed_point_residual() {
+    let grid = GridSpec::new((2, 1, 1), 0.01).unwrap();
+    let source_density = [
+        Complex64::new(1.0 / grid.cell_volume_m3(), 0.0),
+        Complex64::new(0.0, 0.0),
+    ];
+    let potential = [0.05, -0.02];
+    let loose = solve_volume_field(
+        grid,
+        3.0,
+        &potential,
+        &source_density,
+        CbsConfig {
+            max_iterations: 1,
+            relative_tolerance: 1.0e-14,
+        },
+    )
+    .unwrap();
+    let refined = solve_volume_field(
+        grid,
+        3.0,
+        &potential,
+        &source_density,
+        CbsConfig {
+            max_iterations: 8,
+            relative_tolerance: 1.0e-14,
+        },
+    )
+    .unwrap();
+
+    assert!(refined.relative_residual < loose.relative_residual);
+    assert!(refined.iterations >= loose.iterations);
+}
+
+fn inner_product(lhs: &[Complex64], rhs: &[Complex64]) -> Complex64 {
+    lhs.iter()
+        .zip(rhs.iter())
+        .map(|(&left, &right)| left.conj() * right)
+        .sum()
+}
+
+fn norm(values: &[Complex64]) -> f64 {
+    values
+        .iter()
+        .map(|value| value.norm_sqr())
+        .sum::<f64>()
+        .sqrt()
+}

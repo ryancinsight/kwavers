@@ -205,12 +205,15 @@ impl HarmonicTracker {
             return None;
         }
 
-        // Pierson's rule: z_shock ≈ ρ₀ c₀² / (β p₀)
-        let rho0 = 1000.0; // kg/m³
-        let c0 = 1540.0; // m/s
-        let beta = self.config.b_a / 2.0;
+        // Fubini shock distance (Hamilton & Blackstock 1998, §4.3, eq. 4.3.5):
+        //   z_shock = ρ₀ c₀³ / (β · ω₀ · p₀)
+        // where β = 1 + B/(2A) and ω₀ = 2πf₀.
+        let rho0: f64 = 1000.0; // kg/m³
+        let c0: f64 = 1540.0; // m/s
+        let omega0: f64 = 2.0 * PI * self.config.frequency;
+        let beta: f64 = 1.0 + self.config.b_a / 2.0; // β = 1 + B/(2A)
 
-        let z_shock = rho0 * c0 * c0 / (beta * pressure_amplitude);
+        let z_shock = rho0 * f64::powi(c0, 3) / (beta * omega0 * pressure_amplitude);
 
         Some(z_shock)
     }

@@ -164,6 +164,10 @@ theorems against an external published reconstruction.
   compares homogeneous snapped PSTD observations against the outgoing Helmholtz
   direct field, reports passive direct-field phase/amplitude errors, and
   isolates a propagation/source Green mismatch before scattering.
+- Added PSTD source-kappa direct-field diagnostics: the replication report now
+  applies the pressure-source `cos(c_ref |k| dt / 2)` spatial correction to the
+  discrete source mask before direct Green evaluation and reports the filtered
+  residual delta.
 - Added Rust-owned HDF5 phantom ingest:
   `clinical::imaging::reconstruction::breast_ust_fwi::phantom_hdf5` uses
   `consus-hdf5`/`consus-core`/`consus-io` to load 3-D sound-speed datasets from
@@ -229,7 +233,10 @@ theorems against an external published reconstruction.
    snapped PSTD observations versus the outgoing Helmholtz direct Green field
    still have normalized residual 0.454900, passive-only residual 0.757352,
    passive phase-error RMS 1.458883 rad, and passive log-amplitude-error RMS
-   1.028543 before any scattering model enters the path. Source-channel attribution
+   1.028543 before any scattering model enters the path. Adding the PSTD
+   pressure-source k-space correction to the direct field changes homogeneous
+   residual only from 0.454900 to 0.454689 and leaves passive-only residual at
+   0.757458. Source-channel attribution
    rejects co-located receiver contamination as the dominant root cause:
    active-source receiver channels account for 17.7068% of full-scale residual
    energy, and passive-only row-scaled residual is 0.543288. Source-excitation
@@ -242,8 +249,8 @@ theorems against an external published reconstruction.
    Born is currently closest to PSTD (`0.456575` normalized residual), followed
    by dense CBS (`0.476438`), with absorbed spectral CBS worst (`0.523411`).
    This rules out extra CBS complexity as the immediate parity path and shifts
-   the next repair to source normalization and discrete Green sampling semantics
-   between PSTD grid injection and frequency-domain Helmholtz propagation.
+   the next repair to the discrete propagation Green function rather than
+   source-kappa filtering or inversion tuning.
 4. **MAT5/HDF5 ingest — CLOSED.** The published phantom file is MATLAB 5.0,
    while alternate user-provided sound-speed phantoms may be HDF5/MAT-v7.3.
    The selected boundary supports both under Rust-owned clinical ingest; Python
@@ -289,6 +296,9 @@ theorems against an external published reconstruction.
 - T7i: CLOSED. Homogeneous direct-field Green diagnostics compare snapped PSTD
   observations against the outgoing Helmholtz direct field and show passive
   phase/amplitude mismatch exists before scattering.
+- T7j: CLOSED. PSTD source-kappa direct-field diagnostics apply the same
+  `cos(c_ref |k| dt / 2)` source spatial filter used by PSTD pressure-source
+  injection and show it is not sufficient to explain the homogeneous mismatch.
 - T8a: CLOSED. Rust `consus` HDF5/MAT-v7.3 phantom ingest plus PyO3 surface.
 - T8b: CLOSED. `pykwavers/examples/replicate_ali2025_breast_fwi.py` fetches the
   GitHub Release phantom, loads it through Rust clinical ingest, applies

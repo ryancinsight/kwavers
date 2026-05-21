@@ -4,6 +4,9 @@
 //! extracorporeal shock wave lithotripsy (ESWL), including thermal and mechanical
 //! bioeffects evaluation.
 
+use crate::core::constants::numerical::CM_TO_M;
+use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER;
 use ndarray::Array3;
 
 /// Bioeffects model parameters.
@@ -185,12 +188,14 @@ impl BioeffectsModel {
         // ── Thermal Index (simplified SPTA-based estimate) ─────────
         //  I_SPTA = max(intensity)
         //  ΔT ≈ 2 · α · I_SPTA · d / k   (simplified for soft tissue)
-        //  where α=0.3 dB/cm/MHz, d=1cm, k=0.6 W/(m·K)
+        //  where α=0.3 dB/cm/MHz at the active frequency, d=1cm reference depth,
+        //  k = THERMAL_CONDUCTIVITY_WATER (0.598 W/m/K, soft-tissue surrogate).
         let i_spta = intensity.iter().copied().fold(0.0_f64, f64::max);
-        let alpha_np_per_m = 0.3 * f_mhz * 100.0 / 8.686; // dB/cm/MHz → Np/m
+        // 0.3 dB/(cm·MHz) → Np/m at f_mhz: divide by NP_TO_DB then by CM_TO_M.
+        let alpha_np_per_m = 0.3 * f_mhz / NP_TO_DB / CM_TO_M;
         let depth_m = 0.01; // reference depth 1 cm
-        let thermal_conductivity = 0.6; // W/(m·K)
-        let delta_t = 2.0 * alpha_np_per_m * i_spta * depth_m / thermal_conductivity;
+        let delta_t =
+            2.0 * alpha_np_per_m * i_spta * depth_m / THERMAL_CONDUCTIVITY_WATER;
         let ti = delta_t; // TI ≈ ΔT / 1°C
 
         // ── Cavitation dose ────────────────────────────────────────────

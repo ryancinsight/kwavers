@@ -257,6 +257,15 @@ breast-imaging reconstruction.
   direct field residual is `0.454900`, passive-only residual is `0.757352`,
   passive phase-error RMS is `1.458883` rad, and passive log-amplitude-error
   RMS is `1.028543`.
+- **[done] [patch] T8l: PSTD source-kappa direct-field diagnostic — CLOSED 2026-05-21.**
+  Added a source-kappa filtered direct-field branch that maps snapped ring
+  sources back to PSTD grid cells, applies the pressure-source
+  `cos(c_ref |k| dt / 2)` spatial correction by FFT, and evaluates the outgoing
+  Green field from the filtered source distribution. On the determined
+  4x4x3/two-frequency probe, source-kappa filtering changes homogeneous
+  residual from `0.454900` to `0.454689` (`-0.000211`) while passive-only
+  residual remains `0.757458`; this rejects source-kappa filtering as the
+  primary parity repair.
 - **[patch] T9: parity gate.** At reduced grid (2D center slice or 3D
   dxi=1.6 mm) run T7 → T6, assert RMSE within 2× the Ali et al. Table 1
   3-D FWI RMSE and PCC at least 95% of the Table 1 3-D FWI PCC. Current
@@ -278,9 +287,10 @@ breast-imaging reconstruction.
   passive Green-field phase/amplitude mismatch persists before scattering:
   normalized residual `0.454900`, passive-only residual `0.757352`, phase-error
   RMS `1.458883` rad, and log-amplitude-error RMS `1.028543`. Next work should
-  align the source normalization and discrete Green sampling contract between
-  PSTD grid sources and frequency-domain Helmholtz propagation before changing
-  inversion settings.
+  align the discrete propagation Green function itself because the PSTD
+  source-kappa correction changes homogeneous residual by only `-0.000211` and
+  leaves passive-only residual at `0.757458`; changing inversion settings remains
+  blocked until the direct propagation contract is matched.
 
 ### Deprecation (T2 prerequisite)
 - **[patch] Mark `solver::forward::helmholtz::born_series::convergent::ConvergentBornSolver`

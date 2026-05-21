@@ -60,6 +60,27 @@ fn test_shock_distance_prediction() {
 }
 
 #[test]
+fn shock_distance_uses_fubini_frequency_dependent_contract() {
+    let config = HarmonicConfig {
+        frequency: 1.0e6,
+        b_a: 3.5,
+        ..HarmonicConfig::default()
+    };
+    let tracker = HarmonicTracker::new(config);
+    let pressure_amplitude = 1.0e6;
+
+    let rho0: f64 = 1000.0;
+    let c0: f64 = 1540.0;
+    let beta = 1.0 + config.b_a / 2.0;
+    let omega0 = 2.0 * PI * config.frequency;
+    let expected = rho0 * c0.powi(3) / (beta * omega0 * pressure_amplitude);
+
+    let distance = tracker.predict_shock_distance(pressure_amplitude).unwrap();
+
+    assert!((distance - expected).abs() <= 1.0e-12 * expected);
+}
+
+#[test]
 fn test_history_management() {
     let config = HarmonicConfig::default();
     let mut tracker = HarmonicTracker::new(config);

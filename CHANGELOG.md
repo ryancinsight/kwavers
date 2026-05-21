@@ -202,6 +202,10 @@
   replication report. The diagnostic compares homogeneous snapped PSTD
   observations against the outgoing Helmholtz direct Green field and reports
   passive phase/amplitude residuals before scattering.
+- [patch] Add PSTD source-kappa filtered direct-field diagnostics to the Ali
+  2025 replication report. The diagnostic applies the pressure-source
+  `cos(c_ref |k| dt / 2)` spatial correction to discrete source masks before
+  outgoing Green evaluation and records the residual delta.
 - [minor] Add Rust-owned Ali 2025 HDF5 phantom ingest through
   `clinical::imaging::reconstruction::breast_ust_fwi::phantom_hdf5`, backed by
   `consus-hdf5`/`consus-core`/`consus-io`. The loader decodes real 3-D

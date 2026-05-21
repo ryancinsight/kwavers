@@ -50,6 +50,7 @@
 //! - `search`: line-search and joint-objective helpers.
 
 mod adjoint;
+pub mod adjoint_state;
 mod constraints;
 mod forward;
 mod gradient;
@@ -58,36 +59,43 @@ mod search;
 
 pub mod geometry;
 
+pub use adjoint_state::{
+    accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
+};
 pub use geometry::FwiGeometry;
 
 #[cfg(test)]
 mod tests;
 
-/// Reference density for seismic FWI [kg/m³].
+use crate::solver::inverse::seismic::parameters::FwiParameters;
+
+/// Reference density for seismic-tradition acoustic FWI [kg/m³].
 ///
 /// Gardner et al. (1974) relate seismic velocity to density via ρ = a·Vᵇ
-/// (a = 310, b = 0.25 for consolidated sedimentary rock).  Uniform value
+/// (a = 310, b = 0.25 for consolidated sedimentary rock). Uniform value
 /// consistent with typical upper-crust consolidated sediments (~2000 kg/m³).
+/// Used by the acoustic FWI driver when a heterogeneous-density model is
+/// not supplied; replaced via medium construction when one is.
 ///
 /// Reference: Gardner, G.H.F. et al. (1974). Geophysics 39(6), 770–780.
 pub(super) const RHO_SEISMIC_REF: f64 = 2000.0; // kg/m³
 
-/// Full Waveform Inversion processor.
+/// Full Waveform Inversion processor (time-domain, FDTD-driven).
 #[derive(Debug)]
 pub struct FwiProcessor {
-    pub(super) parameters: super::parameters::FwiParameters,
+    pub(super) parameters: FwiParameters,
 }
 
 impl FwiProcessor {
     /// Create new FWI processor with specified parameters.
     #[must_use]
-    pub fn new(parameters: super::parameters::FwiParameters) -> Self {
+    pub fn new(parameters: FwiParameters) -> Self {
         Self { parameters }
     }
 }
 
 impl Default for FwiProcessor {
     fn default() -> Self {
-        Self::new(super::parameters::FwiParameters::default())
+        Self::new(FwiParameters::default())
     }
 }
