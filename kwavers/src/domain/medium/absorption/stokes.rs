@@ -1,6 +1,8 @@
 //! Stokes absorption model for viscous fluids
 
-use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
+use crate::core::constants::cavitation::VISCOSITY_WATER;
+use crate::core::constants::fundamental::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use serde::{Deserialize, Serialize};
 
 /// Stokes absorption parameters for viscous fluids
@@ -24,15 +26,15 @@ pub struct StokesParameters {
 
 impl Default for StokesParameters {
     fn default() -> Self {
-        // Default values for water at 20°C
+        // Default values for water at 20 °C — all sourced from SSOT.
         Self {
-            viscosity: 1.002e-3,
-            bulk_viscosity: 2.81e-3,
-            thermal_conductivity: 0.598,
+            viscosity: VISCOSITY_WATER,
+            bulk_viscosity: 2.81e-3, // Slie et al. 1966 — local domain constant
+            thermal_conductivity: THERMAL_CONDUCTIVITY_WATER,
             specific_heat_p: SPECIFIC_HEAT_WATER,
-            specific_heat_v: SPECIFIC_HEAT_WATER, // Approximately same for water
-            density: 998.2,
-            sound_speed: 1482.0,
+            specific_heat_v: SPECIFIC_HEAT_WATER, // c_v ≈ c_p for liquid water
+            density: DENSITY_WATER,
+            sound_speed: SOUND_SPEED_WATER,
         }
     }
 }
@@ -106,19 +108,29 @@ impl StokesAbsorption {
         Self::new(params)
     }
 
-    /// Calculate classical (Stokes) absorption coefficient
+    /// Calculate classical (Stokes-Kirchhoff) absorption coefficient.
+    ///
+    /// ## Formula (Pierce 1989, *Acoustics*, Eq. 10-7-5)
+    ///
+    /// ```text
+    /// α(ω) = ω² / (2 ρ c³) · [ 4η/3 + ζ + κ (γ − 1) / c_p ]
+    /// ```
+    ///
+    /// where η = shear viscosity, ζ = bulk viscosity, κ = thermal conductivity,
+    /// γ = c_p / c_v. The thermal contribution is **linear** in (γ − 1), not
+    /// quadratic — prior to 2026-05-21 this used (γ − 1)² which for water
+    /// (γ ≈ 1.007) under-predicted the thermal absorption term by ≈ 140×.
+    /// Reference: Pierce A. D. (1989). *Acoustics: An Introduction to its
+    /// Physical Principles and Applications*, §10-7. ASA.
     #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         let omega = 2.0 * std::f64::consts::PI * frequency;
         let p = &self.params;
 
-        // Classical absorption: α = ω²/(2ρc³) * [4μ/3 + μ_B + κ(γ-1)²/Cp]
-        // where μ is shear viscosity, μ_B is bulk viscosity, κ is thermal conductivity
-
         let viscous_term = (4.0 * p.viscosity / 3.0) + p.bulk_viscosity;
 
         let gamma = p.specific_heat_p / p.specific_heat_v;
-        let thermal_term = p.thermal_conductivity * (gamma - 1.0).powi(2) / p.specific_heat_p;
+        let thermal_term = p.thermal_conductivity * (gamma - 1.0) / p.specific_heat_p;
 
         omega.powi(2) / (2.0 * p.density * p.sound_speed.powi(3)) * (viscous_term + thermal_term)
     }
