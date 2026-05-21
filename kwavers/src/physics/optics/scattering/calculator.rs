@@ -70,7 +70,7 @@ impl MieCalculator {
 
         let q_sca = self.scattering_efficiency(&an, &bn, x);
         let q_ext = self.extinction_efficiency(&an, &bn, x);
-        let q_abs = (q_ext - q_sca).max(0.0);
+        let q_abs = q_ext - q_sca;
         let q_bsa = self.backscattering_efficiency(&an, &bn, x);
 
         let geometric_cs = MieResult::geometric_cross_section(params.radius);
@@ -104,8 +104,8 @@ impl MieCalculator {
         let alpha_term = (m2 - 1.0) / (m2 + 2.0);
         // Q_sca = (8/3) x⁴ |(m²−1)/(m²+2)|²  (BH Eq. 5.8)
         let q_sca = (8.0 / 3.0) * x.powi(4) * alpha_term.norm_sqr();
-        // Q_abs = 4x · Im[(m²−1)/(m²+2)]  (BH Eq. 5.11)
-        let q_abs = -4.0 * x * alpha_term.im;
+        // Q_abs = 4x · Im[(m²−1)/(m²+2)]  (BH Eq. 5.11, convention m = n + iκ, κ ≥ 0)
+        let q_abs = 4.0 * x * alpha_term.im;
         let q_ext = q_sca + q_abs;
 
         let geometric_cs = MieResult::geometric_cross_section(params.radius);
@@ -233,13 +233,7 @@ impl MieCalculator {
     /// Asymmetry parameter g = ⟨cos θ⟩ (BH Eq. 4.80):
     /// g·Q_sca = (4/x²) Σ [ n(n+2)/(n+1) · Re(a_n a*_{n+1} + b_n b*_{n+1})
     ///                    + (2n+1)/(n(n+1)) · Re(a_n b*_n) ]
-    fn asymmetry_parameter(
-        &self,
-        an: &[Complex64],
-        bn: &[Complex64],
-        q_sca: f64,
-        x: f64,
-    ) -> f64 {
+    fn asymmetry_parameter(&self, an: &[Complex64], bn: &[Complex64], q_sca: f64, x: f64) -> f64 {
         if q_sca <= 0.0 || an.is_empty() {
             return 0.0;
         }

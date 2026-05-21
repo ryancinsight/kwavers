@@ -150,6 +150,32 @@ fn mie_absorbing_sphere_x10_m1p33_p0p01i() {
     );
 }
 
+/// Rayleigh-branch absorbing sphere: x = 0.05 routes through the small-x
+/// closed-form branch. With BH convention m = n + iκ (κ ≥ 0), Q_abs must be
+/// strictly positive and dominate Q_sca.
+/// Reference (miepython.efficiencies_mx, x=0.05, m=1.5+0.01i):
+///   Q_ext = 9.993748e-4, Q_sca = 1.442601e-6, Q_abs ≈ 9.979322e-4.
+#[test]
+fn mie_rayleigh_branch_absorption_sign() {
+    let params = params_for(0.05, Complex64::new(1.5, 0.01));
+    let result = MieCalculator::default().calculate(&params).unwrap();
+
+    assert!(
+        result.absorption_efficiency > 0.0,
+        "Q_abs = {} must be positive for κ > 0",
+        result.absorption_efficiency
+    );
+    assert!(
+        (result.absorption_efficiency - 9.979322e-4).abs() / 9.979322e-4 < 5e-3,
+        "Q_abs = {} (expected ~9.979e-4)",
+        result.absorption_efficiency
+    );
+    assert!(
+        result.absorption_efficiency > result.scattering_efficiency,
+        "Absorption dominates scattering in the Rayleigh-absorbing limit"
+    );
+}
+
 /// Rayleigh-limit cross-check: the full Mie series at x = 0.15 (above the
 /// short-circuit threshold at x < 0.1) must match the closed-form Rayleigh
 /// efficiency Q_sca = (8/3) x⁴ |(m²−1)/(m²+2)|² to better than 1 %.
