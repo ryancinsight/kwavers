@@ -6,6 +6,7 @@
 //! forms a hard limit.
 
 use super::NonlinearParameters;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use std::f64::consts::PI;
 
 /// Calculates the acoustic saturation pressure
@@ -42,9 +43,10 @@ pub fn nonlinear_cavitation_threshold(
     // Mechanical Index concept suggests PI scales with 1/sqrt(f)
     // M.I. = P_neg (MPa) / sqrt(f_c (MHz))
 
-    // Baseline threshold in water ~ 1 MPa at 1 MHz
-    let f_mhz = frequency / 1e6;
-    let base_threshold = 1e6 * f_mhz.sqrt();
+    // Baseline threshold in water ~ 1 MPa at 1 MHz (FDA MI guideline scaling).
+    //   threshold(Pa) = 1 MPa · sqrt(f / 1 MHz) = MHZ_TO_HZ · sqrt(f / MHZ_TO_HZ)
+    let f_mhz = frequency / MHZ_TO_HZ;
+    let base_threshold = MHZ_TO_HZ * f_mhz.sqrt();
 
     // Saturation can cap achievable negative pressure
     let p_sat = acoustic_saturation_pressure(frequency, distance, params);
