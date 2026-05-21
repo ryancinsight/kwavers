@@ -124,6 +124,68 @@ fn hemispherical_preset_generates_source_domain_fixed_count_layout() {
 }
 
 #[test]
+fn bowl_polar_span_supports_major_cap_beyond_hemisphere() {
+    let config =
+        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, 1.0e6);
+    let theta_max = 0.58 * std::f64::consts::PI;
+
+    let bowl = BowlTransducer::with_polar_span(config, theta_max, 128).unwrap();
+    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let expected_area = 2.0 * std::f64::consts::PI * 0.16_f64.powi(2) * (1.0 - theta_max.cos());
+    let min_z = bowl
+        .element_positions()
+        .iter()
+        .map(|position| position[2])
+        .fold(f64::INFINITY, f64::min);
+    let max_z = bowl
+        .element_positions()
+        .iter()
+        .map(|position| position[2])
+        .fold(f64::NEG_INFINITY, f64::max);
+
+    assert_eq!(bowl.element_count(), 128);
+    assert!((summed_area - expected_area).abs() < 1.0e-14);
+    assert!(min_z < -0.030);
+    assert!(max_z > 0.150);
+}
+
+#[test]
+fn bowl_polar_span_rejects_invalid_angular_domain() {
+    let config = BowlConfig::hemispherical([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 650.0e3, 1.0e6);
+
+    assert!(matches!(
+        BowlTransducer::with_polar_span(config.clone(), 0.0, 128).unwrap_err(),
+        KwaversError::Validation(_)
+    ));
+    assert!(matches!(
+        BowlTransducer::with_polar_span(config, std::f64::consts::PI + 1.0e-12, 128).unwrap_err(),
+        KwaversError::Validation(_)
+    ));
+}
+
+#[test]
+fn bowl_polar_bounds_support_annular_cutout_area() {
+    let config =
+        BowlConfig::from_vertex_focus([0.0, 0.0, 0.10], [0.0, 0.0, 0.0], 0.20, 500.0e3, 1.0e5);
+    let theta_min = 0.20;
+    let theta_max = 0.90;
+
+    let bowl = BowlTransducer::with_polar_bounds(config, theta_min, theta_max, 96).unwrap();
+    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let expected_area =
+        2.0 * std::f64::consts::PI * 0.10_f64.powi(2) * (theta_min.cos() - theta_max.cos());
+    let max_z = bowl
+        .element_positions()
+        .iter()
+        .map(|position| position[2])
+        .fold(f64::NEG_INFINITY, f64::max);
+
+    assert_eq!(bowl.element_count(), 96);
+    assert!((summed_area - expected_area).abs() < 1.0e-14);
+    assert!(max_z < 0.10 * theta_min.cos());
+}
+
+#[test]
 fn bowl_rejects_nonfinite_or_degenerate_domains() {
     let mut zero_radius = BowlConfig::default();
     zero_radius.radius_of_curvature = 0.0;

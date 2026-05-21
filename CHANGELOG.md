@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added (2026-05-21) - Bowl Polar-Span Source Layout
+
+- [minor] Add fixed-count `BowlTransducer::with_polar_span` and
+  `BowlTransducer::with_polar_bounds` constructors so focused bowl sources can
+  generate hemispherical, major-cap, and annular angular apertures through the
+  source-domain API. Full-volume brain placement now delegates its major-cap
+  source points to this bowl API instead of owning local source geometry.
+
 ### Added (2026-05-20) - Bowl Vertex-Focus Presets
 
 - [minor] Add `BowlConfig::from_vertex_focus`, `BowlConfig::hemispherical`,

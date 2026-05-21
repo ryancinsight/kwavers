@@ -2,13 +2,18 @@
 
 use std::f64::consts::PI;
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::{
+    core::error::{KwaversError, KwaversResult},
+    domain::source::transducers::focused::{BowlConfig, BowlTransducer},
+};
 use ndarray::{s, Array2, Array3};
 
 use super::super::scene::target_index_from_mask_fraction_3d;
 use super::super::TheranosticInverseConfig;
 use super::surface::{nearest_surface_point, surface_points_3d};
 use super::{distance_3d, validate_spacing, volume_bbox, volume_center, PlacementContext, Point3};
+
+const FOCUSED_BOWL_POLAR_SPAN_RAD: f64 = 0.58 * PI;
 
 pub fn build_brain_placement_context(
     ct_volume_hu: &Array3<f64>,
@@ -57,12 +62,19 @@ pub fn build_brain_placement_context(
             .unwrap_or_else(|| volume_center(nx, ny, nz, sx, sy, sz))
     };
     let radius = calvarium_radius(&body, sx, sy, sz, center, calvarium_range.clone()) + 0.015;
-    let therapy_points_m = helmet_cap_points(
+    let frequency_hz = config.frequencies_hz.first().copied().ok_or_else(|| {
+        KwaversError::InvalidInput(
+            "brain placement context requires at least one source frequency".to_owned(),
+        )
+    })?;
+    let therapy_points_m = focused_bowl_cap_points(
         config.element_count,
         center,
         radius.max(config.focal_radius_m),
         superior_positive,
-    );
+        frequency_hz,
+        config.source_pressure_pa,
+    )?;
     let surface_stride = (nx.max(ny).max(nz) / 96).clamp(1, 8);
     let body_surface_points_m =
         surface_points_3d(&body, sx, sy, sz, Some(calvarium_range), surface_stride);
@@ -84,33 +96,34 @@ pub fn build_brain_placement_context(
         body_surface_points_m,
         focus_m: center,
         skin_contact_m,
-        model_name: "insightec_like_1024_element_calvarium_helmet_3d".to_owned(),
+        model_name: "focused_bowl_major_cap_3d".to_owned(),
     })
 }
 
-fn helmet_cap_points(
+fn focused_bowl_cap_points(
     count: usize,
     center: Point3,
     radius: f64,
     superior_positive: bool,
-) -> Vec<Point3> {
-    let golden_angle = PI * (3.0 - 5.0_f64.sqrt());
-    let theta_max = 0.58 * PI;
-    let cos_min = theta_max.cos();
+    frequency_hz: f64,
+    amplitude_pa: f64,
+) -> KwaversResult<Vec<Point3>> {
     let z_sign = if superior_positive { 1.0 } else { -1.0 };
-    (0..count)
-        .map(|idx| {
-            let t = (idx as f64 + 0.5) / count.max(1) as f64;
-            let cos_theta = 1.0 - t * (1.0 - cos_min);
-            let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
-            let phi = idx as f64 * golden_angle;
-            Point3 {
-                x_m: center.x_m + radius * sin_theta * phi.cos(),
-                y_m: center.y_m + radius * sin_theta * phi.sin(),
-                z_m: center.z_m + z_sign * radius * cos_theta,
-            }
+    let vertex_m = [center.x_m, center.y_m, center.z_m + z_sign * radius];
+    let focus_m = [center.x_m, center.y_m, center.z_m];
+    let config =
+        BowlConfig::from_vertex_focus(vertex_m, focus_m, 2.0 * radius, frequency_hz, amplitude_pa);
+    let bowl = BowlTransducer::with_polar_span(config, FOCUSED_BOWL_POLAR_SPAN_RAD, count)?;
+
+    Ok(bowl
+        .element_positions()
+        .iter()
+        .map(|position| Point3 {
+            x_m: position[0],
+            y_m: position[1],
+            z_m: position[2],
         })
-        .collect()
+        .collect())
 }
 
 fn point_from_index(

@@ -25,6 +25,12 @@
 - Autodiff/PINN implementations for neural network-based physics solving.
 
 ## Validation Goals
+- 2026-05-21: [minor] Closed the bowl polar-span source-layout gap.
+  `BowlTransducer` now owns fixed-count polar-span and polar-bounds
+  constructors backed by the focused spherical-cap SSOT, and full-volume brain
+  placement delegates major-cap element generation to the bowl source API
+  instead of owning a local aperture sampler.
+
 - 2026-05-20: [minor] Closed the bowl vertex/focus preset gap.
   `BowlConfig` now owns vertex/focus and hemispherical constructors plus an
   element-size fluent setter, allowing clinical adapters to configure
