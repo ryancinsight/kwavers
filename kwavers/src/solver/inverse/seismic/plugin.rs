@@ -15,7 +15,7 @@ use crate::domain::plugin::{PluginMetadata, PluginState};
 use crate::domain::grid::Grid;
 use ndarray::{Array2, Array3};
 
-use super::fwi::{FwiGeometry, FwiProcessor};
+use crate::solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use super::parameters::{FwiParameters, MigrationAperture, RtmSettings};
 use super::rtm::RtmProcessor;
 

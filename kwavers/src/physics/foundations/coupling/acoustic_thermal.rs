@@ -18,6 +18,7 @@
 
 use super::MultiPhysicsCoupling;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use ndarray::ArrayD;
 
 /// Acoustic-thermal coupling for thermoacoustic effects
@@ -44,10 +45,7 @@ pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
 
     /// Thermal conductivity damping coefficient
     fn thermal_conductivity_damping(&self, frequency: f64, _position: &[f64]) -> f64 {
-        let k = 0.6; // W/m·K
-        let rho = DENSITY_WATER_NOMINAL;
-        let cp = 4186.0; // J/kg·K
-        let alpha = k / (rho * cp); // thermal diffusivity [m²/s]
+        let alpha = THERMAL_CONDUCTIVITY_WATER / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
         let omega = 2.0 * std::f64::consts::PI * frequency;
         // δ = √(2·α_th / ω) [m] — classical thermal penetration depth
         (2.0 * alpha / omega).sqrt()

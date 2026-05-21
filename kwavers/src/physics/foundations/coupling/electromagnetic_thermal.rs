@@ -16,7 +16,10 @@
 
 use super::MultiPhysicsCoupling;
 use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_WATER_NOMINAL};
-use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
+use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+};
 use ndarray::ArrayD;
 
 /// Electromagnetic-thermal coupling for photothermal effects
@@ -37,19 +40,12 @@ pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
 
     /// Thermal relaxation time τ = ρ C_p / k (s)
     fn thermal_relaxation_time(&self, _position: &[f64]) -> f64 {
-        let rho = DENSITY_WATER_NOMINAL;
-        let cp = SPECIFIC_HEAT_WATER;
-        let k = 0.6;
-        rho * cp / k
+        DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER / THERMAL_CONDUCTIVITY_WATER
     }
 
-    /// Perfusion cooling rate (W/m³/K)
+    /// Perfusion cooling rate (W/m³). Pennes (1948) Eq 1: q_p = w·ρ_b·c_b·(T − T_b).
     fn perfusion_cooling(&self, temperature: f64, _position: &[f64]) -> f64 {
-        let w = 0.01;
-        let rho_b = DENSITY_BLOOD;
-        let cp_b = 3860.0;
-        let tb = 37.0;
-        w * rho_b * cp_b * (temperature - tb)
+        TISSUE_PERFUSION_RATE * DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT * (temperature - BODY_TEMPERATURE_C)
     }
 
     /// Bioheat equation source term (including perfusion)
