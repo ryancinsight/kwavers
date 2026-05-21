@@ -59,9 +59,17 @@ impl BubbleDynamics {
             radius_dot += 0.5 * (acceleration + acceleration_new) * self.dt;
             radius[i + 1] = radius_new;
 
-            let volume_change =
-                4.0 / 3.0 * std::f64::consts::PI * (radius_new.powi(3) - radius[i].powi(3));
-            scattered_pressure[i + 1] = self.liquid_density * volume_change / self.dt;
+            // Far-field scattered pressure from a pulsating spherical source
+            // at a 1-m reference distance (Leighton 1994 Eq. 4.18):
+            //   p_scat(r=1, t) = (ρ / r) · (R²·R̈ + 2·R·Ṙ²)
+            // Prior to the 2026-05-21 fix this stored ρ·dV/dt (units kg/s,
+            // not Pa) — a dimensional error that mis-labelled the volume
+            // mass-flow rate as a pressure.
+            let r_w = r_new;
+            let v_w = radius_dot;
+            let a_w = acceleration_new;
+            scattered_pressure[i + 1] =
+                self.liquid_density * (r_w * r_w * a_w + 2.0 * r_w * v_w * v_w);
         }
 
         Ok(BubbleResponse {
