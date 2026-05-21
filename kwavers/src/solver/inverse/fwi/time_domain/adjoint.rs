@@ -9,7 +9,59 @@ use crate::domain::source::{GridSource, SourceMode};
 use crate::solver::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
-use ndarray::{Array2, Array3, Array4, Axis, Zip};
+use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
+
+/// Apply the Plessix (2006) eq. (12) per-voxel scaling
+/// `g_c(x) ← -(2 / (ρ(x) · c(x)³)) · g_correlation(x)` in place.
+///
+/// ## Theorem
+/// Given an accumulated correlation `I(x) = ∫₀ᵀ p̈_fwd(x,t) · λ(x,t) dt` and a
+/// strictly positive density / velocity field, the velocity-model gradient
+/// of the acoustic L2 misfit is `g_c(x) = -(2 / (ρ(x) · c(x)³)) · I(x)`.
+/// This routine is the post-correlation scaling step; it is independent of
+/// the forward/adjoint wavefield computation and therefore directly
+/// unit-testable for the local ρ-dependence.
+///
+/// # Errors
+/// Returns [`KwaversError::Validation`] if any sound-speed or density entry
+/// is non-finite or non-positive (avoids silent NaN production from a 1/0
+/// or 1/NaN multiplication).
+pub(super) fn apply_velocity_gradient_scaling(
+    mut gradient: ArrayViewMut3<'_, f64>,
+    model: ArrayView3<'_, f64>,
+    density: ArrayView3<'_, f64>,
+) -> KwaversResult<()> {
+    if gradient.dim() != model.dim() || gradient.dim() != density.dim() {
+        return Err(KwaversError::Validation(
+            ValidationError::ConstraintViolation {
+                message: format!(
+                    "FWI gradient scaling shape mismatch: gradient {:?}, model {:?}, density {:?}",
+                    gradient.dim(),
+                    model.dim(),
+                    density.dim()
+                ),
+            },
+        ));
+    }
+    for (&c, &rho) in model.iter().zip(density.iter()) {
+        if !c.is_finite() || c <= 0.0 || !rho.is_finite() || rho <= 0.0 {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "FWI gradient scaling requires positive finite c and ρ; got c={c}, ρ={rho}"
+                    ),
+                },
+            ));
+        }
+    }
+    Zip::from(&mut gradient)
+        .and(model)
+        .and(density)
+        .par_for_each(|g, &c, &rho| {
+            *g *= -2.0 / (rho * c.powi(3));
+        });
+    Ok(())
+}
 
 impl FwiProcessor {
     /// Compute the acoustic L2 objective between observed and synthetic data.
@@ -249,17 +301,10 @@ impl FwiProcessor {
             )?;
         }
 
-        // Apply the local ρ(x)⁻¹ · c(x)⁻³ scaling from Plessix (2006) eq. (12):
-        //   g_c(x) = -(2 / (ρ(x) · c(x)³)) · ∫ p̈_fwd · λ dt.
-        // When `density_model` is `None`, `density_adj` is a constant
-        // `RHO_SEISMIC_REF` field and this reduces to the legacy
-        // `-2 / c(x)³` scaling up to a uniform scalar absorbed by line search.
-        Zip::from(&mut gradient_m)
-            .and(model)
-            .and(&density_adj)
-            .par_for_each(|g, &c, &rho| {
-                *g *= -2.0 / (rho * c.powi(3));
-            });
+        // Apply the local ρ(x)⁻¹ · c(x)⁻³ scaling from Plessix (2006) eq. (12).
+        // The free function is value-semantically tested in isolation; this
+        // call is its sole production caller.
+        apply_velocity_gradient_scaling(gradient_m.view_mut(), model.view(), density_adj.view())?;
 
         let (gmax, gmax_idx) = gradient_m.indexed_iter().fold(
             (0.0_f64, (0usize, 0usize, 0usize)),
