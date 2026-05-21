@@ -6,6 +6,7 @@
 
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
 use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
 /// Temperature-dependent perfusion model
@@ -43,9 +44,10 @@ impl ThermalPerfusionModel {
             // Linear decrease from max to shutdown
             let fraction = (self.t_shutdown - temperature) / (self.t_shutdown - self.t_max);
             self.w_b0 * self.max_multiplier * fraction
-        } else if temperature > 37.0 {
+        } else if temperature > BODY_TEMPERATURE_C {
             // Linear increase from baseline to max
-            let fraction = (temperature - 37.0) / (self.t_max - 37.0);
+            let fraction =
+                (temperature - BODY_TEMPERATURE_C) / (self.t_max - BODY_TEMPERATURE_C);
             self.w_b0 * (self.max_multiplier - 1.0).mul_add(fraction, 1.0)
         } else {
             // Below body temperature
@@ -90,7 +92,7 @@ impl VesselCooling {
         Self {
             vessels: Vec::new(),
             velocity: 0.1, // 10 cm/s typical
-            blood_temp: 37.0,
+            blood_temp: BODY_TEMPERATURE_C,
         }
     }
 
