@@ -4,7 +4,14 @@
 //! - Sapareto & Dewey (1984) "Thermal dose determination in cancer therapy"
 //! - Dewhirst et al. (2003) "Basic principles of thermal dosimetry"
 
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::{Array3, Zip};
+
+/// CEM43 reference temperature (°C).
+///
+/// Sapareto & Dewey (1984) defined the cumulative equivalent minutes at 43 °C
+/// as the canonical thermal-dose metric for hyperthermic therapy.
+pub const CEM43_REFERENCE_TEMPERATURE_C: f64 = 43.0;
 
 /// Thermal dose calculator using cumulative equivalent minutes at 43°C (CEM43)
 #[derive(Debug)]
@@ -28,7 +35,7 @@ impl ThermalCEM43Grid {
             nx,
             ny,
             nz,
-            reference_temp: 43.0, // CEM43
+            reference_temp: CEM43_REFERENCE_TEMPERATURE_C,
         }
     }
 
@@ -48,7 +55,7 @@ impl ThermalCEM43Grid {
                     0.25
                 };
 
-                if temp > 37.0 {
+                if temp > BODY_TEMPERATURE_C {
                     // Only accumulate dose above body temperature
                     let r_value: f64 = r;
                     let equiv_time = dt_minutes * r_value.powf(self.reference_temp - temp);
@@ -89,19 +96,21 @@ impl ThermalCEM43Grid {
     }
 }
 
-/// Thermal dose thresholds for various effects
+/// Thermal dose thresholds for various effects (CEM43 minutes).
 pub mod thresholds {
     /// Threshold for protein denaturation onset
-    pub const PROTEIN_DENATURATION: f64 = 1.0; // CEM43 minutes
+    pub const PROTEIN_DENATURATION: f64 = 1.0;
 
-    /// Threshold for irreversible cell damage
-    pub const CELL_DEATH: f64 = 240.0; // CEM43 minutes
+    /// Threshold for irreversible cell damage — SSOT alias for
+    /// [`crate::core::constants::medical::THERMAL_DOSE_THRESHOLD`]
+    /// (Sapareto & Dewey 1984).
+    pub use crate::core::constants::medical::THERMAL_DOSE_THRESHOLD as CELL_DEATH;
 
     /// Threshold for immediate coagulation
-    pub const COAGULATION: f64 = 10000.0; // CEM43 minutes
+    pub const COAGULATION: f64 = 10000.0;
 
     /// Safety threshold for diagnostic ultrasound
-    pub const DIAGNOSTIC_SAFETY: f64 = 0.1; // CEM43 minutes
+    pub const DIAGNOSTIC_SAFETY: f64 = 0.1;
 }
 
 #[cfg(test)]
