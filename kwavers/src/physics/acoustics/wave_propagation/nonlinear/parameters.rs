@@ -1,4 +1,8 @@
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::fundamental::{
+    C_WATER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_TISSUE,
+};
+use crate::core::constants::numerical::CM_TO_M;
 
 /// Parameters defining the nonlinear propagation properties of a medium
 #[derive(Debug, Clone, Copy)]
@@ -25,27 +29,29 @@ impl NonlinearParameters {
         // B/A ~ 7.0 (Duck, 1990)
         let b_over_a = 7.0;
         Self {
-            density: 1050.0,
+            density: DENSITY_TISSUE,
             sound_speed: SOUND_SPEED_TISSUE,
             b_over_a,
             beta: 1.0 + b_over_a / 2.0,
-            attenuation_coeff: 0.5 * 100.0 / 8.686, // ~0.5 dB/cm/MHz converted to Np/m/MHz
-            attenuation_exponent: 1.1,              // Typical for soft tissue
+            // 0.5 dB/(cm·MHz) → Np/(m·MHz): / CM_TO_M / NP_TO_DB (SSOT-sourced)
+            attenuation_coeff: 0.5 / CM_TO_M / NP_TO_DB,
+            attenuation_exponent: 1.1, // Typical for soft tissue
         }
     }
 
     /// Create parameters for water
     #[must_use]
     pub fn water() -> Self {
-        // B/A for water at 20C ~ 5.0
+        // B/A for water at 20°C ~ 5.0
         let b_over_a = 5.0;
         Self {
-            density: 998.0,
-            sound_speed: 1482.0,
+            density: DENSITY_WATER,
+            sound_speed: C_WATER,
             b_over_a,
             beta: 1.0 + b_over_a / 2.0,
-            attenuation_coeff: 0.0022 * 100.0 / 8.686, // ~0.0022 dB/cm/MHz^2 converted to Np/m/MHz^2
-            attenuation_exponent: 2.0,                 // Water follows classical f^2 attenuation
+            // 0.0022 dB/(cm·MHz²) → Np/(m·MHz²) — water classical f² absorption.
+            attenuation_coeff: 0.0022 / CM_TO_M / NP_TO_DB,
+            attenuation_exponent: 2.0,
         }
     }
 
