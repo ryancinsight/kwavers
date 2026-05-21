@@ -47,10 +47,20 @@ pub const WATER_SURFACE_TENSION_20C: f64 = 0.0728;
 /// Reference: Wagner & Pruss (2002). "The IAPWS formulation for water"
 pub const WATER_VAPOR_PRESSURE_20C: f64 = 2339.0;
 
-/// Reference frequency for absorption calculations (Hz)
-/// Value: 1e6 (1 `MHz`)
-/// Standard reference in medical ultrasound
+/// Reference frequency for absorption calculations (Hz).
+///
+/// Value: `1e6 Hz = 1 MHz` — the standard reference frequency in medical
+/// ultrasound. The unit in the constant *value* is Hz; the `_MHZ` suffix
+/// in the name refers to the conventional unit name (1 MHz), not the unit
+/// the value is expressed in. New code should use `REFERENCE_FREQUENCY_HZ`,
+/// which is a clearer alias for the same value.
 pub const REFERENCE_FREQUENCY_MHZ: f64 = 1e6;
+
+/// Reference frequency for absorption calculations (Hz).
+///
+/// Alias of `REFERENCE_FREQUENCY_MHZ` (= 1 MHz in Hz) with an unambiguous
+/// unit suffix. Prefer this name in new code; the SSOT value is the same.
+pub const REFERENCE_FREQUENCY_HZ: f64 = REFERENCE_FREQUENCY_MHZ;
 
 /// Minimum time step for acoustic simulations (s)
 /// Value: 1e-10
