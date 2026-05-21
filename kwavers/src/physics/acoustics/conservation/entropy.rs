@@ -21,8 +21,16 @@ pub fn entropy_production_rate(
     grid: &Grid,
 ) -> f64 {
     debug_assert!(temperature > 0.0, "Temperature must be positive Kelvin");
+    if temperature <= 0.0 {
+        // Defensive runtime guard: entropy production is undefined at T ≤ 0 K.
+        // Returning 0 is conservative; the debug_assert above flags caller bugs.
+        // Prior to 2026-05-21 this clamped t0_inv = 1/max(T, 1.0), silently
+        // corrupting cryogenic-temperature inputs (T < 1 K) by replacing T
+        // with 1 K rather than reporting the true 1/T scaling.
+        return 0.0;
+    }
     let dv = grid.dx * grid.dy * grid.dz;
-    let t0_inv = 1.0 / temperature.max(1.0);
+    let t0_inv = 1.0 / temperature;
     let mut total = 0.0_f64;
     let (nx, ny, nz) = pressure.dim();
 
