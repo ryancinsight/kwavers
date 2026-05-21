@@ -44,15 +44,24 @@
   `TranscranialBowlGeometry` impls the trait with bowl-specific azimuthal-
   rotation override of `receiver_indices`. `cargo check -p kwavers --lib` and
   `cargo test -p kwavers linear_born_inversion --lib` pass.
-- **[arch] T13b (was T11c continuation): hoist generic linear-Born + PCG
-  primitives to `solver/inverse/linear_born_inversion/`.** Migrate
-  linear_algebra, sensitivity, volume_operator/*, volume_born/pcg,
-  conditioning, volume_regularization (~1200 LOC) out of clinical adapter.
-  Parameterise signatures: `&TranscranialBowlGeometry` →
-  `<G: TransducerGeometry>`; `&TranscranialUstBornInversionConfig` →
-  `&LinearBornInversionConfig` (new generic config with only numerical knobs).
-  Clinical adapter keeps anatomy (config/medium/volume/born entries) and
-  embeds the generic config.
+- **[done] [arch] T13b-Phase-1: LinearBornInversionConfig defined — CLOSED 2026-05-21.**
+  New `solver/inverse/linear_born_inversion/config.rs` holds anatomy-neutral
+  numerical fields (frequencies_hz, receiver_offsets, iterations, relaxation,
+  regularization, frequency_continuation, Sobolev, edge-preserving,
+  attenuation, harmonic, source-pressure, beta, and contrast bounds) with
+  validate/harmonic_count/measurement_count methods. `element_count` and
+  `radius_m` stay on the clinical transducer geometry wrapper.
+- **[done] [arch] T13b-Phase-2: transcranial kernels consume the generic config — CLOSED 2026-05-21.**
+  `TranscranialUstBornInversionConfig` now embeds `LinearBornInversionConfig`;
+  slice and volume entrypoints construct bowl geometry from clinical fields and
+  pass `&config.linear` to linear_algebra, sensitivity, conditioning,
+  volume_regularization, volume_operator/*, and volume_born/pcg. Verified with
+  `cargo check -p kwavers --lib --message-format=short -j 2`,
+  `cargo test -p kwavers transcranial_ust --lib -j 2`, and
+  `cargo check -p pykwavers --lib --message-format=short -j 2`.
+- **[arch] T13b-Phase-3: physically relocate the generic kernels** to
+  `solver/inverse/linear_born_inversion/` once Phase-2 makes their signatures
+  take only solver-layer types. Pure file moves at that point.
 - **[done] [patch] T11d: pykwavers binding rename — CLOSED 2026-05-20.**
   `seismic_bindings/` → `imaging_bindings/`; `slice_fwi.rs` →
   `transcranial_slice_inversion.rs`; `volume_fwi.rs` →

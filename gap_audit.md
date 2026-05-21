@@ -172,6 +172,9 @@ theorems against an external published reconstruction.
   the no-CPML homogeneous modal recurrence with propagation kappa, source kappa,
   exact source timing, and the same trailing frequency-bin projection as the
   Rust acquisition.
+- Completed the transcranial clinical/generic config boundary: clinical
+  entrypoints retain `TranscranialUstBornInversionConfig` for anatomy fields and
+  pass `&config.linear` to generic linear-Born kernels.
 - Closed residual FWI import drift: remaining examples now depend on
   `solver::inverse::fwi::time_domain` directly, with no legacy seismic-owned
   compatibility path.

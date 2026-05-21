@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (2026-05-21) - Transcranial Linear Born Config Boundary
+
+- [arch] Complete the clinical wrapper to generic linear-Born config boundary:
+  transcranial clinical entrypoints keep anatomy fields on
+  `TranscranialUstBornInversionConfig` and pass `&config.linear` to the
+  anatomy-neutral kernels, restoring the kwavers and pykwavers compile gates.
+
 ### Changed (2026-05-21) - Transcranial UST Reconstruction Boundary
 
 - [patch] Move the transcranial ultrasound tomography Born inversion out of
