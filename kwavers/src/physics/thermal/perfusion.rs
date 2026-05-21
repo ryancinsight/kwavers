@@ -100,10 +100,29 @@ impl VesselCooling {
         self.vessels.push((i, j, k, radius));
     }
 
-    /// Calculate cooling effect at a point
+    /// Convective heat-transfer rate (W/m³ per unit volume) at grid point
+    /// `(i, j, k)`, summed over all registered vessels.
+    ///
+    /// Sign convention follows Newton's law of cooling
+    ///
+    /// ```text
+    /// q = h · (T_tissue − T_blood)
+    /// ```
+    ///
+    /// so the return value is **positive when tissue is hotter than blood
+    /// (heat leaves tissue, cooling)** and **negative when tissue is colder
+    /// than blood (heat enters tissue, warming)**. Callers should
+    /// *subtract* this quantity from the tissue energy balance.
+    ///
+    /// Previously this function applied `.abs()` to `(T - T_blood)`, which
+    /// made every vessel always remove heat regardless of the temperature
+    /// difference — a violation of the second law in the
+    /// `T_tissue < T_blood` regime (e.g. cryotherapy, pre-ablation
+    /// recovery, sub-body-temperature initial conditions).
     #[must_use]
     pub fn cooling_rate(&self, i: usize, j: usize, k: usize, dx: f64, temperature: f64) -> f64 {
         let mut total_cooling = 0.0;
+        let delta_t = temperature - self.blood_temp;
 
         for &(vi, vj, vk, radius) in &self.vessels {
             let distance = ((k as f64 - vk as f64) * dx)
@@ -117,21 +136,20 @@ impl VesselCooling {
                 .sqrt();
 
             if distance < radius {
-                // Inside vessel - strong cooling dependent on flow velocity
-                // Nusselt number correlation: Nu = 0.023 * Re^0.8 * Pr^0.4
-                // Reynolds uses pipe diameter, not radius (Re = ρ·v·D/μ).
+                // Inside vessel — strong forced-convection cooling.
+                // Nusselt-Dittus-Boelter correlation Nu = 0.023·Re^0.8·Pr^0.4;
+                // Reynolds uses pipe diameter, not radius.
                 let reynolds = self.calculate_reynolds_number(2.0 * radius);
                 let prandtl: f64 = 7.0; // Blood Prandtl number
                 let nusselt = 0.023 * reynolds.powf(0.8) * prandtl.powf(0.4);
-
-                // Heat transfer coefficient scales with Nusselt number
-                let h = nusselt * 10.0; // Base heat transfer coefficient
-                total_cooling += h * (temperature - self.blood_temp).abs();
+                let h = nusselt * 10.0; // empirical scaling factor
+                total_cooling += h * delta_t;
             } else if distance < 2.0 * radius {
-                // Near vessel - moderate cooling with velocity effects
-                let velocity_factor = (self.velocity / 0.1).sqrt(); // Normalized to 10 cm/s
+                // Near-vessel boundary layer — moderate cooling with
+                // velocity-scaled coefficient.
+                let velocity_factor = (self.velocity / 0.1).sqrt();
                 let h = 100.0 * (2.0 - distance / radius) * velocity_factor;
-                total_cooling += h * (temperature - self.blood_temp).abs();
+                total_cooling += h * delta_t;
             }
         }
 
@@ -179,5 +197,33 @@ mod tests {
         // Far from vessel
         let cooling_far = vessel_model.cooling_rate(20, 20, 20, 1.0, 45.0);
         assert_eq!(cooling_far, 0.0);
+    }
+
+    /// Vessel cooling must flip sign when tissue is colder than blood.
+    ///
+    /// Newton's law of cooling `q = h·(T_tissue − T_blood)` requires that
+    /// q < 0 when T_tissue < T_blood — the vessel *heats* the surrounding
+    /// tissue. The previous .abs() guard violated this invariant by
+    /// always producing positive cooling regardless of the sign of ΔT.
+    #[test]
+    fn vessel_cooling_sign_flips_with_blood_temperature_difference() {
+        let mut vessel_model = VesselCooling::new();
+        vessel_model.add_vessel(5, 5, 5, 2.0);
+
+        // Tissue hotter than blood → positive cooling (heat leaves tissue).
+        let hot = vessel_model.cooling_rate(5, 5, 5, 1.0, 45.0);
+        assert!(hot > 0.0, "tissue at 45°C above blood at 37°C must give positive cooling, got {hot}");
+
+        // Tissue colder than blood → negative cooling (heat enters tissue).
+        let cold = vessel_model.cooling_rate(5, 5, 5, 1.0, 25.0);
+        assert!(cold < 0.0, "tissue at 25°C below blood at 37°C must give negative cooling, got {cold}");
+
+        // Symmetric ΔT must give exactly opposite-signed cooling.
+        let plus = vessel_model.cooling_rate(5, 5, 5, 1.0, 37.0 + 5.0);
+        let minus = vessel_model.cooling_rate(5, 5, 5, 1.0, 37.0 - 5.0);
+        assert!(
+            (plus + minus).abs() < 1.0e-9 * plus.abs(),
+            "symmetric ΔT must give antisymmetric cooling: plus={plus}, minus={minus}"
+        );
     }
 }
