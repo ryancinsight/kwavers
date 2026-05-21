@@ -23,7 +23,7 @@ pub mod utils;
 
 pub use adapter::FocusedSource;
 pub use arc::{ArcConfig, ArcSource};
-pub use bowl::{BowlConfig, BowlTransducer};
+pub use bowl::{BowlAngularBounds, BowlConfig, BowlTransducer};
 pub use cap::{SphericalCapConfig, SphericalCapElement, SphericalCapLayout};
 pub use multi_bowl::MultiBowlArray;
 pub use utils::{make_annular_array, make_bowl, ApodizationType};

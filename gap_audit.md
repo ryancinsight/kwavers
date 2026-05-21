@@ -190,6 +190,12 @@ theorems against an external published reconstruction.
   and reduced array geometry now live in `breast_ust_fwi::reduction` and are
   exposed through PyO3. The replication script no longer owns those clinical
   reduction formulas.
+- Corrected Ali 2025 operator-equivalence ownership: model-ranking residual
+  aggregation and source-excitation dispersion now live in
+  `breast_ust_fwi::diagnostics::operator` and are exposed through
+  `breast_fwi_operator_equivalence_diagnostics`. The Python
+  `operator_equivalence` support module now delegates aggregation to PyO3 and
+  remains responsible only for configuring model runs and report orchestration.
 - Completed the transcranial clinical/generic config boundary enough to restore
   compile gates: clinical entrypoints retain `TranscranialUstBornInversionConfig`
   for anatomy fields and pass `&config.linear` to generic linear-Born kernels.

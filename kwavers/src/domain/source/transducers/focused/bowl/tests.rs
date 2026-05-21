@@ -186,6 +186,46 @@ fn bowl_polar_bounds_support_annular_cutout_area() {
 }
 
 #[test]
+fn bowl_axis_projection_bounds_support_major_cap_area() {
+    let config =
+        BowlConfig::from_vertex_focus([0.0, 0.0, 0.16], [0.0, 0.0, 0.0], 0.32, 650.0e3, 1.0e6);
+    let bowl = BowlTransducer::with_axis_projection_bounds(config, -0.28, 0.98, 128).unwrap();
+    let summed_area: f64 = bowl.element_areas().iter().sum();
+    let expected_area = 2.0 * std::f64::consts::PI * 0.16_f64.powi(2) * (0.98 - -0.28);
+    let min_projection = bowl
+        .element_positions()
+        .iter()
+        .map(|position| position[2] / 0.16)
+        .fold(f64::INFINITY, f64::min);
+    let max_projection = bowl
+        .element_positions()
+        .iter()
+        .map(|position| position[2] / 0.16)
+        .fold(f64::NEG_INFINITY, f64::max);
+
+    assert_eq!(bowl.element_count(), 128);
+    assert!((summed_area - expected_area).abs() < 1.0e-14);
+    assert!((min_projection + 0.28).abs() < 0.02);
+    assert!((max_projection - 0.98).abs() < 0.02);
+}
+
+#[test]
+fn bowl_axis_projection_bounds_reject_invalid_domain() {
+    assert!(matches!(
+        BowlAngularBounds::from_axis_projection_bounds(-1.1, 0.9).unwrap_err(),
+        KwaversError::Validation(_)
+    ));
+    assert!(matches!(
+        BowlAngularBounds::from_axis_projection_bounds(0.5, 0.5).unwrap_err(),
+        KwaversError::Validation(_)
+    ));
+    assert!(matches!(
+        BowlAngularBounds::from_axis_projection_bounds(-0.2, 1.1).unwrap_err(),
+        KwaversError::Validation(_)
+    ));
+}
+
+#[test]
 fn bowl_rejects_nonfinite_or_degenerate_domains() {
     let mut zero_radius = BowlConfig::default();
     zero_radius.radius_of_curvature = 0.0;

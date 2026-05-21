@@ -266,3 +266,198 @@ fn test_fwi_forward_medium_sound_speed_matches_model() {
     assert!((c_bg - 1800.0).abs() < 1.0, "background speed mismatch");
     assert!((c_anom - 3200.0).abs() < 1.0, "anomaly speed mismatch");
 }
+
+/// Verify `resolved_density` returns the caller-supplied heterogeneous field
+/// when present and falls back to `RHO_SEISMIC_REF` when absent.
+///
+/// ## Theorem
+/// `FwiProcessor::resolved_density` is the single source of truth for the
+/// density used in both forward and adjoint medium construction and in the
+/// gradient scaling, so it must (i) preserve a supplied field bit-exactly,
+/// (ii) reject mismatched shapes, and (iii) reject non-physical (non-finite
+/// or non-positive) entries.
+/// # Panics
+/// - Panics on any assertion failure.
+#[test]
+fn test_fwi_resolved_density_heterogeneous_and_default() {
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).expect("grid");
+    let dims = grid.dimensions();
+
+    // Default: no density supplied → constant RHO_SEISMIC_REF.
+    let default_processor = FwiProcessor::default();
+    let rho_default = default_processor
+        .resolved_density(&grid)
+        .expect("default density resolution must succeed");
+    assert_eq!(rho_default.dim(), dims);
+    assert!(rho_default
+        .iter()
+        .all(|&v| (v - RHO_SEISMIC_REF).abs() < f64::EPSILON));
+
+    // Heterogeneous: cube of 1500 kg/m³ with a 2500 kg/m³ inclusion.
+    let mut rho_field = Array3::from_elem(dims, 1500.0_f64);
+    rho_field[[4, 4, 4]] = 2500.0;
+    let het_processor = FwiProcessor::default()
+        .with_density(rho_field.clone())
+        .expect("heterogeneous density must validate");
+    let rho_resolved = het_processor.resolved_density(&grid).expect("resolution");
+    assert_eq!(
+        rho_resolved, rho_field,
+        "heterogeneous field must round-trip"
+    );
+
+    // Shape mismatch must be rejected.
+    let wrong_shape = Array3::from_elem((4, 4, 4), 1500.0_f64);
+    let mismatched_processor = FwiProcessor::default()
+        .with_density(wrong_shape)
+        .expect("validation only rejects non-finite / non-positive entries");
+    let err = mismatched_processor.resolved_density(&grid);
+    assert!(err.is_err(), "shape mismatch must fail at resolution");
+
+    // Non-physical values must be rejected at the builder.
+    let mut bad_rho = Array3::from_elem(dims, 1500.0_f64);
+    bad_rho[[0, 0, 0]] = -1.0;
+    assert!(FwiProcessor::default().with_density(bad_rho).is_err());
+
+    let mut nan_rho = Array3::from_elem(dims, 1500.0_f64);
+    nan_rho[[0, 0, 0]] = f64::NAN;
+    assert!(FwiProcessor::default().with_density(nan_rho).is_err());
+}
+
+/// Verify the heterogeneous-ρ gradient differs from the constant-ρ gradient
+/// by the prescribed local factor ρ_ref / ρ(x).
+///
+/// ## Theorem (Plessix 2006, eq. 12)
+/// The acoustic velocity-model gradient is
+/// `g_c(x) = -(2 / (ρ(x) · c(x)³)) · ∫ p̈_fwd · λ dt`.
+/// Holding the velocity model, source, geometry, and time-stepping fixed
+/// and supplying a density field `ρ(x) = α · RHO_SEISMIC_REF` for some
+/// spatially varying α(x) > 0 must scale the gradient pointwise by
+/// `1/α(x)` relative to the constant-density baseline.
+///
+/// We verify this on a tiny 8³ domain so that the test runs in seconds.
+/// # Panics
+/// - Panics on any assertion failure or solver error.
+#[test]
+fn test_fwi_heterogeneous_density_gradient_scales_per_voxel() {
+    let (nx, ny, nz) = (8usize, 8, 8);
+    let dx = 1e-3;
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx).expect("grid");
+    let dims = (nx, ny, nz);
+
+    // Homogeneous velocity model: 1500 m/s + 5% Gaussian-ish perturbation
+    // around the centre so the gradient is non-trivial.
+    let mut model = Array3::from_elem(dims, 1500.0_f64);
+    for ((ix, iy, iz), value) in model.indexed_iter_mut() {
+        let r2 = (ix as f64 - 3.5).powi(2) + (iy as f64 - 3.5).powi(2) + (iz as f64 - 3.5).powi(2);
+        *value += 75.0 * (-r2 / 4.0).exp();
+    }
+
+    // Minimal FWI geometry: one source at (2,4,4), one receiver line at ix=6.
+    let mut sensor_mask = Array3::from_elem(dims, false);
+    for iy in 2..6 {
+        for iz in 2..6 {
+            sensor_mask[[6, iy, iz]] = true;
+        }
+    }
+    let nt = 64usize;
+    let dt = 1e-7;
+
+    let mut p_mask = Array3::from_elem(dims, 0.0_f64);
+    p_mask[[2, 4, 4]] = 1.0;
+    let mut p_signal = Array2::zeros((1, nt));
+    for t in 0..16 {
+        let phase = (t as f64) * 0.4;
+        p_signal[[0, t]] = (-phase * phase).exp() * (2.0 * phase).sin();
+    }
+    let source = GridSource {
+        p0: None,
+        u0: None,
+        p_mask: Some(p_mask),
+        p_signal: Some(p_signal),
+        p_mode: SourceMode::Additive,
+        u_mask: None,
+        u_signal: None,
+        u_mode: SourceMode::default(),
+    };
+    let geometry = FwiGeometry::new(source, sensor_mask).expect("geometry");
+
+    let parameters = FwiParameters {
+        nt,
+        dt,
+        frequency: 5e5,
+        ..FwiParameters::default()
+    };
+
+    // Baseline: constant-density processor.
+    let baseline = FwiProcessor::new(parameters.clone());
+    let (synth_const, history_const) = baseline
+        .forward_model(&model, &geometry, &grid)
+        .expect("baseline forward");
+    let observed = Array2::zeros(synth_const.dim()); // arbitrary "data" so residual is non-zero
+    let residual = baseline
+        .compute_adjoint_source(&observed, &synth_const)
+        .expect("residual");
+    let adjoint_source_const = baseline
+        .build_adjoint_source(&residual, &geometry)
+        .expect("adjoint source");
+    let gradient_const = baseline
+        .adjoint_model(&adjoint_source_const, &model, &grid, &history_const, None)
+        .expect("baseline gradient");
+
+    // Heterogeneous: ρ(x) = α(x) · RHO_SEISMIC_REF with α = 1.0 except a
+    // 2× factor in a single voxel. The forward medium changes, but for a
+    // small perturbation the gradient at well-separated voxels is dominated
+    // by the local 1/ρ scaling.
+    let mut alpha = Array3::from_elem(dims, 1.0_f64);
+    alpha[[5, 5, 5]] = 2.0;
+    let rho_het = alpha.mapv(|a| a * RHO_SEISMIC_REF);
+    let het_processor = FwiProcessor::new(parameters)
+        .with_density(rho_het.clone())
+        .expect("density build");
+    let (synth_het, history_het) = het_processor
+        .forward_model(&model, &geometry, &grid)
+        .expect("het forward");
+    let residual_het = het_processor
+        .compute_adjoint_source(&observed, &synth_het)
+        .expect("het residual");
+    let adjoint_source_het = het_processor
+        .build_adjoint_source(&residual_het, &geometry)
+        .expect("het adjoint source");
+    let gradient_het = het_processor
+        .adjoint_model(&adjoint_source_het, &model, &grid, &history_het, None)
+        .expect("het gradient");
+
+    // The unperturbed-ρ voxels see the same scaling as the baseline
+    // (forward & adjoint wavefields are perturbed only locally near (5,5,5)
+    // through medium contrast; far voxels are essentially identical).
+    // The perturbed voxel must have a gradient ≈ baseline / 2 because
+    // ρ doubled there.
+    let g_baseline_at_perturbed = gradient_const[[5, 5, 5]];
+    let g_het_at_perturbed = gradient_het[[5, 5, 5]];
+    assert!(
+        g_baseline_at_perturbed.abs() > 1e-12,
+        "baseline gradient at perturbed voxel must be non-trivial; got {g_baseline_at_perturbed:e}"
+    );
+    let ratio = g_het_at_perturbed / g_baseline_at_perturbed;
+    // Tolerance accounts for the secondary forward-wavefield perturbation
+    // induced by the density contrast on a single voxel.
+    assert!(
+        (ratio - 0.5).abs() < 0.1,
+        "heterogeneous-ρ gradient at doubled-ρ voxel must be ~half the \
+         constant-ρ value; ratio = {ratio:.4}"
+    );
+
+    // Sanity: the heterogeneous-ρ gradient is not just a global rescaling
+    // of the baseline — pick a far voxel and verify it tracks the baseline
+    // (no 1/2 factor) within tolerance.
+    let g_baseline_far = gradient_const[[1, 1, 1]];
+    let g_het_far = gradient_het[[1, 1, 1]];
+    if g_baseline_far.abs() > 1e-12 {
+        let far_ratio = g_het_far / g_baseline_far;
+        assert!(
+            (far_ratio - 1.0).abs() < 0.2,
+            "heterogeneous-ρ gradient at unperturbed voxel must track \
+             baseline within wavefield perturbation; ratio = {far_ratio:.4}"
+        );
+    }
+}

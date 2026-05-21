@@ -351,6 +351,14 @@ breast-imaging reconstruction.
   those bindings instead of Python-owned domain formulas. The determined
   4x4x3/two-frequency probe preserves the Rust-owned report values: true-model
   normalized residual `0.523411`, RMSE `54.6750` m/s, and PCC `0.110968`.
+- **[done] [minor] T8r: Rust-owned operator-equivalence diagnostics — CLOSED 2026-05-21.**
+  Moved forward-operator equivalence aggregation into
+  `kwavers::clinical::imaging::reconstruction::breast_ust_fwi::diagnostics`.
+  `pykwavers` now exposes `breast_fwi_operator_equivalence_diagnostics`, and
+  the Python Ali support module delegates residual/source-excitation
+  aggregation across single-scatter Born, dense CBS, and absorbed spectral CBS
+  to that binding. This keeps Python as orchestration/reporting while preserving
+  the existing reduced-probe model ordering.
 - **[done] [patch] T8n: focused-bowl terminology cleanup — CLOSED 2026-05-21.**
   Removed residual transcranial vendor/helmet labels from book examples and
   documentation, renamed the Chapter 25 phase-correction artifact stem to

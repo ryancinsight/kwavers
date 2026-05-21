@@ -7,9 +7,6 @@ from typing import Any
 
 import numpy as np
 
-from .forward_consistency import scaled_observation_residual_metrics
-from .source_excitation import source_excitation_diagnostics
-
 PROPAGATION_MODELS = (
     "single_scatter_born",
     "dense_convergent_born",
@@ -96,46 +93,24 @@ def operator_equivalence_diagnostics(
     time_steps_per_frequency: Sequence[int],
     frequency_bin_start_steps_per_frequency: Sequence[int],
 ) -> dict[str, Any]:
-    if not predictions_by_model:
-        raise ValueError("predictions_by_model must not be empty")
-
-    per_model = []
-    for model, predicted in predictions_by_model.items():
-        residual = scaled_observation_residual_metrics(predicted, observed)
-        excitation = source_excitation_diagnostics(
-            predicted,
-            observed,
-            frequencies_hz,
-            source_amplitude_pa,
-            time_step_s,
-            time_steps_per_frequency,
-            frequency_bin_start_steps_per_frequency,
-        )
-        per_model.append(
-            {
-                "model": str(model),
-                "normalized_l2_residual": float(residual["normalized_l2_residual"]),
-                "row_normalized_l2_residual_mean": float(
-                    residual["row_normalized_l2_residual_mean"]
-                ),
-                "source_scale_magnitude_coefficient_of_variation": float(
-                    excitation["max_source_scale_magnitude_coefficient_of_variation"]
-                ),
-                "source_scale_phase_span_rad": float(
-                    excitation["max_source_scale_phase_span_rad"]
-                ),
-            }
-        )
-
-    per_model.sort(key=lambda entry: entry["normalized_l2_residual"])
-    best = per_model[0]
-    worst = per_model[-1]
-    return {
-        "model_count": len(per_model),
-        "best_model": best["model"],
-        "best_normalized_l2_residual": best["normalized_l2_residual"],
-        "worst_model": worst["model"],
-        "worst_normalized_l2_residual": worst["normalized_l2_residual"],
-        "residual_spread": worst["normalized_l2_residual"] - best["normalized_l2_residual"],
-        "per_model": per_model,
+    predictions = {
+        str(model): np.asarray(predicted, dtype=np.complex128)
+        for model, predicted in predictions_by_model.items()
     }
+    return dict(
+        _kw().breast_fwi_operator_equivalence_diagnostics(
+            predictions,
+            np.asarray(observed, dtype=np.complex128),
+            [float(value) for value in frequencies_hz],
+            float(source_amplitude_pa),
+            float(time_step_s),
+            [int(value) for value in time_steps_per_frequency],
+            [int(value) for value in frequency_bin_start_steps_per_frequency],
+        )
+    )
+
+
+def _kw() -> Any:
+    import pykwavers as kw
+
+    return kw

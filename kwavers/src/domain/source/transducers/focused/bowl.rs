@@ -18,6 +18,8 @@ use super::cap::{SphericalCapConfig, SphericalCapLayout};
 mod presets;
 mod span;
 
+pub use span::BowlAngularBounds;
+
 #[cfg(test)]
 mod tests;
 

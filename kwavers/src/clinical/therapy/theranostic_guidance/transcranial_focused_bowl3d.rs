@@ -25,7 +25,7 @@ use ndarray::{s, Array3};
 
 use crate::{
     core::error::{KwaversError, KwaversResult},
-    domain::source::transducers::focused::{BowlConfig, BowlTransducer},
+    domain::source::transducers::focused::{BowlAngularBounds, BowlConfig, BowlTransducer},
 };
 
 use super::geometry::{is_boundary_3d, Point3};
@@ -333,12 +333,9 @@ fn calvarium_cap_elements(
         BOWL_LAYOUT_UNIT_FREQUENCY_HZ,
         BOWL_LAYOUT_UNIT_AMPLITUDE_PA,
     );
-    let layout = BowlTransducer::with_polar_bounds(
-        config,
-        BOWL_CAP_UNIT_Z_MAX.acos(),
-        BOWL_CAP_UNIT_Z_MIN.acos(),
-        count,
-    )?;
+    let cap_bounds =
+        BowlAngularBounds::from_axis_projection_bounds(BOWL_CAP_UNIT_Z_MIN, BOWL_CAP_UNIT_Z_MAX)?;
+    let layout = BowlTransducer::with_angular_bounds(config, cap_bounds, count)?;
 
     Ok(layout
         .element_positions()

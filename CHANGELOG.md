@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added (2026-05-21) - Breast FWI Rust-Owned Operator Equivalence Diagnostics
+
+- [minor] Move Ali 2025 forward-operator equivalence aggregation into
+  `kwavers::clinical::imaging::reconstruction::breast_ust_fwi::diagnostics`.
+  Expose `breast_fwi_operator_equivalence_diagnostics` through PyO3 so Python
+  no longer owns the residual/source-excitation aggregation across
+  `single_scatter_born`, `dense_convergent_born`, and
+  `spectral_convergent_born`.
+
 ### Added (2026-05-21) - Breast FWI Rust-Owned Reduced-Domain Preparation
 
 - [minor] Move Ali 2025 reduced phantom decimation, center cropping,

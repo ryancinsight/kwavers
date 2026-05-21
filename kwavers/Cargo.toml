@@ -44,9 +44,9 @@ log = "0.4"
 env_logger = "0.11"
 tracing = { version = "0.1", features = ["attributes"] }
 bitflags = "2.4"
-rand = "0.8"
-rand_distr = "0.4"
-rand_chacha = "0.3"
+rand = "0.9"
+rand_distr = "0.5"
+rand_chacha = "0.9"
 regex = "1.8"
 nifti = "0.17.0"
 # NOTE: the `dicom` crate is now pulled transitively via ritk-io (mandatory).

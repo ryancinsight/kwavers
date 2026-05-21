@@ -18,8 +18,8 @@ pub use dataset::{
     BreastUstPstdDataset, BreastUstPstdDatasetConfig, BREAST_UST_PSTD_DATASET_MODEL,
 };
 pub use diagnostics::{
-    acquisition_identifiability, diagnose_breast_ust_observation_pair, passive_receiver_mask,
-    forward_operator_equivalence_diagnostics, reconstruction_metrics,
+    acquisition_identifiability, diagnose_breast_ust_observation_pair,
+    forward_operator_equivalence_diagnostics, passive_receiver_mask, reconstruction_metrics,
     scaled_observation_residual_metrics, sine_frequency_bin_coefficient,
     source_channel_residual_diagnostics, source_excitation_diagnostics, source_receiver_mask,
     table1_parity, BreastUstAcquisitionIdentifiability,

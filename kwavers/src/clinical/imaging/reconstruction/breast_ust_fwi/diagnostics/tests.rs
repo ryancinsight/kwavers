@@ -120,3 +120,49 @@ fn identifiability_reports_rank_upper_bound() {
     assert_eq!(report.informative_real_dof_upper_bound, 24);
     assert!(report.underdetermined_by_rank_upper_bound);
 }
+
+#[test]
+fn forward_operator_equivalence_selects_lowest_residual_model() {
+    let accurate = Array3::from_shape_vec(
+        (1, 2, 2),
+        vec![
+            Complex64::new(1.0, 0.0),
+            Complex64::new(2.0, 0.5),
+            Complex64::new(3.0, -1.0),
+            Complex64::new(4.0, 0.25),
+        ],
+    )
+    .expect("shape");
+    let mut distorted = accurate.clone();
+    distorted[[0, 0, 1]] *= Complex64::new(0.25, 0.0);
+    distorted[[0, 1, 1]] *= Complex64::new(-0.5, 1.0);
+    let coefficient = sine_frequency_bin_coefficient(100.0, 0.001, 40, 20).expect("coefficient");
+    let observed = accurate.mapv(|value| 4.0 * coefficient * value);
+    let predictions = [
+        BreastUstForwardOperatorPrediction {
+            model: "distorted",
+            pressure: &distorted,
+        },
+        BreastUstForwardOperatorPrediction {
+            model: "accurate",
+            pressure: &accurate,
+        },
+    ];
+
+    let diagnostics = forward_operator_equivalence_diagnostics(
+        &predictions,
+        &observed,
+        &[100.0],
+        4.0,
+        0.001,
+        &[40],
+        &[20],
+    )
+    .expect("diagnostics");
+
+    assert_eq!(diagnostics.model_count, 2);
+    assert_eq!(diagnostics.best_model, "accurate");
+    assert!(diagnostics.best_normalized_l2_residual <= 1.0e-14);
+    assert_eq!(diagnostics.worst_model, "distorted");
+    assert!(diagnostics.residual_spread > 0.0);
+}

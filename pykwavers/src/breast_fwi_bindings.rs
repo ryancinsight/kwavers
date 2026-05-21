@@ -7,6 +7,7 @@
 mod dataset;
 mod diagnostics;
 mod direct_field;
+mod operator_equivalence;
 mod phantom;
 mod reduction;
 
@@ -364,6 +365,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(generate_breast_fwi_pstd_dataset, m)?)?;
     direct_field::register(m)?;
     diagnostics::register(m)?;
+    operator_equivalence::register(m)?;
     reduction::register(m)?;
     m.add_function(wrap_pyfunction!(invert_breast_fwi, m)?)?;
     Ok(())
