@@ -177,30 +177,34 @@ impl ElectromagneticFdtdSolver {
         let dy = self.grid.dy;
         let dz = self.grid.dz;
 
-        // Update Ex: ∂Ex/∂t = (1/ε) (∂Hz/∂y - ∂Hy/∂z) - (σ/ε) Ex
+        // Update Ex: ∂Ex/∂t = (1/ε)(∂Hz/∂y − ∂Hy/∂z) − (σ/ε)Ex
+        //
+        // Crank-Nicolson loss update (Taflove & Hagness §3.7, Eq. 3.54):
+        //   ca = (2ε − σ·dt) / (2ε + σ·dt)
+        //   cb = 2·dt / (2ε + σ·dt)
+        //   E^{n+1} = ca·E^n + cb·curl_H^{n+1/2} / ε
+        //
+        // This is unconditionally stable for the loss term (unlike forward-Euler
+        // which requires σ·dt/ε < 2 separately from the CFL condition).  For σ=0
+        // the update reduces to the lossless Yee update E += dt/ε·curl_H.
         for i in 0..self.grid.nx {
             for j in 1..self.grid.ny {
                 for k in 1..self.grid.nz {
                     let curl_h_x = (self.hz[[i, j, k]] - self.hz[[i, j - 1, k]]) / dy
                         - (self.hy[[i, j, k]] - self.hy[[i, j, k - 1]]) / dz;
 
-                    let mi = i;
-                    let mj = j - 1;
-                    let mk = k - 1;
-                    let eps = self.permittivity_at(mi, mj, mk);
-                    let sigma = self.conductivity_at(mi, mj, mk);
+                    let eps = self.permittivity_at(i, j - 1, k - 1);
+                    let sigma = self.conductivity_at(i, j - 1, k - 1);
 
-                    let decay_term = if sigma > 0.0 {
-                        (sigma / eps) * self.ex[[i, j, k]]
-                    } else {
-                        0.0
-                    };
-                    self.ex[[i, j, k]] += self.dt * (curl_h_x / eps - decay_term);
+                    let denom = 2.0_f64.mul_add(eps, sigma * self.dt);
+                    let ca = (2.0_f64.mul_add(eps, -(sigma * self.dt))) / denom;
+                    let cb = 2.0 * self.dt / denom;
+                    self.ex[[i, j, k]] = ca.mul_add(self.ex[[i, j, k]], cb * curl_h_x);
                 }
             }
         }
 
-        // Update Ey: ∂Ey/∂t = (1/ε) (∂Hx/∂z - ∂Hz/∂x) - (σ/ε) Ey
+        // Update Ey: ∂Ey/∂t = (1/ε)(∂Hx/∂z − ∂Hz/∂x) − (σ/ε)Ey
         for i in 1..self.grid.nx {
             for j in 0..self.grid.ny {
                 for k in 1..self.grid.nz {
@@ -210,17 +214,15 @@ impl ElectromagneticFdtdSolver {
                     let eps = self.permittivity_at(i - 1, j, k - 1);
                     let sigma = self.conductivity_at(i - 1, j, k - 1);
 
-                    let decay_term = if sigma > 0.0 {
-                        (sigma / eps) * self.ey[[i, j, k]]
-                    } else {
-                        0.0
-                    };
-                    self.ey[[i, j, k]] += self.dt * (curl_h_y / eps - decay_term);
+                    let denom = 2.0_f64.mul_add(eps, sigma * self.dt);
+                    let ca = (2.0_f64.mul_add(eps, -(sigma * self.dt))) / denom;
+                    let cb = 2.0 * self.dt / denom;
+                    self.ey[[i, j, k]] = ca.mul_add(self.ey[[i, j, k]], cb * curl_h_y);
                 }
             }
         }
 
-        // Update Ez: ∂Ez/∂t = (1/ε) (∂Hy/∂x - ∂Hx/∂y) - (σ/ε) Ez
+        // Update Ez: ∂Ez/∂t = (1/ε)(∂Hy/∂x − ∂Hx/∂y) − (σ/ε)Ez
         for i in 1..self.grid.nx {
             for j in 1..self.grid.ny {
                 for k in 0..self.grid.nz {
@@ -230,12 +232,10 @@ impl ElectromagneticFdtdSolver {
                     let eps = self.permittivity_at(i - 1, j - 1, k);
                     let sigma = self.conductivity_at(i - 1, j - 1, k);
 
-                    let decay_term = if sigma > 0.0 {
-                        (sigma / eps) * self.ez[[i, j, k]]
-                    } else {
-                        0.0
-                    };
-                    self.ez[[i, j, k]] += self.dt * (curl_h_z / eps - decay_term);
+                    let denom = 2.0_f64.mul_add(eps, sigma * self.dt);
+                    let ca = (2.0_f64.mul_add(eps, -(sigma * self.dt))) / denom;
+                    let cb = 2.0 * self.dt / denom;
+                    self.ez[[i, j, k]] = ca.mul_add(self.ez[[i, j, k]], cb * curl_h_z);
                 }
             }
         }
@@ -278,8 +278,11 @@ impl ElectromagneticFdtdSolver {
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {
                 for k in 1..self.grid.nz {
+                    // ∂Ey/∂x uses dx; ∂Ex/∂y uses dy — NOT dz.
+                    // Previous code divided by dz here, producing a wrong curl
+                    // and systematically wrong Hz evolution in any non-cubic grid.
                     let curl_e_z = (self.ey[[i + 1, j, k]] - self.ey[[i, j, k]]) / dx
-                        - (self.ex[[i, j + 1, k]] - self.ex[[i, j, k]]) / dz;
+                        - (self.ex[[i, j + 1, k]] - self.ex[[i, j, k]]) / dy;
 
                     let mu = self.permeability_at(i, j, k - 1);
                     self.hz[[i, j, k]] -= self.dt * curl_e_z / mu;
