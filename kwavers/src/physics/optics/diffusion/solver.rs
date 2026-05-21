@@ -48,10 +48,19 @@ impl LightDiffusion {
     /// * `enable_scattering` - Enable scattering calculations
     ///
     /// # Mathematical Foundation
-    /// The photon diffusion equation is derived from the radiative transfer equation
-    /// under the diffusion approximation (P1 approximation):
+    /// The time-dependent photon diffusion equation derived from the
+    /// radiative transfer equation under the P1 (diffusion) approximation
+    /// is (Wang & Wu 2007, *Biomedical Optics*, Eq. 5.7; Arridge 1999):
     ///
-    /// ∂φ/∂t = ∇·(D∇φ) - μₐφ + S
+    /// ```text
+    /// (1/c) ∂φ/∂t = ∇·(D∇φ) - μₐφ + S
+    /// ```
+    ///
+    /// equivalently `∂φ/∂t = c·∇·(D∇φ) - c·μₐ·φ + c·S`, where `c = c₀/n` is
+    /// the speed of light in the medium with refractive index `n`. The
+    /// factor of `c` is required for dimensional consistency: with
+    /// `D` in metres and `μₐ` in m⁻¹, `D∇²φ` and `μₐφ` both have units of
+    /// `[φ]/m`; multiplication by `c` (m/s) recovers `[φ]/s = ∂φ/∂t`.
     ///
     /// where:
     /// - φ is the photon fluence rate [photons/(m²·s)]
@@ -124,15 +133,18 @@ impl LightDiffusionModelTrait for LightDiffusion {
         // Get dimensions
         let (nx, ny, nz) = light_field.dim();
 
-        // Photon diffusion equation: ∂φ/∂t = ∇·(D∇φ) - μₐφ + S
-        // where φ is photon fluence rate, D is diffusion coefficient, μₐ is absorption coefficient
+        // Time-dependent photon diffusion equation under the P1 approximation:
         //
-        // Physical diffusion coefficient from optical properties
+        //   (1/c) ∂φ/∂t = ∇·(D∇φ) − μₐ φ + S
+        //
+        // equivalently ∂φ/∂t = c (D ∇²φ − μₐ φ + S), where c = c₀/n is the
+        // speed of light in the medium (n = refractive index of the tissue).
+        // Without the factor of c, the RHS has units [φ]/m, not [φ]/s
+        // (D is in m, μₐ in m⁻¹, ∇² in m⁻²), so the absolute time scale would
+        // be off by a factor of c — a multi-orders-of-magnitude error.
         let diffusion_coefficient = self.optical_properties.diffusion_coefficient();
         let absorption_coeff = self.optical_properties.absorption_coefficient;
-
-        // Convert units if necessary (grid is in meters, coefficients in m⁻¹)
-        // diffusion_coefficient is in m²/s, absorption_coeff in m⁻¹
+        let c_medium = SPEED_OF_LIGHT / self.optical_properties.refractive_index;
 
         // Create a temporary array to store the updated values
         let mut updated_field = light_field.to_owned();
@@ -166,11 +178,15 @@ impl LightDiffusionModelTrait for LightDiffusion {
                         ),
                     );
 
-                    // Update using diffusion equation: ∂φ/∂t = D∇²φ - μₐφ + S
+                    // Forward-Euler update of ∂φ/∂t = c·(D∇²φ − μₐφ + S).
+                    // The c factor (speed of light in medium) converts the
+                    // RHS from [φ]/m to [φ]/s for consistent integration in
+                    // physical time.
                     let update = dt.mul_add(
-                        diffusion_coefficient
-                            .mul_add(laplacian_phi, -(absorption_coeff * center_val))
-                            + source_term,
+                        c_medium
+                            * (diffusion_coefficient
+                                .mul_add(laplacian_phi, -(absorption_coeff * center_val))
+                                + source_term),
                         center_val,
                     );
 
@@ -183,8 +199,13 @@ impl LightDiffusionModelTrait for LightDiffusion {
         // Update the light field
         light_field.assign(&updated_field);
 
-        // Update fluence_rate to match
-        self.fluence_rate.assign(fields);
+        // Mirror the freshly updated light channel into the public
+        // `fluence_rate` snapshot exposed via `LightDiffusionModelTrait`.
+        // The snapshot is sized (1, nx, ny, nz); copying the full
+        // multi-channel `fields` array would broadcast-fail at runtime.
+        self.fluence_rate
+            .index_axis_mut(Axis(0), 0)
+            .assign(&light_field);
 
         self.update_time = start_time.elapsed().as_secs_f64();
         self.call_count += 1;

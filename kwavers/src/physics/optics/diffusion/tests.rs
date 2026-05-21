@@ -54,6 +54,47 @@ fn test_diffusion_approximation_validity() {
 }
 
 #[test]
+fn uniform_fluence_decays_at_rate_c_mu_a() {
+    // With uniform initial fluence the Laplacian is zero in the interior
+    // and the source is zero, so the time-dependent photon diffusion
+    // equation collapses to ∂φ/∂t = -c·μₐ·φ, with single-step
+    // forward-Euler update φ_new = φ_old·(1 - dt·c·μₐ).
+    //
+    // The factor of c (≈ 2.14×10⁸ m/s in tissue) is required for
+    // dimensional consistency: without it the predicted decay would be
+    // ~9 orders of magnitude too slow.
+    use crate::core::constants::fundamental::SPEED_OF_LIGHT;
+    use crate::domain::field::indices::LIGHT_IDX;
+    use crate::physics::acoustics::traits::LightDiffusionModelTrait;
+    use ndarray::Array4;
+
+    let grid = crate::domain::grid::Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let props = DiffusionOpticalProperties {
+        absorption_coefficient: 10.0,          // m⁻¹
+        reduced_scattering_coefficient: 1.0e3, // m⁻¹, μₛ' ≫ μₐ
+        refractive_index: 1.4,
+    };
+    let mut solver = LightDiffusion::new(&grid, props, false, false);
+
+    let phi0 = 1.0_f64;
+    let mut fields: Array4<f64> = Array4::from_elem((LIGHT_IDX + 1, 8, 8, 8), phi0);
+    let source: ndarray::Array3<f64> = ndarray::Array3::zeros((8, 8, 8));
+    let medium = crate::domain::medium::homogeneous::HomogeneousMedium::water(&grid);
+    let dt = 1.0e-12_f64; // 1 ps; chosen so dt·c·μₐ ≪ 1 (≈ 2.14e-3).
+
+    solver.update_light(&mut fields, &source, &grid, &medium, dt);
+
+    let c_medium = SPEED_OF_LIGHT / props.refractive_index;
+    let expected = phi0 * (1.0 - dt * c_medium * props.absorption_coefficient);
+    let observed = fields[[LIGHT_IDX, 4, 4, 4]];
+    let rel_err = (observed - expected).abs() / expected;
+    assert!(
+        rel_err < 1.0e-12,
+        "uniform-fluence decay step expected {expected:.12}, got {observed:.12} (rel err {rel_err:.2e})"
+    );
+}
+
+#[test]
 fn test_light_diffusion_solver_initialization() {
     let grid = crate::domain::grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
 
