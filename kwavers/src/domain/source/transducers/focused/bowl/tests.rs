@@ -1,5 +1,7 @@
 use super::*;
 use crate::core::error::KwaversError;
+use crate::domain::grid::Grid;
+use std::f64::consts::PI;
 
 #[test]
 fn bowl_layout_uses_canonical_equal_area_cap() {
@@ -103,6 +105,64 @@ fn explicit_element_count_owns_discretization_option() {
     let bowl = BowlTransducer::with_element_count(config, 32).unwrap();
 
     assert_eq!(bowl.element_count(), 32);
+}
+
+#[test]
+fn bowl_source_uses_axis_specific_grid_spacing_and_origin() {
+    let config = BowlConfig {
+        radius_of_curvature: 0.08,
+        diameter: 0.04,
+        center: [0.0, 0.0, -0.08],
+        focus: [0.0, 0.0, 0.0],
+        frequency: 1.25e6,
+        amplitude: 4.0e5,
+        phase: 0.31,
+        apply_directivity: false,
+        ..Default::default()
+    };
+    let bowl = BowlTransducer::with_element_count(config.clone(), 1).unwrap();
+    let mut grid = Grid::new(3, 4, 5, 0.001, 0.002, 0.003).unwrap();
+    grid.origin = [0.011, -0.017, 0.023];
+
+    let time = 0.37e-6;
+    let source = bowl.generate_source(&grid, time).unwrap();
+    let omega = 2.0 * PI * config.frequency;
+    let focus_delays = bowl.calculate_focus_delays();
+    let element_position = bowl.element_positions()[0];
+    let element_area = bowl.element_areas()[0];
+    let phase = omega.mul_add(time - focus_delays[0], config.phase);
+
+    for ix in 0..grid.nx {
+        for iy in 0..grid.ny {
+            for iz in 0..grid.nz {
+                let point = [
+                    (ix as f64).mul_add(grid.dx, grid.origin[0]),
+                    (iy as f64).mul_add(grid.dy, grid.origin[1]),
+                    (iz as f64).mul_add(grid.dz, grid.origin[2]),
+                ];
+                let distance = (point[2] - element_position[2])
+                    .mul_add(
+                        point[2] - element_position[2],
+                        (point[1] - element_position[1]).mul_add(
+                            point[1] - element_position[1],
+                            (point[0] - element_position[0]).powi(2),
+                        ),
+                    )
+                    .sqrt();
+                let expected = if distance > 0.0 {
+                    config.amplitude * element_area * phase.sin() / (4.0 * PI * distance)
+                } else {
+                    0.0
+                };
+
+                assert!(
+                    (source[[ix, iy, iz]] - expected).abs() < expected.abs().max(1.0) * 1.0e-12,
+                    "source[{ix},{iy},{iz}] = {}, expected {expected}",
+                    source[[ix, iy, iz]]
+                );
+            }
+        }
+    }
 }
 
 #[test]
