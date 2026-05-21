@@ -1,5 +1,7 @@
 //! Tissue-specific absorption models
 
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
 use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use crate::core::constants::DB_TO_NP;
@@ -100,7 +102,7 @@ impl AbsorptionTissueProperties {
             lame_mu,
             thermal_expansion: 3.0e-4, // Typical for soft tissue [1/K]
             viscosity: 0.003,          // Typical for tissue [Pa·s]
-            surface_tension: 0.072,    // Similar to water [N/m]
+            surface_tension: SURFACE_TENSION_WATER, // Similar to water [N/m]
             gas_diffusion_coefficient: 2e-9, // Oxygen in tissue [m²/s]
             // Default optical properties for generic soft tissue at ~800nm (NIR)
             // Reference: Jacques (2013) "Optical properties of biological tissues: a review"
@@ -131,8 +133,8 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
         AbsorptionTissueProperties::new(
             0.0022,
             2.0,
-            1000.0,
-            1480.0,
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER,
             5.2,
             0.598,
             SPECIFIC_HEAT_WATER,
@@ -267,7 +269,7 @@ impl TissueAbsorption {
     /// Get attenuation in dB for given frequency and distance
     #[must_use]
     pub fn attenuation_db(&self, frequency: f64, distance_cm: f64) -> f64 {
-        let f_mhz = frequency / 1e6;
+        let f_mhz = frequency / MHZ_TO_HZ;
         self.properties.alpha_0 * f_mhz.powf(self.properties.y) * distance_cm
     }
 }
