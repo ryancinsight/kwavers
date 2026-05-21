@@ -123,7 +123,7 @@ class BrainSceneDefinition:
             "source_pressure_pa": self.transducer.diagnostic_source_pressure_pa,
         }
 
-    def helmet_pykwavers_kwargs(self) -> dict[str, Any]:
+    def focused_bowl_pykwavers_kwargs(self) -> dict[str, Any]:
         return {
             "target_fraction_xyz": self.target.fraction_xyz,
             "element_count": self.transducer.element_count,

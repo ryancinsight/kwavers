@@ -1,11 +1,11 @@
-//! `plan_brain_helmet_placement_from_ritk_ct` pyfunction.
+//! `plan_transcranial_focused_bowl_placement_from_ritk_ct` pyfunction.
 //!
 //! When `ct_nifti_path` does not exist on disk the function falls back to a
 //! built-in synthetic brain CT phantom with clinically realistic dimensions
 //! (see `kwavers::clinical::therapy::theranostic_guidance::synthetic`).
 
 use kwavers::clinical::therapy::theranostic_guidance::{
-    plan_brain_helmet_placement, synthetic::synthetic_brain_phantom,
+    plan_transcranial_focused_bowl_placement, synthetic::synthetic_brain_phantom,
 };
 use numpy::IntoPyArray;
 use pyo3::prelude::*;
@@ -25,7 +25,7 @@ use crate::ritk_image::load_ritk_nifti;
     target_fraction_xyz = None,
     scene_radius_m = None
 ))]
-pub fn plan_brain_helmet_placement_from_ritk_ct<'py>(
+pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
     py: Python<'py>,
     ct_nifti_path: &str,
     element_count: usize,
@@ -48,7 +48,7 @@ pub fn plan_brain_helmet_placement_from_ritk_ct<'py>(
 
     let placement = py
         .detach(|| {
-            plan_brain_helmet_placement(
+            plan_transcranial_focused_bowl_placement(
                 &ct,
                 spacing_mm,
                 element_count,
@@ -94,7 +94,7 @@ pub fn plan_brain_helmet_placement_from_ritk_ct<'py>(
             placement.focus_m.z_m,
         ),
     )?;
-    out.set_item("helmet_radius_m", placement.helmet_radius_m)?;
+    out.set_item("bowl_radius_m", placement.bowl_radius_m)?;
     out.set_item("intersection_fraction", placement.intersection_fraction)?;
     out.set_item("element_count", element_count)?;
     out.set_item("surface_stride", surface_stride)?;
@@ -108,7 +108,7 @@ pub fn plan_brain_helmet_placement_from_ritk_ct<'py>(
     }
     out.set_item(
         "geometry_model",
-        "ct_derived_calvarium_1024_element_helmet_with_skull_intersections",
+        "ct_derived_calvarium_1024_element_focused_bowl_with_skull_intersections",
     )?;
     out.set_item("synthetic_phantom", synthetic)?;
     Ok(out)

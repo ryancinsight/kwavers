@@ -4,7 +4,7 @@ use ndarray::Array3;
 
 /// Synthetic brain CT: ellipsoidal skull shell (cortical bone HU values)
 /// wrapping an ellipsoidal brain interior (soft tissue HU), surrounded by
-/// air. Used by `nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_
+/// air. Used by `nonlinear_3d_brain_focused_bowl_pipeline_is_input_sensitive_
 /// through_skull` to exercise the cavitation path through skull voxels
 /// where the heterogeneous-power-law absorption (`y = 2` for skull,
 /// `y ≈ 1.05` for brain) has its largest physical effect.

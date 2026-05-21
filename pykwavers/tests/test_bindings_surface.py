@@ -27,7 +27,8 @@ def test_public_symbols_are_exposed():
     assert hasattr(kw, "run_theranostic_inverse_from_ritk")
     assert hasattr(kw, "run_theranostic_nonlinear_3d_from_ritk")
     assert not hasattr(kw, "run_theranostic_fwi_from_ritk")
-    assert hasattr(kw, "plan_brain_helmet_placement_from_ritk_ct")
+    assert hasattr(kw, "plan_transcranial_focused_bowl_placement_from_ritk_ct")
+    assert not hasattr(kw, "plan_brain_helmet_placement_from_ritk_ct")
     assert hasattr(kw, "run_transcranial_fus_planning_from_ritk_ct")
     assert hasattr(kw, "run_transcranial_skull_adaptive_benchmark_from_ritk_ct")
 

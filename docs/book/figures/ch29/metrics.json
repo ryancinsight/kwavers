@@ -38,15 +38,15 @@
   "figures": [
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig01_device_placement_on_ct.png",
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig02_exposure_and_reconstruction.png",
-    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig03_brain_helmet_3d_placement.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch29\\fig03_brain_focused_bowl_3d_placement.png",
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig04_reconstruction_dynamic_range_diagnostics.png",
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig05_nonlinear_3d_westervelt_rp_cavitation.png",
     "D:\\kwavers\\docs\\book\\figures\\ch29\\fig06_controlled_linear_nonlinear_comparison.png"
   ],
-  "brain_helmet_3d": {
-    "geometry_model": "ct_derived_calvarium_1024_element_helmet_with_skull_intersections",
+  "brain_focused_bowl_3d": {
+    "geometry_model": "ct_derived_calvarium_1024_element_focused_bowl_with_skull_intersections",
     "element_count": 1024,
-    "helmet_radius_m": 0.16867803092091804,
+    "bowl_radius_m": 0.16867803092091804,
     "beam_probe_count": 72,
     "skull_intersection_count": 72,
     "skull_intersection_fraction": 1.0,
@@ -61,9 +61,9 @@
   "cases": [
     {
       "anatomy": "brain",
-      "device_model": "insightec_like_1024_element_helmet_projection",
-      "geometry_model": "insightec_like_1024_element_helmet_projection",
-      "placement_context_model": "insightec_like_1024_element_calvarium_helmet_3d",
+      "device_model": "insightec_like_1024_element_focused_bowl_projection",
+      "geometry_model": "insightec_like_1024_element_focused_bowl_projection",
+      "placement_context_model": "insightec_like_1024_element_calvarium_focused_bowl_3d",
       "operator_model": "finite_frequency_same_aperture_graph_laplacian_pcg",
       "operator_backend": "matrix_free_finite_frequency_same_aperture",
       "operator_storage_values": 307212,
@@ -448,7 +448,7 @@
       "model_family": "westervelt_3d_discrete_adjoint_fwi_plus_rayleigh_plesset_passive_inverse",
       "propagator_model": "heterogeneous_westervelt_fdtd_3d_second_order_discrete_adjoint",
       "cavitation_inverse_model": "rayleigh_plesset_subharmonic_green_projected_gradient_inverse",
-      "aperture_model": "insightec_like_calvarium_helmet_3d_westervelt_sources",
+      "aperture_model": "insightec_like_calvarium_focused_bowl_3d_westervelt_sources",
       "is_full_wave_inversion": true,
       "uses_nonlinear_wave_propagation": true,
       "uses_rayleigh_plesset": true,

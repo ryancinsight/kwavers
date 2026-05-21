@@ -45,7 +45,7 @@ impl PassiveOperator {
         let min_distance_m = 0.5 * spacing_m;
         // Path-integrated tissue power-law attenuation. The cavitation source
         // sits inside the body and the receiver sits on the body surface;
-        // for transcranial helmets the line crosses skull, whose attenuation
+        // for transcranial focused bowls the line crosses skull, whose attenuation
         // is ~26× soft tissue (Hamilton & Blackstock 1998 Table 4.1, Connor
         // & Hynynen 2002). Treeby & Cox 2010 / Szabo 1995: real tissue has a
         // per-class power-law exponent `y`, with `α(f) = α(1MHz) · f_MHz^y`.

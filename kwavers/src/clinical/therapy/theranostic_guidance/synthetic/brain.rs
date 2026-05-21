@@ -1,4 +1,4 @@
-//! Synthetic brain CT phantom for calvarium helmet placement verification.
+//! Synthetic brain CT phantom for calvarium focused-bowl placement verification.
 //!
 //! ## Physical specification
 //!
@@ -13,8 +13,8 @@
 //! - **Superior half** (z ≥ 64): smaller z-radius (48 voxels = 72 mm) simulates
 //!   the tapered skull dome.
 //!
-//! This asymmetry ensures `plan_brain_helmet_placement` correctly identifies
-//! z = 0 as inferior and z = 127 as superior, placing helmet elements on the
+//! This asymmetry ensures `plan_transcranial_focused_bowl_placement` correctly
+//! identifies z = 0 as inferior and z = 127 as superior, placing bowl elements on the
 //! calvarium (z > peak_z = 64).
 //!
 //! ## Layer structure
@@ -26,7 +26,7 @@
 //! | Brain   | interior                      |  40 | soft tissue        |
 //!
 //! The scalp and brain are both below the default skull_hu_threshold of 300 HU,
-//! matching the separation used by `plan_brain_helmet_placement`.
+//! matching the separation used by `plan_transcranial_focused_bowl_placement`.
 
 use ndarray::Array3;
 

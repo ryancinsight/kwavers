@@ -5,7 +5,7 @@ array is also the transmit/receive aperture for image formation and treatment
 monitoring. The current implementation covers three CT-derived finite-frequency
 inverse scenarios:
 
-- INSIGHTEC-like 1024-element transcranial helmet around the head CT.
+- INSIGHTEC-like 1024-element transcranial focused bowl around the head CT.
 - HistoSonics-like 256-element concave abdominal array at the skin surface for
   KiTS19 kidney tumor CT.
 - HistoSonics-like 256-element concave abdominal array at the skin surface for
@@ -45,9 +45,9 @@ not yet a joint `c/alpha/rho/beta/bubble-density` solve with one coupled
 KKT/Gauss-Newton system.
 
 Real systems cover adjacent pieces but not the exact deployed device implied by
-the tomotherapy analogy. Transcranial ultrasound FWI helmets have been
+the tomotherapy analogy. Transcranial ultrasound FWI focused bowls have been
 demonstrated experimentally for imaging, Exablate Neuro uses a CT/MR-planned
-1024-element therapeutic helmet, Edison histotripsy uses integrated diagnostic
+1024-element therapeutic focused bowl, Edison histotripsy uses integrated diagnostic
 ultrasound for liver targeting and bubble-cloud visualization, and research
 histotripsy systems use passive acoustic feedback. The implemented workflow is
 therefore a research simulation of a plausible same-aperture therapy/monitoring
@@ -444,7 +444,7 @@ The frequency dependence of the attenuation follows the per-voxel power law
 - **Cortical skull bone**: `y ≈ 2.0` (Connor & Hynynen 2002 measured 1.9 - 2.0
   across 0.5 - 3.5 MHz; matches classical Stokes-Kirchhoff viscous limit)
 
-For the brain helmet at a 650 kHz drive (325 kHz subharmonic), the skull
+For the brain focused bowl at a 650 kHz drive (325 kHz subharmonic), the skull
 attenuation with `y = 2` is `α(0.325 MHz) = α(1 MHz) · 0.325² ≈ 0.106 ·
 α(1 MHz)` — about 3× smaller than a naive `y = 1` extrapolation predicts.
 Without this correction, transcranial passive cavitation receive would be
@@ -520,7 +520,7 @@ satisfies `m^T L m = sum_(i,j in E) (m_i - m_j)^2 >= 0`. Adding
 1. Load CT/NIfTI with RITK and convert intensities into anatomy-specific
    acoustic property maps.
 2. Build the treatment aperture in the patient coordinate frame: calvarial
-   helmet for brain or external skin-normal arc for abdomen.
+   focused bowl for brain or external skin-normal arc for abdomen.
 3. Simulate the planned exposure with the same heterogeneous scalar acoustic
    forward solver used by the RTM branch, retaining only rolling wavefields and
    a raw peak-pressure accumulator.
@@ -579,11 +579,11 @@ The brain case reads the CT-aligned target and transducer pose from
 `CANONICAL_BRAIN_SCENE` in
 `pykwavers/examples/book/transcranial_planning/scene.py`. The slice-level
 finite-frequency inverse, Figure 5 nonlinear branch, and separate CT-derived
-3-D helmet placement resolve the same target fraction against their CT support
-and use the same 1024-element, 650 kHz, 0.150 m helmet definition. The 3-D view
+3-D focused-bowl placement resolve the same target fraction against their CT support
+and use the same 1024-element, 650 kHz, 0.150 m focused-bowl definition. The 3-D view
 renders the head surface, dense skull/calvarium surface points, the calvarium
-helmet element cloud, sampled beam paths, and the first dense-bone intersection
-on each sampled beam. The helmet cap is limited to the superior skull support
+focused-bowl element cloud, sampled beam paths, and the first dense-bone intersection
+on each sampled beam. The focused-bowl cap is limited to the superior skull support
 determined from the CT axial area profile, so the visualized elements cover the
 calvarium instead of extending down the neck. The
 abdominal cases place a concave 256-element therapy arc outside the nearest
@@ -707,7 +707,7 @@ Outputs:
 
 - `docs/book/figures/ch29/fig01_device_placement_on_ct.{png,pdf}`
 - `docs/book/figures/ch29/fig02_exposure_and_reconstruction.{png,pdf}`
-- `docs/book/figures/ch29/fig03_brain_helmet_3d_placement.{png,pdf}`
+- `docs/book/figures/ch29/fig03_brain_focused_bowl_3d_placement.{png,pdf}`
 - `docs/book/figures/ch29/fig04_reconstruction_dynamic_range_diagnostics.{png,pdf}`
 - `docs/book/figures/ch29/fig05_nonlinear_3d_westervelt_rp_cavitation.{png,pdf}`
 - `docs/book/figures/ch29/fig06_controlled_linear_nonlinear_comparison.{png,pdf}`
@@ -902,7 +902,7 @@ The implemented channels follow the current research direction as of
 2026-05-13:
 
 - Brain FWI: Guasch et al. demonstrate the seismic analogy for adult brain
-  imaging with a 1024-transducer helmet where each element acts as source and
+  imaging with a 1024-transducer focused bowl where each element acts as source and
   receiver, and the inversion uses transmitted, reflected, diffracted,
   multiple-scattered, and guided waves rather than beamforming
   ([npj Digital Medicine, 2020](https://www.nature.com/articles/s41746-020-0240-8)).
@@ -968,7 +968,7 @@ The implemented channels follow the current research direction as of
   summary records the integrated diagnostic ultrasound probe and 52/56-element
   treatment-head class for Edison workflows
   ([FDA K233466](https://www.accessdata.fda.gov/cdrh_docs/pdf23/K233466.pdf));
-  Exablate Neuro specifies a helmet-shaped 1024-element phased array,
+  Exablate Neuro specifies a focused-bowl 1024-element phased array,
   `620-720 kHz` operation, pre-treatment CT/MRI fusion, and MR monitoring
   ([INSIGHTEC datasheet](https://insightec.com/files/PUB41006477-Neuro-System-Data-Sheet-Rev-2.pdf));
   Vantage NXT exposes programmable transmit/receive, raw ultrasound data,

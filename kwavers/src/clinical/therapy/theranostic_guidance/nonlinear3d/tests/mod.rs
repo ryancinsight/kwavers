@@ -5,7 +5,7 @@
 //!
 //! - [`fixtures`] — shared synthetic CT volumes and label maps.
 //! - [`bessel`]   — `J_1` / `J_2` analytical helpers for Fubini validation.
-//! - [`pipeline`] — end-to-end abdominal + brain-helmet integration tests.
+//! - [`pipeline`] — end-to-end abdominal + brain focused-bowl integration tests.
 //! - [`sign_correction`]   — Westervelt nonlinear-term sign regression.
 //! - [`beta_scaling`]      — β = 0 linear baseline + β-scaling regression.
 //! - [`harmonic_presence`] — point-source harmonic-generation check.

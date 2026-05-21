@@ -52,7 +52,7 @@ const BEAM_TRACE_STEPS: usize = 320;
 const ORIENTATION_PROBE_FRACTION: f64 = 0.25;
 
 #[derive(Clone, Debug)]
-pub struct BrainHelmetPlacement3D {
+pub struct TranscranialFocusedBowlPlacement3D {
     pub head_surface_points_m: Vec<Point3>,
     pub skull_surface_points_m: Vec<Point3>,
     pub therapy_elements_m: Vec<Point3>,
@@ -60,7 +60,7 @@ pub struct BrainHelmetPlacement3D {
     pub beam_end_points_m: Vec<Point3>,
     pub skull_intersections_m: Vec<Point3>,
     pub focus_m: Point3,
-    pub helmet_radius_m: f64,
+    pub bowl_radius_m: f64,
     pub intersection_fraction: f64,
 }
 
@@ -79,7 +79,7 @@ pub struct BrainHelmetPlacement3D {
 ///
 /// Placement geometry centred at the calvarium centroid. All coordinates are in
 /// metres and expressed relative to the calvarium centroid (origin = focus point).
-pub fn plan_brain_helmet_placement(
+pub fn plan_transcranial_focused_bowl_placement(
     ct_hu: &Array3<f64>,
     spacing_mm: [f64; 3],
     element_count: usize,
@@ -88,7 +88,7 @@ pub fn plan_brain_helmet_placement(
     skull_hu_threshold: f64,
     target_fraction_xyz: Option<[f64; 3]>,
     scene_radius_m: Option<f64>,
-) -> KwaversResult<BrainHelmetPlacement3D> {
+) -> KwaversResult<TranscranialFocusedBowlPlacement3D> {
     if element_count < 16 {
         return Err(KwaversError::InvalidInput(
             "3-D focused-bowl placement requires at least 16 elements".to_owned(),
@@ -211,11 +211,11 @@ pub fn plan_brain_helmet_placement(
         }
         None => BOWL_RADIUS_MIN_M,
     };
-    let helmet_radius_m = (head_radius + BOWL_SKIN_MARGIN_M)
+    let bowl_radius_m = (head_radius + BOWL_SKIN_MARGIN_M)
         .max(requested_radius_m)
         .max(BOWL_RADIUS_MIN_M);
     let therapy_elements_m =
-        calvarium_cap_elements(element_count, helmet_radius_m, focus, superior_positive)?;
+        calvarium_cap_elements(element_count, bowl_radius_m, focus, superior_positive)?;
     let (beam_start_points_m, beam_end_points_m, skull_intersections_m) = sample_beams(
         &therapy_elements_m,
         focus,
@@ -229,7 +229,7 @@ pub fn plan_brain_helmet_placement(
         skull_intersections_m.len() as f64 / beam_start_points_m.len() as f64
     };
 
-    Ok(BrainHelmetPlacement3D {
+    Ok(TranscranialFocusedBowlPlacement3D {
         head_surface_points_m,
         skull_surface_points_m,
         therapy_elements_m,
@@ -237,7 +237,7 @@ pub fn plan_brain_helmet_placement(
         beam_end_points_m,
         skull_intersections_m,
         focus_m: focus,
-        helmet_radius_m,
+        bowl_radius_m,
         intersection_fraction,
     })
 }

@@ -15,7 +15,6 @@ mod context;
 mod elastic_shear;
 mod exposure;
 mod geometry;
-mod helmet3d;
 mod medium;
 mod metrics;
 mod misfit;
@@ -25,6 +24,7 @@ mod skin;
 mod solver;
 pub mod standing_wave_opt;
 pub mod synthetic;
+mod transcranial_focused_bowl3d;
 mod transcranial_fus;
 mod transmit_schedule;
 mod waveform;
@@ -36,7 +36,6 @@ pub use context::{
 };
 pub use elastic_shear::{ElasticShearReconstructionResult, THERANOSTIC_ELASTIC_SHEAR_MODEL};
 pub use geometry::{placement_metrics, DeviceLayout, DevicePlacementMetrics, Point2, Point3};
-pub use helmet3d::{plan_brain_helmet_placement, BrainHelmetPlacement3D};
 pub use medium::{
     prepare_abdominal_slice, prepare_brain_slice, BrainTargetSelection, PreparedTheranosticSlice,
 };
@@ -55,6 +54,9 @@ pub use solver::{
 };
 pub use standing_wave_opt::{
     run_standing_wave_suppression, StandingWaveOptConfig, StandingWaveOptResult,
+};
+pub use transcranial_focused_bowl3d::{
+    plan_transcranial_focused_bowl_placement, TranscranialFocusedBowlPlacement3D,
 };
 pub use transcranial_fus::{
     evaluate_pressure_field, run_skull_adaptive_transcranial_benchmark,

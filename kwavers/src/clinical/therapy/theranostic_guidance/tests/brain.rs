@@ -1,12 +1,12 @@
 use ndarray::{Array2, Array3};
 
 use super::super::{
-    placement_metrics, plan_brain_helmet_placement, prepare_brain_slice, run_theranostic_inverse,
-    AnatomyKind, BrainTargetSelection, TheranosticInverseConfig,
+    placement_metrics, plan_transcranial_focused_bowl_placement, prepare_brain_slice,
+    run_theranostic_inverse, AnatomyKind, BrainTargetSelection, TheranosticInverseConfig,
 };
 
 #[test]
-fn brain_helmet_layout_uses_requested_element_count() {
+fn brain_focused_bowl_layout_uses_requested_element_count() {
     let mut ct = Array2::<f64>::from_elem((36, 36), -900.0);
     for x in 0..36 {
         for y in 0..36 {
@@ -43,14 +43,14 @@ fn brain_helmet_layout_uses_requested_element_count() {
         .hypot(result.layout.skin_contact_m.y_m);
 
     assert_eq!(result.layout.therapy_elements.len(), 64);
-    assert!(result.layout.model_name.contains("helmet"));
+    assert!(result.layout.model_name.contains("focused_bowl"));
     assert!(
         contact_radius > focus_radius,
-        "helmet contact point must lie on the head boundary, focus radius={focus_radius}, contact radius={contact_radius}"
+        "focused bowl contact point must lie on the head boundary, focus radius={focus_radius}, contact radius={contact_radius}"
     );
     assert!(
         placement.skin_contact_to_nearest_aperture_m >= 0.010,
-        "helmet aperture must remain outside the CT-derived head support"
+        "focused bowl aperture must remain outside the CT-derived head support"
     );
     assert!(placement.min_body_clearance_m >= 0.010);
     assert!(result.active_voxels > 16);
@@ -118,7 +118,7 @@ fn brain_slice_resampled_index_target_controls_focus_mask() {
 }
 
 #[test]
-fn brain_helmet_3d_uses_calvarium_cap_not_inferior_hemisphere() {
+fn brain_focused_bowl_3d_uses_calvarium_cap_not_inferior_hemisphere() {
     let mut ct = Array3::<f64>::from_elem((36, 36, 18), -1000.0);
     for x in 0..36 {
         for y in 0..36 {
@@ -135,9 +135,17 @@ fn brain_helmet_3d_uses_calvarium_cap_not_inferior_hemisphere() {
             }
         }
     }
-    let placement =
-        plan_brain_helmet_placement(&ct, [1.0, 1.0, 2.0], 128, 2, -300.0, 300.0, None, None)
-            .unwrap();
+    let placement = plan_transcranial_focused_bowl_placement(
+        &ct,
+        [1.0, 1.0, 2.0],
+        128,
+        2,
+        -300.0,
+        300.0,
+        None,
+        None,
+    )
+    .unwrap();
     let min_element_z = placement
         .therapy_elements_m
         .iter()
@@ -148,17 +156,17 @@ fn brain_helmet_3d_uses_calvarium_cap_not_inferior_hemisphere() {
         .iter()
         .map(|point| point.z_m)
         .fold(f64::NEG_INFINITY, f64::max);
-    let min_unit_z = min_element_z / placement.helmet_radius_m;
-    let max_unit_z = max_element_z / placement.helmet_radius_m;
+    let min_unit_z = min_element_z / placement.bowl_radius_m;
+    let max_unit_z = max_element_z / placement.bowl_radius_m;
 
     assert_eq!(placement.therapy_elements_m.len(), 128);
     assert!(
         min_element_z > -0.060,
-        "helmet cap must not extend into inferior neck-like coverage: min_z={min_element_z}"
+        "focused bowl cap must not extend into inferior neck-like coverage: min_z={min_element_z}"
     );
     assert!(
         max_element_z > 0.090,
-        "helmet cap must cover the superior calvarium: max_z={max_element_z}"
+        "focused bowl cap must cover the superior calvarium: max_z={max_element_z}"
     );
     assert!(
         (min_unit_z + 0.28).abs() < 0.02,

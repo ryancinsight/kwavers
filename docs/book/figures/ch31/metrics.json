@@ -1,10 +1,10 @@
 {
   "chapter": 31,
-  "analysis": "3-D clinical device geometry: HistoSonics-like bowl on liver/kidney skin, InSightec-like helmet at calvarium; fully simulated exposures and reconstructions via kwavers PyO3 API with RITK NIfTI/DICOM ingestion",
+  "analysis": "3-D clinical device geometry: HistoSonics-like bowl on liver/kidney skin, InSightec-like focused bowl at calvarium; fully simulated exposures and reconstructions via kwavers PyO3 API with RITK NIfTI/DICOM ingestion",
   "figures": [
     "D:\\kwavers\\docs\\book\\figures\\ch31\\fig01_liver_array_3d_geometry.png",
     "D:\\kwavers\\docs\\book\\figures\\ch31\\fig02_kidney_array_3d_geometry.png",
-    "D:\\kwavers\\docs\\book\\figures\\ch31\\fig03_brain_helmet_3d_calvarium.png",
+    "D:\\kwavers\\docs\\book\\figures\\ch31\\fig03_brain_focused_bowl_3d_calvarium.png",
     "D:\\kwavers\\docs\\book\\figures\\ch31\\fig04_exposure_comparison.png",
     "D:\\kwavers\\docs\\book\\figures\\ch31\\fig05_reconstruction_metrics.png"
   ],
@@ -77,9 +77,9 @@
       ]
     },
     "brain": {
-      "geometry_model": "ct_derived_calvarium_1024_element_helmet_with_skull_intersections",
+      "geometry_model": "ct_derived_calvarium_1024_element_focused_bowl_with_skull_intersections",
       "element_count": 1024,
-      "helmet_radius_m": 0.16867803092091804,
+      "bowl_radius_m": 0.16867803092091804,
       "skull_intersection_fraction": 1.0,
       "skull_hu_threshold": 300.0,
       "target_fraction_xyz": [
@@ -196,7 +196,7 @@
       }
     },
     "brain": {
-      "device_model": "insightec_like_1024_element_helmet_projection",
+      "device_model": "insightec_like_1024_element_focused_bowl_projection",
       "element_count": 1024,
       "source_pressure_pa": 150000.0,
       "target_fraction_xyz": [

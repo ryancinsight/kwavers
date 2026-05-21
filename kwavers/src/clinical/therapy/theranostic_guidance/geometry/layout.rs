@@ -38,7 +38,9 @@ pub fn build_device_layout(
 ) -> KwaversResult<DeviceLayout> {
     let focus = centroid_or_center(target_mask, body_mask, spacing_m);
     let layout = match config.anatomy {
-        AnatomyKind::Brain => helmet_layout(config, body_mask, spacing_m, focus),
+        AnatomyKind::Brain => {
+            transcranial_focused_bowl_projection_layout(config, body_mask, spacing_m, focus)
+        }
         AnatomyKind::Liver | AnatomyKind::Kidney => {
             abdominal_layout(config, body_mask, spacing_m, focus)?
         }
@@ -46,7 +48,7 @@ pub fn build_device_layout(
     Ok(layout)
 }
 
-fn helmet_layout(
+fn transcranial_focused_bowl_projection_layout(
     config: &TheranosticInverseConfig,
     body_mask: &Array2<bool>,
     spacing_m: f64,
@@ -68,7 +70,7 @@ fn helmet_layout(
         imaging_receivers: Vec::new(),
         focus_m: focus,
         skin_contact_m: nearest_body_boundary_point(body_mask, spacing_m, focus),
-        model_name: "insightec_like_1024_element_helmet_projection".to_owned(),
+        model_name: "insightec_like_1024_element_focused_bowl_projection".to_owned(),
     }
 }
 

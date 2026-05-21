@@ -36,6 +36,12 @@
   `BowlTransducer::with_polar_bounds`, removing the local Fibonacci sampler
   while preserving normalized polar z-bound coverage.
 
+- 2026-05-21: [patch] Closed the transcranial focused-bowl naming gap.
+  Public Rust/PyO3/Python/book APIs now expose focused-bowl placement names
+  without a compatibility alias for the old brain-helmet planner, and nonlinear
+  aperture model strings plus generated metrics use the same source-owned bowl
+  terminology.
+
 
 - 2026-05-20: [minor] Closed the bowl vertex/focus preset gap.
   `BowlConfig` now owns vertex/focus and hemispherical constructors plus an

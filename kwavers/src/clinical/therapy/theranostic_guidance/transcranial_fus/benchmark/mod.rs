@@ -1,7 +1,7 @@
 //! Skull-adaptive transcranial simulation benchmark.
 //!
 //! The benchmark follows the existing Chapter 25 brain pipeline: CT-derived
-//! skull masks, Insightec-like helmet coordinates, skull-path phase/amplitude
+//! skull masks, Insightec-like focused-bowl coordinates, skull-path phase/amplitude
 //! correction, and Rayleigh field synthesis. It adds the TFUScapes-style
 //! evaluation contract: a CT volume, transducer surface coordinates, a
 //! reference pressure field, and localization/amplitude metrics.

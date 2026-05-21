@@ -228,7 +228,7 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
         "reference_setup",
         "TFUScapes stores pseudo-CT, transducer coordinates, and k-Wave pressure maps",
     )?;
-    comparison.set_item("kwavers_setup", "kwavers stores CT HU, active helmet aperture coordinates, skull-aware pressure, and uncorrected baseline")?;
+    comparison.set_item("kwavers_setup", "kwavers stores CT HU, active focused-bowl aperture coordinates, skull-aware pressure, and uncorrected baseline")?;
     comparison.set_item(
         "not_implemented",
         "DeepTFUS neural surrogate training and TFUScapes-scale dataset generation",

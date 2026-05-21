@@ -1,4 +1,4 @@
-//! End-to-end abdominal + brain-helmet pipeline integration tests.
+//! End-to-end abdominal + brain focused-bowl pipeline integration tests.
 
 use super::super::{run_theranostic_nonlinear_3d, Nonlinear3dConfig};
 use super::fixtures::{abdominal_fixture, brain_fixture};
@@ -104,7 +104,7 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
 
 /// End-to-end integration test for the `AnatomyKind::Brain` path: synthetic
 /// CT with a cortical skull shell wrapping a brain interior, INSIGHTEC-like
-/// calvarium helmet aperture, lossless Westervelt forward, discrete adjoint
+/// calvarium focused-bowl aperture, lossless Westervelt forward, discrete adjoint
 /// FWI, heterogeneous CT-derived path-integrated cavitation Green's function
 /// (including `y = 2` Stokes-Kirchhoff skull attenuation), and Rayleigh-
 /// Plesset passive subharmonic inverse.
@@ -119,10 +119,10 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
 ///   integral,
 /// - the `y = 2` Stokes-Kirchhoff power-law gives a `3.07×` reduction at
 ///   the 325 kHz subharmonic versus the naive `y = 1` extrapolation,
-/// - the helmet aperture is placed on the calvarium surface rather than on
+/// - the focused-bowl aperture is placed on the calvarium surface rather than on
 ///   skin-coupled abdominal arc.
 #[test]
-fn nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_through_skull() {
+fn nonlinear_3d_brain_focused_bowl_pipeline_is_input_sensitive_through_skull() {
     let ct = brain_fixture();
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Brain);
     config.grid_size = 12;
@@ -155,12 +155,12 @@ fn nonlinear_3d_brain_helmet_pipeline_is_input_sensitive_through_skull() {
         result.target_mask.iter().filter(|active| **active).count() >= 2,
         "synthetic brain ellipsoidal target must be non-empty inside the body support",
     );
-    // The INSIGHTEC-like helmet model placed on the calvarium cap.
+    // The INSIGHTEC-like focused-bowl model placed on the calvarium cap.
     assert!(
         result
             .aperture_model
-            .contains("insightec_like_calvarium_helmet"),
-        "brain aperture model must be the INSIGHTEC-like calvarium helmet; got '{}'",
+            .contains("insightec_like_calvarium_focused_bowl"),
+        "brain aperture model must be the INSIGHTEC-like calvarium focused bowl; got '{}'",
         result.aperture_model,
     );
     // Westervelt peak pressure must be positive somewhere inside the

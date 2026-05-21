@@ -2,7 +2,7 @@
 
 All geometry is computed by kwavers (Rust) through the PyO3 wrappers:
   - ``plan_abdominal_array_placement_from_ritk_ct`` for liver and kidney.
-  - ``plan_brain_helmet_placement_from_ritk_ct`` for the transcranial helmet.
+  - ``plan_transcranial_focused_bowl_placement_from_ritk_ct`` for the transcranial focused bowl.
   - ``run_theranostic_inverse_from_ritk`` for simulated exposures and reconstructions.
 
 Python owns only figure rendering and file I/O.  No physics computation is in this file.
@@ -10,7 +10,7 @@ Python owns only figure rendering and file I/O.  No physics computation is in th
 Device naming note: the "HistoSonics-like" label refers to the bowl geometry
 (focused hemispherical array, central imaging cutout, anterior skin placement)
 common to research histotripsy systems.  The "InSightec-like" label refers to the
-transcranial phased-array helmet geometry (1024 elements, calvarium coverage,
+transcranial phased-array focused-bowl geometry (1024 elements, calvarium coverage,
 CT-planned skull-entry correction) common to Exablate Neuro platforms.  Neither
 label implies proprietary device specifications.
 
@@ -21,7 +21,7 @@ anterior, positive z is superior (standard LPS orientation).
 Figures produced:
   fig01_liver_array_3d_geometry.png  — HistoSonics-like bowl on liver CT
   fig02_kidney_array_3d_geometry.png — HistoSonics-like bowl on kidney CT
-  fig03_brain_helmet_3d_calvarium.png — InSightec-like helmet at calvarium level
+  fig03_brain_focused_bowl_3d_calvarium.png — InSightec-like focused bowl at calvarium level
   fig04_exposure_comparison.png      — simulated pressure for all three anatomies
   fig05_reconstruction_metrics.png   — reconstruction fidelity metrics
 """
@@ -110,10 +110,10 @@ def plan_kidney_geometry() -> dict[str, object]:
 
 
 def plan_brain_geometry() -> dict[str, object]:
-    return kw.plan_brain_helmet_placement_from_ritk_ct(
+    return kw.plan_transcranial_focused_bowl_placement_from_ritk_ct(
         str(BRAIN_CT),
         surface_stride=BRAIN_SURFACE_STRIDE,
-        **CANONICAL_BRAIN_SCENE.helmet_pykwavers_kwargs(),
+        **CANONICAL_BRAIN_SCENE.focused_bowl_pykwavers_kwargs(),
     )
 
 
@@ -364,10 +364,10 @@ def render_abdominal_3d(
     return fig_path
 
 
-# ── Brain helmet rendering (calvarium-level) ────────────────────────────────────
+# ── Brain focused-bowl rendering (calvarium-level) ──────────────────────────────
 
-def render_brain_helmet_3d(geo: dict[str, object], fig_path: Path) -> Path:
-    """Render the 1024-element InSightec-like helmet covering the calvarium.
+def render_brain_focused_bowl_3d(geo: dict[str, object], fig_path: Path) -> Path:
+    """Render the 1024-element InSightec-like focused bowl covering the calvarium.
 
     The view is tilted to show the elements ring the upper skull (calvarium), not
     the neck.  Skull-beam intersection points (yellow) confirm the beams enter the
@@ -384,8 +384,8 @@ def render_brain_helmet_3d(geo: dict[str, object], fig_path: Path) -> Path:
 
     fig = plt.figure(figsize=(14.0, 6.0), constrained_layout=True)
     fig.suptitle(
-        f"InSightec-like helmet at calvarium level — {int(geo['element_count'])} elements, "
-        f"helmet radius {1e3 * float(geo['helmet_radius_m']):.0f} mm, "
+        f"InSightec-like focused bowl at calvarium level — {int(geo['element_count'])} elements, "
+        f"bowl radius {1e3 * float(geo['bowl_radius_m']):.0f} mm, "
         f"skull entry fraction {float(geo['intersection_fraction']):.2f}",
         fontsize=11,
     )
@@ -409,7 +409,7 @@ def render_brain_helmet_3d(geo: dict[str, object], fig_path: Path) -> Path:
         if elements.size:
             ax.scatter(
                 elements[:, 0], elements[:, 1], elements[:, 2],
-                s=5.0, c="#d94f45", alpha=0.65, depthshade=False, label="helmet elements",
+                s=5.0, c="#d94f45", alpha=0.65, depthshade=False, label="bowl elements",
             )
         if intersections.size:
             ax.scatter(
@@ -434,7 +434,7 @@ def render_brain_helmet_3d(geo: dict[str, object], fig_path: Path) -> Path:
     # Elevated oblique: clearly shows elements wrap over the top of the head.
     ax_a.view_init(elev=35, azim=-60)
     ax_a.set_title(
-        "Oblique view — helmet covers calvarium\n"
+        "Oblique view — bowl covers calvarium\n"
         "(elements encircle top of skull, not neck)",
         fontsize=9,
     )
@@ -589,7 +589,7 @@ def write_metrics(
         "chapter": 31,
         "analysis": (
             "3-D clinical device geometry: HistoSonics-like bowl on liver/kidney skin, "
-            "InSightec-like helmet at calvarium; fully simulated exposures and reconstructions "
+            "InSightec-like focused bowl at calvarium; fully simulated exposures and reconstructions "
             "via kwavers PyO3 API with RITK NIfTI/DICOM ingestion"
         ),
         "figures": [str(p) for p in figures],
@@ -616,7 +616,7 @@ def write_metrics(
             "brain": {
                 "geometry_model": str(brain_geo["geometry_model"]),
                 "element_count": int(brain_geo["element_count"]),
-                "helmet_radius_m": float(brain_geo["helmet_radius_m"]),
+                "bowl_radius_m": float(brain_geo["bowl_radius_m"]),
                 "skull_intersection_fraction": float(brain_geo["intersection_fraction"]),
                 "skull_hu_threshold": float(brain_geo["skull_hu_threshold"]),
                 "target_fraction_xyz": [float(v) for v in brain_geo.get("target_fraction_xyz", ())],
@@ -702,7 +702,7 @@ def run() -> dict[str, object]:
     figures = [
         render_abdominal_3d(liver_geo, "liver", OUT_DIR / "fig01_liver_array_3d_geometry.png"),
         render_abdominal_3d(kidney_geo, "kidney", OUT_DIR / "fig02_kidney_array_3d_geometry.png"),
-        render_brain_helmet_3d(brain_geo, OUT_DIR / "fig03_brain_helmet_3d_calvarium.png"),
+        render_brain_focused_bowl_3d(brain_geo, OUT_DIR / "fig03_brain_focused_bowl_3d_calvarium.png"),
         render_exposure_comparison(
             liver_result, kidney_result, brain_result,
             OUT_DIR / "fig04_exposure_comparison.png",

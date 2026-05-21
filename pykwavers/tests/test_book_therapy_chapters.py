@@ -69,7 +69,7 @@ def test_book_readme_links_bbb_and_hifu_markdown_chapters():
     assert (DOCS_DIR / "segmented_tissue_transducer_planning.md").is_file()
 
 
-def test_chapter29_layout_helpers_report_skin_and_helmet_clearance():
+def test_chapter29_layout_helpers_report_skin_and_focused_bowl_clearance():
     import ch29_theranostic_fwi_platforms as ch29
 
     kidney = {
@@ -95,7 +95,7 @@ def test_chapter29_layout_helpers_report_skin_and_helmet_clearance():
     y_limits = ch29.axis_limits([-0.05, 0.05], np.asarray([]), np.asarray([]))
 
     assert "skin gap 3.0 mm" == ch29.placement_label(kidney)
-    assert "helmet clearance 15.0 mm" == ch29.placement_label(brain)
+    assert "focused-bowl clearance 15.0 mm" == ch29.placement_label(brain)
     assert x_limits[0] < -0.11
     assert x_limits[1] > 0.09
     assert y_limits[0] < -0.05

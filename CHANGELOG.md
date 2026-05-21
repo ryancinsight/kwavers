@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed (2026-05-21) - Transcranial Focused-Bowl Naming Completion
+
+- [patch] Replace the public 3-D brain placement API and PyO3 export with
+  transcranial focused-bowl terminology, remove the old planner name without a
+  compatibility alias, and sync the affected clinical examples, book figures,
+  metrics, and nonlinear 3-D aperture model strings.
+
 ### Added (2026-05-21) - Bowl Polar-Span Source Layout
 
 - [minor] Add fixed-count `BowlTransducer::with_polar_span` and

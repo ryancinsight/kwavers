@@ -55,6 +55,11 @@
   `BowlTransducer::with_polar_bounds`, and the regression pins normalized polar
   z-bounds instead of only coarse extent checks.
 
+- Closed the transcranial focused-bowl naming gap. Public Rust/PyO3/Python/book
+  APIs now use focused-bowl planner names with no old planner alias, and the
+  nonlinear 3-D aperture model string, Chapter 29/31 examples, generated figure
+  filenames, and metrics are synchronized to the same source-owned bowl concept.
+
 - Closed the bowl vertex/focus preset gap. `BowlConfig` now provides
   vertex/focus, hemispherical, and element-size constructors under the
   source-domain bowl module, so downstream adapters can request fixed-count

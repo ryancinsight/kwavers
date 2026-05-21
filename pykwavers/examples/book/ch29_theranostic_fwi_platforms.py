@@ -155,7 +155,7 @@ BRAIN_HISTOTRIPSY_SOURCE_PRESSURE_PA = float(
 CASES = (
     {
         "name": "brain",
-        "title": "Brain helmet",
+        "title": "Brain focused bowl",
         "ct": REPO_ROOT / "data" / "rire_patient_109" / "patient_109_ct.nii.gz",
         "seg": None,
         "grid": int(os.environ.get("KWAVERS_CH29_BRAIN_GRID", "56")),
@@ -845,7 +845,7 @@ def render_controlled_linear_nonlinear(
     return figure, metrics, fields, comparisons
 
 
-def render_brain_helmet_3d(placement: dict[str, object]) -> Path:
+def render_brain_focused_bowl_3d(placement: dict[str, object]) -> Path:
     head = np.asarray(placement["head_surface_points_m"], dtype=float)
     skull = np.asarray(placement["skull_surface_points_m"], dtype=float)
     elements = np.asarray(placement["therapy_elements_m"], dtype=float)
@@ -888,7 +888,7 @@ def render_brain_helmet_3d(placement: dict[str, object]) -> Path:
         ax.set_zlabel("z [m]")
     ax_a.view_init(elev=18, azim=-68)
     ax_a.set_title(
-        "1024-element helmet around CT head\n"
+        "1024-element focused bowl around CT head\n"
         "red: tx/rx elements, yellow: CT skull entry points",
         fontsize=10,
     )
@@ -898,7 +898,7 @@ def render_brain_helmet_3d(placement: dict[str, object]) -> Path:
         f"skull-intersection fraction={float(placement['intersection_fraction']):.2f}",
         fontsize=10,
     )
-    path = OUT_DIR / "fig03_brain_helmet_3d_placement.png"
+    path = OUT_DIR / "fig03_brain_focused_bowl_3d_placement.png"
     save_figure(fig, path)
     plt.close(fig)
     return path
@@ -1071,8 +1071,8 @@ def plot_projected_3d_points(ax: plt.Axes, result: dict[str, object], z_index: i
 
 def short_device_name(result: dict[str, object]) -> str:
     name = str(result["device_model"])
-    if "helmet" in name:
-        return "INSIGHTEC-like helmet"
+    if "focused_bowl" in name:
+        return "INSIGHTEC-like focused bowl"
     return "HistoSonics-like skin arc"
 
 
@@ -1085,7 +1085,7 @@ def placement_label(result: dict[str, object]) -> str:
     gap_mm = 1.0e3 * float(gap_m)
     clearance_mm = 1.0e3 * float(metrics["min_body_clearance_m"])
     if str(result["anatomy"]) == "brain":
-        return f"helmet clearance {clearance_mm:.1f} mm"
+        return f"focused-bowl clearance {clearance_mm:.1f} mm"
     return f"skin gap {gap_mm:.1f} mm"
 
 
@@ -1181,7 +1181,7 @@ def write_metrics(
     results: list[dict[str, object]],
     nonlinear_results: list[dict[str, object]],
     figures: list[Path],
-    brain_helmet_3d: dict[str, object],
+    brain_focused_bowl_3d: dict[str, object],
     controlled_comparisons: list[dict[str, object]] | None = None,
     controlled_figure: Path | None = None,
     controlled_fields: Path | None = None,
@@ -1192,16 +1192,18 @@ def write_metrics(
         "simulation_type": "RITK-loaded CT/NIfTI, kwavers PyO3 theranostic inverse",
         "brain_scene": CANONICAL_BRAIN_SCENE.to_manifest(),
         "figures": [str(path) for path in figures],
-        "brain_helmet_3d": {
-            "geometry_model": brain_helmet_3d["geometry_model"],
-            "element_count": int(brain_helmet_3d["element_count"]),
-            "helmet_radius_m": float(brain_helmet_3d["helmet_radius_m"]),
-            "beam_probe_count": int(np.asarray(brain_helmet_3d["beam_start_points_m"]).shape[0]),
-            "skull_intersection_count": int(np.asarray(brain_helmet_3d["skull_intersections_m"]).shape[0]),
-            "skull_intersection_fraction": float(brain_helmet_3d["intersection_fraction"]),
-            "skull_hu_threshold": float(brain_helmet_3d["skull_hu_threshold"]),
-            "target_fraction_xyz": [float(v) for v in brain_helmet_3d.get("target_fraction_xyz", ())],
-            "scene_radius_m": float(brain_helmet_3d.get("scene_radius_m", CANONICAL_BRAIN_SCENE.transducer.radius_m)),
+        "brain_focused_bowl_3d": {
+            "geometry_model": brain_focused_bowl_3d["geometry_model"],
+            "element_count": int(brain_focused_bowl_3d["element_count"]),
+            "bowl_radius_m": float(brain_focused_bowl_3d["bowl_radius_m"]),
+            "beam_probe_count": int(np.asarray(brain_focused_bowl_3d["beam_start_points_m"]).shape[0]),
+            "skull_intersection_count": int(np.asarray(brain_focused_bowl_3d["skull_intersections_m"]).shape[0]),
+            "skull_intersection_fraction": float(brain_focused_bowl_3d["intersection_fraction"]),
+            "skull_hu_threshold": float(brain_focused_bowl_3d["skull_hu_threshold"]),
+            "target_fraction_xyz": [float(v) for v in brain_focused_bowl_3d.get("target_fraction_xyz", ())],
+            "scene_radius_m": float(
+                brain_focused_bowl_3d.get("scene_radius_m", CANONICAL_BRAIN_SCENE.transducer.radius_m)
+            ),
         },
         "cases": [
             {
@@ -1338,16 +1340,16 @@ def run() -> dict[str, object]:
     results = [run_case(case) for case in CASES]
     controlled_linear_results = [run_controlled_linear_case(case) for case in CASES]
     nonlinear_results = [run_nonlinear_case(case) for case in CASES]
-    helmet_kwargs = CANONICAL_BRAIN_SCENE.helmet_pykwavers_kwargs()
-    brain_helmet_3d = kw.plan_brain_helmet_placement_from_ritk_ct(
+    focused_bowl_kwargs = CANONICAL_BRAIN_SCENE.focused_bowl_pykwavers_kwargs()
+    brain_focused_bowl_3d = kw.plan_transcranial_focused_bowl_placement_from_ritk_ct(
         str(CASES[0]["ct"]),
         surface_stride=int(os.environ.get("KWAVERS_CH29_3D_SURFACE_STRIDE", "7")),
-        **helmet_kwargs,
+        **focused_bowl_kwargs,
     )
     figures = [
         render_layouts(results),
         render_reconstructions(results),
-        render_brain_helmet_3d(brain_helmet_3d),
+        render_brain_focused_bowl_3d(brain_focused_bowl_3d),
         render_dynamic_range_diagnostics(results),
         render_nonlinear_3d(nonlinear_results, results),
     ]
@@ -1360,7 +1362,7 @@ def run() -> dict[str, object]:
         results,
         nonlinear_results,
         figures,
-        brain_helmet_3d,
+        brain_focused_bowl_3d,
         comparisons,
         comparison_figure,
         comparison_fields,

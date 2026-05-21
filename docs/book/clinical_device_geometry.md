@@ -8,19 +8,19 @@ studied:
   imaging cutout) placed on the exterior abdominal skin for liver tumour and
   kidney tumour histotripsy targets.  The transducer sits visibly on the skin
   surface; no element is inside the patient body.
-- **InSightec-like transcranial helmet** (1024 elements, spherical cap covering
+- **InSightec-like transcranial focused bowl** (1024 elements, spherical cap covering
   the calvarium) placed around the upper skull for transcranial focused
   ultrasound.  The aperture covers the calvarium, not the neck or base of skull.
 
 All geometry is computed by `kwavers` in Rust through the PyO3 wrappers
 `plan_abdominal_array_placement_from_ritk_ct` and
-`plan_brain_helmet_placement_from_ritk_ct`.  RITK owns NIfTI/DICOM ingestion.
+`plan_transcranial_focused_bowl_placement_from_ritk_ct`.  RITK owns NIfTI/DICOM ingestion.
 Python owns only figure rendering.  Simulated pressure exposures and
 reconstructions use the same `run_theranostic_inverse_from_ritk` pipeline as
 Chapter 29, with CT-derived heterogeneous media and the same-aperture
 finite-frequency Born inverse.
 
-The chapter does not model proprietary device geometry.  The bowl and helmet
+The chapter does not model proprietary device geometry.  The bowl
 parameters match published research system specifications.  See Chapter 29 for
 the mathematical contract of the inversion and Chapter 21 for transcranial skull
 aberration correction.
@@ -109,15 +109,15 @@ optimal for spherical caps (Álvarez & González-Aranda, 2019).
 | `θ_max` | 0.960 rad (≈ 55°) | Aperture half-angle; F-number ≈ 0.87 at stated focal length (Parsons et al. 2006) |
 | R | ‖F−S‖ / cos(θ_max) | Rim element at θ_max lies exactly at skin level; vertex (θ→θ_cutout) is well outside. Minimum 60 mm. |
 
-### Theorem: Calvarium Helmet Coverage
+### Theorem: Calvarium Focused-Bowl Coverage
 
-The brain helmet uses the Fibonacci golden-spiral parameterisation on a sphere
-of radius `R_helmet` centred at the brain focus, restricted to the unit-sphere
+The transcranial focused bowl uses the Fibonacci golden-spiral parameterisation on a sphere
+of radius `R_bowl` centred at the brain focus, restricted to the unit-sphere
 range `z_unit ∈ [−0.28, 0.98]`:
 
 ```text
 zᵢ = −0.28 + 1.26 · i/(N−1),   ρᵢ = √(1 − zᵢ²),   φᵢ = i · π(3 − √5)
-Pᵢ = (ρᵢ cos φᵢ, ρᵢ sin φᵢ, zᵢ) · R_helmet   (relative to focus)
+Pᵢ = (ρᵢ cos φᵢ, ρᵢ sin φᵢ, zᵢ) · R_bowl   (relative to focus)
 ```
 
 The range `z_unit ∈ [−0.28, 0.98]` covers from slightly below the equator of
@@ -126,9 +126,9 @@ vertex (`0.98 ≈ 79°` elevation), which corresponds anatomically to the calvar
 and parietal–temporal regions.  The neck region is below `z_unit ≈ −0.50`, well
 outside the placed elements.
 
-**Proof that helmet does not reach the neck:** The minimum z-unit value is
+**Proof that bowl does not reach the neck:** The minimum z-unit value is
 `−0.28`.  For a typical adult head with superior vertex at `z ≈ 0` and foramen
-magnum at `z ≈ −0.17 m`, with helmet radius `R ≈ 0.15 m`, the lowest element
+magnum at `z ≈ −0.17 m`, with bowl radius `R ≈ 0.15 m`, the lowest element
 is at `z_m = −0.28 × 0.15 ≈ −0.042 m`, which is above the level of the
 external auditory canal (typically at `z ≈ −0.04 m`), safely within the
 calvarium and away from the neck.
@@ -218,14 +218,14 @@ rib shadowing by traversing the costal margin.
 or lateral flank skin.  The nearest-skin-point selection automatically identifies
 the posterior or lateral approach, not the anterior.
 
-### InSightec-like Transcranial Helmet (Exablate Neuro)
+### InSightec-like Transcranial Focused Bowl (Exablate Neuro)
 
 The InSightec Exablate Neuro 4000 system uses a 1024-element, 650 kHz
-transcranial helmet with CT-planned phase correction for skull aberration.  The
-helmet covers the calvarium from the temporal and parietal bones upward.
+transcranial phased array with CT-planned phase correction for skull aberration.  The
+focused-bowl aperture covers the calvarium from the temporal and parietal bones upward.
 
 This chapter models:
-- 1024 elements on a sphere of radius `R_helmet = body_radius + 15 mm` (minimum
+- 1024 elements on a sphere of radius `R_bowl = body_radius + 15 mm` (minimum
   150 mm), sampled in the calvarium range `z_unit ∈ [−0.28, 0.98]`.
 - Skull surface extracted from the CT at `skull_hu_threshold = 300 HU`.
 - Beam–skull intersection fraction reported as a geometry quality metric.
@@ -287,8 +287,8 @@ The Rust implementation lives in two modules:
 kwavers::clinical::therapy::theranostic_guidance::abdominal3d
   └─ plan_abdominal_array_placement(ct_hu, label, spacing_mm, ...) → AbdominalArrayPlacement3D
 
-kwavers::clinical::therapy::theranostic_guidance::helmet3d
-  └─ plan_brain_helmet_placement(ct_hu, spacing_mm, ...) → BrainHelmetPlacement3D
+kwavers::clinical::therapy::theranostic_guidance::transcranial_focused_bowl3d
+  └─ plan_transcranial_focused_bowl_placement(ct_hu, spacing_mm, ...) → TranscranialFocusedBowlPlacement3D
 ```
 
 Both are exposed to Python via PyO3:
@@ -299,9 +299,9 @@ from transcranial_planning.scene import CANONICAL_BRAIN_SCENE
 
 liver_geo  = kw.plan_abdominal_array_placement_from_ritk_ct(ct_path, seg_path, anatomy_label="liver")
 kidney_geo = kw.plan_abdominal_array_placement_from_ritk_ct(ct_path, seg_path, anatomy_label="kidney")
-brain_geo  = kw.plan_brain_helmet_placement_from_ritk_ct(
+brain_geo  = kw.plan_transcranial_focused_bowl_placement_from_ritk_ct(
     ct_path,
-    **CANONICAL_BRAIN_SCENE.helmet_pykwavers_kwargs(),
+    **CANONICAL_BRAIN_SCENE.focused_bowl_pykwavers_kwargs(),
 )
 ```
 
@@ -311,7 +311,7 @@ Each function returns a dict with:
 |-----|-------|-------------|
 | `body_surface_points_m` | `(N, 3)` | Skin surface point cloud [m] |
 | `organ_surface_points_m` | `(M, 3)` | Organ surface point cloud [m] |
-| `therapy_elements_m` | `(K, 3)` | Element positions on bowl/helmet [m] |
+| `therapy_elements_m` | `(K, 3)` | Element positions on focused bowl [m] |
 | `beam_start_points_m` | `(B, 3)` | Beam ray start points (elements) [m] |
 | `beam_end_points_m` | `(B, 3)` | Beam ray end points (focus) [m] |
 | `focus_m` | `(3,)` | Acoustic focus target; brain uses the shared CT-aligned brain scene target, abdomen uses the organ centroid [m] |
@@ -340,12 +340,12 @@ profile.
 Same visualisation for the kidney scenario.  The nearest-skin selection places
 the bowl on the posterior/lateral flank for retroperitoneal kidneys.
 
-### Figure 03 — Brain: InSightec-like Helmet at Calvarium Level
+### Figure 03 — Brain: InSightec-like Focused Bowl at Calvarium Level
 
-![Brain helmet 3-D calvarium](figures/ch31/fig03_brain_helmet_3d_calvarium.png)
+![Brain focused-bowl 3-D calvarium](figures/ch31/fig03_brain_focused_bowl_3d_calvarium.png)
 
-1024-element helmet ring around the calvarium using the same CT-aligned
-`CANONICAL_BRAIN_SCENE` target and 0.150 m helmet radius used by Chapter 25 and
+1024-element focused-bowl cap around the calvarium using the same CT-aligned
+`CANONICAL_BRAIN_SCENE` target and 0.150 m bowl radius used by Chapter 25 and
 Chapter 29 brain outputs. Elevated oblique view (left) shows elements wrap over
 the top of the skull, not the neck. Top-down view (right) confirms circular
 aperture centred on the vertex. Yellow points are CT-derived skull entry
@@ -379,7 +379,7 @@ The geometry contract is validated by three property tests in
 3. `all_elements_on_sphere_of_correct_radius`: every element satisfies
    `|P − F| = R` to machine precision (< 10⁻¹⁰ m).
 
-The brain helmet property tests reside in `helmet3d.rs` (Chapter 29).
+The brain focused-bowl property tests reside in `transcranial_focused_bowl3d.rs` (Chapter 29).
 
 ## References
 

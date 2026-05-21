@@ -2,7 +2,7 @@
 //!
 //! The inverse solve in this chapter is a bounded 2-D finite-frequency slice
 //! solve. This vertical owns the separate full-CT placement context used to
-//! audit clinical geometry: a calvarium-only 3-D helmet for transcranial arrays
+//! audit clinical geometry: a calvarium-only 3-D focused bowl for transcranial arrays
 //! and uncropped abdominal slices for skin-coupled histotripsy heads.
 
 mod abdomen;

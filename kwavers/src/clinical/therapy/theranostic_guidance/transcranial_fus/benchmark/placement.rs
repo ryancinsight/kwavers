@@ -24,7 +24,7 @@ pub(super) fn select_skull_aware_placement(
     let radius = config.fus.radius_m;
     if !radius.is_finite() || radius <= 0.0 {
         return Err(KwaversError::InvalidInput(
-            "helmet radius must be positive and finite".to_owned(),
+            "focused-bowl radius must be positive and finite".to_owned(),
         ));
     }
     if !config.aperture_diameter_m.is_finite()
