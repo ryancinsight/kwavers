@@ -293,10 +293,17 @@ impl FwiProcessor {
                 });
             }
 
+            // Trait-method dispatch (T19a) — pressure_field() returns
+            // &Array3<f64>, replacing the previous direct
+            // `solver.fields.p` field access. Fully-qualified syntax keeps
+            // method resolution unambiguous without an extra `use`.
             accumulate_signed_correlation(
                 &mut gradient_m,
                 p_tt.view(),
-                solver.fields.p.view(),
+                <crate::solver::fdtd::FdtdSolver as crate::solver::interface::Solver>::pressure_field(
+                    &solver,
+                )
+                .view(),
                 -dt,
             )?;
         }

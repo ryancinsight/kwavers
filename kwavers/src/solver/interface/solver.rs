@@ -46,6 +46,21 @@ pub trait Solver: Debug + Send + Sync {
     ///
     fn run(&mut self, num_steps: usize) -> KwaversResult<()>;
 
+    /// Advance the simulation by one time step.
+    ///
+    /// FWI and other inversion drivers need single-step control to interleave
+    /// source injection, sensor recording, and wavefield checkpointing. Default
+    /// impl forwards to `self.run(1)`; concrete solvers should override with
+    /// their inherent `step_forward` to skip the per-call init / dispatch
+    /// overhead of `run`.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if the step fails (typically a numerical NaN or
+    ///   internal-state precondition violation).
+    fn step_forward(&mut self) -> KwaversResult<()> {
+        self.run(1)
+    }
+
     /// Get the current pressure field
     fn pressure_field(&self) -> &ndarray::Array3<f64>;
 

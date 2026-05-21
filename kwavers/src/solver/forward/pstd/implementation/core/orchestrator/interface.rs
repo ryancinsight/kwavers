@@ -25,6 +25,11 @@ impl crate::solver::interface::Solver for PSTDSolver {
         self.run_orchestrated(num_steps).map(|_| ())
     }
 
+    fn step_forward(&mut self) -> KwaversResult<()> {
+        // Inherent step_forward on PSTDSolver; direct call, no run(1) dispatch.
+        PSTDSolver::step_forward(self)
+    }
+
     fn pressure_field(&self) -> &ndarray::Array3<f64> {
         &self.fields.p
     }

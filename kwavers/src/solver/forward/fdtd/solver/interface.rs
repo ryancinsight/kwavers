@@ -43,6 +43,11 @@ impl Solver for GenericFdtdSolver<Array3<f64>> {
         Ok(())
     }
 
+    fn step_forward(&mut self) -> KwaversResult<()> {
+        // Inherent step_forward on GenericFdtdSolver; direct call, no run(1) dispatch.
+        Self::step_forward(self)
+    }
+
     fn pressure_field(&self) -> &Array3<f64> {
         &self.fields.p
     }

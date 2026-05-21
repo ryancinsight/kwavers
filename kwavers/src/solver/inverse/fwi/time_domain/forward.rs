@@ -122,10 +122,19 @@ impl FwiProcessor {
         let mut history = Array4::zeros((self.parameters.nt, nx, ny, nz));
 
         for t in 0..self.parameters.nt {
-            solver.step_forward()?;
-            history
-                .slice_mut(s![t, .., .., ..])
-                .assign(&solver.fields.p);
+            // Trait-method dispatch: step_forward is now on the unified Solver
+            // trait (T19a), with each concrete impl forwarding to its inherent
+            // method. pressure_field() likewise — replacing the previous direct
+            // `solver.fields.p` field access removes the last concrete-typed
+            // hot-path read in this loop.
+            <crate::solver::fdtd::FdtdSolver as crate::solver::interface::Solver>::step_forward(
+                &mut solver,
+            )?;
+            history.slice_mut(s![t, .., .., ..]).assign(
+                <crate::solver::fdtd::FdtdSolver as crate::solver::interface::Solver>::pressure_field(
+                    &solver,
+                ),
+            );
         }
 
         let recorded = solver

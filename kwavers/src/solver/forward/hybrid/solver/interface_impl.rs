@@ -32,6 +32,11 @@ impl crate::solver::interface::Solver for HybridSolver {
         Ok(())
     }
 
+    fn step_forward(&mut self) -> KwaversResult<()> {
+        // Inherent step_forward on HybridSolver; direct call, no run(1) dispatch.
+        HybridSolver::step_forward(self)
+    }
+
     fn pressure_field(&self) -> &ndarray::Array3<f64> {
         &self.fields.p
     }
