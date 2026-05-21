@@ -10,6 +10,13 @@
   source-domain API. Full-volume brain placement now delegates its major-cap
   source points to this bowl API instead of owning local source geometry.
 
+### Changed (2026-05-21) - 3D Focused-Bowl Placement Source Routing
+
+- [patch] Route full-volume calvarium cap placement through
+  `BowlTransducer::with_polar_bounds`, remove the local Fibonacci aperture
+  sampler from the clinical placement helper, and pin the normalized polar
+  z-bounds in the 3-D placement regression.
+
 ### Added (2026-05-20) - Bowl Vertex-Focus Presets
 
 - [minor] Add `BowlConfig::from_vertex_focus`, `BowlConfig::hemispherical`,

@@ -148,6 +148,8 @@ fn brain_helmet_3d_uses_calvarium_cap_not_inferior_hemisphere() {
         .iter()
         .map(|point| point.z_m)
         .fold(f64::NEG_INFINITY, f64::max);
+    let min_unit_z = min_element_z / placement.helmet_radius_m;
+    let max_unit_z = max_element_z / placement.helmet_radius_m;
 
     assert_eq!(placement.therapy_elements_m.len(), 128);
     assert!(
@@ -157,6 +159,14 @@ fn brain_helmet_3d_uses_calvarium_cap_not_inferior_hemisphere() {
     assert!(
         max_element_z > 0.090,
         "helmet cap must cover the superior calvarium: max_z={max_element_z}"
+    );
+    assert!(
+        (min_unit_z + 0.28).abs() < 0.02,
+        "focused bowl lower polar bound changed: min_unit_z={min_unit_z}"
+    );
+    assert!(
+        (max_unit_z - 0.98).abs() < 0.02,
+        "focused bowl upper polar bound changed: max_unit_z={max_unit_z}"
     );
     assert!(placement.intersection_fraction > 0.0);
 }

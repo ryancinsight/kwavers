@@ -1,4 +1,4 @@
-//! CT-derived 3-D helmet placement for visual verification.
+//! CT-derived 3-D focused-bowl placement for visual verification.
 //!
 //! # Theorem (Calvarium region extraction)
 //!
@@ -23,20 +23,27 @@
 
 use ndarray::{s, Array3};
 
-use crate::core::error::{KwaversError, KwaversResult};
+use crate::{
+    core::error::{KwaversError, KwaversResult},
+    domain::source::transducers::focused::{BowlConfig, BowlTransducer},
+};
 
 use super::geometry::{is_boundary_3d, Point3};
 use super::nonlinear3d::volume::centroid_float;
 use super::scene::target_index_from_mask_fraction_3d;
 
-/// Fraction of the unit sphere covered below the equator (sin = 0.28 → ~16° below equator).
-const CAP_UNIT_Z_MIN: f64 = -0.28;
-/// Fraction of the unit sphere covered toward the superior pole (cos = 0.98 → ~11° from pole).
-const CAP_UNIT_Z_MAX: f64 = 0.98;
-/// Clearance gap in metres between skull outer surface and the helmet inner surface.
-const HELMET_SKIN_MARGIN_M: f64 = 0.015;
-/// Minimum allowed helmet radius in metres (150 mm).
-const HELMET_RADIUS_MIN_M: f64 = 0.150;
+/// Focused-bowl cap lower axial cosine, covering slightly below the equator.
+const BOWL_CAP_UNIT_Z_MIN: f64 = -0.28;
+/// Focused-bowl cap upper axial cosine, stopping near the superior pole.
+const BOWL_CAP_UNIT_Z_MAX: f64 = 0.98;
+/// Unit metadata for geometry-only use of `BowlConfig`.
+const BOWL_LAYOUT_UNIT_FREQUENCY_HZ: f64 = 1.0;
+/// Unit metadata for geometry-only use of `BowlConfig`.
+const BOWL_LAYOUT_UNIT_AMPLITUDE_PA: f64 = 1.0;
+/// Clearance gap in metres between skull outer surface and the bowl shell.
+const BOWL_SKIN_MARGIN_M: f64 = 0.015;
+/// Minimum allowed bowl radius in metres (150 mm).
+const BOWL_RADIUS_MIN_M: f64 = 0.150;
 /// Number of beam paths sampled for visual and metric output.
 const BEAM_SAMPLE_COUNT: usize = 72;
 /// Number of DDA steps per beam for skull-intersection ray tracing.
@@ -57,13 +64,13 @@ pub struct BrainHelmetPlacement3D {
     pub intersection_fraction: f64,
 }
 
-/// Plan 3-D InSightec-like helmet element placement from a head CT volume.
+/// Plan 3-D focused-bowl element placement from a head CT volume.
 ///
 /// # Arguments
 ///
 /// - `ct_hu` — 3-D array with shape `[NX, NY, NZ]`, values in Hounsfield units.
 /// - `spacing_mm` — voxel spacing in millimetres for each axis.
-/// - `element_count` — total number of therapy elements on the helmet shell.
+/// - `element_count` — total number of therapy elements on the bowl shell.
 /// - `surface_stride` — stride for thinning the surface point clouds (1 = dense).
 /// - `body_hu_threshold` — HU threshold separating tissue from air (−350 HU).
 /// - `skull_hu_threshold` — HU threshold separating bone from soft tissue (300 HU).
@@ -84,7 +91,7 @@ pub fn plan_brain_helmet_placement(
 ) -> KwaversResult<BrainHelmetPlacement3D> {
     if element_count < 16 {
         return Err(KwaversError::InvalidInput(
-            "3-D helmet placement requires at least 16 elements".to_owned(),
+            "3-D focused-bowl placement requires at least 16 elements".to_owned(),
         ));
     }
     if spacing_mm
@@ -92,7 +99,7 @@ pub fn plan_brain_helmet_placement(
         .any(|value| !value.is_finite() || *value <= 0.0)
     {
         return Err(KwaversError::InvalidInput(
-            "3-D helmet placement requires positive finite CT spacing".to_owned(),
+            "3-D focused-bowl placement requires positive finite CT spacing".to_owned(),
         ));
     }
     let body_mask = ct_hu.mapv(|hu| hu.is_finite() && hu >= body_hu_threshold);
@@ -185,9 +192,9 @@ pub fn plan_brain_helmet_placement(
         calvarium_min_z,
         calvarium_max_z,
     );
-    // Helmet sphere radius = maximum 3-D distance from the calvarium centroid to any
-    // calvarium skull voxel, plus a clearance margin. This ensures the spherical shell
-    // lies entirely outside the skull across the full calvarium region.
+    // Bowl shell radius = maximum 3-D distance from the calvarium centroid to any
+    // calvarium skull voxel, plus a clearance margin. This keeps the spherical
+    // source surface outside the skull across the full calvarium region.
     let head_radius = body_radius(
         &body_mask,
         spacing_m,
@@ -202,13 +209,13 @@ pub fn plan_brain_helmet_placement(
                 "scene_radius_m must be positive and finite".to_owned(),
             ));
         }
-        None => HELMET_RADIUS_MIN_M,
+        None => BOWL_RADIUS_MIN_M,
     };
-    let helmet_radius_m = (head_radius + HELMET_SKIN_MARGIN_M)
+    let helmet_radius_m = (head_radius + BOWL_SKIN_MARGIN_M)
         .max(requested_radius_m)
-        .max(HELMET_RADIUS_MIN_M);
+        .max(BOWL_RADIUS_MIN_M);
     let therapy_elements_m =
-        calvarium_cap_elements(element_count, helmet_radius_m, focus, superior_positive);
+        calvarium_cap_elements(element_count, helmet_radius_m, focus, superior_positive)?;
     let (beam_start_points_m, beam_end_points_m, skull_intersections_m) = sample_beams(
         &therapy_elements_m,
         focus,
@@ -260,7 +267,7 @@ fn body_bounds(mask: &Array3<bool>) -> KwaversResult<Bounds> {
         Ok(Bounds { min, max })
     } else {
         Err(KwaversError::InvalidInput(
-            "3-D helmet placement found no CT head support voxels".to_owned(),
+            "3-D focused-bowl placement found no CT head support voxels".to_owned(),
         ))
     }
 }
@@ -304,34 +311,44 @@ fn body_radius(
         .fold(0.0_f64, f64::max)
 }
 
-/// Distribute `count` therapy elements on the calvarium cap of a sphere of `radius_m`
-/// centred at `focus`, using the Fibonacci spiral to achieve near-uniform spacing.
+/// Distribute `count` therapy elements on a focused-bowl major cap.
 ///
-/// The cap spans from `CAP_UNIT_Z_MIN` (slightly below the equatorial plane) to
-/// `CAP_UNIT_Z_MAX` (near the pole), matching the InSightec ExAblate Neuro
-/// geometrical coverage of the skull dome. The `superior_positive` flag flips the
-/// z-axis direction so the cap is always oriented toward the anatomical superior pole.
+/// The cap spans from `BOWL_CAP_UNIT_Z_MIN` to `BOWL_CAP_UNIT_Z_MAX`. The
+/// `superior_positive` flag flips the z-axis direction so the cap is oriented
+/// toward the anatomical superior pole while the source-domain bowl layout owns
+/// the equal-area sampling.
 fn calvarium_cap_elements(
     count: usize,
     radius_m: f64,
     focus: Point3,
     superior_positive: bool,
-) -> Vec<Point3> {
-    let golden = std::f64::consts::PI * (3.0 - 5.0_f64.sqrt());
+) -> KwaversResult<Vec<Point3>> {
     let sign = if superior_positive { 1.0_f64 } else { -1.0_f64 };
-    (0..count)
-        .map(|idx| {
-            let t = (idx as f64 + 0.5) / count as f64;
-            let z_unit = CAP_UNIT_Z_MIN + (CAP_UNIT_Z_MAX - CAP_UNIT_Z_MIN) * t;
-            let radial = (1.0 - z_unit * z_unit).max(0.0).sqrt();
-            let phi = idx as f64 * golden;
-            Point3 {
-                x_m: focus.x_m + radius_m * radial * phi.cos(),
-                y_m: focus.y_m + radius_m * radial * phi.sin(),
-                z_m: focus.z_m + sign * radius_m * z_unit,
-            }
+    let vertex_m = [focus.x_m, focus.y_m, focus.z_m + sign * radius_m];
+    let focus_m = [focus.x_m, focus.y_m, focus.z_m];
+    let config = BowlConfig::from_vertex_focus(
+        vertex_m,
+        focus_m,
+        2.0 * radius_m,
+        BOWL_LAYOUT_UNIT_FREQUENCY_HZ,
+        BOWL_LAYOUT_UNIT_AMPLITUDE_PA,
+    );
+    let layout = BowlTransducer::with_polar_bounds(
+        config,
+        BOWL_CAP_UNIT_Z_MAX.acos(),
+        BOWL_CAP_UNIT_Z_MIN.acos(),
+        count,
+    )?;
+
+    Ok(layout
+        .element_positions()
+        .iter()
+        .map(|position| Point3 {
+            x_m: position[0],
+            y_m: position[1],
+            z_m: position[2],
         })
-        .collect()
+        .collect())
 }
 
 fn axial_areas(mask: &Array3<bool>) -> Vec<usize> {

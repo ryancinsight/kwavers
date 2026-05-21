@@ -50,6 +50,11 @@
   full-volume brain placement uses that source-domain API for major-cap element
   generation instead of retaining local focused-bowl aperture sampling.
 
+- Closed the 3-D focused-bowl placement routing gap. Full-volume clinical
+  calvarium cap placement now delegates major-cap element generation to
+  `BowlTransducer::with_polar_bounds`, and the regression pins normalized polar
+  z-bounds instead of only coarse extent checks.
+
 - Closed the bowl vertex/focus preset gap. `BowlConfig` now provides
   vertex/focus, hemispherical, and element-size constructors under the
   source-domain bowl module, so downstream adapters can request fixed-count

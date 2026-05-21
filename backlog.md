@@ -31,6 +31,12 @@
   placement delegates major-cap element generation to the bowl source API
   instead of owning a local aperture sampler.
 
+- 2026-05-21: [patch] Closed the 3-D focused-bowl placement routing gap.
+  Full-volume calvarium placement now obtains major-cap element positions from
+  `BowlTransducer::with_polar_bounds`, removing the local Fibonacci sampler
+  while preserving normalized polar z-bound coverage.
+
+
 - 2026-05-20: [minor] Closed the bowl vertex/focus preset gap.
   `BowlConfig` now owns vertex/focus and hemispherical constructors plus an
   element-size fluent setter, allowing clinical adapters to configure
