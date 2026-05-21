@@ -264,7 +264,7 @@ impl SonoluminescenceDetector {
             peak_pressure,
             compression_ratio: cluster[0].compression_ratio,
             photon_count: total_photons,
-            peak_wavelength: 2.898e-3 / peak_temperature,
+            peak_wavelength: WIEN_CONSTANT / peak_temperature,
             duration,
             energy: total_energy,
         }
