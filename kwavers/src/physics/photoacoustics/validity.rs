@@ -1,3 +1,4 @@
+use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::{PhotoacousticScenario, ThermoelasticProperties};
 
 /// Validity report for retained photoacoustic physics assumptions.
@@ -9,22 +10,25 @@ pub struct PhotoacousticValidityReport {
 }
 
 impl PhotoacousticValidityReport {
-    #[must_use]
+    /// Evaluate retained photoacoustic validity assumptions.
+    ///
+    /// # Errors
+    /// - Propagates invalid confinement-domain parameters.
     pub fn evaluate(
         scenario: &PhotoacousticScenario,
         mu_a: f64,
         mu_s_prime: f64,
         thermoelastic: ThermoelasticProperties,
-    ) -> Self {
+    ) -> KwaversResult<Self> {
         let confinement = super::ConfinementAssessment::evaluate(
             mu_a,
             scenario.config.pulse_duration_s,
             thermoelastic,
-        );
-        Self {
+        )?;
+        Ok(Self {
             diffusion_regime_valid: mu_s_prime > mu_a,
             stress_confined: confinement.stress_confined,
             thermal_confined: confinement.thermal_confined,
-        }
+        })
     }
 }

@@ -155,7 +155,7 @@ impl PhotoacousticPipeline {
             signals,
             reconstruction,
         };
-        let report = validate_photoacoustic_simulation(scenario, &simulation);
+        let report = validate_photoacoustic_simulation(scenario, &simulation)?;
         Ok((simulation, report))
     }
 }

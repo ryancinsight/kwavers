@@ -1,17 +1,20 @@
+use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::{
     PhotoacousticScenario, PhotoacousticSimulation, PhotoacousticValidationReport,
 };
 use crate::physics::photoacoustics::thermoelasticity::GrueneisenModel;
 use crate::physics::photoacoustics::ConfinementAssessment;
 /// Validate photoacoustic simulation.
+/// # Errors
+/// - Propagates invalid confinement-domain parameters.
+///
 /// # Panics
 /// - Panics if `optical map dimensions are internally consistent`.
 ///
-#[must_use]
 pub fn validate_photoacoustic_simulation(
     scenario: &PhotoacousticScenario,
     simulation: &PhotoacousticSimulation,
-) -> PhotoacousticValidationReport {
+) -> KwaversResult<PhotoacousticValidationReport> {
     let center = scenario
         .optical_map
         .get_properties(
@@ -24,7 +27,7 @@ pub fn validate_photoacoustic_simulation(
         center.absorption_coefficient,
         scenario.config.pulse_duration_s,
         scenario.config.thermoelastic,
-    );
+    )?;
     let pressure_balance_error = simulation
         .optical_fluence
         .iter()
@@ -43,7 +46,7 @@ pub fn validate_photoacoustic_simulation(
         .max(f64::MIN_POSITIVE)
         * simulation.initial_pressure.pressure.len() as f64;
 
-    PhotoacousticValidationReport {
+    Ok(PhotoacousticValidationReport {
         optical_model: format!("{:?}", scenario.config.optical_model),
         wavelength_nm: scenario.wavelength_nm,
         stress_confined: confinement.stress_confined,
@@ -51,5 +54,5 @@ pub fn validate_photoacoustic_simulation(
         total_optical_energy: simulation.optical_fluence.sum() * scenario.grid.cell_volume(),
         max_initial_pressure: simulation.initial_pressure.max_pressure,
         relative_pressure_balance_error: pressure_balance_error / denominator,
-    }
+    })
 }

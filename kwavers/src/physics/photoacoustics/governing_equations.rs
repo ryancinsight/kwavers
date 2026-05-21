@@ -1,5 +1,6 @@
 use super::thermoelasticity::GrueneisenModel;
 use super::ThermoelasticReport;
+use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
 
 #[derive(Debug)]
@@ -21,7 +22,8 @@ impl PhotoacousticGoverningEquations {
     ///
     /// Callers that only have a bare `f64` Grüneisen coefficient should construct
     /// `GrueneisenModel::constant(gamma)` and pass body temperature (37.0 °C).
-    #[must_use]
+    /// # Errors
+    /// - Propagates invalid confinement-domain parameters.
     pub fn initial_pressure(
         mu_a_m_inv: f64,
         fluence_j_m2: f64,
@@ -29,7 +31,7 @@ impl PhotoacousticGoverningEquations {
         thermoelastic: ThermoelasticProperties,
         gruneisen: &GrueneisenModel,
         temperature_celsius: f64,
-    ) -> ThermoelasticReport {
+    ) -> KwaversResult<ThermoelasticReport> {
         let absorbed_energy_density_j_m3 = Self::absorbed_energy_density(mu_a_m_inv, fluence_j_m2);
         ThermoelasticReport::from_absorbed_energy(
             absorbed_energy_density_j_m3,

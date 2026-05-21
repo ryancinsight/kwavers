@@ -51,7 +51,7 @@ impl PhotoacousticSourceModel {
                 scenario.config.thermoelastic,
                 &gruneisen,
                 37.0,
-            );
+            )?;
             *cell_pressure = report.initial_pressure_pa;
             max_pressure = max_pressure.max(report.initial_pressure_pa);
         }

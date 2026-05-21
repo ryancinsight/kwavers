@@ -1,3 +1,4 @@
+use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
 
 #[derive(Debug, Clone, Copy)]
@@ -10,29 +11,126 @@ pub struct ConfinementAssessment {
 }
 
 impl ConfinementAssessment {
-    #[must_use]
+    /// Evaluate stress and thermal confinement for a finite absorbing region.
+    ///
+    /// ## Theorem
+    ///
+    /// For optical absorption coefficient `mu_a`, absorber length scale
+    /// `delta = 1 / mu_a`, sound speed `c_s`, and thermal diffusivity
+    /// `alpha = k / (rho * c_p)`, the characteristic confinement times are
+    ///
+    /// ```text
+    /// tau_s  = delta / c_s
+    /// tau_th = delta^2 / (4 * alpha)
+    /// ```
+    ///
+    /// A pulse is stress-confined when `tau_p <= tau_s` and thermally confined
+    /// when `tau_p <= tau_th`. The formulas require strictly positive finite
+    /// material parameters; invalid domains are rejected rather than regularized
+    /// with denominator floors.
+    ///
+    /// ## References
+    /// - Xu M, Wang LV. Photoacoustic imaging in biomedicine. Rev Sci Instrum.
+    ///   2006;77:041101. DOI: 10.1063/1.2195024.
+    /// - Wang LV, Yao J. A practical guide to photoacoustic tomography in the
+    ///   life sciences. Nat Methods. 2016;13:627-638. DOI: 10.1038/nmeth.3925.
+    ///
+    /// # Errors
+    /// - Returns [`KwaversError::Validation`] if any required physical parameter
+    ///   is nonfinite or nonpositive.
     pub fn evaluate(
         mu_a_m_inv: f64,
         pulse_duration_s: f64,
         thermoelastic: ThermoelasticProperties,
-    ) -> Self {
-        let optical_penetration_depth_m = if mu_a_m_inv > 0.0 {
-            1.0 / mu_a_m_inv
-        } else {
-            f64::INFINITY
-        };
-        let stress_confinement_time_s =
-            optical_penetration_depth_m / thermoelastic.sound_speed_m_s.max(f64::MIN_POSITIVE);
-        let thermal_diffusivity = thermoelastic.thermal_diffusivity_m2_s();
-        let thermal_confinement_time_s = optical_penetration_depth_m.powi(2)
-            / (4.0 * thermal_diffusivity.max(f64::MIN_POSITIVE));
+    ) -> KwaversResult<Self> {
+        validate_positive_finite("mu_a_m_inv", mu_a_m_inv)?;
+        validate_positive_finite("pulse_duration_s", pulse_duration_s)?;
+        validate_positive_finite("density_kg_m3", thermoelastic.density_kg_m3)?;
+        validate_positive_finite("sound_speed_m_s", thermoelastic.sound_speed_m_s)?;
+        validate_positive_finite("specific_heat_j_kgk", thermoelastic.specific_heat_j_kgk)?;
+        validate_positive_finite(
+            "thermal_conductivity_w_mk",
+            thermoelastic.thermal_conductivity_w_mk,
+        )?;
 
-        Self {
+        let optical_penetration_depth_m = 1.0 / mu_a_m_inv;
+        let stress_confinement_time_s = optical_penetration_depth_m / thermoelastic.sound_speed_m_s;
+        let thermal_diffusivity = thermoelastic.thermal_diffusivity_m2_s();
+        validate_positive_finite("thermal_diffusivity_m2_s", thermal_diffusivity)?;
+        let thermal_confinement_time_s =
+            optical_penetration_depth_m.powi(2) / (4.0 * thermal_diffusivity);
+
+        Ok(Self {
             optical_penetration_depth_m,
             stress_confinement_time_s,
             thermal_confinement_time_s,
             stress_confined: pulse_duration_s <= stress_confinement_time_s,
             thermal_confined: pulse_duration_s <= thermal_confinement_time_s,
+        })
+    }
+}
+
+fn validate_positive_finite(parameter: &str, value: f64) -> KwaversResult<()> {
+    if value.is_finite() && value > 0.0 {
+        return Ok(());
+    }
+    Err(KwaversError::Validation(ValidationError::InvalidValue {
+        parameter: parameter.to_owned(),
+        value,
+        reason: "must be finite and strictly positive".to_owned(),
+    }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn water() -> ThermoelasticProperties {
+        ThermoelasticProperties {
+            density_kg_m3: 1000.0,
+            sound_speed_m_s: 1500.0,
+            specific_heat_j_kgk: 4180.0,
+            thermal_conductivity_w_mk: 0.6,
         }
+    }
+
+    #[test]
+    fn evaluates_stress_and_thermal_confinement_without_regularization() -> KwaversResult<()> {
+        let assessment = ConfinementAssessment::evaluate(100.0, 5e-9, water())?;
+        let expected_delta = 0.01_f64;
+        let expected_alpha = 0.6 / (1000.0 * 4180.0);
+        let expected_tau_s = expected_delta / 1500.0;
+        let expected_tau_th = expected_delta.powi(2) / (4.0 * expected_alpha);
+
+        assert!((assessment.optical_penetration_depth_m - expected_delta).abs() < 1e-15);
+        assert!((assessment.stress_confinement_time_s - expected_tau_s).abs() < 1e-15);
+        assert!((assessment.thermal_confinement_time_s - expected_tau_th).abs() < 1e-12);
+        assert!(assessment.stress_confined);
+        assert!(assessment.thermal_confined);
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_nonpositive_absorption_instead_of_infinite_depth() {
+        let err = ConfinementAssessment::evaluate(0.0, 5e-9, water()).unwrap_err();
+        assert!(matches!(
+            err,
+            KwaversError::Validation(ValidationError::InvalidValue { parameter, .. })
+                if parameter == "mu_a_m_inv"
+        ));
+    }
+
+    #[test]
+    fn rejects_invalid_thermal_transport_instead_of_denominator_floor() {
+        let thermoelastic = ThermoelasticProperties {
+            thermal_conductivity_w_mk: 0.0,
+            ..water()
+        };
+        let err = ConfinementAssessment::evaluate(100.0, 5e-9, thermoelastic).unwrap_err();
+        assert!(matches!(
+            err,
+            KwaversError::Validation(ValidationError::InvalidValue { parameter, .. })
+                if parameter == "thermal_conductivity_w_mk"
+        ));
     }
 }

@@ -1,4 +1,5 @@
 use super::ConfinementAssessment;
+use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
 
 /// Temperature-dependent Grüneisen parameter Γ(T) = Γ₀ + c_T · (T − T_ref).
@@ -123,7 +124,9 @@ impl ThermoelasticReport {
     /// ## References
     /// - Sigrist MW (1986). *J Appl Phys* **60**(7), R83. DOI: 10.1063/1.337089
     /// - Xu M, Wang LV (2006). *Rev Sci Instrum* **77**, 041101. DOI: 10.1063/1.2195024
-    #[must_use]
+    ///
+    /// # Errors
+    /// - Propagates invalid confinement-domain parameters.
     pub fn from_absorbed_energy(
         absorbed_energy_density_j_m3: f64,
         mu_a_m_inv: f64,
@@ -131,16 +134,16 @@ impl ThermoelasticReport {
         thermoelastic: ThermoelasticProperties,
         model: &GrueneisenModel,
         temperature_celsius: f64,
-    ) -> Self {
+    ) -> KwaversResult<Self> {
         let confinement =
-            ConfinementAssessment::evaluate(mu_a_m_inv, pulse_duration_s, thermoelastic);
+            ConfinementAssessment::evaluate(mu_a_m_inv, pulse_duration_s, thermoelastic)?;
         let gamma = model.evaluate(temperature_celsius);
         let initial_pressure_pa = gamma * absorbed_energy_density_j_m3;
-        Self {
+        Ok(Self {
             absorbed_energy_density_j_m3,
             initial_pressure_pa,
             confinement,
-        }
+        })
     }
 }
 
@@ -226,7 +229,7 @@ mod tests {
     /// - Panics if an internal precondition is violated.
     ///
     #[test]
-    fn test_thermoelastic_report_temperature_sensitivity() {
+    fn test_thermoelastic_report_temperature_sensitivity() -> KwaversResult<()> {
         use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
         let thermoelastic = ThermoelasticProperties {
             density_kg_m3: 1000.0,
@@ -246,7 +249,7 @@ mod tests {
             thermoelastic,
             &model,
             37.0,
-        );
+        )?;
         let report_20 = ThermoelasticReport::from_absorbed_energy(
             energy,
             mu_a,
@@ -254,7 +257,7 @@ mod tests {
             thermoelastic,
             &model,
             20.0,
-        );
+        )?;
 
         let gamma_37 = model.evaluate(37.0);
         let gamma_20 = model.evaluate(20.0);
@@ -270,6 +273,7 @@ mod tests {
             (expected_ratio - 1.567).abs() < 0.001,
             "Water Γ(37)/Γ(20) = {expected_ratio:.4}, expected ≈ 1.567"
         );
+        Ok(())
     }
 
     /// Stress confinement: τ_laser ≪ τ_stress = 1/(μ_a · c_s).
