@@ -4,6 +4,10 @@
 //! acoustic scattering from microbubble contrast agents.
 
 use super::microbubble::MicrobubblePopulation;
+use crate::core::constants::cavitation::VISCOSITY_WATER;
+use crate::core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+};
 use crate::core::error::KwaversResult;
 
 /// Nonlinear scattering model for microbubbles
@@ -50,8 +54,13 @@ impl NonlinearScattering {
             return Ok(0.0);
         }
 
-        let linear_scattering =
-            population.effective_scattering(frequency, 101_325.0, 1_000.0, 1_500.0, 0.001)?;
+        let linear_scattering = population.effective_scattering(
+            frequency,
+            ATMOSPHERIC_PRESSURE,
+            DENSITY_WATER_NOMINAL,
+            SOUND_SPEED_WATER_SIM,
+            VISCOSITY_WATER,
+        )?;
 
         // Nonlinear enhancement based on acoustic pressure
         let pressure_factor = (acoustic_pressure / 100_000.0).min(1.0); // Normalize to 100 kPa
@@ -59,7 +68,7 @@ impl NonlinearScattering {
         // Resonance enhancement
         let resonance_freq = population
             .reference_bubble
-            .resonance_frequency(101325.0, 1000.0);
+            .resonance_frequency(ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL);
         let freq_ratio = frequency / resonance_freq;
         let resonance_factor = 1.0 / (freq_ratio - 1.0).mul_add(freq_ratio - 1.0, 1.0);
 
