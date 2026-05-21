@@ -11,7 +11,9 @@
 //! Off-resonance: scattering amplitude ∝ R³ · 10³
 
 use super::simulator::CloudDynamics;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -58,7 +60,9 @@ impl CloudDynamics {
             let bubble_pos = &bubble.position;
 
             // Calculate scattering amplitude based on bubble resonance
-            let resonance_freq = bubble.properties.resonance_frequency(101325.0, 1000.0);
+            let resonance_freq = bubble
+                .properties
+                .resonance_frequency(ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL);
             let scattering_amplitude = if (frequency - resonance_freq).abs() < 0.1 * resonance_freq
             {
                 bubble.current_radius.powi(3) * 1e6
