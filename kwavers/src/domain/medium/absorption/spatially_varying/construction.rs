@@ -1,4 +1,5 @@
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::REFERENCE_FREQUENCY_HZ;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
@@ -68,7 +69,7 @@ impl SpatiallyVaryingAbsorption {
     ) -> KwaversResult<Self> {
         let alpha_0_field = Array3::from_elem((nx, ny, nz), alpha_0);
         let gamma_field = Array3::from_elem((nx, ny, nz), gamma);
-        Self::new(alpha_0_field, gamma_field, 1e6)
+        Self::new(alpha_0_field, gamma_field, REFERENCE_FREQUENCY_HZ)
     }
     /// With temperature dependence.
     /// # Errors

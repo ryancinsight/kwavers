@@ -3,7 +3,7 @@
 //! Follows Builder pattern for complex medium instantiation
 
 use super::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
-use crate::core::constants::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::{REFERENCE_FREQUENCY_HZ, SOUND_SPEED_WATER_SIM};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::HeterogeneousFactory;
@@ -101,7 +101,7 @@ impl MediumBuilder {
         let rho0 = config.density;
         let absorption = config.absorption;
         let nonlinearity = config.nonlinearity;
-        let reference_frequency = 1.0e6; // 1 MHz default
+        let reference_frequency = REFERENCE_FREQUENCY_HZ;
 
         let medium = HeterogeneousFactory::from_functions(
             grid,
@@ -249,7 +249,7 @@ impl MediumBuilder {
             Some(Box::new(blended_prop!(absorption))),
             None, // alpha_power: uniform 1.0 (LayerParameters has no power-law exponent field)
             None, // nonlinearity: LayerParameters has no nonlinearity field
-            1.0e6,
+            REFERENCE_FREQUENCY_HZ,
         );
 
         log::debug!(

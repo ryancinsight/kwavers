@@ -3,6 +3,7 @@
 //! Following GRASP principle: Separated core data structure from trait implementations
 //! to achieve optimal cohesion per senior engineering standards.
 
+use crate::core::constants::REFERENCE_FREQUENCY_HZ;
 use crate::domain::grid::Grid;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
 use crate::domain::medium::{
@@ -119,7 +120,7 @@ impl HeterogeneousMedium {
             bulk_viscosity_coeff: Array3::zeros((nx, ny, nz)),
             lame_lambda: Array3::zeros((nx, ny, nz)),
             lame_mu: Array3::zeros((nx, ny, nz)),
-            reference_frequency: 1.0e6, // 1 MHz default
+            reference_frequency: REFERENCE_FREQUENCY_HZ,
         }
     }
 

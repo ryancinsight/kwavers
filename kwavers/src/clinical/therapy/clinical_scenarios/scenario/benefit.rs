@@ -1,5 +1,4 @@
-/// Reference frequency for the intrinsic-threshold log-fit (Vlaisavljevich 2015).
-const REF_FREQ_HZ: f64 = 1.0e6;
+use crate::core::constants::REFERENCE_FREQUENCY_HZ;
 /// Baseline intrinsic-threshold magnitude at 1 MHz in water-rich soft tissue
 /// (Maxwell 2013, Table II — bovine liver).
 const PT0_PA: f64 = 28.2e6;
@@ -27,6 +26,6 @@ pub struct BenefitDetriment {
 #[must_use]
 pub fn intrinsic_threshold_pa(frequency_hz: f64) -> f64 {
     debug_assert!(frequency_hz > 0.0);
-    let log_ratio = (frequency_hz / REF_FREQ_HZ).log10();
+    let log_ratio = (frequency_hz / REFERENCE_FREQUENCY_HZ).log10();
     PT_SLOPE_PA_PER_DECADE.mul_add(log_ratio, PT0_PA)
 }

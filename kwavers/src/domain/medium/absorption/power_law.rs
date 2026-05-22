@@ -1,7 +1,7 @@
 //! Power-law absorption model
 
 use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
-use crate::core::constants::DB_TO_NP;
+use crate::core::constants::{DB_TO_NP, REFERENCE_FREQUENCY_HZ};
 use serde::{Deserialize, Serialize};
 
 /// Power-law absorption model configuration
@@ -22,7 +22,7 @@ impl Default for PowerLawAbsorption {
         Self {
             alpha_0: 0.75, // Typical soft tissue value
             y: 1.1,        // Typical soft tissue exponent
-            f_ref: 1e6,    // 1 MHz reference
+            f_ref: REFERENCE_FREQUENCY_HZ,
             dispersion_correction: true,
         }
     }
@@ -35,7 +35,7 @@ impl PowerLawAbsorption {
         Self {
             alpha_0: 0.0022, // dB/(MHz^2 cm) for water
             y: 2.0,          // Quadratic frequency dependence
-            f_ref: 1e6,
+            f_ref: REFERENCE_FREQUENCY_HZ,
             dispersion_correction: false,
         }
     }
@@ -46,7 +46,7 @@ impl PowerLawAbsorption {
         Self {
             alpha_0: 0.75,
             y: 1.1,
-            f_ref: 1e6,
+            f_ref: REFERENCE_FREQUENCY_HZ,
             dispersion_correction: true,
         }
     }

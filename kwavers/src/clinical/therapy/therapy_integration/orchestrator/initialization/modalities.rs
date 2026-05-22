@@ -1,5 +1,6 @@
 //! Modality-specific initialization for CEUS, transcranial, chemical, and cavitation subsystems.
 
+use crate::core::constants::REFERENCE_FREQUENCY_HZ;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -102,5 +103,5 @@ pub fn init_cavitation_controller(
         },
         _ => unreachable!("Cavitation controller only for histotripsy/oncotripsy"),
     };
-    Ok(FeedbackController::new(feedback_config, 1000000.0, 1000.0))
+    Ok(FeedbackController::new(feedback_config, REFERENCE_FREQUENCY_HZ, 1000.0))
 }

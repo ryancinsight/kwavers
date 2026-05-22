@@ -20,8 +20,8 @@ pub const DEFAULT_RAMP_TIME: f64 = 0.01;
 /// Maximum amplitude change rate (per second)
 pub const MAX_AMPLITUDE_RATE: f64 = 10.0;
 
-/// Safety threshold for mechanical index
-pub const MECHANICAL_INDEX_LIMIT: f64 = 1.9;
+/// Safety threshold for mechanical index — delegates to `medical::MI_LIMIT_SOFT_TISSUE` (FDA 2019).
+pub const MECHANICAL_INDEX_LIMIT: f64 = crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 
 /// Default filter time constant (seconds)
 pub const DEFAULT_FILTER_TIME_CONSTANT: f64 = 0.1;

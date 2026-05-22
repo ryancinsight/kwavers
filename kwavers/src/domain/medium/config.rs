@@ -1,7 +1,7 @@
 //! Medium properties configuration
 
 use crate::core::constants::fundamental::B_OVER_A_WATER;
-use crate::core::constants::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -257,7 +257,7 @@ impl Default for DomainMediumParameters {
     fn default() -> Self {
         Self {
             medium_type: MediumType::Homogeneous,
-            density: 1000.0, // Water
+            density: DENSITY_WATER_NOMINAL,
             sound_speed: Some(SOUND_SPEED_WATER_SIM),
             sound_speed_min: None,
             sound_speed_max: None,

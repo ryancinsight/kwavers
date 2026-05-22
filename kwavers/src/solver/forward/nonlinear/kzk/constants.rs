@@ -3,15 +3,15 @@
 //! All tissue and medium property values delegate to the canonical SSOT at
 //! `core::constants`.  No numerical literals are defined locally.
 
-use crate::core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0;
+use crate::core::constants::acoustic_parameters::{REFERENCE_FREQUENCY_HZ, WATER_ABSORPTION_ALPHA_0};
 use crate::core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER,
     SOFT_TISSUE_ABSORPTION_POWER_Y, WATER_ABSORPTION_POWER_Y,
 };
 use crate::core::constants::SOUND_SPEED_WATER;
 
-/// Default test frequency: 1 `MHz`
-pub const DEFAULT_FREQUENCY: f64 = 1e6;
+/// Default test frequency: 1 `MHz` — delegates to `acoustic_parameters::REFERENCE_FREQUENCY_HZ`.
+pub const DEFAULT_FREQUENCY: f64 = REFERENCE_FREQUENCY_HZ;
 
 /// Default wavelength in water at 1 `MHz`
 pub const DEFAULT_WAVELENGTH: f64 = SOUND_SPEED_WATER / DEFAULT_FREQUENCY;

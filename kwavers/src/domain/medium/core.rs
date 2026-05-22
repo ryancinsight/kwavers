@@ -3,6 +3,7 @@
 //! This module provides fundamental traits that all medium types must implement,
 //! establishing a Single Source of Truth (SSOT) for medium behaviors.
 
+use crate::core::constants::REFERENCE_FREQUENCY_HZ;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
@@ -49,7 +50,7 @@ pub trait CoreMedium: Debug + Send + Sync {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn reference_frequency(&self) -> f64 {
-        1e6 // Default 1 MHz
+        REFERENCE_FREQUENCY_HZ
     }
 
     /// Validate medium properties against physical constraints

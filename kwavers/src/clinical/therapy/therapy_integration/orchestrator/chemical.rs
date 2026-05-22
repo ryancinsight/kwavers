@@ -19,7 +19,7 @@
 //! - Suslick (1990): "Sonochemistry" - Science
 //! - Mason (1999): "Sonochemistry and sonoluminescence"
 
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
@@ -177,7 +177,7 @@ fn calculate_temperature_field(
     // Calculate acoustic absorption heating from pressure field
     // Q_acoustic = α * |p|² / (ρ * c) where α is attenuation coefficient
     let alpha = 0.5; // 0.5 Np/m typical for soft tissue
-    let rho = 1000.0; // kg/m³
+    let rho = DENSITY_WATER_NOMINAL;
     let c = SOUND_SPEED_TISSUE; // m/s
     let heating_factor = alpha / (rho * c);
 

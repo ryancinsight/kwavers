@@ -1,5 +1,6 @@
 use crate::core::constants::acoustic_parameters::{
-    AIR_POLYTROPIC_INDEX, AIR_SPECIFIC_HEAT_CP, REFERENCE_FREQUENCY_HZ, TISSUE_NONLINEARITY_B_A,
+    AIR_ABSORPTION_ALPHA_0, AIR_ABSORPTION_POWER, AIR_POLYTROPIC_INDEX, AIR_SPECIFIC_HEAT_CP,
+    REFERENCE_FREQUENCY_HZ, TISSUE_NONLINEARITY_B_A,
 };
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_AIR, DENSITY_AIR, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER,
@@ -86,8 +87,8 @@ impl HomogeneousMedium {
             thermal_conductivity: THERMAL_CONDUCTIVITY_AIR,
             shear_viscosity: VISCOSITY_AIR,
             bulk_viscosity: 0.0,
-            absorption_alpha: 1.84e-11,
-            absorption_power: 2.0,
+            absorption_alpha: AIR_ABSORPTION_ALPHA_0,
+            absorption_power: AIR_ABSORPTION_POWER,
             thermal_expansion: THERMAL_EXPANSION_AIR_20C,
             gas_diffusion: GAS_DIFFUSION_COEFFICIENT_AIR,
             nonlinearity: B_OVER_A_AIR,
@@ -101,7 +102,7 @@ impl HomogeneousMedium {
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), SOUND_SPEED_AIR),
             absorption_cache: Array3::from_elem(
                 (grid.nx, grid.ny, grid.nz),
-                1.84e-11 * 1.0_f64.powi(2),
+                AIR_ABSORPTION_ALPHA_0 * 1.0_f64.powi(2),
             ),
             nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), B_OVER_A_AIR),
             lame_lambda: DENSITY_AIR * SOUND_SPEED_AIR * SOUND_SPEED_AIR,
