@@ -4,6 +4,8 @@ use ndarray::Array2;
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::medium::PreparedTheranosticSlice;
+use crate::core::constants::acoustic_parameters::BONE_SOUND_SPEED;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 pub(super) fn lesion_speed(
     prepared: &PreparedTheranosticSlice,
@@ -13,7 +15,7 @@ pub(super) fn lesion_speed(
     Array2::from_shape_fn(prepared.sound_speed_m_s.dim(), |idx| {
         if prepared.body_mask[idx] {
             (prepared.sound_speed_m_s[idx] + config.lesion_delta_c_m_s * lesion[idx])
-                .clamp(1000.0, 3500.0)
+                .clamp(SOUND_SPEED_WATER_SIM, BONE_SOUND_SPEED)
         } else {
             prepared.sound_speed_m_s[idx]
         }

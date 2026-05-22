@@ -2,8 +2,38 @@
 //!
 //! Consolidated configuration for all solver types.
 
+use crate::domain::boundary::cpml::CPMLConfig;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+
+/// Absorbing boundary parameters for CPML-enabled solvers.
+///
+/// Bundles the two parameters that `enable_cpml` requires beyond the CPML
+/// geometry itself: `max_sound_speed` is the domain-wide maximum of the
+/// medium's sound-speed field, used to compute the Roden-Gedney σ_max:
+///
+/// ```text
+/// σ_max = -(m+1) · ln(R₀) / (2 · d · c_max)
+/// ```
+///
+/// `dt` is taken from `SolverConfiguration.dt` at assembly time so that the
+/// Courant constraint is enforced once and consistently.
+///
+/// The factory cannot derive `max_sound_speed` from the abstract
+/// `FactoryMediumParameters` trait without full-domain enumeration.  The
+/// caller (FWI forward pass, clinical adapter, etc.) computes it directly from
+/// the medium array and passes it here.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AbsorbingBoundaryConfig {
+    /// CPML layer geometry and polynomial grading parameters.
+    pub cpml: CPMLConfig,
+    /// Maximum sound speed across the entire simulation domain [m/s].
+    ///
+    /// Must equal `model.iter().copied().fold(f64::NEG_INFINITY, f64::max)`
+    /// over the sound-speed volume.  Underestimating this value produces
+    /// insufficiently damped boundaries (spurious reflections).
+    pub max_sound_speed: f64,
+}
 
 /// Unified solver configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +66,17 @@ pub struct SolverConfiguration {
     pub validation_mode: bool,
     /// Detailed logging
     pub detailed_logging: bool,
+    /// Optional C-PML absorbing boundary.
+    ///
+    /// When `Some`, `SimulationSolverFactory::create_solver` applies
+    /// `enable_cpml(config, dt, max_sound_speed)` on the assembled FDTD
+    /// solver before returning the boxed trait object.  This hoists boundary
+    /// setup into the factory so callers receive a fully configured
+    /// `Box<dyn Solver>` without needing to downcast to a concrete type.
+    ///
+    /// Ignored for non-FDTD solver types (PSTD, Hybrid, DG) where CPML is
+    /// managed through solver-specific configuration paths.
+    pub absorbing_boundary: Option<AbsorbingBoundaryConfig>,
 }
 
 /// Types of wave equation solvers
@@ -87,6 +128,7 @@ impl Default for SolverConfiguration {
             progress_interval: Duration::from_secs(10),
             validation_mode: false,
             detailed_logging: false,
+            absorbing_boundary: None,
         }
     }
 }
