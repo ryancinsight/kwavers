@@ -1,5 +1,8 @@
 # Backlog / Strategy
 
+## T19b-slice-2 — sensor-pressure trait promotion (2026-05-21)
+- **[done] [patch]** Added `Solver::recorded_sensor_pressure(&self) -> Option<Array2<f64>>` with default impl returning `None`. Concrete overrides on `FdtdSolver` and `PSTDSolver` forward to their existing `sensor_recorder.extract_pressure_data()`. FWI A's `forward_model` and `forward_model_sensor_only` now read the synthetic receiver trace through `<FdtdSolver as Solver>::recorded_sensor_pressure(&solver)` instead of `solver.sensor_recorder.extract_pressure_data()` — same cross-layer cleanup pattern as the `step_forward` / `pressure_field` trait dispatch landed in T19a. Hybrid and DG solvers keep the default `None` (they have no integrated sensor recorder). 72/72 FWI tests pass; `cargo check -p {kwavers, pykwavers} --lib` exit 0.
+
 ## DG CPML finite-3D closure (2026-05-21)
 - **[done] [patch]** New `solver::forward::pstd::dg::cpml` module: Roden-Gedney
   profile + Lazarov-Warburton joint-stepped auxiliary `ψ` ODE for the tensor
