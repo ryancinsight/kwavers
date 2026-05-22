@@ -3,6 +3,7 @@
 //! This module defines traits for acoustic-specific properties including
 //! absorption, attenuation, and nonlinear effects.
 
+use crate::core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0;
 use crate::domain::grid::Grid;
 use crate::domain::medium::absorption::AbsorptionTissueType;
 use crate::domain::medium::core::CoreMedium;
@@ -14,8 +15,8 @@ pub trait AcousticProperties: CoreMedium {
 
     /// Get acoustic attenuation coefficient (Np/m)
     fn attenuation(&self, _x: f64, _y: f64, _z: f64, frequency: f64, _grid: &Grid) -> f64 {
-        // Default power law absorption for water
-        0.0022 * frequency.powf(1.05)
+        // Default power-law absorption: α(f) = WATER_ABSORPTION_ALPHA_0 · f^1.05
+        WATER_ABSORPTION_ALPHA_0 * frequency.powf(1.05)
     }
 
     /// Get nonlinearity parameter (B/A) for nonlinear wave propagation

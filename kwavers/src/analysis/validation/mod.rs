@@ -63,8 +63,8 @@ pub mod constants {
     /// SSOT: Re-exported from core::constants::fundamental
     pub use crate::core::constants::fundamental::SOUND_SPEED_WATER;
 
-    /// Absorption in water at 1 `MHz` (dB/cm/MHz²) - Pinkerton (1949)
-    pub const WATER_ABSORPTION: f64 = 0.0022;
+    /// Absorption in water at 1 MHz — re-exported from SSOT (Pinkerton 1949)
+    pub use crate::core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0 as WATER_ABSORPTION;
 
     /// CFL limit for 3D FDTD - Taflove & Hagness (2005) Eq. 4.92
     pub const CFL_LIMIT_3D: f64 = 0.577350269; // 1/sqrt(3)

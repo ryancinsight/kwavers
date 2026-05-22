@@ -1,6 +1,8 @@
 //! Tissue-specific absorption models
 
-use crate::core::constants::acoustic_parameters::{BONE_DENSITY, BONE_SOUND_SPEED};
+use crate::core::constants::acoustic_parameters::{
+    BONE_DENSITY, BONE_SOUND_SPEED, WATER_ABSORPTION_ALPHA_0,
+};
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::{
     DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_BREAST_FAT, DENSITY_FAT, DENSITY_LIVER,
@@ -137,7 +139,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
     map.insert(
         AbsorptionTissueType::Water,
         AbsorptionTissueProperties::new(
-            0.0022,
+            WATER_ABSORPTION_ALPHA_0,
             2.0,
             DENSITY_WATER_NOMINAL,
             SOUND_SPEED_WATER,
