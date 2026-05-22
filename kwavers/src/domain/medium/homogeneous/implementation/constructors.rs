@@ -2,6 +2,7 @@ use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_AIR,
     SOUND_SPEED_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
+use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K};
 use crate::core::constants::BLOOD_VISCOSITY_37C;
 use crate::domain::grid::Grid;
@@ -140,9 +141,10 @@ impl HomogeneousMedium {
         medium.lame_lambda = youngs_modulus * nu / ((1.0 + nu) * 2.0f64.mul_add(-nu, 1.0));
         medium.lame_mu = youngs_modulus / (2.0 * (1.0 + nu));
 
-        medium.viscosity = 0.001;
-        medium.shear_viscosity = 0.001;
-        medium.bulk_viscosity = 2.5 * 0.001;
+        // Approximate soft tissue as water viscosity (1.002e-3 Pa·s) — SSOT VISCOSITY_WATER.
+        medium.viscosity = VISCOSITY_WATER;
+        medium.shear_viscosity = VISCOSITY_WATER;
+        medium.bulk_viscosity = 2.5 * VISCOSITY_WATER;
 
         let alpha = 0.5 * (medium.reference_frequency / 1e6).powf(1.1);
         medium.absorption_cache = Array3::from_elem(shape, alpha);

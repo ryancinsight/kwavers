@@ -1,6 +1,6 @@
 //! `Microbubble` and `CeusSizeDistribution` — individual microbubble physics.
 
-use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
+use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VISCOSITY_WATER};
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use std::f64::consts::PI;
@@ -169,7 +169,7 @@ impl Microbubble {
     pub fn scattering_cross_section(&self, frequency: f64) -> f64 {
         const C_L: f64 = 1480.0; // longitudinal speed in water at 20°C [m/s]
         let rho_l = DENSITY_WATER_NOMINAL;
-        const MU_L: f64 = 1.002e-3; // dynamic viscosity of water at 20°C [Pa·s]
+        let mu_l = VISCOSITY_WATER; // dynamic viscosity of water at 20°C [Pa·s]
 
         let r = self.radius_eq;
         let omega = 2.0 * std::f64::consts::PI * frequency;
@@ -182,7 +182,7 @@ impl Microbubble {
 
         // Dimensionless damping components (Church 1995, Eq. A3–A5)
         let delta_rad = omega0 * r / C_L;
-        let delta_vis = 4.0 * MU_L / (omega0 * rho_l * r * r);
+        let delta_vis = 4.0 * mu_l / (omega0 * rho_l * r * r);
         let delta_sh =
             4.0 * self.shell_thickness * self.shell_viscosity / (omega0 * rho_l * r * r * r);
         let delta_tot = (delta_rad + delta_vis + delta_sh).max(1e-12);
