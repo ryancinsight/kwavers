@@ -4,7 +4,8 @@
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE};
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN};
+use crate::core::constants::cavitation::{POLYTROPIC_EXPONENT_AIR, VAPOR_PRESSURE_WATER};
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use log::debug;
@@ -32,12 +33,12 @@ impl TissueFactory {
         // Bubble dynamics parameters
         let surface_tension = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.06);
         let ambient_pressure = ATMOSPHERIC_PRESSURE;
-        let vapor_pressure = Array3::from_elem((grid.nx, grid.ny, grid.nz), 2.338e3);
-        let polytropic_index = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.4);
+        let vapor_pressure = Array3::from_elem((grid.nx, grid.ny, grid.nz), VAPOR_PRESSURE_WATER);
+        let polytropic_index = Array3::from_elem((grid.nx, grid.ny, grid.nz), POLYTROPIC_EXPONENT_AIR);
 
         // Thermal properties
         let specific_heat = Array3::from_elem((grid.nx, grid.ny, grid.nz), SPECIFIC_HEAT_BRAIN);
-        let thermal_conductivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.52);
+        let thermal_conductivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_CONDUCTIVITY_BLOOD);
         let thermal_expansion = Array3::from_elem((grid.nx, grid.ny, grid.nz), 3.0e-4);
         let gas_diffusion_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.8e-9);
         let thermal_diffusivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.35e-7);
