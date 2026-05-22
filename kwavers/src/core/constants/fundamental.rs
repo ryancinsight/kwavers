@@ -149,6 +149,16 @@ pub const B_OVER_A_BRAIN: f64 = 6.55;
 /// Reference: Duck (1990) Table 4.16; Bjørnø (2002) Table 1.
 pub const B_OVER_A_FAT: f64 = 9.6;
 
+/// Nonlinearity parameter B/A for skeletal muscle (dimensionless).
+///
+/// Reference: Duck (1990) Table 4.16; Bjørnø (2002) Table 1.
+pub const B_OVER_A_MUSCLE: f64 = 7.4;
+
+/// Nonlinearity parameter B/A for whole blood at 37°C (dimensionless).
+///
+/// Reference: Duck (1990) Table 4.16.
+pub const B_OVER_A_BLOOD: f64 = 6.1;
+
 /// Small-signal sound speed in whole blood at body temperature (m/s).
 ///
 /// Value: 1584 m/s — measured for normal adult whole blood at 37°C.

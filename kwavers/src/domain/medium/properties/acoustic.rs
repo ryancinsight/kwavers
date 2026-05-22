@@ -40,6 +40,7 @@
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
 use crate::core::constants::fundamental::{
+    B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE,
     DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER,
     SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
     SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
@@ -191,7 +192,7 @@ impl AcousticPropertyData {
     /// - Density: ~1060 kg/m³
     /// - Sound speed: ~1570 m/s
     /// - Attenuation: ~0.5 dB/(MHz·cm) = ~0.58 Np/(MHz·m)
-    /// - B/A: ~6.8
+    /// - B/A: 6.75 (Duck 1990 Table 4.16 mean)
     #[must_use]
     pub fn liver() -> Self {
         Self {
@@ -199,17 +200,17 @@ impl AcousticPropertyData {
             sound_speed: SOUND_SPEED_LIVER,
             absorption_coefficient: 0.58,
             absorption_power: 1.1,
-            nonlinearity: 6.8,
+            nonlinearity: B_OVER_A_LIVER,
         }
     }
 
     /// Brain tissue acoustic properties
     ///
-    /// Based on clinical measurements:
+    /// Based on clinical measurements (Duck 1990 Table 4.6/4.16):
     /// - Density: ~1040 kg/m³
-    /// - Sound speed: ~1540 m/s
+    /// - Sound speed: ~1546 m/s
     /// - Attenuation: ~0.6 dB/(MHz·cm) = ~0.69 Np/(MHz·m)
-    /// - B/A: ~6.5
+    /// - B/A: 6.55 (Duck 1990 Table 4.16)
     #[must_use]
     pub fn brain() -> Self {
         Self {
@@ -217,7 +218,7 @@ impl AcousticPropertyData {
             sound_speed: SOUND_SPEED_BRAIN,
             absorption_coefficient: 0.69,
             absorption_power: 1.0,
-            nonlinearity: 6.5,
+            nonlinearity: B_OVER_A_BRAIN,
         }
     }
 
@@ -227,7 +228,7 @@ impl AcousticPropertyData {
     /// - Density: ~1050 kg/m³
     /// - Sound speed: ~1560 m/s
     /// - Attenuation: ~0.7 dB/(MHz·cm) = ~0.81 Np/(MHz·m)
-    /// - B/A: ~6.7
+    /// - B/A: 7.2 (Duck 1990 Table 4.16; SSOT B_OVER_A_KIDNEY)
     #[must_use]
     pub fn kidney() -> Self {
         Self {
@@ -235,7 +236,7 @@ impl AcousticPropertyData {
             sound_speed: SOUND_SPEED_KIDNEY,
             absorption_coefficient: 0.81,
             absorption_power: 1.1,
-            nonlinearity: 6.7,
+            nonlinearity: B_OVER_A_KIDNEY,
         }
     }
 
@@ -245,7 +246,7 @@ impl AcousticPropertyData {
     /// - Density: ~1090 kg/m³ (IT'IS Foundation; upper Duck range 1041–1090)
     /// - Sound speed: ~1580 m/s (Duck 1990 Table 4.6 mean)
     /// - Attenuation: ~1.0 dB/(MHz·cm) = ~1.15 Np/(MHz·m)
-    /// - B/A: ~7.4
+    /// - B/A: 7.4 (Duck 1990 Table 4.16; SSOT B_OVER_A_MUSCLE)
     #[must_use]
     pub fn muscle() -> Self {
         Self {
@@ -253,7 +254,7 @@ impl AcousticPropertyData {
             sound_speed: SOUND_SPEED_MUSCLE,
             absorption_coefficient: 1.15,
             absorption_power: 1.0,
-            nonlinearity: 7.4,
+            nonlinearity: B_OVER_A_MUSCLE,
         }
     }
 
@@ -263,7 +264,7 @@ impl AcousticPropertyData {
     /// - Density: ~928 kg/m³ (Duck 1990 mean; range 900–950 kg/m³)
     /// - Sound speed: ~1450 m/s (lower than soft tissue)
     /// - Attenuation: ~0.6 dB/(MHz·cm) = ~0.69 Np/(MHz·m)
-    /// - B/A: ~10.0 (higher nonlinearity than soft tissue)
+    /// - B/A: 9.6 (Duck 1990 Table 4.16; SSOT B_OVER_A_FAT)
     #[must_use]
     pub fn fat() -> Self {
         Self {
@@ -271,7 +272,7 @@ impl AcousticPropertyData {
             sound_speed: SOUND_SPEED_FAT,
             absorption_coefficient: 0.69,
             absorption_power: 1.0,
-            nonlinearity: 10.0,
+            nonlinearity: B_OVER_A_FAT,
         }
     }
 }
