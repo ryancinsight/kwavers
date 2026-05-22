@@ -3,7 +3,7 @@
 //! This module implements a simple diagonal preconditioner that approximates
 //! the inverse of the Helmholtz operator using only the diagonal elements.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -71,7 +71,7 @@ impl HelmholtzPreconditioner for DiagonalPreconditioner {
         let k_squared = wavenumber * wavenumber;
         let (nx, ny, nz) = self.diagonal.dim();
         let c0 = SOUND_SPEED_WATER_SIM;
-        let rho0 = 1000.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
         let laplacian_diag =
             -6.0 / (grid.dx * grid.dx) - 6.0 / (grid.dy * grid.dy) - 6.0 / (grid.dz * grid.dz);
 

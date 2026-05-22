@@ -180,7 +180,7 @@ fn nonnegative_finite(value: f64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
     #[test]
     fn hill_at_threshold_is_half() {
@@ -265,7 +265,7 @@ mod tests {
     fn ispta_constant_pressure() {
         // Constant pressure p0 → ISPTA = p0²/(rho*c) in W/m² → W/cm²
         let p0 = 1e5_f64;
-        let rho = 1000.0_f64;
+        let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
         let n = 1000;
         let dt = 1e-7_f64;

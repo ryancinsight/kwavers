@@ -83,7 +83,7 @@ pub fn validate_conservation(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use super::*;
     use crate::domain::grid::Grid;
@@ -155,7 +155,7 @@ mod tests {
         let grid = small_grid();
         let s = (grid.nx, grid.ny, grid.nz);
         let p0 = 500.0_f64;
-        let rho0 = 1000.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
         let c0 = SOUND_SPEED_WATER_SIM;
         let p = uniform(s, p0);
         let v = uniform(s, 0.0);

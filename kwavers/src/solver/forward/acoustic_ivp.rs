@@ -64,13 +64,14 @@ pub fn spectral_velocity_scale_from_source_kappa(
 mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use ndarray::Array3;
     use std::f64::consts::FRAC_PI_4;
 
     #[test]
     fn scale_matches_sinc_identity() {
         let dt = 2.0e-7;
-        let rho0_ref = 1000.0;
+        let rho0_ref = DENSITY_WATER_NOMINAL;
         let theta = FRAC_PI_4;
         let source_kappa = Array3::from_elem((2, 2, 2), theta.cos());
         let scale = spectral_velocity_scale_from_source_kappa(&source_kappa, dt, rho0_ref).unwrap();
@@ -81,7 +82,7 @@ mod tests {
     #[test]
     fn scale_uses_removable_limit_at_zero() {
         let dt = 2.0e-7;
-        let rho0_ref = 1000.0;
+        let rho0_ref = DENSITY_WATER_NOMINAL;
         let source_kappa = Array3::from_elem((1, 1, 1), 1.0);
         let scale = spectral_velocity_scale_from_source_kappa(&source_kappa, dt, rho0_ref).unwrap();
         assert_abs_diff_eq!(scale[[0, 0, 0]], dt / (2.0 * rho0_ref), epsilon = 1e-18);

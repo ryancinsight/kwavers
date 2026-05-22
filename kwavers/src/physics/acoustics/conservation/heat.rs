@@ -50,7 +50,7 @@ pub fn acoustic_heat_source(
 mod tests {
     use super::*;
     use ndarray::Array3;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
     fn uniform(s: (usize, usize, usize), val: f64) -> Array3<f64> {
         Array3::from_elem(s, val)
@@ -98,7 +98,7 @@ mod tests {
     fn heat_source_matches_formula_pressure_only_field() {
         let s = (4, 4, 4);
         let p0 = 2000.0_f64;
-        let rho0 = 1000.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
         let c0 = SOUND_SPEED_WATER_SIM;
         let a0 = 3.0_f64;
         let p = uniform(s, p0);

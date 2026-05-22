@@ -2,7 +2,7 @@
 
 use super::solver::ConvergentBornSolver;
 use super::stats::ConvergentBornStats;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::error::KwaversResult;
 use crate::domain::medium::Medium;
 use ndarray::{ArrayView3, ArrayViewMut3, Zip};
@@ -64,7 +64,7 @@ impl ConvergentBornSolver {
         let k_squared = wavenumber * wavenumber;
         let (nx, ny, nz) = self.workspace.heterogeneity_workspace.dim();
         let c0 = SOUND_SPEED_WATER_SIM;
-        let rho0 = 1000.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
 
         // Phase 1: sequential — medium properties are not guaranteed Sync.
         let contrasts: Vec<f64> = (0..nx)

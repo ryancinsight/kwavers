@@ -1,4 +1,5 @@
 use super::super::phase_correction::TranscranialAberrationCorrection;
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::math::numerics::operators::interpolation::trilinear_index_space;
 use ndarray::Array3;
 
@@ -32,7 +33,7 @@ impl TranscranialAberrationCorrection {
         let zk = (target_point[2] / self.grid.dz).clamp(0.0, nz.saturating_sub(2) as f64);
 
         let p2_interp = trilinear_index_space(field, xi, yj, zk);
-        let rho0 = 1000.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
         p2_interp / (2.0 * rho0 * self.reference_speed)
     }
 

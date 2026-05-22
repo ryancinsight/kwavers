@@ -117,6 +117,33 @@ pub const AIR_THERMAL_CONDUCTIVITY: f64 = 0.0257;
 /// Reference: Standard thermodynamics
 pub const AIR_POLYTROPIC_INDEX: f64 = 1.4;
 
+/// Classical acoustic absorption coefficient for air (m·s²).
+///
+/// The Stokes–Kirchhoff classical absorption follows α = A·f², where
+/// A is the absorption constant. At standard conditions (20°C, 1 atm):
+/// A = 2·ω²·(η_s + 3η_b/4 + κ·(1/cv − 1/cp)·M/R) / (3·ρ₀·c₀³)
+///
+/// Empirical fit to ISO 9613-1:1993 data at 293.15 K, 1 atm, 50% RH:
+/// A ≈ 1.84×10⁻¹¹ m/Hz²  (absorption per meter, per square Hertz).
+///
+/// Reference: ISO 9613-1:1993. "Acoustics — Attenuation of sound during
+/// propagation outdoors — Part 1: Calculation of the absorption of sound
+/// by the atmosphere."
+pub const AIR_ABSORPTION_ALPHA_0: f64 = 1.84e-11;
+
+/// Classical absorption power-law exponent for air (dimensionless).
+///
+/// Air absorption follows the classical quadratic frequency law (f²) due to
+/// viscous and thermal conduction mechanisms (Stokes–Kirchhoff). The exponent
+/// is exactly 2 for the classical regime at audio and low ultrasonic frequencies.
+///
+/// Molecular relaxation corrections are significant above ~100 kHz but are
+/// captured by frequency-dependent ISO 9613-1 models, not this exponent.
+///
+/// Reference: Pierce AD (1989). *Acoustics: An Introduction to Its Physical
+/// Principles and Applications*. ASA, Chapter 10.
+pub const AIR_ABSORPTION_POWER: f64 = 2.0;
+
 /// Default grid spacing for medical ultrasound (m)
 /// Value: 1e-4 (0.1 mm)
 /// Based on λ/10 criterion at 1.5 `MHz`

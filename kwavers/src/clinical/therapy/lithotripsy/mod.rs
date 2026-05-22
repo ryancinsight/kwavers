@@ -22,7 +22,7 @@
 //! - Coleman et al. (2011): "The physics and physiology of shock wave lithotripsy"
 //! - Cleveland et al. (2000): "The physics of shock wave lithotripsy"
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -297,7 +297,7 @@ impl LithotripsySimulator {
     }
 
     fn calculate_acoustic_intensity(&self, pressure_field: &Array3<f64>) -> Array3<f64> {
-        let rho = 1000.0;
+        let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
         pressure_field.mapv(|p| p * p / (2.0 * rho * c))
     }

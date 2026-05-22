@@ -48,7 +48,7 @@
 //! Stanziola, A., et al. (2025). "Iterative Born Solver for the Acoustic
 //! Helmholtz Equation with Heterogeneous Sound Speed and Density"
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -172,7 +172,7 @@ impl IterativeBornSolver {
         let k0_squared = wavenumber * wavenumber;
         let (nx, ny, nz) = self.workspace.heterogeneity_workspace.dim();
         let c0 = SOUND_SPEED_WATER_SIM;
-        let rho0 = 1000.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
 
         // Phase 1: sequential — medium not guaranteed Sync; collect per-cell contrast.
         let contrasts: Vec<f64> = (0..nx)
@@ -300,7 +300,7 @@ impl IterativeBornSolver {
             let c_local = medium.sound_speed(i, j, k);
             let rho_local = medium.density(i, j, k);
             let c0 = SOUND_SPEED_WATER_SIM;
-            let rho0 = 1000.0;
+            let rho0 = DENSITY_WATER_NOMINAL;
             let contrast = (rho_local * c_local * c_local) / (rho0 * c0 * c0);
             let heterogeneity = 1.0 - contrast;
 

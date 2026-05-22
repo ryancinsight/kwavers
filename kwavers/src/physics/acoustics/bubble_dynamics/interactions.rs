@@ -220,7 +220,7 @@ impl CollectiveEffects {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
 
     #[test]
@@ -256,7 +256,7 @@ mod tests {
         bubble2.radius = 3.0e-6;
         bubble1.wall_velocity = 0.5;
         bubble2.wall_velocity = -0.4;
-        let rho = 1000.0_f64;
+        let rho = DENSITY_WATER_NOMINAL;
 
         let d_a = 1.0e-4_f64;
         let d_b = 4.0e-4_f64;

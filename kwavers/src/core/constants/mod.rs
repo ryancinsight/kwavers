@@ -92,7 +92,7 @@ pub use medical::{
 // Numerical constants
 pub use numerical::{
     ABSORPTION_SINGULARITY_THRESHOLD, CFL_DEFAULT, CFL_FACTOR_3D_FDTD, CFL_SAFETY_FACTOR, EPSILON,
-    SMALL_VALUE, SOLVER_TOLERANCE,
+    MHZ_TO_HZ, SMALL_VALUE, SOLVER_TOLERANCE,
 };
 
 // State-dependent constants (temperature/pressure-dependent physical properties)

@@ -60,7 +60,7 @@ pub fn entropy_production_rate(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use super::*;
     use crate::domain::grid::Grid;
@@ -101,7 +101,7 @@ mod tests {
         let grid = small_grid();
         let s = (grid.nx, grid.ny, grid.nz);
         let p0 = 3000.0_f64;
-        let rho0 = 1000.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
         let c0 = SOUND_SPEED_WATER_SIM;
         let a0 = 2.0_f64;
         let t0 = 310.0_f64;

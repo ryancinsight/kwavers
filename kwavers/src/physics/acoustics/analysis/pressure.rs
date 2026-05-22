@@ -158,7 +158,7 @@ pub fn calculate_isppa(pressure_field: &Array3<f64>, density: f64, sound_speed: 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use ndarray::Array3;
 
     // ── calculate_intensity ───────────────────────────────────────────────────
@@ -289,7 +289,7 @@ mod tests {
     #[test]
     fn ispta_equals_peak_intensity_times_duty_cycle() {
         let field = Array3::<f64>::from_elem((2, 2, 2), 2.0_f64);
-        let rho = 1000.0_f64;
+        let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
         let duty = 0.1_f64;
         let ispta = calculate_ispta(&field, rho, c, duty);
@@ -329,7 +329,7 @@ mod tests {
     fn isppa_equals_peak_intensity() {
         let mut field = Array3::<f64>::zeros((4, 4, 4));
         field[[2, 2, 2]] = 3.0;
-        let rho = 1000.0_f64;
+        let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
         let isppa = calculate_isppa(&field, rho, c);
         let expected = 3.0_f64.powi(2) / (2.0 * rho * c);

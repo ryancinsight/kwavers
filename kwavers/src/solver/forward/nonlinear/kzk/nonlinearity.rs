@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn shock_distance_matches_analytical_formula() {
         let c0 = SOUND_SPEED_WATER_SIM;
-        let rho0 = 1000.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
         let b_over_a = 5.0_f64; // water at 25°C (Beyer 1960)
         let frequency = 1.0e6_f64; // 1 MHz
         let p0 = 1.0e5_f64; // 100 kPa source amplitude
