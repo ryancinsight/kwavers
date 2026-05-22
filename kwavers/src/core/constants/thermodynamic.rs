@@ -157,6 +157,16 @@ pub const SPECIFIC_HEAT_BREAST_GLAND: f64 = 3600.0;
 /// Thermal conductivity of water at 20°C (W/(m·K))
 pub const THERMAL_CONDUCTIVITY_WATER: f64 = 0.598;
 
+/// Thermal conductivity of water at 37°C / body temperature (W/(m·K))
+///
+/// NIST value at 310.15 K: 0.6233 W/(m·K), rounded to 0.623.
+/// Distinct from `THERMAL_CONDUCTIVITY_WATER` (0.598 at 20°C) — water
+/// thermal conductivity increases with temperature from 0°C to ~130°C.
+/// Used in photoacoustic and bioheat models at physiological temperature.
+///
+/// Reference: NIST Chemistry WebBook, SRD 69.
+pub const THERMAL_CONDUCTIVITY_WATER_37C: f64 = 0.623;
+
 /// Thermal conductivity of tissue (W/(m·K))
 pub const THERMAL_CONDUCTIVITY_TISSUE: f64 = 0.5;
 

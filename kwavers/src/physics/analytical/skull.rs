@@ -215,7 +215,8 @@ pub fn skull_transmission_spectrum(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
+    use crate::core::constants::acoustic_parameters::{BONE_DENSITY, SOUND_SPEED_SKULL};
+    use crate::core::constants::thermodynamic::SPECIFIC_HEAT_BONE;
 
     #[test]
     fn insertion_loss_positive() {
@@ -290,7 +291,7 @@ mod tests {
 
     #[test]
     fn surface_temperature_zero_at_t0() {
-        let dt = skull_surface_temperature_rise(&[0.0], 1000.0, 0.5, 1900.0, 1300.0);
+        let dt = skull_surface_temperature_rise(&[0.0], 1000.0, 0.5, BONE_DENSITY, SPECIFIC_HEAT_BONE);
         assert!((dt[0]).abs() < 1e-15);
     }
 }

@@ -1,6 +1,7 @@
 //! Tests for multi-physics interface boundary conditions.
 
 use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use super::super::types::{BoundaryCouplingPhysicsDomain, BoundaryCouplingType};
 use super::interface::BoundaryMultiPhysicsInterface;
 
@@ -145,12 +146,12 @@ fn test_acoustic_thermal_coupling_bounds() {
         BoundaryCouplingType::AcousticThermal {
             alpha_np_per_m: 2.0,
             rho_kg_per_m3: DENSITY_BLOOD,
-            c_p_j_per_kg_k: 3500.0,
+            c_p_j_per_kg_k: BLOOD_SPECIFIC_HEAT,
         },
     );
     let tau = interface.transmission_coefficient(1e6);
     assert!((0.0..=1.0).contains(&tau), "τ = {}", tau);
-    let expected = (2.0 * 2.0 / (DENSITY_BLOOD * 3500.0_f64)).clamp(0.0, 1.0);
+    let expected = (2.0 * 2.0 / (DENSITY_BLOOD * BLOOD_SPECIFIC_HEAT)).clamp(0.0, 1.0);
     assert!((tau - expected).abs() < 1e-15);
 }
 

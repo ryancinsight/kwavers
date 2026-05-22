@@ -16,7 +16,10 @@ use crate::core::constants::fundamental::{
     SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER};
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER,
+    THERMAL_CONDUCTIVITY_WATER, THERMAL_DIFFUSIVITY_WATER,
+};
 use super::material::AcousticMaterialProperties;
 
 /// Tissue material properties type alias
@@ -38,8 +41,8 @@ pub const WATER: TissueProperties = TissueProperties {
     shear_viscosity: VISCOSITY_WATER,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_WATER,
-    thermal_conductivity: 0.6,
-    thermal_diffusivity: 1.43e-7,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_WATER,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_WATER,
     perfusion_rate: 0.0,
     arterial_temperature: 20.0,
     metabolic_heat: 0.0,
@@ -114,7 +117,7 @@ pub const SKULL: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_BONE, // 8.0 (Duck 1990 Table 4.16)
     shear_viscosity: 5e-3,
     bulk_viscosity: 1e-2,
-    specific_heat: 1300.0,
+    specific_heat: SPECIFIC_HEAT_BONE,
     thermal_conductivity: 0.4,
     thermal_diffusivity: 1.61e-7,
     perfusion_rate: 5.0, // Much lower perfusion in bone
