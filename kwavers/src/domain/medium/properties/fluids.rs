@@ -14,7 +14,10 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_BLOOD};
+use crate::core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_TISSUE,
+    SOUND_SPEED_BLOOD,
+};
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
@@ -35,7 +38,7 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     impedance: 1624784.0,
     absorption_coefficient: 0.015,
     absorption_exponent: 1.2,
-    nonlinearity_parameter: 5.2,
+    nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)
     shear_viscosity: 1.2e-3,
     bulk_viscosity: 0.0,
     specific_heat: 3840.0,
@@ -60,7 +63,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     impedance: 1650420.0,
     absorption_coefficient: 0.025,
     absorption_exponent: 1.3,
-    nonlinearity_parameter: 5.5,
+    nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
     shear_viscosity: 3.5e-3, // Non-Newtonian: shear-thinning
     bulk_viscosity: 0.0,
     specific_heat: BLOOD_SPECIFIC_HEAT,
@@ -231,7 +234,7 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     impedance: 1494800.0,
     absorption_coefficient: 0.05, // Higher absorption due to bubble resonance
     absorption_exponent: 1.5,
-    nonlinearity_parameter: 5.2,
+    nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)
     shear_viscosity: 0.8e-3,
     bulk_viscosity: 0.0,
     specific_heat: 4170.0,

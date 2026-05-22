@@ -290,7 +290,8 @@ impl MediumBuilder {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::{
-        DENSITY_BRAIN, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE,
+        B_OVER_A_SOFT_TISSUE, DENSITY_BRAIN, DENSITY_TISSUE, DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_TISSUE,
     };
     use std::collections::HashMap;
 
@@ -306,7 +307,7 @@ mod tests {
             density: DENSITY_BRAIN,
             sound_speed: Some(SOUND_SPEED_TISSUE),
             absorption: 0.45,
-            nonlinearity: 6.0,
+            nonlinearity: B_OVER_A_SOFT_TISSUE,
             ..DomainMediumParameters::default()
         };
 
@@ -316,7 +317,7 @@ mod tests {
         assert_eq!(medium.sound_speed(2, 2, 2), SOUND_SPEED_TISSUE);
         assert_eq!(medium.density(1, 1, 1), DENSITY_BRAIN);
         assert_eq!(medium.absorption(2, 1, 0), 0.45);
-        assert_eq!(medium.nonlinearity(0, 2, 1), 6.0);
+        assert_eq!(medium.nonlinearity(0, 2, 1), B_OVER_A_SOFT_TISSUE);
     }
 
     #[test]

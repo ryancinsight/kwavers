@@ -9,10 +9,11 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY,
-    B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT,
-    DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD,
-    SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
+    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_FAT,
+    B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER, DENSITY_BLOOD,
+    DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER,
+    SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
+    SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER};
@@ -110,7 +111,7 @@ pub const SKULL: TissueProperties = TissueProperties {
     impedance: 7833600.0,
     absorption_coefficient: 3.0,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 8.0,
+    nonlinearity_parameter: B_OVER_A_BONE, // 8.0 (Duck 1990 Table 4.16)
     shear_viscosity: 5e-3,
     bulk_viscosity: 1e-2,
     specific_heat: 1300.0,

@@ -40,6 +40,17 @@ pub const WATER_CRITICAL_PRESSURE: f64 = 22.064e6;
 /// <https://webbook.nist.gov/cgi/fluid.cgi?Action=Load&ID=C7732185&Type=SatT>
 pub const SPECIFIC_HEAT_WATER: f64 = 4182.0;
 
+/// Specific heat capacity of water at 37°C / body temperature (J/(kg·K))
+///
+/// NIST isobaric c_p at 310.15 K: 4179.5 J/(kg·K), rounded to 4180.0.
+/// Distinct from `SPECIFIC_HEAT_WATER` (4182.0 at 20°C) because water c_p
+/// decreases slightly as temperature rises from 0 °C to the minimum at ~35–37 °C
+/// and then increases.  The physiological value is used for photoacoustic and
+/// bioheat calculations at body temperature.
+///
+/// Reference: NIST Chemistry WebBook, SRD 69.
+pub const SPECIFIC_HEAT_WATER_37C: f64 = 4180.0;
+
 /// Grüneisen parameter of water at body temperature (37°C), dimensionless.
 ///
 /// ## Definition
@@ -182,6 +193,19 @@ pub const THERMAL_DIFFUSIVITY_WATER: f64 = 1.43e-7;
 /// Reference: Duck, F.A. (1990). Physical Properties of Tissue.
 /// Academic Press, London, Table 9.1.
 pub const THERMAL_DIFFUSIVITY_TISSUE: f64 = 1.36e-7;
+
+/// Thermal diffusivity of whole blood at 37°C and hematocrit 45% (m²/s)
+///
+/// Value: 1.35e-7 m²/s — directly measured by Duck (1990), Table 9.1.
+/// Note: the derived value from Duck's own k, ρ, c_p data is
+/// k/(ρ·c_p) = 0.52 / (1050 × 3617) ≈ 1.369e-7 m²/s, which reflects the
+/// small inconsistency between independently measured calorimetric and
+/// conductimetric quantities in the reference.  The directly measured value
+/// (1.35e-7) is used here as the canonical SSOT for heat-transfer models.
+///
+/// Reference: Duck, F.A. (1990). Physical Properties of Tissue.
+/// Academic Press, London, Table 9.1.
+pub const THERMAL_DIFFUSIVITY_BLOOD: f64 = 1.35e-7;
 
 // ============================================================================
 // Tissue Temperature-Coupling Coefficients

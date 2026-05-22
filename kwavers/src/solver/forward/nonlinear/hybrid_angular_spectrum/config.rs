@@ -1,6 +1,7 @@
 //! HAS solver configuration.
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::fundamental::{B_OVER_A_SOFT_TISSUE, DENSITY_WATER_NOMINAL};
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -27,8 +28,8 @@ impl Default for HASConfig {
     fn default() -> Self {
         Self {
             sound_speed: SOUND_SPEED_WATER_SIM,
-            density: 1000.0,
-            nonlinearity: 6.0,
+            density: DENSITY_WATER_NOMINAL,
+            nonlinearity: B_OVER_A_SOFT_TISSUE, // 6.5 generic soft tissue (Duck 1990)
             attenuation_coeff: 0.5,
             power_law_exponent: 2.0,
             dz: 0.0001,

@@ -1,5 +1,6 @@
 use crate::core::constants::fundamental::{
-    DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+    B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_TISSUE, DENSITY_WATER_NOMINAL,
+    SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
 use super::*;
 use crate::domain::boundary::traits::BoundaryCondition;
@@ -14,7 +15,7 @@ fn test_material_interface_coefficients() {
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
-        nonlinearity: 5.0,
+        nonlinearity: B_OVER_A_WATER,
     };
 
     let material_2 = AcousticPropertyData {
@@ -22,7 +23,7 @@ fn test_material_interface_coefficients() {
         sound_speed: SOUND_SPEED_TISSUE,
         absorption_coefficient: 0.5,
         absorption_power: 1.1,
-        nonlinearity: 6.5,
+        nonlinearity: B_OVER_A_SOFT_TISSUE,
     };
 
     let interface = MaterialInterface::new(
@@ -60,7 +61,7 @@ fn test_material_interface_normal_incidence_water_tissue() {
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.002,
         absorption_power: 2.0,
-        nonlinearity: 5.0,
+        nonlinearity: B_OVER_A_WATER,
     };
 
     let material_tissue = AcousticPropertyData {
@@ -68,7 +69,7 @@ fn test_material_interface_normal_incidence_water_tissue() {
         sound_speed: SOUND_SPEED_TISSUE,
         absorption_coefficient: 0.5,
         absorption_power: 1.1,
-        nonlinearity: 6.5,
+        nonlinearity: B_OVER_A_SOFT_TISSUE,
     };
 
     let grid = crate::domain::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001)
@@ -128,7 +129,7 @@ fn test_material_interface_energy_conservation() {
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
-        nonlinearity: 5.0,
+        nonlinearity: B_OVER_A_WATER,
     };
 
     let material_2 = AcousticPropertyData {
@@ -136,7 +137,7 @@ fn test_material_interface_energy_conservation() {
         sound_speed: 2000.0,
         absorption_coefficient: 0.3,
         absorption_power: 1.5,
-        nonlinearity: 7.0,
+        nonlinearity: B_OVER_A_SOFT_TISSUE,
     };
 
     let interface = MaterialInterface::new(
@@ -167,7 +168,7 @@ fn test_material_interface_matched_impedance() {
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
-        nonlinearity: 5.0,
+        nonlinearity: B_OVER_A_WATER,
     };
 
     let material_2 = AcousticPropertyData {
@@ -175,7 +176,7 @@ fn test_material_interface_matched_impedance() {
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.2,
         absorption_power: 1.8,
-        nonlinearity: 6.0,
+        nonlinearity: B_OVER_A_WATER, // matched impedance: B/A irrelevant for R/T
     };
 
     let interface = MaterialInterface::new(
@@ -204,11 +205,11 @@ fn test_material_interface_matched_impedance() {
 #[test]
 fn test_material_interface_large_impedance_mismatch() {
     let material_air = AcousticPropertyData {
-        density: 1.2,
-        sound_speed: 343.0,
+        density: DENSITY_AIR,        // 1.204 kg/m³ (Duck 1990)
+        sound_speed: SOUND_SPEED_AIR, // 343 m/s at room temperature
         absorption_coefficient: 0.01,
         absorption_power: 2.0,
-        nonlinearity: 0.4,
+        nonlinearity: 0.4, // air B/A (empirical; ideal gas: 2(γ-1)=0.8)
     };
 
     let material_water = AcousticPropertyData {
@@ -216,7 +217,7 @@ fn test_material_interface_large_impedance_mismatch() {
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.002,
         absorption_power: 2.0,
-        nonlinearity: 5.0,
+        nonlinearity: B_OVER_A_WATER,
     };
 
     let interface = MaterialInterface::new(
@@ -254,7 +255,7 @@ fn test_material_interface_field_continuity() {
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
-        nonlinearity: 5.0,
+        nonlinearity: B_OVER_A_WATER,
     };
 
     let material_2 = AcousticPropertyData {
@@ -262,7 +263,7 @@ fn test_material_interface_field_continuity() {
         sound_speed: 1800.0,
         absorption_coefficient: 0.3,
         absorption_power: 1.5,
-        nonlinearity: 7.0,
+        nonlinearity: B_OVER_A_SOFT_TISSUE,
     };
 
     let grid = crate::domain::grid::Grid::new(64, 64, 64, 0.001, 0.001, 0.001)
@@ -310,7 +311,7 @@ fn test_material_interface_zero_thickness() {
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
-        nonlinearity: 5.0,
+        nonlinearity: B_OVER_A_WATER,
     };
 
     let material_2 = AcousticPropertyData {

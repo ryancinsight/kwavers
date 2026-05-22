@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::helpers::*;
+    use crate::core::constants::thermodynamic::THERMAL_DIFFUSIVITY_TISSUE;
     use ndarray::Array1;
     use std::f64::consts::PI;
 
@@ -42,7 +43,7 @@ mod tests {
 
     #[test]
     fn test_heat_equation_mms_convergence() {
-        const ALPHA: f64 = 1.4e-7; // thermal diffusivity [m²/s] (tissue)
+        let alpha = THERMAL_DIFFUSIVITY_TISSUE; // thermal diffusivity [m²/s] (tissue, Duck 1990)
         let l = 1.0e-2_f64; // domain length [m] (1 cm)
         let k = 2.0 * PI / l; // wave number of manufactured solution
         let t_final = 5.0e-3_f64; // simulation time [s]
@@ -51,7 +52,7 @@ mod tests {
         for &n in &[16_usize, 32, 64, 128] {
             let dx = l / n as f64;
             // Fixed Fourier number r = α Δt / Δx² = 0.45 < 0.5 (stable)
-            let dt = 0.45 * dx * dx / ALPHA;
+            let dt = 0.45 * dx * dx / alpha;
             let n_steps = (t_final / dt).ceil() as usize;
             let dt_actual = t_final / n_steps as f64; // adjust dt to hit t_final exactly
 
@@ -64,13 +65,13 @@ mod tests {
                     let ip1 = (i + 1) % n;
                     let im1 = (i + n - 1) % n;
                     let lap = (t_state[ip1] - 2.0 * t_state[i] + t_state[im1]) / (dx * dx);
-                    t_next[i] = t_state[i] + dt_actual * ALPHA * lap;
+                    t_next[i] = t_state[i] + dt_actual * alpha * lap;
                 }
                 t_state = t_next;
             }
 
             // Exact solution: T_exact(x, t_final) = exp(−α k² t_final) · sin(k x)
-            let decay = (-ALPHA * k * k * t_final).exp();
+            let decay = (-alpha * k * k * t_final).exp();
             let err = (0..n)
                 .map(|i| {
                     let t_exact = decay * (k * i as f64 * dx).sin();

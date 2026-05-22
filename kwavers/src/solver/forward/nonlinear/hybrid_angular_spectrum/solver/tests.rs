@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::B_OVER_A_SOFT_TISSUE;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -247,7 +248,7 @@ fn test_harmonic_generation_by_nonlinearity() {
 
     // High nonlinearity, zero absorption (isolate nonlinear effect)
     let config = HASConfig {
-        nonlinearity: 6.0, // water/tissue value
+        nonlinearity: B_OVER_A_SOFT_TISSUE, // 6.5 (Duck 1990 generic soft tissue)
         attenuation_coeff: 0.0,
         dz,
         reference_frequency: 1e5, // low f: k·dz << 1

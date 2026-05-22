@@ -2,6 +2,7 @@
 mod tests {
     use super::super::helpers::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::thermodynamic::THERMAL_DIFFUSIVITY_TISSUE;
     use ndarray::Array3;
     use std::f64::consts::PI;
 
@@ -12,12 +13,11 @@ mod tests {
         // Validate time-scale separation (Gear & Wells 1984)
         // Fast acoustic + slow thermal diffusion
 
-        const THERMAL_DIFFUSIVITY: f64 = 1.4e-7; // m²/s for tissue
         const ACOUSTIC_SPEED: f64 = SOUND_SPEED_WATER_SIM; // m/s
 
         let dx = 1e-3;
         let dt_acoustic = CFL_NUMBER * dx / ACOUSTIC_SPEED;
-        let dt_thermal = 0.5 * dx.powi(2) / THERMAL_DIFFUSIVITY;
+        let dt_thermal = 0.5 * dx.powi(2) / THERMAL_DIFFUSIVITY_TISSUE;
 
         let time_scale_ratio = dt_thermal / dt_acoustic;
 
@@ -115,7 +115,7 @@ mod tests {
                 for j in 0..n {
                     for k in 0..n {
                         thermal_state[[i, j, k]] +=
-                            dt_slow * THERMAL_DIFFUSIVITY * thermal_laplacian[[i, j, k]];
+                            dt_slow * THERMAL_DIFFUSIVITY_TISSUE * thermal_laplacian[[i, j, k]];
                     }
                 }
             }

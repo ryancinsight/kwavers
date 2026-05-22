@@ -18,6 +18,7 @@ pub fn compute_time_step(scenario: &PhotoacousticScenario) -> f64 {
 mod tests {
     use super::compute_time_step;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER_37C;
     use crate::domain::grid::{Grid, GridDimensions};
     use crate::domain::imaging::photoacoustic::{
         IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticAcousticConfig,
@@ -59,7 +60,7 @@ mod tests {
                 thermoelastic: ThermoelasticProperties {
                     density_kg_m3: 1000.0,
                     sound_speed_m_s: SOUND_SPEED_WATER_SIM,
-                    specific_heat_j_kgk: 4180.0,
+                    specific_heat_j_kgk: SPECIFIC_HEAT_WATER_37C,
                     thermal_conductivity_w_mk: 0.6,
                 },
                 monte_carlo: MonteCarloModelConfig::default(),

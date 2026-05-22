@@ -79,7 +79,7 @@ mod tests {
                 thermoelastic: ThermoelasticProperties {
                     density_kg_m3: 1000.0,
                     sound_speed_m_s: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
-                    specific_heat_j_kgk: 4180.0,
+                    specific_heat_j_kgk: crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER_37C,
                     thermal_conductivity_w_mk: 0.6,
                 },
                 monte_carlo: MonteCarloModelConfig::default(),

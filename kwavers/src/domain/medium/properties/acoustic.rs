@@ -41,9 +41,10 @@
 
 use crate::core::constants::fundamental::{
     B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE,
-    B_OVER_A_WATER, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
-    DENSITY_WATER, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
-    SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
+    B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER,
+    DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT,
+    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER,
 };
 use std::fmt;
 
@@ -167,7 +168,7 @@ impl AcousticPropertyData {
     pub fn water() -> Self {
         Self {
             density: DENSITY_WATER,
-            sound_speed: 1481.0,
+            sound_speed: SOUND_SPEED_WATER, // 1482 m/s at 20°C (Bilaniuk & Wong 1993)
             absorption_coefficient: 0.002,
             absorption_power: 2.0,
             nonlinearity: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
@@ -182,7 +183,7 @@ impl AcousticPropertyData {
             sound_speed: SOUND_SPEED_TISSUE,
             absorption_coefficient: 0.5,
             absorption_power: 1.1,
-            nonlinearity: 6.5,
+            nonlinearity: B_OVER_A_SOFT_TISSUE, // 6.5 (Duck 1990 Table 4.16 mean)
         }
     }
 
@@ -295,12 +296,14 @@ impl fmt::Display for AcousticPropertyData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::fundamental::{
+        B_OVER_A_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
+    };
 
     #[test]
     fn test_acoustic_impedance() {
         let water = AcousticPropertyData::water();
-        let expected_impedance = DENSITY_WATER * 1481.0; // ρc
+        let expected_impedance = DENSITY_WATER * SOUND_SPEED_WATER; // ρ₀·c₀
         assert!((water.impedance() - expected_impedance).abs() < 1.0);
     }
 
@@ -311,7 +314,7 @@ mod tests {
             sound_speed: SOUND_SPEED_WATER_SIM,
             absorption_coefficient: 0.5,
             absorption_power: 1.1,
-            nonlinearity: 5.0,
+            nonlinearity: B_OVER_A_WATER,
         };
 
         let alpha_1mhz = props.absorption_at_frequency(1.0);
