@@ -2,7 +2,7 @@
 
 ## SSOT for Tasks, Priorities, Risks, Dependencies, and Retrospectives
 
-**Status**: CURRENT — adjoint RTM timing + PML-zone mute fixed; CNR > 0 verified; 4109/4109 PASS
+**Status**: CURRENT — calvarium cap bounds scene-driven; WATER.impedance SSOT; 4111/4111 PASS
 **Last Updated**: 2026-05-22
 **Architecture Compliance**: ✅ Clean architecture maintained
 **Quality Grade**: A+ — 0 files ≥400 lines; 0 kwavers compiler warnings
@@ -24,6 +24,10 @@
 - [x] `test_energy_conservation_linear`: `Σp²` is not an acoustic energy invariant (velocity carries 50%);
   assertion updated to physics-correct `[0.30, 0.75]×initial` bounds. [patch]
 - [x] 4111/4111 PASS; 12 `#[ignore]` remaining (2 promoted to active). [patch]
+- [x] `WATER.impedance` arithmetic error: `1_479_452` → `DENSITY_WATER * SOUND_SPEED_WATER = 1_479_332.4`; SSOT-derived const; `test_impedance_calculation` PASS. [patch]
+- [x] Brain 3D bowl cap bounds: `BOWL_CAP_UNIT_Z_MIN=-0.28` (theta_max=106°) replaced by scene-driven `cap_min_polar_rad`/`cap_max_polar_rad` (default 0.22/1.18 rad = 12.6°–67.6°, matching InSightec ExAblate Neuro 4000); elements now restricted to calvarium; `focused_bowl_pykwavers_kwargs()` threads values; PyO3 API exposes params. [minor]
+- [x] `test_adaptive_epsilon` VdW R_min: excluded volume is `n_moles × b_si` not `(3b/4π)^{1/3}` per molecule; actual R_min ≈ 637 nm for default params (air, 5 µm, 293 K, 1 atm); small_state.radius corrected 10 nm → 1 µm; docstring updated with derivation. [patch]
+- [x] `SOFT_TISSUE_HU_BASE_SPEED_M_S = 1480.0`: the SSOT commit "ssot: wire tissue-speed" incorrectly used `SOUND_SPEED_WATER = 1482` for the tissue HU model base (distinct physical quantity — empirical model parameter, not water sound speed). Added dedicated constant in `acoustic_parameters.rs`. Updated `abdominal.rs`. Fixed two stale tests to use `SOUND_SPEED_LIVER = 1578` (Duck 1990 Table 4.6). [patch]
 - [x] GPU PSTD: fractional-Laplacian absorption (Treeby & Cox 2010 Eq. 9-10) VERIFIED COMPLETE [minor]
   WGSL: `absorb_*` entry points in pstd.wgsl; Rust: encode_density_update + encode_pressure_record;
   pipelines: all pipeline_absorb_* compiled + bg_absorb bound. No remaining gap.

@@ -136,15 +136,16 @@ pub fn flynn_criterion(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::cavitation::FLYNN_COLLAPSE_COEFFICIENT;
-
+    use crate::core::constants::cavitation::{
+        FLYNN_COLLAPSE_COEFFICIENT, SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER,
+    };
     use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
     // Physical constants for a 5 μm air bubble in water at 20°C
-    const SIGMA: f64 = 0.0728; // N/m
+    const SIGMA: f64 = SURFACE_TENSION_WATER; // 0.0728 N/m (cavitation::SURFACE_TENSION_WATER)
     const R0: f64 = 5e-6; // m
     const P0: f64 = ATMOSPHERIC_PRESSURE; // Pa (1 atm)
-    const PV: f64 = 2_330.0; // Pa (vapor pressure at 20°C)
+    const PV: f64 = VAPOR_PRESSURE_WATER; // 2339.0 Pa (cavitation::VAPOR_PRESSURE_WATER)
 
     /// Blake threshold: acoustic amplitude = P_0 − P_B where
     /// P_B = P_v − (4σ/(3R_0)) · √(2σ/(3 P_g0 R_0))

@@ -132,6 +132,21 @@ pub const ACOUSTIC_SHOCK_DETECTION_THRESHOLD: f64 = 0.5;
 /// High-order modes should be < 0.1% for smooth solutions
 pub const MODAL_DECAY_THRESHOLD: f64 = 1e-3;
 
+/// Base sound speed for the Hounsfield-unit-to-acoustic-speed soft-tissue model (m/s).
+///
+/// This is the empirical model intercept: at HU = 0 (water-equivalent tissue),
+/// the linear HU model `c = 1480 + 0.18·clamp(HU, −150, 250)` evaluates to exactly
+/// 1480 m/s.  This value is a calibration parameter of the soft-tissue tissue-acoustic
+/// model, **not** the speed of sound in pure water (`SOUND_SPEED_WATER = 1482 m/s`).
+/// Substituting `SOUND_SPEED_WATER` for this constant would introduce a 2 m/s bias
+/// in the body-tissue speed map and shift the model off its calibrated domain.
+///
+/// # Reference
+/// Schneider U et al. (1996). "The calibration of CT Hounsfield units for
+/// radiotherapy treatment planning." *Phys. Med. Biol.* 41(1), 111–124.
+/// DOI: 10.1088/0031-9155/41/1/009.
+pub const SOFT_TISSUE_HU_BASE_SPEED_M_S: f64 = 1480.0;
+
 // ============================================================================
 // Medical Ultrasound Frequency Ranges
 // ============================================================================

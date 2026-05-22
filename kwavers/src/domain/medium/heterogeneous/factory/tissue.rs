@@ -4,8 +4,11 @@
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE};
-use crate::core::constants::cavitation::{POLYTROPIC_EXPONENT_AIR, VAPOR_PRESSURE_WATER};
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_DIFFUSIVITY_TISSUE};
+use crate::core::constants::cavitation::{POLYTROPIC_EXPONENT_AIR, SURFACE_TENSION_TISSUE, VAPOR_PRESSURE_WATER};
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_DIFFUSIVITY_TISSUE,
+    THERMAL_EXPANSION_SOFT_TISSUE,
+};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use log::debug;
@@ -31,7 +34,7 @@ impl TissueFactory {
         let viscosity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 2.5e-3);
 
         // Bubble dynamics parameters
-        let surface_tension = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.06);
+        let surface_tension = Array3::from_elem((grid.nx, grid.ny, grid.nz), SURFACE_TENSION_TISSUE);
         let ambient_pressure = ATMOSPHERIC_PRESSURE;
         let vapor_pressure = Array3::from_elem((grid.nx, grid.ny, grid.nz), VAPOR_PRESSURE_WATER);
         let polytropic_index = Array3::from_elem((grid.nx, grid.ny, grid.nz), POLYTROPIC_EXPONENT_AIR);
@@ -39,7 +42,7 @@ impl TissueFactory {
         // Thermal properties
         let specific_heat = Array3::from_elem((grid.nx, grid.ny, grid.nz), SPECIFIC_HEAT_BRAIN);
         let thermal_conductivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_CONDUCTIVITY_BLOOD);
-        let thermal_expansion = Array3::from_elem((grid.nx, grid.ny, grid.nz), 3.0e-4);
+        let thermal_expansion = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_EXPANSION_SOFT_TISSUE);
         let gas_diffusion_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.8e-9);
         let thermal_diffusivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_DIFFUSIVITY_TISSUE);
         let temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), BODY_TEMPERATURE_K); // 37°C

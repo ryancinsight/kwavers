@@ -1,6 +1,8 @@
 //! Cavitation and bubble-scattering PDE residuals for PINN training.
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
+use crate::core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use super::domain::CavitationCoupledDomain;
 use super::mie_scattering::mie_backscatter_form_function;
 use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
@@ -51,10 +53,10 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         let pressure_forcing = acoustic_pressure.clone() - ambient_pressure;
 
         let r_eq = self.config.bubble_params.r0 as f32;
-        let gamma = 1.4_f32; // adiabatic index for air
-        let rho_l = 1000.0_f32; // water [kg/m³]
-        let sigma = 0.072_f32; // surface tension water-air [N/m]
-        let p_vapor = 2330.0_f32; // water vapour pressure at 20 °C [Pa]
+        let gamma = AIR_POLYTROPIC_INDEX as f32;
+        let rho_l = DENSITY_WATER_NOMINAL as f32;
+        let sigma = SURFACE_TENSION_WATER as f32;
+        let p_vapor = VAPOR_PRESSURE_WATER as f32;
 
         // Polytropic gas law: P_gas = P_g0 · (R_0/R_eq)^{3γ}
         let p_gas = self.config.bubble_params.initial_gas_pressure as f32

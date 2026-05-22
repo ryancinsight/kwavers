@@ -145,8 +145,10 @@ fn properties_liver_organ_speed_at_hu_100() {
     let (speed, att, _, organ, target) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
     assert!(organ[[0, 0]]);
     assert!(!target[[0, 0]]);
-    // c = 1595 + 0.10 × clamp(100, −100, 200) = 1595 + 10 = 1605
-    assert!((speed[[0, 0]] - 1605.0).abs() < 1.0e-10);
+    // c = SOUND_SPEED_LIVER + 0.10 × clamp(100, −100, 200) = 1578 + 10 = 1588
+    // SOUND_SPEED_LIVER = 1578 m/s (Duck FA, Physical Properties of Tissue, 1990, Table 4.6).
+    use crate::core::constants::fundamental::SOUND_SPEED_LIVER;
+    assert!((speed[[0, 0]] - (SOUND_SPEED_LIVER + 10.0)).abs() < 1.0e-10);
     assert_eq!(att[[0, 0]], 0.8);
 }
 
@@ -158,8 +160,11 @@ fn properties_tumour_speed_offset_below_organ() {
     label[[0, 0]] = 2;
     let (speed, att, _, _, target) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
     assert!(target[[0, 0]]);
-    // c = (1595 − 22) + 0.12 × clamp(50, −50, 220) = 1573 + 6 = 1579
-    assert!((speed[[0, 0]] - 1579.0).abs() < 1.0e-10);
+    // c = (SOUND_SPEED_LIVER − 22) + 0.12 × clamp(50, −50, 220)
+    //   = (1578 − 22) + 0.12 × 50 = 1556 + 6 = 1562
+    // SOUND_SPEED_LIVER = 1578 m/s (Duck 1990 Table 4.6).
+    use crate::core::constants::fundamental::SOUND_SPEED_LIVER;
+    assert!((speed[[0, 0]] - (SOUND_SPEED_LIVER - 22.0 + 0.12 * 50.0)).abs() < 1.0e-10);
     assert_eq!(att[[0, 0]], 1.05);
 }
 

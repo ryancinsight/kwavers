@@ -8,7 +8,7 @@
 //! - Diels & Rudolph (2006) "Ultrashort Laser Pulse Phenomena"
 //! - Agrawal (2007) "Nonlinear Fiber Optics"
 
-use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SPEED_OF_LIGHT};
+use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER, SPEED_OF_LIGHT};
 
 /// Kerr effect parameters
 ///
@@ -199,7 +199,7 @@ impl PhotoacousticConversion {
     pub fn water() -> Self {
         Self::new(
             0.13,    // Grüneisen parameter
-            1480.0,  // Speed of sound [m/s]
+            SOUND_SPEED_WATER,  // Speed of sound [m/s] (1482.0 m/s at 20°C, NPL)
             0.6,     // Thermal conductivity [W/(m·K)]
             4.186e6, // Volumetric heat capacity [J/(m³·K)]
         )

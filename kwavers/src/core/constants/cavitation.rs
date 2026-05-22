@@ -9,6 +9,16 @@ pub const INITIAL_BUBBLE_RADIUS: f64 = 5e-6;
 /// Surface tension of water at 20°C (N/m)
 pub const SURFACE_TENSION_WATER: f64 = 0.0728;
 
+/// Effective surface tension at the soft-tissue–gas interface (N/m).
+///
+/// Value: 0.060 N/m — lower than pure water due to proteins, lipids, and
+/// surfactant-like molecules in biological tissue. This value governs the
+/// Laplace pressure in tissue-embedded bubble models.
+///
+/// Reference: Cheeke JDN (2002). *Fundamentals and Applications of
+/// Ultrasonic Waves*. CRC Press, p. 199.
+pub const SURFACE_TENSION_TISSUE: f64 = 0.060;
+
 /// Viscosity of water at 20°C (Pa·s)
 pub const VISCOSITY_WATER: f64 = 1.002e-3;
 

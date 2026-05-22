@@ -1,5 +1,6 @@
 //! `BubbleProperties` and `BubbleState` impls for `HeterogeneousTissueMedium`
 
+use crate::core::constants::cavitation::VAPOR_PRESSURE_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::HeterogeneousTissueMedium;
 use crate::domain::grid::Grid;
@@ -17,7 +18,7 @@ impl BubbleProperties for HeterogeneousTissueMedium {
     }
 
     fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        2330.0 // Water vapor pressure at 20C approx
+        VAPOR_PRESSURE_WATER
     }
 
     fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {

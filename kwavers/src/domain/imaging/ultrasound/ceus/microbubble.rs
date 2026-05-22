@@ -1,7 +1,7 @@
 //! `Microbubble` and `CeusSizeDistribution` — individual microbubble physics.
 
 use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VISCOSITY_WATER};
-use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use std::f64::consts::PI;
 
@@ -167,7 +167,7 @@ impl Microbubble {
     /// Constants: c_L = 1480 m/s, ρ_L = 1000 kg/m³, μ_L = 1.002×10⁻³ Pa·s (water, 20°C).
     #[must_use]
     pub fn scattering_cross_section(&self, frequency: f64) -> f64 {
-        const C_L: f64 = 1480.0; // longitudinal speed in water at 20°C [m/s]
+        let c_l = SOUND_SPEED_WATER; // longitudinal speed in water at 20°C [m/s]
         let rho_l = DENSITY_WATER_NOMINAL;
         let mu_l = VISCOSITY_WATER; // dynamic viscosity of water at 20°C [Pa·s]
 
@@ -181,7 +181,7 @@ impl Microbubble {
             );
 
         // Dimensionless damping components (Church 1995, Eq. A3–A5)
-        let delta_rad = omega0 * r / C_L;
+        let delta_rad = omega0 * r / c_l;
         let delta_vis = 4.0 * mu_l / (omega0 * rho_l * r * r);
         let delta_sh =
             4.0 * self.shell_thickness * self.shell_viscosity / (omega0 * rho_l * r * r * r);
@@ -192,7 +192,7 @@ impl Microbubble {
             .mul_add(delta_tot * big_omega, (1.0 - big_omega * big_omega).powi(2));
 
         // σ_s = 4π R² (ωR/c_L)² / denom
-        let ka = omega * r / C_L; // dimensionless acoustic size parameter
+        let ka = omega * r / c_l; // dimensionless acoustic size parameter
         4.0 * std::f64::consts::PI * r * r * ka * ka / denom
     }
 }

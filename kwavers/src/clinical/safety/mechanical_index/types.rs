@@ -1,5 +1,12 @@
 //! Types for mechanical index safety calculation.
 
+use crate::core::constants::medical::{
+    MI_CAVITATION_BOWEL, MI_CAVITATION_BRAIN, MI_CAVITATION_FETAL, MI_CAVITATION_LUNG,
+    MI_CAVITATION_OPHTHALMIC, MI_CAVITATION_SOFT_TISSUE,
+    MI_LIMIT_BOWEL, MI_LIMIT_BRAIN, MI_LIMIT_FETAL, MI_LIMIT_LUNG, MI_LIMIT_OPHTHALMIC,
+    MI_LIMIT_SOFT_TISSUE,
+};
+
 /// Tissue types with different MI safety thresholds.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MechanicalIndexTissueType {
@@ -22,12 +29,12 @@ impl MechanicalIndexTissueType {
     #[must_use]
     pub fn safety_limit(&self) -> f64 {
         match self {
-            Self::SoftTissue => 1.9,  // FDA diagnostic limit
-            Self::Ophthalmic => 0.23, // FDA ophthalmic limit
-            Self::Lung => 0.7,        // WFUMB gas-body tissue
-            Self::Bowel => 0.7,       // WFUMB gas-body tissue
-            Self::Fetal => 1.0,       // Conservative fetal limit
-            Self::Brain => 1.5,       // Transcranial limit
+            Self::SoftTissue => MI_LIMIT_SOFT_TISSUE,
+            Self::Ophthalmic => MI_LIMIT_OPHTHALMIC,
+            Self::Lung => MI_LIMIT_LUNG,
+            Self::Bowel => MI_LIMIT_BOWEL,
+            Self::Fetal => MI_LIMIT_FETAL,
+            Self::Brain => MI_LIMIT_BRAIN,
         }
     }
 
@@ -35,12 +42,12 @@ impl MechanicalIndexTissueType {
     #[must_use]
     pub fn cavitation_threshold(&self) -> f64 {
         match self {
-            Self::SoftTissue => 0.6,
-            Self::Ophthalmic => 0.3,
-            Self::Lung => 0.4,   // Lower due to gas bodies
-            Self::Bowel => 0.4,  // Lower due to gas bodies
-            Self::Fetal => 0.5,  // Conservative estimate
-            Self::Brain => 0.55, // Slightly lower than soft tissue
+            Self::SoftTissue => MI_CAVITATION_SOFT_TISSUE,
+            Self::Ophthalmic => MI_CAVITATION_OPHTHALMIC,
+            Self::Lung => MI_CAVITATION_LUNG,
+            Self::Bowel => MI_CAVITATION_BOWEL,
+            Self::Fetal => MI_CAVITATION_FETAL,
+            Self::Brain => MI_CAVITATION_BRAIN,
         }
     }
 }

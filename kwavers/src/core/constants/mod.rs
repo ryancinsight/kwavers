@@ -38,7 +38,7 @@ pub use fundamental::{
 };
 
 // Water properties (most common medium)
-pub use cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER};
+pub use cavitation::{SURFACE_TENSION_TISSUE, SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER};
 pub use fundamental::{BULK_MODULUS_WATER, C_WATER, DENSITY_WATER};
 
 // Cavitation control limits
@@ -73,7 +73,13 @@ pub use thermodynamic::{
 };
 
 // Medical constants (FDA limits)
-pub use medical::{FDA_DERATING_FACTOR, ISPPA_LIMIT, ISPTA_LIMIT, THERMAL_DOSE_THRESHOLD};
+pub use medical::{
+    FDA_DERATING_FACTOR, ISPPA_LIMIT, ISPTA_LIMIT, THERMAL_DOSE_THRESHOLD,
+    MI_CAVITATION_BOWEL, MI_CAVITATION_BRAIN, MI_CAVITATION_FETAL, MI_CAVITATION_LUNG,
+    MI_CAVITATION_OPHTHALMIC, MI_CAVITATION_SOFT_TISSUE,
+    MI_LIMIT_BOWEL, MI_LIMIT_BRAIN, MI_LIMIT_FETAL, MI_LIMIT_LUNG, MI_LIMIT_OPHTHALMIC,
+    MI_LIMIT_SOFT_TISSUE,
+};
 
 // Numerical constants
 pub use numerical::{

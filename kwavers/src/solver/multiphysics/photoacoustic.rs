@@ -58,7 +58,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         &mut self,
         fluence: &ArrayD<f64>,
     ) -> KwaversResult<ArrayD<f64>> {
-        let gamma = self.gruneisen.evaluate(37.0); // Body temperature (37 °C)
+        let gamma = self.gruneisen.evaluate(BODY_TEMPERATURE_C);
         let mu_a = self.optical_properties.absorption_coefficient;
 
         // p₀ = Γ μ_a Φ

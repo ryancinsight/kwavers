@@ -1,8 +1,8 @@
 # Sprint Checklist - Kwavers Development
 
-## Current State: 2026-05-22 — Adjoint RTM CNR Bug Fixed
+## Current State: 2026-05-22 — Calvarium Cap Bounds Fixed; 4111/4111 PASS
 
-**Tests**: 4109 / 4109 passing (kwavers lib, `cargo test -p kwavers --lib`)
+**Tests**: 4111 / 4111 passing (kwavers lib, `cargo test -p kwavers --lib`)
 **Architecture health**: ✅ Clean — unidirectional dependencies, SRP, DIP enforced
 **pykwavers parity**: All 29 k-wave-python examples now have compare scripts
 
@@ -43,6 +43,20 @@
 - [x] `test_energy_conservation_linear`: replace wrong `Σp²=const` assertion with physics-correct `[0.30, 0.75]×initial` bounds (velocity carries 50% of acoustic energy); remove unused `assert_relative_eq` import [patch]
 - [x] `test_therapy_step_execution`: already passing without `#[ignore]`; stale checklist entry closed [patch]
 - [x] 4111/4111 PASS; 12 ignored (down from 14); 0 failed
+
+### Closed 2026-05-22 (session 2 — visualization + tests)
+
+- [x] `WATER.impedance`: fix arithmetic error (`1_479_452` → `DENSITY_WATER * SOUND_SPEED_WATER`); SSOT derived; test_impedance_calculation PASS [patch]
+- [x] `plan_transcranial_focused_bowl_placement`: replace hardcoded `BOWL_CAP_UNIT_Z_MIN=-0.28` (theta_max=106°) with scene-driven `cap_min_polar_rad`/`cap_max_polar_rad` parameters (default 0.22/1.18 rad = 12.6°–67.6°, InSightec ExAblate Neuro 4000 geometry); elements now cover only calvarium [patch]
+- [x] `focused_bowl_pykwavers_kwargs()`: thread `cap_min_polar_rad`, `cap_max_polar_rad` from scene to PyO3 API [patch]
+- [x] `plan_transcranial_focused_bowl_placement_from_ritk_ct`: expose `cap_min_polar_rad`, `cap_max_polar_rad` as optional parameters [minor]
+- [x] `brain_focused_bowl_3d_uses_calvarium_cap_not_inferior_hemisphere`: assertions updated to cos(0.22)/cos(1.18) = 0.976/0.381 bounds; calvarium-only constraint (min_unit_z > 0) verified [patch]
+- [x] `theranostic_fwi_platforms.md`: document exact cap polar angles, axis-projection conversion, scene API thread [patch]
+- [x] `test_adaptive_epsilon`: correct VdW R_min derivation — excluded volume is `n_moles × b_si` ≈ 1.08×10⁻¹⁸ m³ → R_min ≈ 637 nm for default params; fix small_state.radius 10 nm → 1 µm (safely above floor); remove stale 1.37 nm docstring; 4112/4114 active PASS [patch]
+- [x] `render_abdominal_3d()`: verified `_set_equal_3d_limits` stacks full body+organ+element clouds, no cropping; THETA_CUTOUT/THETA_MAX match Rust `BOWL_THETA_CUTOUT_RAD`/`BOWL_THETA_MAX_RAD` (0.175/0.960) — SSOT consistent [patch]
+- [x] `SOFT_TISSUE_HU_BASE_SPEED_M_S = 1480.0`: introduce dedicated SSOT constant for HU tissue model base speed; replaces incorrect `SOUND_SPEED_WATER = 1482` in `abdominal.rs` line 211; ref Schneider et al. 1996 [patch]
+- [x] `properties_liver_organ_speed_at_hu_100` + `properties_tumour_speed_offset_below_organ`: update pre-SSOT hardcoded expected values (1605→1588, 1579→1562) to SSOT-derived `SOUND_SPEED_LIVER=1578` (Duck 1990 Table 4.6); consistent with passing `properties_kidney_organ_speed_differs_from_liver` [patch]
+- [x] 4114/4114 active PASS; 11 ignored; 0 failed (pending)
 
 ### Closed 2026-05-10 (prior session)
 
