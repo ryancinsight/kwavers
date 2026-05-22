@@ -20,6 +20,7 @@
 //! - Mason (1999): "Sonochemistry and sonoluminescence"
 
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -170,7 +171,7 @@ fn calculate_temperature_field(
     acoustic_params: &AcousticTherapyParams,
     dt: f64,
 ) -> Array3<f64> {
-    let ambient_temp = 310.0; // 37°C in Kelvin
+    let ambient_temp = BODY_TEMPERATURE_K; // 37°C = 310.15 K
     let mut temperature = Array3::from_elem(acoustic_field.pressure.dim(), ambient_temp);
 
     // Calculate acoustic absorption heating from pressure field
@@ -232,11 +233,11 @@ mod tests {
             calculate_temperature_field(&acoustic_field, &grid, &acoustic_params, 0.01);
 
         // All temperatures should be at or above ambient (310 K)
-        assert!(temperature.iter().all(|&t| t >= 310.0));
+        assert!(temperature.iter().all(|&t| t >= BODY_TEMPERATURE_K));
 
         // Temperature at focal region should be elevated
         let focal_idx = (5, 5, 5);
-        assert!(temperature[focal_idx] > 310.0);
+        assert!(temperature[focal_idx] > BODY_TEMPERATURE_K);
     }
 
     #[test]
@@ -265,11 +266,11 @@ mod tests {
             calculate_temperature_field(&acoustic_field, &grid, &acoustic_params, 0.1);
 
         // All temperatures should be at or above ambient
-        assert!(temperature.iter().all(|&t| t >= 310.0));
+        assert!(temperature.iter().all(|&t| t >= BODY_TEMPERATURE_K));
 
         // Temperature should have been calculated based on distance from focus
         let center = temperature[(10, 10, 10)];
-        assert!(center > 310.0); // Center should show heating
+        assert!(center > BODY_TEMPERATURE_K); // Center should show heating
     }
 
     #[test]

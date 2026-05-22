@@ -34,6 +34,10 @@ impl crate::solver::interface::Solver for PSTDSolver {
         &self.fields.p
     }
 
+    fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
+        self.sensor_recorder.extract_pressure_data()
+    }
+
     fn velocity_fields(
         &self,
     ) -> (

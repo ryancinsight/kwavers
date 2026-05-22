@@ -233,6 +233,27 @@ fn run_pstd_transmit(
         ..GridSource::new_empty()
     };
 
+    // GPU PSTD path (compile-time `gpu` feature): all axes power-of-2 and
+    // ≤ 256 → drive the GPU-resident pipeline via the canonical kwavers entry.
+    // Falls back to the CPU PSTDSolver path on shape rejection or runtime error.
+    #[cfg(feature = "gpu")]
+    {
+        if nx.is_power_of_two() && ny.is_power_of_two() && nz.is_power_of_two()
+            && nx <= 256 && ny <= 256 && nz <= 256
+        {
+            if let Some(traces) = try_run_gpu_pstd_transmit(
+                &grid,
+                &medium,
+                &source,
+                receiver_indices,
+                steps,
+                config,
+            ) {
+                return Ok(traces);
+            }
+        }
+    }
+
     let pstd_config = PSTDConfig {
         nt: steps,
         dt: config.time_step_s,
@@ -246,6 +267,44 @@ fn run_pstd_transmit(
     solver.run_orchestrated(steps)?.ok_or_else(|| {
         KwaversError::InvalidInput("PSTD acquisition produced no receiver data".into())
     })
+}
+
+#[cfg(feature = "gpu")]
+fn try_run_gpu_pstd_transmit(
+    grid: &Grid,
+    medium: &crate::domain::medium::heterogeneous::HeterogeneousMedium,
+    source: &GridSource,
+    receiver_indices: &[(usize, usize, usize)],
+    steps: usize,
+    config: BreastUstPstdDatasetConfig,
+) -> Option<Array2<f64>> {
+    use crate::solver::forward::pstd::gpu_pstd::{run_gpu_pstd, GpuPstdRunConfig};
+    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+    let mut sensor_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    for &(i, j, k) in receiver_indices {
+        sensor_mask[[i, j, k]] = true;
+    }
+    // GPU PSTD uses its own polynomial-PML inside the wgsl pipeline; clinical
+    // dataset gen sets `pml_inside = true` when the CPU CPML thickness is
+    // nonzero so the GPU path matches the CPU absorbing boundary semantics.
+    let gpu_config = GpuPstdRunConfig {
+        time_steps: steps,
+        dt: config.time_step_s,
+        alpha_coeff_db: 0.0,
+        alpha_power: 1.0,
+        pml_size: if config.cpml_thickness_cells == 0 {
+            None
+        } else {
+            Some(config.cpml_thickness_cells)
+        },
+        pml_size_xyz: None,
+        pml_inside: config.cpml_thickness_cells > 0,
+        pml_alpha_xyz: None,
+    };
+    match run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config) {
+        Ok(traces) => Some(traces),
+        Err(_) => None,
+    }
 }
 
 fn pstd_boundary(cpml_thickness_cells: usize) -> BoundaryConfig {

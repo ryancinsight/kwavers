@@ -112,6 +112,7 @@ impl crate::domain::plugin::Plugin for ThermalDiffusionPlugin {
 mod tests {
     use super::*;
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use crate::domain::medium::HomogeneousMedium;
     use ndarray::Array3;
 
@@ -136,7 +137,7 @@ mod tests {
 
         let mut solver = ThermalDiffusionSolver::new(config, &grid);
 
-        let mut initial_temp = Array3::from_elem((16, 16, 16), 310.0);
+        let mut initial_temp = Array3::from_elem((16, 16, 16), BODY_TEMPERATURE_K);
         initial_temp[[8, 8, 8]] = 320.0;
         solver.set_temperature(initial_temp);
 
@@ -146,6 +147,6 @@ mod tests {
 
         let final_temp = solver.temperature();
         assert!(final_temp[[8, 8, 8]] < 320.0);
-        assert!(final_temp[[7, 8, 8]] > 310.0);
+        assert!(final_temp[[7, 8, 8]] > BODY_TEMPERATURE_K);
     }
 }

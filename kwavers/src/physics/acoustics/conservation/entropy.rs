@@ -61,6 +61,7 @@ pub fn entropy_production_rate(
 #[cfg(test)]
 mod tests {
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use super::*;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
@@ -85,7 +86,7 @@ mod tests {
         let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = uniform(s, 5.0); // non-zero absorption, but zero energy
         let ds =
-            entropy_production_rate(&zero, &zero, &zero, &zero, &rho, &c, &alpha, 310.0, &grid);
+            entropy_production_rate(&zero, &zero, &zero, &zero, &rho, &c, &alpha, BODY_TEMPERATURE_K, &grid);
         assert_eq!(
             ds, 0.0,
             "zero acoustic energy must give zero entropy production"

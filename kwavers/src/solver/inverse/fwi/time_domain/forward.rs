@@ -137,9 +137,10 @@ impl FwiProcessor {
             );
         }
 
-        let recorded = solver
-            .sensor_recorder
-            .extract_pressure_data()
+        let recorded =
+            <crate::solver::fdtd::FdtdSolver as crate::solver::interface::Solver>::recorded_sensor_pressure(
+                &solver,
+            )
             .ok_or_else(|| {
                 KwaversError::Validation(ValidationError::ConstraintViolation {
                     message: "FWI forward model requires at least one receiver".to_owned(),
@@ -177,9 +178,10 @@ impl FwiProcessor {
             solver.step_forward()?;
         }
 
-        let recorded = solver
-            .sensor_recorder
-            .extract_pressure_data()
+        let recorded =
+            <crate::solver::fdtd::FdtdSolver as crate::solver::interface::Solver>::recorded_sensor_pressure(
+                &solver,
+            )
             .ok_or_else(|| {
                 KwaversError::Validation(ValidationError::ConstraintViolation {
                     message: "FWI forward model requires at least one receiver".to_owned(),

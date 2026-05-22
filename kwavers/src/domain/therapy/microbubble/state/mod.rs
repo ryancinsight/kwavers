@@ -28,6 +28,7 @@
 //! - De Jong et al. (2002): "Ultrasound scattering properties of microbubbles"
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use std::fmt;
 
@@ -165,13 +166,14 @@ impl MicrobubbleState {
             }));
         }
 
-        const BODY_TEMPERATURE: f64 = 310.0;
+        // Use SSOT BODY_TEMPERATURE_K (310.15 K = 37°C)
+        let body_temperature = BODY_TEMPERATURE_K;
         const WATER_SURFACE_TENSION: f64 = 0.072;
 
         let shell_radius_buckling = radius_equilibrium * 0.9;
         let shell_radius_rupture = radius_equilibrium * 1.5;
         let volume = (4.0 / 3.0) * std::f64::consts::PI * radius_equilibrium.powi(3);
-        let gas_moles = (ATMOSPHERIC_PRESSURE * volume) / (GAS_CONSTANT * BODY_TEMPERATURE);
+        let gas_moles = (ATMOSPHERIC_PRESSURE * volume) / (GAS_CONSTANT * body_temperature);
 
         Ok(Self {
             radius: radius_equilibrium,
@@ -180,7 +182,7 @@ impl MicrobubbleState {
             wall_acceleration: 0.0,
             position,
             velocity: Velocity3D::zero(),
-            temperature: BODY_TEMPERATURE,
+            temperature: body_temperature,
             pressure_internal: ATMOSPHERIC_PRESSURE,
             pressure_liquid: ATMOSPHERIC_PRESSURE,
             gas_moles,

@@ -52,6 +52,10 @@ impl Solver for GenericFdtdSolver<Array3<f64>> {
         &self.fields.p
     }
 
+    fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
+        self.sensor_recorder.extract_pressure_data()
+    }
+
     fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.fields.ux, &self.fields.uy, &self.fields.uz)
     }

@@ -84,6 +84,7 @@ pub fn validate_conservation(
 #[cfg(test)]
 mod tests {
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use super::*;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
@@ -130,7 +131,7 @@ mod tests {
         let params = ConservationParams {
             initial_energy: init,
             dt: 1e-6,
-            temperature: 310.0,
+            temperature: BODY_TEMPERATURE_K,
             tolerance: 1e-4,
         };
         let m = validate_conservation(state, prev, params, &grid);
@@ -182,7 +183,7 @@ mod tests {
         let params = ConservationParams {
             initial_energy: init,
             dt: 1e-6,
-            temperature: 310.0,
+            temperature: BODY_TEMPERATURE_K,
             tolerance: 1e-4,
         };
         let m = validate_conservation(state, prev, params, &grid);

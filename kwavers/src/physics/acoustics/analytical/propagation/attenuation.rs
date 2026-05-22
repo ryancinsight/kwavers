@@ -183,10 +183,13 @@ mod tests {
 
     #[test]
     fn test_attenuation_db() {
+        // Exact: attenuation_db = NP_TO_DB × α × d = (20/ln10) × 0.1 × 10
+        // NP_TO_DB SSOT value = 8.685_889_638_065_037 (20 / ln(10)).
+        // The approximation 8.686 has error ~1.3e-4; the exact expression must be used.
         let calc = AttenuationCalculator::new(0.1, 1000.0, SOUND_SPEED_WATER_SIM);
         let distance = 10.0;
         let db = calc.attenuation_db(distance);
-        let expected = 8.686_f64 * 0.1 * 10.0;
-        assert_relative_eq!(db, expected, epsilon = 1e-10);
+        let expected = 20.0 / f64::ln(10.0) * 0.1 * distance; // exact closed-form
+        assert_relative_eq!(db, expected, epsilon = 1e-12);
     }
 }
