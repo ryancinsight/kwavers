@@ -29,7 +29,7 @@ pub use crate::domain::medium::properties::ThermalPropertyData;
 /// For Pennes solver simulations, also specify arterial temperature and metabolic heat
 /// as separate simulation parameters.
 pub mod tissues {
-    use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
+    use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_LIVER, DENSITY_TISSUE};
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
     use crate::domain::medium::properties::ThermalPropertyData;
 
@@ -47,10 +47,10 @@ pub mod tissues {
     #[must_use]
     pub fn liver() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.52,          // conductivity (W/m/K)
-            3540.0,        // specific_heat (J/kg/K)
-            DENSITY_BLOOD, // density (kg/m³)
-            Some(16.7),    // blood_perfusion (kg/m³/s) - high perfusion
+            0.52,           // conductivity (W/m/K)
+            3540.0,         // specific_heat (J/kg/K)
+            DENSITY_LIVER,  // density (kg/m³) — SSOT; Duck (1990): ρ_liver ≈ 1060 kg/m³
+            Some(16.7),     // blood_perfusion (kg/m³/s) - high perfusion
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Liver tissue properties are valid")
@@ -142,14 +142,14 @@ pub mod tissues {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
+    use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_LIVER, DENSITY_TISSUE};
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 
     #[test]
     fn test_tissue_constructors() {
         let liver = tissues::liver();
         assert_eq!(liver.conductivity, 0.52);
-        assert_eq!(liver.density, DENSITY_BLOOD);
+        assert_eq!(liver.density, DENSITY_LIVER);
         assert!(liver.has_bioheat_parameters());
 
         let muscle = tissues::muscle();

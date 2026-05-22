@@ -164,7 +164,8 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     bulk_viscosity: 5e-3,
     specific_heat: 3600.0,
     thermal_conductivity: 0.50,
-    thermal_diffusivity: 1.39e-7,
+    // α = k/(ρ·cp) = 0.50 / (1050 × 3600) = 1.323e-7 m²/s
+    thermal_diffusivity: 1.323e-7,
     perfusion_rate: 120.0, // Very high perfusion
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 1.0,
@@ -179,7 +180,8 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
 pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     sound_speed: 1565.0,
     density: 1055.0,
-    impedance: 1651575.0,
+    // Z = ρ·c = 1055 × 1565 = 1 651 075 Pa·s/m
+    impedance: 1_651_075.0,
     absorption_coefficient: 0.5,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 6.8,
@@ -187,7 +189,8 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     bulk_viscosity: 5e-3,
     specific_heat: 3600.0,
     thermal_conductivity: 0.50,
-    thermal_diffusivity: 1.39e-7,
+    // α = k/(ρ·cp) = 0.50 / (1055 × 3600) = 1.317e-7 m²/s
+    thermal_diffusivity: 1.317e-7,
     perfusion_rate: 130.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 1.1,
@@ -275,7 +278,8 @@ pub const FAT: TissueProperties = TissueProperties {
 pub const CSF: TissueProperties = TissueProperties {
     sound_speed: 1515.0,
     density: 1007.0,
-    impedance: 1524605.0,
+    // Z = ρ·c = 1007 × 1515 = 1 525 605 Pa·s/m
+    impedance: 1_525_605.0,
     absorption_coefficient: 0.0,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 5.0,

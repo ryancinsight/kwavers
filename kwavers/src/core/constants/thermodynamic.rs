@@ -42,21 +42,46 @@ pub const SPECIFIC_HEAT_WATER: f64 = 4182.0;
 
 /// Grüneisen parameter of water at body temperature (37°C), dimensionless.
 ///
-/// The Grüneisen parameter Γ = β·c²/c_p characterises the efficiency of
-/// thermoelastic photoacoustic pressure generation:
+/// ## Definition
 ///
-///   p₀ = Γ · μₐ · Φ / c_p
+/// `Γ = β·c²/c_p` (dimensionless), where β is the isobaric thermal expansion
+/// coefficient [K⁻¹], c is the speed of sound [m/s], and c_p is the specific
+/// heat at constant pressure [J/(kg·K)].
 ///
-/// For water at 37°C: β ≈ 3.7×10⁻⁴ K⁻¹, c ≈ 1524 m/s, c_p ≈ 4182 J/(kg·K),
-/// giving Γ ≈ 0.12.  Soft tissue values lie in the range 0.11–0.16.
+/// ## Photoacoustic pressure formula
 ///
-/// References:
-/// - Jacques, S.L. (1993). "Role of tissue optics and pulse duration on tissue
-///   damage during high-power laser irradiation." Appl. Opt. 32(13), 2447–2454.
-///   DOI: 10.1364/AO.32.002447
-/// - Sigrist, M.W. (1986). "Laser generation of acoustic waves in liquids and
-///   gases." J. Appl. Phys. 60(7), R83–R121. DOI: 10.1063/1.337089
-pub const GRUNEISEN_WATER_37C: f64 = 0.12;
+/// ```text
+/// p₀ = Γ · H = Γ · μₐ · Φ
+/// ```
+///
+/// where H = μₐ·Φ \[J/m³\] is the absorbed optical energy density (Beer-Lambert law).
+/// There is **no** additional division by c_p at the call site; c_p is already
+/// encoded in the definition of Γ.
+///
+/// ## Value derivation
+///
+/// Water at 37°C (Sigrist 1986 linear model, SSOT: `GrueneisenModel::water()`):
+/// ```text
+/// Γ₀ = 0.12  (reference at T_ref = 20°C, Xu & Wang 2006)
+/// dΓ/dT = 0.004 K⁻¹  (Sigrist 1986)
+/// Γ(37°C) = 0.12 + 0.004 × (37 − 20) = 0.12 + 0.068 = 0.188
+/// ```
+///
+/// First-principles check at 37°C: β ≈ 3.7×10⁻⁴ K⁻¹, c ≈ 1524 m/s,
+/// c_p ≈ 4182 J/(kg·K) → Γ = β·c²/c_p ≈ 0.205 (agrees to within the
+/// uncertainty of β from different sources).
+///
+/// **Note**: the previously stored value 0.12 is the reference value at 20°C,
+/// not 37°C. This has been corrected to 0.188 per the canonical
+/// `GrueneisenModel::water().evaluate(37.0)`.
+///
+/// ## References
+///
+/// - Xu M, Wang LV (2006). "Photoacoustic imaging in biomedicine."
+///   *Rev. Sci. Instrum.* **77**, 041101. DOI: 10.1063/1.2195024
+/// - Sigrist MW (1986). "Laser generation of acoustic waves in liquids and gases."
+///   *J. Appl. Phys.* **60**(7), R83. DOI: 10.1063/1.337089
+pub const GRUNEISEN_WATER_37C: f64 = 0.188;
 
 /// Specific heat capacity of tissue (J/(kg·K))
 pub const SPECIFIC_HEAT_TISSUE: f64 = 3600.0;

@@ -5,8 +5,8 @@
 //! a canonical tissue-property database.
 
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
-    SOUND_SPEED_WATER,
+    DENSITY_BLOOD, DENSITY_LIVER, DENSITY_TISSUE, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
+    SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 use std::f64::consts::PI;
 
@@ -164,7 +164,7 @@ pub fn tissue_properties(tissue: &str) -> (f64, f64, f64, f64, f64) {
     // (c [m/s], rho [kg/m3], alpha0 [dB/cm/MHz^y], y, B/A)
     match tissue {
         "water" => (SOUND_SPEED_WATER, 998.0, 0.002, 2.0, 5.2),
-        "liver" => (SOUND_SPEED_LIVER, DENSITY_BLOOD, 0.5, 1.05, 7.6),
+        "liver" => (SOUND_SPEED_LIVER, DENSITY_LIVER, 0.5, 1.05, 7.6),
         "muscle" => (1580.0, DENSITY_TISSUE, 0.57, 1.0, 7.4),
         "fat" => (1450.0, 950.0, 0.48, 1.0, 10.0),
         "skull" => (2900.0, 1900.0, 13.0, 1.2, 12.0),
