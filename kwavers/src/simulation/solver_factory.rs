@@ -155,15 +155,15 @@ impl SimulationSolverFactory {
             SolverType::FEM => Err(KwaversError::FeatureNotAvailable(
                 "Simulation factory cannot assemble FEM from Grid until a real Grid-to-TetrahedralMesh generator and frequency-domain source/boundary contract are available".to_owned(),
             )),
+            #[cfg(feature = "gpu")]
             SolverType::PstdGpu => {
-                let solver = PSTDSolver::new(
-                    pstd_config_from(&config, KSpaceMethod::StandardPSTD),
-                    grid.clone(),
-                    medium,
-                    GridSource::default(),
-                )?;
-                Ok(Box::new(solver))
+                use crate::simulation::solver_adapters::GpuPstdSimulationAdapter;
+                Ok(Box::new(GpuPstdSimulationAdapter::new(&config, grid, medium)?))
             }
+            #[cfg(not(feature = "gpu"))]
+            SolverType::PstdGpu => Err(KwaversError::FeatureNotAvailable(
+                "SolverType::PstdGpu requires the `gpu` Cargo feature".to_owned(),
+            )),
         }
     }
 }

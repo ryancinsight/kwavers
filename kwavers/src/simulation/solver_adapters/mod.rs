@@ -5,5 +5,9 @@
 //! `solver::forward`.
 
 pub mod dg;
+#[cfg(feature = "gpu")]
+pub mod gpu_pstd;
 
 pub use dg::DgSimulationSolver;
+#[cfg(feature = "gpu")]
+pub use gpu_pstd::GpuPstdSimulationAdapter;

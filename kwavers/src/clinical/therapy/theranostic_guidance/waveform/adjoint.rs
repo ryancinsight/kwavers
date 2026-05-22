@@ -82,13 +82,25 @@ pub(super) fn adjoint_image(
             &mut psi_x_adj,
             &mut psi_y_adj,
         );
+        // Inject residual at time `step` into the adjoint field BEFORE applying
+        // the imaging condition.  The cross-correlation `I(x) = Σ_t S(x,t)·R(x,t)`
+        // requires the adjoint R at the same physical time as the forward S.
+        // Injecting the residual before correlating ensures R encodes the
+        // boundary data at `step`; without this the imaging condition uses the
+        // adjoint one step behind (a systematic off-by-one).
+        //
+        // References:
+        //   Claerbout (1985), "Imaging the Earth's Interior", Eq. 2.6.
+        //   Fichtner (2010), "Full Seismic Waveform Modelling", Ch. 4.3.
         for (receiver, cell) in grid.receiver_cells.iter().copied().enumerate() {
             next_adj[cell] += residual[step * receiver_count + receiver];
         }
         apply_attenuation(grid, &mut next_adj);
 
+        // Imaging condition: forward S at time `step`, adjoint R at same time.
+        // Use `next_adj` (updated with residual) not `curr_adj` (prior step).
         for (idx, value) in image.iter_mut().enumerate() {
-            *value += fwd_curr[idx] as f64 * curr_adj[idx] as f64;
+            *value += fwd_curr[idx] as f64 * next_adj[idx] as f64;
         }
 
         std::mem::swap(&mut prev_adj, &mut curr_adj);

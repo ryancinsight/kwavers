@@ -24,7 +24,7 @@ impl Default for AcousticSkullProperties {
         // Typical adult skull properties
         Self {
             sound_speed: 3100.0,       // m/s (cortical bone)
-            density: 1900.0,           // kg/m³
+            density: BONE_DENSITY,     // 1900 kg/m³ (Duck 1990)
             attenuation_coeff: 60.0,   // Np/m/MHz
             thickness: 0.007,          // 7 mm average
             shear_speed: Some(1600.0), // m/s
