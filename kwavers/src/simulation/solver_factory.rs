@@ -275,6 +275,52 @@ mod tests {
     }
 
     #[test]
+    fn assembles_fdtd_with_cpml_via_absorbing_boundary_config() {
+        use crate::domain::boundary::cpml::CPMLConfig;
+        use crate::solver::config::AbsorbingBoundaryConfig;
+
+        // Grid must be large enough for the CPML thickness.
+        // CPMLConfig::with_thickness(4) → 4 cells each side.
+        // 16 × 16 × 16 with dx = 1e-3 is well-conditioned.
+        let grid = Grid::new(16, 16, 16, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+
+        // dt satisfies CFL: dx / (sqrt(3) * c) ≈ 1e-3 / (1.732 * 1500) ≈ 3.85e-7 s.
+        // Use 1e-7 to stay well inside the stability region.
+        let dt = 1.0e-7_f64;
+        let config = SolverConfiguration {
+            solver_type: SolverType::FDTD,
+            max_steps: 2,
+            dt,
+            cfl: 0.3,
+            absorbing_boundary: Some(AbsorbingBoundaryConfig {
+                cpml: CPMLConfig::with_thickness(4),
+                max_sound_speed: SOUND_SPEED_WATER,
+            }),
+            ..SolverConfiguration::default()
+        };
+
+        let mut solver =
+            SimulationSolverFactory::create_solver(SolverType::FDTD, config, &grid, &medium)
+                .unwrap();
+
+        // Run two steps through the CPML-enabled FDTD to confirm the boundary
+        // code path executes without panic or NaN propagation.
+        solver.run(2).unwrap();
+
+        let p = solver.pressure_field();
+        // Value-semantic: every pressure cell must be finite after 2 steps
+        // in a medium with no source and CPML boundaries.
+        assert!(
+            p.iter().all(|v| v.is_finite()),
+            "CPML FDTD produced non-finite pressure after 2 steps"
+        );
+        // Shape must match the grid dimensions unchanged.
+        assert_eq!(p.dim(), (16, 16, 16));
+    }
+
+    #[test]
     fn reports_unavailable_fem_grid_assembly_without_not_implemented() {
         let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
         let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
