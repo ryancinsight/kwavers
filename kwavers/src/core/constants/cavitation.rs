@@ -15,6 +15,15 @@ pub const VISCOSITY_WATER: f64 = 1.002e-3;
 /// Vapor pressure of water at 20°C (Pa)
 pub const VAPOR_PRESSURE_WATER: f64 = 2339.0;
 
+/// Vapor pressure of water at 25°C (Pa)
+///
+/// Value: 3169.0 Pa — computed from the Antoine equation at 25 °C (298.15 K).
+/// Used as the ambient-lab-temperature reference in bubble-dynamics models
+/// that operate near room temperature (25 °C) rather than at 20 °C.
+///
+/// Reference: CRC Handbook of Chemistry and Physics, 97th ed., Table 6-5.
+pub const VAPOR_PRESSURE_WATER_25C: f64 = 3169.0;
+
 /// Polytrophic exponent for air
 pub const POLYTROPIC_EXPONENT_AIR: f64 = 1.4;
 

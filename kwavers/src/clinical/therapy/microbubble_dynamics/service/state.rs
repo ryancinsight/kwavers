@@ -1,7 +1,13 @@
 use std::collections::HashMap;
 
+use crate::core::constants::cavitation::{
+    POLYTROPIC_EXPONENT_AIR, SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER_25C, VISCOSITY_WATER,
+};
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, AVOGADRO, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE,
+};
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_K, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use crate::core::error::KwaversResult;
 use crate::domain::therapy::microbubble::{MarmottantShellProperties, MicrobubbleState};
@@ -19,13 +25,16 @@ impl MicrobubbleDynamicsService {
     pub(super) fn extract_bubble_parameters(
         state: &MicrobubbleState,
     ) -> KwaversResult<BubbleParameters> {
-        const DYNAMIC_VISCOSITY: f64 = 0.001; // Water at 37°C [Pa·s]
-        const SURFACE_TENSION: f64 = 0.072; // [N/m]
-        const VAPOR_PRESSURE: f64 = 3169.0; // Water at 37°C [Pa]
-        const POLYTROPIC_INDEX: f64 = 1.4;
-        const BODY_TEMP: f64 = 310.0; // 37°C [K]
-        const THERMAL_CONDUCTIVITY: f64 = 0.6; // Water [W/(m·K)]
-        const SPECIFIC_HEAT: f64 = 4186.0; // Water [J/(kg·K)]
+        // All fluid properties sourced from core::constants SSOT.
+        // VISCOSITY_WATER = 1.002e-3 Pa·s at 20°C (NIST); nearest available constant.
+        // VAPOR_PRESSURE_WATER_25C = 3169.0 Pa at 25°C (CRC Handbook Table 6-5).
+        let mu_liquid = VISCOSITY_WATER;
+        let sigma = SURFACE_TENSION_WATER;
+        let pv = VAPOR_PRESSURE_WATER_25C;
+        let gamma = POLYTROPIC_EXPONENT_AIR;
+        let t0 = BODY_TEMPERATURE_K;
+        let thermal_cond = THERMAL_CONDUCTIVITY_WATER;
+        let cp_liquid = SPECIFIC_HEAT_WATER;
 
         let mut gas_composition = HashMap::new();
         gas_composition.insert(
@@ -42,17 +51,17 @@ impl MicrobubbleDynamicsService {
             p0: ATMOSPHERIC_PRESSURE,
             rho_liquid: DENSITY_WATER_NOMINAL,
             c_liquid: SOUND_SPEED_TISSUE,
-            mu_liquid: DYNAMIC_VISCOSITY,
-            sigma: SURFACE_TENSION,
-            pv: VAPOR_PRESSURE,
-            thermal_conductivity: THERMAL_CONDUCTIVITY,
-            specific_heat_liquid: SPECIFIC_HEAT,
+            mu_liquid,
+            sigma,
+            pv,
+            thermal_conductivity: thermal_cond,
+            specific_heat_liquid: cp_liquid,
             accommodation_coeff: 0.4,
             gas_species: GasSpecies::Air,
             initial_gas_pressure: ATMOSPHERIC_PRESSURE,
             gas_composition,
-            gamma: POLYTROPIC_INDEX,
-            t0: BODY_TEMP,
+            gamma,
+            t0,
             driving_frequency: 1e6,
             driving_amplitude: 0.0,
             use_compressibility: true,

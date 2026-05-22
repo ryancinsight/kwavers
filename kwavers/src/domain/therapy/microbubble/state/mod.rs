@@ -27,6 +27,7 @@
 //! - Marmottant et al. (2005): "A model for large amplitude oscillations of coated bubbles"
 //! - De Jong et al. (2002): "Ultrasound scattering properties of microbubbles"
 
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
@@ -168,7 +169,7 @@ impl MicrobubbleState {
 
         // Use SSOT BODY_TEMPERATURE_K (310.15 K = 37°C)
         let body_temperature = BODY_TEMPERATURE_K;
-        const WATER_SURFACE_TENSION: f64 = 0.072;
+        // SURFACE_TENSION_WATER = 0.0728 N/m at 20°C (cavitation::SSOT).
 
         let shell_radius_buckling = radius_equilibrium * 0.9;
         let shell_radius_rupture = radius_equilibrium * 1.5;
@@ -191,7 +192,7 @@ impl MicrobubbleState {
             shell_viscosity,
             shell_radius_buckling,
             shell_radius_rupture,
-            surface_tension: WATER_SURFACE_TENSION,
+            surface_tension: SURFACE_TENSION_WATER,
             drug_concentration,
             drug_released_total: 0.0,
             time: 0.0,

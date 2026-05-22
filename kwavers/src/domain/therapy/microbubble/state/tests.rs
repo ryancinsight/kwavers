@@ -1,12 +1,11 @@
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use super::*;
 
 const AMBIENT_PRESSURE: f64 = ATMOSPHERIC_PRESSURE;
 // SSOT: 37 °C + 273.15 = 310.15 K (exact Celsius-to-Kelvin conversion).
-// The rounded value 310.0 K has 0.15 K error and produces a bit-mismatch.
 const BODY_TEMPERATURE: f64 = BODY_TEMPERATURE_K;
-const WATER_SURFACE_TENSION: f64 = 0.072;
 
 fn expected_gas_moles(radius: f64) -> f64 {
     let volume = (4.0 / 3.0) * std::f64::consts::PI * radius.powi(3);
@@ -45,7 +44,7 @@ fn test_create_sono_vue() {
     assert_eq!(state.pressure_liquid.to_bits(), AMBIENT_PRESSURE.to_bits());
     assert_eq!(
         state.surface_tension.to_bits(),
-        WATER_SURFACE_TENSION.to_bits()
+        SURFACE_TENSION_WATER.to_bits()
     );
     assert_eq!(
         state.gas_moles.to_bits(),
