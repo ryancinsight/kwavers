@@ -3,8 +3,11 @@
 //! **Factory Pattern**: Encapsulated creation logic per Gang of Four
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
+use crate::core::constants::acoustic_parameters::{REFERENCE_FREQUENCY_TISSUE_HZ, TISSUE_NONLINEARITY_B_A, VISCOSITY_SOFT_TISSUE};
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE};
-use crate::core::constants::cavitation::{POLYTROPIC_EXPONENT_AIR, SURFACE_TENSION_TISSUE, VAPOR_PRESSURE_WATER};
+use crate::core::constants::cavitation::{
+    GAS_DIFFUSION_COEFFICIENT_TISSUE, POLYTROPIC_EXPONENT_AIR, SURFACE_TENSION_TISSUE, VAPOR_PRESSURE_WATER,
+};
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_DIFFUSIVITY_TISSUE,
     THERMAL_EXPANSION_SOFT_TISSUE,
@@ -31,7 +34,7 @@ impl TissueFactory {
         // Core acoustic properties (Hamilton & Blackstock Table 8.1)
         let density = Array3::from_elem((grid.nx, grid.ny, grid.nz), DENSITY_TISSUE);
         let sound_speed = Array3::from_elem((grid.nx, grid.ny, grid.nz), SOUND_SPEED_TISSUE);
-        let viscosity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 2.5e-3);
+        let viscosity = Array3::from_elem((grid.nx, grid.ny, grid.nz), VISCOSITY_SOFT_TISSUE);
 
         // Bubble dynamics parameters
         let surface_tension = Array3::from_elem((grid.nx, grid.ny, grid.nz), SURFACE_TENSION_TISSUE);
@@ -43,7 +46,7 @@ impl TissueFactory {
         let specific_heat = Array3::from_elem((grid.nx, grid.ny, grid.nz), SPECIFIC_HEAT_BRAIN);
         let thermal_conductivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_CONDUCTIVITY_BLOOD);
         let thermal_expansion = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_EXPANSION_SOFT_TISSUE);
-        let gas_diffusion_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.8e-9);
+        let gas_diffusion_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), GAS_DIFFUSION_COEFFICIENT_TISSUE);
         let thermal_diffusivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), THERMAL_DIFFUSIVITY_TISSUE);
         let temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), BODY_TEMPERATURE_K); // 37°C
 
@@ -58,8 +61,8 @@ impl TissueFactory {
         // Acoustic parameters
         let alpha0 = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5);
         let delta = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.1);
-        let b_a = Array3::from_elem((grid.nx, grid.ny, grid.nz), 7.0);
-        let reference_frequency = 180000.0; // 180 kHz
+        let b_a = Array3::from_elem((grid.nx, grid.ny, grid.nz), TISSUE_NONLINEARITY_B_A);
+        let reference_frequency = REFERENCE_FREQUENCY_TISSUE_HZ; // 180 kHz LIFU reference
 
         // Initialize viscoelastic fields with tissue-appropriate spatial variation
         let shear_sound_speed = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, _k)| {

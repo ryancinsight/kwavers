@@ -1,4 +1,5 @@
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
+use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use std::time::{Duration, Instant};
 
 /// Safety levels for clinical ultrasound systems
@@ -101,11 +102,11 @@ impl ClinicalSafetyMonitor {
             new_state = ClinicalSafetyLevel::Critical;
         }
 
-        if params.mechanical_index > 1.9 {
+        if params.mechanical_index > MI_LIMIT_SOFT_TISSUE {
             self.violations.push(SafetyViolation {
                 parameter: "mechanical_index".to_owned(),
                 measured_value: params.mechanical_index,
-                limit_value: 1.9,
+                limit_value: MI_LIMIT_SOFT_TISSUE,
                 severity: ClinicalSafetyLevel::Critical,
                 timestamp: Instant::now(),
                 message: "Mechanical index exceeds FDA safety limits".to_owned(),

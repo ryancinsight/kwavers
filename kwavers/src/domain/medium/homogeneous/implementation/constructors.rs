@@ -1,9 +1,11 @@
-use crate::core::constants::acoustic_parameters::AIR_SPECIFIC_HEAT_CP;
+use crate::core::constants::acoustic_parameters::{
+    AIR_SPECIFIC_HEAT_CP, TISSUE_NONLINEARITY_B_A,
+};
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_AIR, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER,
+    ATMOSPHERIC_PRESSURE, B_OVER_A_AIR, DENSITY_AIR, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER,
     SOUND_SPEED_AIR, SOUND_SPEED_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
-use crate::core::constants::cavitation::VISCOSITY_WATER;
+use crate::core::constants::cavitation::{GAS_DIFFUSION_COEFFICIENT_AIR, VISCOSITY_AIR, VISCOSITY_WATER};
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
     THERMAL_EXPANSION_AIR_20C,
@@ -75,20 +77,20 @@ impl HomogeneousMedium {
         Self {
             density: DENSITY_AIR,
             sound_speed: SOUND_SPEED_AIR,
-            viscosity: 1.81e-5,
+            viscosity: VISCOSITY_AIR,
             surface_tension: 0.0,
             ambient_pressure: ATMOSPHERIC_PRESSURE,
             vapor_pressure: 0.0,
             polytropic_index: 1.4,
             specific_heat: AIR_SPECIFIC_HEAT_CP, // 1005 J/(kg·K)
             thermal_conductivity: THERMAL_CONDUCTIVITY_AIR,
-            shear_viscosity: 1.81e-5,
+            shear_viscosity: VISCOSITY_AIR,
             bulk_viscosity: 0.0,
             absorption_alpha: 1.84e-11,
             absorption_power: 2.0,
             thermal_expansion: THERMAL_EXPANSION_AIR_20C,
-            gas_diffusion: 2.0e-5,
-            nonlinearity: 0.4,
+            gas_diffusion: GAS_DIFFUSION_COEFFICIENT_AIR,
+            nonlinearity: B_OVER_A_AIR,
             optical_absorption: 0.0,
             optical_scattering: 0.0,
             reference_frequency: 1e6,
@@ -101,7 +103,7 @@ impl HomogeneousMedium {
                 (grid.nx, grid.ny, grid.nz),
                 1.84e-11 * 1.0_f64.powi(2),
             ),
-            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.4),
+            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), B_OVER_A_AIR),
             lame_lambda: DENSITY_AIR * SOUND_SPEED_AIR * SOUND_SPEED_AIR,
             lame_mu: 0.0,
             grid_shape: (grid.nx, grid.ny, grid.nz),
@@ -152,7 +154,7 @@ impl HomogeneousMedium {
 
         let alpha = 0.5 * (medium.reference_frequency / 1e6).powf(1.1);
         medium.absorption_cache = Array3::from_elem(shape, alpha);
-        medium.nonlinearity_cache = Array3::from_elem(shape, 7.0);
+        medium.nonlinearity_cache = Array3::from_elem(shape, TISSUE_NONLINEARITY_B_A);
 
         medium
     }

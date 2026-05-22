@@ -14,6 +14,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
+use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
     DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
@@ -71,7 +72,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     absorption_coefficient: 0.025,
     absorption_exponent: 1.3,
     nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
-    shear_viscosity: 3.5e-3, // Non-Newtonian: shear-thinning
+    shear_viscosity: BLOOD_VISCOSITY_37C, // Non-Newtonian: shear-thinning
     bulk_viscosity: 0.0,
     specific_heat: BLOOD_SPECIFIC_HEAT,
     thermal_conductivity: THERMAL_CONDUCTIVITY_BLOOD,

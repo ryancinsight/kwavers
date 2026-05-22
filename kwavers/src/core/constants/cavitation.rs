@@ -19,6 +19,33 @@ pub const SURFACE_TENSION_WATER: f64 = 0.0728;
 /// Ultrasonic Waves*. CRC Press, p. 199.
 pub const SURFACE_TENSION_TISSUE: f64 = 0.060;
 
+/// Dynamic viscosity of air at 20°C (Pa·s).
+///
+/// Value: 1.81×10⁻⁵ Pa·s — standard reference at 293.15 K, 1 atm.
+///
+/// Reference: NIST Chemistry WebBook, thermophysical properties of air.
+/// Sutherland's law at T = 293.15 K yields μ = 1.813×10⁻⁵ Pa·s.
+pub const VISCOSITY_AIR: f64 = 1.81e-5;
+
+/// Dissolved-gas diffusion coefficient in soft tissue (m²/s).
+///
+/// O₂ in soft tissue at 37°C; directly measured by Krogh-cylinder methods
+/// and confirmed by fluorescence quenching.
+/// Value: 1.8×10⁻⁹ m²/s.
+///
+/// Reference: Pittman RN (2011). *Regulation of Tissue Oxygenation*.
+/// Morgan & Claypool Life Sciences, Chapter 4.
+pub const GAS_DIFFUSION_COEFFICIENT_TISSUE: f64 = 1.8e-9;
+
+/// Binary gas diffusion coefficient for O₂/N₂ in air at 20°C, 1 atm (m²/s).
+///
+/// Chapman–Enskog kinetic theory; confirmed by experimental measurements.
+/// Value: 2.0×10⁻⁵ m²/s.
+///
+/// Reference: Bird RB, Stewart WE, Lightfoot EN (2002).
+/// *Transport Phenomena*, 2nd ed. Wiley, Appendix A.
+pub const GAS_DIFFUSION_COEFFICIENT_AIR: f64 = 2.0e-5;
+
 /// Viscosity of water at 20°C (Pa·s)
 pub const VISCOSITY_WATER: f64 = 1.002e-3;
 

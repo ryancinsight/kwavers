@@ -243,6 +243,16 @@ pub const BONE_ATTENUATION: f64 = 20.0;
 /// Standard reference: 1 MHz
 pub const REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ: f64 = 1e6;
 
+/// Tissue acoustic reference frequency for heterogeneous-medium simulations (Hz).
+///
+/// Value: 180 kHz — representative low-frequency therapeutic ultrasound
+/// (low-intensity focused ultrasound, LIFU) used as the absorption-power-law
+/// reference in tissue medium factory models.
+///
+/// Reference: Haar GT & Coussios C (2007). "High intensity focused ultrasound:
+/// physical principles and devices." *Int. J. Hyperthermia* 23(2), 89–104.
+pub const REFERENCE_FREQUENCY_TISSUE_HZ: f64 = 180_000.0;
+
 /// Default sampling frequency (Hz)
 /// Standard: 10 MHz for ultrasound simulations
 pub const SAMPLING_FREQUENCY_DEFAULT: f64 = 10e6;

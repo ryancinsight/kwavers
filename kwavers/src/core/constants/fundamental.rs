@@ -433,6 +433,16 @@ pub const B_OVER_A_BREAST_GLAND: f64 = 7.0;
 /// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.16.
 pub const B_OVER_A_SOFT_TISSUE: f64 = 6.5;
 
+/// Nonlinearity parameter B/A for air (ideal diatomic gas, dimensionless).
+///
+/// For a thermally perfect diatomic gas: B/A = γ − 1 = 1.4 − 1 = 0.4.
+/// Follows from the isentropic equation of state p ∝ ρ^γ and the definition
+/// B/A = ρ₀(∂²p/∂ρ²)_s / (∂p/∂ρ)_s evaluated at the ideal-gas limit.
+///
+/// Reference: Hamilton MF & Blackstock DT (1998). *Nonlinear Acoustics*.
+/// Academic Press, Chapter 2, Eq. (2.28).
+pub const B_OVER_A_AIR: f64 = 0.4;
+
 /// Power-law frequency exponent y for water acoustic absorption (dimensionless).
 ///
 /// Water exhibits classical thermoviscous absorption proportional to f²,
