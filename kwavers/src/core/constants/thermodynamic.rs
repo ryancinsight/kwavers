@@ -353,8 +353,41 @@ pub const DRHO_DT_SOFT_TISSUE: f64 = -0.2;
 pub const RHO_C_SOFT_TISSUE: f64 = 3_780_000.0; // = DENSITY_TISSUE(1050) × SPECIFIC_HEAT_TISSUE(3600)
 
 // ============================================================================
+// Coupling Fluids and Contrast Agent Suspensions
+// ============================================================================
+
+/// Specific heat capacity of ultrasound coupling gel (J/(kg·K))
+///
+/// Typical commercial aqueous gel (mineral oil + polymer thickener).
+/// Reference: Perry & Green (2007) — Chemical Engineering Handbook.
+pub const SPECIFIC_HEAT_ULTRASOUND_GEL: f64 = 3300.0;
+
+/// Thermal conductivity of ultrasound coupling gel (W/(m·K))
+///
+/// Lower than water due to polymer additive content.
+/// Reference: Perry & Green (2007).
+pub const THERMAL_CONDUCTIVITY_ULTRASOUND_GEL: f64 = 0.15;
+
+/// Specific heat capacity of mineral oil (J/(kg·K))
+///
+/// Reference: Perry & Green (2007).
+pub const SPECIFIC_HEAT_MINERAL_OIL: f64 = 2100.0;
+
+/// Thermal conductivity of mineral oil (W/(m·K))
+///
+/// Reference: Perry & Green (2007).
+pub const THERMAL_CONDUCTIVITY_MINERAL_OIL: f64 = 0.14;
+
+// ============================================================================
 // Thermal Expansion Coefficients
 // ============================================================================
+
+/// Isobaric thermal expansion coefficient of generic soft tissue at 37°C (K⁻¹)
+///
+/// Value: 3.0×10⁻⁴ K⁻¹ — typical for mammalian soft tissue (Duck 1990).
+/// Larger than water at 20°C (2.07×10⁻⁴) due to protein and lipid content.
+/// Reference: Duck FA (1990). Physical Properties of Tissue. Academic Press.
+pub const THERMAL_EXPANSION_SOFT_TISSUE: f64 = 3.0e-4;
 
 /// Isobaric thermal expansion coefficient of liquid water at 20°C (K⁻¹)
 ///

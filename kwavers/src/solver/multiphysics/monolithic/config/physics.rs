@@ -1,7 +1,7 @@
 use crate::core::constants::{
     ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, GRUNEISEN_WATER_37C,
     OPTICAL_ABSORPTION_TISSUE_NIR, REDUCED_SCATTERING_TISSUE_NIR, SOUND_SPEED_TISSUE,
-    SPECIFIC_HEAT_WATER,
+    SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 
@@ -40,7 +40,7 @@ impl Default for PhysicsCoefficients {
             sound_speed: SOUND_SPEED_TISSUE,
             density: DENSITY_WATER_NOMINAL,
             specific_heat: SPECIFIC_HEAT_WATER,
-            thermal_conductivity: 0.6,
+            thermal_conductivity: THERMAL_CONDUCTIVITY_WATER,
             optical_absorption: OPTICAL_ABSORPTION_TISSUE_NIR,
             reduced_scattering: REDUCED_SCATTERING_TISSUE_NIR,
             acoustic_absorption: ACOUSTIC_ABSORPTION_TISSUE,

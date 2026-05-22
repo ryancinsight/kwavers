@@ -37,6 +37,16 @@ pub const WATER_VISCOSITY_20C: f64 = 1.002e-3;
 /// Reference: Rosenson, R. S., et al. (1996). "Distribution of blood viscosity values"
 pub const BLOOD_VISCOSITY_37C: f64 = 3.5e-3;
 
+/// Effective shear viscosity of generic soft tissue at 37°C (Pa·s)
+///
+/// Value: 3.0×10⁻³ Pa·s — empirical effective viscosity for acoustic absorption
+/// modeling in soft tissue. Approximately 3× water viscosity, reflecting
+/// restricted molecular motion in the tissue matrix.
+///
+/// Reference: Duck FA (1990). Physical Properties of Tissue. Academic Press,
+/// Table 5.3.
+pub const VISCOSITY_SOFT_TISSUE: f64 = 3.0e-3;
+
 /// Water surface tension at 20°C (N/m).
 ///
 /// Re-exports the canonical

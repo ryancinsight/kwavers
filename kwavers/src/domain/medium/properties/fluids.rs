@@ -20,8 +20,10 @@ use crate::core::constants::fundamental::{
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
-    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_URINE,
+    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF,
+    SPECIFIC_HEAT_MINERAL_OIL, SPECIFIC_HEAT_ULTRASOUND_GEL, SPECIFIC_HEAT_URINE,
     SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_CSF,
+    THERMAL_CONDUCTIVITY_MINERAL_OIL, THERMAL_CONDUCTIVITY_ULTRASOUND_GEL,
     THERMAL_CONDUCTIVITY_URINE, THERMAL_CONDUCTIVITY_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD,
 };
 use super::material::AcousticMaterialProperties;
@@ -152,8 +154,8 @@ pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
     nonlinearity_parameter: 5.0,
     shear_viscosity: 5.0, // Highly viscous for contact
     bulk_viscosity: 0.0,
-    specific_heat: 3300.0,
-    thermal_conductivity: 0.15,
+    specific_heat: SPECIFIC_HEAT_ULTRASOUND_GEL,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_ULTRASOUND_GEL,
     // α = k/(ρ·cp) = 0.15 / (1020 × 3300) = 4.456e-8 m²/s
     thermal_diffusivity: 4.456e-8,
     perfusion_rate: 0.0,
@@ -178,8 +180,8 @@ pub const MINERAL_OIL: FluidProperties = FluidProperties {
     nonlinearity_parameter: 4.5,
     shear_viscosity: 80.0e-3, // Low viscosity
     bulk_viscosity: 0.0,
-    specific_heat: 2100.0,
-    thermal_conductivity: 0.14,
+    specific_heat: SPECIFIC_HEAT_MINERAL_OIL,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_MINERAL_OIL,
     thermal_diffusivity: 7.62e-8,
     perfusion_rate: 0.0,
     arterial_temperature: 20.0,

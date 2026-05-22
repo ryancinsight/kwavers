@@ -1,7 +1,7 @@
 //! Tissue-specific absorption models
 
 use crate::core::constants::acoustic_parameters::{
-    BONE_DENSITY, BONE_SOUND_SPEED, WATER_ABSORPTION_ALPHA_0,
+    BONE_DENSITY, BONE_SOUND_SPEED, VISCOSITY_SOFT_TISSUE, WATER_ABSORPTION_ALPHA_0,
 };
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::{
@@ -19,6 +19,7 @@ use crate::core::constants::thermodynamic::{
     SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_BRAIN, SPECIFIC_HEAT_BREAST_GLAND,
     SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_KIDNEY, SPECIFIC_HEAT_LIVER, SPECIFIC_HEAT_LUNG,
     SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_SKIN, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+    THERMAL_EXPANSION_SOFT_TISSUE,
 };
 use crate::core::constants::DB_TO_NP;
 use serde::{Deserialize, Serialize};
@@ -116,8 +117,8 @@ impl AbsorptionTissueProperties {
             specific_heat: heat_cap,
             lame_lambda,
             lame_mu,
-            thermal_expansion: 3.0e-4, // Typical for soft tissue [1/K]
-            viscosity: 0.003,          // Typical for tissue [Pa·s]
+            thermal_expansion: THERMAL_EXPANSION_SOFT_TISSUE,
+            viscosity: VISCOSITY_SOFT_TISSUE,
             surface_tension: SURFACE_TENSION_WATER, // Similar to water [N/m]
             gas_diffusion_coefficient: 2e-9, // Oxygen in tissue [m²/s]
             // Default optical properties for generic soft tissue at ~800nm (NIR)
