@@ -12,7 +12,6 @@ mod tests {
     use crate::domain::medium::HomogeneousMedium;
     use crate::domain::source::PointSource;
     use crate::physics::traits::AcousticWaveModel;
-    use approx::assert_relative_eq;
     use ndarray::Array4;
 
     /// Test linear wave propagation (nonlinearity = 0, diffusivity = 0)
@@ -157,8 +156,34 @@ mod tests {
         let final_pressure = fields.index_axis(ndarray::Axis(0), 0);
         let final_energy: f64 = final_pressure.iter().map(|&p| p * p).sum();
 
-        // Energy should be approximately conserved (allowing for numerical dispersion)
-        assert_relative_eq!(initial_energy, final_energy, epsilon = 0.1 * initial_energy);
+        // A pressure-only Gaussian with zero initial velocity is NOT a traveling
+        // wave — it decomposes into two counter-propagating shells.  As the shells
+        // propagate, acoustic energy transfers between the pressure and velocity
+        // fields.  For a pure-pressure initial condition, Σ p² (the pressure-
+        // squared integral measured here) stabilises at ≈ 50 % of its initial
+        // value once the transient phase is complete; the other 50 % resides in
+        // the velocity field, which this solver does not expose externally.
+        //
+        // Σ p² is therefore NOT an acoustic energy invariant for this class of
+        // initial conditions.  The correct invariant is
+        //   E_total = ∫ (p²/(ρc²) + ρu²) dV,
+        // which requires access to the velocity field.
+        //
+        // Acceptance bounds [0.30, 0.75] × initial:
+        //   - Lower: well below 0.5 indicates spurious numerical dissipation.
+        //   - Upper: above 0.75 indicates numerical instability (energy growth).
+        assert!(
+            final_energy >= 0.30 * initial_energy,
+            "p² integral vanished: solver is numerically dissipating energy; \
+             final/initial = {:.3}",
+            final_energy / initial_energy
+        );
+        assert!(
+            final_energy <= 0.75 * initial_energy,
+            "p² integral too large: traveling-wave energy partition not reached \
+             or solver is amplifying; final/initial = {:.3}",
+            final_energy / initial_energy
+        );
     }
 
     /// Test energy conservation in linear regime (FAST - Tier 1)

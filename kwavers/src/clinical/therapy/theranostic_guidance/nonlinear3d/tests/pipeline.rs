@@ -21,8 +21,8 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
 
     let result = run_theranostic_nonlinear_3d(
         AnatomyKind::Liver,
-        &ct,
-        Some(&labels),
+        ct,
+        Some(labels),
         [2.0, 2.0, 2.0],
         &config,
         None,
@@ -138,7 +138,7 @@ fn nonlinear_3d_brain_focused_bowl_pipeline_is_input_sensitive_through_skull() {
 
     let result = run_theranostic_nonlinear_3d(
         AnatomyKind::Brain,
-        &ct,
+        ct,
         None,
         [1.5, 1.5, 1.5],
         &config,

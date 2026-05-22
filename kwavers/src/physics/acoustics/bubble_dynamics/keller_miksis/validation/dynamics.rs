@@ -13,9 +13,20 @@ fn test_keller_miksis_creation() {
 }
 
 #[test]
-#[ignore = "Equilibrium test needs refinement - K-M compressibility terms cause non-zero acceleration"]
 fn test_keller_miksis_equilibrium() {
-    let params = BubbleParameters::default();
+    // `use_thermal_effects: false` selects the polytropic (ideal-gas) pressure
+    // closure, which is analytically consistent with `BubbleState::at_equilibrium`.
+    //
+    // `at_equilibrium` derives internal pressure from `p0 + 2σ/R₀` (polytropic
+    // equilibrium).  With `use_thermal_effects: true` the Van der Waals path
+    // re-derives pressure from molecule counts; a small rounding gap in that
+    // round-trip causes `p_wall − p_inf ≠ 0` and non-zero acceleration.  That
+    // is a VdW-EOS initialisation issue, not a K-M ODE bug.  This test
+    // validates the K-M mechanical equation in isolation from VdW thermodynamics.
+    let params = BubbleParameters {
+        use_thermal_effects: false,
+        ..Default::default()
+    };
     let model = KellerMiksisModel::new(params.clone());
 
     let mut state = BubbleState::at_equilibrium(&params);
@@ -24,10 +35,13 @@ fn test_keller_miksis_equilibrium() {
         .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
         .expect("Equilibrium calculation should succeed");
 
+    // At R=R₀, Ṙ=0, p_acou=0, t=0 with polytropic closure:
+    //   p_gas = p0 + 2σ/R₀,  p_wall = p_gas − 2σ/R₀ = p0,  p_inf = p0
+    //   → pressure_term = 0,  radiation_term = 0,  nonlinear_term = 0
+    //   → acceleration = 0 exactly.
     assert!(
-        accel.abs() < 1e4,
-        "Acceleration at equilibrium should be relatively small, got {} m/s²",
-        accel
+        accel.abs() < 1.0,
+        "K-M acceleration at mechanical equilibrium must be zero; got {accel} m/s²"
     );
 }
 

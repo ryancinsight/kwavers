@@ -42,10 +42,15 @@ use steering::calibrate_electronic_steering;
 use volume::prepare_volume;
 use westervelt::run_fwi;
 
+/// The full-resolution `ct_hu` and `label_volume` arrays are consumed
+/// (moved in) so the caller cannot inadvertently hold hundreds of MB of
+/// CT data alive across the memory-intensive Westervelt FWI loop.
+/// Both arrays are dropped immediately after `prepare_volume` produces
+/// the resampled grid-size³ volume.
 pub fn run_theranostic_nonlinear_3d(
     anatomy: AnatomyKind,
-    ct_hu: &Array3<f64>,
-    label_volume: Option<&Array3<i16>>,
+    ct_hu: Array3<f64>,
+    label_volume: Option<Array3<i16>>,
     spacing_mm: [f64; 3],
     config: &Nonlinear3dConfig,
     target_fraction_xyz: Option<[f64; 3]>,
@@ -53,12 +58,17 @@ pub fn run_theranostic_nonlinear_3d(
     config.validate()?;
     let volume = prepare_volume(
         anatomy,
-        ct_hu,
-        label_volume,
+        &ct_hu,
+        label_volume.as_ref(),
         spacing_mm,
         config,
         target_fraction_xyz,
     )?;
+    // Release the full-resolution source images before the FWI loop.
+    // On real CT volumes (e.g. 512×512×300 brain scan ≈ 600 MB at f64)
+    // holding these alive across all forward/adjoint passes exhausts RAM.
+    drop(ct_hu);
+    drop(label_volume);
     let aperture = build_aperture(&volume, config)?;
     let steering = calibrate_electronic_steering(&volume, &aperture, config);
     let fwi = run_fwi(&volume, &steering.aperture, config);
