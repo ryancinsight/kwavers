@@ -2,6 +2,7 @@
 
 use super::{TheoremValidation, TheoremValidator};
 use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -85,7 +86,7 @@ impl TheoremValidator {
         results.push(Self::validate_impedance_reflection(
             1000.0, SOUND_SPEED_WATER_SIM, 1.2, 340.0, -0.9999,
         ));
-        results.push(Self::validate_ideal_gas_speed(293.15, 0.02897, 1.4, SOUND_SPEED_AIR));
+        results.push(Self::validate_ideal_gas_speed(ROOM_TEMPERATURE_K, 0.02897, 1.4, SOUND_SPEED_AIR));
 
         // Rayleigh-Sommerfeld spherical wave decay
         let distances = vec![0.01, 0.02, 0.05, 0.1];

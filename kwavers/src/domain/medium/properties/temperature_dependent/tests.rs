@@ -1,4 +1,4 @@
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, KELVIN_OFFSET_C};
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, KELVIN_OFFSET_C, ROOM_TEMPERATURE_K};
 
 use super::{
     MaterialPropertiesAtT, TemperatureDependentAcoustic, TemperatureDependentMaterial,
@@ -8,7 +8,7 @@ use super::{
 #[test]
 fn test_water_sound_speed_temperature_dependence() {
     let water = TemperatureDependentAcoustic::water();
-    let t_ref = 293.15;
+    let t_ref = ROOM_TEMPERATURE_K;
     let t_test = 313.15;
 
     let c_ref = water.sound_speed(t_ref);
@@ -24,7 +24,7 @@ fn test_water_sound_speed_temperature_dependence() {
 #[test]
 fn test_water_density_temperature_dependence() {
     let water = TemperatureDependentAcoustic::water();
-    let rho_ref = water.density(293.15);
+    let rho_ref = water.density(ROOM_TEMPERATURE_K);
     let rho_hot = water.density(333.15);
 
     assert!(rho_hot < rho_ref);
@@ -35,7 +35,7 @@ fn test_water_density_temperature_dependence() {
 #[test]
 fn test_impedance_temperature_dependence() {
     let water = TemperatureDependentAcoustic::water();
-    let z1 = water.impedance(293.15);
+    let z1 = water.impedance(ROOM_TEMPERATURE_K);
     let z2 = water.impedance(BODY_TEMPERATURE_K);
 
     assert!(z2 > z1);
@@ -61,7 +61,7 @@ fn test_absorption_temperature_and_frequency_dependence() {
 #[test]
 fn test_thermal_conductivity_temperature_dependence() {
     let thermal = TemperatureDependentThermal::water();
-    let k_ref = thermal.conductivity(293.15);
+    let k_ref = thermal.conductivity(ROOM_TEMPERATURE_K);
     let k_hot = thermal.conductivity(313.15);
     assert!(k_hot > k_ref);
 }
