@@ -9,7 +9,8 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT,
+    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY,
+    B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT,
     DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD,
     SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
@@ -61,7 +62,7 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
     impedance: 1_607_840.0,
     absorption_coefficient: 0.6,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 6.5,
+    nonlinearity_parameter: B_OVER_A_BRAIN, // 6.55 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
     specific_heat: 3650.0,
@@ -85,7 +86,7 @@ pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
     impedance: 1622250.0,
     absorption_coefficient: 0.7,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 6.8,
+    nonlinearity_parameter: B_OVER_A_BRAIN, // 6.55 (Duck 1990 Table 4.16 brain mean)
     shear_viscosity: 2.2e-3,
     bulk_viscosity: 5.2e-3,
     specific_heat: 3680.0,
@@ -138,7 +139,7 @@ pub const LIVER: TissueProperties = TissueProperties {
     impedance: 1_672_680.0,
     absorption_coefficient: 0.4,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 7.0,
+    nonlinearity_parameter: B_OVER_A_LIVER, // 6.75 (Duck 1990 Table 4.16 mean)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
     specific_heat: 3590.0,
@@ -166,7 +167,7 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     impedance: 1638000.0,
     absorption_coefficient: 0.5,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 6.8,
+    nonlinearity_parameter: B_OVER_A_KIDNEY, // 7.2 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
     specific_heat: 3600.0,
@@ -191,7 +192,7 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     impedance: 1_651_075.0,
     absorption_coefficient: 0.5,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 6.8,
+    nonlinearity_parameter: B_OVER_A_KIDNEY, // 7.2 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
     specific_heat: 3600.0,
@@ -221,7 +222,7 @@ pub const BLOOD: TissueProperties = TissueProperties {
     impedance: 1_679_040.0,
     absorption_coefficient: 0.15,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 5.5,
+    nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
     shear_viscosity: 4e-3,
     bulk_viscosity: 0.0,
     specific_heat: 3650.0,
@@ -246,7 +247,7 @@ pub const MUSCLE: TissueProperties = TissueProperties {
     impedance: 1_722_200.0,
     absorption_coefficient: 0.13,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 7.0,
+    nonlinearity_parameter: B_OVER_A_MUSCLE, // 7.4 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
     specific_heat: 3750.0,
@@ -270,7 +271,7 @@ pub const FAT: TissueProperties = TissueProperties {
     impedance: 1_345_600.0,
     absorption_coefficient: 0.48,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 6.0,
+    nonlinearity_parameter: B_OVER_A_FAT, // 9.6 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
     specific_heat: 2500.0,        // Lower heat capacity
