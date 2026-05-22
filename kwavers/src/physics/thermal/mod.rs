@@ -29,7 +29,9 @@ pub use crate::domain::medium::properties::ThermalPropertyData;
 /// For Pennes solver simulations, also specify arterial temperature and metabolic heat
 /// as separate simulation parameters.
 pub mod tissues {
-    use crate::core::constants::fundamental::{DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE};
+    use crate::core::constants::fundamental::{
+        DENSITY_BREAST_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
+    };
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
     use crate::domain::medium::properties::ThermalPropertyData;
 
@@ -93,10 +95,10 @@ pub mod tissues {
     #[must_use]
     pub fn fat() -> ThermalPropertyData {
         ThermalPropertyData::new(
-            0.21,      // conductivity (W/m/K)
-            2348.0,    // specific_heat (J/kg/K)
-            911.0,     // density (kg/m³)
-            Some(0.3), // blood_perfusion (kg/m³/s) - low perfusion
+            0.21,               // conductivity (W/m/K)
+            2348.0,             // specific_heat (J/kg/K)
+            DENSITY_BREAST_FAT, // density (kg/m³) — IT'IS Foundation v4.0 breast fat
+            Some(0.3),          // blood_perfusion (kg/m³/s) - low perfusion
             Some(BLOOD_SPECIFIC_HEAT),
         )
         .expect("Fat tissue properties are valid")
@@ -142,7 +144,9 @@ pub mod tissues {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE};
+    use crate::core::constants::fundamental::{
+        DENSITY_BREAST_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
+    };
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 
     #[test]
@@ -159,7 +163,7 @@ mod tests {
 
         let fat = tissues::fat();
         assert_eq!(fat.conductivity, 0.21);
-        assert_eq!(fat.density, 911.0);
+        assert_eq!(fat.density, DENSITY_BREAST_FAT);
         assert!(fat.has_bioheat_parameters());
 
         let tumor = tissues::tumor();

@@ -2,9 +2,10 @@
 
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
-    DENSITY_WATER_NOMINAL, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
+    DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_BREAST_FAT, DENSITY_FAT, DENSITY_LIVER,
+    DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN,
+    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER,
 };
 use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
@@ -160,7 +161,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
 
     map.insert(
         AbsorptionTissueType::Fat,
-        AbsorptionTissueProperties::new(0.63, 1.1, 950.0, 1450.0, 10.0, 0.21, 2348.0)
+        AbsorptionTissueProperties::new(0.63, 1.1, DENSITY_FAT, 1450.0, 10.0, 0.21, 2348.0)
             .with_optical(40.0, 15000.0), // Fat: μ_a≈0.4 cm⁻¹, μ_s≈150 cm⁻¹
     );
 
@@ -202,7 +203,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
 
     map.insert(
         AbsorptionTissueType::BreastFat,
-        AbsorptionTissueProperties::new(0.75, 1.5, 911.0, 1479.0, 9.6, 0.21, 2348.0)
+        AbsorptionTissueProperties::new(0.75, 1.5, DENSITY_BREAST_FAT, 1479.0, 9.6, 0.21, 2348.0)
             .with_optical(40.0, 12000.0), // Breast fat: μ_a≈0.4 cm⁻¹, μ_s≈120 cm⁻¹
     );
 

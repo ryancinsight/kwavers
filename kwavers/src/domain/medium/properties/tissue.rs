@@ -9,9 +9,9 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_LIVER, DENSITY_MUSCLE,
-    DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT,
-    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
+    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER,
+    DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN,
+    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
@@ -262,10 +262,11 @@ pub const MUSCLE: TissueProperties = TissueProperties {
 };
 
 /// Fat (adipose tissue) (37°C)
+/// Source: Duck (1990) Table 4.1/4.6; Z = ρ·c = 928 × 1450 = 1 345 600 Pa·s/m
 pub const FAT: TissueProperties = TissueProperties {
-    sound_speed: SOUND_SPEED_FAT,  // Slower than water
-    density: 900.0,       // Less dense
-    impedance: 1305000.0, // Lower impedance
+    sound_speed: SOUND_SPEED_FAT,
+    density: DENSITY_FAT,
+    impedance: 1_345_600.0,
     absorption_coefficient: 0.48,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 6.0,

@@ -40,7 +40,7 @@
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
 use crate::core::constants::fundamental::{
-    DENSITY_BRAIN, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER,
+    DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER,
     SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
     SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
 };
@@ -259,18 +259,15 @@ impl AcousticPropertyData {
 
     /// Fat tissue acoustic properties
     ///
-    /// Based on clinical measurements:
-    /// - Density: ~950 kg/m³ (lower than water)
+    /// Based on clinical measurements (Duck 1990 Table 4.1/4.6):
+    /// - Density: ~928 kg/m³ (Duck 1990 mean; range 900–950 kg/m³)
     /// - Sound speed: ~1450 m/s (lower than soft tissue)
     /// - Attenuation: ~0.6 dB/(MHz·cm) = ~0.69 Np/(MHz·m)
     /// - B/A: ~10.0 (higher nonlinearity than soft tissue)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn fat() -> Self {
         Self {
-            density: 950.0,
+            density: DENSITY_FAT,
             sound_speed: SOUND_SPEED_FAT,
             absorption_coefficient: 0.69,
             absorption_power: 1.0,

@@ -166,6 +166,15 @@ pub const SOUND_SPEED_BLOOD: f64 = 1584.0;
 /// Duck, F. A. (1990). *Physical Properties of Tissue*. Academic Press, London, p. 119.
 pub const DENSITY_BLOOD: f64 = 1060.0;
 
+/// Density of breast adipose tissue at body temperature (kg/m³).
+///
+/// Value: 911.0 kg/m³ — IT'IS Foundation database v4.0 value for breast fat
+/// (slightly lower than generic adipose due to higher water content in breast).
+///
+/// Reference: IT'IS Foundation (2018) "Tissue Properties Database";
+/// Hasgall et al. (2022) itis.swiss/tissue-properties.
+pub const DENSITY_BREAST_FAT: f64 = 911.0;
+
 /// Density of skeletal muscle at body temperature (kg/m³).
 ///
 /// Value: 1090.0 kg/m³ — upper end of Duck (1990) Table 4.1 range (1041–1090),
