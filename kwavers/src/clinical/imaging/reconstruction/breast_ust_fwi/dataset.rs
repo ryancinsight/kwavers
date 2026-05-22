@@ -6,19 +6,23 @@
 
 use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult};
-use crate::domain::boundary::CPMLConfig;
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::sensor::recorder::simple::SensorRecorder;
 use crate::domain::source::{GridSource, SourceMode};
 use crate::physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use crate::solver::forward::pstd::config::BoundaryConfig;
 use crate::solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use crate::solver::inverse::fwi::frequency_domain::FrequencyObservation;
-use crate::solver::inverse::linear_born_inversion::ElementPosition;
-use ndarray::{s, Array2, Array3, ArrayView1};
+use ndarray::{s, Array2, Array3};
 use num_complex::Complex64;
-use std::f64::consts::PI;
+
+mod signal;
+mod validation;
+use signal::{
+    frequency_bin, frequency_bin_start_step, grid_index_to_ring_point, map_ring_point_to_grid,
+    map_ring_points_to_grid, pstd_boundary, time_steps_for_frequency, tone_signal,
+};
+use validation::{validate_cfl, validate_config, validate_frequencies, validate_sound_speed};
 
 pub const BREAST_UST_PSTD_DATASET_MODEL: &str =
     "clinical_breast_ust_multi_row_ring_pstd_frequency_dataset";
@@ -306,230 +310,6 @@ fn try_run_gpu_pstd_transmit(
         Ok(traces) => Some(traces),
         Err(_) => None,
     }
-}
-
-fn pstd_boundary(cpml_thickness_cells: usize) -> BoundaryConfig {
-    if cpml_thickness_cells == 0 {
-        BoundaryConfig::None
-    } else {
-        BoundaryConfig::CPML(CPMLConfig::with_thickness(cpml_thickness_cells))
-    }
-}
-
-fn tone_signal(frequency_hz: f64, steps: usize, config: BreastUstPstdDatasetConfig) -> Array2<f64> {
-    Array2::from_shape_fn((1, steps), |(_, n)| {
-        let phase = 2.0 * PI * frequency_hz * n as f64 * config.time_step_s;
-        config.source_amplitude_pa * phase.sin()
-    })
-}
-
-fn frequency_bin(
-    samples: ArrayView1<'_, f64>,
-    frequency_hz: f64,
-    dt: f64,
-    start_sample: usize,
-) -> Complex64 {
-    let window = samples.slice(s![start_sample..]);
-    let scale = 2.0 / window.len() as f64;
-    samples.iter().skip(start_sample).enumerate().fold(
-        Complex64::new(0.0, 0.0),
-        |acc, (n, &sample)| {
-            let phase = -2.0 * PI * frequency_hz * (start_sample + n) as f64 * dt;
-            acc + Complex64::new(phase.cos(), phase.sin()) * sample
-        },
-    ) * scale
-}
-
-fn map_ring_points_to_grid(
-    dims: (usize, usize, usize),
-    config: BreastUstPstdDatasetConfig,
-    points: &[ElementPosition],
-) -> KwaversResult<Vec<(usize, usize, usize)>> {
-    points
-        .iter()
-        .map(|point| map_ring_point_to_grid(dims, config.spacing_m, *point))
-        .collect()
-}
-
-fn map_ring_point_to_grid(
-    (nx, ny, nz): (usize, usize, usize),
-    spacing_m: f64,
-    point: ElementPosition,
-) -> KwaversResult<(usize, usize, usize)> {
-    let center = [
-        0.5 * (nx - 1) as f64 * spacing_m,
-        0.5 * (ny - 1) as f64 * spacing_m,
-        0.5 * (nz - 1) as f64 * spacing_m,
-    ];
-    let coord = [
-        center[0] + point.x_m,
-        center[1] + point.y_m,
-        center[2] + point.z_m,
-    ];
-    let max = [
-        (nx - 1) as f64 * spacing_m,
-        (ny - 1) as f64 * spacing_m,
-        (nz - 1) as f64 * spacing_m,
-    ];
-    for axis in 0..3 {
-        if coord[axis] < 0.0 || coord[axis] > max[axis] {
-            return Err(KwaversError::InvalidInput(format!(
-                "ring point {:?} maps outside centered PSTD grid bounds {:?}",
-                point, max
-            )));
-        }
-    }
-    Ok((
-        (coord[0] / spacing_m).round() as usize,
-        (coord[1] / spacing_m).round() as usize,
-        (coord[2] / spacing_m).round() as usize,
-    ))
-}
-
-fn grid_index_to_ring_point(
-    (nx, ny, nz): (usize, usize, usize),
-    spacing_m: f64,
-    (ix, iy, iz): (usize, usize, usize),
-) -> ElementPosition {
-    let center = [
-        0.5 * (nx - 1) as f64,
-        0.5 * (ny - 1) as f64,
-        0.5 * (nz - 1) as f64,
-    ];
-    ElementPosition {
-        x_m: (ix as f64 - center[0]) * spacing_m,
-        y_m: (iy as f64 - center[1]) * spacing_m,
-        z_m: (iz as f64 - center[2]) * spacing_m,
-    }
-}
-
-fn time_steps_for_frequency(
-    frequency_hz: f64,
-    config: BreastUstPstdDatasetConfig,
-) -> KwaversResult<usize> {
-    time_steps_for_cycles(
-        frequency_hz,
-        config.time_step_s,
-        config.cycles_per_frequency,
-    )
-}
-
-fn frequency_bin_start_step(
-    frequency_hz: f64,
-    config: BreastUstPstdDatasetConfig,
-    total_steps: usize,
-) -> KwaversResult<usize> {
-    let bin_steps = time_steps_for_cycles(
-        frequency_hz,
-        config.time_step_s,
-        config.frequency_bin_cycles,
-    )?;
-    Ok(total_steps.saturating_sub(bin_steps))
-}
-
-fn time_steps_for_cycles(frequency_hz: f64, dt: f64, cycles: usize) -> KwaversResult<usize> {
-    let raw = (cycles as f64 / (frequency_hz * dt)).ceil();
-    if !raw.is_finite() || raw > usize::MAX as f64 {
-        return Err(KwaversError::InvalidInput(format!(
-            "time-step count is not representable for frequency {frequency_hz}"
-        )));
-    }
-    Ok((raw as usize).max(2))
-}
-
-fn validate_config(config: &BreastUstPstdDatasetConfig) -> KwaversResult<()> {
-    if !config.spacing_m.is_finite() || config.spacing_m <= 0.0 {
-        return Err(KwaversError::InvalidInput(format!(
-            "spacing_m must be positive and finite, got {}",
-            config.spacing_m
-        )));
-    }
-    if !config.time_step_s.is_finite() || config.time_step_s <= 0.0 {
-        return Err(KwaversError::InvalidInput(format!(
-            "time_step_s must be positive and finite, got {}",
-            config.time_step_s
-        )));
-    }
-    if config.cycles_per_frequency == 0 {
-        return Err(KwaversError::InvalidInput(
-            "cycles_per_frequency must be positive".to_owned(),
-        ));
-    }
-    if config.frequency_bin_cycles == 0 || config.frequency_bin_cycles > config.cycles_per_frequency
-    {
-        return Err(KwaversError::InvalidInput(format!(
-            "frequency_bin_cycles must be in 1..={}, got {}",
-            config.cycles_per_frequency, config.frequency_bin_cycles
-        )));
-    }
-    if !config.source_amplitude_pa.is_finite() {
-        return Err(KwaversError::InvalidInput(format!(
-            "source_amplitude_pa must be finite, got {}",
-            config.source_amplitude_pa
-        )));
-    }
-    if !config.density_kg_m3.is_finite() || config.density_kg_m3 <= 0.0 {
-        return Err(KwaversError::InvalidInput(format!(
-            "density_kg_m3 must be positive and finite, got {}",
-            config.density_kg_m3
-        )));
-    }
-    Ok(())
-}
-
-fn validate_sound_speed(sound_speed_m_s: &Array3<f64>) -> KwaversResult<()> {
-    if sound_speed_m_s.is_empty() {
-        return Err(KwaversError::InvalidInput(
-            "sound_speed_m_s volume must not be empty".to_owned(),
-        ));
-    }
-    for &speed in sound_speed_m_s {
-        if !speed.is_finite() || speed <= 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "sound speed must be positive and finite, got {speed}"
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn validate_frequencies(frequencies_hz: &[f64], dt: f64) -> KwaversResult<()> {
-    if frequencies_hz.is_empty() {
-        return Err(KwaversError::InvalidInput(
-            "frequencies_hz must not be empty".to_owned(),
-        ));
-    }
-    let nyquist = 0.5 / dt;
-    for &frequency_hz in frequencies_hz {
-        if !frequency_hz.is_finite() || frequency_hz <= 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "frequency must be positive and finite, got {frequency_hz}"
-            )));
-        }
-        if frequency_hz >= nyquist {
-            return Err(KwaversError::InvalidInput(format!(
-                "frequency {frequency_hz} Hz must be below Nyquist {nyquist} Hz"
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn validate_cfl(
-    sound_speed_m_s: &Array3<f64>,
-    config: BreastUstPstdDatasetConfig,
-) -> KwaversResult<()> {
-    let max_sound_speed = sound_speed_m_s
-        .iter()
-        .copied()
-        .fold(f64::NEG_INFINITY, f64::max);
-    let cfl = max_sound_speed * config.time_step_s / config.spacing_m;
-    if cfl > PSTD_DATASET_CFL_LIMIT {
-        return Err(KwaversError::InvalidInput(format!(
-            "PSTD acquisition CFL {cfl:.6} exceeds limit {PSTD_DATASET_CFL_LIMIT:.6}"
-        )));
-    }
-    Ok(())
 }
 
 #[cfg(test)]

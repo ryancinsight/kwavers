@@ -37,6 +37,10 @@
 //! violated.  `SimulationSolverFactory::create_solver(SolverType::PstdGpu,
 //! ...)` propagates that error to the caller.
 
+mod medium;
+
+use medium::GpuMediumSnapshot;
+
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
 use crate::domain::grid::Grid;
@@ -54,100 +58,28 @@ use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 use std::time::{Duration, Instant};
 
-/// Pre-extracted medium snapshot for the GPU PSTD adapter.
-///
-/// Extracted at construction time from `&dyn Medium` so the adapter does not
-/// hold a Medium reference (lifetime / object-safety constraints prevent
-/// storing `&dyn Medium` in `Box<dyn Solver>`).
-#[derive(Debug)]
-struct GpuMediumSnapshot {
-    /// Per-voxel sound speed [f32], C-order `ix*ny*nz + iy*nz + iz`.
-    c0_flat: Vec<f32>,
-    /// Per-voxel density [f32].
-    rho0_flat: Vec<f32>,
-    /// Per-voxel B/(2A) nonlinearity coefficient [f32]; 0 for linear.
-    bon_a_flat: Vec<f32>,
-    /// Per-voxel alpha_db_cm absorption [f32]; 0 for lossless.
-    absorption_flat: Vec<f32>,
-    /// Maximum sound speed over the domain [m/s].
-    c_ref: f64,
-    has_nonlinear: bool,
-    has_absorption: bool,
-}
-
-impl GpuMediumSnapshot {
-    /// Extract all GPU-needed medium data in a single pass.
-    fn from_medium<M: Medium>(grid: &Grid, medium: &M) -> Self {
-        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let total = nx * ny * nz;
-
-        let mut c0_flat = Vec::with_capacity(total);
-        let mut rho0_flat = Vec::with_capacity(total);
-        let mut bon_a_flat = Vec::with_capacity(total);
-        let mut absorption_flat = Vec::with_capacity(total);
-
-        let mut has_nonlinear = false;
-        let mut has_absorption = false;
-
-        for ix in 0..nx {
-            for iy in 0..ny {
-                for iz in 0..nz {
-                    let c = medium.sound_speed(ix, iy, iz);
-                    let rho = medium.density(ix, iy, iz);
-                    let nl = medium.nonlinearity(ix, iy, iz);
-                    let alpha = medium.absorption(ix, iy, iz);
-
-                    c0_flat.push(c as f32);
-                    rho0_flat.push(rho as f32);
-                    bon_a_flat.push((nl / 2.0) as f32);
-                    absorption_flat.push(alpha as f32);
-
-                    if nl > 0.0 {
-                        has_nonlinear = true;
-                    }
-                    if alpha > 0.0 {
-                        has_absorption = true;
-                    }
-                }
-            }
-        }
-
-        let c_ref = medium.max_sound_speed();
-
-        Self {
-            c0_flat,
-            rho0_flat,
-            bon_a_flat,
-            absorption_flat,
-            c_ref,
-            has_nonlinear,
-            has_absorption,
-        }
-    }
-}
-
 /// GPU-resident PSTD adapter implementing the simulation `Solver` trait.
 ///
 /// See module-level documentation for the full architecture and limitation
 /// table.
 #[derive(Debug)]
 pub struct GpuPstdSimulationAdapter {
-    grid: Grid,
-    medium: GpuMediumSnapshot,
-    dt: f64,
+    pub(self) grid: Grid,
+    pub(self) medium: GpuMediumSnapshot,
+    pub(self) dt: f64,
     /// Absorption power-law exponent `y` for the fractional-Laplacian model.
     /// Defaults to `1.0` (standard tissue attenuation).
-    alpha_power: f64,
-    cpml_config: CPMLConfig,
-    pml_inside: bool,
-    source: GridSource,
-    sensor_mask: Array3<bool>,
+    pub(self) alpha_power: f64,
+    pub(self) cpml_config: CPMLConfig,
+    pub(self) pml_inside: bool,
+    pub(self) source: GridSource,
+    pub(self) sensor_mask: Array3<bool>,
     /// Sensor traces recorded by the most-recent `run()` call.
-    recorded: Option<Array2<f64>>,
-    pressure_zero: Array3<f64>,
-    vel_zero: Array3<f64>,
-    current_step: usize,
-    computation_time: Duration,
+    pub(self) recorded: Option<Array2<f64>>,
+    pub(self) pressure_zero: Array3<f64>,
+    pub(self) vel_zero: Array3<f64>,
+    pub(self) current_step: usize,
+    pub(self) computation_time: Duration,
 }
 
 impl GpuPstdSimulationAdapter {
@@ -221,10 +153,9 @@ impl GpuPstdSimulationAdapter {
 
     /// Build all GPU arrays and run the PSTD time loop.
     ///
-    /// This method mirrors `run_gpu_pstd`'s array preparation, then calls
+    /// Mirrors `run_gpu_pstd`'s array preparation, then calls
     /// `GpuPstdSolver::with_auto_device` followed by `GpuPstdSolver::run`.
-    /// The GPU device is acquired once per `run()` call; wgpu caches the
-    /// device handle across calls for the same adapter instance.
+    /// The GPU device is acquired once per `run()` call.
     fn run_gpu_impl(&mut self, nt: usize) -> KwaversResult<()> {
         let nx = self.grid.nx;
         let ny = self.grid.ny;
@@ -272,7 +203,7 @@ impl GpuPstdSimulationAdapter {
             }
         }
 
-        // ── Absorption operator arrays ─────────────────────────────────────────
+        // ── Absorption operator arrays ────────────────────────────────────────
         let (nabla1, nabla2, tau_v, eta_v) = if self.medium.has_absorption {
             let dk_x = 2.0 * PI / (nx as f64 * self.grid.dx);
             let dk_y = 2.0 * PI / (ny as f64 * self.grid.dy);
@@ -374,6 +305,10 @@ impl GpuPstdSimulationAdapter {
             .collect();
 
         // ── Source indices and signals ────────────────────────────────────────
+        //
+        // Mass-source scaling (Treeby & Cox 2010, Eq. 23):
+        //   scale = 2·Δt / (n_dim · c_ref · Δx_min)
+        // Applied to each source signal sample before GPU upload.
         let mass_source_scale = {
             let n_dim_active =
                 [nx > 1, ny > 1, nz > 1].iter().filter(|&&d| d).count().max(1);
@@ -420,7 +355,7 @@ impl GpuPstdSimulationAdapter {
         self.computation_time += t0.elapsed();
         self.current_step += nt;
 
-        // ── Widen to f64 and store ────────────────────────────────────────────
+        // ── Widen f32 → f64 and store ─────────────────────────────────────────
         let n_sensors = sensor_indices.len();
         let mut out = Array2::<f64>::zeros((n_sensors, nt));
         for s in 0..n_sensors {
@@ -523,7 +458,7 @@ impl Solver for GpuPstdSimulationAdapter {
             current_step: self.current_step,
             computation_time: self.computation_time,
             memory_usage: self.medium.c0_flat.len() * std::mem::size_of::<f32>() * 6,
-            max_pressure: 0.0, // not downloaded
+            max_pressure: 0.0, // GPU fields not downloaded mid-run
             max_velocity: 0.0,
         }
     }
@@ -543,123 +478,4 @@ impl Solver for GpuPstdSimulationAdapter {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
-    use crate::domain::medium::homogeneous::HomogeneousMedium;
-    use crate::solver::config::SolverType;
-
-    #[test]
-    fn rejects_non_power_of_two_grid() {
-        let grid = Grid::new(5, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium =
-            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
-        let config = SolverConfiguration {
-            solver_type: SolverType::PstdGpu,
-            dt: 1.0e-7,
-            ..SolverConfiguration::default()
-        };
-
-        let err = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap_err();
-
-        assert!(matches!(err, KwaversError::InvalidInput(_)));
-    }
-
-    #[test]
-    fn rejects_axis_exceeding_256() {
-        let grid = Grid::new(512, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium =
-            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
-        let config = SolverConfiguration {
-            solver_type: SolverType::PstdGpu,
-            dt: 1.0e-7,
-            ..SolverConfiguration::default()
-        };
-
-        let err = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap_err();
-
-        assert!(matches!(err, KwaversError::InvalidInput(_)));
-    }
-
-    #[test]
-    fn constructs_for_valid_power_of_two_grid() {
-        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium =
-            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
-        let config = SolverConfiguration {
-            solver_type: SolverType::PstdGpu,
-            dt: 1.0e-7,
-            ..SolverConfiguration::default()
-        };
-
-        let adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
-
-        assert_eq!(adapter.name(), "GpuPstd");
-        assert_eq!(adapter.pressure_field().dim(), (8, 8, 8));
-        assert!(adapter.recorded_sensor_pressure().is_none());
-    }
-
-    #[test]
-    fn step_forward_returns_feature_not_available() {
-        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium =
-            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
-        let config = SolverConfiguration {
-            solver_type: SolverType::PstdGpu,
-            dt: 1.0e-7,
-            ..SolverConfiguration::default()
-        };
-
-        let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
-
-        let err = adapter.step_forward().unwrap_err();
-        assert!(matches!(err, KwaversError::FeatureNotAvailable(_)));
-    }
-
-    #[test]
-    fn add_sensor_rejects_out_of_bounds_point() {
-        use crate::domain::sensor::grid_sampling::{GridPoint, GridSensorSet};
-
-        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium =
-            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
-        let config = SolverConfiguration {
-            solver_type: SolverType::PstdGpu,
-            dt: 1.0e-7,
-            ..SolverConfiguration::default()
-        };
-
-        let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
-        let sensor = GridSensorSet::from_points(vec![GridPoint::new(99, 0, 0)]);
-
-        let err = adapter.add_sensor(&sensor).unwrap_err();
-        assert!(matches!(err, KwaversError::InvalidInput(_)));
-    }
-
-    #[test]
-    fn add_sensor_valid_points_sets_mask() {
-        use crate::domain::sensor::grid_sampling::{GridPoint, GridSensorSet};
-
-        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium =
-            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
-        let config = SolverConfiguration {
-            solver_type: SolverType::PstdGpu,
-            dt: 1.0e-7,
-            ..SolverConfiguration::default()
-        };
-
-        let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
-        let sensor = GridSensorSet::from_points(vec![
-            GridPoint::new(1, 2, 3),
-            GridPoint::new(4, 5, 6),
-        ]);
-        adapter.add_sensor(&sensor).unwrap();
-
-        // Mask contains exactly 2 `true` entries
-        let true_count = adapter.sensor_mask.iter().filter(|&&v| v).count();
-        assert_eq!(true_count, 2);
-        assert!(adapter.sensor_mask[[1, 2, 3]]);
-        assert!(adapter.sensor_mask[[4, 5, 6]]);
-    }
-}
+mod tests;
