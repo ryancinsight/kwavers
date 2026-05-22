@@ -1,3 +1,4 @@
+use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use super::properties::MarmottantShellProperties;
 use super::state::ShellState;
 
@@ -41,7 +42,7 @@ fn test_surface_tension_ruptured() {
     // from `core::constants::cavitation::SURFACE_TENSION_WATER` =
     // 0.0728 N/m. The prior assertion of 0.072 N/m was a literal that
     // did not match the SSOT-sourced default.
-    assert_eq!(chi, 0.0728);
+    assert_eq!(chi, SURFACE_TENSION_WATER);
 }
 
 #[test]
