@@ -3,6 +3,7 @@
 //! Defines piezoelectric materials, backing layers, matching layers,
 //! and acoustic lenses used in transducer construction.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Piezoelectric material properties
@@ -294,7 +295,7 @@ impl AcousticLens {
     #[must_use]
     pub fn silicone(focal_length: f64, aperture: f64) -> Self {
         let sound_speed_lens = 1000.0; // m/s in silicone
-        let sound_speed_tissue = 1540.0; // m/s in tissue
+        let sound_speed_tissue = SOUND_SPEED_TISSUE; // m/s in tissue
 
         // Calculate radius of curvature using lens equation
         let radius = focal_length * (sound_speed_tissue - sound_speed_lens) / sound_speed_tissue;

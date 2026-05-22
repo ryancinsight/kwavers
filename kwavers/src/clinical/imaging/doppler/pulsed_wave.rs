@@ -48,6 +48,7 @@
 //! - Kasai C et al. (1985). "Real-time two-dimensional blood flow imaging using
 //!   an autocorrelation technique." *IEEE Trans Sonics Ultrason* 32(3):458–464.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::math::fft::{fft_1d_complex, Complex64};
 use ndarray::{Array1, ArrayView1};
@@ -80,7 +81,7 @@ impl Default for PWDConfig {
             sample_volume_depth: 0.05,   // 5 cm
             sample_volume_length: 0.005, // 5 mm gate
             fft_size: 128,
-            c_sound: 1540.0, // m/s
+            c_sound: SOUND_SPEED_TISSUE, // m/s
             beam_angle: 0.0, // 0° (parallel to flow)
         }
     }
@@ -311,7 +312,7 @@ mod tests {
         let config = PWDConfig {
             center_frequency: 5e6,
             prf: 4e3,
-            c_sound: 1540.0,
+            c_sound: SOUND_SPEED_TISSUE,
             beam_angle: 0.0,
             fft_size: 128,
             ..Default::default()
@@ -322,7 +323,7 @@ mod tests {
         assert_eq!(v_axis.len(), config.fft_size / 2 + 1);
 
         let v_max = pwd.max_velocity();
-        let expected_v_max = 4000.0 * 1540.0 / (4.0 * 5e6);
+        let expected_v_max = 4000.0 * SOUND_SPEED_TISSUE / (4.0 * 5e6);
         let rel_err = (v_max - expected_v_max).abs() / expected_v_max;
         assert!(
             rel_err < 1e-10,

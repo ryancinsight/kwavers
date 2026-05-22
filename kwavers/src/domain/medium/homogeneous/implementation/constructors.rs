@@ -1,5 +1,6 @@
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_AIR, SOUND_SPEED_WATER,
+    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_AIR, SOUND_SPEED_BLOOD,
+    SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::constants::BLOOD_VISCOSITY_37C;
@@ -46,7 +47,7 @@ impl HomogeneousMedium {
 
     /// Create a blood medium with standard properties at 37°C
     pub fn blood(grid: &Grid) -> Self {
-        let mut medium = Self::new(DENSITY_BLOOD, 1570.0, 0.15, 0.5, grid);
+        let mut medium = Self::new(DENSITY_BLOOD, SOUND_SPEED_BLOOD, 0.15, 0.5, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
@@ -123,8 +124,8 @@ impl HomogeneousMedium {
     ///
     /// λ = Eν/((1+ν)(1-2ν)), μ = E/(2(1+ν))
     pub fn soft_tissue(youngs_modulus: f64, poisson_ratio: f64, grid: &Grid) -> Self {
-        let density = DENSITY_BLOOD;
-        let sound_speed = 1580.0;
+        let density = DENSITY_TISSUE;
+        let sound_speed = SOUND_SPEED_TISSUE;
 
         let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
         let shape = (grid.nx, grid.ny, grid.nz);

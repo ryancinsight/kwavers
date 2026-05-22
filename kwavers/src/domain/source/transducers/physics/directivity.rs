@@ -2,6 +2,7 @@
 //!
 //! Models the spatial radiation pattern of transducer elements.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::Array1;
 use std::f64::consts::PI;
 
@@ -29,7 +30,7 @@ impl TransducerDirectivityPattern {
     /// Uses sinc function model for rectangular aperture
     #[must_use]
     pub fn rectangular_element(width: f64, height: f64, frequency: f64, num_points: usize) -> Self {
-        let wavelength = 1540.0 / frequency; // Assume tissue
+        let wavelength = SOUND_SPEED_TISSUE / frequency; // Assume tissue
         let k = 2.0 * PI / wavelength;
 
         let angles: Array1<f64> = Array1::linspace(-90.0, 90.0, num_points);
@@ -76,7 +77,7 @@ impl TransducerDirectivityPattern {
     /// Calculate directivity for circular element
     #[must_use]
     pub fn circular_element(diameter: f64, frequency: f64, num_points: usize) -> Self {
-        let wavelength = 1540.0 / frequency;
+        let wavelength = SOUND_SPEED_TISSUE / frequency;
         let k = 2.0 * PI / wavelength;
         let radius = diameter / 2.0;
 

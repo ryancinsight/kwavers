@@ -34,7 +34,7 @@ fn test_therapy_step_execution() {
     };
 
     let grid = crate::domain::grid::Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
-    let medium = Box::new(HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid));
+    let medium = Box::new(HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid));
 
     let mut orchestrator = TherapyIntegrationOrchestrator::new(config, grid, medium).unwrap();
 

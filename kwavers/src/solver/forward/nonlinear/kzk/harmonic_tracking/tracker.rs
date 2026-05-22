@@ -209,7 +209,7 @@ impl HarmonicTracker {
         //   z_shock = ρ₀ c₀³ / (β · ω₀ · p₀)
         // where β = 1 + B/(2A) and ω₀ = 2πf₀.
         let rho0: f64 = 1000.0; // kg/m³
-        let c0: f64 = 1540.0; // m/s
+        let c0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE; // m/s
         let omega0: f64 = 2.0 * PI * self.config.frequency;
         let beta: f64 = 1.0 + self.config.b_a / 2.0; // β = 1 + B/(2A)
 

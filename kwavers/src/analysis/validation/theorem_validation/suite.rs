@@ -1,7 +1,7 @@
 //! Comprehensive validation suite and report generation.
 
 use super::{TheoremValidation, TheoremValidator};
-use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -79,7 +79,7 @@ impl TheoremValidator {
             c0,
         ));
 
-        results.push(Self::validate_sa_resolution(5e6, 1540.0, 30.0, 0.0003));
+        results.push(Self::validate_sa_resolution(5e6, SOUND_SPEED_TISSUE, 30.0, 0.0003));
         results.push(Self::validate_coded_excitation_snr(256, 3.0, 18.0));
         results.push(Self::validate_reciprocity(1.0, 1.0, 1e-10));
         results.push(Self::validate_impedance_reflection(

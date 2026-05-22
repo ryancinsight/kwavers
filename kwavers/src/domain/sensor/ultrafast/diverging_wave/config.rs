@@ -1,5 +1,7 @@
 //! Configuration for diverging wave (virtual source) imaging.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 /// Diverging wave (virtual source) imaging configuration
 #[derive(Debug, Clone)]
 pub struct DivergingWaveConfig {
@@ -32,7 +34,7 @@ impl Default for DivergingWaveConfig {
 
         Self {
             element_positions,
-            sound_speed: 1540.0,         // Soft tissue
+            sound_speed: SOUND_SPEED_TISSUE, // Soft tissue
             virtual_source_depth: 0.010, // 10 mm behind transducer
             f_number: 1.5,
             sampling_frequency: 40.0e6, // 40 MHz

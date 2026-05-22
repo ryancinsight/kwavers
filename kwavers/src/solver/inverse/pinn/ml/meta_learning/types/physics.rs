@@ -1,6 +1,6 @@
 //! Physics parameters for meta-learning task governing equations.
 
-use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 /// Physics parameters defining the task's governing equations
 ///
@@ -90,7 +90,7 @@ impl MetaLearningPhysicsParameters {
     /// Create parameters for acoustic wave propagation in soft tissue
     pub fn acoustic_tissue() -> Self {
         Self {
-            wave_speed: 1540.0,
+            wave_speed: SOUND_SPEED_TISSUE,
             density: DENSITY_TISSUE,
             viscosity: None,
             absorption: Some(0.5),   // At 1 MHz

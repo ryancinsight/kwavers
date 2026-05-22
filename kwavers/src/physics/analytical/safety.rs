@@ -157,6 +157,7 @@ pub fn fda_isppa_limit_w_cm2() -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use super::*;
 
     #[test]
@@ -204,7 +205,7 @@ mod tests {
     fn cem43_below_threshold_smaller() {
         // Below 43°C (R=0.25), increments are smaller than at 43°C
         let t_above = vec![43.0; 3];
-        let t_below = vec![37.0; 3];
+        let t_below = vec![BODY_TEMPERATURE_C; 3];
         let dt = 1.0;
         let c_above = cem43_cumulative(&t_above, dt);
         let c_below = cem43_cumulative(&t_below, dt);

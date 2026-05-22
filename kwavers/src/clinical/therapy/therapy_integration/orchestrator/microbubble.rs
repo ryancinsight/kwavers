@@ -216,6 +216,7 @@ pub fn update_microbubble_dynamics(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
     use crate::domain::grid::Grid;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
 
@@ -235,7 +236,7 @@ mod tests {
     #[test]
     fn test_microbubble_dynamics_integration() {
         let grid = create_test_grid();
-        let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
         let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, 1e6, 2.5).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
@@ -248,7 +249,7 @@ mod tests {
     #[test]
     fn test_microbubble_dynamics_returns_concentration_field() {
         let grid = create_test_grid();
-        let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
         let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, 1e6, 2.5).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
@@ -264,7 +265,7 @@ mod tests {
     #[test]
     fn test_microbubble_dynamics_with_pressure_gradient() {
         let grid = create_test_grid();
-        let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
         let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, 1e6, 2.5).unwrap();
 
         // Create pressure field with gradient
@@ -297,7 +298,7 @@ mod tests {
     #[test]
     fn test_microbubble_dynamics_timestep_validation() {
         let grid = create_test_grid();
-        let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
         let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, 1e6, 2.5).unwrap();
         let acoustic_field = create_test_acoustic_field();
 
@@ -312,7 +313,7 @@ mod tests {
     #[test]
     fn test_microbubble_concentration_remains_positive() {
         let grid = create_test_grid();
-        let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid);
         let mut ceus = ContrastEnhancedUltrasound::new(&grid, &medium, 1e6, 2.5).unwrap();
         let acoustic_field = create_test_acoustic_field();
 

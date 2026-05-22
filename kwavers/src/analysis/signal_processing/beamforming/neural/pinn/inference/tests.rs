@@ -92,7 +92,7 @@ fn test_weight_symmetry() {
         100,    // sample index
         0.0003, // pitch
         0.04,   // focal depth
-        1540.0, // sound speed
+        SOUND_SPEED_TISSUE, // sound speed
         5e6,    // frequency
     )
     .unwrap();

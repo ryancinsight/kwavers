@@ -2,6 +2,7 @@
 //!
 //! Models acoustic and electrical coupling between array elements.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
@@ -22,7 +23,7 @@ impl ElementCoupling {
     /// Calculate coupling for linear array
     #[must_use]
     pub fn linear_array(num_elements: usize, pitch: f64, frequency: f64) -> Self {
-        let wavelength = 1540.0 / frequency;
+        let wavelength = SOUND_SPEED_TISSUE / frequency;
         let k = 2.0 * PI / wavelength;
 
         let mut acoustic_coupling = Array2::eye(num_elements);

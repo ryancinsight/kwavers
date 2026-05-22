@@ -1,5 +1,6 @@
 use super::array::TransducerArray2D;
 use super::types::{ApodizationType, TransducerArray2DConfig};
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 
 fn create_test_config() -> TransducerArray2DConfig {
     TransducerArray2DConfig {
@@ -15,7 +16,7 @@ fn create_test_config() -> TransducerArray2DConfig {
 #[test]
 fn test_array_creation() {
     let config = create_test_config();
-    let array = TransducerArray2D::new(config, 1540.0, 1e6).unwrap();
+    let array = TransducerArray2D::new(config, SOUND_SPEED_TISSUE, 1e6).unwrap();
 
     assert_eq!(array.num_elements(), 16);
     assert!(array.satisfies_nyquist());
@@ -24,7 +25,7 @@ fn test_array_creation() {
 #[test]
 fn test_focus_and_steering() {
     let config = create_test_config();
-    let mut array = TransducerArray2D::new(config, 1540.0, 1e6).unwrap();
+    let mut array = TransducerArray2D::new(config, SOUND_SPEED_TISSUE, 1e6).unwrap();
 
     array.set_focus_distance(20e-3);
     array.set_steering_angle(10.0);
@@ -39,7 +40,7 @@ fn test_focus_and_steering() {
 #[test]
 fn test_apodization() {
     let config = create_test_config();
-    let mut array = TransducerArray2D::new(config, 1540.0, 1e6).unwrap();
+    let mut array = TransducerArray2D::new(config, SOUND_SPEED_TISSUE, 1e6).unwrap();
 
     array.set_transmit_apodization(ApodizationType::Hanning);
     array.set_receive_apodization(ApodizationType::Hamming);
@@ -48,7 +49,7 @@ fn test_apodization() {
 #[test]
 fn test_active_elements() {
     let config = create_test_config();
-    let mut array = TransducerArray2D::new(config, 1540.0, 1e6).unwrap();
+    let mut array = TransducerArray2D::new(config, SOUND_SPEED_TISSUE, 1e6).unwrap();
 
     let mut mask = vec![true; 16];
     for i in (0..16).step_by(2) {
@@ -71,13 +72,13 @@ fn test_invalid_config() {
         ..create_test_config()
     };
 
-    assert!(TransducerArray2D::new(config, 1540.0, 1e6).is_err());
+    assert!(TransducerArray2D::new(config, SOUND_SPEED_TISSUE, 1e6).is_err());
 }
 
 #[test]
 fn test_aperture_calculation() {
     let config = create_test_config();
-    let array = TransducerArray2D::new(config, 1540.0, 1e6).unwrap();
+    let array = TransducerArray2D::new(config, SOUND_SPEED_TISSUE, 1e6).unwrap();
 
     let expected = 15.0 * 0.5e-3 + 0.3e-3;
     assert!((array.aperture_width() - expected).abs() < 1e-10);

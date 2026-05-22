@@ -288,7 +288,8 @@ mod tests {
 
     #[test]
     fn test_sound_speed_temperature() {
-        let c0 = 1540.0;
+        use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+        let c0 = SOUND_SPEED_TISSUE;
 
         let c_37 = sound_speed_vs_temperature(c0, BODY_TEMPERATURE_C);
         let c_45 = sound_speed_vs_temperature(c0, 45.0);

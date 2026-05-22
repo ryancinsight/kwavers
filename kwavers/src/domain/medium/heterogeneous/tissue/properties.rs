@@ -1,6 +1,6 @@
 //! Tissue property caching utilities
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::medium::absorption::{AbsorptionTissueType, TISSUE_PROPERTIES};
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -33,7 +33,7 @@ impl TissuePropertyCache {
         *self.density_cache.entry(tissue_type).or_insert_with(|| {
             TISSUE_PROPERTIES
                 .get(&tissue_type)
-                .map_or(1000.0, |p| p.density)
+                .map_or(DENSITY_WATER_NOMINAL, |p| p.density)
         })
     }
 

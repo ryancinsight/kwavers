@@ -58,9 +58,10 @@ pub struct BemConfig {
 
 impl Default for BemConfig {
     fn default() -> Self {
+        use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
         Self {
             wavenumber: 1.0,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             frequency: 1.0e6,
             coupling_alpha: Complex64::new(0.0, 1.0),
             tolerance: 1e-8,

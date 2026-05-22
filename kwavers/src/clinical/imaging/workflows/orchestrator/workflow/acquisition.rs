@@ -1,7 +1,6 @@
 //! Ultrasound data acquisition for the clinical workflow orchestrator.
 
 use super::ClinicalWorkflowOrchestrator;
-#[cfg(feature = "gpu")]
 use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
@@ -105,7 +104,7 @@ impl ClinicalWorkflowOrchestrator {
 
             let rf_data = generate_realistic_rf_volume(
                 volume_dims,
-                1540.0,
+                SOUND_SPEED_TISSUE,
                 config.sampling_frequency,
                 config.frequency,
             );

@@ -1,6 +1,6 @@
 use super::solver::Trilateration;
 use super::types::TrilaterationConfig;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 use approx::assert_relative_eq;
 
 #[test]
@@ -61,7 +61,7 @@ fn test_localize_source_at_origin() {
 
 #[test]
 fn test_localize_off_axis_source() {
-    let c = 1540.0;
+    let c = SOUND_SPEED_TISSUE;
     let sensors = vec![
         [0.0, 0.0, 0.0],
         [0.02, 0.0, 0.0],

@@ -5,6 +5,7 @@ pub(super) use crate::clinical::therapy::therapy_integration::config::{
 };
 pub(super) use crate::clinical::therapy::therapy_integration::state::TherapyIntegrationSafetyStatus;
 pub(super) use crate::clinical::therapy::therapy_integration::tissue::TissuePropertyMap;
+pub(super) use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 pub(super) use crate::domain::medium::homogeneous::HomogeneousMedium;
 
 mod creation;

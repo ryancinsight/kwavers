@@ -33,7 +33,7 @@ impl Default for CavitationCouplingConfig {
             multi_bubble_effects: false,
             nonlinear_acoustic: true,
             center_frequency: 2.5e6,             // 2.5 MHz default
-            sound_speed: 1540.0,                 // Water/Tissue default
+            sound_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE, // Water/Tissue default
             domain_size: vec![1e-2, 1e-2, 1e-2], // 1cm³ domain
         }
     }

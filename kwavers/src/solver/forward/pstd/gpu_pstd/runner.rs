@@ -19,7 +19,7 @@
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::cpml::{CPMLConfig, CPMLProfiles};
 use crate::domain::grid::Grid;
-use crate::domain::medium::{AcousticProperties, CoreMedium};
+use crate::domain::medium::Medium;
 use crate::domain::source::GridSource;
 use crate::physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 use crate::solver::forward::pstd::gpu_pstd::{
@@ -72,16 +72,13 @@ impl Default for GpuPstdRunConfig {
 /// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 256.
 /// - GPU device acquisition failures bubble up via the `wgpu` error path.
 /// - Invalid medium, source, or sensor inputs return [`KwaversError::InvalidInput`].
-pub fn run_gpu_pstd<M>(
+pub fn run_gpu_pstd(
     grid: &Grid,
-    medium: &M,
+    medium: &dyn Medium,
     source: &GridSource,
     sensor_mask: &Array3<bool>,
     config: GpuPstdRunConfig,
-) -> KwaversResult<Array2<f64>>
-where
-    M: CoreMedium + AcousticProperties + Sync,
-{
+) -> KwaversResult<Array2<f64>> {
     let nx = grid.nx;
     let ny = grid.ny;
     let nz = grid.nz;

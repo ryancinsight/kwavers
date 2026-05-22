@@ -1,5 +1,6 @@
 use super::beamformer::SensorBeamformer;
 use super::types::{BeamformerWindowType, SensorProcessingParams};
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::domain::sensor::array::{Position, Sensor, SensorArray, SensorArrayGeometry};
 use approx::assert_relative_eq;
 use ndarray::Array2;
@@ -15,7 +16,7 @@ fn create_test_array(n_sensors: usize) -> SensorArray {
             Sensor::new(i, position)
         })
         .collect();
-    SensorArray::new(sensors, 1540.0, SensorArrayGeometry::Linear)
+    SensorArray::new(sensors, SOUND_SPEED_TISSUE, SensorArrayGeometry::Linear)
 }
 
 #[test]
@@ -176,7 +177,7 @@ fn test_processing_params_max_spatial_frequency() {
         array_aperture: 19.2e-3,
     };
 
-    let sound_speed = 1540.0;
+    let sound_speed = SOUND_SPEED_TISSUE;
     let max_freq = params.max_spatial_frequency(sound_speed);
     let expected = sound_speed / (2.0 * 0.3e-3);
     assert_relative_eq!(max_freq, expected, epsilon = 1e-6);
@@ -202,7 +203,7 @@ fn test_calculate_delays_logic() {
             },
         ),
     ];
-    let array = SensorArray::new(sensors, 1540.0, SensorArrayGeometry::Linear);
+    let array = SensorArray::new(sensors, SOUND_SPEED_TISSUE, SensorArrayGeometry::Linear);
     let beamformer = SensorBeamformer::new(array, 1e6);
 
     let grid = crate::domain::grid::Grid::new(2, 1, 1, 1.0, 1.0, 1.0).unwrap();

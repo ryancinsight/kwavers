@@ -35,7 +35,7 @@ fn test_intensity_tracker_integration() {
     };
 
     let grid = crate::domain::grid::Grid::new(12, 12, 12, 0.0025, 0.0025, 0.0025).unwrap();
-    let medium = Box::new(HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid));
+    let medium = Box::new(HomogeneousMedium::new(1000.0, SOUND_SPEED_TISSUE, 0.5, 1.0, &grid));
 
     let mut orchestrator = TherapyIntegrationOrchestrator::new(config, grid, medium).unwrap();
 

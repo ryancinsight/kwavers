@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::config::{ClinicalPhotoacousticConfig, ElastographyConfig};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
@@ -85,7 +86,7 @@ pub fn generate_realistic_pa_data(
                         )
                         .sqrt()
                         * 0.001; // distance in meters
-                    let propagation_time = r / 1540.0; // speed of sound
+                    let propagation_time = r / SOUND_SPEED_TISSUE; // speed of sound
 
                     if t >= propagation_time {
                         // Gaussian pulse with spherical spreading

@@ -257,7 +257,7 @@ mod tests {
         assert_eq!(water.wave_speed, crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM);
 
         let tissue = MetaLearningPhysicsParameters::acoustic_tissue();
-        assert_eq!(tissue.wave_speed, 1540.0);
+        assert_eq!(tissue.wave_speed, crate::core::constants::fundamental::SOUND_SPEED_TISSUE);
         assert!(tissue.nonlinearity.unwrap() > 0.0);
     }
 

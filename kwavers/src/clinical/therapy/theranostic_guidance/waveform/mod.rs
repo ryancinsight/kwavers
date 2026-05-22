@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn peak_pressure_exposure_records_bounded_workspace() {
-        let prepared = prepared_fixture(Array2::from_elem((28, 28), 1540.0));
+        let prepared = prepared_fixture(Array2::from_elem((28, 28), SOUND_SPEED_TISSUE));
         let config = exposure_config();
         let layout = exposure_layout();
 
@@ -171,12 +171,12 @@ mod tests {
         let config = exposure_config();
         let layout = exposure_layout();
         let homogeneous = simulate_peak_pressure_exposure(
-            &prepared_fixture(Array2::from_elem((28, 28), 1540.0)),
+            &prepared_fixture(Array2::from_elem((28, 28), SOUND_SPEED_TISSUE)),
             &layout,
             &config,
         );
 
-        let mut speed = Array2::from_elem((28, 28), 1540.0);
+        let mut speed = Array2::from_elem((28, 28), SOUND_SPEED_TISSUE);
         for ix in 12..16 {
             for iy in 8..20 {
                 speed[[ix, iy]] = 343.0;

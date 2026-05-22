@@ -3,7 +3,7 @@
 //! Follows Builder pattern for complex medium instantiation
 
 use super::{DomainMediumParameters, LayerParameters, MediumType};
-use crate::core::constants::fundamental::DENSITY_TISSUE;
+use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL};
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
@@ -147,7 +147,7 @@ impl MediumBuilder {
 
         if total_thickness <= 0.0 {
             // No valid layers, return default
-            let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 10.0, grid);
+            let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 10.0, grid);
             return Ok(Box::new(medium));
         }
 

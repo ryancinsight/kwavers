@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::*;
 use ndarray::Array3;
@@ -25,7 +25,7 @@ fn test_temperature_coefficients_soft_tissue() {
     let coeff = TemperatureCoefficients::soft_tissue();
 
     // Base properties at 37°C
-    let c0 = 1540.0;
+    let c0 = SOUND_SPEED_TISSUE;
     let rho0 = DENSITY_TISSUE;
     let alpha0 = 0.5;
 
@@ -97,7 +97,7 @@ fn test_thermal_acoustic_coupling() {
 fn test_coupling_temperature_effects_on_properties() {
     let coupling = ThermalAcousticCoupling::new(0.5, 1e4, TemperatureCoefficients::soft_tissue());
 
-    let c0 = 1540.0;
+    let c0 = SOUND_SPEED_TISSUE;
     let c_hot = coupling.sound_speed_at_temperature(c0, 45.0, BODY_TEMPERATURE_C);
     let rho0 = DENSITY_TISSUE;
     let rho_hot = coupling.density_at_temperature(rho0, 45.0, BODY_TEMPERATURE_C);

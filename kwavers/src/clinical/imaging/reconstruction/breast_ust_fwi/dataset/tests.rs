@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 use super::*;
 
 #[test]
@@ -15,7 +15,7 @@ fn pstd_dataset_preserves_shape_and_is_input_sensitive() {
     };
     let baseline = Array3::from_elem((12, 12, 3), SOUND_SPEED_WATER_SIM);
     let mut perturbed = baseline.clone();
-    perturbed[[6, 6, 1]] = 1540.0;
+    perturbed[[6, 6, 1]] = SOUND_SPEED_TISSUE;
 
     let first = generate_breast_ust_pstd_frequency_dataset(&baseline, &array, &[200_000.0], config)
         .expect("baseline dataset");

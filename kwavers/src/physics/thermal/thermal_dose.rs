@@ -145,7 +145,7 @@ mod tests {
         let mut dose_calc = ThermalCEM43Grid::new(10, 10, 10);
 
         // Set half the volume to accumulate dose
-        let mut temperature = Array3::from_elem((10, 10, 10), 37.0);
+        let mut temperature = Array3::from_elem((10, 10, 10), BODY_TEMPERATURE_C);
         for k in 0..5 {
             for j in 0..10 {
                 for i in 0..10 {

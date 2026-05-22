@@ -149,6 +149,14 @@ pub const B_OVER_A_BRAIN: f64 = 6.55;
 /// Reference: Duck (1990) Table 4.16; Bjørnø (2002) Table 1.
 pub const B_OVER_A_FAT: f64 = 9.6;
 
+/// Small-signal sound speed in whole blood at body temperature (m/s).
+///
+/// Value: 1584 m/s — measured for normal adult whole blood at 37°C.
+///
+/// Reference: Duck (1990) *Physical Properties of Tissue*, Table 4.6, p. 100.
+/// Consistent with TISSUE const catalog (BLOOD.sound_speed = 1584.0).
+pub const SOUND_SPEED_BLOOD: f64 = 1584.0;
+
 /// Density of whole blood at 37°C (kg/m³)
 ///
 /// Value: 1060.0 kg/m³ — measured value for normal adult whole blood.

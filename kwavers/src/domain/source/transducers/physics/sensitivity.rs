@@ -2,6 +2,8 @@
 //!
 //! Models transmit and receive sensitivity characteristics.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 /// Transducer sensitivity parameters
 ///
 /// Based on IEC 61102 standard for ultrasound transducers
@@ -33,7 +35,7 @@ impl TransducerSensitivity {
 
         // Receive sensitivity: voltage per pascal
         // S_r = k * A / (Z * c)
-        let sound_speed = 1540.0;
+        let sound_speed = SOUND_SPEED_TISSUE;
         let receive_sensitivity = coupling * area / (impedance * sound_speed);
 
         // Round-trip sensitivity

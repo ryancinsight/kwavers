@@ -130,7 +130,7 @@ impl NonlinearInversionConfig {
         Self {
             method,
             density: 1000.0,             // kg/m³
-            acoustic_speed: 1540.0,      // m/s (typical soft tissue)
+            acoustic_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE, // m/s (typical soft tissue)
             shear_wave_speed: 3.0,       // m/s (liver-like tissue; Nightingale 2011)
             excitation_frequency: 100.0, // Hz (typical push-pulse SWE)
             propagation_distance: 0.05,  // m (5 cm focal depth)
@@ -248,7 +248,7 @@ impl Default for NonlinearInversionConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
     use super::*;
 
     #[test]
@@ -292,7 +292,7 @@ mod tests {
     fn test_nonlinear_config_default() {
         let config = NonlinearInversionConfig::default();
         assert_eq!(config.density, 1000.0);
-        assert_eq!(config.acoustic_speed, 1540.0);
+        assert_eq!(config.acoustic_speed, SOUND_SPEED_TISSUE);
         assert_eq!(config.max_iterations, 100);
         assert_eq!(config.tolerance, 1e-6);
         assert!(matches!(
@@ -319,7 +319,7 @@ mod tests {
         config.validate().unwrap();
 
         let invalid_density =
-            NonlinearInversionConfig::default().with_tissue_properties(-100.0, 1540.0);
+            NonlinearInversionConfig::default().with_tissue_properties(-100.0, SOUND_SPEED_TISSUE);
         assert!(invalid_density.validate().is_err());
 
         let invalid_speed =
@@ -329,7 +329,7 @@ mod tests {
         let invalid_iterations = NonlinearInversionConfig {
             method: NonlinearInversionMethod::HarmonicRatio,
             density: 1000.0,
-            acoustic_speed: 1540.0,
+            acoustic_speed: SOUND_SPEED_TISSUE,
             shear_wave_speed: 3.0,
             excitation_frequency: 100.0,
             propagation_distance: 0.05,

@@ -41,6 +41,7 @@
 //! ```
 
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
@@ -150,7 +151,7 @@ impl AcousticMaterialProperties {
             thermal_conductivity,
             thermal_diffusivity,
             perfusion_rate: 0.0,
-            arterial_temperature: 37.0,
+            arterial_temperature: BODY_TEMPERATURE_C,
             metabolic_heat: 0.0,
             optical_absorption: 0.0,
             optical_scattering: 0.0,

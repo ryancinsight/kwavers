@@ -8,7 +8,10 @@
 //! Temperature: 37°C (body temperature)
 //! Pressure: 1 atm unless otherwise noted
 
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::fundamental::{
+    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
+    SOUND_SPEED_TISSUE,
+};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
 
@@ -50,7 +53,7 @@ pub const WATER: TissueProperties = TissueProperties {
 /// Brain white matter (37°C)
 /// Source: Duck (1990), Table 3.3
 pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
-    sound_speed: 1540.0,
+    sound_speed: SOUND_SPEED_TISSUE,
     density: 1040.0,
     impedance: 1601600.0,
     absorption_coefficient: 0.6,
@@ -154,7 +157,7 @@ pub const LIVER: TissueProperties = TissueProperties {
 /// Kidney cortex (37°C)
 /// Source: Duck (1990), Table 3.3
 pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
-    sound_speed: 1560.0,
+    sound_speed: SOUND_SPEED_KIDNEY,
     density: DENSITY_TISSUE,
     impedance: 1638000.0,
     absorption_coefficient: 0.5,
@@ -253,7 +256,7 @@ pub const MUSCLE: TissueProperties = TissueProperties {
 
 /// Fat (adipose tissue) (37°C)
 pub const FAT: TissueProperties = TissueProperties {
-    sound_speed: 1450.0,  // Slower than water
+    sound_speed: SOUND_SPEED_FAT,  // Slower than water
     density: 900.0,       // Less dense
     impedance: 1305000.0, // Lower impedance
     absorption_coefficient: 0.48,

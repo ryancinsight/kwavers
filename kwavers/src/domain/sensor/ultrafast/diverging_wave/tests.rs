@@ -1,5 +1,6 @@
 use super::config::DivergingWaveConfig;
 use super::processor::DivergingWave;
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::Array1;
 
 /// Build a small N-element array with uniform pitch `pitch` centred at x=0.
@@ -8,7 +9,7 @@ fn uniform_array(n: usize, pitch: f64) -> DivergingWave {
     let positions: Vec<f64> = (0..n).map(|i| x0 + i as f64 * pitch).collect();
     DivergingWave::new(DivergingWaveConfig {
         element_positions: positions,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         virtual_source_depth: 0.010,
         f_number: 1.5,
         sampling_frequency: 40.0e6,
@@ -26,7 +27,7 @@ fn test_max_prf_formula() {
     let dw = uniform_array(8, 3.0e-4);
     let z_max = 0.040; // 40 mm
     let prf = dw.max_prf(z_max);
-    let expected = 1540.0 / (2.0 * 0.040);
+    let expected = SOUND_SPEED_TISSUE / (2.0 * 0.040);
     assert!(
         (prf - expected).abs() / expected < 1e-10,
         "PRF_max = {prf:.2} Hz, expected {expected:.2} Hz"

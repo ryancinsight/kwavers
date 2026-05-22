@@ -1,3 +1,4 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
 #[derive(Debug, Clone, Default)]
@@ -15,7 +16,7 @@ impl DomainTreatmentMetrics {
         let max_dose_rate = temperature.iter().fold(0.0f64, |acc, &t| {
             let rate = if t > 43.0 {
                 (t - 43.0).exp2()
-            } else if t > 37.0 {
+            } else if t > BODY_TEMPERATURE_C {
                 4.0_f64.powf(t - 43.0)
             } else {
                 0.0

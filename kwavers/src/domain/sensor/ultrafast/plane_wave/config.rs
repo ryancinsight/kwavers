@@ -1,5 +1,7 @@
 //! `UltrafastPlaneWaveConfig` — plane wave imaging configuration.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 /// Plane wave imaging configuration.
 #[derive(Debug, Clone)]
 pub struct UltrafastPlaneWaveConfig {
@@ -25,7 +27,7 @@ impl Default for UltrafastPlaneWaveConfig {
             .collect();
         Self {
             tilt_angles,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             element_positions: Vec::new(),
             f_number: Some(1.5),
             sampling_frequency: 40e6,

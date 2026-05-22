@@ -59,7 +59,7 @@ fn test_beamformer_trait() {
     let beamformer = MockBeamformer {
         sensor_count: 4,
         sampling_rate: 10e6,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
     };
 
     assert_eq!(beamformer.expected_sensor_count(), 4);
@@ -77,11 +77,11 @@ fn test_time_domain_beamformer_trait() {
     let beamformer = MockBeamformer {
         sensor_count: 8,
         sampling_rate: 10e6,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
     };
 
     assert_eq!(beamformer.sampling_rate(), 10e6);
-    assert_eq!(beamformer.sound_speed(), 1540.0);
+    assert_eq!(beamformer.sound_speed(), SOUND_SPEED_TISSUE);
 
     let focal = [0.0, 0.0, 0.02];
     let sensor = [0.001, 0.0, 0.0];
@@ -97,7 +97,7 @@ fn test_apodization_default() {
     let beamformer = MockBeamformer {
         sensor_count: 8,
         sampling_rate: 10e6,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
     };
 
     // Default apodization is uniform (1.0)
@@ -111,7 +111,7 @@ fn test_trait_object_compatibility() {
     let beamformer: Box<dyn TimeDomainBeamformer> = Box::new(MockBeamformer {
         sensor_count: 4,
         sampling_rate: 10e6,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
     });
 
     assert_eq!(beamformer.expected_sensor_count(), 4);

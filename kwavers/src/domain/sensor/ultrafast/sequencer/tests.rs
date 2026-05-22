@@ -1,8 +1,9 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use std::f64::consts::PI;
 
 fn sequencer_40mm() -> TransmissionSequencer {
-    TransmissionSequencer::new(1540.0, 0.040)
+    TransmissionSequencer::new(SOUND_SPEED_TISSUE, 0.040)
 }
 
 /// PRF_max = c / (2·z_max) = 1540 / 0.080 = 19 250 Hz.
@@ -12,7 +13,7 @@ fn sequencer_40mm() -> TransmissionSequencer {
 #[test]
 fn test_max_prf() {
     let seq = sequencer_40mm();
-    let expected = 1540.0 / 0.080;
+    let expected = SOUND_SPEED_TISSUE / 0.080;
     assert!(
         (seq.max_prf() - expected).abs() / expected < 1e-10,
         "PRF_max mismatch: {:.1} Hz expected {:.1} Hz",

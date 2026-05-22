@@ -229,7 +229,7 @@ impl MaterialPropertiesBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
     #[test]
     fn test_material_acoustic_only() {
@@ -271,7 +271,7 @@ mod tests {
     fn test_property_physical_bounds() {
         let props = CompositeMaterialProperties::builder()
             .acoustic(AcousticPropertyData {
-                density: 1000.0,
+                density: DENSITY_WATER_NOMINAL,
                 sound_speed: SOUND_SPEED_WATER_SIM,
                 absorption_coefficient: 0.5,
                 absorption_power: 1.1,
@@ -279,7 +279,7 @@ mod tests {
             })
             .build();
 
-        assert_eq!(props.acoustic.density, 1000.0);
+        assert_eq!(props.acoustic.density, DENSITY_WATER_NOMINAL);
         assert_eq!(props.acoustic.sound_speed, SOUND_SPEED_WATER_SIM);
     }
 }

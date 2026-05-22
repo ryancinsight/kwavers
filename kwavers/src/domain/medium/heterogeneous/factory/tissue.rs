@@ -3,7 +3,7 @@
 //! **Factory Pattern**: Encapsulated creation logic per Gang of Four
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE};
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
@@ -26,7 +26,7 @@ impl TissueFactory {
     pub fn create_tissue_medium(grid: &Grid) -> HeterogeneousMedium {
         // Core acoustic properties (Hamilton & Blackstock Table 8.1)
         let density = Array3::from_elem((grid.nx, grid.ny, grid.nz), DENSITY_TISSUE);
-        let sound_speed = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1540.0);
+        let sound_speed = Array3::from_elem((grid.nx, grid.ny, grid.nz), SOUND_SPEED_TISSUE);
         let viscosity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 2.5e-3);
 
         // Bubble dynamics parameters
@@ -90,7 +90,7 @@ impl TissueFactory {
         // Use physically consistent relationships:
         //   μ = ρ c_s^2,  K ≈ ρ c_p^2,  λ = K - 2μ/3
         let default_density: f64 = DENSITY_TISSUE;
-        let default_sound_speed: f64 = 1540.0; // compressional wave speed approximation
+        let default_sound_speed: f64 = SOUND_SPEED_TISSUE; // compressional wave speed approximation
         let default_bulk_modulus = default_density * default_sound_speed.powi(2);
 
         // Compute spatially varying shear modulus from shear wave speed field

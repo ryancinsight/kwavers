@@ -118,7 +118,7 @@ impl Default for KZKConfig {
             dz: 0.5e-3, // 0.5 mm
             dt: 10e-9,  // 10 ns
             nt: 1000,
-            c0: 1540.0, // water/tissue
+            c0: crate::core::constants::fundamental::SOUND_SPEED_TISSUE, // water/tissue
             rho0: 1000.0,
             b_over_a: 5.0, // B/A for water at 25°C (Beyer 1960)
             alpha0: 0.5,   // dB/cm/MHz

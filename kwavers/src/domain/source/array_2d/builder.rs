@@ -19,6 +19,7 @@
 //!     .unwrap();
 //! ```
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::{ApodizationType, TransducerArray2D, TransducerArray2DConfig};
 
 /// Builder for 2D transducer arrays
@@ -89,7 +90,7 @@ impl TransducerArray2DBuilder {
     #[must_use]
     pub fn with_frequency(mut self, frequency: f64) -> Self {
         // Adjust spacing based on wavelength if not explicitly set
-        let wavelength = 1540.0 / frequency; // Using default sound speed
+        let wavelength = SOUND_SPEED_TISSUE / frequency; // Using default sound speed
         let optimal_spacing = wavelength / 2.0;
 
         // Only update if current spacing is larger than optimal
@@ -242,7 +243,7 @@ mod tests {
         let array = TransducerArray2DBuilder::new()
             .with_elements(32)
             .with_spacing(0.3e-3)
-            .build(1540.0)
+            .build(SOUND_SPEED_TISSUE)
             .unwrap();
 
         assert_eq!(array.num_elements(), 32);
@@ -255,7 +256,7 @@ mod tests {
             .with_spacing(0.3e-3)
             .with_focus(20e-3)
             .with_steering(10.0)
-            .build(1540.0)
+            .build(SOUND_SPEED_TISSUE)
             .unwrap();
 
         assert!((array.focus_distance() - 20e-3).abs() < 1e-10);
@@ -267,7 +268,7 @@ mod tests {
         let array = TransducerArray2DBuilder::new()
             .with_elements(32)
             .with_frequency(2.5e6) // This should adjust spacing
-            .build(1540.0)
+            .build(SOUND_SPEED_TISSUE)
             .unwrap();
 
         // Should satisfy Nyquist criterion

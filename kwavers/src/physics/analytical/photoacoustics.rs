@@ -259,11 +259,12 @@ fn hb_poly(lam_nm: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use super::*;
 
     #[test]
     fn gruneisen_at_37c() {
-        let g = gruneisen_parameter_water(&[37.0]);
+        let g = gruneisen_parameter_water(&[BODY_TEMPERATURE_C]);
         // Expected ≈ 0.0043 + 0.0053*37 = 0.2004
         assert!((g[0] - 0.2004).abs() < 1e-8);
     }

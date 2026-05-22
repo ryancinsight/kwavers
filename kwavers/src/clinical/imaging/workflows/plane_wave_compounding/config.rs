@@ -1,5 +1,7 @@
 //! Configuration for plane wave compounding.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 /// Configuration for multi-angle plane wave compounding imaging.
 ///
 /// # References
@@ -41,7 +43,7 @@ impl Default for PlaneWaveCompoundingConfig {
             num_angles: 11,
             angle_range: 30.0,
             frequency: 5e6,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             aperture_size: 0.04,
             num_elements: 128,
             element_spacing: 0.000_312_5,

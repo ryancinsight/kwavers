@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 use super::*;
 use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopologyExt;
@@ -17,7 +17,7 @@ fn test_material_interface_coefficients() {
 
     let material_2 = AcousticPropertyData {
         density: 1600.0,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         absorption_coefficient: 0.5,
         absorption_power: 1.1,
         nonlinearity: 6.5,
@@ -63,7 +63,7 @@ fn test_material_interface_normal_incidence_water_tissue() {
 
     let material_tissue = AcousticPropertyData {
         density: DENSITY_TISSUE,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         absorption_coefficient: 0.5,
         absorption_power: 1.1,
         nonlinearity: 6.5,

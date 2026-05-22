@@ -33,7 +33,7 @@ fn create_test_128() -> (Grid, HomogeneousMedium) {
 fn create_test_256() -> (Grid, HomogeneousMedium) {
     let grid =
         Grid::new(256, 256, 64, 0.05e-3, 0.05e-3, 0.1e-3).expect("Valid grid dimensions");
-    let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, crate::core::constants::fundamental::SOUND_SPEED_TISSUE, 0.0, 0.0, &grid);
     (grid, medium)
 }
 

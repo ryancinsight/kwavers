@@ -205,13 +205,14 @@ mod tests {
             Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 0.001, 0.0, 0.0]).unwrap();
         let focal_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.02]).unwrap();
 
+        use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
         let result = beamform_cpu(
             &rf_data,
             &sensor_positions,
             &focal_points,
             None,
             10e6,
-            1540.0,
+            SOUND_SPEED_TISSUE,
         );
 
         let image = result.unwrap();

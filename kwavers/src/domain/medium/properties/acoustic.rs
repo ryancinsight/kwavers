@@ -39,7 +39,10 @@
 //! - `0.5 ≤ absorption_power ≤ 3.0` (physical range)
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
-use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::fundamental::{
+    DENSITY_LIVER, DENSITY_TISSUE, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
+    SOUND_SPEED_TISSUE,
+};
 use std::fmt;
 
 /// Canonical acoustic material properties
@@ -174,7 +177,7 @@ impl AcousticPropertyData {
     pub fn soft_tissue() -> Self {
         Self {
             density: DENSITY_TISSUE,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             absorption_coefficient: 0.5,
             absorption_power: 1.1,
             nonlinearity: 6.5,
@@ -191,8 +194,8 @@ impl AcousticPropertyData {
     #[must_use]
     pub fn liver() -> Self {
         Self {
-            density: DENSITY_BLOOD,
-            sound_speed: 1570.0,
+            density: DENSITY_LIVER,
+            sound_speed: SOUND_SPEED_LIVER,
             absorption_coefficient: 0.58,
             absorption_power: 1.1,
             nonlinearity: 6.8,
@@ -210,7 +213,7 @@ impl AcousticPropertyData {
     pub fn brain() -> Self {
         Self {
             density: 1040.0,
-            sound_speed: 1540.0,
+            sound_speed: SOUND_SPEED_TISSUE,
             absorption_coefficient: 0.69,
             absorption_power: 1.0,
             nonlinearity: 6.5,
@@ -228,7 +231,7 @@ impl AcousticPropertyData {
     pub fn kidney() -> Self {
         Self {
             density: DENSITY_TISSUE,
-            sound_speed: 1560.0,
+            sound_speed: SOUND_SPEED_KIDNEY,
             absorption_coefficient: 0.81,
             absorption_power: 1.1,
             nonlinearity: 6.7,
@@ -267,7 +270,7 @@ impl AcousticPropertyData {
     pub fn fat() -> Self {
         Self {
             density: 950.0,
-            sound_speed: 1450.0,
+            sound_speed: SOUND_SPEED_FAT,
             absorption_coefficient: 0.69,
             absorption_power: 1.0,
             nonlinearity: 10.0,
@@ -293,7 +296,7 @@ impl fmt::Display for AcousticPropertyData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
     #[test]
     fn test_acoustic_impedance() {
@@ -305,7 +308,7 @@ mod tests {
     #[test]
     fn test_acoustic_absorption() {
         let props = AcousticPropertyData {
-            density: 1000.0,
+            density: DENSITY_WATER_NOMINAL,
             sound_speed: SOUND_SPEED_WATER_SIM,
             absorption_coefficient: 0.5,
             absorption_power: 1.1,
@@ -323,13 +326,13 @@ mod tests {
     #[test]
     fn test_acoustic_validation() {
         // Negative density should fail
-        assert!(AcousticPropertyData::new(-1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0).is_err());
+        assert!(AcousticPropertyData::new(-DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0).is_err());
 
         // Invalid absorption power should fail
-        assert!(AcousticPropertyData::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 5.0, 5.0).is_err());
+        assert!(AcousticPropertyData::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 5.0, 5.0).is_err());
 
         // Valid parameters should succeed
-        let props = AcousticPropertyData::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0).unwrap();
+        let props = AcousticPropertyData::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0).unwrap();
         assert!(props.density > 0.0);
     }
 }

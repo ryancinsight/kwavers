@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::analysis::count_connected_components;
 use super::classify::{classify_vessels, principal_axis, vessel_neighbor_count};
 use super::frangi::{compute_frangi_response, symmetric_3x3_eigenvalues};
@@ -99,12 +100,13 @@ fn test_centerline_extracts_thin_vessel_axis() {
 
 #[test]
 fn test_doppler_velocity_formula() {
-    // v = f_d · c / (2 f₀ · cos θ) = 2000 * 1540 / (2 * 5_000_000 * 1.0)
+    // v = f_d · c / (2 f₀ · cos θ) = 2000 * SOUND_SPEED_TISSUE / (2 * 5_000_000 * 1.0)
     //   = 3_080_000 / 10_000_000 = 0.308 m/s
+    let expected_v = 2_000.0 * SOUND_SPEED_TISSUE / (2.0 * 5_000_000.0);
     let v =
-        VesselSegmentation::estimate_flow_velocity_from_doppler(2_000.0, 5_000_000.0, 1540.0, 0.0)
+        VesselSegmentation::estimate_flow_velocity_from_doppler(2_000.0, 5_000_000.0, SOUND_SPEED_TISSUE, 0.0)
             .unwrap();
-    assert!((v - 0.308).abs() < 1e-12, "expected 0.308 m/s, got {v}");
+    assert!((v - expected_v).abs() < 1e-12, "expected {expected_v} m/s, got {v}");
 }
 
 #[test]
@@ -113,13 +115,13 @@ fn test_doppler_velocity_invalid_inputs() {
     assert!(VesselSegmentation::estimate_flow_velocity_from_doppler(
         2000.0,
         5e6,
-        1540.0,
+        SOUND_SPEED_TISSUE,
         std::f64::consts::FRAC_PI_2
     )
     .is_err());
     // Negative frequency
     assert!(
-        VesselSegmentation::estimate_flow_velocity_from_doppler(2000.0, -5e6, 1540.0, 0.0).is_err()
+        VesselSegmentation::estimate_flow_velocity_from_doppler(2000.0, -5e6, SOUND_SPEED_TISSUE, 0.0).is_err()
     );
 }
 

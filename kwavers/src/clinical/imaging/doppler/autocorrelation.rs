@@ -18,6 +18,7 @@
 //! - Loupas, T. et al. (1995). "An axial velocity estimator for ultrasound blood flow imaging".
 //!   *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*, 42(4), 672-688.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{Array2, ArrayView3};
 use num_complex::Complex64;
@@ -52,7 +53,7 @@ impl Default for AutocorrelationConfig {
         Self {
             center_frequency: 5.0e6, // 5 MHz
             prf: 4e3,                // 4 kHz
-            speed_of_sound: 1540.0,  // m/s
+            speed_of_sound: SOUND_SPEED_TISSUE,  // m/s
             beam_angle: 0.0,         // Parallel to beam
             ensemble_size: 10,
             variance_threshold: 0.5, // Reject high-variance estimates
@@ -290,7 +291,7 @@ mod tests {
         let config = AutocorrelationConfig {
             center_frequency: 5.0e6,
             prf: 4e3,
-            speed_of_sound: 1540.0,
+            speed_of_sound: SOUND_SPEED_TISSUE,
             beam_angle: 0.0, // cos(0) = 1
             ..Default::default()
         };

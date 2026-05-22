@@ -2,6 +2,7 @@
 
 use super::config::UltrafastPlaneWaveConfig;
 use super::processor::UltrafastPlaneWave;
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use approx::assert_relative_eq;
 use ndarray::Array1;
 use std::f64::consts::PI;
@@ -11,7 +12,7 @@ fn test_plane_wave_transmission_delays() {
     let positions = vec![-0.002, -0.001, 0.0, 0.001, 0.002];
     let config = UltrafastPlaneWaveConfig {
         element_positions: positions,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         ..Default::default()
     };
     let pw = UltrafastPlaneWave::new(config);
@@ -26,7 +27,7 @@ fn test_plane_wave_transmission_delays() {
     let delays_5deg = pw.transmission_delays(theta).unwrap();
     assert_eq!(delays_5deg.len(), 5);
 
-    let expected_delay_per_mm = -theta.sin() / 1540.0;
+    let expected_delay_per_mm = -theta.sin() / SOUND_SPEED_TISSUE;
     assert_relative_eq!(
         delays_5deg[1] - delays_5deg[0],
         expected_delay_per_mm * 0.001,
@@ -39,7 +40,7 @@ fn test_beamforming_delays() {
     let positions = vec![-0.001, 0.0, 0.001];
     let config = UltrafastPlaneWaveConfig {
         element_positions: positions,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         ..Default::default()
     };
     let pw = UltrafastPlaneWave::new(config);
@@ -47,7 +48,7 @@ fn test_beamforming_delays() {
     let delays = pw.beamforming_delays(0.0, 0.02, 0.0).unwrap();
     assert_eq!(delays.len(), 3);
 
-    let expected = 0.02 / 1540.0;
+    let expected = 0.02 / SOUND_SPEED_TISSUE;
     for &delay in delays.iter() {
         assert_relative_eq!(delay, expected, epsilon = 1e-9);
     }
@@ -93,7 +94,7 @@ fn test_delay_surface() {
     let positions = vec![-0.001, 0.0, 0.001];
     let config = UltrafastPlaneWaveConfig {
         element_positions: positions,
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         ..Default::default()
     };
     let pw = UltrafastPlaneWave::new(config);
@@ -105,6 +106,6 @@ fn test_delay_surface() {
     assert_eq!(surface.dim(), (3, 6));
 
     let y = 0.01;
-    let expected_depth_delay = y / 1540.0;
+    let expected_depth_delay = y / SOUND_SPEED_TISSUE;
     assert_relative_eq!(surface[[1, 1]], expected_depth_delay, epsilon = 1e-9);
 }

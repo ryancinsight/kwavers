@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 
 #[test]
 fn test_shock_capture_creation() {
@@ -25,7 +26,7 @@ fn test_no_shock_detection_smooth_field() {
     }
 
     let result = capture
-        .detect_shock(&pressure, 0.001, 0.001, 1540.0, 1e6)
+        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, 1e6)
         .unwrap();
     assert!(result.max_gradient < config.gradient_threshold);
 }
@@ -46,7 +47,7 @@ fn test_shock_detection_steep_gradient() {
     }
 
     let result = capture
-        .detect_shock(&pressure, 0.001, 0.001, 1540.0, 1e6)
+        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, 1e6)
         .unwrap();
     assert!(result.shock_detected);
     assert!(result.max_gradient > 0.0);
@@ -65,7 +66,7 @@ fn test_artificial_viscosity_generation() {
     }
 
     let q_av = capture
-        .artificial_viscosity(&pressure, 0.001, 0.001, 1000.0, 1540.0)
+        .artificial_viscosity(&pressure, 0.001, 0.001, 1000.0, SOUND_SPEED_TISSUE)
         .unwrap();
     assert_eq!(q_av.dim(), (64, 64));
 }
@@ -83,7 +84,7 @@ fn test_shock_filter_application() {
     }
 
     let result = capture
-        .detect_shock(&pressure, 0.001, 0.001, 1540.0, 1e6)
+        .detect_shock(&pressure, 0.001, 0.001, SOUND_SPEED_TISSUE, 1e6)
         .unwrap();
 
     capture.shock_filter(&mut pressure, &result, 3).unwrap();

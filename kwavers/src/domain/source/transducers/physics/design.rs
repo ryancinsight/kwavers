@@ -6,6 +6,7 @@ use super::{
     BackingLayer, ElementGeometry, FrequencyResponse, MatchingLayer, PiezoMaterial,
     TransducerDirectivityPattern, TransducerSensitivity,
 };
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Complete transducer design specification
@@ -145,7 +146,7 @@ impl TransducerDesign {
     /// Calculate focal characteristics (if focused)
     #[must_use]
     pub fn focal_characteristics(&self, focal_length: f64) -> (f64, f64, f64) {
-        let wavelength = 1540.0 / self.frequency_response.center_frequency;
+        let wavelength = SOUND_SPEED_TISSUE / self.frequency_response.center_frequency;
         let aperture = self.geometry.width * 64.0; // Assume 64 element array
 
         // Focal zone length (depth of field)

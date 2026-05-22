@@ -110,6 +110,7 @@ impl TranscranialSafetyMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use ndarray::Array3;
 
     /// **Test: CEM43 dose rate at body temperature (37 °C)**
@@ -122,12 +123,12 @@ mod tests {
     #[test]
     fn test_cem43_dose_rate_at_body_temperature() {
         let mut monitor = TranscranialSafetyMonitor::new((1, 1, 1), 0.01, 650e3);
-        let temperature = Array3::from_elem((1, 1, 1), 37.0_f64);
+        let temperature = Array3::from_elem((1, 1, 1), BODY_TEMPERATURE_C);
         let pressure = Array3::zeros((1, 1, 1));
 
         monitor.update_fields(&temperature, &pressure, 1.0).unwrap();
 
-        let expected = 0.25_f64.powf(43.0 - 37.0); // 2.441e-4 CEM43/s
+        let expected = 0.25_f64.powf(43.0 - BODY_TEMPERATURE_C); // 2.441e-4 CEM43/s
         let actual = monitor.thermal_dose.dose_rate[[0, 0, 0]];
         let rel_err = (actual - expected).abs() / expected;
         assert!(

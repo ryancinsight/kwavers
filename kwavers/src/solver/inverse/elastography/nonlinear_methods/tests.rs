@@ -219,7 +219,7 @@ fn test_nonlinear_inversion_processor() {
 
     assert_eq!(processor.method(), NonlinearInversionMethod::HarmonicRatio);
     assert_eq!(processor.config().density, 1000.0);
-    assert_eq!(processor.config().acoustic_speed, 1540.0);
+    assert_eq!(processor.config().acoustic_speed, crate::core::constants::fundamental::SOUND_SPEED_TISSUE);
     assert_eq!(processor.config().shear_wave_speed, 3.0);
     assert_eq!(processor.config().excitation_frequency, 100.0);
     assert_eq!(processor.config().propagation_distance, 0.05);
