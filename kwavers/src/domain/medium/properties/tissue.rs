@@ -9,8 +9,8 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_TISSUE,
+    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_FAT,
+    SOUND_SPEED_KIDNEY, SOUND_SPEED_TISSUE,
 };
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
@@ -26,7 +26,7 @@ pub type TissueProperties = AcousticMaterialProperties;
 /// Temperature: 20°C (for comparison with literature)
 pub const WATER: TissueProperties = TissueProperties {
     sound_speed: 1480.0,
-    density: 998.2,
+    density: DENSITY_WATER,
     impedance: 1477336.0, // density * sound_speed = 998.2 * 1480
     absorption_coefficient: 0.002,
     absorption_exponent: 2.0,
@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn test_impedance_calculation() {
-        let expected_water = 998.2 * 1480.0;
+        let expected_water = DENSITY_WATER * 1480.0;
         assert!((WATER.impedance - expected_water).abs() < 1.0);
     }
 

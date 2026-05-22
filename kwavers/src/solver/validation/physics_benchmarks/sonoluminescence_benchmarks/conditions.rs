@@ -1,6 +1,6 @@
 //! Canonical SBSL parameter set (Brenner, Hilgenfeldt & Lohse 2002).
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER};
 
 /// Canonical SBSL parameter set from Brenner, Hilgenfeldt & Lohse (2002).
 ///
@@ -42,7 +42,7 @@ impl Default for BrennerSBSLConditions {
             temperature_k: 293.15,
             sigma: 0.0728,
             mu: 1.002e-3,
-            rho_l: 998.0,
+            rho_l: DENSITY_WATER,
             gamma: 1.4,   // adiabatic index for air (Yasui 1997 uses γ_eff ≈ 1.4)
             p_v: 2_340.0, // vapour pressure at 20°C [Pa]
             c_l: 1_485.0, // sound speed in water at 20°C [m/s]

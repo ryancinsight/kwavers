@@ -40,8 +40,8 @@
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
 use crate::core::constants::fundamental::{
-    DENSITY_LIVER, DENSITY_TISSUE, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
-    SOUND_SPEED_TISSUE,
+    DENSITY_LIVER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
+    SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
 };
 use std::fmt;
 
@@ -164,7 +164,7 @@ impl AcousticPropertyData {
     #[must_use]
     pub fn water() -> Self {
         Self {
-            density: 998.0,
+            density: DENSITY_WATER,
             sound_speed: 1481.0,
             absorption_coefficient: 0.002,
             absorption_power: 2.0,
@@ -301,7 +301,7 @@ mod tests {
     #[test]
     fn test_acoustic_impedance() {
         let water = AcousticPropertyData::water();
-        let expected_impedance = 998.0 * 1481.0; // ρc
+        let expected_impedance = DENSITY_WATER * 1481.0; // ρc
         assert!((water.impedance() - expected_impedance).abs() < 1.0);
     }
 

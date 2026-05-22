@@ -188,7 +188,7 @@ fn hybrid_config_from(config: &SolverConfiguration) -> HybridConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
+    use crate::core::constants::fundamental::{DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
     use crate::domain::medium::homogeneous::HomogeneousMedium;
 
     #[test]
@@ -212,13 +212,13 @@ mod tests {
     #[test]
     fn medium_descriptor_preserves_acoustic_values() {
         let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-        let medium = HomogeneousMedium::from_minimal(998.2, SOUND_SPEED_WATER, &grid);
+        let medium = HomogeneousMedium::from_minimal(DENSITY_WATER, SOUND_SPEED_WATER, &grid);
         let descriptor = MediumDescriptor {
             medium: &medium,
             grid: &grid,
         };
 
-        assert_eq!(descriptor.density(0.0, 0.0, 0.0), 998.2);
+        assert_eq!(descriptor.density(0.0, 0.0, 0.0), DENSITY_WATER);
         assert_eq!(descriptor.sound_speed(0.0, 0.0, 0.0), SOUND_SPEED_WATER);
         assert_eq!(descriptor.heterogeneity(), 0.0);
     }

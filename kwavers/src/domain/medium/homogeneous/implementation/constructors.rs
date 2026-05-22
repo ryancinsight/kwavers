@@ -1,8 +1,8 @@
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_AIR, SOUND_SPEED_BLOOD,
-    SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
+    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_AIR,
+    SOUND_SPEED_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K};
 use crate::core::constants::BLOOD_VISCOSITY_37C;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -30,10 +30,10 @@ impl HomogeneousMedium {
 
     /// Create a water medium with standard properties at 20°C
     pub fn water(grid: &Grid) -> Self {
-        let mut medium = Self::new(998.0, SOUND_SPEED_WATER, 0.01, 0.1, grid);
+        let mut medium = Self::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.01, 0.1, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;
-        medium.temperature = Array3::from_elem(shape, 293.15);
+        medium.temperature = Array3::from_elem(shape, ROOM_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, medium.density);
@@ -87,7 +87,7 @@ impl HomogeneousMedium {
             optical_absorption: 0.0,
             optical_scattering: 0.0,
             reference_frequency: 1e6,
-            temperature: Array3::from_elem((grid.nx, grid.ny, grid.nz), 293.15),
+            temperature: Array3::from_elem((grid.nx, grid.ny, grid.nz), ROOM_TEMPERATURE_K),
             bubble_radius: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             bubble_velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.204),
@@ -108,7 +108,7 @@ impl HomogeneousMedium {
         let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;
-        medium.temperature = Array3::from_elem(shape, 293.15);
+        medium.temperature = Array3::from_elem(shape, ROOM_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, density);

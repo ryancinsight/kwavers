@@ -41,7 +41,7 @@
 //! - `blood_perfusion ≥ 0` (if present)
 //! - `blood_specific_heat > 0` (if present)
 
-use crate::core::constants::fundamental::DENSITY_TISSUE;
+use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use std::fmt;
 
@@ -148,7 +148,7 @@ impl ThermalPropertyData {
         Self {
             conductivity: 0.598,
             specific_heat: SPECIFIC_HEAT_WATER,
-            density: 998.0,
+            density: DENSITY_WATER,
             blood_perfusion: None,
             blood_specific_heat: None,
         }
@@ -208,7 +208,7 @@ mod tests {
     fn test_thermal_diffusivity() {
         let water = ThermalPropertyData::water();
         let alpha = water.thermal_diffusivity();
-        let expected = 0.598 / (998.0 * SPECIFIC_HEAT_WATER);
+        let expected = 0.598 / (DENSITY_WATER * SPECIFIC_HEAT_WATER);
         assert!((alpha - expected).abs() < 1e-10);
     }
 
