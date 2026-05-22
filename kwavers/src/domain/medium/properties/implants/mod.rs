@@ -16,7 +16,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE};
 use super::material::AcousticMaterialProperties;
 
 #[cfg(test)]
@@ -188,7 +188,7 @@ pub const SILICONE_RUBBER: ImplantProperties = ImplantProperties {
 /// Used in artificial heart valves and flexible connectors
 pub const POLYURETHANE: ImplantProperties = ImplantProperties {
     sound_speed: 1890.0,
-    density: 1050.0,
+    density: DENSITY_TISSUE,
     impedance: 1_984_500.0,
     absorption_coefficient: 0.10,
     absorption_exponent: 1.1,

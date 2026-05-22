@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::DENSITY_BLOOD;
 use super::*;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -56,7 +57,7 @@ fn test_from_layers() {
 
     let layers = vec![
         (0.0, 0.005, 1500.0, 1000.0, 0.0, 0.0),
-        (0.005, 0.010, 1540.0, 1060.0, 0.5, 6.0),
+        (0.005, 0.010, 1540.0, DENSITY_BLOOD, 0.5, 6.0),
     ];
 
     let medium = HeterogeneousFactory::from_layers(&grid, &layers, 1e6);
@@ -64,7 +65,7 @@ fn test_from_layers() {
     assert_eq!(medium.sound_speed[[0, 0, 0]], 1500.0);
     assert_eq!(medium.density[[0, 0, 0]], 1000.0);
     assert_eq!(medium.sound_speed[[0, 0, 9]], 1540.0);
-    assert_eq!(medium.density[[0, 0, 9]], 1060.0);
+    assert_eq!(medium.density[[0, 0, 9]], DENSITY_BLOOD);
 }
 
 #[test]

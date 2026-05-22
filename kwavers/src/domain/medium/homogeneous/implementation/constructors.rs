@@ -44,7 +44,7 @@ impl HomogeneousMedium {
 
     /// Create a blood medium with standard properties at 37°C
     pub fn blood(grid: &Grid) -> Self {
-        let mut medium = Self::new(1060.0, 1570.0, 0.15, 0.5, grid);
+        let mut medium = Self::new(DENSITY_BLOOD, 1570.0, 0.15, 0.5, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);

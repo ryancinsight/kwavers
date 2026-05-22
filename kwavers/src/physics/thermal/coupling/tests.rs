@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::DENSITY_TISSUE;
 use super::*;
 use ndarray::Array3;
 
@@ -24,7 +25,7 @@ fn test_temperature_coefficients_soft_tissue() {
 
     // Base properties at 37°C
     let c0 = 1540.0;
-    let rho0 = 1050.0;
+    let rho0 = DENSITY_TISSUE;
     let alpha0 = 0.5;
 
     // At 40°C (3°C higher)
@@ -42,7 +43,7 @@ fn test_temperature_coefficients_soft_tissue() {
 
 #[test]
 fn test_acoustic_streaming_velocity() {
-    let streaming = AcousticStreaming::new(1e3, 1500.0, 1050.0); // 1 kW/m²
+    let streaming = AcousticStreaming::new(1e3, 1500.0, DENSITY_TISSUE); // 1 kW/m²
     let v = streaming.velocity();
     assert!(v > 0.0);
 }
@@ -53,7 +54,7 @@ fn test_nonlinear_heating() {
         5.0,    // B/A = 5
         1e5,    // 100 kPa
         1500.0, // m/s
-        1050.0, // kg/m³
+        DENSITY_TISSUE, // kg/m³
         1.0e6,  // 1 MHz
     );
     let power = nl.power();
@@ -66,11 +67,11 @@ fn test_nonlinear_heating() {
 #[test]
 fn test_nonlinear_regime_detection() {
     // Linear regime
-    let nl_linear = NonlinearHeating::new(5.0, 1e4, 1500.0, 1050.0, 1.0e6);
+    let nl_linear = NonlinearHeating::new(5.0, 1e4, 1500.0, DENSITY_TISSUE, 1.0e6);
     assert!(!nl_linear.is_nonlinear_significant());
 
     // Nonlinear regime
-    let nl_nonlinear = NonlinearHeating::new(5.0, 5e5, 1500.0, 1050.0, 1.0e6);
+    let nl_nonlinear = NonlinearHeating::new(5.0, 5e5, 1500.0, DENSITY_TISSUE, 1.0e6);
     assert!(nl_nonlinear.is_nonlinear_significant());
 }
 
@@ -97,7 +98,7 @@ fn test_coupling_temperature_effects_on_properties() {
 
     let c0 = 1540.0;
     let c_hot = coupling.sound_speed_at_temperature(c0, 45.0, 37.0);
-    let rho0 = 1050.0;
+    let rho0 = DENSITY_TISSUE;
     let rho_hot = coupling.density_at_temperature(rho0, 45.0, 37.0);
 
     // Temperature increases both sound speed and decreases density

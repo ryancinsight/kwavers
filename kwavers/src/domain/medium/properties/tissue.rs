@@ -8,7 +8,7 @@
 //! Temperature: 37°C (body temperature)
 //! Pressure: 1 atm unless otherwise noted
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE};
 use super::material::AcousticMaterialProperties;
 
 /// Tissue material properties type alias
@@ -74,7 +74,7 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
 /// Source: Duck (1990), Table 3.3
 pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
     sound_speed: 1545.0,
-    density: 1050.0,
+    density: DENSITY_TISSUE,
     impedance: 1622250.0,
     absorption_coefficient: 0.7,
     absorption_exponent: 1.0,
@@ -154,7 +154,7 @@ pub const LIVER: TissueProperties = TissueProperties {
 /// Source: Duck (1990), Table 3.3
 pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     sound_speed: 1560.0,
-    density: 1050.0,
+    density: DENSITY_TISSUE,
     impedance: 1638000.0,
     absorption_coefficient: 0.5,
     absorption_exponent: 1.0,
@@ -204,7 +204,7 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
 /// Blood (37°C)
 pub const BLOOD: TissueProperties = TissueProperties {
     sound_speed: 1584.0,
-    density: 1060.0,
+    density: DENSITY_BLOOD,
     impedance: 1679040.0,
     absorption_coefficient: 0.15,
     absorption_exponent: 1.0,

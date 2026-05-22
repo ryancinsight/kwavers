@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::DENSITY_BLOOD;
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
     core::CoreMedium, elastic::ElasticProperties, viscous::ViscousProperties,
@@ -20,7 +21,7 @@ fn test_blood_properties() {
     let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
     let blood = HomogeneousMedium::blood(&grid);
 
-    assert_eq!(blood.density(0, 0, 0), 1060.0);
+    assert_eq!(blood.density(0, 0, 0), DENSITY_BLOOD);
     assert_eq!(blood.sound_speed(0, 0, 0), 1570.0);
     assert_eq!(blood.viscosity(0.0, 0.0, 0.0, &grid), 3.5e-3);
 }

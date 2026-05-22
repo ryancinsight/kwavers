@@ -14,7 +14,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE};
 use super::material::AcousticMaterialProperties;
 
 /// Fluid material properties type alias
@@ -54,7 +54,7 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
 /// Contains red blood cells affecting acoustic properties
 pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     sound_speed: 1557.0,
-    density: 1060.0,
+    density: DENSITY_BLOOD,
     impedance: 1650420.0,
     absorption_coefficient: 0.025,
     absorption_exponent: 1.3,
@@ -237,7 +237,7 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
 /// Water-based carrier with suspended nanoparticles for theranostics
 pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
     sound_speed: 1490.0,
-    density: 1050.0,
+    density: DENSITY_TISSUE,
     impedance: 1563450.0,
     absorption_coefficient: 0.03,
     absorption_exponent: 1.2,

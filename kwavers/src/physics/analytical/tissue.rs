@@ -4,6 +4,7 @@
 //! parameters, power-law tissue absorption, Kramers–Kronig dispersion, and
 //! a canonical tissue-property database.
 
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
 use std::f64::consts::PI;
 
 // ─── Water properties ─────────────────────────────────────────────────────────
@@ -160,13 +161,13 @@ pub fn tissue_properties(tissue: &str) -> (f64, f64, f64, f64, f64) {
     // (c [m/s], rho [kg/m3], alpha0 [dB/cm/MHz^y], y, B/A)
     match tissue {
         "water" => (1482.0, 998.0, 0.002, 2.0, 5.2),
-        "liver" => (1578.0, 1060.0, 0.5, 1.05, 7.6),
-        "muscle" => (1580.0, 1050.0, 0.57, 1.0, 7.4),
+        "liver" => (1578.0, DENSITY_BLOOD, 0.5, 1.05, 7.6),
+        "muscle" => (1580.0, DENSITY_TISSUE, 0.57, 1.0, 7.4),
         "fat" => (1450.0, 950.0, 0.48, 1.0, 10.0),
         "skull" => (2900.0, 1900.0, 13.0, 1.2, 12.0),
-        "blood" => (1584.0, 1050.0, 0.14, 1.21, 6.1),
+        "blood" => (1584.0, DENSITY_BLOOD, 0.14, 1.21, 6.1),
         "brain" => (1560.0, 1040.0, 0.43, 1.3, 6.8),
-        "kidney" => (1560.0, 1050.0, 1.0, 1.0, 7.8),
+        "kidney" => (1560.0, DENSITY_TISSUE, 1.0, 1.0, 7.8),
         "cartilage" => (1700.0, 1100.0, 2.0, 1.5, 8.5),
         _ => (1540.0, 1000.0, 0.5, 1.0, 6.0),
     }

@@ -41,6 +41,7 @@
 //! - `blood_perfusion ≥ 0` (if present)
 //! - `blood_specific_heat > 0` (if present)
 
+use crate::core::constants::fundamental::DENSITY_TISSUE;
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use std::fmt;
 
@@ -159,7 +160,7 @@ impl ThermalPropertyData {
         Self {
             conductivity: 0.5,
             specific_heat: 3600.0,
-            density: 1050.0,
+            density: DENSITY_TISSUE,
             blood_perfusion: Some(0.5),
             blood_specific_heat: Some(3617.0),
         }
@@ -200,6 +201,7 @@ impl fmt::Display for ThermalPropertyData {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::DENSITY_TISSUE;
     use super::*;
 
     #[test]
@@ -222,10 +224,10 @@ mod tests {
     #[test]
     fn test_thermal_validation() {
         // Negative conductivity should fail
-        assert!(ThermalPropertyData::new(-0.5, 3600.0, 1050.0, None, None).is_err());
+        assert!(ThermalPropertyData::new(-0.5, 3600.0, DENSITY_TISSUE, None, None).is_err());
 
         // Valid parameters should succeed
-        let tp = ThermalPropertyData::new(0.5, 3600.0, 1050.0, Some(0.5), Some(3617.0)).unwrap();
+        let tp = ThermalPropertyData::new(0.5, 3600.0, DENSITY_TISSUE, Some(0.5), Some(3617.0)).unwrap();
         assert!(tp.conductivity > 0.0);
     }
 }

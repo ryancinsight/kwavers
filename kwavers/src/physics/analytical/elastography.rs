@@ -151,13 +151,14 @@ pub fn mre_displacement_field(
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::DENSITY_BLOOD;
     use super::*;
 
     #[test]
     fn shear_wave_speed_elastic() {
         // Liver-like: μ = 2000 Pa, ρ = 1060 kg/m³ → c_s ≈ 1.37 m/s
-        let cs = shear_wave_speed(2000.0, 1060.0);
-        assert!((cs - (2000.0_f64 / 1060.0).sqrt()).abs() < 1e-10);
+        let cs = shear_wave_speed(2000.0, DENSITY_BLOOD);
+        assert!((cs - (2000.0_f64 / DENSITY_BLOOD).sqrt()).abs() < 1e-10);
     }
 
     #[test]
@@ -180,7 +181,7 @@ mod tests {
     #[test]
     fn voigt_dispersion_increases_with_frequency() {
         let f = vec![10.0, 100.0, 1000.0];
-        let cs = voigt_shear_wave_dispersion(&f, 2000.0, 5.0, 1060.0);
+        let cs = voigt_shear_wave_dispersion(&f, 2000.0, 5.0, DENSITY_BLOOD);
         assert!(cs[0] <= cs[1] && cs[1] <= cs[2]);
     }
 

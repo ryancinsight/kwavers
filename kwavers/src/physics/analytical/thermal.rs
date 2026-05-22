@@ -159,6 +159,7 @@ pub fn gaussian_power_deposition_2d(
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::DENSITY_BLOOD;
     use super::*;
 
     #[test]
@@ -168,10 +169,10 @@ mod tests {
             10.0,
             1e-6,
             0.5,
-            1060.0,
+            DENSITY_BLOOD,
             3600.0,
             5.0,
-            1060.0,
+            DENSITY_BLOOD,
             3770.0,
             37.0,
         );
@@ -182,7 +183,7 @@ mod tests {
     fn bioheat_monotone_increasing() {
         let tvec: Vec<f64> = (0..10).map(|i| i as f64 * 0.1).collect();
         let temp = bioheat_focal_temperature_rise(
-            &tvec, 10.0, 1e-6, 0.5, 1060.0, 3600.0, 5.0, 1060.0, 3770.0, 37.0,
+            &tvec, 10.0, 1e-6, 0.5, DENSITY_BLOOD, 3600.0, 5.0, DENSITY_BLOOD, 3770.0, 37.0,
         );
         for i in 1..temp.len() {
             assert!(
@@ -204,10 +205,10 @@ mod tests {
             10.0,
             1e-6,
             0.5,
-            1060.0,
+            DENSITY_BLOOD,
             3600.0,
             5.0,
-            1060.0,
+            DENSITY_BLOOD,
             3770.0,
             37.0,
         );
@@ -219,10 +220,10 @@ mod tests {
             10.0,
             1e-6,
             0.5,
-            1060.0,
+            DENSITY_BLOOD,
             3600.0,
             5.0,
-            1060.0,
+            DENSITY_BLOOD,
             3770.0,
             37.0,
         );
@@ -239,7 +240,7 @@ mod tests {
     fn gaussian_deposition_peak_at_focus() {
         let r = vec![0.0];
         let z: Vec<f64> = vec![-5e-3, 0.0, 5e-3];
-        let q = gaussian_power_deposition_2d(&r, &z, 1e6, 0.0, 1e6, 1500.0, 1060.0, 1.0, 1e-3);
+        let q = gaussian_power_deposition_2d(&r, &z, 1e6, 0.0, 1e6, 1500.0, DENSITY_BLOOD, 1.0, 1e-3);
         // Q at focus (z=0) should exceed Q at z=±5mm
         assert!(q[1] > q[0] && q[1] > q[2]);
     }

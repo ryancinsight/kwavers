@@ -248,6 +248,7 @@ impl Default for NonlinearInversionConfig {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_WATER_SIM};
     use super::*;
 
     #[test]
@@ -261,10 +262,10 @@ mod tests {
     #[test]
     fn test_shear_wave_config_builder() {
         let config = ShearWaveInversionConfig::new(InversionMethod::PhaseGradient)
-            .with_density(1050.0)
+            .with_density(DENSITY_TISSUE)
             .with_frequency(150.0);
 
-        assert_eq!(config.density, 1050.0);
+        assert_eq!(config.density, DENSITY_TISSUE);
         assert_eq!(config.frequency, 150.0);
         assert!(matches!(config.method, InversionMethod::PhaseGradient));
     }
@@ -303,11 +304,11 @@ mod tests {
     #[test]
     fn test_nonlinear_config_builder() {
         let config = NonlinearInversionConfig::new(NonlinearInversionMethod::NonlinearLeastSquares)
-            .with_tissue_properties(1050.0, 1500.0)
+            .with_tissue_properties(DENSITY_TISSUE, SOUND_SPEED_WATER_SIM)
             .with_convergence(200, 1e-8);
 
-        assert_eq!(config.density, 1050.0);
-        assert_eq!(config.acoustic_speed, 1500.0);
+        assert_eq!(config.density, DENSITY_TISSUE);
+        assert_eq!(config.acoustic_speed, SOUND_SPEED_WATER_SIM);
         assert_eq!(config.max_iterations, 200);
         assert_eq!(config.tolerance, 1e-8);
     }

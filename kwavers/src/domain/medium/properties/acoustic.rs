@@ -39,6 +39,7 @@
 //! - `0.5 ≤ absorption_power ≤ 3.0` (physical range)
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
 use std::fmt;
 
 /// Canonical acoustic material properties
@@ -172,7 +173,7 @@ impl AcousticPropertyData {
     #[must_use]
     pub fn soft_tissue() -> Self {
         Self {
-            density: 1050.0,
+            density: DENSITY_TISSUE,
             sound_speed: 1540.0,
             absorption_coefficient: 0.5,
             absorption_power: 1.1,
@@ -190,7 +191,7 @@ impl AcousticPropertyData {
     #[must_use]
     pub fn liver() -> Self {
         Self {
-            density: 1060.0,
+            density: DENSITY_BLOOD,
             sound_speed: 1570.0,
             absorption_coefficient: 0.58,
             absorption_power: 1.1,
@@ -226,7 +227,7 @@ impl AcousticPropertyData {
     #[must_use]
     pub fn kidney() -> Self {
         Self {
-            density: 1050.0,
+            density: DENSITY_TISSUE,
             sound_speed: 1560.0,
             absorption_coefficient: 0.81,
             absorption_power: 1.1,
