@@ -2,7 +2,7 @@
 
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{DENSITY_WATER, SOUND_SPEED_WATER};
-use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use crate::core::constants::thermodynamic::{ROOM_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use serde::{Deserialize, Serialize};
 
 /// Stokes absorption parameters for viscous fluids
@@ -98,7 +98,7 @@ impl StokesAbsorption {
         let params = StokesParameters {
             viscosity,
             bulk_viscosity: viscosity * 2.8, // Approximate ratio for water
-            thermal_conductivity: 0.598 * 0.003f64.mul_add(t - 20.0, 1.0),
+            thermal_conductivity: THERMAL_CONDUCTIVITY_WATER * 0.003f64.mul_add(t - ROOM_TEMPERATURE_C, 1.0),
             specific_heat_p: SPECIFIC_HEAT_WATER,
             specific_heat_v: SPECIFIC_HEAT_WATER,
             density,

@@ -5,13 +5,14 @@ use crate::core::constants::acoustic_parameters::{
 };
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_BREAST_FAT, DENSITY_FAT, DENSITY_LIVER,
-    DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN,
-    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
-    SOUND_SPEED_WATER,
+    B_OVER_A_BLOOD, B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER,
+    B_OVER_A_MUSCLE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_BREAST_FAT, DENSITY_FAT,
+    DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_BLOOD,
+    SOUND_SPEED_BRAIN, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
+    SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
-use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use crate::core::constants::DB_TO_NP;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -144,7 +145,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
             DENSITY_WATER_NOMINAL,
             SOUND_SPEED_WATER,
             5.2,
-            0.598,
+            THERMAL_CONDUCTIVITY_WATER,
             SPECIFIC_HEAT_WATER,
         )
         .with_optical(4.0, 1.0), // Water: μ_a≈0.04 cm⁻¹, μ_s≈0.01 cm⁻¹
@@ -152,37 +153,37 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
 
     map.insert(
         AbsorptionTissueType::Blood,
-        AbsorptionTissueProperties::new(0.18, 1.21, DENSITY_BLOOD, SOUND_SPEED_BLOOD, 6.1, 0.52, 3617.0)
+        AbsorptionTissueProperties::new(0.18, 1.21, DENSITY_BLOOD, SOUND_SPEED_BLOOD, B_OVER_A_BLOOD, 0.52, 3617.0)
             .with_optical(230.0, 20000.0), // Blood: μ_a≈2.3 cm⁻¹, μ_s≈200 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Brain,
-        AbsorptionTissueProperties::new(0.85, 1.21, DENSITY_BRAIN, SOUND_SPEED_BRAIN, 6.6, 0.51, 3630.0)
+        AbsorptionTissueProperties::new(0.85, 1.21, DENSITY_BRAIN, SOUND_SPEED_BRAIN, B_OVER_A_BRAIN, 0.51, 3630.0)
             .with_optical(20.0, 10000.0), // Brain: μ_a≈0.2 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Fat,
-        AbsorptionTissueProperties::new(0.63, 1.1, DENSITY_FAT, 1450.0, 10.0, 0.21, 2348.0)
+        AbsorptionTissueProperties::new(0.63, 1.1, DENSITY_FAT, 1450.0, B_OVER_A_FAT, 0.21, 2348.0)
             .with_optical(40.0, 15000.0), // Fat: μ_a≈0.4 cm⁻¹, μ_s≈150 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Muscle,
-        AbsorptionTissueProperties::new(1.3, 1.1, DENSITY_MUSCLE, SOUND_SPEED_MUSCLE, 7.4, 0.49, 3421.0)
+        AbsorptionTissueProperties::new(1.3, 1.1, DENSITY_MUSCLE, SOUND_SPEED_MUSCLE, B_OVER_A_MUSCLE, 0.49, 3421.0)
             .with_optical(30.0, 10000.0), // Muscle: μ_a≈0.3 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Liver,
-        AbsorptionTissueProperties::new(0.94, 1.11, DENSITY_LIVER, SOUND_SPEED_LIVER, 7.6, 0.52, 3540.0)
+        AbsorptionTissueProperties::new(0.94, 1.11, DENSITY_LIVER, SOUND_SPEED_LIVER, B_OVER_A_LIVER, 0.52, 3540.0)
             .with_optical(70.0, 10000.0), // Liver: μ_a≈0.7 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
     map.insert(
         AbsorptionTissueType::Kidney,
-        AbsorptionTissueProperties::new(1.0, 1.09, DENSITY_TISSUE, SOUND_SPEED_KIDNEY, 7.4, 0.53, 3763.0)
+        AbsorptionTissueProperties::new(1.0, 1.09, DENSITY_TISSUE, SOUND_SPEED_KIDNEY, B_OVER_A_KIDNEY, 0.53, 3763.0)
             .with_optical(50.0, 12000.0), // Kidney: μ_a≈0.5 cm⁻¹, μ_s≈120 cm⁻¹
     );
 
