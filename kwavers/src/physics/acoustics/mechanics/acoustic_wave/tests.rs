@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::B_OVER_A_WATER;
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
@@ -135,7 +136,7 @@ fn compute_max_stable_timestep_uses_minimum_spacing_for_anisotropic_grid() {
 
 /// `compute_nonlinearity_coefficient` computes β = 1 + B/(2A).
 ///
-/// For water: B/A = 5.0 (default) → β = 1 + 5/2 = 3.5.
+/// For water: B/A = B_OVER_A_WATER = 5.2 (Duck 1990 Table 4.16) → β = 1 + 5.2/2 = 3.6.
 #[test]
 fn compute_nonlinearity_coefficient_matches_ba_formula() {
     use crate::domain::medium::HomogeneousMedium;
@@ -153,10 +154,11 @@ fn compute_nonlinearity_coefficient_matches_ba_formula() {
         (beta - expected).abs() < 1e-15,
         "β = {beta} must equal 1 + B/(2A) = {expected}"
     );
-    // For water B/A = 5.0 → β = 3.5
+    // B/A = B_OVER_A_WATER (5.2 at 20°C, Duck 1990 Table 4.16) → β = 3.6
+    let expected_beta = 1.0 + B_OVER_A_WATER / 2.0;
     assert!(
-        (beta - 3.5).abs() < 0.1,
-        "β for water must be ~3.5 (got {beta})"
+        (beta - expected_beta).abs() < 1e-10,
+        "β for water must equal 1 + B_OVER_A_WATER/2 = {expected_beta:.6} (got {beta})"
     );
     assert!(
         beta > 1.0,
