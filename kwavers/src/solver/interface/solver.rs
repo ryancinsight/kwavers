@@ -64,6 +64,23 @@ pub trait Solver: Debug + Send + Sync {
     /// Get the current pressure field
     fn pressure_field(&self) -> &ndarray::Array3<f64>;
 
+    /// Owned snapshot of the recorded sensor pressure history, if the solver
+    /// has been configured with a sensor mask or sensor set.
+    ///
+    /// Shape `(N_receivers, N_time_samples)` matching the per-solver sensor
+    /// recorder. Returns `None` when no sensor is configured or no samples
+    /// have been recorded yet. Default impl returns `None` so solvers without
+    /// integrated sensor recording can satisfy the trait without behavioral
+    /// change.
+    ///
+    /// FWI / RTM drivers consume this through trait dispatch instead of
+    /// downcasting to the concrete solver type. Allocating once at the end of
+    /// a run is acceptable; callers that want zero-copy access should hold a
+    /// concrete-typed reference and use the inherent view accessors.
+    fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
+        None
+    }
+
     /// Get the current velocity fields
     fn velocity_fields(
         &self,
