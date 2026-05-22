@@ -1,5 +1,78 @@
 # Backlog / Strategy
 
+## DG CPML finite-3D closure (2026-05-21)
+- **[done] [patch]** New `solver::forward::pstd::dg::cpml` module: Roden-Gedney
+  profile + Lazarov-Warburton joint-stepped auxiliary `ψ` ODE for the tensor
+  acoustic DG solver. `DgCpmlConfig` on `DGConfig` gates the path; the
+  standard non-CPML path is bit-for-bit unchanged. Water-tank example gains a
+  `DG-3D-CPML` row matching DG-2D / DG-3D to L2 ≈ 7.4e-4 (corr 0.999999) and
+  reproducing FDTD / PSTD CPML pairwise metrics. 24 new CPML tests pass;
+  pre-existing 45 DG tests untouched.
+
+## Session 3 closure summary — Ali 2025 replication on cleaned foundation (2026-05-21)
+
+### Architectural cleanups delivered
+- **T17a/T17b**: `HelmholtzForwardOperator` trait + 3 impls in
+  `solver::inverse::fwi::frequency_domain::operator`. `Config.forward_operator:
+  Arc<dyn HelmholtzForwardOperator>` replaces the old `PropagationModel` enum
+  end-to-end (kwavers + pykwavers; `propagation_model` kwarg preserved in
+  Python).
+- **T13a/T13b-Phase-1/2/3 + T13c**: `TransducerGeometry` trait,
+  `LinearBornInversionConfig`, `VolumeVoxel`, `dense`, `schedule`,
+  `enhancement`, `regularization`, `pcg`, `volume_operator` all hoisted from
+  `clinical::imaging::reconstruction::transcranial_ust` to
+  `solver::inverse::linear_born_inversion`. `RingPoint` unified with
+  `ElementPosition`. `MultiRowRingArray` and `TranscranialBowlGeometry` both
+  impl `TransducerGeometry`.
+- **T15/T16**: `solver::inverse::seismic::brain_helmet` relocated to
+  `clinical::imaging::reconstruction::transcranial_ust`. FWI A namespace
+  relocated `solver::inverse::seismic::fwi` →
+  `solver::inverse::fwi::time_domain`. Parallel FWI B stack deleted
+  (~1500 LOC, 0 external consumers).
+- **T19a / T19b-slice-1**: `Solver::step_forward` added to the unified trait
+  with default `self.run(1)` and concrete overrides on FDTD/PSTD/Hybrid; FWI
+  A's hot loops now read `pressure_field()` through trait dispatch instead of
+  the previous `solver.fields.p` direct field access.
+- **T14**: `pykwavers::seismic_bindings` → `imaging_bindings`;
+  `run_seismic_helmet_fwi_*` → `run_transcranial_ust_*_inversion_from_ritk_ct`.
+- **T24**: rand 0.9 `Rng` trait import fix across ritk-core noise.rs + 7
+  kwavers sites (`rng.random()` / `rng.random_range(...)` need explicit
+  `use rand::Rng;` for method-resolution).
+
+### Ali 2025 replication delivered
+- **T6/T7/T8/T9 closed**: PyO3 surface
+  (`pykwavers::breast_fwi_bindings::*`, ~1200 LOC across 6 submodules) + PSTD
+  data-gen pipeline + replication driver
+  (`pykwavers/examples/replicate_ali2025_breast_fwi.py` + 8-module
+  `ali2025_breast_fwi/` helper package) + Table 1 parity scaffold with
+  configurable thresholds.
+- **T27 executed**: maturin develop --release succeeded in 4m55s after the
+  Phase-3 refactors; minimum-scale replication ran end-to-end in ~9 s with
+  full diagnostic JSON output. Windows DLL workaround: `cp
+  /d/miniforge3/python3.dll /d/miniforge3/libpython3.dll` +
+  `os.add_dll_directory('D:/miniforge3')` before import.
+- **T30 executed**: progressive scale-up rungs 0/1b/3 confirmed rank scaling
+  (0.012 → 0.023 → 0.469 informative-DOF ratio with 1, 2, 16 transmitters).
+  At 0.47 rank ratio the system moves out of formally rank-limited regime;
+  remaining reconstruction-quality gap (RMSE ~40 m/s, PCC ~0 at min scale)
+  is FWI-iteration-limited (paper uses 5 × 13 = 65 outer passes).
+- **Compute extrapolation**: paper-scale CPU is ~38 h at 16³ grid up to
+  multi-week at paper 0.4 mm 3-D grid. GPU PSTD wiring (T31) brings the
+  forward-sim phase to ~4–8 h; CBS frequency-domain inversion remains
+  CPU-bound.
+
+### Open architectural items
+- **T10/T19b-slice-2..N**: FWI A factory dispatch via `SolverType` — Solver
+  trait already exposes `step_forward` (T19a); remaining work is CPML →
+  config-time hoist, sensor recording → FWI-internal, `build_fdtd_solver_for_forward`
+  return type → `Box<dyn Solver>`, PSTD adjoint reciprocity verification.
+- **T31**: route `breast_ust_fwi::dataset` PSTD construction through
+  `SimulationSolverFactory::create_solver(SolverType::PstdGpu, ...)`. Blocked
+  on `GpuPstdSolver` not implementing `Solver` trait + factory not accepting
+  `GridSource` at construction.
+- **Paper-scale Ali run**: long-lived background job; infrastructure ready,
+  compute-bound only.
+
 ## Architectural Cleanup — Session 2 closures (2026-05-20)
 - **[minor] closed** CBS forward + adjoint kernel at
   `solver::inverse::fwi::frequency_domain::cbs` (Osnabrugge 2016).

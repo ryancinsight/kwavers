@@ -10,7 +10,10 @@ use kwavers::solver::forward::pstd::dg::dg_solver::acoustic::{
     AcousticDg1DWorkspace, AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR,
 };
 use kwavers::solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
-use kwavers::solver::forward::pstd::dg::{DGConfig, DGSolver, DgBoundaryCondition};
+use kwavers::solver::forward::pstd::dg::{
+    DGConfig, DGSolver, DgBoundaryCondition, DgCpmlAxis, DgCpmlConfig, DgCpmlMemoryWorkspace,
+    DgCpmlProfiles,
+};
 use kwavers::solver::forward::pstd::PSTDSolver;
 use kwavers::solver::interface::solver::Solver;
 use ndarray::Array1;
@@ -31,6 +34,7 @@ pub fn run_solver_fields() -> Result<Vec<SolverField>> {
         run_pstd()?,
         run_dg_tensor_field("DG-2D", 1)?,
         run_dg_tensor_field("DG-3D", physics::NZ)?,
+        run_dg_tensor_field_with_cpml("DG-3D-CPML", physics::NZ)?,
     ])
 }
 
@@ -179,6 +183,97 @@ fn run_dg_tensor_field(name: &'static str, nz: usize) -> Result<SolverField> {
                 physics::RHO0,
                 dt_sub,
                 &mut workspace,
+                t,
+                |stage_t, rhs| apply_dg_tensor_source_rhs(rhs, &sources, stage_t),
+            )?;
+        }
+        if (physics::GATE_START..=physics::GATE_END).contains(&step) {
+            solver.project_acoustic_tensor_pressure_to_uniform_grid(&state, &mut pressure)?;
+            update_peak(name, &mut peak, &pressure);
+        }
+    }
+
+    Ok(SolverField {
+        name,
+        normalized_peak: super::metrics::normalize_map(&peak),
+        elapsed: start.elapsed(),
+    })
+}
+
+fn run_dg_tensor_field_with_cpml(name: &'static str, nz: usize) -> Result<SolverField> {
+    // Non-slab finite 3-D water-tank closure with CPML in x and y. The z axis
+    // has only 1 DG element (nz == 4 grid points, n_nodes == 4), too thin for
+    // a graded CPML strip, so it keeps the absorbing-characteristic exterior
+    // state — exact for normally incident plane waves on the source-invariant
+    // z direction.
+    let grid = Arc::new(Grid::new(
+        physics::NX,
+        physics::NY,
+        nz,
+        physics::DX,
+        physics::DX,
+        physics::DX,
+    )?);
+    let n_nodes = DG_TENSOR_POLYNOMIAL_ORDER + 1;
+    let pml_elements = physics::PML.div_ceil(n_nodes);
+    let cpml_cfg = DgCpmlConfig::with_axes(
+        DgCpmlAxis::standard(pml_elements),
+        DgCpmlAxis::standard(pml_elements),
+        DgCpmlAxis::DISABLED,
+    );
+    let config = DGConfig {
+        polynomial_order: DG_TENSOR_POLYNOMIAL_ORDER,
+        sound_speed: physics::C0,
+        // x, y: absorbing characteristic + CPML layer (finite open boundary).
+        // z: periodic (NZ == 4 grid points → 1 DG element along z, effectively
+        // a thin slab; absorbing characteristic on the single element would
+        // dampen the z-invariant mode the focused-source produces, distorting
+        // the focal field. Periodic z matches the existing DG-3D reference run
+        // and the FDTD/PSTD slab convention.)
+        boundary_conditions: [
+            DgBoundaryCondition::AbsorbingCharacteristic,
+            DgBoundaryCondition::AbsorbingCharacteristic,
+            DgBoundaryCondition::Periodic,
+        ],
+        cpml: Some(cpml_cfg),
+        ..DGConfig::default()
+    };
+    let solver = DGSolver::new(config, Arc::clone(&grid))?;
+    let state_shape = solver.acoustic_tensor_state_shape()?;
+    let mut state = Array3::<f64>::zeros(state_shape);
+    let mut workspace = AcousticDgTensorWorkspace::new(state_shape);
+    let mut memory = DgCpmlMemoryWorkspace::new(state_shape.0, state_shape.1);
+    let profiles = DgCpmlProfiles::new(
+        &cpml_cfg,
+        physics::C0,
+        [
+            physics::NX / n_nodes,
+            physics::NY / n_nodes,
+            (nz / n_nodes).max(1),
+        ],
+        n_nodes,
+        [
+            n_nodes as f64 * physics::DX,
+            n_nodes as f64 * physics::DX,
+            n_nodes as f64 * physics::DX,
+        ],
+    )?;
+    let sources = dg_tensor_sources(&solver, nz)?;
+    let dt_sub = physics::DT / DG_TENSOR_SUBSTEPS_PER_STEP as f64;
+    let mut pressure = Array3::<f64>::zeros((physics::NX, physics::NY, nz));
+
+    let start = Instant::now();
+    let mut peak = Array2::<f64>::zeros((physics::NX, physics::NY));
+    for step in 0..physics::NT {
+        for substep in 0..DG_TENSOR_SUBSTEPS_PER_STEP {
+            let t = (step * DG_TENSOR_SUBSTEPS_PER_STEP + substep) as f64 * dt_sub;
+            solver.step_acoustic_tensor_ssp_rk3_with_cpml_and_source(
+                &mut state,
+                physics::RHO0,
+                dt_sub,
+                &mut workspace,
+                &mut memory,
+                &profiles,
                 t,
                 |stage_t, rhs| apply_dg_tensor_source_rhs(rhs, &sources, stage_t),
             )?;

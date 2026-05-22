@@ -1,5 +1,62 @@
 # Gap Audit
 
+## DG CPML finite-3D boundary closure (2026-05-21)
+
+Lands the Roden-Gedney (2000) CPML adapted for first-order acoustic DG
+following Lazarov & Warburton (2009). The stretched per-axis spatial derivative
+`D̃_a q = (1/κ_a) D_a q + ψ_{q, a}` modifies both the pressure and velocity
+equations; the auxiliary `ψ` satisfies a first-order ODE
+`∂_t ψ = -(σ/κ + α) ψ - (σ/κ²) D_a q` and is integrated jointly with the
+field state under SSP-RK3, inheriting third-order accuracy.
+
+### New solver-layer module
+- `solver::forward::pstd::dg::cpml::{config, profiles, memory}` (3 leaves).
+  20 value-semantic tests: profile monotonicity, Roden-Gedney σ_max formula,
+  α decay, neutral-axis identity, full 3-D profile construction,
+  pressure/velocity memory-index disjointness, workspace lifecycle.
+
+### Field RHS + stepper additions
+- `DGSolver::compute_acoustic_tensor_rhs_with_cpml_into` consumes
+  `&DgCpmlProfiles` + `&memory_state`, writes both the stretched field RHS and
+  the `ψ` RHS. Implementation pre-computes per-axis surface flux into three
+  separate `Array3` buffers so per-axis volume + surface contributions are
+  separable for the CPML formula; this is the only meaningful working-memory
+  overhead vs the standard RHS path.
+- `DGSolver::step_acoustic_tensor_ssp_rk3_with_cpml{,_and_source}` advances
+  field and memory state through identical Shu-Osher weights.
+- 4 tensor regression tests: (a) neutral profile matches the standard RHS to
+  8 ULP, (b) shape mismatches are rejected, (c) neutral stepper matches the
+  standard stepper, (d) 1-D right-going Gaussian pulse attenuated by 10×
+  vs the periodic baseline with an 8-element CPML strip and `R₀ = 1e-6`.
+
+### Gating
+- `DGConfig::cpml: Option<DgCpmlConfig>` (default `None`). When `None`, the
+  standard RHS and stepper paths are unchanged bit-for-bit. When `Some`, the
+  outer face still applies the per-axis `boundary_conditions[a]` policy
+  (typically `AbsorbingCharacteristic`), so any residual wave that survives
+  the absorbing layer is dissipated rather than reflected.
+
+### Water-tank example regeneration
+- Added `DG-3D-CPML` solver-field row to `focused_ultrasound_water_tank`.
+  2-element CPML in x and y (matches FDTD/PSTD 8-grid-point thickness at
+  `n_nodes = 4`), Periodic z (NZ = 4 = 1 element; the z direction is a slab).
+  Pairwise metrics:
+  - DG-2D vs DG-3D-CPML: norm_L2 = 7.36e-4, corr = 0.999999
+  - DG-3D vs DG-3D-CPML: norm_L2 = 7.36e-4, corr = 0.999999
+  - FDTD vs DG-3D-CPML: norm_L2 = 1.617e-1, corr = 0.985522 (matches FDTD-vs-DG-3D)
+  - PSTD vs DG-3D-CPML: norm_L2 = 1.637e-1, corr = 0.986417 (matches PSTD-vs-DG-3D)
+  - DG-3D-CPML vs Analytic: norm_L2 = 1.934e-1, corr = 0.975250 (matches DG-3D-vs-Analytic)
+
+  i.e. the CPML adds the expected small additional absorption near the x/y
+  boundaries without disturbing the focused interior field.
+
+### Verification summary
+- `cargo check -p {kwavers, pykwavers} --lib` exit 0.
+- `cargo test -p kwavers dg:: --lib`: 69/69 pass (45 pre-existing DG tests
+  unchanged + 24 new CPML tests).
+- `cargo run --release -p kwavers --example focused_ultrasound_water_tank`
+  completes finite; new metrics row emitted.
+
 ## T13b-Phase-3 closure (2026-05-21)
 
 `VolumeOperator` is now anatomy-neutral: generic over `<G: TransducerGeometry +

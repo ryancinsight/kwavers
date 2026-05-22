@@ -1,6 +1,5 @@
 //! CouplingInterface implementation
 
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
