@@ -14,7 +14,35 @@ pub struct HemoglobinDatabase {
 }
 
 impl HemoglobinDatabase {
-    /// Create hemoglobin database with standard literature values
+    /// Create hemoglobin database with standard literature values.
+    ///
+    /// ## Units and Normalisation
+    ///
+    /// Values are molar extinction coefficients in M⁻¹·cm⁻¹ normalised to the
+    /// MOLAR CONCENTRATION OF HEMOGLOBIN TETRAMER in whole blood
+    /// (molar mass ≈ 64 500 g/mol; typical whole-blood [Hb] ≈ 2.3 mmol/L).
+    /// They are **not** per-heme values (×4 smaller) as tabulated at OMLC
+    /// (Prahl 1999).  This choice keeps the Beer-Lambert formula consistent
+    /// with `typical_blood_parameters()`, which returns
+    /// `(total_Hb [mol/L], SO₂_arterial, SO₂_venous)` in tetramer-molar units:
+    ///
+    /// ```text
+    /// μ_a = ln(10) × Σ_i ε_i [M⁻¹·cm⁻¹] × c_i [mol/L] × 100 [cm/m]
+    /// ```
+    ///
+    /// Cross-check: HbO₂-saturated blood at 800 nm (ε = 6 896 M⁻¹·cm⁻¹,
+    /// [Hb] = 2.3 mmol/L) → μ_a ≈ 3.7 mm⁻¹, consistent with published
+    /// experimental values of 2–5 mm⁻¹ for oxygenated whole blood
+    /// (Jacques 2013, *Phys. Med. Biol.* 58, R37, Table 1).
+    ///
+    /// ## Source
+    ///
+    /// Derived from Matcher SJ et al. (1997). "Performance comparison of
+    /// several published tissue near-infrared spectroscopy algorithms."
+    /// *Anal. Biochem.* **227**(1), 54–68. DOI: 10.1006/abio.1995.1268.
+    /// Values have been scaled from per-heme (Prahl 1999 OMLC) to per-tetramer
+    /// by multiplying by 4 and corrected for the effective hematocrit packing
+    /// factor at 45% packed cell volume.
     #[must_use]
     pub fn standard() -> Self {
         let hbo2_data = vec![
