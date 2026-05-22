@@ -162,6 +162,7 @@ impl NonlinearWave {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::super::wave_model::NonlinearWave;
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
@@ -170,8 +171,11 @@ mod tests {
     /// `set_nonlinearity_scaling` stores the supplied value verbatim.
     #[test]
     fn set_nonlinearity_scaling_stores_supplied_value() {
-        let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
-        let mut w = NonlinearWave::new(&grid, 1e-7);
+        let dx = 0.001_f64;
+        let grid = Grid::new(4, 4, 4, dx, dx, dx).unwrap();
+        // CFL-safe dt for dx=1 mm, water: 0.9 * 0.001 / (π * 1500) ≈ 1.91e-7 s.
+        let dt_init = 0.9 * dx / (std::f64::consts::PI * SOUND_SPEED_WATER_SIM);
+        let mut w = NonlinearWave::new(&grid, dt_init);
         w.set_nonlinearity_scaling(3.7);
         assert!(
             (w.nonlinearity_scaling - 3.7).abs() < f64::EPSILON,
@@ -193,10 +197,12 @@ mod tests {
         let dx = 0.0001_f64; // 0.1 mm
         let grid = Grid::new(10, 10, 10, dx, dx, dx).unwrap();
         let medium = HomogeneousMedium::water(&grid);
-        let mut w = NonlinearWave::new(&grid, 1e-7 /* placeholder */);
-        // Override dt to the analytically safe value
-        let dt_safe = w.get_stable_timestep(&medium, &grid);
-        w.dt = dt_safe;
+        // CFL-safe initial dt: PSTD formula dt = safety(0.9) * dx / (π * c).
+        // Matches the NonlinearWave::compute_adaptive_timestep formula (stability.rs:61).
+        let dt_init = 0.9 * dx / (std::f64::consts::PI * SOUND_SPEED_WATER_SIM);
+        let mut w = NonlinearWave::new(&grid, dt_init);
+        // Recompute from the actual medium to pick up medium-specific β/c corrections.
+        w.dt = w.get_stable_timestep(&medium, &grid);
         w.source_frequency = 1e6;
 
         assert!(
