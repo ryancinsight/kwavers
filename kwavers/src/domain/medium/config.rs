@@ -1,5 +1,6 @@
 //! Medium properties configuration
 
+use crate::core::constants::fundamental::B_OVER_A_WATER;
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -262,7 +263,7 @@ impl Default for DomainMediumParameters {
             sound_speed_max: None,
             absorption: 0.0022, // Water at 1 MHz
             absorption_power: 2.0,
-            nonlinearity: 3.5, // Water
+            nonlinearity: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
             tissue_file: None,
             property_maps: HashMap::new(),
             layers: Vec::new(),

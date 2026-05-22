@@ -41,9 +41,12 @@
 //! - `blood_perfusion ≥ 0` (if present)
 //! - `blood_specific_heat > 0` (if present)
 
+use crate::core::constants::acoustic_parameters::BONE_DENSITY;
 use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER};
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
-use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use crate::core::constants::thermodynamic::{
+    SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+};
 use std::fmt;
 
 /// Canonical thermal material properties
@@ -175,8 +178,8 @@ impl ThermalPropertyData {
     pub fn bone() -> Self {
         Self {
             conductivity: 0.32,
-            specific_heat: 1300.0,
-            density: 1850.0,
+            specific_heat: SPECIFIC_HEAT_BONE, // 1313 J/(kg·K) (Duck 1990 Table 9.1)
+            density: BONE_DENSITY, // 1900 kg/m³ (Duck 1990)
             blood_perfusion: None,
             blood_specific_heat: None,
         }

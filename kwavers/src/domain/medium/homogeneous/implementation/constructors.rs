@@ -1,6 +1,7 @@
+use crate::core::constants::acoustic_parameters::AIR_SPECIFIC_HEAT_CP;
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_AIR,
-    SOUND_SPEED_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
+    ATMOSPHERIC_PRESSURE, DENSITY_AIR, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER,
+    SOUND_SPEED_AIR, SOUND_SPEED_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K};
@@ -69,14 +70,14 @@ impl HomogeneousMedium {
     /// Create an air medium with standard properties at 20°C
     pub fn air(grid: &Grid) -> Self {
         Self {
-            density: 1.204,
+            density: DENSITY_AIR,
             sound_speed: SOUND_SPEED_AIR,
             viscosity: 1.81e-5,
             surface_tension: 0.0,
             ambient_pressure: ATMOSPHERIC_PRESSURE,
             vapor_pressure: 0.0,
             polytropic_index: 1.4,
-            specific_heat: 1005.0,
+            specific_heat: AIR_SPECIFIC_HEAT_CP, // 1005 J/(kg·K)
             thermal_conductivity: 0.0257,
             shear_viscosity: 1.81e-5,
             bulk_viscosity: 0.0,
@@ -91,14 +92,14 @@ impl HomogeneousMedium {
             temperature: Array3::from_elem((grid.nx, grid.ny, grid.nz), ROOM_TEMPERATURE_K),
             bubble_radius: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             bubble_velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
-            density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.204),
+            density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), DENSITY_AIR),
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), SOUND_SPEED_AIR),
             absorption_cache: Array3::from_elem(
                 (grid.nx, grid.ny, grid.nz),
                 1.84e-11 * 1.0_f64.powi(2),
             ),
             nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.4),
-            lame_lambda: 1.204 * SOUND_SPEED_AIR * SOUND_SPEED_AIR,
+            lame_lambda: DENSITY_AIR * SOUND_SPEED_AIR * SOUND_SPEED_AIR,
             lame_mu: 0.0,
             grid_shape: (grid.nx, grid.ny, grid.nz),
         }
