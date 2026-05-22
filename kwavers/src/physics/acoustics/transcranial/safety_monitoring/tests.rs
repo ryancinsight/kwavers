@@ -1,3 +1,4 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::*;
 use ndarray::Array3;
 
@@ -30,7 +31,7 @@ fn test_safety_level_classification() {
 #[test]
 fn test_mechanical_index_calculation() {
     let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
-    let temperature = Array3::from_elem((8, 8, 8), 37.0);
+    let temperature = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
     let mut pressure = Array3::zeros((8, 8, 8));
     pressure[[4, 4, 4]] = 1e6; // 1 MPa
 
@@ -44,7 +45,7 @@ fn test_mechanical_index_calculation() {
 #[test]
 fn test_mechanical_index_uses_pressure_magnitude() {
     let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
-    let temperature = Array3::from_elem((8, 8, 8), 37.0);
+    let temperature = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
     let mut pressure = Array3::zeros((8, 8, 8));
     pressure[[4, 4, 4]] = -1e6;
 
@@ -57,7 +58,7 @@ fn test_mechanical_index_uses_pressure_magnitude() {
 #[test]
 fn test_mechanical_index_invalid_frequency_fails_closed() {
     let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 0.0);
-    let temperature = Array3::from_elem((8, 8, 8), 37.0);
+    let temperature = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
     let mut pressure = Array3::zeros((8, 8, 8));
     pressure[[4, 4, 4]] = 1e6;
 
@@ -71,7 +72,7 @@ fn test_mechanical_index_invalid_frequency_fails_closed() {
 #[test]
 fn test_mechanical_index_nonfinite_pressure_fails_closed() {
     let mut monitor = TranscranialSafetyMonitor::new((8, 8, 8), 0.01, 1e6);
-    let temperature = Array3::from_elem((8, 8, 8), 37.0);
+    let temperature = Array3::from_elem((8, 8, 8), BODY_TEMPERATURE_C);
     let mut pressure = Array3::zeros((8, 8, 8));
     pressure[[4, 4, 4]] = f64::NAN;
 
@@ -86,7 +87,7 @@ fn test_mechanical_index_nonfinite_pressure_fails_closed() {
 #[test]
 fn test_thermal_dose_accumulation() {
     let mut monitor = TranscranialSafetyMonitor::new((4, 4, 4), 0.01, 650e3);
-    let mut temperature = Array3::from_elem((4, 4, 4), 37.0);
+    let mut temperature = Array3::from_elem((4, 4, 4), BODY_TEMPERATURE_C);
     temperature[[2, 2, 2]] = 42.0; // Hot spot below safety limit (43°C)
     let pressure = Array3::zeros((4, 4, 4));
 
@@ -103,7 +104,7 @@ fn test_thermal_dose_accumulation() {
 #[test]
 fn test_safety_limit_checking() {
     let mut monitor = TranscranialSafetyMonitor::new((4, 4, 4), 0.01, 650e3);
-    let mut temperature = Array3::from_elem((4, 4, 4), 37.0);
+    let mut temperature = Array3::from_elem((4, 4, 4), BODY_TEMPERATURE_C);
     temperature[[2, 2, 2]] = 50.0; // Above limit
     let pressure = Array3::zeros((4, 4, 4));
 

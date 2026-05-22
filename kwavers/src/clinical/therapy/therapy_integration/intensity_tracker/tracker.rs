@@ -1,6 +1,7 @@
 //! IntensityTracker implementation.
 
 use super::types::{InstantaneousIntensity, IntensityTrackerDose, TemporalIntensityMetrics};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
@@ -211,11 +212,11 @@ impl IntensityTracker {
         // Update max temperature tracking
         self.thermal_dose.max_temperature = self.thermal_dose.max_temperature.max(max_temp);
         self.thermal_dose.current_temperature = max_temp;
-        self.thermal_dose.temperature_rise = (max_temp - 37.0).max(0.0);
+        self.thermal_dose.temperature_rise = (max_temp - BODY_TEMPERATURE_C).max(0.0);
 
         // CEM43 accumulation: rate = R^(43-T)
         // where R = 0.25 for T > 43°C, R = 0.5 for T ≤ 43°C
-        if max_temp > 37.0 {
+        if max_temp > BODY_TEMPERATURE_C {
             let r = if max_temp > 43.0 { 0.25 } else { 0.5 };
             let exponent = r * (43.0 - max_temp);
             let rate = exponent.exp();

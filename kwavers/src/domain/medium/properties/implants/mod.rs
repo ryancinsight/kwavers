@@ -17,6 +17,7 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
 
 #[cfg(test)]
@@ -45,12 +46,12 @@ pub const TITANIUM_GRADE5: ImplantProperties = ImplantProperties {
     thermal_conductivity: 7.4,
     thermal_diffusivity: 2.99e-6,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 50.0, // Opaque metal
     optical_scattering: 100.0,
     refractive_index: 2.5,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -70,12 +71,12 @@ pub const STAINLESS_STEEL_316L: ImplantProperties = ImplantProperties {
     thermal_conductivity: 16.0,
     thermal_diffusivity: 4.0e-6,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 60.0,
     optical_scattering: 150.0,
     refractive_index: 2.8,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -95,12 +96,12 @@ pub const PLATINUM: ImplantProperties = ImplantProperties {
     thermal_conductivity: 71.6,
     thermal_diffusivity: 2.46e-5,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 80.0,
     optical_scattering: 200.0,
     refractive_index: 3.0,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -124,12 +125,12 @@ pub const PMMA: ImplantProperties = ImplantProperties {
     thermal_conductivity: 0.19,
     thermal_diffusivity: 1.08e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.1,
     optical_scattering: 10.0,
     refractive_index: 1.49,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -149,12 +150,12 @@ pub const UHMWPE: ImplantProperties = ImplantProperties {
     thermal_conductivity: 0.42,
     thermal_diffusivity: 1.95e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.05,
     optical_scattering: 5.0,
     refractive_index: 1.52,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -174,12 +175,12 @@ pub const SILICONE_RUBBER: ImplantProperties = ImplantProperties {
     thermal_conductivity: 0.25,
     thermal_diffusivity: 1.72e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 1.0,
     optical_scattering: 50.0,
     refractive_index: 1.41,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -199,12 +200,12 @@ pub const POLYURETHANE: ImplantProperties = ImplantProperties {
     thermal_conductivity: 0.24,
     thermal_diffusivity: 1.27e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.3,
     optical_scattering: 20.0,
     refractive_index: 1.48,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -228,12 +229,12 @@ pub const ALUMINA: ImplantProperties = ImplantProperties {
     thermal_conductivity: 30.0,
     thermal_diffusivity: 8.54e-6,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 20.0,
     optical_scattering: 100.0,
     refractive_index: 1.76,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -253,12 +254,12 @@ pub const ZIRCONIA: ImplantProperties = ImplantProperties {
     thermal_conductivity: 2.0,
     thermal_diffusivity: 6.61e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 10.0,
     optical_scattering: 80.0,
     refractive_index: 2.15,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -282,12 +283,12 @@ pub const CFRP: ImplantProperties = ImplantProperties {
     thermal_conductivity: 5.0,
     thermal_diffusivity: 3.47e-6,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 30.0,
     optical_scattering: 80.0,
     refractive_index: 1.6,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -307,11 +308,11 @@ pub const HYDROXYAPATITE: ImplantProperties = ImplantProperties {
     thermal_conductivity: 1.2,
     thermal_diffusivity: 4.21e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 50.0,
     optical_scattering: 150.0,
     refractive_index: 1.65,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };

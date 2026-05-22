@@ -204,11 +204,12 @@ impl PennesSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     #[test]
     fn test_pennes_solver_creation() {
         let properties = ThermalPropertyData::soft_tissue();
-        let arterial_temp = 37.0;
+        let arterial_temp = BODY_TEMPERATURE_C;
         let metabolic_heat = 400.0;
         let solver = PennesSolver::new(
             32,
@@ -228,7 +229,7 @@ mod tests {
     #[test]
     fn test_steady_state_temperature() {
         let properties = ThermalPropertyData::soft_tissue();
-        let arterial_temp = 37.0;
+        let arterial_temp = BODY_TEMPERATURE_C;
         let metabolic_heat = 400.0;
         let mut solver = PennesSolver::new(
             16,

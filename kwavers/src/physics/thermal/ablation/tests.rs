@@ -1,3 +1,4 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::field::AblationField;
 use super::kinetics::AblationKinetics;
 use super::state::AblationState;
@@ -72,10 +73,10 @@ fn test_ablation_threshold() {
 #[test]
 fn test_ablation_state_update() {
     let kinetics = AblationKinetics::hifu_ablation();
-    let mut state = AblationState::new(37.0, &kinetics);
+    let mut state = AblationState::new(BODY_TEMPERATURE_C, &kinetics);
 
     // No damage at body temperature
-    state.update(37.0, &kinetics, 1.0);
+    state.update(BODY_TEMPERATURE_C, &kinetics, 1.0);
     assert_eq!(state.damage, 0.0);
     assert!(!state.ablated);
 
@@ -113,7 +114,7 @@ fn test_ablation_field() {
     let mut field = AblationField::new((10, 10, 10), kinetics);
 
     // Create temperature field
-    let mut temperature = Array3::from_elem((10, 10, 10), 37.0);
+    let mut temperature = Array3::from_elem((10, 10, 10), BODY_TEMPERATURE_C);
     temperature[[5, 5, 5]] = 70.0; // Hot spot at center
 
     // Update multiple times
@@ -136,7 +137,7 @@ fn test_ablation_volume_counting() {
     let mut field = AblationField::new((5, 5, 5), kinetics);
 
     // Create hotly heated field
-    let mut temperature = Array3::from_elem((5, 5, 5), 37.0);
+    let mut temperature = Array3::from_elem((5, 5, 5), BODY_TEMPERATURE_C);
     for i in 1..4 {
         for j in 1..4 {
             for k in 1..4 {

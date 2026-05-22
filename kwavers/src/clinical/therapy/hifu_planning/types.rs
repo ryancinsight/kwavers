@@ -1,6 +1,7 @@
 use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use std::f64::consts::PI;
@@ -190,7 +191,6 @@ impl FocalSpotDoseEstimate {
     ) -> KwaversResult<Self> {
         const SPECIFIC_HEAT: f64 = 3600.0;
         const PERFUSION_RATE: f64 = 0.01;
-        const BASELINE_TEMP_C: f64 = 37.0;
         const SECONDS_PER_MINUTE: f64 = 60.0;
         const ABLATION_DOSE_CEM43_MIN: f64 = 240.0;
 
@@ -207,7 +207,7 @@ impl FocalSpotDoseEstimate {
         let heating_rate_c_per_s = heating_w_m3 / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT);
         let delta_t = (heating_rate_c_per_s / PERFUSION_RATE)
             * (1.0 - (-PERFUSION_RATE * treatment_duration_s).exp());
-        let peak_temperature_c = BASELINE_TEMP_C + delta_t;
+        let peak_temperature_c = BODY_TEMPERATURE_C + delta_t;
         let r: f64 = if peak_temperature_c >= 43.0 {
             0.5
         } else {

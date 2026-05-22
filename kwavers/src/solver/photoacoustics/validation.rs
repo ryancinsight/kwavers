@@ -1,3 +1,4 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::{
     PhotoacousticScenario, PhotoacousticSimulation, PhotoacousticValidationReport,
@@ -33,9 +34,9 @@ pub fn validate_photoacoustic_simulation(
         .iter()
         .zip(simulation.initial_pressure.pressure.iter())
         .map(|(fluence, pressure)| {
-            // Use canonical GrueneisenModel at body temperature (37 °C) for comparison.
+            // Use canonical GrueneisenModel at body temperature for comparison.
             // The simulation was generated with the same constant-Γ assumption.
-            let gamma = GrueneisenModel::water().evaluate(37.0);
+            let gamma = GrueneisenModel::water().evaluate(BODY_TEMPERATURE_C);
             let expected = gamma * center.absorption_coefficient * *fluence;
             (expected - *pressure).abs()
         })

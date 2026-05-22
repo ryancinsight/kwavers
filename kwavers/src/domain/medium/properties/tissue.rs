@@ -9,6 +9,7 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
 
 /// Tissue material properties type alias
@@ -61,12 +62,12 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
     thermal_conductivity: 0.50,
     thermal_diffusivity: 1.33e-7,
     perfusion_rate: 75.0, // mL/100g/min
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.7,       // W/kg
     optical_absorption: 2.0,   // 1/m (near-IR)
     optical_scattering: 100.0, // 1/m
     refractive_index: 1.37,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -85,12 +86,12 @@ pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
     thermal_conductivity: 0.52,
     thermal_diffusivity: 1.34e-7,
     perfusion_rate: 150.0, // mL/100g/min (higher than white matter)
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 1.2, // W/kg (higher metabolic rate)
     optical_absorption: 2.5,
     optical_scattering: 110.0,
     refractive_index: 1.37,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -109,12 +110,12 @@ pub const SKULL: TissueProperties = TissueProperties {
     thermal_conductivity: 0.4,
     thermal_diffusivity: 1.61e-7,
     perfusion_rate: 5.0, // Much lower perfusion in bone
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.1, // Lower metabolic rate
     optical_absorption: 5.0,
     optical_scattering: 200.0,
     refractive_index: 1.65,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -137,12 +138,12 @@ pub const LIVER: TissueProperties = TissueProperties {
     thermal_conductivity: 0.56,
     thermal_diffusivity: 1.46e-7,
     perfusion_rate: 100.0, // mL/100g/min
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.8, // W/kg
     optical_absorption: 3.0,
     optical_scattering: 120.0,
     refractive_index: 1.38,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -165,12 +166,12 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     thermal_conductivity: 0.50,
     thermal_diffusivity: 1.39e-7,
     perfusion_rate: 120.0, // Very high perfusion
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 1.0,
     optical_absorption: 2.5,
     optical_scattering: 110.0,
     refractive_index: 1.37,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -188,12 +189,12 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     thermal_conductivity: 0.50,
     thermal_diffusivity: 1.39e-7,
     perfusion_rate: 130.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 1.1,
     optical_absorption: 2.5,
     optical_scattering: 110.0,
     refractive_index: 1.37,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -215,12 +216,12 @@ pub const BLOOD: TissueProperties = TissueProperties {
     thermal_conductivity: 0.54,
     thermal_diffusivity: 1.39e-7,
     perfusion_rate: 0.0, // Blood IS the perfusion medium
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 100.0, // Blood strongly absorbs light
     optical_scattering: 500.0, // High scattering
     refractive_index: 1.335,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -238,12 +239,12 @@ pub const MUSCLE: TissueProperties = TissueProperties {
     thermal_conductivity: 0.60,
     thermal_diffusivity: 1.48e-7,
     perfusion_rate: 80.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 1.2, // Active metabolism
     optical_absorption: 0.1,
     optical_scattering: 50.0,
     refractive_index: 1.38,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -261,12 +262,12 @@ pub const FAT: TissueProperties = TissueProperties {
     thermal_conductivity: 0.20,   // Much lower thermal conductivity
     thermal_diffusivity: 8.89e-8, // Slower thermal diffusion
     perfusion_rate: 30.0,         // Lower perfusion
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.2,      // Lower metabolic rate
     optical_absorption: 0.01, // Transparent
     optical_scattering: 10.0,
     refractive_index: 1.46,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -284,12 +285,12 @@ pub const CSF: TissueProperties = TissueProperties {
     thermal_conductivity: 0.60,
     thermal_diffusivity: 1.53e-7,
     perfusion_rate: 0.0, // Not perfused tissue
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.0,
     optical_scattering: 0.0,
     refractive_index: 1.334,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 

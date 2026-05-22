@@ -7,6 +7,7 @@ use crate::clinical::therapy::therapy_integration::safety_controller::{
 use crate::clinical::therapy::therapy_integration::state::{
     SafetyMetrics, TherapyIntegrationSafetyStatus, TherapySessionState,
 };
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -191,7 +192,7 @@ impl TherapyIntegrationOrchestrator {
             .iter()
             .cloned()
             .fold(f64::NEG_INFINITY, f64::max);
-        self.session_state.safety_metrics.thermal_index = (t_max - 37.0).max(0.0);
+        self.session_state.safety_metrics.thermal_index = (t_max - BODY_TEMPERATURE_C).max(0.0);
 
         // Mechanical Index (FDA 510(k) guidance, IEC 62359):
         // MI = p_neg_peak_derated (MPa) / sqrt(f_center (MHz))

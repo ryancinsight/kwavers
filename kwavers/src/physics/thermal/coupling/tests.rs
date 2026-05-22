@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::*;
 use ndarray::Array3;
 
@@ -29,9 +30,9 @@ fn test_temperature_coefficients_soft_tissue() {
     let alpha0 = 0.5;
 
     // At 40°C (3°C higher)
-    let c_40 = coeff.sound_speed(c0, 40.0, 37.0);
-    let rho_40 = coeff.density(rho0, 40.0, 37.0);
-    let alpha_40 = coeff.absorption(alpha0, 40.0, 37.0);
+    let c_40 = coeff.sound_speed(c0, 40.0, BODY_TEMPERATURE_C);
+    let rho_40 = coeff.density(rho0, 40.0, BODY_TEMPERATURE_C);
+    let alpha_40 = coeff.absorption(alpha0, 40.0, BODY_TEMPERATURE_C);
 
     // Sound speed increases
     assert!(c_40 > c0);
@@ -81,11 +82,11 @@ fn test_thermal_acoustic_coupling() {
         ThermalAcousticCoupling::new(0.5, 1e4, TemperatureCoefficients::soft_tissue());
     coupling.initialize((5, 5, 5));
 
-    let temperature = Array3::from_elem((5, 5, 5), 37.0);
+    let temperature = Array3::from_elem((5, 5, 5), BODY_TEMPERATURE_C);
     let intensity = Array3::from_elem((5, 5, 5), 1e4);
 
     coupling
-        .update(&temperature, &intensity, 37.0, 0.1)
+        .update(&temperature, &intensity, BODY_TEMPERATURE_C, 0.1)
         .unwrap();
 
     let energy_density = coupling.total_energy_density();
@@ -97,9 +98,9 @@ fn test_coupling_temperature_effects_on_properties() {
     let coupling = ThermalAcousticCoupling::new(0.5, 1e4, TemperatureCoefficients::soft_tissue());
 
     let c0 = 1540.0;
-    let c_hot = coupling.sound_speed_at_temperature(c0, 45.0, 37.0);
+    let c_hot = coupling.sound_speed_at_temperature(c0, 45.0, BODY_TEMPERATURE_C);
     let rho0 = DENSITY_TISSUE;
-    let rho_hot = coupling.density_at_temperature(rho0, 45.0, 37.0);
+    let rho_hot = coupling.density_at_temperature(rho0, 45.0, BODY_TEMPERATURE_C);
 
     // Temperature increases both sound speed and decreases density
     assert!(c_hot > c0);

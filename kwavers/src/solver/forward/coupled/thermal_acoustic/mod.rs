@@ -47,6 +47,7 @@ use crate::core::constants::{
     DC_DT_SOFT_TISSUE, DENSITY_WATER_NOMINAL, DRHO_DT_SOFT_TISSUE, SOUND_SPEED_TISSUE,
     THERMAL_DIFFUSIVITY_TISSUE,
 };
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
 mod physics;
@@ -118,10 +119,10 @@ impl Default for ThermalAcousticConfig {
             dc_d_t: DC_DT_SOFT_TISSUE,
             rho_ref: DENSITY_WATER_NOMINAL,
             drho_d_t: DRHO_DT_SOFT_TISSUE,
-            t_ref: 37.0,
+            t_ref: BODY_TEMPERATURE_C,
             alpha_thermal: THERMAL_DIFFUSIVITY_TISSUE,
             alpha_ac: 0.5,
-            t_arterial: 37.0,
+            t_arterial: BODY_TEMPERATURE_C,
             w_b: 5.0,
             q_met: 0.0,
             enable_temperature_coupling: true,

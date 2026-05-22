@@ -2,6 +2,7 @@ use super::*;
 use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversError;
 use std::f64::consts::PI;
 
@@ -53,7 +54,7 @@ fn test_thermal_dose_calculation() {
         10.0,
     )
     .expect("valid focal dose");
-    assert!(thermal_dose.peak_temperature_c > 37.0);
+    assert!(thermal_dose.peak_temperature_c > BODY_TEMPERATURE_C);
     assert!(thermal_dose.time_to_dose_s.is_finite() || thermal_dose.time_to_dose_s.is_infinite());
 }
 
@@ -197,7 +198,7 @@ fn focal_dose_uses_cem43_equivalent_minutes() {
 
     let expected = 0.25_f64.powf(43.0 - 37.0);
     assert!((dose.cem43 - expected).abs() < 1.0e-15);
-    assert_eq!(dose.peak_temperature_c, 37.0);
+    assert_eq!(dose.peak_temperature_c, BODY_TEMPERATURE_C);
     assert!(dose.time_to_dose_s.is_infinite());
 }
 

@@ -158,6 +158,7 @@ pub mod literature_cases {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use super::*;
 
     #[test]
@@ -192,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_37c_negligible() {
-        let cem43 = analytical_cem43_constant(37.0, 1000.0);
+        let cem43 = analytical_cem43_constant(BODY_TEMPERATURE_C, 1000.0);
         assert!(
             cem43 < 1.0,
             "37°C should give negligible CEM43, got {}",
@@ -202,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_r_factor_calculation() {
-        assert_eq!(r_factor_at_temperature(37.0), 0.25); // T < 43°C: subthreshold
+        assert_eq!(r_factor_at_temperature(BODY_TEMPERATURE_C), 0.25); // T < 43°C: subthreshold
         assert_eq!(r_factor_at_temperature(43.0), 0.5);  // T ≥ 43°C: suprathreshold
         assert_eq!(r_factor_at_temperature(45.0), 0.5);  // T ≥ 43°C: suprathreshold
     }

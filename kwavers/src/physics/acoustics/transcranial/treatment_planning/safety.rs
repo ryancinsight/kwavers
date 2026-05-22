@@ -95,6 +95,7 @@ fn peak_pressure_from_harmonic_intensity_field(acoustic_field: &Array3<f64>) -> 
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use super::*;
 
     fn default_constraints() -> TranscranialSafetyConstraints {
@@ -127,7 +128,7 @@ mod tests {
 
     #[test]
     fn validate_safety_fields_accepts_safe_finite_fields() {
-        let temperature = Array3::from_elem((2, 2, 2), 37.0);
+        let temperature = Array3::from_elem((2, 2, 2), BODY_TEMPERATURE_C);
         let acoustic_field = Array3::from_elem((2, 2, 2), 1.0);
         let constraints = default_constraints();
         let mi = mechanical_index_from_harmonic_intensity_field(&acoustic_field, 1.0e6);
@@ -162,7 +163,7 @@ mod tests {
 
     #[test]
     fn validate_safety_fields_rejects_invalid_frequency() {
-        let temperature = Array3::from_elem((2, 2, 2), 37.0);
+        let temperature = Array3::from_elem((2, 2, 2), BODY_TEMPERATURE_C);
         let acoustic_field = Array3::from_elem((2, 2, 2), 1.0);
 
         let result = TreatmentPlanner::validate_safety_fields(
@@ -178,7 +179,7 @@ mod tests {
 
     #[test]
     fn validate_safety_fields_rejects_negative_intensity() {
-        let temperature = Array3::from_elem((2, 2, 2), 37.0);
+        let temperature = Array3::from_elem((2, 2, 2), BODY_TEMPERATURE_C);
         let acoustic_field = Array3::from_elem((2, 2, 2), -1.0);
 
         let result = TreatmentPlanner::validate_safety_fields(

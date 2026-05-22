@@ -1,5 +1,7 @@
 //! Types for acoustic intensity tracking.
 
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+
 /// Acoustic intensity measurement at a point in time
 #[derive(Debug, Clone, Copy)]
 pub struct InstantaneousIntensity {
@@ -57,8 +59,8 @@ impl Default for IntensityTrackerDose {
     fn default() -> Self {
         Self {
             cem43: 0.0,
-            current_temperature: 37.0, // Normal body temperature
-            max_temperature: 37.0,
+            current_temperature: BODY_TEMPERATURE_C, // Normal body temperature
+            max_temperature: BODY_TEMPERATURE_C,
             temperature_rise: 0.0,
         }
     }

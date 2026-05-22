@@ -26,6 +26,7 @@
 //! - Nyborg (1981): "Heat generation by ultrasound in a relaxing medium"
 
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Zip};
@@ -149,9 +150,6 @@ pub fn calculate_acoustic_heating(
     dt: f64,
     focal_depth: f64,
 ) -> Array3<f64> {
-    // Baseline body temperature in Celsius — consistent with CEM43 threshold (37 °C).
-    const AMBIENT_CELSIUS: f64 = 37.0;
-
     // Tissue constants for soft tissue (Nyborg 1981).
     const ALPHA_NP_M: f64 = 0.5; // absorption coefficient (Np/m)
     const RHO: f64 = DENSITY_WATER_NOMINAL;
@@ -167,7 +165,7 @@ pub fn calculate_acoustic_heating(
     let dy = grid.dy;
     let dz = grid.dz;
 
-    let mut temperature = Array3::<f64>::from_elem(acoustic_field.pressure.dim(), AMBIENT_CELSIUS);
+    let mut temperature = Array3::<f64>::from_elem(acoustic_field.pressure.dim(), BODY_TEMPERATURE_C);
 
     Zip::indexed(temperature.view_mut())
         .and(acoustic_field.pressure.view())
@@ -178,7 +176,7 @@ pub fn calculate_acoustic_heating(
             let z = k as f64 * dz;
             let r = (x * x + y * y + z * z).sqrt();
             let distance_factor = (-r / L_FOCAL).exp();
-            *t = AMBIENT_CELSIUS + heating_scale * p * p * distance_factor;
+            *t = BODY_TEMPERATURE_C + heating_scale * p * p * distance_factor;
         });
 
     temperature

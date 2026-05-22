@@ -1,5 +1,6 @@
 //! CouplingInterface implementation
 
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{ConfigError, KwaversError, KwaversResult};
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::grid::Grid;
@@ -327,6 +328,7 @@ impl CouplingInterface {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use crate::solver::forward::hybrid::domain_decomposition::DomainType;
     use ndarray::Array4;
 
@@ -409,7 +411,7 @@ mod tests {
         let p_idx = UnifiedFieldType::Pressure.index();
         let t_idx = UnifiedFieldType::Temperature.index();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, 4, 3, 2));
-        fields.index_axis_mut(ndarray::Axis(0), t_idx).fill(37.0);
+        fields.index_axis_mut(ndarray::Axis(0), t_idx).fill(BODY_TEMPERATURE_C);
 
         let mut value = 1.0;
         for j in 0..3 {
@@ -432,7 +434,7 @@ mod tests {
 
         let target_sum_after = pressure_plane_sum(&fields, 2);
         assert!((target_sum_after - target_sum_before).abs() < 1e-9);
-        assert_eq!(fields[[t_idx, 2, 1, 1]], 37.0);
+        assert_eq!(fields[[t_idx, 2, 1, 1]], BODY_TEMPERATURE_C);
         assert_eq!(fields[[p_idx, 3, 1, 1]], 0.0);
 
         let metrics = interface.quality_metrics();

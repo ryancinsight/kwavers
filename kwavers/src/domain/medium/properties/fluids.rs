@@ -15,6 +15,7 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
 
 /// Fluid material properties type alias
@@ -40,12 +41,12 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     thermal_conductivity: 0.55,
     thermal_diffusivity: 1.40e-7,
     perfusion_rate: 100.0, // Blood circulation rate
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0, // Carries heat via circulation
     optical_absorption: 0.1,
     optical_scattering: 10.0,
     refractive_index: 1.335,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -65,12 +66,12 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     thermal_conductivity: 0.52,
     thermal_diffusivity: 1.35e-7,
     perfusion_rate: 100.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.5, // Red blood cells scatter and absorb
     optical_scattering: 50.0,
     refractive_index: 1.335,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -90,12 +91,12 @@ pub const CSF: FluidProperties = FluidProperties {
     thermal_conductivity: 0.60,
     thermal_diffusivity: 1.67e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.05,
     optical_scattering: 5.0,
     refractive_index: 1.333,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -114,12 +115,12 @@ pub const URINE: FluidProperties = FluidProperties {
     thermal_conductivity: 0.61,
     thermal_diffusivity: 1.63e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.2,
     optical_scattering: 15.0,
     refractive_index: 1.335,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -193,12 +194,12 @@ pub const WATER_37C: FluidProperties = FluidProperties {
     thermal_conductivity: 0.63,
     thermal_diffusivity: 1.52e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.0,
     optical_scattering: 0.0,
     refractive_index: 1.33,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -223,12 +224,12 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     thermal_conductivity: 0.60,
     thermal_diffusivity: 1.44e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 0.2,
     optical_scattering: 30.0,
     refractive_index: 1.33,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
@@ -248,12 +249,12 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
     thermal_conductivity: 0.59,
     thermal_diffusivity: 1.36e-7,
     perfusion_rate: 0.0,
-    arterial_temperature: 37.0,
+    arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
     optical_absorption: 1.0, // Significant optical absorption
     optical_scattering: 100.0,
     refractive_index: 1.34,
-    reference_temperature: 37.0,
+    reference_temperature: BODY_TEMPERATURE_C,
     reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 

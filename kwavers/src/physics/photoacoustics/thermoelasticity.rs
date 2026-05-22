@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_grueneisen_water_at_37c() {
         let model = GrueneisenModel::water();
-        let gamma = model.evaluate(37.0);
+        let gamma = model.evaluate(BODY_TEMPERATURE_C);
         assert!(
             (gamma - 0.188).abs() < 1e-12,
             "Water Γ(37°C) = {gamma:.12}, expected 0.188"
@@ -191,9 +191,9 @@ mod tests {
     fn test_initial_pressure_temperature_dependence() {
         let model = GrueneisenModel::soft_tissue();
         let gamma_20 = model.evaluate(20.0); // 0.15 - 0.003*17 = 0.099
-        let gamma_37 = model.evaluate(37.0); // 0.150
+        let gamma_37 = model.evaluate(BODY_TEMPERATURE_C); // 0.150
 
-        let expected_gamma_20 = 0.15 + 0.003 * (20.0 - 37.0);
+        let expected_gamma_20 = 0.15 + 0.003 * (20.0 - BODY_TEMPERATURE_C);
         let expected_gamma_37 = 0.15_f64;
         assert!((gamma_20 - expected_gamma_20).abs() < 1e-12);
         assert!((gamma_37 - expected_gamma_37).abs() < 1e-12);
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn test_grueneisen_types_agree_at_body_temperature() {
         // Soft-tissue model: Γ₀ = 0.15, T_ref = 37 °C → Γ(37) = 0.15
-        let gamma = GrueneisenModel::soft_tissue().evaluate(37.0);
+        let gamma = GrueneisenModel::soft_tissue().evaluate(BODY_TEMPERATURE_C);
         assert!(
             (gamma - 0.15).abs() < 1e-12,
             "soft_tissue Γ(37°C) = {gamma:.12}, expected 0.15 (Xu & Wang 2006)"
@@ -251,7 +251,7 @@ mod tests {
             tau,
             thermoelastic,
             &model,
-            37.0,
+            BODY_TEMPERATURE_C,
         )?;
         let report_20 = ThermoelasticReport::from_absorbed_energy(
             energy,
@@ -262,7 +262,7 @@ mod tests {
             20.0,
         )?;
 
-        let gamma_37 = model.evaluate(37.0);
+        let gamma_37 = model.evaluate(BODY_TEMPERATURE_C);
         let gamma_20 = model.evaluate(20.0);
         let expected_ratio = gamma_37 / gamma_20;
         let actual_ratio = report_37.initial_pressure_pa / report_20.initial_pressure_pa;

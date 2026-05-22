@@ -2,6 +2,7 @@
 //!
 //! SRP: changes when the uniform buffer layout or CFL bounds change.
 
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Configuration for GPU thermal-acoustic coupling.
@@ -46,10 +47,10 @@ impl Default for GpuThermalAcousticConfig {
             dc_dT: 2.0,
             rho_ref: 1000.0,
             drho_dT: -0.2,
-            T_ref: 37.0,
+            T_ref: BODY_TEMPERATURE_C as f32,
             alpha_thermal: 1.5e-7,
             alpha_ac: 0.5,
-            T_arterial: 37.0,
+            T_arterial: BODY_TEMPERATURE_C as f32,
             w_b: 5.0,
             Q_met: 0.0,
         }

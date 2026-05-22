@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn test_absorption_never_negative_in_ablation_range() {
         let alpha0 = 0.5;
-        for temperature in [37.0, 50.0, 70.0, 90.0, 100.0] {
+        for temperature in [BODY_TEMPERATURE_C, 50.0, 70.0, 90.0, 100.0] {
             let alpha = absorption_vs_temperature(alpha0, temperature);
             assert!(
                 alpha >= 0.0,
@@ -259,7 +259,7 @@ mod tests {
     fn test_conductivity_increases_with_temperature() {
         let k0 = 0.5;
 
-        let k_37 = conductivity_vs_temperature(k0, 37.0);
+        let k_37 = conductivity_vs_temperature(k0, BODY_TEMPERATURE_C);
         let k_45 = conductivity_vs_temperature(k0, 45.0);
         let k_30 = conductivity_vs_temperature(k0, 30.0);
 
@@ -274,7 +274,7 @@ mod tests {
         let w_b0 = 1.0;
 
         // Normal temperature
-        let w_37 = perfusion_vs_temperature(w_b0, 37.0);
+        let w_37 = perfusion_vs_temperature(w_b0, BODY_TEMPERATURE_C);
         assert_eq!(w_37, w_b0);
 
         // Mild hyperthermia - increased perfusion
@@ -290,7 +290,7 @@ mod tests {
     fn test_sound_speed_temperature() {
         let c0 = 1540.0;
 
-        let c_37 = sound_speed_vs_temperature(c0, 37.0);
+        let c_37 = sound_speed_vs_temperature(c0, BODY_TEMPERATURE_C);
         let c_45 = sound_speed_vs_temperature(c0, 45.0);
 
         assert_eq!(c_37, c0);
@@ -332,12 +332,12 @@ mod tests {
         assert!(elevated.specific_heat > base.specific_heat);
 
         // Update back to reference temperature
-        let back_to_ref = update_properties(&base, 37.0);
+        let back_to_ref = update_properties(&base, BODY_TEMPERATURE_C);
 
         // The formulas are applied independently each time, so this just verifies
         // that applying the formula at reference temperature preserves values
         // (within numerical precision)
-        let ref_again = update_properties(&base, 37.0);
+        let ref_again = update_properties(&base, BODY_TEMPERATURE_C);
 
         assert!((back_to_ref.conductivity - ref_again.conductivity).abs() < 1e-10);
         assert!((back_to_ref.specific_heat - ref_again.specific_heat).abs() < 1e-10);

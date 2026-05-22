@@ -160,6 +160,7 @@ pub fn gaussian_power_deposition_2d(
 #[cfg(test)]
 mod tests {
     use crate::core::constants::fundamental::{DENSITY_BLOOD, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
     use super::*;
 
     #[test]
@@ -174,16 +175,16 @@ mod tests {
             5.0,
             DENSITY_BLOOD,
             3770.0,
-            37.0,
+            BODY_TEMPERATURE_C,
         );
-        assert!((t[0] - 37.0).abs() < 1e-8);
+        assert!((t[0] - BODY_TEMPERATURE_C).abs() < 1e-8);
     }
 
     #[test]
     fn bioheat_monotone_increasing() {
         let tvec: Vec<f64> = (0..10).map(|i| i as f64 * 0.1).collect();
         let temp = bioheat_focal_temperature_rise(
-            &tvec, 10.0, 1e-6, 0.5, DENSITY_BLOOD, 3600.0, 5.0, DENSITY_BLOOD, 3770.0, 37.0,
+            &tvec, 10.0, 1e-6, 0.5, DENSITY_BLOOD, 3600.0, 5.0, DENSITY_BLOOD, 3770.0, BODY_TEMPERATURE_C,
         );
         for i in 1..temp.len() {
             assert!(
@@ -210,10 +211,10 @@ mod tests {
             5.0,
             DENSITY_BLOOD,
             3770.0,
-            37.0,
+            BODY_TEMPERATURE_C,
         );
         // Should saturate: T(∞) < T_body + some bound
-        assert!(t[1] > 37.0 && t[1] < 200.0);
+        assert!(t[1] > BODY_TEMPERATURE_C && t[1] < 200.0);
         // Verify saturation: T(t_long) ≈ T(t_long/2)
         let t_half = bioheat_focal_temperature_rise(
             &[t_long / 2.0],
@@ -225,7 +226,7 @@ mod tests {
             5.0,
             DENSITY_BLOOD,
             3770.0,
-            37.0,
+            BODY_TEMPERATURE_C,
         );
         assert!((t[1] - t_half[0]).abs() / t[1].abs() < 0.01);
     }

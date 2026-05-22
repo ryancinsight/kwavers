@@ -1,3 +1,4 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::*;
 
 #[test]
@@ -73,7 +74,7 @@ fn test_intensity_tracker_integration() {
         );
         let t_min = t_field.iter().cloned().fold(f64::INFINITY, f64::min);
         assert!(
-            t_min >= 37.0,
+            t_min >= BODY_TEMPERATURE_C,
             "step {step}: temperature_rise min={t_min:.4} must be ≥ 37.0 °C"
         );
 

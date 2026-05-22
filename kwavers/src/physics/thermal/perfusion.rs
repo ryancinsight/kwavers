@@ -210,7 +210,7 @@ mod tests {
         let model = ThermalPerfusionModel::new(1.0);
 
         // Normal temperature
-        assert_eq!(model.perfusion_rate(37.0), 1.0);
+        assert_eq!(model.perfusion_rate(BODY_TEMPERATURE_C), 1.0);
 
         // Mild hyperthermia - increased perfusion
         let rate_42 = model.perfusion_rate(42.0);
@@ -247,15 +247,15 @@ mod tests {
 
         // Tissue hotter than blood → positive cooling (heat leaves tissue).
         let hot = vessel_model.cooling_rate(5, 5, 5, 1.0, 45.0);
-        assert!(hot > 0.0, "tissue at 45°C above blood at 37°C must give positive cooling, got {hot}");
+        assert!(hot > 0.0, "tissue at 45°C above blood at {BODY_TEMPERATURE_C}°C must give positive cooling, got {hot}");
 
         // Tissue colder than blood → negative cooling (heat enters tissue).
         let cold = vessel_model.cooling_rate(5, 5, 5, 1.0, 25.0);
-        assert!(cold < 0.0, "tissue at 25°C below blood at 37°C must give negative cooling, got {cold}");
+        assert!(cold < 0.0, "tissue at 25°C below blood at {BODY_TEMPERATURE_C}°C must give negative cooling, got {cold}");
 
         // Symmetric ΔT must give exactly opposite-signed cooling.
-        let plus = vessel_model.cooling_rate(5, 5, 5, 1.0, 37.0 + 5.0);
-        let minus = vessel_model.cooling_rate(5, 5, 5, 1.0, 37.0 - 5.0);
+        let plus = vessel_model.cooling_rate(5, 5, 5, 1.0, BODY_TEMPERATURE_C + 5.0);
+        let minus = vessel_model.cooling_rate(5, 5, 5, 1.0, BODY_TEMPERATURE_C - 5.0);
         assert!(
             (plus + minus).abs() < 1.0e-9 * plus.abs(),
             "symmetric ΔT must give antisymmetric cooling: plus={plus}, minus={minus}"
