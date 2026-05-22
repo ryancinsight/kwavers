@@ -110,12 +110,14 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
     if let Some(pressure) = source_pressure_pa {
         config.source_pressure_pa = pressure;
     }
+    // `ct` and `labels` are moved into `run_theranostic_nonlinear_3d` so the
+    // full-resolution CT arrays are freed before the Westervelt FWI loop.
     let result = py
         .detach(|| {
             run_theranostic_nonlinear_3d(
                 anatomy,
-                &ct,
-                labels.as_ref(),
+                ct,
+                labels,
                 spacing_mm,
                 &config,
                 target_fraction_xyz.map(|(x, y, z)| [x, y, z]),
