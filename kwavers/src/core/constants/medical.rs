@@ -138,3 +138,27 @@ pub const MI_CAVITATION_FETAL: f64 = 0.5;
 
 /// Estimated MI at cavitation onset for brain tissue (dimensionless).
 pub const MI_CAVITATION_BRAIN: f64 = 0.55;
+
+// ── Thermal Index safety limits ──────────────────────────────────────────────
+//
+// The Thermal Index (TI) is an estimate of the maximum temperature rise in
+// degrees Celsius in tissue during sonication.  Safety limits are specified
+// in the NEMA UD-3 / IEC 62359 Output Display Standard and endorsed by AIUM.
+//
+// References:
+// - NEMA UD-3 (2004/2012). "Standard for Real-Time Display of Thermal and
+//   Mechanical Acoustic Output Indices on Diagnostic Ultrasound Equipment."
+// - IEC 62359:2010. "Ultrasonics — Field characterization — Test methods for
+//   the determination of thermal and mechanical indices related to medical
+//   diagnostic ultrasonic fields."
+// - AIUM (2013). "AIUM Practice Parameter for the Performance of Diagnostic
+//   and Screening Ultrasound of the Abdomen and/or Retroperitoneum."
+
+/// Thermal index safety limit for soft tissue (dimensionless, °C equivalent).
+///
+/// TI ≤ 6.0 is the standard display limit for soft-tissue scanning in adults.
+/// Below TI = 1 no restriction on scan duration; above TI = 6 the benefit–risk
+/// ratio must be explicitly justified.
+///
+/// Reference: NEMA UD-3:2012, Table 1; IEC 62359:2010.
+pub const TI_LIMIT_SOFT_TISSUE: f64 = 6.0;

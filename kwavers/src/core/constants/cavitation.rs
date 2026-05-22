@@ -85,9 +85,6 @@ pub const MECHANICAL_INDEX_THRESHOLD: f64 = 0.7;
 ///   In *Methods of Experimental Physics*, Vol. 1, Academic Press, pp. 57–172.
 pub const FLYNN_COLLAPSE_COEFFICIENT: f64 = 0.83;
 
-/// Thermal index threshold for bioeffects
-pub const THERMAL_INDEX_THRESHOLD: f64 = 6.0;
-
 /// Cavitation inception threshold (MPa)
 pub const CAVITATION_THRESHOLD_WATER: f64 = -30.0;
 

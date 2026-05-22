@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use ndarray::Array3;
 
 #[test]
@@ -146,7 +147,7 @@ fn test_safety_limit_checking_all_safe() {
     };
 
     let safety_limits = TherapyIntegrationSafetyLimits {
-        thermal_index_max: 6.0,
+        thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
         max_treatment_time: 300.0,
@@ -166,7 +167,7 @@ fn test_safety_limit_thermal_exceeded() {
     };
 
     let safety_limits = TherapyIntegrationSafetyLimits {
-        thermal_index_max: 6.0,
+        thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
         max_treatment_time: 300.0,
@@ -186,7 +187,7 @@ fn test_safety_limit_mechanical_exceeded() {
     };
 
     let safety_limits = TherapyIntegrationSafetyLimits {
-        thermal_index_max: 6.0,
+        thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
         max_treatment_time: 300.0,
@@ -209,7 +210,7 @@ fn test_safety_limit_time_exceeded() {
     };
 
     let safety_limits = TherapyIntegrationSafetyLimits {
-        thermal_index_max: 6.0,
+        thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1000.0,
         max_treatment_time: 300.0,

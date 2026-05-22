@@ -5,7 +5,7 @@
 //! bioeffects evaluation.
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
-use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::medical::{MI_LIMIT_SOFT_TISSUE, TI_LIMIT_SOFT_TISSUE};
 use crate::core::constants::numerical::CM_TO_M;
 use crate::core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER;
 use ndarray::Array3;
@@ -92,9 +92,9 @@ impl SafetyAssessment {
         }
 
         // Thermal Index limit (IEC 62359)
-        if self.max_thermal_index > 6.0 {
+        if self.max_thermal_index > TI_LIMIT_SOFT_TISSUE {
             self.violations.push(format!(
-                "TI {:.2} exceeds IEC limit 6.0",
+                "TI {:.2} exceeds IEC limit {TI_LIMIT_SOFT_TISSUE:.1}",
                 self.max_thermal_index
             ));
         }
@@ -119,7 +119,7 @@ impl SafetyAssessment {
 
         // Safety score: 1 = fully safe, 0 = at or beyond all limits
         let mi_ratio = self.max_mechanical_index / MI_LIMIT_SOFT_TISSUE;
-        let ti_ratio = self.max_thermal_index / 6.0;
+        let ti_ratio = self.max_thermal_index / TI_LIMIT_SOFT_TISSUE;
         let dp_ratio = self.max_damage_probability / 0.05;
         let worst = mi_ratio.max(ti_ratio).max(dp_ratio);
         self.safety_score = (1.0 - worst).clamp(0.0, 1.0);

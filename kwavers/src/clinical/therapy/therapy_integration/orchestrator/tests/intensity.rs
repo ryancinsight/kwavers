@@ -1,3 +1,4 @@
+use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
 use super::*;
 
@@ -17,7 +18,7 @@ fn test_intensity_tracker_integration() {
             treatment_volume: 0.5,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
-            thermal_index_max: 6.0,
+            thermal_index_max: TI_LIMIT_SOFT_TISSUE,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
             max_treatment_time: 300.0,

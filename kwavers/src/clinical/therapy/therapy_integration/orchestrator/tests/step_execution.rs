@@ -1,3 +1,4 @@
+use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_TISSUE;
 use super::*;
 
@@ -16,7 +17,7 @@ fn test_therapy_step_execution() {
             treatment_volume: 0.5,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
-            thermal_index_max: 6.0,
+            thermal_index_max: TI_LIMIT_SOFT_TISSUE,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
             max_treatment_time: 300.0,
@@ -42,7 +43,7 @@ fn test_therapy_step_execution() {
     // Grid 16³, dx=0.002 m, focal_depth=0.03 m → focal voxel i=15 (= 15×0.002 = 0.030 m).
     // heating_scale = α·dt / (ρ²·c₀·c_p) = 0.5·0.1 / (1e6·1540·3600) = 9.025e-15
     // ΔT_focal = heating_scale · PNP² · exp(0) = 9.025e-15 · (1e6)² = 9.025e-3 °C
-    // TI = ΔT_focal ≈ 0.009 (well within thermal_index_max = 6.0)
+    // TI = ΔT_focal ≈ 0.009 (well within thermal_index_max = TI_LIMIT_SOFT_TISSUE)
     // MI = pnp / (1e3 · √f_Hz) = 1e6 / (1e3 · √2e6) ≈ 0.7071 (< 1.9)
     const DT: f64 = 0.1;
     const PNP: f64 = 1e6;

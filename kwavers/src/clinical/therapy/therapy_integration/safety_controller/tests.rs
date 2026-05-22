@@ -1,3 +1,4 @@
+use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use super::controller::SafetyController;
 use super::types::TherapyAction;
 use crate::clinical::therapy::therapy_integration::config::TherapyIntegrationSafetyLimits;
@@ -6,7 +7,7 @@ use std::collections::HashMap;
 
 fn create_test_controller() -> SafetyController {
     let limits = TherapyIntegrationSafetyLimits {
-        thermal_index_max: 6.0,
+        thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1.0,
         max_treatment_time: 600.0,
@@ -39,7 +40,7 @@ fn test_thermal_index_warning() {
     controller.start_monitoring(0.0);
 
     let mut metrics = SafetyMetrics::default();
-    metrics.thermal_index = 5.0; // 83% of 6.0 limit
+    metrics.thermal_index = 5.0; // 83% of TI_LIMIT_SOFT_TISSUE
 
     let action = controller.evaluate_safety(metrics, 1.0).unwrap();
     assert_eq!(action, TherapyAction::ReducePower);
@@ -88,7 +89,7 @@ fn test_power_reduction_factor() {
 
     // Trigger ReducePower via thermal index at 83% of limit
     let mut metrics = SafetyMetrics::default();
-    metrics.thermal_index = 5.0; // > 80% of 6.0
+    metrics.thermal_index = 5.0; // > 80% of TI_LIMIT_SOFT_TISSUE
     controller.evaluate_safety(metrics, 1.0).unwrap();
     assert_eq!(controller.power_reduction_factor(), 0.5);
 
@@ -102,7 +103,7 @@ fn test_power_reduction_factor() {
 #[test]
 fn test_organ_dose_tracking() {
     let limits = TherapyIntegrationSafetyLimits {
-        thermal_index_max: 6.0,
+        thermal_index_max: TI_LIMIT_SOFT_TISSUE,
         mechanical_index_max: 1.9,
         cavitation_dose_max: 1.0,
         max_treatment_time: 600.0,

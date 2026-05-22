@@ -3,7 +3,7 @@
 //! SRP: changes when the initial requirements registry changes.
 
 use super::types::{ClinicalCategory, ClinicalRequirements, ClinicalStandard};
-use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
+use crate::core::constants::medical::{MI_LIMIT_SOFT_TISSUE, TI_LIMIT_SOFT_TISSUE};
 use std::collections::HashMap;
 
 /// Clinical validation framework
@@ -39,7 +39,7 @@ impl Default for ClinicalValidator {
             .into(),
             safety_thresholds: [
                 ("mechanical_index".to_owned(), MI_LIMIT_SOFT_TISSUE),
-                ("thermal_index".to_owned(), 6.0),
+                ("thermal_index".to_owned(), TI_LIMIT_SOFT_TISSUE),
             ]
             .into(),
             standard: ClinicalStandard::FDA510k,
@@ -55,7 +55,7 @@ impl Default for ClinicalValidator {
             maximum_errors: HashMap::new(),
             safety_thresholds: [
                 ("mechanical_index_max".to_owned(), MI_LIMIT_SOFT_TISSUE),
-                ("thermal_index_soft_max".to_owned(), 6.0),
+                ("thermal_index_soft_max".to_owned(), TI_LIMIT_SOFT_TISSUE),
                 ("thermal_index_bone_max".to_owned(), 1.0),
                 ("thermal_index_cranial_max".to_owned(), 1.0),
                 ("spta_max".to_owned(), 720.0),

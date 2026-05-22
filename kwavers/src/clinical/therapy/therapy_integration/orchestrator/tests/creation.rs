@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 
 #[test]
 fn test_therapy_orchestrator_creation() {
@@ -15,7 +16,7 @@ fn test_therapy_orchestrator_creation() {
             treatment_volume: 1.0,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
-            thermal_index_max: 6.0,
+            thermal_index_max: TI_LIMIT_SOFT_TISSUE,
             mechanical_index_max: 1.9,
             cavitation_dose_max: 1000.0,
             max_treatment_time: 300.0,
