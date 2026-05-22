@@ -324,3 +324,32 @@ pub const REDUCED_SCATTERING_TISSUE_NIR: f64 = 1000.0; // m⁻¹
 /// Reference: Duck, F.A. (1990). Physical Properties of Tissue.
 /// Academic Press, London, Chapter 4, Table 4.1.
 pub const ACOUSTIC_ABSORPTION_TISSUE: f64 = 0.5; // Np/m
+
+/// Nonlinearity parameter B/A for generic soft tissue (dimensionless).
+///
+/// Value: 6.5 — representative mean for soft tissues excluding bone and fat.
+/// Used when no tissue-specific B/A constant applies.
+///
+/// Physical basis: β = 1 + B/(2A) couples the second-order pressure term
+/// in the Westervelt/KZK equation. Tissue-specific values span 6.1 (blood)
+/// to 9.6 (fat); this constant represents the approximate median excluding
+/// adipose tissue.
+///
+/// Reference: Duck, F.A. (1990). *Physical Properties of Tissue*, Table 4.16.
+pub const B_OVER_A_SOFT_TISSUE: f64 = 6.5;
+
+/// Power-law frequency exponent y for water acoustic absorption (dimensionless).
+///
+/// Water exhibits classical thermoviscous absorption proportional to f²,
+/// so y = 2.0 in α(f) = α₀·f^y.
+///
+/// Reference: Duck (1990) §2; Szabo (2004) §4.
+pub const WATER_ABSORPTION_POWER_Y: f64 = 2.0;
+
+/// Power-law frequency exponent y for soft tissue acoustic absorption (dimensionless).
+///
+/// Soft tissue absorption is approximately linear in frequency (y ≈ 1.0–1.2).
+/// The value 1.1 is the consensus from kHz–MHz diagnostic ultrasound measurements.
+///
+/// Reference: Duck (1990) Table 4.1; Szabo (2004) §4; Goss et al. (1978).
+pub const SOFT_TISSUE_ABSORPTION_POWER_Y: f64 = 1.1;
