@@ -289,7 +289,9 @@ impl MediumBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE};
+    use crate::core::constants::fundamental::{
+        DENSITY_BRAIN, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE,
+    };
     use std::collections::HashMap;
 
     fn test_grid() -> Grid {
@@ -343,15 +345,15 @@ mod tests {
             layers: vec![
                 LayerParameters {
                     thickness: 2.0e-3, // 0–2 mm: water-like
-                    density: 1000.0,
-                    sound_speed: 1500.0,
+                    density: DENSITY_WATER_NOMINAL,
+                    sound_speed: SOUND_SPEED_WATER_SIM,
                     absorption: 0.002,
                     interface_type: InterfaceTypeParameters::Sharp,
                 },
                 LayerParameters {
                     thickness: 2.0e-3, // 2–4 mm: tissue-like
-                    density: 1050.0,
-                    sound_speed: 1540.0,
+                    density: DENSITY_TISSUE,
+                    sound_speed: SOUND_SPEED_TISSUE,
                     absorption: 0.5,
                     interface_type: InterfaceTypeParameters::Sharp,
                 },
@@ -362,14 +364,14 @@ mod tests {
         let medium = MediumBuilder::build(&config, &grid).unwrap();
 
         // x=0 (i=0) and x=1mm (i=1): layer 0 — water-like
-        assert_eq!(medium.sound_speed(0, 0, 0), 1500.0, "x=0 must be layer-0 speed");
-        assert_eq!(medium.sound_speed(1, 0, 0), 1500.0, "x=1mm must be layer-0 speed");
+        assert_eq!(medium.sound_speed(0, 0, 0), SOUND_SPEED_WATER_SIM, "x=0 must be layer-0 speed");
+        assert_eq!(medium.sound_speed(1, 0, 0), SOUND_SPEED_WATER_SIM, "x=1mm must be layer-0 speed");
         // x=2mm (i=2) and x=3mm (i=3): layer 1 — tissue-like
-        assert_eq!(medium.sound_speed(2, 0, 0), 1540.0, "x=2mm must be layer-1 speed");
-        assert_eq!(medium.sound_speed(3, 0, 0), 1540.0, "x=3mm must be layer-1 speed");
+        assert_eq!(medium.sound_speed(2, 0, 0), SOUND_SPEED_TISSUE, "x=2mm must be layer-1 speed");
+        assert_eq!(medium.sound_speed(3, 0, 0), SOUND_SPEED_TISSUE, "x=3mm must be layer-1 speed");
         // Density follows the same step
-        assert_eq!(medium.density(0, 0, 0), 1000.0);
-        assert_eq!(medium.density(3, 0, 0), 1050.0);
+        assert_eq!(medium.density(0, 0, 0), DENSITY_WATER_NOMINAL);
+        assert_eq!(medium.density(3, 0, 0), DENSITY_TISSUE);
     }
 
     /// **Invariant**: Sigmoid blend at the Sharp→Smooth boundary: at x = z_boundary
@@ -383,8 +385,8 @@ mod tests {
             layers: vec![
                 LayerParameters {
                     thickness: 3.0e-3,
-                    density: 1000.0,
-                    sound_speed: 1500.0,
+                    density: DENSITY_WATER_NOMINAL,
+                    sound_speed: SOUND_SPEED_WATER_SIM,
                     absorption: 0.1,
                     interface_type: InterfaceTypeParameters::Smooth(0.5e-3), // σ = 0.5 mm
                 },
@@ -402,7 +404,7 @@ mod tests {
         let medium = MediumBuilder::build(&config, &grid).unwrap();
 
         // At x = 3 mm (the boundary), tanh(0/σ) = 0, so t = 0.5
-        // blended = 1500 * 0.5 + 2800 * 0.5 = 2150
+        // blended = SOUND_SPEED_WATER_SIM(1500) * 0.5 + 2800 * 0.5 = 2150
         let at_boundary = medium.sound_speed(3, 0, 0);
         assert!(
             (at_boundary - 2150.0).abs() < 1.0,

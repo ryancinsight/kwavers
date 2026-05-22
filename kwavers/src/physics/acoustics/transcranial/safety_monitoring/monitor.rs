@@ -1,6 +1,7 @@
 //! TranscranialSafetyMonitor struct and field update orchestration
 
 use super::types::{MechanicalIndex, SafetyThresholds, TranscranialSafetyDose};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -27,7 +28,7 @@ impl TranscranialSafetyMonitor {
     /// Create new safety monitor
     #[must_use]
     pub fn new(grid_dims: (usize, usize, usize), perfusion_rate: f64, frequency: f64) -> Self {
-        let temperature = Array3::from_elem(grid_dims, 37.0); // Body temperature
+        let temperature = Array3::from_elem(grid_dims, BODY_TEMPERATURE_C);
         let pressure = Array3::zeros(grid_dims);
         let thermal_dose = TranscranialSafetyDose {
             current_dose: Array3::zeros(grid_dims),

@@ -7,11 +7,10 @@ use super::{
     born::ActiveVoxel, config::C_BRAIN_REF_M_S, medium::AcousticSlice,
     transducer::TranscranialBowlGeometry,
 };
+use crate::core::constants::fundamental::DENSITY_BRAIN;
 use crate::solver::inverse::linear_born_inversion::{
     LinearBornInversionConfig, TransducerGeometry,
 };
-
-const C_TISSUE_DENSITY_KG_M3: f64 = 1000.0;
 
 /// Build the row-normalized Born sensitivity matrix.
 ///
@@ -100,7 +99,7 @@ fn second_harmonic_factor(
 ) -> f64 {
     let source_pressure_pa = config.source_pressure_mpa * 1.0e6;
     let omega = TAU * frequency_hz;
-    let shock_distance_m = C_TISSUE_DENSITY_KG_M3 * C_BRAIN_REF_M_S.powi(3)
+    let shock_distance_m = DENSITY_BRAIN * C_BRAIN_REF_M_S.powi(3)
         / (config.nonlinear_beta * omega * source_pressure_pa);
     0.25 * (path_m / shock_distance_m).max(0.0)
 }

@@ -3,6 +3,8 @@
 //! Configuration structures for Full Waveform Inversion and Reverse Time Migration
 //! Following GRASP principles: Information Expert pattern for parameter management
 
+use crate::solver::config::SolverType;
+
 /// Full Waveform Inversion Parameters
 #[derive(Debug, Clone)]
 pub struct FwiParameters {
@@ -46,6 +48,24 @@ pub struct FwiParameters {
     ///
     /// Default 0 disables the mute (backward-compatible).
     pub source_mute_radius: usize,
+
+    /// Forward (and adjoint) solver type for the time-domain FWI passes.
+    ///
+    /// ## Solver selection contract
+    ///
+    /// Both the forward and adjoint models use the **same** solver type so that
+    /// the discrete adjoint operator is the exact time-reversal of the forward
+    /// operator (time-reversal theorem, Plessix 2006).  Mixing solver types
+    /// between forward and adjoint breaks the gradient identity.
+    ///
+    /// | `SolverType` | Behaviour |
+    /// |---|---|
+    /// | `FDTD` | `FdtdSolver` with 2nd-order spatial stencil + CPML (default). |
+    /// | `PSTD` | `PSTDSolver` with k-space spectral propagation + CPML embedded in `PSTDConfig::boundary`. |
+    /// | Others | `Err(InvalidInput)` — not yet wired. |
+    ///
+    /// Default `SolverType::FDTD` preserves backward-compatible behaviour.
+    pub solver_type: SolverType,
 }
 
 /// Regularization parameters for inversion
@@ -147,6 +167,7 @@ impl Default for FwiParameters {
             regularization: RegularizationParameters::default(),
             frequency: 20.0, // Hz — typical shallow-seismic exploration bandwidth
             source_mute_radius: 0, // disabled by default (backward-compatible)
+            solver_type: SolverType::FDTD,
         }
     }
 }

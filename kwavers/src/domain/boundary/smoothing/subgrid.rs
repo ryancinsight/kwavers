@@ -136,6 +136,7 @@ impl SubgridAveraging {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
     use ndarray::{s, Array3};
 
     #[test]
@@ -144,12 +145,12 @@ mod tests {
         let smoother = SubgridAveraging::new(config);
 
         // Uniform property, all inside (geometry = 1.0)
-        let property = Array3::from_elem((10, 10, 10), 1540.0);
+        let property = Array3::from_elem((10, 10, 10), SOUND_SPEED_TISSUE);
         let geometry = Array3::from_elem((10, 10, 10), 1.0);
 
         let smoothed = smoother.apply(&property, &geometry).unwrap();
         // Should be unchanged (no boundary cells)
-        assert_relative_eq!(smoothed[[5, 5, 5]], 1540.0, epsilon = 1e-9);
+        assert_relative_eq!(smoothed[[5, 5, 5]], SOUND_SPEED_TISSUE, epsilon = 1e-9);
     }
 
     #[test]
@@ -162,7 +163,7 @@ mod tests {
         let smoother = SubgridAveraging::new(config);
 
         // Create a simple boundary scenario
-        let mut property = Array3::from_elem((10, 10, 10), 1540.0);
+        let mut property = Array3::from_elem((10, 10, 10), SOUND_SPEED_TISSUE);
         property.slice_mut(s![5.., .., ..]).fill(3000.0); // Different property outside
 
         let mut geometry = Array3::from_elem((10, 10, 10), 1.0);
@@ -173,7 +174,7 @@ mod tests {
         // Boundary cell should be smoothed (averaged value)
         let smoothed_val = smoothed[[5, 5, 5]];
         assert!(
-            smoothed_val > 1540.0 && smoothed_val < 3000.0,
+            smoothed_val > SOUND_SPEED_TISSUE && smoothed_val < 3000.0,
             "Boundary cell should be between inside and outside values"
         );
     }

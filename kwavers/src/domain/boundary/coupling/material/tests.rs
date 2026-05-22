@@ -1,4 +1,6 @@
-use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{
+    DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
+};
 use super::*;
 use crate::domain::boundary::traits::BoundaryCondition;
 use crate::domain::grid::GridTopologyExt;
@@ -8,7 +10,7 @@ use ndarray::Array3;
 #[test]
 fn test_material_interface_coefficients() {
     let material_1 = AcousticPropertyData {
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
@@ -54,7 +56,7 @@ fn test_material_interface_coefficients() {
 #[test]
 fn test_material_interface_normal_incidence_water_tissue() {
     let material_water = AcousticPropertyData {
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.002,
         absorption_power: 2.0,
@@ -122,7 +124,7 @@ fn test_material_interface_normal_incidence_water_tissue() {
 #[test]
 fn test_material_interface_energy_conservation() {
     let material_1 = AcousticPropertyData {
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
@@ -161,7 +163,7 @@ fn test_material_interface_energy_conservation() {
 #[test]
 fn test_material_interface_matched_impedance() {
     let material_1 = AcousticPropertyData {
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
@@ -169,7 +171,7 @@ fn test_material_interface_matched_impedance() {
     };
 
     let material_2 = AcousticPropertyData {
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.2,
         absorption_power: 1.8,
@@ -210,7 +212,7 @@ fn test_material_interface_large_impedance_mismatch() {
     };
 
     let material_water = AcousticPropertyData {
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.002,
         absorption_power: 2.0,
@@ -248,7 +250,7 @@ fn test_material_interface_large_impedance_mismatch() {
 #[test]
 fn test_material_interface_field_continuity() {
     let material_1 = AcousticPropertyData {
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,
@@ -304,7 +306,7 @@ fn test_material_interface_field_continuity() {
 #[test]
 fn test_material_interface_zero_thickness() {
     let material_1 = AcousticPropertyData {
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         sound_speed: SOUND_SPEED_WATER_SIM,
         absorption_coefficient: 0.1,
         absorption_power: 2.0,

@@ -1,10 +1,8 @@
-//! Adjoint FDTD run, adjoint-source construction, L2 residual and objective.
+//! Adjoint simulation run, adjoint-source construction, L2 residual and objective.
 
 use super::{geometry::FwiGeometry, FwiProcessor};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
-use crate::domain::boundary::cpml::{CPMLConfig, PerDimensionPML};
 use crate::domain::grid::Grid;
-use crate::domain::medium::heterogeneous::HeterogeneousFactory;
 use crate::domain::source::{GridSource, SourceMode};
 use crate::solver::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
@@ -172,9 +170,10 @@ impl FwiProcessor {
         })
     }
 
-    /// Adjoint modeling using time-reversed FDTD.
+    /// Adjoint modeling using time-reversed simulation.
     ///
-    /// Computes the adjoint wavefield by running the FDTD solver in reverse time
+    /// Computes the adjoint wavefield by running the solver (same type as the
+    /// forward pass, selected by `FwiParameters::solver_type`) in reverse time
     /// with the adjoint source (data residual) as input, then accumulates the
     /// discrete velocity-model gradient
     ///
@@ -189,6 +188,15 @@ impl FwiProcessor {
     /// the discretisation of `½∫r² dt`, so the residual itself carries no
     /// extra `dt` weight in the adjoint source — see
     /// [`build_adjoint_source`] / [`l2_residual`]).
+    ///
+    /// ## Solver-type reciprocity
+    ///
+    /// The adjoint solver is constructed through the same `build_fdtd_boxed` /
+    /// `build_pstd_boxed` helpers as the forward pass (dispatching on the same
+    /// `FwiParameters::solver_type`).  This guarantees that the discrete adjoint
+    /// operator is the exact time-reversal of the forward operator — the
+    /// time-reversal theorem holds if and only if forward and adjoint share the
+    /// same stencil and boundary treatment.
     ///
     /// ## Density handling
     ///
@@ -219,7 +227,7 @@ impl FwiProcessor {
         forward_history: &Array4<f64>,
         source_mask: Option<&Array3<f64>>,
     ) -> KwaversResult<Array3<f64>> {
-        use crate::solver::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
+        use crate::solver::config::SolverType;
 
         if forward_history.len_of(Axis(0)) != self.parameters.nt {
             return Err(KwaversError::Validation(
@@ -235,50 +243,46 @@ impl FwiProcessor {
 
         let (nx, ny, nz) = grid.dimensions();
         let dt = self.validate_time_step(model, grid)?;
-        let num_steps = self.parameters.nt;
 
-        let config = FdtdConfig {
-            spatial_order: 2,
-            staggered_grid: true,
-            cfl_factor: 0.3,
-            subgridding: false,
-            subgrid_factor: 2,
-            enable_gpu_acceleration: false,
-            enable_nonlinear: false,
-            kspace_correction: KSpaceCorrectionMode::None,
-            nt: num_steps,
-            dt,
-            sensor_mask: None,
-            geometry: Default::default(),
-        };
-
+        // Resolved once here so both the medium construction inside the solver
+        // builder and the per-voxel Plessix (2006) eq. (12) scaling below use
+        // exactly the same density field.
         let density_adj = self.resolved_density(grid)?;
-        let medium_adj = HeterogeneousFactory::from_arrays(
-            model.clone(),
-            density_adj.clone(),
-            None,
-            None, // alpha_power: default 1.0
-            None,
-            self.parameters.frequency,
-        )
-        .map_err(crate::core::error::KwaversError::InvalidInput)?;
 
-        let mut solver = FdtdSolver::new(config, grid, &medium_adj, adjoint_source.clone())?;
-
-        // CPML must match the forward solver's boundary treatment (time-reversal theorem).
-        let c_max_adj = model.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-        let y_pml_adj = if ny > 20 { 10usize } else { 0usize };
-        let cpml_adj = CPMLConfig {
-            thickness: 10,
-            per_dimension: PerDimensionPML::new(10, y_pml_adj, 10),
-            ..CPMLConfig::default()
-        };
-        solver.enable_cpml(cpml_adj, dt, c_max_adj)?;
+        // Adjoint solver uses the same SolverType as the forward pass to preserve
+        // the discrete time-reversal symmetry (time-reversal theorem).
+        // No sensor mask on the adjoint solver — receiver data is injected through
+        // the adjoint_source pressure signal, not recorded.
+        let mut solver: Box<dyn crate::solver::interface::Solver> =
+            match self.parameters.solver_type {
+                SolverType::FDTD => self.build_fdtd_boxed(
+                    model,
+                    None, // no sensor recording on adjoint pass
+                    grid,
+                    dt,
+                    adjoint_source.clone(),
+                )?,
+                SolverType::PSTD => self.build_pstd_boxed(
+                    model,
+                    None, // no sensor recording on adjoint pass
+                    grid,
+                    dt,
+                    adjoint_source.clone(),
+                )?,
+                other => {
+                    return Err(KwaversError::InvalidInput(format!(
+                        "FWI adjoint builder: SolverType::{other:?} is not yet supported; \
+                         use FDTD or PSTD"
+                    )))
+                }
+            };
 
         let mut gradient_m = Array3::zeros((nx, ny, nz));
         let mut p_tt = Array3::zeros((nx, ny, nz));
 
         for t in 0..self.parameters.nt {
+            // `solver` is `Box<dyn Solver>` — dynamic dispatch through the
+            // unified Solver trait (T19a/T19b/T10).
             solver.step_forward()?;
             let fwd_idx = self.parameters.nt - 1 - t;
             self.pressure_second_derivative_into(forward_history, fwd_idx, dt, &mut p_tt)?;
@@ -293,17 +297,12 @@ impl FwiProcessor {
                 });
             }
 
-            // Trait-method dispatch (T19a) — pressure_field() returns
-            // &Array3<f64>, replacing the previous direct
-            // `solver.fields.p` field access. Fully-qualified syntax keeps
-            // method resolution unambiguous without an extra `use`.
+            // pressure_field() via Box<dyn Solver> dynamic dispatch — replaces
+            // the previous UFCS `<FdtdSolver as Solver>::pressure_field(&solver)`.
             accumulate_signed_correlation(
                 &mut gradient_m,
                 p_tt.view(),
-                <crate::solver::fdtd::FdtdSolver as crate::solver::interface::Solver>::pressure_field(
-                    &solver,
-                )
-                .view(),
+                solver.pressure_field().view(),
                 -dt,
             )?;
         }

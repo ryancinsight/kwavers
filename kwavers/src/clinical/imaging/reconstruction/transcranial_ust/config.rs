@@ -16,7 +16,7 @@ use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 pub const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
 use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
-use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 /// Acoustic properties used by the CT-to-speed model.
 pub const C_WATER_M_S: f64 = SOUND_SPEED_WATER_SIM;
@@ -42,12 +42,12 @@ pub struct TranscranialUstBornInversionConfig {
 
 impl Default for TranscranialUstBornInversionConfig {
     fn default() -> Self {
-        // Brain-tissue reference: c₀ = SOUND_SPEED_TISSUE (1540 m/s), ρ₀ = 1000 kg/m³.
+        // Brain-tissue reference: c₀ = C_BRAIN_REF_M_S (1546 m/s), ρ₀ = DENSITY_BRAIN (1040 kg/m³).
         // Pins the generic operator's wavenumber and weak-shock distance to the
         // brain anatomy this clinical adapter targets.
         let linear = LinearBornInversionConfig {
             reference_sound_speed_m_s: C_BRAIN_REF_M_S,
-            reference_density_kg_m3: 1000.0,
+            reference_density_kg_m3: DENSITY_BRAIN,
             ..LinearBornInversionConfig::default()
         };
         Self {

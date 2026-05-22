@@ -145,6 +145,7 @@ impl BoundarySmoothing {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
     use ndarray::Array3;
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
 
         let smoother = BoundarySmoothing::new(config);
 
-        let property = Array3::from_elem((10, 10, 10), 1540.0);
+        let property = Array3::from_elem((10, 10, 10), SOUND_SPEED_TISSUE);
         let geometry = Array3::from_elem((10, 10, 10), 1.0);
 
         let smoothed = smoother.smooth(&property, &geometry).unwrap();

@@ -4,6 +4,7 @@
 //! PSTD propagation and frequency-domain inversion, while this module maps the
 //! breast ring-array protocol onto those solver contracts.
 
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::boundary::CPMLConfig;
 use crate::domain::grid::Grid;
@@ -51,7 +52,7 @@ impl Default for BreastUstPstdDatasetConfig {
             cycles_per_frequency: 4,
             frequency_bin_cycles: 1,
             source_amplitude_pa: 1.0e3,
-            density_kg_m3: 1000.0,
+            density_kg_m3: DENSITY_WATER_NOMINAL, // water coupling bath
             cpml_thickness_cells: 8,
         }
     }
