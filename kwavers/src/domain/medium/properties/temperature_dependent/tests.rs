@@ -81,7 +81,7 @@ fn test_combined_material_properties() {
 fn test_duck_1990_water_data_validation() {
     let water = TemperatureDependentAcoustic::water();
 
-    let c_20c = water.sound_speed(293.15);
+    let c_20c = water.sound_speed(ROOM_TEMPERATURE_K);
     assert!((c_20c - 1481.0).abs() < 10.0);
 
     let c_37c = water.sound_speed(BODY_TEMPERATURE_K);
@@ -118,7 +118,7 @@ fn test_validation_physical_constraints() {
     assert!(result.is_err());
 
     let result =
-        TemperatureDependentAcoustic::new(water.base_properties, 293.15, 0.02, 2.1e-4, 0.02);
+        TemperatureDependentAcoustic::new(water.base_properties, ROOM_TEMPERATURE_K, 0.02, 2.1e-4, 0.02);
     assert!(result.is_err());
 }
 

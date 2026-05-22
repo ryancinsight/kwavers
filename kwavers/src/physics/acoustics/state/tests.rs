@@ -1,5 +1,5 @@
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
+use crate::core::constants::thermodynamic::{KELVIN_OFFSET_C, ROOM_TEMPERATURE_K};
 use super::container::{field_indices, PhysicsState};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -14,13 +14,13 @@ fn test_physics_state_creation() {
 
     let mut state = state;
     state
-        .initialize_field(field_indices::TEMPERATURE_IDX, 293.15)
+        .initialize_field(field_indices::TEMPERATURE_IDX, ROOM_TEMPERATURE_K)
         .unwrap();
     let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
 
     assert!(
-        (temp[[5, 5, 5]] - 293.15).abs() < f64::EPSILON,
-        "Temperature initialization failed: expected 293.15, got {}",
+        (temp[[5, 5, 5]] - ROOM_TEMPERATURE_K).abs() < f64::EPSILON,
+        "Temperature initialization failed: expected {ROOM_TEMPERATURE_K}, got {}",
         temp[[5, 5, 5]]
     );
 }
