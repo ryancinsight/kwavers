@@ -2,6 +2,7 @@ use std::f64::consts::PI;
 
 use ndarray::{Array1, Array2, Array3};
 
+use crate::core::constants::acoustic_parameters::DB_TO_NP;
 use crate::core::constants::fundamental::DENSITY_BRAIN;
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -17,14 +18,14 @@ pub fn acoustic_properties_from_hu(
     skull_c: f64,
 ) -> (f64, f64, f64) {
     if hu <= 300.0 {
-        let alpha_np_m = 0.5 * 100.0 / 8.686 * (frequency_hz / 1.0e6);
+        let alpha_np_m = 0.5 * 100.0 * DB_TO_NP * (frequency_hz / 1.0e6);
         return (brain_c, DENSITY_BRAIN, alpha_np_m);
     }
     let bone_fraction = ((hu - 300.0) / 1700.0).clamp(0.0, 1.0);
     let density = 1200.0 + 700.0 * bone_fraction;
     let c = brain_c + (skull_c - brain_c) * bone_fraction;
     let alpha_db_cm_mhz = 8.0 + 12.0 * bone_fraction;
-    let alpha_np_m = alpha_db_cm_mhz * 100.0 / 8.686 * (frequency_hz / 1.0e6);
+    let alpha_np_m = alpha_db_cm_mhz * 100.0 * DB_TO_NP * (frequency_hz / 1.0e6);
     (c, density, alpha_np_m)
 }
 

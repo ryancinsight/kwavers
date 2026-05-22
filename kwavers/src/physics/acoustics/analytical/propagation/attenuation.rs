@@ -34,6 +34,7 @@
 //! - Lambert, J.H. (1760): "Photometria sive de mensura et gradibus luminis, colorum et umbrae"
 //! - Beer, A. (1852): "Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten"
 
+use crate::core::constants::acoustic_parameters::NP_TO_DB;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -74,10 +75,10 @@ impl AttenuationCalculator {
     }
 
     /// Calculate attenuation in dB over distance
-    /// `Attenuation_dB` = 20 * log₁₀(A₀/A) = 8.686 * α * x
+    /// `Attenuation_dB` = 20 * log₁₀(A₀/A) = NP_TO_DB * α * x
     #[must_use]
     pub fn attenuation_db(&self, distance: f64) -> f64 {
-        8.686 * self.absorption_coefficient * distance
+        NP_TO_DB * self.absorption_coefficient * distance
     }
 
     /// Calculate frequency-dependent absorption for this calculator's frequency

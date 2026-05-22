@@ -1,6 +1,7 @@
 //! Full 3D attenuation field computation over numeric grids
 
 use super::model::SkullAttenuation;
+use crate::core::constants::acoustic_parameters::NP_TO_DB;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -99,8 +100,7 @@ impl SkullAttenuation {
     #[must_use]
     pub fn attenuation_db_per_cm(&self, frequency: f64) -> f64 {
         let alpha_np_per_m = self.total_coefficient(frequency);
-        let np_to_db = 8.686;
         let m_to_cm = 0.01;
-        alpha_np_per_m * np_to_db * m_to_cm
+        alpha_np_per_m * NP_TO_DB * m_to_cm
     }
 }

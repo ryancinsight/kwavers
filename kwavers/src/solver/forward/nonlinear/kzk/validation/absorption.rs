@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::super::*;
+    use crate::core::constants::acoustic_parameters::DB_TO_NP;
     use ndarray::Array2;
 
     /// Test power-law absorption: spectral field amplitude decay.
@@ -96,8 +97,8 @@ mod tests {
         let final_amp = final_spectrum[fundamental_bin].norm() * 2.0 / nt as f64;
 
         // Expected amplitude decay: exp(−α·d)
-        // α(f₀) in Np/m = α₀_dB_cm_MHz × 100 / 8.686
-        let alpha_np_per_m = config.alpha0 * 100.0 / 8.686;
+        // α(f₀) in Np/m = α₀_dB_cm_MHz × 100 × DB_TO_NP
+        let alpha_np_per_m = config.alpha0 * 100.0 * DB_TO_NP;
         let expected_amp_ratio = (-alpha_np_per_m * 0.1).exp();
 
         let actual_amp_ratio = if initial_amp > 1e-12 {
