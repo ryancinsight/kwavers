@@ -42,7 +42,8 @@
 //! - `blood_specific_heat > 0` (if present)
 
 use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER};
-use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
+use crate::core::constants::thermodynamic::{SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use std::fmt;
 
 /// Canonical thermal material properties
@@ -159,10 +160,10 @@ impl ThermalPropertyData {
     pub fn soft_tissue() -> Self {
         Self {
             conductivity: 0.5,
-            specific_heat: 3600.0,
+            specific_heat: SPECIFIC_HEAT_TISSUE,
             density: DENSITY_TISSUE,
             blood_perfusion: Some(0.5),
-            blood_specific_heat: Some(3617.0),
+            blood_specific_heat: Some(BLOOD_SPECIFIC_HEAT),
         }
     }
 
@@ -223,11 +224,13 @@ mod tests {
 
     #[test]
     fn test_thermal_validation() {
+        use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
+        use crate::core::constants::thermodynamic::SPECIFIC_HEAT_TISSUE;
         // Negative conductivity should fail
-        assert!(ThermalPropertyData::new(-0.5, 3600.0, DENSITY_TISSUE, None, None).is_err());
+        assert!(ThermalPropertyData::new(-0.5, SPECIFIC_HEAT_TISSUE, DENSITY_TISSUE, None, None).is_err());
 
         // Valid parameters should succeed
-        let tp = ThermalPropertyData::new(0.5, 3600.0, DENSITY_TISSUE, Some(0.5), Some(3617.0)).unwrap();
+        let tp = ThermalPropertyData::new(0.5, SPECIFIC_HEAT_TISSUE, DENSITY_TISSUE, Some(0.5), Some(BLOOD_SPECIFIC_HEAT)).unwrap();
         assert!(tp.conductivity > 0.0);
     }
 }

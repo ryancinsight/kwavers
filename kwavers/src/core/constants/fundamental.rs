@@ -325,6 +325,63 @@ pub const REDUCED_SCATTERING_TISSUE_NIR: f64 = 1000.0; // m⁻¹
 /// Academic Press, London, Chapter 4, Table 4.1.
 pub const ACOUSTIC_ABSORPTION_TISSUE: f64 = 0.5; // Np/m
 
+/// Density of human skin at body temperature (kg/m³).
+///
+/// Reference: Duck (1990) Table 4.1; IT'IS Foundation (2022).
+pub const DENSITY_SKIN: f64 = 1100.0;
+
+/// Small-signal sound speed in human skin at body temperature (m/s).
+///
+/// Reference: Duck (1990) Table 4.6.
+pub const SOUND_SPEED_SKIN: f64 = 1600.0;
+
+/// Density of human lung parenchyma at total lung capacity (kg/m³).
+///
+/// Much lower than other soft tissues due to high air fraction (~70% air by volume).
+///
+/// Reference: Duck (1990) Table 4.1; ICRP-89 (2002).
+pub const DENSITY_LUNG: f64 = 400.0;
+
+/// Small-signal sound speed in lung parenchyma at body temperature (m/s).
+///
+/// Dramatically reduced compared to soft tissue due to gas-liquid mixture.
+///
+/// Reference: Duck (1990) Table 4.6.
+pub const SOUND_SPEED_LUNG: f64 = 650.0;
+
+/// Density of human breast glandular tissue at body temperature (kg/m³).
+///
+/// Reference: IT'IS Foundation database v4.0 (2022); Hasgall et al. (2022).
+pub const DENSITY_BREAST_GLAND: f64 = 1041.0;
+
+/// Small-signal sound speed in breast glandular tissue at body temperature (m/s).
+///
+/// Reference: Duck (1990) Table 4.6; Mast (2000) Ultrasound Med. Biol.
+pub const SOUND_SPEED_BREAST_GLAND: f64 = 1510.0;
+
+/// Nonlinearity parameter B/A for cortical bone (dimensionless).
+///
+/// Bone is highly nonlinear; measured values range 6–9 depending on bone type
+/// and mineralisation. The value 8.0 is representative for cortical bone.
+///
+/// Reference: Duck (1990) Table 4.16; Bjørnø (2002).
+pub const B_OVER_A_BONE: f64 = 8.0;
+
+/// Nonlinearity parameter B/A for human skin (dimensionless).
+///
+/// Reference: Duck (1990) Table 4.16.
+pub const B_OVER_A_SKIN: f64 = 7.5;
+
+/// Nonlinearity parameter B/A for lung parenchyma (dimensionless).
+///
+/// Lung has reduced effective B/A due to air content; value from Duck (1990).
+pub const B_OVER_A_LUNG: f64 = 8.0;
+
+/// Nonlinearity parameter B/A for breast glandular tissue (dimensionless).
+///
+/// Reference: IT'IS Foundation; Duck (1990) Table 4.16.
+pub const B_OVER_A_BREAST_GLAND: f64 = 7.0;
+
 /// Nonlinearity parameter B/A for generic soft tissue (dimensionless).
 ///
 /// Value: 6.5 — representative mean for soft tissues excluding bone and fat.

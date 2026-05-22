@@ -1,7 +1,7 @@
 use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use std::f64::consts::PI;
@@ -189,7 +189,7 @@ impl FocalSpotDoseEstimate {
         duty_cycle: f64,
         treatment_duration_s: f64,
     ) -> KwaversResult<Self> {
-        const SPECIFIC_HEAT: f64 = 3600.0;
+        let specific_heat = SPECIFIC_HEAT_TISSUE;
         const PERFUSION_RATE: f64 = 0.01;
         const SECONDS_PER_MINUTE: f64 = 60.0;
         const ABLATION_DOSE_CEM43_MIN: f64 = 240.0;
@@ -204,7 +204,7 @@ impl FocalSpotDoseEstimate {
         let intensity_w_m2 = focal_spot.peak_pressure_pa.powi(2)
             / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
         let heating_w_m3 = 2.0 * alpha_np_per_m * intensity_w_m2 * duty_cycle;
-        let heating_rate_c_per_s = heating_w_m3 / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT);
+        let heating_rate_c_per_s = heating_w_m3 / (DENSITY_WATER_NOMINAL * specific_heat);
         let delta_t = (heating_rate_c_per_s / PERFUSION_RATE)
             * (1.0 - (-PERFUSION_RATE * treatment_duration_s).exp());
         let peak_temperature_c = BODY_TEMPERATURE_C + delta_t;

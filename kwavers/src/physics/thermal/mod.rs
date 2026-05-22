@@ -33,6 +33,9 @@ pub mod tissues {
         DENSITY_BREAST_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
     };
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
+    use crate::core::constants::thermodynamic::{
+        SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_LIVER, SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_TISSUE,
+    };
     use crate::domain::medium::properties::ThermalPropertyData;
 
     /// Liver tissue properties
@@ -50,7 +53,7 @@ pub mod tissues {
     pub fn liver() -> ThermalPropertyData {
         ThermalPropertyData::new(
             0.52,           // conductivity (W/m/K)
-            3540.0,         // specific_heat (J/kg/K)
+            SPECIFIC_HEAT_LIVER, // specific_heat (J/kg/K)
             DENSITY_LIVER,  // density (kg/m³) — SSOT; Duck (1990): ρ_liver ≈ 1060 kg/m³
             Some(16.7),     // blood_perfusion (kg/m³/s) - high perfusion
             Some(BLOOD_SPECIFIC_HEAT),
@@ -73,7 +76,7 @@ pub mod tissues {
     pub fn muscle() -> ThermalPropertyData {
         ThermalPropertyData::new(
             0.49,            // conductivity (W/m/K)
-            3421.0,          // specific_heat (J/kg/K)
+            SPECIFIC_HEAT_MUSCLE, // specific_heat (J/kg/K)
             DENSITY_MUSCLE,  // density (kg/m³) — SSOT; Duck (1990) upper range / IT'IS
             Some(0.54),      // blood_perfusion (kg/m³/s)
             Some(BLOOD_SPECIFIC_HEAT),
@@ -96,7 +99,7 @@ pub mod tissues {
     pub fn fat() -> ThermalPropertyData {
         ThermalPropertyData::new(
             0.21,               // conductivity (W/m/K)
-            2348.0,             // specific_heat (J/kg/K)
+            SPECIFIC_HEAT_FAT, // specific_heat (J/kg/K)
             DENSITY_BREAST_FAT, // density (kg/m³) — IT'IS Foundation v4.0 breast fat
             Some(0.3),          // blood_perfusion (kg/m³/s) - low perfusion
             Some(BLOOD_SPECIFIC_HEAT),
@@ -119,7 +122,7 @@ pub mod tissues {
     pub fn tumor() -> ThermalPropertyData {
         ThermalPropertyData::new(
             0.55,           // conductivity (W/m/K)
-            3600.0,         // specific_heat (J/kg/K)
+            SPECIFIC_HEAT_TISSUE, // specific_heat (J/kg/K)
             DENSITY_TISSUE, // density (kg/m³) — SSOT: fundamental::DENSITY_TISSUE
             Some(0.2),      // blood_perfusion (kg/m³/s) - poor perfusion
             Some(BLOOD_SPECIFIC_HEAT),

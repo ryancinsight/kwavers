@@ -1,4 +1,4 @@
-use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::acoustic_parameters::{NP_TO_DB, WATER_ABSORPTION_ALPHA_0};
 use crate::core::constants::fundamental::{
     B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, C_WATER, DENSITY_BRAIN,
     DENSITY_FAT, DENSITY_KIDNEY, DENSITY_LIVER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN,
@@ -51,8 +51,8 @@ impl NonlinearParameters {
             sound_speed: C_WATER,
             b_over_a,
             beta: 1.0 + b_over_a / 2.0,
-            // 0.0022 dB/(cm·MHz²) → Np/(m·MHz²) — water classical f² absorption.
-            attenuation_coeff: 0.0022 / CM_TO_M / NP_TO_DB,
+            // WATER_ABSORPTION_ALPHA_0 dB/(cm·MHz²) → Np/(m·MHz²) — water classical f² absorption.
+            attenuation_coeff: WATER_ABSORPTION_ALPHA_0 / CM_TO_M / NP_TO_DB,
             attenuation_exponent: 2.0,
         }
     }

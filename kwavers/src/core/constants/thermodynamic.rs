@@ -83,8 +83,65 @@ pub const SPECIFIC_HEAT_WATER: f64 = 4182.0;
 ///   *J. Appl. Phys.* **60**(7), R83. DOI: 10.1063/1.337089
 pub const GRUNEISEN_WATER_37C: f64 = 0.188;
 
-/// Specific heat capacity of tissue (J/(kg·K))
+/// Specific heat capacity of generic soft tissue (J/(kg·K))
+///
+/// Duck (1990) mean for mammalian soft tissue; used in Pennes bioheat and
+/// HIFU heating calculations when a tissue-type-specific value is not available.
 pub const SPECIFIC_HEAT_TISSUE: f64 = 3600.0;
+
+/// Specific heat capacity of human brain tissue (J/(kg·K))
+///
+/// Mean of grey and white matter measured at body temperature.
+///
+/// Reference: Duck (1990), Table 9.1; Bhattacharya & Mahajan (2003).
+pub const SPECIFIC_HEAT_BRAIN: f64 = 3630.0;
+
+/// Specific heat capacity of skeletal muscle (J/(kg·K))
+///
+/// Reference: Duck (1990), Table 9.1.
+pub const SPECIFIC_HEAT_MUSCLE: f64 = 3421.0;
+
+/// Specific heat capacity of human liver parenchyma (J/(kg·K))
+///
+/// Reference: Duck (1990), Table 9.1.
+pub const SPECIFIC_HEAT_LIVER: f64 = 3540.0;
+
+/// Specific heat capacity of human adipose tissue (J/(kg·K))
+///
+/// Reference: Duck (1990), Table 9.1.
+pub const SPECIFIC_HEAT_FAT: f64 = 2348.0;
+
+/// Specific heat capacity of whole blood at 37°C (J/(kg·K))
+///
+/// Reference: Duck (1990), Table 9.1; Gordon et al. (2009).
+pub const SPECIFIC_HEAT_BLOOD: f64 = 3617.0;
+
+/// Specific heat capacity of human renal cortex at body temperature (J/(kg·K))
+///
+/// Reference: Duck (1990), Table 9.1.
+pub const SPECIFIC_HEAT_KIDNEY: f64 = 3763.0;
+
+/// Specific heat capacity of cortical bone at body temperature (J/(kg·K))
+///
+/// Reference: Duck (1990), Table 9.1; Hasgall et al. (2022) IT'IS Foundation.
+pub const SPECIFIC_HEAT_BONE: f64 = 1313.0;
+
+/// Specific heat capacity of human skin at body temperature (J/(kg·K))
+///
+/// Reference: Duck (1990), Table 9.1.
+pub const SPECIFIC_HEAT_SKIN: f64 = 3391.0;
+
+/// Specific heat capacity of lung parenchyma (J/(kg·K))
+///
+/// Reduced heat capacity due to high air fraction (~50% air by volume at FRC).
+///
+/// Reference: Duck (1990), Table 9.1; Hasgall et al. (2022) IT'IS Foundation.
+pub const SPECIFIC_HEAT_LUNG: f64 = 3886.0;
+
+/// Specific heat capacity of breast glandular tissue (J/(kg·K))
+///
+/// Reference: IT'IS Foundation database v4.0 (2022).
+pub const SPECIFIC_HEAT_BREAST_GLAND: f64 = 3600.0;
 
 /// Thermal conductivity of water at 20°C (W/(m·K))
 pub const THERMAL_CONDUCTIVITY_WATER: f64 = 0.598;

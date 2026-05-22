@@ -26,7 +26,7 @@
 //! - Nyborg (1981): "Heat generation by ultrasound in a relaxing medium"
 
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Zip};
@@ -154,12 +154,12 @@ pub fn calculate_acoustic_heating(
     const ALPHA_NP_M: f64 = 0.5; // absorption coefficient (Np/m)
     const RHO: f64 = DENSITY_WATER_NOMINAL;
     const C0: f64 = SOUND_SPEED_TISSUE;
-    const C_P: f64 = 3600.0; // specific heat capacity J/(kg·K) (ICRP 2002)
+    let c_p = SPECIFIC_HEAT_TISSUE; // J/(kg·K) — Duck (1990) / ICRP 2002 soft tissue
     const L_FOCAL: f64 = 0.01; // focal characteristic length (10 mm)
 
     // Q = α p² / (ρ₀ c₀); ΔT = Q dt / (ρ₀ c_p)
     // Combined: ΔT = α p² dt / (ρ₀² c₀ c_p)
-    let heating_scale = ALPHA_NP_M * dt / (RHO * RHO * C0 * C_P);
+    let heating_scale = ALPHA_NP_M * dt / (RHO * RHO * C0 * c_p);
 
     let dx = grid.dx;
     let dy = grid.dy;

@@ -15,6 +15,7 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_BLOOD};
+use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
 
@@ -62,7 +63,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     nonlinearity_parameter: 5.5,
     shear_viscosity: 3.5e-3, // Non-Newtonian: shear-thinning
     bulk_viscosity: 0.0,
-    specific_heat: 3617.0,
+    specific_heat: BLOOD_SPECIFIC_HEAT,
     thermal_conductivity: 0.52,
     thermal_diffusivity: 1.35e-7,
     perfusion_rate: 100.0,

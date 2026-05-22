@@ -4,7 +4,7 @@
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, SOUND_SPEED_TISSUE};
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, SPECIFIC_HEAT_BRAIN};
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use log::debug;
@@ -36,7 +36,7 @@ impl TissueFactory {
         let polytropic_index = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.4);
 
         // Thermal properties
-        let specific_heat = Array3::from_elem((grid.nx, grid.ny, grid.nz), 3630.0);
+        let specific_heat = Array3::from_elem((grid.nx, grid.ny, grid.nz), SPECIFIC_HEAT_BRAIN);
         let thermal_conductivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.52);
         let thermal_expansion = Array3::from_elem((grid.nx, grid.ny, grid.nz), 3.0e-4);
         let gas_diffusion_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.8e-9);

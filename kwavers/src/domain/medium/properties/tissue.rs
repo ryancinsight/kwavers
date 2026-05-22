@@ -15,7 +15,7 @@ use crate::core::constants::fundamental::{
     SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER};
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER};
 use super::material::AcousticMaterialProperties;
 
 /// Tissue material properties type alias
@@ -170,7 +170,7 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_KIDNEY, // 7.2 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
-    specific_heat: 3600.0,
+    specific_heat: SPECIFIC_HEAT_TISSUE,
     thermal_conductivity: 0.50,
     // α = k/(ρ·cp) = 0.50 / (1050 × 3600) = 1.323e-7 m²/s
     thermal_diffusivity: 1.323e-7,
@@ -195,7 +195,7 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_KIDNEY, // 7.2 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
-    specific_heat: 3600.0,
+    specific_heat: SPECIFIC_HEAT_TISSUE,
     thermal_conductivity: 0.50,
     // α = k/(ρ·cp) = 0.50 / (1055 × 3600) = 1.317e-7 m²/s
     thermal_diffusivity: 1.317e-7,
