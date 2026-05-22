@@ -106,17 +106,15 @@ impl NonlinearWave {
 
         Ok(ifft_3d_array(&result_k))
     }
+}
 
-    /// Computes the spectral gradient of a field.
-    ///
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    /// # Panics
-    /// - Panics if `kx contiguous`.
-    /// - Panics if `ky contiguous`.
-    /// - Panics if `kz contiguous`.
-    ///
+/// Spectral derivative utilities used only by tests.
+///
+/// `compute_spectral_gradient` and `compute_spectral_laplacian` verify the
+/// underlying spectral differentiation formulas in isolation. Production code
+/// uses the inlined, dealiased path in `compute_nonlinear_term`.
+#[cfg(test)]
+impl NonlinearWave {
     pub(crate) fn compute_spectral_gradient(
         &self,
         field: &Array3<f64>,
@@ -210,3 +208,4 @@ impl NonlinearWave {
 
 #[cfg(test)]
 mod tests;
+
