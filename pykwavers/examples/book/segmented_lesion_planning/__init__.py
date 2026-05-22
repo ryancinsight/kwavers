@@ -1,15 +1,21 @@
-"""Segmented-lesion transducer planning example support."""
+"""Segmented-lesion transducer planning — figure rendering for Chapter 32.
 
-from .liver_dataset import load_lits_liver_planning_grid
-from .phantom import build_segmented_therapy_phantom
-from .solver import optimize_transducer_layout
-from .types import HybridPlanConfig, Tissue, TransducerAperture
+Physics is performed by pykwavers (Rust/kwavers library).
+This package contains only matplotlib rendering helpers.
+"""
+
+from .figures import (
+    plot_3d_placement,
+    plot_exposure_slice,
+    plot_fwi_convergence,
+    plot_reconstructions,
+    write_metrics,
+)
 
 __all__ = [
-    "HybridPlanConfig",
-    "Tissue",
-    "TransducerAperture",
-    "build_segmented_therapy_phantom",
-    "load_lits_liver_planning_grid",
-    "optimize_transducer_layout",
+    "plot_3d_placement",
+    "plot_exposure_slice",
+    "plot_fwi_convergence",
+    "plot_reconstructions",
+    "write_metrics",
 ]
