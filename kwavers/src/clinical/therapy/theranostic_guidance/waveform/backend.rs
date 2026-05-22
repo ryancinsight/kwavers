@@ -49,7 +49,7 @@ impl PeakPressureBackend for ReferenceFdtdCpmlBackend {
             &prepared.sound_speed_m_s,
             &prepared.sound_speed_m_s,
         );
-        let peak = propagate_peak_pressure(&grid, &prepared.sound_speed_m_s, config);
+        let peak = propagate_peak_pressure(&grid, &prepared.sound_speed_m_s);
         let (nx, ny) = prepared.sound_speed_m_s.dim();
         let raw_peak_pressure =
             ndarray::Array2::from_shape_fn((nx, ny), |(ix, iy)| peak[linear(ix, iy, ny)] as f64);

@@ -27,6 +27,3 @@ pub(super) fn energy(values: &[f32]) -> f64 {
     values.iter().map(|value| (*value as f64).powi(2)).sum()
 }
 
-pub(super) fn distance(a: Point2, b: Point2) -> f64 {
-    (a.x_m - b.x_m).hypot(a.y_m - b.y_m)
-}

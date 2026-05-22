@@ -96,8 +96,8 @@ pub fn simulate_waveform_adjoint_rtm(
         &prepared.sound_speed_m_s,
         &true_speed,
     );
-    let observed = propagate(&grid, &true_speed, config, false);
-    let predicted = propagate(&grid, &prepared.sound_speed_m_s, config, true);
+    let observed = propagate(&grid, &true_speed, false);
+    let predicted = propagate(&grid, &prepared.sound_speed_m_s, true);
     let residual = evaluate_trace_residual(
         &observed.traces,
         &predicted.traces,

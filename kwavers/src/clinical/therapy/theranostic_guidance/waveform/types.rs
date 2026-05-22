@@ -67,9 +67,29 @@ pub(super) struct AcousticGrid {
     pub(super) alpha_np_per_step: Vec<f32>,
     /// CPML coefficient arrays (Komatitsch & Martin 2007, §2).
     pub(super) cpml: CpmlCoeffs,
+    /// Primary source frequency used for Ricker wavelet injection.
+    pub(super) source_frequency_hz: f64,
+    /// Source amplitude scale: `P₀ / √(N_src)` (Pa).
+    ///
+    /// Dividing by √N ensures the total injected energy is independent of
+    /// the element count so the forward and adjoint replay are amplitude-matched.
+    pub(super) source_scale: f32,
 }
 
 /// Checkpoint schedule for memory-efficient adjoint (Griewank 1992).
+///
+/// ## Memory layout
+///
+/// Each checkpoint slot stores a consecutive **pair** of pressure fields
+/// `(previous, current)` at the checkpoint time `t = slot * interval`.
+/// Storing the pair is mandatory for the second-order-in-time wave equation:
+/// a single snapshot only fixes `p(t)`, leaving `p(t-1)` (the "velocity")
+/// unknown, which forces `fwd_prev = fwd_curr` during replay and introduces
+/// an O(|p|) initialization error on every replay outside slot 0.
+///
+/// Buffer layout: `[prev₀ | curr₀ | prev₁ | curr₁ | … | prevₛ | currₛ]`
+/// where each `|prev_s|` or `|curr_s|` block has `N = nx * ny` elements.
+/// Total size: `2 * slot_count * N`.
 #[derive(Clone, Debug)]
 pub(super) struct CheckpointSchedule {
     /// Save a snapshot every `interval` steps.

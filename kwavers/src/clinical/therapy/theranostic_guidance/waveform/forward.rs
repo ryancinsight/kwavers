@@ -3,14 +3,12 @@
 use ndarray::Array2;
 use rayon::prelude::*;
 
-use super::super::config::TheranosticInverseConfig;
 use super::types::{AcousticGrid, CheckpointSchedule, WavefieldRun};
 use super::utils::{linear, ricker};
 
 pub(super) fn propagate(
     grid: &AcousticGrid,
     speed_m_s: &Array2<f64>,
-    config: &TheranosticInverseConfig,
     keep_history: bool,
 ) -> WavefieldRun {
     let n = grid.nx * grid.ny;
@@ -22,28 +20,27 @@ pub(super) fn propagate(
     let mut psi_y = vec![0.0_f32; n];
 
     let schedule = CheckpointSchedule::new(grid.time_steps);
+    // Each slot stores a consecutive pair (previous, current) so the adjoint
+    // replay can initialise the second-order scheme without the O(|p|)
+    // zero-velocity error that arises when both are set to the same snapshot.
+    // Buffer layout: [prev₀ | curr₀ | prev₁ | curr₁ | …], size = 2·slots·N.
     let mut checkpoints: Option<Vec<f32>> =
-        keep_history.then(|| vec![0.0_f32; schedule.slot_count() * n]);
-    let source_scale = source_scale(config, grid);
+        keep_history.then(|| vec![0.0_f32; schedule.slot_count() * 2 * n]);
 
     for step in 0..grid.time_steps {
         if keep_history && schedule.is_checkpoint(step) {
             if let Some(ref mut buf) = checkpoints {
                 let slot = schedule.slot_for(step);
-                let range = slot * n..(slot + 1) * n;
-                buf[range].copy_from_slice(&current);
+                let base = slot * 2 * n;
+                // Save the pair (prev, curr) at this checkpoint time.
+                buf[base..base + n].copy_from_slice(&previous);
+                buf[base + n..base + 2 * n].copy_from_slice(&current);
             }
         }
         step_wavefield_cpml(
             grid, speed_m_s, &previous, &current, &mut next, &mut psi_x, &mut psi_y,
         );
-        inject_sources(
-            grid,
-            config.frequencies_hz[0],
-            source_scale,
-            step,
-            &mut next,
-        );
+        inject_sources(grid, step, &mut next);
         apply_attenuation(grid, &mut next);
 
         for (receiver, cell) in grid.receiver_cells.iter().copied().enumerate() {
@@ -64,7 +61,6 @@ pub(super) fn propagate(
 pub(super) fn propagate_peak_pressure(
     grid: &AcousticGrid,
     speed_m_s: &Array2<f64>,
-    config: &TheranosticInverseConfig,
 ) -> Vec<f32> {
     let n = grid.nx * grid.ny;
     let mut previous = vec![0.0_f32; n];
@@ -73,19 +69,12 @@ pub(super) fn propagate_peak_pressure(
     let mut psi_x = vec![0.0_f32; n];
     let mut psi_y = vec![0.0_f32; n];
     let mut peak = vec![0.0_f32; n];
-    let source_scale = source_scale(config, grid);
 
     for step in 0..grid.time_steps {
         step_wavefield_cpml(
             grid, speed_m_s, &previous, &current, &mut next, &mut psi_x, &mut psi_y,
         );
-        inject_sources(
-            grid,
-            config.frequencies_hz[0],
-            source_scale,
-            step,
-            &mut next,
-        );
+        inject_sources(grid, step, &mut next);
         apply_attenuation_and_update_peak(grid, &mut next, &mut peak);
         std::mem::swap(&mut previous, &mut current);
         std::mem::swap(&mut current, &mut next);
@@ -210,23 +199,22 @@ pub(super) fn apply_attenuation_and_update_peak(
         });
 }
 
-fn inject_sources(
-    grid: &AcousticGrid,
-    frequency_hz: f64,
-    source_scale: f32,
-    step: usize,
-    pressure: &mut [f32],
-) {
+/// Inject the Ricker-wavelet pressure source at all source cells.
+///
+/// Uses `grid.source_frequency_hz` and `grid.source_scale` so that the
+/// adjoint replay path can call the same function without extra parameters.
+///
+/// # Correctness contract
+///
+/// This function must be called in the adjoint replay loop with the same
+/// `step` index as in the forward pass. Any discrepancy introduces a
+/// systematic phase error in the imaging condition.
+pub(super) fn inject_sources(grid: &AcousticGrid, step: usize, pressure: &mut [f32]) {
     let t = step as f64 * grid.dt_s;
     for (cell, delay_s) in grid.source_cells.iter().zip(grid.source_delays_s.iter()) {
         let tau = t - *delay_s;
-        pressure[*cell] += source_scale * ricker(frequency_hz, tau) as f32;
+        pressure[*cell] += grid.source_scale * ricker(grid.source_frequency_hz, tau) as f32;
     }
-}
-
-#[inline]
-fn source_scale(config: &TheranosticInverseConfig, grid: &AcousticGrid) -> f32 {
-    config.source_pressure_pa as f32 / (grid.source_cells.len().max(1) as f32).sqrt()
 }
 
 #[inline]
