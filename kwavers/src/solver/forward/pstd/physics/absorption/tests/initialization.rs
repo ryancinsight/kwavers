@@ -90,7 +90,7 @@ fn test_absorption_model_physics_validation() {
         },
         ..Default::default()
     };
-    let mut medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
+    let mut medium = HomogeneousMedium::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 0.0, &grid);
     medium.set_acoustic_properties(0.0, 1.5, 0.0).unwrap();
     let k_mag = zeros_k_mag(16, 16, 16);
     let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, SOUND_SPEED_WATER_SIM)

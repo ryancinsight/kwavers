@@ -66,6 +66,7 @@ impl InterfaceProperties {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use crate::physics::acoustics::analytical::propagation::AnalyticalMediumProperties;
 
@@ -101,7 +102,7 @@ mod tests {
     /// Analytical: R = |Z₂−Z₁|/(Z₂+Z₁) = 0; T = 2Z₂/(Z₂+Z₁) = 1.
     #[test]
     fn reflection_zero_and_transmission_unity_for_matched_impedance() {
-        let iface = make_interface(1500.0, 1500.0);
+        let iface = make_interface(SOUND_SPEED_WATER_SIM, SOUND_SPEED_WATER_SIM);
         let r = InterfaceProperties::normal_reflection_coefficient(&iface);
         let t = InterfaceProperties::normal_transmission_coefficient(&iface);
         assert!(

@@ -9,7 +9,7 @@ use crate::solver::pstd::PSTDSolver;
 #[test]
 fn test_lossless_mode_no_pressure_correction() {
     let grid = Grid::new(32, 32, 32, 1e-4, 1e-4, 1e-4).unwrap();
-    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 0.0, &grid);
 
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::Lossless,
@@ -200,7 +200,7 @@ fn test_pressure_correction_dispersion_term_matches_analytical() {
 #[test]
 fn test_fft_absorption_energy_dissipation() {
     let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
-    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 0.0, &grid);
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
             alpha_coeff: 0.5,
@@ -274,7 +274,7 @@ fn test_fft_absorption_energy_dissipation() {
 fn test_update_pressure_linear_eos_populates_div_u_and_p() {
     let nx = 16_usize;
     let grid = Grid::new(nx, nx, nx, 1e-4, 1e-4, 1e-4).unwrap();
-    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.0, 0.0, &grid);
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::Lossless,
         dt: 1e-7,

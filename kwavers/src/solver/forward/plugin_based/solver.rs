@@ -327,6 +327,7 @@ impl PluginBasedSolver {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use crate::domain::boundary::DomainPMLBoundary;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
@@ -337,7 +338,7 @@ mod tests {
     fn test_solver_creation() {
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0).unwrap();
         let time = Time::new(0.001, 100);
-        let medium = Arc::new(HomogeneousMedium::from_minimal(1500.0, 1000.0, &grid));
+        let medium = Arc::new(HomogeneousMedium::from_minimal(SOUND_SPEED_WATER_SIM, 1000.0, &grid));
         let boundary = Box::new(DomainPMLBoundary::new(Default::default()).unwrap());
         let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
         let source = Box::new(PointSource::new((5.0, 5.0, 5.0), signal));

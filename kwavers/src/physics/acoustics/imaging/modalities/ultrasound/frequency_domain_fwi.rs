@@ -412,7 +412,7 @@ mod tests {
     #[test]
     fn sound_speed_metrics_match_definitions() {
         let reference =
-            Array3::from_shape_vec((1, 1, 3), vec![1500.0, 1510.0, 1520.0]).expect("shape");
+            Array3::from_shape_vec((1, 1, 3), vec![SOUND_SPEED_WATER_SIM, 1510.0, 1520.0]).expect("shape");
         let reconstructed =
             Array3::from_shape_vec((1, 1, 3), vec![1501.0, 1511.0, 1521.0]).expect("shape");
 
