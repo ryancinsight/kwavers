@@ -50,6 +50,23 @@ pub const DENSITY_WATER: f64 = 998.2;
 /// Tissue. Academic Press, London.
 pub const DENSITY_WATER_NOMINAL: f64 = 1000.0;
 
+/// Speed of sound in water at 37°C / body temperature (m/s)
+///
+/// Value: 1524.0 m/s — Del Grosso & Mader (1972), measured at 37°C.
+/// Water sound speed increases monotonically with temperature up to ≈74°C.
+/// At 25°C: ≈1497 m/s; at 37°C: 1524 m/s; at 20°C: 1482 m/s.
+///
+/// References:
+/// - Del Grosso VA, Mader CW (1972). J. Acoust. Soc. Am. **52**(5):1442–1446.
+/// - Duck FA (1990). Physical Properties of Tissue. Academic Press, Table 2.1.
+pub const SOUND_SPEED_WATER_37C: f64 = 1524.0;
+
+/// Density of water at 37°C (kg/m³)
+///
+/// Value: 993.3 kg/m³ — NIST thermophysical data at 310.15 K, 1 atm.
+/// Reference: NIST Chemistry WebBook SRD 69.
+pub const DENSITY_WATER_37C: f64 = 993.3;
+
 /// Sound speed in water at 20°C (m/s) - Alias for compatibility
 pub const C_WATER: f64 = SOUND_SPEED_WATER;
 

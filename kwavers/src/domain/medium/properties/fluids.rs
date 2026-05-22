@@ -16,7 +16,7 @@
 
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
-    DENSITY_TISSUE, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER,
+    DENSITY_TISSUE, DENSITY_WATER_37C, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER, SOUND_SPEED_WATER_37C,
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
@@ -207,8 +207,9 @@ pub const MINERAL_OIL: FluidProperties = FluidProperties {
 ///
 /// Impedance Z = ρ·c = 993.3 × 1524 = 1 513 789 Pa·s/m.
 pub const WATER_37C: FluidProperties = FluidProperties {
-    sound_speed: 1524.0,
-    density: 993.3,
+    sound_speed: SOUND_SPEED_WATER_37C,
+    density: DENSITY_WATER_37C,
+    // Z = ρ·c = DENSITY_WATER_37C × SOUND_SPEED_WATER_37C = 993.3 × 1524 = 1 513 789 Pa·s/m
     impedance: 1_513_789.0,
     absorption_coefficient: 0.002,
     absorption_exponent: 2.0,
