@@ -162,10 +162,30 @@ pub const HIFU_INTENSITY_MAX: f64 = 10000.0;
 // Bone Properties
 // ============================================================================
 
-/// Bone sound speed (m/s)
-/// Value: 3500 m/s
-/// Reference: Hosokawa & Otani (1997). "Ultrasonic wave propagation in bovine cancellous bone"
+/// Sound speed in dense cortical bone (m/s)
+///
+/// Value: 3500 m/s — compressional wave speed in bovine cortical bone.
+///
+/// Reference: Hosokawa & Otani (1997). "Ultrasonic wave propagation in bovine cancellous bone."
+/// J. Acoust. Soc. Am. 101(1), 558–562. DOI: 10.1121/1.418118.
 pub const BONE_SOUND_SPEED: f64 = 3500.0;
+
+/// Sound speed in human skull bone (m/s)
+///
+/// Value: 2900 m/s — effective longitudinal wave speed in the human skull,
+/// which has a layered diploe structure (inner cortex + cancellous diploe +
+/// outer cortex) that produces a lower effective speed than dense cortical bone.
+///
+/// Used in transcranial ultrasound propagation models where skull bone is the
+/// primary acoustic barrier. Distinct from `BONE_SOUND_SPEED` (3500 m/s for
+/// dense cortical), which applies to long bones with minimal cancellous content.
+///
+/// References:
+/// - Fry & Barger (1978). "Acoustical properties of the human skull."
+///   J. Acoust. Soc. Am. 63(5), 1576–1590. DOI: 10.1121/1.381852.
+/// - Marsac et al. (2017). "MR-guided adaptive focusing of therapeutic
+///   ultrasound beams in the human head." Med. Phys. 39(2), 1141–1149.
+pub const SOUND_SPEED_SKULL: f64 = 2900.0;
 
 /// Bone density (kg/m³)
 /// Value: 1900 kg/m³

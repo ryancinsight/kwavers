@@ -15,12 +15,13 @@ use crate::solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 /// Reference element count for the transcranial focused-bowl acquisition.
 pub const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
+use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
 use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 /// Acoustic properties used by the CT-to-speed model.
 pub const C_WATER_M_S: f64 = SOUND_SPEED_WATER_SIM;
 pub const C_BRAIN_REF_M_S: f64 = SOUND_SPEED_TISSUE;
-pub const C_BONE_M_S: f64 = 2900.0;
+pub const C_BONE_M_S: f64 = SOUND_SPEED_SKULL;
 
 /// Clinical configuration for the transcranial UST finite-frequency Born
 /// inversion.
