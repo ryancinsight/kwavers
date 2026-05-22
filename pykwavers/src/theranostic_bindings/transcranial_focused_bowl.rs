@@ -23,7 +23,9 @@ use crate::ritk_image::load_ritk_nifti;
     body_hu_threshold = -350.0,
     skull_hu_threshold = 300.0,
     target_fraction_xyz = None,
-    scene_radius_m = None
+    scene_radius_m = None,
+    cap_min_polar_rad = None,
+    cap_max_polar_rad = None
 ))]
 pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
     py: Python<'py>,
@@ -34,6 +36,8 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
     skull_hu_threshold: f64,
     target_fraction_xyz: Option<(f64, f64, f64)>,
     scene_radius_m: Option<f64>,
+    cap_min_polar_rad: Option<f64>,
+    cap_max_polar_rad: Option<f64>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let ct_path = Path::new(ct_nifti_path);
     let synthetic = !ct_path.exists();
@@ -57,6 +61,8 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
                 skull_hu_threshold,
                 target_fraction_xyz.map(|(x, y, z)| [x, y, z]),
                 scene_radius_m,
+                cap_min_polar_rad,
+                cap_max_polar_rad,
             )
         })
         .map_err(kwavers_to_py)?;
@@ -111,5 +117,13 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
         "ct_derived_calvarium_1024_element_focused_bowl_with_skull_intersections",
     )?;
     out.set_item("synthetic_phantom", synthetic)?;
+    out.set_item(
+        "cap_min_polar_rad",
+        cap_min_polar_rad.unwrap_or(0.22_f64),
+    )?;
+    out.set_item(
+        "cap_max_polar_rad",
+        cap_max_polar_rad.unwrap_or(1.18_f64),
+    )?;
     Ok(out)
 }

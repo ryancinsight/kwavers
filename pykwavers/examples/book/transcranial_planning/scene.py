@@ -130,6 +130,8 @@ class BrainSceneDefinition:
             "body_hu_threshold": self.transducer.body_hu_threshold,
             "skull_hu_threshold": self.transducer.skull_hu_threshold,
             "scene_radius_m": self.transducer.radius_m,
+            "cap_min_polar_rad": self.transducer.cap_min_polar_rad,
+            "cap_max_polar_rad": self.transducer.cap_max_polar_rad,
         }
 
     def to_manifest(self) -> dict[str, Any]:

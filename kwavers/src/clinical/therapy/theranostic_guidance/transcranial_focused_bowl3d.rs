@@ -32,10 +32,16 @@ use super::geometry::{is_boundary_3d, Point3};
 use super::nonlinear3d::volume::centroid_float;
 use super::scene::target_index_from_mask_fraction_3d;
 
-/// Focused-bowl cap lower axial cosine, covering slightly below the equator.
-const BOWL_CAP_UNIT_Z_MIN: f64 = -0.28;
-/// Focused-bowl cap upper axial cosine, stopping near the superior pole.
-const BOWL_CAP_UNIT_Z_MAX: f64 = 0.98;
+/// Default minimum polar angle from the superior vertex [rad].
+///
+/// 0.22 rad ≈ 12.6° — avoids element crowding at the vertex while keeping
+/// a small central aperture gap matching the InSightec ExAblate Neuro geometry.
+const DEFAULT_CAP_MIN_POLAR_RAD: f64 = 0.22;
+/// Default maximum polar angle from the superior vertex [rad].
+///
+/// 1.18 rad ≈ 67.6° — covers the calvarium without extending past the
+/// temporoparietal junction, matching the InSightec ExAblate Neuro 4000.
+const DEFAULT_CAP_MAX_POLAR_RAD: f64 = 1.18;
 /// Unit metadata for geometry-only use of `BowlConfig`.
 const BOWL_LAYOUT_UNIT_FREQUENCY_HZ: f64 = 1.0;
 /// Unit metadata for geometry-only use of `BowlConfig`.
@@ -88,6 +94,8 @@ pub fn plan_transcranial_focused_bowl_placement(
     skull_hu_threshold: f64,
     target_fraction_xyz: Option<[f64; 3]>,
     scene_radius_m: Option<f64>,
+    cap_min_polar_rad: Option<f64>,
+    cap_max_polar_rad: Option<f64>,
 ) -> KwaversResult<TranscranialFocusedBowlPlacement3D> {
     if element_count < 16 {
         return Err(KwaversError::InvalidInput(
@@ -214,8 +222,14 @@ pub fn plan_transcranial_focused_bowl_placement(
     let bowl_radius_m = (head_radius + BOWL_SKIN_MARGIN_M)
         .max(requested_radius_m)
         .max(BOWL_RADIUS_MIN_M);
+    let theta_min = cap_min_polar_rad
+        .filter(|v| v.is_finite() && *v >= 0.0)
+        .unwrap_or(DEFAULT_CAP_MIN_POLAR_RAD);
+    let theta_max = cap_max_polar_rad
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .unwrap_or(DEFAULT_CAP_MAX_POLAR_RAD);
     let therapy_elements_m =
-        calvarium_cap_elements(element_count, bowl_radius_m, focus, superior_positive)?;
+        calvarium_cap_elements(element_count, bowl_radius_m, focus, superior_positive, theta_min, theta_max)?;
     let (beam_start_points_m, beam_end_points_m, skull_intersections_m) = sample_beams(
         &therapy_elements_m,
         focus,
@@ -311,17 +325,32 @@ fn body_radius(
         .fold(0.0_f64, f64::max)
 }
 
-/// Distribute `count` therapy elements on a focused-bowl major cap.
+/// Distribute `count` therapy elements on a focused-bowl calvarium cap.
 ///
-/// The cap spans from `BOWL_CAP_UNIT_Z_MIN` to `BOWL_CAP_UNIT_Z_MAX`. The
-/// `superior_positive` flag flips the z-axis direction so the cap is oriented
+/// # Arguments
+///
+/// - `theta_min_rad` — minimum polar angle from the superior vertex [rad].
+///   Avoids element crowding at the vertex; typically 0.2–0.3 rad.
+/// - `theta_max_rad` — maximum polar angle from the superior vertex [rad].
+///   Determines how far the cap extends from the vertex; 1.18 rad ≈ 67.6°
+///   covers the calvarium without reaching the temporoparietal junction.
+///
+/// The `superior_positive` flag flips the z-axis direction so the cap is oriented
 /// toward the anatomical superior pole while the source-domain bowl layout owns
 /// the equal-area sampling.
+///
+/// # Mathematical derivation
+///
+/// For polar bounds `[theta_min, theta_max]`, axis-projection bounds are:
+/// `[u_min, u_max] = [cos(theta_max), cos(theta_min)]`.
+/// This preserves the equal-area sampling invariant of `BowlAngularBounds`.
 fn calvarium_cap_elements(
     count: usize,
     radius_m: f64,
     focus: Point3,
     superior_positive: bool,
+    theta_min_rad: f64,
+    theta_max_rad: f64,
 ) -> KwaversResult<Vec<Point3>> {
     let sign = if superior_positive { 1.0_f64 } else { -1.0_f64 };
     let vertex_m = [focus.x_m, focus.y_m, focus.z_m + sign * radius_m];
@@ -333,8 +362,12 @@ fn calvarium_cap_elements(
         BOWL_LAYOUT_UNIT_FREQUENCY_HZ,
         BOWL_LAYOUT_UNIT_AMPLITUDE_PA,
     );
-    let cap_bounds =
-        BowlAngularBounds::from_axis_projection_bounds(BOWL_CAP_UNIT_Z_MIN, BOWL_CAP_UNIT_Z_MAX)?;
+    // Convert polar-angle bounds to axis-projection bounds.
+    // u_max = cos(theta_min) ≈ near-vertex cutoff.
+    // u_min = cos(theta_max) ≈ equatorial/subequatorial limit.
+    let u_max = theta_min_rad.cos().clamp(-1.0, 1.0);
+    let u_min = theta_max_rad.cos().clamp(-1.0, 1.0);
+    let cap_bounds = BowlAngularBounds::from_axis_projection_bounds(u_min, u_max)?;
     let layout = BowlTransducer::with_angular_bounds(config, cap_bounds, count)?;
 
     Ok(layout

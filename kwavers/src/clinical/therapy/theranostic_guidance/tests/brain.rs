@@ -135,6 +135,11 @@ fn brain_focused_bowl_3d_uses_calvarium_cap_not_inferior_hemisphere() {
             }
         }
     }
+    // Use the canonical InSightec-like cap bounds: [0.22, 1.18] rad from vertex.
+    // cos(0.22) ≈ 0.9759  (upper axis-projection limit — near-vertex cutoff)
+    // cos(1.18) ≈ 0.3817  (lower axis-projection limit — calvarium boundary)
+    let cap_min = 0.22_f64;
+    let cap_max = 1.18_f64;
     let placement = plan_transcranial_focused_bowl_placement(
         &ct,
         [1.0, 1.0, 2.0],
@@ -144,6 +149,8 @@ fn brain_focused_bowl_3d_uses_calvarium_cap_not_inferior_hemisphere() {
         300.0,
         None,
         None,
+        Some(cap_min),
+        Some(cap_max),
     )
     .unwrap();
     let min_element_z = placement
@@ -159,22 +166,28 @@ fn brain_focused_bowl_3d_uses_calvarium_cap_not_inferior_hemisphere() {
     let min_unit_z = min_element_z / placement.bowl_radius_m;
     let max_unit_z = max_element_z / placement.bowl_radius_m;
 
+    // cos(cap_max) ≈ 0.382 — all elements must be ABOVE the equatorial plane.
+    // This verifies the calvarium-only constraint: no neck or jaw coverage.
+    let expected_min_unit_z = cap_max.cos(); // ≈ 0.3817
+    let expected_max_unit_z = cap_min.cos(); // ≈ 0.9759
     assert_eq!(placement.therapy_elements_m.len(), 128);
     assert!(
-        min_element_z > -0.060,
-        "focused bowl cap must not extend into inferior neck-like coverage: min_z={min_element_z}"
+        min_element_z > 0.0,
+        "focused bowl cap must not extend below equatorial plane (calvarium constraint): min_z={min_element_z}"
     );
     assert!(
         max_element_z > 0.090,
         "focused bowl cap must cover the superior calvarium: max_z={max_element_z}"
     );
     assert!(
-        (min_unit_z + 0.28).abs() < 0.02,
-        "focused bowl lower polar bound changed: min_unit_z={min_unit_z}"
+        (min_unit_z - expected_min_unit_z).abs() < 0.04,
+        "focused bowl lower polar bound (cos(cap_max)={expected_min_unit_z:.4}) \
+         does not match actual min_unit_z={min_unit_z:.4}"
     );
     assert!(
-        (max_unit_z - 0.98).abs() < 0.02,
-        "focused bowl upper polar bound changed: max_unit_z={max_unit_z}"
+        (max_unit_z - expected_max_unit_z).abs() < 0.04,
+        "focused bowl upper polar bound (cos(cap_min)={expected_max_unit_z:.4}) \
+         does not match actual max_unit_z={max_unit_z:.4}"
     );
     assert!(placement.intersection_fraction > 0.0);
 }
