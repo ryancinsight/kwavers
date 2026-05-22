@@ -2,8 +2,7 @@
 //!
 //! Follows Builder pattern for complex medium instantiation
 
-use super::{DomainMediumParameters, LayerParameters, MediumType};
-use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL};
+use super::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
@@ -24,27 +23,16 @@ impl MediumBuilder {
             MediumType::Homogeneous => Self::build_homogeneous(
                 config.density,
                 config.sound_speed.unwrap_or(SOUND_SPEED_WATER_SIM),
-                // DomainMediumParameters doesn't have mu_a top-level?
-                // Let's check config.rs (Step 130).
-                // It has: density, sound_speed, absorption, absorption_power, nonlinearity...
-                // mu_a and mu_s_prime are in properties map in builder usually?
-                // Step 130: properties.get("mu_a").
-                // So pass them or retrieve from config properties in helper.
                 config,
                 grid,
             ),
             MediumType::Heterogeneous => Self::build_heterogeneous(config, grid),
             MediumType::Layered => Self::build_layered(&config.layers, grid),
             MediumType::Anisotropic => Self::build_anisotropic(config, grid),
-            _ => {
-                // For custom/random etc. fallback to homogeneous/water for now or implement
-                Self::build_homogeneous(
-                    config.density,
-                    config.sound_speed.unwrap_or(SOUND_SPEED_WATER_SIM),
-                    config,
-                    grid,
-                )
-            }
+            ref variant => Err(KwaversError::FeatureNotAvailable(format!(
+                "MediumType::{variant:?} requires a domain-specific medium loader; \
+                 scalar fallback is prohibited"
+            ))),
         }
     }
 
@@ -137,83 +125,130 @@ impl MediumBuilder {
         Ok(Box::new(medium))
     }
 
-    /// Build layered medium with discrete horizontal layers
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// Build a heterogeneous layered medium with per-layer material properties.
     ///
+    /// ## Theorem — step-function medium with interface blending
+    ///
+    /// For N layers with thicknesses `{h_i}` stacked along the x-axis, the
+    /// depth-to-layer mapping is:
+    /// ```text
+    /// z_i = Σ_{j≤i} h_j        (cumulative boundary depth of layer i)
+    /// idx(x) = min{ i : z_i > x }   (first boundary strictly above x)
+    /// ```
+    /// The property function `p(x,y,z)` returns the value of the current
+    /// layer, with optional blending at the lower boundary:
+    ///
+    /// - **Sharp**: step function — `p(x) = p_idx(x)`.
+    /// - **Smooth(σ)**: sigmoid blend of width σ [m] centred at `z_idx(x)`:
+    ///   ```text
+    ///   p(x) = p_cur·(1−t) + p_next·t,   t = ½(1 + tanh((x−z)/σ))
+    ///   ```
+    /// - **Gradient(d)**: linear blend over d [m] starting at `z_idx(x)`:
+    ///   ```text
+    ///   p(x) = p_cur·(1−t) + p_next·t,   t = ((x−z)/d).clamp(0,1)
+    ///   ```
+    ///
+    /// # Errors
+    /// - Returns [`KwaversError::InvalidInput`] if `layers` is empty or any
+    ///   layer has non-positive thickness.
     fn build_layered(layers: &[LayerParameters], grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
-        // Calculate thickness-weighted average properties
-        let total_thickness: f64 = layers.iter().map(|l| l.thickness).sum();
-
-        if total_thickness <= 0.0 {
-            // No valid layers, return default
-            let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5, 10.0, grid);
-            return Ok(Box::new(medium));
+        if layers.is_empty() {
+            return Err(KwaversError::InvalidInput(
+                "layered medium requires at least one layer".to_owned(),
+            ));
+        }
+        for (i, l) in layers.iter().enumerate() {
+            if l.thickness <= 0.0 {
+                return Err(KwaversError::InvalidInput(format!(
+                    "layer {i} thickness {:.4e} m is not positive",
+                    l.thickness
+                )));
+            }
         }
 
-        let avg_density: f64 =
-            layers.iter().map(|l| l.density * l.thickness).sum::<f64>() / total_thickness;
-
-        let avg_speed: f64 = layers
+        // Cumulative depth boundaries [m]: boundaries[i] = depth of lower face of layer i.
+        let boundaries: Vec<f64> = layers
             .iter()
-            .map(|l| l.sound_speed * l.thickness)
-            .sum::<f64>()
-            / total_thickness;
+            .scan(0.0_f64, |acc, l| {
+                *acc += l.thickness;
+                Some(*acc)
+            })
+            .collect();
 
-        let avg_absorption: f64 = layers
-            .iter()
-            .map(|l| l.absorption * l.thickness)
-            .sum::<f64>()
-            / total_thickness;
+        // Inline blend logic; repeated per property to allow independent `move` closures.
+        macro_rules! blended_prop {
+            ($prop:ident) => {{
+                let ls = layers.to_vec();
+                let bs = boundaries.clone();
+                move |x: f64, _y: f64, _z: f64| -> f64 {
+                    let n = ls.len();
+                    let x = x.max(0.0);
+                    // Layer whose lower boundary is strictly greater than x.
+                    let idx = bs.partition_point(|&b| b <= x).min(n - 1);
+                    let v = ls[idx].$prop;
+                    if idx + 1 < n {
+                        let v_next = ls[idx + 1].$prop;
+                        let z_lo = bs[idx];
+                        match ls[idx].interface_type {
+                            InterfaceTypeParameters::Sharp => v,
+                            InterfaceTypeParameters::Smooth(sigma) if sigma > 0.0 => {
+                                let t = 0.5 * (1.0 + f64::tanh((x - z_lo) / sigma));
+                                v.mul_add(1.0 - t, v_next * t)
+                            }
+                            InterfaceTypeParameters::Gradient(d) if d > 0.0 => {
+                                let t = ((x - z_lo) / d).clamp(0.0, 1.0);
+                                v.mul_add(1.0 - t, v_next * t)
+                            }
+                            _ => v,
+                        }
+                    } else {
+                        v
+                    }
+                }
+            }};
+        }
 
-        // Create homogeneous medium with averaged properties
-        log::info!(
-            "Building layered medium with {} layers, averaged properties",
-            layers.len()
-        );
-        let medium = HomogeneousMedium::new(
-            avg_density,
-            avg_speed,
-            avg_absorption.max(0.1), // Ensure positive absorption
-            10.0,                    // Default scattering
+        let medium = HeterogeneousFactory::from_functions(
             grid,
+            blended_prop!(sound_speed),
+            blended_prop!(density),
+            Some(Box::new(blended_prop!(absorption))),
+            None, // alpha_power: uniform 1.0 (LayerParameters has no power-law exponent field)
+            None, // nonlinearity: LayerParameters has no nonlinearity field
+            1.0e6,
+        );
+
+        log::debug!(
+            "Built layered HeterogeneousMedium: {} layers, total depth {:.3} m",
+            layers.len(),
+            boundaries.last().copied().unwrap_or(0.0),
         );
 
         Ok(Box::new(medium))
     }
 
-    /// Build anisotropic medium with directional properties
-    /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// Build anisotropic medium.
     ///
+    /// Full anisotropy requires an explicit tensor field supplied via
+    /// `tensor_file` or `property_maps`. Scalar fallback is prohibited because
+    /// it silently erases the requested anisotropy.
+    ///
+    /// # Errors
+    /// - Always returns [`KwaversError::FeatureNotAvailable`]: callers must
+    ///   supply tensor data through a domain-specific medium loader.
     fn build_anisotropic(
         config: &DomainMediumParameters,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<Box<dyn Medium>> {
-        // Extract anisotropic configuration
-        // Log configuration for future enhancement
-        if let Some(directions) = config.principal_directions {
-            log::info!(
-                "Anisotropic medium with principal directions: {:?}",
-                directions
-            );
-        }
-
-        if let Some(file) = &config.tensor_file {
-            log::info!("Anisotropic tensor file: {}", file);
-        }
-
-        // Use muscle-like properties (typical for anisotropic tissue)
-        // Slightly higher speed and nonlinearity than water
-        let medium = HomogeneousMedium::new(
-            DENSITY_TISSUE, // kg/m³ (muscle density)
-            1580.0,         // m/s (muscle longitudinal speed)
-            0.7,    // 1/m (muscle absorption)
-            12.0,   // 1/m (muscle scattering)
-            grid,
-        );
-
-        Ok(Box::new(medium))
+        let source = config
+            .tensor_file
+            .as_deref()
+            .unwrap_or("<no tensor_file supplied>");
+        Err(KwaversError::FeatureNotAvailable(format!(
+            "anisotropic medium '{source}' requires an explicit tensor-field loader; \
+             scalar-property fallback is prohibited because it silently \
+             discards the requested directional heterogeneity"
+        )))
     }
 }
 
@@ -261,6 +296,110 @@ mod tests {
 
         assert!(matches!(error, KwaversError::FeatureNotAvailable(_)));
         assert!(format!("{error}").contains("scalar fallback"));
+    }
+
+    /// **Invariant**: Two-layer medium with Sharp interface returns each layer's
+    /// sound speed at the correct depth without averaging.
+    #[test]
+    fn layered_sharp_two_layer_step_function_is_exact() {
+        // 4-cell grid, dx = 1 mm → x ∈ {0.0, 1.0, 2.0, 3.0} mm
+        let grid = Grid::new(4, 1, 1, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let config = DomainMediumParameters {
+            medium_type: MediumType::Layered,
+            layers: vec![
+                LayerParameters {
+                    thickness: 2.0e-3, // 0–2 mm: water-like
+                    density: 1000.0,
+                    sound_speed: 1500.0,
+                    absorption: 0.002,
+                    interface_type: InterfaceTypeParameters::Sharp,
+                },
+                LayerParameters {
+                    thickness: 2.0e-3, // 2–4 mm: tissue-like
+                    density: 1050.0,
+                    sound_speed: 1540.0,
+                    absorption: 0.5,
+                    interface_type: InterfaceTypeParameters::Sharp,
+                },
+            ],
+            ..DomainMediumParameters::default()
+        };
+
+        let medium = MediumBuilder::build(&config, &grid).unwrap();
+
+        // x=0 (i=0) and x=1mm (i=1): layer 0 — water-like
+        assert_eq!(medium.sound_speed(0, 0, 0), 1500.0, "x=0 must be layer-0 speed");
+        assert_eq!(medium.sound_speed(1, 0, 0), 1500.0, "x=1mm must be layer-0 speed");
+        // x=2mm (i=2) and x=3mm (i=3): layer 1 — tissue-like
+        assert_eq!(medium.sound_speed(2, 0, 0), 1540.0, "x=2mm must be layer-1 speed");
+        assert_eq!(medium.sound_speed(3, 0, 0), 1540.0, "x=3mm must be layer-1 speed");
+        // Density follows the same step
+        assert_eq!(medium.density(0, 0, 0), 1000.0);
+        assert_eq!(medium.density(3, 0, 0), 1050.0);
+    }
+
+    /// **Invariant**: Sigmoid blend at the Sharp→Smooth boundary: at x = z_boundary
+    /// the blended value must be the exact half-way point between both layers.
+    #[test]
+    fn layered_smooth_interface_midpoint_is_exact_average() {
+        // 6-cell grid, dx = 1 mm → boundaries at 3 mm (between layers 0 and 1)
+        let grid = Grid::new(6, 1, 1, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let config = DomainMediumParameters {
+            medium_type: MediumType::Layered,
+            layers: vec![
+                LayerParameters {
+                    thickness: 3.0e-3,
+                    density: 1000.0,
+                    sound_speed: 1500.0,
+                    absorption: 0.1,
+                    interface_type: InterfaceTypeParameters::Smooth(0.5e-3), // σ = 0.5 mm
+                },
+                LayerParameters {
+                    thickness: 3.0e-3,
+                    density: 1200.0,
+                    sound_speed: 2800.0, // skull-like
+                    absorption: 13.0,
+                    interface_type: InterfaceTypeParameters::Sharp,
+                },
+            ],
+            ..DomainMediumParameters::default()
+        };
+
+        let medium = MediumBuilder::build(&config, &grid).unwrap();
+
+        // At x = 3 mm (the boundary), tanh(0/σ) = 0, so t = 0.5
+        // blended = 1500 * 0.5 + 2800 * 0.5 = 2150
+        let at_boundary = medium.sound_speed(3, 0, 0);
+        assert!(
+            (at_boundary - 2150.0).abs() < 1.0,
+            "at boundary, smooth blend must be mid-point 2150 m/s; got {at_boundary:.1}"
+        );
+    }
+
+    /// **Invariant**: Empty layer list is rejected.
+    #[test]
+    fn layered_empty_layers_rejected() {
+        let grid = test_grid();
+        let config = DomainMediumParameters {
+            medium_type: MediumType::Layered,
+            layers: vec![],
+            ..DomainMediumParameters::default()
+        };
+        let err = MediumBuilder::build(&config, &grid).unwrap_err();
+        assert!(matches!(err, KwaversError::InvalidInput(_)));
+    }
+
+    /// **Invariant**: Anisotropic always returns FeatureNotAvailable.
+    #[test]
+    fn anisotropic_always_rejects_without_tensor_field() {
+        let grid = test_grid();
+        let config = DomainMediumParameters {
+            medium_type: MediumType::Anisotropic,
+            ..DomainMediumParameters::default()
+        };
+        let err = MediumBuilder::build(&config, &grid).unwrap_err();
+        assert!(matches!(err, KwaversError::FeatureNotAvailable(_)));
+        assert!(format!("{err}").contains("tensor-field loader"));
     }
 
     #[test]

@@ -4,6 +4,7 @@
 //! electromagnetic (optical) and acoustic physics.
 
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use crate::domain::field::EMFields;
 use crate::physics::electromagnetic::equations::{
@@ -219,7 +220,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticCoupling for PhotoacousticSolv
     }
 
     fn gruneisen_parameter(&self, _position: &[f64]) -> f64 {
-        self.gruneisen.evaluate(37.0)
+        self.gruneisen.evaluate(BODY_TEMPERATURE_C)
     }
 
     fn reduced_scattering(&self, _position: &[f64]) -> f64 {

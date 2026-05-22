@@ -1,4 +1,4 @@
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K};
 
 use super::super::AcousticPropertyData;
 
@@ -109,7 +109,7 @@ impl TemperatureDependentAcoustic {
     pub fn water() -> Self {
         Self {
             base_properties: AcousticPropertyData::water(),
-            reference_temperature: 293.15,
+            reference_temperature: ROOM_TEMPERATURE_K,
             sound_speed_coefficient: 0.0020,
             density_coefficient: 2.1e-4,
             absorption_coefficient: 0.02,

@@ -1,6 +1,7 @@
 //! Layered heterogeneous medium factory method.
 
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use super::HeterogeneousFactory;
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
@@ -71,7 +72,7 @@ impl HeterogeneousFactory {
             thermal_diffusivity: Array3::zeros((nx, ny, nz)),
             mu_a: Array3::zeros((nx, ny, nz)),
             mu_s_prime: Array3::zeros((nx, ny, nz)),
-            temperature: Array3::from_elem((nx, ny, nz), 293.15),
+            temperature: Array3::from_elem((nx, ny, nz), ROOM_TEMPERATURE_K),
             bubble_radius: Array3::zeros((nx, ny, nz)),
             bubble_velocity: Array3::zeros((nx, ny, nz)),
             alpha0: Array3::zeros((nx, ny, nz)),

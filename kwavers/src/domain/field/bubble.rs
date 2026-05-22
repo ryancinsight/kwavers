@@ -3,6 +3,7 @@
 //! Defines the state fields for bubble dynamics.
 
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use ndarray::Array3;
 
 /// Bubble state fields for interfacing with physics modules
@@ -21,7 +22,7 @@ impl BubbleStateFields {
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
             radius: Array3::zeros(shape),
-            temperature: Array3::from_elem(shape, 293.15),
+            temperature: Array3::from_elem(shape, ROOM_TEMPERATURE_K),
             pressure: Array3::from_elem(shape, ATMOSPHERIC_PRESSURE),
             velocity: Array3::zeros(shape),
             is_collapsing: Array3::zeros(shape),

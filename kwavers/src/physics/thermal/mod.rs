@@ -29,7 +29,7 @@ pub use crate::domain::medium::properties::ThermalPropertyData;
 /// For Pennes solver simulations, also specify arterial temperature and metabolic heat
 /// as separate simulation parameters.
 pub mod tissues {
-    use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_LIVER, DENSITY_TISSUE};
+    use crate::core::constants::fundamental::{DENSITY_LIVER, DENSITY_TISSUE};
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
     use crate::domain::medium::properties::ThermalPropertyData;
 
@@ -142,7 +142,7 @@ pub mod tissues {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_LIVER, DENSITY_TISSUE};
+    use crate::core::constants::fundamental::{DENSITY_LIVER, DENSITY_TISSUE};
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 
     #[test]

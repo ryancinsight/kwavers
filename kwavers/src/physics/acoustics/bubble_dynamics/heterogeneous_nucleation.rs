@@ -155,6 +155,7 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 
     fn test_model() -> ClassicalHeterogeneousNucleation<f64> {
         use crate::core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
@@ -169,7 +170,7 @@ mod tests {
     #[test]
     fn test_nucleation_tension_invariant() {
         let model = test_model();
-        let temp = 293.15;
+        let temp = ROOM_TEMPERATURE_K;
         let factor = 1.0;
 
         // P_l > P_v => Positive/Compressive => Zero rate

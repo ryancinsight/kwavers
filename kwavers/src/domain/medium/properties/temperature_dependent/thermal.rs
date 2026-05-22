@@ -1,4 +1,4 @@
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K};
 
 use super::super::ThermalPropertyData;
 
@@ -79,7 +79,7 @@ impl TemperatureDependentThermal {
     pub fn water() -> Self {
         Self {
             base_properties: ThermalPropertyData::water(),
-            reference_temperature: 293.15,
+            reference_temperature: ROOM_TEMPERATURE_K,
             conductivity_coeff_linear: 0.002,
             conductivity_coeff_quadratic: -1e-5,
             specific_heat_coefficient: 0.0001,

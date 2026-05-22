@@ -1,4 +1,5 @@
 use super::{validate_source_generation, SourceWorkspace};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use crate::domain::imaging::photoacoustic::{InitialPressure, PhotoacousticScenario};
 use crate::physics::photoacoustics::thermoelasticity::GrueneisenModel;
@@ -50,7 +51,7 @@ impl PhotoacousticSourceModel {
                 scenario.config.pulse_duration_s,
                 scenario.config.thermoelastic,
                 &gruneisen,
-                37.0,
+                BODY_TEMPERATURE_C,
             )?;
             *cell_pressure = report.initial_pressure_pa;
             max_pressure = max_pressure.max(report.initial_pressure_pa);
