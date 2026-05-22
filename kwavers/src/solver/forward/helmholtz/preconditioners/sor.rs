@@ -4,6 +4,7 @@
 //! SOR provides better convergence than simple diagonal preconditioning
 //! for certain problem types.
 
+use crate::core::constants::acoustic_parameters::SOFT_TISSUE_HU_BASE_SPEED_M_S;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -89,7 +90,7 @@ impl HelmholtzPreconditioner for SorPreconditioner {
                     // Compute local wavenumber from medium sound speed
                     let c = medium.sound_speed(i, j, k);
                     let local_k = if c > 0.0 {
-                        wavenumber * 1480.0 / c // Scale by ratio to reference speed
+                        wavenumber * SOFT_TISSUE_HU_BASE_SPEED_M_S / c // Scale by ratio to reference speed
                     } else {
                         wavenumber
                     };

@@ -3,6 +3,7 @@
 //! **Domain Focus**: Pure thermal behavior following Domain-Driven Design
 //! Evidence-based thermal modeling per Hamilton & Blackstock Ch.8
 
+use crate::core::constants::thermodynamic::THERMAL_EXPANSION_SOFT_TISSUE;
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
     heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},
@@ -53,8 +54,7 @@ impl ThermalProperties for HeterogeneousMedium {
     /// Thermal expansion coefficient (1/K) at continuous coordinates
     #[inline]
     fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        // Typical soft tissue thermal expansion ~3e-4 1/K
-        3.0e-4
+        THERMAL_EXPANSION_SOFT_TISSUE
     }
 }
 

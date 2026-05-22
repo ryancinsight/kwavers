@@ -72,6 +72,7 @@ impl Default for CavitationSafetyLimits {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
     /// FeedbackConfig::default satisfies amplitude ordering: min_amplitude < max_amplitude.
     #[test]
@@ -96,8 +97,8 @@ mod tests {
             lim.emergency_stop_threshold
         );
         assert!(
-            lim.max_temperature > 37.0, // above body temperature
-            "max temperature ({}) must be above 37°C",
+            lim.max_temperature > BODY_TEMPERATURE_C,
+            "max temperature ({}) must be above body temperature (37°C)",
             lim.max_temperature
         );
     }
