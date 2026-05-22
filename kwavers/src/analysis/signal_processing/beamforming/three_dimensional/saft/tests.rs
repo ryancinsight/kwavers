@@ -1,5 +1,6 @@
 use ndarray::Array4;
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::super::{Beamforming3dApodizationWindow, BeamformingAlgorithm3D};
 use super::config::SaftConfig;
 use super::processor::{distance3, SaftProcessor};
@@ -50,9 +51,9 @@ fn test_time_of_flight_computation() {
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 0.0],
         [0.001, 0.0, 0.0],
-        1540.0,
+        SOUND_SPEED_TISSUE,
     );
-    let expected = (0.001 + 0.001) / 1540.0;
+    let expected = (0.001 + 0.001) / SOUND_SPEED_TISSUE;
     assert!((tof - expected).abs() < 1e-12);
 }
 

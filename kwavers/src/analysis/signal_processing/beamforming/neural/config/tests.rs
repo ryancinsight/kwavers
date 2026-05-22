@@ -1,3 +1,5 @@
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 use super::*;
 
 #[test]
@@ -18,7 +20,7 @@ fn test_physics_parameters_default() {
 
 #[test]
 fn test_sensor_geometry_linear() {
-    let geometry = SensorGeometry::linear_array(64, 0.0003, 40e6, 1540.0);
+    let geometry = SensorGeometry::linear_array(64, 0.0003, 40e6, SOUND_SPEED_TISSUE);
     assert_eq!(geometry.num_elements(), 64);
     assert_eq!(geometry.sampling_frequency, 40e6);
 
@@ -27,7 +29,7 @@ fn test_sensor_geometry_linear() {
 
 #[test]
 fn test_sensor_geometry_phased() {
-    let geometry = SensorGeometry::phased_array(8, 8, 0.0003, 0.0003, 40e6, 1540.0);
+    let geometry = SensorGeometry::phased_array(8, 8, 0.0003, 0.0003, 40e6, SOUND_SPEED_TISSUE);
     assert_eq!(geometry.num_elements(), 64);
 }
 

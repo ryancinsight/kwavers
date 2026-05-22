@@ -1,6 +1,7 @@
 //! Tests for advanced ultrasound imaging techniques
 
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::Array3;
 
 #[test]
@@ -8,7 +9,7 @@ fn test_synthetic_aperture_config() {
     let config = SyntheticApertureConfig::default();
     assert_eq!(config.num_tx_elements, 64);
     assert_eq!(config.num_rx_elements, 64);
-    assert!((config.sound_speed - 1540.0).abs() < 1e-6);
+    assert!((config.sound_speed - SOUND_SPEED_TISSUE).abs() < 1e-6);
 }
 
 #[test]
@@ -27,7 +28,7 @@ fn test_chirp_generation() {
             end_freq: 8e6,
             length: 100,
         },
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         sampling_frequency: 20e6,
     };
 
@@ -42,7 +43,7 @@ fn test_chirp_generation() {
 fn test_barker_generation() {
     let config = CodedExcitationConfig {
         code: ExcitationCode::Barker { length: 7 },
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         sampling_frequency: 20e6,
     };
 
@@ -64,7 +65,7 @@ fn test_snr_improvement_calculation() {
             end_freq: 8e6,
             length: 100,
         },
-        sound_speed: 1540.0,
+        sound_speed: SOUND_SPEED_TISSUE,
         sampling_frequency: 20e6,
     };
 

@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::{Array1, Array2, Array3};
 
 /// Full configuration for the transcranial FUS planning pipeline.
@@ -51,7 +52,7 @@ impl Default for TranscranialFusPlanConfig {
             radius_m: 0.150,
             cap_min_polar_rad: 0.22,
             cap_max_polar_rad: 1.18,
-            brain_c: 1540.0,
+            brain_c: SOUND_SPEED_TISSUE,
             skull_c: 2800.0,
             target_peak_pa: 1.0e6,
             samples_per_ray: 192,

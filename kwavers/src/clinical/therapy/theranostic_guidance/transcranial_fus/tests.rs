@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use super::bbb::bbb_opening_dose;
 use super::benchmark::{
     evaluate_pressure_field, run_skull_adaptive_transcranial_benchmark,
@@ -29,16 +30,16 @@ fn focused_cap_rejects_invalid_polar_span() {
 
 #[test]
 fn acoustic_properties_brain_branch() {
-    let (c, rho, alpha) = acoustic_properties_from_hu(0.0, 650_000.0, 1540.0, 2800.0);
-    assert_eq!(c, 1540.0);
+    let (c, rho, alpha) = acoustic_properties_from_hu(0.0, 650_000.0, SOUND_SPEED_TISSUE, 2800.0);
+    assert_eq!(c, SOUND_SPEED_TISSUE);
     assert_eq!(rho, 1040.0);
     assert!(alpha > 0.0);
 }
 
 #[test]
 fn acoustic_properties_bone_branch() {
-    let (c, rho, _alpha) = acoustic_properties_from_hu(2000.0, 650_000.0, 1540.0, 2800.0);
-    assert!(c > 1540.0 && c <= 2800.0, "sound speed out of range: {c}");
+    let (c, rho, _alpha) = acoustic_properties_from_hu(2000.0, 650_000.0, SOUND_SPEED_TISSUE, 2800.0);
+    assert!(c > SOUND_SPEED_TISSUE && c <= 2800.0, "sound speed out of range: {c}");
     assert!(rho > 1040.0 && rho <= 1900.0, "density out of range: {rho}");
 }
 
@@ -46,7 +47,7 @@ fn acoustic_properties_bone_branch() {
 fn observables_energy_positive() {
     let pressure = Array3::from_elem((4, 4, 4), 1.0e5_f32);
     let (intensity, mi, cavitation) =
-        acoustic_fus_observables(&pressure, 650_000.0, 1040.0, 1540.0, 1.9);
+        acoustic_fus_observables(&pressure, 650_000.0, 1040.0, SOUND_SPEED_TISSUE, 1.9);
     assert!(intensity.iter().all(|&v| v > 0.0));
     assert!(mi.iter().all(|&v| v > 0.0));
     assert!(cavitation.iter().all(|&v| v >= 0.0 && v <= 1.0));

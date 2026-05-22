@@ -7,6 +7,7 @@ use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::infrastructure::api::auth::AuthenticatedUser;
 use crate::infrastructure::api::{APIError, ClinicalAnalysisRequest, ClinicalAnalysisResponse};
 
@@ -235,7 +236,7 @@ pub(crate) fn clinical_analysis_from_beamforming_result(
                 properties: crate::api::ApiTissueProperties {
                     attenuation_db_per_cm_mhz: 0.5,
                     backscatter_coefficient: 1.2,
-                    speed_of_sound: 1540.0,
+                    speed_of_sound: SOUND_SPEED_TISSUE,
                 },
             },
         )]),

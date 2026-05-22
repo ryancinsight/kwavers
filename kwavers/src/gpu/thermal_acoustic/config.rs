@@ -2,6 +2,7 @@
 //!
 //! SRP: changes when the uniform buffer layout or CFL bounds change.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -43,7 +44,7 @@ impl Default for GpuThermalAcousticConfig {
             dy: 0.001,
             dz: 0.001,
             dt: 1e-8,
-            c_ref: 1540.0,
+            c_ref: SOUND_SPEED_TISSUE as f32,
             dc_dT: 2.0,
             rho_ref: 1000.0,
             drho_dT: -0.2,

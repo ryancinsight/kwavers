@@ -139,6 +139,7 @@ mod tests {
     use super::*;
     use crate::clinical::therapy::theranostic_guidance::config::AnatomyKind;
     use crate::clinical::therapy::theranostic_guidance::geometry::Point2;
+    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 
     #[test]
     fn peak_pressure_exposure_records_bounded_workspace() {

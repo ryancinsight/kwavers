@@ -1,3 +1,5 @@
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 use super::normalize_weights;
 use super::*;
 
@@ -9,7 +11,7 @@ fn test_compute_delay() {
         512,    // sample index
         0.0003, // 300 µm pitch
         0.05,   // 50 mm focal depth
-        1540.0, // 1540 m/s sound speed
+        SOUND_SPEED_TISSUE, // sound speed
         40e6,   // 40 MHz sampling
     )
     .unwrap();
@@ -26,7 +28,7 @@ fn test_compute_weights() {
         512,    // sample index
         0.0003, // 300 µm pitch
         0.05,   // 50 mm focal depth
-        1540.0, // 1540 m/s
+        SOUND_SPEED_TISSUE, // m/s
         5e6,    // 5 MHz center frequency
     )
     .unwrap();
@@ -111,8 +113,8 @@ fn test_weight_symmetry() {
 
 #[test]
 fn test_delay_increases_with_distance() {
-    let center_delay = compute_delay(32, 64, 0, 0.0003, 0.05, 1540.0, 40e6).unwrap();
-    let edge_delay = compute_delay(0, 64, 0, 0.0003, 0.05, 1540.0, 40e6).unwrap();
+    let center_delay = compute_delay(32, 64, 0, 0.0003, 0.05, SOUND_SPEED_TISSUE, 40e6).unwrap();
+    let edge_delay = compute_delay(0, 64, 0, 0.0003, 0.05, SOUND_SPEED_TISSUE, 40e6).unwrap();
 
     // Edge elements have longer paths to on-axis focus
     assert!(edge_delay > center_delay);

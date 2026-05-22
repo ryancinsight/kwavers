@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
 use ndarray::Array2;
 
 use super::super::{
@@ -87,7 +88,7 @@ fn fixture_prepared() -> PreparedTheranosticSlice {
         anatomy: AnatomyKind::Kidney,
         ct_hu: Array2::zeros((9, 9)),
         label: Array2::zeros((9, 9)),
-        sound_speed_m_s: Array2::from_elem((9, 9), 1540.0),
+        sound_speed_m_s: Array2::from_elem((9, 9), SOUND_SPEED_TISSUE),
         attenuation_np_per_m_mhz: Array2::from_elem((9, 9), 0.5),
         body_mask: Array2::from_elem((9, 9), true),
         organ_mask: Array2::from_elem((9, 9), true),

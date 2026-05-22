@@ -3,6 +3,8 @@
 //! Tests the complete beamforming pipeline including configuration,
 //! processor initialization, and volume processing.
 
+use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+
 use super::*;
 
 #[test]
@@ -12,7 +14,7 @@ fn test_beamforming_config_3d_default() {
     assert_eq!(config.num_elements_3d, (32, 32, 16));
     assert_eq!(config.center_frequency, 2.5e6);
     assert_eq!(config.sampling_frequency, 50e6);
-    assert_eq!(config.sound_speed, 1540.0);
+    assert_eq!(config.sound_speed, SOUND_SPEED_TISSUE);
 }
 
 #[test]

@@ -16,7 +16,7 @@
 //!
 //! Reference organ sound speeds: liver 1595 m/s, kidney 1567 m/s (Duck 1990).
 
-use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3, Axis, Zip};
 use std::collections::VecDeque;
@@ -149,7 +149,7 @@ fn organ_reference_speed(anatomy: AnatomyKind) -> f64 {
     match anatomy {
         AnatomyKind::Liver => 1595.0,
         AnatomyKind::Kidney => 1567.0,
-        AnatomyKind::Brain => 1540.0,
+        AnatomyKind::Brain => SOUND_SPEED_TISSUE,
     }
 }
 

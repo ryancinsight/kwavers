@@ -1,7 +1,7 @@
 //! Tissue-specific absorption models
 
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
-use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_KIDNEY, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER};
 use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use crate::core::constants::DB_TO_NP;
@@ -174,7 +174,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
 
     map.insert(
         AbsorptionTissueType::Kidney,
-        AbsorptionTissueProperties::new(1.0, 1.09, DENSITY_TISSUE, 1560.0, 7.4, 0.53, 3763.0)
+        AbsorptionTissueProperties::new(1.0, 1.09, DENSITY_TISSUE, SOUND_SPEED_KIDNEY, 7.4, 0.53, 3763.0)
             .with_optical(50.0, 12000.0), // Kidney: μ_a≈0.5 cm⁻¹, μ_s≈120 cm⁻¹
     );
 
@@ -210,7 +210,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
 
     map.insert(
         AbsorptionTissueType::SoftTissue,
-        AbsorptionTissueProperties::new(0.75, 1.1, DENSITY_TISSUE, 1540.0, 6.8, 0.50, 3500.0)
+        AbsorptionTissueProperties::new(0.75, 1.1, DENSITY_TISSUE, SOUND_SPEED_TISSUE, 6.8, 0.50, 3500.0)
             .with_optical(10.0, 10000.0), // Generic soft tissue: μ_a≈0.1 cm⁻¹, μ_s≈100 cm⁻¹
     );
 
