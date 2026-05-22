@@ -289,9 +289,10 @@ impl KzkNonlinearOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::DENSITY_TISSUE;
+    use crate::core::constants::fundamental::{
+        B_OVER_A_WATER, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+    };
     use crate::solver::forward::nonlinear::kzk::KZKConfig;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     /// Helper: minimal `KZKConfig` for unit tests of `KzkNonlinearOperator`.
     /// Grid dimensions are kept small (1×1×1, nt=4) because `KzkNonlinearOperator::new`
@@ -425,8 +426,8 @@ mod tests {
     #[test]
     fn goldberg_number_scales_linearly_with_amplitude() {
         let c0 = SOUND_SPEED_WATER_SIM;
-        let rho0 = 1000.0_f64;
-        let b_over_a = 5.0_f64;
+        let rho0 = DENSITY_WATER_NOMINAL;
+        let b_over_a = B_OVER_A_WATER;
         let frequency = 1.0e6_f64;
 
         let config = minimal_config(c0, rho0, b_over_a, frequency);

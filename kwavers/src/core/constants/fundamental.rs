@@ -179,6 +179,21 @@ pub const B_OVER_A_MUSCLE: f64 = 7.4;
 /// Reference: Duck, F.A. (1990) Table 4.16; Beyer, R.T. (1960) J. Acoust. Soc. Am. 32(6).
 pub const B_OVER_A_WATER: f64 = 5.2;
 
+/// Nonlinearity parameter B/A for water at 37°C / body temperature (dimensionless).
+///
+/// Value: 5.0 — B/A decreases slightly with temperature; the value at 37°C is
+/// approximately 5.0, consistent with the Aanonsen et al. (1984) experimental
+/// water-path validation conditions (degassed water, body temperature). This
+/// constant should be used whenever a water medium at physiological temperature
+/// is specified, e.g., literature-validation tests anchored to that experiment.
+///
+/// Reference:
+/// - Aanonsen SI, Barkve T, Naze Tjøtta J, Tjøtta S (1984). "Distortion and
+///   harmonic generation in the nearfield of a finite amplitude sound beam."
+///   J. Acoust. Soc. Am. **75**(3): 749–768. DOI: 10.1121/1.390585.
+/// - Duck FA (1990). *Physical Properties of Tissue*, Table 4.16.
+pub const B_OVER_A_WATER_37C: f64 = 5.0;
+
 /// Nonlinearity parameter B/A for whole blood at 37°C (dimensionless).
 ///
 /// Reference: Duck (1990) Table 4.16.

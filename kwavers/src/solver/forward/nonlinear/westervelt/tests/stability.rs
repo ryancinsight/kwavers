@@ -1,6 +1,8 @@
 //! Buffer allocation invariants, nonlinear steepening, and CFL stability tests.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{
+    B_OVER_A_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+};
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
@@ -11,7 +13,7 @@ use crate::solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFd
 #[test]
 fn pressure_prev2_allocated_after_first_step() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let config = WesterveltFdtdConfig {
         enable_absorption: false,
         ..WesterveltFdtdConfig::default()
@@ -46,8 +48,8 @@ fn pressure_prev2_allocated_after_first_step() {
 fn nonlinear_term_increases_waveform_asymmetry() {
     let n = 32usize;
     let grid = Grid::new(n, n, n, 1e-3, 1e-3, 1e-3).unwrap();
-    let mut medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
-    medium.nonlinearity = 5.0;
+    let mut medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    medium.nonlinearity = B_OVER_A_WATER;
 
     let config_nl = WesterveltFdtdConfig {
         spatial_order: 2,

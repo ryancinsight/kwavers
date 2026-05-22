@@ -182,9 +182,11 @@ fn properties_kidney_organ_speed_differs_from_liver() {
     label[[0, 0]] = 1;
     let (speed_liver, _, _, _, _) = abdominal_properties(AnatomyKind::Liver, &ct, &label);
     let (speed_kidney, _, _, _, _) = abdominal_properties(AnatomyKind::Kidney, &ct, &label);
-    // Liver organ baseline: 1595; kidney: 1567 (both at HU=0 so offset=0).
-    assert!((speed_liver[[0, 0]] - 1595.0).abs() < 1.0e-10);
-    assert!((speed_kidney[[0, 0]] - 1567.0).abs() < 1.0e-10);
+    // Liver organ baseline: SOUND_SPEED_LIVER = 1578 m/s; kidney: SOUND_SPEED_KIDNEY = 1560 m/s
+    // Both at HU=0 so the HU-offset contribution is zero.
+    use crate::core::constants::fundamental::{SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER};
+    assert!((speed_liver[[0, 0]] - SOUND_SPEED_LIVER).abs() < 1.0e-10);
+    assert!((speed_kidney[[0, 0]] - SOUND_SPEED_KIDNEY).abs() < 1.0e-10);
 }
 
 // ── connected_body_component ──────────────────────────────────────────────

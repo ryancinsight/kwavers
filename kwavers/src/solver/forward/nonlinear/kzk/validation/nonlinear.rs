@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::super::*;
+    use crate::core::constants::fundamental::B_OVER_A_WATER_37C;
     use ndarray::Array2;
 
     /// Test harmonic generation in nonlinear propagation
@@ -102,7 +103,9 @@ mod tests {
 
         let rho0 = 998.0_f64;
         let c0 = 1481.0_f64;
-        let b_over_a = 5.0_f64;
+        // B/A = 5.0 matches Aanonsen et al. (1984) experimental conditions —
+        // degassed water near body temperature where B/A drops to ~5.0 (Duck 1990).
+        let b_over_a = B_OVER_A_WATER_37C;
         let beta = 1.0 + b_over_a / 2.0;
 
         let frequency = 1.0e6_f64;

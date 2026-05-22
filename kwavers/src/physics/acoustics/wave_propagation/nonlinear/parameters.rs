@@ -1,8 +1,9 @@
 use crate::core::constants::acoustic_parameters::{NP_TO_DB, WATER_ABSORPTION_ALPHA_0};
 use crate::core::constants::fundamental::{
-    B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, C_WATER, DENSITY_BRAIN,
-    DENSITY_FAT, DENSITY_KIDNEY, DENSITY_LIVER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN,
-    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
+    B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_SOFT_TISSUE,
+    B_OVER_A_WATER, C_WATER, DENSITY_BRAIN, DENSITY_FAT, DENSITY_KIDNEY, DENSITY_LIVER,
+    DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
+    SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
 };
 use crate::core::constants::numerical::CM_TO_M;
 
@@ -27,9 +28,8 @@ impl NonlinearParameters {
     /// Create parameters for typical soft tissue
     #[must_use]
     pub fn soft_tissue() -> Self {
-        // Typical values for soft tissue (from literature)
-        // B/A ~ 7.0 (Duck, 1990)
-        let b_over_a = 7.0;
+        // B/A = 6.5 — representative median for soft tissues (Duck 1990 Table 4.16, Bjørnø 2002).
+        let b_over_a = B_OVER_A_SOFT_TISSUE;
         Self {
             density: DENSITY_TISSUE,
             sound_speed: SOUND_SPEED_TISSUE,
@@ -44,8 +44,8 @@ impl NonlinearParameters {
     /// Create parameters for water
     #[must_use]
     pub fn water() -> Self {
-        // B/A for water at 20°C ~ 5.0
-        let b_over_a = 5.0;
+        // B/A for water at 20°C = 5.2 (Beyer 1960; Duck 1990 Table 4.16).
+        let b_over_a = B_OVER_A_WATER;
         Self {
             density: DENSITY_WATER,
             sound_speed: C_WATER,

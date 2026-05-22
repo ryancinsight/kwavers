@@ -14,9 +14,11 @@
 //! | 2     | Tumour    | organ_c − 22 + 0.12·HU | 1.05        |
 //! | bone  | HU > 250  | 2450 + 0.42·(HU − 250) | 18.0        |
 //!
-//! Reference organ sound speeds: liver 1595 m/s, kidney 1567 m/s (Duck 1990).
+//! Reference organ sound speeds: liver 1578 m/s, kidney 1560 m/s (Duck 1990 Table 4.6).
 
-use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER};
+use crate::core::constants::fundamental::{
+    SOUND_SPEED_AIR, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
+};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3, Axis, Zip};
 use std::collections::VecDeque;
@@ -140,15 +142,15 @@ pub(crate) fn largest_connected_target_component(
 
 /// Reference sound speed [m/s] for the dominant organ per anatomy.
 ///
-/// Sources: Duck FA, *Physical Properties of Tissue*, Academic Press, 1990.
-/// - Liver: 1595 m/s
-/// - Kidney: 1567 m/s
+/// Sources: Duck FA, *Physical Properties of Tissue*, Academic Press, 1990, Table 4.6.
+/// - Liver: `SOUND_SPEED_LIVER` = 1578 m/s
+/// - Kidney: `SOUND_SPEED_KIDNEY` = 1560 m/s
 /// - Brain (soft-tissue fallback used when anatomy is [`AnatomyKind::Brain`]): 1540 m/s
 #[inline]
 fn organ_reference_speed(anatomy: AnatomyKind) -> f64 {
     match anatomy {
-        AnatomyKind::Liver => 1595.0,
-        AnatomyKind::Kidney => 1567.0,
+        AnatomyKind::Liver => SOUND_SPEED_LIVER,
+        AnatomyKind::Kidney => SOUND_SPEED_KIDNEY,
         AnatomyKind::Brain => SOUND_SPEED_TISSUE,
     }
 }

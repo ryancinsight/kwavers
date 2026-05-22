@@ -4,8 +4,8 @@ use ndarray::Array3;
 
 use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
 use crate::core::constants::fundamental::{
-    DENSITY_AIR, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
-    SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
+    DENSITY_AIR, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
+    SOUND_SPEED_TISSUE, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
 };
 use super::super::super::AnatomyKind;
 use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law_y_from_hu};
@@ -75,13 +75,13 @@ fn speed_from_hu(anatomy: AnatomyKind, hu: f64, label: i16) -> f64 {
     }
     let organ_speed = match anatomy {
         AnatomyKind::Brain => SOUND_SPEED_TISSUE,
-        AnatomyKind::Liver => 1595.0,
-        AnatomyKind::Kidney => 1567.0,
+        AnatomyKind::Liver => SOUND_SPEED_LIVER,
+        AnatomyKind::Kidney => SOUND_SPEED_KIDNEY,
     };
     if label > 0 {
         organ_speed + 0.10 * hu.clamp(-100.0, 200.0)
     } else {
-        1480.0 + 0.18 * hu.clamp(-150.0, 250.0)
+        SOUND_SPEED_WATER + 0.18 * hu.clamp(-150.0, 250.0)
     }
 }
 

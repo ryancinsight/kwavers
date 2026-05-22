@@ -65,9 +65,9 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
 /// Source: Duck (1990), Gordon et al. (2009)
 /// Contains red blood cells affecting acoustic properties
 pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
-    sound_speed: 1557.0,
+    sound_speed: SOUND_SPEED_BLOOD,
     density: DENSITY_BLOOD,
-    impedance: 1650420.0,
+    impedance: 1_679_040.0, // DENSITY_BLOOD * SOUND_SPEED_BLOOD = 1060.0 × 1584.0
     absorption_coefficient: 0.025,
     absorption_exponent: 1.3,
     nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
