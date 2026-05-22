@@ -94,6 +94,24 @@ pub const SPECIFIC_HEAT_WATER_37C: f64 = 4180.0;
 ///   *J. Appl. Phys.* **60**(7), R83. DOI: 10.1063/1.337089
 pub const GRUNEISEN_WATER_37C: f64 = 0.188;
 
+/// Grüneisen parameter of liquid water at 20°C (dimensionless)
+///
+/// Reference value at 20°C from Xu & Wang (2006).
+/// Use `GRUNEISEN_WATER_37C` (0.188) for 37°C / body-temperature simulations.
+///
+/// Reference: Xu M, Wang LV (2006). Rev. Sci. Instrum. **77**, 041101.
+pub const GRUNEISEN_WATER_20C: f64 = 0.12;
+
+/// Grüneisen parameter of generic soft tissue at 37°C (dimensionless)
+///
+/// Γ = β·c²/c_p where β is the isobaric expansion coefficient.
+/// For soft tissue at body temperature: Γ ≈ 0.15.
+///
+/// References:
+/// - Wang LV, Wu H (2007). *Biomedical Optics*. Wiley-Interscience, p. 287.
+/// - Duck FA (1990). *Physical Properties of Tissue*. Academic Press.
+pub const GRUNEISEN_SOFT_TISSUE: f64 = 0.15;
+
 /// Specific heat capacity of generic soft tissue (J/(kg·K))
 ///
 /// Duck (1990) mean for mammalian soft tissue; used in Pennes bioheat and
@@ -241,6 +259,20 @@ pub const THERMAL_CONDUCTIVITY_FAT: f64 = 0.21;
 /// Thermal conductivity of cerebrospinal fluid at 37°C (W/(m·K))
 /// Source: Duck (1990)
 pub const THERMAL_CONDUCTIVITY_CSF: f64 = 0.60;
+
+/// Specific heat capacity of urine at 37°C (J/(kg·K))
+///
+/// Value: 3680 J/(kg·K) — similar to blood plasma but lower due to elevated
+/// urea and electrolyte concentrations.
+/// Reference: Duck FA (1990). Physical Properties of Tissue, Table 9.1.
+pub const SPECIFIC_HEAT_URINE: f64 = 3680.0;
+
+/// Thermal conductivity of urine at 37°C (W/(m·K))
+///
+/// Value: 0.61 W/(m·K) — slightly higher than plasma (0.55) due to
+/// dissolved electrolytes increasing ionic thermal transport.
+/// Reference: Duck FA (1990). Physical Properties of Tissue.
+pub const THERMAL_CONDUCTIVITY_URINE: f64 = 0.61;
 
 /// Thermal diffusivity of water (m²/s)
 pub const THERMAL_DIFFUSIVITY_WATER: f64 = 1.43e-7;

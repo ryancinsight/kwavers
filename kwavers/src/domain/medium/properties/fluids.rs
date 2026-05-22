@@ -20,9 +20,9 @@ use crate::core::constants::fundamental::{
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
-    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_WATER_37C,
-    THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_CSF, THERMAL_CONDUCTIVITY_WATER_37C,
-    THERMAL_DIFFUSIVITY_BLOOD,
+    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_URINE,
+    SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_CSF,
+    THERMAL_CONDUCTIVITY_URINE, THERMAL_CONDUCTIVITY_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD,
 };
 use super::material::AcousticMaterialProperties;
 
@@ -122,8 +122,8 @@ pub const URINE: FluidProperties = FluidProperties {
     nonlinearity_parameter: 5.1,
     shear_viscosity: 0.95e-3,
     bulk_viscosity: 0.0,
-    specific_heat: 3680.0,
-    thermal_conductivity: 0.61,
+    specific_heat: SPECIFIC_HEAT_URINE,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_URINE,
     // α = k/(ρ·cp) = 0.61 / (1005 × 3680) = 1.649e-7 m²/s
     thermal_diffusivity: 1.649e-7,
     perfusion_rate: 0.0,

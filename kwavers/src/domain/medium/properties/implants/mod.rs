@@ -17,6 +17,26 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE};
+use crate::core::constants::implants::{
+    DENSITY_ALUMINA, DENSITY_CFRP, DENSITY_HYDROXYAPATITE, DENSITY_PLATINUM, DENSITY_PMMA,
+    DENSITY_SILICONE_RUBBER, DENSITY_STAINLESS_STEEL_316L, DENSITY_TITANIUM_GRADE5,
+    DENSITY_UHMWPE, DENSITY_ZIRCONIA,
+    SOUND_SPEED_ALUMINA, SOUND_SPEED_CFRP, SOUND_SPEED_HYDROXYAPATITE, SOUND_SPEED_PLATINUM,
+    SOUND_SPEED_PMMA, SOUND_SPEED_SILICONE_RUBBER, SOUND_SPEED_STAINLESS_STEEL_316L,
+    SOUND_SPEED_TITANIUM_GRADE5, SOUND_SPEED_UHMWPE, SOUND_SPEED_ZIRCONIA, SOUND_SPEED_POLYURETHANE,
+    SPECIFIC_HEAT_ALUMINA, SPECIFIC_HEAT_CFRP, SPECIFIC_HEAT_HYDROXYAPATITE,
+    SPECIFIC_HEAT_PLATINUM, SPECIFIC_HEAT_PMMA, SPECIFIC_HEAT_POLYURETHANE,
+    SPECIFIC_HEAT_SILICONE_RUBBER, SPECIFIC_HEAT_STAINLESS_STEEL_316L,
+    SPECIFIC_HEAT_TITANIUM, SPECIFIC_HEAT_UHMWPE, SPECIFIC_HEAT_ZIRCONIA,
+    THERMAL_CONDUCTIVITY_ALUMINA, THERMAL_CONDUCTIVITY_CFRP, THERMAL_CONDUCTIVITY_HYDROXYAPATITE,
+    THERMAL_CONDUCTIVITY_PLATINUM, THERMAL_CONDUCTIVITY_PMMA, THERMAL_CONDUCTIVITY_POLYURETHANE,
+    THERMAL_CONDUCTIVITY_SILICONE_RUBBER, THERMAL_CONDUCTIVITY_STAINLESS_STEEL_316L,
+    THERMAL_CONDUCTIVITY_TITANIUM, THERMAL_CONDUCTIVITY_UHMWPE, THERMAL_CONDUCTIVITY_ZIRCONIA,
+    THERMAL_DIFFUSIVITY_ALUMINA, THERMAL_DIFFUSIVITY_CFRP, THERMAL_DIFFUSIVITY_HYDROXYAPATITE,
+    THERMAL_DIFFUSIVITY_PLATINUM, THERMAL_DIFFUSIVITY_PMMA,
+    THERMAL_DIFFUSIVITY_SILICONE_RUBBER, THERMAL_DIFFUSIVITY_STAINLESS_STEEL_316L,
+    THERMAL_DIFFUSIVITY_TITANIUM, THERMAL_DIFFUSIVITY_UHMWPE, THERMAL_DIFFUSIVITY_ZIRCONIA,
+};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
 
@@ -34,17 +54,18 @@ pub type ImplantProperties = AcousticMaterialProperties;
 /// Source: ISO 5832-3, ASTM F136
 /// High strength-to-weight ratio, excellent biocompatibility
 pub const TITANIUM_GRADE5: ImplantProperties = ImplantProperties {
-    sound_speed: 6070.0, // Much higher than tissue
-    density: 4430.0,
-    impedance: 26_930_100.0,
+    sound_speed: SOUND_SPEED_TITANIUM_GRADE5,
+    density: DENSITY_TITANIUM_GRADE5,
+    // Z = ρ·c = 4430 × 6070 = 26 890 100 Pa·s/m
+    impedance: 26_890_100.0,
     absorption_coefficient: 0.1,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 1.5,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 560.0,
-    thermal_conductivity: 7.4,
-    thermal_diffusivity: 2.99e-6,
+    specific_heat: SPECIFIC_HEAT_TITANIUM,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_TITANIUM,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_TITANIUM,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -59,17 +80,18 @@ pub const TITANIUM_GRADE5: ImplantProperties = ImplantProperties {
 /// Source: ISO 5832-1, ASTM F139
 /// Good corrosion resistance, lower cost than titanium
 pub const STAINLESS_STEEL_316L: ImplantProperties = ImplantProperties {
-    sound_speed: 5960.0,
-    density: 8000.0,
+    sound_speed: SOUND_SPEED_STAINLESS_STEEL_316L,
+    density: DENSITY_STAINLESS_STEEL_316L,
+    // Z = ρ·c = 8000 × 5960 = 47 680 000 Pa·s/m
     impedance: 47_680_000.0,
     absorption_coefficient: 0.15,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 1.8,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 500.0,
-    thermal_conductivity: 16.0,
-    thermal_diffusivity: 4.0e-6,
+    specific_heat: SPECIFIC_HEAT_STAINLESS_STEEL_316L,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_STAINLESS_STEEL_316L,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_STAINLESS_STEEL_316L,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -84,17 +106,18 @@ pub const STAINLESS_STEEL_316L: ImplantProperties = ImplantProperties {
 /// Source: ASTM F216
 /// Used in pacemakers, catheter tips, and brachytherapy seeds
 pub const PLATINUM: ImplantProperties = ImplantProperties {
-    sound_speed: 3960.0,
-    density: 21_450.0,
-    impedance: 85_038_000.0,
+    sound_speed: SOUND_SPEED_PLATINUM,
+    density: DENSITY_PLATINUM,
+    // Z = ρ·c = 21450 × 3960 = 84 942 000 Pa·s/m
+    impedance: 84_942_000.0,
     absorption_coefficient: 0.5,
     absorption_exponent: 1.1,
     nonlinearity_parameter: 2.0,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 135.0,
-    thermal_conductivity: 71.6,
-    thermal_diffusivity: 2.46e-5,
+    specific_heat: SPECIFIC_HEAT_PLATINUM,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_PLATINUM,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_PLATINUM,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -113,17 +136,18 @@ pub const PLATINUM: ImplantProperties = ImplantProperties {
 /// Source: ASTM F451
 /// Rigid polymer, good optical clarity for some applications
 pub const PMMA: ImplantProperties = ImplantProperties {
-    sound_speed: 2670.0,
-    density: 1190.0,
-    impedance: 3_180_300.0,
+    sound_speed: SOUND_SPEED_PMMA,
+    density: DENSITY_PMMA,
+    // Z = ρ·c = 1190 × 2670 = 3 177 300 Pa·s/m
+    impedance: 3_177_300.0,
     absorption_coefficient: 0.08,
     absorption_exponent: 1.1,
     nonlinearity_parameter: 3.0,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 1470.0,
-    thermal_conductivity: 0.19,
-    thermal_diffusivity: 1.08e-7,
+    specific_heat: SPECIFIC_HEAT_PMMA,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_PMMA,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_PMMA,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -138,17 +162,18 @@ pub const PMMA: ImplantProperties = ImplantProperties {
 /// Source: ASTM F648
 /// Used in joint replacement bearing surfaces
 pub const UHMWPE: ImplantProperties = ImplantProperties {
-    sound_speed: 2380.0,
-    density: 935.0,
-    impedance: 2_224_300.0,
+    sound_speed: SOUND_SPEED_UHMWPE,
+    density: DENSITY_UHMWPE,
+    // Z = ρ·c = 935 × 2380 = 2 225 300 Pa·s/m
+    impedance: 2_225_300.0,
     absorption_coefficient: 0.05,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 2.8,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 2300.0,
-    thermal_conductivity: 0.42,
-    thermal_diffusivity: 1.95e-7,
+    specific_heat: SPECIFIC_HEAT_UHMWPE,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_UHMWPE,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_UHMWPE,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -163,17 +188,18 @@ pub const UHMWPE: ImplantProperties = ImplantProperties {
 /// Source: ASTM F381
 /// Used in breast implants, seals, and flexible components
 pub const SILICONE_RUBBER: ImplantProperties = ImplantProperties {
-    sound_speed: 1050.0, // Lower speed than tissue
-    density: 970.0,
+    sound_speed: SOUND_SPEED_SILICONE_RUBBER,
+    density: DENSITY_SILICONE_RUBBER,
+    // Z = ρ·c = 970 × 1050 = 1 018 500 Pa·s/m
     impedance: 1_018_500.0,
     absorption_coefficient: 0.12,
     absorption_exponent: 1.2,
     nonlinearity_parameter: 4.0,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 1500.0,
-    thermal_conductivity: 0.25,
-    thermal_diffusivity: 1.72e-7,
+    specific_heat: SPECIFIC_HEAT_SILICONE_RUBBER,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_SILICONE_RUBBER,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_SILICONE_RUBBER,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -188,17 +214,19 @@ pub const SILICONE_RUBBER: ImplantProperties = ImplantProperties {
 /// Source: ASTM F1634
 /// Used in artificial heart valves and flexible connectors
 pub const POLYURETHANE: ImplantProperties = ImplantProperties {
-    sound_speed: 1890.0,
+    sound_speed: SOUND_SPEED_POLYURETHANE,
     density: DENSITY_TISSUE,
+    // Z = ρ·c = 1050 × 1890 = 1 984 500 Pa·s/m
     impedance: 1_984_500.0,
     absorption_coefficient: 0.10,
     absorption_exponent: 1.1,
     nonlinearity_parameter: 3.5,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 1800.0,
-    thermal_conductivity: 0.24,
-    thermal_diffusivity: 1.27e-7,
+    specific_heat: SPECIFIC_HEAT_POLYURETHANE,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_POLYURETHANE,
+    // α = k/(ρ·c_p) = 0.24 / (1050 × 1800) = 1.270e-7 m²/s
+    thermal_diffusivity: 1.270e-7,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -217,17 +245,18 @@ pub const POLYURETHANE: ImplantProperties = ImplantProperties {
 /// Source: ASTM F603
 /// Used in joint replacement components due to high wear resistance
 pub const ALUMINA: ImplantProperties = ImplantProperties {
-    sound_speed: 11_100.0,
-    density: 3970.0,
-    impedance: 44_037_000.0,
+    sound_speed: SOUND_SPEED_ALUMINA,
+    density: DENSITY_ALUMINA,
+    // Z = ρ·c = 3970 × 11100 = 44 067 000 Pa·s/m
+    impedance: 44_067_000.0,
     absorption_coefficient: 0.05,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 1.2,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 880.0,
-    thermal_conductivity: 30.0,
-    thermal_diffusivity: 8.54e-6,
+    specific_heat: SPECIFIC_HEAT_ALUMINA,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_ALUMINA,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_ALUMINA,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -242,17 +271,18 @@ pub const ALUMINA: ImplantProperties = ImplantProperties {
 /// Source: ASTM F1873
 /// Superior fracture toughness compared to alumina
 pub const ZIRCONIA: ImplantProperties = ImplantProperties {
-    sound_speed: 6000.0,
-    density: 6050.0,
+    sound_speed: SOUND_SPEED_ZIRCONIA,
+    density: DENSITY_ZIRCONIA,
+    // Z = ρ·c = 6050 × 6000 = 36 300 000 Pa·s/m
     impedance: 36_300_000.0,
     absorption_coefficient: 0.08,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 1.4,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 500.0,
-    thermal_conductivity: 2.0,
-    thermal_diffusivity: 6.61e-7,
+    specific_heat: SPECIFIC_HEAT_ZIRCONIA,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_ZIRCONIA,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_ZIRCONIA,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -271,17 +301,18 @@ pub const ZIRCONIA: ImplantProperties = ImplantProperties {
 /// Source: ASTM E2748
 /// High strength-to-weight for structural implants
 pub const CFRP: ImplantProperties = ImplantProperties {
-    sound_speed: 3100.0,
-    density: 1600.0,
+    sound_speed: SOUND_SPEED_CFRP,
+    density: DENSITY_CFRP,
+    // Z = ρ·c = 1600 × 3100 = 4 960 000 Pa·s/m
     impedance: 4_960_000.0,
     absorption_coefficient: 0.15,
     absorption_exponent: 1.2,
     nonlinearity_parameter: 2.5,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 900.0,
-    thermal_conductivity: 5.0,
-    thermal_diffusivity: 3.47e-6,
+    specific_heat: SPECIFIC_HEAT_CFRP,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_CFRP,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_CFRP,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -296,17 +327,18 @@ pub const CFRP: ImplantProperties = ImplantProperties {
 /// Source: ASTM F1185
 /// Composition: Ca₁₀(PO₄)₆(OH)₂, closely matched to bone mineral
 pub const HYDROXYAPATITE: ImplantProperties = ImplantProperties {
-    sound_speed: 3640.0,
-    density: 3220.0,
-    impedance: 11_724_800.0,
+    sound_speed: SOUND_SPEED_HYDROXYAPATITE,
+    density: DENSITY_HYDROXYAPATITE,
+    // Z = ρ·c = 3220 × 3640 = 11 720 800 Pa·s/m
+    impedance: 11_720_800.0,
     absorption_coefficient: 0.2,
     absorption_exponent: 1.1,
     nonlinearity_parameter: 1.8,
     shear_viscosity: 0.0,
     bulk_viscosity: 0.0,
-    specific_heat: 880.0,
-    thermal_conductivity: 1.2,
-    thermal_diffusivity: 4.21e-7,
+    specific_heat: SPECIFIC_HEAT_HYDROXYAPATITE,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_HYDROXYAPATITE,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_HYDROXYAPATITE,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
