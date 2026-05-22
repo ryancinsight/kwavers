@@ -196,7 +196,7 @@ impl VolumetricArfField {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use ndarray::Array3;
 
     /// Uniform pressure field: I = p² / (ρ·c); F = 2·α·I / c.
@@ -212,7 +212,7 @@ mod tests {
     fn test_uniform_field_analytical() {
         let (nx, ny, nz) = (4, 4, 4);
         let p_val = 1000.0_f64;
-        let rho = 1000.0_f64;
+        let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
         let alpha = 5.0_f64;
 
@@ -226,7 +226,7 @@ mod tests {
 
         let absorption = Array3::from_elem((nx, ny, nz), alpha);
         let sound_speed = Array3::from_elem((nx, ny, nz), c);
-        let density = Array3::from_elem((nx, ny, nz), rho);
+        let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
 
         arf.finalize(&absorption, &sound_speed, &density).unwrap();
 
@@ -255,7 +255,7 @@ mod tests {
 
         let absorption = Array3::zeros((nx, ny, nz));
         let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
-        let density = Array3::from_elem((nx, ny, nz), 1000.0);
+        let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
 
         arf.finalize(&absorption, &sound_speed, &density).unwrap();
 
@@ -279,7 +279,7 @@ mod tests {
         let mut arf = VolumetricArfField::new(2, 2, 2);
         let absorption = Array3::zeros((2, 2, 2));
         let sound_speed = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
-        let density = Array3::from_elem((2, 2, 2), 1000.0);
+        let density = Array3::from_elem((2, 2, 2), DENSITY_WATER_NOMINAL);
         let result = arf.finalize(&absorption, &sound_speed, &density);
         assert!(
             result.is_err(),
@@ -299,7 +299,7 @@ mod tests {
         arf.accumulate(&pressure);
         let absorption = Array3::from_elem((nx, ny, nz), 2.0);
         let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
-        let density = Array3::from_elem((nx, ny, nz), 1000.0);
+        let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
         arf.finalize(&absorption, &sound_speed, &density).unwrap();
 
         let intensity_before = arf.intensity()[[0, 0, 0]];

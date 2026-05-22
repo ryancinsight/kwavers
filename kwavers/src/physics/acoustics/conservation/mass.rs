@@ -57,6 +57,7 @@ pub fn validate_mass_conservation(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
 
@@ -71,8 +72,8 @@ mod tests {
     fn mass_conservation_zero_error_for_uniform_static_field() {
         let grid = small_grid();
         let s = (grid.nx, grid.ny, grid.nz);
-        let density = Array3::from_elem(s, 1000.0_f64);
-        let density_previous = Array3::from_elem(s, 1000.0_f64);
+        let density = Array3::from_elem(s, DENSITY_WATER_NOMINAL);
+        let density_previous = Array3::from_elem(s, DENSITY_WATER_NOMINAL);
         let velocity_x = Array3::zeros(s);
         let velocity_y = Array3::zeros(s);
         let velocity_z = Array3::zeros(s);

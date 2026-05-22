@@ -206,7 +206,7 @@ fn shifted_state(state: &BubbleState, derivative: (f64, f64), dt: f64, r0: f64) 
 mod tests {
     use super::*;
     use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use crate::physics::acoustics::analysis::calculate_mechanical_index;
 
     #[test]
@@ -314,7 +314,7 @@ mod tests {
             body_mask,
             target_mask,
             inversion_mask,
-            density_kg_m3: Array3::<f64>::from_elem(shape, 1000.0),
+            density_kg_m3: Array3::<f64>::from_elem(shape, DENSITY_WATER_NOMINAL),
             background_beta: Array3::<f64>::from_elem(shape, 4.0),
             true_beta: Array3::<f64>::from_elem(shape, 4.0),
             background_sound_speed_m_s: Array3::<f64>::from_elem(shape, SOUND_SPEED_WATER_SIM),

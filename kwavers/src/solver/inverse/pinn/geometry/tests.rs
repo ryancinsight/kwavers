@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use ndarray::Array1;
 
 use crate::domain::geometry::RectangularDomain;
@@ -27,7 +28,7 @@ fn test_interface_condition_debug() {
     assert_eq!(format!("{:?}", ic), "ElasticContinuity");
 
     let ic2 = PinnGeometryInterfaceCondition::AcousticElastic {
-        fluid_density: 1000.0,
+        fluid_density: DENSITY_WATER_NOMINAL,
     };
     assert!(format!("{:?}", ic2).contains("1000"));
 }

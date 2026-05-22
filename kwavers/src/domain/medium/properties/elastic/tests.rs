@@ -1,5 +1,5 @@
 use super::ElasticPropertyData;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
 #[test]
 fn test_elastic_engineering_conversion() {
@@ -35,7 +35,7 @@ fn test_elastic_wave_speeds() {
 
 #[test]
 fn test_elastic_poisson_bounds() {
-    let density = 1000.0;
+    let density = DENSITY_WATER_NOMINAL;
 
     assert!(ElasticPropertyData::try_from_engineering(density, 1e9, 0.5).is_err());
     assert!(ElasticPropertyData::try_from_engineering(density, 1e9, -1.0).is_err());
@@ -77,7 +77,7 @@ fn test_elastic_from_wave_speeds() {
 
 #[test]
 fn test_elastic_from_wave_speeds_validation() {
-    let density = 1000.0;
+    let density = DENSITY_WATER_NOMINAL;
 
     assert!(ElasticPropertyData::try_from_wave_speeds(density, SOUND_SPEED_WATER_SIM, 1600.0).is_err());
     assert!(ElasticPropertyData::try_from_wave_speeds(-1000.0, SOUND_SPEED_WATER_SIM, 1000.0).is_err());

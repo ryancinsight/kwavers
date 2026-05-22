@@ -105,7 +105,7 @@ mod tests {
     /// Zero variance produces a uniform field equal to base_speed.
     #[test]
     fn zero_variance_produces_uniform_field() {
-        let base = 1480.0_f64;
+        let base = SOUND_SPEED_WATER_SIM;
         let grid = small_grid();
         let model = HeterogeneityModel::new(&grid, base, 0.0);
         for &v in model.sound_speed_var.iter() {

@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use super::config::{ClinicalPhotoacousticConfig, ElastographyConfig};
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
@@ -184,7 +184,8 @@ pub fn generate_realistic_elastography_data(
                 shear_modulus[[x, y, z]] = g_mod;
 
                 // Shear wave speed from modulus and density (ρ ≈ 1000 kg/m³)
-                shear_wave_speed[[x, y, z]] = (g_mod / 1000.0f64).sqrt();
+                // ρ ≈ DENSITY_WATER_NOMINAL (1000 kg/m³) for soft tissue approximation
+                shear_wave_speed[[x, y, z]] = (g_mod / DENSITY_WATER_NOMINAL).sqrt();
             }
         }
     }

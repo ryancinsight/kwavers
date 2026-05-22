@@ -16,7 +16,7 @@
 //! Attenuation: 0.5 dB/cm/MHz → `α_soft = 0.5 × 100 × ln10/20 Np/m/MHz`.
 
 use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM};
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 
@@ -38,7 +38,7 @@ pub fn prepare_brain_slice(
 ) -> KwaversResult<PreparedTheranosticSlice> {
     let (nx, ny) = ct_hu.dim();
     let mut label = Array2::<i16>::zeros((nx, ny));
-    let mut sound_speed = Array2::<f64>::from_elem((nx, ny), 1480.0);
+    let mut sound_speed = Array2::<f64>::from_elem((nx, ny), SOUND_SPEED_WATER);
     let mut attenuation = Array2::<f64>::from_elem((nx, ny), soft_attenuation());
     let mut body = Array2::<bool>::from_elem((nx, ny), false);
     let mut organ = Array2::<bool>::from_elem((nx, ny), false);

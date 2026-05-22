@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use super::grid::GridShape;
 use super::metrics::diagnostics_for_prediction;
 use super::predict::{point_source_observation_cube, source_kappa_filtered_source_weights};
@@ -63,7 +63,7 @@ fn direct_field_metrics_recover_exact_scaled_prediction() {
         cycles_per_frequency: 4,
         frequency_bin_cycles: 2,
         source_amplitude_pa: 4.0,
-        density_kg_m3: 1000.0,
+        density_kg_m3: DENSITY_WATER_NOMINAL,
         cpml_thickness_cells: 0,
     };
 
@@ -104,7 +104,7 @@ fn direct_field_metrics_separate_active_and_passive_receiver_classes() {
         cycles_per_frequency: 4,
         frequency_bin_cycles: 2,
         source_amplitude_pa: 4.0,
-        density_kg_m3: 1000.0,
+        density_kg_m3: DENSITY_WATER_NOMINAL,
         cpml_thickness_cells: 0,
     };
 
@@ -136,7 +136,7 @@ fn homogeneous_diagnostic_rejects_nonuniform_reference_medium() {
         cycles_per_frequency: 1,
         frequency_bin_cycles: 1,
         source_amplitude_pa: 1.0e3,
-        density_kg_m3: 1000.0,
+        density_kg_m3: DENSITY_WATER_NOMINAL,
         cpml_thickness_cells: 0,
     };
     let mut model = Array3::from_elem((12, 12, 3), SOUND_SPEED_WATER_SIM);

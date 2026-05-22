@@ -3,7 +3,7 @@
 use super::super::{
     AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR, ACOUSTIC_VELOCITY_X_VAR,
 };
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::solver::forward::pstd::dg::cpml::{
     DgCpmlAxis, DgCpmlConfig, DgCpmlMemoryWorkspace, DgCpmlProfiles,
@@ -67,7 +67,7 @@ fn neutral_profile_matches_standard_rhs_bit_for_bit() {
         .compute_acoustic_tensor_rhs_with_cpml_into(
             &state,
             &memory_state,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             &profiles,
             &mut rhs_cpml,
             &mut memory_rhs,
@@ -76,7 +76,7 @@ fn neutral_profile_matches_standard_rhs_bit_for_bit() {
 
     let mut rhs_standard = Array3::<f64>::zeros(shape);
     solver
-        .compute_acoustic_tensor_rhs_into(&state, 1000.0, &mut rhs_standard)
+        .compute_acoustic_tensor_rhs_into(&state, DENSITY_WATER_NOMINAL, &mut rhs_standard)
         .unwrap();
 
     // Bit-for-bit equality is too strict because the two code paths multiply
@@ -117,7 +117,7 @@ fn rhs_shape_mismatches_are_rejected() {
         .compute_acoustic_tensor_rhs_with_cpml_into(
             &state,
             &memory_state,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             &profiles,
             &mut wrong_field_rhs,
             &mut memory_rhs,
@@ -130,7 +130,7 @@ fn rhs_shape_mismatches_are_rejected() {
         .compute_acoustic_tensor_rhs_with_cpml_into(
             &state,
             &memory_state,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             &profiles,
             &mut field_rhs,
             &mut wrong_memory_rhs,
@@ -166,12 +166,12 @@ fn step_with_neutral_profile_matches_standard_step() {
         .unwrap();
     let dt = 1.0e-9;
     solver
-        .step_acoustic_tensor_ssp_rk3(&mut state_a, 1000.0, dt, &mut ws_a)
+        .step_acoustic_tensor_ssp_rk3(&mut state_a, DENSITY_WATER_NOMINAL, dt, &mut ws_a)
         .unwrap();
     solver
         .step_acoustic_tensor_ssp_rk3_with_cpml(
             &mut state_b,
-            1000.0,
+            DENSITY_WATER_NOMINAL,
             dt,
             &mut ws_b,
             &mut memory,
@@ -206,7 +206,7 @@ fn cpml_attenuates_right_propagating_plane_wave_below_periodic_baseline() {
     // Initial condition: localized right-going acoustic pulse near x = 0.25 L.
     // For the linear acoustic plane wave, p = Z·u_x guarantees a right-going
     // characteristic (`w_minus = p - Z·u_x = 0`).
-    let density = 1000.0;
+    let density = DENSITY_WATER_NOMINAL;
     let c = solver.config().sound_speed;
     let impedance = density * c;
     let center_node = nx / 4;

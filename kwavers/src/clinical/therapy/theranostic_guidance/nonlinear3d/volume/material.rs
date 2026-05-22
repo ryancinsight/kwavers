@@ -3,14 +3,17 @@
 use ndarray::Array3;
 
 use crate::core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
-use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{
+    DENSITY_AIR, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
+    SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
+};
 use super::super::super::AnatomyKind;
 use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law_y_from_hu};
 
-const COUPLING_SOUND_SPEED_M_S: f64 = 1480.0;
-const COUPLING_DENSITY_KG_M3: f64 = 1000.0;
+const COUPLING_SOUND_SPEED_M_S: f64 = SOUND_SPEED_WATER;
+const COUPLING_DENSITY_KG_M3: f64 = DENSITY_WATER_NOMINAL;
 const COUPLING_BETA: f64 = 3.5;
-const AIR_DENSITY_KG_M3: f64 = 1.225;
+const AIR_DENSITY_KG_M3: f64 = DENSITY_AIR;
 const AIR_BETA: f64 = 1.2;
 const INTERNAL_GAS_HU_THRESHOLD: f64 = -700.0;
 

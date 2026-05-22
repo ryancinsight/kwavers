@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 use crate::solver::inverse::linear_born_inversion::ElementPosition;
 use ndarray::{Array3, ArrayView1};
 use std::f64::consts::PI;
@@ -13,7 +13,7 @@ fn pstd_dataset_preserves_shape_and_is_input_sensitive() {
         cycles_per_frequency: 1,
         frequency_bin_cycles: 1,
         source_amplitude_pa: 1.0e3,
-        density_kg_m3: 1000.0,
+        density_kg_m3: DENSITY_WATER_NOMINAL,
         cpml_thickness_cells: 0,
     };
     let baseline = Array3::from_elem((12, 12, 3), SOUND_SPEED_WATER_SIM);
@@ -54,7 +54,7 @@ fn pstd_dataset_rejects_unstable_cfl() {
         cycles_per_frequency: 1,
         frequency_bin_cycles: 1,
         source_amplitude_pa: 1.0e3,
-        density_kg_m3: 1000.0,
+        density_kg_m3: DENSITY_WATER_NOMINAL,
         cpml_thickness_cells: 0,
     };
     let model = Array3::from_elem((12, 12, 3), SOUND_SPEED_WATER_SIM);

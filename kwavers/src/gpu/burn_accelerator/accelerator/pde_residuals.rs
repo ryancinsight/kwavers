@@ -1,5 +1,6 @@
 //! PDE residual computation for physics-informed learning (wave, heat, diffusion, Navier-Stokes).
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::super::types::{EquationType, GpuPhysicsParameters};
 use super::BurnGpuAccelerator;
 use burn::prelude::*;
@@ -25,7 +26,7 @@ impl<B: Backend> BurnGpuAccelerator<B> {
         u: &Tensor<B, 4>,
         params: &GpuPhysicsParameters,
     ) -> Tensor<B, 3> {
-        let c = params.wave_speed.unwrap_or(1480.0) as f32;
+        let c = params.wave_speed.unwrap_or(SOUND_SPEED_WATER_SIM) as f32;
         let shape = u.shape();
 
         let u_t_plus = u

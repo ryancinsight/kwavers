@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use ndarray::Array3;
 
 use super::super::interface::{FsiInterface, FsiInterfaceSpec};
@@ -5,7 +6,7 @@ use super::struct_impl::FluidStructureSolver;
 
 fn water_steel_spec(normal: [f64; 3], n: usize) -> FsiInterfaceSpec {
     FsiInterfaceSpec {
-        fluid_density: 1000.0,
+        fluid_density: DENSITY_WATER_NOMINAL,
         fluid_sound_speed: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
         solid_density: 7850.0,
         solid_c_l: 5960.0,

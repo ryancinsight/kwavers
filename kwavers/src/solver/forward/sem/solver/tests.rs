@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use super::config::SemConfig;
 use super::sem_solver::SemSolver;
 use crate::solver::forward::sem::mesh::MeshBuilder;
@@ -62,7 +62,7 @@ fn test_stiffness_constant_field_is_zero() {
     let config = SemConfig {
         polynomial_degree: 3,
         sound_speed: SOUND_SPEED_WATER_SIM,
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         ..Default::default()
     };
     let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
@@ -95,7 +95,7 @@ fn test_stiffness_energy_linear_field() {
     let config = SemConfig {
         polynomial_degree: 3,
         sound_speed: SOUND_SPEED_WATER_SIM,
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         ..Default::default()
     };
     let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();
@@ -172,7 +172,7 @@ fn test_free_vibration_energy_conservation() {
         n_steps: 20,
         dt: 1e-9,
         sound_speed: SOUND_SPEED_WATER_SIM,
-        density: 1000.0,
+        density: DENSITY_WATER_NOMINAL,
         wavenumber: 1.0,
     };
     let mut solver = SemSolver::new(config, Arc::new(mesh)).unwrap();

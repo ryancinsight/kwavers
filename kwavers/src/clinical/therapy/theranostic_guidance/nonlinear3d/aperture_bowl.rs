@@ -183,7 +183,7 @@ mod tests {
     use ndarray::Array3;
 
     use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use super::super::types::Nonlinear3dVolume;
     use super::*;
 
@@ -245,7 +245,7 @@ mod tests {
             body_mask,
             target_mask,
             inversion_mask: Array3::from_elem((n, n, n), true),
-            density_kg_m3: Array3::from_elem((n, n, n), 1000.0),
+            density_kg_m3: Array3::from_elem((n, n, n), DENSITY_WATER_NOMINAL),
             background_beta: Array3::from_elem((n, n, n), 3.5),
             true_beta: Array3::from_elem((n, n, n), 3.5),
             background_sound_speed_m_s: speed.clone(),

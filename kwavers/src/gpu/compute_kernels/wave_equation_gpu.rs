@@ -1,6 +1,6 @@
 //! `WaveEquationGpu`: GPU-accelerated wave equation step.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid;
 use ndarray::Array3;
@@ -67,7 +67,7 @@ impl WaveEquationGpu {
         }
 
         let c_avg = sound_speed.mean().unwrap_or(SOUND_SPEED_WATER_SIM);
-        let rho_avg = density.mean().unwrap_or(1000.0);
+        let rho_avg = density.mean().unwrap_or(DENSITY_WATER_NOMINAL);
 
         // Update pressure: p_new = p + dt * (−ρc² ∇·v)
         let new_pressure = self.kernel.compute_propagation(pressure, grid, dt, c_avg)?;

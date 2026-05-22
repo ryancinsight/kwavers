@@ -206,7 +206,7 @@ pub(super) fn spectral_mul_z(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use super::super::orchestrator::ElasticPstdOrchestrator;
     use super::super::types::{
         ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource,
@@ -228,9 +228,9 @@ mod tests {
         let dt = 0.3 * dx / cp;
         let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
         let medium = ElasticPstdMedium {
-            lame_lambda: Array3::from_elem((nx, nx, nx), 1000.0 * cp * cp),
+            lame_lambda: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL * cp * cp),
             lame_mu: Array3::zeros((nx, nx, nx)),
-            density: Array3::from_elem((nx, nx, nx), 1000.0),
+            density: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL),
         };
         let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
         assert_eq!(
@@ -255,9 +255,9 @@ mod tests {
         let dt = 0.5 * dx / cp;
         let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
         let medium = ElasticPstdMedium {
-            lame_lambda: Array3::from_elem((nx, nx, nx), 1000.0 * cp * cp),
+            lame_lambda: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL * cp * cp),
             lame_mu: Array3::zeros((nx, nx, nx)),
-            density: Array3::from_elem((nx, nx, nx), 1000.0),
+            density: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL),
         };
         let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
         for ((i, j, k), &kap) in orch.kappa.indexed_iter() {
@@ -282,9 +282,9 @@ mod tests {
         let dt = cfl * dx / cp;
         let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let medium = ElasticPstdMedium {
-            lame_lambda: Array3::from_elem((nx, 1, 1), 1000.0 * cp * cp),
+            lame_lambda: Array3::from_elem((nx, 1, 1), DENSITY_WATER_NOMINAL * cp * cp),
             lame_mu: Array3::zeros((nx, 1, 1)),
-            density: Array3::from_elem((nx, 1, 1), 1000.0),
+            density: Array3::from_elem((nx, 1, 1), DENSITY_WATER_NOMINAL),
         };
         let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
         // At i = nx/2 = 2: kx = (2−4)·2π/(4·dx) → |kx| = π/dx (Nyquist)
@@ -320,11 +320,11 @@ mod tests {
         let dt = cfl * dx / cp;
         let n_steps = 20usize;
         let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
-        let lam = 1000.0 * cp * cp;
+        let lam = DENSITY_WATER_NOMINAL * cp * cp;
         let medium = ElasticPstdMedium {
             lame_lambda: Array3::from_elem((nx, 1, 1), lam),
             lame_mu: Array3::zeros((nx, 1, 1)),
-            density: Array3::from_elem((nx, 1, 1), 1000.0),
+            density: Array3::from_elem((nx, 1, 1), DENSITY_WATER_NOMINAL),
         };
         let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
         let k0 = PI / (4.0 * dx); // quarter-Nyquist
