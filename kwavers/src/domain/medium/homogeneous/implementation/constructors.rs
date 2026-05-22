@@ -1,5 +1,5 @@
 use crate::core::constants::acoustic_parameters::{
-    AIR_SPECIFIC_HEAT_CP, TISSUE_NONLINEARITY_B_A,
+    AIR_POLYTROPIC_INDEX, AIR_SPECIFIC_HEAT_CP, REFERENCE_FREQUENCY_HZ, TISSUE_NONLINEARITY_B_A,
 };
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_AIR, DENSITY_AIR, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER,
@@ -81,7 +81,7 @@ impl HomogeneousMedium {
             surface_tension: 0.0,
             ambient_pressure: ATMOSPHERIC_PRESSURE,
             vapor_pressure: 0.0,
-            polytropic_index: 1.4,
+            polytropic_index: AIR_POLYTROPIC_INDEX,
             specific_heat: AIR_SPECIFIC_HEAT_CP, // 1005 J/(kg·K)
             thermal_conductivity: THERMAL_CONDUCTIVITY_AIR,
             shear_viscosity: VISCOSITY_AIR,
@@ -93,7 +93,7 @@ impl HomogeneousMedium {
             nonlinearity: B_OVER_A_AIR,
             optical_absorption: 0.0,
             optical_scattering: 0.0,
-            reference_frequency: 1e6,
+            reference_frequency: REFERENCE_FREQUENCY_HZ,
             temperature: Array3::from_elem((grid.nx, grid.ny, grid.nz), ROOM_TEMPERATURE_K),
             bubble_radius: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             bubble_velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
