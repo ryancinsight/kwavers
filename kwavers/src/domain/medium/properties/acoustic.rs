@@ -40,8 +40,8 @@
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
 use crate::core::constants::fundamental::{
-    DENSITY_LIVER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
+    DENSITY_BRAIN, DENSITY_LIVER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN,
+    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
 };
 use std::fmt;
 
@@ -212,8 +212,8 @@ impl AcousticPropertyData {
     #[must_use]
     pub fn brain() -> Self {
         Self {
-            density: 1040.0,
-            sound_speed: SOUND_SPEED_TISSUE,
+            density: DENSITY_BRAIN,
+            sound_speed: SOUND_SPEED_BRAIN,
             absorption_coefficient: 0.69,
             absorption_power: 1.0,
             nonlinearity: 6.5,

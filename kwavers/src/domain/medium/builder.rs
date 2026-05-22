@@ -175,7 +175,18 @@ impl MediumBuilder {
             })
             .collect();
 
-        // Inline blend logic; repeated per property to allow independent `move` closures.
+        // Evaluate one material property at depth x with interface blending.
+        //
+        // Two boundary contributions are considered:
+        //  (A) LOWER boundary of current layer → blend towards next layer
+        //      using ls[idx].interface_type at z = bs[idx].
+        //  (B) UPPER boundary of current layer → blend back towards previous
+        //      layer using ls[idx-1].interface_type at z = bs[idx-1].
+        //
+        // For Smooth(σ): t = ½(1 + tanh((x−z)/σ)), blending from prev to next.
+        // For Gradient(d): t = ((x−z)/d).clamp(0,1), linear over d metres.
+        //
+        // Repeated per property to allow independent `move` captures.
         macro_rules! blended_prop {
             ($prop:ident) => {{
                 let ls = layers.to_vec();
@@ -183,12 +194,13 @@ impl MediumBuilder {
                 move |x: f64, _y: f64, _z: f64| -> f64 {
                     let n = ls.len();
                     let x = x.max(0.0);
-                    // Layer whose lower boundary is strictly greater than x.
                     let idx = bs.partition_point(|&b| b <= x).min(n - 1);
                     let v = ls[idx].$prop;
-                    if idx + 1 < n {
-                        let v_next = ls[idx + 1].$prop;
+
+                    // (A) blend current layer → next at ls[idx]'s lower boundary
+                    let after_lower = if idx + 1 < n {
                         let z_lo = bs[idx];
+                        let v_next = ls[idx + 1].$prop;
                         match ls[idx].interface_type {
                             InterfaceTypeParameters::Sharp => v,
                             InterfaceTypeParameters::Smooth(sigma) if sigma > 0.0 => {
@@ -203,6 +215,28 @@ impl MediumBuilder {
                         }
                     } else {
                         v
+                    };
+
+                    // (B) blend previous layer → current at ls[idx-1]'s lower boundary
+                    if idx > 0 {
+                        let z_up = bs[idx - 1];
+                        let v_prev = ls[idx - 1].$prop;
+                        match ls[idx - 1].interface_type {
+                            InterfaceTypeParameters::Sharp => after_lower,
+                            InterfaceTypeParameters::Smooth(sigma) if sigma > 0.0 => {
+                                // t → 0 as x → z_up from below (prev layer dominant),
+                                // t → 1 as x ≫ z_up (current layer dominant).
+                                let t = 0.5 * (1.0 + f64::tanh((x - z_up) / sigma));
+                                v_prev.mul_add(1.0 - t, after_lower * t)
+                            }
+                            InterfaceTypeParameters::Gradient(d) if d > 0.0 => {
+                                let t = ((x - z_up) / d).clamp(0.0, 1.0);
+                                v_prev.mul_add(1.0 - t, after_lower * t)
+                            }
+                            _ => after_lower,
+                        }
+                    } else {
+                        after_lower
                     }
                 }
             }};
@@ -255,7 +289,7 @@ impl MediumBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+    use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE};
     use std::collections::HashMap;
 
     fn test_grid() -> Grid {
@@ -267,7 +301,7 @@ mod tests {
         let grid = test_grid();
         let config = DomainMediumParameters {
             medium_type: MediumType::Heterogeneous,
-            density: 1040.0,
+            density: DENSITY_BRAIN,
             sound_speed: Some(SOUND_SPEED_TISSUE),
             absorption: 0.45,
             nonlinearity: 6.0,
@@ -278,7 +312,7 @@ mod tests {
 
         assert_eq!(medium.sound_speed(0, 0, 0), SOUND_SPEED_TISSUE);
         assert_eq!(medium.sound_speed(2, 2, 2), SOUND_SPEED_TISSUE);
-        assert_eq!(medium.density(1, 1, 1), 1040.0);
+        assert_eq!(medium.density(1, 1, 1), DENSITY_BRAIN);
         assert_eq!(medium.absorption(2, 1, 0), 0.45);
         assert_eq!(medium.nonlinearity(0, 2, 1), 6.0);
     }

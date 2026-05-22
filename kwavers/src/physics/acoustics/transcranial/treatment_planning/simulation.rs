@@ -2,7 +2,7 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::{TranscranialTargetVolume, TransducerSetup};
-use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_THRESHOLD};
 use crate::core::constants::numerical::CM_TO_M;
 use crate::core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
@@ -11,8 +11,7 @@ use ndarray::Array3;
 use num_complex::Complex;
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
-const BRAIN_SOUND_SPEED_M_PER_S: f64 = 1546.0;
-const BRAIN_DENSITY_KG_PER_M3: f64 = 1040.0;
+// SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::fundamental
 const BRAIN_ABSORPTION_DB_PER_MHZ_CM: f64 = 0.5;
 // dB/(cm·MHz) → Np/m at 1 MHz: divide by NP_TO_DB then by CM_TO_M (SSOT).
 const BRAIN_ABSORPTION_NP_PER_M: f64 = BRAIN_ABSORPTION_DB_PER_MHZ_CM / NP_TO_DB / CM_TO_M;
@@ -67,7 +66,7 @@ impl TreatmentPlanner {
         let mut acoustic_field = Array3::zeros((nx, ny, nz));
 
         // Wavenumber [rad/m]: k = 2π f / c_brain
-        let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / BRAIN_SOUND_SPEED_M_PER_S;
+        let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / SOUND_SPEED_BRAIN;
 
         for k in 0..nz {
             for j in 0..ny {
@@ -226,7 +225,7 @@ fn harmonic_intensity_at_point(point_m: [f64; 3], setup: &TransducerSetup, k_wav
         p_total += amplitude * Complex::new(phase.cos(), phase.sin()) / r;
     }
 
-    p_total.norm_sqr() / (2.0 * BRAIN_DENSITY_KG_PER_M3 * BRAIN_SOUND_SPEED_M_PER_S)
+    p_total.norm_sqr() / (2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN)
 }
 
 fn steady_state_temperature_from_intensity(intensity: f64) -> Option<f64> {
@@ -308,11 +307,11 @@ mod tests {
             focal_distance: 1.0,
         };
         let point_m = [0.002, 0.0, 0.0];
-        let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / BRAIN_SOUND_SPEED_M_PER_S;
+        let k_wave = 2.0 * std::f64::consts::PI * setup.frequency / SOUND_SPEED_BRAIN;
 
         let intensity = harmonic_intensity_at_point(point_m, &setup, k_wave);
         let expected =
-            1.0 / (0.001_f64.powi(2) * 2.0 * BRAIN_DENSITY_KG_PER_M3 * BRAIN_SOUND_SPEED_M_PER_S);
+            1.0 / (0.001_f64.powi(2) * 2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN);
 
         assert!((intensity - expected).abs() < expected * 1.0e-12);
     }
@@ -322,7 +321,7 @@ mod tests {
         let point_m = [0.001, 0.0, 0.0];
         let low = one_element_setup(1.0);
         let high = one_element_setup(2.0);
-        let k_wave = 2.0 * std::f64::consts::PI * low.frequency / BRAIN_SOUND_SPEED_M_PER_S;
+        let k_wave = 2.0 * std::f64::consts::PI * low.frequency / SOUND_SPEED_BRAIN;
 
         let low_intensity = harmonic_intensity_at_point(point_m, &low, k_wave);
         let high_intensity = harmonic_intensity_at_point(point_m, &high, k_wave);

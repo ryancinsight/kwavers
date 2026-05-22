@@ -9,8 +9,8 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_FAT,
-    SOUND_SPEED_KIDNEY, SOUND_SPEED_TISSUE,
+    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_TISSUE, DENSITY_WATER,
+    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_TISSUE,
 };
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
@@ -54,7 +54,7 @@ pub const WATER: TissueProperties = TissueProperties {
 /// Source: Duck (1990), Table 3.3
 pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_TISSUE,
-    density: 1040.0,
+    density: DENSITY_BRAIN,
     impedance: 1601600.0,
     absorption_coefficient: 0.6,
     absorption_exponent: 1.0,

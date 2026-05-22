@@ -2,12 +2,10 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::TranscranialSafetyConstraints;
+use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use ndarray::Array3;
-
-const BRAIN_DENSITY_KG_PER_M3: f64 = 1040.0;
-const BRAIN_SOUND_SPEED_M_PER_S: f64 = 1546.0;
 
 impl TreatmentPlanner {
     /// Validate safety constraints
@@ -90,7 +88,7 @@ fn peak_pressure_from_harmonic_intensity_field(acoustic_field: &Array3<f64>) -> 
         max_intensity = max_intensity.max(intensity);
     }
 
-    Some((2.0 * max_intensity * BRAIN_DENSITY_KG_PER_M3 * BRAIN_SOUND_SPEED_M_PER_S).sqrt())
+    Some((2.0 * max_intensity * DENSITY_BRAIN * SOUND_SPEED_BRAIN).sqrt())
 }
 
 #[cfg(test)]
@@ -106,7 +104,7 @@ mod tests {
     fn mechanical_index_from_intensity_matches_harmonic_pressure_contract() {
         let pressure_pa = 1.0e6_f64;
         let intensity =
-            pressure_pa.powi(2) / (2.0 * BRAIN_DENSITY_KG_PER_M3 * BRAIN_SOUND_SPEED_M_PER_S);
+            pressure_pa.powi(2) / (2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN);
         let field = Array3::from_elem((2, 2, 2), intensity);
 
         let mi = mechanical_index_from_harmonic_intensity_field(&field, 1.0e6);

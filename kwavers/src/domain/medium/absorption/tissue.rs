@@ -2,8 +2,8 @@
 
 use crate::core::constants::cavitation::SURFACE_TENSION_WATER;
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, DENSITY_LIVER, DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_BRAIN,
-    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
+    DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_LIVER, DENSITY_TISSUE, DENSITY_WATER_NOMINAL,
+    SOUND_SPEED_BRAIN, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 use crate::core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
@@ -153,7 +153,7 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
 
     map.insert(
         AbsorptionTissueType::Brain,
-        AbsorptionTissueProperties::new(0.85, 1.21, 1040.0, SOUND_SPEED_BRAIN, 6.6, 0.51, 3630.0)
+        AbsorptionTissueProperties::new(0.85, 1.21, DENSITY_BRAIN, SOUND_SPEED_BRAIN, 6.6, 0.51, 3630.0)
             .with_optical(20.0, 10000.0), // Brain: μ_a≈0.2 cm⁻¹, μ_s≈100 cm⁻¹
     );
 

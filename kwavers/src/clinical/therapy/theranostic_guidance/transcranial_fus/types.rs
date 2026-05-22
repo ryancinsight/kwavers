@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
+use crate::core::constants::fundamental::{DENSITY_BRAIN, SOUND_SPEED_TISSUE};
 use ndarray::{Array1, Array2, Array3};
 
 /// Full configuration for the transcranial FUS planning pipeline.
@@ -58,7 +58,7 @@ impl Default for TranscranialFusPlanConfig {
             samples_per_ray: 192,
             chunk_size: 512,
             inertial_mi_threshold: 1.9,
-            rho_brain: 1040.0,
+            rho_brain: DENSITY_BRAIN,
             pitch_m: 3.0e-3,
             mechanical_index_bbb: 0.45,
             sonication_s: 60.0,

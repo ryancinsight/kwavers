@@ -2,6 +2,7 @@ use std::f64::consts::PI;
 
 use ndarray::{Array1, Array2, Array3};
 
+use crate::core::constants::fundamental::DENSITY_BRAIN;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Map a HU value to (sound_speed_m_s, density_kg_m3, attenuation_np_m).
@@ -17,7 +18,7 @@ pub fn acoustic_properties_from_hu(
 ) -> (f64, f64, f64) {
     if hu <= 300.0 {
         let alpha_np_m = 0.5 * 100.0 / 8.686 * (frequency_hz / 1.0e6);
-        return (brain_c, 1040.0, alpha_np_m);
+        return (brain_c, DENSITY_BRAIN, alpha_np_m);
     }
     let bone_fraction = ((hu - 300.0) / 1700.0).clamp(0.0, 1.0);
     let density = 1200.0 + 700.0 * bone_fraction;
@@ -92,7 +93,7 @@ pub(super) fn skull_path_phase_correction(
         let mut skull_len = 0.0_f64;
         let mut attenuation_np = 0.0_f64;
         let mut transmission = 1.0_f64;
-        let z_brain = 1040.0 * brain_c;
+        let z_brain = DENSITY_BRAIN * brain_c;
         let mut prev_impedance = z_brain;
 
         for sample_idx in 0..samples {
@@ -123,7 +124,7 @@ pub(super) fn skull_path_phase_correction(
                 let (c, rho, a) = acoustic_properties_from_hu(hu, frequency_hz, brain_c, skull_c);
                 (c, rho, a, in_sk)
             } else {
-                (brain_c, 1040.0, 0.0, false)
+                (brain_c, DENSITY_BRAIN, 0.0, false)
             };
 
             let impedance = density * sound_speed;
