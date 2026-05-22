@@ -14,7 +14,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
-use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_BLOOD};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
 
@@ -29,7 +29,7 @@ pub type FluidProperties = AcousticMaterialProperties;
 /// Source: Duck (1990), Gordon et al. (2009)
 /// Acoustic properties similar to water with slight frequency dependence
 pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
-    sound_speed: 1584.0,
+    sound_speed: SOUND_SPEED_BLOOD,
     density: 1026.0,
     impedance: 1624784.0,
     absorption_coefficient: 0.015,

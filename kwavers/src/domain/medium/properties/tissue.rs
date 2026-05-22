@@ -13,7 +13,8 @@ use crate::core::constants::fundamental::{
     DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN,
     SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::cavitation::VISCOSITY_WATER;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER};
 use super::material::AcousticMaterialProperties;
 
 /// Tissue material properties type alias
@@ -32,9 +33,9 @@ pub const WATER: TissueProperties = TissueProperties {
     absorption_coefficient: 0.002,
     absorption_exponent: 2.0,
     nonlinearity_parameter: 5.0,
-    shear_viscosity: 1.002e-3,
+    shear_viscosity: VISCOSITY_WATER,
     bulk_viscosity: 0.0,
-    specific_heat: 4182.0, // = SPECIFIC_HEAT_WATER (NIST at 20°C); const item cannot reference non-literal
+    specific_heat: SPECIFIC_HEAT_WATER,
     thermal_conductivity: 0.6,
     thermal_diffusivity: 1.43e-7,
     perfusion_rate: 0.0,

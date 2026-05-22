@@ -1,6 +1,8 @@
 //! Canonical SBSL parameter set (Brenner, Hilgenfeldt & Lohse 2002).
 
+use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER};
+use crate::core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 
 /// Canonical SBSL parameter set from Brenner, Hilgenfeldt & Lohse (2002).
 ///
@@ -39,9 +41,9 @@ impl Default for BrennerSBSLConditions {
             p0_pa: ATMOSPHERIC_PRESSURE,
             p_a_pa: 1.35e5,   // 1.35 atm driving (Brenner 2002 Table I)
             r0_m: 5.0e-6,     // 5 µm
-            temperature_k: 293.15,
+            temperature_k: ROOM_TEMPERATURE_K,
             sigma: 0.0728,
-            mu: 1.002e-3,
+            mu: VISCOSITY_WATER,
             rho_l: DENSITY_WATER,
             gamma: 1.4,   // adiabatic index for air (Yasui 1997 uses γ_eff ≈ 1.4)
             p_v: 2_340.0, // vapour pressure at 20°C [Pa]

@@ -60,8 +60,8 @@ impl StokesAbsorption {
 
         let t = temp_celsius;
 
-        // Dynamic viscosity (Vogel equation)
-        let viscosity = 1.002e-3 * (20.0 / (t + 1.0)).exp();
+        // Dynamic viscosity (Vogel equation), reference value VISCOSITY_WATER at 20°C
+        let viscosity = VISCOSITY_WATER * (20.0 / (t + 1.0)).exp();
 
         // Sound speed (Bilaniuk & Wong 1993)
         let sound_speed = 2.787860e-9f64.mul_add(
