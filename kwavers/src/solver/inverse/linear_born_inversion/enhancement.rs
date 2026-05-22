@@ -112,12 +112,13 @@ pub fn high_pass_enhance_volume(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn gain_zero_passes_through_input() {
-        let reconstruction = Array3::from_elem((2, 2, 2), 1500.0);
+        let reconstruction = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
         let mask = Array3::from_elem((2, 2, 2), true);
-        let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 0.0, 1500.0);
+        let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 0.0, SOUND_SPEED_WATER_SIM);
         for (a, b) in enhanced.iter().zip(reconstruction.iter()) {
             assert_eq!(a, b);
         }
@@ -128,19 +129,19 @@ mod tests {
         let reconstruction = Array3::from_elem((3, 3, 3), 1700.0);
         let mut mask = Array3::from_elem((3, 3, 3), false);
         mask[[1, 1, 1]] = true;
-        let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 1.0, 1500.0);
+        let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 1.0, SOUND_SPEED_WATER_SIM);
         // Cell (0,0,0) is outside the mask — pass-through.
         assert_eq!(enhanced[[0, 0, 0]], 1700.0);
     }
 
     #[test]
     fn enhanced_values_stay_in_eight_percent_band() {
-        let mut reconstruction = Array3::from_elem((3, 3, 3), 1500.0);
+        let mut reconstruction = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
         reconstruction[[1, 1, 1]] = 2500.0;
         let mask = Array3::from_elem((3, 3, 3), true);
-        let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 5.0, 1500.0);
-        let lower = 1500.0 * 0.92;
-        let upper = 1500.0 * 1.08;
+        let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 5.0, SOUND_SPEED_WATER_SIM);
+        let lower = SOUND_SPEED_WATER_SIM * 0.92;
+        let upper = SOUND_SPEED_WATER_SIM * 1.08;
         for value in enhanced.iter() {
             assert!(
                 *value >= lower - 1.0e-9 && *value <= upper + 1.0e-9,

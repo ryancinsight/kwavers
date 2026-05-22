@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -17,7 +18,7 @@ fn test_zero_energy_field_has_zero_relative_error() {
     let p = uniform_array(shape, 0.0);
     let v = uniform_array(shape, 0.0);
     let rho = uniform_array(shape, 1000.0);
-    let c = uniform_array(shape, 1500.0);
+    let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let err = validate_energy_conservation(&p, &v, &v, &v, &rho, &c, 0.0, &grid);
     assert!(err < 1e-8, "Zero field energy error: {err:.3e}");
 }
@@ -28,7 +29,7 @@ fn test_energy_analytical_uniform_pressure() {
     let shape = (grid.nx, grid.ny, grid.nz);
     let p0 = 1000.0_f64;
     let rho0 = 1000.0_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let p = uniform_array(shape, p0);
     let v = uniform_array(shape, 0.0);
     let rho = uniform_array(shape, rho0);
@@ -47,7 +48,7 @@ fn test_entropy_production_zero_absorption() {
     let p = uniform_array(shape, 1000.0);
     let v = uniform_array(shape, 0.0);
     let rho = uniform_array(shape, 1000.0);
-    let c = uniform_array(shape, 1500.0);
+    let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 0.0);
     let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, 310.0, &grid);
     assert!(ds.abs() < 1e-20, "Lossless entropy production: {ds:.3e}");
@@ -60,7 +61,7 @@ fn test_entropy_production_non_negative() {
     let p = uniform_array(shape, 5000.0);
     let v = uniform_array(shape, 0.1);
     let rho = uniform_array(shape, 1000.0);
-    let c = uniform_array(shape, 1500.0);
+    let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 2.0);
     let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, 310.0, &grid);
     assert!(
@@ -76,7 +77,7 @@ fn test_entropy_production_scales_linearly_with_absorption() {
     let p = uniform_array(shape, 2000.0);
     let v = uniform_array(shape, 0.05);
     let rho = uniform_array(shape, 1000.0);
-    let c = uniform_array(shape, 1500.0);
+    let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha1 = uniform_array(shape, 1.0);
     let alpha2 = uniform_array(shape, 2.0);
     let ds1 = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha1, 300.0, &grid);
@@ -94,7 +95,7 @@ fn test_entropy_production_analytical() {
     let shape = (grid.nx, grid.ny, grid.nz);
     let p0 = 2000.0_f64;
     let rho0 = 1000.0_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let alpha0 = 3.0_f64;
     let t0 = 310.0_f64;
     let p = uniform_array(shape, p0);
@@ -131,7 +132,7 @@ fn test_heat_source_zero_absorption() {
     let p = uniform_array(shape, 5000.0);
     let v = uniform_array(shape, 1.0);
     let rho = uniform_array(shape, 1000.0);
-    let c = uniform_array(shape, 1500.0);
+    let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 0.0);
     let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
     assert!(q.iter().all(|v| v.abs() < 1e-20));
@@ -144,11 +145,11 @@ fn test_second_law_violation_detected() {
     let p = uniform_array(shape, 1000.0);
     let v = uniform_array(shape, 0.0);
     let rho = uniform_array(shape, 1000.0);
-    let c = uniform_array(shape, 1500.0);
+    let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, -1.0);
     let volume =
         (grid.nx as f64 * grid.dx) * (grid.ny as f64 * grid.dy) * (grid.nz as f64 * grid.dz);
-    let e_init = 1000.0 * 1000.0 / (2.0 * 1000.0 * 1500.0 * 1500.0) * volume;
+    let e_init = 1000.0 * 1000.0 / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM * SOUND_SPEED_WATER_SIM) * volume;
     let state = AcousticStateRefs {
         pressure: &p,
         velocity_x: &v,

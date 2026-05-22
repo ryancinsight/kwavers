@@ -44,11 +44,13 @@
 
 mod medium_update;
 mod pipeline;
+mod runner;
 mod time_loop;
 
 use std::sync::Arc;
 
 pub use pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
+pub use runner::{cpml_thickness_limits, run_gpu_pstd, GpuPstdRunConfig};
 
 /// Per-run timing profile for GPU PSTD execution.
 ///

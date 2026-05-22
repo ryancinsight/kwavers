@@ -180,6 +180,7 @@ fn nonnegative_finite(value: f64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn hill_at_threshold_is_half() {
@@ -214,7 +215,7 @@ mod tests {
 
     #[test]
     fn radiation_force_proportional_to_intensity() {
-        let f = radiation_force_1d(&[1.0, 2.0, 4.0], 1.0, 1500.0);
+        let f = radiation_force_1d(&[1.0, 2.0, 4.0], 1.0, SOUND_SPEED_WATER_SIM);
         assert!((f[1] / f[0] - 2.0).abs() < 1e-10);
         assert!((f[2] / f[0] - 4.0).abs() < 1e-10);
     }
@@ -222,40 +223,40 @@ mod tests {
     #[test]
     fn radiation_force_rejects_negative_or_nonfinite_domains() {
         assert_eq!(
-            radiation_force_1d(&[1.0, 2.0], -1.0, 1500.0),
+            radiation_force_1d(&[1.0, 2.0], -1.0, SOUND_SPEED_WATER_SIM),
             vec![0.0, 0.0]
         );
         assert_eq!(radiation_force_1d(&[1.0], 1.0, 0.0), vec![0.0]);
 
-        let f = radiation_force_1d(&[1.0, -2.0, f64::INFINITY], 1.0, 1500.0);
-        assert!((f[0] - 2.0 / 1500.0).abs() < 1e-15);
+        let f = radiation_force_1d(&[1.0, -2.0, f64::INFINITY], 1.0, SOUND_SPEED_WATER_SIM);
+        assert!((f[0] - 2.0 / SOUND_SPEED_WATER_SIM).abs() < 1e-15);
         assert_eq!(f[1], 0.0);
         assert_eq!(f[2], 0.0);
     }
 
     #[test]
     fn streaming_velocity_positive() {
-        let v = acoustic_streaming_velocity(1000.0, 1e-3, 0.5, 1500.0, 0.05);
+        let v = acoustic_streaming_velocity(1000.0, 1e-3, 0.5, SOUND_SPEED_WATER_SIM, 0.05);
         assert!(v > 0.0);
     }
 
     #[test]
     fn streaming_velocity_rejects_invalid_domains() {
         assert_eq!(
-            acoustic_streaming_velocity(-1.0, 1e-3, 0.5, 1500.0, 0.05),
+            acoustic_streaming_velocity(-1.0, 1e-3, 0.5, SOUND_SPEED_WATER_SIM, 0.05),
             0.0
         );
         assert_eq!(
-            acoustic_streaming_velocity(1.0, 0.0, 0.5, 1500.0, 0.05),
+            acoustic_streaming_velocity(1.0, 0.0, 0.5, SOUND_SPEED_WATER_SIM, 0.05),
             0.0
         );
         assert_eq!(
-            acoustic_streaming_velocity(1.0, 1e-3, -0.5, 1500.0, 0.05),
+            acoustic_streaming_velocity(1.0, 1e-3, -0.5, SOUND_SPEED_WATER_SIM, 0.05),
             0.0
         );
         assert_eq!(acoustic_streaming_velocity(1.0, 1e-3, 0.5, 0.0, 0.05), 0.0);
         assert_eq!(
-            acoustic_streaming_velocity(1.0, 1e-3, 0.5, 1500.0, f64::NAN),
+            acoustic_streaming_velocity(1.0, 1e-3, 0.5, SOUND_SPEED_WATER_SIM, f64::NAN),
             0.0
         );
     }
@@ -265,7 +266,7 @@ mod tests {
         // Constant pressure p0 → ISPTA = p0²/(rho*c) in W/m² → W/cm²
         let p0 = 1e5_f64;
         let rho = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let n = 1000;
         let dt = 1e-7_f64;
         let p = vec![p0; n];
@@ -281,10 +282,10 @@ mod tests {
 
     #[test]
     fn ispta_rejects_empty_invalid_and_nonfinite_domains() {
-        assert_eq!(ispta_w_cm2(&[], 1e-7, 1000.0, 1500.0), 0.0);
-        assert_eq!(ispta_w_cm2(&[1.0], 0.0, 1000.0, 1500.0), 0.0);
-        assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 0.0, 1500.0), 0.0);
-        assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 1000.0, -1500.0), 0.0);
+        assert_eq!(ispta_w_cm2(&[], 1e-7, 1000.0, SOUND_SPEED_WATER_SIM), 0.0);
+        assert_eq!(ispta_w_cm2(&[1.0], 0.0, 1000.0, SOUND_SPEED_WATER_SIM), 0.0);
+        assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 0.0, SOUND_SPEED_WATER_SIM), 0.0);
+        assert_eq!(ispta_w_cm2(&[1.0], 1e-7, 1000.0, -SOUND_SPEED_WATER_SIM), 0.0);
 
         let ispta = ispta_w_cm2(&[1.0, f64::NAN, 1.0], 1.0, 1.0, 1.0);
         assert!((ispta - (2.0 / 3.0) * 1e-4).abs() < 1e-16);

@@ -1,4 +1,5 @@
 use super::OperatorSplittingSolver;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -13,7 +14,7 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
     let dz = dx;
 
     let frequency = 1e6; // 1 MHz
-    let wavelength = 1500.0 / frequency;
+    let wavelength = SOUND_SPEED_WATER_SIM / frequency;
     let k = 2.0 * PI / wavelength;
 
     let solver = OperatorSplittingSolver::new(
@@ -24,9 +25,9 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
         dy,
         dz,
         1000.0,              // density
-        1500.0,              // sound speed
+        SOUND_SPEED_WATER_SIM,              // sound speed
         3.5,                 // B/A for water
-        dx / (1500.0 * 4.0), // dt from CFL
+        dx / (SOUND_SPEED_WATER_SIM * 4.0), // dt from CFL
     );
 
     // Initialize with sinusoidal wave
@@ -83,7 +84,7 @@ fn test_harmonic_generation() -> Result<(), crate::core::error::KwaversError> {
     // Find fundamental and second harmonic peaks
     // For spatial FFT: wavenumber k = 2π/λ = 2πf/c
     // FFT bin = k * L / (2π) = k * nx * dx / (2π)
-    let wavelength = 1500.0 / frequency;
+    let wavelength = SOUND_SPEED_WATER_SIM / frequency;
     let k_fundamental = 2.0 * PI / wavelength;
     let fundamental_idx = (k_fundamental * nx as f64 * dx / (2.0 * PI)).round() as usize;
     let second_harmonic_idx = 2 * fundamental_idx;
@@ -128,9 +129,9 @@ fn test_shock_steepening() {
         dy,
         dz,
         1000.0,              // density
-        1500.0,              // sound speed
+        SOUND_SPEED_WATER_SIM,              // sound speed
         3.5,                 // B/A for water
-        dx / (1500.0 * 4.0), // dt from CFL
+        dx / (SOUND_SPEED_WATER_SIM * 4.0), // dt from CFL
     );
 
     // Initialize with high-amplitude sine wave

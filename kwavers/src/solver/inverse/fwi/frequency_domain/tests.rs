@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+
 use super::gradient::objective_and_gradient;
 use super::{
     invert, simulate_frequency_observation, AbsorbingBoundary, Config, DenseConvergentBornOperator,
@@ -12,7 +14,7 @@ use ndarray::Array3;
 
 fn test_config() -> Config {
     Config {
-        reference_sound_speed_m_s: 1500.0,
+        reference_sound_speed_m_s: SOUND_SPEED_WATER_SIM,
         spacing_m: 0.005,
         iterations: 6,
         initial_step_s_per_m: 3.0e-6,
@@ -31,7 +33,7 @@ fn test_array() -> MultiRowRingArray {
 #[test]
 fn dense_cbs_prediction_matches_born_for_homogeneous_on_grid_ring() {
     let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
-    let model = Array3::from_elem((3, 3, 1), 1500.0);
+    let model = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     let born = Config {
         spacing_m: 0.005,
         forward_operator: Arc::new(SingleScatterBornOperator),
@@ -67,7 +69,7 @@ fn dense_cbs_prediction_matches_born_for_homogeneous_on_grid_ring() {
 #[test]
 fn dense_cbs_prediction_is_sensitive_to_sound_speed_volume() {
     let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
-    let base = Array3::from_elem((3, 3, 1), 1500.0);
+    let base = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     let mut perturbed = base.clone();
     perturbed[[1, 1, 0]] = 1510.0;
     let config = Config {
@@ -102,7 +104,7 @@ fn dense_cbs_prediction_is_sensitive_to_sound_speed_volume() {
 #[test]
 fn spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
     let array = MultiRowRingArray::new(4, 1, 0.01, 0.0).expect("ring array");
-    let base = Array3::from_elem((3, 3, 1), 1500.0);
+    let base = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     let mut perturbed = base.clone();
     perturbed[[1, 1, 0]] = 1510.0;
     let config = Config {
@@ -134,7 +136,7 @@ fn spectral_cbs_prediction_is_sensitive_to_sound_speed_volume() {
 #[test]
 fn dense_cbs_prediction_rejects_ring_outside_inversion_grid() {
     let array = MultiRowRingArray::new(4, 1, 0.10, 0.0).expect("ring array");
-    let model = Array3::from_elem((3, 3, 1), 1500.0);
+    let model = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     let config = Config {
         spacing_m: 0.005,
         forward_operator: Arc::new(DenseConvergentBornOperator {
@@ -156,7 +158,7 @@ fn dense_cbs_prediction_rejects_ring_outside_inversion_grid() {
 fn forward_model_is_sensitive_to_sound_speed_volume() {
     let array = test_array();
     let config = test_config();
-    let base = Array3::from_elem((2, 2, 2), 1500.0);
+    let base = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
     let mut perturbed = base.clone();
     perturbed[[1, 1, 1]] = 1530.0;
 
@@ -188,7 +190,7 @@ fn dense_cbs_adjoint_gradient_matches_finite_difference() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), 1500.0);
+    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     truth[[2, 1, 0]] = 1510.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 180_000.0, &config).expect("observed");
@@ -234,7 +236,7 @@ fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), 1500.0);
+    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
     truth[[2, 1, 0]] = 1510.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 180_000.0, &config).expect("observed");
@@ -271,7 +273,7 @@ fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
 fn adjoint_gradient_matches_finite_difference() {
     let array = test_array();
     let config = test_config();
-    let mut truth = Array3::from_elem((2, 2, 2), 1500.0);
+    let mut truth = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
     truth[[1, 0, 1]] = 1520.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 220_000.0, &config).expect("observed");
@@ -309,7 +311,7 @@ fn adjoint_gradient_matches_finite_difference() {
 fn nonlinear_inversion_reduces_objective_and_raises_high_speed_target() {
     let array = test_array();
     let config = test_config();
-    let mut truth = Array3::from_elem((3, 3, 3), 1500.0);
+    let mut truth = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 1]] = 1535.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 240_000.0, &config).expect("observed");
@@ -317,7 +319,7 @@ fn nonlinear_inversion_reduces_objective_and_raises_high_speed_target() {
         240_000.0,
         observed.slice(ndarray::s![0..4, ..]).to_owned(),
     )];
-    let initial = Array3::from_elem((3, 3, 3), 1500.0);
+    let initial = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
 
     let result = invert(&observations, &array, &initial, &config).expect("inversion");
 
@@ -328,7 +330,7 @@ fn nonlinear_inversion_reduces_objective_and_raises_high_speed_target() {
         result.objective_history
     );
     assert!(
-        result.sound_speed_m_s[[1, 1, 1]] > 1500.0,
+        result.sound_speed_m_s[[1, 1, 1]] > SOUND_SPEED_WATER_SIM,
         "central target speed={}",
         result.sound_speed_m_s[[1, 1, 1]]
     );

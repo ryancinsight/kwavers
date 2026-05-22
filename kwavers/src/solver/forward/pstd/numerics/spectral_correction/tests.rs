@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
 
@@ -6,7 +7,7 @@ use std::f64::consts::PI;
 fn test_exact_dispersion_correction() {
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
     let dt = 1e-6;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
 
     let config = SpectralCorrectionConfig {
         enabled: true,
@@ -28,7 +29,7 @@ fn test_exact_dispersion_correction() {
 fn test_dispersion_error() {
     let dx = 1e-3;
     let dt = 1e-6;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
 
     let k_low = PI / (10.0 * dx);
     let error_low = compute_dispersion_error(k_low, dx, dt, c_ref);
@@ -43,7 +44,7 @@ fn test_dispersion_error() {
 fn test_phase_velocity_computation() {
     let dx = 1e-3;
     let dt = 1e-6;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
 
     let c_dc = compute_numerical_phase_velocity(1e-12, dx, dt, c_ref);
     assert!((c_dc - c_ref).abs() / c_ref < 1e-6);
@@ -69,7 +70,7 @@ fn test_treeby2010_kappa_equals_sinc() {
     // dx_y, dx_z are arbitrary because k_y = k_z = 0 for nz/ny = 1.
     let grid = Grid::new(64, 1, 1, 1e-4, 1e-4, 1e-4).unwrap();
     let dt = 5e-9;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
 
     let config = SpectralCorrectionConfig {
         enabled: true,
@@ -140,7 +141,7 @@ fn test_treeby2010_kappa_equals_sinc() {
 fn test_correction_methods_consistency() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
     let dt = 1e-6;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
 
     let methods = vec![
         SpectralCorrectionMethod::ExactDispersion,

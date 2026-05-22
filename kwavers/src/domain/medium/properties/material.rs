@@ -282,37 +282,38 @@ impl AcousticMaterialProperties {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_material_creation() {
-        let mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
-        assert_eq!(mat.sound_speed, 1500.0);
-        assert_eq!(mat.impedance, 1500000.0);
+        let mat = AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.002, 4186.0, 0.6);
+        assert_eq!(mat.sound_speed, SOUND_SPEED_WATER_SIM);
+        assert_eq!(mat.impedance, SOUND_SPEED_WATER_SIM * 1000.0);
     }
 
     #[test]
     fn test_validation_valid() {
-        let mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let mat = AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.002, 4186.0, 0.6);
         mat.validate().unwrap();
     }
 
     #[test]
     fn test_validation_invalid_speed() {
-        let mut mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
-        mat.sound_speed = -1500.0;
+        let mut mat = AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.002, 4186.0, 0.6);
+        mat.sound_speed = -SOUND_SPEED_WATER_SIM;
         assert!(mat.validate().is_err());
     }
 
     #[test]
     fn test_impedance_match() {
-        let mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
-        let same = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let mat = AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.002, 4186.0, 0.6);
+        let same = AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.002, 4186.0, 0.6);
         assert!((mat.reflection_coefficient(&same)).abs() < 1e-6);
     }
 
     #[test]
     fn test_attenuation_frequency_dependence() {
-        let mat = AcousticMaterialProperties::new(1500.0, 1000.0, 0.002, 4186.0, 0.6);
+        let mat = AcousticMaterialProperties::new(SOUND_SPEED_WATER_SIM, 1000.0, 0.002, 4186.0, 0.6);
         let att_1mhz = mat.absorption_at_frequency(1e6);
         let att_2mhz = mat.absorption_at_frequency(2e6);
         // With exponent 1.0, doubling frequency doubles absorption

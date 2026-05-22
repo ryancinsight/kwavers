@@ -6,6 +6,7 @@
 pub mod basis;
 pub mod config;
 pub mod coupling;
+pub mod cpml;
 pub mod dg_solver;
 pub mod discontinuity_detector;
 pub mod flux;
@@ -21,6 +22,7 @@ pub mod traits;
 pub use basis::BasisType;
 pub use config::{DGConfig, DgBoundaryCondition, DgTimeIntegrator, ShockCaptureConfig, WenoDegree};
 pub use coupling::HybridCoupler;
+pub use cpml::{DgCpmlAxis, DgCpmlConfig, DgCpmlMemoryWorkspace, DgCpmlProfiles};
 pub use dg_solver::core::DGSolver;
 pub use discontinuity_detector::DiscontinuityDetector;
 pub use flux::{FluxType, LimiterType};

@@ -214,10 +214,14 @@ mod tests {
     fn inner_strip_sigma_is_monotonic_increasing_outward() {
         let profile = standard_profile(6);
         let thickness_nodes = 6 * 3;
+        // Left (inner-side) strip stores nodes in increasing array order
+        // moving toward the inner physical-domain face, so σ decreases as `i`
+        // increases. "Monotone increasing outward" means decreasing as i
+        // increases (outward = toward smaller i for the left strip).
         for i in 1..thickness_nodes {
             assert!(
-                profile.sigma[i - 1] <= profile.sigma[i],
-                "left strip σ not monotone non-decreasing at i={i}: {} > {}",
+                profile.sigma[i - 1] >= profile.sigma[i],
+                "left strip σ not monotone non-increasing at i={i}: {} < {}",
                 profile.sigma[i - 1],
                 profile.sigma[i]
             );
@@ -241,21 +245,20 @@ mod tests {
 
     #[test]
     fn outermost_sigma_matches_roden_gedney_formula() {
-        let element_count = 16;
-        let n_nodes = 3;
-        let thickness = 4;
-        let element_span = 1.0e-3;
-        let c0 = 1500.0;
-        let r0 = 1.0e-6;
-        let m: i32 = 4;
+        let n_nodes: usize = 3;
+        let thickness: usize = 4;
+        let element_span: f64 = 1.0e-3;
+        let c0: f64 = 1500.0;
+        let r0: f64 = 1.0e-6;
+        let m: u32 = 4;
         let profile = standard_profile(thickness);
         // d = position of the innermost PML node on the inner side, measured
         // from x = 0. The outermost PML node sits at ξ ≈ d, so σ(outermost) ≈ σ_max.
-        let thickness_nodes = (thickness * n_nodes) as usize;
+        let thickness_nodes = thickness * n_nodes;
         let node_spacing = element_span / n_nodes as f64;
         let last_inner_pml = (thickness_nodes - 1) as f64 + 0.5;
         let d = last_inner_pml * node_spacing;
-        let expected_sigma_max = -(f64::from(m as u32) + 1.0) * c0 * r0.ln() / (2.0 * d);
+        let expected_sigma_max = -(f64::from(m) + 1.0) * c0 * r0.ln() / (2.0 * d);
         // The outermost-left node sits at xi = inner_face_left - x_0 ≈ d (one
         // half-spacing past d), so the computed σ is clamped at σ_max.
         assert!(

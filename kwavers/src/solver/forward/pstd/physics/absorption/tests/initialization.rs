@@ -1,4 +1,5 @@
 use super::{test_k_mag, zeros_k_mag};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::physics::acoustics::mechanics::absorption::AbsorptionMode;
@@ -8,7 +9,7 @@ use crate::solver::forward::pstd::physics::absorption::init::initialize_absorpti
 #[test]
 fn test_power_law_initialization() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let mut medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let mut medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     medium.set_acoustic_properties(0.75, 1.5, 5.0).unwrap();
     let config = PSTDConfig {
         dt: 1e-7,
@@ -20,7 +21,7 @@ fn test_power_law_initialization() {
     };
 
     let k_mag = zeros_k_mag(32, 32, 32);
-    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, 1500.0)
+    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, SOUND_SPEED_WATER_SIM)
         .unwrap()
         .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
@@ -45,7 +46,7 @@ fn test_power_law_initialization() {
 #[test]
 fn test_nabla_operators_correct_power() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let y = 1.5_f64;
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
@@ -59,7 +60,7 @@ fn test_nabla_operators_correct_power() {
     let k_mag = test_k_mag(8, 8, 8, dk);
     let k_at_1 = k_mag[[1, 0, 0]];
 
-    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, 1500.0)
+    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, SOUND_SPEED_WATER_SIM)
         .unwrap()
         .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
@@ -92,7 +93,7 @@ fn test_absorption_model_physics_validation() {
     let mut medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, &grid);
     medium.set_acoustic_properties(0.0, 1.5, 0.0).unwrap();
     let k_mag = zeros_k_mag(16, 16, 16);
-    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, 1500.0)
+    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 1e6, SOUND_SPEED_WATER_SIM)
         .unwrap()
         .expect("PowerLaw mode must return Some(AbsorptionKernel)");
 
@@ -123,7 +124,7 @@ fn test_absorption_model_physics_validation() {
 #[test]
 fn test_stokes_absorption_tau_matches_classical_formula() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::Stokes,
         dt: 1e-7,
@@ -132,14 +133,14 @@ fn test_stokes_absorption_tau_matches_classical_formula() {
 
     let dk = 2.0 * std::f64::consts::PI / (8.0 * 1e-3);
     let k_mag = test_k_mag(8, 8, 8, dk);
-    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, 1500.0)
+    let kernel = initialize_absorption_operators(&config, &grid, &medium, &k_mag, 0.0, SOUND_SPEED_WATER_SIM)
         .expect("Stokes init must succeed")
         .expect("Stokes mode must return Some(AbsorptionKernel)");
 
     let eta_s = 1.0e-3_f64;
     let eta_b = 2.5e-3_f64;
     let rho0 = 1000.0_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let alpha_si = (4.0 * eta_s / 3.0 + eta_b) / (2.0 * rho0 * c0 * c0 * c0);
     let expected_tau = -2.0 * alpha_si * c0;
 

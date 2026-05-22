@@ -158,6 +158,7 @@ pub fn calculate_isppa(pressure_field: &Array3<f64>, density: f64, sound_speed: 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::Array3;
 
     // ── calculate_intensity ───────────────────────────────────────────────────
@@ -166,8 +167,8 @@ mod tests {
     #[test]
     fn calculate_intensity_matches_acoustic_intensity_formula() {
         let field = Array3::<f64>::from_elem((2, 2, 2), 1.0_f64);
-        let intensity = calculate_intensity(field.view(), 1000.0, 1500.0);
-        let expected = 1.0 / (2.0 * 1000.0 * 1500.0);
+        let intensity = calculate_intensity(field.view(), 1000.0, SOUND_SPEED_WATER_SIM);
+        let expected = 1.0 / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM);
         for &v in intensity.iter() {
             assert!((v - expected).abs() < 1e-20, "I = p²/(2ρc) (got {v:.3e})");
         }
@@ -177,7 +178,7 @@ mod tests {
     #[test]
     fn calculate_intensity_zero_for_zero_pressure() {
         let field = Array3::<f64>::zeros((2, 2, 2));
-        let intensity = calculate_intensity(field.view(), 1000.0, 1500.0);
+        let intensity = calculate_intensity(field.view(), 1000.0, SOUND_SPEED_WATER_SIM);
         for &v in intensity.iter() {
             assert_eq!(v, 0.0);
         }
@@ -190,11 +191,11 @@ mod tests {
         let field =
             Array3::<f64>::from_shape_vec((2, 1, 1), vec![f64::NAN, 2.0]).expect("shape matches");
 
-        let invalid_impedance = calculate_intensity(field.view(), -1000.0, 1500.0);
+        let invalid_impedance = calculate_intensity(field.view(), -1000.0, SOUND_SPEED_WATER_SIM);
         assert!(invalid_impedance.iter().all(|&value| value == 0.0));
 
-        let intensity = calculate_intensity(field.view(), 1000.0, 1500.0);
-        let expected = 2.0_f64.powi(2) / (2.0 * 1000.0 * 1500.0);
+        let intensity = calculate_intensity(field.view(), 1000.0, SOUND_SPEED_WATER_SIM);
+        let expected = 2.0_f64.powi(2) / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM);
         assert_eq!(intensity[[0, 0, 0]], 0.0);
         assert!((intensity[[1, 0, 0]] - expected).abs() < 1e-20);
     }
@@ -289,7 +290,7 @@ mod tests {
     fn ispta_equals_peak_intensity_times_duty_cycle() {
         let field = Array3::<f64>::from_elem((2, 2, 2), 2.0_f64);
         let rho = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let duty = 0.1_f64;
         let ispta = calculate_ispta(&field, rho, c, duty);
         let expected = 2.0_f64.powi(2) / (2.0 * rho * c) * duty;
@@ -304,10 +305,10 @@ mod tests {
     #[test]
     fn ispta_rejects_invalid_duty_cycle_and_impedance() {
         let field = Array3::<f64>::from_elem((2, 2, 2), 2.0_f64);
-        assert_eq!(calculate_ispta(&field, 1000.0, 1500.0, -0.1), 0.0);
-        assert_eq!(calculate_ispta(&field, 1000.0, 1500.0, 1.1), 0.0);
-        assert_eq!(calculate_ispta(&field, 1000.0, 1500.0, f64::NAN), 0.0);
-        assert_eq!(calculate_ispta(&field, 0.0, 1500.0, 0.1), 0.0);
+        assert_eq!(calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, -0.1), 0.0);
+        assert_eq!(calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, 1.1), 0.0);
+        assert_eq!(calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, f64::NAN), 0.0);
+        assert_eq!(calculate_ispta(&field, 0.0, SOUND_SPEED_WATER_SIM, 0.1), 0.0);
     }
 
     /// Nonfinite pressure samples do not dominate the spatial peak.
@@ -316,8 +317,8 @@ mod tests {
         let field =
             Array3::<f64>::from_shape_vec((2, 1, 1), vec![f64::INFINITY, 2.0]).expect("shape");
         let duty = 0.25;
-        let ispta = calculate_ispta(&field, 1000.0, 1500.0, duty);
-        let expected = 2.0_f64.powi(2) / (2.0 * 1000.0 * 1500.0) * duty;
+        let ispta = calculate_ispta(&field, 1000.0, SOUND_SPEED_WATER_SIM, duty);
+        let expected = 2.0_f64.powi(2) / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM) * duty;
         assert!((ispta - expected).abs() < 1e-20);
     }
 
@@ -329,7 +330,7 @@ mod tests {
         let mut field = Array3::<f64>::zeros((4, 4, 4));
         field[[2, 2, 2]] = 3.0;
         let rho = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let isppa = calculate_isppa(&field, rho, c);
         let expected = 3.0_f64.powi(2) / (2.0 * rho * c);
         assert!(
@@ -343,10 +344,10 @@ mod tests {
     #[test]
     fn isppa_rejects_invalid_impedance_and_ignores_nonfinite_pressure() {
         let field = Array3::<f64>::from_shape_vec((2, 1, 1), vec![f64::NAN, 3.0]).expect("shape");
-        assert_eq!(calculate_isppa(&field, -1000.0, 1500.0), 0.0);
+        assert_eq!(calculate_isppa(&field, -1000.0, SOUND_SPEED_WATER_SIM), 0.0);
 
-        let isppa = calculate_isppa(&field, 1000.0, 1500.0);
-        let expected = 3.0_f64.powi(2) / (2.0 * 1000.0 * 1500.0);
+        let isppa = calculate_isppa(&field, 1000.0, SOUND_SPEED_WATER_SIM);
+        let expected = 3.0_f64.powi(2) / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM);
         assert!((isppa - expected).abs() < 1e-20);
     }
 }

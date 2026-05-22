@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::validation::gpu_cpu_equivalence::DEFAULT_RELATIVE_TOLERANCE;
 
@@ -9,7 +10,7 @@ use crate::solver::validation::gpu_cpu_equivalence::DEFAULT_RELATIVE_TOLERANCE;
 ///
 fn create_test_64_homogeneous() -> (Grid, HomogeneousMedium) {
     let grid = Grid::new(64, 64, 64, 0.15e-3, 0.15e-3, 0.15e-3).expect("Valid grid dimensions");
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     (grid, medium)
 }
 
@@ -20,7 +21,7 @@ fn create_test_64_homogeneous() -> (Grid, HomogeneousMedium) {
 ///
 fn create_test_128() -> (Grid, HomogeneousMedium) {
     let grid = Grid::new(128, 128, 128, 0.1e-3, 0.1e-3, 0.1e-3).expect("Valid grid dimensions");
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     (grid, medium)
 }
 
@@ -127,7 +128,7 @@ fn test_matrix_256_absorbing_custom_source() {
 ///
 #[test]
 fn test_validate_equivalence_config() {
-    let report = validate_equivalence_config((32, 32, 32), 0.2e-3, 1500.0, 1000.0, 20)
+    let report = validate_equivalence_config((32, 32, 32), 0.2e-3, SOUND_SPEED_WATER_SIM, 1000.0, 20)
         .expect("Config validation should complete");
 
     assert_eq!(report.total_points, 32 * 32 * 32);
@@ -140,10 +141,10 @@ fn test_validate_equivalence_config() {
 #[test]
 fn test_calculate_stable_dt() {
     let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
 
     let dt = calculate_stable_dt(&grid, &medium);
-    let expected_dt = 0.5 * 0.1e-3 / 1500.0;
+    let expected_dt = 0.5 * 0.1e-3 / SOUND_SPEED_WATER_SIM;
 
     assert!(
         (dt - expected_dt).abs() < 1e-20,

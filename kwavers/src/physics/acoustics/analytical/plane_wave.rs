@@ -105,13 +105,14 @@ fn positive_finite(value: f64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::grid::Grid;
     use std::f64::consts::PI;
 
     fn water_grid_one_wavelength() -> Grid {
         // f=1MHz, c=1500 m/s → λ=1.5mm; grid spacing dx=λ/32 → N=32 points per wavelength
         let f = 1e6_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let lam = c / f;
         let dx = lam / 32.0;
         Grid::new(32, 4, 4, dx, dx, dx).unwrap()
@@ -123,7 +124,7 @@ mod tests {
     #[test]
     fn plane_wave_zero_at_origin_t0_x_direction() {
         let grid = water_grid_one_wavelength();
-        let field = PlaneWaveSolution::generate(&grid, 1e6, 10.0, 1500.0, 0.0, (1.0, 0.0, 0.0));
+        let field = PlaneWaveSolution::generate(&grid, 1e6, 10.0, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0));
         assert!(
             field[[0, 0, 0]].abs() < 1e-13,
             "field at origin must be 0 (got {:.3e})",
@@ -139,7 +140,7 @@ mod tests {
         let grid = water_grid_one_wavelength();
         let amplitude = 7.0_f64;
         let field =
-            PlaneWaveSolution::generate(&grid, 1e6, amplitude, 1500.0, 0.0, (1.0, 0.0, 0.0));
+            PlaneWaveSolution::generate(&grid, 1e6, amplitude, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0));
         for &v in field.iter() {
             assert!(
                 v.abs() <= amplitude * 1.01,
@@ -152,14 +153,14 @@ mod tests {
     #[test]
     fn plane_wave_shape_matches_grid() {
         let grid = water_grid_one_wavelength();
-        let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, 0.0, (1.0, 0.0, 0.0));
+        let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0));
         assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
     }
 
     #[test]
     fn plane_wave_rejects_zero_direction_with_zero_field() {
         let grid = water_grid_one_wavelength();
-        let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, 0.0, (0.0, 0.0, 0.0));
+        let field = PlaneWaveSolution::generate(&grid, 1e6, 1.0, SOUND_SPEED_WATER_SIM, 0.0, (0.0, 0.0, 0.0));
 
         assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
         assert!(field.iter().all(|value| *value == 0.0));
@@ -170,11 +171,11 @@ mod tests {
         let grid = water_grid_one_wavelength();
 
         let invalid_cases = [
-            PlaneWaveSolution::generate(&grid, 0.0, 1.0, 1500.0, 0.0, (1.0, 0.0, 0.0)),
-            PlaneWaveSolution::generate(&grid, 1e6, f64::NAN, 1500.0, 0.0, (1.0, 0.0, 0.0)),
-            PlaneWaveSolution::generate(&grid, 1e6, 1.0, -1500.0, 0.0, (1.0, 0.0, 0.0)),
-            PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, f64::NAN, (1.0, 0.0, 0.0)),
-            PlaneWaveSolution::generate(&grid, 1e6, 1.0, 1500.0, 0.0, (f64::INFINITY, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 0.0, 1.0, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 1e6, f64::NAN, SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 1e6, 1.0, -SOUND_SPEED_WATER_SIM, 0.0, (1.0, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 1e6, 1.0, SOUND_SPEED_WATER_SIM, f64::NAN, (1.0, 0.0, 0.0)),
+            PlaneWaveSolution::generate(&grid, 1e6, 1.0, SOUND_SPEED_WATER_SIM, 0.0, (f64::INFINITY, 0.0, 0.0)),
         ];
 
         for field in invalid_cases {
@@ -193,7 +194,7 @@ mod tests {
     fn plane_wave_near_peak_at_quarter_wavelength() {
         let nx = 64usize;
         let f = 1e6_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let lam = c / f;
         let dx = lam / nx as f64; // N grid points per wavelength
         let grid = Grid::new(nx, 4, 4, dx, dx, dx).unwrap();

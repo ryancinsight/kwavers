@@ -158,6 +158,19 @@ pub struct DGConfig {
     /// comparisons can therefore use absorbing in-plane boundaries while
     /// preserving a periodic out-of-plane invariant direction.
     pub boundary_conditions: [DgBoundaryCondition; 3],
+    /// Optional CPML configuration for the tensor acoustic DG solver.
+    ///
+    /// When set, every per-axis spatial derivative used by
+    /// `compute_acoustic_tensor_rhs_with_cpml_into` is replaced by the
+    /// Roden-Gedney stretched derivative `(1/κ_a) D_a + ψ_{q, a}`, with the
+    /// auxiliary memory `ψ` advanced jointly with the field state under the
+    /// SSP-RK3 stepper. The outermost element face still uses the per-axis
+    /// `boundary_conditions[a]` policy (typically `AbsorbingCharacteristic`)
+    /// so any residual outgoing wave that survives the absorbing layer is
+    /// dissipated at the physical boundary rather than reflected. `None`
+    /// disables CPML and reproduces the periodic / characteristic-only path
+    /// exactly.
+    pub cpml: Option<super::cpml::DgCpmlConfig>,
 }
 
 impl Default for DGConfig {
@@ -173,6 +186,7 @@ impl Default for DGConfig {
             shock_capture: ShockCaptureConfig::default(),
             sound_speed: 1500.0,
             boundary_conditions: [DgBoundaryCondition::Periodic; 3],
+            cpml: None,
         }
     }
 }

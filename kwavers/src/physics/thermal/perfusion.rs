@@ -6,6 +6,7 @@
 
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
 use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, THERMAL_CONDUCTIVITY_BLOOD};
 use ndarray::Array3;
 
@@ -136,30 +137,20 @@ impl VesselCooling {
                 .sqrt();
 
             if distance < radius {
-                // Inside vessel — forced-convection cooling via
-                // Dittus-Boelter correlation (turbulent pipe flow):
-                //   Nu = 0.023 · Re^0.8 · Pr^0.4
-                //   h  = Nu · k_blood / D,  D = 2·radius (pipe diameter)
-                // Reynolds uses pipe diameter, not radius.
+                // Inside vessel — convective cooling.
+                // h [W/(m²·K)] = Nu · k_blood / D,  D = 2·radius (pipe diameter).
                 let diameter = 2.0 * radius;
-                let reynolds = self.calculate_reynolds_number(diameter);
-                let prandtl: f64 = 7.0; // Blood Prandtl number (Pr = μ·c_p/k ≈ 3.5e-3·3617/0.52 ≈ 24; 7 is a moderate in-vivo estimate)
-                let nusselt = 0.023 * reynolds.powf(0.8) * prandtl.powf(0.4);
-                // h [W/(m²·K)] = Nu · k_blood [W/(m·K)] / D [m]
-                let h = nusselt * THERMAL_CONDUCTIVITY_BLOOD / diameter;
+                let h = self.nusselt_number(diameter) * THERMAL_CONDUCTIVITY_BLOOD / diameter;
                 total_cooling += h * delta_t;
             } else if distance < 2.0 * radius {
                 // Near-vessel boundary layer — taper the vessel-surface h
-                // linearly from its surface value (weight=1 at r=radius) to
-                // zero at the outer boundary (weight=0 at r=2·radius).
+                // linearly from its surface value (weight=1 at distance=radius)
+                // to zero at the outer boundary (weight=0 at distance=2·radius).
                 // velocity_factor accounts for flow-speed-dependent boundary
-                // layer thinning (∝ √Re ∝ √v for fixed geometry).
+                // layer thinning (∝ √v for fixed geometry).
                 let diameter = 2.0 * radius;
-                let reynolds = self.calculate_reynolds_number(diameter);
-                let prandtl: f64 = 7.0;
-                let nusselt = 0.023 * reynolds.powf(0.8) * prandtl.powf(0.4);
-                let h_surface = nusselt * THERMAL_CONDUCTIVITY_BLOOD / diameter;
-                let proximity = 2.0 - distance / radius; // ∈ (0,1] as distance ∈ [radius, 2·radius)
+                let h_surface = self.nusselt_number(diameter) * THERMAL_CONDUCTIVITY_BLOOD / diameter;
+                let proximity = 2.0 - distance / radius; // ∈ (0, 1]
                 let velocity_factor = (self.velocity / 0.1).sqrt();
                 let h = h_surface * proximity * velocity_factor;
                 total_cooling += h * delta_t;
@@ -169,13 +160,44 @@ impl VesselCooling {
         total_cooling
     }
 
-    /// Calculate Reynolds number for blood flow.
+    /// Reynolds number for blood flow: `Re = ρ · v · D / μ`.
     ///
-    /// `Re = ρ · v · D / μ` where `D` is the pipe diameter (NOT radius).
-    /// Blood viscosity sourced from
-    /// [`crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C`].
+    /// `D` is the pipe **diameter** (not radius).
+    /// Uses [`crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C`] and
+    /// [`crate::core::constants::fundamental::DENSITY_BLOOD`] as SSOT values.
     fn calculate_reynolds_number(&self, diameter: f64) -> f64 {
         (DENSITY_BLOOD * self.velocity * diameter) / BLOOD_VISCOSITY_37C
+    }
+
+    /// Nusselt number for blood in a circular pipe of given `diameter`.
+    ///
+    /// Blood Prandtl number derived from SSOT constants:
+    ///
+    /// ```text
+    /// Pr = μ · c_p / k = BLOOD_VISCOSITY_37C · BLOOD_SPECIFIC_HEAT / THERMAL_CONDUCTIVITY_BLOOD
+    ///    = 3.5e-3 · 3617 / 0.52 ≈ 24.3
+    /// ```
+    ///
+    /// Regime selection (Incropera & DeWitt, §8):
+    /// - Re < 2300 (laminar): Nu = 3.66 — fully developed Graetz solution at
+    ///   constant wall temperature (Sieder-Tate 1936, Nu₀ = 3.66).
+    /// - Re ≥ 2300 (turbulent/transitional): Dittus-Boelter: Nu = 0.023 · Re^0.8 · Pr^0.4.
+    ///
+    /// Physiological blood-vessel flow is almost always laminar
+    /// (e.g. Re ≈ 60 for a 2 mm-diameter vessel at 0.1 m/s), so the
+    /// Dittus-Boelter branch is only reached by unusually large, fast vessels.
+    fn nusselt_number(&self, diameter: f64) -> f64 {
+        // Pr from SSOT: μ·c_p/k
+        let prandtl = BLOOD_VISCOSITY_37C * BLOOD_SPECIFIC_HEAT / THERMAL_CONDUCTIVITY_BLOOD;
+        let reynolds = self.calculate_reynolds_number(diameter);
+        if reynolds < 2300.0 {
+            // Laminar pipe flow, constant wall temperature (Graetz, fully developed)
+            3.66_f64
+        } else {
+            // Turbulent pipe flow, Dittus-Boelter (valid Pr ∈ [0.7, 160], Re > 10000;
+            // used here for Re ≥ 2300 as a conservative transitional estimate).
+            0.023 * reynolds.powf(0.8) * prandtl.powf(0.4)
+        }
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::source::GridSource;
@@ -61,7 +62,7 @@ fn test_lossless_mode_no_pressure_correction() {
 #[test]
 fn test_pressure_correction_formula_dc_bin_nullification() {
     let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
-    let mut medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let mut medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     medium.set_acoustic_properties(0.5, 1.5, 0.0).unwrap();
 
     let config = PSTDConfig {
@@ -124,7 +125,7 @@ fn test_pressure_correction_dispersion_term_matches_analytical() {
     const NY: usize = 1;
     const NZ: usize = 1;
     const DX: f64 = 1e-4;
-    const C0: f64 = 1500.0;
+    const C0: f64 = SOUND_SPEED_WATER_SIM;
     const RHO0: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     const ALPHA: f64 = 0.75;
     const Y: f64 = 1.5;

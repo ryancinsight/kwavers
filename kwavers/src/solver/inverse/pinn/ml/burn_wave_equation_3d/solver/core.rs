@@ -260,6 +260,7 @@ impl<B: Backend> BurnPINN3DWave<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use burn::backend::{Autodiff, NdArray};
     type TestBackend = Autodiff<NdArray>;
 
@@ -268,7 +269,7 @@ mod tests {
         let device = Default::default();
         let config = BurnPINN3DConfig::default();
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-        let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+        let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
         let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
@@ -276,7 +277,7 @@ mod tests {
         // Verify the stored function returns the expected constant speed
         assert_eq!(
             solver.wave_speed_fn.as_ref().unwrap().get(0.5, 0.5, 0.5),
-            1500.0
+            SOUND_SPEED_WATER_SIM as f32
         );
         Ok(())
     }
@@ -286,11 +287,11 @@ mod tests {
         let device = Default::default();
         let config = BurnPINN3DConfig::default();
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-        let wave_speed = |_x: f32, _y: f32, z: f32| if z < 0.5 { 1500.0 } else { 3000.0 };
+        let wave_speed = |_x: f32, _y: f32, z: f32| if z < 0.5 { SOUND_SPEED_WATER_SIM as f32 } else { 3000.0 };
 
         let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
-        assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.3)?, 1500.0);
+        assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.3)?, SOUND_SPEED_WATER_SIM as f32);
         assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.7)?, 3000.0);
         Ok(())
     }
@@ -303,7 +304,7 @@ mod tests {
             ..Default::default()
         };
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-        let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+        let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
         let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 

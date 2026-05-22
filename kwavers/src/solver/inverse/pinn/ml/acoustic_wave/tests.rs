@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::domain::AcousticWaveDomain;
 use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
 use crate::solver::inverse::pinn::ml::physics::{BoundaryPosition, SimulationPhysicsDomain};
@@ -10,7 +11,7 @@ type B = burn::backend::Autodiff<NdArray<f32>>;
 fn test_acoustic_wave_domain_creation() {
     let domain = AcousticWaveDomain::new(
         AcousticProblemType::Linear,
-        1500.0, // m/s (typical for soft tissue)
+        SOUND_SPEED_WATER_SIM, // m/s (typical for soft tissue)
         1000.0, // kg/m³ (water density)
         None,   // No nonlinearity
     );
@@ -19,7 +20,7 @@ fn test_acoustic_wave_domain_creation() {
         <AcousticWaveDomain as SimulationPhysicsDomain<B>>::domain_name(&domain),
         "acoustic_wave"
     );
-    assert_eq!(domain.wave_speed(), 1500.0);
+    assert_eq!(domain.wave_speed(), SOUND_SPEED_WATER_SIM);
     assert_eq!(domain.density(), 1000.0);
     assert!(domain.nonlinearity_coefficient().is_none());
     assert!(<AcousticWaveDomain as SimulationPhysicsDomain<B>>::supports_coupling(&domain));
@@ -29,7 +30,7 @@ fn test_acoustic_wave_domain_creation() {
 fn test_nonlinear_acoustic_domain() {
     let domain = AcousticWaveDomain::new(
         AcousticProblemType::Nonlinear,
-        1500.0,
+        SOUND_SPEED_WATER_SIM,
         1000.0,
         Some(3.5), // Typical β for water
     );
@@ -40,7 +41,7 @@ fn test_nonlinear_acoustic_domain() {
 
 #[test]
 fn test_boundary_conditions() {
-    let mut domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
+    let mut domain = AcousticWaveDomain::new(AcousticProblemType::Linear, SOUND_SPEED_WATER_SIM, 1000.0, None);
 
     domain.add_boundary_condition(AcousticBoundarySpec {
         position: BoundaryPosition::Top,
@@ -55,7 +56,7 @@ fn test_boundary_conditions() {
 
 #[test]
 fn test_validation_metrics() {
-    let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
+    let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, SOUND_SPEED_WATER_SIM, 1000.0, None);
 
     let metrics = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::validation_metrics(&domain);
     assert_eq!(metrics.len(), 3);
@@ -66,7 +67,7 @@ fn test_validation_metrics() {
 
 #[test]
 fn test_coupling_interfaces() {
-    let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, 1500.0, 1000.0, None);
+    let domain = AcousticWaveDomain::new(AcousticProblemType::Linear, SOUND_SPEED_WATER_SIM, 1000.0, None);
 
     let interfaces =
         <AcousticWaveDomain as SimulationPhysicsDomain<B>>::coupling_interfaces(&domain);

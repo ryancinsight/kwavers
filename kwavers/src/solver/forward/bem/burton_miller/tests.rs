@@ -1,10 +1,11 @@
 use super::assembler::BurtonMillerAssembler;
 use super::config::BurtonMillerConfig;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use num_complex::Complex64;
 
 #[test]
 fn test_burton_miller_config_creation() {
-    let cfg = BurtonMillerConfig::new(100_000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM);
     assert!(cfg.wavenumber > 0.0);
     assert!(cfg.coupling_alpha.norm() > 0.0);
 }
@@ -12,19 +13,19 @@ fn test_burton_miller_config_creation() {
 #[test]
 fn test_burton_miller_config_custom_alpha() {
     let cfg =
-        BurtonMillerConfig::new(100_000.0, 1500.0).with_coupling_alpha(Complex64::new(0.0, 1.0));
+        BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM).with_coupling_alpha(Complex64::new(0.0, 1.0));
     assert_eq!(cfg.coupling_alpha, Complex64::new(0.0, 1.0));
 }
 
 #[test]
 fn test_assembler_creation() {
-    let cfg = BurtonMillerConfig::new(100_000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM);
     let _assembler = BurtonMillerAssembler::new(cfg);
 }
 
 #[test]
 fn test_greens_function_helmholtz() {
-    let cfg = BurtonMillerConfig::new(100_000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM);
     let assembler = BurtonMillerAssembler::new(cfg);
     let g = assembler.greens_function_helmholtz(cfg.wavenumber, 0.1);
     assert!(!g.re.is_nan() && !g.im.is_nan());
@@ -33,7 +34,7 @@ fn test_greens_function_helmholtz() {
 
 #[test]
 fn test_triangle_normal() {
-    let cfg = BurtonMillerConfig::new(100_000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM);
     let assembler = BurtonMillerAssembler::new(cfg);
     let n1 = [0.0, 0.0, 0.0];
     let n2 = [1.0, 0.0, 0.0];
@@ -44,7 +45,7 @@ fn test_triangle_normal() {
 
 #[test]
 fn test_triangle_area() {
-    let cfg = BurtonMillerConfig::new(100_000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM);
     let assembler = BurtonMillerAssembler::new(cfg);
     let n1 = [0.0, 0.0, 0.0];
     let n2 = [1.0, 0.0, 0.0];
@@ -55,7 +56,7 @@ fn test_triangle_area() {
 
 #[test]
 fn test_distance() {
-    let cfg = BurtonMillerConfig::new(100_000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(100_000.0, SOUND_SPEED_WATER_SIM);
     let assembler = BurtonMillerAssembler::new(cfg);
     let p1 = [0.0, 0.0, 0.0];
     let p2 = [3.0, 4.0, 0.0];
@@ -72,7 +73,7 @@ fn test_distance() {
 fn test_hypersingular_parallel_normals_matches_formula() {
     let k = 2.0_f64;
     let r = 1.0_f64;
-    let cfg = BurtonMillerConfig::new(1000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(1000.0, SOUND_SPEED_WATER_SIM);
     let assembler = BurtonMillerAssembler::new(cfg);
     let collocation = [0.0_f64, 0.0, 0.0];
     let point = [0.0_f64, 0.0, r];
@@ -124,7 +125,7 @@ fn test_hypersingular_static_limit_matches_dipole_kernel() {
 fn test_hypersingular_all_perpendicular_is_zero() {
     let k = 5.0_f64;
     let r = 1.5_f64;
-    let cfg = BurtonMillerConfig::new(1000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(1000.0, SOUND_SPEED_WATER_SIM);
     let assembler = BurtonMillerAssembler::new(cfg);
     let collocation = [0.0_f64, 0.0, 0.0];
     let point = [r, 0.0, 0.0];
@@ -145,7 +146,7 @@ fn test_hypersingular_all_perpendicular_is_zero() {
 ///
 #[test]
 fn test_hypersingular_near_singular_returns_zero() {
-    let cfg = BurtonMillerConfig::new(1000.0, 1500.0);
+    let cfg = BurtonMillerConfig::new(1000.0, SOUND_SPEED_WATER_SIM);
     let assembler = BurtonMillerAssembler::new(cfg);
     let collocation = [0.0_f64, 0.0, 0.0];
     let point = [1e-11_f64, 0.0, 0.0];
