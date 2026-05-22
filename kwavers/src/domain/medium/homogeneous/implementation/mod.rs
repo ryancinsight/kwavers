@@ -5,6 +5,7 @@ use crate::core::constants::{
     WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT, WATER_SURFACE_TENSION_20C,
     WATER_THERMAL_CONDUCTIVITY, WATER_VAPOR_PRESSURE_20C,
 };
+use crate::core::constants::fundamental::B_OVER_A_WATER;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -63,7 +64,7 @@ impl HomogeneousMedium {
             absorption_power: WATER_ABSORPTION_POWER,
             thermal_expansion: 2.07e-4,
             gas_diffusion: 2.0e-9,
-            nonlinearity: 5.0,
+            nonlinearity: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
             optical_absorption: mu_a,
             optical_scattering: mu_s_prime,
             reference_frequency: REFERENCE_FREQUENCY_MHZ,
@@ -74,9 +75,9 @@ impl HomogeneousMedium {
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), sound_speed),
             absorption_cache: Array3::from_elem(
                 (grid.nx, grid.ny, grid.nz),
-                0.0022 * 1.0_f64.powf(1.05),
+                WATER_ABSORPTION_ALPHA_0 * 1.0_f64.powf(WATER_ABSORPTION_POWER),
             ),
-            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 5.0),
+            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), B_OVER_A_WATER),
             lame_lambda: density * sound_speed * sound_speed,
             lame_mu: 0.0,
             grid_shape: (grid.nx, grid.ny, grid.nz),

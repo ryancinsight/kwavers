@@ -9,9 +9,9 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER,
-    DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN,
-    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
+    ATMOSPHERIC_PRESSURE, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT,
+    DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD,
+    SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER};
@@ -32,7 +32,7 @@ pub const WATER: TissueProperties = TissueProperties {
     impedance: 1477336.0, // density * sound_speed = 998.2 * 1480
     absorption_coefficient: 0.002,
     absorption_exponent: 2.0,
-    nonlinearity_parameter: 5.0,
+    nonlinearity_parameter: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
     shear_viscosity: VISCOSITY_WATER,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_WATER,

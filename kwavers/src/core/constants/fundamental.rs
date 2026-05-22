@@ -154,6 +154,14 @@ pub const B_OVER_A_FAT: f64 = 9.6;
 /// Reference: Duck (1990) Table 4.16; Bjørnø (2002) Table 1.
 pub const B_OVER_A_MUSCLE: f64 = 7.4;
 
+/// Nonlinearity parameter B/A for water at 20°C (dimensionless).
+///
+/// Value: 5.2 — standard reference condition for acoustic calibration and water-path
+/// simulations. Rises to ~5.4 at 60°C; drops slightly to ~5.0 at 37°C (body temp).
+///
+/// Reference: Duck, F.A. (1990) Table 4.16; Beyer, R.T. (1960) J. Acoust. Soc. Am. 32(6).
+pub const B_OVER_A_WATER: f64 = 5.2;
+
 /// Nonlinearity parameter B/A for whole blood at 37°C (dimensionless).
 ///
 /// Reference: Duck (1990) Table 4.16.

@@ -41,8 +41,8 @@
 
 use crate::core::constants::fundamental::{
     B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE,
-    DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER,
-    SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
+    B_OVER_A_WATER, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
+    DENSITY_WATER, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
     SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
 };
 use std::fmt;
@@ -170,7 +170,7 @@ impl AcousticPropertyData {
             sound_speed: 1481.0,
             absorption_coefficient: 0.002,
             absorption_power: 2.0,
-            nonlinearity: 5.0,
+            nonlinearity: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
         }
     }
 
