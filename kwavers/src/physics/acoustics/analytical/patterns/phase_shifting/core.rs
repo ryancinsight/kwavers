@@ -4,7 +4,6 @@
 //! used throughout the phase shifting subsystem. Implements SSOT principle
 //! for phase-related computations.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::SOUND_SPEED_WATER;
 use std::f64::consts::{PI, TAU};
 
@@ -115,6 +114,7 @@ pub fn quantize_phase(phase: f64, levels: u32) -> f64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_calculate_wavelength() {

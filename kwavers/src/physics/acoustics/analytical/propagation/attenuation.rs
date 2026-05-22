@@ -34,7 +34,6 @@
 //! - Lambert, J.H. (1760): "Photometria sive de mensura et gradibus luminis, colorum et umbrae"
 //! - Beer, A. (1852): "Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten"
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -162,6 +161,7 @@ impl AttenuationCalculator {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_amplitude_attenuation() {

@@ -22,7 +22,6 @@
 //! - Taflove & Hagness (2005) "Computational Electrodynamics" (3rd ed.)
 //! - Koene & Robertsson (2012) Geophysics 77(1):T1-T11
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::DispersionAnalysis;
 
 impl DispersionAnalysis {
@@ -100,6 +99,7 @@ impl DispersionAnalysis {
 mod tests {
     use super::*;
     use std::f64::consts::PI;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     /// 1D FDTD dispersion is zero at k=0 (no wave → no error).
     #[test]

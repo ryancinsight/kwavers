@@ -3,6 +3,8 @@
 mod source;
 mod stencil;
 
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+
 use super::absorption::{AbsorptionBuilder, FractionalLaplacianAbsorption};
 #[cfg(test)]
 use super::checkpoint::HistorySegment;
@@ -76,13 +78,13 @@ pub(super) fn time_schedule(
     spacing_m: f64,
     config: &Nonlinear3dConfig,
 ) -> TimeSchedule {
-    let c_max = speed.iter().copied().fold(0.0, f64::max).max(343.0);
+    let c_max = speed.iter().copied().fold(0.0, f64::max).max(SOUND_SPEED_AIR);
     let c_min = speed
         .iter()
         .copied()
         .filter(|value| *value > 100.0)
         .fold(f64::INFINITY, f64::min)
-        .max(343.0);
+        .max(SOUND_SPEED_AIR);
     let dt = config.cfl * spacing_m / (c_max * 3.0_f64.sqrt());
     let diagonal = 3.0_f64.sqrt() * (n - 1) as f64 * spacing_m;
     let duration = 2.0 * diagonal / c_min + config.cycles / config.frequency_hz;

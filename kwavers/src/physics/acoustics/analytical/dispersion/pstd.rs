@@ -11,7 +11,6 @@
 //!
 //! - Liu (1997) Microwave Opt. Tech. Lett. 15(3):158-165
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::DispersionAnalysis;
 
 impl DispersionAnalysis {
@@ -75,6 +74,7 @@ impl DispersionAnalysis {
 mod tests {
     use super::*;
     use std::f64::consts::PI;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     /// pstd_dispersion order=2 follows the 0.02·(k·dx)² analytical model.
     ///

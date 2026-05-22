@@ -2,7 +2,6 @@
 
 use super::pressure::{acoustic_impedance, harmonic_peak_intensity};
 use super::validation::{validate_pressure_field_domain, validation_error};
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::ArrayView3;
@@ -193,6 +192,7 @@ mod tests {
     use super::*;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     fn small_grid() -> Grid {
         Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap()

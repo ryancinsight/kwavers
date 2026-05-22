@@ -4,7 +4,6 @@
 //! computed dispersion errors from FDTD or PSTD methods.
 
 use super::DispersionAnalysis;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::f64::consts::PI;
@@ -95,6 +94,7 @@ impl DispersionAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     fn unit_grid() -> Grid {
         Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).expect("grid must be created")

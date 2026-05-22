@@ -1,6 +1,5 @@
 //! Acoustic-to-thermal coupling source terms.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::{Array3, Zip};
 
 /// Compute volumetric heat source from acoustic absorption [W/m^3].
@@ -51,6 +50,7 @@ pub fn acoustic_heat_source(
 mod tests {
     use super::*;
     use ndarray::Array3;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     fn uniform(s: (usize, usize, usize), val: f64) -> Array3<f64> {
         Array3::from_elem(s, val)

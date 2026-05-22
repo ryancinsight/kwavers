@@ -2,14 +2,13 @@
 
 use ndarray::Array3;
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
 use super::super::super::AnatomyKind;
 use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law_y_from_hu};
 
 const COUPLING_SOUND_SPEED_M_S: f64 = 1480.0;
 const COUPLING_DENSITY_KG_M3: f64 = 1000.0;
 const COUPLING_BETA: f64 = 3.5;
-const AIR_SOUND_SPEED_M_S: f64 = 343.0;
 const AIR_DENSITY_KG_M3: f64 = 1.225;
 const AIR_BETA: f64 = 1.2;
 const INTERNAL_GAS_HU_THRESHOLD: f64 = -700.0;
@@ -64,7 +63,7 @@ pub(super) fn material_maps(
 
 fn speed_from_hu(anatomy: AnatomyKind, hu: f64, label: i16) -> f64 {
     if is_internal_gas(hu, label) {
-        return AIR_SOUND_SPEED_M_S;
+        return SOUND_SPEED_AIR;
     }
     if hu >= 300.0 {
         let phi = (hu / 1000.0).clamp(0.0, 1.0);
@@ -118,7 +117,7 @@ mod tests {
         let body = Array3::from_elem((1, 1, 1), true);
         let (speed, density, beta, attenuation, power_law_y) =
             material_maps(AnatomyKind::Liver, &ct, &label, &body);
-        assert_close(speed[[0, 0, 0]], AIR_SOUND_SPEED_M_S);
+        assert_close(speed[[0, 0, 0]], SOUND_SPEED_AIR);
         assert_close(density[[0, 0, 0]], AIR_DENSITY_KG_M3);
         assert_close(beta[[0, 0, 0]], AIR_BETA);
         assert_close(attenuation[[0, 0, 0]], 1000.0);

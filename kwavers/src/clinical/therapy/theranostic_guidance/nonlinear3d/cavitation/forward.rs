@@ -10,7 +10,6 @@
 use ndarray::Array3;
 use rayon::prelude::*;
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use crate::physics::acoustics::bubble_dynamics::{
     BubbleParameters, BubbleState, RayleighPlessetSolver,
@@ -207,6 +206,7 @@ fn shifted_state(state: &BubbleState, derivative: (f64, f64), dt: f64, r0: f64) 
 mod tests {
     use super::*;
     use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::physics::acoustics::analysis::calculate_mechanical_index;
 
     #[test]

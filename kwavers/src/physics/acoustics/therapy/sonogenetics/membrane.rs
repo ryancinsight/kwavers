@@ -39,7 +39,6 @@
 //!   *Curr. Med. Imaging Rev.*, 6(1), 15-25.
 //! - Duque, M. et al. (2023). Sonogenetic control via MscL-G22S. *Science*, 380, 1084-1090.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::{Array3, Zip};
 
 /// Cell geometry and membrane parameters for the Laplace tension model.
@@ -144,6 +143,7 @@ pub fn compute_membrane_tension(
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::Array3;
 
     /// Analytical reference:

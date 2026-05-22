@@ -38,7 +38,6 @@
 //!   *Curr. Med. Imaging Rev.*, 6(1), 15-25.
 //! - Temkin, S. (2001). *Elements of Acoustics*. Acoustical Society of America.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::{Array3, Zip};
 
@@ -197,6 +196,7 @@ impl VolumetricArfField {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::Array3;
 
     /// Uniform pressure field: I = p² / (ρ·c); F = 2·α·I / c.

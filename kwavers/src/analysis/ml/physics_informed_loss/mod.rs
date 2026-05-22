@@ -15,6 +15,7 @@
 //! - Raissi et al. (2019): "Physics-informed neural networks"
 //! - Jin et al. (2021): "NSFNet"
 
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use crate::core::error::{KwaversError, KwaversResult};
 use std::collections::VecDeque;
 
@@ -78,7 +79,7 @@ impl Default for PhysicsLossConfig {
         Self {
             lambda_data_init: 0.8,
             lambda_physics_init: 0.2,
-            sound_speed: 343.0,
+            sound_speed: SOUND_SPEED_AIR,
             frequency: 1_000_000.0,
             grid_spacing: 1e-4, // 0.1 mm default
             gradient_method: GradientMethod::FiniteDifference { delta: 0.001 },

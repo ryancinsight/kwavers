@@ -1,4 +1,3 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
 use ndarray::{Array2, ArrayViewMut2, Zip};
 use std::f64::consts::PI;
@@ -119,6 +118,7 @@ impl AngularSpectrum2D {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_2d_angular_spectrum() {

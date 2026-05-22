@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM};
 use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::{
     GridIndex, Nonlinear3dAperture, SourceDomain,
 };
@@ -86,7 +86,7 @@ fn source_plan_steers_with_straight_ray_slowness() {
     };
     let mut speed = vec![15_000.0; n * n * n];
     for y in 5..=6 {
-        speed[flat_index(GridIndex { x: 6, y, z: 4 }, n)] = 343.0;
+        speed[flat_index(GridIndex { x: 6, y, z: 4 }, n)] = SOUND_SPEED_AIR;
     }
 
     let far_time = source_focus_travel_time_s(&speed, n, 1.0e-3, far_fast, focus);

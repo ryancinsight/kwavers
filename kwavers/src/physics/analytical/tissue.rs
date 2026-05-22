@@ -4,7 +4,7 @@
 //! parameters, power-law tissue absorption, Kramers–Kronig dispersion, and
 //! a canonical tissue-property database.
 
-use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_WATER};
 use std::f64::consts::PI;
 
 // ─── Water properties ─────────────────────────────────────────────────────────
@@ -160,7 +160,7 @@ pub fn kramers_kronig_sound_speed(
 pub fn tissue_properties(tissue: &str) -> (f64, f64, f64, f64, f64) {
     // (c [m/s], rho [kg/m3], alpha0 [dB/cm/MHz^y], y, B/A)
     match tissue {
-        "water" => (1482.0, 998.0, 0.002, 2.0, 5.2),
+        "water" => (SOUND_SPEED_WATER, 998.0, 0.002, 2.0, 5.2),
         "liver" => (1578.0, DENSITY_BLOOD, 0.5, 1.05, 7.6),
         "muscle" => (1580.0, DENSITY_TISSUE, 0.57, 1.0, 7.4),
         "fat" => (1450.0, 950.0, 0.48, 1.0, 10.0),
@@ -226,7 +226,7 @@ mod tests {
     #[test]
     fn tissue_properties_water_sound_speed() {
         let (c, _, _, _, _) = tissue_properties("water");
-        assert!((c - 1482.0).abs() < 1.0);
+        assert!((c - SOUND_SPEED_WATER).abs() < 1.0);
     }
 
     #[test]

@@ -39,7 +39,7 @@
 //! - `0.5 ≤ absorption_power ≤ 3.0` (physical range)
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
-use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
 use std::fmt;
 
 /// Canonical acoustic material properties

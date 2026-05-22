@@ -1,6 +1,5 @@
 //! Nonlinear term computation for Westervelt equation
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::{Array3, Zip};
@@ -190,6 +189,7 @@ pub(super) fn compute_viscoelastic_term_into(
 mod tests {
     use super::*;
     use crate::domain::medium::{AcousticProperties, HomogeneousMedium};
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     /// **Theorem**: Westervelt explicit-form nonlinear coefficient is `+β/(ρc²)`.
     ///

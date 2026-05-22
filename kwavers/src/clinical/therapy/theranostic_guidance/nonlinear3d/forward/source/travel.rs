@@ -1,6 +1,7 @@
 //! Ray-tracing travel time and source-cell iteration.
 
 use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::{flat_index, GridIndex};
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 
 use super::plan::SourcePlan;
 
@@ -31,7 +32,7 @@ pub(super) fn source_focus_travel_time_s(
                 .round()
                 .clamp(0.0, (n - 1) as f64) as usize,
         };
-        let c = speed[flat_index(idx, n)].max(343.0);
+        let c = speed[flat_index(idx, n)].max(SOUND_SPEED_AIR);
         travel_time_s += segment_length_m / c;
     }
     travel_time_s

@@ -23,11 +23,15 @@ pub fn shock_formation_distance(
     let rho_0 = params.density;
     let c_0 = params.sound_speed;
 
-    // Shock formation distance l_s = (ρ₀ * c₀³) / (β * ω * P₀)
-    let shock_dist = (rho_0 * c_0.powi(3)) / (beta * omega * initial_pressure);
-
-    // Limit to reasonable physical values (prevent Infinity for very low pressures)
-    shock_dist.clamp(0.0, 1e6)
+    // Shock formation distance (Hamilton & Blackstock 1998, §4.4, lossless plane wave):
+    //   l_s = ρ₀ c₀³ / (β ω P₀)
+    // Returns +∞ for P₀ = 0 (correct limit: no shock at zero amplitude).
+    // For absorbing media, use the Goldberg-number-corrected form; this lossless
+    // formula overestimates l_s when Γ = β ω P₀ / (ρ₀ c₀² α l_s) ≲ 1.
+    if initial_pressure == 0.0 {
+        return f64::INFINITY;
+    }
+    (rho_0 * c_0.powi(3)) / (beta * omega * initial_pressure)
 }
 
 /// Calculate the shock front thickness

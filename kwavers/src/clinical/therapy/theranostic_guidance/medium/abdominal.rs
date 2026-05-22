@@ -16,6 +16,7 @@
 //!
 //! Reference organ sound speeds: liver 1595 m/s, kidney 1567 m/s (Duck 1990).
 
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array2, Array3, Axis, Zip};
 use std::collections::VecDeque;
@@ -180,7 +181,7 @@ fn abdominal_properties(
 ) {
     let (nx, ny) = ct.dim();
     let c_organ = organ_reference_speed(anatomy);
-    let mut speed = Array2::<f64>::from_elem((nx, ny), 343.0);
+    let mut speed = Array2::<f64>::from_elem((nx, ny), SOUND_SPEED_AIR);
     let mut attenuation = Array2::<f64>::from_elem((nx, ny), 0.05);
     let mut body = Array2::<bool>::from_elem((nx, ny), false);
     let mut organ = Array2::<bool>::from_elem((nx, ny), false);
@@ -500,7 +501,7 @@ mod tests {
         assert!(!body[[0, 0]]);
         assert!(!organ[[0, 0]]);
         assert!(!target[[0, 0]]);
-        assert_eq!(speed[[0, 0]], 343.0);
+        assert_eq!(speed[[0, 0]], SOUND_SPEED_AIR);
         assert_eq!(att[[0, 0]], 0.05);
     }
 

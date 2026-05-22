@@ -1,5 +1,7 @@
 //! Candidate parameter update kernels for line-search steps.
 
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+
 pub(super) fn fill_candidate_speed(
     out: &mut [f64],
     current_speed: &[f64],
@@ -21,7 +23,7 @@ pub(super) fn fill_candidate_speed(
         .zip(grad_speed.iter())
     {
         *dst = if *active {
-            (c - scale * base_step * g).clamp((b - 160.0).max(343.0), b + 160.0)
+            (c - scale * base_step * g).clamp((b - 160.0).max(SOUND_SPEED_AIR), b + 160.0)
         } else {
             *c
         };

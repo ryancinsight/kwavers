@@ -4,7 +4,6 @@ use std::collections::HashSet;
 
 use ndarray::Array3;
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::abdominal3d::bowl::{bowl_elements, BOWL_THETA_MAX_RAD};
@@ -184,7 +183,7 @@ mod tests {
     use ndarray::Array3;
 
     use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
-
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::super::types::Nonlinear3dVolume;
     use super::*;
 

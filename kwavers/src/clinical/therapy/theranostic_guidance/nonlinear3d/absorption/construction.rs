@@ -3,6 +3,7 @@
 //! Treeby-Cox 2010 power-law absorption coefficients and builds the
 //! corresponding `|k|^y` spectral-filter weights.
 
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
 use rayon::prelude::*;
 
 use super::spectrum::build_k_power_spectrum;
@@ -81,7 +82,7 @@ impl FractionalLaplacianAbsorption {
             .map(|i| {
                 let alpha0_f = input.attenuation_np_per_m_mhz[i];
                 let alpha0_omega = alpha0_f / omega_ref.powf(y_exponent);
-                let c = input.speed_m_s[i].max(343.0);
+                let c = input.speed_m_s[i].max(SOUND_SPEED_AIR);
                 let tau = 2.0 * alpha0_omega * c.powf(y_exponent + 1.0);
                 input.dt_s * tau
             })

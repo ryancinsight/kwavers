@@ -1,3 +1,5 @@
+use crate::core::constants::fundamental::SOUND_SPEED_AIR;
+
 use super::*;
 use ndarray::{Array2, Array3};
 
@@ -33,7 +35,7 @@ fn test_physics_loss_config_validation() {
         "zero sound_speed error must mention 'sound_speed'; got: {err:?}"
     );
 
-    config.sound_speed = 343.0;
+    config.sound_speed = SOUND_SPEED_AIR;
     config.frequency = -100.0;
     let err = config.validate().unwrap_err();
     assert!(
@@ -55,7 +57,7 @@ fn test_physics_loss_creation() {
     // k = 2πf/c = 2π·1e6/343 ≈ 18313 rad/m
     let config = PhysicsLossConfig::default();
     let loss = PhysicsInformedLoss::new(config).unwrap();
-    let k_expected = 2.0 * std::f64::consts::PI * 1_000_000.0 / 343.0;
+    let k_expected = 2.0 * std::f64::consts::PI * 1_000_000.0 / SOUND_SPEED_AIR;
     assert!(
         (loss.wave_number() - k_expected).abs() < 1.0,
         "wave_number = {} (expected ≈ {k_expected})",
@@ -86,11 +88,11 @@ fn test_wave_equation_residual_3d() {
 
 #[test]
 fn test_wave_number_computation() {
-    let config = PhysicsLossConfig::default().with_wave_params(343.0, 1_000_000.0);
+    let config = PhysicsLossConfig::default().with_wave_params(SOUND_SPEED_AIR, 1_000_000.0);
     let loss = PhysicsInformedLoss::new(config).unwrap();
 
     // k = 2πf/c = 2π·1e6/343 ≈ 18313
-    let k_expected = 2.0 * std::f64::consts::PI * 1_000_000.0 / 343.0;
+    let k_expected = 2.0 * std::f64::consts::PI * 1_000_000.0 / SOUND_SPEED_AIR;
     assert!((loss.wave_number() - k_expected).abs() < 1.0);
 }
 
@@ -241,7 +243,7 @@ fn test_builder_pattern() {
 ///   interior count = (5-2)² = 9 → mean = 9·k⁴/9 = k⁴
 #[test]
 fn wave_residual_2d_constant_field_equals_k_fourth() {
-    let config = PhysicsLossConfig::default().with_wave_params(343.0, 1_000_000.0);
+    let config = PhysicsLossConfig::default().with_wave_params(SOUND_SPEED_AIR, 1_000_000.0);
     let loss_fn = PhysicsInformedLoss::new(config).unwrap();
     let k = loss_fn.wave_number();
     let expected = k.powi(4);
@@ -262,7 +264,7 @@ fn wave_residual_2d_constant_field_equals_k_fourth() {
 ///   interior count = (5-2)³ = 27 → mean = 27·k⁴/27 = k⁴
 #[test]
 fn wave_residual_3d_constant_field_equals_k_fourth() {
-    let config = PhysicsLossConfig::default().with_wave_params(343.0, 1_000_000.0);
+    let config = PhysicsLossConfig::default().with_wave_params(SOUND_SPEED_AIR, 1_000_000.0);
     let loss_fn = PhysicsInformedLoss::new(config).unwrap();
     let k = loss_fn.wave_number();
     let expected = k.powi(4);
@@ -359,9 +361,9 @@ fn coherence_loss_mismatched_dims_is_infinity() {
 /// same floating-point operations.
 #[test]
 fn wave_number_exact_formula_verification() {
-    let config = PhysicsLossConfig::default().with_wave_params(343.0, 1_000_000.0);
+    let config = PhysicsLossConfig::default().with_wave_params(SOUND_SPEED_AIR, 1_000_000.0);
     let loss_fn = PhysicsInformedLoss::new(config).unwrap();
-    let expected_k = 2.0 * std::f64::consts::PI * 1_000_000.0 / 343.0;
+    let expected_k = 2.0 * std::f64::consts::PI * 1_000_000.0 / SOUND_SPEED_AIR;
     assert!(
         (loss_fn.wave_number() - expected_k).abs() < 1e-10,
         "wave_number = {} (expected {expected_k})",

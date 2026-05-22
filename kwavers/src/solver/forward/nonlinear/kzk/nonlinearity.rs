@@ -40,7 +40,6 @@
 //!   §4.2.1, eq. (4.2.3).
 
 use super::KZKConfig;
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use ndarray::{Array1, Array3};
 
@@ -292,6 +291,7 @@ mod tests {
     use super::*;
     use crate::core::constants::fundamental::DENSITY_TISSUE;
     use crate::solver::forward::nonlinear::kzk::KZKConfig;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     /// Helper: minimal `KZKConfig` for unit tests of `KzkNonlinearOperator`.
     /// Grid dimensions are kept small (1×1×1, nt=4) because `KzkNonlinearOperator::new`

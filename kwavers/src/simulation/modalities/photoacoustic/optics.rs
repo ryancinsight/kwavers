@@ -33,7 +33,6 @@
 //! - Wang & Wu (2007): "Biomedical Optics: Principles and Imaging"
 //!   Wiley-Interscience. ISBN: 978-0-471-74304-0
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::properties::OpticalPropertyData;
@@ -257,6 +256,7 @@ pub fn compute_multi_wavelength_fluence(
 mod tests {
     use super::*;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_optical_property_initialization() {
