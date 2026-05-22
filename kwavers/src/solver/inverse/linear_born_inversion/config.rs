@@ -14,6 +14,7 @@
 //! has exactly `N·Q·F·H` rows. [`LinearBornInversionConfig::measurement_count`]
 //! is the single implementation of that invariant; geometry supplies only `N`.
 
+use crate::core::constants::fundamental::SOUND_SPEED_BRAIN;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Generic linear Born + PCG inversion settings.
@@ -92,10 +93,10 @@ impl Default for LinearBornInversionConfig {
             nonlinear_beta: 4.5,
             contrast_min: -0.08,
             contrast_max: 0.08,
-            // Soft-tissue reference (brain/breast): typical c₀ ≈ 1546 m/s,
+            // Soft-tissue reference (brain/breast): SOUND_SPEED_BRAIN = 1546 m/s,
             // ρ₀ ≈ 1000 kg/m³. Adapters that target a different anatomy
             // override these explicitly at construction.
-            reference_sound_speed_m_s: 1546.0,
+            reference_sound_speed_m_s: SOUND_SPEED_BRAIN,
             reference_density_kg_m3: 1000.0,
         }
     }

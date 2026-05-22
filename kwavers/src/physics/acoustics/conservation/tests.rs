@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -50,7 +51,7 @@ fn test_entropy_production_zero_absorption() {
     let rho = uniform_array(shape, 1000.0);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 0.0);
-    let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, 310.0, &grid);
+    let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, BODY_TEMPERATURE_K, &grid);
     assert!(ds.abs() < 1e-20, "Lossless entropy production: {ds:.3e}");
 }
 
@@ -63,7 +64,7 @@ fn test_entropy_production_non_negative() {
     let rho = uniform_array(shape, 1000.0);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 2.0);
-    let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, 310.0, &grid);
+    let ds = entropy_production_rate(&p, &v, &v, &v, &rho, &c, &alpha, BODY_TEMPERATURE_K, &grid);
     assert!(
         ds >= 0.0,
         "Entropy production must be nonnegative: {ds:.3e}"
@@ -167,7 +168,7 @@ fn test_second_law_violation_detected() {
     let params = ConservationParams {
         initial_energy: e_init,
         dt: 1e-6,
-        temperature: 310.0,
+        temperature: BODY_TEMPERATURE_K,
         tolerance: 1.0,
     };
     let metrics = validate_conservation(state, prev, params, &grid);

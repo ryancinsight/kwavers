@@ -1,5 +1,6 @@
 use super::model::SkullAttenuation;
 use super::types::BoneType;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 
 #[test]
 fn test_cortical_bone_properties() {
@@ -50,7 +51,7 @@ fn test_temperature_correction() {
 
     // Higher temperature increases attenuation
     let factor_cold = skull.temperature_correction(20.0);
-    let factor_body = skull.temperature_correction(37.0);
+    let factor_body = skull.temperature_correction(BODY_TEMPERATURE_C);
     let factor_hot = skull.temperature_correction(45.0);
 
     assert!(factor_cold < factor_body);

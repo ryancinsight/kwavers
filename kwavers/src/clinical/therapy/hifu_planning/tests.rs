@@ -196,7 +196,7 @@ fn focal_dose_uses_cem43_equivalent_minutes() {
     let dose = FocalSpotDoseEstimate::estimate_from_focal_spot(&focal_spot, 1.0e6, 1.0, 60.0)
         .expect("zero pressure remains a valid no-heating dose");
 
-    let expected = 0.25_f64.powf(43.0 - 37.0);
+    let expected = 0.25_f64.powf(43.0 - BODY_TEMPERATURE_C);
     assert!((dose.cem43 - expected).abs() < 1.0e-15);
     assert_eq!(dose.peak_temperature_c, BODY_TEMPERATURE_C);
     assert!(dose.time_to_dose_s.is_infinite());

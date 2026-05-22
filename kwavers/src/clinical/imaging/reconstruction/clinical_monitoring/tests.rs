@@ -2,6 +2,7 @@ use super::monitor::ClinicalMonitor;
 use super::types::{
     ClinicalMonitoringConfig, MonitoringSafetyEventType, SafetyEvent, SafetySeverity,
 };
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use std::time::SystemTime;
 
 #[test]
@@ -52,7 +53,7 @@ fn test_temperature_check() {
     let config = ClinicalMonitoringConfig::default();
     let mut monitor = ClinicalMonitor::new(config);
 
-    monitor.check_temperature(42.5, 37.0);
+    monitor.check_temperature(42.5, BODY_TEMPERATURE_C);
     assert_eq!(monitor.safety_log().len(), 1);
 
     let event = &monitor.safety_log()[0];
