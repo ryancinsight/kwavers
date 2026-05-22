@@ -18,6 +18,8 @@ use super::{
     AcousticPropertyData, ElasticPropertyData, ElectromagneticPropertyData, OpticalPropertyData,
     StrengthPropertyData, ThermalPropertyData,
 };
+use crate::core::constants::acoustic_parameters::{BONE_DENSITY, BONE_SOUND_SPEED};
+use crate::core::constants::fundamental::B_OVER_A_BONE;
 use std::fmt;
 
 /// Composite material properties for multi-physics simulations
@@ -99,11 +101,11 @@ impl CompositeMaterialProperties {
     pub fn bone() -> Self {
         Self::builder()
             .acoustic(AcousticPropertyData {
-                density: 1850.0,
-                sound_speed: 3500.0,
+                density: BONE_DENSITY,       // 1900 kg/m³ (Duck 1990)
+                sound_speed: BONE_SOUND_SPEED, // 3500 m/s (Hosokawa & Otani 1997)
                 absorption_coefficient: 0.8,
                 absorption_power: 1.2,
-                nonlinearity: 5.5,
+                nonlinearity: B_OVER_A_BONE, // 8.0 (Duck 1990 Table 4.16)
             })
             .elastic(ElasticPropertyData::bone())
             .thermal(ThermalPropertyData::bone())

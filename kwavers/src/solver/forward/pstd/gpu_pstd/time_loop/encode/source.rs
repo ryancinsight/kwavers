@@ -13,7 +13,7 @@ impl GpuPstdSolver {
     /// `source_kappa` k-correction via FFT/IFFT, then adds the corrected field
     /// back into `ux`.  This avoids the PCIe-side `clear_buffer` which would end
     /// the compute pass; the GPU `pipeline_zero_kspace` shader clears in-pass.
-    pub(super) fn encode_source_injection(
+    pub(in crate::solver::forward::pstd::gpu_pstd) fn encode_source_injection(
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
         ctx: &StepCtx,

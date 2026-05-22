@@ -34,7 +34,7 @@ impl GpuPstdSolver {
     /// | **Total per step**               | **19**    | **vs 21 before** |
     ///
     /// Net over naive (no shared FFT(p)): −2 full 3-D forward FFTs per step.
-    pub(super) fn encode_velocity_update(
+    pub(in crate::solver::forward::pstd::gpu_pstd) fn encode_velocity_update(
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
         ctx: &StepCtx,

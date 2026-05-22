@@ -9,7 +9,7 @@ impl GpuPstdSolver {
     /// `pres_density` accumulates `rhox + rhoy + rhoz` into `field_p`.  When
     /// absorbing, `absorb_pressure_correction` adds `c₀² · (τ·L1 − η·L2)`.
     /// `record` scatters `field_p[sensor_indices]` into the sensor_data buffer.
-    pub(super) fn encode_pressure_record(
+    pub(in crate::solver::forward::pstd::gpu_pstd) fn encode_pressure_record(
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
         ctx: &StepCtx,

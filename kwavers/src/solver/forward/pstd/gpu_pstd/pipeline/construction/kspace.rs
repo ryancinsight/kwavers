@@ -14,7 +14,7 @@ use std::f64::consts::PI;
 /// `[x_pos_re, x_pos_im, x_neg_re, x_neg_im (nx each),
 ///   y_pos_re, y_pos_im, y_neg_re, y_neg_im (ny each),
 ///   z_pos_re, z_pos_im, z_neg_re, z_neg_im (nz each)]`
-pub(super) fn precompute_kspace_shifts(
+pub(in crate::solver::forward::pstd::gpu_pstd) fn precompute_kspace_shifts(
     nx: usize,
     ny: usize,
     nz: usize,

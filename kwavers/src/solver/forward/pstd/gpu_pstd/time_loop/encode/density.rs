@@ -13,7 +13,7 @@ impl GpuPstdSolver {
     /// `field_p` is safe to use as scratch here: the previous step's pressure has
     /// already been recorded by sensors; it is overwritten by `pressure_from_density`
     /// after the density loop.
-    pub(super) fn encode_nonlinear_snapshot(
+    pub(in crate::solver::forward::pstd::gpu_pstd) fn encode_nonlinear_snapshot(
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
         ctx: &StepCtx,
@@ -52,7 +52,7 @@ impl GpuPstdSolver {
     /// L2 = IFFT(nabla2 · FFT(ρ_total))              [η term]
     /// p  += c₀² · (τ · L1 − η · L2)
     /// ```
-    pub(super) fn encode_density_update(
+    pub(in crate::solver::forward::pstd::gpu_pstd) fn encode_density_update(
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
         ctx: &StepCtx,
