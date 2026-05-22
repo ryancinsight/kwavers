@@ -112,12 +112,18 @@ impl SimulationSolverFactory {
 
         match selected_type {
             SolverType::FDTD => {
-                let solver = FdtdSolver::new(
+                let mut solver = FdtdSolver::new(
                     fdtd_config_from(&config),
                     grid,
                     medium,
                     GridSource::default(),
                 )?;
+                // Hoist CPML configuration: apply absorbing boundary before
+                // boxing so callers receive a fully configured `Box<dyn Solver>`
+                // without needing to downcast to FdtdSolver.
+                if let Some(ref abc) = config.absorbing_boundary {
+                    solver.enable_cpml(abc.cpml.clone(), config.dt, abc.max_sound_speed)?;
+                }
                 Ok(Box::new(solver))
             }
             SolverType::PSTD => {
