@@ -1,4 +1,4 @@
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
 use super::*;
 
 #[test]
@@ -49,11 +49,11 @@ fn test_intensity_tracker_integration() {
     const ALPHA: f64 = 0.5;
     const RHO: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     const C0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
-    const CP: f64 = 3600.0;
+    let cp = SPECIFIC_HEAT_TISSUE;
     let r_sq = (11.0 * 0.0025 - 0.03_f64).powi(2);
     let p_peak = PNP * (-r_sq / BEAM_W_SQ).exp();
     let r = r_sq.sqrt();
-    let heating_scale = ALPHA * DT / (RHO * RHO * C0 * CP);
+    let heating_scale = ALPHA * DT / (RHO * RHO * C0 * cp);
     let dist_factor = (-r / L_FOCAL).exp();
     let expected_delta_t = heating_scale * p_peak * p_peak * dist_factor;
     let expected_mi = PNP / (1e3 * 2e6_f64.sqrt());

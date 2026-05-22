@@ -1,3 +1,4 @@
+use crate::core::constants::thermodynamic::SPECIFIC_HEAT_TISSUE;
 use super::*;
 
 #[test]
@@ -51,8 +52,8 @@ fn test_therapy_step_execution() {
     const ALPHA: f64 = 0.5;
     const RHO: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     const C0: f64 = crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
-    const CP: f64 = 3600.0;
-    let heating_scale = ALPHA * DT / (RHO * RHO * C0 * CP);
+    let cp = SPECIFIC_HEAT_TISSUE;
+    let heating_scale = ALPHA * DT / (RHO * RHO * C0 * cp);
     let _ = DX;
     let _ = FOCAL;
     let expected_delta_t = heating_scale * PNP * PNP;
