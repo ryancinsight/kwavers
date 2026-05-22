@@ -1,3 +1,5 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+
 use super::super::AcousticPropertyData;
 
 /// Temperature-dependent acoustic properties.
@@ -119,7 +121,7 @@ impl TemperatureDependentAcoustic {
     pub fn soft_tissue() -> Self {
         Self {
             base_properties: AcousticPropertyData::soft_tissue(),
-            reference_temperature: 310.15,
+            reference_temperature: BODY_TEMPERATURE_K,
             sound_speed_coefficient: 0.0016,
             density_coefficient: 3.7e-4,
             absorption_coefficient: 0.015,
@@ -131,7 +133,7 @@ impl TemperatureDependentAcoustic {
     pub fn liver() -> Self {
         Self {
             base_properties: AcousticPropertyData::liver(),
-            reference_temperature: 310.15,
+            reference_temperature: BODY_TEMPERATURE_K,
             sound_speed_coefficient: 0.0018,
             density_coefficient: 3.5e-4,
             absorption_coefficient: 0.018,
@@ -143,7 +145,7 @@ impl TemperatureDependentAcoustic {
     pub fn muscle() -> Self {
         Self {
             base_properties: AcousticPropertyData::muscle(),
-            reference_temperature: 310.15,
+            reference_temperature: BODY_TEMPERATURE_K,
             sound_speed_coefficient: 0.0016,
             density_coefficient: 3.8e-4,
             absorption_coefficient: 0.012,
@@ -155,7 +157,7 @@ impl TemperatureDependentAcoustic {
     pub fn fat() -> Self {
         Self {
             base_properties: AcousticPropertyData::fat(),
-            reference_temperature: 310.15,
+            reference_temperature: BODY_TEMPERATURE_K,
             sound_speed_coefficient: 0.0014,
             density_coefficient: 7.0e-4,
             absorption_coefficient: 0.020,

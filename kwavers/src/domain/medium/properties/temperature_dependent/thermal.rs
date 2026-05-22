@@ -1,3 +1,5 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+
 use super::super::ThermalPropertyData;
 
 /// Temperature-dependent thermal properties.
@@ -89,7 +91,7 @@ impl TemperatureDependentThermal {
     pub fn soft_tissue() -> Self {
         Self {
             base_properties: ThermalPropertyData::soft_tissue(),
-            reference_temperature: 310.15,
+            reference_temperature: BODY_TEMPERATURE_K,
             conductivity_coeff_linear: 0.001,
             conductivity_coeff_quadratic: 0.0,
             specific_heat_coefficient: 0.0002,

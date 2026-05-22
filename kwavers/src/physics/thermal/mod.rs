@@ -149,7 +149,7 @@ mod tests {
     fn test_tissue_constructors() {
         let liver = tissues::liver();
         assert_eq!(liver.conductivity, 0.52);
-        assert_eq!(liver.density, 1060.0);
+        assert_eq!(liver.density, DENSITY_BLOOD);
         assert!(liver.has_bioheat_parameters());
 
         let muscle = tissues::muscle();

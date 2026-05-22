@@ -1,5 +1,6 @@
 //! Therapy calculator orchestration
 
+use crate::core::constants::fundamental::DENSITY_TISSUE;
 use crate::core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
@@ -43,7 +44,7 @@ impl TherapyCalculator {
             let properties = ThermalPropertyData::new(
                 0.5,                         // conductivity (W/m/K)
                 3600.0,                      // specific_heat (J/kg/K)
-                1050.0,                      // density (kg/m³)
+                DENSITY_TISSUE,              // density (kg/m³)
                 Some(TISSUE_PERFUSION_RATE), // blood_perfusion (1/s)
                 Some(BLOOD_SPECIFIC_HEAT),   // blood_specific_heat (J/kg/K)
             )

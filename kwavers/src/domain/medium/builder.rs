@@ -3,6 +3,7 @@
 //! Follows Builder pattern for complex medium instantiation
 
 use super::{DomainMediumParameters, LayerParameters, MediumType};
+use crate::core::constants::fundamental::DENSITY_TISSUE;
 use crate::core::constants::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::domain::grid::Grid;
@@ -205,8 +206,8 @@ impl MediumBuilder {
         // Use muscle-like properties (typical for anisotropic tissue)
         // Slightly higher speed and nonlinearity than water
         let medium = HomogeneousMedium::new(
-            1050.0, // kg/m³ (muscle density)
-            1580.0, // m/s (muscle longitudinal speed)
+            DENSITY_TISSUE, // kg/m³ (muscle density)
+            1580.0,         // m/s (muscle longitudinal speed)
             0.7,    // 1/m (muscle absorption)
             12.0,   // 1/m (muscle scattering)
             grid,

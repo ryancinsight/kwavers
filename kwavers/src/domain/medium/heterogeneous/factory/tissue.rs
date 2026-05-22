@@ -4,6 +4,7 @@
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
 use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use log::debug;
@@ -40,7 +41,7 @@ impl TissueFactory {
         let thermal_expansion = Array3::from_elem((grid.nx, grid.ny, grid.nz), 3.0e-4);
         let gas_diffusion_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.8e-9);
         let thermal_diffusivity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.35e-7);
-        let temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), 310.15); // 37°C
+        let temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), BODY_TEMPERATURE_K); // 37°C
 
         // Optical properties
         let mu_a = Array3::from_elem((grid.nx, grid.ny, grid.nz), 10.0);

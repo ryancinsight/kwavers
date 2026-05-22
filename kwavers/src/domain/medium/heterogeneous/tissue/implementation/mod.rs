@@ -8,6 +8,7 @@ use crate::domain::medium::{
     absorption::{tissue::AbsorptionTissueProperties, TISSUE_PROPERTIES},
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 mod acoustic;
@@ -75,7 +76,7 @@ impl HeterogeneousTissueMedium {
         let absorption = Array3::from_elem(shape, props.alpha_0);
         let nonlinearity = Array3::from_elem(shape, props.nonlinearity);
 
-        let temperature = Array3::from_elem(shape, 310.15); // 37°C default
+        let temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K); // 37°C default
         let bubble_radius = Array3::zeros(shape);
         let bubble_velocity = Array3::zeros(shape);
 

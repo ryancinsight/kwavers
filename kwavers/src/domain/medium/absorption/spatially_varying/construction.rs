@@ -1,3 +1,4 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
@@ -51,7 +52,7 @@ impl SpatiallyVaryingAbsorption {
             dispersion_correction: true,
             temperature_field: None,
             temperature_coefficient: 0.0,
-            reference_temperature: 310.15,
+            reference_temperature: BODY_TEMPERATURE_K,
         })
     }
     /// Uniform.

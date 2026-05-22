@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
 
@@ -60,7 +61,7 @@ fn test_compute_absorption_field() -> KwaversResult<()> {
 fn test_temperature_dependence() -> KwaversResult<()> {
     let absorption = SpatiallyVaryingAbsorption::uniform(5, 5, 5, 1.0, 1.0)?;
 
-    let mut temp_field = Array3::from_elem((5, 5, 5), 310.15);
+    let mut temp_field = Array3::from_elem((5, 5, 5), BODY_TEMPERATURE_K);
     temp_field[[2, 2, 2]] = 320.15;
 
     let absorption = absorption.with_temperature_dependence(temp_field, 0.01)?;

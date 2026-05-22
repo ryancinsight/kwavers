@@ -1,3 +1,5 @@
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+
 use super::{
     MaterialPropertiesAtT, TemperatureDependentAcoustic, TemperatureDependentMaterial,
     TemperatureDependentThermal,
@@ -34,17 +36,17 @@ fn test_water_density_temperature_dependence() {
 fn test_impedance_temperature_dependence() {
     let water = TemperatureDependentAcoustic::water();
     let z1 = water.impedance(293.15);
-    let z2 = water.impedance(310.15);
+    let z2 = water.impedance(BODY_TEMPERATURE_K);
 
     assert!(z2 > z1);
-    let expected_z2 = water.density(310.15) * water.sound_speed(310.15);
+    let expected_z2 = water.density(BODY_TEMPERATURE_K) * water.sound_speed(BODY_TEMPERATURE_K);
     assert!((z2 - expected_z2).abs() < 1e-6);
 }
 
 #[test]
 fn test_absorption_temperature_and_frequency_dependence() {
     let tissue = TemperatureDependentAcoustic::soft_tissue();
-    let t_ref = 310.15;
+    let t_ref = BODY_TEMPERATURE_K;
     let t_hot = 320.15;
     let freq = 1e6;
 
@@ -82,7 +84,7 @@ fn test_duck_1990_water_data_validation() {
     let c_20c = water.sound_speed(293.15);
     assert!((c_20c - 1481.0).abs() < 10.0);
 
-    let c_37c = water.sound_speed(310.15);
+    let c_37c = water.sound_speed(BODY_TEMPERATURE_K);
     let expected_37c = 1481.0 * (1.0 + 0.002 * 17.0);
     assert!((c_37c - expected_37c).abs() < 10.0);
 }
