@@ -1,6 +1,7 @@
 //! Core data structures for transcranial treatment planning
 
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use ndarray::Array3;
 
 /// Treatment target volume in brain coordinates
@@ -89,7 +90,7 @@ impl Default for TranscranialSafetyConstraints {
         Self {
             max_skull_temp: 42.0,    // °C
             max_brain_temp: 43.0,    // °C
-            max_mi: 1.9,             // Mechanical index limit
+            max_mi: MI_LIMIT_SOFT_TISSUE, // Mechanical index limit
             max_thermal_dose: 240.0, // CEM43 for brain tissue
             min_skull_distance: 5.0, // mm
         }

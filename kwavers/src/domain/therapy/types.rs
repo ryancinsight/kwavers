@@ -1,3 +1,4 @@
+use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use ndarray::Array3;
 
@@ -148,7 +149,7 @@ impl DomainTherapyParameters {
 
     #[must_use]
     pub fn validate_safety(&self) -> bool {
-        if self.mechanical_index > 1.9 {
+        if self.mechanical_index > MI_LIMIT_SOFT_TISSUE {
             return false;
         }
         if self.treatment_duration > 3600.0 {

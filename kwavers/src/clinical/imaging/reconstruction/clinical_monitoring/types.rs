@@ -1,3 +1,4 @@
+use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use std::time::SystemTime;
 
 /// Monitoring configuration
@@ -31,7 +32,7 @@ impl Default for ClinicalMonitoringConfig {
             quality_alert_threshold: 0.7,
             safety_alert_threshold: 0.9,
             max_temperature_rise_c: 5.0,
-            max_mechanical_index: 1.9,
+            max_mechanical_index: MI_LIMIT_SOFT_TISSUE,
         }
     }
 }

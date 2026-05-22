@@ -5,6 +5,7 @@
 //! bioeffects evaluation.
 
 use crate::core::constants::acoustic_parameters::NP_TO_DB;
+use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use crate::core::constants::numerical::CM_TO_M;
 use crate::core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER;
 use ndarray::Array3;
@@ -24,7 +25,7 @@ impl Default for BioeffectsParameters {
     fn default() -> Self {
         Self {
             thermal_threshold: 240.0,        // 240 CEM43 minutes
-            mechanical_index_threshold: 1.9, // FDA guideline
+            mechanical_index_threshold: MI_LIMIT_SOFT_TISSUE, // FDA guideline
             max_negative_pressure: 20e6,     // 20 MPa
         }
     }
@@ -83,9 +84,9 @@ impl SafetyAssessment {
         self.violations.clear();
 
         // Mechanical Index limit (FDA 510(k))
-        if self.max_mechanical_index > 1.9 {
+        if self.max_mechanical_index > MI_LIMIT_SOFT_TISSUE {
             self.violations.push(format!(
-                "MI {:.2} exceeds FDA limit 1.9",
+                "MI {:.2} exceeds FDA limit {MI_LIMIT_SOFT_TISSUE:.1}",
                 self.max_mechanical_index
             ));
         }
@@ -117,7 +118,7 @@ impl SafetyAssessment {
         self.overall_safe = self.violations.is_empty();
 
         // Safety score: 1 = fully safe, 0 = at or beyond all limits
-        let mi_ratio = self.max_mechanical_index / 1.9;
+        let mi_ratio = self.max_mechanical_index / MI_LIMIT_SOFT_TISSUE;
         let ti_ratio = self.max_thermal_index / 6.0;
         let dp_ratio = self.max_damage_probability / 0.05;
         let worst = mi_ratio.max(ti_ratio).max(dp_ratio);

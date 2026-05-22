@@ -1,6 +1,7 @@
 //! TranscranialSafetyMonitor struct and field update orchestration
 
 use super::types::{MechanicalIndex, SafetyThresholds, TranscranialSafetyDose};
+use crate::core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::KwaversResult;
 use ndarray::Array3;
@@ -39,7 +40,7 @@ impl TranscranialSafetyMonitor {
         let mechanical_index = MechanicalIndex {
             current_mi: 0.0,
             peak_pressure: 0.0,
-            limit: 1.9,
+            limit: MI_LIMIT_SOFT_TISSUE,
             safety_margin: 1.0,
         };
 
