@@ -3,6 +3,7 @@
 //! Configuration types for elasticity reconstruction algorithms, including
 //! linear and nonlinear inversion method selection.
 
+use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use crate::domain::imaging::ultrasound::elastography::{InversionMethod, NonlinearInversionMethod};
 
 /// Configuration for shear wave inversion
@@ -26,7 +27,7 @@ impl ShearWaveInversionConfig {
     pub fn new(method: InversionMethod) -> Self {
         Self {
             method,
-            density: 1000.0,  // Typical soft tissue density
+            density: DENSITY_WATER_NOMINAL,  // Typical soft tissue density
             frequency: 100.0, // Typical SWE frequency
         }
     }
@@ -129,7 +130,7 @@ impl NonlinearInversionConfig {
     pub fn new(method: NonlinearInversionMethod) -> Self {
         Self {
             method,
-            density: 1000.0,             // kg/m³
+            density: DENSITY_WATER_NOMINAL, // kg/m³
             acoustic_speed: crate::core::constants::fundamental::SOUND_SPEED_TISSUE, // m/s (typical soft tissue)
             shear_wave_speed: 3.0,       // m/s (liver-like tissue; Nightingale 2011)
             excitation_frequency: 100.0, // Hz (typical push-pulse SWE)
@@ -248,13 +249,13 @@ impl Default for NonlinearInversionConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
     use super::*;
 
     #[test]
     fn test_shear_wave_config_default() {
         let config = ShearWaveInversionConfig::default();
-        assert_eq!(config.density, 1000.0);
+        assert_eq!(config.density, DENSITY_WATER_NOMINAL);
         assert_eq!(config.frequency, 100.0);
         assert!(matches!(config.method, InversionMethod::TimeOfFlight));
     }
@@ -291,7 +292,7 @@ mod tests {
     #[test]
     fn test_nonlinear_config_default() {
         let config = NonlinearInversionConfig::default();
-        assert_eq!(config.density, 1000.0);
+        assert_eq!(config.density, DENSITY_WATER_NOMINAL);
         assert_eq!(config.acoustic_speed, SOUND_SPEED_TISSUE);
         assert_eq!(config.max_iterations, 100);
         assert_eq!(config.tolerance, 1e-6);
@@ -328,7 +329,7 @@ mod tests {
 
         let invalid_iterations = NonlinearInversionConfig {
             method: NonlinearInversionMethod::HarmonicRatio,
-            density: 1000.0,
+            density: DENSITY_WATER_NOMINAL,
             acoustic_speed: SOUND_SPEED_TISSUE,
             shear_wave_speed: 3.0,
             excitation_frequency: 100.0,

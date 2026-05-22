@@ -151,8 +151,8 @@ impl ThermoelasticReport {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
+    use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+    use crate::core::constants::thermodynamic::{KELVIN_OFFSET_C, SPECIFIC_HEAT_WATER};
     use super::*;
 
     /// Γ = 0.12 + 0.004·(37−20) = 0.12 + 0.068 = 0.188 for water at 37 °C.
@@ -236,9 +236,9 @@ mod tests {
     fn test_thermoelastic_report_temperature_sensitivity() -> KwaversResult<()> {
         use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
         let thermoelastic = ThermoelasticProperties {
-            density_kg_m3: 1000.0,
+            density_kg_m3: DENSITY_WATER_NOMINAL,
             sound_speed_m_s: SOUND_SPEED_WATER_SIM,
-            specific_heat_j_kgk: 4182.0,
+            specific_heat_j_kgk: SPECIFIC_HEAT_WATER,
             thermal_conductivity_w_mk: 0.6,
         };
         let model = GrueneisenModel::water();

@@ -49,7 +49,7 @@
 //! - Wood A.B. (1955). *A Textbook of Sound*. Bell & Hyman, London.
 
 use crate::core::constants::cavitation::VISCOSITY_WATER;
-use crate::core::constants::fundamental::DENSITY_TISSUE;
+use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL};
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Poroelastic material properties
@@ -83,7 +83,7 @@ impl Default for PoroelasticMaterial {
         Self {
             porosity: 0.3,              // 30% porosity
             solid_density: 2000.0,      // kg/m³
-            fluid_density: 1000.0,      // Water
+            fluid_density: DENSITY_WATER_NOMINAL, // SSOT: fundamental::DENSITY_WATER_NOMINAL
             solid_bulk_modulus: 10e9,   // 10 GPa
             fluid_bulk_modulus: 2.25e9, // 2.25 GPa
             shear_modulus: 3.5e9,       // 3.5 GPa
@@ -160,7 +160,7 @@ impl PoroelasticMaterial {
             "cortical_bone" => Ok(Self {
                 porosity: 0.05, // 5% porosity
                 solid_density: 2000.0,
-                fluid_density: 1000.0,
+                fluid_density: DENSITY_WATER_NOMINAL,
                 solid_bulk_modulus: 20e9, // 20 GPa
                 fluid_bulk_modulus: 2.25e9,
                 shear_modulus: 7e9,  // 7 GPa
@@ -171,7 +171,7 @@ impl PoroelasticMaterial {
             "liver" => Ok(Self {
                 porosity: 0.15, // 15% vascular space
                 solid_density: DENSITY_TISSUE, // SSOT: fundamental::DENSITY_TISSUE
-                fluid_density: 1000.0,
+                fluid_density: DENSITY_WATER_NOMINAL,
                 solid_bulk_modulus: 2.5e9, // 2.5 GPa
                 fluid_bulk_modulus: 2.25e9,
                 shear_modulus: 5e3, // 5 kPa (soft)

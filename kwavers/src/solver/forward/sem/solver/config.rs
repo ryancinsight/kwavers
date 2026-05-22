@@ -1,6 +1,6 @@
 //! `SemConfig` configuration type for the Spectral Element Method solver.
 
-use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
 /// Configuration for SEM solver
 #[derive(Debug, Clone)]
@@ -27,7 +27,7 @@ impl Default for SemConfig {
             dt: 1e-7,
             n_steps: 1000,
             sound_speed: SOUND_SPEED_WATER_SIM,
-            density: 1000.0,
+            density: DENSITY_WATER_NOMINAL,
         }
     }
 }

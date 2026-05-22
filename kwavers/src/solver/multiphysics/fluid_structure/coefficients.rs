@@ -146,6 +146,7 @@ impl ReflectionTransmissionCoefficients {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use super::super::interface::FsiInterfaceSpec;
     use super::*;
 
@@ -156,7 +157,7 @@ mod tests {
         normal: [f64; 3],
     ) -> FsiInterfaceSpec {
         FsiInterfaceSpec {
-            fluid_density: 1000.0,
+            fluid_density: DENSITY_WATER_NOMINAL,
             fluid_sound_speed: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
             solid_density,
             solid_c_l,

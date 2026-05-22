@@ -77,7 +77,7 @@ mod tests {
                     snapshot_interval: 2,
                 },
                 thermoelastic: ThermoelasticProperties {
-                    density_kg_m3: 1000.0,
+                    density_kg_m3: crate::core::constants::fundamental::DENSITY_WATER_NOMINAL,
                     sound_speed_m_s: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
                     specific_heat_j_kgk: crate::core::constants::thermodynamic::SPECIFIC_HEAT_WATER_37C,
                     thermal_conductivity_w_mk: 0.6,

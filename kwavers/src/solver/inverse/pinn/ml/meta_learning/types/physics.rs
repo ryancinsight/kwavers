@@ -1,6 +1,6 @@
 //! Physics parameters for meta-learning task governing equations.
 
-use crate::core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::fundamental::{DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 /// Physics parameters defining the task's governing equations
 ///
@@ -80,7 +80,7 @@ impl MetaLearningPhysicsParameters {
     pub fn acoustic_water() -> Self {
         Self {
             wave_speed: SOUND_SPEED_WATER_SIM,
-            density: 1000.0,
+            density: DENSITY_WATER_NOMINAL,
             viscosity: None,
             absorption: Some(0.025),
             nonlinearity: Some(5.0), // B/A for water
