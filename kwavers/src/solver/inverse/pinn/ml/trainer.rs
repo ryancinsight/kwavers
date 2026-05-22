@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::solver::inverse::pinn::ml::burn_wave_equation_1d::{
     BurnPINNConfig, BurnPINNTrainer, BurnTrainingMetrics,
@@ -162,7 +163,7 @@ fn train_1d(
         .material_properties
         .get("wave_speed")
         .cloned()
-        .unwrap_or(1500.0);
+        .unwrap_or(SOUND_SPEED_WATER_SIM);
 
     let start_time = std::time::Instant::now();
 
@@ -226,7 +227,7 @@ fn train_2d(
         .material_properties
         .get("wave_speed")
         .cloned()
-        .unwrap_or(1500.0);
+        .unwrap_or(SOUND_SPEED_WATER_SIM);
 
     let start_time = std::time::Instant::now();
 

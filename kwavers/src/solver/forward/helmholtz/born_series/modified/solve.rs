@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::medium::Medium;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
@@ -102,7 +103,7 @@ impl ModifiedBornSolver {
         let c_local = medium.sound_speed(i, j, k);
         let rho_local = medium.density(i, j, k);
 
-        let c0 = 1500.0;
+        let c0 = SOUND_SPEED_WATER_SIM;
         let rho0 = 1000.0;
 
         1.0 - (rho_local * c_local * c_local) / (rho0 * c0 * c0)

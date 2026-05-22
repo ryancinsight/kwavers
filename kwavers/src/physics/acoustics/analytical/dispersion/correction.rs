@@ -4,6 +4,7 @@
 //! computed dispersion errors from FDTD or PSTD methods.
 
 use super::DispersionAnalysis;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 use std::f64::consts::PI;
@@ -108,7 +109,7 @@ mod tests {
             &mut field,
             &grid,
             1e6,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             DispersionMethod::None,
         );
         for &v in field.iter() {
@@ -131,7 +132,7 @@ mod tests {
             &mut field,
             &grid,
             1e6,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             DispersionMethod::PSTD(2),
         );
         for &v in field.iter() {
@@ -153,7 +154,7 @@ mod tests {
             0.0,
             0.0,
             0.0,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             DispersionMethod::None,
         );
         for &v in field.iter() {

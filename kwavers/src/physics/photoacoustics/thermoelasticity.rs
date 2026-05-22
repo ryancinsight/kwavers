@@ -151,6 +151,7 @@ impl ThermoelasticReport {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
 
     /// Γ = 0.12 + 0.004·(37−20) = 0.12 + 0.068 = 0.188 for water at 37 °C.
@@ -235,7 +236,7 @@ mod tests {
         use crate::domain::imaging::photoacoustic::ThermoelasticProperties;
         let thermoelastic = ThermoelasticProperties {
             density_kg_m3: 1000.0,
-            sound_speed_m_s: 1500.0,
+            sound_speed_m_s: SOUND_SPEED_WATER_SIM,
             specific_heat_j_kgk: 4182.0,
             thermal_conductivity_w_mk: 0.6,
         };
@@ -288,7 +289,7 @@ mod tests {
     fn test_stress_confinement_condition() {
         let tau_laser = 5e-9_f64; // 5 ns laser pulse
         let mu_a = 100.0_f64; // m⁻¹
-        let c_s = 1500.0_f64; // m/s
+        let c_s = SOUND_SPEED_WATER_SIM; // m/s
         let tau_stress = 1.0 / (mu_a * c_s); // = 6.67 µs
         assert!(
             tau_laser < tau_stress,

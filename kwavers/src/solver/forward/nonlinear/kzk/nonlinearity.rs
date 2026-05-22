@@ -40,6 +40,7 @@
 //!   §4.2.1, eq. (4.2.3).
 
 use super::KZKConfig;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use ndarray::{Array1, Array3};
 
@@ -339,7 +340,7 @@ mod tests {
     /// ```
     #[test]
     fn shock_distance_matches_analytical_formula() {
-        let c0 = 1500.0_f64;
+        let c0 = SOUND_SPEED_WATER_SIM;
         let rho0 = 1000.0_f64;
         let b_over_a = 5.0_f64; // water at 25°C (Beyer 1960)
         let frequency = 1.0e6_f64; // 1 MHz
@@ -423,7 +424,7 @@ mod tests {
     /// Doubling p₀ halves z_shock and thus doubles Γ at any fixed z.
     #[test]
     fn goldberg_number_scales_linearly_with_amplitude() {
-        let c0 = 1500.0_f64;
+        let c0 = SOUND_SPEED_WATER_SIM;
         let rho0 = 1000.0_f64;
         let b_over_a = 5.0_f64;
         let frequency = 1.0e6_f64;

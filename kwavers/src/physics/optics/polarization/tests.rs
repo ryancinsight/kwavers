@@ -1,5 +1,6 @@
 //! Tests for optical polarization physics
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::*;
 use crate::domain::grid::Grid;
 use approx::assert_relative_eq;
@@ -101,7 +102,7 @@ fn test_jones_polarization_model() {
 
     let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
 
-    let medium = crate::domain::medium::HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+    let medium = crate::domain::medium::HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     model.apply_polarization(&mut fluence, &mut polarization_state, &grid, &medium);
 
     for i in 0..2 {

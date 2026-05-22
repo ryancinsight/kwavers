@@ -103,7 +103,7 @@ impl OptimizedRuntime {
         }
         result += self.biases[1][0];
 
-        let c = 1500.0;
+        let c = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM as f32;
         let residual_correction = self.compute_wave_residual_jit(x, y, t, result, c);
 
         output[0] = result + self.config.physics_weight * residual_correction;

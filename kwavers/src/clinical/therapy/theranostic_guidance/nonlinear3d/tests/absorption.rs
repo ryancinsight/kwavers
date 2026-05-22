@@ -21,6 +21,7 @@
 //! `#[ignore]`'d (~10 s runtime, two forward runs). Run on demand with
 //! `cargo test --lib --package kwavers -- --ignored absorption_decay`.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
@@ -34,7 +35,7 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
     let n: usize = 96;
     let cells = n * n * n;
     let spacing_m = 1.5e-4_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let frequency_hz = 1.0e6_f64;
     let alpha0_np_per_m_at_1mhz = 5.8_f64;

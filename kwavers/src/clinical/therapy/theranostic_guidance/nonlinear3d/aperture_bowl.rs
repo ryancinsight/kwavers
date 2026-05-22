@@ -4,6 +4,7 @@ use std::collections::HashSet;
 
 use ndarray::Array3;
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 
 use super::super::abdominal3d::bowl::{bowl_elements, BOWL_THETA_MAX_RAD};
@@ -237,7 +238,7 @@ mod tests {
     ) -> Nonlinear3dVolume {
         let n = body_mask.dim().0;
         let f64_zeros = Array3::from_elem((n, n, n), 0.0);
-        let speed = Array3::from_elem((n, n, n), 1500.0);
+        let speed = Array3::from_elem((n, n, n), SOUND_SPEED_WATER_SIM);
         Nonlinear3dVolume {
             anatomy: AnatomyKind::Liver,
             ct_hu: f64_zeros.clone(),

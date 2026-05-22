@@ -2,6 +2,7 @@
 
 use super::solver::ConvergentBornSolver;
 use super::stats::ConvergentBornStats;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::medium::Medium;
 use ndarray::{ArrayView3, ArrayViewMut3, Zip};
@@ -62,7 +63,7 @@ impl ConvergentBornSolver {
     fn cbs_iteration<M: Medium>(&mut self, wavenumber: f64, medium: &M) -> KwaversResult<f64> {
         let k_squared = wavenumber * wavenumber;
         let (nx, ny, nz) = self.workspace.heterogeneity_workspace.dim();
-        let c0 = 1500.0_f64;
+        let c0 = SOUND_SPEED_WATER_SIM;
         let rho0 = 1000.0_f64;
 
         // Phase 1: sequential — medium properties are not guaranteed Sync.

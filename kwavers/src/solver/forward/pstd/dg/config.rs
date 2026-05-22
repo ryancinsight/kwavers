@@ -35,6 +35,9 @@
 /// `‖u⁽¹⁾‖_TV ≤ ‖u^n‖_TV`.
 ///
 /// **CFL condition for DG(p):** `CFL ≤ 1/(2p+1)` (Cockburn & Shu 2001 §4).
+
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DgTimeIntegrator {
     /// Strong Stability Preserving Runge–Kutta, 3rd-order (Shu & Osher 1988).
@@ -184,7 +187,7 @@ impl Default for DGConfig {
             limiter_type: super::flux::LimiterType::Minmod,
             shock_threshold: 0.1,
             shock_capture: ShockCaptureConfig::default(),
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             boundary_conditions: [DgBoundaryCondition::Periodic; 3],
             cpml: None,
         }

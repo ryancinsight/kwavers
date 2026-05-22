@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::medium::HomogeneousMedium;
 use crate::KwaversError;
 
@@ -74,7 +75,7 @@ fn unsupported_spatial_order_returns_validation_error_without_mutation() {
 #[test]
 fn standard_update_consumes_borrowed_source_view_without_source_clone() {
     let grid = Grid::new(3, 3, 1, 1.0, 1.0, 1.0).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
     let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
     solver.set_temperature(Array3::from_elem((3, 3, 1), 310.0));
     let mut source = Array3::zeros((3, 3, 1));

@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, SOUND_SPEED_WATER_SIM};
 use super::*;
 
 #[test]
@@ -41,7 +41,7 @@ fn rp_rk4_initial_condition() {
 fn km_rk4_length_matches() {
     let t: Vec<f64> = (0..5).map(|i| i as f64 * 1e-9).collect();
     let (r, v) = keller_miksis_rk4(
-        10e-6, 0.0, 0.0, 1e6, &t, ATMOSPHERIC_PRESSURE, 998.0, 0.0725, 0.001, 1.4, 2_330.0, 1500.0,
+        10e-6, 0.0, 0.0, 1e6, &t, ATMOSPHERIC_PRESSURE, 998.0, 0.0725, 0.001, 1.4, 2_330.0, SOUND_SPEED_WATER_SIM,
     );
     assert_eq!(r.len(), 5);
     assert_eq!(v.len(), 5);

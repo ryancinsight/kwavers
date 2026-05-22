@@ -1,5 +1,6 @@
 //! Nonlinear term computation for Westervelt equation
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 use ndarray::{Array3, Zip};
@@ -208,7 +209,7 @@ mod tests {
     #[test]
     fn nonlinear_term_into_matches_product_rule_for_constant_history() {
         const RHO: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
-        const C: f64 = 1500.0;
+        const C: f64 = SOUND_SPEED_WATER_SIM;
         const DT: f64 = 0.5;
         const P_CURR: f64 = 2.0;
 
@@ -276,7 +277,7 @@ mod tests {
         use crate::domain::medium::ViscousProperties;
 
         const RHO: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
-        const C: f64 = 1500.0;
+        const C: f64 = SOUND_SPEED_WATER_SIM;
         const DT: f64 = 0.25;
 
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0).unwrap();

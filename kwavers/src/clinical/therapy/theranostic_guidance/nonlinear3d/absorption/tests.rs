@@ -2,6 +2,7 @@
 //! magnitudes against Treeby-Cox 2010 Eq. 11, zero-attenuation short-circuit,
 //! and the discrete-adjoint transpose identity `⟨A·v, w⟩ = ⟨v, Aᵀ·w⟩`.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::{AbsorptionBuilder, FractionalLaplacianAbsorption};
 
 fn build_homogeneous_operator(
@@ -34,7 +35,7 @@ fn build_homogeneous_operator(
 fn fractional_laplacian_absorption_builder_matches_treeby_cox_2010_coefficients() {
     let n = 8;
     let spacing_m = 1.0e-4;
-    let c0 = 1500.0;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dt_s = 0.4 * spacing_m / (c0 * 3.0_f64.sqrt());
     let alpha0 = 149.7; // skull at 1 MHz, Np/m
     let y = 2.0;
@@ -62,7 +63,7 @@ fn fractional_laplacian_absorption_builder_matches_treeby_cox_2010_coefficients(
 fn maybe_new_returns_none_for_zero_attenuation() {
     let n = 4;
     let cells = n * n * n;
-    let speed = vec![1500.0; cells];
+    let speed = vec![SOUND_SPEED_WATER_SIM; cells];
     let alpha = vec![0.0; cells];
     let y_field = vec![1.05; cells];
     let op = FractionalLaplacianAbsorption::maybe_new(AbsorptionBuilder {
@@ -86,7 +87,7 @@ fn apply_transpose_is_jacobian_transpose() {
     let n = 8;
     let cells = n * n * n;
     let spacing_m = 1.0e-4;
-    let c0 = 1500.0;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dt_s = 0.4 * spacing_m / (c0 * 3.0_f64.sqrt());
     let alpha0 = 5.8; // soft-tissue Np/m at 1 MHz
     let y = 1.05;

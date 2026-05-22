@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 fn test_conservation_diagnostic_severity() {
@@ -70,7 +71,7 @@ fn test_conservation_tracker() {
 #[test]
 fn test_energy_density_calculation() {
     let density = 1000.0;
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let pressure = 1000.0;
     let velocity = (0.1, 0.0, 0.0);
 

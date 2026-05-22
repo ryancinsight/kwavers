@@ -248,11 +248,12 @@ impl CattaneoVernotte {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
 
     fn homogeneous_unit_medium(grid: &Grid) -> HomogeneousMedium {
-        let mut medium = HomogeneousMedium::new(1.0, 1500.0, 0.0, 0.0, grid);
+        let mut medium = HomogeneousMedium::new(1.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid);
         medium
             .set_thermal_properties(1.0, 1.0)
             .expect("unit thermal properties are valid");

@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use super::model::CavitationDamage;
 use crate::physics::bubble_dynamics::bubble_field::BubbleStateFields;
@@ -14,7 +15,7 @@ fn test_damage_calculation() {
     states.velocity[[5, 5, 5]] = -100.0;
     states.pressure[[5, 5, 5]] = 1e9;
 
-    damage.update_damage(&states, (1000.0, 1500.0), 1e-6);
+    damage.update_damage(&states, (1000.0, SOUND_SPEED_WATER_SIM), 1e-6);
 
     assert!(damage.damage_field[[5, 5, 5]] > 0.0);
     assert!(damage.impact_count[[5, 5, 5]] > 0);

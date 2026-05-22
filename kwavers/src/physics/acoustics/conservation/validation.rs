@@ -83,6 +83,7 @@ pub fn validate_conservation(
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
@@ -106,11 +107,11 @@ mod tests {
         let p = uniform(s, 1000.0);
         let v = uniform(s, 0.0);
         let rho = uniform(s, 1000.0);
-        let c = uniform(s, 1500.0);
+        let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = uniform(s, 0.0);
         let dv = grid.dx * grid.dy * grid.dz;
         let n = (s.0 * s.1 * s.2) as f64;
-        let init = 1000.0_f64.powi(2) / (2.0 * 1000.0 * 1500.0_f64.powi(2)) * dv * n;
+        let init = 1000.0_f64.powi(2) / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM.powi(2)) * dv * n;
 
         let state = AcousticStateRefs {
             pressure: &p,
@@ -154,7 +155,7 @@ mod tests {
         let s = (grid.nx, grid.ny, grid.nz);
         let p0 = 500.0_f64;
         let rho0 = 1000.0_f64;
-        let c0 = 1500.0_f64;
+        let c0 = SOUND_SPEED_WATER_SIM;
         let p = uniform(s, p0);
         let v = uniform(s, 0.0);
         let rho = uniform(s, rho0);

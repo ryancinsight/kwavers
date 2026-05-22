@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 fn test_transfer_learning_config() {
@@ -8,7 +9,7 @@ fn test_transfer_learning_config() {
         freeze_strategy: FreezeStrategy::ProgressiveUnfreeze,
         adaptation_strength: 0.1,
         patience: 10,
-        wave_speed: 1500.0,
+        wave_speed: SOUND_SPEED_WATER_SIM,
     };
 
     assert_eq!(config.fine_tune_epochs, 50);

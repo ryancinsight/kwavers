@@ -1,5 +1,6 @@
 use super::super::config::BurnPINN3DConfig;
 use super::core::PINN3DNetwork;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult, SystemError};
 use burn::backend::NdArray;
 use burn::tensor::{Tensor, TensorData};
@@ -63,7 +64,7 @@ fn test_pde_residual_shape() -> KwaversResult<()> {
     let t = Tensor::<TestBackend, 2>::zeros([n_points, 1], &device);
 
     // Constant wave speed
-    let wave_speed = |_x: f32, _y: f32, _z: f32| Ok(1500.0);
+    let wave_speed = |_x: f32, _y: f32, _z: f32| Ok(SOUND_SPEED_WATER_SIM as f32);
 
     let residual = network.compute_pde_residual(x, y, z, t, wave_speed)?;
 
@@ -98,7 +99,7 @@ fn test_pde_residual_heterogeneous_medium() -> KwaversResult<()> {
         .unsqueeze_dim(1);
 
     // Layered medium: different speeds in left/right halves
-    let wave_speed = |x: f32, _y: f32, _z: f32| Ok(if x < 0.5 { 1500.0 } else { 3000.0 });
+    let wave_speed = |x: f32, _y: f32, _z: f32| Ok(if x < 0.5 { SOUND_SPEED_WATER_SIM as f32 } else { 3000.0_f32 });
 
     let residual = network.compute_pde_residual(x, y, z, t, wave_speed)?;
 

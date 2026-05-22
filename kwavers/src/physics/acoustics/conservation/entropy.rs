@@ -60,6 +60,7 @@ pub fn entropy_production_rate(
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
@@ -81,7 +82,7 @@ mod tests {
         let s = (grid.nx, grid.ny, grid.nz);
         let zero = Array3::<f64>::zeros(s);
         let rho = uniform(s, 1000.0);
-        let c = uniform(s, 1500.0);
+        let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = uniform(s, 5.0); // non-zero absorption, but zero energy
         let ds =
             entropy_production_rate(&zero, &zero, &zero, &zero, &rho, &c, &alpha, 310.0, &grid);
@@ -100,7 +101,7 @@ mod tests {
         let s = (grid.nx, grid.ny, grid.nz);
         let p0 = 3000.0_f64;
         let rho0 = 1000.0_f64;
-        let c0 = 1500.0_f64;
+        let c0 = SOUND_SPEED_WATER_SIM;
         let a0 = 2.0_f64;
         let t0 = 310.0_f64;
         let p = uniform(s, p0);

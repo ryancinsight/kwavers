@@ -132,7 +132,7 @@ impl NonlinearSWEConfig {
     /// Reference sound speed in m/s
     #[must_use]
     pub fn sound_speed(&self) -> f64 {
-        1500.0 // m/s, typical for soft tissue
+        crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM // m/s, typical for soft tissue
     }
 }
 
@@ -164,7 +164,7 @@ mod tests {
     fn test_sound_speed() {
         let config = NonlinearSWEConfig::default();
         let c = config.sound_speed();
-        assert_eq!(c, 1500.0);
+        assert_eq!(c, crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM);
     }
 
     #[test]

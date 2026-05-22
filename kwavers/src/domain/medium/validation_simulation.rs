@@ -3,6 +3,7 @@
 //! Implements comprehensive validation following literature standards
 
 use super::config::{DomainMediumParameters, LayerParameters, MediumType};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{ConfigError, KwaversResult};
 
 /// Specialized medium validator following Single Responsibility Principle  
@@ -22,7 +23,7 @@ impl MediumValidator {
 
                 Self::validate_homogeneous(
                     config.density,
-                    config.sound_speed.unwrap_or(1500.0),
+                    config.sound_speed.unwrap_or(SOUND_SPEED_WATER_SIM),
                     mu_a,
                     mu_s_prime,
                 )?;

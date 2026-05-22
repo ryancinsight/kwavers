@@ -34,6 +34,7 @@
 //! - Lambert, J.H. (1760): "Photometria sive de mensura et gradibus luminis, colorum et umbrae"
 //! - Beer, A. (1852): "Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten"
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -164,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_amplitude_attenuation() {
-        let calc = AttenuationCalculator::new(0.1, 1000.0, 1500.0);
+        let calc = AttenuationCalculator::new(0.1, 1000.0, SOUND_SPEED_WATER_SIM);
         let initial = 1.0;
         let distance = 10.0;
         let attenuated = calc.amplitude_at_distance(initial, distance);
@@ -174,14 +175,14 @@ mod tests {
 
     #[test]
     fn test_penetration_depth() {
-        let calc = AttenuationCalculator::new(0.1, 1000.0, 1500.0);
+        let calc = AttenuationCalculator::new(0.1, 1000.0, SOUND_SPEED_WATER_SIM);
         let depth = calc.penetration_depth();
         assert_relative_eq!(depth, 10.0, epsilon = 1e-10);
     }
 
     #[test]
     fn test_attenuation_db() {
-        let calc = AttenuationCalculator::new(0.1, 1000.0, 1500.0);
+        let calc = AttenuationCalculator::new(0.1, 1000.0, SOUND_SPEED_WATER_SIM);
         let distance = 10.0;
         let db = calc.attenuation_db(distance);
         let expected = 8.686_f64 * 0.1 * 10.0;

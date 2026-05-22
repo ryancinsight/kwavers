@@ -32,6 +32,7 @@ pub use time_scale_separation::{TimeScale, TimeScaleSeparator};
 pub use time_stepper::{AdamsBashforth, RungeKutta4};
 pub use traits::{MultiRateConfig, TimeStepper, TimeStepperConfig, TimeStepperType};
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
@@ -178,7 +179,7 @@ impl MultiRateTimeIntegrator {
                         .copied()
                         .unwrap_or_else(|| {
                             let max_val = field.iter().map(|v| v.abs()).fold(0.0, f64::max);
-                            max_val.max(1500.0)
+                            max_val.max(SOUND_SPEED_WATER_SIM)
                         });
                     let dx_min = grid.dx.min(grid.dy).min(grid.dz);
                     let cfl_dt = dx_min * cfl_number / max_speed.max(1e-10);

@@ -14,6 +14,7 @@
 //! When called for every retarded-time slice (nt = 1000), one diffraction
 //! half-step saves 3000 allocations (~786 MB total clones + FFT temporaries).
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
 use ndarray::{Array2, ArrayViewMut2, Zip};
 use std::f64::consts::PI;
@@ -193,7 +194,7 @@ mod tests {
             ny: 64,
             dx: DEFAULT_WAVELENGTH / 8.0,
             frequency: DEFAULT_FREQUENCY,
-            c0: 1500.0,
+            c0: SOUND_SPEED_WATER_SIM,
             ..Default::default()
         };
 
@@ -237,7 +238,7 @@ mod tests {
             ny: DEFAULT_GRID_SIZE,
             dx: DEFAULT_WAVELENGTH / 6.0,
             frequency: DEFAULT_FREQUENCY,
-            c0: 1500.0,
+            c0: SOUND_SPEED_WATER_SIM,
             ..Default::default()
         };
 

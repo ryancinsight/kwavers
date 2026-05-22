@@ -159,7 +159,7 @@ pub fn gaussian_power_deposition_2d(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::constants::fundamental::DENSITY_BLOOD;
+    use crate::core::constants::fundamental::{DENSITY_BLOOD, SOUND_SPEED_WATER_SIM};
     use super::*;
 
     #[test]
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn hifu_gain_positive() {
-        let g = hifu_focal_pressure_gain(0.1, 1.5, 1e6, 1500.0);
+        let g = hifu_focal_pressure_gain(0.1, 1.5, 1e6, SOUND_SPEED_WATER_SIM);
         assert!(g > 1.0, "g={}", g);
     }
 
@@ -240,7 +240,7 @@ mod tests {
     fn gaussian_deposition_peak_at_focus() {
         let r = vec![0.0];
         let z: Vec<f64> = vec![-5e-3, 0.0, 5e-3];
-        let q = gaussian_power_deposition_2d(&r, &z, 1e6, 0.0, 1e6, 1500.0, DENSITY_BLOOD, 1.0, 1e-3);
+        let q = gaussian_power_deposition_2d(&r, &z, 1e6, 0.0, 1e6, SOUND_SPEED_WATER_SIM, DENSITY_BLOOD, 1.0, 1e-3);
         // Q at focus (z=0) should exceed Q at z=±5mm
         assert!(q[1] > q[0] && q[1] > q[2]);
     }

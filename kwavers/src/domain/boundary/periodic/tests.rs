@@ -1,6 +1,7 @@
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::boundary::traits::BoundaryFieldType;
 use crate::domain::boundary::BoundaryCondition;
 use crate::domain::grid::topology::{GridTopology, TopologyDimension};
@@ -145,7 +146,7 @@ fn test_boundary_condition_trait() {
     assert!(boundary.active_directions().x_min);
     assert!(boundary.active_directions().x_max);
     assert!(boundary.supports_field_type(BoundaryFieldType::Pressure));
-    assert_abs_diff_eq!(boundary.reflection_coefficient(0.0, 1e6, 1500.0), 0.0);
+    assert_abs_diff_eq!(boundary.reflection_coefficient(0.0, 1e6, SOUND_SPEED_WATER_SIM), 0.0);
     assert!(!boundary.is_stateful());
 }
 

@@ -1,5 +1,6 @@
 use super::config::{FemHelmholtzConfig, FemPreconditionerType};
 use super::core::FemHelmholtzSolver;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversError;
 use crate::domain::grid::Grid;
 use crate::domain::mesh::{MeshBoundaryType, TetrahedralMesh};
@@ -21,7 +22,7 @@ fn unit_tet() -> (TetrahedralMesh, [usize; 4]) {
 fn homogeneous_medium() -> (crate::domain::medium::HomogeneousMedium, ()) {
     let grid = crate::domain::grid::Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();
     (
-        crate::domain::medium::HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid),
+        crate::domain::medium::HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid),
         (),
     )
 }

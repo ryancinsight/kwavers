@@ -1,6 +1,7 @@
 //! FDTD configuration: CFL validation and stability checks.
 
 use super::InitialCondition;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// FDTD solver configuration for 1D wave equation
@@ -23,7 +24,7 @@ pub struct FDTDConfig {
 impl Default for FDTDConfig {
     fn default() -> Self {
         Self {
-            wave_speed: 1500.0,
+            wave_speed: SOUND_SPEED_WATER_SIM,
             dx: 0.01,
             dt: 0.000005,
             nx: 100,

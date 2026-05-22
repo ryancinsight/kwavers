@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
 use ndarray::{Array2, ArrayViewMut2, Zip};
 use std::f64::consts::PI;
@@ -126,7 +127,7 @@ mod tests {
             ny: 128,
             dx: 0.2e-3,
             frequency: 1e6,
-            c0: 1500.0,
+            c0: SOUND_SPEED_WATER_SIM,
             ..Default::default()
         };
 

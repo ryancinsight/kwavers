@@ -33,6 +33,7 @@
 //! - Wang & Wu (2007): "Biomedical Optics: Principles and Imaging"
 //!   Wiley-Interscience. ISBN: 978-0-471-74304-0
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::properties::OpticalPropertyData;
@@ -260,7 +261,7 @@ mod tests {
     #[test]
     fn test_optical_property_initialization() {
         let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
         let properties = initialize_optical_properties(&grid, &medium).unwrap();
 
@@ -281,7 +282,7 @@ mod tests {
     #[test]
     fn test_fluence_computation_basic() {
         let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
         let properties = initialize_optical_properties(&grid, &medium).unwrap();
 
         let fluence = compute_fluence_at_wavelength(&grid, &properties, 1e6, 750.0).unwrap();
@@ -306,7 +307,7 @@ mod tests {
     #[test]
     fn test_multi_wavelength_fluence() {
         let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
         let properties = initialize_optical_properties(&grid, &medium).unwrap();
 
         let wavelengths = vec![700.0, 750.0, 800.0];

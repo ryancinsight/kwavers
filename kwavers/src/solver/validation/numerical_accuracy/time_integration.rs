@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::helpers::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::Array3;
     use std::f64::consts::PI;
 
@@ -12,7 +13,7 @@ mod tests {
         // Fast acoustic + slow thermal diffusion
 
         const THERMAL_DIFFUSIVITY: f64 = 1.4e-7; // m²/s for tissue
-        const ACOUSTIC_SPEED: f64 = 1500.0; // m/s
+        const ACOUSTIC_SPEED: f64 = SOUND_SPEED_WATER_SIM; // m/s
 
         let dx = 1e-3;
         let dt_acoustic = CFL_NUMBER * dx / ACOUSTIC_SPEED;
@@ -146,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_stormer_verlet_wave_energy_conservation() {
-        const C: f64 = 1500.0; // wave speed [m/s]
+        const C: f64 = SOUND_SPEED_WATER_SIM; // wave speed [m/s]
         let n = 64_usize; // grid points
         let l = 1.0_f64; // domain length [m]
         let dx = l / n as f64;

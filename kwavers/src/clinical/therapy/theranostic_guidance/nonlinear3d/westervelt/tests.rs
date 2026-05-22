@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::{GridIndex, SourceDomain};
 use crate::clinical::therapy::theranostic_guidance::{AnatomyKind, Point3};
 
@@ -12,7 +13,7 @@ fn source_calibration_never_overdrives_configured_transducer_pressure() {
     let n = 12;
     let cells = n * n * n;
     let spacing_m = 1.0e-3;
-    let speed = vec![1500.0; cells];
+    let speed = vec![SOUND_SPEED_WATER_SIM; cells];
     let density = vec![1000.0; cells];
     let attenuation = vec![0.0; cells];
     let attenuation_y = vec![1.0; cells];

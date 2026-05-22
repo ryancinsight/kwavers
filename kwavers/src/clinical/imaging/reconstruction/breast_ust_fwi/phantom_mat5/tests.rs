@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::*;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
@@ -35,7 +36,7 @@ fn mat5_loader_decodes_compressed_uint16_mri_and_maps_sound_speed() {
     assert!(phantom
         .sound_speed_m_s
         .iter()
-        .any(|&value| value > 1500.0 && value <= 1750.0));
+        .any(|&value| value > SOUND_SPEED_WATER_SIM && value <= 1750.0));
 }
 
 #[test]

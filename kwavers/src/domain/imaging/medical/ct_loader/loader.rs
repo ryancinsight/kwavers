@@ -1,6 +1,7 @@
 //! CT image loader implementation.
 
 use super::types::CTMetadata;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::imaging::medical::{MedicalImageLoader, MedicalImageMetadata};
 use log::warn;
@@ -307,7 +308,7 @@ impl CTImageLoader {
         if hu > 700.0 {
             (hu - 700.0).mul_add(2.0, 2800.0)
         } else {
-            1500.0
+            SOUND_SPEED_WATER_SIM
         }
     }
 

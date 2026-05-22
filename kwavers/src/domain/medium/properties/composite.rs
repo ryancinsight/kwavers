@@ -280,6 +280,6 @@ mod tests {
             .build();
 
         assert_eq!(props.acoustic.density, 1000.0);
-        assert_eq!(props.acoustic.sound_speed, 1500.0);
+        assert_eq!(props.acoustic.sound_speed, SOUND_SPEED_WATER_SIM);
     }
 }

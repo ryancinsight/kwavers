@@ -1,6 +1,7 @@
 //! Config defaults and collocation point generation tests.
 
 use super::super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult, SystemError};
 use burn::backend::{Autodiff, NdArray};
 
@@ -32,7 +33,7 @@ fn test_collocation_points_rectangular() -> KwaversResult<()> {
     };
 
     let geometry = Geometry3D::rectangular(0.0, 2.0, 0.0, 3.0, 0.0, 4.0);
-    let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+    let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
     let solver = BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device)?;
 
@@ -90,7 +91,7 @@ fn test_collocation_points_spherical_filtering() -> KwaversResult<()> {
     };
 
     let geometry = Geometry3D::spherical(0.5, 0.5, 0.5, 0.2);
-    let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+    let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
     let solver = BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device)?;
 

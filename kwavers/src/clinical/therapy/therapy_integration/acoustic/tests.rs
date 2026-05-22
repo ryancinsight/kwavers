@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::AcousticWaveSolver;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -8,8 +9,8 @@ fn create_test_grid() -> Grid {
 
 fn create_water_medium(grid: &Grid) -> HomogeneousMedium {
     HomogeneousMedium::new(
-        1000.0, // Water density
-        1500.0, // Water sound speed
+        1000.0,                  // Water density
+        SOUND_SPEED_WATER_SIM,   // Water sound speed
         0.0,    // Optical absorption mu_a
         0.0,    // Optical scattering mu_s_prime
         grid,

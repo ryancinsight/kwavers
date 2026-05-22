@@ -3,6 +3,7 @@
 //! This module implements the coupled photoacoustic solver that integrates
 //! electromagnetic (optical) and acoustic physics.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::field::EMFields;
 use crate::physics::electromagnetic::equations::{
@@ -179,7 +180,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         self.initial_pressure.as_ref().map(|pressure| {
             // E = (1/(2ρc²)) ∫ p² dV (approximate acoustic energy)
             let rho = 1000.0; // kg/m³
-            let c = 1500.0; // m/s
+            let c = SOUND_SPEED_WATER_SIM; // m/s
 
             0.5 / (rho * c * c) * pressure.iter().map(|&p| p * p).sum::<f64>()
         })

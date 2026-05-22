@@ -1,6 +1,7 @@
 //! Test helpers for GPU PSTD solver tests.
 
 use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use std::sync::Arc;
 
 pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
@@ -9,7 +10,7 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
     let nz = 8usize;
     let total = nx * ny * nz;
     let dx = 1.0e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dt = 1.0e-8_f64;
     let nt = 4usize;
 

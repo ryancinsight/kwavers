@@ -1,6 +1,7 @@
 use super::super::config::NonlinearSWEConfig;
 use super::super::material::HyperelasticModel;
 use super::NonlinearElasticWaveSolver;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use ndarray::Array3;
@@ -26,7 +27,7 @@ fn test_nonlinear_solver_creation() {
     let nz = 16_usize;
     let dx = 0.001_f64;
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let material = HyperelasticModel::neo_hookean_soft_tissue();
     let beta = 0.1_f64;
     let config = NonlinearSWEConfig {
@@ -74,7 +75,7 @@ fn cfl_time_step_matches_analytical_formula() {
     let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material, config).unwrap();
     let dt = solver.calculate_time_step();
 
-    const C0: f64 = 1500.0; // config.sound_speed()
+    const C0: f64 = SOUND_SPEED_WATER_SIM; // config.sound_speed()
     const BETA: f64 = 0.1; // default nonlinearity_parameter
     const MAX_STRAIN: f64 = 1.0; // default max_strain
     const DX: f64 = 0.001; // grid spacing [m]
@@ -214,7 +215,7 @@ fn wave_propagation_final_time_matches_domain_crossing_time() {
     //   max_u_over_ref = 1e-6/1e-3 = 1e-3
     //   c_max = 1500*(1+0.05*1e-3)
     //   dt_cfl = 0.45 * 0.001 / c_max; dt = min(dt_cfl, 1e-7) = 1e-7
-    let c = 1500.0_f64;
+    let c = SOUND_SPEED_WATER_SIM;
     let max_abs_u = 1e-6_f64;
     let max_u_over_ref = (max_abs_u / U_REF).max(0.0);
     let c_max = c * beta.mul_add(max_u_over_ref, 1.0);

@@ -1,5 +1,7 @@
 //! `SemConfig` configuration type for the Spectral Element Method solver.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+
 /// Configuration for SEM solver
 #[derive(Debug, Clone)]
 pub struct SemConfig {
@@ -24,7 +26,7 @@ impl Default for SemConfig {
             wavenumber: 1.0,
             dt: 1e-7,
             n_steps: 1000,
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             density: 1000.0,
         }
     }

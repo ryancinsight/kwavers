@@ -4,6 +4,7 @@
 //! used throughout the phase shifting subsystem. Implements SSOT principle
 //! for phase-related computations.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::constants::SOUND_SPEED_WATER;
 use std::f64::consts::{PI, TAU};
 
@@ -117,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_calculate_wavelength() {
-        let wavelength = calculate_wavelength(1e6, 1500.0);
+        let wavelength = calculate_wavelength(1e6, SOUND_SPEED_WATER_SIM);
         assert_relative_eq!(wavelength, 0.0015, epsilon = 1e-6);
     }
 

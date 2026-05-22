@@ -1,5 +1,6 @@
 use super::*;
 use super::{sinc, sinc_normalized};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use std::f64::consts::PI;
 
@@ -61,7 +62,7 @@ fn test_sinc_normalized_function() {
 ///
 #[test]
 fn test_kspace_kappa_correction_at_nyquist() {
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1e-3_f64;
     let cfl = 0.3_f64;
     let dt = cfl * dx / c0; // stable time step

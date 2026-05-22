@@ -161,7 +161,7 @@ mod tests {
     fn test_fsi_interface_creation() {
         let interface = FsiInterface::new(FsiInterfaceSpec {
             fluid_density: 1000.0,
-            fluid_sound_speed: 1500.0,
+            fluid_sound_speed: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
             solid_density: 7850.0,
             solid_c_l: 5960.0,
             solid_c_t: 3240.0,
@@ -180,7 +180,7 @@ mod tests {
     fn test_invalid_wave_speeds() {
         let interface = FsiInterface::new(FsiInterfaceSpec {
             fluid_density: 1000.0,
-            fluid_sound_speed: 1500.0,
+            fluid_sound_speed: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
             solid_density: 7850.0,
             solid_c_l: 3000.0, // c_l < c_t - invalid!
             solid_c_t: 3240.0,

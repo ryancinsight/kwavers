@@ -22,6 +22,7 @@
 //! - Taflove & Hagness (2005) "Computational Electrodynamics" (3rd ed.)
 //! - Koene & Robertsson (2012) Geophysics 77(1):T1-T11
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::DispersionAnalysis;
 
 impl DispersionAnalysis {
@@ -106,7 +107,7 @@ mod tests {
         // k=0 → kx·dx=0 → sin(0)=0 → arcsin(0)=0 → omega_numerical=0 = omega_exact=0.
         // The function clamps: (0 - 0)/0 would be 0/0 — but k=0 → omega_exact=0.
         // Implementation returns 0.0 in that case via the (omega_numerical-omega_exact)/omega_exact formula.
-        let disp = DispersionAnalysis::fdtd_dispersion(0.0, 1e-4, 1e-7, 1500.0);
+        let disp = DispersionAnalysis::fdtd_dispersion(0.0, 1e-4, 1e-7, SOUND_SPEED_WATER_SIM);
         assert!(disp.is_finite(), "dispersion at k=0 must be finite");
     }
 
@@ -115,7 +116,7 @@ mod tests {
     /// Reference: Taflove & Hagness (2005), §3.6.
     #[test]
     fn fdtd_dispersion_below_1pct_at_20_ppw() {
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let freq = 1e6_f64;
         let lambda = c / freq;
         let dx = lambda / 20.0;
@@ -132,7 +133,7 @@ mod tests {
     /// Symmetry: fdtd_dispersion(−k) == fdtd_dispersion(k) since sin is odd and asin is odd.
     #[test]
     fn fdtd_dispersion_symmetric_in_wavenumber() {
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let freq = 1e6_f64;
         let lambda = c / freq;
         let dx = lambda / 15.0;

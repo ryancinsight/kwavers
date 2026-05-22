@@ -360,6 +360,7 @@ pub fn sound_speed_pcc(
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use ndarray::Array3;
 
@@ -396,7 +397,7 @@ mod tests {
     #[test]
     fn helmholtz_slowness_derivative_matches_finite_difference() {
         let omega = 2.0 * PI * 250_000.0_f64;
-        let slowness: f64 = 1.0 / 1500.0;
+        let slowness: f64 = 1.0 / SOUND_SPEED_WATER_SIM;
         let epsilon: f64 = 1.0e-8;
         let slowness_plus = slowness + epsilon;
         let slowness_minus = slowness - epsilon;

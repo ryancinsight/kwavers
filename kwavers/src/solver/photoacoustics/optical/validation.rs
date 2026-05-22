@@ -71,14 +71,14 @@ mod tests {
                 pulse_duration_s: 8e-9,
                 incident_fluence_j_m2: 10.0,
                 acoustic: PhotoacousticAcousticConfig {
-                    speed_of_sound_m_s: 1500.0,
+                    speed_of_sound_m_s: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
                     cfl_factor: 0.2,
                     num_time_steps: 8,
                     snapshot_interval: 2,
                 },
                 thermoelastic: ThermoelasticProperties {
                     density_kg_m3: 1000.0,
-                    sound_speed_m_s: 1500.0,
+                    sound_speed_m_s: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
                     specific_heat_j_kgk: 4180.0,
                     thermal_conductivity_w_mk: 0.6,
                 },

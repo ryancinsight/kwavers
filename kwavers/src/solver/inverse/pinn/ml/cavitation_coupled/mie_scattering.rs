@@ -246,7 +246,7 @@ mod tests {
         // Dominant scaling: |f_bs| ≈ 2·R → ratio |f_bs(r1)|/|f_bs(r2)| ≈ r1/r2 = 0.5
         //
         // Reference: Anderson (1950) J. Acoust. Soc. Am. 22:426, eq. 14-16.
-        let c_l = 1500.0_f32; // water [m/s]
+        let c_l = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM as f32; // water [m/s]
         let c_b = 340.0_f32; // air [m/s]
         let rho_l = 1000.0_f32;
         let rho_b = 1.2_f32;

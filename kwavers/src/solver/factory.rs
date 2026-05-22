@@ -70,6 +70,7 @@ impl SolverFactoryRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::solver::interface::factory::{FactoryGridParameters, FactoryMediumParameters};
 
     struct TestGrid {
@@ -110,7 +111,7 @@ mod tests {
 
     impl FactoryMediumParameters for TestMedium {
         fn sound_speed(&self, _x: f64, _y: f64, _z: f64) -> f64 {
-            1500.0
+            SOUND_SPEED_WATER_SIM
         }
 
         fn density(&self, _x: f64, _y: f64, _z: f64) -> f64 {

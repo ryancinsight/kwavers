@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
@@ -13,7 +14,7 @@ fn test_point_source_phase_accuracy() {
 
     let n = 64;
     let frequency = 1e6;
-    let c0 = 1500.0;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let wavelength = c0 / frequency;
     let dx = wavelength / 16.0; // 16 PPW
     let k_num: f64 = 2.0 * PI / wavelength;

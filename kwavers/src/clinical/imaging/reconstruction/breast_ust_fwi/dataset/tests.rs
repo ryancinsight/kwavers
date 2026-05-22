@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::*;
 
 #[test]
@@ -12,7 +13,7 @@ fn pstd_dataset_preserves_shape_and_is_input_sensitive() {
         density_kg_m3: 1000.0,
         cpml_thickness_cells: 0,
     };
-    let baseline = Array3::from_elem((12, 12, 3), 1500.0);
+    let baseline = Array3::from_elem((12, 12, 3), SOUND_SPEED_WATER_SIM);
     let mut perturbed = baseline.clone();
     perturbed[[6, 6, 1]] = 1540.0;
 
@@ -53,7 +54,7 @@ fn pstd_dataset_rejects_unstable_cfl() {
         density_kg_m3: 1000.0,
         cpml_thickness_cells: 0,
     };
-    let model = Array3::from_elem((12, 12, 3), 1500.0);
+    let model = Array3::from_elem((12, 12, 3), SOUND_SPEED_WATER_SIM);
 
     let err = generate_breast_ust_pstd_frequency_dataset(&model, &array, &[200_000.0], config)
         .expect_err("CFL violation must reject");

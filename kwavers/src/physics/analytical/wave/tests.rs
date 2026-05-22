@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use std::f64::consts::PI;
 
 use super::*;
@@ -19,7 +20,7 @@ fn reflection_plus_transmission_identity() {
 
 #[test]
 fn shock_distance_positive() {
-    let xs = shock_formation_distance(1e6, 1e6, 1500.0, 1000.0, 3.5);
+    let xs = shock_formation_distance(1e6, 1e6, SOUND_SPEED_WATER_SIM, 1000.0, 3.5);
     assert!(xs > 0.0);
 }
 
@@ -51,7 +52,7 @@ fn pstd_error_is_zero() {
 #[test]
 fn westervelt_length_consistency() {
     let z = vec![0.0, 0.01, 0.02];
-    let w = westervelt_harmonic_evolution(&z, 1e5, 1e6, 1500.0, 1000.0, 3.5, 1.0, 3);
+    let w = westervelt_harmonic_evolution(&z, 1e5, 1e6, SOUND_SPEED_WATER_SIM, 1000.0, 3.5, 1.0, 3);
     assert_eq!(w.len(), 3);
     assert_eq!(w[0].len(), 3);
 }

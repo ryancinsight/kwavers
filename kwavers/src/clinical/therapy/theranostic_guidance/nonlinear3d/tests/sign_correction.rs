@@ -14,6 +14,7 @@
 //! inverts the asymmetry — peaks would *round* while troughs sharpen, which
 //! is non-physical.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
@@ -25,7 +26,7 @@ use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
 fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign() {
     let n = 24;
     let spacing_m = 4.0e-4_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let beta_nl = 10.0_f64;
     let cells = n * n * n;

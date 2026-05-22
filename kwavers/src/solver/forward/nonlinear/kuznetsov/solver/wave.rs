@@ -1,5 +1,6 @@
 //! `KuznetsovWave` struct definition and primary impl methods.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
@@ -51,7 +52,7 @@ impl KuznetsovWave {
 
         // Default to water properties
         let rho0 = 1000.0;
-        let c0 = 1500.0;
+        let c0 = SOUND_SPEED_WATER_SIM;
 
         Ok(Self {
             config,

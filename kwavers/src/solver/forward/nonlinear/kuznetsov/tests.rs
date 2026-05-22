@@ -3,6 +3,8 @@
 #[cfg(test)]
 use super::*;
 #[cfg(test)]
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+#[cfg(test)]
 use crate::domain::grid::Grid;
 #[cfg(test)]
 use std::f64::consts::PI;
@@ -173,7 +175,7 @@ fn diffusive_term_matches_stokes_kirchhoff_coefficient() {
 
     const N: usize = 4;
     const DT: f64 = 0.01;
-    const C0: f64 = 1500.0;
+    const C0: f64 = SOUND_SPEED_WATER_SIM;
     const DELTA: f64 = 1e-6; // acoustic diffusivity [m²/s]
     const P0: f64 = 1.0; // coefficient in p(t) = P0·t³
 
@@ -225,7 +227,7 @@ fn nonlinear_term_explicit_form_coefficient_is_positive_with_c_squared() {
     const N: usize = 4;
     const DT: f64 = 1e-7;
     const RHO0: f64 = crate::core::constants::fundamental::DENSITY_WATER_NOMINAL;
-    const C0: f64 = 1500.0;
+    const C0: f64 = SOUND_SPEED_WATER_SIM;
     const B_OVER_A: f64 = 5.0; // water
     const P: f64 = 1e5; // 100 kPa
 

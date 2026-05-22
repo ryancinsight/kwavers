@@ -2,6 +2,7 @@
 
 use ndarray::Array3;
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::super::AnatomyKind;
 use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law_y_from_hu};
 
@@ -67,7 +68,7 @@ fn speed_from_hu(anatomy: AnatomyKind, hu: f64, label: i16) -> f64 {
     }
     if hu >= 300.0 {
         let phi = (hu / 1000.0).clamp(0.0, 1.0);
-        return 1500.0 * (1.0 - phi) + 2900.0 * phi;
+        return SOUND_SPEED_WATER_SIM * (1.0 - phi) + 2900.0 * phi;
     }
     let organ_speed = match anatomy {
         AnatomyKind::Brain => 1540.0,

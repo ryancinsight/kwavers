@@ -11,6 +11,7 @@
 //!
 //! - Liu (1997) Microwave Opt. Tech. Lett. 15(3):158-165
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::DispersionAnalysis;
 
 impl DispersionAnalysis {
@@ -80,7 +81,7 @@ mod tests {
     /// Reference: Liu (1997) — 2nd-order PSTD phase error ≈ 0.02·(k·Δx)².
     #[test]
     fn pstd_dispersion_order2_matches_analytical_formula() {
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let freq = 1e6_f64;
         let lambda = c / freq;
         let dx = lambda / 10.0;
@@ -98,7 +99,7 @@ mod tests {
     /// pstd_dispersion order=4 follows the 0.001·(k·dx)⁴ analytical model.
     #[test]
     fn pstd_dispersion_order4_matches_analytical_formula() {
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let freq = 1e6_f64;
         let lambda = c / freq;
         let dx = lambda / 8.0;
@@ -123,7 +124,7 @@ mod tests {
     /// 4th-order PSTD has strictly lower dispersion than 2nd-order at same grid resolution.
     #[test]
     fn pstd_order4_lower_than_order2_at_same_resolution() {
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let freq = 2e6_f64;
         let lambda = c / freq;
         let dx = lambda / 8.0;

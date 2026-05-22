@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{self};
 use crate::domain::medium::core::CoreMedium;
 
@@ -81,7 +82,7 @@ fn test_physics_constants_validation() {
 #[test]
 fn test_cfl_calculation_basic() {
     let grid = crate::domain::grid::Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).expect("Grid creation");
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let cfl = 0.4; // Conservative CFL for 3D
     let min_dx = grid.dx.min(grid.dy).min(grid.dz);
     let dt = cfl * min_dx / sound_speed;

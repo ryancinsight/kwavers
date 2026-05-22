@@ -254,7 +254,7 @@ mod tests {
         assert_eq!(air.wave_speed, 343.0);
 
         let water = MetaLearningPhysicsParameters::acoustic_water();
-        assert_eq!(water.wave_speed, 1500.0);
+        assert_eq!(water.wave_speed, crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM);
 
         let tissue = MetaLearningPhysicsParameters::acoustic_tissue();
         assert_eq!(tissue.wave_speed, 1540.0);

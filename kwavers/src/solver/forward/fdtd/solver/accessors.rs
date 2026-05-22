@@ -130,6 +130,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::core::error::KwaversError;
     use crate::domain::boundary::cpml::CPMLConfig;
     use crate::domain::grid::Grid;
@@ -147,7 +148,7 @@ mod tests {
     ///
     fn build_solver(kspace_correction: KSpaceCorrectionMode) -> FdtdSolver {
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+        let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
         let source = GridSource::new_empty();
         let config = FdtdConfig {
             kspace_correction,
@@ -175,7 +176,7 @@ mod tests {
     fn enable_cpml_rejects_spectral_kspace_correction() {
         let mut solver = build_solver(KSpaceCorrectionMode::Spectral);
         let cpml_config = CPMLConfig::with_thickness(4);
-        let result = solver.enable_cpml(cpml_config, 1e-7, 1500.0);
+        let result = solver.enable_cpml(cpml_config, 1e-7, SOUND_SPEED_WATER_SIM);
 
         let err =
             result.expect_err("enable_cpml must return Err when kspace_correction = Spectral");
@@ -211,7 +212,7 @@ mod tests {
         let mut solver = build_solver(KSpaceCorrectionMode::None);
         let cpml_config = CPMLConfig::with_thickness(4);
         solver
-            .enable_cpml(cpml_config, 1e-7, 1500.0)
+            .enable_cpml(cpml_config, 1e-7, SOUND_SPEED_WATER_SIM)
             .expect("enable_cpml must succeed when kspace_correction = None");
         // Verify the boundary is now installed (cpml_boundary is Some).
         assert!(

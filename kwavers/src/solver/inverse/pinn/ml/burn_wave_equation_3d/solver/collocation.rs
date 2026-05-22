@@ -1,4 +1,5 @@
 use super::core::BurnPINN3DWave;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::solver::inverse::pinn::ml::burn_wave_equation_3d::config::BurnPINN3DConfig;
 use burn::tensor::{backend::Backend, Tensor, TensorData};
 
@@ -93,7 +94,7 @@ mod tests {
             ..Default::default()
         };
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-        let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+        let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
         let solver =
             BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device)?;
@@ -139,7 +140,7 @@ mod tests {
             ..Default::default()
         };
         let geometry = Geometry3D::spherical(0.5, 0.5, 0.5, 0.3);
-        let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+        let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
         let solver =
             BurnPINN3DWave::<TestBackend>::new(config.clone(), geometry, wave_speed, &device)?;

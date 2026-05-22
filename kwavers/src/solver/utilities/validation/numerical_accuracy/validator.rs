@@ -1,4 +1,5 @@
 use super::{ConvergenceResults, NumericalAccuracyResults, NumericalValidator};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 
@@ -13,7 +14,7 @@ impl NumericalValidator {
     #[must_use]
     pub fn new() -> Self {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Failed to create test grid");
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
         Self { grid, medium }
     }
 

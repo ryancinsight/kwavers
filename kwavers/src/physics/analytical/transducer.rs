@@ -411,6 +411,7 @@ fn bessel_j1(x: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
 
     #[test]
@@ -422,7 +423,7 @@ mod tests {
     #[test]
     fn array_factor_at_steering_angle_is_one() {
         let steer = 0.1_f64;
-        let k = 2.0 * PI * 2e6 / 1500.0;
+        let k = 2.0 * PI * 2e6 / SOUND_SPEED_WATER_SIM;
         let af = linear_array_factor(&[steer], k, 0.3e-3, 64, steer);
         assert!((af[0] - 1.0).abs() < 1e-6);
     }
@@ -448,7 +449,7 @@ mod tests {
         // The element closest to the focus should have delay approaching 0
         let ex = vec![0.0];
         let ez = vec![0.0];
-        let d = delay_law_focus_2d(&ex, &ez, 0.0, 0.0, 1500.0);
+        let d = delay_law_focus_2d(&ex, &ez, 0.0, 0.0, SOUND_SPEED_WATER_SIM);
         assert!((d[0]).abs() < 1e-15);
     }
 }

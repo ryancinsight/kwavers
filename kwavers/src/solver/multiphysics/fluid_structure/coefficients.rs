@@ -157,7 +157,7 @@ mod tests {
     ) -> FsiInterfaceSpec {
         FsiInterfaceSpec {
             fluid_density: 1000.0,
-            fluid_sound_speed: 1500.0,
+            fluid_sound_speed: crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM,
             solid_density,
             solid_c_l,
             solid_c_t,

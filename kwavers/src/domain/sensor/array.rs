@@ -192,6 +192,7 @@ impl SensorArray {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_position_distance() {
@@ -206,7 +207,7 @@ mod tests {
             Sensor::new(0, Position::new(0.0, 0.0, 0.0)),
             Sensor::new(1, Position::new(2.0, 0.0, 0.0)),
         ];
-        let array = SensorArray::new(sensors, 1500.0, SensorArrayGeometry::Linear);
+        let array = SensorArray::new(sensors, SOUND_SPEED_WATER_SIM, SensorArrayGeometry::Linear);
         let centroid = array.centroid();
         assert!((centroid.x - 1.0).abs() < 1e-10);
         assert!((centroid.y - 0.0).abs() < 1e-10);
@@ -216,7 +217,7 @@ mod tests {
     fn test_time_of_flight() {
         let sensor = Sensor::new(0, Position::new(0.0, 0.0, 0.0));
         let point = Position::new(0.0, 0.0, 1.5);
-        let tof = sensor.time_of_flight(&point, 1500.0);
+        let tof = sensor.time_of_flight(&point, SOUND_SPEED_WATER_SIM);
         assert!((tof - 0.001).abs() < 1e-10);
     }
 }

@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::solver::inverse::pinn::ml::burn_wave_equation_1d::config::BurnPINNConfig;
 use burn::backend::{Autodiff, NdArray};
 
@@ -175,7 +176,7 @@ fn test_pde_residual_different_wave_speeds() {
     let t = Tensor::<TestBackend, 2>::from_floats([[0.1]], &device);
 
     let residual_343 = pinn.compute_pde_residual(x.clone(), t.clone(), 343.0);
-    let residual_1500 = pinn.compute_pde_residual(x, t, 1500.0);
+    let residual_1500 = pinn.compute_pde_residual(x, t, SOUND_SPEED_WATER_SIM);
 
     let val_343: f32 = residual_343.into_scalar();
     let val_1500: f32 = residual_1500.into_scalar();

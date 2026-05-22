@@ -1,5 +1,6 @@
 //! Tests for the FEM Helmholtz frequency-domain backend.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::backend::FemHelmholtzBackend;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -9,7 +10,7 @@ use ndarray::arr2;
 use num_complex::Complex64;
 
 fn medium_for(grid: &Grid) -> HomogeneousMedium {
-    HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, grid)
+    HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid)
 }
 
 #[test]

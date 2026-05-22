@@ -258,6 +258,7 @@ fn hb_poly(lam_nm: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
 
     #[test]
@@ -281,7 +282,7 @@ mod tests {
 
     #[test]
     fn axial_resolution_water_1mhz() {
-        let dz = pa_axial_resolution(1e6, 1500.0);
+        let dz = pa_axial_resolution(1e6, SOUND_SPEED_WATER_SIM);
         assert!((dz - 750e-6).abs() < 1e-9);
     }
 
@@ -305,7 +306,7 @@ mod tests {
     #[test]
     fn pa_sphere_signal_length_matches() {
         let t: Vec<f64> = (0..100).map(|i| i as f64 * 1e-8).collect();
-        let p = pa_sphere_pressure_signal(&t, 1e-3, 0.2, 100.0, 1500.0, 0.05, 1e4);
+        let p = pa_sphere_pressure_signal(&t, 1e-3, 0.2, 100.0, SOUND_SPEED_WATER_SIM, 0.05, 1e4);
         assert_eq!(p.len(), 100);
     }
 }

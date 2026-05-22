@@ -220,6 +220,7 @@ impl CollectiveEffects {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
 
     #[test]
@@ -279,13 +280,13 @@ mod tests {
         let c_mixture = CollectiveEffects::wood_sound_speed(
             0.01,   // 1% void fraction
             1000.0, // water density
-            1500.0, // water sound speed
+            SOUND_SPEED_WATER_SIM, // water sound speed
             1.2,    // air density
             340.0,  // air sound speed
         );
 
         // Sound speed should be significantly reduced
-        assert!(c_mixture < 1500.0);
+        assert!(c_mixture < SOUND_SPEED_WATER_SIM);
         assert!(c_mixture > 100.0); // But still reasonable
     }
 }

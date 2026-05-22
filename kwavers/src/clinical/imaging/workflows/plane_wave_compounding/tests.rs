@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::compound::PlaneWaveCompound;
 use super::config::PlaneWaveCompoundingConfig;
 use ndarray::Array2;
@@ -124,7 +125,7 @@ fn test_process_frame() {
 #[test]
 fn test_thermal_acoustic_config_uses_plane_wave_geometry() {
     let plane_wave = PlaneWaveCompoundingConfig {
-        sound_speed: 1500.0,
+        sound_speed: SOUND_SPEED_WATER_SIM,
         aperture_size: 0.012,
         lateral_step: 0.001,
         element_spacing: 0.0005,

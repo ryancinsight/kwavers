@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array2;
 
 #[test]
@@ -84,7 +85,7 @@ fn test_validate_pinn_vs_fdtd() {
     let pinn = BurnPINN1DWave::<Backend>::new(BurnPINNConfig::default(), &device).unwrap();
 
     let fdtd_config = FDTDConfig {
-        wave_speed: 1500.0,
+        wave_speed: SOUND_SPEED_WATER_SIM,
         nx: 50,
         nt: 50,
         dx: 0.01,

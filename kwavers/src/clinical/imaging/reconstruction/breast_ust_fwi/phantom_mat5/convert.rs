@@ -1,6 +1,7 @@
 //! Published MRI-to-sound-speed mapping for Ali et al. 2025.
 
 use super::BreastUstMriBreastSide;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::collections::VecDeque;
@@ -8,7 +9,6 @@ use std::collections::VecDeque;
 const MRI_EXTENT_X_MM: f64 = 340.0;
 const MRI_EXTENT_Y_MM: f64 = 340.0;
 const MRI_EXTENT_Z_MM: f64 = 158.4;
-const WATER_SOUND_SPEED_M_S: f64 = 1500.0;
 const TISSUE_MAX_SOUND_SPEED_M_S: f64 = 1750.0;
 const BREAST_RADIUS_MAX_MM: f64 = 80.0;
 
@@ -51,7 +51,7 @@ pub(super) fn mri_to_sound_speed(
             if tissue[[i, j, k]] {
                 c_min + (breast_seg[[i, j, k]] - min_intensity) * scale
             } else {
-                WATER_SOUND_SPEED_M_S
+                SOUND_SPEED_WATER_SIM
             }
         },
     ))

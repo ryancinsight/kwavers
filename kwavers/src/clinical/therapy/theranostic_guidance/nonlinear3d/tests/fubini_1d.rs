@@ -36,6 +36,7 @@
 //! `#[ignore]`'d (~2 s runtime). Run on demand with
 //! `cargo test --lib --package kwavers -- --ignored fubini_absolute`.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::bessel::{bessel_j1, bessel_j2};
 
 #[test]
@@ -47,7 +48,7 @@ fn westervelt_recurrence_fubini_absolute_at_gamma_half_matches_aanonsen_1984() {
     // FDTD numerical dispersion bias.
     let nx: usize = 1024;
     let dx: f64 = 5.0e-5; // 0.05 mm → 51.2 mm domain
-    let c: f64 = 1500.0;
+    let c: f64 = SOUND_SPEED_WATER_SIM;
     let rho: f64 = 1000.0;
     let beta: f64 = 10.0;
     let frequency_hz: f64 = 1.0e6;

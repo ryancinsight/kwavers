@@ -35,6 +35,7 @@
 //! - Kamil, S. et al. (2010). "An auto-tuning framework for parallel
 //!   multicore stencil computations." *IPDPS*, 1-12. §2 Cache tiling.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::math::fft::Complex64;
 use ndarray::Array1;
 use std::cell::RefCell;
@@ -288,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_operator_key_creation() {
-        let key = OperatorKey::new(64, 64, 64, 1e-4, 1e-4, 1e-4, 1500.0, 1e-8);
+        let key = OperatorKey::new(64, 64, 64, 1e-4, 1e-4, 1e-4, SOUND_SPEED_WATER_SIM, 1e-8);
         assert_eq!(key.nx, 64);
         assert_eq!(key.ny, 64);
         assert_eq!(key.nz, 64);
@@ -311,7 +312,7 @@ mod tests {
     #[test]
     fn test_cache_get_compute() {
         let mut cache = KSpaceCache::new();
-        let key = OperatorKey::new(32, 32, 32, 1e-4, 1e-4, 1e-4, 1500.0, 1e-8);
+        let key = OperatorKey::new(32, 32, 32, 1e-4, 1e-4, 1e-4, SOUND_SPEED_WATER_SIM, 1e-8);
 
         let compute_count = std::cell::Cell::new(0);
         let ops = cache.get_operators(key, || {

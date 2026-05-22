@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use std::f64::consts::PI;
 
 #[test]
@@ -8,7 +9,7 @@ fn test_numerical_dispersion() {
     let _n = 64;
 
     for freq in frequencies {
-        let wavelength = 1500.0 / freq;
+        let wavelength = SOUND_SPEED_WATER_SIM / freq;
         let ppw = wavelength / dx;
 
         if ppw < 2.0 {
@@ -16,7 +17,7 @@ fn test_numerical_dispersion() {
         }
 
         // Theoretical phase velocity (no dispersion)
-        let c_theoretical = 1500.0;
+        let c_theoretical = SOUND_SPEED_WATER_SIM;
 
         // Numerical phase velocity (with dispersion)
         let k = 2.0 * PI / wavelength;

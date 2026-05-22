@@ -243,7 +243,7 @@ where
 
         // 1000 epochs by default; wave speed 1500 m/s (soft tissue).
         let epochs = 1000_usize;
-        let wave_speed = 1500.0_f64;
+        let wave_speed = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
         let mut trainer = BurnPINNTrainer::<B>::new(self.config.clone(), &self.device)?;
         let burn_metrics =

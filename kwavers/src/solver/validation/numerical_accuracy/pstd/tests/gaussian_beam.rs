@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
@@ -27,7 +28,7 @@ fn test_gaussian_beam_phase_accuracy() {
 
     let n = 64;
     let frequency = 1e6;
-    let c0 = 1500.0;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let wavelength = c0 / frequency;
     // 16 PPW → < 1% PSTD phase error (Treeby & Cox 2010, Table 1)

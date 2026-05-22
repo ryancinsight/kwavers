@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::clinical::therapy::theranostic_guidance::nonlinear3d::types::{
     GridIndex, Nonlinear3dAperture, SourceDomain,
 };
@@ -36,7 +37,7 @@ fn source_plan_preserves_per_element_drive_weights() {
         source_domain: SourceDomain::TissueBoundary,
         focus: GridIndex { x: 4, y: 4, z: 4 },
     };
-    let speed = vec![1500.0; cells];
+    let speed = vec![SOUND_SPEED_WATER_SIM; cells];
 
     let plan = build_source_plan(
         &speed,
@@ -132,7 +133,7 @@ fn focused_delays_align_emission_phase_at_focus() {
         source_domain: SourceDomain::TissueBoundary,
         focus,
     };
-    let speed = vec![1500.0; n * n * n];
+    let speed = vec![SOUND_SPEED_WATER_SIM; n * n * n];
     let plan = build_source_plan(
         &speed,
         n,
@@ -181,7 +182,7 @@ fn focused_delays_apply_fast_skull_path_phase_correction() {
         source_domain: SourceDomain::TissueBoundary,
         focus,
     };
-    let mut speed = vec![1500.0; n * n * n];
+    let mut speed = vec![SOUND_SPEED_WATER_SIM; n * n * n];
     for x in 2..=4 {
         speed[flat_index(GridIndex { x, y: 5, z: 5 }, n)] = 3000.0;
     }
@@ -228,7 +229,7 @@ fn source_injection_imposes_bounded_pressure_without_accumulating_drive() {
         source_domain: SourceDomain::TissueBoundary,
         focus: source,
     };
-    let speed = vec![1500.0; field.len()];
+    let speed = vec![SOUND_SPEED_WATER_SIM; field.len()];
     let plan = build_source_plan(
         &speed,
         n,
@@ -282,7 +283,7 @@ fn exterior_coupling_source_stencil_excludes_body_cells() {
         source_domain: SourceDomain::ExteriorCoupling,
         focus: GridIndex { x: 3, y: 3, z: 4 },
     };
-    let speed = vec![1500.0; cells];
+    let speed = vec![SOUND_SPEED_WATER_SIM; cells];
 
     let plan = build_source_plan(
         &speed,

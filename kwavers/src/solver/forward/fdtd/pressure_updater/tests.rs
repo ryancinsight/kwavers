@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::source::GridSource;
@@ -16,7 +17,7 @@ use ndarray::{Array3, Zip};
 fn test_westervelt_correction_nonzero_after_history() {
     let n = 4usize;
     let dx = 1e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let dt = 0.3 * dx / c0;
 
@@ -71,7 +72,7 @@ fn test_westervelt_correction_nonzero_after_history() {
 fn test_fdtd_pressure_numerical_identity() {
     let n = 16usize;
     let dx = 1e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let dt = 0.3 * dx / c0;
 
@@ -152,7 +153,7 @@ fn test_fdtd_pressure_numerical_identity() {
 fn test_staggered_divergence_uses_scratch_buffer() {
     let n = 12usize;
     let dx = 1e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let dt = 0.3 * dx / c0;
 

@@ -1,5 +1,6 @@
 use super::super::types::{ElasticWaveConfig, ElasticWaveField};
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -8,7 +9,7 @@ use ndarray::Array3;
 #[test]
 fn test_elastic_wave_solver_recording() -> KwaversResult<()> {
     let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0)?;
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let mut sensor_mask = Array3::from_elem(grid.dimensions(), false);
     sensor_mask[[5, 5, 5]] = true;
     let config = ElasticWaveConfig {

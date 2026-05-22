@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn new_produces_correct_shape() {
         let grid = small_grid();
-        let model = HeterogeneityModel::new(&grid, 1500.0, 0.05);
+        let model = HeterogeneityModel::new(&grid, SOUND_SPEED_WATER_SIM, 0.05);
         assert_eq!(model.sound_speed_var.dim(), (4, 4, 4));
     }
 
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn adjust_sound_speed_returns_stored_field() {
         let grid = small_grid();
-        let model = HeterogeneityModel::new(&grid, 1500.0, 0.0); // zero variance → uniform
+        let model = HeterogeneityModel::new(&grid, SOUND_SPEED_WATER_SIM, 0.0); // zero variance → uniform
         let returned = model.adjust_sound_speed(&grid);
         for (&orig, &ret) in model.sound_speed_var.iter().zip(returned.iter()) {
             assert!((orig - ret).abs() < 1e-14);

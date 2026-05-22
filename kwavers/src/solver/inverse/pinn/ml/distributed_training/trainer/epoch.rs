@@ -83,7 +83,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             let u_ic = Tensor::<B, 2>::zeros([n_ic, 1], &device);
 
             let loss_weights = BurnLossWeights2D::default();
-            let wave_speed = 1500.0_f64;
+            let wave_speed = crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
             let (total_loss, data_loss, pde_loss, bc_loss, ic_loss) =
                 self.coordinator.model_replicas[replica_idx].compute_physics_loss(

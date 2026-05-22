@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::candidate::{fill_candidate_beta, fill_candidate_speed};
 use super::search::{first_descent_block, first_single_parameter_descent_block_test};
 use super::types::{AcceptedBlock, LineSearchWorkspace};
@@ -83,8 +84,8 @@ fn line_search_workspace_reuses_candidate_buffers_and_preserves_inactive_cells()
     let mut workspace = LineSearchWorkspace::new(4);
     let initial_speed_capacity = workspace.candidate_speed.capacity();
     let initial_beta_capacity = workspace.candidate_beta.capacity();
-    let current_speed = [1500.0, 1520.0, 1540.0, 1560.0];
-    let background_speed = [1500.0, 1520.0, 1540.0, 1560.0];
+    let current_speed = [SOUND_SPEED_WATER_SIM, 1520.0, 1540.0, 1560.0];
+    let background_speed = [SOUND_SPEED_WATER_SIM, 1520.0, 1540.0, 1560.0];
     let current_beta = [4.0, 5.0, 6.0, 7.0];
     let body = [true, false, true, true];
     let grad_speed = [2.0, 99.0, -4.0, 1.0e6];

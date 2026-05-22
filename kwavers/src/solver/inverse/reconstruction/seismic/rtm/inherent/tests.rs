@@ -7,6 +7,7 @@
 mod tests {
     use ndarray::{s, Array2, Array3, Array4};
 
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::grid::Grid;
     use crate::solver::inverse::reconstruction::seismic::config::{
         RtmImagingCondition, SeismicImagingConfig,
@@ -16,7 +17,7 @@ mod tests {
     fn rtm_with_condition(condition: RtmImagingCondition) -> ReverseTimeMigration {
         let mut config = SeismicImagingConfig::default();
         config.rtm_imaging_condition = condition;
-        ReverseTimeMigration::new(config, Array3::from_elem((3, 3, 3), 1500.0))
+        ReverseTimeMigration::new(config, Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM))
     }
 
     /// `EnergyNormalized`: I = (Σ_t S·R) / (Σ_t S²)
@@ -127,7 +128,7 @@ mod tests {
         const NZ: usize = 32;
         const DX: f64 = 3.0e-3; // 3 mm
         const F0: f64 = 150_000.0; // 150 kHz
-        const C: f64 = 1500.0; // water
+        const C: f64 = SOUND_SPEED_WATER_SIM; // water
 
         // CFL-stable dt for the 4th-order interior stencil:
         //   dt ≤ dx · CFL / (c_max · √D),  CFL = 0.3, D = 3

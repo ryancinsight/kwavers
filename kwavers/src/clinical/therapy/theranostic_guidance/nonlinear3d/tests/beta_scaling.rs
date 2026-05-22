@@ -8,6 +8,7 @@
 //!    forward-steepening signature per leading-order weak-nonlinear theory
 //!    (Hamilton & Blackstock 1998 §4.3: `|P_2| ∝ β · |P_1|² · z`).
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
@@ -32,7 +33,7 @@ use crate::clinical::therapy::theranostic_guidance::AnatomyKind;
 fn linear_westervelt_with_beta_zero_produces_symmetric_pressure_trace_within_fdtd_tolerance() {
     let n = 24;
     let spacing_m = 4.0e-4_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let cells = n * n * n;
     let speed = vec![c0; cells];
@@ -142,7 +143,7 @@ fn linear_westervelt_with_beta_zero_produces_symmetric_pressure_trace_within_fdt
 fn westervelt_steepening_signature_scales_linearly_with_beta_per_weak_nonlinear_theory() {
     let n = 24;
     let spacing_m = 4.0e-4_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let cells = n * n * n;
     let speed = vec![c0; cells];

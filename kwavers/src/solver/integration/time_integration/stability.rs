@@ -3,6 +3,7 @@
 //! This module provides stability analysis and CFL condition computation
 //! for time integration methods.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -37,8 +38,7 @@ impl StabilityAnalyzer {
         // Get maximum wave speed - using water as default medium
         // This is a reasonable default as most acoustic simulations use water
         // For other media, this should be passed as a parameter
-        const DEFAULT_SOUND_SPEED_WATER: f64 = 1500.0; // m/s at 20°C
-        let max_speed = DEFAULT_SOUND_SPEED_WATER;
+        let max_speed = SOUND_SPEED_WATER_SIM;
 
         // Compute CFL-limited time step
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
@@ -64,7 +64,7 @@ impl StabilityAnalyzer {
             .unwrap_or_else(|| {
                 // Fallback: estimate from field
                 let max_val = field.iter().map(|v| v.abs()).fold(0.0, f64::max);
-                max_val.max(1500.0) // Default sound speed in water
+                max_val.max(SOUND_SPEED_WATER_SIM) // Default sound speed in water
             });
 
         // Get other constraints if available

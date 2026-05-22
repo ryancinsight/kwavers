@@ -5,6 +5,7 @@ use std::sync::Arc;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::operator::{HelmholtzForwardOperator, SingleScatterBornOperator};
 
 /// Solver model identifier for audit trails.
@@ -63,7 +64,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            reference_sound_speed_m_s: 1500.0,
+            reference_sound_speed_m_s: SOUND_SPEED_WATER_SIM,
             spacing_m: 1.0e-3,
             iterations: 5,
             initial_step_s_per_m: 2.0e-6,

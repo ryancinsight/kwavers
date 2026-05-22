@@ -2,6 +2,7 @@
 
 use super::criteria::HybridSelectionCriteria;
 use super::metrics::{ComputationalMetrics, MaterialMetrics, SpectralMetrics};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array3, Array4};
@@ -87,7 +88,7 @@ impl AdaptiveMethodSelector {
             region.view(),
             (1, 1, 1), // Center of extracted region
         );
-        let computational = ComputationalMetrics::compute(grid, dt, 1500.0); // Assume typical sound speed
+        let computational = ComputationalMetrics::compute(grid, dt, SOUND_SPEED_WATER_SIM); // Assume typical sound speed
 
         // Weighted score for each method
         let spectral_score = self.compute_spectral_score(&spectral, &material, &computational);

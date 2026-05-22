@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::loader::CTImageLoader;
 use crate::domain::imaging::medical::MedicalImageLoader;
 
@@ -35,10 +36,10 @@ fn test_hu_to_sound_speed_bone() {
 #[test]
 fn test_hu_to_sound_speed_soft_tissue() {
     let c_water = CTImageLoader::hu_to_sound_speed(0.0);
-    assert!((c_water - 1500.0).abs() < 1e-6);
+    assert!((c_water - SOUND_SPEED_WATER_SIM).abs() < 1e-6);
 
     let c_tissue = CTImageLoader::hu_to_sound_speed(100.0);
-    assert_eq!(c_tissue, 1500.0);
+    assert_eq!(c_tissue, SOUND_SPEED_WATER_SIM);
 }
 
 #[test]

@@ -260,10 +260,11 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_blood_properties() {
-        assert!(WHOLE_BLOOD.sound_speed > 1500.0);
+        assert!(WHOLE_BLOOD.sound_speed > SOUND_SPEED_WATER_SIM);
         assert!(WHOLE_BLOOD.sound_speed < 1600.0);
         WHOLE_BLOOD.validate().unwrap();
     }

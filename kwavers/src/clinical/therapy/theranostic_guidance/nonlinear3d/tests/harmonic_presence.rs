@@ -33,6 +33,7 @@
 //! `#[ignore]`'d as Tier-2 (~10 s runtime). Run on demand with
 //! `cargo test --lib --package kwavers -- --ignored harmonic_generation`.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::encoding::SourceEncoding;
 use super::super::forward::{forward_with_schedule, ForwardInput, TimeSchedule};
 use super::super::types::{GridIndex, Nonlinear3dAperture, SourceDomain};
@@ -50,7 +51,7 @@ fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
     let n: usize = 48;
     let cells = n * n * n;
     let spacing_m = 1.0e-4_f64; // 0.1 mm → 4.8 mm cube
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let beta_nl = 10.0_f64;
     let frequency_hz = 1.0e6_f64;

@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::*;
 use ndarray::Array3;
 use num_complex::Complex64;
@@ -89,7 +90,7 @@ fn source_excitation_detects_transmit_dispersion() {
 
 #[test]
 fn reconstruction_metrics_and_table1_parity_match_contracts() {
-    let reference = Array3::from_shape_vec((1, 1, 3), vec![1450.0, 1500.0, 1550.0]).expect("shape");
+    let reference = Array3::from_shape_vec((1, 1, 3), vec![1450.0, SOUND_SPEED_WATER_SIM, 1550.0]).expect("shape");
     let shifted = reference.mapv(|value| value + 5.0);
 
     let metrics = reconstruction_metrics(&reference, &shifted).expect("metrics");

@@ -429,7 +429,7 @@ fn test_fwi_velocity_gradient_scaling_rejects_non_physical_inputs() {
 
     // Non-positive sound speed.
     let mut bad_model = model.clone();
-    bad_model[[0, 0, 0]] = -1500.0;
+    bad_model[[0, 0, 0]] = -SOUND_SPEED_WATER_SIM;
     assert!(apply_velocity_gradient_scaling(
         correlation.view_mut(),
         bad_model.view(),

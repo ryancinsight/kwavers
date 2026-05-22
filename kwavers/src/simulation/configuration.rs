@@ -204,6 +204,7 @@ impl Configuration {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use crate::domain::boundary::config::BoundaryParameters;
     use crate::domain::grid::config::DomainGridParameters;
@@ -246,7 +247,7 @@ mod tests {
         let mut config = Configuration::default();
         config.simulation.dt = Some(1e-3); // Too large
         config.simulation.cfl = 0.1;
-        config.medium.sound_speed_max = Some(1500.0);
+        config.medium.sound_speed_max = Some(SOUND_SPEED_WATER_SIM);
         config.grid.spacing = [0.001, 0.001, 0.001];
 
         assert!(config.validate().is_err());

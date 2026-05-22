@@ -111,6 +111,7 @@ impl crate::domain::plugin::Plugin for ThermalDiffusionPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::medium::HomogeneousMedium;
     use ndarray::Array3;
 
@@ -125,7 +126,7 @@ mod tests {
     #[test]
     fn test_heat_diffusion() {
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
 
         let config = ThermalDiffusionConfig {
             enable_bioheat: false,

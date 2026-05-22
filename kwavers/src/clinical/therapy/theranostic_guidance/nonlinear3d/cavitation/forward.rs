@@ -10,6 +10,7 @@
 use ndarray::Array3;
 use rayon::prelude::*;
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
 use crate::physics::acoustics::bubble_dynamics::{
     BubbleParameters, BubbleState, RayleighPlessetSolver,
@@ -316,8 +317,8 @@ mod tests {
             density_kg_m3: Array3::<f64>::from_elem(shape, 1000.0),
             background_beta: Array3::<f64>::from_elem(shape, 4.0),
             true_beta: Array3::<f64>::from_elem(shape, 4.0),
-            background_sound_speed_m_s: Array3::<f64>::from_elem(shape, 1500.0),
-            true_sound_speed_m_s: Array3::<f64>::from_elem(shape, 1500.0),
+            background_sound_speed_m_s: Array3::<f64>::from_elem(shape, SOUND_SPEED_WATER_SIM),
+            true_sound_speed_m_s: Array3::<f64>::from_elem(shape, SOUND_SPEED_WATER_SIM),
             attenuation_np_per_m_mhz: Array3::<f64>::zeros(shape),
             attenuation_power_law_y: Array3::<f64>::from_elem(shape, 1.05),
             spacing_m: 1.0e-3,

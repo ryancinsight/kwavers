@@ -39,7 +39,7 @@ mod tests {
     /// RefractionAngles stores Some critical angle.
     #[test]
     fn stores_critical_angle_when_present() {
-        let theta_c = (1500.0_f64 / 3400.0).asin(); // water–bone critical angle ≈ 26.2°
+        let theta_c = (SOUND_SPEED_WATER_SIM / 3400.0).asin(); // water–bone critical angle ≈ 26.2°
         let a = RefractionAngles {
             incident: 0.1,
             refracted: 0.0,

@@ -1,6 +1,7 @@
 //! Tests for PML boundary conditions.
 
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -60,7 +61,7 @@ fn test_theoretical_reflection() {
     // R = exp(-2 * σ_max * L_pml / c_max)
     // optimize_sigma_max inverts this formula.
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
-    let c_max = 1500.0;
+    let c_max = SOUND_SPEED_WATER_SIM;
     let thickness = 10;
     let target_reflection = 0.005;
 
@@ -98,7 +99,7 @@ fn test_theoretical_reflection() {
 fn test_sigma_max_optimization() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
     let target_reflection = 1e-6;
-    let c_max = 1500.0;
+    let c_max = SOUND_SPEED_WATER_SIM;
     let thickness = 10;
 
     let sigma_opt =

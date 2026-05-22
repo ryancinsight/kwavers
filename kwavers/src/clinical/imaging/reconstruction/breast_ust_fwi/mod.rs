@@ -184,6 +184,7 @@ pub fn reconstruct_breast_ust_sound_speed_volume(
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
     use crate::solver::inverse::fwi::frequency_domain::{
         simulate_frequency_observation, SingleScatterBornOperator,
@@ -194,7 +195,7 @@ mod tests {
     fn clinical_adapter_delegates_to_solver_and_preserves_metadata() {
         let array = MultiRowRingArray::new(5, 2, 0.07, 0.01).expect("array");
         let config = FrequencyDomainFwiConfig {
-            reference_sound_speed_m_s: 1500.0,
+            reference_sound_speed_m_s: SOUND_SPEED_WATER_SIM,
             spacing_m: 0.005,
             iterations: 2,
             initial_step_s_per_m: 2.0e-6,
@@ -204,7 +205,7 @@ mod tests {
             tikhonov_weight: 0.0,
             forward_operator: Arc::new(SingleScatterBornOperator),
         };
-        let mut truth = Array3::from_elem((2, 2, 2), 1500.0);
+        let mut truth = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
         truth[[1, 1, 1]] = 1525.0;
         let observed =
             simulate_frequency_observation(&truth, &array, 230_000.0, &config).expect("observed");
@@ -212,7 +213,7 @@ mod tests {
             230_000.0,
             observed.slice(ndarray::s![0..3, ..]).to_owned(),
         )];
-        let initial = Array3::from_elem((2, 2, 2), 1500.0);
+        let initial = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
 
         let result =
             reconstruct_breast_ust_sound_speed_volume(&observations, &array, &initial, &config)

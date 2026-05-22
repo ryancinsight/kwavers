@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::solver::pstd::PSTDConfig as PstdConfig;
@@ -55,7 +56,7 @@ fn test_pstd_phase_velocity_accuracy() {
     // cells traveled = 0.2·800 = 160; n_wraps = 2; residual s_peak = 32.
     // Quantization error ±0.5/160 = 0.31% < 0.5% tolerance. ~8× faster than n=128.
     let n = 64_usize;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let frequency = 1e6_f64;
     let wavelength = c0 / frequency;

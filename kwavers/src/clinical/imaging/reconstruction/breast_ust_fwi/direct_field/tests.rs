@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::grid::GridShape;
 use super::metrics::diagnostics_for_prediction;
 use super::predict::{point_source_observation_cube, source_kappa_filtered_source_weights};
@@ -29,7 +30,7 @@ fn point_source_prediction_matches_outgoing_green_formula() {
 #[test]
 fn source_kappa_weights_match_two_cell_symbol() {
     let spacing_m = 1.0e-3;
-    let sound_speed_m_s = 1500.0;
+    let sound_speed_m_s = SOUND_SPEED_WATER_SIM;
     let time_step_s = 1.0e-7;
 
     let weights = source_kappa_filtered_source_weights(
@@ -138,7 +139,7 @@ fn homogeneous_diagnostic_rejects_nonuniform_reference_medium() {
         density_kg_m3: 1000.0,
         cpml_thickness_cells: 0,
     };
-    let mut model = Array3::from_elem((12, 12, 3), 1500.0);
+    let mut model = Array3::from_elem((12, 12, 3), SOUND_SPEED_WATER_SIM);
     model[[6, 6, 1]] = 1510.0;
 
     let err = diagnose_breast_ust_homogeneous_direct_field(&model, &array, &[200_000.0], config)

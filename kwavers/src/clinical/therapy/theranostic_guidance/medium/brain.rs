@@ -15,6 +15,7 @@
 //! Soft tissue: `c ≈ 1510 + 55·HU_norm` (empirical, HU in [−20, 120]).
 //! Attenuation: 0.5 dB/cm/MHz → `α_soft = 0.5 × 100 × ln10/20 Np/m/MHz`.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 
@@ -49,7 +50,7 @@ pub fn prepare_brain_slice(
             body[[ix, iy]] = in_body;
             if hu >= 300.0 {
                 let phi = (hu / 1000.0).clamp(0.0, 1.0);
-                sound_speed[[ix, iy]] = 1500.0 * (1.0 - phi) + 2900.0 * phi;
+                sound_speed[[ix, iy]] = SOUND_SPEED_WATER_SIM * (1.0 - phi) + 2900.0 * phi;
                 attenuation[[ix, iy]] = soft_attenuation() * (1.0 - phi) + 70.0 * phi;
                 label[[ix, iy]] = 4;
             } else if in_body {

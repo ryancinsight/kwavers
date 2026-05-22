@@ -83,12 +83,13 @@ fn validate_positive_finite(parameter: &str, value: f64) -> KwaversResult<()> {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::*;
 
     fn water() -> ThermoelasticProperties {
         ThermoelasticProperties {
             density_kg_m3: 1000.0,
-            sound_speed_m_s: 1500.0,
+            sound_speed_m_s: SOUND_SPEED_WATER_SIM,
             specific_heat_j_kgk: 4180.0,
             thermal_conductivity_w_mk: 0.6,
         }
@@ -99,7 +100,7 @@ mod tests {
         let assessment = ConfinementAssessment::evaluate(100.0, 5e-9, water())?;
         let expected_delta = 0.01_f64;
         let expected_alpha = 0.6 / (1000.0 * 4180.0);
-        let expected_tau_s = expected_delta / 1500.0;
+        let expected_tau_s = expected_delta / SOUND_SPEED_WATER_SIM;
         let expected_tau_th = expected_delta.powi(2) / (4.0 * expected_alpha);
 
         assert!((assessment.optical_penetration_depth_m - expected_delta).abs() < 1e-15);

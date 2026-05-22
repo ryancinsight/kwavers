@@ -149,6 +149,7 @@ impl Default for AmplitudeCorrector {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::grid::Grid;
     use crate::domain::medium::homogeneous::HomogeneousMedium;
     use std::sync::Arc;
@@ -156,7 +157,7 @@ mod tests {
     #[test]
     fn absorption_compensation_toggle_changes_gain() -> KwaversResult<()> {
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0)?;
-        let mut medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let mut medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
         medium.set_acoustic_properties(0.5, 0.0, 5.0)?;
         let medium: Arc<dyn Medium> = Arc::new(medium);
 
@@ -179,7 +180,7 @@ mod tests {
             corrector.apply_correction(signal, dt, &medium, &grid, frequency, sensor_pos, false)?;
 
         let ratio = with_abs[1] / without_abs[1];
-        let expected = (0.5 * 1500.0 * dt).exp();
+        let expected = (0.5 * SOUND_SPEED_WATER_SIM * dt).exp();
         assert!((ratio - expected).abs() < 1e-12);
         Ok(())
     }

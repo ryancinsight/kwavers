@@ -3,6 +3,7 @@ use super::{
     SimpleOptimizer,
 };
 use burn::backend::{Autodiff, NdArray};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::{Array1, Array2};
 
 type TestBackend = Autodiff<NdArray<f32>>;
@@ -196,7 +197,7 @@ fn test_different_wave_speeds() {
     // Train with water speed of sound
     let mut trainer2 = BurnPINNTrainer::<TestBackend>::new(config, &device).unwrap();
     let metrics2 = trainer2
-        .train(&x_data, &t_data, &u_data, 1500.0, &device, 10)
+        .train(&x_data, &t_data, &u_data, SOUND_SPEED_WATER_SIM, &device, 10)
         .unwrap();
     assert!(metrics2.total_loss.last().unwrap().is_finite());
 }
