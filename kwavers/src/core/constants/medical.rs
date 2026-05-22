@@ -41,3 +41,13 @@ pub const STANDARD_PRESSURE_AMPLITUDE: f64 = 1e6;
 
 /// Standard beam width (m)
 pub const STANDARD_BEAM_WIDTH: f64 = 0.01;
+
+/// IEC 62127 tissue model specific heat capacity at 37°C (J/(kg·K)).
+///
+/// The IEC 62127-1 homogeneous tissue model (Table A.1) specifies
+/// c_p = 3500 J/(kg·K), distinct from the Duck (1990) general soft-tissue
+/// mean of 3600 J/(kg·K). Use this constant exclusively when computing
+/// temperature rise for IEC 62127 compliance.
+///
+/// Reference: IEC 62127-1:2013, Annex A, Table A.1.
+pub const IEC_TISSUE_SPECIFIC_HEAT: f64 = 3500.0;

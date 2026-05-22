@@ -152,10 +152,11 @@ impl EnhancedComplianceValidator {
         use crate::core::constants::fundamental::{
             DENSITY_BLOOD, DENSITY_WATER_NOMINAL as RHO_W, SOUND_SPEED_WATER,
         };
+        use crate::core::constants::medical::IEC_TISSUE_SPECIFIC_HEAT;
 
-        // IEC 62127 tissue model uses 1060 kg/m³; equals SSOT DENSITY_BLOOD by value.
+        // IEC 62127-1:2013 Table A.1: ρ = 1060 kg/m³, c_p = 3500 J/(kg·K).
         const TISSUE_DENSITY: f64 = DENSITY_BLOOD;
-        const TISSUE_HEAT_CAPACITY: f64 = 3500.0;
+        const TISSUE_HEAT_CAPACITY: f64 = IEC_TISSUE_SPECIFIC_HEAT;
 
         // IEC 62127 absorption model: α [Np/m] = 0.3 dB/cm/MHz × f_MHz × 100 × DB_TO_NP
         let f_mhz = (params.frequency / 1e6).max(1e-3);

@@ -4,6 +4,7 @@
 //! parameters, power-law tissue absorption, Kramers–Kronig dispersion, and
 //! a canonical tissue-property database.
 
+use crate::core::constants::acoustic_parameters::BONE_DENSITY;
 use crate::core::constants::fundamental::{
     DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT, DENSITY_KIDNEY, DENSITY_LIVER, DENSITY_MUSCLE,
     DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT,
@@ -169,7 +170,7 @@ pub fn tissue_properties(tissue: &str) -> (f64, f64, f64, f64, f64) {
         "liver" => (SOUND_SPEED_LIVER, DENSITY_LIVER, 0.5, 1.05, 7.6),
         "muscle" => (SOUND_SPEED_MUSCLE, DENSITY_MUSCLE, 0.57, 1.0, 7.4),
         "fat" => (SOUND_SPEED_FAT, DENSITY_FAT, 0.48, 1.0, 10.0),
-        "skull" => (2900.0, 1900.0, 13.0, 1.2, 12.0),
+        "skull" => (2900.0, BONE_DENSITY, 13.0, 1.2, 12.0),
         "blood" => (SOUND_SPEED_BLOOD, DENSITY_BLOOD, 0.14, 1.21, 6.1),
         "brain" => (SOUND_SPEED_BRAIN, DENSITY_BRAIN, 0.43, 1.3, 6.8),
         "kidney" => (SOUND_SPEED_KIDNEY, DENSITY_KIDNEY, 1.0, 1.0, 7.8),

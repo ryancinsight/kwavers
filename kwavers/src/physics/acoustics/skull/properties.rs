@@ -1,3 +1,4 @@
+use crate::core::constants::acoustic_parameters::BONE_DENSITY;
 use crate::core::error::{KwaversError, KwaversResult};
 
 /// Skull material properties based on literature
@@ -44,7 +45,7 @@ impl AcousticSkullProperties {
         match bone_type {
             "cortical" => Ok(Self {
                 sound_speed: 3100.0,
-                density: 1900.0,
+                density: BONE_DENSITY,
                 attenuation_coeff: 60.0,
                 thickness: 0.007,
                 shear_speed: Some(1600.0),
