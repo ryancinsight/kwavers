@@ -9,8 +9,9 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_TISSUE, DENSITY_WATER,
-    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_TISSUE,
+    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_LIVER, DENSITY_TISSUE,
+    DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
+    SOUND_SPEED_LIVER,
 };
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
@@ -52,10 +53,11 @@ pub const WATER: TissueProperties = TissueProperties {
 
 /// Brain white matter (37°C)
 /// Source: Duck (1990), Table 3.3
+/// Z = ρ·c = 1040 × 1546 = 1 607 840 Pa·s/m
 pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
-    sound_speed: SOUND_SPEED_TISSUE,
+    sound_speed: SOUND_SPEED_BRAIN,
     density: DENSITY_BRAIN,
-    impedance: 1601600.0,
+    impedance: 1_607_840.0,
     absorption_coefficient: 0.6,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 6.5,
@@ -127,11 +129,12 @@ pub const SKULL: TissueProperties = TissueProperties {
 // ============================================================================
 
 /// Liver (hepatic tissue) (37°C)
-/// Source: Duck (1990), Table 3.3
+/// Source: Duck (1990), Table 3.3; Table 4.6: c=1578 m/s, ρ=1060 kg/m³
+/// Z = ρ·c = 1060 × 1578 = 1 672 680 Pa·s/m
 pub const LIVER: TissueProperties = TissueProperties {
-    sound_speed: 1570.0,
-    density: 1070.0,
-    impedance: 1679900.0,
+    sound_speed: SOUND_SPEED_LIVER,
+    density: DENSITY_LIVER,
+    impedance: 1_672_680.0,
     absorption_coefficient: 0.4,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 7.0,
@@ -209,10 +212,12 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
 // ============================================================================
 
 /// Blood (37°C)
+/// Source: Duck (1990), Table 4.6: c=1584 m/s, ρ=1060 kg/m³
+/// Z = ρ·c = 1060 × 1584 = 1 679 040 Pa·s/m
 pub const BLOOD: TissueProperties = TissueProperties {
-    sound_speed: 1584.0,
+    sound_speed: SOUND_SPEED_BLOOD,
     density: DENSITY_BLOOD,
-    impedance: 1679040.0,
+    impedance: 1_679_040.0,
     absorption_coefficient: 0.15,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 5.5,
