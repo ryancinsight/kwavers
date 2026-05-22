@@ -192,6 +192,14 @@ pub const SOUND_SPEED_SKULL: f64 = 2900.0;
 /// Reference: Duck, F. A. (1990). "Physical properties of tissue"
 pub const BONE_DENSITY: f64 = 1900.0;
 
+/// Skull (cortical bone) density (kg/m³).
+///
+/// Cortical bone of the human skull is slightly denser than the generic bone
+/// value (BONE_DENSITY = 1900 kg/m³) due to its compact lamellar structure.
+/// Value: 1920 kg/m³.
+/// Reference: Duck (1990) Table 3.3.
+pub const DENSITY_SKULL: f64 = 1920.0;
+
 /// Bone nonlinearity parameter (B/A)
 /// Value: 8.0
 /// Reference: Estimated from tissue properties

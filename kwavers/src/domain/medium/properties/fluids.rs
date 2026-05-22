@@ -15,11 +15,14 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_WATER, DENSITY_BLOOD, DENSITY_TISSUE,
-    SOUND_SPEED_BLOOD,
+    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
+    DENSITY_TISSUE, SOUND_SPEED_BLOOD,
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD};
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_WATER_37C,
+    THERMAL_CONDUCTIVITY_CSF, THERMAL_DIFFUSIVITY_BLOOD,
+};
 use super::material::AcousticMaterialProperties;
 
 /// Fluid material properties type alias
@@ -41,9 +44,10 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)
     shear_viscosity: 1.2e-3,
     bulk_viscosity: 0.0,
-    specific_heat: 3840.0,
-    thermal_conductivity: 0.55,
-    thermal_diffusivity: 1.40e-7,
+    specific_heat: SPECIFIC_HEAT_BLOOD_PLASMA,
+    thermal_conductivity: 0.55,  // plasma thermal conductivity W/(m·K)
+    // α = k/(ρ·cp) = 0.55 / (1026 × 3840) = 1.396e-7 m²/s
+    thermal_diffusivity: 1.396e-7,
     perfusion_rate: 100.0, // Blood circulation rate
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0, // Carries heat via circulation
@@ -88,12 +92,13 @@ pub const CSF: FluidProperties = FluidProperties {
     impedance: 1520563.0,
     absorption_coefficient: 0.008,
     absorption_exponent: 1.1,
-    nonlinearity_parameter: 5.0,
+    nonlinearity_parameter: B_OVER_A_CSF,
     shear_viscosity: 0.7e-3, // Lower viscosity than blood
     bulk_viscosity: 0.0,
-    specific_heat: 3570.0,
-    thermal_conductivity: 0.60,
-    thermal_diffusivity: 1.67e-7,
+    specific_heat: SPECIFIC_HEAT_CSF,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_CSF,
+    // α = k/(ρ·cp) = 0.60 / (1007 × 3900) = 1.528e-7 m²/s
+    thermal_diffusivity: 1.528e-7,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,

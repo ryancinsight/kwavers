@@ -167,6 +167,12 @@ pub const B_OVER_A_WATER: f64 = 5.2;
 /// Reference: Duck (1990) Table 4.16.
 pub const B_OVER_A_BLOOD: f64 = 6.1;
 
+/// Nonlinearity parameter B/A for cerebrospinal fluid at body temperature (dimensionless).
+///
+/// CSF composition is near-water at physiological temperature; B/A ≈ 5.0.
+/// Reference: Duck (1990) Table 4.16.
+pub const B_OVER_A_CSF: f64 = 5.0;
+
 /// Small-signal sound speed in whole blood at body temperature (m/s).
 ///
 /// Value: 1584 m/s — measured for normal adult whole blood at 37°C.

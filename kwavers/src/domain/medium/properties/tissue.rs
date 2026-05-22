@@ -8,16 +8,22 @@
 //! Temperature: 37°C (body temperature)
 //! Pressure: 1 atm unless otherwise noted
 
+use crate::core::constants::acoustic_parameters::DENSITY_SKULL;
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_FAT,
-    B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER, DENSITY_BLOOD,
-    DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER,
-    SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
+    ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_CSF,
+    B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER,
+    DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
+    DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
     SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::thermodynamic::{
-    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER,
+    BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD, SPECIFIC_HEAT_BONE, SPECIFIC_HEAT_BRAIN_GRAY,
+    SPECIFIC_HEAT_BRAIN_WHITE, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_LIVER,
+    SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_TISSUE, SPECIFIC_HEAT_WATER,
+    THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_BRAIN, THERMAL_CONDUCTIVITY_BRAIN_GRAY,
+    THERMAL_CONDUCTIVITY_CSF, THERMAL_CONDUCTIVITY_FAT, THERMAL_CONDUCTIVITY_KIDNEY,
+    THERMAL_CONDUCTIVITY_LIVER, THERMAL_CONDUCTIVITY_MUSCLE, THERMAL_CONDUCTIVITY_SKULL,
     THERMAL_CONDUCTIVITY_WATER, THERMAL_DIFFUSIVITY_WATER,
 };
 use super::material::AcousticMaterialProperties;
@@ -69,9 +75,10 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_BRAIN, // 6.55 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
-    specific_heat: 3650.0,
-    thermal_conductivity: 0.50,
-    thermal_diffusivity: 1.33e-7,
+    specific_heat: SPECIFIC_HEAT_BRAIN_WHITE,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_BRAIN,
+    // α = k/(ρ·cp) = 0.50 / (1040 × 3650) = 1.317e-7 m²/s
+    thermal_diffusivity: 1.317e-7,
     perfusion_rate: 75.0, // mL/100g/min
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.7,       // W/kg
@@ -93,9 +100,10 @@ pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_BRAIN, // 6.55 (Duck 1990 Table 4.16 brain mean)
     shear_viscosity: 2.2e-3,
     bulk_viscosity: 5.2e-3,
-    specific_heat: 3680.0,
-    thermal_conductivity: 0.52,
-    thermal_diffusivity: 1.34e-7,
+    specific_heat: SPECIFIC_HEAT_BRAIN_GRAY,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_BRAIN_GRAY,
+    // α = k/(ρ·cp) = 0.52 / (1050 × 3680) = 1.346e-7 m²/s
+    thermal_diffusivity: 1.346e-7,
     perfusion_rate: 150.0, // mL/100g/min (higher than white matter)
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 1.2, // W/kg (higher metabolic rate)
@@ -110,7 +118,8 @@ pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
 /// Source: Duck (1990), Table 3.3
 pub const SKULL: TissueProperties = TissueProperties {
     sound_speed: 4080.0,
-    density: 1920.0,
+    density: DENSITY_SKULL,
+    // Z = ρ·c = 1920 × 4080 = 7 833 600 Pa·s/m
     impedance: 7833600.0,
     absorption_coefficient: 3.0,
     absorption_exponent: 1.0,
@@ -118,8 +127,9 @@ pub const SKULL: TissueProperties = TissueProperties {
     shear_viscosity: 5e-3,
     bulk_viscosity: 1e-2,
     specific_heat: SPECIFIC_HEAT_BONE,
-    thermal_conductivity: 0.4,
-    thermal_diffusivity: 1.61e-7,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_SKULL,
+    // α = k/(ρ·cp) = 0.40 / (1920 × 1313) = 1.587e-7 m²/s
+    thermal_diffusivity: 1.587e-7,
     perfusion_rate: 5.0, // Much lower perfusion in bone
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.1, // Lower metabolic rate
@@ -146,9 +156,10 @@ pub const LIVER: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_LIVER, // 6.75 (Duck 1990 Table 4.16 mean)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
-    specific_heat: 3590.0,
-    thermal_conductivity: 0.56,
-    thermal_diffusivity: 1.46e-7,
+    specific_heat: SPECIFIC_HEAT_LIVER,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_LIVER,
+    // α = k/(ρ·cp) = 0.56 / (1060 × 3540) = 1.492e-7 m²/s
+    thermal_diffusivity: 1.492e-7,
     perfusion_rate: 100.0, // mL/100g/min
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.8, // W/kg
@@ -175,7 +186,7 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
     specific_heat: SPECIFIC_HEAT_TISSUE,
-    thermal_conductivity: 0.50,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_KIDNEY,
     // α = k/(ρ·cp) = 0.50 / (1050 × 3600) = 1.323e-7 m²/s
     thermal_diffusivity: 1.323e-7,
     perfusion_rate: 120.0, // Very high perfusion
@@ -200,7 +211,7 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
     specific_heat: SPECIFIC_HEAT_TISSUE,
-    thermal_conductivity: 0.50,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_KIDNEY,
     // α = k/(ρ·cp) = 0.50 / (1055 × 3600) = 1.317e-7 m²/s
     thermal_diffusivity: 1.317e-7,
     perfusion_rate: 130.0,
@@ -229,9 +240,10 @@ pub const BLOOD: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_BLOOD, // 6.1 (Duck 1990 Table 4.16)
     shear_viscosity: 4e-3,
     bulk_viscosity: 0.0,
-    specific_heat: 3650.0,
-    thermal_conductivity: 0.54,
-    thermal_diffusivity: 1.39e-7,
+    specific_heat: SPECIFIC_HEAT_BLOOD,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_BLOOD,
+    // α = k/(ρ·cp) = 0.52 / (1060 × 3617) = 1.356e-7 m²/s
+    thermal_diffusivity: 1.356e-7,
     perfusion_rate: 0.0, // Blood IS the perfusion medium
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -254,9 +266,10 @@ pub const MUSCLE: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_MUSCLE, // 7.4 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
-    specific_heat: 3750.0,
-    thermal_conductivity: 0.60,
-    thermal_diffusivity: 1.48e-7,
+    specific_heat: SPECIFIC_HEAT_MUSCLE,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_MUSCLE,
+    // α = k/(ρ·cp) = 0.49 / (1090 × 3421) = 1.314e-7 m²/s
+    thermal_diffusivity: 1.314e-7,
     perfusion_rate: 80.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 1.2, // Active metabolism
@@ -278,9 +291,10 @@ pub const FAT: TissueProperties = TissueProperties {
     nonlinearity_parameter: B_OVER_A_FAT, // 9.6 (Duck 1990 Table 4.16)
     shear_viscosity: 2e-3,
     bulk_viscosity: 5e-3,
-    specific_heat: 2500.0,        // Lower heat capacity
-    thermal_conductivity: 0.20,   // Much lower thermal conductivity
-    thermal_diffusivity: 8.89e-8, // Slower thermal diffusion
+    specific_heat: SPECIFIC_HEAT_FAT,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_FAT,
+    // α = k/(ρ·cp) = 0.21 / (928 × 2348) = 9.637e-8 m²/s
+    thermal_diffusivity: 9.637e-8,
     perfusion_rate: 30.0,         // Lower perfusion
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.2,      // Lower metabolic rate
@@ -299,12 +313,13 @@ pub const CSF: TissueProperties = TissueProperties {
     impedance: 1_525_605.0,
     absorption_coefficient: 0.0,
     absorption_exponent: 1.0,
-    nonlinearity_parameter: 5.0,
+    nonlinearity_parameter: B_OVER_A_CSF,
     shear_viscosity: 0.7e-3,
     bulk_viscosity: 0.0,
-    specific_heat: 3900.0,
-    thermal_conductivity: 0.60,
-    thermal_diffusivity: 1.53e-7,
+    specific_heat: SPECIFIC_HEAT_CSF,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_CSF,
+    // α = k/(ρ·cp) = 0.60 / (1007 × 3900) = 1.528e-7 m²/s
+    thermal_diffusivity: 1.528e-7,
     perfusion_rate: 0.0, // Not perfused tissue
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,

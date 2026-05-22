@@ -154,6 +154,25 @@ pub const SPECIFIC_HEAT_LUNG: f64 = 3886.0;
 /// Reference: IT'IS Foundation database v4.0 (2022).
 pub const SPECIFIC_HEAT_BREAST_GLAND: f64 = 3600.0;
 
+/// Specific heat of brain white matter at 37°C (J/(kg·K))
+/// Source: Duck (1990) Table 9.1
+pub const SPECIFIC_HEAT_BRAIN_WHITE: f64 = 3650.0;
+
+/// Specific heat of brain gray matter at 37°C (J/(kg·K))
+/// Source: Duck (1990) Table 9.1
+pub const SPECIFIC_HEAT_BRAIN_GRAY: f64 = 3680.0;
+
+/// Specific heat of cerebrospinal fluid at 37°C (J/(kg·K))
+/// Source: Duck (1990)
+pub const SPECIFIC_HEAT_CSF: f64 = 3900.0;
+
+/// Specific heat of blood plasma at 37°C (J/(kg·K))
+///
+/// Plasma (~90% water) has higher specific heat than whole blood because it
+/// lacks red blood cells (which have lower c_p due to haemoglobin content).
+/// Source: Duck (1990); Gordon et al. (2009)
+pub const SPECIFIC_HEAT_BLOOD_PLASMA: f64 = 3840.0;
+
 /// Thermal conductivity of water at 20°C (W/(m·K))
 pub const THERMAL_CONDUCTIVITY_WATER: f64 = 0.598;
 
@@ -190,6 +209,38 @@ pub const THERMAL_CONDUCTIVITY_TISSUE: f64 = 0.5;
 /// - Duck, F.A. (1990). *Physical Properties of Tissue*.
 ///   Academic Press, London, Table 9.1.
 pub const THERMAL_CONDUCTIVITY_BLOOD: f64 = 0.52;
+
+/// Thermal conductivity of brain white matter at 37°C (W/(m·K))
+/// Source: Duck (1990) Table 9.1; IT'IS Foundation v4.1
+pub const THERMAL_CONDUCTIVITY_BRAIN: f64 = 0.50;
+
+/// Thermal conductivity of brain gray matter at 37°C (W/(m·K))
+/// Source: Duck (1990) Table 9.1; IT'IS Foundation v4.1
+pub const THERMAL_CONDUCTIVITY_BRAIN_GRAY: f64 = 0.52;
+
+/// Thermal conductivity of cortical skull bone at 37°C (W/(m·K))
+/// Source: Duck (1990) Table 9.1
+pub const THERMAL_CONDUCTIVITY_SKULL: f64 = 0.40;
+
+/// Thermal conductivity of liver at 37°C (W/(m·K))
+/// Source: Duck (1990) Table 9.1; IT'IS Foundation v4.1
+pub const THERMAL_CONDUCTIVITY_LIVER: f64 = 0.56;
+
+/// Thermal conductivity of kidney at 37°C (W/(m·K))
+/// Source: IT'IS Foundation v4.1
+pub const THERMAL_CONDUCTIVITY_KIDNEY: f64 = 0.50;
+
+/// Thermal conductivity of skeletal muscle at 37°C (W/(m·K))
+/// Source: IT'IS Foundation v4.1
+pub const THERMAL_CONDUCTIVITY_MUSCLE: f64 = 0.49;
+
+/// Thermal conductivity of adipose (fat) tissue at 37°C (W/(m·K))
+/// Source: IT'IS Foundation v4.1
+pub const THERMAL_CONDUCTIVITY_FAT: f64 = 0.21;
+
+/// Thermal conductivity of cerebrospinal fluid at 37°C (W/(m·K))
+/// Source: Duck (1990)
+pub const THERMAL_CONDUCTIVITY_CSF: f64 = 0.60;
 
 /// Thermal diffusivity of water (m²/s)
 pub const THERMAL_DIFFUSIVITY_WATER: f64 = 1.43e-7;
