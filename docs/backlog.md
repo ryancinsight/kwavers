@@ -2,8 +2,8 @@
 
 ## SSOT for Tasks, Priorities, Risks, Dependencies, and Retrospectives
 
-**Status**: CURRENT — structural split complete; zero kwavers warnings; dynamic-focus GPU wired
-**Last Updated**: 2026-05-10
+**Status**: CURRENT — adjoint RTM timing + PML-zone mute fixed; CNR > 0 verified; 4109/4109 PASS
+**Last Updated**: 2026-05-22
 **Architecture Compliance**: ✅ Clean architecture maintained
 **Quality Grade**: A+ — 0 files ≥400 lines; 0 kwavers compiler warnings
 **Current Phase**: Closure — file hierarchy + naming fixes + GPU dynamic focus gap closed
@@ -11,6 +11,19 @@
 ### Priority backlog (ordered: correctness → architecture → missing tests → docs)
 
 #### P0 — Correctness
+- [x] Adjoint RTM timing bug: imaging used `curr_adj=q(t+1)` (1 step late) → reordered to
+  BACKWARD→INJECT→IMAGE→SWAP so cross-correlation uses `next_adj=q(t)` at same physical time as
+  `fwd_curr=p(t)`. PML-zone mute replaces aperture mute: `a_x[ix] < 0` detects all CPML cells;
+  zeroes entire PML strip to eliminate CPML-equation distortion artifacts.
+  Result: `abdominal_theranostic_inverse_recovers_lesion_support` CNR −0.846 → > 0. [patch]
+- [x] `test_keller_miksis_equilibrium`: root cause VdW EOS round-trip mismatch at equilibrium;
+  fixed by `use_thermal_effects: false` (polytropic, consistent with `at_equilibrium`); `#[ignore]` removed. [patch]
+- [x] `test_oneil_solution`: wrong O'Neil formula (`kh/2` → `k(d₂−d₁)/2`, missing abs); wrong peak time
+  (missing propagation delay `d₁/c`); wrong focusing assertion (geometric focus ≠ amplitude max for F#=1);
+  all three corrected; `#[ignore]` removed. [patch]
+- [x] `test_energy_conservation_linear`: `Σp²` is not an acoustic energy invariant (velocity carries 50%);
+  assertion updated to physics-correct `[0.30, 0.75]×initial` bounds. [patch]
+- [x] 4111/4111 PASS; 12 `#[ignore]` remaining (2 promoted to active). [patch]
 - [x] GPU PSTD: fractional-Laplacian absorption (Treeby & Cox 2010 Eq. 9-10) VERIFIED COMPLETE [minor]
   WGSL: `absorb_*` entry points in pstd.wgsl; Rust: encode_density_update + encode_pressure_record;
   pipelines: all pipeline_absorb_* compiled + bg_absorb bound. No remaining gap.

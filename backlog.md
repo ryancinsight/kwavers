@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## Ch29 OOM fix — early CT drop in `run_theranostic_nonlinear_3d` (2026-05-22)
+- **[done] [patch]** Root cause of "memory allocation ... failed" abort in the PyO3 book generation
+  path (`fig05 nonlinear brain start` / `comparison nonlinear brain start`):
+  `run_theranostic_nonlinear_3d` accepted `ct_hu: &Array3<f64>` and `label_volume: Option<&Array3<i16>>`.
+  The caller (PyO3 binding) held the full-resolution brain CT (~600 MB at f64 for a 512×512×300 scan)
+  alive across every forward pass, checkpoint store, and adjoint step of the Westervelt FWI loop.
+  Combined with Python heap, matplotlib state, and results from prior cases, this exhausted available
+  RAM before the FWI loop completed.
+  Fix: changed signature to take owned `Array3<f64>` / `Option<Array3<i16>>` and added explicit
+  `drop(ct_hu); drop(label_volume);` immediately after `prepare_volume` returns the resampled
+  `grid_size³` volume. Three call sites updated: PyO3 binding (`nonlinear3d.rs`), abdominal
+  pipeline test, brain pipeline test. `cargo check -p kwavers --lib` and
+  `cargo check -p pykwavers --lib` exit 0.
+
 ## T10/T15b — time-domain FWI solver-type factory dispatch (2026-05-22)
 - **[done] [arch]** `FwiParameters` gained `solver_type: SolverType` (default `FDTD`). The
   `build_fdtd_solver_for_forward` method was renamed `build_solver_for_forward` and its return
