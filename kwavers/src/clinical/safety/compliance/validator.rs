@@ -149,10 +149,11 @@ impl EnhancedComplianceValidator {
     /// Reference: Nyborg WL (1988), *Phys. Med. Biol.* 33(7):785–792.
     fn estimate_temperature_rise(&self, params: &ClinicalTherapyParameters) -> f64 {
         use crate::core::constants::fundamental::{
-            DENSITY_WATER_NOMINAL as RHO_W, SOUND_SPEED_WATER,
+            DENSITY_BLOOD, DENSITY_WATER_NOMINAL as RHO_W, SOUND_SPEED_WATER,
         };
 
-        const TISSUE_DENSITY: f64 = 1060.0;
+        // IEC 62127 tissue model uses 1060 kg/m³; equals SSOT DENSITY_BLOOD by value.
+        const TISSUE_DENSITY: f64 = DENSITY_BLOOD;
         const TISSUE_HEAT_CAPACITY: f64 = 3500.0;
 
         // IEC 62127 absorption model: α [Np/m] = 0.3 dB/cm/MHz × f_MHz × 100/8.686

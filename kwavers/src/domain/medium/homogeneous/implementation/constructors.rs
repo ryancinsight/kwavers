@@ -1,3 +1,5 @@
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::constants::BLOOD_VISCOSITY_37C;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -7,11 +9,11 @@ use super::HomogeneousMedium;
 impl HomogeneousMedium {
     /// Create a tissue medium with standard properties
     pub fn tissue(grid: &Grid) -> Self {
-        use crate::core::constants::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
+        use crate::core::constants::SOUND_SPEED_TISSUE;
         let mut medium = Self::new(DENSITY_TISSUE, SOUND_SPEED_TISSUE, 0.75, 15.0, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;
-        medium.temperature = Array3::from_elem(shape, 310.15);
+        medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, medium.density);
@@ -45,7 +47,7 @@ impl HomogeneousMedium {
         let mut medium = Self::new(1060.0, 1570.0, 0.15, 0.5, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;
-        medium.temperature = Array3::from_elem(shape, 310.15);
+        medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, medium.density);
@@ -119,13 +121,13 @@ impl HomogeneousMedium {
     ///
     /// λ = Eν/((1+ν)(1-2ν)), μ = E/(2(1+ν))
     pub fn soft_tissue(youngs_modulus: f64, poisson_ratio: f64, grid: &Grid) -> Self {
-        let density = 1060.0;
+        let density = DENSITY_BLOOD;
         let sound_speed = 1580.0;
 
         let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;
-        medium.temperature = Array3::from_elem(shape, 310.15);
+        medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, density);
@@ -219,7 +221,7 @@ impl HomogeneousMedium {
         let mut medium = Self::new(density, c_compression, 0.0, 0.0, grid);
         let shape = (grid.nx, grid.ny, grid.nz);
         medium.grid_shape = shape;
-        medium.temperature = Array3::from_elem(shape, 310.15);
+        medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, density);

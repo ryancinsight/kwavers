@@ -289,6 +289,7 @@ impl KzkNonlinearOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::DENSITY_TISSUE;
     use crate::solver::forward::nonlinear::kzk::KZKConfig;
 
     /// Helper: minimal `KZKConfig` for unit tests of `KzkNonlinearOperator`.
@@ -380,7 +381,7 @@ mod tests {
     #[test]
     fn goldberg_number_at_shock_distance_equals_one() {
         let c0 = 1540.0_f64; // tissue
-        let rho0 = 1050.0_f64;
+        let rho0 = DENSITY_TISSUE;
         let b_over_a = 6.5_f64; // soft tissue mid-range (Duck 1990)
         let frequency = 500.0e3_f64; // 500 kHz
         let p0 = 5.0e4_f64; // 50 kPa

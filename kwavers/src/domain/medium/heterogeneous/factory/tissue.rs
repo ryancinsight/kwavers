@@ -3,6 +3,7 @@
 //! **Factory Pattern**: Encapsulated creation logic per Gang of Four
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
+use crate::core::constants::fundamental::DENSITY_TISSUE;
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use log::debug;
@@ -87,7 +88,7 @@ impl TissueFactory {
         // Initialize elastic properties
         // Use physically consistent relationships:
         //   μ = ρ c_s^2,  K ≈ ρ c_p^2,  λ = K - 2μ/3
-        let default_density: f64 = 1050.0;
+        let default_density: f64 = DENSITY_TISSUE;
         let default_sound_speed: f64 = 1540.0; // compressional wave speed approximation
         let default_bulk_modulus = default_density * default_sound_speed.powi(2);
 
