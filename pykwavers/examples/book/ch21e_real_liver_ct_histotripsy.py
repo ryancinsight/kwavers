@@ -35,6 +35,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 — required for projection="3d"
 import nibabel as nib
 import numpy as np
 import matplotlib.patches as mpatches
@@ -2046,6 +2047,122 @@ TISSUE_CMAP = ListedColormap([
 ])
 
 
+def plot_transducer_placement_3d(label_vol: np.ndarray, info: dict) -> str:
+    """3D scatter: HistoSonics 50 mm / 120 mm-ROC bowl placed anterior to the
+    patient skin (sub-costal approach), targeting the HCC tumour centroid.
+
+    All bowl elements are placed at depth < 0 (outside the patient body).
+    The skin surface begins at depth = 0 mm (anterior face of the volume).
+
+    Refs: HistoSonics Edison system; Vlaisavljevich 2015 (JASA 138:1864);
+    Bilic 2023 (Med Image Anal 84:102680).
+    """
+    dx  = info["dx"]
+    nx, ny, nz = info["shape"]
+    x_axis = info["x_axis"]
+    y_axis = info["y_axis"]
+    z_axis = info["z_axis"]
+    ix0, iy0, iz0 = info["focus_idx"]
+    x_focus = ix0 * dx
+    y_focus = iy0 * dx - ny * dx / 2.0
+    z_focus = iz0 * dx - nz * dx / 2.0
+
+    # ── Transducer bowl elements ──────────────────────────────────────────
+    # 50 mm aperture diameter, 120 mm radius of curvature (HistoSonics class).
+    # Bowl centred on focus; opens in +x direction (into the patient).
+    R_f: float = 120.0e-3  # radius of curvature (m)
+    a:   float = 25.0e-3   # aperture half-diameter (m)
+    theta_max = float(np.arcsin(a / R_f))  # ≈ 12.0°
+
+    ex_list: list[float] = [x_focus - R_f]
+    ey_list: list[float] = [y_focus]
+    ez_list: list[float] = [z_focus]
+    for ring in range(1, 9):
+        th = theta_max * ring / 8.0
+        n_phi = max(8, int(round(40.0 * np.sin(th) / np.sin(theta_max))))
+        phis = np.linspace(0.0, 2.0 * np.pi, n_phi, endpoint=False)
+        ex_list.extend([float(x_focus - R_f * np.cos(th))] * n_phi)
+        ey_list.extend((y_focus + R_f * np.sin(th) * np.cos(phis)).tolist())
+        ez_list.extend((z_focus + R_f * np.sin(th) * np.sin(phis)).tolist())
+    ex = np.array(ex_list)
+    ey = np.array(ey_list)
+    ez = np.array(ez_list)
+
+    # ── Body (skin) surface — anterior face per lateral position ──────────
+    body_bool = label_vol != AIR.label
+    first_ix  = np.argmax(body_bool, axis=0)
+    has_body  = body_bool.any(axis=0)
+    iy_grid, iz_grid = np.meshgrid(np.arange(ny), np.arange(nz), indexing="ij")
+    sx_raw = x_axis[first_ix[has_body]]
+    sy_raw = y_axis[iy_grid[has_body]]
+    sz_raw = z_axis[iz_grid[has_body]]
+    rng = np.random.default_rng(seed=0)
+    if len(sx_raw) > 2500:
+        sel = rng.choice(len(sx_raw), 2500, replace=False)
+        sx_raw, sy_raw, sz_raw = sx_raw[sel], sy_raw[sel], sz_raw[sel]
+
+    # ── Liver + HCC tumour surface voxels ─────────────────────────────────
+    organ_mask = (label_vol == LIVER.label) | (label_vol == HCC.label)
+    tumor_mask = label_vol == HCC.label
+    organ_surf = organ_mask & ~binary_erosion(organ_mask, iterations=1)
+    tumor_surf = tumor_mask & ~binary_erosion(tumor_mask, iterations=1)
+    c_org = np.argwhere(organ_surf)
+    c_tum = np.argwhere(tumor_surf)
+    step_org = max(1, len(c_org) // 1500)
+    step_tum = max(1, len(c_tum) // 800)
+    c_org = c_org[::step_org]
+    c_tum = c_tum[::step_tum]
+    ox = x_axis[c_org[:, 0]]; oy = y_axis[c_org[:, 1]]; oz = z_axis[c_org[:, 2]]
+    tx = x_axis[c_tum[:, 0]]; ty = y_axis[c_tum[:, 1]]; tz = z_axis[c_tum[:, 2]]
+
+    # ── 3D scatter figure ─────────────────────────────────────────────────
+    fig = plt.figure(figsize=(9, 7))
+    ax  = fig.add_subplot(111, projection="3d")
+
+    ax.scatter(sx_raw * 1e3, sy_raw * 1e3, sz_raw * 1e3,
+               c="silver", s=1.5, alpha=0.06, linewidths=0, zorder=1,
+               label="Patient skin surface")
+    ax.scatter(ox * 1e3, oy * 1e3, oz * 1e3,
+               c="#8b6914", s=4, alpha=0.40, linewidths=0, zorder=2, label="Liver")
+    ax.scatter(tx * 1e3, ty * 1e3, tz * 1e3,
+               c="#c0392b", s=14, alpha=0.90, linewidths=0, zorder=3, label="HCC tumour")
+    ax.scatter(ex * 1e3, ey * 1e3, ez * 1e3,
+               c="#2c3e50", s=18, alpha=0.85, edgecolors="white", linewidths=0.4,
+               zorder=4, label="Transducer bowl (50 mm / 120 mm-ROC)")
+    ax.scatter([(x_focus - R_f) * 1e3], [y_focus * 1e3], [z_focus * 1e3],
+               c="limegreen", s=80, marker="o", zorder=5, label="Bowl apex (sub-costal coupling)")
+    ax.scatter([x_focus * 1e3], [y_focus * 1e3], [z_focus * 1e3],
+               c="cyan", s=120, marker="+", linewidths=2.5, zorder=5, label="Focus (HCC centroid)")
+
+    ax.set_xlabel("Depth (mm, anterior →)")
+    ax.set_ylabel("Lateral Y (mm)")
+    ax.set_zlabel("Sup–Inf Z (mm)")
+    ax.set_title(
+        "HistoSonics 50 mm / 120 mm-ROC Bowl — Liver Placement\n"
+        "(LiTS17 case-0 · sub-costal approach · bowl anterior to skin · focus = HCC centroid)",
+        fontsize=9,
+    )
+    ax.legend(fontsize=7, loc="upper right", markerscale=1.3)
+    ax.view_init(elev=18, azim=-65)
+
+    # Equal-aspect bounding cube enclosing all point clouds.
+    all_x = np.concatenate([ex, ox, tx, sx_raw])
+    all_y = np.concatenate([ey, oy, ty, sy_raw])
+    all_z = np.concatenate([ez, oz, tz, sz_raw])
+    cx, cy, cz = float(all_x.mean()), float(all_y.mean()), float(all_z.mean())
+    r_eq = float(max(
+        np.abs(all_x - cx).max(),
+        np.abs(all_y - cy).max(),
+        np.abs(all_z - cz).max(),
+    )) * 1.08
+    ax.set_xlim((cx - r_eq) * 1e3, (cx + r_eq) * 1e3)
+    ax.set_ylim((cy - r_eq) * 1e3, (cy + r_eq) * 1e3)
+    ax.set_zlim((cz - r_eq) * 1e3, (cz + r_eq) * 1e3)
+
+    fig.tight_layout()
+    return save_fig(fig, "fig_21e_transducer_placement_3d")
+
+
 def plot_segmentation(ct, label_vol, info) -> tuple:
     nx, ny, nz = label_vol.shape
     fx, fy, fz = info["focus_idx"]
@@ -3042,9 +3159,10 @@ def main():
                       f"{'[ABSOLUTE]' if spec.is_absolute else '[flagged]'}")
 
     # Render figures + capture base64 for embedding
-    b64_seg = plot_segmentation(ct, label_vol, info)
-    b64_pan = plot_pressure_and_lesion(ct, label_vol, info, results, lesions,
-                                       gtv, ctv, ptv, oar_masks=oar_masks)
+    b64_place = plot_transducer_placement_3d(label_vol, info)
+    b64_seg   = plot_segmentation(ct, label_vol, info)
+    b64_pan   = plot_pressure_and_lesion(ct, label_vol, info, results, lesions,
+                                         gtv, ctv, ptv, oar_masks=oar_masks)
     b64_met = plot_metrics_summary(metrics, sized_scenarios)
     b64_ras = plot_raster_overlay(ct, label_vol, info, results, sized_scenarios,
                                   gtv, ctv, ptv, oar_masks=oar_masks)
@@ -3330,6 +3448,17 @@ def main():
             "![Loss curves](./param_pinn_loss_curves.png)\n\n"
             "![Axial line fit](./param_pinn_axial_line_fit.png)\n\n"
         )
+        f.write("### Figure 21.17 — 3D transducer placement (HistoSonics bowl on skin)\n\n")
+        f.write(
+            "3-D view of the 50 mm aperture / 120 mm radius-of-curvature "
+            "hemispherical bowl placed via a sub-costal approach, anterior to "
+            "the patient skin surface (depth < 0) with coupling gel.  The bowl "
+            "apex (lime circle) marks the deepest point of the dish — closest "
+            "to the patient — and the cyan cross marks the geometric focus "
+            "inside the HCC tumour.  All bowl elements sit outside the body; "
+            "the skin surface is at depth = 0.\n\n"
+        )
+        f.write(f"![Transducer placement 3D](data:image/png;base64,{b64_place})\n\n")
         f.write("### Figure 21.18 — CT segmentation\n\n")
         f.write(f"![CT segmentation](data:image/png;base64,{b64_seg})\n\n")
         f.write(
