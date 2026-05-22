@@ -152,6 +152,7 @@ impl ThermoelasticReport {
 #[cfg(test)]
 mod tests {
     use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
     use super::*;
 
     /// Γ = 0.12 + 0.004·(37−20) = 0.12 + 0.068 = 0.188 for water at 37 °C.
