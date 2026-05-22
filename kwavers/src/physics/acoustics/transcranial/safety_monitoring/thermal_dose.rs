@@ -42,6 +42,9 @@
 //! - Dewhirst MW et al. (2003). "Basic principles of thermal dosimetry and thermal thresholds
 //!   for tissue damage from hyperthermia." *Int J Hyperthermia* 19(3):267–294.
 
+use crate::core::constants::medical::{
+    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
+};
 use super::monitor::TranscranialSafetyMonitor;
 
 impl TranscranialSafetyMonitor {
@@ -71,14 +74,14 @@ impl TranscranialSafetyMonitor {
                     let temp = self.temperature[[i, j, k]];
 
                     // Sapareto & Dewey (1984) R coefficient — step at 43 °C, not 37 °C
-                    let r: f64 = if temp >= 43.0 {
-                        0.5 // protein denaturation regime: faster damage accumulation
+                    let r: f64 = if temp >= THERMAL_DOSE_REFERENCE_TEMP_C {
+                        THERMAL_DOSE_R_ABOVE_43C // protein denaturation regime: faster accumulation
                     } else {
-                        0.25 // sub-threshold regime: slower damage accumulation
+                        THERMAL_DOSE_R_BELOW_43C // sub-threshold regime: slower accumulation
                     };
 
                     // Instantaneous CEM43 dose rate [CEM43 min⁻¹] — Sapareto & Dewey convention
-                    let dose_rate = r.powf(43.0 - temp);
+                    let dose_rate = r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - temp);
 
                     // Accumulate CEM43 dose in equivalent minutes
                     self.thermal_dose.dose_rate[[i, j, k]] = dose_rate;

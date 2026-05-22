@@ -1,6 +1,9 @@
 use crate::clinical::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::clinical::therapy::parameters::ClinicalTherapyParameters;
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use crate::core::constants::medical::{
+    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
+};
 use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_TISSUE};
 use crate::core::error::{KwaversError, KwaversResult};
 use crate::physics::acoustics::analysis::calculate_mechanical_index;
@@ -208,14 +211,14 @@ impl FocalSpotDoseEstimate {
         let delta_t = (heating_rate_c_per_s / PERFUSION_RATE)
             * (1.0 - (-PERFUSION_RATE * treatment_duration_s).exp());
         let peak_temperature_c = BODY_TEMPERATURE_C + delta_t;
-        let r: f64 = if peak_temperature_c >= 43.0 {
-            0.5
+        let r: f64 = if peak_temperature_c >= THERMAL_DOSE_REFERENCE_TEMP_C {
+            THERMAL_DOSE_R_ABOVE_43C
         } else {
-            0.25
+            THERMAL_DOSE_R_BELOW_43C
         };
-        let dose_rate_cem43_per_min = r.powf(43.0 - peak_temperature_c);
+        let dose_rate_cem43_per_min = r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - peak_temperature_c);
         let cem43 = (treatment_duration_s / SECONDS_PER_MINUTE) * dose_rate_cem43_per_min;
-        let time_to_dose_s = if peak_temperature_c >= 43.0 {
+        let time_to_dose_s = if peak_temperature_c >= THERMAL_DOSE_REFERENCE_TEMP_C {
             if dose_rate_cem43_per_min > 0.0 {
                 ABLATION_DOSE_CEM43_MIN * SECONDS_PER_MINUTE / dose_rate_cem43_per_min
             } else {

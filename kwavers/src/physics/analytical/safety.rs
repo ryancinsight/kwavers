@@ -5,6 +5,9 @@
 //! limits.
 
 use crate::core::constants::fundamental::GAS_CONSTANT;
+use crate::core::constants::medical::{
+    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
+};
 use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 
 /// Mechanical Index (MI).
@@ -90,8 +93,12 @@ pub fn cem43_cumulative(t_celsius: &[f64], dt_s: f64) -> Vec<f64> {
     t_celsius
         .iter()
         .map(|&t| {
-            let r: f64 = if t >= 43.0 { 0.5 } else { 0.25 };
-            cem += dt_min * r.powf(43.0 - t);
+            let r: f64 = if t >= THERMAL_DOSE_REFERENCE_TEMP_C {
+                THERMAL_DOSE_R_ABOVE_43C
+            } else {
+                THERMAL_DOSE_R_BELOW_43C
+            };
+            cem += dt_min * r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - t);
             cem
         })
         .collect()
