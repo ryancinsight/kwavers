@@ -105,7 +105,8 @@ pub const CSF: FluidProperties = FluidProperties {
 pub const URINE: FluidProperties = FluidProperties {
     sound_speed: 1541.0,
     density: 1005.0,
-    impedance: 1550405.0,
+    // Z = ρ·c = 1005 × 1541 = 1 548 705 Pa·s/m
+    impedance: 1_548_705.0,
     absorption_coefficient: 0.012,
     absorption_exponent: 1.15,
     nonlinearity_parameter: 5.1,
@@ -113,7 +114,8 @@ pub const URINE: FluidProperties = FluidProperties {
     bulk_viscosity: 0.0,
     specific_heat: 3680.0,
     thermal_conductivity: 0.61,
-    thermal_diffusivity: 1.63e-7,
+    // α = k/(ρ·cp) = 0.61 / (1005 × 3680) = 1.649e-7 m²/s
+    thermal_diffusivity: 1.649e-7,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -142,7 +144,8 @@ pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
     bulk_viscosity: 0.0,
     specific_heat: 3300.0,
     thermal_conductivity: 0.15,
-    thermal_diffusivity: 4.55e-8,
+    // α = k/(ρ·cp) = 0.15 / (1020 × 3300) = 4.456e-8 m²/s
+    thermal_diffusivity: 4.456e-8,
     perfusion_rate: 0.0,
     arterial_temperature: 20.0,
     metabolic_heat: 0.0,
@@ -179,12 +182,22 @@ pub const MINERAL_OIL: FluidProperties = FluidProperties {
 };
 
 /// Distilled water at 37°C
-/// Source: IEC 61161:2013
-/// Reference standard for acoustic measurements
+///
+/// Sources:
+/// - Del Grosso VA, Mader CW (1972). "Speed of sound in pure water."
+///   *J. Acoust. Soc. Am.* **52**(5):1442–1446.  c(37 °C) = 1524.0 m/s.
+/// - Duck FA (1990). *Physical Properties of Tissue*. Academic Press, Table 2.1.
+/// - IEC 61161:2013 (reference conditions for acoustic power measurements).
+///
+/// Note: 1497 m/s is the value at ~25 °C, not 37 °C.  Water sound speed
+/// increases monotonically with temperature up to ≈74 °C; the physiological
+/// value is 1524 m/s.
+///
+/// Impedance Z = ρ·c = 993.3 × 1524 = 1 513 789 Pa·s/m.
 pub const WATER_37C: FluidProperties = FluidProperties {
-    sound_speed: 1497.0,
+    sound_speed: 1524.0,
     density: 993.3,
-    impedance: 1486410.0,
+    impedance: 1_513_789.0,
     absorption_coefficient: 0.002,
     absorption_exponent: 2.0,
     nonlinearity_parameter: 5.0,
@@ -222,7 +235,8 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     bulk_viscosity: 0.0,
     specific_heat: 4170.0,
     thermal_conductivity: 0.60,
-    thermal_diffusivity: 1.44e-7,
+    // α = k/(ρ·cp) = 0.60 / (1010 × 4170) = 1.425e-7 m²/s
+    thermal_diffusivity: 1.425e-7,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -291,9 +305,10 @@ mod tests {
 
     #[test]
     fn test_water_temperature_dependence() {
-        // Water at 37°C should have slightly lower speed than at 20°C
-        assert!(WATER_37C.sound_speed > 1490.0);
-        assert!(WATER_37C.sound_speed < 1510.0);
+        // Water sound speed increases monotonically with temperature up to ~74 °C.
+        // At 20 °C: ~1483 m/s; at 37 °C: ~1524 m/s (Del Grosso & Mader 1972).
+        assert!(WATER_37C.sound_speed > 1515.0);
+        assert!(WATER_37C.sound_speed < 1535.0);
     }
 
     #[test]

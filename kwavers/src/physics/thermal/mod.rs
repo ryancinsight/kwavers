@@ -142,7 +142,7 @@ pub mod tissues {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::constants::fundamental::DENSITY_TISSUE;
+    use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
     use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 
     #[test]
