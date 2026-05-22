@@ -16,12 +16,13 @@
 
 use crate::core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, B_OVER_A_BLOOD, B_OVER_A_CSF, B_OVER_A_WATER, DENSITY_BLOOD,
-    DENSITY_TISSUE, SOUND_SPEED_BLOOD,
+    DENSITY_TISSUE, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER,
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_CSF, SPECIFIC_HEAT_WATER_37C,
-    THERMAL_CONDUCTIVITY_CSF, THERMAL_DIFFUSIVITY_BLOOD,
+    THERMAL_CONDUCTIVITY_BLOOD, THERMAL_CONDUCTIVITY_CSF, THERMAL_CONDUCTIVITY_WATER_37C,
+    THERMAL_DIFFUSIVITY_BLOOD,
 };
 use super::material::AcousticMaterialProperties;
 
@@ -71,7 +72,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     shear_viscosity: 3.5e-3, // Non-Newtonian: shear-thinning
     bulk_viscosity: 0.0,
     specific_heat: BLOOD_SPECIFIC_HEAT,
-    thermal_conductivity: 0.52,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_BLOOD,
     thermal_diffusivity: THERMAL_DIFFUSIVITY_BLOOD,
     perfusion_rate: 100.0,
     arterial_temperature: BODY_TEMPERATURE_C,
@@ -213,8 +214,9 @@ pub const WATER_37C: FluidProperties = FluidProperties {
     shear_viscosity: 0.7e-3,
     bulk_viscosity: 0.0,
     specific_heat: SPECIFIC_HEAT_WATER_37C,
-    thermal_conductivity: 0.63,
-    thermal_diffusivity: 1.52e-7,
+    thermal_conductivity: THERMAL_CONDUCTIVITY_WATER_37C,
+    // α = k/(ρ·cp) = 0.623 / (993.3 × 4180) = 1.499e-7 m²/s
+    thermal_diffusivity: 1.499e-7,
     perfusion_rate: 0.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -234,9 +236,10 @@ pub const WATER_37C: FluidProperties = FluidProperties {
 /// Mostly water with suspended gas bubbles (~3-10 μm diameter)
 /// Effective properties depend on bubble concentration
 pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
-    sound_speed: 1480.0,
+    sound_speed: SOUND_SPEED_WATER,
     density: 1010.0,
-    impedance: 1494800.0,
+    // Z = ρ·c = 1010 × 1482 = 1 496 820 Pa·s/m
+    impedance: 1_496_820.0,
     absorption_coefficient: 0.05, // Higher absorption due to bubble resonance
     absorption_exponent: 1.5,
     nonlinearity_parameter: B_OVER_A_WATER, // 5.2 (Duck 1990 Table 4.16)

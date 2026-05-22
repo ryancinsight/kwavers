@@ -320,8 +320,11 @@ pub const DRHO_DT_SOFT_TISSUE: f64 = -0.2;
 ///   Academic Press, London, pp. 147–151.
 pub const RHO_C_SOFT_TISSUE: f64 = 3_780_000.0; // = DENSITY_TISSUE(1050) × SPECIFIC_HEAT_TISSUE(3600)
 
-/// Thermal conductivity of air (W/(m·K))
-pub const THERMAL_CONDUCTIVITY_AIR: f64 = 0.026;
+/// Thermal conductivity of dry air at 20°C, 1 atm (W/(m·K))
+///
+/// Value: 0.0257 W/(m·K) — consistent with DENSITY_AIR (1.204 kg/m³ at 20°C).
+/// Reference: NIST Chemistry WebBook, SRD 69.
+pub const THERMAL_CONDUCTIVITY_AIR: f64 = 0.0257;
 
 // ============================================================================
 // Van der Waals Constants

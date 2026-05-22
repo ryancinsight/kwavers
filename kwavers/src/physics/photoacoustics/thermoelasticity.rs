@@ -152,7 +152,9 @@ impl ThermoelasticReport {
 #[cfg(test)]
 mod tests {
     use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use crate::core::constants::thermodynamic::{KELVIN_OFFSET_C, SPECIFIC_HEAT_WATER};
+    use crate::core::constants::thermodynamic::{
+        KELVIN_OFFSET_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+    };
     use super::*;
 
     /// Γ = 0.12 + 0.004·(37−20) = 0.12 + 0.068 = 0.188 for water at 37 °C.
@@ -239,7 +241,7 @@ mod tests {
             density_kg_m3: DENSITY_WATER_NOMINAL,
             sound_speed_m_s: SOUND_SPEED_WATER_SIM,
             specific_heat_j_kgk: SPECIFIC_HEAT_WATER,
-            thermal_conductivity_w_mk: 0.6,
+            thermal_conductivity_w_mk: THERMAL_CONDUCTIVITY_WATER,
         };
         let model = GrueneisenModel::water();
         let energy = 1000.0_f64; // J/m³

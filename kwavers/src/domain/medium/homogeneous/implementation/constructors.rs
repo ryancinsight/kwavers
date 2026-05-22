@@ -4,7 +4,9 @@ use crate::core::constants::fundamental::{
     SOUND_SPEED_AIR, SOUND_SPEED_BLOOD, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
-use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K};
+use crate::core::constants::thermodynamic::{
+    BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
+};
 use crate::core::constants::BLOOD_VISCOSITY_37C;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -78,7 +80,7 @@ impl HomogeneousMedium {
             vapor_pressure: 0.0,
             polytropic_index: 1.4,
             specific_heat: AIR_SPECIFIC_HEAT_CP, // 1005 J/(kg·K)
-            thermal_conductivity: 0.0257,
+            thermal_conductivity: THERMAL_CONDUCTIVITY_AIR,
             shear_viscosity: 1.81e-5,
             bulk_viscosity: 0.0,
             absorption_alpha: 1.84e-11,

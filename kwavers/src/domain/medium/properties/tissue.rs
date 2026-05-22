@@ -14,7 +14,7 @@ use crate::core::constants::fundamental::{
     B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_MUSCLE, B_OVER_A_WATER,
     DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_FAT, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE,
     DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
+    SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE, SOUND_SPEED_WATER,
 };
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::thermodynamic::{
@@ -38,9 +38,10 @@ pub type TissueProperties = AcousticMaterialProperties;
 /// Water (reference medium)
 /// Temperature: 20°C (for comparison with literature)
 pub const WATER: TissueProperties = TissueProperties {
-    sound_speed: 1480.0,
+    sound_speed: SOUND_SPEED_WATER,
     density: DENSITY_WATER,
-    impedance: 1477336.0, // density * sound_speed = 998.2 * 1480
+    // Z = ρ·c = 998.2 × 1482 = 1 479 452 Pa·s/m
+    impedance: 1_479_452.0,
     absorption_coefficient: 0.002,
     absorption_exponent: 2.0,
     nonlinearity_parameter: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
@@ -351,7 +352,7 @@ mod tests {
 
     #[test]
     fn test_impedance_calculation() {
-        let expected_water = DENSITY_WATER * 1480.0;
+        let expected_water = DENSITY_WATER * SOUND_SPEED_WATER;
         assert!((WATER.impedance - expected_water).abs() < 1.0);
     }
 
