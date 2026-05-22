@@ -60,6 +60,95 @@ pub const BULK_MODULUS_WATER: f64 = 2.19e9;
 /// Density of soft tissue (kg/m³)
 pub const DENSITY_TISSUE: f64 = 1050.0;
 
+// ── Tissue-specific acoustic SSOT ────────────────────────────────────────────
+//
+// Consensus values from the standard tissue-property compilations. Use these
+// in tissue-specific factory methods (e.g. [`super::super::acoustic_parameters`],
+// [`crate::physics::acoustics::wave_propagation::nonlinear::parameters`]) so
+// liver / kidney / brain / fat simulations remain consistent across modules.
+//
+// Primary references:
+// - Duck FA (1990). *Physical Properties of Tissue: A Comprehensive Reference
+//   Book*. Academic Press, London. ISBN 0-12-222800-6.
+// - Goss SA, Johnston RL, Dunn F (1978). "Comprehensive compilation of
+//   empirical ultrasonic properties of mammalian tissues."
+//   J. Acoust. Soc. Am. 64(2), 423–457. DOI: 10.1121/1.382016.
+// - Bjørnø L (2002). "Forty years of nonlinear ultrasound."
+//   Ultrasonics 40(1–8), 11–17. DOI: 10.1016/S0041-624X(02)00084-7.
+
+/// Density of human liver parenchyma at body temperature (kg/m³).
+///
+/// Reference: Duck (1990) Table 4.1; ICRP-23 Reference Man Table 22.
+pub const DENSITY_LIVER: f64 = 1060.0;
+
+/// Density of human renal cortex at body temperature (kg/m³).
+///
+/// Reference: Duck (1990) Table 4.1.
+pub const DENSITY_KIDNEY: f64 = 1050.0;
+
+/// Density of human brain (mean of white + grey matter) at body temperature
+/// (kg/m³).
+///
+/// Reference: Duck (1990) Table 4.1; ICRP-89 (2002) Table 4.4.
+pub const DENSITY_BRAIN: f64 = 1040.0;
+
+/// Density of human adipose tissue at body temperature (kg/m³).
+///
+/// Reference: Duck (1990) Table 4.1; Goss et al. (1978) Table II.
+pub const DENSITY_FAT: f64 = 928.0;
+
+/// Small-signal sound speed in human liver parenchyma at body temperature
+/// (m/s).
+///
+/// Reference: Duck (1990) Table 4.6; Goss et al. (1978) Table V.
+pub const SOUND_SPEED_LIVER: f64 = 1578.0;
+
+/// Small-signal sound speed in human renal cortex at body temperature (m/s).
+///
+/// Reference: Duck (1990) Table 4.6.
+pub const SOUND_SPEED_KIDNEY: f64 = 1560.0;
+
+/// Small-signal sound speed in human brain (mean of grey + white matter) at
+/// body temperature (m/s).
+///
+/// Reference: Duck (1990) Table 4.6; consistent with brain-mean values
+/// reported in Goldman & Hueter (1956) and subsequent reviews.
+pub const SOUND_SPEED_BRAIN: f64 = 1546.0;
+
+/// Small-signal sound speed in human adipose tissue at body temperature
+/// (m/s).
+///
+/// Reference: Duck (1990) Table 4.6; Goss et al. (1978) Table V.
+pub const SOUND_SPEED_FAT: f64 = 1450.0;
+
+/// Nonlinearity parameter B/A for human liver parenchyma (dimensionless).
+///
+/// Drives the second-order pressure term in the Westervelt / KZK equation
+/// through `β = 1 + B/(2A)`. Range across the published literature is
+/// 6.5–7.6; the central value 6.75 reflects the Duck (1990) Table 4.16 mean.
+///
+/// Reference: Duck (1990) Table 4.16; Bjørnø (2002) Table 1.
+pub const B_OVER_A_LIVER: f64 = 6.75;
+
+/// Nonlinearity parameter B/A for human renal cortex (dimensionless).
+///
+/// Reference: Duck (1990) Table 4.16; Bjørnø (2002) Table 1.
+pub const B_OVER_A_KIDNEY: f64 = 7.2;
+
+/// Nonlinearity parameter B/A for human brain (mean grey + white matter,
+/// dimensionless).
+///
+/// Reference: Duck (1990) Table 4.16; Law et al. (1985) UMB 11(2), 307–318.
+pub const B_OVER_A_BRAIN: f64 = 6.55;
+
+/// Nonlinearity parameter B/A for human adipose tissue (dimensionless).
+///
+/// Fat is the most nonlinear soft tissue in the body; relevant for breast
+/// imaging and subcutaneous-fat heating during HIFU.
+///
+/// Reference: Duck (1990) Table 4.16; Bjørnø (2002) Table 1.
+pub const B_OVER_A_FAT: f64 = 9.6;
+
 /// Density of whole blood at 37°C (kg/m³)
 ///
 /// Value: 1060.0 kg/m³ — measured value for normal adult whole blood.
