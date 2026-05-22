@@ -22,6 +22,7 @@ use crate::core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
 
 mod boundary;
+mod cpml;
 mod projection;
 mod source;
 

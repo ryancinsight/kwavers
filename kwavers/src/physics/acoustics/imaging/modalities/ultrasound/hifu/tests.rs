@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::ultrasound::hifu::{
     DomainHIFUTransducer, DomainHIFUTreatmentPlan, HifuTargetShape, HifuTreatmentProtocol,
@@ -10,7 +11,7 @@ use ndarray::Array3;
 #[test]
 fn hifu_pressure_field_is_centered_at_geometric_focus_depth() -> crate::KwaversResult<()> {
     let grid = Grid::new(9, 9, 17, 0.001, 0.001, 0.001)?;
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let transducer = DomainHIFUTransducer::new_single_element(1.0e6, 50.0, 0.010, 0.004);
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
@@ -33,7 +34,7 @@ fn hifu_pressure_field_is_centered_at_geometric_focus_depth() -> crate::KwaversR
 #[test]
 fn hifu_pressure_field_is_laterally_symmetric() -> crate::KwaversResult<()> {
     let grid = Grid::new(9, 9, 13, 0.001, 0.001, 0.001)?;
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let transducer = DomainHIFUTransducer::new_single_element(1.0e6, 25.0, 0.008, 0.004);
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
@@ -50,13 +51,13 @@ fn hifu_pressure_field_is_laterally_symmetric() -> crate::KwaversResult<()> {
 #[test]
 fn hifu_intensity_uses_peak_pressure_half_impedance_formula() -> crate::KwaversResult<()> {
     let grid = Grid::new(5, 5, 9, 0.001, 0.001, 0.001)?;
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
     let transducer = DomainHIFUTransducer::new_single_element(1.0e6, 10.0, 0.006, 0.003);
 
     let pressure = compute_pressure_field(&transducer, &grid, &medium)?;
     let intensity = compute_intensity_field(&transducer, &grid, &medium)?;
     let p = pressure[[2, 2, 6]];
-    let expected = p * p / (2.0 * 1000.0 * 1500.0);
+    let expected = p * p / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM);
 
     assert!(
         (intensity[[2, 2, 6]] - expected).abs() < expected * 1.0e-12,

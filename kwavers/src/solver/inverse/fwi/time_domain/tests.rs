@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::source::{GridSource, SourceMode};
 use crate::solver::inverse::seismic::parameters::FwiParameters;
@@ -146,7 +147,7 @@ fn test_forward_model_objective_vanishes_for_self_data() {
     });
 
     let grid = Grid::new(3, 3, 3, 1.0, 1.0, 1.0).expect("grid must be valid");
-    let model = Array3::from_elem((3, 3, 3), 1500.0);
+    let model = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
 
     let mut p_mask = Array3::zeros((3, 3, 3));
     p_mask[[1, 1, 1]] = 1.0;
@@ -181,7 +182,7 @@ fn test_generate_synthetic_data_matches_canonical_forward_model() {
     });
 
     let grid = Grid::new(3, 3, 3, 1.0, 1.0, 1.0).expect("grid must be valid");
-    let model = Array3::from_elem((3, 3, 3), 1500.0);
+    let model = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
 
     let mut p_mask = Array3::zeros((3, 3, 3));
     p_mask[[1, 1, 1]] = 1.0;
@@ -357,7 +358,7 @@ fn test_fwi_velocity_gradient_scaling_applies_per_voxel_factor() {
         *value = sign * (1.0 + ix as f64 + 0.5 * iy as f64 + 0.25 * iz as f64);
     }
 
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho_ref = 2000.0_f64;
     let model = Array3::from_elem(dims, c0);
     let mut density = Array3::from_elem(dims, rho_ref);
@@ -414,7 +415,7 @@ fn test_fwi_velocity_gradient_scaling_rejects_non_physical_inputs() {
 
     let dims = (2, 2, 2);
     let mut correlation = Array3::ones(dims);
-    let model = Array3::from_elem(dims, 1500.0_f64);
+    let model = Array3::from_elem(dims, SOUND_SPEED_WATER_SIM);
     let density = Array3::from_elem(dims, 2000.0_f64);
 
     // Shape mismatch.
@@ -459,7 +460,7 @@ fn test_fwi_heterogeneous_density_gradient_differs_from_baseline() {
 
     // Homogeneous velocity model: 1500 m/s + 5% Gaussian-ish perturbation
     // around the centre so the gradient is non-trivial.
-    let mut model = Array3::from_elem(dims, 1500.0_f64);
+    let mut model = Array3::from_elem(dims, SOUND_SPEED_WATER_SIM);
     for ((ix, iy, iz), value) in model.indexed_iter_mut() {
         let r2 = (ix as f64 - 3.5).powi(2) + (iy as f64 - 3.5).powi(2) + (iz as f64 - 3.5).powi(2);
         *value += 75.0 * (-r2 / 4.0).exp();

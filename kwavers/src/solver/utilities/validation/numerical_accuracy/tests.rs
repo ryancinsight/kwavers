@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::NumericalValidator;
 
 fn default_validator() -> NumericalValidator {
@@ -13,7 +14,7 @@ fn default_validator() -> NumericalValidator {
 #[test]
 fn test_fdtd_phase_error_positive_and_small() {
     let v = default_validator();
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = v.grid.dx;
     let dt = 0.3 * dx / c0;
     let k = std::f64::consts::PI / (10.0 * dx);
@@ -39,7 +40,7 @@ fn test_fdtd_phase_error_positive_and_small() {
 #[test]
 fn test_pstd_phase_error_smaller_than_fdtd() {
     let v = default_validator();
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = v.grid.dx;
     let dt = 0.3 * dx / c0;
     let k = std::f64::consts::PI / (10.0 * dx);
@@ -64,7 +65,7 @@ fn test_fdtd_phase_error_decreases_with_finer_grid() {
     use crate::domain::grid::Grid;
     use crate::domain::medium::HomogeneousMedium;
 
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
 
     let dx_coarse = 1e-3_f64;
     let grid_coarse = Grid::new(16, 16, 16, dx_coarse, dx_coarse, dx_coarse).unwrap();

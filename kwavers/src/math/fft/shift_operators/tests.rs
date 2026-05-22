@@ -1,4 +1,5 @@
 use super::functions::{generate_kappa, generate_shift_1d, generate_source_kappa};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::math::fft::Complex64;
 use std::f64::consts::PI;
 
@@ -86,7 +87,7 @@ fn test_nyquist_bin_not_zeroed() {
 ///
 #[test]
 fn test_kappa_dc_is_one() {
-    let kappa = generate_kappa(8, 8, 8, 1e-3, 1e-3, 1e-3, 1500.0, 1e-7);
+    let kappa = generate_kappa(8, 8, 8, 1e-3, 1e-3, 1e-3, SOUND_SPEED_WATER_SIM, 1e-7);
     assert!(
         (kappa[[0, 0, 0]] - 1.0).abs() < 1e-15,
         "kappa DC should be 1.0, got {}",
@@ -103,7 +104,7 @@ fn test_kappa_dc_is_one() {
 #[test]
 fn test_kappa_range_cfl_stable() {
     let dx = 1e-3;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * dx / c_ref; // CFL ≈ 0.3
     let kappa = generate_kappa(8, 8, 8, dx, dx, dx, c_ref, dt);
     for &v in kappa.iter() {
@@ -121,7 +122,7 @@ fn test_kappa_range_cfl_stable() {
 #[test]
 fn test_kappa_sinc_not_cos() {
     let dx = 1e-3_f64;
-    let c_ref = 1500.0_f64;
+    let c_ref = SOUND_SPEED_WATER_SIM;
     let dt = 0.2 * dx / c_ref;
     let kappa = generate_kappa(8, 8, 1, dx, dx, dx, c_ref, dt);
 
@@ -154,7 +155,7 @@ fn test_kappa_sinc_not_cos() {
 #[test]
 fn test_source_kappa_is_cos() {
     let dx = 1e-3_f64;
-    let c_ref = 1500.0_f64;
+    let c_ref = SOUND_SPEED_WATER_SIM;
     let dt = 0.2 * dx / c_ref;
     let src_kappa = generate_source_kappa(8, 8, 1, dx, dx, dx, c_ref, dt);
 

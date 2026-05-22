@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::boundary::cpml::config::CPMLConfig;
 use crate::domain::grid::Grid;
 
@@ -9,7 +10,7 @@ use crate::domain::grid::Grid;
 ///
 #[test]
 fn test_cpml_sigma_max_formula() {
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1e-3_f64;
     let pml_size = 10_usize;
     let dt = 1e-7_f64;
@@ -36,7 +37,7 @@ fn test_cpml_sigma_max_formula() {
 ///
 #[test]
 fn test_singleton_axis_profiles_are_neutral() {
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1e-3_f64;
     let dt = 1e-7_f64;
 
@@ -73,7 +74,7 @@ fn test_singleton_axis_profiles_are_neutral() {
 ///
 #[test]
 fn test_precomputed_pml_exp_factors_match_sigma() {
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1e-3_f64;
     let pml_size = 10_usize;
     let dt = 1e-7_f64;
@@ -169,7 +170,7 @@ fn test_fused_pml_matches_sequential_pml() {
     use crate::domain::boundary::{Boundary, CPMLBoundary};
     use ndarray::Array3;
 
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1e-3_f64;
     let dt = 1e-7_f64;
     let pml_alpha = 2.0_f64;
@@ -229,7 +230,7 @@ fn test_fused_pml_matches_sequential_pml() {
 ///
 #[test]
 fn test_cpml_recursive_convolution_coefficients() {
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1e-3_f64;
     let pml_size = 10_usize;
     let dt = 1e-7_f64;

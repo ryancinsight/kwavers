@@ -17,6 +17,7 @@ pub fn compute_time_step(scenario: &PhotoacousticScenario) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::compute_time_step;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use crate::domain::grid::{Grid, GridDimensions};
     use crate::domain::imaging::photoacoustic::{
         IlluminationGeometry, MonteCarloModelConfig, OpticalModel, PhotoacousticAcousticConfig,
@@ -50,14 +51,14 @@ mod tests {
                 pulse_duration_s: 8e-9,
                 incident_fluence_j_m2: 10.0,
                 acoustic: PhotoacousticAcousticConfig {
-                    speed_of_sound_m_s: 1500.0,
+                    speed_of_sound_m_s: SOUND_SPEED_WATER_SIM,
                     cfl_factor: 0.25,
                     num_time_steps: 8,
                     snapshot_interval: 2,
                 },
                 thermoelastic: ThermoelasticProperties {
                     density_kg_m3: 1000.0,
-                    sound_speed_m_s: 1500.0,
+                    sound_speed_m_s: SOUND_SPEED_WATER_SIM,
                     specific_heat_j_kgk: 4180.0,
                     thermal_conductivity_w_mk: 0.6,
                 },
@@ -68,6 +69,6 @@ mod tests {
         .unwrap();
 
         let dt = compute_time_step(&scenario);
-        assert!((dt - (0.25e-3 / 1500.0)).abs() < 1e-15);
+        assert!((dt - (0.25e-3 / SOUND_SPEED_WATER_SIM)).abs() < 1e-15);
     }
 }

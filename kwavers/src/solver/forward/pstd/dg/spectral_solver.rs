@@ -3,6 +3,7 @@
 //! This module implements high-order spectral methods using FFT
 //! for solving PDEs in smooth regions.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::core::error::{KwaversError, ValidationError};
 use crate::domain::grid::Grid;
@@ -42,7 +43,7 @@ impl std::fmt::Debug for RegionPSTDSolver {
 impl RegionPSTDSolver {
     /// Create a new spectral solver with default wave speed
     pub fn new(order: usize, grid: Arc<Grid>) -> Self {
-        Self::with_wave_speed(order, grid, 1500.0) // Default sound speed
+        Self::with_wave_speed(order, grid, SOUND_SPEED_WATER_SIM) // Default sound speed
     }
 
     /// Create a new spectral solver with specified wave speed
@@ -211,6 +212,7 @@ impl RegionPSTDSolver {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::RegionPSTDSolver;
     use crate::domain::grid::Grid;
     use ndarray::Array3;
@@ -228,7 +230,7 @@ mod tests {
         let mut output = Array3::zeros((4, 4, 4));
 
         solver
-            .spectral_wave_step_into(&field, 1.0e-5, 1500.0, &mask, &mut output)
+            .spectral_wave_step_into(&field, 1.0e-5, SOUND_SPEED_WATER_SIM, &mask, &mut output)
             .unwrap();
 
         assert_eq!(solver.prev_field.as_ptr(), prev_ptr);
@@ -237,7 +239,7 @@ mod tests {
 
         let second_input = output.clone();
         solver
-            .spectral_wave_step_into(&second_input, 1.0e-5, 1500.0, &mask, &mut output)
+            .spectral_wave_step_into(&second_input, 1.0e-5, SOUND_SPEED_WATER_SIM, &mask, &mut output)
             .unwrap();
 
         assert_eq!(solver.prev_field.as_ptr(), prev_ptr);

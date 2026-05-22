@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::orchestrator::PSTDSolver;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -21,7 +22,7 @@ const CPML_REFERENCE_TOL: f64 = 1e-4;
 fn test_source_injection_sign_matches_kwave() {
     let n = 16usize;
     let dx = 1e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let dt = 0.3 * dx / c0;
     let src = n / 2;
@@ -87,7 +88,7 @@ fn test_source_injection_sign_matches_kwave() {
 fn test_nyquist_not_zeroed_propagation_amplitude() {
     let n = 16usize;
     let dx = 1e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let dt = 0.3 * dx / c0;
     let src = n / 2;
@@ -147,7 +148,7 @@ fn test_anti_aliasing_filter_attenuates_nyquist_checkerboard() {
 
     let n = 16usize;
     let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let source = GridSource::new_empty();
 
     let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
@@ -191,7 +192,7 @@ fn test_propagation_amplitude_with_cpml_boundary() {
     use crate::domain::boundary::cpml::CPMLConfig;
     let n = 16usize;
     let dx = 1e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let dt = 0.3 * dx / c0;
     let src = n / 2;
@@ -253,7 +254,7 @@ fn test_source_kappa_equals_cosine() {
 
     let n = 32usize;
     let dx = 5e-4_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let cfl = 0.5_f64;
     let dt = cfl * dx / c0;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();

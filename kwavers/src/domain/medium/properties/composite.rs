@@ -229,6 +229,7 @@ impl MaterialPropertiesBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_material_acoustic_only() {
@@ -271,7 +272,7 @@ mod tests {
         let props = CompositeMaterialProperties::builder()
             .acoustic(AcousticPropertyData {
                 density: 1000.0,
-                sound_speed: 1500.0,
+                sound_speed: SOUND_SPEED_WATER_SIM,
                 absorption_coefficient: 0.5,
                 absorption_power: 1.1,
                 nonlinearity: 5.0,

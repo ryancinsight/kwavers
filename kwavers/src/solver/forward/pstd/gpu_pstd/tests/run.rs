@@ -1,10 +1,11 @@
 //! GPU PSTD run tests — pressure source, velocity source, multi-source, and benchmark.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
 
 fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
     let n3 = 32 * 32 * 32;
-    let c0v = vec![1500.0f32; n3];
+    let c0v = vec![SOUND_SPEED_WATER_SIM as f32; n3];
     let rho0v = vec![1000.0f32; n3];
     let ones = vec![1.0f32; n3];
     let zeros = vec![0.0f32; n3];
@@ -15,9 +16,9 @@ fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
             rho0_flat: &rho0v,
         },
         SolverParams {
-            dt: 0.3e-3 / 1500.0,
+            dt: 0.3e-3 / SOUND_SPEED_WATER_SIM,
             nt,
-            c_ref: 1500.0,
+            c_ref: SOUND_SPEED_WATER_SIM,
             nonlinear: false,
             absorbing: false,
         },
@@ -123,10 +124,10 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
     let ny = 64usize;
     let nz = 32usize;
     let total = nx * ny * nz;
-    let dt = 0.3e-4 / 1500.0;
+    let dt = 0.3e-4 / SOUND_SPEED_WATER_SIM;
     let nt = 64usize;
 
-    let c0v = vec![1500.0f32; total];
+    let c0v = vec![SOUND_SPEED_WATER_SIM as f32; total];
     let rho0v = vec![1000.0f32; total];
     let ones = vec![1.0f32; total];
     let zeros = vec![0.0f32; total];
@@ -139,7 +140,7 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
         SolverParams {
             dt,
             nt,
-            c_ref: 1500.0,
+            c_ref: SOUND_SPEED_WATER_SIM,
             nonlinear: false,
             absorbing: false,
         },
@@ -198,7 +199,7 @@ fn bench_gpu_pstd_bmode_grid() {
     let ny = 128usize;
     let nz = 128usize;
     let dx = 1.48e-4_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * dx / c0;
     let nt = 50;
     let total = nx * ny * nz;

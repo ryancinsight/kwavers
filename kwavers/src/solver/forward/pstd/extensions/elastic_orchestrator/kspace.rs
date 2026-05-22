@@ -206,6 +206,7 @@ pub(super) fn spectral_mul_z(
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use super::super::orchestrator::ElasticPstdOrchestrator;
     use super::super::types::{
         ElasticPstdMedium, ElasticPstdSourceMode, ElasticPstdVelocitySource,
@@ -223,7 +224,7 @@ mod tests {
     fn kappa_dc_mode_is_exactly_one() {
         let nx = 16usize;
         let dx = 1e-3_f64;
-        let cp = 1500.0_f64;
+        let cp = SOUND_SPEED_WATER_SIM;
         let dt = 0.3 * dx / cp;
         let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
         let medium = ElasticPstdMedium {
@@ -249,7 +250,7 @@ mod tests {
     fn kappa_strictly_in_unit_interval() {
         let nx = 32usize;
         let dx = 1e-3_f64;
-        let cp = 1500.0_f64;
+        let cp = SOUND_SPEED_WATER_SIM;
         // CFL = 0.5 (moderate; kappa Nyquist ≈ sinc(π/4) ≈ 0.90)
         let dt = 0.5 * dx / cp;
         let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
@@ -276,7 +277,7 @@ mod tests {
     fn kappa_nyquist_matches_analytical_sinc_cfl_pi_over_2() {
         let nx = 4usize;
         let dx = 1e-3_f64;
-        let cp = 1500.0_f64;
+        let cp = SOUND_SPEED_WATER_SIM;
         let cfl = 0.3_f64;
         let dt = cfl * dx / cp;
         let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
@@ -314,7 +315,7 @@ mod tests {
     fn kappa_preserves_peak_amplitude_at_moderate_cfl() {
         let nx = 64usize;
         let dx = 1e-3_f64;
-        let cp = 1500.0_f64;
+        let cp = SOUND_SPEED_WATER_SIM;
         let cfl = 0.5_f64;
         let dt = cfl * dx / cp;
         let n_steps = 20usize;

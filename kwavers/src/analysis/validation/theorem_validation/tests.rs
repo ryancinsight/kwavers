@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 #[test]
 fn test_beer_lambert_validation() {
@@ -14,7 +15,7 @@ fn test_beer_lambert_validation() {
 fn test_cfl_validation() {
     let dt = 1e-8;
     let dx = 5e-5;
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let dimensions = 3;
 
     let result = TheoremValidator::validate_cfl_condition(dt, dx, c, dimensions);

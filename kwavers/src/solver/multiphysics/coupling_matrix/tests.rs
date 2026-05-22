@@ -1,9 +1,10 @@
 use super::coupler::{stability_dt, AcousticElasticCoupler};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array3;
 
 fn make_coupler(nx: usize) -> AcousticElasticCoupler {
     let mask = Array3::from_elem((nx, nx, nx), false);
-    AcousticElasticCoupler::new([1.0, 0.0, 0.0], mask, 1000.0, 1500.0, 5960.0, 0.9).unwrap()
+    AcousticElasticCoupler::new([1.0, 0.0, 0.0], mask, 1000.0, SOUND_SPEED_WATER_SIM, 5960.0, 0.9).unwrap()
 }
 
 /// Coupling matrix antisymmetry: Cᵀ = −C
@@ -48,7 +49,7 @@ fn test_coupling_antisymmetry() {
 #[test]
 fn test_stability_dt_below_cfl() {
     let dx = 0.1e-3_f64;
-    let c_fluid = 1500.0_f64;
+    let c_fluid = SOUND_SPEED_WATER_SIM;
     let c_solid = 5960.0_f64;
     let cfl = 0.9_f64;
 
@@ -153,7 +154,7 @@ fn test_energy_conservation_cavity() {
 
     let dt = 1.0e-8_f64;
     let p0 = 1.0e3_f64;
-    let v0 = p0 / (1000.0 * 1500.0);
+    let v0 = p0 / (1000.0 * SOUND_SPEED_WATER_SIM);
 
     let fluid_pressure = Array3::from_elem((nx, nx, nx), p0);
     let solid_accel: [Array3<f64>; 3] = [

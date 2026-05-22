@@ -2,6 +2,7 @@
 
 use super::pressure::{acoustic_impedance, harmonic_peak_intensity};
 use super::validation::{validate_pressure_field_domain, validation_error};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::ArrayView3;
@@ -254,9 +255,9 @@ mod tests {
         let mut field = Array3::<f64>::zeros((8, 8, 8));
         field[[4, 4, 4]] = 1e5;
 
-        let metrics = calculate_field_metrics(field.view(), &grid, 1000.0, 1500.0).unwrap();
-        let expected_intensity = 1e5_f64.powi(2) / (2.0 * 1000.0 * 1500.0);
-        let expected_energy = expected_intensity / 1500.0 * grid.dx * grid.dy * grid.dz;
+        let metrics = calculate_field_metrics(field.view(), &grid, 1000.0, SOUND_SPEED_WATER_SIM).unwrap();
+        let expected_intensity = 1e5_f64.powi(2) / (2.0 * 1000.0 * SOUND_SPEED_WATER_SIM);
+        let expected_energy = expected_intensity / SOUND_SPEED_WATER_SIM * grid.dx * grid.dy * grid.dz;
 
         assert_close(metrics.peak_pressure, 1e5, 1e-9, "peak pressure");
         assert_close(metrics.peak_location[0], 4.0 * grid.dx, 1e-14, "peak x");
@@ -280,7 +281,7 @@ mod tests {
         let mut field = Array3::<f64>::zeros((8, 8, 8));
         field[[4, 4, 4]] = 1e5;
 
-        let err = calculate_field_metrics(field.view(), &grid, 0.0, 1500.0).unwrap_err();
+        let err = calculate_field_metrics(field.view(), &grid, 0.0, SOUND_SPEED_WATER_SIM).unwrap_err();
         let message = err.to_string();
 
         assert!(
@@ -299,7 +300,7 @@ mod tests {
         let mut field = Array3::<f64>::zeros((8, 8, 8));
         field[[1, 2, 3]] = f64::NAN;
 
-        let err = calculate_field_metrics(field.view(), &grid, 1000.0, 1500.0).unwrap_err();
+        let err = calculate_field_metrics(field.view(), &grid, 1000.0, SOUND_SPEED_WATER_SIM).unwrap_err();
         let message = err.to_string();
 
         assert!(message.contains("nonfinite"), "unexpected error: {message}");

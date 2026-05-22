@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::orchestrator::ElasticPstdOrchestrator;
 use super::pml::ElasticPmlSpec;
 use super::split_field_pml::ElasticSplitFieldPml;
@@ -18,7 +19,7 @@ fn pstd_orchestrator_keeps_shear_stress_zero_when_mu_is_zero() {
     let ny = 16usize;
     let nz = 4usize;
     let dx = 1e-3;
-    let cp = 1500.0;
+    let cp = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * dx / (cp * 3.0_f64.sqrt());
     let n_steps = 30;
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
@@ -73,7 +74,7 @@ fn split_field_pml_alpha_beta_are_valid_integrator_coefficients() {
     let nx = 32usize;
     let thickness = 8usize;
     let dx = 1e-3_f64;
-    let c_max = 1500.0_f64;
+    let c_max = SOUND_SPEED_WATER_SIM;
     let dt = 1e-7_f64;
     let r0 = 1e-4_f64;
     let pml = ElasticSplitFieldPml::new(ElasticPmlSpec {
@@ -114,7 +115,7 @@ fn split_field_pml_alpha_beta_are_valid_integrator_coefficients() {
 fn split_field_pml_quiescent_state_stays_zero() {
     let nx = 8usize;
     let dx = 1e-3_f64;
-    let cp = 1500.0_f64;
+    let cp = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * dx / cp;
     let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
     let medium = ElasticPstdMedium {
@@ -152,7 +153,7 @@ fn split_field_pml_quiescent_state_stays_zero() {
 fn split_field_pml_zero_thickness_reproduces_standard_leapfrog() {
     let nx = 4usize;
     let dx = 1e-3_f64;
-    let cp = 1500.0_f64;
+    let cp = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * dx / (cp * 3.0_f64.sqrt());
     let n_steps = 5usize;
     let amp = 1e-6_f64;
@@ -243,7 +244,7 @@ fn split_field_pml_attenuates_outgoing_wave() {
     let ny = 4usize;
     let nz = 4usize;
     let dx = 1e-3_f64;
-    let cp = 1500.0_f64;
+    let cp = SOUND_SPEED_WATER_SIM;
     let rho = 1000.0_f64;
     let lam = rho * cp * cp; // μ=0 acoustic fluid
     let dt = 0.3_f64 * dx / (cp * 3.0_f64.sqrt());
@@ -335,7 +336,7 @@ fn acoustic_fluid_pulse_propagates_finite_field() {
     let ny = 16usize;
     let nz = 4usize;
     let dx = 1e-3;
-    let cp = 1500.0;
+    let cp = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * dx / (cp * 3.0_f64.sqrt());
     let n_steps = 40;
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();

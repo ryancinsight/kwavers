@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::*;
 use crate::domain::field::mapping::UnifiedFieldType;
 use crate::domain::medium::HomogeneousMedium;
@@ -120,10 +121,10 @@ fn fd_laplacian_of_x_squared_equals_two_interior() {
 #[test]
 fn check_stability_correctly_classifies_subcritical_and_supercritical_dt() {
     let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
     let solver = WesterveltWave::new(&grid);
 
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1.0e-3_f64;
 
     // Subcritical: CFL = c₀·dt/dx = 1500·3e-7/1e-3 = 0.45 < 0.5
@@ -153,7 +154,7 @@ fn check_stability_correctly_classifies_subcritical_and_supercritical_dt() {
 #[test]
 fn update_wave_preserves_pressure_buffer_storage_for_zero_state() {
     let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
     let source = NullSource::new();
     let mut solver = WesterveltWave::new(&grid);
     let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, grid.nx, grid.ny, grid.nz));

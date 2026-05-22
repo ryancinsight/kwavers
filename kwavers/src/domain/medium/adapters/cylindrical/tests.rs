@@ -1,6 +1,7 @@
 //! Value-semantic regression tests for cylindrical projection.
 
 use super::CylindricalMediumProjection;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::{CylindricalTopology, Grid};
 use crate::domain::medium::heterogeneous::HeterogeneousMedium;
 use crate::domain::medium::{CoreMedium, HomogeneousMedium};
@@ -257,7 +258,7 @@ fn test_heterogeneous_projection() {
     for i in 0..32 {
         for j in 0..32 {
             for k in 0..32 {
-                let c = 1500.0 + (i as f64) * 10.0; // Gradient along x/r direction
+                let c = SOUND_SPEED_WATER_SIM + (i as f64) * 10.0; // Gradient along x/r direction
                 medium.sound_speed[[i, j, k]] = c;
                 medium.density[[i, j, k]] = 1000.0;
             }
@@ -271,7 +272,7 @@ fn test_heterogeneous_projection() {
     assert!(!projection.is_homogeneous());
 
     // Check that min/max are correctly computed
-    assert!(projection.min_sound_speed() >= 1500.0);
+    assert!(projection.min_sound_speed() >= SOUND_SPEED_WATER_SIM);
     assert!(projection.max_sound_speed() > projection.min_sound_speed());
 
     // Validate physical bounds

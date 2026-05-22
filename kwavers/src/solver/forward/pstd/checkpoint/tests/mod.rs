@@ -5,6 +5,7 @@
 
 mod velocity_recording;
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::data::PSTDCheckpoint;
 use crate::core::error::KwaversError;
 use crate::domain::grid::Grid;
@@ -29,7 +30,7 @@ pub(super) fn build_solver_with_sensor(
         ..Default::default()
     };
     let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
 
@@ -61,9 +62,9 @@ fn test_checkpoint_bit_exact_continuation() {
 
     let mut solver_ref = build_solver_with_sensor(NX, NY, NZ, NT, DT);
     solver_ref.fields.p[[NX / 4, NY / 4, NZ / 4]] = 1.0e5;
-    solver_ref.rhox[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
-    solver_ref.rhoy[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
-    solver_ref.rhoz[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
+    solver_ref.rhox[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
+    solver_ref.rhoy[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
+    solver_ref.rhoz[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
 
     let ref_data = solver_ref.run_orchestrated(NT).unwrap().unwrap();
 
@@ -73,9 +74,9 @@ fn test_checkpoint_bit_exact_continuation() {
 
     let mut solver_ckpt = build_solver_with_sensor(NX, NY, NZ, NT, DT);
     solver_ckpt.fields.p[[NX / 4, NY / 4, NZ / 4]] = 1.0e5;
-    solver_ckpt.rhox[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
-    solver_ckpt.rhoy[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
-    solver_ckpt.rhoz[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
+    solver_ckpt.rhox[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
+    solver_ckpt.rhoy[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
+    solver_ckpt.rhoz[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
 
     solver_ckpt.run_to_checkpoint(SPLIT, &ckpt_path).unwrap();
     assert!(ckpt_path.exists(), "Checkpoint file must be written");

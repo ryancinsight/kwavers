@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::operators::KSpaceFdtdOperators;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
@@ -23,7 +24,7 @@ fn test_grid() -> Grid {
 #[test]
 fn test_kspace_shift_operators_match_pstd() {
     let grid = test_grid();
-    let c_ref = 1500.0_f64;
+    let c_ref = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * grid.dx / c_ref;
 
     let kops = KSpaceFdtdOperators::new(
@@ -52,7 +53,7 @@ fn test_kspace_shift_operators_match_pstd() {
 fn test_kspace_fd_fallback_unchanged() {
     let grid = test_grid();
     let medium = HomogeneousMedium::water(&grid);
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * grid.dx / c0;
 
     let config_fd = FdtdConfig {
@@ -86,7 +87,7 @@ fn test_kspace_fd_fallback_unchanged() {
 fn test_kspace_spectral_solver_runs_without_nan() {
     let grid = test_grid();
     let medium = HomogeneousMedium::water(&grid);
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * grid.dx / c0;
 
     let config_ks = FdtdConfig {
@@ -133,7 +134,7 @@ fn test_kspace_spectral_solver_runs_without_nan() {
 fn test_spectral_gradient_of_constant_is_zero() {
     let nx = 8;
     let dx = 1e-3;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * dx / c_ref;
     let mut kops = KSpaceFdtdOperators::new(nx, nx, nx, dx, dx, dx, c_ref, dt);
 
@@ -155,7 +156,7 @@ fn test_spectral_gradient_of_constant_is_zero() {
 fn test_spectral_divergence_of_zero_is_zero() {
     let nx = 8;
     let dx = 1e-3;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
     let dt = 0.3 * dx / c_ref;
     let mut kops = KSpaceFdtdOperators::new(nx, nx, nx, dx, dx, dx, c_ref, dt);
 
@@ -184,7 +185,7 @@ fn test_spectral_divergence_of_zero_is_zero() {
 fn test_spectral_gradient_of_sine_is_cosine() {
     let nx = 32usize;
     let dx = 1e-3_f64;
-    let c_ref = 1500.0;
+    let c_ref = SOUND_SPEED_WATER_SIM;
     let dt_small = 1e-10;
     let mut kops = KSpaceFdtdOperators::new(nx, nx, nx, dx, dx, dx, c_ref, dt_small);
 

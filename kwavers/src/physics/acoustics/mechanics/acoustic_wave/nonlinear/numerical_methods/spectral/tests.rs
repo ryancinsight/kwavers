@@ -153,6 +153,48 @@ fn compute_spectral_gradient_y_analytical_for_single_mode_sinusoid() {
     }
 }
 
+/// The 2/3-rule dealiasing filter must:
+/// (i) preserve the DC bin [0,0,0] exactly,
+/// (ii) preserve low-frequency bins with absolute index ≤ n/3,
+/// (iii) zero bins with absolute index in (n/3, n − n/3),
+/// (iv) preserve the negative-frequency mirror bins at index ≥ n − n/3.
+///
+/// For n = 12: cutoff = 4; alias range = (4, 8); keep [0..4] ∪ [8..11].
+#[test]
+fn dealiasing_filter_preserves_dc_and_zeroes_aliased_bins() {
+    use crate::math::fft::Complex64 as Complex;
+    let n = 12usize; // cx = cy = cz = 4
+    let mut field_k = Array3::<Complex>::zeros((n, n, n));
+    // DC bin: preserved (index 0 ≤ 4)
+    field_k[[0, 0, 0]] = Complex::new(1.0, 0.0);
+    // Mode (1,0,0): index 1 ≤ 4 → preserved
+    field_k[[1, 0, 0]] = Complex::new(0.5, 0.0);
+    // Mode (5,0,0): index 5 ∈ (4, 8) → zeroed
+    field_k[[5, 0, 0]] = Complex::new(0.3, 0.0);
+    // Mode (11,0,0): index 11 ≥ n−cx=8 → preserved (negative-frequency mirror of mode 1)
+    field_k[[11, 0, 0]] = Complex::new(0.5, 0.0);
+
+    NonlinearWave::apply_dealiasing_filter(&mut field_k, n, n, n);
+
+    assert!(
+        (field_k[[0, 0, 0]].re - 1.0).abs() < 1e-15,
+        "DC bin must be preserved unchanged"
+    );
+    assert!(
+        (field_k[[1, 0, 0]].re - 0.5).abs() < 1e-15,
+        "mode 1 (below cutoff) must be preserved"
+    );
+    assert!(
+        field_k[[5, 0, 0]].norm() < 1e-15,
+        "mode 5 (in alias band) must be zeroed, got {:.3e}",
+        field_k[[5, 0, 0]].norm()
+    );
+    assert!(
+        (field_k[[11, 0, 0]].re - 0.5).abs() < 1e-15,
+        "mode n-1 (negative-freq mirror) must be preserved"
+    );
+}
+
 /// `apply_k_space_correction` on a zero-pressure field returns a zero field.
 ///
 /// Trivial null case: FFT(0) = 0; any linear operator on 0 = 0; IFFT(0) = 0.

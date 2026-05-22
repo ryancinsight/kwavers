@@ -150,11 +150,12 @@ pub fn continuous_to_discrete(x: f64, y: f64, z: f64, grid: &Grid) -> (usize, us
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_max_sound_speed() {
         let mut data = Array3::zeros((2, 2, 2));
-        data[(0, 0, 0)] = 1500.0;
+        data[(0, 0, 0)] = SOUND_SPEED_WATER_SIM;
         data[(1, 1, 1)] = 1600.0;
 
         assert_eq!(max_sound_speed(&data), 1600.0);
@@ -166,7 +167,7 @@ mod tests {
             if i == 1 && j == 1 && k == 1 {
                 1600.0
             } else {
-                1500.0
+                SOUND_SPEED_WATER_SIM
             }
         };
 

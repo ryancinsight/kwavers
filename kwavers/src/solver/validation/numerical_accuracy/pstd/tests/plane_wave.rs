@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::core::CoreMedium;
 use crate::domain::medium::HomogeneousMedium;
@@ -11,7 +12,7 @@ fn test_pstd_plane_wave_accuracy() {
     // EXACT VALIDATION: Spectral methods should have minimal dispersion error
     let n = 64; // Reverted to default power of 2
     let frequency = 1e6;
-    let wavelength = 1500.0 / frequency; // 1.5mm at 1MHz
+    let wavelength = SOUND_SPEED_WATER_SIM / frequency; // 1.5mm at 1MHz
                                          // ADJUSTMENT: Use PPW=16 to ensure periodic boundary conditions
                                          // n=64, PPW=16 -> L = 4 * wavelength (integer multiple)
     let dx = wavelength / 16.0; // 16 points per wavelength
@@ -33,7 +34,7 @@ fn test_pstd_plane_wave_accuracy() {
 
     let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
 
-    let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+    let medium = HomogeneousMedium::from_minimal(1000.0, SOUND_SPEED_WATER_SIM, &grid);
     let source_data = crate::domain::source::GridSource::default();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source_data).unwrap();
 
@@ -69,7 +70,7 @@ fn test_pstd_plane_wave_accuracy() {
     let mut _boundary = DomainPMLBoundary::new(pml_config).unwrap();
 
     let dt = solver.get_timestep();
-    let steps = (wavelength / (1500.0 * dt)) as usize;
+    let steps = (wavelength / (SOUND_SPEED_WATER_SIM * dt)) as usize;
     let _initial = solver.fields.p.clone();
 
     println!("Propagating for {} steps, dt = {:.2e}", steps, dt);

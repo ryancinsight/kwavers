@@ -38,6 +38,7 @@
 //!   *Curr. Med. Imaging Rev.*, 6(1), 15-25.
 //! - Temkin, S. (2001). *Elements of Acoustics*. Acoustical Society of America.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use ndarray::{Array3, Zip};
 
@@ -212,7 +213,7 @@ mod tests {
         let (nx, ny, nz) = (4, 4, 4);
         let p_val = 1000.0_f64;
         let rho = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let alpha = 5.0_f64;
 
         let mut arf = VolumetricArfField::new(nx, ny, nz);
@@ -253,7 +254,7 @@ mod tests {
         arf.accumulate(&pressure);
 
         let absorption = Array3::zeros((nx, ny, nz));
-        let sound_speed = Array3::from_elem((nx, ny, nz), 1500.0);
+        let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
         let density = Array3::from_elem((nx, ny, nz), 1000.0);
 
         arf.finalize(&absorption, &sound_speed, &density).unwrap();
@@ -277,7 +278,7 @@ mod tests {
     fn test_finalize_before_accumulate_is_error() {
         let mut arf = VolumetricArfField::new(2, 2, 2);
         let absorption = Array3::zeros((2, 2, 2));
-        let sound_speed = Array3::from_elem((2, 2, 2), 1500.0);
+        let sound_speed = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
         let density = Array3::from_elem((2, 2, 2), 1000.0);
         let result = arf.finalize(&absorption, &sound_speed, &density);
         assert!(
@@ -297,7 +298,7 @@ mod tests {
         let pressure = Array3::from_elem((nx, ny, nz), 200.0_f64);
         arf.accumulate(&pressure);
         let absorption = Array3::from_elem((nx, ny, nz), 2.0);
-        let sound_speed = Array3::from_elem((nx, ny, nz), 1500.0);
+        let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
         let density = Array3::from_elem((nx, ny, nz), 1000.0);
         arf.finalize(&absorption, &sound_speed, &density).unwrap();
 

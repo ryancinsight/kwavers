@@ -11,6 +11,7 @@
 //! The restored state is bit-exact (proven in `test_checkpoint_bit_exact_continuation`),
 //! so the velocity trajectory is identical and the recorded buffers match.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::sensor::recorder::fields::{SensorRecordField, SensorRecordSpec};
@@ -28,7 +29,7 @@ fn build_with_velocity(nx: usize, ny: usize, nz: usize, nt: usize, dt: f64) -> P
         ..Default::default()
     };
     let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, &grid);
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
 
@@ -64,9 +65,9 @@ fn test_checkpoint_velocity_recording_survives_resume() {
     // Reference run: no checkpoint.
     let mut solver_ref = build_with_velocity(NX, NY, NZ, NT, DT);
     solver_ref.fields.p[[NX / 4, NY / 4, NZ / 4]] = 1.0e5;
-    solver_ref.rhox[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
-    solver_ref.rhoy[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
-    solver_ref.rhoz[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
+    solver_ref.rhox[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
+    solver_ref.rhoy[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
+    solver_ref.rhoz[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
     solver_ref.run_orchestrated(NT).unwrap();
     let ref_ux = solver_ref
         .sensor_recorder
@@ -89,9 +90,9 @@ fn test_checkpoint_velocity_recording_survives_resume() {
 
     let mut solver_ckpt = build_with_velocity(NX, NY, NZ, NT, DT);
     solver_ckpt.fields.p[[NX / 4, NY / 4, NZ / 4]] = 1.0e5;
-    solver_ckpt.rhox[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
-    solver_ckpt.rhoy[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
-    solver_ckpt.rhoz[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * 1500.0_f64.powi(2));
+    solver_ckpt.rhox[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
+    solver_ckpt.rhoy[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
+    solver_ckpt.rhoz[[NX / 4, NY / 4, NZ / 4]] = 1.0e5 / (3.0 * SOUND_SPEED_WATER_SIM.powi(2));
     solver_ckpt.run_to_checkpoint(SPLIT, &ckpt_path).unwrap();
 
     let mut solver_resume = build_with_velocity(NX, NY, NZ, NT, DT);

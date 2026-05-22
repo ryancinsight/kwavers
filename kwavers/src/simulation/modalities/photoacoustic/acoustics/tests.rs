@@ -2,6 +2,7 @@
 
 use super::pressure::{compute_initial_pressure, compute_multi_wavelength_pressure};
 use super::propagation::propagate_acoustic_wave;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::imaging::photoacoustic::InitialPressure;
 use crate::domain::medium::homogeneous::HomogeneousMedium;
@@ -11,7 +12,7 @@ use ndarray::Array3;
 #[test]
 fn test_initial_pressure_computation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(
@@ -36,7 +37,7 @@ fn test_initial_pressure_computation() {
 #[test]
 fn test_wavelength_dependent_gruneisen() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(
@@ -61,7 +62,7 @@ fn test_wavelength_dependent_gruneisen() {
 #[test]
 fn test_multi_wavelength_pressure() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+    let medium = HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.0, &grid);
 
     let optical_properties =
         crate::simulation::modalities::photoacoustic::optics::initialize_optical_properties(
@@ -104,7 +105,7 @@ fn test_acoustic_wave_propagation() {
     };
 
     let (pressure_fields, time_points) =
-        propagate_acoustic_wave(&grid, &initial_pressure, 1500.0, 0.3, 100, 10).unwrap();
+        propagate_acoustic_wave(&grid, &initial_pressure, SOUND_SPEED_WATER_SIM, 0.3, 100, 10).unwrap();
 
     assert!(pressure_fields.len() >= 10);
     assert_eq!(pressure_fields.len(), time_points.len());
@@ -130,7 +131,7 @@ fn test_cfl_condition() {
         fluence: pressure.clone(),
     };
 
-    let speed_of_sound = 1500.0;
+    let speed_of_sound = SOUND_SPEED_WATER_SIM;
     let cfl_factor = 0.3;
     let min_h = grid.dx.min(grid.dy).min(grid.dz);
     let expected_dt = cfl_factor * min_h / speed_of_sound;

@@ -1,6 +1,7 @@
 //! End-to-end domain geometry tests (rectangular, spherical, cylindrical).
 
 use super::super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use burn::backend::{Autodiff, NdArray};
 
@@ -17,7 +18,7 @@ fn test_end_to_end_rectangular_domain() -> KwaversResult<()> {
     };
 
     let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-    let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+    let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
     let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
@@ -55,7 +56,7 @@ fn test_end_to_end_spherical_domain() -> KwaversResult<()> {
     };
 
     let geometry = Geometry3D::spherical(0.5, 0.5, 0.5, 0.3);
-    let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+    let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
     let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
@@ -83,7 +84,7 @@ fn test_end_to_end_cylindrical_domain() -> KwaversResult<()> {
     };
 
     let geometry = Geometry3D::cylindrical(0.5, 0.5, 0.0, 1.0, 0.3);
-    let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
+    let wave_speed = |_x: f32, _y: f32, _z: f32| SOUND_SPEED_WATER_SIM as f32;
 
     let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 

@@ -1,6 +1,7 @@
 //! Heterogeneous and radially varying medium tests.
 
 use super::super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use burn::backend::{Autodiff, NdArray};
 
@@ -17,11 +18,11 @@ fn test_heterogeneous_layered_medium() -> KwaversResult<()> {
     };
 
     let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-    let wave_speed = |_x: f32, _y: f32, z: f32| if z < 0.5 { 1500.0 } else { 3000.0 };
+    let wave_speed = |_x: f32, _y: f32, z: f32| if z < 0.5 { SOUND_SPEED_WATER_SIM as f32 } else { 3000.0 };
 
     let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
-    assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.3)?, 1500.0);
+    assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.3)?, SOUND_SPEED_WATER_SIM as f32);
     assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.7)?, 3000.0);
 
     let x_data = vec![0.5, 0.5, 0.5, 0.5];
@@ -57,13 +58,13 @@ fn test_radially_varying_medium() -> KwaversResult<()> {
         if r < 0.3 {
             2500.0
         } else {
-            1500.0
+            SOUND_SPEED_WATER_SIM as f32
         }
     };
 
     let solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed, &device)?;
 
     assert_eq!(solver.get_wave_speed(0.5, 0.5, 0.5)?, 2500.0);
-    assert_eq!(solver.get_wave_speed(0.9, 0.5, 0.5)?, 1500.0);
+    assert_eq!(solver.get_wave_speed(0.9, 0.5, 0.5)?, SOUND_SPEED_WATER_SIM as f32);
     Ok(())
 }

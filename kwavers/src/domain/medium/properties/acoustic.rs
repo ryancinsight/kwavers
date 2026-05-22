@@ -39,7 +39,7 @@
 //! - `0.5 ≤ absorption_power ≤ 3.0` (physical range)
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
-use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE, SOUND_SPEED_WATER_SIM};
 use std::fmt;
 
 /// Canonical acoustic material properties
@@ -293,6 +293,7 @@ impl fmt::Display for AcousticPropertyData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_acoustic_impedance() {
@@ -305,7 +306,7 @@ mod tests {
     fn test_acoustic_absorption() {
         let props = AcousticPropertyData {
             density: 1000.0,
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             absorption_coefficient: 0.5,
             absorption_power: 1.1,
             nonlinearity: 5.0,
@@ -322,13 +323,13 @@ mod tests {
     #[test]
     fn test_acoustic_validation() {
         // Negative density should fail
-        assert!(AcousticPropertyData::new(-1000.0, 1500.0, 0.5, 1.1, 5.0).is_err());
+        assert!(AcousticPropertyData::new(-1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0).is_err());
 
         // Invalid absorption power should fail
-        assert!(AcousticPropertyData::new(1000.0, 1500.0, 0.5, 5.0, 5.0).is_err());
+        assert!(AcousticPropertyData::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 5.0, 5.0).is_err());
 
         // Valid parameters should succeed
-        let props = AcousticPropertyData::new(1000.0, 1500.0, 0.5, 1.1, 5.0).unwrap();
+        let props = AcousticPropertyData::new(1000.0, SOUND_SPEED_WATER_SIM, 0.5, 1.1, 5.0).unwrap();
         assert!(props.density > 0.0);
     }
 }

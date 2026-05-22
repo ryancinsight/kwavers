@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::{KwaversError, KwaversResult};
 
 fn assert_invalid_dimension<T>(result: KwaversResult<T>, dim: usize) {
@@ -46,7 +47,7 @@ fn test_cpml_config_dimension_methods_invalid_dim_returns_err() {
     assert_invalid_dimension(cfg.sigma_factor_for_dimension(3), 3);
     assert_invalid_dimension(cfg.thickness_for_dimension(3), 3);
     assert_invalid_dimension(
-        cfg.theoretical_reflection_for_dimension(3, 1.0, 1e-3, 1500.0),
+        cfg.theoretical_reflection_for_dimension(3, 1.0, 1e-3, SOUND_SPEED_WATER_SIM),
         3,
     );
 }
@@ -80,7 +81,7 @@ fn test_theoretical_reflection_for_dimension_uses_axis_thickness() {
     let cfg = CPMLConfig::default().with_pml_size(2, 3, 5).with_alpha(2.0);
     let cos_theta = 0.5;
     let dx = 1.0e-3;
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let m = cfg.polynomial_order;
     let sigma_max =
         cfg.sigma_factor * (m + 1.0) * sound_speed / (150.0 * std::f64::consts::PI * dx);

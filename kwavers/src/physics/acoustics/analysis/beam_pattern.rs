@@ -1,6 +1,7 @@
 //! Beam pattern analysis and directivity calculations
 
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::Grid;
 use ndarray::{Array2, ArrayView3};
@@ -34,7 +35,7 @@ impl Default for BeamPatternConfig {
     fn default() -> Self {
         Self {
             frequency: 1e6,      // 1 MHz
-            sound_speed: 1500.0, // Default sound speed
+            sound_speed: SOUND_SPEED_WATER_SIM, // Default sound speed
             far_field_method: FarFieldMethod::Fraunhofer,
             angular_resolution: PI / 180.0, // 1 degree
         }
@@ -208,7 +209,7 @@ mod tests {
         let cfg = BeamPatternConfig::default();
         assert!((cfg.frequency - 1e6).abs() < 1.0, "frequency must be 1 MHz");
         assert!(
-            (cfg.sound_speed - 1500.0).abs() < 1e-10,
+            (cfg.sound_speed - SOUND_SPEED_WATER_SIM).abs() < 1e-10,
             "sound_speed must be 1500 m/s"
         );
         assert!(
@@ -276,7 +277,7 @@ mod tests {
 
         let cfg = BeamPatternConfig {
             frequency: 1e6,
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             far_field_method: FarFieldMethod::Fraunhofer,
             angular_resolution: PI / 6.0, // 30° → n_theta=12, n_phi=6
         };
@@ -307,7 +308,7 @@ mod tests {
         let field = Array3::<f64>::zeros((4, 4, 4));
         let cfg = BeamPatternConfig {
             frequency: 0.0,
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             far_field_method: FarFieldMethod::Fraunhofer,
             angular_resolution: PI / 6.0,
         };

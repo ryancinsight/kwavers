@@ -1,6 +1,7 @@
 //! Core boundary condition traits: `BoundaryCondition`, `AbsorbingBoundary`,
 //! `ReflectiveBoundary`, and `PeriodicBoundary`.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::core::error::KwaversResult;
 use crate::domain::grid::GridTopology;
 use ndarray::{Array3, ArrayViewMut3};
@@ -152,7 +153,7 @@ pub trait AbsorbingBoundary: BoundaryCondition {
     ///
     fn validate_thickness(&self, grid: &dyn GridTopology, max_frequency: f64) -> KwaversResult<()> {
         let min_spacing = grid.spacing().iter().copied().fold(f64::INFINITY, f64::min);
-        let wavelength = 1500.0 / max_frequency;
+        let wavelength = SOUND_SPEED_WATER_SIM / max_frequency;
         let min_thickness = (wavelength / (4.0 * min_spacing)).ceil() as usize;
 
         if self.thickness() < min_thickness.max(10) {

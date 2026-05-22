@@ -1,5 +1,6 @@
 //! Unit tests for the Hybrid Angular Spectrum module.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use ndarray::Array3;
 
@@ -9,7 +10,7 @@ use super::facade::HybridAngularSpectrum;
 #[test]
 fn test_has_config_default() {
     let config = HASConfig::default();
-    assert_eq!(config.sound_speed, 1500.0);
+    assert_eq!(config.sound_speed, SOUND_SPEED_WATER_SIM);
     assert_eq!(config.density, 1000.0);
     assert!(config.nonlinearity > 0.0);
 }
@@ -17,15 +18,15 @@ fn test_has_config_default() {
 #[test]
 fn test_has_config_validation() {
     assert!(HASConfig::new(-1.0, 1000.0, 6.0, 0.5, 2.0, 0.0001, 1e6).is_err());
-    assert!(HASConfig::new(1500.0, -1.0, 6.0, 0.5, 2.0, 0.0001, 1e6).is_err());
-    assert!(HASConfig::new(1500.0, 1000.0, 6.0, 0.5, 2.0, -0.0001, 1e6).is_err());
+    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, -1.0, 6.0, 0.5, 2.0, 0.0001, 1e6).is_err());
+    assert!(HASConfig::new(SOUND_SPEED_WATER_SIM, 1000.0, 6.0, 0.5, 2.0, -0.0001, 1e6).is_err());
 }
 
 /// Z = ρ·c (acoustic impedance definition, Pierce 1989 §1.5).
 #[test]
 fn test_impedance_calculation() {
     let config = HASConfig::default();
-    assert_eq!(config.impedance(), 1500.0 * 1000.0);
+    assert_eq!(config.impedance(), SOUND_SPEED_WATER_SIM * 1000.0);
 }
 
 /// Power-law attenuation α(f) = α₀·(f/MHz)^y; ratio at 2× frequency = 2^y.
@@ -74,7 +75,7 @@ fn test_propagate_zero_distance_returns_input_unchanged() {
 fn test_shock_formation_distance_matches_analytical_formula() {
     let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
     // nonlinearity stores B/A; β = 1 + B/(2A) is used inside shock_formation_distance
-    let (rho0, c0, b_over_a, f_ref) = (1000.0_f64, 1500.0_f64, 6.0_f64, 1.0e6_f64);
+    let (rho0, c0, b_over_a, f_ref) = (1000.0_f64, SOUND_SPEED_WATER_SIM, 6.0_f64, 1.0e6_f64);
     let beta = 1.0 + b_over_a / 2.0; // = 4.0 for B/A = 6 (tissue)
     let config = HASConfig {
         sound_speed: c0,
@@ -103,7 +104,7 @@ fn test_shock_formation_distance_matches_analytical_formula() {
 #[test]
 fn test_rayleigh_distance_matches_analytical_formula() {
     let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
-    let (c0, f_ref) = (1500.0_f64, 1.0e6_f64);
+    let (c0, f_ref) = (SOUND_SPEED_WATER_SIM, 1.0e6_f64);
     let config = HASConfig {
         sound_speed: c0,
         reference_frequency: f_ref,

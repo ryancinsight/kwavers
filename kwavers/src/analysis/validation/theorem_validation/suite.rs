@@ -1,6 +1,7 @@
 //! Comprehensive validation suite and report generation.
 
 use super::{TheoremValidation, TheoremValidator};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -26,7 +27,7 @@ impl TheoremValidator {
             &intensities,
         ));
 
-        results.push(Self::validate_cfl_condition(1e-8, 5e-5, 1500.0, 3));
+        results.push(Self::validate_cfl_condition(1e-8, 5e-5, SOUND_SPEED_WATER_SIM, 3));
 
         // Parseval's theorem with analytical sinusoid DFT
         let n_samples = 128;
@@ -57,7 +58,7 @@ impl TheoremValidator {
         let freqs = vec![1e6, 2e6, 5e6, 10e6];
         let alpha_0 = 0.1;
         let alpha_power = 1.5;
-        let c0 = 1500.0;
+        let c0 = SOUND_SPEED_WATER_SIM;
 
         let alpha: Vec<f64> = freqs
             .iter()
@@ -82,7 +83,7 @@ impl TheoremValidator {
         results.push(Self::validate_coded_excitation_snr(256, 3.0, 18.0));
         results.push(Self::validate_reciprocity(1.0, 1.0, 1e-10));
         results.push(Self::validate_impedance_reflection(
-            1000.0, 1500.0, 1.2, 340.0, -0.9999,
+            1000.0, SOUND_SPEED_WATER_SIM, 1.2, 340.0, -0.9999,
         ));
         results.push(Self::validate_ideal_gas_speed(293.15, 0.02897, 1.4, 343.0));
 

@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::config::SemConfig;
 use super::sem_solver::SemSolver;
 use crate::solver::forward::sem::mesh::MeshBuilder;
@@ -60,7 +61,7 @@ fn test_stiffness_constant_field_is_zero() {
     let mesh = MeshBuilder::create_rectangular_mesh(1.0, 1.0, 1.0, 3);
     let config = SemConfig {
         polynomial_degree: 3,
-        sound_speed: 1500.0,
+        sound_speed: SOUND_SPEED_WATER_SIM,
         density: 1000.0,
         ..Default::default()
     };
@@ -93,7 +94,7 @@ fn test_stiffness_energy_linear_field() {
     let mesh = MeshBuilder::create_rectangular_mesh(lx, ly, lz, 3);
     let config = SemConfig {
         polynomial_degree: 3,
-        sound_speed: 1500.0,
+        sound_speed: SOUND_SPEED_WATER_SIM,
         density: 1000.0,
         ..Default::default()
     };
@@ -170,7 +171,7 @@ fn test_free_vibration_energy_conservation() {
         polynomial_degree: 2,
         n_steps: 20,
         dt: 1e-9,
-        sound_speed: 1500.0,
+        sound_speed: SOUND_SPEED_WATER_SIM,
         density: 1000.0,
         wavenumber: 1.0,
     };

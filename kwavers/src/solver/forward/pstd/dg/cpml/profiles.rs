@@ -180,6 +180,7 @@ impl DgCpmlProfiles {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     fn standard_profile(thickness: usize) -> DgCpmlAxisProfile {
         let element_count = 16;
@@ -191,7 +192,7 @@ mod tests {
             .collect();
         DgCpmlAxisProfile::build(
             DgCpmlAxis::standard(thickness),
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             element_count,
             n_nodes,
             &node_positions,
@@ -248,7 +249,7 @@ mod tests {
         let n_nodes: usize = 3;
         let thickness: usize = 4;
         let element_span: f64 = 1.0e-3;
-        let c0: f64 = 1500.0;
+        let c0: f64 = SOUND_SPEED_WATER_SIM;
         let r0: f64 = 1.0e-6;
         let m: u32 = 4;
         let profile = standard_profile(thickness);
@@ -282,7 +283,7 @@ mod tests {
         axis.alpha_max = 1.0e5;
         let profile = DgCpmlAxisProfile::build(
             axis,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             element_count,
             n_nodes,
             &node_positions,
@@ -320,7 +321,7 @@ mod tests {
             .collect();
         let profile = DgCpmlAxisProfile::build(
             DgCpmlAxis::DISABLED,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             element_count,
             n_nodes,
             &node_positions,
@@ -334,7 +335,7 @@ mod tests {
     #[test]
     fn full_profiles_construct_for_3d_uniform_grid() {
         let cfg = DgCpmlConfig::uniform(4);
-        let profiles = DgCpmlProfiles::new(&cfg, 1500.0, [16, 16, 16], 3, [1.0e-3; 3]).unwrap();
+        let profiles = DgCpmlProfiles::new(&cfg, SOUND_SPEED_WATER_SIM, [16, 16, 16], 3, [1.0e-3; 3]).unwrap();
         for axis in &profiles.axes {
             assert_eq!(axis.sigma.len(), 16 * 3);
             assert!(axis.sigma.iter().any(|s| *s > 0.0));

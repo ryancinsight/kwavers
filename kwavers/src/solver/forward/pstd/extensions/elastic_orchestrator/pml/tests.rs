@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::*;
 
 fn spec(
@@ -24,7 +25,7 @@ fn no_thickness_means_unit_damping() {
         (16, 16, 16),
         (0, 0, 0),
         (1e-3, 1e-3, 1e-3),
-        1500.0,
+        SOUND_SPEED_WATER_SIM,
         1e-7,
         1e-4,
     ));
@@ -40,7 +41,7 @@ fn damping_is_monotonic_and_in_unit_interval() {
         (32, 32, 32),
         (8, 8, 8),
         (1e-3, 1e-3, 1e-3),
-        1500.0,
+        SOUND_SPEED_WATER_SIM,
         1e-7,
         1e-4,
     ));
@@ -70,7 +71,7 @@ fn cumulative_attenuation_matches_per_step_multiplier_to_n() {
         (nx, ny, nz),
         (thickness, 0, 0),
         (1e-3, 1e-3, 1e-3),
-        1500.0,
+        SOUND_SPEED_WATER_SIM,
         1e-7,
         1e-4,
     ));
@@ -100,7 +101,7 @@ fn outermost_damping_matches_roden_gedney_calibration() {
     let nx = 64usize;
     let thickness = 10usize;
     let dx = 1e-3_f64;
-    let c_max = 1500.0_f64;
+    let c_max = SOUND_SPEED_WATER_SIM;
     let dt = 1e-7_f64;
     let r0 = 1e-4_f64;
     let pml = ElasticPml::new(spec(

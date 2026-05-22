@@ -2,6 +2,7 @@
 
 use super::super::backend::AcousticSolverBackend;
 use super::backend::FdtdBackend;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
@@ -11,7 +12,7 @@ fn create_test_grid() -> Grid {
 }
 
 fn create_test_medium(grid: &Grid) -> HomogeneousMedium {
-    HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, grid)
+    HomogeneousMedium::new(1000.0, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid)
 }
 
 #[test]
@@ -34,7 +35,7 @@ fn test_fdtd_backend_cfl_condition() {
 
     let dt = backend.get_dt();
     let dx = grid.min_spacing();
-    let c_max = 1500.0;
+    let c_max = SOUND_SPEED_WATER_SIM;
     let cfl = c_max * dt / dx;
     let cfl_limit = 1.0 / 3.0_f64.sqrt();
 
@@ -112,7 +113,7 @@ fn test_fdtd_backend_as_trait_object() {
 #[test]
 fn test_stable_timestep_computation() {
     let dx = 0.0005;
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let dt = FdtdBackend::compute_stable_timestep(dx, c);
 
     let cfl = c * dt / dx;
@@ -126,7 +127,7 @@ fn test_max_sound_speed_estimation() {
     let medium = create_test_medium(&grid);
 
     let c_max = FdtdBackend::estimate_max_sound_speed(&medium, &grid).unwrap();
-    assert!((c_max - 1500.0).abs() < 1e-6);
+    assert!((c_max - SOUND_SPEED_WATER_SIM).abs() < 1e-6);
 }
 
 #[test]

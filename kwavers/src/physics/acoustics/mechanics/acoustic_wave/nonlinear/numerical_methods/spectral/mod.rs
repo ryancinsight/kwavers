@@ -9,6 +9,42 @@ use ndarray::{Array3, Zip};
 use super::super::wave_model::NonlinearWave;
 
 impl NonlinearWave {
+    /// Applies the 2/3-rule anti-aliasing filter to a 3-D spectral field in-place.
+    ///
+    /// Physical-space products of band-limited fields (p·∇²p, |∇p|²) generate
+    /// wavenumber content up to twice the input bandwidth. Zeroing the top 1/3 of
+    /// bins along each axis before those products are formed prevents energy above
+    /// the 2/3 Nyquist from aliasing back into the resolved band.
+    ///
+    /// ## Cutoff rule
+    ///
+    /// For axis length n, cutoff index `cx = n / 3` (integer division). Bins with
+    /// absolute frequency index ≤ cx are retained. DFT layout: positive frequencies
+    /// occupy [0, n/2], negative frequencies [n/2+1, n-1]. Zeroed range along each
+    /// axis: (cx, n − cx), exclusive.
+    ///
+    /// ## Reference
+    ///
+    /// Canuto, Hussaini, Quarteroni & Zang (2006) *Spectral Methods in Fluid
+    /// Dynamics*, §3.2.5; Kreiss & Oliger (1972).
+    pub(crate) fn apply_dealiasing_filter(
+        field_k: &mut Array3<Complex>,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+    ) {
+        let cx = nx / 3;
+        let cy = ny / 3;
+        let cz = nz / 3;
+        Zip::indexed(field_k).for_each(|(i, j, k), val| {
+            if (i > cx && i < nx - cx) || (j > cy && j < ny - cy) || (k > cz && k < nz - cz) {
+                *val = Complex::new(0.0, 0.0);
+            }
+        });
+    }
+}
+
+impl NonlinearWave {
     /// Applies k-space correction for the linear wave propagation.
     ///
     /// # Errors

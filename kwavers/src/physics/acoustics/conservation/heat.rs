@@ -1,5 +1,6 @@
 //! Acoustic-to-thermal coupling source terms.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::{Array3, Zip};
 
 /// Compute volumetric heat source from acoustic absorption [W/m^3].
@@ -63,7 +64,7 @@ mod tests {
         let s = (4, 4, 4);
         let zero = Array3::<f64>::zeros(s);
         let rho = uniform(s, 1000.0);
-        let c = uniform(s, 1500.0);
+        let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = uniform(s, 5.0);
         let q = acoustic_heat_source(&zero, &zero, &zero, &zero, &rho, &c, &alpha);
         assert!(
@@ -81,7 +82,7 @@ mod tests {
         let p = uniform(s, 5000.0);
         let v = uniform(s, 0.1);
         let rho = uniform(s, 1000.0);
-        let c = uniform(s, 1500.0);
+        let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = Array3::<f64>::zeros(s);
         let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
         assert!(
@@ -98,7 +99,7 @@ mod tests {
         let s = (4, 4, 4);
         let p0 = 2000.0_f64;
         let rho0 = 1000.0_f64;
-        let c0 = 1500.0_f64;
+        let c0 = SOUND_SPEED_WATER_SIM;
         let a0 = 3.0_f64;
         let p = uniform(s, p0);
         let v = Array3::<f64>::zeros(s);
@@ -124,7 +125,7 @@ mod tests {
         let p = uniform(s, 1000.0);
         let v = uniform(s, 0.5);
         let rho = uniform(s, 1000.0);
-        let c = uniform(s, 1500.0);
+        let c = uniform(s, SOUND_SPEED_WATER_SIM);
         let alpha = uniform(s, 2.0);
         let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
         assert!(

@@ -39,6 +39,7 @@
 //!   *Curr. Med. Imaging Rev.*, 6(1), 15-25.
 //! - Duque, M. et al. (2023). Sonogenetic control via MscL-G22S. *Science*, 380, 1084-1090.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::{Array3, Zip};
 
 /// Cell geometry and membrane parameters for the Laplace tension model.
@@ -153,7 +154,7 @@ mod tests {
     fn test_membrane_tension_analytical() {
         let (nx, ny, nz) = (3, 3, 3);
         let intensity = Array3::from_elem((nx, ny, nz), 1.0e5_f64);
-        let sound_speed = Array3::from_elem((nx, ny, nz), 1500.0_f64);
+        let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
         let params = CellMembraneParams {
             radius_m: 10.0e-6,
             thickness_m: 5.0e-9,
@@ -161,7 +162,7 @@ mod tests {
 
         let tension = compute_membrane_tension(&intensity, &sound_speed, &params);
 
-        let expected_p_rad = 1.0e5 / 1500.0;
+        let expected_p_rad = 1.0e5 / SOUND_SPEED_WATER_SIM;
         let expected_tension = expected_p_rad * 10.0e-6 / 2.0;
 
         for &v in tension.iter() {
@@ -178,13 +179,13 @@ mod tests {
     fn test_hifu_level_tension_in_channel_range() {
         let (nx, ny, nz) = (2, 2, 2);
         let intensity = Array3::from_elem((nx, ny, nz), 1.0e6_f64);
-        let sound_speed = Array3::from_elem((nx, ny, nz), 1500.0_f64);
+        let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
         let params = CellMembraneParams::default();
 
         let tension = compute_membrane_tension(&intensity, &sound_speed, &params);
 
         // Expected: 1e6 / 1500 * 10e-6 / 2 = 3.333e-3 N/m = 3.333 mN/m
-        let expected = 1.0e6 * 10.0e-6 / (2.0 * 1500.0);
+        let expected = 1.0e6 * 10.0e-6 / (2.0 * SOUND_SPEED_WATER_SIM);
         for &v in tension.iter() {
             assert_relative_eq!(v, expected, max_relative = 1e-12);
         }
@@ -204,7 +205,7 @@ mod tests {
     fn test_zero_sound_speed_produces_zero() {
         let (nx, ny, nz) = (2, 2, 2);
         let intensity = Array3::from_elem((nx, ny, nz), 1.0e5_f64);
-        let mut sound_speed = Array3::from_elem((nx, ny, nz), 1500.0_f64);
+        let mut sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
         sound_speed[[0, 0, 0]] = 0.0;
         let params = CellMembraneParams::default();
 
@@ -221,7 +222,7 @@ mod tests {
     fn test_radiation_pressure_formula() {
         let (nx, ny, nz) = (2, 2, 2);
         let intensity = Array3::from_elem((nx, ny, nz), 3000.0_f64);
-        let sound_speed = Array3::from_elem((nx, ny, nz), 1500.0_f64);
+        let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
 
         let p_rad = compute_radiation_pressure(&intensity, &sound_speed);
 

@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::DENSITY_BLOOD;
+use crate::core::constants::fundamental::{DENSITY_BLOOD, SOUND_SPEED_WATER_SIM};
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
     core::CoreMedium, elastic::ElasticProperties, viscous::ViscousProperties,
@@ -49,7 +49,7 @@ fn test_air_properties() {
 #[test]
 fn test_elastic_homogeneous_lame_inversion_satisfies_dispersion() {
     let grid = Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).unwrap();
-    let cp = 1500.0_f64;
+    let cp = SOUND_SPEED_WATER_SIM;
     let cs = 800.0_f64;
     let rho = 1200.0_f64;
 
@@ -97,7 +97,7 @@ fn test_elastic_homogeneous_lame_inversion_satisfies_dispersion() {
 #[test]
 fn test_elastic_homogeneous_fluid_limit_zero_shear_speed() {
     let grid = Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4).unwrap();
-    let cp = 1500.0_f64;
+    let cp = SOUND_SPEED_WATER_SIM;
     let rho = 1000.0_f64;
 
     let med = HomogeneousMedium::elastic_homogeneous(rho, cp, 0.0, &grid)
@@ -122,19 +122,19 @@ fn test_elastic_homogeneous_fluid_limit_zero_shear_speed() {
 fn test_elastic_homogeneous_rejects_unstable_speeds() {
     let grid = Grid::new(4, 4, 4, 1e-4, 1e-4, 1e-4).unwrap();
     // c_s² · 2 > c_p² ⇒ λ < 0 — must reject
-    let res = HomogeneousMedium::elastic_homogeneous(1000.0, 1500.0, 1200.0, &grid);
+    let res = HomogeneousMedium::elastic_homogeneous(1000.0, SOUND_SPEED_WATER_SIM, 1200.0, &grid);
     assert!(
         res.is_none(),
         "Unstable elastic configuration must be rejected"
     );
 
     // Density / speed positivity
-    assert!(HomogeneousMedium::elastic_homogeneous(0.0, 1500.0, 800.0, &grid).is_none());
+    assert!(HomogeneousMedium::elastic_homogeneous(0.0, SOUND_SPEED_WATER_SIM, 800.0, &grid).is_none());
     assert!(HomogeneousMedium::elastic_homogeneous(1000.0, 0.0, 800.0, &grid).is_none());
-    assert!(HomogeneousMedium::elastic_homogeneous(1000.0, 1500.0, -1.0, &grid).is_none());
+    assert!(HomogeneousMedium::elastic_homogeneous(1000.0, SOUND_SPEED_WATER_SIM, -1.0, &grid).is_none());
 
     // NaN / Inf rejection
-    assert!(HomogeneousMedium::elastic_homogeneous(f64::NAN, 1500.0, 800.0, &grid).is_none());
+    assert!(HomogeneousMedium::elastic_homogeneous(f64::NAN, SOUND_SPEED_WATER_SIM, 800.0, &grid).is_none());
     assert!(HomogeneousMedium::elastic_homogeneous(1000.0, f64::INFINITY, 800.0, &grid).is_none());
 }
 

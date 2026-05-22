@@ -1,4 +1,5 @@
 use super::*;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::boundary::cpml::{CPMLBoundary, CPMLConfig};
 use crate::domain::grid::{CartesianTopology, Grid};
 use ndarray::Array3;
@@ -7,7 +8,7 @@ use ndarray::Array3;
 fn test_field_updater_creation() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
     let config = CPMLConfig::default();
-    let boundary = CPMLBoundary::new(config, &grid, 1500.0).unwrap();
+    let boundary = CPMLBoundary::new(config, &grid, SOUND_SPEED_WATER_SIM).unwrap();
 
     let updater = FieldUpdater::new(boundary);
     assert_eq!(updater.boundary().name(), "CPML (Convolutional PML)");

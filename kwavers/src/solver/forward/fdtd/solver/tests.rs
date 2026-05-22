@@ -47,6 +47,7 @@
 //! - Gustafsson B et al. (1995). Time Compact Difference Schemes. §4.
 //! - Taflove A, Hagness SC (2005). Computational Electrodynamics, 3rd ed. §3.4.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use crate::domain::grid::Grid;
 use crate::domain::medium::HomogeneousMedium;
 use crate::domain::source::GridSource;
@@ -101,7 +102,7 @@ fn make_solver(
 fn max_stable_dt_2nd_order_matches_analytical_formula() {
     let n = 8;
     let dx = 1.0e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let cfl_factor = 0.45_f64; // strictly below 1/√3
 
@@ -132,7 +133,7 @@ fn max_stable_dt_2nd_order_matches_analytical_formula() {
 fn max_stable_dt_4th_order_matches_analytical_formula() {
     let n = 8;
     let dx = 1.0e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let cfl_factor = 0.25_f64; // strictly below 1/√15 ≈ 0.258
 
@@ -161,7 +162,7 @@ fn max_stable_dt_4th_order_matches_analytical_formula() {
 fn max_stable_dt_6th_order_matches_analytical_formula() {
     let n = 8;
     let dx = 1.0e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let cfl_factor = 0.18_f64; // strictly below 1/√27 ≈ 0.192
 
@@ -191,7 +192,7 @@ fn max_stable_dt_6th_order_matches_analytical_formula() {
 fn check_cfl_stability_correctly_classifies_dt() {
     let n = 8;
     let dx = 1.0e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     let cfl_factor = 0.45_f64;
 
@@ -282,7 +283,7 @@ fn spatial_order_cfl_limits_match_analytical_von_neumann_values() {
 fn leapfrog_field_remains_bounded_in_lossless_medium() {
     let n = 16usize;
     let dx = 1.0e-3_f64;
-    let c0 = 1500.0_f64;
+    let c0 = SOUND_SPEED_WATER_SIM;
     let rho0 = 1000.0_f64;
     // Use cfl_factor = 0.45 < 1/√3; explicit dt to match
     let cfl_factor = 0.45_f64;
