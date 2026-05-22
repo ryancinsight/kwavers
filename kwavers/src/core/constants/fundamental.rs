@@ -166,6 +166,23 @@ pub const SOUND_SPEED_BLOOD: f64 = 1584.0;
 /// Duck, F. A. (1990). *Physical Properties of Tissue*. Academic Press, London, p. 119.
 pub const DENSITY_BLOOD: f64 = 1060.0;
 
+/// Density of skeletal muscle at body temperature (kg/m³).
+///
+/// Value: 1090.0 kg/m³ — upper end of Duck (1990) Table 4.1 range (1041–1090),
+/// consistent with IT'IS Foundation database v4.0 and the thermal bioheat
+/// literature.
+///
+/// Reference: Duck (1990) Table 4.1; IT'IS Foundation (2018)
+/// "Tissue Properties Database"; ICRP-89 (2002) Table 4.4.
+pub const DENSITY_MUSCLE: f64 = 1090.0;
+
+/// Small-signal sound speed in skeletal muscle at body temperature (m/s).
+///
+/// Value: 1580.0 m/s — mean of Duck (1990) Table 4.6 range (1547–1626 m/s).
+///
+/// Reference: Duck (1990) Table 4.6; Goss et al. (1978) Table V.
+pub const SOUND_SPEED_MUSCLE: f64 = 1580.0;
+
 /// Density of air at 20°C (kg/m³)
 /// Value: 1.204 kg/m³ (at 20°C, 1 atm)
 /// Reference: NIST Standard Reference Database

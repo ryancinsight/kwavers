@@ -9,9 +9,9 @@
 //! Pressure: 1 atm unless otherwise noted
 
 use crate::core::constants::fundamental::{
-    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_LIVER, DENSITY_TISSUE,
-    DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY,
-    SOUND_SPEED_LIVER,
+    ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_BRAIN, DENSITY_LIVER, DENSITY_MUSCLE,
+    DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BLOOD, SOUND_SPEED_BRAIN, SOUND_SPEED_FAT,
+    SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
 };
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use super::material::AcousticMaterialProperties;
@@ -237,10 +237,12 @@ pub const BLOOD: TissueProperties = TissueProperties {
 };
 
 /// Muscle (37°C)
+/// Source: Duck (1990) Table 4.1/4.6; IT'IS Foundation v4.0
+/// Z = ρ·c = 1090 × 1580 = 1 722 200 Pa·s/m
 pub const MUSCLE: TissueProperties = TissueProperties {
-    sound_speed: 1580.0,
-    density: 1070.0,
-    impedance: 1690600.0,
+    sound_speed: SOUND_SPEED_MUSCLE,
+    density: DENSITY_MUSCLE,
+    impedance: 1_722_200.0,
     absorption_coefficient: 0.13,
     absorption_exponent: 1.0,
     nonlinearity_parameter: 7.0,

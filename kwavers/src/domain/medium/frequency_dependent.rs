@@ -10,6 +10,9 @@
 //!   wave propagation in biological tissue" Journal of the Acoustical
 //!   Society of America, 88(3), 1584-1591.
 
+use crate::core::constants::fundamental::{
+    SOUND_SPEED_BLOOD, SOUND_SPEED_FAT, SOUND_SPEED_LIVER, SOUND_SPEED_MUSCLE,
+};
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::math::fft::Complex64;
 use ndarray::{Array3, Zip};
@@ -139,7 +142,7 @@ impl TissueFrequencyModels {
     /// Get frequency-dependent properties for liver tissue
     #[must_use]
     pub fn liver() -> FrequencyDependentProperties {
-        let mut props = FrequencyDependentProperties::new(1570.0, 6.8);
+        let mut props = FrequencyDependentProperties::new(SOUND_SPEED_LIVER, 6.8);
         props.dispersion_coefficient = 0.002;
         // Add relaxation processes
         let _ = props.add_relaxation(0.5e6, 0.02); // Low frequency relaxation
@@ -151,7 +154,7 @@ impl TissueFrequencyModels {
     /// Get frequency-dependent properties for muscle tissue
     #[must_use]
     pub fn muscle() -> FrequencyDependentProperties {
-        let mut props = FrequencyDependentProperties::new(1580.0, 7.4);
+        let mut props = FrequencyDependentProperties::new(SOUND_SPEED_MUSCLE, 7.4);
         props.dispersion_coefficient = 0.0015;
         // Add relaxation processes
         let _ = props.add_relaxation(1e6, 0.03);
@@ -163,7 +166,7 @@ impl TissueFrequencyModels {
     /// Get frequency-dependent properties for fat tissue
     #[must_use]
     pub fn fat() -> FrequencyDependentProperties {
-        let mut props = FrequencyDependentProperties::new(1450.0, 10.0);
+        let mut props = FrequencyDependentProperties::new(SOUND_SPEED_FAT, 10.0);
         props.dispersion_coefficient = 0.003;
         // Fat has significant relaxation
         let _ = props.add_relaxation(0.2e6, 0.05);
@@ -175,7 +178,7 @@ impl TissueFrequencyModels {
     /// Get frequency-dependent properties for blood
     #[must_use]
     pub fn blood() -> FrequencyDependentProperties {
-        let mut props = FrequencyDependentProperties::new(1575.0, 6.0);
+        let mut props = FrequencyDependentProperties::new(SOUND_SPEED_BLOOD, 6.0);
         props.dispersion_coefficient = 0.001;
         // Blood has minimal relaxation
         let _ = props.add_relaxation(5e6, 0.01);

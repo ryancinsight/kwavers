@@ -1,5 +1,6 @@
 use crate::core::constants::fundamental::{
-    DENSITY_BLOOD, DENSITY_WATER, SOUND_SPEED_AIR, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
+    DENSITY_BLOOD, DENSITY_WATER, SOUND_SPEED_AIR, SOUND_SPEED_BLOOD, SOUND_SPEED_WATER,
+    SOUND_SPEED_WATER_SIM,
 };
 use crate::domain::grid::Grid;
 use crate::domain::medium::{
@@ -24,7 +25,7 @@ fn test_blood_properties() {
     let blood = HomogeneousMedium::blood(&grid);
 
     assert_eq!(blood.density(0, 0, 0), DENSITY_BLOOD);
-    assert_eq!(blood.sound_speed(0, 0, 0), 1570.0);
+    assert_eq!(blood.sound_speed(0, 0, 0), SOUND_SPEED_BLOOD);
     assert_eq!(blood.viscosity(0.0, 0.0, 0.0, &grid), 3.5e-3);
 }
 

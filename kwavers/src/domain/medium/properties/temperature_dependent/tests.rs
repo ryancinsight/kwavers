@@ -1,4 +1,4 @@
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_K, KELVIN_OFFSET_C};
 
 use super::{
     MaterialPropertiesAtT, TemperatureDependentAcoustic, TemperatureDependentMaterial,
@@ -94,7 +94,7 @@ fn test_soft_tissue_properties_physiological_range() {
     let tissue = TemperatureDependentAcoustic::soft_tissue();
 
     for t_celsius in 35..=40 {
-        let t_kelvin = t_celsius as f64 + 273.15;
+        let t_kelvin = t_celsius as f64 + KELVIN_OFFSET_C;
         let c = tissue.sound_speed(t_kelvin);
         let rho = tissue.density(t_kelvin);
 

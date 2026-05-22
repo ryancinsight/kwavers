@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::thermodynamic::KELVIN_OFFSET_C;
 use super::container::{field_indices, PhysicsState};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -78,9 +79,9 @@ fn test_field_guard_deref() {
 
     {
         let mut temp = state.get_field_mut(field_indices::TEMPERATURE_IDX).unwrap();
-        temp[[0, 0, 0]] = 273.15;
+        temp[[0, 0, 0]] = KELVIN_OFFSET_C;
     }
 
     let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-    assert_eq!(temp[[0, 0, 0]], 273.15);
+    assert_eq!(temp[[0, 0, 0]], KELVIN_OFFSET_C);
 }

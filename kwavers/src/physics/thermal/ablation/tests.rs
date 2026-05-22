@@ -1,4 +1,4 @@
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use super::field::AblationField;
 use super::kinetics::AblationKinetics;
 use super::state::AblationState;
@@ -17,9 +17,9 @@ fn test_damage_rate_temperature_dependence() {
     let kinetics = AblationKinetics::hifu_ablation();
 
     // Higher temperature should give higher damage rate
-    let rate_43c = kinetics.damage_rate(273.15 + 43.0);
-    let rate_50c = kinetics.damage_rate(273.15 + 50.0);
-    let rate_70c = kinetics.damage_rate(273.15 + 70.0);
+    let rate_43c = kinetics.damage_rate(KELVIN_OFFSET_C +43.0);
+    let rate_50c = kinetics.damage_rate(KELVIN_OFFSET_C +50.0);
+    let rate_70c = kinetics.damage_rate(KELVIN_OFFSET_C +70.0);
 
     assert!(rate_43c > 0.0);
     assert!(rate_50c > rate_43c); // 50°C > 43°C
@@ -99,7 +99,7 @@ fn test_kinetics_variants() {
     let hifu = AblationKinetics::hifu_ablation();
 
     // Different kinetics should give different damage rates at same temperature
-    let t = 273.15 + 60.0;
+    let t = KELVIN_OFFSET_C +60.0;
     let rate_protein = protein.damage_rate(t);
     let rate_collagen = collagen.damage_rate(t);
     let rate_hifu = hifu.damage_rate(t);

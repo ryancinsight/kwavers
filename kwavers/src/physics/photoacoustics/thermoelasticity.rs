@@ -177,7 +177,7 @@ mod tests {
         let model = GrueneisenModel::constant(0.2);
         assert!((model.evaluate(0.0) - 0.2).abs() < 1e-15);
         assert!((model.evaluate(100.0) - 0.2).abs() < 1e-15);
-        assert!((model.evaluate(-273.15) - 0.2).abs() < 1e-15);
+        assert!((model.evaluate(-KELVIN_OFFSET_C) - 0.2).abs() < 1e-15);
     }
 
     /// p₀(37°C) / p₀(20°C) = Γ(37°C) / Γ(20°C) for soft-tissue model.

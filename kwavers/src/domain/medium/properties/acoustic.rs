@@ -40,8 +40,9 @@
 //! - `nonlinearity > 0` (typically 3-10 for biological media)
 
 use crate::core::constants::fundamental::{
-    DENSITY_BRAIN, DENSITY_LIVER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_BRAIN,
-    SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER, SOUND_SPEED_TISSUE,
+    DENSITY_BRAIN, DENSITY_LIVER, DENSITY_MUSCLE, DENSITY_TISSUE, DENSITY_WATER,
+    SOUND_SPEED_BRAIN, SOUND_SPEED_FAT, SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER,
+    SOUND_SPEED_MUSCLE, SOUND_SPEED_TISSUE,
 };
 use std::fmt;
 
@@ -240,16 +241,16 @@ impl AcousticPropertyData {
 
     /// Muscle tissue acoustic properties
     ///
-    /// Based on clinical measurements:
-    /// - Density: ~1070 kg/m³
-    /// - Sound speed: ~1580 m/s
+    /// Based on clinical measurements (Duck 1990 Table 4.1 and 4.6):
+    /// - Density: ~1090 kg/m³ (IT'IS Foundation; upper Duck range 1041–1090)
+    /// - Sound speed: ~1580 m/s (Duck 1990 Table 4.6 mean)
     /// - Attenuation: ~1.0 dB/(MHz·cm) = ~1.15 Np/(MHz·m)
     /// - B/A: ~7.4
     #[must_use]
     pub fn muscle() -> Self {
         Self {
-            density: 1070.0,
-            sound_speed: 1580.0,
+            density: DENSITY_MUSCLE,
+            sound_speed: SOUND_SPEED_MUSCLE,
             absorption_coefficient: 1.15,
             absorption_power: 1.0,
             nonlinearity: 7.4,
