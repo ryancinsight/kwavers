@@ -53,7 +53,7 @@ mod tests {
         let mut model = CavitationModel::new((5, 5, 5));
         model.threshold_model = ThresholdModel::MechanicalIndex;
 
-        let mut pressure = Array3::from_elem((5, 5, 5), 101325.0);
+        let mut pressure = Array3::from_elem((5, 5, 5), ATMOSPHERIC_PRESSURE);
         pressure[[2, 2, 2]] = -1.0e6; // Beyond typical threshold
 
         model.update_states(&pressure, 1.0e6, 1e-6, 1e-6);

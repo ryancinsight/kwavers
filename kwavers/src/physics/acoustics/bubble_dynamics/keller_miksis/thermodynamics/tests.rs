@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::constants::fundamental::STEFAN_BOLTZMANN;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, STEFAN_BOLTZMANN};
 use crate::core::constants::thermodynamic::{
     EMISSIVITY_VAPOR, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
 };
@@ -44,7 +44,7 @@ fn test_emissivity_vapor_in_range() {
 #[test]
 fn test_antoine_boiling_point() {
     let p = p_sat_water_pa(100.0);
-    let rel_err = (p - 101_325.0).abs() / 101_325.0;
+    let rel_err = (p - ATMOSPHERIC_PRESSURE).abs() / ATMOSPHERIC_PRESSURE;
     assert!(
         rel_err < 0.005,
         "p_sat(100 C) = {:.1} Pa, expected about 101325 Pa (error {:.3}%)",

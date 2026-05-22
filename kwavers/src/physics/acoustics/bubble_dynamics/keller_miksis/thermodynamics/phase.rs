@@ -28,6 +28,7 @@ pub fn latent_heat_water_j_per_kg(t_celsius: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use super::*;
 
     // Antoine constants for verification: A=8.07131, B=1730.63, C=233.426
@@ -42,7 +43,7 @@ mod tests {
         let p = p_sat_water_pa(100.0);
         // Standard atmospheric pressure within 0.5%
         assert!(
-            (p - 101_325.0).abs() / 101_325.0 < 0.005,
+            (p - ATMOSPHERIC_PRESSURE).abs() / ATMOSPHERIC_PRESSURE < 0.005,
             "p_sat(100°C) must be ≈101325 Pa (got {p:.1})"
         );
     }

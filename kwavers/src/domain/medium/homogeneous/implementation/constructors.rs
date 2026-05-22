@@ -1,4 +1,4 @@
-use crate::core::constants::fundamental::{DENSITY_BLOOD, DENSITY_TISSUE};
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_BLOOD, DENSITY_TISSUE};
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use crate::core::constants::BLOOD_VISCOSITY_37C;
 use crate::domain::grid::Grid;
@@ -69,7 +69,7 @@ impl HomogeneousMedium {
             sound_speed: 343.0,
             viscosity: 1.81e-5,
             surface_tension: 0.0,
-            ambient_pressure: 101325.0,
+            ambient_pressure: ATMOSPHERIC_PRESSURE,
             vapor_pressure: 0.0,
             polytropic_index: 1.4,
             specific_heat: 1005.0,

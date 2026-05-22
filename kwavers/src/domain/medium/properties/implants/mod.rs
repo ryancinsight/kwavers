@@ -16,6 +16,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::material::AcousticMaterialProperties;
 
 #[cfg(test)]
@@ -50,7 +51,7 @@ pub const TITANIUM_GRADE5: ImplantProperties = ImplantProperties {
     optical_scattering: 100.0,
     refractive_index: 2.5,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Stainless steel 316L - Standard surgical implant steel
@@ -75,7 +76,7 @@ pub const STAINLESS_STEEL_316L: ImplantProperties = ImplantProperties {
     optical_scattering: 150.0,
     refractive_index: 2.8,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Platinum - High atomic number, excellent biocompatibility
@@ -100,7 +101,7 @@ pub const PLATINUM: ImplantProperties = ImplantProperties {
     optical_scattering: 200.0,
     refractive_index: 3.0,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -129,7 +130,7 @@ pub const PMMA: ImplantProperties = ImplantProperties {
     optical_scattering: 10.0,
     refractive_index: 1.49,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Ultra-high molecular weight polyethylene (UHMWPE)
@@ -154,7 +155,7 @@ pub const UHMWPE: ImplantProperties = ImplantProperties {
     optical_scattering: 5.0,
     refractive_index: 1.52,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Silicone rubber - Flexible implant material
@@ -179,7 +180,7 @@ pub const SILICONE_RUBBER: ImplantProperties = ImplantProperties {
     optical_scattering: 50.0,
     refractive_index: 1.41,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Polyurethane - Flexible elastomer for coatings and components
@@ -204,7 +205,7 @@ pub const POLYURETHANE: ImplantProperties = ImplantProperties {
     optical_scattering: 20.0,
     refractive_index: 1.48,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -233,7 +234,7 @@ pub const ALUMINA: ImplantProperties = ImplantProperties {
     optical_scattering: 100.0,
     refractive_index: 1.76,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Zirconia (ZrO₂) - High strength ceramic with lower modulus
@@ -258,7 +259,7 @@ pub const ZIRCONIA: ImplantProperties = ImplantProperties {
     optical_scattering: 80.0,
     refractive_index: 2.15,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -287,7 +288,7 @@ pub const CFRP: ImplantProperties = ImplantProperties {
     optical_scattering: 80.0,
     refractive_index: 1.6,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Hydroxyapatite (HA) - Bone-mimetic ceramic
@@ -312,5 +313,5 @@ pub const HYDROXYAPATITE: ImplantProperties = ImplantProperties {
     optical_scattering: 150.0,
     refractive_index: 1.65,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };

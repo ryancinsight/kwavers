@@ -1,5 +1,6 @@
 //! Keller-Miksis wall-motion ODE regression tests.
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 
@@ -33,7 +34,7 @@ fn test_keller_miksis_equilibrium() {
 #[test]
 fn test_keller_miksis_compression() {
     let params = BubbleParameters {
-        p0: 101325.0,
+        p0: ATMOSPHERIC_PRESSURE,
         r0: 5e-6,
         ..Default::default()
     };
@@ -53,7 +54,7 @@ fn test_keller_miksis_compression() {
 #[test]
 fn test_keller_miksis_expansion() {
     let params = BubbleParameters {
-        p0: 101325.0,
+        p0: ATMOSPHERIC_PRESSURE,
         r0: 5e-6,
         ..Default::default()
     };

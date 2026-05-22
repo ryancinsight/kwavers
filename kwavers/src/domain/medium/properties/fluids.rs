@@ -14,6 +14,7 @@
 //! Temperature: 37°C (body temperature) unless otherwise noted
 //! Pressure: 1 atm unless otherwise noted
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::material::AcousticMaterialProperties;
 
 /// Fluid material properties type alias
@@ -45,7 +46,7 @@ pub const BLOOD_PLASMA: FluidProperties = FluidProperties {
     optical_scattering: 10.0,
     refractive_index: 1.335,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Whole blood at 37°C (hematocrit 45%)
@@ -70,7 +71,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     optical_scattering: 50.0,
     refractive_index: 1.335,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Cerebrospinal fluid (CSF) at 37°C
@@ -95,7 +96,7 @@ pub const CSF: FluidProperties = FluidProperties {
     optical_scattering: 5.0,
     refractive_index: 1.333,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Urine at 37°C
@@ -119,7 +120,7 @@ pub const URINE: FluidProperties = FluidProperties {
     optical_scattering: 15.0,
     refractive_index: 1.335,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -148,7 +149,7 @@ pub const ULTRASOUND_GEL: FluidProperties = FluidProperties {
     optical_scattering: 20.0,
     refractive_index: 1.45,
     reference_temperature: 20.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Mineral oil (acoustic coupling medium)
@@ -173,7 +174,7 @@ pub const MINERAL_OIL: FluidProperties = FluidProperties {
     optical_scattering: 5.0,
     refractive_index: 1.47,
     reference_temperature: 20.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Distilled water at 37°C
@@ -198,7 +199,7 @@ pub const WATER_37C: FluidProperties = FluidProperties {
     optical_scattering: 0.0,
     refractive_index: 1.33,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -228,7 +229,7 @@ pub const MICROBUBBLE_SUSPENSION: FluidProperties = FluidProperties {
     optical_scattering: 30.0,
     refractive_index: 1.33,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Nanoparticle suspension (iron oxide or gold nanoparticles)
@@ -253,7 +254,7 @@ pub const NANOPARTICLE_SUSPENSION: FluidProperties = FluidProperties {
     optical_scattering: 100.0,
     refractive_index: 1.34,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 #[cfg(test)]

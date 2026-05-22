@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::chemistry::PlasmaChemistry;
 use super::reaction::{zeldovich_no_rate, PlasmaReaction};
 use approx::assert_relative_eq;
@@ -29,7 +30,7 @@ fn test_plasma_reaction_rate() {
 
 #[test]
 fn test_plasma_chemistry() {
-    let mut plasma = PlasmaChemistry::new(3000.0, 101325.0);
+    let mut plasma = PlasmaChemistry::new(3000.0, ATMOSPHERIC_PRESSURE);
 
     // Initial concentrations should be set
     assert!(plasma.concentrations.get("H2O").unwrap() > &0.0);

@@ -1,11 +1,12 @@
 use super::*;
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
 #[test]
 fn test_sound_speed_water_temperature_dependence() {
     let constants = StateDependentConstants::default();
 
-    let c_20 = constants.sound_speed_water(20.0, 101325.0);
-    let c_21 = constants.sound_speed_water(21.0, 101325.0);
+    let c_20 = constants.sound_speed_water(20.0, ATMOSPHERIC_PRESSURE);
+    let c_21 = constants.sound_speed_water(21.0, ATMOSPHERIC_PRESSURE);
 
     let dc_dt = c_21 - c_20;
     assert!(
@@ -14,7 +15,7 @@ fn test_sound_speed_water_temperature_dependence() {
         dc_dt
     );
 
-    let c_37 = constants.sound_speed_water(37.0, 101325.0);
+    let c_37 = constants.sound_speed_water(37.0, ATMOSPHERIC_PRESSURE);
     assert!(
         (c_37 - 1525.0).abs() < 10.0,
         "Sound speed at 37°C should be ~1525 m/s, got {}",
@@ -89,7 +90,7 @@ fn test_nonlinear_parameter() {
 fn test_acoustic_impedance() {
     let constants = StateDependentConstants::default();
 
-    let z_20 = constants.acoustic_impedance_water(20.0, 101325.0);
+    let z_20 = constants.acoustic_impedance_water(20.0, ATMOSPHERIC_PRESSURE);
     assert!(
         (z_20 - 1.48e6).abs() < 0.05e6,
         "Acoustic impedance at 20°C should be ~1.48 MRayl, got {}",
@@ -101,7 +102,7 @@ fn test_acoustic_impedance() {
 fn test_cavitation_threshold() {
     let constants = StateDependentConstants::default();
 
-    let p_thresh = constants.cavitation_threshold(20.0, 1e-6, 101325.0);
+    let p_thresh = constants.cavitation_threshold(20.0, 1e-6, ATMOSPHERIC_PRESSURE);
 
     assert!(
         p_thresh < 0.0,

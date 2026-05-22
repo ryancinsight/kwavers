@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::*;
 
 #[test]
@@ -29,7 +30,7 @@ fn test_ros_concentrations() {
 
 #[test]
 fn test_ros_generation() {
-    let rates = calculate_ros_generation(3000.0, 101325.0, 0.5);
+    let rates = calculate_ros_generation(3000.0, ATMOSPHERIC_PRESSURE, 0.5);
     assert!(rates.contains_key(&ROSSpecies::HydroxylRadical));
     assert!(rates.contains_key(&ROSSpecies::AtomicOxygen));
 }

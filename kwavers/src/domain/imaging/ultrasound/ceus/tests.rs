@@ -1,5 +1,6 @@
 //! Tests for CEUS domain definitions.
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::microbubble::Microbubble;
 
 /// Cross-section must be strictly positive for any physical frequency.
@@ -25,7 +26,7 @@ fn test_scattering_cross_section_positive() {
 #[test]
 fn test_scattering_peak_near_resonance() {
     let mb = Microbubble::sono_vue();
-    let f_r = mb.resonance_frequency(101325.0, 1000.0);
+    let f_r = mb.resonance_frequency(ATMOSPHERIC_PRESSURE, 1000.0);
     let sigma_res = mb.scattering_cross_section(f_r);
     let sigma_far = mb.scattering_cross_section(f_r * 10.0);
     assert!(
@@ -44,7 +45,7 @@ fn test_scattering_peak_near_resonance() {
 #[test]
 fn test_scattering_uses_water_sound_speed() {
     let mb = Microbubble::sono_vue();
-    let f_r = mb.resonance_frequency(101325.0, 1000.0);
+    let f_r = mb.resonance_frequency(ATMOSPHERIC_PRESSURE, 1000.0);
     let sigma_res = mb.scattering_cross_section(f_r);
     let geo = 4.0 * std::f64::consts::PI * mb.radius_eq * mb.radius_eq;
     // Sanity: σ_s should be at most ~100× geometric for typical damping (~0.05)
@@ -62,7 +63,7 @@ fn test_scattering_uses_water_sound_speed() {
 #[test]
 fn test_scattering_decreases_above_resonance() {
     let mb = Microbubble::sono_vue();
-    let f_r = mb.resonance_frequency(101325.0, 1000.0);
+    let f_r = mb.resonance_frequency(ATMOSPHERIC_PRESSURE, 1000.0);
     let s1 = mb.scattering_cross_section(f_r * 1.5);
     let s2 = mb.scattering_cross_section(f_r * 3.0);
     assert!(

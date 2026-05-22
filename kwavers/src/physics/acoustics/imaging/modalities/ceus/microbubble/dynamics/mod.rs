@@ -6,6 +6,7 @@ mod scattering;
 #[cfg(test)]
 mod tests;
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::domain::imaging::ultrasound::ceus::Microbubble;
 
 /// Linearized total damping constant for micron-scale bubbles at resonance.
@@ -33,7 +34,7 @@ impl BubbleDynamics {
     pub fn new() -> Self {
         Self {
             dt: 1e-9,
-            ambient_pressure: 101_325.0,
+            ambient_pressure: ATMOSPHERIC_PRESSURE,
             liquid_density: 1000.0,
             damping_coefficient: PROSPERETTI_TOTAL_DAMPING_COEFFICIENT,
         }

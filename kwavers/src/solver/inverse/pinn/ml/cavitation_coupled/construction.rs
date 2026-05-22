@@ -1,6 +1,7 @@
 //! Constructor, nucleation detection, and coupling-interface factory for
 //! [`CavitationCoupledDomain`].
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::config::{CavitationCouplingConfig, CavitationCouplingType};
 use super::domain::CavitationCoupledDomain;
 use crate::physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
@@ -98,7 +99,7 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
         z: Option<&Tensor<B, 2>>,
     ) -> Vec<(f64, f64, f64)> {
         // Blake threshold: R_n = 5 μm, σ = 0.073 N/m (water), P_0 = 1 atm
-        let p_blake = Self::blake_threshold(5e-6, 0.073, 101_325.0);
+        let p_blake = Self::blake_threshold(5e-6, 0.073, ATMOSPHERIC_PRESSURE);
 
         let pressure_data = pressure_field.clone().into_data();
         let pressure_slice = pressure_data.as_slice::<f32>().unwrap();

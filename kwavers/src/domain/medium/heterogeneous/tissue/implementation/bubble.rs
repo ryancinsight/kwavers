@@ -1,5 +1,6 @@
 //! `BubbleProperties` and `BubbleState` impls for `HeterogeneousTissueMedium`
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::HeterogeneousTissueMedium;
 use crate::domain::grid::Grid;
 use crate::domain::medium::bubble::{BubbleProperties, BubbleState};
@@ -12,7 +13,7 @@ impl BubbleProperties for HeterogeneousTissueMedium {
     }
 
     fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        101325.0 // 1 atm
+        ATMOSPHERIC_PRESSURE
     }
 
     fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {

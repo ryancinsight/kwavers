@@ -40,6 +40,7 @@
 //! assert!(titanium.sound_speed > 5000.0);
 //! ```
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
@@ -155,7 +156,7 @@ impl AcousticMaterialProperties {
             optical_scattering: 0.0,
             refractive_index: 1.0,
             reference_temperature: 20.0,
-            reference_pressure: 101325.0,
+            reference_pressure: ATMOSPHERIC_PRESSURE,
         }
     }
 

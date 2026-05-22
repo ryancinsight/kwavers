@@ -1,5 +1,6 @@
 //! Elastic heterogeneous medium factory from wave speed arrays.
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::HeterogeneousFactory;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
 use ndarray::{Array3, ArrayView3};
@@ -104,7 +105,7 @@ impl HeterogeneousFactory {
             sound_speed,
             viscosity: Array3::zeros((nx, ny, nz)),
             surface_tension: Array3::zeros((nx, ny, nz)),
-            ambient_pressure: 101325.0,
+            ambient_pressure: ATMOSPHERIC_PRESSURE,
             vapor_pressure: Array3::zeros((nx, ny, nz)),
             polytropic_index: Array3::zeros((nx, ny, nz)),
             specific_heat: Array3::zeros((nx, ny, nz)),

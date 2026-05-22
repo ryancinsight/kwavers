@@ -33,6 +33,8 @@ mod tests;
 mod thermo;
 mod transport;
 
+use super::fundamental::ATMOSPHERIC_PRESSURE;
+
 /// Temperature-dependent physical constants calculator
 #[derive(Debug, Clone)]
 pub struct StateDependentConstants {
@@ -46,7 +48,7 @@ impl Default for StateDependentConstants {
     fn default() -> Self {
         Self {
             reference_temperature: 20.0,  // 20°C (room temperature)
-            reference_pressure: 101325.0, // 1 atm
+            reference_pressure: ATMOSPHERIC_PRESSURE,
         }
     }
 }

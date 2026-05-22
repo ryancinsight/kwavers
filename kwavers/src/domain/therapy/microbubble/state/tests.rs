@@ -1,6 +1,7 @@
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::*;
 
-const AMBIENT_PRESSURE: f64 = 101_325.0;
+const AMBIENT_PRESSURE: f64 = ATMOSPHERIC_PRESSURE;
 const BODY_TEMPERATURE: f64 = 310.0;
 const WATER_SURFACE_TENSION: f64 = 0.072;
 

@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::container::{field_indices, PhysicsState};
 use crate::domain::grid::Grid;
 use ndarray::Array3;
@@ -69,11 +70,11 @@ fn test_field_guard_deref() {
     let mut state = PhysicsState::new(grid);
 
     state
-        .initialize_field(field_indices::PRESSURE_IDX, 101325.0)
+        .initialize_field(field_indices::PRESSURE_IDX, ATMOSPHERIC_PRESSURE)
         .unwrap();
 
     let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-    assert_eq!(pressure[[0, 0, 0]], 101325.0);
+    assert_eq!(pressure[[0, 0, 0]], ATMOSPHERIC_PRESSURE);
 
     {
         let mut temp = state.get_field_mut(field_indices::TEMPERATURE_IDX).unwrap();

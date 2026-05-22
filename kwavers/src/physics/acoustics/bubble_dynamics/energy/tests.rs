@@ -1,5 +1,6 @@
 //! Tests for energy balance calculator
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::*;
 use crate::physics::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::physics::acoustics::bubble_dynamics::BubbleParameters;
@@ -14,7 +15,7 @@ fn test_energy_balance_equilibrium() {
     let state = BubbleState::new(&params);
 
     // At equilibrium with no wall motion, energy rate should be near zero
-    let pressure = Pressure::new::<pascal>(101325.0);
+    let pressure = Pressure::new::<pascal>(ATMOSPHERIC_PRESSURE);
     let heat_rate = Power::new::<watt>(0.0);
     let latent_rate = Power::new::<watt>(0.0);
 

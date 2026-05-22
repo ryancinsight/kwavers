@@ -1,5 +1,6 @@
 //! Layered heterogeneous medium factory method.
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::HeterogeneousFactory;
 use crate::domain::grid::Grid;
 use crate::domain::medium::heterogeneous::core::HeterogeneousMedium;
@@ -60,7 +61,7 @@ impl HeterogeneousFactory {
             sound_speed,
             viscosity: Array3::zeros((nx, ny, nz)),
             surface_tension: Array3::zeros((nx, ny, nz)),
-            ambient_pressure: 101325.0,
+            ambient_pressure: ATMOSPHERIC_PRESSURE,
             vapor_pressure: Array3::zeros((nx, ny, nz)),
             polytropic_index: Array3::zeros((nx, ny, nz)),
             specific_heat: Array3::zeros((nx, ny, nz)),

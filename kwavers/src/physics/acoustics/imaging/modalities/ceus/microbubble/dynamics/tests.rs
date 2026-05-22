@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::*;
 use crate::domain::imaging::ultrasound::ceus::Microbubble;
 
@@ -15,7 +16,7 @@ fn test_velocity_verlet_second_order_convergence() {
 
     let sim_base = BubbleDynamics {
         dt: dt_fine,
-        ambient_pressure: 101_325.0,
+        ambient_pressure: ATMOSPHERIC_PRESSURE,
         liquid_density: 1000.0,
         damping_coefficient: 0.1,
     };
@@ -65,7 +66,7 @@ fn test_linear_oscillation_bounded() {
     let bubble = test_bubble();
     let sim = BubbleDynamics {
         dt: 1e-10,
-        ambient_pressure: 101_325.0,
+        ambient_pressure: ATMOSPHERIC_PRESSURE,
         liquid_density: 1000.0,
         damping_coefficient: 0.1,
     };

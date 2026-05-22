@@ -131,7 +131,7 @@ mod tests {
             specific_heat_liquid: SPECIFIC_HEAT_WATER,
             accommodation_coeff: 0.35,
             gas_species: GasSpecies::Argon,
-            initial_gas_pressure: 101_325.0,
+            initial_gas_pressure: ATMOSPHERIC_PRESSURE,
             gas_composition: {
                 let mut m = std::collections::HashMap::new();
                 m.insert(GasType::N2, 1.0);

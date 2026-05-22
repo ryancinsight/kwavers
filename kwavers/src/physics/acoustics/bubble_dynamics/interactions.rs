@@ -2,6 +2,7 @@
 //!
 //! Calculates forces between bubbles (Bjerknes forces, etc.)
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::bubble_state::BubbleState;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -191,7 +192,7 @@ impl CollectiveEffects {
 
         // Minnaert frequency modified for void fraction
         let f0 =
-            1.0 / (2.0 * std::f64::consts::PI * mean_radius) * (3.0 * 1.4 * 101325.0 / rho).sqrt();
+            1.0 / (2.0 * std::f64::consts::PI * mean_radius) * (3.0 * 1.4 * ATMOSPHERIC_PRESSURE / rho).sqrt();
 
         // Correction for bubble-bubble interactions
         f0 * (1.0 - void_fraction).sqrt()

@@ -3,6 +3,7 @@
 //! This file is already gated by `#[cfg(test)] mod tests;` in the parent
 //! `mod.rs`, so an inner `mod tests { ... }` would be redundant nesting.
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::dynamics::BubbleDynamics;
 use crate::domain::imaging::ultrasound::ceus::{Microbubble, MicrobubblePopulation};
 
@@ -18,7 +19,7 @@ fn test_microbubble_creation() {
 #[test]
 fn test_resonance_frequency() {
     let bubble = Microbubble::new(2.0, 1.0, 0.5); // 2 μm radius
-    let freq = bubble.resonance_frequency(101325.0, 1000.0);
+    let freq = bubble.resonance_frequency(ATMOSPHERIC_PRESSURE, 1000.0);
 
     // Typical resonance frequency for 2 μm bubble should be around 2-5 MHz
     assert!(freq > 1e6 && freq < 10e6);
@@ -98,7 +99,7 @@ fn test_nonlinear_scattering() {
 
     // 3. Resonance gives higher efficiency than far off-resonance (Ω=10)
     // Off-resonance: f = 10 × f_res — Lorentzian ≈ 1/Ω² → much smaller
-    let f_res = bubble.resonance_frequency(101325.0, 1000.0);
+    let f_res = bubble.resonance_frequency(ATMOSPHERIC_PRESSURE, 1000.0);
     let eff_off = dynamics.nonlinear_scattering_efficiency(
         &bubble,
         100_000.0,

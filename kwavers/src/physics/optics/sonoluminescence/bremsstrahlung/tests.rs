@@ -1,6 +1,6 @@
 use super::*;
 use crate::core::constants::fundamental::{
-    BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT,
+    ATMOSPHERIC_PRESSURE, BOLTZMANN as BOLTZMANN_CONSTANT, PLANCK as PLANCK_CONSTANT,
 };
 
 #[test]
@@ -30,7 +30,7 @@ fn gaunt_factor_increases_with_temperature() {
 #[test]
 fn saha_hydrogen_10000k_1atm() {
     let model = BremsstrahlungModel::default();
-    let x = model.saha_ionization(10_000.0, 101_325.0, 13.6);
+    let x = model.saha_ionization(10_000.0, ATMOSPHERIC_PRESSURE, 13.6);
     assert!(
         x > 0.01 && x < 0.10,
         "H ionization at 10,000K, 1 atm: x = {x:.4}, expected 1-10%"
@@ -40,7 +40,7 @@ fn saha_hydrogen_10000k_1atm() {
 #[test]
 fn saha_hydrogen_fully_ionized_at_50000k() {
     let model = BremsstrahlungModel::default();
-    let x = model.saha_ionization(50_000.0, 101_325.0, 13.6);
+    let x = model.saha_ionization(50_000.0, ATMOSPHERIC_PRESSURE, 13.6);
     assert!(x > 0.95, "H at 50,000 K must be >95% ionized, got {x:.4}");
 }
 
@@ -59,7 +59,7 @@ fn saha_increases_with_temperature() {
     let temps = [5_000.0, 8_000.0, 12_000.0, 20_000.0, 50_000.0];
     let fracs: Vec<f64> = temps
         .iter()
-        .map(|&t| model.saha_ionization(t, 101_325.0, 13.6))
+        .map(|&t| model.saha_ionization(t, ATMOSPHERIC_PRESSURE, 13.6))
         .collect();
 
     for i in 1..fracs.len() {

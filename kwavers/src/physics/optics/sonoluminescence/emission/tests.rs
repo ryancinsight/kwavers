@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::orchestrator::{IntegratedSonoluminescence, SonoluminescenceEmission};
 use super::spectrum::EmissionParameters;
 use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
@@ -16,7 +17,7 @@ mod tests {
 
         // Create test fields
         let mut temp_field = Array3::zeros(shape);
-        let pressure_field = Array3::from_elem(shape, 101325.0); // 1 atm
+        let pressure_field = Array3::from_elem(shape, ATMOSPHERIC_PRESSURE); // 1 atm
         let radius_field = Array3::from_elem(shape, 5e-6); // 5 μm
         let velocity_field = Array3::zeros(shape); // No velocity for test
         let charge_density_field = Array3::zeros(shape); // No charge for test
@@ -47,7 +48,7 @@ mod tests {
 
         let spectrum = emission.calculate_spectrum_at_point(
             10000.0,  // 10,000 K
-            101325.0, // 1 atm
+            ATMOSPHERIC_PRESSURE, // 1 atm
             5e-6,     // 5 μm radius
             0.0,      // No velocity
             0.0,      // No charge density
@@ -106,7 +107,7 @@ mod tests {
         // Test that pressure and temperature follow correct adiabatic scaling
         let params = BubbleParameters {
             r0: 10e-6,
-            initial_gas_pressure: 101325.0, // 1 atm
+            initial_gas_pressure: ATMOSPHERIC_PRESSURE, // 1 atm
             t0: 300.0,
             gamma: 1.4,
             ..Default::default()

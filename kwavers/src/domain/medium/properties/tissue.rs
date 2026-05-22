@@ -8,6 +8,7 @@
 //! Temperature: 37°C (body temperature)
 //! Pressure: 1 atm unless otherwise noted
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::material::AcousticMaterialProperties;
 
 /// Tissue material properties type alias
@@ -38,7 +39,7 @@ pub const WATER: TissueProperties = TissueProperties {
     optical_scattering: 0.0,
     refractive_index: 1.33,
     reference_temperature: 20.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -66,7 +67,7 @@ pub const BRAIN_WHITE_MATTER: TissueProperties = TissueProperties {
     optical_scattering: 100.0, // 1/m
     refractive_index: 1.37,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Brain gray matter (37°C)
@@ -90,7 +91,7 @@ pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
     optical_scattering: 110.0,
     refractive_index: 1.37,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Skull (bone) - High impedance mismatch
@@ -114,7 +115,7 @@ pub const SKULL: TissueProperties = TissueProperties {
     optical_scattering: 200.0,
     refractive_index: 1.65,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -142,7 +143,7 @@ pub const LIVER: TissueProperties = TissueProperties {
     optical_scattering: 120.0,
     refractive_index: 1.38,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -170,7 +171,7 @@ pub const KIDNEY_CORTEX: TissueProperties = TissueProperties {
     optical_scattering: 110.0,
     refractive_index: 1.37,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Kidney medulla (37°C)
@@ -193,7 +194,7 @@ pub const KIDNEY_MEDULLA: TissueProperties = TissueProperties {
     optical_scattering: 110.0,
     refractive_index: 1.37,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 // ============================================================================
@@ -220,7 +221,7 @@ pub const BLOOD: TissueProperties = TissueProperties {
     optical_scattering: 500.0, // High scattering
     refractive_index: 1.335,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Muscle (37°C)
@@ -243,7 +244,7 @@ pub const MUSCLE: TissueProperties = TissueProperties {
     optical_scattering: 50.0,
     refractive_index: 1.38,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Fat (adipose tissue) (37°C)
@@ -266,7 +267,7 @@ pub const FAT: TissueProperties = TissueProperties {
     optical_scattering: 10.0,
     refractive_index: 1.46,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 /// Cerebrospinal fluid (CSF) (37°C)
@@ -289,7 +290,7 @@ pub const CSF: TissueProperties = TissueProperties {
     optical_scattering: 0.0,
     refractive_index: 1.334,
     reference_temperature: 37.0,
-    reference_pressure: 101325.0,
+    reference_pressure: ATMOSPHERIC_PRESSURE,
 };
 
 #[cfg(test)]

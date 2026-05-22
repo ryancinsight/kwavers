@@ -1,5 +1,6 @@
 //! Cavitation and bubble-scattering PDE residuals for PINN training.
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use super::domain::CavitationCoupledDomain;
 use super::mie_scattering::mie_backscatter_form_function;
 use crate::solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
@@ -39,7 +40,7 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
             .domain_params
             .get("ambient_pressure")
             .copied()
-            .unwrap_or(101_325.0) as f32;
+            .unwrap_or(ATMOSPHERIC_PRESSURE) as f32;
 
         let viscosity = physics_params
             .domain_params

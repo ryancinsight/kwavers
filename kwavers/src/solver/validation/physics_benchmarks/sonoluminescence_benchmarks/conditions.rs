@@ -1,5 +1,7 @@
 //! Canonical SBSL parameter set (Brenner, Hilgenfeldt & Lohse 2002).
 
+use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+
 /// Canonical SBSL parameter set from Brenner, Hilgenfeldt & Lohse (2002).
 ///
 /// These are the "standard" single-bubble sonoluminescence conditions for
@@ -34,7 +36,7 @@ impl Default for BrennerSBSLConditions {
     fn default() -> Self {
         Self {
             freq_hz: 26_500.0,
-            p0_pa: 101_325.0, // 1 atm
+            p0_pa: ATMOSPHERIC_PRESSURE,
             p_a_pa: 1.35e5,   // 1.35 atm driving (Brenner 2002 Table I)
             r0_m: 5.0e-6,     // 5 µm
             temperature_k: 293.15,
