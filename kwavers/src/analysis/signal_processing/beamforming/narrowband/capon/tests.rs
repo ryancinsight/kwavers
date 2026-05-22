@@ -1,5 +1,6 @@
 use super::*;
 use crate::analysis::signal_processing::beamforming::covariance::CovariancePostProcess;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use approx::assert_abs_diff_eq;
 use ndarray::Array3;
 
@@ -64,7 +65,7 @@ fn capon_spectrum_is_finite_for_simple_case() {
     use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
     let cfg = CaponSpectrumConfig {
         frequency_hz: 1e6,
-        sound_speed: 1500.0,
+        sound_speed: SOUND_SPEED_WATER_SIM,
         diagonal_loading: 1e-3,
         covariance: CovarianceEstimator {
             forward_backward_averaging: false,
@@ -90,7 +91,7 @@ fn complex_baseband_requires_sampling_frequency() {
     use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 
     let sensors = sensor_positions_m();
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let sampling_frequency_hz = 2_000_000.0;
     let frequency_hz = 200_000.0;
     let n_samples = 256;
@@ -135,7 +136,7 @@ fn complex_baseband_rejects_invalid_snapshot_step() {
     use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 
     let sensors = sensor_positions_m();
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let sampling_frequency_hz = 2_000_000.0;
     let frequency_hz = 200_000.0;
     let n_samples = 256;
@@ -179,7 +180,7 @@ fn complex_baseband_mvdr_is_invariant_to_global_time_shift() {
     use crate::analysis::signal_processing::beamforming::covariance::CovarianceEstimator;
     use crate::analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let sampling_frequency_hz = 2_000_000.0;
     let frequency_hz = 200_000.0;
     let n_samples = 2048;

@@ -1,5 +1,6 @@
 use super::processor::DelayAndSumPAM;
 use super::types::{ApodizationType, DelayAndSumConfig};
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use approx::assert_relative_eq;
 use ndarray::{Array1, Array2};
 
@@ -74,7 +75,7 @@ fn test_beamform_basic() {
 
 #[test]
 fn beamform_view_localizes_analytic_impulse_source() {
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let sampling_frequency = 1.0e6;
     let sensors = vec![
         [-0.006, 0.0, 0.0],

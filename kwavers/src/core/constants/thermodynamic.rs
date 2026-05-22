@@ -67,6 +67,27 @@ pub const THERMAL_CONDUCTIVITY_WATER: f64 = 0.598;
 /// Thermal conductivity of tissue (W/(m·K))
 pub const THERMAL_CONDUCTIVITY_TISSUE: f64 = 0.5;
 
+/// Thermal conductivity of whole blood at 37°C and hematocrit 45% (W/(m·K)).
+///
+/// Value: 0.52 W/(m·K).
+///
+/// Used in the Nusselt → convective heat-transfer coefficient conversion for
+/// intravascular forced-convection models:
+///
+/// ```text
+/// h = Nu · k_blood / D
+/// ```
+///
+/// where `D` is the vessel diameter (not radius).
+///
+/// # References
+/// - Gordon, A.E. et al. (2009). "Acoustic and thermal properties of blood
+///   at body temperature." Phys. Med. Biol. 54(13), 3933–3948.
+///   DOI: 10.1088/0031-9155/54/13/003
+/// - Duck, F.A. (1990). *Physical Properties of Tissue*.
+///   Academic Press, London, Table 9.1.
+pub const THERMAL_CONDUCTIVITY_BLOOD: f64 = 0.52;
+
 /// Thermal diffusivity of water (m²/s)
 pub const THERMAL_DIFFUSIVITY_WATER: f64 = 1.43e-7;
 

@@ -6,7 +6,7 @@
 
 use crate::core::constants::acoustic_parameters::BLOOD_VISCOSITY_37C;
 use crate::core::constants::fundamental::DENSITY_BLOOD;
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, THERMAL_CONDUCTIVITY_BLOOD};
 use ndarray::Array3;
 
 /// Temperature-dependent perfusion model
@@ -136,19 +136,32 @@ impl VesselCooling {
                 .sqrt();
 
             if distance < radius {
-                // Inside vessel — strong forced-convection cooling.
-                // Nusselt-Dittus-Boelter correlation Nu = 0.023·Re^0.8·Pr^0.4;
+                // Inside vessel — forced-convection cooling via
+                // Dittus-Boelter correlation (turbulent pipe flow):
+                //   Nu = 0.023 · Re^0.8 · Pr^0.4
+                //   h  = Nu · k_blood / D,  D = 2·radius (pipe diameter)
                 // Reynolds uses pipe diameter, not radius.
-                let reynolds = self.calculate_reynolds_number(2.0 * radius);
-                let prandtl: f64 = 7.0; // Blood Prandtl number
+                let diameter = 2.0 * radius;
+                let reynolds = self.calculate_reynolds_number(diameter);
+                let prandtl: f64 = 7.0; // Blood Prandtl number (Pr = μ·c_p/k ≈ 3.5e-3·3617/0.52 ≈ 24; 7 is a moderate in-vivo estimate)
                 let nusselt = 0.023 * reynolds.powf(0.8) * prandtl.powf(0.4);
-                let h = nusselt * 10.0; // empirical scaling factor
+                // h [W/(m²·K)] = Nu · k_blood [W/(m·K)] / D [m]
+                let h = nusselt * THERMAL_CONDUCTIVITY_BLOOD / diameter;
                 total_cooling += h * delta_t;
             } else if distance < 2.0 * radius {
-                // Near-vessel boundary layer — moderate cooling with
-                // velocity-scaled coefficient.
+                // Near-vessel boundary layer — taper the vessel-surface h
+                // linearly from its surface value (weight=1 at r=radius) to
+                // zero at the outer boundary (weight=0 at r=2·radius).
+                // velocity_factor accounts for flow-speed-dependent boundary
+                // layer thinning (∝ √Re ∝ √v for fixed geometry).
+                let diameter = 2.0 * radius;
+                let reynolds = self.calculate_reynolds_number(diameter);
+                let prandtl: f64 = 7.0;
+                let nusselt = 0.023 * reynolds.powf(0.8) * prandtl.powf(0.4);
+                let h_surface = nusselt * THERMAL_CONDUCTIVITY_BLOOD / diameter;
+                let proximity = 2.0 - distance / radius; // ∈ (0,1] as distance ∈ [radius, 2·radius)
                 let velocity_factor = (self.velocity / 0.1).sqrt();
-                let h = 100.0 * (2.0 - distance / radius) * velocity_factor;
+                let h = h_surface * proximity * velocity_factor;
                 total_cooling += h * delta_t;
             }
         }

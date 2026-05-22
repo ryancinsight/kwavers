@@ -1,5 +1,6 @@
 //! Steering-vector unit-magnitude integration tests.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::steering::NarrowbandSteering;
 use super::helpers::generate_ula_positions;
 
@@ -10,7 +11,7 @@ fn steering_vector_has_unit_magnitude_for_all_sensors() {
     let n_sensors = 6;
     let spacing_m = 0.01;
     let positions = generate_ula_positions(n_sensors, spacing_m);
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let f0 = 50_000.0;
 
     let steering = NarrowbandSteering::new(positions.clone(), c).expect("steering init");

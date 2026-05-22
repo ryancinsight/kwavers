@@ -179,6 +179,7 @@ mod tests {
     use crate::analysis::signal_processing::beamforming::three_dimensional::config::{
         Beamforming3dApodizationWindow, BeamformingConfig3D,
     };
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::Array4;
 
     fn make_config(
@@ -219,7 +220,7 @@ mod tests {
             (1, 1, 1),
             (1e-3, 1e-3, 1e-3),
             (1, 1, 1),
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             1_000_000.0,
         );
         let mut rf = Array4::<f32>::zeros((1, 1, 4, 1));
@@ -251,7 +252,7 @@ mod tests {
             (1, 1, 1), // expects 1 channel
             (1e-3, 1e-3, 1e-3),
             (1, 1, 1),
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             1_000_000.0,
         );
         // RF supplies 5 channels; config expects 1.
@@ -290,7 +291,7 @@ mod tests {
             (1, M, 1),
             (0.0, 0.0, 0.0), // all elements co-located at origin
             (1, 1, 1),
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             1_000_000.0,
         );
         let mut rf = Array4::<f32>::zeros((1, M, 4, 1));
@@ -328,7 +329,7 @@ mod tests {
     #[test]
     fn das_receive_delay_is_geometrically_correct() {
         let sz = 3e-3_f64; // 3 mm element z-spacing
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let fs = 1_000_000.0_f64;
         // Precondition: τ is exactly 1.0 sample.
         let tau_exact = 0.5 * sz / c * fs;

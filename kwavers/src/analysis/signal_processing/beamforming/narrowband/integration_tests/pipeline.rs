@@ -1,5 +1,6 @@
 //! End-to-end pipeline and diagonal-loading integration tests.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::{
     capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
     snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection},
@@ -18,7 +19,7 @@ fn end_to_end_pipeline_produces_finite_spectrum() {
     let n_samples = 128;
     let fs = 1_000_000.0; // 1 MHz sampling
     let f0 = 100_000.0; // 100 kHz signal
-    let c = 1500.0; // sound speed
+    let c = SOUND_SPEED_WATER_SIM; // sound speed
     let snr_db = 20.0;
 
     let data = generate_plane_wave_data(n_sensors, spacing_m, n_samples, fs, f0, 0.0, c, snr_db);
@@ -75,7 +76,7 @@ fn capon_spectrum_varies_across_candidate_grid() {
     let n_samples = 256;
     let fs = 1_000_000.0;
     let f0 = 100_000.0;
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 30.0; // High SNR
 
     let data = generate_plane_wave_data(n_sensors, spacing_m, n_samples, fs, f0, 0.0, c, snr_db);
@@ -157,7 +158,7 @@ fn diagonal_loading_prevents_covariance_singularity() {
     let n_samples = 32; // Few samples → poorly conditioned covariance
     let fs = 1_000_000.0;
     let f0 = 100_000.0;
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 10.0; // Low SNR
 
     let data = generate_plane_wave_data(n_sensors, spacing_m, n_samples, fs, f0, 0.0, c, snr_db);

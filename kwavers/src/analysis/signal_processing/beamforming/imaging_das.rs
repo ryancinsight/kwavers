@@ -210,6 +210,7 @@ fn cosine_window(n: usize, a0: f64, a1: f64) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use ndarray::{array, Array2};
 
     /// Analytical sanity check: a single Gaussian pulse emitted from a point
@@ -220,7 +221,7 @@ mod tests {
     /// the imaging grid.
     #[test]
     fn point_source_localizes_at_true_position() {
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let fs = 5.0e6_f64;
         let dt = 1.0 / fs;
 
@@ -308,7 +309,7 @@ mod tests {
         let sensor_data = array![[0.0, 1.0, 0.0], [0.0, 0.5, 0.0]];
         let sensor_positions = array![[0.0, 0.0, 0.0]];
         let grid_points = array![[0.0, 0.0, 0.0]];
-        let cfg = ImagingDasConfig::new(1500.0, 1e6, ImagingDasApodization::Rectangular).unwrap();
+        let cfg = ImagingDasConfig::new(SOUND_SPEED_WATER_SIM, 1e6, ImagingDasApodization::Rectangular).unwrap();
         let err = beamform_image_das(
             sensor_data.view(),
             sensor_positions.view(),

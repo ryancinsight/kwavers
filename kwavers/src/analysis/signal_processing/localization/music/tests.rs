@@ -2,6 +2,7 @@ use crate::analysis::signal_processing::localization::model_order::ModelOrderCri
 use crate::analysis::signal_processing::localization::{
     AcousticLocalizationConfig, LocalizationProcessor,
 };
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array2;
 use num_complex::Complex;
 
@@ -65,7 +66,7 @@ fn test_steering_vector() {
     let source_pos = [0.0, 0.0, 0.0];
     let sensor_positions = vec![[0.0, 0.0, 0.0], [0.1, 0.0, 0.0], [0.0, 0.1, 0.0]];
     let frequency = 1000.0;
-    let speed_of_sound = 1500.0;
+    let speed_of_sound = SOUND_SPEED_WATER_SIM;
 
     let steering =
         MUSICProcessor::steering_vector(source_pos, &sensor_positions, frequency, speed_of_sound);
@@ -120,7 +121,7 @@ fn test_music_automatic_source_detection() {
 
 #[test]
 fn music_trait_localize_uses_time_delay_physics() {
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let sensor_positions = vec![
         [0.01, 0.0, 0.0],
         [-0.01, 0.0, 0.0],

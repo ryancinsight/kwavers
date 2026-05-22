@@ -1,5 +1,6 @@
 //! Mathematical invariance property tests for the narrowband pipeline.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::{
     capon::{capon_spatial_spectrum_point, CaponSpectrumConfig},
     snapshots::{SnapshotScenario, SnapshotSelection},
@@ -22,7 +23,7 @@ fn pipeline_is_invariant_to_global_time_shift() {
     let n_samples = 128;
     let fs = 1_000_000.0;
     let f0 = 100_000.0;
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 25.0;
 
     let data_original =

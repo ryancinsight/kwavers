@@ -37,10 +37,13 @@ pub const WATER_VISCOSITY_20C: f64 = 1.002e-3;
 /// Reference: Rosenson, R. S., et al. (1996). "Distribution of blood viscosity values"
 pub const BLOOD_VISCOSITY_37C: f64 = 3.5e-3;
 
-/// Water surface tension at 20°C (N/m)
-/// Value: 0.0728
-/// Reference: NIST Chemistry `WebBook`
-pub const WATER_SURFACE_TENSION_20C: f64 = 0.0728;
+/// Water surface tension at 20°C (N/m).
+///
+/// Re-exports the canonical
+/// [`crate::core::constants::cavitation::SURFACE_TENSION_WATER`] (= 0.0728 N/m)
+/// so both historical names (`WATER_SURFACE_TENSION_20C` and
+/// `SURFACE_TENSION_WATER`) resolve to the same SSOT constant.
+pub use super::cavitation::SURFACE_TENSION_WATER as WATER_SURFACE_TENSION_20C;
 
 /// Water vapor pressure at 20°C (Pa)
 /// Value: 2339

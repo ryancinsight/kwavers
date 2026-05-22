@@ -1,5 +1,6 @@
 //! Cross-method snapshot consistency tests.
 
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::super::snapshots::{extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection};
 use super::helpers::{compute_sample_covariance, generate_plane_wave_data};
 
@@ -13,7 +14,7 @@ fn snapshot_methods_produce_consistent_covariance_rank() {
     let n_samples = 256;
     let fs = 1_000_000.0;
     let f0 = 100_000.0;
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let snr_db = 20.0;
 
     let data = generate_plane_wave_data(n_sensors, spacing_m, n_samples, fs, f0, 0.0, c, snr_db);

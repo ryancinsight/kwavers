@@ -2,7 +2,7 @@
 //!
 //! Calculates forces between bubbles (Bjerknes forces, etc.)
 
-use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use crate::core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use super::bubble_state::BubbleState;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -14,6 +14,8 @@ pub struct BubbleInteractions {
     pub cutoff_distance: f64,
     /// Interaction strength factor
     pub interaction_strength: f64,
+    /// Liquid density \[kg/m³\] — used in the monopole pressure formula
+    pub liquid_density: f64,
 }
 
 impl Default for BubbleInteractions {
@@ -21,6 +23,7 @@ impl Default for BubbleInteractions {
         Self {
             cutoff_distance: 1e-3, // 1 mm
             interaction_strength: 1.0,
+            liquid_density: DENSITY_WATER_NOMINAL,
         }
     }
 }
@@ -63,19 +66,34 @@ impl BubbleInteractions {
         interaction_field
     }
 
-    /// Calculate Bjerknes force contribution from a single bubble
+    /// Acoustic pressure contribution at `distance` from a pulsating bubble.
+    ///
+    /// For a spherical bubble treated as an acoustic monopole the far-field
+    /// radiated pressure is (Leighton 1994, §3.3; Brennen 1995 Eq. 2.57):
+    ///
+    /// ```text
+    /// p(r, t) = ρ · V̈(t) / (4π · r)
+    /// ```
+    ///
+    /// where `V̈ = dV̇/dt = 4π R² R̈ + 8π R Ṙ²` is the volumetric
+    /// acceleration, `r` is the observation distance, and `ρ` is the liquid
+    /// density.
+    ///
+    /// Dimensional analysis: \[kg/m³ · m³/s² / m\] = \[Pa\] ✓.
+    ///
+    /// The previous implementation returned `V̇/(4π·r²) + V·R̈/r²` which has
+    /// units of m/s — a factor of ρ·r short of pressure — and used 1/r²
+    /// instead of the physically correct 1/r near-field approximation.
     fn calculate_bjerknes_contribution(&self, bubble: &BubbleState, distance: f64) -> f64 {
-        // Primary Bjerknes force: F ∝ V̇/r
-        // Secondary Bjerknes force: F ∝ V₁V₂/r²
+        // V̈ = d(V̇)/dt = d(4π R² Ṙ)/dt = 4π R² R̈ + 8π R Ṙ²
+        let r = bubble.radius;
+        let r_dot = bubble.wall_velocity;
+        let r_ddot = bubble.wall_acceleration;
+        let v_ddot = 4.0 * std::f64::consts::PI * r * r * r_ddot
+            + 8.0 * std::f64::consts::PI * r * r_dot * r_dot;
 
-        let volume = bubble.volume();
-        let volume_rate = 4.0 * std::f64::consts::PI * bubble.radius.powi(2) * bubble.wall_velocity;
-
-        // Distance-dependent pressure contribution model
-        let primary = volume_rate / (4.0 * std::f64::consts::PI * distance.powi(2));
-        let secondary = volume * bubble.wall_acceleration / (distance.powi(2));
-
-        0.1f64.mul_add(secondary, primary)
+        // Monopole acoustic pressure: p = ρ · V̈ / (4π · r)  [Pa]
+        self.liquid_density * v_ddot / (4.0 * std::f64::consts::PI * distance)
     }
 }
 

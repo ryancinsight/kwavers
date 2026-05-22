@@ -238,14 +238,15 @@ pub use steering::{steering_from_delays_s, NarrowbandSteering, NarrowbandSteerin
 mod tests {
     use super::*;
     use crate::analysis::signal_processing::beamforming::covariance::CovariancePostProcess;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn steering_module_exports_accessible() {
         // Verify steering module is correctly exported
         let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];
-        let steering = NarrowbandSteering::new(positions, 1500.0).expect("steering init");
+        let steering = NarrowbandSteering::new(positions, SOUND_SPEED_WATER_SIM).expect("steering init");
         assert_eq!(steering.num_sensors(), 2);
-        assert_eq!(steering.sound_speed_m_per_s(), 1500.0);
+        assert_eq!(steering.sound_speed_m_per_s(), SOUND_SPEED_WATER_SIM);
     }
 
     #[test]
@@ -292,7 +293,7 @@ mod tests {
         let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];
         let cfg = CaponSpectrumConfig {
             frequency_hz: 1e6,
-            sound_speed: 1500.0,
+            sound_speed: SOUND_SPEED_WATER_SIM,
             diagonal_loading: 1e-3,
             covariance:
                 crate::analysis::signal_processing::beamforming::covariance::CovarianceEstimator {

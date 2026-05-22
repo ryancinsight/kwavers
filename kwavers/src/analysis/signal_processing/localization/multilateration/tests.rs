@@ -1,5 +1,6 @@
 use super::solver::Multilateration;
 use super::types::MultilaterationConfig;
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use approx::assert_relative_eq;
 
 #[test]
@@ -41,7 +42,7 @@ fn test_set_uncertainties() {
 
 #[test]
 fn test_localize_symmetric_array() {
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let sensors = vec![
         [0.01, 0.0, 0.0],
         [-0.01, 0.0, 0.0],
@@ -116,7 +117,7 @@ fn test_localize_off_axis_overdetermined() {
 
 #[test]
 fn test_weighted_least_squares() {
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let sensors = vec![
         [0.0, 0.0, 0.0],
         [0.01, 0.0, 0.0],
@@ -156,7 +157,7 @@ fn test_weighted_least_squares() {
 
 #[test]
 fn test_gdop_calculation() {
-    let c = 1500.0;
+    let c = SOUND_SPEED_WATER_SIM;
     let sensors = vec![
         [0.01, 0.0, 0.0],
         [-0.01, 0.0, 0.0],

@@ -212,6 +212,7 @@ impl SteeringVector {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     // ─── SteeringVector exact value tests ─────────────────────────────────────
 
@@ -223,7 +224,7 @@ mod tests {
     #[test]
     fn steering_plane_wave_broadside_all_ones() {
         let f = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0], [0.5, 0.0, 0.0]];
         let a = SteeringVector::compute(
             &SteeringVectorMethod::PlaneWave,
@@ -252,7 +253,7 @@ mod tests {
     #[test]
     fn steering_plane_wave_endfire_quarter_wave_gives_negative_imaginary_unit() {
         let f = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let lambda = c / f; // 1.5 m
         let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0], [lambda / 4.0, 0.0, 0.0]];
         let a = SteeringVector::compute(
@@ -287,7 +288,7 @@ mod tests {
     #[test]
     fn steering_plane_wave_full_wavelength_spacing_is_in_phase() {
         let f = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let lambda = c / f;
         let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0], [lambda, 0.0, 0.0]];
         let a = SteeringVector::compute(
@@ -319,7 +320,7 @@ mod tests {
     #[test]
     fn steering_spherical_wave_one_wavelength_exact_amplitude() {
         let f = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let lambda = c / f; // 1.5 m
         let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0]];
         let source = [lambda, 0.0, 0.0];
@@ -350,7 +351,7 @@ mod tests {
     #[test]
     fn steering_broadside_returns_all_ones_for_x_aligned_sensors() {
         let f = 1000.0_f64;
-        let c = 1500.0_f64;
+        let c = SOUND_SPEED_WATER_SIM;
         let sensors: &[[f64; 3]] = &[[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [1.0, 0.0, 0.0]];
         let a = SteeringVector::broadside(sensors, f, c);
         for (i, &val) in a.iter().enumerate() {
@@ -370,7 +371,7 @@ mod tests {
             [1.0, 1.0, 0.0], // norm = √2, not unit
             1000.0,
             sensors,
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
         );
         assert!(result.is_err(), "non-unit direction must be rejected");
     }

@@ -191,6 +191,7 @@ fn validate_frequency_hz(frequency_hz: f64) -> KwaversResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn steering_from_delays_has_unit_magnitude() {
@@ -210,7 +211,7 @@ mod tests {
     #[test]
     fn point_steering_is_deterministic() {
         let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];
-        let steering = NarrowbandSteering::new(positions, 1500.0).expect("steering init");
+        let steering = NarrowbandSteering::new(positions, SOUND_SPEED_WATER_SIM).expect("steering init");
         let p = [0.0, 0.0, 0.02];
         let f = 1e6;
 
@@ -234,7 +235,7 @@ mod tests {
     #[test]
     fn invalid_frequency_is_rejected() {
         let positions = vec![[0.0, 0.0, 0.0]];
-        let steering = NarrowbandSteering::new(positions, 1500.0).expect("steering init");
+        let steering = NarrowbandSteering::new(positions, SOUND_SPEED_WATER_SIM).expect("steering init");
 
         let err = steering
             .steering_vector_point([0.0, 0.0, 0.0], 0.0)
@@ -245,7 +246,7 @@ mod tests {
     #[test]
     fn invalid_candidate_is_rejected() {
         let positions = vec![[0.0, 0.0, 0.0]];
-        let steering = NarrowbandSteering::new(positions, 1500.0).expect("steering init");
+        let steering = NarrowbandSteering::new(positions, SOUND_SPEED_WATER_SIM).expect("steering init");
 
         let err = steering
             .steering_vector_point([f64::NAN, 0.0, 0.0], 1e6)

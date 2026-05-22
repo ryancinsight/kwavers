@@ -228,12 +228,13 @@ pub fn validate_all(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]
     fn test_cfl_validation() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 1e-7;
-        let c = 1500.0;
+        let c = SOUND_SPEED_WATER_SIM;
 
         let report = validate_cfl_condition(&grid, dt, c);
         assert!(

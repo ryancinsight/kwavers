@@ -1,3 +1,4 @@
+use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use super::extraction::{extract_stft_bin_snapshots, extract_windowed_snapshots};
 use super::types::{
     SnapshotMethod, SnapshotScenario, SnapshotSelection, StftBinConfig, WindowFunction,
@@ -50,7 +51,7 @@ fn synth_narrowband_sensor_data(
 
 #[test]
 fn stft_bin_snapshots_shape_is_correct() {
-    let sound_speed = 1500.0;
+    let sound_speed = SOUND_SPEED_WATER_SIM;
     let sampling_frequency_hz = 2_000_000.0;
     let frequency_hz = 200_000.0;
     let n_samples = 4096;
