@@ -26,12 +26,19 @@
 //! coefficients of the equation of state (Beyer 1960). Typical values:
 //! water ≈ 5.0, soft tissue ≈ 6.0–7.5.
 //!
-//! **Discrete approximation of ∂²(p²)/∂t²**: Using the three-point centred
-//! second-order finite difference (LeVeque 2007, §2.2):
+//! **Discrete approximation of ∂²(p²)/∂t²**: Using the three-point backward
+//! finite difference (LeVeque 2007, §2.2). The backward stencil requires no
+//! future values, keeping the scheme fully explicit. Taylor expansion shows
+//! the truncation error is O(Δt), not O(Δt²) — the centered stencil
+//! `(p²[n+1] − 2p²[n] + p²[n-1])/Δt²` achieves O(Δt²) but is implicit:
 //!
 //! ```text
-//! ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n-1] + p²[n-2]) / Δt²   + O(Δt²)
+//! ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n-1] + p²[n-2]) / Δt²   + O(Δt)
 //! ```
+//!
+//! For weakly nonlinear acoustics (Ma ≪ 1) this is acceptable: the nonlinear
+//! term is subdominant and the dominant O(Δt²) error comes from the linear
+//! leapfrog propagation step.
 //!
 //! ## References
 //!
@@ -63,9 +70,9 @@ use ndarray::{Array3, Zip};
 /// This function returns the nonlinear contribution `+(β/ρ₀c₀²)∂²(p²)/∂t²`
 /// (positive, c² not c⁴).
 ///
-/// Discrete ∂²(p²)/∂t² (LeVeque 2007, §2.2):
+/// Discrete ∂²(p²)/∂t² — backward stencil (LeVeque 2007, §2.2), O(Δt):
 /// ```text
-/// ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n−1] + p²[n−2]) / Δt²   + O(Δt²)
+/// ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n−1] + p²[n−2]) / Δt²   + O(Δt)
 /// ```
 ///
 /// # Arguments

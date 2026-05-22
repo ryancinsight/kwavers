@@ -220,6 +220,7 @@ impl MediumBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::fundamental::SOUND_SPEED_TISSUE;
     use std::collections::HashMap;
 
     fn test_grid() -> Grid {
@@ -232,7 +233,7 @@ mod tests {
         let config = DomainMediumParameters {
             medium_type: MediumType::Heterogeneous,
             density: 1040.0,
-            sound_speed: Some(1540.0),
+            sound_speed: Some(SOUND_SPEED_TISSUE),
             absorption: 0.45,
             nonlinearity: 6.0,
             ..DomainMediumParameters::default()
@@ -240,8 +241,8 @@ mod tests {
 
         let medium = MediumBuilder::build(&config, &grid).unwrap();
 
-        assert_eq!(medium.sound_speed(0, 0, 0), 1540.0);
-        assert_eq!(medium.sound_speed(2, 2, 2), 1540.0);
+        assert_eq!(medium.sound_speed(0, 0, 0), SOUND_SPEED_TISSUE);
+        assert_eq!(medium.sound_speed(2, 2, 2), SOUND_SPEED_TISSUE);
         assert_eq!(medium.density(1, 1, 1), 1040.0);
         assert_eq!(medium.absorption(2, 1, 0), 0.45);
         assert_eq!(medium.nonlinearity(0, 2, 1), 6.0);
