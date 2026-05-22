@@ -44,15 +44,4 @@ impl AcousticStreaming {
         self.intensity.powi(2) / (self.density * self.sound_speed.powi(3))
     }
 
-    /// Enhance thermal mixing (effective diffusivity increase)
-    ///
-    /// Acoustic streaming can enhance thermal transport.
-    /// Effective diffusivity increase: Δα ~ (L·v_stream)²/t_acoustic
-    /// where L is characteristic length scale
-    #[must_use]
-    pub fn enhanced_diffusivity(&self, characteristic_length: f64) -> f64 {
-        let v = self.velocity();
-        let period = 1.0 / 1e6; // Assume 1 MHz frequency
-        (characteristic_length * v).powi(2) / period
-    }
 }

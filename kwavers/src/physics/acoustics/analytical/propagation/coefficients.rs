@@ -33,7 +33,19 @@ impl PropagationCoefficients {
         self.reflection_amplitude.powi(2)
     }
 
-    /// Calculate transmittance (power transmission coefficient)
+    /// Square of the transmission amplitude: `|t|²`.
+    ///
+    /// For optical waves (equal refractive indices, normal incidence) or any
+    /// interface where both media have the same acoustic impedance `Z₁ = Z₂`,
+    /// this equals the intensity (power) transmittance.  For acoustic waves
+    /// with `Z₁ ≠ Z₂` or oblique incidence, the intensity transmittance is
+    ///
+    /// ```text
+    /// T_power = |t|² × (Z₁/Z₂) × (cos θ_t / cos θ_i)
+    /// ```
+    ///
+    /// Use [`energy_conservation_error`][Self::energy_conservation_error] to
+    /// verify energy balance with the correct impedance weighting.
     #[must_use]
     pub fn transmittance(&self) -> f64 {
         if self.total_internal_reflection {
