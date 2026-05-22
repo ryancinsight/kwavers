@@ -48,6 +48,7 @@
 //! - Gassmann F. (1951). Vierteljahrschrift Naturf. Ges. Zürich 96, 1–23.
 //! - Wood A.B. (1955). *A Textbook of Sound*. Bell & Hyman, London.
 
+use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::DENSITY_TISSUE;
 use crate::core::error::{KwaversError, KwaversResult};
 
@@ -87,7 +88,7 @@ impl Default for PoroelasticMaterial {
             fluid_bulk_modulus: 2.25e9, // 2.25 GPa
             shear_modulus: 3.5e9,       // 3.5 GPa
             permeability: 1e-9,         // 1 nm² (Darcy)
-            fluid_viscosity: 1e-3,      // Water at 20°C
+            fluid_viscosity: VISCOSITY_WATER, // Water at 20°C — SSOT: cavitation::VISCOSITY_WATER
             tortuosity: 1.5,            // Typical for bone
         }
     }
@@ -164,7 +165,7 @@ impl PoroelasticMaterial {
                 fluid_bulk_modulus: 2.25e9,
                 shear_modulus: 7e9,  // 7 GPa
                 permeability: 1e-12, // Very low
-                fluid_viscosity: 1e-3,
+                fluid_viscosity: VISCOSITY_WATER,
                 tortuosity: 1.2,
             }),
             "liver" => Ok(Self {
@@ -175,7 +176,7 @@ impl PoroelasticMaterial {
                 fluid_bulk_modulus: 2.25e9,
                 shear_modulus: 5e3, // 5 kPa (soft)
                 permeability: 1e-11,
-                fluid_viscosity: 1e-3,
+                fluid_viscosity: VISCOSITY_WATER,
                 tortuosity: 1.3,
             }),
             "lung" => Ok(Self {
@@ -320,22 +321,26 @@ mod tests {
 
     /// `characteristic_frequency` implements ω_c = φ·η / (κ·ρ_f·α).
     ///
-    /// Analytical for default bone:
-    ///   φ=0.3, η=1e-3, κ=1e-9, ρ_f=1000, α=1.5.
-    ///   ω_c = 0.3·1e-3 / (1e-9·1000·1.5) = 3e-4 / 1.5e-6 = 200 rad/s.
+    /// Analytical for default trabecular bone:
+    ///   φ=0.3, η=VISCOSITY_WATER=1.002e-3 Pa·s, κ=1e-9 m², ρ_f=1000 kg/m³, α=1.5.
+    ///   ω_c = 0.3·1.002e-3 / (1e-9·1000·1.5) = 3.006e-4 / 1.5e-6 = 200.4 rad/s.
     #[test]
     fn characteristic_frequency_matches_analytical_biot_formula() {
         let m = PoroelasticMaterial::default();
-        let expected =
+        // Reference value derived from SSOT VISCOSITY_WATER (1.002e-3 Pa·s):
+        let expected_analytical = 0.3 * VISCOSITY_WATER / (1e-9 * 1000.0 * 1.5);
+        let expected_from_struct =
             m.porosity * m.fluid_viscosity / (m.permeability * m.fluid_density * m.tortuosity);
         let got = m.characteristic_frequency();
+        // Struct-derived and analytical must agree.
         assert!(
-            (got - expected).abs() < 1e-6,
-            "characteristic_frequency: got {got:.3e} expected {expected:.3e}"
+            (got - expected_from_struct).abs() < 1e-6,
+            "characteristic_frequency: got {got:.3e} expected {expected_from_struct:.3e}"
         );
+        // Analytical value from SSOT constants.
         assert!(
-            (got - 200.0).abs() < 1e-6,
-            "ω_c must be 200 rad/s for default bone"
+            (got - expected_analytical).abs() < 1e-6,
+            "ω_c must be {expected_analytical:.3} rad/s for default bone, got {got:.3}"
         );
     }
 
