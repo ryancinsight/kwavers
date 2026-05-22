@@ -40,8 +40,9 @@ pub type TissueProperties = AcousticMaterialProperties;
 pub const WATER: TissueProperties = TissueProperties {
     sound_speed: SOUND_SPEED_WATER,
     density: DENSITY_WATER,
-    // Z = ρ·c = 998.2 × 1482 = 1 479 452 Pa·s/m
-    impedance: 1_479_452.0,
+    // Z = ρ·c = DENSITY_WATER × SOUND_SPEED_WATER = 998.2 × 1482.0 = 1 479 332.4 Pa·s/m
+    // Derived from canonical constants (SSOT); do not hardcode.
+    impedance: DENSITY_WATER * SOUND_SPEED_WATER,
     absorption_coefficient: 0.002,
     absorption_exponent: 2.0,
     nonlinearity_parameter: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)

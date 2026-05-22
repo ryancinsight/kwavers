@@ -6,6 +6,7 @@ use crate::core::constants::fundamental::{
 use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K, THERMAL_CONDUCTIVITY_AIR,
+    THERMAL_EXPANSION_AIR_20C,
 };
 use crate::core::constants::BLOOD_VISCOSITY_37C;
 use crate::domain::grid::Grid;
@@ -85,7 +86,7 @@ impl HomogeneousMedium {
             bulk_viscosity: 0.0,
             absorption_alpha: 1.84e-11,
             absorption_power: 2.0,
-            thermal_expansion: 3.43e-3,
+            thermal_expansion: THERMAL_EXPANSION_AIR_20C,
             gas_diffusion: 2.0e-5,
             nonlinearity: 0.4,
             optical_absorption: 0.0,

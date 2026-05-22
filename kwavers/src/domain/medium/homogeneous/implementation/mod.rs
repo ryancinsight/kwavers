@@ -5,6 +5,7 @@ use crate::core::constants::{
     WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT, WATER_SURFACE_TENSION_20C,
     WATER_THERMAL_CONDUCTIVITY, WATER_VAPOR_PRESSURE_20C,
 };
+use crate::core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
 use crate::core::constants::fundamental::B_OVER_A_WATER;
 use crate::core::error::{KwaversError, KwaversResult, ValidationError};
 use crate::domain::grid::Grid;
@@ -62,7 +63,7 @@ impl HomogeneousMedium {
             bulk_viscosity: 2.5 * viscosity,
             absorption_alpha: WATER_ABSORPTION_ALPHA_0,
             absorption_power: WATER_ABSORPTION_POWER,
-            thermal_expansion: 2.07e-4,
+            thermal_expansion: THERMAL_EXPANSION_WATER_20C,
             gas_diffusion: 2.0e-9,
             nonlinearity: B_OVER_A_WATER, // 5.2 at 20°C (Duck 1990 Table 4.16)
             optical_absorption: mu_a,

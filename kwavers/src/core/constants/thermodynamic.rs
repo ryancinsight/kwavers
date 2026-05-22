@@ -320,6 +320,26 @@ pub const DRHO_DT_SOFT_TISSUE: f64 = -0.2;
 ///   Academic Press, London, pp. 147–151.
 pub const RHO_C_SOFT_TISSUE: f64 = 3_780_000.0; // = DENSITY_TISSUE(1050) × SPECIFIC_HEAT_TISSUE(3600)
 
+// ============================================================================
+// Thermal Expansion Coefficients
+// ============================================================================
+
+/// Isobaric thermal expansion coefficient of liquid water at 20°C (K⁻¹)
+///
+/// Value: 2.07×10⁻⁴ K⁻¹.
+/// Used as the default expansion coefficient for water-like media in
+/// homogeneous medium constructors.
+/// Reference: NIST Chemistry WebBook, SRD 69.
+pub const THERMAL_EXPANSION_WATER_20C: f64 = 2.07e-4;
+
+/// Isobaric thermal expansion coefficient of dry air at 20°C (K⁻¹)
+///
+/// For an ideal gas at temperature T: β = 1/T.
+/// At 20°C (293.15 K): β = 1/293.15 = 3.41×10⁻³ K⁻¹ ≈ 3.43×10⁻³ K⁻¹.
+/// Value: 3.43×10⁻³ K⁻¹ — consistent with DENSITY_AIR at 20°C.
+/// Reference: NIST, ideal gas approximation.
+pub const THERMAL_EXPANSION_AIR_20C: f64 = 3.43e-3;
+
 /// Thermal conductivity of dry air at 20°C, 1 atm (W/(m·K))
 ///
 /// Value: 0.0257 W/(m·K) — consistent with DENSITY_AIR (1.204 kg/m³ at 20°C).

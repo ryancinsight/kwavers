@@ -40,6 +40,7 @@
 //! assert!(titanium.sound_speed > 5000.0);
 //! ```
 
+use crate::core::constants::cavitation::VISCOSITY_WATER;
 use crate::core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use crate::core::error::{KwaversError, KwaversResult};
@@ -145,8 +146,8 @@ impl AcousticMaterialProperties {
             absorption_coefficient,
             absorption_exponent: 1.0,
             nonlinearity_parameter: 0.0,
-            shear_viscosity: 1e-3,
-            bulk_viscosity: 1e-3,
+            shear_viscosity: VISCOSITY_WATER,
+            bulk_viscosity: VISCOSITY_WATER,
             specific_heat,
             thermal_conductivity,
             thermal_diffusivity,
