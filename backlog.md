@@ -1,5 +1,18 @@
 # Backlog / Strategy
 
+## T10/T15b — time-domain FWI solver-type factory dispatch (2026-05-22)
+- **[done] [arch]** `FwiParameters` gained `solver_type: SolverType` (default `FDTD`). The
+  `build_fdtd_solver_for_forward` method was renamed `build_solver_for_forward` and its return
+  type is `(Box<dyn Solver>, dims, dt)`. Dispatch on `SolverType::FDTD` uses the existing
+  `FdtdSolver` + `enable_cpml` path (now extracted to `build_fdtd_boxed`); `SolverType::PSTD`
+  routes to `PSTDSolver` with CPML embedded in `PSTDConfig::boundary` (now in `build_pstd_boxed`).
+  `adjoint_model` in `adjoint.rs` was updated in parallel — it now builds the adjoint solver
+  through the same typed helpers and steps via `Box<dyn Solver>` dynamic dispatch, preserving
+  the time-reversal theorem for both solver types. Unsupported types return
+  `KwaversError::InvalidInput` naming the rejected variant. Two new value-semantic tests:
+  PSTD forward smoke (non-zero receiver trace) + unsupported-type rejection (error contains
+  type name). 76/76 FWI tests pass; `cargo check -p {kwavers,pykwavers} --lib` exit 0.
+
 ## T19b-slice-2 — sensor-pressure trait promotion (2026-05-21)
 - **[done] [patch]** Added `Solver::recorded_sensor_pressure(&self) -> Option<Array2<f64>>` with default impl returning `None`. Concrete overrides on `FdtdSolver` and `PSTDSolver` forward to their existing `sensor_recorder.extract_pressure_data()`. FWI A's `forward_model` and `forward_model_sensor_only` now read the synthetic receiver trace through `<FdtdSolver as Solver>::recorded_sensor_pressure(&solver)` instead of `solver.sensor_recorder.extract_pressure_data()` — same cross-layer cleanup pattern as the `step_forward` / `pressure_field` trait dispatch landed in T19a. Hybrid and DG solvers keep the default `None` (they have no integrated sensor recorder). 72/72 FWI tests pass; `cargo check -p {kwavers, pykwavers} --lib` exit 0.
 

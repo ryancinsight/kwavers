@@ -319,7 +319,7 @@ fn test_material_interface_zero_thickness() {
         sound_speed: 1600.0,
         absorption_coefficient: 0.2,
         absorption_power: 1.8,
-        nonlinearity: 6.0,
+        nonlinearity: B_OVER_A_SOFT_TISSUE,
     };
 
     let grid = crate::domain::grid::Grid::new(32, 32, 32, 0.001, 0.001, 0.001)

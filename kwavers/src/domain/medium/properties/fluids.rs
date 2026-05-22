@@ -19,7 +19,7 @@ use crate::core::constants::fundamental::{
     SOUND_SPEED_BLOOD,
 };
 use crate::core::constants::medical::BLOOD_SPECIFIC_HEAT;
-use crate::core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use crate::core::constants::thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER_37C, THERMAL_DIFFUSIVITY_BLOOD};
 use super::material::AcousticMaterialProperties;
 
 /// Fluid material properties type alias
@@ -68,7 +68,7 @@ pub const WHOLE_BLOOD: FluidProperties = FluidProperties {
     bulk_viscosity: 0.0,
     specific_heat: BLOOD_SPECIFIC_HEAT,
     thermal_conductivity: 0.52,
-    thermal_diffusivity: 1.35e-7,
+    thermal_diffusivity: THERMAL_DIFFUSIVITY_BLOOD,
     perfusion_rate: 100.0,
     arterial_temperature: BODY_TEMPERATURE_C,
     metabolic_heat: 0.0,
@@ -207,7 +207,7 @@ pub const WATER_37C: FluidProperties = FluidProperties {
     nonlinearity_parameter: 5.0,
     shear_viscosity: 0.7e-3,
     bulk_viscosity: 0.0,
-    specific_heat: 4180.0,
+    specific_heat: SPECIFIC_HEAT_WATER_37C,
     thermal_conductivity: 0.63,
     thermal_diffusivity: 1.52e-7,
     perfusion_rate: 0.0,
