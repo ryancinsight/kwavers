@@ -13,11 +13,12 @@ pub use super::detection::{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::Array1;
 
     #[test]
     fn test_spectral_detector() {
-        let mut detector = SpectralDetector::new(1e6, 10e6);
+        let mut detector = SpectralDetector::new(MHZ_TO_HZ, 10.0 * MHZ_TO_HZ);
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
         assert_eq!(metrics.state, CavitationDetectionState::None);
@@ -25,7 +26,7 @@ mod tests {
 
     #[test]
     fn test_broadband_detector() {
-        let mut detector = BroadbandDetector::new(10e6);
+        let mut detector = BroadbandDetector::new(10.0 * MHZ_TO_HZ);
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
         assert_eq!(metrics.state, CavitationDetectionState::None);
@@ -33,7 +34,7 @@ mod tests {
 
     #[test]
     fn test_subharmonic_detector() {
-        let mut detector = SubharmonicDetector::new(1e6, 10e6);
+        let mut detector = SubharmonicDetector::new(MHZ_TO_HZ, 10.0 * MHZ_TO_HZ);
         let signal = Array1::zeros(1024);
         let metrics = detector.detect(&signal.view());
         assert_eq!(metrics.state, CavitationDetectionState::None);

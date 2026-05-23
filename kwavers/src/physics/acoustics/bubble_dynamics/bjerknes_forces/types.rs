@@ -1,6 +1,7 @@
 //! Types for Bjerknes forces calculation
 
 use crate::core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 /// Configuration for Bjerknes force calculations
 #[derive(Debug, Clone, Copy)]
@@ -26,7 +27,7 @@ impl Default for BjerknesConfig {
         Self {
             c0: SOUND_SPEED_TISSUE,
             rho: DENSITY_WATER_NOMINAL,
-            frequency: 1e6,
+            frequency: MHZ_TO_HZ,
             include_primary: true,
             include_secondary: true,
             coalescence_distance: 1e-6, // 1 μm

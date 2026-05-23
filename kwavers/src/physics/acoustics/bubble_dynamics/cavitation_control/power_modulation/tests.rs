@@ -4,6 +4,8 @@
 use super::*;
 #[cfg(test)]
 use crate::core::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
+#[cfg(test)]
+use crate::core::constants::numerical::MHZ_TO_HZ;
 
 #[test]
 fn test_modulation_schemes() {

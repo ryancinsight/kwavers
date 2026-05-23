@@ -3,7 +3,7 @@
 //! This module contains the core `NonlinearWave` struct and its basic implementation.
 
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use crate::core::constants::numerical::PRESSURE_LIMIT;
+use crate::core::constants::numerical::{MHZ_TO_HZ, PRESSURE_LIMIT};
 use crate::domain::grid::Grid;
 use crate::domain::medium::Medium;
 
@@ -121,7 +121,7 @@ impl NonlinearWave {
             clamp_gradients: false,
 
             // Frequency-dependent physics
-            source_frequency: 1e6,
+            source_frequency: MHZ_TO_HZ,
 
             // Performance caches
             max_sound_speed: SOUND_SPEED_WATER_SIM,

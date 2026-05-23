@@ -125,11 +125,12 @@ impl PulseSequenceGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
 
     /// create_burst_sequence produces exactly num_pulses pulses.
     #[test]
     fn burst_sequence_has_correct_pulse_count() {
-        let g = PulseSequenceGenerator::create_burst_sequence(5, 0.01, 0.005, 0.8, 1e6);
+        let g = PulseSequenceGenerator::create_burst_sequence(5, 0.01, 0.005, 0.8, MHZ_TO_HZ);
         // total_duration = 5 * (0.01 + 0.005) = 0.075
         let expected = 5.0 * (0.01 + 0.005);
         assert!(
@@ -157,7 +158,7 @@ mod tests {
             amplitude: 0.7,
             duration: 1.0,
             delay: 0.5,
-            frequency: 1e6,
+            frequency: MHZ_TO_HZ,
         });
         // dt=0.1 < duration+delay=1.5 → still on pulse 0
         let pulse = g.get_current_pulse(0.1).expect("must return pulse");
@@ -171,7 +172,7 @@ mod tests {
     /// reset restores index and time to zero.
     #[test]
     fn reset_restores_initial_state() {
-        let mut g = PulseSequenceGenerator::create_burst_sequence(3, 0.01, 0.005, 0.5, 1e6);
+        let mut g = PulseSequenceGenerator::create_burst_sequence(3, 0.01, 0.005, 0.5, MHZ_TO_HZ);
         g.get_current_pulse(0.1); // advance time
         g.reset();
         // After reset, total_duration is unaffected, but internal time is zero

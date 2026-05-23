@@ -176,19 +176,20 @@ impl FeedbackController {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use ndarray::Array1;
 
     #[test]
     fn test_feedback_controller_creation() {
         let config = FeedbackConfig::default();
-        let controller = FeedbackController::new(config, 1e6, 10e6);
+        let controller = FeedbackController::new(config, MHZ_TO_HZ, 10.0 * MHZ_TO_HZ);
         assert_eq!(controller.config().target_intensity, 0.5);
     }
 
     #[test]
     fn test_control_output() {
         let config = FeedbackConfig::default();
-        let mut controller = FeedbackController::new(config, 1e6, 10e6);
+        let mut controller = FeedbackController::new(config, MHZ_TO_HZ, 10.0 * MHZ_TO_HZ);
         let signal = Array1::zeros(1024);
         let output = controller.process(&signal.view());
         assert!(output.amplitude >= 0.0);

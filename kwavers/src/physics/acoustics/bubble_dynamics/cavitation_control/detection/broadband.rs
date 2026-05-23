@@ -97,13 +97,14 @@ impl BroadbandDetector {
 #[cfg(test)]
 mod tests {
     use super::BroadbandDetector;
+    use crate::core::constants::numerical::MHZ_TO_HZ;
     use crate::physics::acoustics::bubble_dynamics::cavitation_control::detection::traits::CavitationDetector;
     use crate::physics::acoustics::bubble_dynamics::cavitation_control::detection::types::CavitationDetectionState;
     use ndarray::arr1;
 
     #[test]
     fn broadband_detector_rejects_empty_and_nonfinite_signals() {
-        let mut detector = BroadbandDetector::new(1.0e6);
+        let mut detector = BroadbandDetector::new(MHZ_TO_HZ);
 
         let empty = arr1(&[]);
         let empty_metrics = detector.detect(&empty.view());
@@ -125,7 +126,7 @@ mod tests {
 
     #[test]
     fn broadband_detector_recovers_after_invalid_signal() {
-        let mut detector = BroadbandDetector::new(1.0e6);
+        let mut detector = BroadbandDetector::new(MHZ_TO_HZ);
         let invalid = arr1(&[f64::INFINITY]);
         assert_eq!(detector.detect(&invalid.view()).confidence, 0.0);
         assert!(detector.baseline_energy.is_none());

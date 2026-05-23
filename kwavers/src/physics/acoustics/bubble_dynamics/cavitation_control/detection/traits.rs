@@ -1,5 +1,6 @@
 //! Cavitation detector trait definition
 
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use super::types::CavitationMetrics;
 use ndarray::ArrayView1;
 
@@ -36,8 +37,8 @@ pub struct DetectorParameters {
 impl Default for DetectorParameters {
     fn default() -> Self {
         Self {
-            fundamental_freq: 1e6, // 1 MHz
-            sample_rate: 10e6,     // 10 MHz
+            fundamental_freq: MHZ_TO_HZ,       // 1 MHz
+            sample_rate: 10.0 * MHZ_TO_HZ,     // 10 MHz
             sensitivity: 1.0,
             temporal_averaging: true,
             adaptive_threshold: false,

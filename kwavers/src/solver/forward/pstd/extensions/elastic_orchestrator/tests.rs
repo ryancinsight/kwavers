@@ -351,7 +351,7 @@ fn acoustic_fluid_pulse_propagates_finite_field() {
 
     let amp = 1e-6;
     let signal: Array1<f64> = Array1::from_iter(
-        (0..n_steps).map(|n| amp * (2.0 * std::f64::consts::PI * 1e6 * (n as f64) * dt).sin()),
+        (0..n_steps).map(|n| amp * (2.0 * std::f64::consts::PI * MHZ_TO_HZ * (n as f64) * dt).sin()),
     );
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     src_mask[[3, ny / 2, nz / 2]] = true;

@@ -1,4 +1,5 @@
 use crate::core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use crate::core::constants::numerical::MHZ_TO_HZ;
 use crate::core::error::{self};
 use crate::domain::medium::core::CoreMedium;
 
@@ -16,13 +17,13 @@ fn test_config_with_custom_values() {
     use crate::simulation::parameters::SimulationParameters;
     let config = crate::simulation::configuration::Configuration {
         simulation: SimulationParameters {
-            frequency: 2e6,
+            frequency: 2.0 * MHZ_TO_HZ,
             duration: 0.001,
             ..Default::default()
         },
         ..Default::default()
     };
-    assert_eq!(config.simulation.frequency, 2e6);
+    assert_eq!(config.simulation.frequency, 2.0 * MHZ_TO_HZ);
 }
 
 #[test]

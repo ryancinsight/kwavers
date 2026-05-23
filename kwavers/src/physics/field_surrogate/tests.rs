@@ -4,7 +4,7 @@
 
 use ndarray::Array3;
 
-use crate::core::constants::numerical::MHZ_TO_HZ;
+use crate::core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use super::{
     helmholtz_residual_field, helmholtz_residual_kernel, helmholtz_residual_stats,
     place_kernel_at_focus, resample_trilinear, FocalKernel, KernelCube, HELMHOLTZ_C0_WATER,
@@ -33,28 +33,28 @@ fn synthetic_gaussian_kernel(
         let r2 = (di / sx).powi(2) + (dj / sy).powi(2) + (dk / sz).powi(2);
         *v = pnp * (-0.5 * r2).exp();
     }
-    FocalKernel::new(field, dx_m, focus, f0, pnp, 1.0e6, 2.0e-3, 10.0e-3)
+    FocalKernel::new(field, dx_m, focus, f0, pnp, MPA_TO_PA, 2.0e-3, 10.0e-3)
 }
 
 #[test]
 fn test_focal_pressure_matches_pnp() {
-    let k = synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, 1.0e6, 30.0e6);
-    assert!((k.focal_pressure() - 30.0e6).abs() < 1e-9);
+    let k = synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
+    assert!((k.focal_pressure() - 30.0 * MPA_TO_PA).abs() < 1e-9);
     assert_eq!(k.shape(), (40, 30, 30));
 }
 
 #[test]
 fn test_scale_in_place_is_linear() {
-    let mut k = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5e6, 15.0e6);
+    let mut k = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA);
     let original_focal = k.focal_pressure();
     k.scale_in_place(0.6);
     assert!((k.focal_pressure() - original_focal * 0.6).abs() < 1e-9);
-    assert!((k.pnp_realised - 15.0e6 * 0.6).abs() < 1e-9);
+    assert!((k.pnp_realised - 15.0 * MPA_TO_PA * 0.6).abs() < 1e-9);
 }
 
 #[test]
 fn test_resample_identity_when_dx_unchanged() {
-    let k = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5e6, 15.0e6);
+    let k = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA);
     let r = resample_trilinear(&k, 1.0e-3);
     assert_eq!(r.shape(), k.shape());
     let max_abs_diff = k
@@ -68,7 +68,7 @@ fn test_resample_identity_when_dx_unchanged() {
 
 #[test]
 fn test_resample_changes_shape_proportionally() {
-    let k = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, 1.0e6, 30.0e6);
+    let k = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let r = resample_trilinear(&k, 1.0e-3); // 2× downsample
     assert_eq!(r.shape(), (20, 10, 10));
     assert!((r.dx_m - 1.0e-3).abs() < 1e-12);
@@ -76,7 +76,7 @@ fn test_resample_changes_shape_proportionally() {
 
 #[test]
 fn test_resample_preserves_focal_position() {
-    let k = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, 1.0e6, 30.0e6);
+    let k = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let r = resample_trilinear(&k, 1.0e-3);
     // input focus at (20, 10, 10) at 0.5mm dx -> physical (10mm, 5mm, 5mm)
     // output focus at 1.0mm dx should be (10, 5, 5)
@@ -85,7 +85,7 @@ fn test_resample_preserves_focal_position() {
 
 #[test]
 fn test_place_kernel_at_focus_aligns_voxel() {
-    let k = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 1.0e6, 30.0e6);
+    let k = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let target_shape = (60, 40, 40);
     let target_focus = (45, 20, 20);
     let placed = place_kernel_at_focus(&k, target_shape, target_focus);
@@ -100,7 +100,7 @@ fn test_place_kernel_at_focus_aligns_voxel() {
 
 #[test]
 fn test_place_kernel_zero_fills_outside_footprint() {
-    let k = synthetic_gaussian_kernel(10, 10, 10, 1.0e-3, 1.0e6, 30.0e6);
+    let k = synthetic_gaussian_kernel(10, 10, 10, 1.0e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let target_shape = (50, 30, 30);
     let target_focus = (25, 15, 15);
     let placed = place_kernel_at_focus(&k, target_shape, target_focus);
@@ -111,10 +111,10 @@ fn test_place_kernel_zero_fills_outside_footprint() {
 
 #[test]
 fn test_cube_construction_validates_cartesian_completeness() {
-    let k1 = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5e6, 15.0e6);
-    let k2 = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5e6, 30.0e6);
-    let k3 = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, 1.0e6, 15.0e6);
-    let k4 = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, 1.0e6, 30.0e6);
+    let k1 = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA);
+    let k2 = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA);
+    let k3 = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, MHZ_TO_HZ, 15.0 * MPA_TO_PA);
+    let k4 = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let cube = KernelCube::new(vec![k1, k2, k3, k4]).expect("complete cube");
     assert_eq!(cube.len(), 4);
     assert_eq!(cube.f0_axis().len(), 2);
@@ -123,8 +123,8 @@ fn test_cube_construction_validates_cartesian_completeness() {
 
 #[test]
 fn test_cube_construction_rejects_missing_corner() {
-    let k1 = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5e6, 15.0e6);
-    let k4 = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, 1.0e6, 30.0e6);
+    let k1 = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA);
+    let k4 = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let result = KernelCube::new(vec![k1, k4]);
     assert!(
         result.is_err(),
